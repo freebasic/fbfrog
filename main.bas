@@ -9,6 +9,8 @@
 
 private sub parse_header(byref file as string)
 	lex_open(file)
+	emit_open(path_strip_ext(file) & ".bi")
+
 	do
 		lex_skip()
 
@@ -16,6 +18,8 @@ private sub parse_header(byref file as string)
 			exit do
 		end if
 	loop
+
+	emit_close()
 	lex_close()
 end sub
 
