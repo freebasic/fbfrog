@@ -97,6 +97,7 @@ end sub
 	next
 
 	lex_global_init()
+	emit_global_init()
 
 	'' Parse all files specified on the command line
 	for i as integer = 1 to (__FB_ARGC__ - 1)
