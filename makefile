@@ -13,6 +13,8 @@ EXEEXT :=
 HEADERS := common.bi
 
 OBJECTS := main.o
+OBJECTS += lex.o
+OBJECTS += hash.o
 
 #
 # Host specific configuration

@@ -38,6 +38,14 @@ function xreallocate(byval old as any ptr, byval size as ulong) as any ptr
 end function
 
 private sub parse_header(byref file as string)
+	lex_select_file(file)
+	do
+		lex_skip()
+
+		if (lex_tk() = TK_EOF) then
+			exit do
+		end if
+	loop
 end sub
 
 private sub print_help_and_exit()
@@ -79,6 +87,8 @@ end sub
 
 		end select
 	next
+
+	lex_global_init()
 
 	'' Parse all files specified on the command line
 	for i as integer = 1 to (__FB_ARGC__ - 1)
