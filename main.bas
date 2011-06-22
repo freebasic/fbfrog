@@ -1,11 +1,36 @@
 #include once "lex.bi"
 #include once "emit.bi"
 
+private sub parse_pp_directive()
+	'' #
+	lex_skip()
 
+	select case as const (lex_tk())
+	case TK_IF
 
+	case TK_IFDEF
 
+	case TK_IFNDEF
 
+	case TK_ELIF
 
+	case TK_ENDIF
+
+	case TK_PRAGMA
+		lex_skip()
+
+		'' Handle GCC's '#pragma ms_struct on | off | reset'
+		if (lex_match_text("ms_struct")) then
+			select case (*lex_text())
+			case "on"
+			case "off", "reset"
+			end select
+		end if
+
+	case else
+		lex_xoops("unexpected PP directive: '" & *lex_text() & "'")
+	end select
+end sub
 
 private sub parse_header(byref file as string)
 	lex_open(file)
@@ -14,9 +39,17 @@ private sub parse_header(byref file as string)
 	do
 		lex_skip()
 
-		if (lex_tk() = TK_EOF) then
+		select case as const (lex_tk())
+		case TK_HASH
+			parse_pp_directive()
+
+		case TK_EOF
 			exit do
-		end if
+
+		case TK_EOL
+			lex_skip()
+
+		end select
 	loop
 
 	emit_close()
