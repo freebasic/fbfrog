@@ -77,10 +77,15 @@ type LexToken
 	as LexLine line    '' Where this token was read (error reporting)
 end type
 
-'' Determines how much look ahead is available. We're expecting it to be a
-'' power of 2.
+'' Determines how much look ahead is available.
+'' We're expecting it to be a power of 2.
 const LEX_TOKENCOUNT_EXPONENT = 1
 const LEX_TOKENCOUNT = (1 shl LEX_TOKENCOUNT_EXPONENT)
+
+'' Token text buffer for lex_text(); this limits the max. possible length of
+'' a token, if its text is retrieved during parsing, but it helps providing
+'' a nice lexer interface.
+const LEX_TEXTCACHE = (1 shl 13)
 
 type LexStuff
 	as string filename      '' File name from #include
@@ -97,6 +102,9 @@ type LexStuff
 	as integer aheadcount   '' Number of loaded look ahead tokens
 
 	as integer prevtk       '' Previous token's TK_*
+
+	as zstring * (LEX_TEXTCACHE + 1) text_cache
+	as ubyte ptr cached_token
 
 	as HashTable kwhash     '' Keyword hash table
 end type
@@ -769,12 +777,29 @@ function lex_tk() as integer
 	return lex.queue(lex.token).tk
 end function
 
-function lex_text() as ubyte ptr
-	return lex.queue(lex.token).i
+function lex_text() as zstring ptr
+	'' Tokens don't store their text; that'd require the text to be stored
+	'' for every single token. For most it's never needed though, so we can
+	'' just use one buffer (the "text cache") and copy token text into that
+	'' as requested, so that we can return a nice zstring ptr.
+	with (lex.queue(lex.token))
+		if (lex.cached_token <> .i) then
+			if (.length > LEX_TEXTCACHE) then
+				lex_xoops("token too big, the soft-limit needs to be raised!")
+			end if
+			fb_MemCopy(byval @lex.text_cache, byval .i, .length)
+			lex.text_cache[.length] = 0
+		end if
+	end with
+	return @lex.text_cache
 end function
 
-function lex_textlen() as integer
-	return lex.queue(lex.token).length
+function lex_match_text(byval text as zstring ptr) as integer
+	dim as integer matched = (*text = *lex_text())
+	if (matched) then
+		lex_skip()
+	end if
+	return matched
 end function
 
 function lex_lookahead_tk(byval n as integer) as integer
@@ -837,10 +862,7 @@ end sub
 
 '' Sets up the lexer to parse a specific file. Future lex_*() calls will
 '' tokenize that file's content, until the next file is selected...
-'' Note: The whole file is loaded into memory and then just kept allocated.
-'' This way the lexer's tokens, but also the other modules of this program,
-'' can directly point into the buffers.
-sub lex_select_file(byref filename as string)
+sub lex_open(byref filename as string)
 	load_file(filename)
 
 	lex.line.num = 1
@@ -860,6 +882,15 @@ sub lex_select_file(byref filename as string)
 	'' and then skip_char() will overflow it again and reach EOF)
 	lex.i -= 1
 	skip_char()
+end sub
+
+sub lex_close()
+	if (lex.buffer) then
+		deallocate(lex.buffer)
+	end if
+	lex.buffer = NULL
+	lex.i = NULL
+	lex.limit = NULL
 end sub
 
 '' Careful: keep in sync with the lex.bi:TK_* token id enum!
@@ -914,7 +945,7 @@ dim shared as zstring ptr keywords(0 to (TK__KWCOUNT - 1)) = _
 }
 
 sub lex_global_init()
-	'' Load C & CPP keywords
+	'' Load the keywords
 	hash_init(@lex.kwhash, 6)
 	for i as integer = 0 to (TK__KWCOUNT - 1)
 		dim as zstring ptr kw = keywords(i)

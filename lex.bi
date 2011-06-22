@@ -121,10 +121,11 @@ end enum
 declare sub lex_xoops(byref message as string)
 declare function lex_at_line_begin() as integer
 declare function lex_tk() as integer
-declare function lex_text() as ubyte ptr
-declare function lex_textlen() as integer
+declare function lex_text() as zstring ptr
+declare function lex_match_text(byval text as zstring ptr) as integer
 declare function lex_lookahead_tk(byval n as integer) as integer
 declare sub lex_skip()
 declare sub lex_skip_until(byval tk as integer)
-declare sub lex_select_file(byref filename as string)
+declare sub lex_open(byref filename as string)
+declare sub lex_close()
 declare sub lex_global_init()

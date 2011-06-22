@@ -8,7 +8,7 @@
 
 
 private sub parse_header(byref file as string)
-	lex_select_file(file)
+	lex_open(file)
 	do
 		lex_skip()
 
@@ -16,6 +16,7 @@ private sub parse_header(byref file as string)
 			exit do
 		end if
 	loop
+	lex_close()
 end sub
 
 private sub print_help_and_exit()
