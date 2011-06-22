@@ -201,7 +201,7 @@ private sub print_oops_line(byval token as ubyte ptr, byval ln as LexLine ptr)
 	print s + !"\n" + space(offset) + "^"
 end sub
 
-private sub private_oops _
+private sub private_xoops _
 	( _
 		byval token as ubyte ptr, _
 		byval ln as LexLine ptr, _
@@ -212,8 +212,8 @@ private sub private_oops _
 	end 1
 end sub
 
-private sub tokenizer_oops(byref message as string)
-	private_oops(lex.i, @lex.line, message)
+private sub tokenizer_xoops(byref message as string)
+	private_xoops(lex.i, @lex.line, message)
 end sub
 
 '' Skip current char and go to the next
@@ -388,7 +388,7 @@ private sub read_string_literal(byval token as LexToken ptr)
 			exit do
 
 		case CH_LF, CH_CR, CH_EOF
-			tokenizer_oops("string/char literal is left open")
+			tokenizer_xoops("string/char literal is left open")
 
 		case CH_BACKSLASH	'' \
 			select case (lex.ch)
@@ -428,7 +428,7 @@ private sub read_multi_comment(byval token as LexToken ptr)
 	do
 		select case (lex.ch)
 		case CH_EOF
-			tokenizer_oops("multi-line comment is left open")
+			tokenizer_xoops("multi-line comment is left open")
 		case CH_MUL		'' *
 			if (lookahead_char(1) = CH_SLASH) then	'' */
 				exit do
@@ -731,7 +731,7 @@ private sub lex_tokenize(byval token as LexToken ptr)
 		token->tk = TK_EOF
 
 	case else
-		tokenizer_oops("unexpected character: '" & chr(lex.ch) & "'" & _
+		tokenizer_xoops("unexpected character: '" & chr(lex.ch) & "'" & _
 				", &h" + hex(lex.ch, 2))
 
 	end select
@@ -755,9 +755,9 @@ end sub
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 '' Parser interface
 
-sub lex_oops(byref message as string)
+sub lex_xoops(byref message as string)
 	with (lex.queue(lex.token))
-		private_oops(.i, @.line, message)
+		private_xoops(.i, @.line, message)
 	end with
 end sub
 

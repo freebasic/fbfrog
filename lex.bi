@@ -118,7 +118,7 @@ enum
 	TK__KWCOUNT = TK__LASTKW - TK__FIRSTKW + 1
 end enum
 
-declare sub lex_oops(byref message as string)
+declare sub lex_xoops(byref message as string)
 declare function lex_at_line_begin() as integer
 declare function lex_tk() as integer
 declare function lex_text() as ubyte ptr
