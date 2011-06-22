@@ -65,19 +65,16 @@ enum
 	CH_EOF      = 256
 end enum
 
-'' Locations are used to identify filename/line number at which a token was
-'' read, used for error reporting etc.
-type LexLocation
-	as integer linenum     '' Current line
-	as ubyte ptr linebegin '' Pointer into LexInput's file buffer
-	as integer offset      '' Character offset relative to line begin
+type LexLine
+	as integer num     '' Current line
+	as ubyte ptr begin '' Pointer into current buffer
 end type
 
 type LexToken
-	as integer tk           '' TK_*
-	as LexLocation location '' Where this token was read (error reporting)
-	as ubyte ptr text       '' Original text in current buffer
-	as integer textlen
+	as integer tk      '' TK_*
+	as ubyte ptr i     '' Original text in current buffer
+	as integer length
+	as LexLine line    '' Where this token was read (error reporting)
 end type
 
 '' Determines how much look ahead is available. We're expecting it to be a
@@ -91,7 +88,7 @@ type LexStuff
 	as ubyte ptr buffer     '' File content buffer
 	as ubyte ptr i          '' Current char, will always be <= limit
 	as ubyte ptr limit      '' (end of buffer)
-	as LexLocation location '' Current line
+	as LexLine line         '' Current line
 
 	as integer ch           '' Current char or CH_EOF if i = limit
 
@@ -106,52 +103,28 @@ end type
 
 dim shared as LexStuff lex
 
-'' Retrieves the text of the line containing the location and makes it ready
-'' for display during error reporting.
-private function peek_line_at(byval location as LexLocation ptr) as zstring ptr
-	const MAX_PEEKLINE = 512
-	static as zstring * (MAX_PEEKLINE + 1) ln
-
-	dim as ubyte ptr r      = location->linebegin
-	dim as ubyte ptr rlimit = lex.limit
-	dim as ubyte ptr w      = @ln
-	dim as ubyte ptr wlimit = w + MAX_PEEKLINE
-
-	while ((r < rlimit) and (w < wlimit))
-		dim as integer ch = *r
-
-		select case as const (ch)
-		case CH_LF, CH_CR
-			exit while
-
-		'' Replace NULLs, TABs, and other control chars with space.
-		case 0           to (CH_LF    - 1), _
-		     (CH_LF + 1) to (CH_CR    - 1), _
-		     (CH_CR + 1) to (CH_SPACE - 1), _
-		     CH_DEL
-			ch = CH_SPACE
-		end select
-
-		*w = ch : w += 1
-		r += 1
+private function find_eol(byval p as ubyte ptr) as ubyte ptr
+	while ((p < lex.limit) andalso (*p <> CH_LF) andalso (*p <> CH_CR))
+		p += 1
 	wend
-
-	'' NULL terminator
-	*w = 0
-
-	return @ln
+	return p
 end function
 
 '' Displays a line of the input source code, with an indicator showing the
 '' exact location. For example:
 ''		int foo(int bar#)
 ''		               ^
-private sub print_oops_line(byval location as LexLocation ptr)
+private sub print_oops_line(byval token as ubyte ptr, byval ln as LexLine ptr)
+	dim as ubyte ptr eol = find_eol(token)
+
 	'' Get the current line of source code
-	dim as string s = *peek_line_at(location)
+	dim as integer old_eol = *eol
+	*eol = 0
+	dim as string s = *cptr(zstring ptr, ln->begin)
+	*eol = old_eol
 
 	'' Specifies where the "^" goes
-	dim as integer offset = location->offset
+	dim as integer offset = culng(token) - culng(ln->begin)
 
 	'' Determine how many chars can be printed for the error line:
 	'' Normally we can fill a line in the console, so get the console width.
@@ -204,16 +177,17 @@ end sub
 
 private sub private_oops _
 	( _
-		byval location as LexLocation ptr, _
+		byval token as ubyte ptr, _
+		byval ln as LexLine ptr, _
 		byref message as string _
 	)
-	print lex.filename & "(" & location->linenum & "): oops, " & message
-	print_oops_line(location)
+	print lex.filename & "(" & ln->num & "): oops, " & message
+	print_oops_line(token, ln)
 	end 1
 end sub
 
 private sub tokenizer_oops(byref message as string)
-	private_oops(@lex.location, message)
+	private_oops(lex.i, @lex.line, message)
 end sub
 
 '' Skip current char and go to the next
@@ -221,7 +195,6 @@ private sub skip_char()
 	lex.i += 1
 	if (lex.i < lex.limit) then
 		lex.ch = lex.i[0]
-		lex.location.offset += 1
 	else
 		'' Keep lex.i <= lex.limit
 		if (lex.i > lex.limit) then
@@ -262,16 +235,6 @@ private sub read_id(byval token as LexToken ptr)
 
 		end select
 	loop
-
-	'' If this a keyword, replace the TK_ID with the corresponding TK_*
-	dim as HashItem ptr item = _
-		hash_lookup(@lex.kwhash, _
-		            token->text, _
-		            token->textlen, _
-		            hash_hash(token->text, token->textlen))
-	if (item->s) then
-		token->tk = item->data
-	end if
 end sub
 
 private sub read_number_literal(byval token as LexToken ptr)
@@ -530,9 +493,9 @@ private sub lex_tokenize(byval token as LexToken ptr)
 #endif
 
 	'' Next token starts here
-	token->location = lex.location
-	token->text = lex.i
-	token->textlen = 0
+	token->line = lex.line
+	token->i = lex.i
+	token->length = 0
 
 	'' Identify the next token
 	select case as const (lex.ch)
@@ -551,8 +514,8 @@ private sub lex_tokenize(byval token as LexToken ptr)
 		skip_char()
 
 		'' After skipping EOL, update the current line
-		lex.location.linenum += 1
-		lex.location.linebegin = lex.i
+		lex.line.num += 1
+		lex.line.begin = lex.i
 
 	case CH_EXCL		'' !
 		read_one(token, TK_LOGNOT)
@@ -754,14 +717,28 @@ private sub lex_tokenize(byval token as LexToken ptr)
 	end select
 
 	'' The token ends here
-	token->textlen = culng(lex.i) - culng(token->text)
+	token->length = culng(lex.i) - culng(token->i)
+
+	if (token->tk = TK_ID) then
+		'' Is this a keyword?
+		dim as HashItem ptr item = _
+		        hash_lookup(@lex.kwhash, _
+		                    token->i, _
+		                    token->length, _
+		                    hash_hash(token->i, token->length))
+		if (item->s) then
+			token->tk = item->data
+		end if
+	end if
 end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 '' Parser interface
 
 sub lex_oops(byref message as string)
-	private_oops(@lex.queue(lex.token).location, message)
+	with (lex.queue(lex.token))
+		private_oops(.i, @.line, message)
+	end with
 end sub
 
 function lex_at_line_begin() as integer
@@ -773,11 +750,11 @@ function lex_tk() as integer
 end function
 
 function lex_text() as ubyte ptr
-	return lex.queue(lex.token).text
+	return lex.queue(lex.token).i
 end function
 
 function lex_textlen() as integer
-	return lex.queue(lex.token).textlen
+	return lex.queue(lex.token).length
 end function
 
 function lex_lookahead_tk(byval n as integer) as integer
@@ -846,9 +823,8 @@ end sub
 sub lex_select_file(byref filename as string)
 	load_file(filename)
 
-	lex.location.linenum = 1
-	lex.location.linebegin = lex.i
-	lex.location.offset = 0
+	lex.line.num = 1
+	lex.line.begin = lex.i
 
 	lex.aheadcount = 0 '' Reset token queue
 
