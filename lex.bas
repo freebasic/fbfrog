@@ -240,9 +240,6 @@ function lookahead_char(byval n as integer) as integer
 end function
 
 private sub token_extend(byval token as LexToken ptr)
-	if (lex.i < lex.limit) then
-		token->textlen += 1
-	end if
 	skip_char()
 end sub
 
@@ -251,7 +248,7 @@ private sub read_id(byval token as LexToken ptr)
 	token->tk = TK_ID
 
 	do
-		token_extend(token)
+		skip_char()
 
 		select case as const (lex.ch)
 		case CH_A   to CH_Z  , _
@@ -284,13 +281,13 @@ private sub read_number_literal(byval token as LexToken ptr)
 	if (lex.ch = CH_0) then		'' 0
 		if (lex.ch = CH_L_X) then	'' 0x
 			numbase = 16
-			token_extend(token)
+			skip_char()
 		else
 			numbase = 8
 		end if
 	end if
 
-	token_extend(token)
+	skip_char()
 
 	dim as integer found_dot = FALSE
 	do
@@ -323,18 +320,18 @@ private sub read_number_literal(byval token as LexToken ptr)
 			exit do
 		end if
 
-		token_extend(token)
+		skip_char()
 	loop
 
 	'' Exponent? (can be used even without fractional part, e.g. '1e1')
 	select case as const (lex.ch)
 	case CH_E, CH_L_E   '' 'E', 'e'
-		token_extend(token)
+		skip_char()
 
 		'' ['+' | '-']
 		select case as const (lex.ch)
 		case CH_PLUS, CH_MINUS
-			token_extend(token)
+			skip_char()
 		end select
 
 		'' ['0'-'9']
@@ -346,7 +343,7 @@ private sub read_number_literal(byval token as LexToken ptr)
 				exit do
 			end select
 
-			token_extend(token)
+			skip_char()
 		loop
 
 	end select
@@ -357,24 +354,24 @@ private sub read_number_literal(byval token as LexToken ptr)
 	if (found_dot) then
 		select case as const (lex.ch)
 		case CH_F, CH_L_F       '' 'F' | 'f'
-			token_extend(token)
+			skip_char()
 
 		case CH_D, CH_L_D       '' 'D' | 'd'
-			token_extend(token)
+			skip_char()
 
 		end select
 	else
 		select case as const (lex.ch)
 		case CH_U, CH_L_U       '' 'U' | 'u'
-			token_extend(token)
+			skip_char()
 		end select
 
 		select case as const (lex.ch)
 		case CH_L, CH_L_L       '' 'L' | 'l'
-			token_extend(token)
+			skip_char()
 			select case as const (lex.ch)
 			case CH_L, CH_L_L       '' 'L' | 'l'
-				token_extend(token)
+				skip_char()
 			end select
 		end select
 	end if
@@ -385,7 +382,7 @@ private sub read_string_literal(byval token as LexToken ptr)
 	token->tk = TK_STRLIT
 
 	if (lex.ch = CH_L) then
-		token_extend(token)
+		skip_char()
 	end if
 
 	dim as integer quotechar = lex.ch
@@ -394,7 +391,7 @@ private sub read_string_literal(byval token as LexToken ptr)
 	end if
 
 	'' Opening quote
-	token_extend(token)
+	skip_char()
 
 	do
 		select case (lex.ch)
@@ -409,21 +406,21 @@ private sub read_string_literal(byval token as LexToken ptr)
 			case CH_BACKSLASH, _ '' \\
 			     CH_DQUOTE   , _ '' \"
 			     CH_QUOTE        '' \'
-				token_extend(token)
+				skip_char()
 			end select
 
 		end select
 
-		token_extend(token)
+		skip_char()
 	loop
 
 	'' Closing quote
-	token_extend(token)
+	skip_char()
 end sub
 
 private sub read_one(byval token as LexToken ptr, byval tk as integer)
 	token->tk = tk
-	token_extend(token)
+	skip_char()
 end sub
 
 private sub read_line_comment(byval token as LexToken ptr)
@@ -433,7 +430,7 @@ private sub read_line_comment(byval token as LexToken ptr)
 		case CH_LF, CH_CR, CH_EOF
 			exit do
 		end select
-		token_extend(token)
+		skip_char()
 	loop
 end sub
 
@@ -452,12 +449,12 @@ private sub read_multi_comment(byval token as LexToken ptr)
 
 		end select
 
-		token_extend(token)
+		skip_char()
 	loop
 
 	'' */
-	token_extend(token)
-	token_extend(token)
+	skip_char()
+	skip_char()
 end sub
 
 '' Parses the next token.
@@ -546,12 +543,12 @@ private sub lex_tokenize(byval token as LexToken ptr)
 		if (lex.ch = CH_CR) then
 			if (lookahead_char(1) = CH_LF) then
 				'' CR
-				token_extend(token)
+				skip_char()
 			end if
 		end if
 
 		'' CR | LF
-		token_extend(token)
+		skip_char()
 
 		'' After skipping EOL, update the current line
 		lex.location.linenum += 1
@@ -635,8 +632,8 @@ private sub lex_tokenize(byval token as LexToken ptr)
 		case CH_DOT
 			if (lookahead_char(2) = CH_DOT) then	'' ...
 				read_one(token, TK_ELLIPSIS)
-				token_extend(token)
-				token_extend(token)
+				skip_char()
+				skip_char()
 			else
 				read_one(token, TK_DOT)
 			end if
@@ -755,6 +752,9 @@ private sub lex_tokenize(byval token as LexToken ptr)
 				", &h" + hex(lex.ch, 2))
 
 	end select
+
+	'' The token ends here
+	token->textlen = culng(lex.i) - culng(token->text)
 end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
