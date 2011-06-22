@@ -2,13 +2,13 @@
 #
 # Pass V=1 to see more verbose command lines.
 # Use FBFLAGS='...' to override the default debug build.
+# Specify PREFIX='/foo/bar' to override the default /usr/local install target.
 #
 
-CP := cp
-RM := rm -f
 FBC := fbc
 FBFLAGS := -g -exx
 EXEEXT :=
+PREFIX := /usr/local
 
 HEADERS := common.bi
 
@@ -26,8 +26,8 @@ ifneq ($(findstring MINGW,$(uname_s)),)
 endif
 
 ifndef V
-	QUIET_FBC  = @echo "	" FBC $@;
-	QUIET_LINK = @echo "	" LINK $@;
+	QUIET_FBC  = @echo "FBC $@";
+	QUIET_LINK = @echo "LINK $@";
 endif
 
 FROG_EXE := fbfrog$(EXEEXT)
@@ -44,6 +44,15 @@ $(FROG_EXE): $(OBJECTS)
 $(OBJECTS): %.o: %.bas $(HEADERS)
 	$(QUIET_FBC)$(FBC) $(FROG_FBFLAGS) $(FBFLAGS) -c $< -o $@
 
+.PHONY: install
+install:
+	mkdir -p $(PREFIX)/bin
+	cp $(FROG_EXE) $(PREFIX)/bin
+
+.PHONY: uninstall
+uninstall:
+	rm $(PREFIX)/bin/$(FROG_EXE)
+
 .PHONY: clean
 clean:
-	$(RM) $(FROG_EXE) $(OBJECTS)
+	rm -f $(FROG_EXE) $(OBJECTS)
