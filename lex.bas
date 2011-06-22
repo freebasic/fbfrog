@@ -103,11 +103,42 @@ end type
 
 dim shared as LexStuff lex
 
-private function find_eol(byval p as ubyte ptr) as ubyte ptr
-	while ((p < lex.limit) andalso (*p <> CH_LF) andalso (*p <> CH_CR))
-		p += 1
+'' Retrieves the text of the line containing the location and makes it ready
+'' for display during error reporting.
+private function peek_line_at(byval linebegin as ubyte ptr) as zstring ptr
+	const MAX_PEEKLINE = 512
+	static as zstring * (MAX_PEEKLINE + 1) ln
+
+	dim as ubyte ptr r      = linebegin
+	dim as ubyte ptr rlimit = lex.limit
+	dim as ubyte ptr w      = @ln
+	dim as ubyte ptr wlimit = w + MAX_PEEKLINE
+
+	while ((r < rlimit) and (w < wlimit))
+		dim as integer ch = *r
+
+		select case as const (ch)
+		case CH_LF, CH_CR
+			exit while
+
+		'' Replace NULLs, tabs, and other control chars with space.
+		'' Otherwise the indicator would be misaligned when tabs are
+		'' used in the input code...
+		case 0           to (CH_LF    - 1), _
+		     (CH_LF + 1) to (CH_CR    - 1), _
+		     (CH_CR + 1) to (CH_SPACE - 1), _
+		     CH_DEL
+			ch = CH_SPACE
+		end select
+
+		*w = ch : w += 1
+		r += 1
 	wend
-	return p
+
+	'' NULL terminator
+	*w = 0
+
+	return @ln
 end function
 
 '' Displays a line of the input source code, with an indicator showing the
@@ -115,13 +146,8 @@ end function
 ''		int foo(int bar#)
 ''		               ^
 private sub print_oops_line(byval token as ubyte ptr, byval ln as LexLine ptr)
-	dim as ubyte ptr eol = find_eol(token)
-
 	'' Get the current line of source code
-	dim as integer old_eol = *eol
-	*eol = 0
-	dim as string s = *cptr(zstring ptr, ln->begin)
-	*eol = old_eol
+	dim as string s = *peek_line_at(ln->begin)
 
 	'' Specifies where the "^" goes
 	dim as integer offset = culng(token) - culng(ln->begin)
@@ -399,23 +425,17 @@ end sub
 
 private sub read_multi_comment(byval token as LexToken ptr)
 	read_one(token, TK_MULTICOMMENT)
-
 	do
 		select case (lex.ch)
 		case CH_EOF
 			tokenizer_oops("multi-line comment is left open")
-
-		case CH_MUL
-			if (lookahead_char(1) = CH_SLASH) then
+		case CH_MUL		'' *
+			if (lookahead_char(1) = CH_SLASH) then	'' */
 				exit do
 			end if
-
 		end select
-
 		skip_char()
 	loop
-
-	'' */
 	skip_char()
 	skip_char()
 end sub
