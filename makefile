@@ -3,18 +3,25 @@
 # Pass V=1 to see more verbose command lines.
 # Use FBFLAGS='...' to override the default debug build.
 # Specify PREFIX='/foo/bar' to override the default /usr/local install target.
-#
 
 FBC := fbc
 FBFLAGS := -g -exx
 EXEEXT :=
 PREFIX := /usr/local
 
-HEADERS := common.bi
 
-OBJECTS := main.o
+HEADERS :=
+OBJECTS :=
+
+HEADERS += common.bi
+HEADERS += lex.bi
+HEADERS += hash.bi
+
+OBJECTS += common.o
+OBJECTS += main.o
 OBJECTS += lex.o
 OBJECTS += hash.o
+
 
 #
 # Host specific configuration
@@ -24,6 +31,11 @@ uname_s := $(shell uname -s || echo unknown)
 ifneq ($(findstring MINGW,$(uname_s)),)
 	EXEEXT := .exe
 endif
+
+
+#
+# Build rules
+#
 
 ifndef V
 	QUIET_FBC  = @echo "FBC $@";
