@@ -1,4 +1,5 @@
 #include once "lex.bi"
+#include once "emit.bi"
 
 
 
