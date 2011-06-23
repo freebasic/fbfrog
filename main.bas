@@ -1,5 +1,10 @@
 #include once "lex.bi"
 #include once "emit.bi"
+#include once "tree.bi"
+
+private sub write_me()
+	lex_xoops("not yet implemented, write me!")
+end sub
 
 private sub parse_pp_directive()
 	'' #
@@ -16,29 +21,46 @@ private sub parse_pp_directive()
 
 	case TK_ENDIF
 
+	case TK_DEFINE
+		lex_skip()
+		tree_add(tree_new_define(lex_text()))
+
 	case TK_PRAGMA
 		lex_skip()
 
-		'' Handle GCC's '#pragma ms_struct on | off | reset'
-		if (lex_match_text("ms_struct")) then
+		select case (*lex_text())
+		case "ms_struct"
+			lex_skip()
+			'' GCC's #pragma ms_struct on | off | reset
 			select case (*lex_text())
 			case "on"
 			case "off", "reset"
 			end select
-		end if
+
+			write_me()
+
+		case else
+			write_me()
+
+		end select
 
 	case else
 		lex_xoops("unexpected PP directive: '" & *lex_text() & "'")
 	end select
+
+	if (lex_tk() = TK_EOL) then
+		lex_skip()
+	else
+		lex_xoops("expected end-of-line following PP directive")
+	end if
 end sub
 
 private sub parse_header(byref file as string)
+	print "parsing '" & file & "'..."
 	lex_open(file)
-	emit_open(path_strip_ext(file) & ".bi")
+	tree_begin_header(path_strip_ext(file) & ".bi")
 
 	do
-		lex_skip()
-
 		select case as const (lex_tk())
 		case TK_HASH
 			parse_pp_directive()
@@ -52,7 +74,6 @@ private sub parse_header(byref file as string)
 		end select
 	loop
 
-	emit_close()
 	lex_close()
 end sub
 
@@ -97,7 +118,7 @@ end sub
 	next
 
 	lex_global_init()
-	emit_global_init()
+	tree_global_init()
 
 	'' Parse all files specified on the command line
 	for i as integer = 1 to (__FB_ARGC__ - 1)
@@ -109,5 +130,9 @@ end sub
 		end if
 	next
 
-	print "Done."
+	lex_global_end()
+
+	''transforms_global_init()
+
+	print "done."
 	end 0

@@ -1,5 +1,3 @@
-#define DEBUG_HASH
-
 '' The hash table is an array of these hash items, which associate a string to
 '' some user data (always an array index in our case).
 type HashItem
@@ -13,7 +11,7 @@ type HashTable
 	as HashItem ptr items  '' The table
 	as integer count        '' Used
 	as integer room         '' Allocated
-	#ifdef DEBUG_HASH
+	#ifdef ENABLE_STATS
 		as integer initialroom
 		as integer lookups
 		as integer collisions
@@ -29,10 +27,7 @@ declare function hash_lookup _
 		byval hash as uinteger _
 	) as HashItem ptr
 declare sub hash_init(byval h as HashTable ptr, byval exponent as integer)
-
-#ifdef DEBUG_HASH
-	declare sub _hash_stats(byval h as HashTable ptr)
-	#define hash_stats(h) print "[hash] " & #h : _hash_stats(h)
-#else
-	#define hash_stats(h) _hash_stats(h)
+#ifdef ENABLE_STATS
+	declare sub hash_stats(byval h as HashTable ptr)
 #endif
+declare sub hash_end(byval h as HashTable ptr)

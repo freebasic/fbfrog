@@ -73,7 +73,7 @@ function hash_lookup _
 		grow_table(h)
 	end if
 
-	#ifdef DEBUG_HASH
+	#ifdef ENABLE_STATS
 		h->lookups += 1
 	#endif
 
@@ -107,7 +107,7 @@ function hash_lookup _
 	dim as uinteger stepsize = (hash_hash2(s, length) and roommask) or 1
 
 	do
-		#ifdef DEBUG_HASH
+		#ifdef ENABLE_STATS
 			h->collisions += 1
 		#endif
 		i = (i + stepsize) and roommask
@@ -134,16 +134,21 @@ end function
 
 sub hash_init(byval h as HashTable ptr, byval exponent as integer)
 	h->room = 1 shl exponent
-	#ifdef DEBUG_HASH
+	#ifdef ENABLE_STATS
 		h->initialroom = h->room
 	#endif
 	allocate_table(h)
 end sub
 
-#ifdef DEBUG_HASH
-sub _hash_stats(byval h as HashTable ptr)
+#ifdef ENABLE_STATS
+sub hash_stats(byval h as HashTable ptr)
+	print "hash stats: "
 	print !"\ttable size: " & h->initialroom & " grown to " & h->room & _
 		", " & h->count & " entries"
 	print !"\t" & h->lookups & " lookups, " & h->collisions & " collisions"
 end sub
 #endif
+
+sub hash_end(byval h as HashTable ptr)
+	deallocate(h->items)
+end sub

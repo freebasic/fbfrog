@@ -103,10 +103,14 @@ type LexStuff
 
 	as integer prevtk       '' Previous token's TK_*
 
-	as zstring * (LEX_TEXTCACHE + 1) text_cache
+	as zstring * (LEX_TEXTCACHE + 1) text_cache '' lex_text() buffer
 	as ubyte ptr cached_token
 
 	as HashTable kwhash     '' Keyword hash table
+
+	#ifdef ENABLE_STATS
+		as integer tokencount    '' Tokens overall
+	#endif
 end type
 
 dim shared as LexStuff lex
@@ -758,6 +762,10 @@ private sub lex_tokenize(byval token as LexToken ptr)
 			token->tk = item->data
 		end if
 	end if
+
+	#ifdef ENABLE_STATS
+		lex.tokencount += 1
+	#endif
 end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -794,14 +802,6 @@ function lex_text() as zstring ptr
 	return @lex.text_cache
 end function
 
-function lex_match_text(byval text as zstring ptr) as integer
-	dim as integer matched = (*text = *lex_text())
-	if (matched) then
-		lex_skip()
-	end if
-	return matched
-end function
-
 function lex_lookahead_tk(byval n as integer) as integer
 	assert((n > 0) and (n < LEX_TOKENCOUNT))
 	return lex.queue((lex.token + n) and (LEX_TOKENCOUNT - 1)).tk
@@ -816,15 +816,6 @@ sub lex_skip()
 	else
 		lex_tokenize(@lex.queue(lex.token))
 	end if
-end sub
-
-sub lex_skip_until(byval tk as integer)
-	do
-		select case (lex.queue(lex.token).tk)
-		case tk, TK_EOF
-			lex_skip()
-		end select
-	loop
 end sub
 
 private sub load_file(byref filename as string)
@@ -882,6 +873,9 @@ sub lex_open(byref filename as string)
 	'' and then skip_char() will overflow it again and reach EOF)
 	lex.i -= 1
 	skip_char()
+
+	'' Read first token
+	lex_skip()
 end sub
 
 sub lex_close()
@@ -946,7 +940,7 @@ dim shared as zstring ptr keywords(0 to (TK__KWCOUNT - 1)) = _
 
 sub lex_global_init()
 	'' Load the keywords
-	hash_init(@lex.kwhash, 6)
+	hash_init(@lex.kwhash, 7)
 	for i as integer = 0 to (TK__KWCOUNT - 1)
 		dim as zstring ptr kw = keywords(i)
 		dim as integer length = len(*kw)
@@ -957,4 +951,13 @@ sub lex_global_init()
 		item->hash = hash
 		item->data = i + TK__FIRSTKW
 	next
+end sub
+
+sub lex_global_end()
+	#ifdef ENABLE_STATS
+		print "lex stats:"
+		print !"\t" & lex.tokencount & " tokens"
+		hash_stats(@lex.kwhash)
+	#endif
+	hash_end(@lex.kwhash)
 end sub

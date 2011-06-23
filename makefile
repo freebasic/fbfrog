@@ -1,11 +1,11 @@
 #!/usr/bin/make -f
 #
 # Pass V=1 to see more verbose command lines.
-# Use FBFLAGS='...' to override the default debug build.
+# Use FBFLAGS='' to override the default debug build.
 # Specify PREFIX='/foo/bar' to override the default /usr/local install target.
 
 FBC := fbc
-FBFLAGS := -g -exx
+FBFLAGS := -g -exx -d ENABLE_STATS
 EXEEXT :=
 PREFIX := /usr/local
 
@@ -17,12 +17,14 @@ HEADERS += common.bi
 HEADERS += emit.bi
 HEADERS += lex.bi
 HEADERS += hash.bi
+HEADERS += tree.bi
 
 OBJECTS += common.o
 OBJECTS += emit.o
 OBJECTS += main.o
 OBJECTS += lex.o
 OBJECTS += hash.o
+OBJECTS += tree.o
 
 
 #
