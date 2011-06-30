@@ -1,3 +1,14 @@
+sub _xassertfail _
+	( _
+		byval test as zstring ptr, _
+		byval filename as zstring ptr, _
+		byval funcname as zstring ptr, _
+		byval linenum as integer _
+	)
+	print *filename & "(" & linenum & "):" & *funcname & "(): assertion failed: " & *test
+	xoops("internal problem, please report this bug!")
+end sub
+
 sub oops(byref message as string)
 	print "oops, " & message
 end sub
