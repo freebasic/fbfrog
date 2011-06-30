@@ -1,6 +1,12 @@
 #include once "lex.bi"
-#include once "emit.bi"
 #include once "tree.bi"
+
+type FrogStuff
+	'' Emitting
+	as integer emit_fo  '' Output file number during emitting
+end type
+
+dim shared as FrogStuff frog
 
 private sub write_me()
 	lex_xoops("not yet implemented, write me!")
@@ -85,6 +91,54 @@ private sub print_help_and_exit()
 	print "errors and warnings, and there may be notes emitted into the .bi files."
 	end 1
 end sub
+
+private sub emit(byval what as zstring ptr)
+	if (put(#frog.emit_fo, , *what)) then
+		xoops("file output failed!")
+	end if
+end sub
+
+private sub emit_open(byref filename as string)
+	frog.emit_fo = freefile()
+	if (open(filename, for binary, access write, as #frog.emit_fo)) then
+		xoops("could not open output file: '" & filename & "'")
+	end if
+end sub
+
+private sub emit_close()
+	close #frog.emit_fo
+	frog.emit_fo = 0
+end sub
+
+private sub emit_tree(byval t as FbTree ptr)
+	static as integer level = 0
+
+	select case as const (t->type)
+	case TREE_DEFINE
+		emit("#define ")
+		emit(t->text)
+
+	case TREE_INCLUDE
+		emit("#include ")
+		emit(t->text)
+
+	case else
+		xassert(FALSE)
+	end select
+end sub
+
+private sub emit_header(byval header as FbHeader ptr)
+	emit_open(*header->filename)
+
+	dim as FbTree ptr t = header->head
+	while (t)
+		emit_tree(t)
+		t = t->next
+	wend
+
+	emit_close()
+end sub
+
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 

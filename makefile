@@ -14,13 +14,11 @@ HEADERS :=
 OBJECTS :=
 
 HEADERS += common.bi
-HEADERS += emit.bi
 HEADERS += lex.bi
 HEADERS += hash.bi
 HEADERS += tree.bi
 
 OBJECTS += common.o
-OBJECTS += emit.o
 OBJECTS += main.o
 OBJECTS += lex.o
 OBJECTS += hash.o
