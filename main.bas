@@ -29,7 +29,7 @@ private sub parse_pp_directive()
 
 	case TK_DEFINE
 		lex_skip()
-		tree_add(tree_new_define(lex_text()))
+		tree_add_define(lex_text())
 
 	case TK_PRAGMA
 		lex_skip()
@@ -186,7 +186,11 @@ end sub
 
 	lex_global_end()
 
-	''transforms_global_init()
+	dim as FbHeader ptr header = tree_get_first_header()
+	while (header)
+		emit_header(header)
+		header = header->next
+	wend
 
 	print "done."
 	end 0

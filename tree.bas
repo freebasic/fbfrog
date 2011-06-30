@@ -97,7 +97,7 @@ private function text_store(byval text as zstring ptr) as zstring ptr
 	return p
 end function
 
-private function tree_alloc() as FbTree ptr
+private function tree_alloc(byval typ as integer) as FbTree ptr
 	#ifdef ENABLE_STATS
 		tree.nodecount += 1
 	#endif
@@ -107,29 +107,35 @@ private function tree_alloc() as FbTree ptr
 			tree.nodeblockcount += 1
 		#endif
 		tree.nodefree = 256
-		tree.node = xallocate(sizeof(FbTree) * tree.nodefree)
+		tree.node = xcallocate(sizeof(FbTree) * tree.nodefree)
 	end if
 
 	dim as FbTree ptr node = tree.node
 	tree.node += 1
 	tree.nodefree -= 1
+
+	node->type = typ
 	return node
 end function
 
 sub tree_begin_header(byval filename as zstring ptr)
-	dim as FbHeader ptr header = xallocate(sizeof(FbHeader))
-	header->next = NULL
-	header->prev = tree.tail
-	tree.tail = header
+	dim as FbHeader ptr header = xcallocate(sizeof(FbHeader))
+
 	if (tree.head = NULL) then
 		tree.head = header
 	end if
-
-	header->head = NULL
-	header->tail = NULL
+	if (tree.tail) then
+		tree.tail->next = header
+	end if
+	header->prev = tree.tail
+	tree.tail = header
 
 	header->filename = text_store(filename)
 end sub
+
+function tree_get_first_header() as FbHeader ptr
+	return tree.head
+end function
 
 '' Append a node to the last header
 sub tree_add(byval t as FbTree ptr)
@@ -141,11 +147,14 @@ sub tree_add(byval t as FbTree ptr)
 	end if
 end sub
 
-function tree_new_define(byval id as zstring ptr) as FbTree ptr
-	dim as FbTree ptr t = tree_alloc()
-	t->type = TREE_DEFINE
-	t->id = text_store(id)
-	t->next = NULL
-	t->prev = NULL
-	return t
-end function
+sub tree_add_define(byval id as zstring ptr)
+	dim as FbTree ptr t = tree_alloc(TREE_DEFINE)
+	t->text = text_store(id)
+	tree_add(t)
+end sub
+
+sub tree_add_include(byval is_computed as integer, byval text as zstring ptr)
+	dim as FbTree ptr t = tree_alloc(TREE_INCLUDE)
+	t->text = text_store(text)
+	tree_add(t)
+end sub
