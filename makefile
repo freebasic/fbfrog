@@ -5,7 +5,7 @@
 # Specify PREFIX='/foo/bar' to override the default /usr/local install target.
 
 FBC := fbc
-FBFLAGS := -g -exx -d ENABLE_STATS
+FBFLAGS := -g -exx
 EXEEXT :=
 PREFIX := /usr/local
 
