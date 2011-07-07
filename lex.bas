@@ -620,14 +620,14 @@ private sub lex_tokenize(byval token as LexToken ptr)
 		read_one(token, TK_COMMA)
 
 	case CH_MINUS		'' -
-		read_one(token, TK_MINUS)
+		read_one(token, TK_SUB)
 		select case (lex.ch)
 		case CH_GT	'' ->
 			read_one(token, TK_FIELDDEREF)
 		case CH_MINUS	'' --
 			read_one(token, TK_DECREMENT)
 		case CH_EQ	'' -=
-			read_one(token, TK_SELFMINUS)
+			read_one(token, TK_SELFSUB)
 		end select
 
 	case CH_DOT		'' .

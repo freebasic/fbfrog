@@ -20,8 +20,8 @@ enum
 	TK_SELFADD      '' +=
 	TK_INCREMENT    '' ++
 	TK_COMMA        '' ,
-	TK_MINUS        '' -
-	TK_SELFMINUS    '' -=
+	TK_SUB          '' -
+	TK_SELFSUB      '' -=
 	TK_DECREMENT    '' --
 	TK_FIELDDEREF   '' ->
 	TK_DOT          '' .
