@@ -86,7 +86,9 @@ sub transforms_global_init()
 		dim as HashItem ptr item = hash_lookup(@emit.fbkwhash, kw, length, hash)
 		assert(item->s = NULL)
 		item->s = kw
+		item->length = length
 		item->hash = hash
+		emit.fbkwhash.count += 1
 	next
 end sub
 

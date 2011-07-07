@@ -953,8 +953,10 @@ sub lex_global_init()
 		dim as HashItem ptr item = hash_lookup(@lex.kwhash, kw, length, hash)
 		assert(item->s = NULL)
 		item->s = kw
+		item->length = length
 		item->hash = hash
 		item->data = i + TK__FIRSTKW
+		lex.kwhash.count += 1
 	next
 end sub
 

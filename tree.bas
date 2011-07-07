@@ -91,8 +91,10 @@ private function text_store(byval text as zstring ptr) as zstring ptr
 
 	fb_MemCopy(byval p, byval text, length)
 	item->s = p
+	item->length = length
 	item->hash = hash
 	/'item->data = <unused>'/
+	tree.texthash.count += 1
 
 	return p
 end function
