@@ -28,8 +28,6 @@ enum
 	TK_ELLIPSIS     '' ...
 	TK_DIV          '' /
 	TK_SELFDIV      '' /=
-	TK_LINECOMMENT  '' //
-	TK_MULTICOMMENT '' /* ... */
 	TK_COLON        '' :
 	TK_SEMI         '' ;
 	TK_LT           '' <

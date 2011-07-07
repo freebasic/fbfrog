@@ -424,20 +424,21 @@ private sub read_one(byval token as LexToken ptr, byval tk as integer)
 	skip_char()
 end sub
 
-private sub read_line_comment(byval token as LexToken ptr)
-	read_one(token, TK_LINECOMMENT)
+private sub skip_line_comment()
+	skip_char()
 	do
+		skip_char()
 		select case (lex.ch)
 		case CH_LF, CH_CR, CH_EOF
 			exit do
 		end select
-		skip_char()
 	loop
 end sub
 
-private sub read_multi_comment(byval token as LexToken ptr)
-	read_one(token, TK_MULTICOMMENT)
+private sub skip_multi_comment()
+	skip_char()
 	do
+		skip_char()
 		select case (lex.ch)
 		case CH_EOF
 			tokenizer_xoops("multi-line comment is left open")
@@ -446,7 +447,6 @@ private sub read_multi_comment(byval token as LexToken ptr)
 				exit do
 			end if
 		end select
-		skip_char()
 	loop
 	skip_char()
 	skip_char()
@@ -459,6 +459,16 @@ private sub lex_tokenize(byval token as LexToken ptr)
 	do
 		select case as const (lex.ch)
 		case CH_TAB, CH_SPACE
+
+		case CH_SLASH		'' /
+			select case (lookahead_char(1))
+			case CH_SLASH	'' //
+				skip_line_comment()
+			case CH_MUL	'' /*
+				skip_multi_comment()
+			case else
+				exit do
+			end select
 
 		case else
 			exit do
@@ -638,14 +648,9 @@ private sub lex_tokenize(byval token as LexToken ptr)
 
 	case CH_SLASH		'' /
 		read_one(token, TK_DIV)
-		select case (lex.ch)
-		case CH_SLASH	'' //
-			read_line_comment(token)
-		case CH_MUL	'' /*
-			read_multi_comment(token)
-		case CH_EQ	'' /=
+		if (lex.ch = CH_EQ) then	'' /=
 			read_one(token, TK_SELFDIV)
-		end select
+		end if
 
 	case CH_0 to CH_9	'' 0 - 9
 		read_number_literal(token)
