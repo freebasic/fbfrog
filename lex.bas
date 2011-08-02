@@ -1,6 +1,425 @@
 #include once "lex.bi"
 #include once "hash.bi"
 
+dim shared as HashTable fbkwhash
+
+dim shared as zstring ptr fbkeywords(0 to ...) = _
+{ _
+	@"ABS"        , @"ACCESS"     , @"ACOS"       , @"ALIAS"      , _
+	@"AND"        , @"ANDALSO"    , @"ANY"        , @"APPEND"     , _
+	@"AS"         , @"ASC"        , @"ASIN"       , @"ASM"        , _
+	@"ATAN2"      , @"ATN"        , _
+	@"BASE"       , @"BINARY"     , @"BYREF"      , @"BYTE"       , _
+	@"BYVAL"      , _
+	@"CALL"       , @"CASE"       , @"CAST"       , @"CBYTE"      , _
+	@"CDBL"       , @"CDECL"      , @"CHR"        , @"CINT"       , _
+	@"CIRCLE"     , @"CLASS"      , @"CLNG"       , @"CLNGINT"    , _
+	@"CLOSE"      , @"COLOR"      , @"COMMON"     , @"CONST"      , _
+	@"CONSTRUCTOR", @"CONTINUE"   , @"COS"        , @"CPTR"       , _
+	@"CSHORT"     , @"CSIGN"      , @"CSNG"       , @"CUBYTE"     , _
+	@"CUINT"      , @"CULNG"      , @"CULNGINT"   , @"CUNSG"      , _
+	@"CUSHORT"    , @"CVD"        , @"CVI"        , @"CVL"        , _
+	@"CVLONGINT"  , @"CVS"        , @"CVSHORT"    , _
+	@"DATA"       , @"DECLARE"    , @"DEFBYTE"    , @"DEFDBL"     , _
+	@"DEFINE"     , @"DEFINED"    , @"DEFINT"     , @"DEFLNG"     , _
+	@"DEFLONGINT" , @"DEFSHORT"   , @"DEFSNG"     , @"DEFSTR"     , _
+	@"DEFUBYTE"   , @"DEFUINT"    , @"DEFULNG"    , @"DEFULONGINT", _
+	@"DEFUSHORT"  , @"DELETE"     , @"DESTRUCTOR" , @"DIM"        , _
+	@"DO"         , @"DOUBLE"     , @"DRAW"       , @"DYNAMIC"    , _
+	@"ELSE"       , @"ELSEIF"     , @"ENCODING"   , @"END"        , _
+	@"ENDIF"      , @"ENDMACRO"   , @"ENUM"       , @"EQV"        , _
+	@"ERASE"      , @"ERR"        , @"ERROR"      , @"ESCAPE"     , _
+	@"EXIT"       , @"EXP"        , @"EXPLICIT"   , @"EXPORT"     , _
+	@"EXTERN"     , _
+	@"FIELD"      , @"FIX"        , @"FOR"        , @"FRAC"       , _
+	@"FUNCTION"   , _
+	@"GET"        , @"GOSUB"      , @"GOTO"       , _
+	@"IF"         , @"IFDEF"      , @"IFNDEF"     , @"IIF"        , _
+	@"IMAGECREATE", @"IMP"        , @"IMPORT"     , @"INCLIB"     , _
+	@"INCLUDE"    , @"INPUT"      , @"INSTR"      , @"INSTRREV"   , _
+	@"INT"        , @"INTEGER"    , @"IS"         , _
+	@"LANG"       , @"LBOUND"     , @"LEN"        , @"LET"        , _
+	@"LIB"        , @"LIBPATH"    , @"LINE"       , @"LOCAL"      , _
+	@"LOCK"       , @"LOG"        , @"LONG"       , @"LONGINT"    , _
+	@"LOOP"       , @"LPRINT"     , @"LSET"       , @"LTRIM"      , _
+	@"MACRO"      , @"MID"        , @"MKD"        , @"MKI"        , _
+	@"MKL"        , @"MKLONGINT"  , @"MKS"        , @"MKSHORT"    , _
+	@"MOD"        , @"MSBITFIELDS", _
+	@"NAKED"      , @"NAME"       , @"NAMESPACE"  , @"NEW"        , _
+	@"NEXT"       , @"NOGOSUB"    , @"NOKEYWORD"  , @"NOT"        , _
+	@"ON"         , @"ONCE"       , @"OPEN"       , @"OPERATOR"   , _
+	@"OPTION"     , @"OR"         , @"ORELSE"     , @"OUTPUT"     , _
+	@"OVERLOAD"   , _
+	@"PAINT"      , @"PALETTE"    , @"PASCAL"     , @"PEEK"       , _
+	@"POINT"      , @"POINTER"    , @"POKE"       , @"POP"        , _
+	@"PUSH"       , @"PRAGMA"     , @"PRESERVE"   , @"PRESET"     , _
+	@"PRINT"      , @"PRIVATE"    , @"PROCPTR"    , @"PROPERTY"   , _
+	@"PROTECTED"  , @"PSET"       , @"PTR"        , @"PUBLIC"     , _
+	@"PUT"        , _
+	@"RANDOM"     , @"READ"       , @"REDIM"      , @"REM"        , _
+	@"RESTORE"    , @"RESUME"     , @"RETURN"     , @"RSET"       , _
+	@"RTRIM"      , _
+	@"SADD"       , @"SCOPE"      , @"SCREEN"     , @"SCREENRES"  , _
+	@"SEEK"       , @"SELECT"     , @"SGN"        , @"SHARED"     , _
+	@"SHL"        , @"SHORT"      , @"SHR"        , @"SIN"        , _
+	@"SINGLE"     , @"SIZEOF"     , @"SPC"        , @"SQR"        , _
+	@"STATIC"     , @"STDCALL"    , @"STEP"       , @"STR"        , _
+	@"STRING"     , @"STRPTR"     , @"SUB"        , @"SWAP"       , _
+	@"TAB"        , @"TAN"        , @"THEN"       , @"TO"         , _
+	@"TRIM"       , @"TYPE"       , @"TYPEOF"     , _
+	@"UBOUND"     , @"UBYTE"      , @"UINTEGER"   , @"ULONG"      , _
+	@"ULONGINT"   , @"UNDEF"      , @"UNION"      , @"UNLOCK"     , _
+	@"UNSIGNED"   , @"UNTIL"      , @"USHORT"     , @"USING"      , _
+	@"VAR"        , @"VARPTR"     , @"VA_FIRST"   , @"VIEW"       , _
+	@"WCHR"       , @"WEND"       , @"WHILE"      , @"WIDTH"      , _
+	@"WINDOW"     , @"WITH"       , @"WRITE"      , @"WSTR"       , _
+	@"WSTRING"    , _
+	@"XOR"        , _
+	@"ZSTRING"      _
+}
+
+sub transforms_global_init()
+	hash_init(@emit.fbkwhash, 9)
+	for i as integer = 0 to ubound(fbkeywords)
+		dim as zstring ptr kw = fbkeywords(i)
+		dim as integer length = len(*kw)
+		dim as uinteger hash = hash_hash(kw, length)
+		dim as HashItem ptr item = hash_lookup(@emit.fbkwhash, kw, length, hash)
+		assert(item->s = NULL)
+		item->s = kw
+		item->length = length
+		item->hash = hash
+		emit.fbkwhash.count += 1
+	next
+end sub
+
+private function is_fb_keyword(byval id as zstring ptr) as integer
+	dim as integer length = len(*id)
+	return (hash_lookup(@emit.fbkwhash, id, length, _
+	                    hash_hash(id, length))->s <> NULL)
+end function
+
+type LexStuff
+	'' Gap buffer containing current file's content
+	as ubyte ptr p      '' Buffer containing: front,gap,back
+	as integer front    '' Front length; the gap's offset
+	as integer gap      '' Gap length
+	as integer size     '' Front + back
+	as integer growth   '' By how much the buffer grows when it's reallocated
+end type
+
+dim shared as LexStuff lex
+
+sub lex_init()
+	'' Load the keywords
+	hash_init(@file.kwhash, 7)
+	for i as integer = 0 to (TK__KWCOUNT - 1)
+		dim as zstring ptr kw = keywords(i)
+		dim as integer length = len(*kw)
+		dim as uinteger hash = hash_hash(kw, length)
+		dim as HashItem ptr item = hash_lookup(@file.kwhash, _
+		                                       kw, length, hash)
+		assert(item->s = NULL)
+		item->s = kw
+		item->length = length
+		item->hash = hash
+		item->data = i + TK__FIRSTKW
+		file.kwhash.count += 1
+	next
+end sub
+
+private sub append_file(byref filename as string)
+	const FILES_GROWTH = 8
+
+	if (lex.filecount = lex.fileroom) then
+		lex.fileroom += FILES_GROWTH
+		lex.files = xreallocate(lex.files, _
+		                        lex.fileroom * sizeof(LexFile))
+	end if
+
+	lex.file = lex.files + lex.filecount
+
+	clear(byval lex.file, 0, sizeof(LexFile))
+	lex.f->name = filename
+
+	lex.filecount += 1
+end sub
+
+function lex_file_count() as integer
+	return lex.filecount
+end function
+
+sub lex_switch(byval file as integer)
+	xassert((file >= 0) and (file < lex_file_count()))
+	lex.file = lex.files + file
+end sub
+
+function lex_count() as integer
+	return lex.f->count
+end function
+
+sub lex_insert(byval i as integer, byval tk as integer)
+	const TOKENS_GROWTH = 512
+
+	if (lex.f->count = lex.f->room) then
+		lex.f->room += TOKENS_GROWTH
+		lex.f->tokens = xreallocate(lex.f->tokens, _
+		                            lex.f->room * sizeof(LexToken))
+	end if
+
+	dim as integer rightside = lex.f->count - i
+	if (rightside > 0) then
+		dim as ubyte ptr source = _
+				lex.f->tokens + (i * sizeof(LexToken))
+		memmove(source + sizeof(LexToken), _
+		        source, _
+		        rightside * sizeof(LexToken))
+	end if
+
+	dim as any ptr token = lex.f->tokens + (i * sizeof(LexToken))
+	clear(byval token, 0, sizeof(LexToken))
+	token->tk = tk
+
+	lex.f->count += 1
+end sub
+
+sub lex_remove(byval i as integer)
+	xassert((i >= 0) and (i < lex.f->count))
+
+	lex.f->count -= 1
+
+	dim as integer rightside = lex.f->count - i
+	if (rightside > 0) then
+		dim as any ptr target = _
+				lex.f->tokens + (i * sizeof(LexToken))
+		memmove(target, _
+		        target + sizeof(LexToken), _
+		        rightside * sizeof(LexToken))
+	end if
+end sub
+
+'' Copies the given range of bytes (offset, size) from the gap buffer into the
+'' given target buffer (p, size).
+function gap_render _
+	( _
+		byval gap as TheGap ptr, _
+		byval offset as integer, _
+		byval p as ubyte ptr, _
+		byval size as integer _
+	) as integer
+
+	if ((size <= 0) or (offset < 0) or (offset >= gap->size)) then
+		return 0
+	end if
+
+	dim as integer limit = offset + size
+	if (limit > gap->size) then
+		limit = gap->size
+	end if
+
+	size = limit - off
+	dim as ubyte ptr source = gap->p + offset
+
+	if (offset >= gap->front) then
+		'' Requested range completely lies inside the back part.
+		memcpy(p, source + gap->gap, size)
+	elseif (limit > gap->front) then
+		'' Requested range "contains" the gap, so there are two parts to copy.
+		dim as integer bytesleft = gap->front - offset
+		memcpy(p, source, bytesleft)
+		memcpy(p + bytesleft, source + gap->gap, limit - gap->front)
+	else
+		'' Requested range completely lies inside the front part.
+		memcpy(p, source, size)
+	end if
+
+	return size
+end function
+
+function gap_get(byval gap as TheGap ptr, byval off as integer) as any ptr
+	'' Inside end?
+	if (off >= gap->front) then
+		'' Invalid?
+		if (off >= gap->size) then
+			return NULL
+		end if
+		off += gap->gap
+	else
+		'' Invalid?
+		if (off < 0) then
+			return NULL
+		end if
+	end if
+	return gap->p + off
+end function
+
+sub gap_move(byval gap as TheGap ptr, byval delta as integer)
+	gap_move_to(gap, gap->front + delta)
+end sub
+
+sub gap_move_to(byval gap as TheGap ptr, byval off as integer)
+	if (off < 0) then
+		off = 0
+	elseif (off > gap->size) then
+		off = gap->size
+	end if
+
+	'' Move gap:
+	'' Move a block of data from before/after the gap in reverse direction
+	dim as integer offold = gap->front
+	if (off < offold) then
+		'' Move gap left
+		dim as ubyte ptr source = gap->p + off
+		memmove(source + gap->gap, source, offold - off)
+	elseif (off > offold) then
+		'' Move gap right
+		dim as ubyte ptr dest = gap->p + offold
+		memmove(dest, dest + gap->gap, off - offold)
+	end if
+
+	gap->front = off
+end sub
+
+'' Enlarge the gap; 'size' is the minimum size that is needed.
+sub gap_grow(byval gap as TheGap ptr, byval size as integer)
+	if (size <= 0)
+		return
+	end if
+
+	dim as integer newgap = gap->gap + g->growth
+	if (newgap < size)
+		newgap = size
+	end if
+
+	gap->p = xreallocate(gap->p, gap->size + newgap)
+
+	'' Move the back block to the end of the new buffer, so that the gap in the
+	'' middle grows. The front part is preserved by the realloc().
+	if (gap->size > gap->front) then
+		dim as ubyte ptr pgap = gap->p + gap->front
+		memmove(pgap + newgap, pgap + gap->gap, gap->size - gap->front)
+	end if
+
+	gap->gap = newgap
+end sub
+
+'' Forward-insertion at the current gap offset: front grows, gap shrinks.
+sub gap_in(byval gap as TheGap ptr, byval p as any ptr, byval size as integer)
+	if (size <= 0) then return
+
+	'' Make room for the new data, if necessary.
+	if (gap->gap < size) then
+		gap_grow(gap, size)
+	end if
+
+	'' If a buffer was given, copy content
+	if (p) then
+		memcpy(gap->p + gap->front, p, size)
+	end if
+
+	gap->front += size
+	gap->gap -= size
+	gap->size += size
+end sub
+
+'' Backwards-deletion from the current gap offset: front shrinks, gap grows.
+sub gap_out(byval gap as TheGap ptr, byval p as any ptr, byval size as integer)
+	if ((size <= 0) or (size > gap->front)) then return
+
+	gap->front -= size
+	gap->gap += size
+	gap->size -= size
+
+	'' If a buffer was given, copy the to-be-deleted part into it
+	if (p) then
+		memcpy(p, gap->p + gap->front, size)
+	end if
+end sub
+
+'' Moves bytes from gap buffer 'a' directly into gap buffer 'b'. Doing this
+'' manually with gapIn/gapOut would require a temporary buffer.
+sub gap_out_in(byval a as TheGap ptr, byval b as TheGap ptr, byval size as integer)
+	if ((size <= 0) or (size > a->front)) then return
+
+	'' Not enough room?
+	if (b->gap < size) then
+		gap_grow(b, size)
+	end if
+
+	a->front -= size
+	a->gap += size
+	a->size -= size
+	memcpy(b->p + b->front, a->p + a->front, size)
+	b->front += size
+	b->gap -= size
+	b->size += size
+end sub
+
+sub gap_init(byval gap as TheGap ptr, byval growth as integer)
+	gap->p = NULL
+	gap->front = 0
+	gap->gap = 0
+	gap->size = 0
+	gap->growth = growth
+end sub
+
+sub gap_end(byval gap as TheGap ptr)
+	deallocate(gap->p)
+end sub
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+'' Careful: keep in sync with the lex.bi:TK_* token id enum!
+dim shared as zstring ptr keywords(0 to (TK__KWCOUNT - 1)) = _
+{ _
+	@"_Bool"   , _
+	@"_Complex", _
+	@"_Imaginary", _
+	@"auto"    , _
+	@"break"   , _
+	@"case"    , _
+	@"char"    , _
+	@"const"   , _
+	@"continue", _
+	@"default" , _
+	@"define"  , _
+	@"defined" , _
+	@"do"      , _
+	@"double"  , _
+	@"else"    , _
+	@"elif"    , _
+	@"endif"   , _
+	@"enum"    , _
+	@"extern"  , _
+	@"float"   , _
+	@"for"     , _
+	@"goto"    , _
+	@"if"      , _
+	@"ifdef"   , _
+	@"ifndef"  , _
+	@"include" , _
+	@"inline"  , _
+	@"int"     , _
+	@"long"    , _
+	@"pragma"  , _
+	@"register", _
+	@"restrict", _
+	@"return"  , _
+	@"short"   , _
+	@"signed"  , _
+	@"sizeof"  , _
+	@"static"  , _
+	@"struct"  , _
+	@"switch"  , _
+	@"typedef" , _
+	@"undef"   , _
+	@"union"   , _
+	@"unsigned", _
+	@"void"    , _
+	@"volatile", _
+	@"while"     _
+}
+
 enum
 	CH_BELL     = &h07  '' \a
 	CH_BKSPC    = &h08  '' \b
@@ -59,61 +478,26 @@ enum
 	CH_PIPE         '' |
 	CH_RBRACE       '' }
 	CH_TILDE        '' ~
-
-	CH_DEL      = 127
-
-	CH_EOF      = 256
 end enum
 
-type LexLine
-	as integer num     '' Current line
-	as ubyte ptr begin '' Pointer into current buffer
-end type
-
-type LexToken
-	as integer tk      '' TK_*
-	as ubyte ptr i     '' Original text in current buffer
-	as integer length
-	as LexLine line    '' Where this token was read (error reporting)
-end type
-
-'' Determines how much look ahead is available.
-'' We're expecting it to be a power of 2.
-const LEX_TOKENCOUNT_EXPONENT = 1
-const LEX_TOKENCOUNT = (1 shl LEX_TOKENCOUNT_EXPONENT)
-
-'' Token text buffer for lex_text(); this limits the max. possible length of
-'' a token, if its text is retrieved during parsing, but it helps providing
-'' a nice lexer interface.
-const LEX_TEXTCACHE = (1 shl 13)
-
-type LexStuff
-	as string filename      '' File name from #include
+type TokenizerFile
+	as string name          '' File name
 
 	as ubyte ptr buffer     '' File content buffer
 	as ubyte ptr i          '' Current char, will always be <= limit
 	as ubyte ptr limit      '' (end of buffer)
-	as LexLine line         '' Current line
 
-	as integer ch           '' Current char or CH_EOF if i = limit
+	as integer linenum      '' Current line
+	as ubyte ptr linebegin  '' Current line's begin
 
-	as LexToken queue(0 to (LEX_TOKENCOUNT - 1))
-	as integer token        '' Current token
-	as integer aheadcount   '' Number of loaded look ahead tokens
-
-	as integer prevtk       '' Previous token's TK_*
-
-	as zstring * (LEX_TEXTCACHE + 1) text_cache '' lex_text() buffer
-	as ubyte ptr cached_token
+	as integer tk           '' Current token (TK_*)
+	as ubyte ptr tkbegin    '' Its text
+	as integer tklength     '' Length of its text
 
 	as HashTable kwhash     '' Keyword hash table
-
-	#ifdef ENABLE_STATS
-		as integer tokencount    '' Tokens overall
-	#endif
 end type
 
-dim shared as LexStuff lex
+dim shared as TokenizerFile file
 
 '' Retrieves the text of the line containing the location and makes it ready
 '' for display during error reporting.
@@ -122,7 +506,7 @@ private function peek_line_at(byval linebegin as ubyte ptr) as zstring ptr
 	static as zstring * (MAX_PEEKLINE + 1) ln
 
 	dim as ubyte ptr r      = linebegin
-	dim as ubyte ptr rlimit = lex.limit
+	dim as ubyte ptr rlimit = file.limit
 	dim as ubyte ptr w      = @ln
 	dim as ubyte ptr wlimit = w + MAX_PEEKLINE
 
@@ -157,7 +541,7 @@ end function
 '' exact location. For example:
 ''		int foo(int bar#)
 ''		               ^
-private sub print_oops_line(byval token as ubyte ptr, byval ln as LexLine ptr)
+private sub print_oops_line(byval token as ubyte ptr, byval line as LexLine ptr)
 	'' Get the current line of source code
 	dim as string s = *peek_line_at(ln->begin)
 
@@ -213,55 +597,19 @@ private sub print_oops_line(byval token as ubyte ptr, byval ln as LexLine ptr)
 	print s + !"\n" + space(offset) + "^"
 end sub
 
-private sub private_xoops _
-	( _
-		byval token as ubyte ptr, _
-		byval ln as LexLine ptr, _
-		byref message as string _
-	)
-	print lex.filename & "(" & ln->num & "): oops, " & message
-	print_oops_line(token, ln)
+private sub file_xoops(byref message as string)
+	print file.name & "(" & file.linenum & "): oops, " & message
 	end 1
 end sub
 
-private sub tokenizer_xoops(byref message as string)
-	private_xoops(lex.i, @lex.line, message)
-end sub
-
-'' Skip current char and go to the next
-private sub skip_char()
-	lex.i += 1
-	if (lex.i < lex.limit) then
-		lex.ch = lex.i[0]
-	else
-		'' Keep lex.i <= lex.limit
-		if (lex.i > lex.limit) then
-			lex.i -= 1
-		end if
-		lex.ch = CH_EOF
-	end if
-end sub
-
-function lookahead_char(byval n as integer) as integer
-	assert(n > 0)
-	if ((lex.i + n) < lex.limit) then
-		return lex.i[n]
-	end if
-	return CH_EOF
-end function
-
-private sub token_extend(byval token as LexToken ptr)
-	skip_char()
-end sub
-
 '' Reads a-z, A-Z, 0-9, _, $ sequences (identifiers, keywords).
-private sub read_id(byval token as LexToken ptr)
-	token->tk = TK_ID
+private sub read_id()
+	file.tk = TK_ID
 
 	do
-		skip_char()
+		file.i += 1
 
-		select case as const (lex.ch)
+		select case as const (file.i[0])
 		case CH_A   to CH_Z  , _
 		     CH_L_A to CH_L_Z, _
 		     CH_0   to CH_9  , _
@@ -275,24 +623,24 @@ private sub read_id(byval token as LexToken ptr)
 	loop
 end sub
 
-private sub read_number_literal(byval token as LexToken ptr)
-	token->tk = TK_NUMLIT
+private sub read_number()
+	file.tk = TK_NUMLIT
 
 	dim as integer numbase = 10
-	if (lex.ch = CH_0) then		'' 0
-		if (lex.ch = CH_L_X) then	'' 0x
+	if (file.i[0] = CH_0) then '' 0
+		if (file.i[0] = CH_L_X) then '' 0x
 			numbase = 16
-			skip_char()
+			file.i += 1
 		else
 			numbase = 8
 		end if
 	end if
 
-	skip_char()
+	file.i += 1
 
 	dim as integer found_dot = FALSE
 	do
-		dim as integer digit = lex.ch
+		dim as integer digit = file.i[0]
 
 		select case as const (digit)
 		case CH_A to CH_F
@@ -321,147 +669,126 @@ private sub read_number_literal(byval token as LexToken ptr)
 			exit do
 		end if
 
-		skip_char()
+		file.i += 1
 	loop
 
 	'' Exponent? (can be used even without fractional part, e.g. '1e1')
-	select case as const (lex.ch)
+	select case (file.i[0])
 	case CH_E, CH_L_E   '' 'E', 'e'
-		skip_char()
+		file.i += 1
 
 		'' ['+' | '-']
-		select case as const (lex.ch)
+		select case (file.i[0])
 		case CH_PLUS, CH_MINUS
-			skip_char()
+			file.i += 1
 		end select
 
 		'' ['0'-'9']
-		do
-			select case as const (lex.ch)
-			case CH_0 to CH_9
-
-			case else
-				exit do
-			end select
-
-			skip_char()
-		loop
+		while ((file.i[0] >= CH_0) and (file.i[0] <= CH_9))
+			file.i += 1
+		wend
 
 	end select
 
 	'' Type suffixes
 	'' TODO: are all possible combinations covered?
-	'' C is more strict than FB here.
 	if (found_dot) then
-		select case as const (lex.ch)
-		case CH_F, CH_L_F       '' 'F' | 'f'
-			skip_char()
-
-		case CH_D, CH_L_D       '' 'D' | 'd'
-			skip_char()
-
+		select case (file.i[0])
+		case CH_F, CH_L_F, _    '' 'F' | 'f'
+		     CH_D, CH_L_D       '' 'D' | 'd'
+			file.i += 1
 		end select
 	else
-		select case as const (lex.ch)
+		select case (file.i[0])
 		case CH_U, CH_L_U       '' 'U' | 'u'
-			skip_char()
+			file.i += 1
 		end select
 
-		select case as const (lex.ch)
+		select case (file.i[0])
 		case CH_L, CH_L_L       '' 'L' | 'l'
-			skip_char()
-			select case as const (lex.ch)
+			file.i += 1
+			select case (file.i[0])
 			case CH_L, CH_L_L       '' 'L' | 'l'
-				skip_char()
+				file.i += 1
 			end select
 		end select
 	end if
 end sub
 
 '' String/char literal parser
-private sub read_string_literal(byval token as LexToken ptr)
-	token->tk = TK_STRLIT
-
-	if (lex.ch = CH_L) then
-		skip_char()
-	end if
-
-	dim as integer quotechar = lex.ch
+private sub read_string()
+	dim as integer quotechar = file.i[0]
 	if (quotechar = CH_QUOTE) then
-		token->tk = TK_CHRLIT
+		file.tk = TK_CHRLIT
+	else
+		file.tk = TK_STRLIT
 	end if
-
-	'' Opening quote
-	skip_char()
 
 	do
-		select case (lex.ch)
+		file.i += 1
+
+		select case (file.i[0])
 		case quotechar
+			file.i += 1
 			exit do
 
 		case CH_LF, CH_CR, CH_EOF
-			tokenizer_xoops("string/char literal is left open")
+			file_xoops("string/char literal is left open")
 
 		case CH_BACKSLASH	'' \
-			select case (lex.ch)
+			select case (file.i[0])
 			case CH_BACKSLASH, _ '' \\
 			     CH_DQUOTE   , _ '' \"
 			     CH_QUOTE        '' \'
-				skip_char()
+				file.i += 1
 			end select
 
 		end select
-
-		skip_char()
 	loop
-
-	'' Closing quote
-	skip_char()
 end sub
 
-private sub read_one(byval token as LexToken ptr, byval tk as integer)
-	token->tk = tk
-	skip_char()
+private sub read_one(byval tk as integer)
+	file.tk = tk
+	file.i += 1
 end sub
 
 private sub skip_line_comment()
-	skip_char()
+	file.i += 1
 	do
-		skip_char()
-		select case (lex.ch)
-		case CH_LF, CH_CR, CH_EOF
+		file.i += 1
+		select case (file.i[0])
+		case CH_LF, CH_CR, 0
 			exit do
 		end select
 	loop
 end sub
 
 private sub skip_multi_comment()
-	skip_char()
+	file.i += 1
 	do
-		skip_char()
-		select case (lex.ch)
-		case CH_EOF
-			tokenizer_xoops("multi-line comment is left open")
+		file.i += 1
+		select case (file.i[0])
+		case 0
+			file_xoops("multi-line comment is left open")
 		case CH_MUL		'' *
-			if (lookahead_char(1) = CH_SLASH) then	'' */
+			if (file.i[1] = CH_SLASH) then	'' */
+				file.i += 2
 				exit do
 			end if
 		end select
 	loop
-	skip_char()
-	skip_char()
 end sub
 
 '' Parses the next token.
 '' Note: must fill in the token structure correctly!
-private sub lex_tokenize(byval token as LexToken ptr)
+private sub lex_tokenize()
 	'' Skip spaces in front of next token
 	do
-		select case as const (lex.ch)
+		select case (file.i[0])
 		case CH_TAB, CH_SPACE
 
 		case CH_SLASH		'' /
-			select case (lookahead_char(1))
+			select case (file.i[1])
 			case CH_SLASH	'' //
 				skip_line_comment()
 			case CH_MUL	'' /*
@@ -474,7 +801,7 @@ private sub lex_tokenize(byval token as LexToken ptr)
 			exit do
 		end select
 
-		skip_char()
+		file.i += 1
 	loop
 
 	'' TODO: di/trigraph handling doesn't work with char look ahead!
@@ -483,488 +810,311 @@ private sub lex_tokenize(byval token as LexToken ptr)
 	'' It's not a problem though, this isn't used much anways.
 #if 0
 	'' Handle di/trigraphs (this must be done only once, not recursively)
-	select case as const (lex.ch)
+	select case as const (file.i[0])
 	case CH_QUEST		'' ?
-		if (lookahead_char(1) = CH_QUEST) then		'' ??
+		if (file.i[1] = CH_QUEST) then		'' ??
 			'' Trigraphs
-			select case as const (lookahead_char(2))
+			select case as const (file.i[2])
 			case CH_EQ				'' ??=	#
-				lex.ch = CH_HASH
+				file.i[0] = CH_HASH
 			case CH_SLASH				'' ??/	\
-				lex.ch = CH_BACKSLASH
+				file.i[0] = CH_BACKSLASH
 			case CH_QUOTE				'' ??'	^
-				lex.ch = CH_CIRCUMFLEX
+				file.i[0] = CH_CIRCUMFLEX
 			case CH_LPAREN				'' ??(	[
-				lex.ch = CH_LBRACKET
+				file.i[0] = CH_LBRACKET
 			case CH_RPAREN				'' ??)	]
-				lex.ch = CH_RBRACKET
+				file.i[0] = CH_RBRACKET
 			case CH_EXCL				'' ??!	|
-				lex.ch = CH_PIPE
+				file.i[0] = CH_PIPE
 			case CH_LT				'' ??<	{
-				lex.ch = CH_LBRACE
+				file.i[0] = CH_LBRACE
 			case CH_GT				'' ??>	}
-				lex.ch = CH_RBRACE
+				file.i[0] = CH_RBRACE
 			case CH_MINUS				'' ??-	~
-				lex.ch = CH_TILDE
+				file.i[0] = CH_TILDE
 			end select
 		end if
 
 	case CH_COLON		'' :
-		select case as const (lookahead_char(1))
+		select case (file.i[1])
 		case CH_GT	'' :>	]
-			lex.ch = CH_RBRACKET
+			file.i[0] = CH_RBRACKET
 		end select
 
 	case CH_LT		'' <
-		select case as const (lookahead_char(1))
+		select case (file.i[1])
 		case CH_COLON	'' <:	[
-			lex.ch = CH_LBRACKET
+			file.i[0] = CH_LBRACKET
 		case CH_PERCENT	'' <%	{
-			lex.ch = CH_LBRACE
+			file.i[0] = CH_LBRACE
 		end select
 
 	case CH_PERCENT		'' %
-		select case as const (lookahead_char(1))
+		select case (file.i[1])
 		case CH_GT	'' %>	}
-			lex.ch = CH_RBRACE
+			file.i[0] = CH_RBRACE
 		case CH_PERCENT	'' %:	#
-			lex.ch = CH_LBRACE
+			file.i[0] = CH_LBRACE
 		end select
 
 	end select
 #endif
 
-	'' Next token starts here
-	token->line = lex.line
-	token->i = lex.i
-	token->length = 0
-
 	'' Identify the next token
-	select case as const (lex.ch)
+	select case as const (file.i[0])
 	case CH_LF, CH_CR
-		token->tk = TK_EOL
+		file.tk = TK_EOL
 
 		'' CRLF?
-		if (lex.ch = CH_CR) then
-			if (lookahead_char(1) = CH_LF) then
+		if (file.i[0] = CH_CR) then
+			if (file.i[1] = CH_LF) then
 				'' CR
-				skip_char()
+				file.i += 1
 			end if
 		end if
 
 		'' CR | LF
-		skip_char()
+		file.i += 1
 
 		'' After skipping EOL, update the current line
-		lex.line.num += 1
-		lex.line.begin = lex.i
+		file.linenum += 1
+		file.linebegin = file.i
 
 	case CH_EXCL		'' !
-		read_one(token, TK_LOGNOT)
-		if (lex.ch = CH_EQ) then	'' !=
-			read_one(token, TK_NE)
+		read_one(TK_LOGNOT)
+		if (file.i[0] = CH_EQ) then	'' !=
+			read_one(TK_NE)
 		end if
 
 	case CH_DQUOTE		'' "
-		read_string_literal(token)
+		read_string()
 
 	case CH_HASH		'' #
-		read_one(token, TK_HASH)
-		if (lex.ch = CH_HASH) then	'' ##
-			read_one(token, TK_MERGE)
+		read_one(TK_HASH)
+		if (file.i[0] = CH_HASH) then	'' ##
+			read_one(TK_MERGE)
 		end if
 
 	case CH_DOLLAR		'' $
-		read_id(token)
+		read_id()
 
 	case CH_PERCENT		'' %
-		read_one(token, TK_MOD)
-		if (lex.ch = CH_EQ) then	'' %=
-			read_one(token, TK_SELFMOD)
+		read_one(TK_MOD)
+		if (file.i[0] = CH_EQ) then	'' %=
+			read_one(TK_SELFMOD)
 		end if
 
 	case CH_AMP		'' &
-		read_one(token, TK_BITAND)
-		select case (lex.ch)
+		read_one(TK_BITAND)
+		select case (file.i[0])
 		case CH_AMP	'' &&
-			read_one(token, TK_LOGAND)
+			read_one(TK_LOGAND)
 		case CH_EQ	'' &=
-			read_one(token, TK_SELFBITAND)
+			read_one(TK_SELFBITAND)
 		end select
 
 	case CH_QUOTE		'' '
-		read_string_literal(token)
+		read_string()
 
 	case CH_LPAREN		'' (
-		read_one(token, TK_LPAREN)
+		read_one(TK_LPAREN)
 
 	case CH_RPAREN		'' )
-		read_one(token, TK_RPAREN)
+		read_one(TK_RPAREN)
 
 	case CH_MUL		'' *
-		read_one(token, TK_MUL)
-		if (lex.ch = CH_EQ) then	'' *=
-			read_one(token, TK_SELFMUL)
+		read_one(TK_MUL)
+		if (file.i[0] = CH_EQ) then	'' *=
+			read_one(TK_SELFMUL)
 		end if
 
 	case CH_PLUS		'' +
-		read_one(token, TK_ADD)
-		select case (lex.ch)
+		read_one(TK_ADD)
+		select case (file.i[0])
 		case CH_PLUS	'' ++
-			read_one(token, TK_INCREMENT)
+			read_one(TK_INCREMENT)
 		case CH_EQ	'' +=
-			read_one(token, TK_SELFADD)
+			read_one(TK_SELFADD)
 		end select
 
 	case CH_COMMA		'' ,
-		read_one(token, TK_COMMA)
+		read_one(TK_COMMA)
 
 	case CH_MINUS		'' -
-		read_one(token, TK_SUB)
-		select case (lex.ch)
+		read_one(TK_SUB)
+		select case (file.i[0])
 		case CH_GT	'' ->
-			read_one(token, TK_FIELDDEREF)
+			read_one(TK_FIELDDEREF)
 		case CH_MINUS	'' --
-			read_one(token, TK_DECREMENT)
+			read_one(TK_DECREMENT)
 		case CH_EQ	'' -=
-			read_one(token, TK_SELFSUB)
+			read_one(TK_SELFSUB)
 		end select
 
 	case CH_DOT		'' .
-		select case as const (lookahead_char(1))
+		select case (file.i[1])
 		case CH_0 to CH_9   '' 0-9 (Decimal float beginning with '.')
-			read_number_literal(token)
+			read_number()
 		case CH_DOT
-			if (lookahead_char(2) = CH_DOT) then	'' ...
-				read_one(token, TK_ELLIPSIS)
-				skip_char()
-				skip_char()
+			if (file.i[2] = CH_DOT) then	'' ...
+				read_one(TK_ELLIPSIS)
+				file.i += 2
 			else
-				read_one(token, TK_DOT)
+				read_one(TK_DOT)
 			end if
 		case else
-			read_one(token, TK_DOT)
+			read_one(TK_DOT)
 		end select
 
 	case CH_SLASH		'' /
-		read_one(token, TK_DIV)
-		if (lex.ch = CH_EQ) then	'' /=
-			read_one(token, TK_SELFDIV)
+		read_one(TK_DIV)
+		if (file.i[0] = CH_EQ) then	'' /=
+			read_one(TK_SELFDIV)
 		end if
 
 	case CH_0 to CH_9	'' 0 - 9
-		read_number_literal(token)
+		read_number()
 
 	case CH_COLON		'' :
-		read_one(token, TK_COLON)
+		read_one(TK_COLON)
 
 	case CH_SEMI		'' ;
-		read_one(token, TK_SEMI)
+		read_one(TK_SEMI)
 
 	case CH_LT		'' <
-		read_one(token, TK_LT)
-		select case (lex.ch)
+		read_one(TK_LT)
+		select case (file.i[0])
 		case CH_LT	'' <<
-			read_one(token, TK_SHL)
-			if (lex.ch = CH_EQ) then	'' <<=
-				read_one(token, TK_SELFSHL)
+			read_one(TK_SHL)
+			if (file.i[0] = CH_EQ) then	'' <<=
+				read_one(TK_SELFSHL)
 			end if
 		case CH_EQ	'' <=
-			read_one(token, TK_LE)
+			read_one(TK_LE)
 		end select
 
 	case CH_EQ		'' =
-		read_one(token, TK_ASSIGN)
-		if (lex.ch = CH_EQ) then	'' ==
-			read_one(token, TK_EQ)
+		read_one(TK_ASSIGN)
+		if (file.i[0] = CH_EQ) then	'' ==
+			read_one(TK_EQ)
 		end if
 
 	case CH_GT		'' >
-		read_one(token, TK_GT)
-		select case (lex.ch)
+		read_one(TK_GT)
+		select case (file.i[0])
 		case CH_GT	'' >>
-			read_one(token, TK_SHR)
-			if (lex.ch = CH_EQ) then	'' >>=
-				read_one(token, TK_SELFSHR)
+			read_one(TK_SHR)
+			if (file.i[0] = CH_EQ) then	'' >>=
+				read_one(TK_SELFSHR)
 			end if
 		case CH_EQ	'' >=
-			read_one(token, TK_GE)
+			read_one(TK_GE)
 		end select
 
 	case CH_QUEST		'' ?
-		read_one(token, TK_IIF)
+		read_one(TK_IIF)
 
 	case CH_A       to (CH_L - 1), _	'' A-Z except L
 	     (CH_L + 1) to CH_Z
-		read_id(token)
+		read_id()
 
 	case CH_L		'' L
-		if (lookahead_char(1) = CH_DQUOTE) then
-			read_string_literal(token)
+		if (file.i[1] = CH_DQUOTE) then
+			file.i += 1
+			read_string()
 		else
-			read_id(token)
+			read_id()
 		end if
 
 	case CH_LBRACKET	'' [
-		read_one(token, TK_LBRACKET)
+		read_one(TK_LBRACKET)
 
 	case CH_BACKSLASH	'' \
-		read_one(token, TK_BACKSLASH)
+		read_one(TK_BACKSLASH)
 
 	case CH_RBRACKET	'' ]
-		read_one(token, TK_RBRACKET)
+		read_one(TK_RBRACKET)
 
 	case CH_CIRCUMFLEX	'' ^
-		read_one(token, TK_BITXOR)
-		if (lex.ch = CH_EQ) then	'' ^=
-			read_one(token, TK_SELFBITXOR)
+		read_one(TK_BITXOR)
+		if (file.i[0] = CH_EQ) then	'' ^=
+			read_one(TK_SELFBITXOR)
 		end if
 
 	case CH_UNDERLINE	'' _
-		read_id(token)
+		read_id()
 
 	case CH_L_A to CH_L_Z	'' a-z
-		read_id(token)
+		read_id()
 
 	case CH_LBRACE		'' {
-		read_one(token, TK_LBRACE)
+		read_one(TK_LBRACE)
 
 	case CH_PIPE		'' |
-		read_one(token, TK_BITOR)
-		select case (lex.ch)
+		read_one(TK_BITOR)
+		select case (file.i[0])
 		case CH_PIPE	'' ||
-			read_one(token, TK_LOGOR)
+			read_one(TK_LOGOR)
 		case CH_EQ	'' |=
-			read_one(token, TK_SELFBITOR)
+			read_one(TK_SELFBITOR)
 		end select
 
 	case CH_RBRACE		'' }
-		read_one(token, TK_RBRACE)
+		read_one(TK_RBRACE)
 
 	case CH_TILDE		'' ~
-		read_one(token, TK_BITNOT)
+		read_one(TK_BITNOT)
 
 	case CH_EOF
-		token->tk = TK_EOF
 
 	case else
-		tokenizer_xoops("unexpected character: '" & chr(lex.ch) & "'" & _
-				", &h" + hex(lex.ch, 2))
+		file_xoops("unexpected character: &h" + hex(file.i[0], 2))
 
 	end select
 
 	'' The token ends here
-	token->length = culng(lex.i) - culng(token->i)
+	lex.length = culng(lex.i) - culng(lex.i)
 
-	if (token->tk = TK_ID) then
+	if (file.tk = TK_ID) then
 		'' Is this a keyword?
 		dim as HashItem ptr item = _
 		        hash_lookup(@lex.kwhash, _
-		                    token->i, _
-		                    token->length, _
-		                    hash_hash(token->i, token->length))
+		                    lex.i, _
+		                    lex.length, _
+		                    hash_hash(lex.i, lex.length))
 		if (item->s) then
-			token->tk = item->data
+			file.tk = item->data
 		end if
 	end if
-
-	#ifdef ENABLE_STATS
-		lex.tokencount += 1
-	#endif
 end sub
 
-''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-'' Parser interface
+const IOBUFFER_SIZE = 1024 * 8
+static shared as zstring * IOBUFFER_SIZE iobuffer
 
-sub lex_xoops(byref message as string)
-	with (lex.queue(lex.token))
-		private_xoops(.i, @.line, message)
-	end with
-end sub
+sub lex_load(byref filename as string)
+	map_file(filename)
 
-function lex_at_line_begin() as integer
-	return (lex.prevtk = TK_EOL)
-end function
-
-function lex_tk() as integer
-	return lex.queue(lex.token).tk
-end function
-
-function lex_text() as zstring ptr
-	'' Tokens don't store their text; that'd require the text to be stored
-	'' for every single token. For most it's never needed though, so we can
-	'' just use one buffer (the "text cache") and copy token text into that
-	'' as requested, so that we can return a nice zstring ptr.
-	with (lex.queue(lex.token))
-		if (lex.cached_token <> .i) then
-			if (.length > LEX_TEXTCACHE) then
-				lex_xoops("token too big, the soft-limit needs to be raised!")
-			end if
-			fb_MemCopy(byval @lex.text_cache, byval .i, .length)
-			lex.text_cache[.length] = 0
-		end if
-	end with
-	return @lex.text_cache
-end function
-
-function lex_lookahead_tk(byval n as integer) as integer
-	assert((n > 0) and (n < LEX_TOKENCOUNT))
-	return lex.queue((lex.token + n) and (LEX_TOKENCOUNT - 1)).tk
-end function
-
-'' Skips the current token and loads the next one, if there's none waiting.
-sub lex_skip()
-	lex.prevtk = lex.queue(lex.token).tk
-	lex.token = (lex.token + 1) and (LEX_TOKENCOUNT - 1)
-	if (lex.aheadcount > 0) then
-		lex.aheadcount -= 1
-	else
-		lex_tokenize(@lex.queue(lex.token))
-	end if
-end sub
-
-private sub load_file(byref filename as string)
-	lex.filename = filename
-
+	'' Read in the whole file content
 	dim as integer f = freefile()
 	if (open(filename, for binary, access read, as #f)) then
-		xoops("could not open this file, maybe it doesn't exist?")
+		xoops("could not open this file; does it exist?")
 	end if
 
-	dim as longint size = lof(f)
-	if (size >= &h7FFFFFFFull) then
-		xoops("wow, where did you get a big header file like that?")
-	end if
-
-	if (size > 0) then
-		lex.buffer = xallocate(size)
-
-		dim as integer found = 0
-		dim as integer result = get(#f, , *lex.buffer, size, found)
-		if (result or (found <> size)) then
-			xoops("could not read from this file, even though I opened it!")
+	do
+		dim as integer size = 0
+		if (get(#f, , *cptr(ubyte ptr, @iobuffer), _
+		        IOBUFFER_SIZE, size)) then
+			xoops("my file I/Os are failing me, how sad")
 		end if
 
-		lex.limit = lex.buffer + found
-	else
-		lex.buffer = NULL
-		lex.limit = NULL
-	end if
+		'' EOF?
+		if (size = 0) then
+			exit do
+		end if
 
-	lex.i = lex.buffer
+		gap_in(@lex.f->gap, @iobuffer, size)
+	loop
 
 	close #f
-end sub
-
-'' Sets up the lexer to parse a specific file. Future lex_*() calls will
-'' tokenize that file's content, until the next file is selected...
-sub lex_open(byref filename as string)
-	load_file(filename)
-
-	lex.line.num = 1
-	lex.line.begin = lex.i
-
-	lex.aheadcount = 0 '' Reset token queue
-
-	'' Fake a TK_EOL here at the beginning of the file, so
-	'' lex_at_line_begin() will return TRUE after the first lex_skip(),
-	'' in order to find #directives at file begin.
-	lex.prevtk = TK_EOL
-
-	'' This reads the first char from the file (and may set the current
-	'' char to CH_EOF), but no token will be parsed until the first
-	'' lex_skip().
-	'' (hack... this will underflow if lex.i is NULL on an empty file,
-	'' and then skip_char() will overflow it again and reach EOF)
-	lex.i -= 1
-	skip_char()
-
-	'' Read first token
-	lex_skip()
-end sub
-
-sub lex_close()
-	if (lex.buffer) then
-		deallocate(lex.buffer)
-	end if
-	lex.buffer = NULL
-	lex.i = NULL
-	lex.limit = NULL
-end sub
-
-'' Careful: keep in sync with the lex.bi:TK_* token id enum!
-dim shared as zstring ptr keywords(0 to (TK__KWCOUNT - 1)) = _
-{ _
-	@"_Bool"   , _
-	@"_Complex", _
-	@"_Imaginary", _
-	@"auto"    , _
-	@"break"   , _
-	@"case"    , _
-	@"char"    , _
-	@"const"   , _
-	@"continue", _
-	@"default" , _
-	@"define"  , _
-	@"defined" , _
-	@"do"      , _
-	@"double"  , _
-	@"else"    , _
-	@"elif"    , _
-	@"endif"   , _
-	@"enum"    , _
-	@"extern"  , _
-	@"float"   , _
-	@"for"     , _
-	@"goto"    , _
-	@"if"      , _
-	@"ifdef"   , _
-	@"ifndef"  , _
-	@"include" , _
-	@"inline"  , _
-	@"int"     , _
-	@"long"    , _
-	@"pragma"  , _
-	@"register", _
-	@"restrict", _
-	@"return"  , _
-	@"short"   , _
-	@"signed"  , _
-	@"sizeof"  , _
-	@"static"  , _
-	@"struct"  , _
-	@"switch"  , _
-	@"typedef" , _
-	@"undef"   , _
-	@"union"   , _
-	@"unsigned", _
-	@"void"    , _
-	@"volatile", _
-	@"while"     _
-}
-
-sub lex_global_init()
-	'' Load the keywords
-	hash_init(@lex.kwhash, 7)
-	for i as integer = 0 to (TK__KWCOUNT - 1)
-		dim as zstring ptr kw = keywords(i)
-		dim as integer length = len(*kw)
-		dim as uinteger hash = hash_hash(kw, length)
-		dim as HashItem ptr item = hash_lookup(@lex.kwhash, kw, length, hash)
-		assert(item->s = NULL)
-		item->s = kw
-		item->length = length
-		item->hash = hash
-		item->data = i + TK__FIRSTKW
-		lex.kwhash.count += 1
-	next
-end sub
-
-sub lex_global_end()
-	#ifdef ENABLE_STATS
-		print "lex stats:"
-		print !"\t" & lex.tokencount & " tokens"
-		hash_stats(@lex.kwhash)
-	#endif
-	hash_end(@lex.kwhash)
 end sub
