@@ -2,7 +2,10 @@ FB frog - the wacky h2bi type of translator
 
 We should:
 > Read in all .h's from the command line and spit out corresponding .bi's
-> Not have configuration options (always do the right thing automatically)
+> Not have configuration options (always do the right thing automatically),
+  instead the tool itself may be modified, it's small enough for that,
+  and this isn't even more work than figuring out some sort of scripting
+  language or rules specifications or something.
 > Preserve preprocessor directives/unexpanded macros (can't use a real C parser)
 > Have some sort of intermediate form to be able to rearrange things,
   e.g. #defines intermixed in a declaration

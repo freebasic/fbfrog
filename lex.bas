@@ -78,6 +78,10 @@ dim shared as zstring ptr fbkeywords(0 to ...) = _
 	@"ZSTRING"      _
 }
 
+type LexToken
+	as integer id       '' TK_*
+	as zstring ptr text '' Identifiers and number/string literals, or NULL
+end type
 sub transforms_global_init()
 	hash_init(@emit.fbkwhash, 9)
 	for i as integer = 0 to ubound(fbkeywords)
@@ -100,12 +104,9 @@ private function is_fb_keyword(byval id as zstring ptr) as integer
 end function
 
 type LexStuff
-	'' Gap buffer containing current file's content
-	as ubyte ptr p      '' Buffer containing: front,gap,back
-	as integer front    '' Front length; the gap's offset
-	as integer gap      '' Gap length
-	as integer size     '' Front + back
-	as integer growth   '' By how much the buffer grows when it's reallocated
+	as LexToken ptr p
+	as integer count
+	as integer room
 end type
 
 dim shared as LexStuff lex
@@ -128,243 +129,60 @@ sub lex_init()
 	next
 end sub
 
-private sub append_file(byref filename as string)
-	const FILES_GROWTH = 8
-
-	if (lex.filecount = lex.fileroom) then
-		lex.fileroom += FILES_GROWTH
-		lex.files = xreallocate(lex.files, _
-		                        lex.fileroom * sizeof(LexFile))
+sub lex_insert _
+	( _
+		byval i as integer, _
+		byval id as integer, _
+		byval text as zstring ptr _
+	)
+	dim as integer length = any
+	if (text) then
+		length = len(*text)
+	else
+		length = 0
 	end if
-
-	lex.file = lex.files + lex.filecount
-
-	clear(byval lex.file, 0, sizeof(LexFile))
-	lex.f->name = filename
-
-	lex.filecount += 1
+	lex_insert_raw(i, id, text, length)
 end sub
 
-function lex_file_count() as integer
-	return lex.filecount
-end function
+sub lex_insert_raw _
+	( _
+		byval i as integer, _
+		byval id as integer, _
+		byval text as zstring ptr, _
+		byval length as integer _
+	)
 
-sub lex_switch(byval file as integer)
-	xassert((file >= 0) and (file < lex_file_count()))
-	lex.file = lex.files + file
-end sub
-
-function lex_count() as integer
-	return lex.f->count
-end function
-
-sub lex_insert(byval i as integer, byval tk as integer)
-	const TOKENS_GROWTH = 512
-
-	if (lex.f->count = lex.f->room) then
-		lex.f->room += TOKENS_GROWTH
-		lex.f->tokens = xreallocate(lex.f->tokens, _
-		                            lex.f->room * sizeof(LexToken))
+	if (lex.room = lex.count) then
+		lex.room += 512
+		lex.p = xreallocate(lex.p, lex.room * sizeof(LexToken))
 	end if
-
-	dim as integer rightside = lex.f->count - i
-	if (rightside > 0) then
-		dim as ubyte ptr source = _
-				lex.f->tokens + (i * sizeof(LexToken))
-		memmove(source + sizeof(LexToken), _
-		        source, _
-		        rightside * sizeof(LexToken))
+	dim as LexToken ptr p = lex.p + i
+	if (i < lex.count) then
+		memmove(p + 1, p, (lex.count - i) * sizeof(LexToken))
 	end if
+	lex.count += 1
 
-	dim as any ptr token = lex.f->tokens + (i * sizeof(LexToken))
-	clear(byval token, 0, sizeof(LexToken))
-	token->tk = tk
-
-	lex.f->count += 1
+	p->id = id
+	if (length > 0) then
+		assert(text)
+		p->text = xallocate(length + 1)
+		memcpy(p->text, text, length)
+		p->text[length] = 0
+	else
+		p->text = NULL
+	end if
 end sub
 
 sub lex_remove(byval i as integer)
-	xassert((i >= 0) and (i < lex.f->count))
+	xassert((i >= 0) and (i < lex.count))
 
-	lex.f->count -= 1
+	dim as LexToken ptr p = lex.p + i
+	deallocate(p->text)
 
-	dim as integer rightside = lex.f->count - i
-	if (rightside > 0) then
-		dim as any ptr target = _
-				lex.f->tokens + (i * sizeof(LexToken))
-		memmove(target, _
-		        target + sizeof(LexToken), _
-		        rightside * sizeof(LexToken))
+	lex.count -= 1
+	if (i < lex.count) then
+		memmove(p, p + 1, (lex.count - i) * sizeof(LexToken))
 	end if
-end sub
-
-'' Copies the given range of bytes (offset, size) from the gap buffer into the
-'' given target buffer (p, size).
-function gap_render _
-	( _
-		byval gap as TheGap ptr, _
-		byval offset as integer, _
-		byval p as ubyte ptr, _
-		byval size as integer _
-	) as integer
-
-	if ((size <= 0) or (offset < 0) or (offset >= gap->size)) then
-		return 0
-	end if
-
-	dim as integer limit = offset + size
-	if (limit > gap->size) then
-		limit = gap->size
-	end if
-
-	size = limit - off
-	dim as ubyte ptr source = gap->p + offset
-
-	if (offset >= gap->front) then
-		'' Requested range completely lies inside the back part.
-		memcpy(p, source + gap->gap, size)
-	elseif (limit > gap->front) then
-		'' Requested range "contains" the gap, so there are two parts to copy.
-		dim as integer bytesleft = gap->front - offset
-		memcpy(p, source, bytesleft)
-		memcpy(p + bytesleft, source + gap->gap, limit - gap->front)
-	else
-		'' Requested range completely lies inside the front part.
-		memcpy(p, source, size)
-	end if
-
-	return size
-end function
-
-function gap_get(byval gap as TheGap ptr, byval off as integer) as any ptr
-	'' Inside end?
-	if (off >= gap->front) then
-		'' Invalid?
-		if (off >= gap->size) then
-			return NULL
-		end if
-		off += gap->gap
-	else
-		'' Invalid?
-		if (off < 0) then
-			return NULL
-		end if
-	end if
-	return gap->p + off
-end function
-
-sub gap_move(byval gap as TheGap ptr, byval delta as integer)
-	gap_move_to(gap, gap->front + delta)
-end sub
-
-sub gap_move_to(byval gap as TheGap ptr, byval off as integer)
-	if (off < 0) then
-		off = 0
-	elseif (off > gap->size) then
-		off = gap->size
-	end if
-
-	'' Move gap:
-	'' Move a block of data from before/after the gap in reverse direction
-	dim as integer offold = gap->front
-	if (off < offold) then
-		'' Move gap left
-		dim as ubyte ptr source = gap->p + off
-		memmove(source + gap->gap, source, offold - off)
-	elseif (off > offold) then
-		'' Move gap right
-		dim as ubyte ptr dest = gap->p + offold
-		memmove(dest, dest + gap->gap, off - offold)
-	end if
-
-	gap->front = off
-end sub
-
-'' Enlarge the gap; 'size' is the minimum size that is needed.
-sub gap_grow(byval gap as TheGap ptr, byval size as integer)
-	if (size <= 0)
-		return
-	end if
-
-	dim as integer newgap = gap->gap + g->growth
-	if (newgap < size)
-		newgap = size
-	end if
-
-	gap->p = xreallocate(gap->p, gap->size + newgap)
-
-	'' Move the back block to the end of the new buffer, so that the gap in the
-	'' middle grows. The front part is preserved by the realloc().
-	if (gap->size > gap->front) then
-		dim as ubyte ptr pgap = gap->p + gap->front
-		memmove(pgap + newgap, pgap + gap->gap, gap->size - gap->front)
-	end if
-
-	gap->gap = newgap
-end sub
-
-'' Forward-insertion at the current gap offset: front grows, gap shrinks.
-sub gap_in(byval gap as TheGap ptr, byval p as any ptr, byval size as integer)
-	if (size <= 0) then return
-
-	'' Make room for the new data, if necessary.
-	if (gap->gap < size) then
-		gap_grow(gap, size)
-	end if
-
-	'' If a buffer was given, copy content
-	if (p) then
-		memcpy(gap->p + gap->front, p, size)
-	end if
-
-	gap->front += size
-	gap->gap -= size
-	gap->size += size
-end sub
-
-'' Backwards-deletion from the current gap offset: front shrinks, gap grows.
-sub gap_out(byval gap as TheGap ptr, byval p as any ptr, byval size as integer)
-	if ((size <= 0) or (size > gap->front)) then return
-
-	gap->front -= size
-	gap->gap += size
-	gap->size -= size
-
-	'' If a buffer was given, copy the to-be-deleted part into it
-	if (p) then
-		memcpy(p, gap->p + gap->front, size)
-	end if
-end sub
-
-'' Moves bytes from gap buffer 'a' directly into gap buffer 'b'. Doing this
-'' manually with gapIn/gapOut would require a temporary buffer.
-sub gap_out_in(byval a as TheGap ptr, byval b as TheGap ptr, byval size as integer)
-	if ((size <= 0) or (size > a->front)) then return
-
-	'' Not enough room?
-	if (b->gap < size) then
-		gap_grow(b, size)
-	end if
-
-	a->front -= size
-	a->gap += size
-	a->size -= size
-	memcpy(b->p + b->front, a->p + a->front, size)
-	b->front += size
-	b->gap -= size
-	b->size += size
-end sub
-
-sub gap_init(byval gap as TheGap ptr, byval growth as integer)
-	gap->p = NULL
-	gap->front = 0
-	gap->gap = 0
-	gap->size = 0
-	gap->growth = growth
-end sub
-
-sub gap_end(byval gap as TheGap ptr)
-	deallocate(gap->p)
 end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
