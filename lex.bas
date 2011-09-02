@@ -804,63 +804,6 @@ private sub lex_tokenize()
 		file.i += 1
 	loop
 
-	'' TODO: di/trigraph handling doesn't work with char look ahead!
-	'' It would be difficult to handle during file input too, because
-	'' string literals shouldn't be affected...
-	'' It's not a problem though, this isn't used much anways.
-#if 0
-	'' Handle di/trigraphs (this must be done only once, not recursively)
-	select case as const (file.i[0])
-	case CH_QUEST		'' ?
-		if (file.i[1] = CH_QUEST) then		'' ??
-			'' Trigraphs
-			select case as const (file.i[2])
-			case CH_EQ				'' ??=	#
-				file.i[0] = CH_HASH
-			case CH_SLASH				'' ??/	\
-				file.i[0] = CH_BACKSLASH
-			case CH_QUOTE				'' ??'	^
-				file.i[0] = CH_CIRCUMFLEX
-			case CH_LPAREN				'' ??(	[
-				file.i[0] = CH_LBRACKET
-			case CH_RPAREN				'' ??)	]
-				file.i[0] = CH_RBRACKET
-			case CH_EXCL				'' ??!	|
-				file.i[0] = CH_PIPE
-			case CH_LT				'' ??<	{
-				file.i[0] = CH_LBRACE
-			case CH_GT				'' ??>	}
-				file.i[0] = CH_RBRACE
-			case CH_MINUS				'' ??-	~
-				file.i[0] = CH_TILDE
-			end select
-		end if
-
-	case CH_COLON		'' :
-		select case (file.i[1])
-		case CH_GT	'' :>	]
-			file.i[0] = CH_RBRACKET
-		end select
-
-	case CH_LT		'' <
-		select case (file.i[1])
-		case CH_COLON	'' <:	[
-			file.i[0] = CH_LBRACKET
-		case CH_PERCENT	'' <%	{
-			file.i[0] = CH_LBRACE
-		end select
-
-	case CH_PERCENT		'' %
-		select case (file.i[1])
-		case CH_GT	'' %>	}
-			file.i[0] = CH_RBRACE
-		case CH_PERCENT	'' %:	#
-			file.i[0] = CH_LBRACE
-		end select
-
-	end select
-#endif
-
 	'' Identify the next token
 	select case as const (file.i[0])
 	case CH_LF, CH_CR
