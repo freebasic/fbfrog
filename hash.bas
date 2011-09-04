@@ -2,6 +2,7 @@
 '' based on GCC's libcpp's hash table.
 
 #include once "hash.bi"
+#include once "common.bi"
 #include once "crt.bi"
 
 function hash_hash(byval s as ubyte ptr, byval length as integer) as uinteger
@@ -73,9 +74,7 @@ function hash_lookup _
 		grow_table(h)
 	end if
 
-	#ifdef ENABLE_STATS
-		h->lookups += 1
-	#endif
+	h->lookups += 1
 
 	dim as uinteger roommask = h->room - 1
 
@@ -107,9 +106,7 @@ function hash_lookup _
 	dim as uinteger stepsize = (hash_hash2(s, length) and roommask) or 1
 
 	do
-		#ifdef ENABLE_STATS
-			h->collisions += 1
-		#endif
+		h->collisions += 1
 		i = (i + stepsize) and roommask
 		item = h->items + i
 
@@ -132,22 +129,37 @@ function hash_lookup _
 	return item
 end function
 
+sub hash_add _
+	( _
+		byval h as HashTable ptr, _
+		byval s as zstring ptr, _
+		byval dat as integer _
+	)
+
+	dim as integer length = len(*s)
+	dim as uinteger hash = hash_hash(s, length)
+
+	dim as HashItem ptr item = hash_lookup(h, s, length, hash)
+	item->s = s
+	item->length = length
+	item->hash = hash
+	item->data = dat
+
+	h->count += 1
+end sub
+
 sub hash_init(byval h as HashTable ptr, byval exponent as integer)
 	h->room = 1 shl exponent
-	#ifdef ENABLE_STATS
-		h->initialroom = h->room
-	#endif
+	h->initialroom = h->room
 	allocate_table(h)
 end sub
 
-#ifdef ENABLE_STATS
 sub hash_stats(byval h as HashTable ptr)
 	print "hash stats: "
 	print !"\ttable size: " & h->initialroom & " grown to " & h->room & _
 		", " & h->count & " entries"
 	print !"\t" & h->lookups & " lookups, " & h->collisions & " collisions"
 end sub
-#endif
 
 sub hash_end(byval h as HashTable ptr)
 	deallocate(h->items)
