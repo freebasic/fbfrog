@@ -8,52 +8,99 @@ type OneToken
 end type
 
 type AllTokens
-	as OneToken ptr p
-	as integer count
-	as integer room
+	'' Gap buffer of tokens
+	as OneToken ptr p   '' Buffer containing: front,gap,back
+	as integer front    '' Front length; the gap's offset
+	as integer gap      '' Gap length
+	as integer size     '' Front + back
+
+	'' Stats
 	as ulongint inputsize  '' Sum of input file sizes, just for stats
 	as integer inputtokens '' Count of input tokens
 end type
 
 dim shared as AllTokens tk
 
-sub tk_init()
+private function tk_ptr(byval x as integer) as OneToken ptr
+	'' Inside end?
+	if (x >= tk.front) then
+		'' Invalid?
+		if (x >= tk.size) then
+			return NULL
+		end if
+		x += tk.gap
+	else
+		'' Invalid?
+		if (x < 0) then
+			return NULL
+		end if
+	end if
+	return tk.p + x
+end function
+
+sub tk_move(byval delta as integer)
+	tk_move_to(tk.front + delta)
 end sub
 
-sub tk_insert _
-	( _
-		byval x as integer, _
-		byval id as integer, _
-		byval text as zstring ptr _
-	)
+sub tk_move_to(byval x as integer)
+	if (x < 0) then
+		x = 0
+	elseif (x > tk.size) then
+		x = tk.size
+	end if
+
+	dim as integer old = tk.front
+	if (x < old) then
+		'' Move gap left
+		dim as OneToken ptr p = tk.p + x
+		memmove(p + tk.gap, p, (old - x) * sizeof(OneToken))
+	elseif (x > old) then
+		'' Move gap right
+		dim as OneToken ptr p = tk.p + old
+		memmove(p, p + tk.gap, (x - old) * sizeof(OneToken))
+	end if
+
+	tk.front = x
+end sub
+
+sub tk_in(byval id as integer, byval text as zstring ptr)
 	dim as integer length = any
 	if (text) then
 		length = len(*text)
 	else
 		length = 0
 	end if
-	tk_insert_raw(x, id, text, length)
+	tk_in_raw(id, text, length)
 end sub
 
-sub tk_insert_raw _
+'' Insert token at current position (forwards)
+sub tk_in_raw _
 	( _
-		byval x as integer, _
 		byval id as integer, _
 		byval text as ubyte ptr, _
 		byval length as integer _
 	)
 
-	xassert((x >= 0) and (x <= tk.count))
+	dim as OneToken ptr p = any
 
-	if (tk.room = tk.count) then
-		tk.room += 512
-		tk.p = xreallocate(tk.p, tk.room * sizeof(OneToken))
+	'' Make room for the new data, if necessary
+	if (tk.gap = 0) then
+		const NEWGAP = 512
+
+		tk.p = xreallocate(tk.p, (tk.size + NEWGAP) * sizeof(OneToken))
+		p = tk.p + tk.front
+
+		'' Move the back block to the end of the new buffer,
+		'' so that the gap in the middle grows.
+		if (tk.size > tk.front) then
+			memmove(p + NEWGAP, p + tk.gap, _
+			        (tk.size - tk.front) * sizeof(OneToken))
+		end if
+
+		tk.gap = NEWGAP
+	else
+		p = tk.p + tk.front
 	end if
-	dim as OneToken ptr p = tk.p + x
-	if (x < tk.count) then
-		memmove(p + 1, p, (tk.count - x) * sizeof(OneToken))
-	end if
-	tk.count += 1
 
 	p->id = id
 	if (length > 0) then
@@ -61,41 +108,54 @@ sub tk_insert_raw _
 		memcpy(p->text, text, length)
 		p->text[length] = 0
 	else
-		''xassert((tokeninfo(id) and FLAG_TEXT) = 0)
 		p->text = NULL
 	end if
+
+	tk.front += 1
+	tk.gap -= 1
+	tk.size += 1
 end sub
 
-sub tk_remove(byval x as integer)
-	xassert((x >= 0) and (x < tk.count))
+'' Delete token at current position (backwards)
+sub tk_out()
+	if (tk.front < 1) then return
 
-	dim as OneToken ptr p = tk.p + x
+	tk.front -= 1
+	tk.gap += 1
+	tk.size -= 1
+
+	dim as OneToken ptr p = tk.p + tk.front
 	deallocate(p->text)
-
-	tk.count -= 1
-	if (x < tk.count) then
-		memmove(p, p + 1, (tk.count - x) * sizeof(OneToken))
-	end if
 end sub
 
 sub tk_drop_all()
-	for i as integer = 0 to (tk.count - 1)
-		deallocate(tk.p[i].text)
+	for i as integer = 0 to (tk.size - 1)
+		deallocate(tk_ptr(i)->text)
 	next
-	tk.count = 0
-	tk.inputsize = 0
+	tk.gap += tk.front + tk.size
+	tk.front = 0
+	tk.size = 0
+end sub
+
+sub tk_init()
+	tk.p = NULL
+	tk.front = 0
+	tk.gap = 0
+	tk.size = 0
+end sub
+
+sub tk_end()
+	deallocate(tk.p)
 end sub
 
 function tk_get(byval x as integer) as integer
 	if (x < 0) then return TK_BOF
-	if (x >= tk.count) then return TK_EOF
-	return tk.p[x].id
+	if (x >= tk.size) then return TK_EOF
+	return tk_ptr(x)->id
 end function
 
 function tk_text(byval x as integer) as zstring ptr
-	xassert((x >= 0) and (x < tk.count))
-	''xassert(tokeninfo(tk.p[x].id) and FLAG_TEXT)
-	return tk.p[x].text
+	return tk_ptr(x)->text
 end function
 
 sub tk_count_input_size(byval n as integer)

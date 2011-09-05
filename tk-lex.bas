@@ -57,10 +57,7 @@ type LexStuff
 	as ubyte ptr buffer '' File content buffer
 	as ubyte ptr i      '' Current char, will always be <= limit
 	as ubyte ptr limit  '' (end of buffer)
-
 	as HashTable kwhash '' C keywords
-
-	as integer x        '' Current token index
 end type
 
 dim shared as LexStuff lex
@@ -99,8 +96,7 @@ private sub load_file(byref filename as string)
 	close #f
 end sub
 
-private sub lex_init(byval x as integer, byref filename as string)
-	lex.x = x
+private sub lex_init(byref filename as string)
 	load_file(filename)
 
 	'' Load C keywords if not yet done
@@ -176,21 +172,6 @@ enum
 	CH_TILDE        '' ~
 end enum
 
-private sub add_tk(byval id as integer, byval text as zstring ptr)
-	tk_insert(lex.x, id, text)
-	lex.x += 1
-end sub
-
-private sub add_tk_raw _
-	( _
-		byval id as integer, _
-		byval text as ubyte ptr, _
-		byval length as integer _
-	)
-	tk_insert_raw(lex.x, id, text, length)
-	lex.x += 1
-end sub
-
 private sub read_id()
 	'' Identifier/keyword parsing: sequences of a-z, A-Z, 0-9, _, $
 	'' The current char is one of those already. The whole identifier
@@ -220,9 +201,9 @@ private sub read_id()
 		hash_lookup(@lex.kwhash, begin, length, _
 		            hash_hash(begin, length))
 	if (item->s) then
-		add_tk_raw(item->data, NULL, 0)
+		tk_in_raw(item->data, NULL, 0)
 	else
-		add_tk_raw(TK_ID, begin, length)
+		tk_in_raw(TK_ID, begin, length)
 	end if
 end sub
 
@@ -333,7 +314,7 @@ private sub read_number()
 		end select
 	end if
 
-	add_tk_raw(id, begin, culng(lex.i) - culng(begin))
+	tk_in_raw(id, begin, culng(lex.i) - culng(begin))
 end sub
 
 enum
@@ -375,7 +356,7 @@ private sub read_string()
 			exit do
 
 		case CH_LF, CH_CR, 0
-			add_tk(TK_TODO, "string/char literal left open")
+			tk_in(TK_TODO, "string/char literal left open")
 			exit do
 
 		case CH_BACKSLASH	'' \
@@ -393,18 +374,18 @@ private sub read_string()
 
 	if (strflags) then
 		if (strflags and STRFLAG_CHAR) then
-			add_tk(TK_TODO, "char literal")
+			tk_in(TK_TODO, "char literal")
 		else
-			add_tk(TK_TODO, "non-trivial string literal")
+			tk_in(TK_TODO, "non-trivial string literal")
 		end if
 	end if
 
-	add_tk_raw(id, begin, culng(lex.i) - culng(begin))
+	tk_in_raw(id, begin, culng(lex.i) - culng(begin))
 end sub
 
 #macro read_bytes(n, id)
 	lex.i += n
-	add_tk(id, NULL)
+	tk_in(id, NULL)
 #endmacro
 
 private sub read_linecomment()
@@ -423,7 +404,7 @@ private sub read_linecomment()
 		lex.i += 1
 	loop
 
-	add_tk_raw(TK_LINECOMMENT, begin, culng(lex.i) - culng(begin))
+	tk_in_raw(TK_LINECOMMENT, begin, culng(lex.i) - culng(begin))
 end sub
 
 private sub read_blockcomment()
@@ -434,7 +415,7 @@ private sub read_blockcomment()
 	do
 		select case (lex.i[0])
 		case 0
-			add_tk(TK_TODO, "block comment left open")
+			tk_in(TK_TODO, "block comment left open")
 			exit do
 
 		case CH_MUL		'' *
@@ -448,7 +429,7 @@ private sub read_blockcomment()
 		lex.i += 1
 	loop
 
-	add_tk_raw(TK_BLOCKCOMMENT, begin, culng(lex.i) - culng(begin))
+	tk_in_raw(TK_BLOCKCOMMENT, begin, culng(lex.i) - culng(begin))
 
 	if (saw_end) then
 		lex.i += 2
@@ -676,8 +657,8 @@ private sub tokenize_next()
 		read_bytes(1, TK_BITNOT)
 
 	case else
-		add_tk(TK_TODO, "unexpected character: &h" + hex(lex.i[0], 2))
-		add_tk_raw(TK_BYTE, lex.i, 1)
+		tk_in(TK_TODO, "unexpected character: &h" + hex(lex.i[0], 2))
+		tk_in_raw(TK_BYTE, lex.i, 1)
 		lex.i += 1
 
 	end select
@@ -693,8 +674,8 @@ private sub complain_about_nulls()
 	lex.i = lex.buffer
 end sub
 
-sub tk_insert_file(byval x as integer, byref filename as string)
-	lex_init(x, filename)
+sub tk_in_file(byref filename as string)
+	lex_init(filename)
 
 	'' Currently tokens store text as NULL-terminated strings, so they
 	'' can't allow embedded NULLs.
