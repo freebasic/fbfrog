@@ -149,13 +149,19 @@ sub tk_end()
 end sub
 
 function tk_get(byval x as integer) as integer
-	if (x < 0) then return TK_BOF
-	if (x >= tk.size) then return TK_EOF
-	return tk_ptr(x)->id
+	dim as OneToken ptr p = tk_ptr(x)
+	if (p = NULL) then
+		return TK_EOF
+	end if
+	return p->id
 end function
 
 function tk_text(byval x as integer) as zstring ptr
 	return tk_ptr(x)->text
+end function
+
+function tk_count() as integer
+	return tk.size
 end function
 
 sub tk_count_input_size(byval n as integer)

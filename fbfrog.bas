@@ -97,12 +97,23 @@ end function
 		xoops("no input files")
 	end if
 
+	tk_init()
+
 	'' Parse the files specified on the command line
+	dim as string hfile, bifile
 	for i as integer = 1 to (__FB_ARGC__ - 1)
 		dim as zstring ptr arg = __FB_ARGV__[i]
 		if (cptr(ubyte ptr, arg)[0] <> asc("-")) then
-			print *arg
+			hfile = *arg
+
+			print "loading '" & hfile & "'..."
+			tk_in_file(hfile)
+
+			bifile = path_strip_ext(hfile) & ".bi"
+			print "emitting '" & bifile & "'..."
+			tk_emit_file(bifile)
 		end if
 	next
 
+	tk_end()
 	end 0

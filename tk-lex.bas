@@ -5,9 +5,6 @@
 '' Same order as in TK_* enum
 dim shared as zstring ptr c_keywords(0 to (KW__C_COUNT - 1)) = _
 { _
-	@"_Bool"     , _
-	@"_Complex"  , _
-	@"_Imaginary", _
 	@"auto"      , _
 	@"break"     , _
 	@"case"      , _
@@ -407,7 +404,7 @@ private sub read_linecomment()
 	tk_in_raw(TK_LINECOMMENT, begin, culng(lex.i) - culng(begin))
 end sub
 
-private sub read_blockcomment()
+private sub read_comment()
 	lex.i += 2
 	dim as ubyte ptr begin = lex.i
 
@@ -415,7 +412,7 @@ private sub read_blockcomment()
 	do
 		select case (lex.i[0])
 		case 0
-			tk_in(TK_TODO, "block comment left open")
+			tk_in(TK_TODO, "comment left open")
 			exit do
 
 		case CH_MUL		'' *
@@ -429,7 +426,7 @@ private sub read_blockcomment()
 		lex.i += 1
 	loop
 
-	tk_in_raw(TK_BLOCKCOMMENT, begin, culng(lex.i) - culng(begin))
+	tk_in_raw(TK_COMMENT, begin, culng(lex.i) - culng(begin))
 
 	if (saw_end) then
 		lex.i += 2
@@ -552,7 +549,7 @@ private sub tokenize_next()
 		case CH_SLASH	'' //
 			read_linecomment()
 		case CH_MUL	'' /*
-			read_blockcomment()
+			read_comment()
 		case else
 			read_bytes(1, TK_DIV)
 		end select
