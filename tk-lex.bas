@@ -406,11 +406,11 @@ private sub read_string()
 
 	lex.i += 1
 	dim as ubyte ptr begin = lex.i
-
+	dim as integer saw_end = FALSE
 	do
 		select case (lex.i[0])
 		case quotechar
-			lex.i += 1
+			saw_end = TRUE
 			exit do
 
 		case CH_LF, CH_CR, 0
@@ -439,6 +439,10 @@ private sub read_string()
 	end if
 
 	tk_in_raw(id, begin, culng(lex.i) - culng(begin))
+
+	if (saw_end) then
+		lex.i += 1
+	end if
 end sub
 
 private sub tokenize_next()
