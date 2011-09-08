@@ -169,6 +169,67 @@ enum
 	CH_TILDE        '' ~
 end enum
 
+#macro read_bytes(n, id)
+	lex.i += n
+	tk_in(id, NULL)
+#endmacro
+
+private sub read_space()
+	dim as ubyte ptr begin = lex.i
+	do
+		lex.i += 1
+	loop while ((lex.i[0] = CH_TAB) or (lex.i[0] = CH_SPACE))
+	tk_in_raw(TK_SPACE, begin, culng(lex.i) - culng(begin))
+end sub
+
+private sub read_linecomment()
+	'' Line comments, starting at the first '/' of '// foo...'
+	'' The whole comment body except for the // will be put into the token.
+	'' EOL remains a separate token.
+	lex.i += 2
+	dim as ubyte ptr begin = lex.i
+
+	do
+		select case (lex.i[0])
+		case CH_LF, CH_CR, 0
+			exit do
+		end select
+
+		lex.i += 1
+	loop
+
+	tk_in_raw(TK_LINECOMMENT, begin, culng(lex.i) - culng(begin))
+end sub
+
+private sub read_comment()
+	lex.i += 2
+	dim as ubyte ptr begin = lex.i
+
+	dim as integer saw_end = FALSE
+	do
+		select case (lex.i[0])
+		case 0
+			tk_in(TK_TODO, "comment left open")
+			exit do
+
+		case CH_MUL		'' *
+			if (lex.i[1] = CH_SLASH) then	'' */
+				saw_end = TRUE
+				exit do
+			end if
+
+		end select
+
+		lex.i += 1
+	loop
+
+	tk_in_raw(TK_COMMENT, begin, culng(lex.i) - culng(begin))
+
+	if (saw_end) then
+		lex.i += 2
+	end if
+end sub
+
 private sub read_id()
 	'' Identifier/keyword parsing: sequences of a-z, A-Z, 0-9, _, $
 	'' The current char is one of those already. The whole identifier
@@ -380,65 +441,7 @@ private sub read_string()
 	tk_in_raw(id, begin, culng(lex.i) - culng(begin))
 end sub
 
-#macro read_bytes(n, id)
-	lex.i += n
-	tk_in(id, NULL)
-#endmacro
-
-private sub read_linecomment()
-	'' Line comments, starting at the first '/' of '// foo...'
-	'' The whole comment body except for the // will be put into the token.
-	'' EOL remains a separate token.
-	lex.i += 2
-	dim as ubyte ptr begin = lex.i
-
-	do
-		select case (lex.i[0])
-		case CH_LF, CH_CR, 0
-			exit do
-		end select
-
-		lex.i += 1
-	loop
-
-	tk_in_raw(TK_LINECOMMENT, begin, culng(lex.i) - culng(begin))
-end sub
-
-private sub read_comment()
-	lex.i += 2
-	dim as ubyte ptr begin = lex.i
-
-	dim as integer saw_end = FALSE
-	do
-		select case (lex.i[0])
-		case 0
-			tk_in(TK_TODO, "comment left open")
-			exit do
-
-		case CH_MUL		'' *
-			if (lex.i[1] = CH_SLASH) then	'' */
-				saw_end = TRUE
-				exit do
-			end if
-
-		end select
-
-		lex.i += 1
-	loop
-
-	tk_in_raw(TK_COMMENT, begin, culng(lex.i) - culng(begin))
-
-	if (saw_end) then
-		lex.i += 2
-	end if
-end sub
-
 private sub tokenize_next()
-	'' Skip spaces in front of next token
-	while ((lex.i[0] = CH_TAB) or (lex.i[0] = CH_SPACE))
-		lex.i += 1
-	wend
-
 	'' Identify the next token
 	select case as const (lex.i[0])
 	case CH_CR
@@ -449,6 +452,9 @@ private sub tokenize_next()
 
 	case CH_LF
 		read_bytes(1, TK_EOL)
+
+	case CH_TAB, CH_SPACE
+		read_space()
 
 	case CH_EXCL		'' !
 		if (lex.i[1] = CH_EQ) then	'' !=

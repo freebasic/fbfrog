@@ -19,6 +19,7 @@ dim shared as zstring ptr tokentext(0 to (TK__COUNT - 1)) = _
 	NULL, _       '' TK_TODO
 	NULL, _       '' TK_BYTE
 	@EOL_CHARS, _ '' TK_EOL
+	NULL, _       '' TK_SPACE
 	NULL, _       '' TK_COMMENT
 	NULL, _       '' TK_LINECOMMENT
 	_ '' Number literals

@@ -4,6 +4,7 @@ enum
 	TK_TODO         '' TODOs added as fix-me-markers
 	TK_BYTE         '' For stray bytes that don't fit in elsewhere
 	TK_EOL
+	TK_SPACE        '' Concatenated spaces/tabs
 	TK_COMMENT      '' /* ... */
 	TK_LINECOMMENT  '' // ...
 
