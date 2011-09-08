@@ -178,33 +178,87 @@ type EmitterStuff
 	as integer fo '' Output file
 end type
 
-dim shared as EmitterStuff emit
+dim shared as EmitterStuff emitter
 
-private sub flush(byval text as zstring ptr)
+private sub emit(byval text as zstring ptr)
 	dim as integer length = len(*text)
-	if (put(#emit.fo, , *cptr(ubyte ptr, text), length)) then
+	if (put(#emitter.fo, , *cptr(ubyte ptr, text), length)) then
 		xoops("file I/O failed")
 	end if
 end sub
 
+private sub emit_token(byval id as integer, byval text as zstring ptr)
+	select case as const (id)
+	case TK_TODO
+		emit("/' TODO: ")
+		emit(text)
+		emit("'/")
+
+	case TK_COMMENT
+		emit("/'")
+		emit(text)
+		emit("'/")
+
+	case TK_LINECOMMENT
+		emit("''")
+		emit(text)
+
+	case TK_DECNUM
+		emit(text)
+
+	case TK_HEXNUM
+		emit("&h")
+		emit(text)
+
+	case TK_OCTNUM
+		emit("&o")
+		emit(text)
+
+	case TK_STRING
+		emit("""")
+		emit(text)
+		emit("""")
+
+	case TK_WSTRING
+		emit("wstr(""")
+		emit(text)
+		emit(""")")
+
+	case TK_ESTRING
+		emit("!""")
+		emit(text)
+		emit("""")
+
+	case TK_EWSTRING
+		emit("wstr(!""")
+		emit(text)
+		emit(""")")
+
+	case else
+		if (text) then
+			emit(text)
+		else
+			text = tokentext(id)
+			if (text) then
+				emit(text)
+			else
+				emit("/' TODO: token " & id & " '/")
+			end if
+		end if
+
+	end select
+end sub
+
 sub tk_emit_file(byref filename as string)
-	emit.fo = freefile()
-	if (open(filename, for binary, access write, as #emit.fo)) then
+	emitter.fo = freefile()
+	if (open(filename, for binary, access write, as #emitter.fo)) then
 		xoops("could not open output file: '" & filename & "'")
 	end if
 
 	for i as integer = 0 to (tk_count() - 1)
-		dim as integer id = tk_get(i)
-		dim as zstring ptr text = tk_text(i)
-		if (text = NULL) then
-			text = tokentext(id)
-			if (text = NULL) then
-				text = @"/' TODO '/"
-			end if
-		end if
-		flush(text)
+		emit_token(tk_get(i), tk_text(i))
 	next
 
-	close #emit.fo
-	emit.fo = 0
+	close #emitter.fo
+	emitter.fo = 0
 end sub
