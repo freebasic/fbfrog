@@ -8,12 +8,6 @@ We should:
   language or rules specifications or something.
 > Preserve preprocessor directives/unexpanded macros (can't use a real C parser)
 
-> Only one token buffer at a time
-  - If we want to gather certain information like typedef vs struct usage,
-    then we can read in, tokenize and analyze the input files multiple times,
-    before finally reading it in for the last time and actually translating it.
-  - This is ok for combining multiple files
-
 > --combine: lex_insert_file() the main file, scan for #includes and insert
   them via lex_insert_file(), even nested #includes, but drop recursive
   #includes. Then go to normal (single file) translation & emitting.
