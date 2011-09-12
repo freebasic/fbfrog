@@ -191,9 +191,13 @@ end sub
 private sub emit_token(byval id as integer, byval text as zstring ptr)
 	select case as const (id)
 	case TK_TODO
-		emit("/' TODO: ")
-		emit(text)
-		emit("'/")
+		if (text) then
+			emit("/' TODO: ")
+			emit(text)
+			emit(" '/")
+		else
+			emit("/' TODO '/")
+		end if
 
 	case TK_COMMENT
 		emit("/'")
