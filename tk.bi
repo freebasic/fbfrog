@@ -174,6 +174,13 @@ enum
 	TK__COUNT = KW__FB_COUNT
 end enum
 
+enum
+	STMT_TOPLEVEL = 0
+	STMT_PP         '' Some PP directive
+	STMT_EXTERN     '' EXTERN string '{'
+	STMT_END_EXTERN '' '}' -> END EXTERN
+end enum
+
 declare sub tk_move(byval delta as integer)
 declare sub tk_move_to(byval x as integer)
 declare sub tk_in(byval id as integer, byval text as zstring ptr)
@@ -183,13 +190,28 @@ declare sub tk_in_raw _
 		byval text as ubyte ptr, _
 		byval length as integer _
 	)
+declare sub tk_insert _
+	( _
+		byval x as integer, _
+		byval id as integer, _
+		byval text as zstring ptr _
+	)
+declare sub tk_insert_space(byval x as integer)
 declare sub tk_out()
+declare sub tk_remove(byval x as integer)
 declare sub tk_drop_all()
 declare sub tk_init()
 declare sub tk_end()
 declare function tk_get(byval x as integer) as integer
 declare function tk_text(byval x as integer) as zstring ptr
+declare function tk_stmt(byval x as integer) as integer
 declare function tk_count() as integer
+declare sub tk_mark_stmt _
+	( _
+		byval stmt as integer, _
+		byval first as integer, _
+		byval xright as integer _
+	)
 declare sub tk_count_input_size(byval n as integer)
 declare sub tk_count_input_token()
 

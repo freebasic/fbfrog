@@ -188,9 +188,10 @@ private sub emit(byval text as zstring ptr)
 	end if
 end sub
 
-private sub emit_token(byval id as integer, byval text as zstring ptr)
-	select case as const (id)
+private sub emit_token(byval x as integer)
+	select case as const (tk_get(x))
 	case TK_TODO
+		dim as zstring ptr text = tk_text(x)
 		if (text) then
 			emit("/' TODO: ")
 			emit(text)
@@ -201,53 +202,54 @@ private sub emit_token(byval id as integer, byval text as zstring ptr)
 
 	case TK_COMMENT
 		emit("/'")
-		emit(text)
+		emit(tk_text(x))
 		emit("'/")
 
 	case TK_LINECOMMENT
 		emit("''")
-		emit(text)
+		emit(tk_text(x))
 
 	case TK_DECNUM
-		emit(text)
+		emit(tk_text(x))
 
 	case TK_HEXNUM
 		emit("&h")
-		emit(text)
+		emit(tk_text(x))
 
 	case TK_OCTNUM
 		emit("&o")
-		emit(text)
+		emit(tk_text(x))
 
 	case TK_STRING
 		emit("""")
-		emit(text)
+		emit(tk_text(x))
 		emit("""")
 
 	case TK_WSTRING
 		emit("wstr(""")
-		emit(text)
+		emit(tk_text(x))
 		emit(""")")
 
 	case TK_ESTRING
 		emit("!""")
-		emit(text)
+		emit(tk_text(x))
 		emit("""")
 
 	case TK_EWSTRING
 		emit("wstr(!""")
-		emit(text)
+		emit(tk_text(x))
 		emit(""")")
 
 	case else
+		dim as zstring ptr text = tk_text(x)
 		if (text) then
 			emit(text)
 		else
-			text = tokentext(id)
+			text = tokentext(tk_get(x))
 			if (text) then
 				emit(text)
 			else
-				emit("/' TODO: token " & id & " '/")
+				emit("/' TODO: token " & tk_get(x) & " '/")
 			end if
 		end if
 
@@ -260,9 +262,11 @@ sub tk_emit_file(byref filename as string)
 		xoops("could not open output file: '" & filename & "'")
 	end if
 
-	for i as integer = 0 to (tk_count() - 1)
-		emit_token(tk_get(i), tk_text(i))
-	next
+	dim as integer x = 0
+	while (tk_get(x) <> TK_EOF)
+		emit_token(x)
+		x += 1
+	wend
 
 	close #emitter.fo
 	emitter.fo = 0

@@ -72,7 +72,8 @@ end function
 
 private function is_whitespace(byval x as integer) as integer
 	dim as integer id = tk_get(x)
-	return ((id = TK_SPACE) or (id = TK_COMMENT) or (id = TK_LINECOMMENT))
+	return ((id = TK_EOL) or (id = TK_SPACE) or _
+	        (id = TK_COMMENT) or (id = TK_LINECOMMENT))
 end function
 
 private function skip_whitespace(byval x as integer) as integer
@@ -93,30 +94,40 @@ private function parse_pp_directive(byval x as integer) as integer
 		return x
 	end if
 
+	dim as integer begin = x
+
 	'' Skip until EOL, but also handle PP line continuation
 	do
 		x += 1
-		if (tk_get(x) = TK_EOL) then
+
+		select case (tk_get(x))
+		case TK_EOL
 			if (tk_get(x - 1) <> TK_BACKSLASH) then
 				exit do
 			end if
-		end if
+
+		case TK_EOF
+			exit do
+
+		end select
 	loop
+
+	tk_mark_stmt(STMT_PP, begin, x)
 
 	return x
 end function
 
-private function find_matching_parentheses(byval x as integer) as integer
-	dim as integer opening_tk = tk_get(x)
-	dim as integer closing_tk = any
+private function find_parentheses_backwards(byval x as integer) as integer
+	dim as integer opening_tk = any
+	dim as integer closing_tk = tk_get(x)
 
-	select case (opening_tk)
-	case TK_LPAREN
-		closing_tk = TK_RPAREN
-	case TK_LBRACE
-		closing_tk = TK_RBRACE
-	case TK_LBRACKET
-		closing_tk = TK_RBRACKET
+	select case (closing_tk)
+	case TK_RPAREN
+		opening_tk = TK_LPAREN
+	case TK_RBRACE
+		opening_tk = TK_LBRACE
+	case TK_RBRACKET
+		opening_tk = TK_LBRACKET
 	case else
 		return x
 	end select
@@ -124,18 +135,18 @@ private function find_matching_parentheses(byval x as integer) as integer
 	dim as integer level = 0
 	dim as integer old = x
 	do
-		x = skip_soft(x)
+		x -= 1
 
 		select case (tk_get(x))
 		case opening_tk
-			level += 1
-
-		case closing_tk
 			if (level = 0) then
 				'' Found it
 				exit do
 			end if
 			level -= 1
+
+		case closing_tk
+			level += 1
 
 		case TK_EOF
 			'' Not in this file anyways
@@ -147,10 +158,9 @@ private function find_matching_parentheses(byval x as integer) as integer
 	return x
 end function
 
-'' EXTERN string '{' ... '}'
-'' EXTERN string ... END EXTERN
+'' EXTERN string '{'
 private function parse_extern(byval x as integer) as integer
-	dim as integer old = x
+	dim as integer begin = x
 
 	if (tk_get(x) <> KW_EXTERN) then
 		return x
@@ -158,54 +168,48 @@ private function parse_extern(byval x as integer) as integer
 	x = skip_soft(x)
 
 	if (tk_get(x) <> TK_STRING) then
-		return old
+		return begin
 	end if
 	x = skip_soft(x)
 
 	'' Opening '{'
 	if (tk_get(x) <> TK_LBRACE) then
-		return old
+		return begin
 	end if
 
-	'' Find closing '}'
-	dim as integer closing = find_matching_parentheses(x)
-	if (closing = x) then
-		'' Not found
-		return old
-	end if
+	tk_mark_stmt(STMT_EXTERN, begin, x + 1)
 
-	'' Delete the '{'
-	tk_move_to(x)
-	tk_out()
-
-	'' Insert END EXTERN in place of the closing '}'
-	tk_move_to(closing)
-	tk_out()
-	tk_in(KW_END, NULL)
-	tk_in(KW_EXTERN, NULL)
-
-	return x
+	return skip_soft(x)
 end function
 
-private sub translate_this()
-	'' Scan for function declarations and rearrange them
-	'' Many headers will prepend defines to function declarations,
-	'' to specify calling convention, __declspec or other attributes.
-	''
-	''  (attribute)*
-	''  type
-	''  {identifier | '(' '*' identifier ')' }
-	''  '('
-	''  [ type [identifier] (',' type [identifier])* ]
-	''  [ ',' '...' ]
-	''  ')'
-	''  ';'
-	''
+private function parse_closing_braces(byval x as integer) as integer
+	if (tk_get(x) <> TK_RBRACE) then
+		return x
+	end if
 
+	dim as integer opening = find_parentheses_backwards(x)
+	if (opening = x) then
+		return x
+	end if
+
+	dim as integer stmt = 0
+
+	select case (tk_stmt(opening))
+	case STMT_EXTERN
+		stmt = STMT_END_EXTERN
+	end select
+
+	tk_mark_stmt(stmt, x, x + 1)
+
+	return skip_soft(x)
+end function
+
+private sub parse_toplevel()
 	dim as integer x = 0
 	do
 		x = parse_pp_directive(x)
 		x = parse_extern(x)
+		x = parse_closing_braces(x)
 
 		select case (tk_get(x))
 		case TK_BYTE, TK_EOL, TK_SPACE, TK_COMMENT, TK_LINECOMMENT
@@ -216,8 +220,100 @@ private sub translate_this()
 
 		case else
 			x += 1
-			tk_move_to(x)
-			tk_in(TK_TODO, NULL)
+
+		end select
+	loop
+end sub
+
+private sub filter_semicolons()
+	dim as integer lastsemi = -1
+	dim as integer x = 0
+	do
+		select case (tk_get(x))
+		case TK_SEMI
+			'' All ';' can just be removed
+			tk_remove(x)
+			lastsemi = x
+
+		case TK_EOL
+			lastsemi = -1
+			x += 1
+
+		case TK_SPACE, TK_COMMENT, TK_LINECOMMENT
+			'' Allowed between semi-colon and EOL
+			x += 1
+
+		case TK_EOF
+			exit do
+
+		case else
+			'' However if there is no EOL coming,
+			'' add an ':' (FB's statement separator) instead.
+			if (lastsemi >= 0) then
+				tk_insert(lastsemi, TK_COLON, NULL)
+				lastsemi = -1
+				x += 1
+			end if
+
+			x += 1
+
+		end select
+	loop
+end sub
+
+private sub filter_eol_and_comments_in_statements()
+	dim as integer x = 0
+	do
+		select case (tk_get(x))
+		case TK_EOF
+			exit do
+
+		case TK_EOL, TK_COMMENT, TK_LINECOMMENT
+			if (tk_stmt(x) <> STMT_TOPLEVEL) then
+				tk_remove(x)
+				'' Removing EOL or comment might result in
+				'' a lack of a space token, fix that up.
+				if ((tk_get(x - 1) <> TK_SPACE) and _
+				    (tk_get(x    ) <> TK_SPACE)) then
+					tk_insert_space(x)
+				end if
+			end if
+
+		end select
+
+		x += 1
+	loop
+end sub
+
+private sub translate_toplevel()
+	dim as integer x = 0
+	do
+		select case (tk_stmt(x))
+		case STMT_EXTERN
+			'' EXTERN "C" '{' -> EXTERN "C"
+			'' Just jump to the '{' and remove it
+			x += 3
+			while (tk_get(x) <> TK_LBRACE)
+				x += 1
+			wend
+			tk_remove(x)
+
+		case STMT_END_EXTERN
+			'' '}' -> END EXTERN
+			tk_remove(x)
+			tk_insert(x, KW_END, NULL)
+			x += 1
+			tk_insert_space(x)
+			x += 1
+			tk_insert(x, KW_EXTERN, NULL)
+
+		end select
+
+		select case (tk_get(x))
+		case TK_EOF
+			exit do
+
+		case else
 			x += 1
 
 		end select
@@ -263,7 +359,14 @@ end sub
 			print "loading '" & hfile & "'..."
 			tk_in_file(hfile)
 
-			translate_this()
+			print "parsing..."
+			parse_toplevel()
+			print "filtering semi-colons..."
+			filter_semicolons()
+			print "filtering eol/comments inside constructs..."
+			filter_eol_and_comments_in_statements()
+			print "main translation..."
+			translate_toplevel()
 
 			bifile = path_strip_ext(hfile) & ".bi"
 			print "emitting '" & bifile & "'..."

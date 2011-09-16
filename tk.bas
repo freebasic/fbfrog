@@ -3,8 +3,9 @@
 #include once "crt.bi"
 
 type OneToken
-	as integer id       '' TK_*
-	as zstring ptr text '' Identifiers and number/string literals, or NULL
+	as integer id        '' TK_*
+	as zstring ptr text  '' Identifiers and number/string literals, or NULL
+	as integer stmt      '' STMT_*
 end type
 
 type AllTokens
@@ -73,7 +74,7 @@ sub tk_in(byval id as integer, byval text as zstring ptr)
 	tk_in_raw(id, text, length)
 end sub
 
-'' Insert token at current position (forwards)
+'' Insert token at current position, the current position moves forward.
 sub tk_in_raw _
 	( _
 		byval id as integer, _
@@ -110,13 +111,28 @@ sub tk_in_raw _
 	else
 		p->text = NULL
 	end if
+	p->stmt = STMT_TOPLEVEL
 
 	tk.front += 1
 	tk.gap -= 1
 	tk.size += 1
 end sub
 
-'' Delete token at current position (backwards)
+sub tk_insert _
+	( _
+		byval x as integer, _
+		byval id as integer, _
+		byval text as zstring ptr _
+	)
+	tk_move_to(x)
+	tk_in(id, text)
+end sub
+
+sub tk_insert_space(byval x as integer)
+	tk_insert(x, TK_SPACE, " ")
+end sub
+
+'' Delete token in front of current position (backwards deletion)
 sub tk_out()
 	if (tk.front < 1) then return
 
@@ -126,6 +142,11 @@ sub tk_out()
 
 	dim as OneToken ptr p = tk.p + tk.front
 	deallocate(p->text)
+end sub
+
+sub tk_remove(byval x as integer)
+	tk_move_to(x + 1)
+	tk_out()
 end sub
 
 sub tk_drop_all()
@@ -157,12 +178,37 @@ function tk_get(byval x as integer) as integer
 end function
 
 function tk_text(byval x as integer) as zstring ptr
-	return tk_ptr(x)->text
+	dim as OneToken ptr p = tk_ptr(x)
+	if (p = NULL) then
+		return NULL
+	end if
+	return p->text
+end function
+
+function tk_stmt(byval x as integer) as integer
+	dim as OneToken ptr p = tk_ptr(x)
+	if (p = NULL) then
+		return STMT_TOPLEVEL
+	end if
+	return p->stmt
 end function
 
 function tk_count() as integer
 	return tk.size
 end function
+
+sub tk_mark_stmt _
+	( _
+		byval stmt as integer, _
+		byval first as integer, _
+		byval xright as integer _
+	)
+
+	for i as integer = first to (xright - 1)
+		dim as OneToken ptr p = tk_ptr(i)
+		p->stmt = stmt
+	next
+end sub
 
 sub tk_count_input_size(byval n as integer)
 	tk.inputsize += n
