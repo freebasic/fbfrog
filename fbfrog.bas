@@ -70,6 +70,8 @@ function path_strip_ext(byref path as string) as string
 	return left(path, find_ext_begin(path))
 end function
 
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
 private function is_whitespace(byval x as integer) as integer
 	dim as integer id = tk_get(x)
 	return ((id = TK_EOL) or (id = TK_SPACE) or _
@@ -158,31 +160,51 @@ private function find_parentheses_backwards(byval x as integer) as integer
 	return x
 end function
 
-'' EXTERN string '{'
-private function parse_extern(byval x as integer) as integer
-	dim as integer begin = x
+'' EXTERN/STRUCT/ENUM blocks
+private function parse_compound_opening(byval x as integer) as integer
+	dim as integer stmt = any
 
-	if (tk_get(x) <> KW_EXTERN) then
+	select case (tk_get(x))
+	case KW_EXTERN
+		stmt = STMT_EXTERN
+	case KW_STRUCT
+		stmt = STMT_STRUCT
+	case KW_ENUM
+		stmt = STMT_ENUM
+	case else
 		return x
-	end if
+	end select
+
+	dim as integer begin = x
 	x = skip_soft(x)
 
-	if (tk_get(x) <> TK_STRING) then
-		return begin
+	if (stmt = STMT_EXTERN) then
+		'' EXTERN requires a following string
+		if (tk_get(x) <> TK_STRING) then
+			return begin
+		end if
+		x = skip_soft(x)
+	else
+		'' STRUCT/ENUM can have an optional id
+		if (tk_get(x) = TK_ID) then
+			x = skip_soft(x)
+		end if
 	end if
-	x = skip_soft(x)
 
-	'' Opening '{'
+	'' Opening '{'?
 	if (tk_get(x) <> TK_LBRACE) then
 		return begin
 	end if
 
-	tk_mark_stmt(STMT_EXTERN, begin, x + 1)
+	'' Mark the '{' too, but not the whitespace/comments behind it,
+	'' since that's usually indentation belonging to something else.
+	x += 1
+	tk_mark_stmt(stmt, begin, x)
 
-	return skip_soft(x)
+	return x
 end function
 
-private function parse_closing_braces(byval x as integer) as integer
+private function parse_compound_closing(byval x as integer) as integer
 	if (tk_get(x) <> TK_RBRACE) then
 		return x
 	end if
@@ -192,14 +214,24 @@ private function parse_closing_braces(byval x as integer) as integer
 		return x
 	end if
 
-	dim as integer stmt = 0
+	x += 1
 
-	select case (tk_stmt(opening))
+	dim as integer stmt = tk_stmt(opening)
+
+	select case (stmt)
 	case STMT_EXTERN
 		stmt = STMT_END_EXTERN
+	case STMT_STRUCT
+		stmt = STMT_END_STRUCT
+	case STMT_ENUM
+		stmt = STMT_END_ENUM
 	end select
 
-	tk_mark_stmt(stmt, x, x + 1)
+	tk_mark_stmt(stmt, x - 1, x)
+
+	return x
+end function
+
 
 	return skip_soft(x)
 end function
@@ -208,20 +240,14 @@ private sub parse_toplevel()
 	dim as integer x = 0
 	do
 		x = parse_pp_directive(x)
-		x = parse_extern(x)
-		x = parse_closing_braces(x)
+		x = parse_compound_opening(x)
+		x = parse_compound_closing(x)
 
-		select case (tk_get(x))
-		case TK_BYTE, TK_EOL, TK_SPACE, TK_COMMENT, TK_LINECOMMENT
-			x += 1
-
-		case TK_EOF
+		if (tk_get(x) = TK_EOF) then
 			exit do
+		end if
 
-		case else
-			x += 1
-
-		end select
+		x += 1
 	loop
 end sub
 
@@ -285,27 +311,57 @@ private sub filter_eol_and_comments_in_statements()
 	loop
 end sub
 
+private function remove_following_lbrace(byval x as integer) as integer
+	'' EXTERN "C" '{' -> EXTERN "C"
+	'' Just jump to the '{' and remove it
+	while (tk_get(x) <> TK_LBRACE)
+		x += 1
+	wend
+	tk_remove(x)
+	return x
+end function
+
+private function translate_compound_end _
+	( _
+		byval x as integer, _
+		byval compound_kw as integer _
+	) as integer
+
+	'' '}' -> END EXTERN
+	tk_remove(x)
+
+	tk_insert(x, KW_END, NULL)
+	x += 1
+	tk_insert_space(x)
+	x += 1
+	tk_insert(x, compound_kw, NULL)
+
+	return x
+end function
+
 private sub translate_toplevel()
 	dim as integer x = 0
 	do
 		select case (tk_stmt(x))
-		case STMT_EXTERN
-			'' EXTERN "C" '{' -> EXTERN "C"
-			'' Just jump to the '{' and remove it
-			x += 3
-			while (tk_get(x) <> TK_LBRACE)
-				x += 1
-			wend
+		case STMT_EXTERN, STMT_ENUM
+			'' Just remove the '{'
+			x = remove_following_lbrace(x)
+
+		case STMT_STRUCT
+			'' STRUCT -> TYPE
 			tk_remove(x)
+			tk_insert(x, KW_TYPE, NULL)
+			'' And also remove the '{'
+			x = remove_following_lbrace(x)
 
 		case STMT_END_EXTERN
-			'' '}' -> END EXTERN
-			tk_remove(x)
-			tk_insert(x, KW_END, NULL)
-			x += 1
-			tk_insert_space(x)
-			x += 1
-			tk_insert(x, KW_EXTERN, NULL)
+			x = translate_compound_end(x, KW_EXTERN)
+
+		case STMT_END_STRUCT
+			x = translate_compound_end(x, KW_TYPE)
+
+		case STMT_END_ENUM
+			x = translate_compound_end(x, KW_ENUM)
 
 		end select
 

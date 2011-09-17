@@ -127,6 +127,8 @@ enum
 	'' FB only keywords
 	'' Here we only need to have FB keywords that we might produce during
 	'' the C-to-FB translation.
+	'' Note: The lexer doesn't recognize/use these, they're only added
+	'' during the translation process.
 	KW__FB_FIRST = KW__C_COUNT
 	KW_ALIAS = KW__FB_FIRST
 	KW_AS
@@ -177,8 +179,14 @@ end enum
 enum
 	STMT_TOPLEVEL = 0
 	STMT_PP         '' Some PP directive
-	STMT_EXTERN     '' EXTERN string '{'
-	STMT_END_EXTERN '' '}' -> END EXTERN
+
+	'' Compound blocks
+	STMT_EXTERN
+	STMT_END_EXTERN
+	STMT_STRUCT
+	STMT_END_STRUCT
+	STMT_ENUM
+	STMT_END_ENUM
 end enum
 
 declare sub tk_move(byval delta as integer)
