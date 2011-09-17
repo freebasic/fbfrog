@@ -301,31 +301,31 @@ private sub read_number()
 	do
 		dim as integer digit = lex.i[0]
 
-		select case as const (digit)
-		case CH_A to CH_F
-			digit -= (CH_A - 10)
-
-		case CH_L_A to CH_L_F
-			digit -= (CH_L_A - 10)
-
-		case CH_0 to CH_9
-			digit -= CH_0
-
-		case CH_DOT
+		if (digit = CH_DOT) then
 			'' Only one dot allowed
 			if (found_dot) then
 				exit do
 			end if
-
 			found_dot = TRUE
+		else
+			select case as const (digit)
+			case CH_A to CH_F
+				digit -= (CH_A - 10)
 
-		case else
-			exit do
-		end select
+			case CH_L_A to CH_L_F
+				digit -= (CH_L_A - 10)
 
-		'' Do not allow A-F in decimal numbers, etc.
-		if (digit >= numbase) then
-			exit do
+			case CH_0 to CH_9
+				digit -= CH_0
+
+			case else
+				exit do
+			end select
+
+			'' Do not allow A-F in decimal numbers, etc.
+			if (digit >= numbase) then
+				exit do
+			end if
 		end if
 
 		lex.i += 1
