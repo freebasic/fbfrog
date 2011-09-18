@@ -67,6 +67,7 @@ enum
 	TK_RBRACKET     '' ]
 	TK_BITXOR       '' ^
 	TK_SELFBITXOR   '' ^=
+	TK_UNDERSCORE   '' _ (only for FB code, not used by the C lexer)
 	TK_LBRACE       '' {
 	TK_BITOR        '' |
 	TK_SELFBITOR    '' |=

@@ -155,7 +155,7 @@ enum
 	CH_BACKSLASH    '' \
 	CH_RBRACKET     '' ]
 	CH_CIRCUMFLEX   '' ^
-	CH_UNDERLINE    '' _
+	CH_UNDERSCORE   '' _
 	CH_GRAVE        '' `
 
 	CH_L_A, CH_L_B, CH_L_C, CH_L_D, CH_L_E, CH_L_F, CH_L_G
@@ -244,7 +244,7 @@ private sub read_id()
 		case CH_A   to CH_Z  , _
 		     CH_L_A to CH_L_Z, _
 		     CH_0   to CH_9  , _
-		     CH_UNDERLINE    , _
+		     CH_UNDERSCORE   , _
 		     CH_DOLLAR
 
 		case else
@@ -638,7 +638,7 @@ private sub tokenize_next()
 			read_bytes(1, TK_BITXOR)
 		end if
 
-	case CH_UNDERLINE	'' _
+	case CH_UNDERSCORE	'' _
 		read_id()
 
 	case CH_L_A to CH_L_Z	'' a-z

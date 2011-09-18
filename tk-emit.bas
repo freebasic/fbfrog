@@ -79,6 +79,7 @@ dim shared as zstring ptr tokentext(0 to (TK__COUNT - 1)) = _
 	@"]"      , _
 	@"xor"    , _ '' ^
 	@"xor="   , _ '' ^=
+	@"_"      , _
 	@"{"      , _
 	@"or"     , _ '' |
 	@"or="    , _ '' |=

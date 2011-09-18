@@ -287,23 +287,63 @@ private sub filter_semicolons()
 	loop
 end sub
 
-private sub filter_eol_and_comments_in_statements()
+'' EOL fixup -- in C it's possible to have constructs split over multiple
+'' lines, which requires a '_' line continuation char in FB. Also, the CPP
+'' \<EOL> line continuation needs to be converted to FB.
+private sub fixup_eols()
 	dim as integer x = 0
 	do
 		select case (tk_get(x))
 		case TK_EOF
 			exit do
 
-		case TK_EOL, TK_COMMENT, TK_LINECOMMENT
-			if (tk_stmt(x) <> STMT_TOPLEVEL) then
-				tk_remove(x)
-				'' Removing EOL or comment might result in
-				'' a lack of a space token, fix that up.
-				if ((tk_get(x - 1) <> TK_SPACE) and _
-				    (tk_get(x    ) <> TK_SPACE)) then
+		case TK_EOL
+			select case (tk_stmt(x))
+			case STMT_TOPLEVEL
+				'' (EOLs at toplevel are supposed to stay)
+
+			case STMT_PP
+				'' EOLs can only be part of PP directives if
+				'' the newline char is escaped with '\'.
+				'' For FB that needs to be replaced with a '_'.
+				'' That might require an extra space too,
+				'' because '_' can be part of identifiers,
+				'' unlike '\'...
+				x -= 2
+				if (tk_get(x) <> TK_SPACE) then
 					tk_insert_space(x)
+					x += 1
 				end if
-			end if
+
+				'' Back to '\'
+				x += 1
+
+				'' Replace the '\' by '_'
+				xassert(tk_get(x) = TK_BACKSLASH)
+				tk_remove(x)
+				tk_insert(x, TK_UNDERSCORE, NULL)
+
+				'' Back to EOL
+				x += 1
+
+			case else
+				'' For EOLs inside constructs, '_'s need to
+				'' be added so it works in FB. It should be
+				'' inserted in front of any line comment or
+				'' space that aligns the line comment.
+				dim as integer y = x - 1
+				if (tk_get(y) = TK_LINECOMMENT) then
+					y -= 1
+				end if
+				if (tk_get(y) = TK_SPACE) then
+					y -= 1
+				end if
+				y += 1
+				tk_insert_space(y)
+				tk_insert(y + 1, TK_UNDERSCORE, NULL)
+				x += 2
+
+			end select
 
 		end select
 
@@ -417,11 +457,10 @@ end sub
 
 			print "parsing..."
 			parse_toplevel()
-			print "filtering semi-colons..."
+
+			print "translating..."
 			filter_semicolons()
-			print "filtering eol/comments inside constructs..."
-			filter_eol_and_comments_in_statements()
-			print "main translation..."
+			fixup_eols()
 			translate_toplevel()
 
 			bifile = path_strip_ext(hfile) & ".bi"

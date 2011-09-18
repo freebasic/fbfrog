@@ -1,8 +1,10 @@
 #ifndef TEST_H
 #define TEST_H
 
-#ifdef  __cplusplus
-extern "C" {
+#ifdef __cplusplus
+extern    /*oopsydaisy*/
+"C"              // oh, look this is on a new line!
+{
 #endif
 
 struct T {
@@ -63,7 +65,7 @@ double *(*fpo02)(int ***(*)(char**));
 #	endif
 #endif
 
-#ifdef  __cplusplus
+#ifdef __cplusplus
 }
 #endif
 
