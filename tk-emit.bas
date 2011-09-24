@@ -13,7 +13,7 @@
 '' carry around will be used instead of this table, and some are pure C
 '' tokens that should never be emitted into FB code at all, both of these
 '' kinds have a NULL here.
-dim shared as zstring ptr tokentext(0 to (TK__COUNT - 1)) = _
+dim shared as zstring ptr token_text(0 to (TK__COUNT - 1)) = _
 { _
 	NULL, _       '' TK_EOF
 	NULL, _       '' TK_TODO
@@ -246,7 +246,7 @@ private sub emit_token(byval x as integer)
 		if (text) then
 			emit(text)
 		else
-			text = tokentext(tk_get(x))
+			text = token_text(tk_get(x))
 			if (text) then
 				emit(text)
 			else

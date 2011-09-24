@@ -3,7 +3,7 @@
 #include once "hash.bi"
 
 '' Same order as in TK_* enum
-dim shared as zstring ptr c_keywords(0 to (KW__C_COUNT - 1)) = _
+dim shared as zstring ptr c_keywords(0 to (KW__FB_FIRST - KW__C_FIRST - 1)) = _
 { _
 	@"auto"      , _
 	@"break"     , _
@@ -99,8 +99,8 @@ private sub lex_init(byref filename as string)
 	'' Load C keywords if not yet done
 	if (lex.kwhash.items = NULL) then
 		hash_init(@lex.kwhash, 7)
-		for i as integer = 0 to (KW__C_COUNT - 1)
-			hash_add(@lex.kwhash, c_keywords(i), i + KW__C_FIRST)
+		for i as integer = 0 to (KW__FB_FIRST - KW__C_FIRST - 1)
+			hash_add(@lex.kwhash, c_keywords(i), KW__C_FIRST + i)
 		next
 	end if
 end sub

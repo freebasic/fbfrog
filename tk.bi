@@ -123,14 +123,13 @@ enum
 	KW_VOID
 	KW_VOLATILE
 	KW_WHILE
-	KW__C_COUNT
 
 	'' FB only keywords
 	'' Here we only need to have FB keywords that we might produce during
 	'' the C-to-FB translation.
 	'' Note: The lexer doesn't recognize/use these, they're only added
 	'' during the translation process.
-	KW__FB_FIRST = KW__C_COUNT
+	KW__FB_FIRST
 	KW_ALIAS = KW__FB_FIRST
 	KW_AS
 	KW_BYTE
@@ -172,9 +171,8 @@ enum
 	KW_WSTR
 	KW_WSTRING
 	KW_ZSTRING
-	KW__FB_COUNT
 
-	TK__COUNT = KW__FB_COUNT
+	TK__COUNT
 end enum
 
 enum
@@ -223,6 +221,8 @@ declare sub tk_mark_stmt _
 	)
 declare sub tk_count_input_size(byval n as integer)
 declare sub tk_count_input_token()
+declare function tk_debug(byval x as integer) as string
+#define TRACE(x) print __FILE__ & "(" & __LINE__ & "):" & __FUNCTION__ & ": " & cint(x) & " [" & tk_debug(x) & "]"
 
 declare sub tk_emit_file(byref filename as string)
 declare sub tk_in_file(byref filename as string)
