@@ -2,21 +2,28 @@
 #define TEST_H
 
 #ifdef __cplusplus
-extern    /*oopsydaisy*/
-"C"              // oh, look this is on a new line!
-{
+extern
+"C" {             // oh look, this is on a new line!
 #endif
 
 struct T {
 	int i; int j;
+	int *(*p)(int*);
 };
 
 typedef struct T TT;
 
+struct TTT;
+
+typedef struct {
+	int a;
+	double x;
+} TTTT;
+
 enum {
-	A,      /* This is A */
-	B,      /* This is B */
-	C       /* This is C */
+	A = 0,               /* This is A */
+	B, C = (1 << 4),     /* This is B and C */
+	D                    /* This is D */
 };
 
 /* sub */
@@ -36,6 +43,9 @@ TT *f05();
 
 /* struct */
 struct T f06(struct T *, TT ******);
+
+#define MY_EXTERN /*__declspec(dllexport)*/
+#define MY_CALL __attribute__((__stdcall__))/*__stdcall*/
 
 /* some #defines in front, as is pretty common */
 MY_EXTERN MY_CALL TT f07();

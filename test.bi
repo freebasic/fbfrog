@@ -2,21 +2,28 @@
 #define TEST_H
 
 #ifdef __cplusplus
-extern    /'oopsydaisy'/ _
-"C" _              '' oh, look this is on a new line!
-
+extern _
+"C"              '' oh look, this is on a new line!
 #endif
 
 type T 
 	/' TODO: token 93 '/ i: /' TODO: token 93 '/ j
+	/' TODO: token 93 '/ *(*p)(/' TODO: token 93 '/*)
 end type
 
 /' TODO: token 105 '/ /' TODO: token 103 '/ T TT
 
+/' TODO: token 103 '/ TTT
+
+/' TODO: token 105 '/ type 
+	/' TODO: token 93 '/ a
+	double x
+end type TTTT
+
 enum 
-	A,      /' This is A '/
-	B,      /' This is B '/
-	C       /' This is C '/
+	A = &o               /' This is A '/
+	B, C = (1 shl 4)     /' This is B and C '/
+	D                    /' This is D '/
 end enum
 
 /' sub '/
@@ -36,6 +43,9 @@ TT *f05()
 
 /' struct '/
 /' TODO: token 103 '/ T f06(/' TODO: token 103 '/ T *, TT ******)
+
+#define MY_EXTERN /'__declspec(dllexport)'/
+#define MY_CALL __attribute__((__stdcall__))/'__stdcall'/
 
 /' some #defines in front, as is pretty common '/
 MY_EXTERN MY_CALL TT f07()

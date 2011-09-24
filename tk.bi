@@ -181,11 +181,12 @@ enum
 
 	'' Compound blocks
 	STMT_EXTERN
-	STMT_END_EXTERN
+	STMT_ENDEXTERN
 	STMT_STRUCT
-	STMT_END_STRUCT
+	STMT_ENDSTRUCT
 	STMT_ENUM
-	STMT_END_ENUM
+	STMT_ENDENUM
+	STMT_ENUMFIELD  '' constant declaration in an enum's body
 end enum
 
 declare sub tk_move(byval delta as integer)

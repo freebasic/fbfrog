@@ -164,8 +164,44 @@ private function find_parentheses_backwards(byval x as integer) as integer
 	return x
 end function
 
+private function parse_enumfield(byval x as integer) as integer
+	if (tk_get(x) <> TK_ID) then
+		return x
+	end if
+
+	dim as integer begin = x
+	x = skip(x)
+
+	'' ['=' expression]
+	if (tk_get(x) = TK_ASSIGN) then
+		do
+			x = skip(x)
+			select case (tk_get(x))
+			case TK_COMMA, TK_RBRACE, TK_EOF
+				exit do
+			end select
+		loop
+	end if
+
+	select case (tk_get(x))
+	case TK_COMMA
+		'' Treat the comma as part of the constant declaration
+		x = skip(x)
+
+	case TK_RBRACE
+
+	case else
+		return begin
+	end select
+
+	'' Mark the constant declaration
+	tk_mark_stmt(STMT_ENUMFIELD, begin, skiprev(x) + 1)
+
+	return x
+end function
+
 '' EXTERN/STRUCT/ENUM blocks
-private function parse_compound_opening(byval x as integer) as integer
+private function parse_compound(byval x as integer) as integer
 	dim as integer stmt = any
 
 	select case (tk_get(x))
@@ -184,6 +220,7 @@ private function parse_compound_opening(byval x as integer) as integer
 
 	if (stmt = STMT_EXTERN) then
 		'' EXTERN requires a following string
+		'' (for example <EXTERN "C">)
 		if (tk_get(x) <> TK_STRING) then
 			return begin
 		end if
@@ -205,10 +242,50 @@ private function parse_compound_opening(byval x as integer) as integer
 	x += 1
 	tk_mark_stmt(stmt, begin, x)
 
-	return x
+	'' EXTERN parsing is done here; the content is parsed as toplevel,
+	'' and the '}' is handled later.
+	if (stmt = STMT_EXTERN) then
+		return x
+	end if
+
+	x = skip(x)
+
+	'' Fields
+	do
+		dim as integer old = x
+		x = parse_pp_directive(x)
+
+		if (stmt = STMT_ENUM) then
+			x = parse_enumfield(x)
+		end if
+
+		select case (tk_get(x))
+		case TK_RBRACE
+			exit do
+		case TK_EOF
+			return begin
+		end select
+
+		if (x = old) then
+			'' The above parsers didn't catch anything, this is
+			'' probably commentary/whitespace...
+			x = skip(x)
+		end if
+	loop
+
+	select case (stmt)
+	case STMT_STRUCT
+		stmt = STMT_ENDSTRUCT
+	case STMT_ENUM
+		stmt = STMT_ENDENUM
+	end select
+
+	tk_mark_stmt(stmt, x, x + 1)
+
+	return x + 1
 end function
 
-private function parse_compound_closing(byval x as integer) as integer
+private function parse_extern_end(byval x as integer) as integer
 	if (tk_get(x) <> TK_RBRACE) then
 		return x
 	end if
@@ -218,25 +295,14 @@ private function parse_compound_closing(byval x as integer) as integer
 		return x
 	end if
 
-	x += 1
-
 	dim as integer stmt = tk_stmt(opening)
+	if (stmt <> STMT_EXTERN) then
+		return x
+	end if
 
-	select case (stmt)
-	case STMT_EXTERN
-		stmt = STMT_END_EXTERN
-	case STMT_STRUCT
-		stmt = STMT_END_STRUCT
-	case STMT_ENUM
-		stmt = STMT_END_ENUM
-	end select
+	tk_mark_stmt(STMT_ENDEXTERN, x, x + 1)
 
-	tk_mark_stmt(stmt, x - 1, x)
-
-	return x
-end function
-
-
+	return x + 1
 end function
 
 private sub parse_toplevel()
@@ -245,8 +311,8 @@ private sub parse_toplevel()
 		dim as integer old = x
 
 		x = parse_pp_directive(x)
-		x = parse_compound_opening(x)
-		x = parse_compound_closing(x)
+		x = parse_compound(x)
+		x = parse_extern_end(x)
 
 		if (x = old) then
 			'' Token/construct couldn't be identified, so make
@@ -384,10 +450,57 @@ private function translate_compound_end _
 	return x
 end function
 
+private function translate_enumfield(byval x as integer) as integer
+	'' identifer ['=' expression] [',']
+	'' The only thing to do here is to remove the comma,
+	'' unless there are more constants coming in this line.
+	do
+		x = skip(x)
+
+		select case (tk_get(x))
+		case TK_COMMA
+			dim as integer more_coming = FALSE
+			dim as integer y = x
+			do
+				y += 1
+
+				select case (tk_get(y))
+				case TK_SPACE, TK_COMMENT
+					'' Space/comment is ok
+
+				case TK_LINECOMMENT, TK_EOL
+					'' Reaching these means there is
+					'' nothing else coming in this line
+					exit do
+
+				case else
+					more_coming = TRUE
+					exit do
+
+				end select
+			loop
+
+			if (more_coming = FALSE) then
+				tk_remove(x)
+			else
+				x += 1
+			end if
+
+			exit do
+
+		case TK_RBRACE, TK_EOF
+			exit do
+
+		end select
+	loop
+
+	return x
+end function
+
 private sub translate_toplevel()
 	dim as integer x = 0
-	do
-		select case (tk_stmt(x))
+	while (tk_get(x) <> TK_EOF)
+		select case as const (tk_stmt(x))
 		case STMT_EXTERN, STMT_ENUM
 			'' Just remove the '{'
 			x = remove_following_lbrace(x)
@@ -399,26 +512,23 @@ private sub translate_toplevel()
 			'' And also remove the '{'
 			x = remove_following_lbrace(x)
 
-		case STMT_END_EXTERN
+		case STMT_ENDEXTERN
 			x = translate_compound_end(x, KW_EXTERN)
 
-		case STMT_END_STRUCT
+		case STMT_ENDSTRUCT
 			x = translate_compound_end(x, KW_TYPE)
 
-		case STMT_END_ENUM
+		case STMT_ENDENUM
 			x = translate_compound_end(x, KW_ENUM)
 
-		end select
-
-		select case (tk_get(x))
-		case TK_EOF
-			exit do
+		case STMT_ENUMFIELD
+			x = translate_enumfield(x)
 
 		case else
 			x += 1
 
 		end select
-	loop
+	wend
 end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
