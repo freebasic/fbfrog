@@ -46,4 +46,3 @@ We should:
 
 > Check for nested /' or '/ in C comments, those need to be replaced
   since they have meaning in FB...
-

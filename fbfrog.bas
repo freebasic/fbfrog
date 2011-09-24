@@ -164,6 +164,48 @@ private function find_parentheses_backwards(byval x as integer) as integer
 	return x
 end function
 
+private function parse_base_type(byval x as integer) as integer
+	dim as integer old = x
+
+	select case (tk_get(x))
+	case KW_ENUM, KW_STRUCT
+		'' {'enum' | 'struct'} id
+		x = skip(x)
+		if (tk_get(x) = TK_ID) then
+			x = skip(x)
+		else
+			return old
+		end if
+
+	case TK_ID
+		'' Just a single id
+		x = skip(x)
+
+	case else
+		'' [signed | unsigned] {void | char | int | ...}
+		'' or even signed/unsigned alone.
+
+		select case (tk_get(x))
+		case KW_SIGNED, KW_UNSIGNED
+			x = skip(x)
+		end select
+
+		select case (tk_get(x))
+		case KW_VOID, KW_CHAR, KW_DOUBLE, KW_FLOAT, _
+		     KW_SHORT, KW_INT, KW_LONG, KW_REGISTER
+			x = skip(x)
+		end select
+
+		'' No type keyword at all?
+		if (x = old) then
+			return old
+		end if
+
+	end select
+
+	return x
+end function
+
 private function parse_enumfield(byval x as integer) as integer
 	if (tk_get(x) <> TK_ID) then
 		return x
@@ -196,6 +238,51 @@ private function parse_enumfield(byval x as integer) as integer
 
 	'' Mark the constant declaration
 	tk_mark_stmt(STMT_ENUMFIELD, begin, skiprev(x) + 1)
+
+	return x
+end function
+
+private function parse_field(byval x as integer) as integer
+	dim as integer begin = x
+
+	'' type
+	TRACE(x), "type?"
+	x = parse_base_type(begin)
+	if (x = begin) then
+		return begin
+	end if
+
+	'' '*'* identifier (',' '*'* identifier)*
+	do
+		'' Pointers: ('*')*
+		while (tk_get(x) = TK_MUL)
+			TRACE(x), "pointer"
+			x = skip(x)
+		wend
+
+		TRACE(x), "identifier?"
+		if (tk_get(x) <> TK_ID) then
+			return begin
+		end if
+		x = skip(x)
+
+		TRACE(x), "','?"
+		if (tk_get(x) <> TK_COMMA) then
+			exit do
+		end if
+		x = skip(x)
+	loop
+
+	'' ';'
+	TRACE(x), "';'?"
+	if (tk_get(x) <> TK_SEMI) then
+		return begin
+	end if
+	x = skip(x)
+
+	'' Mark the constant declaration
+	print "--- marking " & begin & ".." & skiprev(x) + 1
+	tk_mark_stmt(STMT_FIELD, begin, skiprev(x) + 1)
 
 	return x
 end function
@@ -257,6 +344,8 @@ private function parse_compound(byval x as integer) as integer
 
 		if (stmt = STMT_ENUM) then
 			x = parse_enumfield(x)
+		else
+			x = parse_field(x)
 		end if
 
 		select case (tk_get(x))

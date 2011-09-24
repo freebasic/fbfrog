@@ -8,6 +8,8 @@ extern
 
 struct T {
 	int i; int j;
+	double a,b,c;
+	struct T *x, ****y, z;
 	int *(*p)(int*);
 };
 

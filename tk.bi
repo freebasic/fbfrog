@@ -187,6 +187,7 @@ enum
 	STMT_ENUM
 	STMT_ENDENUM
 	STMT_ENUMFIELD  '' constant declaration in an enum's body
+	STMT_FIELD      '' struct field
 end enum
 
 declare sub tk_move(byval delta as integer)

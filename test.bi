@@ -8,6 +8,8 @@ extern _
 
 type T 
 	/' TODO: token 93 '/ i: /' TODO: token 93 '/ j
+	double a,b,c
+	/' TODO: token 103 '/ T *x, ****y, z
 	/' TODO: token 93 '/ *(*p)(/' TODO: token 93 '/*)
 end type
 
