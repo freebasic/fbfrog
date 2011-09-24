@@ -78,16 +78,20 @@ private function is_whitespace(byval x as integer) as integer
 	        (id = TK_COMMENT) or (id = TK_LINECOMMENT))
 end function
 
-private function skip_whitespace(byval x as integer) as integer
-	while (is_whitespace(x))
+'' Skips the token and any following whitespace
+private function skip(byval x as integer) as integer
+	do
 		x += 1
-	wend
+	loop while (is_whitespace(x))
 	return x
 end function
 
-'' Skips the token and any following whitespace
-private function skip_soft(byval x as integer) as integer
-	return skip_whitespace(x + 1)
+'' Same, but backwards
+private function skiprev(byval x as integer) as integer
+	do
+		x -= 1
+	loop while (is_whitespace(x))
+	return x
 end function
 
 private function parse_pp_directive(byval x as integer) as integer
@@ -176,18 +180,18 @@ private function parse_compound_opening(byval x as integer) as integer
 	end select
 
 	dim as integer begin = x
-	x = skip_soft(x)
+	x = skip(x)
 
 	if (stmt = STMT_EXTERN) then
 		'' EXTERN requires a following string
 		if (tk_get(x) <> TK_STRING) then
 			return begin
 		end if
-		x = skip_soft(x)
+		x = skip(x)
 	else
 		'' STRUCT/ENUM can have an optional id
 		if (tk_get(x) = TK_ID) then
-			x = skip_soft(x)
+			x = skip(x)
 		end if
 	end if
 
@@ -233,22 +237,23 @@ private function parse_compound_closing(byval x as integer) as integer
 end function
 
 
-	return skip_soft(x)
 end function
 
 private sub parse_toplevel()
 	dim as integer x = 0
 	do
+		dim as integer old = x
+
 		x = parse_pp_directive(x)
 		x = parse_compound_opening(x)
 		x = parse_compound_closing(x)
 
-		if (tk_get(x) = TK_EOF) then
-			exit do
+		if (x = old) then
+			'' Token/construct couldn't be identified, so make
+			'' sure the parsing advances somehow...
+			x = skip(x)
 		end if
-
-		x += 1
-	loop
+	loop while (tk_get(x) <> TK_EOF)
 end sub
 
 private sub filter_semicolons()
