@@ -61,7 +61,7 @@ enum
 	TK_SHR          '' >>
 	TK_SELFSHR      '' >>=
 	TK_GE           '' >=
-	TK_QUEST        '' ?
+	TK_QUESTION     '' ?
 	TK_LBRACKET     '' [
 	TK_BACKSLASH    '' \
 	TK_RBRACKET     '' ]
@@ -131,6 +131,7 @@ enum
 	'' during the translation process.
 	KW__FB_FIRST
 	KW_ALIAS = KW__FB_FIRST
+	KW_ANY
 	KW_AS
 	KW_BYTE
 	KW_BYVAL
@@ -188,6 +189,8 @@ enum
 	STMT_ENDENUM
 	STMT_ENUMFIELD  '' constant declaration in an enum's body
 	STMT_FIELD      '' struct field
+
+	STMT__COUNT
 end enum
 
 declare sub tk_move(byval delta as integer)
@@ -206,8 +209,21 @@ declare sub tk_insert _
 		byval text as zstring ptr _
 	)
 declare sub tk_insert_space(byval x as integer)
+declare sub tk_copy(byval target as integer, byval source as integer)
+declare sub tk_copy_range _
+	( _
+		byval x as integer, _
+		byval first as integer, _
+		byval last as integer _
+	)
 declare sub tk_out()
 declare sub tk_remove(byval x as integer)
+declare sub tk_replace _
+	( _
+		byval x as integer, _
+		byval id as integer, _
+		byval text as zstring ptr _
+	)
 declare sub tk_drop_all()
 declare sub tk_init()
 declare sub tk_end()
@@ -219,12 +235,12 @@ declare sub tk_mark_stmt _
 	( _
 		byval stmt as integer, _
 		byval first as integer, _
-		byval xright as integer _
+		byval last as integer _
 	)
 declare sub tk_count_input_size(byval n as integer)
 declare sub tk_count_input_token()
 declare function tk_debug(byval x as integer) as string
-#define TRACE(x) print __FILE__ & "(" & __LINE__ & "):" & __FUNCTION__ & ": " & cint(x) & " [" & tk_debug(x) & "]"
+#define TRACE(x) print __FILE__ & "(" & __LINE__ & "):" & lcase(__FUNCTION__) & ": " & cint(x) & " [" & tk_debug(x) & "]"
 
 declare sub tk_emit_file(byref filename as string)
 declare sub tk_in_file(byref filename as string)

@@ -143,7 +143,7 @@ enum
 	CH_LT           '' <
 	CH_EQ           '' =
 	CH_GT           '' >
-	CH_QUEST        '' ?
+	CH_QUESTION     '' ?
 	CH_AT           '' @
 
 	CH_A, CH_B, CH_C, CH_D, CH_E, CH_F, CH_G
@@ -608,8 +608,8 @@ private sub tokenize_next()
 			read_bytes(1, TK_GT)
 		end select
 
-	case CH_QUEST		'' ?
-		read_bytes(1, TK_QUEST)
+	case CH_QUESTION	'' ?
+		read_bytes(1, TK_QUESTION)
 
 	case CH_A       to (CH_L - 1), _	'' A-Z except L
 	     (CH_L + 1) to CH_Z

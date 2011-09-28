@@ -7,9 +7,12 @@ extern
 #endif
 
 struct T {
-	int i; int j;
+	signed int i;
+	unsigned long long int j;
+	unsigned k;
 	double a,b,c;
 	struct T *x, ****y, z;
+	int *aa, bb, cc, **dd, **ee, ff;
 	int *(*p)(int*);
 };
 

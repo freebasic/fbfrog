@@ -132,6 +132,22 @@ sub tk_insert_space(byval x as integer)
 	tk_insert(x, TK_SPACE, " ")
 end sub
 
+sub tk_copy(byval target as integer, byval source as integer)
+	tk_insert(target, tk_get(source), tk_text(source))
+	tk_mark_stmt(tk_stmt(source), target, target)
+end sub
+
+sub tk_copy_range _
+	( _
+		byval x as integer, _
+		byval first as integer, _
+		byval last as integer _
+	)
+	for i as integer = 0 to (last - first)
+		tk_copy(x + i, first + i)
+	next
+end sub
+
 '' Delete token in front of current position (backwards deletion)
 sub tk_out()
 	if (tk.front < 1) then return
@@ -147,6 +163,16 @@ end sub
 sub tk_remove(byval x as integer)
 	tk_move_to(x + 1)
 	tk_out()
+end sub
+
+sub tk_replace _
+	( _
+		byval x as integer, _
+		byval id as integer, _
+		byval text as zstring ptr _
+	)
+	tk_remove(x)
+	tk_insert(x, id, text)
 end sub
 
 sub tk_drop_all()
@@ -201,10 +227,10 @@ sub tk_mark_stmt _
 	( _
 		byval stmt as integer, _
 		byval first as integer, _
-		byval xright as integer _
+		byval last as integer _
 	)
 
-	for i as integer = first to (xright - 1)
+	for i as integer = first to last
 		dim as OneToken ptr p = tk_ptr(i)
 		p->stmt = stmt
 	next
@@ -220,167 +246,182 @@ end sub
 
 dim shared as zstring ptr token_id_text(0 to (TK__COUNT-1)) = _
 { _
-	@"TK_EOF", _
-	@"TK_TODO", _
-	@"TK_BYTE", _
-	@"TK_EOL", _
-	@"TK_SPACE", _
-	@"TK_COMMENT", _
-	@"TK_LINECOMMENT", _
+	@"eof", _
+	@"todo", _
+	@"byte", _
+	@"eol", _
+	@"space", _
+	@"comment", _
+	@"linecomment", _
 	_
-	@"TK_DECNUM", _
-	@"TK_HEXNUM", _
-	@"TK_OCTNUM", _
+	@"decnum", _
+	@"hexnum", _
+	@"octnum", _
 	_
-	@"TK_STRING", _
-	@"TK_CHAR", _
-	@"TK_WSTRING", _
-	@"TK_WCHAR", _
-	@"TK_ESTRING", _
-	@"TK_ECHAR", _
-	@"TK_EWSTRING", _
-	@"TK_EWCHAR", _
+	@"string", _
+	@"char", _
+	@"wstring", _
+	@"wchar", _
+	@"estring", _
+	@"echar", _
+	@"ewstring", _
+	@"ewchar", _
 	_
-	@"TK_LOGNOT", _
-	@"TK_NE", _
-	@"TK_HASH", _
-	@"TK_MERGE", _
-	@"TK_MOD", _
-	@"TK_SELFMOD", _
-	@"TK_BITAND", _
-	@"TK_SELFBITAND", _
-	@"TK_LOGAND", _
-	@"TK_LPAREN", _
-	@"TK_RPAREN", _
-	@"TK_MUL", _
-	@"TK_SELFMUL", _
-	@"TK_ADD", _
-	@"TK_SELFADD", _
-	@"TK_INCREMENT", _
-	@"TK_COMMA", _
-	@"TK_SUB", _
-	@"TK_SELFSUB", _
-	@"TK_DECREMENT", _
-	@"TK_FIELDDEREF", _
-	@"TK_DOT", _
-	@"TK_ELLIPSIS", _
-	@"TK_DIV", _
-	@"TK_SELFDIV", _
-	@"TK_COLON", _
-	@"TK_SEMI", _
-	@"TK_LT", _
-	@"TK_SHL", _
-	@"TK_SELFSHL", _
-	@"TK_LE", _
-	@"TK_ASSIGN", _
-	@"TK_EQ", _
-	@"TK_GT", _
-	@"TK_SHR", _
-	@"TK_SELFSHR", _
-	@"TK_GE", _
-	@"TK_QUEST", _
-	@"TK_LBRACKET", _
-	@"TK_BACKSLASH", _
-	@"TK_RBRACKET", _
-	@"TK_BITXOR", _
-	@"TK_SELFBITXOR", _
-	@"TK_UNDERSCORE", _
-	@"TK_LBRACE", _
-	@"TK_BITOR", _
-	@"TK_SELFBITOR", _
-	@"TK_LOGOR", _
-	@"TK_RBRACE", _
-	@"TK_BITNOT", _
+	@"lognot", _
+	@"ne", _
+	@"hash", _
+	@"merge", _
+	@"mod", _
+	@"selfmod", _
+	@"bitand", _
+	@"selfbitand", _
+	@"logand", _
+	@"lparen", _
+	@"rparen", _
+	@"mul", _
+	@"selfmul", _
+	@"add", _
+	@"selfadd", _
+	@"increment", _
+	@"comma", _
+	@"sub", _
+	@"selfsub", _
+	@"decrement", _
+	@"fieldderef", _
+	@"dot", _
+	@"ellipsis", _
+	@"div", _
+	@"selfdiv", _
+	@"colon", _
+	@"semi", _
+	@"lt", _
+	@"shl", _
+	@"selfshl", _
+	@"le", _
+	@"assign", _
+	@"eq", _
+	@"gt", _
+	@"shr", _
+	@"selfshr", _
+	@"ge", _
+	@"question", _
+	@"lbracket", _
+	@"backslash", _
+	@"rbracket", _
+	@"bitxor", _
+	@"selfbitxor", _
+	@"underscore", _
+	@"lbrace", _
+	@"bitor", _
+	@"selfbitor", _
+	@"logor", _
+	@"rbrace", _
+	@"bitnot", _
 	_
-	@"TK_ID", _
+	@"id", _
 	_
-	@"KW_AUTO", _
-	@"KW_BREAK", _
-	@"KW_CASE", _
-	@"KW_CHAR", _
-	@"KW_CONST", _
-	@"KW_CONTINUE", _
-	@"KW_DEFAULT", _
-	@"KW_DEFINE", _
-	@"KW_DEFINED", _
-	@"KW_DO", _
-	@"KW_DOUBLE", _
-	@"KW_ELIF", _
-	@"KW_ELSE", _
-	@"KW_ENDIF", _
-	@"KW_ENUM", _
-	@"KW_EXTERN", _
-	@"KW_FLOAT", _
-	@"KW_FOR", _
-	@"KW_GOTO", _
-	@"KW_IF", _
-	@"KW_IFDEF", _
-	@"KW_IFNDEF", _
-	@"KW_INCLUDE", _
-	@"KW_INLINE", _
-	@"KW_INT", _
-	@"KW_LONG", _
-	@"KW_PRAGMA", _
-	@"KW_REGISTER", _
-	@"KW_RESTRICT", _
-	@"KW_RETURN", _
-	@"KW_SHORT", _
-	@"KW_SIGNED", _
-	@"KW_SIZEOF", _
-	@"KW_STATIC", _
-	@"KW_STRUCT", _
-	@"KW_SWITCH", _
-	@"KW_TYPEDEF", _
-	@"KW_UNDEF", _
-	@"KW_UNION", _
-	@"KW_UNSIGNED", _
-	@"KW_VOID", _
-	@"KW_VOLATILE", _
-	@"KW_WHILE", _
+	@"AUTO", _
+	@"BREAK", _
+	@"CASE", _
+	@"CHAR", _
+	@"CONST", _
+	@"CONTINUE", _
+	@"DEFAULT", _
+	@"DEFINE", _
+	@"DEFINED", _
+	@"DO", _
+	@"DOUBLE", _
+	@"ELIF", _
+	@"ELSE", _
+	@"ENDIF", _
+	@"ENUM", _
+	@"EXTERN", _
+	@"FLOAT", _
+	@"FOR", _
+	@"GOTO", _
+	@"IF", _
+	@"IFDEF", _
+	@"IFNDEF", _
+	@"INCLUDE", _
+	@"INLINE", _
+	@"INT", _
+	@"LONG", _
+	@"PRAGMA", _
+	@"REGISTER", _
+	@"RESTRICT", _
+	@"RETURN", _
+	@"SHORT", _
+	@"SIGNED", _
+	@"SIZEOF", _
+	@"STATIC", _
+	@"STRUCT", _
+	@"SWITCH", _
+	@"TYPEDEF", _
+	@"UNDEF", _
+	@"UNION", _
+	@"UNSIGNED", _
+	@"VOID", _
+	@"VOLATILE", _
+	@"WHILE", _
 	_
-	@"KW_ALIAS", _
-	@"KW_AS", _
-	@"KW_BYTE", _
-	@"KW_BYVAL", _
-	@"KW_CAST", _
-	@"KW_CDECL", _
-	@"KW_CPTR", _
-	@"KW_DECLARE", _
-	@"KW_DIM", _
-	@"KW_ELSEIF", _
-	@"KW_END", _
-	@"KW_EXIT", _
-	@"KW_EXPORT", _
-	@"KW_FIELD", _
-	@"KW_FUNCTION", _
-	@"KW_IIF", _
-	@"KW_INTEGER", _
-	@"KW_LONGINT", _
-	@"KW_LOOP", _
-	@"KW_NEXT", _
-	@"KW_PASCAL", _
-	@"KW_PRIVATE", _
-	@"KW_PTR", _
-	@"KW_SCOPE", _
-	@"KW_SELECT", _
-	@"KW_SHARED", _
-	@"KW_SINGLE", _
-	@"KW_STDCALL", _
-	@"KW_SUB", _
-	@"KW_THEN", _
-	@"KW_TO", _
-	@"KW_TYPE", _
-	@"KW_UBYTE", _
-	@"KW_UINTEGER", _
-	@"KW_ULONG", _
-	@"KW_ULONGINT", _
-	@"KW_USHORT", _
-	@"KW_WEND", _
-	@"KW_WSTR", _
-	@"KW_WSTRING", _
-	@"KW_ZSTRING" _
+	@"ALIAS", _
+	@"ANY", _
+	@"AS", _
+	@"BYTE", _
+	@"BYVAL", _
+	@"CAST", _
+	@"CDECL", _
+	@"CPTR", _
+	@"DECLARE", _
+	@"DIM", _
+	@"ELSEIF", _
+	@"END", _
+	@"EXIT", _
+	@"EXPORT", _
+	@"FIELD", _
+	@"FUNCTION", _
+	@"IIF", _
+	@"INTEGER", _
+	@"LONGINT", _
+	@"LOOP", _
+	@"NEXT", _
+	@"PASCAL", _
+	@"PRIVATE", _
+	@"PTR", _
+	@"SCOPE", _
+	@"SELECT", _
+	@"SHARED", _
+	@"SINGLE", _
+	@"STDCALL", _
+	@"SUB", _
+	@"THEN", _
+	@"TO", _
+	@"TYPE", _
+	@"UBYTE", _
+	@"UINTEGER", _
+	@"ULONG", _
+	@"ULONGINT", _
+	@"USHORT", _
+	@"WEND", _
+	@"WSTR", _
+	@"WSTRING", _
+	@"ZSTRING" _
+}
+
+dim shared as zstring ptr token_stmt_text(0 to (STMT__COUNT - 1)) = _
+{ _
+	@"", _
+	@"pp", _
+	@"extern", _
+	@"endextern", _
+	@"struct", _
+	@"endstruct", _
+	@"enum", _
+	@"endenum", _
+	@"enumfield", _
+	@"field" _
 }
 
 function tk_debug(byval x as integer) as string
-	return *token_id_text(tk_get(x))
+	return *token_stmt_text(tk_stmt(x)) & "." & *token_id_text(tk_get(x))
 end function

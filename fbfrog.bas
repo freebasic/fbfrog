@@ -94,6 +94,17 @@ private function skiprev(byval x as integer) as integer
 	return x
 end function
 
+private function skip_if_match _
+	( _
+		byval x as integer, _
+		byval id as integer _
+	) as integer
+	if (tk_get(x) = id) then
+		x = skip(x)
+	end if
+	return x
+end function
+
 private function parse_pp_directive(byval x as integer) as integer
 	'' (Assuming all '#' are indicating a PP directive)
 	if (tk_get(x) <> TK_HASH) then
@@ -118,7 +129,7 @@ private function parse_pp_directive(byval x as integer) as integer
 		end select
 	loop
 
-	tk_mark_stmt(STMT_PP, begin, x)
+	tk_mark_stmt(STMT_PP, begin, x - 1)
 
 	return x
 end function
@@ -169,40 +180,48 @@ private function parse_base_type(byval x as integer) as integer
 
 	select case (tk_get(x))
 	case KW_ENUM, KW_STRUCT
-		'' {'enum' | 'struct'} id
+		'' {ENUM | STRUCT} id
 		x = skip(x)
-		if (tk_get(x) = TK_ID) then
-			x = skip(x)
-		else
+		if (tk_get(x) <> TK_ID) then
 			return old
 		end if
+		return skip(x)
 
 	case TK_ID
 		'' Just a single id
+		return skip(x)
+	end select
+
+	'' [SIGNED | UNSIGNED]
+	select case (tk_get(x))
+	case KW_SIGNED, KW_UNSIGNED
+		x = skip(x)
+	end select
+
+	'' [ VOID
+	'' | CHAR
+	'' | FLOAT
+	'' | DOUBLE
+	'' | INT
+	'' | SHORT [INT]
+	'' | LONG [LONG] [INT]
+	'' ]
+	select case (tk_get(x))
+	case KW_VOID, KW_CHAR, KW_FLOAT, KW_DOUBLE, KW_INT
 		x = skip(x)
 
-	case else
-		'' [signed | unsigned] {void | char | int | ...}
-		'' or even signed/unsigned alone.
+	case KW_SHORT
+		x = skip(x)
+		x = skip_if_match(x, KW_INT)
 
-		select case (tk_get(x))
-		case KW_SIGNED, KW_UNSIGNED
-			x = skip(x)
-		end select
-
-		select case (tk_get(x))
-		case KW_VOID, KW_CHAR, KW_DOUBLE, KW_FLOAT, _
-		     KW_SHORT, KW_INT, KW_LONG, KW_REGISTER
-			x = skip(x)
-		end select
-
-		'' No type keyword at all?
-		if (x = old) then
-			return old
-		end if
+	case KW_LONG
+		x = skip(x)
+		x = skip_if_match(x, KW_LONG)
+		x = skip_if_match(x, KW_INT)
 
 	end select
 
+	'' In case of no type keyword at all, x = old
 	return x
 end function
 
@@ -237,7 +256,7 @@ private function parse_enumfield(byval x as integer) as integer
 	end select
 
 	'' Mark the constant declaration
-	tk_mark_stmt(STMT_ENUMFIELD, begin, skiprev(x) + 1)
+	tk_mark_stmt(STMT_ENUMFIELD, begin, skiprev(x))
 
 	return x
 end function
@@ -246,7 +265,6 @@ private function parse_field(byval x as integer) as integer
 	dim as integer begin = x
 
 	'' type
-	TRACE(x), "type?"
 	x = parse_base_type(begin)
 	if (x = begin) then
 		return begin
@@ -256,17 +274,14 @@ private function parse_field(byval x as integer) as integer
 	do
 		'' Pointers: ('*')*
 		while (tk_get(x) = TK_MUL)
-			TRACE(x), "pointer"
 			x = skip(x)
 		wend
 
-		TRACE(x), "identifier?"
 		if (tk_get(x) <> TK_ID) then
 			return begin
 		end if
 		x = skip(x)
 
-		TRACE(x), "','?"
 		if (tk_get(x) <> TK_COMMA) then
 			exit do
 		end if
@@ -274,15 +289,13 @@ private function parse_field(byval x as integer) as integer
 	loop
 
 	'' ';'
-	TRACE(x), "';'?"
 	if (tk_get(x) <> TK_SEMI) then
 		return begin
 	end if
 	x = skip(x)
 
 	'' Mark the constant declaration
-	print "--- marking " & begin & ".." & skiprev(x) + 1
-	tk_mark_stmt(STMT_FIELD, begin, skiprev(x) + 1)
+	tk_mark_stmt(STMT_FIELD, begin, skiprev(x))
 
 	return x
 end function
@@ -314,9 +327,7 @@ private function parse_compound(byval x as integer) as integer
 		x = skip(x)
 	else
 		'' STRUCT/ENUM can have an optional id
-		if (tk_get(x) = TK_ID) then
-			x = skip(x)
-		end if
+		x = skip_if_match(x, TK_ID)
 	end if
 
 	'' Opening '{'?
@@ -326,15 +337,15 @@ private function parse_compound(byval x as integer) as integer
 
 	'' Mark the '{' too, but not the whitespace/comments behind it,
 	'' since that's usually indentation belonging to something else.
-	x += 1
 	tk_mark_stmt(stmt, begin, x)
 
 	'' EXTERN parsing is done here; the content is parsed as toplevel,
 	'' and the '}' is handled later.
 	if (stmt = STMT_EXTERN) then
-		return x
+		return x + 1
 	end if
 
+	'' '{'
 	x = skip(x)
 
 	'' Fields
@@ -369,7 +380,7 @@ private function parse_compound(byval x as integer) as integer
 		stmt = STMT_ENDENUM
 	end select
 
-	tk_mark_stmt(stmt, x, x + 1)
+	tk_mark_stmt(stmt, x, x)
 
 	return x + 1
 end function
@@ -389,7 +400,7 @@ private function parse_extern_end(byval x as integer) as integer
 		return x
 	end if
 
-	tk_mark_stmt(STMT_ENDEXTERN, x, x + 1)
+	tk_mark_stmt(STMT_ENDEXTERN, x, x)
 
 	return x + 1
 end function
@@ -444,8 +455,7 @@ private sub fixup_eols()
 
 				'' Replace the '\' by '_'
 				xassert(tk_get(x) = TK_BACKSLASH)
-				tk_remove(x)
-				tk_insert(x, TK_UNDERSCORE, NULL)
+				tk_replace(x, TK_UNDERSCORE, NULL)
 
 				'' Back to EOL
 				x += 1
@@ -492,9 +502,7 @@ private function translate_compound_end _
 	) as integer
 
 	'' '}' -> END EXTERN
-	tk_remove(x)
-
-	tk_insert(x, KW_END, NULL)
+	tk_replace(x, KW_END, NULL)
 	x += 1
 	tk_insert_space(x)
 	x += 1
@@ -550,6 +558,281 @@ private function translate_enumfield(byval x as integer) as integer
 	return x
 end function
 
+private sub split_field_if_needed(byval x as integer)
+	'' Split up a field if needed:
+	'' Scan the whole field (from begin to ';'). If there are commas and
+	'' pointers, then splits need to be made at the proper places, to
+	'' bring the whole thing into a state allowing it to be translated to
+	'' FB. The offsets of fields mustn't change of course.
+	''    int *a, b, c, **d, **e, f;
+	'' to:
+	''    int *a; int b, c; int **d; int **e; int f;
+	'' Declarations with pointers need to be split off, while non-pointer
+	'' declarations and declarations with the same number of pointers can
+	'' stay together (since they /can/ be translated to FB).
+
+	dim as integer typebegin = x
+	dim as integer typeend = parse_base_type(typebegin)
+	x = typeend
+	'' The type parser skips to the next non-type token,
+	'' so to get the real typeend we need to skip back
+	typeend = skiprev(typeend)
+
+
+	'' Current ptrcount > 0 but <> next ptrcount?
+	''  --> Replace following comma by semi, dup the type.
+	'' As soon as a next decl is seen and it's different, split.
+
+	'' Amount of pointers seen for the current sequence of declarations.
+	'' As soon as a declaration with different ptrcount is seen,
+	'' we know it's time to split.
+	dim as integer ptrcount = 0     '' Active counter
+	dim as integer declptrcount = 0 '' Amount for previous declaration(s)
+
+	'' Begin of the current sequence of declarations with equal ptrcount,
+	'' so we can go back and do the split there.
+	dim as integer declbegin = typebegin
+
+	do
+		select case (tk_get(x))
+		case TK_MUL
+			ptrcount += 1
+
+		case TK_COMMA, TK_SEMI
+			'' Comma/semicolon terminate a declaration (not
+			'' officially probably, hehe) and we need to decide
+			'' whether to continue the current sequence (of decls
+			'' with equal ptrcount) or split it off and start a new
+			'' sequence, beginning with this last (just terminated)
+			'' decl.
+			if (ptrcount <> declptrcount) then
+				'' Only split if this isn't the first decl,
+				'' in which case there is no current sequence
+				'' to split off...
+				if (declbegin <> typebegin) then
+					'' Replace ',' with ';'
+					tk_replace(declbegin, TK_SEMI, NULL)
+
+					'' Copy in the type
+					tk_copy_range(declbegin + 1, typebegin, typeend)
+
+					'' Take into account the added tokens
+					x += typeend - typebegin + 1
+				end if
+
+				'' Continue with new sequence
+				declptrcount = ptrcount
+				declbegin = x
+			end if
+
+			if (tk_get(x) = TK_SEMI) then
+				exit do
+			end if
+
+			ptrcount = 0
+
+		end select
+
+		x = skip(x)
+	loop
+end sub
+
+private sub remove_unnecessary_ptrs(byval x as integer)
+	'' Assuming field declarations with multiple identifiers but different
+	'' ptrcounts on some of them have been split up already, we will only
+	'' encounter fields of these forms here:
+	''    int a;
+	''    int *a;
+	''    int a, b, c;
+	''    int *a, *b, *c;
+	'' i.e. all identifiers with equal ptrcounts.
+	'' This translation step turns this:
+	''    int *a, *b, *c;
+	'' into:
+	''    int *a, b, c;
+	'' which is needed to get to this:
+	''    as integer ptr a, b, c
+
+	x = parse_base_type(x)
+
+	'' Just remove all ptrs behind commas.
+	'' TODO: should do space beautifications?
+	dim as integer have_comma = FALSE
+	do
+		select case (tk_get(x))
+		case TK_MUL
+			if (have_comma) then
+				tk_remove(x)
+				x -= 1
+			end if
+
+		case TK_COMMA
+			have_comma = TRUE
+
+		case TK_SEMI
+			exit do
+		end select
+
+		x += 1
+	loop
+end sub
+
+private sub remove_next_if_match(byval x as integer, byval id as integer)
+	x = skip(x)
+	if (tk_get(x) = id) then
+		tk_remove(x)
+	end if
+end sub
+
+private function translate_base_type(byval x as integer) as integer
+	'' Insert the AS
+	tk_insert(x, KW_AS, NULL)
+	x += 1
+	tk_insert_space(x)
+	x += 1
+
+	select case (tk_get(x))
+	case KW_ENUM, KW_STRUCT
+		'' {ENUM | STRUCT} id
+		tk_remove(x)
+		x = skip(x - 1)
+		xassert(tk_get(x) = TK_ID)
+		return skip(x)
+
+	case TK_ID
+		'' Just a single id
+		return skip(x)
+	end select
+
+	'' [SIGNED | UNSIGNED]
+	'' [ VOID
+	'' | CHAR
+	'' | FLOAT
+	'' | DOUBLE
+	'' | INT
+	'' | SHORT [INT]
+	'' | LONG [LONG] [INT]
+	'' ]
+	''
+	'' 1) Remember position of [UN]SIGNED
+	'' 2) Parse base type (void/char/int/...)
+	'' 3) If base type found, remove the [UN]SIGNED, otherwise translate it
+	''    as [U]INTEGER
+
+	dim as integer sign = x
+	dim as integer signed = (tk_get(sign) <> KW_UNSIGNED)
+	dim as integer basekw = -1
+
+	select case (tk_get(sign))
+	case KW_SIGNED, KW_UNSIGNED
+		x = skip(x)
+	end select
+
+	select case (tk_get(x))
+	case KW_VOID
+		basekw = KW_ANY
+
+	case KW_CHAR
+		basekw = iif(signed, KW_BYTE, KW_UBYTE)
+
+	case KW_FLOAT
+		basekw = KW_SINGLE
+
+	case KW_DOUBLE
+		basekw = KW_DOUBLE
+
+	case KW_INT
+		basekw = iif(signed, KW_INTEGER, KW_UINTEGER)
+
+	case KW_SHORT
+		basekw = iif(signed, KW_SHORT, KW_USHORT)
+		remove_next_if_match(x, KW_INT)
+
+	case KW_LONG
+		basekw = iif(signed, KW_LONG, KW_ULONG)
+		if (tk_get(skip(x)) = KW_LONG) then
+			basekw = iif(signed, KW_LONGINT, KW_ULONGINT)
+			tk_remove(skip(x))
+		end if
+		remove_next_if_match(x, KW_INT)
+
+	end select
+
+	if (basekw >= 0) then
+		tk_replace(x, basekw, NULL)
+		x = skip(x)
+	end if
+
+	select case (tk_get(sign))
+	case KW_SIGNED, KW_UNSIGNED
+		if (basekw >= 0) then
+			'' Remove the [UN]SIGNED, it's now encoded into the
+			'' FB type (e.g. UINTEGER)
+			tk_remove(sign)
+			x -= 1
+		else
+			'' Found [UN]SIGNED only, treat it as [U]INTEGER
+			tk_replace(sign, iif(signed, KW_INTEGER, KW_UINTEGER), NULL)
+		end if
+	end select
+
+	return x
+end function
+
+private function translate_ptrs(byval x as integer) as integer
+	'' Pointers: '*' -> PTR, plus some space if needed
+	while (tk_get(x) = TK_MUL)
+		if ((skiprev(x) + 1) = x) then
+			tk_insert_space(x - 1)
+		end if
+		tk_replace(x, KW_PTR, NULL)
+		if ((skip(x) - 1) = x) then
+			tk_insert_space(x + 1)
+		end if
+		x = skip(x)
+	wend
+	return x
+end function
+
+private function translate_field(byval x as integer) as integer
+	'' The field parser accepts all possible variations, now here we need
+	'' an ok way to translate them.
+	''
+	'' int *i;              ->      as integer ptr i
+	'' int a, b, c;         ->      as integer a, b, c
+	'' Simple: insert an AS, translate type and pointers, remove the ';'.
+	''
+	'' int *a, **b, c;      ->      int *a; int **b; int c;
+	'' Commas + pointers can't be translated to FB 1:1, but we can split it
+	'' up into separate declarations by replacing ',' by ';' and duplicating
+	'' the type. Then the normal simple translation rules can work.
+
+	split_field_if_needed(x)
+	remove_unnecessary_ptrs(x)
+
+	x = translate_base_type(x)
+	x = translate_ptrs(x)
+
+	'' identifier (',' identifier)*
+	do
+		'' identifier
+		xassert(tk_get(x) = TK_ID)
+		x = skip(x)
+
+		'' ','
+		if (tk_get(x) <> TK_COMMA) then
+			exit do
+		end if
+		x = skip(x)
+	loop
+
+	'' ';'
+	xassert(tk_get(x) = TK_SEMI)
+	x = skip(x)
+
+	return x
+end function
+
 private sub translate_toplevel()
 	dim as integer x = 0
 	while (tk_get(x) <> TK_EOF)
@@ -560,8 +843,7 @@ private sub translate_toplevel()
 
 		case STMT_STRUCT
 			'' STRUCT -> TYPE
-			tk_remove(x)
-			tk_insert(x, KW_TYPE, NULL)
+			tk_replace(x, KW_TYPE, NULL)
 			'' And also remove the '{'
 			x = remove_following_lbrace(x)
 
@@ -576,6 +858,9 @@ private sub translate_toplevel()
 
 		case STMT_ENUMFIELD
 			x = translate_enumfield(x)
+
+		case STMT_FIELD
+			x = translate_field(x)
 
 		case else
 			x += 1

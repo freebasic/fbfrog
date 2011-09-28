@@ -134,6 +134,7 @@ dim shared as zstring ptr token_text(0 to (TK__COUNT - 1)) = _
 	@"while"     , _
 	_ '' FB-only keywords
 	@"alias"      , _
+	@"any"        , _
 	@"as"         , _
 	@"byte"       , _
 	@"byval"      , _
