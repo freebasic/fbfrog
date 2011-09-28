@@ -16,8 +16,7 @@ sub _xassertfail _
 		byval funcname as zstring ptr, _
 		byval linenum as integer _
 	)
-	print *filename & "(" & linenum & "):" & *funcname & "(): assertion failed: " & *test
-	xoops("internal problem, please report this bug!")
+	print "bug: assertion failed at " & *filename & "(" & linenum & "):" & lcase(*funcname) & ": " & *test
 end sub
 
 sub xoops(byref message as string)
@@ -72,17 +71,18 @@ end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-private function is_whitespace(byval x as integer) as integer
-	dim as integer id = tk_get(x)
-	return ((id = TK_EOL) or (id = TK_SPACE) or _
-	        (id = TK_COMMENT) or (id = TK_LINECOMMENT))
-end function
-
 '' Skips the token and any following whitespace
 private function skip(byval x as integer) as integer
 	do
 		x += 1
-	loop while (is_whitespace(x))
+
+		select case (tk_get(x))
+		case TK_EOL, TK_SPACE, TK_COMMENT, TK_LINECOMMENT
+
+		case else
+			exit do
+		end select
+	loop
 	return x
 end function
 
@@ -90,7 +90,14 @@ end function
 private function skiprev(byval x as integer) as integer
 	do
 		x -= 1
-	loop while (is_whitespace(x))
+
+		select case (tk_get(x))
+		case TK_EOL, TK_SPACE, TK_COMMENT, TK_LINECOMMENT
+
+		case else
+			exit do
+		end select
+	loop
 	return x
 end function
 
@@ -103,6 +110,24 @@ private function skip_if_match _
 		x = skip(x)
 	end if
 	return x
+end function
+
+private function is_whitespace_until_eol(byval x as integer) as integer
+	do
+		select case (tk_get(x))
+		case TK_EOL, TK_EOF
+			exit do
+
+		case TK_SPACE, TK_COMMENT, TK_LINECOMMENT
+
+		case else
+			return FALSE
+
+		end select
+
+		x += 1
+	loop
+	return TRUE
 end function
 
 private function parse_pp_directive(byval x as integer) as integer
@@ -827,8 +852,14 @@ private function translate_field(byval x as integer) as integer
 	loop
 
 	'' ';'
+	'' Remove it, and if there is no EOL following,
+	'' insert a ':' statement separator.
 	xassert(tk_get(x) = TK_SEMI)
-	x = skip(x)
+	tk_remove(x)
+	if (is_whitespace_until_eol(x) = FALSE) then
+		tk_insert(x, TK_COLON, NULL)
+		x += 1
+	end if
 
 	return x
 end function

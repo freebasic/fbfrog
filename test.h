@@ -6,24 +6,27 @@ extern
 "C" {             // oh look, this is on a new line!
 #endif
 
-struct T {
+struct T2;
+
+typedef struct T2 {
+	int a;
+	double x;
+} TT2;
+
+struct T1 {
 	signed int i;
 	unsigned long long int j;
 	unsigned k;
 	double a,b,c;
-	struct T *x, ****y, z;
+	struct T2 *x, ****y, z;
 	int *aa, bb, cc, **dd, **ee, ff;
 	int *(*p)(int*);
+	int a, **b, **c;
 };
 
-typedef struct T TT;
+typedef struct T1 TT1;
 
-struct TTT;
-
-typedef struct {
-	int a;
-	double x;
-} TTTT;
+typedef struct { int a, **b, **c; } T3;
 
 enum {
 	A = 0,               /* This is A */
@@ -44,16 +47,16 @@ int f03(int);
 int *f04(int x, short y, char *z, ...);
 
 /* typedef */
-TT *f05();
+TT1 *f05();
 
 /* struct */
-struct T f06(struct T *, TT ******);
+struct T1 f06(struct T1 *, TT1 ******);
 
 #define MY_EXTERN /*__declspec(dllexport)*/
 #define MY_CALL __attribute__((__stdcall__))/*__stdcall*/
 
 /* some #defines in front, as is pretty common */
-MY_EXTERN MY_CALL TT f07();
+MY_EXTERN MY_CALL TT1 f07();
 
 /* wrapped */
 int f08(int a, int b,
