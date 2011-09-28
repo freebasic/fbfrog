@@ -411,42 +411,6 @@ private sub parse_toplevel()
 	loop while (tk_get(x) <> TK_EOF)
 end sub
 
-private sub filter_semicolons()
-	dim as integer lastsemi = -1
-	dim as integer x = 0
-	do
-		select case (tk_get(x))
-		case TK_SEMI
-			'' All ';' can just be removed
-			tk_remove(x)
-			lastsemi = x
-
-		case TK_EOL
-			lastsemi = -1
-			x += 1
-
-		case TK_SPACE, TK_COMMENT, TK_LINECOMMENT
-			'' Allowed between semi-colon and EOL
-			x += 1
-
-		case TK_EOF
-			exit do
-
-		case else
-			'' However if there is no EOL coming,
-			'' add an ':' (FB's statement separator) instead.
-			if (lastsemi >= 0) then
-				tk_insert(lastsemi, TK_COLON, NULL)
-				lastsemi = -1
-				x += 1
-			end if
-
-			x += 1
-
-		end select
-	loop
-end sub
-
 '' EOL fixup -- in C it's possible to have constructs split over multiple
 '' lines, which requires a '_' line continuation char in FB. Also, the CPP
 '' \<EOL> line continuation needs to be converted to FB.
@@ -663,7 +627,6 @@ end sub
 			parse_toplevel()
 
 			print "translating..."
-			filter_semicolons()
 			fixup_eols()
 			translate_toplevel()
 
