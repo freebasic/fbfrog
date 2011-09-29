@@ -218,6 +218,7 @@ declare sub tk_copy_range _
 	)
 declare sub tk_out()
 declare sub tk_remove(byval x as integer)
+declare sub tk_remove_range(byval first as integer, byval last as integer)
 declare sub tk_replace _
 	( _
 		byval x as integer, _

@@ -702,13 +702,6 @@ private sub remove_unnecessary_ptrs(byval x as integer)
 	loop
 end sub
 
-private sub remove_next_if_match(byval x as integer, byval id as integer)
-	x = skip(x)
-	if (tk_get(x) = id) then
-		tk_remove(x)
-	end if
-end sub
-
 private function translate_base_type(byval x as integer) as integer
 	'' Insert the AS
 	tk_insert(x, KW_AS, NULL)
@@ -719,8 +712,8 @@ private function translate_base_type(byval x as integer) as integer
 	select case (tk_get(x))
 	case KW_ENUM, KW_STRUCT
 		'' {ENUM | STRUCT} id
-		tk_remove(x)
-		x = skip(x - 1)
+		tk_remove_range(x, skip(x) - 1)
+
 		xassert(tk_get(x) = TK_ID)
 		return skip(x)
 
@@ -745,11 +738,14 @@ private function translate_base_type(byval x as integer) as integer
 	''    as [U]INTEGER
 
 	dim as integer sign = x
-	dim as integer signed = (tk_get(sign) <> KW_UNSIGNED)
+	dim as integer signed = TRUE
 	dim as integer basekw = -1
 
 	select case (tk_get(sign))
-	case KW_SIGNED, KW_UNSIGNED
+	case KW_SIGNED
+		x = skip(x)
+	case KW_UNSIGNED
+		signed = FALSE
 		x = skip(x)
 	end select
 
@@ -771,15 +767,25 @@ private function translate_base_type(byval x as integer) as integer
 
 	case KW_SHORT
 		basekw = iif(signed, KW_SHORT, KW_USHORT)
-		remove_next_if_match(x, KW_INT)
+
+		'' [INT]
+		if (tk_get(skip(x)) = KW_INT) then
+			tk_remove_range(x + 1, skip(x))
+		end if
 
 	case KW_LONG
 		basekw = iif(signed, KW_LONG, KW_ULONG)
+
+		'' [LONG]
 		if (tk_get(skip(x)) = KW_LONG) then
 			basekw = iif(signed, KW_LONGINT, KW_ULONGINT)
-			tk_remove(skip(x))
+			tk_remove_range(x + 1, skip(x))
 		end if
-		remove_next_if_match(x, KW_INT)
+
+		'' [INT]
+		if (tk_get(skip(x)) = KW_INT) then
+			tk_remove_range(x + 1, skip(x))
+		end if
 
 	end select
 
@@ -793,8 +799,9 @@ private function translate_base_type(byval x as integer) as integer
 		if (basekw >= 0) then
 			'' Remove the [UN]SIGNED, it's now encoded into the
 			'' FB type (e.g. UINTEGER)
-			tk_remove(sign)
-			x -= 1
+			dim as integer last = skip(sign) - 1
+			tk_remove_range(sign, last)
+			x -= (last - sign + 1)
 		else
 			'' Found [UN]SIGNED only, treat it as [U]INTEGER
 			tk_replace(sign, iif(signed, KW_INTEGER, KW_UINTEGER), NULL)

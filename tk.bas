@@ -165,6 +165,13 @@ sub tk_remove(byval x as integer)
 	tk_out()
 end sub
 
+sub tk_remove_range(byval first as integer, byval last as integer)
+	while (last >= first)
+		tk_remove(first)
+		last -= 1
+	wend
+end sub
+
 sub tk_replace _
 	( _
 		byval x as integer, _

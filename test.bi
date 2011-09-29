@@ -8,25 +8,25 @@ extern _
 
 /' TODO: token 103 '/ T2/' TODO: token 44 '/
 
-/' TODO: token 105 '/ type T2 
+type /' TODO: token 103 '/ T2 
 	as integer a
 	as double x
 end type TT2/' TODO: token 44 '/
 
 type T1 
-	as  integer i
-	as  ulongint   j
+	as integer i
+	as ulongint j
 	as uinteger k
 	as double a,b,c
-	as  T2 ptr x : as  T2 ptr ptr ptr ptr y : as  T2 z
-	as integer ptr aa : as integer bb : as integer cc, dd : as integer ptr ptr ee : as integer ff
+	as T2 ptr x:as T2 ptr ptr ptr ptr y:as T2 z
+	as integer ptr aa:as integer bb:as integer cc, dd:as integer ptr ptr ee:as integer ff
 	/' TODO: token 93 '/ *(*p)(/' TODO: token 93 '/*)/' TODO: token 44 '/
 	as integer a, b, c
 end type
 
 /' TODO: token 105 '/ /' TODO: token 103 '/ T1 TT1/' TODO: token 44 '/
 
-/' TODO: token 105 '/ type  as integer a, b, c : end type T3/' TODO: token 44 '/
+type /' TODO: token 103 '/  as integer a, b, c: end type T3/' TODO: token 44 '/
 
 enum 
 	A = &o               /' This is A '/
