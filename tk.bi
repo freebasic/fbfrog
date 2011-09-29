@@ -181,14 +181,16 @@ enum
 	STMT_PP         '' Some PP directive
 
 	'' Compound blocks
-	STMT_EXTERN
-	STMT_ENDEXTERN
-	STMT_STRUCT
-	STMT_ENDSTRUCT
-	STMT_ENUM
-	STMT_ENDENUM
-	STMT_ENUMFIELD  '' constant declaration in an enum's body
-	STMT_FIELD      '' struct field
+	STMT_EXTERN     '' EXTERN string '{'
+	STMT_ENDEXTERN  '' '}'
+	STMT_STRUCT     '' [TYPEDEF] STRUCT [id] '{'
+	STMT_ENDSTRUCT  '' '}' [id] ';'
+	STMT_ENUM       '' ENUM [id] '{'
+	STMT_ENDENUM    '' '}'
+	STMT_ENUMFIELD  '' Constant declaration in an enum's body
+	STMT_FIELD      '' Struct field
+
+	STMT_TYPEDEF    '' Simple typedefs: <TYPEDEF type id ';'>
 
 	STMT__COUNT
 end enum

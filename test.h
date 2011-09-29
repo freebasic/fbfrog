@@ -6,13 +6,28 @@ extern
 "C" {             // oh look, this is on a new line!
 #endif
 
+// type T2 as T2_
+// (this way we only need to translate the <struct T2 ...> body as
+// <type T2_ ...>, that's easier than inserting T2_ fwdref in place of T2
+// before the T2 body)
 struct T2;
 
+// type T2 : ... : end type
+// type TT2 as T2
+// (Both ids might be needed)
 typedef struct T2 {
 	int a;
 	double x;
 } TT2;
 
+// type TT3 : ... : end type
+typedef struct {
+	int a;
+	double x;
+} TT3;
+
+// type T1 : ... : end type
+// (also, any places using <struct T1> will become just <T1>, so they work ok)
 struct T1 {
 	signed int i;
 	unsigned long long int j;
@@ -24,7 +39,13 @@ struct T1 {
 	int a, **b, **c;
 };
 
+// type TT1 as T1
+// (typedef needed, since it's a different id)
 typedef struct T1 TT1;
+
+// type typedef_T1 as T1
+// (typedef not needed, since any places using T1 will work anyways)
+typedef struct T1 T1;
 
 typedef struct { int a, **b, **c; } T3;
 

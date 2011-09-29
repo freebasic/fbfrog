@@ -430,5 +430,16 @@ dim shared as zstring ptr token_stmt_text(0 to (STMT__COUNT - 1)) = _
 }
 
 function tk_debug(byval x as integer) as string
-	return *token_stmt_text(tk_stmt(x)) & "." & *token_id_text(tk_get(x))
+	dim as string payload = ""
+
+	if (tk_get(x) = TK_ID) then
+		payload = *tk_text(x)
+	end if
+
+	if (len(payload) > 0) then
+		payload = "[" & payload & "]"
+	end if
+
+	return *token_stmt_text(tk_stmt(x)) & "." & _
+	       *token_id_text(tk_get(x)) & payload
 end function

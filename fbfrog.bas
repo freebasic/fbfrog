@@ -101,17 +101,6 @@ private function skiprev(byval x as integer) as integer
 	return x
 end function
 
-private function skip_if_match _
-	( _
-		byval x as integer, _
-		byval id as integer _
-	) as integer
-	if (tk_get(x) = id) then
-		x = skip(x)
-	end if
-	return x
-end function
-
 private function is_whitespace_until_eol(byval x as integer) as integer
 	do
 		select case (tk_get(x))
@@ -177,7 +166,7 @@ private function find_parentheses_backwards(byval x as integer) as integer
 	dim as integer level = 0
 	dim as integer old = x
 	do
-		x -= 1
+		x = skiprev(x)
 
 		select case (tk_get(x))
 		case opening_tk
@@ -188,6 +177,47 @@ private function find_parentheses_backwards(byval x as integer) as integer
 			level -= 1
 
 		case closing_tk
+			level += 1
+
+		case TK_EOF
+			'' Not in this file anyways
+			return old
+
+		end select
+	loop
+
+	return x
+end function
+
+private function find_parentheses(byval x as integer) as integer
+	dim as integer opening_tk = tk_get(x)
+	dim as integer closing_tk = any
+
+	select case (opening_tk)
+	case TK_LPAREN
+		closing_tk = TK_RPAREN
+	case TK_LBRACE
+		closing_tk = TK_RBRACE
+	case TK_LBRACKET
+		closing_tk = TK_RBRACKET
+	case else
+		return x
+	end select
+
+	dim as integer level = 0
+	dim as integer old = x
+	do
+		x = skip(x)
+
+		select case (tk_get(x))
+		case closing_tk
+			if (level = 0) then
+				'' Found it
+				exit do
+			end if
+			level -= 1
+
+		case opening_tk
 			level += 1
 
 		case TK_EOF
@@ -223,11 +253,7 @@ private function parse_base_type(byval x as integer) as integer
 		x = skip(x)
 	end select
 
-	'' [ VOID
-	'' | CHAR
-	'' | FLOAT
-	'' | DOUBLE
-	'' | INT
+	'' [ VOID | CHAR | FLOAT | DOUBLE | INT
 	'' | SHORT [INT]
 	'' | LONG [LONG] [INT]
 	'' ]
@@ -237,12 +263,24 @@ private function parse_base_type(byval x as integer) as integer
 
 	case KW_SHORT
 		x = skip(x)
-		x = skip_if_match(x, KW_INT)
+
+		'' [INT]
+		if (tk_get(x) = KW_INT) then
+			x = skip(x)
+		end if
 
 	case KW_LONG
 		x = skip(x)
-		x = skip_if_match(x, KW_LONG)
-		x = skip_if_match(x, KW_INT)
+
+		'' [LONG]
+		if (tk_get(x) = KW_LONG) then
+			x = skip(x)
+		end if
+
+		'' [INT]
+		if (tk_get(x) = KW_INT) then
+			x = skip(x)
+		end if
 
 	end select
 
@@ -327,20 +365,39 @@ end function
 
 '' EXTERN/STRUCT/ENUM blocks
 private function parse_compound(byval x as integer) as integer
-	dim as integer stmt = any
+	'' EXTERN string '{'
+	'' [TYPEDEF] STRUCT [id] '{' fields '}' [id] ';'
+	'' ENUM [id] '{' enumfields '}' ';'
+	''
+	'' For EXTERN blocks, the '}' end is handled later, so that the
+	'' body is parsed from the toplevel loop. For structs/enums however,
+	'' the body is parsed in here, same for the end.
 
+	dim as integer begin = x
+
+	dim as integer stmt = any
 	select case (tk_get(x))
 	case KW_EXTERN
 		stmt = STMT_EXTERN
+
 	case KW_STRUCT
 		stmt = STMT_STRUCT
+
 	case KW_ENUM
 		stmt = STMT_ENUM
+
+	case KW_TYPEDEF
+		x = skip(x)
+		if (tk_get(x) <> KW_STRUCT) then
+			return begin
+		end if
+		stmt = STMT_STRUCT
+
 	case else
 		return x
+
 	end select
 
-	dim as integer begin = x
 	x = skip(x)
 
 	if (stmt = STMT_EXTERN) then
@@ -351,8 +408,10 @@ private function parse_compound(byval x as integer) as integer
 		end if
 		x = skip(x)
 	else
-		'' STRUCT/ENUM can have an optional id
-		x = skip_if_match(x, TK_ID)
+		'' [id]
+		if (tk_get(x) = TK_ID) then
+			x = skip(x)
+		end if
 	end if
 
 	'' Opening '{'?
@@ -384,11 +443,10 @@ private function parse_compound(byval x as integer) as integer
 			x = parse_field(x)
 		end if
 
+		'' '}'?
 		select case (tk_get(x))
-		case TK_RBRACE
+		case TK_RBRACE, TK_EOF
 			exit do
-		case TK_EOF
-			return begin
 		end select
 
 		if (x = old) then
@@ -398,16 +456,49 @@ private function parse_compound(byval x as integer) as integer
 		end if
 	loop
 
-	select case (stmt)
-	case STMT_STRUCT
-		stmt = STMT_ENDSTRUCT
-	case STMT_ENUM
-		stmt = STMT_ENDENUM
-	end select
+	'' '}' should have been reached. If not -- then the input is broken.
+	'' We need to add a fake compound end, and also a TODO, because it
+	'' is too late to abort now that the compound begin has been marked.
+	'' (The compound begin translator may try to find the end, e.g. for
+	'' typedef/struct fixups, and we do not want BUG! warnings or infinite
+	'' loops just because of weird input...)
+	if (tk_get(x) <> TK_RBRACE) then
+		xassert(tk_get(x) = TK_EOF)
+		tk_insert(x, TK_SEMI, NULL)
+		tk_insert(x, TK_RBRACE, NULL)
+		tk_insert(x, TK_EOL, NULL)
+		tk_insert(x, TK_TODO, "compound end was missing, added automatically")
+		tk_insert(x, TK_EOL, NULL)
+		x += 2
+	end if
 
-	tk_mark_stmt(stmt, x, x)
+	'' '}'
+	dim as integer compoundend = x
+	xassert(tk_get(x) = TK_RBRACE)
+	x = skip(x)
 
-	return x + 1
+	if (stmt = STMT_STRUCT) then
+		'' [id]
+		if (tk_get(x) = TK_ID) then
+			x = skip(x)
+		end if
+	end if
+
+	'' ';' -- same issue as with '}', it must be there or we'd need
+	'' extra code in the endstruct translator.
+	if (tk_get(x) <> TK_SEMI) then
+		tk_insert(x, TK_SEMI, NULL)
+		tk_insert(x, TK_TODO, "semi-colon was missing, added automatically")
+		x += 1
+	end if
+
+	'' ';'
+	xassert(tk_get(x) = TK_SEMI)
+
+	tk_mark_stmt(iif(stmt = STMT_STRUCT, STMT_ENDSTRUCT, STMT_ENDENUM), _
+	             compoundend, x)
+
+	return skip(x)
 end function
 
 private function parse_extern_end(byval x as integer) as integer
@@ -430,6 +521,38 @@ private function parse_extern_end(byval x as integer) as integer
 	return x + 1
 end function
 
+private function parse_typedef(byval x as integer) as integer
+	if (tk_get(x) <> KW_TYPEDEF) then
+		return x
+	end if
+
+	'' TYPEDEF
+	dim as integer begin = x
+	x = skip(x)
+
+	'' type
+	dim as integer typebegin = x
+	x = parse_base_type(x)
+	if (x = typebegin) then
+		return begin
+	end if
+
+	'' id
+	if (tk_get(x) <> TK_ID) then
+		return begin
+	end if
+	x = skip(x)
+
+	'' ';'
+	if (tk_get(x) <> TK_SEMI) then
+		return begin
+	end if
+
+	tk_mark_stmt(STMT_TYPEDEF, begin, x)
+
+	return skip(x)
+end function
+
 private sub parse_toplevel()
 	dim as integer x = 0
 	do
@@ -438,6 +561,7 @@ private sub parse_toplevel()
 		x = parse_pp_directive(x)
 		x = parse_compound(x)
 		x = parse_extern_end(x)
+		x = parse_typedef(x)
 
 		if (x = old) then
 			'' Token/construct couldn't be identified, so make
@@ -511,8 +635,6 @@ private sub fixup_eols()
 end sub
 
 private function remove_following_lbrace(byval x as integer) as integer
-	'' EXTERN "C" '{' -> EXTERN "C"
-	'' Just jump to the '{' and remove it
 	while (tk_get(x) <> TK_LBRACE)
 		x += 1
 	wend
@@ -520,18 +642,67 @@ private function remove_following_lbrace(byval x as integer) as integer
 	return x
 end function
 
+private function insert_statement_separator(byval x as integer) as integer
+	if (tk_get(x - 1) <> TK_SPACE) then
+		tk_insert_space(x)
+		x += 1
+	end if
+
+	tk_insert(x, TK_COLON, NULL)
+	x += 1
+
+	if (tk_get(x) <> TK_SPACE) then
+		tk_insert_space(x)
+		x += 1
+	end if
+
+	return x
+end function
+
 private function translate_compound_end _
 	( _
 		byval x as integer, _
-		byval compound_kw as integer _
+		byval compoundkw as integer _
 	) as integer
 
-	'' '}' -> END EXTERN
-	tk_replace(x, KW_END, NULL)
+	'' '}' [id] [';']    ->    END {EXTERN | TYPE | ENUM}
+	'' The id can only appear because of <typedef struct { } id;> which
+	'' the struct parser/translator accepts and handles. The id might be
+	'' copied, but only here is it removed.
+	'' The ';' is not there for EXTERN blocks (the EXTERN parser, unlike
+	'' the enum/struct parser, does not handle the ';' even if it might
+	'' be there, it'll be picked up as random toplevel semicolon.).
+
+	tk_insert(x, KW_END, NULL)
 	x += 1
 	tk_insert_space(x)
 	x += 1
-	tk_insert(x, compound_kw, NULL)
+	tk_insert(x, compoundkw, NULL)
+	x += 1
+
+	'' '}'
+	dim as integer y = x
+	xassert(tk_get(y) = TK_RBRACE)
+	y = skip(y)
+
+	'' [id]
+	if (tk_get(y) = TK_ID) then
+		xassert(compoundkw = KW_TYPE)
+		y = skip(y)
+	end if
+
+	'' [';']
+	if (tk_get(y) = TK_SEMI) then
+		y = skip(y)
+	end if
+
+	'' Remove the '}' and ';', including space and the optional id in
+	'' between. If there is no EOL coming afterwards, insert a ':'
+	'' statement separator.
+	tk_remove_range(x, skiprev(y))
+	if (is_whitespace_until_eol(x) = FALSE) then
+		x = insert_statement_separator(x)
+	end if
 
 	return x
 end function
@@ -703,6 +874,11 @@ private sub remove_unnecessary_ptrs(byval x as integer)
 end sub
 
 private function translate_base_type(byval x as integer) as integer
+	''    int             ->      as integer
+	''    unsigned int    ->      as uinteger
+	''    struct T        ->      as T
+	'' etc.
+
 	'' Insert the AS
 	tk_insert(x, KW_AS, NULL)
 	x += 1
@@ -723,11 +899,7 @@ private function translate_base_type(byval x as integer) as integer
 	end select
 
 	'' [SIGNED | UNSIGNED]
-	'' [ VOID
-	'' | CHAR
-	'' | FLOAT
-	'' | DOUBLE
-	'' | INT
+	'' [ VOID | CHAR | FLOAT | DOUBLE | INT
 	'' | SHORT [INT]
 	'' | LONG [LONG] [INT]
 	'' ]
@@ -864,8 +1036,147 @@ private function translate_field(byval x as integer) as integer
 	xassert(tk_get(x) = TK_SEMI)
 	tk_remove(x)
 	if (is_whitespace_until_eol(x) = FALSE) then
-		tk_insert(x, TK_COLON, NULL)
-		x += 1
+		x = insert_statement_separator(x)
+	end if
+
+	return x
+end function
+
+private function translate_struct(byval x as integer) as integer
+	'' struct T { ... };               ->    type T : ... : end type
+	'' Note: any occurences of <struct T> will be translated to just <T>
+	'' by the type translator, so this just works.
+	''
+	'' typedef struct { ... } TT;      ->    type TT : ... : end type
+	''
+	'' typedef struct T { ... } TT;    ->    type T : ... : end type
+	''                                       type TT as T
+	'' Both identifiers might be needed.
+	''
+	'' typedef struct A { ... } A;     ->    type A : ... : end type
+	''
+	'' All in all this means:
+	'' If the struct has an id, then use it for the type. If it has no
+	'' id, then move the one at the end of the declaration to the front.
+	'' If there is none there either, insert a TODO instead.
+	'' If both struct and typedef have an identifier, but they are
+	'' different, then insert a <type typedef-id as struct-id> after the
+	'' struct end.
+
+	'' [TYPEDEF]
+	dim as integer is_typedef = FALSE
+	if (tk_get(x) = KW_TYPEDEF) then
+		tk_remove_range(x, skip(x) - 1)
+		is_typedef = TRUE
+	end if
+
+	'' STRUCT -> TYPE
+	xassert(tk_get(x) = KW_STRUCT)
+	tk_replace(x, KW_TYPE, NULL)
+	x = skip(x)
+
+	'' [struct-id]
+	dim as integer structid = x
+	if (tk_get(x) = TK_ID) then
+		x = skip(x)
+	end if
+
+	'' '{'
+	xassert(tk_get(x) = TK_LBRACE)
+
+	if (is_typedef) then
+		'' Find the '}' and the following typedef id (if it's there)
+		dim as integer typedefid = find_parentheses(x)
+		xassert(tk_stmt(typedefid) = STMT_ENDSTRUCT)
+		xassert(tk_get(typedefid) = TK_RBRACE)
+		typedefid = skip(typedefid)
+
+		if (tk_get(structid) = TK_ID) then
+			'' There is a struct-id. If the typedef has the same
+			'' id, it can be ignored. If the typedef has a
+			'' different id, we need to insert an FB typedef
+			'' after the endstruct. If the typedef has no id
+			'' at all, that's bad C, but we don't care.
+			if (tk_get(typedefid) = TK_ID) then
+				if (*tk_text(structid) <> *tk_text(typedefid)) then
+					dim as integer y = skip(typedefid)
+					xassert(tk_get(y) = TK_SEMI)
+
+					'' Fake a typedef (building it up in
+					'' reverse, so y doesn't need to be
+					'' updated)
+					y += 1
+					tk_insert(y, TK_SEMI, NULL)
+					tk_copy(y, typedefid)
+					tk_insert_space(y)
+					tk_copy(y, structid)
+					tk_insert_space(y)
+					tk_insert(y, KW_STRUCT, NULL)
+					tk_insert_space(y)
+					tk_insert(y, KW_TYPEDEF, NULL)
+					tk_mark_stmt(STMT_TYPEDEF, y, y + 7)
+				end if
+			end if
+		else
+			'' Use the typedef-id for the struct,
+			'' or insert a TODO if there is no typedef-id.
+			if (tk_get(typedefid) = TK_ID) then
+				tk_copy(structid, typedefid)
+			else
+				tk_insert(structid, TK_TODO, "missing identifier")
+			end if
+			'' If needed, insert a space to separate the STRUCT
+			'' from the identifier.
+			if (tk_get(structid - 1) <> TK_SPACE) then
+				tk_insert_space(structid)
+				x += 1
+			end if
+			x += 1
+		end if
+	end if
+
+	'' Remove the '{' if there is an EOL following. Otherwise, insert an
+	'' ':' statement separator.
+	xassert(tk_get(x) = TK_LBRACE)
+	tk_remove(x)
+	if (is_whitespace_until_eol(x) = FALSE) then
+		x = insert_statement_separator(x)
+	end if
+
+	return x
+end function
+
+private function translate_typedef(byval x as integer) as integer
+	'' typedef T id;    ->    type id as T
+
+	dim as integer begin = x
+
+	'' TYPEDEF -> TYPE
+	xassert(tk_get(x) = KW_TYPEDEF)
+	tk_replace(x, KW_TYPE, NULL)
+	x = skip(x)
+
+	'' Translate the type
+	dim as integer typebegin = x
+	x = translate_base_type(x)
+
+	'' Copy the id to the front, in between the TYPE and the type,
+	'' and also insert a single space to separate the identifier from
+	'' the type's AS.
+	xassert(tk_get(x) = TK_ID)
+	tk_insert_space(typebegin)
+	x += 1
+	tk_copy(typebegin, x)
+
+	'' Remove the old id and space in front of it.
+	tk_remove_range(x, skip(x - 1))
+
+	x = skip(x - 1)
+
+	xassert(tk_get(x) = TK_SEMI)
+	tk_remove(x)
+	if (is_whitespace_until_eol(x) = FALSE) then
+		x = insert_statement_separator(x)
 	end if
 
 	return x
@@ -876,14 +1187,11 @@ private sub translate_toplevel()
 	while (tk_get(x) <> TK_EOF)
 		select case as const (tk_stmt(x))
 		case STMT_EXTERN, STMT_ENUM
-			'' Just remove the '{'
+			'' Just jump to the '{' and remove it
 			x = remove_following_lbrace(x)
 
 		case STMT_STRUCT
-			'' STRUCT -> TYPE
-			tk_replace(x, KW_TYPE, NULL)
-			'' And also remove the '{'
-			x = remove_following_lbrace(x)
+			x = translate_struct(x)
 
 		case STMT_ENDEXTERN
 			x = translate_compound_end(x, KW_EXTERN)
@@ -899,6 +1207,9 @@ private sub translate_toplevel()
 
 		case STMT_FIELD
 			x = translate_field(x)
+
+		case STMT_TYPEDEF
+			x = translate_typedef(x)
 
 		case else
 			x += 1

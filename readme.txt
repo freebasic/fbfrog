@@ -1,12 +1,12 @@
-FB frog - the wacky h2bi type of translator
+fbfrog -- a h2bi translator
 
-We should:
-> Read in all .h's from the command line and spit out corresponding .bi's
-> Not have configuration options (always do the right thing automatically),
-  instead the tool itself may be modified, it's small enough for that,
-  and this isn't even more work than figuring out some sort of scripting
-  language or rules specifications or something.
-> Preserve preprocessor directives/unexpanded macros (can't use a real C parser)
+This program is given a set of .h files on its command line, and it writes out
+corresponding .bi files, while preserving as much of the input as possible,
+including preprocessor directives, aswell as most commentary and whitespace.
+
+There intentionally are almost no configuration options:
+a) This program should do the right thing automatically, and
+b) it is easy enough to hack it, or further edit the produced .bi files.
 
 > --combine: lex_insert_file() the main file, scan for #includes and insert
   them via lex_insert_file(), even nested #includes, but drop recursive
