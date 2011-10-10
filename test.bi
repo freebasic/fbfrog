@@ -56,7 +56,7 @@ enum
 end enum
 
 /' sub '/
-/' TODO: token 109 '/ f01()/' TODO: token 44 '/
+declare sub f01()
 
 /' function as any ptr '/
 /' TODO: token 109 '/ *f02()/' TODO: token 44 '/
@@ -77,7 +77,7 @@ TT1 *f05()/' TODO: token 44 '/
 #define MY_CALL __attribute__((__stdcall__))/'__stdcall'/
 
 /' some #defines in front, as is pretty common '/
-MY_EXTERN MY_CALL TT1 f07()/' TODO: token 44 '/
+MY_EXTERN MY_CALL declare function  f07() as TT1
 
 /' wrapped '/
 /' TODO: token 93 '/ f08(/' TODO: token 93 '/ a, /' TODO: token 93 '/ b,

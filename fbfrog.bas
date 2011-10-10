@@ -357,7 +357,6 @@ private function parse_field(byval x as integer) as integer
 	end if
 	x = skip(x)
 
-	'' Mark the constant declaration
 	tk_mark_stmt(STMT_FIELD, begin, skiprev(x))
 
 	return x
@@ -445,8 +444,10 @@ private function parse_compound(byval x as integer) as integer
 
 		'' '}'?
 		select case (tk_get(x))
-		case TK_RBRACE, TK_EOF
+		case TK_RBRACE
 			exit do
+		case TK_EOF
+			return begin
 		end select
 
 		if (x = old) then
@@ -455,22 +456,6 @@ private function parse_compound(byval x as integer) as integer
 			x = skip(x)
 		end if
 	loop
-
-	'' '}' should have been reached. If not -- then the input is broken.
-	'' We need to add a fake compound end, and also a TODO, because it
-	'' is too late to abort now that the compound begin has been marked.
-	'' (The compound begin translator may try to find the end, e.g. for
-	'' typedef/struct fixups, and we do not want BUG! warnings or infinite
-	'' loops just because of weird input...)
-	if (tk_get(x) <> TK_RBRACE) then
-		xassert(tk_get(x) = TK_EOF)
-		tk_insert(x, TK_SEMI, NULL)
-		tk_insert(x, TK_RBRACE, NULL)
-		tk_insert(x, TK_EOL, NULL)
-		tk_insert(x, TK_TODO, "compound end was missing, added automatically")
-		tk_insert(x, TK_EOL, NULL)
-		x += 2
-	end if
 
 	'' '}'
 	dim as integer compoundend = x
@@ -484,16 +469,10 @@ private function parse_compound(byval x as integer) as integer
 		end if
 	end if
 
-	'' ';' -- same issue as with '}', it must be there or we'd need
-	'' extra code in the endstruct translator.
-	if (tk_get(x) <> TK_SEMI) then
-		tk_insert(x, TK_SEMI, NULL)
-		tk_insert(x, TK_TODO, "semi-colon was missing, added automatically")
-		x += 1
-	end if
-
 	'' ';'
-	xassert(tk_get(x) = TK_SEMI)
+	if (tk_get(x) <> TK_SEMI) then
+		return begin
+	end if
 
 	tk_mark_stmt(iif(stmt = STMT_STRUCT, STMT_ENDSTRUCT, STMT_ENDENUM), _
 	             compoundend, x)
@@ -553,6 +532,81 @@ private function parse_typedef(byval x as integer) as integer
 	return skip(x)
 end function
 
+private function parse_procdecl(byval x as integer) as integer
+	dim as integer begin = x
+
+	'' type
+	x = parse_base_type(x)
+	if (x = begin) then
+		return begin
+	end if
+
+	'' id
+	if (tk_get(x) <> TK_ID) then
+		return begin
+	end if
+	x = skip(x)
+
+	'' '('
+	if (tk_get(x) <> TK_LPAREN) then
+		return begin
+	end if
+	x = skip(x)
+
+	'' Parameter list
+	'' [ type id  (',' type id )*  [ ',' '...' ] ]
+	do
+		select case (tk_get(x))
+		case TK_RPAREN
+			exit do
+
+		case TK_EOF
+			return begin
+
+		case TK_ELLIPSIS
+			'' Let '...' pass
+
+		case else
+			'' type
+			dim as integer parambegin = x
+			x = parse_base_type(x)
+			if (x = parambegin) then
+				return begin
+			end if
+
+			'' Pointers: ('*')*
+			while (tk_get(x) = TK_MUL)
+				x = skip(x)
+			wend
+
+			'' id
+			if (tk_get(x) <> TK_ID) then
+				return begin
+			end if
+
+		end select
+
+		x = skip(x)
+
+		'' ','?
+	loop while (tk_get(x) = TK_COMMA)
+
+	'' ')'
+	xassert(tk_get(x) = TK_RPAREN)
+	x = skip(x)
+
+	'' ';'
+	if (tk_get(x) <> TK_SEMI) then
+		return begin
+	end if
+
+	'' The whole thing must be marked, so that any EOLs in between can
+	'' be detected and removed...
+	tk_mark_stmt(STMT_PROCDECL, begin, x)
+
+	return skip(x)
+end function
+
 private sub parse_toplevel()
 	dim as integer x = 0
 	do
@@ -562,10 +616,13 @@ private sub parse_toplevel()
 		x = parse_compound(x)
 		x = parse_extern_end(x)
 		x = parse_typedef(x)
+		x = parse_procdecl(x)
 
 		if (x = old) then
 			'' Token/construct couldn't be identified, so make
-			'' sure the parsing advances somehow...
+			'' sure the parsing advances somehow, but mark as
+			'' nothing to clean up failed parses.
+			tk_mark_stmt(STMT_TOPLEVEL, x, x)
 			x = skip(x)
 		end if
 	loop while (tk_get(x) <> TK_EOF)
@@ -1182,6 +1239,97 @@ private function translate_typedef(byval x as integer) as integer
 	return x
 end function
 
+private function translate_procdecl(byval x as integer) as integer
+	''    type id '(' params ')' ';'
+	'' ->
+	''    DECLARE {SUB | FUNCTION} id '(' params ')' [AS type]
+	''
+	'' params:
+	''    type '*'* id          ->         BYVAL id AS type PTR*
+	''
+
+	dim as integer begin = x
+
+	'' DECLARE
+	tk_insert(x, KW_DECLARE, NULL)
+	x += 1
+	tk_insert_space(x)
+	x += 1
+
+	'' VOID only?
+	dim as integer is_sub = _
+			((tk_get(x) = KW_VOID) and (tk_get(skip(x)) = TK_ID))
+
+	'' SUB | FUNCTION
+	tk_insert(x, iif(is_sub, KW_SUB, KW_FUNCTION), NULL)
+	x += 1
+	tk_insert_space(x)
+	x += 1
+
+	if (is_sub) then
+		'' Remove the VOID and space behind it
+		xassert(tk_get(x) = KW_VOID)
+		tk_remove_range(x, skip(x) - 1)
+	else
+		'' Translate the type and move it behind the ')'.
+		dim as integer typebegin = x
+		dim as integer typeend = translate_base_type(typebegin)
+		xassert(typeend > typebegin)
+		dim as integer y = translate_ptrs(typeend)
+		typeend = skiprev(y)
+
+		'' id
+		xassert(tk_get(y) = TK_ID)
+		y = skip(y)
+
+		'' '('
+		xassert(tk_get(y) = TK_LPAREN)
+
+		'' ')'
+		y = find_parentheses(y)
+		y += 1
+
+		tk_insert_space(y)
+		y += 1
+
+		tk_copy_range(y, typebegin, typeend)
+		tk_remove_range(typebegin, typeend)
+	end if
+
+	'' id
+	x = skip(x - 1)
+	xassert(tk_get(x) = TK_ID)
+	x = skip(x)
+
+	'' '('
+	xassert(tk_get(x) = TK_LPAREN)
+	''x = skip(x)
+	x = find_parentheses(x)
+	'' TODO: Translate parameters
+	
+
+	'' ')'
+	xassert(tk_get(x) = TK_RPAREN)
+	x = skip(x)
+
+	if (is_sub = FALSE) then
+		'' Skip over the function type copied here before...
+		while (tk_get(x) <> TK_SEMI)
+			xassert(tk_get(x) <> TK_EOF)
+			x = skip(x)
+		wend
+	end if
+
+	'' ';'
+	xassert(tk_get(x) = TK_SEMI)
+	tk_remove(x)
+	if (is_whitespace_until_eol(x) = FALSE) then
+		x = insert_statement_separator(x)
+	end if
+
+	return x
+end function
+
 private sub translate_toplevel()
 	dim as integer x = 0
 	while (tk_get(x) <> TK_EOF)
@@ -1210,6 +1358,9 @@ private sub translate_toplevel()
 
 		case STMT_TYPEDEF
 			x = translate_typedef(x)
+
+		case STMT_PROCDECL
+			x = translate_procdecl(x)
 
 		case else
 			x += 1
@@ -1261,8 +1412,8 @@ end sub
 			parse_toplevel()
 
 			print "translating..."
-			fixup_eols()
 			translate_toplevel()
+			fixup_eols()
 
 			bifile = path_strip_ext(hfile) & ".bi"
 			print "emitting '" & bifile & "'..."
