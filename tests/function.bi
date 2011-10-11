@@ -1,16 +1,16 @@
 declare function f1() as integer
 
 /' function as any ptr '/
-/' TODO: token 109 '/ *f2()/' TODO: token 44 '/
+declare function f2() as any ptr
 
 /' taking an int, returning an int '/
 /' TODO: token 93 '/ f3(/' TODO: token 93 '/)/' TODO: token 44 '/
 
 /' some more params, and even ellipsis '/
-/' TODO: token 93 '/ *f4(/' TODO: token 93 '/ x, short y, /' TODO: token 72 '/ *z, ...)/' TODO: token 44 '/
+declare function f4(byval x as integer, byval y as short, byval z as byte ptr, ...) as integer ptr
 
 /' typedef '/
-TT1 *f5()/' TODO: token 44 '/
+declare function f5() as TT1 ptr
 
 /' struct '/
 /' TODO: token 103 '/ T1 f6(/' TODO: token 103 '/ T1 *, TT1 ******)/' TODO: token 44 '/

@@ -324,6 +324,14 @@ private function parse_enumfield(byval x as integer) as integer
 	return x
 end function
 
+private function parse_ptrs(byval x as integer) as integer
+	'' Pointers: ('*')*
+	while (tk_get(x) = TK_MUL)
+		x = skip(x)
+	wend
+	return x
+end function
+
 private function parse_field(byval x as integer) as integer
 	dim as integer begin = x
 
@@ -335,10 +343,7 @@ private function parse_field(byval x as integer) as integer
 
 	'' '*'* identifier (',' '*'* identifier)*
 	do
-		'' Pointers: ('*')*
-		while (tk_get(x) = TK_MUL)
-			x = skip(x)
-		wend
+		x = parse_ptrs(x)
 
 		if (tk_get(x) <> TK_ID) then
 			return begin
@@ -516,6 +521,8 @@ private function parse_typedef(byval x as integer) as integer
 		return begin
 	end if
 
+	x = parse_ptrs(x)
+
 	'' id
 	if (tk_get(x) <> TK_ID) then
 		return begin
@@ -540,6 +547,8 @@ private function parse_procdecl(byval x as integer) as integer
 	if (x = begin) then
 		return begin
 	end if
+
+	x = parse_ptrs(x)
 
 	'' id
 	if (tk_get(x) <> TK_ID) then
@@ -575,10 +584,7 @@ private function parse_procdecl(byval x as integer) as integer
 				return begin
 			end if
 
-			'' Pointers: ('*')*
-			while (tk_get(x) = TK_MUL)
-				x = skip(x)
-			wend
+			x = parse_ptrs(x)
 
 			'' id
 			if (tk_get(x) <> TK_ID) then
@@ -1211,9 +1217,10 @@ private function translate_typedef(byval x as integer) as integer
 	tk_replace(x, KW_TYPE, NULL)
 	x = skip(x)
 
-	'' Translate the type
+	'' Translate the type + pointers
 	dim as integer typebegin = x
 	x = translate_base_type(x)
+	x = translate_ptrs(x)
 
 	'' Copy the id to the front, in between the TYPE and the type,
 	'' and also insert a single space to separate the identifier from

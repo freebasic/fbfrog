@@ -9,3 +9,7 @@ typedef struct T1 TT1;
 // type typedef_T1 as T1
 // (typedef not needed, since any places using T1 will work anyways)
 typedef struct T1 T1;
+
+typedef int *PINT;
+
+typedef struct T1  /*boo*/ *  *  *  *  TT1;
