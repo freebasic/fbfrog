@@ -19,9 +19,7 @@ struct T1 {
 	unsigned long long int j;
 	unsigned k;
 	double a,b,c;
-	struct T2 *x, ****y, z;
-	int *aa, bb, cc, **dd, **ee, ff;
-	int a, **b, **c;
+	struct T2 ****y;
 };
 
-typedef struct { int a, **b, **c; } T3;
+typedef struct { int a; } T3;

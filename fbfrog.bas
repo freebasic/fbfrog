@@ -880,13 +880,15 @@ private sub split_field_if_needed(byval x as integer)
 
 				'' Continue with new sequence
 				declptrcount = ptrcount
-				declbegin = x
 			end if
 
 			if (tk_get(x) = TK_SEMI) then
 				exit do
 			end if
 
+			'' Remember this for later -- it's where the split
+			'' might need to be done.
+			declbegin = x
 			ptrcount = 0
 
 		end select
@@ -913,8 +915,7 @@ private sub remove_unnecessary_ptrs(byval x as integer)
 
 	x = parse_base_type(x)
 
-	'' Just remove all ptrs behind commas.
-	'' TODO: should do space beautifications?
+	'' Just remove all ptrs behind commas. Also remove unnecessary space.
 	dim as integer have_comma = FALSE
 	do
 		select case (tk_get(x))

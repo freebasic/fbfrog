@@ -19,9 +19,7 @@ type T1
 	as ulongint j
 	as uinteger k
 	as double a,b,c
-	as T2 ptr x : as T2 ptr ptr ptr ptr y : as T2 z
-	as integer ptr aa : as integer bb : as integer cc, dd : as integer ptr ptr ee : as integer ff
-	as integer a, b, c
+	as T2 ptr ptr ptr ptr y
 end type
 
-type T3 : as integer a, b, c : end type
+type T3 : as integer a : end type
