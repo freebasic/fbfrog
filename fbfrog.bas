@@ -563,8 +563,9 @@ private function parse_procdecl(byval x as integer) as integer
 		case TK_EOF
 			return begin
 
-		case TK_ELLIPSIS
-			'' Let '...' pass
+		case TK_COMMA, TK_ELLIPSIS
+			'' Let ',' and '...' pass
+			x = skip(x)
 
 		case else
 			'' type
@@ -583,13 +584,10 @@ private function parse_procdecl(byval x as integer) as integer
 			if (tk_get(x) <> TK_ID) then
 				return begin
 			end if
+			x = skip(x)
 
 		end select
-
-		x = skip(x)
-
-		'' ','?
-	loop while (tk_get(x) = TK_COMMA)
+	loop
 
 	'' ')'
 	xassert(tk_get(x) = TK_RPAREN)
@@ -1248,8 +1246,6 @@ private function translate_procdecl(byval x as integer) as integer
 	''    type '*'* id          ->         BYVAL id AS type PTR*
 	''
 
-	dim as integer begin = x
-
 	'' DECLARE
 	tk_insert(x, KW_DECLARE, NULL)
 	x += 1
@@ -1271,7 +1267,7 @@ private function translate_procdecl(byval x as integer) as integer
 		xassert(tk_get(x) = KW_VOID)
 		tk_remove_range(x, skip(x) - 1)
 	else
-		'' Translate the type and move it behind the ')'.
+		'' type + pointers
 		dim as integer typebegin = x
 		dim as integer typeend = translate_base_type(typebegin)
 		xassert(typeend > typebegin)
@@ -1292,8 +1288,11 @@ private function translate_procdecl(byval x as integer) as integer
 		tk_insert_space(y)
 		y += 1
 
+		'' Copy the translated type/ptrs behind the ')'
 		tk_copy_range(y, typebegin, typeend)
-		tk_remove_range(typebegin, typeend)
+
+		'' Remove the old type and space behind it
+		tk_remove_range(typebegin, skip(typeend) - 1)
 	end if
 
 	'' id
@@ -1303,10 +1302,55 @@ private function translate_procdecl(byval x as integer) as integer
 
 	'' '('
 	xassert(tk_get(x) = TK_LPAREN)
-	''x = skip(x)
-	x = find_parentheses(x)
-	'' TODO: Translate parameters
-	
+	x = skip(x)
+
+	'' Parameter list
+	'' [ type id  (',' type id )*  [ ',' '...' ] ]
+	do
+		select case (tk_get(x))
+		case TK_RPAREN, TK_EOF
+			exit do
+
+		case TK_COMMA, TK_ELLIPSIS
+			'' Let ',' and '...' pass
+			x = skip(x)
+
+		case else
+			'' BYVAL
+			tk_insert(x, KW_BYVAL, NULL)
+			x += 1
+			tk_insert_space(x)
+			x += 1
+
+			'' type + pointers
+			dim as integer typebegin = x
+			dim as integer typeend = translate_base_type(typebegin)
+			xassert(typeend > typebegin)
+			x = translate_ptrs(typeend)
+			typeend = skiprev(x)
+
+			'' id
+			xassert(tk_get(x) = TK_ID)
+			x += 1
+
+			tk_insert_space(x)
+			x += 1
+
+			'' Copy the translated type/ptrs behind the id
+			tk_copy_range(x, typebegin, typeend)
+
+			'' Skip it
+			x += (typeend - typebegin + 1)
+
+			xassert((tk_get(x) = TK_COMMA) or (tk_get(x) = TK_RPAREN))
+
+			'' Remove the old type and following space
+			typeend = skip(typeend) - 1
+			tk_remove_range(typebegin, typeend)
+			x -= (typeend - typebegin + 1)
+
+		end select
+	loop
 
 	'' ')'
 	xassert(tk_get(x) = TK_RPAREN)
@@ -1405,18 +1449,14 @@ end sub
 		if (cptr(ubyte ptr, arg)[0] <> asc("-")) then
 			hfile = *arg
 
-			print "loading '" & hfile & "'..."
 			tk_in_file(hfile)
 
-			print "parsing..."
 			parse_toplevel()
 
-			print "translating..."
 			translate_toplevel()
 			fixup_eols()
 
 			bifile = path_strip_ext(hfile) & ".bi"
-			print "emitting '" & bifile & "'..."
 			tk_emit_file(bifile)
 		end if
 	next
