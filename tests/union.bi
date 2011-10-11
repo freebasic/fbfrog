@@ -6,7 +6,7 @@ union U
 		union
 			as integer d
 			as integer e
-		end type
+		end union
 		as integer f
 	end type
 	as integer g
@@ -15,9 +15,9 @@ union U
 		union
 			type
 				union
-				end type
+				end union
 			end type
-		end type
+		end union
 	end type
 end union
 
@@ -41,4 +41,4 @@ type T
 	as T2 ptr ptr ptr ptr y
 end type
 
-type T : union : type : as integer a : as integer b : end type : as integer c : end type : end type
+type T : union : type : as integer a : as integer b : end type : as integer c : end union : end type

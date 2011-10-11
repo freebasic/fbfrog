@@ -428,13 +428,30 @@ private function parse_nested_struct_begin(byval x as integer) as integer
 	return skip(x)
 end function
 
-private function parse_nested_struct_end(byval x as integer) as integer
+private function parse_nested_struct_end _
+	( _
+		byval x as integer, _
+		byval toplevelopening as integer _
+	) as integer
+
 	'' '}'
 	if (tk_get(x) <> TK_RBRACE) then
 		return x
 	end if
 
 	dim as integer begin = x
+
+	'' Find the opening '{', to determine whether this is a struct
+	'' or a union. Bail out if there is no matching nested struct/union
+	'' begin.
+	dim as integer opening = find_parentheses_backwards(x)
+	if ((opening = x) or (opening <= toplevelopening)) then
+		return begin
+	end if
+	opening = skiprev(opening)
+	xassert(tk_stmt(opening) = STMT_STRUCT)
+
+	'' '}'
 	x = skip(x)
 
 	'' ';'
@@ -442,7 +459,8 @@ private function parse_nested_struct_end(byval x as integer) as integer
 		return begin
 	end if
 
-	tk_mark_stmt(STMT_ENDSTRUCT, begin, x)
+	tk_mark_stmt(iif((tk_get(opening) = KW_STRUCT), _
+				STMT_ENDSTRUCT, STMT_ENDUNION), begin, x)
 
 	return skip(x)
 end function
@@ -480,6 +498,7 @@ private function parse_struct(byval x as integer) as integer
 
 	tk_mark_stmt(STMT_STRUCT, begin, x)
 
+	dim as integer toplevelopening = x
 	x = skip(x)
 
 	'' Body: Struct fields/enum constants, nested structs/unions,
@@ -503,7 +522,7 @@ private function parse_struct(byval x as integer) as integer
 		select case (tk_get(x))
 		case TK_RBRACE
 			if (level > 0) then
-				x = parse_nested_struct_end(x)
+				x = parse_nested_struct_end(x, toplevelopening)
 				level -= 1
 			else
 				exit do
