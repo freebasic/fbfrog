@@ -422,8 +422,9 @@ dim shared as zstring ptr token_stmt_text(0 to (STMT__COUNT - 1)) = _
 	@"extern", _
 	@"endextern", _
 	@"struct", _
-	@"endstruct", _
 	@"endenum", _
+	@"endstruct", _
+	@"endunion", _
 	@"enumconst", _
 	@"field", _
 	@"typedef", _

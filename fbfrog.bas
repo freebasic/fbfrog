@@ -256,8 +256,8 @@ private function parse_base_type(byval x as integer) as integer
 	dim as integer old = x
 
 	select case (tk_get(x))
-	case KW_ENUM, KW_STRUCT
-		'' {ENUM | STRUCT} id
+	case KW_ENUM, KW_STRUCT, KW_UNION
+		'' {ENUM | STRUCT | UNION} id
 		x = skip(x)
 		if (tk_get(x) <> TK_ID) then
 			return old
@@ -406,9 +406,49 @@ private function parse_field(byval x as integer) as integer
 	return x
 end function
 
-private function parse_struct(byval x as integer) as integer
-	'' [TYPEDEF] {STRUCT|ENUM} [id] '{' ... '}' [id] ';'
+private function parse_nested_struct_begin(byval x as integer) as integer
+	'' {STRUCT|UNION} '{'
+	select case (tk_get(x))
+	case KW_STRUCT, KW_UNION
 
+	case else
+		return x
+	end select
+
+	dim as integer begin = x
+	x = skip(x)
+
+	'' '{'
+	if (tk_get(x) <> TK_LBRACE) then
+		return begin
+	end if
+
+	tk_mark_stmt(STMT_STRUCT, begin, x)
+
+	return skip(x)
+end function
+
+private function parse_nested_struct_end(byval x as integer) as integer
+	'' '}'
+	if (tk_get(x) <> TK_RBRACE) then
+		return x
+	end if
+
+	dim as integer begin = x
+	x = skip(x)
+
+	'' ';'
+	if (tk_get(x) <> TK_SEMI) then
+		return begin
+	end if
+
+	tk_mark_stmt(STMT_ENDSTRUCT, begin, x)
+
+	return skip(x)
+end function
+
+private function parse_struct(byval x as integer) as integer
+	'' [TYPEDEF] {STRUCT|UNION|ENUM} [id] '{' ... '}' [id] ';'
 	dim as integer begin = x
 
 	'' [TYPEDEF]
@@ -416,13 +456,10 @@ private function parse_struct(byval x as integer) as integer
 		x = skip(x)
 	end if
 
-	'' {STRUCT|ENUM}
-	dim as integer is_enum = FALSE
-	select case (tk_get(x))
-	case KW_STRUCT
-
-	case KW_ENUM
-		is_enum = TRUE
+	'' {STRUCT|UNION|ENUM}
+	dim as integer compoundkw = tk_get(x)
+	select case (compoundkw)
+	case KW_ENUM, KW_STRUCT, KW_UNION
 
 	case else
 		return begin
@@ -445,26 +482,37 @@ private function parse_struct(byval x as integer) as integer
 
 	x = skip(x)
 
-	'' Body: Struct fields/enum constants, possibly intermixed with
-	'' PP directives.
+	'' Body: Struct fields/enum constants, nested structs/unions,
+	'' possibly intermixed with PP directives.
+	dim as integer level = 0
 	do
 		dim as integer old = x
 
-		x = parse_pp_directive(x)
-
-		if (is_enum) then
+		if (compoundkw = KW_ENUM) then
 			x = parse_enumconst(x)
 		else
+			x = parse_nested_struct_begin(x)
+			if (x > old) then
+				level += 1
+			end if
+
 			x = parse_field(x)
 		end if
 
 		'' '}'?
 		select case (tk_get(x))
 		case TK_RBRACE
-			exit do
+			if (level > 0) then
+				x = parse_nested_struct_end(x)
+				level -= 1
+			else
+				exit do
+			end if
 		case TK_EOF
 			return begin
 		end select
+
+		x = parse_pp_directive(x)
 
 		if (x = old) then
 			'' Ok, there's something weird inside this struct/enum
@@ -477,7 +525,7 @@ private function parse_struct(byval x as integer) as integer
 	loop
 
 	'' '}'
-	dim as integer compoundend = x
+	dim as integer structend = x
 	xassert(tk_get(x) = TK_RBRACE)
 	x = skip(x)
 
@@ -491,7 +539,15 @@ private function parse_struct(byval x as integer) as integer
 		return begin
 	end if
 
-	tk_mark_stmt(iif(is_enum, STMT_ENDENUM, STMT_ENDSTRUCT), compoundend, x)
+	if (compoundkw = KW_ENUM) then
+		compoundkw = STMT_ENDENUM
+	elseif (compoundkw = KW_STRUCT) then
+		compoundkw = STMT_ENDSTRUCT
+	else
+		compoundkw = STMT_ENDUNION
+	end if
+
+	tk_mark_stmt(compoundkw, structend, x)
 
 	return skip(x)
 end function
@@ -733,13 +789,12 @@ private function translate_compound_end _
 	xassert(tk_get(y) = TK_RBRACE)
 	y = skip(y)
 
-	'' [id]
-	if (tk_get(y) = TK_ID) then
-		xassert((compoundkw = KW_TYPE) or (compoundkw = KW_ENUM))
-		y = skip(y)
-	end if
-
 	if (compoundkw <> KW_EXTERN) then
+		'' [id]
+		if (tk_get(y) = TK_ID) then
+			y = skip(y)
+		end if
+
 		'' [';']
 		if (tk_get(y) = TK_SEMI) then
 			y = skip(y)
@@ -930,8 +985,8 @@ private function translate_base_type(byval x as integer) as integer
 	x += 1
 
 	select case (tk_get(x))
-	case KW_ENUM, KW_STRUCT
-		'' {ENUM | STRUCT} id
+	case KW_ENUM, KW_STRUCT, KW_UNION
+		'' {ENUM | STRUCT | UNION} id
 		tk_remove_range(x, skip(x) - 1)
 
 		xassert(tk_get(x) = TK_ID)
@@ -1109,7 +1164,8 @@ private function translate_struct(byval x as integer) as integer
 	'' different, then insert a <type typedef-id as struct-id> after the
 	'' struct end.
 	''
-	'' Same for enums...
+	'' Same for enums. And this also handles unions and nested structs...
+	'' 
 
 	'' [TYPEDEF]
 	dim as integer is_typedef = FALSE
@@ -1118,13 +1174,14 @@ private function translate_struct(byval x as integer) as integer
 		is_typedef = TRUE
 	end if
 
-	dim as integer is_enum = (tk_get(x) = KW_ENUM)
-
-	'' STRUCT -> TYPE, ENUM can stay as-is
-	if (is_enum = FALSE) then
-		xassert(tk_get(x) = KW_STRUCT)
+	dim as integer compoundkw = tk_get(x)
+	if (compoundkw = KW_STRUCT) then
+		'' STRUCT -> TYPE
 		tk_replace(x, KW_TYPE, NULL)
+	else
+		xassert((compoundkw = KW_ENUM) or (compoundkw = KW_UNION))
 	end if
+
 	x = skip(x)
 
 	'' ['id']
@@ -1140,8 +1197,14 @@ private function translate_struct(byval x as integer) as integer
 		'' Find the '}' and the following typedef id (if it's there)
 		dim as integer typedefid = find_parentheses(x)
 
-		xassert(((tk_stmt(typedefid) = STMT_ENDSTRUCT) and not is_enum) or _
-			((tk_stmt(typedefid) = STMT_ENDENUM)   and     is_enum))
+		if (compoundkw = KW_ENUM) then
+			xassert(tk_stmt(typedefid) = STMT_ENDENUM)
+		elseif (compoundkw = KW_STRUCT) then
+			xassert(tk_stmt(typedefid) = STMT_ENDSTRUCT)
+		else
+			xassert(tk_stmt(typedefid) = STMT_ENDUNION)
+		end if
+
 		xassert(tk_get(typedefid) = TK_RBRACE)
 
 		typedefid = skip(typedefid)
@@ -1166,7 +1229,7 @@ private function translate_struct(byval x as integer) as integer
 					tk_insert_space(y)
 					tk_copy(y, structid)
 					tk_insert_space(y)
-					tk_insert(y, iif(is_enum, KW_ENUM, KW_STRUCT), NULL)
+					tk_insert(y, compoundkw, NULL)
 					tk_insert_space(y)
 					tk_insert(y, KW_TYPEDEF, NULL)
 					tk_mark_stmt(STMT_TYPEDEF, y, y + 7)
@@ -1392,11 +1455,14 @@ private sub translate_toplevel()
 		case STMT_STRUCT
 			x = translate_struct(x)
 
+		case STMT_ENDENUM
+			x = translate_compound_end(x, KW_ENUM)
+
 		case STMT_ENDSTRUCT
 			x = translate_compound_end(x, KW_TYPE)
 
-		case STMT_ENDENUM
-			x = translate_compound_end(x, KW_ENUM)
+		case STMT_ENDUNION
+			x = translate_compound_end(x, KW_UNION)
 
 		case STMT_ENUMCONST
 			x = translate_enumconst(x)

@@ -10,6 +10,6 @@ typedef struct T TT;
 // (typedef not needed, since any places using T will work anyways)
 typedef struct T T;
 
-typedef enum FOO *PENUMFOO;
+typedef enum E *PE;
 
-typedef struct T  /*boo*/ *  *  *  *  TT;
+typedef union U  /*boo*/ *  *  *  *  TT;

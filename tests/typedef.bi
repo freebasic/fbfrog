@@ -10,6 +10,6 @@ type TT as T
 '' (typedef not needed, since any places using T will work anyways)
 type T as T
 
-type PENUMFOO as FOO ptr
+type PE as E ptr
 
-type TT as T  /'boo'/ ptr  ptr  ptr  ptr
+type TT as U  /'boo'/ ptr  ptr  ptr  ptr

@@ -182,9 +182,10 @@ enum
 	STMT_PP          '' Some PP directive
 	STMT_EXTERN      '' EXTERN "C" block
 	STMT_ENDEXTERN
-	STMT_STRUCT      '' struct/enum blocks
-	STMT_ENDSTRUCT
+	STMT_STRUCT      '' struct/union/enum blocks
 	STMT_ENDENUM
+	STMT_ENDSTRUCT
+	STMT_ENDUNION
 	STMT_ENUMCONST   '' Enum constants
 	STMT_FIELD       '' Fields
 	STMT_TYPEDEF     '' Simple typedefs: <TYPEDEF type id ';'>
