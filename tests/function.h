@@ -3,11 +3,11 @@ int f1();
 /* function as any ptr */
 void *f2();
 
-/* taking an int, returning an int */
+/* taking an int (but the id is omitted), returning an int */
 int f3(int);
 
 /* some more params, and even ellipsis */
-int *f4(int x, short y, char *z, ...);
+int *f4(int x, short, char *, ...);
 
 /* typedef */
 TT1 *f5();

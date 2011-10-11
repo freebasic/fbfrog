@@ -3,17 +3,17 @@ declare function f1() as integer
 /' function as any ptr '/
 declare function f2() as any ptr
 
-/' taking an int, returning an int '/
-/' TODO: token 93 '/ f3(/' TODO: token 93 '/)/' TODO: token 44 '/
+/' taking an int (but the id is omitted), returning an int '/
+declare function f3(byval as integer) as integer
 
 /' some more params, and even ellipsis '/
-declare function f4(byval x as integer, byval y as short, byval z as byte ptr, ...) as integer ptr
+declare function f4(byval x as integer, byval as short, byval as byte ptr, ...) as integer ptr
 
 /' typedef '/
 declare function f5() as TT1 ptr
 
 /' struct '/
-/' TODO: token 103 '/ T1 f6(/' TODO: token 103 '/ T1 *, TT1 ******)/' TODO: token 44 '/
+declare function f6(byval as T1 ptr, byval as TT1 ptr ptr ptr ptr ptr ptr) as T1
 
 #define MY_EXTERN /'__declspec(dllexport)'/
 #define MY_CALL __attribute__((__stdcall__))/'__stdcall'/

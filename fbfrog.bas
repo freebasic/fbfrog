@@ -563,7 +563,9 @@ private function parse_procdecl(byval x as integer) as integer
 	x = skip(x)
 
 	'' Parameter list
-	'' [ type id  (',' type id )*  [ ',' '...' ] ]
+	'' [ type [id]  (',' type [id] )*  [ ',' '...' ] ]
+	'' Note: The following isn't even doing that much syntax verification
+	'' at all, but it's ok, it's not a compiler afterall.
 	do
 		select case (tk_get(x))
 		case TK_RPAREN
@@ -586,11 +588,10 @@ private function parse_procdecl(byval x as integer) as integer
 
 			x = parse_ptrs(x)
 
-			'' id
-			if (tk_get(x) <> TK_ID) then
-				return begin
+			'' [id]
+			if (tk_get(x) = TK_ID) then
+				x = skip(x)
 			end if
-			x = skip(x)
 
 		end select
 	loop
@@ -1336,12 +1337,12 @@ private function translate_procdecl(byval x as integer) as integer
 			x = translate_ptrs(typeend)
 			typeend = skiprev(x)
 
-			'' id
-			xassert(tk_get(x) = TK_ID)
-			x += 1
-
-			tk_insert_space(x)
-			x += 1
+			'' [id]
+			if (tk_get(x) = TK_ID) then
+				x += 1
+				tk_insert_space(x)
+				x += 1
+			end if
 
 			'' Copy the translated type/ptrs behind the id
 			tk_copy_range(x, typebegin, typeend)
