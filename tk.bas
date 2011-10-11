@@ -2,10 +2,10 @@
 #include once "common.bi"
 #include once "crt.bi"
 
-type OneToken
-	as integer id        '' TK_*
-	as zstring ptr text  '' Identifiers and number/string literals, or NULL
-	as integer stmt      '' STMT_*
+type OneToken field = 1
+	as short id         '' TK_*
+	as short stmt       '' STMT_*
+	as zstring ptr text '' Identifiers and number/string literals, or NULL
 end type
 
 type AllTokens
@@ -104,6 +104,7 @@ sub tk_in_raw _
 	end if
 
 	p->id = id
+	p->stmt = STMT_TOPLEVEL
 	if (length > 0) then
 		p->text = xallocate(length + 1)
 		memcpy(p->text, text, length)
@@ -111,7 +112,6 @@ sub tk_in_raw _
 	else
 		p->text = NULL
 	end if
-	p->stmt = STMT_TOPLEVEL
 
 	tk.front += 1
 	tk.gap -= 1
