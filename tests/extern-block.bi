@@ -1,15 +1,12 @@
 extern "C" 
 end extern
 
-extern "C" 
-end extern
+extern "C" : end extern
 
-extern "C"end extern
-
-extern "C"  end extern
+extern "C"  : end extern
 
 extern _
-"C"end extern
+"C" : end extern
 
 extern _
 "C" _

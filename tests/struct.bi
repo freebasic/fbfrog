@@ -1,20 +1,20 @@
-'' type T2 : ... : end type
-'' type TT2 as T2
+'' type T : ... : end type
+'' type TT as T
 '' (Both ids might be needed)
-type T2
+type T
 	as integer a
 	as double x
-end type : type TT2 as T2
+end type : type TT as T
 
-'' type TT3 : ... : end type
-type TT3
+'' type TT : ... : end type
+type TT
 	as integer a
 	as double x
 end type
 
-'' type T1 : ... : end type
-'' (also, any places using <struct T1> will become just <T1>, so they work ok)
-type T1
+'' type T : ... : end type
+'' (also, any places using <struct T> will become just <T>, so they work ok)
+type T
 	as integer i
 #if 1
 	as ulongint j
@@ -24,4 +24,4 @@ type T1
 	as T2 ptr ptr ptr ptr y
 end type
 
-type T3 : as integer a : end type
+type T : as integer a : end type

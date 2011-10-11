@@ -2,14 +2,14 @@ typedef unsigned __int8 uint8_t;
 typedef unsigned __int32 uint32_t;
 typedef unsigned __int64 uint64_t;
 
-// type TT1 as T1
+// type TT as T
 // (typedef needed, since it's a different id)
-typedef struct T1 TT1;
+typedef struct T TT;
 
-// type typedef_T1 as T1
-// (typedef not needed, since any places using T1 will work anyways)
-typedef struct T1 T1;
+// type typedef_T as T
+// (typedef not needed, since any places using T will work anyways)
+typedef struct T T;
 
-typedef int *PINT;
+typedef enum FOO *PENUMFOO;
 
-typedef struct T1  /*boo*/ *  *  *  *  TT1;
+typedef struct T  /*boo*/ *  *  *  *  TT;

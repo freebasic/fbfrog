@@ -119,6 +119,24 @@ private function is_whitespace_until_eol(byval x as integer) as integer
 	return TRUE
 end function
 
+private function is_whitespace_since_eol(byval x as integer) as integer
+	do
+		select case (tk_get(x))
+		case TK_EOL, TK_EOF
+			exit do
+
+		case TK_SPACE, TK_COMMENT, TK_LINECOMMENT
+
+		case else
+			return FALSE
+
+		end select
+
+		x -= 1
+	loop
+	return TRUE
+end function
+
 private function parse_pp_directive(byval x as integer) as integer
 	'' (Assuming all '#' are indicating a PP directive)
 	if (tk_get(x) <> TK_HASH) then
@@ -666,6 +684,11 @@ private function remove_following_lbrace(byval x as integer) as integer
 end function
 
 private function insert_statement_separator(byval x as integer) as integer
+	'' Only if there's not already another ':'
+	if ((tk_get(x) = TK_COLON) or (tk_get(skiprev(x)) = TK_COLON)) then
+		return x
+	end if
+
 	if (tk_get(x - 1) <> TK_SPACE) then
 		tk_insert_space(x)
 		x += 1
@@ -692,9 +715,11 @@ private function translate_compound_end _
 	'' The id can only appear because of <typedef struct { } id;> which
 	'' the struct parser/translator accepts and handles. The id might be
 	'' copied, but only here is it removed.
-	'' The ';' is not there for EXTERN blocks (the EXTERN parser, unlike
-	'' the enum/struct parser, does not handle the ';' even if it might
-	'' be there, it'll be picked up as random toplevel semicolon.).
+	'' Note: ';' behind an EXTERN block isn't treated as part of it.
+
+	if (is_whitespace_since_eol(x - 1) = FALSE) then
+		x = insert_statement_separator(x)
+	end if
 
 	tk_insert(x, KW_END, NULL)
 	x += 1
@@ -714,9 +739,11 @@ private function translate_compound_end _
 		y = skip(y)
 	end if
 
-	'' [';']
-	if (tk_get(y) = TK_SEMI) then
-		y = skip(y)
+	if (compoundkw <> KW_EXTERN) then
+		'' [';']
+		if (tk_get(y) = TK_SEMI) then
+			y = skip(y)
+		end if
 	end if
 
 	'' Remove the '}' and ';', including space and the optional id in
@@ -732,11 +759,10 @@ end function
 
 private function translate_enumconst(byval x as integer) as integer
 	'' identifer ['=' expression] [',']
-	'' The only thing to do here is to remove the comma,
-	'' unless there are more constants coming in this line.
 
 	xassert(tk_get(x) = TK_ID)
 
+	dim as integer ends_at_eol = FALSE
 	dim as integer level = 0
 	do
 		x = skip(x)
@@ -750,6 +776,8 @@ private function translate_enumconst(byval x as integer) as integer
 
 		case TK_COMMA
 			if (level = 0) then
+				'' Remove the comma, unless there are more
+				'' constants coming in this line.
 				if (is_whitespace_until_eol(x + 1)) then
 					tk_remove(x)
 					x -= 1

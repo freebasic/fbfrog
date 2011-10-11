@@ -6,21 +6,33 @@ enum
 	F
 end enum
 
-'' enum E2 : ... : end enum
-'' type EE2 as E2
+'' enum E : ... : end enum
+'' type EE as E
 '' (Both ids might be needed)
-enum E2 : A, B end enum : type EE2 as E2
+enum E : A, B : end enum : type EE as E
 
-'' enum EE3 : ... : end enum
-enum EE3
+enum E : A, B, : end enum : type EE as E
+
+enum E
+A, B : end enum : type EE as E
+
+enum E : A
+B : end enum : type EE as E
+
+enum E : A, B
+end enum : type EE as E
+
+
+'' enum EE : ... : end enum
+enum EE
 	A
 	B
 	C
 end enum
 
-'' enum E1 : ... : end enum
-'' (also, any places using <enum E1> will become just <E1>, so they work ok)
-enum E1
+'' enum E : ... : end enum
+'' (also, any places using <enum E> will become just <E>, so they work ok)
+enum E
 	A
 #if 1
 	B

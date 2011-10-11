@@ -6,21 +6,33 @@ enum {
 	F
 };
 
-// enum E2 : ... : end enum
-// type EE2 as E2
+// enum E : ... : end enum
+// type EE as E
 // (Both ids might be needed)
-typedef enum E2 { A, B } EE2;
+typedef enum E { A, B } EE;
 
-// enum EE3 : ... : end enum
+typedef enum E { A, B, } EE;
+
+typedef enum E {
+A, B} EE;
+
+typedef enum E {A,
+B} EE;
+
+typedef enum E {A, B
+} EE;
+
+
+// enum EE : ... : end enum
 typedef enum {
 	A,
 	B,
 	C
-} EE3;
+} EE;
 
-// enum E1 : ... : end enum
-// (also, any places using <enum E1> will become just <E1>, so they work ok)
-enum E1 {
+// enum E : ... : end enum
+// (also, any places using <enum E> will become just <E>, so they work ok)
+enum E {
 	A,
 #if 1
 	B,
