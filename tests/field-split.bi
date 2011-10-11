@@ -1,4 +1,4 @@
-type T 
+type T
 	as integer a : as integer ptr ptr b, c
 	as integer ptr aa : as integer bb, cc : as integer ptr ptr dd, ee : as integer ff
 	as T2 ptr x : as T2 ptr ptr ptr ptr y : as T2 z

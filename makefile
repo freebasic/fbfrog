@@ -22,9 +22,9 @@ endif
 FBC := fbc
 FROG := ./fbfrog$(EXEEXT)
 
-ifndef V
-  QUIET_TEST    = @echo "TEST $@";
-endif
+#ifndef V
+#  QUIET_TEST    = @echo "TEST $@";
+#endif
 
 .PHONY: all
 all: $(FROG)
@@ -46,4 +46,4 @@ FORCE:
 tests: $(TESTSBI)
 
 $(TESTSBI): %.bi: %.h FORCE
-	$(QUIET_TEST)$(FROG) $<
+	$(FROG) $<

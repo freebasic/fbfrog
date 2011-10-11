@@ -143,9 +143,13 @@ private function parse_pp_directive(byval x as integer) as integer
 		end select
 	loop
 
+	'' The last EOL is not part of the #directive, otherwise the EOL
+	'' fixup would replace it with line continuation...
 	tk_mark_stmt(STMT_PP, begin, x - 1)
 
-	return x
+	'' Make sure to return at a proper non-space token though,
+	'' to avoid confusing the other parsers.
+	return skip(x)
 end function
 
 private function find_parentheses_backwards(byval x as integer) as integer
@@ -288,7 +292,8 @@ private function parse_base_type(byval x as integer) as integer
 	return x
 end function
 
-private function parse_enumfield(byval x as integer) as integer
+private function parse_enumconst(byval x as integer) as integer
+	'' id
 	if (tk_get(x) <> TK_ID) then
 		return x
 	end if
@@ -298,11 +303,27 @@ private function parse_enumfield(byval x as integer) as integer
 
 	'' ['=' expression]
 	if (tk_get(x) = TK_ASSIGN) then
+		dim as integer level = 0
 		do
 			x = skip(x)
+
 			select case (tk_get(x))
-			case TK_COMMA, TK_RBRACE, TK_EOF
+			case TK_LPAREN
+				level += 1
+
+			case TK_RPAREN
+				level -= 1
+
+			case TK_COMMA
+				if (level = 0) then
+					exit do
+				end if
+
+			case TK_RBRACE, TK_EOF, TK_HASH
+				'' Note: '#' (PP directives) not allowed in
+				'' expressions in FB, this can't be translated.
 				exit do
+
 			end select
 		loop
 	end if
@@ -319,7 +340,7 @@ private function parse_enumfield(byval x as integer) as integer
 	end select
 
 	'' Mark the constant declaration
-	tk_mark_stmt(STMT_ENUMFIELD, begin, skiprev(x))
+	tk_mark_stmt(STMT_ENUMCONST, begin, skiprev(x))
 
 	return x
 end function
@@ -367,82 +388,54 @@ private function parse_field(byval x as integer) as integer
 	return x
 end function
 
-'' EXTERN/STRUCT/ENUM blocks
-private function parse_compound(byval x as integer) as integer
-	'' EXTERN string '{'
-	'' [TYPEDEF] STRUCT [id] '{' fields '}' [id] ';'
-	'' ENUM [id] '{' enumfields '}' ';'
-	''
-	'' For EXTERN blocks, the '}' end is handled later, so that the
-	'' body is parsed from the toplevel loop. For structs/enums however,
-	'' the body is parsed in here, same for the end.
+private function parse_struct(byval x as integer) as integer
+	'' [TYPEDEF] {STRUCT|ENUM} [id] '{' ... '}' [id] ';'
 
 	dim as integer begin = x
 
-	dim as integer stmt = any
-	select case (tk_get(x))
-	case KW_EXTERN
-		stmt = STMT_EXTERN
+	'' [TYPEDEF]
+	if (tk_get(x) = KW_TYPEDEF) then
+		x = skip(x)
+	end if
 
+	'' {STRUCT|ENUM}
+	dim as integer is_enum = FALSE
+	select case (tk_get(x))
 	case KW_STRUCT
-		stmt = STMT_STRUCT
 
 	case KW_ENUM
-		stmt = STMT_ENUM
-
-	case KW_TYPEDEF
-		x = skip(x)
-		if (tk_get(x) <> KW_STRUCT) then
-			return begin
-		end if
-		stmt = STMT_STRUCT
+		is_enum = TRUE
 
 	case else
-		return x
+		return begin
 
 	end select
 
 	x = skip(x)
 
-	if (stmt = STMT_EXTERN) then
-		'' EXTERN requires a following string
-		'' (for example <EXTERN "C">)
-		if (tk_get(x) <> TK_STRING) then
-			return begin
-		end if
+	'' [id]
+	if (tk_get(x) = TK_ID) then
 		x = skip(x)
-	else
-		'' [id]
-		if (tk_get(x) = TK_ID) then
-			x = skip(x)
-		end if
 	end if
 
-	'' Opening '{'?
+	'' '{'
 	if (tk_get(x) <> TK_LBRACE) then
 		return begin
 	end if
 
-	'' Mark the '{' too, but not the whitespace/comments behind it,
-	'' since that's usually indentation belonging to something else.
-	tk_mark_stmt(stmt, begin, x)
+	tk_mark_stmt(STMT_STRUCT, begin, x)
 
-	'' EXTERN parsing is done here; the content is parsed as toplevel,
-	'' and the '}' is handled later.
-	if (stmt = STMT_EXTERN) then
-		return x + 1
-	end if
-
-	'' '{'
 	x = skip(x)
 
-	'' Fields
+	'' Body: Struct fields/enum constants, possibly intermixed with
+	'' PP directives.
 	do
 		dim as integer old = x
+
 		x = parse_pp_directive(x)
 
-		if (stmt = STMT_ENUM) then
-			x = parse_enumfield(x)
+		if (is_enum) then
+			x = parse_enumconst(x)
 		else
 			x = parse_field(x)
 		end if
@@ -456,8 +449,11 @@ private function parse_compound(byval x as integer) as integer
 		end select
 
 		if (x = old) then
-			'' The above parsers didn't catch anything, this is
-			'' probably commentary/whitespace...
+			'' Ok, there's something weird inside this struct/enum
+			'' body that the PP directive/enumconst/field parsers
+			'' didn't recognize. Ignore this token and try to
+			'' continue parsing other fields etc.
+			''return begin
 			x = skip(x)
 		end if
 	loop
@@ -467,11 +463,9 @@ private function parse_compound(byval x as integer) as integer
 	xassert(tk_get(x) = TK_RBRACE)
 	x = skip(x)
 
-	if (stmt = STMT_STRUCT) then
-		'' [id]
-		if (tk_get(x) = TK_ID) then
-			x = skip(x)
-		end if
+	'' [id]
+	if (tk_get(x) = TK_ID) then
+		x = skip(x)
 	end if
 
 	'' ';'
@@ -479,17 +473,46 @@ private function parse_compound(byval x as integer) as integer
 		return begin
 	end if
 
-	tk_mark_stmt(iif(stmt = STMT_STRUCT, STMT_ENDSTRUCT, STMT_ENDENUM), _
-	             compoundend, x)
+	tk_mark_stmt(iif(is_enum, STMT_ENDENUM, STMT_ENDSTRUCT), compoundend, x)
 
 	return skip(x)
 end function
 
+private function parse_extern_begin(byval x as integer) as integer
+	'' EXTERN "C" '{'
+
+	if (tk_get(x) <> KW_EXTERN) then
+		return x
+	end if
+
+	dim as integer begin = x
+	x = skip(x)
+
+	'' "C"
+	if (tk_get(x) <> TK_STRING) then
+		return begin
+	end if
+	x = skip(x)
+
+	'' '{'
+	if (tk_get(x) <> TK_LBRACE) then
+		return begin
+	end if
+
+	tk_mark_stmt(STMT_EXTERN, begin, x)
+
+	'' EXTERN parsing is done here, so the content is parsed from the
+	'' toplevel loop.
+	return skip(x)
+end function
+
 private function parse_extern_end(byval x as integer) as integer
+	'' '}'
 	if (tk_get(x) <> TK_RBRACE) then
 		return x
 	end if
 
+	'' Check whether this '}' belongs to an 'extern "C" {'
 	dim as integer opening = find_parentheses_backwards(x)
 	if (opening = x) then
 		return x
@@ -502,7 +525,7 @@ private function parse_extern_end(byval x as integer) as integer
 
 	tk_mark_stmt(STMT_ENDEXTERN, x, x)
 
-	return x + 1
+	return skip(x)
 end function
 
 private function parse_typedef(byval x as integer) as integer
@@ -618,7 +641,8 @@ private sub parse_toplevel()
 		dim as integer old = x
 
 		x = parse_pp_directive(x)
-		x = parse_compound(x)
+		x = parse_struct(x)
+		x = parse_extern_begin(x)
 		x = parse_extern_end(x)
 		x = parse_typedef(x)
 		x = parse_procdecl(x)
@@ -627,73 +651,10 @@ private sub parse_toplevel()
 			'' Token/construct couldn't be identified, so make
 			'' sure the parsing advances somehow, but mark as
 			'' nothing to clean up failed parses.
-			tk_mark_stmt(STMT_TOPLEVEL, x, x)
 			x = skip(x)
+			tk_mark_stmt(STMT_TOPLEVEL, old, x - 1)
 		end if
 	loop while (tk_get(x) <> TK_EOF)
-end sub
-
-'' EOL fixup -- in C it's possible to have constructs split over multiple
-'' lines, which requires a '_' line continuation char in FB. Also, the CPP
-'' \<EOL> line continuation needs to be converted to FB.
-private sub fixup_eols()
-	dim as integer x = 0
-	do
-		select case (tk_get(x))
-		case TK_EOF
-			exit do
-
-		case TK_EOL
-			select case (tk_stmt(x))
-			case STMT_TOPLEVEL
-				'' (EOLs at toplevel are supposed to stay)
-
-			case STMT_PP
-				'' EOLs can only be part of PP directives if
-				'' the newline char is escaped with '\'.
-				'' For FB that needs to be replaced with a '_'.
-				'' That might require an extra space too,
-				'' because '_' can be part of identifiers,
-				'' unlike '\'...
-				x -= 2
-				if (tk_get(x) <> TK_SPACE) then
-					tk_insert_space(x)
-					x += 1
-				end if
-
-				'' Back to '\'
-				x += 1
-
-				'' Replace the '\' by '_'
-				xassert(tk_get(x) = TK_BACKSLASH)
-				tk_replace(x, TK_UNDERSCORE, NULL)
-
-				'' Back to EOL
-				x += 1
-
-			case else
-				'' For EOLs inside constructs, '_'s need to
-				'' be added so it works in FB. It should be
-				'' inserted in front of any line comment or
-				'' space that aligns the line comment.
-				dim as integer y = x - 1
-				if (tk_get(y) = TK_LINECOMMENT) then
-					y -= 1
-				end if
-				if (tk_get(y) = TK_SPACE) then
-					y -= 1
-				end if
-				y += 1
-				tk_insert_space(y)
-				tk_insert(y + 1, TK_UNDERSCORE, NULL)
-				x += 2
-
-			end select
-
-		end select
-
-		x += 1
-	loop
 end sub
 
 private function remove_following_lbrace(byval x as integer) as integer
@@ -749,7 +710,7 @@ private function translate_compound_end _
 
 	'' [id]
 	if (tk_get(y) = TK_ID) then
-		xassert(compoundkw = KW_TYPE)
+		xassert((compoundkw = KW_TYPE) or (compoundkw = KW_ENUM))
 		y = skip(y)
 	end if
 
@@ -769,48 +730,40 @@ private function translate_compound_end _
 	return x
 end function
 
-private function translate_enumfield(byval x as integer) as integer
+private function translate_enumconst(byval x as integer) as integer
 	'' identifer ['=' expression] [',']
 	'' The only thing to do here is to remove the comma,
 	'' unless there are more constants coming in this line.
+
+	xassert(tk_get(x) = TK_ID)
+
+	dim as integer level = 0
 	do
 		x = skip(x)
 
 		select case (tk_get(x))
+		case TK_LPAREN
+			level += 1
+
+		case TK_RPAREN
+			level -= 1
+
 		case TK_COMMA
-			dim as integer more_coming = FALSE
-			dim as integer y = x
-			do
-				y += 1
-
-				select case (tk_get(y))
-				case TK_SPACE, TK_COMMENT
-					'' Space/comment is ok
-
-				case TK_LINECOMMENT, TK_EOL
-					'' Reaching these means there is
-					'' nothing else coming in this line
-					exit do
-
-				case else
-					more_coming = TRUE
-					exit do
-
-				end select
-			loop
-
-			if (more_coming = FALSE) then
-				tk_remove(x)
-			else
-				x += 1
+			if (level = 0) then
+				if (is_whitespace_until_eol(x + 1)) then
+					tk_remove(x)
+					x -= 1
+				end if
+				x = skip(x)
+				exit do
 			end if
 
-			exit do
-
-		case TK_RBRACE, TK_EOF
+		case TK_RBRACE
 			exit do
 
 		end select
+
+		xassert(tk_get(x) <> TK_EOF)
 	loop
 
 	return x
@@ -1106,6 +1059,8 @@ private function translate_field(byval x as integer) as integer
 end function
 
 private function translate_struct(byval x as integer) as integer
+	'' structs/enums
+	''
 	'' struct T { ... };               ->    type T : ... : end type
 	'' Note: any occurences of <struct T> will be translated to just <T>
 	'' by the type translator, so this just works.
@@ -1125,6 +1080,8 @@ private function translate_struct(byval x as integer) as integer
 	'' If both struct and typedef have an identifier, but they are
 	'' different, then insert a <type typedef-id as struct-id> after the
 	'' struct end.
+	''
+	'' Same for enums...
 
 	'' [TYPEDEF]
 	dim as integer is_typedef = FALSE
@@ -1133,12 +1090,16 @@ private function translate_struct(byval x as integer) as integer
 		is_typedef = TRUE
 	end if
 
-	'' STRUCT -> TYPE
-	xassert(tk_get(x) = KW_STRUCT)
-	tk_replace(x, KW_TYPE, NULL)
+	dim as integer is_enum = (tk_get(x) = KW_ENUM)
+
+	'' STRUCT -> TYPE, ENUM can stay as-is
+	if (is_enum = FALSE) then
+		xassert(tk_get(x) = KW_STRUCT)
+		tk_replace(x, KW_TYPE, NULL)
+	end if
 	x = skip(x)
 
-	'' [struct-id]
+	'' ['id']
 	dim as integer structid = x
 	if (tk_get(x) = TK_ID) then
 		x = skip(x)
@@ -1150,8 +1111,11 @@ private function translate_struct(byval x as integer) as integer
 	if (is_typedef) then
 		'' Find the '}' and the following typedef id (if it's there)
 		dim as integer typedefid = find_parentheses(x)
-		xassert(tk_stmt(typedefid) = STMT_ENDSTRUCT)
+
+		xassert(((tk_stmt(typedefid) = STMT_ENDSTRUCT) and not is_enum) or _
+			((tk_stmt(typedefid) = STMT_ENDENUM)   and     is_enum))
 		xassert(tk_get(typedefid) = TK_RBRACE)
+
 		typedefid = skip(typedefid)
 
 		if (tk_get(structid) = TK_ID) then
@@ -1174,7 +1138,7 @@ private function translate_struct(byval x as integer) as integer
 					tk_insert_space(y)
 					tk_copy(y, structid)
 					tk_insert_space(y)
-					tk_insert(y, KW_STRUCT, NULL)
+					tk_insert(y, iif(is_enum, KW_ENUM, KW_STRUCT), NULL)
 					tk_insert_space(y)
 					tk_insert(y, KW_TYPEDEF, NULL)
 					tk_mark_stmt(STMT_TYPEDEF, y, y + 7)
@@ -1198,10 +1162,13 @@ private function translate_struct(byval x as integer) as integer
 		end if
 	end if
 
-	'' Remove the '{' if there is an EOL following. Otherwise, insert an
-	'' ':' statement separator.
+	'' Remove the '{' and space in front of it. If there is an EOL
+	'' following, insert a ':' statement separator.
 	xassert(tk_get(x) = TK_LBRACE)
-	tk_remove(x)
+	dim as integer spacebegin = skiprev(x) + 1
+	tk_remove_range(spacebegin, x)
+	x -= x - spacebegin
+
 	if (is_whitespace_until_eol(x) = FALSE) then
 		x = insert_statement_separator(x)
 	end if
@@ -1387,15 +1354,15 @@ private sub translate_toplevel()
 	dim as integer x = 0
 	while (tk_get(x) <> TK_EOF)
 		select case as const (tk_stmt(x))
-		case STMT_EXTERN, STMT_ENUM
+		case STMT_EXTERN
 			'' Just jump to the '{' and remove it
 			x = remove_following_lbrace(x)
 
-		case STMT_STRUCT
-			x = translate_struct(x)
-
 		case STMT_ENDEXTERN
 			x = translate_compound_end(x, KW_EXTERN)
+
+		case STMT_STRUCT
+			x = translate_struct(x)
 
 		case STMT_ENDSTRUCT
 			x = translate_compound_end(x, KW_TYPE)
@@ -1403,8 +1370,8 @@ private sub translate_toplevel()
 		case STMT_ENDENUM
 			x = translate_compound_end(x, KW_ENUM)
 
-		case STMT_ENUMFIELD
-			x = translate_enumfield(x)
+		case STMT_ENUMCONST
+			x = translate_enumconst(x)
 
 		case STMT_FIELD
 			x = translate_field(x)
@@ -1416,10 +1383,73 @@ private sub translate_toplevel()
 			x = translate_procdecl(x)
 
 		case else
-			x += 1
+			x = skip(x)
 
 		end select
 	wend
+end sub
+
+'' EOL fixup -- in C it's possible to have constructs split over multiple
+'' lines, which requires a '_' line continuation char in FB. Also, the CPP
+'' \<EOL> line continuation needs to be converted to FB.
+private sub fixup_eols()
+	dim as integer x = 0
+	do
+		select case (tk_get(x))
+		case TK_EOF
+			exit do
+
+		case TK_EOL
+			select case (tk_stmt(x))
+			case STMT_TOPLEVEL
+				'' (EOLs at toplevel are supposed to stay)
+
+			case STMT_PP
+				'' EOLs can only be part of PP directives if
+				'' the newline char is escaped with '\'.
+				'' For FB that needs to be replaced with a '_'.
+				'' That might require an extra space too,
+				'' because '_' can be part of identifiers,
+				'' unlike '\'...
+				x -= 2
+				if (tk_get(x) <> TK_SPACE) then
+					tk_insert_space(x)
+					x += 1
+				end if
+
+				'' Back to '\'
+				x += 1
+
+				'' Replace the '\' by '_'
+				xassert(tk_get(x) = TK_BACKSLASH)
+				tk_replace(x, TK_UNDERSCORE, NULL)
+
+				'' Back to EOL
+				x += 1
+
+			case else
+				'' For EOLs inside constructs, '_'s need to
+				'' be added so it works in FB. It should be
+				'' inserted in front of any line comment or
+				'' space that aligns the line comment.
+				dim as integer y = x - 1
+				if (tk_get(y) = TK_LINECOMMENT) then
+					y -= 1
+				end if
+				if (tk_get(y) = TK_SPACE) then
+					y -= 1
+				end if
+				y += 1
+				tk_insert_space(y)
+				tk_insert(y + 1, TK_UNDERSCORE, NULL)
+				x += 2
+
+			end select
+
+		end select
+
+		x += 1
+	loop
 end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''

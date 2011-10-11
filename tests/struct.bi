@@ -1,7 +1,7 @@
 '' type T2 : ... : end type
 '' type TT2 as T2
 '' (Both ids might be needed)
-type T2 
+type T2
 	as integer a
 	as double x
 end type : type TT2 as T2
@@ -14,9 +14,11 @@ end type
 
 '' type T1 : ... : end type
 '' (also, any places using <struct T1> will become just <T1>, so they work ok)
-type T1 
+type T1
 	as integer i
+#if 1
 	as ulongint j
+#endif
 	as uinteger k
 	as double a,b,c
 	as T2 ptr ptr ptr ptr y

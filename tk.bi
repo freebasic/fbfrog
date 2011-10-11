@@ -176,20 +176,18 @@ enum
 	TK__COUNT
 end enum
 
+'' Note: When updating, update the debugging code too!
 enum
 	STMT_TOPLEVEL = 0
-	STMT_PP         '' Some PP directive
-	STMT_EXTERN     '' EXTERN string '{'
-	STMT_ENDEXTERN  '' '}'
-	STMT_STRUCT     '' [TYPEDEF] STRUCT [id] '{'
-	STMT_ENDSTRUCT  '' '}' [id] ';'
-	STMT_ENUM       '' ENUM [id] '{'
-	STMT_ENDENUM    '' '}'
-	STMT_ENUMFIELD  '' Constant declaration in an enum's body
-	STMT_FIELD
-	''STMT_VAR        '' Struct fields, variables (vardecl until ';')
-	''STMT_PARAM      '' Proc params (vardecl until ',' or ')')
-	STMT_TYPEDEF    '' Simple typedefs: <TYPEDEF type id ';'>
+	STMT_PP          '' Some PP directive
+	STMT_EXTERN      '' EXTERN "C" block
+	STMT_ENDEXTERN
+	STMT_STRUCT      '' struct/enum blocks
+	STMT_ENDSTRUCT
+	STMT_ENDENUM
+	STMT_ENUMCONST   '' Enum constants
+	STMT_FIELD       '' Fields
+	STMT_TYPEDEF     '' Simple typedefs: <TYPEDEF type id ';'>
 	STMT_PROCDECL
 	STMT__COUNT
 end enum

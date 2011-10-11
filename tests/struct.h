@@ -16,7 +16,9 @@ typedef struct {
 // (also, any places using <struct T1> will become just <T1>, so they work ok)
 struct T1 {
 	signed int i;
+#if 1
 	unsigned long long int j;
+#endif
 	unsigned k;
 	double a,b,c;
 	struct T2 ****y;

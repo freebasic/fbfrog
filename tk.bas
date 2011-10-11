@@ -423,10 +423,11 @@ dim shared as zstring ptr token_stmt_text(0 to (STMT__COUNT - 1)) = _
 	@"endextern", _
 	@"struct", _
 	@"endstruct", _
-	@"enum", _
 	@"endenum", _
-	@"enumfield", _
-	@"field" _
+	@"enumconst", _
+	@"field", _
+	@"typedef", _
+	@"procdecl" _
 }
 
 function tk_debug(byval x as integer) as string
