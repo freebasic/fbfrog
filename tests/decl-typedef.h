@@ -4,12 +4,12 @@ typedef unsigned __int64 uint64_t;
 
 // type TT as T
 // (typedef needed, since it's a different id)
-typedef struct T TT;
+typedef struct T A;
 
-// type typedef_T as T
-// (typedef not needed, since any places using T will work anyways)
-typedef struct T T;
+typedef struct T (*A)(int i);
+
+typedef T **A, B, (*C)(int);
 
 typedef enum E *PE;
 
-typedef union U  /*boo*/ *  *  *  *  TT;
+typedef union U /*boo*/ ****A;

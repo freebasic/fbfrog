@@ -239,7 +239,9 @@ sub tk_mark_stmt _
 
 	for i as integer = first to last
 		dim as OneToken ptr p = tk_ptr(i)
-		p->stmt = stmt
+		if (p) then
+			p->stmt = stmt
+		end if
 	next
 end sub
 
@@ -426,9 +428,11 @@ dim shared as zstring ptr token_stmt_text(0 to (STMT__COUNT - 1)) = _
 	@"endstruct", _
 	@"endunion", _
 	@"enumconst", _
-	@"field", _
 	@"typedef", _
-	@"procdecl" _
+	@"topdecl", _
+	@"procdecl", _
+	@"vardecl", _
+	@"fielddecl" _
 }
 
 function tk_debug(byval x as integer) as string

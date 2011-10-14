@@ -179,17 +179,19 @@ end enum
 '' Note: When updating, update the debugging code too!
 enum
 	STMT_TOPLEVEL = 0
-	STMT_PP          '' Some PP directive
-	STMT_EXTERN      '' EXTERN "C" block
-	STMT_ENDEXTERN
-	STMT_STRUCT      '' struct/union/enum blocks
-	STMT_ENDENUM
-	STMT_ENDSTRUCT
-	STMT_ENDUNION
-	STMT_ENUMCONST   '' Enum constants
-	STMT_FIELD       '' Fields
-	STMT_TYPEDEF     '' Simple typedefs: <TYPEDEF type id ';'>
-	STMT_PROCDECL
+	STMT_PP        '' Some PP directive
+	STMT_EXTERN    '' EXTERN "C" block
+	STMT_ENDEXTERN '' To identify '}'
+	STMT_STRUCT    '' [typedef to] struct/union/enum block
+	STMT_ENDENUM   '' To identify '}'
+	STMT_ENDSTRUCT '' To identify '}'
+	STMT_ENDUNION  '' To identify '}'
+	STMT_ENUMCONST '' Enum constants
+	STMT_TYPEDEF   '' Typedefs (though not those with struct/etc blocks)
+	STMT_TOPDECL   '' Toplevel declarations, after parsing, before split up into vardecls/procdecls
+	STMT_PROCDECL  '' procdecls after being split from topdecls
+	STMT_VARDECL   '' vardecls after being split from topdecls
+	STMT_FIELDDECL '' Fields
 	STMT__COUNT
 end enum
 

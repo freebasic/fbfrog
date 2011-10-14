@@ -1,27 +1,33 @@
 '' type T : ... : end type
-'' type TT as T
+'' type as T A
 '' (Both ids might be needed)
 type T
 	as integer a
-	as double x
-end type : type TT as T
+end type : type as T A
 
+'' Anonymous struct typedef
 '' type TT : ... : end type
 type TT
 	as integer a
-	as double x
 end type
+
+'' Anonymous struct typedef triggering the fake id insertion
+type __FAKE__ /' TODO: added fake id for anonymous struct '/
+	as integer a
+end type : type as __FAKE__ A : type as __FAKE__ ptr PA
+
+'' type T : ... : end type
+'' type as T A, B : type as T ptr C : type as function() as T D
+type T
+	as integer a
+end type : type as T A, B : type as T ptr C : type as function() as T D
 
 '' type T : ... : end type
 '' (also, any places using <struct T> will become just <T>, so they work ok)
 type T
-	as integer i
-#if 1
-	as ulongint j
-#endif
-	as uinteger k
-	as double a,b,c
-	as T2 ptr ptr ptr ptr y
+	as integer a
 end type
+
+type T : as integer a : end type
 
 type T : as integer a : end type

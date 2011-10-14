@@ -83,30 +83,48 @@
 > Instead of translating-by-re-emitting, allow preserving C tokens as-is for
   untranslated constructs, and add a global replace-operators-etc pass.
 
-> Procedure pointers, are basically same as * pointers, just a different syntax
-  that involves the id. So: ptr + id parsing should be combined to hide away
-  the pointer mess.
-  - This is also where a generic vardecl parser make sense.
-    Covers vars/fields/typedefs, and proc parameters (but for whose it must
-    terminate on ',' instead of ';').
-	base-type ptr-id (',' ptr-id)* ';'
-  - Together with a generic version of the field-split code, since also vars
-    and typedefs need to be split up... (doesn't affect params)
-  - This would automatically complete typedef/var support
+> Vardecl/param initializers
 
-> typedef struct T { ... } T1, T2, *PT;
-  If there are multiple typedefs, or it has ptrs, then split them off into the
-  fake typedef without reusing one of the ids as struct id (which one?), so
-  the normal typedef parsing can handle the multdecl. Then we might also need
-  to add a fake structid (or at least write a TODO), if the struct is anonymous.
+> Add a global useless-typedef-removal pass that removes typedefs that have
+  the same id as a type and no pointers/procptrs on them. Add TODOs for such
+  typedefs that have pointers, since those would cause dupdef errors in FB
+  anyways (FB doesn't have separate struct/typedef namespaces)
+	/* typedef-same-id-as-type fixups: */
+	typedef struct T T;
+	typedef struct T A, T;
+	typedef struct T T, B;
+	typedef struct T A, T, B;
+
+> Constness CONST
+  - Easy to parse, difficult to translate
+
+> Make each TK_SPACE correspond to a single space -- that's just easier for
+  everything, including overhead space removal
+
+> Change insert_spaced_token() to be smarter and only insert space to separate
+  keywords from each other, but not from ')' etc.
+  This would be easier if all keywords were KW_*, i.e. TK_NOT should be '!',
+  while KW_NOT is 'NOT'
+
+> Forward declarations
+	// type T as T_
+	// (this way we only need to translate the <struct T ...> body as
+	// <type T_ ...>, that's easier than inserting T_ fwdref in place of T
+	// everywhere where it's used before the T body)
+	struct T;
 
 > Add TODOs rather than automatically inserting/modifying identifiers
 
 > Let translators re-mark their constructs and also specially mark any ids,
   then add a global id vs. FB keyword checker.
+  And also adjust them all to ensure they don't return x while at whitespace,
+  i.e. fix the ';' removal and ':' insertion...
 
 > Add global TODO-for-untranslated-construct pass, with a skip_declaration()
   function to not have one TODO per token...
+
+> Detect untranslatable constructs, mark them as STMT_UNTRANSLATABLE and
+  add a TODO: X not supported in FB, consider doing Y and retrying
 
 > --combine: Build a dependency graph of #includes to determine which files
   can be inserted into their "parents". Rules for inserting an #include file:
@@ -119,6 +137,8 @@
 > Show message after emitting:
   bar.bi: merged into foo.bi
   foo.bi: 14 TODOs, 512 lines (60 KiB) from 332 lines (53 KiB)
+
+> Complain if input file = output file
 
 > #define tracing
   For example, many headers use defines like <WINAPI> (defined to <__stdcall>)

@@ -101,6 +101,20 @@ private function skiprev(byval x as integer) as integer
 	return x
 end function
 
+private function skip_unless_eol(byval x as integer) as integer
+	do
+		x += 1
+
+		select case (tk_get(x))
+		case TK_SPACE, TK_COMMENT, TK_LINECOMMENT
+
+		case else
+			exit do
+		end select
+	loop
+	return x
+end function
+
 private function is_whitespace_until_eol(byval x as integer) as integer
 	do
 		select case (tk_get(x))
@@ -119,6 +133,7 @@ private function is_whitespace_until_eol(byval x as integer) as integer
 	return TRUE
 end function
 
+#if 0
 private function is_whitespace_since_eol(byval x as integer) as integer
 	do
 		select case (tk_get(x))
@@ -136,6 +151,7 @@ private function is_whitespace_since_eol(byval x as integer) as integer
 	loop
 	return TRUE
 end function
+#endif
 
 private function parse_pp_directive(byval x as integer) as integer
 	'' (Assuming all '#' are indicating a PP directive)
@@ -310,6 +326,166 @@ private function parse_base_type(byval x as integer) as integer
 	return x
 end function
 
+private function parse_ptrs(byval x as integer) as integer
+	'' Pointers: ('*')*
+	while (tk_get(x) = TK_MUL)
+		x = skip(x)
+	wend
+	return x
+end function
+
+enum
+	DECL_PARAM = 0
+	DECL_TOP
+	DECL_TYPEDEF
+	DECL_TYPEDEFSTRUCTBLOCK
+	DECL_VAR
+	DECL_FIELD
+	DECL_PROC
+end enum
+
+private function parse_multdecl _
+	( _
+		byval x as integer, _
+		byval begin as integer, _
+		byval decl as integer _
+	) as integer
+
+	'' Generic 'type *a, **b;' parsing,
+	'' used for vardecls/fielddecls/procdecls/params...
+	''
+	'' type '*'* var (',' '*'* var)* ';'
+	''
+	'' Where var can be:
+	'' a plain id: var = id
+	'' a procptr:  var = '(' '*'+ id ')' '(' params ')'
+	'' a procdecl: var = id '(' params ')'
+
+	'' No type hack for the typedef-to-struct-block parser:
+	'' its type is the struct block, which it already parsed...
+	if (decl <> DECL_TYPEDEFSTRUCTBLOCK) then
+		'' type
+		dim as integer typebegin = x
+		x = parse_base_type(x)
+		if (x = typebegin) then
+			return begin
+		end if
+	end if
+
+	'' var (',' var)*
+	do
+		'' '*'*
+		x = parse_ptrs(x)
+
+		'' '('?
+		dim as integer is_procptr = FALSE
+		if (tk_get(x) = TK_LPAREN) then
+			is_procptr = TRUE
+			x = skip(x)
+
+			'' '*'
+			if (tk_get(x) <> TK_MUL) then
+				return begin
+			end if
+			x = skip(x)
+		end if
+
+		'' id (must be there except for params)
+		if (tk_get(x) = TK_ID) then
+			x = skip(x)
+		elseif (decl <> DECL_PARAM) then
+			return begin
+		end if
+
+		if (is_procptr) then
+			'' ')'
+			if (tk_get(x) <> TK_RPAREN) then
+				return begin
+			end if
+			x = skip(x)
+		end if
+
+		'' Check for '(' params ')'
+		if (tk_get(x) = TK_LPAREN) then
+			'' Note: typedef to procdecl can't be translated,
+			'' so it's disallowed here. If there are procdecls
+			'' in fields, then fine, that's C++ stuff, but oh well.
+			'' Note: procptrs always have params.
+			if ((is_procptr = FALSE) and _
+			    ((decl = DECL_TYPEDEF) or _
+			     (decl = DECL_TYPEDEFSTRUCTBLOCK))) then
+				return begin
+			end if
+
+			'' '('
+			x = skip(x)
+
+			'' Just '(void)'?
+			if ((tk_get(x) = KW_VOID) and (tk_get(skip(x)) = TK_RPAREN)) then
+				'' VOID
+				x = skip(x)
+			else
+				'' [ type [id]  (',' type [id] )*  [ ',' '...' ] ]
+				'' Note: The following isn't even doing that much
+				'' syntax verification at all, but it's ok, it's not
+				'' a compiler afterall.
+				do
+					select case (tk_get(x))
+					case TK_RPAREN
+						exit do
+
+					case TK_EOF
+						return begin
+
+					case TK_COMMA, TK_ELLIPSIS
+						'' Let ',' and '...' pass
+						x = skip(x)
+
+					case else
+						x = parse_multdecl(x, x, DECL_PARAM)
+
+					end select
+				loop
+			end if
+
+			'' ')'
+			if (tk_get(x) <> TK_RPAREN) then
+				return begin
+			end if
+			x = skip(x)
+		end if
+
+		'' Everything can have a comma and more identifiers,
+		'' except for params.
+		if ((decl = DECL_PARAM) or (tk_get(x) <> TK_COMMA)) then
+			exit do
+		end if
+		x = skip(x)
+	loop
+
+	select case (decl)
+	case DECL_FIELD, DECL_TYPEDEF, DECL_TOP
+		'' ';'
+		if (tk_get(x) <> TK_SEMI) then
+			return begin
+		end if
+
+		dim as integer stmt = STMT_TOPDECL
+		select case (decl)
+		case DECL_FIELD
+			stmt = STMT_FIELDDECL
+		case DECL_TYPEDEF
+			stmt = STMT_TYPEDEF
+		end select
+
+		tk_mark_stmt(stmt, begin, x)
+		x = skip(x)
+
+	end select
+
+	return x
+end function
+
 private function parse_enumconst(byval x as integer) as integer
 	'' id
 	if (tk_get(x) <> TK_ID) then
@@ -359,49 +535,6 @@ private function parse_enumconst(byval x as integer) as integer
 
 	'' Mark the constant declaration
 	tk_mark_stmt(STMT_ENUMCONST, begin, skiprev(x))
-
-	return x
-end function
-
-private function parse_ptrs(byval x as integer) as integer
-	'' Pointers: ('*')*
-	while (tk_get(x) = TK_MUL)
-		x = skip(x)
-	wend
-	return x
-end function
-
-private function parse_field(byval x as integer) as integer
-	dim as integer begin = x
-
-	'' type
-	x = parse_base_type(begin)
-	if (x = begin) then
-		return begin
-	end if
-
-	'' '*'* identifier (',' '*'* identifier)*
-	do
-		x = parse_ptrs(x)
-
-		if (tk_get(x) <> TK_ID) then
-			return begin
-		end if
-		x = skip(x)
-
-		if (tk_get(x) <> TK_COMMA) then
-			exit do
-		end if
-		x = skip(x)
-	loop
-
-	'' ';'
-	if (tk_get(x) <> TK_SEMI) then
-		return begin
-	end if
-	x = skip(x)
-
-	tk_mark_stmt(STMT_FIELD, begin, skiprev(x))
 
 	return x
 end function
@@ -466,7 +599,10 @@ private function parse_nested_struct_end _
 end function
 
 private function parse_struct(byval x as integer) as integer
-	'' [TYPEDEF] {STRUCT|UNION|ENUM} [id] '{' ... '}' [id] ';'
+	'' [TYPEDEF] {STRUCT|UNION|ENUM} [id] '{'
+	'' ...
+	'' '}' [no-type-multdecl] ';'
+
 	dim as integer begin = x
 
 	'' [TYPEDEF]
@@ -515,7 +651,7 @@ private function parse_struct(byval x as integer) as integer
 				level += 1
 			end if
 
-			x = parse_field(x)
+			x = parse_multdecl(x, x, DECL_FIELD)
 		end if
 
 		'' '}'?
@@ -527,8 +663,10 @@ private function parse_struct(byval x as integer) as integer
 			else
 				exit do
 			end if
+
 		case TK_EOF
 			return begin
+
 		end select
 
 		x = parse_pp_directive(x)
@@ -548,9 +686,10 @@ private function parse_struct(byval x as integer) as integer
 	xassert(tk_get(x) = TK_RBRACE)
 	x = skip(x)
 
-	'' [id]
-	if (tk_get(x) = TK_ID) then
-		x = skip(x)
+	'' If this was a typedef-to-struct-block, there will be a multdecl
+	'' following now...
+	if (tk_get(begin) = KW_TYPEDEF) then
+		x = parse_multdecl(x, begin, DECL_TYPEDEFSTRUCTBLOCK)
 	end if
 
 	'' ';'
@@ -621,111 +760,36 @@ private function parse_extern_end(byval x as integer) as integer
 	return skip(x)
 end function
 
-private function parse_typedef(byval x as integer) as integer
-	if (tk_get(x) <> KW_TYPEDEF) then
-		return x
-	end if
+private function parse_topdecl_or_typedef(byval x as integer) as integer
+	'' Toplevel declarations: global variables (including procedure
+	'' pointers), procedure declarations, and also typedefs, since they
+	'' are almost the same (parse_multdecl() disallows typedefs to
+	'' procdecls, because those aren't possible FB).
+	''    int a, *b, (*c)(), f(), *g();
+	''    ...
+	''
+	'' [TYPEDEF|EXTERN|STATIC] multdecl
 
-	'' TYPEDEF
 	dim as integer begin = x
-	x = skip(x)
+	dim as integer decl = DECL_TOP
 
-	'' type
-	dim as integer typebegin = x
-	x = parse_base_type(x)
-	if (x = typebegin) then
+	select case (tk_get(x))
+	case KW_EXTERN, KW_STATIC
+		x = skip(x)
+
+	case KW_TYPEDEF
+		decl = DECL_TYPEDEF
+		x = skip(x)
+
+	end select
+
+	dim as integer multdecl = x
+	x = parse_multdecl(x, begin, decl)
+	if (x = multdecl) then
 		return begin
 	end if
 
-	x = parse_ptrs(x)
-
-	'' id
-	if (tk_get(x) <> TK_ID) then
-		return begin
-	end if
-	x = skip(x)
-
-	'' ';'
-	if (tk_get(x) <> TK_SEMI) then
-		return begin
-	end if
-
-	tk_mark_stmt(STMT_TYPEDEF, begin, x)
-
-	return skip(x)
-end function
-
-private function parse_procdecl(byval x as integer) as integer
-	dim as integer begin = x
-
-	'' type
-	x = parse_base_type(x)
-	if (x = begin) then
-		return begin
-	end if
-
-	x = parse_ptrs(x)
-
-	'' id
-	if (tk_get(x) <> TK_ID) then
-		return begin
-	end if
-	x = skip(x)
-
-	'' '('
-	if (tk_get(x) <> TK_LPAREN) then
-		return begin
-	end if
-	x = skip(x)
-
-	'' Parameter list
-	'' [ type [id]  (',' type [id] )*  [ ',' '...' ] ]
-	'' Note: The following isn't even doing that much syntax verification
-	'' at all, but it's ok, it's not a compiler afterall.
-	do
-		select case (tk_get(x))
-		case TK_RPAREN
-			exit do
-
-		case TK_EOF
-			return begin
-
-		case TK_COMMA, TK_ELLIPSIS
-			'' Let ',' and '...' pass
-			x = skip(x)
-
-		case else
-			'' type
-			dim as integer parambegin = x
-			x = parse_base_type(x)
-			if (x = parambegin) then
-				return begin
-			end if
-
-			x = parse_ptrs(x)
-
-			'' [id]
-			if (tk_get(x) = TK_ID) then
-				x = skip(x)
-			end if
-
-		end select
-	loop
-
-	'' ')'
-	xassert(tk_get(x) = TK_RPAREN)
-	x = skip(x)
-
-	'' ';'
-	if (tk_get(x) <> TK_SEMI) then
-		return begin
-	end if
-
-	'' The whole thing must be marked, so that any EOLs in between can
-	'' be detected and removed...
-	tk_mark_stmt(STMT_PROCDECL, begin, x)
-
-	return skip(x)
+	return x
 end function
 
 private sub parse_toplevel()
@@ -737,8 +801,7 @@ private sub parse_toplevel()
 		x = parse_struct(x)
 		x = parse_extern_begin(x)
 		x = parse_extern_end(x)
-		x = parse_typedef(x)
-		x = parse_procdecl(x)
+		x = parse_topdecl_or_typedef(x)
 
 		if (x = old) then
 			'' Token/construct couldn't be identified, so make
@@ -750,11 +813,31 @@ private sub parse_toplevel()
 	loop while (tk_get(x) <> TK_EOF)
 end sub
 
-private function remove_following_lbrace(byval x as integer) as integer
-	while (tk_get(x) <> TK_LBRACE)
+private function insert_spaced_token _
+	( _
+		byval x as integer, _
+		byval tk as integer _
+	) as integer
+
+	select case (tk_get(x - 1))
+	case TK_SPACE, TK_EOL, TK_EOF
+
+	case else
+		tk_insert_space(x)
 		x += 1
-	wend
-	tk_remove(x)
+	end select
+
+	tk_insert(x, tk, NULL)
+	x += 1
+
+	select case (tk_get(x))
+	case TK_SPACE, TK_EOL, TK_EOF
+
+	case else
+		tk_insert_space(x)
+		x += 1
+	end select
+
 	return x
 end function
 
@@ -763,19 +846,27 @@ private function insert_statement_separator(byval x as integer) as integer
 	if ((tk_get(x) = TK_COLON) or (tk_get(skiprev(x)) = TK_COLON)) then
 		return x
 	end if
+	return insert_spaced_token(x, TK_COLON)
+end function
 
-	if (tk_get(x - 1) <> TK_SPACE) then
-		tk_insert_space(x)
+private sub remove_this_and_space(byval x as integer)
+	tk_remove_range(x, skip(x) - 1)
+end sub
+
+private function find_token(byval x as integer, byval tk as integer) as integer
+	dim as integer begin = x
+
+	do
+		select case (tk_get(x))
+		case tk
+			exit do
+		case TK_EOF
+			x = begin
+			exit do
+		end select
+
 		x += 1
-	end if
-
-	tk_insert(x, TK_COLON, NULL)
-	x += 1
-
-	if (tk_get(x) <> TK_SPACE) then
-		tk_insert_space(x)
-		x += 1
-	end if
+	loop
 
 	return x
 end function
@@ -786,45 +877,25 @@ private function translate_compound_end _
 		byval compoundkw as integer _
 	) as integer
 
-	'' '}' [id] [';']    ->    END {EXTERN | TYPE | ENUM}
-	'' The id can only appear because of <typedef struct { } id;> which
-	'' the struct parser/translator accepts and handles. The id might be
-	'' copied, but only here is it removed.
-	'' Note: ';' behind an EXTERN block isn't treated as part of it.
+	'' '}'                  ->    END EXTERN
+	'' '}' [multdecl] ';'   ->    END {TYPE|ENUM|UNION}
+	'' Where multdecl can be something like <A, *PA, (*FPA)()> etc. in
+	'' the case of <typedef struct {} multdecl ;>. See also the struct
+	'' translator. Here this just needs to be removed.
 
-	if (is_whitespace_since_eol(x - 1) = FALSE) then
-		x = insert_statement_separator(x)
+	'' Remove '}' and space in front of it
+	xassert(tk_get(x) = TK_RBRACE)
+
+	if (compoundkw = KW_EXTERN) then
+		tk_remove(x)
+	else
+		tk_remove_range(x, find_token(x, TK_SEMI))
 	end if
 
-	tk_insert(x, KW_END, NULL)
-	x += 1
-	tk_insert_space(x)
-	x += 1
-	tk_insert(x, compoundkw, NULL)
-	x += 1
+	x = insert_spaced_token(x, KW_END)
+	x = insert_spaced_token(x, compoundkw)
 
-	'' '}'
-	dim as integer y = x
-	xassert(tk_get(y) = TK_RBRACE)
-	y = skip(y)
-
-	if (compoundkw <> KW_EXTERN) then
-		'' [id]
-		if (tk_get(y) = TK_ID) then
-			y = skip(y)
-		end if
-
-		'' [';']
-		if (tk_get(y) = TK_SEMI) then
-			y = skip(y)
-		end if
-	end if
-
-	'' Remove the '}' and ';', including space and the optional id in
-	'' between. If there is no EOL coming afterwards, insert a ':'
-	'' statement separator.
-	tk_remove_range(x, skiprev(y))
-	if (is_whitespace_until_eol(x) = FALSE) then
+	if (is_whitespace_until_eol(skiprev(x) + 1) = FALSE) then
 		x = insert_statement_separator(x)
 	end if
 
@@ -850,145 +921,302 @@ private function translate_enumconst(byval x as integer) as integer
 
 		case TK_COMMA
 			if (level = 0) then
-				'' Remove the comma, unless there are more
-				'' constants coming in this line.
-				if (is_whitespace_until_eol(x + 1)) then
-					tk_remove(x)
-					x -= 1
-				end if
-				x = skip(x)
 				exit do
 			end if
 
 		case TK_RBRACE
 			exit do
 
-		end select
+		case TK_EOF
+			xassert(FALSE)
+			exit do
 
-		xassert(tk_get(x) <> TK_EOF)
+		end select
 	loop
+
+	if (tk_get(x) = TK_COMMA) then
+		'' Beautification: Remove the comma if there is only EOL or
+		'' '}' (end of enum) coming.
+		if (is_whitespace_until_eol(x + 1) or _
+		    (tk_get(skip(x)) = TK_RBRACE)) then
+			tk_remove(x)
+			x -= 1
+		end if
+
+		'' Either way, skip to the next token after the comma
+		x = skip(x)
+	end if
+
+	'' If the '}' is following in the same line, then a separator must
+	'' be added. But take care not to add it in any other cases.
+	if (tk_get(x) = TK_RBRACE) then
+		if (skip_unless_eol(skiprev(x)) = x) then
+			x = insert_statement_separator(x)
+		end if
+	end if
 
 	return x
 end function
 
-private sub split_field_if_needed(byval x as integer)
-	'' Split up a field if needed:
-	'' Scan the whole field (from begin to ';'). If there are commas and
-	'' pointers, then splits need to be made at the proper places, to
-	'' bring the whole thing into a state allowing it to be translated to
-	'' FB. The offsets of fields mustn't change of course.
-	''    int *a, b, c, **d, **e, f;
-	'' to:
-	''    int *a; int b, c; int **d; int **e; int f;
-	'' Declarations with pointers need to be split off, while non-pointer
-	'' declarations and declarations with the same number of pointers can
-	'' stay together (since they /can/ be translated to FB).
+private sub split_multdecl_if_needed(byval x as integer, byval begin as integer)
+	'' First job: split the declaration in two, so that the head part
+	'' consists only of identifiers with equal pointer count on them,
+	'' or is just one procedure pointer or procedure declaration.
+	'' (To translate a multdecl of procptrs to FB we'd need to compare
+	'' the procptr parameters etc., that's way too much work; and procdecls
+	'' can't be multdecl in FB, there is no <declare sub a(), b()>)
+	'' When splitting, the comma is replaced by a semicolon, and the
+	'' beginning of the head part (special tokens such as EXTERN, STATIC,
+	'' TYPEDEF; and the type) is duplicated for the tail. The tail part
+	'' is now again a valid declaration and will be handled during the
+	'' next call to this function, when the translation process reaches it.
+	''
+	'' Second job: In the head part, remove overhead pointers, as in:
+	''    int *a, *b;
+	'' turns into:
+	''    int *a, b;
+	'' then later:
+	''    dim as integer ptr a, b
+	''
+	'' An example of the overall translation process of a topdecl:
+	'' (fields are the same, except perhaps they won't have procdecls in C)
+	''
+	''        1. int *a, *b, c, f();
+	'' splitted:
+	''        2. int *a, *b; int c, f();
+	'' overhead ptrs removed:
+	''        3. int *a, b; int c, f();
+	'' translated:
+	''        4. dim as integer ptr a, b : int c, f();
+	'' splitted:
+	''        5. dim as integer ptr a, b : int c; int f();
+	'' translated:
+	''        6. dim as integer ptr a, b : dim as integer c : int f();
+	'' translated:
+	''        7. dim as integer ptr a, b : dim as integer c : declare function f() as integer
+	''
+	'' Note: The identifiers can't be reordered, because that would
+	'' change the offsets of struct fields.
 
-	dim as integer typebegin = x
-	dim as integer typeend = parse_base_type(typebegin)
-	x = typeend
+	'' Skip over the type, but remember its position/size, because in case
+	'' of a split, the type tokens need to be duplicated.
+	x = parse_base_type(x)
+
 	'' The type parser skips to the next non-type token,
-	'' so to get the real typeend we need to skip back
-	typeend = skiprev(typeend)
+	'' so to get the real typeend, skip back.
+	dim as integer typeend = skiprev(x)
 
-
-	'' Current ptrcount > 0 but <> next ptrcount?
-	''  --> Replace following comma by semi, dup the type.
-	'' As soon as a next decl is seen and it's different, split.
-
-	'' Amount of pointers seen for the current sequence of declarations.
-	'' As soon as a declaration with different ptrcount is seen,
-	'' we know it's time to split.
-	dim as integer ptrcount = 0     '' Active counter
-	dim as integer declptrcount = 0 '' Amount for previous declaration(s)
-
-	'' Begin of the current sequence of declarations with equal ptrcount,
-	'' so we can go back and do the split there.
-	dim as integer declbegin = typebegin
+	'' Properties of the first identifier. Following ones are compared
+	'' against these to determine whether a split is needed.
+	dim as integer first_ptrcount = 0
+	dim as integer first_is_procptr = FALSE
+	dim as integer first_is_procdecl = FALSE
+	dim as integer lastcomma = -1
+	dim as integer end_of_first = x
 
 	do
-		select case (tk_get(x))
-		case TK_MUL
+		'' This can be:
+		''   normal: '*'* id
+		'' procdecl: '*'* id '(' params ')'
+		''  procptr: '*'* '(' '*' id ')' '(' params ')'
+
+		'' '*'*
+		'' (in case of procdecl/procptr, this are the pointers on the
+		'' function result type)
+		dim as integer ptrcount = 0
+		while (tk_get(x) = TK_MUL)
 			ptrcount += 1
+			x = skip(x)
+		wend
 
-		case TK_COMMA, TK_SEMI
-			'' Comma/semicolon terminate a declaration (not
-			'' officially probably, hehe) and we need to decide
-			'' whether to continue the current sequence (of decls
-			'' with equal ptrcount) or split it off and start a new
-			'' sequence, beginning with this last (just terminated)
-			'' decl.
-			if (ptrcount <> declptrcount) then
-				'' Only split if this isn't the first decl,
-				'' in which case there is no current sequence
-				'' to split off...
-				if (declbegin <> typebegin) then
-					'' Replace ',' with ';'
-					tk_replace(declbegin, TK_SEMI, NULL)
+		'' ['(' '*']
+		dim as integer is_procptr = FALSE
+		if (tk_get(x) = TK_LPAREN) then
+			'' '('
+			is_procptr = TRUE
+			x = skip(x)
 
-					'' Copy in the type
-					tk_copy_range(declbegin + 1, typebegin, typeend)
+			xassert(tk_get(x) = TK_MUL)
+			x = skip(x)
+		end if
 
-					'' Take into account the added tokens
-					x += typeend - typebegin + 1
-				end if
+		'' id
+		xassert(tk_get(x) = TK_ID)
+		x = skip(x)
 
-				'' Continue with new sequence
-				declptrcount = ptrcount
-			end if
+		'' [')']
+		if (is_procptr) then
+			'' ')'
+			xassert(tk_get(x) = TK_RPAREN)
+			x = skip(x)
+		end if
 
-			if (tk_get(x) = TK_SEMI) then
+		'' ['(' params ')']
+		dim as integer is_procdecl = FALSE
+		if (tk_get(x) = TK_LPAREN) then
+			'' '('
+			is_procdecl = not is_procptr
+			x = find_parentheses(x)
+
+			'' ')'
+			xassert(tk_get(x) = TK_RPAREN)
+			x = skip(x)
+		end if
+
+		'' ',' or ';' terminates this part of the decl
+		xassert((tk_get(x) = TK_COMMA) or (tk_get(x) = TK_SEMI))
+
+		if (lastcomma < 0) then
+			'' Just parsed the first identifier
+			first_ptrcount = ptrcount
+			first_is_procptr = is_procptr
+			first_is_procdecl = is_procdecl
+			end_of_first = x
+		else
+			'' Just parsed the second/third/... identifier.
+			'' Different properties? Then split it off, together
+			'' with all following ones.
+			if ((first_ptrcount <> ptrcount) or _
+			    (first_is_procptr <> is_procptr) or _
+			    (first_is_procdecl <> is_procdecl)) then
+
+				'' Replace ',' with ';'
+				tk_replace(lastcomma, TK_SEMI, NULL)
+
+				'' Copy in the begin tokens (e.g. TYPEDEF in
+				'' case of a typedef) and the type. It all goes
+				'' behind the new semicolon. The marks will be
+				'' preserved too.
+				lastcomma += 1
+				tk_copy_range(lastcomma, begin, typeend)
+
+				'' And a space between semicolon/type
+				tk_insert_space(lastcomma)
+
+				'' Done -- the rest will be parsed during
+				'' a following call to this function,
+				'' when the translation process reaches it...
 				exit do
 			end if
+		end if
 
-			'' Remember this for later -- it's where the split
-			'' might need to be done.
-			declbegin = x
-			ptrcount = 0
+		select case (tk_get(x))
+		case TK_SEMI
+			exit do
+
+		case TK_EOF
+			xassert(FALSE)
+			exit do
 
 		end select
 
+		lastcomma = x
 		x = skip(x)
 	loop
+
+	'' After the split (or no split in case it was just one identifier
+	'' in the first place), the head part is remarked, so the corresponding
+	'' translators will translate it now.
+	''  - If the begin token is marked as topdecl, then the new mark
+	''    is either vardecl or procdecl depending on whether it's a
+	''    procdecl or not.
+	''  - If the begin token is marked as typedef or field, nothing
+	''    neds to be done, since it's already marked correctly.
+	dim as integer stmt = tk_stmt(begin)
+	if (stmt = STMT_TOPDECL) then
+		if (first_is_procdecl) then
+			stmt = STMT_PROCDECL
+		else
+			stmt = STMT_VARDECL
+		end if
+		tk_mark_stmt(stmt, begin, end_of_first)
+	end if
 end sub
 
-private sub remove_unnecessary_ptrs(byval x as integer)
+private sub remove_overhead_ptrs(byval x as integer)
+	'' Second job: remove overhead pointers
 	'' Assuming field declarations with multiple identifiers but different
-	'' ptrcounts on some of them have been split up already, we will only
+	'' ptrcounts on some of them have been split up properly, we will only
 	'' encounter fields of these forms here:
 	''    int a;
 	''    int *a;
 	''    int a, b, c;
 	''    int *a, *b, *c;
-	'' i.e. all identifiers with equal ptrcounts.
+	''    int f();
+	''    int *f();
+	''    int (*p)();
+	''    int *(*p)();
+	'' i.e. all identifiers per declaration with equal ptrcounts.
 	'' This translation step turns this:
 	''    int *a, *b, *c;
 	'' into:
 	''    int *a, b, c;
 	'' which is needed to get to this:
 	''    as integer ptr a, b, c
+	'' (Note: this also needs to handle procptrs and procdecls)
 
 	x = parse_base_type(x)
 
-	'' Just remove all ptrs behind commas. Also remove unnecessary space.
+	'' Just remove all ptrs behind commas and outside parentheses.
+	'' Also remove unnecessary space.
+	dim as integer level = 0
 	dim as integer have_comma = FALSE
 	do
 		select case (tk_get(x))
 		case TK_MUL
-			if (have_comma) then
-				tk_remove(x)
+			if ((level = 0) and have_comma) then
+				remove_this_and_space(x)
+				'' Counter the x += 1 below; we already are
+				'' at the next token after having removed the
+				'' current one...
 				x -= 1
 			end if
 
 		case TK_COMMA
-			have_comma = TRUE
+			if (level = 0) then
+				have_comma = TRUE
+			end if
+
+		case TK_LPAREN
+			level += 1
+
+		case TK_RPAREN
+			level -= 1
 
 		case TK_SEMI
+			xassert(level = 0)
 			exit do
+
+		case TK_EOF
+			xassert(FALSE)
+			exit do
+
 		end select
 
 		x += 1
 	loop
+end sub
+
+private sub fixup_multdecl(byval x as integer, byval begin as integer)
+	'' A multdecl (a declaration allowing multiple identifiers separated
+	'' by commas, but reusing the same base type) is something like this:
+	''    int a, b;        ->    dim as integer a, b
+	''
+	'' Because in C pointers belong to the identifier, but in FB, they
+	'' belong to the type, multdecls with pointers might need to be split
+	'' up into separate [mult]decls.
+	''    int a, b, *c;    ->    dim as integer a, b : dim as integer ptr c
+	''
+	'' To top it of, in C you can also declare procedures in one
+	'' declaration together with variables.
+	''    int a, f();      ->    dim as integer a : declare function f() as integer
+	''
+	'' And not to forget, variables can also be procedure pointers.
+	''    int (*a)(), *(*b)();   ->    dim as function() as integer a
+	''                                 dim as function() as integer ptr b
+
+	split_multdecl_if_needed(x, begin)
+	remove_overhead_ptrs(x)
 end sub
 
 private function translate_base_type(byval x as integer) as integer
@@ -998,10 +1226,7 @@ private function translate_base_type(byval x as integer) as integer
 	'' etc.
 
 	'' Insert the AS
-	tk_insert(x, KW_AS, NULL)
-	x += 1
-	tk_insert_space(x)
-	x += 1
+	x = insert_spaced_token(x, KW_AS)
 
 	select case (tk_get(x))
 	case KW_ENUM, KW_STRUCT, KW_UNION
@@ -1104,64 +1329,336 @@ end function
 private function translate_ptrs(byval x as integer) as integer
 	'' Pointers: '*' -> PTR, plus some space if needed
 	while (tk_get(x) = TK_MUL)
-		if ((skiprev(x) + 1) = x) then
-			tk_insert_space(x - 1)
-		end if
-		tk_replace(x, KW_PTR, NULL)
-		if ((skip(x) - 1) = x) then
-			tk_insert_space(x + 1)
-		end if
-		x = skip(x)
+		remove_this_and_space(x)
+		x = insert_spaced_token(x, KW_PTR)
 	wend
 	return x
 end function
 
-private function translate_field(byval x as integer) as integer
-	'' The field parser accepts all possible variations, now here we need
-	'' an ok way to translate them.
-	''
-	'' int *i;              ->      as integer ptr i
-	'' int a, b, c;         ->      as integer a, b, c
-	'' Simple: insert an AS, translate type and pointers, remove the ';'.
-	''
-	'' int *a, **b, c;      ->      int *a; int **b; int c;
-	'' Commas + pointers can't be translated to FB 1:1, but we can split it
-	'' up into separate declarations by replacing ',' by ';' and duplicating
-	'' the type. Then the normal simple translation rules can work.
+private function decl_is_procptr(byval x as integer) as integer
+	return (tk_get(parse_ptrs(parse_base_type(x))) = TK_LPAREN)
+end function
 
-	split_field_if_needed(x)
-	remove_unnecessary_ptrs(x)
+'' Check whether the declaration is a sub procdecl or sub procptr
+private function decl_type_is_void_only(byval x as integer) as integer
+	if (tk_get(x) <> KW_VOID) then
+		return FALSE
+	end if
+	x = skip(x)
 
-	x = translate_base_type(x)
-	x = translate_ptrs(x)
+	'' It's a sub if there are no '*'s (pointers would make it a <function
+	'' as any ptr+>), same for procptr
+	return ((tk_get(x) = TK_ID) or (tk_get(x) = TK_LPAREN))
+end function
 
-	'' identifier (',' identifier)*
-	do
-		'' identifier
-		xassert(tk_get(x) = TK_ID)
-		x = skip(x)
+declare function translate_decl _
+	( _
+		byval x as integer, _
+		byval decl as integer _
+	) as integer
 
-		'' ','
-		if (tk_get(x) <> TK_COMMA) then
-			exit do
+private function translate_params(byval x as integer) as integer
+	'' '('
+	xassert(tk_get(x) = TK_LPAREN)
+
+	'' Just '(void)'?
+	if (tk_get(skip(x)) = KW_VOID) then
+		dim as integer rparen = skip(skip(x))
+		if (tk_get(rparen) = TK_RPAREN) then
+			'' Go to first token behind lparen
+			x += 1
+
+			'' Just remove the whole [space]VOID[space]
+			tk_remove_range(x, rparen - 1)
+
+			'' Skip rparen and done
+			return skip(x)
 		end if
-		x = skip(x)
+	end if
+
+	x = skip(x)
+
+	'' params
+	do
+		select case (tk_get(x))
+		case TK_RPAREN
+			exit do
+
+		case TK_COMMA, TK_ELLIPSIS
+			'' Let ',' and '...' pass
+			x = skip(x)
+
+		case TK_EOF
+			xassert(FALSE)
+			exit do
+
+		case else
+			'' Translate the param (recursion!)
+			x = translate_decl(x, DECL_PARAM)
+			xassert((tk_get(x) = TK_COMMA) or (tk_get(x) = TK_RPAREN))
+
+		end select
 	loop
 
-	'' ';'
-	'' Remove it, and if there is no EOL following,
-	'' insert a ':' statement separator.
-	xassert(tk_get(x) = TK_SEMI)
-	tk_remove(x)
-	if (is_whitespace_until_eol(x) = FALSE) then
-		x = insert_statement_separator(x)
+	'' ')'
+	xassert(tk_get(x) = TK_RPAREN)
+	x = skip(x)
+
+	return x
+end function
+
+private function translate_decl _
+	( _
+		byval x as integer, _
+		byval decl as integer _
+	) as integer
+
+	'' {var|field|proc}decl, param and typedef translation.
+	''
+	'' Here we'll only get things like this:
+	''    int *i               ->    as integer ptr i
+	''    int a, b, c          ->    as integer a, b, c
+	''    struct T **a, b      ->    as T ptr ptr a, b
+	''    int f()              ->    declare function f() as integer
+	''    void (*p)()          ->    as sub() p
+	''    int (*p)()           ->    as function() as integer p
+	''
+	'' Thanks to the preprocessing by fixup_multdecl(),
+	''  - Pointers ('*') will only appear right behind the type,
+	''    ready to be replaced by PTRs
+	''  - For plain vardecls/fielddecls, there can be multiple identifiers
+	''    separated by commas
+	''  - However, if it's a procptr or procdecl, it will be the only thing
+	''    in this declaration
+	''
+	'' vardecls/fields:
+	''    1. int * a, b
+	''    2. as integer ptr a, b
+	''
+	'' procptrs (complex vardecls):
+	''    1. int (*p)(...)
+	''     . as function(...) as integer p
+	''
+	'' procdecls:
+	''        [EXTERN | STATIC] type {'(' id ')' | id} '(' params ')' ';'
+	''    ->
+	''        DECLARE {SUB | FUNCTION} id '(' params ')' [AS type]
+	''
+	''    1. int a(...)
+	''    2. declare function int a(...)
+	''    3. declare function as integer a(...)
+	''    4. declare function a(...) as integer
+	''
+	'' params:
+	''    1. int a
+	''    2. byval int a
+	''    3. byval as integer a
+	''    4. byval a as integer
+	''
+	'' typedefs:
+	''     typedef T id;    ->    type as T id
+	''
+
+	select case (decl)
+	case DECL_PROC
+		select case (tk_get(x))
+		case KW_EXTERN, KW_STATIC
+			remove_this_and_space(x)
+		end select
+
+	case DECL_VAR
+		if (tk_get(x) = KW_EXTERN) then
+			x = skip(x)
+		else
+			if (tk_get(x) = KW_STATIC) then
+				remove_this_and_space(x)
+
+				'' PRIVATE
+				x = insert_spaced_token(x, KW_PRIVATE)
+			end if
+
+			'' DIM SHARED
+			x = insert_spaced_token(x, KW_DIM)
+			x = insert_spaced_token(x, KW_SHARED)
+		end if
+
+	case DECL_TYPEDEF
+		'' TYPEDEF -> TYPE
+		xassert(tk_get(x) = KW_TYPEDEF)
+		tk_replace(x, KW_TYPE, NULL)
+		x = skip(x)
+
+	case DECL_PARAM
+		'' Note: params only appear behind '(' or ','
+
+		'' BYVAL
+		tk_insert(x, KW_BYVAL, NULL)
+		x = skip(x)
+
+	end select
+
+	dim as integer is_procptr = decl_is_procptr(x)
+	dim as integer is_sub = decl_type_is_void_only(x)
+
+	'' procdecls: DECLARE {FUNCTION | SUB}
+	'' typedef/var/field procptrs: AS {FUNCTION | SUB}
+	'' The AS {FUNCTION | SUB} for procptr params is inserted later...
+	if ((is_procptr and (decl <> DECL_PARAM)) or (decl = DECL_PROC)) then
+		'' DECLARE | AS
+		x = insert_spaced_token(x, iif(is_procptr, KW_AS, KW_DECLARE))
+
+		'' FUNCTION | SUB
+		x = insert_spaced_token(x, iif(is_sub, KW_SUB, KW_FUNCTION))
 	end if
+
+	'' Type + pointers
+	dim as integer typebegin = x
+	x = translate_ptrs(translate_base_type(x))
+	dim as integer typeend = skiprev(x)
+
+	'' Exclude space that might have been added from the type
+	typebegin = skip(typebegin - 1)
+
+	'' '('?
+	if (is_procptr) then
+		xassert(tk_get(x) = TK_LPAREN)
+		remove_this_and_space(x)
+
+		'' '*'
+		xassert(tk_get(x) = TK_MUL)
+		remove_this_and_space(x)
+	end if
+
+	'' id (optional for params, required elsewhere)
+	if (tk_get(x) = TK_ID) then
+		x = skip(x)
+	else
+		xassert(decl = DECL_PARAM)
+	end if
+
+	if (is_procptr and (decl = DECL_PARAM)) then
+		'' Move directly behind the id or the BYVAL (if there's no id)
+		'' (could be space here)
+		x = skiprev(x) + 1
+
+		'' AS {SUB | FUNCTION} for procptr params
+		'' (inserted here instead of the front so it doesn't
+		'' need to be moved here)
+
+		tk_insert_space(x)
+		x += 1
+
+		tk_insert(x, KW_AS, NULL)
+		x += 1
+
+		tk_insert_space(x)
+		x += 1
+
+		tk_insert(x, iif(is_sub, KW_SUB, KW_FUNCTION), NULL)
+		x += 1
+
+		'' Ensure to go back to the next non-space token
+		x = skip(x - 1)
+	end if
+
+	'' ')'
+	if (is_procptr) then
+		xassert(tk_get(x) = TK_RPAREN)
+		remove_this_and_space(x)
+	end if
+
+	'' '(' params ')' (recursion!)
+	if (is_procptr or (decl = DECL_PROC)) then
+		x = translate_params(x)
+	end if
+
+	if (is_procptr or (decl = DECL_PROC) or (decl = DECL_PARAM)) then
+		'' Procdecls, procptrs and params require the type to be moved from the
+		'' front to the back:
+		''    declare function as integer f() -> declare function f() as integer
+		''    as function as integer p()      -> as function() as integer p
+		''    byval as integer i              -> byval i as integer
+		''    declare sub as any s()          -> declare sub s()
+		''    as sub as any s()               -> as sub() s
+		''
+		'' For subs (procdecls or procptrs), the AS ANY just needs to
+		'' be removed, not copied.
+
+		'' Move directly behind the id/')' (could be space here)
+		x = skiprev(x) + 1
+
+		if (is_sub = FALSE) then
+			'' Append the type directly behind the id (for params),
+			'' or ')' (for procdecls/procptrs), and insert a space too.
+
+			tk_insert_space(x)
+			x += 1
+
+			'' Copy the translated type/ptrs
+			tk_copy_range(x, typebegin, typeend)
+			x += (typeend - typebegin + 1)
+		end if
+
+		'' For all procptrs except params, the id must be moved to the
+		'' end, that's easier than moving the params instead.
+		if (is_procptr and (decl <> DECL_PARAM)) then
+			tk_insert_space(x)
+			x += 1
+
+			'' Just extend the typeend to the id so it will be
+			'' deleted below too...
+			typeend = skip(typeend)
+
+			'' Copy the id to the back
+			xassert(tk_get(typeend) = TK_ID)
+			tk_copy(x, typeend)
+			x += 1
+
+			'' Remove space behind the id below too
+			''    as function ()              ->    as function()
+			typeend = skip(typeend) - 1
+		end if
+
+		'' Remove the old type + pointers + space in the front
+		typebegin = skiprev(typebegin) + 1
+		tk_remove_range(typebegin, typeend)
+		x -= (typeend - typebegin + 1)
+
+		'' Ensure to go back to the next non-space token
+		x = skip(x - 1)
+	else
+		'' Not a procdecl/procptr/param:
+		'' Can have more ids separated by commas.
+		'' (',' id)*
+		while (tk_get(x) = TK_COMMA)
+			x = skip(x)
+
+			'' id
+			xassert(tk_get(x) = TK_ID)
+			x = skip(x)
+		wend
+	end if
+
+	select case (decl)
+	case DECL_PROC, DECL_VAR, DECL_FIELD, DECL_TYPEDEF
+		'' ';'
+		xassert(tk_get(x) = TK_SEMI)
+		tk_remove(x)
+		if (is_whitespace_until_eol(x) = FALSE) then
+			x = insert_statement_separator(x)
+		end if
+		x = skip(x - 1)
+
+	end select
 
 	return x
 end function
 
 private function translate_struct(byval x as integer) as integer
-	'' structs/enums
+	'' structs/enums beginnings are translated here.
+	'' To support typedefs to struct blocks (which might also be
+	'' anonymous) the ending is searched to retrieve the typedef id
+	'' from there.
 	''
 	'' struct T { ... };               ->    type T : ... : end type
 	'' Note: any occurences of <struct T> will be translated to just <T>
@@ -1170,8 +1667,8 @@ private function translate_struct(byval x as integer) as integer
 	'' typedef struct { ... } TT;      ->    type TT : ... : end type
 	''
 	'' typedef struct T { ... } TT;    ->    type T : ... : end type
-	''                                       type TT as T
-	'' Both identifiers might be needed.
+	''                                       type as T TT
+	'' Afterall both identifiers might be needed.
 	''
 	'' typedef struct A { ... } A;     ->    type A : ... : end type
 	''
@@ -1180,10 +1677,12 @@ private function translate_struct(byval x as integer) as integer
 	'' id, then move the one at the end of the declaration to the front.
 	'' If there is none there either, insert a TODO instead.
 	'' If both struct and typedef have an identifier, but they are
-	'' different, then insert a <type typedef-id as struct-id> after the
-	'' struct end.
+	'' different, then insert a <typedef struct structid typedefid;>
+	'' after the struct end, which will then be handled by the typedef
+	'' translator.
 	''
-	'' Same for enums. And this also handles unions and nested structs...
+	'' Same for enums/unions. And this is also used to translate nested
+	'' anonymous structs/unions...
 	'' 
 
 	'' [TYPEDEF]
@@ -1213,55 +1712,54 @@ private function translate_struct(byval x as integer) as integer
 	xassert(tk_get(x) = TK_LBRACE)
 
 	if (is_typedef) then
-		'' Find the '}' and the following typedef id (if it's there)
-		dim as integer typedefid = find_parentheses(x)
+		'' Typedef-to-struct-block split up hack:
+		''    typedef struct T { ... } a, *b, (*c)();
+		'' must be translated to:
+		''    type T : ... : end type : typedef struct T a, *b, (*c)();
+		'' so then the normal typedef parser can handle the typedef.
+		'' (Having something like <typedef struct { ... } FOO, *PFOO;>
+		'' is quite common, so this is important)
+		''
+		'' However, there also is this common use case with an
+		'' anonymous struct:
+		''    typedef struct { ... } T;
+		'' And that is usually best translated to:
+		''    type T : ... : end type
+		''
+		'' But of course this can only be done if the typedef is just
+		'' a plain simple identifier like 'T'. If it has pointers,
+		'' commas + multiple identifiers or even procedure pointers,
+		'' then the typedef must be split off. If the struct is
+		'' anonymous then, a fake identifer has to be used (though
+		'' choosing that id is the user's job, we just insert a TODO).
 
+		'' 1. Find the '}'
+		'' 2. Check whether there is a single identifier.
+		''    If the struct is anonymous, copy that identifier to the
+		''    front.
+		''    Otherwise, do the split up hack.
+
+		dim as integer y = find_parentheses(x)
+
+		'' '}'
+		xassert(tk_get(y) = TK_RBRACE)
 		if (compoundkw = KW_ENUM) then
-			xassert(tk_stmt(typedefid) = STMT_ENDENUM)
+			xassert(tk_stmt(y) = STMT_ENDENUM)
 		elseif (compoundkw = KW_STRUCT) then
-			xassert(tk_stmt(typedefid) = STMT_ENDSTRUCT)
+			xassert(tk_stmt(y) = STMT_ENDSTRUCT)
 		else
-			xassert(tk_stmt(typedefid) = STMT_ENDUNION)
+			xassert(tk_stmt(y) = STMT_ENDUNION)
 		end if
+		y = skip(y)
 
-		xassert(tk_get(typedefid) = TK_RBRACE)
+		'' <id ';'> and struct is anonymous?
+		if ((tk_get(y) = TK_ID) and _
+		    (tk_get(skip(y)) = TK_SEMI) and _
+		    (tk_get(structid) <> TK_ID)) then
 
-		typedefid = skip(typedefid)
+			'' Copy the typedef-id to the front.
+			tk_copy(structid, y)
 
-		if (tk_get(structid) = TK_ID) then
-			'' There is a struct-id. If the typedef has the same
-			'' id, it can be ignored. If the typedef has a
-			'' different id, we need to insert an FB typedef
-			'' after the endstruct. If the typedef has no id
-			'' at all, that's bad C, but we don't care.
-			if (tk_get(typedefid) = TK_ID) then
-				if (*tk_text(structid) <> *tk_text(typedefid)) then
-					dim as integer y = skip(typedefid)
-					xassert(tk_get(y) = TK_SEMI)
-
-					'' Fake a typedef (building it up in
-					'' reverse, so y doesn't need to be
-					'' updated)
-					y += 1
-					tk_insert(y, TK_SEMI, NULL)
-					tk_copy(y, typedefid)
-					tk_insert_space(y)
-					tk_copy(y, structid)
-					tk_insert_space(y)
-					tk_insert(y, compoundkw, NULL)
-					tk_insert_space(y)
-					tk_insert(y, KW_TYPEDEF, NULL)
-					tk_mark_stmt(STMT_TYPEDEF, y, y + 7)
-				end if
-			end if
-		else
-			'' Use the typedef-id for the struct,
-			'' or insert a TODO if there is no typedef-id.
-			if (tk_get(typedefid) = TK_ID) then
-				tk_copy(structid, typedefid)
-			else
-				tk_insert(structid, TK_TODO, "missing identifier")
-			end if
 			'' If needed, insert a space to separate the STRUCT
 			'' from the identifier.
 			if (tk_get(structid - 1) <> TK_SPACE) then
@@ -1269,6 +1767,67 @@ private function translate_struct(byval x as integer) as integer
 				x += 1
 			end if
 			x += 1
+		else
+			'' Do the split up hack.
+			'' If the struct is anonymous, we must fake an id,
+			'' it's needed for the typedef we want to split off.
+			'' (need to declare a typedef to /something/)
+
+			if (tk_get(structid) <> TK_ID) then
+				tk_insert(structid, TK_TODO, "added fake id for anonymous struct")
+				tk_insert_space(structid)
+				tk_insert(structid, TK_ID, "__FAKE__")
+
+				'' Inserting at the top moves everything down..
+				x += 3
+				y += 3
+			end if
+
+			'' Turn this:
+			''    ... a, *b, (*c)();
+			'' into:
+			''    ... ; typedef struct structid a, *b, (*c)();
+
+			'' Add a new ';' and mark it as same as '}'
+			tk_insert(y, TK_SEMI, NULL)
+			tk_mark_stmt(tk_stmt(skiprev(y)), y, y)
+			y += 1
+
+			tk_insert_space(y)
+			y += 1
+
+			dim as integer typedefbegin = y
+
+			tk_insert(y, KW_TYPEDEF, NULL)
+			y += 1
+			tk_insert_space(y)
+			y += 1
+			tk_insert(y, compoundkw, NULL)
+			y += 1
+			tk_insert_space(y)
+			y += 1
+			tk_copy(y, structid)
+			y += 1
+			if (tk_get(y) <> TK_SPACE) then
+				tk_insert_space(y)
+				y += 1
+			end if
+
+			'' Skip over the existing multdecl, until ';'
+			do
+				select case (tk_get(y))
+				case TK_SEMI
+					exit do
+				case TK_EOF
+					xassert(FALSE)
+					exit do
+				end select
+
+				y = skip(y)
+			loop
+
+			'' Ensure it's translated as typedef
+			tk_mark_stmt(STMT_TYPEDEF, typedefbegin, y)
 		end if
 	end if
 
@@ -1286,187 +1845,21 @@ private function translate_struct(byval x as integer) as integer
 	return x
 end function
 
-private function translate_typedef(byval x as integer) as integer
-	'' typedef T id;    ->    type id as T
-
-	dim as integer begin = x
-
-	'' TYPEDEF -> TYPE
-	xassert(tk_get(x) = KW_TYPEDEF)
-	tk_replace(x, KW_TYPE, NULL)
-	x = skip(x)
-
-	'' Translate the type + pointers
-	dim as integer typebegin = x
-	x = translate_base_type(x)
-	x = translate_ptrs(x)
-
-	'' Copy the id to the front, in between the TYPE and the type,
-	'' and also insert a single space to separate the identifier from
-	'' the type's AS.
-	xassert(tk_get(x) = TK_ID)
-	tk_insert_space(typebegin)
-	x += 1
-	tk_copy(typebegin, x)
-
-	'' Remove the old id and space in front of it.
-	tk_remove_range(x, skip(x - 1))
-
-	x = skip(x - 1)
-
-	xassert(tk_get(x) = TK_SEMI)
-	tk_remove(x)
-	if (is_whitespace_until_eol(x) = FALSE) then
-		x = insert_statement_separator(x)
-	end if
-
-	return x
-end function
-
-private function translate_procdecl(byval x as integer) as integer
-	''    type id '(' params ')' ';'
-	'' ->
-	''    DECLARE {SUB | FUNCTION} id '(' params ')' [AS type]
-	''
-	'' params:
-	''    type '*'* id          ->         BYVAL id AS type PTR*
-	''
-
-	'' DECLARE
-	tk_insert(x, KW_DECLARE, NULL)
-	x += 1
-	tk_insert_space(x)
-	x += 1
-
-	'' VOID only?
-	dim as integer is_sub = _
-			((tk_get(x) = KW_VOID) and (tk_get(skip(x)) = TK_ID))
-
-	'' SUB | FUNCTION
-	tk_insert(x, iif(is_sub, KW_SUB, KW_FUNCTION), NULL)
-	x += 1
-	tk_insert_space(x)
-	x += 1
-
-	if (is_sub) then
-		'' Remove the VOID and space behind it
-		xassert(tk_get(x) = KW_VOID)
-		tk_remove_range(x, skip(x) - 1)
-	else
-		'' type + pointers
-		dim as integer typebegin = x
-		dim as integer typeend = translate_base_type(typebegin)
-		xassert(typeend > typebegin)
-		dim as integer y = translate_ptrs(typeend)
-		typeend = skiprev(y)
-
-		'' id
-		xassert(tk_get(y) = TK_ID)
-		y = skip(y)
-
-		'' '('
-		xassert(tk_get(y) = TK_LPAREN)
-
-		'' ')'
-		y = find_parentheses(y)
-		y += 1
-
-		tk_insert_space(y)
-		y += 1
-
-		'' Copy the translated type/ptrs behind the ')'
-		tk_copy_range(y, typebegin, typeend)
-
-		'' Remove the old type and space behind it
-		tk_remove_range(typebegin, skip(typeend) - 1)
-	end if
-
-	'' id
-	x = skip(x - 1)
-	xassert(tk_get(x) = TK_ID)
-	x = skip(x)
-
-	'' '('
-	xassert(tk_get(x) = TK_LPAREN)
-	x = skip(x)
-
-	'' Parameter list
-	'' [ type id  (',' type id )*  [ ',' '...' ] ]
-	do
-		select case (tk_get(x))
-		case TK_RPAREN, TK_EOF
-			exit do
-
-		case TK_COMMA, TK_ELLIPSIS
-			'' Let ',' and '...' pass
-			x = skip(x)
-
-		case else
-			'' BYVAL
-			tk_insert(x, KW_BYVAL, NULL)
-			x += 1
-			tk_insert_space(x)
-			x += 1
-
-			'' type + pointers
-			dim as integer typebegin = x
-			dim as integer typeend = translate_base_type(typebegin)
-			xassert(typeend > typebegin)
-			x = translate_ptrs(typeend)
-			typeend = skiprev(x)
-
-			'' [id]
-			if (tk_get(x) = TK_ID) then
-				x += 1
-				tk_insert_space(x)
-				x += 1
-			end if
-
-			'' Copy the translated type/ptrs behind the id
-			tk_copy_range(x, typebegin, typeend)
-
-			'' Skip it
-			x += (typeend - typebegin + 1)
-
-			xassert((tk_get(x) = TK_COMMA) or (tk_get(x) = TK_RPAREN))
-
-			'' Remove the old type and following space
-			typeend = skip(typeend) - 1
-			tk_remove_range(typebegin, typeend)
-			x -= (typeend - typebegin + 1)
-
-		end select
-	loop
-
-	'' ')'
-	xassert(tk_get(x) = TK_RPAREN)
-	x = skip(x)
-
-	if (is_sub = FALSE) then
-		'' Skip over the function type copied here before...
-		while (tk_get(x) <> TK_SEMI)
-			xassert(tk_get(x) <> TK_EOF)
-			x = skip(x)
-		wend
-	end if
-
-	'' ';'
-	xassert(tk_get(x) = TK_SEMI)
-	tk_remove(x)
-	if (is_whitespace_until_eol(x) = FALSE) then
-		x = insert_statement_separator(x)
-	end if
-
-	return x
-end function
-
 private sub translate_toplevel()
 	dim as integer x = 0
 	while (tk_get(x) <> TK_EOF)
 		select case as const (tk_stmt(x))
 		case STMT_EXTERN
-			'' Just jump to the '{' and remove it
-			x = remove_following_lbrace(x)
+			xassert(tk_get(x) = KW_EXTERN)
+			x = skip(x)
+			xassert(tk_get(x) = TK_STRING)
+			x = skip(x)
+			xassert(tk_get(x) = TK_LBRACE)
+			tk_remove(x)
+
+			if (is_whitespace_until_eol(skiprev(x) + 1) = FALSE) then
+				x = insert_statement_separator(x)
+			end if
 
 		case STMT_ENDEXTERN
 			x = translate_compound_end(x, KW_EXTERN)
@@ -1486,14 +1879,35 @@ private sub translate_toplevel()
 		case STMT_ENUMCONST
 			x = translate_enumconst(x)
 
-		case STMT_FIELD
-			x = translate_field(x)
-
 		case STMT_TYPEDEF
-			x = translate_typedef(x)
+			fixup_multdecl(skip(x), x)
+			x = translate_decl(x, DECL_TYPEDEF)
+
+		case STMT_TOPDECL
+			dim as integer typebegin = x
+
+			select case (tk_get(typebegin))
+			case KW_EXTERN, KW_STATIC
+				typebegin = skip(typebegin)
+			end select
+
+			'' Split up combined var/proc declarations into separate declarations,
+			'' as needed for FB, and mark them as vardecl/procdecl to let those
+			'' translators finish the translation.
+			fixup_multdecl(typebegin, x)
+
+			'' Note: x doesn't advanced here, so that the /whole/
+			'' former topdecl will be handled as vardecl/procdecl.
 
 		case STMT_PROCDECL
-			x = translate_procdecl(x)
+			x = translate_decl(x, DECL_PROC)
+
+		case STMT_VARDECL
+			x = translate_decl(x, DECL_VAR)
+
+		case STMT_FIELDDECL
+			fixup_multdecl(x, x)
+			x = translate_decl(x, DECL_FIELD)
 
 		case else
 			x = skip(x)
