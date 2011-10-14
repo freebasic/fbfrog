@@ -71,8 +71,6 @@
 
   o To do
 
-> 0 and 0.123 are misdetected as octal numlits
-
 > Rename stmt to mark
 
 > Add a BUG_IF() and TK_ASSERT(x, TK_*) instead of xassert()

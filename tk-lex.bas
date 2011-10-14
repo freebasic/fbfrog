@@ -285,12 +285,12 @@ private sub read_number()
 	dim as integer numbase = 10
 	dim as integer id = TK_DECNUM
 	if (lex.i[0] = CH_0) then '' 0
-		lex.i += 1
-		if (lex.i[0] = CH_L_X) then '' 0x
-			lex.i += 1
+		if (lex.i[1] = CH_L_X) then '' 0x
+			lex.i += 2
 			numbase = 16
 			id = TK_HEXNUM
-		else
+		elseif ((lex.i[1] >= CH_0) and (lex.i[1] <= CH_9)) then
+			lex.i += 1
 			numbase = 8
 			id = TK_OCTNUM
 		end if
