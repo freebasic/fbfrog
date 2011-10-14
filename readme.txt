@@ -71,8 +71,6 @@
 
   o To do
 
-> Rename stmt to mark
-
 > Add a BUG_IF() and TK_ASSERT(x, TK_*) instead of xassert()
 
 > Check for nested /' or '/ in C comments, those need to be replaced

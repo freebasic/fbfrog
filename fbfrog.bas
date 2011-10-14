@@ -179,7 +179,7 @@ private function parse_pp_directive(byval x as integer) as integer
 
 	'' The last EOL is not part of the #directive, otherwise the EOL
 	'' fixup would replace it with line continuation...
-	tk_mark_stmt(STMT_PP, begin, x - 1)
+	tk_set_mark(MARK_PP, begin, x - 1)
 
 	'' Make sure to return at a proper non-space token though,
 	'' to avoid confusing the other parsers.
@@ -470,15 +470,15 @@ private function parse_multdecl _
 			return begin
 		end if
 
-		dim as integer stmt = STMT_TOPDECL
+		dim as integer mark = MARK_TOPDECL
 		select case (decl)
 		case DECL_FIELD
-			stmt = STMT_FIELDDECL
+			mark = MARK_FIELDDECL
 		case DECL_TYPEDEF
-			stmt = STMT_TYPEDEF
+			mark = MARK_TYPEDEF
 		end select
 
-		tk_mark_stmt(stmt, begin, x)
+		tk_set_mark(mark, begin, x)
 		x = skip(x)
 
 	end select
@@ -534,7 +534,7 @@ private function parse_enumconst(byval x as integer) as integer
 	end select
 
 	'' Mark the constant declaration
-	tk_mark_stmt(STMT_ENUMCONST, begin, skiprev(x))
+	tk_set_mark(MARK_ENUMCONST, begin, skiprev(x))
 
 	return x
 end function
@@ -556,7 +556,7 @@ private function parse_nested_struct_begin(byval x as integer) as integer
 		return begin
 	end if
 
-	tk_mark_stmt(STMT_STRUCT, begin, x)
+	tk_set_mark(MARK_STRUCT, begin, x)
 
 	return skip(x)
 end function
@@ -582,7 +582,7 @@ private function parse_nested_struct_end _
 		return begin
 	end if
 	opening = skiprev(opening)
-	xassert(tk_stmt(opening) = STMT_STRUCT)
+	xassert(tk_mark(opening) = MARK_STRUCT)
 
 	'' '}'
 	x = skip(x)
@@ -592,8 +592,8 @@ private function parse_nested_struct_end _
 		return begin
 	end if
 
-	tk_mark_stmt(iif((tk_get(opening) = KW_STRUCT), _
-				STMT_ENDSTRUCT, STMT_ENDUNION), begin, x)
+	tk_set_mark(iif((tk_get(opening) = KW_STRUCT), _
+				MARK_ENDSTRUCT, MARK_ENDUNION), begin, x)
 
 	return skip(x)
 end function
@@ -632,7 +632,7 @@ private function parse_struct(byval x as integer) as integer
 		return begin
 	end if
 
-	tk_mark_stmt(STMT_STRUCT, begin, x)
+	tk_set_mark(MARK_STRUCT, begin, x)
 
 	dim as integer toplevelopening = x
 	x = skip(x)
@@ -698,14 +698,14 @@ private function parse_struct(byval x as integer) as integer
 	end if
 
 	if (compoundkw = KW_ENUM) then
-		compoundkw = STMT_ENDENUM
+		compoundkw = MARK_ENDENUM
 	elseif (compoundkw = KW_STRUCT) then
-		compoundkw = STMT_ENDSTRUCT
+		compoundkw = MARK_ENDSTRUCT
 	else
-		compoundkw = STMT_ENDUNION
+		compoundkw = MARK_ENDUNION
 	end if
 
-	tk_mark_stmt(compoundkw, structend, x)
+	tk_set_mark(compoundkw, structend, x)
 
 	return skip(x)
 end function
@@ -731,7 +731,7 @@ private function parse_extern_begin(byval x as integer) as integer
 		return begin
 	end if
 
-	tk_mark_stmt(STMT_EXTERN, begin, x)
+	tk_set_mark(MARK_EXTERN, begin, x)
 
 	'' EXTERN parsing is done here, so the content is parsed from the
 	'' toplevel loop.
@@ -750,12 +750,12 @@ private function parse_extern_end(byval x as integer) as integer
 		return x
 	end if
 
-	dim as integer stmt = tk_stmt(opening)
-	if (stmt <> STMT_EXTERN) then
+	dim as integer mark = tk_mark(opening)
+	if (mark <> MARK_EXTERN) then
 		return x
 	end if
 
-	tk_mark_stmt(STMT_ENDEXTERN, x, x)
+	tk_set_mark(MARK_ENDEXTERN, x, x)
 
 	return skip(x)
 end function
@@ -808,7 +808,7 @@ private sub parse_toplevel()
 			'' sure the parsing advances somehow, but mark as
 			'' nothing to clean up failed parses.
 			x = skip(x)
-			tk_mark_stmt(STMT_TOPLEVEL, old, x - 1)
+			tk_set_mark(MARK_TOPLEVEL, old, x - 1)
 		end if
 	loop while (tk_get(x) <> TK_EOF)
 end sub
@@ -1122,14 +1122,14 @@ private sub split_multdecl_if_needed(byval x as integer, byval begin as integer)
 	''    procdecl or not.
 	''  - If the begin token is marked as typedef or field, nothing
 	''    neds to be done, since it's already marked correctly.
-	dim as integer stmt = tk_stmt(begin)
-	if (stmt = STMT_TOPDECL) then
+	dim as integer mark = tk_mark(begin)
+	if (mark = MARK_TOPDECL) then
 		if (first_is_procdecl) then
-			stmt = STMT_PROCDECL
+			mark = MARK_PROCDECL
 		else
-			stmt = STMT_VARDECL
+			mark = MARK_VARDECL
 		end if
-		tk_mark_stmt(stmt, begin, end_of_first)
+		tk_set_mark(mark, begin, end_of_first)
 	end if
 end sub
 
@@ -1744,11 +1744,11 @@ private function translate_struct(byval x as integer) as integer
 		'' '}'
 		xassert(tk_get(y) = TK_RBRACE)
 		if (compoundkw = KW_ENUM) then
-			xassert(tk_stmt(y) = STMT_ENDENUM)
+			xassert(tk_mark(y) = MARK_ENDENUM)
 		elseif (compoundkw = KW_STRUCT) then
-			xassert(tk_stmt(y) = STMT_ENDSTRUCT)
+			xassert(tk_mark(y) = MARK_ENDSTRUCT)
 		else
-			xassert(tk_stmt(y) = STMT_ENDUNION)
+			xassert(tk_mark(y) = MARK_ENDUNION)
 		end if
 		y = skip(y)
 
@@ -1790,7 +1790,7 @@ private function translate_struct(byval x as integer) as integer
 
 			'' Add a new ';' and mark it as same as '}'
 			tk_insert(y, TK_SEMI, NULL)
-			tk_mark_stmt(tk_stmt(skiprev(y)), y, y)
+			tk_set_mark(tk_mark(skiprev(y)), y, y)
 			y += 1
 
 			tk_insert_space(y)
@@ -1827,7 +1827,7 @@ private function translate_struct(byval x as integer) as integer
 			loop
 
 			'' Ensure it's translated as typedef
-			tk_mark_stmt(STMT_TYPEDEF, typedefbegin, y)
+			tk_set_mark(MARK_TYPEDEF, typedefbegin, y)
 		end if
 	end if
 
@@ -1848,8 +1848,8 @@ end function
 private sub translate_toplevel()
 	dim as integer x = 0
 	while (tk_get(x) <> TK_EOF)
-		select case as const (tk_stmt(x))
-		case STMT_EXTERN
+		select case as const (tk_mark(x))
+		case MARK_EXTERN
 			xassert(tk_get(x) = KW_EXTERN)
 			x = skip(x)
 			xassert(tk_get(x) = TK_STRING)
@@ -1861,29 +1861,29 @@ private sub translate_toplevel()
 				x = insert_statement_separator(x)
 			end if
 
-		case STMT_ENDEXTERN
+		case MARK_ENDEXTERN
 			x = translate_compound_end(x, KW_EXTERN)
 
-		case STMT_STRUCT
+		case MARK_STRUCT
 			x = translate_struct(x)
 
-		case STMT_ENDENUM
+		case MARK_ENDENUM
 			x = translate_compound_end(x, KW_ENUM)
 
-		case STMT_ENDSTRUCT
+		case MARK_ENDSTRUCT
 			x = translate_compound_end(x, KW_TYPE)
 
-		case STMT_ENDUNION
+		case MARK_ENDUNION
 			x = translate_compound_end(x, KW_UNION)
 
-		case STMT_ENUMCONST
+		case MARK_ENUMCONST
 			x = translate_enumconst(x)
 
-		case STMT_TYPEDEF
+		case MARK_TYPEDEF
 			fixup_multdecl(skip(x), x)
 			x = translate_decl(x, DECL_TYPEDEF)
 
-		case STMT_TOPDECL
+		case MARK_TOPDECL
 			dim as integer typebegin = x
 
 			select case (tk_get(typebegin))
@@ -1899,13 +1899,13 @@ private sub translate_toplevel()
 			'' Note: x doesn't advanced here, so that the /whole/
 			'' former topdecl will be handled as vardecl/procdecl.
 
-		case STMT_PROCDECL
+		case MARK_PROCDECL
 			x = translate_decl(x, DECL_PROC)
 
-		case STMT_VARDECL
+		case MARK_VARDECL
 			x = translate_decl(x, DECL_VAR)
 
-		case STMT_FIELDDECL
+		case MARK_FIELDDECL
 			fixup_multdecl(x, x)
 			x = translate_decl(x, DECL_FIELD)
 
@@ -1927,11 +1927,11 @@ private sub fixup_eols()
 			exit do
 
 		case TK_EOL
-			select case (tk_stmt(x))
-			case STMT_TOPLEVEL
+			select case (tk_mark(x))
+			case MARK_TOPLEVEL
 				'' (EOLs at toplevel are supposed to stay)
 
-			case STMT_PP
+			case MARK_PP
 				'' EOLs can only be part of PP directives if
 				'' the newline char is escaped with '\'.
 				'' For FB that needs to be replaced with a '_'.

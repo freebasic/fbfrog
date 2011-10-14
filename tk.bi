@@ -178,21 +178,21 @@ end enum
 
 '' Note: When updating, update the debugging code too!
 enum
-	STMT_TOPLEVEL = 0
-	STMT_PP        '' Some PP directive
-	STMT_EXTERN    '' EXTERN "C" block
-	STMT_ENDEXTERN '' To identify '}'
-	STMT_STRUCT    '' [typedef to] struct/union/enum block
-	STMT_ENDENUM   '' To identify '}'
-	STMT_ENDSTRUCT '' To identify '}'
-	STMT_ENDUNION  '' To identify '}'
-	STMT_ENUMCONST '' Enum constants
-	STMT_TYPEDEF   '' Typedefs (though not those with struct/etc blocks)
-	STMT_TOPDECL   '' Toplevel declarations, after parsing, before split up into vardecls/procdecls
-	STMT_PROCDECL  '' procdecls after being split from topdecls
-	STMT_VARDECL   '' vardecls after being split from topdecls
-	STMT_FIELDDECL '' Fields
-	STMT__COUNT
+	MARK_TOPLEVEL = 0
+	MARK_PP        '' Some PP directive
+	MARK_EXTERN    '' EXTERN "C" block
+	MARK_ENDEXTERN '' To identify '}'
+	MARK_STRUCT    '' [typedef to] struct/union/enum block
+	MARK_ENDENUM   '' To identify '}'
+	MARK_ENDSTRUCT '' To identify '}'
+	MARK_ENDUNION  '' To identify '}'
+	MARK_ENUMCONST '' Enum constants
+	MARK_TYPEDEF   '' Typedefs (though not those with struct/etc blocks)
+	MARK_TOPDECL   '' Toplevel declarations, after parsing, before split up into vardecls/procdecls
+	MARK_PROCDECL  '' procdecls after being split from topdecls
+	MARK_VARDECL   '' vardecls after being split from topdecls
+	MARK_FIELDDECL '' Fields
+	MARK__COUNT
 end enum
 
 declare sub tk_move(byval delta as integer)
@@ -232,11 +232,11 @@ declare sub tk_init()
 declare sub tk_end()
 declare function tk_get(byval x as integer) as integer
 declare function tk_text(byval x as integer) as zstring ptr
-declare function tk_stmt(byval x as integer) as integer
+declare function tk_mark(byval x as integer) as integer
 declare function tk_count() as integer
-declare sub tk_mark_stmt _
+declare sub tk_set_mark _
 	( _
-		byval stmt as integer, _
+		byval mark as integer, _
 		byval first as integer, _
 		byval last as integer _
 	)

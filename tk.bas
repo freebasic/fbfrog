@@ -4,7 +4,7 @@
 
 type OneToken field = 1
 	as short id         '' TK_*
-	as short stmt       '' STMT_*
+	as short mark       '' MARK_*
 	as zstring ptr text '' Identifiers and number/string literals, or NULL
 end type
 
@@ -104,7 +104,7 @@ sub tk_in_raw _
 	end if
 
 	p->id = id
-	p->stmt = STMT_TOPLEVEL
+	p->mark = MARK_TOPLEVEL
 	if (length > 0) then
 		p->text = xallocate(length + 1)
 		memcpy(p->text, text, length)
@@ -134,7 +134,7 @@ end sub
 
 sub tk_copy(byval target as integer, byval source as integer)
 	tk_insert(target, tk_get(source), tk_text(source))
-	tk_mark_stmt(tk_stmt(source), target, target)
+	tk_set_mark(tk_mark(source), target, target)
 end sub
 
 sub tk_copy_range _
@@ -218,21 +218,21 @@ function tk_text(byval x as integer) as zstring ptr
 	return p->text
 end function
 
-function tk_stmt(byval x as integer) as integer
+function tk_mark(byval x as integer) as integer
 	dim as OneToken ptr p = tk_ptr(x)
 	if (p = NULL) then
-		return STMT_TOPLEVEL
+		return MARK_TOPLEVEL
 	end if
-	return p->stmt
+	return p->mark
 end function
 
 function tk_count() as integer
 	return tk.size
 end function
 
-sub tk_mark_stmt _
+sub tk_set_mark _
 	( _
-		byval stmt as integer, _
+		byval mark as integer, _
 		byval first as integer, _
 		byval last as integer _
 	)
@@ -240,7 +240,7 @@ sub tk_mark_stmt _
 	for i as integer = first to last
 		dim as OneToken ptr p = tk_ptr(i)
 		if (p) then
-			p->stmt = stmt
+			p->mark = mark
 		end if
 	next
 end sub
@@ -417,7 +417,7 @@ dim shared as zstring ptr token_id_text(0 to (TK__COUNT-1)) = _
 	@"ZSTRING" _
 }
 
-dim shared as zstring ptr token_stmt_text(0 to (STMT__COUNT - 1)) = _
+dim shared as zstring ptr token_mark_text(0 to (MARK__COUNT - 1)) = _
 { _
 	@"", _
 	@"pp", _
@@ -446,6 +446,6 @@ function tk_debug(byval x as integer) as string
 		payload = "[" & payload & "]"
 	end if
 
-	return *token_stmt_text(tk_stmt(x)) & "." & _
+	return *token_mark_text(tk_mark(x)) & "." & _
 	       *token_id_text(tk_get(x)) & payload
 end function
