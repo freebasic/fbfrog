@@ -9,7 +9,7 @@
  *  3. f(1)(2)(3) int;
  *  4. declare function f(1) as function(2) as function(3) as integer
  '/
-/' TODO: token 93 '/ (*(*f(/' TODO: token 93 '/))(/' TODO: token 93 '/))(/' TODO: token 93 '/)/' TODO: token 44 '/
+int (*(*f(int))(int))(int);
 
 /'
  * procptrs to functions returning procptrs:
@@ -19,7 +19,7 @@
  *  3. (1)(2) int p;
  *  4. as function(1) as function(2) as integer p
  '/
-/' TODO: token 93 '/ (*(*p)(/' TODO: token 93 '/))(/' TODO: token 93 '/)/' TODO: token 44 '/
+int (*(*p)(int))(int);
 
 /'
  * Extra parentheses around the identifier in procptrs/procdecls
@@ -28,9 +28,9 @@
  *
  * Can be translated, but it needs a proper recursive parser...
  '/
-/' TODO: token 93 '/ (f)(/' TODO: token 93 '/)/' TODO: token 44 '/
-/' TODO: token 93 '/ (*(*(p))(/' TODO: token 93 '/))(/' TODO: token 93 '/)/' TODO: token 44 '/
-/' TODO: token 93 '/ (*(*(((f)))(/' TODO: token 93 '/))(/' TODO: token 93 '/))(/' TODO: token 93 '/)/' TODO: token 44 '/
+int (f)(int);
+int (*(*(p))(int))(int);
+int (*(*(((f)))(int))(int))(int);
 
 /'
  * Function pointer pointers -- only possible in FB using typedefs
@@ -42,7 +42,7 @@
  *    void (*a)();     ->    dim as sub() a
  *    void (**a)();    ->    dim as sub() ptr a
  '/
-/' TODO: token 93 '/ (**pp)()/' TODO: token 44 '/
+int (**pp)();
 
 /'
  * typedefs to procdecls (FB doesn't know something like that):
@@ -56,7 +56,7 @@
  *    int t(int);
  *    t(5);
  '/
-/' TODO: token 105 '/ declare function T(byval as integer) as integer
+typedef declare function T(byval as integer) as integer
 
 enum
 #if 1
@@ -77,8 +77,8 @@ enum
 end enum
 
 /' Named nested unions/structs -- not supported in FB '/
-/' TODO: token 103 '/ T {
+struct T {
 	union {
 		dim shared as integer a
-	} foo/' TODO: token 44 '/
-}/' TODO: token 44 '/
+	} foo;
+};

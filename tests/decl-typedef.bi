@@ -1,6 +1,6 @@
-/' TODO: token 105 '/ /' TODO: token 108 '/ dim shared as __int8 uint8_t
-/' TODO: token 105 '/ /' TODO: token 108 '/ dim shared as __int32 uint32_t
-/' TODO: token 105 '/ /' TODO: token 108 '/ dim shared as __int64 uint64_t
+typedef unsigned dim shared as __int8 uint8_t
+typedef unsigned dim shared as __int32 uint32_t
+typedef unsigned dim shared as __int64 uint64_t
 
 '' type TT as T
 '' (typedef needed, since it's a different id)

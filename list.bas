@@ -1,9 +1,104 @@
+#include once "fbfrog.bi"
+#include once "crt.bi"
+
+sub bugoops _
+	( _
+		byval test as zstring ptr, _
+		byval funcname as zstring ptr, _
+		byval linenum as integer _
+	)
+	print "bug: failure at " & lcase(*funcname) & _
+			"(" & linenum & "): " & *test
+	end 1
+end sub
+
+sub oops(byref message as string)
+	print "oops, " & message
+	end 1
+end sub
+
+private sub memoops(byval size as ulong)
+	oops("memory allocation failed (asked for " & size & " bytes)")
+end sub
+
+function xallocate(byval size as ulong) as any ptr
+	dim as any ptr p = allocate(size)
+	if (p = NULL) then
+		memoops(size)
+	end if
+	return p
+end function
+
+function xcallocate(byval size as ulong) as any ptr
+	dim as any ptr p = callocate(size)
+	if (p = NULL) then
+		memoops(size)
+	end if
+	return p
+end function
+
+function xreallocate(byval old as any ptr, byval size as ulong) as any ptr
+	dim as any ptr p = reallocate(old, size)
+	if (p = NULL) then
+		memoops(size)
+	end if
+	return p
+end function
+
+'' Generic linked list
+
+#define list_node(p)   cptr(ListNode ptr, cptr(ubyte ptr, p   ) - sizeof(ListNode))
+#define list_ptr(node) cptr(any ptr     , cptr(ubyte ptr, node) + sizeof(ListNode))
+
+function list_head(byval l as LinkedList ptr) as any ptr
+	if (l->head = NULL) then
+		return NULL
+	end if
+	return list_ptr(l->head)
+end function
+
+function list_next(byval p as any ptr) as any ptr
+	dim as ListNode ptr nxt = list_node(p)->next
+	if (nxt = NULL) then
+		return NULL
+	end if
+	return list_ptr(nxt)
+end function
+
+function list_append(byval l as LinkedList ptr) as any ptr
+	dim as ListNode ptr node = xcallocate(l->nodesize)
+
+	node->next = NULL
+	node->prev = l->tail
+	if (l->tail) then
+		l->tail->next = node
+	else
+		l->head = node
+	end if
+	l->tail = node
+
+	return list_ptr(node)
+end function
+
+sub list_init(byval l as LinkedList ptr, byval unit as integer)
+	l->head = NULL
+	l->tail = NULL
+	l->nodesize = sizeof(ListNode) + unit
+end sub
+
+sub list_end(byval l as LinkedList ptr)
+	dim as ListNode ptr node = l->head
+	while (node)
+		dim as ListNode ptr nxt = node->next
+		deallocate(node)
+		node = nxt
+	wend
+end sub
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
 '' Generic hash table (open addressing/closed hashing),
 '' based on GCC's libcpp's hash table.
-
-#include once "hash.bi"
-#include once "common.bi"
-#include once "crt.bi"
 
 function hash_hash(byval s as ubyte ptr, byval length as integer) as uinteger
 	dim as uinteger hash = 5381
@@ -74,8 +169,6 @@ function hash_lookup _
 		grow_table(h)
 	end if
 
-	h->lookups += 1
-
 	dim as uinteger roommask = h->room - 1
 
 	'' First probe
@@ -106,7 +199,6 @@ function hash_lookup _
 	dim as uinteger stepsize = (hash_hash2(s, length) and roommask) or 1
 
 	do
-		h->collisions += 1
 		i = (i + stepsize) and roommask
 		item = h->items + i
 
@@ -150,15 +242,7 @@ end sub
 
 sub hash_init(byval h as HashTable ptr, byval exponent as integer)
 	h->room = 1 shl exponent
-	h->initialroom = h->room
 	allocate_table(h)
-end sub
-
-sub hash_stats(byval h as HashTable ptr)
-	print "hash stats: "
-	print !"\ttable size: " & h->initialroom & " grown to " & h->room & _
-		", " & h->count & " entries"
-	print !"\t" & h->lookups & " lookups, " & h->collisions & " collisions"
 end sub
 
 sub hash_end(byval h as HashTable ptr)

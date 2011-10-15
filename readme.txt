@@ -133,8 +133,6 @@
   bar.bi: merged into foo.bi
   foo.bi: 14 TODOs, 512 lines (60 KiB) from 332 lines (53 KiB)
 
-> Complain if input file = output file
-
 > #define tracing
   For example, many headers use defines like <WINAPI> (defined to <__stdcall>)
   in function declarations. Those should be backtracked to see what they expand

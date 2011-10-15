@@ -1,3 +1,87 @@
+#define NULL 0
+#define FALSE 0
+#define TRUE (-1)
+
+'' assert() that doesn't require -g
+#macro ASSUMING(test) _
+	if ((test) = FALSE) then : _
+		bugoops(#test, __FUNCTION__, __LINE__) : _
+	end if
+#endmacro
+
+declare sub bugoops _
+	( _
+		byval test as zstring ptr, _
+		byval funcname as zstring ptr, _
+		byval linenum as integer _
+	)
+declare sub oops(byref message as string)
+declare function xallocate(byval as ulong) as any ptr
+declare function xcallocate(byval as ulong) as any ptr
+declare function xreallocate(byval as any ptr, byval as ulong) as any ptr
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+declare sub frog_work()
+declare sub frog_add_file(byref h as string, byref bi as string)
+declare sub frog_init()
+declare sub frog_end()
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+type ListNode
+	as ListNode ptr next
+	as ListNode ptr prev
+end type
+
+type LinkedList
+	as ListNode ptr head
+	as ListNode ptr tail
+	as integer nodesize
+end type
+
+declare function list_head(byval l as LinkedList ptr) as any ptr
+declare function list_next(byval p as any ptr) as any ptr
+declare function list_append(byval l as LinkedList ptr) as any ptr
+declare sub list_init(byval l as LinkedList ptr, byval unit as integer)
+declare sub list_end(byval l as LinkedList ptr)
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+'' The hash table is an array of these hash items, which associate a string to
+'' some user data (always an array index in our case).
+type HashItem
+	as ubyte ptr s
+	as integer length
+	as uinteger hash        '' Hash value for quick comparison
+	as integer data         '' User data
+end type
+
+type HashTable
+	as HashItem ptr items  '' The table
+	as integer count        '' Used
+	as integer room         '' Allocated
+end type
+
+declare function hash_hash(byval s as ubyte ptr, byval length as integer) as uinteger
+declare function hash_lookup _
+	( _
+		byval h as HashTable ptr, _
+		byval s as ubyte ptr, _
+		byval length as integer, _
+		byval hash as uinteger _
+	) as HashItem ptr
+declare sub hash_add _
+	( _
+		byval h as HashTable ptr, _
+		byval s as zstring ptr, _
+		byval dat as integer _
+	)
+declare sub hash_init(byval h as HashTable ptr, byval exponent as integer)
+declare sub hash_end(byval h as HashTable ptr)
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
 '' When changing the enum all token tables/lists in tk*.bas must be updated too
 enum
 	TK_EOF = 0
@@ -195,15 +279,13 @@ enum
 	MARK__COUNT
 end enum
 
-declare sub tk_move(byval delta as integer)
-declare sub tk_move_to(byval x as integer)
-declare sub tk_in(byval id as integer, byval text as zstring ptr)
-declare sub tk_in_raw _
-	( _
-		byval id as integer, _
-		byval text as ubyte ptr, _
-		byval length as integer _
-	)
+extern as zstring ptr token_text(0 to (TK__COUNT - 1))
+extern as zstring ptr mark_text(0 to (MARK__COUNT - 1))
+
+'' Great debugging helper, for example: TRACE(x), "decl begin"
+#define TRACE(x) print lcase(__FUNCTION__) & "(" & __LINE__ & "):" & _
+	x & " " & *mark_text(tk_mark(x)) & "[" & *token_text(tk_get(x)) & "]"
+
 declare sub tk_insert _
 	( _
 		byval x as integer, _
@@ -211,39 +293,24 @@ declare sub tk_insert _
 		byval text as zstring ptr _
 	)
 declare sub tk_insert_space(byval x as integer)
-declare sub tk_copy(byval target as integer, byval source as integer)
-declare sub tk_copy_range _
+declare sub tk_copy _
 	( _
 		byval x as integer, _
 		byval first as integer, _
 		byval last as integer _
 	)
-declare sub tk_out()
-declare sub tk_remove(byval x as integer)
-declare sub tk_remove_range(byval first as integer, byval last as integer)
-declare sub tk_replace _
-	( _
-		byval x as integer, _
-		byval id as integer, _
-		byval text as zstring ptr _
-	)
-declare sub tk_drop_all()
-declare sub tk_init()
-declare sub tk_end()
-declare function tk_get(byval x as integer) as integer
-declare function tk_text(byval x as integer) as zstring ptr
-declare function tk_mark(byval x as integer) as integer
-declare function tk_count() as integer
+declare sub tk_remove(byval first as integer, byval last as integer)
 declare sub tk_set_mark _
 	( _
 		byval mark as integer, _
 		byval first as integer, _
 		byval last as integer _
 	)
-declare sub tk_count_input_size(byval n as integer)
-declare sub tk_count_input_token()
-declare function tk_debug(byval x as integer) as string
-#define TRACE(x) print __FILE__ & "(" & __LINE__ & "):" & lcase(__FUNCTION__) & ": " & cint(x) & " [" & tk_debug(x) & "]"
-
+declare function tk_get(byval x as integer) as integer
+declare function tk_text(byval x as integer) as zstring ptr
+declare function tk_mark(byval x as integer) as integer
+declare function tk_debug_text(byval x as integer) as string
+declare sub tk_init()
+declare sub tk_end()
+declare sub tk_insert_file(byval x as integer, byref filename as string)
 declare sub tk_emit_file(byref filename as string)
-declare sub tk_in_file(byref filename as string)

@@ -7,7 +7,7 @@
                         3
 
 /' PP expressions '/
-#if (/' TODO: token 18 '/defined(FOO_BAR) andalso THIS_IS_INSANE >= 123) _
+#if (!defined(FOO_BAR) andalso THIS_IS_INSANE >= 123) _
     orelse (OH_MAN_WHATS_THE_PRECEDENCE < 5 andalso (defined(OK) _
                                             orelse defined(I_DONT_KNOW)))
 	#define PPMERGE(a, b) a##b
