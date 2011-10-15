@@ -1979,6 +1979,45 @@ private sub fixup_eols()
 	loop
 end sub
 
+private sub fixup_comments()
+	'' Remove /' and '/ inside comments, since those have meaning in FB
+	dim as integer x = 0
+	do
+		select case (tk_get(x))
+		case TK_COMMENT
+			dim as zstring ptr s = tk_text(x)
+			dim as ubyte ptr p = s
+			dim as ubyte ptr limit = p + len(*s)
+
+			while (p < limit)
+				select case (p[0])
+				case asc("'")
+					if ((p + 1) < limit) then
+						if (p[1] = asc("/")) then
+							p[0] = asc("?")
+						end if
+					end if
+				case asc("/")
+					if ((p + 1) < limit) then
+						if (p[1] = asc("'")) then
+							p[0] = asc("?")
+						end if
+					else
+						p[0] = asc("?")
+					end if
+				end select
+
+				p += 1
+			wend
+
+		case TK_EOF
+			exit do
+		end select
+
+		x += 1
+	loop
+end sub
+
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 	if (__FB_ARGC__ = 1) then
@@ -2021,6 +2060,7 @@ end sub
 
 			translate_toplevel()
 			fixup_eols()
+			fixup_comments()
 
 			bifile = path_strip_ext(hfile) & ".bi"
 			tk_emit_file(bifile)

@@ -73,9 +73,6 @@
 
 > Add a BUG_IF() and TK_ASSERT(x, TK_*) instead of xassert()
 
-> Check for nested /' or '/ in C comments, those need to be replaced
-  since they have meaning in FB...
-
 > Instead of translating-by-re-emitting, allow preserving C tokens as-is for
   untranslated constructs, and add a global replace-operators-etc pass.
 
@@ -111,16 +108,18 @@
 
 > Add TODOs rather than automatically inserting/modifying identifiers
 
-> Let translators re-mark their constructs and also specially mark any ids,
-  then add a global id vs. FB keyword checker.
-  And also adjust them all to ensure they don't return x while at whitespace,
-  i.e. fix the ';' removal and ':' insertion...
+> Let translators mark any id declarations as MARK_TYPEID or MARK_ID (the two
+  FB namespaces), then add a global id vs. FB keyword checker, etc...
+  including checks for conflicting ids (case insensitivity).
+  Add a number to the __FAKE__ id for anonymous structs, or it will be misdetected...
+
+> Clean up/unify the ';' removal and ':' insertion
 
 > Add global TODO-for-untranslated-construct pass, with a skip_declaration()
   function to not have one TODO per token...
 
-> Detect untranslatable constructs, mark them as STMT_UNTRANSLATABLE and
-  add a TODO: X not supported in FB, consider doing Y and retrying
+> Add MARK_UNKNOWN for unknown constructs, and MARK_UNSUPPORTED for known
+  but unsupported in FB
 
 > --combine: Build a dependency graph of #includes to determine which files
   can be inserted into their "parents". Rules for inserting an #include file:
