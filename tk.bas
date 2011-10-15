@@ -22,14 +22,14 @@ dim shared as zstring ptr token_text(0 to (TK__COUNT - 1)) = _
 	@"<ewstring>"   , _
 	@"<ewchar>"     , _
 	@"!"      , _ '' Main tokens
-	@"<>"     , _ '' !=
+	@"!="     , _
 	@"#"      , _
 	@"##"     , _
-	@"mod"    , _ '' %
-	@"mod="   , _ '' %=
-	@"and"    , _ '' &
-	@"and="   , _ '' &=
-	@"andalso", _ '' &&
+	@"%"      , _
+	@"%="     , _
+	@"&"      , _
+	@"&="     , _
+	@"&&"     , _
 	@"("      , _
 	@")"      , _
 	@"*"      , _
@@ -49,28 +49,29 @@ dim shared as zstring ptr token_text(0 to (TK__COUNT - 1)) = _
 	@":"      , _
 	@";"      , _
 	@"<"      , _
-	@"shl"    , _ '' <<
-	@"shl="   , _ '' <<=
+	@"<<"     , _
+	@"<<="    , _
 	@"<="     , _
+	@"<>"     , _
 	@"="      , _
-	@"="      , _ '' ==
+	@"=="     , _
 	@">"      , _
-	@"shr"    , _ '' >>
-	@"shr="   , _ '' >>=
+	@">>"     , _
+	@">>="    , _
 	@">="     , _
 	@"?"      , _
 	@"["      , _
 	@"\"      , _
 	@"]"      , _
-	@"xor"    , _ '' ^
-	@"xor="   , _ '' ^=
+	@"^"      , _
+	@"^="     , _
 	@"_"      , _
 	@"{"      , _
-	@"or"     , _ '' |
-	@"or="    , _ '' |=
-	@"orelse" , _ '' ||
+	@"|"      , _
+	@"|="     , _
+	@"||"     , _
 	@"}"      , _
-	@"not"    , _ '' ~
+	@"~"      , _
 	@"<id>"      , _ '' TK_ID
 	@"auto"      , _ '' C/FB keywords
 	@"break"     , _
@@ -454,7 +455,7 @@ enum
 	CH_QUOTE        '' '
 	CH_LPAREN       '' (
 	CH_RPAREN       '' )
-	CH_MUL          '' *
+	CH_STAR         '' *
 	CH_PLUS         '' +
 	CH_COMMA        '' ,
 	CH_MINUS        '' -
@@ -468,7 +469,7 @@ enum
 	CH_LT           '' <
 	CH_EQ           '' =
 	CH_GT           '' >
-	CH_QUESTION     '' ?
+	CH_QUEST        '' ?
 	CH_AT           '' @
 
 	CH_A, CH_B, CH_C, CH_D, CH_E, CH_F, CH_G
@@ -537,7 +538,7 @@ private sub read_comment()
 			tk_in(TK_TODO, "comment left open")
 			exit do
 
-		case CH_MUL		'' *
+		case CH_STAR		'' *
 			if (lex.i[1] = CH_SLASH) then	'' */
 				saw_end = TRUE
 				exit do
@@ -787,9 +788,9 @@ private sub tokenize_next()
 
 	case CH_EXCL		'' !
 		if (lex.i[1] = CH_EQ) then	'' !=
-			read_bytes(2, TK_NE)
+			read_bytes(2, TK_EXCLEQ)
 		else
-			read_bytes(1, TK_LOGNOT)
+			read_bytes(1, TK_EXCL)
 		end if
 
 	case CH_DQUOTE		'' "
@@ -797,7 +798,7 @@ private sub tokenize_next()
 
 	case CH_HASH		'' #
 		if (lex.i[1] = CH_HASH) then	'' ##
-			read_bytes(2, TK_MERGE)
+			read_bytes(2, TK_HASHHASH)
 		else
 			read_bytes(1, TK_HASH)
 		end if
@@ -807,19 +808,19 @@ private sub tokenize_next()
 
 	case CH_PERCENT		'' %
 		if (lex.i[1] = CH_EQ) then	'' %=
-			read_bytes(2, TK_SELFMOD)
+			read_bytes(2, TK_PERCENTEQ)
 		else
-			read_bytes(1, TK_MOD)
+			read_bytes(1, TK_PERCENT)
 		end if
 
 	case CH_AMP		'' &
 		select case (lex.i[1])
 		case CH_AMP	'' &&
-			read_bytes(2, TK_LOGAND)
+			read_bytes(2, TK_AMPAMP)
 		case CH_EQ	'' &=
-			read_bytes(2, TK_SELFBITAND)
+			read_bytes(2, TK_AMPEQ)
 		case else
-			read_bytes(1, TK_BITAND)
+			read_bytes(1, TK_AMP)
 		end select
 
 	case CH_QUOTE		'' '
@@ -831,21 +832,21 @@ private sub tokenize_next()
 	case CH_RPAREN		'' )
 		read_bytes(1, TK_RPAREN)
 
-	case CH_MUL		'' *
+	case CH_STAR		'' *
 		if (lex.i[1] = CH_EQ) then	'' *=
-			read_bytes(2, TK_SELFMUL)
+			read_bytes(2, TK_STAREQ)
 		else
-			read_bytes(1, TK_MUL)
+			read_bytes(1, TK_STAR)
 		end if
 
 	case CH_PLUS		'' +
 		select case (lex.i[1])
 		case CH_PLUS	'' ++
-			read_bytes(2, TK_INCREMENT)
+			read_bytes(2, TK_PLUSPLUS)
 		case CH_EQ	'' +=
-			read_bytes(2, TK_SELFADD)
+			read_bytes(2, TK_PLUSEQ)
 		case else
-			read_bytes(1, TK_ADD)
+			read_bytes(1, TK_PLUS)
 		end select
 
 	case CH_COMMA		'' ,
@@ -854,13 +855,13 @@ private sub tokenize_next()
 	case CH_MINUS		'' -
 		select case (lex.i[1])
 		case CH_GT	'' ->
-			read_bytes(2, TK_FIELDDEREF)
+			read_bytes(2, TK_ARROW)
 		case CH_MINUS	'' --
-			read_bytes(2, TK_DECREMENT)
+			read_bytes(2, TK_MINUSMINUS)
 		case CH_EQ	'' -=
-			read_bytes(2, TK_SELFSUB)
+			read_bytes(2, TK_MINUSEQ)
 		case else
-			read_bytes(1, TK_SUB)
+			read_bytes(1, TK_MINUS)
 		end select
 
 	case CH_DOT		'' .
@@ -880,13 +881,13 @@ private sub tokenize_next()
 	case CH_SLASH		'' /
 		select case (lex.i[1])
 		case CH_EQ	'' /=
-			read_bytes(2, TK_SELFDIV)
+			read_bytes(2, TK_SLASHEQ)
 		case CH_SLASH	'' //
 			read_linecomment()
-		case CH_MUL	'' /*
+		case CH_STAR	'' /*
 			read_comment()
 		case else
-			read_bytes(1, TK_DIV)
+			read_bytes(1, TK_SLASH)
 		end select
 
 	case CH_0 to CH_9	'' 0 - 9
@@ -902,39 +903,39 @@ private sub tokenize_next()
 		select case (lex.i[1])
 		case CH_LT	'' <<
 			if (lex.i[2] = CH_EQ) then	'' <<=
-				read_bytes(3, TK_SELFSHL)
+				read_bytes(3, TK_LTLTEQ)
 			else
-				read_bytes(2, TK_SHL)
+				read_bytes(2, TK_LTLT)
 			end if
 		case CH_EQ	'' <=
-			read_bytes(2, TK_LE)
+			read_bytes(2, TK_LTEQ)
 		case else
 			read_bytes(1, TK_LT)
 		end select
 
 	case CH_EQ		'' =
 		if (lex.i[1] = CH_EQ) then	'' ==
-			read_bytes(2, TK_EQ)
+			read_bytes(2, TK_EQEQ)
 		else
-			read_bytes(1, TK_ASSIGN)
+			read_bytes(1, TK_EQ)
 		end if
 
 	case CH_GT		'' >
 		select case (lex.i[1])
 		case CH_GT	'' >>
 			if (lex.i[2] = CH_EQ) then	'' >>=
-				read_bytes(3, TK_SELFSHR)
+				read_bytes(3, TK_GTGTEQ)
 			else
-				read_bytes(2, TK_SHR)
+				read_bytes(2, TK_GTGT)
 			end if
 		case CH_EQ	'' >=
-			read_bytes(2, TK_GE)
+			read_bytes(2, TK_GTEQ)
 		case else
 			read_bytes(1, TK_GT)
 		end select
 
-	case CH_QUESTION	'' ?
-		read_bytes(1, TK_QUESTION)
+	case CH_QUEST	'' ?
+		read_bytes(1, TK_QUEST)
 
 	case CH_A       to (CH_L - 1), _	'' A-Z except L
 	     (CH_L + 1) to CH_Z
@@ -958,9 +959,9 @@ private sub tokenize_next()
 
 	case CH_CIRCUMFLEX	'' ^
 		if (lex.i[1] = CH_EQ) then	'' ^=
-			read_bytes(2, TK_SELFBITXOR)
+			read_bytes(2, TK_CIRCUMFLEXEQ)
 		else
-			read_bytes(1, TK_BITXOR)
+			read_bytes(1, TK_CIRCUMFLEX)
 		end if
 
 	case CH_UNDERSCORE	'' _
@@ -975,18 +976,18 @@ private sub tokenize_next()
 	case CH_PIPE		'' |
 		select case (lex.i[1])
 		case CH_PIPE	'' ||
-			read_bytes(2, TK_LOGOR)
+			read_bytes(2, TK_PIPEPIPE)
 		case CH_EQ	'' |=
-			read_bytes(2, TK_SELFBITOR)
+			read_bytes(2, TK_PIPEEQ)
 		case else
-			read_bytes(1, TK_BITOR)
+			read_bytes(1, TK_PIPE)
 		end select
 
 	case CH_RBRACE		'' }
 		read_bytes(1, TK_RBRACE)
 
 	case CH_TILDE		'' ~
-		read_bytes(1, TK_BITNOT)
+		read_bytes(1, TK_TILDE)
 
 	case else
 		tk_in(TK_TODO, "unexpected character: &h" + hex(lex.i[0], 2))

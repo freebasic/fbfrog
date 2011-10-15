@@ -2,7 +2,7 @@
 '' enum : ... : end enum
 enum
 	A = 0               /' This is A '/
-	B, C = (1 shl 4)     /' This is B and C '/
+	B, C = (1 << 4)     /' This is B and C '/
 	D                   /' This is D '/
 	E = CALC(1,2,3)
 	F

@@ -82,7 +82,7 @@ declare sub hash_end(byval h as HashTable ptr)
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-'' When changing the enum all token tables/lists in tk*.bas must be updated too
+'' When changing, update the table in tk.bas too!
 enum
 	TK_EOF = 0
 	TK_TODO         '' TODOs added as fix-me-markers
@@ -108,56 +108,57 @@ enum
 	TK_EWCHAR       '' 111    L'\n'
 
 	'' C tokens
-	TK_LOGNOT       '' !
-	TK_NE           '' !=
+	TK_EXCL         '' !
+	TK_EXCLEQ       '' !=
 	TK_HASH         '' #
-	TK_MERGE        '' ##
-	TK_MOD          '' %
-	TK_SELFMOD      '' %=
-	TK_BITAND       '' &
-	TK_SELFBITAND   '' &=
-	TK_LOGAND       '' &&
+	TK_HASHHASH     '' ##
+	TK_PERCENT      '' %
+	TK_PERCENTEQ    '' %=
+	TK_AMP          '' &
+	TK_AMPEQ        '' &=
+	TK_AMPAMP       '' &&
 	TK_LPAREN       '' (
 	TK_RPAREN       '' )
-	TK_MUL          '' *
-	TK_SELFMUL      '' *=
-	TK_ADD          '' +
-	TK_SELFADD      '' +=
-	TK_INCREMENT    '' ++
+	TK_STAR         '' *
+	TK_STAREQ       '' *=
+	TK_PLUS         '' +
+	TK_PLUSEQ       '' +=
+	TK_PLUSPLUS     '' ++
 	TK_COMMA        '' ,
-	TK_SUB          '' -
-	TK_SELFSUB      '' -=
-	TK_DECREMENT    '' --
-	TK_FIELDDEREF   '' ->
+	TK_MINUS        '' -
+	TK_MINUSEQ      '' -=
+	TK_MINUSMINUS   '' --
+	TK_ARROW        '' ->
 	TK_DOT          '' .
 	TK_ELLIPSIS     '' ...
-	TK_DIV          '' /
-	TK_SELFDIV      '' /=
+	TK_SLASH        '' /
+	TK_SLASHEQ      '' /=
 	TK_COLON        '' :
 	TK_SEMI         '' ;
 	TK_LT           '' <
-	TK_SHL          '' <<
-	TK_SELFSHL      '' <<=
-	TK_LE           '' <=
-	TK_ASSIGN       '' =
-	TK_EQ           '' ==
+	TK_LTLT         '' <<
+	TK_LTLTEQ       '' <<=
+	TK_LTEQ         '' <=
+	TK_LTGT         '' <>
+	TK_EQ           '' =
+	TK_EQEQ         '' ==
 	TK_GT           '' >
-	TK_SHR          '' >>
-	TK_SELFSHR      '' >>=
-	TK_GE           '' >=
-	TK_QUESTION     '' ?
+	TK_GTGT         '' >>
+	TK_GTGTEQ       '' >>=
+	TK_GTEQ         '' >=
+	TK_QUEST        '' ?
 	TK_LBRACKET     '' [
 	TK_BACKSLASH    '' \
 	TK_RBRACKET     '' ]
-	TK_BITXOR       '' ^
-	TK_SELFBITXOR   '' ^=
-	TK_UNDERSCORE   '' _ (only for FB code, not used by the C lexer)
+	TK_CIRCUMFLEX   '' ^
+	TK_CIRCUMFLEXEQ '' ^=
+	TK_UNDERSCORE   '' _
 	TK_LBRACE       '' {
-	TK_BITOR        '' |
-	TK_SELFBITOR    '' |=
-	TK_LOGOR        '' ||
+	TK_PIPE         '' |
+	TK_PIPEEQ       '' |=
+	TK_PIPEPIPE     '' ||
 	TK_RBRACE       '' }
-	TK_BITNOT       '' ~
+	TK_TILDE        '' ~
 
 	'' >= TK_ID: keywords/identifiers
 	TK_ID           '' Identifiers (a-z, A-Z, 0-9, _, $)

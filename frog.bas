@@ -273,7 +273,7 @@ private function parse_enumconst(byval x as integer) as integer
 	x = skip(x)
 
 	'' ['=' expression]
-	if (tk_get(x) = TK_ASSIGN) then
+	if (tk_get(x) = TK_EQ) then
 		dim as integer level = 0
 		do
 			x = skip(x)
@@ -376,7 +376,7 @@ end function
 
 private function parse_ptrs(byval x as integer) as integer
 	'' Pointers: ('*')*
-	while (tk_get(x) = TK_MUL)
+	while (tk_get(x) = TK_STAR)
 		x = skip(x)
 	wend
 	return x
@@ -422,7 +422,7 @@ private function parse_multdecl _
 			x = skip(x)
 
 			'' '*'
-			if (tk_get(x) <> TK_MUL) then
+			if (tk_get(x) <> TK_STAR) then
 				return begin
 			end if
 			x = skip(x)
@@ -923,7 +923,7 @@ private sub split_multdecl_if_needed(byval x as integer, byval begin as integer)
 		'' (in case of procdecl/procptr, this are the pointers on the
 		'' function result type)
 		dim as integer ptrcount = 0
-		while (tk_get(x) = TK_MUL)
+		while (tk_get(x) = TK_STAR)
 			ptrcount += 1
 			x = skip(x)
 		wend
@@ -935,7 +935,7 @@ private sub split_multdecl_if_needed(byval x as integer, byval begin as integer)
 			is_procptr = TRUE
 			x = skip(x)
 
-			ASSUMING(tk_get(x) = TK_MUL)
+			ASSUMING(tk_get(x) = TK_STAR)
 			x = skip(x)
 		end if
 
@@ -1065,7 +1065,7 @@ private sub remove_overhead_ptrs(byval x as integer)
 	dim as integer have_comma = FALSE
 	do
 		select case (tk_get(x))
-		case TK_MUL
+		case TK_STAR
 			if ((level = 0) and have_comma) then
 				remove_this_and_space(x)
 				'' Counter the x += 1 below; we already are
@@ -1232,7 +1232,7 @@ end function
 
 private function translate_ptrs(byval x as integer) as integer
 	'' Pointers: '*' -> PTR, plus some space if needed
-	while (tk_get(x) = TK_MUL)
+	while (tk_get(x) = TK_STAR)
 		remove_this_and_space(x)
 		x = insert_spaced_token(x, KW_PTR)
 	wend
@@ -1430,7 +1430,7 @@ private function translate_decl _
 		remove_this_and_space(x)
 
 		'' '*'
-		ASSUMING(tk_get(x) = TK_MUL)
+		ASSUMING(tk_get(x) = TK_STAR)
 		remove_this_and_space(x)
 	end if
 
