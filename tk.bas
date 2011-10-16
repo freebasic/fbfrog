@@ -559,7 +559,7 @@ private sub read_comment()
 end sub
 
 private sub read_id()
-	'' Identifier/keyword parsing: sequences of a-z, A-Z, 0-9, _, $
+	'' Identifier/keyword parsing: sequences of a-z, A-Z, 0-9, _
 	'' The current char is one of those already. The whole identifier
 	'' will be stored into a TK_ID, or if it's a keyword the proper KW_*
 	'' is used instead of TK_ID and the text is not stored.
@@ -572,8 +572,7 @@ private sub read_id()
 		case CH_A   to CH_Z  , _
 		     CH_L_A to CH_L_Z, _
 		     CH_0   to CH_9  , _
-		     CH_UNDERSCORE   , _
-		     CH_DOLLAR
+		     CH_UNDERSCORE
 
 		case else
 			exit do
@@ -804,9 +803,6 @@ private sub tokenize_next()
 		else
 			read_bytes(1, TK_HASH)
 		end if
-
-	case CH_DOLLAR		'' $
-		read_id()
 
 	case CH_PERCENT		'' %
 		if (lex.i[1] = CH_EQ) then	'' %=
