@@ -1962,6 +1962,11 @@ sub translate_toplevel()
 	while (tk_get(x) <> TK_EOF)
 		select case as const (tk_mark(x))
 		case MARK_PP
+			if (tk_get(skip_pp(x)) = KW_PRAGMA) then
+				'' Add TODO for #pragmas
+				x = insert_todo(x, "#pragma")
+			end if
+
 			ASSUMING(tk_get(x) = TK_HASH)
 			x = skip_pp(x)
 

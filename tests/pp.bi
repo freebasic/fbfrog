@@ -17,6 +17,8 @@
 #		define HOORAY
 #	endif
 #elseif 1
+	/'TODO: #pragma'/
+	#pragma foo
 #endif
 
 #endif

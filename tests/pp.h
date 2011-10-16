@@ -17,6 +17,7 @@
 #		define HOORAY
 #	endif
 #elif 1
+	#pragma foo
 #endif
 
 #endif
