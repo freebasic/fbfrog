@@ -16,6 +16,7 @@
 #	if X = 4294967295UL or X = 0.1e+1
 #		define HOORAY
 #	endif
+#elseif 1
 #endif
 
 #endif

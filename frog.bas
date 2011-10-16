@@ -346,7 +346,6 @@ private function parse_pp_directive(byval x as integer) as integer
 
 	'' Mark the expression parts of #if (but not #if itself) specially
 	dim as integer mark = MARK_PP
-	TRACE(x)
 	select case (tk_get(x))
 	case KW_IF, KW_IFDEF, KW_IFNDEF, KW_ELIF
 		mark = MARK_PPEXPR
@@ -1962,6 +1961,18 @@ sub translate_toplevel()
 
 	while (tk_get(x) <> TK_EOF)
 		select case as const (tk_mark(x))
+		case MARK_PP
+			ASSUMING(tk_get(x) = TK_HASH)
+			x = skip_pp(x)
+
+			if (tk_get(x) = KW_ELIF) then
+				'' #elif -> #elseif
+				tk_remove(x, x)
+				tk_insert(x, KW_ELSEIF, NULL)
+			end if
+
+			x = skip(skip_pp_directive(x) - 1)
+
 		case MARK_EXTERN
 			ASSUMING(tk_get(x) = KW_EXTERN)
 			x = skip(x)
