@@ -1772,7 +1772,9 @@ private function translate_struct(byval x as integer) as integer
 
 		'' Add TODO for <struct { } id;>
 		if (is_typedef = FALSE) then
-			tk_insert(structid, TK_TODO, "translated from anonymous struct/union/enum in declaration")
+			tk_insert(structid, TK_TODO, _
+					"translated from anonymous " & _
+					"struct/union/enum in declaration")
 			tk_insert_space(structid)
 			x += 2
 			y += 2
@@ -1796,9 +1798,10 @@ private function translate_struct(byval x as integer) as integer
 		'' (need to declare a typedef to /something/)
 
 		if (tk_get(structid) <> TK_ID) then
-			tk_insert(structid, TK_TODO, "added fake id for anonymous struct")
+			tk_insert(structid, TK_TODO, _
+					"added fake id for anonymous struct")
 			tk_insert_space(structid)
-			tk_insert(structid, TK_ID, "__FAKE__")
+			tk_insert(structid, TK_ID, "FAKE")
 
 			'' Inserting at the top moves everything down..
 			x += 3

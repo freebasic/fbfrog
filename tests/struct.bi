@@ -12,9 +12,9 @@ type TT
 end type
 
 '' Anonymous struct typedef triggering the fake id insertion
-type __FAKE__ /' TODO: added fake id for anonymous struct '/
+type FAKE /' TODO: added fake id for anonymous struct '/
 	as integer a
-end type : type as __FAKE__ A : type as __FAKE__ ptr PA
+end type : type as FAKE A : type as FAKE ptr PA
 
 '' type T : ... : end type
 '' type as T A, B : type as T ptr C : type as function() as T D
