@@ -1,4 +1,4 @@
-/' TODO: unknown construct '/
+/'TODO: unknown construct'/
 0
 1
 11
@@ -32,12 +32,12 @@
 
 "foo"
 
-/' TODO: non-trivial string literal '/"foo"
+/'TODO: non-trivial string literal'/"foo"
 
-/' TODO: non-trivial string literal '/"foo\n"
+/'TODO: non-trivial string literal'/"foo\n"
 
-/' TODO: non-trivial string literal '/"\"foo\""
+/'TODO: non-trivial string literal'/"\"foo\""
 
-/' TODO: char literal '/"a"
+/'TODO: char literal'/"a"
 
-L/' TODO: char literal '/"a"
+L/'TODO: char literal'/"a"

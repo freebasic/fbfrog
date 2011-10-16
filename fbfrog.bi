@@ -147,6 +147,7 @@ enum
 	TK_GTGTEQ       '' >>=
 	TK_GTEQ         '' >=
 	TK_QUEST        '' ?
+	TK_AT           '' @
 	TK_LBRACKET     '' [
 	TK_BACKSLASH    '' \
 	TK_RBRACKET     '' ]
@@ -216,6 +217,8 @@ enum
 	'' during the translation process.
 	KW__FB_FIRST
 	KW_ALIAS = KW__FB_FIRST
+	KW_AND
+	KW_ANDALSO
 	KW_ANY
 	KW_AS
 	KW_BYTE
@@ -235,13 +238,19 @@ enum
 	KW_INTEGER
 	KW_LONGINT
 	KW_LOOP
+	KW_MOD
 	KW_NEXT
+	KW_NOT
+	KW_OR
+	KW_ORELSE
 	KW_PASCAL
 	KW_PRIVATE
 	KW_PTR
 	KW_SCOPE
 	KW_SELECT
 	KW_SHARED
+	KW_SHL
+	KW_SHR
 	KW_SINGLE
 	KW_STDCALL
 	KW_SUB
@@ -256,6 +265,7 @@ enum
 	KW_WEND
 	KW_WSTR
 	KW_WSTRING
+	KW_XOR
 	KW_ZSTRING
 
 	TK__COUNT
@@ -265,6 +275,7 @@ end enum
 enum
 	MARK_TOPLEVEL = 0
 	MARK_PP        '' Some PP directive
+	MARK_PPEXPR    '' #if expression (but not the #if itself)
 	MARK_EXTERN    '' EXTERN "C" block
 	MARK_ENDEXTERN '' To identify '}'
 	MARK_STRUCT    '' [typedef to] struct/union/enum block

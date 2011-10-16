@@ -60,6 +60,7 @@ dim shared as zstring ptr token_text(0 to (TK__COUNT - 1)) = _
 	@">>="    , _
 	@">="     , _
 	@"?"      , _
+	@"@"      , _
 	@"["      , _
 	@"\"      , _
 	@"]"      , _
@@ -117,6 +118,8 @@ dim shared as zstring ptr token_text(0 to (TK__COUNT - 1)) = _
 	@"volatile"  , _
 	@"while"     , _
 	@"alias"      , _  '' FB-only keywords
+	@"and"        , _
+	@"andalso"    , _
 	@"any"        , _
 	@"as"         , _
 	@"byte"       , _
@@ -136,13 +139,19 @@ dim shared as zstring ptr token_text(0 to (TK__COUNT - 1)) = _
 	@"integer"    , _
 	@"longint"    , _
 	@"loop"       , _
+	@"mod"        , _
 	@"next"       , _
+	@"not"        , _
+	@"or"         , _
+	@"orelse"     , _
 	@"pascal"     , _
 	@"private"    , _
 	@"ptr"        , _
 	@"scope"      , _
 	@"select"     , _
 	@"shared"     , _
+	@"shl"        , _
+	@"shr"        , _
 	@"single"     , _
 	@"stdcall"    , _
 	@"sub"        , _
@@ -157,6 +166,7 @@ dim shared as zstring ptr token_text(0 to (TK__COUNT - 1)) = _
 	@"wend"       , _
 	@"wstr"       , _
 	@"wstring"    , _
+	@"xor"        , _
 	@"zstring"      _
 }
 
@@ -164,6 +174,7 @@ dim shared as zstring ptr mark_text(0 to (MARK__COUNT - 1)) = _
 { _
 	@"", _
 	@"pp", _
+	@"ppexpr", _
 	@"extern", _
 	@"endextern", _
 	@"struct", _
@@ -1049,11 +1060,11 @@ private sub emit_token(byval x as integer)
 	case TK_TODO
 		dim as zstring ptr text = tk_text(x)
 		if (text) then
-			emit("/' TODO: ")
+			emit("/'TODO: ")
 			emit(text)
-			emit(" '/")
+			emit("'/")
 		else
-			emit("/' TODO '/")
+			emit("/'TODO'/")
 		end if
 
 	case TK_COMMENT

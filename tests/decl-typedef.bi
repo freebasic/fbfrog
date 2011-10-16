@@ -1,8 +1,8 @@
-/' TODO: unknown construct '/
+/'TODO: unknown construct'/
 typedef unsigned __int8 uint8_t;
-/' TODO: unknown construct '/
+/'TODO: unknown construct'/
 typedef unsigned __int32 uint32_t;
-/' TODO: unknown construct '/
+/'TODO: unknown construct'/
 typedef unsigned __int64 uint64_t;
 
 '' type TT as T

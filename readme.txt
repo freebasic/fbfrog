@@ -71,12 +71,21 @@
 
   o To do
 
-> Add a BUG_IF() and TK_ASSERT(x, TK_*) instead of xassert()
-
-> Instead of translating-by-re-emitting, allow preserving C tokens as-is for
-  untranslated constructs, and add a global replace-operators-etc pass.
-
-> Vardecl/param initializers
+> More constructs:
+  - Expression parser & translator that allows for better/less ambigious
+    operator translation, and can handle ?: -> iif().
+  - #elif -> #elseif
+  - vardecl/param initializers
+  - Constness CONST
+  - Forward declarations
+	// type T as T_
+	// (this way we only need to translate the <struct T ...> body as
+	// <type T_ ...>, that's easier than inserting T_ fwdref in place of T
+	// everywhere where it's used before the T body)
+	struct T;
+  - C++ methods currently trigger a bug, probably because the multdecl
+    splitup only sets MARK_PROCDECL for MARK_TOPDECL, not MARK_FIELDDECL,
+    and the fielddecl translator of course won't expect the ()'s...
 
 > Add a global useless-typedef-removal pass that removes typedefs that have
   the same id as a type and no pointers/procptrs on them. Add TODOs for such
@@ -88,9 +97,6 @@
 	typedef struct T T, B;
 	typedef struct T A, T, B;
 
-> Constness CONST
-  - Easy to parse, difficult to translate
-
 > Make each TK_SPACE correspond to a single space -- that's just easier for
   everything, including overhead space removal
 
@@ -99,14 +105,9 @@
   This would be easier if all keywords were KW_*, i.e. TK_NOT should be '!',
   while KW_NOT is 'NOT'
 
-> Forward declarations
-	// type T as T_
-	// (this way we only need to translate the <struct T ...> body as
-	// <type T_ ...>, that's easier than inserting T_ fwdref in place of T
-	// everywhere where it's used before the T body)
-	struct T;
-
-> Add TODOs rather than automatically inserting/modifying identifiers
+> Mark ids during translation, then check them in a global pass
+> Mark expressions during translation, for improved operator translation
+  (e.g. #define bodies, or #if expressions)
 
 > Let translators mark any id declarations as MARK_TYPEID or MARK_ID (the two
   FB namespaces), then add a global id vs. FB keyword checker, etc...
@@ -119,9 +120,15 @@
   can be inserted into their "parents". Rules for inserting an #include file:
   has only one parent, and only one reference by that parent, is among list of
   input files.
+  (This can also be used to filter duplicate input files)
   Then the parsing/translation process starts with the parents, and before
   parsing each file there is a combining pass that merges in the sub-tree of
   #include files that can be combined with this file.
+
+> Insert EOL + same indentation instead of ':' in some cases, e.g. fields or
+  typede-struct-block split ups
+
+> Add --input-dir <path> and scan it for *.h files
 
 > Show message after emitting:
   bar.bi: merged into foo.bi
@@ -139,14 +146,6 @@
        parse its output.
     c) In the current file only, parse backwards to find those #defines,
        or collect a list of such #defines
-
-> #if/#include token branches (C constructs split up across #if/#else branches)
-  There are many possible quirks. C constructs can be split up across one or
-  more #if/#else branches, even with nested #ifs. This could only really be
-  handled by parsing each PP code path into C constructs and then finding out
-  whether it's ok to leave it as is, or whether tokens from the outside might
-  need to be moved & duplicated to complete the constructs inside each branch,
-  afterall FB doesn't allow PP in the middle of a function declaration etc...
 
 > Pretty printing yes/no?
   - fbfrog should preserve original as close as possible

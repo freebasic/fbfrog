@@ -21,7 +21,7 @@ private function skip_(byval x as integer, byval delta as integer) as integer
 		x += delta
 
 		select case (tk_get(x))
-		case TK_EOL, TK_SPACE, TK_COMMENT, TK_LINECOMMENT
+		case TK_EOL, TK_SPACE, TK_COMMENT, TK_LINECOMMENT, TK_TODO
 
 		case else
 			exit do
@@ -48,7 +48,7 @@ private function skip_unless_eol_ _
 		x += delta
 
 		select case (tk_get(x))
-		case TK_SPACE, TK_COMMENT, TK_LINECOMMENT
+		case TK_SPACE, TK_COMMENT, TK_LINECOMMENT, TK_TODO
 
 		case else
 			exit do
@@ -72,7 +72,7 @@ private function is_whitespace_until_eol(byval x as integer) as integer
 		case TK_EOL, TK_EOF
 			exit do
 
-		case TK_SPACE, TK_COMMENT, TK_LINECOMMENT
+		case TK_SPACE, TK_COMMENT, TK_LINECOMMENT, TK_TODO
 
 		case else
 			return FALSE
@@ -119,6 +119,45 @@ private function insert_statement_separator(byval x as integer) as integer
 		return x
 	end if
 	return insert_spaced_token(x, TK_COLON, NULL)
+end function
+
+private function insert_todo _
+	( _
+		byval x as integer, _
+		byval text as zstring ptr _
+	) as integer
+
+	dim as integer first = skiprev_unless_eol(x)
+
+	select case (tk_get(first))
+	case TK_EOL, TK_EOF
+		'' Ok, there's only indentation in front of us.
+		'' Insert the TODO right here, then an EOL,
+		'' then duplicate the indentation to re-indent
+		'' the next construct. That way, the TODO
+		'' will appear nicely aligned above the
+		'' construct it refers to.
+		'' (Often there won't be any indentation,
+		'' then nothing will be copied)
+		first += 1 '' (not the EOL at the front)
+		dim as integer last = x - 1
+
+		tk_insert(x, TK_TODO, text)
+		x += 1
+
+		tk_insert(x, TK_EOL, NULL)
+		x += 1
+
+		if (first <= last) then
+			tk_copy(x, first, last)
+			x += last - first + 1
+		end if
+	case else
+		'' Insert in the middle of the line
+		x = insert_spaced_token(x, TK_TODO, text)
+	end select
+
+	return x
 end function
 
 private sub remove_this_and_space(byval x as integer)
@@ -264,6 +303,38 @@ enum
 	DECL_PROC
 end enum
 
+private function skip_pp(byval x as integer) as integer
+	'' Skip over current token like skip(), but stop at EOL, unless it's
+	'' escaped (CPP line continuation).
+
+	do
+		x = skip_unless_eol(x)
+
+		if (tk_get(x) <> TK_EOL) then
+			exit do
+		end if
+
+		if (tk_get(x - 1) <> TK_BACKSLASH) then
+			exit do
+		end if
+	loop
+
+	return x
+end function
+
+private function skip_pp_directive(byval x as integer) as integer
+	do
+		x = skip_pp(x)
+
+		select case (tk_get(x))
+		case TK_EOL, TK_EOF
+			exit do
+		end select
+	loop
+
+	return x
+end function
+
 private function parse_pp_directive(byval x as integer) as integer
 	'' (Assuming all '#' are indicating a PP directive)
 	if (tk_get(x) <> TK_HASH) then
@@ -271,26 +342,24 @@ private function parse_pp_directive(byval x as integer) as integer
 	end if
 
 	dim as integer begin = x
+	x = skip_pp(x)
 
-	'' Skip until EOL, but also handle PP line continuation
-	do
-		x += 1
+	'' Mark the expression parts of #if (but not #if itself) specially
+	dim as integer mark = MARK_PP
+	TRACE(x)
+	select case (tk_get(x))
+	case KW_IF, KW_IFDEF, KW_IFNDEF, KW_ELIF
+		mark = MARK_PPEXPR
+	end select
 
-		select case (tk_get(x))
-		case TK_EOL
-			if (tk_get(x - 1) <> TK_BACKSLASH) then
-				exit do
-			end if
+	tk_set_mark(MARK_PP, begin, x)
 
-		case TK_EOF
-			exit do
-
-		end select
-	loop
+	begin = x + 1
+	x = skip_pp_directive(x)
 
 	'' The last EOL is not part of the #directive, otherwise the EOL
 	'' fixup would replace it with line continuation...
-	tk_set_mark(MARK_PP, begin, x - 1)
+	tk_set_mark(mark, begin, x - 1)
 
 	'' Make sure to return at a proper non-space token though,
 	'' to avoid confusing the other parsers.
@@ -1770,12 +1839,26 @@ private function translate_struct(byval x as integer) as integer
 	    (tk_get(skip(y)) = TK_SEMI) and _
 	    (tk_get(structid) <> TK_ID)) then
 
+		'' If needed, insert a space to separate the STRUCT
+		'' from the identifier.
+		if (tk_get(structid - 1) <> TK_SPACE) then
+			tk_insert_space(structid)
+			structid += 1
+
+			x += 1
+			y += 1
+		end if
+
 		'' Add TODO for <struct { } id;>
 		if (is_typedef = FALSE) then
 			tk_insert(structid, TK_TODO, _
 					"translated from anonymous " & _
 					"struct/union/enum in declaration")
+			structid += 1
+
 			tk_insert_space(structid)
+			structid += 1
+
 			x += 2
 			y += 2
 		end if
@@ -1784,13 +1867,6 @@ private function translate_struct(byval x as integer) as integer
 		tk_copy(structid, y, y)
 		x += 1
 
-		'' If needed, insert a space to separate the STRUCT
-		'' from the identifier.
-		if (tk_get(structid - 1) <> TK_SPACE) then
-			tk_insert_space(structid)
-			x += 1
-		end if
-
 	elseif (is_typedef) then
 		'' Do the split up hack.
 		'' If the struct is anonymous, we must fake an id,
@@ -1798,9 +1874,21 @@ private function translate_struct(byval x as integer) as integer
 		'' (need to declare a typedef to /something/)
 
 		if (tk_get(structid) <> TK_ID) then
+			'' If needed, insert a space to separate the STRUCT
+			'' from the identifier.
+			if (tk_get(structid - 1) <> TK_SPACE) then
+				tk_insert_space(structid)
+				structid += 1
+
+				x += 1
+				y += 1
+			end if
+
 			tk_insert(structid, TK_TODO, _
-					"added fake id for anonymous struct")
+					"added fake id for anonymous struct:")
+			structid += 1
 			tk_insert_space(structid)
+			structid += 1
 			tk_insert(structid, TK_ID, "FAKE")
 
 			'' Inserting at the top moves everything down..
@@ -1937,35 +2025,8 @@ sub translate_toplevel()
 		case MARK_UNKNOWN, MARK_UNKNOWNENUMCONST
 			'' Insert a TODO at the begin of this statement.
 			ASSUMING(tk_get(x) <> TK_EOL)
-			dim as integer first = skiprev_unless_eol(x)
-			select case (tk_get(first))
-			case TK_EOL, TK_EOF
-				'' Ok, there's only indentation in front of us.
-				'' Insert the TODO right here, then an EOL,
-				'' then duplicate the indentation to re-indent
-				'' the unknown construct. That way, the TODO
-				'' will appear nicely aligned above the
-				'' construct it refers to.
-				'' (Often there won't be any indentation,
-				'' then nothing will be copied)
-				first += 1 '' (not the EOL at the front)
-				dim as integer last = x - 1
 
-				tk_insert(x, TK_TODO, "unknown construct")
-				x += 1
-
-				tk_insert(x, TK_EOL, NULL)
-				x += 1
-
-				if (first <= last) then
-					tk_copy(x, first, last)
-					x += last - first + 1
-				end if
-			case else
-				'' Insert in the middle of the line
-				x = insert_spaced_token(x, TK_TODO, _
-							"unknown construct")
-			end select
+			x = insert_todo(x, "unknown construct")
 
 			if (tk_mark(x) = MARK_UNKNOWNENUMCONST) then
 				x = parse_enumconst(x, TRUE)
@@ -1995,7 +2056,7 @@ sub fixup_eols()
 			case MARK_TOPLEVEL, MARK_UNKNOWN
 				'' (EOLs at toplevel are supposed to stay)
 
-			case MARK_PP
+			case MARK_PP, MARK_PPEXPR
 				'' EOLs can only be part of PP directives if
 				'' the newline char is escaped with '\'.
 				'' For FB that needs to be replaced with a '_'.
@@ -2083,6 +2144,167 @@ sub fixup_comments()
 	loop
 end sub
 
+private function fixup_logical_operator _
+	( _
+		byval x as integer, _
+		byval kwforpp as integer, _
+		byval kwnormal as integer _
+	) as integer
+
+	dim as integer mark = tk_mark(x)
+
+	tk_remove(x, x)
+
+	if (mark = MARK_PPEXPR) then
+		x = insert_spaced_token(x, kwforpp, NULL)
+	else
+		x = insert_spaced_token(x, kwnormal, NULL)
+	end if
+
+	return x
+end function
+
+private function replace_operator _
+	(_
+		byval x as integer, _
+		byval tk1 as integer, _
+		byval tk2 as integer _
+	) as integer
+
+	tk_remove(x, x)
+
+	'' Inserting a keyword? That might need spaces too...
+	if (tk1 > TK_ID) then
+		x = insert_spaced_token(x, tk1, NULL)
+
+		'' Inserting a double-token self-op? (e.g. '%=' -> MOD '=')
+		if (tk2 >= 0) then
+			ASSUMING(tk_get(x - 1) = tk1)
+			tk_insert(x, tk2, NULL)
+			x = skip(x)
+		else
+			x = skip(x - 1)
+		end if
+	else
+		tk_insert(x, tk1, NULL)
+		x = skip(x)
+	end if
+
+	return x
+end function
+
+private function fixup_operator(byval x as integer) as integer
+	select case as const (tk_get(x))
+	case TK_EXCL '' ! -> NOT
+		x = insert_spaced_token(x, TK_TODO, _
+			"FB's NOT has different precedence")
+		x = replace_operator(x, KW_NOT, -1)
+
+	case TK_EXCLEQ '' != -> <>
+		x = replace_operator(x, TK_LTGT, -1)
+
+	case TK_PERCENT '' % -> mod
+		x = replace_operator(x, KW_MOD, -1)
+
+	case TK_PERCENTEQ '' %= -> mod=
+		x = replace_operator(x, KW_MOD, TK_EQ)
+
+	case TK_AMP '' & -> AND | @
+		select case (tk_get(skiprev(x)))
+		case TK_ID, _                   '' abc & x
+		     TK_DECNUM, TK_HEXNUM, _    '' 123 & x
+		     TK_OCTNUM, _
+		     TK_RPAREN, _               '' ...) & x
+		     TK_RBRACKET                '' ...] & x
+			'' This is likely to be AND
+			x = replace_operator(x, KW_AND, -1)
+
+		case else
+			'' (&x
+			'' , &x
+			'' etc., this is likely to be @
+			x = insert_spaced_token(x, TK_TODO, "was &")
+			x = replace_operator(x, TK_AT, -1)
+
+		end select
+
+	case TK_AMPEQ '' &= -> and=
+		x = replace_operator(x, KW_AND, TK_EQ)
+
+	case TK_PLUSPLUS, TK_MINUSMINUS
+		x = insert_spaced_token(x, TK_TODO, NULL)
+		x = skip(x)
+
+	case TK_LTLT '' << -> shl
+		x = replace_operator(x, KW_SHL, -1)
+
+	case TK_LTLTEQ '' <<= -> shl=
+		x = replace_operator(x, KW_SHL, TK_EQ)
+
+	case TK_EQEQ '' == -> =
+		x = replace_operator(x, TK_EQ, -1)
+
+	case TK_GTGT '' >> -> shr
+		x = replace_operator(x, KW_SHR, -1)
+
+	case TK_GTGTEQ '' >>= -> shr=
+		x = replace_operator(x, KW_SHR, TK_EQ)
+
+	case TK_QUEST '' ?
+		'' TODO: should turn this into iif(), but that's not easy
+		x = insert_spaced_token(x, TK_TODO, "iif()")
+		x = skip(x)
+
+	case TK_CIRCUMFLEX
+		x = replace_operator(x, KW_XOR, -1)
+
+	case TK_CIRCUMFLEXEQ
+		x = replace_operator(x, KW_XOR, TK_EQ)
+
+	case TK_PIPE '' | -> or
+		x = replace_operator(x, KW_OR, -1)
+
+	case TK_PIPEEQ '' |= -> or=
+		x = replace_operator(x, KW_OR, TK_EQ)
+
+	case TK_AMPAMP, TK_PIPEPIPE
+		'' || -> orelse | or
+		'' && -> andalso | and
+
+		dim as integer is_pp = (tk_mark(x) = MARK_PPEXPR)
+		dim as integer kw = -1
+
+		select case (tk_get(x))
+		case TK_AMPAMP
+			kw = iif(is_pp, KW_AND, KW_ANDALSO)
+		case TK_PIPEPIPE
+			kw = iif(is_pp, KW_OR, KW_ORELSE)
+		end select
+
+		ASSUMING(kw >= 0)
+
+		x = replace_operator(x, kw, -1)
+
+	case else
+		x = skip(x)
+
+	end select
+
+	return x
+end function
+
+sub fixup_operators()
+	dim as integer x = skip(-1)
+	while (tk_get(x) <> TK_EOF)
+		select case (tk_mark(x))
+		case MARK_TOPLEVEL, MARK_UNKNOWN, MARK_UNKNOWNENUMCONST
+			x = skip(x)
+		case else
+			x = fixup_operator(x)
+		end select
+	wend
+end sub
+
 sub frog_work()
 	dim as FrogFile ptr f = list_head(@frog.files)
 	while (f)
@@ -2092,8 +2314,9 @@ sub frog_work()
 
 		parse_toplevel()
 		translate_toplevel()
-		fixup_eols()
 		fixup_comments()
+		fixup_operators()
+		fixup_eols()
 
 		tk_emit_file(f->bi)
 		tk_end()
