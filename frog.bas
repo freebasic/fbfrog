@@ -16,38 +16,36 @@ end type
 dim shared as FrogStuff frog
 
 '' Skips the token and any following whitespace
+private function skip_(byval x as integer, byval delta as integer) as integer
+	do
+		x += delta
+
+		select case (tk_get(x))
+		case TK_EOL, TK_SPACE, TK_COMMENT, TK_LINECOMMENT
+
+		case else
+			exit do
+		end select
+	loop
+	return x
+end function
+
 private function skip(byval x as integer) as integer
-	do
-		x += 1
-
-		select case (tk_get(x))
-		case TK_EOL, TK_SPACE, TK_COMMENT, TK_LINECOMMENT
-
-		case else
-			exit do
-		end select
-	loop
-	return x
+	return skip_(x, 1)
 end function
 
-'' Same, but backwards
 private function skiprev(byval x as integer) as integer
-	do
-		x -= 1
-
-		select case (tk_get(x))
-		case TK_EOL, TK_SPACE, TK_COMMENT, TK_LINECOMMENT
-
-		case else
-			exit do
-		end select
-	loop
-	return x
+	return skip_(x, -1)
 end function
 
-private function skip_unless_eol(byval x as integer) as integer
+private function skip_unless_eol_ _
+	( _
+		byval x as integer, _
+		byval delta as integer _
+	) as integer
+
 	do
-		x += 1
+		x += delta
 
 		select case (tk_get(x))
 		case TK_SPACE, TK_COMMENT, TK_LINECOMMENT
@@ -56,7 +54,16 @@ private function skip_unless_eol(byval x as integer) as integer
 			exit do
 		end select
 	loop
+
 	return x
+end function
+
+private function skip_unless_eol(byval x as integer) as integer
+	return skip_unless_eol_(x, 1)
+end function
+
+private function skiprev_unless_eol(byval x as integer) as integer
+	return skip_unless_eol_(x, -1)
 end function
 
 private function is_whitespace_until_eol(byval x as integer) as integer
@@ -80,7 +87,8 @@ end function
 private function insert_spaced_token _
 	( _
 		byval x as integer, _
-		byval tk as integer _
+		byval tk as integer, _
+		byval text as zstring ptr _
 	) as integer
 
 	select case (tk_get(x - 1))
@@ -91,7 +99,7 @@ private function insert_spaced_token _
 		x += 1
 	end select
 
-	tk_insert(x, tk, NULL)
+	tk_insert(x, tk, text)
 	x += 1
 
 	select case (tk_get(x))
@@ -110,7 +118,7 @@ private function insert_statement_separator(byval x as integer) as integer
 	if ((tk_get(x) = TK_COLON) or (tk_get(skiprev(x)) = TK_COLON)) then
 		return x
 	end if
-	return insert_spaced_token(x, TK_COLON)
+	return insert_spaced_token(x, TK_COLON, NULL)
 end function
 
 private sub remove_this_and_space(byval x as integer)
@@ -135,35 +143,58 @@ private function find_token(byval x as integer, byval tk as integer) as integer
 	return x
 end function
 
-private function find_parentheses_backwards(byval x as integer) as integer
-	dim as integer opening_tk = any
-	dim as integer closing_tk = tk_get(x)
+private function find_parentheses _
+	( _
+		byval x as integer, _
+		byval backwards as integer _
+	) as integer
 
-	select case (closing_tk)
-	case TK_RPAREN
-		opening_tk = TK_LPAREN
-	case TK_RBRACE
-		opening_tk = TK_LBRACE
-	case TK_RBRACKET
-		opening_tk = TK_LBRACKET
-	case else
-		return x
-	end select
+	dim as integer old = x
+
+	dim as integer a = tk_get(x)
+	dim as integer b = -1
+
+	if (backwards) then
+		select case (a)
+		case TK_RPAREN
+			b = TK_LPAREN
+		case TK_RBRACE
+			b = TK_LBRACE
+		case TK_RBRACKET
+			b = TK_LBRACKET
+		end select
+	else
+		select case (a)
+		case TK_LPAREN
+			b = TK_RPAREN
+		case TK_LBRACE
+			b = TK_RBRACE
+		case TK_LBRACKET
+			b = TK_RBRACKET
+		end select
+	end if
+
+	if (b < 0) then
+		return old
+	end if
 
 	dim as integer level = 0
-	dim as integer old = x
 	do
-		x = skiprev(x)
+		if (backwards) then
+			x = skiprev(x)
+		else
+			x = skip(x)
+		end if
 
 		select case (tk_get(x))
-		case opening_tk
+		case b
 			if (level = 0) then
 				'' Found it
 				exit do
 			end if
 			level -= 1
 
-		case closing_tk
+		case a
 			level += 1
 
 		case TK_EOF
@@ -176,49 +207,52 @@ private function find_parentheses_backwards(byval x as integer) as integer
 	return x
 end function
 
-private function find_parentheses(byval x as integer) as integer
-	dim as integer opening_tk = tk_get(x)
-	dim as integer closing_tk = any
-
-	select case (opening_tk)
-	case TK_LPAREN
-		closing_tk = TK_RPAREN
-	case TK_LBRACE
-		closing_tk = TK_RBRACE
-	case TK_LBRACKET
-		closing_tk = TK_RBRACKET
-	case else
-		return x
-	end select
-
+private function skip_statement(byval x as integer) as integer
 	dim as integer level = 0
-	dim as integer old = x
-	do
-		x = skip(x)
 
+	do
 		select case (tk_get(x))
-		case closing_tk
+		case TK_SEMI
 			if (level = 0) then
-				'' Found it
 				exit do
 			end if
-			level -= 1
 
-		case opening_tk
+		case TK_LBRACE
 			level += 1
 
+		case TK_RBRACE
+			level -= 1
+
 		case TK_EOF
-			'' Not in this file anyways
-			return old
+			exit do
 
 		end select
+
+		x = skip(x)
 	loop
 
-	return x
+	return skip(x)
 end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 '' Parsing
+
+private function parse_unknown(byval x as integer) as integer
+	dim as integer begin = x
+
+	'' The current token/construct couldn't be identified,
+	'' so try to skip over the whole statement. Parsing
+	'' needs to advance somehow, and everything here should
+	'' be re-marked as MARK_UNKNOWN, so it can be marked
+	'' with a /single/ TODO.
+
+	'' Find the next ';' while skipping over those inside
+	'' '{...}'.
+	x = skip_statement(x)
+	tk_set_mark(MARK_UNKNOWN, begin, skiprev(x))
+
+	return x
+end function
 
 enum
 	DECL_PARAM = 0
@@ -263,21 +297,32 @@ private function parse_pp_directive(byval x as integer) as integer
 	return skip(x)
 end function
 
-private function parse_enumconst(byval x as integer) as integer
-	'' id
-	if (tk_get(x) <> TK_ID) then
-		return x
-	end if
+private function parse_enumconst _
+	( _
+		byval x as integer, _
+		byval is_unknown as integer _
+	) as integer
 
 	dim as integer begin = x
-	x = skip(x)
+	dim as integer skip_expression = is_unknown
 
-	'' ['=' expression]
-	if (tk_get(x) = TK_EQ) then
+	if (is_unknown = FALSE) then
+		'' id
+		if (tk_get(x) <> TK_ID) then
+			return begin
+		end if
+		x = skip(x)
+
+		'' ['=']
+		if (tk_get(x) = TK_EQ) then
+			skip_expression = TRUE
+			x = skip(x)
+		end if
+	end if
+
+	if (skip_expression) then
 		dim as integer level = 0
 		do
-			x = skip(x)
-
 			select case (tk_get(x))
 			case TK_LPAREN
 				level += 1
@@ -296,6 +341,8 @@ private function parse_enumconst(byval x as integer) as integer
 				exit do
 
 			end select
+
+			x = skip(x)
 		loop
 	end if
 
@@ -307,11 +354,15 @@ private function parse_enumconst(byval x as integer) as integer
 	case TK_RBRACE
 
 	case else
-		return begin
+		if (is_unknown = FALSE) then
+			return begin
+		end if
+
 	end select
 
 	'' Mark the constant declaration
-	tk_set_mark(MARK_ENUMCONST, begin, skiprev(x))
+	tk_set_mark(iif(is_unknown, MARK_UNKNOWNENUMCONST, MARK_ENUMCONST), _
+			begin, skiprev(x))
 
 	return x
 end function
@@ -584,17 +635,17 @@ private function parse_nested_struct_end _
 		byval toplevelopening as integer _
 	) as integer
 
+	dim as integer begin = x
+
 	'' '}'
 	if (tk_get(x) <> TK_RBRACE) then
-		return x
+		return begin
 	end if
-
-	dim as integer begin = x
 
 	'' Find the opening '{', to determine whether this is a struct
 	'' or a union. Bail out if there is no matching nested struct/union
 	'' begin.
-	dim as integer opening = find_parentheses_backwards(x)
+	dim as integer opening = find_parentheses(x, TRUE)
 	if ((opening = x) or (opening <= toplevelopening)) then
 		return begin
 	end if
@@ -602,7 +653,13 @@ private function parse_nested_struct_end _
 	ASSUMING(tk_mark(opening) = MARK_STRUCT)
 
 	'' '}'
+	ASSUMING(tk_get(x) = TK_RBRACE)
 	x = skip(x)
+
+	'' [id]
+	if (tk_get(x) = TK_ID) then
+		x = skip(x)
+	end if
 
 	'' ';'
 	if (tk_get(x) <> TK_SEMI) then
@@ -661,7 +718,7 @@ private function parse_struct(byval x as integer) as integer
 		dim as integer old = x
 
 		if (compoundkw = KW_ENUM) then
-			x = parse_enumconst(x)
+			x = parse_enumconst(x, FALSE)
 		else
 			x = parse_nested_struct_begin(x)
 			if (x > old) then
@@ -691,10 +748,14 @@ private function parse_struct(byval x as integer) as integer
 		if (x = old) then
 			'' Ok, there's something weird inside this struct/enum
 			'' body that the PP directive/enumconst/field parsers
-			'' didn't recognize. Ignore this token and try to
-			'' continue parsing other fields etc.
+			'' didn't recognize. Ignore this and try to parse
+			'' other fields etc.
 			''return begin
-			x = skip(x)
+			if (compoundkw = KW_ENUM) then
+				x = parse_enumconst(x, TRUE)
+			else
+				x = parse_unknown(x)
+			end if
 		end if
 	loop
 
@@ -762,7 +823,7 @@ private function parse_extern_end(byval x as integer) as integer
 	end if
 
 	'' Check whether this '}' belongs to an 'extern "C" {'
-	dim as integer opening = find_parentheses_backwards(x)
+	dim as integer opening = find_parentheses(x, TRUE)
 	if (opening = x) then
 		return x
 	end if
@@ -778,7 +839,9 @@ private function parse_extern_end(byval x as integer) as integer
 end function
 
 sub parse_toplevel()
-	dim as integer x = 0
+	'' Skip space at begin-of-file
+	dim as integer x = skip(-1)
+
 	do
 		dim as integer old = x
 
@@ -788,14 +851,20 @@ sub parse_toplevel()
 		x = parse_extern_begin(x)
 		x = parse_extern_end(x)
 
-		if (x = old) then
-			'' Token/construct couldn't be identified, so make
-			'' sure the parsing advances somehow, but mark as
-			'' nothing to clean up failed parses.
+		select case (tk_get(x))
+		case TK_SEMI
+			'' Random toplevel semicolon
 			x = skip(x)
-			tk_set_mark(MARK_TOPLEVEL, old, x - 1)
+
+		case TK_EOF
+			exit do
+
+		end select
+
+		if (x = old) then
+			x = parse_unknown(x)
 		end if
-	loop while (tk_get(x) <> TK_EOF)
+	loop
 end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -955,7 +1024,7 @@ private sub split_multdecl_if_needed(byval x as integer, byval begin as integer)
 		if (tk_get(x) = TK_LPAREN) then
 			'' '('
 			is_procdecl = not is_procptr
-			x = find_parentheses(x)
+			x = find_parentheses(x, FALSE)
 
 			'' ')'
 			ASSUMING(tk_get(x) = TK_RPAREN)
@@ -1128,7 +1197,7 @@ private function translate_base_type(byval x as integer) as integer
 	'' etc.
 
 	'' Insert the AS
-	x = insert_spaced_token(x, KW_AS)
+	x = insert_spaced_token(x, KW_AS, NULL)
 
 	select case (tk_get(x))
 	case KW_ENUM, KW_STRUCT, KW_UNION
@@ -1234,7 +1303,7 @@ private function translate_ptrs(byval x as integer) as integer
 	'' Pointers: '*' -> PTR, plus some space if needed
 	while (tk_get(x) = TK_STAR)
 		remove_this_and_space(x)
-		x = insert_spaced_token(x, KW_PTR)
+		x = insert_spaced_token(x, KW_PTR, NULL)
 	wend
 	return x
 end function
@@ -1378,12 +1447,12 @@ private function translate_decl _
 				remove_this_and_space(x)
 
 				'' PRIVATE
-				x = insert_spaced_token(x, KW_PRIVATE)
+				x = insert_spaced_token(x, KW_PRIVATE, NULL)
 			end if
 
 			'' DIM SHARED
-			x = insert_spaced_token(x, KW_DIM)
-			x = insert_spaced_token(x, KW_SHARED)
+			x = insert_spaced_token(x, KW_DIM, NULL)
+			x = insert_spaced_token(x, KW_SHARED, NULL)
 		end if
 
 	case DECL_TYPEDEF
@@ -1410,10 +1479,12 @@ private function translate_decl _
 	'' The AS {FUNCTION | SUB} for procptr params is inserted later...
 	if ((is_procptr and (decl <> DECL_PARAM)) or (decl = DECL_PROC)) then
 		'' DECLARE | AS
-		x = insert_spaced_token(x, iif(is_procptr, KW_AS, KW_DECLARE))
+		x = insert_spaced_token(x, _
+				iif(is_procptr, KW_AS, KW_DECLARE), NULL)
 
 		'' FUNCTION | SUB
-		x = insert_spaced_token(x, iif(is_sub, KW_SUB, KW_FUNCTION))
+		x = insert_spaced_token(x, _
+				iif(is_sub, KW_SUB, KW_FUNCTION), NULL)
 	end if
 
 	'' Type + pointers
@@ -1580,8 +1651,8 @@ private function translate_compound_end _
 		tk_remove(x, find_token(x, TK_SEMI))
 	end if
 
-	x = insert_spaced_token(x, KW_END)
-	x = insert_spaced_token(x, compoundkw)
+	x = insert_spaced_token(x, KW_END, NULL)
+	x = insert_spaced_token(x, compoundkw, NULL)
 
 	if (is_whitespace_until_eol(skiprev(x) + 1) = FALSE) then
 		x = insert_statement_separator(x)
@@ -1618,8 +1689,9 @@ private function translate_struct(byval x as integer) as integer
 	'' translator.
 	''
 	'' Same for enums/unions. And this is also used to translate nested
-	'' anonymous structs/unions...
-	'' 
+	'' structs/unions. Note: FB doesn't support non-anonymous nested
+	'' structs.
+	''    struct { } id;               ->    type id /' TODO '/ : ...
 
 	'' [TYPEDEF]
 	dim as integer is_typedef = FALSE
@@ -1648,124 +1720,136 @@ private function translate_struct(byval x as integer) as integer
 	'' '{'
 	ASSUMING(tk_get(x) = TK_LBRACE)
 
-	if (is_typedef) then
-		'' Typedef-to-struct-block split up hack:
-		''    typedef struct T { ... } a, *b, (*c)();
-		'' must be translated to:
-		''    type T : ... : end type : typedef struct T a, *b, (*c)();
-		'' so then the normal typedef parser can handle the typedef.
-		'' (Having something like <typedef struct { ... } FOO, *PFOO;>
-		'' is quite common, so this is important)
-		''
-		'' However, there also is this common use case with an
-		'' anonymous struct:
-		''    typedef struct { ... } T;
-		'' And that is usually best translated to:
-		''    type T : ... : end type
-		''
-		'' But of course this can only be done if the typedef is just
-		'' a plain simple identifier like 'T'. If it has pointers,
-		'' commas + multiple identifiers or even procedure pointers,
-		'' then the typedef must be split off. If the struct is
-		'' anonymous then, a fake identifer has to be used (though
-		'' choosing that id is the user's job, we just insert a TODO).
+	'' Typedef-to-struct-block split up hack:
+	''    typedef struct T { ... } a, *b, (*c)();
+	'' must be translated to:
+	''    type T : ... : end type : typedef struct T a, *b, (*c)();
+	'' so then the normal typedef parser can handle the typedef.
+	'' (Having something like <typedef struct { ... } FOO, *PFOO;>
+	'' is quite common, so this is important)
+	''
+	'' However, there also is this common use case with an
+	'' anonymous struct:
+	''    typedef struct { ... } T;
+	'' And that is usually best translated to:
+	''    type T : ... : end type
+	''
+	'' But of course this can only be done if the typedef is just
+	'' a plain simple identifier like 'T'. If it has pointers,
+	'' commas + multiple identifiers or even procedure pointers,
+	'' then the typedef must be split off. If the struct is
+	'' anonymous then, a fake identifer has to be used (though
+	'' choosing that id is the user's job, we just insert a TODO).
+	''
+	'' And there also is this use case (named nested union/struct):
+	''    struct { } foo;
+	'' Which isn't supported in FB, but we can still translate it
+	'' to translate the contained fields too, and add a TODO.
 
-		'' 1. Find the '}'
-		'' 2. Check whether there is a single identifier.
-		''    If the struct is anonymous, copy that identifier to the
-		''    front.
-		''    Otherwise, do the split up hack.
+	'' 1. Find the '}'
+	'' 2. Check whether there is a single identifier.
+	''    If the struct is anonymous, copy that identifier to the
+	''    front.
+	''    Otherwise, do the typedef split up hack.
 
-		dim as integer y = find_parentheses(x)
+	dim as integer y = find_parentheses(x, FALSE)
 
-		'' '}'
-		ASSUMING(tk_get(y) = TK_RBRACE)
-		if (compoundkw = KW_ENUM) then
-			ASSUMING(tk_mark(y) = MARK_ENDENUM)
-		elseif (compoundkw = KW_STRUCT) then
-			ASSUMING(tk_mark(y) = MARK_ENDSTRUCT)
-		else
-			ASSUMING(tk_mark(y) = MARK_ENDUNION)
+	'' '}'
+	ASSUMING(tk_get(y) = TK_RBRACE)
+	if (compoundkw = KW_ENUM) then
+		ASSUMING(tk_mark(y) = MARK_ENDENUM)
+	elseif (compoundkw = KW_STRUCT) then
+		ASSUMING(tk_mark(y) = MARK_ENDSTRUCT)
+	else
+		ASSUMING(tk_mark(y) = MARK_ENDUNION)
+	end if
+	y = skip(y)
+
+	'' <id ';'> and struct is anonymous?
+	if ((tk_get(y) = TK_ID) and _
+	    (tk_get(skip(y)) = TK_SEMI) and _
+	    (tk_get(structid) <> TK_ID)) then
+
+		'' Add TODO for <struct { } id;>
+		if (is_typedef = FALSE) then
+			tk_insert(structid, TK_TODO, "translated from anonymous struct/union/enum in declaration")
+			tk_insert_space(structid)
+			x += 2
+			y += 2
 		end if
-		y = skip(y)
 
-		'' <id ';'> and struct is anonymous?
-		if ((tk_get(y) = TK_ID) and _
-		    (tk_get(skip(y)) = TK_SEMI) and _
-		    (tk_get(structid) <> TK_ID)) then
+		'' Copy the trailing id to the front.
+		tk_copy(structid, y, y)
+		x += 1
 
-			'' Copy the typedef-id to the front.
-			tk_copy(structid, y, y)
-
-			'' If needed, insert a space to separate the STRUCT
-			'' from the identifier.
-			if (tk_get(structid - 1) <> TK_SPACE) then
-				tk_insert_space(structid)
-				x += 1
-			end if
+		'' If needed, insert a space to separate the STRUCT
+		'' from the identifier.
+		if (tk_get(structid - 1) <> TK_SPACE) then
+			tk_insert_space(structid)
 			x += 1
-		else
-			'' Do the split up hack.
-			'' If the struct is anonymous, we must fake an id,
-			'' it's needed for the typedef we want to split off.
-			'' (need to declare a typedef to /something/)
-
-			if (tk_get(structid) <> TK_ID) then
-				tk_insert(structid, TK_TODO, "added fake id for anonymous struct")
-				tk_insert_space(structid)
-				tk_insert(structid, TK_ID, "__FAKE__")
-
-				'' Inserting at the top moves everything down..
-				x += 3
-				y += 3
-			end if
-
-			'' Turn this:
-			''    ... a, *b, (*c)();
-			'' into:
-			''    ... ; typedef struct structid a, *b, (*c)();
-
-			'' Add a new ';' and mark it as same as '}'
-			tk_insert(y, TK_SEMI, NULL)
-			tk_set_mark(tk_mark(skiprev(y)), y, y)
-			y += 1
-
-			tk_insert_space(y)
-			y += 1
-
-			dim as integer typedefbegin = y
-
-			tk_insert(y, KW_TYPEDEF, NULL)
-			y += 1
-			tk_insert_space(y)
-			y += 1
-			tk_insert(y, compoundkw, NULL)
-			y += 1
-			tk_insert_space(y)
-			y += 1
-			tk_copy(y, structid, structid)
-			y += 1
-			if (tk_get(y) <> TK_SPACE) then
-				tk_insert_space(y)
-				y += 1
-			end if
-
-			'' Skip over the existing multdecl, until ';'
-			do
-				select case (tk_get(y))
-				case TK_SEMI
-					exit do
-				case TK_EOF
-					ASSUMING(FALSE)
-					exit do
-				end select
-
-				y = skip(y)
-			loop
-
-			'' Ensure it's translated as typedef
-			tk_set_mark(MARK_TYPEDEF, typedefbegin, y)
 		end if
+
+	elseif (is_typedef) then
+		'' Do the split up hack.
+		'' If the struct is anonymous, we must fake an id,
+		'' it's needed for the typedef we want to split off.
+		'' (need to declare a typedef to /something/)
+
+		if (tk_get(structid) <> TK_ID) then
+			tk_insert(structid, TK_TODO, "added fake id for anonymous struct")
+			tk_insert_space(structid)
+			tk_insert(structid, TK_ID, "__FAKE__")
+
+			'' Inserting at the top moves everything down..
+			x += 3
+			y += 3
+		end if
+
+		'' Turn this:
+		''    ... a, *b, (*c)();
+		'' into:
+		''    ... ; typedef struct structid a, *b, (*c)();
+
+		'' Add a new ';' and mark it as same as '}'
+		tk_insert(y, TK_SEMI, NULL)
+		tk_set_mark(tk_mark(skiprev(y)), y, y)
+		y += 1
+
+		tk_insert_space(y)
+		y += 1
+
+		dim as integer typedefbegin = y
+
+		tk_insert(y, KW_TYPEDEF, NULL)
+		y += 1
+		tk_insert_space(y)
+		y += 1
+		tk_insert(y, compoundkw, NULL)
+		y += 1
+		tk_insert_space(y)
+		y += 1
+		tk_copy(y, structid, structid)
+		y += 1
+		if (tk_get(y) <> TK_SPACE) then
+			tk_insert_space(y)
+			y += 1
+		end if
+
+		'' Skip over the existing multdecl, until ';'
+		do
+			select case (tk_get(y))
+			case TK_SEMI
+				exit do
+			case TK_EOF
+				ASSUMING(FALSE)
+				exit do
+			end select
+
+			y = skip(y)
+		loop
+
+		'' Ensure it's translated as typedef
+		tk_set_mark(MARK_TYPEDEF, typedefbegin, y)
 	end if
 
 	'' Remove the '{' and space in front of it. If there is an EOL
@@ -1783,7 +1867,8 @@ private function translate_struct(byval x as integer) as integer
 end function
 
 sub translate_toplevel()
-	dim as integer x = 0
+	dim as integer x = skip(-1)
+
 	while (tk_get(x) <> TK_EOF)
 		select case as const (tk_mark(x))
 		case MARK_EXTERN
@@ -1846,6 +1931,45 @@ sub translate_toplevel()
 			fixup_multdecl(x, x)
 			x = translate_decl(x, DECL_FIELD)
 
+		case MARK_UNKNOWN, MARK_UNKNOWNENUMCONST
+			'' Insert a TODO at the begin of this statement.
+			ASSUMING(tk_get(x) <> TK_EOL)
+			dim as integer first = skiprev_unless_eol(x)
+			select case (tk_get(first))
+			case TK_EOL, TK_EOF
+				'' Ok, there's only indentation in front of us.
+				'' Insert the TODO right here, then an EOL,
+				'' then duplicate the indentation to re-indent
+				'' the unknown construct. That way, the TODO
+				'' will appear nicely aligned above the
+				'' construct it refers to.
+				'' (Often there won't be any indentation,
+				'' then nothing will be copied)
+				first += 1 '' (not the EOL at the front)
+				dim as integer last = x - 1
+
+				tk_insert(x, TK_TODO, "unknown construct")
+				x += 1
+
+				tk_insert(x, TK_EOL, NULL)
+				x += 1
+
+				if (first <= last) then
+					tk_copy(x, first, last)
+					x += last - first + 1
+				end if
+			case else
+				'' Insert in the middle of the line
+				x = insert_spaced_token(x, TK_TODO, _
+							"unknown construct")
+			end select
+
+			if (tk_mark(x) = MARK_UNKNOWNENUMCONST) then
+				x = parse_enumconst(x, TRUE)
+			else
+				x = skip_statement(x)
+			end if
+
 		case else
 			x = skip(x)
 
@@ -1865,7 +1989,7 @@ sub fixup_eols()
 
 		case TK_EOL
 			select case (tk_mark(x))
-			case MARK_TOPLEVEL
+			case MARK_TOPLEVEL, MARK_UNKNOWN
 				'' (EOLs at toplevel are supposed to stay)
 
 			case MARK_PP

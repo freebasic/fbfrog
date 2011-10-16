@@ -175,7 +175,9 @@ dim shared as zstring ptr mark_text(0 to (MARK__COUNT - 1)) = _
 	@"topdecl", _
 	@"procdecl", _
 	@"vardecl", _
-	@"fielddecl" _
+	@"fielddecl", _
+	@"unknown", _
+	@"unknownenumconst" _
 }
 
 type OneToken field = 1

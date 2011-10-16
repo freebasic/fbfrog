@@ -115,12 +115,6 @@
 
 > Clean up/unify the ';' removal and ':' insertion
 
-> Add global TODO-for-untranslated-construct pass, with a skip_declaration()
-  function to not have one TODO per token...
-
-> Add MARK_UNKNOWN for unknown constructs, and MARK_UNSUPPORTED for known
-  but unsupported in FB
-
 > --combine: Build a dependency graph of #includes to determine which files
   can be inserted into their "parents". Rules for inserting an #include file:
   has only one parent, and only one reference by that parent, is among list of

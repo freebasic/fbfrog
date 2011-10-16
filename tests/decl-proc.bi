@@ -15,7 +15,8 @@ declare function f(byval x as integer, byval as short, byval as byte ptr , ...) 
 #define MY_CALL __attribute__((__stdcall__))/'__stdcall'/
 
 /' some #defines in front, as is pretty common '/
-MY_EXTERN MY_CALL declare function f7() as TT1
+/' TODO: unknown construct '/
+MY_EXTERN MY_CALL TT1 f7(void);
 
 /' wrapped '/
 declare function f(byval a as integer, byval b as integer, _

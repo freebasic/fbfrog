@@ -277,6 +277,8 @@ enum
 	MARK_PROCDECL  '' procdecls after being split from topdecls
 	MARK_VARDECL   '' vardecls after being split from topdecls
 	MARK_FIELDDECL '' Fields
+	MARK_UNKNOWN   '' Unrecognized constructs (skip until ';')
+	MARK_UNKNOWNENUMCONST '' Unrecognized constructs inside enums (skip until ',' or '}' instead of ';')
 	MARK__COUNT
 end enum
 

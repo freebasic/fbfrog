@@ -9,6 +9,7 @@
  *  3. f(1)(2)(3) int;
  *  4. declare function f(1) as function(2) as function(3) as integer
  '/
+/' TODO: unknown construct '/
 int (*(*f(int))(int))(int);
 
 /'
@@ -19,6 +20,7 @@ int (*(*f(int))(int))(int);
  *  3. (1)(2) int p;
  *  4. as function(1) as function(2) as integer p
  '/
+/' TODO: unknown construct '/
 int (*(*p)(int))(int);
 
 /'
@@ -28,8 +30,11 @@ int (*(*p)(int))(int);
  *
  * Can be translated, but it needs a proper recursive parser...
  '/
+/' TODO: unknown construct '/
 int (f)(int);
+/' TODO: unknown construct '/
 int (*(*(p))(int))(int);
+/' TODO: unknown construct '/
 int (*(*(((f)))(int))(int))(int);
 
 /'
@@ -42,6 +47,7 @@ int (*(*(((f)))(int))(int))(int);
  *    void (*a)();     ->    dim as sub() a
  *    void (**a)();    ->    dim as sub() ptr a
  '/
+/' TODO: unknown construct '/
 int (**pp)();
 
 /'
@@ -56,29 +62,34 @@ int (**pp)();
  *    int t(int);
  *    t(5);
  '/
-typedef declare function T(byval as integer) as integer
+/' TODO: unknown construct '/
+typedef int T(int);
 
 enum
 #if 1
+	/' TODO: unknown construct '/
 	A    /' next token is '#' instead of ',' or '}', preventing the translation '/
 #endif
 end enum
 
 /' Cannot have #directives mixed into the expression in FB '/
 enum
-	A =
+	/' TODO: unknown construct '/
+	A = _
 	1
 #if 1
-	+
+	/' TODO: unknown construct '/
+	+ _
 	2
 #endif
+	/' TODO: unknown construct '/
 	,
 	B
 end enum
 
 /' Named nested unions/structs -- not supported in FB '/
-struct T {
-	union {
-		dim shared as integer a
-	} foo;
-};
+type T
+	union foo /' TODO: translated from anonymous struct/union/enum in declaration '/
+		as integer a
+	end union
+end type
