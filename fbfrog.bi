@@ -380,6 +380,7 @@ end type
 
 type FrogStuff
 	as integer follow
+	as integer verbose
 
 	as LinkedList files    '' FrogFile
 	as HashTable filehash

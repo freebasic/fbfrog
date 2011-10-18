@@ -4,6 +4,7 @@ dim shared as FrogStuff frog
 
 private sub frog_init()
 	frog.follow = FALSE
+	frog.verbose = FALSE
 
 	list_init(@frog.files, sizeof(FrogFile))
 	hash_init(@frog.filehash, 6)
@@ -29,10 +30,16 @@ private function find_and_normalize _
 		ASSUMING(frog.f)
 		dim as string parent = path_only(*frog.f->hardname)
 		while (len(parent) > 0)
-
 			hardname = parent + origname
 			if (file_exists(hardname)) then
+				if (frog.verbose) then
+					print "  found: " & origname & ": " & hardname
+				end if
 				exit while
+			end if
+
+			if (frog.verbose) then
+				print "  not found: " & origname & ": " & hardname
 			end if
 
 			parent = path_strip_last_component(parent)
@@ -42,6 +49,9 @@ private function find_and_normalize _
 	if (len(hardname) = 0) then
 		'' Not found; handle it like input files from command line
 		hardname = path_make_absolute(origname)
+		if (frog.verbose) then
+			print "  default: " & origname & ": " & hardname
+		end if
 	end if
 
 	return path_normalize(hardname)
@@ -63,8 +73,16 @@ function frog_add_file _
 			hash_lookup(@frog.filehash, s, length, hash)
 
 	if (item->s) then
+		if (frog.verbose) then
+			print "  old news: " & origname & ": " & hardname
+		end if
+
 		'' Already exists
 		return cptr(FrogFile ptr, item->data)
+	end if
+
+	if (frog.verbose) then
+		print "  found new: " & origname & ": " & hardname
 	end if
 
 	'' Add file
@@ -90,6 +108,7 @@ private sub print_help()
 	!"The resulting .bi files may need further editing; watch out for TODOs.\n" & _
 	!"options:\n" & _
 	!"  --follow      Also translate all #includes that can be found\n" & _
+	!"  --verbose     Show more stats and information\n" & _
 	 "  --help, --version  Help and version output"
 
 	end 0
@@ -130,6 +149,9 @@ end sub
 
 		case "help"
 			print_help()
+
+		case "verbose"
+			frog.verbose = TRUE
 
 		case "version"
 			print_version()
@@ -203,4 +225,9 @@ end sub
 
 	print "done: ";
 	emit_stats()
+	if (frog.verbose) then
+		print "  file hash: ";
+		hash_stats(@frog.filehash)
+		lex_stats()
+	end if
 	end 0
