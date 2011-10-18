@@ -486,7 +486,66 @@ end sub
 '' EOL fixup -- in C it's possible to have constructs split over multiple
 '' lines, which requires a '_' line continuation char in FB. Also, the CPP
 '' \<EOL> line continuation needs to be converted to FB.
-sub fixup_eols()
+private function fixup_eol(byval x as integer) as integer
+	select case (tk_mark(x))
+	case MARK_TOPLEVEL, MARK_UNKNOWN
+		'' (EOLs at toplevel are supposed to stay)
+
+	case MARK_PP, MARK_PPEXPR
+		'' CPP uses <'\' EOL> for line continuation; translate that to
+		'' <'_' EOL>, and add a space in front of '_' if needed,
+		'' so it doesn't become part of some identifier/keyword.
+		x -= 2
+		if (tk_get(x) <> TK_SPACE) then
+			tk_insert_space(x)
+			x += 1
+		end if
+
+		'' Back to '\'
+		x += 1
+
+		'' Replace the '\' by '_'
+		ASSUMING(tk_get(x) = TK_BACKSLASH)
+		tk_remove(x, x)
+		tk_insert(x, TK_UNDERSCORE, NULL)
+
+		'' Back to EOL
+		x += 1
+
+	case else
+		'' For EOLs inside constructs, add '_' so the line wrapping
+		'' is preserved. Alternatively we could just remove the EOLs.
+
+		dim as integer y = x
+		y -= 1
+
+		'' If there is a line comment, then the '_' needs to be added
+		'' in front of it.
+		if (tk_get(y) = TK_LINECOMMENT) then
+			y -= 1
+		end if
+
+		'' For beauty, we add it even in front of the space that
+		'' (possibly) aligns the line comment.
+		if (tk_get(y) = TK_SPACE) then
+			y -= 1
+		end if
+
+		y += 1
+
+		tk_insert_space(y)
+		y += 1
+
+		tk_insert(y, TK_UNDERSCORE, NULL)
+
+		x += 2
+
+	end select
+
+	return x
+end function
+
+private sub fixup_eols()
 	dim as integer x = 0
 	do
 		select case (tk_get(x))
@@ -494,52 +553,7 @@ sub fixup_eols()
 			exit do
 
 		case TK_EOL
-			select case (tk_mark(x))
-			case MARK_TOPLEVEL, MARK_UNKNOWN
-				'' (EOLs at toplevel are supposed to stay)
-
-			case MARK_PP, MARK_PPEXPR
-				'' EOLs can only be part of PP directives if
-				'' the newline char is escaped with '\'.
-				'' For FB that needs to be replaced with a '_'.
-				'' That might require an extra space too,
-				'' because '_' can be part of identifiers,
-				'' unlike '\'...
-				x -= 2
-				if (tk_get(x) <> TK_SPACE) then
-					tk_insert_space(x)
-					x += 1
-				end if
-
-				'' Back to '\'
-				x += 1
-
-				'' Replace the '\' by '_'
-				ASSUMING(tk_get(x) = TK_BACKSLASH)
-				tk_remove(x, x)
-				tk_insert(x, TK_UNDERSCORE, NULL)
-
-				'' Back to EOL
-				x += 1
-
-			case else
-				'' For EOLs inside constructs, '_'s need to
-				'' be added so it works in FB. It should be
-				'' inserted in front of any line comment or
-				'' space that aligns the line comment.
-				dim as integer y = x - 1
-				if (tk_get(y) = TK_LINECOMMENT) then
-					y -= 1
-				end if
-				if (tk_get(y) = TK_SPACE) then
-					y -= 1
-				end if
-				y += 1
-				tk_insert_space(y)
-				tk_insert(y + 1, TK_UNDERSCORE, NULL)
-				x += 2
-
-			end select
+			x = fixup_eol(x)
 
 		end select
 
