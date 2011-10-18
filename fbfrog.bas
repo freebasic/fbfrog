@@ -177,6 +177,7 @@ end sub
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 	frog_init()
+	storage_init()
 
 	if (__FB_ARGC__ = 1) then
 		print_help()
@@ -343,6 +344,6 @@ end sub
 	if (frog.verbose) then
 		print "  file hash: ";
 		hash_stats(@frog.filehash)
-		lex_stats()
+		storage_stats()
 	end if
 	end 0

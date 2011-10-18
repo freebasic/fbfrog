@@ -45,9 +45,10 @@ private sub allocate_table(byval h as HashTable ptr)
 end sub
 
 private sub grow_table(byval h as HashTable ptr)
-	dim as integer oldroom = h->room
 	dim as HashItem ptr old = h->items
+	dim as integer oldroom = h->room
 
+	h->resizes += 1
 	h->room shl= 1
 	allocate_table(h)
 
@@ -143,8 +144,9 @@ function hash_lookup _
 end function
 
 sub hash_init(byval h as HashTable ptr, byval exponent as integer)
+	h->count = 0
 	h->room = 1 shl exponent
-	h->initialroom = h->room
+	h->resizes = 0
 	h->lookups = 0
 	h->collisions = 0
 	allocate_table(h)
@@ -157,6 +159,6 @@ end sub
 #endif
 
 sub hash_stats(byval h as HashTable ptr)
-	print using "size & -> &, & entries, & lookups, & collisions"; _
-		h->initialroom, h->room, h->count, h->lookups, h->collisions
+	print using "& resizes, & entries, & lookups, & collisions"; _
+		h->resizes, h->count, h->lookups, h->collisions
 end sub

@@ -138,12 +138,6 @@
   - extern "C"/cdecl alias fixups
   - Realign commentary
 
-> Use a onewaystorage for token text. Then we don't need to worry about
-  deallocating(), and tk_end() can easily clean it up too...
-  we don't delete that many text tokens anyways (we /preserve/ most identifiers
-  etc).
-  Now that token text is never deleted we can also use a hash to hash token
-  text and save some memory.
 > Make each TK_SPACE correspond to a single space -- that's just easier for
   everything, including overhead space removal
 > Change insert_spaced_token() to be smarter and only insert space to separate

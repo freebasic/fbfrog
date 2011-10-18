@@ -27,12 +27,12 @@ type HashItem
 end type
 
 type HashTable
-	as HashItem ptr items  '' The table
-	as integer count        '' Used
-	as integer room         '' Allocated
-	as integer initialroom
-	as integer lookups
-	as integer collisions
+	as HashItem ptr items '' The table
+	as integer count      '' Used
+	as integer room       '' Allocated
+	as integer resizes    '' Number of table reallocs/size increases
+	as integer lookups    '' Lookup counter
+	as integer collisions '' Sum of collisions during all lookups
 end type
 
 declare function hash_hash _
@@ -325,12 +325,7 @@ extern as zstring ptr mark_text(0 to (MARK__COUNT - 1))
 	x & " " & *mark_text(tk_mark(x)) & "[" & *token_text(tk_get(x)) & "]"
 
 declare sub tk_raw_move_to(byval x as integer)
-declare sub tk_raw_insert _
-	( _
-		byval id as integer, _
-		byval text as ubyte ptr, _
-		byval length as integer _
-	)
+declare sub tk_raw_insert(byval id as integer, byval text as ubyte ptr)
 declare sub tk_insert _
 	( _
 		byval x as integer, _
@@ -364,7 +359,17 @@ declare function lex_insert_file _
 		byval x as integer, _
 		byref filename as string _
 	) as integer
-declare sub lex_stats()
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+declare function storage_store _
+	( _
+		byval text as ubyte ptr, _
+		byval length as integer, _
+		byval pdat as integer ptr _
+	) as ubyte ptr
+declare sub storage_init()
+declare sub storage_stats()
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 

@@ -263,44 +263,31 @@ sub tk_raw_move_to(byval x as integer)
 	tk.front = x
 end sub
 
-'' Insert token at current position, the current position moves forward.
-sub tk_raw_insert _
-	( _
-		byval id as integer, _
-		byval text as ubyte ptr, _
-		byval length as integer _
-	)
 
+'' Insert token at current position, the current position moves forward.
+sub tk_raw_insert(byval id as integer, byval text as ubyte ptr)
+	const NEW_GAP = 512
 	dim as OneToken ptr p = any
 
 	'' Make room for the new data, if necessary
 	if (tk.gap = 0) then
-		const NEWGAP = 512
-
+		'' Reallocate the buffer, then move the back block to the
+		'' end of the new buffer, so that the gap in the middle grows.
 		tk.reallocs += 1
-
-		tk.p = xreallocate(tk.p, (tk.size + NEWGAP) * sizeof(OneToken))
+		tk.p = xreallocate(tk.p, (tk.size + NEW_GAP) * sizeof(OneToken))
 		p = tk.p + tk.front
-
-		'' Move the back block to the end of the new buffer,
-		'' so that the gap in the middle grows.
 		if (tk.size > tk.front) then
-			memmove(p + NEWGAP, p + tk.gap, _
+			memmove(p + NEW_GAP, p + tk.gap, _
 			        (tk.size - tk.front) * sizeof(OneToken))
 		end if
-
-		tk.gap = NEWGAP
+		tk.gap = NEW_GAP
 	else
 		p = tk.p + tk.front
 	end if
 
 	p->id = id
 	p->mark = MARK_TOPLEVEL
-	if (length > 0) then
-		p->text = str_duplicate(text, length)
-	else
-		p->text = NULL
-	end if
+	p->text = text
 
 	tk.front += 1
 	tk.gap -= 1
@@ -318,14 +305,18 @@ sub tk_insert _
 		byval id as integer, _
 		byval text as zstring ptr _
 	)
+
 	tk_raw_move_to(x)
-	dim as integer length = any
+
+	'' See also lex.bas:add_text_token_raw(); this is the same, except
+	'' that here we don't turn TK_IDs into KW_*s, and this is also used
+	'' for non-text tokens.
 	if (text) then
-		length = len(*text)
-	else
-		length = 0
+		dim as integer dat = -1
+		text = storage_store(text, len(*text), @dat)
 	end if
-	tk_raw_insert(id, text, length)
+
+	tk_raw_insert(id, text)
 end sub
 
 sub tk_insert_space(byval x as integer)
@@ -347,22 +338,18 @@ sub tk_copy _
 end sub
 
 sub tk_remove(byval first as integer, byval last as integer)
-	'' TODO: clean up
 	tk_raw_move_to(last + 1)
-	while (last >= first)
 
-		'' Delete token in front of current position (backwards deletion)
-		if (tk.front >= 1) then
-			tk.deletes += 1
+	dim as integer delta = last - first + 1
+	if (delta > tk.front) then
+		delta = tk.front
+	end if
 
-			tk.front -= 1
-			tk.gap += 1
-			tk.size -= 1
-			deallocate(tk.p[tk.front].text)
-		end if
-
-		last -= 1
-	wend
+	'' Delete tokens in front of current position (backwards deletion)
+	tk.deletes += delta
+	tk.front -= delta
+	tk.gap += delta
+	tk.size -= delta
 end sub
 
 sub tk_set_mark _
@@ -409,13 +396,9 @@ sub tk_init()
 end sub
 
 sub tk_end()
-	for i as integer = 0 to (tk.size - 1)
-		deallocate(tk_access(i)->text)
-	next
 	deallocate(tk.p)
-
 	if (frog.verbose) then
-		print using "  tk: max load: & (& in, & out; & reallocs), & lookups"; _
+		print using "  token buffer: max load: & (& in, & out; & reallocs), & lookups"; _
 			tk.maxsize, tk.inserts, tk.deletes, tk.reallocs, tk.lookups
 	end if
 end sub

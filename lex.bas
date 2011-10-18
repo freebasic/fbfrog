@@ -6,7 +6,6 @@ type LexStuff
 	as ubyte ptr buffer '' File content buffer
 	as ubyte ptr i      '' Current char, will always be <= limit
 	as ubyte ptr limit  '' (end of buffer)
-	as HashTable kwhash '' C keywords
 end type
 
 dim shared as LexStuff lex
@@ -71,17 +70,54 @@ enum
 	CH_TILDE        '' ~
 end enum
 
+private sub add_text_token_raw _
+	( _
+		byval tk as integer, _
+		byval text as ubyte ptr, _
+		byval length as integer _
+	)
+
+	'' Just store the token text. If this text string is already stored,
+	'' we'll get the existing pointer, otherwise our text will be copied,
+	'' a null terminator will be added, and we get that new string.
+	'' Note: This can reuse even keyword text, e.g. for string literals
+	'' like "int".
+	dim as integer dat = -1
+	text = storage_store(text, length, @dat)
+
+	'' Is this a keyword? Then use the proper KW_* instead of TK_ID
+	if ((tk = TK_ID) and (dat >= 0)) then
+		tk_raw_insert(dat, NULL)
+	else
+		tk_raw_insert(tk, text)
+	end if
+end sub
+
+private sub add_text_token(byval tk as integer, byval begin as ubyte ptr)
+	add_text_token_raw(tk, begin, culng(lex.i) - culng(begin))
+end sub
+
+private sub add_todo(byval text as zstring ptr)
+	add_text_token_raw(TK_TODO, text, len(*text))
+end sub
+
+private sub add_plain_token(byval tk as integer)
+	tk_raw_insert(tk, NULL)
+end sub
+
 #macro read_bytes(n, id)
 	lex.i += n
-	tk_raw_insert(id, NULL, 0)
+	add_plain_token(id)
 #endmacro
 
 private sub read_space()
 	dim as ubyte ptr begin = lex.i
+
 	do
 		lex.i += 1
 	loop while ((lex.i[0] = CH_TAB) or (lex.i[0] = CH_SPACE))
-	tk_raw_insert(TK_SPACE, begin, culng(lex.i) - culng(begin))
+
+	add_text_token(TK_SPACE, begin)
 end sub
 
 private sub read_linecomment()
@@ -100,11 +136,7 @@ private sub read_linecomment()
 		lex.i += 1
 	loop
 
-	tk_raw_insert(TK_LINECOMMENT, begin, culng(lex.i) - culng(begin))
-end sub
-
-private sub insert_todo(byval text as zstring ptr)
-	tk_raw_insert(TK_TODO, text, len(*text))
+	add_text_token(TK_LINECOMMENT, begin)
 end sub
 
 private sub read_comment()
@@ -115,7 +147,7 @@ private sub read_comment()
 	do
 		select case (lex.i[0])
 		case 0
-			insert_todo("comment left open")
+			add_todo("comment left open")
 			exit do
 
 		case CH_STAR		'' *
@@ -129,7 +161,7 @@ private sub read_comment()
 		lex.i += 1
 	loop
 
-	tk_raw_insert(TK_COMMENT, begin, culng(lex.i) - culng(begin))
+	add_text_token(TK_COMMENT, begin)
 
 	if (saw_end) then
 		lex.i += 2
@@ -158,16 +190,7 @@ private sub read_id()
 		end select
 	loop
 
-	'' Is this a keyword? Then use the proper KW_* instead of TK_ID
-	dim as integer length = culng(lex.i) - culng(begin)
-	dim as HashItem ptr item = _
-		hash_lookup(@lex.kwhash, begin, length, _
-		            hash_hash(begin, length))
-	if (item->s) then
-		tk_raw_insert(cint(item->data), NULL, 0)
-	else
-		tk_raw_insert(TK_ID, begin, length)
-	end if
+	add_text_token(TK_ID, begin)
 end sub
 
 private sub read_number()
@@ -277,7 +300,7 @@ private sub read_number()
 		end select
 	end if
 
-	tk_raw_insert(id, begin, culng(lex.i) - culng(begin))
+	add_text_token(id, begin)
 end sub
 
 enum
@@ -319,7 +342,7 @@ private sub read_string()
 			exit do
 
 		case CH_LF, CH_CR, 0
-			insert_todo("string/char literal left open")
+			add_todo("string/char literal left open")
 			exit do
 
 		case CH_BACKSLASH	'' \
@@ -337,13 +360,13 @@ private sub read_string()
 
 	if (strflags) then
 		if (strflags and STRFLAG_CHAR) then
-			insert_todo("char literal")
+			add_todo("char literal")
 		else
-			insert_todo("non-trivial string literal")
+			add_todo("non-trivial string literal")
 		end if
 	end if
 
-	tk_raw_insert(id, begin, culng(lex.i) - culng(begin))
+	add_text_token(id, begin)
 
 	if (saw_end) then
 		lex.i += 1
@@ -566,9 +589,9 @@ private sub lex_next()
 		read_bytes(1, TK_TILDE)
 
 	case else
-		insert_todo("unexpected character: &h" + hex(lex.i[0], 2))
-		tk_raw_insert(TK_BYTE, lex.i, 1)
+		add_todo("unexpected character")
 		lex.i += 1
+		add_text_token(TK_BYTE, lex.i - 1)
 
 	end select
 end sub
@@ -618,34 +641,31 @@ private sub complain_about_embedded_nulls()
 end sub
 
 private sub init_keywords()
-	'' The hash table must be big to avoid collisions...
-	'' 2^10 works well for the C keywords currently, see also hash_lookup()
-	'' and enable the debug code there.
-	hash_init(@lex.kwhash, 10)
+	'' Load C keywords if not yet done
+	static as integer lazy = FALSE
+
+	if (lazy) then
+		return
+	end if
+
+	lazy = TRUE
+
 	for i as integer = KW__C_FIRST to (KW__FB_FIRST - 1)
 		dim as zstring ptr s = token_text(i)
 		dim as integer length = len(*s)
-		dim as uinteger hash = hash_hash(s, length)
-		dim as HashItem ptr item = _
-			hash_lookup(@lex.kwhash, s, length, hash)
 
-		ASSUMING(item->s = NULL)
-		item->s = s
-		item->length = length
-		item->hash = hash
-		item->data = cast(any ptr, i)
-		lex.kwhash.count += 1
+		'' Note: passing @i here. If the keyword would already be
+		'' stored, then this would overwrite i with the hash item data.
+		'' However since this is only done once, the keyword won't
+		'' exist yet, and storage_store() will only read from i.
+		storage_store(s, length, @i)
 	next
 end sub
 
 private sub lex_init(byref filename as string)
 	load_file(filename)
 	complain_about_embedded_nulls()
-
-	'' Load C keywords if not yet done
-	if (lex.kwhash.items = NULL) then
-		init_keywords()
-	end if
+	init_keywords()
 end sub
 
 private sub lex_end()
@@ -671,7 +691,7 @@ function lex_insert_file _
 	dim as integer newtokens = tk_count() - oldcount
 
 	if (frog.verbose) then
-		print using "  lex: & bytes, & tokens"; _
+		print using "  C lexer: read in & bytes, produced & tokens"; _
 			(culng(lex.limit) - culng(lex.buffer)), _
 			newtokens
 	end if
@@ -680,8 +700,3 @@ function lex_insert_file _
 
 	return x + newtokens
 end function
-
-sub lex_stats()
-	print "  keyword hash: ";
-	hash_stats(@lex.kwhash)
-end sub
