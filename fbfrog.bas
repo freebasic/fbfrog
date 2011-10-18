@@ -1,25 +1,6 @@
 #include once "fbfrog.bi"
 
-'' Searches backwards for the last '.' while still behind '/' or '\'.
-private function find_ext_begin(byref path as string) as integer
-	for i as integer = (len(path)-1) to 0 step -1
-		dim as integer ch = path[i]
-		if (ch = asc(".")) then
-			return i
-		elseif ((ch = asc("/")) or (ch = asc("\"))) then
-			exit for
-		end if
-	next
-	return len(path)
-end function
 
-function path_strip_ext(byref path as string) as string
-	return left(path, find_ext_begin(path))
-end function
-
-function path_ext_only(byref path as string) as string
-	return right(path, len(path) - (find_ext_begin(path) + 1))
-end function
 
 private sub print_help()
 	print _

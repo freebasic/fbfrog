@@ -4,28 +4,53 @@
 
 '' assert() that doesn't require -g
 #macro ASSUMING(test) _
-	if ((test) = FALSE) then : _
-		bugoops(#test, __FUNCTION__, __LINE__) : _
+	if ((test) = 0) then : _
+		oops_bug(#test, __FUNCTION__, __LINE__) : _
 	end if
 #endmacro
-
-declare sub bugoops _
-	( _
-		byval test as zstring ptr, _
-		byval funcname as zstring ptr, _
-		byval linenum as integer _
-	)
-declare sub oops(byref message as string)
-declare function xallocate(byval as ulong) as any ptr
-declare function xcallocate(byval as ulong) as any ptr
-declare function xreallocate(byval as any ptr, byval as ulong) as any ptr
-
-''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 declare sub frog_work()
 declare sub frog_add_file(byref h as string, byref bi as string)
 declare sub frog_init()
 declare sub frog_end()
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+'' The hash table is an array of these hash items, which associate a string to
+'' some user data (always an array index in our case).
+type HashItem
+	as ubyte ptr s
+	as integer length
+	as uinteger hash        '' Hash value for quick comparison
+	as any ptr data         '' User data
+end type
+
+type HashTable
+	as HashItem ptr items  '' The table
+	as integer count        '' Used
+	as integer room         '' Allocated
+	as integer initialroom
+	as integer lookups
+	as integer collisions
+end type
+
+declare function hash_hash _
+	( _
+		byval s as ubyte ptr, _
+		byval length as integer _
+	) as uinteger
+declare function hash_lookup _
+	( _
+		byval h as HashTable ptr, _
+		byval s as ubyte ptr, _
+		byval length as integer, _
+		byval hash as uinteger _
+	) as HashItem ptr
+declare sub hash_init(byval h as HashTable ptr, byval exponent as integer)
+declare sub hash_stats(byval h as HashTable ptr)
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
@@ -44,41 +69,42 @@ declare function list_head(byval l as LinkedList ptr) as any ptr
 declare function list_next(byval p as any ptr) as any ptr
 declare function list_append(byval l as LinkedList ptr) as any ptr
 declare sub list_init(byval l as LinkedList ptr, byval unit as integer)
-declare sub list_end(byval l as LinkedList ptr)
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-'' The hash table is an array of these hash items, which associate a string to
-'' some user data (always an array index in our case).
-type HashItem
-	as ubyte ptr s
-	as integer length
-	as uinteger hash        '' Hash value for quick comparison
-	as integer data         '' User data
-end type
-
-type HashTable
-	as HashItem ptr items  '' The table
-	as integer count        '' Used
-	as integer room         '' Allocated
-end type
-
-declare function hash_hash(byval s as ubyte ptr, byval length as integer) as uinteger
-declare function hash_lookup _
+declare sub oops_bug _
 	( _
-		byval h as HashTable ptr, _
-		byval s as ubyte ptr, _
-		byval length as integer, _
-		byval hash as uinteger _
-	) as HashItem ptr
-declare sub hash_add _
-	( _
-		byval h as HashTable ptr, _
-		byval s as zstring ptr, _
-		byval dat as integer _
+		byval test as zstring ptr, _
+		byval funcname as zstring ptr, _
+		byval linenum as integer _
 	)
-declare sub hash_init(byval h as HashTable ptr, byval exponent as integer)
-declare sub hash_end(byval h as HashTable ptr)
+declare sub oops(byref message as string)
+declare function xallocate(byval as ulong) as any ptr
+declare function xcallocate(byval as ulong) as any ptr
+declare function xreallocate(byval as any ptr, byval as ulong) as any ptr
+declare function str_duplicate _
+	( _
+		byval s as ubyte ptr, _
+		byval length as integer _
+	) as zstring ptr
+declare function path_strip_ext(byref path as string) as string
+declare function path_ext_only(byref path as string) as string
+declare function path_only(byref path as string) as string
+declare function path_add_div(byref path as string) as string
+declare function path_strip_last_component(byref path as string) as string
+declare function path_find_common_base _
+	( _
+		byref aorig as string, _
+		byref borig as string _
+	) as string
+declare function path_strip_common_base _
+	( _
+		byref a as string, _
+		byref b as string _
+	) as string
+declare function path_make_absolute(byref path as string) as string
+declare function path_normalize(byref path as string) as string
+declare function file_exists(byref file as string) as integer
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
