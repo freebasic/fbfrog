@@ -3,6 +3,7 @@
 dim shared as FrogStuff frog
 
 private sub frog_init()
+	frog.concat = FALSE
 	frog.follow = FALSE
 	frog.merge = FALSE
 	frog.verbose = FALSE
@@ -104,6 +105,44 @@ function frog_add_file _
 	return f
 end function
 
+private function can_concat() as integer
+	'' Not if already visited
+	if (frog.f->flags and FROGFILE_TRANSLATED) then return FALSE
+
+	'' refcount = 0 is required
+	if (frog.f->refcount <> 0) then return FALSE
+
+	'' And don't follow #includes if --follow wasn't given
+	return (frog.follow or ((frog.f->flags and FROGFILE_PREPARSE) = 0))
+end function
+
+private function concat_file(byval x as integer) as integer
+	frog.f->flags or= FROGFILE_TRANSLATED
+
+	dim as integer begin = x
+
+	tk_insert(x, TK_EOL, NULL)
+	x += 1
+	tk_insert(x, TK_EOL, NULL)
+	x += 1
+	tk_insert(x, TK_EOL, NULL)
+	x += 1
+	tk_insert(x, TK_TODO, "from file " & *frog.f->softname)
+	x += 1
+	tk_insert(x, TK_EOL, NULL)
+	x += 1
+	tk_insert(x, TK_EOL, NULL)
+	x += 1
+
+	x = lex_insert_file(x, *frog.f->hardname)
+
+	'' Now parse the appended tokens, preparing for translation...
+	'' and to possibly merge #includes (if --merge is on).
+	parse_toplevel(begin)
+
+	return x
+end function
+
 private function can_translate() as integer
 	'' Not if already visited
 	if (frog.f->flags and FROGFILE_TRANSLATED) then return FALSE
@@ -121,6 +160,7 @@ private sub print_help()
 	!"For every given C header (*.h) an FB header (*.bi) will be generated.\n" & _
 	!"The resulting .bi files may need further editing; watch out for TODOs.\n" & _
 	!"options:\n" & _
+	!"  --concat      Concatenate headers that don't #include each other\n" & _
 	!"  --follow      Also translate all #includes that can be found\n" & _
 	!"  --merge       Try to combine headers and their #includes\n" & _
 	!"  --verbose     Show more stats and information\n" & _
@@ -159,6 +199,9 @@ end sub
 		loop while (left(arg, 1) = "-")
 
 		select case (arg)
+		case "concat"
+			frog.concat = TRUE
+
 		case "follow"
 			frog.follow = TRUE
 
@@ -197,9 +240,9 @@ end sub
 	'' Data collected by the preparse:
 	'' - All modes except the default want to know more input files
 	''   from #includes, including /their/ #includes, and so on...
-	'' - --merge also need to know who includes what and how often
+	'' - --concat/--merge also need to know who includes what and how often
 	''
-	if (frog.follow or frog.merge) then
+	if (frog.concat or frog.follow or frog.merge) then
 		'' Go through all input files, and new ones as they are
 		'' appended to the list...
 		frog.f = list_head(@frog.files)
@@ -226,6 +269,52 @@ end sub
 	'' have one reference/parent. So with --merge those will-be-merged
 	'' files need to be skipped here, instead of being translated 1:1.
 	''
+	'' --concat on the other hand should concatenate all files into a
+	'' single file, provided they don't already #include each other.
+	'' This means translating & concatenating everything with refcount = 0,
+	'' while working off the rest normally.
+	''
+
+	''
+	'' --concat pass
+	''
+	'' Load & parse all files with refcount = 0 into the token buffer,
+	'' one after another, so #includes (when merging) can be handled
+	'' in the context of their parent, the current file.
+	''
+	if (frog.concat) then
+		tk_init()
+
+		dim as FrogFile ptr first = NULL
+		dim as integer x = 0
+
+		frog.f = list_head(@frog.files)
+		while (frog.f)
+
+			if (can_concat()) then
+				frog.f->flags or= FROGFILE_TRANSLATED
+
+				if (first = NULL) then
+					first = frog.f
+					print "first: " & *frog.f->softname
+				else
+					print "appending: " & *frog.f->softname
+				end if
+
+				x = concat_file(x)
+			end if
+
+			frog.f = list_next(frog.f)
+		wend
+
+		if (first) then
+			print "concatenating as: " & path_strip_ext(*first->softname) & ".bi"
+			translate_toplevel()
+			emit_write_file(path_strip_ext(*first->hardname) & ".bi")
+		end if
+
+		tk_end()
+	end if
 
 	''
 	'' Regular translation, 1:1, possibly with merges

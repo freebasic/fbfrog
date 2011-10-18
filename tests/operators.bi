@@ -1,6 +1,6 @@
 #define ADDROF(a) ( /'TODO: was &'/ @a)
 
-#define A /'TODO: FB's NOT has different precedence'/ not x
+#define A /'TODO: unary NOT'/ not x
 #define A x <> x
 #define A x mod x
 #define A x mod= x

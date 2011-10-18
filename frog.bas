@@ -513,14 +513,17 @@ sub preparse_toplevel()
 	wend
 end sub
 
-sub parse_toplevel()
+'' Normally this will only be called once, but when concatenating, it's called
+'' repeatedly to parse the appended files, so found #includes can be searched
+'' for based on their parent, the current file.
+sub parse_toplevel(byval begin as integer)
 	'' Skip space at begin-of-file
-	dim as integer x = skip(-1)
+	dim as integer x = skip(begin - 1)
 
 	do
 		dim as integer old = x
 
-		x = parse_pp_directive(x)
+		x = parse_pp_directive(x, FALSE)
 		x = parse_topdecl_or_typedef(x)
 		x = parse_struct(x)
 		x = parse_extern_begin(x)

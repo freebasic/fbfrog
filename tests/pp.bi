@@ -7,7 +7,7 @@
                         3
 
 /' PP expressions '/
-#if ( /'TODO: FB's NOT has different precedence'/ not defined(FOO_BAR) and THIS_IS_INSANE >= 123) _
+#if ( /'TODO: unary NOT'/ not defined(FOO_BAR) and THIS_IS_INSANE >= 123) _
     or (OH_MAN_WHATS_THE_PRECEDENCE < 5 and (defined(OK) _
                                             or defined(I_DONT_KNOW)))
 	#define PPMERGE(a, b) a##b

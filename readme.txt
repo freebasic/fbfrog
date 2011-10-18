@@ -19,6 +19,27 @@
     documentational commentary and even indendation whitespace can be preserved.
 
 
+  o Usage
+
+    First, compile it using fbc, for example:
+        $ fbc -m fbfrog *.bas
+
+    Translating headers:
+        $ ./fbfrog foo.h
+
+    Automatically look for #includes in headers and recursively translate all
+    of them that can be found:
+        $ ./fbfrog --follow start.h
+
+    Combine everything into a single main header if possible:
+    (Merge in #included headers if not used anywhere else,
+    concatenate toplevel headers that don't #include each other)
+        $ ./fbfrog --follow --merge --concat *.h
+
+    For options, see also:
+        $ ./fbfrog --help
+
+
   o Here's how it works:
 
     The core is a giant array of tokens. A token has an id to tell what
@@ -86,73 +107,59 @@
   - C++ methods currently trigger a bug, probably because the multdecl
     splitup only sets MARK_PROCDECL for MARK_TOPDECL, not MARK_FIELDDECL,
     and the fielddecl translator of course won't expect the ()'s...
+  - #include <foo>
+  - EXTERN/callconv #defines in front of procdecls
+    For example, many headers use defines like <WINAPI> defined to <__stdcall>
+    in function declarations. Those should be backtracked to see what they expand
+    to, so we can tell whether it's a calling convention (these are most
+    important) and then put it into the right position in function declarations.
+    options:
+      a) Support multiple token buffers via tk_switch(buffer-index) and scan
+         the files for #defines without touching the translation-in-progress
+      b) Launch a second process to filter the files for those #defines, then
+         parse its output.
+      c) In the current file only, parse backwards to find those #defines,
+         or collect a list of such #defines
+      d) Collect information on such #defines during a preparse
 
-> Add a global useless-typedef-removal pass that removes typedefs that have
-  the same id as a type and no pointers/procptrs on them. Add TODOs for such
-  typedefs that have pointers, since those would cause dupdef errors in FB
-  anyways (FB doesn't have separate struct/typedef namespaces)
+> More translations passes
+  - Mark ids during translation, then check them in a global pass
+  - Mark expressions during translation, for improved operator translation
+    (e.g. #define bodies, or #if expressions)
+  - Add a global useless-typedef-removal pass that removes typedefs that have
+    the same id as a type and no pointers/procptrs on them. Add TODOs for such
+    typedefs that have pointers, since those would cause dupdef errors in FB
+    anyways (FB doesn't have separate struct/typedef namespaces)
 	/* typedef-same-id-as-type fixups: */
 	typedef struct T T;
 	typedef struct T A, T;
 	typedef struct T T, B;
 	typedef struct T A, T, B;
+  - extern "C"/cdecl alias fixups
+  - Realign commentary
 
+> Use a onewaystorage for token text. Then we don't need to worry about
+  deallocating(), and tk_end() can easily clean it up too...
+  we don't delete that many text tokens anyways (we /preserve/ most identifiers
+  etc).
+  Now that token text is never deleted we can also use a hash to hash token
+  text and save some memory.
 > Make each TK_SPACE correspond to a single space -- that's just easier for
   everything, including overhead space removal
-
 > Change insert_spaced_token() to be smarter and only insert space to separate
   keywords from each other, but not from ')' etc.
   This would be easier if all keywords were KW_*, i.e. TK_NOT should be '!',
   while KW_NOT is 'NOT'
-
-> Mark ids during translation, then check them in a global pass
-> Mark expressions during translation, for improved operator translation
-  (e.g. #define bodies, or #if expressions)
-
-> Let translators mark any id declarations as MARK_TYPEID or MARK_ID (the two
-  FB namespaces), then add a global id vs. FB keyword checker, etc...
-  including checks for conflicting ids (case insensitivity).
-  Add a number to the __FAKE__ id for anonymous structs, or it will be misdetected...
-
 > Clean up/unify the ';' removal and ':' insertion
-
-> --combine: Build a dependency graph of #includes to determine which files
-  can be inserted into their "parents". Rules for inserting an #include file:
-  has only one parent, and only one reference by that parent, is among list of
-  input files.
-  (This can also be used to filter duplicate input files)
-  Then the parsing/translation process starts with the parents, and before
-  parsing each file there is a combining pass that merges in the sub-tree of
-  #include files that can be combined with this file.
-
 > Insert EOL + same indentation instead of ':' in some cases, e.g. fields or
   typede-struct-block split ups
 
 > Add --input-dir <path> and scan it for *.h files
 
-> Show message after emitting:
-  bar.bi: merged into foo.bi
-  foo.bi: 14 TODOs, 512 lines (60 KiB) from 332 lines (53 KiB)
-
-> #define tracing
-  For example, many headers use defines like <WINAPI> (defined to <__stdcall>)
-  in function declarations. Those should be backtracked to see what they expand
-  to, so we can tell whether it's a calling convention (these are most
-  important) and then put it into the right position in function declarations.
-  3 options:
-    a) Support multiple token buffers via tk_switch(buffer-index) and scan
-       the files for #defines without touching the translation-in-progress
-    b) Launch a second process to filter the files for those #defines, then
-       parse its output.
-    c) In the current file only, parse backwards to find those #defines,
-       or collect a list of such #defines
-
-> Pretty printing yes/no?
-  - fbfrog should preserve original as close as possible
-  - Nice for realigning commentary ('int' vs. 'as integer' just isn't the same)
-  - Could do function declaration wrapping
-  - Could fixup space overkill so translator wouldn't have to worry
-  - Perhaps make it a separate 'fbpretty' program, then it could also be used
-    to reformat user-supplied headers, e.g. change keyword casing.
+> Pretty print .bi input
+  - Add FB mode to the lexer
+  - Keyword casing
+  - Function declaration wrapping?
+  - Fixup indendation and overhead space?
 
 > Make a simple GUI -- someone is going to ask for it anyways

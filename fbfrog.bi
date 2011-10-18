@@ -12,6 +12,8 @@
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 declare sub preparse_toplevel()
+declare sub parse_toplevel(byval begin as integer)
+declare sub translate_toplevel()
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
@@ -389,6 +391,7 @@ type FrogFile
 end type
 
 type FrogStuff
+	as integer concat
 	as integer follow
 	as integer merge
 	as integer verbose

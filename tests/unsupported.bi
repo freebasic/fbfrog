@@ -89,7 +89,7 @@ end enum
 
 /' Named nested unions/structs -- not supported in FB '/
 type T
-	union /'TODO: translated from anonymous struct/union/enum in declaration'/ foo
+	union /'TODO: illegal FB'/ foo
 		as integer a
 	end union
 end type
