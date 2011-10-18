@@ -326,6 +326,13 @@ extern as zstring ptr mark_text(0 to (MARK__COUNT - 1))
 #define TRACE(x) print lcase(__FUNCTION__) & "(" & __LINE__ & "):" & _
 	x & " " & *mark_text(tk_mark(x)) & "[" & *token_text(tk_get(x)) & "]"
 
+declare sub tk_raw_move_to(byval x as integer)
+declare sub tk_raw_insert _
+	( _
+		byval id as integer, _
+		byval text as ubyte ptr, _
+		byval length as integer _
+	)
 declare sub tk_insert _
 	( _
 		byval x as integer, _
@@ -349,8 +356,14 @@ declare sub tk_set_mark _
 declare function tk_get(byval x as integer) as integer
 declare function tk_text(byval x as integer) as zstring ptr
 declare function tk_mark(byval x as integer) as integer
-declare function tk_debug_text(byval x as integer) as string
+declare function tk_count() as integer
 declare sub tk_init()
 declare sub tk_end()
-declare sub tk_insert_file(byval x as integer, byref filename as string)
-declare sub tk_emit_file(byref filename as string)
+declare sub emit_write_file(byref filename as string)
+declare sub emit_stats()
+declare function lex_insert_file _
+	( _
+		byval x as integer, _
+		byref filename as string _
+	) as integer
+declare sub lex_stats()
