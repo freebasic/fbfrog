@@ -711,8 +711,7 @@ end function
 private function fixup_operator(byval x as integer) as integer
 	select case as const (tk_get(x))
 	case TK_EXCL '' ! -> NOT
-		x = insert_spaced_token(x, TK_TODO, _
-			"FB's NOT has different precedence")
+		x = insert_spaced_token(x, TK_TODO, "unary NOT")
 		x = replace_operator(x, KW_NOT, -1)
 
 	case TK_EXCLEQ '' != -> <>
