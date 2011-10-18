@@ -307,6 +307,61 @@ private function skip_pp_directive(byval x as integer) as integer
 	return x
 end function
 
+private function indent_comment _
+	( _
+		byref oldtext as string, _
+		byref prefix as string _
+	) as string
+
+	''
+	'' Indents a comments body. Since the whole comment is a single token,
+	'' the indendation must be done in the comment token's text.
+	''
+	'' Used to change this:
+	''
+	''			/* Foo
+	''	   bar baz buz */
+	''
+	'' To this:
+	''
+	''			/* Foo
+	''			   bar baz buz */
+	''
+
+	dim as string newtext
+	dim as integer behindeol = FALSE
+
+	for i as integer = 0 to (len(oldtext) - 1)
+		if (behindeol) then
+			newtext += prefix
+		end if
+
+		'' Check the current char, if's an EOL, we'll insert whitespace
+		'' behind it later...
+		select case (oldtext[i])
+		case &h0A '' LF
+			behindeol = TRUE
+		case &h0D '' CR
+			if ((i + 1) < len(oldtext)) then
+				behindeol = (oldtext[i + 1] <> &h0A) '' CRLF
+			else
+				behindeol = TRUE
+			end if
+		case else
+			behindeol = FALSE
+		end select
+
+		'' Copy current char
+		newtext += chr(oldtext[i])
+	next
+
+	if (behindeol) then
+		newtext += prefix
+	end if
+
+	return newtext
+end function
+
 private function handle_include _
 	( _
 		byval begin as integer, _
@@ -315,16 +370,84 @@ private function handle_include _
 		byval is_preparse as integer _
 	) as integer
 
-	if (is_preparse = FALSE) then
-		'' Do nothing if not preparse
+	if ((is_preparse = FALSE) and (frog.merge = FALSE)) then
 		return x
 	end if
 
-	'' Preparse: Lookup/add the file and increase the refcount
 	dim as FrogFile ptr f = _
-		frog_add_file(*tk_text(filename), TRUE)
+		frog_add_file(*tk_text(filename), is_preparse, TRUE)
 
-	f->refcount += 1
+	'' Preparse: Lookup/add the file and increase the refcount
+	if (is_preparse) then
+		f->refcount += 1
+		return x
+	end if
+
+	'' Otherwise: Just lookup the file entry to check its refcount,
+	'' and merge the file in if this is the only place #including it.
+	if (f->refcount <> 1) then
+		return x
+	end if
+
+	print "merging in: " & *f->softname
+
+	'' Remove the #include (but not the EOL behind it)
+	ASSUMING(tk_get(begin) = TK_HASH)
+	tk_remove(begin, x - 1)
+
+	'' and insert the file content
+	x = lex_insert_file(begin, *f->hardname)
+
+	'' If the #include was indented, indent the whole inserted block too.
+	dim as integer first = skiprev_unless_eol(begin)
+	select case (tk_get(first))
+	case TK_EOL, TK_EOF
+		'' Ok, there's only indentation in front of the #include.
+		'' Copy it in front of every line of the inserted block.
+
+		first += 1 '' (not the EOL in front of the #include)
+		dim as integer last = begin - 1
+
+		'' Often there won't be any indentation, then there's nothing
+		'' to do.
+		if (first <= last) then
+			dim as integer y = begin
+			while (y < x)
+				select case (tk_get(y))
+				case TK_EOL
+					y += 1
+					tk_copy(y, first, last)
+					y += last - first + 1
+					x += last - first + 1
+
+				case TK_COMMENT
+					'' Reindent multiline comments too
+
+					'' 1) Collect the whitespace into
+					''    a string
+					dim as string text
+					for i as integer = first to last
+						text += *tk_text(i)
+					next
+
+					'' 2) Prefix it to every line in the
+					''    comment body
+					text = indent_comment(*tk_text(y), text)
+
+					'' 3) Insert the new comment
+					tk_insert(y, TK_COMMENT, text)
+					y += 1
+
+					'' 4) Remove the old one
+					tk_remove(y, y)
+
+				case else
+					y += 1
+				end select
+			wend
+		end if
+	end select
+
 	return x
 end function
 
@@ -419,107 +542,6 @@ sub parse_toplevel()
 	loop
 end sub
 
-sub translate_toplevel()
-	dim as integer x = skip(-1)
-
-	while (tk_get(x) <> TK_EOF)
-		select case as const (tk_mark(x))
-		case MARK_PP
-			if (tk_get(skip_pp(x)) = KW_PRAGMA) then
-				'' Add TODO for #pragmas
-				x = insert_todo(x, "#pragma")
-			end if
-
-			ASSUMING(tk_get(x) = TK_HASH)
-			x = skip_pp(x)
-
-			if (tk_get(x) = KW_ELIF) then
-				'' #elif -> #elseif
-				tk_remove(x, x)
-				tk_insert(x, KW_ELSEIF, NULL)
-			end if
-
-			x = skip(skip_pp_directive(x) - 1)
-
-		case MARK_EXTERN
-			ASSUMING(tk_get(x) = KW_EXTERN)
-			x = skip(x)
-			ASSUMING(tk_get(x) = TK_STRING)
-			x = skip(x)
-			ASSUMING(tk_get(x) = TK_LBRACE)
-			tk_remove(x, x)
-
-			if (is_whitespace_until_eol(skiprev(x) + 1) = FALSE) then
-				x = insert_statement_separator(x)
-			end if
-
-		case MARK_ENDEXTERN
-			x = translate_compound_end(x, KW_EXTERN)
-
-		case MARK_STRUCT
-			x = translate_struct(x)
-
-		case MARK_ENDENUM
-			x = translate_compound_end(x, KW_ENUM)
-
-		case MARK_ENDSTRUCT
-			x = translate_compound_end(x, KW_TYPE)
-
-		case MARK_ENDUNION
-			x = translate_compound_end(x, KW_UNION)
-
-		case MARK_ENUMCONST
-			x = translate_enumconst(x)
-
-		case MARK_TYPEDEF
-			fixup_multdecl(skip(x), x)
-			x = translate_decl(x, DECL_TYPEDEF)
-
-		case MARK_TOPDECL
-			dim as integer typebegin = x
-
-			select case (tk_get(typebegin))
-			case KW_EXTERN, KW_STATIC
-				typebegin = skip(typebegin)
-			end select
-
-			'' Split up combined var/proc declarations into separate declarations,
-			'' as needed for FB, and mark them as vardecl/procdecl to let those
-			'' translators finish the translation.
-			fixup_multdecl(typebegin, x)
-
-			'' Note: x doesn't advanced here, so that the /whole/
-			'' former topdecl will be handled as vardecl/procdecl.
-
-		case MARK_PROCDECL
-			x = translate_decl(x, DECL_PROC)
-
-		case MARK_VARDECL
-			x = translate_decl(x, DECL_VAR)
-
-		case MARK_FIELDDECL
-			fixup_multdecl(x, x)
-			x = translate_decl(x, DECL_FIELD)
-
-		case MARK_UNKNOWN, MARK_UNKNOWNENUMCONST
-			'' Insert a TODO at the begin of this statement.
-			ASSUMING(tk_get(x) <> TK_EOL)
-
-			x = insert_todo(x, "unknown construct")
-
-			if (tk_mark(x) = MARK_UNKNOWNENUMCONST) then
-				x = parse_enumconst(x, TRUE)
-			else
-				x = skip_statement(x)
-			end if
-
-		case else
-			x = skip(x)
-
-		end select
-	wend
-end sub
-
 '' EOL fixup -- in C it's possible to have constructs split over multiple
 '' lines, which requires a '_' line continuation char in FB. Also, the CPP
 '' \<EOL> line continuation needs to be converted to FB.
@@ -598,7 +620,7 @@ private sub fixup_eols()
 	loop
 end sub
 
-sub fixup_comments()
+private sub fixup_comments()
 	'' Remove /' and '/ inside comments, since those have meaning in FB
 	dim as integer x = 0
 	do
@@ -786,7 +808,7 @@ private function fixup_operator(byval x as integer) as integer
 	return x
 end function
 
-sub fixup_operators()
+private sub fixup_operators()
 	dim as integer x = skip(-1)
 	while (tk_get(x) <> TK_EOF)
 		select case (tk_mark(x))
@@ -796,4 +818,109 @@ sub fixup_operators()
 			x = fixup_operator(x)
 		end select
 	wend
+end sub
+
+sub translate_toplevel()
+	dim as integer x = skip(-1)
+
+	while (tk_get(x) <> TK_EOF)
+		select case as const (tk_mark(x))
+		case MARK_PP
+			if (tk_get(skip_pp(x)) = KW_PRAGMA) then
+				'' Add TODO for #pragmas
+				x = insert_todo(x, "#pragma")
+			end if
+
+			ASSUMING(tk_get(x) = TK_HASH)
+			x = skip_pp(x)
+
+			if (tk_get(x) = KW_ELIF) then
+				'' #elif -> #elseif
+				tk_remove(x, x)
+				tk_insert(x, KW_ELSEIF, NULL)
+			end if
+
+			x = skip(skip_pp_directive(x) - 1)
+
+		case MARK_EXTERN
+			ASSUMING(tk_get(x) = KW_EXTERN)
+			x = skip(x)
+			ASSUMING(tk_get(x) = TK_STRING)
+			x = skip(x)
+			ASSUMING(tk_get(x) = TK_LBRACE)
+			tk_remove(x, x)
+
+			if (is_whitespace_until_eol(skiprev(x) + 1) = FALSE) then
+				x = insert_statement_separator(x)
+			end if
+
+		case MARK_ENDEXTERN
+			x = translate_compound_end(x, KW_EXTERN)
+
+		case MARK_STRUCT
+			x = translate_struct(x)
+
+		case MARK_ENDENUM
+			x = translate_compound_end(x, KW_ENUM)
+
+		case MARK_ENDSTRUCT
+			x = translate_compound_end(x, KW_TYPE)
+
+		case MARK_ENDUNION
+			x = translate_compound_end(x, KW_UNION)
+
+		case MARK_ENUMCONST
+			x = translate_enumconst(x)
+
+		case MARK_TYPEDEF
+			fixup_multdecl(skip(x), x)
+			x = translate_decl(x, DECL_TYPEDEF)
+
+		case MARK_TOPDECL
+			dim as integer typebegin = x
+
+			select case (tk_get(typebegin))
+			case KW_EXTERN, KW_STATIC
+				typebegin = skip(typebegin)
+			end select
+
+			'' Split up combined var/proc declarations into separate declarations,
+			'' as needed for FB, and mark them as vardecl/procdecl to let those
+			'' translators finish the translation.
+			fixup_multdecl(typebegin, x)
+
+			'' Note: x doesn't advanced here, so that the /whole/
+			'' former topdecl will be handled as vardecl/procdecl.
+
+		case MARK_PROCDECL
+			x = translate_decl(x, DECL_PROC)
+
+		case MARK_VARDECL
+			x = translate_decl(x, DECL_VAR)
+
+		case MARK_FIELDDECL
+			fixup_multdecl(x, x)
+			x = translate_decl(x, DECL_FIELD)
+
+		case MARK_UNKNOWN, MARK_UNKNOWNENUMCONST
+			'' Insert a TODO at the begin of this statement.
+			ASSUMING(tk_get(x) <> TK_EOL)
+
+			x = insert_todo(x, "unknown construct")
+
+			if (tk_mark(x) = MARK_UNKNOWNENUMCONST) then
+				x = parse_enumconst(x, TRUE)
+			else
+				x = skip_statement(x)
+			end if
+
+		case else
+			x = skip(x)
+
+		end select
+	wend
+
+	fixup_comments()
+	fixup_operators()
+	fixup_eols()
 end sub

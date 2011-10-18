@@ -366,6 +366,14 @@ declare sub lex_stats()
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
+enum
+	'' Translated already? (no matter which method)
+	FROGFILE_TRANSLATED = (1 shl 0)
+
+	'' Found during preparse? (if not, it's from the command line)
+	FROGFILE_PREPARSE   = (1 shl 1)
+end enum
+
 type FrogFile
 	as zstring ptr softname '' Pretty name from command line or #include
 	as zstring ptr hardname '' Normalized path used in hash table
@@ -376,10 +384,13 @@ type FrogFile
 	'' refcount = 0 means it's a "toplevel" file that has no parents (ohh).
 	'' Note: This refcount is only valid if the preparse is done...
 	as integer refcount
+
+	as uinteger flags
 end type
 
 type FrogStuff
 	as integer follow
+	as integer merge
 	as integer verbose
 
 	as LinkedList files    '' FrogFile
@@ -393,5 +404,6 @@ extern as FrogStuff frog
 declare function frog_add_file _
 	( _
 		byref origname as string, _
+		byval is_preparse as integer, _
 		byval search_paths as integer _
 	) as FrogFile ptr

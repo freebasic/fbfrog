@@ -4,6 +4,7 @@ dim shared as FrogStuff frog
 
 private sub frog_init()
 	frog.follow = FALSE
+	frog.merge = FALSE
 	frog.verbose = FALSE
 
 	list_init(@frog.files, sizeof(FrogFile))
@@ -60,6 +61,7 @@ end function
 function frog_add_file _
 	( _
 		byref origname as string, _
+		byval is_preparse as integer, _
 		byval search_paths as integer _
 	) as FrogFile ptr
 
@@ -90,6 +92,7 @@ function frog_add_file _
 	f->softname = str_duplicate(strptr(origname), len(origname))
 	f->hardname = str_duplicate(s, length)
 	f->refcount = 0
+	f->flags = iif(is_preparse, FROGFILE_PREPARSE, 0)
 
 	'' Add to hash table
 	item->s = f->hardname
@@ -101,6 +104,17 @@ function frog_add_file _
 	return f
 end function
 
+private function can_translate() as integer
+	'' Not if already visited
+	if (frog.f->flags and FROGFILE_TRANSLATED) then return FALSE
+
+	'' Not if it was or will be merged in somewhere
+	if (frog.merge and (frog.f->refcount = 1)) then return FALSE
+
+	'' And don't follow #includes if --follow wasn't given
+	return (frog.follow or ((frog.f->flags and FROGFILE_PREPARSE) = 0))
+end function
+
 private sub print_help()
 	print _
 	!"usage: fbfrog [-[-]options] *.h\n" & _
@@ -108,6 +122,7 @@ private sub print_help()
 	!"The resulting .bi files may need further editing; watch out for TODOs.\n" & _
 	!"options:\n" & _
 	!"  --follow      Also translate all #includes that can be found\n" & _
+	!"  --merge       Try to combine headers and their #includes\n" & _
 	!"  --verbose     Show more stats and information\n" & _
 	 "  --help, --version  Help and version output"
 
@@ -150,6 +165,9 @@ end sub
 		case "help"
 			print_help()
 
+		case "merge"
+			frog.merge = TRUE
+
 		case "verbose"
 			frog.verbose = TRUE
 
@@ -179,8 +197,9 @@ end sub
 	'' Data collected by the preparse:
 	'' - All modes except the default want to know more input files
 	''   from #includes, including /their/ #includes, and so on...
+	'' - --merge also need to know who includes what and how often
 	''
-	if (frog.follow) then
+	if (frog.follow or frog.merge) then
 		'' Go through all input files, and new ones as they are
 		'' appended to the list...
 		frog.f = list_head(@frog.files)
@@ -203,22 +222,29 @@ end sub
 	''
 	'' --follow only enables the preparse, to find more input files.
 	''
+	'' --merge however causes the parser to merge in #includes that only
+	'' have one reference/parent. So with --merge those will-be-merged
+	'' files need to be skipped here, instead of being translated 1:1.
+	''
 
 	''
-	'' Regular translation, 1:1
+	'' Regular translation, 1:1, possibly with merges
 	''
 	frog.f = list_head(@frog.files)
 	while (frog.f)
-		print "translating: " & *frog.f->softname
+		if (can_translate()) then
+			frog.f->flags or= FROGFILE_TRANSLATED
+			print "translating: " & *frog.f->softname
 
-		tk_init()
-		lex_insert_file(0, *frog.f->hardname)
+			tk_init()
+			lex_insert_file(0, *frog.f->hardname)
 
-		parse_toplevel(0)
-		translate_toplevel()
+			parse_toplevel(0)
+			translate_toplevel()
 
-		emit_write_file(path_strip_ext(*frog.f->hardname) & ".bi")
-		tk_end()
+			emit_write_file(path_strip_ext(*frog.f->hardname) & ".bi")
+			tk_end()
+		end if
 
 		frog.f = list_next(frog.f)
 	wend
