@@ -1,20 +1,5 @@
 #include once "frog.bi"
 
-type FrogFile
-	as string h
-	as string bi
-end type
-
-type FrogStuff
-	'' Stats
-	as ulongint inputsize  '' Sum of input file sizes, just for stats
-	as integer inputtokens '' Count of input tokens
-
-	as LinkedList files    '' FrogFile
-end type
-
-dim shared as FrogStuff frog
-
 '' Skips the token and any following whitespace
 private function skip_(byval x as integer, byval delta as integer) as integer
 	do
@@ -322,12 +307,39 @@ private function skip_pp_directive(byval x as integer) as integer
 	return x
 end function
 
-private function parse_pp_directive(byval x as integer) as integer
+private function handle_include _
+	( _
+		byval begin as integer, _
+		byval x as integer, _
+		byval filename as integer, _
+		byval is_preparse as integer _
+	) as integer
+
+	if (is_preparse = FALSE) then
+		'' Do nothing if not preparse
+		return x
+	end if
+
+	'' Preparse: Lookup/add the file and increase the refcount
+	dim as FrogFile ptr f = _
+		frog_add_file(*tk_text(filename), TRUE)
+
+	f->refcount += 1
+	return x
+end function
+
+function parse_pp_directive _
+	( _
+		byval x as integer, _
+		byval is_preparse as integer _
+	) as integer
+
 	'' (Assuming all '#' are indicating a PP directive)
 	if (tk_get(x) <> TK_HASH) then
 		return x
 	end if
 
+	dim as integer filename = -1
 	dim as integer begin = x
 	x = skip_pp(x)
 
@@ -336,22 +348,47 @@ private function parse_pp_directive(byval x as integer) as integer
 	select case (tk_get(x))
 	case KW_IF, KW_IFDEF, KW_IFNDEF, KW_ELIF
 		mark = MARK_PPEXPR
+
+	case KW_INCLUDE
+		dim as integer y = skip_pp(x)
+		if (tk_get(y) = TK_STRING) then
+			if (tk_get(skip_pp(y)) = TK_EOL) then
+				filename = y
+			end if
+		end if
+
 	end select
 
 	tk_set_mark(MARK_PP, begin, x)
 
-	begin = x + 1
+	dim as integer rest = x + 1
 	x = skip_pp_directive(x)
 
 	'' The last EOL is not part of the #directive, otherwise the EOL
 	'' fixup would replace it with line continuation...
-	tk_set_mark(mark, begin, x - 1)
+	tk_set_mark(mark, rest, x - 1)
 
-	'' Make sure to return at a proper non-space token though,
-	'' to avoid confusing the other parsers.
-	return skip(x)
+	if (filename >= 0) then
+		x = handle_include(begin, x, filename, is_preparse)
+	end if
+
+	'' In case of merge: skip whitespace at BOF
+	'' Otherwise: skip EOL + other following whitespace
+	x = skip(x - 1)
+
+	return x
 end function
 
+sub preparse_toplevel()
+	dim as integer x = skip(-1)
+	while (tk_get(x) <> TK_EOF)
+		dim as integer old = x
+		x = parse_pp_directive(x, TRUE)
+		if (x = old) then
+			x = skip(x)
+		end if
+	wend
+end sub
 
 sub parse_toplevel()
 	'' Skip space at begin-of-file
@@ -759,44 +796,4 @@ sub fixup_operators()
 			x = fixup_operator(x)
 		end select
 	wend
-end sub
-
-sub frog_work()
-	dim as FrogFile ptr f = list_head(@frog.files)
-	while (f)
-		print "working on '" & f->h & "'"
-		tk_init()
-		tk_insert_file(0, f->h)
-
-		parse_toplevel()
-		translate_toplevel()
-		fixup_comments()
-		fixup_operators()
-		fixup_eols()
-
-		tk_emit_file(f->bi)
-		tk_end()
-
-		f = list_next(f)
-	wend
-end sub
-
-sub frog_add_file(byref h as string, byref bi as string)
-	dim as FrogFile ptr f = list_append(@frog.files)
-	f->h = h
-	f->bi = bi
-end sub
-
-sub frog_init()
-	list_init(@frog.files, sizeof(FrogFile))
-end sub
-
-sub frog_end()
-	dim as FrogFile ptr f = list_head(@frog.files)
-	while (f)
-		f->h = ""
-		f->bi = ""
-		f = list_next(f)
-	wend
-	list_end(@frog.files)
 end sub

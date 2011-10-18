@@ -9,13 +9,9 @@
 	end if
 #endmacro
 
-declare sub frog_work()
-declare sub frog_add_file(byref h as string, byref bi as string)
-declare sub frog_init()
-declare sub frog_end()
-
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
+declare sub preparse_toplevel()
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
@@ -367,3 +363,34 @@ declare function lex_insert_file _
 		byref filename as string _
 	) as integer
 declare sub lex_stats()
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+type FrogFile
+	as zstring ptr softname '' Pretty name from command line or #include
+	as zstring ptr hardname '' Normalized path used in hash table
+
+	'' This tells how many #includes of this file were found during the
+	'' preparse (no matter which parent file).
+	'' refcount = 1 means it can be trivially merged into its one parent.
+	'' refcount = 0 means it's a "toplevel" file that has no parents (ohh).
+	'' Note: This refcount is only valid if the preparse is done...
+	as integer refcount
+end type
+
+type FrogStuff
+	as integer follow
+
+	as LinkedList files    '' FrogFile
+	as HashTable filehash
+
+	as FrogFile ptr f
+end type
+
+extern as FrogStuff frog
+
+declare function frog_add_file _
+	( _
+		byref origname as string, _
+		byval search_paths as integer _
+	) as FrogFile ptr
