@@ -599,7 +599,11 @@ private function parse_multdecl _
 						x = skip(x)
 
 					case else
+						dim as integer old = x
 						x = parse_multdecl(x, x, DECL_PARAM)
+						if (x = old) then
+							return begin
+						end if
 
 					end select
 				loop
