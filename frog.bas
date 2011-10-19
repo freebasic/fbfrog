@@ -260,6 +260,9 @@ private function skip_statement(byval x as integer) as integer
 		case TK_RBRACE
 			level -= 1
 
+		case TK_HASH
+			return x
+
 		case TK_EOF
 			exit do
 
@@ -280,7 +283,7 @@ function parse_unknown(byval x as integer) as integer
 	'' be re-marked as MARK_UNKNOWN, so it can be marked
 	'' with a /single/ TODO.
 
-	'' Find the next ';' while skipping over those inside
+	'' Find the next '#' or ';' while skipping over ';'s inside
 	'' '{...}'.
 	x = skip_statement(x)
 	tk_set_mark(MARK_UNKNOWN, begin, skiprev(x))
