@@ -393,6 +393,11 @@ private function handle_include _
 	dim as FrogFile ptr f = _
 		frog_add_file(filename, is_preparse, TRUE)
 
+	'' File not found?
+	if (f = NULL) then
+		return x
+	end if
+
 	'' Preparse: Lookup/add the file and increase the refcount
 	if (is_preparse) then
 		f->refcount += 1

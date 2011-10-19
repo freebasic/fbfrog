@@ -49,51 +49,6 @@ function frog_add_define _
 	return flags
 end function
 
-private function find_and_normalize _
-	( _
-		byref origname as string, _
-		byval search_paths as integer _
-	) as string
-
-	dim as string hardname
-
-	if (search_paths) then
-		'' Try to find the include file in one of the parent
-		'' directories of the current file.
-		'' (Usually the #include will refer to a file in the same
-		'' directory or in a sub-directory at the same level or some
-		'' levels up)
-
-		ASSUMING(frog.f)
-		dim as string parent = path_only(*frog.f->hardname)
-		while (len(parent) > 0)
-			hardname = parent + origname
-			if (file_exists(hardname)) then
-				if (frog.verbose) then
-					print "  found: " & origname & ": " & hardname
-				end if
-				exit while
-			end if
-
-			if (frog.verbose) then
-				print "  not found: " & origname & ": " & hardname
-			end if
-
-			parent = path_strip_last_component(parent)
-		wend
-	end if
-
-	if (len(hardname) = 0) then
-		'' Not found; handle it like input files from command line
-		hardname = path_make_absolute(origname)
-		if (frog.verbose) then
-			print "  default: " & origname & ": " & hardname
-		end if
-	end if
-
-	return path_normalize(hardname)
-end function
-
 function frog_add_file _
 	( _
 		byref origname as string, _
@@ -101,7 +56,48 @@ function frog_add_file _
 		byval search_paths as integer _
 	) as FrogFile ptr
 
-	dim as string hardname = find_and_normalize(origname, search_paths)
+	dim as string hardname
+
+	if (search_paths) then
+		''
+		'' File collected from an #include directive. Try to find it
+		'' in one of the parent directories of the current file.
+		''
+		'' (Usually the #include will refer to a file in the same
+		'' directory or in a sub-directory at the same level or some
+		'' levels up)
+		''
+		ASSUMING(frog.f)
+		dim as string parent = path_only(*frog.f->hardname)
+		do
+			'' File not found anywhere, ignore it.
+			if (len(parent) = 0) then
+				if (frog.verbose) then
+					print "  ignoring: " & origname
+				end if
+				return NULL
+			end if
+
+			hardname = parent + origname
+			if (file_exists(hardname)) then
+				if (frog.verbose) then
+					print "  found: " & origname & ": " & hardname
+				end if
+				exit do
+			end if
+
+			if (frog.verbose) then
+				print "  not found: " & origname & ": " & hardname
+			end if
+
+			parent = path_strip_last_component(parent)
+		loop
+	else
+		'' File from command line, search in current directory
+		hardname = path_make_absolute(origname)
+	end if
+
+	hardname = path_normalize(hardname)
 
 	dim as integer length = len(hardname)
 	ASSUMING(length > 0)
