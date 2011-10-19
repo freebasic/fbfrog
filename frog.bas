@@ -464,6 +464,126 @@ private function handle_include _
 	return x
 end function
 
+private function parse_pp_define_attribute _
+	( _
+		byval x as integer, _
+		byval pflags as uinteger ptr _
+	) as integer
+
+	dim as integer begin = x
+
+	'' __attribute__
+	if (tk_get(x) <> TK_ID) then
+		return begin
+	end if
+
+	if (*tk_text(x) <> "__attribute__") then
+		return begin
+	end if
+	x = skip_pp(x)
+
+	'' '(' '('
+	for i as integer = 0 to 1
+		if (tk_get(x) <> TK_LPAREN) then
+			return begin
+		end if
+		x = skip_pp(x)
+	next
+
+	'' id
+	if (tk_get(x) <> TK_ID) then
+		return begin
+	end if
+
+	select case (*tk_text(x))
+	case "cdecl", "stdcall", "__stdcall__"
+		*pflags or= DEFINE_CALL
+
+	case "dllexport", "dllimport"
+		*pflags or= DEFINE_EMPTY
+
+	case else
+		return begin
+	end select
+
+	x = skip_pp(x)
+
+	return x
+end function
+
+private function parse_pp_define_declspec _
+	( _
+		byval x as integer, _
+		byval pflags as uinteger ptr _
+	) as integer
+
+	dim as integer begin = x
+
+	'' __declspec
+	if (tk_get(x) <> TK_ID) then
+		return begin
+	end if
+
+	if (*tk_text(x) <> "__declspec") then
+		return begin
+	end if
+	x = skip_pp(x)
+
+	'' '('
+	if (tk_get(x) <> TK_LPAREN) then
+		return begin
+	end if
+	x = skip_pp(x)
+
+	'' id
+	if (tk_get(x) <> TK_ID) then
+		return begin
+	end if
+
+	select case (*tk_text(x))
+	case "dllexport", "dllimport"
+		*pflags or= DEFINE_EMPTY
+
+	case else
+		return begin
+	end select
+
+	x = skip_pp(x)
+
+	return x
+end function
+
+private function determine_pp_define_flags(byval x as integer) as uinteger
+	dim as uinteger flags = 0
+
+	'' Empty?
+	if (tk_get(x) = TK_EOL) then
+		flags or= DEFINE_EMPTY
+	end if
+
+	do
+		x = parse_pp_define_attribute(x, @flags)
+		x = parse_pp_define_declspec(x, @flags)
+
+		select case (tk_get(x))
+		case TK_EOL
+			exit do
+
+		case TK_ID
+			select case (*tk_text(x))
+			case "__stdcall"
+				flags or= DEFINE_CALL
+
+			end select
+
+		end select
+
+		x = skip_pp(x)
+	loop
+
+	return flags
+end function
+
 function parse_pp_directive _
 	( _
 		byval x as integer, _
@@ -490,6 +610,16 @@ function parse_pp_directive _
 		if (tk_get(y) = TK_STRING) then
 			if (tk_get(skip_pp(y)) = TK_EOL) then
 				filename = y
+			end if
+		end if
+
+	case KW_DEFINE
+		dim as integer y = skip_pp(x)
+		if (tk_get(y) = TK_ID) then
+			dim as uinteger flags = _
+					determine_pp_define_flags(skip_pp(y))
+			if (flags) then
+				frog_add_define(tk_text(y), flags)
 			end if
 		end if
 
@@ -895,6 +1025,10 @@ sub translate_toplevel()
 			dim as integer typebegin = x
 
 			select case (tk_get(typebegin))
+			case TK_ID
+				if (frog_add_define(tk_text(typebegin), 0)) then
+					typebegin = skip(typebegin)
+				end if
 			case KW_EXTERN, KW_STATIC
 				typebegin = skip(typebegin)
 			end select

@@ -321,6 +321,13 @@ function parse_topdecl_or_typedef(byval x as integer) as integer
 	dim as integer decl = DECL_TOP
 
 	select case (tk_get(x))
+	case TK_ID
+		'' Allow an id at the front, if it represents a calling
+		'' convention, a dllexport declspec or is empty...
+		if (frog_add_define(tk_text(x), 0)) then
+			x = skip(x)
+		end if
+
 	case KW_EXTERN, KW_STATIC
 		x = skip(x)
 
@@ -977,9 +984,19 @@ function translate_decl _
 	''     typedef T id;    ->    type as T id
 	''
 
+	dim as string calldefine
+
 	select case (decl)
 	case DECL_PROC
 		select case (tk_get(x))
+		case TK_ID
+			dim as uinteger flags = frog_add_define(tk_text(x), 0)
+			if (flags and DEFINE_CALL) then
+				calldefine = *tk_text(x)
+				remove_this_and_space(x)
+			elseif (flags and DEFINE_EMPTY) then
+				remove_this_and_space(x)
+			end if
 		case KW_EXTERN, KW_STATIC
 			remove_this_and_space(x)
 		end select
@@ -1055,6 +1072,10 @@ function translate_decl _
 		x = skip(x)
 	else
 		ASSUMING(decl = DECL_PARAM)
+	end if
+
+	if (len(calldefine) > 0) then
+		x = insert_spaced_token(x, TK_ID, calldefine)
 	end if
 
 	if (is_procptr and (decl = DECL_PARAM)) then

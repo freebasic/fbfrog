@@ -396,19 +396,30 @@ type FrogFile
 	as uinteger flags
 end type
 
+enum
+	DEFINE_EMPTY = (1 shl 0)
+	DEFINE_CALL  = (1 shl 1)
+end enum
+
 type FrogStuff
 	as integer concat
 	as integer follow
 	as integer merge
 	as integer verbose
+	as FrogFile ptr f
 
 	as LinkedList files    '' FrogFile
 	as HashTable filehash
-
-	as FrogFile ptr f
+	as HashTable definehash
 end type
 
 extern as FrogStuff frog
+
+declare function frog_add_define _
+	( _
+		byval id as zstring ptr, _
+		byval flags as uinteger _
+	) as uinteger
 
 declare function frog_add_file _
 	( _

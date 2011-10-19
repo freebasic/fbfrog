@@ -7,12 +7,47 @@ private sub frog_init()
 	frog.follow = FALSE
 	frog.merge = FALSE
 	frog.verbose = FALSE
+	frog.f = NULL
 
+	hash_init(@frog.definehash, 6)
 	list_init(@frog.files, sizeof(FrogFile))
 	hash_init(@frog.filehash, 6)
-
-	frog.f = NULL
 end sub
+
+function frog_add_define _
+	( _
+		byval id as zstring ptr, _
+		byval flags as uinteger _
+	) as uinteger
+
+	dim as integer length = len(*id)
+	ASSUMING(length > 0)
+
+	dim as uinteger hash = hash_hash(id, length)
+	dim as HashItem ptr item = _
+			hash_lookup(@frog.definehash, id, length, hash)
+
+	if (item->s) then
+		'' Already exists, add the flags. For lookups only, flags
+		'' should be 0, so nothing changes.
+		item->data = cast(any ptr, cuint(item->data) or flags)
+		return cuint(item->data)
+	end if
+
+	'' If no information, don't bother adding, allowing this function
+	'' to be used for lookups only.
+	if (flags) then
+		'' Add new
+		dim as integer dat = -1
+		item->s = storage_store(id, length, @dat)
+		item->length = length
+		item->hash = hash
+		item->data = cast(any ptr, flags)
+		frog.definehash.count += 1
+	end if
+
+	return flags
+end function
 
 private function find_and_normalize _
 	( _
@@ -343,6 +378,7 @@ end sub
 	emit_stats()
 	if (frog.verbose) then
 		hash_stats(@frog.filehash, "filename")
+		hash_stats(@frog.definehash, "define")
 		storage_stats()
 	end if
 	end 0
