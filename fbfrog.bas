@@ -116,7 +116,7 @@ function frog_add_file _
 	end if
 
 	if (frog.verbose) then
-		print "  found new: " & origname & ": " & hardname
+		print "  new file: " & origname & ": " & hardname
 	end if
 
 	'' Add file
@@ -124,7 +124,7 @@ function frog_add_file _
 	f->softname = str_duplicate(strptr(origname), len(origname))
 	f->hardname = str_duplicate(s, length)
 	f->refcount = 0
-	f->flags = iif(is_preparse, FROGFILE_PREPARSE, 0)
+	f->flags = iif(is_preparse, FILE_EXTRA, 0)
 
 	'' Add to hash table
 	item->s = f->hardname
@@ -136,19 +136,30 @@ function frog_add_file _
 	return f
 end function
 
-private function can_concat() as integer
-	'' Not if already visited
-	if (frog.f->flags and FROGFILE_TRANSLATED) then return FALSE
+sub frog_set_visited(byval f as FrogFile ptr)
+	f->flags or= FILE_VISITED
+end sub
 
-	'' refcount = 0 is required
-	if (frog.f->refcount <> 0) then return FALSE
+function frog_can_visit(byval f as FrogFile ptr) as integer
+	return ((f->flags and FILE_VISITED) = 0)
+end function
 
-	'' And don't follow #includes if --follow wasn't given
-	return (frog.follow or ((frog.f->flags and FROGFILE_PREPARSE) = 0))
+private function frog_can_follow(byval f as FrogFile ptr) as integer
+	'' Only work on files found during the #include preparse if
+	'' --follow was given
+	return (frog.follow or ((f->flags and FILE_EXTRA) = 0))
+end function
+
+function frog_can_merge(byval f as FrogFile ptr) as integer
+	return (frog.merge and (f->refcount = 1) and frog_can_follow(f))
+end function
+
+function frog_can_work_on(byval f as FrogFile ptr) as integer
+	return (frog_can_visit(f) and frog_can_follow(f))
 end function
 
 private function concat_file(byval x as integer) as integer
-	frog.f->flags or= FROGFILE_TRANSLATED
+	frog.f->flags or= FILE_VISITED
 
 	dim as integer begin = x
 
@@ -158,7 +169,7 @@ private function concat_file(byval x as integer) as integer
 	x += 1
 	tk_insert(x, TK_EOL, NULL)
 	x += 1
-	tk_insert(x, TK_TODO, "Note: " & *frog.f->softname & " appended here")
+	tk_insert(x, TK_TODO, "Note: " & *frog.f->softname & " starts here")
 	x += 1
 	tk_insert(x, TK_EOL, NULL)
 	x += 1
@@ -172,17 +183,6 @@ private function concat_file(byval x as integer) as integer
 	parse_toplevel(begin)
 
 	return x
-end function
-
-private function can_translate() as integer
-	'' Not if already visited
-	if (frog.f->flags and FROGFILE_TRANSLATED) then return FALSE
-
-	'' Not if it was or will be merged in somewhere
-	if (frog.merge and (frog.f->refcount = 1)) then return FALSE
-
-	'' And don't follow #includes if --follow wasn't given
-	return (frog.follow or ((frog.f->flags and FROGFILE_PREPARSE) = 0))
 end function
 
 private sub print_help()
@@ -284,14 +284,16 @@ end sub
 	'' appended to the list...
 	frog.f = list_head(@frog.files)
 	while (frog.f)
-		print "preparsing: " & *frog.f->softname
+		if (frog_can_follow(frog.f)) then
+			print "preparsing: " & *frog.f->softname
 
-		tk_init()
-		lex_insert_file(0, *frog.f->hardname)
+			tk_init()
+			lex_insert_file(0, *frog.f->hardname)
 
-		preparse_toplevel()
+			preparse_toplevel()
 
-		tk_end()
+			tk_end()
+		end if
 
 		frog.f = list_next(frog.f)
 	wend
@@ -327,8 +329,9 @@ end sub
 		frog.f = list_head(@frog.files)
 		while (frog.f)
 
-			if (can_concat()) then
-				frog.f->flags or= FROGFILE_TRANSLATED
+			'' Only concatenate if not #included anywhere
+			if (frog_can_visit(frog.f) and (frog.f->refcount = 0)) then
+				frog_set_visited(frog.f)
 
 				if (first = NULL) then
 					first = frog.f
@@ -354,25 +357,32 @@ end sub
 
 	''
 	'' Regular translation, 1:1, possibly with merges
+	'' Pass 1: Translate everything that doesn't look like it'll be merged
+	'' Pass 2: Translate files that looked like they should be merged,
+	''         but weren't. (recursive #includes, all refcount > 0)
 	''
-	frog.f = list_head(@frog.files)
-	while (frog.f)
-		if (can_translate()) then
-			frog.f->flags or= FROGFILE_TRANSLATED
-			print "translating: " & *frog.f->softname
+	for i as integer = 0 to 1
+		frog.f = list_head(@frog.files)
+		while (frog.f)
 
-			tk_init()
-			lex_insert_file(0, *frog.f->hardname)
+			if (frog_can_work_on(frog.f) and _
+			    ((frog_can_merge(frog.f) = FALSE) or (i = 1))) then
+				frog_set_visited(frog.f)
+				print "translating: " & *frog.f->softname
 
-			parse_toplevel(0)
-			translate_toplevel()
+				tk_init()
+				lex_insert_file(0, *frog.f->hardname)
 
-			emit_write_file(path_strip_ext(*frog.f->hardname) & ".bi")
-			tk_end()
-		end if
+				parse_toplevel(0)
+				translate_toplevel()
 
-		frog.f = list_next(frog.f)
-	wend
+				emit_write_file(path_strip_ext(*frog.f->hardname) & ".bi")
+				tk_end()
+			end if
+
+			frog.f = list_next(frog.f)
+		wend
+	next
 
 	print "done: ";
 	emit_stats()

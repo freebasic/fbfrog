@@ -378,46 +378,19 @@ private function indent_comment _
 	return newtext
 end function
 
-private function handle_include _
+private function merge_file_in _
 	( _
-		byval begin as integer, _
-		byval x as integer, _
 		byref filename as string, _
-		byval is_preparse as integer _
+		byval begin as integer, _
+		byval x as integer _
 	) as integer
-
-	if ((is_preparse = FALSE) and (frog.merge = FALSE)) then
-		return x
-	end if
-
-	dim as FrogFile ptr f = _
-		frog_add_file(filename, is_preparse, TRUE)
-
-	'' File not found?
-	if (f = NULL) then
-		return x
-	end if
-
-	'' Preparse: Lookup/add the file and increase the refcount
-	if (is_preparse) then
-		f->refcount += 1
-		return x
-	end if
-
-	'' Otherwise: Just lookup the file entry to check its refcount,
-	'' and merge the file in if this is the only place #including it.
-	if (f->refcount <> 1) then
-		return x
-	end if
-
-	print "merging in: " & *f->softname
 
 	'' Remove the #include (but not the EOL behind it)
 	ASSUMING(tk_get(begin) = TK_HASH)
 	tk_remove(begin, x - 1)
 
 	'' and insert the file content
-	x = lex_insert_file(begin, *f->hardname)
+	x = lex_insert_file(begin, filename)
 
 	'' If the #include was indented, indent the whole inserted block too.
 	dim as integer first = skiprev_unless_eol(begin)
@@ -468,6 +441,52 @@ private function handle_include _
 			wend
 		end if
 	end select
+
+	return x
+end function
+
+private function handle_include _
+	( _
+		byval begin as integer, _
+		byval x as integer, _
+		byref filename as string, _
+		byval is_preparse as integer _
+	) as integer
+
+	'' #includes are important for the preparse (which collects #include
+	'' file names) and for merging, but nothing else.
+	if ((is_preparse = FALSE) and (frog.merge = FALSE)) then
+		return x
+	end if
+
+	'' Lookup an existing file entry or find and add a new file entry
+	'' For #includes, the file search always needs to be done, there is
+	'' no other way to determine the full name.
+	'' If this file is new, it will marked as "was found during preparse",
+	'' which helps us deciding whether to translate it or not, depending
+	'' on whether --follow was given or not. Normally we only have input
+	'' files from the command line.
+	dim as FrogFile ptr f = _
+		frog_add_file(filename, is_preparse, TRUE)
+
+	'' File not found? Not interesting for neither preparse nor merging...
+	if (f = NULL) then
+		return x
+	end if
+
+	'' If this is for the preparse: increase the file's refcount, that's it.
+	if (is_preparse) then
+		f->refcount += 1
+		return x
+	end if
+
+	'' Otherwise, this must be for the normal parsing process with merging
+	'' enabled.
+	if (frog_can_merge(f)) then
+		frog_set_visited(f)
+		print "merging in: " & *f->softname
+		x = merge_file_in(*f->hardname, begin, x)
+	end if
 
 	return x
 end function

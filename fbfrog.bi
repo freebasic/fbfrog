@@ -372,10 +372,10 @@ declare sub storage_stats()
 
 enum
 	'' Translated already? (no matter which method)
-	FROGFILE_TRANSLATED = (1 shl 0)
+	FILE_VISITED = (1 shl 0)
 
 	'' Found during preparse? (if not, it's from the command line)
-	FROGFILE_PREPARSE   = (1 shl 1)
+	FILE_EXTRA = (1 shl 1)
 end enum
 
 type FrogFile
@@ -416,10 +416,12 @@ declare function frog_add_define _
 		byval id as zstring ptr, _
 		byval flags as uinteger _
 	) as uinteger
-
 declare function frog_add_file _
 	( _
 		byref origname as string, _
 		byval is_preparse as integer, _
 		byval search_paths as integer _
 	) as FrogFile ptr
+declare sub frog_set_visited(byval f as FrogFile ptr)
+declare function frog_can_visit(byval f as FrogFile ptr) as integer
+declare function frog_can_merge(byval f as FrogFile ptr) as integer
