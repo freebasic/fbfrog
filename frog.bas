@@ -379,7 +379,7 @@ private function handle_include _
 	( _
 		byval begin as integer, _
 		byval x as integer, _
-		byval filename as integer, _
+		byref filename as string, _
 		byval is_preparse as integer _
 	) as integer
 
@@ -388,7 +388,7 @@ private function handle_include _
 	end if
 
 	dim as FrogFile ptr f = _
-		frog_add_file(*tk_text(filename), is_preparse, TRUE)
+		frog_add_file(filename, is_preparse, TRUE)
 
 	'' Preparse: Lookup/add the file and increase the refcount
 	if (is_preparse) then
@@ -595,7 +595,7 @@ function parse_pp_directive _
 		return x
 	end if
 
-	dim as integer filename = -1
+	dim as string filename
 	dim as integer begin = x
 	x = skip_pp(x)
 
@@ -607,9 +607,42 @@ function parse_pp_directive _
 
 	case KW_INCLUDE
 		dim as integer y = skip_pp(x)
+
+		'' Turn <...> into a string literal
+		'' TODO: This should be handled by the lexer, but it depends
+		'' on context, so it could be even harder to do in the lexer
+		'' than here. This sort of breaks the strict separation of
+		'' parsing/translating, but oh well...
+
+		if (tk_get(y) = TK_LT) then
+			dim as integer lt = y
+			do
+				y += 1
+
+				select case (tk_get(y))
+				case TK_GT
+					tk_remove(lt, y)
+					tk_insert(lt, TK_STRING, filename)
+					y = lt
+					exit do
+
+				case TK_EOL, TK_EOF
+					filename = ""
+					exit do
+
+				end select
+
+				dim as zstring ptr text = tk_text(y)
+				if (text = NULL) then
+					text = token_text(tk_get(y))
+				end if
+				filename += *text
+			loop
+		end if
+
 		if (tk_get(y) = TK_STRING) then
 			if (tk_get(skip_pp(y)) = TK_EOL) then
-				filename = y
+				filename = *tk_text(y)
 			end if
 		end if
 
@@ -634,7 +667,7 @@ function parse_pp_directive _
 	'' fixup would replace it with line continuation...
 	tk_set_mark(mark, rest, x - 1)
 
-	if (filename >= 0) then
+	if (len(filename) > 0) then
 		x = handle_include(begin, x, filename, is_preparse)
 	end if
 
