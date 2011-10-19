@@ -22,3 +22,4 @@
 #define A x | x
 #define A x |= x
 #define A x || x
+#define A ~x

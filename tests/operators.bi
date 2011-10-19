@@ -22,3 +22,4 @@
 #define A x or x
 #define A x or= x
 #define A x orelse x
+#define A not x

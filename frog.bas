@@ -897,7 +897,7 @@ end function
 
 private function fixup_operator(byval x as integer) as integer
 	select case as const (tk_get(x))
-	case TK_EXCL '' ! -> NOT
+	case TK_EXCL, TK_TILDE '' {'!' | '~'} -> NOT
 		x = insert_spaced_token(x, TK_TODO, "unary NOT")
 		x = replace_operator(x, KW_NOT, -1)
 
