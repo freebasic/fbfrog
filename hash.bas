@@ -94,6 +94,7 @@ function hash_lookup _
 
 	'' Found unused item with first probe?
 	if (item->s = NULL) then
+		h->perfects += 1
 		return item
 	end if
 
@@ -101,6 +102,7 @@ function hash_lookup _
 	if (item->hash = hash) then
 		if (item->length = length) then
 			if (memcmp(item->s, s, length) = 0) then
+				h->perfects += 1
 				return item
 			end if
 		end if
@@ -118,7 +120,10 @@ function hash_lookup _
 	do
 #if 0
 		'' Collisions happen when both hashes are equal mod table size
-		print "** COLLISION at " & i & ": '" & *str_duplicate(s, length) & "'[" & hex(hash, 8) & "] with existing '" & *str_duplicate(item->s, item->length) & "'[" & hex(item->hash, 8) & "]"
+		print "** COLLISION at " & i & ": " & _
+			*str_duplicate(s, length) & _
+			" with existing " & _
+			*str_duplicate(item->s, item->length)
 #endif
 		h->collisions += 1
 		i = (i + stepsize) and roommask
@@ -148,6 +153,7 @@ sub hash_init(byval h as HashTable ptr, byval exponent as integer)
 	h->room = 1 shl exponent
 	h->resizes = 0
 	h->lookups = 0
+	h->perfects = 0
 	h->collisions = 0
 	allocate_table(h)
 end sub
@@ -158,7 +164,12 @@ sub hash_end(byval h as HashTable ptr)
 end sub
 #endif
 
-sub hash_stats(byval h as HashTable ptr)
-	print using "& resizes, & entries, & lookups, & collisions"; _
-		h->resizes, h->count, h->lookups, h->collisions
+sub hash_stats(byval h as HashTable ptr, byref prefix as string)
+	print using "  " & prefix & " hash: " & _
+		"&/& hits (&%), &/& used (&%), & resizes"; _
+		h->perfects, h->lookups, _
+		cint((100 / h->lookups) * h->perfects), _
+		h->count, h->room, _
+		cint((100 / h->room) * h->count), _
+		h->resizes
 end sub

@@ -342,8 +342,7 @@ end sub
 	print "done: ";
 	emit_stats()
 	if (frog.verbose) then
-		print "  file hash: ";
-		hash_stats(@frog.filehash)
+		hash_stats(@frog.filehash, "filename")
 		storage_stats()
 	end if
 	end 0

@@ -691,7 +691,7 @@ function lex_insert_file _
 	dim as integer newtokens = tk_count() - oldcount
 
 	if (frog.verbose) then
-		print using "  C lexer: read in & bytes, produced & tokens"; _
+		print using "  lexer: read in & bytes, produced & tokens"; _
 			(culng(lex.limit) - culng(lex.buffer)), _
 			newtokens
 	end if

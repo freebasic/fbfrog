@@ -32,6 +32,7 @@ type HashTable
 	as integer room       '' Allocated
 	as integer resizes    '' Number of table reallocs/size increases
 	as integer lookups    '' Lookup counter
+	as integer perfects   '' Lookups successful after first probe
 	as integer collisions '' Sum of collisions during all lookups
 end type
 
@@ -48,7 +49,7 @@ declare function hash_lookup _
 		byval hash as uinteger _
 	) as HashItem ptr
 declare sub hash_init(byval h as HashTable ptr, byval exponent as integer)
-declare sub hash_stats(byval h as HashTable ptr)
+declare sub hash_stats(byval h as HashTable ptr, byref prefix as string)
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 

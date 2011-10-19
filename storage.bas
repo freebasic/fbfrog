@@ -16,6 +16,7 @@ type TextStorage
 	as integer used       '' Amount of stored bytes
 	as integer wasted     '' Unused/unreachable/wasted bytes
 	as integer blockcount '' Number of allocated blocks
+	as integer allocated  '' Full allocated size
 end type
 
 dim shared as TextStorage storage
@@ -25,7 +26,7 @@ private function storage_allocate(byval length as integer) as ubyte ptr
 	'' Purpose: to be faster than malloc(), and to avoid having to
 	'' deallocate() token text every single time a token is removed.
 
-	const STORAGE_ROOM = (1 shl 12)
+	const STORAGE_ROOM = (1 shl 13)
 
 	'' Not enough room left in the current block?
 	if (storage.free < length) then
@@ -37,6 +38,8 @@ private function storage_allocate(byval length as integer) as ubyte ptr
 		if (storage.free < length) then
 			storage.free = length
 		end if
+
+		storage.allocated += storage.free
 
 		'' Get new block
 		storage.p = xallocate(storage.free)
@@ -108,12 +111,16 @@ sub storage_init()
 end sub
 
 sub storage_stats()
-	print using "  text cache: & hits, & misses, average string length: &"; _
-		storage.hits, storage.misses, _
-		iif(storage.misses > 0, storage.used \ storage.misses, 0)
+	print using "  text cache: &/& hits (&%), &/& used (&%)"; _
+		storage.hits, storage.hits + storage.misses, _
+		cint((100 / (storage.hits + storage.misses)) * storage.hits), _
+		storage.used, storage.allocated, _
+		cint((100 / storage.allocated) * storage.used)
 
-	print using "              & blocks, bytes: & used, & free, & wasted"; _
-		storage.blockcount, storage.used, storage.free, storage.wasted
-	print       "        hash: ";
-	hash_stats(@storage.hash)
+	print using "              & blocks, average stored length: &, & wasted (&%)"; _
+		storage.blockcount, _
+		iif(storage.misses > 0, storage.used \ storage.misses, 0), _
+		storage.wasted, cint((100 / storage.allocated) * storage.wasted)
+
+	hash_stats(@storage.hash, "text")
 end sub
