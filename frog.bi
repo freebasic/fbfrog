@@ -15,6 +15,11 @@ declare function skiprev(byval x as integer) as integer
 declare function skip_unless_eol(byval x as integer) as integer
 declare function skiprev_unless_eol(byval x as integer) as integer
 declare function is_whitespace_until_eol(byval x as integer) as integer
+declare function skip_optional _
+	( _
+		byval x as integer, _
+		byval tk as integer _
+	) as integer
 declare function insert_spaced_token _
 	( _
 		byval x as integer, _

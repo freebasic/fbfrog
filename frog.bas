@@ -69,6 +69,19 @@ function is_whitespace_until_eol(byval x as integer) as integer
 	return TRUE
 end function
 
+function skip_optional _
+	( _
+		byval x as integer, _
+		byval tk as integer _
+	) as integer
+
+	if (tk_get(x) = tk) then
+		x = skip(x)
+	end if
+
+	return x
+end function
+
 function insert_spaced_token _
 	( _
 		byval x as integer, _

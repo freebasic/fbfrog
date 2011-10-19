@@ -73,18 +73,33 @@ end function
 private function parse_base_type(byval x as integer) as integer
 	dim as integer old = x
 
+	'' [CONST]
+	x = skip_optional(x, KW_CONST)
+
 	select case (tk_get(x))
 	case KW_ENUM, KW_STRUCT, KW_UNION
 		'' {ENUM | STRUCT | UNION} id
 		x = skip(x)
+
+		'' id
 		if (tk_get(x) <> TK_ID) then
 			return old
 		end if
-		return skip(x)
+		x = skip(x)
+
+		'' [CONST]
+		x = skip_optional(x, KW_CONST)
+
+		return x
 
 	case TK_ID
 		'' Just a single id
-		return skip(x)
+		x = skip(x)
+
+		'' [CONST]
+		x = skip_optional(x, KW_CONST)
+
+		return x
 	end select
 
 	'' [SIGNED | UNSIGNED]
@@ -105,24 +120,21 @@ private function parse_base_type(byval x as integer) as integer
 		x = skip(x)
 
 		'' [INT]
-		if (tk_get(x) = KW_INT) then
-			x = skip(x)
-		end if
+		x = skip_optional(x, KW_INT)
 
 	case KW_LONG
 		x = skip(x)
 
 		'' [LONG]
-		if (tk_get(x) = KW_LONG) then
-			x = skip(x)
-		end if
+		x = skip_optional(x, KW_LONG)
 
 		'' [INT]
-		if (tk_get(x) = KW_INT) then
-			x = skip(x)
-		end if
+		x = skip_optional(x, KW_INT)
 
 	end select
+
+	'' [CONST]
+	x = skip_optional(x, KW_CONST)
 
 	'' In case of no type keyword at all, x = old
 	return x
@@ -132,6 +144,9 @@ private function parse_ptrs(byval x as integer) as integer
 	'' Pointers: ('*')*
 	while (tk_get(x) = TK_STAR)
 		x = skip(x)
+
+		'' [CONST] (behind the '*')
+		x = skip_optional(x, KW_CONST)
 	wend
 	return x
 end function
@@ -421,6 +436,7 @@ private sub split_multdecl_if_needed(byval x as integer, byval begin as integer)
 	'' Properties of the first identifier. Following ones are compared
 	'' against these to determine whether a split is needed.
 	dim as integer first_ptrcount = 0
+	dim as uinteger first_constmask = 0
 	dim as integer first_is_procptr = FALSE
 	dim as integer first_is_procdecl = FALSE
 	dim as integer lastcomma = -1
@@ -428,17 +444,24 @@ private sub split_multdecl_if_needed(byval x as integer, byval begin as integer)
 
 	do
 		'' This can be:
-		''   normal: '*'* id
-		'' procdecl: '*'* id '(' params ')'
-		''  procptr: '*'* '(' '*' id ')' '(' params ')'
+		''   normal: ptrs id
+		'' procdecl: ptrs id '(' params ')'
+		''  procptr: ptrs '(' '*' id ')' '(' params ')'
 
-		'' '*'*
-		'' (in case of procdecl/procptr, this are the pointers on the
-		'' function result type)
+		'' Pointers (in case of procdecl/procptr, this are the pointers
+		'' on the function result type)
 		dim as integer ptrcount = 0
+		dim as uinteger constmask = 0
 		while (tk_get(x) = TK_STAR)
 			ptrcount += 1
+			constmask shl= 1
 			x = skip(x)
+
+			'' [CONST]
+			if (tk_get(x) = KW_CONST) then
+				constmask or= 1
+				x = skip(x)
+			end if
 		wend
 
 		'' ['(' '*']
@@ -481,6 +504,7 @@ private sub split_multdecl_if_needed(byval x as integer, byval begin as integer)
 		if (lastcomma < 0) then
 			'' Just parsed the first identifier
 			first_ptrcount = ptrcount
+			first_constmask = constmask
 			first_is_procptr = is_procptr
 			first_is_procdecl = is_procdecl
 			end_of_first = x
@@ -489,6 +513,7 @@ private sub split_multdecl_if_needed(byval x as integer, byval begin as integer)
 			'' Different properties? Then split it off, together
 			'' with all following ones.
 			if ((first_ptrcount <> ptrcount) or _
+			    (first_constmask <> constmask) or _
 			    (first_is_procptr <> is_procptr) or _
 			    (first_is_procdecl <> is_procdecl)) then
 
@@ -581,6 +606,12 @@ private sub remove_overhead_ptrs(byval x as integer)
 		case TK_STAR
 			if ((level = 0) and have_comma) then
 				remove_this_and_space(x)
+
+				'' [CONST]
+				if (tk_get(x) = KW_CONST) then
+					remove_this_and_space(x)
+				end if
+
 				'' Counter the x += 1 below; we already are
 				'' at the next token after having removed the
 				'' current one...
@@ -634,6 +665,48 @@ sub fixup_multdecl(byval x as integer, byval begin as integer)
 	remove_overhead_ptrs(x)
 end sub
 
+private function maybe_move_const_to_front _
+	( _
+		byval x as integer, _
+		byval front as integer, _
+		byval is_ptr as integer _
+	) as integer
+
+	'' CONST?
+	if (tk_get(x) <> KW_CONST) then
+		return x
+	end if
+
+	'' Copy this CONST (and space in front of it) to the front,
+	'' unless there already is a CONST at the front (in C both seem to
+	'' be allowed together; only affects CONST on base types, not CONST
+	'' on PTRs).
+	''
+	'' For base types:
+	''    as integer const    ->    as const integer
+	''
+	'' For PTRs:
+	''    as integer ptr const    ->    as integer const ptr
+	''
+
+	dim as integer move_it = TRUE
+	if (is_ptr = FALSE) then
+		ASSUMING(tk_get(skiprev(front)) = KW_AS)
+		if (tk_get(front) = KW_CONST) then
+			move_it = FALSE
+		end if
+	end if
+
+	if (move_it) then
+		x += insert_spaced_token(front, KW_CONST, NULL) - front
+	end if
+
+	ASSUMING(tk_get(x) = KW_CONST)
+	remove_this_and_space(x)
+
+	return x
+end function
+
 private function translate_base_type(byval x as integer) as integer
 	''    int             ->      as integer
 	''    unsigned int    ->      as uinteger
@@ -643,17 +716,33 @@ private function translate_base_type(byval x as integer) as integer
 	'' Insert the AS
 	x = insert_spaced_token(x, KW_AS, NULL)
 
+	dim as integer front = x
+
+	'' [CONST] (in front of the type as in FB, perfect)
+	x = skip_optional(x, KW_CONST)
+
 	select case (tk_get(x))
 	case KW_ENUM, KW_STRUCT, KW_UNION
 		'' {ENUM | STRUCT | UNION} id
 		tk_remove(x, skip(x) - 1)
 
 		ASSUMING(tk_get(x) = TK_ID)
-		return skip(x)
+		x = skip(x)
+
+		'' [CONST]
+		x = maybe_move_const_to_front(x, front, FALSE)
+
+		return x
 
 	case TK_ID
 		'' Just a single id
-		return skip(x)
+		x = skip(x)
+
+		'' [CONST]
+		x = maybe_move_const_to_front(x, front, FALSE)
+
+		return x
+
 	end select
 
 	'' [SIGNED | UNSIGNED]
@@ -740,14 +829,22 @@ private function translate_base_type(byval x as integer) as integer
 		end if
 	end select
 
+	'' [CONST]
+	x = maybe_move_const_to_front(x, front, FALSE)
+
 	return x
 end function
 
 private function translate_ptrs(byval x as integer) as integer
 	'' Pointers: '*' -> PTR, plus some space if needed
 	while (tk_get(x) = TK_STAR)
+		dim as integer ptrpos = x
+
 		remove_this_and_space(x)
 		x = insert_spaced_token(x, KW_PTR, NULL)
+
+		'' [CONST]
+		x = maybe_move_const_to_front(x, ptrpos, TRUE)
 	wend
 	return x
 end function

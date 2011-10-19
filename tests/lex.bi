@@ -41,3 +41,19 @@
 /'TODO: char literal'/"a"
 
 L/'TODO: char literal'/"a"
+
+
+
+/'*
+ * Comments like this
+ '/
+
+/' ?' '/
+
+/' ????' '/
+
+/'''/
+
+/'?'/
+
+/'???'/
