@@ -273,24 +273,28 @@ end sub
 	'' - All modes except the default want to know more input files
 	''   from #includes, including /their/ #includes, and so on...
 	'' - --concat/--merge also need to know who includes what and how often
+	'' - A list (actually a hash table) of #defines that represent
+	''   calling conventions or dllexport declspecs or are empty,
+	''   this information is used by the procdecl parser/translator
+	''   to allow/disallow such a #define and, in case of callconvs,
+	''   preserve and move it where it belongs in FB syntax.
 	''
-	if (frog.concat or frog.follow or frog.merge) then
-		'' Go through all input files, and new ones as they are
-		'' appended to the list...
-		frog.f = list_head(@frog.files)
-		while (frog.f)
-			print "preparsing: " & *frog.f->softname
 
-			tk_init()
-			lex_insert_file(0, *frog.f->hardname)
+	'' Go through all input files, and new ones as they are
+	'' appended to the list...
+	frog.f = list_head(@frog.files)
+	while (frog.f)
+		print "preparsing: " & *frog.f->softname
 
-			preparse_toplevel()
+		tk_init()
+		lex_insert_file(0, *frog.f->hardname)
 
-			tk_end()
+		preparse_toplevel()
 
-			frog.f = list_next(frog.f)
-		wend
-	end if
+		tk_end()
+
+		frog.f = list_next(frog.f)
+	wend
 
 	''
 	'' By default, all input files are translated 1:1.
