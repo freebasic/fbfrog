@@ -16,14 +16,24 @@ function parse_enumconst _
 		end if
 		x = skip(x)
 
-		'' ['=']
-		if (tk_get(x) = TK_EQ) then
+		select case (tk_get(x))
+		case TK_EQ
+			'' ['=']
 			skip_expression = TRUE
 			x = skip(x)
-		end if
+		case TK_LPAREN
+			'' '('
+			'' This allows function-like macros like <FOO(...)>
+			'' in place of constants in an enum, at least the
+			'' libcurl headers make extensive use of that...
+			'' The '(...)' skipping is covered by the same code
+			'' that skips over the '= ...' expressions.
+			skip_expression = TRUE
+		end select
 	end if
 
 	if (skip_expression) then
+		'' Skip until ',' or '}'
 		dim as integer level = 0
 		do
 			select case (tk_get(x))
