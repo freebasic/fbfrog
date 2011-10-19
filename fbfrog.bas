@@ -158,7 +158,7 @@ private function concat_file(byval x as integer) as integer
 	x += 1
 	tk_insert(x, TK_EOL, NULL)
 	x += 1
-	tk_insert(x, TK_TODO, "from file " & *frog.f->softname)
+	tk_insert(x, TK_TODO, "Note: " & *frog.f->softname & " appended here")
 	x += 1
 	tk_insert(x, TK_EOL, NULL)
 	x += 1

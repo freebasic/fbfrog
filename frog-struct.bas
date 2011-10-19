@@ -383,7 +383,7 @@ function translate_struct(byval x as integer) as integer
 
 		'' Add TODO for <struct { } id;>
 		if (is_typedef = FALSE) then
-			tk_insert(structid, TK_TODO, "illegal FB")
+			tk_insert(structid, TK_TODO, "not supported in FB")
 			structid += 1
 
 			tk_insert_space(structid)

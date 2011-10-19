@@ -11,12 +11,6 @@
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-declare sub preparse_toplevel()
-declare sub parse_toplevel(byval begin as integer)
-declare sub translate_toplevel()
-
-''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-
 '' The hash table is an array of these hash items, which associate a string to
 '' some user data (always an array index in our case).
 type HashItem
@@ -50,8 +44,6 @@ declare function hash_lookup _
 	) as HashItem ptr
 declare sub hash_init(byval h as HashTable ptr, byval exponent as integer)
 declare sub hash_stats(byval h as HashTable ptr, byref prefix as string)
-
-''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 type ListNode
 	as ListNode ptr next
@@ -353,15 +345,19 @@ declare function tk_mark(byval x as integer) as integer
 declare function tk_count() as integer
 declare sub tk_init()
 declare sub tk_end()
+
 declare sub emit_write_file(byref filename as string)
 declare sub emit_stats()
+
 declare function lex_insert_file _
 	( _
 		byval x as integer, _
 		byref filename as string _
 	) as integer
 
-''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+declare sub preparse_toplevel()
+declare sub parse_toplevel(byval begin as integer)
+declare sub translate_toplevel()
 
 declare function storage_store _
 	( _

@@ -27,14 +27,26 @@ sub emit_token(byval x as integer)
 		#endif
 
 	case TK_TODO
+		dim as integer linecomment = (tk_get(x + 1) = TK_EOL)
 		dim as zstring ptr text = tk_text(x)
-		if (text) then
-			emit("/'TODO: ")
-			emit(text)
-			emit("'/")
+
+		if (linecomment) then
+			emit("'' ")
 		else
-			emit("/'TODO'/")
+			emit("/' ")
 		end if
+
+		emit("TODO")
+
+		if (text) then
+			emit(": ")
+			emit(text)
+		end if
+
+		if (linecomment = FALSE) then
+			emit(" '/")
+		end if
+
 		stuff.todocount += 1
 
 	case TK_COMMENT
@@ -83,12 +95,8 @@ sub emit_token(byval x as integer)
 			emit(text)
 		else
 			text = token_text(tk_get(x))
-			if (text) then
-				emit(text)
-			else
-				emit("/'TODO: token " & tk_get(x) & "'/")
-				stuff.todocount += 1
-			end if
+			ASSUMING(text)
+			emit(text)
 		end if
 
 	end select

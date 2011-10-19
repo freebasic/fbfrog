@@ -50,7 +50,7 @@ declare function f(byval x as integer, byval as short, byval as byte ptr , ...) 
 #define MY_CALL __attribute__((__stdcall__))/'__stdcall'/
 
 /' some #defines in front, as is pretty common '/
-/'TODO: unknown construct'/
+'' TODO: unknown construct
 MY_EXTERN MY_CALL TT1 f7(void);
 
 /' Wrapped '/

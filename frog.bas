@@ -898,7 +898,7 @@ end function
 private function fixup_operator(byval x as integer) as integer
 	select case as const (tk_get(x))
 	case TK_EXCL, TK_TILDE '' {'!' | '~'} -> NOT
-		x = insert_spaced_token(x, TK_TODO, "unary NOT")
+		x = insert_spaced_token(x, TK_TODO, "bitwise NOT, different precedence")
 		x = replace_operator(x, KW_NOT, -1)
 
 	case TK_EXCLEQ '' != -> <>
@@ -911,6 +911,8 @@ private function fixup_operator(byval x as integer) as integer
 		x = replace_operator(x, KW_MOD, TK_EQ)
 
 	case TK_AMP '' & -> AND | @
+		x = insert_spaced_token(x, TK_TODO, "best guess translation of &")
+
 		select case (tk_get(skiprev(x)))
 		case TK_ID, _                   '' abc & x
 		     TK_DECNUM, TK_HEXNUM, _    '' 123 & x
@@ -924,7 +926,6 @@ private function fixup_operator(byval x as integer) as integer
 			'' (&x
 			'' , &x
 			'' etc., this is likely to be @
-			x = insert_spaced_token(x, TK_TODO, "was &")
 			x = replace_operator(x, TK_AT, -1)
 
 		end select
@@ -933,7 +934,7 @@ private function fixup_operator(byval x as integer) as integer
 		x = replace_operator(x, KW_AND, TK_EQ)
 
 	case TK_PLUSPLUS, TK_MINUSMINUS
-		x = insert_spaced_token(x, TK_TODO, NULL)
+		x = insert_spaced_token(x, TK_TODO, "not supported in FB")
 		x = skip(x)
 
 	case TK_LTLT '' << -> shl
