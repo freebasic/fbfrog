@@ -300,8 +300,11 @@ function path_normalize(byref path as string) as string
 				if (chars = 0) then
 					'' // (Ignore: don't write this /)
 				else
+					'' Write this /
 #if defined(__FB_WIN32__) or defined(__FB_DOS__)
-					s[w] = asc("\") '' Normalize / to \
+					s[w] = asc("\") '' This also normalizes / to \
+#else
+					s[w] = asc("/")
 #endif
 					'' New component starts behind this /
 					w += 1
@@ -333,6 +336,7 @@ function path_normalize(byref path as string) as string
 	solver_end()
 
 	s = left(s, w)
+
 	return s
 end function
 
