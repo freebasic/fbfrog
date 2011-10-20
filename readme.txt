@@ -1,81 +1,159 @@
-fbfrog -- a h2bi translator
 
-The idea is to base the translation process not on parsing C into a tree,
-but rather on rearranging/translating tokens and the constructs they form.
-It can easily translate "int a;" to "as integer a", but it cannot that easily
-rearrange whole expressions if FB operators work differently than C ones.
-It can preserve whitespace, commentary and preprocessor directives, but it
-cannot translate constructs obscured by macros.
+  fbfrog -- C-to-FreeBASIC header translator
+  Copyright (C) 2011  Daniel C. Klauer <daniel.c.klauer@web.de>
 
-The results look very much like the original. Anything it couldn't handle
-is marked with a TODO comment.
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+
+Goal:
+
+  The idea is to base the translation process not on parsing C into a tree,
+  but rather on rearranging/translating tokens and the constructs they form.
+  It can easily translate "int a;" to "as integer a", but it cannot that easily
+  rearrange whole expressions if FB operators work differently than C ones.
+  It can preserve whitespace, commentary and preprocessor directives, but it
+  cannot translate constructs obscured by macros.
+
+  The results look very much like the original. Anything it couldn't handle
+  is marked with a TODO comment.
 
 
 Usage:
 
-First, compile it using fbc, for example:
+  Compile it:
 	fbc -m fbfrog *.bas
 
-Translating headers:
+  Translating headers:
 	./fbfrog foo.h
 
-Automatically look for #includes in headers and recursively translate all
-f them that can be found:
+  Collect #includes and translate them too:
 	./fbfrog --follow start.h
 
-Combine everything into a single main header if possible:
-(Merge in #included headers if not used anywhere else,
-concatenate toplevel headers that don't #include each other)
+  Combine everything into as few output files as possible:
 	./fbfrog --follow --merge --concat *.h
 
-For options, see also:
+  See also:
 	./fbfrog --help
 
 
 Here's how it works:
 
-The core is a huge dynamic array of tokens. Each token holds this information:
-  - token id (keyword? identifier? comma? eol? comment? space? etc.)
-  - associated text (for identifiers, strings, numbers)
-  - construct id (mark; tells what language construct this token belongs to)
+  The core is a huge dynamic array of tokens. Each token consists of:
+   - Token id (keyword? identifier? comma? eol? comment? space? etc.)
+   - Associated text (for identifiers, strings, numbers)
+   - Construct id (mark telling what construct this token belongs to)
 
-The token buffer is filled by a C lexer, which reads in the input .h files
-and inserts the corresponding tokens into the token buffer.
+  The token buffer is accessed through functions that take an index (often
+  called x) and return information on the token at that position. It works
+  just like an array, so there is no "current position" or anything.
+  Since there are whitespace tokens present, the parser uses helper functions
+  to skip over such noise via x = skip(x), instead of just doing x += 1.
+  All tokens can be accessed at any time, which allows for easy look-ahead
+  and back-tracking in the parsing code.
 
-At any time, the token buffer can be emitted into a file. That's as simple as
-going through all tokens and just writing them out, no matter what they are.
+  Translating a file is done in these steps:
+   1) Letting a C lexer read in the *.h file and insert the corresponding
+      tokens into the token buffer.
+   2) Parsing through the token buffer to identify constructs, setting the
+      token marks accordingly. Unknown constructs are marked as unknown.
+   3) Translating the file by going through all tokens again, and looking
+      at their marks and inserting and deleting tokens as needed to convert
+      the constructs to FB syntax.
+   4) Emitting all tokens into a file, the output *.bi.
 
-The token buffer is accessed through functions that take an index (often
-called x) and return information on the token at that position. It works just
-like an array, so there is no "current position" or anything. All tokens can
-be accessed at any time, which allows for easy look-ahead/back-tracking.
+  Parsing and translating in two separate steps has the advantages of:
+   - Being able to do trial-and-error parsing: Check whether something
+     is a function declaration, if it's not -- give up and try something
+     else, no harm done.
+   - Not having to store AST-like information as the result of parsing;
+     when needed, the translator can just do some parsing itself.
+   - Being easily able to identify and handle EOLs inside constructs, allowing
+     them to be be made "FB-compatible" by inserting the "_" line continuation
+     character (or just deleting them).
+   - Being able to do preparses (whole parsing pass, but at least without the
+     translation pass) to collect information on #includes and #defines.
 
-Parsing is the pass that goes through the token buffer to identify constructs,
-setting the token marks accordingly. Unknown constructs are marked as unknown.
-Since there are whitespace tokens present, the parser uses helper functions to
-skip over such noise via x = skip(x), instead of just doing x += 1.
+  For example, here is (basically) how a field declaration such as "int a;"
+  would be translated:
+   - The fielddecl translator would remove the "int" token,
+   - and insert "as integer" instead.
+   - Then it would skip over the identifier "a", since there is no change
+     required to translate it,
+   - and finally it would remove the ";",
+   - resulting in "as integer a".
 
-Translation is the pass that goes through all tokens, looks at their construct
-marks and translates/rearranges constructs based on that.
+  The idea behind the --follow, --concat and --merge options is to ease the
+  translation of multiple headers at once.
+   - Following refers to the translation of files found referenced via
+     #include directives in other files.
+   - Merging is the resolving of #includes, i.e. the inclusion of the
+     #included file in place of the #include directive. A file can only be
+     merged in like this if it is not #included anywhere else, otherwise the
+     content would be duplicated, and that is usually not nice...
+   - Concatenation is supposed to be used when headers belong together and
+     just should be appended into a bigger file, as a last resort, if they
+     cannot be combined by merging.
 
-For example, to translate a field declaration such as "int a;":
-  - The fielddecl translator would remove the "int" token,
-  - and insert "as integer" instead.
-  - Then it would skip over the identifier "a", since there is no change
-    required to translate it,
-  - and finally it would remove the ";",
-  - resulting in "as integer a"
+  To handle the #include dependencies, the fbfrog frontend keeps a list of
+  (*.h) files that is filled with files from the command line and those found
+  during an #include-collection preparse, with an #include reference count for
+  each file.
 
-Parsing and translating in two separate steps has the advantages of:
-  - being able to do trial-and-error parsing: Check whether something
-    is a function declaration, if it's not -- give up and try something
-    else, no harm done.
-  - not having to store AST-like information as the result of parsing;
-    when needed, the translator can just do some parsing itself.
-  - being easily able to identify and handle EOLs inside constructs, allowing
-    them to be be made "FB-compatible" by inserting the "_" line continuation
-    character (or just deleting them).
-  - being able to do preparses to collect information on #includes and #defines.
+  The preparse is not only used to collect #includes, but also to gather some
+  information on #defines. Currently it just collects any #defines that contain
+  something like __stdcall or __declspec(dllexport) or are empty, and the
+  procedure declaration uses that information to allow and translate such
+  defines in front of procedure declarations. Enabling --follow allows more
+  #defines to be found, which can help. And sure enough you can just add any
+  #define FOO to the top of the headers to translate, to let the preparse find
+  them and help out the translation.
+
+
+Source module overview:
+
+  emit.bas           Function to write out the current token buffer into a file
+
+  fbfrog.bas         Main module: Command line handling, header file list,
+                     parsing/translation driver
+
+  frog.bas           Toplevel parsing/translator functions (main loops),
+                     parsing helper functions, post-translation fixup passes,
+                     #define/#include parsing/merging
+
+  frog-struct.bas    Compound block parsing (enum/struct/union blocks,
+                     and the special case extern block)
+
+  frog-decl.bas      All sorts of declaration parsing: variables, fields,
+                     enum constants, procedures, parameters, typedefs,
+                     everything with procedure pointers too
+
+  hash.bas           Generic hash table (no deletions)
+
+  lex.bas            C lexer, exports only a function to insert a file at a
+                     specific position in the token buffer
+
+  list.bas           Generic linked list
+
+  misc.bas           Helper functions: error handling (i.e. print "oops" and
+                     end 1, hah), path/file name transformations
+
+  storage.bas        Global token text buffer, allowing tokens to re-use text
+                     across multiple parses, and avoiding the need to allocate()
+                     and deallocate() the text on every token insert/delete.
+
+  tk.bas             Token buffer (implemented as a gap buffer),
+                     accessor functions
 
 
 To do:
