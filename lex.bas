@@ -600,7 +600,7 @@ private sub load_file(byref filename as string)
 	'' Read in the whole file content into lex.buffer
 	dim as integer f = freefile()
 	if (open(filename, for binary, access read, as #f)) then
-		oops("couldn't open file: '" & filename & "'")
+		oops("could not open file: '" & filename & "'")
 	end if
 
 	dim as longint filesize = lof(f)

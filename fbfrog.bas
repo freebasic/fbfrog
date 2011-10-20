@@ -191,7 +191,7 @@ private sub print_help()
 	!"For every given C header (*.h) an FB header (*.bi) will be generated.\n" & _
 	!"The resulting .bi files may need further editing; watch out for TODOs.\n" & _
 	!"options:\n" & _
-	!"  --concat      Concatenate headers that don't #include each other\n" & _
+	!"  --concat      Concatenate headers that do not #include each other\n" & _
 	!"  --follow      Also translate all #includes that can be found\n" & _
 	!"  --merge       Try to combine headers and their #includes\n" & _
 	!"  --verbose     Show more stats and information\n" & _
@@ -201,7 +201,7 @@ private sub print_help()
 end sub
 
 private sub print_version()
-	print "0.1"
+	print "fbfrog 0.1"
 	end 0
 end sub
 
@@ -209,10 +209,6 @@ end sub
 
 	frog_init()
 	storage_init()
-
-	if (__FB_ARGC__ = 1) then
-		print_help()
-	end if
 
 	dim as string arg
 	for i as integer = 1 to (__FB_ARGC__ - 1)
@@ -261,9 +257,20 @@ end sub
 	for i as integer = 1 to (__FB_ARGC__ - 1)
 		arg = *__FB_ARGV__[i]
 		if (arg[0] <> asc("-")) then
+			select case (path_ext_only(arg))
+			case "h", "hh", "hxx", "hpp", "c", "cc", "cxx", "cpp"
+
+			case else
+				oops("not a .h file: '" & arg & "', oh why, why?")
+			end select
+
 			frog_add_file(arg, FALSE, FALSE)
 		end if
 	next
+
+	if (list_head(@frog.files) = NULL) then
+		oops("no input files")
+	end if
 
 	''
 	'' Preparse everything to collect a list of all involved headers.
