@@ -161,7 +161,7 @@ end sub
 
 sub gui_threadsafe_add_text(byval i as integer, byval text as zstring ptr)
 	gdk_threads_enter()
-	gui_append_line(i, text)
+	gui_add_text(i, text)
 	gdk_threads_leave()
 end sub
 
@@ -175,7 +175,12 @@ sub gui_threadsafe_clear_text(byval i as integer)
 	gdk_threads_leave()
 end sub
 
-function gui_dialog(byval i as integer) as string
+function gui_dialog(byval i as integer) as zstring ptr
+	const PATH_SIZE = 1 shl 15
+	static as zstring * (PATH_SIZE + 1) path
+
+	path[0] = 0
+
 	dim as GtkWidget ptr dialog = _
 		gtk_file_chooser_dialog_new( _
 			dialog_strings(i), _
@@ -191,12 +196,14 @@ function gui_dialog(byval i as integer) as string
 		dim as gchar ptr selection = _
 			gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(dialog))
 
-		function = *cptr(zstring ptr, selection)
+		path = *cptr(zstring ptr, selection)
 
 		g_free(selection)
 	end if
 
 	gtk_widget_destroy(dialog)
+
+	return @path
 end function
 
 sub gui_set_window_title(byval text as zstring ptr)
