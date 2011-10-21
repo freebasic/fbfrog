@@ -31,25 +31,24 @@ Goal:
 
 Usage:
 
-  Compile it:
-	fbc -m fbfrog *.bas
+  Compile fbfrog:                     fbc -m fbfrog *.bas
+  Translate a header:                 ./fbfrog foo.h
+  Recursively process #includes too:  ./fbfrog --follow start.h
+  Merge headers as much as possible:  ./fbfrog --follow --merge --concat *.h
+  See also:                           ./fbfrog --help
 
-  Translating headers:
-	./fbfrog foo.h
 
-  Collect #includes and translate them too:
-	./fbfrog --follow start.h
+fbfrog GUI (runs fbfrog for you):
 
-  Combine everything into as few output files as possible:
-	./fbfrog --follow --merge --concat *.h
+  First:        cd gui/
+  Linux, GTK+:  fbc gtk.bas -x fbfrog-gui
+  Win32:        fbc win32.bas resources.rc -x fbfrog-gui.exe -s gui
 
   The gui/*.png images were hand-crafted in Paint.NET.
   The win32 icon (gui/frog.ico) can be rebuild using GIMP: Open the 48x48 png,
   then load in the others as layers, then duplicate them to have three of each,
   then save as .ico and set the options so that it ends up with 8bpp, 24bpp
   and 32bpp versions of each image.
-  See also:
-	./fbfrog --help
 
 
 Here's how it works:

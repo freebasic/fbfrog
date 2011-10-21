@@ -1,0 +1,7 @@
+// Note: GoRC requires .rc files to use CRLF line endings.
+
+// Manifest file, causes comctl v6 to be used
+1 24 "xp.manifest"
+
+// Icon resource for display in Explorer/ALT+TAB/the main window
+2 ICON "frog.ico"
