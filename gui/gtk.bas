@@ -34,7 +34,6 @@ type GuiStuff
 	as GtkTextBuffer ptr buffer(0 to 1)
 	as GtkTextMark ptr   mark(0 to 1)
 	as integer text0_ready
-	as gulong tag_button_release_event_text0
 	as GtkWidget ptr checkboxes(0 to 3)
 
 	as any ptr mutex
@@ -86,16 +85,6 @@ private function get_buffer_text(byval i as integer) as string
 
 	g_free(text)
 end function
-
-private sub make_text0_ready()
-	if (gui.text0_ready = FALSE) then
-		clear_buffer(0)
-		gui.text0_ready = TRUE
-
-		'' The button-release-event is no longer needed
-		g_signal_handler_disconnect(gui.text(0), gui.tag_button_release_event_text0)
-	end if
-end sub
 
 private sub launch_fbfrog(byref args as string)
 	dim as string cmd = "../fbfrog " + args
@@ -258,9 +247,6 @@ private sub on_clicked_go cdecl _
 		byval button as GtkButton ptr, _
 		byval userdata as gpointer _
 	)
-
-	make_text0_ready()
-
 	mutexlock(gui.mutex)
 	gui.frogargs = get_frog_options() & " " & get_input_files()
 	gui.workerstate = WORKER_WORK
@@ -273,8 +259,6 @@ private sub on_clicked_browse cdecl _
 		byval button as GtkButton ptr, _
 		byval userdata as gpointer _
 	)
-
-	make_text0_ready()
 
 	dim as zstring ptr title = any
 	dim as GtkFileChooserAction action = any
@@ -312,31 +296,12 @@ private sub on_clicked_reset cdecl _
 		byval button as GtkButton ptr, _
 		byval userdata as gpointer _
 	)
-	make_text0_ready()
 	clear_buffer(0)
 end sub
-
-private function on_button_release_event_text0 cdecl _
-	( _
-		byval widget as GtkWidget ptr, _
-		byval even as GdkEvent ptr, _
-		byval userdata as gpointer _
-	) as gboolean
-	make_text0_ready()
-	return FALSE
-end function
 
 private function create_text_view(byval i as integer) as GtkWidget ptr
 	'' Text view
 	gui.text(i) = gtk_text_view_new()
-
-	if (i = 0) then
-		gui.tag_button_release_event_text0 = _
-			g_signal_connect(G_OBJECT(gui.text(0)), _
-					"button-release-event", _
-					G_CALLBACK(@on_button_release_event_text0), _
-					NULL)
-	end if
 
 	gtk_text_view_set_wrap_mode(GTK_TEXT_VIEW(gui.text(i)), GTK_WRAP_NONE)
 
@@ -471,9 +436,6 @@ end sub
 
 	gui_init()
 	gui_set_window_title("fbfrog")
-	append_line(0, "Enter input files/directories here")
-	append_line(0, "(or use the Browse button)")
-	append_line(1, "fbfrog output will appear here")
 	gui.text0_ready = FALSE
 
 	'' We'll just start the thread now. The first thing it will do
