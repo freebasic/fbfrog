@@ -45,8 +45,12 @@ end type
 
 dim shared as GuiStuff gui
 
-private sub fbfrog_not_found(byref cmd as string)
-	gui_threadsafe_add_text(1, "oops, could not execute '" & cmd & "'")
+private sub note(byval message as zstring ptr)
+	gui_threadsafe_add_text(1, message)
+end sub
+
+private sub oops_not_found(byref cmd as string)
+	note("oops, could not execute '" & cmd & "'")
 end sub
 
 private sub launch_fbfrog(byref args as string)
@@ -63,11 +67,11 @@ private sub launch_fbfrog(byref args as string)
 	dim as integer f = freefile()
 
 	if (open pipe(cmd, for input, as #f)) then
-		fbfrog_not_found(cmd)
+		oops_not_found(cmd)
 		return
 	end if
 
-	gui_threadsafe_add_text(1, "$ " & cmd)
+	note("$ " & cmd)
 
 	dim as integer saw_text = FALSE
 	dim as string ln
@@ -79,7 +83,7 @@ private sub launch_fbfrog(byref args as string)
 		end if
 
 		saw_text = TRUE
-		gui_threadsafe_add_text(1, ln)
+		note(ln)
 	wend
 
 	close #f
@@ -96,7 +100,7 @@ private sub launch_fbfrog(byref args as string)
 				return
 			end if
 		#endif
-		gui_threadsafe_add_text(1, "oops, no output from fbfrog")
+		note("oops, no output retrieved, fbfrog missing?!")
 	end if
 end sub
 
@@ -210,7 +214,7 @@ private function build_frog_args() as string
 	dim as string path
 	while (len(s) > 0)
 		dim as integer i = instr(s, any !"\r\n")
-		path = left(s, i)
+		path = left(s, i - 1)
 		if (len(path) > 0) then
 			'' TODO: Escape special chars (probably too hard)
 			args += " """ + path + """"

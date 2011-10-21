@@ -18,7 +18,7 @@ type GtkStuff
 	as GtkWidget ptr      text(0 to 1)
 	as GtkTextBuffer ptr  buffer(0 to 1)
 	as GtkTextMark ptr    mark(0 to 1)
-	as GtkWidget ptr      checkboxes(0 to 3)
+	as GtkWidget ptr      checkboxes(C_CONCAT to C_VERBOSE)
 end type
 
 dim shared as GtkStuff gtk

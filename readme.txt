@@ -41,8 +41,8 @@ Usage:
 fbfrog GUI (runs fbfrog for you):
 
   First:         cd gui/
-  Linux (GTK+):  fbc gui.bas gtk.bas -x ../fbfrog-gui
-  Win32:         fbc gui.bas win32.bas resources.rc -s gui -x ..\fbfrog-gui.exe
+  Linux (GTK+):  fbc gui.bas gtk.bas -mt -x ../fbfrog-gui
+  Win32:         fbc gui.bas win32.bas resources.rc -mt -s gui -x ..\fbfrog-gui.exe
 
   The gui/*.png images were hand-crafted in Paint.NET.
   The win32 icon (gui/frog.ico) can be rebuild using GIMP: Open the 48x48 png,
