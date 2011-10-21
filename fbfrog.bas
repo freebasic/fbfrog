@@ -259,12 +259,15 @@ end sub
 		if (arg[0] <> asc("-")) then
 			select case (path_ext_only(arg))
 			case "h", "hh", "hxx", "hpp", "c", "cc", "cxx", "cpp"
+				frog_add_file(arg, FALSE, FALSE)
+
+			case ""
+				'' No extension? Treat as directory...
+				scan_directory_for_h(arg)
 
 			case else
-				oops("not a .h file: '" & arg & "', oh why, why?")
+				oops("not a .h file: '" & arg & "'")
 			end select
-
-			frog_add_file(arg, FALSE, FALSE)
 		end if
 	next
 

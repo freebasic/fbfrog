@@ -33,6 +33,7 @@ Usage:
 
   Compile fbfrog:                     fbc -m fbfrog *.bas
   Translate a header:                 ./fbfrog foo.h
+  Translate a whole directory:        ./fbfrog path/to/foo/
   Recursively process #includes too:  ./fbfrog --follow start.h
   Merge headers as much as possible:  ./fbfrog --follow --merge --concat *.h
   See also:                           ./fbfrog --help
@@ -158,6 +159,14 @@ Source module overview:
 
   tk.bas             Token buffer (implemented as a gap buffer),
                      accessor functions
+
+
+  gui/gui.bas        GUI main module (the GUI is a separate program)
+                     fbfrog launching code, some event logic
+
+  gui/gtk.bas        GTK+ version of the GUI
+
+  gui/win32.bas      Win32 version of the GUI
 
 
 To do:

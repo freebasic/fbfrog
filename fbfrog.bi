@@ -96,6 +96,7 @@ declare function path_strip_common_base _
 declare function path_make_absolute(byref path as string) as string
 declare function path_normalize(byref path as string) as string
 declare function file_exists(byref file as string) as integer
+declare sub scan_directory_for_h(byref rootdir as string)
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 

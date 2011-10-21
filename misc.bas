@@ -1,5 +1,6 @@
 #include once "fbfrog.bi"
 #include once "crt.bi"
+#include once "dir.bi"
 
 sub oops_bug _
 	( _
@@ -348,3 +349,127 @@ function file_exists(byref file as string) as integer
 	end if
 	return FALSE
 end function
+
+type DirNode
+	as DirNode ptr next
+	as string path
+end type
+
+type DirQueue
+	as DirNode ptr head
+	as DirNode ptr tail
+
+	as integer dircount
+	as integer filecount
+end type
+
+dim shared as DirQueue dirs
+
+private sub dirs_append(byref path as string)
+	dim as DirNode ptr node = callocate(sizeof(DirNode))
+	node->path = path
+
+	if (dirs.tail) then
+		dirs.tail->next = node
+	end if
+	dirs.tail = node
+	if (dirs.head = NULL) then
+		dirs.head = node
+	end if
+end sub
+
+private sub dirs_drop_head()
+	if (dirs.head) then
+		dim as DirNode ptr node = dirs.head
+		dirs.head = node->next
+		if (dirs.head = NULL) then
+			dirs.tail = NULL
+		end if
+		node->path = ""
+		deallocate(node)
+	end if
+end sub
+
+private sub scan_current_head_and_append()
+	const PATTERN = "*.h"
+
+	''if (frog.verbose) then
+	''	print " dir: " & dirs.head->path
+	''end if
+
+	'' Find files and subdirs (first level children only)
+	''
+	'' Dirs must be appended to a list for later,
+	'' since dir() can't be used recursively due to
+	'' its context sensitivity.
+	'' Alternative: one threadcreate() per dir
+	''
+	'' Files on the other hand can be handled immediately.
+
+	dim as integer attrib = 0
+	dim as string found = dir(dirs.head->path & PATTERN, _
+	                          fbDirectory or fbNormal, @attrib)
+
+	while (len(found) > 0)
+		dim as integer is_dir = ((attrib and fbDirectory) <> 0)
+
+		if (is_dir) then
+			'' Directory
+			select case (found)
+			case ".", ".."
+
+			case else
+				found = dirs.head->path + found
+				dirs.dircount += 1
+				dirs_append(path_add_div(found))
+			end select
+		else
+			'' File
+			found = dirs.head->path + found
+			dirs.filecount += 1
+
+			''if (frog.verbose) then
+			''	print "file: " & found
+			''end if
+
+			frog_add_file(found, FALSE, FALSE)
+		end if
+
+		found = dir(@attrib)
+	wend
+end sub
+
+sub scan_directory_for_h(byref rootdir as string)
+	dirs.filecount = 0
+	dirs.dircount = 1
+
+	dim as string root = path_add_div(rootdir)
+
+	print "scanning directory for *.h files: '" & root & "'"
+
+	dirs_append(root)
+
+	'' Work off the queue -- each subdir scan can append new subdirs
+	while (dirs.head)
+		scan_current_head_and_append()
+		dirs_drop_head()
+	wend
+
+	if (frog.verbose) then
+		dim as string files = "file"
+		if (dirs.filecount <> 1) then
+			files += "s"
+		end if
+
+		dim as string directories = "director"
+		if (dirs.dircount = 1) then
+			directories += "y"
+		else
+			directories += "ies"
+		end if
+
+		print using "  scanner: found & " & files & _
+				" in & " & directories; _
+				dirs.filecount, dirs.dircount
+	end if
+end sub
