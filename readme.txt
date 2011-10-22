@@ -31,25 +31,36 @@ Goal:
 
 Usage:
 
-  Compile fbfrog:                     fbc -m fbfrog *.bas
   Translate a header:                 ./fbfrog foo.h
   Translate a whole directory:        ./fbfrog path/to/foo/
   Recursively process #includes too:  ./fbfrog --follow start.h
   Merge headers as much as possible:  ./fbfrog --follow --merge --concat *.h
   See also:                           ./fbfrog --help
 
+  Or launch the fbfrog-gui[.exe] and use that; it's a frontend for
+  the fbfrog command line program.
 
-fbfrog GUI (runs fbfrog for you):
 
-  First:         cd gui/
-  Linux (GTK+):  fbc gui.bas gtk.bas -mt -x ../fbfrog-gui
-  Win32:         fbc gui.bas win32.bas resources.rc -mt -s gui -x ..\fbfrog-gui.exe
+Compiling:
 
-  The gui/*.png images were hand-crafted in Paint.NET.
-  The win32 icon (gui/frog.ico) can be rebuild using GIMP: Open the 48x48 png,
-  then load in the others as layers, then duplicate them to have three of each,
-  then save as .ico and set the options so that it ends up with 8bpp, 24bpp
-  and 32bpp versions of each image.
+  fbfrog:
+        fbc -m fbfrog *.bas
+
+  Linux GTK+ GUI:
+        cd gui/
+        fbc gui.bas gtk.bas xpms.bas -mt -x ../fbfrog-gui
+
+  Win32 GUI:
+        cd gui/
+        fbc gui.bas win32.bas resources.rc -mt -s gui -x ..\fbfrog-gui.exe
+
+  The *.png images were hand-crafted in Paint.NET.
+  The win32 icon can be rebuild using GIMP: Open the 48x48 png, then load in
+  the others as layers, then duplicate them to have three of each, then save
+  as .ico and set the options so that it ends up with 8bpp, 24bpp and 32bpp
+  versions of each image.
+  The *.xpm files are exported from the *.pngs using GIMP.
+  To recreate the xpms.bas module, compile and run embed-xpms.bas.
 
 
 Here's how it works:
@@ -161,12 +172,20 @@ Source module overview:
                      accessor functions
 
 
-  gui/gui.bas        GUI main module (the GUI is a separate program)
-                     fbfrog launching code, some event logic
+  gui/embed-xpms.bas    Program for regenerating xpms.bas from the *.xpm files
+                        in the same directory
 
   gui/gtk.bas        GTK+ version of the GUI
 
+  gui/gui.bas        GUI main module (the GUI is a separate program)
+                     fbfrog launching code, some event logic
+
   gui/win32.bas      Win32 version of the GUI
+
+  gui/resources.rc   Win32 resource script, compile it in to embed the icon
+                     and the xp.manifest into the program
+
+  gui/xpms.bas       Embedded .xpm icons for the GTK+ GUI
 
 
 To do:

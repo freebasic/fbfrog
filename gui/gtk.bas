@@ -128,6 +128,21 @@ private function create_controls() as GtkWidget ptr
 	return paned
 end function
 
+'' Must be compatible to xpms.bas
+extern as zstring ptr ptr frog16_xpm
+extern as zstring ptr ptr frog24_xpm
+extern as zstring ptr ptr frog32_xpm
+extern as zstring ptr ptr frog48_xpm
+
+private sub load_icons()
+	dim as GList ptr list = NULL
+	list = g_list_prepend(list, gdk_pixbuf_new_from_xpm_data(frog16_xpm))
+	list = g_list_prepend(list, gdk_pixbuf_new_from_xpm_data(frog24_xpm))
+	list = g_list_prepend(list, gdk_pixbuf_new_from_xpm_data(frog32_xpm))
+	list = g_list_prepend(list, gdk_pixbuf_new_from_xpm_data(frog48_xpm))
+	gtk_window_set_icon_list(GTK_WINDOW(gtk.win), list)
+end sub
+
 function gui_is_checkbox_enabled(byval i as integer) as integer
 	return (gtk_toggle_button_get_active( _
 	        GTK_TOGGLE_BUTTON(gtk.checkboxes(i))) <> FALSE)
@@ -225,6 +240,8 @@ sub gui_init()
 	''gtk_window_move(GTK_WINDOW(gtk.win), x, y)
 	gtk_window_set_default_size(GTK_WINDOW(gtk.win), 640, 480)
 	''gtk_window_maximize(GTK_WINDOW(gtk.win))
+
+	load_icons()
 
 	''dim as GtkWidget ptr align = gtk_alignment_new(0, 0, 1, 1)
 	''gtk_box_pack_start(GTK_BOX(parentbox), align, FALSE, FALSE, 0)
