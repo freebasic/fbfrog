@@ -52,7 +52,7 @@ Compiling:
 
   Win32 GUI:
         cd gui/
-        fbc gui.bas win32.bas resources.rc -mt -s gui -x ..\fbfrog-gui.exe
+        fbc gui.bas win32.bas resources.rc -mt -s gui -x ../fbfrog-gui.exe
 
   The *.png images were hand-crafted in Paint.NET.
   The win32 icon can be rebuild using GIMP: Open the 48x48 png, then load in
