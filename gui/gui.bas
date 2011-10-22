@@ -96,7 +96,7 @@ private sub launch_fbfrog(byref args as string)
 			'' to -s gui). So that's why here there is this
 			'' additional check to detect that situation.
 			if (exec(fbfrog, "") <> 0) then
-				fbfrog_not_found(fbfrog)
+				oops_not_found(fbfrog)
 				return
 			end if
 		#endif
