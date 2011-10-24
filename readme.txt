@@ -1,6 +1,6 @@
 
   fbfrog -- C-to-FreeBASIC header translator
-  Copyright (C) 2011  Daniel C. Klauer <daniel.c.klauer@web.de>
+  Copyright (C) 2011  Daniel C. Klauer <daniel.c.klauer[at]web.de>
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
