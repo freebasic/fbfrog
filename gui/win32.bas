@@ -206,7 +206,6 @@ private sub on_size()
 	rects(C_OUT    ).bottom = y
 	rects(C_IN     ).bottom = y
 
-	dim as double a = timer()
 #if 0
 	for i as integer = 0 to (C__COUNT - 1)
 		MoveWindow(w32.controls(i), _
@@ -375,21 +374,21 @@ function gui_dialog(byval i as integer) as zstring ptr
 		info.lpstrFile = @path
 		info.nMaxFile = MAX_PATH + 1
 		info.lpstrTitle = dialog_strings(0)
-		info.Flags = OFN_ALLOWMULTISELECT or OFN_EXPLORER or OFN_HIDEREADONLY _
-			     or OFN_FILEMUSTEXIST or OFN_PATHMUSTEXIST
+		info.Flags = OFN_ALLOWMULTISELECT or OFN_EXPLORER or _
+		             OFN_HIDEREADONLY or _
+			     OFN_FILEMUSTEXIST or OFN_PATHMUSTEXIST
 
-		print "GetOpenFileName(): ";GetOpenFileName(@info)
+		GetOpenFileName(@info)
 
 	case 1
 		static as zstring * (MAX_PATH + 1) lastvisited
-
-		print "<";lastvisited;">"
 
 		dim as BROWSEINFO info
 		info.hwndOwner = w32.win
 		info.pszDisplayName = @path
 		info.lpszTitle = dialog_strings(1)
-		info.ulFlags = BIF_USENEWUI or BIF_RETURNFSANCESTORS or BIF_RETURNONLYFSDIRS
+		info.ulFlags = BIF_USENEWUI or BIF_RETURNFSANCESTORS or _
+		               BIF_RETURNONLYFSDIRS
 
 		'' If we remembered a path from last time, go back to it
 		if (lastvisited[0]) then
@@ -406,8 +405,6 @@ function gui_dialog(byval i as integer) as zstring ptr
 		lastvisited = path
 
 	end select
-
-	print "<";path;">"
 
 	return @path
 end function

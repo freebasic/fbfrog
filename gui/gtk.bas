@@ -237,15 +237,9 @@ sub gui_init()
 	gtk.win = gtk_window_new(GTK_WINDOW_TOPLEVEL)
 	g_signal_connect(G_OBJECT(gtk.win), "delete-event", G_CALLBACK(@on_delete_event), NULL)
 	gtk_container_set_border_width(GTK_CONTAINER(gtk.win), 4)
-	''gtk_window_move(GTK_WINDOW(gtk.win), x, y)
 	gtk_window_set_default_size(GTK_WINDOW(gtk.win), 640, 480)
-	''gtk_window_maximize(GTK_WINDOW(gtk.win))
 
 	load_icons()
-
-	''dim as GtkWidget ptr align = gtk_alignment_new(0, 0, 1, 1)
-	''gtk_box_pack_start(GTK_BOX(parentbox), align, FALSE, FALSE, 0)
-	''gtk_container_add(GTK_CONTAINER(align), box)
 
 	gtk_container_add(GTK_CONTAINER(gtk.win), create_controls())
 
