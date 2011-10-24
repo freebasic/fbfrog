@@ -226,12 +226,8 @@ To do:
 > Insert EOL + same indentation instead of ':' in some cases, e.g. fields or
   typede-struct-block split ups
 
-> Add --input-dir <path> and scan it for *.h files
-
 > Pretty print .bi input
   - Add FB mode to the lexer, differences to C aren't that big
   - Keyword casing
   - Function declaration wrapping?
   - Fixup indendation and overhead space?
-
-> Make a simple GUI -- someone is going to ask for it anyways
