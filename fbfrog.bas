@@ -186,17 +186,15 @@ private function concat_file(byval x as integer) as integer
 end function
 
 private sub print_help()
-	print _
-	!"usage: fbfrog [-[-]options] *.h\n" & _
-	!"For every given C header (*.h) an FB header (*.bi) will be generated.\n" & _
-	!"The resulting .bi files may need further editing; watch out for TODOs.\n" & _
-	!"options:\n" & _
-	!"  --concat      Concatenate headers that do not #include each other\n" & _
-	!"  --follow      Also translate all #includes that can be found\n" & _
-	!"  --merge       Try to combine headers and their #includes\n" & _
-	!"  --verbose     Show more stats and information\n" & _
-	 "  --help, --version  Help and version output"
-
+	print "usage: fbfrog [-[-]options] *.h"
+	print "For every given C header (*.h) an FB header (*.bi) will be generated."
+	print "The resulting .bi files may need further editing; watch out for TODOs."
+	print "options:"
+	print "  --concat      Concatenate headers that do not #include each other"
+	print "  --follow      Also translate all #includes that can be found"
+	print "  --merge       Try to combine headers and their #includes"
+	print "  --verbose     Show more stats and information"
+	print "  --help, --version      Help and version output"
 	end 0
 end sub
 
