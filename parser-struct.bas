@@ -1,4 +1,4 @@
-#include once "frog.bi"
+#include once "parser.bi"
 
 private function parse_nested_struct_begin(byval x as integer) as integer
 	'' {STRUCT|UNION} '{'

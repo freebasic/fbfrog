@@ -143,17 +143,6 @@ Source module overview:
   fbfrog.bas         Main module: Command line handling, header file list,
                      parsing/translation driver
 
-  frog.bas           Toplevel parsing/translator functions (main loops),
-                     parsing helper functions, post-translation fixup passes,
-                     #define/#include parsing/merging
-
-  frog-struct.bas    Compound block parsing (enum/struct/union blocks,
-                     and the special case extern block)
-
-  frog-decl.bas      All sorts of declaration parsing: variables, fields,
-                     enum constants, procedures, parameters, typedefs,
-                     everything with procedure pointers too
-
   hash.bas           Generic hash table (no deletions)
 
   lex.bas            C lexer, exports only a function to insert a file at a
@@ -163,6 +152,17 @@ Source module overview:
 
   misc.bas           Helper functions: error handling (i.e. print "oops" and
                      end 1, hah), path/file name transformations
+
+  parser.bas         Toplevel parsing/translator functions (main loops),
+                     parsing helper functions, post-translation fixup passes,
+                     #define/#include parsing/merging
+
+  parser-struct.bas  Compound block parsing (enum/struct/union blocks,
+                     and the special case extern block)
+
+  parser-decl.bas    All sorts of declaration parsing: variables, fields,
+                     enum constants, procedures, parameters, typedefs,
+                     everything with procedure pointers too
 
   storage.bas        Global token text buffer, allowing tokens to re-use text
                      across multiple parses, and avoiding the need to allocate()

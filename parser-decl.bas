@@ -1,4 +1,4 @@
-#include once "frog.bi"
+#include once "parser.bi"
 
 function parse_enumconst _
 	( _
