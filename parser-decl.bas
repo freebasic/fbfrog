@@ -577,17 +577,26 @@ private sub split_multdecl_if_needed(byval x as integer, byval begin as integer)
 	''  - If the begin token is marked as topdecl, then the new mark
 	''    is either vardecl or procdecl depending on whether it's a
 	''    procdecl or not.
-	''  - If the begin token is marked as typedef or field, nothing
-	''    neds to be done, since it's already marked correctly.
+	''  - Also, a fielddecl is changed to a procdecl, if it is one
+	''    (C++ methods; those can appear as fielddecls inside the
+	''    struct/class compound or outside as topdecls, so it's best to
+	''    let the procdecl translator handle them)
+	''  - Otherwise, it could be a normal fielddecl or a typedef, nothing
+	''    needs to be done then, since it's already marked correctly.
 	dim as integer mark = tk_mark(begin)
-	if (mark = MARK_TOPDECL) then
+	select case (mark)
+	case MARK_TOPDECL
 		if (first_is_procdecl) then
 			mark = MARK_PROCDECL
 		else
 			mark = MARK_VARDECL
 		end if
 		tk_set_mark(mark, begin, end_of_first)
-	end if
+	case MARK_FIELDDECL
+		if (first_is_procdecl) then
+			tk_set_mark(MARK_PROCDECL, begin, end_of_first)
+		end if
+	end select
 end sub
 
 private sub remove_overhead_ptrs(byval x as integer)

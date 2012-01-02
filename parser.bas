@@ -1110,7 +1110,14 @@ sub translate_toplevel()
 
 		case MARK_FIELDDECL
 			fixup_multdecl(x, x)
-			x = translate_decl(x, DECL_FIELD)
+
+			'' fielddecls can be changed to procdecls (methods),
+			'' in that case x doesn't advance here (as if this was
+			'' a topdecl), so the decl will be handled as procdecl
+			'' instead.
+			if (tk_mark(x) = MARK_FIELDDECL) then
+				x = translate_decl(x, DECL_FIELD)
+			end if
 
 		case MARK_UNKNOWN, MARK_UNKNOWNENUMCONST
 			'' Insert a TODO at the begin of this statement.

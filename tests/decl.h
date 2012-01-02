@@ -84,6 +84,8 @@ struct T {
 	struct T *a, ****a, a;
 
 	int *(*p)(int*);
+	int f(int, int);
+	void proc(void);
 
 	int a;
 #if 1

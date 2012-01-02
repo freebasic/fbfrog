@@ -85,6 +85,8 @@ type T
 	as T ptr a : as T ptr ptr ptr ptr a : as T a
 
 	as function(byval as integer ptr ) as integer ptr p
+	declare function f(byval as integer, byval as integer) as integer
+	declare sub proc()
 
 	as integer a
 #if 1

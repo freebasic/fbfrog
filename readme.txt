@@ -201,9 +201,6 @@ To do:
 	// <type T_ ...>, that's easier than inserting T_ fwdref in place of T
 	// everywhere where it's used before the T body)
 	struct T;
-  - C++ methods currently trigger a bug warning, probably because the multdecl
-    splitup only sets MARK_PROCDECL for MARK_TOPDECL, not MARK_FIELDDECL,
-    and the fielddecl translator comes across unexpected ()'s...
 
 > More translations passes
   - Mark ids during translation, then check them in a global pass
