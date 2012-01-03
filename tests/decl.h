@@ -46,11 +46,15 @@ int f(int);
 /* some more params, and even ellipsis */
 T *f(int x, short, char *, ...);
 
-#define MY_EXTERN /*__declspec(dllexport)*/
+#define MY_EMPTY
+#define MY_EXPORT __declspec(dllexport)
 #define MY_CALL __attribute__((__stdcall__))/*__stdcall*/
 
 /* some #defines in front, as is pretty common */
-MY_EXTERN MY_CALL TT1 f7(void);
+MY_EMPTY T f(void);
+MY_CALL T f(void);
+MY_EMPTY MY_CALL T f(void);
+MY_EXPORT T a;
 
 /* Wrapped */
 int f(int a, int b,

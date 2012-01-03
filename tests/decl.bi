@@ -13,7 +13,7 @@ dim shared as sub() p
 /' Function pointer, with anonymous function pointer param '/
 dim shared as function(byval as function (byval as byte ptr ptr ptr ) as integer ptr ptr ptr) as double ptr ptr ptr p
 
-private dim shared as integer a
+dim shared as integer a
 extern as integer a
 
 /' Complex toplevel decl -- vardecl, procptr vardecl, procdecl '/
@@ -46,12 +46,16 @@ declare function f(byval as integer) as integer
 /' some more params, and even ellipsis '/
 declare function f(byval x as integer, byval as short, byval as byte ptr , ...) as T ptr
 
-#define MY_EXTERN /'__declspec(dllexport)'/
+#define MY_EMPTY
+#define MY_EXPORT __declspec(dllexport)
 #define MY_CALL __attribute__((__stdcall__))/'__stdcall'/
 
 /' some #defines in front, as is pretty common '/
+declare function f() as T
+declare function f MY_CALL () as T
 '' TODO: unknown construct
-MY_EXTERN MY_CALL TT1 f7(void);
+MY_EMPTY MY_CALL T f(void);
+dim shared as T a
 
 /' Wrapped '/
 declare function f(byval a as integer, byval b as integer, _

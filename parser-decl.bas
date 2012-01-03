@@ -1011,16 +1011,21 @@ function translate_decl _
 		end select
 
 	case DECL_VAR
-		if (tk_get(x) = KW_EXTERN) then
-			x = skip(x)
-		else
-			if (tk_get(x) = KW_STATIC) then
+		dim as integer is_extern = FALSE
+
+		select case (tk_get(x))
+		case TK_ID
+			if (frog_add_define(tk_text(x), 0)) then
 				remove_this_and_space(x)
-
-				'' PRIVATE
-				x = insert_spaced_token(x, KW_PRIVATE, NULL)
 			end if
+		case KW_EXTERN
+			is_extern = TRUE
+			x = skip(x)
+		case KW_STATIC
+			remove_this_and_space(x)
+		end select
 
+		if (is_extern = FALSE) then
 			'' DIM SHARED
 			x = insert_spaced_token(x, KW_DIM, NULL)
 			x = insert_spaced_token(x, KW_SHARED, NULL)
