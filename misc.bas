@@ -366,8 +366,10 @@ end type
 dim shared as DirQueue dirs
 
 private sub dirs_append(byref path as string)
+	dirs.dircount += 1
+
 	dim as DirNode ptr node = callocate(sizeof(DirNode))
-	node->path = path
+	node->path = path_add_div(path)
 
 	if (dirs.tail) then
 		dirs.tail->next = node
@@ -390,68 +392,44 @@ private sub dirs_drop_head()
 	end if
 end sub
 
-private sub scan_current_head_and_append()
-	const PATTERN = "*.h"
-
-	''if (frog.verbose) then
-	''	print " dir: " & dirs.head->path
-	''end if
-
-	'' Find files and subdirs (first level children only)
-	''
-	'' Dirs must be appended to a list for later,
-	'' since dir() can't be used recursively due to
-	'' its context sensitivity.
-	'' Alternative: one threadcreate() per dir
-	''
-	'' Files on the other hand can be handled immediately.
-
-	dim as integer attrib = 0
-	dim as string found = dir(dirs.head->path & PATTERN, _
-	                          fbDirectory or fbNormal, @attrib)
-
+private sub scan_parent(byref parent as string)
+	'' Scan for *.h files
+	dim as string found = dir(parent & "*.h", fbNormal)
 	while (len(found) > 0)
-		dim as integer is_dir = ((attrib and fbDirectory) <> 0)
+		'' Remember the file for translation
+		frog_add_file(parent + found, FALSE, FALSE)
+		dirs.filecount += 1
 
-		if (is_dir) then
-			'' Directory
-			select case (found)
-			case ".", ".."
+		found = dir()
+	wend
 
-			case else
-				found = dirs.head->path + found
-				dirs.dircount += 1
-				dirs_append(path_add_div(found))
-			end select
-		else
-			'' File
-			found = dirs.head->path + found
-			dirs.filecount += 1
+	'' Scan for subdirectories
+	found = dir(parent & "*", fbDirectory)
+	while (len(found) > 0)
+		select case (found)
+		case ".", ".."
+			'' Ignore these special subdirectories
 
-			''if (frog.verbose) then
-			''	print "file: " & found
-			''end if
+		case else
+			'' Remember the subdirectory for further scanning
+			dirs_append(parent + found)
+		end select
 
-			frog_add_file(found, FALSE, FALSE)
-		end if
-
-		found = dir(@attrib)
+		found = dir()
 	wend
 end sub
 
 sub scan_directory_for_h(byref rootdir as string)
 	dirs.filecount = 0
-	dirs.dircount = 1
+	dirs.dircount = 0
 
-	dim as string root = path_add_div(rootdir)
+	dirs_append(rootdir)
 
-	print "scanning directory for *.h files: '" & root & "'"
-
-	dirs_append(root)
+	print "scanning tree for *.h files: '" & dirs.head->path & "'"
 
 	'' Work off the queue -- each subdir scan can append new subdirs
 	while (dirs.head)
-		scan_current_head_and_append()
+		scan_parent(dirs.head->path)
 		dirs_drop_head()
 	wend
 
