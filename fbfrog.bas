@@ -163,12 +163,13 @@ private sub concat_file()
 
 	dim as integer x = tk_count()
 
-	'' Insert the file content and a TODO note
+	'' Insert the file content behind some EOLs, to ensure it's separated
+	'' (not all files have EOL at EOF), unless it's the first
 	lex_insert_file(x, *frog.f->hardname)
-	tk_insert(x, TK_EOL, NULL)
-	tk_insert(x, TK_TODO, "Note: " & *frog.f->softname & " starts here")
-	tk_insert(x, TK_EOL, NULL)
-	tk_insert(x, TK_EOL, NULL)
+	if (x > 0) then
+		tk_insert(x, TK_EOL, NULL)
+		tk_insert(x, TK_EOL, NULL)
+	end if
 
 	'' Now parse the appended tokens, preparing for translation...
 	'' and to possibly merge #includes (if --merge is on).
