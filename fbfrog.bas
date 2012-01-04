@@ -177,15 +177,16 @@ private sub concat_file()
 end sub
 
 private sub print_help()
-	print "usage: fbfrog [-[-]options] *.h"
-	print "For every given C header (*.h) an FB header (*.bi) will be generated."
-	print "The resulting .bi files may need further editing; watch out for TODOs."
-	print "options:"
-	print "  --concat      Concatenate headers that do not #include each other"
-	print "  --follow      Also translate all #includes that can be found"
-	print "  --merge       Try to combine headers and their #includes"
-	print "  --verbose     Show more stats and information"
-	print "  --help, --version      Help and version output"
+	print "Usage: fbfrog *.h"
+	print "The given *.h file will be translated into a *.bi file. It needs reviewing"
+	print "and editing afterwards, so watch out for TODOs and C/FB differences like"
+	print "procedure calling conventions."
+	print "Options:"
+	print "  -concat      Concatenate headers that don't #include each other"
+	print "  -follow      Also translate all #includes that can be found"
+	print "  -merge       Insert #included files into their parent"
+	print "  -verbose     Show debugging info"
+	print "  -help, -version      Help and version output"
 	end 0
 end sub
 

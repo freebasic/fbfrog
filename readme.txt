@@ -119,7 +119,10 @@ Here's how it works:
      content would be duplicated, and that is usually not nice...
    - Concatenation is supposed to be used when headers belong together and
      just should be appended into a bigger file, as a last resort, if they
-     cannot be combined by merging.
+     cannot be combined by merging. This is only done if the headers aren't
+     #included anywhere, otherwise the files would be missing.
+  All the options together can do a pretty good job at combining all headers
+  into a single one, unless there are circular #include dependencies.
 
   To handle the #include dependencies, the fbfrog frontend keeps a list of
   (*.h) files that is filled with files from the command line and those found
