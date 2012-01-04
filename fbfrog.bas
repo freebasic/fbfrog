@@ -112,7 +112,7 @@ function frog_add_file _
 		end if
 
 		'' Already exists
-		return cptr(FrogFile ptr, item->data)
+		return item->data
 	end if
 
 	if (frog.verbose) then
@@ -140,7 +140,7 @@ sub frog_set_visited(byval f as FrogFile ptr)
 	f->flags or= FILE_VISITED
 end sub
 
-function frog_can_visit(byval f as FrogFile ptr) as integer
+private function frog_can_visit(byval f as FrogFile ptr) as integer
 	return ((f->flags and FILE_VISITED) = 0)
 end function
 
@@ -154,36 +154,26 @@ function frog_can_merge(byval f as FrogFile ptr) as integer
 	return (frog.merge and (f->refcount = 1) and frog_can_follow(f))
 end function
 
-function frog_can_work_on(byval f as FrogFile ptr) as integer
+private function frog_can_work_on(byval f as FrogFile ptr) as integer
 	return (frog_can_visit(f) and frog_can_follow(f))
 end function
 
-private function concat_file(byval x as integer) as integer
+private sub concat_file()
 	frog.f->flags or= FILE_VISITED
 
-	dim as integer begin = x
+	dim as integer x = tk_count()
 
+	'' Insert the file content and a TODO note
+	lex_insert_file(x, *frog.f->hardname)
 	tk_insert(x, TK_EOL, NULL)
-	x += 1
-	tk_insert(x, TK_EOL, NULL)
-	x += 1
-	tk_insert(x, TK_EOL, NULL)
-	x += 1
 	tk_insert(x, TK_TODO, "Note: " & *frog.f->softname & " starts here")
-	x += 1
 	tk_insert(x, TK_EOL, NULL)
-	x += 1
 	tk_insert(x, TK_EOL, NULL)
-	x += 1
-
-	x = lex_insert_file(x, *frog.f->hardname)
 
 	'' Now parse the appended tokens, preparing for translation...
 	'' and to possibly merge #includes (if --merge is on).
-	parse_toplevel(begin)
-
-	return x
-end function
+	parse_toplevel(x)
+end sub
 
 private sub print_help()
 	print "usage: fbfrog [-[-]options] *.h"
@@ -332,7 +322,6 @@ end sub
 		tk_init()
 
 		dim as FrogFile ptr first = NULL
-		dim as integer x = 0
 
 		frog.f = list_head(@frog.files)
 		while (frog.f)
@@ -348,7 +337,7 @@ end sub
 					print "appending: " & *frog.f->softname
 				end if
 
-				x = concat_file(x)
+				concat_file()
 			end if
 
 			frog.f = list_next(frog.f)

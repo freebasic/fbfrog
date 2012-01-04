@@ -424,5 +424,4 @@ declare function frog_add_file _
 		byval search_paths as integer _
 	) as FrogFile ptr
 declare sub frog_set_visited(byval f as FrogFile ptr)
-declare function frog_can_visit(byval f as FrogFile ptr) as integer
 declare function frog_can_merge(byval f as FrogFile ptr) as integer
