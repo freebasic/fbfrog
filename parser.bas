@@ -378,12 +378,12 @@ private function indent_comment _
 	return newtext
 end function
 
-private function merge_file_in _
+private sub merge_file_in _
 	( _
 		byref filename as string, _
 		byval begin as integer, _
 		byval x as integer _
-	) as integer
+	)
 
 	'' Remove the #include (but not the EOL behind it)
 	ASSUMING(tk_get(begin) = TK_HASH)
@@ -441,9 +441,7 @@ private function merge_file_in _
 			wend
 		end if
 	end select
-
-	return x
-end function
+end sub
 
 private function handle_include _
 	( _
@@ -485,7 +483,12 @@ private function handle_include _
 	if (frog_can_merge(f)) then
 		frog_set_visited(f)
 		print "merging in: " & *f->softname
-		x = merge_file_in(*f->hardname, begin, x)
+
+		'' This will remove the #include, insert the file content in
+		'' its place, and we have to continue parsing at its beginning,
+		'' which also is the former beginning of the #include.
+		merge_file_in(*f->hardname, begin, x)
+		x = begin
 	end if
 
 	return x
@@ -617,30 +620,41 @@ function parse_pp_directive _
 		byval is_preparse as integer _
 	) as integer
 
-	'' (Assuming all '#' are indicating a PP directive)
-	if (tk_get(x) <> TK_HASH) then
-		return x
-	end if
-
 	dim as string filename
 	dim as integer begin = x
+
+	'' '#'?
+	'' (Assuming all '#' are indicating a PP directive)
+	if (tk_get(x) <> TK_HASH) then
+		return begin
+	end if
+
 	x = skip_pp(x)
 
 	'' Mark the expression parts of #if (but not #if itself) specially
 	dim as integer mark = MARK_PP
 	select case (tk_get(x))
-	case KW_IF, KW_IFDEF, KW_IFNDEF, KW_ELIF
+	case KW_IF, KW_IFDEF, KW_IFNDEF, KW_ELIF '' #if & co
 		mark = MARK_PPEXPR
 
-	case KW_INCLUDE
+	case KW_INCLUDE '' #include
 		dim as integer y = skip_pp(x)
 
-		'' Turn <...> into a string literal
-		'' TODO: This should be handled by the lexer, but it depends
-		'' on context, so it could be even harder to do in the lexer
-		'' than here. This sort of breaks the strict separation of
-		'' parsing/translating, but oh well...
+		'' This will usually be one of:
+		''
+		'' #include <...>
+		'' #include "..."
+		'' #include SOME_DEFINE
+		''
+		'' FB doesn't support the <...> form, so it must be turned into
+		'' a "..." string literal. This *should* be done by the C lexer,
+		'' but it can't handle <...> as string literal. It's only a
+		'' string literal in the context of #include which the lexer
+		'' doesn't track. So, the tokens in <...> must be merged into
+		'' a single string literal token, preventing the #include file
+		'' name from being touched by the translation process.
 
+		'' '<'?
 		if (tk_get(y) = TK_LT) then
 			dim as integer lt = y
 			do
@@ -648,6 +662,7 @@ function parse_pp_directive _
 
 				select case (tk_get(y))
 				case TK_GT
+					'' Replace <...> with "..."
 					tk_remove(lt, y)
 					tk_insert(lt, TK_STRING, filename)
 					y = lt
@@ -667,13 +682,14 @@ function parse_pp_directive _
 			loop
 		end if
 
+		'' "..." followed by EOL?
 		if (tk_get(y) = TK_STRING) then
 			if (tk_get(skip_pp(y)) = TK_EOL) then
 				filename = *tk_text(y)
 			end if
 		end if
 
-	case KW_DEFINE
+	case KW_DEFINE '' #define
 		dim as integer y = skip_pp(x)
 		if (tk_get(y) = TK_ID) then
 			dim as uinteger flags = _
@@ -698,7 +714,7 @@ function parse_pp_directive _
 		x = handle_include(begin, x, filename, is_preparse)
 	end if
 
-	'' In case of merge: skip whitespace at BOF
+	'' In case of #include merge: skip whitespace at BOF
 	'' Otherwise: skip EOL + other following whitespace
 	x = skip(x - 1)
 
