@@ -7,7 +7,7 @@
                         3
 
 /' PP expressions '/
-#if ( /' TODO: bitwise NOT, different precedence '/ not defined(FOO_BAR) and THIS_IS_INSANE >= 123) _
+#if ( /' TODO: add parentheses around NOT (different precedence) '/ not defined(FOO_BAR) and THIS_IS_INSANE >= 123) _
     or (OH_MAN_WHATS_THE_PRECEDENCE < 5 and (defined(OK) _
                                             or defined(I_DONT_KNOW)))
 	#define PPMERGE(a, b) a##b
@@ -17,7 +17,7 @@
 #		define HOORAY
 #	endif
 #elseif 1
-	'' TODO: #pragma
+	'' TODO: somehow translate this #pragma if needed
 	#pragma foo
 #endif
 

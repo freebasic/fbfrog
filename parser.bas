@@ -933,7 +933,7 @@ end function
 private function fixup_operator(byval x as integer) as integer
 	select case as const (tk_get(x))
 	case TK_EXCL, TK_TILDE '' {'!' | '~'} -> NOT
-		x = insert_spaced_token(x, TK_TODO, "bitwise NOT, different precedence")
+		x = insert_spaced_token(x, TK_TODO, "add parentheses around NOT (different precedence)")
 		x = replace_operator(x, KW_NOT, -1)
 
 	case TK_EXCLEQ '' != -> <>
@@ -946,7 +946,7 @@ private function fixup_operator(byval x as integer) as integer
 		x = replace_operator(x, KW_MOD, TK_EQ)
 
 	case TK_AMP '' & -> AND | @
-		x = insert_spaced_token(x, TK_TODO, "best guess translation of &")
+		x = insert_spaced_token(x, TK_TODO, "check whether & meant @ or AND")
 
 		select case (tk_get(skiprev(x)))
 		case TK_ID, _                   '' abc & x
@@ -969,7 +969,7 @@ private function fixup_operator(byval x as integer) as integer
 		x = replace_operator(x, KW_AND, TK_EQ)
 
 	case TK_PLUSPLUS, TK_MINUSMINUS
-		x = insert_spaced_token(x, TK_TODO, "not supported in FB")
+		x = insert_spaced_token(x, TK_TODO, "translate ++/--")
 		x = skip(x)
 
 	case TK_LTLT '' << -> shl
@@ -989,7 +989,7 @@ private function fixup_operator(byval x as integer) as integer
 
 	case TK_QUEST '' ?
 		'' TODO: should turn this into iif(), but that's not easy
-		x = insert_spaced_token(x, TK_TODO, "iif()")
+		x = insert_spaced_token(x, TK_TODO, "turn a?b:c into iif(a,b,c)")
 		x = skip(x)
 
 	case TK_CIRCUMFLEX
@@ -1050,7 +1050,7 @@ sub translate_toplevel()
 		case MARK_PP
 			if (tk_get(skip_pp(x)) = KW_PRAGMA) then
 				'' Add TODO for #pragmas
-				x = insert_todo(x, "#pragma")
+				x = insert_todo(x, "somehow translate this #pragma if needed")
 			end if
 
 			ASSUMING(tk_get(x) = TK_HASH)
@@ -1139,7 +1139,7 @@ sub translate_toplevel()
 			'' Insert a TODO at the begin of this statement.
 			ASSUMING(tk_get(x) <> TK_EOL)
 
-			x = insert_todo(x, "unknown construct")
+			x = insert_todo(x, "translate (sorry)")
 
 			if (tk_mark(x) = MARK_UNKNOWNENUMCONST) then
 				x = parse_enumconst(x, TRUE)

@@ -53,7 +53,7 @@ declare function f(byval x as integer, byval as short, byval as byte ptr , ...) 
 /' some #defines in front, as is pretty common '/
 declare function f() as T
 declare function f MY_CALL () as T
-'' TODO: unknown construct
+'' TODO: translate (sorry)
 MY_EMPTY MY_CALL T f(void);
 dim shared as T a
 

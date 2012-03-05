@@ -9,7 +9,7 @@
  *  3. f(1)(2)(3) int;
  *  4. declare function f(1) as function(2) as function(3) as integer
  '/
-'' TODO: unknown construct
+'' TODO: translate (sorry)
 int (*(*f(int))(int))(int);
 
 /'
@@ -20,7 +20,7 @@ int (*(*f(int))(int))(int);
  *  3. (1)(2) int p;
  *  4. as function(1) as function(2) as integer p
  '/
-'' TODO: unknown construct
+'' TODO: translate (sorry)
 int (*(*p)(int))(int);
 
 /'
@@ -30,11 +30,11 @@ int (*(*p)(int))(int);
  *
  * Can be translated, but it needs a proper recursive parser...
  '/
-'' TODO: unknown construct
+'' TODO: translate (sorry)
 int (f)(int);
-'' TODO: unknown construct
+'' TODO: translate (sorry)
 int (*(*(p))(int))(int);
-'' TODO: unknown construct
+'' TODO: translate (sorry)
 int (*(*(((f)))(int))(int))(int);
 
 /'
@@ -47,7 +47,7 @@ int (*(*(((f)))(int))(int))(int);
  *    void (*a)();     ->    dim as sub() a
  *    void (**a)();    ->    dim as sub() ptr a
  '/
-'' TODO: unknown construct
+'' TODO: translate (sorry)
 int (**pp)();
 
 /'
@@ -62,27 +62,27 @@ int (**pp)();
  *    int t(int);
  *    t(5);
  '/
-'' TODO: unknown construct
+'' TODO: translate (sorry)
 typedef int T(int);
 
 enum
 #if 1
-	'' TODO: unknown construct
+	'' TODO: translate (sorry)
 	A    /' next token is '#' instead of ',' or '}', preventing the translation '/
 #endif
 end enum
 
 /' Cannot have #directives mixed into the expression in FB '/
 enum
-	'' TODO: unknown construct
+	'' TODO: translate (sorry)
 	A = _
 	1
 #if 1
-	'' TODO: unknown construct
+	'' TODO: translate (sorry)
 	+ _
 	2
 #endif
-	'' TODO: unknown construct
+	'' TODO: translate (sorry)
 	,
 	B
 end enum
