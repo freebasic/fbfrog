@@ -692,7 +692,7 @@ function lex_insert_file _
 
 	if (frog.verbose) then
 		print using "  lexer: read in & bytes, produced & tokens"; _
-			(culng(lex.limit) - culng(lex.buffer)), _
+			(culng(lex.limit) - culng(lex.buffer)); _
 			newtokens
 	end if
 

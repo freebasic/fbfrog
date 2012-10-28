@@ -137,5 +137,5 @@ sub emit_stats()
 	if (stuff.filecount <> 1) then
 		message &= "s"
 	end if
-	print using message; stuff.todocount, stuff.filecount
+	print using message; stuff.todocount; stuff.filecount
 end sub

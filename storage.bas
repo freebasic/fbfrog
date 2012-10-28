@@ -112,15 +112,15 @@ end sub
 
 sub storage_stats()
 	print using "  text cache: &/& hits (&%), &/& used (&%)"; _
-		storage.hits, storage.hits + storage.misses, _
-		cint((100 / (storage.hits + storage.misses)) * storage.hits), _
-		storage.used, storage.allocated, _
+		storage.hits; storage.hits + storage.misses; _
+		cint((100 / (storage.hits + storage.misses)) * storage.hits); _
+		storage.used; storage.allocated; _
 		cint((100 / storage.allocated) * storage.used)
 
 	print using "              & blocks, average stored length: &, & wasted (&%)"; _
-		storage.blockcount, _
-		iif(storage.misses > 0, storage.used \ storage.misses, 0), _
-		storage.wasted, cint((100 / storage.allocated) * storage.wasted)
+		storage.blockcount; _
+		iif(storage.misses > 0, storage.used \ storage.misses, 0); _
+		storage.wasted; cint((100 / storage.allocated) * storage.wasted)
 
 	hash_stats(@storage.hash, "text")
 end sub

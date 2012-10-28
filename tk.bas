@@ -400,7 +400,7 @@ sub tk_end()
 	if (frog.verbose) then
 		print using "  tokens: & max load, & resizes, " & _
 				"& in, & out, & lookups"; _
-			tk.maxsize, tk.reallocs, _
-			tk.inserts, tk.deletes, tk.lookups
+			tk.maxsize; tk.reallocs; _
+			tk.inserts; tk.deletes; tk.lookups
 	end if
 end sub

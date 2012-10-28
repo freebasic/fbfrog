@@ -167,9 +167,9 @@ end sub
 sub hash_stats(byval h as HashTable ptr, byref prefix as string)
 	print using "  " & prefix & " hash: " & _
 		"&/& hits (&%), &/& used (&%), & resizes"; _
-		h->perfects, h->lookups, _
-		cint((100 / h->lookups) * h->perfects), _
-		h->count, h->room, _
-		cint((100 / h->room) * h->count), _
+		h->perfects; h->lookups; _
+		cint((100 / h->lookups) * h->perfects); _
+		h->count; h->room; _
+		cint((100 / h->room) * h->count); _
 		h->resizes
 end sub

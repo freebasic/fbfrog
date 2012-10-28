@@ -448,6 +448,6 @@ sub scan_directory_for_h(byref rootdir as string)
 
 		print using "  scanner: found & " & files & _
 				" in & " & directories; _
-				dirs.filecount, dirs.dircount
+				dirs.filecount; dirs.dircount
 	end if
 end sub
