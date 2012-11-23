@@ -1,6 +1,6 @@
 
   fbfrog -- C-to-FreeBASIC header translator
-  Copyright (C) 2011  Daniel C. Klauer <daniel.c.klauer[at]web.de>
+  Copyright (C) 2011 - 2012  Daniel C. Klauer <daniel.c.klauer[at]web.de>
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -153,9 +153,6 @@ Source module overview:
 
   list.bas           Generic linked list
 
-  misc.bas           Helper functions: error handling (i.e. print "oops" and
-                     end 1, hah), path/file name transformations
-
   parser.bas         Toplevel parsing/translator functions (main loops),
                      parsing helper functions, post-translation fixup passes,
                      #define/#include parsing/merging
@@ -166,6 +163,8 @@ Source module overview:
   parser-decl.bas    All sorts of declaration parsing: variables, fields,
                      enum constants, procedures, parameters, typedefs,
                      everything with procedure pointers too
+
+  pathmagic.bas      Path/file name handling functions, directory tree search
 
   storage.bas        Global token text buffer, allowing tokens to re-use text
                      across multiple parses, and avoiding the need to allocate()

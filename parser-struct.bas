@@ -1,131 +1,137 @@
 #include once "parser.bi"
 
-private function parse_nested_struct_begin(byval x as integer) as integer
+private function parseNestedStructBegin( byval x as integer ) as integer
+	dim as integer begin = any
+
 	'' {STRUCT|UNION} '{'
-	select case (tk_get(x))
+	select case( tkGet( x ) )
 	case KW_STRUCT, KW_UNION
 
 	case else
 		return x
 	end select
 
-	dim as integer begin = x
-	x = skip(x)
+	begin = x
+	x = hSkip( x )
 
 	'' '{'
-	if (tk_get(x) <> TK_LBRACE) then
+	if( tkGet( x ) <> TK_LBRACE ) then
 		return begin
 	end if
 
-	tk_set_mark(MARK_STRUCT, begin, x)
+	tkSetMark( MARK_STRUCT, begin, x )
 
-	return skip(x)
+	function = hSkip( x )
 end function
 
-private function parse_nested_struct_end _
+private function parseNestedStructEnd _
 	( _
 		byval x as integer, _
 		byval toplevelopening as integer _
 	) as integer
 
-	dim as integer begin = x
+	dim as integer begin = any, opening = any
+
+	begin = x
 
 	'' '}'
-	if (tk_get(x) <> TK_RBRACE) then
+	if( tkGet( x ) <> TK_RBRACE ) then
 		return begin
 	end if
 
 	'' Find the opening '{', to determine whether this is a struct
 	'' or a union. Bail out if there is no matching nested struct/union
 	'' begin.
-	dim as integer opening = find_parentheses(x, TRUE)
-	if ((opening = x) or (opening <= toplevelopening)) then
+	opening = hFindParentheses( x, -1 )
+	if( (opening = x) or (opening <= toplevelopening) ) then
 		return begin
 	end if
-	opening = skiprev(opening)
-	ASSUMING(tk_mark(opening) = MARK_STRUCT)
+	opening = hSkipRev( opening )
+	assert( tkMark( opening ) = MARK_STRUCT )
 
 	'' '}'
-	ASSUMING(tk_get(x) = TK_RBRACE)
-	x = skip(x)
+	assert( tkGet( x ) = TK_RBRACE )
+	x = hSkip( x )
 
 	'' [id]
-	if (tk_get(x) = TK_ID) then
-		x = skip(x)
+	if( tkGet( x ) = TK_ID ) then
+		x = hSkip( x )
 	end if
 
 	'' ';'
-	if (tk_get(x) <> TK_SEMI) then
+	if( tkGet( x ) <> TK_SEMI ) then
 		return begin
 	end if
 
-	tk_set_mark(iif((tk_get(opening) = KW_STRUCT), _
-				MARK_ENDSTRUCT, MARK_ENDUNION), begin, x)
+	tkSetMark( iif( (tkGet( opening ) = KW_STRUCT), _
+				MARK_ENDSTRUCT, MARK_ENDUNION ), begin, x )
 
-	return skip(x)
+	function = hSkip( x )
 end function
 
-function parse_struct(byval x as integer) as integer
+function parseStruct( byval x as integer ) as integer
+	dim as integer begin = any, compoundkw = any, level = any, old = any, _
+		toplevelopening = any, structend = any
+
 	'' [TYPEDEF] {STRUCT|UNION|ENUM} [id] '{'
 	'' ...
 	'' '}' [no-type-multdecl] ';'
 
-	dim as integer begin = x
+	begin = x
 
 	'' [TYPEDEF]
-	if (tk_get(x) = KW_TYPEDEF) then
-		x = skip(x)
+	if( tkGet(x) = KW_TYPEDEF) then
+		x = hSkip( x )
 	end if
 
 	'' {STRUCT|UNION|ENUM}
-	dim as integer compoundkw = tk_get(x)
-	select case (compoundkw)
+	compoundkw = tkGet( x )
+	select case( compoundkw )
 	case KW_ENUM, KW_STRUCT, KW_UNION
 
 	case else
 		return begin
-
 	end select
 
-	x = skip(x)
+	x = hSkip( x )
 
 	'' [id]
-	if (tk_get(x) = TK_ID) then
-		x = skip(x)
+	if( tkGet( x ) = TK_ID ) then
+		x = hSkip(x)
 	end if
 
 	'' '{'
-	if (tk_get(x) <> TK_LBRACE) then
+	if( tkGet( x ) <> TK_LBRACE ) then
 		return begin
 	end if
 
-	tk_set_mark(MARK_STRUCT, begin, x)
+	tkSetMark( MARK_STRUCT, begin, x )
 
-	dim as integer toplevelopening = x
-	x = skip(x)
+	toplevelopening = x
+	x = hSkip(x)
 
 	'' Body: Struct fields/enum constants, nested structs/unions,
 	'' possibly intermixed with PP directives.
-	dim as integer level = 0
+	level = 0
 	do
-		dim as integer old = x
+		old = x
 
-		if (compoundkw = KW_ENUM) then
-			x = parse_enumconst(x, FALSE)
+		if( compoundkw = KW_ENUM ) then
+			x = parseEnumconst( x, FALSE )
 		else
-			x = parse_nested_struct_begin(x)
-			if (x > old) then
+			x = parseNestedStructBegin( x )
+			if( x > old ) then
 				level += 1
 			end if
 
-			x = parse_multdecl(x, x, DECL_FIELD)
+			x = parseMultdecl( x, x, DECL_FIELD )
 		end if
 
 		'' '}'?
-		select case (tk_get(x))
+		select case( tkGet( x ) )
 		case TK_RBRACE
-			if (level > 0) then
-				x = parse_nested_struct_end(x, toplevelopening)
+			if( level > 0 ) then
+				x = parseNestedStructEnd( x, toplevelopening )
 				level -= 1
 			else
 				exit do
@@ -133,105 +139,109 @@ function parse_struct(byval x as integer) as integer
 
 		case TK_EOF
 			return begin
-
 		end select
 
-		x = parse_pp_directive(x, FALSE)
+		x = parsePPDirective( x, FALSE )
 
-		if (x = old) then
+		if( x = old ) then
 			'' Ok, there's something weird inside this struct/enum
 			'' body that the PP directive/enumconst/field parsers
 			'' didn't recognize. Ignore this and try to parse
 			'' other fields etc.
 			''return begin
-			if (compoundkw = KW_ENUM) then
-				x = parse_enumconst(x, TRUE)
+			if( compoundkw = KW_ENUM ) then
+				x = parseEnumconst( x, TRUE )
 			else
-				x = parse_unknown(x)
+				x = parseUnknown( x )
 			end if
 		end if
 	loop
 
 	'' '}'
-	dim as integer structend = x
-	ASSUMING(tk_get(x) = TK_RBRACE)
-	x = skip(x)
+	structend = x
+	assert( tkGet( x ) = TK_RBRACE )
+	x = hSkip( x )
 
 	'' If this was a typedef-to-struct-block, there will be a multdecl
 	'' following now...
-	if (tk_get(begin) = KW_TYPEDEF) then
-		x = parse_multdecl(x, begin, DECL_TYPEDEFSTRUCTBLOCK)
+	if( tkGet( begin ) = KW_TYPEDEF ) then
+		x = parseMultdecl( x, begin, DECL_TYPEDEFSTRUCTBLOCK )
 	end if
 
 	'' ';'
-	if (tk_get(x) <> TK_SEMI) then
+	if( tkGet( x ) <> TK_SEMI ) then
 		return begin
 	end if
 
-	if (compoundkw = KW_ENUM) then
+	select case( compoundkw )
+	case KW_ENUM
 		compoundkw = MARK_ENDENUM
-	elseif (compoundkw = KW_STRUCT) then
+	case KW_STRUCT
 		compoundkw = MARK_ENDSTRUCT
-	else
+	case else
 		compoundkw = MARK_ENDUNION
-	end if
+	end select
 
-	tk_set_mark(compoundkw, structend, x)
+	tkSetMark( compoundkw, structend, x )
 
-	return skip(x)
+	function = hSkip( x )
 end function
 
-function parse_extern_begin(byval x as integer) as integer
+function parseExternBegin( byval x as integer ) as integer
+	dim as integer begin = any
+
 	'' EXTERN "C" '{'
 
-	if (tk_get(x) <> KW_EXTERN) then
+	if( tkGet( x ) <> KW_EXTERN ) then
 		return x
 	end if
 
-	dim as integer begin = x
-	x = skip(x)
+	begin = x
+	x = hSkip( x )
 
 	'' "C"
-	if (tk_get(x) <> TK_STRING) then
+	if( tkGet( x ) <> TK_STRING ) then
 		return begin
 	end if
-	x = skip(x)
+	x = hSkip( x )
 
 	'' '{'
-	if (tk_get(x) <> TK_LBRACE) then
+	if( tkGet( x ) <> TK_LBRACE ) then
 		return begin
 	end if
 
-	tk_set_mark(MARK_EXTERN, begin, x)
+	tkSetMark( MARK_EXTERN, begin, x )
 
 	'' EXTERN parsing is done here, so the content is parsed from the
 	'' toplevel loop.
-	return skip(x)
+	function = hSkip( x )
 end function
 
-function parse_extern_end(byval x as integer) as integer
+function parseExternEnd( byval x as integer ) as integer
+	dim as integer opening = any, mark = any
+
 	'' '}'
-	if (tk_get(x) <> TK_RBRACE) then
+	if( tkGet( x ) <> TK_RBRACE ) then
 		return x
 	end if
 
 	'' Check whether this '}' belongs to an 'extern "C" {'
-	dim as integer opening = find_parentheses(x, TRUE)
-	if (opening = x) then
+	opening = hFindParentheses( x, -1 )
+	if( opening = x ) then
 		return x
 	end if
 
-	dim as integer mark = tk_mark(opening)
-	if (mark <> MARK_EXTERN) then
+	mark = tkMark( opening )
+	if( mark <> MARK_EXTERN ) then
 		return x
 	end if
 
-	tk_set_mark(MARK_ENDEXTERN, x, x)
+	tkSetMark( MARK_ENDEXTERN, x, x )
 
-	return skip(x)
+	function = hSkip( x )
 end function
 
-function translate_compound_end _
+function translateCompoundEnd _
 	( _
 		byval x as integer, _
 		byval compoundkw as integer _
@@ -244,25 +254,28 @@ function translate_compound_end _
 	'' translator. Here this just needs to be removed.
 
 	'' Remove '}' and space in front of it
-	ASSUMING(tk_get(x) = TK_RBRACE)
+	assert( tkGet( x ) = TK_RBRACE )
 
-	if (compoundkw = KW_EXTERN) then
-		tk_remove(x, x)
+	if( compoundkw = KW_EXTERN ) then
+		tkRemove( x, x )
 	else
-		tk_remove(x, find_token(x, TK_SEMI))
+		tkRemove( x, hFindToken( x, TK_SEMI ) )
 	end if
 
-	x = insert_spaced_token(x, KW_END, NULL)
-	x = insert_spaced_token(x, compoundkw, NULL)
+	x = hInsertSpacedToken( x, KW_END, NULL )
+	x = hInsertSpacedToken( x, compoundkw, NULL )
 
-	if (is_whitespace_until_eol(skiprev(x) + 1) = FALSE) then
-		x = insert_statement_separator(x)
+	if( hIsWhitespaceUntilEol( hSkipRev( x ) + 1 ) = FALSE ) then
+		x = hInsertStatementSeparator( x )
 	end if
 
-	return x
+	function = x
 end function
 
-function translate_struct(byval x as integer) as integer
+function translateStruct( byval x as integer ) as integer
+	dim as integer is_typedef = any, compoundkw = any, structid = any, _
+		typedefbegin = any, y = any, spacebegin = any
+
 	'' structs/enums beginnings are translated here.
 	'' To support typedefs to struct blocks (which might also be
 	'' anonymous) the ending is searched to retrieve the typedef id
@@ -295,31 +308,31 @@ function translate_struct(byval x as integer) as integer
 	''    struct { } id;               ->    type id /' TODO '/ : ...
 
 	'' [TYPEDEF]
-	dim as integer is_typedef = FALSE
-	if (tk_get(x) = KW_TYPEDEF) then
-		tk_remove(x, skip(x) - 1)
+	is_typedef = FALSE
+	if( tkGet( x ) = KW_TYPEDEF ) then
+		tkRemove( x, hSkip( x ) - 1 )
 		is_typedef = TRUE
 	end if
 
-	dim as integer compoundkw = tk_get(x)
-	if (compoundkw = KW_STRUCT) then
+	compoundkw = tkGet( x )
+	if( compoundkw = KW_STRUCT ) then
 		'' STRUCT -> TYPE
-		tk_remove(x, x)
-		tk_insert(x, KW_TYPE, NULL)
+		tkRemove( x, x )
+		tkInsert( x, KW_TYPE, NULL )
 	else
-		ASSUMING((compoundkw = KW_ENUM) or (compoundkw = KW_UNION))
+		assert( (compoundkw = KW_ENUM) or (compoundkw = KW_UNION) )
 	end if
 
-	x = skip(x)
+	x = hSkip( x )
 
 	'' ['id']
-	dim as integer structid = x
-	if (tk_get(x) = TK_ID) then
-		x = skip(x)
+	structid = x
+	if( tkGet( x ) = TK_ID ) then
+		x = hSkip( x )
 	end if
 
 	'' '{'
-	ASSUMING(tk_get(x) = TK_LBRACE)
+	assert( tkGet( x ) = TK_LBRACE )
 
 	'' Typedef-to-struct-block split up hack:
 	''    typedef struct T { ... } a, *b, (*c)();
@@ -353,40 +366,40 @@ function translate_struct(byval x as integer) as integer
 	''    front.
 	''    Otherwise, do the typedef split up hack.
 
-	dim as integer y = find_parentheses(x, FALSE)
+	y = hFindParentheses( x, 1 )
 
 	'' '}'
-	ASSUMING(tk_get(y) = TK_RBRACE)
-	if (compoundkw = KW_ENUM) then
-		ASSUMING(tk_mark(y) = MARK_ENDENUM)
-	elseif (compoundkw = KW_STRUCT) then
-		ASSUMING(tk_mark(y) = MARK_ENDSTRUCT)
-	else
-		ASSUMING(tk_mark(y) = MARK_ENDUNION)
-	end if
-	y = skip(y)
+	assert( tkGet( y ) = TK_RBRACE )
+	select case( compoundkw )
+	case KW_ENUM
+		assert( tkMark( y ) = MARK_ENDENUM )
+	case KW_STRUCT
+		assert( tkMark( y ) = MARK_ENDSTRUCT )
+	case else
+		assert( tkMark( y ) = MARK_ENDUNION )
+	end select
+	y = hSkip( y )
 
 	'' <id ';'> and struct is anonymous?
-	if ((tk_get(y) = TK_ID) and _
-	    (tk_get(skip(y)) = TK_SEMI) and _
-	    (tk_get(structid) <> TK_ID)) then
+	if( (tkGet( y )          =  TK_ID   ) and _
+	    (tkGet( hSkip( y ) ) =  TK_SEMI ) and _
+	    (tkGet( structid )   <> TK_ID   )       ) then
 
 		'' If needed, insert a space to separate the STRUCT
 		'' from the identifier.
-		if (tk_get(structid - 1) <> TK_SPACE) then
-			tk_insert_space(structid)
+		if( tkGet( structid - 1 ) <> TK_SPACE ) then
+			tkInsertSpace( structid )
 			structid += 1
-
 			x += 1
 			y += 1
 		end if
 
 		'' Add TODO for <struct { } id;>
-		if (is_typedef = FALSE) then
-			tk_insert(structid, TK_TODO, "not supported in FB")
+		if( is_typedef = FALSE ) then
+			tkInsert( structid, TK_TODO, "not supported in FB" )
 			structid += 1
 
-			tk_insert_space(structid)
+			tkInsertSpace( structid )
 			structid += 1
 
 			x += 2
@@ -394,31 +407,30 @@ function translate_struct(byval x as integer) as integer
 		end if
 
 		'' Copy the trailing id to the front.
-		tk_copy(structid, y, y)
+		tkCopy( structid, y, y )
 		x += 1
 
-	elseif (is_typedef) then
+	elseif( is_typedef ) then
 		'' Do the split up hack.
 		'' If the struct is anonymous, we must fake an id,
 		'' it's needed for the typedef we want to split off.
 		'' (need to declare a typedef to /something/)
 
-		if (tk_get(structid) <> TK_ID) then
+		if( tkGet( structid ) <> TK_ID ) then
 			'' If needed, insert a space to separate the STRUCT
 			'' from the identifier.
-			if (tk_get(structid - 1) <> TK_SPACE) then
-				tk_insert_space(structid)
+			if( tkGet( structid - 1 ) <> TK_SPACE ) then
+				tkInsertSpace( structid )
 				structid += 1
-
 				x += 1
 				y += 1
 			end if
 
-			tk_insert(structid, TK_TODO, "faked id")
+			tkInsert( structid, TK_TODO, "faked id" )
 			structid += 1
-			tk_insert_space(structid)
+			tkInsertSpace( structid )
 			structid += 1
-			tk_insert(structid, TK_ID, "FAKE")
+			tkInsert( structid, TK_ID, "FAKE" )
 
 			'' Inserting at the top moves everything down..
 			x += 3
@@ -431,57 +443,50 @@ function translate_struct(byval x as integer) as integer
 		''    ... ; typedef struct structid a, *b, (*c)();
 
 		'' Add a new ';' and mark it as same as '}'
-		tk_insert(y, TK_SEMI, NULL)
-		tk_set_mark(tk_mark(skiprev(y)), y, y)
+		tkInsert( y, TK_SEMI, NULL )
+		tkSetMark( tkMark( hSkipRev( y ) ), y, y )
 		y += 1
 
-		tk_insert_space(y)
+		tkInsertSpace( y )
 		y += 1
 
-		dim as integer typedefbegin = y
+		typedefbegin = y
 
-		tk_insert(y, KW_TYPEDEF, NULL)
+		tkInsert( y, KW_TYPEDEF, NULL )
 		y += 1
-		tk_insert_space(y)
+		tkInsertSpace( y )
 		y += 1
-		tk_insert(y, compoundkw, NULL)
+		tkInsert( y, compoundkw, NULL )
 		y += 1
-		tk_insert_space(y)
+		tkInsertSpace( y )
 		y += 1
-		tk_copy(y, structid, structid)
+		tkCopy( y, structid, structid )
 		y += 1
-		if (tk_get(y) <> TK_SPACE) then
-			tk_insert_space(y)
+		if( tkGet( y ) <> TK_SPACE ) then
+			tkInsertSpace( y )
 			y += 1
 		end if
 
 		'' Skip over the existing multdecl, until ';'
-		do
-			select case (tk_get(y))
-			case TK_SEMI
-				exit do
-			case TK_EOF
-				ASSUMING(FALSE)
-				exit do
-			end select
-
-			y = skip(y)
-		loop
+		while( tkGet( y ) <> TK_SEMI )
+			assert( tkGet( y ) <> TK_EOF )
+			y = hSkip( y )
+		wend
 
 		'' Ensure it's translated as typedef
-		tk_set_mark(MARK_TYPEDEF, typedefbegin, y)
+		tkSetMark( MARK_TYPEDEF, typedefbegin, y )
 	end if
 
 	'' Remove the '{' and space in front of it. If there is an EOL
 	'' following, insert a ':' statement separator.
-	ASSUMING(tk_get(x) = TK_LBRACE)
-	dim as integer spacebegin = skiprev(x) + 1
-	tk_remove(spacebegin, x)
+	assert( tkGet( x ) = TK_LBRACE )
+	spacebegin = hSkipRev( x ) + 1
+	tkRemove( spacebegin, x )
 	x -= x - spacebegin
 
-	if (is_whitespace_until_eol(x) = FALSE) then
-		x = insert_statement_separator(x)
+	if( hIsWhitespaceUntilEol( x ) = FALSE ) then
+		x = hInsertStatementSeparator( x )
 	end if
 
-	return x
+	function = x
 end function

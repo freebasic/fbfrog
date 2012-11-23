@@ -2,101 +2,96 @@
 #define FALSE 0
 #define TRUE (-1)
 
-'' assert() that doesn't require -g
-#macro ASSUMING(test) _
-	if ((test) = 0) then : _
-		oops_bug(#test, __FUNCTION__, __LINE__) : _
-	end if
-#endmacro
-
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-'' The hash table is an array of these hash items, which associate a string to
-'' some user data (always an array index in our case).
-type HashItem
-	as ubyte ptr s
-	as integer length
-	as uinteger hash        '' Hash value for quick comparison
-	as any ptr data         '' User data
+'' The hash table is an array of HASHITEMs, which associate a string to
+'' some user data.
+type HASHITEM
+	s	as zstring ptr
+	length	as integer
+	hash	as uinteger  '' hash value for quick comparison
+	data	as any ptr   '' user data
 end type
 
-type HashTable
-	as HashItem ptr items '' The table
-	as integer count      '' Used
-	as integer room       '' Allocated
-	as integer resizes    '' Number of table reallocs/size increases
-	as integer lookups    '' Lookup counter
-	as integer perfects   '' Lookups successful after first probe
-	as integer collisions '' Sum of collisions during all lookups
+type HASHTABLE
+	items		as HASHITEM ptr
+	count		as integer  '' number of used items
+	room		as integer  '' number of allocated items
+	resizes		as integer  '' number of table reallocs/size increases
+	lookups		as integer  '' lookup counter
+	perfects	as integer  '' lookups successful after first probe
+	collisions	as integer  '' sum of collisions during all lookups
 end type
 
-declare function hash_hash _
+declare function hashHash _
 	( _
 		byval s as ubyte ptr, _
 		byval length as integer _
 	) as uinteger
-declare function hash_lookup _
+declare function hashLookup _
 	( _
-		byval h as HashTable ptr, _
+		byval h as HASHTABLE ptr, _
 		byval s as ubyte ptr, _
 		byval length as integer, _
 		byval hash as uinteger _
-	) as HashItem ptr
-declare sub hash_init(byval h as HashTable ptr, byval exponent as integer)
-declare sub hash_stats(byval h as HashTable ptr, byref prefix as string)
-
-type ListNode
-	as ListNode ptr next
-	as ListNode ptr prev
-end type
-
-type LinkedList
-	as ListNode ptr head
-	as ListNode ptr tail
-	as integer nodesize
-end type
-
-declare function list_head(byval l as LinkedList ptr) as any ptr
-declare function list_next(byval p as any ptr) as any ptr
-declare function list_append(byval l as LinkedList ptr) as any ptr
-declare sub list_init(byval l as LinkedList ptr, byval unit as integer)
+	) as HASHITEM ptr
+declare sub hashAdd _
+	( _
+		byval h as HASHTABLE ptr, _
+		byval item as HASHITEM ptr, _
+		byval hash as uinteger, _
+		byval s as ubyte ptr, _
+		byval length as integer, _
+		byval dat as any ptr _
+	)
+declare sub hashInit( byval h as HASHTABLE ptr, byval exponent as integer )
+declare sub hashEnd( byval h as HASHTABLE ptr )
+declare sub hashStats( byval h as HASHTABLE ptr, byref prefix as string )
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-declare sub oops_bug _
-	( _
-		byval test as zstring ptr, _
-		byval funcname as zstring ptr, _
-		byval linenum as integer _
-	)
-declare sub oops(byref message as string)
-declare function xallocate(byval as ulong) as any ptr
-declare function xcallocate(byval as ulong) as any ptr
-declare function xreallocate(byval as any ptr, byval as ulong) as any ptr
-declare function str_duplicate _
-	( _
-		byval s as ubyte ptr, _
-		byval length as integer _
-	) as zstring ptr
-declare function path_strip_ext(byref path as string) as string
-declare function path_ext_only(byref path as string) as string
-declare function path_only(byref path as string) as string
-declare function path_add_div(byref path as string) as string
-declare function path_strip_last_component(byref path as string) as string
-declare function path_find_common_base _
+type LISTNODE
+	next		as LISTNODE ptr
+	prev		as LISTNODE ptr
+end type
+
+type LINKEDLIST
+	head		as LISTNODE ptr
+	tail		as LISTNODE ptr
+	nodesize	as integer
+end type
+
+declare function listGetHead( byval l as LINKEDLIST ptr) as any ptr
+declare function listGetNext( byval p as any ptr ) as any ptr
+declare function listAppend( byval l as LINKEDLIST ptr ) as any ptr
+declare sub listInit( byval l as LINKEDLIST ptr, byval unit as integer )
+declare sub listEnd( byval l as LINKEDLIST ptr )
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+declare function pathStripExt( byref path as string ) as string
+declare function pathExtOnly( byref path as string ) as string
+declare function pathOnly( byref path as string ) as string
+declare function pathAddDiv( byref path as string ) as string
+declare function pathStripLastComponent( byref path as string ) as string
+declare function pathFindCommonBase _
 	( _
 		byref aorig as string, _
 		byref borig as string _
 	) as string
-declare function path_strip_common_base _
+declare function pathStripCommonBase _
 	( _
 		byref a as string, _
 		byref b as string _
 	) as string
-declare function path_make_absolute(byref path as string) as string
-declare function path_normalize(byref path as string) as string
-declare function file_exists(byref file as string) as integer
-declare sub scan_directory_for_h(byref rootdir as string)
+declare function pathMakeAbsolute( byref path as string ) as string
+declare function pathNormalize( byref path as string ) as string
+declare function hFileExists( byref file as string ) as integer
+declare sub hScanDirectoryForH _
+	( _
+		byref rootdir as string, _
+		byval resultlist as LINKEDLIST ptr _
+	)
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
@@ -315,59 +310,64 @@ extern as zstring ptr token_text(0 to (TK__COUNT - 1))
 extern as zstring ptr mark_text(0 to (MARK__COUNT - 1))
 
 '' Great debugging helper, for example: TRACE(x), "decl begin"
-#define TRACE(x) print lcase(__FUNCTION__) & "(" & __LINE__ & "):" & _
-	x & " " & *mark_text(tk_mark(x)) & "[" & *token_text(tk_get(x)) & "]"
+#define TRACE( x ) print lcase( __FUNCTION__ ) + "(" + str( __LINE__ ) + "):" + _
+	str( x ) + " " + *mark_text(tkMark( x )) + "[" + *token_text(tkGet( x )) + "]"
 
-declare sub tk_raw_move_to(byval x as integer)
-declare sub tk_raw_insert(byval id as integer, byval text as ubyte ptr)
-declare sub tk_insert _
+declare function strDuplicate _
+	( _
+		byval s as ubyte ptr, _
+		byval length as integer _
+	) as zstring ptr
+declare sub tkRawMoveTo( byval x as integer )
+declare sub tkRawInsert( byval id as integer, byval text as ubyte ptr )
+declare sub tkInsert _
 	( _
 		byval x as integer, _
 		byval id as integer, _
 		byval text as zstring ptr _
 	)
-declare sub tk_insert_space(byval x as integer)
-declare sub tk_copy _
+declare sub tkInsertSpace( byval x as integer )
+declare sub tkCopy _
 	( _
 		byval x as integer, _
 		byval first as integer, _
 		byval last as integer _
 	)
-declare sub tk_remove(byval first as integer, byval last as integer)
-declare sub tk_set_mark _
+declare sub tkRemove( byval first as integer, byval last as integer )
+declare sub tkSetMark _
 	( _
 		byval mark as integer, _
 		byval first as integer, _
 		byval last as integer _
 	)
-declare function tk_get(byval x as integer) as integer
-declare function tk_text(byval x as integer) as zstring ptr
-declare function tk_mark(byval x as integer) as integer
-declare function tk_count() as integer
-declare sub tk_init()
-declare sub tk_end()
+declare function tkGet( byval x as integer ) as integer
+declare function tkText( byval x as integer ) as zstring ptr
+declare function tkMark( byval x as integer ) as integer
+declare function tkCount( ) as integer
+declare sub tkInit( )
+declare sub tkEnd( )
 
-declare sub emit_write_file(byref filename as string)
-declare sub emit_stats()
+declare sub emitWriteFile( byref filename as string )
+declare sub emitStats( )
 
-declare function lex_insert_file _
+declare function lexInsertFile _
 	( _
 		byval x as integer, _
 		byref filename as string _
 	) as integer
 
-declare sub preparse_toplevel()
-declare sub parse_toplevel(byval begin as integer)
-declare sub translate_toplevel()
+declare sub preparseToplevel( )
+declare sub parseToplevel( byval begin as integer )
+declare sub translateToplevel( )
 
-declare function storage_store _
+declare function storageStore _
 	( _
 		byval text as ubyte ptr, _
 		byval length as integer, _
 		byval pdat as integer ptr _
 	) as ubyte ptr
-declare sub storage_init()
-declare sub storage_stats()
+declare sub storageInit( )
+declare sub storageStats( )
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
@@ -379,18 +379,18 @@ enum
 	FILE_EXTRA = (1 shl 1)
 end enum
 
-type FrogFile
-	as zstring ptr softname '' Pretty name from command line or #include
-	as zstring ptr hardname '' Normalized path used in hash table
+type FROGFILE
+	softname	as zstring ptr  '' Pretty name from command line or #include
+	hardname	as zstring ptr  '' Normalized path used in hash table
 
 	'' This tells how many #includes of this file were found during the
 	'' preparse (no matter which parent file).
 	'' refcount = 1 means it can be trivially merged into its one parent.
 	'' refcount = 0 means it's a "toplevel" file that has no parents (ohh).
 	'' Note: This refcount is only valid if the preparse is done...
-	as integer refcount
+	refcount	as integer
 
-	as uinteger flags
+	flags		as uinteger
 end type
 
 enum
@@ -398,30 +398,31 @@ enum
 	DEFINE_CALL  = (1 shl 1)
 end enum
 
-type FrogStuff
-	as integer concat
-	as integer follow
-	as integer merge
-	as integer verbose
-	as FrogFile ptr f
+type FROGSTUFF
+	concat		as integer
+	follow		as integer
+	merge		as integer
+	verbose		as integer
+	f		as FROGFILE ptr
 
-	as LinkedList files    '' FrogFile
-	as HashTable filehash
-	as HashTable definehash
+	files		as LINKEDLIST '' FROGFILE
+	filehash	as HASHTABLE
+	definehash	as HASHTABLE
 end type
 
 extern as FrogStuff frog
 
-declare function frog_add_define _
+declare sub oops( byref message as string )
+declare function frogAddDefine _
 	( _
 		byval id as zstring ptr, _
 		byval flags as uinteger _
 	) as uinteger
-declare function frog_add_file _
+declare function frogAddFile _
 	( _
 		byref origname as string, _
 		byval is_preparse as integer, _
 		byval search_paths as integer _
-	) as FrogFile ptr
-declare sub frog_set_visited(byval f as FrogFile ptr)
-declare function frog_can_merge(byval f as FrogFile ptr) as integer
+	) as FROGFILE ptr
+declare sub frogSetVisited( byval f as FROGFILE ptr )
+declare function frogCanMerge( byval f as FROGFILE ptr ) as integer

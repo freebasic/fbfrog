@@ -10,63 +10,63 @@ enum
 	DECL_PROC
 end enum
 
-declare function skip(byval x as integer) as integer
-declare function skiprev(byval x as integer) as integer
-declare function skip_unless_eol(byval x as integer) as integer
-declare function skiprev_unless_eol(byval x as integer) as integer
-declare function is_whitespace_until_eol(byval x as integer) as integer
-declare function skip_optional _
+declare function hSkip( byval x as integer ) as integer
+declare function hSkipRev( byval x as integer ) as integer
+declare function hSkipUnlessEol( byval x as integer ) as integer
+declare function hSkipRevUnlessEol( byval x as integer ) as integer
+declare function hIsWhitespaceUntilEol( byval x as integer ) as integer
+declare function hSkipOptional _
 	( _
 		byval x as integer, _
 		byval tk as integer _
 	) as integer
-declare function insert_spaced_token _
+declare function hInsertSpacedToken _
 	( _
 		byval x as integer, _
 		byval tk as integer, _
 		byval text as zstring ptr _
 	) as integer
-declare function insert_statement_separator(byval x as integer) as integer
-declare sub remove_this_and_space(byval x as integer)
-declare function find_token(byval x as integer, byval tk as integer) as integer
-declare function find_parentheses _
+declare function hInsertStatementSeparator( byval x as integer ) as integer
+declare sub hRemoveThisAndSpace( byval x as integer )
+declare function hFindToken( byval x as integer, byval tk as integer ) as integer
+declare function hFindParentheses _
 	( _
 		byval x as integer, _
 		byval backwards as integer _
 	) as integer
-declare function parse_unknown(byval x as integer) as integer
-declare function parse_pp_directive _
+declare function parseUnknown( byval x as integer ) as integer
+declare function parsePPDirective _
 	( _
 		byval x as integer, _
 		byval is_preparse as integer _
 	) as integer
 
-declare function parse_enumconst _
+declare function parseEnumconst _
 	( _
 		byval x as integer, _
 		byval is_unknown as integer _
 	) as integer
-declare function parse_multdecl _
+declare function parseMultdecl _
 	( _
 		byval x as integer, _
 		byval begin as integer, _
 		byval decl as integer _
 	) as integer
-declare function parse_topdecl_or_typedef(byval x as integer) as integer
-declare function translate_enumconst(byval x as integer) as integer
-declare sub fixup_multdecl(byval x as integer, byval begin as integer)
-declare function translate_decl _
+declare function parseTopdeclOrTypedef( byval x as integer ) as integer
+declare function translateEnumconst( byval x as integer ) as integer
+declare sub hFixupMultdecl( byval x as integer, byval begin as integer )
+declare function translateDecl _
 	( _
 		byval x as integer, _
 		byval decl as integer _
 	) as integer
 
-declare function parse_struct(byval x as integer) as integer
-declare function parse_extern_begin(byval x as integer) as integer
-declare function parse_extern_end(byval x as integer) as integer
-declare function translate_compound_end _
+declare function parseStruct( byval x as integer ) as integer
+declare function parseExternBegin( byval x as integer ) as integer
+declare function parseExternEnd( byval x as integer ) as integer
+declare function translateCompoundEnd _
 	( _
 		byval x as integer, _
 		byval compoundkw as integer _
 	) as integer
-declare function translate_struct(byval x as integer) as integer
+declare function translateStruct( byval x as integer ) as integer

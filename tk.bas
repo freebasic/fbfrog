@@ -191,96 +191,110 @@ dim shared as zstring ptr mark_text(0 to (MARK__COUNT - 1)) = _
 	@"unknownenumconst" _
 }
 
-type OneToken field = 1
+type ONETOKEN
 	as short id         '' TK_*
 	as short mark       '' MARK_*
 	as zstring ptr text '' Identifiers and number/string literals, or NULL
 end type
 
-type TokenBuffer
+type TOKENBUFFER
 	'' Gap buffer of tokens
-	as OneToken ptr p   '' Buffer containing: front,gap,back
-	as integer front    '' Front length; the gap's offset
-	as integer gap      '' Gap length
-	as integer size     '' Front + back
+	p		as ONETOKEN ptr  '' Buffer containing: front,gap,back
+	front		as integer  '' Front length; the gap's offset
+	gap		as integer  '' Gap length
+	size		as integer  '' Front + back
 
-	as integer maxsize  '' Highest amount of tokens at once
-	as integer reallocs '' Buffer reallocations
-	as integer inserts
-	as integer deletes
-	as integer lookups '' tk_access() calls
+	maxsize		as integer  '' Highest amount of tokens at once
+	reallocs	as integer  '' Buffer reallocations
+	inserts		as integer
+	deletes		as integer
+	lookups		as integer  '' tk_access() calls
 end type
 
-dim shared as TokenBuffer tk
+dim shared as TOKENBUFFER tk
 
-private function tk_access(byval x as integer) as OneToken ptr
-	'' All token information queries go through here.
-	'' (For example from tk_get(), which is the most used function by
-	'' the parser/translator)
-	'' This can easily be called 10k times on only small headers,
-	'' and hundred thousands of times for bigger ones.
+function strDuplicate _
+	( _
+		byval s as ubyte ptr, _
+		byval length as integer _
+	) as zstring ptr
 
+	dim as zstring ptr p = any
+
+	p = allocate( length + 1 )
+
+	if( length > 0 ) then
+		memcpy( p, s, length )
+	end if
+	p[length] = 0
+
+	function = p
+end function
+
+private function tkAccess( byval x as integer ) as ONETOKEN ptr
 	tk.lookups += 1
 
 	'' Static EOF token for "error recovery"
-	static as OneToken static_eof = (TK_EOF, MARK_TOPLEVEL, NULL)
+	static as ONETOKEN static_eof = (TK_EOF, MARK_TOPLEVEL, NULL)
 
 	'' Inside end?
-	if (x >= tk.front) then
+	if( x >= tk.front ) then
 		'' Invalid?
-		if (x >= tk.size) then
+		if( x >= tk.size ) then
 			return @static_eof
 		end if
 		x += tk.gap
 	else
 		'' Invalid?
-		if (x < 0) then
+		if( x < 0 ) then
 			return @static_eof
 		end if
 	end if
 
-	return tk.p + x
+	function = tk.p + x
 end function
 
-sub tk_raw_move_to(byval x as integer)
-	if (x < 0) then
+sub tkRawMoveTo( byval x as integer )
+	dim as integer old = any
+	dim as ONETOKEN ptr p = any
+
+	if( x < 0 ) then
 		x = 0
-	elseif (x > tk.size) then
+	elseif( x > tk.size ) then
 		x = tk.size
 	end if
 
-	dim as integer old = tk.front
-	if (x < old) then
+	old = tk.front
+	if( x < old ) then
 		'' Move gap left
-		dim as OneToken ptr p = tk.p + x
-		memmove(p + tk.gap, p, (old - x) * sizeof(OneToken))
+		p = tk.p + x
+		memmove( p + tk.gap, p, (old - x) * sizeof( ONETOKEN ) )
 	elseif (x > old) then
 		'' Move gap right
-		dim as OneToken ptr p = tk.p + old
-		memmove(p, p + tk.gap, (x - old) * sizeof(OneToken))
+		p = tk.p + old
+		memmove( p, p + tk.gap, (x - old) * sizeof( ONETOKEN ) )
 	end if
 
 	tk.front = x
 end sub
 
-
 '' Insert token at current position, the current position moves forward.
-sub tk_raw_insert(byval id as integer, byval text as ubyte ptr)
-	const NEW_GAP = 512
-	dim as OneToken ptr p = any
+sub tkRawInsert( byval id as integer, byval text as ubyte ptr )
+	const NEWGAP = 512
+	dim as ONETOKEN ptr p = any
 
 	'' Make room for the new data, if necessary
-	if (tk.gap = 0) then
+	if( tk.gap = 0 ) then
 		'' Reallocate the buffer, then move the back block to the
 		'' end of the new buffer, so that the gap in the middle grows.
 		tk.reallocs += 1
-		tk.p = xreallocate(tk.p, (tk.size + NEW_GAP) * sizeof(OneToken))
+		tk.p = reallocate( tk.p, (tk.size + NEWGAP) * sizeof( ONETOKEN ) )
 		p = tk.p + tk.front
-		if (tk.size > tk.front) then
-			memmove(p + NEW_GAP, p + tk.gap, _
-			        (tk.size - tk.front) * sizeof(OneToken))
+		if( tk.size > tk.front ) then
+			memmove( p + NEWGAP, p + tk.gap, _
+			         (tk.size - tk.front) * sizeof( ONETOKEN ) )
 		end if
-		tk.gap = NEW_GAP
+		tk.gap = NEWGAP
 	else
 		p = tk.p + tk.front
 	end if
@@ -294,54 +308,62 @@ sub tk_raw_insert(byval id as integer, byval text as ubyte ptr)
 	tk.size += 1
 
 	tk.inserts += 1
-	if (tk.maxsize < tk.size) then
+	if( tk.maxsize < tk.size ) then
 		tk.maxsize = tk.size
 	end if
 end sub
 
-sub tk_insert _
+sub tkInsert _
 	( _
 		byval x as integer, _
 		byval id as integer, _
 		byval text as zstring ptr _
 	)
 
-	tk_raw_move_to(x)
+	dim as integer dat = any
+
+	tkRawMoveTo( x )
 
 	'' See also lex.bas:add_text_token_raw(); this is the same, except
 	'' that here we don't turn TK_IDs into KW_*s, and this is also used
 	'' for non-text tokens.
-	if (text) then
-		dim as integer dat = -1
-		text = storage_store(text, len(*text), @dat)
+	if( text ) then
+		dat = -1
+		text = storageStore( text, len( *text ), @dat )
 	end if
 
-	tk_raw_insert(id, text)
+	tkRawInsert( id, text )
 end sub
 
-sub tk_insert_space(byval x as integer)
-	tk_insert(x, TK_SPACE, " ")
+sub tkInsertSpace( byval x as integer )
+	tkInsert( x, TK_SPACE, " " )
 end sub
 
-sub tk_copy _
+sub tkCopy _
 	( _
 		byval x as integer, _
 		byval first as integer, _
 		byval last as integer _
 	)
+
+	dim as integer target = any, source = any
+
 	for i as integer = 0 to (last - first)
-		dim as integer target = x + i
-		dim as integer source = first + i
-		tk_insert(target, tk_get(source), tk_text(source))
-		tk_set_mark(tk_mark(source), target, target)
+		target = x + i
+		source = first + i
+		tkInsert( target, tkGet( source ), tkText( source ) )
+		tkSetMark( tkMark( source ), target, target )
 	next
+
 end sub
 
-sub tk_remove(byval first as integer, byval last as integer)
-	tk_raw_move_to(last + 1)
+sub tkRemove( byval first as integer, byval last as integer )
+	dim as integer delta = any
 
-	dim as integer delta = last - first + 1
-	if (delta > tk.front) then
+	tkRawMoveTo( last + 1 )
+
+	delta = last - first + 1
+	if( delta > tk.front ) then
 		delta = tk.front
 	end if
 
@@ -352,37 +374,41 @@ sub tk_remove(byval first as integer, byval last as integer)
 	tk.size -= delta
 end sub
 
-sub tk_set_mark _
+sub tkSetMark _
 	( _
 		byval mark as integer, _
 		byval first as integer, _
 		byval last as integer _
 	)
+
+	dim as ONETOKEN ptr p = any
+
 	for i as integer = first to last
-		dim as OneToken ptr p = tk_access(i)
-		if (p->id <> TK_EOF) then
+		p = tkAccess( i )
+		if( p->id <> TK_EOF ) then
 			p->mark = mark
 		end if
 	next
+
 end sub
 
-function tk_get(byval x as integer) as integer
-	return tk_access(x)->id
+function tkGet( byval x as integer ) as integer
+	function = tkAccess( x )->id
 end function
 
-function tk_text(byval x as integer) as zstring ptr
-	return tk_access(x)->text
+function tkText( byval x as integer ) as zstring ptr
+	function = tkAccess( x )->text
 end function
 
-function tk_mark(byval x as integer) as integer
-	return tk_access(x)->mark
+function tkMark( byval x as integer ) as integer
+	function = tkAccess( x )->mark
 end function
 
-function tk_count() as integer
-	return tk.size
+function tkCount( ) as integer
+	function = tk.size
 end function
 
-sub tk_init()
+sub tkInit( )
 	tk.p = NULL
 	tk.front = 0
 	tk.gap = 0
@@ -395,9 +421,9 @@ sub tk_init()
 	tk.lookups = 0
 end sub
 
-sub tk_end()
-	deallocate(tk.p)
-	if (frog.verbose) then
+sub tkEnd( )
+	deallocate( tk.p )
+	if( frog.verbose ) then
 		print using "  tokens: & max load, & resizes, " & _
 				"& in, & out, & lookups"; _
 			tk.maxsize; tk.reallocs; _

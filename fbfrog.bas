@@ -2,186 +2,187 @@
 
 dim shared as FrogStuff frog
 
-private sub frog_init()
+sub oops( byref message as string )
+	print "oops, " & message
+	end 1
+end sub
+
+private sub frogInit( )
 	frog.concat = FALSE
 	frog.follow = FALSE
 	frog.merge = FALSE
 	frog.verbose = FALSE
 	frog.f = NULL
 
-	hash_init(@frog.definehash, 6)
-	list_init(@frog.files, sizeof(FrogFile))
-	hash_init(@frog.filehash, 6)
+	hashInit( @frog.definehash, 6 )
+	listInit( @frog.files, sizeof( FROGFILE ) )
+	hashInit( @frog.filehash, 6 )
 end sub
 
-function frog_add_define _
+function frogAddDefine _
 	( _
 		byval id as zstring ptr, _
 		byval flags as uinteger _
 	) as uinteger
 
-	dim as integer length = len(*id)
-	ASSUMING(length > 0)
+	dim as integer length = any, dat = any
+	dim as uinteger hash = any
+	dim as HashItem ptr item = any
 
-	dim as uinteger hash = hash_hash(id, length)
-	dim as HashItem ptr item = _
-			hash_lookup(@frog.definehash, id, length, hash)
+	length = len( *id )
+	assert( length > 0 )
 
-	if (item->s) then
+	hash = hashHash( id, length )
+	item = hashLookup( @frog.definehash, id, length, hash )
+
+	if( item->s ) then
 		'' Already exists, add the flags. For lookups only, flags
 		'' should be 0, so nothing changes.
-		item->data = cast(any ptr, cuint(item->data) or flags)
-		return cuint(item->data)
+		item->data = cast( any ptr, cuint( item->data ) or flags )
+		return cuint( item->data )
 	end if
 
 	'' If no information, don't bother adding, allowing this function
 	'' to be used for lookups only.
-	if (flags) then
+	if( flags ) then
 		'' Add new
-		dim as integer dat = -1
-		item->s = storage_store(id, length, @dat)
-		item->length = length
-		item->hash = hash
-		item->data = cast(any ptr, flags)
-		frog.definehash.count += 1
+		dat = -1
+		hashAdd( @frog.definehash, item, hash, _
+		         storageStore( id, length, @dat ), length, cast( any ptr, flags ) )
 	end if
 
-	return flags
+	function = flags
 end function
 
-function frog_add_file _
+function frogAddFile _
 	( _
 		byref origname as string, _
 		byval is_preparse as integer, _
 		byval search_paths as integer _
-	) as FrogFile ptr
+	) as FROGFILE ptr
 
-	dim as string hardname
+	dim as string hardname, parent
+	dim as uinteger hash = any
+	dim as HASHITEM ptr item = any
+	dim as FROGFILE ptr f = any
 
-	if (search_paths) then
-		''
+	if( search_paths ) then
 		'' File collected from an #include directive. Try to find it
 		'' in one of the parent directories of the current file.
 		''
 		'' (Usually the #include will refer to a file in the same
 		'' directory or in a sub-directory at the same level or some
 		'' levels up)
-		''
-		ASSUMING(frog.f)
-		dim as string parent = path_only(*frog.f->hardname)
+
+		parent = pathOnly( *frog.f->hardname )
 		do
 			'' File not found anywhere, ignore it.
-			if (len(parent) = 0) then
-				if (frog.verbose) then
-					print "  ignoring: " & origname
+			if( len( parent ) = 0 ) then
+				if( frog.verbose ) then
+					print "  ignoring: " + origname
 				end if
 				return NULL
 			end if
 
 			hardname = parent + origname
-			if (file_exists(hardname)) then
-				if (frog.verbose) then
-					print "  found: " & origname & ": " & hardname
+			if( hFileExists( hardname ) ) then
+				if( frog.verbose ) then
+					print "  found: " + origname + ": " + hardname
 				end if
 				exit do
 			end if
 
-			if (frog.verbose) then
-				print "  not found: " & origname & ": " & hardname
+			if( frog.verbose ) then
+				print "  not found: " + origname + ": " + hardname
 			end if
 
-			parent = path_strip_last_component(parent)
+			parent = pathStripLastComponent( parent )
 		loop
 	else
 		'' File from command line, search in current directory
-		hardname = path_make_absolute(origname)
+		hardname = pathMakeAbsolute( origname )
 	end if
 
-	hardname = path_normalize(hardname)
+	hardname = pathNormalize( hardname )
 
-	dim as integer length = len(hardname)
-	ASSUMING(length > 0)
-	dim as zstring ptr s = strptr(hardname)
-	dim as uinteger hash = hash_hash(s, length)
-	dim as HashItem ptr item = _
-			hash_lookup(@frog.filehash, s, length, hash)
+	assert( len( origname ) > 0 )
+	assert( len( hardname ) > 0 )
 
-	if (item->s) then
-		if (frog.verbose) then
-			print "  old news: " & origname & ": " & hardname
-		end if
+	hash = hashHash( strptr( hardname ), len( hardname ) )
+	item = hashLookup( @frog.filehash, strptr( hardname ), len( hardname ), hash )
 
+	if( item->s ) then
 		'' Already exists
+		if( frog.verbose ) then
+			print "  old news: " + origname + ": " + hardname
+		end if
 		return item->data
 	end if
 
-	if (frog.verbose) then
-		print "  new file: " & origname & ": " & hardname
+	if( frog.verbose ) then
+		print "  new file: " + origname + ": " + hardname
 	end if
 
 	'' Add file
-	dim as FrogFile ptr f = list_append(@frog.files)
-	f->softname = str_duplicate(strptr(origname), len(origname))
-	f->hardname = str_duplicate(s, length)
+	f = listAppend( @frog.files )
+	f->softname = strDuplicate( strptr( origname ), len( origname ) )
+	f->hardname = strDuplicate( strptr( hardname ), len( hardname ) )
 	f->refcount = 0
-	f->flags = iif(is_preparse, FILE_EXTRA, 0)
+	f->flags = iif( is_preparse, FILE_EXTRA, 0 )
 
 	'' Add to hash table
-	item->s = f->hardname
-	item->length = length
-	item->hash = hash
-	item->data = f
-	frog.filehash.count += 1
+	hashAdd( @frog.filehash, item, hash, f->hardname, len( hardname ), f )
 
-	return f
+	function = f
 end function
 
-sub frog_set_visited(byval f as FrogFile ptr)
+private sub frogAddFromDir( byref d as string )
+	dim as LINKEDLIST list = any
+	dim as string ptr s = any
+
+	listInit( @list, sizeof( string ) )
+
+	hScanDirectoryForH( d, @list )
+
+	s = listGetHead( @list )
+	while( s )
+		frogAddFile( *s, FALSE, FALSE )
+		*s = ""
+		s = listGetNext( s )
+	wend
+
+	listEnd( @list )
+end sub
+
+sub frogSetVisited( byval f as FROGFILE ptr )
 	f->flags or= FILE_VISITED
 end sub
 
-private function frog_can_visit(byval f as FrogFile ptr) as integer
-	return ((f->flags and FILE_VISITED) = 0)
+private function frogCanVisit( byval f as FROGFILE ptr ) as integer
+	function = ((f->flags and FILE_VISITED) = 0)
 end function
 
-private function frog_can_follow(byval f as FrogFile ptr) as integer
+private function frogCanFollow( byval f as FROGFILE ptr ) as integer
 	'' Only work on files found during the #include preparse if
 	'' --follow was given
-	return (frog.follow or ((f->flags and FILE_EXTRA) = 0))
+	function = (frog.follow or ((f->flags and FILE_EXTRA) = 0))
 end function
 
-function frog_can_merge(byval f as FrogFile ptr) as integer
-	return (frog.merge and (f->refcount = 1) and frog_can_follow(f))
+function frogCanMerge( byval f as FROGFILE ptr ) as integer
+	function = (frog.merge and (f->refcount = 1) and frogCanFollow( f ))
 end function
 
-private function frog_can_work_on(byval f as FrogFile ptr) as integer
-	return (frog_can_visit(f) and frog_can_follow(f))
+private function frogCanWorkOn( byval f as FROGFILE ptr ) as integer
+	function = (frogCanVisit( f ) and frogCanFollow( f ))
 end function
 
-private sub concat_file()
-	frog.f->flags or= FILE_VISITED
-
-	dim as integer x = tk_count()
-
-	'' Insert the file content behind some EOLs, to ensure it's separated
-	'' (not all files have EOL at EOF), unless it's the first
-	lex_insert_file(x, *frog.f->hardname)
-	if (x > 0) then
-		tk_insert(x, TK_EOL, NULL)
-		tk_insert(x, TK_EOL, NULL)
-	end if
-
-	'' Now parse the appended tokens, preparing for translation...
-	'' and to possibly merge #includes (if --merge is on).
-	parse_toplevel(x)
-end sub
-
-private sub print_help()
-	print "Usage: fbfrog *.h"
+private sub hPrintHelp( )
+	print "fbfrog 0.1 from " + __DATE_ISO__
+	print "usage: fbfrog *.h"
 	print "The given *.h file will be translated into a *.bi file. It needs reviewing"
 	print "and editing afterwards, so watch out for TODOs and C/FB differences like"
 	print "procedure calling conventions."
-	print "Options:"
+	print "options:"
 	print "  -concat      Concatenate headers that don't #include each other"
 	print "  -follow      Also translate all #includes that can be found"
 	print "  -merge       Insert #included files into their parent"
@@ -190,79 +191,74 @@ private sub print_help()
 	end 0
 end sub
 
-private sub print_version()
-	print "fbfrog 0.1"
-	end 0
-end sub
-
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-	frog_init()
-	storage_init()
-
 	dim as string arg
-	for i as integer = 1 to (__FB_ARGC__ - 1)
+	dim as FROGFILE ptr first = any
+	dim as integer x = any
+
+	frogInit( )
+	storageInit( )
+
+	for i as integer = 1 to __FB_ARGC__-1
 		arg = *__FB_ARGV__[i]
 
-		if (len(arg) = 0) then
+		if( len( arg ) = 0 ) then
 			continue for
 		end if
 
-		if (arg[0] <> asc("-")) then
+		if( arg[0] <> asc( "-" ) ) then
+			'' file names will be handled later
 			continue for
 		end if
 
 		do
-			arg = right(arg, len(arg) - 1)
-		loop while (left(arg, 1) = "-")
+			arg = right( arg, len( arg ) - 1 )
+		loop while( left( arg, 1 ) = "-" )
 
-		select case (arg)
+		select case( arg )
 		case "concat"
 			frog.concat = TRUE
-
 		case "follow"
 			frog.follow = TRUE
-
-		case "help"
-			print_help()
-
+		case "help", "version"
+			hPrintHelp( )
 		case "merge"
 			frog.merge = TRUE
-
 		case "verbose"
 			frog.verbose = TRUE
-
-		case "version"
-			print_version()
-
 		case else
-			if (len(arg) > 0) then
-				oops("unknown option: '" & arg & "', try --help")
+			if( len( arg ) > 0 ) then
+				oops( "unknown option: '" + arg + "', try --help" )
 			end if
-
 		end select
 	next
 
 	'' Now that all options are known -- start adding the files
-	for i as integer = 1 to (__FB_ARGC__ - 1)
+	for i as integer = 1 to __FB_ARGC__-1
 		arg = *__FB_ARGV__[i]
-		if (arg[0] <> asc("-")) then
-			select case (path_ext_only(arg))
-			case "h", "hh", "hxx", "hpp", "c", "cc", "cxx", "cpp"
-				frog_add_file(arg, FALSE, FALSE)
 
-			case ""
-				'' No extension? Treat as directory...
-				scan_directory_for_h(arg)
-
-			case else
-				oops("not a .h file: '" & arg & "'")
-			end select
+		if( len( arg ) = 0 ) then
+			continue for
 		end if
+
+		if( arg[0] = asc( "-" ) ) then
+			continue for
+		end if
+
+		select case( pathExtOnly( arg ) )
+		case "h", "hh", "hxx", "hpp", "c", "cc", "cxx", "cpp"
+			frogAddFile( arg, FALSE, FALSE )
+		case ""
+			'' No extension? Treat as directory...
+			frogAddFromDir( arg )
+		case else
+			oops( "not a .h file: '" + arg + "'" )
+		end select
 	next
 
-	if (list_head(@frog.files) = NULL) then
-		oops("no input files")
+	if( listGetHead( @frog.files ) = NULL ) then
+		oops( "no input files" )
 	end if
 
 	''
@@ -282,20 +278,18 @@ end sub
 
 	'' Go through all input files, and new ones as they are
 	'' appended to the list...
-	frog.f = list_head(@frog.files)
-	while (frog.f)
-		if (frog_can_follow(frog.f)) then
-			print "preparsing: " & *frog.f->softname
+	frog.f = listGetHead( @frog.files )
+	while( frog.f )
 
-			tk_init()
-			lex_insert_file(0, *frog.f->hardname)
-
-			preparse_toplevel()
-
-			tk_end()
+		if( frogCanFollow( frog.f ) ) then
+			print "preparsing: " + *frog.f->softname
+			tkInit( )
+			lexInsertFile( 0, *frog.f->hardname )
+			preparseToplevel( )
+			tkEnd( )
 		end if
 
-		frog.f = list_next(frog.f)
+		frog.f = listGetNext( frog.f )
 	wend
 
 	''
@@ -320,38 +314,51 @@ end sub
 	'' one after another, so #includes (when merging) can be handled
 	'' in the context of their parent, the current file.
 	''
-	if (frog.concat) then
-		tk_init()
+	if( frog.concat ) then
+		tkInit( )
 
-		dim as FrogFile ptr first = NULL
-
-		frog.f = list_head(@frog.files)
-		while (frog.f)
+		first = NULL
+		frog.f = listGetHead( @frog.files )
+		while( frog.f )
 
 			'' Only concatenate if not #included anywhere
-			if (frog_can_visit(frog.f) and (frog.f->refcount = 0)) then
-				frog_set_visited(frog.f)
+			if( frogCanVisit( frog.f ) and (frog.f->refcount = 0) ) then
+				frogSetVisited( frog.f )
 
-				if (first = NULL) then
+				if( first = NULL ) then
 					first = frog.f
-					print "first: " & *frog.f->softname
+					print "first: " + *frog.f->softname
 				else
-					print "appending: " & *frog.f->softname
+					print "appending: " + *frog.f->softname
 				end if
 
-				concat_file()
+				frog.f->flags or= FILE_VISITED
+
+				x = tkCount( )
+
+				'' Insert the file content behind some EOLs, to ensure it's separated
+				'' (not all files have EOL at EOF), unless it's the first
+				lexInsertFile( x, *frog.f->hardname )
+				if( x > 0 ) then
+					tkInsert( x, TK_EOL, NULL )
+					tkInsert( x, TK_EOL, NULL )
+				end if
+
+				'' Now parse the appended tokens, preparing for translation...
+				'' and to possibly merge #includes (if --merge is on).
+				parseToplevel( x )
 			end if
 
-			frog.f = list_next(frog.f)
+			frog.f = listGetNext( frog.f )
 		wend
 
-		if (first) then
-			print "concatenating as: " & path_strip_ext(*first->softname) & ".bi"
-			translate_toplevel()
-			emit_write_file(path_strip_ext(*first->hardname) & ".bi")
+		if( first ) then
+			print "concatenating as: " + pathStripExt( *first->softname ) + ".bi"
+			translateToplevel( )
+			emitWriteFile( pathStripExt( *first->hardname ) + ".bi" )
 		end if
 
-		tk_end()
+		tkEnd( )
 	end if
 
 	''
@@ -361,33 +368,33 @@ end sub
 	''         but weren't. (recursive #includes, all refcount > 0)
 	''
 	for i as integer = 0 to 1
-		frog.f = list_head(@frog.files)
-		while (frog.f)
+		frog.f = listGetHead( @frog.files )
+		while( frog.f )
 
-			if (frog_can_work_on(frog.f) and _
-			    ((frog_can_merge(frog.f) = FALSE) or (i = 1))) then
-				frog_set_visited(frog.f)
-				print "translating: " & *frog.f->softname
+			if( frogCanWorkOn( frog.f ) and _
+			    ((frogCanMerge( frog.f ) = FALSE) or (i = 1)) ) then
+				frogSetVisited( frog.f )
+				print "translating: " + *frog.f->softname
 
-				tk_init()
-				lex_insert_file(0, *frog.f->hardname)
+				tkInit( )
+				lexInsertFile( 0, *frog.f->hardname )
 
-				parse_toplevel(0)
-				translate_toplevel()
+				parseToplevel( 0 )
+				translateToplevel( )
 
-				emit_write_file(path_strip_ext(*frog.f->hardname) & ".bi")
-				tk_end()
+				emitWriteFile( pathStripExt( *frog.f->hardname ) + ".bi" )
+				tkEnd( )
 			end if
 
-			frog.f = list_next(frog.f)
+			frog.f = listGetNext( frog.f )
 		wend
 	next
 
 	print "done: ";
-	emit_stats()
-	if (frog.verbose) then
-		hash_stats(@frog.filehash, "filename")
-		hash_stats(@frog.definehash, "define")
-		storage_stats()
+	emitStats( )
+	if( frog.verbose ) then
+		hashStats( @frog.filehash, "filename" )
+		hashStats( @frog.definehash, "define" )
+		storageStats( )
 	end if
 	end 0

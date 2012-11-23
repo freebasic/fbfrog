@@ -2,13 +2,13 @@
 
 #include once "fbfrog.bi"
 
-type LexStuff
-	as ubyte ptr buffer '' File content buffer
-	as ubyte ptr i      '' Current char, will always be <= limit
-	as ubyte ptr limit  '' (end of buffer)
+type LEXSTUFF
+	buffer	as ubyte ptr  '' File content buffer
+	i	as ubyte ptr  '' Current char, will always be <= limit
+	limit	as ubyte ptr  '' (end of buffer)
 end type
 
-dim shared as LexStuff lex
+dim shared as LEXSTUFF lex
 
 enum
 	CH_BELL     = &h07  '' \a
@@ -70,65 +70,66 @@ enum
 	CH_TILDE        '' ~
 end enum
 
-private sub add_text_token_raw _
+private sub hAddTextTokenRaw _
 	( _
 		byval tk as integer, _
 		byval text as ubyte ptr, _
 		byval length as integer _
 	)
 
+	dim as integer dat = any
+
 	'' Just store the token text. If this text string is already stored,
 	'' we'll get the existing pointer, otherwise our text will be copied,
 	'' a null terminator will be added, and we get that new string.
 	'' Note: This can reuse even keyword text, e.g. for string literals
 	'' like "int".
-	dim as integer dat = -1
-	text = storage_store(text, length, @dat)
+	dat = -1
+	text = storageStore( text, length, @dat )
 
 	'' Is this a keyword? Then use the proper KW_* instead of TK_ID
-	if ((tk = TK_ID) and (dat >= 0)) then
-		tk_raw_insert(dat, NULL)
+	if( (tk = TK_ID) and (dat >= 0) ) then
+		tkRawInsert( dat, NULL )
 	else
-		tk_raw_insert(tk, text)
+		tkRawInsert( tk, text )
 	end if
 end sub
 
-private sub add_text_token(byval tk as integer, byval begin as ubyte ptr)
-	add_text_token_raw(tk, begin, culng(lex.i) - culng(begin))
+private sub hAddTextToken( byval tk as integer, byval begin as ubyte ptr )
+	hAddTextTokenRaw( tk, begin, culng( lex.i ) - culng( begin ) )
 end sub
 
-private sub add_todo(byval text as zstring ptr)
-	add_text_token_raw(TK_TODO, text, len(*text))
+private sub hAddTodo( byval text as zstring ptr )
+	hAddTextTokenRaw( TK_TODO, text, len( *text ) )
 end sub
 
-private sub add_plain_token(byval tk as integer)
-	tk_raw_insert(tk, NULL)
+private sub hReadBytes( byval tk as integer, byval length as integer )
+	lex.i += length
+	tkRawInsert( tk, NULL )
 end sub
 
-#macro read_bytes(n, id)
-	lex.i += n
-	add_plain_token(id)
-#endmacro
+private sub hReadSpace( )
+	dim as ubyte ptr begin = any
 
-private sub read_space()
-	dim as ubyte ptr begin = lex.i
-
+	begin = lex.i
 	do
 		lex.i += 1
-	loop while ((lex.i[0] = CH_TAB) or (lex.i[0] = CH_SPACE))
+	loop while( (lex.i[0] = CH_TAB) or (lex.i[0] = CH_SPACE) )
 
-	add_text_token(TK_SPACE, begin)
+	hAddTextToken( TK_SPACE, begin )
 end sub
 
-private sub read_linecomment()
+private sub hReadLineComment( )
+	dim as ubyte ptr begin = any
+
 	'' Line comments, starting at the first '/' of '// foo...'
 	'' The whole comment body except for the // will be put into the token.
 	'' EOL remains a separate token.
 	lex.i += 2
-	dim as ubyte ptr begin = lex.i
+	begin = lex.i
 
 	do
-		select case (lex.i[0])
+		select case( lex.i[0] )
 		case CH_LF, CH_CR, 0
 			exit do
 		end select
@@ -136,22 +137,25 @@ private sub read_linecomment()
 		lex.i += 1
 	loop
 
-	add_text_token(TK_LINECOMMENT, begin)
+	hAddTextToken( TK_LINECOMMENT, begin )
 end sub
 
-private sub read_comment()
-	lex.i += 2
-	dim as ubyte ptr begin = lex.i
+private sub hReadComment( )
+	dim as ubyte ptr begin = any
+	dim as integer saw_end = any
 
-	dim as integer saw_end = FALSE
+	lex.i += 2
+	begin = lex.i
+
+	saw_end = FALSE
 	do
-		select case (lex.i[0])
+		select case( lex.i[0] )
 		case 0
-			add_todo("comment left open")
+			hAddTodo( "comment left open" )
 			exit do
 
 		case CH_STAR		'' *
-			if (lex.i[1] = CH_SLASH) then	'' */
+			if( lex.i[1] = CH_SLASH ) then	'' */
 				saw_end = TRUE
 				exit do
 			end if
@@ -161,24 +165,26 @@ private sub read_comment()
 		lex.i += 1
 	loop
 
-	add_text_token(TK_COMMENT, begin)
+	hAddTextToken( TK_COMMENT, begin )
 
-	if (saw_end) then
+	if( saw_end ) then
 		lex.i += 2
 	end if
 end sub
 
-private sub read_id()
+private sub hReadId( )
+	dim as ubyte ptr begin = any
+
 	'' Identifier/keyword parsing: sequences of a-z, A-Z, 0-9, _
 	'' The current char is one of those already. The whole identifier
 	'' will be stored into a TK_ID, or if it's a keyword the proper KW_*
 	'' is used instead of TK_ID and the text is not stored.
-	dim as ubyte ptr begin = lex.i
+	begin = lex.i
 
 	do
 		lex.i += 1
 
-		select case as const (lex.i[0])
+		select case as const( lex.i[0] )
 		case CH_A   to CH_Z  , _
 		     CH_L_A to CH_L_Z, _
 		     CH_0   to CH_9  , _
@@ -186,14 +192,16 @@ private sub read_id()
 
 		case else
 			exit do
-
 		end select
 	loop
 
-	add_text_token(TK_ID, begin)
+	hAddTextToken( TK_ID, begin )
 end sub
 
-private sub read_number()
+private sub hReadNumber( )
+	dim as ubyte ptr begin = any
+	dim as integer digit = any, found_dot = any, numbase = any, id = any
+
 	'' Number literal parsing starting at '0'-'9' or '.'
 	'' These are covered:
 	''    123
@@ -210,33 +218,33 @@ private sub read_number()
 	''    0xAABBCCDD -> TK_HEXLIT, AABBCCDD -> &hAABBCCDD
 	''    010        -> TK_OCTLIT, 10       -> &o10
 
-	dim as integer numbase = 10
-	dim as integer id = TK_DECNUM
-	if (lex.i[0] = CH_0) then '' 0
-		if (lex.i[1] = CH_L_X) then '' 0x
+	numbase = 10
+	id = TK_DECNUM
+	if( lex.i[0] = CH_0 ) then '' 0
+		if( lex.i[1] = CH_L_X ) then '' 0x
 			lex.i += 2
 			numbase = 16
 			id = TK_HEXNUM
-		elseif ((lex.i[1] >= CH_0) and (lex.i[1] <= CH_9)) then
+		elseif( (lex.i[1] >= CH_0) and (lex.i[1] <= CH_9) ) then
 			lex.i += 1
 			numbase = 8
 			id = TK_OCTNUM
 		end if
 	end if
 
-	dim as ubyte ptr begin = lex.i
-	dim as integer found_dot = FALSE
+	begin = lex.i
+	found_dot = FALSE
 	do
-		dim as integer digit = lex.i[0]
+		digit = lex.i[0]
 
-		if (digit = CH_DOT) then
+		if( digit = CH_DOT ) then
 			'' Only one dot allowed
-			if (found_dot) then
+			if( found_dot ) then
 				exit do
 			end if
 			found_dot = TRUE
 		else
-			select case as const (digit)
+			select case as const( digit )
 			case CH_A to CH_F
 				digit -= (CH_A - 10)
 
@@ -251,7 +259,7 @@ private sub read_number()
 			end select
 
 			'' Do not allow A-F in decimal numbers, etc.
-			if (digit >= numbase) then
+			if( digit >= numbase ) then
 				exit do
 			end if
 		end if
@@ -260,47 +268,47 @@ private sub read_number()
 	loop
 
 	'' Exponent? (can be used even without fractional part, e.g. '1e1')
-	select case (lex.i[0])
+	select case( lex.i[0] )
 	case CH_E, CH_L_E   '' 'E', 'e'
 		lex.i += 1
 
 		'' ['+' | '-']
-		select case (lex.i[0])
+		select case( lex.i[0] )
 		case CH_PLUS, CH_MINUS
 			lex.i += 1
 		end select
 
 		'' ['0'-'9']*
-		while ((lex.i[0] >= CH_0) and (lex.i[0] <= CH_9))
+		while( (lex.i[0] >= CH_0) and (lex.i[0] <= CH_9) )
 			lex.i += 1
 		wend
 
 	end select
 
 	'' Type suffixes
-	if (found_dot) then
-		select case (lex.i[0])
+	if( found_dot ) then
+		select case( lex.i[0] )
 		case CH_F, CH_L_F, _    '' 'F' | 'f'
 		     CH_D, CH_L_D       '' 'D' | 'd'
 			lex.i += 1
 		end select
 	else
-		select case (lex.i[0])
+		select case( lex.i[0] )
 		case CH_U, CH_L_U       '' 'U' | 'u'
 			lex.i += 1
 		end select
 
-		select case (lex.i[0])
+		select case( lex.i[0] )
 		case CH_L, CH_L_L       '' 'L' | 'l'
 			lex.i += 1
-			select case (lex.i[0])
+			select case( lex.i[0] )
 			case CH_L, CH_L_L       '' 'L' | 'l'
 				lex.i += 1
 			end select
 		end select
 	end if
 
-	add_text_token(id, begin)
+	hAddTextToken( id, begin )
 end sub
 
 enum
@@ -309,7 +317,10 @@ enum
 	STRFLAG_ESC  = &b100 '' contains escape sequences?
 end enum
 
-private sub read_string()
+private sub hReadString( )
+	dim as ubyte ptr begin = any
+	dim as integer saw_end = any, id = any, strflags = any, quotechar = any
+
 	'' String/char literal parsing, starting at ", ', or L, covering:
 	''    'a'
 	''    "foo"
@@ -319,35 +330,35 @@ private sub read_string()
 	'' of TK_STRING, so the emitter can prepend an '!', for example:
 	''    "\n" -> \n -> !"\n"
 
-	dim as uinteger strflags = 0
+	strflags = 0
 
-	dim as integer id = TK_STRING
-	if (lex.i[0] = CH_L) then
+	id = TK_STRING
+	if( lex.i[0] = CH_L ) then
 		lex.i += 1
 		strflags or= STRFLAG_WIDE
 	end if
 
-	dim as integer quotechar = lex.i[0]
-	if (quotechar = CH_QUOTE) then
+	quotechar = lex.i[0]
+	if( quotechar = CH_QUOTE ) then
 		strflags or= STRFLAG_CHAR
 	end if
 
 	lex.i += 1
-	dim as ubyte ptr begin = lex.i
-	dim as integer saw_end = FALSE
+	begin = lex.i
+	saw_end = FALSE
 	do
-		select case (lex.i[0])
+		select case( lex.i[0] )
 		case quotechar
 			saw_end = TRUE
 			exit do
 
 		case CH_LF, CH_CR, 0
-			add_todo("string/char literal left open")
+			hAddTodo( "string/char literal left open" )
 			exit do
 
 		case CH_BACKSLASH	'' \
 			strflags or= STRFLAG_ESC
-			select case (lex.i[0])
+			select case( lex.i[0] )
 			case CH_BACKSLASH, _ '' \\
 			     quotechar       '' \" | \'
 				lex.i += 1
@@ -358,345 +369,342 @@ private sub read_string()
 		lex.i += 1
 	loop
 
-	if (strflags) then
-		if (strflags and STRFLAG_CHAR) then
-			add_todo("char literal")
+	if( strflags ) then
+		if( strflags and STRFLAG_CHAR ) then
+			hAddTodo( "char literal" )
 		else
-			add_todo("non-trivial string literal")
+			hAddTodo( "non-trivial string literal" )
 		end if
 	end if
 
-	add_text_token(id, begin)
+	hAddTextToken( id, begin )
 
-	if (saw_end) then
+	if( saw_end ) then
 		lex.i += 1
 	end if
 end sub
 
-private sub lex_next()
+private sub lexNext( )
 	'' Identify the next token
-	select case as const (lex.i[0])
+	select case as const( lex.i[0] )
 	case CH_CR
-		if (lex.i[0] = CH_LF) then	'' CRLF
+		if( lex.i[0] = CH_LF ) then	'' CRLF
 			lex.i += 1
 		end if
-		read_bytes(1, TK_EOL)
+		hReadBytes( TK_EOL, 1 )
 
 	case CH_LF
-		read_bytes(1, TK_EOL)
+		hReadBytes( TK_EOL, 1 )
 
 	case CH_TAB, CH_SPACE
-		read_space()
+		hReadSpace( )
 
 	case CH_EXCL		'' !
-		if (lex.i[1] = CH_EQ) then	'' !=
-			read_bytes(2, TK_EXCLEQ)
+		if( lex.i[1] = CH_EQ ) then	'' !=
+			hReadBytes( TK_EXCLEQ, 2 )
 		else
-			read_bytes(1, TK_EXCL)
+			hReadBytes( TK_EXCL, 1 )
 		end if
 
 	case CH_DQUOTE		'' "
-		read_string()
+		hReadString( )
 
 	case CH_HASH		'' #
-		if (lex.i[1] = CH_HASH) then	'' ##
-			read_bytes(2, TK_HASHHASH)
+		if( lex.i[1] = CH_HASH ) then	'' ##
+			hReadBytes( TK_HASHHASH, 2 )
 		else
-			read_bytes(1, TK_HASH)
+			hReadBytes( TK_HASH, 1 )
 		end if
 
 	case CH_PERCENT		'' %
-		if (lex.i[1] = CH_EQ) then	'' %=
-			read_bytes(2, TK_PERCENTEQ)
+		if( lex.i[1] = CH_EQ ) then	'' %=
+			hReadBytes( TK_PERCENTEQ, 2 )
 		else
-			read_bytes(1, TK_PERCENT)
+			hReadBytes( TK_PERCENT, 1 )
 		end if
 
 	case CH_AMP		'' &
-		select case (lex.i[1])
+		select case( lex.i[1] )
 		case CH_AMP	'' &&
-			read_bytes(2, TK_AMPAMP)
+			hReadBytes( TK_AMPAMP, 2 )
 		case CH_EQ	'' &=
-			read_bytes(2, TK_AMPEQ)
+			hReadBytes( TK_AMPEQ, 2 )
 		case else
-			read_bytes(1, TK_AMP)
+			hReadBytes( TK_AMP, 1 )
 		end select
 
 	case CH_QUOTE		'' '
-		read_string()
+		hReadString( )
 
 	case CH_LPAREN		'' (
-		read_bytes(1, TK_LPAREN)
+		hReadBytes( TK_LPAREN, 1 )
 
 	case CH_RPAREN		'' )
-		read_bytes(1, TK_RPAREN)
+		hReadBytes( TK_RPAREN, 1 )
 
 	case CH_STAR		'' *
-		if (lex.i[1] = CH_EQ) then	'' *=
-			read_bytes(2, TK_STAREQ)
+		if( lex.i[1] = CH_EQ ) then	'' *=
+			hReadBytes( TK_STAREQ, 2 )
 		else
-			read_bytes(1, TK_STAR)
+			hReadBytes( TK_STAR, 1 )
 		end if
 
 	case CH_PLUS		'' +
-		select case (lex.i[1])
+		select case( lex.i[1] )
 		case CH_PLUS	'' ++
-			read_bytes(2, TK_PLUSPLUS)
+			hReadBytes( TK_PLUSPLUS, 2 )
 		case CH_EQ	'' +=
-			read_bytes(2, TK_PLUSEQ)
+			hReadBytes( TK_PLUSEQ, 2 )
 		case else
-			read_bytes(1, TK_PLUS)
+			hReadBytes( TK_PLUS, 1 )
 		end select
 
 	case CH_COMMA		'' ,
-		read_bytes(1, TK_COMMA)
+		hReadBytes( TK_COMMA, 1 )
 
 	case CH_MINUS		'' -
-		select case (lex.i[1])
+		select case( lex.i[1] )
 		case CH_GT	'' ->
-			read_bytes(2, TK_ARROW)
+			hReadBytes( TK_ARROW, 2 )
 		case CH_MINUS	'' --
-			read_bytes(2, TK_MINUSMINUS)
+			hReadBytes( TK_MINUSMINUS, 2 )
 		case CH_EQ	'' -=
-			read_bytes(2, TK_MINUSEQ)
+			hReadBytes( TK_MINUSEQ, 2 )
 		case else
-			read_bytes(1, TK_MINUS)
+			hReadBytes( TK_MINUS, 1 )
 		end select
 
 	case CH_DOT		'' .
-		select case (lex.i[1])
+		select case( lex.i[1] )
 		case CH_0 to CH_9   '' 0-9 (Decimal float beginning with '.')
-			read_number()
+			hReadNumber( )
 		case CH_DOT
-			if (lex.i[2] = CH_DOT) then	'' ...
-				read_bytes(3, TK_ELLIPSIS)
+			if( lex.i[2] = CH_DOT ) then	'' ...
+				hReadBytes( TK_ELLIPSIS, 3 )
 			else
-				read_bytes(1, TK_DOT)
+				hReadBytes( TK_DOT, 1 )
 			end if
 		case else
-			read_bytes(1, TK_DOT)
+			hReadBytes( TK_DOT, 1 )
 		end select
 
 	case CH_SLASH		'' /
-		select case (lex.i[1])
+		select case( lex.i[1] )
 		case CH_EQ	'' /=
-			read_bytes(2, TK_SLASHEQ)
+			hReadBytes( TK_SLASHEQ, 2 )
 		case CH_SLASH	'' //
-			read_linecomment()
+			hReadLineComment( )
 		case CH_STAR	'' /*
-			read_comment()
+			hReadComment( )
 		case else
-			read_bytes(1, TK_SLASH)
+			hReadBytes( TK_SLASH, 1 )
 		end select
 
 	case CH_0 to CH_9	'' 0 - 9
-		read_number()
+		hReadNumber( )
 
 	case CH_COLON		'' :
-		read_bytes(1, TK_COLON)
+		hReadBytes( TK_COLON, 1 )
 
 	case CH_SEMI		'' ;
-		read_bytes(1, TK_SEMI)
+		hReadBytes( TK_SEMI, 1 )
 
 	case CH_LT		'' <
-		select case (lex.i[1])
+		select case( lex.i[1] )
 		case CH_LT	'' <<
-			if (lex.i[2] = CH_EQ) then	'' <<=
-				read_bytes(3, TK_LTLTEQ)
+			if( lex.i[2] = CH_EQ ) then	'' <<=
+				hReadBytes( TK_LTLTEQ, 3 )
 			else
-				read_bytes(2, TK_LTLT)
+				hReadBytes( TK_LTLT, 2 )
 			end if
 		case CH_EQ	'' <=
-			read_bytes(2, TK_LTEQ)
+			hReadBytes( TK_LTEQ, 2 )
 		case else
-			read_bytes(1, TK_LT)
+			hReadBytes( TK_LT, 1 )
 		end select
 
 	case CH_EQ		'' =
-		if (lex.i[1] = CH_EQ) then	'' ==
-			read_bytes(2, TK_EQEQ)
+		if( lex.i[1] = CH_EQ ) then	'' ==
+			hReadBytes( TK_EQEQ, 2 )
 		else
-			read_bytes(1, TK_EQ)
+			hReadBytes( TK_EQ, 1 )
 		end if
 
 	case CH_GT		'' >
-		select case (lex.i[1])
+		select case( lex.i[1] )
 		case CH_GT	'' >>
-			if (lex.i[2] = CH_EQ) then	'' >>=
-				read_bytes(3, TK_GTGTEQ)
+			if( lex.i[2] = CH_EQ ) then	'' >>=
+				hReadBytes( TK_GTGTEQ, 3 )
 			else
-				read_bytes(2, TK_GTGT)
+				hReadBytes( TK_GTGT, 2 )
 			end if
 		case CH_EQ	'' >=
-			read_bytes(2, TK_GTEQ)
+			hReadBytes( TK_GTEQ, 2 )
 		case else
-			read_bytes(1, TK_GT)
+			hReadBytes( TK_GT, 1 )
 		end select
 
 	case CH_QUEST	'' ?
-		read_bytes(1, TK_QUEST)
+		hReadBytes( TK_QUEST, 1 )
 
 	case CH_A       to (CH_L - 1), _	'' A-Z except L
 	     (CH_L + 1) to CH_Z
-		read_id()
+		hReadId( )
 
 	case CH_L		'' L
-		if (lex.i[1] = CH_DQUOTE) then
-			read_string()
+		if( lex.i[1] = CH_DQUOTE ) then
+			hReadString( )
 		else
-			read_id()
+			hReadId( )
 		end if
 
 	case CH_LBRACKET	'' [
-		read_bytes(1, TK_LBRACKET)
+		hReadBytes( TK_LBRACKET, 1 )
 
 	case CH_BACKSLASH	'' \
-		read_bytes(1, TK_BACKSLASH)
+		hReadBytes( TK_BACKSLASH, 1 )
 
 	case CH_RBRACKET	'' ]
-		read_bytes(1, TK_RBRACKET)
+		hReadBytes( TK_RBRACKET, 1 )
 
 	case CH_CIRCUMFLEX	'' ^
-		if (lex.i[1] = CH_EQ) then	'' ^=
-			read_bytes(2, TK_CIRCUMFLEXEQ)
+		if( lex.i[1] = CH_EQ ) then	'' ^=
+			hReadBytes( TK_CIRCUMFLEXEQ, 2 )
 		else
-			read_bytes(1, TK_CIRCUMFLEX)
+			hReadBytes( TK_CIRCUMFLEX, 1 )
 		end if
 
-	case CH_UNDERSCORE	'' _
-		read_id()
-
-	case CH_L_A to CH_L_Z	'' a-z
-		read_id()
+	case CH_L_A to CH_L_Z, _	'' a-z
+	     CH_UNDERSCORE		'' _
+		hReadId( )
 
 	case CH_LBRACE		'' {
-		read_bytes(1, TK_LBRACE)
+		hReadBytes( TK_LBRACE, 1 )
 
 	case CH_PIPE		'' |
-		select case (lex.i[1])
+		select case( lex.i[1] )
 		case CH_PIPE	'' ||
-			read_bytes(2, TK_PIPEPIPE)
+			hReadBytes( TK_PIPEPIPE, 2 )
 		case CH_EQ	'' |=
-			read_bytes(2, TK_PIPEEQ)
+			hReadBytes( TK_PIPEEQ, 2 )
 		case else
-			read_bytes(1, TK_PIPE)
+			hReadBytes( TK_PIPE, 1 )
 		end select
 
 	case CH_RBRACE		'' }
-		read_bytes(1, TK_RBRACE)
+		hReadBytes( TK_RBRACE, 1 )
 
 	case CH_TILDE		'' ~
-		read_bytes(1, TK_TILDE)
+		hReadBytes( TK_TILDE, 1 )
 
 	case else
-		add_todo("unexpected character")
+		hAddTodo( "unusual character" )
 		lex.i += 1
-		add_text_token(TK_BYTE, lex.i - 1)
+		hAddTextToken( TK_BYTE, lex.i - 1 )
 
 	end select
 end sub
 
-private sub load_file(byref filename as string)
+private sub hLoadFile( byref filename as string )
+	dim as integer f = any, found = any, result = any, size = any
+	dim as longint filesize = any
+
 	'' Read in the whole file content into lex.buffer
-	dim as integer f = freefile()
-	if (open(filename, for binary, access read, as #f)) then
-		oops("could not open file: '" & filename & "'")
+	f = freefile( )
+	if( open( filename, for binary, access read, as #f ) ) then
+		oops( "could not open file: '" + filename + "'" )
 	end if
 
-	dim as longint filesize = lof(f)
-	if (filesize > &h40000000) then
-		oops("a header file bigger than 1 GiB? no way...")
+	filesize = lof( f )
+	if( filesize > &h40000000 ) then
+		oops( "a header file bigger than 1 GiB? no way..." )
 	end if
 
 	'' An extra 0 byte at the end of the buffer so we can look ahead
 	'' without bound checks, and don't need to give special treatment
 	'' to empty files
-	dim as integer size = filesize
-	lex.buffer = xallocate(size + 1)
+	size = filesize
+	lex.buffer = callocate( size + 1 )
 	lex.buffer[size] = 0
 	lex.i = lex.buffer
 	lex.limit = lex.buffer + size
 
-	if (size > 0) then
-		dim as integer found = 0
-		dim as integer result = get(#f, , *lex.buffer, size, found)
-		if (result or (found <> size)) then
-			oops("file I/O failed")
+	if( size > 0 ) then
+		found = 0
+		result = get( #f, , *lex.buffer, size, found )
+		if( result or (found <> size) ) then
+			oops( "file I/O failed" )
 		end if
 	end if
 
 	close #f
 end sub
 
-private sub complain_about_embedded_nulls()
+private sub hComplainAboutEmbeddedNulls( )
 	'' Currently tokens store text as null-terminated strings, so they
 	'' can't allow embedded nulls, and null also indicates EOF to the lexer.
-	while (lex.i < lex.limit)
-		if (lex.i[0] = 0) then
-			oops("file has embedded nulls, please fix that first!")
+	while( lex.i < lex.limit )
+		if( lex.i[0] = 0 ) then
+			oops( "file has embedded nulls, please fix that first!" )
 		end if
 		lex.i += 1
 	wend
 	lex.i = lex.buffer
 end sub
 
-private sub init_keywords()
-	'' Load C keywords if not yet done
+private sub hInitKeywords( )
 	static as integer lazy = FALSE
 
-	if (lazy) then
-		return
+	'' Load C keywords if not yet done
+	if( lazy ) then
+		exit sub
 	end if
-
 	lazy = TRUE
 
-	for i as integer = KW__C_FIRST to (KW__FB_FIRST - 1)
-		dim as zstring ptr s = token_text(i)
-		dim as integer length = len(*s)
-
+	for i as integer = KW_AUTO to KW_WHILE
 		'' Note: passing @i here. If the keyword would already be
 		'' stored, then this would overwrite i with the hash item data.
 		'' However since this is only done once, the keyword won't
 		'' exist yet, and storage_store() will only read from i.
-		storage_store(s, length, @i)
+		storageStore( token_text(i), len( *token_text(i) ), @i )
 	next
 end sub
 
-private sub lex_init(byref filename as string)
-	load_file(filename)
-	complain_about_embedded_nulls()
-	init_keywords()
+private sub lexInit( byref filename as string )
+	hLoadFile( filename )
+	hComplainAboutEmbeddedNulls( )
+	hInitKeywords( )
 end sub
 
-private sub lex_end()
-	deallocate(lex.buffer)
+private sub lexEnd( )
+	deallocate( lex.buffer )
 end sub
 
-function lex_insert_file _
+function lexInsertFile _
 	( _
 		byval x as integer, _
 		byref filename as string _
 	) as integer
 
-	lex_init(filename)
+	dim as integer oldcount = any, newtokens = any
 
-	dim as integer oldcount = tk_count()
+	lexInit( filename )
+	oldcount = tkCount( )
 
 	'' Tokenize and insert into tk buffer
-	tk_raw_move_to(x)
-	while (lex.i < lex.limit)
-		lex_next()
+	tkRawMoveTo( x )
+	while( lex.i < lex.limit )
+		lexNext( )
 	wend
 
-	dim as integer newtokens = tk_count() - oldcount
+	newtokens = tkCount( ) - oldcount
 
-	if (frog.verbose) then
+	if( frog.verbose ) then
 		print using "  lexer: read in & bytes, produced & tokens"; _
-			(culng(lex.limit) - culng(lex.buffer)); _
+			(culng( lex.limit ) - culng( lex.buffer )); _
 			newtokens
 	end if
 
-	lex_end()
-
-	return x + newtokens
+	lexEnd( )
+	function = x + newtokens
 end function
