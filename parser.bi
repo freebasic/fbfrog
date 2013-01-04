@@ -20,12 +20,6 @@ declare function hSkipOptional _
 		byval x as integer, _
 		byval tk as integer _
 	) as integer
-declare function hInsertSpacedToken _
-	( _
-		byval x as integer, _
-		byval tk as integer, _
-		byval text as zstring ptr _
-	) as integer
 declare function hInsertStatementSeparator( byval x as integer ) as integer
 declare sub hRemoveThisAndSpace( byval x as integer )
 declare function hFindToken( byval x as integer, byval tk as integer ) as integer

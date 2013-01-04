@@ -18,16 +18,9 @@
 
 Goal:
 
-  The idea is to base the translation process not on parsing C into a tree,
-  but rather on rearranging/translating tokens and the constructs they form.
-  It can easily translate "int a;" to "as integer a", but it cannot that easily
-  rearrange whole expressions if FB operators work differently than C ones.
-  It can preserve whitespace, commentary and preprocessor directives, but it
-  cannot translate constructs obscured by macros.
-
-  The results look very much like the original. Anything it couldn't handle
-  is marked with a TODO comment.
-
+  To have a .h to .bi header translation tool that can create and update FB
+  headers for third-party APIs. It should produce bindings rather than exact
+  translations, which are not possible anyways in most cases.
 
 Usage:
 

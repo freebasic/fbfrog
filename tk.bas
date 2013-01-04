@@ -7,7 +7,6 @@ dim shared as zstring ptr token_text(0 to (TK__COUNT - 1)) = _
 	@"<todo>"       , _
 	@"<byte>"       , _
 	@"<eol>"        , _
-	@"<space>"      , _
 	@"<comment>"    , _
 	@"<linecomment>", _
 	@"<decnum>"     , _ '' Number literals
@@ -333,10 +332,6 @@ sub tkInsert _
 	end if
 
 	tkRawInsert( id, text )
-end sub
-
-sub tkInsertSpace( byval x as integer )
-	tkInsert( x, TK_SPACE, " " )
 end sub
 
 sub tkCopy _

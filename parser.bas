@@ -11,7 +11,7 @@ private function hSkipRaw _
 		x += delta
 
 		select case( tkGet( x ) )
-		case TK_EOL, TK_SPACE, TK_COMMENT, TK_LINECOMMENT, TK_TODO
+		case TK_EOL, TK_COMMENT, TK_LINECOMMENT, TK_TODO
 
 		case else
 			exit do
@@ -39,7 +39,7 @@ private function hSkipUnlessEolRaw _
 		x += delta
 
 		select case( tkGet( x ) )
-		case TK_SPACE, TK_COMMENT, TK_LINECOMMENT, TK_TODO
+		case TK_COMMENT, TK_LINECOMMENT, TK_TODO
 
 		case else
 			exit do
@@ -62,7 +62,7 @@ function hIsWhitespaceUntilEol( byval x as integer ) as integer
 		select case( tkGet( x ) )
 		case TK_EOL, TK_EOF
 			exit do
-		case TK_SPACE, TK_COMMENT, TK_LINECOMMENT, TK_TODO
+		case TK_COMMENT, TK_LINECOMMENT, TK_TODO
 
 		case else
 			return FALSE
@@ -86,42 +86,13 @@ function hSkipOptional _
 	function = x
 end function
 
-function hInsertSpacedToken _
-	( _
-		byval x as integer, _
-		byval tk as integer, _
-		byval text as zstring ptr _
-	) as integer
-
-	select case( tkGet( x - 1 ) )
-	case TK_SPACE, TK_EOL, TK_EOF
-
-	case else
-		tkInsertSpace( x )
-		x += 1
-	end select
-
-	tkInsert( x, tk, text )
-	x += 1
-
-	select case( tkGet( x ) )
-	case TK_SPACE, TK_EOL, TK_EOF
-
-	case else
-		tkInsertSpace( x )
-		x += 1
-	end select
-
-	function = x
-end function
-
 function hInsertStatementSeparator( byval x as integer ) as integer
 	'' Only if there's not already another ':'
-	if( (tkGet( x ) = TK_COLON) or (tkGet( hSkipRev( x ) ) = TK_COLON) ) then
-		function = x
-	else
-		function = hInsertSpacedToken( x, TK_COLON, NULL )
+	if( (tkGet( x ) <> TK_COLON) and (tkGet( hSkipRev( x ) ) <> TK_COLON) ) then
+		tkInsert( x, TK_COLON, NULL )
+		x += 1
 	end if
+	function = x
 end function
 
 private function hInsertTodo _
@@ -159,7 +130,8 @@ private function hInsertTodo _
 		end if
 	case else
 		'' Insert in the middle of the line
-		x = hInsertSpacedToken( x, TK_TODO, text )
+		tkInsert( x, TK_TODO, text )
+		x += 1
 	end select
 
 	return x
@@ -779,10 +751,6 @@ private function hFixUpEol( byval x as integer ) as integer
 		'' <'_' EOL>, and add a space in front of '_' if needed,
 		'' so it doesn't become part of some identifier/keyword.
 		x -= 2
-		if( tkGet( x ) <> TK_SPACE ) then
-			tkInsertSpace( x )
-			x += 1
-		end if
 
 		'' Back to '\'
 		x += 1
@@ -804,13 +772,8 @@ private function hFixUpEol( byval x as integer ) as integer
 		'' in front of it.
 		y += (tkGet( y ) = TK_LINECOMMENT)
 
-		'' For beauty, we add it even in front of the space that
-		'' (possibly) aligns the line comment.
-		y += (tkGet( y ) = TK_SPACE)
-
-		tkInsertSpace( y + 1 )
-		tkInsert( y + 2, TK_UNDERSCORE, NULL )
-		x += 2
+		tkInsert( y + 1, TK_UNDERSCORE, NULL )
+		x += 1
 
 	end select
 
@@ -892,10 +855,11 @@ private function hFixUpLogicalOperator _
 	tkRemove( x, x )
 
 	if( mark = MARK_PPEXPR ) then
-		x = hInsertSpacedToken( x, kwforpp, NULL )
+		tkInsert( x, kwforpp, NULL )
 	else
-		x = hInsertSpacedToken( x, kwnormal, NULL )
+		tkInsert( x, kwnormal, NULL )
 	end if
+	x += 1
 
 	function = x
 end function
@@ -911,7 +875,8 @@ private function hReplaceOperator _
 
 	'' Inserting a keyword? That might need spaces too...
 	if( tk1 > TK_ID ) then
-		x = hInsertSpacedToken( x, tk1, NULL )
+		tkInsert( x, tk1, NULL )
+		x += 1
 
 		'' Inserting a double-token self-op? (e.g. '%=' -> MOD '=')
 		if( tk2 >= 0 ) then
@@ -934,7 +899,8 @@ private function hFixUpOperator( byval x as integer ) as integer
 
 	select case as const( tkGet( x ) )
 	case TK_EXCL, TK_TILDE '' {'!' | '~'} -> NOT
-		x = hInsertSpacedToken( x, TK_TODO, "add parentheses around NOT (different precedence)" )
+		tkInsert( x, TK_TODO, "add parentheses around NOT (different precedence)" )
+		x += 1
 		x = hReplaceOperator( x, KW_NOT, -1 )
 
 	case TK_EXCLEQ '' != -> <>
@@ -947,7 +913,8 @@ private function hFixUpOperator( byval x as integer ) as integer
 		x = hReplaceOperator( x, KW_MOD, TK_EQ )
 
 	case TK_AMP '' & -> AND | @
-		x = hInsertSpacedToken( x, TK_TODO, "check whether & meant @ or AND" )
+		tkInsert( x, TK_TODO, "check whether & meant @ or AND" )
+		x += 1
 
 		select case( tkGet( hSkipRev( x ) ) )
 		case TK_ID, _                   '' abc & x
@@ -970,7 +937,8 @@ private function hFixUpOperator( byval x as integer ) as integer
 		x = hReplaceOperator( x, KW_AND, TK_EQ )
 
 	case TK_PLUSPLUS, TK_MINUSMINUS
-		x = hInsertSpacedToken( x, TK_TODO, "translate ++/--" )
+		tkInsert( x, TK_TODO, "translate ++/--" )
+		x += 1
 		x = hSkip( x )
 
 	case TK_LTLT '' << -> shl
@@ -990,7 +958,8 @@ private function hFixUpOperator( byval x as integer ) as integer
 
 	case TK_QUEST '' ?
 		'' TODO: should turn this into iif(), but that's not easy
-		x = hInsertSpacedToken( x, TK_TODO, "turn a?b:c into iif(a,b,c)" )
+		tkInsert( x, TK_TODO, "turn a?b:c into iif(a,b,c)" )
+		x += 1
 		x = hSkip( x )
 
 	case TK_CIRCUMFLEX

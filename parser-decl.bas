@@ -544,9 +544,6 @@ private sub hSplitMultdeclIfNeeded( byval x as integer, byval begin as integer )
 				tkSetMark( tkMark( begin ), lastcomma, _
 				            lastcomma + typeend - begin + 1 )
 
-				'' And a space between semicolon/type
-				tkInsertSpace( lastcomma )
-
 				'' Done -- the rest will be parsed during
 				'' a following call to this function,
 				'' when the translation process reaches it...
@@ -714,7 +711,8 @@ private function hMaybeMoveConstToFront _
 	end if
 
 	if( move_it ) then
-		x += hInsertSpacedToken( front, KW_CONST, NULL ) - front
+		tkInsert( front, KW_CONST, NULL )
+		x += (x + 1) - front
 	end if
 
 	assert( tkGet( x ) = KW_CONST )
@@ -733,7 +731,8 @@ private function translateBaseType( byval x as integer ) as integer
 	'' etc.
 
 	'' Insert the AS
-	x = hInsertSpacedToken( x, KW_AS, NULL )
+	tkInsert( x, KW_AS, NULL )
+	x += 1
 
 	front = x
 
@@ -857,7 +856,8 @@ private function translatePtrs( byval x as integer ) as integer
 		ptrpos = x
 
 		hRemoveThisAndSpace( x )
-		x = hInsertSpacedToken( x, KW_PTR, NULL )
+		tkInsert( x, KW_PTR, NULL )
+		x += 1
 
 		'' [CONST]
 		x = hMaybeMoveConstToFront( x, ptrpos, TRUE )
@@ -895,7 +895,7 @@ private function translateParams( byval x as integer ) as integer
 			'' Go to first token behind lparen
 			x += 1
 
-			'' Just remove the whole [space]VOID[space]
+			'' Just remove VOID
 			tkRemove( x, rparen - 1 )
 
 			'' Skip rparen and done
@@ -1018,8 +1018,10 @@ function translateDecl _
 
 		if( is_extern = FALSE ) then
 			'' DIM SHARED
-			x = hInsertSpacedToken( x, KW_DIM, NULL )
-			x = hInsertSpacedToken( x, KW_SHARED, NULL )
+			tkInsert( x, KW_DIM, NULL )
+			x += 1
+			tkInsert( x, KW_SHARED, NULL )
+			x += 1
 		end if
 
 	case DECL_TYPEDEF
@@ -1046,10 +1048,12 @@ function translateDecl _
 	'' The AS {FUNCTION | SUB} for procptr params is inserted later...
 	if( (is_procptr and (decl <> DECL_PARAM)) or (decl = DECL_PROC) ) then
 		'' DECLARE | AS
-		x = hInsertSpacedToken( x, iif( is_procptr, KW_AS, KW_DECLARE ), NULL )
+		tkInsert( x, iif( is_procptr, KW_AS, KW_DECLARE ), NULL )
+		x += 1
 
 		'' FUNCTION | SUB
-		x = hInsertSpacedToken( x, iif( is_sub, KW_SUB, KW_FUNCTION ), NULL )
+		tkInsert( x, iif( is_sub, KW_SUB, KW_FUNCTION ), NULL )
+		x += 1
 	end if
 
 	'' Type + pointers
@@ -1078,7 +1082,8 @@ function translateDecl _
 	end if
 
 	if( len( calldefine ) > 0 ) then
-		x = hInsertSpacedToken( x, TK_ID, calldefine )
+		tkInsert( x, TK_ID, calldefine )
+		x += 1
 	end if
 
 	if( is_procptr and (decl = DECL_PARAM) ) then
@@ -1090,13 +1095,7 @@ function translateDecl _
 		'' (inserted here instead of the front so it doesn't
 		'' need to be moved here)
 
-		tkInsertSpace( x )
-		x += 1
-
 		tkInsert( x, KW_AS, NULL )
-		x += 1
-
-		tkInsertSpace( x )
 		x += 1
 
 		tkInsert( x, iif( is_sub, KW_SUB, KW_FUNCTION ), NULL )
@@ -1136,9 +1135,6 @@ function translateDecl _
 			'' Append the type directly behind the id (for params),
 			'' or ')' (for procdecls/procptrs), and insert a space too.
 
-			tkInsertSpace( x )
-			x += 1
-
 			'' Copy the translated type/ptrs
 			tkCopy( x, typebegin, typeend )
 			x += (typeend - typebegin + 1)
@@ -1147,9 +1143,6 @@ function translateDecl _
 		'' For all procptrs except params, the id must be moved to the
 		'' end, that's easier than moving the params instead.
 		if( is_procptr and (decl <> DECL_PARAM) ) then
-			tkInsertSpace( x )
-			x += 1
-
 			'' Just extend the typeend to the id so it will be
 			'' deleted below too...
 			typeend = hSkip( typeend )

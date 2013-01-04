@@ -108,17 +108,6 @@ private sub hReadBytes( byval tk as integer, byval length as integer )
 	tkRawInsert( tk, NULL )
 end sub
 
-private sub hReadSpace( )
-	dim as ubyte ptr begin = any
-
-	begin = lex.i
-	do
-		lex.i += 1
-	loop while( (lex.i[0] = CH_TAB) or (lex.i[0] = CH_SPACE) )
-
-	hAddTextToken( TK_SPACE, begin )
-end sub
-
 private sub hReadLineComment( )
 	dim as ubyte ptr begin = any
 
@@ -397,7 +386,7 @@ private sub lexNext( )
 		hReadBytes( TK_EOL, 1 )
 
 	case CH_TAB, CH_SPACE
-		hReadSpace( )
+		lex.i += 1
 
 	case CH_EXCL		'' !
 		if( lex.i[1] = CH_EQ ) then	'' !=

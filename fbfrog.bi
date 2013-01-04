@@ -101,7 +101,6 @@ enum
 	TK_TODO         '' TODOs added as fix-me-markers
 	TK_BYTE         '' For stray bytes that don't fit in elsewhere
 	TK_EOL
-	TK_SPACE        '' Concatenated spaces/tabs
 	TK_COMMENT      '' /* ... */
 	TK_LINECOMMENT  '' // ...
 
@@ -326,7 +325,6 @@ declare sub tkInsert _
 		byval id as integer, _
 		byval text as zstring ptr _
 	)
-declare sub tkInsertSpace( byval x as integer )
 declare sub tkCopy _
 	( _
 		byval x as integer, _

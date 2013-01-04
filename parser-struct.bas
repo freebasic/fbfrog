@@ -253,7 +253,7 @@ function translateCompoundEnd _
 	'' the case of <typedef struct {} multdecl ;>. See also the struct
 	'' translator. Here this just needs to be removed.
 
-	'' Remove '}' and space in front of it
+	'' Remove '}'
 	assert( tkGet( x ) = TK_RBRACE )
 
 	if( compoundkw = KW_EXTERN ) then
@@ -262,8 +262,10 @@ function translateCompoundEnd _
 		tkRemove( x, hFindToken( x, TK_SEMI ) )
 	end if
 
-	x = hInsertSpacedToken( x, KW_END, NULL )
-	x = hInsertSpacedToken( x, compoundkw, NULL )
+	tkInsert( x, KW_END, NULL )
+	x += 1
+	tkInsert( x, compoundkw, NULL )
+	x += 1
 
 	if( hIsWhitespaceUntilEol( hSkipRev( x ) + 1 ) = FALSE ) then
 		x = hInsertStatementSeparator( x )
@@ -385,25 +387,12 @@ function translateStruct( byval x as integer ) as integer
 	    (tkGet( hSkip( y ) ) =  TK_SEMI ) and _
 	    (tkGet( structid )   <> TK_ID   )       ) then
 
-		'' If needed, insert a space to separate the STRUCT
-		'' from the identifier.
-		if( tkGet( structid - 1 ) <> TK_SPACE ) then
-			tkInsertSpace( structid )
-			structid += 1
-			x += 1
-			y += 1
-		end if
-
 		'' Add TODO for <struct { } id;>
 		if( is_typedef = FALSE ) then
 			tkInsert( structid, TK_TODO, "not supported in FB" )
 			structid += 1
-
-			tkInsertSpace( structid )
-			structid += 1
-
-			x += 2
-			y += 2
+			x += 1
+			y += 1
 		end if
 
 		'' Copy the trailing id to the front.
@@ -417,18 +406,7 @@ function translateStruct( byval x as integer ) as integer
 		'' (need to declare a typedef to /something/)
 
 		if( tkGet( structid ) <> TK_ID ) then
-			'' If needed, insert a space to separate the STRUCT
-			'' from the identifier.
-			if( tkGet( structid - 1 ) <> TK_SPACE ) then
-				tkInsertSpace( structid )
-				structid += 1
-				x += 1
-				y += 1
-			end if
-
 			tkInsert( structid, TK_TODO, "faked id" )
-			structid += 1
-			tkInsertSpace( structid )
 			structid += 1
 			tkInsert( structid, TK_ID, "FAKE" )
 
@@ -447,25 +425,14 @@ function translateStruct( byval x as integer ) as integer
 		tkSetMark( tkMark( hSkipRev( y ) ), y, y )
 		y += 1
 
-		tkInsertSpace( y )
-		y += 1
-
 		typedefbegin = y
 
 		tkInsert( y, KW_TYPEDEF, NULL )
 		y += 1
-		tkInsertSpace( y )
-		y += 1
 		tkInsert( y, compoundkw, NULL )
-		y += 1
-		tkInsertSpace( y )
 		y += 1
 		tkCopy( y, structid, structid )
 		y += 1
-		if( tkGet( y ) <> TK_SPACE ) then
-			tkInsertSpace( y )
-			y += 1
-		end if
 
 		'' Skip over the existing multdecl, until ';'
 		while( tkGet( y ) <> TK_SEMI )
@@ -477,8 +444,8 @@ function translateStruct( byval x as integer ) as integer
 		tkSetMark( MARK_TYPEDEF, typedefbegin, y )
 	end if
 
-	'' Remove the '{' and space in front of it. If there is an EOL
-	'' following, insert a ':' statement separator.
+	'' Remove the '{'. If there is an EOL following, insert a ':'
+	'' statement separator.
 	assert( tkGet( x ) = TK_LBRACE )
 	spacebegin = hSkipRev( x ) + 1
 	tkRemove( spacebegin, x )
