@@ -185,12 +185,33 @@ Source module overview:
 
 To do:
 
-> Handle more constructs:
-  - Expression parser & translator that allows for better/less ambigious
-    operator translation, and can handle "?:" -> "iif()", but that's a lot
-    of work
-  - vardecl/param initializers
-  - Forward declarations
+o Better output code formatting
+  - don't try to preserve white space,
+      1. at the end of the day we need bindings, no 1:1 translations
+      2. different language = different formatting anyways
+  - handle comments in certain places only
+
+- allow multiple mark flags per token, not just a single mark
+  at least 2 or 3 levels:
+      1. construct (struct, proc, ...)
+      2. element (field, param, ...)
+      3. purpose (token is an id? a type?)
+
+- add presets/rules to allow for trivial retranslation of known headers
+  e.g. fbfrog zlib.h -preset zlib
+
+- follow/merge/concat...
+    - should follow automatically, or purely rely on dir scanning instead,
+      headers usually are in a single directory, follow is rarely useful...
+    - we basically never want to pull in unrelated third-party headers from outside the directory
+    - presets should be able to decide what to do for each #include and also
+      allow adding expected file names right from the start
+
+- always write output to current dir? need to recreate dir layout
+
+- arrays
+- vardecl/param initializers
+- Forward declarations
 	// type T as T_
 	// (this way we only need to translate the <struct T ...> body as
 	// <type T_ ...>, that's easier than inserting T_ fwdref in place of T
