@@ -348,8 +348,75 @@ declare function lexInsertFile _
 
 declare sub preparseToplevel( )
 declare sub parseToplevel( byval begin as integer )
-declare sub translateToplevel( )
 declare function findPpInclude( byval x as integer ) as integer
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+const TYPEMASK_DT    = &b00000000000000000000000000001111  '' 0..15, enough for TYPE_* enum
+const TYPEMASK_PTR   = &b00000000000000000000000011110000  '' 0..15, enough for max. 8 PTRs on a type, like FB
+const TYPEMASK_REF   = &b00000000000000000000000100000000  '' 0..1, reference or not?
+const TYPEMASK_CONST = &b00000000000001111111111000000000  '' 1 bit per PTR + 1 for the REF + 1 for the toplevel
+
+const TYPEPOS_PTR    = 4  '' PTR mask starts at 4th bit
+const TYPEPOS_REF    = TYPEPOS_PTR + 4
+const TYPEPOS_CONST  = TYPEPOS_REF + 1
+
+const TYPEMAX_PTR = 8
+
+#define typeGetDtAndPtr( dt ) ((dt) and (TYPEMASK_DT or TYPEMASK_PTR))
+
+enum
+	TYPE_INT8 = 0
+	TYPE_UINT8
+	TYPE_INT16
+	TYPE_UINT16
+	TYPE_INT32
+	TYPE_UINT32
+	TYPE_INT64
+	TYPE_UINT64
+	TYPE_UDT
+end enum
+
+enum
+	ASTCLASS_TK = 0
+	ASTCLASS_COMMENT
+
+	ASTCLASS_PPIF
+	ASTCLASS_PPELSEIF
+	ASTCLASS_PPELSE
+	ASTCLASS_PPENDIF
+	ASTCLASS_PPDEFINE
+	ASTCLASS_PPINCLUDE
+
+	ASTCLASS_STRUCT
+	ASTCLASS_PROCDECL
+	ASTCLASS_VARDECL
+end enum
+
+type ASTNODEVARDECL
+	id		as zstring ptr
+	dtype		as integer
+	subtype		as zstring ptr
+end type
+
+type ASTNODE
+	class		as integer
+	union
+		vardecl		as ASTNODEVARDECL
+	end union
+end type
+
+declare sub astInit( )
+declare sub astEnd( )
+declare sub astAdd( byval t as ASTNODE ptr )
+declare function astNew( byval class_ as integer ) as ASTNODE ptr
+declare sub astDelete( byval t as ASTNODE ptr )
+declare function astNewVARDECL _
+	( _
+		byval id as zstring ptr, _
+		byval dtype as integer, _
+		byval subtype as zstring ptr _
+	) as ASTNODE ptr
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 

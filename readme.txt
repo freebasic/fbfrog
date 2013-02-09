@@ -56,82 +56,6 @@ Compiling:
   To recreate the xpms.bas module, compile and run embed-xpms.bas.
 
 
-Here's how it works:
-
-  The core is a huge dynamic array of tokens. Each token consists of:
-   - Token id (keyword? identifier? comma? eol? comment? space? etc.)
-   - Associated text (for identifiers, strings, numbers)
-   - Construct id (mark telling what construct this token belongs to)
-
-  The token buffer is accessed through functions that take an index (often
-  called x) and return information on the token at that position. It works
-  just like an array, so there is no "current position" or anything.
-  Since there are whitespace tokens present, the parser uses helper functions
-  to skip over such noise via x = skip(x), instead of just doing x += 1.
-  All tokens can be accessed at any time, which allows for easy look-ahead
-  and back-tracking in the parsing code.
-
-  Translating a file is done in these steps:
-   1) Letting a C lexer read in the *.h file and insert the corresponding
-      tokens into the token buffer.
-   2) Parsing through the token buffer to identify constructs, setting the
-      token marks accordingly. Unknown constructs are marked as unknown.
-   3) Translating the file by going through all tokens again, and looking
-      at their marks and inserting and deleting tokens as needed to convert
-      the constructs to FB syntax.
-   4) Emitting all tokens into a file, the output *.bi.
-
-  Parsing and translating in two separate steps has the advantages of:
-   - Being able to do trial-and-error parsing: Check whether something
-     is a function declaration, if it's not -- give up and try something
-     else, no harm done.
-   - Not having to store AST-like information as the result of parsing;
-     when needed, the translator can just do some parsing itself.
-   - Being easily able to identify and handle EOLs inside constructs, allowing
-     them to be be made "FB-compatible" by inserting the "_" line continuation
-     character (or just deleting them).
-   - Being able to do preparses (whole parsing pass, but at least without the
-     translation pass) to collect information on #includes and #defines.
-
-  For example, here is (basically) how a field declaration such as "int a;"
-  would be translated:
-   - The fielddecl translator would remove the "int" token,
-   - and insert "as integer" instead.
-   - Then it would skip over the identifier "a", since there is no change
-     required to translate it,
-   - and finally it would remove the ";",
-   - resulting in "as integer a".
-
-  The idea behind the --follow, --concat and --merge options is to ease the
-  translation of multiple headers at once.
-   - Following refers to the translation of files found referenced via
-     #include directives in other files.
-   - Merging is the resolving of #includes, i.e. the inclusion of the
-     #included file in place of the #include directive. A file can only be
-     merged in like this if it is not #included anywhere else, otherwise the
-     content would be duplicated, and that is usually not nice...
-   - Concatenation is supposed to be used when headers belong together and
-     just should be appended into a bigger file, as a last resort, if they
-     cannot be combined by merging. This is only done if the headers aren't
-     #included anywhere, otherwise the files would be missing.
-  All the options together can do a pretty good job at combining all headers
-  into a single one, unless there are circular #include dependencies.
-
-  To handle the #include dependencies, the fbfrog frontend keeps a list of
-  (*.h) files that is filled with files from the command line and those found
-  during an #include-collection preparse, with an #include reference count for
-  each file.
-
-  The preparse is not only used to collect #includes, but also to gather some
-  information on #defines. Currently it just collects any #defines that contain
-  something like __stdcall or __declspec(dllexport) or are empty, and the
-  procedure declaration uses that information to allow and translate such
-  defines in front of procedure declarations. Enabling --follow allows more
-  #defines to be found, which can help. And sure enough you can just add any
-  #define FOO to the top of the headers to translate, to let the preparse find
-  them and help out the translation.
-
-
 Source module overview:
 
   emit.bas           Function to write out the current token buffer into a file
@@ -158,10 +82,6 @@ Source module overview:
                      everything with procedure pointers too
 
   pathmagic.bas      Path/file name handling functions, directory tree search
-
-  storage.bas        Global token text buffer, allowing tokens to re-use text
-                     across multiple parses, and avoiding the need to allocate()
-                     and deallocate() the text on every token insert/delete.
 
   tk.bas             Token buffer (implemented as a gap buffer),
                      accessor functions
@@ -207,6 +127,7 @@ o Split up all work into separate steps,
           1. at the end of the day we need bindings, no 1:1 translations
           2. different language = different formatting anyways
       - preserve comments at EOL only
+  - use an AST for the "high level" parsing, it's just much easier
 
 o Combine -follow/-merge/-concat into just -merge
   - Following is useless, because we pretty much always want to work on all
