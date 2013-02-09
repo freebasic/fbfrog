@@ -309,7 +309,7 @@ extern as zstring ptr token_text(0 to (TK__COUNT - 1))
 extern as zstring ptr mark_text(0 to (MARK__COUNT - 1))
 
 '' Great debugging helper, for example: TRACE(x), "decl begin"
-#define TRACE( x ) print lcase( __FUNCTION__ ) + "(" + str( __LINE__ ) + "):" + _
+#define TRACE( x ) print __FUNCTION__ + "(" + str( __LINE__ ) + "):" + _
 	str( x ) + " " + *mark_text(tkMark( x )) + "[" + *token_text(tkGet( x )) + "]"
 
 declare function strDuplicate _

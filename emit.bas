@@ -123,6 +123,10 @@ sub emitIndent( byval tabs as integer )
 	next
 end sub
 
+sub emitSpace( )
+	emit( " " )
+end sub
+
 sub emitWriteFile( byref filename as string )
 	dim as integer x = any, level = any, nextlevel = any
 
@@ -133,10 +137,10 @@ sub emitWriteFile( byref filename as string )
 	nextlevel = 0
 	while( tkGet( x ) <> TK_EOF )
 
-		'' At BOL or BOF?
-		select case( tkGet( x - 1 ) )
-		case TK_EOL, TK_EOF
+		select case as const( tkGet( x - 1 ) )
 
+		'' At BOL or BOF?
+		case TK_EOL, TK_EOF
 			nextlevel = level
 
 			select case( tkMark( x ) )
@@ -163,9 +167,30 @@ sub emitWriteFile( byref filename as string )
 			end if
 
 			level = nextlevel
+
+		'' Insert space between other tokens if needed
+		case TK_HASH
+			select case( tkMark( x - 1 ) )
+			case MARK_PP
+				'' not between PP '#' and the following keyword
+
+			case else
+				emitSpace( )
+			end select
+
+		case else
+			select case( tkGet( x ) )
+			case TK_EOL, TK_COMMA, TK_LPAREN
+				'' Don't add space in front of EOL or ',' etc.
+
+			case else
+				emitSpace( )
+			end select
+
 		end select
 
 		emitToken( x )
+
 		x += 1
 	wend
 
