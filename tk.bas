@@ -212,15 +212,14 @@ end type
 
 dim shared as TOKENBUFFER tk
 
-function strDuplicate _
-	( _
-		byval s as ubyte ptr, _
-		byval length as integer _
-	) as zstring ptr
-
+function strDuplicate( byval s as zstring ptr ) as zstring ptr
 	dim as zstring ptr p = any
+	dim as integer length = any
 
-	p = allocate( length + 1 )
+	if( s = NULL ) then exit function
+
+	length = len( *s )
+	p = callocate( length + 1 )
 
 	if( length > 0 ) then
 		memcpy( p, s, length )
@@ -278,7 +277,7 @@ sub tkRawMoveTo( byval x as integer )
 end sub
 
 '' Insert token at current position, the current position moves forward.
-sub tkRawInsert( byval id as integer, byval text as ubyte ptr )
+sub tkRawInsert( byval id as integer, byval text as zstring ptr )
 	const NEWGAP = 512
 	dim as ONETOKEN ptr p = any
 
@@ -300,7 +299,7 @@ sub tkRawInsert( byval id as integer, byval text as ubyte ptr )
 
 	p->id = id
 	p->mark = MARK_TOPLEVEL
-	p->text = text
+	p->text = strDuplicate( text )
 
 	tk.front += 1
 	tk.gap -= 1
@@ -319,19 +318,9 @@ sub tkInsert _
 		byval text as zstring ptr _
 	)
 
-	dim as integer dat = any
-
 	tkRawMoveTo( x )
-
-	'' See also lex.bas:add_text_token_raw(); this is the same, except
-	'' that here we don't turn TK_IDs into KW_*s, and this is also used
-	'' for non-text tokens.
-	if( text ) then
-		dat = -1
-		text = storageStore( text, len( *text ), @dat )
-	end if
-
 	tkRawInsert( id, text )
+
 end sub
 
 sub tkCopy _
@@ -353,9 +342,16 @@ sub tkCopy _
 end sub
 
 sub tkRemove( byval first as integer, byval last as integer )
+	dim as ONETOKEN ptr p = any
 	dim as integer delta = any
 
 	tkRawMoveTo( last + 1 )
+
+	for i as integer = first to last
+		p = tkAccess( i )
+		deallocate( p->text )
+		p->text = NULL
+	next
 
 	delta = last - first + 1
 	if( delta > tk.front ) then

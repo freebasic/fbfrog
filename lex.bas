@@ -6,6 +6,8 @@ type LEXSTUFF
 	buffer	as ubyte ptr  '' File content buffer
 	i	as ubyte ptr  '' Current char, will always be <= limit
 	limit	as ubyte ptr  '' (end of buffer)
+
+	kwhash	as THASH
 end type
 
 dim shared as LEXSTUFF lex
@@ -70,37 +72,33 @@ enum
 	CH_TILDE        '' ~
 end enum
 
-private sub hAddTextTokenRaw _
-	( _
-		byval tk as integer, _
-		byval text as ubyte ptr, _
-		byval length as integer _
-	)
-
-	dim as integer dat = any
-
-	'' Just store the token text. If this text string is already stored,
-	'' we'll get the existing pointer, otherwise our text will be copied,
-	'' a null terminator will be added, and we get that new string.
-	'' Note: This can reuse even keyword text, e.g. for string literals
-	'' like "int".
-	dat = -1
-	text = storageStore( text, length, @dat )
-
-	'' Is this a keyword? Then use the proper KW_* instead of TK_ID
-	if( (tk = TK_ID) and (dat >= 0) ) then
-		tkRawInsert( dat, NULL )
-	else
-		tkRawInsert( tk, text )
-	end if
-end sub
-
 private sub hAddTextToken( byval tk as integer, byval begin as ubyte ptr )
-	hAddTextTokenRaw( tk, begin, culng( lex.i ) - culng( begin ) )
+	dim as integer old = any
+	dim as uinteger hash = any
+	dim as THASHITEM ptr item = any
+
+	'' Insert a null terminator temporarily
+	old = lex.i[0]
+	lex.i[0] = 0
+
+	'' Lookup C keyword
+	hash = hashHash( begin )
+	item = hashLookup( @lex.kwhash, begin, hash )
+
+	'' Is it a C keyword?
+	if( item ) then
+		'' Then use the proper KW_* instead of TK_ID
+		tkRawInsert( cint( item->data ), NULL )
+	else
+		'' TK_ID
+		tkRawInsert( tk, begin )
+	end if
+
+	lex.i[0] = old
 end sub
 
 private sub hAddTodo( byval text as zstring ptr )
-	hAddTextTokenRaw( TK_TODO, text, len( *text ) )
+	tkRawInsert( TK_TODO, text )
 end sub
 
 private sub hReadBytes( byval tk as integer, byval length as integer )
@@ -643,6 +641,8 @@ end sub
 
 private sub hInitKeywords( )
 	static as integer lazy = FALSE
+	dim as uinteger hash = any
+	dim as THASHITEM ptr item = any
 
 	'' Load C keywords if not yet done
 	if( lazy ) then
@@ -650,12 +650,12 @@ private sub hInitKeywords( )
 	end if
 	lazy = TRUE
 
+	hashInit( @lex.kwhash, 10 )
+
 	for i as integer = KW_AUTO to KW_WHILE
-		'' Note: passing @i here. If the keyword would already be
-		'' stored, then this would overwrite i with the hash item data.
-		'' However since this is only done once, the keyword won't
-		'' exist yet, and storage_store() will only read from i.
-		storageStore( token_text(i), len( *token_text(i) ), @i )
+		hash = hashHash( token_text(i) )
+		item = hashLookup( @lex.kwhash, token_text(i), hash )
+		hashAdd( @lex.kwhash, item, hash, token_text(i), cast( any ptr, i ) )
 	next
 end sub
 

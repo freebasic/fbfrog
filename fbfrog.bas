@@ -17,15 +17,11 @@ function frogAddDefine _
 		byval flags as uinteger _
 	) as uinteger
 
-	dim as integer length = any, dat = any
 	dim as uinteger hash = any
-	dim as HashItem ptr item = any
+	dim as THASHITEM ptr item = any
 
-	length = len( *id )
-	assert( length > 0 )
-
-	hash = hashHash( id, length )
-	item = hashLookup( @frog.definehash, id, length, hash )
+	hash = hashHash( id )
+	item = hashLookup( @frog.definehash, id, hash )
 
 	if( item->s ) then
 		'' Already exists, add the flags. For lookups only, flags
@@ -38,9 +34,7 @@ function frogAddDefine _
 	'' to be used for lookups only.
 	if( flags ) then
 		'' Add new
-		dat = -1
-		hashAdd( @frog.definehash, item, hash, _
-		         storageStore( id, length, @dat ), length, cast( any ptr, flags ) )
+		hashAdd( @frog.definehash, item, hash, strDuplicate( id ), cast( any ptr, flags ) )
 	end if
 
 	function = flags
@@ -86,7 +80,6 @@ end sub
 	depInit( )
 	frogInit( )
 	fsInit( )
-	storageInit( )
 
 	for i as integer = 1 to __FB_ARGC__-1
 		arg = *__FB_ARGV__[i]
@@ -174,6 +167,5 @@ end sub
 	emitStats( )
 	if( frog.verbose ) then
 		hashStats( @frog.definehash, "define" )
-		storageStats( )
 	end if
 	end 0

@@ -4,40 +4,24 @@
 #include once "fbfrog.bi"
 #include once "crt.bi"
 
-function hashHash _
-	( _
-		byval s as ubyte ptr, _
-		byval length as integer _
-	) as uinteger
-
+function hashHash( byval s as zstring ptr ) as uinteger
 	dim as uinteger hash = any
-	dim as ubyte ptr limit = any
 
 	hash = 5381
-	limit = s + length
-
-	while( s < limit )
-		hash = *s + (hash shl 5) - hash
+	while( (*s)[0] )
+		hash = (*s)[0] + (hash shl 5) - hash
 		s += 1
 	wend
 
 	function = hash
 end function
 
-private function hashHash2 _
-	( _
-		byval s as ubyte ptr, _
-		byval length as integer _
-	) as uinteger
-
+private function hashHash2( byval s as zstring ptr ) as uinteger
 	dim as uinteger hash = any
-	dim as ubyte ptr limit = any
 
 	hash = 0
-	limit = s + length
-
-	while( s < limit )
-		hash = *s + (hash shl 6) + (hash shl 16) - hash
+	while( (*s)[0] )
+		hash = (*s)[0] + (hash shl 6) + (hash shl 16) - hash
 		s += 1
 	wend
 
@@ -47,11 +31,11 @@ end function
 private sub hAllocTable( byval h as THASH ptr )
 	'' They must be zeroed, because NULL instead of a string indicates
 	'' unused items
-	h->items = callocate( h->room * sizeof( HASHITEM ) )
+	h->items = callocate( h->room * sizeof( THASHITEM ) )
 end sub
 
 private sub hGrowTable( byval h as THASH ptr )
-	dim as HASHITEM ptr old = any
+	dim as THASHITEM ptr old = any
 	dim as integer oldroom = any
 
 	old = h->items
@@ -63,11 +47,11 @@ private sub hGrowTable( byval h as THASH ptr )
 
 	'' Insert all used items from the old table into the new one.
 	'' This will redistribute everything using the new h->room.
-	for item as HASHITEM ptr = old to (old + (oldroom - 1))
+	for item as THASHITEM ptr = old to (old + (oldroom - 1))
 		if( item->s ) then
 			'' Yep, this is recursive, but since the table is
 			'' larger by now, we won't recurse in here again.
-			*hashLookup( h, item->s, item->length, item->hash ) = *item
+			*hashLookup( h, item->s, item->hash ) = *item
 		end if
 	next
 
@@ -77,13 +61,12 @@ end sub
 function hashLookup _
 	( _
 		byval h as THASH ptr, _
-		byval s as ubyte ptr, _
-		byval length as integer, _
+		byval s as zstring ptr, _
 		byval hash as uinteger _
-	) as HASHITEM ptr
+	) as THASHITEM ptr
 
 	dim as uinteger roommask = any, i = any, stepsize = any
-	dim as HASHITEM ptr item = any
+	dim as THASHITEM ptr item = any
 
 	'' Enlarge the hash map when >= 75% is used up, for better lookup
 	'' performance (it's easier to find free items if there are many; i.e.
@@ -109,29 +92,25 @@ function hashLookup _
 
 	'' Item is used. Is it the correct string?
 	if( item->hash = hash ) then
-		if( item->length = length ) then
-			if( memcmp( item->s, s, length ) = 0 ) then
-				return item
-			end if
+		if( *item->s = *s ) then
+			return item
 		end if
 	end if
 
 	'' The first probe reached an item containing the wrong string.
-	'' The collision is resolved by stepping through items until a free item or
-	'' the look-for string is found.
+	'' The collision is resolved by stepping through items until a
+	'' free item or the look-for string is found.
 	''
-	'' The step size is calculated based on a 2nd hash value. It is or'ed with 1
-	'' to make sure it is odd, so all items will eventually be reached, because
-	'' h->room always is a power of 2.
-	stepsize = (hashHash2( s, length ) and roommask) or 1
+	'' The step size is calculated based on a 2nd hash value. It is or'ed
+	'' with 1 to make sure it's odd, so all items will eventually be
+	'' reached, because h->room always is a power of 2.
+	stepsize = (hashHash2( s ) and roommask) or 1
 
 	do
 #if 0
 		'' Collisions happen when both hashes are equal mod table size
-		print "** COLLISION at " + hex( i ) + ": " + _
-			*strDuplicate( s, length ) + _
-			" with existing " + _
-			*strDuplicate( item->s, item->length )
+		print "** COLLISION at " + hex( i ) + ": " + *s + _
+			" with existing " + *item->s
 #endif
 		h->collisions += 1
 
@@ -146,10 +125,8 @@ function hashLookup _
 
 		'' Item is used. Is it the correct string?
 		if( item->hash = hash ) then
-			if( item->length = length ) then
-				if( memcmp( item->s, s, length ) = 0 ) then
-					exit do
-				end if
+			if( *item->s = *s ) then
+				exit do
 			end if
 		end if
 	loop
@@ -160,15 +137,13 @@ end function
 sub hashAdd _
 	( _
 		byval h as THASH ptr, _
-		byval item as HASHITEM ptr, _
+		byval item as THASHITEM ptr, _
 		byval hash as uinteger, _
-		byval s as ubyte ptr, _
-		byval length as integer, _
+		byval s as zstring ptr, _
 		byval dat as any ptr _
 	)
 
 	item->s = s
-	item->length = length
 	item->hash = hash
 	item->data = dat
 	h->count += 1

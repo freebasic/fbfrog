@@ -4,17 +4,16 @@
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-'' The hash table is an array of HASHITEMs, which associate a string to
-'' some user data.
-type HASHITEM
+'' The hash table is an array of items,
+'' which associate a string to some user data.
+type THASHITEM
 	s	as zstring ptr
-	length	as integer
 	hash	as uinteger  '' hash value for quick comparison
 	data	as any ptr   '' user data
 end type
 
 type THASH
-	items		as HASHITEM ptr
+	items		as THASHITEM ptr
 	count		as integer  '' number of used items
 	room		as integer  '' number of allocated items
 	resizes		as integer  '' number of table reallocs/size increases
@@ -23,25 +22,19 @@ type THASH
 	collisions	as integer  '' sum of collisions during all lookups
 end type
 
-declare function hashHash _
-	( _
-		byval s as ubyte ptr, _
-		byval length as integer _
-	) as uinteger
+declare function hashHash( byval s as zstring ptr ) as uinteger
 declare function hashLookup _
 	( _
 		byval h as THASH ptr, _
-		byval s as ubyte ptr, _
-		byval length as integer, _
+		byval s as zstring ptr, _
 		byval hash as uinteger _
-	) as HASHITEM ptr
+	) as THASHITEM ptr
 declare sub hashAdd _
 	( _
 		byval h as THASH ptr, _
-		byval item as HASHITEM ptr, _
+		byval item as THASHITEM ptr, _
 		byval hash as uinteger, _
-		byval s as ubyte ptr, _
-		byval length as integer, _
+		byval s as zstring ptr, _
 		byval dat as any ptr _
 	)
 declare sub hashInit( byval h as THASH ptr, byval exponent as integer )
@@ -315,13 +308,9 @@ extern as zstring ptr mark_text(0 to (MARK__COUNT - 1))
 #define TRACE( x ) print __FUNCTION__ + "(" + str( __LINE__ ) + "):" + _
 	str( x ) + " " + *mark_text(tkMark( x )) + "[" + *token_text(tkGet( x )) + "]"
 
-declare function strDuplicate _
-	( _
-		byval s as ubyte ptr, _
-		byval length as integer _
-	) as zstring ptr
+declare function strDuplicate( byval s as zstring ptr ) as zstring ptr
 declare sub tkRawMoveTo( byval x as integer )
-declare sub tkRawInsert( byval id as integer, byval text as ubyte ptr )
+declare sub tkRawInsert( byval id as integer, byval text as zstring ptr )
 declare sub tkInsert _
 	( _
 		byval x as integer, _
@@ -361,15 +350,6 @@ declare sub preparseToplevel( )
 declare sub parseToplevel( byval begin as integer )
 declare sub translateToplevel( )
 declare function findPpInclude( byval x as integer ) as integer
-
-declare function storageStore _
-	( _
-		byval text as ubyte ptr, _
-		byval length as integer, _
-		byval pdat as integer ptr _
-	) as ubyte ptr
-declare sub storageInit( )
-declare sub storageStats( )
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 

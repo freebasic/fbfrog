@@ -45,7 +45,7 @@ end sub
 function fsAdd( byref pretty as string ) as FSFILE ptr
 	dim as string normed, real, parent
 	dim as uinteger hash = any
-	dim as HASHITEM ptr item = any
+	dim as THASHITEM ptr item = any
 	dim as FSFILE ptr f = any
 
 	if( filesys.context ) then
@@ -86,8 +86,8 @@ function fsAdd( byref pretty as string ) as FSFILE ptr
 	normed = pathNormalize( real )
 
 	if( len( normed ) > 0 ) then
-		hash = hashHash( strptr( normed ), len( normed ) )
-		item = hashLookup( @filesys.filehash, strptr( normed ), len( normed ), hash )
+		hash = hashHash( normed )
+		item = hashLookup( @filesys.filehash, normed, hash )
 
 		if( item->s ) then
 			'' Already exists
@@ -97,8 +97,8 @@ function fsAdd( byref pretty as string ) as FSFILE ptr
 			return item->data
 		end if
 	else
-		hash = hashHash( strptr( pretty ), len( pretty ) )
-		item = hashLookup( @filesys.filehash, strptr( pretty ), len( pretty ), hash )
+		hash = hashHash( pretty )
+		item = hashLookup( @filesys.filehash, pretty, hash )
 	end if
 
 	if( frog.verbose ) then
@@ -112,9 +112,9 @@ function fsAdd( byref pretty as string ) as FSFILE ptr
 
 	'' Add to hash table
 	if( len( f->normed ) > 0 ) then
-		hashAdd( @filesys.filehash, item, hash, strptr( f->normed ), len( f->normed ), f )
+		hashAdd( @filesys.filehash, item, hash, f->normed, f )
 	else
-		hashAdd( @filesys.filehash, item, hash, strptr( f->pretty ), len( f->pretty ), f )
+		hashAdd( @filesys.filehash, item, hash, f->pretty, f )
 	end if
 
 	function = f
