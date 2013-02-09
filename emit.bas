@@ -80,7 +80,7 @@ private sub emitToken( byval x as integer )
 
 	case TK_HEXNUM
 		emit( "&h" )
-		emit( tkText( x ) )
+		emit( ucase( *tkText( x ) ) )
 
 	case TK_OCTNUM
 		emit( "&o" )
