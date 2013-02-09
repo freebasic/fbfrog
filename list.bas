@@ -5,7 +5,7 @@
 #define listGetPtr( node ) cptr( any ptr, cptr( ubyte ptr, node ) + sizeof( LISTNODE ) )
 #define listGetNode( p ) cptr( LISTNODE ptr, cptr( ubyte ptr, p ) - sizeof( LISTNODE ) )
 
-function listGetHead( byval l as LINKEDLIST ptr) as any ptr
+function listGetHead( byval l as TLIST ptr) as any ptr
 	if( l->head ) then
 		function = listGetPtr( l->head )
 	end if
@@ -19,7 +19,7 @@ function listGetNext( byval p as any ptr ) as any ptr
 	end if
 end function
 
-function listAppend( byval l as LINKEDLIST ptr ) as any ptr
+function listAppend( byval l as TLIST ptr ) as any ptr
 	dim as LISTNODE ptr node = any
 
 	node = callocate( l->nodesize )
@@ -35,13 +35,13 @@ function listAppend( byval l as LINKEDLIST ptr ) as any ptr
 	function = listGetPtr( node )
 end function
 
-sub listInit( byval l as LINKEDLIST ptr, byval unit as integer )
+sub listInit( byval l as TLIST ptr, byval unit as integer )
 	l->head = NULL
 	l->tail = NULL
 	l->nodesize = sizeof( LISTNODE ) + unit
 end sub
 
-sub listEnd( byval l as LINKEDLIST ptr )
+sub listEnd( byval l as TLIST ptr )
 	dim as LISTNODE ptr node = any, nxt = any
 	node = l->head
 	while( node )

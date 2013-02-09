@@ -44,13 +44,13 @@ private function hashHash2 _
 	function = hash
 end function
 
-private sub hAllocTable( byval h as HASHTABLE ptr )
+private sub hAllocTable( byval h as THASH ptr )
 	'' They must be zeroed, because NULL instead of a string indicates
 	'' unused items
 	h->items = callocate( h->room * sizeof( HASHITEM ) )
 end sub
 
-private sub hGrowTable( byval h as HASHTABLE ptr )
+private sub hGrowTable( byval h as THASH ptr )
 	dim as HASHITEM ptr old = any
 	dim as integer oldroom = any
 
@@ -76,7 +76,7 @@ end sub
 
 function hashLookup _
 	( _
-		byval h as HASHTABLE ptr, _
+		byval h as THASH ptr, _
 		byval s as ubyte ptr, _
 		byval length as integer, _
 		byval hash as uinteger _
@@ -159,7 +159,7 @@ end function
 
 sub hashAdd _
 	( _
-		byval h as HASHTABLE ptr, _
+		byval h as THASH ptr, _
 		byval item as HASHITEM ptr, _
 		byval hash as uinteger, _
 		byval s as ubyte ptr, _
@@ -175,7 +175,7 @@ sub hashAdd _
 
 end sub
 
-sub hashInit( byval h as HASHTABLE ptr, byval exponent as integer )
+sub hashInit( byval h as THASH ptr, byval exponent as integer )
 	h->count = 0
 	h->room = 1 shl exponent
 	h->resizes = 0
@@ -185,11 +185,11 @@ sub hashInit( byval h as HASHTABLE ptr, byval exponent as integer )
 	hAllocTable( h )
 end sub
 
-sub hashEnd( byval h as HASHTABLE ptr )
+sub hashEnd( byval h as THASH ptr )
 	deallocate( h->items )
 end sub
 
-sub hashStats( byval h as HASHTABLE ptr, byref prefix as string )
+sub hashStats( byval h as THASH ptr, byref prefix as string )
 	print using "  " + prefix + " hash: " + _
 		"&/& hits (&%), &/& used (&%), & resizes"; _
 		h->perfects; h->lookups; _

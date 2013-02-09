@@ -13,7 +13,7 @@ type HASHITEM
 	data	as any ptr   '' user data
 end type
 
-type HASHTABLE
+type THASH
 	items		as HASHITEM ptr
 	count		as integer  '' number of used items
 	room		as integer  '' number of allocated items
@@ -30,23 +30,23 @@ declare function hashHash _
 	) as uinteger
 declare function hashLookup _
 	( _
-		byval h as HASHTABLE ptr, _
+		byval h as THASH ptr, _
 		byval s as ubyte ptr, _
 		byval length as integer, _
 		byval hash as uinteger _
 	) as HASHITEM ptr
 declare sub hashAdd _
 	( _
-		byval h as HASHTABLE ptr, _
+		byval h as THASH ptr, _
 		byval item as HASHITEM ptr, _
 		byval hash as uinteger, _
 		byval s as ubyte ptr, _
 		byval length as integer, _
 		byval dat as any ptr _
 	)
-declare sub hashInit( byval h as HASHTABLE ptr, byval exponent as integer )
-declare sub hashEnd( byval h as HASHTABLE ptr )
-declare sub hashStats( byval h as HASHTABLE ptr, byref prefix as string )
+declare sub hashInit( byval h as THASH ptr, byval exponent as integer )
+declare sub hashEnd( byval h as THASH ptr )
+declare sub hashStats( byval h as THASH ptr, byref prefix as string )
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
@@ -55,17 +55,17 @@ type LISTNODE
 	prev		as LISTNODE ptr
 end type
 
-type LINKEDLIST
+type TLIST
 	head		as LISTNODE ptr
 	tail		as LISTNODE ptr
 	nodesize	as integer
 end type
 
-declare function listGetHead( byval l as LINKEDLIST ptr) as any ptr
+declare function listGetHead( byval l as TLIST ptr) as any ptr
 declare function listGetNext( byval p as any ptr ) as any ptr
-declare function listAppend( byval l as LINKEDLIST ptr ) as any ptr
-declare sub listInit( byval l as LINKEDLIST ptr, byval unit as integer )
-declare sub listEnd( byval l as LINKEDLIST ptr )
+declare function listAppend( byval l as TLIST ptr ) as any ptr
+declare sub listInit( byval l as TLIST ptr, byval unit as integer )
+declare sub listEnd( byval l as TLIST ptr )
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
@@ -90,7 +90,7 @@ declare function hFileExists( byref file as string ) as integer
 declare sub hScanDirectoryForH _
 	( _
 		byref rootdir as string, _
-		byval resultlist as LINKEDLIST ptr _
+		byval resultlist as TLIST ptr _
 	)
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -403,12 +403,12 @@ type FROGSTUFF
 	verbose		as integer
 	f		as FROGFILE ptr
 
-	files		as LINKEDLIST '' FROGFILE
-	filehash	as HASHTABLE
-	definehash	as HASHTABLE
+	files		as TLIST '' FROGFILE
+	filehash	as THASH
+	definehash	as THASH
 end type
 
-extern as FrogStuff frog
+extern as FROGSTUFF frog
 
 declare sub oops( byref message as string )
 declare function frogAddDefine _

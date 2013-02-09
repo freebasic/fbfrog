@@ -336,7 +336,7 @@ end sub
 private sub hScanParent _
 	( _
 		byref parent as string, _
-		byval resultlist as LINKEDLIST ptr _
+		byval resultlist as TLIST ptr _
 	)
 
 	dim as string found
@@ -369,7 +369,7 @@ end sub
 sub hScanDirectoryForH _
 	( _
 		byref rootdir as string, _
-		byval resultlist as LINKEDLIST ptr _
+		byval resultlist as TLIST ptr _
 	)
 
 	dirsAppend( rootdir )

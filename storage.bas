@@ -6,7 +6,7 @@
 #include once "crt.bi"
 
 type TEXTSTORAGE
-	hash		as HASHTABLE
+	hash		as THASH
 
 	p		as any ptr  '' Begin of free room in last allocated block
 	free		as integer  '' Remaining free room

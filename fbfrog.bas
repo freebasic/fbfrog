@@ -1,6 +1,6 @@
 #include once "fbfrog.bi"
 
-dim shared as FrogStuff frog
+dim shared as FROGSTUFF frog
 
 sub oops( byref message as string )
 	print "oops, " & message
