@@ -68,10 +68,6 @@ function parseEnumconst _
 		end if
 	end select
 
-	'' Mark the constant declaration
-	tkSetMark( iif( is_unknown, MARK_UNKNOWNENUMCONST, MARK_ENUMCONST ), _
-			begin, hSkipRev( x ) )
-
 	function = x
 end function
 
@@ -165,7 +161,7 @@ function parseMultdecl _
 		byval decl as integer _
 	) as integer
 
-	dim as integer typebegin = any, is_procptr = any, old = any, mark = any
+	dim as integer typebegin = any, is_procptr = any, old = any
 
 	'' Generic 'type *a, **b;' parsing,
 	'' used for vardecls/fielddecls/procdecls/params...
@@ -286,15 +282,6 @@ function parseMultdecl _
 			return begin
 		end if
 
-		mark = MARK_TOPDECL
-		select case( decl )
-		case DECL_FIELD
-			mark = MARK_FIELDDECL
-		case DECL_TYPEDEF
-			mark = MARK_TYPEDEF
-		end select
-
-		tkSetMark( mark, begin, x )
 		x = hSkip( x )
 
 	end select

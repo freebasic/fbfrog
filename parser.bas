@@ -255,17 +255,11 @@ end function
 function parseUnknown( byval x as integer ) as integer
 	dim as integer begin = any
 
-	'' The current token/construct couldn't be identified,
-	'' so try to hSkip over the whole statement. Parsing
-	'' needs to advance somehow, and everything here should
-	'' be re-marked as MARK_UNKNOWN, so it can be marked
-	'' with a /single/ TODO.
 	begin = x
 
 	'' Find the next '#' or ';' while skipping over ';'s inside
 	'' '{...}'.
 	x = hSkipStatement( x )
-	tkSetMark( MARK_UNKNOWN, begin, hSkipRev( x ) )
 
 	function = x
 end function
@@ -538,7 +532,7 @@ function parsePPDirective _
 	) as integer
 
 	dim as string filename
-	dim as integer begin = any, mark = any, y = any, lt = any
+	dim as integer begin = any, y = any, lt = any
 	dim as uinteger flags = any
 	dim as zstring ptr text = any
 
@@ -551,11 +545,8 @@ function parsePPDirective _
 	end if
 	x = hSkipPP( x )
 
-	'' Mark the expression parts of #if (but not #if itself) specially
-	mark = MARK_PP
 	select case( tkGet( x ) )
 	case KW_IF, KW_IFDEF, KW_IFNDEF, KW_ELIF '' #if & co
-		mark = MARK_PPEXPR
 
 	case KW_INCLUDE '' #include
 		y = hSkipPP( x )
@@ -620,14 +611,8 @@ function parsePPDirective _
 
 	end select
 
-	tkSetMark( MARK_PP, begin, x )
-
 	y = x + 1
 	x = hSkipPPDirective( x )
-
-	'' The last EOL is not part of the #directive, otherwise the EOL
-	'' fixup would replace it with line continuation...
-	tkSetMark( mark, y, x - 1 )
 
 	if( len( filename ) > 0 ) then
 		print "parser: include: ", filename
@@ -678,9 +663,7 @@ function findPpInclude( byval x as integer ) as integer
 		case TK_EOF
 			exit do
 		case KW_INCLUDE
-			if( tkMark( x ) = MARK_PP ) then
-				exit do
-			end if
+			exit do
 		end select
 
 		x = hSkip( x )

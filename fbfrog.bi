@@ -279,34 +279,7 @@ enum
 	TK__COUNT
 end enum
 
-'' Note: When updating, update the debugging code too!
-enum
-	MARK_TOPLEVEL = 0
-	MARK_PP        '' Some PP directive
-	MARK_PPEXPR    '' #if expression (but not the #if itself)
-	MARK_EXTERN    '' EXTERN "C" block
-	MARK_ENDEXTERN '' To identify '}'
-	MARK_STRUCT    '' [typedef to] struct/union/enum block
-	MARK_ENDENUM   '' To identify '}'
-	MARK_ENDSTRUCT '' To identify '}'
-	MARK_ENDUNION  '' To identify '}'
-	MARK_ENUMCONST '' Enum constants
-	MARK_TYPEDEF   '' Typedefs (though not those with struct/etc blocks)
-	MARK_TOPDECL   '' Toplevel declarations, after parsing, before split up into vardecls/procdecls
-	MARK_PROCDECL  '' procdecls after being split from topdecls
-	MARK_VARDECL   '' vardecls after being split from topdecls
-	MARK_FIELDDECL '' Fields
-	MARK_UNKNOWN   '' Unrecognized constructs (skip until ';')
-	MARK_UNKNOWNENUMCONST '' Unrecognized constructs inside enums (skip until ',' or '}' instead of ';')
-	MARK__COUNT
-end enum
-
 extern as zstring ptr token_text(0 to (TK__COUNT - 1))
-extern as zstring ptr mark_text(0 to (MARK__COUNT - 1))
-
-'' Great debugging helper, for example: TRACE(x), "decl begin"
-#define TRACE( x ) print __FUNCTION__ + "(" + str( __LINE__ ) + "):" + _
-	str( x ) + " " + *mark_text(tkMark( x )) + "[" + *token_text(tkGet( x )) + "]"
 
 declare function strDuplicate( byval s as zstring ptr ) as zstring ptr
 declare sub tkRawMoveTo( byval x as integer )
@@ -324,15 +297,8 @@ declare sub tkCopy _
 		byval last as integer _
 	)
 declare sub tkRemove( byval first as integer, byval last as integer )
-declare sub tkSetMark _
-	( _
-		byval mark as integer, _
-		byval first as integer, _
-		byval last as integer _
-	)
 declare function tkGet( byval x as integer ) as integer
 declare function tkText( byval x as integer ) as zstring ptr
-declare function tkMark( byval x as integer ) as integer
 declare function tkCount( ) as integer
 declare sub tkInit( )
 declare sub tkEnd( )

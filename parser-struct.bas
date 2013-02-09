@@ -19,8 +19,6 @@ private function parseNestedStructBegin( byval x as integer ) as integer
 		return begin
 	end if
 
-	tkSetMark( MARK_STRUCT, begin, x )
-
 	function = hSkip( x )
 end function
 
@@ -47,7 +45,6 @@ private function parseNestedStructEnd _
 		return begin
 	end if
 	opening = hSkipRev( opening )
-	assert( tkMark( opening ) = MARK_STRUCT )
 
 	'' '}'
 	assert( tkGet( x ) = TK_RBRACE )
@@ -62,9 +59,6 @@ private function parseNestedStructEnd _
 	if( tkGet( x ) <> TK_SEMI ) then
 		return begin
 	end if
-
-	tkSetMark( iif( (tkGet( opening ) = KW_STRUCT), _
-				MARK_ENDSTRUCT, MARK_ENDUNION ), begin, x )
 
 	function = hSkip( x )
 end function
@@ -104,8 +98,6 @@ function parseStruct( byval x as integer ) as integer
 	if( tkGet( x ) <> TK_LBRACE ) then
 		return begin
 	end if
-
-	tkSetMark( MARK_STRUCT, begin, x )
 
 	toplevelopening = x
 	x = hSkip(x)
@@ -173,17 +165,6 @@ function parseStruct( byval x as integer ) as integer
 		return begin
 	end if
 
-	select case( compoundkw )
-	case KW_ENUM
-		compoundkw = MARK_ENDENUM
-	case KW_STRUCT
-		compoundkw = MARK_ENDSTRUCT
-	case else
-		compoundkw = MARK_ENDUNION
-	end select
-
-	tkSetMark( compoundkw, structend, x )
-
 	function = hSkip( x )
 end function
 
@@ -210,15 +191,13 @@ function parseExternBegin( byval x as integer ) as integer
 		return begin
 	end if
 
-	tkSetMark( MARK_EXTERN, begin, x )
-
 	'' EXTERN parsing is done here, so the content is parsed from the
 	'' toplevel loop.
 	function = hSkip( x )
 end function
 
 function parseExternEnd( byval x as integer ) as integer
-	dim as integer opening = any, mark = any
+	dim as integer opening = any
 
 	'' '}'
 	if( tkGet( x ) <> TK_RBRACE ) then
@@ -230,13 +209,6 @@ function parseExternEnd( byval x as integer ) as integer
 	if( opening = x ) then
 		return x
 	end if
-
-	mark = tkMark( opening )
-	if( mark <> MARK_EXTERN ) then
-		return x
-	end if
-
-	tkSetMark( MARK_ENDEXTERN, x, x )
 
 	function = hSkip( x )
 end function

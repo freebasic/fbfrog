@@ -169,30 +169,8 @@ dim shared as zstring ptr token_text(0 to (TK__COUNT - 1)) = _
 	@"zstring"      _
 }
 
-dim shared as zstring ptr mark_text(0 to (MARK__COUNT - 1)) = _
-{ _
-	@"", _
-	@"pp", _
-	@"ppexpr", _
-	@"extern", _
-	@"endextern", _
-	@"struct", _
-	@"endenum", _
-	@"endstruct", _
-	@"endunion", _
-	@"enumconst", _
-	@"typedef", _
-	@"topdecl", _
-	@"procdecl", _
-	@"vardecl", _
-	@"fielddecl", _
-	@"unknown", _
-	@"unknownenumconst" _
-}
-
 type ONETOKEN
 	as short id         '' TK_*
-	as short mark       '' MARK_*
 	as zstring ptr text '' Identifiers and number/string literals, or NULL
 end type
 
@@ -233,7 +211,7 @@ private function tkAccess( byval x as integer ) as ONETOKEN ptr
 	tk.lookups += 1
 
 	'' Static EOF token for "error recovery"
-	static as ONETOKEN static_eof = (TK_EOF, MARK_TOPLEVEL, NULL)
+	static as ONETOKEN static_eof = (TK_EOF, NULL)
 
 	'' Inside end?
 	if( x >= tk.front ) then
@@ -298,7 +276,6 @@ sub tkRawInsert( byval id as integer, byval text as zstring ptr )
 	end if
 
 	p->id = id
-	p->mark = MARK_TOPLEVEL
 	p->text = strDuplicate( text )
 
 	tk.front += 1
@@ -336,7 +313,6 @@ sub tkCopy _
 		target = x + i
 		source = first + i
 		tkInsert( target, tkGet( source ), tkText( source ) )
-		tkSetMark( tkMark( source ), target, target )
 	next
 
 end sub
@@ -365,34 +341,12 @@ sub tkRemove( byval first as integer, byval last as integer )
 	tk.size -= delta
 end sub
 
-sub tkSetMark _
-	( _
-		byval mark as integer, _
-		byval first as integer, _
-		byval last as integer _
-	)
-
-	dim as ONETOKEN ptr p = any
-
-	for i as integer = first to last
-		p = tkAccess( i )
-		if( p->id <> TK_EOF ) then
-			p->mark = mark
-		end if
-	next
-
-end sub
-
 function tkGet( byval x as integer ) as integer
 	function = tkAccess( x )->id
 end function
 
 function tkText( byval x as integer ) as zstring ptr
 	function = tkAccess( x )->text
-end function
-
-function tkMark( byval x as integer ) as integer
-	function = tkAccess( x )->mark
 end function
 
 function tkCount( ) as integer

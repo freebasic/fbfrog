@@ -131,69 +131,6 @@ sub emitWriteFile( byref filename as string )
 	dim as integer x = any, level = any, nextlevel = any
 
 	emitInit( filename )
-
-	x = 0
-	level = 0
-	nextlevel = 0
-	while( tkGet( x ) <> TK_EOF )
-
-		select case as const( tkGet( x - 1 ) )
-
-		'' At BOL or BOF?
-		case TK_EOL, TK_EOF
-			nextlevel = level
-
-			select case( tkMark( x ) )
-			case MARK_PP
-				assert( tkGet( x ) = TK_HASH )
-				select case( tkGet( hSkip( x ) ) )
-				case KW_IF
-					'' Next line and following should be indented
-					nextlevel += 1
-				case KW_ELSE, KW_ELIF, KW_ELSEIF
-					'' This #else line shouldn't be indented
-					level -= 1
-				case KW_ENDIF
-					'' Same for this #endif
-					level -= 1
-					'' Next line and following shouldn't be indented anymore
-					nextlevel -= 1
-				end select
-			end select
-
-			'' Insert indentation, unless it's an empty line
-			if( tkGet( x ) <> TK_EOL ) then
-				emitIndent( level )
-			end if
-
-			level = nextlevel
-
-		'' Insert space between other tokens if needed
-		case TK_HASH
-			select case( tkMark( x - 1 ) )
-			case MARK_PP
-				'' not between PP '#' and the following keyword
-
-			case else
-				emitSpace( )
-			end select
-
-		case else
-			select case( tkGet( x ) )
-			case TK_EOL, TK_COMMA, TK_LPAREN
-				'' Don't add space in front of EOL or ',' etc.
-
-			case else
-				emitSpace( )
-			end select
-
-		end select
-
-		emitToken( x )
-
-		x += 1
-	wend
-
 	emitEnd( )
 
 	stuff.filecount += 1
