@@ -60,6 +60,7 @@ declare function listGetNext( byval p as any ptr ) as any ptr
 declare function listGetPrev( byval p as any ptr ) as any ptr
 declare function listAppend( byval l as TLIST ptr ) as any ptr
 declare sub listDelete( byval l as TLIST ptr, byval p as any ptr )
+declare function listCount( byval l as TLIST ptr ) as integer
 declare sub listInit( byval l as TLIST ptr, byval unit as integer )
 declare sub listEnd( byval l as TLIST ptr )
 
@@ -91,7 +92,50 @@ declare sub hScanDirectoryForH _
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-'' When changing, update the table in tk.bas too!
+const TYPEMASK_DT    = &b00000000000000000000000000001111  '' 0..15, enough for TYPE_* enum
+const TYPEMASK_PTR   = &b00000000000000000000000011110000  '' 0..15, enough for max. 8 PTRs on a type, like FB
+const TYPEMASK_REF   = &b00000000000000000000000100000000  '' 0..1, reference or not?
+const TYPEMASK_CONST = &b00000000000001111111111000000000  '' 1 bit per PTR + 1 for the REF + 1 for the toplevel
+
+const TYPEPOS_PTR    = 4  '' PTR mask starts at 4th bit
+const TYPEPOS_REF    = TYPEPOS_PTR + 4
+const TYPEPOS_CONST  = TYPEPOS_REF + 1
+
+const TYPEMAX_PTR = 8
+
+#define typeGetDtAndPtr( dt ) ((dt) and (TYPEMASK_DT or TYPEMASK_PTR))
+
+enum
+	TYPE_INT8 = 0
+	TYPE_UINT8
+	TYPE_INT16
+	TYPE_UINT16
+	TYPE_INT32
+	TYPE_UINT32
+	TYPE_INT64
+	TYPE_UINT64
+	TYPE_UDT
+end enum
+
+enum
+	ASTCLASS_TK = 0
+	ASTCLASS_COMMENT
+
+	ASTCLASS_PPIF
+	ASTCLASS_PPELSEIF
+	ASTCLASS_PPELSE
+	ASTCLASS_PPENDIF
+	ASTCLASS_PPDEFINE
+	ASTCLASS_PPINCLUDE
+
+	ASTCLASS_STRUCT
+	ASTCLASS_PROCDECL
+	ASTCLASS_VARDECL
+
+	ASTCLASS__COUNT
+end enum
+
+'' When changing, update the table in ast.bas too!
 enum
 	TK_EOF = 0
 	TK_TODO         '' TODOs added as fix-me-markers
@@ -281,81 +325,10 @@ end enum
 
 extern as zstring ptr token_text(0 to (TK__COUNT - 1))
 
-declare function strDuplicate( byval s as zstring ptr ) as zstring ptr
-declare sub tkRawMoveTo( byval x as integer )
-declare sub tkRawInsert( byval id as integer, byval text as zstring ptr )
-declare sub tkInsert _
-	( _
-		byval x as integer, _
-		byval id as integer, _
-		byval text as zstring ptr _
-	)
-declare sub tkCopy _
-	( _
-		byval x as integer, _
-		byval first as integer, _
-		byval last as integer _
-	)
-declare sub tkRemove( byval first as integer, byval last as integer )
-declare function tkGet( byval x as integer ) as integer
-declare function tkText( byval x as integer ) as zstring ptr
-declare function tkCount( ) as integer
-declare sub tkInit( )
-declare sub tkEnd( )
-
-declare sub emitWriteFile( byref filename as string )
-declare sub emitStats( )
-
-declare function lexInsertFile _
-	( _
-		byval x as integer, _
-		byref filename as string _
-	) as integer
-
-declare sub parseToplevel( )
-
-''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-
-const TYPEMASK_DT    = &b00000000000000000000000000001111  '' 0..15, enough for TYPE_* enum
-const TYPEMASK_PTR   = &b00000000000000000000000011110000  '' 0..15, enough for max. 8 PTRs on a type, like FB
-const TYPEMASK_REF   = &b00000000000000000000000100000000  '' 0..1, reference or not?
-const TYPEMASK_CONST = &b00000000000001111111111000000000  '' 1 bit per PTR + 1 for the REF + 1 for the toplevel
-
-const TYPEPOS_PTR    = 4  '' PTR mask starts at 4th bit
-const TYPEPOS_REF    = TYPEPOS_PTR + 4
-const TYPEPOS_CONST  = TYPEPOS_REF + 1
-
-const TYPEMAX_PTR = 8
-
-#define typeGetDtAndPtr( dt ) ((dt) and (TYPEMASK_DT or TYPEMASK_PTR))
-
-enum
-	TYPE_INT8 = 0
-	TYPE_UINT8
-	TYPE_INT16
-	TYPE_UINT16
-	TYPE_INT32
-	TYPE_UINT32
-	TYPE_INT64
-	TYPE_UINT64
-	TYPE_UDT
-end enum
-
-enum
-	ASTCLASS_TK = 0
-	ASTCLASS_COMMENT
-
-	ASTCLASS_PPIF
-	ASTCLASS_PPELSEIF
-	ASTCLASS_PPELSE
-	ASTCLASS_PPENDIF
-	ASTCLASS_PPDEFINE
-	ASTCLASS_PPINCLUDE
-
-	ASTCLASS_STRUCT
-	ASTCLASS_PROCDECL
-	ASTCLASS_VARDECL
-end enum
+type ASTTOKEN
+	id	as integer      '' TK_*
+	text	as zstring ptr  '' Identifiers/literals, or NULL
+end type
 
 type ASTNODEVARDECL
 	id		as zstring ptr
@@ -366,6 +339,7 @@ end type
 type ASTNODE
 	class		as integer
 	union
+		tk		as TLIST  '' ASTTOKEN's for ASTCLASS_TK
 		vardecl		as ASTNODEVARDECL
 	end union
 end type
@@ -375,6 +349,17 @@ declare sub astEnd( )
 declare sub astAdd( byval t as ASTNODE ptr )
 declare function astNew( byval class_ as integer ) as ASTNODE ptr
 declare sub astDelete( byval t as ASTNODE ptr )
+declare function strDuplicate( byval s as zstring ptr ) as zstring ptr
+
+declare function astNewTK( ) as ASTNODE ptr
+declare function astTkAppend _
+	( _
+		byval n as ASTNODE ptr, _
+		byval id as integer, _
+		byval text as zstring ptr _
+	) as ASTTOKEN ptr
+declare sub astTkRemove( byval n as ASTNODE ptr, byval tk as ASTTOKEN ptr )
+
 declare function astNewVARDECL _
 	( _
 		byval id as zstring ptr, _
@@ -458,3 +443,14 @@ declare function frogAddFile _
 	) as FROGFILE ptr
 declare sub frogSetVisited( byval f as FROGFILE ptr )
 declare function frogCanMerge( byval f as FROGFILE ptr ) as integer
+
+declare sub emitWriteFile( byref filename as string )
+declare sub emitStats( )
+
+declare function lexInsertFile _
+	( _
+		byval x as integer, _
+		byref filename as string _
+	) as integer
+
+declare sub parseToplevel( )

@@ -2,16 +2,6 @@
 
 #include once "fbfrog.bi"
 
-type LEXSTUFF
-	buffer	as ubyte ptr  '' File content buffer
-	i	as ubyte ptr  '' Current char, will always be <= limit
-	limit	as ubyte ptr  '' (end of buffer)
-
-	kwhash	as THASH
-end type
-
-dim shared as LEXSTUFF lex
-
 enum
 	CH_BELL     = &h07  '' \a
 	CH_BKSPC    = &h08  '' \b
@@ -72,6 +62,18 @@ enum
 	CH_TILDE        '' ~
 end enum
 
+type LEXSTUFF
+	buffer	as ubyte ptr  '' File content buffer
+	i	as ubyte ptr  '' Current char, will always be <= limit
+	limit	as ubyte ptr  '' (end of buffer)
+
+	ast	as ASTNODE ptr
+
+	kwhash	as THASH
+end type
+
+dim shared as LEXSTUFF lex
+
 private sub hAddTextToken( byval tk as integer, byval begin as ubyte ptr )
 	dim as integer old = any
 	dim as uinteger hash = any
@@ -88,22 +90,22 @@ private sub hAddTextToken( byval tk as integer, byval begin as ubyte ptr )
 	'' Is it a C keyword?
 	if( item ) then
 		'' Then use the proper KW_* instead of TK_ID
-		tkRawInsert( cint( item->data ), NULL )
+		astTkAppend( lex.ast, cint( item->data ), NULL )
 	else
 		'' TK_ID
-		tkRawInsert( tk, begin )
+		astTkAppend( lex.ast, tk, begin )
 	end if
 
 	lex.i[0] = old
 end sub
 
 private sub hAddTodo( byval text as zstring ptr )
-	tkRawInsert( TK_TODO, text )
+	astTkAppend( lex.ast, TK_TODO, text )
 end sub
 
 private sub hReadBytes( byval tk as integer, byval length as integer )
 	lex.i += length
-	tkRawInsert( tk, NULL )
+	astTkAppend( lex.ast, tk, NULL )
 end sub
 
 private sub hReadLineComment( )
@@ -659,41 +661,23 @@ private sub hInitKeywords( )
 	next
 end sub
 
-private sub lexInit( byref filename as string )
+function lexLoadFile( byref filename as string ) as ASTNODE ptr
+	lex.ast = astNewTK( )
 	hLoadFile( filename )
 	hComplainAboutEmbeddedNulls( )
 	hInitKeywords( )
-end sub
-
-private sub lexEnd( )
-	deallocate( lex.buffer )
-end sub
-
-function lexInsertFile _
-	( _
-		byval x as integer, _
-		byref filename as string _
-	) as integer
-
-	dim as integer oldcount = any, newtokens = any
-
-	lexInit( filename )
-	oldcount = tkCount( )
 
 	'' Tokenize and insert into tk buffer
-	tkRawMoveTo( x )
 	while( lex.i < lex.limit )
 		lexNext( )
 	wend
 
-	newtokens = tkCount( ) - oldcount
-
 	if( frog.verbose ) then
 		print using "  lexer: read in & bytes, produced & tokens"; _
 			(culng( lex.limit ) - culng( lex.buffer )); _
-			newtokens
+			listCount( @lex.ast->tk )
 	end if
 
-	lexEnd( )
-	function = x + newtokens
+	deallocate( lex.buffer )
+	function = lex.ast
 end function

@@ -71,6 +71,20 @@ sub listDelete( byval l as TLIST ptr, byval p as any ptr )
 	deallocate( node )
 end sub
 
+function listCount( byval l as TLIST ptr ) as integer
+	dim as integer count = any
+	dim as LISTNODE ptr node = any
+
+	count = 0
+	node = l->head
+	while( node )
+		count += 1
+		node = node->next
+	wend
+
+	function = count
+end function
+
 sub listInit( byval l as TLIST ptr, byval unit as integer )
 	l->head = NULL
 	l->tail = NULL

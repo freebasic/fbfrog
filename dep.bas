@@ -57,6 +57,7 @@ sub depOn( byval node as DEPNODE ptr, byval child as DEPNODE ptr )
 	node->childcount += 1
 end sub
 
+#if 0
 private sub hParseFileForIncludes( byval node as DEPNODE ptr )
 	dim as integer x = any
 	dim as string incfile
@@ -92,13 +93,14 @@ private sub hParseFileForIncludes( byval node as DEPNODE ptr )
 	tkEnd( )
 	fsPop( )
 end sub
+#endif
 
 sub depScan( )
 	dim as DEPNODE ptr node = any
 
 	node = listGetHead( @dep.nodes )
 	while( node )
-		hParseFileForIncludes( node )
+		''hParseFileForIncludes( node )
 		node = listGetNext( node )
 	wend
 end sub

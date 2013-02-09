@@ -31,6 +31,7 @@ private sub emit( byval text as zstring ptr )
 	end if
 end sub
 
+#if 0
 private sub emitToken( byval x as integer )
 	dim as integer linecomment = any
 	dim as zstring ptr text = any
@@ -116,6 +117,7 @@ private sub emitToken( byval x as integer )
 
 	end select
 end sub
+#endif
 
 sub emitIndent( byval tabs as integer )
 	for i as integer = 1 to tabs
