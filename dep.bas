@@ -70,12 +70,10 @@ private sub hParseFileForIncludes( byval node as DEPNODE ptr )
 	fsPush( node->f )
 	tkInit( )
 	lexInsertFile( 0, node->f->normed )
-	parseToplevel( 0 )
+	parseToplevel( )
 
 	x = 0
 	while( tkGet( x ) <> TK_EOF )
-		x = findPpInclude( x )
-
 		if( tkGet( x ) = KW_INCLUDE ) then
 			x += 1
 			if( tkGet( x ) = TK_STRING ) then

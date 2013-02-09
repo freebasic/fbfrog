@@ -625,10 +625,7 @@ function parsePPDirective _
 	function = x
 end function
 
-'' Normally this will only be called once, but when concatenating, it's called
-'' repeatedly to parse the appended files, so found #includes can be searched
-'' for based on their parent, the current file.
-sub parseToplevel( byval begin as integer )
+sub parseToplevel( )
 	dim as integer x = any, old = any
 
 	'' Skip space at begin-of-file
@@ -656,18 +653,3 @@ sub parseToplevel( byval begin as integer )
 		end if
 	loop
 end sub
-
-function findPpInclude( byval x as integer ) as integer
-	do
-		select case( tkGet( x ) )
-		case TK_EOF
-			exit do
-		case KW_INCLUDE
-			exit do
-		end select
-
-		x = hSkip( x )
-	loop
-
-	function = x
-end function

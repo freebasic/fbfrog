@@ -312,9 +312,7 @@ declare function lexInsertFile _
 		byref filename as string _
 	) as integer
 
-declare sub preparseToplevel( )
-declare sub parseToplevel( byval begin as integer )
-declare function findPpInclude( byval x as integer ) as integer
+declare sub parseToplevel( )
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
