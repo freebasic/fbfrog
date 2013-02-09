@@ -416,58 +416,6 @@ private sub hMergeFileIn _
 	end select
 end sub
 
-private function hHandleInclude _
-	( _
-		byval begin as integer, _
-		byval x as integer, _
-		byref filename as string, _
-		byval is_preparse as integer _
-	) as integer
-
-	dim as FROGFILE ptr f = any
-
-	'' #includes are important for the preparse (which collects #include
-	'' file names) and for merging, but nothing else.
-	if( (is_preparse = FALSE) and (frog.merge = FALSE) ) then
-		return x
-	end if
-
-	'' Lookup an existing file entry or find and add a new file entry
-	'' For #includes, the file search always needs to be done, there is
-	'' no other way to determine the full name.
-	'' If this file is new, it will marked as "was found during preparse",
-	'' which helps us deciding whether to translate it or not, depending
-	'' on whether --follow was given or not. Normally we only have input
-	'' files from the command line.
-	f = frogAddFile( filename, is_preparse, TRUE )
-
-	'' File not found? Not interesting for neither preparse nor merging...
-	if( f = NULL ) then
-		return x
-	end if
-
-	'' If this is for the preparse: increase the file's refcount, that's it.
-	if( is_preparse ) then
-		f->refcount += 1
-		return x
-	end if
-
-	'' Otherwise, this must be for the normal parsing process with merging
-	'' enabled.
-	if( frogCanMerge( f ) ) then
-		frogSetVisited( f )
-		print "merging in: " + *f->softname
-
-		'' This will remove the #include, insert the file content in
-		'' its place, and we have to continue parsing at its beginning,
-		'' which also is the former beginning of the #include.
-		hMergeFileIn( *f->hardname, begin, x )
-		x = begin
-	end if
-
-	function = x
-end function
-
 private function parsePPDefineAttribute _
 	( _
 		byval x as integer, _
@@ -682,7 +630,7 @@ function parsePPDirective _
 	tkSetMark( mark, y, x - 1 )
 
 	if( len( filename ) > 0 ) then
-		x = hHandleInclude( begin, x, filename, is_preparse )
+		print "parser: include: ", filename
 	end if
 
 	'' In case of #include merge: hSkip whitespace at BOF
@@ -691,18 +639,6 @@ function parsePPDirective _
 
 	function = x
 end function
-
-sub preparseToplevel( )
-	dim as integer x = any, old = any
-	x = hSkip( -1 )
-	while( tkGet( x ) <> TK_EOF )
-		old = x
-		x = parsePPDirective( x, TRUE )
-		if( x = old ) then
-			x = hSkip( x )
-		end if
-	wend
-end sub
 
 '' Normally this will only be called once, but when concatenating, it's called
 '' repeatedly to parse the appended files, so found #includes can be searched
@@ -1127,3 +1063,20 @@ sub translateToplevel( )
 	hFixUpOperators( )
 	hFixUpEols( )
 end sub
+
+function findPpInclude( byval x as integer ) as integer
+	do
+		select case( tkGet( x ) )
+		case TK_EOF
+			exit do
+		case KW_INCLUDE
+			if( tkMark( x ) = MARK_PP ) then
+				exit do
+			end if
+		end select
+
+		x = hSkip( x )
+	loop
+
+	function = x
+end function

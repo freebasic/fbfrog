@@ -62,8 +62,11 @@ type TLIST
 end type
 
 declare function listGetHead( byval l as TLIST ptr) as any ptr
+declare function listGetTail( byval l as TLIST ptr) as any ptr
 declare function listGetNext( byval p as any ptr ) as any ptr
+declare function listGetPrev( byval p as any ptr ) as any ptr
 declare function listAppend( byval l as TLIST ptr ) as any ptr
+declare sub listDelete( byval l as TLIST ptr, byval p as any ptr )
 declare sub listInit( byval l as TLIST ptr, byval unit as integer )
 declare sub listEnd( byval l as TLIST ptr )
 
@@ -357,6 +360,7 @@ declare function lexInsertFile _
 declare sub preparseToplevel( )
 declare sub parseToplevel( byval begin as integer )
 declare sub translateToplevel( )
+declare function findPpInclude( byval x as integer ) as integer
 
 declare function storageStore _
 	( _
@@ -369,6 +373,39 @@ declare sub storageStats( )
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
+type FSFILE
+	pretty		as string  '' Pretty name from command line or #include
+	normed		as string  '' Normalized path used in hash table
+end type
+
+declare sub fsInit( )
+declare sub fsPush( byval context as FSFILE ptr )
+declare sub fsPop( )
+declare function fsAdd( byref pretty as string ) as FSFILE ptr
+declare function fsGetHead( ) as FSFILE ptr
+declare sub fsStats( )
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+type DEPNODE
+	f		as FSFILE ptr
+
+	children	as DEPNODE ptr ptr
+	childcount	as integer
+	childroom	as integer
+
+	missing		as integer
+end type
+
+declare sub depInit( )
+declare function depLookup( byval f as FSFILE ptr ) as DEPNODE ptr
+declare function depAdd( byref pretty as string ) as DEPNODE ptr
+declare sub depOn( byval node as DEPNODE ptr, byval child as DEPNODE ptr )
+declare sub depScan( )
+declare sub depPrintFlat( )
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
 enum
 	'' Translated already? (no matter which method)
 	FILE_VISITED = (1 shl 0)
@@ -378,16 +415,6 @@ enum
 end enum
 
 type FROGFILE
-	softname	as zstring ptr  '' Pretty name from command line or #include
-	hardname	as zstring ptr  '' Normalized path used in hash table
-
-	'' This tells how many #includes of this file were found during the
-	'' preparse (no matter which parent file).
-	'' refcount = 1 means it can be trivially merged into its one parent.
-	'' refcount = 0 means it's a "toplevel" file that has no parents (ohh).
-	'' Note: This refcount is only valid if the preparse is done...
-	refcount	as integer
-
 	flags		as uinteger
 end type
 
@@ -397,14 +424,10 @@ enum
 end enum
 
 type FROGSTUFF
-	concat		as integer
-	follow		as integer
+	dep		as integer
 	merge		as integer
 	verbose		as integer
-	f		as FROGFILE ptr
 
-	files		as TLIST '' FROGFILE
-	filehash	as THASH
 	definehash	as THASH
 end type
 

@@ -185,29 +185,43 @@ Source module overview:
 
 To do:
 
-o Better output code formatting
-  - don't try to preserve white space,
-      1. at the end of the day we need bindings, no 1:1 translations
-      2. different language = different formatting anyways
-  - handle comments in certain places only
+o Split up all work into separate steps,
+  better re-read input files multiple times
+  - Any merging/concatenating should be handled separately from translation
+  - functions to:
+      - load file into tk buffer
+      - parse a.k.a. colorize a.k.a. set marks
+          - allow multiple mark flags per token, not just a single mark
+            at least 2 or 3 levels:
+              1. construct (struct, proc, ...)
+              2. element (field, param, ...)
+              3. purpose (token is an id? a type?)
+      - find constructs and extract information from them or operate on them
+          - high level parsing based on marks
+          - e.g. findPpInclude() or replaceIdentifier()
+          - foreach loops
+  - Add "presets", custom/hard-coded translation helpers
+     - allow fixups before and after normal translation
+  - When emitting, pretty-print automatically
+      - don't preserve white space,
+          1. at the end of the day we need bindings, no 1:1 translations
+          2. different language = different formatting anyways
+      - preserve comments at EOL only
 
-- allow multiple mark flags per token, not just a single mark
-  at least 2 or 3 levels:
-      1. construct (struct, proc, ...)
-      2. element (field, param, ...)
-      3. purpose (token is an id? a type?)
+o Combine -follow/-merge/-concat into just -merge
+  - Following is useless, because we pretty much always want to work on all
+    headers in a certain directory. Dir scanning takes care of that.
+    Any "external" #include will usually be translated separately if still
+    needed, or will be replaced/removed somehow.
 
-- add presets/rules to allow for trivial retranslation of known headers
-  e.g. fbfrog zlib.h -preset zlib
+  - From the command line it's better to only have 2 options:
+      a) 1:1 translation
+      b) all:1 (merge) translation
+    Any other special cases can be handled manually by presets...
 
-- follow/merge/concat...
-    - should follow automatically, or purely rely on dir scanning instead,
-      headers usually are in a single directory, follow is rarely useful...
-    - we basically never want to pull in unrelated third-party headers from outside the directory
-    - presets should be able to decide what to do for each #include and also
-      allow adding expected file names right from the start
-
-- always write output to current dir? need to recreate dir layout
+o Add option to display #include dependency graph for the input files
+  - useful to decide whether to -merge or not, to see how many "root" includes
+    there are, etc.
 
 - arrays
 - vardecl/param initializers
@@ -217,30 +231,9 @@ o Better output code formatting
 	// <type T_ ...>, that's easier than inserting T_ fwdref in place of T
 	// everywhere where it's used before the T body)
 	struct T;
-
-> More translations passes
-  - Mark ids during translation, then check them in a global pass
-  - Mark expressions during translation, for improved operator translation
-    (e.g. #define bodies, or #if expressions)
-  - Add a global useless-typedef-removal pass that removes typedefs that have
-    the same id as a type and no pointers/procptrs on them. Add TODOs for such
-    typedefs that have pointers, since those would cause dupdef errors in FB
-    anyways (FB doesn't have separate struct/typedef namespaces)
+- drop redundant typedefs (since FB doesn't have separate struct/type namespaces)
 	/* typedef-same-id-as-type fixups: */
 	typedef struct T T;
 	typedef struct T A, T;
 	typedef struct T T, B;
 	typedef struct T A, T, B;
-  - Realign commentary
-
-> Change insert_spaced_token() to be smarter and only insert space to separate
-  keywords from each other, but not from ')' etc.
-> Clean up/unify the ';' removal and ':' insertion
-> Insert EOL + same indentation instead of ':' in some cases, e.g. fields or
-  typede-struct-block split ups
-
-> Pretty print .bi input
-  - Add FB mode to the lexer, differences to C aren't that big
-  - Keyword casing
-  - Function declaration wrapping?
-  - Fixup indendation and overhead space?

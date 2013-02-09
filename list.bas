@@ -11,11 +11,25 @@ function listGetHead( byval l as TLIST ptr) as any ptr
 	end if
 end function
 
+function listGetTail( byval l as TLIST ptr) as any ptr
+	if( l->tail ) then
+		function = listGetPtr( l->tail )
+	end if
+end function
+
 function listGetNext( byval p as any ptr ) as any ptr
 	dim as LISTNODE ptr nxt = any
 	nxt = listGetNode( p )->next
 	if( nxt ) then
 		function = listGetPtr( nxt )
+	end if
+end function
+
+function listGetPrev( byval p as any ptr ) as any ptr
+	dim as LISTNODE ptr prv = any
+	prv = listGetNode( p )->prev
+	if( prv ) then
+		function = listGetPtr( prv )
 	end if
 end function
 
@@ -34,6 +48,28 @@ function listAppend( byval l as TLIST ptr ) as any ptr
 
 	function = listGetPtr( node )
 end function
+
+sub listDelete( byval l as TLIST ptr, byval p as any ptr )
+	dim as LISTNODE ptr node = any, nxt = any, prv = any
+
+	if( p = NULL ) then exit sub
+	node = listGetNode( p )
+
+	nxt = node->next
+	prv = node->prev
+	if( prv ) then
+		prv->next = nxt
+	else
+		l->head = nxt
+	end if
+	if( nxt ) then
+		nxt->prev = prv
+	else
+		l->tail = prv
+	end if
+
+	deallocate( node )
+end sub
 
 sub listInit( byval l as TLIST ptr, byval unit as integer )
 	l->head = NULL
