@@ -3,78 +3,10 @@
 
 declare sub astDtorTK( byval n as ASTNODE ptr )
 
-type ASTSTUFF
-	dtors(0 to ASTCLASS__COUNT-1)	as sub( byval as ASTNODE ptr )
-
-	statements	as TLIST '' ASTNODE ptr's
-end type
-
-dim shared as ASTSTUFF ast = _
-( _
-	{ _
-		@astDtorTK _  '' ASTCLASS_TK
-	} _
-)
-
-sub astInit( )
-	listInit( @ast.statements, sizeof( ASTNODE ptr ) )
-end sub
-
-sub astEnd( )
-	dim as ASTNODE ptr ptr stmt = any
-
-	stmt = listGetHead( @ast.statements )
-	while( stmt )
-		astDelete( *stmt )
-		stmt = listGetNext( stmt )
-	wend
-
-	listEnd( @ast.statements )
-end sub
-
-sub astAdd( byval t as ASTNODE ptr )
-	dim as ASTNODE ptr ptr stmt = any
-
-	stmt = listAppend( @ast.statements )
-	*stmt = t
-end sub
-
-''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-
-function astNew( byval class_ as integer ) as ASTNODE ptr
-	dim as ASTNODE ptr n = any
-
-	n = callocate( sizeof( ASTNODE ) )
-	n->class = class_
-
-	function = n
-end function
-
-sub astDelete( byval t as ASTNODE ptr )
-	if( ast.dtors(t->class) ) then
-		ast.dtors(t->class)( t )
-	end if
-	deallocate( t )
-end sub
-
-function strDuplicate( byval s as zstring ptr ) as zstring ptr
-	dim as zstring ptr p = any
-	dim as integer length = any
-
-	if( s = NULL ) then exit function
-
-	length = len( *s )
-	p = callocate( length + 1 )
-
-	if( length > 0 ) then
-		memcpy( p, s, length )
-	end if
-	p[length] = 0
-
-	function = p
-end function
-
-''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+dim shared as sub( byval as ASTNODE ptr ) astdtors(0 to ASTCLASS__COUNT-1) = _
+{ _
+	@astDtorTK _  '' ASTCLASS_TK
+}
 
 dim shared as zstring ptr token_text(0 to (TK__COUNT - 1)) = _
 { _
@@ -244,75 +176,148 @@ dim shared as zstring ptr token_text(0 to (TK__COUNT - 1)) = _
 	@"zstring"      _
 }
 
-function astNewTK( ) as ASTNODE ptr
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+function astNew( byval class_ as integer ) as ASTNODE ptr
 	dim as ASTNODE ptr n = any
 
-	n = astNew( ASTCLASS_TK )
-	listInit( @n->tk, sizeof( ASTTOKEN ) )
+	n = callocate( sizeof( ASTNODE ) )
+	n->class = class_
 
 	function = n
 end function
 
-private sub astTokenDtor( byval tk as ASTTOKEN ptr )
-	deallocate( tk->text )
+sub astDelete( byval t as ASTNODE ptr )
+	if( astdtors(t->class) ) then
+		astdtors(t->class)( t )
+	end if
+	deallocate( t )
 end sub
 
-private sub astDtorTK( byval n as ASTNODE ptr )
-	dim as ASTTOKEN ptr tk = any
+function strDuplicate( byval s as zstring ptr ) as zstring ptr
+	dim as zstring ptr p = any
+	dim as integer length = any
 
-	'' Free token text if any tokens are left
-	tk = listGetHead( @n->tk )
-	while( tk )
-		astTokenDtor( tk )
-		tk = listGetNext( tk )
-	wend
+	if( s = NULL ) then exit function
 
-	listEnd( @n->tk )
-end sub
+	length = len( *s )
+	p = callocate( length + 1 )
 
-function astTkAppend _
-	( _
-		byval n as ASTNODE ptr, _
-		byval id as integer, _
-		byval text as zstring ptr _
-	) as ASTTOKEN ptr
+	if( length > 0 ) then
+		memcpy( p, s, length )
+	end if
+	p[length] = 0
 
-	dim as ASTTOKEN ptr tk = any
-
-	assert( n->class = ASTCLASS_TK )
-
-	tk = listAppend( @n->tk )
-	tk->id = id
-	tk->text = strDuplicate( text )
-
-	function = tk
+	function = p
 end function
 
-#if __FB_DEBUG__
-private function astTkContainsToken _
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+function astNewBLOCK( ) as ASTNODE ptr
+	function = astNew( ASTCLASS_BLOCK )
+end function
+
+function astGetNodeCount( byval block as ASTNODE ptr ) as integer
+	dim as ASTNODE ptr n = any
+	dim as integer count = any
+
+	count = 0
+	n = block->block.head
+	while( n )
+		count += 1
+		n = n->next
+	wend
+
+	function = count
+end function
+
+sub astAddInFront _
 	( _
-		byval n as ASTNODE ptr, _
-		byval tk as ASTTOKEN ptr _
+		byval block as ASTNODE ptr, _
+		byval ref as ASTNODE ptr, _
+		byval n as ASTNODE ptr _
+	)
+end sub
+
+sub astAddBehind _
+	( _
+		byval block as ASTNODE ptr, _
+		byval ref as ASTNODE ptr, _
+		byval n as ASTNODE ptr _
+	)
+end sub
+
+sub astAppend( byval block as ASTNODE ptr, byval n as ASTNODE ptr )
+	if( block->block.head = NULL ) then
+		block->block.head = n
+	end if
+	if( block->block.tail ) then
+		block->block.tail->next = n
+	end if
+	n->prev = block->block.tail
+	n->next = NULL
+	block->block.tail = n
+end sub
+
+function astContains _
+	( _
+		byval t as ASTNODE ptr, _
+		byval n as ASTNODE ptr _
 	) as integer
 
-	dim as ASTTOKEN ptr i = any
+	dim as ASTNODE ptr i = any
 
-	i = listGetHead( @n->tk )
-	while( i )
-		if( i = tk ) then
-			return TRUE
-		end if
-		i = listGetNext( i )
-	wend
+	if( t = n ) then
+		return TRUE
+	end if
+
+	if( t->class = ASTCLASS_BLOCK ) then
+		i = t->block.head
+		while( i )
+			if( astContains( i, n ) ) then
+				return TRUE
+			end if
+			i = i->next
+		wend
+	end if
 
 	function = FALSE
 end function
-#endif
 
-sub astTkRemove( byval n as ASTNODE ptr, byval tk as ASTTOKEN ptr )
-	assert( astTkContainsToken( n, tk ) )
-	astTokenDtor( tk )
-	listDelete( @n->tk, tk )
+sub astRemove( byval block as ASTNODE ptr, byval n as ASTNODE ptr )
+	dim as ASTNODE ptr nxt = any, prv = any
+	assert( astContains( block, n ) )
+
+	nxt = n->next
+	prv = n->prev
+	if( prv ) then
+		prv->next = nxt
+	else
+		block->block.head = nxt
+	end if
+	if( nxt ) then
+		nxt->prev = prv
+	else
+		block->block.tail = prv
+	end if
+
+	astDelete( n )
+end sub
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+function astNewTK( byval id as integer, byval text as zstring ptr ) as ASTNODE ptr
+	dim as ASTNODE ptr n = any
+
+	n = astNew( ASTCLASS_TK )
+	n->tk.id = id
+	n->tk.text = strDuplicate( text )
+
+	function = n
+end function
+
+private sub astDtorTK( byval n as ASTNODE ptr )
+	deallocate( n->tk.text )
 end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''

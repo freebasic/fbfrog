@@ -1,5 +1,7 @@
 #include once "parser.bi"
 
+#if 0
+
 private function parseNestedStructBegin( byval x as integer ) as integer
 	dim as integer begin = any
 
@@ -212,3 +214,5 @@ function parseExternEnd( byval x as integer ) as integer
 
 	function = hSkip( x )
 end function
+
+#endif

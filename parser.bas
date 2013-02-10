@@ -1,5 +1,7 @@
 #include once "parser.bi"
 
+#if 0
+
 '' Skips the token and any following whitespace
 private function hSkipRaw _
 	( _
@@ -625,31 +627,14 @@ function parsePPDirective _
 	function = x
 end function
 
-sub parseToplevel( )
-	dim as integer x = any, old = any
+#endif
 
-	'' Skip space at begin-of-file
-	x = hSkip( begin - 1 )
+sub parseToplevel( byval block as ASTNODE ptr )
+	dim as ASTNODE ptr i = any
 
-	do
-		old = x
-
-		x = parsePPDirective( x, FALSE )
-		x = parseTopdeclOrTypedef( x )
-		x = parseStruct( x )
-		x = parseExternBegin( x )
-		x = parseExternEnd( x )
-
-		select case( tkGet( x ) )
-		case TK_SEMI
-			'' Random toplevel semicolon
-			x = hSkip( x )
-		case TK_EOF
-			exit do
-		end select
-
-		if( x = old ) then
-			x = parseUnknown( x )
-		end if
-	loop
+	i = block->block.head
+	while( i )
+		print i->tk.text
+		i = i->next
+	wend
 end sub

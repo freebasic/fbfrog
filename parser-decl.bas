@@ -1,5 +1,7 @@
 #include once "parser.bi"
 
+#if 0
+
 function parseEnumconst _
 	( _
 		byval x as integer, _
@@ -326,3 +328,5 @@ function parseTopdeclOrTypedef( byval x as integer ) as integer
 
 	function = x
 end function
+
+#endif

@@ -92,49 +92,6 @@ declare sub hScanDirectoryForH _
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-const TYPEMASK_DT    = &b00000000000000000000000000001111  '' 0..15, enough for TYPE_* enum
-const TYPEMASK_PTR   = &b00000000000000000000000011110000  '' 0..15, enough for max. 8 PTRs on a type, like FB
-const TYPEMASK_REF   = &b00000000000000000000000100000000  '' 0..1, reference or not?
-const TYPEMASK_CONST = &b00000000000001111111111000000000  '' 1 bit per PTR + 1 for the REF + 1 for the toplevel
-
-const TYPEPOS_PTR    = 4  '' PTR mask starts at 4th bit
-const TYPEPOS_REF    = TYPEPOS_PTR + 4
-const TYPEPOS_CONST  = TYPEPOS_REF + 1
-
-const TYPEMAX_PTR = 8
-
-#define typeGetDtAndPtr( dt ) ((dt) and (TYPEMASK_DT or TYPEMASK_PTR))
-
-enum
-	TYPE_INT8 = 0
-	TYPE_UINT8
-	TYPE_INT16
-	TYPE_UINT16
-	TYPE_INT32
-	TYPE_UINT32
-	TYPE_INT64
-	TYPE_UINT64
-	TYPE_UDT
-end enum
-
-enum
-	ASTCLASS_TK = 0
-	ASTCLASS_COMMENT
-
-	ASTCLASS_PPIF
-	ASTCLASS_PPELSEIF
-	ASTCLASS_PPELSE
-	ASTCLASS_PPENDIF
-	ASTCLASS_PPDEFINE
-	ASTCLASS_PPINCLUDE
-
-	ASTCLASS_STRUCT
-	ASTCLASS_PROCDECL
-	ASTCLASS_VARDECL
-
-	ASTCLASS__COUNT
-end enum
-
 '' When changing, update the table in ast.bas too!
 enum
 	TK_EOF = 0
@@ -325,7 +282,58 @@ end enum
 
 extern as zstring ptr token_text(0 to (TK__COUNT - 1))
 
-type ASTTOKEN
+const TYPEMASK_DT    = &b00000000000000000000000000001111  '' 0..15, enough for TYPE_* enum
+const TYPEMASK_PTR   = &b00000000000000000000000011110000  '' 0..15, enough for max. 8 PTRs on a type, like FB
+const TYPEMASK_REF   = &b00000000000000000000000100000000  '' 0..1, reference or not?
+const TYPEMASK_CONST = &b00000000000001111111111000000000  '' 1 bit per PTR + 1 for the REF + 1 for the toplevel
+
+const TYPEPOS_PTR    = 4  '' PTR mask starts at 4th bit
+const TYPEPOS_REF    = TYPEPOS_PTR + 4
+const TYPEPOS_CONST  = TYPEPOS_REF + 1
+
+const TYPEMAX_PTR = 8
+
+#define typeGetDtAndPtr( dt ) ((dt) and (TYPEMASK_DT or TYPEMASK_PTR))
+
+enum
+	TYPE_INT8 = 0
+	TYPE_UINT8
+	TYPE_INT16
+	TYPE_UINT16
+	TYPE_INT32
+	TYPE_UINT32
+	TYPE_INT64
+	TYPE_UINT64
+	TYPE_UDT
+end enum
+
+enum
+	ASTCLASS_BLOCK = 0
+	ASTCLASS_TK
+	ASTCLASS_COMMENT
+
+	ASTCLASS_PPIF
+	ASTCLASS_PPELSEIF
+	ASTCLASS_PPELSE
+	ASTCLASS_PPENDIF
+	ASTCLASS_PPDEFINE
+	ASTCLASS_PPINCLUDE
+
+	ASTCLASS_STRUCT
+	ASTCLASS_PROCDECL
+	ASTCLASS_VARDECL
+
+	ASTCLASS__COUNT
+end enum
+
+type ASTNODE as ASTNODE_
+
+type ASTNODEBLOCK
+	head		as ASTNODE ptr
+	tail		as ASTNODE ptr
+end type
+
+type ASTNODETK
 	id	as integer      '' TK_*
 	text	as zstring ptr  '' Identifiers/literals, or NULL
 end type
@@ -336,29 +344,46 @@ type ASTNODEVARDECL
 	subtype		as zstring ptr
 end type
 
-type ASTNODE
+type ASTNODE_
 	class		as integer
+
+	next		as ASTNODE ptr
+	prev		as ASTNODE ptr
+
 	union
-		tk		as TLIST  '' ASTTOKEN's for ASTCLASS_TK
+		block		as ASTNODEBLOCK
+		tk		as ASTNODETK
 		vardecl		as ASTNODEVARDECL
 	end union
 end type
 
-declare sub astInit( )
-declare sub astEnd( )
-declare sub astAdd( byval t as ASTNODE ptr )
 declare function astNew( byval class_ as integer ) as ASTNODE ptr
 declare sub astDelete( byval t as ASTNODE ptr )
 declare function strDuplicate( byval s as zstring ptr ) as zstring ptr
 
-declare function astNewTK( ) as ASTNODE ptr
-declare function astTkAppend _
+declare function astNewBLOCK( ) as ASTNODE ptr
+declare function astGetNodeCount( byval block as ASTNODE ptr ) as integer
+declare sub astAddInFront _
 	( _
-		byval n as ASTNODE ptr, _
-		byval id as integer, _
-		byval text as zstring ptr _
-	) as ASTTOKEN ptr
-declare sub astTkRemove( byval n as ASTNODE ptr, byval tk as ASTTOKEN ptr )
+		byval block as ASTNODE ptr, _
+		byval ref as ASTNODE ptr, _
+		byval n as ASTNODE ptr _
+	)
+declare sub astAddBehind _
+	( _
+		byval block as ASTNODE ptr, _
+		byval ref as ASTNODE ptr, _
+		byval n as ASTNODE ptr _
+	)
+declare sub astAppend( byval block as ASTNODE ptr, byval n as ASTNODE ptr )
+declare function astContains _
+	( _
+		byval t as ASTNODE ptr, _
+		byval n as ASTNODE ptr _
+	) as integer
+declare sub astRemove( byval block as ASTNODE ptr, byval n as ASTNODE ptr )
+
+declare function astNewTK( byval id as integer, byval text as zstring ptr ) as ASTNODE ptr
 
 declare function astNewVARDECL _
 	( _
@@ -453,4 +478,4 @@ declare function lexInsertFile _
 		byref filename as string _
 	) as integer
 
-declare sub parseToplevel( )
+declare sub parseToplevel( byval block as ASTNODE ptr )

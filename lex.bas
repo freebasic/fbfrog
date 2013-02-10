@@ -67,7 +67,7 @@ type LEXSTUFF
 	i	as ubyte ptr  '' Current char, will always be <= limit
 	limit	as ubyte ptr  '' (end of buffer)
 
-	ast	as ASTNODE ptr
+	block	as ASTNODE ptr
 
 	kwhash	as THASH
 end type
@@ -90,22 +90,22 @@ private sub hAddTextToken( byval tk as integer, byval begin as ubyte ptr )
 	'' Is it a C keyword?
 	if( item ) then
 		'' Then use the proper KW_* instead of TK_ID
-		astTkAppend( lex.ast, cint( item->data ), NULL )
+		astAppend( lex.block, astNewTK( cint( item->data ), NULL ) )
 	else
 		'' TK_ID
-		astTkAppend( lex.ast, tk, begin )
+		astAppend( lex.block, astNewTK( tk, begin ) )
 	end if
 
 	lex.i[0] = old
 end sub
 
 private sub hAddTodo( byval text as zstring ptr )
-	astTkAppend( lex.ast, TK_TODO, text )
+	astAppend( lex.block, astNewTK( TK_TODO, text ) )
 end sub
 
 private sub hReadBytes( byval tk as integer, byval length as integer )
 	lex.i += length
-	astTkAppend( lex.ast, tk, NULL )
+	astAppend( lex.block, astNewTK( tk, NULL ) )
 end sub
 
 private sub hReadLineComment( )
@@ -662,7 +662,7 @@ private sub hInitKeywords( )
 end sub
 
 function lexLoadFile( byref filename as string ) as ASTNODE ptr
-	lex.ast = astNewTK( )
+	lex.block = astNewBLOCK( )
 	hLoadFile( filename )
 	hComplainAboutEmbeddedNulls( )
 	hInitKeywords( )
@@ -675,9 +675,9 @@ function lexLoadFile( byref filename as string ) as ASTNODE ptr
 	if( frog.verbose ) then
 		print using "  lexer: read in & bytes, produced & tokens"; _
 			(culng( lex.limit ) - culng( lex.buffer )); _
-			listCount( @lex.ast->tk )
+			astGetNodeCount( lex.block )
 	end if
 
 	deallocate( lex.buffer )
-	function = lex.ast
+	function = lex.block
 end function

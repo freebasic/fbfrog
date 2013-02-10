@@ -62,6 +62,7 @@ private sub hParseFileForIncludes( byval node as DEPNODE ptr )
 	dim as integer x = any
 	dim as string incfile
 	dim as DEPNODE ptr incnode = any
+	dim as ASTNODE ptr block = any
 
 	if( len( node->f->normed ) = 0 ) then
 		node->missing = TRUE
@@ -70,8 +71,8 @@ private sub hParseFileForIncludes( byval node as DEPNODE ptr )
 
 	fsPush( node->f )
 	tkInit( )
-	lexInsertFile( 0, node->f->normed )
-	parseToplevel( )
+	block = lexInsertFile( node->f->normed )
+	parseToplevel( block )
 
 	x = 0
 	while( tkGet( x ) <> TK_EOF )
