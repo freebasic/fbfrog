@@ -327,6 +327,15 @@ function astIsTK( byval n as ASTNODE ptr, byval id as integer ) as integer
 	end if
 end function
 
+function astGetText( byval n as ASTNODE ptr ) as zstring ptr
+	assert( astIsTK( n ) )
+	if( n->tk.text ) then
+		function = n->tk.text
+	else
+		function = token_text(n->tk.id)
+	end if
+end function
+
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 function astNewVARDECL _

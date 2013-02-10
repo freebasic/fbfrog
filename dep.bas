@@ -57,12 +57,12 @@ sub depOn( byval node as DEPNODE ptr, byval child as DEPNODE ptr )
 	node->childcount += 1
 end sub
 
-#if 0
 private sub hParseFileForIncludes( byval node as DEPNODE ptr )
 	dim as integer x = any
 	dim as string incfile
 	dim as DEPNODE ptr incnode = any
 	dim as ASTNODE ptr block = any
+	dim as ASTNODE ptr i = any
 
 	if( len( node->f->normed ) = 0 ) then
 		node->missing = TRUE
@@ -70,38 +70,40 @@ private sub hParseFileForIncludes( byval node as DEPNODE ptr )
 	end if
 
 	fsPush( node->f )
-	tkInit( )
-	block = lexInsertFile( node->f->normed )
-	parseToplevel( block )
+	block = lexLoadFile( node->f->normed )
 
-	x = 0
-	while( tkGet( x ) <> TK_EOF )
-		if( tkGet( x ) = KW_INCLUDE ) then
-			x += 1
-			if( tkGet( x ) = TK_STRING ) then
-				incfile = *tkText( x )
+	i = block->block.head
+	while( i )
+		if( astIsTK( i, TK_HASH ) ) then
+			i = i->next
+			if( astIsTK( i, KW_INCLUDE ) ) then
+				i = i->next
+				if( astIsTK( i, TK_STRING ) ) then
+					incfile = *astGetText( i )
 
-				incnode = depAdd( incfile )
-				if( incnode ) then
-					depOn( node, incnode )
+					incnode = depAdd( incfile )
+					if( incnode ) then
+						depOn( node, incnode )
+					end if
+
+					i = i->next
 				end if
-
-				x += 1
 			end if
+		else
+			i = i->next
 		end if
 	wend
 
-	tkEnd( )
+	astDelete( block )
 	fsPop( )
 end sub
-#endif
 
 sub depScan( )
 	dim as DEPNODE ptr node = any
 
 	node = listGetHead( @dep.nodes )
 	while( node )
-		''hParseFileForIncludes( node )
+		hParseFileForIncludes( node )
 		node = listGetNext( node )
 	wend
 end sub

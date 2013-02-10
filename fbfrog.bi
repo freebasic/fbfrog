@@ -384,6 +384,7 @@ declare sub astRemove( byval block as ASTNODE ptr, byval n as ASTNODE ptr )
 
 declare function astNewTK( byval id as integer, byval text as zstring ptr ) as ASTNODE ptr
 declare function astIsTK( byval n as ASTNODE ptr, byval id as integer = -1 ) as integer
+declare function astGetText( byval n as ASTNODE ptr ) as zstring ptr
 
 declare function astNewVARDECL _
 	( _
@@ -471,11 +472,5 @@ declare function frogCanMerge( byval f as FROGFILE ptr ) as integer
 
 declare sub emitWriteFile( byref filename as string )
 declare sub emitStats( )
-
-declare function lexInsertFile _
-	( _
-		byval x as integer, _
-		byref filename as string _
-	) as integer
-
+declare function lexLoadFile( byref filename as string ) as ASTNODE ptr
 declare sub parseToplevel( byval block as ASTNODE ptr )
