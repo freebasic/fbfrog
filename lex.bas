@@ -328,9 +328,12 @@ private sub hReadString( )
 	end if
 
 	quotechar = lex.i[0]
-	if( quotechar = CH_QUOTE ) then
+	select case( quotechar )
+	case CH_QUOTE
 		strflags or= STRFLAG_CHAR
-	end if
+	case CH_LT
+		quotechar = CH_GT
+	end select
 
 	lex.i += 1
 	begin = lex.i
@@ -509,6 +512,20 @@ private sub lexNext( )
 		case CH_EQ	'' <=
 			hReadBytes( TK_LTEQ, 2 )
 		case else
+			'' If it's an #include, parse <...> as string literal
+			'' include?
+			if( astIsTK( lex.block->block.tail, KW_INCLUDE ) ) then
+				'' '#'?
+				if( astIsTK( lex.block->block.tail->prev, TK_HASH ) ) then
+					'' BOL/BOF?
+					if( astIsTK( lex.block->block.tail->prev->prev, TK_EOL ) or _
+					    (lex.block->block.tail->prev->prev = NULL) ) then
+						hReadString( )
+						exit select
+					end if
+				end if
+			end if
+
 			hReadBytes( TK_LT, 1 )
 		end select
 

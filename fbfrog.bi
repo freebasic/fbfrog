@@ -384,6 +384,7 @@ declare function astContains _
 declare sub astRemove( byval block as ASTNODE ptr, byval n as ASTNODE ptr )
 
 declare function astNewTK( byval id as integer, byval text as zstring ptr ) as ASTNODE ptr
+declare function astIsTK( byval n as ASTNODE ptr, byval id as integer = -1 ) as integer
 
 declare function astNewVARDECL _
 	( _

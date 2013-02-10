@@ -320,6 +320,14 @@ private sub astDtorTK( byval n as ASTNODE ptr )
 	deallocate( n->tk.text )
 end sub
 
+function astIsTK( byval n as ASTNODE ptr, byval id as integer ) as integer
+	if( n ) then
+		if( n->class = ASTCLASS_TK ) then
+			function = (n->tk.id = id) or (id < 0)
+		end if
+	end if
+end function
+
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 function astNewVARDECL _
