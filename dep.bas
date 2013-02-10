@@ -58,11 +58,8 @@ sub depOn( byval node as DEPNODE ptr, byval child as DEPNODE ptr )
 end sub
 
 private sub hParseFileForIncludes( byval node as DEPNODE ptr )
-	dim as integer x = any
-	dim as string incfile
 	dim as DEPNODE ptr incnode = any
-	dim as ASTNODE ptr block = any
-	dim as ASTNODE ptr i = any
+	dim as ASTNODE ptr block = any, i = any
 
 	if( len( node->f->normed ) = 0 ) then
 		node->missing = TRUE
@@ -71,27 +68,19 @@ private sub hParseFileForIncludes( byval node as DEPNODE ptr )
 
 	fsPush( node->f )
 	block = lexLoadFile( node->f->normed )
+	parsePpDirectives( block )
 
 	i = block->block.head
 	while( i )
-		if( astIsTK( i, TK_HASH ) ) then
-			i = i->next
-			if( astIsTK( i, KW_INCLUDE ) ) then
-				i = i->next
-				if( astIsTK( i, TK_STRING ) ) then
-					incfile = *astGetText( i )
 
-					incnode = depAdd( incfile )
-					if( incnode ) then
-						depOn( node, incnode )
-					end if
-
-					i = i->next
-				end if
+		if( i->id = TK_PPINCLUDE ) then
+			incnode = depAdd( *i->text )
+			if( incnode ) then
+				depOn( node, incnode )
 			end if
-		else
-			i = i->next
 		end if
+
+		i = i->next
 	wend
 
 	astDelete( block )

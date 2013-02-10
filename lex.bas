@@ -90,22 +90,22 @@ private sub hAddTextToken( byval tk as integer, byval begin as ubyte ptr )
 	'' Is it a C keyword?
 	if( item->s ) then
 		'' Then use the proper KW_* instead of TK_ID
-		astAppend( lex.block, astNewTK( cint( item->data ), NULL ) )
+		astAppend( lex.block, astNew( cint( item->data ) ) )
 	else
 		'' TK_ID
-		astAppend( lex.block, astNewTK( tk, begin ) )
+		astAppend( lex.block, astNew( tk, begin ) )
 	end if
 
 	lex.i[0] = old
 end sub
 
 private sub hAddTodo( byval text as zstring ptr )
-	astAppend( lex.block, astNewTK( TK_TODO, text ) )
+	astAppend( lex.block, astNew( TK_TODO, text ) )
 end sub
 
 private sub hReadBytes( byval tk as integer, byval length as integer )
 	lex.i += length
-	astAppend( lex.block, astNewTK( tk, NULL ) )
+	astAppend( lex.block, astNew( tk ) )
 end sub
 
 private sub hReadLineComment( )
@@ -514,15 +514,12 @@ private sub lexNext( )
 		case else
 			'' If it's an #include, parse <...> as string literal
 			'' include?
-			if( astIsTK( lex.block->block.tail, KW_INCLUDE ) ) then
-				'' '#'?
-				if( astIsTK( lex.block->block.tail->prev, TK_HASH ) ) then
-					'' BOL/BOF?
-					if( astIsTK( lex.block->block.tail->prev->prev, TK_EOL ) or _
-					    (lex.block->block.tail->prev->prev = NULL) ) then
-						hReadString( )
-						exit select
-					end if
+			if( astGet( lex.block->block.tail ) = KW_INCLUDE ) then
+				'' '#' at BOL?
+				if( (   astGet( lex.block->block.tail->prev ) = TK_HASH) and _
+				    astIsAtBOL( lex.block->block.tail->prev ) ) then
+					hReadString( )
+					exit select
 				end if
 			end if
 
@@ -692,7 +689,7 @@ function lexLoadFile( byref filename as string ) as ASTNODE ptr
 	if( frog.verbose ) then
 		print using "  lexer: read in & bytes, produced & tokens"; _
 			(culng( lex.limit ) - culng( lex.buffer )); _
-			astGetNodeCount( lex.block )
+			astCount( lex.block )
 	end if
 
 	deallocate( lex.buffer )

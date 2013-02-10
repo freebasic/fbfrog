@@ -629,12 +629,29 @@ end function
 
 #endif
 
-sub parseToplevel( byval block as ASTNODE ptr )
-	dim as ASTNODE ptr i = any
+sub parsePpDirectives( byval block as ASTNODE ptr )
+	dim as ASTNODE ptr i = any, j = any
 
 	i = block->block.head
 	while( i )
-		print i->tk.text
+
+		'' '#' at BOL?
+		if( astIsAtBOL( i ) and (i->id = TK_HASH) ) then
+			select case( astGet( i->next ) )
+			case KW_INCLUDE
+				if( astGet( i->next->next ) = TK_STRING ) then
+					j = astNew( TK_PPINCLUDE, i->next->next->text )
+
+					astInsert( block, j, i )
+
+					'' '#' INCLUDE STRING
+					i = astRemove( block, i, 3 )
+					continue while
+				end if
+			end select
+		end if
+
 		i = i->next
 	wend
+
 end sub

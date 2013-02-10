@@ -94,7 +94,13 @@ declare sub hScanDirectoryForH _
 
 '' When changing, update the table in ast.bas too!
 enum
-	TK_TODO = 0     '' TODOs added as fix-me-markers
+	TK_BLOCK
+	TK_PPINCLUDE
+	TK_STRUCT
+	TK_PROCDECL
+	TK_VARDECL
+
+	TK_TODO         '' TODOs added as fix-me-markers
 	TK_BYTE         '' For stray bytes that don't fit in elsewhere
 	TK_EOL
 	TK_COMMENT      '' /* ... */
@@ -306,25 +312,6 @@ enum
 	TYPE_UDT
 end enum
 
-enum
-	ASTCLASS_BLOCK = 0
-	ASTCLASS_TK
-	ASTCLASS_COMMENT
-
-	ASTCLASS_PPIF
-	ASTCLASS_PPELSEIF
-	ASTCLASS_PPELSE
-	ASTCLASS_PPENDIF
-	ASTCLASS_PPDEFINE
-	ASTCLASS_PPINCLUDE
-
-	ASTCLASS_STRUCT
-	ASTCLASS_PROCDECL
-	ASTCLASS_VARDECL
-
-	ASTCLASS__COUNT
-end enum
-
 type ASTNODE as ASTNODE_
 
 type ASTNODEBLOCK
@@ -332,47 +319,45 @@ type ASTNODEBLOCK
 	tail		as ASTNODE ptr
 end type
 
-type ASTNODETK
-	id	as integer      '' TK_*
-	text	as zstring ptr  '' Identifiers/literals, or NULL
-end type
-
 type ASTNODEVARDECL
-	id		as zstring ptr
 	dtype		as integer
 	subtype		as zstring ptr
 end type
 
 type ASTNODE_
-	class		as integer
+	id		as integer      '' AST_*, TK_*, KW_*
+	text		as zstring ptr  '' Identifiers/literals, or NULL
 
 	next		as ASTNODE ptr
 	prev		as ASTNODE ptr
 
 	union
 		block		as ASTNODEBLOCK
-		tk		as ASTNODETK
 		vardecl		as ASTNODEVARDECL
 	end union
 end type
 
-declare function astNew( byval class_ as integer ) as ASTNODE ptr
-declare sub astDelete( byval t as ASTNODE ptr )
+#define astIsBLOCK( n ) ((n)->id = TK_BLOCK)
+declare sub astDump( byval n as ASTNODE ptr )
+
 declare function strDuplicate( byval s as zstring ptr ) as zstring ptr
+declare function astNew _
+	( _
+		byval id as integer, _
+		byval text as zstring ptr = NULL _
+	) as ASTNODE ptr
+declare sub astDelete( byval t as ASTNODE ptr )
+declare function astGet( byval n as ASTNODE ptr ) as integer
+declare function astGetText( byval n as ASTNODE ptr ) as zstring ptr
+declare function astIsAtBOL( byval i as ASTNODE ptr ) as integer
 
 declare function astNewBLOCK( ) as ASTNODE ptr
-declare function astGetNodeCount( byval block as ASTNODE ptr ) as integer
-declare sub astAddInFront _
+declare function astCount( byval block as ASTNODE ptr ) as integer
+declare sub astInsert _
 	( _
 		byval block as ASTNODE ptr, _
-		byval ref as ASTNODE ptr, _
-		byval n as ASTNODE ptr _
-	)
-declare sub astAddBehind _
-	( _
-		byval block as ASTNODE ptr, _
-		byval ref as ASTNODE ptr, _
-		byval n as ASTNODE ptr _
+		byval n as ASTNODE ptr, _
+		byval ref as ASTNODE ptr _
 	)
 declare sub astAppend( byval block as ASTNODE ptr, byval n as ASTNODE ptr )
 declare function astContains _
@@ -380,11 +365,12 @@ declare function astContains _
 		byval t as ASTNODE ptr, _
 		byval n as ASTNODE ptr _
 	) as integer
-declare sub astRemove( byval block as ASTNODE ptr, byval n as ASTNODE ptr )
-
-declare function astNewTK( byval id as integer, byval text as zstring ptr ) as ASTNODE ptr
-declare function astIsTK( byval n as ASTNODE ptr, byval id as integer = -1 ) as integer
-declare function astGetText( byval n as ASTNODE ptr ) as zstring ptr
+declare function astRemove _
+	( _
+		byval block as ASTNODE ptr, _
+		byval n as ASTNODE ptr, _
+		byval count as integer = 1 _
+	) as ASTNODE ptr
 
 declare function astNewVARDECL _
 	( _
@@ -473,4 +459,4 @@ declare function frogCanMerge( byval f as FROGFILE ptr ) as integer
 declare sub emitWriteFile( byref filename as string )
 declare sub emitStats( )
 declare function lexLoadFile( byref filename as string ) as ASTNODE ptr
-declare sub parseToplevel( byval block as ASTNODE ptr )
+declare sub parsePpDirectives( byval block as ASTNODE ptr )

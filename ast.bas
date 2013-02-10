@@ -1,15 +1,13 @@
 #include once "fbfrog.bi"
 #include once "crt.bi"
 
-declare sub astDtorTK( byval n as ASTNODE ptr )
-
-dim shared as sub( byval as ASTNODE ptr ) astdtors(0 to ASTCLASS__COUNT-1) = _
-{ _
-	@astDtorTK _  '' ASTCLASS_TK
-}
-
 dim shared as zstring ptr token_text(0 to (TK__COUNT - 1)) = _
 { _
+	@"<block>"      , _
+	@"<ppinclude>"  , _
+	@"<struct>"     , _
+	@"<procdecl>"   , _
+	@"<vardecl>"    , _
 	@"<todo>"       , _
 	@"<byte>"       , _
 	@"<eol>"        , _
@@ -175,29 +173,64 @@ dim shared as zstring ptr token_text(0 to (TK__COUNT - 1)) = _
 	@"zstring"      _
 }
 
-''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+sub astDump( byval n as ASTNODE ptr )
+	static as integer reclevel
+	dim as ASTNODE ptr i = any
 
-function astNew( byval class_ as integer ) as ASTNODE ptr
-	dim as ASTNODE ptr n = any
-
-	n = callocate( sizeof( ASTNODE ) )
-	n->class = class_
-
-	function = n
-end function
-
-sub astDelete( byval t as ASTNODE ptr )
-	if( astdtors(t->class) ) then
-		astdtors(t->class)( t )
+	if( reclevel > 0 ) then
+		print string( reclevel, !"\t" );
 	end if
-	deallocate( t )
+
+	if( n = NULL ) then
+		print "[NULL]"
+		exit sub
+	end if
+
+	#if 1
+		print "[";hex( n, 8 );"] ";
+	#endif
+
+	select case( n->id )
+	case TK_BLOCK
+		print "block (" & astCount( n ) & " nodes)"
+		reclevel += 1
+
+		i = n->block.head
+		while( i )
+			astDump( i )
+			i = i->next
+		wend
+
+		reclevel -= 1
+		print "end block"
+
+	case TK_ID
+		print *n->text
+
+	case TK_STRING
+		print """";*n->text;""""
+
+	case TK_PPINCLUDE
+		print "#include """;*n->text;""""
+
+	case else
+		if( (n->id >= 0) and (n->id < TK__COUNT) ) then
+			print *token_text(n->id)
+		else
+			print "invalid id: " & n->id
+		end if
+	end select
 end sub
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 function strDuplicate( byval s as zstring ptr ) as zstring ptr
 	dim as zstring ptr p = any
 	dim as integer length = any
 
-	if( s = NULL ) then exit function
+	if( s = NULL ) then
+		return NULL
+	end if
 
 	length = len( *s )
 	p = callocate( length + 1 )
@@ -210,15 +243,78 @@ function strDuplicate( byval s as zstring ptr ) as zstring ptr
 	function = p
 end function
 
+function astNew _
+	( _
+		byval id as integer, _
+		byval text as zstring ptr = NULL _
+	) as ASTNODE ptr
+
+	dim as ASTNODE ptr n = any
+
+	n = callocate( sizeof( ASTNODE ) )
+	n->id = id
+	n->text = strDuplicate( text )
+
+	function = n
+end function
+
+sub astDelete( byval n as ASTNODE ptr )
+	dim as ASTNODE ptr i = any, nxt = any
+
+	if( n->id = TK_BLOCK ) then
+		i = n->block.head
+		while( i )
+			nxt = i->next
+			astDelete( i )
+			i = nxt
+		wend
+	end if
+
+	deallocate( n->text )
+	deallocate( n )
+end sub
+
+function astGet( byval n as ASTNODE ptr ) as integer
+	if( n ) then
+		function = n->id
+	else
+		function = -1
+	end if
+end function
+
+function astGetText( byval n as ASTNODE ptr ) as zstring ptr
+	if( n->text ) then
+		function = n->text
+	else
+		function = token_text(n->id)
+	end if
+end function
+
+function astIsAtBOL( byval i as ASTNODE ptr ) as integer
+	if( i = NULL ) then
+		return TRUE
+	end if
+
+	'' BOF?
+	if( i->prev = NULL ) then
+		return TRUE
+	end if
+
+	'' BOL?
+	function = (i->prev->id = TK_EOL)
+end function
+
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 function astNewBLOCK( ) as ASTNODE ptr
-	function = astNew( ASTCLASS_BLOCK )
+	function = astNew( TK_BLOCK )
 end function
 
-function astGetNodeCount( byval block as ASTNODE ptr ) as integer
+function astCount( byval block as ASTNODE ptr ) as integer
 	dim as ASTNODE ptr n = any
 	dim as integer count = any
+
+	assert( astIsBLOCK( block ) )
 
 	count = 0
 	n = block->block.head
@@ -230,23 +326,31 @@ function astGetNodeCount( byval block as ASTNODE ptr ) as integer
 	function = count
 end function
 
-sub astAddInFront _
+'' Link in N in front of REF
+sub astInsert _
 	( _
 		byval block as ASTNODE ptr, _
-		byval ref as ASTNODE ptr, _
-		byval n as ASTNODE ptr _
+		byval n as ASTNODE ptr, _
+		byval ref as ASTNODE ptr _
 	)
-end sub
 
-sub astAddBehind _
-	( _
-		byval block as ASTNODE ptr, _
-		byval ref as ASTNODE ptr, _
-		byval n as ASTNODE ptr _
-	)
+	assert( astIsBLOCK( block ) )
+	assert( astContains( block, ref ) )
+
+	n->prev = ref->prev
+	n->next = ref
+
+	if( ref->prev ) then
+		ref->prev->next = n
+	else
+		block->block.head = n
+	end if
+	ref->prev = n
+
 end sub
 
 sub astAppend( byval block as ASTNODE ptr, byval n as ASTNODE ptr )
+	assert( astIsBLOCK( block ) )
 	if( block->block.head = NULL ) then
 		block->block.head = n
 	end if
@@ -266,74 +370,55 @@ function astContains _
 
 	dim as ASTNODE ptr i = any
 
-	if( t = n ) then
-		return TRUE
-	end if
+	assert( astIsBLOCK( t ) )
 
-	if( t->class = ASTCLASS_BLOCK ) then
-		i = t->block.head
-		while( i )
-			if( astContains( i, n ) ) then
-				return TRUE
-			end if
-			i = i->next
-		wend
-	end if
+	i = t->block.head
+	while( i )
+		if( i = n ) then
+			return TRUE
+		end if
+		i = i->next
+	wend
 
 	function = FALSE
 end function
 
-sub astRemove( byval block as ASTNODE ptr, byval n as ASTNODE ptr )
+'' Delete COUNT nodes, starting from N
+'' result = the node that ends up in N's place after the deletion, if any
+function astRemove _
+	( _
+		byval block as ASTNODE ptr, _
+		byval n as ASTNODE ptr, _
+		byval count as integer = 1 _
+	) as ASTNODE ptr
+
 	dim as ASTNODE ptr nxt = any, prv = any
+	assert( astIsBLOCK( block ) )
 	assert( astContains( block, n ) )
 
-	nxt = n->next
-	prv = n->prev
-	if( prv ) then
-		prv->next = nxt
-	else
-		block->block.head = nxt
-	end if
-	if( nxt ) then
-		nxt->prev = prv
-	else
-		block->block.tail = prv
-	end if
+	while( (n <> NULL) and (count > 0) )
+		'' Link out N
+		nxt = n->next
+		prv = n->prev
+		if( prv ) then
+			prv->next = nxt
+		else
+			block->block.head = nxt
+		end if
+		if( nxt ) then
+			nxt->prev = prv
+		else
+			block->block.tail = prv
+		end if
 
-	astDelete( n )
-end sub
+		astDelete( n )
 
-''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-
-function astNewTK( byval id as integer, byval text as zstring ptr ) as ASTNODE ptr
-	dim as ASTNODE ptr n = any
-
-	n = astNew( ASTCLASS_TK )
-	n->tk.id = id
-	n->tk.text = strDuplicate( text )
+		'' Go to next node, if any, and maybe delete that too
+		n = nxt
+		count -= 1
+	wend
 
 	function = n
-end function
-
-private sub astDtorTK( byval n as ASTNODE ptr )
-	deallocate( n->tk.text )
-end sub
-
-function astIsTK( byval n as ASTNODE ptr, byval id as integer ) as integer
-	if( n ) then
-		if( n->class = ASTCLASS_TK ) then
-			function = (n->tk.id = id) or (id < 0)
-		end if
-	end if
-end function
-
-function astGetText( byval n as ASTNODE ptr ) as zstring ptr
-	assert( astIsTK( n ) )
-	if( n->tk.text ) then
-		function = n->tk.text
-	else
-		function = token_text(n->tk.id)
-	end if
 end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -347,8 +432,8 @@ function astNewVARDECL _
 
 	dim as ASTNODE ptr n = any
 
-	n = astNew( ASTCLASS_VARDECL )
-	n->vardecl.id = strDuplicate( id )
+	n = astNew( TK_VARDECL )
+	n->text = strDuplicate( id )
 	n->vardecl.dtype = dtype
 	n->vardecl.subtype = strDuplicate( subtype )
 
