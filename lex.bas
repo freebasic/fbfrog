@@ -88,7 +88,7 @@ private sub hAddTextToken( byval tk as integer, byval begin as ubyte ptr )
 	item = hashLookup( @lex.kwhash, begin, hash )
 
 	'' Is it a C keyword?
-	if( item ) then
+	if( item->s ) then
 		'' Then use the proper KW_* instead of TK_ID
 		astAppend( lex.block, astNewTK( cint( item->data ), NULL ) )
 	else
