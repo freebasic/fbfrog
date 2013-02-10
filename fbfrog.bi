@@ -94,8 +94,7 @@ declare sub hScanDirectoryForH _
 
 '' When changing, update the table in ast.bas too!
 enum
-	TK_EOF = 0
-	TK_TODO         '' TODOs added as fix-me-markers
+	TK_TODO = 0     '' TODOs added as fix-me-markers
 	TK_BYTE         '' For stray bytes that don't fit in elsewhere
 	TK_EOL
 	TK_COMMENT      '' /* ... */

@@ -10,7 +10,6 @@ dim shared as sub( byval as ASTNODE ptr ) astdtors(0 to ASTCLASS__COUNT-1) = _
 
 dim shared as zstring ptr token_text(0 to (TK__COUNT - 1)) = _
 { _
-	@"<eof>"        , _
 	@"<todo>"       , _
 	@"<byte>"       , _
 	@"<eol>"        , _
