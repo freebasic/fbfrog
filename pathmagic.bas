@@ -351,7 +351,7 @@ private sub hScanParent _
 	wend
 
 	'' Scan for subdirectories
-	found = dir( parent + "*", fbDirectory )
+	found = dir( parent + "*", fbDirectory or fbReadOnly )
 	while( len( found ) > 0 )
 		select case( found )
 		case ".", ".."
@@ -364,6 +364,7 @@ private sub hScanParent _
 
 		found = dir( )
 	wend
+
 end sub
 
 sub hScanDirectoryForH _
