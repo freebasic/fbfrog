@@ -1,185 +1,186 @@
 #include once "fbfrog.bi"
 #include once "crt.bi"
 
-dim shared as zstring ptr token_text(0 to (TK__COUNT - 1)) = _
+dim shared as ASTINFO ast_info(0 to (TK__COUNT - 1)) = _
 { _
-	@"<file>"       , _
-	@"<ppdefine>"   , _
-	@"<ppinclude>"  , _
-	@"<struct>"     , _
-	@"<procdecl>"   , _
-	@"<vardecl>"    , _
-	@"<todo>"       , _
-	@"<byte>"       , _
-	@"<eol>"        , _
-	@"<comment>"    , _
-	@"<linecomment>", _
-	@"<decnum>"     , _ '' Number literals
-	@"<hexnum>"     , _
-	@"<octnum>"     , _
-	@"<string>"     , _ '' String literals
-	@"<char>"       , _
-	@"<wstring>"    , _
-	@"<wchar>"      , _
-	@"<estring>"    , _
-	@"<echar>"      , _
-	@"<ewstring>"   , _
-	@"<ewchar>"     , _
-	@"!"      , _ '' Main tokens
-	@"!="     , _
-	@"#"      , _
-	@"##"     , _
-	@"%"      , _
-	@"%="     , _
-	@"&"      , _
-	@"&="     , _
-	@"&&"     , _
-	@"("      , _
-	@")"      , _
-	@"*"      , _
-	@"*="     , _
-	@"+"      , _
-	@"+="     , _
-	@"++"     , _
-	@","      , _
-	@"-"      , _
-	@"-="     , _
-	@"--"     , _
-	@"->"     , _
-	@"."      , _
-	@"..."    , _
-	@"/"      , _
-	@"/="     , _
-	@":"      , _
-	@";"      , _
-	@"<"      , _
-	@"<<"     , _
-	@"<<="    , _
-	@"<="     , _
-	@"<>"     , _
-	@"="      , _
-	@"=="     , _
-	@">"      , _
-	@">>"     , _
-	@">>="    , _
-	@">="     , _
-	@"?"      , _
-	@"@"      , _
-	@"["      , _
-	@"\"      , _
-	@"]"      , _
-	@"^"      , _
-	@"^="     , _
-	@"_"      , _
-	@"{"      , _
-	@"|"      , _
-	@"|="     , _
-	@"||"     , _
-	@"}"      , _
-	@"~"      , _
-	@"<id>"      , _ '' TK_ID
-	@"auto"      , _ '' C/FB keywords
-	@"break"     , _
-	@"case"      , _
-	@"char"      , _
-	@"const"     , _
-	@"continue"  , _
-	@"default"   , _
-	@"define"    , _
-	@"defined"   , _
-	@"do"        , _
-	@"double"    , _
-	@"elif"      , _
-	@"else"      , _
-	@"endif"     , _
-	@"enum"      , _
-	@"extern"    , _
-	@"float"     , _
-	@"for"       , _
-	@"goto"      , _
-	@"if"        , _
-	@"ifdef"     , _
-	@"ifndef"    , _
-	@"include"   , _
-	@"inline"    , _
-	@"int"       , _
-	@"long"      , _
-	@"pragma"    , _
-	@"register"  , _
-	@"restrict"  , _
-	@"return"    , _
-	@"short"     , _
-	@"signed"    , _
-	@"sizeof"    , _
-	@"static"    , _
-	@"struct"    , _
-	@"switch"    , _
-	@"typedef"   , _
-	@"undef"     , _
-	@"union"     , _
-	@"unsigned"  , _
-	@"void"      , _
-	@"volatile"  , _
-	@"while"     , _
-	@"alias"      , _  '' FB-only keywords
-	@"and"        , _
-	@"andalso"    , _
-	@"any"        , _
-	@"as"         , _
-	@"byte"       , _
-	@"byval"      , _
-	@"cast"       , _
-	@"cdecl"      , _
-	@"cptr"       , _
-	@"declare"    , _
-	@"dim"        , _
-	@"elseif"     , _
-	@"end"        , _
-	@"exit"       , _
-	@"export"     , _
-	@"field"      , _
-	@"function"   , _
-	@"iif"        , _
-	@"integer"    , _
-	@"longint"    , _
-	@"loop"       , _
-	@"mod"        , _
-	@"next"       , _
-	@"not"        , _
-	@"or"         , _
-	@"orelse"     , _
-	@"pascal"     , _
-	@"private"    , _
-	@"ptr"        , _
-	@"scope"      , _
-	@"select"     , _
-	@"shared"     , _
-	@"shl"        , _
-	@"shr"        , _
-	@"single"     , _
-	@"stdcall"    , _
-	@"sub"        , _
-	@"then"       , _
-	@"to"         , _
-	@"type"       , _
-	@"ubyte"      , _
-	@"uinteger"   , _
-	@"ulong"      , _
-	@"ulongint"   , _
-	@"ushort"     , _
-	@"wend"       , _
-	@"wstr"       , _
-	@"wstring"    , _
-	@"xor"        , _
-	@"zstring"      _
+	( TRUE , NULL  , @"file"        ), _
+	( TRUE , NULL  , @"#include"    ), _
+	( TRUE , NULL  , @"#define"     ), _
+	( TRUE , NULL  , @"struct"      ), _
+	( TRUE , NULL  , @"procdecl"    ), _
+	( TRUE , NULL  , @"vardecl"     ), _
+	( TRUE , NULL  , @"todo"        ), _
+	( FALSE, NULL  , @"byte"        ), _
+	( TRUE , NULL  , @"eol"         ), _
+	( FALSE, NULL  , @"comment"     ), _
+	( FALSE, NULL  , @"linecomment" ), _
+	( FALSE, NULL  , @"decnum"      ), _ '' Number literals
+	( FALSE, NULL  , @"hexnum"      ), _
+	( FALSE, NULL  , @"octnum"      ), _
+	( FALSE, NULL  , @"string"      ), _ '' String literals
+	( FALSE, NULL  , @"char"        ), _
+	( FALSE, NULL  , @"wstring"     ), _
+	( FALSE, NULL  , @"wchar"       ), _
+	( FALSE, NULL  , @"estring"     ), _
+	( FALSE, NULL  , @"echar"       ), _
+	( FALSE, NULL  , @"ewstring"    ), _
+	( FALSE, NULL  , @"ewchar"      ), _
+	( FALSE, @"!"  , @"tk" ), _ '' Main tokens
+	( FALSE, @"!=" , @"tk" ), _
+	( FALSE, @"#"  , @"tk" ), _
+	( FALSE, @"##" , @"tk" ), _
+	( FALSE, @"%"  , @"tk" ), _
+	( FALSE, @"%=" , @"tk" ), _
+	( FALSE, @"&"  , @"tk" ), _
+	( FALSE, @"&=" , @"tk" ), _
+	( FALSE, @"&&" , @"tk" ), _
+	( FALSE, @"("  , @"tk" ), _
+	( FALSE, @")"  , @"tk" ), _
+	( FALSE, @"*"  , @"tk" ), _
+	( FALSE, @"*=" , @"tk" ), _
+	( FALSE, @"+"  , @"tk" ), _
+	( FALSE, @"+=" , @"tk" ), _
+	( FALSE, @"++" , @"tk" ), _
+	( FALSE, @","  , @"tk" ), _
+	( FALSE, @"-"  , @"tk" ), _
+	( FALSE, @"-=" , @"tk" ), _
+	( FALSE, @"--" , @"tk" ), _
+	( FALSE, @"->" , @"tk" ), _
+	( FALSE, @"."  , @"tk" ), _
+	( FALSE, @"...", @"tk" ), _
+	( FALSE, @"/"  , @"tk" ), _
+	( FALSE, @"/=" , @"tk" ), _
+	( FALSE, @":"  , @"tk" ), _
+	( FALSE, @";"  , @"tk" ), _
+	( FALSE, @"<"  , @"tk" ), _
+	( FALSE, @"<<" , @"tk" ), _
+	( FALSE, @"<<=", @"tk" ), _
+	( FALSE, @"<=" , @"tk" ), _
+	( FALSE, @"<>" , @"tk" ), _
+	( FALSE, @"="  , @"tk" ), _
+	( FALSE, @"==" , @"tk" ), _
+	( FALSE, @">"  , @"tk" ), _
+	( FALSE, @">>" , @"tk" ), _
+	( FALSE, @">>=", @"tk" ), _
+	( FALSE, @">=" , @"tk" ), _
+	( FALSE, @"?"  , @"tk" ), _
+	( FALSE, @"@"  , @"tk" ), _
+	( FALSE, @"["  , @"tk" ), _
+	( FALSE, @"\"  , @"tk" ), _
+	( FALSE, @"]"  , @"tk" ), _
+	( FALSE, @"^"  , @"tk" ), _
+	( FALSE, @"^=" , @"tk" ), _
+	( FALSE, @"_"  , @"tk" ), _
+	( FALSE, @"{"  , @"tk" ), _
+	( FALSE, @"|"  , @"tk" ), _
+	( FALSE, @"|=" , @"tk" ), _
+	( FALSE, @"||" , @"tk" ), _
+	( FALSE, @"}"  , @"tk" ), _
+	( FALSE, @"~"  , @"tk" ), _
+	( FALSE, NULL  , @"id" ), _ '' TK_ID
+	( FALSE, @"auto"    , @"kw" ), _ '' C/FB keywords
+	( FALSE, @"break"   , @"kw" ), _
+	( FALSE, @"case"    , @"kw" ), _
+	( FALSE, @"char"    , @"kw" ), _
+	( FALSE, @"const"   , @"kw" ), _
+	( FALSE, @"continue", @"kw" ), _
+	( FALSE, @"default" , @"kw" ), _
+	( FALSE, @"define"  , @"kw" ), _
+	( FALSE, @"defined" , @"kw" ), _
+	( FALSE, @"do"      , @"kw" ), _
+	( FALSE, @"double"  , @"kw" ), _
+	( FALSE, @"elif"    , @"kw" ), _
+	( FALSE, @"else"    , @"kw" ), _
+	( FALSE, @"endif"   , @"kw" ), _
+	( FALSE, @"enum"    , @"kw" ), _
+	( FALSE, @"extern"  , @"kw" ), _
+	( FALSE, @"float"   , @"kw" ), _
+	( FALSE, @"for"     , @"kw" ), _
+	( FALSE, @"goto"    , @"kw" ), _
+	( FALSE, @"if"      , @"kw" ), _
+	( FALSE, @"ifdef"   , @"kw" ), _
+	( FALSE, @"ifndef"  , @"kw" ), _
+	( FALSE, @"include" , @"kw" ), _
+	( FALSE, @"inline"  , @"kw" ), _
+	( FALSE, @"int"     , @"kw" ), _
+	( FALSE, @"long"    , @"kw" ), _
+	( FALSE, @"pragma"  , @"kw" ), _
+	( FALSE, @"register", @"kw" ), _
+	( FALSE, @"restrict", @"kw" ), _
+	( FALSE, @"return"  , @"kw" ), _
+	( FALSE, @"short"   , @"kw" ), _
+	( FALSE, @"signed"  , @"kw" ), _
+	( FALSE, @"sizeof"  , @"kw" ), _
+	( FALSE, @"static"  , @"kw" ), _
+	( FALSE, @"struct"  , @"kw" ), _
+	( FALSE, @"switch"  , @"kw" ), _
+	( FALSE, @"typedef" , @"kw" ), _
+	( FALSE, @"undef"   , @"kw" ), _
+	( FALSE, @"union"   , @"kw" ), _
+	( FALSE, @"unsigned", @"kw" ), _
+	( FALSE, @"void"    , @"kw" ), _
+	( FALSE, @"volatile", @"kw" ), _
+	( FALSE, @"while"   , @"kw" ), _
+	( FALSE, @"alias"   , @"kw" ), _  '' FB-only keywords
+	( FALSE, @"and"     , @"kw" ), _
+	( FALSE, @"andalso" , @"kw" ), _
+	( FALSE, @"any"     , @"kw" ), _
+	( FALSE, @"as"      , @"kw" ), _
+	( FALSE, @"byte"    , @"kw" ), _
+	( FALSE, @"byval"   , @"kw" ), _
+	( FALSE, @"cast"    , @"kw" ), _
+	( FALSE, @"cdecl"   , @"kw" ), _
+	( FALSE, @"cptr"    , @"kw" ), _
+	( FALSE, @"declare" , @"kw" ), _
+	( FALSE, @"dim"     , @"kw" ), _
+	( FALSE, @"elseif"  , @"kw" ), _
+	( FALSE, @"end"     , @"kw" ), _
+	( FALSE, @"exit"    , @"kw" ), _
+	( FALSE, @"export"  , @"kw" ), _
+	( FALSE, @"field"   , @"kw" ), _
+	( FALSE, @"function", @"kw" ), _
+	( FALSE, @"iif"     , @"kw" ), _
+	( FALSE, @"integer" , @"kw" ), _
+	( FALSE, @"longint" , @"kw" ), _
+	( FALSE, @"loop"    , @"kw" ), _
+	( FALSE, @"mod"     , @"kw" ), _
+	( FALSE, @"next"    , @"kw" ), _
+	( FALSE, @"not"     , @"kw" ), _
+	( FALSE, @"or"      , @"kw" ), _
+	( FALSE, @"orelse"  , @"kw" ), _
+	( FALSE, @"pascal"  , @"kw" ), _
+	( FALSE, @"private" , @"kw" ), _
+	( FALSE, @"ptr"     , @"kw" ), _
+	( FALSE, @"scope"   , @"kw" ), _
+	( FALSE, @"select"  , @"kw" ), _
+	( FALSE, @"shared"  , @"kw" ), _
+	( FALSE, @"shl"     , @"kw" ), _
+	( FALSE, @"shr"     , @"kw" ), _
+	( FALSE, @"single"  , @"kw" ), _
+	( FALSE, @"stdcall" , @"kw" ), _
+	( FALSE, @"sub"     , @"kw" ), _
+	( FALSE, @"then"    , @"kw" ), _
+	( FALSE, @"to"      , @"kw" ), _
+	( FALSE, @"type"    , @"kw" ), _
+	( FALSE, @"ubyte"   , @"kw" ), _
+	( FALSE, @"uinteger", @"kw" ), _
+	( FALSE, @"ulong"   , @"kw" ), _
+	( FALSE, @"ulongint", @"kw" ), _
+	( FALSE, @"ushort"  , @"kw" ), _
+	( FALSE, @"wend"    , @"kw" ), _
+	( FALSE, @"wstr"    , @"kw" ), _
+	( FALSE, @"wstring" , @"kw" ), _
+	( FALSE, @"xor"     , @"kw" ), _
+	( FALSE, @"zstring" , @"kw" )  _
 }
 
 sub astDump( byval n as ASTNODE ptr )
 	static as integer reclevel
 	dim as ASTNODE ptr i = any
+	dim as string s
 
 	if( reclevel > 0 ) then
-		print string( reclevel, !"\t" );
+		print space( reclevel * 4 );
 	end if
 
 	if( n = NULL ) then
@@ -187,33 +188,32 @@ sub astDump( byval n as ASTNODE ptr )
 		exit sub
 	end if
 
-	#if 1
+	if( (n->id < 0) or (n->id >= TK__COUNT) ) then
+		print "[invalid id: " & n->id & "]"
+		exit sub
+	end if
+
+	#if 0
 		print "[";hex( n, 8 );"] ";
 	#endif
 
-	select case( n->id )
-	case TK_FILE
-		print "file: " + *n->text
+	s = *ast_info(n->id).debug
 
-	case TK_PPINCLUDE
-		print "#include """;*n->text;""""
+	'' Align if there are siblings
+	if( (reclevel > 0) and ((n->next <> NULL) or (n->prev <> NULL)) ) then
+		s += space( 8 - len( s ) )
+	end if
+	s = "[" + s + "] "
 
-	case TK_PPDEFINE
-		print "#define ";*n->text
-
-	case TK_ID
-		print *n->text
-
-	case TK_STRING
-		print """";*n->text;""""
-
-	case else
-		if( (n->id >= 0) and (n->id < TK__COUNT) ) then
-			print *token_text(n->id)
-		else
-			print "invalid id: " & n->id
+	if( n->text ) then
+		s += "'" + *n->text + "'"
+	else
+		if( ast_info(n->id).text ) then
+			s += "'" + *ast_info(n->id).text + "'"
 		end if
-	end select
+	end if
+
+	print s
 
 	'' Children, if any
 	reclevel += 1
@@ -303,10 +303,18 @@ function astGetText( byval n as ASTNODE ptr ) as zstring ptr
 	else
 		if( n->id >= TK_EXCL ) then
 			assert( n->id <> TK_ID )
-			function = token_text(n->id)
+			function = ast_info(n->id).text
 		else
 			function = @""
 		end if
+	end if
+end function
+
+function astIsStmtSep( byval n as ASTNODE ptr ) as integer
+	if( n ) then
+		function = ast_info(n->id).is_stmtsep
+	else
+		function = TRUE
 	end if
 end function
 
@@ -321,7 +329,7 @@ function astIsAtBOL( byval i as ASTNODE ptr ) as integer
 	end if
 
 	'' BOL?
-	function = (i->prev->id = TK_EOL)
+	function = astIsStmtSep( i->prev )
 end function
 
 '' Returns the last token in front of EOL/EOF, or NULL if starting at EOL/EOF,
@@ -331,12 +339,12 @@ function astFindLastInLine( byval i as ASTNODE ptr ) as ASTNODE ptr
 		return NULL
 	end if
 
-	if( i->id = TK_EOL ) then
+	if( astIsStmtSep( i ) ) then
 		return NULL
 	end if
 
 	while( i->next )
-		if( i->next->id = TK_EOL ) then
+		if( astIsStmtSep( i->next ) ) then
 			exit while
 		end if
 		i = i->next
@@ -469,7 +477,7 @@ function astRemoveUntilBehindEol _
 
 	saw_eol = FALSE
 	while( (i <> NULL) and (not saw_eol) )
-		saw_eol = (i->id = TK_EOL)
+		saw_eol = astIsStmtSep( i )
 		i = astRemove( parent, i )
 	wend
 

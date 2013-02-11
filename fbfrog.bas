@@ -105,9 +105,8 @@ end sub
 		oops( "no input files" )
 	end if
 
-	depScan( )
-
 	if( frog.dep ) then
+		depScan( )
 		depPrintFlat( )
 		end 0
 	end if

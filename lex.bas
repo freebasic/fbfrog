@@ -669,9 +669,9 @@ private sub hInitKeywords( )
 	hashInit( @lex.kwhash, 10 )
 
 	for i as integer = KW_AUTO to KW_WHILE
-		hash = hashHash( token_text(i) )
-		item = hashLookup( @lex.kwhash, token_text(i), hash )
-		hashAdd( @lex.kwhash, item, hash, token_text(i), cast( any ptr, i ) )
+		hash = hashHash( ast_info(i).text )
+		item = hashLookup( @lex.kwhash, ast_info(i).text, hash )
+		hashAdd( @lex.kwhash, item, hash, ast_info(i).text, cast( any ptr, i ) )
 	next
 end sub
 

@@ -286,7 +286,13 @@ enum
 	TK__COUNT
 end enum
 
-extern as zstring ptr token_text(0 to (TK__COUNT - 1))
+type ASTINFO
+	is_stmtsep	as integer
+	text		as zstring ptr
+	debug		as zstring ptr
+end type
+
+extern as ASTINFO ast_info(0 to (TK__COUNT - 1))
 
 const TYPEMASK_DT    = &b00000000000000000000000000001111  '' 0..15, enough for TYPE_* enum
 const TYPEMASK_PTR   = &b00000000000000000000000011110000  '' 0..15, enough for max. 8 PTRs on a type, like FB
@@ -342,6 +348,7 @@ declare sub astDelete( byval n as ASTNODE ptr )
 declare function astClone( byval n as ASTNODE ptr ) as ASTNODE ptr
 declare function astGet( byval n as ASTNODE ptr ) as integer
 declare function astGetText( byval n as ASTNODE ptr ) as zstring ptr
+declare function astIsStmtSep( byval n as ASTNODE ptr ) as integer
 declare function astIsAtBOL( byval i as ASTNODE ptr ) as integer
 declare function astFindLastInLine( byval i as ASTNODE ptr ) as ASTNODE ptr
 

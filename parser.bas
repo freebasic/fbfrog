@@ -637,13 +637,10 @@ sub cPurgeInlineComments( byval ast as ASTNODE ptr )
 	while( i )
 
 		if( i->id = TK_COMMENT ) then
-			select case( astGet( i->next ) )
-			case TK_EOL, -1
-
-			case else
+			if( astIsStmtSep( i->next ) = FALSE ) then
 				i = astRemove( ast, i )
 				continue while
-			end select
+			end if
 		end if
 
 		i = i->next
@@ -679,7 +676,7 @@ function cPpDefine _
 	astInsert( ast, ppdefine, begin )
 	astRemoveUntilBehindEol( ast, begin )
 
-	function = i
+	function = ppdefine
 end function
 
 sub cParsePpDirectives( byval ast as ASTNODE ptr )
@@ -693,6 +690,7 @@ sub cParsePpDirectives( byval ast as ASTNODE ptr )
 			select case( astGet( i->next ) )
 			case KW_DEFINE
 				i = cPpDefine( ast, i )
+				continue while
 
 			case KW_INCLUDE
 				if( astGet( i->next->next ) = TK_STRING ) then
@@ -707,4 +705,5 @@ sub cParsePpDirectives( byval ast as ASTNODE ptr )
 
 		i = i->next
 	wend
+
 end sub
