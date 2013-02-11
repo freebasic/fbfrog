@@ -1,6 +1,15 @@
 #include once "fbfrog.bi"
 #include once "crt.bi"
 
+type ASTSTATS
+	totalnodes	as integer
+	livenodes	as integer
+	maxnodes	as integer
+	maxstrlen	as integer
+end type
+
+dim shared as ASTSTATS stats
+
 dim shared as ASTINFO ast_info(0 to (TK__COUNT - 1)) = _
 { _
 	( TRUE , NULL  , @"file"        ), _
@@ -225,6 +234,10 @@ sub astDump( byval n as ASTNODE ptr )
 	reclevel -= 1
 end sub
 
+sub astStats( )
+	print "ast nodes: " & stats.maxnodes & " max, " & stats.totalnodes & " total"
+end sub
+
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 function strDuplicate( byval s as zstring ptr ) as zstring ptr
@@ -243,6 +256,8 @@ function strDuplicate( byval s as zstring ptr ) as zstring ptr
 	end if
 	p[length] = 0
 
+	stats.maxstrlen += length
+
 	function = p
 end function
 
@@ -257,6 +272,12 @@ function astNew _
 	n = callocate( sizeof( ASTNODE ) )
 	n->id = id
 	n->text = strDuplicate( text )
+
+	stats.totalnodes += 1
+	stats.livenodes += 1
+	if( stats.maxnodes < stats.livenodes ) then
+		stats.maxnodes = stats.livenodes
+	end if
 
 	function = n
 end function
@@ -274,6 +295,8 @@ sub astDelete( byval n as ASTNODE ptr )
 	deallocate( n->subtype )
 	deallocate( n->text )
 	deallocate( n )
+
+	stats.livenodes -= 1
 end sub
 
 function astClone( byval n as ASTNODE ptr ) as ASTNODE ptr

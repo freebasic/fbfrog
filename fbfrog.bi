@@ -337,6 +337,7 @@ type ASTNODE
 end type
 
 declare sub astDump( byval n as ASTNODE ptr )
+declare sub astStats( )
 
 declare function strDuplicate( byval s as zstring ptr ) as zstring ptr
 declare function astNew _
@@ -393,7 +394,7 @@ declare function astNewVARDECL _
 
 declare function lexLoadFile( byref filename as string ) as ASTNODE ptr
 declare sub cPurgeInlineComments( byval block as ASTNODE ptr )
-declare sub cParsePpDirectives( byval block as ASTNODE ptr )
+declare sub cParsePPDirectives( byval block as ASTNODE ptr )
 declare sub emitWriteFile( byval block as ASTNODE ptr, byref filename as string )
 declare sub emitStats( )
 

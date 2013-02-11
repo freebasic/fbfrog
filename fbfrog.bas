@@ -136,7 +136,7 @@ end sub
 		ast = lexLoadFile( f->normed )
 
 		cPurgeInlineComments( ast )
-		cParsePpDirectives( ast )
+		cParsePPDirectives( ast )
 
 		emitWriteFile( ast, pathStripExt( f->normed ) + ".bi" )
 
@@ -145,6 +145,10 @@ end sub
 
 		f = listGetNext( f )
 	wend
+
+	if( frog.verbose ) then
+		astStats( )
+	end if
 
 	print "done: ";
 	emitStats( )

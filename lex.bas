@@ -691,8 +691,8 @@ function lexLoadFile( byref filename as string ) as ASTNODE ptr
 	wend
 
 	if( frog.verbose ) then
-		print using "  lexer: read in & bytes, produced & tokens"; _
-			(cuint( lex.limit ) - cuint( lex.buffer )); count
+		print "  lex: ";str( cuint( lex.limit ) - cuint( lex.buffer ) );
+		print " bytes -> " & count & " tokens"
 	end if
 
 	deallocate( lex.buffer )

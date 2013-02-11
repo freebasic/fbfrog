@@ -648,7 +648,7 @@ sub cPurgeInlineComments( byval ast as ASTNODE ptr )
 end sub
 
 '' '#' DEFINE Identifier ['(' ParameterList ')'] Body Eol .
-function cPpDefine _
+private function cPPDefine _
 	( _
 		byval ast as ASTNODE ptr, _
 		byval i as ASTNODE ptr _
@@ -679,7 +679,7 @@ function cPpDefine _
 	function = ppdefine
 end function
 
-sub cParsePpDirectives( byval ast as ASTNODE ptr )
+sub cParsePPDirectives( byval ast as ASTNODE ptr )
 	dim as ASTNODE ptr i = any
 
 	i = ast->head
@@ -689,7 +689,7 @@ sub cParsePpDirectives( byval ast as ASTNODE ptr )
 		if( astIsAtBOL( i ) and (i->id = TK_HASH) ) then
 			select case( astGet( i->next ) )
 			case KW_DEFINE
-				i = cPpDefine( ast, i )
+				i = cPPDefine( ast, i )
 				continue while
 
 			case KW_INCLUDE
