@@ -381,11 +381,11 @@ declare function astNewVARDECL _
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-declare sub emitWriteFile( byref filename as string )
-declare sub emitStats( )
 declare function lexLoadFile( byref filename as string ) as ASTNODE ptr
 declare sub cPurgeInlineComments( byval block as ASTNODE ptr )
 declare sub cParsePpDirectives( byval block as ASTNODE ptr )
+declare sub emitWriteFile( byval block as ASTNODE ptr, byref filename as string )
+declare sub emitStats( )
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 

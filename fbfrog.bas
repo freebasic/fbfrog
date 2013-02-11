@@ -163,6 +163,26 @@ end sub
 	''         but weren't. (recursive #includes, all refcount > 0)
 	''
 
+	dim as FSFILE ptr f = any
+	dim as ASTNODE ptr ast = any
+
+	f = fsGetHead( )
+	while( f )
+
+		fsPush( f )
+		ast = lexLoadFile( f->normed )
+
+		cPurgeInlineComments( ast )
+		cParsePpDirectives( ast )
+
+		emitWriteFile( ast, pathStripExt( f->normed ) + ".bi" )
+
+		astDelete( ast )
+		fsPop( )
+
+		f = listGetNext( f )
+	wend
+
 	print "done: ";
 	emitStats( )
 	if( frog.verbose ) then

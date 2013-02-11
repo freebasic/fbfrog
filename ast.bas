@@ -286,7 +286,12 @@ function astGetText( byval n as ASTNODE ptr ) as zstring ptr
 	if( n->text ) then
 		function = n->text
 	else
-		function = token_text(n->id)
+		if( n->id >= TK_EXCL ) then
+			assert( n->id <> TK_ID )
+			function = token_text(n->id)
+		else
+			function = @""
+		end if
 	end if
 end function
 
