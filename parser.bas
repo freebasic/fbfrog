@@ -629,8 +629,29 @@ end function
 
 #endif
 
-sub parsePpDirectives( byval block as ASTNODE ptr )
-	dim as ASTNODE ptr i = any, j = any
+'' Remove all comments unless they're at EOL
+sub cPurgeInlineComments( byval block as ASTNODE ptr )
+	dim as ASTNODE ptr i = any
+
+	i = block->block.head
+	while( i )
+
+		if( i->id = TK_COMMENT ) then
+			select case( astGet( i->next ) )
+			case TK_EOL, -1
+
+			case else
+				i = astRemove( block, i )
+				continue while
+			end select
+		end if
+
+		i = i->next
+	wend
+end sub
+
+sub cParsePpDirectives( byval block as ASTNODE ptr )
+	dim as ASTNODE ptr i = any
 
 	i = block->block.head
 	while( i )
@@ -640,9 +661,7 @@ sub parsePpDirectives( byval block as ASTNODE ptr )
 			select case( astGet( i->next ) )
 			case KW_INCLUDE
 				if( astGet( i->next->next ) = TK_STRING ) then
-					j = astNew( TK_PPINCLUDE, i->next->next->text )
-
-					astInsert( block, j, i )
+					astInsert( block, astNew( TK_PPINCLUDE, i->next->next->text ), i )
 
 					'' '#' INCLUDE STRING
 					i = astRemove( block, i, 3 )
@@ -653,5 +672,4 @@ sub parsePpDirectives( byval block as ASTNODE ptr )
 
 		i = i->next
 	wend
-
 end sub

@@ -68,7 +68,7 @@ private sub hParseFileForIncludes( byval node as DEPNODE ptr )
 
 	fsPush( node->f )
 	block = lexLoadFile( node->f->normed )
-	parsePpDirectives( block )
+	cParsePpDirectives( block )
 
 	i = block->block.head
 	while( i )

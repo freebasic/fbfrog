@@ -381,6 +381,14 @@ declare function astNewVARDECL _
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
+declare sub emitWriteFile( byref filename as string )
+declare sub emitStats( )
+declare function lexLoadFile( byref filename as string ) as ASTNODE ptr
+declare sub cPurgeInlineComments( byval block as ASTNODE ptr )
+declare sub cParsePpDirectives( byval block as ASTNODE ptr )
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
 type FSFILE
 	pretty		as string  '' Pretty name from command line or #include
 	normed		as string  '' Normalized path used in hash table
@@ -455,8 +463,3 @@ declare function frogAddFile _
 	) as FROGFILE ptr
 declare sub frogSetVisited( byval f as FROGFILE ptr )
 declare function frogCanMerge( byval f as FROGFILE ptr ) as integer
-
-declare sub emitWriteFile( byref filename as string )
-declare sub emitStats( )
-declare function lexLoadFile( byref filename as string ) as ASTNODE ptr
-declare sub parsePpDirectives( byval block as ASTNODE ptr )
