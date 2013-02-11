@@ -422,44 +422,12 @@ declare sub depPrintFlat( )
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-enum
-	'' Translated already? (no matter which method)
-	FILE_VISITED = (1 shl 0)
-
-	'' Found during preparse? (if not, it's from the command line)
-	FILE_EXTRA = (1 shl 1)
-end enum
-
-type FROGFILE
-	flags		as uinteger
-end type
-
-enum
-	DEFINE_EMPTY = (1 shl 0)
-	DEFINE_CALL  = (1 shl 1)
-end enum
-
 type FROGSTUFF
 	dep		as integer
 	merge		as integer
 	verbose		as integer
-
-	definehash	as THASH
 end type
 
 extern as FROGSTUFF frog
 
 declare sub oops( byref message as string )
-declare function frogAddDefine _
-	( _
-		byval id as zstring ptr, _
-		byval flags as uinteger _
-	) as uinteger
-declare function frogAddFile _
-	( _
-		byref origname as string, _
-		byval is_preparse as integer, _
-		byval search_paths as integer _
-	) as FROGFILE ptr
-declare sub frogSetVisited( byval f as FROGFILE ptr )
-declare function frogCanMerge( byval f as FROGFILE ptr ) as integer

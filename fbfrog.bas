@@ -7,39 +7,6 @@ sub oops( byref message as string )
 	end 1
 end sub
 
-private sub frogInit( )
-	hashInit( @frog.definehash, 6 )
-end sub
-
-function frogAddDefine _
-	( _
-		byval id as zstring ptr, _
-		byval flags as uinteger _
-	) as uinteger
-
-	dim as uinteger hash = any
-	dim as THASHITEM ptr item = any
-
-	hash = hashHash( id )
-	item = hashLookup( @frog.definehash, id, hash )
-
-	if( item->s ) then
-		'' Already exists, add the flags. For lookups only, flags
-		'' should be 0, so nothing changes.
-		item->data = cast( any ptr, cuint( item->data ) or flags )
-		return cuint( item->data )
-	end if
-
-	'' If no information, don't bother adding, allowing this function
-	'' to be used for lookups only.
-	if( flags ) then
-		'' Add new
-		hashAdd( @frog.definehash, item, hash, strDuplicate( id ), cast( any ptr, flags ) )
-	end if
-
-	function = flags
-end function
-
 private sub hPrintHelp( )
 	print "fbfrog 0.1 from " + __DATE_ISO__
 	print "usage: fbfrog *.h"
@@ -74,11 +41,8 @@ end sub
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 	dim as string arg
-	dim as FROGFILE ptr first = any
-	dim as integer x = any
 
 	depInit( )
-	frogInit( )
 	fsInit( )
 
 	for i as integer = 1 to __FB_ARGC__-1
@@ -185,7 +149,4 @@ end sub
 
 	print "done: ";
 	emitStats( )
-	if( frog.verbose ) then
-		hashStats( @frog.definehash, "define" )
-	end if
 	end 0
