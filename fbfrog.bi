@@ -94,8 +94,9 @@ declare sub hScanDirectoryForH _
 
 '' When changing, update the table in ast.bas too!
 enum
-	TK_BLOCK
+	TK_FILE
 	TK_PPINCLUDE
+	TK_PPDEFINE
 	TK_STRUCT
 	TK_PROCDECL
 	TK_VARDECL
@@ -312,32 +313,23 @@ enum
 	TYPE_UDT
 end enum
 
-type ASTNODE as ASTNODE_
-
-type ASTNODEBLOCK
-	head		as ASTNODE ptr
-	tail		as ASTNODE ptr
-end type
-
-type ASTNODEVARDECL
-	dtype		as integer
-	subtype		as zstring ptr
-end type
-
-type ASTNODE_
+type ASTNODE
 	id		as integer      '' AST_*, TK_*, KW_*
 	text		as zstring ptr  '' Identifiers/literals, or NULL
 
+	'' Data type (vars, fields, params, function results)
+	dtype		as integer
+	subtype		as zstring ptr
+
+	'' Child nodes, if any (fields, params, #define body, #if condition)
+	head		as ASTNODE ptr
+	tail		as ASTNODE ptr
+
+	'' Linked list of siblings
 	next		as ASTNODE ptr
 	prev		as ASTNODE ptr
-
-	union
-		block		as ASTNODEBLOCK
-		vardecl		as ASTNODEVARDECL
-	end union
 end type
 
-#define astIsBLOCK( n ) ((n)->id = TK_BLOCK)
 declare sub astDump( byval n as ASTNODE ptr )
 
 declare function strDuplicate( byval s as zstring ptr ) as zstring ptr
@@ -346,30 +338,41 @@ declare function astNew _
 		byval id as integer, _
 		byval text as zstring ptr = NULL _
 	) as ASTNODE ptr
-declare sub astDelete( byval t as ASTNODE ptr )
+declare sub astDelete( byval n as ASTNODE ptr )
+declare function astClone( byval n as ASTNODE ptr ) as ASTNODE ptr
 declare function astGet( byval n as ASTNODE ptr ) as integer
 declare function astGetText( byval n as ASTNODE ptr ) as zstring ptr
 declare function astIsAtBOL( byval i as ASTNODE ptr ) as integer
+declare function astFindLastInLine( byval i as ASTNODE ptr ) as ASTNODE ptr
 
-declare function astNewBLOCK( ) as ASTNODE ptr
-declare function astCount( byval block as ASTNODE ptr ) as integer
+declare sub astCloneInto _
+	( _
+		byval parent as ASTNODE ptr, _
+		byval head as ASTNODE ptr, _
+		byval tail as ASTNODE ptr _
+	)
 declare sub astInsert _
 	( _
-		byval block as ASTNODE ptr, _
+		byval parent as ASTNODE ptr, _
 		byval n as ASTNODE ptr, _
 		byval ref as ASTNODE ptr _
 	)
-declare sub astAppend( byval block as ASTNODE ptr, byval n as ASTNODE ptr )
+declare sub astAppend( byval parent as ASTNODE ptr, byval n as ASTNODE ptr )
 declare function astContains _
 	( _
-		byval t as ASTNODE ptr, _
-		byval n as ASTNODE ptr _
+		byval tree as ASTNODE ptr, _
+		byval lookfor as ASTNODE ptr _
 	) as integer
 declare function astRemove _
 	( _
-		byval block as ASTNODE ptr, _
+		byval parent as ASTNODE ptr, _
 		byval n as ASTNODE ptr, _
 		byval count as integer = 1 _
+	) as ASTNODE ptr
+declare function astRemoveUntilBehindEol _
+	( _
+		byval parent as ASTNODE ptr, _
+		byval i as ASTNODE ptr _
 	) as ASTNODE ptr
 
 declare function astNewVARDECL _

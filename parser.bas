@@ -630,10 +630,10 @@ end function
 #endif
 
 '' Remove all comments unless they're at EOL
-sub cPurgeInlineComments( byval block as ASTNODE ptr )
+sub cPurgeInlineComments( byval ast as ASTNODE ptr )
 	dim as ASTNODE ptr i = any
 
-	i = block->block.head
+	i = ast->head
 	while( i )
 
 		if( i->id = TK_COMMENT ) then
@@ -641,7 +641,7 @@ sub cPurgeInlineComments( byval block as ASTNODE ptr )
 			case TK_EOL, -1
 
 			case else
-				i = astRemove( block, i )
+				i = astRemove( ast, i )
 				continue while
 			end select
 		end if
@@ -650,21 +650,56 @@ sub cPurgeInlineComments( byval block as ASTNODE ptr )
 	wend
 end sub
 
-sub cParsePpDirectives( byval block as ASTNODE ptr )
+'' '#' DEFINE Identifier ['(' ParameterList ')'] Body Eol .
+function cPpDefine _
+	( _
+		byval ast as ASTNODE ptr, _
+		byval i as ASTNODE ptr _
+	) as ASTNODE ptr
+
+	dim as ASTNODE ptr begin = any, ppdefine = any
+
+	'' '#' DEFINE
+	begin = i
+	i = i->next->next
+
+	'' Identifier?
+	if( astGet( i ) <> TK_ID ) then
+		return begin
+	end if
+	ppdefine = astNew( TK_PPDEFINE, i->text )
+	i = i->next
+
+	'' '(' and not separated from the Identifier with spaces?
+	'' TODO
+
+	'' Body
+	astCloneInto( ppdefine, i, astFindLastInLine( i ) )
+
+	astInsert( ast, ppdefine, begin )
+	astRemoveUntilBehindEol( ast, begin )
+
+	function = i
+end function
+
+sub cParsePpDirectives( byval ast as ASTNODE ptr )
 	dim as ASTNODE ptr i = any
 
-	i = block->block.head
+	i = ast->head
 	while( i )
 
 		'' '#' at BOL?
 		if( astIsAtBOL( i ) and (i->id = TK_HASH) ) then
 			select case( astGet( i->next ) )
+			case KW_DEFINE
+				i = cPpDefine( ast, i )
+
 			case KW_INCLUDE
 				if( astGet( i->next->next ) = TK_STRING ) then
-					astInsert( block, astNew( TK_PPINCLUDE, i->next->next->text ), i )
+					astInsert( ast, astNew( TK_PPINCLUDE, i->next->next->text ), i )
 
 					'' '#' INCLUDE STRING
-					i = astRemove( block, i, 3 )
+					i = astRemoveUntilBehindEol( ast, i )
 					continue while
 				end if
 			end select

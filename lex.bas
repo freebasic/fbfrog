@@ -67,7 +67,7 @@ type LEXSTUFF
 	i	as ubyte ptr  '' Current char, will always be <= limit
 	limit	as ubyte ptr  '' (end of buffer)
 
-	block	as ASTNODE ptr
+	ast	as ASTNODE ptr
 
 	kwhash	as THASH
 end type
@@ -90,22 +90,22 @@ private sub hAddTextToken( byval tk as integer, byval begin as ubyte ptr )
 	'' Is it a C keyword?
 	if( item->s ) then
 		'' Then use the proper KW_* instead of TK_ID
-		astAppend( lex.block, astNew( cint( item->data ) ) )
+		astAppend( lex.ast, astNew( cint( item->data ) ) )
 	else
 		'' TK_ID
-		astAppend( lex.block, astNew( tk, begin ) )
+		astAppend( lex.ast, astNew( tk, begin ) )
 	end if
 
 	lex.i[0] = old
 end sub
 
 private sub hAddTodo( byval text as zstring ptr )
-	astAppend( lex.block, astNew( TK_TODO, text ) )
+	astAppend( lex.ast, astNew( TK_TODO, text ) )
 end sub
 
 private sub hReadBytes( byval tk as integer, byval length as integer )
 	lex.i += length
-	astAppend( lex.block, astNew( tk ) )
+	astAppend( lex.ast, astNew( tk ) )
 end sub
 
 private sub hReadLineComment( )
@@ -514,10 +514,10 @@ private sub lexNext( )
 		case else
 			'' If it's an #include, parse <...> as string literal
 			'' include?
-			if( astGet( lex.block->block.tail ) = KW_INCLUDE ) then
+			if( astGet( lex.ast->tail ) = KW_INCLUDE ) then
 				'' '#' at BOL?
-				if( (   astGet( lex.block->block.tail->prev ) = TK_HASH) and _
-				    astIsAtBOL( lex.block->block.tail->prev ) ) then
+				if( (   astGet( lex.ast->tail->prev ) = TK_HASH) and _
+				    astIsAtBOL( lex.ast->tail->prev ) ) then
 					hReadString( )
 					exit select
 				end if
@@ -676,22 +676,25 @@ private sub hInitKeywords( )
 end sub
 
 function lexLoadFile( byref filename as string ) as ASTNODE ptr
-	lex.block = astNewBLOCK( )
+	dim as integer count = any
+
+	lex.ast = astNew( TK_FILE, filename )
 	hLoadFile( filename )
 	hComplainAboutEmbeddedNulls( )
 	hInitKeywords( )
 
 	'' Tokenize and insert into tk buffer
+	count = 0
 	while( lex.i < lex.limit )
+		count += 1
 		lexNext( )
 	wend
 
 	if( frog.verbose ) then
 		print using "  lexer: read in & bytes, produced & tokens"; _
-			(culng( lex.limit ) - culng( lex.buffer )); _
-			astCount( lex.block )
+			(cuint( lex.limit ) - cuint( lex.buffer )); count
 	end if
 
 	deallocate( lex.buffer )
-	function = lex.block
+	function = lex.ast
 end function

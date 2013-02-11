@@ -59,78 +59,87 @@ sub emitStmt( byref ln as string )
 	''emitEol( )
 end sub
 
-sub emitWriteFile( byval block as ASTNODE ptr, byref filename as string )
+sub emitNode( byval n as ASTNODE ptr )
 	dim as ASTNODE ptr i = any
 
-	emitInit( filename )
+	select case as const( n->id )
+	case TK_FILE
+		emit( "'' translated from: " + *n->text )
 
-	i = block->block.head
+	case TK_PPINCLUDE
+		emitStmt( "#include """ + *n->text + """" )
+
+	case TK_PPDEFINE
+		emit( "#define " + *n->text )
+
+	case TK_EOL
+		emitEol( )
+
+	case TK_TODO
+		emit( "'' TODO" )
+
+		if( n->text ) then
+			emit( ": " )
+			emit( n->text )
+		end if
+
+		stuff.todocount += 1
+
+	case TK_COMMENT
+		emit( "/'" )
+		emit( astGetText( n ) )
+		emit( "'/" )
+
+	case TK_LINECOMMENT
+		emit( "''" )
+		emit( astGetText( n ) )
+
+	case TK_DECNUM
+		emit( astGetText( n ) )
+
+	case TK_HEXNUM
+		emit( "&h" )
+		emit( ucase( *astGetText( n ) ) )
+
+	case TK_OCTNUM
+		emit( "&o" )
+		emit( astGetText( n ) )
+
+	case TK_STRING
+		emit( """" )
+		emit( astGetText( n ) )
+		emit( """" )
+
+	case TK_WSTRING
+		emit( "wstr( """ )
+		emit( astGetText( n ) )
+		emit( """ )" )
+
+	case TK_ESTRING
+		emit( "!""" )
+		emit( astGetText( n ) )
+		emit( """" )
+
+	case TK_EWSTRING
+		emit( "wstr( !""" )
+		emit( astGetText( n ) )
+		emit( """ )" )
+
+	case else
+		emit( astGetText( n ) )
+
+	end select
+
+	i = n->head
 	while( i )
-		select case as const( i->id )
-		case TK_EOL
-			emitEol( )
-
-		case TK_PPINCLUDE
-			emitStmt( "#include """ + *i->text + """" )
-
-		case TK_TODO
-			emit( "'' TODO" )
-
-			if( i->text ) then
-				emit( ": " )
-				emit( i->text )
-			end if
-
-			stuff.todocount += 1
-
-		case TK_COMMENT
-			emit( "/'" )
-			emit( astGetText( i ) )
-			emit( "'/" )
-
-		case TK_LINECOMMENT
-			emit( "''" )
-			emit( astGetText( i ) )
-
-		case TK_DECNUM
-			emit( astGetText( i ) )
-
-		case TK_HEXNUM
-			emit( "&h" )
-			emit( ucase( *astGetText( i ) ) )
-
-		case TK_OCTNUM
-			emit( "&o" )
-			emit( astGetText( i ) )
-
-		case TK_STRING
-			emit( """" )
-			emit( astGetText( i ) )
-			emit( """" )
-
-		case TK_WSTRING
-			emit( "wstr( """ )
-			emit( astGetText( i ) )
-			emit( """ )" )
-
-		case TK_ESTRING
-			emit( "!""" )
-			emit( astGetText( i ) )
-			emit( """" )
-
-		case TK_EWSTRING
-			emit( "wstr( !""" )
-			emit( astGetText( i ) )
-			emit( """ )" )
-
-		case else
-			emit( astGetText( i ) )
-
-		end select
-
+		emitNode( i )
 		i = i->next
 	wend
+end sub
 
+sub emitWriteFile( byval ast as ASTNODE ptr, byref filename as string )
+	emitInit( filename )
+	emitNode( ast )
 	emitEnd( )
 end sub
 

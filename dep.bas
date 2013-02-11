@@ -59,7 +59,7 @@ end sub
 
 private sub hParseFileForIncludes( byval node as DEPNODE ptr )
 	dim as DEPNODE ptr incnode = any
-	dim as ASTNODE ptr block = any, i = any
+	dim as ASTNODE ptr ast = any, i = any
 
 	if( len( node->f->normed ) = 0 ) then
 		node->missing = TRUE
@@ -67,10 +67,10 @@ private sub hParseFileForIncludes( byval node as DEPNODE ptr )
 	end if
 
 	fsPush( node->f )
-	block = lexLoadFile( node->f->normed )
-	cParsePpDirectives( block )
+	ast = lexLoadFile( node->f->normed )
+	cParsePpDirectives( ast )
 
-	i = block->block.head
+	i = ast->head
 	while( i )
 
 		if( i->id = TK_PPINCLUDE ) then
@@ -83,7 +83,7 @@ private sub hParseFileForIncludes( byval node as DEPNODE ptr )
 		i = i->next
 	wend
 
-	astDelete( block )
+	astDelete( ast )
 	fsPop( )
 end sub
 
