@@ -3,6 +3,8 @@
 #include once "fbfrog.bi"
 #include once "parser.bi"
 
+declare sub emitNode( byval n as ASTNODE ptr )
+
 type EmitterStuff
 	fo		as integer '' Output file
 	indentlevel	as integer
@@ -43,34 +45,48 @@ private sub emitEol( )
 	#endif
 end sub
 
-sub emitIndentBegin( )
+private sub emitIndentBegin( )
 	stuff.indentlevel += 1
 end sub
 
-sub emitIndentEnd( )
+private sub emitIndentEnd( )
 	stuff.indentlevel -= 1
 end sub
 
-sub emitStmt( byref ln as string )
+private sub emitStmtBegin( byref ln as string )
 	for i as integer = 1 to stuff.indentlevel
 		emit( !"\t" )
 	next
 	emit( ln )
-	''emitEol( )
 end sub
 
-sub emitNode( byval n as ASTNODE ptr )
-	dim as ASTNODE ptr i = any
+private sub emitStmt( byref ln as string )
+	emitStmtBegin( ln )
+	emitEol( )
+end sub
 
+private sub emitChildren( byval n as ASTNODE ptr )
+	dim as ASTNODE ptr i = any
+	i = n->head
+	while( i )
+		emitNode( i )
+		i = i->next
+	wend
+end sub
+
+private sub emitNode( byval n as ASTNODE ptr )
 	select case as const( n->id )
 	case TK_FILE
-		emit( "'' translated from: " + *n->text )
+		emitStmt( "'' translated from: " + *n->text )
+		emitChildren( n )
 
 	case TK_PPINCLUDE
 		emitStmt( "#include """ + *n->text + """" )
 
 	case TK_PPDEFINE
-		emit( "#define " + *n->text )
+		emitStmtBegin( "#define " + *n->text )
+		emitChildren( n )
+		emitEol( )
 
 	case TK_EOL
 		emitEol( )
@@ -129,12 +145,6 @@ sub emitNode( byval n as ASTNODE ptr )
 		emit( astGetText( n ) )
 
 	end select
-
-	i = n->head
-	while( i )
-		emitNode( i )
-		i = i->next
-	wend
 end sub
 
 sub emitWriteFile( byval ast as ASTNODE ptr, byref filename as string )
