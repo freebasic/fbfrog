@@ -1,5 +1,7 @@
 #include once "fbfrog.bi"
 
+declare function cStructCompound( byval x as integer ) as integer
+
 private function cFindEOL( byval x as integer ) as integer
 	while( tkIsStmtSep( x ) = FALSE )
 		x += 1
@@ -146,15 +148,34 @@ end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-#if 0
+private function cStructBody( byval x as integer ) as integer
+	dim as integer old = any
 
-function cStructCompound _
-	( _
-		byval ast as ASTNODE ptr, _
-		byval x as ASTNODE ptr _
-	) as ASTNODE ptr
+	'' (StructCompound|Field|PPDirective)*
+	do
+		old = x
 
-	dim as ASTNODE ptr begin = any, id = any, newstruct = any
+		x = cStructCompound( x )
+		'x = cField( x )
+		x = cPPDirective( x )
+
+		'' '}'?
+		select case( tkGet( x ) )
+		case TK_RBRACE, TK_EOF
+			exit do
+		end select
+
+		if( old = x ) then
+			x += 1
+		end if
+	loop
+
+	function = x
+end function
+
+private function cStructCompound( byval x as integer ) as integer
+	dim as integer begin = any
+	dim as zstring ptr id = any
 
 	'' {STRUCT|UNION} [Identifier] '{'
 	'' ...
@@ -162,67 +183,59 @@ function cStructCompound _
 	begin = x
 
 	'' {STRUCT|UNION}
-	select case( astGet( x ) )
+	select case( tkGet( x ) )
 	case KW_STRUCT, KW_UNION
 
 	case else
 		return begin
 	end select
-	x = x->next
+	x += 1
 
 	'' [Identifier]
-	if( astGet( x ) = TK_ID ) then
-		id = x
-		x = x->next
+	if( tkGet( x ) = TK_ID ) then
+		id = tkGetText( x )
+		x += 1
 	else
 		id = NULL
 	end if
 
 	'' '{'
-	if( astGet( x ) <> TK_LBRACE ) then
+	if( tkGet( x ) <> TK_LBRACE ) then
 		return begin
 	end if
 
-	newstruct = astNew( TK_STRUCT, id )
+	'' STRUCT|UNION [Identifier] '{'   ->   STRUCTBEGIN
+	tkInsert( begin, TK_STRUCTBEGIN, id )
+	begin += 1
+	x += 1
+	tkRemove( begin, x )
+	x = begin
 
-	bodybegin = x->next
-	bodyend   = astFindLastBeforeClosingParen( x )
-
-	x = bodyend->next
+	begin = cStructBody( begin )
+	x = begin
 
 	'' '}'
-	if( astGet( x ) = TK_RBRACE ) then
-		x = x->next
+	if( tkGet( x ) = TK_RBRACE ) then
+		x += 1
 	end if
 
 	'' [';']
-	if( astGet( x ) = TK_SEMI ) then
-		x = x->next
+	if( tkGet( x ) = TK_SEMI ) then
+		x += 1
 	end if
 
-	'' Insert a TK_STRUCT in place of the struct compound tokens,
-	'' and copy the body into it
+	'' ['}' ';']   ->   STRUCTEND
+	tkInsert( begin, TK_STRUCTEND )
+	begin += 1
+	x += 1
+	tkRemove( begin, x )
 
-			astCloneInto( newtk, i, astFindLastInLine( i ) )
-
-			astInsert( ast, newtk, begin )
-			i = astRemoveUntilBehindEol( ast, begin )
-
-
-
-	function
+	function = x
 end function
 
-sub cToplevel( byval ast as ASTNODE ptr )
-	dim as ASTNODE ptr x = any, begin = any
-
-	x = ast->head
-	while( x )
-		begin = x
-	wend
-end sub
-
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+#if 0
 
 enum
 	DECL_PARAM = 0
@@ -1151,8 +1164,10 @@ sub cMultdecl( byval decl as integer )
 	function = x
 end function
 
-sub cDeclarations( byval ast as ASTNODE ptr )
-	dim as ASTNODE ptr i = any
+#endif
+
+sub cToplevel( )
+	dim as integer x = any, old = any
 
 	'' Toplevel declarations: global variables (including procedure
 	'' pointers), procedure declarations, and also typedefs, since they
@@ -1163,8 +1178,17 @@ sub cDeclarations( byval ast as ASTNODE ptr )
 	''
 	'' [TYPEDEF|EXTERN|STATIC] multdecl
 
-	i = ast->head
-	while( i )
+	x = 0
+	do
+		old = x
+
+		x = cStructCompound( x )
+
+		if( tkGet( x ) = TK_EOF ) then
+			exit do
+		end if
+
+#if 0
 		decl = DECL_TOP
 
 		select case( parseGet( ) )
@@ -1178,7 +1202,10 @@ sub cDeclarations( byval ast as ASTNODE ptr )
 		end select
 
 		cMultDecl( decl )
-	wend
-end sub
-
 #endif
+
+		if( x = old ) then
+			x += 1
+		end if
+	loop
+end sub

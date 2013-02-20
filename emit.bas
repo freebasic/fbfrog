@@ -42,11 +42,11 @@ private sub emitEol( )
 	#endif
 end sub
 
-private sub emitIndentBegin( )
+private sub emitIndent( )
 	stuff.indentlevel += 1
 end sub
 
-private sub emitIndentEnd( )
+private sub emitUnindent( )
 	stuff.indentlevel -= 1
 end sub
 
@@ -62,7 +62,7 @@ private sub emitStmt( byref ln as string )
 	emitEol( )
 end sub
 
-private sub emitToken( byval x as integer )
+private function emitTk( byval x as integer ) as integer
 	dim as zstring ptr s = any
 
 	select case as const( tkGet( x ) )
@@ -72,6 +72,30 @@ private sub emitToken( byval x as integer )
 	case TK_PPDEFINE
 		emitStmtBegin( "#define " + *tkGetText( x ) )
 		emitEol( )
+
+	case TK_STRUCTBEGIN
+		emitStmtBegin( "type" )
+		s = tkGetText( x )
+		if( s ) then
+			emit( " " )
+			emit( s )
+		end if
+		emitEol( )
+
+		emitIndent( )
+		do
+			x += 1
+
+			if( tkGet( x ) = TK_STRUCTEND ) then
+				exit do
+			end if
+
+			assert( tkGet( x ) <> TK_EOF )
+			emitTk( x )
+		loop
+		emitUnindent( )
+
+		emitStmt( "end type" )
 
 	case TK_EOL
 		emitEol( )
@@ -131,7 +155,10 @@ private sub emitToken( byval x as integer )
 		emit( tkGetText( x ) )
 
 	end select
-end sub
+
+	x += 1
+	function = x
+end function
 
 sub emitWriteFile( byref filename as string )
 	dim as integer x = any
@@ -140,8 +167,7 @@ sub emitWriteFile( byref filename as string )
 
 	x = 0
 	while( tkGet( x ) <> TK_EOF )
-		emitToken( x )
-		x += 1
+		x = emitTk( x )
 	wend
 
 	emitEnd( )

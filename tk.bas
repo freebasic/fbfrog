@@ -6,7 +6,8 @@ dim shared as TOKENINFO tk_info(0 to (TK__COUNT - 1)) = _
 	( TRUE , NULL  , @"eof"         ), _
 	( TRUE , NULL  , @"#include"    ), _
 	( TRUE , NULL  , @"#define"     ), _
-	( TRUE , NULL  , @"struct"      ), _
+	( TRUE , NULL  , @"structbegin" ), _
+	( TRUE , NULL  , @"structend"   ), _
 	( TRUE , NULL  , @"procdecl"    ), _
 	( TRUE , NULL  , @"vardecl"     ), _
 	( TRUE , NULL  , @"todo"        ), _

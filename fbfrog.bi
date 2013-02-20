@@ -97,7 +97,8 @@ enum
 	TK_EOF
 	TK_PPINCLUDE
 	TK_PPDEFINE
-	TK_STRUCT
+	TK_STRUCTBEGIN
+	TK_STRUCTEND
 	TK_PROCDECL
 	TK_VARDECL
 
@@ -365,6 +366,7 @@ declare sub emitStats( )
 
 declare sub cPurgeInlineComments( )
 declare sub cPPDirectives( )
+declare sub cToplevel( )
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
