@@ -146,18 +146,34 @@ sub cPPDirectives( )
 	loop
 end sub
 
+'' After PP directives were parsed, EOLs can be removed completely
+sub cPurgeEOLs( )
+	dim as integer x = any
+
+	x = 0
+	do
+		select case( tkGet( x ) )
+		case TK_EOL
+			tkRemove( x, x )
+			x -= 1
+
+		case TK_EOF
+			exit do
+		end select
+
+		x += 1
+	loop
+end sub
+
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 private function cStructBody( byval x as integer ) as integer
 	dim as integer old = any
 
-	'' (StructCompound|Field|PPDirective)*
 	do
 		old = x
 
 		x = cStructCompound( x )
-		'x = cField( x )
-		x = cPPDirective( x )
 
 		'' '}'?
 		select case( tkGet( x ) )

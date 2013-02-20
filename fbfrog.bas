@@ -7,6 +7,13 @@ sub oops( byref message as string )
 	end 1
 end sub
 
+private sub frogEnd( )
+	if( frog.verbose ) then
+		tkStats( )
+	end if
+	end 0
+end sub
+
 private sub hPrintHelp( )
 	print "fbfrog 0.1 from " + __DATE_ISO__
 	print "usage: fbfrog *.h"
@@ -108,7 +115,7 @@ end sub
 	if( frog.dep ) then
 		depScan( )
 		depPrintFlat( )
-		end 0
+		frogEnd( )
 	end if
 
 	''
@@ -137,6 +144,7 @@ end sub
 
 		cPurgeInlineComments( )
 		cPPDirectives( )
+		cPurgeEOLs( )
 		cToplevel( )
 
 		emitWriteFile( pathStripExt( f->normed ) + ".bi" )
@@ -147,10 +155,7 @@ end sub
 		f = listGetNext( f )
 	wend
 
-	if( frog.verbose ) then
-		tkStats( )
-	end if
-
 	print "done: ";
 	emitStats( )
-	end 0
+
+	frogEnd( )
