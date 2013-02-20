@@ -678,6 +678,7 @@ end sub
 function lexLoadFile( byval x as integer, byref filename as string ) as integer
 	dim as integer count = any
 
+	count = 0
 	lex.x = x
 	hLoadFile( filename )
 	hComplainAboutEmbeddedNulls( )
