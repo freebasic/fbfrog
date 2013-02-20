@@ -1,18 +1,9 @@
 #include once "fbfrog.bi"
 #include once "crt.bi"
 
-type ASTSTATS
-	totalnodes	as integer
-	livenodes	as integer
-	maxnodes	as integer
-	maxstrlen	as integer
-end type
-
-dim shared as ASTSTATS stats
-
-dim shared as ASTINFO ast_info(0 to (TK__COUNT - 1)) = _
+dim shared as TOKENINFO tk_info(0 to (TK__COUNT - 1)) = _
 { _
-	( TRUE , NULL  , @"file"        ), _
+	( TRUE , NULL  , @"eof"         ), _
 	( TRUE , NULL  , @"#include"    ), _
 	( TRUE , NULL  , @"#define"     ), _
 	( TRUE , NULL  , @"struct"      ), _
@@ -137,7 +128,7 @@ dim shared as ASTINFO ast_info(0 to (TK__COUNT - 1)) = _
 	( FALSE, @"as"      , @"kw" ), _
 	( FALSE, @"byte"    , @"kw" ), _
 	( FALSE, @"byval"   , @"kw" ), _
-	( FALSE, @"cast"    , @"kw" ), _
+	( FALSE, @"ctk"    , @"kw" ), _
 	( FALSE, @"cdecl"   , @"kw" ), _
 	( FALSE, @"cptr"    , @"kw" ), _
 	( FALSE, @"declare" , @"kw" ), _
@@ -183,62 +174,39 @@ dim shared as ASTINFO ast_info(0 to (TK__COUNT - 1)) = _
 	( FALSE, @"zstring" , @"kw" )  _
 }
 
-sub astDump( byval n as ASTNODE ptr )
-	static as integer reclevel
-	dim as ASTNODE ptr i = any
-	dim as string s
+type ONETOKEN
+	id		as short  '' TK_*
+	flags		as short
+	text		as zstring ptr  '' Identifiers/literals, or NULL
 
-	if( reclevel > 0 ) then
-		print space( reclevel * 4 );
-	end if
+	'' Data type (vars, fields, params, function results)
+	dtype		as integer
+	subtype		as zstring ptr
+end type
 
-	if( n = NULL ) then
-		print "[NULL]"
-		exit sub
-	end if
+type TOKENBUFFER
+	'' Gap buffer of tokens
+	p		as ONETOKEN ptr  '' Buffer containing: front,gap,back
+	front		as integer  '' Front length; the gap's offset
+	gap		as integer  '' Gap length
+	size		as integer  '' Front + back
 
-	if( (n->id < 0) or (n->id >= TK__COUNT) ) then
-		print "[invalid id: " & n->id & "]"
-		exit sub
-	end if
+	'' Static EOF token for "error recovery"
+	eof		as ONETOKEN
+end type
 
-	#if 0
-		print "[";hex( n, 8 );"] ";
-	#endif
+type TOKENSTATS
+	maxsize		as integer  '' Highest amount of tokens at once
+	reallocs	as integer  '' Buffer reallocations
+	inserts		as integer
+	deletes		as integer
+	lookups		as integer
+	movedtokens	as longint
+	maxstrlen	as integer
+end type
 
-	s = *ast_info(n->id).debug
-
-	'' Align if there are siblings
-	if( (reclevel > 0) and ((n->next <> NULL) or (n->prev <> NULL)) ) then
-		s += space( 8 - len( s ) )
-	end if
-	s = "[" + s + "] "
-
-	if( n->text ) then
-		s += "'" + *n->text + "'"
-	else
-		if( ast_info(n->id).text ) then
-			s += "'" + *ast_info(n->id).text + "'"
-		end if
-	end if
-
-	print s
-
-	'' Children, if any
-	reclevel += 1
-	i = n->head
-	while( i )
-		astDump( i )
-		i = i->next
-	wend
-	reclevel -= 1
-end sub
-
-sub astStats( )
-	print "ast nodes: " & stats.maxnodes & " max, " & stats.totalnodes & " total"
-end sub
-
-''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+dim shared as TOKENBUFFER tk
+dim shared as TOKENSTATS stats
 
 function strDuplicate( byval s as zstring ptr ) as zstring ptr
 	dim as zstring ptr p = any
@@ -261,266 +229,233 @@ function strDuplicate( byval s as zstring ptr ) as zstring ptr
 	function = p
 end function
 
-function astNew _
-	( _
-		byval id as integer, _
-		byval text as zstring ptr = NULL _
-	) as ASTNODE ptr
+sub tkInit( )
+	tk.p = NULL
+	tk.front = 0
+	tk.gap = 0
+	tk.size = 0
 
-	dim as ASTNODE ptr n = any
-
-	n = callocate( sizeof( ASTNODE ) )
-	n->id = id
-	n->text = strDuplicate( text )
-
-	stats.totalnodes += 1
-	stats.livenodes += 1
-	if( stats.maxnodes < stats.livenodes ) then
-		stats.maxnodes = stats.livenodes
-	end if
-
-	function = n
-end function
-
-sub astDelete( byval n as ASTNODE ptr )
-	dim as ASTNODE ptr i = any, nxt = any
-
-	i = n->head
-	while( i )
-		nxt = i->next
-		astDelete( i )
-		i = nxt
-	wend
-
-	deallocate( n->subtype )
-	deallocate( n->text )
-	deallocate( n )
-
-	stats.livenodes -= 1
+	tk.eof.id = TK_EOF
+	tk.eof.flags = 0
+	tk.eof.text = NULL
 end sub
 
-function astClone( byval n as ASTNODE ptr ) as ASTNODE ptr
-	dim as ASTNODE ptr c = any
+private function tkAccess( byval x as integer ) as ONETOKEN ptr
+	stats.lookups += 1
 
-	c = astNew( n->id, n->text )
-
-	c->dtype = n->dtype
-	c->subtype = strDuplicate( n->subtype )
-
-	astCloneInto( c, n->head, n->tail )
-
-	function = c
-end function
-
-function astGet( byval n as ASTNODE ptr ) as integer
-	if( n ) then
-		function = n->id
+	'' Inside end?
+	if( x >= tk.front ) then
+		'' Invalid?
+		if( x >= tk.size ) then
+			return @tk.eof
+		end if
+		x += tk.gap
 	else
-		function = -1
+		'' Invalid?
+		if( x < 0 ) then
+			return @tk.eof
+		end if
 	end if
+
+	function = tk.p + x
 end function
 
-function astGetText( byval n as ASTNODE ptr ) as zstring ptr
-	if( n->text ) then
-		function = n->text
+sub tkEnd( )
+	for i as integer = 0 to tk.size - 1
+		deallocate( tkAccess( i )->text )
+	next
+	deallocate( tk.p )
+end sub
+
+sub tkStats( )
+	print "  tokens: " & stats.maxsize & " max, " & _
+		stats.reallocs & " resizes, " & _
+		stats.inserts & " in, " & _
+		stats.deletes & " out, " & _
+		stats.lookups & " lookups, " & _
+		stats.movedtokens & " tokens moved, " & _
+		stats.maxstrlen & " max strlen"
+end sub
+
+function tkDumpOne( byval x as integer ) as string
+	dim as ONETOKEN ptr p = any
+	dim as string s
+
+	p = tkAccess( x )
+	s = "[" + *tk_info(p->id).debug + "] "
+
+	if( p->text ) then
+		s += "'" + *p->text + "'"
 	else
-		if( n->id >= TK_EXCL ) then
-			assert( n->id <> TK_ID )
-			function = ast_info(n->id).text
+		if( tk_info(p->id).text ) then
+			s += "'" + *tk_info(p->id).text + "'"
+		end if
+	end if
+
+	function = s
+end function
+
+sub tkDump( )
+	for i as integer = 0 to tk.size - 1
+		print tkDumpOne( i )
+	next
+end sub
+
+private sub tkRawMoveTo( byval x as integer )
+	dim as integer old = any
+	dim as ONETOKEN ptr p = any
+
+	if( x < 0 ) then
+		x = 0
+	elseif( x > tk.size ) then
+		x = tk.size
+	end if
+
+	old = tk.front
+	if( x < old ) then
+		'' Move gap left
+		p = tk.p + x
+		memmove( p + tk.gap, p, (old - x) * sizeof( ONETOKEN ) )
+		stats.movedtokens += old - x
+	elseif( x > old ) then
+		'' Move gap right
+		p = tk.p + old
+		memmove( p, p + tk.gap, (x - old) * sizeof( ONETOKEN ) )
+		stats.movedtokens += x - old
+	end if
+
+	tk.front = x
+end sub
+
+'' Insert token at current position, the current position moves forward.
+private sub tkRawInsert( byval id as integer, byval text as zstring ptr )
+	const NEWGAP = 512
+	dim as ONETOKEN ptr p = any
+
+	'' Make room for the new data, if necessary
+	if( tk.gap = 0 ) then
+		'' Reallocate the buffer, then move the back block to the
+		'' end of the new buffer, so that the gap in the middle grows.
+		stats.reallocs += 1
+		tk.p = reallocate( tk.p, (tk.size + NEWGAP) * sizeof( ONETOKEN ) )
+		p = tk.p + tk.front
+		if( tk.size > tk.front ) then
+			memmove( p + NEWGAP, p + tk.gap, _
+			         (tk.size - tk.front) * sizeof( ONETOKEN ) )
+			stats.movedtokens += tk.size - tk.front
+		end if
+		tk.gap = NEWGAP
+	else
+		p = tk.p + tk.front
+	end if
+
+	p->id = id
+	p->flags = 0
+	p->text = strDuplicate( text )
+
+	tk.front += 1
+	tk.gap -= 1
+	tk.size += 1
+
+	stats.inserts += 1
+	if( stats.maxsize < tk.size ) then
+		stats.maxsize = tk.size
+	end if
+end sub
+
+sub tkInsert _
+	( _
+		byval x as integer, _
+		byval id as integer, _
+		byval text as zstring ptr _
+	)
+
+	tkRawMoveTo( x )
+	tkRawInsert( id, text )
+
+end sub
+
+sub tkCopy _
+	( _
+		byval x as integer, _
+		byval first as integer, _
+		byval last as integer _
+	)
+
+	for i as integer = 0 to (last - first)
+		tkInsert( x + i, tkGet( first + i ), tkGetText( first + i ) )
+	next
+
+end sub
+
+sub tkRemove( byval first as integer, byval last as integer )
+	dim as ONETOKEN ptr p = any
+	dim as integer delta = any
+
+	tkRawMoveTo( last + 1 )
+
+	for i as integer = first to last
+		p = tkAccess( i )
+		deallocate( p->text )
+	next
+
+	delta = last - first + 1
+	if( delta > tk.front ) then
+		delta = tk.front
+	end if
+
+	'' Delete tokens in front of current position (backwards deletion)
+	stats.deletes += delta
+	tk.front -= delta
+	tk.gap += delta
+	tk.size -= delta
+end sub
+
+sub tkSetFlags _
+	( _
+		byval first as integer, _
+		byval last as integer, _
+		byval flags as integer _
+	)
+
+	for i as integer = first to last
+		tkAccess( i )->flags = flags
+	next
+
+	'' Reset in case it got changed
+	tk.eof.flags = 0
+
+end sub
+
+function tkGet( byval x as integer ) as integer
+	function = tkAccess( x )->id
+end function
+
+function tkGetFlags( byval x as integer ) as integer
+	function = tkAccess( x )->flags
+end function
+
+function tkGetText( byval x as integer ) as zstring ptr
+	dim as ONETOKEN ptr p = any
+
+	p = tkAccess( x )
+
+	if( p->text ) then
+		function = p->text
+	else
+		if( p->id >= TK_EXCL ) then
+			assert( p->id <> TK_ID )
+			function = tk_info(p->id).text
 		else
 			function = @""
 		end if
 	end if
 end function
 
-function astIsStmtSep( byval n as ASTNODE ptr ) as integer
-	if( n ) then
-		function = ast_info(n->id).is_stmtsep
-	else
-		function = TRUE
-	end if
+function tkGetCount( ) as integer
+	function = tk.size
 end function
 
-function astIsAtBOL( byval i as ASTNODE ptr ) as integer
-	if( i = NULL ) then
-		return TRUE
-	end if
-
-	'' BOF?
-	if( i->prev = NULL ) then
-		return TRUE
-	end if
-
-	'' BOL?
-	function = astIsStmtSep( i->prev )
-end function
-
-'' Returns the last token in front of EOL/EOF, or NULL if starting at EOL/EOF,
-'' i.e. there is no other token coming in between anymore.
-function astFindLastInLine( byval i as ASTNODE ptr ) as ASTNODE ptr
-	if( i = NULL ) then
-		return NULL
-	end if
-
-	if( astIsStmtSep( i ) ) then
-		return NULL
-	end if
-
-	while( i->next )
-		if( astIsStmtSep( i->next ) ) then
-			exit while
-		end if
-		i = i->next
-	wend
-
-	function = i
-end function
-
-''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-
-sub astCloneInto _
-	( _
-		byval parent as ASTNODE ptr, _
-		byval head as ASTNODE ptr, _
-		byval tail as ASTNODE ptr _
-	)
-
-	while( head <> NULL )
-		astAppend( parent, astClone( head ) )
-		if( head = tail ) then
-			exit while
-		end if
-		head = head->next
-	wend
-
-end sub
-
-'' Link in N in front of REF
-sub astInsert _
-	( _
-		byval parent as ASTNODE ptr, _
-		byval n as ASTNODE ptr, _
-		byval ref as ASTNODE ptr _
-	)
-
-	assert( astContains( parent, ref ) )
-
-	n->prev = ref->prev
-	n->next = ref
-
-	if( ref->prev ) then
-		ref->prev->next = n
-	else
-		parent->head = n
-	end if
-	ref->prev = n
-
-end sub
-
-sub astAppend( byval parent as ASTNODE ptr, byval n as ASTNODE ptr )
-	if( parent->head = NULL ) then
-		parent->head = n
-	end if
-	if( parent->tail ) then
-		parent->tail->next = n
-	end if
-	n->prev = parent->tail
-	n->next = NULL
-	parent->tail = n
-end sub
-
-function astContains _
-	( _
-		byval tree as ASTNODE ptr, _
-		byval lookfor as ASTNODE ptr _
-	) as integer
-
-	dim as ASTNODE ptr i = any
-
-	if( tree = lookfor ) then
-		return TRUE
-	end if
-
-	i = tree->head
-	while( i )
-		if( i = lookfor ) then
-			return TRUE
-		end if
-		i = i->next
-	wend
-
-	function = FALSE
-end function
-
-'' Delete COUNT nodes, starting from N
-'' result = the node that ends up in N's place after the deletion, if any
-function astRemove _
-	( _
-		byval parent as ASTNODE ptr, _
-		byval n as ASTNODE ptr, _
-		byval count as integer = 1 _
-	) as ASTNODE ptr
-
-	dim as ASTNODE ptr nxt = any, prv = any
-	assert( astContains( parent, n ) )
-
-	while( (n <> NULL) and (count > 0) )
-		'' Link out N
-		nxt = n->next
-		prv = n->prev
-		if( prv ) then
-			prv->next = nxt
-		else
-			parent->head = nxt
-		end if
-		if( nxt ) then
-			nxt->prev = prv
-		else
-			parent->tail = prv
-		end if
-
-		astDelete( n )
-
-		'' Go to next node, if any, and maybe delete that too
-		n = nxt
-		count -= 1
-	wend
-
-	function = n
-end function
-
-function astRemoveUntilBehindEol _
-	( _
-		byval parent as ASTNODE ptr, _
-		byval i as ASTNODE ptr _
-	) as ASTNODE ptr
-
-	dim as integer saw_eol = any
-	assert( astContains( parent, i ) )
-
-	saw_eol = FALSE
-	while( (i <> NULL) and (not saw_eol) )
-		saw_eol = astIsStmtSep( i )
-		i = astRemove( parent, i )
-	wend
-
-	function = i
-end function
-
-''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-
-function astNewVARDECL _
-	( _
-		byval id as zstring ptr, _
-		byval dtype as integer, _
-		byval subtype as zstring ptr _
-	) as ASTNODE ptr
-
-	dim as ASTNODE ptr n = any
-
-	n = astNew( TK_VARDECL, id )
-	n->dtype = dtype
-	n->subtype = strDuplicate( subtype )
-
-	function = n
+function tkIsStmtSep( byval x as integer ) as integer
+	function = tk_info(tkAccess( x )->id).is_stmtsep
 end function

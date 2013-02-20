@@ -127,27 +127,27 @@ end sub
 	''
 
 	dim as FSFILE ptr f = any
-	dim as ASTNODE ptr ast = any
 
 	f = fsGetHead( )
 	while( f )
 
 		fsPush( f )
-		ast = lexLoadFile( f->normed )
+		tkInit( )
+		lexLoadFile( 0, f->normed )
 
-		cPurgeInlineComments( ast )
-		cParsePPDirectives( ast )
+		cPurgeInlineComments( )
+		cPPDirectives( )
 
-		emitWriteFile( ast, pathStripExt( f->normed ) + ".bi" )
+		emitWriteFile( pathStripExt( f->normed ) + ".bi" )
 
-		astDelete( ast )
+		tkEnd( )
 		fsPop( )
 
 		f = listGetNext( f )
 	wend
 
 	if( frog.verbose ) then
-		astStats( )
+		tkStats( )
 	end if
 
 	print "done: ";

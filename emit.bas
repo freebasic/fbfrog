@@ -1,9 +1,6 @@
 '' Token emitter
 
 #include once "fbfrog.bi"
-#include once "parser.bi"
-
-declare sub emitNode( byval n as ASTNODE ptr )
 
 type EmitterStuff
 	fo		as integer '' Output file
@@ -65,27 +62,15 @@ private sub emitStmt( byref ln as string )
 	emitEol( )
 end sub
 
-private sub emitChildren( byval n as ASTNODE ptr )
-	dim as ASTNODE ptr i = any
-	i = n->head
-	while( i )
-		emitNode( i )
-		i = i->next
-	wend
-end sub
+private sub emitToken( byval x as integer )
+	dim as zstring ptr s = any
 
-private sub emitNode( byval n as ASTNODE ptr )
-	select case as const( n->id )
-	case TK_FILE
-		emitStmt( "'' translated from: " + *n->text )
-		emitChildren( n )
-
+	select case as const( tkGet( x ) )
 	case TK_PPINCLUDE
-		emitStmt( "#include """ + *n->text + """" )
+		emitStmt( "#include """ + *tkGetText( x ) + """" )
 
 	case TK_PPDEFINE
-		emitStmtBegin( "#define " + *n->text )
-		emitChildren( n )
+		emitStmtBegin( "#define " + *tkGetText( x ) )
 		emitEol( )
 
 	case TK_EOL
@@ -94,75 +79,85 @@ private sub emitNode( byval n as ASTNODE ptr )
 	case TK_TODO
 		emit( "'' TODO" )
 
-		if( n->text ) then
+		s = tkGetText( x )
+		if( len( *s ) > 0 ) then
 			emit( ": " )
-			emit( n->text )
+			emit( s )
 		end if
 
 		stuff.todocount += 1
 
 	case TK_COMMENT
 		emit( "/'" )
-		emit( astGetText( n ) )
+		emit( tkGetText( x ) )
 		emit( "'/" )
 
 	case TK_LINECOMMENT
 		emit( "''" )
-		emit( astGetText( n ) )
+		emit( tkGetText( x ) )
 
 	case TK_DECNUM
-		emit( astGetText( n ) )
+		emit( tkGetText( x ) )
 
 	case TK_HEXNUM
 		emit( "&h" )
-		emit( ucase( *astGetText( n ) ) )
+		emit( ucase( *tkGetText( x ) ) )
 
 	case TK_OCTNUM
 		emit( "&o" )
-		emit( astGetText( n ) )
+		emit( tkGetText( x ) )
 
 	case TK_STRING
 		emit( """" )
-		emit( astGetText( n ) )
+		emit( tkGetText( x ) )
 		emit( """" )
 
 	case TK_WSTRING
 		emit( "wstr( """ )
-		emit( astGetText( n ) )
+		emit( tkGetText( x ) )
 		emit( """ )" )
 
 	case TK_ESTRING
 		emit( "!""" )
-		emit( astGetText( n ) )
+		emit( tkGetText( x ) )
 		emit( """" )
 
 	case TK_EWSTRING
 		emit( "wstr( !""" )
-		emit( astGetText( n ) )
+		emit( tkGetText( x ) )
 		emit( """ )" )
 
 	case else
-		emit( astGetText( n ) )
+		emit( tkGetText( x ) )
 
 	end select
 end sub
 
-sub emitWriteFile( byval ast as ASTNODE ptr, byref filename as string )
+sub emitWriteFile( byref filename as string )
+	dim as integer x = any
+
 	emitInit( filename )
-	emitNode( ast )
+
+	x = 0
+	while( tkGet( x ) <> TK_EOF )
+		emitToken( x )
+		x += 1
+	wend
+
 	emitEnd( )
 end sub
 
 sub emitStats( )
 	dim as string message
 
-	message = "& TODO"
+	message = stuff.todocount & " TODO"
 	if( stuff.todocount <> 1 ) then
 		message += "s"
 	end if
-	message += " in & file"
+	message += " in " & stuff.filecount & " file"
 	if( stuff.filecount <> 1 ) then
 		message += "s"
 	end if
-	print using message; stuff.todocount; stuff.filecount
+
+	print message
 end sub

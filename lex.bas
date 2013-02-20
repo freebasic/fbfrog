@@ -67,7 +67,7 @@ type LEXSTUFF
 	i	as ubyte ptr  '' Current char, will always be <= limit
 	limit	as ubyte ptr  '' (end of buffer)
 
-	ast	as ASTNODE ptr
+	x	as integer
 
 	kwhash	as THASH
 end type
@@ -90,22 +90,22 @@ private sub hAddTextToken( byval tk as integer, byval begin as ubyte ptr )
 	'' Is it a C keyword?
 	if( item->s ) then
 		'' Then use the proper KW_* instead of TK_ID
-		astAppend( lex.ast, astNew( cint( item->data ) ) )
+		tkInsert( lex.x, cint( item->data ) )
 	else
 		'' TK_ID
-		astAppend( lex.ast, astNew( tk, begin ) )
+		tkInsert( lex.x, tk, begin )
 	end if
 
 	lex.i[0] = old
 end sub
 
 private sub hAddTodo( byval text as zstring ptr )
-	astAppend( lex.ast, astNew( TK_TODO, text ) )
+	tkInsert( lex.x, TK_TODO, text )
 end sub
 
 private sub hReadBytes( byval tk as integer, byval length as integer )
 	lex.i += length
-	astAppend( lex.ast, astNew( tk ) )
+	tkInsert( lex.x, tk )
 end sub
 
 private sub hReadLineComment( )
@@ -514,10 +514,10 @@ private sub lexNext( )
 		case else
 			'' If it's an #include, parse <...> as string literal
 			'' include?
-			if( astGet( lex.ast->tail ) = KW_INCLUDE ) then
+			if( tkGet( lex.x - 1 ) = KW_INCLUDE ) then
 				'' '#' at BOL?
-				if( (   astGet( lex.ast->tail->prev ) = TK_HASH) and _
-				    astIsAtBOL( lex.ast->tail->prev ) ) then
+				if( (tkGet( lex.x - 2 ) = TK_HASH) and _
+				    tkIsStmtSep( lex.x - 3 ) ) then
 					hReadString( )
 					exit select
 				end if
@@ -669,32 +669,32 @@ private sub hInitKeywords( )
 	hashInit( @lex.kwhash, 10 )
 
 	for i as integer = KW_AUTO to KW_WHILE
-		hash = hashHash( ast_info(i).text )
-		item = hashLookup( @lex.kwhash, ast_info(i).text, hash )
-		hashAdd( @lex.kwhash, item, hash, ast_info(i).text, cast( any ptr, i ) )
+		hash = hashHash( tk_info(i).text )
+		item = hashLookup( @lex.kwhash, tk_info(i).text, hash )
+		hashAdd( @lex.kwhash, item, hash, tk_info(i).text, cast( any ptr, i ) )
 	next
 end sub
 
-function lexLoadFile( byref filename as string ) as ASTNODE ptr
+function lexLoadFile( byval x as integer, byref filename as string ) as integer
 	dim as integer count = any
 
-	lex.ast = astNew( TK_FILE, filename )
+	lex.x = x
 	hLoadFile( filename )
 	hComplainAboutEmbeddedNulls( )
 	hInitKeywords( )
 
 	'' Tokenize and insert into tk buffer
-	count = 0
 	while( lex.i < lex.limit )
-		count += 1
 		lexNext( )
+		lex.x += 1
+		count += 1
 	wend
 
 	if( frog.verbose ) then
-		print "  lex: ";str( cuint( lex.limit ) - cuint( lex.buffer ) );
-		print " bytes -> " & count & " tokens"
+		print "  lex: " & cuint( lex.limit ) - cuint( lex.buffer ) & _
+			" bytes -> " & count & " tokens"
 	end if
 
 	deallocate( lex.buffer )
-	function = lex.ast
+	function = lex.x
 end function

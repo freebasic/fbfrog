@@ -1,6 +1,238 @@
-#include once "parser.bi"
+#include once "fbfrog.bi"
+
+private function cFindEOL( byval x as integer ) as integer
+	while( tkIsStmtSep( x ) = FALSE )
+		x += 1
+	wend
+	function = x
+end function
+
+private function cFindClosingParen( byval x as integer ) as integer
+	dim as integer level = any, opening = any, closing = any
+
+	opening = tkGet( x )
+	level = 0
+	select case( opening )
+	case TK_LBRACE
+		closing = TK_RBRACE
+	case TK_LBRACKET
+		closing = TK_RBRACKET
+	case TK_LPAREN
+		closing = TK_RPAREN
+	case else
+		return x
+	end select
+
+	do
+		x += 1
+
+		select case( tkGet( x ) )
+		case opening
+			level += 1
+
+		case closing
+			if( level = 0 ) then
+				exit do
+			end if
+
+			level -= 1
+
+		case -1
+			exit do
+
+		end select
+	loop
+
+	function = x
+end function
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+'' Remove all comments unless they're at EOL
+sub cPurgeInlineComments( )
+	dim as integer x = any
+
+	x = 0
+	do
+		select case( tkGet( x ) )
+		case TK_COMMENT
+			if( tkIsStmtSep( x + 1 ) = FALSE ) then
+				tkRemove( x, x )
+				x -= 1
+			end if
+
+		case TK_EOF
+			exit do
+		end select
+
+		x += 1
+	loop
+end sub
+
+private function cPPDirective( byval x as integer ) as integer
+	dim as integer begin = any
+
+	'' '#'
+	begin = x
+	x += 1
+
+	select case( tkGet( x ) )
+	'' DEFINE Identifier ['(' ParameterList ')'] Body Eol .
+	case KW_DEFINE
+		'' DEFINE
+		x += 1
+
+		'' Identifier?
+		if( tkGet( x ) <> TK_ID ) then
+			return begin
+		end if
+
+		tkInsert( begin, TK_PPDEFINE, tkGetText( x ) )
+		begin += 1
+		tkRemove( begin, x )
+
+		'' '(' and not separated from the Identifier with spaces?
+		'' TODO
+
+		'' Body
+		x = cFindEOL( begin )
+		tkSetFlags( begin, x, FLAG_PPDEFINE )
+
+	case KW_INCLUDE
+		'' INCLUDE
+		x += 1
+
+		if( tkGet( x ) <> TK_STRING ) then
+			return begin
+		end if
+
+		tkInsert( begin, TK_PPINCLUDE, tkGetText( x ) )
+		begin += 1
+		tkRemove( begin, cFindEOL( begin ) )
+		x = begin
+
+	case else
+		return begin
+	end select
+
+	function = x
+end function
+
+sub cPPDirectives( )
+	dim as integer x = any, old = any
+
+	x = 0
+	do
+		old = x
+
+		select case( tkGet( x ) )
+		'' '#'?
+		case TK_HASH
+			'' BOL?
+			if( tkIsStmtSep( x - 1 ) ) then
+				x = cPPDirective( x )
+				if( x <> old ) then
+					x -= 1
+				end if
+			end if
+
+		case TK_EOF
+			exit do
+		end select
+
+		x += 1
+	loop
+end sub
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 #if 0
+
+function cStructCompound _
+	( _
+		byval ast as ASTNODE ptr, _
+		byval x as ASTNODE ptr _
+	) as ASTNODE ptr
+
+	dim as ASTNODE ptr begin = any, id = any, newstruct = any
+
+	'' {STRUCT|UNION} [Identifier] '{'
+	'' ...
+	'' '}'
+	begin = x
+
+	'' {STRUCT|UNION}
+	select case( astGet( x ) )
+	case KW_STRUCT, KW_UNION
+
+	case else
+		return begin
+	end select
+	x = x->next
+
+	'' [Identifier]
+	if( astGet( x ) = TK_ID ) then
+		id = x
+		x = x->next
+	else
+		id = NULL
+	end if
+
+	'' '{'
+	if( astGet( x ) <> TK_LBRACE ) then
+		return begin
+	end if
+
+	newstruct = astNew( TK_STRUCT, id )
+
+	bodybegin = x->next
+	bodyend   = astFindLastBeforeClosingParen( x )
+
+	x = bodyend->next
+
+	'' '}'
+	if( astGet( x ) = TK_RBRACE ) then
+		x = x->next
+	end if
+
+	'' [';']
+	if( astGet( x ) = TK_SEMI ) then
+		x = x->next
+	end if
+
+	'' Insert a TK_STRUCT in place of the struct compound tokens,
+	'' and copy the body into it
+
+			astCloneInto( newtk, i, astFindLastInLine( i ) )
+
+			astInsert( ast, newtk, begin )
+			i = astRemoveUntilBehindEol( ast, begin )
+
+
+
+	function
+end function
+
+sub cToplevel( byval ast as ASTNODE ptr )
+	dim as ASTNODE ptr x = any, begin = any
+
+	x = ast->head
+	while( x )
+		begin = x
+	wend
+end sub
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+enum
+	DECL_PARAM = 0
+	DECL_TOP
+	DECL_TYPEDEF
+	DECL_TYPEDEFSTRUCTBLOCK
+	DECL_VAR
+	DECL_FIELD
+	DECL_PROC
+end enum
 
 '' Skips the token and any following whitespace
 private function hSkipRaw _
@@ -527,183 +759,426 @@ private function hDeterminePPDefineFlags( byval x as integer ) as uinteger
 	function = flags
 end function
 
-function parsePPDirective _
+private function parseNestedStructBegin( byval x as integer ) as integer
+	dim as integer begin = any
+
+	'' {STRUCT|UNION} '{'
+	select case( tkGet( x ) )
+	case KW_STRUCT, KW_UNION
+
+	case else
+		return x
+	end select
+
+	begin = x
+	x = hSkip( x )
+
+	'' '{'
+	if( tkGet( x ) <> TK_LBRACE ) then
+		return begin
+	end if
+
+	function = hSkip( x )
+end function
+
+private function parseNestedStructEnd _
 	( _
 		byval x as integer, _
-		byval is_preparse as integer _
+		byval toplevelopening as integer _
 	) as integer
 
-	dim as string filename
-	dim as integer begin = any, y = any, lt = any
-	dim as uinteger flags = any
-	dim as zstring ptr text = any
+	dim as integer begin = any, opening = any
 
 	begin = x
 
-	'' '#'?
-	'' (Assuming all '#' are indicating a PP directive)
-	if( tkGet( x ) <> TK_HASH ) then
+	'' '}'
+	if( tkGet( x ) <> TK_RBRACE ) then
 		return begin
 	end if
-	x = hSkipPP( x )
 
-	select case( tkGet( x ) )
-	case KW_IF, KW_IFDEF, KW_IFNDEF, KW_ELIF '' #if & co
+	'' Find the opening '{', to determine whether this is a struct
+	'' or a union. Bail out if there is no matching nested struct/union
+	'' begin.
+	opening = hFindParentheses( x, -1 )
+	if( (opening = x) or (opening <= toplevelopening) ) then
+		return begin
+	end if
+	opening = hSkipRev( opening )
 
-	case KW_INCLUDE '' #include
-		y = hSkipPP( x )
+	'' '}'
+	assert( tkGet( x ) = TK_RBRACE )
+	x = hSkip( x )
 
-		'' This will usually be one of:
-		''
-		'' #include <...>
-		'' #include "..."
-		'' #include SOME_DEFINE
-		''
-		'' FB doesn't support the <...> form, so it must be turned into
-		'' a "..." string literal. This *should* be done by the C lexer,
-		'' but it can't handle <...> as string literal. It's only a
-		'' string literal in the context of #include which the lexer
-		'' doesn't track. So, the tokens in <...> must be merged into
-		'' a single string literal token, preventing the #include file
-		'' name from being touched by the translation process.
-
-		'' '<'?
-		if( tkGet( y ) = TK_LT ) then
-			lt = y
-			do
-				y += 1
-
-				select case( tkGet( y ) )
-				case TK_GT
-					'' Replace <...> with "..."
-					tkRemove( lt, y )
-					tkInsert( lt, TK_STRING, filename )
-					y = lt
-					exit do
-
-				case TK_EOL, TK_EOF
-					filename = ""
-					exit do
-
-				end select
-
-				text = tkText( y )
-				if( text = NULL ) then
-					text = token_text(tkGet( y ))
-				end if
-				filename += *text
-			loop
-		end if
-
-		'' "..." followed by EOL?
-		if( tkGet( y ) = TK_STRING ) then
-			if( tkGet( hSkipPP( y ) ) = TK_EOL ) then
-				filename = *tkText( y )
-			end if
-		end if
-
-	case KW_DEFINE '' #define
-		y = hSkipPP( x )
-		if( tkGet( y ) = TK_ID ) then
-			flags = hDeterminePPDefineFlags( hSkipPP( y ) )
-			if( flags ) then
-				frogAddDefine( tkText( y ), flags )
-			end if
-		end if
-
-	end select
-
-	y = x + 1
-	x = hSkipPPDirective( x )
-
-	if( len( filename ) > 0 ) then
-		print "parser: include: ", filename
+	'' [id]
+	if( tkGet( x ) = TK_ID ) then
+		x = hSkip( x )
 	end if
 
-	'' In case of #include merge: hSkip whitespace at BOF
-	'' Otherwise: hSkip EOL + other following whitespace
-	x = hSkip( x - 1 )
+	'' ';'
+	if( tkGet( x ) <> TK_SEMI ) then
+		return begin
+	end if
+
+	function = hSkip( x )
+end function
+
+
+function parseExternBegin( byval x as integer ) as integer
+	dim as integer begin = any
+
+	'' EXTERN "C" '{'
+
+	if( tkGet( x ) <> KW_EXTERN ) then
+		return x
+	end if
+
+	begin = x
+	x = hSkip( x )
+
+	'' "C"
+	if( tkGet( x ) <> TK_STRING ) then
+		return begin
+	end if
+	x = hSkip( x )
+
+	'' '{'
+	if( tkGet( x ) <> TK_LBRACE ) then
+		return begin
+	end if
+
+	'' EXTERN parsing is done here, so the content is parsed from the
+	'' toplevel loop.
+	function = hSkip( x )
+end function
+
+function parseExternEnd( byval x as integer ) as integer
+	dim as integer opening = any
+
+	'' '}'
+	if( tkGet( x ) <> TK_RBRACE ) then
+		return x
+	end if
+
+	'' Check whether this '}' belongs to an 'extern "C" {'
+	opening = hFindParentheses( x, -1 )
+	if( opening = x ) then
+		return x
+	end if
+
+	function = hSkip( x )
+end function
+
+function parseEnumconst _
+	( _
+		byval x as integer, _
+		byval is_unknown as integer _
+	) as integer
+
+	dim as integer begin = any, skip_expression = any, level = any
+
+	begin = x
+	skip_expression = is_unknown
+
+	if( is_unknown = FALSE ) then
+		'' id
+		if( tkGet( x ) <> TK_ID ) then
+			return begin
+		end if
+		x = hSkip( x )
+
+		select case( tkGet( x ) )
+		case TK_EQ
+			'' ['=']
+			skip_expression = TRUE
+			x = hSkip( x )
+		case TK_LPAREN
+			'' '('
+			'' This allows function-like macros like <FOO(...)>
+			'' in place of constants in an enum, at least the
+			'' libcurl headers make extensive use of that...
+			'' The '(...)' skipping is covered by the same code
+			'' that skips over the '= ...' expressions.
+			skip_expression = TRUE
+		end select
+	end if
+
+	if( skip_expression ) then
+		'' Skip until ',' or '}'
+		level = 0
+		do
+			select case( tkGet( x ) )
+			case TK_LPAREN
+				level += 1
+			case TK_RPAREN
+				level -= 1
+			case TK_COMMA
+				if( level = 0 ) then
+					exit do
+				end if
+			case TK_RBRACE, TK_EOF, TK_HASH
+				'' Note: '#' (PP directives) not allowed in
+				'' expressions in FB, this can't be translated.
+				exit do
+			end select
+			x = hSkip( x )
+		loop
+	end if
+
+	select case( tkGet( x ) )
+	case TK_COMMA
+		'' Treat the comma as part of the constant declaration
+		x = hSkip( x )
+	case TK_RBRACE
+
+	case else
+		if( is_unknown = FALSE ) then
+			return begin
+		end if
+	end select
 
 	function = x
 end function
 
-#endif
+private function parseBaseType( byval x as integer ) as integer
+	dim as integer old = any
 
-'' Remove all comments unless they're at EOL
-sub cPurgeInlineComments( byval ast as ASTNODE ptr )
-	dim as ASTNODE ptr i = any
+	old = x
 
-	i = ast->head
-	while( i )
+	'' [CONST]
+	x = hSkipOptional( x, KW_CONST )
 
-		if( i->id = TK_COMMENT ) then
-			if( astIsStmtSep( i->next ) = FALSE ) then
-				i = astRemove( ast, i )
-				continue while
-			end if
+	select case( tkGet( x ) )
+	case KW_ENUM, KW_STRUCT, KW_UNION
+		'' {ENUM | STRUCT | UNION} id
+		x = hSkip( x )
+
+		'' id
+		if( tkGet( x ) <> TK_ID ) then
+			return old
 		end if
+		x = hSkip( x )
 
-		i = i->next
-	wend
-end sub
+		'' [CONST]
+		x = hSkipOptional( x, KW_CONST )
 
-'' '#' DEFINE Identifier ['(' ParameterList ')'] Body Eol .
-private function cPPDefine _
-	( _
-		byval ast as ASTNODE ptr, _
-		byval i as ASTNODE ptr _
-	) as ASTNODE ptr
+		return x
 
-	dim as ASTNODE ptr begin = any, ppdefine = any
+	case TK_ID
+		'' Just a single id
+		x = hSkip( x )
 
-	'' '#' DEFINE
-	begin = i
-	i = i->next->next
+		'' [CONST]
+		x = hSkipOptional( x, KW_CONST )
 
-	'' Identifier?
-	if( astGet( i ) <> TK_ID ) then
-		return begin
-	end if
-	ppdefine = astNew( TK_PPDEFINE, i->text )
-	i = i->next
+		return x
+	end select
 
-	'' '(' and not separated from the Identifier with spaces?
-	'' TODO
+	'' [SIGNED | UNSIGNED]
+	select case( tkGet( x ) )
+	case KW_SIGNED, KW_UNSIGNED
+		x = hSkip( x )
+	end select
 
-	'' Body
-	astCloneInto( ppdefine, i, astFindLastInLine( i ) )
+	'' [ VOID | CHAR | FLOAT | DOUBLE | INT
+	'' | SHORT [INT]
+	'' | LONG [LONG] [INT]
+	'' ]
+	select case( tkGet( x ) )
+	case KW_VOID, KW_CHAR, KW_FLOAT, KW_DOUBLE, KW_INT
+		x = hSkip( x )
 
-	astInsert( ast, ppdefine, begin )
-	astRemoveUntilBehindEol( ast, begin )
+	case KW_SHORT
+		x = hSkip( x )
 
-	function = ppdefine
+		'' [INT]
+		x = hSkipOptional( x, KW_INT )
+
+	case KW_LONG
+		x = hSkip( x )
+
+		'' [LONG]
+		x = hSkipOptional( x, KW_LONG )
+
+		'' [INT]
+		x = hSkipOptional( x, KW_INT )
+
+	end select
+
+	'' [CONST]
+	x = hSkipOptional( x, KW_CONST )
+
+	'' In case of no type keyword at all, x = old
+	function = x
 end function
 
-sub cParsePPDirectives( byval ast as ASTNODE ptr )
+private function parsePtrs( byval x as integer ) as integer
+	'' Pointers: ('*')*
+	while( tkGet( x ) = TK_STAR )
+		x = hSkip( x )
+
+		'' [CONST] (behind the '*')
+		x = hSkipOptional( x, KW_CONST )
+	wend
+	function = x
+end function
+
+sub cMultdecl( byval decl as integer )
+	dim as integer typebegin = any, is_procptr = any, old = any
+
+	'' Generic 'type *a, **b;' parsing,
+	'' used for vardecls/fielddecls/procdecls/params...
+	''
+	'' type '*'* var (',' '*'* var)* ';'
+	''
+	'' Where var can be:
+	'' a plain id: var = id
+	'' a procptr:  var = '(' '*'+ id ')' '(' params ')'
+	'' a procdecl: var = id '(' params ')'
+
+	'' No type hack for the typedef-to-struct-block parser:
+	'' its type is the struct block, which it already parsed...
+	if( decl <> DECL_TYPEDEFSTRUCTBLOCK ) then
+		'' type
+		typebegin = x
+		x = parseBaseType( x )
+		if( x = typebegin ) then
+			return begin
+		end if
+	end if
+
+	'' var (',' var)*
+	do
+		'' '*'*
+		x = parsePtrs( x )
+
+		'' '('?
+		is_procptr = FALSE
+		if( tkGet( x ) = TK_LPAREN ) then
+			is_procptr = TRUE
+			x = hSkip( x )
+
+			'' '*'
+			if( tkGet( x ) <> TK_STAR ) then
+				return begin
+			end if
+			x = hSkip( x )
+		end if
+
+		'' id (must be there except for params)
+		if( tkGet( x ) = TK_ID ) then
+			x = hSkip( x )
+		elseif( decl <> DECL_PARAM ) then
+			return begin
+		end if
+
+		if( is_procptr ) then
+			'' ')'
+			if( tkGet( x ) <> TK_RPAREN ) then
+				return begin
+			end if
+			x = hSkip( x )
+		end if
+
+		'' Check for '(' params ')'
+		if( tkGet( x ) = TK_LPAREN ) then
+			'' Note: typedef to procdecl can't be translated,
+			'' so it's disallowed here. If there are procdecls
+			'' in fields, then fine, that's C++ stuff, but oh well.
+			'' Note: procptrs always have params.
+			if( (is_procptr = FALSE) and _
+			    ((decl = DECL_TYPEDEF) or _
+			     (decl = DECL_TYPEDEFSTRUCTBLOCK)) ) then
+				return begin
+			end if
+
+			'' '('
+			x = hSkip( x )
+
+			'' Just '(void)'?
+			if( (tkGet( x ) = KW_VOID) and (tkGet( hSkip( x ) ) = TK_RPAREN)) then
+				'' VOID
+				x = hSkip( x )
+			else
+				'' [ type [id]  (',' type [id] )*  [ ',' '...' ] ]
+				'' Note: The following isn't even doing that much
+				'' syntax verification at all, but it's ok, it's not
+				'' a compiler afterall.
+				do
+					select case( tkGet( x ) )
+					case TK_RPAREN
+						exit do
+					case TK_EOF
+						return begin
+					case TK_COMMA, TK_ELLIPSIS
+						'' Let ',' and '...' pass
+						x = hSkip( x )
+					case else
+						old = x
+						x = parseMultdecl( x, x, DECL_PARAM )
+						if( x = old ) then
+							return begin
+						end if
+					end select
+				loop
+			end if
+
+			'' ')'
+			if( tkGet( x ) <> TK_RPAREN ) then
+				return begin
+			end if
+			x = hSkip( x )
+		end if
+
+		'' Everything can have a comma and more identifiers,
+		'' except for params.
+		if( (decl = DECL_PARAM) or (tkGet( x ) <> TK_COMMA) ) then
+			exit do
+		end if
+		x = hSkip( x )
+	loop
+
+	select case( decl )
+	case DECL_FIELD, DECL_TYPEDEF, DECL_TOP
+		'' ';'
+		if( tkGet( x ) <> TK_SEMI ) then
+			return begin
+		end if
+
+		x = hSkip( x )
+
+	end select
+
+	function = x
+end function
+
+sub cDeclarations( byval ast as ASTNODE ptr )
 	dim as ASTNODE ptr i = any
+
+	'' Toplevel declarations: global variables (including procedure
+	'' pointers), procedure declarations, and also typedefs, since they
+	'' are almost the same (parse_multdecl() disallows typedefs to
+	'' procdecls, because those aren't possible FB).
+	''    int a, *b, (*c)(), f(), *g();
+	''    ...
+	''
+	'' [TYPEDEF|EXTERN|STATIC] multdecl
 
 	i = ast->head
 	while( i )
+		decl = DECL_TOP
 
-		'' '#' at BOL?
-		if( astIsAtBOL( i ) and (i->id = TK_HASH) ) then
-			select case( astGet( i->next ) )
-			case KW_DEFINE
-				i = cPPDefine( ast, i )
-				continue while
+		select case( parseGet( ) )
+		case KW_EXTERN, KW_STATIC
+			parseNext( )
 
-			case KW_INCLUDE
-				if( astGet( i->next->next ) = TK_STRING ) then
-					astInsert( ast, astNew( TK_PPINCLUDE, i->next->next->text ), i )
+		case KW_TYPEDEF
+			decl = DECL_TYPEDEF
+			parseNext( )
 
-					'' '#' INCLUDE STRING
-					i = astRemoveUntilBehindEol( ast, i )
-					continue while
-				end if
-			end select
-		end if
+		end select
 
-		i = i->next
+		cMultDecl( decl )
 	wend
-
 end sub
+
+#endif

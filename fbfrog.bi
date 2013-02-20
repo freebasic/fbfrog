@@ -94,7 +94,7 @@ declare sub hScanDirectoryForH _
 
 '' When changing, update the table in ast.bas too!
 enum
-	TK_FILE
+	TK_EOF
 	TK_PPINCLUDE
 	TK_PPDEFINE
 	TK_STRUCT
@@ -286,13 +286,9 @@ enum
 	TK__COUNT
 end enum
 
-type ASTINFO
-	is_stmtsep	as integer
-	text		as zstring ptr
-	debug		as zstring ptr
-end type
-
-extern as ASTINFO ast_info(0 to (TK__COUNT - 1))
+enum
+	FLAG_PPDEFINE
+end enum
 
 const TYPEMASK_DT    = &b00000000000000000000000000001111  '' 0..15, enough for TYPE_* enum
 const TYPEMASK_PTR   = &b00000000000000000000000011110000  '' 0..15, enough for max. 8 PTRs on a type, like FB
@@ -319,84 +315,56 @@ enum
 	TYPE_UDT
 end enum
 
-type ASTNODE
-	id		as integer      '' AST_*, TK_*, KW_*
-	text		as zstring ptr  '' Identifiers/literals, or NULL
-
-	'' Data type (vars, fields, params, function results)
-	dtype		as integer
-	subtype		as zstring ptr
-
-	'' Child nodes, if any (fields, params, #define body, #if condition)
-	head		as ASTNODE ptr
-	tail		as ASTNODE ptr
-
-	'' Linked list of siblings
-	next		as ASTNODE ptr
-	prev		as ASTNODE ptr
+type TOKENINFO
+	is_stmtsep	as integer
+	text		as zstring ptr
+	debug		as zstring ptr
 end type
 
-declare sub astDump( byval n as ASTNODE ptr )
-declare sub astStats( )
+extern as TOKENINFO tk_info(0 to (TK__COUNT - 1))
+
+'' Debugging helper, for example: TRACE( x ), "decl begin"
+#define TRACE( x ) print __FUNCTION__ + "(" + str( __LINE__ ) + "): " + tkDumpOne( x )
 
 declare function strDuplicate( byval s as zstring ptr ) as zstring ptr
-declare function astNew _
+declare sub tkInit( )
+declare sub tkEnd( )
+declare sub tkStats( )
+declare function tkDumpOne( byval x as integer ) as string
+declare sub tkDump( )
+declare sub tkInsert _
 	( _
+		byval x as integer, _
 		byval id as integer, _
 		byval text as zstring ptr = NULL _
-	) as ASTNODE ptr
-declare sub astDelete( byval n as ASTNODE ptr )
-declare function astClone( byval n as ASTNODE ptr ) as ASTNODE ptr
-declare function astGet( byval n as ASTNODE ptr ) as integer
-declare function astGetText( byval n as ASTNODE ptr ) as zstring ptr
-declare function astIsStmtSep( byval n as ASTNODE ptr ) as integer
-declare function astIsAtBOL( byval i as ASTNODE ptr ) as integer
-declare function astFindLastInLine( byval i as ASTNODE ptr ) as ASTNODE ptr
-
-declare sub astCloneInto _
-	( _
-		byval parent as ASTNODE ptr, _
-		byval head as ASTNODE ptr, _
-		byval tail as ASTNODE ptr _
 	)
-declare sub astInsert _
+declare sub tkCopy _
 	( _
-		byval parent as ASTNODE ptr, _
-		byval n as ASTNODE ptr, _
-		byval ref as ASTNODE ptr _
+		byval x as integer, _
+		byval first as integer, _
+		byval last as integer _
 	)
-declare sub astAppend( byval parent as ASTNODE ptr, byval n as ASTNODE ptr )
-declare function astContains _
+declare sub tkRemove( byval first as integer, byval last as integer )
+declare sub tkSetFlags _
 	( _
-		byval tree as ASTNODE ptr, _
-		byval lookfor as ASTNODE ptr _
-	) as integer
-declare function astRemove _
-	( _
-		byval parent as ASTNODE ptr, _
-		byval n as ASTNODE ptr, _
-		byval count as integer = 1 _
-	) as ASTNODE ptr
-declare function astRemoveUntilBehindEol _
-	( _
-		byval parent as ASTNODE ptr, _
-		byval i as ASTNODE ptr _
-	) as ASTNODE ptr
-
-declare function astNewVARDECL _
-	( _
-		byval id as zstring ptr, _
-		byval dtype as integer, _
-		byval subtype as zstring ptr _
-	) as ASTNODE ptr
+		byval first as integer, _
+		byval last as integer, _
+		byval flags as integer _
+	)
+declare function tkGet( byval x as integer ) as integer
+declare function tkGetFlags( byval x as integer ) as integer
+declare function tkGetText( byval x as integer ) as zstring ptr
+declare function tkGetCount( ) as integer
+declare function tkIsStmtSep( byval x as integer ) as integer
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-declare function lexLoadFile( byref filename as string ) as ASTNODE ptr
-declare sub cPurgeInlineComments( byval block as ASTNODE ptr )
-declare sub cParsePPDirectives( byval block as ASTNODE ptr )
-declare sub emitWriteFile( byval block as ASTNODE ptr, byref filename as string )
+declare function lexLoadFile( byval x as integer, byref filename as string ) as integer
+declare sub emitWriteFile( byref filename as string )
 declare sub emitStats( )
+
+declare sub cPurgeInlineComments( )
+declare sub cPPDirectives( )
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
