@@ -283,7 +283,8 @@ function tkDumpOne( byval x as integer ) as string
 	dim as string s
 
 	p = tkAccess( x )
-	s = "[" + *tk_info(p->id).debug + "] "
+	s += str( x ) + " "
+	s += "[" + *tk_info(p->id).debug + "] "
 
 	if( p->text ) then
 		s += "'" + *p->text + "'"
@@ -392,6 +393,18 @@ end sub
 sub tkRemove( byval first as integer, byval last as integer )
 	dim as ONETOKEN ptr p = any
 	dim as integer delta = any
+
+	if( first < 0 ) then
+		first = 0
+	end if
+
+	if( last >= tk.size ) then
+		last = tk.size - 1
+	end if
+
+	if( first > last ) then
+		exit sub
+	end if
 
 	tkRawMoveTo( last + 1 )
 
