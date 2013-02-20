@@ -3,29 +3,30 @@
 
 dim shared as TOKENINFO tk_info(0 to (TK__COUNT - 1)) = _
 { _
-	( TRUE , NULL  , @"eof"         ), _
-	( TRUE , NULL  , @"#include"    ), _
-	( TRUE , NULL  , @"#define"     ), _
-	( TRUE , NULL  , @"structbegin" ), _
-	( TRUE , NULL  , @"structend"   ), _
-	( TRUE , NULL  , @"procdecl"    ), _
-	( TRUE , NULL  , @"vardecl"     ), _
-	( TRUE , NULL  , @"todo"        ), _
-	( FALSE, NULL  , @"byte"        ), _
-	( TRUE , NULL  , @"eol"         ), _
-	( FALSE, NULL  , @"comment"     ), _
-	( FALSE, NULL  , @"linecomment" ), _
-	( FALSE, NULL  , @"decnum"      ), _ '' Number literals
-	( FALSE, NULL  , @"hexnum"      ), _
-	( FALSE, NULL  , @"octnum"      ), _
-	( FALSE, NULL  , @"string"      ), _ '' String literals
-	( FALSE, NULL  , @"char"        ), _
-	( FALSE, NULL  , @"wstring"     ), _
-	( FALSE, NULL  , @"wchar"       ), _
-	( FALSE, NULL  , @"estring"     ), _
-	( FALSE, NULL  , @"echar"       ), _
-	( FALSE, NULL  , @"ewstring"    ), _
-	( FALSE, NULL  , @"ewchar"      ), _
+	( TRUE , NULL  , @"eof"             ), _
+	( TRUE , NULL  , @"#include"        ), _
+	( TRUE , NULL  , @"#define begin"   ), _
+	( TRUE , NULL  , @"#define end"     ), _
+	( TRUE , NULL  , @"struct begin"    ), _
+	( TRUE , NULL  , @"struct end"      ), _
+	( TRUE , NULL  , @"procdecl"        ), _
+	( TRUE , NULL  , @"vardecl"         ), _
+	( TRUE , NULL  , @"todo"            ), _
+	( FALSE, NULL  , @"byte"            ), _
+	( TRUE , NULL  , @"eol"             ), _
+	( FALSE, NULL  , @"comment"         ), _
+	( FALSE, NULL  , @"linecomment"     ), _
+	( FALSE, NULL  , @"decnum"          ), _ '' Number literals
+	( FALSE, NULL  , @"hexnum"          ), _
+	( FALSE, NULL  , @"octnum"          ), _
+	( FALSE, NULL  , @"string"          ), _ '' String literals
+	( FALSE, NULL  , @"char"            ), _
+	( FALSE, NULL  , @"wstring"         ), _
+	( FALSE, NULL  , @"wchar"           ), _
+	( FALSE, NULL  , @"estring"         ), _
+	( FALSE, NULL  , @"echar"           ), _
+	( FALSE, NULL  , @"ewstring"        ), _
+	( FALSE, NULL  , @"ewchar"          ), _
 	( FALSE, @"!"  , @"tk" ), _ '' Main tokens
 	( FALSE, @"!=" , @"tk" ), _
 	( FALSE, @"#"  , @"tk" ), _
@@ -176,8 +177,7 @@ dim shared as TOKENINFO tk_info(0 to (TK__COUNT - 1)) = _
 }
 
 type ONETOKEN
-	id		as short  '' TK_*
-	flags		as short
+	id		as integer      '' TK_*
 	text		as zstring ptr  '' Identifiers/literals, or NULL
 
 	'' Data type (vars, fields, params, function results)
@@ -199,11 +199,8 @@ end type
 type TOKENSTATS
 	maxsize		as integer  '' Highest amount of tokens at once
 	reallocs	as integer  '' Buffer reallocations
-	inserts		as integer
-	deletes		as integer
 	lookups		as integer
-	movedtokens	as longint
-	maxstrlen	as integer
+	moved		as longint
 end type
 
 dim shared as TOKENBUFFER tk
@@ -225,8 +222,6 @@ function strDuplicate( byval s as zstring ptr ) as zstring ptr
 	end if
 	p[length] = 0
 
-	stats.maxstrlen += length
-
 	function = p
 end function
 
@@ -237,7 +232,6 @@ sub tkInit( )
 	tk.size = 0
 
 	tk.eof.id = TK_EOF
-	tk.eof.flags = 0
 	tk.eof.text = NULL
 end sub
 
@@ -262,20 +256,16 @@ private function tkAccess( byval x as integer ) as ONETOKEN ptr
 end function
 
 sub tkEnd( )
-	for i as integer = 0 to tk.size - 1
-		deallocate( tkAccess( i )->text )
-	next
+	tkRemove( 0, tk.size - 1 )
 	deallocate( tk.p )
 end sub
 
 sub tkStats( )
-	print "  tokens: " & stats.maxsize & " max, " & _
-		stats.reallocs & " resizes, " & _
-		stats.inserts & " in, " & _
-		stats.deletes & " out, " & _
+	print "tokens: " & _
+		stats.maxsize & " max, " & _
 		stats.lookups & " lookups, " & _
-		stats.movedtokens & " tokens moved, " & _
-		stats.maxstrlen & " max strlen"
+		stats.reallocs & " resizes, " & _
+		stats.moved & " moved"
 end sub
 
 function tkDumpOne( byval x as integer ) as string
@@ -318,21 +308,30 @@ private sub tkRawMoveTo( byval x as integer )
 		'' Move gap left
 		p = tk.p + x
 		memmove( p + tk.gap, p, (old - x) * sizeof( ONETOKEN ) )
-		stats.movedtokens += old - x
+		stats.moved += old - x
 	elseif( x > old ) then
 		'' Move gap right
 		p = tk.p + old
 		memmove( p, p + tk.gap, (x - old) * sizeof( ONETOKEN ) )
-		stats.movedtokens += x - old
+		stats.moved += x - old
 	end if
 
 	tk.front = x
 end sub
 
-'' Insert token at current position, the current position moves forward.
-private sub tkRawInsert( byval id as integer, byval text as zstring ptr )
+'' Insert new token in front of token at the given position,
+'' so that the new token ends up at that position
+sub tkInsert _
+	( _
+		byval x as integer, _
+		byval id as integer, _
+		byval text as zstring ptr _
+	)
+
 	const NEWGAP = 512
 	dim as ONETOKEN ptr p = any
+
+	tkRawMoveTo( x )
 
 	'' Make room for the new data, if necessary
 	if( tk.gap = 0 ) then
@@ -344,7 +343,7 @@ private sub tkRawInsert( byval id as integer, byval text as zstring ptr )
 		if( tk.size > tk.front ) then
 			memmove( p + NEWGAP, p + tk.gap, _
 			         (tk.size - tk.front) * sizeof( ONETOKEN ) )
-			stats.movedtokens += tk.size - tk.front
+			stats.moved += tk.size - tk.front
 		end if
 		tk.gap = NEWGAP
 	else
@@ -352,41 +351,17 @@ private sub tkRawInsert( byval id as integer, byval text as zstring ptr )
 	end if
 
 	p->id = id
-	p->flags = 0
 	p->text = strDuplicate( text )
+	p->dtype = TYPE_NONE
+	p->subtype = NULL
 
 	tk.front += 1
 	tk.gap -= 1
 	tk.size += 1
 
-	stats.inserts += 1
 	if( stats.maxsize < tk.size ) then
 		stats.maxsize = tk.size
 	end if
-end sub
-
-sub tkInsert _
-	( _
-		byval x as integer, _
-		byval id as integer, _
-		byval text as zstring ptr _
-	)
-
-	tkRawMoveTo( x )
-	tkRawInsert( id, text )
-
-end sub
-
-sub tkCopy _
-	( _
-		byval x as integer, _
-		byval first as integer, _
-		byval last as integer _
-	)
-
-	for i as integer = 0 to (last - first)
-		tkInsert( x + i, tkGet( first + i ), tkGetText( first + i ) )
-	next
 
 end sub
 
@@ -409,8 +384,9 @@ sub tkRemove( byval first as integer, byval last as integer )
 	tkRawMoveTo( last + 1 )
 
 	for i as integer = first to last
-		p = tkAccess( i )
+		p = tk.p + i
 		deallocate( p->text )
+		deallocate( p->subtype )
 	next
 
 	delta = last - first + 1
@@ -419,34 +395,13 @@ sub tkRemove( byval first as integer, byval last as integer )
 	end if
 
 	'' Delete tokens in front of current position (backwards deletion)
-	stats.deletes += delta
 	tk.front -= delta
 	tk.gap += delta
 	tk.size -= delta
 end sub
 
-sub tkSetFlags _
-	( _
-		byval first as integer, _
-		byval last as integer, _
-		byval flags as integer _
-	)
-
-	for i as integer = first to last
-		tkAccess( i )->flags = flags
-	next
-
-	'' Reset in case it got changed
-	tk.eof.flags = 0
-
-end sub
-
 function tkGet( byval x as integer ) as integer
 	function = tkAccess( x )->id
-end function
-
-function tkGetFlags( byval x as integer ) as integer
-	function = tkAccess( x )->flags
 end function
 
 function tkGetText( byval x as integer ) as zstring ptr
@@ -464,6 +419,32 @@ function tkGetText( byval x as integer ) as zstring ptr
 			function = @""
 		end if
 	end if
+end function
+
+sub tkSetType _
+	( _
+		byval x as integer, _
+		byval dtype as integer, _
+		byval subtype as zstring ptr _
+	)
+
+	dim as ONETOKEN ptr p = any
+
+	p = tkAccess( x )
+
+	if( p->id <> TK_EOF ) then
+		p->dtype = dtype
+		p->subtype = strDuplicate( subtype )
+	end if
+
+end sub
+
+function tkGetType( byval x as integer ) as integer
+	function = tkAccess( x )->dtype
+end function
+
+function tkGetSubtype( byval x as integer ) as zstring ptr
+	function = tkAccess( x )->subtype
 end function
 
 function tkGetCount( ) as integer

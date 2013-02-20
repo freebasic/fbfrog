@@ -69,8 +69,22 @@ private function emitTk( byval x as integer ) as integer
 	case TK_PPINCLUDE
 		emitStmt( "#include """ + *tkGetText( x ) + """" )
 
-	case TK_PPDEFINE
-		emitStmtBegin( "#define " + *tkGetText( x ) )
+	case TK_PPDEFINEBEGIN
+		emitStmtBegin( "#define " )
+		emit( tkGetText( x ) )
+		emit( " " )
+
+		do
+			x += 1
+
+			if( tkGet( x ) = TK_PPDEFINEEND ) then
+				exit do
+			end if
+
+			assert( tkGet( x ) <> TK_EOF )
+			emitTk( x )
+		loop
+
 		emitEol( )
 
 	case TK_STRUCTBEGIN

@@ -96,11 +96,13 @@ declare sub hScanDirectoryForH _
 enum
 	TK_EOF
 	TK_PPINCLUDE
-	TK_PPDEFINE
+	TK_PPDEFINEBEGIN
+	TK_PPDEFINEEND
 	TK_STRUCTBEGIN
 	TK_STRUCTEND
 	TK_PROCDECL
 	TK_VARDECL
+	TK_TYPE
 
 	TK_TODO         '' TODOs added as fix-me-markers
 	TK_BYTE         '' For stray bytes that don't fit in elsewhere
@@ -288,13 +290,26 @@ enum
 end enum
 
 enum
-	FLAG_PPDEFINE
+	TYPE_NONE = 0
+	TYPE_ANY
+	TYPE_BYTE
+	TYPE_UBYTE
+	TYPE_ZSTRING
+	TYPE_SHORT
+	TYPE_USHORT
+	TYPE_LONG
+	TYPE_ULONG
+	TYPE_LONGINT
+	TYPE_ULONGINT
+	TYPE_SINGLE
+	TYPE_DOUBLE
+	TYPE_UDT
 end enum
 
 const TYPEMASK_DT    = &b00000000000000000000000000001111  '' 0..15, enough for TYPE_* enum
 const TYPEMASK_PTR   = &b00000000000000000000000011110000  '' 0..15, enough for max. 8 PTRs on a type, like FB
 const TYPEMASK_REF   = &b00000000000000000000000100000000  '' 0..1, reference or not?
-const TYPEMASK_CONST = &b00000000000001111111111000000000  '' 1 bit per PTR + 1 for the REF + 1 for the toplevel
+const TYPEMASK_CONST = &b00000000000000111111111000000000  '' 1 bit per PTR + 1 for the toplevel
 
 const TYPEPOS_PTR    = 4  '' PTR mask starts at 4th bit
 const TYPEPOS_REF    = TYPEPOS_PTR + 4
@@ -302,19 +317,13 @@ const TYPEPOS_CONST  = TYPEPOS_REF + 1
 
 const TYPEMAX_PTR = 8
 
+#define typeSetDt( dtype, dt ) ((dtype and (not TYPEMASK_DT)) or (dt and TYPEMASK_DT))
+#define typeSetIsConst( dt ) ((dt) or (1 shl TYPEPOS_CONST))
 #define typeGetDtAndPtr( dt ) ((dt) and (TYPEMASK_DT or TYPEMASK_PTR))
-
-enum
-	TYPE_INT8 = 0
-	TYPE_UINT8
-	TYPE_INT16
-	TYPE_UINT16
-	TYPE_INT32
-	TYPE_UINT32
-	TYPE_INT64
-	TYPE_UINT64
-	TYPE_UDT
-end enum
+#define typeAddrOf( dt ) _
+	(((dt) and TYPEMASK_DT) or _
+	 (((dt) and TYPEMASK_PTR) + (1 shl TYPEPOS_PTR)) or _
+	 (((dt) and TYPEMASK_CONST) shl 1))
 
 type TOKENINFO
 	is_stmtsep	as integer
@@ -339,22 +348,17 @@ declare sub tkInsert _
 		byval id as integer, _
 		byval text as zstring ptr = NULL _
 	)
-declare sub tkCopy _
+declare sub tkRemove( byval first as integer, byval last as integer )
+declare function tkGet( byval x as integer ) as integer
+declare function tkGetText( byval x as integer ) as zstring ptr
+declare sub tkSetType _
 	( _
 		byval x as integer, _
-		byval first as integer, _
-		byval last as integer _
+		byval dtype as integer, _
+		byval subtype as zstring ptr _
 	)
-declare sub tkRemove( byval first as integer, byval last as integer )
-declare sub tkSetFlags _
-	( _
-		byval first as integer, _
-		byval last as integer, _
-		byval flags as integer _
-	)
-declare function tkGet( byval x as integer ) as integer
-declare function tkGetFlags( byval x as integer ) as integer
-declare function tkGetText( byval x as integer ) as zstring ptr
+declare function tkGetType( byval x as integer ) as integer
+declare function tkGetSubtype( byval x as integer ) as zstring ptr
 declare function tkGetCount( ) as integer
 declare function tkIsStmtSep( byval x as integer ) as integer
 

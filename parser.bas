@@ -89,7 +89,7 @@ private function cPPDirective( byval x as integer ) as integer
 			return begin
 		end if
 
-		tkInsert( begin, TK_PPDEFINE, tkGetText( x ) )
+		tkInsert( begin, TK_PPDEFINEBEGIN, tkGetText( x ) )
 		begin += 1
 		tkRemove( begin, x )
 
@@ -98,7 +98,8 @@ private function cPPDirective( byval x as integer ) as integer
 
 		'' Body
 		x = cFindEOL( begin )
-		tkSetFlags( begin, x, FLAG_PPDEFINE )
+		tkInsert( x, TK_PPDEFINEEND )
+		x += 1
 
 	case KW_INCLUDE
 		'' INCLUDE
@@ -251,861 +252,234 @@ end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-#if 0
-
 enum
-	DECL_PARAM = 0
-	DECL_TOP
-	DECL_TYPEDEF
-	DECL_TYPEDEFSTRUCTBLOCK
-	DECL_VAR
+	DECL_TOP = 0
 	DECL_FIELD
+	DECL_PARAM
+	DECL_VAR
 	DECL_PROC
+	DECL_TYPEDEF
 end enum
 
-'' Skips the token and any following whitespace
-private function hSkipRaw _
+private function cConstMod _
 	( _
 		byval x as integer, _
-		byval delta as integer _
+		byref dtype as integer _
 	) as integer
-
-	do
-		x += delta
-
-		select case( tkGet( x ) )
-		case TK_EOL, TK_COMMENT, TK_LINECOMMENT, TK_TODO
-
-		case else
-			exit do
-		end select
-	loop
-
-	function = x
-end function
-
-function hSkip( byval x as integer ) as integer
-	function = hSkipRaw( x, 1 )
-end function
-
-function hSkipRev( byval x as integer ) as integer
-	function = hSkipRaw( x, -1 )
-end function
-
-private function hSkipUnlessEolRaw _
-	( _
-		byval x as integer, _
-		byval delta as integer _
-	) as integer
-
-	do
-		x += delta
-
-		select case( tkGet( x ) )
-		case TK_COMMENT, TK_LINECOMMENT, TK_TODO
-
-		case else
-			exit do
-		end select
-	loop
-
-	function = x
-end function
-
-function hSkipUnlessEol( byval x as integer ) as integer
-	function = hSkipUnlessEolRaw( x, 1 )
-end function
-
-function hSkipRevUnlessEol( byval x as integer ) as integer
-	function = hSkipUnlessEolRaw( x, -1 )
-end function
-
-function hIsWhitespaceUntilEol( byval x as integer ) as integer
-	do
-		select case( tkGet( x ) )
-		case TK_EOL, TK_EOF
-			exit do
-		case TK_COMMENT, TK_LINECOMMENT, TK_TODO
-
-		case else
-			return FALSE
-		end select
-
-		x += 1
-	loop
-	function = TRUE
-end function
-
-function hSkipOptional _
-	( _
-		byval x as integer, _
-		byval tk as integer _
-	) as integer
-
-	if( tkGet( x ) = tk ) then
-		x = hSkip( x )
-	end if
-
-	function = x
-end function
-
-function hInsertStatementSeparator( byval x as integer ) as integer
-	'' Only if there's not already another ':'
-	if( (tkGet( x ) <> TK_COLON) and (tkGet( hSkipRev( x ) ) <> TK_COLON) ) then
-		tkInsert( x, TK_COLON, NULL )
-		x += 1
-	end if
-	function = x
-end function
-
-private function hInsertTodo _
-	( _
-		byval x as integer, _
-		byval text as zstring ptr _
-	) as integer
-
-	dim as integer first = any, last = any
-
-	first = hSkipRevUnlessEol( x )
-
-	select case( tkGet( first ) )
-	case TK_EOL, TK_EOF
-		'' Ok, there's only indentation in front of us.
-		'' Insert the TODO right here, then an EOL,
-		'' then duplicate the indentation to re-indent
-		'' the next construct. That way, the TODO
-		'' will appear nicely aligned above the
-		'' construct it refers to.
-		'' (Often there won't be any indentation,
-		'' then nothing will be copied)
-		first += 1 '' (not the EOL at the front)
-		last = x - 1
-
-		tkInsert( x, TK_TODO, text )
-		x += 1
-
-		tkInsert( x, TK_EOL, NULL )
-		x += 1
-
-		if( first <= last ) then
-			tkCopy( x, first, last )
-			x += last - first + 1
-		end if
-	case else
-		'' Insert in the middle of the line
-		tkInsert( x, TK_TODO, text )
-		x += 1
-	end select
-
-	return x
-end function
-
-sub hRemoveThisAndSpace( byval x as integer )
-	tkRemove( x, hSkip(x) - 1 )
-end sub
-
-function hFindToken( byval x as integer, byval tk as integer ) as integer
-	dim as integer begin = any
-
-	begin = x
-	do
-		select case( tkGet( x ) )
-		case tk
-			exit do
-		case TK_EOF
-			x = begin
-			exit do
-		end select
-
-		x += 1
-	loop
-
-	function = x
-end function
-
-function hFindParentheses _
-	( _
-		byval x as integer, _
-		byval delta as integer _
-	) as integer
-
-	dim as integer old = any, a = any, b = any, level = any
-
-	old = x
-	a = tkGet( x )
-	b = -1
-
-	if( delta < 0 ) then
-		select case( a )
-		case TK_RPAREN
-			b = TK_LPAREN
-		case TK_RBRACE
-			b = TK_LBRACE
-		case TK_RBRACKET
-			b = TK_LBRACKET
-		end select
-	else
-		select case( a )
-		case TK_LPAREN
-			b = TK_RPAREN
-		case TK_LBRACE
-			b = TK_RBRACE
-		case TK_LBRACKET
-			b = TK_RBRACKET
-		end select
-	end if
-
-	if( b < 0 ) then
-		return old
-	end if
-
-	level = 0
-	do
-		x = hSkipRaw( x, delta )
-
-		select case( tkGet( x ) )
-		case b
-			if( level = 0 ) then
-				'' Found it
-				exit do
-			end if
-			level -= 1
-
-		case a
-			level += 1
-
-		case TK_EOF
-			'' Not in this file anyways
-			return old
-
-		end select
-	loop
-
-	function = x
-end function
-
-private function hSkipStatement( byval x as integer ) as integer
-	dim as integer level = any
-
-	level = 0
-	do
-		select case( tkGet( x ) )
-		case TK_SEMI
-			if( level = 0 ) then
-				exit do
-			end if
-
-		case TK_LBRACE
-			level += 1
-
-		case TK_RBRACE
-			level -= 1
-
-		case TK_HASH
-			return x
-
-		case TK_EOF
-			exit do
-
-		end select
-
-		x = hSkip( x )
-	loop
-
-	function = hSkip( x )
-end function
-
-function parseUnknown( byval x as integer ) as integer
-	dim as integer begin = any
-
-	begin = x
-
-	'' Find the next '#' or ';' while skipping over ';'s inside
-	'' '{...}'.
-	x = hSkipStatement( x )
-
-	function = x
-end function
-
-private function hSkipPP( byval x as integer ) as integer
-	'' Skip over current token like hSkip(), but stop at EOL, unless it's
-	'' escaped (CPP line continuation).
-
-	do
-		x = hSkipUnlessEol( x )
-	loop while( (tkGet( x ) = TK_EOL) and (tkGet( x - 1 ) = TK_BACKSLASH) )
-
-	function = x
-end function
-
-private function hSkipPPDirective( byval x as integer ) as integer
-	do
-		x = hSkipPP( x )
-
-		select case( tkGet( x ) )
-		case TK_EOL, TK_EOF
-			exit do
-		end select
-	loop
-	function = x
-end function
-
-private function hIndentComment _
-	( _
-		byref oldtext as string, _
-		byref prefix as string _
-	) as string
-
-	''
-	'' Indents a comments body. Since the whole comment is a single token,
-	'' the indendation must be done in the comment token's text.
-	''
-	'' Used to change this:
-	''
-	''			/* Foo
-	''	   bar baz buz */
-	''
-	'' To this:
-	''
-	''			/* Foo
-	''			   bar baz buz */
-	''
-
-	dim as string newtext
-	dim as integer behindeol
-
-	behindeol = FALSE
-	for i as integer = 0 to len( oldtext )-1
-		if( behindeol ) then
-			newtext += prefix
-		end if
-
-		'' Check the current char, if's an EOL, we'll insert whitespace
-		'' behind it later...
-		select case( oldtext[i] )
-		case &h0A '' LF
-			behindeol = TRUE
-		case &h0D '' CR
-			if( (i + 1) < len( oldtext ) ) then
-				behindeol = (oldtext[i+1] <> &h0A) '' CRLF
-			else
-				behindeol = TRUE
-			end if
-		case else
-			behindeol = FALSE
-		end select
-
-		'' Copy current char
-		newtext += chr( oldtext[i] )
-	next
-
-	if( behindeol ) then
-		newtext += prefix
-	end if
-
-	function = newtext
-end function
-
-private sub hMergeFileIn _
-	( _
-		byref filename as string, _
-		byval begin as integer, _
-		byval x as integer _
-	)
-
-	dim as integer first = any, last = any, y = any
-	dim as string text
-
-	'' Remove the #include (but not the EOL behind it)
-	assert( tkGet( begin ) = TK_HASH )
-	tkRemove( begin, x - 1 )
-
-	'' and insert the file content
-	x = lexInsertFile( begin, filename )
-
-	'' If the #include was indented, indent the whole inserted block too.
-	first = hSkipRevUnlessEol( begin )
-	select case( tkGet( first ) )
-	case TK_EOL, TK_EOF
-		'' Ok, there's only indentation in front of the #include.
-		'' Copy it in front of every line of the inserted block.
-
-		first += 1 '' (not the EOL in front of the #include)
-		last = begin - 1
-
-		'' Often there won't be any indentation, then there's nothing
-		'' to do.
-		if( first <= last ) then
-			y = begin
-			while( y < x )
-				select case( tkGet( y ) )
-				case TK_EOL
-					y += 1
-					tkCopy( y, first, last )
-					y += last - first + 1
-					x += last - first + 1
-
-				case TK_COMMENT
-					'' Reindent multiline comments too
-
-					'' 1) Collect the whitespace into
-					''    a string
-					for i as integer = first to last
-						text += *tkText( i )
-					next
-
-					'' 2) Prefix it to every line in the
-					''    comment body
-					text = hIndentComment( *tkText( y ), text )
-
-					'' 3) Insert the new comment
-					tkInsert( y, TK_COMMENT, text )
-					y += 1
-
-					'' 4) Remove the old one
-					tkRemove( y, y )
-
-				case else
-					y += 1
-				end select
-			wend
-		end if
-	end select
-end sub
-
-private function parsePPDefineAttribute _
-	( _
-		byval x as integer, _
-		byval pflags as uinteger ptr _
-	) as integer
-
-	dim as integer begin = any
-
-	begin = x
-
-	'' __attribute__
-	if( tkGet( x ) <> TK_ID ) then
-		return begin
-	end if
-	if( *tkText( x ) <> "__attribute__" ) then
-		return begin
-	end if
-	x = hSkipPP( x )
-
-	'' '(' '('
-	for i as integer = 0 to 1
-		if( tkGet( x ) <> TK_LPAREN ) then
-			return begin
-		end if
-		x = hSkipPP( x )
-	next
-
-	'' id
-	if( tkGet( x ) <> TK_ID ) then
-		return begin
-	end if
-	select case( *tkText( x ) )
-	case "cdecl", "stdcall", "__stdcall__"
-		*pflags or= DEFINE_CALL
-	case "dllexport", "dllimport"
-		*pflags or= DEFINE_EMPTY
-	case else
-		return begin
-	end select
-	x = hSkipPP( x )
-
-	function = x
-end function
-
-private function parsePPDefineDeclspec _
-	( _
-		byval x as integer, _
-		byval pflags as uinteger ptr _
-	) as integer
-
-	dim as integer begin = any
-
-	begin = x
-
-	'' __declspec
-	if( tkGet( x ) <> TK_ID ) then
-		return begin
-	end if
-	if( *tkText( x ) <> "__declspec" ) then
-		return begin
-	end if
-	x = hSkipPP( x )
-
-	'' '('
-	if( tkGet( x ) <> TK_LPAREN ) then
-		return begin
-	end if
-	x = hSkipPP( x )
-
-	'' id
-	if( tkGet( x ) <> TK_ID ) then
-		return begin
-	end if
-	select case( *tkText( x ) )
-	case "dllexport", "dllimport"
-		*pflags or= DEFINE_EMPTY
-	case else
-		return begin
-	end select
-
-	x = hSkipPP( x )
-
-	function = x
-end function
-
-private function hDeterminePPDefineFlags( byval x as integer ) as uinteger
-	dim as uinteger flags = any
-
-	flags = 0
-
-	'' Empty?
-	if( tkGet( x ) = TK_EOL ) then
-		flags or= DEFINE_EMPTY
-	end if
-
-	do
-		x = parsePPDefineAttribute( x, @flags )
-		x = parsePPDefineDeclspec( x, @flags )
-
-		select case( tkGet( x ) )
-		case TK_EOL
-			exit do
-		case TK_ID
-			select case( *tkText( x ) )
-			case "__stdcall"
-				flags or= DEFINE_CALL
-			end select
-		end select
-
-		x = hSkipPP( x )
-	loop
-
-	function = flags
-end function
-
-private function parseNestedStructBegin( byval x as integer ) as integer
-	dim as integer begin = any
-
-	'' {STRUCT|UNION} '{'
-	select case( tkGet( x ) )
-	case KW_STRUCT, KW_UNION
-
-	case else
-		return x
-	end select
-
-	begin = x
-	x = hSkip( x )
-
-	'' '{'
-	if( tkGet( x ) <> TK_LBRACE ) then
-		return begin
-	end if
-
-	function = hSkip( x )
-end function
-
-private function parseNestedStructEnd _
-	( _
-		byval x as integer, _
-		byval toplevelopening as integer _
-	) as integer
-
-	dim as integer begin = any, opening = any
-
-	begin = x
-
-	'' '}'
-	if( tkGet( x ) <> TK_RBRACE ) then
-		return begin
-	end if
-
-	'' Find the opening '{', to determine whether this is a struct
-	'' or a union. Bail out if there is no matching nested struct/union
-	'' begin.
-	opening = hFindParentheses( x, -1 )
-	if( (opening = x) or (opening <= toplevelopening) ) then
-		return begin
-	end if
-	opening = hSkipRev( opening )
-
-	'' '}'
-	assert( tkGet( x ) = TK_RBRACE )
-	x = hSkip( x )
-
-	'' [id]
-	if( tkGet( x ) = TK_ID ) then
-		x = hSkip( x )
-	end if
-
-	'' ';'
-	if( tkGet( x ) <> TK_SEMI ) then
-		return begin
-	end if
-
-	function = hSkip( x )
-end function
-
-
-function parseExternBegin( byval x as integer ) as integer
-	dim as integer begin = any
-
-	'' EXTERN "C" '{'
-
-	if( tkGet( x ) <> KW_EXTERN ) then
-		return x
-	end if
-
-	begin = x
-	x = hSkip( x )
-
-	'' "C"
-	if( tkGet( x ) <> TK_STRING ) then
-		return begin
-	end if
-	x = hSkip( x )
-
-	'' '{'
-	if( tkGet( x ) <> TK_LBRACE ) then
-		return begin
-	end if
-
-	'' EXTERN parsing is done here, so the content is parsed from the
-	'' toplevel loop.
-	function = hSkip( x )
-end function
-
-function parseExternEnd( byval x as integer ) as integer
-	dim as integer opening = any
-
-	'' '}'
-	if( tkGet( x ) <> TK_RBRACE ) then
-		return x
-	end if
-
-	'' Check whether this '}' belongs to an 'extern "C" {'
-	opening = hFindParentheses( x, -1 )
-	if( opening = x ) then
-		return x
-	end if
-
-	function = hSkip( x )
-end function
-
-function parseEnumconst _
-	( _
-		byval x as integer, _
-		byval is_unknown as integer _
-	) as integer
-
-	dim as integer begin = any, skip_expression = any, level = any
-
-	begin = x
-	skip_expression = is_unknown
-
-	if( is_unknown = FALSE ) then
-		'' id
-		if( tkGet( x ) <> TK_ID ) then
-			return begin
-		end if
-		x = hSkip( x )
-
-		select case( tkGet( x ) )
-		case TK_EQ
-			'' ['=']
-			skip_expression = TRUE
-			x = hSkip( x )
-		case TK_LPAREN
-			'' '('
-			'' This allows function-like macros like <FOO(...)>
-			'' in place of constants in an enum, at least the
-			'' libcurl headers make extensive use of that...
-			'' The '(...)' skipping is covered by the same code
-			'' that skips over the '= ...' expressions.
-			skip_expression = TRUE
-		end select
-	end if
-
-	if( skip_expression ) then
-		'' Skip until ',' or '}'
-		level = 0
-		do
-			select case( tkGet( x ) )
-			case TK_LPAREN
-				level += 1
-			case TK_RPAREN
-				level -= 1
-			case TK_COMMA
-				if( level = 0 ) then
-					exit do
-				end if
-			case TK_RBRACE, TK_EOF, TK_HASH
-				'' Note: '#' (PP directives) not allowed in
-				'' expressions in FB, this can't be translated.
-				exit do
-			end select
-			x = hSkip( x )
-		loop
-	end if
-
-	select case( tkGet( x ) )
-	case TK_COMMA
-		'' Treat the comma as part of the constant declaration
-		x = hSkip( x )
-	case TK_RBRACE
-
-	case else
-		if( is_unknown = FALSE ) then
-			return begin
-		end if
-	end select
-
-	function = x
-end function
-
-private function parseBaseType( byval x as integer ) as integer
-	dim as integer old = any
-
-	old = x
 
 	'' [CONST]
-	x = hSkipOptional( x, KW_CONST )
+	if( tkGet( x ) = KW_CONST ) then
+		dtype = typeSetIsConst( dtype )
+		x += 1
+	end if
+
+	function = x
+end function
+
+private function cBaseType _
+	( _
+		byval x as integer, _
+		byref dtype as integer, _
+		byref subtype as string _
+	) as integer
+
+	dim as integer begin = any, sign = any
+
+	dtype = TYPE_NONE
+	subtype = ""
+
+	begin = x
+	sign = 0
+
+	'' (CONST|SIGNED|UNSIGNED)*
+	do
+		'' [CONST]
+		x = cConstMod( x, dtype )
+
+		'' [SIGNED | UNSIGNED]
+		select case( tkGet( x ) )
+		case KW_SIGNED
+			sign = -1
+			x += 1
+		case KW_UNSIGNED
+			sign = 1
+			x += 1
+		case else
+			exit do
+		end select
+	loop
 
 	select case( tkGet( x ) )
 	case KW_ENUM, KW_STRUCT, KW_UNION
-		'' {ENUM | STRUCT | UNION} id
-		x = hSkip( x )
+		'' {ENUM|STRUCT|UNION}
+		x += 1
 
-		'' id
+		'' Identifier
 		if( tkGet( x ) <> TK_ID ) then
-			return old
+			return FALSE
 		end if
-		x = hSkip( x )
 
-		'' [CONST]
-		x = hSkipOptional( x, KW_CONST )
-
-		return x
+		dtype = typeSetDt( dtype, TYPE_UDT )
+		subtype = *tkGetText( x )
+		x += 1
 
 	case TK_ID
-		'' Just a single id
-		x = hSkip( x )
+		'' Identifier
+		dtype = typeSetDt( dtype, TYPE_UDT )
+		subtype = *tkGetText( x )
+		x += 1
 
-		'' [CONST]
-		x = hSkipOptional( x, KW_CONST )
+	case KW_VOID
+		dtype = typeSetDt( dtype, TYPE_ANY )
+		x += 1
 
-		return x
-	end select
+	case KW_CHAR
+		select case( sign )
+		case -1
+			dtype = typeSetDt( dtype, TYPE_BYTE )
+		case 1
+			dtype = typeSetDt( dtype, TYPE_UBYTE )
+		case else
+			dtype = typeSetDt( dtype, TYPE_ZSTRING )
+		end select
+		x += 1
 
-	'' [SIGNED | UNSIGNED]
-	select case( tkGet( x ) )
-	case KW_SIGNED, KW_UNSIGNED
-		x = hSkip( x )
-	end select
+	case KW_FLOAT
+		dtype = typeSetDt( dtype, TYPE_SINGLE )
+		x += 1
 
-	'' [ VOID | CHAR | FLOAT | DOUBLE | INT
-	'' | SHORT [INT]
-	'' | LONG [LONG] [INT]
-	'' ]
-	select case( tkGet( x ) )
-	case KW_VOID, KW_CHAR, KW_FLOAT, KW_DOUBLE, KW_INT
-		x = hSkip( x )
+	case KW_DOUBLE
+		dtype = typeSetDt( dtype, TYPE_DOUBLE )
+		x += 1
 
 	case KW_SHORT
-		x = hSkip( x )
+		if( sign > 0 ) then
+			dtype = typeSetDt( dtype, TYPE_USHORT )
+		else
+			dtype = typeSetDt( dtype, TYPE_SHORT )
+		end if
+		x += 1
 
 		'' [INT]
-		x = hSkipOptional( x, KW_INT )
+		if( tkGet( x ) = KW_INT ) then
+			x += 1
+		end if
+
+	case KW_INT
+		if( sign > 0 ) then
+			dtype = typeSetDt( dtype, TYPE_ULONG )
+		else
+			dtype = typeSetDt( dtype, TYPE_LONG )
+		end if
+		x += 1
 
 	case KW_LONG
-		x = hSkip( x )
+		if( sign > 0 ) then
+			dtype = typeSetDt( dtype, TYPE_ULONG )
+		else
+			dtype = typeSetDt( dtype, TYPE_LONG )
+		end if
+		x += 1
 
 		'' [LONG]
-		x = hSkipOptional( x, KW_LONG )
+		if( tkGet( x ) = KW_LONG ) then
+			if( sign > 0 ) then
+				dtype = typeSetDt( dtype, TYPE_ULONGINT )
+			else
+				dtype = typeSetDt( dtype, TYPE_LONGINT )
+			end if
+			x += 1
+		end if
 
 		'' [INT]
-		x = hSkipOptional( x, KW_INT )
+		if( tkGet( x ) = KW_INT ) then
+			x += 1
+		end if
 
+	case else
+		return FALSE
 	end select
 
 	'' [CONST]
-	x = hSkipOptional( x, KW_CONST )
+	x = cConstMod( x, dtype )
 
-	'' In case of no type keyword at all, x = old
-	function = x
+	tkRemove( begin, x )
+	function = TRUE
 end function
 
-private function parsePtrs( byval x as integer ) as integer
+private function cPtrCount _
+	( _
+		byval x as integer, _
+		byref dtype as integer _
+	) as integer
+
 	'' Pointers: ('*')*
 	while( tkGet( x ) = TK_STAR )
-		x = hSkip( x )
+		dtype = typeAddrOf( dtype )
+		x += 1
 
-		'' [CONST] (behind the '*')
-		x = hSkipOptional( x, KW_CONST )
+		'' [CONST]
+		x = cConstMod( x, dtype )
 	wend
+
 	function = x
 end function
 
-sub cMultdecl( byval decl as integer )
-	dim as integer typebegin = any, is_procptr = any, old = any
+function cMultDecl( byval x as integer, byval decl as integer ) as integer
+	dim as integer dtype = any, basedtype = any, begin = any
+	dim as string subtype
 
 	'' Generic 'type *a, **b;' parsing,
-	'' used for vardecls/fielddecls/procdecls/params...
+	'' used for vars/fields/protos/params...
 	''
-	'' type '*'* var (',' '*'* var)* ';'
+	'' BaseType PtrCount Identifier (',' PtrCount Identifier)* ';'
 	''
-	'' Where var can be:
-	'' a plain id: var = id
-	'' a procptr:  var = '(' '*'+ id ')' '(' params ')'
-	'' a procdecl: var = id '(' params ')'
+	'' Here, Identifier can actually be:
+	'' a plain id: Identifier
+	'' a procptr:  '(' PtrCount Identifier ')' '(' ParamList ')'
+	'' a proto:    Identifier '(' ParamList ')'
+	begin = x
 
-	'' No type hack for the typedef-to-struct-block parser:
-	'' its type is the struct block, which it already parsed...
-	if( decl <> DECL_TYPEDEFSTRUCTBLOCK ) then
-		'' type
-		typebegin = x
-		x = parseBaseType( x )
-		if( x = typebegin ) then
-			return begin
-		end if
+	'' type
+	if( cBaseType( x, basedtype, subtype ) = FALSE ) then
+		return begin
 	end if
 
-	'' var (',' var)*
+	'' ... (',' ...)*
 	do
-		'' '*'*
-		x = parsePtrs( x )
+		dtype = basedtype
+		x = cPtrCount( x, dtype )
 
+#if 0
 		'' '('?
 		is_procptr = FALSE
 		if( tkGet( x ) = TK_LPAREN ) then
-			is_procptr = TRUE
-			x = hSkip( x )
+			x += 1
 
 			'' '*'
 			if( tkGet( x ) <> TK_STAR ) then
 				return begin
 			end if
-			x = hSkip( x )
+			x += 1
+
+			is_procptr = TRUE
 		end if
+#endif
 
 		'' id (must be there except for params)
 		if( tkGet( x ) = TK_ID ) then
-			x = hSkip( x )
+			x += 1
 		elseif( decl <> DECL_PARAM ) then
 			return begin
 		end if
 
+#if 0
 		if( is_procptr ) then
 			'' ')'
 			if( tkGet( x ) <> TK_RPAREN ) then
 				return begin
 			end if
-			x = hSkip( x )
+			x += 1
 		end if
 
 		'' Check for '(' params ')'
@@ -1157,13 +531,14 @@ sub cMultdecl( byval decl as integer )
 			end if
 			x = hSkip( x )
 		end if
+#endif
 
 		'' Everything can have a comma and more identifiers,
 		'' except for params.
 		if( (decl = DECL_PARAM) or (tkGet( x ) <> TK_COMMA) ) then
 			exit do
 		end if
-		x = hSkip( x )
+		x += 1
 	loop
 
 	select case( decl )
@@ -1173,17 +548,15 @@ sub cMultdecl( byval decl as integer )
 			return begin
 		end if
 
-		x = hSkip( x )
+		x += 1
 
 	end select
 
 	function = x
 end function
 
-#endif
-
-sub cToplevel( )
-	dim as integer x = any, old = any
+private function cTopDecl( byval x as integer ) as integer
+	dim as integer begin = any, decl = any
 
 	'' Toplevel declarations: global variables (including procedure
 	'' pointers), procedure declarations, and also typedefs, since they
@@ -1194,31 +567,35 @@ sub cToplevel( )
 	''
 	'' [TYPEDEF|EXTERN|STATIC] multdecl
 
+	begin = x
+	decl = DECL_TOP
+
+	select case( tkGet( x ) )
+	case KW_EXTERN, KW_STATIC
+		x += 1
+
+	case KW_TYPEDEF
+		decl = DECL_TYPEDEF
+		x += 1
+
+	end select
+
+	function = cMultDecl( x, decl )
+end function
+
+sub cToplevel( )
+	dim as integer x = any, old = any
+
 	x = 0
 	do
 		old = x
 
 		x = cStructCompound( x )
+		x = cTopDecl( x )
 
 		if( tkGet( x ) = TK_EOF ) then
 			exit do
 		end if
-
-#if 0
-		decl = DECL_TOP
-
-		select case( parseGet( ) )
-		case KW_EXTERN, KW_STATIC
-			parseNext( )
-
-		case KW_TYPEDEF
-			decl = DECL_TYPEDEF
-			parseNext( )
-
-		end select
-
-		cMultDecl( decl )
-#endif
 
 		if( x = old ) then
 			x += 1

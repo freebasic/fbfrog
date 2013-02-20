@@ -8,9 +8,7 @@ sub oops( byref message as string )
 end sub
 
 private sub frogEnd( )
-	if( frog.verbose ) then
-		tkStats( )
-	end if
+	tkStats( )
 	end 0
 end sub
 
