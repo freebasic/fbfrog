@@ -62,6 +62,47 @@ private sub emitStmt( byref ln as string )
 	emitEol( )
 end sub
 
+private function emitType( byval x as integer ) as string
+	static as zstring ptr types(0 to TYPE__COUNT-1) = _
+	{ _
+		NULL       , _
+		@"any"     , _
+		@"byte"    , _
+		@"ubyte"   , _
+		@"zstring" , _
+		@"short"   , _
+		@"ushort"  , _
+		@"long"    , _
+		@"ulong"   , _
+		@"longint" , _
+		@"ulongint", _
+		@"single"  , _
+		@"double"  , _
+		NULL         _
+	}
+
+	dim as string s
+	dim as integer dtype = any
+
+	dtype = tkGetType( x )
+
+	if( typeIsConstAt( dtype, 0 ) ) then
+		s += "const "
+	end if
+
+	s += *types(typeGetDt( dtype ))
+
+	for i as integer = 1 to typeGetPtrCount( dtype )
+		if( typeIsConstAt( dtype, i ) ) then
+			s += " const"
+		end if
+
+		s += " ptr"
+	next
+
+	function = s
+end function
+
 private function emitTk( byval x as integer ) as integer
 	dim as zstring ptr s = any
 
@@ -110,6 +151,9 @@ private function emitTk( byval x as integer ) as integer
 		emitUnindent( )
 
 		emitStmt( "end type" )
+
+	case TK_FIELD
+		emitStmt( *tkGetText( x ) + !"\t\tas " + emitType( x ) )
 
 	case TK_EOL
 		emitEol( )

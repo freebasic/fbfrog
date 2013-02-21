@@ -9,6 +9,7 @@ dim shared as TOKENINFO tk_info(0 to (TK__COUNT - 1)) = _
 	( TRUE , NULL  , @"#define end"     ), _
 	( TRUE , NULL  , @"struct begin"    ), _
 	( TRUE , NULL  , @"struct end"      ), _
+	( TRUE , NULL  , @"field"           ), _
 	( TRUE , NULL  , @"procdecl"        ), _
 	( TRUE , NULL  , @"vardecl"         ), _
 	( TRUE , NULL  , @"todo"            ), _
@@ -385,6 +386,7 @@ sub tkRemove( byval first as integer, byval last as integer )
 
 	for i as integer = first to last
 		p = tk.p + i
+		assert( p = tkAccess( i ) )
 		deallocate( p->text )
 		deallocate( p->subtype )
 	next

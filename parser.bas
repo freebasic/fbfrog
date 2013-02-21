@@ -1,6 +1,19 @@
 #include once "fbfrog.bi"
 
+enum
+	DECL_TOP = 0
+	DECL_FIELD
+	DECL_PARAM
+	DECL_VAR
+	DECL_PROC
+	DECL_PROCPTR
+	DECL_TYPEDEF
+end enum
+
 declare function cStructCompound( byval x as integer ) as integer
+declare function cMultDecl( byval x as integer, byval decl as integer ) as integer
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 private function cFindEOL( byval x as integer ) as integer
 	while( tkIsStmtSep( x ) = FALSE )
@@ -174,6 +187,7 @@ private function cStructBody( byval x as integer ) as integer
 	do
 		old = x
 
+		x = cMultDecl( x, DECL_FIELD )
 		x = cStructCompound( x )
 
 		'' '}'?
@@ -231,7 +245,7 @@ private function cStructCompound( byval x as integer ) as integer
 	begin = cStructBody( begin )
 	x = begin
 
-	'' '}'
+	'' ['}']
 	if( tkGet( x ) = TK_RBRACE ) then
 		x += 1
 	end if
@@ -245,21 +259,14 @@ private function cStructCompound( byval x as integer ) as integer
 	tkInsert( begin, TK_STRUCTEND )
 	begin += 1
 	x += 1
-	tkRemove( begin, x )
+	if( x <> begin ) then
+		tkRemove( begin, x - 1 )
+	end if
 
-	function = x
+	function = begin
 end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-
-enum
-	DECL_TOP = 0
-	DECL_FIELD
-	DECL_PARAM
-	DECL_VAR
-	DECL_PROC
-	DECL_TYPEDEF
-end enum
 
 private function cConstMod _
 	( _
@@ -403,7 +410,7 @@ private function cBaseType _
 	'' [CONST]
 	x = cConstMod( x, dtype )
 
-	tkRemove( begin, x )
+	tkRemove( begin, x - 1 )
 	function = TRUE
 end function
 
@@ -425,120 +432,170 @@ private function cPtrCount _
 	function = x
 end function
 
+function cDeclElement _
+	( _
+		byval x as integer, _
+		byval decl as integer, _
+		byval basedtype as integer, _
+		byref basesubtype as string _
+	) as integer
+
+	dim as integer dtype = any, begin = any
+	dim as zstring ptr id = any
+
+	'' plain id: PtrCount Identifier
+	'' procptr:  PtrCount '(' '*' Identifier ')' '(' ParamList ')'
+	'' proto:    PtrCount Identifier '(' ParamList ')'
+	begin = x
+	dtype = basedtype
+
+	'' PtrCount
+	x = cPtrCount( x, dtype )
+
+#if 0
+	'' '('?
+	is_procptr = FALSE
+	if( tkGet( x ) = TK_LPAREN ) then
+		x += 1
+
+		'' '*'
+		if( tkGet( x ) <> TK_STAR ) then
+			return begin
+		end if
+		x += 1
+
+		is_procptr = TRUE
+	end if
+#endif
+
+	'' Identifier (must be there except for params)
+	if( tkGet( x ) = TK_ID ) then
+		id = tkGetText( x )
+		x += 1
+	else
+		if( decl <> DECL_PARAM ) then
+			return begin
+		end if
+
+		id = NULL
+	end if
+
+#if 0
+	if( is_procptr ) then
+		'' ')'
+		if( tkGet( x ) <> TK_RPAREN ) then
+			return begin
+		end if
+		x += 1
+	end if
+
+	'' Check for '(' params ')'
+	if( tkGet( x ) = TK_LPAREN ) then
+		'' Note: typedef to procdecl can't be translated,
+		'' so it's disallowed here. If there are procdecls
+		'' in fields, then fine, that's C++ stuff, but oh well.
+		'' Note: procptrs always have params.
+		if( (is_procptr = FALSE) and _
+		    ((decl = DECL_TYPEDEF) or _
+		     (decl = DECL_TYPEDEFSTRUCTBLOCK)) ) then
+			return begin
+		end if
+
+		'' '('
+		x = hSkip( x )
+
+		'' Just '(void)'?
+		if( (tkGet( x ) = KW_VOID) and (tkGet( hSkip( x ) ) = TK_RPAREN)) then
+			'' VOID
+			x = hSkip( x )
+		else
+			'' [ type [id]  (',' type [id] )*  [ ',' '...' ] ]
+			'' Note: The following isn't even doing that much
+			'' syntax verification at all, but it's ok, it's not
+			'' a compiler afterall.
+			do
+				select case( tkGet( x ) )
+				case TK_RPAREN
+					exit do
+				case TK_EOF
+					return begin
+				case TK_COMMA, TK_ELLIPSIS
+					'' Let ',' and '...' pass
+					x = hSkip( x )
+				case else
+					old = x
+					x = parseMultdecl( x, x, DECL_PARAM )
+					if( x = old ) then
+						return begin
+					end if
+				end select
+			loop
+		end if
+
+		'' ')'
+		if( tkGet( x ) <> TK_RPAREN ) then
+			return begin
+		end if
+		x = hSkip( x )
+	end if
+#endif
+
+	select case as const( decl )
+	case DECL_FIELD
+		tkInsert( begin, TK_FIELD, id )
+		tkSetType( begin, dtype, basesubtype )
+		begin += 1
+		tkRemove( begin, x )
+		x = begin
+
+	case DECL_PARAM
+	case DECL_VAR
+	case DECL_PROC
+	case DECL_PROCPTR
+	case DECL_TOP
+	case else
+		assert( FALSE )
+	end select
+
+	function = x
+end function
+
+'' Generic 'type *a, **b;' parsing, used for vars/fields/protos/params
+'' ("multiple declaration" syntax)
+''    int i;
+''    int a, b, c;
+''    int *a, ***b, c;
+''    int f(void);
+''    int (*procptr)(void);
 function cMultDecl( byval x as integer, byval decl as integer ) as integer
-	dim as integer dtype = any, basedtype = any, begin = any
+	dim as integer dtype = any, begin = any, old = any
 	dim as string subtype
 
-	'' Generic 'type *a, **b;' parsing,
-	'' used for vars/fields/protos/params...
-	''
-	'' BaseType PtrCount Identifier (',' PtrCount Identifier)* ';'
-	''
-	'' Here, Identifier can actually be:
-	'' a plain id: Identifier
-	'' a procptr:  '(' PtrCount Identifier ')' '(' ParamList ')'
-	'' a proto:    Identifier '(' ParamList ')'
+	'' BaseType DeclElement (',' DeclElement)* [';']
 	begin = x
 
-	'' type
-	if( cBaseType( x, basedtype, subtype ) = FALSE ) then
+	'' BaseType
+	if( cBaseType( x, dtype, subtype ) = FALSE ) then
 		return begin
 	end if
 
 	'' ... (',' ...)*
 	do
-		dtype = basedtype
-		x = cPtrCount( x, dtype )
+		old = x
+		x = cDeclElement( x, decl, dtype, subtype )
 
-#if 0
-		'' '('?
-		is_procptr = FALSE
-		if( tkGet( x ) = TK_LPAREN ) then
-			x += 1
-
-			'' '*'
-			if( tkGet( x ) <> TK_STAR ) then
-				return begin
-			end if
-			x += 1
-
-			is_procptr = TRUE
-		end if
-#endif
-
-		'' id (must be there except for params)
-		if( tkGet( x ) = TK_ID ) then
-			x += 1
-		elseif( decl <> DECL_PARAM ) then
+		if( x = old ) then
 			return begin
 		end if
-
-#if 0
-		if( is_procptr ) then
-			'' ')'
-			if( tkGet( x ) <> TK_RPAREN ) then
-				return begin
-			end if
-			x += 1
-		end if
-
-		'' Check for '(' params ')'
-		if( tkGet( x ) = TK_LPAREN ) then
-			'' Note: typedef to procdecl can't be translated,
-			'' so it's disallowed here. If there are procdecls
-			'' in fields, then fine, that's C++ stuff, but oh well.
-			'' Note: procptrs always have params.
-			if( (is_procptr = FALSE) and _
-			    ((decl = DECL_TYPEDEF) or _
-			     (decl = DECL_TYPEDEFSTRUCTBLOCK)) ) then
-				return begin
-			end if
-
-			'' '('
-			x = hSkip( x )
-
-			'' Just '(void)'?
-			if( (tkGet( x ) = KW_VOID) and (tkGet( hSkip( x ) ) = TK_RPAREN)) then
-				'' VOID
-				x = hSkip( x )
-			else
-				'' [ type [id]  (',' type [id] )*  [ ',' '...' ] ]
-				'' Note: The following isn't even doing that much
-				'' syntax verification at all, but it's ok, it's not
-				'' a compiler afterall.
-				do
-					select case( tkGet( x ) )
-					case TK_RPAREN
-						exit do
-					case TK_EOF
-						return begin
-					case TK_COMMA, TK_ELLIPSIS
-						'' Let ',' and '...' pass
-						x = hSkip( x )
-					case else
-						old = x
-						x = parseMultdecl( x, x, DECL_PARAM )
-						if( x = old ) then
-							return begin
-						end if
-					end select
-				loop
-			end if
-
-			'' ')'
-			if( tkGet( x ) <> TK_RPAREN ) then
-				return begin
-			end if
-			x = hSkip( x )
-		end if
-#endif
 
 		'' Everything can have a comma and more identifiers,
 		'' except for params.
 		if( (decl = DECL_PARAM) or (tkGet( x ) <> TK_COMMA) ) then
 			exit do
 		end if
-		x += 1
+
+		'' ','
+		tkRemove( x, x )
 	loop
 
 	select case( decl )
@@ -547,8 +604,7 @@ function cMultDecl( byval x as integer, byval decl as integer ) as integer
 		if( tkGet( x ) <> TK_SEMI ) then
 			return begin
 		end if
-
-		x += 1
+		tkRemove( x, x )
 
 	end select
 
@@ -556,7 +612,7 @@ function cMultDecl( byval x as integer, byval decl as integer ) as integer
 end function
 
 private function cTopDecl( byval x as integer ) as integer
-	dim as integer begin = any, decl = any
+	dim as integer decl = any
 
 	'' Toplevel declarations: global variables (including procedure
 	'' pointers), procedure declarations, and also typedefs, since they
@@ -567,7 +623,6 @@ private function cTopDecl( byval x as integer ) as integer
 	''
 	'' [TYPEDEF|EXTERN|STATIC] multdecl
 
-	begin = x
 	decl = DECL_TOP
 
 	select case( tkGet( x ) )

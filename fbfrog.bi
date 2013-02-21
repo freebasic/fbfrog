@@ -100,9 +100,9 @@ enum
 	TK_PPDEFINEEND
 	TK_STRUCTBEGIN
 	TK_STRUCTEND
+	TK_FIELD
 	TK_PROCDECL
 	TK_VARDECL
-	TK_TYPE
 
 	TK_TODO         '' TODOs added as fix-me-markers
 	TK_BYTE         '' For stray bytes that don't fit in elsewhere
@@ -304,6 +304,7 @@ enum
 	TYPE_SINGLE
 	TYPE_DOUBLE
 	TYPE_UDT
+	TYPE__COUNT
 end enum
 
 const TYPEMASK_DT    = &b00000000000000000000000000001111  '' 0..15, enough for TYPE_* enum
@@ -319,7 +320,10 @@ const TYPEMAX_PTR = 8
 
 #define typeSetDt( dtype, dt ) ((dtype and (not TYPEMASK_DT)) or (dt and TYPEMASK_DT))
 #define typeSetIsConst( dt ) ((dt) or (1 shl TYPEPOS_CONST))
+#define typeIsConstAt( dt, at ) (((dt) and (1 shl (TYPEPOS_CONST + (at)))) <> 0)
+#define typeGetDt( dt ) ((dt) and TYPEMASK_DT)
 #define typeGetDtAndPtr( dt ) ((dt) and (TYPEMASK_DT or TYPEMASK_PTR))
+#define typeGetPtrCount( dt ) (((dt) and TYPEMASK_PTR) shr TYPEPOS_PTR)
 #define typeAddrOf( dt ) _
 	(((dt) and TYPEMASK_DT) or _
 	 (((dt) and TYPEMASK_PTR) + (1 shl TYPEPOS_PTR)) or _
