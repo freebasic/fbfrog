@@ -1,33 +1,48 @@
 #include once "fbfrog.bi"
 #include once "crt.bi"
 
-dim shared as TOKENINFO tk_info(0 to (TK__COUNT - 1)) = _
+type TOKENINFO
+	is_stmtsep	as integer
+	text		as zstring ptr
+	debug		as zstring ptr
+end type
+
+dim shared as TOKENINFO tk_info(0 to ...) = _
 { _
-	( TRUE , NULL  , @"eof"             ), _
-	( TRUE , NULL  , @"#include"        ), _
-	( TRUE , NULL  , @"#define begin"   ), _
-	( TRUE , NULL  , @"#define end"     ), _
-	( TRUE , NULL  , @"struct begin"    ), _
-	( TRUE , NULL  , @"struct end"      ), _
-	( TRUE , NULL  , @"field"           ), _
-	( TRUE , NULL  , @"procdecl"        ), _
-	( TRUE , NULL  , @"vardecl"         ), _
-	( TRUE , NULL  , @"todo"            ), _
-	( FALSE, NULL  , @"byte"            ), _
-	( TRUE , NULL  , @"eol"             ), _
-	( FALSE, NULL  , @"comment"         ), _
-	( FALSE, NULL  , @"linecomment"     ), _
-	( FALSE, NULL  , @"decnum"          ), _ '' Number literals
-	( FALSE, NULL  , @"hexnum"          ), _
-	( FALSE, NULL  , @"octnum"          ), _
-	( FALSE, NULL  , @"string"          ), _ '' String literals
-	( FALSE, NULL  , @"char"            ), _
-	( FALSE, NULL  , @"wstring"         ), _
-	( FALSE, NULL  , @"wchar"           ), _
-	( FALSE, NULL  , @"estring"         ), _
-	( FALSE, NULL  , @"echar"           ), _
-	( FALSE, NULL  , @"ewstring"        ), _
-	( FALSE, NULL  , @"ewchar"          ), _
+	( TRUE , NULL  , @"eof"                  ), _
+	( TRUE , NULL  , @"#include"             ), _
+	( TRUE , NULL  , @"#define begin"        ), _
+	( TRUE , NULL  , @"#define end"          ), _
+	( TRUE , NULL  , @"struct begin"         ), _
+	( TRUE , NULL  , @"struct end"           ), _
+	( TRUE , NULL  , @"global"               ), _
+	( TRUE , NULL  , @"externglobal"         ), _
+	( TRUE , NULL  , @"staticglobal"         ), _
+	( TRUE , NULL  , @"globalprocptr"        ), _
+	( TRUE , NULL  , @"externglobalprocptr"  ), _
+	( TRUE , NULL  , @"staticglobalprocptr"  ), _
+	( TRUE , NULL  , @"globalproc"           ), _
+	( TRUE , NULL  , @"field"                ), _
+	( TRUE , NULL  , @"fieldprocptr"         ), _
+	( TRUE , NULL  , @"fieldproc"            ), _
+	( TRUE , NULL  , @"param"                ), _
+	( TRUE , NULL  , @"paramprocptr"         ), _
+	( TRUE , NULL  , @"todo"                 ), _
+	( FALSE, NULL  , @"byte"                 ), _
+	( TRUE , NULL  , @"eol"                  ), _
+	( FALSE, NULL  , @"comment"              ), _
+	( FALSE, NULL  , @"linecomment"          ), _
+	( FALSE, NULL  , @"decnum"               ), _ '' Number literals
+	( FALSE, NULL  , @"hexnum"               ), _
+	( FALSE, NULL  , @"octnum"               ), _
+	( FALSE, NULL  , @"string"               ), _ '' String literals
+	( FALSE, NULL  , @"char"                 ), _
+	( FALSE, NULL  , @"wstring"              ), _
+	( FALSE, NULL  , @"wchar"                ), _
+	( FALSE, NULL  , @"estring"              ), _
+	( FALSE, NULL  , @"echar"                ), _
+	( FALSE, NULL  , @"ewstring"             ), _
+	( FALSE, NULL  , @"ewchar"               ), _
 	( FALSE, @"!"  , @"tk" ), _ '' Main tokens
 	( FALSE, @"!=" , @"tk" ), _
 	( FALSE, @"#"  , @"tk" ), _
@@ -176,6 +191,16 @@ dim shared as TOKENINFO tk_info(0 to (TK__COUNT - 1)) = _
 	( FALSE, @"xor"     , @"kw" ), _
 	( FALSE, @"zstring" , @"kw" )  _
 }
+
+#if ubound( tk_info ) < TK__COUNT - 1
+#error "you forgot to update the tk_info() table again!"
+#endif
+
+function tkInfoText( byval tk as integer ) as zstring ptr
+	function = tk_info(tk).text
+end function
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 type ONETOKEN
 	id		as integer      '' TK_*

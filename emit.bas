@@ -103,6 +103,14 @@ private function emitType( byval x as integer ) as string
 	function = s
 end function
 
+private sub emitDimShared( byval x as integer )
+	emitStmt( "dim shared " + *tkGetText( x ) + !" as " + emitType( x ) )
+end sub
+
+private sub emitExtern( byval x as integer )
+	emitStmt(     "extern " + *tkGetText( x ) + !" as " + emitType( x ) )
+end sub
+
 private function emitTk( byval x as integer ) as integer
 	dim as zstring ptr s = any
 
@@ -154,6 +162,16 @@ private function emitTk( byval x as integer ) as integer
 
 	case TK_FIELD
 		emitStmt( *tkGetText( x ) + !"\t\tas " + emitType( x ) )
+
+	case TK_GLOBAL
+		emitExtern( x )
+		emitDimShared( x )
+
+	case TK_EXTERNGLOBAL
+		emitExtern( x )
+
+	case TK_STATICGLOBAL
+		emitDimShared( x )
 
 	case TK_EOL
 		emitEol( )

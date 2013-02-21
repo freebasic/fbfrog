@@ -1,15 +1,5 @@
 #include once "fbfrog.bi"
 
-enum
-	DECL_TOP = 0
-	DECL_FIELD
-	DECL_PARAM
-	DECL_VAR
-	DECL_PROC
-	DECL_PROCPTR
-	DECL_TYPEDEF
-end enum
-
 declare function cStructCompound( byval x as integer ) as integer
 declare function cMultDecl( byval x as integer, byval decl as integer ) as integer
 
@@ -187,7 +177,7 @@ private function cStructBody( byval x as integer ) as integer
 	do
 		old = x
 
-		x = cMultDecl( x, DECL_FIELD )
+		x = cMultDecl( x, TK_FIELD )
 		x = cStructCompound( x )
 
 		'' '}'?
@@ -440,7 +430,7 @@ function cDeclElement _
 		byref basesubtype as string _
 	) as integer
 
-	dim as integer dtype = any, begin = any
+	dim as integer dtype = any, begin = any, elementtk = any
 	dim as zstring ptr id = any
 
 	'' plain id: PtrCount Identifier
@@ -473,7 +463,7 @@ function cDeclElement _
 		id = tkGetText( x )
 		x += 1
 	else
-		if( decl <> DECL_PARAM ) then
+		if( decl <> TK_PARAM ) then
 			return begin
 		end if
 
@@ -540,22 +530,11 @@ function cDeclElement _
 	end if
 #endif
 
-	select case as const( decl )
-	case DECL_FIELD
-		tkInsert( begin, TK_FIELD, id )
-		tkSetType( begin, dtype, basesubtype )
-		begin += 1
-		tkRemove( begin, x )
-		x = begin
-
-	case DECL_PARAM
-	case DECL_VAR
-	case DECL_PROC
-	case DECL_PROCPTR
-	case DECL_TOP
-	case else
-		assert( FALSE )
-	end select
+	tkInsert( begin, decl, id )
+	tkSetType( begin, dtype, basesubtype )
+	begin += 1
+	tkRemove( begin, x )
+	x = begin
 
 	function = x
 end function
@@ -590,52 +569,58 @@ function cMultDecl( byval x as integer, byval decl as integer ) as integer
 
 		'' Everything can have a comma and more identifiers,
 		'' except for params.
-		if( (decl = DECL_PARAM) or (tkGet( x ) <> TK_COMMA) ) then
+		select case( decl )
+		case TK_PARAM, TK_PARAMPROCPTR
+			exit do
+		end select
+
+		'' ','?
+		if( tkGet( x ) <> TK_COMMA ) then
 			exit do
 		end if
-
-		'' ','
 		tkRemove( x, x )
 	loop
 
+	'' Everything except params must end with a ';'
 	select case( decl )
-	case DECL_FIELD, DECL_TYPEDEF, DECL_TOP
+	case TK_PARAM, TK_PARAMPROCPTR
+
+	case else
 		'' ';'
 		if( tkGet( x ) <> TK_SEMI ) then
 			return begin
 		end if
 		tkRemove( x, x )
-
 	end select
 
 	function = x
 end function
 
-private function cTopDecl( byval x as integer ) as integer
-	dim as integer decl = any
+'' Global variable/procedure declarations
+private function cGlobalDecl( byval x as integer ) as integer
+	dim as integer begin = any, old = any, decl = any
 
-	'' Toplevel declarations: global variables (including procedure
-	'' pointers), procedure declarations, and also typedefs, since they
-	'' are almost the same (parse_multdecl() disallows typedefs to
-	'' procdecls, because those aren't possible FB).
-	''    int a, *b, (*c)(), f(), *g();
-	''    ...
-	''
-	'' [TYPEDEF|EXTERN|STATIC] multdecl
-
-	decl = DECL_TOP
+	'' [EXTERN|STATIC] MultDecl
+	begin = x
 
 	select case( tkGet( x ) )
-	case KW_EXTERN, KW_STATIC
+	case KW_EXTERN
+		decl = TK_EXTERNGLOBAL
 		x += 1
-
-	case KW_TYPEDEF
-		decl = DECL_TYPEDEF
+	case KW_STATIC
+		decl = TK_STATICGLOBAL
 		x += 1
-
+	case else
+		decl = TK_GLOBAL
 	end select
 
-	function = cMultDecl( x, decl )
+	old = x
+	x = cMultDecl( x, decl )
+	if( x = old ) then
+		return begin
+	end if
+
+	function = x
 end function
 
 sub cToplevel( )
@@ -646,7 +631,7 @@ sub cToplevel( )
 		old = x
 
 		x = cStructCompound( x )
-		x = cTopDecl( x )
+		x = cGlobalDecl( x )
 
 		if( tkGet( x ) = TK_EOF ) then
 			exit do

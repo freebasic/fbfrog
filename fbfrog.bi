@@ -100,9 +100,19 @@ enum
 	TK_PPDEFINEEND
 	TK_STRUCTBEGIN
 	TK_STRUCTEND
+
+	TK_GLOBAL
+	TK_EXTERNGLOBAL
+	TK_STATICGLOBAL
+	TK_GLOBALPROCPTR
+	TK_EXTERNGLOBALPROCPTR
+	TK_STATICGLOBALPROCPTR
+	TK_GLOBALPROC
 	TK_FIELD
-	TK_PROCDECL
-	TK_VARDECL
+	TK_FIELDPROCPTR
+	TK_FIELDPROC
+	TK_PARAM
+	TK_PARAMPROCPTR
 
 	TK_TODO         '' TODOs added as fix-me-markers
 	TK_BYTE         '' For stray bytes that don't fit in elsewhere
@@ -329,13 +339,7 @@ const TYPEMAX_PTR = 8
 	 (((dt) and TYPEMASK_PTR) + (1 shl TYPEPOS_PTR)) or _
 	 (((dt) and TYPEMASK_CONST) shl 1))
 
-type TOKENINFO
-	is_stmtsep	as integer
-	text		as zstring ptr
-	debug		as zstring ptr
-end type
-
-extern as TOKENINFO tk_info(0 to (TK__COUNT - 1))
+declare function tkInfoText( byval tk as integer ) as zstring ptr
 
 '' Debugging helper, for example: TRACE( x ), "decl begin"
 #define TRACE( x ) print __FUNCTION__ + "(" + str( __LINE__ ) + "): " + tkDumpOne( x )
