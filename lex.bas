@@ -63,13 +63,14 @@ enum
 end enum
 
 type LEXSTUFF
-	buffer	as ubyte ptr  '' File content buffer
-	i	as ubyte ptr  '' Current char, will always be <= limit
-	limit	as ubyte ptr  '' (end of buffer)
+	buffer		as ubyte ptr  '' File content buffer
+	i		as ubyte ptr  '' Current char, will always be <= limit
+	limit		as ubyte ptr  '' (end of buffer)
 
-	x	as integer
+	x		as integer
+	location	as integer
 
-	kwhash	as THASH
+	kwhash		as THASH
 end type
 
 dim shared as LEXSTUFF lex
@@ -90,22 +91,22 @@ private sub hAddTextToken( byval tk as integer, byval begin as ubyte ptr )
 	'' Is it a C keyword?
 	if( item->s ) then
 		'' Then use the proper KW_* instead of TK_ID
-		tkInsert( lex.x, cint( item->data ) )
+		tkInsert( lex.x, cint( item->data ), , , , lex.location )
 	else
 		'' TK_ID
-		tkInsert( lex.x, tk, begin )
+		tkInsert( lex.x, tk, begin, , , lex.location )
 	end if
 
 	lex.i[0] = old
 end sub
 
 private sub hAddTodo( byval text as zstring ptr )
-	tkInsert( lex.x, TK_TODO, text )
+	tkInsert( lex.x, TK_TODO, text, , , lex.location )
 end sub
 
 private sub hReadBytes( byval tk as integer, byval length as integer )
 	lex.i += length
-	tkInsert( lex.x, tk )
+	tkInsert( lex.x, tk, , , , lex.location )
 end sub
 
 private sub hReadLineComment( )
@@ -384,9 +385,11 @@ private sub lexNext( )
 			lex.i += 1
 		end if
 		hReadBytes( TK_EOL, 1 )
+		lex.location = tkLocationNewLine( )
 
 	case CH_LF
 		hReadBytes( TK_EOL, 1 )
+		lex.location = tkLocationNewLine( )
 
 	case CH_TAB, CH_SPACE
 		lex.i += 1
@@ -678,8 +681,11 @@ end sub
 function lexLoadFile( byval x as integer, byref filename as string ) as integer
 	dim as integer count = any
 
+	tkLocationNewFile( filename )
+
 	count = 0
 	lex.x = x
+	lex.location = tkLocationNewLine( )
 	hLoadFile( filename )
 	hComplainAboutEmbeddedNulls( )
 	hInitKeywords( )

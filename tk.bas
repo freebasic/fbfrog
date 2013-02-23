@@ -15,7 +15,8 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	( TRUE , NULL  , @"#define end"          ), _
 	( TRUE , NULL  , @"struct begin"         ), _
 	( TRUE , NULL  , @"struct end"           ), _
-	( TRUE , NULL  , @"unknown"              ), _
+	( TRUE , NULL  , @"todo begin"           ), _
+	( TRUE , NULL  , @"todo end"             ), _
 	( TRUE , NULL  , @"global"               ), _
 	( TRUE , NULL  , @"externglobal"         ), _
 	( TRUE , NULL  , @"staticglobal"         ), _
@@ -203,13 +204,9 @@ end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-type ONETOKEN
-	id		as integer      '' TK_*
-	text		as zstring ptr  '' Identifiers/literals, or NULL
-
-	'' Data type (vars, fields, params, function results)
-	dtype		as integer
-	subtype		as zstring ptr
+type MAPENTRY
+	base		as integer  '' (location - base) = line number
+	filename	as zstring ptr
 end type
 
 type TKBUFFER
@@ -221,6 +218,9 @@ type TKBUFFER
 
 	'' Static EOF token for out-of-bounds accesses
 	eof		as ONETOKEN
+
+	map		as TLIST  '' MAPENTRYs
+	location	as integer
 end type
 
 type TKSTATS
@@ -259,9 +259,15 @@ sub tkInit( )
 
 	tk.eof.id = TK_EOF
 	tk.eof.text = NULL
+	tk.eof.dtype = TYPE_NONE
+	tk.eof.subtype = NULL
+	tk.eof.location = -1
+
+	listInit( @tk.map, sizeof( MAPENTRY ) )
+	tk.location = 0
 end sub
 
-private function tkAccess( byval x as integer ) as ONETOKEN ptr
+function tkAccess( byval x as integer ) as ONETOKEN ptr
 	stats.lookups += 1
 
 	'' Inside end?
@@ -282,6 +288,15 @@ private function tkAccess( byval x as integer ) as ONETOKEN ptr
 end function
 
 sub tkEnd( )
+	dim as MAPENTRY ptr entry = any
+
+	entry = listGetHead( @tk.map )
+	while( entry )
+		deallocate( entry->filename )
+		entry = listGetNext( entry )
+	wend
+	listEnd( @tk.map )
+
 	tkRemove( 0, tk.size - 1 )
 	deallocate( tk.p )
 end sub
@@ -344,6 +359,29 @@ private sub hMoveTo( byval x as integer )
 	tk.front = x
 end sub
 
+sub tkCtor _
+	( _
+		byval p as ONETOKEN ptr, _
+		byval id as integer, _
+		byval text as zstring ptr, _
+		byval dtype as integer, _
+		byval subtype as zstring ptr, _
+		byval location as integer _
+	)
+
+	p->id = id
+	p->text = strDuplicate( text )
+	p->dtype = dtype
+	p->subtype = strDuplicate( subtype )
+	p->location = location
+
+end sub
+
+sub tkDtor( byval p as ONETOKEN ptr )
+	deallocate( p->text )
+	deallocate( p->subtype )
+end sub
+
 '' Insert new token in front of token at the given position,
 '' so that the new token ends up at that position
 sub tkInsert _
@@ -352,7 +390,8 @@ sub tkInsert _
 		byval id as integer, _
 		byval text as zstring ptr, _
 		byval dtype as integer, _
-		byval subtype as zstring ptr _
+		byval subtype as zstring ptr, _
+		byval location as integer _
 	)
 
 	const NEWGAP = 512
@@ -377,10 +416,7 @@ sub tkInsert _
 		p = tk.p + tk.front
 	end if
 
-	p->id = id
-	p->text = strDuplicate( text )
-	p->dtype = dtype
-	p->subtype = strDuplicate( subtype )
+	tkCtor( p, id, text, dtype, subtype, location )
 
 	'' Extend front part of the buffer
 	tk.front += 1
@@ -410,9 +446,7 @@ sub tkRemove( byval first as integer, byval last as integer )
 	end if
 
 	for i as integer = first to last
-		p = tkAccess( i )
-		deallocate( p->text )
-		deallocate( p->subtype )
+		tkDtor( tkAccess( i ) )
 	next
 
 	delta = last - first + 1
@@ -468,4 +502,48 @@ end function
 
 function tkIsStmtSep( byval x as integer ) as integer
 	function = tk_info(tkGet( x )).is_stmtsep
+end function
+
+sub tkLocationNewFile( byval filename as zstring ptr )
+	dim as MAPENTRY ptr entry = any
+
+	entry = listAppend( @tk.map )
+	entry->base = tk.location
+	entry->filename = strDuplicate( filename )
+end sub
+
+function tkLocationNewLine( ) as integer
+	function = tk.location
+	tk.location += 1
+end function
+
+'' Find the map entry that "contains" this token's location
+'' (assuming there always is one)
+private function hLookupLocation( byval location as integer ) as MAPENTRY ptr
+	dim as MAPENTRY ptr entry = any
+
+	entry = listGetTail( @tk.map )
+	while( entry->base > location )
+		entry = listGetPrev( entry )
+	wend
+
+	function = entry
+end function
+
+function tkHasSourceLocation( byval x as integer ) as integer
+	function = (tkAccess( x )->location >= 0)
+end function
+
+function tkGetSourceFile( byval x as integer ) as zstring ptr
+	assert( tkHasSourceLocation( x ) )
+	function = hLookupLocation( tkAccess( x )->location )->filename
+end function
+
+function tkGetLineNum( byval x as integer ) as integer
+	dim as integer location = any
+
+	assert( tkHasSourceLocation( x ) )
+	location = tkAccess( x )->location
+
+	function = location - hLookupLocation( location )->base
 end function

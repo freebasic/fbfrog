@@ -2,6 +2,8 @@
 
 #include once "fbfrog.bi"
 
+declare function emitTk( byval x as integer ) as integer
+
 type EmitterStuff
 	fo		as integer '' Output file
 	indentlevel	as integer
@@ -62,6 +64,20 @@ private sub emitStmt( byref ln as string )
 	emitEol( )
 end sub
 
+private function emitPPDefine( byval x as integer ) as integer
+	emitStmtBegin( "#define " + *tkGetText( x ) + " " )
+
+	x += 1
+	while( tkGet( x ) <> TK_PPDEFINEEND )
+		x = emitTk( x )
+	wend
+	x += 1
+
+	emitEol( )
+
+	function = x
+end function
+
 private function emitType( byval x as integer ) as string
 	static as zstring ptr types(0 to TYPE__COUNT-1) = _
 	{ _
@@ -115,180 +131,222 @@ private sub emitExtern( byval x as integer )
 	emitStmt(     "extern " + *tkGetText( x ) + !" as " + emitType( x ) )
 end sub
 
-private function emitTk( byval x as integer ) as integer
+private function emitStruct( byval x as integer ) as integer
+	dim as zstring ptr s = any
+	dim as string ln
+
+	ln = "type"
+	s = tkGetText( x )
+	if( len( *s ) > 0 ) then
+		ln += " " + *s
+	end if
+	emitStmt( ln )
+
+	emitIndent( )
+	x += 1
+	while( tkGet( x ) <> TK_STRUCTEND )
+		x = emitTk( x )
+	wend
+	x += 1
+	emitUnindent( )
+
+	emitStmt( "end type" )
+
+	function = x
+end function
+
+private function emitProcDecl( byval x as integer ) as integer
+	dim as integer y = any, count = any
+	dim as string ln
+
+	ln = "declare "
+	if( tkGetType( x ) = TYPE_ANY ) then
+		ln += "sub"
+	else
+		ln += "function"
+	end if
+	ln += " " + *tkGetText( x )
+
+	ln += "( "
+	y = x
+	count = 0
+	do
+		y += 1
+
+		select case( tkGet( y ) )
+		case TK_PARAM, TK_PARAMPROCPTR, TK_PARAMVARARG
+			if( count > 0 ) then
+				ln += ", "
+			end if
+
+			select case( tkGet( y ) )
+			case TK_PARAM
+				ln += "byval "
+				ln += *tkGetText( y )
+				ln += " as " + emitType( y )
+
+			case TK_PARAMPROCPTR
+				ln += "TODO"
+
+			case TK_PARAMVARARG
+				ln += "..."
+			end select
+
+		case else
+			exit do
+		end select
+
+		count += 1
+	loop
+	ln += " )"
+
+	if( tkGetType( x ) <> TYPE_ANY ) then
+		ln += " as " + emitType( x )
+	end if
+
+	emitStmt( ln )
+
+	x = y
+
+	function = x
+end function
+
+private sub emitTodo( byval x as integer )
 	dim as string ln
 	dim as zstring ptr s = any
-	dim as integer y = any, count = any
+
+	ln = "'' "
+
+	if( tkHasSourceLocation( x + 1 ) ) then
+		ln += *tkGetSourceFile( x + 1 )
+		ln += "(" & tkGetLineNum( x + 1 ) + 1 & "): "
+	end if
+
+	ln += "TODO"
+
+	s = tkGetText( x )
+	if( len( *s ) > 0 ) then
+		ln += ": " + *s
+	end if
+
+	emitStmt( ln )
+	stuff.todocount += 1
+end sub
+
+private function emitTk( byval x as integer ) as integer
+	dim as string ln
 
 	select case as const( tkGet( x ) )
+	case TK_EOF
+		assert( FALSE )
+
 	case TK_PPINCLUDE
 		emitStmt( "#include """ + *tkGetText( x ) + """" )
+		x += 1
 
 	case TK_PPDEFINEBEGIN
-		emitStmtBegin( "#define " )
-		emit( tkGetText( x ) )
-		emit( " " )
-
-		do
-			x += 1
-
-			if( tkGet( x ) = TK_PPDEFINEEND ) then
-				exit do
-			end if
-
-			assert( tkGet( x ) <> TK_EOF )
-			emitTk( x )
-		loop
-
-		emitEol( )
+		x = emitPPDefine( x )
 
 	case TK_STRUCTBEGIN
-		emitStmtBegin( "type" )
-		s = tkGetText( x )
-		if( s ) then
-			emit( " " )
-			emit( s )
-		end if
 		emitEol( )
-
-		emitIndent( )
-		do
-			x += 1
-
-			if( tkGet( x ) = TK_STRUCTEND ) then
-				exit do
-			end if
-
-			assert( tkGet( x ) <> TK_EOF )
-			emitTk( x )
-		loop
-		emitUnindent( )
-
-		emitStmt( "end type" )
+		x = emitStruct( x )
+		emitEol( )
 
 	case TK_FIELD
 		emitStmt( *tkGetText( x ) + !"\t\tas " + emitType( x ) )
+		x += 1
 
 	case TK_GLOBAL
 		emitExtern( x )
 		emitDimShared( x )
+		x += 1
 
 	case TK_EXTERNGLOBAL
 		emitExtern( x )
+		x += 1
 
 	case TK_STATICGLOBAL
 		emitDimShared( x )
+		x += 1
 
 	case TK_PROC
-		ln = "declare "
-		if( tkGetType( x ) = TYPE_ANY ) then
-			ln += "sub"
-		else
-			ln += "function"
-		end if
-		ln += " " + *tkGetText( x )
-
-		ln += "( "
-		y = x
-		count = 0
-		do
-			y += 1
-
-			select case( tkGet( y ) )
-			case TK_PARAM, TK_PARAMPROCPTR, TK_PARAMVARARG
-				if( count > 0 ) then
-					ln += ", "
-				end if
-
-				select case( tkGet( y ) )
-				case TK_PARAM
-					ln += "byval "
-					ln += *tkGetText( y )
-					ln += " as " + emitType( y )
-
-				case TK_PARAMPROCPTR
-					ln += "TODO"
-
-				case TK_PARAMVARARG
-					ln += "..."
-				end select
-
-			case else
-				exit do
-			end select
-
-			count += 1
-		loop
-		ln += " )"
-
-		if( tkGetType( x ) <> TYPE_ANY ) then
-			ln += " as " + emitType( x )
-		end if
-
-		emitStmt( ln )
-
-		x = y
+		x = emitProcDecl( x )
 
 	case TK_EOL
 		emitEol( )
+		x += 1
 
 	case TK_TODO
-		emit( "'' TODO" )
+		emitTodo( x )
+		x += 1
 
-		s = tkGetText( x )
-		if( len( *s ) > 0 ) then
-			emit( ": " )
-			emit( s )
-		end if
+	case TK_TODOBEGIN
+		emitEol( )
+		emitTodo( x )
 
-		stuff.todocount += 1
+		x += 1
+		while( tkGet( x ) <> TK_TODOEND )
+			x = emitTk( x )
+		wend
+		x += 1
+
+		emitEol( )
 
 	case TK_COMMENT
 		emit( "/'" )
 		emit( tkGetText( x ) )
 		emit( "'/" )
+		x += 1
 
 	case TK_LINECOMMENT
 		emit( "''" )
 		emit( tkGetText( x ) )
+		x += 1
 
 	case TK_DECNUM
 		emit( tkGetText( x ) )
+		x += 1
 
 	case TK_HEXNUM
 		emit( "&h" )
 		emit( ucase( *tkGetText( x ) ) )
+		x += 1
 
 	case TK_OCTNUM
 		emit( "&o" )
 		emit( tkGetText( x ) )
+		x += 1
 
 	case TK_STRING
 		emit( """" )
 		emit( tkGetText( x ) )
 		emit( """" )
+		x += 1
 
 	case TK_WSTRING
 		emit( "wstr( """ )
 		emit( tkGetText( x ) )
 		emit( """ )" )
+		x += 1
 
 	case TK_ESTRING
 		emit( "!""" )
 		emit( tkGetText( x ) )
 		emit( """" )
+		x += 1
 
 	case TK_EWSTRING
 		emit( "wstr( !""" )
 		emit( tkGetText( x ) )
 		emit( """ )" )
+		x += 1
 
 	case else
 		emit( tkGetText( x ) )
+		x += 1
 
 	end select
 
-	x += 1
 	function = x
 end function
 

@@ -100,7 +100,8 @@ enum
 	TK_PPDEFINEEND
 	TK_STRUCTBEGIN
 	TK_STRUCTEND
-	TK_UNKNOWN
+	TK_TODOBEGIN
+	TK_TODOEND
 
 	TK_GLOBAL
 	TK_EXTERNGLOBAL
@@ -329,6 +330,18 @@ const TYPEPOS_CONST  = TYPEPOS_REF + 1
 
 const TYPEMAX_PTR = 8
 
+type ONETOKEN
+	id		as integer      '' TK_*
+	text		as zstring ptr  '' Identifiers/literals, or NULL
+
+	'' Data type (vars, fields, params, function results)
+	dtype		as integer
+	subtype		as zstring ptr
+
+	'' Source location (maps to filename/linenumber where this token was found)
+	location	as integer
+end type
+
 #define typeSetDt( dtype, dt ) ((dtype and (not TYPEMASK_DT)) or (dt and TYPEMASK_DT))
 #define typeSetIsConst( dt ) ((dt) or (1 shl TYPEPOS_CONST))
 #define typeIsConstAt( dt, at ) (((dt) and (1 shl (TYPEPOS_CONST + (at)))) <> 0)
@@ -347,17 +360,29 @@ declare function tkInfoText( byval tk as integer ) as zstring ptr
 
 declare function strDuplicate( byval s as zstring ptr ) as zstring ptr
 declare sub tkInit( )
+declare function tkAccess( byval x as integer ) as ONETOKEN ptr
 declare sub tkEnd( )
 declare sub tkStats( )
 declare function tkDumpOne( byval x as integer ) as string
 declare sub tkDump( )
+declare sub tkCtor _
+	( _
+		byval p as ONETOKEN ptr, _
+		byval id as integer, _
+		byval text as zstring ptr, _
+		byval dtype as integer, _
+		byval subtype as zstring ptr, _
+		byval location as integer _
+	)
+declare sub tkDtor( byval p as ONETOKEN ptr )
 declare sub tkInsert _
 	( _
 		byval x as integer, _
 		byval id as integer, _
 		byval text as zstring ptr = NULL, _
 		byval dtype as integer = TYPE_NONE, _
-		byval subtype as zstring ptr = NULL _
+		byval subtype as zstring ptr = NULL, _
+		byval location as integer = -1 _
 	)
 declare sub tkRemove( byval first as integer, byval last as integer )
 declare function tkGet( byval x as integer ) as integer
@@ -366,6 +391,11 @@ declare function tkGetType( byval x as integer ) as integer
 declare function tkGetSubtype( byval x as integer ) as zstring ptr
 declare function tkGetCount( ) as integer
 declare function tkIsStmtSep( byval x as integer ) as integer
+declare sub tkLocationNewFile( byval filename as zstring ptr )
+declare function tkLocationNewLine( ) as integer
+declare function tkHasSourceLocation( byval x as integer ) as integer
+declare function tkGetSourceFile( byval x as integer ) as zstring ptr
+declare function tkGetLineNum( byval x as integer ) as integer
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 

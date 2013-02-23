@@ -7,10 +7,7 @@ type UNDOSTEP
 	x		as integer  '' position where the modification happened
 
 	'' For deletions only: data of the token that was deleted
-	id		as integer
-	text		as zstring ptr
-	dtype		as integer
-	subtype		as zstring ptr
+	tk		as ONETOKEN
 end type
 
 type UNDOSTACK
@@ -42,8 +39,7 @@ private sub hDropSteps( byval stack as UNDOSTACK ptr )
 
 		'' Free memory
 		if( stp->is_insert = FALSE ) then
-			deallocate( stp->text )
-			deallocate( stp->subtype )
+			tkDtor( @stp->tk )
 		end if
 
 		listDelete( @stack->steps, stp )
@@ -103,7 +99,9 @@ sub passTryAgain( )
 			tkRemove( stp->x, stp->x )
 		else
 			'' It was a deletion, re-insert the token
-			tkInsert( stp->x, stp->id, stp->text, stp->dtype, stp->subtype )
+			tkInsert( stp->x, stp->tk.id, stp->tk.text, _
+					stp->tk.dtype, stp->tk.subtype, _
+					stp->tk.location )
 		end if
 		stp = listGetPrev( stp )
 	wend
@@ -128,16 +126,15 @@ end function
 sub passSkip( )
 	dim as UNDOSTACK ptr stack = any
 	dim as UNDOSTEP ptr stp = any
+	dim as ONETOKEN ptr tk = any
 
 	stack = listGetTail( @pass.undostacks )
 	stp = listAppend( @stack->steps )
 
 	stp->is_insert = FALSE
-	stp->x         = pass.x
-	stp->id        = tkGet( pass.x )
-	stp->text      = strDuplicate( tkGetText( pass.x ) )
-	stp->dtype     = tkGetType( pass.x )
-	stp->subtype   = strDuplicate( tkGetSubtype( pass.x ) )
+	stp->x = pass.x
+	tk = tkAccess( pass.x )
+	tkCtor( @stp->tk, tk->id, tk->text, tk->dtype, tk->subtype, tk->location )
 
 	tkRemove( pass.x, pass.x )
 end sub
@@ -791,9 +788,11 @@ private sub cUnknown( )
 		exit sub
 	end if
 
-	passInsert( TK_UNKNOWN )
+	passInsert( TK_TODOBEGIN, "unknown construct (sorry)" )
 
 	pass.x = cSkipStatement( pass.x )
+
+	passInsert( TK_TODOEND )
 end sub
 
 sub cToplevel( )
