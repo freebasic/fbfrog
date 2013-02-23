@@ -90,7 +90,11 @@ private function emitType( byval x as integer ) as string
 		s += "const "
 	end if
 
-	s += *types(typeGetDt( dtype ))
+	if( typeGetDt( dtype ) = TYPE_UDT ) then
+		s += *tkGetSubtype( x )
+	else
+		s += *types(typeGetDt( dtype ))
+	end if
 
 	for i as integer = 1 to typeGetPtrCount( dtype )
 		if( typeIsConstAt( dtype, i ) ) then
