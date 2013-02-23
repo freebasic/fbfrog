@@ -112,7 +112,9 @@ private sub emitExtern( byval x as integer )
 end sub
 
 private function emitTk( byval x as integer ) as integer
+	dim as string ln
 	dim as zstring ptr s = any
+	dim as integer y = any, count = any
 
 	select case as const( tkGet( x ) )
 	case TK_PPINCLUDE
@@ -172,6 +174,56 @@ private function emitTk( byval x as integer ) as integer
 
 	case TK_STATICGLOBAL
 		emitDimShared( x )
+
+	case TK_PROC
+		ln = "declare "
+		if( tkGetType( x ) = TYPE_ANY ) then
+			ln += "sub"
+		else
+			ln += "function"
+		end if
+		ln += " " + *tkGetText( x )
+
+		ln += "( "
+		y = x
+		count = 0
+		do
+			y += 1
+
+			select case( tkGet( y ) )
+			case TK_PARAM, TK_PARAMPROCPTR, TK_PARAMVARARG
+				if( count > 0 ) then
+					ln += ", "
+				end if
+
+				select case( tkGet( y ) )
+				case TK_PARAM
+					ln += "byval "
+					ln += *tkGetText( y )
+					ln += " as " + emitType( y )
+
+				case TK_PARAMPROCPTR
+					ln += "TODO"
+
+				case TK_PARAMVARARG
+					ln += "..."
+				end select
+
+			case else
+				exit do
+			end select
+
+			count += 1
+		loop
+		ln += " )"
+
+		if( tkGetType( x ) <> TYPE_ANY ) then
+			ln += " as " + emitType( x )
+		end if
+
+		emitStmt( ln )
+
+		x = y
 
 	case TK_EOL
 		emitEol( )

@@ -133,6 +133,7 @@ end sub
 
 	dim as FSFILE ptr f = any
 
+	print "translating..."
 	f = fsGetHead( )
 	while( f )
 

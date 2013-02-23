@@ -15,18 +15,19 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	( TRUE , NULL  , @"#define end"          ), _
 	( TRUE , NULL  , @"struct begin"         ), _
 	( TRUE , NULL  , @"struct end"           ), _
+	( TRUE , NULL  , @"unknown"              ), _
 	( TRUE , NULL  , @"global"               ), _
 	( TRUE , NULL  , @"externglobal"         ), _
 	( TRUE , NULL  , @"staticglobal"         ), _
 	( TRUE , NULL  , @"globalprocptr"        ), _
 	( TRUE , NULL  , @"externglobalprocptr"  ), _
 	( TRUE , NULL  , @"staticglobalprocptr"  ), _
-	( TRUE , NULL  , @"globalproc"           ), _
 	( TRUE , NULL  , @"field"                ), _
 	( TRUE , NULL  , @"fieldprocptr"         ), _
-	( TRUE , NULL  , @"fieldproc"            ), _
+	( TRUE , NULL  , @"proc"                 ), _
 	( TRUE , NULL  , @"param"                ), _
 	( TRUE , NULL  , @"paramprocptr"         ), _
+	( TRUE , NULL  , @"paramvararg"          ), _
 	( TRUE , NULL  , @"todo"                 ), _
 	( FALSE, NULL  , @"byte"                 ), _
 	( TRUE , NULL  , @"eol"                  ), _
@@ -211,26 +212,25 @@ type ONETOKEN
 	subtype		as zstring ptr
 end type
 
-type TOKENBUFFER
+type TKBUFFER
 	'' Gap buffer of tokens
 	p		as ONETOKEN ptr  '' Buffer containing: front,gap,back
 	front		as integer  '' Front length; the gap's offset
 	gap		as integer  '' Gap length
 	size		as integer  '' Front + back
 
-	'' Static EOF token for "error recovery"
+	'' Static EOF token for out-of-bounds accesses
 	eof		as ONETOKEN
 end type
 
-type TOKENSTATS
+type TKSTATS
 	maxsize		as integer  '' Highest amount of tokens at once
-	reallocs	as integer  '' Buffer reallocations
 	lookups		as integer
-	moved		as longint
+	moved		as integer
 end type
 
-dim shared as TOKENBUFFER tk
-dim shared as TOKENSTATS stats
+dim shared as TKBUFFER tk
+dim shared as TKSTATS stats
 
 function strDuplicate( byval s as zstring ptr ) as zstring ptr
 	dim as zstring ptr p = any
@@ -290,7 +290,6 @@ sub tkStats( )
 	print "tokens: " & _
 		stats.maxsize & " max, " & _
 		stats.lookups & " lookups, " & _
-		stats.reallocs & " resizes, " & _
 		stats.moved & " moved"
 end sub
 
@@ -319,7 +318,7 @@ sub tkDump( )
 	next
 end sub
 
-private sub tkRawMoveTo( byval x as integer )
+private sub hMoveTo( byval x as integer )
 	dim as integer old = any
 	dim as ONETOKEN ptr p = any
 
@@ -351,19 +350,21 @@ sub tkInsert _
 	( _
 		byval x as integer, _
 		byval id as integer, _
-		byval text as zstring ptr _
+		byval text as zstring ptr, _
+		byval dtype as integer, _
+		byval subtype as zstring ptr _
 	)
 
 	const NEWGAP = 512
 	dim as ONETOKEN ptr p = any
 
-	tkRawMoveTo( x )
+	'' Move gap in front of the position
+	hMoveTo( x )
 
 	'' Make room for the new data, if necessary
 	if( tk.gap = 0 ) then
 		'' Reallocate the buffer, then move the back block to the
 		'' end of the new buffer, so that the gap in the middle grows.
-		stats.reallocs += 1
 		tk.p = reallocate( tk.p, (tk.size + NEWGAP) * sizeof( ONETOKEN ) )
 		p = tk.p + tk.front
 		if( tk.size > tk.front ) then
@@ -378,9 +379,10 @@ sub tkInsert _
 
 	p->id = id
 	p->text = strDuplicate( text )
-	p->dtype = TYPE_NONE
-	p->subtype = NULL
+	p->dtype = dtype
+	p->subtype = strDuplicate( subtype )
 
+	'' Extend front part of the buffer
 	tk.front += 1
 	tk.gap -= 1
 	tk.size += 1
@@ -407,22 +409,26 @@ sub tkRemove( byval first as integer, byval last as integer )
 		exit sub
 	end if
 
-	tkRawMoveTo( last + 1 )
-
 	for i as integer = first to last
-		p = tk.p + i
-		assert( p = tkAccess( i ) )
+		p = tkAccess( i )
 		deallocate( p->text )
 		deallocate( p->subtype )
 	next
 
 	delta = last - first + 1
-	if( delta > tk.front ) then
-		delta = tk.front
+
+	'' Gap is in front of first token to delete?
+	if( tk.front = first ) then
+		'' Then do a forward deletion
+		assert( delta <= (tk.size - tk.front) )
+	else
+		'' Otherwise, move the gap behind the last token,
+		'' and do a backwards deletion
+		hMoveTo( last + 1 )
+		assert( delta <= tk.front )
+		tk.front -= delta
 	end if
 
-	'' Delete tokens in front of current position (backwards deletion)
-	tk.front -= delta
 	tk.gap += delta
 	tk.size -= delta
 end sub
@@ -448,24 +454,6 @@ function tkGetText( byval x as integer ) as zstring ptr
 	end if
 end function
 
-sub tkSetType _
-	( _
-		byval x as integer, _
-		byval dtype as integer, _
-		byval subtype as zstring ptr _
-	)
-
-	dim as ONETOKEN ptr p = any
-
-	p = tkAccess( x )
-
-	if( p->id <> TK_EOF ) then
-		p->dtype = dtype
-		p->subtype = strDuplicate( subtype )
-	end if
-
-end sub
-
 function tkGetType( byval x as integer ) as integer
 	function = tkAccess( x )->dtype
 end function
@@ -479,5 +467,5 @@ function tkGetCount( ) as integer
 end function
 
 function tkIsStmtSep( byval x as integer ) as integer
-	function = tk_info(tkAccess( x )->id).is_stmtsep
+	function = tk_info(tkGet( x )).is_stmtsep
 end function

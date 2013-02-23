@@ -100,6 +100,7 @@ enum
 	TK_PPDEFINEEND
 	TK_STRUCTBEGIN
 	TK_STRUCTEND
+	TK_UNKNOWN
 
 	TK_GLOBAL
 	TK_EXTERNGLOBAL
@@ -107,12 +108,12 @@ enum
 	TK_GLOBALPROCPTR
 	TK_EXTERNGLOBALPROCPTR
 	TK_STATICGLOBALPROCPTR
-	TK_GLOBALPROC
 	TK_FIELD
 	TK_FIELDPROCPTR
-	TK_FIELDPROC
+	TK_PROC
 	TK_PARAM
 	TK_PARAMPROCPTR
+	TK_PARAMVARARG
 
 	TK_TODO         '' TODOs added as fix-me-markers
 	TK_BYTE         '' For stray bytes that don't fit in elsewhere
@@ -354,17 +355,13 @@ declare sub tkInsert _
 	( _
 		byval x as integer, _
 		byval id as integer, _
-		byval text as zstring ptr = NULL _
+		byval text as zstring ptr = NULL, _
+		byval dtype as integer = TYPE_NONE, _
+		byval subtype as zstring ptr = NULL _
 	)
 declare sub tkRemove( byval first as integer, byval last as integer )
 declare function tkGet( byval x as integer ) as integer
 declare function tkGetText( byval x as integer ) as zstring ptr
-declare sub tkSetType _
-	( _
-		byval x as integer, _
-		byval dtype as integer, _
-		byval subtype as zstring ptr _
-	)
 declare function tkGetType( byval x as integer ) as integer
 declare function tkGetSubtype( byval x as integer ) as zstring ptr
 declare function tkGetCount( ) as integer

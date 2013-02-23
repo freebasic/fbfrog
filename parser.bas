@@ -1,7 +1,182 @@
+'' C parsing passes
+
 #include once "fbfrog.bi"
 
-declare function cStructCompound( byval x as integer ) as integer
-declare function cMultDecl( byval x as integer, byval decl as integer ) as integer
+type UNDOSTEP
+	is_insert	as integer  '' Was it an insertion or deletion?
+	x		as integer  '' position where the modification happened
+
+	'' For deletions only: data of the token that was deleted
+	id		as integer
+	text		as zstring ptr
+	dtype		as integer
+	subtype		as zstring ptr
+end type
+
+type UNDOSTACK
+	begin		as integer
+	steps		as TLIST  '' UNDOSTEPs
+end type
+
+type PARSERSTUFF
+	x		as integer  '' current position
+
+	'' Stack of history stacks
+	'' The undo stack allows token buffer modifications to be reverted.
+	'' This allows the parser to remove/insert tokens while trying to parse
+	'' a certain statement. If one parsing try fails, it can just revert
+	'' and try another construct.
+	undostacks	as TLIST  '' UNDOSTACKs
+end type
+
+dim shared as PARSERSTUFF pass
+
+private sub hDropSteps( byval stack as UNDOSTACK ptr )
+	dim as UNDOSTEP ptr stp = any
+
+	do
+		stp = listGetTail( @stack->steps )
+		if( stp = NULL ) then
+			exit do
+		end if
+
+		'' Free memory
+		if( stp->is_insert = FALSE ) then
+			deallocate( stp->text )
+			deallocate( stp->subtype )
+		end if
+
+		listDelete( @stack->steps, stp )
+	loop
+end sub
+
+sub passPush( )
+	dim as UNDOSTACK ptr stack = any
+
+	stack = listAppend( @pass.undostacks )
+	stack->begin = pass.x
+	listInit( @stack->steps, sizeof( UNDOSTEP ) )
+end sub
+
+sub passPop( )
+	dim as UNDOSTACK ptr stack = any
+
+	stack = listGetTail( @pass.undostacks )
+	hDropSteps( stack )
+	listEnd( @stack->steps )
+	listDelete( @pass.undostacks, stack )
+end sub
+
+sub passInit( )
+	pass.x = 0
+	listInit( @pass.undostacks, sizeof( UNDOSTACK ) )
+
+	passPush( )
+end sub
+
+sub passEnd( )
+	passPop( )
+
+	assert( listGetTail( @pass.undostacks ) = NULL )
+	listEnd( @pass.undostacks )
+end sub
+
+sub passTryBegin( )
+	dim as UNDOSTACK ptr stack = any
+
+	stack = listGetTail( @pass.undostacks )
+	stack->begin = pass.x
+	hDropSteps( stack )
+end sub
+
+sub passTryAgain( )
+	dim as UNDOSTACK ptr stack = any
+	dim as UNDOSTEP ptr stp = any
+
+	stack = listGetTail( @pass.undostacks )
+
+	'' Apply inverse operations
+	stp = listGetTail( @stack->steps )
+	while( stp )
+		if( stp->is_insert ) then
+			'' It was an insertion, delete the token
+			tkRemove( stp->x, stp->x )
+		else
+			'' It was a deletion, re-insert the token
+			tkInsert( stp->x, stp->id, stp->text, stp->dtype, stp->subtype )
+		end if
+		stp = listGetPrev( stp )
+	wend
+
+	hDropSteps( listGetTail( @pass.undostacks ) )
+
+	pass.x = stack->begin
+end sub
+
+function passGet( ) as integer
+	function = tkGet( pass.x )
+end function
+
+function passGetLookAhead( byval n as integer ) as integer
+	function = tkGet( pass.x + n )
+end function
+
+function passGetText( ) as zstring ptr
+	function = tkGetText( pass.x )
+end function
+
+sub passSkip( )
+	dim as UNDOSTACK ptr stack = any
+	dim as UNDOSTEP ptr stp = any
+
+	stack = listGetTail( @pass.undostacks )
+	stp = listAppend( @stack->steps )
+
+	stp->is_insert = FALSE
+	stp->x         = pass.x
+	stp->id        = tkGet( pass.x )
+	stp->text      = strDuplicate( tkGetText( pass.x ) )
+	stp->dtype     = tkGetType( pass.x )
+	stp->subtype   = strDuplicate( tkGetSubtype( pass.x ) )
+
+	tkRemove( pass.x, pass.x )
+end sub
+
+sub passInsert _
+	( _
+		byval tk as integer, _
+		byval text as zstring ptr = NULL, _
+		byval dtype as integer = TYPE_NONE, _
+		byval subtype as zstring ptr = NULL _
+	)
+
+	dim as UNDOSTACK ptr stack = any
+	dim as UNDOSTEP ptr stp = any
+
+	stack = listGetTail( @pass.undostacks )
+	stp = listAppend( @stack->steps )
+
+	stp->is_insert = TRUE
+	stp->x         = pass.x
+
+	tkInsert( pass.x, tk, text, dtype, subtype )
+	pass.x += 1
+
+end sub
+
+function passMatch( byval tk as integer ) as integer
+	if( passGet( ) = tk ) then
+		passSkip( )
+		function = TRUE
+	else
+		function = FALSE
+	end if
+end function
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+declare function cStructCompound( ) as integer
+declare function cMultDecl( byval decl as integer ) as integer
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
@@ -42,9 +217,30 @@ private function cFindClosingParen( byval x as integer ) as integer
 
 			level -= 1
 
-		case -1
+		case TK_EOF
 			exit do
 
+		end select
+	loop
+
+	function = x
+end function
+
+function cSkipStatement( byval x as integer ) as integer
+	do
+		select case( tkGet( x ) )
+		case TK_EOF
+			exit do
+
+		case TK_SEMI
+			x += 1
+			exit do
+
+		case TK_LPAREN, TK_LBRACKET, TK_LBRACE
+			x = cFindClosingParen( x )
+
+		case else
+			x += 1
 		end select
 	loop
 
@@ -95,12 +291,13 @@ private function cPPDirective( byval x as integer ) as integer
 		tkInsert( begin, TK_PPDEFINEBEGIN, tkGetText( x ) )
 		begin += 1
 		tkRemove( begin, x )
+		x = begin
 
 		'' '(' and not separated from the Identifier with spaces?
 		'' TODO
 
 		'' Body
-		x = cFindEOL( begin )
+		x = cFindEOL( x )
 		tkInsert( x, TK_PPDEFINEEND )
 		x += 1
 
@@ -114,7 +311,7 @@ private function cPPDirective( byval x as integer ) as integer
 
 		tkInsert( begin, TK_PPINCLUDE, tkGetText( x ) )
 		begin += 1
-		tkRemove( begin, cFindEOL( begin ) )
+		tkRemove( begin, x )
 		x = begin
 
 	case else
@@ -144,6 +341,7 @@ sub cPPDirectives( )
 
 		case TK_EOF
 			exit do
+
 		end select
 
 		x += 1
@@ -171,166 +369,137 @@ end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-private function cStructBody( byval x as integer ) as integer
-	dim as integer old = any
+'' (MultDecl{Field} | StructCompound)*
+private sub cStructBody( )
+	passPush( )
 
 	do
-		old = x
-
-		x = cMultDecl( x, TK_FIELD )
-		x = cStructCompound( x )
-
-		'' '}'?
-		select case( tkGet( x ) )
-		case TK_RBRACE, TK_EOF
-			exit do
-		end select
-
-		if( old = x ) then
-			x += 1
+		passTryBegin( )
+		if( cMultDecl( TK_FIELD ) = FALSE ) then
+			passTryAgain( )
+			if( cStructCompound( ) = FALSE ) then
+				passTryAgain( )
+				exit do
+			end if
 		end if
 	loop
 
-	function = x
-end function
+	passPop( )
+end sub
 
-private function cStructCompound( byval x as integer ) as integer
-	dim as integer begin = any
-	dim as zstring ptr id = any
+'' {STRUCT|UNION} [Identifier] '{' StructBody '}'
+private function cStructCompound( ) as integer
+	dim as string id
 
-	'' {STRUCT|UNION} [Identifier] '{'
-	'' ...
-	'' '}'
-	begin = x
+	function = FALSE
 
 	'' {STRUCT|UNION}
-	select case( tkGet( x ) )
+	select case( passGet( ) )
 	case KW_STRUCT, KW_UNION
 
 	case else
-		return begin
+		exit function
 	end select
-	x += 1
+	passSkip( )
 
 	'' [Identifier]
-	if( tkGet( x ) = TK_ID ) then
-		id = tkGetText( x )
-		x += 1
-	else
-		id = NULL
+	if( passGet( ) = TK_ID ) then
+		id = *passGetText( )
+		passSkip( )
 	end if
+
+	passInsert( TK_STRUCTBEGIN, id )
 
 	'' '{'
-	if( tkGet( x ) <> TK_LBRACE ) then
-		return begin
+	if( passMatch( TK_LBRACE ) = FALSE ) then
+		exit function
 	end if
 
-	'' STRUCT|UNION [Identifier] '{'   ->   STRUCTBEGIN
-	tkInsert( begin, TK_STRUCTBEGIN, id )
-	begin += 1
-	x += 1
-	tkRemove( begin, x )
-	x = begin
+	cStructBody( )
 
-	begin = cStructBody( begin )
-	x = begin
+	passInsert( TK_STRUCTEND )
 
-	'' ['}']
-	if( tkGet( x ) = TK_RBRACE ) then
-		x += 1
+	'' '}'
+	if( passMatch( TK_RBRACE ) = FALSE ) then
+		exit function
 	end if
 
-	'' [';']
-	if( tkGet( x ) = TK_SEMI ) then
-		x += 1
-	end if
-
-	'' ['}' ';']   ->   STRUCTEND
-	tkInsert( begin, TK_STRUCTEND )
-	begin += 1
-	x += 1
-	if( x <> begin ) then
-		tkRemove( begin, x - 1 )
-	end if
-
-	function = begin
+	'' ';'
+	function = passMatch( TK_SEMI )
 end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-private function cConstMod _
-	( _
-		byval x as integer, _
-		byref dtype as integer _
-	) as integer
-
-	'' [CONST]
-	if( tkGet( x ) = KW_CONST ) then
+'' (CONST)*
+private sub cConstMod( byref dtype as integer )
+	while( passMatch( KW_CONST ) )
 		dtype = typeSetIsConst( dtype )
-		x += 1
-	end if
-
-	function = x
-end function
+	wend
+end sub
 
 private function cBaseType _
 	( _
-		byval x as integer, _
 		byref dtype as integer, _
 		byref subtype as string _
 	) as integer
 
-	dim as integer begin = any, sign = any
+	dim as integer sign = any
 
+	function = FALSE
 	dtype = TYPE_NONE
 	subtype = ""
-
-	begin = x
 	sign = 0
 
-	'' (CONST|SIGNED|UNSIGNED)*
-	do
-		'' [CONST]
-		x = cConstMod( x, dtype )
+	'' [CONST]
+	cConstMod( dtype )
 
-		'' [SIGNED | UNSIGNED]
-		select case( tkGet( x ) )
-		case KW_SIGNED
-			sign = -1
-			x += 1
-		case KW_UNSIGNED
-			sign = 1
-			x += 1
-		case else
-			exit do
-		end select
-	loop
+	'' [SIGNED|UNSIGNED]
+	select case( passGet( ) )
+	case KW_SIGNED
+		sign = -1
+		passSkip( )
+	case KW_UNSIGNED
+		sign = 1
+		passSkip( )
+	end select
 
-	select case( tkGet( x ) )
+	select case( passGet( ) )
 	case KW_ENUM, KW_STRUCT, KW_UNION
-		'' {ENUM|STRUCT|UNION}
-		x += 1
-
-		'' Identifier
-		if( tkGet( x ) <> TK_ID ) then
-			return FALSE
+		if( sign <> 0 ) then
+			exit function
 		end if
 
+		'' {ENUM|STRUCT|UNION}
+		passSkip( )
+
+		'' Identifier
+		if( passGet( ) <> TK_ID ) then
+			exit function
+		end if
 		dtype = typeSetDt( dtype, TYPE_UDT )
-		subtype = *tkGetText( x )
-		x += 1
+		subtype = *passGetText( )
+		passSkip( )
 
 	case TK_ID
+		if( sign <> 0 ) then
+			exit function
+		end if
+
 		'' Identifier
 		dtype = typeSetDt( dtype, TYPE_UDT )
-		subtype = *tkGetText( x )
-		x += 1
+		subtype = *passGetText( )
+		passSkip( )
 
 	case KW_VOID
+		if( sign <> 0 ) then
+			exit function
+		end if
+
+		passSkip( )
 		dtype = typeSetDt( dtype, TYPE_ANY )
-		x += 1
 
 	case KW_CHAR
+		passSkip( )
 		select case( sign )
 		case -1
 			dtype = typeSetDt( dtype, TYPE_BYTE )
@@ -339,206 +508,210 @@ private function cBaseType _
 		case else
 			dtype = typeSetDt( dtype, TYPE_ZSTRING )
 		end select
-		x += 1
 
 	case KW_FLOAT
+		passSkip( )
 		dtype = typeSetDt( dtype, TYPE_SINGLE )
-		x += 1
 
 	case KW_DOUBLE
+		passSkip( )
 		dtype = typeSetDt( dtype, TYPE_DOUBLE )
-		x += 1
 
 	case KW_SHORT
+		passSkip( )
 		if( sign > 0 ) then
 			dtype = typeSetDt( dtype, TYPE_USHORT )
 		else
 			dtype = typeSetDt( dtype, TYPE_SHORT )
 		end if
-		x += 1
 
 		'' [INT]
-		if( tkGet( x ) = KW_INT ) then
-			x += 1
-		end if
+		passMatch( KW_INT )
 
 	case KW_INT
+		passSkip( )
 		if( sign > 0 ) then
 			dtype = typeSetDt( dtype, TYPE_ULONG )
 		else
 			dtype = typeSetDt( dtype, TYPE_LONG )
 		end if
-		x += 1
 
 	case KW_LONG
+		passSkip( )
 		if( sign > 0 ) then
 			dtype = typeSetDt( dtype, TYPE_ULONG )
 		else
 			dtype = typeSetDt( dtype, TYPE_LONG )
 		end if
-		x += 1
 
 		'' [LONG]
-		if( tkGet( x ) = KW_LONG ) then
+		if( passMatch( KW_LONG ) ) then
 			if( sign > 0 ) then
 				dtype = typeSetDt( dtype, TYPE_ULONGINT )
 			else
 				dtype = typeSetDt( dtype, TYPE_LONGINT )
 			end if
-			x += 1
 		end if
 
 		'' [INT]
-		if( tkGet( x ) = KW_INT ) then
-			x += 1
-		end if
+		passMatch( KW_INT )
 
 	case else
-		return FALSE
+		exit function
 	end select
 
 	'' [CONST]
-	x = cConstMod( x, dtype )
+	cConstMod( dtype )
 
-	tkRemove( begin, x - 1 )
 	function = TRUE
 end function
 
-private function cPtrCount _
-	( _
-		byval x as integer, _
-		byref dtype as integer _
-	) as integer
-
+private sub cPtrCount( byref dtype as integer )
 	'' Pointers: ('*')*
-	while( tkGet( x ) = TK_STAR )
+	while( passMatch( TK_STAR ) )
 		dtype = typeAddrOf( dtype )
-		x += 1
 
 		'' [CONST]
-		x = cConstMod( x, dtype )
+		cConstMod( dtype )
 	wend
+end sub
 
-	function = x
+''    '...' | MultDecl{Param}
+private function cParamDecl( ) as integer
+	'' '...'?
+	if( passMatch( TK_ELLIPSIS ) ) then
+		passInsert( TK_PARAMVARARG )
+		function = TRUE
+	else
+		function = cMultDecl( TK_PARAM )
+	end if
 end function
 
-function cDeclElement _
+private function cParamDeclList( ) as integer
+	function = FALSE
+
+	'' [ParamDecl (',' ParamDecl)*]
+	do
+		if( cParamDecl( ) = FALSE ) then
+			exit function
+		end if
+
+		'' ','
+	loop while( passMatch( TK_COMMA ) )
+
+	function = TRUE
+end function
+
+'' plain id: PtrCount Identifier
+'' procptr:  PtrCount '(' '*' Identifier ')' '(' ParamList ')'
+'' proto:    PtrCount Identifier '(' ParamList ')'
+private function cDeclElement _
 	( _
-		byval x as integer, _
 		byval decl as integer, _
 		byval basedtype as integer, _
 		byref basesubtype as string _
 	) as integer
 
-	dim as integer dtype = any, begin = any, elementtk = any
-	dim as zstring ptr id = any
+	dim as integer dtype = any, is_procptr = any, has_params = any
+	dim as string id
 
-	'' plain id: PtrCount Identifier
-	'' procptr:  PtrCount '(' '*' Identifier ')' '(' ParamList ')'
-	'' proto:    PtrCount Identifier '(' ParamList ')'
-	begin = x
+	function = FALSE
 	dtype = basedtype
 
 	'' PtrCount
-	x = cPtrCount( x, dtype )
+	cPtrCount( dtype )
 
-#if 0
 	'' '('?
-	is_procptr = FALSE
-	if( tkGet( x ) = TK_LPAREN ) then
-		x += 1
-
+	if( passMatch( TK_LPAREN ) ) then
 		'' '*'
-		if( tkGet( x ) <> TK_STAR ) then
-			return begin
+		if( passMatch( TK_STAR ) = FALSE ) then
+			exit function
 		end if
-		x += 1
 
+		select case( decl )
+		case TK_GLOBAL
+			decl = TK_GLOBALPROCPTR
+		case TK_EXTERNGLOBAL
+			decl = TK_EXTERNGLOBALPROCPTR
+		case TK_STATICGLOBAL
+			decl = TK_STATICGLOBALPROCPTR
+		case TK_FIELD
+			decl = TK_FIELDPROCPTR
+		case TK_PARAM
+			decl = TK_PARAMPROCPTR
+		case else
+			return FALSE
+		end select
 		is_procptr = TRUE
+	else
+		is_procptr = FALSE
 	end if
-#endif
 
 	'' Identifier (must be there except for params)
-	if( tkGet( x ) = TK_ID ) then
-		id = tkGetText( x )
-		x += 1
+	if( passGet( ) = TK_ID ) then
+		id = *passGetText( )
+		passSkip( )
 	else
-		if( decl <> TK_PARAM ) then
-			return begin
-		end if
+		select case( decl )
+		case TK_PARAM, TK_PARAMPROCPTR, TK_PARAMVARARG
 
-		id = NULL
+		case else
+			return FALSE
+		end select
 	end if
 
-#if 0
 	if( is_procptr ) then
 		'' ')'
-		if( tkGet( x ) <> TK_RPAREN ) then
-			return begin
+		if( passMatch( TK_RPAREN ) = FALSE ) then
+			exit function
 		end if
-		x += 1
 	end if
 
-	'' Check for '(' params ')'
-	if( tkGet( x ) = TK_LPAREN ) then
-		'' Note: typedef to procdecl can't be translated,
-		'' so it's disallowed here. If there are procdecls
-		'' in fields, then fine, that's C++ stuff, but oh well.
-		'' Note: procptrs always have params.
-		if( (is_procptr = FALSE) and _
-		    ((decl = DECL_TYPEDEF) or _
-		     (decl = DECL_TYPEDEFSTRUCTBLOCK)) ) then
-			return begin
+	'' '('? (procedure parameters)
+	if( passMatch( TK_LPAREN ) ) then
+		select case( decl )
+		case TK_GLOBAL, TK_EXTERNGLOBAL, TK_STATICGLOBAL, TK_FIELD
+			decl = TK_PROC
+		case TK_GLOBALPROCPTR, TK_EXTERNGLOBALPROCPTR, _
+		     TK_PARAMPROCPTR, TK_FIELDPROCPTR
+
+		case else
+			exit function
+		end select
+
+		has_params = TRUE
+	else
+		'' If it's a function pointer there must also be a parameter list
+		if( is_procptr ) then
+			exit function
 		end if
+		has_params = FALSE
+	end if
 
-		'' '('
-		x = hSkip( x )
+	passInsert( decl, id, dtype, basesubtype )
 
+	if( has_params ) then
 		'' Just '(void)'?
-		if( (tkGet( x ) = KW_VOID) and (tkGet( hSkip( x ) ) = TK_RPAREN)) then
+		if( (passGet( ) = KW_VOID) and (passGetLookAhead( 1 ) = TK_RPAREN) ) then
 			'' VOID
-			x = hSkip( x )
-		else
-			'' [ type [id]  (',' type [id] )*  [ ',' '...' ] ]
-			'' Note: The following isn't even doing that much
-			'' syntax verification at all, but it's ok, it's not
-			'' a compiler afterall.
-			do
-				select case( tkGet( x ) )
-				case TK_RPAREN
-					exit do
-				case TK_EOF
-					return begin
-				case TK_COMMA, TK_ELLIPSIS
-					'' Let ',' and '...' pass
-					x = hSkip( x )
-				case else
-					old = x
-					x = parseMultdecl( x, x, DECL_PARAM )
-					if( x = old ) then
-						return begin
-					end if
-				end select
-			loop
+			passSkip( )
+		'' Not just '()'?
+		elseif( passGet( ) <> TK_RPAREN ) then
+			if( cParamDeclList( ) = FALSE ) then
+				exit function
+			end if
 		end if
 
 		'' ')'
-		if( tkGet( x ) <> TK_RPAREN ) then
-			return begin
+		if( passMatch( TK_RPAREN ) = FALSE ) then
+			exit function
 		end if
-		x = hSkip( x )
 	end if
-#endif
 
-	tkInsert( begin, decl, id )
-	tkSetType( begin, dtype, basesubtype )
-	begin += 1
-	tkRemove( begin, x )
-	x = begin
-
-	function = x
+	function = TRUE
 end function
 
+''
 '' Generic 'type *a, **b;' parsing, used for vars/fields/protos/params
 '' ("multiple declaration" syntax)
 ''    int i;
@@ -546,99 +719,96 @@ end function
 ''    int *a, ***b, c;
 ''    int f(void);
 ''    int (*procptr)(void);
-function cMultDecl( byval x as integer, byval decl as integer ) as integer
-	dim as integer dtype = any, begin = any, old = any
+''
+''    BaseType DeclElement (',' DeclElement)* [';']
+''
+private function cMultDecl( byval decl as integer ) as integer
+	dim as integer dtype = any
 	dim as string subtype
 
-	'' BaseType DeclElement (',' DeclElement)* [';']
-	begin = x
+	function = FALSE
 
 	'' BaseType
-	if( cBaseType( x, dtype, subtype ) = FALSE ) then
-		return begin
+	if( cBaseType( dtype, subtype ) = FALSE ) then
+		exit function
 	end if
 
 	'' ... (',' ...)*
 	do
-		old = x
-		x = cDeclElement( x, decl, dtype, subtype )
-
-		if( x = old ) then
-			return begin
+		if( cDeclElement( decl, dtype, subtype ) = FALSE ) then
+			exit function
 		end if
 
 		'' Everything can have a comma and more identifiers,
 		'' except for params.
 		select case( decl )
-		case TK_PARAM, TK_PARAMPROCPTR
+		case TK_PARAM, TK_PARAMPROCPTR, TK_PARAMVARARG
 			exit do
 		end select
 
 		'' ','?
-		if( tkGet( x ) <> TK_COMMA ) then
-			exit do
-		end if
-		tkRemove( x, x )
-	loop
+	loop while( passMatch( TK_COMMA ) )
 
 	'' Everything except params must end with a ';'
 	select case( decl )
-	case TK_PARAM, TK_PARAMPROCPTR
+	case TK_PARAM, TK_PARAMPROCPTR, TK_PARAMVARARG
 
 	case else
 		'' ';'
-		if( tkGet( x ) <> TK_SEMI ) then
-			return begin
+		if( passMatch( TK_SEMI ) = FALSE ) then
+			exit function
 		end if
-		tkRemove( x, x )
 	end select
 
-	function = x
+	function = TRUE
 end function
 
 '' Global variable/procedure declarations
-private function cGlobalDecl( byval x as integer ) as integer
-	dim as integer begin = any, old = any, decl = any
+''    [EXTERN|STATIC] MultDecl
+private function cGlobalDecl( ) as integer
+	dim as integer decl = any
 
-	'' [EXTERN|STATIC] MultDecl
-	begin = x
+	function = FALSE
 
-	select case( tkGet( x ) )
+	select case( passGet( ) )
 	case KW_EXTERN
 		decl = TK_EXTERNGLOBAL
-		x += 1
+		passSkip( )
+
 	case KW_STATIC
 		decl = TK_STATICGLOBAL
-		x += 1
+		passSkip( )
+
 	case else
 		decl = TK_GLOBAL
 	end select
 
-	old = x
-	x = cMultDecl( x, decl )
-	if( x = old ) then
-		return begin
-	end if
-
-	function = x
+	function = cMultDecl( decl )
 end function
 
+private sub cUnknown( )
+	if( passGet( ) = TK_EOF ) then
+		exit sub
+	end if
+
+	passInsert( TK_UNKNOWN )
+
+	pass.x = cSkipStatement( pass.x )
+end sub
+
 sub cToplevel( )
-	dim as integer x = any, old = any
+	passInit( )
 
-	x = 0
-	do
-		old = x
-
-		x = cStructCompound( x )
-		x = cGlobalDecl( x )
-
-		if( tkGet( x ) = TK_EOF ) then
-			exit do
+	while( passGet( ) <> TK_EOF )
+		passTryBegin( )
+		if( cStructCompound( ) = FALSE ) then
+			passTryAgain( )
+			if( cGlobalDecl( ) = FALSE ) then
+				passTryAgain( )
+				cUnknown( )
+			end if
 		end if
+	wend
 
-		if( x = old ) then
-			x += 1
-		end if
-	loop
+	passEnd( )
 end sub

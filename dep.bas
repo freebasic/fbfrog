@@ -93,6 +93,8 @@ end sub
 sub depScan( )
 	dim as DEPNODE ptr node = any
 
+	print "parsing files for #includes..."
+
 	node = listGetHead( @dep.nodes )
 	while( node )
 		hParseFileForIncludes( node )
