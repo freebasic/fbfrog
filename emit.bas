@@ -248,9 +248,7 @@ private function emitTk( byval x as integer ) as integer
 		x = emitPPDefine( x )
 
 	case TK_STRUCTBEGIN
-		emitEol( )
 		x = emitStruct( x )
-		emitEol( )
 
 	case TK_FIELD
 		emitStmt( *tkGetText( x ) + !"\t\tas " + emitType( x ) )
@@ -281,7 +279,6 @@ private function emitTk( byval x as integer ) as integer
 		x += 1
 
 	case TK_TODOBEGIN
-		emitEol( )
 		emitTodo( x )
 
 		x += 1
@@ -289,8 +286,6 @@ private function emitTk( byval x as integer ) as integer
 			x = emitTk( x )
 		wend
 		x += 1
-
-		emitEol( )
 
 	case TK_COMMENT
 		emit( "/'" )

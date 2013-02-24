@@ -345,26 +345,25 @@ sub cPPDirectives( )
 	loop
 end sub
 
-'' After PP directives were parsed, EOLs can be removed completely
-sub cPurgeEOLs( )
-	dim as integer x = any
-
-	x = 0
-	do
-		select case( tkGet( x ) )
-		case TK_EOL
-			tkRemove( x, x )
-			x -= 1
-
-		case TK_EOF
-			exit do
-		end select
-
-		x += 1
-	loop
-end sub
-
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+private sub cPurgeEOLsFromStatement( )
+	dim as integer begin = any, x = any, endofstmt = any
+
+	begin = pass.x
+	endofstmt = cSkipStatement( begin )
+	x = begin
+	while( x < endofstmt )
+		if( tkGet( x ) = TK_EOL ) then
+			pass.x = x
+			passSkip( )
+			x -= 1
+		end if
+		x += 1
+	wend
+
+	pass.x = begin
+end sub
 
 '' (MultDecl{Field} | StructCompound)*
 private sub cStructBody( )
@@ -389,6 +388,8 @@ private function cStructCompound( ) as integer
 	dim as string id
 
 	function = FALSE
+
+	cPurgeEOLsFromStatement( )
 
 	'' {STRUCT|UNION}
 	select case( passGet( ) )
@@ -767,6 +768,8 @@ private function cGlobalDecl( ) as integer
 
 	function = FALSE
 
+	cPurgeEOLsFromStatement( )
+
 	select case( passGet( ) )
 	case KW_EXTERN
 		decl = TK_EXTERNGLOBAL
@@ -784,21 +787,22 @@ private function cGlobalDecl( ) as integer
 end function
 
 private sub cUnknown( )
-	if( passGet( ) = TK_EOF ) then
-		exit sub
-	end if
-
 	passInsert( TK_TODOBEGIN, "unknown construct (sorry)" )
-
 	pass.x = cSkipStatement( pass.x )
-
 	passInsert( TK_TODOEND )
 end sub
 
 sub cToplevel( )
 	passInit( )
 
-	while( passGet( ) <> TK_EOF )
+	do
+		while( passMatch( TK_EOL ) )
+		wend
+
+		if( passGet( ) = TK_EOF ) then
+			exit do
+		end if
+
 		passTryBegin( )
 		if( cStructCompound( ) = FALSE ) then
 			passTryAgain( )
@@ -807,7 +811,7 @@ sub cToplevel( )
 				cUnknown( )
 			end if
 		end if
-	wend
+	loop
 
 	passEnd( )
 end sub

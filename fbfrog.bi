@@ -405,7 +405,6 @@ declare sub emitStats( )
 
 declare sub cPurgeInlineComments( )
 declare sub cPPDirectives( )
-declare sub cPurgeEOLs( )
 declare sub cToplevel( )
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
