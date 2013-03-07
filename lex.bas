@@ -113,6 +113,10 @@ private sub hReadBytes( byval tk as integer, byval length as integer )
 	tkSetLocation( lex.x, lex.location )
 end sub
 
+private sub hNewline( )
+	lex.location = tkLocationNewLine( )
+end sub
+
 private sub hReadLineComment( )
 	dim as ubyte ptr begin = any
 	dim as integer escaped = any
@@ -127,10 +131,23 @@ private sub hReadLineComment( )
 
 	do
 		select case( lex.i[0] )
-		case CH_LF, CH_CR
+		case CH_CR
 			if( escaped = FALSE ) then
 				exit do
 			end if
+
+			lex.i += 1
+			if( lex.i[0] = CH_LF ) then	'' CRLF
+				lex.i += 1
+			end if
+
+			hNewline( )
+
+		case CH_LF
+			if( escaped = FALSE ) then
+				exit do
+			end if
+			hNewline( )
 
 		case CH_SPACE, CH_TAB
 			'' Spaces don't change escaped status
@@ -407,11 +424,12 @@ private sub lexNext( )
 			lex.i += 1
 		end if
 		hReadBytes( TK_EOL, 1 )
-		lex.location = tkLocationNewLine( )
+
+		hNewline( )
 
 	case CH_LF
 		hReadBytes( TK_EOL, 1 )
-		lex.location = tkLocationNewLine( )
+		hNewline( )
 
 	case CH_TAB, CH_SPACE
 		lex.i += 1
@@ -707,7 +725,7 @@ function lexLoadFile( byval x as integer, byref filename as string ) as integer
 
 	count = 0
 	lex.x = x
-	lex.location = tkLocationNewLine( )
+	hNewline( )
 	hLoadFile( filename )
 	hComplainAboutEmbeddedNulls( )
 	hInitKeywords( )
