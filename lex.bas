@@ -115,17 +115,35 @@ end sub
 
 private sub hReadLineComment( )
 	dim as ubyte ptr begin = any
+	dim as integer escaped = any
 
 	'' Line comments, starting at the first '/' of '// foo...'
 	'' The whole comment body except for the // will be put into the token.
-	'' EOL remains a separate token.
+	'' EOL remains a separate token. Escaped newlines ('\' [Spaces] EOL)
+	'' means the comment continues on the next line.
 	lex.i += 2
 	begin = lex.i
+	escaped = FALSE
 
 	do
 		select case( lex.i[0] )
-		case CH_LF, CH_CR, 0
+		case CH_LF, CH_CR
+			if( escaped = FALSE ) then
+				exit do
+			end if
+
+		case CH_SPACE, CH_TAB
+			'' Spaces don't change escaped status
+			'' (at least gcc/clang support spaces between \ and EOL)
+
+		case CH_BACKSLASH
+			escaped = TRUE
+
+		case 0
 			exit do
+
+		case else
+			escaped = FALSE
 		end select
 
 		lex.i += 1
