@@ -420,10 +420,11 @@ private sub lexNext( )
 	'' Identify the next token
 	select case as const( lex.i[0] )
 	case CH_CR
+		hReadBytes( TK_EOL, 1 )
+
 		if( lex.i[0] = CH_LF ) then	'' CRLF
 			lex.i += 1
 		end if
-		hReadBytes( TK_EOL, 1 )
 
 		hNewline( )
 
