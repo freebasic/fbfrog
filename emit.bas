@@ -2,6 +2,13 @@
 
 #include once "fbfrog.bi"
 
+declare sub emitDecl _
+	( _
+		byref x as integer, _
+		byref ln as string, _
+		byval decl as integer, _
+		byval belongs_to_dimshared as integer = FALSE _
+	)
 declare function emitTk( byval x as integer ) as integer
 
 type EmitterStuff
@@ -123,12 +130,89 @@ private function emitType( byval x as integer ) as string
 	function = s
 end function
 
-private sub emitDimShared( byval x as integer )
-	emitStmt( "dim shared " + *tkGetText( x ) + !" as " + emitType( x ) )
+private function emitSubOrFunction( byval x as integer ) as string
+	if( tkGetType( x ) = TYPE_ANY ) then
+		function = "sub"
+	else
+		function = "function"
+	end if
+end function
+
+private sub emitParamList( byref x as integer, byref ln as string )
+	dim as integer y = any, count = any
+
+	ln += "("
+	count = 0
+	y = x + 1
+	do
+		select case( tkGet( y ) )
+		case TK_PARAM, TK_PARAMPROCPTR, TK_PARAMVARARG
+			if( count > 0 ) then
+				ln += ","
+			end if
+			ln += " "
+
+			if( tkGet( y ) = TK_PARAMVARARG ) then
+				ln += "..."
+				y += 1
+			else
+				emitDecl( y, ln, TK_PARAM )
+			end if
+		case else
+			exit do
+		end select
+
+		count += 1
+	loop
+	ln += " )"
+
+	if( tkGetType( x ) <> TYPE_ANY ) then
+		ln += " as " + emitType( x )
+	end if
+
+	x = y
 end sub
 
-private sub emitExtern( byval x as integer )
-	emitStmt(     "extern " + *tkGetText( x ) + !" as " + emitType( x ) )
+private sub emitDecl _
+	( _
+		byref x as integer, _
+		byref ln as string, _
+		byval decl as integer, _
+		byval belongs_to_dimshared as integer _
+	)
+
+	dim as zstring ptr s = any
+
+	select case( decl )
+	case TK_GLOBAL
+		ln += "dim shared "
+	case TK_EXTERNGLOBAL
+		ln += "extern "
+		if( belongs_to_dimshared ) then
+			ln += "    "
+		end if
+	case TK_PARAM
+		ln += "byval "
+	case TK_FIELD
+
+	case else
+		assert( FALSE )
+	end select
+
+	s = tkGetText( x )
+	if( len( *s ) > 0 ) then
+		ln += *s + " "
+	end if
+
+	ln += "as "
+
+	if( tkIsProcPtr( x ) ) then
+		ln += emitSubOrFunction( x )
+		emitParamList( x, ln )
+	else
+		ln += emitType( x )
+		x += 1
+	end if
 end sub
 
 private function emitStruct( byval x as integer ) as integer
@@ -151,62 +235,6 @@ private function emitStruct( byval x as integer ) as integer
 	emitUnindent( )
 
 	emitStmt( "end type" )
-
-	function = x
-end function
-
-private function emitProcDecl( byval x as integer ) as integer
-	dim as integer y = any, count = any
-	dim as string ln
-
-	ln = "declare "
-	if( tkGetType( x ) = TYPE_ANY ) then
-		ln += "sub"
-	else
-		ln += "function"
-	end if
-	ln += " " + *tkGetText( x )
-
-	ln += "( "
-	y = x
-	count = 0
-	do
-		y += 1
-
-		select case( tkGet( y ) )
-		case TK_PARAM, TK_PARAMPROCPTR, TK_PARAMVARARG
-			if( count > 0 ) then
-				ln += ", "
-			end if
-
-			select case( tkGet( y ) )
-			case TK_PARAM
-				ln += "byval "
-				ln += *tkGetText( y )
-				ln += " as " + emitType( y )
-
-			case TK_PARAMPROCPTR
-				ln += "TODO"
-
-			case TK_PARAMVARARG
-				ln += "..."
-			end select
-
-		case else
-			exit do
-		end select
-
-		count += 1
-	loop
-	ln += " )"
-
-	if( tkGetType( x ) <> TYPE_ANY ) then
-		ln += " as " + emitType( x )
-	end if
-
-	emitStmt( ln )
-
-	x = y
 
 	function = x
 end function
@@ -235,6 +263,7 @@ end sub
 
 private function emitTk( byval x as integer ) as integer
 	dim as string ln
+	dim as integer y = any
 
 	select case as const( tkGet( x ) )
 	case TK_EOF
@@ -250,25 +279,33 @@ private function emitTk( byval x as integer ) as integer
 	case TK_STRUCTBEGIN
 		x = emitStruct( x )
 
-	case TK_FIELD
-		emitStmt( *tkGetText( x ) + !"\t\tas " + emitType( x ) )
-		x += 1
+	case TK_FIELD, TK_FIELDPROCPTR
+		emitDecl( x, ln, TK_FIELD )
+		emitStmt( ln )
 
-	case TK_GLOBAL
-		emitExtern( x )
-		emitDimShared( x )
-		x += 1
+	case TK_GLOBAL, TK_GLOBALPROCPTR
+		y = x
+		emitDecl( x, ln, TK_EXTERNGLOBAL, TRUE )
+		emitStmt( ln )
 
-	case TK_EXTERNGLOBAL
-		emitExtern( x )
-		x += 1
+		x = y
+		ln = ""
+		emitDecl( x, ln, TK_GLOBAL )
+		emitStmt( ln )
 
-	case TK_STATICGLOBAL
-		emitDimShared( x )
-		x += 1
+	case TK_EXTERNGLOBAL, TK_EXTERNGLOBALPROCPTR
+		emitDecl( x, ln, TK_EXTERNGLOBAL )
+		emitStmt( ln )
+
+	case TK_STATICGLOBAL, TK_STATICGLOBALPROCPTR
+		emitDecl( x, ln, TK_GLOBAL )
+		emitStmt( ln )
 
 	case TK_PROC
-		x = emitProcDecl( x )
+		ln = "declare "
+		ln += emitSubOrFunction( x )
+		emitParamList( x, ln )
+		emitStmt( ln )
 
 	case TK_EOL
 		emitEol( )

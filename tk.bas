@@ -1,197 +1,202 @@
 #include once "fbfrog.bi"
 #include once "crt.bi"
 
+enum
+	TKFLAG_STMTSEP = &h1
+	TKFLAG_PROCPTR = &h2
+end enum
+
 type TOKENINFO
-	is_stmtsep	as integer
 	text		as zstring ptr
 	debug		as zstring ptr
+	flags		as integer
 end type
 
 dim shared as TOKENINFO tk_info(0 to ...) = _
 { _
-	( TRUE , NULL  , @"eof"                  ), _
-	( TRUE , NULL  , @"#include"             ), _
-	( TRUE , NULL  , @"#define begin"        ), _
-	( TRUE , NULL  , @"#define end"          ), _
-	( TRUE , NULL  , @"struct begin"         ), _
-	( TRUE , NULL  , @"struct end"           ), _
-	( TRUE , NULL  , @"todo begin"           ), _
-	( TRUE , NULL  , @"todo end"             ), _
-	( TRUE , NULL  , @"global"               ), _
-	( TRUE , NULL  , @"externglobal"         ), _
-	( TRUE , NULL  , @"staticglobal"         ), _
-	( TRUE , NULL  , @"globalprocptr"        ), _
-	( TRUE , NULL  , @"externglobalprocptr"  ), _
-	( TRUE , NULL  , @"staticglobalprocptr"  ), _
-	( TRUE , NULL  , @"field"                ), _
-	( TRUE , NULL  , @"fieldprocptr"         ), _
-	( TRUE , NULL  , @"proc"                 ), _
-	( TRUE , NULL  , @"param"                ), _
-	( TRUE , NULL  , @"paramprocptr"         ), _
-	( TRUE , NULL  , @"paramvararg"          ), _
-	( TRUE , NULL  , @"todo"                 ), _
-	( FALSE, NULL  , @"byte"                 ), _
-	( TRUE , NULL  , @"eol"                  ), _
-	( FALSE, NULL  , @"comment"              ), _
-	( FALSE, NULL  , @"linecomment"          ), _
-	( FALSE, NULL  , @"decnum"               ), _ '' Number literals
-	( FALSE, NULL  , @"hexnum"               ), _
-	( FALSE, NULL  , @"octnum"               ), _
-	( FALSE, NULL  , @"string"               ), _ '' String literals
-	( FALSE, NULL  , @"char"                 ), _
-	( FALSE, NULL  , @"wstring"              ), _
-	( FALSE, NULL  , @"wchar"                ), _
-	( FALSE, NULL  , @"estring"              ), _
-	( FALSE, NULL  , @"echar"                ), _
-	( FALSE, NULL  , @"ewstring"             ), _
-	( FALSE, NULL  , @"ewchar"               ), _
-	( FALSE, @"!"  , @"tk" ), _ '' Main tokens
-	( FALSE, @"!=" , @"tk" ), _
-	( FALSE, @"#"  , @"tk" ), _
-	( FALSE, @"##" , @"tk" ), _
-	( FALSE, @"%"  , @"tk" ), _
-	( FALSE, @"%=" , @"tk" ), _
-	( FALSE, @"&"  , @"tk" ), _
-	( FALSE, @"&=" , @"tk" ), _
-	( FALSE, @"&&" , @"tk" ), _
-	( FALSE, @"("  , @"tk" ), _
-	( FALSE, @")"  , @"tk" ), _
-	( FALSE, @"*"  , @"tk" ), _
-	( FALSE, @"*=" , @"tk" ), _
-	( FALSE, @"+"  , @"tk" ), _
-	( FALSE, @"+=" , @"tk" ), _
-	( FALSE, @"++" , @"tk" ), _
-	( FALSE, @","  , @"tk" ), _
-	( FALSE, @"-"  , @"tk" ), _
-	( FALSE, @"-=" , @"tk" ), _
-	( FALSE, @"--" , @"tk" ), _
-	( FALSE, @"->" , @"tk" ), _
-	( FALSE, @"."  , @"tk" ), _
-	( FALSE, @"...", @"tk" ), _
-	( FALSE, @"/"  , @"tk" ), _
-	( FALSE, @"/=" , @"tk" ), _
-	( FALSE, @":"  , @"tk" ), _
-	( FALSE, @";"  , @"tk" ), _
-	( FALSE, @"<"  , @"tk" ), _
-	( FALSE, @"<<" , @"tk" ), _
-	( FALSE, @"<<=", @"tk" ), _
-	( FALSE, @"<=" , @"tk" ), _
-	( FALSE, @"<>" , @"tk" ), _
-	( FALSE, @"="  , @"tk" ), _
-	( FALSE, @"==" , @"tk" ), _
-	( FALSE, @">"  , @"tk" ), _
-	( FALSE, @">>" , @"tk" ), _
-	( FALSE, @">>=", @"tk" ), _
-	( FALSE, @">=" , @"tk" ), _
-	( FALSE, @"?"  , @"tk" ), _
-	( FALSE, @"@"  , @"tk" ), _
-	( FALSE, @"["  , @"tk" ), _
-	( FALSE, @"\"  , @"tk" ), _
-	( FALSE, @"]"  , @"tk" ), _
-	( FALSE, @"^"  , @"tk" ), _
-	( FALSE, @"^=" , @"tk" ), _
-	( FALSE, @"_"  , @"tk" ), _
-	( FALSE, @"{"  , @"tk" ), _
-	( FALSE, @"|"  , @"tk" ), _
-	( FALSE, @"|=" , @"tk" ), _
-	( FALSE, @"||" , @"tk" ), _
-	( FALSE, @"}"  , @"tk" ), _
-	( FALSE, @"~"  , @"tk" ), _
-	( FALSE, NULL  , @"id" ), _ '' TK_ID
-	( FALSE, @"auto"    , @"kw" ), _ '' C/FB keywords
-	( FALSE, @"break"   , @"kw" ), _
-	( FALSE, @"case"    , @"kw" ), _
-	( FALSE, @"char"    , @"kw" ), _
-	( FALSE, @"const"   , @"kw" ), _
-	( FALSE, @"continue", @"kw" ), _
-	( FALSE, @"default" , @"kw" ), _
-	( FALSE, @"define"  , @"kw" ), _
-	( FALSE, @"defined" , @"kw" ), _
-	( FALSE, @"do"      , @"kw" ), _
-	( FALSE, @"double"  , @"kw" ), _
-	( FALSE, @"elif"    , @"kw" ), _
-	( FALSE, @"else"    , @"kw" ), _
-	( FALSE, @"endif"   , @"kw" ), _
-	( FALSE, @"enum"    , @"kw" ), _
-	( FALSE, @"extern"  , @"kw" ), _
-	( FALSE, @"float"   , @"kw" ), _
-	( FALSE, @"for"     , @"kw" ), _
-	( FALSE, @"goto"    , @"kw" ), _
-	( FALSE, @"if"      , @"kw" ), _
-	( FALSE, @"ifdef"   , @"kw" ), _
-	( FALSE, @"ifndef"  , @"kw" ), _
-	( FALSE, @"include" , @"kw" ), _
-	( FALSE, @"inline"  , @"kw" ), _
-	( FALSE, @"int"     , @"kw" ), _
-	( FALSE, @"long"    , @"kw" ), _
-	( FALSE, @"pragma"  , @"kw" ), _
-	( FALSE, @"register", @"kw" ), _
-	( FALSE, @"restrict", @"kw" ), _
-	( FALSE, @"return"  , @"kw" ), _
-	( FALSE, @"short"   , @"kw" ), _
-	( FALSE, @"signed"  , @"kw" ), _
-	( FALSE, @"sizeof"  , @"kw" ), _
-	( FALSE, @"static"  , @"kw" ), _
-	( FALSE, @"struct"  , @"kw" ), _
-	( FALSE, @"switch"  , @"kw" ), _
-	( FALSE, @"typedef" , @"kw" ), _
-	( FALSE, @"undef"   , @"kw" ), _
-	( FALSE, @"union"   , @"kw" ), _
-	( FALSE, @"unsigned", @"kw" ), _
-	( FALSE, @"void"    , @"kw" ), _
-	( FALSE, @"volatile", @"kw" ), _
-	( FALSE, @"while"   , @"kw" ), _
-	( FALSE, @"alias"   , @"kw" ), _  '' FB-only keywords
-	( FALSE, @"and"     , @"kw" ), _
-	( FALSE, @"andalso" , @"kw" ), _
-	( FALSE, @"any"     , @"kw" ), _
-	( FALSE, @"as"      , @"kw" ), _
-	( FALSE, @"byte"    , @"kw" ), _
-	( FALSE, @"byval"   , @"kw" ), _
-	( FALSE, @"ctk"    , @"kw" ), _
-	( FALSE, @"cdecl"   , @"kw" ), _
-	( FALSE, @"cptr"    , @"kw" ), _
-	( FALSE, @"declare" , @"kw" ), _
-	( FALSE, @"dim"     , @"kw" ), _
-	( FALSE, @"elseif"  , @"kw" ), _
-	( FALSE, @"end"     , @"kw" ), _
-	( FALSE, @"exit"    , @"kw" ), _
-	( FALSE, @"export"  , @"kw" ), _
-	( FALSE, @"field"   , @"kw" ), _
-	( FALSE, @"function", @"kw" ), _
-	( FALSE, @"iif"     , @"kw" ), _
-	( FALSE, @"integer" , @"kw" ), _
-	( FALSE, @"longint" , @"kw" ), _
-	( FALSE, @"loop"    , @"kw" ), _
-	( FALSE, @"mod"     , @"kw" ), _
-	( FALSE, @"next"    , @"kw" ), _
-	( FALSE, @"not"     , @"kw" ), _
-	( FALSE, @"or"      , @"kw" ), _
-	( FALSE, @"orelse"  , @"kw" ), _
-	( FALSE, @"pascal"  , @"kw" ), _
-	( FALSE, @"private" , @"kw" ), _
-	( FALSE, @"ptr"     , @"kw" ), _
-	( FALSE, @"scope"   , @"kw" ), _
-	( FALSE, @"select"  , @"kw" ), _
-	( FALSE, @"shared"  , @"kw" ), _
-	( FALSE, @"shl"     , @"kw" ), _
-	( FALSE, @"shr"     , @"kw" ), _
-	( FALSE, @"single"  , @"kw" ), _
-	( FALSE, @"stdcall" , @"kw" ), _
-	( FALSE, @"sub"     , @"kw" ), _
-	( FALSE, @"then"    , @"kw" ), _
-	( FALSE, @"to"      , @"kw" ), _
-	( FALSE, @"type"    , @"kw" ), _
-	( FALSE, @"ubyte"   , @"kw" ), _
-	( FALSE, @"uinteger", @"kw" ), _
-	( FALSE, @"ulong"   , @"kw" ), _
-	( FALSE, @"ulongint", @"kw" ), _
-	( FALSE, @"ushort"  , @"kw" ), _
-	( FALSE, @"wend"    , @"kw" ), _
-	( FALSE, @"wstr"    , @"kw" ), _
-	( FALSE, @"wstring" , @"kw" ), _
-	( FALSE, @"xor"     , @"kw" ), _
-	( FALSE, @"zstring" , @"kw" )  _
+	( NULL  , @"eof"                  , TKFLAG_STMTSEP ), _
+	( NULL  , @"#include"             , TKFLAG_STMTSEP ), _
+	( NULL  , @"#define begin"        , TKFLAG_STMTSEP ), _
+	( NULL  , @"#define end"          , TKFLAG_STMTSEP ), _
+	( NULL  , @"struct begin"         , TKFLAG_STMTSEP ), _
+	( NULL  , @"struct end"           , TKFLAG_STMTSEP ), _
+	( NULL  , @"todo begin"           , TKFLAG_STMTSEP ), _
+	( NULL  , @"todo end"             , TKFLAG_STMTSEP ), _
+	( NULL  , @"global"               , TKFLAG_STMTSEP ), _
+	( NULL  , @"externglobal"         , TKFLAG_STMTSEP ), _
+	( NULL  , @"staticglobal"         , TKFLAG_STMTSEP ), _
+	( NULL  , @"globalprocptr"        , TKFLAG_STMTSEP or TKFLAG_PROCPTR ), _
+	( NULL  , @"externglobalprocptr"  , TKFLAG_STMTSEP or TKFLAG_PROCPTR ), _
+	( NULL  , @"staticglobalprocptr"  , TKFLAG_STMTSEP or TKFLAG_PROCPTR ), _
+	( NULL  , @"field"                , TKFLAG_STMTSEP ), _
+	( NULL  , @"fieldprocptr"         , TKFLAG_STMTSEP or TKFLAG_PROCPTR ), _
+	( NULL  , @"proc"                 , TKFLAG_STMTSEP ), _
+	( NULL  , @"param"                , TKFLAG_STMTSEP ), _
+	( NULL  , @"paramprocptr"         , TKFLAG_STMTSEP or TKFLAG_PROCPTR ), _
+	( NULL  , @"paramvararg"          , TKFLAG_STMTSEP ), _
+	( NULL  , @"todo"                 , TKFLAG_STMTSEP ), _
+	( NULL  , @"byte"                 ), _
+	( NULL  , @"eol"                  , TKFLAG_STMTSEP ), _
+	( NULL  , @"comment"              ), _
+	( NULL  , @"linecomment"          ), _
+	( NULL  , @"decnum"               ), _ '' Number literals
+	( NULL  , @"hexnum"               ), _
+	( NULL  , @"octnum"               ), _
+	( NULL  , @"string"               ), _ '' String literals
+	( NULL  , @"char"                 ), _
+	( NULL  , @"wstring"              ), _
+	( NULL  , @"wchar"                ), _
+	( NULL  , @"estring"              ), _
+	( NULL  , @"echar"                ), _
+	( NULL  , @"ewstring"             ), _
+	( NULL  , @"ewchar"               ), _
+	( @"!"  , @"tk" ), _ '' Main tokens
+	( @"!=" , @"tk" ), _
+	( @"#"  , @"tk" ), _
+	( @"##" , @"tk" ), _
+	( @"%"  , @"tk" ), _
+	( @"%=" , @"tk" ), _
+	( @"&"  , @"tk" ), _
+	( @"&=" , @"tk" ), _
+	( @"&&" , @"tk" ), _
+	( @"("  , @"tk" ), _
+	( @")"  , @"tk" ), _
+	( @"*"  , @"tk" ), _
+	( @"*=" , @"tk" ), _
+	( @"+"  , @"tk" ), _
+	( @"+=" , @"tk" ), _
+	( @"++" , @"tk" ), _
+	( @","  , @"tk" ), _
+	( @"-"  , @"tk" ), _
+	( @"-=" , @"tk" ), _
+	( @"--" , @"tk" ), _
+	( @"->" , @"tk" ), _
+	( @"."  , @"tk" ), _
+	( @"...", @"tk" ), _
+	( @"/"  , @"tk" ), _
+	( @"/=" , @"tk" ), _
+	( @":"  , @"tk" ), _
+	( @";"  , @"tk" ), _
+	( @"<"  , @"tk" ), _
+	( @"<<" , @"tk" ), _
+	( @"<<=", @"tk" ), _
+	( @"<=" , @"tk" ), _
+	( @"<>" , @"tk" ), _
+	( @"="  , @"tk" ), _
+	( @"==" , @"tk" ), _
+	( @">"  , @"tk" ), _
+	( @">>" , @"tk" ), _
+	( @">>=", @"tk" ), _
+	( @">=" , @"tk" ), _
+	( @"?"  , @"tk" ), _
+	( @"@"  , @"tk" ), _
+	( @"["  , @"tk" ), _
+	( @"\"  , @"tk" ), _
+	( @"]"  , @"tk" ), _
+	( @"^"  , @"tk" ), _
+	( @"^=" , @"tk" ), _
+	( @"_"  , @"tk" ), _
+	( @"{"  , @"tk" ), _
+	( @"|"  , @"tk" ), _
+	( @"|=" , @"tk" ), _
+	( @"||" , @"tk" ), _
+	( @"}"  , @"tk" ), _
+	( @"~"  , @"tk" ), _
+	( NULL  , @"id" ), _ '' TK_ID
+	( @"auto"    , @"kw" ), _ '' C/FB keywords
+	( @"break"   , @"kw" ), _
+	( @"case"    , @"kw" ), _
+	( @"char"    , @"kw" ), _
+	( @"const"   , @"kw" ), _
+	( @"continue", @"kw" ), _
+	( @"default" , @"kw" ), _
+	( @"define"  , @"kw" ), _
+	( @"defined" , @"kw" ), _
+	( @"do"      , @"kw" ), _
+	( @"double"  , @"kw" ), _
+	( @"elif"    , @"kw" ), _
+	( @"else"    , @"kw" ), _
+	( @"endif"   , @"kw" ), _
+	( @"enum"    , @"kw" ), _
+	( @"extern"  , @"kw" ), _
+	( @"float"   , @"kw" ), _
+	( @"for"     , @"kw" ), _
+	( @"goto"    , @"kw" ), _
+	( @"if"      , @"kw" ), _
+	( @"ifdef"   , @"kw" ), _
+	( @"ifndef"  , @"kw" ), _
+	( @"include" , @"kw" ), _
+	( @"inline"  , @"kw" ), _
+	( @"int"     , @"kw" ), _
+	( @"long"    , @"kw" ), _
+	( @"pragma"  , @"kw" ), _
+	( @"register", @"kw" ), _
+	( @"restrict", @"kw" ), _
+	( @"return"  , @"kw" ), _
+	( @"short"   , @"kw" ), _
+	( @"signed"  , @"kw" ), _
+	( @"sizeof"  , @"kw" ), _
+	( @"static"  , @"kw" ), _
+	( @"struct"  , @"kw" ), _
+	( @"switch"  , @"kw" ), _
+	( @"typedef" , @"kw" ), _
+	( @"undef"   , @"kw" ), _
+	( @"union"   , @"kw" ), _
+	( @"unsigned", @"kw" ), _
+	( @"void"    , @"kw" ), _
+	( @"volatile", @"kw" ), _
+	( @"while"   , @"kw" ), _
+	( @"alias"   , @"kw" ), _  '' FB-only keywords
+	( @"and"     , @"kw" ), _
+	( @"andalso" , @"kw" ), _
+	( @"any"     , @"kw" ), _
+	( @"as"      , @"kw" ), _
+	( @"byte"    , @"kw" ), _
+	( @"byval"   , @"kw" ), _
+	( @"ctk"    , @"kw" ), _
+	( @"cdecl"   , @"kw" ), _
+	( @"cptr"    , @"kw" ), _
+	( @"declare" , @"kw" ), _
+	( @"dim"     , @"kw" ), _
+	( @"elseif"  , @"kw" ), _
+	( @"end"     , @"kw" ), _
+	( @"exit"    , @"kw" ), _
+	( @"export"  , @"kw" ), _
+	( @"field"   , @"kw" ), _
+	( @"function", @"kw" ), _
+	( @"iif"     , @"kw" ), _
+	( @"integer" , @"kw" ), _
+	( @"longint" , @"kw" ), _
+	( @"loop"    , @"kw" ), _
+	( @"mod"     , @"kw" ), _
+	( @"next"    , @"kw" ), _
+	( @"not"     , @"kw" ), _
+	( @"or"      , @"kw" ), _
+	( @"orelse"  , @"kw" ), _
+	( @"pascal"  , @"kw" ), _
+	( @"private" , @"kw" ), _
+	( @"ptr"     , @"kw" ), _
+	( @"scope"   , @"kw" ), _
+	( @"select"  , @"kw" ), _
+	( @"shared"  , @"kw" ), _
+	( @"shl"     , @"kw" ), _
+	( @"shr"     , @"kw" ), _
+	( @"single"  , @"kw" ), _
+	( @"stdcall" , @"kw" ), _
+	( @"sub"     , @"kw" ), _
+	( @"then"    , @"kw" ), _
+	( @"to"      , @"kw" ), _
+	( @"type"    , @"kw" ), _
+	( @"ubyte"   , @"kw" ), _
+	( @"uinteger", @"kw" ), _
+	( @"ulong"   , @"kw" ), _
+	( @"ulongint", @"kw" ), _
+	( @"ushort"  , @"kw" ), _
+	( @"wend"    , @"kw" ), _
+	( @"wstr"    , @"kw" ), _
+	( @"wstring" , @"kw" ), _
+	( @"xor"     , @"kw" ), _
+	( @"zstring" , @"kw" )  _
 }
 
 #if ubound( tk_info ) < TK__COUNT - 1
@@ -461,7 +466,11 @@ function tkGet( byval x as integer ) as integer
 end function
 
 function tkIsStmtSep( byval x as integer ) as integer
-	function = tk_info(tkGet( x )).is_stmtsep
+	function = ((tk_info(tkGet( x )).flags and TKFLAG_STMTSEP) <> 0)
+end function
+
+function tkIsProcPtr( byval x as integer ) as integer
+	function = ((tk_info(tkGet( x )).flags and TKFLAG_PROCPTR) <> 0)
 end function
 
 function tkGetText( byval x as integer ) as zstring ptr

@@ -376,6 +376,7 @@ declare sub tkInsert _
 declare sub tkRemove( byval first as integer, byval last as integer )
 declare function tkGet( byval x as integer ) as integer
 declare function tkIsStmtSep( byval x as integer ) as integer
+declare function tkIsProcPtr( byval x as integer ) as integer
 declare function tkGetText( byval x as integer ) as zstring ptr
 declare sub tkSetType _
 	( _
