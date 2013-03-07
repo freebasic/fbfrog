@@ -91,22 +91,26 @@ private sub hAddTextToken( byval tk as integer, byval begin as ubyte ptr )
 	'' Is it a C keyword?
 	if( item->s ) then
 		'' Then use the proper KW_* instead of TK_ID
-		tkInsert( lex.x, cint( item->data ), , , , lex.location )
+		tkInsert( lex.x, cint( item->data ) )
+		tkSetLocation( lex.x, lex.location )
 	else
 		'' TK_ID
-		tkInsert( lex.x, tk, begin, , , lex.location )
+		tkInsert( lex.x, tk, begin )
+		tkSetLocation( lex.x, lex.location )
 	end if
 
 	lex.i[0] = old
 end sub
 
 private sub hAddTodo( byval text as zstring ptr )
-	tkInsert( lex.x, TK_TODO, text, , , lex.location )
+	tkInsert( lex.x, TK_TODO, text )
+	tkSetLocation( lex.x, lex.location )
 end sub
 
 private sub hReadBytes( byval tk as integer, byval length as integer )
 	lex.i += length
-	tkInsert( lex.x, tk, , , , lex.location )
+	tkInsert( lex.x, tk )
+	tkSetLocation( lex.x, lex.location )
 end sub
 
 private sub hReadLineComment( )

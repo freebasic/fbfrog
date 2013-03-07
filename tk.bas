@@ -359,28 +359,15 @@ private sub hMoveTo( byval x as integer )
 	tk.front = x
 end sub
 
-sub tkCtor _
-	( _
-		byval p as ONETOKEN ptr, _
-		byval id as integer, _
-		byval text as zstring ptr, _
-		byval dtype as integer, _
-		byval subtype as zstring ptr, _
-		byval location as integer _
-	)
-
-	p->id = id
-	p->text = strDuplicate( text )
-	p->dtype = dtype
-	p->subtype = strDuplicate( subtype )
-	p->location = location
-
-end sub
-
 sub tkDtor( byval p as ONETOKEN ptr )
 	deallocate( p->text )
 	deallocate( p->subtype )
+	deallocate( p->comment )
 end sub
+
+function tkGetCount( ) as integer
+	function = tk.size
+end function
 
 '' Insert new token in front of token at the given position,
 '' so that the new token ends up at that position
@@ -388,10 +375,7 @@ sub tkInsert _
 	( _
 		byval x as integer, _
 		byval id as integer, _
-		byval text as zstring ptr, _
-		byval dtype as integer, _
-		byval subtype as zstring ptr, _
-		byval location as integer _
+		byval text as zstring ptr _
 	)
 
 	const NEWGAP = 512
@@ -416,7 +400,12 @@ sub tkInsert _
 		p = tk.p + tk.front
 	end if
 
-	tkCtor( p, id, text, dtype, subtype, location )
+	p->id = id
+	p->text = strDuplicate( text )
+	p->dtype = TYPE_NONE
+	p->subtype = NULL
+	p->location = -1
+	p->comment = NULL
 
 	'' Extend front part of the buffer
 	tk.front += 1
@@ -471,6 +460,10 @@ function tkGet( byval x as integer ) as integer
 	function = tkAccess( x )->id
 end function
 
+function tkIsStmtSep( byval x as integer ) as integer
+	function = tk_info(tkGet( x )).is_stmtsep
+end function
+
 function tkGetText( byval x as integer ) as zstring ptr
 	dim as ONETOKEN ptr p = any
 
@@ -488,20 +481,29 @@ function tkGetText( byval x as integer ) as zstring ptr
 	end if
 end function
 
+sub tkSetType _
+	( _
+		byval x as integer, _
+		byval dtype as integer, _
+		byval subtype as zstring ptr _
+	)
+
+	dim as ONETOKEN ptr p = any
+
+	p = tkAccess( x )
+	if( p->id <> TK_EOF ) then
+		p->dtype = dtype
+		p->subtype = strDuplicate( subtype )
+	end if
+
+end sub
+
 function tkGetType( byval x as integer ) as integer
 	function = tkAccess( x )->dtype
 end function
 
 function tkGetSubtype( byval x as integer ) as zstring ptr
 	function = tkAccess( x )->subtype
-end function
-
-function tkGetCount( ) as integer
-	function = tk.size
-end function
-
-function tkIsStmtSep( byval x as integer ) as integer
-	function = tk_info(tkGet( x )).is_stmtsep
 end function
 
 sub tkLocationNewFile( byval filename as zstring ptr )
@@ -517,6 +519,18 @@ function tkLocationNewLine( ) as integer
 	tk.location += 1
 end function
 
+sub tkSetLocation( byval x as integer, byval location as integer )
+	dim as ONETOKEN ptr p = any
+	p = tkAccess( x )
+	if( p->id <> TK_EOF ) then
+		p->location = location
+	end if
+end sub
+
+function tkHasSourceLocation( byval x as integer ) as integer
+	function = (tkAccess( x )->location >= 0)
+end function
+
 '' Find the map entry that "contains" this token's location
 '' (assuming there always is one)
 private function hLookupLocation( byval location as integer ) as MAPENTRY ptr
@@ -528,10 +542,6 @@ private function hLookupLocation( byval location as integer ) as MAPENTRY ptr
 	wend
 
 	function = entry
-end function
-
-function tkHasSourceLocation( byval x as integer ) as integer
-	function = (tkAccess( x )->location >= 0)
 end function
 
 function tkGetSourceFile( byval x as integer ) as zstring ptr

@@ -365,34 +365,29 @@ declare sub tkEnd( )
 declare sub tkStats( )
 declare function tkDumpOne( byval x as integer ) as string
 declare sub tkDump( )
-declare sub tkCtor _
-	( _
-		byval p as ONETOKEN ptr, _
-		byval id as integer, _
-		byval text as zstring ptr, _
-		byval dtype as integer, _
-		byval subtype as zstring ptr, _
-		byval location as integer _
-	)
 declare sub tkDtor( byval p as ONETOKEN ptr )
+declare function tkGetCount( ) as integer
 declare sub tkInsert _
 	( _
 		byval x as integer, _
 		byval id as integer, _
-		byval text as zstring ptr = NULL, _
-		byval dtype as integer = TYPE_NONE, _
-		byval subtype as zstring ptr = NULL, _
-		byval location as integer = -1 _
+		byval text as zstring ptr = NULL _
 	)
 declare sub tkRemove( byval first as integer, byval last as integer )
 declare function tkGet( byval x as integer ) as integer
+declare function tkIsStmtSep( byval x as integer ) as integer
 declare function tkGetText( byval x as integer ) as zstring ptr
+declare sub tkSetType _
+	( _
+		byval x as integer, _
+		byval dtype as integer, _
+		byval subtype as zstring ptr _
+	)
 declare function tkGetType( byval x as integer ) as integer
 declare function tkGetSubtype( byval x as integer ) as zstring ptr
-declare function tkGetCount( ) as integer
-declare function tkIsStmtSep( byval x as integer ) as integer
 declare sub tkLocationNewFile( byval filename as zstring ptr )
 declare function tkLocationNewLine( ) as integer
+declare sub tkSetLocation( byval x as integer, byval location as integer )
 declare function tkHasSourceLocation( byval x as integer ) as integer
 declare function tkGetSourceFile( byval x as integer ) as zstring ptr
 declare function tkGetLineNum( byval x as integer ) as integer
