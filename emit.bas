@@ -307,7 +307,7 @@ private function emitTk( byval x as integer ) as integer
 		emitParamList( x, ln )
 		emitStmt( ln )
 
-	case TK_EOL
+	case TK_EOL, TK_DIVIDER
 		emitEol( )
 		x += 1
 

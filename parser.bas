@@ -11,12 +11,12 @@ declare function cMultDecl _
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-private function cSkip( byval x as integer ) as integer
+private function ppSkip( byval x as integer ) as integer
 	do
 		x += 1
 
 		select case( tkGet( x ) )
-		case TK_EOL, TK_COMMENT, TK_LINECOMMENT
+		case TK_COMMENT, TK_LINECOMMENT
 
 		case else
 			exit do
@@ -30,6 +30,21 @@ private function ppFindEOL( byval x as integer ) as integer
 	while( tkIsStmtSep( x ) = FALSE )
 		x += 1
 	wend
+	function = x
+end function
+
+private function cSkip( byval x as integer ) as integer
+	do
+		x += 1
+
+		select case( tkGet( x ) )
+		case TK_EOL, TK_COMMENT, TK_LINECOMMENT
+
+		case else
+			exit do
+		end select
+	loop
+
 	function = x
 end function
 
@@ -211,6 +226,28 @@ sub cPPDirectives( )
 
 		x += 1
 	loop
+end sub
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+sub cInsertDividers( )
+	dim as integer x = any, y = any
+
+	x = ppSkip( -1 )
+	while( tkGet( x ) <> TK_EOF )
+		if( (tkGet( x           ) = TK_EOL) and _
+		    (tkGet( ppSkip( x ) ) = TK_EOL) ) then
+			y = x
+			while( tkGet( y ) = TK_EOL )
+				y = ppSkip( y )
+			wend
+			tkRemove( x, y - 1 )
+			tkInsert( x, TK_DIVIDER )
+			x += 1
+		else
+			x = ppSkip( x )
+		end if
+	wend
 end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''

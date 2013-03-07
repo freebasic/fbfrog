@@ -143,6 +143,7 @@ end sub
 
 		cPurgeInlineComments( )
 		cPPDirectives( )
+		cInsertDividers( )
 		cToplevel( )
 
 		emitWriteFile( pathStripExt( f->normed ) + ".bi" )

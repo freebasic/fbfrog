@@ -95,6 +95,7 @@ declare sub hScanDirectoryForH _
 '' When changing, update the table in ast.bas too!
 enum
 	TK_EOF
+	TK_DIVIDER
 	TK_PPINCLUDE
 	TK_PPDEFINEBEGIN
 	TK_PPDEFINEEND
@@ -401,6 +402,7 @@ declare sub emitStats( )
 
 declare sub cPurgeInlineComments( )
 declare sub cPPDirectives( )
+declare sub cInsertDividers( )
 declare sub cToplevel( )
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''

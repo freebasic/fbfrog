@@ -15,6 +15,7 @@ end type
 dim shared as TOKENINFO tk_info(0 to ...) = _
 { _
 	( NULL  , @"eof"                  , TKFLAG_STMTSEP ), _
+	( NULL  , @"divider"              , TKFLAG_STMTSEP ), _
 	( NULL  , @"#include"             , TKFLAG_STMTSEP ), _
 	( NULL  , @"#define begin"        , TKFLAG_STMTSEP ), _
 	( NULL  , @"#define end"          , TKFLAG_STMTSEP ), _
