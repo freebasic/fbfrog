@@ -37,6 +37,7 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	( NULL  , @"paramvararg"          , TKFLAG_STMTSEP ), _
 	( NULL  , @"todo"                 , TKFLAG_STMTSEP ), _
 	( NULL  , @"byte"                 ), _
+	( NULL  , @"space"                ), _
 	( NULL  , @"eol"                  , TKFLAG_STMTSEP ), _
 	( NULL  , @"comment"              ), _
 	( NULL  , @"linecomment"          ), _

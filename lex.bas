@@ -117,6 +117,18 @@ private sub hNewline( )
 	lex.location = tkLocationNewLine( )
 end sub
 
+private sub hReadSpace( )
+	dim as ubyte ptr begin = any
+
+	begin = lex.i
+
+	do
+		lex.i += 1
+	loop while( (lex.i[0] = CH_SPACE) and (lex.i[0] = CH_TAB) )
+
+	hAddTextToken( TK_SPACE, begin )
+end sub
+
 private sub hReadLineComment( )
 	dim as ubyte ptr begin = any
 	dim as integer escaped = any
@@ -433,7 +445,7 @@ private sub lexNext( )
 		hNewline( )
 
 	case CH_TAB, CH_SPACE
-		lex.i += 1
+		hReadSpace( )
 
 	case CH_EXCL		'' !
 		if( lex.i[1] = CH_EQ ) then	'' !=

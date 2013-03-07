@@ -16,7 +16,7 @@ private function ppSkip( byval x as integer ) as integer
 		x += 1
 
 		select case( tkGet( x ) )
-		case TK_COMMENT, TK_LINECOMMENT
+		case TK_SPACE, TK_COMMENT, TK_LINECOMMENT
 
 		case else
 			exit do
@@ -38,7 +38,7 @@ private function cSkip( byval x as integer ) as integer
 		x += 1
 
 		select case( tkGet( x ) )
-		case TK_EOL, TK_COMMENT, TK_LINECOMMENT
+		case TK_SPACE, TK_COMMENT, TK_LINECOMMENT, TK_EOL
 
 		case else
 			exit do
