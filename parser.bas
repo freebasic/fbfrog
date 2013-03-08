@@ -11,6 +11,33 @@ declare function cMultDecl _
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
+private function hSkipFromBeginToEnd( byval x as integer ) as integer
+	dim as integer level = any
+
+	assert( tkGet( x ) = TK_BEGIN )
+
+	level = 0
+	do
+		x += 1
+
+		assert( tkGet( x ) <> TK_EOF )
+
+		select case( tkGet( x ) )
+		case TK_BEGIN
+			level += 1
+
+		case TK_END
+			if( level = 0 ) then
+				exit do
+			end if
+			level -= 1
+
+		end select
+	loop
+
+	function = x
+end function
+
 private function ppSkip( byval x as integer ) as integer
 	dim as integer y = any
 
@@ -21,9 +48,7 @@ private function ppSkip( byval x as integer ) as integer
 		case TK_SPACE, TK_COMMENT, TK_LINECOMMENT
 
 		case TK_BEGIN
-			do
-				x += 1
-			loop while( tkGet( x ) <> TK_END )
+			x = hSkipFromBeginToEnd( x )
 
 		'' Escaped EOLs don't end PP directives, though normal EOLs do
 		'' '\' [Space] EOL
@@ -55,9 +80,7 @@ private function cSkip( byval x as integer ) as integer
 		case TK_SPACE, TK_COMMENT, TK_LINECOMMENT, TK_EOL
 
 		case TK_BEGIN
-			do
-				x += 1
-			loop while( tkGet( x ) <> TK_END )
+			x = hSkipFromBeginToEnd( x )
 
 		case else
 			exit do
