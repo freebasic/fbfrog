@@ -12,11 +12,32 @@ declare function cMultDecl _
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 private function ppSkip( byval x as integer ) as integer
+	dim as integer y = any
+
 	do
 		x += 1
 
 		select case( tkGet( x ) )
 		case TK_SPACE, TK_COMMENT, TK_LINECOMMENT
+
+		case TK_BEGIN
+			do
+				x += 1
+			loop while( tkGet( x ) <> TK_END )
+
+		'' Escaped EOLs don't end PP directives, though normal EOLs do
+		'' '\' [Space] EOL
+		case TK_BACKSLASH
+			y = x
+
+			do
+				y += 1
+			loop while( tkGet( y ) = TK_SPACE )
+
+			if( tkGet( y ) <> TK_EOL ) then
+				exit do
+			end if
+			x = y
 
 		case else
 			exit do
@@ -26,19 +47,17 @@ private function ppSkip( byval x as integer ) as integer
 	function = x
 end function
 
-private function ppFindEOL( byval x as integer ) as integer
-	while( tkIsStmtSep( x ) = FALSE )
-		x += 1
-	wend
-	function = x
-end function
-
 private function cSkip( byval x as integer ) as integer
 	do
 		x += 1
 
 		select case( tkGet( x ) )
 		case TK_SPACE, TK_COMMENT, TK_LINECOMMENT, TK_EOL
+
+		case TK_BEGIN
+			do
+				x += 1
+			loop while( tkGet( x ) <> TK_END )
 
 		case else
 			exit do
@@ -77,21 +96,6 @@ private function cFindClosingParen( byval x as integer ) as integer
 			end if
 
 			level -= 1
-
-		case TK_PPDEFINEBEGIN
-			while( tkGet( x ) <> TK_PPDEFINEEND )
-				x = cSkip( x )
-			wend
-
-		case TK_STRUCTBEGIN
-			while( tkGet( x ) <> TK_STRUCTEND )
-				x = cSkip( x )
-			wend
-
-		case TK_TODOBEGIN
-			while( tkGet( x ) <> TK_TODOEND )
-				x = cSkip( x )
-			wend
 
 		case TK_EOF
 			exit do
@@ -150,47 +154,70 @@ sub cPurgeInlineComments( )
 	loop
 end sub
 
-private function cPPDirective( byval x as integer ) as integer
-	dim as integer begin = any
+private function ppSkipToEOL( byval x as integer ) as integer
+	do
+		x = ppSkip( x )
+
+		select case( tkGet( x ) )
+		case TK_EOL, TK_EOF
+			exit do
+		end select
+	loop
+
+	function = x
+end function
+
+private function ppDirective( byval x as integer ) as integer
+	dim as integer begin = any, filename = any
 
 	'' '#'
 	begin = x
-	x += 1
+	x = ppSkip( x )
 
 	select case( tkGet( x ) )
 	'' DEFINE Identifier ['(' ParameterList ')'] Body Eol .
 	case KW_DEFINE
 		'' DEFINE
-		x += 1
+		x = ppSkip( x )
 
 		'' Identifier?
 		if( tkGet( x ) <> TK_ID ) then
 			return begin
 		end if
 
-		tkInsert( begin, TK_PPDEFINEBEGIN, tkGetText( x ) )
+		tkInsert( begin, TK_PPDEFINE, tkGetText( x ) )
 		begin += 1
-		tkRemove( begin, x )
+		tkInsert( begin, TK_BEGIN )
+		begin += 1
+		tkRemove( begin, ppSkip( x ) - 1 )
 		x = begin
 
 		'' '(' and not separated from the Identifier with spaces?
 		'' TODO
 
-		'' Body
-		x = ppFindEOL( x )
-		tkInsert( x, TK_PPDEFINEEND )
+		x = ppSkipToEOL( x )
+
+		tkInsert( x - 1, TK_END )
 		x += 1
 
 	case KW_INCLUDE
 		'' INCLUDE
-		x += 1
+		x = ppSkip( x )
 
+		'' "..."
 		if( tkGet( x ) <> TK_STRING ) then
 			return begin
 		end if
+		filename = x
+		x = ppSkip( x )
 
-		tkInsert( begin, TK_PPINCLUDE, tkGetText( x ) )
+		if( tkGet( x ) <> TK_EOL ) then
+			return begin
+		end if
+
+		tkInsert( begin, TK_PPINCLUDE, tkGetText( filename ) )
 		begin += 1
+		x += 1
 		tkRemove( begin, x )
 		x = begin
 
@@ -201,30 +228,44 @@ private function cPPDirective( byval x as integer ) as integer
 	function = x
 end function
 
+private function ppUnknown( byval x as integer ) as integer
+	tkInsert( x, TK_TODO, "unknown PP directive (sorry)" )
+	x += 1
+	tkInsert( x, TK_BEGIN )
+	x += 1
+
+	x = ppSkipToEOL( x )
+	tkInsert( x, TK_END )
+	x += 1
+
+	function = ppSkip( x )
+end function
+
 sub cPPDirectives( )
 	dim as integer x = any, old = any
 
-	x = 0
+	x = ppSkip( -1 )
 	do
-		old = x
-
 		select case( tkGet( x ) )
 		'' '#'?
 		case TK_HASH
 			'' BOL?
 			if( tkIsStmtSep( x - 1 ) ) then
-				x = cPPDirective( x )
-				if( x <> old ) then
-					x -= 1
+				old = x
+				x = ppDirective( x )
+				if( x = old ) then
+					x = ppUnknown( x )
 				end if
+			else
+				x = ppSkip( ppSkipToEOL( x ) )
 			end if
 
 		case TK_EOF
 			exit do
 
+		case else
+			x = ppSkip( ppSkipToEOL( x ) )
 		end select
-
-		x += 1
 	loop
 end sub
 
@@ -294,14 +335,18 @@ private function cStructCompound( byval x as integer ) as integer
 	x = cSkip( x )
 
 	tkRemove( begin, x - 1 )
-	tkInsert( begin, TK_STRUCTBEGIN, id )
+	tkInsert( begin, TK_STRUCT, id )
 	begin += 1
 	x = begin
 
+	tkInsert( x, TK_BEGIN )
+	x += 1
+
 	x = cStructBody( x )
 
-	tkInsert( x, TK_STRUCTEND )
+	tkInsert( x, TK_END )
 	x += 1
+
 	begin = x
 
 	'' '}'
@@ -626,7 +671,13 @@ private function cDeclElement _
 			tkRemove( x, cSkip( x ) - 1 )
 		'' Not just '()'?
 		elseif( tkGet( x ) <> TK_RPAREN ) then
+			tkInsert( x, TK_BEGIN )
+			x += 1
+
 			x = cParamDeclList( x )
+
+			tkInsert( x, TK_END )
+			x += 1
 		end if
 
 		'' ')'
@@ -730,12 +781,25 @@ private function cGlobalDecl( byval x as integer ) as integer
 	function = cMultDecl( x, decl )
 end function
 
+private function cSemiColon( byval x as integer ) as integer
+	if( tkGet( x ) = TK_SEMI ) then
+		tkRemove( x, cSkip( x ) - 1 )
+
+		'' A token must be inserted to ensure the x position moves forward
+		tkInsert( x, TK_NOP )
+		x += 1
+	end if
+	function = x
+end function
+
 private function cUnknown( byval x as integer ) as integer
-	tkInsert( x, TK_TODOBEGIN, "unknown construct (sorry)" )
+	tkInsert( x, TK_TODO, "unknown construct (sorry)" )
+	x += 1
+	tkInsert( x, TK_BEGIN )
 	x += 1
 
 	x = cSkipStatement( x )
-	tkInsert( x, TK_TODOEND )
+	tkInsert( x, TK_END )
 	x += 1
 
 	function = cSkip( x )
@@ -750,6 +814,7 @@ sub cToplevel( )
 
 		x = cStructCompound( x )
 		x = cGlobalDecl( x )
+		x = cSemiColon( x )
 
 		if( x = old ) then
 			if( tkGet( x ) = TK_EOF ) then

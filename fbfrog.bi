@@ -95,15 +95,14 @@ declare sub hScanDirectoryForH _
 '' When changing, update the table in ast.bas too!
 enum
 	TK_EOF
+	TK_NOP
 	TK_DIVIDER
-	TK_PPINCLUDE
-	TK_PPDEFINEBEGIN
-	TK_PPDEFINEEND
-	TK_STRUCTBEGIN
-	TK_STRUCTEND
-	TK_TODOBEGIN
-	TK_TODOEND
+	TK_BEGIN
+	TK_END
 
+	TK_PPINCLUDE
+	TK_PPDEFINE
+	TK_STRUCT
 	TK_GLOBAL
 	TK_EXTERNGLOBAL
 	TK_STATICGLOBAL
@@ -342,6 +341,8 @@ type ONETOKEN
 
 	'' Source location (maps to filename/linenumber where this token was found)
 	location	as integer
+
+	comment		as zstring ptr
 end type
 
 #define typeSetDt( dtype, dt ) ((dtype and (not TYPEMASK_DT)) or (dt and TYPEMASK_DT))
@@ -394,6 +395,14 @@ declare sub tkSetLocation( byval x as integer, byval location as integer )
 declare function tkHasSourceLocation( byval x as integer ) as integer
 declare function tkGetSourceFile( byval x as integer ) as zstring ptr
 declare function tkGetLineNum( byval x as integer ) as integer
+declare sub tkSetComment( byval x as integer, byval comment as zstring ptr )
+declare function tkGetComment( byval x as integer ) as zstring ptr
+declare function tkCount _
+	( _
+		byval first as integer, _
+		byval last as integer, _
+		byval tk as integer _
+	) as integer
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 

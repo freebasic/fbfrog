@@ -15,14 +15,13 @@ end type
 dim shared as TOKENINFO tk_info(0 to ...) = _
 { _
 	( NULL  , @"eof"                  , TKFLAG_STMTSEP ), _
+	( NULL  , @"nop"                  , TKFLAG_STMTSEP ), _
 	( NULL  , @"divider"              , TKFLAG_STMTSEP ), _
+	( NULL  , @"begin"                , TKFLAG_STMTSEP ), _
+	( NULL  , @"end"                  , TKFLAG_STMTSEP ), _
 	( NULL  , @"#include"             , TKFLAG_STMTSEP ), _
-	( NULL  , @"#define begin"        , TKFLAG_STMTSEP ), _
-	( NULL  , @"#define end"          , TKFLAG_STMTSEP ), _
-	( NULL  , @"struct begin"         , TKFLAG_STMTSEP ), _
-	( NULL  , @"struct end"           , TKFLAG_STMTSEP ), _
-	( NULL  , @"todo begin"           , TKFLAG_STMTSEP ), _
-	( NULL  , @"todo end"             , TKFLAG_STMTSEP ), _
+	( NULL  , @"#define"              , TKFLAG_STMTSEP ), _
+	( NULL  , @"struct"               , TKFLAG_STMTSEP ), _
 	( NULL  , @"global"               , TKFLAG_STMTSEP ), _
 	( NULL  , @"externglobal"         , TKFLAG_STMTSEP ), _
 	( NULL  , @"staticglobal"         , TKFLAG_STMTSEP ), _
@@ -567,4 +566,36 @@ function tkGetLineNum( byval x as integer ) as integer
 	location = tkAccess( x )->location
 
 	function = location - hLookupLocation( location )->base
+end function
+
+sub tkSetComment( byval x as integer, byval comment as zstring ptr )
+	dim as ONETOKEN ptr p = any
+	p = tkAccess( x )
+	if( p->id <> TK_EOF ) then
+		p->comment = strDuplicate( comment )
+	end if
+end sub
+
+function tkGetComment( byval x as integer ) as zstring ptr
+	function = tkAccess( x )->comment
+end function
+
+function tkCount _
+	( _
+		byval first as integer, _
+		byval last as integer, _
+		byval tk as integer _
+	) as integer
+
+	dim as integer count = any
+
+	count = 0
+
+	for i as integer = first to last
+		if( tkGet( i ) = tk ) then
+			count += 1
+		end if
+	next
+
+	function = count
 end function

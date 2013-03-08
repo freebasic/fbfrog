@@ -71,20 +71,6 @@ private sub emitStmt( byref ln as string )
 	emitEol( )
 end sub
 
-private function emitPPDefine( byval x as integer ) as integer
-	emitStmtBegin( "#define " + *tkGetText( x ) + " " )
-
-	x += 1
-	while( tkGet( x ) <> TK_PPDEFINEEND )
-		x = emitTk( x )
-	wend
-	x += 1
-
-	emitEol( )
-
-	function = x
-end function
-
 private function emitType( byval x as integer ) as string
 	static as zstring ptr types(0 to TYPE__COUNT-1) = _
 	{ _
@@ -141,30 +127,36 @@ end function
 private sub emitParamList( byref x as integer, byref ln as string )
 	dim as integer y = any, count = any
 
+	y = x + 1
+
+	'' Begin?
+	if( tkGet( y ) <> TK_BEGIN ) then
+		x = y
+		exit sub
+	end if
+	y += 1
+
 	ln += "("
 	count = 0
-	y = x + 1
-	do
-		select case( tkGet( y ) )
-		case TK_PARAM, TK_PARAMPROCPTR, TK_PARAMVARARG
-			if( count > 0 ) then
-				ln += ","
-			end if
-			ln += " "
+	while( tkGet( y ) <> TK_END )
+		if( count > 0 ) then
+			ln += ","
+		end if
+		ln += " "
 
-			if( tkGet( y ) = TK_PARAMVARARG ) then
-				ln += "..."
-				y += 1
-			else
-				emitDecl( y, ln, TK_PARAM )
-			end if
-		case else
-			exit do
-		end select
+		if( tkGet( y ) = TK_PARAMVARARG ) then
+			ln += "..."
+			y += 1
+		else
+			emitDecl( y, ln, TK_PARAM )
+		end if
 
 		count += 1
-	loop
+	wend
 	ln += " )"
+
+	'' End
+	y += 1
 
 	if( tkGetType( x ) <> TYPE_ANY ) then
 		ln += " as " + emitType( x )
@@ -215,30 +207,6 @@ private sub emitDecl _
 	end if
 end sub
 
-private function emitStruct( byval x as integer ) as integer
-	dim as zstring ptr s = any
-	dim as string ln
-
-	ln = "type"
-	s = tkGetText( x )
-	if( len( *s ) > 0 ) then
-		ln += " " + *s
-	end if
-	emitStmt( ln )
-
-	emitIndent( )
-	x += 1
-	while( tkGet( x ) <> TK_STRUCTEND )
-		x = emitTk( x )
-	wend
-	x += 1
-	emitUnindent( )
-
-	emitStmt( "end type" )
-
-	function = x
-end function
-
 private sub emitTodo( byval x as integer )
 	dim as string ln
 	dim as zstring ptr s = any
@@ -264,20 +232,64 @@ end sub
 private function emitTk( byval x as integer ) as integer
 	dim as string ln
 	dim as integer y = any
+	dim as zstring ptr s = any
+
+	assert( tkGet( x ) <> TK_EOF )
+	assert( tkGet( x ) <> TK_BEGIN )
+	assert( tkGet( x ) <> TK_END )
 
 	select case as const( tkGet( x ) )
-	case TK_EOF
-		assert( FALSE )
+	case TK_NOP
+		x += 1
 
 	case TK_PPINCLUDE
 		emitStmt( "#include """ + *tkGetText( x ) + """" )
 		x += 1
 
-	case TK_PPDEFINEBEGIN
-		x = emitPPDefine( x )
+	case TK_PPDEFINE
+		emitStmtBegin( "#define " + *tkGetText( x ) + " " )
 
-	case TK_STRUCTBEGIN
-		x = emitStruct( x )
+		'' PPDefine
+		x += 1
+
+		'' Begin
+		assert( tkGet( x ) = TK_BEGIN )
+		x += 1
+
+		while( tkGet( x ) <> TK_END )
+			x = emitTk( x )
+		wend
+
+		'' End
+		x += 1
+
+		emitEol( )
+
+	case TK_STRUCT
+		ln = "type"
+		s = tkGetText( x )
+		if( len( *s ) > 0 ) then
+			ln += " " + *s
+		end if
+		emitStmt( ln )
+
+		'' Struct
+		x += 1
+
+		'' Begin
+		assert( tkGet( x ) = TK_BEGIN )
+		x += 1
+
+		emitIndent( )
+		while( tkGet( x ) <> TK_END )
+			x = emitTk( x )
+		wend
+		emitUnindent( )
+
+		'' End
+		x += 1
+
+		emitStmt( "end type" )
 
 	case TK_FIELD, TK_FIELDPROCPTR
 		emitDecl( x, ln, TK_FIELD )
@@ -315,14 +327,17 @@ private function emitTk( byval x as integer ) as integer
 		emitTodo( x )
 		x += 1
 
-	case TK_TODOBEGIN
-		emitTodo( x )
+		'' Begin?
+		if( tkGet( x ) = TK_BEGIN ) then
+			x += 1
 
-		x += 1
-		while( tkGet( x ) <> TK_TODOEND )
-			x = emitTk( x )
-		wend
-		x += 1
+			while( tkGet( x ) <> TK_END )
+				x = emitTk( x )
+			wend
+
+			'' End
+			x += 1
+		end if
 
 	case TK_COMMENT
 		emit( "/'" )

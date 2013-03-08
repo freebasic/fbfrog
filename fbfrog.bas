@@ -133,13 +133,13 @@ end sub
 
 	dim as FSFILE ptr f = any
 
-	print "translating..."
 	f = fsGetHead( )
 	while( f )
 
 		fsPush( f )
 		tkInit( )
 		lexLoadFile( 0, f->normed )
+		print "translating: ";f->normed
 
 		cPurgeInlineComments( )
 		cPPDirectives( )
