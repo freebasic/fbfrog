@@ -210,6 +210,20 @@ end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
+type ONETOKEN
+	id		as integer      '' TK_*
+	text		as zstring ptr  '' Identifiers/literals, or NULL
+
+	'' Data type (vars, fields, params, function results)
+	dtype		as integer
+	subtype		as zstring ptr
+
+	'' Source location (maps to filename/linenumber where this token was found)
+	location	as integer
+
+	comment		as zstring ptr
+end type
+
 type MAPENTRY
 	base		as integer  '' (location - base) = line number
 	filename	as zstring ptr
@@ -273,7 +287,7 @@ sub tkInit( )
 	tk.location = 0
 end sub
 
-function tkAccess( byval x as integer ) as ONETOKEN ptr
+private function tkAccess( byval x as integer ) as ONETOKEN ptr
 	stats.lookups += 1
 
 	'' Inside end?
@@ -365,12 +379,6 @@ private sub hMoveTo( byval x as integer )
 	tk.front = x
 end sub
 
-sub tkDtor( byval p as ONETOKEN ptr )
-	deallocate( p->text )
-	deallocate( p->subtype )
-	deallocate( p->comment )
-end sub
-
 function tkGetCount( ) as integer
 	function = tk.size
 end function
@@ -441,7 +449,10 @@ sub tkRemove( byval first as integer, byval last as integer )
 	end if
 
 	for i as integer = first to last
-		tkDtor( tkAccess( i ) )
+		p = tkAccess( i )
+		deallocate( p->text )
+		deallocate( p->subtype )
+		deallocate( p->comment )
 	next
 
 	delta = last - first + 1

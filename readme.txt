@@ -105,44 +105,40 @@ Source module overview:
 
 To do:
 
-o Split up all work into separate steps,
-  better re-read input files multiple times
-  - Any merging/concatenating should be handled separately from translation
-  - functions to:
-      - load file into tk buffer
-      - parse a.k.a. colorize a.k.a. set marks
-          - allow multiple mark flags per token, not just a single mark
-            at least 2 or 3 levels:
-              1. construct (struct, proc, ...)
-              2. element (field, param, ...)
-              3. purpose (token is an id? a type?)
-      - find constructs and extract information from them or operate on them
-          - high level parsing based on marks
-          - e.g. findPpInclude() or replaceIdentifier()
-          - foreach loops
-  - Add "presets", custom/hard-coded translation helpers
-     - allow fixups before and after normal translation
-  - When emitting, pretty-print automatically
-      - don't preserve white space,
-          1. at the end of the day we need bindings, no 1:1 translations
-          2. different language = different formatting anyways
-      - preserve comments at EOL only
-  - use an AST for the "high level" parsing, it's just much easier
-
-o Combine -follow/-merge/-concat into just -merge
-  - Following is useless, because we pretty much always want to work on all
-    headers in a certain directory. Dir scanning takes care of that.
-    Any "external" #include will usually be translated separately if still
-    needed, or will be replaced/removed somehow.
-
-  - From the command line it's better to only have 2 options:
+- Combine -follow/-merge/-concat into just -merge
+  - Make -merge the default
+  - Remove following, external #includes will be translated separately anyways,
+    or they're replaced/removed
+  - For the command line UI it's best to only have 1 choice to make:
       a) 1:1 translation
       b) all:1 (merge) translation
-    Any other special cases can be handled manually by presets...
+  - Any other special cases should be handled manually by the presets
 
-o Add option to display #include dependency graph for the input files
+- FB needs bindings, no 1:1 translations, so use some kind of AST
+    - merge low-level tokens into high-level tokens
+    - don't bother preserving white-space/formatting
+
+- Add "presets", custom hard-coded header-specific translation helpers for
+  fixups before and after normal translation (e.g. renaming symbols)
+
+
+- Add #if evaluation function, to solve out useless #if blocks (that's pretty
+  common for C headers which support tons of different C compilers/systems,
+  while for FB only GNU C + certain targets are interesting)
+- Add function to expand certain macros
+
+- Comments should be associated with high level constructs, or blocks of them
+  comment at EOL but behind code -> belongs to that code
+  comment alone in line above line of code -> belongs to the following code
+  otherwise, it's a "section divider" comment
+
+- Add option to display #include dependency graph for the input files
   - useful to decide whether to -merge or not, to see how many "root" includes
     there are, etc.
+
+- Add output directory option
+
+- normalize file names in fs module, for prettier verbose output etc.
 
 - arrays
 - vardecl/param initializers
