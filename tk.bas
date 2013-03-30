@@ -104,7 +104,7 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	( @"}"  , @"tk" ), _
 	( @"~"  , @"tk" ), _
 	( NULL  , @"id" ), _ '' TK_ID
-	( @"auto"    , @"kw" ), _ '' C/FB keywords
+	( @"auto"    , @"kw" ), _ '' C keywords
 	( @"break"   , @"kw" ), _
 	( @"case"    , @"kw" ), _
 	( @"char"    , @"kw" ), _
@@ -146,58 +146,7 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	( @"unsigned", @"kw" ), _
 	( @"void"    , @"kw" ), _
 	( @"volatile", @"kw" ), _
-	( @"while"   , @"kw" ), _
-	( @"alias"   , @"kw" ), _  '' FB-only keywords
-	( @"and"     , @"kw" ), _
-	( @"andalso" , @"kw" ), _
-	( @"any"     , @"kw" ), _
-	( @"as"      , @"kw" ), _
-	( @"byte"    , @"kw" ), _
-	( @"byval"   , @"kw" ), _
-	( @"ctk"    , @"kw" ), _
-	( @"cdecl"   , @"kw" ), _
-	( @"cptr"    , @"kw" ), _
-	( @"declare" , @"kw" ), _
-	( @"dim"     , @"kw" ), _
-	( @"elseif"  , @"kw" ), _
-	( @"end"     , @"kw" ), _
-	( @"exit"    , @"kw" ), _
-	( @"export"  , @"kw" ), _
-	( @"field"   , @"kw" ), _
-	( @"function", @"kw" ), _
-	( @"iif"     , @"kw" ), _
-	( @"integer" , @"kw" ), _
-	( @"longint" , @"kw" ), _
-	( @"loop"    , @"kw" ), _
-	( @"mod"     , @"kw" ), _
-	( @"next"    , @"kw" ), _
-	( @"not"     , @"kw" ), _
-	( @"or"      , @"kw" ), _
-	( @"orelse"  , @"kw" ), _
-	( @"pascal"  , @"kw" ), _
-	( @"private" , @"kw" ), _
-	( @"ptr"     , @"kw" ), _
-	( @"scope"   , @"kw" ), _
-	( @"select"  , @"kw" ), _
-	( @"shared"  , @"kw" ), _
-	( @"shl"     , @"kw" ), _
-	( @"shr"     , @"kw" ), _
-	( @"single"  , @"kw" ), _
-	( @"stdcall" , @"kw" ), _
-	( @"sub"     , @"kw" ), _
-	( @"then"    , @"kw" ), _
-	( @"to"      , @"kw" ), _
-	( @"type"    , @"kw" ), _
-	( @"ubyte"   , @"kw" ), _
-	( @"uinteger", @"kw" ), _
-	( @"ulong"   , @"kw" ), _
-	( @"ulongint", @"kw" ), _
-	( @"ushort"  , @"kw" ), _
-	( @"wend"    , @"kw" ), _
-	( @"wstr"    , @"kw" ), _
-	( @"wstring" , @"kw" ), _
-	( @"xor"     , @"kw" ), _
-	( @"zstring" , @"kw" )  _
+	( @"while"   , @"kw" )  _
 }
 
 #if ubound( tk_info ) < TK__COUNT - 1

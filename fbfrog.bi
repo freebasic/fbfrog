@@ -195,9 +195,8 @@ enum
 	'' >= TK_ID: keywords/identifiers
 	TK_ID           '' Identifiers (a-z, A-Z, 0-9, _, $)
 
-	'' C Keywords (some also used by FB)
-	KW__C_FIRST
-	KW_AUTO = KW__C_FIRST
+	'' C Keywords
+	KW_AUTO
 	KW_BREAK
 	KW_CASE
 	KW_CHAR
@@ -240,64 +239,6 @@ enum
 	KW_VOID
 	KW_VOLATILE
 	KW_WHILE
-
-	'' FB only keywords
-	'' Here we only need to have FB keywords that we might produce during
-	'' the C-to-FB translation.
-	'' Note: The lexer doesn't recognize/use these, they're only added
-	'' during the translation process.
-	KW__FB_FIRST
-	KW_ALIAS = KW__FB_FIRST
-	KW_AND
-	KW_ANDALSO
-	KW_ANY
-	KW_AS
-	KW_BYTE
-	KW_BYVAL
-	KW_CAST
-	KW_CDECL
-	KW_CPTR
-	KW_DECLARE
-	KW_DIM
-	KW_ELSEIF
-	KW_END
-	KW_EXIT
-	KW_EXPORT
-	KW_FIELD
-	KW_FUNCTION
-	KW_IIF
-	KW_INTEGER
-	KW_LONGINT
-	KW_LOOP
-	KW_MOD
-	KW_NEXT
-	KW_NOT
-	KW_OR
-	KW_ORELSE
-	KW_PASCAL
-	KW_PRIVATE
-	KW_PTR
-	KW_SCOPE
-	KW_SELECT
-	KW_SHARED
-	KW_SHL
-	KW_SHR
-	KW_SINGLE
-	KW_STDCALL
-	KW_SUB
-	KW_THEN
-	KW_TO
-	KW_TYPE
-	KW_UBYTE
-	KW_UINTEGER
-	KW_ULONG
-	KW_ULONGINT
-	KW_USHORT
-	KW_WEND
-	KW_WSTR
-	KW_WSTRING
-	KW_XOR
-	KW_ZSTRING
 
 	TK__COUNT
 end enum
