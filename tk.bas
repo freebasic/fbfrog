@@ -160,14 +160,22 @@ end function
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 type ONETOKEN
-	id		as integer      '' TK_*
-	text		as zstring ptr  '' Identifiers/literals, or NULL
+	'' TK_*
+	id		as short
+
+	'' Tokens from unknown constructs that couldn't be parsed successfully
+	'' will be marked poisoned, so the parser can avoid them in the 2nd run
+	poisoned	as short
+
+	'' Identifiers/literals, or NULL
+	text		as zstring ptr
 
 	'' Data type (vars, fields, params, function results)
 	dtype		as integer
 	subtype		as zstring ptr
 
-	'' Source location (maps to filename/linenumber where this token was found)
+	'' Source location
+	'' (maps to filename/linenumber where this token was found)
 	location	as integer
 
 	comment		as zstring ptr
@@ -227,6 +235,7 @@ sub tkInit( )
 	tk.size = 0
 
 	tk.eof.id = TK_EOF
+	tk.eof.poisoned = FALSE
 	tk.eof.text = NULL
 	tk.eof.dtype = TYPE_NONE
 	tk.eof.subtype = NULL
@@ -283,14 +292,24 @@ function tkDumpOne( byval x as integer ) as string
 
 	p = tkAccess( x )
 	s += str( x ) + " "
-	s += "[" + *tk_info(p->id).debug + "] "
+	s += "["
+	s += *tk_info(p->id).debug
+	if( p->poisoned ) then
+		s += " posioned"
+	end if
+	s += "]"
 
+	s += " "
 	if( p->text ) then
 		s += "'" + *p->text + "'"
 	else
 		if( tk_info(p->id).text ) then
 			s += "'" + *tk_info(p->id).text + "'"
 		end if
+	end if
+
+	if( tkGetType( x ) <> TYPE_NONE ) then
+		s += " as " + emitType( x )
 	end if
 
 	function = s
@@ -364,6 +383,7 @@ sub tkInsert _
 	end if
 
 	p->id = id
+	p->poisoned = FALSE
 	p->text = strDuplicate( text )
 	p->dtype = TYPE_NONE
 	p->subtype = NULL
@@ -449,6 +469,20 @@ function tkGetText( byval x as integer ) as zstring ptr
 			function = @""
 		end if
 	end if
+end function
+
+sub tkSetPoisoned( byval first as integer, byval last as integer )
+	dim as ONETOKEN ptr p = any
+	for i as integer = first to last
+		p = tkAccess( i )
+		if( p->id <> TK_EOF ) then
+			p->poisoned = TRUE
+		end if
+	next
+end sub
+
+function tkIsPoisoned( byval x as integer ) as integer
+	function = tkAccess( x )->poisoned
 end function
 
 sub tkSetType _

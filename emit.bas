@@ -71,7 +71,7 @@ private sub emitStmt( byref ln as string )
 	emitEol( )
 end sub
 
-private function emitType( byval x as integer ) as string
+function emitType( byval x as integer ) as string
 	static as zstring ptr types(0 to TYPE__COUNT-1) = _
 	{ _
 		NULL       , _
@@ -124,44 +124,53 @@ private function emitSubOrFunction( byval x as integer ) as string
 	end if
 end function
 
-private sub emitParamList( byref x as integer, byref ln as string )
+private sub emitParamListAndResultType( byref x as integer, byref ln as string )
 	dim as integer y = any, count = any
 
-	y = x + 1
-
-	'' Begin?
-	if( tkGet( y ) <> TK_BEGIN ) then
-		x = y
-		exit sub
-	end if
-	y += 1
+	'' The parameter tokens, if any, are following behind the main token,
+	'' grouped in a BEGIN/END:
+	''    TK_PROC/...
+	''    TK_BEGIN
+	''        TK_PARAM
+	''        ...
+	''    TK_END
 
 	ln += "("
-	count = 0
-	while( tkGet( y ) <> TK_END )
-		if( count > 0 ) then
-			ln += ","
-		end if
-		ln += " "
 
-		if( tkGet( y ) = TK_PARAMVARARG ) then
-			ln += "..."
-			y += 1
-		else
-			emitDecl( y, ln, TK_PARAM )
-		end if
+	y = x + 1
+	if( tkGet( y ) = TK_BEGIN ) then
+		'' Begin
+		y += 1
 
-		count += 1
-	wend
+		count = 0
+		while( tkGet( y ) <> TK_END )
+			if( count > 0 ) then
+				ln += ","
+			end if
+			ln += " "
+
+			if( tkGet( y ) = TK_PARAMVARARG ) then
+				ln += "..."
+				y += 1
+			else
+				emitDecl( y, ln, TK_PARAM )
+			end if
+
+			count += 1
+		wend
+
+		'' End
+		y += 1
+	end if
+
 	ln += " )"
 
-	'' End
-	y += 1
-
+	'' Function result type
 	if( tkGetType( x ) <> TYPE_ANY ) then
 		ln += " as " + emitType( x )
 	end if
 
+	'' Skip over the main token and its parameters, if any
 	x = y
 end sub
 
@@ -200,7 +209,7 @@ private sub emitDecl _
 
 	if( tkIsProcPtr( x ) ) then
 		ln += emitSubOrFunction( x )
-		emitParamList( x, ln )
+		emitParamListAndResultType( x, ln )
 	else
 		ln += emitType( x )
 		x += 1
@@ -316,7 +325,9 @@ private function emitTk( byval x as integer ) as integer
 	case TK_PROC
 		ln = "declare "
 		ln += emitSubOrFunction( x )
-		emitParamList( x, ln )
+		ln += " "
+		ln += *tkGetText( x )
+		emitParamListAndResultType( x, ln )
 		emitStmt( ln )
 
 	case TK_EOL, TK_DIVIDER

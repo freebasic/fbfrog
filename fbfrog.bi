@@ -306,6 +306,8 @@ declare function tkGet( byval x as integer ) as integer
 declare function tkIsStmtSep( byval x as integer ) as integer
 declare function tkIsProcPtr( byval x as integer ) as integer
 declare function tkGetText( byval x as integer ) as zstring ptr
+declare sub tkSetPoisoned( byval first as integer, byval last as integer )
+declare function tkIsPoisoned( byval x as integer ) as integer
 declare sub tkSetType _
 	( _
 		byval x as integer, _
@@ -332,6 +334,7 @@ declare function tkCount _
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 declare function lexLoadFile( byval x as integer, byref filename as string ) as integer
+declare function emitType( byval x as integer ) as string
 declare sub emitWriteFile( byref filename as string )
 declare sub emitStats( )
 

@@ -2,6 +2,12 @@
 
 #include once "fbfrog.bi"
 
+type PARSERSTUFF
+	dryrun		as integer
+end type
+
+dim shared as PARSERSTUFF parser
+
 declare function cStructCompound( byval x as integer ) as integer
 declare function cMultDecl _
 	( _
@@ -357,33 +363,37 @@ private function cStructCompound( byval x as integer ) as integer
 	end if
 	x = cSkip( x )
 
-	tkRemove( begin, x - 1 )
-	tkInsert( begin, TK_STRUCT, id )
-	begin += 1
-	x = begin
-
-	tkInsert( x, TK_BEGIN )
-	x += 1
+	if( parser.dryrun = FALSE ) then
+		tkRemove( begin, x - 1 )
+		tkInsert( begin, TK_STRUCT, id )
+		begin += 1
+		tkInsert( begin, TK_BEGIN )
+		begin += 1
+		x = begin
+	end if
 
 	x = cStructBody( x )
-
-	tkInsert( x, TK_END )
-	x += 1
 
 	begin = x
 
 	'' '}'
-	if( tkGet( x ) = TK_RBRACE ) then
-		x = cSkip( x )
+	if( tkGet( x ) <> TK_RBRACE ) then
+		return begin
 	end if
+	x = cSkip( x )
 
 	'' ';'
-	if( tkGet( x ) = TK_SEMI ) then
-		x = cSkip( x )
+	if( tkGet( x ) <> TK_SEMI ) then
+		return begin
 	end if
+	x = cSkip( x )
 
-	tkRemove( begin, x - 1 )
-	x = begin
+	if( parser.dryrun = FALSE ) then
+		tkInsert( begin, TK_END )
+		begin += 1
+		tkRemove( begin, x - 1 )
+		x = begin
+	end if
 
 	function = x
 end function
@@ -562,8 +572,10 @@ end function
 private function cParamDecl( byval x as integer ) as integer
 	'' '...'?
 	if( tkGet( x ) = TK_ELLIPSIS ) then
-		tkRemove( x, x )
-		tkInsert( x, TK_PARAMVARARG )
+		if( parser.dryrun = FALSE ) then
+			tkRemove( x, x )
+			tkInsert( x, TK_PARAMVARARG )
+		end if
 		x = cSkip( x )
 	else
 		x = cMultDecl( x, TK_PARAM )
@@ -581,7 +593,11 @@ private function cParamDeclList( byval x as integer ) as integer
 		if( tkGet( x ) <> TK_COMMA ) then
 			exit do
 		end if
-		tkRemove( x, cSkip( x ) - 1 )
+		if( parser.dryrun ) then
+			x = cSkip( x )
+		else
+			tkRemove( x, cSkip( x ) - 1 )
+		end if
 	loop
 
 	function = x
@@ -681,30 +697,45 @@ private function cDeclElement _
 		has_params = FALSE
 	end if
 
-	tkRemove( begin, x - 1 )
-	tkInsert( begin, decl, id )
-	tkSetType( begin, dtype, basesubtype )
-	begin += 1
-	x = begin
+	if( parser.dryrun = FALSE ) then
+		tkRemove( begin, x - 1 )
+		tkInsert( begin, decl, id )
+		tkSetType( begin, dtype, basesubtype )
+		begin += 1
+		x = begin
+	end if
 
 	if( has_params ) then
 		'' Just '(void)'?
 		if( (tkGet( x ) = KW_VOID) and (tkGet( cSkip( x ) ) = TK_RPAREN) ) then
 			'' VOID
-			tkRemove( x, cSkip( x ) - 1 )
+			if( parser.dryrun ) then
+				x = cSkip( x )
+			else
+				tkRemove( x, cSkip( x ) - 1 )
+			end if
 		'' Not just '()'?
 		elseif( tkGet( x ) <> TK_RPAREN ) then
-			tkInsert( x, TK_BEGIN )
-			x += 1
+			if( parser.dryrun = FALSE ) then
+				tkInsert( x, TK_BEGIN )
+				x += 1
+			end if
 
 			x = cParamDeclList( x )
 
-			tkInsert( x, TK_END )
-			x += 1
+			if( parser.dryrun = FALSE ) then
+				tkInsert( x, TK_END )
+				x += 1
+			end if
 		end if
 
 		'' ')'
-		if( tkGet( x ) = TK_RPAREN ) then
+		if( tkGet( x ) <> TK_RPAREN ) then
+			return begin
+		end if
+		if( parser.dryrun ) then
+			x = cSkip( x )
+		else
 			tkRemove( x, cSkip( x ) - 1 )
 		end if
 	end if
@@ -774,11 +805,17 @@ private function cMultDecl _
 		if( tkGet( x ) <> TK_SEMI ) then
 			return begin
 		end if
-		tkRemove( x, cSkip( x ) - 1 )
+		if( parser.dryrun ) then
+			x = cSkip( x )
+		else
+			tkRemove( x, cSkip( x ) - 1 )
+		end if
 	end select
 
-	tkRemove( typebegin, typeend - 1 )
-	x -= typeend - typebegin
+	if( parser.dryrun = FALSE ) then
+		tkRemove( typebegin, typeend - 1 )
+		x -= typeend - typebegin
+	end if
 
 	function = x
 end function
@@ -786,69 +823,125 @@ end function
 '' Global variable/procedure declarations
 ''    [EXTERN|STATIC] MultDecl
 private function cGlobalDecl( byval x as integer ) as integer
-	dim as integer decl = any
+	dim as integer begin = any, old = any, decl = any
+
+	begin = x
 
 	select case( tkGet( x ) )
-	case KW_EXTERN
-		decl = TK_EXTERNGLOBAL
-		tkRemove( x, cSkip( x ) - 1 )
+	case KW_EXTERN, KW_STATIC
+		if( tkGet( x ) = KW_EXTERN ) then
+			decl = TK_EXTERNGLOBAL
+		else
+			decl = TK_STATICGLOBAL
+		end if
 
-	case KW_STATIC
-		decl = TK_STATICGLOBAL
-		tkRemove( x, cSkip( x ) - 1 )
+		if( parser.dryrun ) then
+			x = cSkip( x )
+		else
+			tkRemove( x, cSkip( x ) - 1 )
+		end if
 
 	case else
 		decl = TK_GLOBAL
 	end select
 
-	function = cMultDecl( x, decl )
+	old = x
+	x = cMultDecl( x, decl )
+	if( x = old ) then
+		return begin
+	end if
+
+	function = x
 end function
 
 private function cSemiColon( byval x as integer ) as integer
 	if( tkGet( x ) = TK_SEMI ) then
-		tkRemove( x, cSkip( x ) - 1 )
+		if( parser.dryrun ) then
+			x = cSkip( x )
+		else
+			tkRemove( x, cSkip( x ) - 1 )
 
-		'' A token must be inserted to ensure the x position moves forward
-		tkInsert( x, TK_NOP )
-		x += 1
+			'' A token must be inserted to ensure the x position moves forward
+			tkInsert( x, TK_NOP )
+			x += 1
+		end if
 	end if
 	function = x
 end function
 
-private function cUnknown( byval x as integer ) as integer
-	tkInsert( x, TK_TODO, "unknown construct (sorry)" )
-	x += 1
-	tkInsert( x, TK_BEGIN )
-	x += 1
+private function cHighLevelToken( byval x as integer ) as integer
+	'' Any pre-existing high-level tokens (things transformed by previous
+	'' parsing, such as PP directives, or anything inserted by presets)
+	'' need to be recognized as "valid constructs" too
 
-	x = cSkipStatement( x )
-	tkInsert( x, TK_END )
-	x += 1
+	select case( tkGet( x ) )
+	case TK_EOF, TK_EOL
 
-	function = cSkip( x )
+	case else
+		if( tkIsStmtSep( x ) ) then
+			x = cSkip( x )
+		end if
+	end select
+
+	function = x
 end function
 
-sub cToplevel( )
-	dim as integer x = any, old = any
+private sub hToplevel( )
+	dim as integer x = any, old = any, begin = any
 
 	x = cSkip( -1 )
 	do
 		old = x
 
+		if( parser.dryrun = FALSE ) then
+			if( tkIsPoisoned( x ) ) then
+				begin = x
+				do
+					x += 1
+				loop while( tkIsPoisoned( x ) )
+
+				tkInsert( begin, TK_TODO, "unknown construct (sorry)" )
+				begin += 1
+				x += 1
+
+				tkInsert( begin, TK_BEGIN )
+				begin += 1
+				x += 1
+
+				tkInsert( x, TK_END )
+				x += 1
+			end if
+		end if
+
 		x = cStructCompound( x )
 		x = cGlobalDecl( x )
 		x = cSemiColon( x )
+		x = cHighLevelToken( x )
 
+		if( tkGet( x ) = TK_EOF ) then
+			exit do
+		end if
+
+		'' None of the parsing functions could handle this construct?
 		if( x = old ) then
-			if( tkGet( x ) = TK_EOF ) then
-				exit do
-			end if
-
-			if( tkIsStmtSep( x ) ) then
-				x = cSkip( x )
-			else
-				x = cUnknown( x )
-			end if
+			assert( parser.dryrun )
+			begin = x
+			x = cSkipStatement( x )
+			tkSetPoisoned( begin, x - 1 )
 		end if
 	loop
+end sub
+
+sub cToplevel( )
+	'' 1st pass to identify constructs & set marks correspondingly
+	parser.dryrun = TRUE
+	hToplevel( )
+
+	tkDump( )
+
+	'' 2nd pass to merge them into high-level tokens
+	parser.dryrun = FALSE
+	hToplevel( )
+
+	tkDump( )
 end sub
