@@ -216,8 +216,10 @@ private function ppDirective( byval x as integer ) as integer
 
 		tkInsert( begin, TK_PPDEFINE, tkGetText( x ) )
 		begin += 1
+		x += 1
 		tkInsert( begin, TK_BEGIN )
 		begin += 1
+		x += 1
 		tkRemove( begin, ppSkip( x ) - 1 )
 		x = begin
 
@@ -322,15 +324,104 @@ end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
+private function cSimpleToken( byval x as integer ) as integer
+	select case( tkGet( x ) )
+	case TK_SEMI
+		if( parser.dryrun ) then
+			x = cSkip( x )
+		else
+			tkRemove( x, cSkip( x ) - 1 )
+		end if
+
+	case else
+		'' Any pre-existing high-level tokens (things transformed by
+		'' previous parsing, such as PP directives, or anything inserted
+		'' by presets) need to be recognized as "valid constructs" too.
+		if( tkIsStmtSep( x ) ) then
+			x = cSkip( x )
+		else
+			x = -1
+		end if
+	end select
+
+	function = x
+end function
+
+private function hMergeUnknown( byval x as integer ) as integer
+	dim as integer begin = any
+
+	if( parser.dryrun ) then
+		return -1
+	end if
+
+	if( tkIsPoisoned( x ) = FALSE ) then
+		return -1
+	end if
+
+	begin = x
+	do
+		x += 1
+	loop while( tkIsPoisoned( x ) )
+
+	tkInsert( begin, TK_TODO, "unknown construct (sorry)" )
+	begin += 1
+	x += 1
+
+	tkInsert( begin, TK_BEGIN )
+	begin += 1
+	x += 1
+
+	tkInsert( x, TK_END )
+	x += 1
+
+	function = x
+end function
+
+private function cUnknown( byval x as integer ) as integer
+	dim as integer begin = any
+
+	assert( parser.dryrun )
+	begin = x
+	x = cSkipStatement( x )
+	tkSetPoisoned( begin, x - 1 )
+
+	function = x
+end function
+
 '' (MultDecl{Field} | StructCompound)*
 private function cStructBody( byval x as integer ) as integer
 	dim as integer old = any
 
 	do
+		select case( tkGet( x ) )
+		case TK_RBRACE, TK_EOF
+			exit do
+		end select
+
 		old = x
-		x = cMultDecl( x, TK_FIELD )
-		x = cStructCompound( x )
-	loop while( old <> x )
+
+		x = hMergeUnknown( old )
+		if( x >= 0 ) then
+			continue do
+		end if
+
+		x = cStructCompound( old )
+		if( x >= 0 ) then
+			continue do
+		end if
+
+		x = cMultDecl( old, TK_FIELD )
+		if( x >= 0 ) then
+			continue do
+		end if
+
+		x = cSimpleToken( old )
+		if( x >= 0 ) then
+			continue do
+		end if
+
+		x = cUnknown( old )
+	loop
 
 	function = x
 end function
@@ -347,7 +438,7 @@ private function cStructCompound( byval x as integer ) as integer
 	case KW_STRUCT, KW_UNION
 
 	case else
-		return begin
+		return -1
 	end select
 	x = cSkip( x )
 
@@ -359,7 +450,7 @@ private function cStructCompound( byval x as integer ) as integer
 
 	'' '{'
 	if( tkGet( x ) <> TK_LBRACE ) then
-		return begin
+		return -1
 	end if
 	x = cSkip( x )
 
@@ -378,20 +469,20 @@ private function cStructCompound( byval x as integer ) as integer
 
 	'' '}'
 	if( tkGet( x ) <> TK_RBRACE ) then
-		return begin
+		return -1
 	end if
 	x = cSkip( x )
 
 	'' ';'
 	if( tkGet( x ) <> TK_SEMI ) then
-		return begin
+		return -1
 	end if
 	x = cSkip( x )
 
 	if( parser.dryrun = FALSE ) then
+		tkRemove( begin, x - 1 )
 		tkInsert( begin, TK_END )
 		begin += 1
-		tkRemove( begin, x - 1 )
 		x = begin
 	end if
 
@@ -422,9 +513,8 @@ private function cBaseType _
 		byref subtype as string _
 	) as integer
 
-	dim as integer sign = any, begin = any
+	dim as integer sign = any
 
-	begin = x
 	dtype = TYPE_NONE
 	subtype = ""
 	sign = 0
@@ -445,7 +535,7 @@ private function cBaseType _
 	select case( tkGet( x ) )
 	case KW_ENUM, KW_STRUCT, KW_UNION
 		if( sign <> 0 ) then
-			return begin
+			return -1
 		end if
 
 		'' {ENUM|STRUCT|UNION}
@@ -453,7 +543,7 @@ private function cBaseType _
 
 		'' Identifier
 		if( tkGet( x ) <> TK_ID ) then
-			return begin
+			return -1
 		end if
 		dtype = typeSetDt( dtype, TYPE_UDT )
 		subtype = *tkGetText( x )
@@ -461,7 +551,7 @@ private function cBaseType _
 
 	case TK_ID
 		if( sign <> 0 ) then
-			return begin
+			return -1
 		end if
 
 		'' Identifier
@@ -471,7 +561,7 @@ private function cBaseType _
 
 	case KW_VOID
 		if( sign <> 0 ) then
-			return begin
+			return -1
 		end if
 
 		x = cSkip( x )
@@ -541,7 +631,7 @@ private function cBaseType _
 		end if
 
 	case else
-		return begin
+		return -1
 	end select
 
 	'' [CONST]
@@ -573,7 +663,7 @@ private function cParamDecl( byval x as integer ) as integer
 	'' '...'?
 	if( tkGet( x ) = TK_ELLIPSIS ) then
 		if( parser.dryrun = FALSE ) then
-			tkRemove( x, x )
+			tkRemove( x, cSkip( x ) - 1 )
 			tkInsert( x, TK_PARAMVARARG )
 		end if
 		x = cSkip( x )
@@ -630,7 +720,7 @@ private function cDeclElement _
 
 		'' '*'
 		if( tkGet( x ) <> TK_STAR ) then
-			return begin
+			return -1
 		end if
 		x = cSkip( x )
 
@@ -646,7 +736,7 @@ private function cDeclElement _
 		case TK_PARAM
 			decl = TK_PARAMPROCPTR
 		case else
-			return begin
+			return -1
 		end select
 		is_procptr = TRUE
 	else
@@ -662,14 +752,14 @@ private function cDeclElement _
 		case TK_PARAM, TK_PARAMPROCPTR, TK_PARAMVARARG
 
 		case else
-			return begin
+			return -1
 		end select
 	end if
 
 	if( is_procptr ) then
 		'' ')'
 		if( tkGet( x ) <> TK_RPAREN ) then
-			return begin
+			return -1
 		end if
 		x = cSkip( x )
 	end if
@@ -685,14 +775,14 @@ private function cDeclElement _
 		     TK_PARAMPROCPTR, TK_FIELDPROCPTR
 
 		case else
-			return begin
+			return -1
 		end select
 
 		has_params = TRUE
 	else
 		'' If it's a function pointer there must also be a parameter list
 		if( is_procptr ) then
-			return begin
+			return -1
 		end if
 		has_params = FALSE
 	end if
@@ -731,7 +821,7 @@ private function cDeclElement _
 
 		'' ')'
 		if( tkGet( x ) <> TK_RPAREN ) then
-			return begin
+			return -1
 		end if
 		if( parser.dryrun ) then
 			x = cSkip( x )
@@ -760,26 +850,22 @@ private function cMultDecl _
 		byval decl as integer _
 	) as integer
 
-	dim as integer begin = any, old = any, dtype = any
-	dim as integer typebegin = any, typeend = any
+	dim as integer dtype = any, typebegin = any, typeend = any
 	dim as string subtype
-
-	begin = x
 
 	'' BaseType
 	typebegin = x
 	x = cBaseType( x, dtype, subtype )
-	if( typebegin = x ) then
-		return begin
+	if( x < 0 ) then
+		return -1
 	end if
 	typeend = x
 
 	'' ... (',' ...)*
 	do
-		old = x
 		x = cDeclElement( x, decl, dtype, subtype )
-		if( x = old ) then
-			return begin
+		if( x < 0 ) then
+			return -1
 		end if
 
 		'' Everything can have a comma and more identifiers,
@@ -803,7 +889,7 @@ private function cMultDecl _
 	case else
 		'' ';'
 		if( tkGet( x ) <> TK_SEMI ) then
-			return begin
+			return -1
 		end if
 		if( parser.dryrun ) then
 			x = cSkip( x )
@@ -823,9 +909,7 @@ end function
 '' Global variable/procedure declarations
 ''    [EXTERN|STATIC] MultDecl
 private function cGlobalDecl( byval x as integer ) as integer
-	dim as integer begin = any, old = any, decl = any
-
-	begin = x
+	dim as integer decl = any
 
 	select case( tkGet( x ) )
 	case KW_EXTERN, KW_STATIC
@@ -845,91 +929,38 @@ private function cGlobalDecl( byval x as integer ) as integer
 		decl = TK_GLOBAL
 	end select
 
-	old = x
-	x = cMultDecl( x, decl )
-	if( x = old ) then
-		return begin
-	end if
-
-	function = x
-end function
-
-private function cSemiColon( byval x as integer ) as integer
-	if( tkGet( x ) = TK_SEMI ) then
-		if( parser.dryrun ) then
-			x = cSkip( x )
-		else
-			tkRemove( x, cSkip( x ) - 1 )
-
-			'' A token must be inserted to ensure the x position moves forward
-			tkInsert( x, TK_NOP )
-			x += 1
-		end if
-	end if
-	function = x
-end function
-
-private function cHighLevelToken( byval x as integer ) as integer
-	'' Any pre-existing high-level tokens (things transformed by previous
-	'' parsing, such as PP directives, or anything inserted by presets)
-	'' need to be recognized as "valid constructs" too
-
-	select case( tkGet( x ) )
-	case TK_EOF, TK_EOL
-
-	case else
-		if( tkIsStmtSep( x ) ) then
-			x = cSkip( x )
-		end if
-	end select
-
-	function = x
+	function = cMultDecl( x, decl )
 end function
 
 private sub hToplevel( )
-	dim as integer x = any, old = any, begin = any
+	dim as integer x = any, old = any
 
 	x = cSkip( -1 )
-	do
+	while( tkGet( x ) <> TK_EOF )
 		old = x
 
-		if( parser.dryrun = FALSE ) then
-			if( tkIsPoisoned( x ) ) then
-				begin = x
-				do
-					x += 1
-				loop while( tkIsPoisoned( x ) )
-
-				tkInsert( begin, TK_TODO, "unknown construct (sorry)" )
-				begin += 1
-				x += 1
-
-				tkInsert( begin, TK_BEGIN )
-				begin += 1
-				x += 1
-
-				tkInsert( x, TK_END )
-				x += 1
-			end if
+		x = hMergeUnknown( old )
+		if( x >= 0 ) then
+			continue while
 		end if
 
-		x = cStructCompound( x )
-		x = cGlobalDecl( x )
-		x = cSemiColon( x )
-		x = cHighLevelToken( x )
-
-		if( tkGet( x ) = TK_EOF ) then
-			exit do
+		x = cStructCompound( old )
+		if( x >= 0 ) then
+			continue while
 		end if
 
-		'' None of the parsing functions could handle this construct?
-		if( x = old ) then
-			assert( parser.dryrun )
-			begin = x
-			x = cSkipStatement( x )
-			tkSetPoisoned( begin, x - 1 )
+		x = cGlobalDecl( old )
+		if( x >= 0 ) then
+			continue while
 		end if
-	loop
+
+		x = cSimpleToken( old )
+		if( x >= 0 ) then
+			continue while
+		end if
+
+		x = cUnknown( old )
+	wend
 end sub
 
 sub cToplevel( )
@@ -937,11 +968,7 @@ sub cToplevel( )
 	parser.dryrun = TRUE
 	hToplevel( )
 
-	tkDump( )
-
 	'' 2nd pass to merge them into high-level tokens
 	parser.dryrun = FALSE
 	hToplevel( )
-
-	tkDump( )
 end sub
