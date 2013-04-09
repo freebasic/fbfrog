@@ -78,6 +78,19 @@ private function ppSkip( byval x as integer ) as integer
 	function = x
 end function
 
+private function ppSkipToEOL( byval x as integer ) as integer
+	do
+		select case( tkGet( x ) )
+		case TK_EOL, TK_EOF
+			exit do
+		end select
+
+		x = ppSkip( x )
+	loop
+
+	function = x
+end function
+
 private function cSkip( byval x as integer ) as integer
 	do
 		x += 1
@@ -183,24 +196,21 @@ sub cPurgeInlineComments( )
 	loop
 end sub
 
-private function ppSkipToEOL( byval x as integer ) as integer
-	do
-		x = ppSkip( x )
-
-		select case( tkGet( x ) )
-		case TK_EOL, TK_EOF
-			exit do
-		end select
-	loop
-
-	function = x
-end function
-
 private function ppDirective( byval x as integer ) as integer
-	dim as integer begin = any, filename = any
+	dim as integer begin = any
+	dim as string text
+
+	begin = x
+
+	'' not at BOL?
+	if( tkIsStmtSep( x - 1 ) = FALSE ) then
+		return -1
+	end if
 
 	'' '#'
-	begin = x
+	if( tkGet( x ) <> TK_HASH ) then
+		return -1
+	end if
 	x = ppSkip( x )
 
 	select case( tkGet( x ) )
@@ -211,16 +221,16 @@ private function ppDirective( byval x as integer ) as integer
 
 		'' Identifier?
 		if( tkGet( x ) <> TK_ID ) then
-			return begin
+			return -1
 		end if
+		text = *tkGetText( x )
+		x = ppSkip( x )
 
-		tkInsert( begin, TK_PPDEFINE, tkGetText( x ) )
+		tkRemove( begin, x - 1 )
+		tkInsert( begin, TK_PPDEFINE, text )
 		begin += 1
-		x += 1
 		tkInsert( begin, TK_BEGIN )
 		begin += 1
-		x += 1
-		tkRemove( begin, ppSkip( x ) - 1 )
 		x = begin
 
 		'' '(' and not separated from the Identifier with spaces?
@@ -228,7 +238,7 @@ private function ppDirective( byval x as integer ) as integer
 
 		x = ppSkipToEOL( x )
 
-		tkInsert( x - 1, TK_END )
+		tkInsert( x, TK_END )
 		x += 1
 
 	case KW_INCLUDE
@@ -237,29 +247,46 @@ private function ppDirective( byval x as integer ) as integer
 
 		'' "..."
 		if( tkGet( x ) <> TK_STRING ) then
-			return begin
+			return -1
 		end if
-		filename = x
+		text = *tkGetText( x )
 		x = ppSkip( x )
 
-		if( tkGet( x ) <> TK_EOL ) then
-			return begin
-		end if
-
-		tkInsert( begin, TK_PPINCLUDE, tkGetText( filename ) )
-		begin += 1
-		x += 1
 		tkRemove( begin, x )
+		tkInsert( begin, TK_PPINCLUDE, text )
+		begin += 1
 		x = begin
 
 	case else
-		return begin
+		return -1
+	end select
+
+	'' EOL?
+	select case( tkGet( x ) )
+	case TK_EOL
+		tkRemove( x, ppSkip( x ) - 1 )
+
+	case TK_EOF
+
+	case else
+		return -1
 	end select
 
 	function = x
 end function
 
-private function ppUnknown( byval x as integer ) as integer
+private function ppUnknownDirective( byval x as integer ) as integer
+	'' not at BOL?
+	if( tkIsStmtSep( x - 1 ) = FALSE ) then
+		return -1
+	end if
+
+	'' '#'
+	if( tkGet( x ) <> TK_HASH ) then
+		return -1
+	end if
+	x = ppSkip( x )
+
 	tkInsert( x, TK_TODO, "unknown PP directive (sorry)" )
 	x += 1
 	tkInsert( x, TK_BEGIN )
@@ -269,35 +296,39 @@ private function ppUnknown( byval x as integer ) as integer
 	tkInsert( x, TK_END )
 	x += 1
 
-	function = ppSkip( x )
+	'' EOL?
+	select case( tkGet( x ) )
+	case TK_EOL
+		tkRemove( x, ppSkip( x ) - 1 )
+
+	case TK_EOF
+
+	case else
+		return -1
+	end select
+
+	function = x
 end function
 
 sub cPPDirectives( )
 	dim as integer x = any, old = any
 
 	x = ppSkip( -1 )
-	do
-		select case( tkGet( x ) )
-		'' '#'?
-		case TK_HASH
-			'' BOL?
-			if( tkIsStmtSep( x - 1 ) ) then
-				old = x
-				x = ppDirective( x )
-				if( x = old ) then
-					x = ppUnknown( x )
-				end if
-			else
-				x = ppSkip( ppSkipToEOL( x ) )
-			end if
+	while( tkGet( x ) <> TK_EOF )
+		old = x
 
-		case TK_EOF
-			exit do
+		x = ppDirective( old )
+		if( x >= 0 ) then
+			continue while
+		end if
 
-		case else
-			x = ppSkip( ppSkipToEOL( x ) )
-		end select
-	loop
+		x = ppUnknownDirective( old )
+		if( x >= 0 ) then
+			continue while
+		end if
+
+		x = ppSkip( ppSkipToEOL( old ) )
+	wend
 end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
