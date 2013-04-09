@@ -281,6 +281,10 @@ private function ppDirective( byval x as integer ) as integer
 end function
 
 private function ppUnknownDirective( byval x as integer ) as integer
+	dim as integer begin = any
+
+	begin = x
+
 	'' not at BOL?
 	if( tkIsStmtSep( x - 1 ) = FALSE ) then
 		return -1
@@ -292,25 +296,22 @@ private function ppUnknownDirective( byval x as integer ) as integer
 	end if
 	x = ppSkip( x )
 
-	tkInsert( x, TK_TODO, "unknown PP directive (sorry)" )
+	x = ppSkipToEOL( x )
+
+	'' EOL? (could also be EOF)
+	if( tkGet( x ) = TK_EOL ) then
+		x = ppSkip( x )
+	end if
+
+	tkInsert( begin, TK_TODO, "unknown PP directive (sorry)" )
+	begin += 1
 	x += 1
-	tkInsert( x, TK_BEGIN )
+	tkInsert( begin, TK_BEGIN )
+	begin += 1
 	x += 1
 
-	x = ppSkipToEOL( x )
 	tkInsert( x, TK_END )
 	x += 1
-
-	'' EOL?
-	select case( tkGet( x ) )
-	case TK_EOL
-		tkRemove( x, ppSkip( x ) - 1 )
-
-	case TK_EOF
-
-	case else
-		return -1
-	end select
 
 	function = x
 end function
