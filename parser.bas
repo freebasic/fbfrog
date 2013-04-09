@@ -229,17 +229,22 @@ private function ppDirective( byval x as integer ) as integer
 		tkRemove( begin, x - 1 )
 		tkInsert( begin, TK_PPDEFINE, text )
 		begin += 1
-		tkInsert( begin, TK_BEGIN )
-		begin += 1
 		x = begin
 
-		'' '(' and not separated from the Identifier with spaces?
-		'' TODO
+		'' Parse body tokens, if any, and wrap them inside a BEGIN/END
+		select case( tkGet( x ) )
+		case TK_EOL, TK_EOF
 
-		x = ppSkipToEOL( x )
+		case else
 
-		tkInsert( x, TK_END )
-		x += 1
+			tkInsert( x, TK_BEGIN )
+			x += 1
+
+			x = ppSkipToEOL( x )
+
+			tkInsert( x, TK_END )
+			x += 1
+		end select
 
 	case KW_INCLUDE
 		'' INCLUDE

@@ -105,6 +105,8 @@ Source module overview:
 
 To do:
 
+- BOL checks use -1 instead skipRev(), so won't work if there is a TK_SPACE etc.
+
 - Combine -follow/-merge/-concat into just -merge
   - Make -merge the default
   - Remove following, external #includes will be translated separately anyways,

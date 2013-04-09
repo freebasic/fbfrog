@@ -256,21 +256,22 @@ private function emitTk( byval x as integer ) as integer
 		x += 1
 
 	case TK_PPDEFINE
-		emitStmtBegin( "#define " + *tkGetText( x ) + " " )
+		emitStmtBegin( "#define " + *tkGetText( x ) )
 
 		'' PPDefine
 		x += 1
 
-		'' Begin
-		assert( tkGet( x ) = TK_BEGIN )
-		x += 1
+		'' Begin?
+		if( tkGet( x ) = TK_BEGIN ) then
+			x += 1
 
-		while( tkGet( x ) <> TK_END )
-			x = emitTk( x )
-		wend
+			while( tkGet( x ) <> TK_END )
+				x = emitTk( x )
+			wend
 
-		'' End
-		x += 1
+			'' End
+			x += 1
+		end if
 
 		emitEol( )
 
