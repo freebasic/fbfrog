@@ -22,6 +22,8 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	( NULL  , @"#include"             , TKFLAG_STMTSEP ), _
 	( NULL  , @"#define"              , TKFLAG_STMTSEP ), _
 	( NULL  , @"struct"               , TKFLAG_STMTSEP ), _
+	( NULL  , @"typedef"              , TKFLAG_STMTSEP ), _
+	( NULL  , @"typedefprocptr"       , TKFLAG_STMTSEP or TKFLAG_PROCPTR ), _
 	( NULL  , @"global"               , TKFLAG_STMTSEP ), _
 	( NULL  , @"externglobal"         , TKFLAG_STMTSEP ), _
 	( NULL  , @"staticglobal"         , TKFLAG_STMTSEP ), _

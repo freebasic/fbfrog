@@ -772,6 +772,8 @@ private function cDeclElement _
 			decl = TK_FIELDPROCPTR
 		case TK_PARAM
 			decl = TK_PARAMPROCPTR
+		case TK_TYPEDEF
+			decl = TK_TYPEDEFPROCPTR
 		case else
 			return -1
 		end select
@@ -809,7 +811,7 @@ private function cDeclElement _
 		case TK_GLOBAL, TK_EXTERNGLOBAL, TK_STATICGLOBAL, TK_FIELD
 			decl = TK_PROC
 		case TK_GLOBALPROCPTR, TK_EXTERNGLOBALPROCPTR, TK_STATICGLOBALPROCPTR, _
-		     TK_PARAMPROCPTR, TK_FIELDPROCPTR
+		     TK_PARAMPROCPTR, TK_FIELDPROCPTR, TK_TYPEDEFPROCPTR
 
 		case else
 			return -1
@@ -871,7 +873,7 @@ private function cDeclElement _
 end function
 
 ''
-'' Generic 'type *a, **b;' parsing, used for vars/fields/protos/params
+'' Generic 'type *a, **b;' parsing, used for vars/fields/protos/params/typedefs
 '' ("multiple declaration" syntax)
 ''    int i;
 ''    int a, b, c;
@@ -969,6 +971,23 @@ private function cGlobalDecl( byval x as integer ) as integer
 	function = cMultDecl( x, decl )
 end function
 
+'' Typedefs
+''    TYPEDEF MultDecl
+private function cTypedef( byval x as integer ) as integer
+
+	'' TYPEDEF?
+	if( tkGet( x ) <> KW_TYPEDEF ) then
+		return -1
+	end if
+	if( parser.dryrun ) then
+		x = cSkip( x )
+	else
+		tkRemove( x, cSkip( x ) - 1 )
+	end if
+
+	function = cMultDecl( x, TK_TYPEDEF )
+end function
+
 private sub hToplevel( )
 	dim as integer x = any, old = any
 
@@ -987,6 +1006,11 @@ private sub hToplevel( )
 		end if
 
 		x = cGlobalDecl( old )
+		if( x >= 0 ) then
+			continue while
+		end if
+
+		x = cTypedef( old )
 		if( x >= 0 ) then
 			continue while
 		end if

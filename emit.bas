@@ -196,6 +196,8 @@ private sub emitDecl _
 		ln += "byval "
 	case TK_FIELD
 
+	case TK_TYPEDEF
+		ln += "type "
 	case else
 		assert( FALSE )
 	end select
@@ -300,6 +302,10 @@ private function emitTk( byval x as integer ) as integer
 		x += 1
 
 		emitStmt( "end type" )
+
+	case TK_TYPEDEF, TK_TYPEDEFPROCPTR
+		emitDecl( x, ln, TK_TYPEDEF )
+		emitStmt( ln )
 
 	case TK_FIELD, TK_FIELDPROCPTR
 		emitDecl( x, ln, TK_FIELD )
