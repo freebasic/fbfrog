@@ -918,7 +918,11 @@ private function cMultDecl _
 		if( tkGet( x ) <> TK_COMMA ) then
 			exit do
 		end if
-		x = cSkip( x )
+		if( parser.dryrun ) then
+			x = cSkip( x )
+		else
+			tkRemove( x, cSkip( x ) - 1 )
+		end if
 	loop
 
 	'' Everything except params must end with a ';'
