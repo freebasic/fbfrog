@@ -1,99 +1,111 @@
-/**
- * Variables
- */
-
+// variables
 int a;
-int *p;
+int *a;
+int **a;
+int ***a;
+int ****a;
 int a, b;
-int *p, ***p, x;
+int a, b, c, d;
+int  *a,   b;
+int   a,  *b;
+int  *a,  *b;
+int  *a,   b,  **c;
+int **a,   b,   *c;
+int   a,  *b,    c;
+int  *a, **b, ***c;
+int   a,  *b, ***c,    d;
+int **a,   b,    c,  **d;
+int   a,  *b,    c,   *d;
+int  *a,   b,   *c, ***d;
 
-/* Sub pointer */
-void (*p)();
+// sub/function return types
+void f(void);
+int f(void);
+int *f(void);
+UDT f(void);
+UDT **f(void);
 
-/* Function pointer, with anonymous function pointer param */
-double ***(*p)(int ***(*)(char***));
+// no parameters
+void f();
+void f(void);
 
+// parameters
+void f(int a);
+void f(int a, int b);
+void f(int a, int b, int c);
+void f(int *a, int ***b);
+
+// anonymous parameters
+void f(int);
+void f(int, int);
+void f(int, int, int);
+void f(int *, int ***);
+
+// vararg
+void f(int a, ...);
+
+// procptr variables
+void (*a)(void);
+int (*a)(int);
+int (*a)(int a), (*b)(int a), c;
+int a, (*b)(int a), c, (*d)(int a);
+int **(*a)(int);
+
+// function returning a procptr
+int (*f(void))(void);
+
+// procptr as param
+void f(void (*a)(void));
+void f(void (*)(void));
+
+// procptr with procptr as param
+void (*a)(void (*a)(void));
+int ***(*p)(int ***(*)(int ***));
+
+// variable/procptr/function
+int a, *(*a)(void), a(void), *a(void);
+
+// static/extern
 static int a;
 extern int a;
+static void f(void);
+extern void f(void);
 
-/* Complex toplevel decl -- vardecl, procptr vardecl, procdecl */
-int a, *(*a)(), a(), *a();
+// typedefs
+typedef UDT A;
+typedef int A;
+typedef int *A;
+typedef int A, B, C;
+typedef void (*A)(void);
+typedef UDT (*A)(UDT);
+typedef UDT **A, B, (*C)(int);
 
-/**
- * Typedefs
- */
-
-typedef struct T A;
-typedef struct T (*A)(int i);
-typedef T **A, B, (*C)(int);
-typedef enum E *PE;
-typedef union U /*boo*/ ****A;
-
-
-/**
- * Procedures
- */
-
-int f();
-int f(void);
-
-/* Function as any ptr */
-void *f(void);
-
-/* taking an int (but the id is omitted), returning an int */
-int f(int);
-
-/* some more params, and even ellipsis */
-T *f(int x, short, char *, ...);
-
-#define MY_EMPTY
-#define MY_EXPORT __declspec(dllexport)
-#define MY_CALL __attribute__((__stdcall__))/*__stdcall*/
-
-/* some #defines in front, as is pretty common */
-MY_EMPTY T f(void);
-MY_CALL T f(void);
-MY_EMPTY MY_CALL T f(void);
-MY_EXPORT T a;
-
-/* Wrapped */
-int f(int a, int b,
-      int c, int d);
-
-/* Taking a procptr param */
-void f(void (*foo)(void));
-
-/* Sub */
-void test1();
-void test2(int a, float *b, TT c, struct T **d);
-
-static int f(void);
-extern int f(void);
-
-/**
- * Fields
- */
-
-struct T {
-	signed int i;
-	unsigned long long int j;
-	unsigned k;
-	double a,b,c;
-
-	int **a, *a, a;
-	int a, **a, **a;
-	int *a, a, a, **a, **a, a;
-
-	struct T ****y;
-	struct T *a, ****a, a;
-
-	int *(*p)(int*);
-	int f(int, int);
-	void proc(void);
-
+struct UDT {
+	// fields
 	int a;
-#if 1
-	int b;
-#endif
-	int c;
+	int **a;
+	int a, b;
+	int  *a, b, *c, ***d;
+
+	// methods
+	void f(void);
+	int f(void);
+	void f();
+	UDT **f(void);
+	void f(int *a, int ***b);
+
+	// procptr fields
+	void (*a)(void);
+	int (*a)(int);
+	int (*a)(int a), (*b)(int a), c;
+	int a, (*b)(int a), c, (*d)(int a);
+	int **(*a)(int);
+
+	// procptr as param
+	void f(void (*a)(void));
+	void f(void (*)(void));
+
+	// procptr with procptr as param
+	void (*a)(void (*a)(void));
+	int ***(*p)(int ***(*)(int ***));
 };

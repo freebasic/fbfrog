@@ -1,100 +1,202 @@
-/'*
- * Variables
- '/
+'' variables
+extern     a as long
+dim shared a as long
+extern     a as long ptr
+dim shared a as long ptr
+extern     a as long ptr ptr
+dim shared a as long ptr ptr
+extern     a as long ptr ptr ptr
+dim shared a as long ptr ptr ptr
+extern     a as long ptr ptr ptr ptr
+dim shared a as long ptr ptr ptr ptr
+extern     a as long
+dim shared a as long
+extern     b as long
+dim shared b as long
+extern     a as long
+dim shared a as long
+extern     b as long
+dim shared b as long
+extern     c as long
+dim shared c as long
+extern     d as long
+dim shared d as long
+extern     a as long ptr
+dim shared a as long ptr
+extern     b as long
+dim shared b as long
+extern     a as long
+dim shared a as long
+extern     b as long ptr
+dim shared b as long ptr
+extern     a as long ptr
+dim shared a as long ptr
+extern     b as long ptr
+dim shared b as long ptr
+extern     a as long ptr
+dim shared a as long ptr
+extern     b as long
+dim shared b as long
+extern     c as long ptr ptr
+dim shared c as long ptr ptr
+extern     a as long ptr ptr
+dim shared a as long ptr ptr
+extern     b as long
+dim shared b as long
+extern     c as long ptr
+dim shared c as long ptr
+extern     a as long
+dim shared a as long
+extern     b as long ptr
+dim shared b as long ptr
+extern     c as long
+dim shared c as long
+extern     a as long ptr
+dim shared a as long ptr
+extern     b as long ptr ptr
+dim shared b as long ptr ptr
+extern     c as long ptr ptr ptr
+dim shared c as long ptr ptr ptr
+extern     a as long
+dim shared a as long
+extern     b as long ptr
+dim shared b as long ptr
+extern     c as long ptr ptr ptr
+dim shared c as long ptr ptr ptr
+extern     d as long
+dim shared d as long
+extern     a as long ptr ptr
+dim shared a as long ptr ptr
+extern     b as long
+dim shared b as long
+extern     c as long
+dim shared c as long
+extern     d as long ptr ptr
+dim shared d as long ptr ptr
+extern     a as long
+dim shared a as long
+extern     b as long ptr
+dim shared b as long ptr
+extern     c as long
+dim shared c as long
+extern     d as long ptr
+dim shared d as long ptr
+extern     a as long ptr
+dim shared a as long ptr
+extern     b as long
+dim shared b as long
+extern     c as long ptr
+dim shared c as long ptr
+extern     d as long ptr ptr ptr
+dim shared d as long ptr ptr ptr
 
-dim shared as integer a
-dim shared as integer ptr p
-dim shared as integer a, b
-dim shared as integer ptr p : dim shared as integer ptr ptr ptr p : dim shared as integer x
+declare sub f( )
+declare function f( ) as long
+declare function f( ) as long ptr
+declare function f( ) as UDT
+declare function f( ) as UDT ptr ptr
 
-/' Sub pointer '/
-dim shared as sub() p
+declare sub f( )
+declare sub f( )
 
-/' Function pointer, with anonymous function pointer param '/
-dim shared as function(byval as function (byval as byte ptr ptr ptr ) as integer ptr ptr ptr) as double ptr ptr ptr p
+declare sub f( byval a as long )
+declare sub f( byval a as long, byval b as long )
+declare sub f( byval a as long, byval b as long, byval c as long )
+declare sub f( byval a as long ptr, byval b as long ptr ptr ptr )
 
-dim shared as integer a
-extern as integer a
+declare sub f( byval as long )
+declare sub f( byval as long, byval as long )
+declare sub f( byval as long, byval as long, byval as long )
+declare sub f( byval as long ptr, byval as long ptr ptr ptr )
 
-/' Complex toplevel decl -- vardecl, procptr vardecl, procdecl '/
-dim shared as integer a : dim shared as function() as integer ptr a : declare function a() as integer : declare function a() as integer ptr
+declare sub f( byval a as long, ... )
 
-/'*
- * Typedefs
- '/
+extern     a as sub( )
+dim shared a as sub( )
+extern     a as function( byval as long ) as long
+dim shared a as function( byval as long ) as long
+extern     a as function( byval a as long ) as long
+dim shared a as function( byval a as long ) as long
+extern     b as function( byval a as long ) as long
+dim shared b as function( byval a as long ) as long
+extern     c as long
+dim shared c as long
+extern     a as long
+dim shared a as long
+extern     b as function( byval a as long ) as long
+dim shared b as function( byval a as long ) as long
+extern     c as long
+dim shared c as long
+extern     d as function( byval a as long ) as long
+dim shared d as function( byval a as long ) as long
+extern     a as function( byval as long ) as long ptr ptr
+dim shared a as function( byval as long ) as long ptr ptr
 
-type as T A
-type as function(byval i as integer) as T A
-type as T ptr ptr A : type as T B : type as function(byval as integer) as T C
-type as E ptr PE
-type as U /'boo'/ ptr ptr ptr ptr A
+'' TODO: unknown construct (sorry)
+int (*f(void))(void);
+declare sub f( byval a as sub( ) )
+declare sub f( byval as sub( ) )
 
+extern     a as sub( byval a as sub( ) )
+dim shared a as sub( byval a as sub( ) )
+extern     p as function( byval as function( byval as long ptr ptr ptr ) as long ptr ptr ptr ) as long ptr ptr ptr
+dim shared p as function( byval as function( byval as long ptr ptr ptr ) as long ptr ptr ptr ) as long ptr ptr ptr
 
-/'*
- * Procedures
- '/
+extern     a as long
+dim shared a as long
+extern     a as function( ) as long ptr
+dim shared a as function( ) as long ptr
+declare function a( ) as long
+declare function a( ) as long ptr
 
-declare function f() as integer
-declare function f() as integer
+dim shared a as long
+extern a as long
+declare sub f( )
+declare sub f( )
 
-/' Function as any ptr '/
-declare function f() as any ptr
+type A as UDT
+type A as long
+type A as long ptr
+type A as long
+type B as long
+type C as long
+type A as sub( )
+type A as function( byval as UDT ) as UDT
+type A as UDT ptr ptr
+type B as UDT
+type C as function( byval as long ) as UDT
 
-/' taking an int (but the id is omitted), returning an int '/
-declare function f(byval as integer) as integer
+type UDT
 
-/' some more params, and even ellipsis '/
-declare function f(byval x as integer, byval as short, byval as byte ptr , ...) as T ptr
+	a as long
+	a as long ptr ptr
+	a as long
+	b as long
+	a as long ptr
+	b as long
+	c as long ptr
+	d as long ptr ptr ptr
 
-#define MY_EMPTY
-#define MY_EXPORT __declspec(dllexport)
-#define MY_CALL __attribute__((__stdcall__))/'__stdcall'/
+	declare sub f( )
+	declare function f( ) as long
+	declare sub f( )
+	declare function f( ) as UDT ptr ptr
+	declare sub f( byval a as long ptr, byval b as long ptr ptr ptr )
 
-/' some #defines in front, as is pretty common '/
-declare function f() as T
-declare function f MY_CALL () as T
-'' TODO: translate (sorry)
-MY_EMPTY MY_CALL T f(void);
-dim shared as T a
+	a as sub( )
+	a as function( byval as long ) as long
+	a as function( byval a as long ) as long
+	b as function( byval a as long ) as long
+	c as long
+	a as long
+	b as function( byval a as long ) as long
+	c as long
+	d as function( byval a as long ) as long
+	a as function( byval as long ) as long ptr ptr
 
-/' Wrapped '/
-declare function f(byval a as integer, byval b as integer, _
-      byval c as integer, byval d as integer) as integer
+	declare sub f( byval a as sub( ) )
+	declare sub f( byval as sub( ) )
 
-/' Taking a procptr param '/
-declare sub f(byval foo as sub())
-
-/' Sub '/
-declare sub test1()
-declare sub test2(byval a as integer, byval b as single ptr, byval c as TT, byval d as T ptr ptr)
-
-declare function f() as integer
-declare function f() as integer
-
-/'*
- * Fields
- '/
-
-type T
-	as integer i
-	as ulongint j
-	as uinteger k
-	as double a,b,c
-
-	as integer ptr ptr a : as integer ptr a : as integer a
-	as integer a : as integer ptr ptr a, a
-	as integer ptr a : as integer a, a : as integer ptr ptr a, a : as integer a
-
-	as T ptr ptr ptr ptr y
-	as T ptr a : as T ptr ptr ptr ptr a : as T a
-
-	as function(byval as integer ptr ) as integer ptr p
-	declare function f(byval as integer, byval as integer) as integer
-	declare sub proc()
-
-	as integer a
-#if 1
-	as integer b
-#endif
-	as integer c
+	a as sub( byval a as sub( ) )
+	p as function( byval as function( byval as long ptr ptr ptr ) as long ptr ptr ptr ) as long ptr ptr ptr
 end type
