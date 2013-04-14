@@ -66,8 +66,11 @@ private sub emitStmtBegin( byref ln as string )
 	emit( ln )
 end sub
 
-private sub emitStmt( byref ln as string )
+private sub emitStmt( byref ln as string, byref comment as string )
 	emitStmtBegin( ln )
+	if( len( comment ) > 0 ) then
+		emit( " ''" + comment )
+	end if
 	emitEol( )
 end sub
 
@@ -236,12 +239,12 @@ private sub emitTodo( byval x as integer )
 		ln += ": " + *s
 	end if
 
-	emitStmt( ln )
+	emitStmt( ln, "" )
 	stuff.todocount += 1
 end sub
 
 private function emitTk( byval x as integer ) as integer
-	dim as string ln
+	dim as string ln, comment
 	dim as integer y = any
 	dim as zstring ptr s = any
 
@@ -249,12 +252,17 @@ private function emitTk( byval x as integer ) as integer
 	assert( tkGet( x ) <> TK_BEGIN )
 	assert( tkGet( x ) <> TK_END )
 
+	s = tkGetComment( x )
+	if( s ) then
+		comment = *s
+	end if
+
 	select case as const( tkGet( x ) )
 	case TK_NOP
 		x += 1
 
 	case TK_PPINCLUDE
-		emitStmt( "#include """ + *tkGetText( x ) + """" )
+		emitStmt( "#include """ + *tkGetText( x ) + """", comment )
 		x += 1
 
 	case TK_PPDEFINE
@@ -283,7 +291,7 @@ private function emitTk( byval x as integer ) as integer
 		if( len( *s ) > 0 ) then
 			ln += " " + *s
 		end if
-		emitStmt( ln )
+		emitStmt( ln, comment )
 
 		'' Struct
 		x += 1
@@ -301,33 +309,33 @@ private function emitTk( byval x as integer ) as integer
 		'' End
 		x += 1
 
-		emitStmt( "end type" )
+		emitStmt( "end type", "" )
 
 	case TK_TYPEDEF, TK_TYPEDEFPROCPTR
 		emitDecl( x, ln, TK_TYPEDEF )
-		emitStmt( ln )
+		emitStmt( ln, comment )
 
 	case TK_FIELD, TK_FIELDPROCPTR
 		emitDecl( x, ln, TK_FIELD )
-		emitStmt( ln )
+		emitStmt( ln, comment )
 
 	case TK_GLOBAL, TK_GLOBALPROCPTR
 		y = x
 		emitDecl( x, ln, TK_EXTERNGLOBAL, TRUE )
-		emitStmt( ln )
+		emitStmt( ln, comment )
 
 		x = y
 		ln = ""
 		emitDecl( x, ln, TK_GLOBAL )
-		emitStmt( ln )
+		emitStmt( ln, "" )
 
 	case TK_EXTERNGLOBAL, TK_EXTERNGLOBALPROCPTR
 		emitDecl( x, ln, TK_EXTERNGLOBAL )
-		emitStmt( ln )
+		emitStmt( ln, comment )
 
 	case TK_STATICGLOBAL, TK_STATICGLOBALPROCPTR
 		emitDecl( x, ln, TK_GLOBAL )
-		emitStmt( ln )
+		emitStmt( ln, comment )
 
 	case TK_PROC
 		ln = "declare "
@@ -335,7 +343,7 @@ private function emitTk( byval x as integer ) as integer
 		ln += " "
 		ln += *tkGetText( x )
 		emitParamListAndResultType( x, ln )
-		emitStmt( ln )
+		emitStmt( ln, comment )
 
 	case TK_EOL, TK_DIVIDER
 		emitEol( )
@@ -361,11 +369,6 @@ private function emitTk( byval x as integer ) as integer
 		emit( "/'" )
 		emit( tkGetText( x ) )
 		emit( "'/" )
-		x += 1
-
-	case TK_LINECOMMENT
-		emit( "''" )
-		emit( tkGetText( x ) )
 		x += 1
 
 	case TK_DECNUM

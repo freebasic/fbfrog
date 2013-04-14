@@ -141,9 +141,7 @@ end sub
 		lexLoadFile( 0, f->normed )
 		print "translating: ";f->normed
 
-		cPurgeInlineComments( )
 		cPPDirectives( )
-		cInsertDividers( )
 		cToplevel( )
 
 		emitWriteFile( pathStripExt( f->normed ) + ".bi" )

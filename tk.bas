@@ -41,7 +41,6 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	( NULL  , @"space"                ), _
 	( NULL  , @"eol"                  , TKFLAG_STMTSEP ), _
 	( NULL  , @"comment"              ), _
-	( NULL  , @"linecomment"          ), _
 	( NULL  , @"decnum"               ), _ '' Number literals
 	( NULL  , @"hexnum"               ), _
 	( NULL  , @"octnum"               ), _
@@ -291,6 +290,7 @@ end sub
 function tkDumpOne( byval x as integer ) as string
 	dim as ONETOKEN ptr p = any
 	dim as string s
+	dim as zstring ptr text = any
 
 	p = tkAccess( x )
 	s += str( x ) + " "
@@ -312,6 +312,11 @@ function tkDumpOne( byval x as integer ) as string
 
 	if( tkGetType( x ) <> TYPE_NONE ) then
 		s += " as " + emitType( x )
+	end if
+
+	text = tkGetComment( x )
+	if( text ) then
+		s += " '' " + *text
 	end if
 
 	function = s

@@ -178,7 +178,7 @@ private sub hReadLineComment( )
 		lex.i += 1
 	loop
 
-	hAddTextToken( TK_LINECOMMENT, begin )
+	hAddTextToken( TK_COMMENT, begin )
 end sub
 
 private sub hReadComment( )

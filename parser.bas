@@ -17,22 +17,29 @@ declare function cMultDecl _
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-private function hSkipFromBeginToEnd( byval x as integer ) as integer
+private function hSkipFromTo _
+	( _
+		byval x as integer, _
+		byval fromtk as integer, _
+		byval totk as integer, _
+		byval delta as integer _
+	) as integer
+
 	dim as integer level = any
 
-	assert( tkGet( x ) = TK_BEGIN )
+	assert( tkGet( x ) = fromtk )
 
 	level = 0
 	do
-		x += 1
+		x += delta
 
 		assert( tkGet( x ) <> TK_EOF )
 
 		select case( tkGet( x ) )
-		case TK_BEGIN
+		case fromtk
 			level += 1
 
-		case TK_END
+		case totk
 			if( level = 0 ) then
 				exit do
 			end if
@@ -51,10 +58,10 @@ private function ppSkip( byval x as integer ) as integer
 		x += 1
 
 		select case( tkGet( x ) )
-		case TK_SPACE, TK_COMMENT, TK_LINECOMMENT
+		case TK_SPACE, TK_COMMENT
 
 		case TK_BEGIN
-			x = hSkipFromBeginToEnd( x )
+			x = hSkipFromTo( x, TK_BEGIN, TK_END, 1 )
 
 		'' Escaped EOLs don't end PP directives, though normal EOLs do
 		'' '\' [Space] EOL
@@ -96,10 +103,43 @@ private function cSkip( byval x as integer ) as integer
 		x += 1
 
 		select case( tkGet( x ) )
-		case TK_SPACE, TK_COMMENT, TK_LINECOMMENT, TK_EOL
+		case TK_SPACE, TK_COMMENT, TK_EOL
 
 		case TK_BEGIN
-			x = hSkipFromBeginToEnd( x )
+			x = hSkipFromTo( x, TK_BEGIN, TK_END, 1 )
+
+		case else
+			exit do
+		end select
+	loop
+
+	function = x
+end function
+
+private function cSkipSpaceAndComments( byval x as integer ) as integer
+	do
+		x += 1
+
+		select case( tkGet( x ) )
+		case TK_SPACE, TK_COMMENT
+
+		case else
+			exit do
+		end select
+	loop
+
+	function = x
+end function
+
+private function cSkipRev( byval x as integer ) as integer
+	do
+		x -= 1
+
+		select case( tkGet( x ) )
+		case TK_SPACE, TK_COMMENT, TK_EOL
+
+		case TK_END
+			x = hSkipFromTo( x, TK_END, TK_BEGIN, -1 )
 
 		case else
 			exit do
@@ -175,26 +215,34 @@ end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-'' Remove all comments unless they're at EOL
-sub cPurgeInlineComments( )
-	dim as integer x = any
+private function hCollectComments _
+	( _
+		byval first as integer, _
+		byval last as integer _
+	) as string
 
-	x = 0
-	do
-		select case( tkGet( x ) )
-		case TK_COMMENT
-			if( tkIsStmtSep( x + 1 ) = FALSE ) then
-				tkRemove( x, x )
-				x -= 1
+	dim as string s
+	dim as zstring ptr text = any
+
+	'' Collect all comment text from a range of tokens and merge it into
+	'' one string, which can be used
+	for i as integer = first to last
+		if( tkGet( i ) = TK_COMMENT ) then
+			text = tkGetText( i )
+		else
+			text = tkGetComment( i )
+		end if
+
+		if( text ) then
+			if( len( s ) > 0 ) then
+				s += " | "
 			end if
+			s += *text
+		end if
+	next
 
-		case TK_EOF
-			exit do
-		end select
-
-		x += 1
-	loop
-end sub
+	function = s
+end function
 
 private function ppDirective( byval x as integer ) as integer
 	dim as integer begin = any
@@ -316,6 +364,53 @@ private function ppUnknownDirective( byval x as integer ) as integer
 	function = x
 end function
 
+'' Merge empty lines into TK_DIVIDER, and also look for comments that are
+'' surrounded by empty lines. We can assume to start at BOL, as cPPDirectives()
+'' effectively parses one line after another.
+function ppDivider( byval x as integer ) as integer
+	dim as integer lines = any, commentline = any, begin = any
+	dim as string comment
+
+	begin = x
+
+	'' Count empty lines in a row, while allowing only 1 line with comments
+	lines = 0
+	commentline = -1
+	do
+		select case( tkGet( x ) )
+		case TK_COMMENT
+			'' Did we already find comments in a previous line?
+			if( commentline >= 0 ) then
+				exit do
+			end if
+
+			commentline = lines
+
+		case TK_EOL
+			lines += 1
+
+		case TK_SPACE
+
+		case else
+			exit do
+		end select
+
+		x += 1
+	loop
+
+	if( lines < 2 ) then
+		return -1
+	end if
+
+	comment = hCollectComments( begin, x - 1 )
+	tkRemove( begin, x - 1 )
+	tkInsert( begin, TK_DIVIDER )
+	tkSetComment( begin, comment )
+	x = begin + 1
+
+	function = x
+end function
+
 sub cPPDirectives( )
 	dim as integer x = any, old = any
 
@@ -333,29 +428,13 @@ sub cPPDirectives( )
 			continue while
 		end if
 
-		x = ppSkip( ppSkipToEOL( old ) )
-	wend
-end sub
-
-''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-
-sub cInsertDividers( )
-	dim as integer x = any, y = any
-
-	x = ppSkip( -1 )
-	while( tkGet( x ) <> TK_EOF )
-		if( (tkGet( x           ) = TK_EOL) and _
-		    (tkGet( ppSkip( x ) ) = TK_EOL) ) then
-			y = x
-			while( tkGet( y ) = TK_EOL )
-				y = ppSkip( y )
-			wend
-			tkRemove( x, y - 1 )
-			tkInsert( x, TK_DIVIDER )
-			x += 1
-		else
-			x = ppSkip( x )
+		x = ppDivider( old )
+		if( x >= 0 ) then
+			continue while
 		end if
+
+		'' Skip to next line
+		x = ppSkip( ppSkipToEOL( old ) )
 	wend
 end sub
 
@@ -465,10 +544,10 @@ end function
 
 '' {STRUCT|UNION} [Identifier] '{' StructBody '}'
 private function cStructCompound( byval x as integer ) as integer
-	dim as integer begin = any
-	dim as string id
+	dim as integer head = any, tail = any
+	dim as string id, comment
 
-	begin = x
+	head = x
 
 	'' {STRUCT|UNION}
 	select case( tkGet( x ) )
@@ -492,17 +571,15 @@ private function cStructCompound( byval x as integer ) as integer
 	x = cSkip( x )
 
 	if( parser.dryrun = FALSE ) then
-		tkRemove( begin, x - 1 )
-		tkInsert( begin, TK_STRUCT, id )
-		begin += 1
-		tkInsert( begin, TK_BEGIN )
-		begin += 1
-		x = begin
+		tkRemove( head, x - 1 )
+		tkInsert( head, TK_STRUCT, id )
+		head += 1
+		x = head
 	end if
 
 	x = cStructBody( x )
 
-	begin = x
+	tail = x
 
 	'' '}'
 	if( tkGet( x ) <> TK_RBRACE ) then
@@ -514,13 +591,24 @@ private function cStructCompound( byval x as integer ) as integer
 	if( tkGet( x ) <> TK_SEMI ) then
 		return -1
 	end if
+	comment = hCollectComments( x, cSkipSpaceAndComments( x ) - 1 )
 	x = cSkip( x )
 
 	if( parser.dryrun = FALSE ) then
-		tkRemove( begin, x - 1 )
-		tkInsert( begin, TK_END )
-		begin += 1
-		x = begin
+		'' TK_BEGIN/END should be inserted together in one go, because
+		'' the field parsing may need to look ahead/back; that would
+		'' break if the token buffer is in an inconsistent state.
+		tkInsert( head, TK_BEGIN )
+		head += 1
+		tail += 1
+		x += 1
+
+		tkRemove( tail, x - 1 )
+		tkInsert( tail, TK_END )
+		tail += 1
+		x = tail
+
+		tkSetComment( cSkipRev( x ), comment )
 	end if
 
 	function = x
@@ -937,6 +1025,13 @@ private function cMultDecl _
 		if( parser.dryrun ) then
 			x = cSkip( x )
 		else
+			'' Find any comments following behind the ';' but still
+			'' in front of the next EOL, and assign them to this
+			'' high-level construct
+			tkSetComment( cSkipRev( x ), _
+				hCollectComments( x, _
+					cSkipSpaceAndComments( x ) - 1 ) )
+
 			tkRemove( x, cSkip( x ) - 1 )
 		end if
 	end select

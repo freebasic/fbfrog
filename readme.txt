@@ -123,6 +123,8 @@ To do:
 - Add "presets", custom hard-coded header-specific translation helpers for
   fixups before and after normal translation (e.g. renaming symbols)
 
+- Allow registering type mappings dynamically, with built-in types added by default
+  so we could remap custom types such as myint32 -> long (if wanted)
 
 - Add #if evaluation function, to solve out useless #if blocks (that's pretty
   common for C headers which support tons of different C compilers/systems,

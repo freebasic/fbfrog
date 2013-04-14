@@ -122,8 +122,7 @@ enum
 	TK_BYTE         '' For stray bytes that don't fit in elsewhere
 	TK_SPACE        '' Spaces/tabs (merged)
 	TK_EOL
-	TK_COMMENT      '' /* ... */
-	TK_LINECOMMENT  '' // ...
+	TK_COMMENT
 
 	'' Number literals
 	TK_DECNUM
@@ -340,9 +339,7 @@ declare function emitType( byval x as integer ) as string
 declare sub emitWriteFile( byref filename as string )
 declare sub emitStats( )
 
-declare sub cPurgeInlineComments( )
 declare sub cPPDirectives( )
-declare sub cInsertDividers( )
 declare sub cToplevel( )
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
