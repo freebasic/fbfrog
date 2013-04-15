@@ -116,9 +116,14 @@ private function cSkip( byval x as integer ) as integer
 	function = x
 end function
 
-private function cSkipSpaceAndComments( byval x as integer ) as integer
+private function cSkipSpaceAndComments _
+	( _
+		byval x as integer, _
+		byval delta as integer = 1 _
+	) as integer
+
 	do
-		x += 1
+		x += delta
 
 		select case( tkGet( x ) )
 		case TK_SPACE, TK_COMMENT
@@ -215,6 +220,25 @@ end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
+private function hCount _
+	( _
+		byval tk as integer, _
+		byval first as integer, _
+		byval last as integer _
+	) as integer
+
+	dim as integer count = any
+
+	count = 0
+	for i as integer = first to last
+		if( tkGet( i ) = tk ) then
+			count += 1
+		end if
+	next
+
+	function = count
+end function
+
 private function hCollectComments _
 	( _
 		byval first as integer, _
@@ -235,7 +259,7 @@ private function hCollectComments _
 
 		if( text ) then
 			if( len( s ) > 0 ) then
-				s += " | "
+				s += !"\n"
 			end if
 			s += *text
 		end if
@@ -243,6 +267,94 @@ private function hCollectComments _
 
 	function = s
 end function
+
+private function hIsBeforeEol _
+	( _
+		byval x as integer, _
+		byval delta as integer _
+	) as integer
+
+	function = TRUE
+
+	do
+		x += delta
+
+		select case( tkGet( x ) )
+		case TK_SPACE, TK_COMMENT
+
+		case TK_EOL, TK_EOF
+			exit do
+
+		case else
+			'' High-level tokens count as separate lines
+			function = tkIsStmtSep( x )
+			exit do
+		end select
+	loop
+
+end function
+
+private sub hAccumComment( byval x as integer, byref comment as string )
+	dim as zstring ptr s = any
+	dim as string text
+
+	s = tkGetComment( x )
+	if( s ) then
+		text = *s + !"\n"
+	end if
+
+	text += comment
+
+	tkSetComment( x, text )
+end sub
+
+private sub hAccumTkComment( byval x as integer, byval comment as integer )
+	assert( tkGet( comment ) = TK_COMMENT )
+	hAccumComment( x, *tkGetText( comment ) )
+end sub
+
+sub cAssignComments( )
+	dim as integer x = any, at_bol = any, at_eol = any
+
+	x = 0
+	do
+		select case( tkGet( x ) )
+		case TK_EOF
+			exit do
+
+		case TK_COMMENT
+			'' a) comment at EOL, behind code
+			'' b) comment at BOL, in front of code, or above code
+			''    and not separated with an empty line
+			'' c) comment alone in line, followed by empty line
+			'' d) comment in the middle of code in a line
+			at_bol = hIsBeforeEol( x, -1 )
+			at_eol = hIsBeforeEol( x,  1 )
+
+			if( at_bol and at_eol ) then
+				if( hCount( TK_EOL, x + 1, cSkip( x ) ) >= 2 ) then
+					hAccumTkComment( cSkipSpaceAndComments( x ), x )
+				else
+					hAccumTkComment( cSkip( x ), x )
+				end if
+			elseif( at_bol ) then
+				hAccumTkComment( cSkipSpaceAndComments( x ), x )
+			elseif( at_eol ) then
+				hAccumTkComment( cSkipSpaceAndComments( x, -1 ), x )
+			else
+				hAccumTkComment( cSkipSpaceAndComments( x ), x )
+			end if
+
+			tkRemove( x, x )
+			x -= 1
+
+		end select
+
+		x += 1
+	loop
+end sub
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 private function ppDirective( byval x as integer ) as integer
 	dim as integer begin = any
@@ -368,24 +480,15 @@ end function
 '' surrounded by empty lines. We can assume to start at BOL, as cPPDirectives()
 '' effectively parses one line after another.
 function ppDivider( byval x as integer ) as integer
-	dim as integer lines = any, commentline = any, begin = any
+	dim as integer lines = any, begin = any
 	dim as string comment
 
 	begin = x
 
 	'' Count empty lines in a row, while allowing only 1 line with comments
 	lines = 0
-	commentline = -1
 	do
 		select case( tkGet( x ) )
-		case TK_COMMENT
-			'' Did we already find comments in a previous line?
-			if( commentline >= 0 ) then
-				exit do
-			end if
-
-			commentline = lines
-
 		case TK_EOL
 			lines += 1
 
@@ -406,7 +509,7 @@ function ppDivider( byval x as integer ) as integer
 	tkRemove( begin, x - 1 )
 	tkInsert( begin, TK_DIVIDER )
 	tkSetComment( begin, comment )
-	x = begin + 1
+	x = cSkip( begin )
 
 	function = x
 end function
@@ -571,8 +674,10 @@ private function cStructCompound( byval x as integer ) as integer
 	x = cSkip( x )
 
 	if( parser.dryrun = FALSE ) then
+		comment = hCollectComments( head, x - 1 )
 		tkRemove( head, x - 1 )
 		tkInsert( head, TK_STRUCT, id )
+		tkSetComment( head, comment )
 		head += 1
 		x = head
 	end if
@@ -591,7 +696,6 @@ private function cStructCompound( byval x as integer ) as integer
 	if( tkGet( x ) <> TK_SEMI ) then
 		return -1
 	end if
-	comment = hCollectComments( x, cSkipSpaceAndComments( x ) - 1 )
 	x = cSkip( x )
 
 	if( parser.dryrun = FALSE ) then
@@ -603,12 +707,12 @@ private function cStructCompound( byval x as integer ) as integer
 		tail += 1
 		x += 1
 
+		comment = hCollectComments( tail, x - 1 )
 		tkRemove( tail, x - 1 )
 		tkInsert( tail, TK_END )
+		tkSetComment( tail, comment )
 		tail += 1
 		x = tail
-
-		tkSetComment( cSkipRev( x ), comment )
 	end if
 
 	function = x
@@ -785,11 +889,15 @@ end function
 
 ''    '...' | MultDecl{Param}
 private function cParamDecl( byval x as integer ) as integer
+	dim as string comment
+
 	'' '...'?
 	if( tkGet( x ) = TK_ELLIPSIS ) then
 		if( parser.dryrun = FALSE ) then
+			comment = hCollectComments( x, cSkip( x ) - 1 )
 			tkRemove( x, cSkip( x ) - 1 )
 			tkInsert( x, TK_PARAMVARARG )
+			tkSetComment( x, comment )
 		end if
 		x = cSkip( x )
 	else
@@ -831,7 +939,7 @@ private function cDeclElement _
 
 	dim as integer begin = any
 	dim as integer dtype = any, is_procptr = any, has_params = any
-	dim as string id
+	dim as string id, comment
 
 	begin = x
 	dtype = basedtype
@@ -915,8 +1023,10 @@ private function cDeclElement _
 	end if
 
 	if( parser.dryrun = FALSE ) then
+		comment = hCollectComments( begin, x - 1 )
 		tkRemove( begin, x - 1 )
 		tkInsert( begin, decl, id )
+		tkSetComment( begin, comment )
 		tkSetType( begin, dtype, basesubtype )
 		begin += 1
 		x = begin
@@ -1025,10 +1135,7 @@ private function cMultDecl _
 		if( parser.dryrun ) then
 			x = cSkip( x )
 		else
-			'' Find any comments following behind the ';' but still
-			'' in front of the next EOL, and assign them to this
-			'' high-level construct
-			tkSetComment( cSkipRev( x ), _
+			hAccumComment( cSkipRev( x ), _
 				hCollectComments( x, _
 					cSkipSpaceAndComments( x ) - 1 ) )
 
@@ -1091,6 +1198,13 @@ private sub hToplevel( )
 	dim as integer x = any, old = any
 
 	x = cSkip( -1 )
+
+	'' Prune space at BOF
+	if( parser.dryrun = FALSE ) then
+		tkRemove( 0, x - 1 )
+		x = 0
+	end if
+
 	while( tkGet( x ) <> TK_EOF )
 		old = x
 

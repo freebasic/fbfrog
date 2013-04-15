@@ -316,7 +316,7 @@ function tkDumpOne( byval x as integer ) as string
 
 	text = tkGetComment( x )
 	if( text ) then
-		s += " '' " + *text
+		s += " comment(""" + *text + """)"
 	end if
 
 	function = s

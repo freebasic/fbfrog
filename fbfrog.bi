@@ -339,6 +339,7 @@ declare function emitType( byval x as integer ) as string
 declare sub emitWriteFile( byref filename as string )
 declare sub emitStats( )
 
+declare sub cAssignComments( )
 declare sub cPPDirectives( )
 declare sub cToplevel( )
 

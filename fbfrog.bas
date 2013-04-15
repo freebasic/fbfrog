@@ -141,6 +141,7 @@ end sub
 		lexLoadFile( 0, f->normed )
 		print "translating: ";f->normed
 
+		cAssignComments( )
 		cPPDirectives( )
 		cToplevel( )
 
