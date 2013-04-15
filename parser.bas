@@ -1144,6 +1144,8 @@ private function cMultDecl _
 	end select
 
 	if( parser.dryrun = FALSE ) then
+		hAccumComment( typeend, _
+			hCollectComments( typebegin, typeend - 1 ) )
 		tkRemove( typebegin, typeend - 1 )
 		x -= typeend - typebegin
 	end if
