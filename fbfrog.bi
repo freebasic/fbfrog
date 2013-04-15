@@ -387,3 +387,9 @@ end type
 extern as FROGSTUFF frog
 
 declare sub oops( byref message as string )
+declare function strReplace _
+	( _
+		byref text as string, _
+		byref a as string, _
+		byref b as string _
+	) as string

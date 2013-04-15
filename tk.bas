@@ -289,7 +289,7 @@ end sub
 
 function tkDumpOne( byval x as integer ) as string
 	dim as ONETOKEN ptr p = any
-	dim as string s
+	dim as string s, comment
 	dim as zstring ptr text = any
 
 	p = tkAccess( x )
@@ -316,7 +316,11 @@ function tkDumpOne( byval x as integer ) as string
 
 	text = tkGetComment( x )
 	if( text ) then
-		s += " comment(""" + *text + """)"
+		comment = strReplace( *text, !"\n", "\n" )
+		if( len( comment ) > 40 ) then
+			comment = left( comment, 40 ) + "..."
+		end if
+		s += " comment(" + comment + ")"
 	end if
 
 	function = s

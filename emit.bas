@@ -67,11 +67,25 @@ private sub emitStmtBegin( byref ln as string )
 end sub
 
 private sub emitStmt( byref ln as string, byref comment as string )
-	emitStmtBegin( ln )
 	if( len( comment ) > 0 ) then
-		emit( " ''" + comment )
+		'' Multi-line comment? Then emit it above the statement;
+		'' otherwise, behind it
+		if( instr( comment, !"\n" ) > 0 ) then
+			emitStmtBegin( "''" + strReplace( comment, !"\n", !"\n''" ) )
+			emitEol( )
+			emitStmtBegin( ln )
+			emitEol( )
+		else
+			emitStmtBegin( ln )
+			if( len( comment ) > 0 ) then
+				emit( " ''" + comment )
+			end if
+			emitEol( )
+		end if
+	else
+		emitStmtBegin( ln )
+		emitEol( )
 	end if
-	emitEol( )
 end sub
 
 function emitType( byval x as integer ) as string

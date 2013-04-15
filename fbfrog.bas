@@ -7,6 +7,42 @@ sub oops( byref message as string )
 	end 1
 end sub
 
+function strReplace _
+	( _
+		byref text as string, _
+		byref a as string, _
+		byref b as string _
+	) as string
+
+	dim as string keep, result
+	dim as integer alen = any, blen = any, i = any
+
+	result = text
+
+	alen = len( a )
+	blen = len( b )
+
+	i = 0
+	do
+		'' Does result contain an occurence of a?
+		i = instr( i + 1, result, a )
+		if( i = 0 ) then
+			exit do
+		end if
+
+		'' Cut out a and insert b in its place
+		'' result  =  front  +  b  +  back
+		keep = right( result, len( result ) - ((i - 1) + alen) )
+		result = left( result, i - 1 )
+		result += b
+		result += keep
+
+		i += blen - 1
+	loop
+
+	function = result
+end function
+
 private sub frogEnd( )
 	tkStats( )
 	end 0
