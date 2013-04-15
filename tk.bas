@@ -503,6 +503,7 @@ sub tkSetType _
 
 	p = tkAccess( x )
 	if( p->id <> TK_EOF ) then
+		deallocate( p->subtype )
 		p->dtype = dtype
 		p->subtype = strDuplicate( subtype )
 	end if
@@ -573,6 +574,7 @@ sub tkSetComment( byval x as integer, byval comment as zstring ptr )
 	dim as ONETOKEN ptr p = any
 	p = tkAccess( x )
 	if( p->id <> TK_EOF ) then
+		deallocate( p->comment )
 		p->comment = strDuplicate( comment )
 	end if
 end sub
