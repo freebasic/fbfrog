@@ -187,6 +187,11 @@ private function cFindClosingParen( byval x as integer ) as integer
 		case TK_EOF
 			exit do
 
+		case else
+			if( tkIsStmtSep( x ) ) then
+				exit do
+			end if
+
 		end select
 	loop
 
