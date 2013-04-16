@@ -362,7 +362,7 @@ end sub
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 private function ppDirective( byval x as integer ) as integer
-	dim as integer begin = any
+	dim as integer begin = any, tk = any
 	dim as string text
 
 	begin = x
@@ -378,7 +378,8 @@ private function ppDirective( byval x as integer ) as integer
 	end if
 	x = ppSkip( x )
 
-	select case( tkGet( x ) )
+	tk = tkGet( x )
+	select case( tk )
 	'' DEFINE Identifier ['(' ParameterList ')'] Body Eol .
 	case KW_DEFINE
 		'' DEFINE
@@ -424,6 +425,41 @@ private function ppDirective( byval x as integer ) as integer
 
 		tkRemove( begin, x )
 		tkInsert( begin, TK_PPINCLUDE, text )
+		begin += 1
+		x = begin
+
+	case KW_IFDEF, KW_IFNDEF
+		x = ppSkip( x )
+
+		if( tk = KW_IFDEF ) then
+			tk = TK_PPIFDEF
+		else
+			tk = TK_PPIFNDEF
+		end if
+
+		'' Identifier?
+		if( tkGet( x ) <> TK_ID ) then
+			return -1
+		end if
+		text = *tkGetText( x )
+		x = ppSkip( x )
+
+		tkRemove( begin, x - 1 )
+		tkInsert( begin, tk, text )
+		begin += 1
+		x = begin
+
+	case KW_ELSE, KW_ENDIF
+		x = ppSkip( x )
+
+		if( tk = KW_ELSE ) then
+			tk = TK_PPELSE
+		else
+			tk = TK_PPENDIF
+		end if
+
+		tkRemove( begin, x - 1 )
+		tkInsert( begin, tk )
 		begin += 1
 		x = begin
 

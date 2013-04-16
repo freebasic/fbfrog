@@ -299,6 +299,22 @@ private function emitTk( byval x as integer ) as integer
 
 		emitEol( )
 
+	case TK_PPIFDEF
+		emitStmt( "#ifdef """ + *tkGetText( x ) + """", comment )
+		x += 1
+
+	case TK_PPIFNDEF
+		emitStmt( "#ifndef """ + *tkGetText( x ) + """", comment )
+		x += 1
+
+	case TK_PPELSE
+		emitStmt( "#else", comment )
+		x += 1
+
+	case TK_PPENDIF
+		emitStmt( "#endif", comment )
+		x += 1
+
 	case TK_STRUCT
 		ln = "type"
 		s = tkGetText( x )
