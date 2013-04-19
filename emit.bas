@@ -280,7 +280,7 @@ private function emitTk( byval x as integer ) as integer
 		x += 1
 
 	case TK_PPDEFINE
-		emitStmtBegin( "#define " + *tkGetText( x ) )
+		emitStmtBegin( "#define " + *tkGetText( x ) + " " )
 
 		'' PPDefine
 		x += 1
