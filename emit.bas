@@ -300,11 +300,11 @@ private function emitTk( byval x as integer ) as integer
 		emitEol( )
 
 	case TK_PPIFDEF
-		emitStmt( "#ifdef """ + *tkGetText( x ) + """", comment )
+		emitStmt( "#ifdef " + *tkGetText( x ), comment )
 		x += 1
 
 	case TK_PPIFNDEF
-		emitStmt( "#ifndef """ + *tkGetText( x ) + """", comment )
+		emitStmt( "#ifndef " + *tkGetText( x ), comment )
 		x += 1
 
 	case TK_PPELSE
