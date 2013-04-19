@@ -1,66 +1,119 @@
-dim shared as integer a
-dim shared as uinteger a
+dim shared a as long
+dim shared a as ulong
 
-dim shared as integer a
-dim shared as integer a
-dim shared as uinteger a
+dim shared a as zstring
+dim shared a as byte
+dim shared a as ubyte
 
-dim shared as long a
-dim shared as long a
-dim shared as ulong a
+dim shared a as short
+dim shared a as short
+dim shared a as ushort
 
-dim shared as long a
-dim shared as long a
-dim shared as ulong a
+dim shared a as short
+dim shared a as short
+dim shared a as ushort
 
-dim shared as longint a
-dim shared as longint a
-dim shared as ulongint a
+dim shared a as long
+dim shared a as long
+dim shared a as ulong
 
-dim shared as longint a
-dim shared as longint a
-dim shared as ulongint a
+'' TODO: unknown construct (sorry)
+static          long a;
+static   signed long a;
+static unsigned long a;
 
-dim shared as single a
-dim shared as double a
+'' TODO: unknown construct (sorry)
+static          long int a;
+static   signed long int a;
+static unsigned long int a;
 
-dim shared as __int8 a
-dim shared as __int32 a
-dim shared as __int64 a
+dim shared a as longint
+dim shared a as longint
+dim shared a as ulongint
 
- dim shared as int8_t a
-dim shared as uint8_t a
- dim shared as int32_t a
-dim shared as uint32_t a
- dim shared as int64_t a
-dim shared as uint64_t a
+dim shared a as longint
+dim shared a as longint
+dim shared a as ulongint
 
-dim shared as A a
-dim shared as A a
-dim shared as A a
-dim shared as A a
+dim shared a as single
+dim shared a as double
 
-'' Pointers
+dim shared a as __int8
+dim shared a as __int32
+dim shared a as __int64
 
-dim shared as integer ptr a
-dim shared as integer ptr ptr ptr ptr a
-dim shared as integer ptr a : dim shared as integer ptr ptr b
+dim shared a as int8_t
+dim shared a as uint8_t
+dim shared a as int32_t
+dim shared a as uint32_t
+dim shared a as int64_t
+dim shared a as uint64_t
 
-'' Split up based on different ptrcount
-dim shared as integer a : dim shared as integer ptr b : dim shared as integer ptr ptr c
-dim shared as integer ptr ptr a : dim shared as integer ptr b : dim shared as integer c
-dim shared as integer a : dim shared as integer ptr b : dim shared as integer c
-dim shared as integer ptr a : dim shared as integer b : dim shared as integer ptr c
-dim shared as integer ptr a, b : dim shared as integer c
-dim shared as integer a : dim shared as integer ptr b, c
+dim shared a as A
+dim shared a as A
+dim shared a as A
+dim shared a as A
 
-'' CONSTness
-dim shared as const integer a
-dim shared as const integer a
-dim shared as const integer a
-dim shared as integer const ptr a
-dim shared as const integer const ptr a
-dim shared as const integer const ptr ptr ptr const ptr a
+dim shared a as zstring ptr
+dim shared a as const zstring ptr
+dim shared a as const ubyte ptr
+dim shared a as long ptr ptr ptr ptr
+dim shared a as long ptr
+dim shared b as long ptr ptr
+dim shared c as long
+dim shared d as long ptr ptr ptr ptr
+dim shared a as short
+dim shared a as const ulongint
+dim shared a as long const ptr
+dim shared b as long ptr
+dim shared c as long ptr ptr const ptr ptr
+dim shared a as const long
 
-'' Split up based on different ptr const mask
-dim shared as integer const ptr a : dim shared as integer ptr b : dim shared as integer ptr ptr const ptr ptr c
+'' int ptr ptr
+''
+dim shared a as long ptr ptr
+'' int ptr const ptr
+''
+dim shared a as long ptr const ptr
+'' int const ptr ptr
+''
+dim shared a as long const ptr ptr
+'' int const ptr const ptr
+''
+dim shared a as long const ptr const ptr
+'' const int ptr ptr
+''
+dim shared a as const long ptr ptr
+'' const int ptr const ptr
+''
+dim shared a as const long ptr const ptr
+'' const int const ptr ptr
+''
+dim shared a as const long const ptr ptr
+'' const int const ptr const ptr
+''
+dim shared a as const long const ptr const ptr
+'' const int ptr ptr
+''
+dim shared a as const long ptr ptr
+'' const int ptr const ptr
+''
+dim shared a as const long ptr const ptr
+'' const int const ptr ptr
+''
+dim shared a as const long const ptr ptr
+'' const int const ptr const ptr
+''
+dim shared a as const long const ptr const ptr
+'' const int ptr ptr
+''
+dim shared a as const long ptr ptr
+'' const int ptr const ptr
+''
+dim shared a as const long ptr const ptr
+'' const int const ptr ptr
+''
+dim shared a as const long const ptr ptr
+'' const int const ptr const ptr
+''
+dim shared a as const long const ptr const ptr

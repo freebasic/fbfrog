@@ -516,16 +516,15 @@ private function ppUnknownDirective( byval x as integer ) as integer
 	function = x
 end function
 
-'' Merge empty lines into TK_DIVIDER, and also look for comments that are
-'' surrounded by empty lines. We can assume to start at BOL, as cPPDirectives()
-'' effectively parses one line after another.
-function ppDivider( byval x as integer ) as integer
+'' Merge empty lines into TK_DIVIDER. We can assume to start at BOL,
+'' as cPPDirectives() effectively parses one line after another.
+private function ppDivider( byval x as integer ) as integer
 	dim as integer lines = any, begin = any
 	dim as string comment
 
 	begin = x
 
-	'' Count empty lines in a row, while allowing only 1 line with comments
+	'' Count empty lines in a row
 	lines = 0
 	do
 		select case( tkGet( x ) )
@@ -541,7 +540,7 @@ function ppDivider( byval x as integer ) as integer
 		x += 1
 	loop
 
-	if( lines < 2 ) then
+	if( lines < 1 ) then
 		return -1
 	end if
 
