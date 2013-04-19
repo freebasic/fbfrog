@@ -303,6 +303,10 @@ private sub hAccumComment( byval x as integer, byref comment as string )
 	dim as zstring ptr s = any
 	dim as string text
 
+	if( len( comment ) = 0 ) then
+		exit sub
+	end if
+
 	s = tkGetComment( x )
 	if( s ) then
 		text = *s + !"\n"

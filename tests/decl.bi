@@ -1,5 +1,5 @@
-'' variables
-extern     a as long
+
+extern     a as long '' variables
 dim shared a as long
 extern     a as long ptr
 dim shared a as long ptr
@@ -90,28 +90,28 @@ dim shared c as long ptr
 extern     d as long ptr ptr ptr
 dim shared d as long ptr ptr ptr
 
-declare sub f( )
+declare sub f( ) '' sub/function return types
 declare function f( ) as long
 declare function f( ) as long ptr
 declare function f( ) as UDT
 declare function f( ) as UDT ptr ptr
 
-declare sub f( )
+declare sub f( ) '' no parameters
 declare sub f( )
 
-declare sub f( byval a as long )
+declare sub f( byval a as long ) '' parameters
 declare sub f( byval a as long, byval b as long )
 declare sub f( byval a as long, byval b as long, byval c as long )
 declare sub f( byval a as long ptr, byval b as long ptr ptr ptr )
 
-declare sub f( byval as long )
+declare sub f( byval as long ) '' anonymous parameters
 declare sub f( byval as long, byval as long )
 declare sub f( byval as long, byval as long, byval as long )
 declare sub f( byval as long ptr, byval as long ptr ptr ptr )
 
-declare sub f( byval a as long, ... )
+declare sub f( byval a as long, ... ) '' vararg
 
-extern     a as sub( )
+extern     a as sub( ) '' procptr variables
 dim shared a as sub( )
 extern     a as function( byval as long ) as long
 dim shared a as function( byval as long ) as long
@@ -134,15 +134,16 @@ dim shared a as function( byval as long ) as long ptr ptr
 
 '' TODO: unknown construct (sorry)
 int (*f(void))(void);
-declare sub f( byval a as sub( ) )
+
+declare sub f( byval a as sub( ) ) '' procptr as param
 declare sub f( byval as sub( ) )
 
-extern     a as sub( byval a as sub( ) )
+extern     a as sub( byval a as sub( ) ) '' procptr with procptr as param
 dim shared a as sub( byval a as sub( ) )
 extern     p as function( byval as function( byval as long ptr ptr ptr ) as long ptr ptr ptr ) as long ptr ptr ptr
 dim shared p as function( byval as function( byval as long ptr ptr ptr ) as long ptr ptr ptr ) as long ptr ptr ptr
 
-extern     a as long
+extern     a as long '' variable/procptr/function
 dim shared a as long
 extern     a as function( ) as long ptr
 dim shared a as function( ) as long ptr
@@ -168,7 +169,7 @@ type C as function( byval as long ) as UDT
 
 type UDT
 
-	a as long
+	a as long '' fields
 	a as long ptr ptr
 	a as long
 	b as long
@@ -177,13 +178,13 @@ type UDT
 	c as long ptr
 	d as long ptr ptr ptr
 
-	declare sub f( )
+	declare sub f( ) '' methods
 	declare function f( ) as long
 	declare sub f( )
 	declare function f( ) as UDT ptr ptr
 	declare sub f( byval a as long ptr, byval b as long ptr ptr ptr )
 
-	a as sub( )
+	a as sub( ) '' procptr fields
 	a as function( byval as long ) as long
 	a as function( byval a as long ) as long
 	b as function( byval a as long ) as long
@@ -194,9 +195,9 @@ type UDT
 	d as function( byval a as long ) as long
 	a as function( byval as long ) as long ptr ptr
 
-	declare sub f( byval a as sub( ) )
+	declare sub f( byval a as sub( ) ) '' procptr as param
 	declare sub f( byval as sub( ) )
 
-	a as sub( byval a as sub( ) )
+	a as sub( byval a as sub( ) ) '' procptr with procptr as param
 	p as function( byval as function( byval as long ptr ptr ptr ) as long ptr ptr ptr ) as long ptr ptr ptr
 end type
