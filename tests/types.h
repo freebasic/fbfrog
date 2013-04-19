@@ -1,66 +1,109 @@
-signed a;
-unsigned a;
+static   signed a;
+static unsigned a;
 
-int a;
-signed int a;
-unsigned int a;
+static          int a;
+static   signed int a;
+static unsigned int a;
 
-long a;
-signed long a;
-unsigned long a;
+static          long a;
+static   signed long a;
+static unsigned long a;
 
-long int a;
-signed long int a;
-unsigned long int a;
+static          long int a;
+static   signed long int a;
+static unsigned long int a;
 
-long long a;
-signed long long a;
-unsigned long long a;
+static          long long a;
+static   signed long long a;
+static unsigned long long a;
 
-long long int a;
-signed long long int a;
-unsigned long long int a;
+static          long long int a;
+static   signed long long int a;
+static unsigned long long int a;
 
-float a;
-double a;
+static float a;
+static double a;
 
-__int8 a;
-__int32 a;
-__int64 a;
+static __int8 a;
+static __int32 a;
+static __int64 a;
 
- int8_t a;
-uint8_t a;
- int32_t a;
-uint32_t a;
- int64_t a;
-uint64_t a;
+static  int8_t a;
+static uint8_t a;
+static  int32_t a;
+static uint32_t a;
+static  int64_t a;
+static uint64_t a;
 
-A a;
-enum A a;
-union A a;
-struct A a;
+static A a;
+static enum A a;
+static union A a;
+static struct A a;
 
 // Pointers
+static int *a;
+static int ****a;
+static int *a, **b;
 
-int *a;
-int ****a;
-int *a, **b;
+static int   a,   b,   c;
+static int   a,   b,  *c;
+static int   a,   b, **c;
+static int   a,  *b,   c;
+static int   a,  *b,  *c;
+static int   a,  *b, **c;
+static int   a, **b,   c;
+static int   a, **b,  *c;
+static int   a, **b, **c;
+static int  *a,   b,   c;
+static int  *a,   b,  *c;
+static int  *a,   b, **c;
+static int  *a,  *b,   c;
+static int  *a,  *b,  *c;
+static int  *a,  *b, **c;
+static int  *a, **b,   c;
+static int  *a, **b,  *c;
+static int  *a, **b, **c;
+static int **a,   b,   c;
+static int **a,   b,  *c;
+static int **a,   b, **c;
+static int **a,  *b,   c;
+static int **a,  *b,  *c;
+static int **a,  *b, **c;
+static int **a, **b,   c;
+static int **a, **b,  *c;
+static int **a, **b, **c;
 
-// Split up based on different ptrcount
-int a, *b, **c;
-int **a, *b, c;
-int a, *b, c;
-int *a, b, *c;
-int *a, *b, c;
-int a, *b, *c;
+static int *const a, *b, ***const*c;
 
 // CONSTness
-const int a;
-int const a;
-const int const a;
-int * const a;
-int const * const a;
-const int const * const * * * const a;
 
-// Split up based on different ptr const mask
-int *const a, *b, ***const*c;
+static       int               a;
+static       int const         a;
+static const int               a;
+static const int const         a;
+
+static       int       *       a;
+static       int       * const a;
+static       int const *       a;
+static       int const * const a;
+static const int       *       a;
+static const int       * const a;
+static const int const *       a;
+static const int const * const a;
+
+static       int       *       *       a;
+static       int       *       * const a;
+static       int       * const *       a;
+static       int       * const * const a;
+static       int const *       *       a;
+static       int const *       * const a;
+static       int const * const *       a;
+static       int const * const * const a;
+static const int       *       *       a;
+static const int       *       * const a;
+static const int       * const *       a;
+static const int       * const * const a;
+static const int const *       *       a;
+static const int const *       * const a;
+static const int const * const *       a;
+static const int const * const * const a;

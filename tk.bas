@@ -315,7 +315,7 @@ function tkDumpOne( byval x as integer ) as string
 	end if
 
 	if( tkGetType( x ) <> TYPE_NONE ) then
-		s += " as " + emitType( x )
+		s += " as " + emitType( tkGetType( x ), tkGetSubtype( x ) )
 	end if
 
 	text = tkGetComment( x )

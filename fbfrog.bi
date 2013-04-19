@@ -339,7 +339,11 @@ declare function tkCount _
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 declare function lexLoadFile( byval x as integer, byref filename as string ) as integer
-declare function emitType( byval x as integer ) as string
+declare function emitType _
+	( _
+		byval dtype as integer, _
+		byval subtype as zstring ptr _
+	) as string
 declare sub emitWriteFile( byref filename as string )
 declare sub emitStats( )
 

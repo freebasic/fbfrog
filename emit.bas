@@ -88,7 +88,12 @@ private sub emitStmt( byref ln as string, byref comment as string )
 	end if
 end sub
 
-function emitType( byval x as integer ) as string
+function emitType _
+	( _
+		byval dtype as integer, _
+		byval subtype as zstring ptr _
+	) as string
+
 	static as zstring ptr types(0 to TYPE__COUNT-1) = _
 	{ _
 		NULL       , _
@@ -108,21 +113,21 @@ function emitType( byval x as integer ) as string
 	}
 
 	dim as string s
-	dim as integer dtype = any
+	dim as integer ptrcount = any
 
-	dtype = tkGetType( x )
+	ptrcount = typeGetPtrCount( dtype )
 
-	if( typeIsConstAt( dtype, 0 ) ) then
+	if( typeIsConstAt( dtype, ptrcount ) ) then
 		s += "const "
 	end if
 
 	if( typeGetDt( dtype ) = TYPE_UDT ) then
-		s += *tkGetSubtype( x )
+		s += *subtype
 	else
 		s += *types(typeGetDt( dtype ))
 	end if
 
-	for i as integer = 1 to typeGetPtrCount( dtype )
+	for i as integer = (ptrcount - 1) to 0 step -1
 		if( typeIsConstAt( dtype, i ) ) then
 			s += " const"
 		end if
@@ -184,7 +189,7 @@ private sub emitParamListAndResultType( byref x as integer, byref ln as string )
 
 	'' Function result type
 	if( tkGetType( x ) <> TYPE_ANY ) then
-		ln += " as " + emitType( x )
+		ln += " as " + emitType( tkGetType( x ), tkGetSubtype( x ) )
 	end if
 
 	'' Skip over the main token and its parameters, if any
@@ -230,7 +235,7 @@ private sub emitDecl _
 		ln += emitSubOrFunction( x )
 		emitParamListAndResultType( x, ln )
 	else
-		ln += emitType( x )
+		ln += emitType( tkGetType( x ), tkGetSubtype( x ) )
 		x += 1
 	end if
 end sub
