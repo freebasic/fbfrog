@@ -796,6 +796,33 @@ private function cSignMod _
 	function = x
 end function
 
+''
+'' Declaration base type parsing
+''
+'' The base type is the data type part of a variable/procedure/typedef/parameter
+'' declaration that is at the front, in front of the identifier list.
+'' '*' chars indicating pointers belong to the identifier, not the type.
+''
+''    int a, b, c;
+''    ^^^
+''
+''    struct UDT const *p, **pp;
+''    ^^^^^^^^^^^^^^^^
+''
+'' Besides the base type there can be modifiers such as "signed", "unsigned",
+'' "const", "short", "long". They can be used together with some base types,
+'' for example "short int a;", or alone: "short a;". Modifiers can appear in
+'' front of the base type or behind it, in any order. Some modifiers are
+'' incompatible to each-other, such as "signed" and "unsigned", or "short" and
+'' "long". There may only be 1 "short", and only 1 or 2 "long"s.
+''
+''    short int a;
+''    unsigned a;
+''    const int unsigned a;
+''    long const a;
+''    long long int a;
+''    const const unsigned long const long const int const unsigned a;
+''
 private function cBaseType _
 	( _
 		byval x as integer, _
@@ -803,139 +830,185 @@ private function cBaseType _
 		byref subtype as string _
 	) as integer
 
-	dim as integer sign = any
+	dim as integer sign = any, signedmods = any, unsignedmods = any
+	dim as integer constmods = any, shortmods = any, longmods = any
+	dim as integer basetypex = any, basetypetk = any
 
+	signedmods = 0
+	unsignedmods = 0
+	constmods = 0
+	shortmods = 0
+	longmods = 0
+	basetypex = -1
+	basetypetk = -1
 	dtype = TYPE_NONE
 	subtype = ""
 
-	'' [CONST]
-	x = cConstMod( x, dtype )
+	''
+	'' 1. Parse base type and all modifiers, and count them
+	''
 
-	'' [SIGNED|UNSIGNED]
-	x = cSignMod( x, sign )
+	do
+		select case as const( tkGet( x ) )
+		case KW_SIGNED
+			signedmods += 1
 
-	select case( tkGet( x ) )
-	case KW_ENUM, KW_STRUCT, KW_UNION
-		if( sign <> 0 ) then
-			return -1
-		end if
+		case KW_UNSIGNED
+			unsignedmods += 1
 
-		'' {ENUM|STRUCT|UNION}
-		x = cSkip( x )
+		case KW_CONST
+			constmods += 1
 
-		'' Identifier
-		if( tkGet( x ) <> TK_ID ) then
-			return -1
-		end if
-		dtype = typeSetDt( dtype, TYPE_UDT )
-		subtype = *tkGetText( x )
-		x = cSkip( x )
+		case KW_SHORT
+			shortmods += 1
 
-	case TK_ID
-		'' Disambiguation needed:
-		''    signed foo;       // foo = var id
-		''    signed foo, bar;  // foo = var id, bar = var id
-		''    signed foo(void); // foo = function id
-		''    signed foo[1];    // foo = array id
-		'' vs.
-		''    signed foo bar;   // foo = typedef, bar = var id
-		''    signed foo *bar;  // ditto
-		''    signed foo const bar;  // ditto
+		case KW_LONG
+			longmods += 1
 
-		select case( tkGet( cSkip( x ) ) )
-		case TK_SEMI, TK_COMMA, TK_STAR, TK_LPAREN, TK_LBRACKET
-			'' Treat the TK_ID as part of the vardecl;
-			'' SIGNED|UNSIGNED only produces an int
-			dtype = typeSetDt( dtype, TYPE_LONG )
 		case else
-			if( sign <> 0 ) then
-				return -1
+			'' Only one base type is allowed
+			if( basetypex >= 0 ) then
+				exit do
 			end if
 
-			'' Treat the TK_ID as the type (a typedef)
-			dtype = typeSetDt( dtype, TYPE_UDT )
-			subtype = *tkGetText( x )
-			x = cSkip( x )
+			select case as const( tkGet( x ) )
+			case KW_ENUM, KW_STRUCT, KW_UNION
+				'' {ENUM|STRUCT|UNION}
+				x = cSkip( x )
+
+				'' Identifier
+				if( tkGet( x ) <> TK_ID ) then
+					return -1
+				end if
+				basetypex = x
+
+			case TK_ID
+				'' Disambiguation needed:
+				''    signed foo;       // foo = var id
+				''    signed foo, bar;  // foo = var id, bar = var id
+				''    signed foo(void); // foo = function id
+				''    signed foo[1];    // foo = array id
+				'' vs.
+				''    signed foo bar;   // foo = typedef, bar = var id
+				''    signed foo *bar;  // ditto
+				''    signed foo const bar;  // ditto
+
+				select case( tkGet( cSkip( x ) ) )
+				case TK_SEMI, TK_COMMA, TK_STAR, TK_LPAREN, TK_LBRACKET
+					exit do
+				end select
+
+				'' Treat the TK_ID as the type (a typedef)
+				basetypex = x
+
+			case KW_VOID, KW_CHAR, KW_FLOAT, KW_DOUBLE, KW_INT
+				basetypex = x
+
+			case else
+				exit do
+			end select
 		end select
 
-	case KW_VOID
 		x = cSkip( x )
-		dtype = typeSetDt( dtype, TYPE_ANY )
+	loop
+
+	''
+	'' 2. Refuse invalid modifier combinations etc.
+	''
+
+	if( basetypex >= 0 ) then
+		basetypetk = tkGet( basetypex )
+	end if
+
+	'' Can't have both SIGNED and UNSIGNED
+	if( (signedmods > 0) and (unsignedmods > 0) ) then
+		return -1
+	end if
+
+	'' Neither both SHORT and LONG
+	if( (shortmods > 0) and (longmods > 0) ) then
+		return -1
+	end if
+
+	'' Max. 1 SHORT allowed, and 1 or 2 LONGs
+	if( (shortmods > 1) or (longmods > 2) ) then
+		return -1
+	end if
+
+	select case( basetypetk )
+	case TK_ID, KW_VOID, KW_FLOAT, KW_DOUBLE
+		'' No SIGNED|UNSIGNED|SHORT|LONG for UDTs/floats/void
+		'' (cannot be translated to FB)
+		if( signedmods or unsignedmods or shortmods or longmods ) then
+			return -1
+		end if
+
+		select case( basetypetk )
+		case TK_ID
+			dtype = TYPE_UDT
+			subtype = *tkGetText( basetypex )
+		case KW_VOID
+			dtype = TYPE_ANY
+		case KW_FLOAT
+			dtype = TYPE_SINGLE
+		case KW_DOUBLE
+			dtype = TYPE_DOUBLE
+		case else
+			assert( FALSE )
+		end select
 
 	case KW_CHAR
-		x = cSkip( x )
-		if( sign = 0 ) then
-			dtype = typeSetDt( dtype, TYPE_ZSTRING )
+		'' No SHORT|LONG CHAR allowed
+		if( shortmods or longmods ) then
+			return -1
+		end if
+
+		'' SIGNED|UNSIGNED CHAR becomes BYTE|UBYTE,
+		'' but plain CHAR probably means ZSTRING
+		if( signedmods > 0 ) then
+			dtype = TYPE_BYTE
+		elseif( unsignedmods > 0 ) then
+			dtype = TYPE_UBYTE
 		else
-			dtype = typeSetDt( dtype, TYPE_BYTE )
-		end if
-
-	case KW_FLOAT
-		x = cSkip( x )
-		dtype = typeSetDt( dtype, TYPE_SINGLE )
-
-	case KW_DOUBLE
-		x = cSkip( x )
-		dtype = typeSetDt( dtype, TYPE_DOUBLE )
-
-	case KW_SHORT
-		x = cSkip( x )
-		dtype = typeSetDt( dtype, TYPE_SHORT )
-
-		'' [INT]
-		if( tkGet( x ) = KW_INT ) then
-			x = cSkip( x )
-		end if
-
-	case KW_INT
-		x = cSkip( x )
-		dtype = typeSetDt( dtype, TYPE_LONG )
-
-	case KW_LONG
-		x = cSkip( x )
-		dtype = typeSetDt( dtype, TYPE_LONG )
-
-		'' [LONG]
-		if( tkGet( x ) = KW_LONG ) then
-			x = cSkip( x )
-			dtype = typeSetDt( dtype, TYPE_LONGINT )
-		end if
-
-		'' [INT]
-		if( tkGet( x ) = KW_INT ) then
-			x = cSkip( x )
+			dtype = TYPE_ZSTRING
 		end if
 
 	case else
-		if( sign = 0 ) then
+		'' Base type is "int" (either explicitly given, or implied
+		'' because no other base type was given). Any modifiers are
+		'' just added on top of that.
+		if( shortmods = 1 ) then
+			dtype = iif( unsignedmods > 0, TYPE_USHORT, TYPE_SHORT )
+		elseif( longmods = 1 ) then
+			'' TODO: How to handle translation of longs (32bit vs. 64bit)?
+			return -1
+		elseif( longmods = 2 ) then
+			dtype = iif( unsignedmods > 0, TYPE_ULONGINT, TYPE_LONGINT )
+		elseif( basetypetk = KW_INT ) then
+			'' Explicit "int" base type and no modifiers
+			dtype = iif( unsignedmods > 0, TYPE_ULONG, TYPE_LONG )
+		elseif( unsignedmods > 0 ) then
+			'' UNSIGNED only
+			dtype = TYPE_ULONG
+		elseif( signedmods > 0 ) then
+			'' SIGNED only
+			dtype = TYPE_LONG
+		else
+			'' No modifiers and no explicit "int" either
 			return -1
 		end if
 
-		'' SIGNED|UNSIGNED only produces an int
-		dtype = typeSetDt( dtype, TYPE_LONG )
-
 	end select
 
-	'' [CONST]
-	x = cConstMod( x, dtype )
-
-	if( sign = 0 ) then
-		select case( typeGetDt( dtype ) )
-		case TYPE_BYTE, TYPE_UBYTE, TYPE_SHORT  , TYPE_USHORT, _
-		     TYPE_LONG, TYPE_ULONG, TYPE_LONGINT, TYPE_ULONGINT
-			'' [SIGNED|UNSIGNED]
-			x = cSignMod( x, sign )
-		end select
+	'' Any CONSTs on the base type are merged into one
+	''    const int a;
+	''    const int const a;
+	''          int const a;
+	''    const const int const const a;
+	'' It's all the same...
+	if( constmods > 0 ) then
+		dtype = typeSetIsConst( dtype )
 	end if
-
-	if( sign > 0 ) then
-		dtype = typeToUnsigned( dtype )
-	elseif( sign < 0 ) then
-		dtype = typeToSigned( dtype )
-	end if
-
-	'' [CONST]
-	x = cConstMod( x, dtype )
 
 	function = x
 end function
