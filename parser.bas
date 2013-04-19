@@ -402,7 +402,6 @@ private function ppDirective( byval x as integer ) as integer
 		case TK_EOL, TK_EOF
 
 		case else
-
 			tkInsert( x, TK_BEGIN )
 			x += 1
 
@@ -776,6 +775,27 @@ private function cConstMod _
 	function = x
 end function
 
+private function cSignMod _
+	( _
+		byval x as integer, _
+		byref sign as integer _
+	) as integer
+
+	sign = 0
+
+	'' [SIGNED|UNSIGNED]
+	select case( tkGet( x ) )
+	case KW_SIGNED
+		sign = -1
+		x = cSkip( x )
+	case KW_UNSIGNED
+		sign = 1
+		x = cSkip( x )
+	end select
+
+	function = x
+end function
+
 private function cBaseType _
 	( _
 		byval x as integer, _
@@ -787,20 +807,12 @@ private function cBaseType _
 
 	dtype = TYPE_NONE
 	subtype = ""
-	sign = 0
 
 	'' [CONST]
 	x = cConstMod( x, dtype )
 
 	'' [SIGNED|UNSIGNED]
-	select case( tkGet( x ) )
-	case KW_SIGNED
-		sign = -1
-		x = cSkip( x )
-	case KW_UNSIGNED
-		sign = 1
-		x = cSkip( x )
-	end select
+	x = cSignMod( x, sign )
 
 	select case( tkGet( x ) )
 	case KW_ENUM, KW_STRUCT, KW_UNION
@@ -820,33 +832,43 @@ private function cBaseType _
 		x = cSkip( x )
 
 	case TK_ID
-		if( sign <> 0 ) then
-			return -1
-		end if
+		'' Disambiguation needed:
+		''    signed foo;       // foo = var id
+		''    signed foo, bar;  // foo = var id, bar = var id
+		''    signed foo(void); // foo = function id
+		''    signed foo[1];    // foo = array id
+		'' vs.
+		''    signed foo bar;   // foo = typedef, bar = var id
+		''    signed foo *bar;  // ditto
+		''    signed foo const bar;  // ditto
 
-		'' Identifier
-		dtype = typeSetDt( dtype, TYPE_UDT )
-		subtype = *tkGetText( x )
-		x = cSkip( x )
+		select case( tkGet( cSkip( x ) ) )
+		case TK_SEMI, TK_COMMA, TK_STAR, TK_LPAREN, TK_LBRACKET
+			'' Treat the TK_ID as part of the vardecl;
+			'' SIGNED|UNSIGNED only produces an int
+			dtype = typeSetDt( dtype, TYPE_LONG )
+		case else
+			if( sign <> 0 ) then
+				return -1
+			end if
+
+			'' Treat the TK_ID as the type (a typedef)
+			dtype = typeSetDt( dtype, TYPE_UDT )
+			subtype = *tkGetText( x )
+			x = cSkip( x )
+		end select
 
 	case KW_VOID
-		if( sign <> 0 ) then
-			return -1
-		end if
-
 		x = cSkip( x )
 		dtype = typeSetDt( dtype, TYPE_ANY )
 
 	case KW_CHAR
 		x = cSkip( x )
-		select case( sign )
-		case -1
-			dtype = typeSetDt( dtype, TYPE_BYTE )
-		case 1
-			dtype = typeSetDt( dtype, TYPE_UBYTE )
-		case else
+		if( sign = 0 ) then
 			dtype = typeSetDt( dtype, TYPE_ZSTRING )
-		end select
+		else
+			dtype = typeSetDt( dtype, TYPE_BYTE )
+		end if
 
 	case KW_FLOAT
 		x = cSkip( x )
@@ -858,11 +880,7 @@ private function cBaseType _
 
 	case KW_SHORT
 		x = cSkip( x )
-		if( sign > 0 ) then
-			dtype = typeSetDt( dtype, TYPE_USHORT )
-		else
-			dtype = typeSetDt( dtype, TYPE_SHORT )
-		end if
+		dtype = typeSetDt( dtype, TYPE_SHORT )
 
 		'' [INT]
 		if( tkGet( x ) = KW_INT ) then
@@ -871,28 +889,16 @@ private function cBaseType _
 
 	case KW_INT
 		x = cSkip( x )
-		if( sign > 0 ) then
-			dtype = typeSetDt( dtype, TYPE_ULONG )
-		else
-			dtype = typeSetDt( dtype, TYPE_LONG )
-		end if
+		dtype = typeSetDt( dtype, TYPE_LONG )
 
 	case KW_LONG
 		x = cSkip( x )
-		if( sign > 0 ) then
-			dtype = typeSetDt( dtype, TYPE_ULONG )
-		else
-			dtype = typeSetDt( dtype, TYPE_LONG )
-		end if
+		dtype = typeSetDt( dtype, TYPE_LONG )
 
 		'' [LONG]
 		if( tkGet( x ) = KW_LONG ) then
 			x = cSkip( x )
-			if( sign > 0 ) then
-				dtype = typeSetDt( dtype, TYPE_ULONGINT )
-			else
-				dtype = typeSetDt( dtype, TYPE_LONGINT )
-			end if
+			dtype = typeSetDt( dtype, TYPE_LONGINT )
 		end if
 
 		'' [INT]
@@ -901,8 +907,32 @@ private function cBaseType _
 		end if
 
 	case else
-		return -1
+		if( sign = 0 ) then
+			return -1
+		end if
+
+		'' SIGNED|UNSIGNED only produces an int
+		dtype = typeSetDt( dtype, TYPE_LONG )
+
 	end select
+
+	'' [CONST]
+	x = cConstMod( x, dtype )
+
+	if( sign = 0 ) then
+		select case( typeGetDt( dtype ) )
+		case TYPE_BYTE, TYPE_UBYTE, TYPE_SHORT  , TYPE_USHORT, _
+		     TYPE_LONG, TYPE_ULONG, TYPE_LONGINT, TYPE_ULONGINT
+			'' [SIGNED|UNSIGNED]
+			x = cSignMod( x, sign )
+		end select
+	end if
+
+	if( sign > 0 ) then
+		dtype = typeToUnsigned( dtype )
+	elseif( sign < 0 ) then
+		dtype = typeToSigned( dtype )
+	end if
 
 	'' [CONST]
 	x = cConstMod( x, dtype )

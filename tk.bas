@@ -1,6 +1,24 @@
 #include once "fbfrog.bi"
 #include once "crt.bi"
 
+function typeToSigned( byval dtype as integer ) as integer
+	select case( typeGetDtAndPtr( dtype ) )
+	case TYPE_UBYTE, TYPE_USHORT, TYPE_ULONG, TYPE_ULONGINT
+		dtype = typeGetConst( dtype ) or (typeGetDt( dtype ) - 1)
+	end select
+	function = dtype
+end function
+
+function typeToUnsigned( byval dtype as integer ) as integer
+	select case( typeGetDtAndPtr( dtype ) )
+	case TYPE_BYTE, TYPE_SHORT, TYPE_LONG, TYPE_LONGINT
+		dtype = typeGetConst( dtype ) or (typeGetDt( dtype ) + 1)
+	end select
+	function = dtype
+end function
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
 enum
 	TKFLAG_STMTSEP = &h1
 	TKFLAG_PROCPTR = &h2

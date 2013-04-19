@@ -287,6 +287,10 @@ const TYPEMAX_PTR = 8
 	(((dt) and TYPEMASK_DT) or _
 	 (((dt) and TYPEMASK_PTR) + (1 shl TYPEPOS_PTR)) or _
 	 (((dt) and TYPEMASK_CONST) shl 1))
+#define typeGetConst( dt ) ((dt) and TYPEMASK_CONST)
+
+declare function typeToSigned( byval dtype as integer ) as integer
+declare function typeToUnsigned( byval dtype as integer ) as integer
 
 declare function tkInfoText( byval tk as integer ) as zstring ptr
 
