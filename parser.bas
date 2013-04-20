@@ -9,6 +9,13 @@ end type
 dim shared as PARSERSTUFF parser
 
 declare function cStructCompound( byval x as integer ) as integer
+declare function cIdList _
+	( _
+		byval x as integer, _
+		byval decl as integer, _
+		byval basedtype as integer, _
+		byref basesubtype as string _
+	) as integer
 declare function cMultDecl _
 	( _
 		byval x as integer, _
@@ -714,12 +721,19 @@ private function cStructBody( byval x as integer ) as integer
 	function = x
 end function
 
-'' {STRUCT|UNION} [Identifier] '{' StructBody '}'
+'' [TYPEDEF] {STRUCT|UNION} [Identifier] '{' StructBody '}' [MultDecl] ';'
 private function cStructCompound( byval x as integer ) as integer
-	dim as integer head = any, tail = any
+	dim as integer head = any, is_typedef = any
 	dim as string id, comment
 
 	head = x
+	is_typedef = FALSE
+
+	'' TYPEDEF?
+	if( tkGet( x ) = KW_TYPEDEF ) then
+		x = cSkip( x )
+		is_typedef = TRUE
+	end if
 
 	'' {STRUCT|UNION}
 	select case( tkGet( x ) )
@@ -753,35 +767,43 @@ private function cStructCompound( byval x as integer ) as integer
 
 	x = cStructBody( x )
 
-	tail = x
-
-	'' '}'
-	if( tkGet( x ) <> TK_RBRACE ) then
-		return -1
-	end if
-	x = cSkip( x )
-
-	'' ';'
-	if( tkGet( x ) <> TK_SEMI ) then
-		return -1
-	end if
-	x = cSkip( x )
-
 	if( parser.dryrun = FALSE ) then
 		'' TK_BEGIN/END should be inserted together in one go, because
 		'' the field parsing may need to look ahead/back; that would
 		'' break if the token buffer is in an inconsistent state.
 		tkInsert( head, TK_BEGIN )
 		head += 1
-		tail += 1
 		x += 1
 
-		comment = hCollectComments( tail, x - 1 )
-		tkRemove( tail, x - 1 )
-		tkInsert( tail, TK_END )
-		tkSetComment( tail, comment )
-		tail += 1
-		x = tail
+		tkInsert( x, TK_END )
+		x += 1
+	end if
+
+	'' '}'
+	if( tkGet( x ) <> TK_RBRACE ) then
+		return -1
+	end if
+	if( parser.dryrun ) then
+		x = cSkip( x )
+	else
+		tkRemove( x, cSkip( x ) - 1 )
+	end if
+
+	if( is_typedef ) then
+		x = cIdList( x, TK_TYPEDEF, TYPE_UDT, id )
+		if( x < 0 ) then
+			return -1
+		end if
+	else
+		'' ';'
+		if( tkGet( x ) <> TK_SEMI ) then
+			return -1
+		end if
+		if( parser.dryrun ) then
+			x = cSkip( x )
+		else
+			tkRemove( x, cSkip( x ) - 1 )
+		end if
 	end if
 
 	function = x
@@ -1243,37 +1265,18 @@ private function cDeclElement _
 	function = x
 end function
 
-''
-'' Generic 'type *a, **b;' parsing, used for vars/fields/protos/params/typedefs
-'' ("multiple declaration" syntax)
-''    int i;
-''    int a, b, c;
-''    int *a, ***b, c;
-''    int f(void);
-''    int (*procptr)(void);
-''
-''    BaseType DeclElement (',' DeclElement)* [';']
-''
-private function cMultDecl _
+'' IdList = DeclElement (',' DeclElement)* [';']
+private function cIdList _
 	( _
 		byval x as integer, _
-		byval decl as integer _
+		byval decl as integer, _
+		byval basedtype as integer, _
+		byref basesubtype as string _
 	) as integer
-
-	dim as integer dtype = any, typebegin = any, typeend = any
-	dim as string subtype
-
-	'' BaseType
-	typebegin = x
-	x = cBaseType( x, dtype, subtype )
-	if( x < 0 ) then
-		return -1
-	end if
-	typeend = x
 
 	'' ... (',' ...)*
 	do
-		x = cDeclElement( x, decl, dtype, subtype )
+		x = cDeclElement( x, decl, basedtype, basesubtype )
 		if( x < 0 ) then
 			return -1
 		end if
@@ -1315,6 +1318,42 @@ private function cMultDecl _
 			tkRemove( x, cSkip( x ) - 1 )
 		end if
 	end select
+
+	function = x
+end function
+
+''
+'' Generic 'type *a, **b;' parsing, used for vars/fields/protos/params/typedefs
+'' ("multiple declaration" syntax)
+''    int i;
+''    int a, b, c;
+''    int *a, ***b, c;
+''    int f(void);
+''    int (*procptr)(void);
+''
+'' MultDecl = BaseType IdList
+''
+private function cMultDecl _
+	( _
+		byval x as integer, _
+		byval decl as integer _
+	) as integer
+
+	dim as integer dtype = any, typebegin = any, typeend = any
+	dim as string subtype
+
+	'' BaseType
+	typebegin = x
+	x = cBaseType( x, dtype, subtype )
+	if( x < 0 ) then
+		return -1
+	end if
+	typeend = x
+
+	x = cIdList( x, decl, dtype, subtype )
+	if( x < 0 ) then
+		return -1
+	end if
 
 	if( parser.dryrun = FALSE ) then
 		hAccumComment( typeend, _
