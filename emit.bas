@@ -68,13 +68,15 @@ end sub
 
 private sub emitStmt( byref ln as string, byref comment as string )
 	if( len( comment ) > 0 ) then
-		'' Multi-line comment? Then emit it above the statement;
-		'' otherwise, behind it
+		'' Multi-line comment? Then emit it above the statement, if any;
+		'' otherwise, behind it (or at BOL, if no statement)
 		if( instr( comment, !"\n" ) > 0 ) then
 			emitStmtBegin( "''" + strReplace( comment, !"\n", !"\n''" ) )
 			emitEol( )
-			emitStmtBegin( ln )
-			emitEol( )
+			if( len( ln ) > 0 ) then
+				emitStmtBegin( ln )
+				emitEol( )
+			end if
 		else
 			emitStmtBegin( ln )
 			if( len( comment ) > 0 ) then
