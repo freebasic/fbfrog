@@ -80,7 +80,11 @@ private sub emitStmt( byref ln as string, byref comment as string )
 		else
 			emitStmtBegin( ln )
 			if( len( comment ) > 0 ) then
-				emit( " ''" + comment )
+				'' Separate comment with a space if not a BOL
+				if( len( ln ) > 0 ) then
+					emit( " " )
+				end if
+				emit( "''" + comment )
 			end if
 			emitEol( )
 		end if
