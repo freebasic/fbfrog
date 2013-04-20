@@ -323,7 +323,7 @@ private sub hAccumTkComment( byval x as integer, byval comment as integer )
 end sub
 
 sub cAssignComments( )
-	dim as integer x = any, at_bol = any, at_eol = any
+	dim as integer x = any, y = any, at_bol = any, at_eol = any
 
 	x = 0
 	do
@@ -332,19 +332,45 @@ sub cAssignComments( )
 			exit do
 
 		case TK_COMMENT
-			'' a) comment at EOL, behind code
-			'' b) comment at BOL, in front of code, or above code
-			''    and not separated with an empty line
-			'' c) comment alone in line, followed by empty line
-			'' d) comment in the middle of code in a line
+			''
+			'' int A; //FOO    -> assign FOO to ';', so it can be
+			''                    picked up by the A vardecl
+			''
+			''  /*FOO*/ int A; -> assign FOO to 'int', ditto
+			''
+			'' //FOO           -> assign FOO to EOL, so it can be
+			'' <empty line>       picked up by a TK_DIVIDER
+			''
+			'' //FOO           -> assign FOO to EOL, ditto
+			'' int A;
+			'' <empty line>
+			''
+			'' //FOO           -> comment belongs to both A and B,
+			'' int A;             assign to EOL for a TK_DIVIDER
+			'' int B;
+			''
+			'' int /*FOO*/ A;  -> assign FOO to 'int'
+			''
+			'' int             -> assign FOO to EOL
+			'' //FOO
+			'' A;
+
 			at_bol = hIsBeforeEol( x, -1 )
 			at_eol = hIsBeforeEol( x,  1 )
 
 			if( at_bol and at_eol ) then
+				'' Comment above empty line?
 				if( hCount( TK_EOL, x + 1, cSkip( x ) ) >= 2 ) then
 					hAccumTkComment( cSkipSpaceAndComments( x ), x )
 				else
-					hAccumTkComment( cSkip( x ), x )
+					'' Comment above multiple statements?
+					y = cSkipStatement( x )
+					if( y < cSkipStatement( y ) ) then
+						hAccumTkComment( cSkipSpaceAndComments( x ), x )
+					else
+						'' Comment above single statement
+						hAccumTkComment( cSkip( x ), x )
+					end if
 				end if
 			elseif( at_bol ) then
 				hAccumTkComment( cSkipSpaceAndComments( x ), x )
@@ -1316,6 +1342,8 @@ private function cGlobalDecl( byval x as integer ) as integer
 		if( parser.dryrun ) then
 			x = cSkip( x )
 		else
+			hAccumComment( cSkip( x ), _
+				hCollectComments( x, cSkip( x ) - 1 ) )
 			tkRemove( x, cSkip( x ) - 1 )
 		end if
 
@@ -1329,7 +1357,6 @@ end function
 '' Typedefs
 ''    TYPEDEF MultDecl
 private function cTypedef( byval x as integer ) as integer
-
 	'' TYPEDEF?
 	if( tkGet( x ) <> KW_TYPEDEF ) then
 		return -1
