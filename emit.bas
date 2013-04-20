@@ -380,8 +380,12 @@ private function emitTk( byval x as integer ) as integer
 		emitParamListAndResultType( x, ln )
 		emitStmt( ln, comment )
 
-	case TK_EOL, TK_DIVIDER
+	case TK_EOL
 		emitEol( )
+		x += 1
+
+	case TK_DIVIDER
+		emitStmt( "", comment )
 		x += 1
 
 	case TK_TODO
