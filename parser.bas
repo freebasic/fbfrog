@@ -4,6 +4,7 @@
 
 type PARSERSTUFF
 	dryrun		as integer
+	tempidcount	as integer
 end type
 
 dim shared as PARSERSTUFF parser
@@ -21,6 +22,11 @@ declare function cMultDecl _
 		byval x as integer, _
 		byval decl as integer _
 	) as integer
+
+private function hMakeTempId( ) as string
+	parser.tempidcount += 1
+	function = "__fbfrog_AnonStruct" & parser.tempidcount
+end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
@@ -765,6 +771,12 @@ private function cStructCompound( byval x as integer ) as integer
 	if( tkGet( x ) = TK_ID ) then
 		id = *tkGetText( x )
 		x = cSkip( x )
+	elseif( is_typedef ) then
+		'' If it's a typedef with anonymous struct block, we need to
+		'' make up an id for it, for use in the base type of the
+		'' typedef MultDecl. If it turns out to be just a single
+		'' typedef, we can still solve it out later.
+		id = hMakeTempId( )
 	end if
 
 	'' '{'
@@ -1472,9 +1484,11 @@ end sub
 sub cToplevel( )
 	'' 1st pass to identify constructs & set marks correspondingly
 	parser.dryrun = TRUE
+	parser.tempidcount = 0
 	hToplevel( )
 
 	'' 2nd pass to merge them into high-level tokens
 	parser.dryrun = FALSE
+	parser.tempidcount = 0
 	hToplevel( )
 end sub
