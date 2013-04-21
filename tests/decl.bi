@@ -176,6 +176,10 @@ type A as UDT ptr ptr
 type B as UDT
 type C as function( byval as long ) as UDT
 
+'' arrays
+dim shared a(0 to 9) as long
+dim shared p(0 to 3) as sub( )
+
 type UDT
 
 	'' fields
@@ -187,6 +191,8 @@ type UDT
 	b as long
 	c as long ptr
 	d as long ptr ptr ptr
+	a(0 to 19) as long
+	p(0 to 39) as sub( )
 
 	'' methods
 	declare sub f( )

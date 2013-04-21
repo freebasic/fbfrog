@@ -197,6 +197,8 @@ type ONETOKEN
 	dtype		as integer
 	subtype		as zstring ptr
 
+	arrayelements	as integer
+
 	'' Source location
 	'' (maps to filename/linenumber where this token was found)
 	location	as integer
@@ -262,7 +264,9 @@ sub tkInit( )
 	tk.eof.text = NULL
 	tk.eof.dtype = TYPE_NONE
 	tk.eof.subtype = NULL
+	tk.eof.arrayelements = 0
 	tk.eof.location = -1
+	tk.eof.comment = NULL
 
 	listInit( @tk.map, sizeof( MAPENTRY ) )
 	tk.location = 0
@@ -420,6 +424,7 @@ sub tkInsert _
 	p->text = strDuplicate( text )
 	p->dtype = TYPE_NONE
 	p->subtype = NULL
+	p->arrayelements = 0
 	p->location = -1
 	p->comment = NULL
 
@@ -542,6 +547,18 @@ end function
 
 function tkGetSubtype( byval x as integer ) as zstring ptr
 	function = tkAccess( x )->subtype
+end function
+
+sub tkSetArrayElements( byval x as integer, byval elements as integer )
+	dim as ONETOKEN ptr p = any
+	p = tkAccess( x )
+	if( p->id <> TK_EOF ) then
+		p->arrayelements = elements
+	end if
+end sub
+
+function tkGetArrayElements( byval x as integer ) as integer
+	function = tkAccess( x )->arrayelements
 end function
 
 sub tkLocationNewFile( byval filename as zstring ptr )

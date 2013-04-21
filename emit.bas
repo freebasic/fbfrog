@@ -215,6 +215,7 @@ private sub emitDecl _
 		byval belongs_to_dimshared as integer _
 	)
 
+	dim as integer elements = any
 	dim as zstring ptr s = any
 
 	select case( decl )
@@ -237,9 +238,17 @@ private sub emitDecl _
 
 	s = tkGetText( x )
 	if( len( *s ) > 0 ) then
-		ln += *s + " "
+		ln += *s
 	end if
 
+	elements = tkGetArrayElements( x )
+	if( elements > 0 ) then
+		ln += "(0 to " & elements - 1 & ")"
+	end if
+
+	if( right( ln, 1 ) <> " " ) then
+		ln += " "
+	end if
 	ln += "as "
 
 	if( tkIsProcPtr( x ) ) then

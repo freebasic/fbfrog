@@ -325,6 +325,8 @@ declare sub tkSetType _
 	)
 declare function tkGetType( byval x as integer ) as integer
 declare function tkGetSubtype( byval x as integer ) as zstring ptr
+declare sub tkSetArrayElements( byval x as integer, byval elements as integer )
+declare function tkGetArrayElements( byval x as integer ) as integer
 declare sub tkLocationNewFile( byval filename as zstring ptr )
 declare function tkLocationNewLine( ) as integer
 declare sub tkSetLocation( byval x as integer, byval location as integer )

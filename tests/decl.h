@@ -80,12 +80,18 @@ typedef void (*A)(void);
 typedef UDT (*A)(UDT);
 typedef UDT **A, B, (*C)(int);
 
+// arrays
+static int a[10];
+static void (*p[4])(void);
+
 struct UDT {
 	// fields
 	int a;
 	int **a;
 	int a, b;
 	int  *a, b, *c, ***d;
+	int a[20];
+	void (*p[40])(void);
 
 	// methods
 	void f(void);

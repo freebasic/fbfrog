@@ -1184,12 +1184,13 @@ private function cDeclElement _
 		byref basesubtype as string _
 	) as integer
 
-	dim as integer begin = any
+	dim as integer begin = any, elements = any
 	dim as integer dtype = any, is_procptr = any, has_params = any
 	dim as string id, comment
 
 	begin = x
 	dtype = basedtype
+	elements = 0
 
 	'' PtrCount
 	x = cPtrCount( x, dtype )
@@ -1238,6 +1239,24 @@ private function cDeclElement _
 		end select
 	end if
 
+	'' '['?
+	if( tkGet( x ) = TK_LBRACKET ) then
+		x = cSkip( x )
+
+		'' Simple number?
+		if( tkGet( x ) <> TK_DECNUM ) then
+			return -1
+		end if
+		elements = valint( *tkGetText( x ) )
+		x = cSkip( x )
+
+		'' ']'
+		if( tkGet( x ) <> TK_RBRACKET ) then
+			return -1
+		end if
+		x = cSkip( x )
+	end if
+
 	if( is_procptr ) then
 		'' ')'
 		if( tkGet( x ) <> TK_RPAREN ) then
@@ -1275,6 +1294,7 @@ private function cDeclElement _
 		tkInsert( begin, decl, id )
 		tkSetComment( begin, comment )
 		tkSetType( begin, dtype, basesubtype )
+		tkSetArrayElements( begin, elements )
 		begin += 1
 		x = begin
 	end if
