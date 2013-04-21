@@ -72,23 +72,28 @@ private sub emitStmt( byref ln as string, byref comment as string )
 		'' otherwise, behind it (or at BOL, if no statement)
 		if( instr( comment, !"\n" ) > 0 ) then
 			emitStmtBegin( "''" + strReplace( comment, !"\n", !"\n''" ) )
-			emitEol( )
 			if( len( ln ) > 0 ) then
-				emitStmtBegin( ln )
 				emitEol( )
+				emitStmtBegin( ln )
 			end if
 		else
-			emitStmtBegin( ln )
-			if( len( comment ) > 0 ) then
-				'' Separate comment with a space if not a BOL
-				if( len( ln ) > 0 ) then
-					emit( " " )
+			if( len( ln ) > 0 ) then
+				emitStmtBegin( ln )
+				if( len( comment ) > 0 ) then
+					'' Separate comment with a space if not a BOL
+					if( len( ln ) > 0 ) then
+						emit( " " )
+					end if
+					emit( "''" + comment )
 				end if
-				emit( "''" + comment )
+			else
+				if( len( comment ) > 0 ) then
+					emitStmtBegin( "''" + comment )
+				end if
 			end if
-			emitEol( )
 		end if
-	else
+		emitEol( )
+	elseif( len( ln ) > 0 ) then
 		emitStmtBegin( ln )
 		emitEol( )
 	end if
@@ -402,7 +407,7 @@ private function emitTk( byval x as integer ) as integer
 			emitStmt( "", comment )
 			emitEol( )
 		elseif( x > 0 ) then
-			emitStmt( "", "" )
+			emitEol( )
 		end if
 
 		'' If it carries a comment associated with the following block

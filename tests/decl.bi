@@ -178,7 +178,8 @@ type C as function( byval as long ) as UDT
 
 type UDT
 
-	a as long '' fields
+	'' fields
+	a as long
 	a as long ptr ptr
 	a as long
 	b as long
@@ -187,13 +188,15 @@ type UDT
 	c as long ptr
 	d as long ptr ptr ptr
 
-	declare sub f( ) '' methods
+	'' methods
+	declare sub f( )
 	declare function f( ) as long
 	declare sub f( )
 	declare function f( ) as UDT ptr ptr
 	declare sub f( byval a as long ptr, byval b as long ptr ptr ptr )
 
-	a as sub( ) '' procptr fields
+	'' procptr fields
+	a as sub( )
 	a as function( byval as long ) as long
 	a as function( byval a as long ) as long
 	b as function( byval a as long ) as long
@@ -204,9 +207,11 @@ type UDT
 	d as function( byval a as long ) as long
 	a as function( byval as long ) as long ptr ptr
 
-	declare sub f( byval a as sub( ) ) '' procptr as param
+	'' procptr as param
+	declare sub f( byval a as sub( ) )
 	declare sub f( byval as sub( ) )
 
-	a as sub( byval a as sub( ) ) '' procptr with procptr as param
+	'' procptr with procptr as param
+	a as sub( byval a as sub( ) )
 	p as function( byval as function( byval as long ptr ptr ptr ) as long ptr ptr ptr ) as long ptr ptr ptr
 end type

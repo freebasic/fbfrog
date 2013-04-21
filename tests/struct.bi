@@ -203,7 +203,7 @@ type UDT '' fields
 	a as double
 	b as double
 	c as double
-	
+
 	a as long ptr ptr
 	a as long ptr
 	a as long
@@ -216,16 +216,16 @@ type UDT '' fields
 	a as long ptr ptr
 	a as long ptr ptr
 	a as long
-	
+
 	y as T ptr ptr ptr ptr
 	a as T ptr
 	a as T ptr ptr ptr ptr
 	a as T
-	
+
 	p as function( byval as long ptr ) as long ptr
 	declare function f( byval as long, byval as long ) as long
 	declare sub proc( )
-	
+
 	a as long
 	'' TODO: unknown PP directive (sorry)
 #if 1
