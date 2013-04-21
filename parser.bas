@@ -370,9 +370,11 @@ sub cAssignComments( )
 				if( hCount( TK_EOL, x + 1, cSkip( x ) ) >= 2 ) then
 					hAccumTkComment( cSkipSpaceAndComments( x ), x )
 				else
-					'' Comment above multiple statements?
+					'' Comment above multiple statements,
+					'' that aren't separated by empty lines?
 					y = cSkipStatement( x )
-					if( y < cSkipStatement( y ) ) then
+					if( (y < cSkipStatement( y )) and _
+					    (hCount( TK_EOL, cSkipRev( y ) + 1, y - 1 ) < 2) ) then
 						hAccumTkComment( cSkipSpaceAndComments( x ), x )
 					else
 						'' Comment above single statement
@@ -556,8 +558,8 @@ end function
 '' Merge empty lines into TK_DIVIDER. We can assume to start at BOL,
 '' as cPPDirectives() effectively parses one line after another.
 private function ppDivider( byval x as integer ) as integer
-	dim as integer lines = any, begin = any
-	dim as string comment
+	dim as integer lines = any, begin = any, eol1 = any, eol2 = any
+	dim as string comment, blockcomment
 
 	begin = x
 
@@ -581,9 +583,24 @@ private function ppDivider( byval x as integer ) as integer
 		return -1
 	end if
 
-	comment = hCollectComments( begin, x - 1 )
+	''  ...code...
+	''
+	''  //foo
+	''
+	''  //bar
+	''  ...code...
+	''
+	'' "foo" is the comment associated with TK_DIVIDER, "bar" the one
+	'' associated with the following block of code, stored as TK_DIVIDER's
+	'' text.
+
+	eol2 = cSkipSpaceAndComments( x, -1 )
+	eol1 = cSkipSpaceAndComments( eol2 - 1, -1 )
+	blockcomment = hCollectComments( eol1 + 1, eol2 )
+
+	comment = hCollectComments( begin, eol1 )
 	tkRemove( begin, x - 1 )
-	tkInsert( begin, TK_DIVIDER )
+	tkInsert( begin, TK_DIVIDER, blockcomment )
 	tkSetComment( begin, comment )
 	x = cSkip( begin )
 

@@ -391,7 +391,28 @@ private function emitTk( byval x as integer ) as integer
 		x += 1
 
 	case TK_DIVIDER
-		emitStmt( "", comment )
+		'' Normally TK_DIVIDER merges multiple empty lines into one,
+		'' but if it has a comment in one line, we may want to emit
+		'' an additional empty line above and one below the comment.
+		if( len( comment ) > 0 ) then
+			'' Don't bother emitting an empty line at BOF
+			if( x > 0 ) then
+				emitEol( )
+			end if
+			emitStmt( "", comment )
+			emitEol( )
+		elseif( x > 0 ) then
+			emitStmt( "", "" )
+		end if
+
+		'' If it carries a comment associated with the following block
+		'' of code, that should be emitted right above that code,
+		'' not separated by empty lines
+		s = tkGetText( x )
+		if( len( *s ) > 0 ) then
+			emitStmt( "", *s )
+		end if
+
 		x += 1
 
 	case TK_TODO
