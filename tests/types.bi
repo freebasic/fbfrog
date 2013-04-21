@@ -68,6 +68,7 @@ dim shared a as long const ptr
 dim shared b as long ptr
 dim shared c as long ptr ptr const ptr ptr
 dim shared a as const long
+dim shared x as UDT ptr
 
 dim shared a as long ptr ptr '' int ptr ptr
 dim shared a as long ptr const ptr '' int ptr const ptr

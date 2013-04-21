@@ -913,6 +913,10 @@ private function cBaseType _
 	dim as integer sign = any, signedmods = any, unsignedmods = any
 	dim as integer constmods = any, shortmods = any, longmods = any
 	dim as integer basetypex = any, basetypetk = any
+	dim as integer begin = any
+
+	dtype = TYPE_NONE
+	subtype = ""
 
 	signedmods = 0
 	unsignedmods = 0
@@ -921,8 +925,7 @@ private function cBaseType _
 	longmods = 0
 	basetypex = -1
 	basetypetk = -1
-	dtype = TYPE_NONE
-	subtype = ""
+	begin = x
 
 	''
 	'' 1. Parse base type and all modifiers, and count them
@@ -963,6 +966,7 @@ private function cBaseType _
 				basetypex = x
 
 			case TK_ID
+				''
 				'' Disambiguation needed:
 				''    signed foo;       // foo = var id
 				''    signed foo, bar;  // foo = var id, bar = var id
@@ -971,12 +975,31 @@ private function cBaseType _
 				'' vs.
 				''    signed foo bar;   // foo = typedef, bar = var id
 				''    signed foo *bar;  // ditto
+				''    signed foo (*bar)(void);  // ditto
 				''    signed foo const bar;  // ditto
+				''
+				'' Checking for this is only needed if there
+				'' already were tokens that belong to the type
+				'' in front of the TK_ID, e.g. the "signed".
+				'' If a type is expected, and a TK_ID appears
+				'' as first token, then it just must be part of
+				'' the type, afterall something like
+				''    foo;
+				'' isn't allowed; it has to be at least
+				''    mytype foo;
+				''
 
-				select case( tkGet( cSkip( x ) ) )
-				case TK_SEMI, TK_COMMA, TK_STAR, TK_LPAREN, TK_LBRACKET
-					exit do
-				end select
+				if( x > begin ) then
+					select case( tkGet( cSkip( x ) ) )
+					case TK_SEMI, TK_COMMA, TK_LBRACKET
+						exit do
+
+					case TK_LPAREN
+						if( tkGet( cSkip( cSkip( x ) ) ) <> TK_STAR ) then
+							exit do
+						end if
+					end select
+				end if
 
 				'' Treat the TK_ID as the type (a typedef)
 				basetypex = x

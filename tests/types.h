@@ -61,6 +61,7 @@ static int short signed a;
 static long const int long unsigned a;
 static int *const a, *b, ***const*c;
 static const int a;
+static UDT *x;
 
 static       int       *       *       a; // int ptr ptr
 static       int       *       * const a; // int ptr const ptr
