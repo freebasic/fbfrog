@@ -907,13 +907,13 @@ private function cBaseType _
 	( _
 		byval x as integer, _
 		byref dtype as integer, _
-		byref subtype as string _
+		byref subtype as string, _
+		byval decl as integer _
 	) as integer
 
 	dim as integer sign = any, signedmods = any, unsignedmods = any
 	dim as integer constmods = any, shortmods = any, longmods = any
 	dim as integer basetypex = any, basetypetk = any
-	dim as integer begin = any
 
 	dtype = TYPE_NONE
 	subtype = ""
@@ -925,7 +925,6 @@ private function cBaseType _
 	longmods = 0
 	basetypex = -1
 	basetypetk = -1
-	begin = x
 
 	''
 	'' 1. Parse base type and all modifiers, and count them
@@ -980,7 +979,10 @@ private function cBaseType _
 				''
 				'' Checking for this is only needed if there
 				'' already were tokens that belong to the type
-				'' in front of the TK_ID, e.g. the "signed".
+				'' in front of the TK_ID, e.g. "signed" or
+				'' "long", but not "const" which cannot be given
+				'' alone in place of a type.
+				''
 				'' If a type is expected, and a TK_ID appears
 				'' as first token, then it just must be part of
 				'' the type, afterall something like
@@ -988,9 +990,30 @@ private function cBaseType _
 				'' isn't allowed; it has to be at least
 				''    mytype foo;
 				''
+				'' For parameters the identifier can be omitted
+				'' optionally, disambiguation is impossible
+				'' based on syntax only:
+				''    void f(unsigned myint);
+				'' vs.
+				''    typedef int myint;
+				''    void f(unsigned myint);
+				'' To be safe, we should always assume it's the
+				'' identifier
+				''
 
-				if( x > begin ) then
+				'' Already saw modifiers that themselves would
+				'' be enough to form the type?
+				if( signedmods or unsignedmods or _
+				    longmods or shortmods ) then
 					select case( tkGet( cSkip( x ) ) )
+					case TK_ID
+						'' Another id must follow for params,
+						'' otherwise it's ambigious
+						select case( decl )
+						case TK_PARAM, TK_PARAMPROCPTR, TK_PARAMVARARG
+							return -1
+						end select
+
 					case TK_SEMI, TK_COMMA, TK_LBRACKET
 						exit do
 
@@ -1416,7 +1439,7 @@ private function cMultDecl _
 
 	'' BaseType
 	typebegin = x
-	x = cBaseType( x, dtype, subtype )
+	x = cBaseType( x, dtype, subtype, decl )
 	if( x < 0 ) then
 		return -1
 	end if
