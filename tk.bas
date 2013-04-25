@@ -628,9 +628,9 @@ end function
 
 function tkCount _
 	( _
+		byval tk as integer, _
 		byval first as integer, _
-		byval last as integer, _
-		byval tk as integer _
+		byval last as integer _
 	) as integer
 
 	dim as integer count = any

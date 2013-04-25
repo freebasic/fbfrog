@@ -337,9 +337,9 @@ declare sub tkSetComment( byval x as integer, byval comment as zstring ptr )
 declare function tkGetComment( byval x as integer ) as zstring ptr
 declare function tkCount _
 	( _
+		byval tk as integer, _
 		byval first as integer, _
-		byval last as integer, _
-		byval tk as integer _
+		byval last as integer _
 	) as integer
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''

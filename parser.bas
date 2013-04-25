@@ -238,25 +238,6 @@ end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-private function hCount _
-	( _
-		byval tk as integer, _
-		byval first as integer, _
-		byval last as integer _
-	) as integer
-
-	dim as integer count = any
-
-	count = 0
-	for i as integer = first to last
-		if( tkGet( i ) = tk ) then
-			count += 1
-		end if
-	next
-
-	function = count
-end function
-
 private function hCollectComments _
 	( _
 		byval first as integer, _
@@ -373,14 +354,14 @@ sub cAssignComments( )
 
 			if( at_bol and at_eol ) then
 				'' Comment above empty line?
-				if( hCount( TK_EOL, x + 1, cSkip( x ) ) >= 2 ) then
+				if( tkCount( TK_EOL, x + 1, cSkip( x ) ) >= 2 ) then
 					hAccumTkComment( cSkipSpaceAndComments( x ), x )
 				else
 					'' Comment above multiple statements,
 					'' that aren't separated by empty lines?
 					y = cSkipStatement( x )
 					if( (y < cSkipStatement( y )) and _
-					    (hCount( TK_EOL, cSkipRev( y ) + 1, y - 1 ) < 2) ) then
+					    (tkCount( TK_EOL, cSkipRev( y ) + 1, y - 1 ) < 2) ) then
 						hAccumTkComment( cSkipSpaceAndComments( x ), x )
 					else
 						'' Comment above single statement
