@@ -157,6 +157,8 @@ dim shared a as function( ) as long ptr
 declare function a( ) as long
 declare function a( ) as long ptr
 
+declare function f( ) as long '' function identifier in parentheses
+
 '' static/extern
 dim shared a as long
 extern a as long

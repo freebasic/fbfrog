@@ -1188,13 +1188,15 @@ private function cDeclElement _
 		byref basesubtype as string _
 	) as integer
 
-	dim as integer begin = any, elements = any
+	dim as integer begin = any, elements = any, have_lparen = any
 	dim as integer dtype = any, is_procptr = any, has_params = any
 	dim as string id, comment
 
 	begin = x
 	dtype = basedtype
 	elements = 0
+	have_lparen = FALSE
+	is_procptr = FALSE
 
 	'' PtrCount
 	x = cPtrCount( x, dtype )
@@ -1202,35 +1204,34 @@ private function cDeclElement _
 	'' '('?
 	if( tkGet( x ) = TK_LPAREN ) then
 		x = cSkip( x )
+		have_lparen = TRUE
 
 		'' '*'
-		if( tkGet( x ) <> TK_STAR ) then
-			return -1
-		end if
-		x = cSkip( x )
+		if( tkGet( x ) = TK_STAR ) then
+			'' It's a function pointer
+			x = cSkip( x )
 
-		select case( decl )
-		case TK_GLOBAL
-			decl = TK_GLOBALPROCPTR
-		case TK_EXTERNGLOBAL
-			decl = TK_EXTERNGLOBALPROCPTR
-		case TK_STATICGLOBAL
-			decl = TK_STATICGLOBALPROCPTR
-		case TK_FIELD
-			decl = TK_FIELDPROCPTR
-		case TK_PARAM
-			decl = TK_PARAMPROCPTR
-		case TK_TYPEDEF
-			decl = TK_TYPEDEFPROCPTR
-		case else
-			return -1
-		end select
-		is_procptr = TRUE
-	else
-		is_procptr = FALSE
+			select case( decl )
+			case TK_GLOBAL
+				decl = TK_GLOBALPROCPTR
+			case TK_EXTERNGLOBAL
+				decl = TK_EXTERNGLOBALPROCPTR
+			case TK_STATICGLOBAL
+				decl = TK_STATICGLOBALPROCPTR
+			case TK_FIELD
+				decl = TK_FIELDPROCPTR
+			case TK_PARAM
+				decl = TK_PARAMPROCPTR
+			case TK_TYPEDEF
+				decl = TK_TYPEDEFPROCPTR
+			case else
+				return -1
+			end select
+			is_procptr = TRUE
+		end if
 	end if
 
-	'' Identifier (must be there except for params)
+	'' Identifier (must be there, except for params)
 	if( tkGet( x ) = TK_ID ) then
 		id = *tkGetText( x )
 		x = cSkip( x )
@@ -1261,7 +1262,7 @@ private function cDeclElement _
 		x = cSkip( x )
 	end if
 
-	if( is_procptr ) then
+	if( have_lparen ) then
 		'' ')'
 		if( tkGet( x ) <> TK_RPAREN ) then
 			return -1

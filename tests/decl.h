@@ -65,6 +65,9 @@ int ***(*p)(int ***(*)(int ***));
 // variable/procptr/function
 int a, *(*a)(void), a(void), *a(void);
 
+// function identifier in parentheses
+int (f)(void);
+
 // static/extern
 static int a;
 extern int a;
