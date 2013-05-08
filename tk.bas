@@ -1,79 +1,34 @@
 #include once "fbfrog.bi"
 #include once "crt.bi"
 
-function typeToSigned( byval dtype as integer ) as integer
-	select case( typeGetDtAndPtr( dtype ) )
-	case TYPE_UBYTE, TYPE_USHORT, TYPE_ULONG, TYPE_ULONGINT
-		dtype = typeGetConst( dtype ) or (typeGetDt( dtype ) - 1)
-	end select
-	function = dtype
-end function
-
-function typeToUnsigned( byval dtype as integer ) as integer
-	select case( typeGetDtAndPtr( dtype ) )
-	case TYPE_BYTE, TYPE_SHORT, TYPE_LONG, TYPE_LONGINT
-		dtype = typeGetConst( dtype ) or (typeGetDt( dtype ) + 1)
-	end select
-	function = dtype
-end function
-
-''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-
-enum
-	TKFLAG_STMTSEP = &h1
-	TKFLAG_PROCPTR = &h2
-end enum
-
 type TOKENINFO
 	text		as zstring ptr
 	debug		as zstring ptr
-	flags		as integer
 end type
 
 dim shared as TOKENINFO tk_info(0 to ...) = _
 { _
-	( NULL  , @"eof"                  , TKFLAG_STMTSEP ), _
-	( NULL  , @"nop"                  , TKFLAG_STMTSEP ), _
-	( NULL  , @"divider"              , TKFLAG_STMTSEP ), _
-	( NULL  , @"begin"                , TKFLAG_STMTSEP ), _
-	( NULL  , @"end"                  , TKFLAG_STMTSEP ), _
-	( NULL  , @"#include"             , TKFLAG_STMTSEP ), _
-	( NULL  , @"#define"              , TKFLAG_STMTSEP ), _
-	( NULL  , @"#ifdef"               , TKFLAG_STMTSEP ), _
-	( NULL  , @"#ifndef"              , TKFLAG_STMTSEP ), _
-	( NULL  , @"#else"                , TKFLAG_STMTSEP ), _
-	( NULL  , @"#endif"               , TKFLAG_STMTSEP ), _
-	( NULL  , @"struct"               , TKFLAG_STMTSEP ), _
-	( NULL  , @"typedef"              , TKFLAG_STMTSEP ), _
-	( NULL  , @"typedefprocptr"       , TKFLAG_STMTSEP or TKFLAG_PROCPTR ), _
-	( NULL  , @"global"               , TKFLAG_STMTSEP ), _
-	( NULL  , @"externglobal"         , TKFLAG_STMTSEP ), _
-	( NULL  , @"staticglobal"         , TKFLAG_STMTSEP ), _
-	( NULL  , @"globalprocptr"        , TKFLAG_STMTSEP or TKFLAG_PROCPTR ), _
-	( NULL  , @"externglobalprocptr"  , TKFLAG_STMTSEP or TKFLAG_PROCPTR ), _
-	( NULL  , @"staticglobalprocptr"  , TKFLAG_STMTSEP or TKFLAG_PROCPTR ), _
-	( NULL  , @"field"                , TKFLAG_STMTSEP ), _
-	( NULL  , @"fieldprocptr"         , TKFLAG_STMTSEP or TKFLAG_PROCPTR ), _
-	( NULL  , @"proc"                 , TKFLAG_STMTSEP ), _
-	( NULL  , @"param"                , TKFLAG_STMTSEP ), _
-	( NULL  , @"paramprocptr"         , TKFLAG_STMTSEP or TKFLAG_PROCPTR ), _
-	( NULL  , @"paramvararg"          , TKFLAG_STMTSEP ), _
-	( NULL  , @"todo"                 , TKFLAG_STMTSEP ), _
-	( NULL  , @"byte"                 ), _
-	( NULL  , @"space"                ), _
-	( NULL  , @"eol"                  , TKFLAG_STMTSEP ), _
-	( NULL  , @"comment"              ), _
-	( NULL  , @"decnum"               ), _ '' Number literals
-	( NULL  , @"hexnum"               ), _
-	( NULL  , @"octnum"               ), _
-	( NULL  , @"string"               ), _ '' String literals
-	( NULL  , @"char"                 ), _
-	( NULL  , @"wstring"              ), _
-	( NULL  , @"wchar"                ), _
-	( NULL  , @"estring"              ), _
-	( NULL  , @"echar"                ), _
-	( NULL  , @"ewstring"             ), _
-	( NULL  , @"ewchar"               ), _
+	( NULL  , @"eof"      ), _
+	( NULL  , @"divider"  ), _
+	( NULL  , @"ast"      ), _
+	( NULL  , @"begin"    ), _
+	( NULL  , @"end"      ), _
+	( NULL  , @"todo"     ), _
+	( NULL  , @"byte"     ), _
+	( NULL  , @"space"    ), _
+	( NULL  , @"eol"      ), _
+	( NULL  , @"comment"  ), _
+	( NULL  , @"decnum"   ), _ '' Number literals
+	( NULL  , @"hexnum"   ), _
+	( NULL  , @"octnum"   ), _
+	( NULL  , @"string"   ), _ '' String literals
+	( NULL  , @"char"     ), _
+	( NULL  , @"wstring"  ), _
+	( NULL  , @"wchar"    ), _
+	( NULL  , @"estring"  ), _
+	( NULL  , @"echar"    ), _
+	( NULL  , @"ewstring" ), _
+	( NULL  , @"ewchar"   ), _
 	( @"!"  , @"tk" ), _ '' Main tokens
 	( @"!=" , @"tk" ), _
 	( @"#"  , @"tk" ), _
@@ -183,32 +138,16 @@ end function
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 type ONETOKEN
-	'' TK_*
-	id		as short
+	id		as short  '' TK_*
 
 	'' Tokens from unknown constructs that couldn't be parsed successfully
 	'' will be marked poisoned, so the parser can avoid them in the 2nd run
 	poisoned	as short
 
-	'' Identifiers/literals, or NULL
-	text		as zstring ptr
-
-	'' Data type (vars, fields, params, function results)
-	dtype		as integer
-	subtype		as zstring ptr
-
-	arrayelements	as integer
-
-	'' Source location
-	'' (maps to filename/linenumber where this token was found)
-	location	as integer
-
+	text		as zstring ptr  '' Identifiers/literals, or NULL
+ 	ast		as ASTNODE ptr  '' for TK_AST
+	linenum		as integer      '' where this token was found
 	comment		as zstring ptr
-end type
-
-type MAPENTRY
-	base		as integer  '' (location - base) = line number
-	filename	as zstring ptr
 end type
 
 type TKBUFFER
@@ -220,9 +159,6 @@ type TKBUFFER
 
 	'' Static EOF token for out-of-bounds accesses
 	eof		as ONETOKEN
-
-	map		as TLIST  '' MAPENTRYs
-	location	as integer
 end type
 
 type TKSTATS
@@ -236,21 +172,13 @@ dim shared as TKSTATS stats
 
 function strDuplicate( byval s as zstring ptr ) as zstring ptr
 	dim as zstring ptr p = any
-	dim as integer length = any
-
-	if( s = NULL ) then
-		return NULL
+	if( s ) then
+		p = callocate( len( *s ) + 1 )
+		*p = *s
+		function = p
+	else
+		function = NULL
 	end if
-
-	length = len( *s )
-	p = callocate( length + 1 )
-
-	if( length > 0 ) then
-		memcpy( p, s, length )
-	end if
-	p[length] = 0
-
-	function = p
 end function
 
 sub tkInit( )
@@ -262,14 +190,9 @@ sub tkInit( )
 	tk.eof.id = TK_EOF
 	tk.eof.poisoned = FALSE
 	tk.eof.text = NULL
-	tk.eof.dtype = TYPE_NONE
-	tk.eof.subtype = NULL
-	tk.eof.arrayelements = 0
-	tk.eof.location = -1
+	tk.eof.ast = NULL
+	tk.eof.linenum = -1
 	tk.eof.comment = NULL
-
-	listInit( @tk.map, sizeof( MAPENTRY ) )
-	tk.location = 0
 end sub
 
 private function tkAccess( byval x as integer ) as ONETOKEN ptr
@@ -293,15 +216,6 @@ private function tkAccess( byval x as integer ) as ONETOKEN ptr
 end function
 
 sub tkEnd( )
-	dim as MAPENTRY ptr entry = any
-
-	entry = listGetHead( @tk.map )
-	while( entry )
-		deallocate( entry->filename )
-		entry = listGetNext( entry )
-	wend
-	listEnd( @tk.map )
-
 	tkRemove( 0, tk.size - 1 )
 	deallocate( tk.p )
 end sub
@@ -328,16 +242,16 @@ function tkDumpOne( byval x as integer ) as string
 	s += "]"
 
 	s += " "
-	if( p->text ) then
-		s += "'" + *p->text + "'"
+	if( p->id = TK_AST ) then
+		s += emitAst( p->ast )
 	else
-		if( tk_info(p->id).text ) then
-			s += "'" + *tk_info(p->id).text + "'"
+		if( p->text ) then
+			s += "'" + *p->text + "'"
+		else
+			if( tk_info(p->id).text ) then
+				s += "'" + *tk_info(p->id).text + "'"
+			end if
 		end if
-	end if
-
-	if( tkGetType( x ) <> TYPE_NONE ) then
-		s += " as " + emitType( tkGetType( x ), tkGetSubtype( x ) )
 	end if
 
 	text = tkGetComment( x )
@@ -394,7 +308,8 @@ sub tkInsert _
 	( _
 		byval x as integer, _
 		byval id as integer, _
-		byval text as zstring ptr _
+		byval text as zstring ptr, _
+		byval ast as ASTNODE ptr _
 	)
 
 	const NEWGAP = 512
@@ -422,10 +337,8 @@ sub tkInsert _
 	p->id = id
 	p->poisoned = FALSE
 	p->text = strDuplicate( text )
-	p->dtype = TYPE_NONE
-	p->subtype = NULL
-	p->arrayelements = 0
-	p->location = -1
+	p->ast = ast
+	p->linenum = -1
 	p->comment = NULL
 
 	'' Extend front part of the buffer
@@ -458,7 +371,7 @@ sub tkRemove( byval first as integer, byval last as integer )
 	for i as integer = first to last
 		p = tkAccess( i )
 		deallocate( p->text )
-		deallocate( p->subtype )
+		astDelete( p->ast )
 		deallocate( p->comment )
 	next
 
@@ -484,29 +397,12 @@ function tkGet( byval x as integer ) as integer
 	function = tkAccess( x )->id
 end function
 
-function tkIsStmtSep( byval x as integer ) as integer
-	function = ((tk_info(tkGet( x )).flags and TKFLAG_STMTSEP) <> 0)
-end function
-
-function tkIsProcPtr( byval x as integer ) as integer
-	function = ((tk_info(tkGet( x )).flags and TKFLAG_PROCPTR) <> 0)
-end function
-
 function tkGetText( byval x as integer ) as zstring ptr
-	dim as ONETOKEN ptr p = any
+	function = tkAccess( x )->text
+end function
 
-	p = tkAccess( x )
-
-	if( p->text ) then
-		function = p->text
-	else
-		if( p->id >= TK_EXCL ) then
-			assert( p->id <> TK_ID )
-			function = tk_info(p->id).text
-		else
-			function = @""
-		end if
-	end if
+function tkGetAst( byval x as integer ) as ASTNODE ptr
+	function = tkAccess( x )->ast
 end function
 
 sub tkSetPoisoned( byval first as integer, byval last as integer )
@@ -523,94 +419,16 @@ function tkIsPoisoned( byval x as integer ) as integer
 	function = tkAccess( x )->poisoned
 end function
 
-sub tkSetType _
-	( _
-		byval x as integer, _
-		byval dtype as integer, _
-		byval subtype as zstring ptr _
-	)
-
-	dim as ONETOKEN ptr p = any
-
-	p = tkAccess( x )
-	if( p->id <> TK_EOF ) then
-		deallocate( p->subtype )
-		p->dtype = dtype
-		p->subtype = strDuplicate( subtype )
-	end if
-
-end sub
-
-function tkGetType( byval x as integer ) as integer
-	function = tkAccess( x )->dtype
-end function
-
-function tkGetSubtype( byval x as integer ) as zstring ptr
-	function = tkAccess( x )->subtype
-end function
-
-sub tkSetArrayElements( byval x as integer, byval elements as integer )
+sub tkSetLineNum( byval x as integer, byval linenum as integer )
 	dim as ONETOKEN ptr p = any
 	p = tkAccess( x )
 	if( p->id <> TK_EOF ) then
-		p->arrayelements = elements
+		p->linenum = linenum
 	end if
 end sub
-
-function tkGetArrayElements( byval x as integer ) as integer
-	function = tkAccess( x )->arrayelements
-end function
-
-sub tkLocationNewFile( byval filename as zstring ptr )
-	dim as MAPENTRY ptr entry = any
-
-	entry = listAppend( @tk.map )
-	entry->base = tk.location
-	entry->filename = strDuplicate( filename )
-end sub
-
-function tkLocationNewLine( ) as integer
-	function = tk.location
-	tk.location += 1
-end function
-
-sub tkSetLocation( byval x as integer, byval location as integer )
-	dim as ONETOKEN ptr p = any
-	p = tkAccess( x )
-	if( p->id <> TK_EOF ) then
-		p->location = location
-	end if
-end sub
-
-function tkHasSourceLocation( byval x as integer ) as integer
-	function = (tkAccess( x )->location >= 0)
-end function
-
-'' Find the map entry that "contains" this token's location
-'' (assuming there always is one)
-private function hLookupLocation( byval location as integer ) as MAPENTRY ptr
-	dim as MAPENTRY ptr entry = any
-
-	entry = listGetTail( @tk.map )
-	while( entry->base > location )
-		entry = listGetPrev( entry )
-	wend
-
-	function = entry
-end function
-
-function tkGetSourceFile( byval x as integer ) as zstring ptr
-	assert( tkHasSourceLocation( x ) )
-	function = hLookupLocation( tkAccess( x )->location )->filename
-end function
 
 function tkGetLineNum( byval x as integer ) as integer
-	dim as integer location = any
-
-	assert( tkHasSourceLocation( x ) )
-	location = tkAccess( x )->location
-
-	function = location - hLookupLocation( location )->base
+	function = tkAccess( x )->linenum
 end function
 
 sub tkSetComment( byval x as integer, byval comment as zstring ptr )
@@ -644,4 +462,46 @@ function tkCount _
 	next
 
 	function = count
+end function
+
+function tkSkipSpaceAndComments _
+	( _
+		byval x as integer, _
+		byval delta as integer _
+	) as integer
+
+	do
+		x += delta
+
+		select case( tkGet( x ) )
+		case TK_SPACE, TK_COMMENT
+
+		case else
+			exit do
+		end select
+	loop
+
+	function = x
+end function
+
+function tkToText( byval first as integer, byval last as integer ) as string
+	dim as ONETOKEN ptr p = any
+	dim as string s
+
+	for i as integer = first to last
+		p = tkAccess( i )
+
+		'' Some tokens carry their own text (e.g. identifiers)
+		if( p->text ) then
+			s += *p->text
+		else
+			'' For others, lookup in the info table
+			if( p->id >= TK_EXCL ) then
+				assert( p->id <> TK_ID )
+				s += *tk_info(p->id).text
+			end if
+		end if
+	next
+
+	function = s
 end function

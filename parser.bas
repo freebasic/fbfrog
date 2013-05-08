@@ -3,24 +3,39 @@
 #include once "fbfrog.bi"
 
 type PARSERSTUFF
-	dryrun		as integer
 	tempidcount	as integer
 end type
 
 dim shared as PARSERSTUFF parser
 
-declare function cStructCompound( byval x as integer ) as integer
+enum
+	DECL_VAR = 0
+	DECL_EXTERNVAR
+	DECL_STATICVAR
+	DECL_FIELD
+	DECL_PARAM
+	DECL_TYPEDEF
+	DECL_PROC
+end enum
+
+declare function cStructCompound _
+	( _
+		byval x as integer, _
+		byval parent as ASTNODE ptr _
+	) as integer
 declare function cIdList _
 	( _
 		byval x as integer, _
 		byval decl as integer, _
 		byval basedtype as integer, _
-		byref basesubtype as string _
+		byval basesubtype as ASTNODE ptr, _
+		byval parent as ASTNODE ptr _
 	) as integer
 declare function cMultDecl _
 	( _
 		byval x as integer, _
-		byval decl as integer _
+		byval decl as integer, _
+		byval parent as ASTNODE ptr _
 	) as integer
 
 private function hMakeTempId( ) as string
@@ -129,26 +144,6 @@ private function cSkip( byval x as integer ) as integer
 	function = x
 end function
 
-private function cSkipSpaceAndComments _
-	( _
-		byval x as integer, _
-		byval delta as integer = 1 _
-	) as integer
-
-	do
-		x += delta
-
-		select case( tkGet( x ) )
-		case TK_SPACE, TK_COMMENT
-
-		case else
-			exit do
-		end select
-	loop
-
-	function = x
-end function
-
 private function cSkipRev( byval x as integer ) as integer
 	do
 		x -= 1
@@ -200,10 +195,8 @@ private function cFindClosingParen( byval x as integer ) as integer
 		case TK_EOF
 			exit do
 
-		case else
-			if( tkIsStmtSep( x ) ) then
-				exit do
-			end if
+		case TK_AST
+			exit do
 
 		end select
 	loop
@@ -224,11 +217,10 @@ function cSkipStatement( byval x as integer ) as integer
 		case TK_LPAREN, TK_LBRACKET, TK_LBRACE
 			x = cFindClosingParen( x )
 
-		case else
-			if( tkIsStmtSep( x ) ) then
-				exit do
-			end if
+		case TK_AST
+			exit do
 
+		case else
 			x = cSkip( x )
 		end select
 	loop
@@ -275,6 +267,7 @@ private function hIsBeforeEol _
 
 	function = TRUE
 
+	'' Can we reach EOL before hitting any non-space token?
 	do
 		x += delta
 
@@ -284,9 +277,12 @@ private function hIsBeforeEol _
 		case TK_EOL, TK_EOF
 			exit do
 
-		case else
+		case TK_AST
 			'' High-level tokens count as separate lines
-			function = tkIsStmtSep( x )
+			exit do
+
+		case else
+			function = FALSE
 			exit do
 		end select
 	loop
@@ -355,25 +351,25 @@ sub cAssignComments( )
 			if( at_bol and at_eol ) then
 				'' Comment above empty line?
 				if( tkCount( TK_EOL, x + 1, cSkip( x ) ) >= 2 ) then
-					hAccumTkComment( cSkipSpaceAndComments( x ), x )
+					hAccumTkComment( tkSkipSpaceAndComments( x ), x )
 				else
 					'' Comment above multiple statements,
 					'' that aren't separated by empty lines?
 					y = cSkipStatement( x )
 					if( (y < cSkipStatement( y )) and _
 					    (tkCount( TK_EOL, cSkipRev( y ) + 1, y - 1 ) < 2) ) then
-						hAccumTkComment( cSkipSpaceAndComments( x ), x )
+						hAccumTkComment( tkSkipSpaceAndComments( x ), x )
 					else
 						'' Comment above single statement
 						hAccumTkComment( cSkip( x ), x )
 					end if
 				end if
 			elseif( at_bol ) then
-				hAccumTkComment( cSkipSpaceAndComments( x ), x )
+				hAccumTkComment( tkSkipSpaceAndComments( x ), x )
 			elseif( at_eol ) then
-				hAccumTkComment( cSkipSpaceAndComments( x, -1 ), x )
+				hAccumTkComment( tkSkipSpaceAndComments( x, -1 ), x )
 			else
-				hAccumTkComment( cSkipSpaceAndComments( x ), x )
+				hAccumTkComment( tkSkipSpaceAndComments( x ), x )
 			end if
 
 			tkRemove( x, x )
@@ -388,21 +384,24 @@ end sub
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 private function ppDirective( byval x as integer ) as integer
-	dim as integer begin = any, tk = any
-	dim as string text
-
-	begin = x
+	dim as integer begin = any, tk = any, y = any
+	dim as ASTNODE ptr expr = any
 
 	'' not at BOL?
-	if( tkIsStmtSep( x - 1 ) = FALSE ) then
+	y = tkSkipSpaceAndComments( x, -1 )
+	select case( tkGet( y ) )
+	case TK_EOL, TK_EOF
 		return -1
-	end if
+	end select
 
 	'' '#'
 	if( tkGet( x ) <> TK_HASH ) then
 		return -1
 	end if
 	x = ppSkip( x )
+
+	begin = x
+	expr = NULL
 
 	tk = tkGet( x )
 	select case( tk )
@@ -415,13 +414,14 @@ private function ppDirective( byval x as integer ) as integer
 		if( tkGet( x ) <> TK_ID ) then
 			return -1
 		end if
-		text = *tkGetText( x )
+		expr = astNewPPDEFINE( tkGetText( x ) )
 		x = ppSkip( x )
 
 		tkRemove( begin, x - 1 )
-		tkInsert( begin, TK_PPDEFINE, text )
+		tkInsert( begin, TK_AST, , expr )
 		begin += 1
 		x = begin
+		expr = NULL
 
 		'' Parse body tokens, if any, and wrap them inside a BEGIN/END
 		select case( tkGet( x ) )
@@ -437,6 +437,38 @@ private function ppDirective( byval x as integer ) as integer
 			x += 1
 		end select
 
+
+''		'' If it's just a number literal, use a proper CONST expression
+''		select case( tkGet( x ) )
+''		case TK_DECNUM, TK_HEXNUM, TK_OCTNUM
+''			select case( tkGet( ppSkip( x ) ) )
+''			case TK_EOL, TK_EOF
+''				select case( tkGet( x ) )
+''				case TK_DECNUM
+''					expr = astNewCONSTi( vallng( *tkGetText( x ) ) )
+''				case TK_HEXNUM
+''					expr = astNewCONSTi( vallng( "&h" + *tkGetText( x ) ) )
+''				case TK_OCTNUM
+''					expr = astNewCONSTi( vallng( "&o" + *tkGetText( x ) ) )
+''				end select
+''			end select
+''		end select
+''
+''		'' Otherwise, if there are any tokens, fall back to a TEXT
+''		'' expression, that may have to be translated manually
+''		if( expr = NULL ) then
+''			select case( tkGet( x ) )
+''			case TK_EOL, TK_EOF
+''
+''			case else
+''				y = ppSkipToEOL( x )
+''				expr = astNewTEXT( tkToText( x, y ) )
+''				x = y
+''			end select
+''		end if
+''
+''		expr = astNewPPDEFINE( text, expr )
+
 	case KW_INCLUDE
 		'' INCLUDE
 		x = ppSkip( x )
@@ -445,48 +477,33 @@ private function ppDirective( byval x as integer ) as integer
 		if( tkGet( x ) <> TK_STRING ) then
 			return -1
 		end if
-		text = *tkGetText( x )
+		expr = astNewPPINCLUDE( tkGetText( x ) )
 		x = ppSkip( x )
-
-		tkRemove( begin, x )
-		tkInsert( begin, TK_PPINCLUDE, text )
-		begin += 1
-		x = begin
 
 	case KW_IFDEF, KW_IFNDEF
 		x = ppSkip( x )
-
-		if( tk = KW_IFDEF ) then
-			tk = TK_PPIFDEF
-		else
-			tk = TK_PPIFNDEF
-		end if
 
 		'' Identifier?
 		if( tkGet( x ) <> TK_ID ) then
 			return -1
 		end if
-		text = *tkGetText( x )
+		expr = astNewID( tkGetText( x ) )
 		x = ppSkip( x )
 
-		tkRemove( begin, x - 1 )
-		tkInsert( begin, tk, text )
-		begin += 1
-		x = begin
+		expr = astNewDEFINED( expr )
+		if( tk = KW_IFNDEF ) then
+			expr = astNewLOGICNOT( expr )
+		end if
+		expr = astNewPPIF( expr )
 
 	case KW_ELSE, KW_ENDIF
 		x = ppSkip( x )
 
 		if( tk = KW_ELSE ) then
-			tk = TK_PPELSE
+			expr = astNewPPELSE( )
 		else
-			tk = TK_PPENDIF
+			expr = astNewPPENDIF( )
 		end if
-
-		tkRemove( begin, x - 1 )
-		tkInsert( begin, tk )
-		begin += 1
-		x = begin
 
 	case else
 		return -1
@@ -495,7 +512,7 @@ private function ppDirective( byval x as integer ) as integer
 	'' EOL?
 	select case( tkGet( x ) )
 	case TK_EOL
-		tkRemove( x, ppSkip( x ) - 1 )
+		x = ppSkip( x )
 
 	case TK_EOF
 
@@ -503,18 +520,28 @@ private function ppDirective( byval x as integer ) as integer
 		return -1
 	end select
 
+	if( expr ) then
+		tkRemove( begin, x - 1 )
+		tkInsert( begin, TK_AST, , expr )
+		begin += 1
+		x = begin
+	end if
+
 	function = x
 end function
 
 private function ppUnknownDirective( byval x as integer ) as integer
-	dim as integer begin = any
+	dim as integer begin = any, y = any
+	dim as ASTNODE ptr expr = any
 
 	begin = x
 
 	'' not at BOL?
-	if( tkIsStmtSep( x - 1 ) = FALSE ) then
+	y = tkSkipSpaceAndComments( x, -1 )
+	select case( tkGet( y ) )
+	case TK_EOL, TK_EOF
 		return -1
-	end if
+	end select
 
 	'' '#'
 	if( tkGet( x ) <> TK_HASH ) then
@@ -522,22 +549,19 @@ private function ppUnknownDirective( byval x as integer ) as integer
 	end if
 	x = ppSkip( x )
 
-	x = ppSkipToEOL( x )
+	y = ppSkipToEOL( x )
+	expr = astNewPPUNKNOWN( tkToText( x, y ) )
+	x = y
 
 	'' EOL? (could also be EOF)
 	if( tkGet( x ) = TK_EOL ) then
 		x = ppSkip( x )
 	end if
 
-	tkInsert( begin, TK_TODO, "unknown PP directive (sorry)" )
+	tkRemove( begin, x - 1 )
+	tkInsert( begin, TK_AST, , expr )
 	begin += 1
-	x += 1
-	tkInsert( begin, TK_BEGIN )
-	begin += 1
-	x += 1
-
-	tkInsert( x, TK_END )
-	x += 1
+	x = begin
 
 	function = x
 end function
@@ -581,8 +605,8 @@ private function ppDivider( byval x as integer ) as integer
 	'' associated with the following block of code, stored as TK_DIVIDER's
 	'' text.
 
-	eol2 = cSkipSpaceAndComments( x, -1 )
-	eol1 = cSkipSpaceAndComments( eol2 - 1, -1 )
+	eol2 = tkSkipSpaceAndComments( x, -1 )
+	eol1 = tkSkipSpaceAndComments( eol2 - 1, -1 )
 	blockcomment = hCollectComments( eol1 + 1, eol2 )
 
 	comment = hCollectComments( begin, eol1 )
@@ -623,37 +647,42 @@ end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-private function cSimpleToken( byval x as integer ) as integer
+private function cSimpleToken _
+	( _
+		byval x as integer, _
+		byval parent as ASTNODE ptr _
+	) as integer
+
 	select case( tkGet( x ) )
 	case TK_SEMI
-		if( parser.dryrun ) then
-			x = cSkip( x )
-		else
-			tkRemove( x, cSkip( x ) - 1 )
-		end if
+		x = cSkip( x )
 
-	case else
+	case TK_AST
 		'' Any pre-existing high-level tokens (things transformed by
 		'' previous parsing, such as PP directives, or anything inserted
 		'' by presets) need to be recognized as "valid constructs" too.
-		if( tkIsStmtSep( x ) ) then
-			x = cSkip( x )
-		else
-			x = -1
+		if( parent ) then
+			astAddChild( parent, astClone( tkGetAst( x ) ) )
 		end if
+		x = cSkip( x )
+
+	case else
+		x = -1
 	end select
 
 	function = x
 end function
 
-private function hMergeUnknown( byval x as integer ) as integer
+private function hMergeUnknown _
+	( _
+		byval x as integer, _
+		byval parent as ASTNODE ptr _
+	) as integer
+
 	dim as integer begin = any
+	dim as ASTNODE ptr expr = any
 
-	if( parser.dryrun ) then
-		return -1
-	end if
-
-	if( tkIsPoisoned( x ) = FALSE ) then
+	if( (parent = NULL) or (tkIsPoisoned( x ) = FALSE) ) then
 		return -1
 	end if
 
@@ -662,24 +691,22 @@ private function hMergeUnknown( byval x as integer ) as integer
 		x += 1
 	loop while( tkIsPoisoned( x ) )
 
-	tkInsert( begin, TK_TODO, "unknown construct (sorry)" )
-	begin += 1
-	x += 1
-
-	tkInsert( begin, TK_BEGIN )
-	begin += 1
-	x += 1
-
-	tkInsert( x, TK_END )
-	x += 1
+	astAddChild( parent, astNewUNKNOWN( tkToText( begin, x - 1 ) ) )
 
 	function = x
 end function
 
-private function cUnknown( byval x as integer ) as integer
+private function cUnknown _
+	( _
+		byval x as integer, _
+		byval parent as ASTNODE ptr _
+	) as integer
+
 	dim as integer begin = any
 
-	assert( parser.dryrun )
+	'' This should only be called during the 1st pass
+	assert( parent = NULL )
+
 	begin = x
 	x = cSkipStatement( x )
 	tkSetPoisoned( begin, x - 1 )
@@ -688,7 +715,12 @@ private function cUnknown( byval x as integer ) as integer
 end function
 
 '' (MultDecl{Field} | StructCompound)*
-private function cStructBody( byval x as integer ) as integer
+private function cStructBody _
+	( _
+		byval x as integer, _
+		byval parent as ASTNODE ptr _
+	) as integer
+
 	dim as integer old = any
 
 	do
@@ -699,36 +731,42 @@ private function cStructBody( byval x as integer ) as integer
 
 		old = x
 
-		x = hMergeUnknown( old )
+		x = hMergeUnknown( old, parent )
 		if( x >= 0 ) then
 			continue do
 		end if
 
-		x = cStructCompound( old )
+		x = cStructCompound( old, parent )
 		if( x >= 0 ) then
 			continue do
 		end if
 
-		x = cMultDecl( old, TK_FIELD )
+		x = cMultDecl( old, DECL_FIELD, parent )
 		if( x >= 0 ) then
 			continue do
 		end if
 
-		x = cSimpleToken( old )
+		x = cSimpleToken( old, parent )
 		if( x >= 0 ) then
 			continue do
 		end if
 
-		x = cUnknown( old )
+		x = cUnknown( old, parent )
 	loop
 
 	function = x
 end function
 
 '' [TYPEDEF] {STRUCT|UNION} [Identifier] '{' StructBody '}' [MultDecl] ';'
-private function cStructCompound( byval x as integer ) as integer
+private function cStructCompound _
+	( _
+		byval x as integer, _
+		byval parent as ASTNODE ptr _
+	) as integer
+
 	dim as integer head = any, is_typedef = any
-	dim as string id, comment
+	dim as string id
+	dim as ASTNODE ptr struct = any
 
 	head = x
 	is_typedef = FALSE
@@ -766,41 +804,25 @@ private function cStructCompound( byval x as integer ) as integer
 	end if
 	x = cSkip( x )
 
-	if( parser.dryrun = FALSE ) then
-		comment = hCollectComments( head, x - 1 )
-		tkRemove( head, x - 1 )
-		tkInsert( head, TK_STRUCT, id )
-		tkSetComment( head, comment )
-		head += 1
-		x = head
+	if( parent ) then
+		struct = astNew( ASTCLASS_STRUCT )
+		astSetId( struct, id )
+		astAddComment( struct, hCollectComments( head, x - 1 ) )
+		astAddChild( parent, struct )
 	end if
 
-	x = cStructBody( x )
-
-	if( parser.dryrun = FALSE ) then
-		'' TK_BEGIN/END should be inserted together in one go, because
-		'' the field parsing may need to look ahead/back; that would
-		'' break if the token buffer is in an inconsistent state.
-		tkInsert( head, TK_BEGIN )
-		head += 1
-		x += 1
-
-		tkInsert( x, TK_END )
-		x += 1
-	end if
+	x = cStructBody( x, parent )
 
 	'' '}'
 	if( tkGet( x ) <> TK_RBRACE ) then
 		return -1
 	end if
-	if( parser.dryrun ) then
-		x = cSkip( x )
-	else
-		tkRemove( x, cSkip( x ) - 1 )
-	end if
+	x = cSkip( x )
 
 	if( is_typedef ) then
-		x = cIdList( x, TK_TYPEDEF, TYPE_UDT, id )
+		struct = astNewID( id )
+		x = cIdList( x, DECL_TYPEDEF, TYPE_UDT, struct, parent )
+		astDelete( struct )
 		if( x < 0 ) then
 			return -1
 		end if
@@ -809,11 +831,7 @@ private function cStructCompound( byval x as integer ) as integer
 		if( tkGet( x ) <> TK_SEMI ) then
 			return -1
 		end if
-		if( parser.dryrun ) then
-			x = cSkip( x )
-		else
-			tkRemove( x, cSkip( x ) - 1 )
-		end if
+		x = cSkip( x )
 	end if
 
 	function = x
@@ -888,7 +906,7 @@ private function cBaseType _
 	( _
 		byval x as integer, _
 		byref dtype as integer, _
-		byref subtype as string, _
+		byref subtype as ASTNODE ptr, _
 		byval decl as integer _
 	) as integer
 
@@ -897,7 +915,7 @@ private function cBaseType _
 	dim as integer basetypex = any, basetypetk = any
 
 	dtype = TYPE_NONE
-	subtype = ""
+	subtype = NULL
 
 	signedmods = 0
 	unsignedmods = 0
@@ -990,10 +1008,9 @@ private function cBaseType _
 					case TK_ID
 						'' Another id must follow for params,
 						'' otherwise it's ambigious
-						select case( decl )
-						case TK_PARAM, TK_PARAMPROCPTR, TK_PARAMVARARG
+						if( decl = DECL_PARAM ) then
 							return -1
-						end select
+						end if
 
 					case TK_SEMI, TK_COMMA, TK_LBRACKET
 						exit do
@@ -1053,7 +1070,7 @@ private function cBaseType _
 		select case( basetypetk )
 		case TK_ID
 			dtype = TYPE_UDT
-			subtype = *tkGetText( basetypex )
+			subtype = astNewID( tkGetText( basetypex ) )
 		case KW_VOID
 			dtype = TYPE_ANY
 		case KW_FLOAT
@@ -1139,39 +1156,44 @@ private function cPtrCount _
 end function
 
 ''    '...' | MultDecl{Param}
-private function cParamDecl( byval x as integer ) as integer
-	dim as string comment
+private function cParamDecl _
+	( _
+		byval x as integer, _
+		byval parent as ASTNODE ptr _
+	) as integer
+
+	dim as ASTNODE ptr param = any
 
 	'' '...'?
 	if( tkGet( x ) = TK_ELLIPSIS ) then
-		if( parser.dryrun = FALSE ) then
-			comment = hCollectComments( x, cSkip( x ) - 1 )
-			tkRemove( x, cSkip( x ) - 1 )
-			tkInsert( x, TK_PARAMVARARG )
-			tkSetComment( x, comment )
+		if( parent ) then
+			param = astNew( ASTCLASS_PARAM )
+			astAddComment( param, hCollectComments( x, cSkip( x ) - 1 ) )
+			astAddChild( parent, param )
 		end if
 		x = cSkip( x )
 	else
-		x = cMultDecl( x, TK_PARAM )
+		x = cMultDecl( x, DECL_PARAM, parent )
 	end if
 
 	function = x
 end function
 
 '' [ParamDecl (',' ParamDecl)*]
-private function cParamDeclList( byval x as integer ) as integer
+private function cParamDeclList _
+	( _
+		byval x as integer, _
+		byval parent as ASTNODE ptr _
+	) as integer
+
 	do
-		x = cParamDecl( x )
+		x = cParamDecl( x, parent )
 
 		'' ','?
 		if( tkGet( x ) <> TK_COMMA ) then
 			exit do
 		end if
-		if( parser.dryrun ) then
-			x = cSkip( x )
-		else
-			tkRemove( x, cSkip( x ) - 1 )
-		end if
+		x = cSkip( x )
 	loop
 
 	function = x
@@ -1185,18 +1207,21 @@ private function cDeclElement _
 		byval x as integer, _
 		byval decl as integer, _
 		byval basedtype as integer, _
-		byref basesubtype as string _
+		byval basesubtype as ASTNODE ptr, _
+		byval parent as ASTNODE ptr _
 	) as integer
 
+	dim as ASTNODE ptr ast = any
 	dim as integer begin = any, elements = any, have_lparen = any
-	dim as integer dtype = any, is_procptr = any, has_params = any
-	dim as string id, comment
+	dim as integer dtype = any, is_procptr = any, astclass = any
+	dim as string id
 
 	begin = x
 	dtype = basedtype
 	elements = 0
 	have_lparen = FALSE
 	is_procptr = FALSE
+	ast = NULL
 
 	'' PtrCount
 	x = cPtrCount( x, dtype )
@@ -1210,23 +1235,6 @@ private function cDeclElement _
 		if( tkGet( x ) = TK_STAR ) then
 			'' It's a function pointer
 			x = cSkip( x )
-
-			select case( decl )
-			case TK_GLOBAL
-				decl = TK_GLOBALPROCPTR
-			case TK_EXTERNGLOBAL
-				decl = TK_EXTERNGLOBALPROCPTR
-			case TK_STATICGLOBAL
-				decl = TK_STATICGLOBALPROCPTR
-			case TK_FIELD
-				decl = TK_FIELDPROCPTR
-			case TK_PARAM
-				decl = TK_PARAMPROCPTR
-			case TK_TYPEDEF
-				decl = TK_TYPEDEFPROCPTR
-			case else
-				return -1
-			end select
 			is_procptr = TRUE
 		end if
 	end if
@@ -1235,13 +1243,8 @@ private function cDeclElement _
 	if( tkGet( x ) = TK_ID ) then
 		id = *tkGetText( x )
 		x = cSkip( x )
-	else
-		select case( decl )
-		case TK_PARAM, TK_PARAMPROCPTR, TK_PARAMVARARG
-
-		case else
-			return -1
-		end select
+	elseif( decl <> DECL_PARAM ) then
+		return -1
 	end if
 
 	'' '['?
@@ -1274,69 +1277,67 @@ private function cDeclElement _
 	if( tkGet( x ) = TK_LPAREN ) then
 		x = cSkip( x )
 
+		'' Parameters turn a vardecl/fielddecl into a procdecl
 		select case( decl )
-		case TK_GLOBAL, TK_EXTERNGLOBAL, TK_STATICGLOBAL, TK_FIELD
-			decl = TK_PROC
-		case TK_GLOBALPROCPTR, TK_EXTERNGLOBALPROCPTR, TK_STATICGLOBALPROCPTR, _
-		     TK_PARAMPROCPTR, TK_FIELDPROCPTR, TK_TYPEDEFPROCPTR
-
-		case else
-			return -1
+		case DECL_VAR, DECL_EXTERNVAR, DECL_STATICVAR, DECL_FIELD
+			decl = DECL_PROC
 		end select
 
-		has_params = TRUE
+		have_lparen = TRUE
 	else
 		'' If it's a function pointer there must also be a parameter list
 		if( is_procptr ) then
 			return -1
 		end if
-		has_params = FALSE
+		have_lparen = FALSE
 	end if
 
-	if( parser.dryrun = FALSE ) then
-		comment = hCollectComments( begin, x - 1 )
-		tkRemove( begin, x - 1 )
-		tkInsert( begin, decl, id )
-		tkSetComment( begin, comment )
-		tkSetType( begin, dtype, basesubtype )
-		tkSetArrayElements( begin, elements )
-		begin += 1
-		x = begin
+	if( parent ) then
+		select case( decl )
+		case DECL_VAR, DECL_EXTERNVAR, DECL_STATICVAR
+			astclass = ASTCLASS_VAR
+		case DECL_FIELD
+			astclass = ASTCLASS_FIELD
+		case DECL_PARAM
+			astclass = ASTCLASS_PARAM
+		case DECL_TYPEDEF
+			astclass = ASTCLASS_TYPEDEF
+		case DECL_PROC
+			astclass = ASTCLASS_PROC
+		case else
+			assert( FALSE )
+		end select
+
+		ast = astNew( astclass )
+
+		select case( decl )
+		case DECL_EXTERNVAR
+			ast->attrib or= ASTATTRIB_EXTERN
+		case DECL_STATICVAR
+			ast->attrib or= ASTATTRIB_STATIC
+		end select
+
+		astSetId( ast, id )
+		astSetType( ast, dtype, basesubtype )
+		astAddComment( ast, hCollectComments( begin, x - 1 ) )
+		astAddChild( parent, ast )
 	end if
 
-	if( has_params ) then
+	if( have_lparen ) then
 		'' Just '(void)'?
 		if( (tkGet( x ) = KW_VOID) and (tkGet( cSkip( x ) ) = TK_RPAREN) ) then
 			'' VOID
-			if( parser.dryrun ) then
-				x = cSkip( x )
-			else
-				tkRemove( x, cSkip( x ) - 1 )
-			end if
+			x = cSkip( x )
 		'' Not just '()'?
 		elseif( tkGet( x ) <> TK_RPAREN ) then
-			if( parser.dryrun = FALSE ) then
-				tkInsert( x, TK_BEGIN )
-				x += 1
-			end if
-
-			x = cParamDeclList( x )
-
-			if( parser.dryrun = FALSE ) then
-				tkInsert( x, TK_END )
-				x += 1
-			end if
+			x = cParamDeclList( x, ast )
 		end if
 
 		'' ')'
 		if( tkGet( x ) <> TK_RPAREN ) then
 			return -1
 		end if
-		if( parser.dryrun ) then
-			x = cSkip( x )
-		else
-			tkRemove( x, cSkip( x ) - 1 )
-		end if
+		x = cSkip( x )
 	end if
 
 	function = x
@@ -1348,53 +1349,38 @@ private function cIdList _
 		byval x as integer, _
 		byval decl as integer, _
 		byval basedtype as integer, _
-		byref basesubtype as string _
+		byval basesubtype as ASTNODE ptr, _
+		byval parent as ASTNODE ptr _
 	) as integer
 
 	'' ... (',' ...)*
 	do
-		x = cDeclElement( x, decl, basedtype, basesubtype )
+		x = cDeclElement( x, decl, basedtype, basesubtype, parent )
 		if( x < 0 ) then
 			return -1
 		end if
 
 		'' Everything can have a comma and more identifiers,
-		'' except for params.
-		select case( decl )
-		case TK_PARAM, TK_PARAMPROCPTR, TK_PARAMVARARG
+		'' except for parameters.
+		if( decl = DECL_PARAM ) then
 			exit do
-		end select
+		end if
 
 		'' ','?
 		if( tkGet( x ) <> TK_COMMA ) then
 			exit do
 		end if
-		if( parser.dryrun ) then
-			x = cSkip( x )
-		else
-			tkRemove( x, cSkip( x ) - 1 )
-		end if
+		x = cSkip( x )
 	loop
 
-	'' Everything except params must end with a ';'
-	select case( decl )
-	case TK_PARAM, TK_PARAMPROCPTR, TK_PARAMVARARG
-
-	case else
+	'' Everything except parameters must end with a ';'
+	if( decl <> DECL_PARAM ) then
 		'' ';'
 		if( tkGet( x ) <> TK_SEMI ) then
 			return -1
 		end if
-		if( parser.dryrun ) then
-			x = cSkip( x )
-		else
-			hAccumComment( cSkipRev( x ), _
-				hCollectComments( x, _
-					cSkipSpaceAndComments( x ) - 1 ) )
-
-			tkRemove( x, cSkip( x ) - 1 )
-		end if
-	end select
+		x = cSkip( x )
+	end if
 
 	function = x
 end function
@@ -1413,11 +1399,12 @@ end function
 private function cMultDecl _
 	( _
 		byval x as integer, _
-		byval decl as integer _
+		byval decl as integer, _
+		byval parent as ASTNODE ptr _
 	) as integer
 
 	dim as integer dtype = any, typebegin = any, typeend = any
-	dim as string subtype
+	dim as ASTNODE ptr subtype = any
 
 	'' BaseType
 	typebegin = x
@@ -1427,16 +1414,10 @@ private function cMultDecl _
 	end if
 	typeend = x
 
-	x = cIdList( x, decl, dtype, subtype )
+	x = cIdList( x, decl, dtype, subtype, parent )
+	astDelete( subtype )
 	if( x < 0 ) then
 		return -1
-	end if
-
-	if( parser.dryrun = FALSE ) then
-		hAccumComment( typeend, _
-			hCollectComments( typebegin, typeend - 1 ) )
-		tkRemove( typebegin, typeend - 1 )
-		x -= typeend - typebegin
 	end if
 
 	function = x
@@ -1444,99 +1425,93 @@ end function
 
 '' Global variable/procedure declarations
 ''    [EXTERN|STATIC] MultDecl
-private function cGlobalDecl( byval x as integer ) as integer
+private function cGlobalDecl _
+	( _
+		byval x as integer, _
+		byval parent as ASTNODE ptr _
+	) as integer
+
 	dim as integer decl = any
 
 	select case( tkGet( x ) )
 	case KW_EXTERN, KW_STATIC
 		if( tkGet( x ) = KW_EXTERN ) then
-			decl = TK_EXTERNGLOBAL
+			decl = DECL_EXTERNVAR
 		else
-			decl = TK_STATICGLOBAL
+			decl = DECL_STATICVAR
 		end if
-
-		if( parser.dryrun ) then
-			x = cSkip( x )
-		else
-			hAccumComment( cSkip( x ), _
-				hCollectComments( x, cSkip( x ) - 1 ) )
-			tkRemove( x, cSkip( x ) - 1 )
-		end if
-
+		x = cSkip( x )
 	case else
-		decl = TK_GLOBAL
+		decl = DECL_VAR
 	end select
 
-	function = cMultDecl( x, decl )
+	function = cMultDecl( x, decl, parent )
 end function
 
 '' Typedefs
 ''    TYPEDEF MultDecl
-private function cTypedef( byval x as integer ) as integer
+private function cTypedef _
+	( _
+		byval x as integer, _
+		byval parent as ASTNODE ptr _
+	) as integer
+
 	'' TYPEDEF?
 	if( tkGet( x ) <> KW_TYPEDEF ) then
 		return -1
 	end if
-	if( parser.dryrun ) then
-		x = cSkip( x )
-	else
-		tkRemove( x, cSkip( x ) - 1 )
-	end if
+	x = cSkip( x )
 
-	function = cMultDecl( x, TK_TYPEDEF )
+	function = cMultDecl( x, DECL_TYPEDEF, parent )
 end function
 
-private sub hToplevel( )
+private sub hToplevel( byval parent as ASTNODE ptr )
 	dim as integer x = any, old = any
 
 	x = cSkip( -1 )
 
-	'' Prune space at BOF
-	if( parser.dryrun = FALSE ) then
-		tkRemove( 0, x - 1 )
-		x = 0
-	end if
-
 	while( tkGet( x ) <> TK_EOF )
 		old = x
 
-		x = hMergeUnknown( old )
+		x = hMergeUnknown( old, parent )
 		if( x >= 0 ) then
 			continue while
 		end if
 
-		x = cStructCompound( old )
+		x = cStructCompound( old, parent )
 		if( x >= 0 ) then
 			continue while
 		end if
 
-		x = cGlobalDecl( old )
+		x = cGlobalDecl( old, parent )
 		if( x >= 0 ) then
 			continue while
 		end if
 
-		x = cTypedef( old )
+		x = cTypedef( old, parent )
 		if( x >= 0 ) then
 			continue while
 		end if
 
-		x = cSimpleToken( old )
+		x = cSimpleToken( old, parent )
 		if( x >= 0 ) then
 			continue while
 		end if
 
-		x = cUnknown( old )
+		x = cUnknown( old, parent )
 	wend
 end sub
 
-sub cToplevel( )
+function cToplevel( byval parent as ASTNODE ptr ) as ASTNODE ptr
 	'' 1st pass to identify constructs & set marks correspondingly
-	parser.dryrun = TRUE
 	parser.tempidcount = 0
-	hToplevel( )
+	hToplevel( NULL )
 
-	'' 2nd pass to merge them into high-level tokens
-	parser.dryrun = FALSE
+	tkDump( )
+
+	'' 2nd pass to build up AST
 	parser.tempidcount = 0
-	hToplevel( )
-end sub
+	hToplevel( parent )
+
+	function = parent
+end function

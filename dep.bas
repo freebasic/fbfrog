@@ -60,6 +60,7 @@ end sub
 private sub hParseFileForIncludes( byval node as DEPNODE ptr )
 	dim as DEPNODE ptr incnode = any
 	dim as integer x = any
+	dim as ASTNODE ptr ast = any
 
 	if( len( node->f->normed ) = 0 ) then
 		node->missing = TRUE
@@ -74,10 +75,13 @@ private sub hParseFileForIncludes( byval node as DEPNODE ptr )
 	x = 0
 	do
 		select case( tkGet( x ) )
-		case TK_PPINCLUDE
-			incnode = depAdd( *tkGetText( x ) )
-			if( incnode ) then
-				depOn( node, incnode )
+		case TK_AST
+			ast = tkGetAst( x )
+			if( ast->class = ASTCLASS_PPINCLUDE ) then
+				incnode = depAdd( *ast->text )
+				if( incnode ) then
+					depOn( node, incnode )
+				end if
 			end if
 		case TK_EOF
 			exit do

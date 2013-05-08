@@ -168,6 +168,7 @@ end sub
 	''
 
 	dim as FSFILE ptr f = any
+	dim as ASTNODE ptr ast = any
 
 	f = fsGetHead( )
 	while( f )
@@ -177,19 +178,19 @@ end sub
 		lexLoadFile( 0, f->normed )
 		print "translating: ";f->normed
 
+		ast = astNewFILE( f )
+
 		cAssignComments( )
 		cPPDirectives( )
-		cToplevel( )
+		ast = cToplevel( ast )
+		emitWriteFile( pathStripExt( f->normed ) + ".bi", emitAst( ast ) )
 
-		emitWriteFile( pathStripExt( f->normed ) + ".bi" )
+		astDelete( ast )
 
 		tkEnd( )
 		fsPop( )
 
 		f = listGetNext( f )
 	wend
-
-	print "done: ";
-	emitStats( )
 
 	frogEnd( )

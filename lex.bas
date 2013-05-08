@@ -68,7 +68,7 @@ type LEXSTUFF
 	limit		as ubyte ptr  '' (end of buffer)
 
 	x		as integer
-	location	as integer
+	linenum		as integer
 
 	kwhash		as THASH
 end type
@@ -92,29 +92,24 @@ private sub hAddTextToken( byval tk as integer, byval begin as ubyte ptr )
 	if( item->s ) then
 		'' Then use the proper KW_* instead of TK_ID
 		tkInsert( lex.x, cint( item->data ) )
-		tkSetLocation( lex.x, lex.location )
 	else
 		'' TK_ID
 		tkInsert( lex.x, tk, begin )
-		tkSetLocation( lex.x, lex.location )
 	end if
+	tkSetLineNum( lex.x, lex.linenum )
 
 	lex.i[0] = old
 end sub
 
 private sub hAddTodo( byval text as zstring ptr )
 	tkInsert( lex.x, TK_TODO, text )
-	tkSetLocation( lex.x, lex.location )
+	tkSetLineNum( lex.x, lex.linenum )
 end sub
 
 private sub hReadBytes( byval tk as integer, byval length as integer )
 	lex.i += length
 	tkInsert( lex.x, tk )
-	tkSetLocation( lex.x, lex.location )
-end sub
-
-private sub hNewline( )
-	lex.location = tkLocationNewLine( )
+	tkSetLineNum( lex.x, lex.linenum )
 end sub
 
 private sub hReadSpace( )
@@ -153,13 +148,13 @@ private sub hReadLineComment( )
 				lex.i += 1
 			end if
 
-			hNewline( )
+			lex.linenum += 1
 
 		case CH_LF
 			if( escaped = FALSE ) then
 				exit do
 			end if
-			hNewline( )
+			lex.linenum += 1
 
 		case CH_SPACE, CH_TAB
 			'' Spaces don't change escaped status
@@ -429,6 +424,8 @@ private sub hReadString( )
 end sub
 
 private sub lexNext( )
+	dim as integer y = any
+
 	'' Identify the next token
 	select case as const( lex.i[0] )
 	case CH_CR
@@ -438,11 +435,11 @@ private sub lexNext( )
 			lex.i += 1
 		end if
 
-		hNewline( )
+		lex.linenum += 1
 
 	case CH_LF
 		hReadBytes( TK_EOL, 1 )
-		hNewline( )
+		lex.linenum += 1
 
 	case CH_TAB, CH_SPACE
 		hReadSpace( )
@@ -569,13 +566,15 @@ private sub lexNext( )
 			hReadBytes( TK_LTEQ, 2 )
 		case else
 			'' If it's an #include, parse <...> as string literal
-			'' include?
-			if( tkGet( lex.x - 1 ) = KW_INCLUDE ) then
-				'' '#' at BOL?
-				if( (tkGet( lex.x - 2 ) = TK_HASH) and _
-				    tkIsStmtSep( lex.x - 3 ) ) then
-					hReadString( )
-					exit select
+			if( tkGet( lex.x ) = KW_INCLUDE ) then
+				y = tkSkipSpaceAndComments( lex.x, -1 )
+				if( tkGet( y ) = TK_HASH ) then
+					y = tkSkipSpaceAndComments( y, -1 )
+					select case( tkGet( y ) )
+					case TK_EOL, TK_EOF
+						hReadString( )
+						exit select, select
+					end select
 				end if
 			end if
 
@@ -734,11 +733,9 @@ end sub
 function lexLoadFile( byval x as integer, byref filename as string ) as integer
 	dim as integer count = any
 
-	tkLocationNewFile( filename )
-
 	count = 0
 	lex.x = x
-	hNewline( )
+	lex.linenum = 1
 	hLoadFile( filename )
 	hComplainAboutEmbeddedNulls( )
 	hInitKeywords( )

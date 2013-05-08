@@ -3,7 +3,7 @@
 #include once "fbfrog.bi"
 
 type FSSTUFF
-	files		as TLIST '' FROGFILE
+	files		as TLIST '' FSFILE
 	filehash	as THASH
 
 	contextstack	as TLIST '' FSFILE ptr, stack of parent contexts

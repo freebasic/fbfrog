@@ -92,35 +92,27 @@ declare sub hScanDirectoryForH _
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
+type FSFILE
+	pretty		as string  '' Pretty name from command line or #include
+	normed		as string  '' Normalized path used in hash table
+end type
+
+declare sub fsInit( )
+declare sub fsPush( byval context as FSFILE ptr )
+declare sub fsPop( )
+declare function fsAdd( byref pretty as string ) as FSFILE ptr
+declare function fsGetHead( ) as FSFILE ptr
+declare sub fsStats( )
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
 '' When changing, update the table in ast.bas too!
 enum
 	TK_EOF
-	TK_NOP
 	TK_DIVIDER
+	TK_AST
 	TK_BEGIN
 	TK_END
-
-	TK_PPINCLUDE
-	TK_PPDEFINE
-	TK_PPIFDEF
-	TK_PPIFNDEF
-	TK_PPELSE
-	TK_PPENDIF
-	TK_STRUCT
-	TK_TYPEDEF
-	TK_TYPEDEFPROCPTR
-	TK_GLOBAL
-	TK_EXTERNGLOBAL
-	TK_STATICGLOBAL
-	TK_GLOBALPROCPTR
-	TK_EXTERNGLOBALPROCPTR
-	TK_STATICGLOBALPROCPTR
-	TK_FIELD
-	TK_FIELDPROCPTR
-	TK_PROC
-	TK_PARAM
-	TK_PARAMPROCPTR
-	TK_PARAMVARARG
 
 	TK_TODO         '' TODOs added as fix-me-markers
 	TK_BYTE         '' For stray bytes that don't fit in elsewhere
@@ -248,6 +240,52 @@ enum
 	TK__COUNT
 end enum
 
+declare function tkInfoText( byval tk as integer ) as zstring ptr
+
+'' Debugging helper, for example: TRACE( x ), "decl begin"
+#define TRACE( x ) print __FUNCTION__ + "(" + str( __LINE__ ) + "): " + tkDumpOne( x )
+
+type ASTNODE as ASTNODE_
+
+declare function strDuplicate( byval s as zstring ptr ) as zstring ptr
+declare sub tkInit( )
+declare sub tkEnd( )
+declare sub tkStats( )
+declare function tkDumpOne( byval x as integer ) as string
+declare sub tkDump( )
+declare function tkGetCount( ) as integer
+declare sub tkInsert _
+	( _
+		byval x as integer, _
+		byval id as integer, _
+		byval text as zstring ptr = NULL, _
+		byval ast as ASTNODE ptr = NULL _
+	)
+declare sub tkRemove( byval first as integer, byval last as integer )
+declare function tkGet( byval x as integer ) as integer
+declare function tkGetText( byval x as integer ) as zstring ptr
+declare function tkGetAst( byval x as integer ) as ASTNODE ptr
+declare sub tkSetPoisoned( byval first as integer, byval last as integer )
+declare function tkIsPoisoned( byval x as integer ) as integer
+declare sub tkSetLineNum( byval x as integer, byval linenum as integer )
+declare function tkGetLineNum( byval x as integer ) as integer
+declare sub tkSetComment( byval x as integer, byval comment as zstring ptr )
+declare function tkGetComment( byval x as integer ) as zstring ptr
+declare function tkCount _
+	( _
+		byval tk as integer, _
+		byval first as integer, _
+		byval last as integer _
+	) as integer
+declare function tkSkipSpaceAndComments _
+	( _
+		byval x as integer, _
+		byval delta as integer = 1 _
+	) as integer
+declare function tkToText( byval first as integer, byval last as integer ) as string
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
 enum
 	TYPE_NONE = 0
 	TYPE_ANY
@@ -263,6 +301,7 @@ enum
 	TYPE_SINGLE
 	TYPE_DOUBLE
 	TYPE_UDT
+	TYPE_PROC
 	TYPE__COUNT
 end enum
 
@@ -292,55 +331,92 @@ const TYPEMAX_PTR = 8
 declare function typeToSigned( byval dtype as integer ) as integer
 declare function typeToUnsigned( byval dtype as integer ) as integer
 
-declare function tkInfoText( byval tk as integer ) as zstring ptr
+enum
+	ASTCLASS_FILE = 0
 
-'' Debugging helper, for example: TRACE( x ), "decl begin"
-#define TRACE( x ) print __FUNCTION__ + "(" + str( __LINE__ ) + "): " + tkDumpOne( x )
+	ASTCLASS_PPINCLUDE
+	ASTCLASS_PPDEFINE
+	ASTCLASS_PPIF
+	ASTCLASS_PPELSE
+	ASTCLASS_PPENDIF
+	ASTCLASS_PPUNKNOWN
 
-declare function strDuplicate( byval s as zstring ptr ) as zstring ptr
-declare sub tkInit( )
-declare sub tkEnd( )
-declare sub tkStats( )
-declare function tkDumpOne( byval x as integer ) as string
-declare sub tkDump( )
-declare function tkGetCount( ) as integer
-declare sub tkInsert _
+	ASTCLASS_STRUCT
+	ASTCLASS_TYPEDEF
+	ASTCLASS_VAR
+	ASTCLASS_FIELD
+	ASTCLASS_PROC
+	ASTCLASS_PARAM
+	ASTCLASS_UNKNOWN
+
+	ASTCLASS_CONST
+	ASTCLASS_ID
+	ASTCLASS_DEFINED
+	ASTCLASS_LOGICNOT
+end enum
+
+enum
+	ASTATTRIB_EXTERN = &h00000001
+	ASTATTRIB_STATIC = &h00000002
+end enum
+
+type ASTNODE_
+	class		as integer  '' ASTCLASS_*
+	attrib		as integer  '' ASTATTRIB_*
+
+	'' Identifiers/string literals/#define bodies, or NULL
+	id		as zstring ptr
+	text		as zstring ptr
+	comment		as zstring ptr
+	intval		as longint
+
+	'' Data type (vars, fields, params, function results, expressions)
+	dtype		as integer
+	subtype		as ASTNODE ptr
+
+	'' Source location where this declaration/statement was found
+	sourcefile	as FSFILE ptr
+	sourceline	as integer
+
+	'' Operands (expressions)
+	l		as ASTNODE ptr
+	r		as ASTNODE ptr
+
+	'' Fields (STRUCT), parameters (PROC, function pointers)
+	childhead	as ASTNODE ptr
+	childtail	as ASTNODE ptr
+	next		as ASTNODE ptr  '' Siblings in this list
+	prev		as ASTNODE ptr
+end type
+
+declare function astNew( byval class_ as integer ) as ASTNODE ptr
+declare sub astDelete( byval n as ASTNODE ptr )
+declare sub astAddChild( byval parent as ASTNODE ptr, byval child as ASTNODE ptr )
+declare sub astSetId( byval n as ASTNODE ptr, byval id as zstring ptr )
+declare sub astSetType _
 	( _
-		byval x as integer, _
-		byval id as integer, _
-		byval text as zstring ptr = NULL _
-	)
-declare sub tkRemove( byval first as integer, byval last as integer )
-declare function tkGet( byval x as integer ) as integer
-declare function tkIsStmtSep( byval x as integer ) as integer
-declare function tkIsProcPtr( byval x as integer ) as integer
-declare function tkGetText( byval x as integer ) as zstring ptr
-declare sub tkSetPoisoned( byval first as integer, byval last as integer )
-declare function tkIsPoisoned( byval x as integer ) as integer
-declare sub tkSetType _
-	( _
-		byval x as integer, _
+		byval n as ASTNODE ptr, _
 		byval dtype as integer, _
-		byval subtype as zstring ptr _
+		byval subtype as ASTNODE ptr _
 	)
-declare function tkGetType( byval x as integer ) as integer
-declare function tkGetSubtype( byval x as integer ) as zstring ptr
-declare sub tkSetArrayElements( byval x as integer, byval elements as integer )
-declare function tkGetArrayElements( byval x as integer ) as integer
-declare sub tkLocationNewFile( byval filename as zstring ptr )
-declare function tkLocationNewLine( ) as integer
-declare sub tkSetLocation( byval x as integer, byval location as integer )
-declare function tkHasSourceLocation( byval x as integer ) as integer
-declare function tkGetSourceFile( byval x as integer ) as zstring ptr
-declare function tkGetLineNum( byval x as integer ) as integer
-declare sub tkSetComment( byval x as integer, byval comment as zstring ptr )
-declare function tkGetComment( byval x as integer ) as zstring ptr
-declare function tkCount _
+declare sub astAddComment( byval n as ASTNODE ptr, byval comment as zstring ptr )
+declare function astClone( byval n as ASTNODE ptr ) as ASTNODE ptr
+declare function astNewFILE( byval f as FSFILE ptr ) as ASTNODE ptr
+declare function astNewPPDEFINE( byval id as zstring ptr ) as ASTNODE ptr
+declare function astNewPPINCLUDE( byval filename as zstring ptr ) as ASTNODE ptr
+declare function astNewPPIF( byval expr as ASTNODE ptr ) as ASTNODE ptr
+declare function astNewPPELSE( ) as ASTNODE ptr
+declare function astNewPPENDIF( ) as ASTNODE ptr
+declare function astNewPPUNKNOWN( byval text as zstring ptr ) as ASTNODE ptr
+declare function astNewUNKNOWN( byval text as zstring ptr ) as ASTNODE ptr
+declare function astNewCONSTi _
 	( _
-		byval tk as integer, _
-		byval first as integer, _
-		byval last as integer _
-	) as integer
+		byval i as longint, _
+		byval dtype as integer _
+	) as ASTNODE ptr
+declare function astNewID( byval id as zstring ptr ) as ASTNODE ptr
+declare function astNewDEFINED( byval l as ASTNODE ptr ) as ASTNODE ptr
+declare function astNewLOGICNOT( byval l as ASTNODE ptr ) as ASTNODE ptr
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
@@ -348,28 +424,14 @@ declare function lexLoadFile( byval x as integer, byref filename as string ) as 
 declare function emitType _
 	( _
 		byval dtype as integer, _
-		byval subtype as zstring ptr _
+		byval subtype as ASTNODE ptr _
 	) as string
-declare sub emitWriteFile( byref filename as string )
-declare sub emitStats( )
+declare function emitAst( byval ast as ASTNODE ptr ) as string
+declare sub emitWriteFile( byref filename as string, byref text as string )
 
 declare sub cAssignComments( )
 declare sub cPPDirectives( )
-declare sub cToplevel( )
-
-''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-
-type FSFILE
-	pretty		as string  '' Pretty name from command line or #include
-	normed		as string  '' Normalized path used in hash table
-end type
-
-declare sub fsInit( )
-declare sub fsPush( byval context as FSFILE ptr )
-declare sub fsPop( )
-declare function fsAdd( byref pretty as string ) as FSFILE ptr
-declare function fsGetHead( ) as FSFILE ptr
-declare sub fsStats( )
+declare function cToplevel( byval parent as ASTNODE ptr ) as ASTNODE ptr
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
