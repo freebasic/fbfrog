@@ -773,6 +773,7 @@ private function cStructCompound _
 
 	head = x
 	is_typedef = FALSE
+	struct = NULL
 
 	'' TYPEDEF?
 	if( tkGet( x ) = KW_TYPEDEF ) then
@@ -814,7 +815,7 @@ private function cStructCompound _
 		astAddChild( parent, struct )
 	end if
 
-	x = cStructBody( x, parent )
+	x = cStructBody( x, struct )
 
 	'' '}'
 	if( tkGet( x ) <> TK_RBRACE ) then
