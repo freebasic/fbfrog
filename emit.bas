@@ -5,12 +5,13 @@
 function emitType _
 	( _
 		byval dtype as integer, _
-		byval subtype as ASTNODE ptr _
+		byval subtype as ASTNODE ptr, _
+		byval debugdump as integer _
 	) as string
 
-	static as zstring ptr types(0 to TYPE__COUNT-1) = _
+	static as zstring ptr datatypenames(0 to TYPE__COUNT-1) = _
 	{ _
-		NULL       , _
+		@"none"    , _
 		@"any"     , _
 		@"byte"    , _
 		@"ubyte"   , _
@@ -23,12 +24,12 @@ function emitType _
 		@"ulongint", _
 		@"single"  , _
 		@"double"  , _
-		NULL       , _
-		NULL         _
+		@"udt"     , _
+		@"proc"      _
 	}
 
 	dim as string s
-	dim as integer ptrcount = any, dt = any
+	dim as integer ptrcount = any, dt = any, add_typeof = any
 
 	dt = typeGetDt( dtype )
 	ptrcount = typeGetPtrCount( dtype )
@@ -37,12 +38,56 @@ function emitType _
 		s += "const "
 	end if
 
-	select case( dt )
-	case TYPE_UDT, TYPE_PROC
-		s += emitAst( subtype )
-	case else
-		s += *types(dt)
-	end select
+	if( debugdump ) then
+		s += *datatypenames(dt)
+	else
+		'' If it's a pointer to a function pointer, wrap it inside
+		'' a typeof() to prevent the additional PTRs from being seen
+		'' as part of the function pointer's result type:
+		''    int (**p)(void)
+		''    p as function() as integer ptr
+		''    p as typeof( function() as integer ) ptr
+		'' (alternatively a typedef could be used)
+		add_typeof = (dt = TYPE_PROC) and (ptrcount >= 2)
+		if( add_typeof ) then
+			s += "typeof( "
+		end if
+
+		select case( dt )
+		case TYPE_UDT
+			s += emitAst( subtype )
+		case TYPE_PROC
+			if( ptrcount >= 1 ) then
+				'' The inner-most PTR on function pointers will be
+				'' ignored below, but we still should preserve its CONST
+				if( typeIsConstAt( dtype, ptrcount - 1 ) ) then
+					s += "const "
+				end if
+			else
+				'' proc type but no pointers -- this is not supported in
+				'' place of data types in FB, so here we add a DECLARE to
+				'' indicate that it's not supposed to be a procptr type,
+				'' but a plain proc type.
+				s += "declare "
+			end if
+			s += emitAst( subtype )
+		case else
+			s += *datatypenames(dt)
+		end select
+
+		if( add_typeof ) then
+			s += " )"
+		end if
+
+		'' Ignore most-inner PTR on function pointers -- in FB it's already
+		'' implied by writing AS SUB|FUNCTION( ... ).
+		if( dt = TYPE_PROC ) then
+			'assert( ptrcount > 0 )
+			if( ptrcount >= 1 ) then
+				ptrcount -= 1
+			end if
+		end if
+	end if
 
 	for i as integer = (ptrcount - 1) to 0 step -1
 		if( typeIsConstAt( dtype, i ) ) then

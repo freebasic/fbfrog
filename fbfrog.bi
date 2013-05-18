@@ -326,6 +326,10 @@ const TYPEMAX_PTR = 8
 	(((dt) and TYPEMASK_DT) or _
 	 (((dt) and TYPEMASK_PTR) + (1 shl TYPEPOS_PTR)) or _
 	 (((dt) and TYPEMASK_CONST) shl 1))
+#define typeMultAddrOf( dt, count ) _
+	((dt and TYPEMASK_DT) or _
+	 ((dt and TYPEMASK_PTR) + (count shl TYPEPOS_PTR)) or _
+	 ((dt and TYPEMASK_CONST) shl count))
 #define typeGetConst( dt ) ((dt) and TYPEMASK_CONST)
 
 declare function typeToSigned( byval dtype as integer ) as integer
@@ -353,6 +357,8 @@ enum
 	ASTCLASS_ID
 	ASTCLASS_DEFINED
 	ASTCLASS_LOGICNOT
+
+	ASTCLASS__COUNT
 end enum
 
 enum
@@ -417,6 +423,7 @@ declare function astNewCONSTi _
 declare function astNewID( byval id as zstring ptr ) as ASTNODE ptr
 declare function astNewDEFINED( byval l as ASTNODE ptr ) as ASTNODE ptr
 declare function astNewLOGICNOT( byval l as ASTNODE ptr ) as ASTNODE ptr
+declare sub astDump( byval n as ASTNODE ptr )
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
@@ -424,7 +431,8 @@ declare function lexLoadFile( byval x as integer, byref filename as string ) as 
 declare function emitType _
 	( _
 		byval dtype as integer, _
-		byval subtype as ASTNODE ptr _
+		byval subtype as ASTNODE ptr, _
+		byval debugdump as integer = FALSE _
 	) as string
 declare function emitAst( byval ast as ASTNODE ptr ) as string
 declare sub emitWriteFile( byref filename as string, byref text as string )

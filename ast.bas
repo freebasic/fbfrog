@@ -212,3 +212,88 @@ function astNewLOGICNOT( byval l as ASTNODE ptr ) as ASTNODE ptr
 	n->l = l
 	function = n
 end function
+
+dim shared as zstring ptr astclassnames(0 to ASTCLASS__COUNT-1) = _
+{ _
+	@"file"    , _
+	@"#include", _
+	@"#define" , _
+	@"#if"     , _
+	@"#else"   , _
+	@"#endif"  , _
+	@"#unknown", _
+	@"struct"  , _
+	@"typedef" , _
+	@"var"     , _
+	@"field"   , _
+	@"proc"    , _
+	@"param"   , _
+	@"unknown" , _
+	@"const"   , _
+	@"id"      , _
+	@"defined" , _
+	@"logicnot"  _
+}
+
+function astDumpOne( byval n as ASTNODE ptr ) as string
+	dim as string s
+
+	if( n = NULL ) then
+		return "<NULL>"
+	end if
+
+	s += *astclassnames(n->class)
+
+	if( n->id ) then
+		s += " " + *n->id
+	end if
+
+	if( n->text ) then
+		s += " """ + *n->text + """"
+	end if
+
+	if( n->dtype <> TYPE_NONE ) then
+		s += " as " + emitType( n->dtype, NULL, TRUE )
+	end if
+
+	function = s
+end function
+
+private sub hPrintIndentation( byval nestlevel as integer )
+	for i as integer = 2 to nestlevel
+		print "   ";
+	next
+end sub
+
+sub astDump( byval n as ASTNODE ptr )
+	static as integer nestlevel
+	dim as ASTNODE ptr child = any
+
+	nestlevel += 1
+
+	if( n ) then
+		hPrintIndentation( nestlevel )
+		print astDumpOne( n )
+
+		if( n->subtype ) then
+			nestlevel += 1
+			hPrintIndentation( nestlevel )
+			print "subtype:"
+			astDump( n->subtype )
+			nestlevel -= 1
+		end if
+
+		child = n->childhead
+		if( child ) then
+			do
+				astDump( child )
+				child = child->next
+			loop while( child )
+		end if
+	else
+		hPrintIndentation( nestlevel )
+		print "<NULL>"
+	end if
+
+	nestlevel -= 1
+end sub

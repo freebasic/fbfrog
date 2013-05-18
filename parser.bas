@@ -15,7 +15,6 @@ enum
 	DECL_FIELD
 	DECL_PARAM
 	DECL_TYPEDEF
-	DECL_PROC
 end enum
 
 declare function cStructCompound _
@@ -195,7 +194,7 @@ private function cFindClosingParen( byval x as integer ) as integer
 		case TK_EOF
 			exit do
 
-		case TK_AST
+		case TK_AST, TK_DIVIDER
 			exit do
 
 		end select
@@ -217,7 +216,7 @@ function cSkipStatement( byval x as integer ) as integer
 		case TK_LPAREN, TK_LBRACKET, TK_LBRACE
 			x = cFindClosingParen( x )
 
-		case TK_AST
+		case TK_AST, TK_DIVIDER
 			exit do
 
 		case else
@@ -277,7 +276,7 @@ private function hIsBeforeEol _
 		case TK_EOL, TK_EOF
 			exit do
 
-		case TK_AST
+		case TK_AST, TK_DIVIDER
 			'' High-level tokens count as separate lines
 			exit do
 
@@ -666,6 +665,10 @@ private function cSimpleToken _
 		end if
 		x = cSkip( x )
 
+	case TK_DIVIDER
+		'' (ditto)
+		x = cSkip( x )
+
 	case else
 		x = -1
 	end select
@@ -838,21 +841,6 @@ private function cStructCompound _
 end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-
-'' (CONST)*
-private function cConstMod _
-	( _
-		byval x as integer, _
-		byref dtype as integer _
-	) as integer
-
-	while( tkGet( x ) = KW_CONST )
-		dtype = typeSetIsConst( dtype )
-		x = cSkip( x )
-	wend
-
-	function = x
-end function
 
 private function cSignMod _
 	( _
@@ -1137,24 +1125,6 @@ private function cBaseType _
 	function = x
 end function
 
-private function cPtrCount _
-	( _
-		byval x as integer, _
-		byref dtype as integer _
-	) as integer
-
-	'' Pointers: ('*')*
-	while( tkGet( x ) = TK_STAR )
-		dtype = typeAddrOf( dtype )
-		x = cSkip( x )
-
-		'' [CONST]
-		x = cConstMod( x, dtype )
-	wend
-
-	function = x
-end function
-
 ''    '...' | MultDecl{Param}
 private function cParamDecl _
 	( _
@@ -1199,56 +1169,118 @@ private function cParamDeclList _
 	function = x
 end function
 
-'' plain id: PtrCount Identifier
-'' procptr:  PtrCount '(' '*' Identifier ')' '(' ParamList ')'
-'' proto:    PtrCount Identifier '(' ParamList ')'
-private function cDeclElement _
+''
+'' Declarator =
+''    '*'*
+''    { [Identifier] | '(' Declarator ')' }
+''    { '(' ParamList ')' | '[' ArrayElements ']' }
+''
+'' This needs to parse things like:
+''    i            for example, as part of: int i;
+''    i[10]        array: int i[10];
+''    <nothing>    anonymous parameter: int f(int);
+''    ()           extra parentheses on anonymous parameter: int f(int ());
+''    ***p         int ***p;
+''    (*p)(void)   function pointer: void (*p)(void);
+''    (((i)))      extra parentheses around identifier: int (((i)));
+''    *(*(pp))     ditto
+''    (*f(void))(void)    function returning a function pointer:
+''                            void (*f(void))(void);
+''    (*p[10])(void)      array of function pointers: void (*p[10])(void);
+''
+private function cDeclarator _
 	( _
 		byval x as integer, _
 		byval decl as integer, _
 		byval basedtype as integer, _
 		byval basesubtype as ASTNODE ptr, _
-		byval parent as ASTNODE ptr _
+		byval parent as ASTNODE ptr, _
+		byref ast as ASTNODE ptr, _
+		byref procptrdtype as integer _
 	) as integer
 
-	dim as ASTNODE ptr ast = any
-	dim as integer begin = any, elements = any, have_lparen = any
-	dim as integer dtype = any, is_procptr = any, astclass = any
+	dim as ASTNODE ptr proc = any
+	dim as integer begin = any, astclass = any, elements = any
+	dim as integer dtype = any, innerprocptrdtype = any
 	dim as string id
 
 	begin = x
 	dtype = basedtype
+	innerprocptrdtype = TYPE_PROC
+	procptrdtype = TYPE_PROC
 	elements = 0
-	have_lparen = FALSE
-	is_procptr = FALSE
 	ast = NULL
+	proc = NULL
 
-	'' PtrCount
-	x = cPtrCount( x, dtype )
-
-	'' '('?
-	if( tkGet( x ) = TK_LPAREN ) then
+	'' Pointers: ('*')*
+	while( tkGet( x ) = TK_STAR )
+		procptrdtype = typeAddrOf( procptrdtype )
+		dtype = typeAddrOf( dtype )
 		x = cSkip( x )
-		have_lparen = TRUE
 
-		'' '*'
-		if( tkGet( x ) = TK_STAR ) then
-			'' It's a function pointer
+		'' (CONST)*
+		while( tkGet( x ) = KW_CONST )
+			procptrdtype = typeSetIsConst( procptrdtype )
+			dtype = typeSetIsConst( dtype )
 			x = cSkip( x )
-			is_procptr = TRUE
+		wend
+	wend
+
+	if( tkGet( x ) = TK_LPAREN ) then
+		'' '('
+		x = cSkip( x )
+
+		x = cDeclarator( x, decl, dtype, basesubtype, parent, ast, innerprocptrdtype )
+
+		'' ')'
+		if( tkGet( x ) <> TK_RPAREN ) then
+			return -1
+		end if
+		x = cSkip( x )
+	else
+		if( tkGet( x ) = TK_ID ) then
+			id = *tkGetText( x )
+			x = cSkip( x )
+		else
+			'' An identifier must exist, except for parameters
+			if( decl <> DECL_PARAM ) then
+				return -1
+			end if
+		end if
+
+		if( parent ) then
+			select case( decl )
+			case DECL_VAR, DECL_EXTERNVAR, DECL_STATICVAR
+				astclass = ASTCLASS_VAR
+			case DECL_FIELD
+				astclass = ASTCLASS_FIELD
+			case DECL_PARAM
+				astclass = ASTCLASS_PARAM
+			case DECL_TYPEDEF
+				astclass = ASTCLASS_TYPEDEF
+			case else
+				assert( FALSE )
+			end select
+
+			ast = astNew( astclass )
+
+			select case( decl )
+			case DECL_EXTERNVAR
+				ast->attrib or= ASTATTRIB_EXTERN
+			case DECL_STATICVAR
+				ast->attrib or= ASTATTRIB_STATIC
+			end select
+
+			astSetId( ast, id )
+			astSetType( ast, dtype, basesubtype )
+			astAddComment( ast, hCollectComments( begin, x - 1 ) )
+			astAddChild( parent, ast )
 		end if
 	end if
 
-	'' Identifier (must be there, except for params)
-	if( tkGet( x ) = TK_ID ) then
-		id = *tkGetText( x )
-		x = cSkip( x )
-	elseif( decl <> DECL_PARAM ) then
-		return -1
-	end if
-
-	'' '['?
-	if( tkGet( x ) = TK_LBRACKET ) then
+	select case( tkGet( x ) )
+	'' '[' ArrayElements ']'
+	case TK_LBRACKET
 		x = cSkip( x )
 
 		'' Simple number?
@@ -1263,74 +1295,46 @@ private function cDeclElement _
 			return -1
 		end if
 		x = cSkip( x )
-	end if
 
-	if( have_lparen ) then
-		'' ')'
-		if( tkGet( x ) <> TK_RPAREN ) then
-			return -1
-		end if
-		x = cSkip( x )
-	end if
-
-	'' '('? (procedure parameters)
-	if( tkGet( x ) = TK_LPAREN ) then
+	'' '(' ParamList ')'
+	case TK_LPAREN
 		x = cSkip( x )
 
-		'' Parameters turn a vardecl/fielddecl into a procdecl
-		select case( decl )
-		case DECL_VAR, DECL_EXTERNVAR, DECL_STATICVAR, DECL_FIELD
-			decl = DECL_PROC
-		end select
+		if( ast ) then
+			'' Parameters turn a vardecl/fielddecl into a procdecl,
+			'' unless they're for a procptr type.
+			if( innerprocptrdtype <> TYPE_PROC ) then
+				'' There were '()'s above and the recursive
+				'' cDeclarator() call found pointers/CONSTs,
+				'' these parameters are for a function pointer.
+				proc = astNew( ASTCLASS_PROC )
 
-		have_lparen = TRUE
-	else
-		'' If it's a function pointer there must also be a parameter list
-		if( is_procptr ) then
-			return -1
+				'' The function pointer's result type is the
+				'' base type plus any pointers up to this level.
+				astSetType( proc, dtype, basesubtype )
+
+				'' The declared symbol's type is the function
+				'' pointer plus additional pointers if any
+				astDelete( ast->subtype )
+				ast->dtype = innerprocptrdtype
+				ast->subtype = proc
+			else
+				'' A plain symbol, not a pointer, becomes a function
+				select case( ast->class )
+				case ASTCLASS_VAR, ASTCLASS_FIELD
+					ast->class = ASTCLASS_PROC
+				end select
+				proc = ast
+			end if
 		end if
-		have_lparen = FALSE
-	end if
 
-	if( parent ) then
-		select case( decl )
-		case DECL_VAR, DECL_EXTERNVAR, DECL_STATICVAR
-			astclass = ASTCLASS_VAR
-		case DECL_FIELD
-			astclass = ASTCLASS_FIELD
-		case DECL_PARAM
-			astclass = ASTCLASS_PARAM
-		case DECL_TYPEDEF
-			astclass = ASTCLASS_TYPEDEF
-		case DECL_PROC
-			astclass = ASTCLASS_PROC
-		case else
-			assert( FALSE )
-		end select
-
-		ast = astNew( astclass )
-
-		select case( decl )
-		case DECL_EXTERNVAR
-			ast->attrib or= ASTATTRIB_EXTERN
-		case DECL_STATICVAR
-			ast->attrib or= ASTATTRIB_STATIC
-		end select
-
-		astSetId( ast, id )
-		astSetType( ast, dtype, basesubtype )
-		astAddComment( ast, hCollectComments( begin, x - 1 ) )
-		astAddChild( parent, ast )
-	end if
-
-	if( have_lparen ) then
 		'' Just '(void)'?
 		if( (tkGet( x ) = KW_VOID) and (tkGet( cSkip( x ) ) = TK_RPAREN) ) then
 			'' VOID
 			x = cSkip( x )
 		'' Not just '()'?
 		elseif( tkGet( x ) <> TK_RPAREN ) then
-			x = cParamDeclList( x, ast )
+			x = cParamDeclList( x, proc )
 		end if
 
 		'' ')'
@@ -1338,12 +1342,12 @@ private function cDeclElement _
 			return -1
 		end if
 		x = cSkip( x )
-	end if
+	end select
 
 	function = x
 end function
 
-'' IdList = DeclElement (',' DeclElement)* [';']
+'' IdList = Declarator (',' Declarator)* [';']
 private function cIdList _
 	( _
 		byval x as integer, _
@@ -1355,7 +1359,7 @@ private function cIdList _
 
 	'' ... (',' ...)*
 	do
-		x = cDeclElement( x, decl, basedtype, basesubtype, parent )
+		x = cDeclarator( x, decl, basedtype, basesubtype, parent, NULL, 0 )
 		if( x < 0 ) then
 			return -1
 		end if
@@ -1506,8 +1510,6 @@ function cToplevel( byval parent as ASTNODE ptr ) as ASTNODE ptr
 	'' 1st pass to identify constructs & set marks correspondingly
 	parser.tempidcount = 0
 	hToplevel( NULL )
-
-	tkDump( )
 
 	'' 2nd pass to build up AST
 	parser.tempidcount = 0
