@@ -1155,7 +1155,7 @@ private function cDeclarator _
 		byref procptrdtype as integer _
 	) as ASTNODE ptr
 
-	dim as ASTNODE ptr proc = any, t = any
+	dim as ASTNODE ptr proc = any, t = any, params = any
 	dim as integer begin = any, astclass = any, elements = any
 	dim as integer dtype = any, innerprocptrdtype = any
 	dim as string id
@@ -1166,8 +1166,6 @@ private function cDeclarator _
 	innerprocptrdtype = TYPE_PROC
 	procptrdtype = TYPE_PROC
 	elements = 0
-	t = NULL
-	proc = NULL
 
 	'' Pointers: ('*')*
 	while( tkGet( parse.x ) = TK_STAR )
@@ -1292,7 +1290,12 @@ private function cDeclarator _
 			parse.x = cSkip( parse.x )
 		'' Not just '()'?
 		elseif( tkGet( parse.x ) <> TK_RPAREN ) then
-			astAddChild( proc, cParamDeclList( ) )
+			params = cParamDeclList( )
+			if( params = NULL ) then
+				astDelete( t )
+				exit function
+			end if
+			astAddChild( proc, params )
 		end if
 
 		'' ')'
