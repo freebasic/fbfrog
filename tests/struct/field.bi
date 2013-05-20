@@ -5,6 +5,7 @@ type UDT
 	a as double
 	b as double
 	c as double
+
 	a as long ptr ptr
 	a as long ptr
 	a as long
@@ -17,17 +18,21 @@ type UDT
 	a as long ptr ptr
 	a as long ptr ptr
 	a as long
+
 	y as T ptr ptr ptr ptr
 	a as T ptr
 	a as T ptr ptr ptr ptr
 	a as T
+
 	p as function( byval as long ptr ) as long ptr
 	declare function f( byval as long, byval as long ) as long
 	declare sub proc( )
+
 	a as long
 	'' TODO: unknown construct
 	#if 1	int b;#endif	int c;
 end type
+
 type UDT
 	a as long
 	a as long ptr ptr
@@ -39,11 +44,13 @@ type UDT
 	d as long ptr ptr ptr
 	a as long
 	p as sub( )
+
 	declare sub f( )
 	declare function f( ) as long
 	declare sub f( )
 	declare function f( ) as UDT ptr ptr
 	declare sub f( byval a as long ptr, byval b as long ptr ptr ptr )
+
 	a as sub( )
 	a as function( byval as long ) as long
 	a as function( byval a as long ) as long
@@ -54,8 +61,10 @@ type UDT
 	c as long
 	d as function( byval a as long ) as long
 	a as function( byval as long ) as long ptr ptr
+
 	declare sub f( byval a as sub( ) )
 	declare sub f( byval as sub( ) )
+
 	a as sub( byval a as sub( ) )
 	p as function( byval as function( byval as long ptr ptr ptr ) as long ptr ptr ptr ) as long ptr ptr ptr
 end type

@@ -178,13 +178,11 @@ end sub
 		lexLoadFile( 0, f->normed )
 		print "translating: ";f->normed
 
-		ast = astNewFILE( f )
-
 		cAssignComments( )
 		cPPDirectives( )
-		ast = cToplevel( ast )
+		ast = cToplevel( )
+		astDump( ast )
 		emitWriteFile( pathStripExt( f->normed ) + ".bi", emitAst( ast ) )
-
 		astDelete( ast )
 
 		tkEnd( )

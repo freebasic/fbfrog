@@ -336,7 +336,9 @@ declare function typeToSigned( byval dtype as integer ) as integer
 declare function typeToUnsigned( byval dtype as integer ) as integer
 
 enum
-	ASTCLASS_FILE = 0
+	ASTCLASS_NOP = 0
+	ASTCLASS_GROUP
+	ASTCLASS_DIVIDER
 
 	ASTCLASS_PPINCLUDE
 	ASTCLASS_PPDEFINE
@@ -407,7 +409,6 @@ declare sub astSetType _
 	)
 declare sub astAddComment( byval n as ASTNODE ptr, byval comment as zstring ptr )
 declare function astClone( byval n as ASTNODE ptr ) as ASTNODE ptr
-declare function astNewFILE( byval f as FSFILE ptr ) as ASTNODE ptr
 declare function astNewPPDEFINE( byval id as zstring ptr ) as ASTNODE ptr
 declare function astNewPPINCLUDE( byval filename as zstring ptr ) as ASTNODE ptr
 declare function astNewPPIF( byval expr as ASTNODE ptr ) as ASTNODE ptr
@@ -439,7 +440,7 @@ declare sub emitWriteFile( byref filename as string, byref text as string )
 
 declare sub cAssignComments( )
 declare sub cPPDirectives( )
-declare function cToplevel( byval parent as ASTNODE ptr ) as ASTNODE ptr
+declare function cToplevel( ) as ASTNODE ptr
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 

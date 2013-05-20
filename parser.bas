@@ -3,10 +3,13 @@
 #include once "fbfrog.bi"
 
 type PARSERSTUFF
+	x		as integer
+	pass		as integer
+
 	tempidcount	as integer
 end type
 
-dim shared as PARSERSTUFF parser
+dim shared as PARSERSTUFF parse
 
 enum
 	DECL_VAR = 0
@@ -17,29 +20,18 @@ enum
 	DECL_TYPEDEF
 end enum
 
-declare function cStructCompound _
-	( _
-		byval x as integer, _
-		byval parent as ASTNODE ptr _
-	) as integer
+declare function cStructCompound( ) as ASTNODE ptr
 declare function cIdList _
 	( _
-		byval x as integer, _
 		byval decl as integer, _
 		byval basedtype as integer, _
-		byval basesubtype as ASTNODE ptr, _
-		byval parent as ASTNODE ptr _
-	) as integer
-declare function cMultDecl _
-	( _
-		byval x as integer, _
-		byval decl as integer, _
-		byval parent as ASTNODE ptr _
-	) as integer
+		byval basesubtype as ASTNODE ptr _
+	) as ASTNODE ptr
+declare function cMultDecl( byval decl as integer ) as ASTNODE ptr
 
 private function hMakeTempId( ) as string
-	parser.tempidcount += 1
-	function = "__fbfrog_AnonStruct" & parser.tempidcount
+	parse.tempidcount += 1
+	function = "__fbfrog_AnonStruct" & parse.tempidcount
 end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -646,154 +638,133 @@ end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-private function cSimpleToken _
-	( _
-		byval x as integer, _
-		byval parent as ASTNODE ptr _
-	) as integer
+private function cSimpleToken( ) as ASTNODE ptr
+	dim as ASTNODE ptr t = any
 
-	select case( tkGet( x ) )
+	select case( tkGet( parse.x ) )
 	case TK_SEMI
-		x = cSkip( x )
+		'' Cannot just return NULL, because we need to indicate success,
+		'' so a NOP node is needed...
+		t = astNew( ASTCLASS_NOP )
+		parse.x = cSkip( parse.x )
 
 	case TK_AST
 		'' Any pre-existing high-level tokens (things transformed by
 		'' previous parsing, such as PP directives, or anything inserted
 		'' by presets) need to be recognized as "valid constructs" too.
-		if( parent ) then
-			astAddChild( parent, astClone( tkGetAst( x ) ) )
-		end if
-		x = cSkip( x )
+		t = astClone( tkGetAst( parse.x ) )
+		parse.x = cSkip( parse.x )
 
 	case TK_DIVIDER
 		'' (ditto)
-		x = cSkip( x )
+		t = astNew( ASTCLASS_DIVIDER )
+		parse.x = cSkip( parse.x )
 
 	case else
-		x = -1
+		t = NULL
 	end select
 
-	function = x
+	function = t
 end function
 
-private function hMergeUnknown _
-	( _
-		byval x as integer, _
-		byval parent as ASTNODE ptr _
-	) as integer
-
+private function hMergeUnknown( ) as ASTNODE ptr
 	dim as integer begin = any
-	dim as ASTNODE ptr expr = any
 
-	if( (parent = NULL) or (tkIsPoisoned( x ) = FALSE) ) then
-		return -1
+	function = NULL
+
+	if( (parse.pass = 1) or (tkIsPoisoned( parse.x ) = FALSE) ) then
+		exit function
 	end if
 
-	begin = x
+	begin = parse.x
 	do
-		x += 1
-	loop while( tkIsPoisoned( x ) )
+		parse.x += 1
+	loop while( tkIsPoisoned( parse.x ) )
 
-	astAddChild( parent, astNewUNKNOWN( tkToText( begin, x - 1 ) ) )
-
-	function = x
+	function = astNewUNKNOWN( tkToText( begin, parse.x - 1 ) )
 end function
 
-private function cUnknown _
-	( _
-		byval x as integer, _
-		byval parent as ASTNODE ptr _
-	) as integer
-
+private sub cUnknown( )
 	dim as integer begin = any
 
 	'' This should only be called during the 1st pass
-	assert( parent = NULL )
+	assert( parse.pass = 1 )
 
-	begin = x
-	x = cSkipStatement( x )
-	tkSetPoisoned( begin, x - 1 )
-
-	function = x
-end function
+	begin = parse.x
+	parse.x = cSkipStatement( parse.x )
+	tkSetPoisoned( begin, parse.x - 1 )
+end sub
 
 '' (MultDecl{Field} | StructCompound)*
-private function cStructBody _
-	( _
-		byval x as integer, _
-		byval parent as ASTNODE ptr _
-	) as integer
-
+private function cStructBody( ) as ASTNODE ptr
+	dim as ASTNODE ptr group = any, t = any
 	dim as integer old = any
 
+	group = astNew( ASTCLASS_GROUP )
+
 	do
-		select case( tkGet( x ) )
+		select case( tkGet( parse.x ) )
 		case TK_RBRACE, TK_EOF
 			exit do
 		end select
 
-		old = x
+		old = parse.x
 
-		x = hMergeUnknown( old, parent )
-		if( x >= 0 ) then
-			continue do
+		t = hMergeUnknown( )
+		if( t = NULL ) then
+			parse.x = old
+			t = cStructCompound( )
+			if( t = NULL ) then
+				parse.x = old
+				t = cMultDecl( DECL_FIELD )
+				if( t = NULL ) then
+					parse.x = old
+					t = cSimpleToken( )
+					if( t = NULL ) then
+						parse.x = old
+						cUnknown( )
+					end if
+				end if
+			end if
 		end if
 
-		x = cStructCompound( old, parent )
-		if( x >= 0 ) then
-			continue do
+		if( t ) then
+			astAddChild( group, t )
 		end if
-
-		x = cMultDecl( old, DECL_FIELD, parent )
-		if( x >= 0 ) then
-			continue do
-		end if
-
-		x = cSimpleToken( old, parent )
-		if( x >= 0 ) then
-			continue do
-		end if
-
-		x = cUnknown( old, parent )
 	loop
 
-	function = x
+	function = group
 end function
 
 '' [TYPEDEF] {STRUCT|UNION} [Identifier] '{' StructBody '}' [MultDecl] ';'
-private function cStructCompound _
-	( _
-		byval x as integer, _
-		byval parent as ASTNODE ptr _
-	) as integer
-
+private function cStructCompound( ) as ASTNODE ptr
+	dim as ASTNODE ptr struct = any, subtype = any, group = any, t = any
 	dim as integer head = any, is_typedef = any
 	dim as string id
-	dim as ASTNODE ptr struct = any
 
-	head = x
+	function = NULL
+	head = parse.x
 	is_typedef = FALSE
-	struct = NULL
 
 	'' TYPEDEF?
-	if( tkGet( x ) = KW_TYPEDEF ) then
-		x = cSkip( x )
+	if( tkGet( parse.x ) = KW_TYPEDEF ) then
+		parse.x = cSkip( parse.x )
 		is_typedef = TRUE
 	end if
 
 	'' {STRUCT|UNION}
-	select case( tkGet( x ) )
+	select case( tkGet( parse.x ) )
 	case KW_STRUCT, KW_UNION
 
 	case else
-		return -1
+		exit function
 	end select
-	x = cSkip( x )
+	parse.x = cSkip( parse.x )
 
 	'' [Identifier]
-	if( tkGet( x ) = TK_ID ) then
-		id = *tkGetText( x )
-		x = cSkip( x )
+	if( tkGet( parse.x ) = TK_ID ) then
+		id = *tkGetText( parse.x )
+		parse.x = cSkip( parse.x )
 	elseif( is_typedef ) then
 		'' If it's a typedef with anonymous struct block, we need to
 		'' make up an id for it, for use in the base type of the
@@ -803,66 +774,52 @@ private function cStructCompound _
 	end if
 
 	'' '{'
-	if( tkGet( x ) <> TK_LBRACE ) then
-		return -1
+	if( tkGet( parse.x ) <> TK_LBRACE ) then
+		exit function
 	end if
-	x = cSkip( x )
+	parse.x = cSkip( parse.x )
 
-	if( parent ) then
-		struct = astNew( ASTCLASS_STRUCT )
-		astSetId( struct, id )
-		astAddComment( struct, hCollectComments( head, x - 1 ) )
-		astAddChild( parent, struct )
-	end if
+	struct = astNew( ASTCLASS_STRUCT )
+	astSetId( struct, id )
+	astAddComment( struct, hCollectComments( head, parse.x - 1 ) )
 
-	x = cStructBody( x, struct )
+	astAddChild( struct, cStructBody( ) )
 
 	'' '}'
-	if( tkGet( x ) <> TK_RBRACE ) then
-		return -1
+	if( tkGet( parse.x ) <> TK_RBRACE ) then
+		astDelete( struct )
+		exit function
 	end if
-	x = cSkip( x )
+	parse.x = cSkip( parse.x )
 
 	if( is_typedef ) then
-		struct = astNewID( id )
-		x = cIdList( x, DECL_TYPEDEF, TYPE_UDT, struct, parent )
-		astDelete( struct )
-		if( x < 0 ) then
-			return -1
+		subtype = astNewID( id )
+		t = cIdList( DECL_TYPEDEF, TYPE_UDT, subtype )
+		astDelete( subtype )
+
+		if( t = NULL ) then
+			astDelete( struct )
+			exit function
 		end if
+
+		group = astNew( ASTCLASS_GROUP )
+		astAddChild( group, struct )
+		astAddChild( group, t )
 	else
 		'' ';'
-		if( tkGet( x ) <> TK_SEMI ) then
-			return -1
+		if( tkGet( parse.x ) <> TK_SEMI ) then
+			astDelete( struct )
+			exit function
 		end if
-		x = cSkip( x )
+		parse.x = cSkip( parse.x )
+
+		group = struct
 	end if
 
-	function = x
+	function = group
 end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-
-private function cSignMod _
-	( _
-		byval x as integer, _
-		byref sign as integer _
-	) as integer
-
-	sign = 0
-
-	'' [SIGNED|UNSIGNED]
-	select case( tkGet( x ) )
-	case KW_SIGNED
-		sign = -1
-		x = cSkip( x )
-	case KW_UNSIGNED
-		sign = 1
-		x = cSkip( x )
-	end select
-
-	function = x
-end function
 
 ''
 '' Declaration base type parsing
@@ -891,9 +848,11 @@ end function
 ''    long long int a;
 ''    const const unsigned long const long const int const unsigned a;
 ''
+'' Returns TRUE/FALSE to indicate success/failure. The type is returned through
+'' the byref parameters.
+''
 private function cBaseType _
 	( _
-		byval x as integer, _
 		byref dtype as integer, _
 		byref subtype as ASTNODE ptr, _
 		byval decl as integer _
@@ -905,6 +864,7 @@ private function cBaseType _
 
 	dtype = TYPE_NONE
 	subtype = NULL
+	function = FALSE
 
 	signedmods = 0
 	unsignedmods = 0
@@ -919,7 +879,7 @@ private function cBaseType _
 	''
 
 	do
-		select case as const( tkGet( x ) )
+		select case as const( tkGet( parse.x ) )
 		case KW_SIGNED
 			signedmods += 1
 
@@ -941,16 +901,16 @@ private function cBaseType _
 				exit do
 			end if
 
-			select case as const( tkGet( x ) )
+			select case as const( tkGet( parse.x ) )
 			case KW_ENUM, KW_STRUCT, KW_UNION
 				'' {ENUM|STRUCT|UNION}
-				x = cSkip( x )
+				parse.x = cSkip( parse.x )
 
 				'' Identifier
-				if( tkGet( x ) <> TK_ID ) then
-					return -1
+				if( tkGet( parse.x ) <> TK_ID ) then
+					exit function
 				end if
-				basetypex = x
+				basetypex = parse.x
 
 			case TK_ID
 				''
@@ -993,36 +953,36 @@ private function cBaseType _
 				'' be enough to form the type?
 				if( signedmods or unsignedmods or _
 				    longmods or shortmods ) then
-					select case( tkGet( cSkip( x ) ) )
+					select case( tkGet( cSkip( parse.x ) ) )
 					case TK_ID
 						'' Another id must follow for params,
 						'' otherwise it's ambigious
 						if( decl = DECL_PARAM ) then
-							return -1
+							exit function
 						end if
 
 					case TK_SEMI, TK_COMMA, TK_LBRACKET
 						exit do
 
 					case TK_LPAREN
-						if( tkGet( cSkip( cSkip( x ) ) ) <> TK_STAR ) then
+						if( tkGet( cSkip( cSkip( parse.x ) ) ) <> TK_STAR ) then
 							exit do
 						end if
 					end select
 				end if
 
 				'' Treat the TK_ID as the type (a typedef)
-				basetypex = x
+				basetypex = parse.x
 
 			case KW_VOID, KW_CHAR, KW_FLOAT, KW_DOUBLE, KW_INT
-				basetypex = x
+				basetypex = parse.x
 
 			case else
 				exit do
 			end select
 		end select
 
-		x = cSkip( x )
+		parse.x = cSkip( parse.x )
 	loop
 
 	''
@@ -1035,17 +995,17 @@ private function cBaseType _
 
 	'' Can't have both SIGNED and UNSIGNED
 	if( (signedmods > 0) and (unsignedmods > 0) ) then
-		return -1
+		exit function
 	end if
 
 	'' Neither both SHORT and LONG
 	if( (shortmods > 0) and (longmods > 0) ) then
-		return -1
+		exit function
 	end if
 
 	'' Max. 1 SHORT allowed, and 1 or 2 LONGs
 	if( (shortmods > 1) or (longmods > 2) ) then
-		return -1
+		exit function
 	end if
 
 	select case( basetypetk )
@@ -1053,7 +1013,7 @@ private function cBaseType _
 		'' No SIGNED|UNSIGNED|SHORT|LONG for UDTs/floats/void
 		'' (cannot be translated to FB)
 		if( signedmods or unsignedmods or shortmods or longmods ) then
-			return -1
+			exit function
 		end if
 
 		select case( basetypetk )
@@ -1073,7 +1033,7 @@ private function cBaseType _
 	case KW_CHAR
 		'' No SHORT|LONG CHAR allowed
 		if( shortmods or longmods ) then
-			return -1
+			exit function
 		end if
 
 		'' SIGNED|UNSIGNED CHAR becomes BYTE|UBYTE,
@@ -1094,7 +1054,7 @@ private function cBaseType _
 			dtype = iif( unsignedmods > 0, TYPE_USHORT, TYPE_SHORT )
 		elseif( longmods = 1 ) then
 			'' TODO: How to handle translation of longs (32bit vs. 64bit)?
-			return -1
+			exit function
 		elseif( longmods = 2 ) then
 			dtype = iif( unsignedmods > 0, TYPE_ULONGINT, TYPE_LONGINT )
 		elseif( basetypetk = KW_INT ) then
@@ -1108,7 +1068,7 @@ private function cBaseType _
 			dtype = TYPE_LONG
 		else
 			'' No modifiers and no explicit "int" either
-			return -1
+			exit function
 		end if
 
 	end select
@@ -1123,51 +1083,49 @@ private function cBaseType _
 		dtype = typeSetIsConst( dtype )
 	end if
 
-	function = x
+	function = TRUE
 end function
 
-''    '...' | MultDecl{Param}
-private function cParamDecl _
-	( _
-		byval x as integer, _
-		byval parent as ASTNODE ptr _
-	) as integer
-
-	dim as ASTNODE ptr param = any
+'' ParamDecl = '...' | MultDecl{Param}
+private function cParamDecl( ) as ASTNODE ptr
+	dim as ASTNODE ptr t = any
 
 	'' '...'?
-	if( tkGet( x ) = TK_ELLIPSIS ) then
-		if( parent ) then
-			param = astNew( ASTCLASS_PARAM )
-			astAddComment( param, hCollectComments( x, cSkip( x ) - 1 ) )
-			astAddChild( parent, param )
-		end if
-		x = cSkip( x )
+	if( tkGet( parse.x ) = TK_ELLIPSIS ) then
+		t = astNew( ASTCLASS_PARAM )
+		astAddComment( t, hCollectComments( parse.x, cSkip( parse.x ) - 1 ) )
+		parse.x = cSkip( parse.x )
 	else
-		x = cMultDecl( x, DECL_PARAM, parent )
+		t = cMultDecl( DECL_PARAM )
 	end if
 
-	function = x
+	function = t
 end function
 
-'' [ParamDecl (',' ParamDecl)*]
-private function cParamDeclList _
-	( _
-		byval x as integer, _
-		byval parent as ASTNODE ptr _
-	) as integer
+'' ParamDeclList = ParamDecl (',' ParamDecl)*
+private function cParamDeclList( ) as ASTNODE ptr
+	dim as ASTNODE ptr group = any, t = any
+
+	function = NULL
+	group = astNew( ASTCLASS_GROUP )
 
 	do
-		x = cParamDecl( x, parent )
+		t = cParamDecl( )
+		if( t = NULL ) then
+			astDelete( group )
+			exit function
+		end if
+
+		astAddChild( group, t )
 
 		'' ','?
-		if( tkGet( x ) <> TK_COMMA ) then
+		if( tkGet( parse.x ) <> TK_COMMA ) then
 			exit do
 		end if
-		x = cSkip( x )
+		parse.x = cSkip( parse.x )
 	loop
 
-	function = x
+	function = group
 end function
 
 ''
@@ -1191,179 +1149,185 @@ end function
 ''
 private function cDeclarator _
 	( _
-		byval x as integer, _
 		byval decl as integer, _
 		byval basedtype as integer, _
 		byval basesubtype as ASTNODE ptr, _
-		byval parent as ASTNODE ptr, _
-		byref ast as ASTNODE ptr, _
 		byref procptrdtype as integer _
-	) as integer
+	) as ASTNODE ptr
 
-	dim as ASTNODE ptr proc = any
+	dim as ASTNODE ptr proc = any, t = any
 	dim as integer begin = any, astclass = any, elements = any
 	dim as integer dtype = any, innerprocptrdtype = any
 	dim as string id
 
-	begin = x
+	function = NULL
+	begin = parse.x
 	dtype = basedtype
 	innerprocptrdtype = TYPE_PROC
 	procptrdtype = TYPE_PROC
 	elements = 0
-	ast = NULL
+	t = NULL
 	proc = NULL
 
 	'' Pointers: ('*')*
-	while( tkGet( x ) = TK_STAR )
+	while( tkGet( parse.x ) = TK_STAR )
 		procptrdtype = typeAddrOf( procptrdtype )
 		dtype = typeAddrOf( dtype )
-		x = cSkip( x )
+		parse.x = cSkip( parse.x )
 
 		'' (CONST)*
-		while( tkGet( x ) = KW_CONST )
+		while( tkGet( parse.x ) = KW_CONST )
 			procptrdtype = typeSetIsConst( procptrdtype )
 			dtype = typeSetIsConst( dtype )
-			x = cSkip( x )
+			parse.x = cSkip( parse.x )
 		wend
 	wend
 
-	if( tkGet( x ) = TK_LPAREN ) then
+	if( tkGet( parse.x ) = TK_LPAREN ) then
 		'' '('
-		x = cSkip( x )
+		parse.x = cSkip( parse.x )
 
-		x = cDeclarator( x, decl, dtype, basesubtype, parent, ast, innerprocptrdtype )
+		t = cDeclarator( decl, dtype, basesubtype, innerprocptrdtype )
+		if( t = NULL ) then
+			exit function
+		end if
 
 		'' ')'
-		if( tkGet( x ) <> TK_RPAREN ) then
-			return -1
+		if( tkGet( parse.x ) <> TK_RPAREN ) then
+			astDelete( t )
+			exit function
 		end if
-		x = cSkip( x )
+		parse.x = cSkip( parse.x )
 	else
-		if( tkGet( x ) = TK_ID ) then
-			id = *tkGetText( x )
-			x = cSkip( x )
+		if( tkGet( parse.x ) = TK_ID ) then
+			id = *tkGetText( parse.x )
+			parse.x = cSkip( parse.x )
 		else
 			'' An identifier must exist, except for parameters
 			if( decl <> DECL_PARAM ) then
-				return -1
+				exit function
 			end if
 		end if
 
-		if( parent ) then
-			select case( decl )
-			case DECL_VAR, DECL_EXTERNVAR, DECL_STATICVAR
-				astclass = ASTCLASS_VAR
-			case DECL_FIELD
-				astclass = ASTCLASS_FIELD
-			case DECL_PARAM
-				astclass = ASTCLASS_PARAM
-			case DECL_TYPEDEF
-				astclass = ASTCLASS_TYPEDEF
-			case else
-				assert( FALSE )
-			end select
+		select case( decl )
+		case DECL_VAR, DECL_EXTERNVAR, DECL_STATICVAR
+			astclass = ASTCLASS_VAR
+		case DECL_FIELD
+			astclass = ASTCLASS_FIELD
+		case DECL_PARAM
+			astclass = ASTCLASS_PARAM
+		case DECL_TYPEDEF
+			astclass = ASTCLASS_TYPEDEF
+		case else
+			assert( FALSE )
+		end select
 
-			ast = astNew( astclass )
+		t = astNew( astclass )
 
-			select case( decl )
-			case DECL_EXTERNVAR
-				ast->attrib or= ASTATTRIB_EXTERN
-			case DECL_STATICVAR
-				ast->attrib or= ASTATTRIB_STATIC
-			end select
+		select case( decl )
+		case DECL_EXTERNVAR
+			t->attrib or= ASTATTRIB_EXTERN
+		case DECL_STATICVAR
+			t->attrib or= ASTATTRIB_STATIC
+		end select
 
-			astSetId( ast, id )
-			astSetType( ast, dtype, basesubtype )
-			astAddComment( ast, hCollectComments( begin, x - 1 ) )
-			astAddChild( parent, ast )
-		end if
+		astSetId( t, id )
+		astSetType( t, dtype, basesubtype )
+		astAddComment( t, hCollectComments( begin, parse.x - 1 ) )
 	end if
 
-	select case( tkGet( x ) )
+	select case( tkGet( parse.x ) )
 	'' '[' ArrayElements ']'
 	case TK_LBRACKET
-		x = cSkip( x )
+		parse.x = cSkip( parse.x )
 
 		'' Simple number?
-		if( tkGet( x ) <> TK_DECNUM ) then
-			return -1
+		if( tkGet( parse.x ) <> TK_DECNUM ) then
+			astDelete( t )
+			exit function
 		end if
-		elements = valint( *tkGetText( x ) )
-		x = cSkip( x )
+		elements = valint( *tkGetText( parse.x ) )
+		parse.x = cSkip( parse.x )
 
 		'' ']'
-		if( tkGet( x ) <> TK_RBRACKET ) then
-			return -1
+		if( tkGet( parse.x ) <> TK_RBRACKET ) then
+			astDelete( t )
+			exit function
 		end if
-		x = cSkip( x )
+		parse.x = cSkip( parse.x )
 
 	'' '(' ParamList ')'
 	case TK_LPAREN
-		x = cSkip( x )
+		parse.x = cSkip( parse.x )
 
-		if( ast ) then
-			'' Parameters turn a vardecl/fielddecl into a procdecl,
-			'' unless they're for a procptr type.
-			if( innerprocptrdtype <> TYPE_PROC ) then
-				'' There were '()'s above and the recursive
-				'' cDeclarator() call found pointers/CONSTs,
-				'' these parameters are for a function pointer.
-				proc = astNew( ASTCLASS_PROC )
+		'' Parameters turn a vardecl/fielddecl into a procdecl,
+		'' unless they're for a procptr type.
+		if( innerprocptrdtype <> TYPE_PROC ) then
+			'' There were '()'s above and the recursive
+			'' cDeclarator() call found pointers/CONSTs,
+			'' these parameters are for a function pointer.
+			proc = astNew( ASTCLASS_PROC )
 
-				'' The function pointer's result type is the
-				'' base type plus any pointers up to this level.
-				astSetType( proc, dtype, basesubtype )
+			'' The function pointer's result type is the
+			'' base type plus any pointers up to this level.
+			astSetType( proc, dtype, basesubtype )
 
-				'' The declared symbol's type is the function
-				'' pointer plus additional pointers if any
-				astDelete( ast->subtype )
-				ast->dtype = innerprocptrdtype
-				ast->subtype = proc
-			else
-				'' A plain symbol, not a pointer, becomes a function
-				select case( ast->class )
-				case ASTCLASS_VAR, ASTCLASS_FIELD
-					ast->class = ASTCLASS_PROC
-				end select
-				proc = ast
-			end if
+			'' The declared symbol's type is the function
+			'' pointer plus additional pointers if any
+			astDelete( t->subtype )
+			t->dtype = innerprocptrdtype
+			t->subtype = proc
+		else
+			'' A plain symbol, not a pointer, becomes a function
+			select case( t->class )
+			case ASTCLASS_VAR, ASTCLASS_FIELD
+				t->class = ASTCLASS_PROC
+			end select
+			proc = t
 		end if
 
 		'' Just '(void)'?
-		if( (tkGet( x ) = KW_VOID) and (tkGet( cSkip( x ) ) = TK_RPAREN) ) then
+		if( (tkGet( parse.x ) = KW_VOID) and (tkGet( cSkip( parse.x ) ) = TK_RPAREN) ) then
 			'' VOID
-			x = cSkip( x )
+			parse.x = cSkip( parse.x )
 		'' Not just '()'?
-		elseif( tkGet( x ) <> TK_RPAREN ) then
-			x = cParamDeclList( x, proc )
+		elseif( tkGet( parse.x ) <> TK_RPAREN ) then
+			astAddChild( proc, cParamDeclList( ) )
 		end if
 
 		'' ')'
-		if( tkGet( x ) <> TK_RPAREN ) then
-			return -1
+		if( tkGet( parse.x ) <> TK_RPAREN ) then
+			astDelete( t )
+			exit function
 		end if
-		x = cSkip( x )
+		parse.x = cSkip( parse.x )
 	end select
 
-	function = x
+	function = t
 end function
 
 '' IdList = Declarator (',' Declarator)* [';']
 private function cIdList _
 	( _
-		byval x as integer, _
 		byval decl as integer, _
 		byval basedtype as integer, _
-		byval basesubtype as ASTNODE ptr, _
-		byval parent as ASTNODE ptr _
-	) as integer
+		byval basesubtype as ASTNODE ptr _
+	) as ASTNODE ptr
+
+	dim as ASTNODE ptr group = any, t = any
+
+	function = NULL
+	group = astNew( ASTCLASS_GROUP )
 
 	'' ... (',' ...)*
 	do
-		x = cDeclarator( x, decl, basedtype, basesubtype, parent, NULL, 0 )
-		if( x < 0 ) then
-			return -1
+		t = cDeclarator( decl, basedtype, basesubtype, 0 )
+		if( t = NULL ) then
+			astDelete( group )
+			exit function
 		end if
+
+		astAddChild( group, t )
 
 		'' Everything can have a comma and more identifiers,
 		'' except for parameters.
@@ -1372,22 +1336,23 @@ private function cIdList _
 		end if
 
 		'' ','?
-		if( tkGet( x ) <> TK_COMMA ) then
+		if( tkGet( parse.x ) <> TK_COMMA ) then
 			exit do
 		end if
-		x = cSkip( x )
+		parse.x = cSkip( parse.x )
 	loop
 
 	'' Everything except parameters must end with a ';'
 	if( decl <> DECL_PARAM ) then
 		'' ';'
-		if( tkGet( x ) <> TK_SEMI ) then
-			return -1
+		if( tkGet( parse.x ) <> TK_SEMI ) then
+			astDelete( group )
+			exit function
 		end if
-		x = cSkip( x )
+		parse.x = cSkip( parse.x )
 	end if
 
-	function = x
+	function = group
 end function
 
 ''
@@ -1401,120 +1366,105 @@ end function
 ''
 '' MultDecl = BaseType IdList
 ''
-private function cMultDecl _
-	( _
-		byval x as integer, _
-		byval decl as integer, _
-		byval parent as ASTNODE ptr _
-	) as integer
-
+private function cMultDecl( byval decl as integer ) as ASTNODE ptr
 	dim as integer dtype = any, typebegin = any, typeend = any
 	dim as ASTNODE ptr subtype = any
 
+	function = NULL
+
 	'' BaseType
-	typebegin = x
-	x = cBaseType( x, dtype, subtype, decl )
-	if( x < 0 ) then
-		return -1
+	typebegin = parse.x
+	if( cBaseType( dtype, subtype, decl ) = FALSE ) then
+		exit function
 	end if
-	typeend = x
+	typeend = parse.x
 
-	x = cIdList( x, decl, dtype, subtype, parent )
+	function = cIdList( decl, dtype, subtype )
 	astDelete( subtype )
-	if( x < 0 ) then
-		return -1
-	end if
-
-	function = x
 end function
 
 '' Global variable/procedure declarations
 ''    [EXTERN|STATIC] MultDecl
-private function cGlobalDecl _
-	( _
-		byval x as integer, _
-		byval parent as ASTNODE ptr _
-	) as integer
-
+private function cGlobalDecl( ) as ASTNODE ptr
 	dim as integer decl = any
 
-	select case( tkGet( x ) )
+	select case( tkGet( parse.x ) )
 	case KW_EXTERN, KW_STATIC
-		if( tkGet( x ) = KW_EXTERN ) then
+		if( tkGet( parse.x ) = KW_EXTERN ) then
 			decl = DECL_EXTERNVAR
 		else
 			decl = DECL_STATICVAR
 		end if
-		x = cSkip( x )
+		parse.x = cSkip( parse.x )
 	case else
 		decl = DECL_VAR
 	end select
 
-	function = cMultDecl( x, decl, parent )
+	function = cMultDecl( decl )
 end function
 
 '' Typedefs
 ''    TYPEDEF MultDecl
-private function cTypedef _
-	( _
-		byval x as integer, _
-		byval parent as ASTNODE ptr _
-	) as integer
+private function cTypedef( ) as ASTNODE ptr
+	function = NULL
 
 	'' TYPEDEF?
-	if( tkGet( x ) <> KW_TYPEDEF ) then
-		return -1
+	if( tkGet( parse.x ) <> KW_TYPEDEF ) then
+		exit function
 	end if
-	x = cSkip( x )
+	parse.x = cSkip( parse.x )
 
-	function = cMultDecl( x, DECL_TYPEDEF, parent )
+	function = cMultDecl( DECL_TYPEDEF )
 end function
 
-private sub hToplevel( byval parent as ASTNODE ptr )
-	dim as integer x = any, old = any
+private function hToplevel( ) as ASTNODE ptr
+	dim as integer old = any
+	dim as ASTNODE ptr group = any, t = any
 
-	x = cSkip( -1 )
+	group = astNew( ASTCLASS_GROUP )
+	parse.x = cSkip( -1 )
 
-	while( tkGet( x ) <> TK_EOF )
-		old = x
+	while( tkGet( parse.x ) <> TK_EOF )
+		old = parse.x
 
-		x = hMergeUnknown( old, parent )
-		if( x >= 0 ) then
-			continue while
+		t = hMergeUnknown( )
+		if( t = NULL ) then
+			parse.x = old
+			t = cStructCompound( )
+			if( t = NULL ) then
+				parse.x = old
+				t = cGlobalDecl( )
+				if( t = NULL ) then
+					parse.x = old
+					t = cTypedef( )
+					if( t = NULL ) then
+						parse.x = old
+						t = cSimpleToken( )
+						if( t = NULL ) then
+							parse.x = old
+							cUnknown( )
+						end if
+					end if
+				end if
+			end if
 		end if
 
-		x = cStructCompound( old, parent )
-		if( x >= 0 ) then
-			continue while
+		if( t ) then
+			astAddChild( group, t )
 		end if
-
-		x = cGlobalDecl( old, parent )
-		if( x >= 0 ) then
-			continue while
-		end if
-
-		x = cTypedef( old, parent )
-		if( x >= 0 ) then
-			continue while
-		end if
-
-		x = cSimpleToken( old, parent )
-		if( x >= 0 ) then
-			continue while
-		end if
-
-		x = cUnknown( old, parent )
 	wend
-end sub
 
-function cToplevel( byval parent as ASTNODE ptr ) as ASTNODE ptr
+	function = group
+end function
+
+function cToplevel( ) as ASTNODE ptr
 	'' 1st pass to identify constructs & set marks correspondingly
-	parser.tempidcount = 0
-	hToplevel( NULL )
+	parse.pass = 1
+	parse.tempidcount = 0
+	astDelete( hToplevel( ) )
 
 	'' 2nd pass to build up AST
-	parser.tempidcount = 0
-	hToplevel( parent )
-
-	function = parent
+	parse.pass = 2
+	parse.tempidcount = 0
+	function = hToplevel( )
 end function

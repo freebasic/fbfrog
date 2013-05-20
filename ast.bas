@@ -49,16 +49,39 @@ sub astDelete( byval n as ASTNODE ptr )
 	deallocate( n )
 end sub
 
-sub astAddChild( byval parent as ASTNODE ptr, byval child as ASTNODE ptr )
-	assert( parent )
-	assert( child )
-	child->prev = parent->childtail
-	if( parent->childtail ) then
-		parent->childtail->next = child
+sub astAddChild( byval parent as ASTNODE ptr, byval t as ASTNODE ptr )
+	dim as ASTNODE ptr child = any
+
+	if( t = NULL ) then
+		exit sub
 	end if
-	parent->childtail = child
+
+	select case( t->class )
+	case ASTCLASS_GROUP
+		'' If it's a GROUP, add its children, and delete the GROUP itself
+		child = t->childhead
+		while( child )
+			astAddChild( parent, astClone( child ) )
+			child = child->next
+		wend
+
+		astDelete( t )
+		exit sub
+
+	case ASTCLASS_NOP
+		'' Don't bother adding NOPs
+		astDelete( t )
+		exit sub
+
+	end select
+
+	t->prev = parent->childtail
+	if( parent->childtail ) then
+		parent->childtail->next = t
+	end if
+	parent->childtail = t
 	if( parent->childhead = NULL ) then
-		parent->childhead = child
+		parent->childhead = t
 	end if
 end sub
 
@@ -125,13 +148,6 @@ function astClone( byval n as ASTNODE ptr ) as ASTNODE ptr
 	wend
 
 	function = c
-end function
-
-function astNewFILE( byval f as FSFILE ptr ) as ASTNODE ptr
-	dim as ASTNODE ptr n = any
-	n = astNew( ASTCLASS_FILE )
-	n->sourcefile = f
-	function = n
 end function
 
 function astNewPPDEFINE( byval id as zstring ptr ) as ASTNODE ptr
@@ -215,7 +231,9 @@ end function
 
 dim shared as zstring ptr astclassnames(0 to ASTCLASS__COUNT-1) = _
 { _
-	@"file"    , _
+	@"nop"     , _
+	@"group"   , _
+	@"divider" , _
 	@"#include", _
 	@"#define" , _
 	@"#if"     , _

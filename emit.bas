@@ -101,7 +101,10 @@ function emitType _
 end function
 
 private function hIndent( byref s as string ) as string
-	function = !"\t" + strReplace( s, !"\n", !"\n\t" )
+	'' Not just newlines?
+	if( len( strReplace( s, !"\n", "" ) ) > 0 ) then
+		function = !"\t" + strReplace( s, !"\n", !"\n\t" )
+	end if
 end function
 
 function emitAst( byval ast as ASTNODE ptr ) as string
@@ -110,12 +113,16 @@ function emitAst( byval ast as ASTNODE ptr ) as string
 	dim as integer count = any
 
 	select case as const( ast->class )
-	case ASTCLASS_FILE
+	case ASTCLASS_NOP
+
+	case ASTCLASS_GROUP
 		child = ast->childhead
 		while( child )
 			s += emitAst( child ) + !"\n"
 			child = child->next
 		wend
+
+	case ASTCLASS_DIVIDER
 
 	case ASTCLASS_PPINCLUDE
 		s += "#include """ + *ast->text + """"
