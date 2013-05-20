@@ -260,6 +260,10 @@ function astDumpOne( byval n as ASTNODE ptr ) as string
 		return "<NULL>"
 	end if
 
+	#if 0
+		s += "[" & hex( n ) & "] "
+	#endif
+
 	s += *astclassnames(n->class)
 
 	if( n->id ) then

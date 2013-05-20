@@ -1,13 +1,13 @@
 
-declare function f( byval as long ) as function( byval as long ) as long
+declare function f( byval as long ) as function( byval as long ) as function( byval as long ) as long
 
-extern     p as function( byval as long ) as long
-dim shared p as function( byval as long ) as long
+extern     p as function( byval as long ) as function( byval as long ) as long
+dim shared p as function( byval as long ) as function( byval as long ) as long
 
 declare function f( byval as long ) as long
-extern     p as function( byval as long ) as long
-dim shared p as function( byval as long ) as long
-declare function f( byval as long ) as function( byval as long ) as long
+extern     p as function( byval as long ) as function( byval as long ) as long
+dim shared p as function( byval as long ) as function( byval as long ) as long
+declare function f( byval as long ) as function( byval as long ) as function( byval as long ) as long
 
 extern     pp as typeof( function( ) as long ) ptr
 dim shared pp as typeof( function( ) as long ) ptr

@@ -1147,15 +1147,65 @@ end function
 ''                            void (*f(void))(void);
 ''    (*p[10])(void)      array of function pointers: void (*p[10])(void);
 ''
+'' Example 1:
+''
+''         int (*f)(int a);
+'' depth 1:     ^^
+''    innerprocptrdtype = TYPE_PROC (unused)
+''    procptrdtype      = typeAddrOf( TYPE_PROC )
+''    innernode = NULL
+''    node = NULL
+''    t = VAR( f as int ptr )    (f as int ptr for now, in case it's just "int (*f);")
+''
+''         int (*f)(int a);
+'' depth 0:    ^  ^^^^^^^^
+''    innerprocptrdtype = typeAddrOf( TYPE_PROC )      (passed up from depth 1)
+''    procptrdtype      = TYPE_PROC                    (unused)
+''    innernode = VAR( f as int ptr )                  (passed up from depth 1)
+''    node      = PROC( function( a as int ) as int )  (new function pointer subtype)
+''    t = VAR( f as function( a as int ) as int )      (adjusted AST: f turned into function pointer)
+''
+'' Example 2:
+''
+''         int (*(*f)(int a))(int b);
+'' depth 2:       ^^
+''    innerprocptrdtype = TYPE_PROC                    (unused)
+''    procptrdtype      = typeAddrOf( TYPE_PROC )
+''    innernode = NULL
+''    node      = NULL
+''    t = VAR( f as int ptr ptr )    (f as int ptr ptr for now, in case it's just "int (*(*f));")
+''
+''         int (*(*f)(int a))(int b);
+'' depth 1:     ^^  ^^^^^^^^
+''    innerprocptrdtype = typeAddrOf( TYPE_PROC )      (passed up from depth 2)
+''    procptrdtype      = typeAddrOf( TYPE_PROC )
+''    innernode = VAR( f as int ptr ptr )              (passed up from depth 2)
+''    node      = PROC( function( a as int ) as int ptr )  (new function pointer subtype,
+''                                                     result = int ptr for now, in case it's
+''                                                     just "int (*(*f)(int a));")
+''    t = VAR( f as function( a as int ) as int ptr )  (adjusted AST: f turned into function pointer)
+''
+''         int (*(*f)(int a))(int b);
+'' depth 0:    ^            ^^^^^^^^
+''    innerprocptrdtype = typeAddrOf( TYPE_PROC )          (passed up from depth 1)
+''    procptrdtype      = TYPE_PROC (unused)
+''    innernode = PROC( function( a as int ) as int ptr )  (passed up from depth 1)
+''    node      = PROC( function( b as int ) as int )      (new function pointer subtype)
+''    t = VAR( f as function( a as int ) as function( b as int ) as int )
+''                               (adjusted AST: f's subtype (innernode) turned into function pointer,
+''                               i.e. the f function pointer now has a function pointer as its function
+''                               result type, instead of "int ptr")
+''
 private function cDeclarator _
 	( _
 		byval decl as integer, _
 		byval basedtype as integer, _
 		byval basesubtype as ASTNODE ptr, _
+		byref node as ASTNODE ptr, _
 		byref procptrdtype as integer _
 	) as ASTNODE ptr
 
-	dim as ASTNODE ptr proc = any, t = any, params = any
+	dim as ASTNODE ptr innernode = any, t = any, params = any
 	dim as integer begin = any, astclass = any, elements = any
 	dim as integer dtype = any, innerprocptrdtype = any
 	dim as string id
@@ -1163,7 +1213,9 @@ private function cDeclarator _
 	function = NULL
 	begin = parse.x
 	dtype = basedtype
+	innernode = NULL
 	innerprocptrdtype = TYPE_PROC
+	node = NULL
 	procptrdtype = TYPE_PROC
 	elements = 0
 
@@ -1185,7 +1237,7 @@ private function cDeclarator _
 		'' '('
 		parse.x = cSkip( parse.x )
 
-		t = cDeclarator( decl, dtype, basesubtype, innerprocptrdtype )
+		t = cDeclarator( decl, dtype, basesubtype, innernode, innerprocptrdtype )
 		if( t = NULL ) then
 			exit function
 		end if
@@ -1234,6 +1286,8 @@ private function cDeclarator _
 		astAddComment( t, hCollectComments( begin, parse.x - 1 ) )
 	end if
 
+	node = t
+
 	select case( tkGet( parse.x ) )
 	'' '[' ArrayElements ']'
 	case TK_LBRACKET
@@ -1242,6 +1296,7 @@ private function cDeclarator _
 		'' Simple number?
 		if( tkGet( parse.x ) <> TK_DECNUM ) then
 			astDelete( t )
+			node = NULL
 			exit function
 		end if
 		elements = valint( *tkGetText( parse.x ) )
@@ -1250,6 +1305,7 @@ private function cDeclarator _
 		'' ']'
 		if( tkGet( parse.x ) <> TK_RBRACKET ) then
 			astDelete( t )
+			node = NULL
 			exit function
 		end if
 		parse.x = cSkip( parse.x )
@@ -1264,24 +1320,26 @@ private function cDeclarator _
 			'' There were '()'s above and the recursive
 			'' cDeclarator() call found pointers/CONSTs,
 			'' these parameters are for a function pointer.
-			proc = astNew( ASTCLASS_PROC )
+			''
+			'' Whichever object should become the function pointer,
+			'' its dtype/subtype must be adjusted accordingly.
+			'' For the subtype, a new PROC node is created, which
+			'' will hold the parameters etc. found at this level.
 
-			'' The function pointer's result type is the
-			'' base type plus any pointers up to this level.
-			astSetType( proc, dtype, basesubtype )
+			'' New PROC node for the function pointer's subtype
+			node = astNew( ASTCLASS_PROC )
+			astSetType( node, dtype, basesubtype )
 
-			'' The declared symbol's type is the function
-			'' pointer plus additional pointers if any
-			astDelete( t->subtype )
-			t->dtype = innerprocptrdtype
-			t->subtype = proc
+			'' Turn the object into a function pointer
+			astDelete( innernode->subtype )
+			innernode->dtype = innerprocptrdtype
+			innernode->subtype = node
 		else
 			'' A plain symbol, not a pointer, becomes a function
 			select case( t->class )
 			case ASTCLASS_VAR, ASTCLASS_FIELD
 				t->class = ASTCLASS_PROC
 			end select
-			proc = t
 		end if
 
 		'' Just '(void)'?
@@ -1293,14 +1351,16 @@ private function cDeclarator _
 			params = cParamDeclList( )
 			if( params = NULL ) then
 				astDelete( t )
+				node = NULL
 				exit function
 			end if
-			astAddChild( proc, params )
+			astAddChild( node, params )
 		end if
 
 		'' ')'
 		if( tkGet( parse.x ) <> TK_RPAREN ) then
 			astDelete( t )
+			node = NULL
 			exit function
 		end if
 		parse.x = cSkip( parse.x )
@@ -1324,7 +1384,7 @@ private function cIdList _
 
 	'' ... (',' ...)*
 	do
-		t = cDeclarator( decl, basedtype, basesubtype, 0 )
+		t = cDeclarator( decl, basedtype, basesubtype, NULL, 0 )
 		if( t = NULL ) then
 			astDelete( group )
 			exit function
