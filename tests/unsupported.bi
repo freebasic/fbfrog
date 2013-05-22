@@ -24,4 +24,3 @@ type T
 	'' TODO: unknown construct
 	union {		int a;	} foo;
 end type
-

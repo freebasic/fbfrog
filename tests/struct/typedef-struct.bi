@@ -50,4 +50,3 @@ type __fbfrog_AnonStruct5
 	end type
 end type
 type T as __fbfrog_AnonStruct5
-

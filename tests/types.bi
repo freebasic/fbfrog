@@ -82,4 +82,3 @@ dim shared a as const long ptr ptr
 dim shared a as const long ptr const ptr
 dim shared a as const long const ptr ptr
 dim shared a as const long const ptr const ptr
-

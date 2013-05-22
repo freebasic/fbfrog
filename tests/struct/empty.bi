@@ -6,4 +6,3 @@ enum E {};
 
 type U
 end type
-

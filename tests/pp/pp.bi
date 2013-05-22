@@ -26,4 +26,3 @@ if X == 4294967295UL || X == 0.1e+1
 '' TODO: unknown construct
 #
 #endif
-

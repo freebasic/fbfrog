@@ -10,4 +10,3 @@ type A as function( byval as UDT ) as UDT
 type A as UDT ptr ptr
 type B as UDT
 type C as function( byval as long ) as UDT
-

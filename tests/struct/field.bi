@@ -68,4 +68,3 @@ type UDT
 	a as sub( byval a as sub( ) )
 	p as function( byval as function( byval as long ptr ptr ptr ) as long ptr ptr ptr ) as long ptr ptr ptr
 end type
-

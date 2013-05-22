@@ -118,8 +118,11 @@ function emitAst( byval ast as ASTNODE ptr ) as string
 	case ASTCLASS_GROUP
 		child = ast->childhead
 		while( child )
-			s += emitAst( child ) + !"\n"
+			s += emitAst( child )
 			child = child->next
+			if( child ) then
+				s += !"\n"
+			end if
 		wend
 
 	case ASTCLASS_DIVIDER

@@ -9,4 +9,3 @@ enum {	A =	1	+	CALC(2,3)	,	B};
 
 '' TODO: unknown construct
 enum E { A, B, };enum E{A,B,};enum E { A, B,};
-
