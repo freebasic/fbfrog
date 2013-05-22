@@ -221,35 +221,6 @@ end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-private function hCollectComments _
-	( _
-		byval first as integer, _
-		byval last as integer _
-	) as string
-
-	dim as string s
-	dim as zstring ptr text = any
-
-	'' Collect all comment text from a range of tokens and merge it into
-	'' one string, which can be used
-	for i as integer = first to last
-		if( tkGet( i ) = TK_COMMENT ) then
-			text = tkGetText( i )
-		else
-			text = tkGetComment( i )
-		end if
-
-		if( text ) then
-			if( len( s ) > 0 ) then
-				s += !"\n"
-			end if
-			s += *text
-		end if
-	next
-
-	function = s
-end function
-
 private function hIsBeforeEol _
 	( _
 		byval x as integer, _
@@ -781,9 +752,9 @@ private function ppDivider( byval x as integer ) as integer
 
 	eol2 = tkSkipSpaceAndComments( x, -1 )
 	eol1 = tkSkipSpaceAndComments( eol2 - 1, -1 )
-	blockcomment = hCollectComments( eol1 + 1, eol2 )
+	blockcomment = tkCollectComments( eol1 + 1, eol2 )
 
-	comment = hCollectComments( begin, eol1 )
+	comment = tkCollectComments( begin, eol1 )
 	tkRemove( begin, x - 1 )
 	tkInsert( begin, TK_DIVIDER, blockcomment )
 	tkSetComment( begin, comment )
@@ -973,7 +944,7 @@ private function cStructCompound( ) as ASTNODE ptr
 	parse.x = cSkip( parse.x )
 
 	struct = astNew( ASTCLASS_STRUCT, id )
-	astAddComment( struct, hCollectComments( head, parse.x - 1 ) )
+	astAddComment( struct, tkCollectComments( head, parse.x - 1 ) )
 
 	astAddChild( struct, cStructBody( ) )
 
@@ -1283,7 +1254,7 @@ private function cParamDecl( ) as ASTNODE ptr
 	'' '...'?
 	if( tkGet( parse.x ) = TK_ELLIPSIS ) then
 		t = astNew( ASTCLASS_PARAM )
-		astAddComment( t, hCollectComments( parse.x, cSkip( parse.x ) - 1 ) )
+		astAddComment( t, tkCollectComments( parse.x, cSkip( parse.x ) - 1 ) )
 		parse.x = cSkip( parse.x )
 	else
 		t = cMultDecl( DECL_PARAM )
@@ -1472,7 +1443,7 @@ private function cDeclarator _
 		end select
 
 		astSetType( t, dtype, basesubtype )
-		astAddComment( t, hCollectComments( begin, parse.x - 1 ) )
+		astAddComment( t, tkCollectComments( begin, parse.x - 1 ) )
 	end if
 
 	node = t

@@ -283,6 +283,11 @@ declare function tkSkipSpaceAndComments _
 		byval delta as integer = 1 _
 	) as integer
 declare function tkToText( byval first as integer, byval last as integer ) as string
+declare function tkCollectComments _
+	( _
+		byval first as integer, _
+		byval last as integer _
+	) as string
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 

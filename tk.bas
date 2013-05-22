@@ -505,3 +505,32 @@ function tkToText( byval first as integer, byval last as integer ) as string
 
 	function = s
 end function
+
+function tkCollectComments _
+	( _
+		byval first as integer, _
+		byval last as integer _
+	) as string
+
+	dim as string s
+	dim as zstring ptr text = any
+
+	'' Collect all comment text from a range of tokens and merge it into
+	'' one string, which can be used
+	for i as integer = first to last
+		if( tkGet( i ) = TK_COMMENT ) then
+			text = tkGetText( i )
+		else
+			text = tkGetComment( i )
+		end if
+
+		if( text ) then
+			if( len( s ) > 0 ) then
+				s += !"\n"
+			end if
+			s += *text
+		end if
+	next
+
+	function = s
+end function
