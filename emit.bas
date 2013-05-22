@@ -107,16 +107,21 @@ private function hIndent( byref s as string ) as string
 	end if
 end function
 
-function emitAst( byval ast as ASTNODE ptr ) as string
+function emitAst _
+	( _
+		byval n as ASTNODE ptr, _
+		byval need_parens as integer _
+	) as string
+
 	dim as ASTNODE ptr child = any
 	dim as string s
 	dim as integer count = any
 
-	select case as const( ast->class )
+	select case as const( n->class )
 	case ASTCLASS_NOP
 
 	case ASTCLASS_GROUP
-		child = ast->childhead
+		child = n->head
 		while( child )
 			s += emitAst( child )
 			child = child->next
@@ -128,23 +133,26 @@ function emitAst( byval ast as ASTNODE ptr ) as string
 	case ASTCLASS_DIVIDER
 
 	case ASTCLASS_PPINCLUDE
-		s += "#include """ + *ast->text + """"
+		s += "#include """ + *n->text + """"
 	case ASTCLASS_PPDEFINE
-		s += "#define " + *ast->id + " " + *ast->text
+		s += "#define " + *n->text
+		if( n->head ) then
+			s += " " + emitAst( n->head )
+		end if
 	case ASTCLASS_PPIF
-		s += "#if " + emitAst( ast->l )
+		s += "#if " + emitAst( n->head )
 	case ASTCLASS_PPELSE
 		s += "#else"
 	case ASTCLASS_PPENDIF
 		s += "#endif"
 	case ASTCLASS_PPUNKNOWN
 		s += "'' TODO: unknown PP directive" + !"\n"
-		s += *ast->text
+		s += *n->text
 
 	case ASTCLASS_STRUCT
-		s += "type " + *ast->id + !"\n"
+		s += "type " + *n->text + !"\n"
 
-		child = ast->childhead
+		child = n->head
 		while( child )
 			s += hIndent( emitAst( child ) ) + !"\n"
 			child = child->next
@@ -153,42 +161,42 @@ function emitAst( byval ast as ASTNODE ptr ) as string
 		s += "end type"
 
 	case ASTCLASS_TYPEDEF
-		s += "type " + *ast->id + " as " + emitType( ast->dtype, ast->subtype )
+		s += "type " + *n->text + " as " + emitType( n->dtype, n->subtype )
 
 	case ASTCLASS_VAR
-		if( ast->attrib and ASTATTRIB_EXTERN ) then
-			s += "extern "     + *ast->id + " as " + emitType( ast->dtype, ast->subtype )
-		elseif( ast->attrib and ASTATTRIB_STATIC ) then
-			s += "dim shared " + *ast->id + " as " + emitType( ast->dtype, ast->subtype )
+		if( n->attrib and ASTATTRIB_EXTERN ) then
+			s += "extern "     + *n->text + " as " + emitType( n->dtype, n->subtype )
+		elseif( n->attrib and ASTATTRIB_STATIC ) then
+			s += "dim shared " + *n->text + " as " + emitType( n->dtype, n->subtype )
 		else
-			s += "extern     " + *ast->id + " as " + emitType( ast->dtype, ast->subtype ) + !"\n"
-			s += "dim shared " + *ast->id + " as " + emitType( ast->dtype, ast->subtype )
+			s += "extern     " + *n->text + " as " + emitType( n->dtype, n->subtype ) + !"\n"
+			s += "dim shared " + *n->text + " as " + emitType( n->dtype, n->subtype )
 		end if
 
 	case ASTCLASS_FIELD
-		s += *ast->id + " as " + emitType( ast->dtype, ast->subtype )
+		s += *n->text + " as " + emitType( n->dtype, n->subtype )
 
 	case ASTCLASS_PROC
 		'' Is this a procedure declaration,
 		'' or the subtype of a procedure pointer?
-		if( ast->id ) then
+		if( n->text ) then
 			s += "declare "
 		end if
 
-		if( ast->dtype = TYPE_ANY ) then
+		if( n->dtype = TYPE_ANY ) then
 			s += "sub"
 		else
 			s += "function"
 		end if
 
-		if( ast->id ) then
-			s += " " + *ast->id
+		if( n->text ) then
+			s += " " + *n->text
 		end if
 
 		s += "("
 
 		count = 0
-		child = ast->childhead
+		child = n->head
 		while( child )
 			if( count > 0 ) then
 				s += ","
@@ -204,37 +212,116 @@ function emitAst( byval ast as ASTNODE ptr ) as string
 		s += " )"
 
 		'' Function result type
-		if( ast->dtype <> TYPE_ANY ) then
-			s += " as " + emitType( ast->dtype, ast->subtype )
+		if( n->dtype <> TYPE_ANY ) then
+			s += " as " + emitType( n->dtype, n->subtype )
 		end if
 
 	case ASTCLASS_PARAM
 		'' vararg?
-		if( ast->dtype = TYPE_NONE ) then
+		if( n->dtype = TYPE_NONE ) then
 			s += "..."
 		else
 			s += "byval"
-			if( ast->id ) then
-				s += " " + *ast->id
+			if( n->text ) then
+				s += " " + *n->text
 			end if
-			s += " as " + emitType( ast->dtype, ast->subtype )
+			s += " as " + emitType( n->dtype, n->subtype )
 		end if
 
 	case ASTCLASS_UNKNOWN
 		s += "'' TODO: unknown construct" + !"\n"
-		s += *ast->text
+		s += *n->text
 
 	case ASTCLASS_CONST
-		s += str( ast->intval )
-
+		s += str( n->intval )
 	case ASTCLASS_ID
-		s += *ast->id
+		s += *n->text
+	case ASTCLASS_TEXT
+		s += *n->text
 
 	case ASTCLASS_DEFINED
-		s += "defined( " + emitAst( ast->l ) + " )"
+		s += "defined( " + emitAst( n->head ) + " )"
 
-	case ASTCLASS_LOGICNOT
-		s += "(" + emitAst( ast->l ) + ") = 0"
+	case ASTCLASS_IIF
+		s += "iif( " + _
+			emitAst( n->head       ) + ", " + _
+			emitAst( n->head->next ) + ", " + _
+			emitAst( n->tail       ) + " )"
+
+	case ASTCLASS_LOGOR, ASTCLASS_LOGAND, _
+	     ASTCLASS_BITOR, ASTCLASS_BITXOR, ASTCLASS_BITAND, _
+	     ASTCLASS_EQ, ASTCLASS_NE, _
+	     ASTCLASS_LT, ASTCLASS_LE, _
+	     ASTCLASS_GT, ASTCLASS_GE, _
+	     ASTCLASS_SHL, ASTCLASS_SHR, _
+	     ASTCLASS_ADD, ASTCLASS_SUB, _
+	     ASTCLASS_MUL, ASTCLASS_DIV, ASTCLASS_MOD
+
+		if( need_parens ) then
+			s += "("
+		end if
+
+		s += emitAst( n->head, TRUE )
+		s += " "
+
+		select case as const( n->class )
+		case ASTCLASS_LOGOR  : s += "orelse"
+		case ASTCLASS_LOGAND : s += "andalso"
+		case ASTCLASS_BITOR  : s += "or"
+		case ASTCLASS_BITXOR : s += "xor"
+		case ASTCLASS_BITAND : s += "and"
+		case ASTCLASS_EQ     : s += "="
+		case ASTCLASS_NE     : s += "<>"
+		case ASTCLASS_LT     : s += "<"
+		case ASTCLASS_LE     : s += "<="
+		case ASTCLASS_GT     : s += ">"
+		case ASTCLASS_GE     : s += ">="
+		case ASTCLASS_SHL    : s += "shl"
+		case ASTCLASS_SHR    : s += "shr"
+		case ASTCLASS_ADD    : s += "+"
+		case ASTCLASS_SUB    : s += "-"
+		case ASTCLASS_MUL    : s += "*"
+		case ASTCLASS_DIV    : s += "/"
+		case ASTCLASS_MOD    : s += "mod"
+		case else
+			assert( FALSE )
+		end select
+
+		s += " "
+		s += emitAst( n->tail, TRUE )
+
+		if( need_parens ) then
+			s += ")"
+		end if
+
+	case ASTCLASS_LOGNOT, ASTCLASS_BITNOT, _
+	     ASTCLASS_NEGATE, ASTCLASS_UNARYPLUS
+		if( need_parens ) then
+			s += "("
+		end if
+
+		select case as const( n->class )
+		case ASTCLASS_BITNOT
+			s += "not "
+		case ASTCLASS_NEGATE
+			s += "-"
+		case ASTCLASS_UNARYPLUS
+			s += "+"
+		case ASTCLASS_LOGNOT
+
+		case else
+			assert( FALSE )
+		end select
+
+		s += emitAst( n->head, TRUE )
+
+		if( n->class = ASTCLASS_LOGNOT ) then
+			s += " = 0"
+		end if
+
+		if( need_parens ) then
+			s += ")"
+		end if
 
 	case else
 		assert( FALSE )

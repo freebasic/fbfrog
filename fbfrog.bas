@@ -79,6 +79,18 @@ private sub hAddFromDir( byref d as string )
 	listEnd( @list )
 end sub
 
+private sub hStripAllComments( )
+	dim as integer x = any
+	x = 0
+	while( tkGet( x ) <> TK_EOF )
+		if( tkGet( x ) = TK_COMMENT ) then
+			tkRemove( x, x )
+			x -= 1
+		end if
+		x += 1
+	wend
+end sub
+
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 	dim as string arg
@@ -178,6 +190,7 @@ end sub
 		lexLoadFile( 0, f->normed )
 		print "translating: ";f->normed
 
+		hStripAllComments( )
 		cAssignComments( )
 		cPPDirectives( )
 		ast = cToplevel( )

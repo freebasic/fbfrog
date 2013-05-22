@@ -1,2 +1,3 @@
-'' TODO: unknown construct
-#foo#include foo
+'' TODO: unknown PP directive
+#foo
+#include "foo"

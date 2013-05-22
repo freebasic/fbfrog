@@ -179,8 +179,8 @@ enum
 	TK_LBRACKET     '' [
 	TK_BACKSLASH    '' \
 	TK_RBRACKET     '' ]
-	TK_CIRCUMFLEX   '' ^
-	TK_CIRCUMFLEXEQ '' ^=
+	TK_CIRC         '' ^
+	TK_CIRCEQ       '' ^=
 	TK_UNDERSCORE   '' _
 	TK_LBRACE       '' {
 	TK_PIPE         '' |
@@ -357,8 +357,32 @@ enum
 
 	ASTCLASS_CONST
 	ASTCLASS_ID
+	ASTCLASS_TEXT
 	ASTCLASS_DEFINED
-	ASTCLASS_LOGICNOT
+
+	ASTCLASS_IIF
+	ASTCLASS_LOGOR
+	ASTCLASS_LOGAND
+	ASTCLASS_BITOR
+	ASTCLASS_BITXOR
+	ASTCLASS_BITAND
+	ASTCLASS_EQ
+	ASTCLASS_NE
+	ASTCLASS_LT
+	ASTCLASS_LE
+	ASTCLASS_GT
+	ASTCLASS_GE
+	ASTCLASS_SHL
+	ASTCLASS_SHR
+	ASTCLASS_ADD
+	ASTCLASS_SUB
+	ASTCLASS_MUL
+	ASTCLASS_DIV
+	ASTCLASS_MOD
+	ASTCLASS_LOGNOT
+	ASTCLASS_BITNOT
+	ASTCLASS_NEGATE
+	ASTCLASS_UNARYPLUS
 
 	ASTCLASS__COUNT
 end enum
@@ -372,9 +396,9 @@ type ASTNODE_
 	class		as integer  '' ASTCLASS_*
 	attrib		as integer  '' ASTATTRIB_*
 
-	'' Identifiers/string literals/#define bodies, or NULL
-	id		as zstring ptr
+	'' Identifiers/string literals, or NULL
 	text		as zstring ptr
+
 	comment		as zstring ptr
 	intval		as longint
 
@@ -386,21 +410,29 @@ type ASTNODE_
 	sourcefile	as FSFILE ptr
 	sourceline	as integer
 
-	'' Operands (expressions)
-	l		as ASTNODE ptr
-	r		as ASTNODE ptr
-
-	'' Fields (STRUCT), parameters (PROC, function pointers)
-	childhead	as ASTNODE ptr
-	childtail	as ASTNODE ptr
+	'' Operands (expressions), fields (STRUCT), parameters (PROC)
+	head		as ASTNODE ptr
+	tail		as ASTNODE ptr
 	next		as ASTNODE ptr  '' Siblings in this list
 	prev		as ASTNODE ptr
 end type
 
-declare function astNew( byval class_ as integer ) as ASTNODE ptr
+declare function astNew overload( byval class_ as integer ) as ASTNODE ptr
+declare function astNew overload _
+	( _
+		byval class_ as integer, _
+		byval a as ASTNODE ptr, _
+		byval b as ASTNODE ptr, _
+		byval c as ASTNODE ptr _
+	) as ASTNODE ptr
+declare function astNew overload _
+	( _
+		byval class_ as integer, _
+		byval text as zstring ptr _
+	) as ASTNODE ptr
 declare sub astDelete( byval n as ASTNODE ptr )
 declare sub astAddChild( byval parent as ASTNODE ptr, byval child as ASTNODE ptr )
-declare sub astSetId( byval n as ASTNODE ptr, byval id as zstring ptr )
+declare sub astSetText( byval n as ASTNODE ptr, byval text as zstring ptr )
 declare sub astSetType _
 	( _
 		byval n as ASTNODE ptr, _
@@ -409,21 +441,11 @@ declare sub astSetType _
 	)
 declare sub astAddComment( byval n as ASTNODE ptr, byval comment as zstring ptr )
 declare function astClone( byval n as ASTNODE ptr ) as ASTNODE ptr
-declare function astNewPPDEFINE( byval id as zstring ptr ) as ASTNODE ptr
-declare function astNewPPINCLUDE( byval filename as zstring ptr ) as ASTNODE ptr
-declare function astNewPPIF( byval expr as ASTNODE ptr ) as ASTNODE ptr
-declare function astNewPPELSE( ) as ASTNODE ptr
-declare function astNewPPENDIF( ) as ASTNODE ptr
-declare function astNewPPUNKNOWN( byval text as zstring ptr ) as ASTNODE ptr
-declare function astNewUNKNOWN( byval text as zstring ptr ) as ASTNODE ptr
 declare function astNewCONSTi _
 	( _
 		byval i as longint, _
 		byval dtype as integer _
 	) as ASTNODE ptr
-declare function astNewID( byval id as zstring ptr ) as ASTNODE ptr
-declare function astNewDEFINED( byval l as ASTNODE ptr ) as ASTNODE ptr
-declare function astNewLOGICNOT( byval l as ASTNODE ptr ) as ASTNODE ptr
 declare sub astDump( byval n as ASTNODE ptr )
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -435,7 +457,11 @@ declare function emitType _
 		byval subtype as ASTNODE ptr, _
 		byval debugdump as integer = FALSE _
 	) as string
-declare function emitAst( byval ast as ASTNODE ptr ) as string
+declare function emitAst _
+	( _
+		byval n as ASTNODE ptr, _
+		byval need_parens as integer = FALSE _
+	) as string
 declare sub emitWriteFile( byref filename as string, byref text as string )
 
 declare sub cAssignComments( )

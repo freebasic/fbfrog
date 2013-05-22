@@ -47,7 +47,7 @@ enum
 	CH_LBRACKET     '' [
 	CH_BACKSLASH    '' \
 	CH_RBRACKET     '' ]
-	CH_CIRCUMFLEX   '' ^
+	CH_CIRC         '' ^
 	CH_UNDERSCORE   '' _
 	CH_GRAVE        '' `
 
@@ -625,11 +625,11 @@ private sub lexNext( )
 	case CH_RBRACKET	'' ]
 		hReadBytes( TK_RBRACKET, 1 )
 
-	case CH_CIRCUMFLEX	'' ^
+	case CH_CIRC		'' ^
 		if( lex.i[1] = CH_EQ ) then	'' ^=
-			hReadBytes( TK_CIRCUMFLEXEQ, 2 )
+			hReadBytes( TK_CIRCEQ, 2 )
 		else
-			hReadBytes( TK_CIRCUMFLEX, 1 )
+			hReadBytes( TK_CIRC, 1 )
 		end if
 
 	case CH_L_A to CH_L_Z, _	'' a-z

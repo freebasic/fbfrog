@@ -106,6 +106,15 @@ Source module overview:
 To do:
 
 - BOL checks use -1 instead skipRev(), so won't work if there is a TK_SPACE etc.
+- #defines don't emit comments yet
+- how to handle number literals properly?
+    - AST should store them as longints/doubles, plus dtype
+    - The lexer needs to parse 'ull' type suffixes etc., so it's the one that
+      decides the dtype
+- should use TYPE_INT32 instead of TYPE_LONG, that's much less confusing
+  (which "long" is it referring to, C's or FB's..)
+- why bother with TK_DIVIDER? We want automated formatting anyways, don't need
+  dividers for that...
 
 - Combine -follow/-merge/-concat into just -merge
   - Make -merge the default
@@ -130,6 +139,12 @@ To do:
   common for C headers which support tons of different C compilers/systems,
   while for FB only GNU C + certain targets are interesting)
 - Add function to expand certain macros
+- Allow presets to specify information on #defined symbols
+    - assume defined to value
+    - assume defined
+    - assume undefined
+- Auto-register new defines, based on found #defines, possibly dependant on
+  #if blocks
 
 - Comments should be associated with high level constructs, or blocks of them
   comment at EOL but behind code -> belongs to that code

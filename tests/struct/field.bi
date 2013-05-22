@@ -29,8 +29,10 @@ type UDT
 	declare sub proc( )
 
 	a as long
-	'' TODO: unknown construct
-	#if 1	int b;#endif	int c;
+	#if 1
+	b as long
+	#endif
+	c as long
 end type
 
 type UDT

@@ -16,11 +16,43 @@ function typeToUnsigned( byval dtype as integer ) as integer
 	function = dtype
 end function
 
-function astNew( byval class_ as integer ) as ASTNODE ptr
+function astNew overload( byval class_ as integer ) as ASTNODE ptr
 	dim as ASTNODE ptr n = any
 
 	n = callocate( sizeof( ASTNODE ) )
 	n->class = class_
+
+	function = n
+end function
+
+function astNew overload _
+	( _
+		byval class_ as integer, _
+		byval a as ASTNODE ptr, _
+		byval b as ASTNODE ptr, _
+		byval c as ASTNODE ptr _
+	) as ASTNODE ptr
+
+	dim as ASTNODE ptr n = any
+
+	n = astNew( class_ )
+	astAddChild( n, a )
+	astAddChild( n, b )
+	astAddChild( n, c )
+
+	function = n
+end function
+
+function astNew overload _
+	( _
+		byval class_ as integer, _
+		byval text as zstring ptr _
+	) as ASTNODE ptr
+
+	dim as ASTNODE ptr n = any
+
+	n = astNew( class_ )
+	n->text = strDuplicate( text )
 
 	function = n
 end function
@@ -32,14 +64,10 @@ sub astDelete( byval n as ASTNODE ptr )
 		exit sub
 	end if
 
-	deallocate( n->id )
 	deallocate( n->text )
 	astDelete( n->subtype )
 
-	astDelete( n->l )
-	astDelete( n->r )
-
-	child = n->childhead
+	child = n->head
 	while( child )
 		nxt = child->next
 		astDelete( child )
@@ -59,7 +87,7 @@ sub astAddChild( byval parent as ASTNODE ptr, byval t as ASTNODE ptr )
 	select case( t->class )
 	case ASTCLASS_GROUP
 		'' If it's a GROUP, add its children, and delete the GROUP itself
-		child = t->childhead
+		child = t->head
 		while( child )
 			astAddChild( parent, astClone( child ) )
 			child = child->next
@@ -75,19 +103,19 @@ sub astAddChild( byval parent as ASTNODE ptr, byval t as ASTNODE ptr )
 
 	end select
 
-	t->prev = parent->childtail
-	if( parent->childtail ) then
-		parent->childtail->next = t
+	t->prev = parent->tail
+	if( parent->tail ) then
+		parent->tail->next = t
 	end if
-	parent->childtail = t
-	if( parent->childhead = NULL ) then
-		parent->childhead = t
+	parent->tail = t
+	if( parent->head = NULL ) then
+		parent->head = t
 	end if
 end sub
 
-sub astSetId( byval n as ASTNODE ptr, byval id as zstring ptr )
-	deallocate( n->id )
-	n->id = strDuplicate( id )
+sub astSetText( byval n as ASTNODE ptr, byval text as zstring ptr )
+	deallocate( n->text )
+	n->text = strDuplicate( text )
 end sub
 
 sub astSetType _
@@ -129,7 +157,6 @@ function astClone( byval n as ASTNODE ptr ) as ASTNODE ptr
 
 	c = astNew( n->class )
 	c->attrib     = n->attrib
-	c->id         = strDuplicate( n->id )
 	c->text       = strDuplicate( n->text )
 	c->comment    = strDuplicate( n->comment )
 	c->intval     = n->intval
@@ -138,59 +165,13 @@ function astClone( byval n as ASTNODE ptr ) as ASTNODE ptr
 	c->sourcefile = n->sourcefile
 	c->sourceline = n->sourceline
 
-	c->l = astClone( n->l )
-	c->r = astClone( n->r )
-
-	child = n->childhead
+	child = n->head
 	while( child )
 		astAddChild( c, astClone( child ) )
 		child = child->next
 	wend
 
 	function = c
-end function
-
-function astNewPPDEFINE( byval id as zstring ptr ) as ASTNODE ptr
-	dim as ASTNODE ptr n = any
-	n = astNew( ASTCLASS_PPDEFINE )
-	n->id = strDuplicate( id )
-	function = n
-end function
-
-function astNewPPINCLUDE( byval filename as zstring ptr ) as ASTNODE ptr
-	dim as ASTNODE ptr n = any
-	n = astNew( ASTCLASS_PPINCLUDE )
-	n->text = strDuplicate( filename )
-	function = n
-end function
-
-function astNewPPIF( byval expr as ASTNODE ptr ) as ASTNODE ptr
-	dim as ASTNODE ptr n = any
-	n = astNew( ASTCLASS_PPIF )
-	n->l = expr
-	function = n
-end function
-
-function astNewPPELSE( ) as ASTNODE ptr
-	function = astNew( ASTCLASS_PPELSE )
-end function
-
-function astNewPPENDIF( ) as ASTNODE ptr
-	function = astNew( ASTCLASS_PPENDIF )
-end function
-
-function astNewPPUNKNOWN( byval text as zstring ptr ) as ASTNODE ptr
-	dim as ASTNODE ptr n = any
-	n = astNew( ASTCLASS_PPUNKNOWN )
-	n->text = strDuplicate( text )
-	function = n
-end function
-
-function astNewUNKNOWN( byval text as zstring ptr ) as ASTNODE ptr
-	dim as ASTNODE ptr n = any
-	n = astNew( ASTCLASS_UNKNOWN )
-	n->text = strDuplicate( text )
-	function = n
 end function
 
 function astNewCONSTi _
@@ -208,38 +189,19 @@ function astNewCONSTi _
 	function = n
 end function
 
-function astNewID( byval id as zstring ptr ) as ASTNODE ptr
-	dim as ASTNODE ptr n = any
-	n = astNew( ASTCLASS_ID )
-	n->id = strDuplicate( id )
-	function = n
-end function
-
-function astNewDEFINED( byval l as ASTNODE ptr ) as ASTNODE ptr
-	dim as ASTNODE ptr n = any
-	n = astNew( ASTCLASS_DEFINED )
-	n->l = l
-	function = n
-end function
-
-function astNewLOGICNOT( byval l as ASTNODE ptr ) as ASTNODE ptr
-	dim as ASTNODE ptr n = any
-	n = astNew( ASTCLASS_LOGICNOT )
-	n->l = l
-	function = n
-end function
-
 dim shared as zstring ptr astclassnames(0 to ASTCLASS__COUNT-1) = _
 { _
 	@"nop"     , _
 	@"group"   , _
 	@"divider" , _
+	_
 	@"#include", _
 	@"#define" , _
 	@"#if"     , _
 	@"#else"   , _
 	@"#endif"  , _
 	@"#unknown", _
+	_
 	@"struct"  , _
 	@"typedef" , _
 	@"var"     , _
@@ -247,10 +209,35 @@ dim shared as zstring ptr astclassnames(0 to ASTCLASS__COUNT-1) = _
 	@"proc"    , _
 	@"param"   , _
 	@"unknown" , _
+	_
 	@"const"   , _
 	@"id"      , _
+	@"text"    , _
 	@"defined" , _
-	@"logicnot"  _
+	_
+	@"iif"     , _
+	@"orelse"  , _
+	@"andalso" , _
+	@"or"      , _
+	@"xor"     , _
+	@"and"     , _
+	@"="       , _
+	@"<>"      , _
+	@"<"       , _
+	@"<="      , _
+	@">"       , _
+	@">="      , _
+	@"shl"     , _
+	@"shr"     , _
+	@"+"       , _
+	@"-"       , _
+	@"*"       , _
+	@"/"       , _
+	@"mod"     , _
+	@"lognot"  , _
+	@"not"     , _
+	@"unary -" , _
+	@"unary +"   _
 }
 
 function astDumpOne( byval n as ASTNODE ptr ) as string
@@ -266,12 +253,12 @@ function astDumpOne( byval n as ASTNODE ptr ) as string
 
 	s += *astclassnames(n->class)
 
-	if( n->id ) then
-		s += " " + *n->id
+	if( n->text ) then
+		s += " " + *n->text
 	end if
 
-	if( n->text ) then
-		s += " """ + *n->text + """"
+	if( n->class = ASTCLASS_CONST ) then
+		s += " " + str( n->intval )
 	end if
 
 	if( n->dtype <> TYPE_NONE ) then
@@ -305,7 +292,7 @@ sub astDump( byval n as ASTNODE ptr )
 			nestlevel -= 1
 		end if
 
-		child = n->childhead
+		child = n->head
 		if( child ) then
 			do
 				astDump( child )

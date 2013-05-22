@@ -1,2 +1,2 @@
-'' TODO: unknown construct
+'' TODO: unknown PP directive
 #foo
