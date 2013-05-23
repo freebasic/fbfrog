@@ -469,8 +469,12 @@ declare function emitAst _
 	) as string
 declare sub emitWriteFile( byref filename as string, byref text as string )
 
-declare sub cAssignComments( )
-declare sub cPPDirectives( )
+declare sub ppComments( )
+declare sub ppDividers( )
+declare sub ppDirectives( )
+declare function cSkip( byval x as integer ) as integer
+declare function cSkipRev( byval x as integer ) as integer
+declare function cSkipStatement( byval x as integer ) as integer
 declare function cToplevel( ) as ASTNODE ptr
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''

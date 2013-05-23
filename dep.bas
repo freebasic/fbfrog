@@ -70,7 +70,8 @@ private sub hParseFileForIncludes( byval node as DEPNODE ptr )
 	fsPush( node->f )
 	tkInit( )
 	lexLoadFile( 0, node->f->normed )
-	cPPDirectives( )
+	ppComments( )
+	ppDirectives( )
 
 	x = 0
 	do

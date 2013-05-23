@@ -189,6 +189,8 @@ function astNewCONSTi _
 	function = n
 end function
 
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
 dim shared as zstring ptr astclassnames(0 to ASTCLASS__COUNT-1) = _
 { _
 	@"nop"     , _
