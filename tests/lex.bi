@@ -32,4 +32,4 @@ a
 La
 
 '' TODO: unknown construct
-char literalchar literalnon-trivial string literalnon-trivial string literalnon-trivial string literal
+€

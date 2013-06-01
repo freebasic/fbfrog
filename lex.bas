@@ -69,11 +69,16 @@ type LEXSTUFF
 
 	x		as integer
 	linenum		as integer
+	filename	as string
 
 	kwhash		as THASH
 end type
 
 dim shared as LEXSTUFF lex
+
+private sub lexOops( byval message as zstring ptr )
+	print lex.filename + "(" & lex.linenum & "): error: " + *message
+end sub
 
 private sub hAddTextToken( byval tk as integer, byval begin as ubyte ptr )
 	dim as integer old = any
@@ -97,19 +102,16 @@ private sub hAddTextToken( byval tk as integer, byval begin as ubyte ptr )
 		tkInsert( lex.x, tk, begin )
 	end if
 	tkSetLineNum( lex.x, lex.linenum )
+	lex.x += 1
 
 	lex.i[0] = old
-end sub
-
-private sub hAddTodo( byval text as zstring ptr )
-	tkInsert( lex.x, TK_TODO, text )
-	tkSetLineNum( lex.x, lex.linenum )
 end sub
 
 private sub hReadBytes( byval tk as integer, byval length as integer )
 	lex.i += length
 	tkInsert( lex.x, tk )
 	tkSetLineNum( lex.x, lex.linenum )
+	lex.x += 1
 end sub
 
 private sub hReadSpace( )
@@ -187,8 +189,7 @@ private sub hReadComment( )
 	do
 		select case( lex.i[0] )
 		case 0
-			hAddTodo( "comment left open" )
-			exit do
+			lexOops( "comment left open" )
 
 		case CH_STAR		'' *
 			if( lex.i[1] = CH_SLASH ) then	'' */
@@ -392,8 +393,7 @@ private sub hReadString( )
 			exit do
 
 		case CH_LF, CH_CR, 0
-			hAddTodo( "string/char literal left open" )
-			exit do
+			lexOops( "string/char literal left open" )
 
 		case CH_BACKSLASH	'' \
 			strflags or= STRFLAG_ESC
@@ -410,9 +410,7 @@ private sub hReadString( )
 
 	if( strflags ) then
 		if( strflags and STRFLAG_CHAR ) then
-			hAddTodo( "char literal" )
-		else
-			hAddTodo( "non-trivial string literal" )
+			id = TK_CHAR
 		end if
 	end if
 
@@ -656,7 +654,6 @@ private sub lexNext( )
 		hReadBytes( TK_TILDE, 1 )
 
 	case else
-		hAddTodo( "unusual character" )
 		lex.i += 1
 		hAddTextToken( TK_BYTE, lex.i - 1 )
 
@@ -731,11 +728,9 @@ private sub hInitKeywords( )
 end sub
 
 function lexLoadFile( byval x as integer, byref filename as string ) as integer
-	dim as integer count = any
-
-	count = 0
 	lex.x = x
 	lex.linenum = 1
+	lex.filename = filename
 	hLoadFile( filename )
 	hComplainAboutEmbeddedNulls( )
 	hInitKeywords( )
@@ -743,13 +738,11 @@ function lexLoadFile( byval x as integer, byref filename as string ) as integer
 	'' Tokenize and insert into tk buffer
 	while( lex.i < lex.limit )
 		lexNext( )
-		lex.x += 1
-		count += 1
 	wend
 
 	if( frog.verbose ) then
 		print "  lex: " & cuint( lex.limit ) - cuint( lex.buffer ) & _
-			" bytes -> " & count & " tokens"
+			" bytes -> " & lex.x - x & " tokens"
 	end if
 
 	deallocate( lex.buffer )

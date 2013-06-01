@@ -13,7 +13,6 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	( NULL  , @"ast"      ), _
 	( NULL  , @"begin"    ), _
 	( NULL  , @"end"      ), _
-	( NULL  , @"todo"     ), _
 	( NULL  , @"byte"     ), _
 	( NULL  , @"space"    ), _
 	( NULL  , @"eol"      ), _
