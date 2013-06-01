@@ -71,7 +71,7 @@ private sub hParseFileForIncludes( byval node as DEPNODE ptr )
 	tkInit( )
 	lexLoadFile( 0, node->f->normed )
 	ppComments( )
-	ppDirectives( )
+	ppDirectives1( )
 
 	x = 0
 	do

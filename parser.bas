@@ -195,15 +195,6 @@ private function cSimpleToken( ) as ASTNODE ptr
 		'' previous parsing, such as PP directives, or anything inserted
 		'' by presets) need to be recognized as "valid constructs" too.
 		t = astClone( tkGetAst( parse.x ) )
-
-		xbegin = parse.x + 1
-		if( (t->class = ASTCLASS_PPDEFINE) and _
-		    (tkGet( xbegin ) = TK_BEGIN) ) then
-			xend = hSkipFromTo( xbegin, TK_BEGIN, TK_END, 1 )
-			astAddChild( t, astNew( ASTCLASS_TEXT, _
-					tkToText( xbegin + 1, xend - 1 ) ) )
-		end if
-
 		parse.x = cSkip( parse.x )
 
 	case TK_DIVIDER

@@ -183,9 +183,9 @@ end sub
 
 		ppComments( )
 		ppDividers( )
-		ppDirectives( )
+		ppDirectives1( )
 
-		ppIfExpressions( )
+		ppDirectives2( )
 
 		ast = cToplevel( )
 		astDump( ast )

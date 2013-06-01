@@ -471,8 +471,8 @@ declare sub emitWriteFile( byref filename as string, byref text as string )
 
 declare sub ppComments( )
 declare sub ppDividers( )
-declare sub ppDirectives( )
-declare sub ppIfExpressions( )
+declare sub ppDirectives1( )
+declare sub ppDirectives2( )
 declare function cSkip( byval x as integer ) as integer
 declare function cSkipRev( byval x as integer ) as integer
 declare function cSkipStatement( byval x as integer ) as integer

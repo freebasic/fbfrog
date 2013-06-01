@@ -1,7 +1,18 @@
 ''
 '' CPP directive parsing
 ''
-'' ppDirectives() merges PP directives into TK_AST tokens.
+'' ppDirectives1() merges PP directives into TK_AST tokens, except that #define
+'' bodies and #if expressions are not yet parsed, but only enclosed in TK_BEGIN
+'' and TK_END tokens.
+''
+'' ppDirectives2() goes through all PP directives and finishes the parsing job,
+'' by parsing the #define bodies and #if expressions into ASTs properly,
+'' assigning them to the TK_AST tokens of the corresponding directives, and
+'' removing the TK_BEGIN/TK_END and the tokens they enclosed.
+''
+'' With this separation it's possible to identify PP directives and still do
+'' macro expansion etc. in #define bodies or #if expressions, before the 2nd
+'' step finalizes the parsing.
 ''
 
 #include once "fbfrog.bi"
@@ -440,7 +451,7 @@ private function ppUnknownDirective( byval x as integer ) as integer
 	function = x
 end function
 
-sub ppDirectives( )
+sub ppDirectives1( )
 	dim as integer x = any, old = any
 
 	x = ppSkip( -1 )
@@ -469,7 +480,7 @@ end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-sub ppIfExpressions( )
+sub ppDirectives2( )
 	dim as integer x = any, begin = any
 	dim as ASTNODE ptr t = any, expr = any
 
@@ -483,7 +494,27 @@ sub ppIfExpressions( )
 			t = tkGetAst( x )
 			x += 1
 
-			if( t->class = ASTCLASS_PPIF ) then
+			select case( t->class )
+			case ASTCLASS_PPDEFINE
+				'' BEGIN
+				assert( tkGet( x ) = TK_BEGIN )
+				begin = x
+				x += 1
+
+				'' Body tokens?
+				if( tkGet( x ) <> TK_END ) then
+					do
+						x += 1
+					loop while( tkGet( x ) <> TK_END )
+					astAddChild( t, astNew( ASTCLASS_TEXT, tkToText( begin + 1, x - 1 ) ) )
+				end if
+
+				'' END
+				assert( tkGet( x ) = TK_END )
+				tkRemove( begin, x )
+				x = begin
+
+			case ASTCLASS_PPIF
 				'' No #if expression yet?
 				if( t->head = NULL ) then
 					'' BEGIN
@@ -499,14 +530,15 @@ sub ppIfExpressions( )
 					if( expr = NULL ) then
 						'' If no expression could be parsed, turn into PPUNKNOWN
 						t->class = ASTCLASS_PPUNKNOWN
-						expr = astNew( ASTCLASS_TEXT, tkToText( begin, x ) )
+						expr = astNew( ASTCLASS_TEXT, tkToText( begin + 1, x - 1 ) )
 					end if
 					tkRemove( begin, x )
 					x = begin
 
 					astAddChild( t, expr )
 				end if
-			end if
+
+			end select
 
 		case else
 			x += 1
