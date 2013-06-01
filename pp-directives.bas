@@ -303,6 +303,7 @@ private function ppDirective( byval x as integer ) as integer
 		x = ppSkip( x )
 
 		keepbegin = x
+		x = ppSkipToEOL( x )
 
 	case KW_INCLUDE
 		'' INCLUDE
@@ -383,7 +384,7 @@ private function ppDirective( byval x as integer ) as integer
 	end if
 
 	if( tkGet( x ) = TK_EOL ) then
-		x += 1
+		x = ppSkip( x )
 	end if
 
 	function = x
