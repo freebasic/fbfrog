@@ -287,6 +287,7 @@ declare function tkCollectComments _
 		byval first as integer, _
 		byval last as integer _
 	) as string
+declare sub tkRemoveAllOf( byval id as integer, byval text as zstring ptr )
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 

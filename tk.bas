@@ -530,3 +530,19 @@ function tkCollectComments _
 
 	function = s
 end function
+
+sub tkRemoveAllOf( byval id as integer, byval text as zstring ptr )
+	dim as integer match = any
+	for x as integer = 0 to tkGetCount( )-1
+		if( tkGet( x ) = id ) then
+			match = TRUE
+			if( text ) then
+				match = (*tkGetText( x ) = *text)
+			end if
+			if( match ) then
+				tkRemove( x, x )
+				x -= 1
+			end if
+		end if
+	next
+end sub

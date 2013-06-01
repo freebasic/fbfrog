@@ -185,6 +185,11 @@ end sub
 		ppDividers( )
 		ppDirectives1( )
 
+		select case( frog.preset )
+		case "zip"
+			tkRemoveAllOf( TK_ID, "ZIP_EXTERN" )
+		end select
+
 		ppDirectives2( )
 
 		ast = cToplevel( )
