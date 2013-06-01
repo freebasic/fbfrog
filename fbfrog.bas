@@ -79,68 +79,71 @@ private sub hAddFromDir( byref d as string )
 	listEnd( @list )
 end sub
 
-''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-
+private sub hParseArgs( byval argc as integer, byval argv as zstring ptr ptr )
 	dim as string arg
+
+	for i as integer = 1 to argc-1
+		arg = *argv[i]
+
+		'' option?
+		if( left( arg, 1 ) = "-" ) then
+			'' Strip all preceding '-'s
+			do
+				arg = right( arg, len( arg ) - 1 )
+			loop while( left( arg, 1 ) = "-" )
+
+			select case( arg )
+			case "help", "version"
+				hPrintHelp( )
+			case "merge"
+				frog.merge = TRUE
+			case "verbose"
+				frog.verbose = TRUE
+			case "dep"
+				frog.dep = TRUE
+			case else
+				'' "-l<name>" or "-l <name>"
+				if( left( arg, 1 ) = "l" ) then
+					'' Cut off the l
+					arg = right( arg, len( arg ) - 1 )
+
+					'' Now empty? then it was just "-l"
+					if( len( arg ) = 0 ) then
+						'' Use the following arg, if any, as <name>
+						i += 1
+						if( i < argc ) then
+							arg = *argv[i]
+						else
+							oops( "missing argument for -l option, please use -l<name> or -l <name>" )
+						end if
+					end if
+
+					frog.preset = arg
+				elseif( len( arg ) > 0 ) then
+					oops( "unknown option: '" + arg + "', try --help" )
+				end if
+			end select
+		else
+			select case( pathExtOnly( arg ) )
+			case "h", "hh", "hxx", "hpp", "c", "cc", "cxx", "cpp"
+				'' File from command line, search in current directory
+				depAdd( arg )
+			case ""
+				'' No extension? Treat as directory...
+				hAddFromDir( arg )
+			case else
+				oops( "'" + arg + "' is not a *.h file" )
+			end select
+		end if
+	next
+end sub
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 	depInit( )
 	fsInit( )
 
-	for i as integer = 1 to __FB_ARGC__-1
-		arg = *__FB_ARGV__[i]
-
-		if( len( arg ) = 0 ) then
-			continue for
-		end if
-
-		if( arg[0] <> asc( "-" ) ) then
-			'' file names will be handled later
-			continue for
-		end if
-
-		do
-			arg = right( arg, len( arg ) - 1 )
-		loop while( left( arg, 1 ) = "-" )
-
-		select case( arg )
-		case "help", "version"
-			hPrintHelp( )
-		case "merge"
-			frog.merge = TRUE
-		case "verbose"
-			frog.verbose = TRUE
-		case "dep"
-			frog.dep = TRUE
-		case else
-			if( len( arg ) > 0 ) then
-				oops( "unknown option: '" + arg + "', try --help" )
-			end if
-		end select
-	next
-
-	'' Now that all options are known -- start adding the files
-	for i as integer = 1 to __FB_ARGC__-1
-		arg = *__FB_ARGV__[i]
-
-		if( len( arg ) = 0 ) then
-			continue for
-		end if
-
-		if( arg[0] = asc( "-" ) ) then
-			continue for
-		end if
-
-		select case( pathExtOnly( arg ) )
-		case "h", "hh", "hxx", "hpp", "c", "cc", "cxx", "cpp"
-			'' File from command line, search in current directory
-			depAdd( arg )
-		case ""
-			'' No extension? Treat as directory...
-			hAddFromDir( arg )
-		case else
-			oops( "not a .h file: '" + arg + "'" )
-		end select
-	next
+	hParseArgs( __FB_ARGC__, __FB_ARGV__ )
 
 	if( fsGetHead( ) = NULL ) then
 		oops( "no input files" )

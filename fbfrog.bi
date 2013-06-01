@@ -503,6 +503,7 @@ type FROGSTUFF
 	dep		as integer
 	merge		as integer
 	verbose		as integer
+	preset		as string
 end type
 
 extern as FROGSTUFF frog
