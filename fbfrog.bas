@@ -181,6 +181,9 @@ end sub
 		ppComments( )
 		ppDividers( )
 		ppDirectives( )
+
+		ppIfExpressions( )
+
 		ast = cToplevel( )
 		astDump( ast )
 		emitWriteFile( pathStripExt( f->normed ) + ".bi", emitAst( ast ) )

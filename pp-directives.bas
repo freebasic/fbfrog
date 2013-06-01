@@ -6,12 +6,6 @@
 
 #include once "fbfrog.bi"
 
-type PARSERSTUFF
-	x		as integer
-end type
-
-dim shared as PARSERSTUFF parse
-
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 private function ppSkip( byval x as integer ) as integer
@@ -111,14 +105,19 @@ dim shared as PPOPINFO ppopinfo(ASTCLASS_IIF to ASTCLASS_UNARYPLUS) = _
 }
 
 '' PP expression parser based on precedence climbing
-private function ppExpression( byval level as integer = 0 ) as ASTNODE ptr
+private function ppExpression _
+	( _
+		byref x as integer, _
+		byval level as integer = 0 _
+	) as ASTNODE ptr
+
 	dim as ASTNODE ptr a = any, b = any, c = any
 	dim as integer astclass = any, oplevel = any, have_parens = any
 
 	function = NULL
 
 	'' Unary prefix operators
-	select case( tkGet( parse.x ) )
+	select case( tkGet( x ) )
 	case TK_EXCL   : astclass = ASTCLASS_LOGNOT    '' !
 	case TK_TILDE  : astclass = ASTCLASS_BITNOT    '' ~
 	case TK_MINUS  : astclass = ASTCLASS_NEGATE    '' -
@@ -127,63 +126,63 @@ private function ppExpression( byval level as integer = 0 ) as ASTNODE ptr
 	end select
 
 	if( astclass >= 0 ) then
-		parse.x = ppSkip( parse.x )
-		a = astNew( astclass, ppExpression( ppopinfo(astclass).level ), NULL, NULL )
+		x = ppSkip( x )
+		a = astNew( astclass, ppExpression( x, ppopinfo(astclass).level ), NULL, NULL )
 	else
 		'' Atoms
-		select case( tkGet( parse.x ) )
+		select case( tkGet( x ) )
 		'' '(' Expression ')'
 		case TK_LPAREN
 			'' '('
-			parse.x = ppSkip( parse.x )
+			x = ppSkip( x )
 
 			'' Expression
-			a = ppExpression( )
+			a = ppExpression( x )
 			if( a = NULL ) then
 				exit function
 			end if
 
 			'' ')'
-			if( tkGet( parse.x ) <> TK_RPAREN ) then
+			if( tkGet( x ) <> TK_RPAREN ) then
 				astDelete( a )
 				exit function
 			end if
-			parse.x = ppSkip( parse.x )
+			x = ppSkip( x )
 
 		case TK_ID
-			a = astNew( ASTCLASS_ID, tkGetText( parse.x ) )
-			parse.x = ppSkip( parse.x )
+			a = astNew( ASTCLASS_ID, tkGetText( x ) )
+			x = ppSkip( x )
 
 		case TK_OCTNUM, TK_DECNUM, TK_HEXNUM
-			a = hNumberLiteral( parse.x )
-			parse.x = ppSkip( parse.x )
+			a = hNumberLiteral( x )
+			x = ppSkip( x )
 
 		'' DEFINED '(' Identifier ')'
 		case KW_DEFINED
-			parse.x = ppSkip( parse.x )
+			x = ppSkip( x )
 
 			'' '('
-			if( tkGet( parse.x ) = TK_LPAREN ) then
+			if( tkGet( x ) = TK_LPAREN ) then
 				have_parens = TRUE
-				parse.x = ppSkip( parse.x )
+				x = ppSkip( x )
 			else
 				have_parens = FALSE
 			end if
 
 			'' Identifier
-			if( tkGet( parse.x ) <> TK_ID ) then
+			if( tkGet( x ) <> TK_ID ) then
 				exit function
 			end if
-			a = astNew( ASTCLASS_ID, tkGetText( parse.x ) )
-			parse.x = ppSkip( parse.x )
+			a = astNew( ASTCLASS_ID, tkGetText( x ) )
+			x = ppSkip( x )
 
 			if( have_parens ) then
 				'' ')'
-				if( tkGet( parse.x ) <> TK_RPAREN ) then
+				if( tkGet( x ) <> TK_RPAREN ) then
 					astDelete( a )
 					exit function
 				end if
-				parse.x = ppSkip( parse.x )
+				x = ppSkip( x )
 			end if
 
 			a = astNew( ASTCLASS_DEFINED, a, NULL, NULL )
@@ -195,7 +194,7 @@ private function ppExpression( byval level as integer = 0 ) as ASTNODE ptr
 
 	'' Infix operators
 	do
-		select case as const( tkGet( parse.x ) )
+		select case as const( tkGet( x ) )
 		case TK_QUEST    : astclass = ASTCLASS_IIF    '' ? (a ? b : c)
 		case TK_PIPEPIPE : astclass = ASTCLASS_LOGOR  '' ||
 		case TK_AMPAMP   : astclass = ASTCLASS_LOGAND '' &&
@@ -230,10 +229,10 @@ private function ppExpression( byval level as integer = 0 ) as ASTNODE ptr
 		end if
 
 		'' operator
-		parse.x = ppSkip( parse.x )
+		x = ppSkip( x )
 
 		'' rhs
-		b = ppExpression( oplevel )
+		b = ppExpression( x, oplevel )
 		if( b = NULL ) then
 			astDelete( a )
 			exit function
@@ -242,14 +241,14 @@ private function ppExpression( byval level as integer = 0 ) as ASTNODE ptr
 		'' Handle ?: special case
 		if( astclass = ASTCLASS_IIF ) then
 			'' ':'?
-			if( tkGet( parse.x ) <> TK_COLON ) then
+			if( tkGet( x ) <> TK_COLON ) then
 				astDelete( a )
 				astDelete( b )
 				exit function
 			end if
-			parse.x = ppSkip( parse.x )
+			x = ppSkip( x )
 
-			c = ppExpression( oplevel )
+			c = ppExpression( x, oplevel )
 			if( c = NULL ) then
 				astDelete( a )
 				astDelete( b )
@@ -265,11 +264,14 @@ private function ppExpression( byval level as integer = 0 ) as ASTNODE ptr
 	function = a
 end function
 
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
 private function ppDirective( byval x as integer ) as integer
-	dim as integer begin = any, tk = any, y = any
+	dim as integer begin = any, keepbegin = any, tk = any, y = any, astclass = any
 	dim as ASTNODE ptr t = any
 
 	begin = x
+	keepbegin = -1
 	t = NULL
 
 	'' not at BOL?
@@ -300,31 +302,13 @@ private function ppDirective( byval x as integer ) as integer
 		t = astNew( ASTCLASS_PPDEFINE, tkGetText( x ) )
 		x = ppSkip( x )
 
-		tkRemove( begin, x - 1 )
-		tkInsert( begin, TK_AST, , t )
-		begin += 1
-		x = begin
-		t = NULL
-
-		'' Parse body tokens, if any, and wrap them inside a BEGIN/END
-		select case( tkGet( x ) )
-		case TK_EOL, TK_EOF
-
-		case else
-			tkInsert( x, TK_BEGIN )
-			x += 1
-
-			x = ppSkipToEOL( x )
-
-			tkInsert( x, TK_END )
-			x += 1
-		end select
+		keepbegin = x
 
 	case KW_INCLUDE
 		'' INCLUDE
 		x = ppSkip( x )
 
-		'' "..."
+		'' "filename"
 		if( tkGet( x ) <> TK_STRING ) then
 			return -1
 		end if
@@ -333,15 +317,14 @@ private function ppDirective( byval x as integer ) as integer
 
 	case KW_IF
 		x = ppSkip( x )
+		keepbegin = x
 
-		parse.x = x
-		t = ppExpression( )
-		if( t = NULL ) then
+		x = ppSkipToEOL( x )
+		if( x = keepbegin ) then
 			return -1
 		end if
-		x = parse.x
 
-		t = astNew( ASTCLASS_PPIF, t, NULL, NULL )
+		t = astNew( ASTCLASS_PPIF )
 
 	case KW_IFDEF, KW_IFNDEF
 		x = ppSkip( x )
@@ -369,10 +352,7 @@ private function ppDirective( byval x as integer ) as integer
 
 	'' EOL?
 	select case( tkGet( x ) )
-	case TK_EOL
-		x = ppSkip( x )
-
-	case TK_EOF
+	case TK_EOL, TK_EOF
 
 	case else
 		astDelete( t )
@@ -380,10 +360,30 @@ private function ppDirective( byval x as integer ) as integer
 	end select
 
 	if( t ) then
-		tkRemove( begin, x - 1 )
-		tkInsert( begin, TK_AST, , t )
-		begin += 1
-		x = begin
+		if( keepbegin >= 0 ) then
+			tkRemove( begin, keepbegin - 1 )
+			x -= keepbegin - begin
+			keepbegin -= keepbegin - begin
+
+			tkInsert( begin, TK_AST, , t )
+			begin += 1
+			keepbegin += 1
+			x += 1
+
+			tkInsert( keepbegin, TK_BEGIN )
+			x += 1
+			tkInsert( x, TK_END )
+			x += 1
+		else
+			tkRemove( begin, x - 1 )
+			tkInsert( begin, TK_AST, , t )
+			begin += 1
+			x = begin
+		end if
+	end if
+
+	if( tkGet( x ) = TK_EOL ) then
+		x += 1
 	end if
 
 	function = x
@@ -464,4 +464,51 @@ sub ppDirectives( )
 		'' Skip to next line
 		x = ppSkip( ppSkipToEOL( old ) )
 	wend
+end sub
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+sub ppIfExpressions( )
+	dim as integer x = any, begin = any
+	dim as ASTNODE ptr t = any, expr = any
+
+	x = 0
+	do
+		select case( tkGet( x ) )
+		case TK_EOF
+			exit do
+
+		case TK_AST
+			t = tkGetAst( x )
+			x += 1
+
+			if( t->class = ASTCLASS_PPIF ) then
+				'' No #if expression yet?
+				if( t->head = NULL ) then
+					'' BEGIN
+					assert( tkGet( x ) = TK_BEGIN )
+					begin = x
+					x += 1
+
+					'' Expression tokens
+					expr = ppExpression( x )
+
+					'' END
+					assert( tkGet( x ) = TK_END )
+					if( expr = NULL ) then
+						'' If no expression could be parsed, turn into PPUNKNOWN
+						t->class = ASTCLASS_PPUNKNOWN
+						expr = astNew( ASTCLASS_TEXT, tkToText( begin, x ) )
+					end if
+					tkRemove( begin, x )
+					x = begin
+
+					astAddChild( t, expr )
+				end if
+			end if
+
+		case else
+			x += 1
+		end select
+	loop
 end sub

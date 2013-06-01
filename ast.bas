@@ -191,7 +191,7 @@ end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-dim shared as zstring ptr astclassnames(0 to ASTCLASS__COUNT-1) = _
+dim shared as zstring ptr astclassnames(0 to ...) = _
 { _
 	@"nop"     , _
 	@"group"   , _
@@ -242,6 +242,10 @@ dim shared as zstring ptr astclassnames(0 to ASTCLASS__COUNT-1) = _
 	@"unary +"   _
 }
 
+#if ubound( astclassnames ) < ASTCLASS__COUNT - 1
+#error "please update the astclassnames() table!"
+#endif
+
 function astDumpOne( byval n as ASTNODE ptr ) as string
 	dim as string s
 
@@ -276,8 +280,7 @@ private sub hPrintIndentation( byval nestlevel as integer )
 	next
 end sub
 
-sub astDump( byval n as ASTNODE ptr )
-	static as integer nestlevel
+sub astDump( byval n as ASTNODE ptr, byval nestlevel as integer )
 	dim as ASTNODE ptr child = any
 
 	nestlevel += 1
@@ -290,14 +293,14 @@ sub astDump( byval n as ASTNODE ptr )
 			nestlevel += 1
 			hPrintIndentation( nestlevel )
 			print "subtype:"
-			astDump( n->subtype )
+			astDump( n->subtype, nestlevel )
 			nestlevel -= 1
 		end if
 
 		child = n->head
 		if( child ) then
 			do
-				astDump( child )
+				astDump( child, nestlevel )
 				child = child->next
 			loop while( child )
 		end if

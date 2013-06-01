@@ -128,7 +128,7 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 }
 
 #if ubound( tk_info ) < TK__COUNT - 1
-#error "you forgot to update the tk_info() table again!"
+#error "please update the tk_info() table!"
 #endif
 
 function tkInfoText( byval tk as integer ) as zstring ptr
@@ -242,16 +242,10 @@ function tkDumpOne( byval x as integer ) as string
 	s += "]"
 
 	s += " "
-	if( p->id = TK_AST ) then
-		s += emitAst( p->ast )
-	else
-		if( p->text ) then
-			s += "'" + *p->text + "'"
-		else
-			if( tk_info(p->id).text ) then
-				s += "'" + *tk_info(p->id).text + "'"
-			end if
-		end if
+	if( p->text ) then
+		s += "'" + *p->text + "'"
+	elseif( tk_info(p->id).text ) then
+		s += "'" + *tk_info(p->id).text + "'"
 	end if
 
 	text = tkGetComment( x )
@@ -269,6 +263,9 @@ end function
 sub tkDump( )
 	for i as integer = 0 to tk.size - 1
 		print tkDumpOne( i )
+		if( tkGet( i ) = TK_AST ) then
+			astDump( tkGetAst( i ), 2 )
+		end if
 	next
 end sub
 

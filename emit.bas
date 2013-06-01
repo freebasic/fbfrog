@@ -117,6 +117,10 @@ function emitAst _
 	dim as string s
 	dim as integer count = any
 
+	if( n = NULL ) then
+		exit function
+	end if
+
 	select case as const( n->class )
 	case ASTCLASS_NOP
 

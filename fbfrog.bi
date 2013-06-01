@@ -451,7 +451,8 @@ declare function astNewCONSTi _
 		byval i as longint, _
 		byval dtype as integer _
 	) as ASTNODE ptr
-declare sub astDump( byval n as ASTNODE ptr )
+declare function astDumpOne( byval n as ASTNODE ptr ) as string
+declare sub astDump( byval n as ASTNODE ptr, byval nestlevel as integer = 0 )
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
@@ -472,6 +473,7 @@ declare sub emitWriteFile( byref filename as string, byref text as string )
 declare sub ppComments( )
 declare sub ppDividers( )
 declare sub ppDirectives( )
+declare sub ppIfExpressions( )
 declare function cSkip( byval x as integer ) as integer
 declare function cSkipRev( byval x as integer ) as integer
 declare function cSkipStatement( byval x as integer ) as integer
