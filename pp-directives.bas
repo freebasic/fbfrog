@@ -520,18 +520,26 @@ sub ppDirectives2( )
 
 					'' Expression tokens
 					expr = ppExpression( x )
+					'' TK_END not reached after ppExpression()?
+					if( tkGet( x ) <> TK_END ) then
+						'' Then either no expression could be parsed at all,
+						'' or it was followed by "junk" tokens...
+						astDelete( expr )
 
-					'' END
-					assert( tkGet( x ) = TK_END )
-					if( expr = NULL ) then
-						'' If no expression could be parsed, turn into PPUNKNOWN
+						do
+							x += 1
+						loop while( tkGet( x ) <> TK_END )
+
+						'' Turn the PPIF into a PPUNKNOWN
 						t->class = ASTCLASS_PPUNKNOWN
 						expr = astNew( ASTCLASS_TEXT, tkToText( begin + 1, x - 1 ) )
 					end if
+					astAddChild( t, expr )
+
+					'' END
+					assert( tkGet( x ) = TK_END )
 					tkRemove( begin, x )
 					x = begin
-
-					astAddChild( t, expr )
 				end if
 
 			end select
