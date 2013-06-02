@@ -160,10 +160,6 @@ private function ppExpression _
 			end if
 			x = ppSkip( x )
 
-		case TK_ID
-			a = astNew( ASTCLASS_ID, tkGetText( x ) )
-			x = ppSkip( x )
-
 		case TK_OCTNUM, TK_DECNUM, TK_HEXNUM
 			a = hNumberLiteral( x )
 			x = ppSkip( x )
