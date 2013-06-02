@@ -298,8 +298,10 @@ function emitAst _
 			s += ")"
 		end if
 
-	case ASTCLASS_LOGNOT, ASTCLASS_BITNOT, _
-	     ASTCLASS_NEGATE, ASTCLASS_UNARYPLUS
+	case ASTCLASS_LOGNOT
+		s += "iif( " + emitAst( n->head, FALSE ) + ", 0, 1 )"
+
+	case ASTCLASS_BITNOT, ASTCLASS_NEGATE, ASTCLASS_UNARYPLUS
 		if( need_parens ) then
 			s += "("
 		end if
@@ -311,17 +313,11 @@ function emitAst _
 			s += "-"
 		case ASTCLASS_UNARYPLUS
 			s += "+"
-		case ASTCLASS_LOGNOT
-
 		case else
 			assert( FALSE )
 		end select
 
 		s += emitAst( n->head, TRUE )
-
-		if( n->class = ASTCLASS_LOGNOT ) then
-			s += " = 0"
-		end if
 
 		if( need_parens ) then
 			s += ")"

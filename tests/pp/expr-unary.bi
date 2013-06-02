@@ -1,19 +1,19 @@
-#if 0 = 0
+#if iif( 0, 0, 1 )
 #if not 0
 #if -0
 #if +0
 
-#if 0 = 0
+#if iif( 0, 0, 1 )
 #if not 0
 #if -0
 #if +0
 
-#if 0 = 0
+#if iif( 0, 0, 1 )
 #if not 0
 #if -0
 #if +0
 
-#if (0 = 0) = 0
+#if iif( iif( 0, 0, 1 ), 0, 1 )
 #if not (not 0)
 #if -(-0)
 #if +(+0)
