@@ -14,8 +14,7 @@
 #if X == 4294967295UL || X == 0.1e+1
 #define HOORAY
 #endif
-'' TODO: unknown PP directive
-#elif 1
+#elseif 1
 '' TODO: unknown PP directive
 #pragma foo
 #endif

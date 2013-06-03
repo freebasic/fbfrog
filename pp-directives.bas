@@ -17,8 +17,6 @@
 
 #include once "fbfrog.bi"
 
-''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-
 private function ppSkip( byval x as integer ) as integer
 	dim as integer y = any
 
@@ -323,7 +321,7 @@ private function ppDirective( byval x as integer ) as integer
 		t = astNew( ASTCLASS_PPINCLUDE, tkGetText( x ) )
 		x = ppSkip( x )
 
-	case KW_IF
+	case KW_IF, KW_ELIF
 		x = ppSkip( x )
 		keepbegin = x
 
@@ -332,7 +330,7 @@ private function ppDirective( byval x as integer ) as integer
 			return -1
 		end if
 
-		t = astNew( ASTCLASS_PPIF )
+		t = astNew( iif( tk = KW_IF, ASTCLASS_PPIF, ASTCLASS_PPELSEIF ) )
 
 	case KW_IFDEF, KW_IFNDEF
 		x = ppSkip( x )
@@ -511,7 +509,7 @@ sub ppDirectives2( )
 				tkRemove( begin, x )
 				x = begin
 
-			case ASTCLASS_PPIF
+			case ASTCLASS_PPIF, ASTCLASS_PPELSEIF
 				'' No #if expression yet?
 				if( t->head = NULL ) then
 					'' BEGIN
@@ -531,11 +529,14 @@ sub ppDirectives2( )
 							x += 1
 						loop while( tkGet( x ) <> TK_END )
 
-						'' Turn the PPIF into a PPUNKNOWN
-						t->class = ASTCLASS_PPUNKNOWN
-						expr = astNew( ASTCLASS_PPIF, astNew( ASTCLASS_TEXT, tkToText( begin + 1, x - 1 ) ), NULL, NULL )
+						'' Turn it into a PPUNKNOWN
+						astAddChild( t, astNew( ASTCLASS_TEXT, tkToText( begin + 1, x - 1 ) ) )
+						t = astNew( ASTCLASS_PPUNKNOWN, astClone( t ), NULL, NULL )
+						tkRemove( begin - 1, begin - 1 )
+						tkInsert( begin - 1, TK_AST, , t )
+					else
+						astAddChild( t, expr )
 					end if
-					astAddChild( t, expr )
 
 					'' END
 					assert( tkGet( x ) = TK_END )

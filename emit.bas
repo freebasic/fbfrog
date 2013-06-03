@@ -145,6 +145,8 @@ function emitAst _
 		end if
 	case ASTCLASS_PPIF
 		s += "#if " + emitAst( n->head )
+	case ASTCLASS_PPELSEIF
+		s += "#elseif " + emitAst( n->head )
 	case ASTCLASS_PPELSE
 		s += "#else"
 	case ASTCLASS_PPENDIF

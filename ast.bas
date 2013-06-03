@@ -200,6 +200,7 @@ dim shared as zstring ptr astclassnames(0 to ...) = _
 	@"#include", _
 	@"#define" , _
 	@"#if"     , _
+	@"#elseif" , _
 	@"#else"   , _
 	@"#endif"  , _
 	@"#unknown", _
