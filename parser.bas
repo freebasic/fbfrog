@@ -223,7 +223,10 @@ private function hMergeUnknown( ) as ASTNODE ptr
 		parse.x += 1
 	loop while( tkIsPoisoned( parse.x ) )
 
-	function = astNew( ASTCLASS_UNKNOWN, tkToText( begin, parse.x - 1 ) )
+	function = astNew( ASTCLASS_UNKNOWN, _
+		astNew( ASTCLASS_TEXT, _
+			tkToText( begin, parse.x - 1 ) ), _
+		NULL, NULL )
 end function
 
 private sub cUnknown( )

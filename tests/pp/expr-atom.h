@@ -4,7 +4,6 @@
 #if 100
 #if 0x0
 #if 0x100
-#if ID
 #if (123)
 #if (((123)))
 #if defined ID

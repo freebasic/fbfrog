@@ -151,7 +151,7 @@ function emitAst _
 		s += "#endif"
 	case ASTCLASS_PPUNKNOWN
 		s += "'' TODO: unknown PP directive" + !"\n"
-		s += *n->text
+		s += emitAst( n->head )
 
 	case ASTCLASS_STRUCT
 		s += "type " + *n->text + !"\n"
@@ -234,7 +234,7 @@ function emitAst _
 
 	case ASTCLASS_UNKNOWN
 		s += "'' TODO: unknown construct" + !"\n"
-		s += *n->text
+		s += emitAst( n->head )
 
 	case ASTCLASS_CONST
 		s += str( n->intval )

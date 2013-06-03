@@ -431,7 +431,8 @@ private function ppUnknownDirective( byval x as integer ) as integer
 	x = ppSkip( x )
 
 	y = ppSkipToEOL( x )
-	expr = astNew( ASTCLASS_PPUNKNOWN, tkToText( begin, y ) )
+	expr = astNew( ASTCLASS_TEXT, tkToText( begin, y ) )
+	expr = astNew( ASTCLASS_PPUNKNOWN, expr, NULL, NULL )
 	x = y
 
 	'' EOL? (could also be EOF)
@@ -532,7 +533,7 @@ sub ppDirectives2( )
 
 						'' Turn the PPIF into a PPUNKNOWN
 						t->class = ASTCLASS_PPUNKNOWN
-						expr = astNew( ASTCLASS_TEXT, tkToText( begin + 1, x - 1 ) )
+						expr = astNew( ASTCLASS_PPIF, astNew( ASTCLASS_TEXT, tkToText( begin + 1, x - 1 ) ), NULL, NULL )
 					end if
 					astAddChild( t, expr )
 
