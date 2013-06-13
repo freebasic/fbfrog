@@ -389,7 +389,7 @@ private function ppDirective( byval x as integer ) as integer
 	end if
 
 	if( tkGet( x ) = TK_EOL ) then
-		x = ppSkip( x )
+		tkRemove( x, ppSkip( x ) - 1 )
 	end if
 
 	function = x
