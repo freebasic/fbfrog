@@ -16,6 +16,69 @@ function typeToUnsigned( byval dtype as integer ) as integer
 	function = dtype
 end function
 
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+type ASTNODEINFO
+	name		as zstring * 10
+	is_expr		as integer
+end type
+
+dim shared as ASTNODEINFO astnodeinfo(0 to ...) = _
+{ _
+	( "nop"     , FALSE ), _
+	( "group"   , FALSE ), _
+	( "divider" , FALSE ), _
+	( "#include", FALSE ), _
+	( "#define" , FALSE ), _
+	( "#if"     , FALSE ), _
+	( "#elseif" , FALSE ), _
+	( "#else"   , FALSE ), _
+	( "#endif"  , FALSE ), _
+	( "#unknown", FALSE ), _
+	( "struct"  , FALSE ), _
+	( "typedef" , FALSE ), _
+	( "var"     , FALSE ), _
+	( "field"   , FALSE ), _
+	( "proc"    , FALSE ), _
+	( "param"   , FALSE ), _
+	( "unknown" , FALSE ), _
+	( "const"   , TRUE  ), _
+	( "id"      , TRUE  ), _
+	( "text"    , TRUE  ), _
+	( "defined" , TRUE  ), _
+	( "iif"     , TRUE  ), _
+	( "orelse"  , TRUE  ), _
+	( "andalso" , TRUE  ), _
+	( "or"      , TRUE  ), _
+	( "xor"     , TRUE  ), _
+	( "and"     , TRUE  ), _
+	( "="       , TRUE  ), _
+	( "<>"      , TRUE  ), _
+	( "<"       , TRUE  ), _
+	( "<="      , TRUE  ), _
+	( ">"       , TRUE  ), _
+	( ">="      , TRUE  ), _
+	( "shl"     , TRUE  ), _
+	( "shr"     , TRUE  ), _
+	( "+"       , TRUE  ), _
+	( "-"       , TRUE  ), _
+	( "*"       , TRUE  ), _
+	( "/"       , TRUE  ), _
+	( "mod"     , TRUE  ), _
+	( "lognot"  , TRUE  ), _
+	( "not"     , TRUE  ), _
+	( "unary -" , TRUE  ), _
+	( "unary +" , TRUE  )  _
+}
+
+#if ubound( astnodeinfo ) < ASTCLASS__COUNT - 1
+#error "please update the astnodeinfo() table!"
+#endif
+
+function astIsExpr( byval n as ASTNODE ptr ) as integer
+	function = astnodeinfo(n->class).is_expr
+end function
+
 function astNew overload( byval class_ as integer ) as ASTNODE ptr
 	dim as ASTNODE ptr n = any
 
@@ -67,12 +130,18 @@ sub astDelete( byval n as ASTNODE ptr )
 	deallocate( n->text )
 	astDelete( n->subtype )
 
-	child = n->head
-	while( child )
-		nxt = child->next
-		astDelete( child )
-		child = nxt
-	wend
+	if( astIsExpr( n ) ) then
+		astDelete( n->l )
+		astDelete( n->r )
+		astDelete( n->next )
+	else
+		child = n->l
+		while( child )
+			nxt = child->next
+			astDelete( child )
+			child = nxt
+		wend
+	end if
 
 	deallocate( n )
 end sub
@@ -87,7 +156,7 @@ sub astAddChild( byval parent as ASTNODE ptr, byval t as ASTNODE ptr )
 	select case( t->class )
 	case ASTCLASS_GROUP
 		'' If it's a GROUP, add its children, and delete the GROUP itself
-		child = t->head
+		child = t->l
 		while( child )
 			astAddChild( parent, astClone( child ) )
 			child = child->next
@@ -103,13 +172,14 @@ sub astAddChild( byval parent as ASTNODE ptr, byval t as ASTNODE ptr )
 
 	end select
 
-	t->prev = parent->tail
-	if( parent->tail ) then
-		parent->tail->next = t
+	assert( astIsExpr( parent ) = FALSE )
+	t->prev = parent->r
+	if( parent->r ) then
+		parent->r->next = t
 	end if
-	parent->tail = t
-	if( parent->head = NULL ) then
-		parent->head = t
+	parent->r = t
+	if( parent->l = NULL ) then
+		parent->l = t
 	end if
 end sub
 
@@ -148,6 +218,17 @@ sub astAddComment( byval n as ASTNODE ptr, byval comment as zstring ptr )
 	n->comment = strDuplicate( s )
 end sub
 
+sub astCopyNodeData( byval d as ASTNODE ptr, byval s as ASTNODE ptr )
+	d->attrib     = s->attrib
+	d->text       = strDuplicate( s->text )
+	d->comment    = strDuplicate( s->comment )
+	d->intval     = s->intval
+	d->dtype      = s->dtype
+	d->subtype    = astClone( s->subtype )
+	d->sourcefile = s->sourcefile
+	d->sourceline = s->sourceline
+end sub
+
 function astClone( byval n as ASTNODE ptr ) as ASTNODE ptr
 	dim as ASTNODE ptr c = any, child = any
 
@@ -156,20 +237,19 @@ function astClone( byval n as ASTNODE ptr ) as ASTNODE ptr
 	end if
 
 	c = astNew( n->class )
-	c->attrib     = n->attrib
-	c->text       = strDuplicate( n->text )
-	c->comment    = strDuplicate( n->comment )
-	c->intval     = n->intval
-	c->dtype      = n->dtype
-	c->subtype    = astClone( n->subtype )
-	c->sourcefile = n->sourcefile
-	c->sourceline = n->sourceline
+	astCopyNodeData( c, n )
 
-	child = n->head
-	while( child )
-		astAddChild( c, astClone( child ) )
-		child = child->next
-	wend
+	if( astIsExpr( n ) ) then
+		c->l = astClone( n->l )
+		c->r = astClone( n->r )
+		c->next = astClone( n->next )
+	else
+		child = n->l
+		while( child )
+			astAddChild( c, astClone( child ) )
+			child = child->next
+		wend
+	end if
 
 	function = c
 end function
@@ -191,61 +271,6 @@ end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-dim shared as zstring ptr astclassnames(0 to ...) = _
-{ _
-	@"nop"     , _
-	@"group"   , _
-	@"divider" , _
-	_
-	@"#include", _
-	@"#define" , _
-	@"#if"     , _
-	@"#elseif" , _
-	@"#else"   , _
-	@"#endif"  , _
-	@"#unknown", _
-	_
-	@"struct"  , _
-	@"typedef" , _
-	@"var"     , _
-	@"field"   , _
-	@"proc"    , _
-	@"param"   , _
-	@"unknown" , _
-	_
-	@"const"   , _
-	@"id"      , _
-	@"text"    , _
-	@"defined" , _
-	_
-	@"iif"     , _
-	@"orelse"  , _
-	@"andalso" , _
-	@"or"      , _
-	@"xor"     , _
-	@"and"     , _
-	@"="       , _
-	@"<>"      , _
-	@"<"       , _
-	@"<="      , _
-	@">"       , _
-	@">="      , _
-	@"shl"     , _
-	@"shr"     , _
-	@"+"       , _
-	@"-"       , _
-	@"*"       , _
-	@"/"       , _
-	@"mod"     , _
-	@"lognot"  , _
-	@"not"     , _
-	@"unary -" , _
-	@"unary +"   _
-}
-
-#if ubound( astclassnames ) < ASTCLASS__COUNT - 1
-#error "please update the astclassnames() table!"
-#endif
 
 function astDumpOne( byval n as ASTNODE ptr ) as string
 	dim as string s
@@ -258,10 +283,10 @@ function astDumpOne( byval n as ASTNODE ptr ) as string
 		s += "[" & hex( n ) & "] "
 	#endif
 
-	s += *astclassnames(n->class)
+	s += astnodeinfo(n->class).name
 
 	if( n->text ) then
-		s += " " + *n->text
+		s += " " + strReplace( *n->text, !"\n", "\n" )
 	end if
 
 	if( n->class = ASTCLASS_CONST ) then
@@ -298,12 +323,24 @@ sub astDump( byval n as ASTNODE ptr, byval nestlevel as integer )
 			nestlevel -= 1
 		end if
 
-		child = n->head
-		if( child ) then
-			do
-				astDump( child, nestlevel )
-				child = child->next
-			loop while( child )
+		if( astIsExpr( n ) ) then
+			if( n->l ) then
+				astDump( n->l, nestlevel )
+			end if
+			if( n->r ) then
+				astDump( n->r, nestlevel )
+			end if
+			if( n->next ) then
+				astDump( n->next, nestlevel )
+			end if
+		else
+			child = n->l
+			if( child ) then
+				do
+					astDump( child, nestlevel )
+					child = child->next
+				loop while( child )
+			end if
 		end if
 	else
 		hPrintIndentation( nestlevel )

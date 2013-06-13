@@ -125,7 +125,7 @@ function emitAst _
 	case ASTCLASS_NOP
 
 	case ASTCLASS_GROUP
-		child = n->head
+		child = n->l
 		while( child )
 			s += emitAst( child )
 			child = child->next
@@ -140,25 +140,25 @@ function emitAst _
 		s += "#include """ + *n->text + """"
 	case ASTCLASS_PPDEFINE
 		s += "#define " + *n->text
-		if( n->head ) then
-			s += " " + emitAst( n->head )
+		if( n->l ) then
+			s += " " + emitAst( n->l )
 		end if
 	case ASTCLASS_PPIF
-		s += "#if " + emitAst( n->head )
+		s += "#if " + emitAst( n->l )
 	case ASTCLASS_PPELSEIF
-		s += "#elseif " + emitAst( n->head )
+		s += "#elseif " + emitAst( n->l )
 	case ASTCLASS_PPELSE
 		s += "#else"
 	case ASTCLASS_PPENDIF
 		s += "#endif"
 	case ASTCLASS_PPUNKNOWN
 		s += "'' TODO: unknown PP directive" + !"\n"
-		s += emitAst( n->head )
+		s += emitAst( n->l )
 
 	case ASTCLASS_STRUCT
 		s += "type " + *n->text + !"\n"
 
-		child = n->head
+		child = n->l
 		while( child )
 			s += hIndent( emitAst( child ) ) + !"\n"
 			child = child->next
@@ -202,7 +202,7 @@ function emitAst _
 		s += "("
 
 		count = 0
-		child = n->head
+		child = n->l
 		while( child )
 			if( count > 0 ) then
 				s += ","
@@ -236,7 +236,7 @@ function emitAst _
 
 	case ASTCLASS_UNKNOWN
 		s += "'' TODO: unknown construct" + !"\n"
-		s += emitAst( n->head )
+		s += emitAst( n->l )
 
 	case ASTCLASS_CONST
 		s += str( n->intval )
@@ -246,13 +246,13 @@ function emitAst _
 		s += *n->text
 
 	case ASTCLASS_DEFINED
-		s += "defined( " + emitAst( n->head ) + " )"
+		s += "defined( " + emitAst( n->l ) + " )"
 
 	case ASTCLASS_IIF
 		s += "iif( " + _
-			emitAst( n->head       ) + ", " + _
-			emitAst( n->head->next ) + ", " + _
-			emitAst( n->tail       ) + " )"
+			emitAst( n->next ) + ", " + _
+			emitAst( n->l    ) + ", " + _
+			emitAst( n->r    ) + " )"
 
 	case ASTCLASS_LOGOR, ASTCLASS_LOGAND, _
 	     ASTCLASS_BITOR, ASTCLASS_BITXOR, ASTCLASS_BITAND, _
@@ -267,7 +267,7 @@ function emitAst _
 			s += "("
 		end if
 
-		s += emitAst( n->head, TRUE )
+		s += emitAst( n->l, TRUE )
 		s += " "
 
 		select case as const( n->class )
@@ -294,14 +294,14 @@ function emitAst _
 		end select
 
 		s += " "
-		s += emitAst( n->tail, TRUE )
+		s += emitAst( n->r, TRUE )
 
 		if( need_parens ) then
 			s += ")"
 		end if
 
 	case ASTCLASS_LOGNOT
-		s += "iif( " + emitAst( n->head, FALSE ) + ", 0, 1 )"
+		s += "iif( " + emitAst( n->l, FALSE ) + ", 0, 1 )"
 
 	case ASTCLASS_BITNOT, ASTCLASS_NEGATE, ASTCLASS_UNARYPLUS
 		if( need_parens ) then
@@ -319,7 +319,7 @@ function emitAst _
 			assert( FALSE )
 		end select
 
-		s += emitAst( n->head, TRUE )
+		s += emitAst( n->l, TRUE )
 
 		if( need_parens ) then
 			s += ")"

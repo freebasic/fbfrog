@@ -511,7 +511,7 @@ sub ppDirectives2( )
 
 			case ASTCLASS_PPIF, ASTCLASS_PPELSEIF
 				'' No #if expression yet?
-				if( t->head = NULL ) then
+				if( t->l = NULL ) then
 					'' BEGIN
 					assert( tkGet( x ) = TK_BEGIN )
 					begin = x

@@ -416,13 +416,17 @@ type ASTNODE_
 	sourcefile	as FSFILE ptr
 	sourceline	as integer
 
-	'' Operands (expressions), fields (STRUCT), parameters (PROC)
-	head		as ASTNODE ptr
-	tail		as ASTNODE ptr
-	next		as ASTNODE ptr  '' Siblings in this list
+	'' Operands (expressions), or head/tail of a list, e.g. fields (STRUCT),
+	'' parameters (PROC)
+	l		as ASTNODE ptr
+	r		as ASTNODE ptr
+
+	'' Siblings in the list (not for expressions)
+	next		as ASTNODE ptr  '' iif condition (IIF)
 	prev		as ASTNODE ptr
 end type
 
+declare function astIsExpr( byval n as ASTNODE ptr ) as integer
 declare function astNew overload( byval class_ as integer ) as ASTNODE ptr
 declare function astNew overload _
 	( _
@@ -446,6 +450,7 @@ declare sub astSetType _
 		byval subtype as ASTNODE ptr _
 	)
 declare sub astAddComment( byval n as ASTNODE ptr, byval comment as zstring ptr )
+declare sub astCopyNodeData( byval d as ASTNODE ptr, byval s as ASTNODE ptr )
 declare function astClone( byval n as ASTNODE ptr ) as ASTNODE ptr
 declare function astNewCONSTi _
 	( _
