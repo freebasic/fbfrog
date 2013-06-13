@@ -1,9 +1,9 @@
+''
 '' C parsing
 ''
-'' cToplevel() tries to parse whatever is currently loaded in the tk buffer,
-'' without modifying it. As result it returns an AST. If there are any
-'' constructs in the input that it cannot handle, they will be represented via
-'' ASTCLASS_UNKNOWN nodes.
+'' cToplevel() parses the content of the tk buffer without modifying it,
+'' and returns the resulting AST.
+''
 
 #include once "fbfrog.bi"
 
