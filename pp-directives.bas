@@ -365,27 +365,25 @@ private function ppDirective( byval x as integer ) as integer
 		return -1
 	end select
 
-	if( t ) then
-		if( keepbegin >= 0 ) then
-			tkRemove( begin, keepbegin - 1 )
-			x -= keepbegin - begin
-			keepbegin -= keepbegin - begin
+	if( keepbegin >= 0 ) then
+		tkRemove( begin, keepbegin - 1 )
+		x -= keepbegin - begin
+		keepbegin -= keepbegin - begin
 
-			tkInsert( begin, TK_AST, , t )
-			begin += 1
-			keepbegin += 1
-			x += 1
+		tkInsert( begin, TK_AST, , t )
+		begin += 1
+		keepbegin += 1
+		x += 1
 
-			tkInsert( keepbegin, TK_BEGIN )
-			x += 1
-			tkInsert( x, TK_END )
-			x += 1
-		else
-			tkRemove( begin, x - 1 )
-			tkInsert( begin, TK_AST, , t )
-			begin += 1
-			x = begin
-		end if
+		tkInsert( keepbegin, TK_BEGIN )
+		x += 1
+		tkInsert( x, TK_END )
+		x += 1
+	else
+		tkRemove( begin, x - 1 )
+		tkInsert( begin, TK_AST, , t )
+		begin += 1
+		x = begin
 	end if
 
 	if( tkGet( x ) = TK_EOL ) then
