@@ -1,6 +1,6 @@
 
-  fbfrog -- C-to-FreeBASIC header translator
-  Copyright (C) 2011 - 2012  Daniel C. Klauer <daniel.c.klauer[at]web.de>
+  fbfrog -- FreeBASIC binding creation tool
+  Copyright (C) 2011 - 2013  Daniel C. Klauer <daniel.c.klauer[at]web.de>
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -18,9 +18,9 @@
 
 Goal:
 
-  To have a .h to .bi header translation tool that can create and update FB
-  headers for third-party APIs. It should produce bindings rather than exact
-  translations, which are not possible anyways in most cases.
+  Automation of most of the work needed to create and maintain FB bindings to
+  C libraries, most importantly: the translation of C procedure and structure
+  declarations to FB.
 
 Usage:
 
