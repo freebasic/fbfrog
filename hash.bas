@@ -150,6 +150,31 @@ sub hashAdd _
 
 end sub
 
+sub hashAddOverwrite _
+	( _
+		byval h as THASH ptr, _
+		byval s as zstring ptr, _
+		byval dat as any ptr _
+	)
+
+	dim as uinteger hash = any
+	dim as THASHITEM ptr item = any
+
+	hash = hashHash( s )
+	item = hashLookup( h, s, hash )
+
+	'' Update count if entry doesn't exist yet
+	if( item->s = NULL ) then
+		h->count += 1
+	end if
+
+	'' Overwrite existing entry (if any)
+	item->s = s
+	item->hash = hash
+	item->data = dat
+
+end sub
+
 sub hashInit( byval h as THASH ptr, byval exponent as integer )
 	h->count = 0
 	h->room = 1 shl exponent

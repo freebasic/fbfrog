@@ -271,6 +271,126 @@ end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
+namespace eval
+	dim shared as THASH symbols
+end namespace
+
+sub ppAddSymbol( byval id as zstring ptr, byval is_defined as integer )
+	if( eval.symbols.items = NULL ) then
+		hashInit( @eval.symbols, 4 )
+	end if
+	hashAddOverwrite( @eval.symbols, id, cptr( any ptr, is_defined ) )
+end sub
+
+sub ppResetSymbols( )
+	hashEnd( @eval.symbols )
+	eval.symbols.items = NULL
+end sub
+
+function ppExprFold( byval n as ASTNODE ptr ) as ASTNODE ptr
+	dim as THASHITEM ptr item = any
+	dim as long v1 = any, v2 = any
+
+	function = n
+
+	if( n = NULL ) then
+		exit function
+	end if
+
+	select case as const( n->class )
+	case ASTCLASS_DEFINED
+		'' defined() on known symbol?
+		assert( n->l->class = ASTCLASS_ID )
+		item = hashLookup( @eval.symbols, n->l->text, hashHash( n->l->text ) )
+		if( item->s ) then
+			function = astNewCONSTi( iif( item->data, 1, 0 ), TYPE_LONG )
+			astDelete( n )
+		end if
+
+	case ASTCLASS_IIF
+		n->l = ppExprFold( n->l )
+		n->r = ppExprFold( n->r )
+		n->next = ppExprFold( n->next )
+
+		if( n->next->class = ASTCLASS_CONST ) then
+			if( n->next->intval ) then
+				function = astClone( n->l )
+			else
+				function = astClone( n->r )
+			end if
+			astDelete( n )
+		end if
+
+	case ASTCLASS_LOGOR, ASTCLASS_LOGAND, _
+	     ASTCLASS_BITOR, ASTCLASS_BITXOR, ASTCLASS_BITAND, _
+	     ASTCLASS_EQ, ASTCLASS_NE, _
+	     ASTCLASS_LT, ASTCLASS_LE, _
+	     ASTCLASS_GT, ASTCLASS_GE, _
+	     ASTCLASS_SHL, ASTCLASS_SHR, _
+	     ASTCLASS_ADD, ASTCLASS_SUB, _
+	     ASTCLASS_MUL, ASTCLASS_DIV, ASTCLASS_MOD
+
+		n->l = ppExprFold( n->l )
+		n->r = ppExprFold( n->r )
+
+		if( (n->l->class = ASTCLASS_CONST) and _
+		    (n->r->class = ASTCLASS_CONST) ) then
+			v1 = n->l->intval
+			v2 = n->r->intval
+
+			select case as const( n->class )
+			case ASTCLASS_LOGOR  : v1    = iif( v1 orelse  v2, 1, 0 )
+			case ASTCLASS_LOGAND : v1    = iif( v1 andalso v2, 1, 0 )
+			case ASTCLASS_BITOR  : v1  or= v2
+			case ASTCLASS_BITXOR : v1 xor= v2
+			case ASTCLASS_BITAND : v1 and= v2
+			case ASTCLASS_EQ     : v1    = iif( v1 =  v2, 1, 0 )
+			case ASTCLASS_NE     : v1    = iif( v1 <> v2, 1, 0 )
+			case ASTCLASS_LT     : v1    = iif( v1 <  v2, 1, 0 )
+			case ASTCLASS_LE     : v1    = iif( v1 <= v2, 1, 0 )
+			case ASTCLASS_GT     : v1    = iif( v1 >  v2, 1, 0 )
+			case ASTCLASS_GE     : v1    = iif( v1 >= v2, 1, 0 )
+			case ASTCLASS_SHL    : v1 shl= v2
+			case ASTCLASS_SHR    : v1 shr= v2
+			case ASTCLASS_ADD    : v1   += v2
+			case ASTCLASS_SUB    : v1   -= v2
+			case ASTCLASS_MUL    : v1   *= v2
+			case ASTCLASS_DIV    : v1   /= v2
+			case ASTCLASS_MOD    : v1 mod= v2
+			case else
+				assert( FALSE )
+			end select
+
+			function = astNewCONSTi( v1, TYPE_LONG )
+			astDelete( n )
+		end if
+
+	case ASTCLASS_LOGNOT, ASTCLASS_BITNOT, _
+	     ASTCLASS_NEGATE, ASTCLASS_UNARYPLUS
+
+		n->l = ppExprFold( n->l )
+
+		if( n->l->class = ASTCLASS_CONST ) then
+			v1 = n->l->intval
+
+			select case as const( n->class )
+			case ASTCLASS_LOGNOT    : v1 = iif( v1, 0, 1 )
+			case ASTCLASS_BITNOT    : v1 = not v1
+			case ASTCLASS_NEGATE    : v1 = -v1
+			case ASTCLASS_UNARYPLUS : '' nothing to do
+			case else
+				assert( FALSE )
+			end select
+
+			function = astNewCONSTi( v1, TYPE_LONG )
+			astDelete( n )
+		end if
+
+	end select
+end function
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
 private function ppDirective( byval x as integer ) as integer
 	dim as integer begin = any, keepbegin = any, tk = any, y = any, astclass = any
 	dim as ASTNODE ptr t = any

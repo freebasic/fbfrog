@@ -37,6 +37,12 @@ declare sub hashAdd _
 		byval s as zstring ptr, _
 		byval dat as any ptr _
 	)
+declare sub hashAddOverwrite _
+	( _
+		byval h as THASH ptr, _
+		byval s as zstring ptr, _
+		byval dat as any ptr _
+	)
 declare sub hashInit( byval h as THASH ptr, byval exponent as integer )
 declare sub hashEnd( byval h as THASH ptr )
 declare sub hashStats( byval h as THASH ptr, byref prefix as string )
