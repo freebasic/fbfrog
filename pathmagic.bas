@@ -1,3 +1,5 @@
+'' Path/file name handling functions, directory tree search
+
 #include once "fbfrog.bi"
 #include once "crt.bi"
 #include once "dir.bi"

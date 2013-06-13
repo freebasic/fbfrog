@@ -1,3 +1,5 @@
+'' AST build up/helper functions
+
 #include once "fbfrog.bi"
 
 function typeToSigned( byval dtype as integer ) as integer

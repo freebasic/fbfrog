@@ -1,4 +1,12 @@
+''
 '' C lexer
+''
+'' Call lexLoadFile() to insert tokens corresponding to the content of a
+'' certain file into the tk buffer.
+''
+'' lexLoadFile() loads the whole file into a buffer and then repeatedly calls
+'' lexNext() to parse it into tokens which are added to tk through tkInsert().
+''
 
 #include once "fbfrog.bi"
 

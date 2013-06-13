@@ -1,3 +1,5 @@
+'' Token buffer (implemented as a gap buffer), accessor functions
+
 #include once "fbfrog.bi"
 #include once "crt.bi"
 

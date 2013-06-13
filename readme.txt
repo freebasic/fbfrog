@@ -56,53 +56,6 @@ Compiling:
   To recreate the xpms.bas module, compile and run embed-xpms.bas.
 
 
-Source module overview:
-
-  emit.bas           Function to write out the current token buffer into a file
-
-  fbfrog.bas         Main module: Command line handling, header file list,
-                     parsing/translation driver
-
-  hash.bas           Generic hash table (no deletions)
-
-  lex.bas            C lexer, exports only a function to insert a file at a
-                     specific position in the token buffer
-
-  list.bas           Generic linked list
-
-  parser.bas         Toplevel parsing/translator functions (main loops),
-                     parsing helper functions, post-translation fixup passes,
-                     #define/#include parsing/merging
-
-  parser-struct.bas  Compound block parsing (enum/struct/union blocks,
-                     and the special case extern block)
-
-  parser-decl.bas    All sorts of declaration parsing: variables, fields,
-                     enum constants, procedures, parameters, typedefs,
-                     everything with procedure pointers too
-
-  pathmagic.bas      Path/file name handling functions, directory tree search
-
-  tk.bas             Token buffer (implemented as a gap buffer),
-                     accessor functions
-
-
-  gui/embed-xpms.bas    Program for regenerating xpms.bas from the *.xpm files
-                        in the same directory
-
-  gui/gtk.bas        GTK+ version of the GUI
-
-  gui/gui.bas        GUI main module (the GUI is a separate program)
-                     fbfrog launching code, some event logic
-
-  gui/win32.bas      Win32 version of the GUI
-
-  gui/resources.rc   Win32 resource script, compile it in to embed the icon
-                     and the xp.manifest into the program
-
-  gui/xpms.bas       Embedded .xpm icons for the GTK+ GUI
-
-
 To do:
 
 - BOL checks use -1 instead skipRev(), so won't work if there is a TK_SPACE etc.

@@ -1,4 +1,10 @@
-'' Token emitter
+''
+'' AST emitter
+''
+'' emitAst() takes an AST and recursively generates a string containing
+'' corresponding formatted FB code. emitWriteFile() is used to create a file
+'' from such a string.
+''
 
 #include once "fbfrog.bi"
 
