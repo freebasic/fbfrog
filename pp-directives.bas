@@ -281,7 +281,7 @@ private function ppDirective( byval x as integer ) as integer
 
 	'' not at BOL?
 	select case( tkGet( tkSkipSpaceAndComments( x, -1 ) ) )
-	case TK_EOL, TK_EOF, TK_AST, TK_DIVIDER
+	case TK_EOL, TK_EOF, TK_AST, TK_DIVIDER, TK_END
 
 	case else
 		return -1
@@ -416,7 +416,7 @@ private function ppUnknownDirective( byval x as integer ) as integer
 
 	'' not at BOL?
 	select case( tkGet( tkSkipSpaceAndComments( x, -1 ) ) )
-	case TK_EOL, TK_EOF, TK_AST, TK_DIVIDER
+	case TK_EOL, TK_EOF, TK_AST, TK_DIVIDER, TK_END
 
 	case else
 		return -1
