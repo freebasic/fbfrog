@@ -530,8 +530,7 @@ sub ppDirectives2( )
 						'' Turn it into a PPUNKNOWN
 						astAddChild( t, astNew( ASTCLASS_TEXT, tkToText( begin + 1, x - 1 ) ) )
 						t = astNew( ASTCLASS_PPUNKNOWN, astClone( t ), NULL, NULL )
-						tkRemove( begin - 1, begin - 1 )
-						tkInsert( begin - 1, TK_AST, , t )
+						tkSetAst( begin - 1, t )
 					else
 						astAddChild( t, expr )
 					end if

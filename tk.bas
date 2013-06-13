@@ -401,6 +401,14 @@ function tkGetAst( byval x as integer ) as ASTNODE ptr
 	function = tkAccess( x )->ast
 end function
 
+sub tkSetAst( byval x as integer, byval ast as ASTNODE ptr )
+	dim as ONETOKEN ptr p = any
+	p = tkAccess( x )
+	assert( p->id = TK_AST )
+	astDelete( p->ast )
+	p->ast = ast
+end sub
+
 sub tkSetPoisoned( byval first as integer, byval last as integer )
 	dim as ONETOKEN ptr p = any
 	for i as integer = first to last

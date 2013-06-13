@@ -264,6 +264,7 @@ declare sub tkRemove( byval first as integer, byval last as integer )
 declare function tkGet( byval x as integer ) as integer
 declare function tkGetText( byval x as integer ) as zstring ptr
 declare function tkGetAst( byval x as integer ) as ASTNODE ptr
+declare sub tkSetAst( byval x as integer, byval ast as ASTNODE ptr )
 declare sub tkSetPoisoned( byval first as integer, byval last as integer )
 declare function tkIsPoisoned( byval x as integer ) as integer
 declare sub tkSetLineNum( byval x as integer, byval linenum as integer )
