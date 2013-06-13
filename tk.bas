@@ -488,23 +488,33 @@ function tkSkipSpaceAndComments _
 	function = x
 end function
 
+private function hToText( byval p as ONETOKEN ptr ) as string
+	select case as const( p->id )
+	case TK_DIVIDER, TK_EOL : function = !"\n"
+	case TK_AST             : assert( FALSE )
+	case TK_BEGIN, TK_END   :
+	case TK_BYTE            : function = *p->text
+	case TK_SPACE           : function = " "
+	case TK_COMMENT         : function = "/* " + *p->text + " */"
+	case TK_DECNUM          : function = *p->text
+	case TK_HEXNUM          : function = "0x" + *p->text
+	case TK_OCTNUM          : function = "0" + *p->text
+	case TK_STRING, TK_ESTRING   : function = """" + *p->text + """"
+	case TK_CHAR, TK_ECHAR       : function = "'" + *p->text + "'"
+	case TK_WSTRING, TK_EWSTRING : function = "L""" + *p->text + """"
+	case TK_WCHAR, TK_EWCHAR     : function = "L'" + *p->text + "'"
+	case TK_EXCL to TK_TILDE     : function = *tk_info(p->id).text
+	case TK_ID                   : function = *p->text
+	case KW_AUTO to KW_WHILE     : function = *tk_info(p->id).text
+	end select
+end function
+
 function tkToText( byval first as integer, byval last as integer ) as string
 	dim as ONETOKEN ptr p = any
 	dim as string s
 
 	for i as integer = first to last
-		p = tkAccess( i )
-
-		'' Some tokens carry their own text (e.g. identifiers)
-		if( p->text ) then
-			s += *p->text
-		else
-			'' For others, lookup in the info table
-			if( p->id >= TK_EXCL ) then
-				assert( p->id <> TK_ID )
-				s += *tk_info(p->id).text
-			end if
-		end if
+		s += hToText( tkAccess( i ) )
 	next
 
 	function = s
