@@ -128,6 +128,30 @@ function astNew overload _
 	function = n
 end function
 
+function astNewIIF _
+	( _
+		byval cond as ASTNODE ptr, _
+		byval l as ASTNODE ptr, _
+		byval r as ASTNODE ptr _
+	) as ASTNODE ptr
+	function = astNew( ASTCLASS_IIF, l, r, cond )
+end function
+
+function astNewCONSTi _
+	( _
+		byval intval as longint, _
+		byval dtype as integer _
+	) as ASTNODE ptr
+
+	dim as ASTNODE ptr n = any
+
+	n = astNew( ASTCLASS_CONST )
+	n->dtype = dtype
+	n->intval = intval
+
+	function = n
+end function
+
 sub astDelete( byval n as ASTNODE ptr )
 	dim as ASTNODE ptr child = any, nxt = any
 
@@ -190,6 +214,53 @@ sub astAddChild( byval parent as ASTNODE ptr, byval t as ASTNODE ptr )
 		parent->l = t
 	end if
 end sub
+
+private function hIsChildOf _
+	( _
+		byval parent as ASTNODE ptr, _
+		byval lookfor as ASTNODE ptr _
+	) as integer
+
+	dim as ASTNODE ptr child = any
+	child = parent->l
+	while( child )
+		if( child = lookfor ) then
+			return TRUE
+		end if
+		child = child->next
+	wend
+
+	function = FALSE
+end function
+
+function astReplaceChild _
+	( _
+		byval parent as ASTNODE ptr, _
+		byval a as ASTNODE ptr, _
+		byval b as ASTNODE ptr _
+	) as ASTNODE ptr
+
+	assert( hIsChildOf( parent, a ) )
+
+	b->next = a->next
+	b->prev = a->prev
+
+	if( b->prev ) then
+		b->prev->next = b
+	else
+		assert( parent->l = a )
+		parent->l = b
+	end if
+
+	if( b->next ) then
+		b->next->prev = b
+	else
+		assert( parent->r = a )
+		parent->r = b
+	end if
+
+	function = b
+end function
 
 sub astSetText( byval n as ASTNODE ptr, byval text as zstring ptr )
 	deallocate( n->text )
@@ -260,21 +331,6 @@ function astClone( byval n as ASTNODE ptr ) as ASTNODE ptr
 	end if
 
 	function = c
-end function
-
-function astNewCONSTi _
-	( _
-		byval intval as longint, _
-		byval dtype as integer _
-	) as ASTNODE ptr
-
-	dim as ASTNODE ptr n = any
-
-	n = astNew( ASTCLASS_CONST )
-	n->dtype = dtype
-	n->intval = intval
-
-	function = n
 end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''

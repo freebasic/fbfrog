@@ -448,8 +448,25 @@ declare function astNew overload _
 		byval class_ as integer, _
 		byval text as zstring ptr _
 	) as ASTNODE ptr
+declare function astNewIIF _
+	( _
+		byval cond as ASTNODE ptr, _
+		byval l as ASTNODE ptr, _
+		byval r as ASTNODE ptr _
+	) as ASTNODE ptr
+declare function astNewCONSTi _
+	( _
+		byval i as longint, _
+		byval dtype as integer _
+	) as ASTNODE ptr
 declare sub astDelete( byval n as ASTNODE ptr )
 declare sub astAddChild( byval parent as ASTNODE ptr, byval child as ASTNODE ptr )
+declare function astReplaceChild _
+	( _
+		byval parent as ASTNODE ptr, _
+		byval a as ASTNODE ptr, _
+		byval b as ASTNODE ptr _
+	) as ASTNODE ptr
 declare sub astSetText( byval n as ASTNODE ptr, byval text as zstring ptr )
 declare sub astSetType _
 	( _
@@ -460,11 +477,6 @@ declare sub astSetType _
 declare sub astAddComment( byval n as ASTNODE ptr, byval comment as zstring ptr )
 declare sub astCopyNodeData( byval d as ASTNODE ptr, byval s as ASTNODE ptr )
 declare function astClone( byval n as ASTNODE ptr ) as ASTNODE ptr
-declare function astNewCONSTi _
-	( _
-		byval i as longint, _
-		byval dtype as integer _
-	) as ASTNODE ptr
 declare function astDumpOne( byval n as ASTNODE ptr ) as string
 declare sub astDump( byval n as ASTNODE ptr, byval nestlevel as integer = 0 )
 

@@ -2,7 +2,9 @@ type UDT
 end type
 
 '' TODO: unknown construct
-enum E {};
+enum E {
+};
+
 
 type U
 end type

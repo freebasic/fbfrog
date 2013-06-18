@@ -256,7 +256,7 @@ function emitAst _
 
 	case ASTCLASS_IIF
 		s += "iif( " + _
-			emitAst( n->next ) + ", " + _
+			emitAst( n->cond ) + ", " + _
 			emitAst( n->l    ) + ", " + _
 			emitAst( n->r    ) + " )"
 

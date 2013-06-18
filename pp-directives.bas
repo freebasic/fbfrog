@@ -259,11 +259,11 @@ private function ppExpression _
 				astDelete( b )
 				exit function
 			end if
-		else
-			c = NULL
-		end if
 
-		a = astNew( astclass, a, b, c )
+			a = astNewIIF( a, b, c )
+		else
+			a = astNew( astclass, a, b, NULL )
+		end if
 	loop
 
 	function = a
@@ -290,6 +290,7 @@ end sub
 function ppExprFold( byval n as ASTNODE ptr ) as ASTNODE ptr
 	dim as THASHITEM ptr item = any
 	dim as long v1 = any, v2 = any
+	dim as ASTNODE ptr child = any
 
 	function = n
 
@@ -308,9 +309,9 @@ function ppExprFold( byval n as ASTNODE ptr ) as ASTNODE ptr
 		end if
 
 	case ASTCLASS_IIF
+		n->cond = ppExprFold( n->cond )
 		n->l = ppExprFold( n->l )
 		n->r = ppExprFold( n->r )
-		n->cond = ppExprFold( n->cond )
 
 		if( n->cond->class = ASTCLASS_CONST ) then
 			if( n->cond->intval ) then
@@ -386,6 +387,13 @@ function ppExprFold( byval n as ASTNODE ptr ) as ASTNODE ptr
 			astDelete( n )
 		end if
 
+	case else
+		assert( astIsExpr( n ) = FALSE )
+		child = n->l
+		while( child )
+			child = astReplaceChild( n, child, ppExprFold( astClone( child ) ) )
+			child = child->next
+		wend
 	end select
 end function
 
