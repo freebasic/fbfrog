@@ -101,9 +101,15 @@ function astNew overload _
 	dim as ASTNODE ptr n = any
 
 	n = astNew( class_ )
-	astAddChild( n, a )
-	astAddChild( n, b )
-	astAddChild( n, c )
+	if( astIsExpr( n ) ) then
+		n->l = a
+		n->r = b
+		n->next = c
+	else
+		astAddChild( n, a )
+		astAddChild( n, b )
+		astAddChild( n, c )
+	end if
 
 	function = n
 end function
