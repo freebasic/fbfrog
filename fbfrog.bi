@@ -427,9 +427,10 @@ type ASTNODE_
 	'' parameters (PROC)
 	l		as ASTNODE ptr
 	r		as ASTNODE ptr
+	cond		as ASTNODE ptr  '' iif condition (IIF)
 
 	'' Siblings in the list (not for expressions)
-	next		as ASTNODE ptr  '' iif condition (IIF)
+	next		as ASTNODE ptr
 	prev		as ASTNODE ptr
 end type
 

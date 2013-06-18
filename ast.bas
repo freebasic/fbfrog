@@ -104,7 +104,7 @@ function astNew overload _
 	if( astIsExpr( n ) ) then
 		n->l = a
 		n->r = b
-		n->next = c
+		n->cond = c
 	else
 		astAddChild( n, a )
 		astAddChild( n, b )
@@ -141,7 +141,7 @@ sub astDelete( byval n as ASTNODE ptr )
 	if( astIsExpr( n ) ) then
 		astDelete( n->l )
 		astDelete( n->r )
-		astDelete( n->next )
+		astDelete( n->cond )
 	else
 		child = n->l
 		while( child )
@@ -250,7 +250,7 @@ function astClone( byval n as ASTNODE ptr ) as ASTNODE ptr
 	if( astIsExpr( n ) ) then
 		c->l = astClone( n->l )
 		c->r = astClone( n->r )
-		c->next = astClone( n->next )
+		c->cond = astClone( n->cond )
 	else
 		child = n->l
 		while( child )
@@ -305,6 +305,10 @@ function astDumpOne( byval n as ASTNODE ptr ) as string
 		s += " as " + emitType( n->dtype, NULL, TRUE )
 	end if
 
+	#if 0
+		s += " l=[" & hex( n->l, 8 ) & "] r=[" & hex( n->r, 8 ) & "] cond=[" & hex( n->cond, 8 ) & "] next=[" & hex( n->next, 8 ) & "] prev=[" & hex( n->prev, 8 ) & "]"
+	#endif
+
 	function = s
 end function
 
@@ -338,17 +342,15 @@ sub astDump( byval n as ASTNODE ptr, byval nestlevel as integer )
 			if( n->r ) then
 				astDump( n->r, nestlevel )
 			end if
-			if( n->next ) then
-				astDump( n->next, nestlevel )
+			if( n->cond ) then
+				astDump( n->cond, nestlevel )
 			end if
 		else
 			child = n->l
-			if( child ) then
-				do
-					astDump( child, nestlevel )
-					child = child->next
-				loop while( child )
-			end if
+			while( child )
+				astDump( child, nestlevel )
+				child = child->next
+			wend
 		end if
 	else
 		hPrintIndentation( nestlevel )

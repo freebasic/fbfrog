@@ -310,10 +310,10 @@ function ppExprFold( byval n as ASTNODE ptr ) as ASTNODE ptr
 	case ASTCLASS_IIF
 		n->l = ppExprFold( n->l )
 		n->r = ppExprFold( n->r )
-		n->next = ppExprFold( n->next )
+		n->cond = ppExprFold( n->cond )
 
-		if( n->next->class = ASTCLASS_CONST ) then
-			if( n->next->intval ) then
+		if( n->cond->class = ASTCLASS_CONST ) then
+			if( n->cond->intval ) then
 				function = astClone( n->l )
 			else
 				function = astClone( n->r )
