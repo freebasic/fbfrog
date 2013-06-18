@@ -572,8 +572,10 @@ private sub lexNext( )
 			hReadBytes( TK_LTEQ, 2 )
 		case else
 			'' If it's an #include, parse <...> as string literal
-			if( tkGet( lex.x ) = KW_INCLUDE ) then
-				y = tkSkipSpaceAndComments( lex.x, -1 )
+			y = lex.x
+			y = tkSkipSpaceAndComments( y, -1 )
+			if( tkGet( y ) = KW_INCLUDE ) then
+				y = tkSkipSpaceAndComments( y, -1 )
 				if( tkGet( y ) = TK_HASH ) then
 					y = tkSkipSpaceAndComments( y, -1 )
 					select case( tkGet( y ) )

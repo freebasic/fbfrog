@@ -1,35 +1,64 @@
 '' TODO: unknown construct
-0111
+0
+1
+11
+
 
 '' TODO: unknown construct
-1123
+01
+0123
+
 
 '' TODO: unknown construct
-01FF
+0x
+0x0
+0x1
+0xFF
+
 
 '' TODO: unknown construct
-1.01.0f1.0d0.10.01.1231e+11.0e+1
+1.0
+1.0f
+1.0d
+0.1
+0.0
+1.123
+1e+1
+1.0e+1
+
 
 '' TODO: unknown construct
-1u1l1ul1ll1ull
+1u
+1l
+1ul
+1ll
+1ull
+
 
 '' TODO: unknown construct
-foo
+"foo"
+
 
 '' TODO: unknown construct
-foo
+"foo"
+
 
 '' TODO: unknown construct
-foo\n
+"foo\n"
+
 
 '' TODO: unknown construct
-\"foo\"
+"\"foo\""
+
 
 '' TODO: unknown construct
-a
+'a'
+
 
 '' TODO: unknown construct
-La
+L'a'
+
 
 '' TODO: unknown construct
 €
+

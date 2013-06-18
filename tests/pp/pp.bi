@@ -6,7 +6,9 @@
 #define C 3
 
 '' TODO: unknown PP directive
-#if (!defined(FOO_BAR) && THIS_IS_INSANE >= 123) \    || (OH_MAN_WHATS_THE_PRECEDENCE < 5 && (defined(OK) \                                            || defined(I_DONT_KNOW)))
+#if (!defined(FOO_BAR) && THIS_IS_INSANE >= 123) \
+    || (OH_MAN_WHATS_THE_PRECEDENCE < 5 && (defined(OK) \
+                                            || defined(I_DONT_KNOW)))
 #define PPMERGE (a, b) a##b
 #define PPSTRINGIZE (a) #a
 
@@ -17,6 +19,7 @@
 #elseif 1
 '' TODO: unknown PP directive
 #pragma foo
+
 #endif
 
 #endif

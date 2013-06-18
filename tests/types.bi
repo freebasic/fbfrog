@@ -18,10 +18,16 @@ dim shared a as long
 dim shared a as ulong
 
 '' TODO: unknown construct
-static          long a;static   signed long a;static unsigned long a;
+static          long a;
+static   signed long a;
+static unsigned long a;
+
 
 '' TODO: unknown construct
-static          long int a;static   signed long int a;static unsigned long int a;
+static          long int a;
+static   signed long int a;
+static unsigned long int a;
+
 
 dim shared a as longint
 dim shared a as longint

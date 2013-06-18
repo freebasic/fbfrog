@@ -16,23 +16,37 @@ type T as long
 
 '' TODO: unknown construct
 enum {
+
 #if 1
 '' TODO: unknown construct
 A    
+
 #endif
 '' TODO: unknown construct
 };
 
+
 '' TODO: unknown construct
-enum {	A =	1
+enum {
+ A =
+ 1
+
 #if 1
 '' TODO: unknown construct
-+	2
++
+ 2
+
 #endif
 '' TODO: unknown construct
-,	B};
+,
+ B
+};
+
 
 type T
 	'' TODO: unknown construct
-	union {		int a;	} foo;
+	union {
+	  int a;
+	 } foo;
+	
 end type
