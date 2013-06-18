@@ -198,5 +198,3 @@ end sub
 
 		f = listGetNext( f )
 	wend
-
-	tkStats( )

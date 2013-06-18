@@ -1,7 +1,5 @@
 '' Token buffer (implemented as a gap buffer), accessor functions
 
-'#define USE_ARRAY
-
 #include once "fbfrog.bi"
 #include once "crt.bi"
 
@@ -154,29 +152,17 @@ type ONETOKEN
 end type
 
 type TKBUFFER
-#ifdef USE_ARRAY
-	p		as ONETOKEN ptr
-	room		as integer
-#else
 	'' Gap buffer of tokens
 	p		as ONETOKEN ptr  '' Buffer containing: front,gap,back
 	front		as integer  '' Front length; the gap's offset
 	gap		as integer  '' Gap length
-#endif
 	size		as integer  '' Front + back
 
 	'' Static EOF token for out-of-bounds accesses
 	eof		as ONETOKEN
 end type
 
-type TKSTATS
-	maxsize		as integer  '' Highest amount of tokens at once
-	lookups		as integer
-	moved		as integer
-end type
-
 dim shared as TKBUFFER tk
-dim shared as TKSTATS stats
 
 function strDuplicate( byval s as zstring ptr ) as zstring ptr
 	dim as zstring ptr p = any
@@ -190,14 +176,9 @@ function strDuplicate( byval s as zstring ptr ) as zstring ptr
 end function
 
 sub tkInit( )
-#ifdef USE_ARRAY
-	tk.p = NULL
-	tk.room = 0
-#else
 	tk.p = NULL
 	tk.front = 0
 	tk.gap = 0
-#endif
 	tk.size = 0
 
 	tk.eof.id = TK_EOF
@@ -209,13 +190,6 @@ sub tkInit( )
 end sub
 
 private function tkAccess( byval x as integer ) as ONETOKEN ptr
-	stats.lookups += 1
-
-#ifdef USE_ARRAY
-	if( (x < 0) or (x >= tk.size) ) then
-		return @tk.eof
-	end if
-#else
 	'' Inside end?
 	if( x >= tk.front ) then
 		'' Invalid?
@@ -229,7 +203,6 @@ private function tkAccess( byval x as integer ) as ONETOKEN ptr
 			return @tk.eof
 		end if
 	end if
-#endif
 
 	function = tk.p + x
 end function
@@ -237,13 +210,6 @@ end function
 sub tkEnd( )
 	tkRemove( 0, tk.size - 1 )
 	deallocate( tk.p )
-end sub
-
-sub tkStats( )
-	print "tokens: " & _
-		stats.maxsize & " max, " & _
-		stats.lookups & " lookups, " & _
-		stats.moved & " moved"
 end sub
 
 function tkDumpOne( byval x as integer ) as string
@@ -288,7 +254,6 @@ sub tkDump( )
 	next
 end sub
 
-#ifndef USE_ARRAY
 private sub hMoveTo( byval x as integer )
 	dim as integer old = any
 	dim as ONETOKEN ptr p = any
@@ -304,17 +269,14 @@ private sub hMoveTo( byval x as integer )
 		'' Move gap left
 		p = tk.p + x
 		memmove( p + tk.gap, p, (old - x) * sizeof( ONETOKEN ) )
-		stats.moved += old - x
 	elseif( x > old ) then
 		'' Move gap right
 		p = tk.p + old
 		memmove( p, p + tk.gap, (x - old) * sizeof( ONETOKEN ) )
-		stats.moved += x - old
 	end if
 
 	tk.front = x
 end sub
-#endif
 
 function tkGetCount( ) as integer
 	function = tk.size
@@ -333,36 +295,6 @@ sub tkInsert _
 	const NEWGAP = 512
 	dim as ONETOKEN ptr p = any
 
-#ifdef USE_ARRAY
-	if( x < 0 ) then
-		x = 0
-	end if
-	if( x > tk.size ) then
-		x = tk.size
-	end if
-
-	if( tk.room = tk.size ) then
-		tk.room += NEWGAP
-		tk.p = reallocate( tk.p, tk.room * sizeof( ONETOKEN ) )
-	end if
-
-	dim as integer rhs = tk.size - x
-	if( rhs > 0 ) then
-		memmove( tk.p + x + 1, _
-		         tk.p + x, _
-		         rhs * sizeof( ONETOKEN ) )
-		stats.moved += rhs
-	end if
-
-	with( tk.p[x] )
-		.id = id
-		.poisoned = FALSE
-		.text = strDuplicate( text )
-		.ast = ast
-		.linenum = -1
-		.comment = NULL
-	end with
-#else
 	'' Move gap in front of the position
 	hMoveTo( x )
 
@@ -375,7 +307,6 @@ sub tkInsert _
 		if( tk.size > tk.front ) then
 			memmove( p + NEWGAP, p + tk.gap, _
 			         (tk.size - tk.front) * sizeof( ONETOKEN ) )
-			stats.moved += tk.size - tk.front
 		end if
 		tk.gap = NEWGAP
 	else
@@ -392,13 +323,7 @@ sub tkInsert _
 	'' Extend front part of the buffer
 	tk.front += 1
 	tk.gap -= 1
-#endif
-
 	tk.size += 1
-
-	if( stats.maxsize < tk.size ) then
-		stats.maxsize = tk.size
-	end if
 
 end sub
 
@@ -427,15 +352,6 @@ sub tkRemove( byval first as integer, byval last as integer )
 
 	delta = last - first + 1
 
-#ifdef USE_ARRAY
-	dim as integer rhs = tk.size - (last + 1)
-	if( rhs > 0 ) then
-		memmove( tk.p + first, _
-		         tk.p + last + 1, _
-		         rhs * sizeof( ONETOKEN ) )
-		stats.moved += rhs
-	end if
-#else
 	'' Gap is in front of first token to delete?
 	if( tk.front = first ) then
 		'' Then do a forward deletion
@@ -449,8 +365,6 @@ sub tkRemove( byval first as integer, byval last as integer )
 	end if
 
 	tk.gap += delta
-#endif
-
 	tk.size -= delta
 end sub
 

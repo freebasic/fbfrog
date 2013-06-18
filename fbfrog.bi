@@ -255,7 +255,6 @@ type ASTNODE as ASTNODE_
 declare function strDuplicate( byval s as zstring ptr ) as zstring ptr
 declare sub tkInit( )
 declare sub tkEnd( )
-declare sub tkStats( )
 declare function tkDumpOne( byval x as integer ) as string
 declare sub tkDump( )
 declare function tkGetCount( ) as integer
