@@ -422,18 +422,13 @@ type ASTNODE_
 	sourcefile	as FSFILE ptr
 	sourceline	as integer
 
-	'' Operands (expressions), or head/tail of a list, e.g. fields (STRUCT),
-	'' parameters (PROC)
-	l		as ASTNODE ptr
-	r		as ASTNODE ptr
-	cond		as ASTNODE ptr  '' iif condition (IIF)
-
-	'' Siblings in the list (not for expressions)
+	'' Operands/fields/parameters/...
+	head		as ASTNODE ptr
+	tail		as ASTNODE ptr
 	next		as ASTNODE ptr
 	prev		as ASTNODE ptr
 end type
 
-declare function astIsExpr( byval n as ASTNODE ptr ) as integer
 declare function astNew overload( byval class_ as integer ) as ASTNODE ptr
 declare function astNew overload _
 	( _
@@ -447,19 +442,13 @@ declare function astNew overload _
 		byval class_ as integer, _
 		byval text as zstring ptr _
 	) as ASTNODE ptr
-declare function astNewIIF _
-	( _
-		byval cond as ASTNODE ptr, _
-		byval l as ASTNODE ptr, _
-		byval r as ASTNODE ptr _
-	) as ASTNODE ptr
 declare function astNewCONSTi _
 	( _
 		byval i as longint, _
 		byval dtype as integer _
 	) as ASTNODE ptr
 declare sub astDelete( byval n as ASTNODE ptr )
-declare sub astAddChild( byval parent as ASTNODE ptr, byval child as ASTNODE ptr )
+declare sub astAddChild( byval parent as ASTNODE ptr, byval n as ASTNODE ptr )
 declare function astReplaceChild _
 	( _
 		byval parent as ASTNODE ptr, _

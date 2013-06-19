@@ -242,10 +242,7 @@ end sub
 
 '' (MultDecl{Field} | StructCompound)*
 private function cStructBody( ) as ASTNODE ptr
-	dim as ASTNODE ptr group = any, t = any
-	dim as integer old = any
-
-	group = astNew( ASTCLASS_GROUP )
+	var group = astNew( ASTCLASS_GROUP )
 
 	do
 		select case( tkGet( parse.x ) )
@@ -253,9 +250,9 @@ private function cStructBody( ) as ASTNODE ptr
 			exit do
 		end select
 
-		old = parse.x
+		var old = parse.x
 
-		t = hMergeUnknown( )
+		var t = hMergeUnknown( )
 		if( t = NULL ) then
 			parse.x = old
 			t = cStructCompound( )
@@ -646,13 +643,10 @@ end function
 
 '' ParamDeclList = ParamDecl (',' ParamDecl)*
 private function cParamDeclList( ) as ASTNODE ptr
-	dim as ASTNODE ptr group = any, t = any
-
-	function = NULL
-	group = astNew( ASTCLASS_GROUP )
+	var group = astNew( ASTCLASS_GROUP )
 
 	do
-		t = cParamDecl( )
+		var t = cParamDecl( )
 		if( t = NULL ) then
 			astDelete( group )
 			exit function
@@ -918,14 +912,11 @@ private function cIdList _
 		byval basesubtype as ASTNODE ptr _
 	) as ASTNODE ptr
 
-	dim as ASTNODE ptr group = any, t = any
-
-	function = NULL
-	group = astNew( ASTCLASS_GROUP )
+	var group = astNew( ASTCLASS_GROUP )
 
 	'' ... (',' ...)*
 	do
-		t = cDeclarator( decl, basedtype, basesubtype, NULL, 0 )
+		var t = cDeclarator( decl, basedtype, basesubtype, NULL, 0 )
 		if( t = NULL ) then
 			astDelete( group )
 			exit function
@@ -1022,16 +1013,14 @@ private function cTypedef( ) as ASTNODE ptr
 end function
 
 private function hToplevel( ) as ASTNODE ptr
-	dim as integer old = any
-	dim as ASTNODE ptr group = any, t = any
+	var group = astNew( ASTCLASS_GROUP )
 
-	group = astNew( ASTCLASS_GROUP )
 	parse.x = cSkip( -1 )
 
 	while( tkGet( parse.x ) <> TK_EOF )
-		old = parse.x
+		var old = parse.x
 
-		t = hMergeUnknown( )
+		var t = hMergeUnknown( )
 		if( t = NULL ) then
 			parse.x = old
 			t = cStructCompound( )

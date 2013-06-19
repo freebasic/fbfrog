@@ -120,20 +120,18 @@ private function ppExpression _
 		byval level as integer = 0 _
 	) as ASTNODE ptr
 
-	dim as ASTNODE ptr a = any, b = any, c = any
-	dim as integer astclass = any, oplevel = any, have_parens = any
-
 	function = NULL
 
 	'' Unary prefix operators
+	var astclass = -1
 	select case( tkGet( x ) )
 	case TK_EXCL   : astclass = ASTCLASS_LOGNOT    '' !
 	case TK_TILDE  : astclass = ASTCLASS_BITNOT    '' ~
 	case TK_MINUS  : astclass = ASTCLASS_NEGATE    '' -
 	case TK_PLUS   : astclass = ASTCLASS_UNARYPLUS '' +
-	case else      : astclass = -1
 	end select
 
+	dim as ASTNODE ptr a
 	if( astclass >= 0 ) then
 		x = ppSkip( x )
 		a = astNew( astclass, ppExpression( x, ppopinfo(astclass).level ), NULL, NULL )
@@ -167,11 +165,10 @@ private function ppExpression _
 			x = ppSkip( x )
 
 			'' '('
+			var have_parens = FALSE
 			if( tkGet( x ) = TK_LPAREN ) then
 				have_parens = TRUE
 				x = ppSkip( x )
-			else
-				have_parens = FALSE
 			end if
 
 			'' Identifier
@@ -225,7 +222,7 @@ private function ppExpression _
 		'' Higher/same level means process now (takes precedence),
 		'' lower level means we're done and the parent call will
 		'' continue. The first call will start with level 0.
-		oplevel = ppopinfo(astclass).level
+		var oplevel = ppopinfo(astclass).level
 		if( oplevel < level ) then
 			exit do
 		end if
@@ -237,13 +234,14 @@ private function ppExpression _
 		x = ppSkip( x )
 
 		'' rhs
-		b = ppExpression( x, oplevel )
+		var b = ppExpression( x, oplevel )
 		if( b = NULL ) then
 			astDelete( a )
 			exit function
 		end if
 
 		'' Handle ?: special case
+		dim as ASTNODE ptr c
 		if( astclass = ASTCLASS_IIF ) then
 			'' ':'?
 			if( tkGet( x ) <> TK_COLON ) then
@@ -259,11 +257,9 @@ private function ppExpression _
 				astDelete( b )
 				exit function
 			end if
-
-			a = astNewIIF( a, b, c )
-		else
-			a = astNew( astclass, a, b, NULL )
 		end if
+
+		a = astNew( astclass, a, b, c )
 	loop
 
 	function = a
@@ -288,36 +284,34 @@ sub ppResetSymbols( )
 end sub
 
 function ppExprFold( byval n as ASTNODE ptr ) as ASTNODE ptr
-	dim as THASHITEM ptr item = any
-	dim as long v1 = any, v2 = any
-	dim as ASTNODE ptr child = any
-
 	function = n
 
 	if( n = NULL ) then
 		exit function
 	end if
 
+	var child = n->head
+	while( child )
+		child = astReplaceChild( n, child, ppExprFold( astClone( child ) ) )
+		child = child->next
+	wend
+
 	select case as const( n->class )
 	case ASTCLASS_DEFINED
 		'' defined() on known symbol?
-		assert( n->l->class = ASTCLASS_ID )
-		item = hashLookup( @eval.symbols, n->l->text, hashHash( n->l->text ) )
+		assert( n->head->class = ASTCLASS_ID )
+		var item = hashLookup( @eval.symbols, n->head->text, hashHash( n->head->text ) )
 		if( item->s ) then
 			function = astNewCONSTi( iif( item->data, 1, 0 ), TYPE_LONG )
 			astDelete( n )
 		end if
 
 	case ASTCLASS_IIF
-		n->cond = ppExprFold( n->cond )
-		n->l = ppExprFold( n->l )
-		n->r = ppExprFold( n->r )
-
-		if( n->cond->class = ASTCLASS_CONST ) then
-			if( n->cond->intval ) then
-				function = astClone( n->l )
+		if( n->head->class = ASTCLASS_CONST ) then
+			if( n->head->intval ) then
+				function = astClone( n->head->next )
 			else
-				function = astClone( n->r )
+				function = astClone( n->tail )
 			end if
 			astDelete( n )
 		end if
@@ -331,13 +325,10 @@ function ppExprFold( byval n as ASTNODE ptr ) as ASTNODE ptr
 	     ASTCLASS_ADD, ASTCLASS_SUB, _
 	     ASTCLASS_MUL, ASTCLASS_DIV, ASTCLASS_MOD
 
-		n->l = ppExprFold( n->l )
-		n->r = ppExprFold( n->r )
-
-		if( (n->l->class = ASTCLASS_CONST) and _
-		    (n->r->class = ASTCLASS_CONST) ) then
-			v1 = n->l->intval
-			v2 = n->r->intval
+		if( (n->head->class = ASTCLASS_CONST) and _
+		    (n->tail->class = ASTCLASS_CONST) ) then
+			var v1 = n->head->intval
+			var v2 = n->tail->intval
 
 			select case as const( n->class )
 			case ASTCLASS_LOGOR  : v1    = iif( v1 orelse  v2, 1, 0 )
@@ -369,10 +360,8 @@ function ppExprFold( byval n as ASTNODE ptr ) as ASTNODE ptr
 	case ASTCLASS_LOGNOT, ASTCLASS_BITNOT, _
 	     ASTCLASS_NEGATE, ASTCLASS_UNARYPLUS
 
-		n->l = ppExprFold( n->l )
-
-		if( n->l->class = ASTCLASS_CONST ) then
-			v1 = n->l->intval
+		if( n->head->class = ASTCLASS_CONST ) then
+			var v1 = n->head->intval
 
 			select case as const( n->class )
 			case ASTCLASS_LOGNOT    : v1 = iif( v1, 0, 1 )
@@ -387,25 +376,15 @@ function ppExprFold( byval n as ASTNODE ptr ) as ASTNODE ptr
 			astDelete( n )
 		end if
 
-	case else
-		assert( astIsExpr( n ) = FALSE )
-		child = n->l
-		while( child )
-			child = astReplaceChild( n, child, ppExprFold( astClone( child ) ) )
-			child = child->next
-		wend
 	end select
 end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 private function ppDirective( byval x as integer ) as integer
-	dim as integer begin = any, keepbegin = any, tk = any, y = any, astclass = any
-	dim as ASTNODE ptr t = any
-
-	begin = x
-	keepbegin = -1
-	t = NULL
+	var begin = x
+	var keepbegin = -1
+	dim as ASTNODE ptr t
 
 	'' not at BOL?
 	select case( tkGet( tkSkipSpaceAndComments( x, -1 ) ) )
@@ -421,7 +400,7 @@ private function ppDirective( byval x as integer ) as integer
 	end if
 	x = ppSkip( x )
 
-	tk = tkGet( x )
+	var tk = tkGet( x )
 	select case( tk )
 	'' DEFINE Identifier ['(' ParameterList ')'] Body Eol .
 	case KW_DEFINE
@@ -637,7 +616,7 @@ sub ppDirectives2( )
 
 			case ASTCLASS_PPIF, ASTCLASS_PPELSEIF
 				'' No #if expression yet?
-				if( t->l = NULL ) then
+				if( t->head = NULL ) then
 					'' BEGIN
 					assert( tkGet( x ) = TK_BEGIN )
 					begin = x
@@ -724,8 +703,8 @@ sub ppEvalIfs( )
 					end if
 				end if
 
-				if( t->l->class = ASTCLASS_CONST ) then
-					ifstack(level).cond = iif( t->l->intval <> 0, COND_TRUE, COND_FALSE )
+				if( t->head->class = ASTCLASS_CONST ) then
+					ifstack(level).cond = iif( t->head->intval <> 0, COND_TRUE, COND_FALSE )
 
 					'' not yet skipping?
 					if( skip = -1 ) then

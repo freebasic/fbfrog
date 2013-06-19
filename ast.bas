@@ -22,71 +22,63 @@ end function
 
 type ASTNODEINFO
 	name		as zstring * 10
-	is_expr		as integer
 end type
 
 dim shared as ASTNODEINFO astnodeinfo(0 to ...) = _
 { _
-	( "nop"     , FALSE ), _
-	( "group"   , FALSE ), _
-	( "divider" , FALSE ), _
-	( "#include", FALSE ), _
-	( "#define" , FALSE ), _
-	( "#if"     , FALSE ), _
-	( "#elseif" , FALSE ), _
-	( "#else"   , FALSE ), _
-	( "#endif"  , FALSE ), _
-	( "#unknown", FALSE ), _
-	( "struct"  , FALSE ), _
-	( "typedef" , FALSE ), _
-	( "var"     , FALSE ), _
-	( "field"   , FALSE ), _
-	( "proc"    , FALSE ), _
-	( "param"   , FALSE ), _
-	( "unknown" , FALSE ), _
-	( "const"   , TRUE  ), _
-	( "id"      , TRUE  ), _
-	( "text"    , TRUE  ), _
-	( "defined" , TRUE  ), _
-	( "iif"     , TRUE  ), _
-	( "orelse"  , TRUE  ), _
-	( "andalso" , TRUE  ), _
-	( "or"      , TRUE  ), _
-	( "xor"     , TRUE  ), _
-	( "and"     , TRUE  ), _
-	( "="       , TRUE  ), _
-	( "<>"      , TRUE  ), _
-	( "<"       , TRUE  ), _
-	( "<="      , TRUE  ), _
-	( ">"       , TRUE  ), _
-	( ">="      , TRUE  ), _
-	( "shl"     , TRUE  ), _
-	( "shr"     , TRUE  ), _
-	( "+"       , TRUE  ), _
-	( "-"       , TRUE  ), _
-	( "*"       , TRUE  ), _
-	( "/"       , TRUE  ), _
-	( "mod"     , TRUE  ), _
-	( "lognot"  , TRUE  ), _
-	( "not"     , TRUE  ), _
-	( "unary -" , TRUE  ), _
-	( "unary +" , TRUE  )  _
+	( "nop"      ), _
+	( "group"    ), _
+	( "divider"  ), _
+	( "#include" ), _
+	( "#define"  ), _
+	( "#if"      ), _
+	( "#elseif"  ), _
+	( "#else"    ), _
+	( "#endif"   ), _
+	( "#unknown" ), _
+	( "struct"  ), _
+	( "typedef" ), _
+	( "var"     ), _
+	( "field"   ), _
+	( "proc"    ), _
+	( "param"   ), _
+	( "unknown" ), _
+	( "const"   ), _
+	( "id"      ), _
+	( "text"    ), _
+	( "defined" ), _
+	( "iif"     ), _
+	( "orelse"  ), _
+	( "andalso" ), _
+	( "or"  ), _
+	( "xor" ), _
+	( "and" ), _
+	( "="   ), _
+	( "<>"  ), _
+	( "<"   ), _
+	( "<="  ), _
+	( ">"   ), _
+	( ">="  ), _
+	( "shl" ), _
+	( "shr" ), _
+	( "+"   ), _
+	( "-"   ), _
+	( "*"   ), _
+	( "/"   ), _
+	( "mod" ), _
+	( "lognot"  ), _
+	( "not"     ), _
+	( "unary -" ), _
+	( "unary +" )  _
 }
 
 #if ubound( astnodeinfo ) < ASTCLASS__COUNT - 1
 #error "please update the astnodeinfo() table!"
 #endif
 
-function astIsExpr( byval n as ASTNODE ptr ) as integer
-	function = astnodeinfo(n->class).is_expr
-end function
-
 function astNew overload( byval class_ as integer ) as ASTNODE ptr
-	dim as ASTNODE ptr n = any
-
-	n = callocate( sizeof( ASTNODE ) )
+	dim as ASTNODE ptr n = callocate( sizeof( ASTNODE ) )
 	n->class = class_
-
 	function = n
 end function
 
@@ -98,18 +90,10 @@ function astNew overload _
 		byval c as ASTNODE ptr _
 	) as ASTNODE ptr
 
-	dim as ASTNODE ptr n = any
-
-	n = astNew( class_ )
-	if( astIsExpr( n ) ) then
-		n->l = a
-		n->r = b
-		n->cond = c
-	else
-		astAddChild( n, a )
-		astAddChild( n, b )
-		astAddChild( n, c )
-	end if
+	var n = astNew( class_ )
+	astAddChild( n, a )
+	astAddChild( n, b )
+	astAddChild( n, c )
 
 	function = n
 end function
@@ -120,21 +104,10 @@ function astNew overload _
 		byval text as zstring ptr _
 	) as ASTNODE ptr
 
-	dim as ASTNODE ptr n = any
-
-	n = astNew( class_ )
+	var n = astNew( class_ )
 	n->text = strDuplicate( text )
 
 	function = n
-end function
-
-function astNewIIF _
-	( _
-		byval cond as ASTNODE ptr, _
-		byval l as ASTNODE ptr, _
-		byval r as ASTNODE ptr _
-	) as ASTNODE ptr
-	function = astNew( ASTCLASS_IIF, l, r, cond )
 end function
 
 function astNewCONSTi _
@@ -143,9 +116,7 @@ function astNewCONSTi _
 		byval dtype as integer _
 	) as ASTNODE ptr
 
-	dim as ASTNODE ptr n = any
-
-	n = astNew( ASTCLASS_CONST )
+	var n = astNew( ASTCLASS_CONST )
 	n->dtype = dtype
 	n->intval = intval
 
@@ -153,65 +124,53 @@ function astNewCONSTi _
 end function
 
 sub astDelete( byval n as ASTNODE ptr )
-	dim as ASTNODE ptr child = any, nxt = any
-
 	if( n = NULL ) then
 		exit sub
 	end if
 
+	var child = n->head
+	while( child )
+		var nxt = child->next
+		astDelete( child )
+		child = nxt
+	wend
+
 	deallocate( n->text )
 	astDelete( n->subtype )
-
-	if( astIsExpr( n ) ) then
-		astDelete( n->l )
-		astDelete( n->r )
-		astDelete( n->cond )
-	else
-		child = n->l
-		while( child )
-			nxt = child->next
-			astDelete( child )
-			child = nxt
-		wend
-	end if
-
 	deallocate( n )
 end sub
 
-sub astAddChild( byval parent as ASTNODE ptr, byval t as ASTNODE ptr )
-	dim as ASTNODE ptr child = any
-
-	if( t = NULL ) then
+sub astAddChild( byval parent as ASTNODE ptr, byval n as ASTNODE ptr )
+	if( n = NULL ) then
 		exit sub
 	end if
 
-	select case( t->class )
+	select case( n->class )
 	case ASTCLASS_GROUP
-		'' If it's a GROUP, add its children, and delete the GROUP itself
-		child = t->l
+		'' If it's a GROUP, add its children and delete the GROUP itself
+		var child = n->head
 		while( child )
 			astAddChild( parent, astClone( child ) )
 			child = child->next
 		wend
 
-		astDelete( t )
+		astDelete( n )
 		exit sub
 
 	case ASTCLASS_NOP
 		'' Don't bother adding NOPs
-		astDelete( t )
+		astDelete( n )
 		exit sub
 
 	end select
 
-	assert( astIsExpr( parent ) = FALSE )
-	t->prev = parent->r
-	if( parent->r ) then
-		parent->r->next = t
+	n->prev = parent->tail
+	if( parent->tail ) then
+		parent->tail->next = n
 	end if
-	parent->r = t
-	if( parent->l = NULL ) then
-		parent->l = t
+	parent->tail = n
+	if( parent->head = NULL ) then
+		parent->head = n
 	end if
 end sub
 
@@ -221,8 +180,7 @@ private function hIsChildOf _
 		byval lookfor as ASTNODE ptr _
 	) as integer
 
-	dim as ASTNODE ptr child = any
-	child = parent->l
+	var child = parent->head
 	while( child )
 		if( child = lookfor ) then
 			return TRUE
@@ -248,15 +206,15 @@ function astReplaceChild _
 	if( b->prev ) then
 		b->prev->next = b
 	else
-		assert( parent->l = a )
-		parent->l = b
+		assert( parent->head = a )
+		parent->head = b
 	end if
 
 	if( b->next ) then
 		b->next->prev = b
 	else
-		assert( parent->r = a )
-		parent->r = b
+		assert( parent->tail = a )
+		parent->tail = b
 	end if
 
 	function = b
@@ -309,26 +267,18 @@ sub astCopyNodeData( byval d as ASTNODE ptr, byval s as ASTNODE ptr )
 end sub
 
 function astClone( byval n as ASTNODE ptr ) as ASTNODE ptr
-	dim as ASTNODE ptr c = any, child = any
-
 	if( n = NULL ) then
 		return NULL
 	end if
 
-	c = astNew( n->class )
+	var c = astNew( n->class )
 	astCopyNodeData( c, n )
 
-	if( astIsExpr( n ) ) then
-		c->l = astClone( n->l )
-		c->r = astClone( n->r )
-		c->cond = astClone( n->cond )
-	else
-		child = n->l
-		while( child )
-			astAddChild( c, astClone( child ) )
-			child = child->next
-		wend
-	end if
+	var child = n->head
+	while( child )
+		astAddChild( c, astClone( child ) )
+		child = child->next
+	wend
 
 	function = c
 end function
@@ -375,8 +325,6 @@ private sub hPrintIndentation( byval nestlevel as integer )
 end sub
 
 sub astDump( byval n as ASTNODE ptr, byval nestlevel as integer )
-	dim as ASTNODE ptr child = any
-
 	nestlevel += 1
 
 	if( n ) then
@@ -391,23 +339,11 @@ sub astDump( byval n as ASTNODE ptr, byval nestlevel as integer )
 			nestlevel -= 1
 		end if
 
-		if( astIsExpr( n ) ) then
-			if( n->l ) then
-				astDump( n->l, nestlevel )
-			end if
-			if( n->r ) then
-				astDump( n->r, nestlevel )
-			end if
-			if( n->cond ) then
-				astDump( n->cond, nestlevel )
-			end if
-		else
-			child = n->l
-			while( child )
-				astDump( child, nestlevel )
-				child = child->next
-			wend
-		end if
+		var child = n->head
+		while( child )
+			astDump( child, nestlevel )
+			child = child->next
+		wend
 	else
 		hPrintIndentation( nestlevel )
 		print "<NULL>"
