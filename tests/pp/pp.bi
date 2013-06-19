@@ -1,4 +1,4 @@
-#if iif( defined( TEST_H ), 0, 1 )
+#ifndef TEST_H
 #define TEST_H
 
 #define A 1

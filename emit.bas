@@ -148,7 +148,21 @@ function emitAst _
 			s += " " + emitAst( n->head )
 		end if
 	case ASTCLASS_PPIF
-		s += "#if " + emitAst( n->head )
+		select case( n->head->class )
+		'' #if defined id     ->    #ifdef id
+		case ASTCLASS_DEFINED
+			s += "#ifdef " + emitAst( n->head->head )
+
+		'' #if !defined id    ->    #ifndef id
+		case ASTCLASS_LOGNOT
+			if( n->head->head->class = ASTCLASS_DEFINED ) then
+				s += "#ifndef " + emitAst( n->head->head->head )
+			end if
+		end select
+
+		if( len( s ) = 0 ) then
+			s += "#if " + emitAst( n->head )
+		end if
 	case ASTCLASS_PPELSEIF
 		s += "#elseif " + emitAst( n->head )
 	case ASTCLASS_PPELSE

@@ -6,6 +6,6 @@
 #if 256
 #if 123
 #if 123
-#if defined( ID )
-#if defined( ID )
-#if defined( ID )
+#ifdef ID
+#ifdef ID
+#ifdef ID
