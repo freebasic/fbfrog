@@ -488,6 +488,10 @@ declare sub ppComments( )
 declare sub ppDividers( )
 declare sub ppDirectives1( )
 declare sub ppDirectives2( )
+declare sub ppEvalInit( )
+declare sub ppEvalEnd( )
+declare sub ppAddSymbol( byval id as zstring ptr, byval is_defined as integer )
+declare sub ppEvalExpressions( )
 declare sub ppEvalIfs( )
 declare function cSkip( byval x as integer ) as integer
 declare function cSkipRev( byval x as integer ) as integer

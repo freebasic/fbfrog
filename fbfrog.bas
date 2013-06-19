@@ -187,9 +187,15 @@ end sub
 
 		ppDirectives2( )
 
-		'ppEvalIfs( )
+#if 0
+		ppEvalInit( )
+		ppEvalExpressions( )
+		ppEvalIfs( )
+		ppEvalEnd( )
+#endif
 
 		ast = cToplevel( )
+		astDump( ast )
 		emitWriteFile( pathStripExt( f->normed ) + ".bi", emitAst( ast ) )
 		astDelete( ast )
 

@@ -265,25 +265,40 @@ private function ppExpression _
 	function = a
 end function
 
-''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-
 namespace eval
 	dim shared as THASH symbols
 end namespace
 
+enum
+	COND_UNKNOWN = 0
+	COND_TRUE
+	COND_FALSE
+end enum
+
 sub ppAddSymbol( byval id as zstring ptr, byval is_defined as integer )
-	if( eval.symbols.items = NULL ) then
-		hashInit( @eval.symbols, 4 )
-	end if
 	hashAddOverwrite( @eval.symbols, id, cptr( any ptr, is_defined ) )
 end sub
 
-sub ppResetSymbols( )
-	hashEnd( @eval.symbols )
-	eval.symbols.items = NULL
+sub ppEvalInit( )
+	hashInit( @eval.symbols, 4 )
 end sub
 
-function ppExprFold( byval n as ASTNODE ptr ) as ASTNODE ptr
+sub ppEvalEnd( )
+	hashEnd( @eval.symbols )
+end sub
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+private function hLookupSymbol( byval id as zstring ptr ) as integer
+	var item = hashLookup( @eval.symbols, id, hashHash( id ) )
+	if( item->s ) then
+		function = iif( item->data, COND_TRUE, COND_FALSE )
+	else
+		function = COND_UNKNOWN
+	end if
+end function
+
+private function hFold( byval n as ASTNODE ptr ) as ASTNODE ptr
 	function = n
 
 	if( n = NULL ) then
@@ -292,7 +307,7 @@ function ppExprFold( byval n as ASTNODE ptr ) as ASTNODE ptr
 
 	var child = n->head
 	while( child )
-		child = astReplaceChild( n, child, ppExprFold( astClone( child ) ) )
+		child = astReplaceChild( n, child, hFold( astClone( child ) ) )
 		child = child->next
 	wend
 
@@ -300,9 +315,10 @@ function ppExprFold( byval n as ASTNODE ptr ) as ASTNODE ptr
 	case ASTCLASS_DEFINED
 		'' defined() on known symbol?
 		assert( n->head->class = ASTCLASS_ID )
-		var item = hashLookup( @eval.symbols, n->head->text, hashHash( n->head->text ) )
-		if( item->s ) then
-			function = astNewCONSTi( iif( item->data, 1, 0 ), TYPE_LONG )
+		var cond = hLookupSymbol( n->head->text )
+		if( cond <> COND_UNKNOWN ) then
+			'' defined()    ->    1|0
+			function = astNewCONSTi( iif( cond = COND_TRUE, 1, 0 ), TYPE_LONG )
 			astDelete( n )
 		end if
 
@@ -378,6 +394,24 @@ function ppExprFold( byval n as ASTNODE ptr ) as ASTNODE ptr
 
 	end select
 end function
+
+sub ppEvalExpressions( )
+	var x = 0
+
+	while( tkGet( x ) <> TK_EOF )
+		if( tkGet( x ) = TK_AST ) then
+			var t = tkGetAst( x )
+
+			select case( t->class )
+			case ASTCLASS_PPIF, ASTCLASS_PPELSEIF
+				t = hFold( astClone( t ) )
+				tkSetAst( x, t )
+			end select
+		end if
+
+		x += 1
+	wend
+end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
@@ -656,15 +690,7 @@ sub ppDirectives2( )
 	loop
 end sub
 
-''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-
 const IFSTACKSIZE = 64
-
-enum
-	COND_UNKNOWN = 0
-	COND_TRUE
-	COND_FALSE
-end enum
 
 type IFSTACKNODE
 	cond		as integer '' COND_*
@@ -690,9 +716,6 @@ sub ppEvalIfs( )
 
 			select case( t->class )
 			case ASTCLASS_PPIF, ASTCLASS_PPELSEIF
-				t = ppExprFold( astClone( t ) )
-				tkSetAst( x, t )
-
 				if( t->class = ASTCLASS_PPIF ) then
 					level += 1
 				else
