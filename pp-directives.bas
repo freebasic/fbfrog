@@ -800,4 +800,8 @@ sub ppEvalIfs( )
 			x += 1
 		end select
 	loop
+
+	if( level >= 0 ) then
+		oops( "missing " & level + 1 & " #endif" )
+	end if
 end sub
