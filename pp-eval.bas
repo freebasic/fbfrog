@@ -61,13 +61,14 @@ private function hFold( byval n as ASTNODE ptr ) as ASTNODE ptr
 		var cond = hLookupSymbol( n->head->text )
 		if( cond <> COND_UNKNOWN ) then
 			'' defined()    ->    1|0
-			function = astNewCONSTi( iif( cond = COND_TRUE, 1, 0 ), TYPE_LONG )
+			function = astNewCONST( iif( cond = COND_TRUE, 1, 0 ), 0, TYPE_LONG )
 			astDelete( n )
 		end if
 
 	case ASTCLASS_IIF
 		if( n->head->class = ASTCLASS_CONST ) then
-			if( n->head->intval ) then
+			assert( typeIsFloat( n->dtype ) = FALSE )
+			if( n->val.i ) then
 				function = astClone( n->head->next )
 			else
 				function = astClone( n->tail )
@@ -86,8 +87,10 @@ private function hFold( byval n as ASTNODE ptr ) as ASTNODE ptr
 
 		if( (n->head->class = ASTCLASS_CONST) and _
 		    (n->tail->class = ASTCLASS_CONST) ) then
-			var v1 = n->head->intval
-			var v2 = n->tail->intval
+			assert( typeIsFloat( n->head->dtype ) = FALSE )
+			assert( typeIsFloat( n->tail->dtype ) = FALSE )
+			var v1 = n->head->val.i
+			var v2 = n->tail->val.i
 
 			select case as const( n->class )
 			case ASTCLASS_LOGOR  : v1    = iif( v1 orelse  v2, 1, 0 )
@@ -112,7 +115,7 @@ private function hFold( byval n as ASTNODE ptr ) as ASTNODE ptr
 				assert( FALSE )
 			end select
 
-			function = astNewCONSTi( v1, TYPE_LONG )
+			function = astNewCONST( v1, 0, TYPE_LONG )
 			astDelete( n )
 		end if
 
@@ -120,7 +123,8 @@ private function hFold( byval n as ASTNODE ptr ) as ASTNODE ptr
 	     ASTCLASS_NEGATE, ASTCLASS_UNARYPLUS
 
 		if( n->head->class = ASTCLASS_CONST ) then
-			var v1 = n->head->intval
+			assert( typeIsFloat( n->head->dtype ) = FALSE )
+			var v1 = n->head->val.i
 
 			select case as const( n->class )
 			case ASTCLASS_LOGNOT    : v1 = iif( v1, 0, 1 )
@@ -131,7 +135,7 @@ private function hFold( byval n as ASTNODE ptr ) as ASTNODE ptr
 				assert( FALSE )
 			end select
 
-			function = astNewCONSTi( v1, TYPE_LONG )
+			function = astNewCONST( v1, 0, TYPE_LONG )
 			astDelete( n )
 		end if
 
@@ -195,7 +199,8 @@ sub ppEvalIfs( )
 				end if
 
 				if( t->head->class = ASTCLASS_CONST ) then
-					ifstack(level).cond = iif( t->head->intval <> 0, COND_TRUE, COND_FALSE )
+					assert( typeIsFloat( t->head->dtype ) = FALSE )
+					ifstack(level).cond = iif( t->head->val.i <> 0, COND_TRUE, COND_FALSE )
 
 					'' not yet skipping?
 					if( skip = -1 ) then

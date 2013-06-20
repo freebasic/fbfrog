@@ -64,24 +64,22 @@ end function
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 private function hNumberLiteral( byval x as integer ) as ASTNODE ptr
-	dim as longint value
-	dim as integer attrib
+	dim as ASTNODE ptr n
 
 	select case( tkGet( x ) )
 	case TK_DECNUM
-		value = vallng( *tkGetText( x ) )
+		n = astNewCONST( vallng( *tkGetText( x ) ), 0, TYPE_LONGINT )
 	case TK_HEXNUM
-		value = vallng( "&h" + *tkGetText( x ) )
-		attrib = ASTATTRIB_HEX
+		n = astNewCONST( vallng( "&h" + *tkGetText( x ) ), 0, TYPE_LONGINT )
+		n->attrib or= ASTATTRIB_HEX
 	case TK_OCTNUM
-		value = vallng( "&o" + *tkGetText( x ) )
-		attrib = ASTATTRIB_OCT
+		n = astNewCONST( vallng( "&o" + *tkGetText( x ) ), 0, TYPE_LONGINT )
+		n->attrib or= ASTATTRIB_OCT
+	case TK_DECFLOAT
+		n = astNewCONST( 0, val( *tkGetText( x ) ), TYPE_DOUBLE )
 	case else
 		assert( FALSE )
 	end select
-
-	var n = astNewCONSTi( value, TYPE_LONGINT )
-	n->attrib or= attrib
 
 	function = n
 end function
@@ -162,7 +160,7 @@ private function ppExpression _
 			end if
 			x = ppSkip( x )
 
-		case TK_OCTNUM, TK_DECNUM, TK_HEXNUM
+		case TK_OCTNUM, TK_DECNUM, TK_HEXNUM, TK_DECFLOAT
 			a = hNumberLiteral( x )
 			x = ppSkip( x )
 

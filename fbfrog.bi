@@ -129,6 +129,7 @@ enum
 	TK_DECNUM
 	TK_HEXNUM
 	TK_OCTNUM
+	TK_DECFLOAT
 
 	'' String literals, sorted to match STRFLAG_*:
 	TK_STRING       '' 000    "foo"
@@ -345,6 +346,7 @@ const TYPEMAX_PTR = 8
 
 declare function typeToSigned( byval dtype as integer ) as integer
 declare function typeToUnsigned( byval dtype as integer ) as integer
+declare function typeIsFloat( byval dtype as integer ) as integer
 
 enum
 	ASTCLASS_NOP = 0
@@ -406,15 +408,20 @@ enum
 	ASTATTRIB_HEX		= &h00000008  '' CONST
 end enum
 
+type ASTNODECONST
+	union
+		i	as longint
+		f	as double
+	end union
+end type
+
 type ASTNODE_
 	class		as integer  '' ASTCLASS_*
 	attrib		as integer  '' ASTATTRIB_*
 
 	'' Identifiers/string literals, or NULL
 	text		as zstring ptr
-
 	comment		as zstring ptr
-	intval		as longint
 
 	'' Data type (vars, fields, params, function results, expressions)
 	dtype		as integer
@@ -423,6 +430,8 @@ type ASTNODE_
 	'' Source location where this declaration/statement was found
 	sourcefile	as FSFILE ptr
 	sourceline	as integer
+
+	val		as ASTNODECONST
 
 	'' Operands/fields/parameters/...
 	head		as ASTNODE ptr
@@ -444,9 +453,10 @@ declare function astNew overload _
 		byval class_ as integer, _
 		byval text as zstring ptr _
 	) as ASTNODE ptr
-declare function astNewCONSTi _
+declare function astNewCONST _
 	( _
 		byval i as longint, _
+		byval f as double, _
 		byval dtype as integer _
 	) as ASTNODE ptr
 declare sub astDelete( byval n as ASTNODE ptr )
@@ -465,7 +475,6 @@ declare sub astSetType _
 		byval subtype as ASTNODE ptr _
 	)
 declare sub astAddComment( byval n as ASTNODE ptr, byval comment as zstring ptr )
-declare sub astCopyNodeData( byval d as ASTNODE ptr, byval s as ASTNODE ptr )
 declare function astClone( byval n as ASTNODE ptr ) as ASTNODE ptr
 declare function astDumpOne( byval n as ASTNODE ptr ) as string
 declare sub astDump( byval n as ASTNODE ptr, byval nestlevel as integer = 0 )

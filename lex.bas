@@ -244,9 +244,6 @@ private sub hReadId( )
 end sub
 
 private sub hReadNumber( )
-	dim as ubyte ptr begin = any
-	dim as integer digit = any, found_dot = any, numbase = any, id = any
-
 	'' Number literal parsing starting at '0'-'9' or '.'
 	'' These are covered:
 	''    123
@@ -263,8 +260,8 @@ private sub hReadNumber( )
 	''    0xAABBCCDD -> TK_HEXLIT, AABBCCDD -> &hAABBCCDD
 	''    010        -> TK_OCTLIT, 10       -> &o10
 
-	numbase = 10
-	id = TK_DECNUM
+	var numbase = 10
+	var id = TK_DECNUM
 	if( lex.i[0] = CH_0 ) then '' 0
 		if( lex.i[1] = CH_L_X ) then '' 0x
 			lex.i += 2
@@ -277,10 +274,10 @@ private sub hReadNumber( )
 		end if
 	end if
 
-	begin = lex.i
-	found_dot = FALSE
+	var begin = lex.i
+	var found_dot = FALSE
 	do
-		digit = lex.i[0]
+		dim as integer digit = lex.i[0]
 
 		if( digit = CH_DOT ) then
 			'' Only one dot allowed
@@ -328,10 +325,17 @@ private sub hReadNumber( )
 			lex.i += 1
 		wend
 
+		'' The exponent makes this a float too
+		found_dot = TRUE
 	end select
 
 	'' Type suffixes
 	if( found_dot ) then
+		if( id <> TK_DECNUM ) then
+			lexOops( "non-decimal floats not supported" )
+		end if
+		id = TK_DECFLOAT
+
 		select case( lex.i[0] )
 		case CH_F, CH_L_F, _    '' 'F' | 'f'
 		     CH_D, CH_L_D       '' 'D' | 'd'

@@ -10,11 +10,11 @@
 #define A10 1
 #define A11 1
 #define A12 1
-#define A13 0
+#define A13 0.1
 #define A14 0
-#define A15 1
-#define A16 1
-#define A17 1
+#define A15 1.123
+#define A16 10
+#define A17 10
 #define A18 1
 #define A19 1
 #define A20 1

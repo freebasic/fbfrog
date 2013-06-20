@@ -18,6 +18,10 @@ function typeToUnsigned( byval dtype as integer ) as integer
 	function = dtype
 end function
 
+function typeIsFloat( byval dtype as integer ) as integer
+	function = ((dtype = TYPE_SINGLE) or (dtype = TYPE_DOUBLE))
+end function
+
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 type ASTNODEINFO
@@ -110,15 +114,21 @@ function astNew overload _
 	function = n
 end function
 
-function astNewCONSTi _
+function astNewCONST _
 	( _
-		byval intval as longint, _
+		byval i as longint, _
+		byval f as double, _
 		byval dtype as integer _
 	) as ASTNODE ptr
 
 	var n = astNew( ASTCLASS_CONST )
 	n->dtype = dtype
-	n->intval = intval
+
+	if( typeIsFloat( dtype ) ) then
+		n->val.f = f
+	else
+		n->val.i = i
+	end if
 
 	function = n
 end function
@@ -255,24 +265,29 @@ sub astAddComment( byval n as ASTNODE ptr, byval comment as zstring ptr )
 	n->comment = strDuplicate( s )
 end sub
 
-sub astCopyNodeData( byval d as ASTNODE ptr, byval s as ASTNODE ptr )
-	d->attrib     = s->attrib
-	d->text       = strDuplicate( s->text )
-	d->comment    = strDuplicate( s->comment )
-	d->intval     = s->intval
-	d->dtype      = s->dtype
-	d->subtype    = astClone( s->subtype )
-	d->sourcefile = s->sourcefile
-	d->sourceline = s->sourceline
-end sub
-
 function astClone( byval n as ASTNODE ptr ) as ASTNODE ptr
 	if( n = NULL ) then
 		return NULL
 	end if
 
 	var c = astNew( n->class )
-	astCopyNodeData( c, n )
+
+	c->attrib     = n->attrib
+	c->text       = strDuplicate( n->text )
+	c->comment    = strDuplicate( n->comment )
+	c->dtype      = n->dtype
+	c->subtype    = astClone( n->subtype )
+	c->sourcefile = n->sourcefile
+	c->sourceline = n->sourceline
+
+	select case( n->class )
+	case ASTCLASS_CONST
+		if( typeIsFloat( n->dtype ) ) then
+			c->val.f = n->val.f
+		else
+			c->val.i = n->val.i
+		end if
+	end select
 
 	var child = n->head
 	while( child )
@@ -303,12 +318,16 @@ function astDumpOne( byval n as ASTNODE ptr ) as string
 	end if
 
 	if( n->class = ASTCLASS_CONST ) then
-		if( n->attrib and ASTATTRIB_OCT ) then
-			s += " &o" + oct( n->intval )
-		elseif( n->attrib and ASTATTRIB_HEX ) then
-			s += " &h" + hex( n->intval )
+		if( typeIsFloat( n->dtype ) ) then
+			s += " " + str( n->val.f )
 		else
-			s += " " + str( n->intval )
+			if( n->attrib and ASTATTRIB_OCT ) then
+				s += " &o" + oct( n->val.i )
+			elseif( n->attrib and ASTATTRIB_HEX ) then
+				s += " &h" + hex( n->val.i )
+			else
+				s += " " + str( n->val.i )
+			end if
 		end if
 	end if
 

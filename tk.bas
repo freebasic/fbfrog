@@ -22,6 +22,7 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	( NULL  , @"decnum"   ), _ '' Number literals
 	( NULL  , @"hexnum"   ), _
 	( NULL  , @"octnum"   ), _
+	( NULL  , @"decfloat" ), _
 	( NULL  , @"string"   ), _ '' String literals
 	( NULL  , @"char"     ), _
 	( NULL  , @"wstring"  ), _
@@ -478,6 +479,7 @@ private function hToText( byval p as ONETOKEN ptr ) as string
 	case TK_DECNUM          : function = *p->text
 	case TK_HEXNUM          : function = "0x" + *p->text
 	case TK_OCTNUM          : function = "0" + *p->text
+	case TK_DECFLOAT        : function = *p->text
 	case TK_STRING, TK_ESTRING   : function = """" + *p->text + """"
 	case TK_CHAR, TK_ECHAR       : function = "'" + *p->text + "'"
 	case TK_WSTRING, TK_EWSTRING : function = "L""" + *p->text + """"

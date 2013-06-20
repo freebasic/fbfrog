@@ -257,12 +257,16 @@ function emitAst _
 		s += emitAst( n->head )
 
 	case ASTCLASS_CONST
-		if( n->attrib and ASTATTRIB_OCT ) then
-			s += "&o" + oct( n->intval )
-		elseif( n->attrib and ASTATTRIB_HEX ) then
-			s += "&h" + hex( n->intval )
+		if( typeIsFloat( n->dtype ) ) then
+			s += str( n->val.f )
 		else
-			s += str( n->intval )
+			if( n->attrib and ASTATTRIB_OCT ) then
+				s += "&o" + oct( n->val.i )
+			elseif( n->attrib and ASTATTRIB_HEX ) then
+				s += "&h" + hex( n->val.i )
+			else
+				s += str( n->val.i )
+			end if
 		end if
 	case ASTCLASS_ID
 		s += *n->text
