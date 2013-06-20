@@ -467,32 +467,39 @@ end sub
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 sub ppDirectives2( )
-	dim as integer x = any, begin = any
-	dim as ASTNODE ptr t = any, expr = any
-
-	x = 0
+	var x = 0
 	do
 		select case( tkGet( x ) )
 		case TK_EOF
 			exit do
 
 		case TK_AST
-			t = tkGetAst( x )
+			var t = tkGetAst( x )
 			x += 1
 
 			select case( t->class )
 			case ASTCLASS_PPDEFINE
 				'' BEGIN
 				assert( tkGet( x ) = TK_BEGIN )
-				begin = x
+				var begin = x
 				x += 1
 
 				'' Body tokens?
 				if( tkGet( x ) <> TK_END ) then
-					do
-						x += 1
-					loop while( tkGet( x ) <> TK_END )
-					astAddChild( t, astNew( ASTCLASS_TEXT, tkToText( begin + 1, x - 1 ) ) )
+					'' Try to parse the body as expression
+					var expr = ppExpression( x )
+					'' Expression found and TK_END reached?
+					if( (expr <> NULL) and (tkGet( x ) = TK_END) ) then
+						astAddChild( t, expr )
+					else
+						'' Then either no expression could be parsed at all,
+						'' or it was followed by "junk" tokens...
+						astDelete( expr )
+						while( tkGet( x ) <> TK_END )
+							x += 1
+						wend
+						astAddChild( t, astNew( ASTCLASS_TEXT, tkToText( begin + 1, x - 1 ) ) )
+					end if
 				end if
 
 				'' END
@@ -505,11 +512,11 @@ sub ppDirectives2( )
 				if( t->head = NULL ) then
 					'' BEGIN
 					assert( tkGet( x ) = TK_BEGIN )
-					begin = x
+					var begin = x
 					x += 1
 
 					'' Expression tokens
-					expr = ppExpression( x )
+					var expr = ppExpression( x )
 					'' TK_END not reached after ppExpression()?
 					if( tkGet( x ) <> TK_END ) then
 						'' Then either no expression could be parsed at all,
