@@ -65,19 +65,25 @@ end function
 
 private function hNumberLiteral( byval x as integer ) as ASTNODE ptr
 	dim as longint value
+	dim as integer attrib
 
 	select case( tkGet( x ) )
 	case TK_DECNUM
 		value = vallng( *tkGetText( x ) )
 	case TK_HEXNUM
 		value = vallng( "&h" + *tkGetText( x ) )
+		attrib = ASTATTRIB_HEX
 	case TK_OCTNUM
 		value = vallng( "&o" + *tkGetText( x ) )
+		attrib = ASTATTRIB_OCT
 	case else
 		assert( FALSE )
 	end select
 
-	function = astNewCONSTi( value, TYPE_LONGINT )
+	var n = astNewCONSTi( value, TYPE_LONGINT )
+	n->attrib or= attrib
+
+	function = n
 end function
 
 type PPOPINFO

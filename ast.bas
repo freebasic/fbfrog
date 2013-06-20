@@ -285,7 +285,6 @@ end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-
 function astDumpOne( byval n as ASTNODE ptr ) as string
 	dim as string s
 
@@ -304,7 +303,13 @@ function astDumpOne( byval n as ASTNODE ptr ) as string
 	end if
 
 	if( n->class = ASTCLASS_CONST ) then
-		s += " " + str( n->intval )
+		if( n->attrib and ASTATTRIB_OCT ) then
+			s += " &o" + oct( n->intval )
+		elseif( n->attrib and ASTATTRIB_HEX ) then
+			s += " &h" + hex( n->intval )
+		else
+			s += " " + str( n->intval )
+		end if
 	end if
 
 	if( n->dtype <> TYPE_NONE ) then

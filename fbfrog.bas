@@ -195,6 +195,7 @@ end sub
 #endif
 
 		ast = cToplevel( )
+
 		astDump( ast )
 		emitWriteFile( pathStripExt( f->normed ) + ".bi", emitAst( ast ) )
 		astDelete( ast )
