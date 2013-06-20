@@ -173,8 +173,22 @@ function emitAst _
 		s += "'' TODO: unknown PP directive" + !"\n"
 		s += emitAst( n->head )
 
-	case ASTCLASS_STRUCT
-		s += "type " + *n->text + !"\n"
+	case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
+		dim as string compoundkeyword
+		select case( n->class )
+		case ASTCLASS_UNION
+			compoundkeyword = "union"
+		case ASTCLASS_ENUM
+			compoundkeyword = "enum"
+		case else
+			compoundkeyword = "type"
+		end select
+
+		s += compoundkeyword
+		if( n->text ) then
+			s += " " + *n->text
+		end if
+		s += !"\n"
 
 		var child = n->head
 		while( child )
@@ -182,7 +196,7 @@ function emitAst _
 			child = child->next
 		wend
 
-		s += "end type"
+		s += "end " + compoundkeyword
 
 	case ASTCLASS_TYPEDEF
 		s += "type " + *n->text + " as " + emitType( n->dtype, n->subtype )
@@ -199,6 +213,12 @@ function emitAst _
 
 	case ASTCLASS_FIELD
 		s += *n->text + " as " + emitType( n->dtype, n->subtype )
+
+	case ASTCLASS_ENUMCONST
+		s += *n->text
+		if( n->head ) then
+			s += " = " + emitAst( n->head )
+		end if
 
 	case ASTCLASS_PROC
 		'' Is this a procedure declaration,

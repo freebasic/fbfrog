@@ -14,34 +14,30 @@ dim shared pp as typeof( function( ) as long ) ptr
 
 type T as long
 
-'' TODO: unknown construct
-enum {
+enum
+	#if 1
+	'' TODO: unknown construct
+	A    
+	
+	#endif
+end enum
 
-#if 1
-'' TODO: unknown construct
-A    
-
-#endif
-'' TODO: unknown construct
-};
-
-
-'' TODO: unknown construct
-enum {
- A =
- 1
-
-#if 1
-'' TODO: unknown construct
-+
- 2
-
-#endif
-'' TODO: unknown construct
-,
- B
-};
-
+enum
+	'' TODO: unknown construct
+	A =
+	 1
+	
+	#if 1
+	'' TODO: unknown construct
+	+
+	 2
+	
+	#endif
+	'' TODO: unknown construct
+	,
+	 
+	B
+end enum
 
 type T
 	'' TODO: unknown construct

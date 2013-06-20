@@ -490,15 +490,43 @@ private function hToText( byval p as ONETOKEN ptr ) as string
 	end select
 end function
 
-function tkToText( byval first as integer, byval last as integer ) as string
-	dim as ONETOKEN ptr p = any
+function tkToAstText _
+	( _
+		byval first as integer, _
+		byval last as integer _
+	) as ASTNODE ptr
+
 	dim as string s
+	dim as ASTNODE ptr group, text
 
 	for i as integer = first to last
-		s += hToText( tkAccess( i ) )
+		var p = tkAccess( i )
+		if( p->id = TK_AST ) then
+			if( len( s ) > 0 ) then
+				text = astNew( ASTCLASS_TEXT, s )
+			end if
+			if( group = NULL ) then
+				group = astNew( ASTCLASS_GROUP )
+			end if
+			astAddChild( group, text )
+			astAddChild( group, astClone( p->ast ) )
+			text = NULL
+			s = ""
+		else
+			s += hToText( p )
+		end if
 	next
 
-	function = s
+	if( len( s ) > 0 ) then
+		text = astNew( ASTCLASS_TEXT, s )
+	end if
+
+	if( group ) then
+		astAddChild( group, text )
+		function = group
+	else
+		function = text
+	end if
 end function
 
 function tkCollectComments _

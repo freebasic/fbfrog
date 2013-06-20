@@ -424,7 +424,7 @@ private function ppUnknownDirective( byval x as integer ) as integer
 	x = ppSkip( x )
 
 	y = ppSkipToEOL( x )
-	expr = astNew( ASTCLASS_TEXT, tkToText( begin, y ) )
+	expr = tkToAstText( begin, y )
 	expr = astNew( ASTCLASS_PPUNKNOWN, expr, NULL, NULL )
 	x = y
 
@@ -502,7 +502,7 @@ sub ppDirectives2( )
 						while( tkGet( x ) <> TK_END )
 							x += 1
 						wend
-						astAddChild( t, astNew( ASTCLASS_TEXT, tkToText( begin + 1, x - 1 ) ) )
+						astAddChild( t, tkToAstText( begin + 1, x - 1 ) )
 					end if
 				end if
 
@@ -532,7 +532,7 @@ sub ppDirectives2( )
 						loop while( tkGet( x ) <> TK_END )
 
 						'' Turn it into a PPUNKNOWN
-						astAddChild( t, astNew( ASTCLASS_TEXT, tkToText( begin + 1, x - 1 ) ) )
+						astAddChild( t, tkToAstText( begin + 1, x - 1 ) )
 						t = astNew( ASTCLASS_PPUNKNOWN, astClone( t ), NULL, NULL )
 						tkSetAst( begin - 1, t )
 					else

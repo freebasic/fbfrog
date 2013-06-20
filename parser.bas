@@ -153,27 +153,52 @@ private function cFindClosingParen( byval x as integer ) as integer
 	function = x
 end function
 
-function cSkipStatement( byval x as integer ) as integer
+function cSkipStatement _
+	( _
+		byval x as integer, _
+		byval is_enum as integer _
+	) as integer
+
+	var begin = x
+
 	do
 		select case( tkGet( x ) )
 		case TK_EOF
 			exit do
 
+		'' ';' (statement separator, though not in enums)
 		case TK_SEMI
-			x = cSkip( x )
-			exit do
+			if( is_enum = FALSE ) then
+				x = cSkip( x )
+				exit do
+			end if
+
+		'' ',' (enum constant separator)
+		case TK_COMMA
+			if( is_enum ) then
+				x = cSkip( x )
+				exit do
+			end if
+
+		'' '}' (usually end of block)
+		case TK_RBRACE
+			if( is_enum ) then
+				exit do
+			end if
 
 		case TK_LPAREN, TK_LBRACKET, TK_LBRACE
 			x = cFindClosingParen( x )
+		end select
 
-		case TK_AST, TK_DIVIDER
+		x = cSkip( x )
+
+		select case( tkGet( x ) )
+		case TK_AST, TK_DIVIDER, TK_RBRACE
 			exit do
-
-		case else
-			x = cSkip( x )
 		end select
 	loop
 
+	assert( x > begin )
 	function = x
 end function
 
@@ -224,19 +249,17 @@ private function hMergeUnknown( ) as ASTNODE ptr
 	loop while( tkIsPoisoned( parse.x ) )
 
 	function = astNew( ASTCLASS_UNKNOWN, _
-		astNew( ASTCLASS_TEXT, _
-			tkToText( begin, parse.x - 1 ) ), _
-		NULL, NULL )
+			tkToAstText( begin, parse.x - 1 ), NULL, NULL )
 end function
 
-private sub cUnknown( )
+private sub cUnknown( byval is_enum as integer = FALSE )
 	dim as integer begin = any
 
 	'' This should only be called during the 1st pass
 	assert( parse.pass = 1 )
 
 	begin = parse.x
-	parse.x = cSkipStatement( parse.x )
+	parse.x = cSkipStatement( parse.x, is_enum )
 	tkSetPoisoned( begin, parse.x - 1 )
 end sub
 
@@ -278,15 +301,83 @@ private function cStructBody( ) as ASTNODE ptr
 	function = group
 end function
 
-'' [TYPEDEF] {STRUCT|UNION} [Identifier] '{' StructBody '}' [MultDecl] ';'
-private function cStructCompound( ) as ASTNODE ptr
-	dim as ASTNODE ptr struct = any, subtype = any, group = any, t = any
-	dim as integer head = any, is_typedef = any
-	dim as string id
+'' Identifier ['=' Expression] (',' | '}')
+private function cEnumConst( ) as ASTNODE ptr
+	'' Identifier
+	if( tkGet( parse.x ) <> TK_ID ) then
+		exit function
+	end if
+	var n = astNew( ASTCLASS_ENUMCONST, tkGetText( parse.x ) )
+	parse.x = cSkip( parse.x )
 
-	function = NULL
-	head = parse.x
-	is_typedef = FALSE
+	'' '='?
+	if( tkGet( parse.x ) = TK_EQ ) then
+		parse.x = cSkip( parse.x )
+
+		'' NumberLiteral?
+		if( tkGet( parse.x ) <> TK_DECNUM ) then
+			astDelete( n )
+			exit function
+		end if
+		astAddChild( n, astNewCONST( vallng( *tkGetText( parse.x ) ), 0, TYPE_LONGINT ) )
+		parse.x = cSkip( parse.x )
+	end if
+
+	'' (',' | '}')
+	select case( tkGet( parse.x ) )
+	case TK_COMMA
+		parse.x = cSkip( parse.x )
+
+	case TK_RBRACE
+
+	case else
+		astDelete( n )
+		exit function
+	end select
+
+	function = n
+end function
+
+'' EnumConst (',' EnumConst)*
+private function cEnumBody( ) as ASTNODE ptr
+	var group = astNew( ASTCLASS_GROUP )
+
+	do
+		select case( tkGet( parse.x ) )
+		case TK_RBRACE, TK_EOF
+			exit do
+		end select
+
+		var old = parse.x
+
+		var t = hMergeUnknown( )
+		if( t = NULL ) then
+			parse.x = old
+			t = cEnumConst( )
+			if( t = NULL ) then
+				parse.x = old
+				t = cSimpleToken( )
+				if( t = NULL ) then
+					parse.x = old
+					cUnknown( TRUE )
+				end if
+			end if
+		end if
+
+		if( t ) then
+			astAddChild( group, t )
+		end if
+	loop
+
+	function = group
+end function
+
+'' [TYPEDEF] {STRUCT|UNION|ENUM} [Identifier] '{'
+''     {StructBody|EnumBody}
+'' '}' [MultDecl] ';'
+private function cStructCompound( ) as ASTNODE ptr
+	var head = parse.x
+	var is_typedef = FALSE
 
 	'' TYPEDEF?
 	if( tkGet( parse.x ) = KW_TYPEDEF ) then
@@ -294,16 +385,22 @@ private function cStructCompound( ) as ASTNODE ptr
 		is_typedef = TRUE
 	end if
 
-	'' {STRUCT|UNION}
+	'' {STRUCT|UNION|ENUM}
+	dim as integer astclass
 	select case( tkGet( parse.x ) )
-	case KW_STRUCT, KW_UNION
-
+	case KW_STRUCT
+		astclass = ASTCLASS_STRUCT
+	case KW_UNION
+		astclass = ASTCLASS_UNION
+	case KW_ENUM
+		astclass = ASTCLASS_ENUM
 	case else
 		exit function
 	end select
 	parse.x = cSkip( parse.x )
 
 	'' [Identifier]
+	dim as string id
 	if( tkGet( parse.x ) = TK_ID ) then
 		id = *tkGetText( parse.x )
 		parse.x = cSkip( parse.x )
@@ -321,10 +418,14 @@ private function cStructCompound( ) as ASTNODE ptr
 	end if
 	parse.x = cSkip( parse.x )
 
-	struct = astNew( ASTCLASS_STRUCT, id )
+	var struct = astNew( astclass, id )
 	astAddComment( struct, tkCollectComments( head, parse.x - 1 ) )
 
-	astAddChild( struct, cStructBody( ) )
+	if( astclass = ASTCLASS_ENUM ) then
+		astAddChild( struct, cEnumBody( ) )
+	else
+		astAddChild( struct, cStructBody( ) )
+	end if
 
 	'' '}'
 	if( tkGet( parse.x ) <> TK_RBRACE ) then
@@ -334,8 +435,8 @@ private function cStructCompound( ) as ASTNODE ptr
 	parse.x = cSkip( parse.x )
 
 	if( is_typedef ) then
-		subtype = astNew( ASTCLASS_ID, id )
-		t = cIdList( DECL_TYPEDEF, TYPE_UDT, subtype )
+		var subtype = astNew( ASTCLASS_ID, id )
+		var t = cIdList( DECL_TYPEDEF, TYPE_UDT, subtype )
 		astDelete( subtype )
 
 		if( t = NULL ) then
@@ -343,7 +444,7 @@ private function cStructCompound( ) as ASTNODE ptr
 			exit function
 		end if
 
-		group = astNew( ASTCLASS_GROUP, struct, t, NULL )
+		function = astNew( ASTCLASS_GROUP, struct, t, NULL )
 	else
 		'' ';'
 		if( tkGet( parse.x ) <> TK_SEMI ) then
@@ -352,10 +453,8 @@ private function cStructCompound( ) as ASTNODE ptr
 		end if
 		parse.x = cSkip( parse.x )
 
-		group = struct
+		function = struct
 	end if
-
-	function = group
 end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''

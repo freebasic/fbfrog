@@ -1,26 +1,30 @@
-'' TODO: unknown construct
-typedef enum E { A, B } EE;
+enum E
+	A
+	B
+end enum
+type EE as E
 
+enum __fbfrog_AnonStruct1
+	A
+	B
+	C
+end enum
+type EE as __fbfrog_AnonStruct1
 
-'' TODO: unknown construct
-typedef enum {
- A,
- B,
- C
-} EE;
+enum E
+	A
+	B
+end enum
+type EE as E
 
+enum E
+	A
+	B
+end enum
+type EE as E
 
-'' TODO: unknown construct
-typedef enum E {
-A, B} EE;
-
-
-'' TODO: unknown construct
-typedef enum E {A,
-B} EE;
-
-
-'' TODO: unknown construct
-typedef enum E {A, B
-} EE;
-
+enum E
+	A
+	B
+end enum
+type EE as E

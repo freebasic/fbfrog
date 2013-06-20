@@ -31,22 +31,22 @@ end type
 type A as __fbfrog_AnonStruct3
 type PA as __fbfrog_AnonStruct3 ptr
 
-type U
+union U
 	a as long
-end type
+end union
 type UU as U
-type __fbfrog_AnonStruct4
+union __fbfrog_AnonStruct4
 	a as long
-end type
+end union
 type UU as __fbfrog_AnonStruct4
 
 type __fbfrog_AnonStruct5
-	type 
-		type 
+	union
+		type
 			a as long
 			b as long
 		end type
 		c as long
-	end type
+	end union
 end type
 type T as __fbfrog_AnonStruct5

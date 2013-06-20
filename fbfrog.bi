@@ -288,7 +288,11 @@ declare function tkSkipSpaceAndComments _
 		byval x as integer, _
 		byval delta as integer = 1 _
 	) as integer
-declare function tkToText( byval first as integer, byval last as integer ) as string
+declare function tkToAstText _
+	( _
+		byval first as integer, _
+		byval last as integer _
+	) as ASTNODE ptr
 declare function tkCollectComments _
 	( _
 		byval first as integer, _
@@ -362,9 +366,12 @@ enum
 	ASTCLASS_PPUNKNOWN
 
 	ASTCLASS_STRUCT
+	ASTCLASS_UNION
+	ASTCLASS_ENUM
 	ASTCLASS_TYPEDEF
 	ASTCLASS_VAR
 	ASTCLASS_FIELD
+	ASTCLASS_ENUMCONST
 	ASTCLASS_PROC
 	ASTCLASS_PARAM
 	ASTCLASS_UNKNOWN
@@ -506,7 +513,11 @@ declare sub ppEvalExpressions( )
 declare sub ppEvalIfs( )
 declare function cSkip( byval x as integer ) as integer
 declare function cSkipRev( byval x as integer ) as integer
-declare function cSkipStatement( byval x as integer ) as integer
+declare function cSkipStatement _
+	( _
+		byval x as integer, _
+		byval is_enum as integer = FALSE _
+	) as integer
 declare function cToplevel( ) as ASTNODE ptr
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''

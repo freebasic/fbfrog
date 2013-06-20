@@ -2,8 +2,8 @@ enum {
 	A = 0,
 	B, C = (1 << 4),
 	D,
-	E = CALC(1,2,3),
-	F
+	E = 1, F
+	, G
 };
 
 enum E {
@@ -15,10 +15,9 @@ enum E {
 };
 
 enum {
-	A =
+	A
+	=
 	1
-	+
-	CALC(2,3)
 	,
 	B
 };

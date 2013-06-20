@@ -1,41 +1,37 @@
-'' TODO: unknown construct
-enum {
- A = 0,
- B, C = (1 << 4),
- D,
- E = CALC(1,2,3),
- F
-};
+enum
+	A = 0
+	B
+	'' TODO: unknown construct
+	C = (1 << 4),
+	 
+	D
+	E = 1
+	F
+	G
+end enum
 
+enum E
+	A
+	#if 1
+	B
+	#endif
+	C
+end enum
 
-'' TODO: unknown construct
-enum E {
- A,
+enum
+	A = 1
+	B
+end enum
 
-#if 1
-'' TODO: unknown construct
-B,
-
-#endif
-'' TODO: unknown construct
-C
-};
-
-
-'' TODO: unknown construct
-enum {
- A =
- 1
- +
- CALC(2,3)
- ,
- B
-};
-
-
-'' TODO: unknown construct
-enum E { A, B, };
-enum E{A,B,};
-enum E { A, B,
-};
-
+enum E
+	A
+	B
+end enum
+enum E
+	A
+	B
+end enum
+enum E
+	A
+	B
+end enum

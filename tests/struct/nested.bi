@@ -1,24 +1,24 @@
-type U
+union U
 	a as long
 	b as long
-	type 
+	type
 		c as long
-		type 
+		union
 			d as long
 			e as long
-		end type
+		end union
 		f as long
 	end type
 	g as long
-	type 
+	type
 		h as long
 	end type
-	type 
-		type 
-			type 
-				type 
-				end type
+	type
+		union
+			type
+				union
+				end union
 			end type
-		end type
+		end union
 	end type
-end type
+end union
