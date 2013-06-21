@@ -142,9 +142,11 @@ private function cFindClosingParen( byval x as integer ) as integer
 			level -= 1
 
 		case TK_EOF
+			x -= 1
 			exit do
 
 		case TK_AST, TK_DIVIDER
+			x = cSkipRev( x )
 			exit do
 
 		end select
@@ -180,9 +182,18 @@ function cSkipStatement _
 				exit do
 			end if
 
-		'' '}' (usually end of block)
+		'' '}': usually indicates end of statement, unless we're trying
+		'' to skip a '}' itself
 		case TK_RBRACE
 			if( is_enum ) then
+				exit do
+			elseif( x > begin ) then
+				exit do
+			end if
+
+		case TK_AST, TK_DIVIDER
+			'' Reached high-level token after having seen normals?
+			if( x > begin ) then
 				exit do
 			end if
 
@@ -191,11 +202,6 @@ function cSkipStatement _
 		end select
 
 		x = cSkip( x )
-
-		select case( tkGet( x ) )
-		case TK_AST, TK_DIVIDER, TK_RBRACE
-			exit do
-		end select
 	loop
 
 	assert( x > begin )
