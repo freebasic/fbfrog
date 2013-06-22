@@ -22,12 +22,10 @@ static          long a;
 static   signed long a;
 static unsigned long a;
 
-
 '' TODO: unknown construct
 static          long int a;
 static   signed long int a;
 static unsigned long int a;
-
 
 dim shared a as longint
 dim shared a as longint

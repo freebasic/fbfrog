@@ -43,6 +43,33 @@ function strReplace _
 	function = result
 end function
 
+function strStartsWith( byref s as string, byref lookfor as string ) as integer
+	function = (left( s, len( lookfor ) ) = lookfor)
+end function
+
+function strMatches _
+	( _
+		byref origpattern as string, _
+		byref s as string _
+	) as integer
+
+	dim as string pattern = origpattern
+	dim as integer wildcard = instr( pattern, "*" )
+	if( instr( wildcard + 1, pattern, "*" ) > 0 ) then
+		oops( __FUNCTION__ & "(): pattern with more than one wildcard" )
+		end 1
+	end if
+
+	if( wildcard > 0 ) then
+		dim as integer lhs = wildcard - 1
+		dim as integer rhs = len( pattern ) - wildcard
+		function = (( left( s, lhs ) =  left( pattern, lhs )) and _
+		            (right( s, rhs ) = right( pattern, rhs )))
+	else
+		function = (pattern = s)
+	end if
+end function
+
 private sub hPrintHelp( )
 	print "fbfrog 0.1 from " + __DATE_ISO__
 	print "usage: fbfrog *.h"
@@ -133,6 +160,131 @@ private sub hParseArgs( byval argc as integer, byval argv as zstring ptr ptr )
 	next
 end sub
 
+private sub hSetPPIndentAttrib _
+	( _
+		byval n as ASTNODE ptr, _
+		byval enable as integer _
+	)
+
+	var child = n->head
+	while( child )
+		hSetPPIndentAttrib( child, enable )
+		child = child->next
+	wend
+
+	if( enable ) then
+		select case( n->class )
+		case ASTCLASS_PPIF
+			n->attrib or= ASTATTRIB_PPINDENTBEGIN
+		case ASTCLASS_PPELSEIF, ASTCLASS_PPELSE
+			n->attrib or= ASTATTRIB_PPINDENTBEGIN or ASTATTRIB_PPINDENTEND
+		case ASTCLASS_PPENDIF
+			n->attrib or= ASTATTRIB_PPINDENTEND
+		end select
+	else
+		select case( n->class )
+		case ASTCLASS_PPIF, ASTCLASS_PPELSEIF, ASTCLASS_PPELSE, _
+		     ASTCLASS_PPENDIF
+			n->attrib and= not (ASTATTRIB_PPINDENTBEGIN or ASTATTRIB_PPINDENTEND)
+		end select
+	end if
+
+end sub
+
+private function hAstMatches _
+	( _
+		byval a as ASTNODE ptr, _
+		byval b as ASTNODE ptr _
+	) as integer
+
+	if( a->class <> b->class ) then
+		exit function
+	end if
+
+	'' Compare common children
+	var achild = a->head
+	var bchild = b->head
+	while( (achild <> NULL) and (bchild <> NULL) )
+		if( hAstMatches( achild, bchild ) = FALSE ) then
+			exit function
+		end if
+		achild = achild->next
+		bchild = bchild->next
+	wend
+
+	function = TRUE
+end function
+
+private function hFindFirstMatch _
+	( _
+		byval group as ASTNODE ptr, _
+		byval lookfor as ASTNODE ptr _
+	) as ASTNODE ptr
+
+	assert( group->class = ASTCLASS_GROUP )
+
+	var child = group->head
+	while( child )
+		if( hAstMatches( child, lookfor ) ) then
+			exit while
+		end if
+		child = child->next
+	wend
+
+	astDelete( lookfor )
+	function = child
+end function
+
+private function hFindLastMatch _
+	( _
+		byval group as ASTNODE ptr, _
+		byval lookfor as ASTNODE ptr _
+	) as ASTNODE ptr
+
+	assert( group->class = ASTCLASS_GROUP )
+
+	var child = group->tail
+	while( child )
+		if( hAstMatches( child, lookfor ) ) then
+			exit while
+		end if
+		child = child->prev
+	wend
+
+	astDelete( lookfor )
+	function = child
+end function
+
+private sub hRemovePPIndentFromIncludeGuard( byval n as ASTNODE ptr )
+	if( n->class <> ASTCLASS_GROUP ) then exit sub
+
+	'' Find first #ifndef and last #endif, if any
+	var firstifndef = hFindFirstMatch( n, _
+		astNew( ASTCLASS_PPIF, _
+			astNew( ASTCLASS_LOGNOT, _
+				astNew( ASTCLASS_DEFINED ) ) ) )
+
+	var lastendif = hFindLastMatch( n, astNew( ASTCLASS_PPENDIF ) )
+
+	if( (firstifndef = NULL) or (lastendif = NULL) ) then exit sub
+
+	'' Is the #ifndef followed by a #define?
+	if( firstifndef->next = NULL ) then exit sub
+
+	var def = firstifndef->next
+	if( def = NULL ) then exit sub
+
+	'' Compare the #ifndef ID against the #define ID, for an include guard
+	'' it's supposed to be the same
+	var ifndefid = firstifndef->head->head->head
+	if( ifndefid = NULL ) then exit sub
+	if( ifndefid->class <> ASTCLASS_ID ) then exit sub
+	if( *def->text <> *ifndefid->text ) then exit sub
+
+	hSetPPIndentAttrib( firstifndef, FALSE )
+	hSetPPIndentAttrib( lastendif, FALSE )
+end sub
+
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 	depInit( )
@@ -196,8 +348,14 @@ end sub
 
 		ast = cToplevel( )
 
-		astDump( ast )
-		emitWriteFile( pathStripExt( f->normed ) + ".bi", emitAst( ast ) )
+		hSetPPIndentAttrib( ast, TRUE )
+		hRemovePPIndentFromIncludeGuard( ast )
+		if( strMatches( "tests/pp/expr-*", f->pretty ) ) then
+			hSetPPIndentAttrib( ast, FALSE )
+		end if
+
+		'astDump( ast )
+		emitFile( pathStripExt( f->normed ) + ".bi", ast )
 		astDelete( ast )
 
 		tkEnd( )

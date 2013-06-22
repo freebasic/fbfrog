@@ -413,6 +413,8 @@ enum
 	ASTATTRIB_STATIC	= &h00000002  '' VAR
 	ASTATTRIB_OCT		= &h00000004  '' CONST
 	ASTATTRIB_HEX		= &h00000008  '' CONST
+	ASTATTRIB_PPINDENTBEGIN	= &h00000010  '' PP*
+	ASTATTRIB_PPINDENTEND	= &h00000020  '' PP*
 end enum
 
 type ASTNODECONST
@@ -448,6 +450,17 @@ type ASTNODE_
 end type
 
 declare function astNew overload( byval class_ as integer ) as ASTNODE ptr
+declare function astNew overload _
+	( _
+		byval class_ as integer, _
+		byval a as ASTNODE ptr _
+	) as ASTNODE ptr
+declare function astNew overload _
+	( _
+		byval class_ as integer, _
+		byval a as ASTNODE ptr, _
+		byval b as ASTNODE ptr _
+	) as ASTNODE ptr
 declare function astNew overload _
 	( _
 		byval class_ as integer, _
@@ -495,12 +508,7 @@ declare function emitType _
 		byval subtype as ASTNODE ptr, _
 		byval debugdump as integer = FALSE _
 	) as string
-declare function emitAst _
-	( _
-		byval n as ASTNODE ptr, _
-		byval need_parens as integer = FALSE _
-	) as string
-declare sub emitWriteFile( byref filename as string, byref text as string )
+declare sub emitFile( byref filename as string, byval ast as ASTNODE ptr )
 
 declare sub ppComments( )
 declare sub ppDividers( )

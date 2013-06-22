@@ -30,7 +30,7 @@ type UDT
 
 	a as long
 	#if 1
-	b as long
+		b as long
 	#endif
 	c as long
 end type

@@ -3,7 +3,6 @@ enum
 	B
 	'' TODO: unknown construct
 	C = (1 << 4),
-	 
 	D
 	E = 1
 	F
@@ -13,7 +12,7 @@ end enum
 enum E
 	A
 	#if 1
-	B
+		B
 	#endif
 	C
 end enum

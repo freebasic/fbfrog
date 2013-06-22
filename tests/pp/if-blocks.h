@@ -24,35 +24,35 @@ short separator4;
 
 #if 0
 	short a1;
-#elseif 0
+#elif 0
 	short b1;
 #endif
 short separator5;
 
 #if 0
 	short a1;
-#elseif 1
+#elif 1
 	short b1;
 #endif
 short separator6;
 
 #if 1
 	short a1;
-#elseif 0
+#elif 0
 	short b1;
 #endif
 short separator7;
 
 #if 1
 	short a1;
-#elseif 1
+#elif 1
 	short b1;
 #endif
 short separator8;
 
 #if 0
 	short a1;
-#elseif 0
+#elif 0
 	short b1;
 #else
 	short c1;
@@ -61,7 +61,7 @@ short separator9;
 
 #if 0
 	short a1;
-#elseif 1
+#elif 1
 	short b1;
 #else
 	short c1;
@@ -70,7 +70,7 @@ short separator10;
 
 #if 1
 	short a1;
-#elseif 0
+#elif 0
 	short b1;
 #else
 	short c1;
@@ -79,7 +79,7 @@ short separator11;
 
 #if 1
 	short a1;
-#elseif 1
+#elif 1
 	short b1;
 #else
 	short c1;

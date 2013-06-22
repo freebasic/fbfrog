@@ -8,6 +8,12 @@
 
 #include once "fbfrog.bi"
 
+declare function emitAst _
+	( _
+		byval n as ASTNODE ptr, _
+		byval need_parens as integer = FALSE _
+	) as string
+
 function emitType _
 	( _
 		byval dtype as integer, _
@@ -35,10 +41,9 @@ function emitType _
 	}
 
 	dim as string s
-	dim as integer ptrcount = any, dt = any, add_typeof = any
 
-	dt = typeGetDt( dtype )
-	ptrcount = typeGetPtrCount( dtype )
+	var dt = typeGetDt( dtype )
+	var ptrcount = typeGetPtrCount( dtype )
 
 	if( typeIsConstAt( dtype, ptrcount ) ) then
 		s += "const "
@@ -54,7 +59,7 @@ function emitType _
 		''    p as function() as integer ptr
 		''    p as typeof( function() as integer ) ptr
 		'' (alternatively a typedef could be used)
-		add_typeof = (dt = TYPE_PROC) and (ptrcount >= 2)
+		var add_typeof = (dt = TYPE_PROC) and (ptrcount >= 2)
 		if( add_typeof ) then
 			s += "typeof( "
 		end if
@@ -106,14 +111,23 @@ function emitType _
 	function = s
 end function
 
-private function hIndent( byref s as string ) as string
-	'' Not just newlines?
-	if( len( strReplace( s, !"\n", "" ) ) > 0 ) then
-		function = !"\t" + strReplace( s, !"\n", !"\n\t" )
-	end if
-end function
+namespace emit
+	dim shared as integer indent, fo
+end namespace
 
-function emitAst _
+private sub emitLine( byref ln as string )
+	var s = trim( ln, any !" \t\n\r" )
+
+	if( len( s ) > 0 ) then
+		for i as integer = 1 to emit.indent
+			print #emit.fo, !"\t";
+		next
+	end if
+
+	print #emit.fo, s
+end sub
+
+private function emitAst _
 	( _
 		byval n as ASTNODE ptr, _
 		byval need_parens as integer _
@@ -125,28 +139,35 @@ function emitAst _
 		exit function
 	end if
 
+	if( n->attrib and ASTATTRIB_PPINDENTEND ) then
+		emit.indent -= 1
+	end if
+
 	select case as const( n->class )
 	case ASTCLASS_NOP
 
 	case ASTCLASS_GROUP
 		var child = n->head
 		while( child )
-			s += emitAst( child )
+			s = emitAst( child )
 			child = child->next
-			if( child ) then
-				s += !"\n"
-			end if
 		wend
+		s = ""
 
 	case ASTCLASS_DIVIDER
+		emitLine( "" )
 
 	case ASTCLASS_PPINCLUDE
-		s += "#include """ + *n->text + """"
+		emitLine( "#include """ + *n->text + """" )
+
 	case ASTCLASS_PPDEFINE
 		s += "#define " + *n->text
 		if( n->head ) then
 			s += " " + emitAst( n->head )
 		end if
+		emitLine( s )
+		s = ""
+
 	case ASTCLASS_PPIF
 		select case( n->head->class )
 		'' #if defined id     ->    #ifdef id
@@ -163,15 +184,22 @@ function emitAst _
 		if( len( s ) = 0 ) then
 			s += "#if " + emitAst( n->head )
 		end if
+
+		emitLine( s )
+		s = ""
+
 	case ASTCLASS_PPELSEIF
-		s += "#elseif " + emitAst( n->head )
+		emitLine( "#elseif " + emitAst( n->head ) )
+
 	case ASTCLASS_PPELSE
-		s += "#else"
+		emitLine( "#else" )
+
 	case ASTCLASS_PPENDIF
-		s += "#endif"
+		emitLine( "#endif" )
+
 	case ASTCLASS_PPUNKNOWN
-		s += "'' TODO: unknown PP directive" + !"\n"
-		s += emitAst( n->head )
+		emitLine( "'' TODO: unknown PP directive" )
+		emitLine( emitAst( n->head ) )
 
 	case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
 		dim as string compoundkeyword
@@ -188,37 +216,43 @@ function emitAst _
 		if( n->text ) then
 			s += " " + *n->text
 		end if
-		s += !"\n"
+		emitLine( s )
+		s = ""
+		emit.indent += 1
 
 		var child = n->head
 		while( child )
-			s += hIndent( emitAst( child ) ) + !"\n"
+			s = emitAst( child )
 			child = child->next
 		wend
+		s = ""
 
-		s += "end " + compoundkeyword
+		emit.indent -= 1
+		emitLine( "end " + compoundkeyword )
 
 	case ASTCLASS_TYPEDEF
-		s += "type " + *n->text + " as " + emitType( n->dtype, n->subtype )
+		emitLine( "type " + *n->text + " as " + emitType( n->dtype, n->subtype ) )
 
 	case ASTCLASS_VAR
 		if( n->attrib and ASTATTRIB_EXTERN ) then
-			s += "extern "     + *n->text + " as " + emitType( n->dtype, n->subtype )
+			emitLine( "extern "     + *n->text + " as " + emitType( n->dtype, n->subtype ) )
 		elseif( n->attrib and ASTATTRIB_STATIC ) then
-			s += "dim shared " + *n->text + " as " + emitType( n->dtype, n->subtype )
+			emitLine( "dim shared " + *n->text + " as " + emitType( n->dtype, n->subtype ) )
 		else
-			s += "extern     " + *n->text + " as " + emitType( n->dtype, n->subtype ) + !"\n"
-			s += "dim shared " + *n->text + " as " + emitType( n->dtype, n->subtype )
+			emitLine( "extern     " + *n->text + " as " + emitType( n->dtype, n->subtype ) )
+			emitLine( "dim shared " + *n->text + " as " + emitType( n->dtype, n->subtype ) )
 		end if
 
 	case ASTCLASS_FIELD
-		s += *n->text + " as " + emitType( n->dtype, n->subtype )
+		emitLine( *n->text + " as " + emitType( n->dtype, n->subtype ) )
 
 	case ASTCLASS_ENUMCONST
 		s += *n->text
 		if( n->head ) then
 			s += " = " + emitAst( n->head )
 		end if
+		emitLine( s )
+		s = ""
 
 	case ASTCLASS_PROC
 		'' Is this a procedure declaration,
@@ -260,6 +294,11 @@ function emitAst _
 			s += " as " + emitType( n->dtype, n->subtype )
 		end if
 
+		if( n->text ) then
+			emitLine( s )
+			s = ""
+		end if
+
 	case ASTCLASS_PARAM
 		'' vararg?
 		if( n->dtype = TYPE_NONE ) then
@@ -273,8 +312,8 @@ function emitAst _
 		end if
 
 	case ASTCLASS_UNKNOWN
-		s += "'' TODO: unknown construct" + !"\n"
-		s += emitAst( n->head )
+		emitLine( "'' TODO: unknown construct" )
+		emitLine( emitAst( n->head ) )
 
 	case ASTCLASS_CONST
 		if( typeIsFloat( n->dtype ) ) then
@@ -377,18 +416,21 @@ function emitAst _
 		assert( FALSE )
 	end select
 
+	if( n->attrib and ASTATTRIB_PPINDENTBEGIN ) then
+		emit.indent += 1
+	end if
+
 	function = s
 end function
 
-sub emitWriteFile( byref filename as string, byref text as string )
-	dim as integer fo = any
-
-	fo = freefile( )
-	if( open( filename, for output, as #fo ) ) then
+sub emitFile( byref filename as string, byval ast as ASTNODE ptr )
+	emit.indent = 0
+	emit.fo = freefile( )
+	if( open( filename, for output, as #emit.fo ) ) then
 		oops( "could not open output file: '" + filename + "'" )
 	end if
 
-	print #fo, text
+	var s = emitAst( ast )
 
-	close #fo
+	close #emit.fo
 end sub

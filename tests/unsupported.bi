@@ -16,33 +16,28 @@ type T as long
 
 enum
 	#if 1
-	'' TODO: unknown construct
-	A    
-	
+		'' TODO: unknown construct
+		A
 	#endif
 end enum
 
 enum
 	'' TODO: unknown construct
 	A =
-	 1
-	
+ 1
 	#if 1
-	'' TODO: unknown construct
-	+
-	 2
-	
+		'' TODO: unknown construct
+		+
+ 2
 	#endif
 	'' TODO: unknown construct
 	,
-	 
 	B
 end enum
 
 type T
 	'' TODO: unknown construct
 	union {
-	  int a;
-	 } foo;
-	
+  int a;
+ } foo;
 end type
