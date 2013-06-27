@@ -339,12 +339,13 @@ end sub
 
 		ppDirectives2( )
 
-#if 0
-		ppEvalInit( )
-		ppEvalExpressions( )
-		ppEvalIfs( )
-		ppEvalEnd( )
-#endif
+		if( (strMatches( "tests/*", f->pretty ) = FALSE) or _
+		    strMatches( "tests/pp/eval-*", f->pretty ) ) then
+			ppEvalInit( )
+			ppEvalExpressions( )
+			ppEvalIfs( )
+			ppEvalEnd( )
+		end if
 
 		ast = cToplevel( )
 

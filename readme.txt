@@ -58,16 +58,10 @@ Compiling:
 
 To do:
 
-- BOL checks use -1 instead skipRev(), so won't work if there is a TK_SPACE etc.
-- #defines don't emit comments yet
-- how to handle number literals properly?
-    - AST should store them as longints/doubles, plus dtype
-    - The lexer needs to parse 'ull' type suffixes etc., so it's the one that
-      decides the dtype
 - should use TYPE_INT32 instead of TYPE_LONG, that's much less confusing
   (which "long" is it referring to, C's or FB's..)
 - why bother with TK_DIVIDER? We want automated formatting anyways, don't need
-  dividers for that...
+  dividers for that
 
 - Combine -follow/-merge/-concat into just -merge
   - Make -merge the default
@@ -77,36 +71,6 @@ To do:
       a) 1:1 translation
       b) all:1 (merge) translation
   - Any other special cases should be handled manually by the presets
-
-- FB needs bindings, no 1:1 translations, so use some kind of AST
-    - merge low-level tokens into high-level tokens
-    - don't bother preserving white-space/formatting
-
-- Add "presets", custom hard-coded header-specific translation helpers for
-  fixups before and after normal translation (e.g. renaming symbols)
-
-- Allow registering type mappings dynamically, with built-in types added by default
-  so we could remap custom types such as myint32 -> long (if wanted)
-
-- Add #if evaluation function, to solve out useless #if blocks (that's pretty
-  common for C headers which support tons of different C compilers/systems,
-  while for FB only GNU C + certain targets are interesting)
-- Add function to expand certain macros
-- Allow presets to specify information on #defined symbols
-    - assume defined to value
-    - assume defined
-    - assume undefined
-- Auto-register new defines, based on found #defines, possibly dependant on
-  #if blocks
-
-- Comments should be associated with high level constructs, or blocks of them
-  comment at EOL but behind code -> belongs to that code
-  comment alone in line above line of code -> belongs to the following code
-  otherwise, it's a "section divider" comment
-
-- Add option to display #include dependency graph for the input files
-  - useful to decide whether to -merge or not, to see how many "root" includes
-    there are, etc.
 
 - Add output directory option
 

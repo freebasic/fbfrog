@@ -162,142 +162,131 @@ end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-const IFSTACKSIZE = 64
+namespace fi
+	const IFSTACKSIZE = 64
 
-type IFSTACKNODE
-	cond		as integer '' COND_*
-	found_else	as integer
-end type
+	type IFSTACKNODE
+		cond		as integer '' COND_*
+		found_else	as integer
+	end type
 
-dim shared as IFSTACKNODE ifstack(0 to IFSTACKSIZE-1)
+	dim shared as IFSTACKNODE stack(0 to IFSTACKSIZE-1)
+	dim shared as integer skip, level, x
+end namespace
+
+private sub hStartSkip( )
+	'' not yet skipping?
+	if( fi.skip = -1 ) then
+		'' #if FALSE, or #else of #if TRUE? start skipping
+		with( fi.stack(fi.level) )
+			if( ((not .found_else) and (.cond = COND_FALSE)) or _
+			    (     .found_else  and (.cond = COND_TRUE )) ) then
+				fi.skip = fi.level + 1
+			end if
+		end with
+	end if
+end sub
+
+private sub hStopSkip( )
+	'' Skipping at current level?
+	if( fi.skip = fi.level + 1 ) then
+		'' Now stop skipping
+		fi.skip = -1
+	end if
+end sub
+
+private sub hCheckCond( byval t as ASTNODE ptr )
+	if( t->head->class = ASTCLASS_CONST ) then
+		assert( typeIsFloat( t->head->dtype ) = FALSE )
+		fi.stack(fi.level).cond = iif( t->head->val.i <> 0, COND_TRUE, COND_FALSE )
+	else
+		fi.stack(fi.level).cond = COND_UNKNOWN
+	end if
+	fi.stack(fi.level).found_else = FALSE
+end sub
+
+private sub hDeleteToken( )
+	if( fi.stack(fi.level).cond <> COND_UNKNOWN ) then
+		tkRemove( fi.x, fi.x )
+		tkInsert( fi.x, TK_EOL )
+	end if
+end sub
 
 sub ppEvalIfs( )
-	dim as integer x = any, level = any, skip = any
-	dim as ASTNODE ptr t = any
-
-	x = 0
-	level = -1
-	skip = -1
+	fi.x = 0
+	fi.level = -1
+	fi.skip = -1
 	do
-		select case( tkGet( x ) )
+		select case( tkGet( fi.x ) )
 		case TK_EOF
 			exit do
 
 		case TK_AST
-			t = tkGetAst( x )
+			var t = tkGetAst( fi.x )
 
 			select case( t->class )
 			case ASTCLASS_PPIF, ASTCLASS_PPELSEIF
 				if( t->class = ASTCLASS_PPIF ) then
-					level += 1
+					fi.level += 1
 				else
-					if( level < 0 ) then
+					if( fi.level < 0 ) then
 						oops( "#elif without #if" )
-					elseif( ifstack(level).found_else ) then
+					elseif( fi.stack(fi.level).found_else ) then
 						oops( "#elif after #else" )
 					end if
+
+					hStopSkip( )
 				end if
 
-				if( t->head->class = ASTCLASS_CONST ) then
-					assert( typeIsFloat( t->head->dtype ) = FALSE )
-					ifstack(level).cond = iif( t->head->val.i <> 0, COND_TRUE, COND_FALSE )
+				hCheckCond( t )
+				hStartSkip( )
 
-					'' not yet skipping?
-					if( skip = -1 ) then
-						'' #if FALSE? start skipping
-						if( ifstack(level).cond = COND_FALSE ) then
-							skip = level + 1
-						end if
-					end if
-				else
-					ifstack(level).cond = COND_UNKNOWN
-				end if
-				ifstack(level).found_else = FALSE
-
-				print level,;
+				print fi.level,;
 				if( t->class = ASTCLASS_PPIF ) then
 					print "if";
 				else
 					print "elseif";
 				end if
-				print , "cond=" & ifstack(level).cond, "skip=" & skip
+				print , "cond=" & fi.stack(fi.level).cond, "skip=" & fi.skip
 
-				if( ifstack(level).cond <> COND_UNKNOWN ) then
-					tkRemove( x, x )
-					t = NULL
-					tkInsert( x, TK_EOL )
-				end if
+				hDeleteToken( )
 
 			case ASTCLASS_PPELSE
-				if( ifstack(level).found_else ) then
+				if( fi.stack(fi.level).found_else ) then
 					oops( "repeated #else" )
 				end if
-				ifstack(level).found_else = TRUE
+				fi.stack(fi.level).found_else = TRUE
 
-				'' Skipping?
-				if( skip >= 0 ) then
-					'' Was the #if corresponding to this #else the cause of the skipping?
-					if( skip = level + 1 ) then
-						'' It must have been an #if FALSE
-						assert( ifstack(level).cond = COND_FALSE )
-
-						'' Now stop skipping and parse this #else block
-						skip = -1
-					end if
-				else
-					'' Not skipping, so the #if corresponding to this #else must have been
-					'' an #if TRUE (and no other skipping from outer levels either).
-					assert( ifstack(level).cond = COND_TRUE )
-
-					'' Start skipping now to skip the #else block
-					skip = level + 1
-				end if
-
-				if( ifstack(level).cond <> COND_UNKNOWN ) then
-					tkRemove( x, x )
-					t = NULL
-					tkInsert( x, TK_EOL )
-				end if
-
-				print level, "else", "skip=" & skip
+				hStopSkip( )
+				hStartSkip( )
+				hDeleteToken( )
+				print fi.level, "else", "skip=" & fi.skip
 
 			case ASTCLASS_PPENDIF
-				if( level < 0 ) then
+				if( fi.level < 0 ) then
 					oops( "#endif without #if" )
 				end if
 
-				'' Skipping?
-				if( skip >= 0 ) then
-					'' Was the #if/#else corresponding to this #endif the cause of the skipping?
-					if( skip = level + 1 ) then
-						'' Now stop skipping
-						skip = -1
-					end if
-				end if
+				hStopSkip( )
+				hDeleteToken( )
 
-				if( ifstack(level).cond <> COND_UNKNOWN ) then
-					tkRemove( x, x )
-					t = NULL
-					tkInsert( x, TK_EOL )
-				end if
-
-				print level, "endif", "skip=" & skip
-				level -= 1
+				print fi.level, "endif", "skip=" & fi.skip
+				fi.level -= 1
 
 			end select
 
-			x += 1
+			fi.x += 1
 
 		case else
-			if( skip >= 0 ) then
-				tkRemove( x, x )
-				x -= 1
+			if( fi.skip >= 0 ) then
+				tkRemove( fi.x, fi.x )
+				fi.x -= 1
 			end if
-			x += 1
+			fi.x += 1
 		end select
 	loop
 
-	if( level >= 0 ) then
-		oops( "missing " & level + 1 & " #endif" )
+	if( fi.level >= 0 ) then
+		oops( "missing " & fi.level + 1 & " #endif" )
 	end if
 end sub
