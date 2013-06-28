@@ -3,8 +3,16 @@
 '' or "undefined" for #if defined() or #ifdef checks. defined() checks on
 '' unknown symbols are not solved out.
 ''
-'' ppEvalIfs() solves out #if/#else blocks if the condition value is known,
-'' i.e. expressions that could be simplified down to true or false.
+'' #if evaluation is done with these 3 steps:
+''
+'' 1. ppSplitElseIfs(): Splitting up #elseifs blocks into normal
+''    #else/#if/#endif blocks
+'' 2. ppEvalIfs(): Checks each #if whether the condition is known to be true
+''    or false, i.e. expressions that could be simplified down to a constant,
+''    and if so, deletes tokens accordingly before continuing to the next #if.
+''    Not having to worry about #elseifs greatly simplifies this step.
+'' 3. ppMergeElseIfs(): Merging #else/#if/#endif blocks back into #elseifs
+
 
 #include once "fbfrog.bi"
 
@@ -162,131 +170,179 @@ end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-namespace fi
-	const IFSTACKSIZE = 64
+'' Find corresponding #else and closing #endif, while stepping over nested
+'' #if blocks.
+private sub hFindElseEndIf _
+	( _
+		byval x as integer, _
+		byref xelse as integer, _
+		byref xendif as integer _
+	)
 
-	type IFSTACKNODE
-		cond		as integer '' COND_*
-		found_else	as integer
-	end type
+	xelse = -1
+	xendif = -1
 
-	dim shared as IFSTACKNODE stack(0 to IFSTACKSIZE-1)
-	dim shared as integer skip, level, x
-end namespace
-
-private sub hStartSkip( )
-	'' not yet skipping?
-	if( fi.skip = -1 ) then
-		'' #if FALSE, or #else of #if TRUE? start skipping
-		with( fi.stack(fi.level) )
-			if( ((not .found_else) and (.cond = COND_FALSE)) or _
-			    (     .found_else  and (.cond = COND_TRUE )) ) then
-				fi.skip = fi.level + 1
-			end if
-		end with
-	end if
-end sub
-
-private sub hStopSkip( )
-	'' Skipping at current level?
-	if( fi.skip = fi.level + 1 ) then
-		'' Now stop skipping
-		fi.skip = -1
-	end if
-end sub
-
-private sub hCheckCond( byval t as ASTNODE ptr )
-	if( t->head->class = ASTCLASS_CONST ) then
-		assert( typeIsFloat( t->head->dtype ) = FALSE )
-		fi.stack(fi.level).cond = iif( t->head->val.i <> 0, COND_TRUE, COND_FALSE )
-	else
-		fi.stack(fi.level).cond = COND_UNKNOWN
-	end if
-	fi.stack(fi.level).found_else = FALSE
-end sub
-
-private sub hDeleteToken( )
-	if( fi.stack(fi.level).cond <> COND_UNKNOWN ) then
-		tkRemove( fi.x, fi.x )
-		tkInsert( fi.x, TK_EOL )
-	end if
-end sub
-
-sub ppEvalIfs( )
-	fi.x = 0
-	fi.level = -1
-	fi.skip = -1
+	var level = 0
 	do
-		select case( tkGet( fi.x ) )
+		select case( tkGet( x ) )
 		case TK_EOF
 			exit do
 
 		case TK_AST
-			var t = tkGetAst( fi.x )
+			var t = tkGetAst( x )
 
 			select case( t->class )
-			case ASTCLASS_PPIF, ASTCLASS_PPELSEIF
-				if( t->class = ASTCLASS_PPIF ) then
-					fi.level += 1
-				else
-					if( fi.level < 0 ) then
-						oops( "#elif without #if" )
-					elseif( fi.stack(fi.level).found_else ) then
-						oops( "#elif after #else" )
-					end if
-
-					hStopSkip( )
-				end if
-
-				hCheckCond( t )
-				hStartSkip( )
-
-				print fi.level,;
-				if( t->class = ASTCLASS_PPIF ) then
-					print "if";
-				else
-					print "elseif";
-				end if
-				print , "cond=" & fi.stack(fi.level).cond, "skip=" & fi.skip
-
-				hDeleteToken( )
+			case ASTCLASS_PPIF
+				level += 1
 
 			case ASTCLASS_PPELSE
-				if( fi.stack(fi.level).found_else ) then
-					oops( "repeated #else" )
+				if( level = 0 ) then
+					xelse = x
 				end if
-				fi.stack(fi.level).found_else = TRUE
-
-				hStopSkip( )
-				hStartSkip( )
-				hDeleteToken( )
-				print fi.level, "else", "skip=" & fi.skip
 
 			case ASTCLASS_PPENDIF
-				if( fi.level < 0 ) then
-					oops( "#endif without #if" )
+				if( level = 0 ) then
+					xendif = x
+					exit do
 				end if
-
-				hStopSkip( )
-				hDeleteToken( )
-
-				print fi.level, "endif", "skip=" & fi.skip
-				fi.level -= 1
+				level -= 1
 
 			end select
 
-			fi.x += 1
-
-		case else
-			if( fi.skip >= 0 ) then
-				tkRemove( fi.x, fi.x )
-				fi.x -= 1
-			end if
-			fi.x += 1
 		end select
+
+		x += 1
 	loop
 
-	if( fi.level >= 0 ) then
-		oops( "missing " & fi.level + 1 & " #endif" )
+	'' If no #else was found, use same position as for #endif
+	if( xelse < 0 ) then
+		xelse = xendif
 	end if
+end sub
+
+'' Expand #elseifs into normal #if blocks:
+''
+'' 1.   #if 1       2. #if 1          3. #if 1
+''      #elseif 2      #else             #else
+''      #elseif 3          #if 2             #if 2
+''      #else              #elseif 3         #else
+''      #endif             #else                 #if 3
+''                         #endif                #else
+''                     #endif                    #endif
+''                                           #endif
+''                                       #endif
+sub ppSplitElseIfs( )
+	var x = 0
+
+	do
+		select case( tkGet( x ) )
+		case TK_EOF
+			exit do
+
+		case TK_AST
+			var t = tkGetAst( x )
+
+			'' Found an #elseif? Replace it by #else #if
+			if( t->class = ASTCLASS_PPELSEIF ) then
+				t = astClone( t->head )
+				tkRemove( x, x )
+				tkInsert( x, TK_AST, , astNew( ASTCLASS_PPELSE ) )
+				x += 1
+				tkInsert( x, TK_AST, , astNew( ASTCLASS_PPIF, t, NULL, NULL ) )
+
+				'' Find the corresponding #endif,
+				'' and insert another #endif in front of it
+				dim as integer xelse, xendif
+				hFindElseEndIf( x + 1, xelse, xendif )
+				tkInsert( xendif, TK_AST, , astNew( ASTCLASS_PPENDIF ) )
+			end if
+
+			x += 1
+
+		case else
+			x += 1
+		end select
+	loop
+end sub
+
+'' Solve out #if/#else/#endif blocks if the condition is known to be TRUE/FALSE
+sub ppEvalIfs( )
+	var x = 0
+	do
+		select case( tkGet( x ) )
+		case TK_EOF
+			exit do
+
+		case TK_AST
+			var t = tkGetAst( x )
+			if( t->class = ASTCLASS_PPIF ) then
+				var cond = COND_UNKNOWN
+				if( t->head->class = ASTCLASS_CONST ) then
+					assert( typeIsFloat( t->head->dtype ) = FALSE )
+					cond = iif( t->head->val.i <> 0, COND_TRUE, COND_FALSE )
+				end if
+
+				if( cond <> COND_UNKNOWN ) then
+					dim as integer xelse, xendif
+					hFindElseEndIf( x + 1, xelse, xendif )
+
+					if( cond = COND_TRUE ) then
+						'' Remove whole #else..#endif block and the #if
+						tkRemove( xelse, xendif )
+						tkRemove( x, x )
+					else
+						if( xelse = xendif ) then
+							'' No #else found; remove whole #if..#endif block
+							tkRemove( x, xendif )
+						else
+							'' Remove whole #if..#else block and the #endif
+							tkRemove( xendif, xendif )
+							tkRemove( x, xelse )
+						end if
+					end if
+
+					x -= 1
+				end if
+			end if
+
+		end select
+
+		x += 1
+	loop
+end sub
+
+'' Merge #else #if back into #elseifs
+sub ppMergeElseIfs( )
+	var x = 0
+
+	do
+		select case( tkGet( x ) )
+		case TK_EOF
+			exit do
+
+		case TK_AST
+			'' Found an #else followed by an #if?
+			var t = tkGetAst( x )
+			if( t->class = ASTCLASS_PPELSE ) then
+				if( tkGet( x + 1 ) = TK_AST ) then
+					t = tkGetAst( x + 1 )
+					if( t->class = ASTCLASS_PPIF ) then
+						t = astClone( t->head )
+						tkRemove( x, x + 1 )
+						tkInsert( x, TK_AST, , astNew( ASTCLASS_PPELSEIF, t, NULL, NULL ) )
+
+						'' Find the corresponding #endif and remove it
+						dim as integer xelse, xendif
+						hFindElseEndIf( x + 1, xelse, xendif )
+						tkRemove( xendif, xendif )
+					end if
+				end if
+			end if
+
+			x += 1
+
+		case else
+			x += 1
+		end select
+	loop
 end sub

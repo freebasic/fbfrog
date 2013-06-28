@@ -343,7 +343,9 @@ end sub
 		    strMatches( "tests/pp/eval-*", f->pretty ) ) then
 			ppEvalInit( )
 			ppEvalExpressions( )
+			ppSplitElseIfs( )
 			ppEvalIfs( )
+			ppMergeElseIfs( )
 			ppEvalEnd( )
 		end if
 

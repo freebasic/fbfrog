@@ -518,7 +518,9 @@ declare sub ppEvalInit( )
 declare sub ppEvalEnd( )
 declare sub ppAddSymbol( byval id as zstring ptr, byval is_defined as integer )
 declare sub ppEvalExpressions( )
+declare sub ppSplitElseIfs( )
 declare sub ppEvalIfs( )
+declare sub ppMergeElseIfs( )
 declare function cSkip( byval x as integer ) as integer
 declare function cSkipRev( byval x as integer ) as integer
 declare function cSkipStatement _
