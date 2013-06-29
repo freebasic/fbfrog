@@ -1,5 +1,3 @@
-#ifndef TEST_H
-#define TEST_H
 
 #define A 1
 #define B 2
@@ -23,4 +21,3 @@
 	#pragma foo
 #endif
 
-#endif

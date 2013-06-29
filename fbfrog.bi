@@ -98,20 +98,6 @@ declare sub hScanDirectoryForH _
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-type FSFILE
-	pretty		as string  '' Pretty name from command line or #include
-	normed		as string  '' Normalized path used in hash table
-end type
-
-declare sub fsInit( )
-declare sub fsPush( byval context as FSFILE ptr )
-declare sub fsPop( )
-declare function fsAdd( byref pretty as string ) as FSFILE ptr
-declare function fsGetHead( ) as FSFILE ptr
-declare sub fsStats( )
-
-''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-
 '' When changing, update the table in ast.bas too!
 enum
 	TK_EOF
@@ -252,6 +238,7 @@ declare function tkInfoText( byval tk as integer ) as zstring ptr
 #define TRACE( x ) print __FUNCTION__ + "(" + str( __LINE__ ) + "): " + tkDumpOne( x )
 
 type ASTNODE as ASTNODE_
+type FROGFILE as FROGFILE_
 
 declare function strDuplicate( byval s as zstring ptr ) as zstring ptr
 declare sub tkInit( )
@@ -437,7 +424,7 @@ type ASTNODE_
 	subtype		as ASTNODE ptr
 
 	'' Source location where this declaration/statement was found
-	sourcefile	as FSFILE ptr
+	sourcefile	as FROGFILE ptr
 	sourceline	as integer
 
 	val		as ASTNODECONST
@@ -487,6 +474,7 @@ declare function astReplaceChild _
 		byval a as ASTNODE ptr, _
 		byval b as ASTNODE ptr _
 	) as ASTNODE ptr
+declare sub astRemoveChild( byval parent as ASTNODE ptr, byval a as ASTNODE ptr )
 declare sub astSetText( byval n as ASTNODE ptr, byval text as zstring ptr )
 declare sub astSetType _
 	( _
@@ -532,30 +520,17 @@ declare function cToplevel( ) as ASTNODE ptr
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-type DEPNODE
-	f		as FSFILE ptr
-
-	children	as DEPNODE ptr ptr
-	childcount	as integer
-	childroom	as integer
-
-	missing		as integer
+type FROGFILE_
+	pretty		as string '' Pretty name from command line or #include
+	normed		as string '' Normalized path used in hash table
 end type
 
-declare sub depInit( )
-declare function depLookup( byval f as FSFILE ptr ) as DEPNODE ptr
-declare function depAdd( byref pretty as string ) as DEPNODE ptr
-declare sub depOn( byval node as DEPNODE ptr, byval child as DEPNODE ptr )
-declare sub depScan( )
-declare sub depPrintFlat( )
-
-''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-
 type FROGSTUFF
-	dep		as integer
 	merge		as integer
 	verbose		as integer
 	preset		as string
+	files		as TLIST '' FROGFILE
+	filehash	as THASH
 end type
 
 extern as FROGSTUFF frog

@@ -70,30 +70,105 @@ function strMatches _
 	end if
 end function
 
-private sub hPrintHelp( )
+private sub frogInit( )
+	listInit( @frog.files, sizeof( FROGFILE ) )
+	hashInit( @frog.filehash, 6 )
+end sub
+
+private function frogAddFile _
+	( _
+		byval context as FROGFILE ptr, _
+		byref pretty as string _
+	) as FROGFILE ptr
+
+	dim as string real
+
+	if( context ) then
+		'' Search for #included files in one of the parent directories
+		'' of the current file. Usually the #include will refer to a
+		'' file in the same directory or in a sub-directory at the same
+		'' level or some levels up.
+
+		var parent = pathOnly( context->normed )
+		do
+			'' File not found anywhere, ignore it.
+			if( len( parent ) = 0 ) then
+				if( frog.verbose ) then
+					print "  missing: " + pretty
+				end if
+				real = ""
+				exit do
+			end if
+
+			real = parent + pretty
+			if( hFileExists( real ) ) then
+				if( frog.verbose ) then
+					print "  found: " + pretty + ": " + real
+				end if
+				exit do
+			end if
+
+			if( frog.verbose ) then
+				print "  not found: " + pretty + ": " + real
+			end if
+
+			parent = pathStripLastComponent( parent )
+		loop
+	else
+		real = pathMakeAbsolute( pretty )
+	end if
+
+	var normed = pathNormalize( real )
+
+	var hash = hashHash( normed )
+	var item = hashLookup( @frog.filehash, normed, hash )
+	if( item->s ) then
+		'' Already exists
+		if( frog.verbose ) then
+			print "  old news: " + pretty + ": " + normed
+		end if
+		return item->data
+	end if
+
+	if( frog.verbose ) then
+		print "  new file: " + pretty + ": " + normed
+	end if
+
+	'' Add file
+	dim as FROGFILE ptr f = listAppend( @frog.files )
+	f->pretty = pretty
+	f->normed = normed
+
+	'' Add to hash table
+	hashAdd( @frog.filehash, item, hash, f->normed, f )
+
+	function = f
+end function
+
+private sub hPrintHelp( byref message as string )
+	if( len( message ) > 0 ) then
+		print message
+	end if
 	print "fbfrog 0.1 from " + __DATE_ISO__
 	print "usage: fbfrog *.h"
 	print "The given *.h file will be translated into a *.bi file. It needs reviewing"
 	print "and editing afterwards, so watch out for TODOs and C/FB differences like"
 	print "procedure calling conventions."
 	print "options:"
-	print "  -merge       Combine all files into one"
+	print "  -l <name>    Select preset"
 	print "  -verbose     Show debugging info"
-	print "  -help, -version      Help and version output"
-	end 0
+	end (iif( len( message ) > 0, 1, 0 ))
 end sub
 
 private sub hAddFromDir( byref d as string )
-	dim as TLIST list = any
-	dim as string ptr s = any
-
+	dim as TLIST list
 	listInit( @list, sizeof( string ) )
 
 	hScanDirectoryForH( d, @list )
 
-	s = listGetHead( @list )
+	dim as string ptr s = listGetHead( @list )
 	while( s )
-		depAdd( *s )
+		frogAddFile( NULL, *s )
 		*s = ""
 		s = listGetNext( s )
 	wend
@@ -116,13 +191,11 @@ private sub hParseArgs( byval argc as integer, byval argv as zstring ptr ptr )
 
 			select case( arg )
 			case "help", "version"
-				hPrintHelp( )
+				hPrintHelp( "" )
 			case "merge"
 				frog.merge = TRUE
 			case "verbose"
 				frog.verbose = TRUE
-			case "dep"
-				frog.dep = TRUE
 			case else
 				'' "-l<name>" or "-l <name>"
 				if( left( arg, 1 ) = "l" ) then
@@ -136,25 +209,25 @@ private sub hParseArgs( byval argc as integer, byval argv as zstring ptr ptr )
 						if( i < argc ) then
 							arg = *argv[i]
 						else
-							oops( "missing argument for -l option, please use -l<name> or -l <name>" )
+							hPrintHelp( "missing argument for -l option" )
 						end if
 					end if
 
 					frog.preset = arg
 				elseif( len( arg ) > 0 ) then
-					oops( "unknown option: '" + arg + "', try --help" )
+					hPrintHelp( "unknown option: " + *argv[i] )
 				end if
 			end select
 		else
 			select case( pathExtOnly( arg ) )
 			case "h", "hh", "hxx", "hpp", "c", "cc", "cxx", "cpp"
 				'' File from command line, search in current directory
-				depAdd( arg )
+				frogAddFile( NULL, arg )
 			case ""
 				'' No extension? Treat as directory...
 				hAddFromDir( arg )
 			case else
-				oops( "'" + arg + "' is not a *.h file" )
+				hPrintHelp( "'" + arg + "' is not a *.h file" )
 			end select
 		end if
 	next
@@ -304,93 +377,84 @@ private sub hRemoveIncludeGuard( byval n as ASTNODE ptr )
 	end if
 end sub
 
-''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+private sub hVisitIncludes( byval main as ASTNODE ptr )
+	var child = main->head
+	while( child )
+		if( child->class = ASTCLASS_PPINCLUDE ) then
+			print "#include: " & *child->text
+		end if
+		child = child->next
+	wend
+end sub
 
-	depInit( )
-	fsInit( )
+private function hLoadFileToAst( byval f as FROGFILE ptr ) as ASTNODE ptr
+	print "parsing: ";f->normed
 
-	hParseArgs( __FB_ARGC__, __FB_ARGV__ )
+	tkInit( )
+	lexLoadFile( 0, f->normed )
 
-	if( fsGetHead( ) = NULL ) then
-		oops( "no input files" )
-	end if
+	ppComments( )
+	ppDividers( )
+	ppDirectives1( )
 
-	if( frog.dep ) then
-		depScan( )
-		depPrintFlat( )
-		end 0
-	end if
+	select case( frog.preset )
+	case "zip"
+		tkRemoveAllOf( TK_ID, "ZIP_EXTERN" )
+	end select
 
-	''
-	'' By default, all input files are translated 1:1. With -merge however,
-	'' files with refcount = 1 are merged into their parent (in place of
-	'' the #include statement), and files with refcount = 0 are appended.
-	''
-	'' Concat: Load & parse all files with refcount = 0 into the token buffer,
-	'' one after another, so #includes (when merging) can be handled
-	'' in the context of their parent, the current file.
-	''
-	'' Regular translation, 1:1, possibly with merges
-	'' Pass 1: Translate everything that doesn't look like it'll be merged
-	'' Pass 2: Translate files that looked like they should be merged,
-	''         but weren't. (recursive #includes, all refcount > 0)
-	''
+	ppDirectives2( )
 
-	dim as FSFILE ptr f = any
-	dim as ASTNODE ptr ast = any
-
-	f = fsGetHead( )
-	while( f )
-
-		fsPush( f )
-		tkInit( )
-		lexLoadFile( 0, f->normed )
-		print "translating: ";f->normed
-
-		ppComments( )
-		ppDividers( )
-		ppDirectives1( )
+	if( (strMatches( "tests/*", f->pretty ) = FALSE) or _
+	    strMatches( "tests/pp/eval-*", f->pretty ) ) then
+		ppEvalInit( )
 
 		select case( frog.preset )
 		case "zip"
-			tkRemoveAllOf( TK_ID, "ZIP_EXTERN" )
+			ppAddSymbol( "ZIP_EXTERN", TRUE )
+			ppAddSymbol( "__cplusplus", FALSE )
+			ppAddSymbol( "ZIP_DISABLE_DEPRECATED", FALSE )
 		end select
 
-		ppDirectives2( )
+		ppEvalExpressions( )
+		ppSplitElseIfs( )
+		ppEvalIfs( )
+		ppMergeElseIfs( )
+		ppEvalEnd( )
+	end if
 
-		if( (strMatches( "tests/*", f->pretty ) = FALSE) or _
-		    strMatches( "tests/pp/eval-*", f->pretty ) ) then
-			ppEvalInit( )
+	var ast = cToplevel( )
 
-			select case( frog.preset )
-			case "zip"
-				ppAddSymbol( "ZIP_EXTERN", TRUE )
-				ppAddSymbol( "__cplusplus", FALSE )
-				ppAddSymbol( "ZIP_DISABLE_DEPRECATED", FALSE )
-			end select
+	tkEnd( )
 
-			ppEvalExpressions( )
-			ppSplitElseIfs( )
-			ppEvalIfs( )
-			ppMergeElseIfs( )
-			ppEvalEnd( )
-		end if
+	hSetPPIndentAttrib( ast, TRUE )
+	'hRemovePPIndentFromIncludeGuard( ast )
+	hRemoveIncludeGuard( ast )
+	if( strMatches( "tests/pp/expr-*", f->pretty ) ) then
+		hSetPPIndentAttrib( ast, FALSE )
+	end if
 
-		ast = cToplevel( )
+	hVisitIncludes( ast )
 
-		hSetPPIndentAttrib( ast, TRUE )
-		'hRemovePPIndentFromIncludeGuard( ast )
-		hRemoveIncludeGuard( ast )
-		if( strMatches( "tests/pp/expr-*", f->pretty ) ) then
-			hSetPPIndentAttrib( ast, FALSE )
-		end if
+	function = ast
+end function
 
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+	frogInit( )
+
+	hParseArgs( __FB_ARGC__, __FB_ARGV__ )
+
+	if( listGetHead( @frog.files ) = NULL ) then
+		oops( "no input files" )
+	end if
+
+	dim as FROGFILE ptr f = listGetHead( @frog.files )
+	while( f )
+
+		var ast = hLoadFileToAst( f )
 		'astDump( ast )
 		emitFile( pathStripExt( f->normed ) + ".bi", ast )
 		astDelete( ast )
-
-		tkEnd( )
-		fsPop( )
 
 		f = listGetNext( f )
 	wend
