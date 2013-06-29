@@ -81,7 +81,7 @@ private function frogAddFile _
 		byref pretty as string _
 	) as FROGFILE ptr
 
-	dim as string real
+	dim as string normed
 
 	if( context ) then
 		'' Search for #included files in one of the parent directories
@@ -93,51 +93,60 @@ private function frogAddFile _
 		do
 			'' File not found anywhere, ignore it.
 			if( len( parent ) = 0 ) then
-				if( frog.verbose ) then
-					print "  missing: " + pretty
-				end if
-				real = ""
+				normed = ""
 				exit do
 			end if
 
-			real = parent + pretty
-			if( hFileExists( real ) ) then
+			normed = parent + pretty
+			if( hFileExists( normed ) ) then
 				if( frog.verbose ) then
-					print "  found: " + pretty + ": " + real
+					print "    found: " + normed
 				end if
 				exit do
 			end if
 
 			if( frog.verbose ) then
-				print "  not found: " + pretty + ": " + real
+				print "    not found: " + normed
 			end if
 
 			parent = pathStripLastComponent( parent )
 		loop
 	else
-		real = pathMakeAbsolute( pretty )
+		normed = pathMakeAbsolute( pretty )
 	end if
 
-	var normed = pathNormalize( real )
+	var missing = FALSE
+	if( len( normed ) > 0 ) then
+		normed = pathNormalize( normed )
+	else
+		'' File missing/not found; still add it to the hash
+		normed = pretty
+		missing = TRUE
+	end if
 
 	var hash = hashHash( normed )
 	var item = hashLookup( @frog.filehash, normed, hash )
 	if( item->s ) then
 		'' Already exists
 		if( frog.verbose ) then
-			print "  old news: " + pretty + ": " + normed
+			print "    old news: " + pretty + ": " + normed
 		end if
 		return item->data
 	end if
 
 	if( frog.verbose ) then
-		print "  new file: " + pretty + ": " + normed
+		if( missing ) then
+			print "    registered: " + pretty + " (missing)"
+		else
+			print "    registered: " + pretty + ": " + normed
+		end if
 	end if
 
 	'' Add file
 	dim as FROGFILE ptr f = listAppend( @frog.files )
 	f->pretty = pretty
 	f->normed = normed
+	f->missing = missing
 
 	'' Add to hash table
 	hashAdd( @frog.filehash, item, hash, f->normed, f )
@@ -176,7 +185,7 @@ private sub hAddFromDir( byref d as string )
 	listEnd( @list )
 end sub
 
-private sub hParseArgs( byval argc as integer, byval argv as zstring ptr ptr )
+private sub hParseArgs1( byval argc as integer, byval argv as zstring ptr ptr )
 	dim as string arg
 
 	for i as integer = 1 to argc-1
@@ -218,7 +227,15 @@ private sub hParseArgs( byval argc as integer, byval argv as zstring ptr ptr )
 					hPrintHelp( "unknown option: " + *argv[i] )
 				end if
 			end select
-		else
+		end if
+	next
+end sub
+
+private sub hParseArgs2( byval argc as integer, byval argv as zstring ptr ptr )
+	dim as string arg
+	for i as integer = 1 to argc-1
+		arg = *argv[i]
+		if( left( arg, 1 ) <> "-" ) then
 			select case( pathExtOnly( arg ) )
 			case "h", "hh", "hxx", "hpp", "c", "cc", "cxx", "cpp"
 				'' File from command line, search in current directory
@@ -377,18 +394,8 @@ private sub hRemoveIncludeGuard( byval n as ASTNODE ptr )
 	end if
 end sub
 
-private sub hVisitIncludes( byval main as ASTNODE ptr )
-	var child = main->head
-	while( child )
-		if( child->class = ASTCLASS_PPINCLUDE ) then
-			print "#include: " & *child->text
-		end if
-		child = child->next
-	wend
-end sub
-
-private function hLoadFileToAst( byval f as FROGFILE ptr ) as ASTNODE ptr
-	print "parsing: ";f->normed
+private sub frogLoadFile( byval f as FROGFILE ptr )
+	print "parsing: ";f->pretty
 
 	tkInit( )
 	lexLoadFile( 0, f->normed )
@@ -422,39 +429,59 @@ private function hLoadFileToAst( byval f as FROGFILE ptr ) as ASTNODE ptr
 		ppEvalEnd( )
 	end if
 
-	var ast = cToplevel( )
+	f->ast = cToplevel( )
 
 	tkEnd( )
 
-	hSetPPIndentAttrib( ast, TRUE )
+	hSetPPIndentAttrib( f->ast, TRUE )
 	'hRemovePPIndentFromIncludeGuard( ast )
-	hRemoveIncludeGuard( ast )
+	hRemoveIncludeGuard( f->ast )
 	if( strMatches( "tests/pp/expr-*", f->pretty ) ) then
-		hSetPPIndentAttrib( ast, FALSE )
+		hSetPPIndentAttrib( f->ast, FALSE )
 	end if
-
-	hVisitIncludes( ast )
-
-	function = ast
-end function
+end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 	frogInit( )
 
-	hParseArgs( __FB_ARGC__, __FB_ARGV__ )
+	hParseArgs1( __FB_ARGC__, __FB_ARGV__ )
+	hParseArgs2( __FB_ARGC__, __FB_ARGV__ )
 
 	if( listGetHead( @frog.files ) = NULL ) then
 		oops( "no input files" )
 	end if
 
+	'' Load files given on command line.
+	'' Load #includes too if available and not yet done.
+	'' Files newly registered by the inner loop will eventually be worked
+	'' off by the outer loop, as they're appended to the files list.
 	dim as FROGFILE ptr f = listGetHead( @frog.files )
 	while( f )
+		if( f->missing = FALSE ) then
+			frogLoadFile( f )
 
-		var ast = hLoadFileToAst( f )
-		'astDump( ast )
-		emitFile( pathStripExt( f->normed ) + ".bi", ast )
-		astDelete( ast )
-
+			'' For each statement...
+			var child = f->ast->head
+			while( child )
+				'' #include?
+				if( child->class = ASTCLASS_PPINCLUDE ) then
+					print "  #include: " & *child->text;
+					if( frog.verbose ) then
+						print
+					end if
+					child->includefile = frogAddFile( f, *child->text )
+					if( frog.verbose = FALSE ) then
+						if( child->includefile->missing ) then
+							print " (not found)";
+						end if
+						print
+					end if
+				end if
+				child = child->next
+			wend
+		end if
 		f = listGetNext( f )
 	wend
+
+	'emitFile( pathStripExt( f->normed ) + ".bi", ast )

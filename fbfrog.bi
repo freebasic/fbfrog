@@ -427,6 +427,9 @@ type ASTNODE_
 	sourcefile	as FROGFILE ptr
 	sourceline	as integer
 
+	'' PPINCLUDE: back link after the #include was resolved to a real file
+	includefile	as FROGFILE ptr
+
 	val		as ASTNODECONST
 
 	'' Operands/fields/parameters/...
@@ -523,6 +526,8 @@ declare function cToplevel( ) as ASTNODE ptr
 type FROGFILE_
 	pretty		as string '' Pretty name from command line or #include
 	normed		as string '' Normalized path used in hash table
+	missing		as integer '' File missing/not found?
+	ast		as ASTNODE ptr  '' AST representing file content, when loaded
 end type
 
 type FROGSTUFF
