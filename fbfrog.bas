@@ -361,6 +361,14 @@ end sub
 		if( (strMatches( "tests/*", f->pretty ) = FALSE) or _
 		    strMatches( "tests/pp/eval-*", f->pretty ) ) then
 			ppEvalInit( )
+
+			select case( frog.preset )
+			case "zip"
+				ppAddSymbol( "ZIP_EXTERN", TRUE )
+				ppAddSymbol( "__cplusplus", FALSE )
+				ppAddSymbol( "ZIP_DISABLE_DEPRECATED", FALSE )
+			end select
+
 			ppEvalExpressions( )
 			ppSplitElseIfs( )
 			ppEvalIfs( )
