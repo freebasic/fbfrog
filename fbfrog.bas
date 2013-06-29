@@ -113,6 +113,9 @@ private function frogAddFile _
 		loop
 	else
 		normed = pathMakeAbsolute( pretty )
+		if( frog.verbose ) then
+			print "    starting point: " + normed
+		end if
 	end if
 
 	var missing = FALSE
@@ -129,16 +132,16 @@ private function frogAddFile _
 	if( item->s ) then
 		'' Already exists
 		if( frog.verbose ) then
-			print "    old news: " + pretty + ": " + normed
+			print "    (old news)"
 		end if
 		return item->data
 	end if
 
 	if( frog.verbose ) then
 		if( missing ) then
-			print "    registered: " + pretty + " (missing)"
+			print "    (registered, missing)"
 		else
-			print "    registered: " + pretty + ": " + normed
+			print "    (registered)"
 		end if
 	end if
 
@@ -282,8 +285,6 @@ private sub hSetPPIndentAttrib _
 end sub
 
 private sub frogLoadFile( byval f as FROGFILE ptr )
-	print "parsing: ";f->pretty
-
 	tkInit( )
 	lexLoadFile( 0, f->normed )
 
@@ -326,6 +327,55 @@ private sub frogLoadFile( byval f as FROGFILE ptr )
 	end if
 end sub
 
+private function frogCalcRefcount( byval lookfor as FROGFILE ptr ) as integer
+	var refcount = 0
+
+	dim as FROGFILE ptr f = listGetHead( @frog.files )
+	while( f )
+
+		'' File loaded? (missing files weren't loaded)
+		if( f->ast ) then
+			'' For each statement...
+			var child = f->ast->head
+			while( child )
+				'' #include?
+				if( child->class = ASTCLASS_PPINCLUDE ) then
+					if( child->includefile = lookfor ) then
+						refcount += 1
+					end if
+				end if
+				child = child->next
+			wend
+		end if
+
+		f = listGetNext( f )
+	wend
+
+	function = refcount
+end function
+
+private sub hTryMergeIncludes( byval n as ASTNODE ptr )
+	var child = n->head
+	while( child )
+		'' #include?
+		if( child->class = ASTCLASS_PPINCLUDE ) then
+			'' If this is the only reference, merge
+			var incf = child->includefile
+			if( incf->refcount = 1 ) then
+				if( incf->ast ) then
+					print "  #include: " & incf->pretty
+					child = astReplaceChild( n, child, incf->ast )
+					incf->ast = NULL
+				end if
+			end if
+		end if
+
+		hTryMergeIncludes( child )
+
+		child = child->next
+	wend
+end sub
+
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 	frogInit( )
@@ -344,6 +394,7 @@ end sub
 	dim as FROGFILE ptr f = listGetHead( @frog.files )
 	while( f )
 		if( f->missing = FALSE ) then
+			print "parsing: ";f->pretty
 			frogLoadFile( f )
 
 			'' For each statement...
@@ -358,15 +409,66 @@ end sub
 					child->includefile = frogAddFile( f, *child->text )
 					if( frog.verbose = FALSE ) then
 						if( child->includefile->missing ) then
-							print " (not found)";
+							print " (not found)"
+						else
+							print ''" -> " + child->includefile->normed
 						end if
-						print
 					end if
 				end if
 				child = child->next
 			wend
 		end if
+
 		f = listGetNext( f )
 	wend
 
-	'emitFile( pathStripExt( f->normed ) + ".bi", ast )
+	if( frog.merge ) then
+		'' Calculate #include refcounts
+		f = listGetHead( @frog.files )
+		while( f )
+			f->refcount = frogCalcRefcount( f )
+			f = listGetNext( f )
+		wend
+
+		'' Merge every #include that can be merged
+		f = listGetHead( @frog.files )
+		while( f )
+			if( f->ast ) then
+				print "merging: " + f->pretty
+				hTryMergeIncludes( f->ast )
+			end if
+			f = listGetNext( f )
+		wend
+
+		'' Concatenate files with refcount=0
+		dim as FROGFILE ptr first
+		f = listGetHead( @frog.files )
+		while( f )
+			if( f->refcount = 0 ) then
+				if( first ) then
+					'' Already have a first; append to it
+					if( f->ast ) then
+						astAddChild( first->ast, f->ast )
+						f->ast = NULL
+					end if
+				else
+					'' This is the first
+					first = f
+				end if
+			end if
+			f = listGetNext( f )
+		wend
+	end if
+
+	'' Emit all files that have an AST left (i.e. weren't merged into or
+	'' appended to anything)
+	f = listGetHead( @frog.files )
+	while( f )
+		if( f->ast ) then
+			var binormed = pathStripExt( f->normed ) + ".bi"
+			var bipretty = pathStripExt( f->pretty ) + ".bi"
+			print "emitting: " + bipretty
+			emitFile( binormed, f->ast )
+		end if
+		f = listGetNext( f )
+	wend

@@ -471,6 +471,12 @@ declare function astNewCONST _
 	) as ASTNODE ptr
 declare sub astDelete( byval n as ASTNODE ptr )
 declare sub astAddChild( byval parent as ASTNODE ptr, byval n as ASTNODE ptr )
+declare sub astAddChildBefore _
+	( _
+		byval parent as ASTNODE ptr, _
+		byval n as ASTNODE ptr, _
+		byval ref as ASTNODE ptr _
+	)
 declare function astReplaceChild _
 	( _
 		byval parent as ASTNODE ptr, _
@@ -528,6 +534,7 @@ type FROGFILE_
 	normed		as string '' Normalized path used in hash table
 	missing		as integer '' File missing/not found?
 	ast		as ASTNODE ptr  '' AST representing file content, when loaded
+	refcount	as integer
 end type
 
 type FROGSTUFF

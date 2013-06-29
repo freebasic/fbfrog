@@ -221,6 +221,36 @@ private function hIsChildOf _
 	function = FALSE
 end function
 
+sub astAddChildBefore _
+	( _
+		byval parent as ASTNODE ptr, _
+		byval n as ASTNODE ptr, _
+		byval ref as ASTNODE ptr _
+	)
+
+	if( ref ) then
+		assert( hIsChildOf( parent, ref ) )
+		if( ref->prev ) then
+			ref->prev->next = n
+		else
+			parent->head = n
+		end if
+		n->next = ref
+		n->prev = ref->prev
+		ref->prev = n
+	else
+		if( parent->tail ) then
+			parent->tail->next = n
+		else
+			parent->head = n
+		end if
+		n->prev = parent->tail
+		n->next = NULL
+		parent->tail = n
+	end if
+
+end sub
+
 function astReplaceChild _
 	( _
 		byval parent as ASTNODE ptr, _
@@ -229,23 +259,8 @@ function astReplaceChild _
 	) as ASTNODE ptr
 
 	assert( hIsChildOf( parent, a ) )
-
-	b->next = a->next
-	b->prev = a->prev
-
-	if( b->prev ) then
-		b->prev->next = b
-	else
-		assert( parent->head = a )
-		parent->head = b
-	end if
-
-	if( b->next ) then
-		b->next->prev = b
-	else
-		assert( parent->tail = a )
-		parent->tail = b
-	end if
+	astAddChildBefore( parent, b, a )
+	astRemoveChild( parent, a )
 
 	function = b
 end function
