@@ -250,6 +250,24 @@ function astReplaceChild _
 	function = b
 end function
 
+sub astRemoveChild( byval parent as ASTNODE ptr, byval a as ASTNODE ptr )
+	assert( hIsChildOf( parent, a ) )
+
+	if( a->prev ) then
+		a->prev->next = a->next
+	else
+		assert( parent->head = a )
+		parent->head = a->next
+	end if
+
+	if( a->next ) then
+		a->next->prev = a->prev
+	else
+		assert( parent->tail = a )
+		parent->tail = a->prev
+	end if
+end sub
+
 sub astSetText( byval n as ASTNODE ptr, byval text as zstring ptr )
 	deallocate( n->text )
 	n->text = strDuplicate( text )

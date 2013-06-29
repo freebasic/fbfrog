@@ -255,34 +255,53 @@ private function hFindLastMatch _
 	function = child
 end function
 
-private sub hRemovePPIndentFromIncludeGuard( byval n as ASTNODE ptr )
-	if( n->class <> ASTCLASS_GROUP ) then exit sub
+private function hFindIncludeGuard _
+	( _
+		byval n as ASTNODE ptr, _
+		byref firstifndef as ASTNODE ptr, _
+		byref def as ASTNODE ptr, _
+		byref lastendif as ASTNODE ptr _
+	) as integer
+
+	if( n->class <> ASTCLASS_GROUP ) then exit function
 
 	'' Find first #ifndef and last #endif, if any
-	var firstifndef = hFindFirstMatch( n, _
+	firstifndef = hFindFirstMatch( n, _
 		astNew( ASTCLASS_PPIF, _
 			astNew( ASTCLASS_LOGNOT, _
 				astNew( ASTCLASS_DEFINED ) ) ) )
 
-	var lastendif = hFindLastMatch( n, astNew( ASTCLASS_PPENDIF ) )
+	lastendif = hFindLastMatch( n, astNew( ASTCLASS_PPENDIF ) )
 
-	if( (firstifndef = NULL) or (lastendif = NULL) ) then exit sub
+	if( (firstifndef = NULL) or (lastendif = NULL) ) then exit function
 
 	'' Is the #ifndef followed by a #define?
-	if( firstifndef->next = NULL ) then exit sub
-
-	var def = firstifndef->next
-	if( def = NULL ) then exit sub
+	def = firstifndef->next
+	if( def = NULL ) then exit function
 
 	'' Compare the #ifndef ID against the #define ID, for an include guard
 	'' it's supposed to be the same
 	var ifndefid = firstifndef->head->head->head
-	if( ifndefid = NULL ) then exit sub
-	if( ifndefid->class <> ASTCLASS_ID ) then exit sub
-	if( *def->text <> *ifndefid->text ) then exit sub
+	if( ifndefid = NULL ) then exit function
+	if( ifndefid->class <> ASTCLASS_ID ) then exit function
+	function = (*def->text = *ifndefid->text)
+end function
 
-	hSetPPIndentAttrib( firstifndef, FALSE )
-	hSetPPIndentAttrib( lastendif, FALSE )
+private sub hRemovePPIndentFromIncludeGuard( byval n as ASTNODE ptr )
+	dim as ASTNODE ptr firstifndef, def, lastendif
+	if( hFindIncludeGuard( n, firstifndef, def, lastendif ) ) then
+		hSetPPIndentAttrib( firstifndef, FALSE )
+		hSetPPIndentAttrib( lastendif, FALSE )
+	end if
+end sub
+
+private sub hRemoveIncludeGuard( byval n as ASTNODE ptr )
+	dim as ASTNODE ptr firstifndef, def, lastendif
+	if( hFindIncludeGuard( n, firstifndef, def, lastendif ) ) then
+		astRemoveChild( n, firstifndef )
+		astRemoveChild( n, def )
+		astRemoveChild( n, lastendif )
+	end if
 end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -352,7 +371,8 @@ end sub
 		ast = cToplevel( )
 
 		hSetPPIndentAttrib( ast, TRUE )
-		hRemovePPIndentFromIncludeGuard( ast )
+		'hRemovePPIndentFromIncludeGuard( ast )
+		hRemoveIncludeGuard( ast )
 		if( strMatches( "tests/pp/expr-*", f->pretty ) ) then
 			hSetPPIndentAttrib( ast, FALSE )
 		end if
