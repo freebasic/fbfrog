@@ -283,6 +283,26 @@ private sub hSetPPIndentAttrib _
 
 end sub
 
+private sub hRemoveNode _
+	( _
+		byval n as ASTNODE ptr, _
+		byval astclass as integer, _
+		byref id as string _
+	)
+
+	if( (n->class = astclass) and (*n->text = id) ) then
+		n->class = ASTCLASS_NOP
+		exit sub
+	end if
+
+	var child = n->head
+	while( child )
+		hRemoveNode( child, astclass, id )
+		child = child->next
+	wend
+
+end sub
+
 private sub frogLoadFile( byval f as FROGFILE ptr )
 	tkInit( )
 	lexLoadFile( 0, f->normed )
@@ -307,6 +327,8 @@ private sub frogLoadFile( byval f as FROGFILE ptr )
 			ppAddSymbol( "ZIP_EXTERN", TRUE )
 			ppAddSymbol( "__cplusplus", FALSE )
 			ppAddSymbol( "ZIP_DISABLE_DEPRECATED", FALSE )
+			ppAddSymbol( "_HAD_ZIP_H", FALSE )
+			ppAddSymbol( "_HAD_ZIPCONF_H", FALSE )
 		end select
 
 		ppEvalExpressions( )
@@ -317,6 +339,12 @@ private sub frogLoadFile( byval f as FROGFILE ptr )
 	end if
 
 	f->ast = cToplevel( )
+
+	select case( frog.preset )
+	case "zip"
+		hRemoveNode( f->ast, ASTCLASS_PPDEFINE, "_HAD_ZIP_H" )
+		hRemoveNode( f->ast, ASTCLASS_PPDEFINE, "_HAD_ZIPCONF_H" )
+	end select
 
 	tkEnd( )
 

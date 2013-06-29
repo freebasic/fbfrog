@@ -58,24 +58,12 @@ Compiling:
 
 To do:
 
+- Add output directory option
+- normalize file names in fs module, for prettier verbose output etc.
 - should use TYPE_INT32 instead of TYPE_LONG, that's much less confusing
   (which "long" is it referring to, C's or FB's..)
-- why bother with TK_DIVIDER? We want automated formatting anyways, don't need
-  dividers for that
-
-- Combine -follow/-merge/-concat into just -merge
-  - Make -merge the default
-  - Remove following, external #includes will be translated separately anyways,
-    or they're replaced/removed
-  - For the command line UI it's best to only have 1 choice to make:
-      a) 1:1 translation
-      b) all:1 (merge) translation
-  - Any other special cases should be handled manually by the presets
-
-- Add output directory option
-
-- normalize file names in fs module, for prettier verbose output etc.
-
+- treat size_t etc. as built-in types
+- remove TK_DIVIDER in favour of fully automated output formatting
 - arrays
 - vardecl/param initializers
 - Forward declarations
