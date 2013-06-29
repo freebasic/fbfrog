@@ -161,14 +161,13 @@ private sub hPrintHelp( byref message as string )
 	if( len( message ) > 0 ) then
 		print message
 	end if
-	print "fbfrog 0.1 from " + __DATE_ISO__
-	print "usage: fbfrog *.h"
-	print "The given *.h file will be translated into a *.bi file. It needs reviewing"
-	print "and editing afterwards, so watch out for TODOs and C/FB differences like"
-	print "procedure calling conventions."
+	print "fbfrog 0.1 from " + __DATE_ISO__ + ", usage: fbfrog [options] *.h"
 	print "options:"
 	print "  -l <name>    Select preset"
-	print "  -verbose     Show debugging info"
+	print "  -m           Merge multiple headers into one"
+	print "  -v           Show debugging info"
+	print "By default, fbfrog will generate a *.bi file for each given *.h file."
+	print "*.bi files need to be reviewed and tested! Watch out for calling conventions!"
 	end (iif( len( message ) > 0, 1, 0 ))
 end sub
 
@@ -202,11 +201,11 @@ private sub hParseArgs1( byval argc as integer, byval argv as zstring ptr ptr )
 			loop while( left( arg, 1 ) = "-" )
 
 			select case( arg )
-			case "help", "version"
+			case "h", "?", "help", "version"
 				hPrintHelp( "" )
-			case "merge"
+			case "m"
 				frog.merge = TRUE
-			case "verbose"
+			case "v"
 				frog.verbose = TRUE
 			case else
 				'' "-l<name>" or "-l <name>"
