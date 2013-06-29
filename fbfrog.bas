@@ -281,119 +281,6 @@ private sub hSetPPIndentAttrib _
 
 end sub
 
-private function hAstMatches _
-	( _
-		byval a as ASTNODE ptr, _
-		byval b as ASTNODE ptr _
-	) as integer
-
-	if( a->class <> b->class ) then
-		exit function
-	end if
-
-	'' Compare common children
-	var achild = a->head
-	var bchild = b->head
-	while( (achild <> NULL) and (bchild <> NULL) )
-		if( hAstMatches( achild, bchild ) = FALSE ) then
-			exit function
-		end if
-		achild = achild->next
-		bchild = bchild->next
-	wend
-
-	function = TRUE
-end function
-
-private function hFindFirstMatch _
-	( _
-		byval group as ASTNODE ptr, _
-		byval lookfor as ASTNODE ptr _
-	) as ASTNODE ptr
-
-	assert( group->class = ASTCLASS_GROUP )
-
-	var child = group->head
-	while( child )
-		if( hAstMatches( child, lookfor ) ) then
-			exit while
-		end if
-		child = child->next
-	wend
-
-	astDelete( lookfor )
-	function = child
-end function
-
-private function hFindLastMatch _
-	( _
-		byval group as ASTNODE ptr, _
-		byval lookfor as ASTNODE ptr _
-	) as ASTNODE ptr
-
-	assert( group->class = ASTCLASS_GROUP )
-
-	var child = group->tail
-	while( child )
-		if( hAstMatches( child, lookfor ) ) then
-			exit while
-		end if
-		child = child->prev
-	wend
-
-	astDelete( lookfor )
-	function = child
-end function
-
-private function hFindIncludeGuard _
-	( _
-		byval n as ASTNODE ptr, _
-		byref firstifndef as ASTNODE ptr, _
-		byref def as ASTNODE ptr, _
-		byref lastendif as ASTNODE ptr _
-	) as integer
-
-	if( n->class <> ASTCLASS_GROUP ) then exit function
-
-	'' Find first #ifndef and last #endif, if any
-	firstifndef = hFindFirstMatch( n, _
-		astNew( ASTCLASS_PPIF, _
-			astNew( ASTCLASS_LOGNOT, _
-				astNew( ASTCLASS_DEFINED ) ) ) )
-
-	lastendif = hFindLastMatch( n, astNew( ASTCLASS_PPENDIF ) )
-
-	if( (firstifndef = NULL) or (lastendif = NULL) ) then exit function
-
-	'' Is the #ifndef followed by a #define?
-	def = firstifndef->next
-	if( def = NULL ) then exit function
-
-	'' Compare the #ifndef ID against the #define ID, for an include guard
-	'' it's supposed to be the same
-	var ifndefid = firstifndef->head->head->head
-	if( ifndefid = NULL ) then exit function
-	if( ifndefid->class <> ASTCLASS_ID ) then exit function
-	function = (*def->text = *ifndefid->text)
-end function
-
-private sub hRemovePPIndentFromIncludeGuard( byval n as ASTNODE ptr )
-	dim as ASTNODE ptr firstifndef, def, lastendif
-	if( hFindIncludeGuard( n, firstifndef, def, lastendif ) ) then
-		hSetPPIndentAttrib( firstifndef, FALSE )
-		hSetPPIndentAttrib( lastendif, FALSE )
-	end if
-end sub
-
-private sub hRemoveIncludeGuard( byval n as ASTNODE ptr )
-	dim as ASTNODE ptr firstifndef, def, lastendif
-	if( hFindIncludeGuard( n, firstifndef, def, lastendif ) ) then
-		astRemoveChild( n, firstifndef )
-		astRemoveChild( n, def )
-		astRemoveChild( n, lastendif )
-	end if
-end sub
-
 private sub frogLoadFile( byval f as FROGFILE ptr )
 	print "parsing: ";f->pretty
 
@@ -434,8 +321,6 @@ private sub frogLoadFile( byval f as FROGFILE ptr )
 	tkEnd( )
 
 	hSetPPIndentAttrib( f->ast, TRUE )
-	'hRemovePPIndentFromIncludeGuard( ast )
-	hRemoveIncludeGuard( f->ast )
 	if( strMatches( "tests/pp/expr-*", f->pretty ) ) then
 		hSetPPIndentAttrib( f->ast, FALSE )
 	end if
