@@ -63,7 +63,7 @@ end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-private function hNumberLiteral( byval x as integer ) as ASTNODE ptr
+function hNumberLiteral( byval x as integer ) as ASTNODE ptr
 	dim as ASTNODE ptr n
 
 	select case( tkGet( x ) )

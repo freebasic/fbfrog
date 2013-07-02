@@ -210,6 +210,193 @@ end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
+type COPINFO
+	level		as integer
+	is_leftassoc	as integer
+end type
+
+'' C operator precedence (higher value = higher precedence)
+dim shared as COPINFO copinfo(ASTCLASS_IIF to ASTCLASS_UNARYPLUS) = _
+{ _
+	( 2, FALSE), _ '' ASTCLASS_IIF
+	( 3, TRUE ), _ '' ASTCLASS_LOGOR
+	( 4, TRUE ), _ '' ASTCLASS_LOGAND
+	( 5, TRUE ), _ '' ASTCLASS_BITOR
+	( 6, TRUE ), _ '' ASTCLASS_BITXOR
+	( 7, TRUE ), _ '' ASTCLASS_BITAND
+	( 8, TRUE ), _ '' ASTCLASS_EQ
+	( 8, TRUE ), _ '' ASTCLASS_NE
+	( 9, TRUE ), _ '' ASTCLASS_LT
+	( 9, TRUE ), _ '' ASTCLASS_LE
+	( 9, TRUE ), _ '' ASTCLASS_GT
+	( 9, TRUE ), _ '' ASTCLASS_GE
+	(10, TRUE ), _ '' ASTCLASS_SHL
+	(10, TRUE ), _ '' ASTCLASS_SHR
+	(11, TRUE ), _ '' ASTCLASS_ADD
+	(11, TRUE ), _ '' ASTCLASS_SUB
+	(12, TRUE ), _ '' ASTCLASS_MUL
+	(12, TRUE ), _ '' ASTCLASS_DIV
+	(12, TRUE ), _ '' ASTCLASS_MOD
+	(13, TRUE ), _ '' ASTCLASS_LOGNOT
+	(13, TRUE ), _ '' ASTCLASS_BITNOT
+	(13, TRUE ), _ '' ASTCLASS_NEGATE
+	(13, TRUE )  _ '' ASTCLASS_UNARYPLUS
+}
+
+'' C expression parser based on precedence climbing
+private function cExpression _
+	( _
+		byref x as integer, _
+		byval level as integer = 0 _
+	) as ASTNODE ptr
+
+	function = NULL
+
+	'' Unary prefix operators
+	var astclass = -1
+	select case( tkGet( x ) )
+	case TK_EXCL   : astclass = ASTCLASS_LOGNOT    '' !
+	case TK_TILDE  : astclass = ASTCLASS_BITNOT    '' ~
+	case TK_MINUS  : astclass = ASTCLASS_NEGATE    '' -
+	case TK_PLUS   : astclass = ASTCLASS_UNARYPLUS '' +
+	end select
+
+	dim as ASTNODE ptr a
+	if( astclass >= 0 ) then
+		x = cSkip( x )
+		a = astNew( astclass, cExpression( x, copinfo(astclass).level ), NULL, NULL )
+	else
+		'' Atoms
+		select case( tkGet( x ) )
+		'' '(' Expression ')'
+		case TK_LPAREN
+			'' '('
+			x = cSkip( x )
+
+			'' Expression
+			a = cExpression( x )
+			if( a = NULL ) then
+				exit function
+			end if
+
+			'' ')'
+			if( tkGet( x ) <> TK_RPAREN ) then
+				astDelete( a )
+				exit function
+			end if
+			x = cSkip( x )
+
+		case TK_OCTNUM, TK_DECNUM, TK_HEXNUM, TK_DECFLOAT
+			a = hNumberLiteral( x )
+			x = cSkip( x )
+
+		'' DEFINED '(' Identifier ')'
+		case KW_DEFINED
+			x = cSkip( x )
+
+			'' '('
+			var have_parens = FALSE
+			if( tkGet( x ) = TK_LPAREN ) then
+				have_parens = TRUE
+				x = cSkip( x )
+			end if
+
+			'' Identifier
+			if( tkGet( x ) <> TK_ID ) then
+				exit function
+			end if
+			a = astNew( ASTCLASS_ID, tkGetText( x ) )
+			x = cSkip( x )
+
+			if( have_parens ) then
+				'' ')'
+				if( tkGet( x ) <> TK_RPAREN ) then
+					astDelete( a )
+					exit function
+				end if
+				x = cSkip( x )
+			end if
+
+			a = astNew( ASTCLASS_DEFINED, a, NULL, NULL )
+
+		case else
+			exit function
+		end select
+	end if
+
+	'' Infix operators
+	do
+		select case as const( tkGet( x ) )
+		case TK_QUEST    : astclass = ASTCLASS_IIF    '' ? (a ? b : c)
+		case TK_PIPEPIPE : astclass = ASTCLASS_LOGOR  '' ||
+		case TK_AMPAMP   : astclass = ASTCLASS_LOGAND '' &&
+		case TK_PIPE     : astclass = ASTCLASS_BITOR  '' |
+		case TK_CIRC     : astclass = ASTCLASS_BITXOR '' ^
+		case TK_AMP      : astclass = ASTCLASS_BITAND '' &
+		case TK_EQEQ     : astclass = ASTCLASS_EQ     '' ==
+		case TK_EXCLEQ   : astclass = ASTCLASS_NE     '' !=
+		case TK_LT       : astclass = ASTCLASS_LT     '' <
+		case TK_LTEQ     : astclass = ASTCLASS_LE     '' <=
+		case TK_GT       : astclass = ASTCLASS_GT     '' >
+		case TK_GTEQ     : astclass = ASTCLASS_GE     '' >=
+		case TK_LTLT     : astclass = ASTCLASS_SHL    '' <<
+		case TK_GTGT     : astclass = ASTCLASS_SHR    '' >>
+		case TK_PLUS     : astclass = ASTCLASS_ADD    '' +
+		case TK_MINUS    : astclass = ASTCLASS_SUB    '' -
+		case TK_STAR     : astclass = ASTCLASS_MUL    '' *
+		case TK_SLASH    : astclass = ASTCLASS_DIV    '' /
+		case TK_PERCENT  : astclass = ASTCLASS_MOD    '' %
+		case else        : exit do
+		end select
+
+		'' Higher/same level means process now (takes precedence),
+		'' lower level means we're done and the parent call will
+		'' continue. The first call will start with level 0.
+		var oplevel = copinfo(astclass).level
+		if( oplevel < level ) then
+			exit do
+		end if
+		if( copinfo(astclass).is_leftassoc ) then
+			oplevel += 1
+		end if
+
+		'' operator
+		x = cSkip( x )
+
+		'' rhs
+		var b = cExpression( x, oplevel )
+		if( b = NULL ) then
+			astDelete( a )
+			exit function
+		end if
+
+		'' Handle ?: special case
+		dim as ASTNODE ptr c
+		if( astclass = ASTCLASS_IIF ) then
+			'' ':'?
+			if( tkGet( x ) <> TK_COLON ) then
+				astDelete( a )
+				astDelete( b )
+				exit function
+			end if
+			x = cSkip( x )
+
+			c = cExpression( x, oplevel )
+			if( c = NULL ) then
+				astDelete( a )
+				astDelete( b )
+				exit function
+			end if
+		end if
+
+		a = astNew( astclass, a, b, c )
+	loop
+
+	function = a
+end function
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
 private function cSimpleToken( ) as ASTNODE ptr
 	dim as ASTNODE ptr t = any
 	dim as integer xbegin = any, xend = any

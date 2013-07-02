@@ -509,6 +509,7 @@ declare sub emitFile( byref filename as string, byval ast as ASTNODE ptr )
 
 declare sub ppComments( )
 declare sub ppDividers( )
+declare function hNumberLiteral( byval x as integer ) as ASTNODE ptr
 declare sub ppDirectives1( )
 declare sub ppDirectives2( )
 declare sub ppEvalInit( )
