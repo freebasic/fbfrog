@@ -507,13 +507,15 @@ private function cEnumConst( ) as ASTNODE ptr
 	if( tkGet( parse.x ) = TK_EQ ) then
 		parse.x = cSkip( parse.x )
 
-		'' NumberLiteral?
-		if( tkGet( parse.x ) <> TK_DECNUM ) then
+		var y = parse.x
+		var expr = cExpression( y )
+		if( expr = NULL ) then
 			astDelete( n )
 			exit function
 		end if
-		astAddChild( n, astNewCONST( vallng( *tkGetText( parse.x ) ), 0, TYPE_LONGINT ) )
-		parse.x = cSkip( parse.x )
+
+		parse.x = y
+		astAddChild( n, expr )
 	end if
 
 	'' (',' | '}')
