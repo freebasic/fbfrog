@@ -28,7 +28,9 @@ struct UDT {
 	int a, b;
 	int  *a, b, *c, ***d;
 	int a[20];
+	int a[2][3];
 	void (*p[40])(void);
+	void (*p[2][3])(void);
 
 	void f(void);
 	int f(void);

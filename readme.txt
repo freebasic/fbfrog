@@ -63,7 +63,7 @@ To do:
   (which "long" is it referring to, C's or FB's..)
 - treat size_t etc. as built-in types
 - remove TK_DIVIDER in favour of fully automated output formatting
-- arrays
+- Turn array parameters into pointers (that's the only possible translation)
 - vardecl/param initializers
 - Forward declarations
 	// type T as T_

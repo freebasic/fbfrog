@@ -49,6 +49,8 @@ dim shared as ASTNODEINFO astnodeinfo(0 to ...) = _
 	( "enumconst" ), _
 	( "proc"    ), _
 	( "param"   ), _
+	( "array"   ), _
+	( "dimension" ), _
 	( "unknown" ), _
 	( "const"   ), _
 	( "id"      ), _
@@ -165,6 +167,7 @@ sub astDelete( byval n as ASTNODE ptr )
 		child = nxt
 	wend
 
+	astDelete( n->array )
 	deallocate( n->text )
 	astDelete( n->subtype )
 	deallocate( n )
@@ -330,6 +333,7 @@ function astClone( byval n as ASTNODE ptr ) as ASTNODE ptr
 	c->comment    = strDuplicate( n->comment )
 	c->dtype      = n->dtype
 	c->subtype    = astClone( n->subtype )
+	c->array      = astClone( n->array )
 	c->sourcefile = n->sourcefile
 	c->sourceline = n->sourceline
 
@@ -413,6 +417,14 @@ sub astDump( byval n as ASTNODE ptr, byval nestlevel as integer )
 			hPrintIndentation( nestlevel )
 			print "subtype:"
 			astDump( n->subtype, nestlevel )
+			nestlevel -= 1
+		end if
+
+		if( n->array ) then
+			nestlevel += 1
+			hPrintIndentation( nestlevel )
+			print "array:"
+			astDump( n->array, nestlevel )
 			nestlevel -= 1
 		end if
 

@@ -361,6 +361,8 @@ enum
 	ASTCLASS_ENUMCONST
 	ASTCLASS_PROC
 	ASTCLASS_PARAM
+	ASTCLASS_ARRAY
+	ASTCLASS_DIMENSION
 	ASTCLASS_UNKNOWN
 
 	ASTCLASS_CONST
@@ -422,6 +424,7 @@ type ASTNODE_
 	'' Data type (vars, fields, params, function results, expressions)
 	dtype		as integer
 	subtype		as ASTNODE ptr
+	array		as ASTNODE ptr '' ARRAY holding DIMENSIONs, or NULL
 
 	'' Source location where this declaration/statement was found
 	sourcefile	as FROGFILE ptr

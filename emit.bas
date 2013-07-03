@@ -127,6 +127,46 @@ private sub emitLine( byref ln as string )
 	print #emit.fo, s
 end sub
 
+private function hIdAndArray( byval n as ASTNODE ptr ) as string
+	var s = *n->text
+	if( n->array ) then
+		s += emitAst( n->array )
+	end if
+	function = s
+end function
+
+private function hCommaList _
+	( _
+		byval n as ASTNODE ptr, _
+		byval spaced as integer _
+	) as string
+
+	var s = "("
+
+	var count = 0
+	var child = n->head
+	while( child )
+		if( count > 0 ) then
+			s += ", "
+		elseif( spaced ) then
+			'' space behind '('
+			s += " "
+		end if
+
+		s += emitAst( child )
+
+		count += 1
+		child = child->next
+	wend
+
+	if( spaced ) then
+		'' space before ')'
+		s += " "
+	end if
+
+	function = s + ")"
+end function
+
 private function emitAst _
 	( _
 		byval n as ASTNODE ptr, _
@@ -231,20 +271,21 @@ private function emitAst _
 		emitLine( "end " + compoundkeyword )
 
 	case ASTCLASS_TYPEDEF
+		assert( n->array = NULL )
 		emitLine( "type " + *n->text + " as " + emitType( n->dtype, n->subtype ) )
 
 	case ASTCLASS_VAR
 		if( n->attrib and ASTATTRIB_EXTERN ) then
-			emitLine( "extern "     + *n->text + " as " + emitType( n->dtype, n->subtype ) )
+			emitLine( "extern "     + hIdAndArray( n ) + " as " + emitType( n->dtype, n->subtype ) )
 		elseif( n->attrib and ASTATTRIB_STATIC ) then
-			emitLine( "dim shared " + *n->text + " as " + emitType( n->dtype, n->subtype ) )
+			emitLine( "dim shared " + hIdAndArray( n ) + " as " + emitType( n->dtype, n->subtype ) )
 		else
-			emitLine( "extern     " + *n->text + " as " + emitType( n->dtype, n->subtype ) )
-			emitLine( "dim shared " + *n->text + " as " + emitType( n->dtype, n->subtype ) )
+			emitLine( "extern     " + hIdAndArray( n ) + " as " + emitType( n->dtype, n->subtype ) )
+			emitLine( "dim shared " + hIdAndArray( n ) + " as " + emitType( n->dtype, n->subtype ) )
 		end if
 
 	case ASTCLASS_FIELD
-		emitLine( *n->text + " as " + emitType( n->dtype, n->subtype ) )
+		emitLine( hIdAndArray( n ) + " as " + emitType( n->dtype, n->subtype ) )
 
 	case ASTCLASS_ENUMCONST
 		s += *n->text
@@ -255,6 +296,8 @@ private function emitAst _
 		s = ""
 
 	case ASTCLASS_PROC
+		assert( n->array = NULL )
+
 		'' Is this a procedure declaration,
 		'' or the subtype of a procedure pointer?
 		if( n->text ) then
@@ -271,23 +314,7 @@ private function emitAst _
 			s += " " + *n->text
 		end if
 
-		s += "("
-
-		var count = 0
-		var child = n->head
-		while( child )
-			if( count > 0 ) then
-				s += ","
-			end if
-			s += " "
-
-			s += emitAst( child )
-
-			count += 1
-			child = child->next
-		wend
-
-		s += " )"
+		s += hCommaList( n, TRUE )
 
 		'' Function result type
 		if( n->dtype <> TYPE_ANY ) then
@@ -300,6 +327,8 @@ private function emitAst _
 		end if
 
 	case ASTCLASS_PARAM
+		assert( n->array = NULL )
+
 		'' vararg?
 		if( n->dtype = TYPE_NONE ) then
 			s += "..."
@@ -310,6 +339,14 @@ private function emitAst _
 			end if
 			s += " as " + emitType( n->dtype, n->subtype )
 		end if
+
+	case ASTCLASS_ARRAY
+		s += hCommaList( n, FALSE )
+
+	case ASTCLASS_DIMENSION
+		s += emitAst( n->head, FALSE )
+		s += " to "
+		s += emitAst( n->tail, FALSE )
 
 	case ASTCLASS_UNKNOWN
 		emitLine( "'' TODO: unknown construct" )
@@ -327,8 +364,10 @@ private function emitAst _
 				s += str( n->val.i )
 			end if
 		end if
+
 	case ASTCLASS_ID
 		s += *n->text
+
 	case ASTCLASS_TEXT
 		s += *n->text
 

@@ -1,8 +1,7 @@
 enum
 	A = 0
 	B
-	'' TODO: unknown construct
-	C = (1 << 4),
+	C = 1 shl 4
 	D
 	E = 1
 	F

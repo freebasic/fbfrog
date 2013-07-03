@@ -962,7 +962,7 @@ end function
 '' Declarator =
 ''    '*'*
 ''    { [Identifier] | '(' Declarator ')' }
-''    { '(' ParamList ')' | '[' ArrayElements ']' }
+''    { '(' ParamList ')' | ('[' ArrayElements ']')* }
 ''
 '' This needs to parse things like:
 ''    i            for example, as part of: int i;
@@ -1035,19 +1035,10 @@ private function cDeclarator _
 		byref procptrdtype as integer _
 	) as ASTNODE ptr
 
-	dim as ASTNODE ptr innernode = any, t = any, params = any
-	dim as integer begin = any, astclass = any, elements = any
-	dim as integer dtype = any, innerprocptrdtype = any
-	dim as string id
-
-	function = NULL
-	begin = parse.x
-	dtype = basedtype
-	innernode = NULL
-	innerprocptrdtype = TYPE_PROC
-	node = NULL
+	var begin = parse.x
+	var dtype = basedtype
+	var innerprocptrdtype = TYPE_PROC
 	procptrdtype = TYPE_PROC
-	elements = 0
 
 	'' Pointers: ('*')*
 	while( tkGet( parse.x ) = TK_STAR )
@@ -1063,6 +1054,7 @@ private function cDeclarator _
 		wend
 	wend
 
+	dim as ASTNODE ptr t, innernode
 	if( tkGet( parse.x ) = TK_LPAREN ) then
 		'' '('
 		parse.x = cSkip( parse.x )
@@ -1079,6 +1071,7 @@ private function cDeclarator _
 		end if
 		parse.x = cSkip( parse.x )
 	else
+		dim as string id
 		if( tkGet( parse.x ) = TK_ID ) then
 			id = *tkGetText( parse.x )
 			parse.x = cSkip( parse.x )
@@ -1089,6 +1082,7 @@ private function cDeclarator _
 			end if
 		end if
 
+		dim as integer astclass
 		select case( decl )
 		case DECL_VAR, DECL_EXTERNVAR, DECL_STATICVAR
 			astclass = ASTCLASS_VAR
@@ -1118,26 +1112,53 @@ private function cDeclarator _
 	node = t
 
 	select case( tkGet( parse.x ) )
-	'' '[' ArrayElements ']'
+	'' ('[' ArrayElements ']')*
 	case TK_LBRACKET
-		parse.x = cSkip( parse.x )
+		'' Currently, only variables/fields can be arrays
+		'' (FB doesn't support array parameters/typedefs like that)
+		select case( decl )
+		case DECL_VAR, DECL_EXTERNVAR, DECL_STATICVAR, DECL_FIELD
 
-		'' Simple number?
-		if( tkGet( parse.x ) <> TK_DECNUM ) then
+		case else
 			astDelete( t )
 			node = NULL
 			exit function
-		end if
-		elements = valint( *tkGetText( parse.x ) )
-		parse.x = cSkip( parse.x )
+		end select
 
-		'' ']'
-		if( tkGet( parse.x ) <> TK_RBRACKET ) then
-			astDelete( t )
-			node = NULL
-			exit function
-		end if
-		parse.x = cSkip( parse.x )
+		assert( node->array = NULL )
+		node->array = astNew( ASTCLASS_ARRAY )
+
+		do
+			parse.x = cSkip( parse.x )
+
+			var dimension = astNew( ASTCLASS_DIMENSION )
+			astAddChild( node->array, dimension )
+
+			var y = parse.x
+			var elements = cExpression( y )
+			if( elements = NULL ) then
+				astDelete( t )
+				node = NULL
+				exit function
+			end if
+			parse.x = y
+
+			'' lbound = 0, ubound = elements - 1
+			astAddChild( dimension, astNewCONST( 0, 0, TYPE_LONG ) )
+			astAddChild( dimension, _
+				astNew( ASTCLASS_SUB, _
+					elements, _
+					astNewCONST( 1, 0, TYPE_LONG ), _
+					NULL ) )
+
+			'' ']'
+			if( tkGet( parse.x ) <> TK_RBRACKET ) then
+				astDelete( t )
+				node = NULL
+				exit function
+			end if
+			parse.x = cSkip( parse.x )
+		loop while( tkGet( parse.x ) = TK_LBRACKET )
 
 	'' '(' ParamList ')'
 	case TK_LPAREN
@@ -1177,7 +1198,7 @@ private function cDeclarator _
 			parse.x = cSkip( parse.x )
 		'' Not just '()'?
 		elseif( tkGet( parse.x ) <> TK_RPAREN ) then
-			params = cParamDeclList( )
+			var params = cParamDeclList( )
 			if( params = NULL ) then
 				astDelete( t )
 				node = NULL
