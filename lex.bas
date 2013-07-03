@@ -754,10 +754,12 @@ function lexLoadFile( byval x as integer, byref filename as string ) as integer
 		lexNext( )
 	wend
 
+	#if 0
 	if( frog.verbose ) then
 		print "  lex: " & cuint( lex.limit ) - cuint( lex.buffer ) & _
 			" bytes -> " & lex.x - x & " tokens"
 	end if
+	#endif
 
 	deallocate( lex.buffer )
 	function = lex.x

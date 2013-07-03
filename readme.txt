@@ -59,7 +59,6 @@ Compiling:
 To do:
 
 - Add output directory option
-- normalize file names in fs module, for prettier verbose output etc.
 - should use TYPE_INT32 instead of TYPE_LONG, that's much less confusing
   (which "long" is it referring to, C's or FB's..)
 - treat size_t etc. as built-in types

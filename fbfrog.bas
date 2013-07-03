@@ -75,13 +75,29 @@ private sub frogInit( )
 	hashInit( @frog.filehash, 6 )
 end sub
 
+private function hFindCommonParent( ) as string
+	dim as string s
+	dim as FROGFILE ptr f = listGetHead( @frog.files )
+	while( f )
+		if( f->missing = FALSE ) then
+			if( len( s ) > 0 ) then
+				s = pathFindCommonBase( s, f->normed )
+			else
+				s = pathOnly( f->normed )
+			end if
+		end if
+		f = listGetNext( f )
+	wend
+	function = s
+end function
+
 private function frogAddFile _
 	( _
 		byval context as FROGFILE ptr, _
 		byref pretty as string _
 	) as FROGFILE ptr
 
-	dim as string normed
+	dim as string normed, report
 
 	if( context ) then
 		'' Search for #included files in one of the parent directories
@@ -100,13 +116,22 @@ private function frogAddFile _
 			normed = parent + pretty
 			if( hFileExists( normed ) ) then
 				if( frog.verbose ) then
-					print "    found: " + normed
+					if( len( report ) ) then print report
+					report = "    found: " + normed
 				end if
 				exit do
 			end if
 
 			if( frog.verbose ) then
-				print "    not found: " + normed
+				if( len( report ) ) then print report
+				report = "    not found: " + normed
+			end if
+
+			'' Stop searching parent directories after trying
+			'' the common base
+			if( parent = frog.commonparent ) then
+				normed = ""
+				exit do
 			end if
 
 			parent = pathStripLastComponent( parent )
@@ -114,7 +139,7 @@ private function frogAddFile _
 	else
 		normed = pathMakeAbsolute( pretty )
 		if( frog.verbose ) then
-			print "    starting point: " + normed
+			report = "    root: " + pretty
 		end if
 	end if
 
@@ -132,16 +157,16 @@ private function frogAddFile _
 	if( item->s ) then
 		'' Already exists
 		if( frog.verbose ) then
-			print "    (old news)"
+			print report + " (old news)"
 		end if
 		return item->data
 	end if
 
 	if( frog.verbose ) then
 		if( missing ) then
-			print "    (registered, missing)"
+			print report + " (missing)"
 		else
-			print "    (registered)"
+			print report + " (new)"
 		end if
 	end if
 
@@ -153,6 +178,9 @@ private function frogAddFile _
 
 	'' Add to hash table
 	hashAdd( @frog.filehash, item, hash, f->normed, f )
+
+	'' Update/recalculate common base path
+	frog.commonparent = hFindCommonParent( )
 
 	function = f
 end function

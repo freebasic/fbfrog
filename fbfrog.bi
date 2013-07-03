@@ -542,8 +542,10 @@ type FROGSTUFF
 	merge		as integer
 	verbose		as integer
 	preset		as string
+
 	files		as TLIST '' FROGFILE
 	filehash	as THASH
+	commonparent	as string
 end type
 
 extern as FROGSTUFF frog
