@@ -451,6 +451,9 @@ private sub lexNext( )
 		hReadBytes( TK_EOL, 1 )
 		lex.linenum += 1
 
+	case CH_FORMFEED
+		hReadBytes( TK_DIVIDER, 1 )
+
 	case CH_TAB, CH_SPACE
 		hReadSpace( )
 
