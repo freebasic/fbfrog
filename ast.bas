@@ -285,6 +285,8 @@ sub astRemoveChild( byval parent as ASTNODE ptr, byval a as ASTNODE ptr )
 		assert( parent->tail = a )
 		parent->tail = a->prev
 	end if
+
+	astDelete( a )
 end sub
 
 sub astSetText( byval n as ASTNODE ptr, byval text as zstring ptr )

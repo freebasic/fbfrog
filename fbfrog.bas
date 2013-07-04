@@ -545,6 +545,57 @@ private sub hTryMergeIncludes( byval n as ASTNODE ptr )
 	wend
 end sub
 
+private sub hMergeGroups( byval n as ASTNODE ptr )
+	var child = n->head
+	while( child )
+		var nxt = child->next
+
+		if( child->class = ASTCLASS_GROUP ) then
+			var groupchild = child->head
+			var first = groupchild
+			while( groupchild )
+				astAddChildBefore( n, astClone( groupchild ), child )
+				groupchild = groupchild->next
+			wend
+
+			astRemoveChild( n, child )
+
+			'' Work on the GROUP's children too (if any),
+			'' since it may contain nested GROUPs
+			if( first ) then
+				nxt = first
+			end if
+		end if
+
+		child = nxt
+	wend
+end sub
+
+private sub hMergeDividers( byval n as ASTNODE ptr )
+	var child = n->head
+	while( child )
+		var nxt = child->next
+
+		if( nxt ) then
+			if( (child->class = ASTCLASS_DIVIDER) and _
+			    (  nxt->class = ASTCLASS_DIVIDER) ) then
+				astRemoveChild( n, child )
+			end if
+		end if
+
+		child = nxt
+	wend
+end sub
+
+private sub frogEmitFile( byval f as FROGFILE ptr )
+	var binormed = pathStripExt( f->normed ) + ".bi"
+	var bipretty = pathStripExt( f->pretty ) + ".bi"
+	print "emitting: " + bipretty
+	hMergeGroups( f->ast )
+	hMergeDividers( f->ast )
+	emitFile( binormed, f->ast )
+end sub
+
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 	frogInit( )
@@ -634,10 +685,7 @@ end sub
 	f = listGetHead( @frog.files )
 	while( f )
 		if( f->ast ) then
-			var binormed = pathStripExt( f->normed ) + ".bi"
-			var bipretty = pathStripExt( f->pretty ) + ".bi"
-			print "emitting: " + bipretty
-			emitFile( binormed, f->ast )
+			frogEmitFile( f )
 		end if
 		f = listGetNext( f )
 	wend
