@@ -1316,8 +1316,6 @@ end function
 '' Typedefs
 ''    TYPEDEF MultDecl
 private function cTypedef( ) as ASTNODE ptr
-	function = NULL
-
 	'' TYPEDEF?
 	if( tkGet( parse.x ) <> KW_TYPEDEF ) then
 		exit function
@@ -1325,6 +1323,31 @@ private function cTypedef( ) as ASTNODE ptr
 	parse.x = cSkip( parse.x )
 
 	function = cMultDecl( DECL_TYPEDEF )
+end function
+
+'' Struct forward declarations
+''    STRUCT Identifier ';'
+private function cStructForward( ) as ASTNODE ptr
+	'' STRUCT?
+	if( tkGet( parse.x ) <> KW_STRUCT ) then
+		exit function
+	end if
+	parse.x = cSkip( parse.x )
+
+	'' Identifier?
+	if( tkGet( parse.x ) <> TK_ID ) then
+		exit function
+	end if
+	var id = *tkGetText( parse.x )
+	parse.x = cSkip( parse.x )
+
+	'' ';'?
+	if( tkGet( parse.x ) <> TK_SEMI ) then
+		exit function
+	end if
+	parse.x = cSkip( parse.x )
+
+	function = astNew( ASTCLASS_STRUCTFWD, id )
 end function
 
 private function hToplevel( ) as ASTNODE ptr
@@ -1347,10 +1370,14 @@ private function hToplevel( ) as ASTNODE ptr
 					t = cTypedef( )
 					if( t = NULL ) then
 						parse.x = old
-						t = cSimpleToken( )
+						t = cStructForward( )
 						if( t = NULL ) then
 							parse.x = old
-							cUnknown( )
+							t = cSimpleToken( )
+							if( t = NULL ) then
+								parse.x = old
+								cUnknown( )
+							end if
 						end if
 					end if
 				end if

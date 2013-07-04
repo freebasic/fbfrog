@@ -274,6 +274,14 @@ private function emitAst _
 		assert( n->array = NULL )
 		emitLine( "type " + *n->text + " as " + emitType( n->dtype, n->subtype ) )
 
+	case ASTCLASS_STRUCTFWD
+		'' type UDT as UDT_
+		'' This way, we only need to translate the <struct UDT { ... }>
+		'' body as <type UDT_ : ... : end type>, and everything else
+		'' can keep using UDT, that's easier than adjusting all
+		'' declarations to use UDT_ in place of UDT.
+		emitLine( "type " + *n->text + " as " + *n->text + "_" )
+
 	case ASTCLASS_VAR
 		if( n->attrib and ASTATTRIB_EXTERN ) then
 			emitLine( "extern "     + hIdAndArray( n ) + " as " + emitType( n->dtype, n->subtype ) )

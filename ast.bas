@@ -44,6 +44,7 @@ dim shared as ASTNODEINFO astnodeinfo(0 to ...) = _
 	( "union"   ), _
 	( "enum"    ), _
 	( "typedef" ), _
+	( "structfwd" ), _
 	( "var"     ), _
 	( "field"   ), _
 	( "enumconst" ), _
