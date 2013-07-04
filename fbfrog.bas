@@ -545,7 +545,7 @@ private sub hTryMergeIncludes( byval n as ASTNODE ptr )
 	wend
 end sub
 
-private sub hMergeGroups( byval n as ASTNODE ptr )
+private sub hMergeGROUPs( byval n as ASTNODE ptr )
 	var child = n->head
 	while( child )
 		var nxt = child->next
@@ -571,7 +571,20 @@ private sub hMergeGroups( byval n as ASTNODE ptr )
 	wend
 end sub
 
-private sub hMergeDividers( byval n as ASTNODE ptr )
+private sub hRemoveNOPs( byval n as ASTNODE ptr )
+	var child = n->head
+	while( child )
+		var nxt = child->next
+
+		if( child->class = ASTCLASS_NOP ) then
+			astRemoveChild( n, child )
+		end if
+
+		child = nxt
+	wend
+end sub
+
+private sub hMergeDIVIDERs( byval n as ASTNODE ptr )
 	var child = n->head
 	while( child )
 		var nxt = child->next
@@ -587,12 +600,28 @@ private sub hMergeDividers( byval n as ASTNODE ptr )
 	wend
 end sub
 
+private sub hRemoveOuterDIVIDERs( byval n as ASTNODE ptr )
+	if( n->head = NULL ) then
+		exit sub
+	end if
+
+	if( n->head->class = ASTCLASS_DIVIDER ) then
+		astRemoveChild( n, n->head )
+	end if
+
+	if( n->tail->class = ASTCLASS_DIVIDER ) then
+		astRemoveChild( n, n->tail )
+	end if
+end sub
+
 private sub frogEmitFile( byval f as FROGFILE ptr )
 	var binormed = pathStripExt( f->normed ) + ".bi"
 	var bipretty = pathStripExt( f->pretty ) + ".bi"
 	print "emitting: " + bipretty
-	hMergeGroups( f->ast )
-	hMergeDividers( f->ast )
+	hMergeGROUPs( f->ast )
+	hRemoveNOPs( f->ast )
+	hMergeDIVIDERs( f->ast )
+	hRemoveOuterDIVIDERs( f->ast )
 	emitFile( binormed, f->ast )
 end sub
 
