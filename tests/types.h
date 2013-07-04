@@ -37,15 +37,21 @@ static float a;
 static double a;
 
 static __int8 a;
+static __int16 a;
 static __int32 a;
 static __int64 a;
 
 static  int8_t a;
 static uint8_t a;
+static  int16_t a;
+static uint16_t a;
 static  int32_t a;
 static uint32_t a;
 static  int64_t a;
 static uint64_t a;
+
+static size_t a;
+static ssize_t a;
 
 static A a;
 static enum A a;

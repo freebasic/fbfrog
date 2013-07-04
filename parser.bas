@@ -851,8 +851,31 @@ private function cBaseType _
 
 		select case( basetypetk )
 		case TK_ID
-			dtype = TYPE_UDT
-			subtype = astNew( ASTCLASS_ID, tkGetText( basetypex ) )
+			select case( *tkGetText( basetypex ) )
+			case "size_t"
+				dtype = TYPE_UINTEGER
+			case "ssize_t"
+				dtype = TYPE_INTEGER
+			case "int8_t", "__int8"
+				dtype = TYPE_BYTE
+			case "uint8_t"
+				dtype = TYPE_UBYTE
+			case "int16_t", "__int16"
+				dtype = TYPE_SHORT
+			case "uint16_t"
+				dtype = TYPE_USHORT
+			case "int32_t", "__int32"
+				dtype = TYPE_LONG
+			case "uint32_t"
+				dtype = TYPE_ULONG
+			case "int64_t", "__int64"
+				dtype = TYPE_LONGINT
+			case "uint64_t"
+				dtype = TYPE_ULONGINT
+			case else
+				dtype = TYPE_UDT
+				subtype = astNew( ASTCLASS_ID, tkGetText( basetypex ) )
+			end select
 		case KW_VOID
 			dtype = TYPE_ANY
 		case KW_FLOAT

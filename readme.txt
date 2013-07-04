@@ -59,9 +59,6 @@ Compiling:
 To do:
 
 - Add output directory option
-- should use TYPE_INT32 instead of TYPE_LONG, that's much less confusing
-  (which "long" is it referring to, C's or FB's..)
-- treat size_t etc. as built-in types
 - Turn array parameters into pointers (that's the only possible translation)
 - vardecl/param initializers
 - drop redundant typedefs (since FB doesn't have separate struct/type namespaces)

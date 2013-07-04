@@ -622,6 +622,7 @@ private sub frogEmitFile( byval f as FROGFILE ptr )
 	hRemoveNOPs( f->ast )
 	hMergeDIVIDERs( f->ast )
 	hRemoveOuterDIVIDERs( f->ast )
+	'astDump( f->ast )
 	emitFile( binormed, f->ast )
 end sub
 

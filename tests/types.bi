@@ -38,16 +38,22 @@ dim shared a as ulongint
 dim shared a as single
 dim shared a as double
 
-dim shared a as __int8
-dim shared a as __int32
-dim shared a as __int64
+dim shared a as byte
+dim shared a as short
+dim shared a as long
+dim shared a as longint
 
-dim shared a as int8_t
-dim shared a as uint8_t
-dim shared a as int32_t
-dim shared a as uint32_t
-dim shared a as int64_t
-dim shared a as uint64_t
+dim shared a as byte
+dim shared a as ubyte
+dim shared a as short
+dim shared a as ushort
+dim shared a as long
+dim shared a as ulong
+dim shared a as longint
+dim shared a as ulongint
+
+dim shared a as uinteger
+dim shared a as integer
 
 dim shared a as A
 dim shared a as A

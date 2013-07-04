@@ -299,6 +299,8 @@ enum
 	TYPE_USHORT
 	TYPE_LONG
 	TYPE_ULONG
+	TYPE_INTEGER
+	TYPE_UINTEGER
 	TYPE_LONGINT
 	TYPE_ULONGINT
 	TYPE_SINGLE
@@ -308,12 +310,12 @@ enum
 	TYPE__COUNT
 end enum
 
-const TYPEMASK_DT    = &b00000000000000000000000000001111  '' 0..15, enough for TYPE_* enum
-const TYPEMASK_PTR   = &b00000000000000000000000011110000  '' 0..15, enough for max. 8 PTRs on a type, like FB
-const TYPEMASK_REF   = &b00000000000000000000000100000000  '' 0..1, reference or not?
-const TYPEMASK_CONST = &b00000000000000111111111000000000  '' 1 bit per PTR + 1 for the toplevel
+const TYPEMASK_DT    = &b00000000000000000000000011111111  '' 1 byte, enough for TYPE_* enum
+const TYPEMASK_PTR   = &b00000000000000000000111100000000  '' 0..15, enough for max. 8 PTRs on a type, like FB
+const TYPEMASK_REF   = &b00000000000000000001000000000000  '' 0..1, reference or not?
+const TYPEMASK_CONST = &b00000000001111111110000000000000  '' 1 bit per PTR + 1 for the toplevel
 
-const TYPEPOS_PTR    = 4  '' PTR mask starts at 4th bit
+const TYPEPOS_PTR    = 8  '' bit where PTR mask starts
 const TYPEPOS_REF    = TYPEPOS_PTR + 4
 const TYPEPOS_CONST  = TYPEPOS_REF + 1
 
