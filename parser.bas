@@ -986,6 +986,7 @@ end function
 ''    '*'*
 ''    { [Identifier] | '(' Declarator ')' }
 ''    { '(' ParamList ')' | ('[' ArrayElements ']')* }
+''    [ '=' Initializer ]
 ''
 '' This needs to parse things like:
 ''    i            for example, as part of: int i;
@@ -1077,6 +1078,7 @@ private function cDeclarator _
 		wend
 	wend
 
+	''    '(' Declarator ')'    |    [Identifier]
 	dim as ASTNODE ptr t, innernode
 	if( tkGet( parse.x ) = TK_LPAREN ) then
 		'' '('
@@ -1094,6 +1096,7 @@ private function cDeclarator _
 		end if
 		parse.x = cSkip( parse.x )
 	else
+		'' [Identifier]
 		dim as string id
 		if( tkGet( parse.x ) = TK_ID ) then
 			id = *tkGetText( parse.x )
@@ -1237,6 +1240,26 @@ private function cDeclarator _
 			exit function
 		end if
 		parse.x = cSkip( parse.x )
+	end select
+
+	'' ['=' Initializer]
+	select case( decl )
+	case DECL_PARAM
+		if( tkGet( parse.x ) = TK_EQ ) then
+			parse.x = cSkip( parse.x )
+
+			var y = parse.x
+			var expr = cExpression( y )
+			if( expr = NULL ) then
+				astDelete( t )
+				node = NULL
+				exit function
+			end if
+			parse.x = y
+
+			assert( node->initializer = NULL )
+			node->initializer = expr
+		end if
 	end select
 
 	function = t

@@ -168,6 +168,7 @@ sub astDelete( byval n as ASTNODE ptr )
 		child = nxt
 	wend
 
+	astDelete( n->initializer )
 	astDelete( n->array )
 	deallocate( n->text )
 	astDelete( n->subtype )
@@ -331,14 +332,15 @@ function astClone( byval n as ASTNODE ptr ) as ASTNODE ptr
 
 	var c = astNew( n->class )
 
-	c->attrib     = n->attrib
-	c->text       = strDuplicate( n->text )
-	c->comment    = strDuplicate( n->comment )
-	c->dtype      = n->dtype
-	c->subtype    = astClone( n->subtype )
-	c->array      = astClone( n->array )
-	c->sourcefile = n->sourcefile
-	c->sourceline = n->sourceline
+	c->attrib      = n->attrib
+	c->text        = strDuplicate( n->text )
+	c->comment     = strDuplicate( n->comment )
+	c->dtype       = n->dtype
+	c->subtype     = astClone( n->subtype )
+	c->array       = astClone( n->array )
+	c->initializer = astClone( n->initializer )
+	c->sourcefile  = n->sourcefile
+	c->sourceline  = n->sourceline
 
 	select case( n->class )
 	case ASTCLASS_CONST
@@ -428,6 +430,14 @@ sub astDump( byval n as ASTNODE ptr, byval nestlevel as integer )
 			hPrintIndentation( nestlevel )
 			print "array:"
 			astDump( n->array, nestlevel )
+			nestlevel -= 1
+		end if
+
+		if( n->initializer ) then
+			nestlevel += 1
+			hPrintIndentation( nestlevel )
+			print "initializer:"
+			astDump( n->initializer, nestlevel )
 			nestlevel -= 1
 		end if
 

@@ -429,6 +429,9 @@ type ASTNODE_
 	subtype		as ASTNODE ptr
 	array		as ASTNODE ptr '' ARRAY holding DIMENSIONs, or NULL
 
+	'' PARAM initializer expression
+	initializer	as ASTNODE ptr
+
 	'' Source location where this declaration/statement was found
 	sourcefile	as FROGFILE ptr
 	sourceline	as integer

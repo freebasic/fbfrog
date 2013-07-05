@@ -348,6 +348,10 @@ private function emitAst _
 				s += " " + *n->text
 			end if
 			s += " as " + emitType( n->dtype, n->subtype )
+
+			if( n->initializer ) then
+				s += " = " + emitAst( n->initializer )
+			end if
 		end if
 
 	case ASTCLASS_ARRAY
