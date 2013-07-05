@@ -337,6 +337,7 @@ private function emitAst _
 		end if
 
 	case ASTCLASS_PARAM
+		'' should have been solved out by hFixArrayParams()
 		assert( n->array = NULL )
 
 		'' vararg?

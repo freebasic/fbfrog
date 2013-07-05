@@ -30,6 +30,3 @@ end type
 
 '' TODO: unknown construct
 typedef int MYINTARRAY[10];
-
-'' TODO: unknown construct
-void f(int myintarrayparam[10]);

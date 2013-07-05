@@ -59,7 +59,6 @@ Compiling:
 To do:
 
 - Add output directory option
-- Turn array parameters into pointers (that's the only possible translation)
 - drop redundant typedefs (since FB doesn't have separate struct/type namespaces)
 	/* typedef-same-id-as-type fixups: */
 	typedef struct T T;

@@ -1140,10 +1140,11 @@ private function cDeclarator _
 	select case( tkGet( parse.x ) )
 	'' ('[' ArrayElements ']')*
 	case TK_LBRACKET
-		'' Currently, only variables/fields can be arrays
-		'' (FB doesn't support array parameters/typedefs like that)
+		'' Can't allow arrays on everything - currently, it's only
+		'' handled for vars/fields/params
 		select case( decl )
-		case DECL_VAR, DECL_EXTERNVAR, DECL_STATICVAR, DECL_FIELD
+		case DECL_VAR, DECL_EXTERNVAR, DECL_STATICVAR, _
+		     DECL_FIELD, DECL_PARAM
 
 		case else
 			astDelete( t )

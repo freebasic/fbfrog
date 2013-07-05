@@ -331,6 +331,26 @@ private sub hRemoveNode _
 
 end sub
 
+private sub hFixArrayParams( byval n as ASTNODE ptr )
+	if( n->class = ASTCLASS_PARAM ) then
+		'' C array parameters are really just pointers (i.e. the array
+		'' is passed byref), and FB doesn't support array parameters
+		'' like that, so turn them into pointers:
+		''    int a[5]  ->  byval a as long ptr
+		if( n->array ) then
+			astDelete( n->array )
+			n->array = NULL
+			n->dtype = typeAddrOf( n->dtype )
+		end if
+	end if
+
+	var child = n->head
+	while( child )
+		hFixArrayParams( child )
+		child = child->next
+	wend
+end sub
+
 private function hAstMatches _
 	( _
 		byval a as ASTNODE ptr, _
@@ -481,13 +501,15 @@ private sub frogLoadFile( byval f as FROGFILE ptr )
 
 	f->ast = cToplevel( )
 
+	tkEnd( )
+
 	select case( frog.preset )
 	case "zip"
 		hRemoveNode( f->ast, ASTCLASS_PPDEFINE, "_HAD_ZIP_H" )
 		hRemoveNode( f->ast, ASTCLASS_PPDEFINE, "_HAD_ZIPCONF_H" )
 	end select
 
-	tkEnd( )
+	hFixArrayParams( f->ast )
 
 	hSetPPIndentAttrib( f->ast, TRUE )
 	hRemovePPIndentFromIncludeGuard( f->ast )

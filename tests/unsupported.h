@@ -39,6 +39,3 @@ struct T {
 
 /* Array typedef */
 typedef int MYINTARRAY[10];
-
-/* Array parameter */
-void f(int myintarrayparam[10]);
