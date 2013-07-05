@@ -351,6 +351,25 @@ private sub hFixArrayParams( byval n as ASTNODE ptr )
 	wend
 end sub
 
+'' Removes typedefs where the typedef identifier is the same as the struct tag,
+'' e.g. "typedef struct T T;" since FB doesn't have separate struct/type
+'' namespaces and such typedefs aren't needed.
+private sub hRemoveRedundantTypedefs( byval n as ASTNODE ptr )
+	var child = n->head
+	while( child )
+		hRemoveRedundantTypedefs( child )
+		child = child->next
+	wend
+
+	if( (n->class = ASTCLASS_TYPEDEF) and _
+	    (typeGetDtAndPtr( n->dtype ) = TYPE_UDT) ) then
+		assert( n->subtype->class = ASTCLASS_ID )
+		if( ucase( *n->text, 1 ) = ucase( *n->subtype->text ) ) then
+			n->class = ASTCLASS_NOP
+		end if
+	end if
+end sub
+
 private function hAstMatches _
 	( _
 		byval a as ASTNODE ptr, _
@@ -510,6 +529,7 @@ private sub frogLoadFile( byval f as FROGFILE ptr )
 	end select
 
 	hFixArrayParams( f->ast )
+	hRemoveRedundantTypedefs( f->ast )
 
 	hSetPPIndentAttrib( f->ast, TRUE )
 	hRemovePPIndentFromIncludeGuard( f->ast )

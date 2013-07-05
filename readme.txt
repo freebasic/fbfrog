@@ -59,9 +59,3 @@ Compiling:
 To do:
 
 - Add output directory option
-- drop redundant typedefs (since FB doesn't have separate struct/type namespaces)
-	/* typedef-same-id-as-type fixups: */
-	typedef struct T T;
-	typedef struct T A, T;
-	typedef struct T T, B;
-	typedef struct T A, T, B;
