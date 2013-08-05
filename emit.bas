@@ -296,7 +296,7 @@ private function emitAst _
 	case ASTCLASS_VAR
 		if( n->attrib and ASTATTRIB_EXTERN ) then
 			emitLine( "extern "     + hIdAndArray( n ) + " as " + emitType( n->dtype, n->subtype ) )
-		elseif( n->attrib and ASTATTRIB_STATIC ) then
+		elseif( n->attrib and ASTATTRIB_PRIVATE ) then
 			emitLine( "dim shared " + hIdAndArray( n ) + " as " + emitType( n->dtype, n->subtype ) )
 		else
 			if( emit.export_ast ) then

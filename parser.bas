@@ -1099,7 +1099,7 @@ private function cDeclarator _
 		case DECL_EXTERNVAR
 			t->attrib or= ASTATTRIB_EXTERN
 		case DECL_STATICVAR
-			t->attrib or= ASTATTRIB_STATIC
+			t->attrib or= ASTATTRIB_PRIVATE
 		end select
 
 		astSetType( t, dtype, basesubtype )

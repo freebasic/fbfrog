@@ -409,7 +409,7 @@ private function imVarDecl( byval decl as integer ) as ASTNODE ptr
 	case DECL_EXTERN
 		t->attrib or= ASTATTRIB_EXTERN
 	case DECL_DIMSHARED
-		t->attrib or= ASTATTRIB_STATIC
+		t->attrib or= ASTATTRIB_PRIVATE
 	end select
 
 	'' AS
