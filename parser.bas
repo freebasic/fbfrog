@@ -290,35 +290,6 @@ private function cExpression _
 			a = hNumberLiteral( x )
 			x = cSkip( x )
 
-		'' DEFINED '(' Identifier ')'
-		case KW_DEFINED
-			x = cSkip( x )
-
-			'' '('
-			var have_parens = FALSE
-			if( tkGet( x ) = TK_LPAREN ) then
-				have_parens = TRUE
-				x = cSkip( x )
-			end if
-
-			'' Identifier
-			if( tkGet( x ) <> TK_ID ) then
-				exit function
-			end if
-			a = astNew( ASTCLASS_ID, tkGetText( x ) )
-			x = cSkip( x )
-
-			if( have_parens ) then
-				'' ')'
-				if( tkGet( x ) <> TK_RPAREN ) then
-					astDelete( a )
-					exit function
-				end if
-				x = cSkip( x )
-			end if
-
-			a = astNew( ASTCLASS_DEFINED, a, NULL, NULL )
-
 		case else
 			exit function
 		end select
