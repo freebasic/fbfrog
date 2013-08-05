@@ -95,23 +95,6 @@ end function
 function astNew overload _
 	( _
 		byval class_ as integer, _
-		byval a as ASTNODE ptr _
-	) as ASTNODE ptr
-	function = astNew( class_, a, NULL, NULL )
-end function
-
-function astNew overload _
-	( _
-		byval class_ as integer, _
-		byval a as ASTNODE ptr, _
-		byval b as ASTNODE ptr _
-	) as ASTNODE ptr
-	function = astNew( class_, a, b, NULL )
-end function
-
-function astNew overload _
-	( _
-		byval class_ as integer, _
 		byval a as ASTNODE ptr, _
 		byval b as ASTNODE ptr, _
 		byval c as ASTNODE ptr _

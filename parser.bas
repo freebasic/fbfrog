@@ -264,7 +264,7 @@ private function cExpression _
 	dim as ASTNODE ptr a
 	if( astclass >= 0 ) then
 		x = cSkip( x )
-		a = astNew( astclass, cExpression( x, copinfo(astclass).level ), NULL, NULL )
+		a = astNew( astclass, cExpression( x, copinfo(astclass).level ) )
 	else
 		'' Atoms
 		select case( tkGet( x ) )
@@ -412,8 +412,7 @@ private function hMergeUnknown( ) as ASTNODE ptr
 		parse.x += 1
 	loop while( tkIsPoisoned( parse.x ) )
 
-	function = astNew( ASTCLASS_UNKNOWN, _
-			tkToAstText( begin, parse.x - 1 ), NULL, NULL )
+	function = astNew( ASTCLASS_UNKNOWN, tkToAstText( begin, parse.x - 1 ) )
 end function
 
 private sub cUnknown( byval is_enum as integer = FALSE )
@@ -610,7 +609,7 @@ private function cStructCompound( ) as ASTNODE ptr
 			exit function
 		end if
 
-		function = astNew( ASTCLASS_GROUP, struct, t, NULL )
+		function = astNew( ASTCLASS_GROUP, struct, t )
 	else
 		'' ';'
 		if( tkGet( parse.x ) <> TK_SEMI ) then
@@ -1146,8 +1145,7 @@ private function cDeclarator _
 			astAddChild( dimension, _
 				astNew( ASTCLASS_SUB, _
 					elements, _
-					astNewCONST( 1, 0, TYPE_LONG ), _
-					NULL ) )
+					astNewCONST( 1, 0, TYPE_LONG ) ) )
 
 			'' ']'
 			if( tkGet( parse.x ) <> TK_RBRACKET ) then

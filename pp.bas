@@ -399,7 +399,7 @@ private function ppExpression _
 	dim as ASTNODE ptr a
 	if( astclass >= 0 ) then
 		x = ppSkip( x )
-		a = astNew( astclass, ppExpression( x, ppopinfo(astclass).level ), NULL, NULL )
+		a = astNew( astclass, ppExpression( x, ppopinfo(astclass).level ) )
 	else
 		'' Atoms
 		select case( tkGet( x ) )
@@ -452,7 +452,7 @@ private function ppExpression _
 				x = ppSkip( x )
 			end if
 
-			a = astNew( ASTCLASS_DEFINED, a, NULL, NULL )
+			a = astNew( ASTCLASS_DEFINED, a )
 
 		case else
 			exit function
@@ -600,11 +600,11 @@ private function ppDirective( byval x as integer ) as integer
 		t = astNew( ASTCLASS_ID, tkGetText( x ) )
 		x = ppSkip( x )
 
-		t = astNew( ASTCLASS_DEFINED, t, NULL, NULL )
+		t = astNew( ASTCLASS_DEFINED, t )
 		if( tk = KW_IFNDEF ) then
-			t = astNew( ASTCLASS_LOGNOT, t, NULL, NULL )
+			t = astNew( ASTCLASS_LOGNOT, t )
 		end if
-		t = astNew( ASTCLASS_PPIF, t, NULL, NULL )
+		t = astNew( ASTCLASS_PPIF, t )
 
 	case KW_ELSE, KW_ENDIF
 		x = ppSkip( x )
@@ -686,7 +686,7 @@ private function ppUnknownDirective( byval x as integer ) as integer
 
 	y = ppSkipToEOL( x )
 	expr = tkToAstText( begin, y )
-	expr = astNew( ASTCLASS_PPUNKNOWN, expr, NULL, NULL )
+	expr = astNew( ASTCLASS_PPUNKNOWN, expr )
 	x = y
 
 	'' EOL? (could also be EOF)
@@ -794,7 +794,7 @@ sub ppDirectives2( )
 
 						'' Turn it into a PPUNKNOWN
 						astAddChild( t, tkToAstText( begin + 1, x - 1 ) )
-						t = astNew( ASTCLASS_PPUNKNOWN, astClone( t ), NULL, NULL )
+						t = astNew( ASTCLASS_PPUNKNOWN, astClone( t ) )
 						tkSetAst( begin - 1, t )
 					else
 						astAddChild( t, expr )
@@ -1048,7 +1048,7 @@ sub ppSplitElseIfs( )
 				tkRemove( x, x )
 				tkInsert( x, TK_AST, , astNew( ASTCLASS_PPELSE ) )
 				x += 1
-				tkInsert( x, TK_AST, , astNew( ASTCLASS_PPIF, t, NULL, NULL ) )
+				tkInsert( x, TK_AST, , astNew( ASTCLASS_PPIF, t ) )
 
 				'' Find the corresponding #endif,
 				'' and insert another #endif in front of it
@@ -1129,7 +1129,7 @@ sub ppMergeElseIfs( )
 					if( t->class = ASTCLASS_PPIF ) then
 						t = astClone( t->head )
 						tkRemove( x, x + 1 )
-						tkInsert( x, TK_AST, , astNew( ASTCLASS_PPELSEIF, t, NULL, NULL ) )
+						tkInsert( x, TK_AST, , astNew( ASTCLASS_PPELSEIF, t ) )
 
 						'' Find the corresponding #endif and remove it
 						dim as integer xelse, xendif

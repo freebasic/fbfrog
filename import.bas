@@ -106,7 +106,7 @@ private function imExpression _
 	dim as ASTNODE ptr a
 	if( astclass >= 0 ) then
 		hSkip( )
-		a = astNew( astclass, imExpression( is_pp, fbopinfo(astclass).level ), NULL, NULL )
+		a = astNew( astclass, imExpression( is_pp, fbopinfo(astclass).level ) )
 	else
 		'' Atoms
 		select case( tkGet( x ) )
@@ -142,7 +142,7 @@ private function imExpression _
 			'' ')'
 			hExpectAndSkip( TK_RPAREN )
 
-			a = astNew( ASTCLASS_DEFINED, a, NULL, NULL )
+			a = astNew( ASTCLASS_DEFINED, a )
 
 		'' IIF '(' Expression ',' Expression ',' Expression ')'
 		case KW_IIF
@@ -214,7 +214,7 @@ private function imExpression _
 		'' rhs
 		var b = imExpression( is_pp, oplevel )
 
-		a = astNew( astclass, a, b, NULL )
+		a = astNew( astclass, a, b )
 	loop
 
 	function = a
@@ -250,7 +250,7 @@ private function imPPDirective( ) as ASTNODE ptr
 		'' Expression
 		var t = imExpression( TRUE )
 
-		function = astNew( iif( tk = KW_IF, ASTCLASS_PPIF, ASTCLASS_PPELSEIF ), t, NULL, NULL )
+		function = astNew( iif( tk = KW_IF, ASTCLASS_PPIF, ASTCLASS_PPELSEIF ), t )
 
 	case KW_IFDEF, KW_IFNDEF
 		hSkip( )
@@ -260,11 +260,11 @@ private function imPPDirective( ) as ASTNODE ptr
 		var t = astNew( ASTCLASS_ID, tkGetText( x ) )
 		hSkip( )
 
-		t = astNew( ASTCLASS_DEFINED, t, NULL, NULL )
+		t = astNew( ASTCLASS_DEFINED, t )
 		if( tk = KW_IFNDEF ) then
-			t = astNew( ASTCLASS_LOGNOT, t, NULL, NULL )
+			t = astNew( ASTCLASS_LOGNOT, t )
 		end if
-		function = astNew( ASTCLASS_PPIF, t, NULL, NULL )
+		function = astNew( ASTCLASS_PPIF, t )
 
 	case KW_ELSE
 		hSkip( )

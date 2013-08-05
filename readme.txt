@@ -58,7 +58,6 @@ Compiling:
 
 To do:
 
-- Now that fbc's overload resolution is fixed, remove extra astNew() overloads
 - Consider stopping to bother with preserving commentary, for a pure binding
   with auto-formatting it's not needed
 - Add output directory option

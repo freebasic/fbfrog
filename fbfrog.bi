@@ -508,20 +508,9 @@ declare function astNew overload( byval class_ as integer ) as ASTNODE ptr
 declare function astNew overload _
 	( _
 		byval class_ as integer, _
-		byval a as ASTNODE ptr _
-	) as ASTNODE ptr
-declare function astNew overload _
-	( _
-		byval class_ as integer, _
 		byval a as ASTNODE ptr, _
-		byval b as ASTNODE ptr _
-	) as ASTNODE ptr
-declare function astNew overload _
-	( _
-		byval class_ as integer, _
-		byval a as ASTNODE ptr, _
-		byval b as ASTNODE ptr, _
-		byval c as ASTNODE ptr _
+		byval b as ASTNODE ptr = NULL, _
+		byval c as ASTNODE ptr = NULL _
 	) as ASTNODE ptr
 declare function astNew overload _
 	( _
