@@ -127,7 +127,7 @@ enum
 	TK_EWSTRING     '' 110    L"\n"
 	TK_EWCHAR       '' 111    L'\n'
 
-	'' C tokens
+	'' C/FB tokens
 	TK_EXCL         '' !
 	TK_EXCLEQ       '' !=
 	TK_HASH         '' #
@@ -184,50 +184,106 @@ enum
 	'' >= TK_ID: keywords/identifiers
 	TK_ID           '' Identifiers (a-z, A-Z, 0-9, _, $)
 
-	'' C Keywords
+	'' C-only keywords
 	KW_AUTO
 	KW_BREAK
-	KW_CASE
 	KW_CHAR
+	KW_DEFAULT
+	KW_ELIF
+	KW_FLOAT
+	KW_INLINE
+	KW_REGISTER
+	KW_RESTRICT
+	KW_SIGNED
+	KW_STRUCT
+	KW_SWITCH
+	KW_TYPEDEF
+	KW_VOID
+	KW_VOLATILE
+
+	'' C/FB shared keywords
+	KW_CASE
 	KW_CONST
 	KW_CONTINUE
-	KW_DEFAULT
 	KW_DEFINE
 	KW_DEFINED
 	KW_DO
 	KW_DOUBLE
-	KW_ELIF
 	KW_ELSE
 	KW_ENDIF
 	KW_ENUM
 	KW_EXTERN
-	KW_FLOAT
 	KW_FOR
 	KW_GOTO
 	KW_IF
 	KW_IFDEF
 	KW_IFNDEF
 	KW_INCLUDE
-	KW_INLINE
 	KW_INT
 	KW_LONG
 	KW_PRAGMA
-	KW_REGISTER
-	KW_RESTRICT
 	KW_RETURN
 	KW_SHORT
-	KW_SIGNED
 	KW_SIZEOF
 	KW_STATIC
-	KW_STRUCT
-	KW_SWITCH
-	KW_TYPEDEF
 	KW_UNDEF
 	KW_UNION
 	KW_UNSIGNED
-	KW_VOID
-	KW_VOLATILE
 	KW_WHILE
+
+	'' FB-only keywords
+	KW_ALIAS
+	KW_AND
+	KW_ANDALSO
+	KW_ANY
+	KW_AS
+	KW_BYTE
+	KW_BYVAL
+	KW_CAST
+	KW_CDECL
+	KW_CPTR
+	KW_DECLARE
+	KW_DIM
+	KW_ELSEIF
+	KW_END
+	KW_EXIT
+	KW_EXPORT
+	KW_FIELD
+	KW_FUNCTION
+	KW_IIF
+	KW_INTEGER
+	KW_LONGINT
+	KW_LOOP
+	KW_MOD
+	KW_NEXT
+	KW_NOT
+	KW_OR
+	KW_ORELSE
+	KW_PASCAL
+	KW_PRIVATE
+	KW_PTR
+	KW_SCOPE
+	KW_SELECT
+	KW_SHARED
+	KW_SHL
+	KW_SHR
+	KW_SINGLE
+	KW_STDCALL
+	KW_SUB
+	KW_THEN
+	KW_TO
+	KW_TYPE
+	KW_TYPEOF
+	KW_UBYTE
+	KW_UINTEGER
+	KW_ULONG
+	KW_ULONGINT
+	KW_USHORT
+	KW_WEND
+	KW_WSTR
+	KW_WSTRING
+	KW_XOR
+	KW_ZSTRING
 
 	TK__COUNT
 end enum
@@ -507,14 +563,25 @@ declare sub astDump( byval n as ASTNODE ptr, byval nestlevel as integer = 0 )
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-declare function lexLoadFile( byval x as integer, byref filename as string ) as integer
+declare function lexLoadFile _
+	( _
+		byval x as integer, _
+		byref filename as string, _
+		byval fb_mode as integer = FALSE _
+	) as integer
 declare function emitType _
 	( _
 		byval dtype as integer, _
 		byval subtype as ASTNODE ptr, _
 		byval debugdump as integer = FALSE _
 	) as string
-declare sub emitFile( byref filename as string, byval ast as ASTNODE ptr )
+declare sub emitFile _
+	( _
+		byref filename as string, _
+		byval ast as ASTNODE ptr, _
+		byval export_ast as integer = FALSE _
+	)
+declare function importFile( byref file as string ) as ASTNODE ptr
 
 declare sub ppComments( )
 declare sub ppDividers( )

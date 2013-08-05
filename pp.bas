@@ -350,7 +350,7 @@ type PPOPINFO
 	is_leftassoc	as integer
 end type
 
-'' PP operator precedence (higher value = higher precedence)
+'' C PP operator precedence (higher value = higher precedence)
 dim shared as PPOPINFO ppopinfo(ASTCLASS_IIF to ASTCLASS_UNARYPLUS) = _
 { _
 	( 2, FALSE), _ '' ASTCLASS_IIF
@@ -378,7 +378,7 @@ dim shared as PPOPINFO ppopinfo(ASTCLASS_IIF to ASTCLASS_UNARYPLUS) = _
 	(13, TRUE )  _ '' ASTCLASS_UNARYPLUS
 }
 
-'' PP expression parser based on precedence climbing
+'' C PP expression parser based on precedence climbing
 private function ppExpression _
 	( _
 		byref x as integer, _

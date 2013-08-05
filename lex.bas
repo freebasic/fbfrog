@@ -78,14 +78,18 @@ type LEXSTUFF
 	x		as integer
 	linenum		as integer
 	filename	as string
+	fb_mode		as integer    '' C or FB?
 
-	kwhash		as THASH
+	fbkwhash	as THASH
+	ckwhash		as THASH
+	kwhash		as THASH ptr  '' Points to keywords hash tb for current mode, C or FB
 end type
 
 dim shared as LEXSTUFF lex
 
 private sub lexOops( byval message as zstring ptr )
 	print lex.filename + "(" & lex.linenum & "): error: " + *message
+	end 1
 end sub
 
 private sub hAddTextToken( byval tk as integer, byval begin as ubyte ptr )
@@ -99,7 +103,7 @@ private sub hAddTextToken( byval tk as integer, byval begin as ubyte ptr )
 
 	'' Lookup C keyword
 	hash = hashHash( begin )
-	item = hashLookup( @lex.kwhash, begin, hash )
+	item = hashLookup( lex.kwhash, begin, hash )
 
 	'' Is it a C keyword?
 	if( item->s ) then
@@ -135,16 +139,15 @@ private sub hReadSpace( )
 end sub
 
 private sub hReadLineComment( )
-	dim as ubyte ptr begin = any
-	dim as integer escaped = any
-
-	'' Line comments, starting at the first '/' of '// foo...'
-	'' The whole comment body except for the // will be put into the token.
+	'' Line comments:
+	''    'abcd
+	''    //abcd
+	'' The whole comment body except for the ' or // iss put into the token.
 	'' EOL remains a separate token. Escaped newlines ('\' [Spaces] EOL)
-	'' means the comment continues on the next line.
+	'' means the comment continues on the next line (C mode only).
 	lex.i += 2
-	begin = lex.i
-	escaped = FALSE
+	var begin = lex.i
+	var escaped = FALSE
 
 	do
 		select case( lex.i[0] )
@@ -171,7 +174,7 @@ private sub hReadLineComment( )
 			'' (at least gcc/clang support spaces between \ and EOL)
 
 		case CH_BACKSLASH
-			escaped = TRUE
+			escaped = not lex.fb_mode
 
 		case 0
 			exit do
@@ -187,20 +190,18 @@ private sub hReadLineComment( )
 end sub
 
 private sub hReadComment( )
-	dim as ubyte ptr begin = any
-	dim as integer saw_end = any
-
+	var quote = lex.i[1]  '' ' (FB mode's /' '/) or * (C mode's /* */)
 	lex.i += 2
-	begin = lex.i
+	var begin = lex.i
 
-	saw_end = FALSE
+	var saw_end = FALSE
 	do
 		select case( lex.i[0] )
 		case 0
 			lexOops( "comment left open" )
 
-		case CH_STAR		'' *
-			if( lex.i[1] = CH_SLASH ) then	'' */
+		case quote		'' ' or *
+			if( lex.i[1] = CH_SLASH ) then	'' '/ or */
 				saw_end = TRUE
 				exit do
 			end if
@@ -492,7 +493,11 @@ private sub lexNext( )
 		end select
 
 	case CH_QUOTE		'' '
-		hReadString( )
+		if( lex.fb_mode ) then
+			hReadLineComment( )
+		else
+			hReadString( )
+		end if
 
 	case CH_LPAREN		'' (
 		hReadBytes( TK_LPAREN, 1 )
@@ -551,9 +556,23 @@ private sub lexNext( )
 		case CH_EQ	'' /=
 			hReadBytes( TK_SLASHEQ, 2 )
 		case CH_SLASH	'' //
-			hReadLineComment( )
+			if( lex.fb_mode ) then
+				hReadBytes( TK_SLASH, 1 )
+			else
+				hReadLineComment( )
+			end if
+		case CH_QUOTE	'' /'
+			if( lex.fb_mode ) then
+				hReadComment( )
+			else
+				hReadBytes( TK_SLASH, 1 )
+			end if
 		case CH_STAR	'' /*
-			hReadComment( )
+			if( lex.fb_mode ) then
+				hReadBytes( TK_SLASH, 1 )
+			else
+				hReadComment( )
+			end if
 		case else
 			hReadBytes( TK_SLASH, 1 )
 		end select
@@ -577,6 +596,8 @@ private sub lexNext( )
 			end if
 		case CH_EQ	'' <=
 			hReadBytes( TK_LTEQ, 2 )
+		case CH_GT	'' <>
+			hReadBytes( TK_LTGT, 2 )
 		case else
 			'' If it's an #include, parse <...> as string literal
 			y = lex.x
@@ -725,29 +746,42 @@ private sub hComplainAboutEmbeddedNulls( )
 end sub
 
 private sub hInitKeywords( )
-	static as integer lazy = FALSE
-	dim as uinteger hash = any
-	dim as THASHITEM ptr item = any
+	'' Load keywords if not yet done, and switch between C/FB keyword
+	'' hash tables to match the requested mode.
 
-	'' Load C keywords if not yet done
-	if( lazy ) then
-		exit sub
+	dim as integer first, last
+	if( lex.fb_mode ) then
+		lex.kwhash = @lex.fbkwhash
+		first = KW_CASE
+		last = KW_ZSTRING
+	else
+		lex.kwhash = @lex.ckwhash
+		first = KW_AUTO
+		last = KW_WHILE
 	end if
-	lazy = TRUE
 
-	hashInit( @lex.kwhash, 10 )
+	if( lex.kwhash->items = NULL ) then
+		hashInit( lex.kwhash, 12 )
+	end if
 
-	for i as integer = KW_AUTO to KW_WHILE
-		hash = hashHash( tkInfoText( i ) )
-		item = hashLookup( @lex.kwhash, tkInfoText( i ), hash )
-		hashAdd( @lex.kwhash, item, hash, tkInfoText( i ), cast( any ptr, i ) )
+	for i as integer = first to last
+		var hash = hashHash( tkInfoText( i ) )
+		var item = hashLookup( lex.kwhash, tkInfoText( i ), hash )
+		hashAdd( lex.kwhash, item, hash, tkInfoText( i ), cast( any ptr, i ) )
 	next
 end sub
 
-function lexLoadFile( byval x as integer, byref filename as string ) as integer
+function lexLoadFile _
+	( _
+		byval x as integer, _
+		byref filename as string, _
+		byval fb_mode as integer _
+	) as integer
+
 	lex.x = x
 	lex.linenum = 1
 	lex.filename = filename
+	lex.fb_mode = fb_mode
 	hLoadFile( filename )
 	hComplainAboutEmbeddedNulls( )
 	hInitKeywords( )

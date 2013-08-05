@@ -58,4 +58,22 @@ Compiling:
 
 To do:
 
+- Rename ASTATTRIB_STATIC -> ASTATTRIB_PRIVATE
+- Now that fbc's overload resolution is fixed, remove extra astNew() overloads
+- Consider stopping to bother with preserving commentary, for a pure binding
+  with auto-formatting it's not needed
 - Add output directory option
+- libzip: zip_source_free() vs. enumconst ZIP_SOURCE_FREE,
+          zip_stat_index() vs. #define ZIP_STAT_INDEX
+- Allow to presets to download and extract tarballs, and then register some of
+  the extracted files as input files for parsing
+- If any files are given on command line, that overrides the preset (if any)
+- Support parsing separate library-version-specific files and then combining
+  their ASTs with a simple diff algorithm to create a binding that supports
+  multiple versions of that library through a version #define
+- Add AST exporting & importing support, so the ASTs of finished bindings could
+  be stored in fbfrog.git, allowing these bindings to easily be extended when
+  new versions of their libraries come out (so fbfrog wouldn't have to re-parse
+  or re-download all the tarballs for previous versions again)
+    - Ideally the final FB binding itself could be re-imported but that'll be
+      more difficult

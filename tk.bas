@@ -84,54 +84,104 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	( @"}"  , @"tk" ), _
 	( @"~"  , @"tk" ), _
 	( NULL  , @"id" ), _ '' TK_ID
-	( @"auto"    , @"kw" ), _ '' C keywords
+	( @"auto"    , @"kw" ), _ '' C-only keywords
 	( @"break"   , @"kw" ), _
-	( @"case"    , @"kw" ), _
 	( @"char"    , @"kw" ), _
+	( @"default" , @"kw" ), _
+	( @"elif"    , @"kw" ), _
+	( @"float"   , @"kw" ), _
+	( @"inline"  , @"kw" ), _
+	( @"register", @"kw" ), _
+	( @"restrict", @"kw" ), _
+	( @"signed"  , @"kw" ), _
+	( @"struct"  , @"kw" ), _
+	( @"switch"  , @"kw" ), _
+	( @"typedef" , @"kw" ), _
+	( @"void"    , @"kw" ), _
+	( @"volatile", @"kw" ), _
+	( @"case"    , @"kw" ), _  '' C/FB shared keywords
 	( @"const"   , @"kw" ), _
 	( @"continue", @"kw" ), _
-	( @"default" , @"kw" ), _
 	( @"define"  , @"kw" ), _
 	( @"defined" , @"kw" ), _
 	( @"do"      , @"kw" ), _
 	( @"double"  , @"kw" ), _
-	( @"elif"    , @"kw" ), _
 	( @"else"    , @"kw" ), _
 	( @"endif"   , @"kw" ), _
 	( @"enum"    , @"kw" ), _
 	( @"extern"  , @"kw" ), _
-	( @"float"   , @"kw" ), _
 	( @"for"     , @"kw" ), _
 	( @"goto"    , @"kw" ), _
 	( @"if"      , @"kw" ), _
 	( @"ifdef"   , @"kw" ), _
 	( @"ifndef"  , @"kw" ), _
 	( @"include" , @"kw" ), _
-	( @"inline"  , @"kw" ), _
 	( @"int"     , @"kw" ), _
 	( @"long"    , @"kw" ), _
 	( @"pragma"  , @"kw" ), _
-	( @"register", @"kw" ), _
-	( @"restrict", @"kw" ), _
 	( @"return"  , @"kw" ), _
 	( @"short"   , @"kw" ), _
-	( @"signed"  , @"kw" ), _
 	( @"sizeof"  , @"kw" ), _
 	( @"static"  , @"kw" ), _
-	( @"struct"  , @"kw" ), _
-	( @"switch"  , @"kw" ), _
-	( @"typedef" , @"kw" ), _
 	( @"undef"   , @"kw" ), _
 	( @"union"   , @"kw" ), _
 	( @"unsigned", @"kw" ), _
-	( @"void"    , @"kw" ), _
-	( @"volatile", @"kw" ), _
-	( @"while"   , @"kw" )  _
+	( @"while"   , @"kw" ), _
+	( @"alias"   , @"kw" ), _  '' FB-only keywords
+	( @"and"     , @"kw" ), _
+	( @"andalso" , @"kw" ), _
+	( @"any"     , @"kw" ), _
+	( @"as"      , @"kw" ), _
+	( @"byte"    , @"kw" ), _
+	( @"byval"   , @"kw" ), _
+	( @"cast"    , @"kw" ), _
+	( @"cdecl"   , @"kw" ), _
+	( @"cptr"    , @"kw" ), _
+	( @"declare" , @"kw" ), _
+	( @"dim"     , @"kw" ), _
+	( @"elseif"  , @"kw" ), _
+	( @"end"     , @"kw" ), _
+	( @"exit"    , @"kw" ), _
+	( @"export"  , @"kw" ), _
+	( @"field"   , @"kw" ), _
+	( @"function", @"kw" ), _
+	( @"iif"     , @"kw" ), _
+	( @"integer" , @"kw" ), _
+	( @"longint" , @"kw" ), _
+	( @"loop"    , @"kw" ), _
+	( @"mod"     , @"kw" ), _
+	( @"next"    , @"kw" ), _
+	( @"not"     , @"kw" ), _
+	( @"or"      , @"kw" ), _
+	( @"orelse"  , @"kw" ), _
+	( @"pascal"  , @"kw" ), _
+	( @"private" , @"kw" ), _
+	( @"ptr"     , @"kw" ), _
+	( @"scope"   , @"kw" ), _
+	( @"select"  , @"kw" ), _
+	( @"shared"  , @"kw" ), _
+	( @"shl"     , @"kw" ), _
+	( @"shr"     , @"kw" ), _
+	( @"single"  , @"kw" ), _
+	( @"stdcall" , @"kw" ), _
+	( @"sub"     , @"kw" ), _
+	( @"then"    , @"kw" ), _
+	( @"to"      , @"kw" ), _
+	( @"type"    , @"kw" ), _
+	( @"typeof"  , @"kw" ), _
+	( @"ubyte"   , @"kw" ), _
+	( @"uinteger", @"kw" ), _
+	( @"ulong"   , @"kw" ), _
+	( @"ulongint", @"kw" ), _
+	( @"ushort"  , @"kw" ), _
+	( @"wend"    , @"kw" ), _
+	( @"wstr"    , @"kw" ), _
+	( @"wstring" , @"kw" ), _
+	( @"xor"     , @"kw" ), _
+	( @"zstring" , @"kw" )  _
 }
 
-#if ubound( tk_info ) < TK__COUNT - 1
-#error "please update the tk_info() table!"
-#endif
+#assert ubound( tk_info ) = TK__COUNT - 1
 
 function tkInfoText( byval tk as integer ) as zstring ptr
 	function = tk_info(tk).text
