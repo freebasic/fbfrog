@@ -199,20 +199,46 @@ private sub hPrintHelp( byref message as string )
 	end (iif( len( message ) > 0, 1, 0 ))
 end sub
 
-private sub hAddFromDir( byref d as string )
-	dim as TLIST list
-	listInit( @list, sizeof( string ) )
+private sub hHandleOption _
+	( _
+		byval argc as integer, _
+		byval argv as zstring ptr ptr, _
+		byref i as integer, _
+		byref arg as string _
+	)
 
-	hScanDirectoryForH( d, @list )
+	select case( arg )
+	case "h", "?", "help", "version"
+		hPrintHelp( "" )
+	case "m"
+		frog.merge = TRUE
+		exit sub
+	case "v"
+		frog.verbose = TRUE
+		exit sub
+	end select
 
-	dim as string ptr s = listGetHead( @list )
-	while( s )
-		frogAddFile( NULL, *s )
-		*s = ""
-		s = listGetNext( s )
-	wend
+	'' "-l<name>" or "-l <name>"
+	if( left( arg, 1 ) = "l" ) then
+		'' Cut off the l
+		arg = right( arg, len( arg ) - 1 )
 
-	listEnd( @list )
+		'' Now empty? then it was just "-l"
+		if( len( arg ) = 0 ) then
+			'' Use the following arg, if any, as <name>
+			i += 1
+			if( i < argc ) then
+				arg = *argv[i]
+			else
+				hPrintHelp( "missing argument for -l option" )
+			end if
+		end if
+
+		frog.preset = arg
+		exit sub
+	end if
+
+	hPrintHelp( "unknown option: " + *argv[i] )
 end sub
 
 private sub hParseArgs1( byval argc as integer, byval argv as zstring ptr ptr )
@@ -228,37 +254,25 @@ private sub hParseArgs1( byval argc as integer, byval argv as zstring ptr ptr )
 				arg = right( arg, len( arg ) - 1 )
 			loop while( left( arg, 1 ) = "-" )
 
-			select case( arg )
-			case "h", "?", "help", "version"
-				hPrintHelp( "" )
-			case "m"
-				frog.merge = TRUE
-			case "v"
-				frog.verbose = TRUE
-			case else
-				'' "-l<name>" or "-l <name>"
-				if( left( arg, 1 ) = "l" ) then
-					'' Cut off the l
-					arg = right( arg, len( arg ) - 1 )
-
-					'' Now empty? then it was just "-l"
-					if( len( arg ) = 0 ) then
-						'' Use the following arg, if any, as <name>
-						i += 1
-						if( i < argc ) then
-							arg = *argv[i]
-						else
-							hPrintHelp( "missing argument for -l option" )
-						end if
-					end if
-
-					frog.preset = arg
-				elseif( len( arg ) > 0 ) then
-					hPrintHelp( "unknown option: " + *argv[i] )
-				end if
-			end select
+			hHandleOption( argc, argv, i, arg )
 		end if
 	next
+end sub
+
+private sub hAddFromDir( byref d as string )
+	dim as TLIST list
+	listInit( @list, sizeof( string ) )
+
+	hScanDirectoryForH( d, @list )
+
+	dim as string ptr s = listGetHead( @list )
+	while( s )
+		frogAddFile( NULL, *s )
+		*s = ""
+		s = listGetNext( s )
+	wend
+
+	listEnd( @list )
 end sub
 
 private sub hParseArgs2( byval argc as integer, byval argv as zstring ptr ptr )
