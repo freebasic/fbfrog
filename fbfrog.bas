@@ -1,74 +1,8 @@
+'' Main module, command line interface
+
 #include once "fbfrog.bi"
 
 dim shared as FROGSTUFF frog
-
-sub oops( byref message as string )
-	print "oops, " & message
-	end 1
-end sub
-
-function strReplace _
-	( _
-		byref text as string, _
-		byref a as string, _
-		byref b as string _
-	) as string
-
-	dim as string keep, result
-	dim as integer alen = any, blen = any, i = any
-
-	result = text
-
-	alen = len( a )
-	blen = len( b )
-
-	i = 0
-	do
-		'' Does result contain an occurence of a?
-		i = instr( i + 1, result, a )
-		if( i = 0 ) then
-			exit do
-		end if
-
-		'' Cut out a and insert b in its place
-		'' result  =  front  +  b  +  back
-		keep = right( result, len( result ) - ((i - 1) + alen) )
-		result = left( result, i - 1 )
-		result += b
-		result += keep
-
-		i += blen - 1
-	loop
-
-	function = result
-end function
-
-function strStartsWith( byref s as string, byref lookfor as string ) as integer
-	function = (left( s, len( lookfor ) ) = lookfor)
-end function
-
-function strMatches _
-	( _
-		byref origpattern as string, _
-		byref s as string _
-	) as integer
-
-	dim as string pattern = origpattern
-	dim as integer wildcard = instr( pattern, "*" )
-	if( instr( wildcard + 1, pattern, "*" ) > 0 ) then
-		oops( __FUNCTION__ & "(): pattern with more than one wildcard" )
-		end 1
-	end if
-
-	if( wildcard > 0 ) then
-		dim as integer lhs = wildcard - 1
-		dim as integer rhs = len( pattern ) - wildcard
-		function = (( left( s, lhs ) =  left( pattern, lhs )) and _
-		            (right( s, rhs ) = right( pattern, rhs )))
-	else
-		function = (pattern = s)
-	end if
-end function
 
 private sub frogInit( )
 	listInit( @frog.files, sizeof( FROGFILE ) )
@@ -683,9 +617,6 @@ private sub frogEmitFile( byval f as FROGFILE ptr )
 	if( len( frog.preset ) > 0 ) then
 		var astdumpfile = pathStripExt( f->normed ) + ".ast.bi"
 		emitFile( astdumpfile, f->ast, TRUE )
-
-		var ast = importFile( astdumpfile )
-		astDump( ast )
 	end if
 
 	emitFile( binormed, f->ast )

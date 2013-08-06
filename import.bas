@@ -680,7 +680,6 @@ end function
 function importFile( byref file as string ) as ASTNODE ptr
 	tkInit( )
 	lexLoadFile( 0, file, TRUE )
-	tkDump( )
 	function = imToplevel( )
 	tkEnd( )
 end function

@@ -2,6 +2,21 @@
 #define FALSE 0
 #define TRUE (-1)
 
+declare sub oops( byref message as string )
+declare function strReplace _
+	( _
+		byref text as string, _
+		byref a as string, _
+		byref b as string _
+	) as string
+declare function strMatches _
+	( _
+		byref origpattern as string, _
+		byref s as string _
+	) as integer
+declare function strStartsWith( byref s as string, byref lookfor as string ) as integer
+declare function strEndsWith( byref s as string, byref lookfor as string ) as integer
+
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 '' The hash table is an array of items,
@@ -614,11 +629,3 @@ type FROGSTUFF
 end type
 
 extern as FROGSTUFF frog
-
-declare sub oops( byref message as string )
-declare function strReplace _
-	( _
-		byref text as string, _
-		byref a as string, _
-		byref b as string _
-	) as string
