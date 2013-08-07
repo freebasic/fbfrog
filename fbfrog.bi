@@ -419,6 +419,7 @@ enum
 
 	ASTCLASS_PPINCLUDE
 	ASTCLASS_PPDEFINE
+	ASTCLASS_PPMACRO
 	ASTCLASS_PPIF
 	ASTCLASS_PPELSEIF
 	ASTCLASS_PPELSE
@@ -439,6 +440,8 @@ enum
 	ASTCLASS_DIMENSION
 	ASTCLASS_UNKNOWN
 
+	ASTCLASS_TK
+	ASTCLASS_MACROPARAM
 	ASTCLASS_CONST
 	ASTCLASS_ID
 	ASTCLASS_TEXT
@@ -511,10 +514,15 @@ type ASTNODE_
 	includefile	as FROGFILE ptr
 
 	val		as ASTNODECONST
+	tk		as integer  '' ASTCLASS_TK
+	macroparam	as integer  '' ASTCLASS_MACROPARAM
+	macroparams	as integer  '' ASTCLASS_PPMACRO
 
-	'' Operands/fields/parameters/...
+	'' Child nodes: operands/fields/parameters/...
 	head		as ASTNODE ptr
 	tail		as ASTNODE ptr
+
+	'' Sibling nodes
 	next		as ASTNODE ptr
 	prev		as ASTNODE ptr
 end type
@@ -594,6 +602,10 @@ declare sub ppDirectives1( )
 declare sub ppDirectives2( )
 declare sub ppEvalInit( )
 declare sub ppEvalEnd( )
+declare sub ppMacroBegin( byval id as zstring ptr, byval params as integer )
+declare sub ppMacroToken( byval tk as integer, byval text as zstring ptr )
+declare sub ppMacroParam( byval index as integer )
+declare sub ppMacroEnd( )
 declare sub ppAddSymbol( byval id as zstring ptr, byval is_defined as integer )
 declare sub ppEvalExpressions( )
 declare sub ppSplitElseIfs( )

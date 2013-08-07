@@ -25,7 +25,7 @@ end function
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 type ASTNODEINFO
-	name		as zstring * 10
+	name		as zstring * 16
 end type
 
 dim shared as ASTNODEINFO astnodeinfo(0 to ...) = _
@@ -35,6 +35,7 @@ dim shared as ASTNODEINFO astnodeinfo(0 to ...) = _
 	( "divider"  ), _
 	( "#include" ), _
 	( "#define"  ), _
+	( "#macro"   ), _
 	( "#if"      ), _
 	( "#elseif"  ), _
 	( "#else"    ), _
@@ -53,6 +54,8 @@ dim shared as ASTNODEINFO astnodeinfo(0 to ...) = _
 	( "array"   ), _
 	( "dimension" ), _
 	( "unknown" ), _
+	( "tk"      ), _
+	( "macroparam" ), _
 	( "const"   ), _
 	( "id"      ), _
 	( "text"    ), _

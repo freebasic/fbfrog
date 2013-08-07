@@ -818,6 +818,7 @@ end sub
 
 namespace eval
 	dim shared as THASH symbols
+	dim shared as ASTNODE ptr macro
 end namespace
 
 enum
@@ -836,6 +837,138 @@ end sub
 
 sub ppEvalEnd( )
 	hashEnd( @eval.symbols )
+end sub
+
+sub ppMacroBegin( byval id as zstring ptr, byval params as integer )
+	assert( params > 0 )
+	eval.macro = astNew( ASTCLASS_PPMACRO, id )
+	eval.macro->macroparams = params
+end sub
+
+sub ppMacroToken( byval tk as integer, byval text as zstring ptr )
+	var n = astNew( ASTCLASS_TK, text )
+	n->tk = tk
+	astAddChild( eval.macro, n )
+end sub
+
+sub ppMacroParam( byval index as integer )
+	assert( (index >= 0) and (index < eval.macro->macroparams) )
+	var n = astNew( ASTCLASS_MACROPARAM )
+	n->macroparam = index
+	astAddChild( eval.macro, n )
+end sub
+
+private function hMacroCall( byval x as integer ) as integer
+	var begin = x
+
+	'' ID
+	x += 1
+
+	'' '('?
+	if( tkGet( x ) <> TK_LPAREN ) then
+		return begin
+	end if
+	x += 1
+
+	const MAXARGS = 32
+	dim as integer argbegin(0 to MAXARGS-1), argend(0 to MAXARGS-1)
+	var args = 0
+
+	'' For each arg...
+	do
+		if( args = MAXARGS ) then
+			return begin
+		end if
+
+		argbegin(args) = x
+
+		'' For each token that's part of this arg...
+		var level = 0
+		do
+			select case( tkGet( x ) )
+			case TK_LPAREN
+				level += 1
+			case TK_RPAREN
+				if( level <= 0 ) then
+					exit do
+				end if
+				level -= 1
+			case TK_COMMA
+				if( level <= 0 ) then
+					exit do
+				end if
+			case TK_EOL, TK_EOF
+				return begin
+			end select
+			x += 1
+		loop
+
+		argend(args) = x - 1
+		args += 1
+
+		'' ','?
+		if( tkGet( x ) <> TK_COMMA ) then
+			exit do
+		end if
+		x += 1
+	loop
+
+	'' ')'?
+	if( tkGet( x ) <> TK_RPAREN ) then
+		return begin
+	end if
+	x += 1
+
+	'' As many args as params?
+	if( eval.macro->macroparams <> args ) then
+		return begin
+	end if
+
+	'' Insert the macro body behind the call
+	var callend = x - 1
+	var child = eval.macro->head
+	while( child )
+		select case( child->class )
+		case ASTCLASS_TK
+			tkInsert( x, child->tk, child->text )
+			x += 1
+		case ASTCLASS_MACROPARAM
+			var arg = child->macroparam
+			assert( (arg >= 0) and (arg < args) )
+			'' Copy the arg's tokens into the body
+			for i as integer = argbegin(arg) to argend(arg)
+				tkInsert( x, tkGet( i ), tkGetText( i ) )
+				x += 1
+			next
+		case else
+			assert( FALSE )
+		end select
+		child = child->next
+	wend
+
+	'' Then remove the call tokens
+	tkRemove( begin, callend )
+	x -= callend - begin + 1
+
+	function = x
+end function
+
+private sub hExpandMacro( )
+	var x = 0
+	while( tkGet( x ) <> TK_EOF )
+		if( tkGet( x ) = TK_ID ) then
+			if( *tkGetText( x ) = *eval.macro->text ) then
+				x = hMacroCall( x )
+			end if
+		end if
+		x += 1
+	wend
+end sub
+
+sub ppMacroEnd( )
+	hExpandMacro( )
+	astDelete( eval.macro )
+	eval.macro = NULL
 end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
