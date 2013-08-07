@@ -925,6 +925,23 @@ private function hFold( byval n as ASTNODE ptr ) as ASTNODE ptr
 
 			function = astNewCONST( v1, 0, TYPE_LONG )
 			astDelete( n )
+
+		'' Check for short-curcuiting for || and &&,
+		'' if only the lhs is a CONST
+		elseif( (n->head->class = ASTCLASS_CONST) and _
+		        (n->tail->class <> ASTCLASS_CONST) ) then
+			select case( n->class )
+			case ASTCLASS_LOGOR, ASTCLASS_LOGAND
+				assert( typeIsFloat( n->head->dtype ) = FALSE )
+				var v1 = n->head->val.i
+
+				'' 1 || unknown -> 1
+				'' 0 && unknown -> 0
+				if( v1 = iif( n->class = ASTCLASS_LOGOR, 1, 0 ) ) then
+					function = astNewCONST( v1, 0, TYPE_LONG )
+					astDelete( n )
+				end if
+			end select
 		end if
 
 	case ASTCLASS_LOGNOT, ASTCLASS_BITNOT, _
