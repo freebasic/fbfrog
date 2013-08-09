@@ -831,7 +831,8 @@ end sub
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 namespace eval
-	dim shared as THASH symbols
+	dim shared as TLIST strings
+	dim shared as THASH knownsyms
 	dim shared as ASTNODE ptr macro
 end namespace
 
@@ -841,17 +842,33 @@ enum
 	COND_FALSE
 end enum
 
+private function hStoreId( byval id as zstring ptr ) as zstring ptr
+	dim as zstring ptr ptr s = listAppend( @eval.strings )
+	*s = strDuplicate( id )
+	function = *s
+end function
+
 sub ppAddSymbol( byval id as zstring ptr, byval is_defined as integer )
-	hashAddOverwrite( @eval.symbols, id, cptr( any ptr, is_defined ) )
+	hashAddOverwrite( @eval.knownsyms, hStoreId( id ), cptr( any ptr, is_defined ) )
 end sub
 
 sub ppEvalInit( )
-	hashInit( @eval.symbols, 4 )
+	listInit( @eval.strings, sizeof( zstring ptr ) )
+	hashInit( @eval.knownsyms, 4 )
 end sub
 
 sub ppEvalEnd( )
-	hashEnd( @eval.symbols )
+	hashEnd( @eval.knownsyms )
+
+	dim s as zstring ptr ptr = listGetHead( @eval.strings )
+	while( s )
+		deallocate( *s )
+		s = listGetNext( s )
+	wend
+	listEnd( @eval.strings )
 end sub
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 sub ppMacroBegin( byval id as zstring ptr, byval params as integer )
 	assert( params > 0 )
@@ -988,7 +1005,7 @@ end sub
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 private function hLookupSymbol( byval id as zstring ptr ) as integer
-	var item = hashLookup( @eval.symbols, id, hashHash( id ) )
+	var item = hashLookup( @eval.knownsyms, id, hashHash( id ) )
 	if( item->s ) then
 		function = iif( item->data, COND_TRUE, COND_FALSE )
 	else
