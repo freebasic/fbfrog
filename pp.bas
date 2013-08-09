@@ -833,6 +833,7 @@ end sub
 namespace eval
 	dim shared as TLIST strings
 	dim shared as THASH knownsyms
+	dim shared as THASH expandsyms
 	dim shared as ASTNODE ptr macro
 end namespace
 
@@ -852,12 +853,18 @@ sub ppAddSym( byval id as zstring ptr, byval is_defined as integer )
 	hashAddOverwrite( @eval.knownsyms, hStoreId( id ), cptr( any ptr, is_defined ) )
 end sub
 
+sub ppExpandSym( byval id as zstring ptr )
+	hashAddOverwrite( @eval.expandsyms, hStoreId( id ), 0 )
+end sub
+
 sub ppEvalInit( )
 	listInit( @eval.strings, sizeof( zstring ptr ) )
 	hashInit( @eval.knownsyms, 4 )
+	hashInit( @eval.expandsyms, 4 )
 end sub
 
 sub ppEvalEnd( )
+	hashEnd( @eval.expandsyms )
 	hashEnd( @eval.knownsyms )
 
 	dim s as zstring ptr ptr = listGetHead( @eval.strings )
@@ -967,10 +974,8 @@ private function hMacroCall( byval x as integer ) as integer
 			var arg = child->macroparam
 			assert( (arg >= 0) and (arg < args) )
 			'' Copy the arg's tokens into the body
-			for i as integer = argbegin(arg) to argend(arg)
-				tkInsert( x, tkGet( i ), tkGetText( i ) )
-				x += 1
-			next
+			tkCopy( x, argbegin(arg), argend(arg) )
+			x += argend(arg) - argbegin(arg) + 1
 		case else
 			assert( FALSE )
 		end select
@@ -1004,7 +1009,7 @@ end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-private function hLookupSymbol( byval id as zstring ptr ) as integer
+private function hLookupKnownSym( byval id as zstring ptr ) as integer
 	var item = hashLookup( @eval.knownsyms, id, hashHash( id ) )
 	if( item->s ) then
 		function = iif( item->data, COND_TRUE, COND_FALSE )
@@ -1030,7 +1035,7 @@ private function hFold( byval n as ASTNODE ptr ) as ASTNODE ptr
 	case ASTCLASS_DEFINED
 		'' defined() on known symbol?
 		assert( n->head->class = ASTCLASS_ID )
-		var cond = hLookupSymbol( n->head->text )
+		var cond = hLookupKnownSym( n->head->text )
 		if( cond <> COND_UNKNOWN ) then
 			'' defined()    ->    1|0
 			function = astNewCONST( iif( cond = COND_TRUE, 1, 0 ), 0, TYPE_LONG )
@@ -1271,6 +1276,109 @@ sub ppEvalIfs( )
 
 		end select
 
+		x += 1
+	loop
+end sub
+
+private function hLookupExpandSym( byval id as zstring ptr ) as integer
+	function = (hashLookup( @eval.expandsyms, id, hashHash( id ) )->s <> NULL)
+end function
+
+'' Check whether the given range of tokens includes the #define for a symbol
+'' registed for expansion
+private function hContainsPreciousDefine _
+	( _
+		byval xbegin as integer, _
+		byval xend as integer _
+	) as integer
+
+	for i as integer = xbegin to xend
+		'' #define?
+		if( tkGet( i ) = TK_PPDEFINE ) then
+			'' Is the #define symbol in ppExpandSym()'s list?
+			if( hLookupExpandSym( tkGetAst( i )->text ) ) then
+				return TRUE
+			end if
+		end if
+	next
+
+	function = FALSE
+end function
+
+sub ppIntegrateTrailCodeIntoIfElseBlocks( )
+	const STACKSIZE = 512
+	static xelse(0 to STACKSIZE-1) as integer
+	static xendif(0 to STACKSIZE-1) as integer
+
+	var x = 0
+	var level = -1
+	do
+		select case( tkGet( x ) )
+		case TK_EOF
+			exit do
+		case TK_PPIF
+			level += 1
+			if( level >= STACKSIZE ) then
+				oops( __FUNCTION__ & "(" & __LINE__ & "): stack size too small" )
+			end if
+			hFindElseEndIf( x + 1, xelse(level), xendif(level) )
+
+			if( hContainsPreciousDefine( x, xendif(level) ) ) then
+				'' If there's no #else, add it
+				if( xelse(level) = xendif(level) ) then
+					tkInsert( xelse(level), TK_PPELSE, , astNew( ASTCLASS_PPELSE ) )
+					xendif(level) += 1
+					for i as integer = 0 to level-1
+						xelse(i) += 1
+						xendif(i) += 1
+					next
+				end if
+
+				'' Duplicate all tokens following the #endif
+				'' into each of the #if and #else code paths,
+				'' then remove them from behind the #endif.
+				''
+				'' If it's the top-most #if, copy all tokens
+				'' from #endif until EOF. Otherwise, if it's
+				'' a nested #if, copy only the tokens from
+				'' #endif to the next #else/#endif.
+				var first = xendif(level) + 1
+				var last = iif( level = 0, tkGetCount( )-1, xelse(level-1)-1 )
+				var delta = last - first + 1
+
+				if( delta > 0 ) then
+					tkCopy( xelse(level), first, last )
+					xelse(level) += delta
+					xendif(level) += delta
+					first += delta
+					last += delta
+					for i as integer = 0 to level-1
+						xelse(i) += delta
+						xendif(i) += delta
+					next
+
+					tkCopy( xendif(level), first, last )
+					xendif(level) += delta
+					first += delta
+					last += delta
+					for i as integer = 0 to level-1
+						xelse(i) += delta
+						xendif(i) += delta
+					next
+
+					tkRemove( first, last )
+					for i as integer = 0 to level-1
+						xelse(i) -= delta
+						xendif(i) -= delta
+					next
+				end if
+			end if
+
+		case TK_PPENDIF
+			assert( level >= 0 )
+			assert( x = xendif(level) )
+			level -= 1
+		end select
 		x += 1
 	loop
 end sub

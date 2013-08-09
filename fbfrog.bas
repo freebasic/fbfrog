@@ -431,6 +431,29 @@ private sub hRemoveIncludeGuard( byval n as ASTNODE ptr )
 	end if
 end sub
 
+private sub hPPEval( )
+	ppEvalInit( )
+
+	select case( frog.preset )
+	case "tests"
+		ppExpandSym( "EXPANDTHIS" )
+	case "zip"
+		ppAddSym( "ZIP_EXTERN", TRUE )
+		ppAddSym( "__cplusplus", FALSE )
+		ppAddSym( "ZIP_DISABLE_DEPRECATED", FALSE )
+		ppAddSym( "_HAD_ZIP_H", FALSE )
+		ppAddSym( "_HAD_ZIPCONF_H", FALSE )
+
+	end select
+
+	ppEvalExpressions( )
+	ppSplitElseIfs( )
+	ppEvalIfs( )
+	ppIntegrateTrailCodeIntoIfElseBlocks( )
+	ppMergeElseIfs( )
+	ppEvalEnd( )
+end sub
+
 private sub frogLoadFile( byval f as FROGFILE ptr )
 	tkInit( )
 	lexLoadFile( 0, f->normed )
@@ -446,25 +469,15 @@ private sub frogLoadFile( byval f as FROGFILE ptr )
 
 	ppDirectives2( )
 
-	if( (strMatches( "tests/*", f->pretty ) = FALSE) or _
-	    strMatches( "tests/pp/eval-*", f->pretty ) ) then
-		ppEvalInit( )
-
-		select case( frog.preset )
-		case "zip"
-			ppAddSym( "ZIP_EXTERN", TRUE )
-			ppAddSym( "__cplusplus", FALSE )
-			ppAddSym( "ZIP_DISABLE_DEPRECATED", FALSE )
-			ppAddSym( "_HAD_ZIP_H", FALSE )
-			ppAddSym( "_HAD_ZIPCONF_H", FALSE )
-		end select
-
-		ppEvalExpressions( )
-		ppSplitElseIfs( )
-		ppEvalIfs( )
-		ppMergeElseIfs( )
-		ppEvalEnd( )
-	end if
+	select case( frog.preset )
+	case "tests"
+		if( (strMatches( "tests/*", f->pretty ) = FALSE) or _
+		    strMatches( "tests/pp/eval-*", f->pretty ) ) then
+			hPPEval( )
+		end if
+	case else
+		hPPEval( )
+	end select
 
 	f->ast = cToplevel( )
 

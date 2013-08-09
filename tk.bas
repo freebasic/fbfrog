@@ -385,29 +385,18 @@ sub tkInsert _
 end sub
 
 sub tkRemove( byval first as integer, byval last as integer )
-	dim as ONETOKEN ptr p = any
-	dim as integer delta = any
-
-	if( first < 0 ) then
-		first = 0
-	end if
-
-	if( last >= tk.size ) then
-		last = tk.size - 1
-	end if
-
-	if( first > last ) then
-		exit sub
-	end if
+	if( first < 0 ) then first = 0
+	if( last >= tk.size ) then last = tk.size - 1
+	if( first > last ) then exit sub
 
 	for i as integer = first to last
-		p = tkAccess( i )
+		var p = tkAccess( i )
 		deallocate( p->text )
 		astDelete( p->ast )
 		deallocate( p->comment )
 	next
 
-	delta = last - first + 1
+	var delta = last - first + 1
 
 	'' Gap is in front of first token to delete?
 	if( tk.front = first ) then
@@ -423,6 +412,36 @@ sub tkRemove( byval first as integer, byval last as integer )
 
 	tk.gap += delta
 	tk.size -= delta
+end sub
+
+'' Copy tokens first..last and insert them in front of x
+sub tkCopy( byval x as integer, byval first as integer, byval last as integer )
+	if( first < 0 ) then first = 0
+	if( last >= tk.size ) then last = tk.size - 1
+	if( first > last ) then exit sub
+	if( (x < 0) or (x > tk.size) ) then exit sub
+	assert( (x <= first) or (x > last) )
+
+	do
+		var src = tkAccess( first )
+		tkInsert( x, src->id, src->text )
+		'' Careful when inserting before the source range, the position
+		'' offsets shift by 1 everytime
+		if( x <= first ) then
+			first += 1
+			last += 1
+		end if
+
+		src = tkAccess( first )
+		var dst = tkAccess( x )
+		dst->poisoned = src->poisoned
+		dst->ast = astClone( src->ast )
+		dst->linenum = src->linenum
+		dst->comment = strDuplicate( src->comment )
+
+		x += 1
+		first += 1
+	loop while( first <= last )
 end sub
 
 function tkGet( byval x as integer ) as integer

@@ -331,6 +331,7 @@ declare sub tkInsert _
 		byval ast as ASTNODE ptr = NULL _
 	)
 declare sub tkRemove( byval first as integer, byval last as integer )
+declare sub tkCopy( byval x as integer, byval first as integer, byval last as integer )
 declare function tkGet( byval x as integer ) as integer
 declare function tkGetText( byval x as integer ) as zstring ptr
 declare function tkGetAst( byval x as integer ) as ASTNODE ptr
@@ -613,9 +614,11 @@ declare sub ppMacroToken( byval tk as integer, byval text as zstring ptr )
 declare sub ppMacroParam( byval index as integer )
 declare sub ppMacroEnd( )
 declare sub ppAddSym( byval id as zstring ptr, byval is_defined as integer )
+declare sub ppExpandSym( byval id as zstring ptr )
 declare sub ppEvalExpressions( )
 declare sub ppSplitElseIfs( )
 declare sub ppEvalIfs( )
+declare sub ppIntegrateTrailCodeIntoIfElseBlocks( )
 declare sub ppMergeElseIfs( )
 declare function cSkip( byval x as integer ) as integer
 declare function cSkipRev( byval x as integer ) as integer
