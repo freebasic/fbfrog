@@ -897,7 +897,7 @@ private function hMacroCall( byval x as integer ) as integer
 				if( level <= 0 ) then
 					exit do
 				end if
-			case TK_EOL, TK_EOF
+			case TK_EOF
 				return begin
 			end select
 			x += 1
