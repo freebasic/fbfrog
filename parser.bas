@@ -145,7 +145,8 @@ private function cFindClosingParen( byval x as integer ) as integer
 			x -= 1
 			exit do
 
-		case TK_AST, TK_DIVIDER
+		case TK_PPINCLUDE, TK_PPDEFINE, TK_PPIF, TK_PPELSEIF, _
+		     TK_PPELSE, TK_PPENDIF, TK_PPUNKNOWN, TK_DIVIDER
 			x = cSkipRev( x )
 			exit do
 
@@ -191,7 +192,8 @@ function cSkipStatement _
 				exit do
 			end if
 
-		case TK_AST, TK_DIVIDER
+		case TK_PPINCLUDE, TK_PPDEFINE, TK_PPIF, TK_PPELSEIF, _
+		     TK_PPELSE, TK_PPENDIF, TK_PPUNKNOWN, TK_DIVIDER
 			'' Reached high-level token after having seen normals?
 			if( x > begin ) then
 				exit do
@@ -379,10 +381,9 @@ private function cSimpleToken( ) as ASTNODE ptr
 		t = astNew( ASTCLASS_NOP )
 		parse.x = cSkip( parse.x )
 
-	case TK_AST
-		'' Any pre-existing high-level tokens (things transformed by
-		'' previous parsing, such as PP directives, or anything inserted
-		'' by presets) need to be recognized as "valid constructs" too.
+	case TK_PPINCLUDE, TK_PPDEFINE, TK_PPIF, TK_PPELSEIF, _
+	     TK_PPELSE, TK_PPENDIF, TK_PPUNKNOWN
+		'' Accept high-level tokens as "valid constructs" too
 		t = astClone( tkGetAst( parse.x ) )
 		parse.x = cSkip( parse.x )
 

@@ -15,13 +15,13 @@
 '' CPP directive parsing
 '' ---------------------
 ''
-'' ppDirectives1() merges PP directives into TK_AST tokens, except that #define
+'' ppDirectives1() merges PP directives into TK_PP* tokens, except that #define
 '' bodies and #if expressions are not yet parsed, but only enclosed in TK_BEGIN
 '' and TK_END tokens.
 ''
 '' ppDirectives2() goes through all PP directives and finishes the parsing job,
 '' by parsing the #define bodies and #if expressions into ASTs properly,
-'' assigning them to the TK_AST tokens of the corresponding directives, and
+'' assigning them to the TK_PP* tokens of the corresponding directives, and
 '' removing the TK_BEGIN/TK_END and the tokens they enclosed.
 ''
 '' With this separation it's possible to identify PP directives and still do
@@ -68,7 +68,8 @@ private function hIsBeforeEol _
 		case TK_EOL, TK_EOF
 			exit do
 
-		case TK_AST, TK_DIVIDER
+		case TK_PPINCLUDE, TK_PPDEFINE, TK_PPIF, TK_PPELSEIF, _
+		     TK_PPELSE, TK_PPENDIF, TK_PPUNKNOWN, TK_DIVIDER
 			'' High-level tokens count as separate lines
 			exit do
 
@@ -539,7 +540,9 @@ private function ppDirective( byval x as integer ) as integer
 
 	'' not at BOL?
 	select case( tkGet( tkSkipSpaceAndComments( x, -1 ) ) )
-	case TK_EOL, TK_EOF, TK_AST, TK_DIVIDER, TK_END
+	case TK_EOL, TK_EOF, TK_END, _
+	     TK_PPINCLUDE, TK_PPDEFINE, TK_PPIF, TK_PPELSEIF, _
+	     TK_PPELSE, TK_PPENDIF, TK_PPUNKNOWN, TK_DIVIDER
 
 	case else
 		return -1
@@ -623,12 +626,23 @@ private function ppDirective( byval x as integer ) as integer
 		return -1
 	end select
 
+	dim tkid as integer
+	select case( t->class )
+	case ASTCLASS_PPINCLUDE : tkid = TK_PPINCLUDE
+	case ASTCLASS_PPDEFINE  : tkid = TK_PPDEFINE
+	case ASTCLASS_PPIF      : tkid = TK_PPIF
+	case ASTCLASS_PPELSEIF  : tkid = TK_PPELSEIF
+	case ASTCLASS_PPELSE    : tkid = TK_PPELSE
+	case ASTCLASS_PPENDIF   : tkid = TK_PPENDIF
+	case else               : assert( FALSE )
+	end select
+
 	if( keepbegin >= 0 ) then
 		tkRemove( begin, keepbegin - 1 )
 		x -= keepbegin - begin
 		keepbegin -= keepbegin - begin
 
-		tkInsert( begin, TK_AST, , t )
+		tkInsert( begin, tkid, , t )
 		begin += 1
 		keepbegin += 1
 		x += 1
@@ -639,7 +653,7 @@ private function ppDirective( byval x as integer ) as integer
 		x += 1
 	else
 		tkRemove( begin, x - 1 )
-		tkInsert( begin, TK_AST, , t )
+		tkInsert( begin, tkid, , t )
 		begin += 1
 		x = begin
 	end if
@@ -654,9 +668,8 @@ end function
 private function ppSimpleToken( byval x as integer ) as integer
 	'' Handle pre-existing high-level tokens
 	select case( tkGet( x ) )
-	case TK_AST
-		x += 1
-	case TK_DIVIDER
+	case TK_PPINCLUDE, TK_PPDEFINE, TK_PPIF, TK_PPELSEIF, _
+	     TK_PPELSE, TK_PPENDIF, TK_PPUNKNOWN, TK_DIVIDER
 		x += 1
 	case else
 		x = -1
@@ -672,7 +685,9 @@ private function ppUnknownDirective( byval x as integer ) as integer
 
 	'' not at BOL?
 	select case( tkGet( tkSkipSpaceAndComments( x, -1 ) ) )
-	case TK_EOL, TK_EOF, TK_AST, TK_DIVIDER, TK_END
+	case TK_EOL, TK_EOF, TK_END, _
+	     TK_PPINCLUDE, TK_PPDEFINE, TK_PPIF, TK_PPELSEIF, _
+	     TK_PPELSE, TK_PPENDIF, TK_PPUNKNOWN, TK_DIVIDER
 
 	case else
 		return -1
@@ -695,7 +710,7 @@ private function ppUnknownDirective( byval x as integer ) as integer
 	end if
 
 	tkRemove( begin, x - 1 )
-	tkInsert( begin, TK_AST, , expr )
+	tkInsert( begin, TK_PPUNKNOWN, , expr )
 	begin += 1
 	x = begin
 
@@ -738,75 +753,74 @@ sub ppDirectives2( )
 		case TK_EOF
 			exit do
 
-		case TK_AST
+		case TK_PPDEFINE
 			var t = tkGetAst( x )
 			x += 1
 
-			select case( t->class )
-			case ASTCLASS_PPDEFINE
+			'' BEGIN
+			assert( tkGet( x ) = TK_BEGIN )
+			var begin = x
+			x += 1
+
+			'' Body tokens?
+			if( tkGet( x ) <> TK_END ) then
+				'' Try to parse the body as expression
+				var expr = ppExpression( x )
+				'' Expression found and TK_END reached?
+				if( (expr <> NULL) and (tkGet( x ) = TK_END) ) then
+					astAddChild( t, expr )
+				else
+					'' Then either no expression could be parsed at all,
+					'' or it was followed by "junk" tokens...
+					astDelete( expr )
+					while( tkGet( x ) <> TK_END )
+						x += 1
+					wend
+					astAddChild( t, tkToAstText( begin + 1, x - 1 ) )
+				end if
+			end if
+
+			'' END
+			assert( tkGet( x ) = TK_END )
+			tkRemove( begin, x )
+			x = begin
+
+		case TK_PPIF, TK_PPELSEIF
+			var t = tkGetAst( x )
+			x += 1
+
+			'' No #if expression yet?
+			if( t->head = NULL ) then
 				'' BEGIN
 				assert( tkGet( x ) = TK_BEGIN )
 				var begin = x
 				x += 1
 
-				'' Body tokens?
+				'' Expression tokens
+				var expr = ppExpression( x )
+				'' TK_END not reached after ppExpression()?
 				if( tkGet( x ) <> TK_END ) then
-					'' Try to parse the body as expression
-					var expr = ppExpression( x )
-					'' Expression found and TK_END reached?
-					if( (expr <> NULL) and (tkGet( x ) = TK_END) ) then
-						astAddChild( t, expr )
-					else
-						'' Then either no expression could be parsed at all,
-						'' or it was followed by "junk" tokens...
-						astDelete( expr )
-						while( tkGet( x ) <> TK_END )
-							x += 1
-						wend
-						astAddChild( t, tkToAstText( begin + 1, x - 1 ) )
-					end if
+					'' Then either no expression could be parsed at all,
+					'' or it was followed by "junk" tokens...
+					astDelete( expr )
+
+					do
+						x += 1
+					loop while( tkGet( x ) <> TK_END )
+
+					'' Turn it into a PPUNKNOWN
+					astAddChild( t, tkToAstText( begin + 1, x - 1 ) )
+					t = astNew( ASTCLASS_PPUNKNOWN, astClone( t ) )
+					tkSetAst( begin - 1, t )
+				else
+					astAddChild( t, expr )
 				end if
 
 				'' END
 				assert( tkGet( x ) = TK_END )
 				tkRemove( begin, x )
 				x = begin
-
-			case ASTCLASS_PPIF, ASTCLASS_PPELSEIF
-				'' No #if expression yet?
-				if( t->head = NULL ) then
-					'' BEGIN
-					assert( tkGet( x ) = TK_BEGIN )
-					var begin = x
-					x += 1
-
-					'' Expression tokens
-					var expr = ppExpression( x )
-					'' TK_END not reached after ppExpression()?
-					if( tkGet( x ) <> TK_END ) then
-						'' Then either no expression could be parsed at all,
-						'' or it was followed by "junk" tokens...
-						astDelete( expr )
-
-						do
-							x += 1
-						loop while( tkGet( x ) <> TK_END )
-
-						'' Turn it into a PPUNKNOWN
-						astAddChild( t, tkToAstText( begin + 1, x - 1 ) )
-						t = astNew( ASTCLASS_PPUNKNOWN, astClone( t ) )
-						tkSetAst( begin - 1, t )
-					else
-						astAddChild( t, expr )
-					end if
-
-					'' END
-					assert( tkGet( x ) = TK_END )
-					tkRemove( begin, x )
-					x = begin
-				end if
-
-			end select
+			end if
 
 		case else
 			x += 1
@@ -1102,20 +1116,15 @@ end function
 
 sub ppEvalExpressions( )
 	var x = 0
-
-	while( tkGet( x ) <> TK_EOF )
-		if( tkGet( x ) = TK_AST ) then
-			var t = tkGetAst( x )
-
-			select case( t->class )
-			case ASTCLASS_PPIF, ASTCLASS_PPELSEIF
-				t = hFold( astClone( t ) )
-				tkSetAst( x, t )
-			end select
-		end if
-
+	do
+		select case( tkGet( x ) )
+		case TK_EOF
+			exit do
+		case TK_PPIF, TK_PPELSEIF
+			tkSetAst( x, hFold( astClone( tkGetAst( x ) ) ) )
+		end select
 		x += 1
-	wend
+	loop
 end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -1138,26 +1147,20 @@ private sub hFindElseEndIf _
 		case TK_EOF
 			exit do
 
-		case TK_AST
-			var t = tkGetAst( x )
+		case TK_PPIF
+			level += 1
 
-			select case( t->class )
-			case ASTCLASS_PPIF
-				level += 1
+		case TK_PPELSE
+			if( level = 0 ) then
+				xelse = x
+			end if
 
-			case ASTCLASS_PPELSE
-				if( level = 0 ) then
-					xelse = x
-				end if
-
-			case ASTCLASS_PPENDIF
-				if( level = 0 ) then
-					xendif = x
-					exit do
-				end if
-				level -= 1
-
-			end select
+		case TK_PPENDIF
+			if( level = 0 ) then
+				xendif = x
+				exit do
+			end if
+			level -= 1
 
 		end select
 
@@ -1189,29 +1192,25 @@ sub ppSplitElseIfs( )
 		case TK_EOF
 			exit do
 
-		case TK_AST
+		'' Found an #elseif? Replace it by #else #if
+		case TK_PPELSEIF
 			var t = tkGetAst( x )
 
-			'' Found an #elseif? Replace it by #else #if
-			if( t->class = ASTCLASS_PPELSEIF ) then
-				t = astClone( t->head )
-				tkRemove( x, x )
-				tkInsert( x, TK_AST, , astNew( ASTCLASS_PPELSE ) )
-				x += 1
-				tkInsert( x, TK_AST, , astNew( ASTCLASS_PPIF, t ) )
-
-				'' Find the corresponding #endif,
-				'' and insert another #endif in front of it
-				dim as integer xelse, xendif
-				hFindElseEndIf( x + 1, xelse, xendif )
-				tkInsert( xendif, TK_AST, , astNew( ASTCLASS_PPENDIF ) )
-			end if
-
+			t = astClone( t->head )
+			tkRemove( x, x )
+			tkInsert( x, TK_PPELSE, , astNew( ASTCLASS_PPELSE ) )
 			x += 1
+			tkInsert( x, TK_PPIF, , astNew( ASTCLASS_PPIF, t ) )
 
-		case else
-			x += 1
+			'' Find the corresponding #endif,
+			'' and insert another #endif in front of it
+			dim as integer xelse, xendif
+			hFindElseEndIf( x + 1, xelse, xendif )
+			tkInsert( xendif, TK_PPENDIF, , astNew( ASTCLASS_PPENDIF ) )
+
 		end select
+
+		x += 1
 	loop
 end sub
 
@@ -1223,36 +1222,34 @@ sub ppEvalIfs( )
 		case TK_EOF
 			exit do
 
-		case TK_AST
+		case TK_PPIF
 			var t = tkGetAst( x )
-			if( t->class = ASTCLASS_PPIF ) then
-				var cond = COND_UNKNOWN
-				if( t->head->class = ASTCLASS_CONST ) then
-					assert( typeIsFloat( t->head->dtype ) = FALSE )
-					cond = iif( t->head->val.i <> 0, COND_TRUE, COND_FALSE )
-				end if
+			var cond = COND_UNKNOWN
+			if( t->head->class = ASTCLASS_CONST ) then
+				assert( typeIsFloat( t->head->dtype ) = FALSE )
+				cond = iif( t->head->val.i <> 0, COND_TRUE, COND_FALSE )
+			end if
 
-				if( cond <> COND_UNKNOWN ) then
-					dim as integer xelse, xendif
-					hFindElseEndIf( x + 1, xelse, xendif )
+			if( cond <> COND_UNKNOWN ) then
+				dim as integer xelse, xendif
+				hFindElseEndIf( x + 1, xelse, xendif )
 
-					if( cond = COND_TRUE ) then
-						'' Remove whole #else..#endif block and the #if
-						tkRemove( xelse, xendif )
-						tkRemove( x, x )
+				if( cond = COND_TRUE ) then
+					'' Remove whole #else..#endif block and the #if
+					tkRemove( xelse, xendif )
+					tkRemove( x, x )
+				else
+					if( xelse = xendif ) then
+						'' No #else found; remove whole #if..#endif block
+						tkRemove( x, xendif )
 					else
-						if( xelse = xendif ) then
-							'' No #else found; remove whole #if..#endif block
-							tkRemove( x, xendif )
-						else
-							'' Remove whole #if..#else block and the #endif
-							tkRemove( xendif, xendif )
-							tkRemove( x, xelse )
-						end if
+						'' Remove whole #if..#else block and the #endif
+						tkRemove( xendif, xendif )
+						tkRemove( x, xelse )
 					end if
-
-					x -= 1
 				end if
+
+				x -= 1
 			end if
 
 		end select
@@ -1270,38 +1267,28 @@ sub ppMergeElseIfs( )
 		case TK_EOF
 			exit do
 
-		case TK_AST
-			'' Found an #else followed by an #if?
-			var t = tkGetAst( x )
-			if( t->class = ASTCLASS_PPELSE ) then
-				if( tkGet( x + 1 ) = TK_AST ) then
-					t = tkGetAst( x + 1 )
-					if( t->class = ASTCLASS_PPIF ) then
-						'' Find the #endif corresponding to the #if
-						dim as integer xelse, xendif
-						hFindElseEndIf( x + 1, xelse, xendif )
+		'' Found an #else followed by an #if?
+		case TK_PPELSE
+			if( tkGet( x + 1 ) = TK_PPIF ) then
+				'' Find the #endif corresponding to the #if
+				dim as integer xelse, xendif
+				hFindElseEndIf( x + 1, xelse, xendif )
 
-						'' Followed immediately by the #endif
-						'' corresponding to the #else?
-						if( tkGet( xendif + 1 ) = TK_AST ) then
-							if( tkGetAst( xendif + 1 )->class = ASTCLASS_PPENDIF ) then
-								'' #else #if -> #elseif
-								t = astClone( t->head )
-								tkRemove( x, x + 1 )
-								tkInsert( x, TK_AST, , astNew( ASTCLASS_PPELSEIF, t ) )
+				'' Followed immediately by the #endif
+				'' corresponding to the #else?
+				if( tkGet( xendif + 1 ) = TK_PPENDIF ) then
+					'' #else #if expr -> #elseif expr
+					var t = astClone( tkGetAst( x + 1 )->head )
+					tkRemove( x, x + 1 )
+					tkInsert( x, TK_PPELSEIF, , astNew( ASTCLASS_PPELSEIF, t ) )
 
-								'' Remove the #endif
-								tkRemove( xendif, xendif )
-							end if
-						end if
-					end if
+					'' Remove the #endif
+					tkRemove( xendif, xendif )
 				end if
 			end if
 
-			x += 1
-
-		case else
-			x += 1
 		end select
+
+		x += 1
 	loop
 end sub

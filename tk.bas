@@ -12,7 +12,13 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 { _
 	( NULL  , @"eof"      ), _
 	( NULL  , @"divider"  ), _
-	( NULL  , @"ast"      ), _
+	( NULL  , @"ppinclude" ), _
+	( NULL  , @"ppdefine" ), _
+	( NULL  , @"ppif"     ), _
+	( NULL  , @"ppelseif" ), _
+	( NULL  , @"ppelse"   ), _
+	( NULL  , @"ppendif"  ), _
+	( NULL  , @"ppunknown" ), _
 	( NULL  , @"begin"    ), _
 	( NULL  , @"end"      ), _
 	( NULL  , @"byte"     ), _
@@ -197,7 +203,7 @@ type ONETOKEN
 	poisoned	as short
 
 	text		as zstring ptr  '' Identifiers/literals, or NULL
- 	ast		as ASTNODE ptr  '' for TK_AST
+	ast		as ASTNODE ptr  '' for TK_PP* high level tokens
 	linenum		as integer      '' where this token was found
 	comment		as zstring ptr
 end type
@@ -299,7 +305,7 @@ end function
 sub tkDump( )
 	for i as integer = 0 to tk.size - 1
 		print tkDumpOne( i )
-		if( tkGet( i ) = TK_AST ) then
+		if( tkGetAst( i ) ) then
 			astDump( tkGetAst( i ), 2 )
 		end if
 	next
@@ -432,17 +438,14 @@ function tkGetAst( byval x as integer ) as ASTNODE ptr
 end function
 
 sub tkSetAst( byval x as integer, byval ast as ASTNODE ptr )
-	dim as ONETOKEN ptr p = any
-	p = tkAccess( x )
-	assert( p->id = TK_AST )
+	var p = tkAccess( x )
 	astDelete( p->ast )
 	p->ast = ast
 end sub
 
 sub tkSetPoisoned( byval first as integer, byval last as integer )
-	dim as ONETOKEN ptr p = any
 	for i as integer = first to last
-		p = tkAccess( i )
+		var p = tkAccess( i )
 		if( p->id <> TK_EOF ) then
 			p->poisoned = TRUE
 		end if
@@ -454,8 +457,7 @@ function tkIsPoisoned( byval x as integer ) as integer
 end function
 
 sub tkSetLineNum( byval x as integer, byval linenum as integer )
-	dim as ONETOKEN ptr p = any
-	p = tkAccess( x )
+	var p = tkAccess( x )
 	if( p->id <> TK_EOF ) then
 		p->linenum = linenum
 	end if
@@ -521,7 +523,9 @@ end function
 private function hToText( byval p as ONETOKEN ptr ) as string
 	select case as const( p->id )
 	case TK_DIVIDER, TK_EOL : function = !"\n"
-	case TK_AST             : assert( FALSE )
+	case TK_PPINCLUDE, TK_PPDEFINE, TK_PPIF, TK_PPELSEIF, _
+	     TK_PPELSE, TK_PPENDIF, TK_PPUNKNOWN
+		assert( FALSE )
 	case TK_BEGIN, TK_END   :
 	case TK_BYTE            : function = *p->text
 	case TK_SPACE           : function = " "
@@ -551,7 +555,7 @@ function tkToAstText _
 
 	for i as integer = first to last
 		var p = tkAccess( i )
-		if( p->id = TK_AST ) then
+		if( p->ast ) then
 			if( len( s ) > 0 ) then
 				text = astNew( ASTCLASS_TEXT, s )
 			end if
