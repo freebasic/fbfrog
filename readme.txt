@@ -75,3 +75,53 @@ To do:
   or re-download all the tarballs for previous versions again)
     - Ideally the final FB binding itself could be re-imported but that'll be
       more difficult
+
+- should be able to solve the calling conventions problem automatically,
+  because otherwise a human has to check every single function declaration,
+  or make unsafe assumptions...
+	#ifdef _WIN32
+		#define DLL_CALLCONV __stdcall
+	#else
+		#define DLL_CALLCONV
+	#endif
+	void DLL_CALLCONV FreeImage_DeInitialise(void);
+  - Preset tells us that DLL_CALLCONV needs to be expanded
+  - We look for DLL_CALLCONV declaration
+  - And find two, both of which depend on certain #ifs, since they're nested
+    in #ifs
+  - So now we need to parse the (rest of the) header twice, once assuming the
+    #if code path with the one declaration, once for the other
+  - This could be done duplicating the token buffer and removing the other
+    unreachable code paths
+  - Then the remaining #define will automaticaly be the only one
+  - Ultimately this results in multiple slightly different ASTs
+  - Which we need to merge; e.g. if two function declarations differ only in
+    calling convention then we should combine that into one with a conditional
+    calling convention field (depends on the various #if conditions)
+    e.g. list of calling conventions associated with their condition expressions
+
+  a) duplicate token buffers, parse into separate different ASTs, merge ASTs
+     - extract and combine the #if conditions that lead to the target #define,
+       this will be the AST's condition
+     - then solve out all the unreached #if/#else blocks
+  b) copy tokens following multiple possible code paths into each of these code
+     paths, e.g.
+	#ifdef _WIN32
+		#define DLL_CALLCONV __stdcall
+		void DLL_CALLCONV FreeImage_DeInitialise(void);
+	#else
+		#define DLL_CALLCONV
+		void DLL_CALLCONV FreeImage_DeInitialise(void);
+	#endif
+     then such #defines could be solved out trivially again. Requires a "merging
+     back" algorithm of course, but that could be useful, because it would also
+     handle cases such as this:
+	#ifdef _WIN32
+		void __stdcall f(void);
+	#else
+		void f(void);
+	#endif
+     The merging back could be done on the final AST though:
+         For each #if/#else block, from inner-most to outer-most:
+             Combine similar AST nodes from #if/#else paths into one node behind
+             the #endif

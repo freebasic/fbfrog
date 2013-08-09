@@ -1288,11 +1288,11 @@ end function
 '' registed for expansion
 private function hContainsPreciousDefine _
 	( _
-		byval xbegin as integer, _
-		byval xend as integer _
+		byval first as integer, _
+		byval last as integer _
 	) as integer
 
-	for i as integer = xbegin to xend
+	for i as integer = first to last
 		'' #define?
 		if( tkGet( i ) = TK_PPDEFINE ) then
 			'' Is the #define symbol in ppExpandSym()'s list?
@@ -1323,7 +1323,7 @@ sub ppIntegrateTrailCodeIntoIfElseBlocks( )
 			end if
 			hFindElseEndIf( x + 1, xelse(level), xendif(level) )
 
-			if( hContainsPreciousDefine( x, xendif(level) ) ) then
+			if( hContainsPreciousDefine( x + 1, xendif(level) - 1 ) ) then
 				'' If there's no #else, add it
 				if( xelse(level) = xendif(level) ) then
 					tkInsert( xelse(level), TK_PPELSE, , astNew( ASTCLASS_PPELSE ) )
@@ -1337,13 +1337,27 @@ sub ppIntegrateTrailCodeIntoIfElseBlocks( )
 				'' Duplicate all tokens following the #endif
 				'' into each of the #if and #else code paths,
 				'' then remove them from behind the #endif.
-				''
-				'' If it's the top-most #if, copy all tokens
-				'' from #endif until EOF. Otherwise, if it's
-				'' a nested #if, copy only the tokens from
-				'' #endif to the next #else/#endif.
+
 				var first = xendif(level) + 1
-				var last = iif( level = 0, tkGetCount( )-1, xelse(level-1)-1 )
+
+				'' If it's the top-most #if, copy all tokens
+				'' from #endif until EOF.
+				var last = tkGetCount( )-1
+
+				'' Otherwise, if it's a nested #if, copy only
+				'' the tokens from #endif to the next #else or
+				'' #endif, depending on whether this #if block
+				'' is inside an #if or #else block.
+				if( level > 0 ) then
+					'' In front of parent's #else?
+					'' (or #endif if there is no #else)
+					if( x < xelse(level-1) ) then
+						last = xelse(level-1)-1
+					else
+						last = xendif(level-1)-1
+					end if
+				end if
+
 				var delta = last - first + 1
 
 				if( delta > 0 ) then
