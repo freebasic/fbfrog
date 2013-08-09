@@ -122,3 +122,15 @@ extern separator46 as short
 
 extern yes as short
 extern separator47 as short
+
+#ifdef a
+	extern a as short
+#else
+	#ifdef b
+		extern b as short
+	#else
+		extern c as short
+	#endif
+	extern d as short
+#endif
+extern separator48 as short

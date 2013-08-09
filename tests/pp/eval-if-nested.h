@@ -492,3 +492,15 @@ extern short separator46;
 	#endif
 #endif
 extern short separator47;
+
+#ifdef a
+	extern short a;
+#else
+	#ifdef b
+		extern short b;
+	#else
+		extern short c;
+	#endif
+	extern short d;
+#endif
+extern short separator48;

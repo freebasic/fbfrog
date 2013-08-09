@@ -1277,14 +1277,23 @@ sub ppMergeElseIfs( )
 				if( tkGet( x + 1 ) = TK_AST ) then
 					t = tkGetAst( x + 1 )
 					if( t->class = ASTCLASS_PPIF ) then
-						t = astClone( t->head )
-						tkRemove( x, x + 1 )
-						tkInsert( x, TK_AST, , astNew( ASTCLASS_PPELSEIF, t ) )
-
-						'' Find the corresponding #endif and remove it
+						'' Find the #endif corresponding to the #if
 						dim as integer xelse, xendif
 						hFindElseEndIf( x + 1, xelse, xendif )
-						tkRemove( xendif, xendif )
+
+						'' Followed immediately by the #endif
+						'' corresponding to the #else?
+						if( tkGet( xendif + 1 ) = TK_AST ) then
+							if( tkGetAst( xendif + 1 )->class = ASTCLASS_PPENDIF ) then
+								'' #else #if -> #elseif
+								t = astClone( t->head )
+								tkRemove( x, x + 1 )
+								tkInsert( x, TK_AST, , astNew( ASTCLASS_PPELSEIF, t ) )
+
+								'' Remove the #endif
+								tkRemove( xendif, xendif )
+							end if
+						end if
 					end if
 				end if
 			end if
