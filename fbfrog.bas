@@ -643,6 +643,13 @@ end sub
 	hParseArgs2( __FB_ARGC__, __FB_ARGV__ )
 
 	if( listGetHead( @frog.files ) = NULL ) then
+		select case( frog.preset )
+		case "tests"
+			hAddFromDir( "tests" )
+		end select
+	end if
+
+	if( listGetHead( @frog.files ) = NULL ) then
 		oops( "no input files" )
 	end if
 
