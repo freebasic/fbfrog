@@ -472,7 +472,8 @@ private sub frogLoadFile( byval f as FROGFILE ptr )
 	select case( frog.preset )
 	case "tests"
 		if( (strMatches( "tests/*", f->pretty ) = FALSE) or _
-		    strMatches( "tests/pp/eval-*", f->pretty ) ) then
+		    strMatches( "tests/pp/eval-*", f->pretty ) or _
+		    strMatches( "tests/pp/expand/*", f->pretty ) ) then
 			hPPEval( )
 		end if
 	case else
@@ -494,9 +495,12 @@ private sub frogLoadFile( byval f as FROGFILE ptr )
 
 	hSetPPIndentAttrib( f->ast, TRUE )
 	hRemovePPIndentFromIncludeGuard( f->ast )
-	if( strMatches( "tests/pp/expr-*", f->pretty ) ) then
-		hSetPPIndentAttrib( f->ast, FALSE )
-	end if
+	select case( frog.preset )
+	case "tests"
+		if( strMatches( "tests/pp/expr-*", f->pretty ) ) then
+			hSetPPIndentAttrib( f->ast, FALSE )
+		end if
+	end select
 end sub
 
 private function frogCalcRefcount( byval lookfor as FROGFILE ptr ) as integer
