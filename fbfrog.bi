@@ -578,6 +578,7 @@ declare sub astSetType _
 declare sub astAddComment( byval n as ASTNODE ptr, byval comment as zstring ptr )
 declare function astClone( byval n as ASTNODE ptr ) as ASTNODE ptr
 declare function astDumpOne( byval n as ASTNODE ptr ) as string
+declare function astDumpInline( byval n as ASTNODE ptr ) as string
 declare sub astDump( byval n as ASTNODE ptr, byval nestlevel as integer = 0 )
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''

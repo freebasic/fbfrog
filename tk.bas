@@ -299,15 +299,16 @@ function tkDumpOne( byval x as integer ) as string
 		s += " comment(" + comment + ")"
 	end if
 
+	if( tkGetAst( x ) ) then
+		s += "ast=" & astDumpInline( tkGetAst( x ) )
+	end if
+
 	function = s
 end function
 
 sub tkDump( )
 	for i as integer = 0 to tk.size - 1
 		print tkDumpOne( i )
-		if( tkGetAst( i ) ) then
-			astDump( tkGetAst( i ), 2 )
-		end if
 	next
 end sub
 

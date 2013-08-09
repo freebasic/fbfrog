@@ -383,9 +383,23 @@ function astDumpOne( byval n as ASTNODE ptr ) as string
 		s += " as " + emitType( n->dtype, NULL, TRUE )
 	end if
 
-	#if 0
-		s += " l=[" & hex( n->l, 8 ) & "] r=[" & hex( n->r, 8 ) & "] cond=[" & hex( n->cond, 8 ) & "] next=[" & hex( n->next, 8 ) & "] prev=[" & hex( n->prev, 8 ) & "]"
-	#endif
+	function = s
+end function
+
+function astDumpInline( byval n as ASTNODE ptr ) as string
+	var s = astDumpOne( n )
+
+	var child = n->head
+	if( child ) then
+		s += "("
+		do
+			s += astDumpInline( child )
+			child = child->next
+			if( child = NULL ) then exit do
+			s += ", "
+		loop
+		s += ")"
+	end if
 
 	function = s
 end function
