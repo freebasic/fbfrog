@@ -452,11 +452,11 @@ private sub frogLoadFile( byval f as FROGFILE ptr )
 
 		select case( frog.preset )
 		case "zip"
-			ppAddSymbol( "ZIP_EXTERN", TRUE )
-			ppAddSymbol( "__cplusplus", FALSE )
-			ppAddSymbol( "ZIP_DISABLE_DEPRECATED", FALSE )
-			ppAddSymbol( "_HAD_ZIP_H", FALSE )
-			ppAddSymbol( "_HAD_ZIPCONF_H", FALSE )
+			ppAddSym( "ZIP_EXTERN", TRUE )
+			ppAddSym( "__cplusplus", FALSE )
+			ppAddSym( "ZIP_DISABLE_DEPRECATED", FALSE )
+			ppAddSym( "_HAD_ZIP_H", FALSE )
+			ppAddSym( "_HAD_ZIPCONF_H", FALSE )
 		end select
 
 		ppEvalExpressions( )

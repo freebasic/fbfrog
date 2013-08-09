@@ -848,7 +848,7 @@ private function hStoreId( byval id as zstring ptr ) as zstring ptr
 	function = *s
 end function
 
-sub ppAddSymbol( byval id as zstring ptr, byval is_defined as integer )
+sub ppAddSym( byval id as zstring ptr, byval is_defined as integer )
 	hashAddOverwrite( @eval.knownsyms, hStoreId( id ), cptr( any ptr, is_defined ) )
 end sub
 
