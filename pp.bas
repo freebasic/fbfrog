@@ -1262,8 +1262,9 @@ sub ppEvalIfs( )
 			var t = tkGetAst( x )
 			var cond = COND_UNKNOWN
 			if( t->head->class = ASTCLASS_CONST ) then
-				assert( typeIsFloat( t->head->dtype ) = FALSE )
-				cond = iif( t->head->val.i <> 0, COND_TRUE, COND_FALSE )
+				if( typeIsFloat( t->head->dtype ) = FALSE ) then
+					cond = iif( t->head->val.i <> 0, COND_TRUE, COND_FALSE )
+				end if
 			end if
 
 			if( cond <> COND_UNKNOWN ) then
