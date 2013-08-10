@@ -422,8 +422,18 @@ private function ppExpression _
 			end if
 			x = ppSkip( x )
 
+		'' Number literals
 		case TK_OCTNUM, TK_DECNUM, TK_HEXNUM, TK_DECFLOAT
 			a = hNumberLiteral( x )
+			x = ppSkip( x )
+
+		'' Identifier
+		case TK_ID
+			'' Accepting identifiers as atoms to allow more PP
+			'' expressions to be parsed, such as
+			''    defined FOO && FOO == 123
+			'' without having to expand FOO.
+			a = astNew( ASTCLASS_ID, tkGetText( x ) )
 			x = ppSkip( x )
 
 		'' DEFINED '(' Identifier ')'

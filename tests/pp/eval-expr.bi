@@ -13,3 +13,7 @@ extern separator4 as short
 
 extern yes as short
 extern separator5 as short
+
+#if defined( FOO ) andalso (FOO = 123)
+#endif
+extern separator6 as short
