@@ -510,7 +510,7 @@ type ASTNODE_
 	subtype		as ASTNODE ptr
 	array		as ASTNODE ptr '' ARRAY holding DIMENSIONs, or NULL
 
-	'' PARAM initializer expression
+	'' PARAM initializer, macro body
 	initializer	as ASTNODE ptr
 
 	'' Source location where this declaration/statement was found

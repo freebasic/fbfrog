@@ -121,7 +121,13 @@ To do:
 	#else
 		void f(void);
 	#endif
-     The merging back could be done on the final AST though:
+
+     2. Trivially expanding the #defines:
+	For each #if/#else block
+		for each directly contained previous #define
+			expand corresponding TK_ID's in the block's trail code
+
+     3. Merging back in the final AST:
          For each #if/#else block, from inner-most to outer-most:
              Combine similar AST nodes from #if/#else paths into one node behind
              the #endif

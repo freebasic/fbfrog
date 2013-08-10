@@ -576,7 +576,41 @@ private function ppDirective( byval x as integer ) as integer
 			return -1
 		end if
 		t = astNew( ASTCLASS_PPDEFINE, tkGetText( x ) )
-		x = ppSkip( x )
+
+		'' '('? (+1 instead of ppSkip() so TK_SPACE won't be ignored)
+		if( tkGet( x + 1 ) = TK_LPAREN ) then
+			'' #define's Identifier
+			x += 1
+
+			'' '('
+			x = ppSkip( x )
+
+			'' List of macro parameters:
+			'' Identifier (',' Identifier)*
+			do
+				'' macro parameter's Identifier
+				if( tkGet( x ) <> TK_ID ) then
+					return -1
+				end if
+				astAddChild( t, astNew( ASTCLASS_MACROPARAM, tkGetText( x ) ) )
+				x = ppSkip( x )
+
+				'' ','?
+				if( tkGet( x ) <> TK_COMMA ) then
+					exit do
+				end if
+				x = ppSkip( x )
+			loop
+
+			'' ')'?
+			if( tkGet( x ) <> TK_RPAREN ) then
+				return -1
+			end if
+			x = ppSkip( x )
+		else
+			'' #define's Identifier
+			x = ppSkip( x )
+		end if
 
 		keepbegin = x
 		x = ppSkipToEOL( x )
@@ -776,9 +810,12 @@ sub ppDirectives2( )
 			if( tkGet( x ) <> TK_END ) then
 				'' Try to parse the body as expression
 				var expr = ppExpression( x )
+
+				assert( t->initializer = NULL )
+
 				'' Expression found and TK_END reached?
 				if( (expr <> NULL) and (tkGet( x ) = TK_END) ) then
-					astAddChild( t, expr )
+					t->initializer = expr
 				else
 					'' Then either no expression could be parsed at all,
 					'' or it was followed by "junk" tokens...
@@ -786,7 +823,7 @@ sub ppDirectives2( )
 					while( tkGet( x ) <> TK_END )
 						x += 1
 					wend
-					astAddChild( t, tkToAstText( begin + 1, x - 1 ) )
+					t->initializer = tkToAstText( begin + 1, x - 1 )
 				end if
 			end if
 

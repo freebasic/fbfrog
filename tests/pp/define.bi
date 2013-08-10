@@ -35,3 +35,45 @@
 #define X09 )
 #define X10 -
 #define X11
+
+#define m( a )
+#define m( a )
+#define m( a, b )
+#define m( a, b )
+#define m( a, b )
+#define m( foo, abcdefg, something, bar, buzzzz )
+#define m( a ) foo
+#define m( a ) foo
+
+#define m( a ) a
+#define m( a ) a foo
+#define m( a ) foo a
+#define m( a ) foo a foo
+
+#define m( a, b ) a     b
+#define m( a, b ) a     b foo
+#define m( a, b ) a foo b
+#define m( a, b ) a foo b foo
+#define m( a, b ) foo a     b
+#define m( a, b ) foo a     b foo
+#define m( a, b ) foo a foo b
+#define m( a, b ) foo a foo b foo
+
+#define m( a ) a##foo
+#define m( a ) foo##a
+#define m( a ) foo##a##foo
+
+#define m( a, b ) a    ##     b
+#define m( a, b ) a    ##     b ## foo
+#define m( a, b ) a ## foo ## b
+#define m( a, b ) a ## foo ## b ## foo
+#define m( a, b ) foo ## a    ##     b
+#define m( a, b ) foo ## a    ##     b ## foo
+#define m( a, b ) foo ## a ## foo ## b
+#define m( a, b ) foo ## a ## foo ## b ## foo
+
+#define m( a ) #a
+#define m( a, b ) #a #b
+
+#define no_parameters_here a
+#define no_parameters_here (a, b, c)

@@ -20,4 +20,6 @@
 	#pragma foo
 #endif
 
+#define myDoSomething(a, b, c) doSomething(1, c, b, a, 0)
+
 #endif

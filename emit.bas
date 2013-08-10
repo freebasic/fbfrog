@@ -205,7 +205,10 @@ private function emitAst _
 	case ASTCLASS_PPDEFINE
 		s += "#define " + *n->text
 		if( n->head ) then
-			s += " " + emitAst( n->head )
+			s += hCommaList( n, TRUE )
+		end if
+		if( n->initializer ) then
+			s += " " + emitAst( n->initializer )
 		end if
 		emitLine( s )
 		s = ""
@@ -388,6 +391,9 @@ private function emitAst _
 			emit.indent -= 1
 			emitLine( "end unknown" )
 		end if
+
+	case ASTCLASS_MACROPARAM
+		s += *n->text
 
 	case ASTCLASS_CONST
 		if( typeIsFloat( n->dtype ) ) then

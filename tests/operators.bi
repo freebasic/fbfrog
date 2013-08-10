@@ -1,4 +1,4 @@
-#define ADDROF (a) (&a)
+#define ADDROF( a ) (&a)
 
 #define A iif( x, 0, 1 )
 #define A x <> x
