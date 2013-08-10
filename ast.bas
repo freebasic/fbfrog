@@ -19,7 +19,10 @@ function typeToUnsigned( byval dtype as integer ) as integer
 end function
 
 function typeIsFloat( byval dtype as integer ) as integer
-	function = ((dtype = TYPE_SINGLE) or (dtype = TYPE_DOUBLE))
+	select case( typeGetDtAndPtr( dtype ) )
+	case TYPE_SINGLE, TYPE_DOUBLE
+		function = TRUE
+	end select
 end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
