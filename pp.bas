@@ -383,7 +383,8 @@ dim shared as PPOPINFO ppopinfo(ASTCLASS_IIF to ASTCLASS_UNARYPLUS) = _
 private function ppExpression _
 	( _
 		byref x as integer, _
-		byval level as integer = 0 _
+		byval level as integer = 0, _
+		byval allow_id_atoms as integer _
 	) as ASTNODE ptr
 
 	function = NULL
@@ -400,7 +401,7 @@ private function ppExpression _
 	dim as ASTNODE ptr a
 	if( astclass >= 0 ) then
 		x = ppSkip( x )
-		a = astNew( astclass, ppExpression( x, ppopinfo(astclass).level ) )
+		a = astNew( astclass, ppExpression( x, ppopinfo(astclass).level, allow_id_atoms ) )
 	else
 		'' Atoms
 		select case( tkGet( x ) )
@@ -410,7 +411,7 @@ private function ppExpression _
 			x = ppSkip( x )
 
 			'' Expression
-			a = ppExpression( x )
+			a = ppExpression( x, , allow_id_atoms )
 			if( a = NULL ) then
 				exit function
 			end if
@@ -429,6 +430,10 @@ private function ppExpression _
 
 		'' Identifier
 		case TK_ID
+			if( allow_id_atoms = FALSE ) then
+				exit function
+			end if
+
 			'' Accepting identifiers as atoms to allow more PP
 			'' expressions to be parsed, such as
 			''    defined FOO && FOO == 123
@@ -510,7 +515,7 @@ private function ppExpression _
 		x = ppSkip( x )
 
 		'' rhs
-		var b = ppExpression( x, oplevel )
+		var b = ppExpression( x, oplevel, allow_id_atoms )
 		if( b = NULL ) then
 			astDelete( a )
 			exit function
@@ -527,7 +532,7 @@ private function ppExpression _
 			end if
 			x = ppSkip( x )
 
-			c = ppExpression( x, oplevel )
+			c = ppExpression( x, oplevel, allow_id_atoms )
 			if( c = NULL ) then
 				astDelete( a )
 				astDelete( b )
@@ -809,7 +814,7 @@ sub ppDirectives2( )
 			'' Body tokens?
 			if( tkGet( x ) <> TK_END ) then
 				'' Try to parse the body as expression
-				var expr = ppExpression( x )
+				var expr = ppExpression( x, , FALSE )
 
 				assert( t->initializer = NULL )
 
@@ -844,7 +849,7 @@ sub ppDirectives2( )
 				x += 1
 
 				'' Expression tokens
-				var expr = ppExpression( x )
+				var expr = ppExpression( x, , TRUE )
 				'' TK_END not reached after ppExpression()?
 				if( tkGet( x ) <> TK_END ) then
 					'' Then either no expression could be parsed at all,
