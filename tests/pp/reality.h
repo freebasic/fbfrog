@@ -13,7 +13,7 @@
 	#define PPMERGE(a, b) a##b
 	#define PPSTRINGIZE(a) #a
 
-#	if X == 4294967295UL || X == 0.1e+1
+#	if X == 4294967295UL || X == -1
 #		define HOORAY
 #	endif
 #elif 1

@@ -9,7 +9,7 @@
 	#define PPMERGE (a, b) a##b
 	#define PPSTRINGIZE (a) #a
 
-	#if (X = 4294967295) orelse (X = 1)
+	#if (X = 4294967295) orelse (X = (-1))
 		#define HOORAY
 	#endif
 #elseif 1

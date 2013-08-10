@@ -12,3 +12,5 @@
 #ifndef
 '' TODO: unknown PP directive
 #elif
+
+#if 1 = 2

@@ -1054,13 +1054,14 @@ private function hFold( byval n as ASTNODE ptr ) as ASTNODE ptr
 
 	case ASTCLASS_IIF
 		if( n->head->class = ASTCLASS_CONST ) then
-			assert( typeIsFloat( n->dtype ) = FALSE )
-			if( n->val.i ) then
-				function = astClone( n->head->next )
-			else
-				function = astClone( n->tail )
+			if( typeIsFloat( n->dtype ) = FALSE ) then
+				if( n->val.i ) then
+					function = astClone( n->head->next )
+				else
+					function = astClone( n->tail )
+				end if
+				astDelete( n )
 			end if
-			astDelete( n )
 		end if
 
 	case ASTCLASS_LOGOR, ASTCLASS_LOGAND, _
@@ -1074,36 +1075,37 @@ private function hFold( byval n as ASTNODE ptr ) as ASTNODE ptr
 
 		if( (n->head->class = ASTCLASS_CONST) and _
 		    (n->tail->class = ASTCLASS_CONST) ) then
-			assert( typeIsFloat( n->head->dtype ) = FALSE )
-			assert( typeIsFloat( n->tail->dtype ) = FALSE )
-			var v1 = n->head->val.i
-			var v2 = n->tail->val.i
+			if( (not typeIsFloat( n->head->dtype )) and _
+			    (not typeIsFloat( n->tail->dtype )) ) then
+				var v1 = n->head->val.i
+				var v2 = n->tail->val.i
 
-			select case as const( n->class )
-			case ASTCLASS_LOGOR  : v1    = iif( v1 orelse  v2, 1, 0 )
-			case ASTCLASS_LOGAND : v1    = iif( v1 andalso v2, 1, 0 )
-			case ASTCLASS_BITOR  : v1  or= v2
-			case ASTCLASS_BITXOR : v1 xor= v2
-			case ASTCLASS_BITAND : v1 and= v2
-			case ASTCLASS_EQ     : v1    = iif( v1 =  v2, 1, 0 )
-			case ASTCLASS_NE     : v1    = iif( v1 <> v2, 1, 0 )
-			case ASTCLASS_LT     : v1    = iif( v1 <  v2, 1, 0 )
-			case ASTCLASS_LE     : v1    = iif( v1 <= v2, 1, 0 )
-			case ASTCLASS_GT     : v1    = iif( v1 >  v2, 1, 0 )
-			case ASTCLASS_GE     : v1    = iif( v1 >= v2, 1, 0 )
-			case ASTCLASS_SHL    : v1 shl= v2
-			case ASTCLASS_SHR    : v1 shr= v2
-			case ASTCLASS_ADD    : v1   += v2
-			case ASTCLASS_SUB    : v1   -= v2
-			case ASTCLASS_MUL    : v1   *= v2
-			case ASTCLASS_DIV    : v1   /= v2
-			case ASTCLASS_MOD    : v1 mod= v2
-			case else
-				assert( FALSE )
-			end select
+				select case as const( n->class )
+				case ASTCLASS_LOGOR  : v1    = iif( v1 orelse  v2, 1, 0 )
+				case ASTCLASS_LOGAND : v1    = iif( v1 andalso v2, 1, 0 )
+				case ASTCLASS_BITOR  : v1  or= v2
+				case ASTCLASS_BITXOR : v1 xor= v2
+				case ASTCLASS_BITAND : v1 and= v2
+				case ASTCLASS_EQ     : v1    = iif( v1 =  v2, 1, 0 )
+				case ASTCLASS_NE     : v1    = iif( v1 <> v2, 1, 0 )
+				case ASTCLASS_LT     : v1    = iif( v1 <  v2, 1, 0 )
+				case ASTCLASS_LE     : v1    = iif( v1 <= v2, 1, 0 )
+				case ASTCLASS_GT     : v1    = iif( v1 >  v2, 1, 0 )
+				case ASTCLASS_GE     : v1    = iif( v1 >= v2, 1, 0 )
+				case ASTCLASS_SHL    : v1 shl= v2
+				case ASTCLASS_SHR    : v1 shr= v2
+				case ASTCLASS_ADD    : v1   += v2
+				case ASTCLASS_SUB    : v1   -= v2
+				case ASTCLASS_MUL    : v1   *= v2
+				case ASTCLASS_DIV    : v1   /= v2
+				case ASTCLASS_MOD    : v1 mod= v2
+				case else
+					assert( FALSE )
+				end select
 
-			function = astNewCONST( v1, 0, TYPE_LONG )
-			astDelete( n )
+				function = astNewCONST( v1, 0, TYPE_LONG )
+				astDelete( n )
+			end if
 
 		'' Check for short-curcuiting for || and &&,
 		'' if only the lhs is a CONST
@@ -1111,14 +1113,15 @@ private function hFold( byval n as ASTNODE ptr ) as ASTNODE ptr
 		        (n->tail->class <> ASTCLASS_CONST) ) then
 			select case( n->class )
 			case ASTCLASS_LOGOR, ASTCLASS_LOGAND
-				assert( typeIsFloat( n->head->dtype ) = FALSE )
-				var v1 = n->head->val.i
+				if( typeIsFloat( n->head->dtype ) = FALSE ) then
+					var v1 = n->head->val.i
 
-				'' 1 || unknown -> 1
-				'' 0 && unknown -> 0
-				if( v1 = iif( n->class = ASTCLASS_LOGOR, 1, 0 ) ) then
-					function = astNewCONST( v1, 0, TYPE_LONG )
-					astDelete( n )
+					'' 1 || unknown -> 1
+					'' 0 && unknown -> 0
+					if( v1 = iif( n->class = ASTCLASS_LOGOR, 1, 0 ) ) then
+						function = astNewCONST( v1, 0, TYPE_LONG )
+						astDelete( n )
+					end if
 				end if
 			end select
 		end if
@@ -1127,20 +1130,21 @@ private function hFold( byval n as ASTNODE ptr ) as ASTNODE ptr
 	     ASTCLASS_NEGATE, ASTCLASS_UNARYPLUS
 
 		if( n->head->class = ASTCLASS_CONST ) then
-			assert( typeIsFloat( n->head->dtype ) = FALSE )
-			var v1 = n->head->val.i
+			if( typeIsFloat( n->head->dtype ) = FALSE ) then
+				var v1 = n->head->val.i
 
-			select case as const( n->class )
-			case ASTCLASS_LOGNOT    : v1 = iif( v1, 0, 1 )
-			case ASTCLASS_BITNOT    : v1 = not v1
-			case ASTCLASS_NEGATE    : v1 = -v1
-			case ASTCLASS_UNARYPLUS : '' nothing to do
-			case else
-				assert( FALSE )
-			end select
+				select case as const( n->class )
+				case ASTCLASS_LOGNOT    : v1 = iif( v1, 0, 1 )
+				case ASTCLASS_BITNOT    : v1 = not v1
+				case ASTCLASS_NEGATE    : v1 = -v1
+				case ASTCLASS_UNARYPLUS : '' nothing to do
+				case else
+					assert( FALSE )
+				end select
 
-			function = astNewCONST( v1, 0, TYPE_LONG )
-			astDelete( n )
+				function = astNewCONST( v1, 0, TYPE_LONG )
+				astDelete( n )
+			end if
 		end if
 
 	end select
