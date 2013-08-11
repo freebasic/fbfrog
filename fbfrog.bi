@@ -335,6 +335,7 @@ declare sub tkRemove( byval first as integer, byval last as integer )
 declare sub tkCopy( byval x as integer, byval first as integer, byval last as integer )
 declare function tkGet( byval x as integer ) as integer
 declare function tkGetText( byval x as integer ) as zstring ptr
+declare function tkGetIdOrKw( byval x as integer ) as zstring ptr
 declare function tkGetAst( byval x as integer ) as ASTNODE ptr
 declare sub tkSetAst( byval x as integer, byval ast as ASTNODE ptr )
 declare sub tkSetPoisoned( byval first as integer, byval last as integer )
@@ -355,6 +356,11 @@ declare function tkSkipSpaceAndComments _
 		byval delta as integer = 1 _
 	) as integer
 declare function tkToCText( byval id as integer, byval text as zstring ptr ) as string
+declare function tkManyToCText _
+	( _
+		byval first as integer, _
+		byval last as integer _
+	) as string
 declare function tkToAstText _
 	( _
 		byval first as integer, _
@@ -490,8 +496,7 @@ enum
 	ASTATTRIB_HEX		= &h00000008  '' CONST
 	ASTATTRIB_PPINDENTBEGIN	= &h00000010  '' PP*
 	ASTATTRIB_PPINDENTEND	= &h00000020  '' PP*
-	ASTATTRIB_MERGERIGHT	= &h00000040  '' Macro body tokens (TK, MACROPARAM)
-	ASTATTRIB_MERGELEFT	= &h00000080  '' Macro body tokens (TK, MACROPARAM)
+	ASTATTRIB_MERGEWITHPREV	= &h00000080  '' TK, MACROPARAM: Macro body tokens that were preceded by the '##' PP merge operator
 	ASTATTRIB_STRINGIFY	= &h00000100  '' MACROPARAM, to distinguish "param" from "#param"
 end enum
 
@@ -529,7 +534,7 @@ type ASTNODE_
 	val		as ASTNODECONST
 	tk		as integer  '' ASTCLASS_TK
 	paramindex	as integer  '' ASTCLASS_MACROPARAM
-	paramcount	as integer  '' ASTCLASS_PPMACRO
+	paramcount	as integer  '' ASTCLASS_PPDEFINE: -1 = #define m, 0 = #define m(), 1 = #define m(a), ...
 
 	'' Child nodes: operands/fields/parameters/...
 	head		as ASTNODE ptr
@@ -626,6 +631,7 @@ declare sub ppEvalExpressions( )
 declare sub ppSplitElseIfs( )
 declare sub ppEvalIfs( )
 declare sub ppIntegrateTrailCodeIntoIfElseBlocks( )
+declare sub ppExpand( )
 declare sub ppMergeElseIfs( )
 declare function cSkip( byval x as integer ) as integer
 declare function cSkipRev( byval x as integer ) as integer

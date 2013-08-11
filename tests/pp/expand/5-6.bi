@@ -1,21 +1,17 @@
 #ifdef A
 	#ifdef B
 		#define EXPANDTHIS
-		'' TODO: unknown construct
-		EXPANDTHIS void f(void);
+		declare sub f( )
 	#else
 		#define EXPANDTHIS
-		'' TODO: unknown construct
-		EXPANDTHIS void f(void);
+		declare sub f( )
 	#endif
 #else
 	#ifdef B
 		#define EXPANDTHIS
-		'' TODO: unknown construct
-		EXPANDTHIS void f(void);
+		declare sub f( )
 	#else
 		#define EXPANDTHIS
-		'' TODO: unknown construct
-		EXPANDTHIS void f(void);
+		declare sub f( )
 	#endif
 #endif

@@ -581,6 +581,7 @@ private function ppDirective( byval x as integer ) as integer
 			return -1
 		end if
 		t = astNew( ASTCLASS_PPDEFINE, tkGetText( x ) )
+		t->paramcount = -1
 
 		'' '('? (+1 instead of ppSkip() so TK_SPACE won't be ignored)
 		if( tkGet( x + 1 ) = TK_LPAREN ) then
@@ -589,15 +590,17 @@ private function ppDirective( byval x as integer ) as integer
 
 			'' '('
 			x = ppSkip( x )
+			t->paramcount = 0
 
 			'' List of macro parameters:
 			'' Identifier (',' Identifier)*
 			do
 				'' macro parameter's Identifier
 				if( tkGet( x ) <> TK_ID ) then
-					return -1
+					exit do
 				end if
 				astAddChild( t, astNew( ASTCLASS_MACROPARAM, tkGetText( x ) ) )
+				t->paramcount += 1
 				x = ppSkip( x )
 
 				'' ','?
@@ -816,21 +819,38 @@ end sub
 ''
 namespace record
 	dim shared as ASTNODE ptr macro
-	dim shared as integer x, stringify, mergeleft
+	dim shared as integer x, stringify, merge
 end namespace
 
-private sub hTakeMergeLeft( byval n as ASTNODE ptr )
-	if( record.mergeleft ) then
-		n->attrib or= ASTATTRIB_MERGELEFT
-		record.mergeleft = FALSE
+private sub hTakeMergeAttrib _
+	( _
+		byval macrobody as ASTNODE ptr, _
+		byval n as ASTNODE ptr _
+	)
+
+	if( record.merge ) then
+		'' Remove TK_SPACE's preceding the '##'
+		while( macrobody->tail )
+			if( macrobody->tail->class <> ASTCLASS_TK ) then exit while
+			if( macrobody->tail->tk <> TK_SPACE ) then exit while
+			astRemoveChild( macrobody, macrobody->tail )
+		wend
+
+		n->attrib or= ASTATTRIB_MERGEWITHPREV
+		record.merge = FALSE
 	end if
 end sub
 
 '' Used for uninteresting tokens
 private sub hRecordToken( )
+	'' Don't add TK_SPACE's behind a '##'
+	if( record.merge and (tkGet( record.x ) = TK_SPACE) ) then
+		exit sub
+	end if
+
 	var n = astNew( ASTCLASS_TK, tkGetText( record.x ) )
 	n->tk = tkGet( record.x )
-	hTakeMergeLeft( n )
+	hTakeMergeAttrib( record.macro->initializer, n )
 	astAddChild( record.macro->initializer, n )
 end sub
 
@@ -848,25 +868,14 @@ private sub hRecordParam _
 	if( stringify ) then
 		n->attrib or= ASTATTRIB_STRINGIFY
 	end if
-	hTakeMergeLeft( n )
+	hTakeMergeAttrib( record.macro->initializer, n )
 
 	astAddChild( record.macro->initializer, n )
 end sub
 
 private sub hRecordMerge( )
-	'' Merging as in "A##B" is represented by setting mergeright on A and
-	'' mergeleft on B. In 'A##B##C', B will end up having both mergeright
-	'' and mergeleft flags set.
-
-	'' If '##' is found at the beginning of the macro body, then there won't
-	'' be a part yet, and the mergeright won't go anywhere.
-	assert( record.macro->initializer->class = ASTCLASS_MACROBODY )
-	if( record.macro->initializer->tail ) then
-		record.macro->initializer->tail->attrib or= ASTATTRIB_MERGERIGHT
-	end if
-
-	'' The next token/param (if any) will recieve the mergeleft
-	record.mergeleft = TRUE
+	'' The next token/param (if any) will recieve the '##' merge attribute
+	record.merge = TRUE
 end sub
 
 private function hLookupMacroParam( byval id as zstring ptr ) as integer
@@ -972,7 +981,7 @@ sub ppDirectives2( )
 				record.macro = t
 				record.x = x
 				record.stringify = FALSE
-				record.mergeleft = FALSE
+				record.merge = FALSE
 				hRecordBody( )
 				x = record.x
 			end if
@@ -1027,11 +1036,270 @@ end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
+private sub hExprToTokens( byval n as ASTNODE ptr, byref x as integer )
+	if( n = NULL ) then
+		exit sub
+	end if
+
+	select case as const( n->class )
+	case ASTCLASS_CONST
+		dim s as string
+		dim tk as integer
+		if( typeIsFloat( n->dtype ) ) then
+			tk = TK_DECFLOAT
+			s = str( n->val.f )
+		elseif( n->attrib and ASTATTRIB_OCT ) then
+			tk = TK_OCTNUM
+			s = "0" + oct( n->val.i )
+		elseif( n->attrib and ASTATTRIB_HEX ) then
+			tk = TK_HEXNUM
+			s = "0x" + hex( n->val.i )
+		else
+			tk = TK_DECNUM
+			s = str( n->val.i )
+		end if
+		tkInsert( x, tk, s ) : x += 1
+
+	case ASTCLASS_ID
+		tkInsert( x, TK_ID, n->text ) : x += 1
+
+	case ASTCLASS_DEFINED
+		'' defined id
+		tkInsert( x, KW_DEFINED ) : x += 1
+		tkInsert( x, TK_SPACE )   : x += 1
+		hExprToTokens( n->head, x )
+
+	case ASTCLASS_IIF
+		'' condition ? l : r
+		hExprToTokens( n->head, x )
+		tkInsert( x, TK_SPACE )   : x += 1
+		tkInsert( x, TK_QUEST )   : x += 1  '' ?
+		tkInsert( x, TK_SPACE )   : x += 1
+		hExprToTokens( n->head->next, x )
+		tkInsert( x, TK_SPACE )   : x += 1
+		tkInsert( x, TK_COLON )   : x += 1  '' :
+		tkInsert( x, TK_SPACE )   : x += 1
+		hExprToTokens( n->tail, x )
+
+	case ASTCLASS_LOGOR, ASTCLASS_LOGAND, _
+	     ASTCLASS_BITOR, ASTCLASS_BITXOR, ASTCLASS_BITAND, _
+	     ASTCLASS_EQ, ASTCLASS_NE, _
+	     ASTCLASS_LT, ASTCLASS_LE, _
+	     ASTCLASS_GT, ASTCLASS_GE, _
+	     ASTCLASS_SHL, ASTCLASS_SHR, _
+	     ASTCLASS_ADD, ASTCLASS_SUB, _
+	     ASTCLASS_MUL, ASTCLASS_DIV, ASTCLASS_MOD
+
+		hExprToTokens( n->head, x )
+		tkInsert( x, TK_SPACE ) : x += 1
+
+		dim as integer tk
+		select case as const( n->class )
+		case ASTCLASS_LOGOR  : tk = TK_PIPEPIPE  '' ||
+		case ASTCLASS_LOGAND : tk = TK_AMPAMP    '' &&
+		case ASTCLASS_BITOR  : tk = TK_PIPE      '' |
+		case ASTCLASS_BITXOR : tk = TK_CIRC      '' ^
+		case ASTCLASS_BITAND : tk = TK_AMP       '' &
+		case ASTCLASS_EQ     : tk = TK_EQEQ      '' ==
+		case ASTCLASS_NE     : tk = TK_EXCLEQ    '' !=
+		case ASTCLASS_LT     : tk = TK_LT        '' <
+		case ASTCLASS_LE     : tk = TK_LTEQ      '' <=
+		case ASTCLASS_GT     : tk = TK_GT        '' >
+		case ASTCLASS_GE     : tk = TK_GTEQ      '' >=
+		case ASTCLASS_SHL    : tk = TK_LTLT      '' <<
+		case ASTCLASS_SHR    : tk = TK_GTGT      '' >>
+		case ASTCLASS_ADD    : tk = TK_PLUS      '' +
+		case ASTCLASS_SUB    : tk = TK_MINUS     '' -
+		case ASTCLASS_MUL    : tk = TK_STAR      '' *
+		case ASTCLASS_DIV    : tk = TK_SLASH     '' /
+		case ASTCLASS_MOD    : tk = TK_PERCENT   '' %
+		case else
+			assert( FALSE )
+		end select
+		tkInsert( x, tk ) : x += 1
+
+		tkInsert( x, TK_SPACE ) : x += 1
+		hExprToTokens( n->tail, x )
+
+	case ASTCLASS_LOGNOT, ASTCLASS_BITNOT, _
+	     ASTCLASS_NEGATE, ASTCLASS_UNARYPLUS
+
+		dim as integer tk
+		select case as const( n->class )
+		case ASTCLASS_LOGNOT    : tk = TK_EXCL  '' !
+		case ASTCLASS_BITNOT    : tk = TK_TILDE '' ~
+		case ASTCLASS_NEGATE    : tk = TK_MINUS '' -
+		case ASTCLASS_UNARYPLUS : tk = TK_PLUS  '' +
+		case else
+			assert( FALSE )
+		end select
+		tkInsert( x, tk ) : x += 1
+
+		tkInsert( x, TK_SPACE ) : x += 1
+		hExprToTokens( n->head, x )
+
+	case else
+		assert( FALSE )
+	end select
+end sub
+
+private function hMacroCall _
+	( _
+		byval macro as ASTNODE ptr, _
+		byval x as integer, _
+		byref delta as integer _
+	) as integer
+
+	const MAXARGS = 32
+	dim as integer argbegin(0 to MAXARGS-1), argend(0 to MAXARGS-1)
+	var args = 0
+	var begin = x
+	delta = 0
+
+	'' ID
+	assert( tkGet( x ) = TK_ID )
+	x += 1
+
+	'' Not just "#define m"?
+	if( macro->paramcount >= 0 ) then
+		'' '('?
+		if( tkGet( x ) <> TK_LPAREN ) then
+			return FALSE
+		end if
+		x += 1
+
+		'' Not just "#define m()"?
+		if( macro->paramcount > 0 ) then
+			'' For each arg...
+			do
+				if( args = MAXARGS ) then
+					return FALSE
+				end if
+
+				argbegin(args) = x
+
+				'' For each token that's part of this arg...
+				var level = 0
+				do
+					select case( tkGet( x ) )
+					case TK_LPAREN
+						level += 1
+					case TK_RPAREN
+						if( level <= 0 ) then
+							exit do
+						end if
+						level -= 1
+					case TK_COMMA
+						if( level <= 0 ) then
+							exit do
+						end if
+					case TK_EOF
+						return FALSE
+					end select
+					x += 1
+				loop
+
+				argend(args) = x - 1
+				args += 1
+
+				'' ','?
+				if( tkGet( x ) <> TK_COMMA ) then
+					exit do
+				end if
+				x += 1
+			loop
+
+			'' As many args as params?
+			if( macro->paramcount <> args ) then
+				return FALSE
+			end if
+		end if
+
+		'' ')'?
+		if( tkGet( x ) <> TK_RPAREN ) then
+			return FALSE
+		end if
+		x += 1
+	end if
+
+	var bodybegin = x
+
+	'' Not an empty #define?
+	var macrobody = macro->initializer
+	if( macrobody ) then
+		'' Insert the macro body behind the call
+
+		'' #define body parsed as tokens?
+		if( macrobody->class = ASTCLASS_MACROBODY ) then
+			var child = macrobody->head
+			while( child )
+				var y = x
+
+				select case( child->class )
+				case ASTCLASS_TK
+					tkInsert( x, child->tk, child->text )
+					x += 1
+
+				case ASTCLASS_MACROPARAM
+					var arg = child->paramindex
+					assert( (arg >= 0) and (arg < args) )
+
+					if( child->attrib and ASTATTRIB_STRINGIFY ) then
+						'' Turn the arg's tokens into a string and insert it as string literal
+						tkInsert( x, TK_STRING, tkManyToCText( argbegin(arg), argend(arg) ) )
+						x += 1
+					else
+						'' Copy the arg's tokens into the body
+						tkCopy( x, argbegin(arg), argend(arg) )
+						x += argend(arg) - argbegin(arg) + 1
+					end if
+
+				case else
+					assert( FALSE )
+				end select
+
+				if( child->attrib and ASTATTRIB_MERGEWITHPREV ) then
+					'' Not the first token? (it wouldn't have a previous token to merge with)
+					if( bodybegin < y ) then
+						'' Assuming every token >= TK_ID is mergable (i.e. an identifier or keyword)
+						'' Assuming TK_SPACE's around '##' have already been removed
+						if( (tkGet( y - 1 ) >= TK_ID) and _
+						    (tkGet( y     ) >= TK_ID) ) then
+							tkInsert( x, TK_ID, *tkGetIdOrKw( y - 1 ) + *tkGetIdOrKw( y ) )
+							x += 1
+							tkRemove( y - 1, y )
+							x -= 2
+						else
+							print tkDumpOne( y - 1 )
+							print tkDumpOne( y )
+							oops( "cannot merge these two tokens when expanding macro '" & *macro->text & "'" )
+						end if
+					end if
+				end if
+
+				child = child->next
+			wend
+		'' #define body is an expression
+		else
+			hExprToTokens( macrobody, x )
+		end if
+	end if
+
+	'' Then remove the call tokens
+	tkRemove( begin, bodybegin - 1 )
+	x -= (bodybegin - 1) - begin + 1
+
+	delta = x - begin
+	function = TRUE
+end function
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
 namespace eval
 	dim shared as TLIST strings
 	dim shared as THASH knownsyms
 	dim shared as THASH expandsyms
-	dim shared as ASTNODE ptr macrobody
+	dim shared as ASTNODE ptr macro
 end namespace
 
 enum
@@ -1075,133 +1343,45 @@ end sub
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 sub ppMacroBegin( byval id as zstring ptr, byval paramcount as integer )
-	assert( paramcount > 0 )
-	eval.macrobody = astNew( ASTCLASS_MACROBODY, id )
-	eval.macrobody->paramcount = paramcount
+	assert( paramcount >= -1 )
+	eval.macro = astNew( ASTCLASS_PPDEFINE, id )
+	eval.macro->paramcount = paramcount
+	eval.macro->initializer = astNew( ASTCLASS_MACROBODY )
 end sub
 
 sub ppMacroToken( byval tk as integer, byval text as zstring ptr )
 	var n = astNew( ASTCLASS_TK, text )
 	n->tk = tk
-	astAddChild( eval.macrobody, n )
+	astAddChild( eval.macro->initializer, n )
 end sub
 
 sub ppMacroParam( byval index as integer )
-	assert( (index >= 0) and (index < eval.macrobody->paramcount) )
+	assert( eval.macro->paramcount > 0 )
+	assert( (index >= 0) and (index < eval.macro->paramcount) )
 	var n = astNew( ASTCLASS_MACROPARAM )
 	n->paramindex = index
-	astAddChild( eval.macrobody, n )
+	astAddChild( eval.macro->initializer, n )
 end sub
 
-private function hMacroCall( byval x as integer ) as integer
-	var begin = x
-
-	'' ID
-	x += 1
-
-	'' '('?
-	if( tkGet( x ) <> TK_LPAREN ) then
-		return begin
-	end if
-	x += 1
-
-	const MAXARGS = 32
-	dim as integer argbegin(0 to MAXARGS-1), argend(0 to MAXARGS-1)
-	var args = 0
-
-	'' For each arg...
-	do
-		if( args = MAXARGS ) then
-			return begin
-		end if
-
-		argbegin(args) = x
-
-		'' For each token that's part of this arg...
-		var level = 0
-		do
-			select case( tkGet( x ) )
-			case TK_LPAREN
-				level += 1
-			case TK_RPAREN
-				if( level <= 0 ) then
-					exit do
-				end if
-				level -= 1
-			case TK_COMMA
-				if( level <= 0 ) then
-					exit do
-				end if
-			case TK_EOF
-				return begin
-			end select
-			x += 1
-		loop
-
-		argend(args) = x - 1
-		args += 1
-
-		'' ','?
-		if( tkGet( x ) <> TK_COMMA ) then
-			exit do
-		end if
-		x += 1
-	loop
-
-	'' ')'?
-	if( tkGet( x ) <> TK_RPAREN ) then
-		return begin
-	end if
-	x += 1
-
-	'' As many args as params?
-	if( eval.macrobody->paramcount <> args ) then
-		return begin
-	end if
-
-	'' Insert the macro body behind the call
-	var callend = x - 1
-	var child = eval.macrobody->head
-	while( child )
-		select case( child->class )
-		case ASTCLASS_TK
-			tkInsert( x, child->tk, child->text )
-			x += 1
-		case ASTCLASS_MACROPARAM
-			var arg = child->paramindex
-			assert( (arg >= 0) and (arg < args) )
-			'' Copy the arg's tokens into the body
-			tkCopy( x, argbegin(arg), argend(arg) )
-			x += argend(arg) - argbegin(arg) + 1
-		case else
-			assert( FALSE )
-		end select
-		child = child->next
-	wend
-
-	'' Then remove the call tokens
-	tkRemove( begin, callend )
-	x -= callend - begin + 1
-
-	function = x
-end function
-
-private sub hExpandMacro( )
+sub ppMacroEnd( )
+	'' Expand the macro globally
 	var x = 0
 	while( tkGet( x ) <> TK_EOF )
 		if( tkGet( x ) = TK_ID ) then
-			if( *tkGetText( x ) = *eval.macrobody->text ) then
-				x = hMacroCall( x )
+			if( *tkGetText( x ) = *eval.macro->text ) then
+				if( hMacroCall( eval.macro, x, 0 ) ) then
+					'' The macro call will be replaced with the body,
+					'' so everything including this TK_ID must be
+					'' re-parsed.
+					x -= 1
+				end if
 			end if
 		end if
 		x += 1
 	wend
-end sub
 
-sub ppMacroEnd( )
-	hExpandMacro( )
-	astDelete( eval.macrobody )
-	eval.macrobody = NULL
+	astDelete( eval.macro )
+	eval.macro = NULL
 end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -1594,6 +1774,45 @@ sub ppIntegrateTrailCodeIntoIfElseBlocks( )
 			assert( level >= 0 )
 			assert( x = xendif(level) )
 			level -= 1
+		end select
+		x += 1
+	loop
+end sub
+
+sub ppExpand( )
+	var x = 0
+	do
+		select case( tkGet( x ) )
+		case TK_EOF
+			exit do
+
+		case TK_PPDEFINE
+			if( hLookupExpandSym( tkGetAst( x )->text ) ) then
+				dim as integer xelse, xendif
+				hFindElseEndIf( x + 1, xelse, xendif )
+
+				if( xelse  = -1 ) then xelse  = tkGetCount( ) - 1
+				if( xendif = -1 ) then xendif = tkGetCount( ) - 1
+
+				var y = x + 1
+				while( y < xelse )
+					if( tkGet( y ) = TK_ID ) then
+						if( *tkGetText( y ) = *tkGetAst( x )->text ) then
+							dim as integer delta
+							if( hMacroCall( tkGetAst( x ), y, delta ) ) then
+								'' The macro call will be replaced with the body,
+								'' so everything including this TK_ID must be
+								'' re-parsed.
+								y -= 1
+								xelse += delta
+								xendif += delta
+							end if
+						end if
+					end if
+					y += 1
+				wend
+			end if
+
 		end select
 		x += 1
 	loop

@@ -63,14 +63,14 @@
 #define m( a ) foo##a
 #define m( a ) foo##a##foo
 
-#define m( a, b ) a    ##     b
-#define m( a, b ) a    ##     b ## foo
-#define m( a, b ) a ## foo ## b
-#define m( a, b ) a ## foo ## b ## foo
-#define m( a, b ) foo ## a    ##     b
-#define m( a, b ) foo ## a    ##     b ## foo
-#define m( a, b ) foo ## a ## foo ## b
-#define m( a, b ) foo ## a ## foo ## b ## foo
+#define m( a, b ) a##b
+#define m( a, b ) a##b##foo
+#define m( a, b ) a##foo##b
+#define m( a, b ) a##foo##b##foo
+#define m( a, b ) foo##a##b
+#define m( a, b ) foo##a##b##foo
+#define m( a, b ) foo##a##foo##b
+#define m( a, b ) foo##a##foo##b##foo
 
 #define m( a ) #a
 #define m( a, b ) #a #b

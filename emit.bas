@@ -216,10 +216,8 @@ private function emitAst _
 				var child = n->initializer->head
 				while( child )
 
-					if( child->attrib and ASTATTRIB_MERGELEFT ) then
-						if( right( s, 2 ) <> "##" ) then
-							s += "##"
-						end if
+					if( child->attrib and ASTATTRIB_MERGEWITHPREV ) then
+						s += "##"
 					end if
 
 					select case( child->class )
@@ -235,12 +233,6 @@ private function emitAst _
 					case else
 						assert( FALSE )
 					end select
-
-					if( child->attrib and ASTATTRIB_MERGERIGHT ) then
-						if( right( s, 2 ) <> "##" ) then
-							s += "##"
-						end if
-					end if
 
 					child = child->next
 				wend

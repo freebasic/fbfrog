@@ -453,6 +453,16 @@ function tkGetText( byval x as integer ) as zstring ptr
 	function = tkAccess( x )->text
 end function
 
+function tkGetIdOrKw( byval x as integer ) as zstring ptr
+	var p = tkAccess( x )
+	assert( p->id >= TK_ID )
+	if( p->text ) then
+		function = p->text
+	else
+		function = tk_info(p->id).text
+	end if
+end function
+
 function tkGetAst( byval x as integer ) as ASTNODE ptr
 	function = tkAccess( x )->ast
 end function
@@ -543,9 +553,6 @@ end function
 function tkToCText( byval id as integer, byval text as zstring ptr ) as string
 	select case as const( id )
 	case TK_DIVIDER, TK_EOL : function = !"\n"
-	case TK_PPINCLUDE, TK_PPDEFINE, TK_PPIF, TK_PPELSEIF, _
-	     TK_PPELSE, TK_PPENDIF, TK_PPUNKNOWN
-		assert( FALSE )
 	case TK_BEGIN, TK_END   :
 	case TK_BYTE            : function = *text
 	case TK_SPACE           : function = " "
@@ -561,7 +568,30 @@ function tkToCText( byval id as integer, byval text as zstring ptr ) as string
 	case TK_EXCL to TK_TILDE     : function = *tk_info(id).text
 	case TK_ID                   : function = *text
 	case KW_AUTO to KW_WHILE     : function = *tk_info(id).text
+	case else
+		assert( FALSE )
 	end select
+end function
+
+function tkManyToCText _
+	( _
+		byval first as integer, _
+		byval last as integer _
+	) as string
+
+	dim as string s
+
+	for i as integer = first to last
+		var p = tkAccess( i )
+
+		'' This shouldn't be used with high-level tokens; that'd be
+		'' pretty difficult
+		assert( p->ast = NULL )
+
+		s += tkToCText( p->id, p->text )
+	next
+
+	function = s
 end function
 
 function tkToAstText _
