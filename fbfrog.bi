@@ -320,6 +320,7 @@ type FROGFILE as FROGFILE_
 
 declare sub tkInit( )
 declare sub tkEnd( )
+declare function tkDumpBasic( byval id as integer, byval text as zstring ptr ) as string
 declare function tkDumpOne( byval x as integer ) as string
 declare sub tkDump( )
 declare function tkGetCount( ) as integer
@@ -353,6 +354,7 @@ declare function tkSkipSpaceAndComments _
 		byval x as integer, _
 		byval delta as integer = 1 _
 	) as integer
+declare function tkToCText( byval id as integer, byval text as zstring ptr ) as string
 declare function tkToAstText _
 	( _
 		byval first as integer, _
@@ -426,7 +428,6 @@ enum
 
 	ASTCLASS_PPINCLUDE
 	ASTCLASS_PPDEFINE
-	ASTCLASS_PPMACRO
 	ASTCLASS_PPIF
 	ASTCLASS_PPELSEIF
 	ASTCLASS_PPELSE
@@ -447,8 +448,9 @@ enum
 	ASTCLASS_DIMENSION
 	ASTCLASS_UNKNOWN
 
-	ASTCLASS_TK
+	ASTCLASS_MACROBODY
 	ASTCLASS_MACROPARAM
+	ASTCLASS_TK
 	ASTCLASS_CONST
 	ASTCLASS_ID
 	ASTCLASS_TEXT
@@ -488,6 +490,9 @@ enum
 	ASTATTRIB_HEX		= &h00000008  '' CONST
 	ASTATTRIB_PPINDENTBEGIN	= &h00000010  '' PP*
 	ASTATTRIB_PPINDENTEND	= &h00000020  '' PP*
+	ASTATTRIB_MERGERIGHT	= &h00000040  '' Macro body tokens (TK, MACROPARAM)
+	ASTATTRIB_MERGELEFT	= &h00000080  '' Macro body tokens (TK, MACROPARAM)
+	ASTATTRIB_STRINGIFY	= &h00000100  '' MACROPARAM, to distinguish "param" from "#param"
 end enum
 
 type ASTNODECONST
@@ -497,6 +502,7 @@ type ASTNODECONST
 	end union
 end type
 
+'' When changing, adjust astClone()
 type ASTNODE_
 	class		as integer  '' ASTCLASS_*
 	attrib		as integer  '' ASTATTRIB_*
@@ -522,8 +528,8 @@ type ASTNODE_
 
 	val		as ASTNODECONST
 	tk		as integer  '' ASTCLASS_TK
-	macroparam	as integer  '' ASTCLASS_MACROPARAM
-	macroparams	as integer  '' ASTCLASS_PPMACRO
+	paramindex	as integer  '' ASTCLASS_MACROPARAM
+	paramcount	as integer  '' ASTCLASS_PPMACRO
 
 	'' Child nodes: operands/fields/parameters/...
 	head		as ASTNODE ptr
@@ -610,7 +616,7 @@ declare sub ppDirectives1( )
 declare sub ppDirectives2( )
 declare sub ppEvalInit( )
 declare sub ppEvalEnd( )
-declare sub ppMacroBegin( byval id as zstring ptr, byval params as integer )
+declare sub ppMacroBegin( byval id as zstring ptr, byval paramcount as integer )
 declare sub ppMacroToken( byval tk as integer, byval text as zstring ptr )
 declare sub ppMacroParam( byval index as integer )
 declare sub ppMacroEnd( )

@@ -794,6 +794,146 @@ sub ppDirectives1( )
 end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+''
+'' Example of recording the body of a #define:
+''
+''      #define m(a, b) a foo #b a##b a##foo
+''                     |------- body ------|
+''
+'' This sequence of macro body nodes will be created:
+''
+''      tk TK_SPACE
+''      param 0
+''      tk TK_SPACE
+''      tk TK_ID "foo"
+''      param 1 (stringify)
+''      tk TK_SPACE
+''      param 0 (merge right)
+''      param 1 (merge left)
+''      tk TK_SPACE
+''      param 0 (merge right)
+''      tk TK_ID "foo" (merge left)
+''
+namespace record
+	dim shared as ASTNODE ptr macro
+	dim shared as integer x, stringify, mergeleft
+end namespace
+
+private sub hTakeMergeLeft( byval n as ASTNODE ptr )
+	if( record.mergeleft ) then
+		n->attrib or= ASTATTRIB_MERGELEFT
+		record.mergeleft = FALSE
+	end if
+end sub
+
+'' Used for uninteresting tokens
+private sub hRecordToken( )
+	var n = astNew( ASTCLASS_TK, tkGetText( record.x ) )
+	n->tk = tkGet( record.x )
+	hTakeMergeLeft( n )
+	astAddChild( record.macro->initializer, n )
+end sub
+
+'' Used when a 'param' or '#param' was found in the macro body.
+private sub hRecordParam _
+	( _
+		byval id as zstring ptr, _
+		byval paramindex as integer, _
+		byval stringify as integer _
+	)
+
+	var n = astNew( ASTCLASS_MACROPARAM, id )
+	n->paramindex = paramindex
+
+	if( stringify ) then
+		n->attrib or= ASTATTRIB_STRINGIFY
+	end if
+	hTakeMergeLeft( n )
+
+	astAddChild( record.macro->initializer, n )
+end sub
+
+private sub hRecordMerge( )
+	'' Merging as in "A##B" is represented by setting mergeright on A and
+	'' mergeleft on B. In 'A##B##C', B will end up having both mergeright
+	'' and mergeleft flags set.
+
+	'' If '##' is found at the beginning of the macro body, then there won't
+	'' be a part yet, and the mergeright won't go anywhere.
+	assert( record.macro->initializer->class = ASTCLASS_MACROBODY )
+	if( record.macro->initializer->tail ) then
+		record.macro->initializer->tail->attrib or= ASTATTRIB_MERGERIGHT
+	end if
+
+	'' The next token/param (if any) will recieve the mergeleft
+	record.mergeleft = TRUE
+end sub
+
+private function hLookupMacroParam( byval id as zstring ptr ) as integer
+	var index = 0
+	var param = record.macro->head
+	while( param )
+		assert( param->class = ASTCLASS_MACROPARAM )
+		if( *param->text = *id ) then
+			return index
+		end if
+		index += 1
+		param = param->next
+	wend
+	function = -1
+end function
+
+private sub hRecordBody( )
+	do
+		select case( tkGet( record.x ) )
+		case TK_END
+			exit do
+
+		case TK_ID
+			'' Is it one of the #define's parameters?
+			var id = tkGetText( record.x )
+			var paramindex = hLookupMacroParam( id )
+			if( paramindex >= 0 ) then
+				hRecordParam( id, paramindex, FALSE )
+			else
+				hRecordToken( )
+			end if
+
+		'' '#'?
+		case TK_HASH
+			'' '#param'?
+			if( tkGet( record.x + 1 ) = TK_ID ) then
+				'' Is it one of the #define's parameters?
+				var id = tkGetText( record.x + 1 )
+				var paramindex = hLookupMacroParam( id )
+				if( paramindex >= 0 ) then
+					'' '#'
+					record.x += 1
+
+					hRecordParam( id, paramindex, TRUE )
+				else
+					'' '#'
+					hRecordToken( )
+					record.x += 1
+
+					hRecordToken( )
+				end if
+			else
+				'' '#'
+				hRecordToken( )
+			end if
+
+		'' '##'?
+		case TK_HASHHASH
+			hRecordMerge( )
+
+		case else
+			hRecordToken( )
+		end select
+
+		record.x += 1
+	loop
+end sub
 
 sub ppDirectives2( )
 	var x = 0
@@ -811,25 +951,30 @@ sub ppDirectives2( )
 			var begin = x
 			x += 1
 
-			'' Body tokens?
-			if( tkGet( x ) <> TK_END ) then
-				'' Try to parse the body as expression
-				var expr = ppExpression( x, , FALSE )
+			'' Body tokens
+			assert( t->initializer = NULL )
 
-				assert( t->initializer = NULL )
+			'' Try to parse the body as expression
+			var expr = ppExpression( x, , FALSE )
 
-				'' Expression found and TK_END reached?
-				if( (expr <> NULL) and (tkGet( x ) = TK_END) ) then
-					t->initializer = expr
-				else
-					'' Then either no expression could be parsed at all,
-					'' or it was followed by "junk" tokens...
-					astDelete( expr )
-					while( tkGet( x ) <> TK_END )
-						x += 1
-					wend
-					t->initializer = tkToAstText( begin + 1, x - 1 )
-				end if
+			'' Expression found and TK_END reached?
+			if( (expr <> NULL) and (tkGet( x ) = TK_END) ) then
+				t->initializer = expr
+			else
+				'' Then either no expression could be parsed at all,
+				'' or it was an expression followed by more tokens.
+				x = begin + 1
+				astDelete( expr )
+				expr = NULL
+
+				'' Parse macro body properly
+				t->initializer = astNew( ASTCLASS_MACROBODY )
+				record.macro = t
+				record.x = x
+				record.stringify = FALSE
+				record.mergeleft = FALSE
+				hRecordBody( )
+				x = record.x
 			end if
 
 			'' END
@@ -886,7 +1031,7 @@ namespace eval
 	dim shared as TLIST strings
 	dim shared as THASH knownsyms
 	dim shared as THASH expandsyms
-	dim shared as ASTNODE ptr macro
+	dim shared as ASTNODE ptr macrobody
 end namespace
 
 enum
@@ -929,23 +1074,23 @@ end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-sub ppMacroBegin( byval id as zstring ptr, byval params as integer )
-	assert( params > 0 )
-	eval.macro = astNew( ASTCLASS_PPMACRO, id )
-	eval.macro->macroparams = params
+sub ppMacroBegin( byval id as zstring ptr, byval paramcount as integer )
+	assert( paramcount > 0 )
+	eval.macrobody = astNew( ASTCLASS_MACROBODY, id )
+	eval.macrobody->paramcount = paramcount
 end sub
 
 sub ppMacroToken( byval tk as integer, byval text as zstring ptr )
 	var n = astNew( ASTCLASS_TK, text )
 	n->tk = tk
-	astAddChild( eval.macro, n )
+	astAddChild( eval.macrobody, n )
 end sub
 
 sub ppMacroParam( byval index as integer )
-	assert( (index >= 0) and (index < eval.macro->macroparams) )
+	assert( (index >= 0) and (index < eval.macrobody->paramcount) )
 	var n = astNew( ASTCLASS_MACROPARAM )
-	n->macroparam = index
-	astAddChild( eval.macro, n )
+	n->paramindex = index
+	astAddChild( eval.macrobody, n )
 end sub
 
 private function hMacroCall( byval x as integer ) as integer
@@ -1010,20 +1155,20 @@ private function hMacroCall( byval x as integer ) as integer
 	x += 1
 
 	'' As many args as params?
-	if( eval.macro->macroparams <> args ) then
+	if( eval.macrobody->paramcount <> args ) then
 		return begin
 	end if
 
 	'' Insert the macro body behind the call
 	var callend = x - 1
-	var child = eval.macro->head
+	var child = eval.macrobody->head
 	while( child )
 		select case( child->class )
 		case ASTCLASS_TK
 			tkInsert( x, child->tk, child->text )
 			x += 1
 		case ASTCLASS_MACROPARAM
-			var arg = child->macroparam
+			var arg = child->paramindex
 			assert( (arg >= 0) and (arg < args) )
 			'' Copy the arg's tokens into the body
 			tkCopy( x, argbegin(arg), argend(arg) )
@@ -1045,7 +1190,7 @@ private sub hExpandMacro( )
 	var x = 0
 	while( tkGet( x ) <> TK_EOF )
 		if( tkGet( x ) = TK_ID ) then
-			if( *tkGetText( x ) = *eval.macro->text ) then
+			if( *tkGetText( x ) = *eval.macrobody->text ) then
 				x = hMacroCall( x )
 			end if
 		end if
@@ -1055,8 +1200,8 @@ end sub
 
 sub ppMacroEnd( )
 	hExpandMacro( )
-	astDelete( eval.macro )
-	eval.macro = NULL
+	astDelete( eval.macrobody )
+	eval.macrobody = NULL
 end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''

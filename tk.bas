@@ -258,6 +258,17 @@ sub tkEnd( )
 	deallocate( tk.p )
 end sub
 
+function tkDumpBasic( byval id as integer, byval text as zstring ptr ) as string
+	var s = "[" + *tk_info(id).debug + "]"
+	s += " "
+	if( text ) then
+		s += "'" + *text + "'"
+	elseif( tk_info(id).text ) then
+		s += "'" + *tk_info(id).text + "'"
+	end if
+	function = s
+end function
+
 function tkDumpOne( byval x as integer ) as string
 	dim as ONETOKEN ptr p = any
 	dim as string s, comment
@@ -529,27 +540,27 @@ function tkSkipSpaceAndComments _
 	function = x
 end function
 
-private function hToText( byval p as ONETOKEN ptr ) as string
-	select case as const( p->id )
+function tkToCText( byval id as integer, byval text as zstring ptr ) as string
+	select case as const( id )
 	case TK_DIVIDER, TK_EOL : function = !"\n"
 	case TK_PPINCLUDE, TK_PPDEFINE, TK_PPIF, TK_PPELSEIF, _
 	     TK_PPELSE, TK_PPENDIF, TK_PPUNKNOWN
 		assert( FALSE )
 	case TK_BEGIN, TK_END   :
-	case TK_BYTE            : function = *p->text
+	case TK_BYTE            : function = *text
 	case TK_SPACE           : function = " "
-	case TK_COMMENT         : function = "/* " + *p->text + " */"
-	case TK_DECNUM          : function = *p->text
-	case TK_HEXNUM          : function = "0x" + *p->text
-	case TK_OCTNUM          : function = "0" + *p->text
-	case TK_DECFLOAT        : function = *p->text
-	case TK_STRING, TK_ESTRING   : function = """" + *p->text + """"
-	case TK_CHAR, TK_ECHAR       : function = "'" + *p->text + "'"
-	case TK_WSTRING, TK_EWSTRING : function = "L""" + *p->text + """"
-	case TK_WCHAR, TK_EWCHAR     : function = "L'" + *p->text + "'"
-	case TK_EXCL to TK_TILDE     : function = *tk_info(p->id).text
-	case TK_ID                   : function = *p->text
-	case KW_AUTO to KW_WHILE     : function = *tk_info(p->id).text
+	case TK_COMMENT         : function = "/* " + *text + " */"
+	case TK_DECNUM          : function = *text
+	case TK_HEXNUM          : function = "0x" + *text
+	case TK_OCTNUM          : function = "0" + *text
+	case TK_DECFLOAT        : function = *text
+	case TK_STRING, TK_ESTRING   : function = """" + *text + """"
+	case TK_CHAR, TK_ECHAR       : function = "'" + *text + "'"
+	case TK_WSTRING, TK_EWSTRING : function = "L""" + *text + """"
+	case TK_WCHAR, TK_EWCHAR     : function = "L'" + *text + "'"
+	case TK_EXCL to TK_TILDE     : function = *tk_info(id).text
+	case TK_ID                   : function = *text
+	case KW_AUTO to KW_WHILE     : function = *tk_info(id).text
 	end select
 end function
 
@@ -576,7 +587,7 @@ function tkToAstText _
 			text = NULL
 			s = ""
 		else
-			s += hToText( p )
+			s += tkToCText( p->id, p->text )
 		end if
 	next
 

@@ -207,9 +207,48 @@ private function emitAst _
 		if( n->head ) then
 			s += hCommaList( n, TRUE )
 		end if
+
 		if( n->initializer ) then
-			s += " " + emitAst( n->initializer )
+			s += " "
+
+			'' Macro body, or expression?
+			if( n->initializer->class = ASTCLASS_MACROBODY ) then
+				var child = n->initializer->head
+				while( child )
+
+					if( child->attrib and ASTATTRIB_MERGELEFT ) then
+						if( right( s, 2 ) <> "##" ) then
+							s += "##"
+						end if
+					end if
+
+					select case( child->class )
+					case ASTCLASS_MACROPARAM
+						if( child->attrib and ASTATTRIB_STRINGIFY ) then
+							s += "#"
+						end if
+						s += *child->text
+
+					case ASTCLASS_TK
+						s += tkToCText( child->tk, child->text )
+
+					case else
+						assert( FALSE )
+					end select
+
+					if( child->attrib and ASTATTRIB_MERGERIGHT ) then
+						if( right( s, 2 ) <> "##" ) then
+							s += "##"
+						end if
+					end if
+
+					child = child->next
+				wend
+			else
+				s += emitAst( n->initializer )
+			end if
 		end if
+
 		emitLine( s )
 		s = ""
 
@@ -495,6 +534,7 @@ private function emitAst _
 		end if
 
 	case else
+		astDump( n )
 		assert( FALSE )
 	end select
 

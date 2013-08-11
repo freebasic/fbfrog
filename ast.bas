@@ -38,7 +38,6 @@ dim shared as ASTNODEINFO astnodeinfo(0 to ...) = _
 	( "divider"  ), _
 	( "#include" ), _
 	( "#define"  ), _
-	( "#macro"   ), _
 	( "#if"      ), _
 	( "#elseif"  ), _
 	( "#else"    ), _
@@ -57,8 +56,9 @@ dim shared as ASTNODEINFO astnodeinfo(0 to ...) = _
 	( "array"   ), _
 	( "dimension" ), _
 	( "unknown" ), _
-	( "tk"      ), _
+	( "macrobody" ), _
 	( "macroparam" ), _
+	( "tk"      ), _
 	( "const"   ), _
 	( "id"      ), _
 	( "text"    ), _
@@ -320,7 +320,6 @@ function astClone( byval n as ASTNODE ptr ) as ASTNODE ptr
 	end if
 
 	var c = astNew( n->class )
-
 	c->attrib      = n->attrib
 
 	c->text        = strDuplicate( n->text )
@@ -339,8 +338,8 @@ function astClone( byval n as ASTNODE ptr ) as ASTNODE ptr
 
 	c->val         = n->val
 	c->tk          = n->tk
-	c->macroparam  = n->macroparam
-	c->macroparams = n->macroparams
+	c->paramindex  = n->paramindex
+	c->paramcount  = n->paramcount
 
 	var child = n->head
 	while( child )
@@ -370,7 +369,8 @@ function astDumpOne( byval n as ASTNODE ptr ) as string
 		s += " " + strReplace( *n->text, !"\n", "\n" )
 	end if
 
-	if( n->class = ASTCLASS_CONST ) then
+	select case( n->class )
+	case ASTCLASS_CONST
 		if( typeIsFloat( n->dtype ) ) then
 			s += " " + str( n->val.f )
 		else
@@ -382,7 +382,9 @@ function astDumpOne( byval n as ASTNODE ptr ) as string
 				s += " " + str( n->val.i )
 			end if
 		end if
-	end if
+	case ASTCLASS_TK
+		s += " " + tkDumpBasic( n->tk, n->text )
+	end select
 
 	if( n->dtype <> TYPE_NONE ) then
 		s += " as " + emitType( n->dtype, NULL, TRUE )
