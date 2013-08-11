@@ -3,6 +3,7 @@
 #define TRUE (-1)
 
 declare sub oops( byref message as string )
+declare function strDuplicate( byval s as zstring ptr ) as zstring ptr
 declare function strReplace _
 	( _
 		byref text as string, _
@@ -317,7 +318,6 @@ declare function tkInfoText( byval tk as integer ) as zstring ptr
 type ASTNODE as ASTNODE_
 type FROGFILE as FROGFILE_
 
-declare function strDuplicate( byval s as zstring ptr ) as zstring ptr
 declare sub tkInit( )
 declare sub tkEnd( )
 declare function tkDumpOne( byval x as integer ) as string

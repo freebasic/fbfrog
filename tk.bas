@@ -221,17 +221,6 @@ end type
 
 dim shared as TKBUFFER tk
 
-function strDuplicate( byval s as zstring ptr ) as zstring ptr
-	dim as zstring ptr p = any
-	if( s ) then
-		p = callocate( len( *s ) + 1 )
-		*p = *s
-		function = p
-	else
-		function = NULL
-	end if
-end function
-
 sub tkInit( )
 	tk.p = NULL
 	tk.front = 0
