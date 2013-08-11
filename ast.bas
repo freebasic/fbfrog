@@ -322,23 +322,25 @@ function astClone( byval n as ASTNODE ptr ) as ASTNODE ptr
 	var c = astNew( n->class )
 
 	c->attrib      = n->attrib
+
 	c->text        = strDuplicate( n->text )
 	c->comment     = strDuplicate( n->comment )
+
 	c->dtype       = n->dtype
 	c->subtype     = astClone( n->subtype )
 	c->array       = astClone( n->array )
+
 	c->initializer = astClone( n->initializer )
+
 	c->sourcefile  = n->sourcefile
 	c->sourceline  = n->sourceline
 
-	select case( n->class )
-	case ASTCLASS_CONST
-		if( typeIsFloat( n->dtype ) ) then
-			c->val.f = n->val.f
-		else
-			c->val.i = n->val.i
-		end if
-	end select
+	c->includefile = n->includefile
+
+	c->val         = n->val
+	c->tk          = n->tk
+	c->macroparam  = n->macroparam
+	c->macroparams = n->macroparams
 
 	var child = n->head
 	while( child )
