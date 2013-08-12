@@ -391,6 +391,18 @@ function astDumpOne( byval n as ASTNODE ptr ) as string
 		s += " as " + emitType( n->dtype, NULL, TRUE )
 	end if
 
+	#macro checkAttrib( a )
+		if( n->attrib and ASTATTRIB_##a ) then s += " " + lcase( #a, 1 )
+	#endmacro
+	checkAttrib( EXTERN )
+	checkAttrib( PRIVATE )
+	checkAttrib( OCT )
+	checkAttrib( HEX )
+	checkAttrib( PPINDENTBEGIN )
+	checkAttrib( PPINDENTEND )
+	checkAttrib( MERGEWITHPREV )
+	checkAttrib( STRINGIFY )
+
 	function = s
 end function
 
