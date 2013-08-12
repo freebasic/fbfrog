@@ -32,20 +32,22 @@
 '' #if evaluation
 '' --------------
 ''
-'' ppEvalExpressions() goes through all #ifs and #elseifs and tries to simplify
-'' the expressions. ppAddSymbol() can be used to register symbols as "defined"
-'' or "undefined" for #if defined() or #ifdef checks. defined() checks on
-'' unknown symbols are not solved out.
+'' ppAddSym() can be used to register symbols as initially "defined" or
+'' "undefined" for #if defined() or #ifdef checks. defined() checks on unknown
+'' symbols are not solved out.
 ''
-'' #if evaluation is done with these 3 steps:
-''
-'' 1. ppSplitElseIfs(): Splitting up #elseifs blocks into normal
-''    #else/#if/#endif blocks
-'' 2. ppEvalIfs(): Checks each #if whether the condition is known to be true
-''    or false, i.e. expressions that could be simplified down to a constant,
-''    and if so, deletes tokens accordingly before continuing to the next #if.
-''    Not having to worry about #elseifs greatly simplifies this step.
-'' 3. ppMergeElseIfs(): Merging #else/#if/#endif blocks back into #elseifs
+'' 1. ppSplitElseIfs():
+''    - splits #elseifs blocks up into normal #else/#if/#endif blocks
+'' 2. ppEvalIfs():
+''    - goes through all #ifs and tries to simplify the expressions
+''    - checks each #if whether the condition is known to be true or false,
+''      i.e. whether the expression could be simplified down to a constant,
+''      and if so, deletes the tokens from the #if or #else blocks accordingly
+''      before continuing to the next #if.
+''    - not having to worry about #elseifs greatly simplifies this step
+''    - #defines and #undefs are taken into account for defined() checks too
+'' 3. ppMergeElseIfs():
+''    - merges #else/#if/#endif blocks back into #elseifs
 ''
 
 #include once "fbfrog.bi"
@@ -69,7 +71,7 @@ private function hIsBeforeEol _
 			exit do
 
 		case TK_PPINCLUDE, TK_PPDEFINE, TK_PPIF, TK_PPELSEIF, _
-		     TK_PPELSE, TK_PPENDIF, TK_PPUNKNOWN, TK_DIVIDER
+		     TK_PPELSE, TK_PPENDIF, TK_PPUNDEF, TK_PPUNKNOWN, TK_DIVIDER
 			'' High-level tokens count as separate lines
 			exit do
 
@@ -557,7 +559,7 @@ private function ppDirective( byval x as integer ) as integer
 	select case( tkGet( tkSkipSpaceAndComments( x, -1 ) ) )
 	case TK_EOL, TK_EOF, TK_END, _
 	     TK_PPINCLUDE, TK_PPDEFINE, TK_PPIF, TK_PPELSEIF, _
-	     TK_PPELSE, TK_PPENDIF, TK_PPUNKNOWN, TK_DIVIDER
+	     TK_PPELSE, TK_PPENDIF, TK_PPUNDEF, TK_PPUNKNOWN, TK_DIVIDER
 
 	case else
 		return -1
@@ -665,6 +667,18 @@ private function ppDirective( byval x as integer ) as integer
 		x = ppSkip( x )
 		t = astNew( iif( tk = KW_ELSE, ASTCLASS_PPELSE, ASTCLASS_PPENDIF ) )
 
+	case KW_UNDEF
+		x = ppSkip( x )
+
+		'' Identifier?
+		if( tkGet( x ) <> TK_ID ) then
+			return -1
+		end if
+		t = astNew( ASTCLASS_ID, tkGetText( x ) )
+		x = ppSkip( x )
+
+		t = astNew( ASTCLASS_PPUNDEF, t )
+
 	case else
 		return -1
 	end select
@@ -686,6 +700,7 @@ private function ppDirective( byval x as integer ) as integer
 	case ASTCLASS_PPELSEIF  : tkid = TK_PPELSEIF
 	case ASTCLASS_PPELSE    : tkid = TK_PPELSE
 	case ASTCLASS_PPENDIF   : tkid = TK_PPENDIF
+	case ASTCLASS_PPUNDEF   : tkid = TK_PPUNDEF
 	case else               : assert( FALSE )
 	end select
 
@@ -721,7 +736,7 @@ private function ppSimpleToken( byval x as integer ) as integer
 	'' Handle pre-existing high-level tokens
 	select case( tkGet( x ) )
 	case TK_PPINCLUDE, TK_PPDEFINE, TK_PPIF, TK_PPELSEIF, _
-	     TK_PPELSE, TK_PPENDIF, TK_PPUNKNOWN, TK_DIVIDER
+	     TK_PPELSE, TK_PPENDIF, TK_PPUNDEF, TK_PPUNKNOWN, TK_DIVIDER
 		x += 1
 	case else
 		x = -1
@@ -739,7 +754,7 @@ private function ppUnknownDirective( byval x as integer ) as integer
 	select case( tkGet( tkSkipSpaceAndComments( x, -1 ) ) )
 	case TK_EOL, TK_EOF, TK_END, _
 	     TK_PPINCLUDE, TK_PPDEFINE, TK_PPIF, TK_PPELSEIF, _
-	     TK_PPELSE, TK_PPENDIF, TK_PPUNKNOWN, TK_DIVIDER
+	     TK_PPELSE, TK_PPENDIF, TK_PPUNDEF, TK_PPUNKNOWN, TK_DIVIDER
 
 	case else
 		return -1
@@ -1517,19 +1532,6 @@ private function hFold( byval n as ASTNODE ptr ) as ASTNODE ptr
 	end select
 end function
 
-sub ppEvalExpressions( )
-	var x = 0
-	do
-		select case( tkGet( x ) )
-		case TK_EOF
-			exit do
-		case TK_PPIF, TK_PPELSEIF
-			tkSetAst( x, hFold( astClone( tkGetAst( x ) ) ) )
-		end select
-		x += 1
-	loop
-end sub
-
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 '' Find corresponding #else and closing #endif, while stepping over nested
@@ -1625,7 +1627,22 @@ sub ppEvalIfs( )
 		case TK_EOF
 			exit do
 
+		case TK_PPDEFINE
+			'' Register/overwrite #define as known defined symbol
+			var t = tkGetAst( x )
+			ppAddSym( t->text, TRUE )
+
+		case TK_PPUNDEF
+			'' Register/overwrite #define as known undefined symbol
+			var t = tkGetAst( x )
+			assert( t->head->class = ASTCLASS_ID )
+			ppAddSym( t->head->text, FALSE )
+
 		case TK_PPIF
+			'' 1. Try to evaluate the condition
+			tkSetAst( x, hFold( astClone( tkGetAst( x ) ) ) )
+
+			'' 2. Check the condition
 			var t = tkGetAst( x )
 			var cond = COND_UNKNOWN
 			if( t->head->class = ASTCLASS_CONST ) then

@@ -273,6 +273,9 @@ private function emitAst _
 	case ASTCLASS_PPENDIF
 		emitLine( "#endif" )
 
+	case ASTCLASS_PPUNDEF
+		emitLine( "#undef " + emitAst( n->head ) )
+
 	case ASTCLASS_PPUNKNOWN
 		if( emit.export_ast ) then
 			emitLine( "ppunknown" )

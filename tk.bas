@@ -18,6 +18,7 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	( NULL  , @"ppelseif" ), _
 	( NULL  , @"ppelse"   ), _
 	( NULL  , @"ppendif"  ), _
+	( NULL  , @"ppundef"  ), _
 	( NULL  , @"ppunknown" ), _
 	( NULL  , @"begin"    ), _
 	( NULL  , @"end"      ), _

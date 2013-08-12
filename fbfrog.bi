@@ -124,6 +124,7 @@ enum
 	TK_PPELSEIF
 	TK_PPELSE
 	TK_PPENDIF
+	TK_PPUNDEF
 	TK_PPUNKNOWN
 	TK_BEGIN
 	TK_END
@@ -438,6 +439,7 @@ enum
 	ASTCLASS_PPELSEIF
 	ASTCLASS_PPELSE
 	ASTCLASS_PPENDIF
+	ASTCLASS_PPUNDEF
 	ASTCLASS_PPUNKNOWN
 
 	ASTCLASS_STRUCT
@@ -627,7 +629,6 @@ declare sub ppMacroParam( byval index as integer )
 declare sub ppMacroEnd( )
 declare sub ppAddSym( byval id as zstring ptr, byval is_defined as integer )
 declare sub ppExpandSym( byval id as zstring ptr )
-declare sub ppEvalExpressions( )
 declare sub ppSplitElseIfs( )
 declare sub ppEvalIfs( )
 declare sub ppIntegrateTrailCodeIntoIfElseBlocks( )

@@ -274,6 +274,16 @@ private function imPPDirective( ) as ASTNODE ptr
 		hSkip( )
 		function = astNew( ASTCLASS_PPENDIF )
 
+	case KW_UNDEF
+		hSkip( )
+
+		'' Identifier?
+		hExpect( TK_ID )
+		var t = astNew( ASTCLASS_ID, tkGetText( x ) )
+		hSkip( )
+
+		function = astNew( ASTCLASS_PPUNDEF, t )
+
 	case else
 		imOops( )
 	end select

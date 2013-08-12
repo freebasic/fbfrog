@@ -42,6 +42,7 @@ dim shared as ASTNODEINFO astnodeinfo(0 to ...) = _
 	( "#elseif"  ), _
 	( "#else"    ), _
 	( "#endif"   ), _
+	( "#undef"   ), _
 	( "#unknown" ), _
 	( "struct"  ), _
 	( "union"   ), _

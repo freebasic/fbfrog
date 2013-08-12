@@ -433,6 +433,7 @@ end sub
 
 private sub hPPEval( )
 	ppEvalInit( )
+	ppSplitElseIfs( )
 
 	select case( frog.preset )
 	case "tests"
@@ -443,6 +444,10 @@ private sub hPPEval( )
 		ppExpandSym( "EXPANDME4" )
 		ppExpandSym( "EXPANDME5" )
 		ppExpandSym( "EXPANDME6" )
+		ppAddSym( "KNOWNDEFINED1", TRUE )
+		ppAddSym( "KNOWNDEFINED2", TRUE )
+		ppAddSym( "KNOWNUNDEFINED1", FALSE )
+		ppAddSym( "KNOWNUNDEFINED2", FALSE )
 	case "zip"
 		ppAddSym( "ZIP_EXTERN", TRUE )
 		ppAddSym( "__cplusplus", FALSE )
@@ -452,8 +457,6 @@ private sub hPPEval( )
 
 	end select
 
-	ppEvalExpressions( )
-	ppSplitElseIfs( )
 	ppEvalIfs( )
 	ppIntegrateTrailCodeIntoIfElseBlocks( )
 	ppExpand( )
