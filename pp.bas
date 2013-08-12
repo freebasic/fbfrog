@@ -1489,23 +1489,139 @@ private function hFold( byval n as ASTNODE ptr ) as ASTNODE ptr
 				astDelete( n )
 			end if
 
-		'' Check for short-curcuiting for || and &&,
-		'' if only the lhs is a CONST
+		'' Only the lhs is a CONST? Check for NOPs
 		elseif( (n->head->class = ASTCLASS_CONST) and _
 		        (n->tail->class <> ASTCLASS_CONST) ) then
-			select case( n->class )
-			case ASTCLASS_LOGOR, ASTCLASS_LOGAND
-				if( typeIsFloat( n->head->dtype ) = FALSE ) then
-					var v1 = n->head->val.i
 
-					'' 1 || unknown -> 1
-					'' 0 && unknown -> 0
-					if( v1 = iif( n->class = ASTCLASS_LOGOR, 1, 0 ) ) then
-						function = astNewCONST( v1, 0, TYPE_LONG )
+			if( typeIsFloat( n->head->dtype ) = FALSE ) then
+				var v1 = n->head->val.i
+
+				select case( n->class )
+
+				'' true  || x   = 1
+				'' false || x   = x
+				case ASTCLASS_LOGOR
+					if( v1 ) then
+						function = astNewCONST( 1, 0, TYPE_LONG )
+					else
+						function = astClone( n->tail )
+					end if
+					astDelete( n )
+
+				'' true  && x   = x
+				'' false && x   = 0
+				case ASTCLASS_LOGAND
+					if( v1 ) then
+						function = astClone( n->tail )
+					else
+						function = astNewCONST( 0, 0, TYPE_LONG )
+					end if
+					astDelete( n )
+
+				'' 0 | x = x
+				'' 0 + x = x
+				case ASTCLASS_BITOR, ASTCLASS_ADD
+					if( v1 = 0 ) then
+						function = astClone( n->tail )
 						astDelete( n )
 					end if
-				end if
-			end select
+
+				'' 0 &  x = 0
+				'' 0 << x = 0
+				'' 0 >> x = 0
+				'' 0 /  x = 0
+				'' 0 %  x = 0
+				case ASTCLASS_BITAND, ASTCLASS_SHL, ASTCLASS_SHR, _
+				     ASTCLASS_DIV, ASTCLASS_MOD
+					if( v1 = 0 ) then
+						function = astNewCONST( 0, 0, TYPE_LONG )
+						astDelete( n )
+					end if
+
+				'' 0 * x = 0
+				'' 1 * x = x
+				case ASTCLASS_MUL
+					select case( v1 )
+					case 0
+						function = astNewCONST( 0, 0, TYPE_LONG )
+						astDelete( n )
+					case 1
+						function = astClone( n->tail )
+						astDelete( n )
+					end select
+
+				'' 0 - x = -x
+				case ASTCLASS_SUB
+					if( v1 = 0 ) then
+						function = astNew( ASTCLASS_NEGATE, astClone( n->tail ) )
+						astDelete( n )
+					end if
+
+				end select
+			end if
+
+		'' Only the rhs is a CONST? Check for NOPs
+		elseif( (n->head->class <> ASTCLASS_CONST) and _
+		        (n->tail->class = ASTCLASS_CONST) ) then
+
+			if( typeIsFloat( n->tail->dtype ) = FALSE ) then
+				var v2 = n->tail->val.i
+
+				select case( n->class )
+
+				'' x || true    = 1
+				'' x || false   = x
+				case ASTCLASS_LOGOR
+					if( v2 ) then
+						function = astNewCONST( 1, 0, TYPE_LONG )
+					else
+						function = astClone( n->head )
+					end if
+					astDelete( n )
+
+				'' x && true    = x
+				'' x && false   = 0
+				case ASTCLASS_LOGAND
+					if( v2 ) then
+						function = astClone( n->head )
+					else
+						function = astNewCONST( 0, 0, TYPE_LONG )
+					end if
+					astDelete( n )
+
+				'' x | 0 = x
+				'' x + 0 = x
+				'' x - 0 = x
+				'' x << 0 = x
+				'' x >> 0 = x
+				case ASTCLASS_BITOR, ASTCLASS_ADD, ASTCLASS_SUB, _
+				     ASTCLASS_SHL, ASTCLASS_SHR
+					if( v2 = 0 ) then
+						function = astClone( n->head )
+						astDelete( n )
+					end if
+
+				'' x & 0 = 0
+				case ASTCLASS_BITAND
+					if( v2 = 0 ) then
+						function = astNewCONST( 0, 0, TYPE_LONG )
+						astDelete( n )
+					end if
+
+				'' x * 0 = 0
+				'' x * 1 = x
+				case ASTCLASS_MUL
+					select case( v2 )
+					case 0
+						function = astNewCONST( 0, 0, TYPE_LONG )
+						astDelete( n )
+					case 1
+						function = astClone( n->head )
+						astDelete( n )
+					end select
+
+				end select
+			end if
 		end if
 
 	case ASTCLASS_LOGNOT, ASTCLASS_BITNOT, _

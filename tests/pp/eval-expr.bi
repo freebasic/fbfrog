@@ -1,10 +1,10 @@
 extern separator1 as short
 
-#if 1 andalso defined( foo )
+#ifdef foo
 #endif
 extern separator2 as short
 
-#if 0 orelse defined( foo )
+#ifdef foo
 #endif
 extern separator3 as short
 
