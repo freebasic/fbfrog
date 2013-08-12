@@ -461,104 +461,6 @@ private sub hPPEval( )
 	ppEvalEnd( )
 end sub
 
-private sub frogLoadFile( byval f as FROGFILE ptr )
-	tkInit( )
-	lexLoadFile( 0, f->normed )
-
-	ppComments( )
-	ppDividers( )
-	ppDirectives1( )
-
-	select case( frog.preset )
-	case "zip"
-		tkRemoveAllOf( TK_ID, "ZIP_EXTERN" )
-	end select
-
-	ppDirectives2( )
-
-	select case( frog.preset )
-	case "tests"
-		if( (strMatches( "tests/*", f->pretty ) = FALSE) or _
-		    strMatches( "tests/pp/eval-*", f->pretty ) or _
-		    strMatches( "tests/pp/expand/*", f->pretty ) ) then
-			hPPEval( )
-		end if
-	case else
-		hPPEval( )
-	end select
-
-	f->ast = cToplevel( )
-
-	tkEnd( )
-
-	select case( frog.preset )
-	case "zip"
-		hRemoveNode( f->ast, ASTCLASS_PPDEFINE, "_HAD_ZIP_H" )
-		hRemoveNode( f->ast, ASTCLASS_PPDEFINE, "_HAD_ZIPCONF_H" )
-	end select
-
-	hFixArrayParams( f->ast )
-	hRemoveRedundantTypedefs( f->ast )
-
-	hSetPPIndentAttrib( f->ast, TRUE )
-	hRemovePPIndentFromIncludeGuard( f->ast )
-	select case( frog.preset )
-	case "tests"
-		if( strMatches( "tests/pp/expr-*", f->pretty ) ) then
-			hSetPPIndentAttrib( f->ast, FALSE )
-		end if
-	end select
-end sub
-
-private function frogCalcRefcount( byval lookfor as FROGFILE ptr ) as integer
-	var refcount = 0
-
-	dim as FROGFILE ptr f = listGetHead( @frog.files )
-	while( f )
-
-		'' File loaded? (missing files weren't loaded)
-		if( f->ast ) then
-			'' For each statement...
-			var child = f->ast->head
-			while( child )
-				'' #include?
-				if( child->class = ASTCLASS_PPINCLUDE ) then
-					if( child->includefile = lookfor ) then
-						refcount += 1
-					end if
-				end if
-				child = child->next
-			wend
-		end if
-
-		f = listGetNext( f )
-	wend
-
-	function = refcount
-end function
-
-private sub hTryMergeIncludes( byval n as ASTNODE ptr )
-	var child = n->head
-	while( child )
-		'' #include?
-		if( child->class = ASTCLASS_PPINCLUDE ) then
-			'' If this is the only reference, merge
-			var incf = child->includefile
-			if( incf->refcount = 1 ) then
-				if( incf->ast ) then
-					print "  #include: " & incf->pretty
-					child = astReplaceChild( n, child, incf->ast )
-					incf->ast = NULL
-				end if
-			end if
-		end if
-
-		hTryMergeIncludes( child )
-
-		child = child->next
-	wend
-end sub
-
 private sub hMergeGROUPs( byval n as ASTNODE ptr )
 	var child = n->head
 	while( child )
@@ -664,59 +566,172 @@ end sub
 		oops( "no input files" )
 	end if
 
-	'' Load files given on command line.
-	'' Load #includes too if available and not yet done.
+	print "preparsing to determine #include dependencies..."
+
+	'' Preparse to find #includes and calculate refcounts
 	'' Files newly registered by the inner loop will eventually be worked
 	'' off by the outer loop, as they're appended to the files list.
 	dim as FROGFILE ptr f = listGetHead( @frog.files )
 	while( f )
 		if( f->missing = FALSE ) then
-			print "parsing: ";f->pretty
-			frogLoadFile( f )
+			print "preparsing: ";f->pretty
 
-			'' For each statement...
-			var child = f->ast->head
-			while( child )
-				'' #include?
-				if( child->class = ASTCLASS_PPINCLUDE ) then
-					print "  #include: " & *child->text;
+			tkInit( )
+			lexLoadFile( 0, f->normed )
+
+			ppComments( )
+			ppDividers( )
+			ppDirectives1( )
+
+			'' Find #include directives
+			var x = 0
+			while( tkGet( x ) <> TK_EOF )
+
+				if( tkGet( x ) = TK_PPINCLUDE ) then
+					var t = tkGetAst( x )
+					var incfile = *t->text
+
+					print "  #include: " & incfile;
 					if( frog.verbose ) then
 						print
 					end if
-					child->includefile = frogAddFile( f, *child->text )
+
+					var incf = frogAddFile( f, incfile )
+					t->includefile = incf
+					incf->refcount += 1
+
 					if( frog.verbose = FALSE ) then
-						if( child->includefile->missing ) then
+						if( incf->missing ) then
 							print " (not found)"
 						else
 							print ''" -> " + child->includefile->normed
 						end if
 					end if
 				end if
-				child = child->next
+
+				x += 1
 			wend
+
+			tkEnd( )
+		end if
+
+		f = listGetNext( f )
+	wend
+
+	#if 0
+		print "---"
+		f = listGetHead( @frog.files )
+		while( f )
+			print f->pretty, "refcount=" & f->refcount;
+			if( f->missing ) then
+				print ,"missing";
+			end if
+			print
+			f = listGetNext( f )
+		wend
+		print "---"
+	#endif
+
+	'' Read in files that were found
+	f = listGetHead( @frog.files )
+	while( f )
+
+		'' Only parse this one if it was found and if it's not going to
+		'' be merged into another one
+		if( (not f->missing) and (f->refcount <> 1) ) then
+			print "parsing: ";f->pretty
+
+			tkInit( )
+			lexLoadFile( 0, f->normed )
+
+			ppComments( )
+			ppDividers( )
+			ppDirectives1( )
+
+			'' Expand any #includes if wanted and possible
+			if( frog.merge ) then
+				var x = 0
+				while( tkGet( x ) <> TK_EOF )
+					if( tkGet( x ) = TK_PPINCLUDE ) then
+						var t = tkGetAst( x )
+						var incfile = *t->text
+						var incf = frogAddFile( f, incfile )
+						t->includefile = incf
+
+						if( (incf->refcount = 1) and (not incf->missing) ) then
+							print "merging: " + incf->pretty
+
+							tkRemove( x, x )
+							x -= 1
+
+							lexLoadFile( x, incf->normed )
+							x -= 1
+						end if
+					end if
+					x += 1
+				wend
+
+				'' Again after new tokens were loaded
+				ppComments( )
+				ppDividers( )
+				ppDirectives1( )
+			end if
+
+			select case( frog.preset )
+			case "zip"
+				tkRemoveAllOf( TK_ID, "ZIP_EXTERN" )
+			case "png"
+				'' PNG_EXPORT(ordinal, resulttype, functionid, parameters)
+				'ppMacroBegin( "PNG_EXPORT", 4 )
+				'ppMacroParam( 1 )
+				'ppMacroParam( 2 )
+				'ppMacroParam( 3 )
+				'ppMacroEnd( )
+			end select
+
+			ppDirectives2( )
+
+			select case( frog.preset )
+			case "tests"
+				if( (strMatches( "tests/*", f->pretty ) = FALSE) or _
+				    strMatches( "tests/pp/eval-*", f->pretty ) or _
+				    strMatches( "tests/pp/expand/*", f->pretty ) ) then
+					hPPEval( )
+				end if
+			case else
+				hPPEval( )
+			end select
+
+			f->ast = cToplevel( )
+
+			tkEnd( )
+
+			select case( frog.preset )
+			case "zip"
+				hRemoveNode( f->ast, ASTCLASS_PPDEFINE, "_HAD_ZIP_H" )
+				hRemoveNode( f->ast, ASTCLASS_PPDEFINE, "_HAD_ZIPCONF_H" )
+			case "png"
+				hRemoveNode( f->ast, ASTCLASS_PPDEFINE, "PNG_H" )
+				hRemoveNode( f->ast, ASTCLASS_PPDEFINE, "PNGCONF_H" )
+			end select
+
+			hFixArrayParams( f->ast )
+			hRemoveRedundantTypedefs( f->ast )
+
+			hSetPPIndentAttrib( f->ast, TRUE )
+			hRemovePPIndentFromIncludeGuard( f->ast )
+			select case( frog.preset )
+			case "tests"
+				if( strMatches( "tests/pp/expr-*", f->pretty ) ) then
+					hSetPPIndentAttrib( f->ast, FALSE )
+				end if
+			end select
 		end if
 
 		f = listGetNext( f )
 	wend
 
 	if( frog.merge ) then
-		'' Calculate #include refcounts
-		f = listGetHead( @frog.files )
-		while( f )
-			f->refcount = frogCalcRefcount( f )
-			f = listGetNext( f )
-		wend
-
-		'' Merge every #include that can be merged
-		f = listGetHead( @frog.files )
-		while( f )
-			if( f->ast ) then
-				print "merging: " + f->pretty
-				hTryMergeIncludes( f->ast )
-			end if
-			f = listGetNext( f )
-		wend
-
 		'' Concatenate files with refcount=0
 		dim as FROGFILE ptr first
 		f = listGetHead( @frog.files )
