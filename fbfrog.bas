@@ -456,15 +456,6 @@ private sub hRemovePPIndentFromIncludeGuard( byval n as ASTNODE ptr )
 	end if
 end sub
 
-private sub hRemoveIncludeGuard( byval n as ASTNODE ptr )
-	dim as ASTNODE ptr firstifndef, def, lastendif
-	if( hFindIncludeGuard( n, firstifndef, def, lastendif ) ) then
-		astRemoveChild( n, firstifndef )
-		astRemoveChild( n, def )
-		astRemoveChild( n, lastendif )
-	end if
-end sub
-
 private sub hMergeGROUPs( byval n as ASTNODE ptr )
 	var child = n->head
 	while( child )
