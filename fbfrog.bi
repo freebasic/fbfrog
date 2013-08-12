@@ -621,6 +621,7 @@ declare sub ppDividers( )
 declare function hNumberLiteral( byval x as integer ) as ASTNODE ptr
 declare sub ppDirectives1( )
 declare sub ppDirectives2( )
+declare sub ppDirectives3( )
 declare sub ppEvalInit( )
 declare sub ppEvalEnd( )
 declare sub ppMacroBegin( byval id as zstring ptr, byval paramcount as integer )

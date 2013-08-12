@@ -431,39 +431,6 @@ private sub hRemoveIncludeGuard( byval n as ASTNODE ptr )
 	end if
 end sub
 
-private sub hPPEval( )
-	ppEvalInit( )
-	ppSplitElseIfs( )
-
-	select case( frog.preset )
-	case "tests"
-		ppExpandSym( "EXPANDTHIS" )
-		ppExpandSym( "EXPANDME1" )
-		ppExpandSym( "EXPANDME2" )
-		ppExpandSym( "EXPANDME3" )
-		ppExpandSym( "EXPANDME4" )
-		ppExpandSym( "EXPANDME5" )
-		ppExpandSym( "EXPANDME6" )
-		ppAddSym( "KNOWNDEFINED1", TRUE )
-		ppAddSym( "KNOWNDEFINED2", TRUE )
-		ppAddSym( "KNOWNUNDEFINED1", FALSE )
-		ppAddSym( "KNOWNUNDEFINED2", FALSE )
-	case "zip"
-		ppAddSym( "ZIP_EXTERN", TRUE )
-		ppAddSym( "__cplusplus", FALSE )
-		ppAddSym( "ZIP_DISABLE_DEPRECATED", FALSE )
-		ppAddSym( "_HAD_ZIP_H", FALSE )
-		ppAddSym( "_HAD_ZIPCONF_H", FALSE )
-
-	end select
-
-	ppEvalIfs( )
-	ppIntegrateTrailCodeIntoIfElseBlocks( )
-	ppExpand( )
-	ppMergeElseIfs( )
-	ppEvalEnd( )
-end sub
-
 private sub hMergeGROUPs( byval n as ASTNODE ptr )
 	var child = n->head
 	while( child )
@@ -694,16 +661,50 @@ end sub
 
 			ppDirectives2( )
 
+			var do_pp = TRUE
 			select case( frog.preset )
 			case "tests"
-				if( (strMatches( "tests/*", f->pretty ) = FALSE) or _
-				    strMatches( "tests/pp/eval-*", f->pretty ) or _
-				    strMatches( "tests/pp/expand/*", f->pretty ) ) then
-					hPPEval( )
-				end if
-			case else
-				hPPEval( )
+				do_pp and= not strMatches( "tests/*", f->pretty )
+				do_pp or= strMatches( "tests/pp/eval-*", f->pretty )
+				do_pp or= strMatches( "tests/pp/expand/*", f->pretty )
 			end select
+
+			if( do_pp ) then
+				ppEvalInit( )
+				ppSplitElseIfs( )
+
+				select case( frog.preset )
+				case "tests"
+					ppExpandSym( "EXPANDTHIS" )
+					ppExpandSym( "EXPANDME1" )
+					ppExpandSym( "EXPANDME2" )
+					ppExpandSym( "EXPANDME3" )
+					ppExpandSym( "EXPANDME4" )
+					ppExpandSym( "EXPANDME5" )
+					ppExpandSym( "EXPANDME6" )
+					ppAddSym( "KNOWNDEFINED1", TRUE )
+					ppAddSym( "KNOWNDEFINED2", TRUE )
+					ppAddSym( "KNOWNUNDEFINED1", FALSE )
+					ppAddSym( "KNOWNUNDEFINED2", FALSE )
+				case "zip"
+					ppAddSym( "ZIP_EXTERN", TRUE )
+					ppAddSym( "__cplusplus", FALSE )
+					ppAddSym( "ZIP_DISABLE_DEPRECATED", FALSE )
+					ppAddSym( "_HAD_ZIP_H", FALSE )
+					ppAddSym( "_HAD_ZIPCONF_H", FALSE )
+				end select
+
+				ppIntegrateTrailCodeIntoIfElseBlocks( )
+				ppExpand( )
+
+				ppDirectives3( )
+				ppEvalIfs( )
+
+				ppMergeElseIfs( )
+				ppEvalEnd( )
+			else
+				ppDirectives3( )
+			end if
 
 			f->ast = cToplevel( )
 

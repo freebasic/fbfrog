@@ -19,14 +19,14 @@
 '' bodies and #if expressions are not yet parsed, but only enclosed in TK_BEGIN
 '' and TK_END tokens.
 ''
-'' ppDirectives2() goes through all PP directives and finishes the parsing job,
-'' by parsing the #define bodies and #if expressions into ASTs properly,
-'' assigning them to the TK_PP* tokens of the corresponding directives, and
-'' removing the TK_BEGIN/TK_END and the tokens they enclosed.
+'' ppDirectives2() goes through all #defines and finishes the parsing job by
+'' parsing the #define bodies into ASTs and removing the TK_BEGIN/END parts.
 ''
-'' With this separation it's possible to identify PP directives and still do
-'' macro expansion etc. in #define bodies or #if expressions, before the 2nd
-'' step finalizes the parsing.
+'' ppDirectives3() does the same for #if conditions.
+''
+'' With this separation it's possible to identify PP directives, possibly do
+'' macro expansion in #define bodies, and finally do macro expansion in #if
+'' conditions while knowing all #defines completely.
 ''
 ''
 '' #if evaluation
@@ -1006,43 +1006,6 @@ sub ppDirectives2( )
 			tkRemove( begin, x )
 			x = begin
 
-		case TK_PPIF, TK_PPELSEIF
-			var t = tkGetAst( x )
-			x += 1
-
-			'' No #if expression yet?
-			if( t->head = NULL ) then
-				'' BEGIN
-				assert( tkGet( x ) = TK_BEGIN )
-				var begin = x
-				x += 1
-
-				'' Expression tokens
-				var expr = ppExpression( x, , TRUE )
-				'' TK_END not reached after ppExpression()?
-				if( tkGet( x ) <> TK_END ) then
-					'' Then either no expression could be parsed at all,
-					'' or it was followed by "junk" tokens...
-					astDelete( expr )
-
-					do
-						x += 1
-					loop while( tkGet( x ) <> TK_END )
-
-					'' Turn it into a PPUNKNOWN
-					astAddChild( t, tkToAstText( begin + 1, x - 1 ) )
-					t = astNew( ASTCLASS_PPUNKNOWN, astClone( t ) )
-					tkSetAst( begin - 1, t )
-				else
-					astAddChild( t, expr )
-				end if
-
-				'' END
-				assert( tkGet( x ) = TK_END )
-				tkRemove( begin, x )
-				x = begin
-			end if
-
 		case else
 			x += 1
 		end select
@@ -1685,7 +1648,7 @@ private sub hFindElseEndIf _
 
 		end select
 
-		x += 1
+		x = ppSkip( x )
 	loop
 
 	'' If no #else was found, use same position as for #endif
@@ -1706,92 +1669,29 @@ end sub
 ''                                           #endif
 ''                                       #endif
 sub ppSplitElseIfs( )
-	var x = 0
-
+	var x = -1
 	do
+		x = ppSkip( x )
+
 		select case( tkGet( x ) )
 		case TK_EOF
 			exit do
 
 		'' Found an #elseif? Replace it by #else #if
 		case TK_PPELSEIF
-			var t = tkGetAst( x )
-
-			t = astClone( t->head )
 			tkRemove( x, x )
 			tkInsert( x, TK_PPELSE, , astNew( ASTCLASS_PPELSE ) )
 			x += 1
-			tkInsert( x, TK_PPIF, , astNew( ASTCLASS_PPIF, t ) )
+			tkInsert( x, TK_PPIF, , astNew( ASTCLASS_PPIF ) )
+			'' Note: there may be TK_BEGIN/END following, but that's ok
 
 			'' Find the corresponding #endif,
 			'' and insert another #endif in front of it
 			dim as integer xelse, xendif
-			hFindElseEndIf( x + 1, xelse, xendif )
+			hFindElseEndIf( ppSkip( x ), xelse, xendif )
 			tkInsert( xendif, TK_PPENDIF, , astNew( ASTCLASS_PPENDIF ) )
 
 		end select
-
-		x += 1
-	loop
-end sub
-
-'' Solve out #if/#else/#endif blocks if the condition is known to be TRUE/FALSE
-sub ppEvalIfs( )
-	var x = 0
-	do
-		select case( tkGet( x ) )
-		case TK_EOF
-			exit do
-
-		case TK_PPDEFINE
-			'' Register/overwrite #define as known defined symbol
-			var t = tkGetAst( x )
-			ppAddSym( t->text, TRUE )
-
-		case TK_PPUNDEF
-			'' Register/overwrite #define as known undefined symbol
-			var t = tkGetAst( x )
-			assert( t->head->class = ASTCLASS_ID )
-			ppAddSym( t->head->text, FALSE )
-
-		case TK_PPIF
-			'' 1. Try to evaluate the condition
-			tkSetAst( x, hFold( astClone( tkGetAst( x ) ) ) )
-
-			'' 2. Check the condition
-			var t = tkGetAst( x )
-			var cond = COND_UNKNOWN
-			if( t->head->class = ASTCLASS_CONST ) then
-				if( typeIsFloat( t->head->dtype ) = FALSE ) then
-					cond = iif( t->head->val.i <> 0, COND_TRUE, COND_FALSE )
-				end if
-			end if
-
-			if( cond <> COND_UNKNOWN ) then
-				dim as integer xelse, xendif
-				hFindElseEndIf( x + 1, xelse, xendif )
-
-				if( cond = COND_TRUE ) then
-					'' Remove whole #else..#endif block and the #if
-					tkRemove( xelse, xendif )
-					tkRemove( x, x )
-				else
-					if( xelse = xendif ) then
-						'' No #else found; remove whole #if..#endif block
-						tkRemove( x, xendif )
-					else
-						'' Remove whole #if..#else block and the #endif
-						tkRemove( xendif, xendif )
-						tkRemove( x, xelse )
-					end if
-				end if
-
-				x -= 1
-			end if
-
-		end select
-
-		x += 1
 	loop
 end sub
 
@@ -1825,20 +1725,26 @@ sub ppIntegrateTrailCodeIntoIfElseBlocks( )
 	static xelse(0 to STACKSIZE-1) as integer
 	static xendif(0 to STACKSIZE-1) as integer
 
-	var x = 0
+	var x = -1
 	var level = -1
 	do
+		x = ppSkip( x )
+
 		select case( tkGet( x ) )
 		case TK_EOF
 			exit do
+
 		case TK_PPIF
+			'' Note: there may be TK_BEGIN/END following, but that's ok
+
 			level += 1
 			if( level >= STACKSIZE ) then
 				oops( __FUNCTION__ & "(" & __LINE__ & "): stack size too small" )
 			end if
-			hFindElseEndIf( x + 1, xelse(level), xendif(level) )
 
-			if( hContainsPreciousDefine( x + 1, xendif(level) - 1 ) ) then
+			hFindElseEndIf( ppSkip( x ), xelse(level), xendif(level) )
+
+			if( hContainsPreciousDefine( ppSkip( x ), xendif(level) - 1 ) ) then
 				'' If there's no #else, add it
 				if( xelse(level) = xendif(level) ) then
 					tkInsert( xelse(level), TK_PPELSE, , astNew( ASTCLASS_PPELSE ) )
@@ -1908,7 +1814,6 @@ sub ppIntegrateTrailCodeIntoIfElseBlocks( )
 			assert( x = xendif(level) )
 			level -= 1
 		end select
-		x += 1
 	loop
 end sub
 
@@ -1945,8 +1850,121 @@ sub ppExpand( )
 					y += 1
 				wend
 			end if
+		end select
+
+		x += 1
+	loop
+end sub
+
+sub ppDirectives3( )
+	var x = 0
+	do
+		select case( tkGet( x ) )
+		case TK_EOF
+			exit do
+
+		case TK_PPIF, TK_PPELSEIF
+			var t = tkGetAst( x )
+			x += 1
+
+			'' No #if expression yet?
+			if( t->head = NULL ) then
+				'' BEGIN
+				assert( tkGet( x ) = TK_BEGIN )
+				var begin = x
+				x += 1
+
+				'' Expression tokens
+				var expr = ppExpression( x, , TRUE )
+				'' TK_END not reached after ppExpression()?
+				if( tkGet( x ) <> TK_END ) then
+					'' Then either no expression could be parsed at all,
+					'' or it was followed by "junk" tokens...
+					astDelete( expr )
+
+					do
+						x += 1
+					loop while( tkGet( x ) <> TK_END )
+
+					'' Turn it into a PPUNKNOWN
+					astAddChild( t, tkToAstText( begin + 1, x - 1 ) )
+					t = astNew( ASTCLASS_PPUNKNOWN, astClone( t ) )
+					tkSetAst( begin - 1, t )
+				else
+					astAddChild( t, expr )
+				end if
+
+				'' END
+				assert( tkGet( x ) = TK_END )
+				tkRemove( begin, x )
+				x = begin
+			end if
+
+		case else
+			x += 1
+		end select
+	loop
+end sub
+
+'' Solve out #if/#else/#endif blocks if the condition is known to be TRUE/FALSE
+sub ppEvalIfs( )
+	var x = 0
+	do
+		select case( tkGet( x ) )
+		case TK_EOF
+			exit do
+
+		case TK_PPDEFINE
+			'' Register/overwrite #define as known defined symbol
+			var t = tkGetAst( x )
+			ppAddSym( t->text, TRUE )
+
+		case TK_PPUNDEF
+			'' Register/overwrite #define as known undefined symbol
+			var t = tkGetAst( x )
+			assert( t->head->class = ASTCLASS_ID )
+			ppAddSym( t->head->text, FALSE )
+
+		case TK_PPIF
+			'' Assuming TK_BEGIN/END have been solved out by now
+			assert( tkGet( x + 1 ) <> TK_BEGIN )
+
+			'' 1. Try to evaluate the condition
+			tkSetAst( x, hFold( astClone( tkGetAst( x ) ) ) )
+
+			'' 2. Check the condition
+			var t = tkGetAst( x )
+			var cond = COND_UNKNOWN
+			if( t->head->class = ASTCLASS_CONST ) then
+				if( typeIsFloat( t->head->dtype ) = FALSE ) then
+					cond = iif( t->head->val.i <> 0, COND_TRUE, COND_FALSE )
+				end if
+			end if
+
+			if( cond <> COND_UNKNOWN ) then
+				dim as integer xelse, xendif
+				hFindElseEndIf( x + 1, xelse, xendif )
+
+				if( cond = COND_TRUE ) then
+					'' Remove whole #else..#endif block and the #if
+					tkRemove( xelse, xendif )
+					tkRemove( x, x )
+				else
+					if( xelse = xendif ) then
+						'' No #else found; remove whole #if..#endif block
+						tkRemove( x, xendif )
+					else
+						'' Remove whole #if..#else block and the #endif
+						tkRemove( xendif, xendif )
+						tkRemove( x, xelse )
+					end if
+				end if
+
+				x -= 1
+			end if
 
 		end select
+
 		x += 1
 	loop
 end sub
