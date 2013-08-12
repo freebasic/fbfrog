@@ -382,6 +382,37 @@ private function hFindLastMatch _
 	function = child
 end function
 
+private function hIfBelongsToEndIf _
+	( _
+		byval firstifndef as ASTNODE ptr, _
+		byval lastendif as ASTNODE ptr _
+	) as integer
+
+	'' Walk through nested #if blocks from firstifndef to lastendif; they
+	'' belong together if they're on the same nesting level, if there's no
+	'' other #endif above lastendif terminating the firstifndef block.
+	var level = 0
+
+	var sibling = firstifndef->next
+	while( sibling )
+		select case( sibling->class )
+		case ASTCLASS_PPIF
+			level += 1
+		case ASTCLASS_PPENDIF
+			'' #endif corresponding to starting #if?
+			if( level = 0 ) then
+				exit while
+			end if
+			level -= 1
+		end select
+
+		sibling = sibling->next
+	wend
+
+	'' Note: sibling=NULL in case there was no matching #endif found at all
+	function = (sibling = lastendif)
+end function
+
 private function hFindIncludeGuard _
 	( _
 		byval n as ASTNODE ptr, _
@@ -401,6 +432,9 @@ private function hFindIncludeGuard _
 	lastendif = hFindLastMatch( n, astNew( ASTCLASS_PPENDIF ) )
 
 	if( (firstifndef = NULL) or (lastendif = NULL) ) then exit function
+
+	'' Check whether the #ifndef and #endif belong together
+	if( hIfBelongsToEndIf( firstifndef, lastendif ) = FALSE ) then exit function
 
 	'' Is the #ifndef followed by a #define?
 	def = firstifndef->next
