@@ -1436,8 +1436,8 @@ private function hFold( byval n as ASTNODE ptr ) as ASTNODE ptr
 
 	case ASTCLASS_IIF
 		if( n->head->class = ASTCLASS_CONST ) then
-			if( typeIsFloat( n->dtype ) = FALSE ) then
-				if( n->val.i ) then
+			if( typeIsFloat( n->head->dtype ) = FALSE ) then
+				if( n->head->val.i ) then
 					function = astClone( n->head->next )
 				else
 					function = astClone( n->tail )
