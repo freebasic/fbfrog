@@ -1656,6 +1656,21 @@ private sub hUndefMacro( byval id as zstring ptr, byval level as integer )
 	loop while( n )
 end sub
 
+private sub hMaybeExpandId( byref x as integer, byval level as integer )
+	assert( tkGet( x ) = TK_ID )
+	var id = tkGetText( x )
+	if( hLookupExpandSym( id ) ) then
+		var macro = hLookupMacro( id, level )
+		if( macro ) then
+			if( hMacroCall( macro, x ) ) then
+				'' The macro call will be replaced with the body,
+				'' the token at TK_ID's position must be re-parsed.
+				x -= 1
+			end if
+		end if
+	end if
+end sub
+
 sub ppExpand( )
 	hIntegrateTrailCodeIntoIfElseBlocks( )
 
@@ -1677,6 +1692,58 @@ sub ppExpand( )
 			exit do
 
 		case TK_PPIF
+			x += 1
+
+			'' Check for TK_BEGIN/END enclosing the #if expression.
+			'' We want to expand macros in #if expressions generally,
+			'' but not the "id" in "defined id" expressions.
+			if( tkGet( x ) = TK_BEGIN ) then
+				x += 1
+
+				do
+					select case( tkGet( x ) )
+					case TK_END
+						exit do
+
+					'' DEFINED ['('] Identifier [')']
+					case KW_DEFINED
+						x = ppSkip( x )
+
+						'' '('?
+						var have_lparen = FALSE
+						if( tkGet( x ) = TK_LPAREN ) then
+							have_lparen = TRUE
+							x = ppSkip( x )
+						end if
+
+						'' Identifier? (not doing any expansion here)
+						if( tkGet( x ) = TK_ID ) then
+							x = ppSkip( x )
+						end if
+
+						'' ')'?
+						if( have_lparen ) then
+							if( tkGet( x ) = TK_RPAREN ) then
+								x = ppSkip( x )
+							end if
+						end if
+
+						x -= 1
+
+					'' Identifier (anything unrelated to DEFINED)
+					case TK_ID
+						hMaybeExpandId( x, level )
+
+					end select
+
+					x += 1
+				loop
+
+				assert( tkGet( x) = TK_END )
+				x += 1
+			end if
+
+			x -= 1
 			level += 1
 
 		case TK_PPELSE, TK_PPENDIF
@@ -1704,17 +1771,7 @@ sub ppExpand( )
 			end if
 
 		case TK_ID
-			var id = tkGetText( x )
-			if( hLookupExpandSym( id ) ) then
-				var macro = hLookupMacro( id, level )
-				if( macro ) then
-					if( hMacroCall( macro, x ) ) then
-						'' The macro call will be replaced with the body,
-						'' the token at TK_ID's position must be re-parsed.
-						x -= 1
-					end if
-				end if
-			end if
+			hMaybeExpandId( x, level )
 
 		end select
 

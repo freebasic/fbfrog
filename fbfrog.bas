@@ -636,37 +636,59 @@ end sub
 		if( (not f->missing) and (f->refcount <> 1) ) then
 			print "parsing: ";f->pretty
 
+			''
+			'' Load main file into token buffer
+			''
 			tkInit( )
 			lexLoadFile( 0, f->normed )
 
+			''
+			'' Some white-space preprocessing
+			''
 			ppComments( )
 			ppDividers( )
+
+			''
+			'' Parse PP directives
+			''
 			ppDirectives1( )
 
-			'' Expand any #includes if wanted and possible
+			''
+			'' Expand #includes if wanted and possible
+			''
 			if( frog.merge ) then
 				var x = 0
 				while( tkGet( x ) <> TK_EOF )
+
+					'' #include?
 					if( tkGet( x ) = TK_PPINCLUDE ) then
 						var t = tkGetAst( x )
+
 						var incfile = *t->text
 						var incf = frogAddFile( f, incfile )
 						t->includefile = incf
 
 						if( (incf->refcount = 1) and (not incf->missing) ) then
-							print "merging: " + incf->pretty
+							''
+							'' Replace #include by included file's content
+							''
 
 							tkRemove( x, x )
 							x -= 1
 
 							lexLoadFile( x, incf->normed )
 							x -= 1
+
+							print "(merged in: " + incf->pretty + ")"
 						end if
 					end if
+
 					x += 1
 				wend
 
-				'' Again after new tokens were loaded
+				''
+				'' Parse PP directives etc. again after new tokens were loaded
+				''
 				ppComments( )
 				ppDividers( )
 				ppDirectives1( )
@@ -686,6 +708,9 @@ end sub
 
 			ppDirectives2( )
 
+			''
+			'' Macro expansion, #if evaluation
+			''
 			var do_pp = TRUE
 			select case( frog.preset )
 			case "tests"
@@ -730,10 +755,16 @@ end sub
 				ppDirectives3( )
 			end if
 
+			''
+			'' Parse C constructs
+			''
 			f->ast = cToplevel( )
 
 			tkEnd( )
 
+			''
+			'' Work on the AST
+			''
 			select case( frog.preset )
 			case "zip"
 				hRemoveNode( f->ast, ASTCLASS_PPDEFINE, "_HAD_ZIP_H" )
