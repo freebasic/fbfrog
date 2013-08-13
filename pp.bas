@@ -1627,6 +1627,7 @@ private sub hForgetMacros( byval level as integer )
 		dim as MACROSTATUS ptr n = listGetTail( @expand.statusstack )
 		if( n = NULL ) then exit do
 		if( n->level < level ) then exit do
+		astDelete( n->macro )
 		listDelete( @expand.statusstack, n )
 	loop
 	assert( hFindMaxMacroLevel( ) < level )
