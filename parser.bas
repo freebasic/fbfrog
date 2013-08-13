@@ -825,7 +825,7 @@ private function cBaseType _
 			select case( *tkGetText( basetypex ) )
 			case "size_t"
 				dtype = TYPE_UINTEGER
-			case "ssize_t"
+			case "ssize_t", "ptrdiff_t"
 				dtype = TYPE_INTEGER
 			case "int8_t", "__int8"
 				dtype = TYPE_BYTE

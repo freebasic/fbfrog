@@ -54,6 +54,7 @@ dim shared a as ulongint
 
 dim shared a as uinteger
 dim shared a as integer
+dim shared a as integer
 
 dim shared a as A
 dim shared a as A
