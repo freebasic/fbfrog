@@ -146,6 +146,32 @@ function astNewCONST _
 	function = n
 end function
 
+function astNewID _
+	( _
+		byval id as zstring ptr, _
+		byval is_defined as integer _
+	) as ASTNODE ptr
+	var n = astNew( ASTCLASS_ID, id )
+	n->is_defined = is_defined
+	function = n
+end function
+
+function astNewTK _
+	( _
+		byval tk as integer, _
+		byval text as zstring ptr _
+	) as ASTNODE ptr
+	var n = astNew( ASTCLASS_TK, text )
+	n->tk = tk
+	function = n
+end function
+
+function astNewMACROPARAM( byval paramindex as integer ) as ASTNODE ptr
+	var n = astNew( ASTCLASS_MACROPARAM )
+	n->paramindex = paramindex
+	function = n
+end function
+
 sub astDelete( byval n as ASTNODE ptr )
 	if( n = NULL ) then
 		exit sub
@@ -408,16 +434,35 @@ end function
 
 function astDumpInline( byval n as ASTNODE ptr ) as string
 	var s = astDumpOne( n )
+	var args = 0
+
+	#macro more( arg )
+		if( args = 0 ) then
+			s += "("
+		else
+			s += ", "
+		end if
+		s += arg
+		args += 1
+	#endmacro
+
+	if( n->subtype ) then
+		more( "subtype=" + astDumpInline( n->subtype ) )
+	end if
+	if( n->array ) then
+		more( "array=" + astDumpInline( n->array ) )
+	end if
+	if( n->initializer ) then
+		more( "initializer=" + astDumpInline( n->initializer ) )
+	end if
 
 	var child = n->head
-	if( child ) then
-		s += "("
-		do
-			s += astDumpInline( child )
-			child = child->next
-			if( child = NULL ) then exit do
-			s += ", "
-		loop
+	while( child )
+		more( astDumpInline( child ) )
+		child = child->next
+	wend
+
+	if( args > 0 ) then
 		s += ")"
 	end if
 

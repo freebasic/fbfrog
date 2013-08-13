@@ -131,3 +131,38 @@ To do:
          For each #if/#else block, from inner-most to outer-most:
              Combine similar AST nodes from #if/#else paths into one node behind
              the #endif
+
+	this is the same algorithm needed to merge ASTs of different versions...
+
+- macro expansion should build a list of known macros, and add more as #defines
+  are found, and expand on other tokens, instead of looking for #defines and
+  expanding each one separately
+  because we shouldn't expand inside #define bodies, because it might accidentially
+  expand a macro parameter or a TK_ID that will be merged with something.
+  i.e we should expand inside bodies after expanding them, not before.
+  Checking TK_ID's whether they're macro paramters or will be merged could
+  work too but it's more difficult...
+  Of course the question is, can we keep this scoped expansion behaviour (only
+  expanding inside a certain #if/#else/#endif code path when having a list of
+  known #defines...
+  - store #if nesting level on each #define in that list, then it's like a
+    stack: we can remove #defines when leaving the #if block.
+
+- re-#defines are allowed in CPP as long as the macro is exactly the same, right?
+  need to allow re-#defines, but oops() on invalid ones -> hAreMacrosEqual() function
+
+- CPP relational BOPs shouldn't just be emitted as FB relational BOPs always,
+  because the result values differ (1 vs. -1). This should only be done where
+  a boolean check is done, but not if it's used in a math expression.
+  -> related to ! vs. not: "!defined" should be turned into "not defined" if
+     used in boolean context.
+  -> is_bool parameter to hFold(), which can be set to TRUE by callers for
+     iif/#if condition for example.
+  -> it's not clear whether AST should represent C or FB?
+     -> maybe have both C/FB relational/defined ops
+
+- #include foo.h  ->  #include foo.bi, if foo.bi will be generated too
+- #include stdio.h -> #include crt/stdio.bi, for some known default headers
+  (or perhaps let presets do this)
+
+- ## PP merging should allow TK_ID ## TK_DECNUM, currently it only allows TK_ID ## TK_ID

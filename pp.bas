@@ -1124,15 +1124,13 @@ end sub
 private function hMacroCall _
 	( _
 		byval macro as ASTNODE ptr, _
-		byval x as integer, _
-		byref delta as integer _
+		byval x as integer _
 	) as integer
 
 	const MAXARGS = 32
 	dim as integer argbegin(0 to MAXARGS-1), argend(0 to MAXARGS-1)
 	var args = 0
 	var begin = x
-	delta = 0
 
 	'' ID
 	assert( tkGet( x ) = TK_ID )
@@ -1267,18 +1265,525 @@ private function hMacroCall _
 	tkRemove( begin, bodybegin - 1 )
 	x -= (bodybegin - 1) - begin + 1
 
-	delta = x - begin
 	function = TRUE
 end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 namespace eval
-	dim shared as TLIST strings
-	dim shared as THASH knownsyms
-	dim shared as THASH expandsyms
-	dim shared as ASTNODE ptr macro
+	'' Initial list of symbols that are known to be defined or undefined
+	'' (individual passes have to maintain their custom list, initially
+	'' filled with the symbols from here, because the list changes when
+	'' #defines or #undefs are found)
+	dim shared as ASTNODE ptr initialknownsyms
+
+	'' List of precious symbols: symbols registered for expansion
+	dim shared as ASTNODE ptr expandsyms
+	dim shared expandsymhash as THASH
+
+	'' Initially declared macros
+	dim shared as ASTNODE ptr initialmacros
 end namespace
+
+sub ppEvalInit( )
+	eval.initialknownsyms = astNew( ASTCLASS_GROUP )
+	eval.expandsyms = astNew( ASTCLASS_GROUP )
+	hashInit( @eval.expandsymhash, 4 )
+	eval.initialmacros = astNew( ASTCLASS_GROUP )
+end sub
+
+sub ppEvalEnd( )
+	astDelete( eval.initialmacros )
+	hashEnd( @eval.expandsymhash )
+	astDelete( eval.expandsyms )
+	astDelete( eval.initialknownsyms )
+end sub
+
+#if __FB_DEBUG__
+private function hSymNotYetAdded _
+	( _
+		byval group as ASTNODE ptr, _
+		byval id as zstring ptr _
+	) as integer
+
+	var found = FALSE
+
+	var child = group->head
+	while( child )
+		if( *child->text = *id ) then
+			found = TRUE
+			exit while
+		end if
+		child = child->next
+	wend
+
+	function = not found
+end function
+#endif
+
+sub ppAddSym( byval id as zstring ptr, byval is_defined as integer )
+	assert( hSymNotYetAdded( eval.initialknownsyms, id ) )
+	astAddChild( eval.initialknownsyms, astNewID( id, is_defined ) )
+end sub
+
+sub ppExpandSym( byval id as zstring ptr )
+	assert( hSymNotYetAdded( eval.expandsyms, id ) )
+	var n = astNewID( id )
+	astAddChild( eval.expandsyms, n )
+	hashAddOverwrite( @eval.expandsymhash, n->text, NULL )
+end sub
+
+sub ppMacroBegin( byval id as zstring ptr, byval paramcount as integer )
+	assert( paramcount >= -1 )
+	ppAddSym( id, TRUE )
+	ppExpandSym( id )
+	var macro = astNew( ASTCLASS_PPDEFINE, id )
+	macro->paramcount = paramcount
+	macro->initializer = astNew( ASTCLASS_MACROBODY )
+	astAddChild( eval.initialmacros, macro )
+end sub
+
+sub ppMacroToken( byval tk as integer, byval text as zstring ptr )
+	var macro = eval.initialmacros->tail
+	astAddChild( macro->initializer, astNewTK( tk, text ) )
+end sub
+
+sub ppMacroParam( byval index as integer )
+	var macro = eval.initialmacros->tail
+	assert( macro->paramcount > 0 )
+	assert( (index >= 0) and (index < macro->paramcount) )
+	astAddChild( macro->initializer, astNewMACROPARAM( index ) )
+end sub
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+'' Find corresponding #else and closing #endif, while stepping over nested
+'' #if blocks.
+private sub hFindElseEndIf _
+	( _
+		byval x as integer, _
+		byref xelse as integer, _
+		byref xendif as integer _
+	)
+
+	xelse = -1
+	xendif = -1
+
+	var level = 0
+	do
+		select case( tkGet( x ) )
+		case TK_EOF
+			exit do
+
+		case TK_PPIF
+			level += 1
+
+		case TK_PPELSE
+			if( level = 0 ) then
+				xelse = x
+			end if
+
+		case TK_PPENDIF
+			if( level = 0 ) then
+				xendif = x
+				exit do
+			end if
+			level -= 1
+
+		end select
+
+		x = ppSkip( x )
+	loop
+
+	'' If no #else was found, use same position as for #endif
+	if( xelse < 0 ) then
+		xelse = xendif
+	end if
+end sub
+
+'' Expand #elseifs into normal #if blocks:
+''
+'' 1.   #if 1       2. #if 1          3. #if 1
+''      #elseif 2      #else             #else
+''      #elseif 3          #if 2             #if 2
+''      #else              #elseif 3         #else
+''      #endif             #else                 #if 3
+''                         #endif                #else
+''                     #endif                    #endif
+''                                           #endif
+''                                       #endif
+sub ppSplitElseIfs( )
+	var x = -1
+	do
+		x = ppSkip( x )
+
+		select case( tkGet( x ) )
+		case TK_EOF
+			exit do
+
+		'' Found an #elseif? Replace it by #else #if
+		case TK_PPELSEIF
+			tkRemove( x, x )
+			tkInsert( x, TK_PPELSE, , astNew( ASTCLASS_PPELSE ) )
+			x += 1
+			tkInsert( x, TK_PPIF, , astNew( ASTCLASS_PPIF ) )
+			'' Note: there may be TK_BEGIN/END following, but that's ok
+
+			'' Find the corresponding #endif,
+			'' and insert another #endif in front of it
+			dim as integer xelse, xendif
+			hFindElseEndIf( ppSkip( x ), xelse, xendif )
+			tkInsert( xendif, TK_PPENDIF, , astNew( ASTCLASS_PPENDIF ) )
+
+		end select
+	loop
+end sub
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+'' Check whether the given id is a precious symbol
+private function hLookupExpandSym( byval id as zstring ptr ) as integer
+	function = (hashLookup( @eval.expandsymhash, id, hashHash( id ) )->s <> NULL)
+end function
+
+'' Check whether the given range of tokens includes #defines/#undefs for a
+'' precious symbol
+private function hContainsPreciousDefine _
+	( _
+		byval first as integer, _
+		byval last as integer _
+	) as integer
+
+	for i as integer = first to last
+		select case( tkGet( i ) )
+		case TK_PPDEFINE
+			if( hLookupExpandSym( tkGetAst( i )->text ) ) then
+				return TRUE
+			end if
+		case TK_PPUNDEF
+			var t = tkGetAst( i )
+			assert( t->head->class = ASTCLASS_ID )
+			if( hLookupExpandSym( t->head->text ) ) then
+				return TRUE
+			end if
+		end select
+	next
+
+	function = FALSE
+end function
+
+private sub hIntegrateTrailCodeIntoIfElseBlocks( )
+	const STACKSIZE = 512
+	static xelse(0 to STACKSIZE-1) as integer
+	static xendif(0 to STACKSIZE-1) as integer
+
+	var x = -1
+	var level = -1
+	do
+		x = ppSkip( x )
+
+		select case( tkGet( x ) )
+		case TK_EOF
+			exit do
+
+		case TK_PPIF
+			'' Note: there may be TK_BEGIN/END following, but that's ok
+
+			level += 1
+			if( level >= STACKSIZE ) then
+				oops( __FUNCTION__ & "(" & __LINE__ & "): stack size too small" )
+			end if
+
+			hFindElseEndIf( ppSkip( x ), xelse(level), xendif(level) )
+
+			if( hContainsPreciousDefine( ppSkip( x ), xendif(level) - 1 ) ) then
+				'' If there's no #else, add it
+				if( xelse(level) = xendif(level) ) then
+					tkInsert( xelse(level), TK_PPELSE, , astNew( ASTCLASS_PPELSE ) )
+					xendif(level) += 1
+					for i as integer = 0 to level-1
+						xelse(i) += 1
+						xendif(i) += 1
+					next
+				end if
+
+				'' Duplicate all tokens following the #endif
+				'' into each of the #if and #else code paths,
+				'' then remove them from behind the #endif.
+
+				var first = xendif(level) + 1
+
+				'' If it's the top-most #if, copy all tokens
+				'' from #endif until EOF.
+				var last = tkGetCount( )-1
+
+				'' Otherwise, if it's a nested #if, copy only
+				'' the tokens from #endif to the next #else or
+				'' #endif, depending on whether this #if block
+				'' is inside an #if or #else block.
+				if( level > 0 ) then
+					'' In front of parent's #else?
+					'' (or #endif if there is no #else)
+					if( x < xelse(level-1) ) then
+						last = xelse(level-1)-1
+					else
+						last = xendif(level-1)-1
+					end if
+				end if
+
+				var delta = last - first + 1
+
+				if( delta > 0 ) then
+					tkCopy( xelse(level), first, last )
+					xelse(level) += delta
+					xendif(level) += delta
+					first += delta
+					last += delta
+					for i as integer = 0 to level-1
+						xelse(i) += delta
+						xendif(i) += delta
+					next
+
+					tkCopy( xendif(level), first, last )
+					xendif(level) += delta
+					first += delta
+					last += delta
+					for i as integer = 0 to level-1
+						xelse(i) += delta
+						xendif(i) += delta
+					next
+
+					tkRemove( first, last )
+					for i as integer = 0 to level-1
+						xelse(i) -= delta
+						xendif(i) -= delta
+					next
+				end if
+			end if
+
+		case TK_PPENDIF
+			assert( level >= 0 )
+			assert( x = xendif(level) )
+			level -= 1
+		end select
+	loop
+end sub
+
+type MACROSTATUS
+	macro		as ASTNODE ptr
+	level		as integer
+	undeflevel	as integer
+end type
+
+namespace expand
+	dim shared statusstack as TLIST
+end namespace
+
+#if __FB_DEBUG__
+private function hFindMaxMacroLevel( ) as integer
+	var level = -1
+	dim as MACROSTATUS ptr n = listGetHead( @expand.statusstack )
+	while( n )
+		if( level < n->level ) then
+			level = n->level
+		end if
+		n = listGetNext( n )
+	wend
+	function = level
+end function
+#endif
+
+private sub hAddMacro( byval macro as ASTNODE ptr, byval level as integer )
+	assert( macro->class = ASTCLASS_PPDEFINE )
+	assert( level >= hFindMaxMacroLevel( ) )
+	dim as MACROSTATUS ptr n = listAppend( @expand.statusstack )
+	n->macro = macro
+	n->level = level
+	n->undeflevel = -1
+end sub
+
+private function hLookupMacro _
+	( _
+		byval id as zstring ptr, _
+		byval level as integer _
+	) as ASTNODE ptr
+
+	dim as MACROSTATUS ptr n = listGetTail( @expand.statusstack )
+	while( n )
+		if( *n->macro->text = *id ) then
+			'' Not #undeffed?
+			if( n->undeflevel < 0 ) then
+				return n->macro
+			end if
+		end if
+		n = listGetPrev( n )
+	wend
+
+	function = NULL
+end function
+
+private sub hForgetMacros( byval level as integer )
+	'' Drop all macros >= level from the top of the stack
+	do
+		dim as MACROSTATUS ptr n = listGetTail( @expand.statusstack )
+		if( n = NULL ) then exit do
+		if( n->level < level ) then exit do
+		listDelete( @expand.statusstack, n )
+	loop
+	assert( hFindMaxMacroLevel( ) < level )
+end sub
+
+'' Reset #undef status for macros #undeffed in this #if level
+private sub hResetUndefStatus( byval level as integer )
+	dim as MACROSTATUS ptr n = listGetTail( @expand.statusstack )
+	while( n )
+		if( n->undeflevel = level ) then
+			n->undeflevel = -1
+		end if
+		assert( n->undeflevel < level )
+		n = listGetPrev( n )
+	wend
+end sub
+
+private sub hUndefMacro( byval id as zstring ptr, byval level as integer )
+	dim as MACROSTATUS ptr n = listGetTail( @expand.statusstack )
+	do
+		if( *n->macro->text = *id ) then
+			n->undeflevel = level
+			exit do
+		end if
+		n = listGetPrev( n )
+	loop while( n )
+end sub
+
+sub ppExpand( )
+	hIntegrateTrailCodeIntoIfElseBlocks( )
+
+	listInit( @expand.statusstack, sizeof( MACROSTATUS ) )
+	scope
+		'' Add initial macros
+		var child = eval.initialmacros->head
+		while( child )
+			hAddMacro( astClone( child ), 0 )
+			child = child->next
+		wend
+	end scope
+
+	var level = 0
+	var x = 0
+	do
+		select case( tkGet( x ) )
+		case TK_EOF
+			exit do
+
+		case TK_PPIF
+			level += 1
+
+		case TK_PPELSE, TK_PPENDIF
+			'' Forget about #defines/#undefs from the #if block
+			hForgetMacros( level )
+			hResetUndefStatus( level )
+
+			if( tkGet( x ) = TK_PPENDIF ) then
+				level -= 1
+			end if
+
+		case TK_PPDEFINE
+			if( hLookupExpandSym( tkGetAst( x )->text ) ) then
+				'' Push macro to the stack, using current #if
+				'' nesting level
+				hAddMacro( astClone( tkGetAst( x ) ), level )
+			end if
+
+		case TK_PPUNDEF
+			var t = tkGetAst( x )
+			assert( t->head->class = ASTCLASS_ID )
+			var id = t->head->text
+			if( hLookupExpandSym( id ) ) then
+				hUndefMacro( id, level )
+			end if
+
+		case TK_ID
+			var id = tkGetText( x )
+			if( hLookupExpandSym( id ) ) then
+				var macro = hLookupMacro( id, level )
+				if( macro ) then
+					if( hMacroCall( macro, x ) ) then
+						'' The macro call will be replaced with the body,
+						'' the token at TK_ID's position must be re-parsed.
+						x -= 1
+					end if
+				end if
+			end if
+
+		end select
+
+		x += 1
+	loop
+
+	scope
+		dim n as MACROSTATUS ptr = listGetHead( @expand.statusstack )
+		while( n )
+			astDelete( n->macro )
+			n = listGetNext( n )
+		wend
+	end scope
+	listEnd( @expand.statusstack )
+end sub
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+sub ppDirectives3( )
+	var x = 0
+	do
+		select case( tkGet( x ) )
+		case TK_EOF
+			exit do
+
+		case TK_PPIF, TK_PPELSEIF
+			var t = tkGetAst( x )
+			x += 1
+
+			'' No #if expression yet?
+			if( t->head = NULL ) then
+				'' BEGIN
+				assert( tkGet( x ) = TK_BEGIN )
+				var begin = x
+				x += 1
+
+				'' Expression tokens
+				var expr = ppExpression( x, , TRUE )
+				'' TK_END not reached after ppExpression()?
+				if( tkGet( x ) <> TK_END ) then
+					'' Then either no expression could be parsed at all,
+					'' or it was followed by "junk" tokens...
+					astDelete( expr )
+
+					do
+						x += 1
+					loop while( tkGet( x ) <> TK_END )
+
+					'' Turn it into a PPUNKNOWN
+					astAddChild( t, tkToAstText( begin + 1, x - 1 ) )
+					t = astNew( ASTCLASS_PPUNKNOWN, astClone( t ) )
+					tkSetAst( begin - 1, t )
+				else
+					astAddChild( t, expr )
+				end if
+
+				'' END
+				assert( tkGet( x ) = TK_END )
+				tkRemove( begin, x )
+				x = begin
+			end if
+
+		case else
+			x += 1
+		end select
+	loop
+end sub
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 enum
 	COND_UNKNOWN = 0
@@ -1286,86 +1791,19 @@ enum
 	COND_FALSE
 end enum
 
-private function hStoreId( byval id as zstring ptr ) as zstring ptr
-	dim as zstring ptr ptr s = listAppend( @eval.strings )
-	*s = strDuplicate( id )
-	function = *s
-end function
+namespace evalif
+	dim shared knownsyms as ASTNODE ptr
+	dim shared knownsymhash as THASH
+end namespace
 
-sub ppAddSym( byval id as zstring ptr, byval is_defined as integer )
-	hashAddOverwrite( @eval.knownsyms, hStoreId( id ), cptr( any ptr, is_defined ) )
+private sub hAddKnownSym( byval id as zstring ptr, byval is_defined as integer )
+	var n = astNewID( id, is_defined )
+	astAddChild( evalif.knownsyms, n )
+	hashAddOverwrite( @evalif.knownsymhash, n->text, cptr( any ptr, is_defined ) )
 end sub
-
-sub ppExpandSym( byval id as zstring ptr )
-	hashAddOverwrite( @eval.expandsyms, hStoreId( id ), 0 )
-end sub
-
-sub ppEvalInit( )
-	listInit( @eval.strings, sizeof( zstring ptr ) )
-	hashInit( @eval.knownsyms, 4 )
-	hashInit( @eval.expandsyms, 4 )
-end sub
-
-sub ppEvalEnd( )
-	hashEnd( @eval.expandsyms )
-	hashEnd( @eval.knownsyms )
-
-	dim s as zstring ptr ptr = listGetHead( @eval.strings )
-	while( s )
-		deallocate( *s )
-		s = listGetNext( s )
-	wend
-	listEnd( @eval.strings )
-end sub
-
-''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-
-sub ppMacroBegin( byval id as zstring ptr, byval paramcount as integer )
-	assert( paramcount >= -1 )
-	eval.macro = astNew( ASTCLASS_PPDEFINE, id )
-	eval.macro->paramcount = paramcount
-	eval.macro->initializer = astNew( ASTCLASS_MACROBODY )
-end sub
-
-sub ppMacroToken( byval tk as integer, byval text as zstring ptr )
-	var n = astNew( ASTCLASS_TK, text )
-	n->tk = tk
-	astAddChild( eval.macro->initializer, n )
-end sub
-
-sub ppMacroParam( byval index as integer )
-	assert( eval.macro->paramcount > 0 )
-	assert( (index >= 0) and (index < eval.macro->paramcount) )
-	var n = astNew( ASTCLASS_MACROPARAM )
-	n->paramindex = index
-	astAddChild( eval.macro->initializer, n )
-end sub
-
-sub ppMacroEnd( )
-	'' Expand the macro globally
-	var x = 0
-	while( tkGet( x ) <> TK_EOF )
-		if( tkGet( x ) = TK_ID ) then
-			if( *tkGetText( x ) = *eval.macro->text ) then
-				if( hMacroCall( eval.macro, x, 0 ) ) then
-					'' The macro call will be replaced with the body,
-					'' so everything including this TK_ID must be
-					'' re-parsed.
-					x -= 1
-				end if
-			end if
-		end if
-		x += 1
-	wend
-
-	astDelete( eval.macro )
-	eval.macro = NULL
-end sub
-
-''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 private function hLookupKnownSym( byval id as zstring ptr ) as integer
-	var item = hashLookup( @eval.knownsyms, id, hashHash( id ) )
+	var item = hashLookup( @evalif.knownsymhash, id, hashHash( id ) )
 	if( item->s ) then
 		function = iif( item->data, COND_TRUE, COND_FALSE )
 	else
@@ -1611,303 +2049,19 @@ private function hFold( byval n as ASTNODE ptr ) as ASTNODE ptr
 	end select
 end function
 
-''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-
-'' Find corresponding #else and closing #endif, while stepping over nested
-'' #if blocks.
-private sub hFindElseEndIf _
-	( _
-		byval x as integer, _
-		byref xelse as integer, _
-		byref xendif as integer _
-	)
-
-	xelse = -1
-	xendif = -1
-
-	var level = 0
-	do
-		select case( tkGet( x ) )
-		case TK_EOF
-			exit do
-
-		case TK_PPIF
-			level += 1
-
-		case TK_PPELSE
-			if( level = 0 ) then
-				xelse = x
-			end if
-
-		case TK_PPENDIF
-			if( level = 0 ) then
-				xendif = x
-				exit do
-			end if
-			level -= 1
-
-		end select
-
-		x = ppSkip( x )
-	loop
-
-	'' If no #else was found, use same position as for #endif
-	if( xelse < 0 ) then
-		xelse = xendif
-	end if
-end sub
-
-'' Expand #elseifs into normal #if blocks:
-''
-'' 1.   #if 1       2. #if 1          3. #if 1
-''      #elseif 2      #else             #else
-''      #elseif 3          #if 2             #if 2
-''      #else              #elseif 3         #else
-''      #endif             #else                 #if 3
-''                         #endif                #else
-''                     #endif                    #endif
-''                                           #endif
-''                                       #endif
-sub ppSplitElseIfs( )
-	var x = -1
-	do
-		x = ppSkip( x )
-
-		select case( tkGet( x ) )
-		case TK_EOF
-			exit do
-
-		'' Found an #elseif? Replace it by #else #if
-		case TK_PPELSEIF
-			tkRemove( x, x )
-			tkInsert( x, TK_PPELSE, , astNew( ASTCLASS_PPELSE ) )
-			x += 1
-			tkInsert( x, TK_PPIF, , astNew( ASTCLASS_PPIF ) )
-			'' Note: there may be TK_BEGIN/END following, but that's ok
-
-			'' Find the corresponding #endif,
-			'' and insert another #endif in front of it
-			dim as integer xelse, xendif
-			hFindElseEndIf( ppSkip( x ), xelse, xendif )
-			tkInsert( xendif, TK_PPENDIF, , astNew( ASTCLASS_PPENDIF ) )
-
-		end select
-	loop
-end sub
-
-private function hLookupExpandSym( byval id as zstring ptr ) as integer
-	function = (hashLookup( @eval.expandsyms, id, hashHash( id ) )->s <> NULL)
-end function
-
-'' Check whether the given range of tokens includes the #define for a symbol
-'' registed for expansion
-private function hContainsPreciousDefine _
-	( _
-		byval first as integer, _
-		byval last as integer _
-	) as integer
-
-	for i as integer = first to last
-		'' #define?
-		if( tkGet( i ) = TK_PPDEFINE ) then
-			'' Is the #define symbol in ppExpandSym()'s list?
-			if( hLookupExpandSym( tkGetAst( i )->text ) ) then
-				return TRUE
-			end if
-		end if
-	next
-
-	function = FALSE
-end function
-
-sub ppIntegrateTrailCodeIntoIfElseBlocks( )
-	const STACKSIZE = 512
-	static xelse(0 to STACKSIZE-1) as integer
-	static xendif(0 to STACKSIZE-1) as integer
-
-	var x = -1
-	var level = -1
-	do
-		x = ppSkip( x )
-
-		select case( tkGet( x ) )
-		case TK_EOF
-			exit do
-
-		case TK_PPIF
-			'' Note: there may be TK_BEGIN/END following, but that's ok
-
-			level += 1
-			if( level >= STACKSIZE ) then
-				oops( __FUNCTION__ & "(" & __LINE__ & "): stack size too small" )
-			end if
-
-			hFindElseEndIf( ppSkip( x ), xelse(level), xendif(level) )
-
-			if( hContainsPreciousDefine( ppSkip( x ), xendif(level) - 1 ) ) then
-				'' If there's no #else, add it
-				if( xelse(level) = xendif(level) ) then
-					tkInsert( xelse(level), TK_PPELSE, , astNew( ASTCLASS_PPELSE ) )
-					xendif(level) += 1
-					for i as integer = 0 to level-1
-						xelse(i) += 1
-						xendif(i) += 1
-					next
-				end if
-
-				'' Duplicate all tokens following the #endif
-				'' into each of the #if and #else code paths,
-				'' then remove them from behind the #endif.
-
-				var first = xendif(level) + 1
-
-				'' If it's the top-most #if, copy all tokens
-				'' from #endif until EOF.
-				var last = tkGetCount( )-1
-
-				'' Otherwise, if it's a nested #if, copy only
-				'' the tokens from #endif to the next #else or
-				'' #endif, depending on whether this #if block
-				'' is inside an #if or #else block.
-				if( level > 0 ) then
-					'' In front of parent's #else?
-					'' (or #endif if there is no #else)
-					if( x < xelse(level-1) ) then
-						last = xelse(level-1)-1
-					else
-						last = xendif(level-1)-1
-					end if
-				end if
-
-				var delta = last - first + 1
-
-				if( delta > 0 ) then
-					tkCopy( xelse(level), first, last )
-					xelse(level) += delta
-					xendif(level) += delta
-					first += delta
-					last += delta
-					for i as integer = 0 to level-1
-						xelse(i) += delta
-						xendif(i) += delta
-					next
-
-					tkCopy( xendif(level), first, last )
-					xendif(level) += delta
-					first += delta
-					last += delta
-					for i as integer = 0 to level-1
-						xelse(i) += delta
-						xendif(i) += delta
-					next
-
-					tkRemove( first, last )
-					for i as integer = 0 to level-1
-						xelse(i) -= delta
-						xendif(i) -= delta
-					next
-				end if
-			end if
-
-		case TK_PPENDIF
-			assert( level >= 0 )
-			assert( x = xendif(level) )
-			level -= 1
-		end select
-	loop
-end sub
-
-sub ppExpand( )
-	var x = 0
-	do
-		select case( tkGet( x ) )
-		case TK_EOF
-			exit do
-
-		case TK_PPDEFINE
-			if( hLookupExpandSym( tkGetAst( x )->text ) ) then
-				dim as integer xelse, xendif
-				hFindElseEndIf( x + 1, xelse, xendif )
-
-				if( xelse  = -1 ) then xelse  = tkGetCount( ) - 1
-				if( xendif = -1 ) then xendif = tkGetCount( ) - 1
-
-				var y = x + 1
-				while( y < xelse )
-					if( tkGet( y ) = TK_ID ) then
-						if( *tkGetText( y ) = *tkGetAst( x )->text ) then
-							dim as integer delta
-							if( hMacroCall( tkGetAst( x ), y, delta ) ) then
-								'' The macro call will be replaced with the body,
-								'' so everything including this TK_ID must be
-								'' re-parsed.
-								y -= 1
-								xelse += delta
-								xendif += delta
-							end if
-						end if
-					end if
-					y += 1
-				wend
-			end if
-		end select
-
-		x += 1
-	loop
-end sub
-
-sub ppDirectives3( )
-	var x = 0
-	do
-		select case( tkGet( x ) )
-		case TK_EOF
-			exit do
-
-		case TK_PPIF, TK_PPELSEIF
-			var t = tkGetAst( x )
-			x += 1
-
-			'' No #if expression yet?
-			if( t->head = NULL ) then
-				'' BEGIN
-				assert( tkGet( x ) = TK_BEGIN )
-				var begin = x
-				x += 1
-
-				'' Expression tokens
-				var expr = ppExpression( x, , TRUE )
-				'' TK_END not reached after ppExpression()?
-				if( tkGet( x ) <> TK_END ) then
-					'' Then either no expression could be parsed at all,
-					'' or it was followed by "junk" tokens...
-					astDelete( expr )
-
-					do
-						x += 1
-					loop while( tkGet( x ) <> TK_END )
-
-					'' Turn it into a PPUNKNOWN
-					astAddChild( t, tkToAstText( begin + 1, x - 1 ) )
-					t = astNew( ASTCLASS_PPUNKNOWN, astClone( t ) )
-					tkSetAst( begin - 1, t )
-				else
-					astAddChild( t, expr )
-				end if
-
-				'' END
-				assert( tkGet( x ) = TK_END )
-				tkRemove( begin, x )
-				x = begin
-			end if
-
-		case else
-			x += 1
-		end select
-	loop
-end sub
-
 '' Solve out #if/#else/#endif blocks if the condition is known to be TRUE/FALSE
 sub ppEvalIfs( )
+	evalif.knownsyms = astNew( ASTCLASS_GROUP )
+	hashInit( @evalif.knownsymhash, 4 )
+	scope
+		var child = eval.initialknownsyms->head
+		while( child )
+			assert( child->class = ASTCLASS_ID )
+			hAddKnownSym( child->text, child->is_defined )
+			child = child->next
+		wend
+	end scope
+
 	var x = 0
 	do
 		select case( tkGet( x ) )
@@ -1917,13 +2071,13 @@ sub ppEvalIfs( )
 		case TK_PPDEFINE
 			'' Register/overwrite #define as known defined symbol
 			var t = tkGetAst( x )
-			ppAddSym( t->text, TRUE )
+			hAddKnownSym( t->text, TRUE )
 
 		case TK_PPUNDEF
 			'' Register/overwrite #define as known undefined symbol
 			var t = tkGetAst( x )
 			assert( t->head->class = ASTCLASS_ID )
-			ppAddSym( t->head->text, FALSE )
+			hAddKnownSym( t->head->text, FALSE )
 
 		case TK_PPIF
 			'' Assuming TK_BEGIN/END have been solved out by now
@@ -1967,6 +2121,9 @@ sub ppEvalIfs( )
 
 		x += 1
 	loop
+
+	hashEnd( @evalif.knownsymhash )
+	astDelete( evalif.knownsyms )
 end sub
 
 '' Merge #else #if back into #elseifs

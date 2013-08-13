@@ -719,7 +719,6 @@ end sub
 					ppAddSym( "_HAD_ZIPCONF_H", FALSE )
 				end select
 
-				ppIntegrateTrailCodeIntoIfElseBlocks( )
 				ppExpand( )
 
 				ppDirectives3( )
