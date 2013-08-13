@@ -1299,35 +1299,34 @@ sub ppEvalEnd( )
 	astDelete( eval.initialknownsyms )
 end sub
 
-#if __FB_DEBUG__
-private function hSymNotYetAdded _
+private function hSymExists _
 	( _
 		byval group as ASTNODE ptr, _
 		byval id as zstring ptr _
 	) as integer
 
-	var found = FALSE
-
 	var child = group->head
 	while( child )
 		if( *child->text = *id ) then
-			found = TRUE
-			exit while
+			return TRUE
 		end if
 		child = child->next
 	wend
 
-	function = not found
+	function = FALSE
 end function
-#endif
 
 sub ppAddSym( byval id as zstring ptr, byval is_defined as integer )
-	assert( hSymNotYetAdded( eval.initialknownsyms, id ) )
+	if( hSymExists( eval.initialknownsyms, id ) ) then
+		oops( "ppAddSym( """ & *id & """, " & iif( is_defined, "TRUE", "FALSE" ) & " ) called, but already exists" )
+	end if
 	astAddChild( eval.initialknownsyms, astNewID( id, is_defined ) )
 end sub
 
 sub ppExpandSym( byval id as zstring ptr )
-	assert( hSymNotYetAdded( eval.expandsyms, id ) )
+	if( hSymExists( eval.expandsyms, id ) ) then
+		oops( "ppExpandSym( """ & *id & """ ) called, but already exists" )
+	end if
 	var n = astNewID( id )
 	astAddChild( eval.expandsyms, n )
 	hashAddOverwrite( @eval.expandsymhash, n->text, NULL )
