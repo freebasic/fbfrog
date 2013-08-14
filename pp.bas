@@ -1521,7 +1521,7 @@ private sub hMergeElseIfs( )
 end sub
 
 '' Check whether an #if/#else block includes precious #defines/#undefs
-private sub hCheckIfBlockForPreciousDefine( byval x as integer )
+private function hCheckIfBlockForPreciousDefine( byval x as integer ) as integer
 	assert( tkGet( x ) = TK_PPIF )
 	x = ppSkip( x )
 
@@ -1533,20 +1533,26 @@ private sub hCheckIfBlockForPreciousDefine( byval x as integer )
 		case TK_PPDEFINE
 			var id = tkGetAst( x )->text
 			if( hLookupExpandSym( id ) ) then
-				oops( "#define " + *id + " found in unsolved #if block" )
+				print "#define " + *id + " found in unsolved #if block, aborting preprocessing"
+				exit function
 			end if
+
 		case TK_PPUNDEF
 			var t = tkGetAst( x )
 			assert( t->head->class = ASTCLASS_ID )
 			var id = t->head->text
 			if( hLookupExpandSym( id ) ) then
-				oops( "#undef " + *id + " found in unsolved #if block" )
+				print "#undef " + *id + " found in unsolved #if block, aborting preprocessing"
+				exit function
 			end if
+
 		end select
 
 		x = ppSkip( x )
 	wend
-end sub
+
+	function = TRUE
+end function
 
 private function hMaybeExpandId( byval x as integer ) as integer
 	assert( tkGet( x ) = TK_ID )
@@ -1928,7 +1934,11 @@ sub ppEval( )
 				'' If the #if can't be solved out, it mustn't contain any
 				'' #defines/#undefs for symbols we want to expand, because
 				'' we don't know whether the #define/#undef would be reached...
-				hCheckIfBlockForPreciousDefine( x )
+				if( hCheckIfBlockForPreciousDefine( x ) = FALSE ) then
+					'' Aborting ppEval(), but still finish parsing #if conditions...
+					ppNoEval( )
+					exit do
+				end if
 			else
 				dim as integer xelse, xendif
 				hFindElseEndIf( x + 1, xelse, xendif )
