@@ -30,9 +30,14 @@ declare function cIdList _
 	( _
 		byval decl as integer, _
 		byval basedtype as integer, _
-		byval basesubtype as ASTNODE ptr _
+		byval basesubtype as ASTNODE ptr, _
+		byval gccattribs as integer _
 	) as ASTNODE ptr
-declare function cMultDecl( byval decl as integer ) as ASTNODE ptr
+declare function cMultDecl _
+	( _
+		byval decl as integer, _
+		byval gccattribs as integer _
+	) as ASTNODE ptr
 
 private function hMakeTempId( ) as string
 	parse.tempidcount += 1
@@ -370,6 +375,87 @@ end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
+'enum
+'	ATTRIB_
+'end enum
+
+private function cGccAttribute( byref gccattribs as integer ) as integer
+	function = FALSE
+
+	if( tkGet( parse.x ) < TK_ID ) then
+		exit function
+	end if
+
+	select case( *tkGetText( parse.x ) )
+	case "warn_unused_result", "__warn_unused_result__", _
+	     "noreturn", "__noreturn__", _
+	     "malloc", "__malloc__", _
+	     "deprecated", "__deprecated__"
+		'' Ignore, not interesting for FB bindings
+		parse.x = cSkip( parse.x )
+
+	case else
+		exit function
+	end select
+
+	function = TRUE
+end function
+
+private function cGccAttributeList( byref gccattribs as integer ) as integer
+	function = FALSE
+
+	'' __ATTRIBUTE__?
+	while( tkGet( parse.x ) = KW___ATTRIBUTE__ )
+		parse.x = cSkip( parse.x )
+
+		'' '('?
+		if( tkGet( parse.x ) <> TK_LPAREN ) then
+			exit function
+		end if
+		parse.x = cSkip( parse.x )
+
+		'' '('?
+		if( tkGet( parse.x ) <> TK_LPAREN ) then
+			exit function
+		end if
+
+		'' Attribute (',' Attribute)*
+		do
+			parse.x = cSkip( parse.x )
+
+			select case( tkGet( parse.x ) )
+			case TK_EOF
+				exit function
+			case TK_RPAREN
+				exit do
+			end select
+
+			'' Attribute
+			if( cGccAttribute( gccattribs ) = FALSE ) then
+				exit function
+			end if
+
+			'' ','?
+		loop while( tkGet( parse.x ) = TK_COMMA )
+
+		'' ')'?
+		if( tkGet( parse.x ) <> TK_RPAREN ) then
+			exit function
+		end if
+		parse.x = cSkip( parse.x )
+
+		'' ')'?
+		if( tkGet( parse.x ) <> TK_RPAREN ) then
+			exit function
+		end if
+		parse.x = cSkip( parse.x )
+	wend
+
+	function = TRUE
+end function
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
 private function cSimpleToken( ) as ASTNODE ptr
 	dim as ASTNODE ptr t = any
 	dim as integer xbegin = any, xend = any
@@ -445,7 +531,7 @@ private function cStructBody( ) as ASTNODE ptr
 			t = cStructCompound( )
 			if( t = NULL ) then
 				parse.x = old
-				t = cMultDecl( DECL_FIELD )
+				t = cMultDecl( DECL_FIELD, 0 )
 				if( t = NULL ) then
 					parse.x = old
 					t = cSimpleToken( )
@@ -602,7 +688,7 @@ private function cStructCompound( ) as ASTNODE ptr
 
 	if( is_typedef ) then
 		var subtype = astNew( ASTCLASS_ID, id )
-		var t = cIdList( DECL_TYPEDEF, TYPE_UDT, subtype )
+		var t = cIdList( DECL_TYPEDEF, TYPE_UDT, subtype, 0 )
 		astDelete( subtype )
 
 		if( t = NULL ) then
@@ -923,7 +1009,7 @@ private function cParamDecl( ) as ASTNODE ptr
 		astAddComment( t, tkCollectComments( parse.x, cSkip( parse.x ) - 1 ) )
 		parse.x = cSkip( parse.x )
 	else
-		t = cMultDecl( DECL_PARAM )
+		t = cMultDecl( DECL_PARAM, 0 )
 	end if
 
 	function = t
@@ -954,10 +1040,12 @@ end function
 
 ''
 '' Declarator =
-''    '*'*
+''    GccAttributeList
+''    ('*' [CONST|GccAttributeList])*
 ''    { [Identifier] | '(' Declarator ')' }
 ''    { '(' ParamList ')' | ('[' ArrayElements ']')* }
 ''    [ '=' Initializer ]
+''    GccAttributeList
 ''
 '' This needs to parse things like:
 ''    i            for example, as part of: int i;
@@ -1026,6 +1114,7 @@ private function cDeclarator _
 		byval decl as integer, _
 		byval basedtype as integer, _
 		byval basesubtype as ASTNODE ptr, _
+		byval gccattribs as integer, _
 		byref node as ASTNODE ptr, _
 		byref procptrdtype as integer _
 	) as ASTNODE ptr
@@ -1035,21 +1124,34 @@ private function cDeclarator _
 	var innerprocptrdtype = TYPE_PROC
 	procptrdtype = TYPE_PROC
 
+	'' __ATTRIBUTE__((...))
+	if( cGccAttributeList( gccattribs ) = FALSE ) then
+		exit function
+	end if
+
 	'' Pointers: ('*')*
 	while( tkGet( parse.x ) = TK_STAR )
 		procptrdtype = typeAddrOf( procptrdtype )
 		dtype = typeAddrOf( dtype )
 		parse.x = cSkip( parse.x )
 
-		'' (CONST|RESTRICT)*
+		'' (CONST|RESTRICT|__ATTRIBUTE__((...)))*
 		do
 			select case( tkGet( parse.x ) )
 			case KW_CONST
 				procptrdtype = typeSetIsConst( procptrdtype )
 				dtype = typeSetIsConst( dtype )
 				parse.x = cSkip( parse.x )
+
 			case KW_RESTRICT, KW___RESTRICT, KW___RESTRICT__
 				parse.x = cSkip( parse.x )
+
+			case KW___ATTRIBUTE__
+				'' __attribute__((...))
+				if( cGccAttributeList( gccattribs ) = FALSE ) then
+					exit function
+				end if
+
 			case else
 				exit do
 			end select
@@ -1062,7 +1164,7 @@ private function cDeclarator _
 		'' '('
 		parse.x = cSkip( parse.x )
 
-		t = cDeclarator( decl, dtype, basesubtype, innernode, innerprocptrdtype )
+		t = cDeclarator( decl, dtype, basesubtype, gccattribs, innernode, innerprocptrdtype )
 		if( t = NULL ) then
 			exit function
 		end if
@@ -1240,6 +1342,13 @@ private function cDeclarator _
 		end if
 	end select
 
+	'' __ATTRIBUTE__((...))
+	if( cGccAttributeList( gccattribs ) = FALSE ) then
+		astDelete( t )
+		node = NULL
+		exit function
+	end if
+
 	function = t
 end function
 
@@ -1248,14 +1357,15 @@ private function cIdList _
 	( _
 		byval decl as integer, _
 		byval basedtype as integer, _
-		byval basesubtype as ASTNODE ptr _
+		byval basesubtype as ASTNODE ptr, _
+		byval gccattribs as integer _
 	) as ASTNODE ptr
 
 	var group = astNew( ASTCLASS_GROUP )
 
 	'' ... (',' ...)*
 	do
-		var t = cDeclarator( decl, basedtype, basesubtype, NULL, 0 )
+		var t = cDeclarator( decl, basedtype, basesubtype, gccattribs, NULL, 0 )
 		if( t = NULL ) then
 			astDelete( group )
 			exit function
@@ -1298,30 +1408,43 @@ end function
 ''    int f(void);
 ''    int (*procptr)(void);
 ''
-'' MultDecl = BaseType IdList
+'' MultDecl = GccAttributeList BaseType IdList
 ''
-private function cMultDecl( byval decl as integer ) as ASTNODE ptr
-	dim as integer dtype = any, typebegin = any, typeend = any
-	dim as ASTNODE ptr subtype = any
+private function cMultDecl _
+	( _
+		byval decl as integer, _
+		byval gccattribs as integer _
+	) as ASTNODE ptr
 
-	function = NULL
+	'' __ATTRIBUTE__((...))
+	if( cGccAttributeList( gccattribs ) = FALSE ) then
+		exit function
+	end if
 
 	'' BaseType
-	typebegin = parse.x
+	var typebegin = parse.x
+	dim as integer dtype
+	dim as ASTNODE ptr subtype
 	if( cBaseType( dtype, subtype, decl ) = FALSE ) then
 		exit function
 	end if
-	typeend = parse.x
+	var typeend = parse.x
 
-	function = cIdList( decl, dtype, subtype )
+	function = cIdList( decl, dtype, subtype, gccattribs )
 	astDelete( subtype )
 end function
 
 '' Global variable/procedure declarations
-''    [EXTERN|STATIC] MultDecl
+''    GccAttributeList [EXTERN|STATIC] MultDecl
 private function cGlobalDecl( ) as ASTNODE ptr
-	dim as integer decl = any
+	'' __ATTRIBUTE__((...))
+	var gccattribs = 0
+	if( cGccAttributeList( gccattribs ) = FALSE ) then
+		exit function
+	end if
 
+	'' [EXTERN|STATIC]
+	var decl = DECL_VAR
 	select case( tkGet( parse.x ) )
 	case KW_EXTERN, KW_STATIC
 		if( tkGet( parse.x ) = KW_EXTERN ) then
@@ -1330,11 +1453,9 @@ private function cGlobalDecl( ) as ASTNODE ptr
 			decl = DECL_STATICVAR
 		end if
 		parse.x = cSkip( parse.x )
-	case else
-		decl = DECL_VAR
 	end select
 
-	function = cMultDecl( decl )
+	function = cMultDecl( decl, gccattribs )
 end function
 
 '' Typedefs
@@ -1346,7 +1467,7 @@ private function cTypedef( ) as ASTNODE ptr
 	end if
 	parse.x = cSkip( parse.x )
 
-	function = cMultDecl( DECL_TYPEDEF )
+	function = cMultDecl( DECL_TYPEDEF, 0 )
 end function
 
 '' Struct forward declarations

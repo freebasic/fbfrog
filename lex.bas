@@ -752,12 +752,12 @@ private sub hInitKeywords( )
 	dim as integer first, last
 	if( lex.fb_mode ) then
 		lex.kwhash = @lex.fbkwhash
-		first = KW_CASE
-		last = KW_ZSTRING
+		first = KW__FB_FIRST
+		last = KW__FB_LAST
 	else
 		lex.kwhash = @lex.ckwhash
-		first = KW_AUTO
-		last = KW_WHILE
+		first = KW__C_FIRST
+		last = KW__C_LAST
 	end if
 
 	if( lex.kwhash->items = NULL ) then

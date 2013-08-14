@@ -91,7 +91,8 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	( @"}"  , @"tk" ), _
 	( @"~"  , @"tk" ), _
 	( NULL  , @"id" ), _ '' TK_ID
-	( @"auto"    , @"kw" ), _ '' C-only keywords
+	( @"__attribute__", @"kw" ), _ '' C-only keywords
+	( @"auto"    , @"kw" ), _
 	( @"break"   , @"kw" ), _
 	( @"char"    , @"kw" ), _
 	( @"default" , @"kw" ), _
@@ -570,7 +571,8 @@ function tkToCText( byval id as integer, byval text as zstring ptr ) as string
 	case TK_WCHAR, TK_EWCHAR     : function = "L'" + *text + "'"
 	case TK_EXCL to TK_TILDE     : function = *tk_info(id).text
 	case TK_ID                   : function = *text
-	case KW_AUTO to KW_WHILE     : function = *tk_info(id).text
+	case KW__C_FIRST to KW__C_LAST
+		function = *tk_info(id).text
 	case else
 		assert( FALSE )
 	end select

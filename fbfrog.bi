@@ -208,6 +208,8 @@ enum
 	TK_ID           '' Identifiers (a-z, A-Z, 0-9, _, $)
 
 	'' C-only keywords
+	KW__C_FIRST
+	KW___ATTRIBUTE__ = KW__C_FIRST
 	KW_AUTO
 	KW_BREAK
 	KW_CHAR
@@ -227,7 +229,8 @@ enum
 	KW_VOLATILE
 
 	'' C/FB shared keywords
-	KW_CASE
+	KW__FB_FIRST
+	KW_CASE = KW__FB_FIRST
 	KW_CONST
 	KW_CONTINUE
 	KW_DEFINE
@@ -255,6 +258,7 @@ enum
 	KW_UNION
 	KW_UNSIGNED
 	KW_WHILE
+	KW__C_LAST = KW_WHILE
 
 	'' FB-only keywords
 	KW_ALIAS
@@ -309,6 +313,7 @@ enum
 	KW_WSTRING
 	KW_XOR
 	KW_ZSTRING
+	KW__FB_LAST = KW_ZSTRING
 
 	TK__COUNT
 end enum
