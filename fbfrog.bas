@@ -721,7 +721,6 @@ end sub
 
 			if( do_pp ) then
 				ppEvalInit( )
-				ppSplitElseIfs( )
 
 				select case( frog.preset )
 				case "tests"
@@ -742,17 +741,12 @@ end sub
 					ppAddSym( "ZIP_DISABLE_DEPRECATED", FALSE )
 					ppAddSym( "_HAD_ZIP_H", FALSE )
 					ppAddSym( "_HAD_ZIPCONF_H", FALSE )
+
 				end select
 
-				ppExpand( )
-
-				ppDirectives3( )
-				ppEvalIfs( )
-
-				ppMergeElseIfs( )
-				ppEvalEnd( )
+				ppEval( )
 			else
-				ppDirectives3( )
+				ppNoEval( )
 			end if
 
 			''

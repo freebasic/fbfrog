@@ -146,16 +146,6 @@ function astNewCONST _
 	function = n
 end function
 
-function astNewID _
-	( _
-		byval id as zstring ptr, _
-		byval is_defined as integer _
-	) as ASTNODE ptr
-	var n = astNew( ASTCLASS_ID, id )
-	n->is_defined = is_defined
-	function = n
-end function
-
 function astNewTK _
 	( _
 		byval tk as integer, _
@@ -375,6 +365,89 @@ function astClone( byval n as ASTNODE ptr ) as ASTNODE ptr
 	wend
 
 	function = c
+end function
+
+'' Check whether two ASTs represent equal declarations, i.e. most fields must be
+'' equal, but some things may be different as long as it would still result in
+'' compatible C/FB code.
+'' For example, two procedures must have the same kind of parameters, but it
+'' doesn't matter whether two CONST expressions both originally were
+'' oct/hex/dec, as long as they're the same value.
+function astIsEqualDecl( byval a as ASTNODE ptr, byval b as ASTNODE ptr ) as integer
+	'' If one is NULL, both must be NULL
+	if( (a = NULL) or (b = NULL) ) then
+		return ((a = NULL) and (b = NULL))
+	end if
+
+	if( a->class <> b->class ) then exit function
+
+	if( (a->attrib and ASTATTRIB_EXTERN) <> _
+	    (b->attrib and ASTATTRIB_EXTERN) ) then
+		exit function
+	end if
+
+	if( (a->attrib and ASTATTRIB_PRIVATE) <> _
+	    (b->attrib and ASTATTRIB_PRIVATE) ) then
+		exit function
+	end if
+
+	if( (a->attrib and ASTATTRIB_MERGEWITHPREV) <> _
+	    (b->attrib and ASTATTRIB_MERGEWITHPREV) ) then
+		exit function
+	end if
+
+	if( (a->attrib and ASTATTRIB_STRINGIFY) <> _
+	    (b->attrib and ASTATTRIB_STRINGIFY) ) then
+		exit function
+	end if
+
+	if( (a->text <> NULL) and (b->text <> NULL) ) then
+		if( *a->text <> *b->text ) then exit function
+	else
+		if( (a->text <> NULL) <> (b->text <> NULL) ) then exit function
+	end if
+
+	if( a->dtype <> b->dtype ) then exit function
+	if( astIsEqualDecl( a->subtype, b->subtype ) = FALSE ) then exit function
+	if( astIsEqualDecl( a->array, b->array ) = FALSE ) then exit function
+
+	if( astIsEqualDecl( a->initializer, b->initializer ) = FALSE ) then exit function
+
+	if( a->includefile <> b->includefile ) then exit function
+
+	select case( a->class )
+	case ASTCLASS_CONST
+		if( typeIsFloat( a->dtype ) ) then
+			const EPSILON_DBL as double = 2.2204460492503131e-016
+			if( abs( a->val.f - b->val.f ) >= EPSILON_DBL ) then exit function
+		else
+			if( a->val.i <> b->val.i ) then exit function
+		end if
+
+	case ASTCLASS_TK
+		if( a->tk <> b->tk ) then exit function
+
+	case ASTCLASS_MACROPARAM
+		if( a->paramindex <> b->paramindex ) then exit function
+
+	case ASTCLASS_PPDEFINE
+		if( a->paramcount <> b->paramcount ) then exit function
+
+	end select
+
+	'' Children
+	a = a->head
+	b = b->head
+	while( (a <> NULL) and (b <> NULL) )
+		if( astIsEqualDecl( a, b ) = FALSE ) then
+			exit function
+		end if
+		a = a->next
+		b = b->next
+	wend
+
+	'' Both a's and b's last child must be reached at the same time
+	function = ((a = NULL) and (b = NULL))
 end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''

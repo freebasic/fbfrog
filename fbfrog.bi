@@ -537,7 +537,6 @@ type ASTNODE_
 	tk		as integer  '' ASTCLASS_TK
 	paramindex	as integer  '' ASTCLASS_MACROPARAM
 	paramcount	as integer  '' ASTCLASS_PPDEFINE: -1 = #define m, 0 = #define m(), 1 = #define m(a), ...
-	is_defined	as integer  '' ASTCLASS_ID
 
 	'' Child nodes: operands/fields/parameters/...
 	head		as ASTNODE ptr
@@ -567,11 +566,7 @@ declare function astNewCONST _
 		byval f as double, _
 		byval dtype as integer _
 	) as ASTNODE ptr
-declare function astNewID _
-	( _
-		byval id as zstring ptr, _
-		byval is_defined as integer = FALSE _
-	) as ASTNODE ptr
+#define astNewID( id ) astNew( ASTCLASS_ID, id )
 declare function astNewTK _
 	( _
 		byval tk as integer, _
@@ -602,6 +597,7 @@ declare sub astSetType _
 	)
 declare sub astAddComment( byval n as ASTNODE ptr, byval comment as zstring ptr )
 declare function astClone( byval n as ASTNODE ptr ) as ASTNODE ptr
+declare function astIsEqualDecl( byval a as ASTNODE ptr, byval b as ASTNODE ptr ) as integer
 declare function astDumpOne( byval n as ASTNODE ptr ) as string
 declare function astDumpInline( byval n as ASTNODE ptr ) as string
 declare sub astDump( byval n as ASTNODE ptr, byval nestlevel as integer = 0 )
@@ -633,18 +629,14 @@ declare sub ppDividers( )
 declare function hNumberLiteral( byval x as integer ) as ASTNODE ptr
 declare sub ppDirectives1( )
 declare sub ppDirectives2( )
-declare sub ppDirectives3( )
 declare sub ppEvalInit( )
-declare sub ppEvalEnd( )
 declare sub ppMacroBegin( byval id as zstring ptr, byval paramcount as integer )
-declare sub ppMacroToken( byval tk as integer, byval text as zstring ptr )
+declare sub ppMacroToken( byval tk as integer, byval text as zstring ptr = NULL )
 declare sub ppMacroParam( byval index as integer )
 declare sub ppAddSym( byval id as zstring ptr, byval is_defined as integer )
 declare sub ppExpandSym( byval id as zstring ptr )
-declare sub ppSplitElseIfs( )
-declare sub ppEvalIfs( )
-declare sub ppExpand( )
-declare sub ppMergeElseIfs( )
+declare sub ppEval( )
+declare sub ppNoEval( )
 declare function cSkip( byval x as integer ) as integer
 declare function cSkipRev( byval x as integer ) as integer
 declare function cSkipStatement _

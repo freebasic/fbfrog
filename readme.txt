@@ -76,77 +76,14 @@ To do:
     - Ideally the final FB binding itself could be re-imported but that'll be
       more difficult
 
-- should be able to solve the calling conventions problem automatically,
-  because otherwise a human has to check every single function declaration,
-  or make unsafe assumptions...
-	#ifdef _WIN32
-		#define DLL_CALLCONV __stdcall
-	#else
-		#define DLL_CALLCONV
-	#endif
-	void DLL_CALLCONV FreeImage_DeInitialise(void);
-  - Preset tells us that DLL_CALLCONV needs to be expanded
-  - We look for DLL_CALLCONV declaration
-  - And find two, both of which depend on certain #ifs, since they're nested
-    in #ifs
-  - So now we need to parse the (rest of the) header twice, once assuming the
-    #if code path with the one declaration, once for the other
-  - This could be done duplicating the token buffer and removing the other
-    unreachable code paths
-  - Then the remaining #define will automaticaly be the only one
-  - Ultimately this results in multiple slightly different ASTs
-  - Which we need to merge; e.g. if two function declarations differ only in
-    calling convention then we should combine that into one with a conditional
-    calling convention field (depends on the various #if conditions)
-    e.g. list of calling conventions associated with their condition expressions
-
-  a) duplicate token buffers, parse into separate different ASTs, merge ASTs
-     - extract and combine the #if conditions that lead to the target #define,
-       this will be the AST's condition
-     - then solve out all the unreached #if/#else blocks
-  b) copy tokens following multiple possible code paths into each of these code
-     paths, e.g.
-	#ifdef _WIN32
-		#define DLL_CALLCONV __stdcall
-		void DLL_CALLCONV FreeImage_DeInitialise(void);
-	#else
-		#define DLL_CALLCONV
-		void DLL_CALLCONV FreeImage_DeInitialise(void);
-	#endif
-     then such #defines could be solved out trivially again. Requires a "merging
-     back" algorithm of course, but that could be useful, because it would also
-     handle cases such as this:
-	#ifdef _WIN32
-		void __stdcall f(void);
-	#else
-		void f(void);
-	#endif
-
-     2. Trivially expanding the #defines:
-	For each #if/#else block
-		for each directly contained previous #define
-			expand corresponding TK_ID's in the block's trail code
-
-     3. Merging back in the final AST:
-         For each #if/#else block, from inner-most to outer-most:
-             Combine similar AST nodes from #if/#else paths into one node behind
-             the #endif
-
-	this is the same algorithm needed to merge ASTs of different versions...
-
-- macro expansion should build a list of known macros, and add more as #defines
-  are found, and expand on other tokens, instead of looking for #defines and
-  expanding each one separately
-  because we shouldn't expand inside #define bodies, because it might accidentially
-  expand a macro parameter or a TK_ID that will be merged with something.
-  i.e we should expand inside bodies after expanding them, not before.
-  Checking TK_ID's whether they're macro paramters or will be merged could
-  work too but it's more difficult...
-  Of course the question is, can we keep this scoped expansion behaviour (only
-  expanding inside a certain #if/#else/#endif code path when having a list of
-  known #defines...
-  - store #if nesting level on each #define in that list, then it's like a
-    stack: we can remove #defines when leaving the #if block.
+- Should parse headers once for Linux, once for Win32, etc., then combine the
+  resulting ASTs. This is better than duplicating trailing code into #if/#else
+  code paths if those #if/#else blocks contain precious #defines/#undefs,
+  because it eliminates a lot of unteresting special cases.
+      - if we find a precious #define/#undef still in an #if, then oops(),
+        because the #if must be solved out first.
+      - i.e. a single, proper PP pass
+      - except there will still be unsolved #ifs and unexpanded macros...
 
 - re-#defines are allowed in CPP as long as the macro is exactly the same, right?
   need to allow re-#defines, but oops() on invalid ones -> hAreMacrosEqual() function
