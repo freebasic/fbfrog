@@ -912,6 +912,33 @@ private sub hRecordBody( )
 		case TK_END
 			exit do
 
+		'' '\'?
+		case TK_BACKSLASH
+			var xbackslash = record.x
+			record.x += 1
+
+			'' Check for escaped EOL, solve them out
+			'' '\' [Space] EOL
+			if( tkGet( record.x ) = TK_SPACE ) then
+				record.x += 1
+			end if
+
+			if( tkGet( record.x ) = TK_EOL ) then
+				'' Remove the escaped EOL
+				tkRemove( xbackslash, record.x )
+				record.x = xbackslash
+
+				'' Insert a space instead if there is no space yet
+				if( (tkGet( record.x - 1 ) <> TK_SPACE) and _
+				    (tkGet( record.x     ) <> TK_SPACE) ) then
+					tkInsert( record.x, TK_SPACE )
+				end if
+				record.x -= 1
+			else
+				record.x = xbackslash
+				hRecordToken( )
+			end if
+
 		case TK_ID
 			'' Is it one of the #define's parameters?
 			var id = tkGetText( record.x )

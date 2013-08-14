@@ -94,5 +94,3 @@ To do:
   (or perhaps let presets do this)
 
 - ## PP merging should allow TK_ID ## TK_DECNUM, currently it only allows TK_ID ## TK_ID
-
-- escaped PP newlines (\EOL) should be solved out when parsing the macro body
