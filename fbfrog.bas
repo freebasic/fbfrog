@@ -535,11 +535,6 @@ private sub frogEmitFile( byval f as FROGFILE ptr )
 	hRemoveOuterDIVIDERs( f->ast )
 	'astDump( f->ast )
 
-	if( (len( frog.preset ) > 0) and (frog.preset <> "tests") ) then
-		var astdumpfile = pathStripExt( f->normed ) + ".ast.bi"
-		emitFile( astdumpfile, f->ast, TRUE )
-	end if
-
 	emitFile( binormed, f->ast )
 end sub
 

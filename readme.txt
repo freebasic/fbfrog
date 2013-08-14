@@ -58,35 +58,26 @@ Compiling:
 
 To do:
 
-- Consider stopping to bother with preserving commentary, for a pure binding
-  with auto-formatting it's not needed
+- Add some kind of automated formatting. fbfrog should be able to optionally
+  preserve comments and dividers, because that's useful for some headers, but
+  otherwise don't bother.
+
 - Add output directory option
+
 - libzip: zip_source_free() vs. enumconst ZIP_SOURCE_FREE,
           zip_stat_index() vs. #define ZIP_STAT_INDEX
+
 - Allow to presets to download and extract tarballs, and then register some of
   the extracted files as input files for parsing
-- If any files are given on command line, that overrides the preset (if any)
+
 - Support parsing separate library-version-specific files and then combining
   their ASTs with a simple diff algorithm to create a binding that supports
   multiple versions of that library through a version #define
-- Add AST exporting & importing support, so the ASTs of finished bindings could
-  be stored in fbfrog.git, allowing these bindings to easily be extended when
-  new versions of their libraries come out (so fbfrog wouldn't have to re-parse
-  or re-download all the tarballs for previous versions again)
-    - Ideally the final FB binding itself could be re-imported but that'll be
-      more difficult
 
-- Should parse headers once for Linux, once for Win32, etc., then combine the
-  resulting ASTs. This is better than duplicating trailing code into #if/#else
-  code paths if those #if/#else blocks contain precious #defines/#undefs,
-  because it eliminates a lot of unteresting special cases.
-      - if we find a precious #define/#undef still in an #if, then oops(),
-        because the #if must be solved out first.
-      - i.e. a single, proper PP pass
-      - except there will still be unsolved #ifs and unexpanded macros...
-
-- re-#defines are allowed in CPP as long as the macro is exactly the same, right?
-  need to allow re-#defines, but oops() on invalid ones -> hAreMacrosEqual() function
+- Improve FB parser to allow re-importing generated bindings, this could be
+  used to amend bindings much more easily than re-making from scratch (which may
+  require downloading many tarballs for different versions of the library),
+  and it allows modifications made to the binding to be preserved...
 
 - CPP relational BOPs shouldn't just be emitted as FB relational BOPs always,
   because the result values differ (1 vs. -1). This should only be done where

@@ -616,12 +616,7 @@ declare function emitType _
 		byval subtype as ASTNODE ptr, _
 		byval debugdump as integer = FALSE _
 	) as string
-declare sub emitFile _
-	( _
-		byref filename as string, _
-		byval ast as ASTNODE ptr, _
-		byval export_ast as integer = FALSE _
-	)
+declare sub emitFile( byref filename as string, byval ast as ASTNODE ptr )
 declare function importFile( byref file as string ) as ASTNODE ptr
 
 declare sub ppComments( )

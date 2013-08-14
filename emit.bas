@@ -114,7 +114,7 @@ function emitType _
 end function
 
 namespace emit
-	dim shared as integer indent, export_ast, fo
+	dim shared as integer indent, fo
 end namespace
 
 private sub emitLine( byref ln as string )
@@ -277,17 +277,8 @@ private function emitAst _
 		emitLine( "#undef " + emitAst( n->head ) )
 
 	case ASTCLASS_PPUNKNOWN
-		if( emit.export_ast ) then
-			emitLine( "ppunknown" )
-			emit.indent += 1
-		else
-			emitLine( "'' TODO: unknown PP directive" )
-		end if
+		emitLine( "'' TODO: unknown PP directive" )
 		emitLine( emitAst( n->head ) )
-		if( emit.export_ast ) then
-			emit.indent -= 1
-			emitLine( "end ppunknown" )
-		end if
 
 	case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
 		dim as string compoundkeyword
@@ -336,12 +327,8 @@ private function emitAst _
 		elseif( n->attrib and ASTATTRIB_PRIVATE ) then
 			emitLine( "dim shared " + hIdAndArray( n ) + " as " + emitType( n->dtype, n->subtype ) )
 		else
-			if( emit.export_ast ) then
-				emitLine( "dim extern " + hIdAndArray( n ) + " as " + emitType( n->dtype, n->subtype ) )
-			else
-				emitLine( "extern     " + hIdAndArray( n ) + " as " + emitType( n->dtype, n->subtype ) )
-				emitLine( "dim shared " + hIdAndArray( n ) + " as " + emitType( n->dtype, n->subtype ) )
-			end if
+			emitLine( "extern     " + hIdAndArray( n ) + " as " + emitType( n->dtype, n->subtype ) )
+			emitLine( "dim shared " + hIdAndArray( n ) + " as " + emitType( n->dtype, n->subtype ) )
 		end if
 
 	case ASTCLASS_FIELD
@@ -414,17 +401,8 @@ private function emitAst _
 		s += emitAst( n->tail, FALSE )
 
 	case ASTCLASS_UNKNOWN
-		if( emit.export_ast ) then
-			emitLine( "unknown" )
-			emit.indent += 1
-		else
-			emitLine( "'' TODO: unknown construct" )
-		end if
+		emitLine( "'' TODO: unknown construct" )
 		emitLine( emitAst( n->head ) )
-		if( emit.export_ast ) then
-			emit.indent -= 1
-			emitLine( "end unknown" )
-		end if
 
 	case ASTCLASS_MACROPARAM
 		s += *n->text
@@ -540,15 +518,8 @@ private function emitAst _
 	function = s
 end function
 
-sub emitFile _
-	( _
-		byref filename as string, _
-		byval ast as ASTNODE ptr, _
-		byval export_ast as integer _
-	)
-
+sub emitFile( byref filename as string, byval ast as ASTNODE ptr )
 	emit.indent = 0
-	emit.export_ast = export_ast
 	emit.fo = freefile( )
 	if( open( filename, for output, as #emit.fo ) ) then
 		oops( "could not open output file: '" + filename + "'" )
