@@ -93,3 +93,12 @@ dim shared a as const long ptr ptr
 dim shared a as const long ptr const ptr
 dim shared a as const long const ptr ptr
 dim shared a as const long const ptr const ptr
+
+dim shared p as long ptr
+dim shared p as long ptr
+dim shared p as long ptr
+dim shared p as long ptr ptr
+dim shared p as long ptr ptr
+dim shared p as long ptr ptr
+dim shared p as long const ptr const ptr
+dim shared p as long const ptr const ptr

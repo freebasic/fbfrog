@@ -1041,12 +1041,19 @@ private function cDeclarator _
 		dtype = typeAddrOf( dtype )
 		parse.x = cSkip( parse.x )
 
-		'' (CONST)*
-		while( tkGet( parse.x ) = KW_CONST )
-			procptrdtype = typeSetIsConst( procptrdtype )
-			dtype = typeSetIsConst( dtype )
-			parse.x = cSkip( parse.x )
-		wend
+		'' (CONST|RESTRICT)*
+		do
+			select case( tkGet( parse.x ) )
+			case KW_CONST
+				procptrdtype = typeSetIsConst( procptrdtype )
+				dtype = typeSetIsConst( dtype )
+				parse.x = cSkip( parse.x )
+			case KW_RESTRICT, KW___RESTRICT, KW___RESTRICT__
+				parse.x = cSkip( parse.x )
+			case else
+				exit do
+			end select
+		loop
 	wend
 
 	''    '(' Declarator ')'    |    [Identifier]

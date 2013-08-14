@@ -100,6 +100,8 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	( @"inline"  , @"kw" ), _
 	( @"register", @"kw" ), _
 	( @"restrict", @"kw" ), _
+	( @"__restrict", @"kw" ), _
+	( @"__restrict__", @"kw" ), _
 	( @"signed"  , @"kw" ), _
 	( @"struct"  , @"kw" ), _
 	( @"switch"  , @"kw" ), _

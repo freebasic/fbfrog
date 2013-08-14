@@ -86,3 +86,12 @@ static const int const *       *       a; // const int ptr ptr
 static const int const *       * const a; // const int ptr const ptr
 static const int const * const *       a; // const int const ptr ptr
 static const int const * const * const a; // const int const ptr const ptr
+
+static int * restrict p;
+static int * __restrict p;
+static int * __restrict__ p;
+static int * * restrict p;
+static int * restrict * p;
+static int * restrict * restrict p;
+static int * const restrict * const p;
+static int * restrict const * const p;
