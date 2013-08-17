@@ -70,10 +70,6 @@ To do:
 - Allow to presets to download and extract tarballs, and then register some of
   the extracted files as input files for parsing
 
-- Support parsing separate library-version-specific files and then combining
-  their ASTs with a simple diff algorithm to create a binding that supports
-  multiple versions of that library through a version #define
-
 - Improve FB parser to allow re-importing generated bindings, this could be
   used to amend bindings much more easily than re-making from scratch (which may
   require downloading many tarballs for different versions of the library),

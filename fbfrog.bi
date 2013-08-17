@@ -438,6 +438,7 @@ declare function typeIsFloat( byval dtype as integer ) as integer
 enum
 	ASTCLASS_NOP = 0
 	ASTCLASS_GROUP
+	ASTCLASS_VERSION
 	ASTCLASS_DIVIDER
 
 	ASTCLASS_PPINCLUDE
@@ -530,7 +531,9 @@ type ASTNODE_
 	subtype		as ASTNODE ptr
 	array		as ASTNODE ptr '' ARRAY holding DIMENSIONs, or NULL
 
-	'' PARAM initializer, macro body
+	'' PARAM: initializer
+	'' PPDEFINE: macro body
+	'' VERSION: version information (a GROUP holding a list of CONSTs)
 	initializer	as ASTNODE ptr
 
 	'' Source location where this declaration/statement was found
@@ -567,6 +570,17 @@ declare function astNew overload _
 		byval class_ as integer, _
 		byval text as zstring ptr _
 	) as ASTNODE ptr
+declare function astNewVERSION overload _
+	( _
+		byval child as ASTNODE ptr, _
+		byval versionnum as integer _
+	) as ASTNODE ptr
+declare function astNewVERSION overload _
+	( _
+		byval child as ASTNODE ptr, _
+		byval version1 as ASTNODE ptr, _
+		byval version2 as ASTNODE ptr _
+	) as ASTNODE ptr
 declare function astNewCONST _
 	( _
 		byval i as longint, _
@@ -582,6 +596,13 @@ declare function astNewTK _
 declare function astNewMACROPARAM( byval paramindex as integer ) as ASTNODE ptr
 declare sub astDelete( byval n as ASTNODE ptr )
 declare sub astAddChild( byval parent as ASTNODE ptr, byval n as ASTNODE ptr )
+declare sub astCloneAndAddAllChildrenOf( byval d as ASTNODE ptr, byval s as ASTNODE ptr )
+declare sub astAddVersionedChild( byval n as ASTNODE ptr, byval child as ASTNODE ptr )
+declare function astIsChildOf _
+	( _
+		byval parent as ASTNODE ptr, _
+		byval lookfor as ASTNODE ptr _
+	) as integer
 declare sub astAddChildBefore _
 	( _
 		byval parent as ASTNODE ptr, _

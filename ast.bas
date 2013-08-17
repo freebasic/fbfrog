@@ -35,6 +35,7 @@ dim shared as ASTNODEINFO astnodeinfo(0 to ...) = _
 { _
 	( "nop"      ), _
 	( "group"    ), _
+	( "version"  ), _
 	( "divider"  ), _
 	( "#include" ), _
 	( "#define"  ), _
@@ -127,6 +128,48 @@ function astNew overload _
 	function = n
 end function
 
+private function astNewVERSION overload( ) as ASTNODE ptr
+	var n = astNew( ASTCLASS_VERSION )
+	n->initializer = astNew( ASTCLASS_GROUP )
+	function = n
+end function
+
+function astNewVERSION overload _
+	( _
+		byval child as ASTNODE ptr, _
+		byval versionnum as integer _
+	) as ASTNODE ptr
+
+	var n = astNewVERSION( )
+
+	astAddChild( n->initializer, astNewCONST( versionnum, 0, TYPE_INTEGER ) )
+	astAddChild( n, child )
+
+	function = n
+end function
+
+function astNewVERSION overload _
+	( _
+		byval child as ASTNODE ptr, _
+		byval version1 as ASTNODE ptr, _
+		byval version2 as ASTNODE ptr _
+	) as ASTNODE ptr
+
+	var n = astNewVERSION( )
+
+	assert( version1->class = ASTCLASS_VERSION )
+	astCloneAndAddAllChildrenOf( n->initializer, version1->initializer )
+
+	if( version2 ) then
+		assert( version2->class = ASTCLASS_VERSION )
+		astCloneAndAddAllChildrenOf( n->initializer, version2->initializer )
+	end if
+
+	astAddChild( n, child )
+
+	function = n
+end function
+
 function astNewCONST _
 	( _
 		byval i as longint, _
@@ -215,7 +258,34 @@ sub astAddChild( byval parent as ASTNODE ptr, byval n as ASTNODE ptr )
 	end if
 end sub
 
-private function hIsChildOf _
+sub astCloneAndAddAllChildrenOf( byval d as ASTNODE ptr, byval s as ASTNODE ptr )
+	var child = s->head
+	while( child )
+		astAddChild( d, astClone( child ) )
+		child = child->next
+	wend
+end sub
+
+sub astAddVersionedChild( byval n as ASTNODE ptr, byval child as ASTNODE ptr )
+	assert( n->class = ASTCLASS_GROUP )
+	assert( child->class = ASTCLASS_VERSION )
+
+	'' If the tree's last VERSION node has the same version numbers, then
+	'' just add the new children nodes to that instead of opening a new
+	'' separate VERSION node.
+	if( n->tail ) then
+		assert( n->tail->class = ASTCLASS_VERSION )
+		if( astIsEqualDecl( n->tail->initializer, child->initializer ) ) then
+			astCloneAndAddAllChildrenOf( n->tail, child )
+			astDelete( child )
+			exit sub
+		end if
+	end if
+
+	astAddChild( n, child )
+end sub
+
+function astIsChildOf _
 	( _
 		byval parent as ASTNODE ptr, _
 		byval lookfor as ASTNODE ptr _
@@ -240,7 +310,7 @@ sub astAddChildBefore _
 	)
 
 	if( ref ) then
-		assert( hIsChildOf( parent, ref ) )
+		assert( astIsChildOf( parent, ref ) )
 		if( ref->prev ) then
 			ref->prev->next = n
 		else
@@ -269,7 +339,7 @@ function astReplaceChild _
 		byval b as ASTNODE ptr _
 	) as ASTNODE ptr
 
-	assert( hIsChildOf( parent, a ) )
+	assert( astIsChildOf( parent, a ) )
 	astAddChildBefore( parent, b, a )
 	astRemoveChild( parent, a )
 
@@ -277,7 +347,7 @@ function astReplaceChild _
 end function
 
 sub astRemoveChild( byval parent as ASTNODE ptr, byval a as ASTNODE ptr )
-	assert( hIsChildOf( parent, a ) )
+	assert( astIsChildOf( parent, a ) )
 
 	if( a->prev ) then
 		a->prev->next = a->next

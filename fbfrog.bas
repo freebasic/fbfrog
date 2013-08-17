@@ -456,45 +456,6 @@ private sub hRemovePPIndentFromIncludeGuard( byval n as ASTNODE ptr )
 	end if
 end sub
 
-private sub hMergeGROUPs( byval n as ASTNODE ptr )
-	var child = n->head
-	while( child )
-		var nxt = child->next
-
-		if( child->class = ASTCLASS_GROUP ) then
-			var groupchild = child->head
-			var first = groupchild
-			while( groupchild )
-				astAddChildBefore( n, astClone( groupchild ), child )
-				groupchild = groupchild->next
-			wend
-
-			astRemoveChild( n, child )
-
-			'' Work on the GROUP's children too (if any),
-			'' since it may contain nested GROUPs
-			if( first ) then
-				nxt = first
-			end if
-		end if
-
-		child = nxt
-	wend
-end sub
-
-private sub hRemoveNOPs( byval n as ASTNODE ptr )
-	var child = n->head
-	while( child )
-		var nxt = child->next
-
-		if( child->class = ASTCLASS_NOP ) then
-			astRemoveChild( n, child )
-		end if
-
-		child = nxt
-	wend
-end sub
-
 private sub hMergeDIVIDERs( byval n as ASTNODE ptr )
 	var child = n->head
 	while( child )
@@ -525,18 +486,592 @@ private sub hRemoveOuterDIVIDERs( byval n as ASTNODE ptr )
 	end if
 end sub
 
-private sub frogEmitFile( byval f as FROGFILE ptr )
-	var binormed = pathStripExt( f->normed ) + ".bi"
-	var bipretty = pathStripExt( f->pretty ) + ".bi"
-	print "emitting: " + bipretty
-	hMergeGROUPs( f->ast )
-	hRemoveNOPs( f->ast )
-	hMergeDIVIDERs( f->ast )
-	hRemoveOuterDIVIDERs( f->ast )
-	'astDump( f->ast )
+private function hFindNthDecl _
+	( _
+		byval ast as ASTNODE ptr, _
+		byval index as integer, _
+		byref version as ASTNODE ptr _
+	) as ASTNODE ptr
 
-	emitFile( binormed, f->ast )
+	if( ast = NULL ) then
+		exit function
+	end if
+
+	version = ast
+	if( version->class = ASTCLASS_GROUP ) then
+		version = version->head
+		if( version = NULL ) then
+			exit function
+		end if
+	end if
+
+	'' For each VERSION...
+	do
+		assert( version->class = ASTCLASS_VERSION )
+
+		'' For each declaration in that VERSION...
+		var decl = version->head
+		while( decl )
+			if( index <= 0 ) then
+				return decl
+			end if
+			index -= 1
+			decl = decl->next
+		wend
+
+		version = version->next
+	loop while( version )
+
+end function
+
+private function hAstCountDecls( byval n as ASTNODE ptr ) as integer
+	if( n = NULL ) then
+		exit function
+	end if
+
+	var version = n
+	if( version->class = ASTCLASS_GROUP ) then
+		version = version->head
+		if( version = NULL ) then
+			exit function
+		end if
+	end if
+
+	'' For each VERSION...
+	var count = 0
+	do
+		assert( version->class = ASTCLASS_VERSION )
+
+		'' For each declaration in that VERSION...
+		var decl = version->head
+		while( decl )
+			count += 1
+			decl = decl->next
+		wend
+
+		version = version->next
+	loop while( version )
+
+	function = count
+end function
+
+private sub hAddDecl _
+	( _
+		byval c as ASTNODE ptr, _
+		byval t as ASTNODE ptr, _
+		byval i as integer _
+	)
+
+	dim as ASTNODE ptr tversion
+	var tdecl = hFindNthDecl( t, i, tversion )
+
+	astAddVersionedChild( c, astNewVERSION( astClone( tdecl ), tversion, NULL ) )
+
 end sub
+
+private sub hAddMergedDecl _
+	( _
+		byval c as ASTNODE ptr, _
+		byval a as ASTNODE ptr, _
+		byval ai as integer, _
+		byval b as ASTNODE ptr, _
+		byval bi as integer _
+	)
+
+	dim as ASTNODE ptr aversion, bversion
+	var adecl = hFindNthDecl( a, ai, aversion )
+	var bdecl = hFindNthDecl( b, bi, bversion )
+
+	astAddVersionedChild( c, astNewVERSION( astClone( adecl ), aversion, bversion ) )
+
+end sub
+
+'' Determine longest common substring, by building an l x r matrix:
+''
+'' if l[i] = r[j] then
+''     if( i-1 or j-1 would be out-of-bounds ) then
+''         matrix[i][j] = 1
+''     else
+''         matrix[i][j] = matrix[i-1][j-1] + 1
+''     end if
+'' else
+''     matrix[i][j] = 0
+'' end if
+''
+'' 0 = characters not equal
+'' 1 = characters equal
+'' 2 = characters equal here, and also at one position to top/left
+'' ...
+'' i.e. the non-zero diagonal parts in the matrix determine the common
+'' substrings.
+''
+'' Some examples:
+''
+''             Longest common substring:
+''   b a a c           b a a c
+'' a 0 1 1 0         a   1
+'' a 0 1 2 0         a     2
+'' b 1 0 0 0         b
+'' c 0 0 0 1         c
+''
+''   c a a b           c a a b
+'' a 0 1 1 0         a   1
+'' a 0 1 2 0         a     2
+'' b 1 0 0 3         b       3
+'' c 1 0 0 0         c
+''
+''   b a b c           b a b c
+'' c 0 1 0 1         c
+'' a 0 1 0 0         a   1
+'' b 1 0 2 0         b     2
+'' c 0 0 0 3         c       3
+''
+sub hAstLCS _
+	( _
+		byval l as ASTNODE ptr, _
+		byval lfirst as integer, _
+		byval llast as integer, _
+		byref llcsfirst as integer, _
+		byref llcslast as integer, _
+		byval r as ASTNODE ptr, _
+		byval rfirst as integer, _
+		byval rlast as integer, _
+		byref rlcsfirst as integer, _
+		byref rlcslast as integer _
+	)
+
+	var llen = llast - lfirst + 1
+	var rlen = rlast - rfirst + 1
+	var max = 0, maxi = 0, maxj = 0
+
+	dim as integer ptr matrix = callocate( sizeof( integer ) * llen * rlen )
+	for i as integer = 0 to llen-1
+		for j as integer = 0 to rlen-1
+			var newval = 0
+			if( astIsEqualDecl( hFindNthDecl( l, lfirst + i, NULL ), hFindNthDecl( r, rfirst + j, NULL ) ) ) then
+				if( (i = 0) or (j = 0) ) then
+					newval = 1
+				else
+					newval = matrix[(i-1)+((j-1)*llen)] + 1
+				end if
+			end if
+			if( max < newval ) then
+				max = newval
+				maxi = i
+				maxj = j
+			end if
+			matrix[i+(j*llen)] = newval
+		next
+	next
+
+	llcsfirst = lfirst + maxi - max + 1
+	rlcsfirst = rfirst + maxj - max + 1
+	llcslast  = llcsfirst + max - 1
+	rlcslast  = rlcsfirst + max - 1
+end sub
+
+private sub hAstMerge _
+	( _
+		byval c as ASTNODE ptr, _
+		byval a as ASTNODE ptr, _
+		byval afirst as integer, _
+		byval alast as integer, _
+		byval b as ASTNODE ptr, _
+		byval bfirst as integer, _
+		byval blast as integer _
+	)
+
+	static reclevel as integer
+	#if 0
+		#define DEBUG( x ) print string( reclevel + 1, " " ) & x
+	#else
+		#define DEBUG( x )
+	#endif
+
+	DEBUG( "hAstMerge( reclevel=" & reclevel & ", a=" & afirst & ".." & alast & ", b=" & bfirst & ".." & blast & " )" )
+
+	'' No longest common substring possible?
+	if( afirst > alast ) then
+		'' Add bfirst..blast to result
+		DEBUG( "no LCS possible due to a, adding b as-is" )
+		for i as integer = bfirst to blast
+			hAddDecl( c, b, i )
+		next
+		exit sub
+	elseif( bfirst > blast ) then
+		'' Add afirst..alast to result
+		DEBUG( "no LCS possible due to b, adding a as-is" )
+		for i as integer = afirst to alast
+			hAddDecl( c, a, i )
+		next
+		exit sub
+	end if
+
+	'' Find longest common substring
+	dim as integer alcsfirst, alcslast, blcsfirst, blcslast
+	hAstLCS( a, afirst, alast, alcsfirst, alcslast, _
+	         b, bfirst, blast, blcsfirst, blcslast )
+	DEBUG( "LCS: a=" & alcsfirst & ".." & alcslast & ", b=" & blcsfirst & ".." & blcslast )
+
+	'' No LCS found?
+	if( alcsfirst > alcslast ) then
+		'' Add a first, then b. This order makes the most sense: keeping
+		'' the old declarations at the top, add new ones to the bottom.
+		DEBUG( "no LCS found, adding both as-is" )
+		for i as integer = afirst to alast
+			hAddDecl( c, a, i )
+		next
+		for i as integer = bfirst to blast
+			hAddDecl( c, b, i )
+		next
+		exit sub
+	end if
+
+	'' Do both sides have decls before the LCS?
+	if( (alcsfirst > afirst) and (blcsfirst > bfirst) ) then
+		'' Do LCS on that recursively
+		DEBUG( "both sides have decls before LCS, recursing" )
+		reclevel += 1
+		hAstMerge( c, a, afirst, alcsfirst - 1, b, bfirst, blcsfirst - 1 )
+		reclevel -= 1
+	elseif( alcsfirst > afirst ) then
+		'' Only a has decls before the LCS; copy them into result first
+		DEBUG( "only a has decls before LCS" )
+		for i as integer = afirst to alcsfirst - 1
+			hAddDecl( c, a, i )
+		next
+	elseif( blcsfirst > bfirst ) then
+		'' Only b has decls before the LCS; copy them into result first
+		DEBUG( "only b has decls before LCS" )
+		for i as integer = bfirst to blcsfirst - 1
+			hAddDecl( c, b, i )
+		next
+	end if
+
+	'' Add LCS
+	DEBUG( "adding LCS" )
+	assert( (alcslast - alcsfirst + 1) = (blcslast - blcsfirst + 1) )
+	for i as integer = 0 to (alcslast - alcsfirst + 1)-1
+		hAddMergedDecl( c, a, alcsfirst + i, b, blcsfirst + i )
+	next
+
+	'' Do both sides have decls behind the LCS?
+	if( (alcslast < alast) and (blcslast < blast) ) then
+		'' Do LCS on that recursively
+		DEBUG( "both sides have decls behind LCS, recursing" )
+		reclevel += 1
+		hAstMerge( c, a, alcslast + 1, alast, b, blcslast + 1, blast )
+		reclevel -= 1
+	elseif( alcslast < alast ) then
+		'' Only a has decls behind the LCS
+		DEBUG( "only a has decls behind LCS" )
+		for i as integer = alcslast + 1 to alast
+			hAddDecl( c, a, i )
+		next
+	elseif( blcslast < blast ) then
+		'' Only b has decls behind the LCS
+		DEBUG( "only b has decls behind LCS" )
+		for i as integer = blcslast + 1 to blast
+			hAddDecl( c, b, i )
+		next
+	end if
+
+end sub
+
+private function hMergeVersions _
+	( _
+		byval a as ASTNODE ptr, _
+		byval b as ASTNODE ptr _
+	) as ASTNODE ptr
+
+	'' a = existing GROUP( ) holding one or more VERSIONs( )
+	'' b = new VERSION( ) that should be integrated into a
+	'' c = resulting GROUP( ) holding one or more VERSIONs( )
+
+	if( b = NULL ) then
+		return astClone( a )
+	end if
+
+	var c = astNew( ASTCLASS_GROUP )
+
+	if( a = NULL ) then
+		astAddChild( c, astClone( b ) )
+		return c
+	end if
+
+	#if 0
+		print "a:"
+		astDump( a, 1 )
+		print "b:"
+		astDump( b, 1 )
+	#endif
+
+	assert( a->class = ASTCLASS_GROUP )
+	assert( a->head->class = ASTCLASS_VERSION )
+	assert( b->class = ASTCLASS_VERSION )
+
+	hAstMerge( c, a, 0, hAstCountDecls( a ) - 1, _
+	              b, 0, hAstCountDecls( b ) - 1 )
+
+	#if 0
+		print "c:"
+		astDump( c, 1 )
+	#endif
+
+	function = c
+end function
+
+private function frogParse _
+	( _
+		byval f as FROGFILE ptr, _
+		byval version as integer _
+	) as ASTNODE ptr
+
+	tkInit( )
+	lexLoadFile( 0, f->normed )
+
+	ppComments( )
+	ppDividers( )
+	ppDirectives1( )
+
+	'' Expand #includes if wanted and possible
+	if( frog.merge ) then
+		var x = 0
+		while( tkGet( x ) <> TK_EOF )
+
+			'' #include?
+			if( tkGet( x ) = TK_PPINCLUDE ) then
+				var t = tkGetAst( x )
+
+				var incfile = *t->text
+				var incf = frogAddFile( f, incfile )
+				t->includefile = incf
+
+				if( (incf->refcount = 1) and (not incf->missing) ) then
+					'' Replace #include by included file's content
+					tkRemove( x, x )
+					x -= 1
+					lexLoadFile( x, incf->normed )
+					x -= 1
+					print "(merged in: " + incf->pretty + ")"
+				end if
+			end if
+
+			x += 1
+		wend
+
+		'' Parse PP directives etc. again after new tokens were loaded
+		ppComments( )
+		ppDividers( )
+		ppDirectives1( )
+	end if
+
+	ppDirectives2( )
+
+	''
+	'' Macro expansion, #if evaluation
+	''
+	var do_pp = TRUE
+	select case( frog.preset )
+	case "tests"
+		do_pp and= not strMatches( "tests/*", f->pretty )
+		do_pp or= strMatches( "tests/pp/eval-*", f->pretty )
+		do_pp or= strMatches( "tests/pp/expand/*", f->pretty )
+	end select
+
+	if( do_pp ) then
+		ppEvalInit( )
+
+		select case( frog.preset )
+		case "tests"
+			ppExpandSym( "EXPANDTHIS" )
+			ppExpandSym( "EXPANDME1" )
+			ppExpandSym( "EXPANDME2" )
+			ppExpandSym( "EXPANDME3" )
+			ppExpandSym( "EXPANDME4" )
+			ppExpandSym( "EXPANDME5" )
+			ppExpandSym( "EXPANDME6" )
+			ppAddSym( "KNOWNDEFINED1", TRUE )
+			ppAddSym( "KNOWNDEFINED2", TRUE )
+			ppAddSym( "KNOWNUNDEFINED1", FALSE )
+			ppAddSym( "KNOWNUNDEFINED2", FALSE )
+		case "test"
+			ppMacroBegin( "TEST", -1 )
+			ppMacroToken( TK_DECNUM, str( version ) )
+		case "zip"
+			ppAddSym( "ZIP_EXTERN", TRUE )
+			ppAddSym( "__cplusplus", FALSE )
+			ppAddSym( "ZIP_DISABLE_DEPRECATED", FALSE )
+			ppAddSym( "_HAD_ZIP_H", FALSE )
+			ppAddSym( "_HAD_ZIPCONF_H", FALSE )
+		case "png"
+			ppAddSym( "__cplusplus", FALSE )
+			ppAddSym( "PNG_H", FALSE )
+			ppAddSym( "PNGCONF_H", FALSE )
+			ppAddSym( "PNGLCONF_H", FALSE )
+
+			ppAddSym( "PNG_VERSION_INFO_ONLY", FALSE )
+			ppAddSym( "PNG_BUILDING_SYMBOL_TABLE", FALSE )
+			ppAddSym( "PNG_USE_READ_MACROS", FALSE )
+			ppAddSym( "PNG_NO_USE_READ_MACROS", TRUE )
+			ppAddSym( "PNG_NO_PEDANTIC_WARNINGS", FALSE )
+			ppAddSym( "PNG_PEDANTIC_WARNINGS_SUPPORTED", FALSE )
+			ppAddSym( "PNG_SMALL_SIZE_T", FALSE )
+			ppAddSym( "PNG_STDIO_SUPPORTED", TRUE )
+			ppAddSym( "PNG_FLOATING_POINT_SUPPORTED", TRUE )
+			ppAddSym( "PNG_TEXT_SUPPORTED", TRUE )
+			ppAddSym( "PNG_STORE_UNKNOWN_CHUNKS_SUPPORTED", TRUE )
+			ppAddSym( "PNG_PROGRESSIVE_READ_SUPPORTED", TRUE )
+			ppAddSym( "PNG_READ_USER_TRANSFORM_SUPPORTED", TRUE )
+			ppAddSym( "PNG_WRITE_USER_TRANSFORM_SUPPORTED", TRUE )
+			ppAddSym( "PNG_USER_CHUNKS_SUPPORTED", TRUE )
+			ppAddSym( "PNG_UNKNOWN_CHUNKS_SUPPORTED", TRUE )
+			ppAddSym( "PNG_SETJMP_SUPPORTED", TRUE )
+			ppAddSym( "PNG_USER_MEM_SUPPORTED", TRUE )
+			ppAddSym( "PNG_SAFE_LIMITS_SUPPORTED", FALSE )
+
+			ppMacroBegin( "CHAR_BIT", -1 )
+			ppMacroToken( TK_DECNUM, "8" )
+
+			ppMacroBegin( "UCHAR_MAX", -1 )
+			ppMacroToken( TK_DECNUM, "255" )
+
+			ppMacroBegin( "SHRT_MIN", -1 )
+			ppMacroToken( TK_MINUS )
+			ppMacroToken( TK_DECNUM, str( &h8000 ) )
+
+			ppMacroBegin( "SHRT_MAX", -1 )
+			ppMacroToken( TK_DECNUM, str( &h7FFF ) )
+
+			ppMacroBegin( "USHRT_MAX", -1 )
+			ppMacroToken( TK_DECNUM, str( &hFFFF ) )
+
+			ppMacroBegin( "INT_MIN", -1 )
+			ppMacroToken( TK_MINUS )
+			ppMacroToken( TK_DECNUM, str( &h80000000ul ) )
+
+			ppMacroBegin( "INT_MAX", -1 )
+			ppMacroToken( TK_DECNUM, str( &h7FFFFFFFul ) )
+
+			ppMacroBegin( "UINT_MAX", -1 )
+			ppMacroToken( TK_DECNUM, str( &hFFFFFFFFul ) )
+
+			ppMacroBegin( "LONG_MIN", -1 )
+			ppMacroToken( TK_MINUS )
+			ppMacroToken( TK_DECNUM, str( &h80000000ul ) )
+
+			ppMacroBegin( "LONG_MAX", -1 )
+			ppMacroToken( TK_DECNUM, str( &h7FFFFFFFul ) )
+
+			ppMacroBegin( "ULONG_MAX", -1 )
+			ppMacroToken( TK_DECNUM, str( &hFFFFFFFFul ) )
+
+			ppMacroBegin( "__GNUC__", -1 )
+			ppMacroToken( TK_DECNUM, "4" )
+			ppAddSym( "_MSC_VER", FALSE )
+			ppAddSym( "__BORLANDC__", FALSE )
+			ppAddSym( "__IBMC__", FALSE )
+			ppAddSym( "__IBMCPP__", FALSE )
+			ppAddSym( "__OS2__", FALSE )
+			ppAddSym( "__TURBOC__", FALSE )
+			ppAddSym( "__FLAT__", FALSE )
+			ppAddSym( "MAXSEG_64K", FALSE )
+
+			ppAddSym( "_Windows", FALSE )
+			ppAddSym( "_WINDOWS", FALSE )
+			ppAddSym( "__WIN32__", FALSE )
+			ppAddSym( "WIN32", FALSE )
+			ppAddSym( "__CYGWIN__", FALSE )
+
+			ppAddSym( "_WIN32", FALSE )
+			ppAddSym( "PNG_USE_DLL", FALSE )
+			ppAddSym( "PNG_DLL_IMPORT", FALSE )
+
+			ppAddSym( "PNGARG", FALSE )
+			ppAddSym( "PNG_USER_PRIVATEBUILD", FALSE )
+			ppAddSym( "PNG_LIBPNG_SPECIALBUILD", FALSE )
+			ppAddSym( "PNGAPI", FALSE )
+			ppAddSym( "PNGCAPI", FALSE )
+			ppAddSym( "PNGCBAPI", FALSE )
+			ppAddSym( "PNG_IMPEXP", FALSE )
+			ppAddSym( "PNG_FUNCTION", FALSE )
+			ppAddSym( "PNG_EXPORTA", FALSE )
+			ppAddSym( "PNG_EXPORT_TYPE", FALSE )
+			ppAddSym( "PNG_REMOVED", FALSE )
+			ppAddSym( "PNG_CALLBACK", FALSE )
+			ppAddSym( "PNG_FP_EXPORT", FALSE )
+			ppAddSym( "PNG_FIXED_EXPORT", FALSE )
+			ppAddSym( "PNG_RESTRICT", FALSE )
+			ppAddSym( "PNG_ALLOCATED", FALSE )
+			ppAddSym( "PNG_NORETURN", FALSE )
+			ppAddSym( "PNG_DEPRECATED", FALSE )
+			ppAddSym( "PNG_PRIVATE", FALSE )
+			ppAddSym( "PNG_USE_RESULT", FALSE )
+			ppAddSym( "PNG_EXPORT_LAST_ORDINAL", FALSE )
+
+			ppExpandSym( "PNG_API_RULE" )
+			ppExpandSym( "PNG_EXPORT" )
+			ppExpandSym( "PNG_EXPORTA" )
+			ppExpandSym( "PNG_CALLBACK" )
+			ppExpandSym( "PNG_RESTRICT" )
+			ppExpandSym( "PNG_FP_EXPORT" )
+			ppExpandSym( "PNG_FIXED_EXPORT" )
+			ppExpandSym( "PNG_EXPORT_TYPE" )
+			ppExpandSym( "PNG_EMPTY" )
+			ppExpandSym( "PNG_IMPEXP" )
+			ppExpandSym( "PNGAPI" )
+			ppExpandSym( "PNGCAPI" )
+			ppExpandSym( "PNGCBAPI" )
+			ppExpandSym( "PNGARG" )
+			ppExpandSym( "PNG_FUNCTION" )
+			ppExpandSym( "PNG_ALLOCATED" )
+			ppExpandSym( "PNG_NORETURN" )
+			ppExpandSym( "PNG_DEPRECATED" )
+			ppExpandSym( "PNG_REMOVED" )
+
+		end select
+
+		ppEval( )
+	else
+		ppNoEval( )
+	end if
+
+	'' Parse C constructs
+	var ast = cToplevel( )
+
+	tkEnd( )
+
+	''
+	'' Work on the AST
+	''
+	select case( frog.preset )
+	case "zip"
+		hRemoveNode( ast, ASTCLASS_PPDEFINE, "_HAD_ZIP_H" )
+		hRemoveNode( ast, ASTCLASS_PPDEFINE, "_HAD_ZIPCONF_H" )
+	case "png"
+		hRemoveNode( ast, ASTCLASS_PPDEFINE, "PNG_H" )
+		hRemoveNode( ast, ASTCLASS_PPDEFINE, "PNGCONF_H" )
+		hRemoveNode( ast, ASTCLASS_PPDEFINE, "PNGLCONF_H" )
+		hRemoveNode( ast, ASTCLASS_PPDEFINE, "PNG_CONST" )
+	end select
+
+	hFixArrayParams( ast )
+	hRemoveRedundantTypedefs( ast )
+
+	hSetPPIndentAttrib( ast, TRUE )
+	hRemovePPIndentFromIncludeGuard( ast )
+	select case( frog.preset )
+	case "tests"
+		if( strMatches( "tests/pp/expr-*", f->pretty ) ) then
+			hSetPPIndentAttrib( ast, FALSE )
+		end if
+	end select
+
+	hMergeDIVIDERs( ast )
+	hRemoveOuterDIVIDERs( ast )
+
+	function = ast
+end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
@@ -636,264 +1171,12 @@ end sub
 		if( (not f->missing) and (f->refcount <> 1) ) then
 			print "parsing: ";f->pretty
 
-			''
-			'' Load main file into token buffer
-			''
-			tkInit( )
-			lexLoadFile( 0, f->normed )
-
-			''
-			'' Some white-space preprocessing
-			''
-			ppComments( )
-			ppDividers( )
-
-			''
-			'' Parse PP directives
-			''
-			ppDirectives1( )
-
-			''
-			'' Expand #includes if wanted and possible
-			''
-			if( frog.merge ) then
-				var x = 0
-				while( tkGet( x ) <> TK_EOF )
-
-					'' #include?
-					if( tkGet( x ) = TK_PPINCLUDE ) then
-						var t = tkGetAst( x )
-
-						var incfile = *t->text
-						var incf = frogAddFile( f, incfile )
-						t->includefile = incf
-
-						if( (incf->refcount = 1) and (not incf->missing) ) then
-							''
-							'' Replace #include by included file's content
-							''
-
-							tkRemove( x, x )
-							x -= 1
-
-							lexLoadFile( x, incf->normed )
-							x -= 1
-
-							print "(merged in: " + incf->pretty + ")"
-						end if
-					end if
-
-					x += 1
-				wend
-
-				''
-				'' Parse PP directives etc. again after new tokens were loaded
-				''
-				ppComments( )
-				ppDividers( )
-				ppDirectives1( )
-			end if
-
-			ppDirectives2( )
-
-			''
-			'' Macro expansion, #if evaluation
-			''
-			var do_pp = TRUE
 			select case( frog.preset )
-			case "tests"
-				do_pp and= not strMatches( "tests/*", f->pretty )
-				do_pp or= strMatches( "tests/pp/eval-*", f->pretty )
-				do_pp or= strMatches( "tests/pp/expand/*", f->pretty )
-			end select
-
-			if( do_pp ) then
-				ppEvalInit( )
-
-				select case( frog.preset )
-				case "tests"
-					ppExpandSym( "EXPANDTHIS" )
-					ppExpandSym( "EXPANDME1" )
-					ppExpandSym( "EXPANDME2" )
-					ppExpandSym( "EXPANDME3" )
-					ppExpandSym( "EXPANDME4" )
-					ppExpandSym( "EXPANDME5" )
-					ppExpandSym( "EXPANDME6" )
-					ppAddSym( "KNOWNDEFINED1", TRUE )
-					ppAddSym( "KNOWNDEFINED2", TRUE )
-					ppAddSym( "KNOWNUNDEFINED1", FALSE )
-					ppAddSym( "KNOWNUNDEFINED2", FALSE )
-				case "test"
-					ppExpandSym( "PNG_API_RULE" )
-				case "zip"
-					ppAddSym( "ZIP_EXTERN", TRUE )
-					ppAddSym( "__cplusplus", FALSE )
-					ppAddSym( "ZIP_DISABLE_DEPRECATED", FALSE )
-					ppAddSym( "_HAD_ZIP_H", FALSE )
-					ppAddSym( "_HAD_ZIPCONF_H", FALSE )
-				case "png"
-					ppAddSym( "__cplusplus", FALSE )
-					ppAddSym( "PNG_H", FALSE )
-					ppAddSym( "PNGCONF_H", FALSE )
-					ppAddSym( "PNGLCONF_H", FALSE )
-
-					ppAddSym( "PNG_VERSION_INFO_ONLY", FALSE )
-					ppAddSym( "PNG_BUILDING_SYMBOL_TABLE", FALSE )
-					ppAddSym( "PNG_USE_READ_MACROS", FALSE )
-					ppAddSym( "PNG_NO_USE_READ_MACROS", TRUE )
-					ppAddSym( "PNG_NO_PEDANTIC_WARNINGS", FALSE )
-					ppAddSym( "PNG_PEDANTIC_WARNINGS_SUPPORTED", FALSE )
-					ppAddSym( "PNG_SMALL_SIZE_T", FALSE )
-					ppAddSym( "PNG_STDIO_SUPPORTED", TRUE )
-					ppAddSym( "PNG_FLOATING_POINT_SUPPORTED", TRUE )
-					ppAddSym( "PNG_TEXT_SUPPORTED", TRUE )
-					ppAddSym( "PNG_STORE_UNKNOWN_CHUNKS_SUPPORTED", TRUE )
-					ppAddSym( "PNG_PROGRESSIVE_READ_SUPPORTED", TRUE )
-					ppAddSym( "PNG_READ_USER_TRANSFORM_SUPPORTED", TRUE )
-					ppAddSym( "PNG_WRITE_USER_TRANSFORM_SUPPORTED", TRUE )
-					ppAddSym( "PNG_USER_CHUNKS_SUPPORTED", TRUE )
-					ppAddSym( "PNG_UNKNOWN_CHUNKS_SUPPORTED", TRUE )
-					ppAddSym( "PNG_SETJMP_SUPPORTED", TRUE )
-					ppAddSym( "PNG_USER_MEM_SUPPORTED", TRUE )
-					ppAddSym( "PNG_SAFE_LIMITS_SUPPORTED", FALSE )
-
-					ppMacroBegin( "CHAR_BIT", -1 )
-					ppMacroToken( TK_DECNUM, "8" )
-
-					ppMacroBegin( "UCHAR_MAX", -1 )
-					ppMacroToken( TK_DECNUM, "255" )
-
-					ppMacroBegin( "SHRT_MIN", -1 )
-					ppMacroToken( TK_MINUS )
-					ppMacroToken( TK_DECNUM, str( &h8000 ) )
-
-					ppMacroBegin( "SHRT_MAX", -1 )
-					ppMacroToken( TK_DECNUM, str( &h7FFF ) )
-
-					ppMacroBegin( "USHRT_MAX", -1 )
-					ppMacroToken( TK_DECNUM, str( &hFFFF ) )
-
-					ppMacroBegin( "INT_MIN", -1 )
-					ppMacroToken( TK_MINUS )
-					ppMacroToken( TK_DECNUM, str( &h80000000ul ) )
-
-					ppMacroBegin( "INT_MAX", -1 )
-					ppMacroToken( TK_DECNUM, str( &h7FFFFFFFul ) )
-
-					ppMacroBegin( "UINT_MAX", -1 )
-					ppMacroToken( TK_DECNUM, str( &hFFFFFFFFul ) )
-
-					ppMacroBegin( "LONG_MIN", -1 )
-					ppMacroToken( TK_MINUS )
-					ppMacroToken( TK_DECNUM, str( &h80000000ul ) )
-
-					ppMacroBegin( "LONG_MAX", -1 )
-					ppMacroToken( TK_DECNUM, str( &h7FFFFFFFul ) )
-
-					ppMacroBegin( "ULONG_MAX", -1 )
-					ppMacroToken( TK_DECNUM, str( &hFFFFFFFFul ) )
-
-					ppMacroBegin( "__GNUC__", -1 )
-					ppMacroToken( TK_DECNUM, "4" )
-					ppAddSym( "_MSC_VER", FALSE )
-					ppAddSym( "__BORLANDC__", FALSE )
-					ppAddSym( "__IBMC__", FALSE )
-					ppAddSym( "__IBMCPP__", FALSE )
-					ppAddSym( "__OS2__", FALSE )
-					ppAddSym( "__TURBOC__", FALSE )
-					ppAddSym( "__FLAT__", FALSE )
-					ppAddSym( "MAXSEG_64K", FALSE )
-
-					ppAddSym( "_Windows", FALSE )
-					ppAddSym( "_WINDOWS", FALSE )
-					ppAddSym( "__WIN32__", FALSE )
-					ppAddSym( "WIN32", FALSE )
-					ppAddSym( "__CYGWIN__", FALSE )
-
-					ppAddSym( "_WIN32", FALSE )
-					ppAddSym( "PNG_USE_DLL", FALSE )
-					ppAddSym( "PNG_DLL_IMPORT", FALSE )
-
-					ppAddSym( "PNGARG", FALSE )
-					ppAddSym( "PNG_USER_PRIVATEBUILD", FALSE )
-					ppAddSym( "PNG_LIBPNG_SPECIALBUILD", FALSE )
-					ppAddSym( "PNGAPI", FALSE )
-					ppAddSym( "PNGCAPI", FALSE )
-					ppAddSym( "PNGCBAPI", FALSE )
-					ppAddSym( "PNG_IMPEXP", FALSE )
-					ppAddSym( "PNG_FUNCTION", FALSE )
-					ppAddSym( "PNG_EXPORTA", FALSE )
-					ppAddSym( "PNG_EXPORT_TYPE", FALSE )
-					ppAddSym( "PNG_REMOVED", FALSE )
-					ppAddSym( "PNG_CALLBACK", FALSE )
-					ppAddSym( "PNG_FP_EXPORT", FALSE )
-					ppAddSym( "PNG_FIXED_EXPORT", FALSE )
-					ppAddSym( "PNG_RESTRICT", FALSE )
-					ppAddSym( "PNG_ALLOCATED", FALSE )
-					ppAddSym( "PNG_NORETURN", FALSE )
-					ppAddSym( "PNG_DEPRECATED", FALSE )
-					ppAddSym( "PNG_PRIVATE", FALSE )
-					ppAddSym( "PNG_USE_RESULT", FALSE )
-					ppAddSym( "PNG_EXPORT_LAST_ORDINAL", FALSE )
-
-					ppExpandSym( "PNG_API_RULE" )
-					ppExpandSym( "PNG_EXPORT" )
-					ppExpandSym( "PNG_EXPORTA" )
-					ppExpandSym( "PNG_CALLBACK" )
-					ppExpandSym( "PNG_RESTRICT" )
-					ppExpandSym( "PNG_FP_EXPORT" )
-					ppExpandSym( "PNG_FIXED_EXPORT" )
-					ppExpandSym( "PNG_EXPORT_TYPE" )
-					ppExpandSym( "PNG_EMPTY" )
-					ppExpandSym( "PNG_IMPEXP" )
-					ppExpandSym( "PNGAPI" )
-					ppExpandSym( "PNGCAPI" )
-					ppExpandSym( "PNGCBAPI" )
-					ppExpandSym( "PNGARG" )
-					ppExpandSym( "PNG_FUNCTION" )
-					ppExpandSym( "PNG_ALLOCATED" )
-					ppExpandSym( "PNG_NORETURN" )
-					ppExpandSym( "PNG_DEPRECATED" )
-					ppExpandSym( "PNG_REMOVED" )
-
-				end select
-
-				ppEval( )
-			else
-				ppNoEval( )
-			end if
-
-			''
-			'' Parse C constructs
-			''
-			f->ast = cToplevel( )
-
-			tkEnd( )
-
-			''
-			'' Work on the AST
-			''
-			select case( frog.preset )
-			case "zip"
-				hRemoveNode( f->ast, ASTCLASS_PPDEFINE, "_HAD_ZIP_H" )
-				hRemoveNode( f->ast, ASTCLASS_PPDEFINE, "_HAD_ZIPCONF_H" )
-			case "png"
-				hRemoveNode( f->ast, ASTCLASS_PPDEFINE, "PNG_H" )
-				hRemoveNode( f->ast, ASTCLASS_PPDEFINE, "PNGCONF_H" )
-				hRemoveNode( f->ast, ASTCLASS_PPDEFINE, "PNGLCONF_H" )
-				hRemoveNode( f->ast, ASTCLASS_PPDEFINE, "PNG_CONST" )
-			end select
-
-			hFixArrayParams( f->ast )
-			hRemoveRedundantTypedefs( f->ast )
-
-			hSetPPIndentAttrib( f->ast, TRUE )
-			hRemovePPIndentFromIncludeGuard( f->ast )
-			select case( frog.preset )
-			case "tests"
-				if( strMatches( "tests/pp/expr-*", f->pretty ) ) then
-					hSetPPIndentAttrib( f->ast, FALSE )
-				end if
+			case "test"
+				f->ast = hMergeVersions( NULL  , astNewVERSION( frogParse( f, 0 ), 0 ) )
+				f->ast = hMergeVersions( f->ast, astNewVERSION( frogParse( f, 1 ), 1 ) )
+			case else
+				f->ast = frogParse( f, 0 )
 			end select
 		end if
 
@@ -926,7 +1209,11 @@ end sub
 	f = listGetHead( @frog.files )
 	while( f )
 		if( f->ast ) then
-			frogEmitFile( f )
+			var binormed = pathStripExt( f->normed ) + ".bi"
+			var bipretty = pathStripExt( f->pretty ) + ".bi"
+			print "emitting: " + bipretty
+			'astDump( f->ast )
+			emitFile( binormed, f->ast )
 		end if
 		f = listGetNext( f )
 	wend
