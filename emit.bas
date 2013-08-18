@@ -196,6 +196,18 @@ private function emitAst _
 		wend
 		s = ""
 
+	case ASTCLASS_VERSION
+		emitLine( "version" + hCommaList( n->initializer, TRUE ) )
+		emit.indent += 1
+		var child = n->head
+		while( child )
+			s = emitAst( child )
+			child = child->next
+		wend
+		s = ""
+		emit.indent -= 1
+		emitLine( "end version" )
+
 	case ASTCLASS_DIVIDER
 		emitLine( "" )
 

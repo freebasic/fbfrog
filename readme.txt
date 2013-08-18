@@ -89,4 +89,19 @@ To do:
 - #include stdio.h -> #include crt/stdio.bi, for some known default headers
   (or perhaps let presets do this)
 
-- ## PP merging should allow TK_ID ## TK_DECNUM, currently it only allows TK_ID ## TK_ID
+- ## PP merging should allow TK_ID ## TK_DECNUM or TK_UNDERSCORE,
+  currently it only allows TK_ID ## TK_ID
+
+- add optional pass to drop parameter names from procdecls
+- add pass to check all identifiers against FB keywords, and to check for dupdefs
+  due to case insensitivity
+
+- struct fields should be VERSIONed too, inside the struct
+- must check for #if/#endif blocks split up by VERSIONs: the #if and #endif directives
+  could end up in separate VERSIONs currently, that wouldn't be good if the VERSIONs
+  themselves are implemented as #if/#endif...
+    - perhaps #if/#endif can be merged into #if blocks so they appear as single nodes
+      that will be merged or not, like structs and their fields?
+- allow the AST diffing to find partial matches, e.g. if a procdecl differs only
+  in calling convention.
+- VERSION nodes should be merged/turned into #if checks on the binding's version #define
