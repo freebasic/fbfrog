@@ -96,7 +96,6 @@ To do:
 - add pass to check all identifiers against FB keywords, and to check for dupdefs
   due to case insensitivity
 
-- struct fields should be VERSIONed too, inside the struct
 - must check for #if/#endif blocks split up by VERSIONs: the #if and #endif directives
   could end up in separate VERSIONs currently, that wouldn't be good if the VERSIONs
   themselves are implemented as #if/#endif...

@@ -624,8 +624,14 @@ declare sub astSetType _
 		byval subtype as ASTNODE ptr _
 	)
 declare sub astAddComment( byval n as ASTNODE ptr, byval comment as zstring ptr )
+declare function astCloneNode( byval n as ASTNODE ptr ) as ASTNODE ptr
 declare function astClone( byval n as ASTNODE ptr ) as ASTNODE ptr
-declare function astIsEqualDecl( byval a as ASTNODE ptr, byval b as ASTNODE ptr ) as integer
+declare function astIsEqualDecl _
+	( _
+		byval a as ASTNODE ptr, _
+		byval b as ASTNODE ptr, _
+		byval ignore_fields as integer = FALSE _
+	) as integer
 declare function astDumpOne( byval n as ASTNODE ptr ) as string
 declare function astDumpInline( byval n as ASTNODE ptr ) as string
 declare sub astDump( byval n as ASTNODE ptr, byval nestlevel as integer = 0 )

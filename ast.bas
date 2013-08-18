@@ -401,7 +401,8 @@ sub astAddComment( byval n as ASTNODE ptr, byval comment as zstring ptr )
 	n->comment = strDuplicate( s )
 end sub
 
-function astClone( byval n as ASTNODE ptr ) as ASTNODE ptr
+'' astClone() but without children
+function astCloneNode( byval n as ASTNODE ptr ) as ASTNODE ptr
 	if( n = NULL ) then
 		return NULL
 	end if
@@ -428,6 +429,15 @@ function astClone( byval n as ASTNODE ptr ) as ASTNODE ptr
 	c->paramindex  = n->paramindex
 	c->paramcount  = n->paramcount
 
+	function = c
+end function
+
+function astClone( byval n as ASTNODE ptr ) as ASTNODE ptr
+	var c = astCloneNode( n )
+	if( c = NULL ) then
+		return NULL
+	end if
+
 	var child = n->head
 	while( child )
 		astAddChild( c, astClone( child ) )
@@ -443,7 +453,13 @@ end function
 '' For example, two procedures must have the same kind of parameters, but it
 '' doesn't matter whether two CONST expressions both originally were
 '' oct/hex/dec, as long as they're the same value.
-function astIsEqualDecl( byval a as ASTNODE ptr, byval b as ASTNODE ptr ) as integer
+function astIsEqualDecl _
+	( _
+		byval a as ASTNODE ptr, _
+		byval b as ASTNODE ptr, _
+		byval ignore_fields as integer _
+	) as integer
+
 	'' If one is NULL, both must be NULL
 	if( (a = NULL) or (b = NULL) ) then
 		return ((a = NULL) and (b = NULL))
@@ -478,10 +494,10 @@ function astIsEqualDecl( byval a as ASTNODE ptr, byval b as ASTNODE ptr ) as int
 	end if
 
 	if( a->dtype <> b->dtype ) then exit function
-	if( astIsEqualDecl( a->subtype, b->subtype ) = FALSE ) then exit function
-	if( astIsEqualDecl( a->array, b->array ) = FALSE ) then exit function
+	if( astIsEqualDecl( a->subtype, b->subtype, ignore_fields ) = FALSE ) then exit function
+	if( astIsEqualDecl( a->array, b->array, ignore_fields ) = FALSE ) then exit function
 
-	if( astIsEqualDecl( a->initializer, b->initializer ) = FALSE ) then exit function
+	if( astIsEqualDecl( a->initializer, b->initializer, ignore_fields ) = FALSE ) then exit function
 
 	if( a->includefile <> b->includefile ) then exit function
 
@@ -503,13 +519,15 @@ function astIsEqualDecl( byval a as ASTNODE ptr, byval b as ASTNODE ptr ) as int
 	case ASTCLASS_PPDEFINE
 		if( a->paramcount <> b->paramcount ) then exit function
 
+	case ASTCLASS_STRUCT
+		if( ignore_fields ) then return TRUE
 	end select
 
 	'' Children
 	a = a->head
 	b = b->head
 	while( (a <> NULL) and (b <> NULL) )
-		if( astIsEqualDecl( a, b ) = FALSE ) then
+		if( astIsEqualDecl( a, b, ignore_fields ) = FALSE ) then
 			exit function
 		end if
 		a = a->next

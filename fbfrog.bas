@@ -648,7 +648,9 @@ sub hAstLCS _
 	for i as integer = 0 to llen-1
 		for j as integer = 0 to rlen-1
 			var newval = 0
-			if( astIsEqualDecl( hFindNthDecl( l, lfirst + i, NULL ), hFindNthDecl( r, rfirst + j, NULL ) ) ) then
+			if( astIsEqualDecl( hFindNthDecl( l, lfirst + i, NULL ), _
+			                    hFindNthDecl( r, rfirst + j, NULL ), _
+			                    TRUE ) ) then
 				if( (i = 0) or (j = 0) ) then
 					newval = 1
 				else
@@ -669,6 +671,70 @@ sub hAstLCS _
 	llcslast  = llcsfirst + max - 1
 	rlcslast  = rlcsfirst + max - 1
 end sub
+
+declare function hMergeVersions _
+	( _
+		byval a as ASTNODE ptr, _
+		byval b as ASTNODE ptr _
+	) as ASTNODE ptr
+
+private function hMergeStructsManually _
+	( _
+		byval astruct as ASTNODE ptr, _
+		byval aversion as ASTNODE ptr, _
+		byval bstruct as ASTNODE ptr, _
+		byval bversion as ASTNODE ptr _
+	) as ASTNODE ptr
+
+	''
+	'' For example:
+	''
+	''     version 1                   version 2
+	''         struct FOO                  struct FOO
+	''             field a as integer          field a as integer
+	''             field b as integer          field c as integer
+	''
+	'' should become:
+	''
+	''     version 1, 2
+	''         struct FOO
+	''             field a as integer
+	''             version 1
+	''                 field b as integer
+	''             version 2
+	''                 field c as integer
+	''
+	'' instead of:
+	''
+	''     version 1
+	''         struct FOO
+	''             field a as integer
+	''             field b as integer
+	''     version 2
+	''         struct FOO
+	''             field a as integer
+	''             field c as integer
+	''
+
+	'' Copy astruct's fields into temp VERSION for a's version(s)
+	var afields = astNew( ASTCLASS_GROUP )
+	astCloneAndAddAllChildrenOf( afields, astruct )
+	afields = astNewVERSION( afields, aversion, NULL )
+
+	'' Copy bstruct's fields into temp VERSION for b's version(s)
+	var bfields = astNew( ASTCLASS_GROUP )
+	astCloneAndAddAllChildrenOf( bfields, bstruct )
+	bfields = astNewVERSION( bfields, bversion, NULL )
+
+	'' Merge both set of fields
+	var fields = hMergeVersions( hMergeVersions( NULL, afields ), bfields )
+
+	'' Create a result struct with the new set of fields
+	var cstruct = astCloneNode( astruct )
+	astAddChild( cstruct, fields )
+
+	function = cstruct
+end function
 
 private sub hAstMerge _
 	( _
@@ -752,6 +818,26 @@ private sub hAstMerge _
 	DEBUG( "adding LCS" )
 	assert( (alcslast - alcsfirst + 1) = (blcslast - blcsfirst + 1) )
 	for i as integer = 0 to (alcslast - alcsfirst + 1)-1
+		'' The LCS may include structs but with different fields on both
+		'' sides, they must be merged manually so the struct itself can
+		'' be common, but the fields may be version dependant.
+		'' (relying on hAstLCS() to allow structs to match even if they
+		'' have different fields)
+		dim as ASTNODE ptr aversion
+		var astruct = hFindNthDecl( a, alcsfirst + i, aversion )
+		if( astruct->class = ASTCLASS_STRUCT ) then
+			dim as ASTNODE ptr bversion
+			var bstruct = hFindNthDecl( b, blcsfirst + i, bversion )
+			assert( bstruct->class = ASTCLASS_STRUCT )
+
+			var cstruct = hMergeStructsManually( astruct, aversion, bstruct, bversion )
+
+			'' Add struct to result tree, under both a's and b's version numbers
+			astAddVersionedChild( c, astNewVERSION( cstruct, aversion, bversion ) )
+
+			continue for
+		end if
+
 		hAddMergedDecl( c, a, alcsfirst + i, b, blcsfirst + i )
 	next
 
@@ -824,7 +910,8 @@ end function
 private function frogParse _
 	( _
 		byval f as FROGFILE ptr, _
-		byval version as integer _
+		byval version as integer, _
+		byval mode as integer _
 	) as ASTNODE ptr
 
 	tkInit( )
@@ -1173,10 +1260,10 @@ end function
 
 			select case( frog.preset )
 			case "test"
-				f->ast = hMergeVersions( NULL  , astNewVERSION( frogParse( f, 0 ), 0 ) )
-				f->ast = hMergeVersions( f->ast, astNewVERSION( frogParse( f, 1 ), 1 ) )
+				f->ast = hMergeVersions( NULL  , astNewVERSION( frogParse( f, 0, 0 ), 0 ) )
+				f->ast = hMergeVersions( f->ast, astNewVERSION( frogParse( f, 1, 0 ), 1 ) )
 			case else
-				f->ast = frogParse( f, 0 )
+				f->ast = frogParse( f, 0, 0 )
 			end select
 		end if
 
