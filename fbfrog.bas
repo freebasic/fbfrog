@@ -279,6 +279,26 @@ private sub hRemoveNode _
 
 end sub
 
+private sub hMakeProcsDefaultToCdecl( byval n as ASTNODE ptr )
+	if( n->class = ASTCLASS_PROC ) then
+		'' No calling convention specified yet?
+		if( (n->attrib and (ASTATTRIB_CDECL or ASTATTRIB_STDCALL)) = 0 ) then
+			n->attrib or= ASTATTRIB_CDECL
+		end if
+	end if
+
+	'' Don't forget the procptr subtypes
+	if( typeGetDt( n->dtype ) = TYPE_PROC ) then
+		hMakeProcsDefaultToCdecl( n->subtype )
+	end if
+
+	var child = n->head
+	while( child )
+		hMakeProcsDefaultToCdecl( child )
+		child = child->next
+	wend
+end sub
+
 private sub hFixArrayParams( byval n as ASTNODE ptr )
 	if( n->class = ASTCLASS_PARAM ) then
 		'' C array parameters are really just pointers (i.e. the array
@@ -1167,6 +1187,13 @@ private function frogParse _
 		hRemoveNode( ast, ASTCLASS_PPDEFINE, "PNGCONF_H" )
 		hRemoveNode( ast, ASTCLASS_PPDEFINE, "PNGLCONF_H" )
 		hRemoveNode( ast, ASTCLASS_PPDEFINE, "PNG_CONST" )
+	end select
+
+	select case( frog.preset )
+	case "tests", "test"
+
+	case else
+		hMakeProcsDefaultToCdecl( ast )
 	end select
 
 	hFixArrayParams( ast )
