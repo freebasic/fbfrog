@@ -1081,7 +1081,11 @@ private function frogParse _
 			ppAddSym( "WIN32", FALSE )
 			ppAddSym( "__CYGWIN__", FALSE )
 
-			ppAddSym( "_WIN32", FALSE )
+			if( version = 1 ) then
+				ppAddSym( "_WIN32", TRUE )
+			else
+				ppAddSym( "_WIN32", FALSE )
+			end if
 			ppAddSym( "PNG_USE_DLL", FALSE )
 			ppAddSym( "PNG_DLL_IMPORT", FALSE )
 
@@ -1271,6 +1275,9 @@ end function
 
 			select case( frog.preset )
 			case "test"
+				f->ast = hMergeVersions( NULL  , astNewVERSION( frogParse( f, 0 ), 0 ) )
+				f->ast = hMergeVersions( f->ast, astNewVERSION( frogParse( f, 1 ), 1 ) )
+			case "png"
 				f->ast = hMergeVersions( NULL  , astNewVERSION( frogParse( f, 0 ), 0 ) )
 				f->ast = hMergeVersions( f->ast, astNewVERSION( frogParse( f, 1 ), 1 ) )
 			case else
