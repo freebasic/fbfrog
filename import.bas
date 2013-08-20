@@ -469,7 +469,7 @@ private function imStructCompound( ) as ASTNODE ptr
 			end if
 		end if
 
-		astAddChild( struct, imTypeMemberOrPP( ) )
+		astAppend( struct, imTypeMemberOrPP( ) )
 	loop
 
 	'' END TYPE|UNION
@@ -491,7 +491,7 @@ private function imEnumConst( ) as ASTNODE ptr
 		hSkip( )
 
 		'' Expression
-		astAddChild( enumconst, imExpression( FALSE ) )
+		astAppend( enumconst, imExpression( FALSE ) )
 	end if
 
 	hExpectAndSkip( TK_EOL )
@@ -523,7 +523,7 @@ private function imEnumCompound( ) as ASTNODE ptr
 			end if
 		end if
 
-		astAddChild( t, imEnumConst( ) )
+		astAppend( t, imEnumConst( ) )
 	loop
 
 	'' END ENUM
@@ -559,7 +559,7 @@ private sub imParamList( byval proc as ASTNODE ptr )
 		do
 			TRACE( x )
 			'' Parameter
-			astAddChild( proc, imParamDecl( ) )
+			astAppend( proc, imParamDecl( ) )
 
 			'' ','?
 		loop while( hMatch( TK_COMMA ) )
@@ -676,7 +676,7 @@ private function imToplevel( ) as ASTNODE ptr
 
 	x = imSkip( -1 )
 	while( tkGet( x ) <> TK_EOF )
-		astAddChild( group, imCompoundOrStatement( ) )
+		astAppend( group, imCompoundOrStatement( ) )
 	wend
 
 	function = group

@@ -619,8 +619,8 @@ function tkToAstText _
 			if( group = NULL ) then
 				group = astNew( ASTCLASS_GROUP )
 			end if
-			astAddChild( group, text )
-			astAddChild( group, astClone( p->ast ) )
+			astAppend( group, text )
+			astAppend( group, astClone( p->ast ) )
 			text = NULL
 			s = ""
 		else
@@ -633,7 +633,7 @@ function tkToAstText _
 	end if
 
 	if( group ) then
-		astAddChild( group, text )
+		astAppend( group, text )
 		function = group
 	else
 		function = text

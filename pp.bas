@@ -600,7 +600,7 @@ private function ppDirective( byval x as integer ) as integer
 				if( tkGet( x ) <> TK_ID ) then
 					exit do
 				end if
-				astAddChild( t, astNew( ASTCLASS_MACROPARAM, tkGetText( x ) ) )
+				astAppend( t, astNew( ASTCLASS_MACROPARAM, tkGetText( x ) ) )
 				t->paramcount += 1
 				x = ppSkip( x )
 
@@ -865,7 +865,7 @@ private sub hRecordToken( )
 	var n = astNew( ASTCLASS_TK, tkGetText( record.x ) )
 	n->tk = tkGet( record.x )
 	hTakeMergeAttrib( record.macro->initializer, n )
-	astAddChild( record.macro->initializer, n )
+	astAppend( record.macro->initializer, n )
 end sub
 
 '' Used when a 'param' or '#param' was found in the macro body.
@@ -884,7 +884,7 @@ private sub hRecordParam _
 	end if
 	hTakeMergeAttrib( record.macro->initializer, n )
 
-	astAddChild( record.macro->initializer, n )
+	astAppend( record.macro->initializer, n )
 end sub
 
 private sub hRecordMerge( )
@@ -1339,7 +1339,7 @@ end function
 
 private sub hAddKnownSym( byval id as zstring ptr, byval is_defined as integer )
 	var n = astNewID( id )
-	astAddChild( eval.knownsyms, n )
+	astAppend( eval.knownsyms, n )
 	hashAddOverwrite( @eval.knownsymhash, n->text, cptr( any ptr, is_defined ) )
 end sub
 
@@ -1369,7 +1369,7 @@ sub ppExpandSym( byval id as zstring ptr )
 		oops( "ppExpandSym( """ & *id & """ ) called, but already exists" )
 	end if
 	var n = astNewID( id )
-	astAddChild( eval.expandsyms, n )
+	astAppend( eval.expandsyms, n )
 	hashAddOverwrite( @eval.expandsymhash, n->text, NULL )
 end sub
 
@@ -1396,7 +1396,7 @@ private sub hAddMacro( byval macro as ASTNODE ptr )
 		end if
 		exit sub
 	end if
-	astAddChild( eval.macros, macro )
+	astAppend( eval.macros, macro )
 end sub
 
 private sub hUndefMacro( byval id as zstring ptr )
@@ -1413,19 +1413,19 @@ sub ppMacroBegin( byval id as zstring ptr, byval paramcount as integer )
 	var macro = astNew( ASTCLASS_PPDEFINE, id )
 	macro->paramcount = paramcount
 	macro->initializer = astNew( ASTCLASS_MACROBODY )
-	astAddChild( eval.macros, macro )
+	astAppend( eval.macros, macro )
 end sub
 
 sub ppMacroToken( byval tk as integer, byval text as zstring ptr )
 	var macro = eval.macros->tail
-	astAddChild( macro->initializer, astNewTK( tk, text ) )
+	astAppend( macro->initializer, astNewTK( tk, text ) )
 end sub
 
 sub ppMacroParam( byval index as integer )
 	var macro = eval.macros->tail
 	assert( macro->paramcount > 0 )
 	assert( (index >= 0) and (index < macro->paramcount) )
-	astAddChild( macro->initializer, astNewMACROPARAM( index ) )
+	astAppend( macro->initializer, astNewMACROPARAM( index ) )
 end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -1662,11 +1662,11 @@ private sub hParseIfCondition( byval t as ASTNODE ptr, byval x as integer )
 		loop while( tkGet( x ) <> TK_END )
 
 		'' Turn the #if into a PPUNKNOWN
-		astAddChild( t, tkToAstText( begin + 1, x - 1 ) )
+		astAppend( t, tkToAstText( begin + 1, x - 1 ) )
 		t = astNew( ASTCLASS_PPUNKNOWN, astClone( t ) )
 		tkSetAst( begin - 1, t )
 	else
-		astAddChild( t, expr )
+		astAppend( t, expr )
 	end if
 
 	'' END

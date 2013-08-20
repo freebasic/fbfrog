@@ -111,9 +111,9 @@ function astNew overload _
 	) as ASTNODE ptr
 
 	var n = astNew( class_ )
-	astAddChild( n, a )
-	astAddChild( n, b )
-	astAddChild( n, c )
+	astAppend( n, a )
+	astAppend( n, b )
+	astAppend( n, c )
 
 	function = n
 end function
@@ -144,8 +144,8 @@ function astNewVERSION overload _
 
 	var n = astNewVERSION( )
 
-	astAddChild( n->initializer, astNewCONST( versionnum, 0, TYPE_INTEGER ) )
-	astAddChild( n, child )
+	astAppend( n->initializer, astNewCONST( versionnum, 0, TYPE_INTEGER ) )
+	astAppend( n, child )
 
 	function = n
 end function
@@ -167,7 +167,7 @@ function astNewVERSION overload _
 		astCloneAndAddAllChildrenOf( n->initializer, version2->initializer )
 	end if
 
-	astAddChild( n, child )
+	astAppend( n, child )
 
 	function = n
 end function
@@ -260,7 +260,7 @@ sub astPrepend( byval parent as ASTNODE ptr, byval n as ASTNODE ptr )
 	end if
 end sub
 
-sub astAddChild( byval parent as ASTNODE ptr, byval n as ASTNODE ptr )
+sub astAppend( byval parent as ASTNODE ptr, byval n as ASTNODE ptr )
 	if( n = NULL ) then
 		exit sub
 	end if
@@ -270,7 +270,7 @@ sub astAddChild( byval parent as ASTNODE ptr, byval n as ASTNODE ptr )
 		'' If it's a GROUP, add its children and delete the GROUP itself
 		var child = n->head
 		while( child )
-			astAddChild( parent, astClone( child ) )
+			astAppend( parent, astClone( child ) )
 			child = child->next
 		wend
 
@@ -297,7 +297,7 @@ end sub
 sub astCloneAndAddAllChildrenOf( byval d as ASTNODE ptr, byval s as ASTNODE ptr )
 	var child = s->head
 	while( child )
-		astAddChild( d, astClone( child ) )
+		astAppend( d, astClone( child ) )
 		child = child->next
 	wend
 end sub
@@ -324,7 +324,7 @@ sub astAddVersionedChild( byval n as ASTNODE ptr, byval child as ASTNODE ptr )
 		end if
 	end if
 
-	astAddChild( n, child )
+	astAppend( n, child )
 end sub
 
 function astSolveVersionsOut _
@@ -345,7 +345,7 @@ function astSolveVersionsOut _
 			astCloneAndAddAllChildrenOf( cleannodes, version )
 		else
 			'' Add the whole VERSION
-			astAddChild( cleannodes, astClone( version ) )
+			astAppend( cleannodes, astClone( version ) )
 		end if
 
 		version = version->next
@@ -516,7 +516,7 @@ function astClone( byval n as ASTNODE ptr ) as ASTNODE ptr
 
 	var child = n->head
 	while( child )
-		astAddChild( c, astClone( child ) )
+		astAppend( c, astClone( child ) )
 		child = child->next
 	wend
 

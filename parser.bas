@@ -576,7 +576,7 @@ private function cStructBody( ) as ASTNODE ptr
 		end if
 
 		if( t ) then
-			astAddChild( group, t )
+			astAppend( group, t )
 		end if
 	loop
 
@@ -604,7 +604,7 @@ private function cEnumConst( ) as ASTNODE ptr
 		end if
 
 		parse.x = y
-		astAddChild( n, expr )
+		astAppend( n, expr )
 	end if
 
 	'' (',' | '}')
@@ -649,7 +649,7 @@ private function cEnumBody( ) as ASTNODE ptr
 		end if
 
 		if( t ) then
-			astAddChild( group, t )
+			astAppend( group, t )
 		end if
 	loop
 
@@ -706,9 +706,9 @@ private function cStructCompound( ) as ASTNODE ptr
 	astAddComment( struct, tkCollectComments( head, parse.x - 1 ) )
 
 	if( astclass = ASTCLASS_ENUM ) then
-		astAddChild( struct, cEnumBody( ) )
+		astAppend( struct, cEnumBody( ) )
 	else
-		astAddChild( struct, cStructBody( ) )
+		astAppend( struct, cStructBody( ) )
 	end if
 
 	'' '}'
@@ -1069,7 +1069,7 @@ private function cParamDeclList( ) as ASTNODE ptr
 			exit function
 		end if
 
-		astAddChild( group, t )
+		astAppend( group, t )
 
 		'' ','?
 		if( tkGet( parse.x ) <> TK_COMMA ) then
@@ -1368,7 +1368,7 @@ private function cDeclarator _
 			parse.x = cSkip( parse.x )
 
 			var dimension = astNew( ASTCLASS_DIMENSION )
-			astAddChild( node->array, dimension )
+			astAppend( node->array, dimension )
 
 			var y = parse.x
 			var elements = cExpression( y )
@@ -1380,8 +1380,8 @@ private function cDeclarator _
 			parse.x = y
 
 			'' lbound = 0, ubound = elements - 1
-			astAddChild( dimension, astNewCONST( 0, 0, TYPE_LONG ) )
-			astAddChild( dimension, _
+			astAppend( dimension, astNewCONST( 0, 0, TYPE_LONG ) )
+			astAppend( dimension, _
 				astNew( ASTCLASS_SUB, _
 					elements, _
 					astNewCONST( 1, 0, TYPE_LONG ) ) )
@@ -1441,7 +1441,7 @@ private function cDeclarator _
 				node = NULL
 				exit function
 			end if
-			astAddChild( node, params )
+			astAppend( node, params )
 		end if
 
 		'' ')'
@@ -1535,7 +1535,7 @@ private function cIdList _
 			exit function
 		end if
 
-		astAddChild( group, t )
+		astAppend( group, t )
 
 		'' Everything can have a comma and more identifiers,
 		'' except for parameters.
@@ -1689,7 +1689,7 @@ private function hToplevel( ) as ASTNODE ptr
 		end if
 
 		if( t ) then
-			astAddChild( group, t )
+			astAppend( group, t )
 		end if
 	wend
 

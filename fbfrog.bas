@@ -365,8 +365,8 @@ private sub hTurnCallConvsIntoExternBlock _
 	assert( ast->class = ASTCLASS_GROUP )
 	astPrepend( ast, astNew( ASTCLASS_DIVIDER ) )
 	astPrepend( ast, astNew( ASTCLASS_EXTERNBLOCKBEGIN, externblock ) )
-	astAddChild( ast, astNew( ASTCLASS_DIVIDER ) )
-	astAddChild( ast, astNew( ASTCLASS_EXTERNBLOCKEND ) )
+	astAppend( ast, astNew( ASTCLASS_DIVIDER ) )
+	astAppend( ast, astNew( ASTCLASS_EXTERNBLOCKEND ) )
 end sub
 
 private sub hRemoveParamNames( byval n as ASTNODE ptr )
@@ -784,7 +784,7 @@ private function hMergeStructsManually _
 
 	'' Create a result struct with the new set of fields
 	var cstruct = astCloneNode( astruct )
-	astAddChild( cstruct, cleanfields )
+	astAppend( cstruct, cleanfields )
 
 	function = cstruct
 end function
@@ -994,7 +994,7 @@ private function hMergeVersions _
 	var c = astNew( ASTCLASS_GROUP )
 
 	if( a = NULL ) then
-		astAddChild( c, astClone( b ) )
+		astAppend( c, astClone( b ) )
 		return c
 	end if
 
@@ -1441,7 +1441,7 @@ end function
 				if( first ) then
 					'' Already have a first; append to it
 					if( f->ast ) then
-						astAddChild( first->ast, f->ast )
+						astAppend( first->ast, f->ast )
 						f->ast = NULL
 					end if
 				else
