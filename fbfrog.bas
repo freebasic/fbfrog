@@ -626,7 +626,7 @@ end sub
 '' b 1 0 2 0         b     2
 '' c 0 0 0 3         c       3
 ''
-sub hAstLCS _
+private sub hAstLCS _
 	( _
 		byval l as ASTNODE ptr, _
 		byval lfirst as integer, _
@@ -645,6 +645,7 @@ sub hAstLCS _
 	var max = 0, maxi = 0, maxj = 0
 
 	dim as integer ptr matrix = callocate( sizeof( integer ) * llen * rlen )
+
 	for i as integer = 0 to llen-1
 		for j as integer = 0 to rlen-1
 			var newval = 0
@@ -665,6 +666,8 @@ sub hAstLCS _
 			matrix[i+(j*llen)] = newval
 		next
 	next
+
+	deallocate( matrix )
 
 	llcsfirst = lfirst + maxi - max + 1
 	rlcsfirst = rfirst + maxj - max + 1
