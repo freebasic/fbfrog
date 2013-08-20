@@ -92,6 +92,10 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	( @"~"  , @"tk" ), _
 	( NULL  , @"id" ), _ '' TK_ID
 	( @"__attribute__", @"kw" ), _ '' C-only keywords
+	( @"__cdecl" , @"kw" ), _
+	( @"__restrict", @"kw" ), _
+	( @"__restrict__", @"kw" ), _
+	( @"__stdcall", @"kw" ), _
 	( @"auto"    , @"kw" ), _
 	( @"break"   , @"kw" ), _
 	( @"char"    , @"kw" ), _
@@ -101,8 +105,6 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	( @"inline"  , @"kw" ), _
 	( @"register", @"kw" ), _
 	( @"restrict", @"kw" ), _
-	( @"__restrict", @"kw" ), _
-	( @"__restrict__", @"kw" ), _
 	( @"signed"  , @"kw" ), _
 	( @"struct"  , @"kw" ), _
 	( @"switch"  , @"kw" ), _

@@ -487,6 +487,16 @@ function astIsEqualDecl _
 		exit function
 	end if
 
+	if( (a->attrib and ASTATTRIB_CDECL) <> _
+	    (b->attrib and ASTATTRIB_CDECL) ) then
+		exit function
+	end if
+
+	if( (a->attrib and ASTATTRIB_STDCALL) <> _
+	    (b->attrib and ASTATTRIB_STDCALL) ) then
+		exit function
+	end if
+
 	if( (a->text <> NULL) and (b->text <> NULL) ) then
 		if( *a->text <> *b->text ) then exit function
 	else
@@ -589,6 +599,8 @@ function astDumpOne( byval n as ASTNODE ptr ) as string
 	checkAttrib( PPINDENTEND )
 	checkAttrib( MERGEWITHPREV )
 	checkAttrib( STRINGIFY )
+	checkAttrib( CDECL )
+	checkAttrib( STDCALL )
 
 	function = s
 end function

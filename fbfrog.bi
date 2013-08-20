@@ -210,6 +210,10 @@ enum
 	'' C-only keywords
 	KW__C_FIRST
 	KW___ATTRIBUTE__ = KW__C_FIRST
+	KW___CDECL
+	KW___RESTRICT
+	KW___RESTRICT__
+	KW___STDCALL
 	KW_AUTO
 	KW_BREAK
 	KW_CHAR
@@ -219,8 +223,6 @@ enum
 	KW_INLINE
 	KW_REGISTER
 	KW_RESTRICT
-	KW___RESTRICT
-	KW___RESTRICT__
 	KW_SIGNED
 	KW_STRUCT
 	KW_SWITCH
@@ -500,14 +502,16 @@ enum
 end enum
 
 enum
-	ASTATTRIB_EXTERN	= &h00000001  '' VAR
-	ASTATTRIB_PRIVATE	= &h00000002  '' VAR
-	ASTATTRIB_OCT		= &h00000004  '' CONST
-	ASTATTRIB_HEX		= &h00000008  '' CONST
-	ASTATTRIB_PPINDENTBEGIN	= &h00000010  '' PP*
-	ASTATTRIB_PPINDENTEND	= &h00000020  '' PP*
-	ASTATTRIB_MERGEWITHPREV	= &h00000080  '' TK, MACROPARAM: Macro body tokens that were preceded by the '##' PP merge operator
-	ASTATTRIB_STRINGIFY	= &h00000100  '' MACROPARAM, to distinguish "param" from "#param"
+	ASTATTRIB_EXTERN	= 1 shl 0  '' VAR
+	ASTATTRIB_PRIVATE	= 1 shl 1  '' VAR
+	ASTATTRIB_OCT		= 1 shl 2  '' CONST
+	ASTATTRIB_HEX		= 1 shl 3  '' CONST
+	ASTATTRIB_PPINDENTBEGIN	= 1 shl 4  '' PP*
+	ASTATTRIB_PPINDENTEND	= 1 shl 5  '' PP*
+	ASTATTRIB_MERGEWITHPREV	= 1 shl 6  '' TK, MACROPARAM: Macro body tokens that were preceded by the '##' PP merge operator
+	ASTATTRIB_STRINGIFY	= 1 shl 7  '' MACROPARAM, to distinguish "param" from "#param"
+	ASTATTRIB_CDECL		= 1 shl 8
+	ASTATTRIB_STDCALL	= 1 shl 9
 end enum
 
 type ASTNODECONST

@@ -375,9 +375,15 @@ end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-'enum
-'	ATTRIB_
-'end enum
+private function hCdeclAttribute( byref gccattribs as integer ) as integer
+	function = ((gccattribs and ASTATTRIB_STDCALL) = 0)
+	gccattribs or= ASTATTRIB_CDECL
+end function
+
+private function hStdcallAttribute( byref gccattribs as integer ) as integer
+	function = ((gccattribs and ASTATTRIB_CDECL) = 0)
+	gccattribs or= ASTATTRIB_STDCALL
+end function
 
 private function cGccAttribute( byref gccattribs as integer ) as integer
 	function = FALSE
@@ -393,63 +399,89 @@ private function cGccAttribute( byref gccattribs as integer ) as integer
 	     "deprecated", "__deprecated__"
 		'' Ignore, not interesting for FB bindings
 		parse.x = cSkip( parse.x )
+		function = TRUE
 
-	case else
-		exit function
+	case "cdecl", "__cdecl__"
+		parse.x = cSkip( parse.x )
+		function = hCdeclAttribute( gccattribs )
+
+	case "stdcall", "__stdcall__"
+		parse.x = cSkip( parse.x )
+		function = hStdcallAttribute( gccattribs )
+
 	end select
-
-	function = TRUE
 end function
 
 private function cGccAttributeList( byref gccattribs as integer ) as integer
 	function = FALSE
 
-	'' __ATTRIBUTE__?
-	while( tkGet( parse.x ) = KW___ATTRIBUTE__ )
-		parse.x = cSkip( parse.x )
-
-		'' '('?
-		if( tkGet( parse.x ) <> TK_LPAREN ) then
-			exit function
-		end if
-		parse.x = cSkip( parse.x )
-
-		'' '('?
-		if( tkGet( parse.x ) <> TK_LPAREN ) then
-			exit function
-		end if
-
-		'' Attribute (',' Attribute)*
-		do
+	do
+		select case( tkGet( parse.x ) )
+		'' __cdecl
+		case KW___CDECL
 			parse.x = cSkip( parse.x )
-
-			select case( tkGet( parse.x ) )
-			case TK_EOF
-				exit function
-			case TK_RPAREN
-				exit do
-			end select
-
-			'' Attribute
-			if( cGccAttribute( gccattribs ) = FALSE ) then
+			if( hCdeclAttribute( gccattribs ) = FALSE ) then
 				exit function
 			end if
 
-			'' ','?
-		loop while( tkGet( parse.x ) = TK_COMMA )
+		'' __stdcall
+		case KW___STDCALL
+			parse.x = cSkip( parse.x )
+			if( hStdcallAttribute( gccattribs ) = FALSE ) then
+				exit function
+			end if
 
-		'' ')'?
-		if( tkGet( parse.x ) <> TK_RPAREN ) then
-			exit function
-		end if
-		parse.x = cSkip( parse.x )
+		'' __attribute__((...)):
+		'' __ATTRIBUTE__ '((' Attribute (',' Attribute)* '))'
+		case KW___ATTRIBUTE__
+			parse.x = cSkip( parse.x )
 
-		'' ')'?
-		if( tkGet( parse.x ) <> TK_RPAREN ) then
-			exit function
-		end if
-		parse.x = cSkip( parse.x )
-	wend
+			'' '('?
+			if( tkGet( parse.x ) <> TK_LPAREN ) then
+				exit function
+			end if
+			parse.x = cSkip( parse.x )
+
+			'' '('?
+			if( tkGet( parse.x ) <> TK_LPAREN ) then
+				exit function
+			end if
+
+			'' Attribute (',' Attribute)*
+			do
+				parse.x = cSkip( parse.x )
+
+				select case( tkGet( parse.x ) )
+				case TK_EOF
+					exit function
+				case TK_RPAREN
+					exit do
+				end select
+
+				'' Attribute
+				if( cGccAttribute( gccattribs ) = FALSE ) then
+					exit function
+				end if
+
+				'' ','?
+			loop while( tkGet( parse.x ) = TK_COMMA )
+
+			'' ')'?
+			if( tkGet( parse.x ) <> TK_RPAREN ) then
+				exit function
+			end if
+			parse.x = cSkip( parse.x )
+
+			'' ')'?
+			if( tkGet( parse.x ) <> TK_RPAREN ) then
+				exit function
+			end if
+			parse.x = cSkip( parse.x )
+
+		case else
+			exit do
+		end select
+	loop
 
 	function = TRUE
 end function
@@ -745,6 +777,7 @@ private function cBaseType _
 	( _
 		byref dtype as integer, _
 		byref subtype as ASTNODE ptr, _
+		byref gccattribs as integer, _
 		byval decl as integer _
 	) as integer
 
@@ -769,6 +802,11 @@ private function cBaseType _
 	''
 
 	do
+		'' __ATTRIBUTE__((...))
+		if( cGccAttributeList( gccattribs ) = FALSE ) then
+			exit function
+		end if
+
 		select case as const( tkGet( parse.x ) )
 		case KW_SIGNED
 			signedmods += 1
@@ -996,6 +1034,11 @@ private function cBaseType _
 		dtype = typeSetIsConst( dtype )
 	end if
 
+	'' __ATTRIBUTE__((...))
+	if( cGccAttributeList( gccattribs ) = FALSE ) then
+		exit function
+	end if
+
 	function = TRUE
 end function
 
@@ -1109,22 +1152,109 @@ end function
 ''                               i.e. the f function pointer now has a function pointer as its function
 ''                               result type, instead of "int ptr")
 ''
+''
+'' __attribute__((...)) parsing stuff:
+''
+'' These are all the same:
+''    __attribute__((stdcall)) void (*p)(int a);
+''    void (*p)(int a) __attribute__((stdcall));
+''    void (__attribute__((stdcall)) *p)(int a);
+''    void (* __attribute__((stdcall)) p)(int a);
+''    extern p as sub stdcall( byval a as long )
+'' i.e. the stdcall attribute goes to the procptr subtype, no matter whether
+'' it appears in the toplevel declarator (the proc) or the nested declarator
+'' (the pointer var).
+''
+'' Here the stdcall goes to the proc that's being declared, not to its result type:
+''    __attribute__((stdcall)) void (*f(int a))(int b);
+''    void (*f(int a))(int b) __attribute__((stdcall));
+''    declare function f stdcall( byval a as long ) as sub cdecl( byval b as long )
+''
+'' Here the stdcall goes to the proc's result procptr subtype, not the proc itself:
+''    void (__attribute__((stdcall)) *f(int a))(int b);
+''    declare function f cdecl( byval a as long ) as sub stdcall( byval b as long )
+''
+'' This proc returns a pointer to the above one:
+''    void (__attribute__((stdcall)) *(*f(int a))(int b))(int c);
+''                                      ^^^^^^^^
+''                                    ^^        ^^^^^^^^
+''          ^^^^^^^^^^^^^^^^^^^^^^^^^^                  ^^^^^^^^
+''    ^^^^^^                                                    ^
+''    declare function f cdecl  ( byval a as long ) as _
+''            function   cdecl  ( byval b as long ) as _
+''            sub        stdcall( byval c as long )
+''
+'' Here the stdcall still goes to the proc that's being declared:
+''    __attribute__((stdcall)) void (*(*f(int a))(int b))(int c);
+''    declare function f stdcall( byval a as long ) as _
+''            function   cdecl  ( byval b as long ) as _
+''            sub        cdecl  ( byval c as long )
+''
+'' Here the stdcall still goes to the proc's result type:
+''    void (*(__attribute__((stdcall)) *f(int a))(int b))(int c);
+''    declare function f cdecl  ( byval a as long ) as _
+''            function   stdcall( byval b as long ) as _
+''            sub        cdecl  ( byval c as long )
+''
+'' I.e. attributes from the base type go to the inner most declarator (which
+'' ends up defining the toplevel object, a proc or var), while attributes from
+'' declarators go to the nodes for those declarators.
+''
+'' More about function pointers because they seem to be more complicated, these
+'' are all ok:
+''
+''    __attribute__((stdcall)) void (*f(int a))(int b);         // proc
+''    declare function f stdcall( byval a as long ) as sub cdecl( byval b as long )
+''
+''    extern __attribute__((stdcall)) void (*(*p)(int a))(int b) = f;  // ptr to it
+''    extern void (*(__attribute__((stdcall)) *p)(int a))(int b) = f;  // same thing, apparently
+''    extern p as function stdcall( byval a as long ) as sub cdecl( byval b as long )
+''
+'' I.e. we see again that for procptr vars, the attributes from toplevel and
+'' inner-most declarators have the same effect - they go to the procptr subtype
+'' in both cases.
+''
+''    void (__attribute__((stdcall)) *f(int a))(int b);         // different proc
+''    declare function f cdecl( byval a as long ) as sub stdcall( byval b as long )
+''
+''    extern void (__attribute__((stdcall)) *(*p)(int a))(int b) = f;  // ptr to it
+''    extern p as function cdecl( byval a as long ) as sub stdcall( byval b as long )
+''
+'' Here the stdcall is in the middle declarator and goes to the proc type
+'' corresponding to it, the procptr's result type.
+''
 private function cDeclarator _
 	( _
+		byval nestlevel as integer, _
 		byval decl as integer, _
-		byval basedtype as integer, _
+		byval outerdtype as integer, _
 		byval basesubtype as ASTNODE ptr, _
-		byval gccattribs as integer, _
+		byval basegccattribs as integer, _
 		byref node as ASTNODE ptr, _
-		byref procptrdtype as integer _
+		byref procptrdtype as integer, _
+		byref gccattribs as integer _
 	) as ASTNODE ptr
 
 	var begin = parse.x
-	var dtype = basedtype
+	var dtype = outerdtype
 	var innerprocptrdtype = TYPE_PROC
+	var innergccattribs = 0
 	procptrdtype = TYPE_PROC
+	gccattribs = 0
 
 	'' __ATTRIBUTE__((...))
+	''
+	'' Note: __attribute__'s behind the base type are handled by cBaseType()
+	'' already because they apply to the whole multdecl:
+	''    int __attribute__((stdcall)) f1(void), f2(void);
+	'' both should be stdcall.
+	''
+	'' But this is still here, to handle __attribute__'s appearing in
+	'' nested declarators:
+	''    int (__attribute__((stdcall)) f1)(void);
+	'' or at the front of follow-up declarators in a multdecl:
+	''    int f1(void), __attribute__((stdcall)) f2(void);
+	''
 	if( cGccAttributeList( gccattribs ) = FALSE ) then
 		exit function
 	end if
@@ -1137,6 +1267,11 @@ private function cDeclarator _
 
 		'' (CONST|RESTRICT|__ATTRIBUTE__((...)))*
 		do
+			'' __ATTRIBUTE__((...))
+			if( cGccAttributeList( gccattribs ) = FALSE ) then
+				exit function
+			end if
+
 			select case( tkGet( parse.x ) )
 			case KW_CONST
 				procptrdtype = typeSetIsConst( procptrdtype )
@@ -1145,12 +1280,6 @@ private function cDeclarator _
 
 			case KW_RESTRICT, KW___RESTRICT, KW___RESTRICT__
 				parse.x = cSkip( parse.x )
-
-			case KW___ATTRIBUTE__
-				'' __attribute__((...))
-				if( cGccAttributeList( gccattribs ) = FALSE ) then
-					exit function
-				end if
 
 			case else
 				exit do
@@ -1164,7 +1293,7 @@ private function cDeclarator _
 		'' '('
 		parse.x = cSkip( parse.x )
 
-		t = cDeclarator( decl, dtype, basesubtype, gccattribs, innernode, innerprocptrdtype )
+		t = cDeclarator( nestlevel + 1, decl, dtype, basesubtype, 0, innernode, innerprocptrdtype, innergccattribs )
 		if( t = NULL ) then
 			exit function
 		end if
@@ -1290,6 +1419,8 @@ private function cDeclarator _
 			astDelete( innernode->subtype )
 			innernode->dtype = innerprocptrdtype
 			innernode->subtype = node
+
+			innerprocptrdtype = TYPE_PROC
 		else
 			'' A plain symbol, not a pointer, becomes a function
 			select case( t->class )
@@ -1322,6 +1453,14 @@ private function cDeclarator _
 		parse.x = cSkip( parse.x )
 	end select
 
+	'' __ATTRIBUTE__((...))
+	var endgccattribs = 0
+	if( cGccAttributeList( endgccattribs ) = FALSE ) then
+		astDelete( t )
+		node = NULL
+		exit function
+	end if
+
 	'' ['=' Initializer]
 	select case( decl )
 	case DECL_PARAM
@@ -1342,11 +1481,36 @@ private function cDeclarator _
 		end if
 	end select
 
-	'' __ATTRIBUTE__((...))
-	if( cGccAttributeList( gccattribs ) = FALSE ) then
-		astDelete( t )
-		node = NULL
-		exit function
+	if( nestlevel > 0 ) then
+		'' __attribute__'s from this level should always be passed up
+		gccattribs or= endgccattribs
+
+		'' Pass innerprocptrdtype and innergccattribs up again if they
+		'' weren't used up on this level
+		if( innerprocptrdtype <> TYPE_PROC ) then
+			gccattribs or= innergccattribs
+			procptrdtype = typeMultAddrOf( procptrdtype, typeGetPtrCount( innerprocptrdtype ) ) or _
+								typeGetConst( innerprocptrdtype )
+		else
+			node->attrib or= innergccattribs
+		end if
+	else
+		'' At toplevel nothing can be passed up, everything must be assigned.
+		'' __attribute__'s from the base type go to the toplevel symbol
+		'' that's being declared, for example a function, except if it's
+		'' a function pointer variable, then the __attribute__'s go to
+		'' the procptr subtype, not the variable.
+
+		basegccattribs or= gccattribs or endgccattribs
+
+		if( (typeGetDt( t->dtype ) = TYPE_PROC) and (t->class <> ASTCLASS_PROC) ) then
+			assert( t->subtype->class = ASTCLASS_PROC )
+			t->subtype->attrib or= basegccattribs
+		else
+			t->attrib or= basegccattribs
+		end if
+
+		node->attrib or= innergccattribs
 	end if
 
 	function = t
@@ -1365,7 +1529,7 @@ private function cIdList _
 
 	'' ... (',' ...)*
 	do
-		var t = cDeclarator( decl, basedtype, basesubtype, gccattribs, NULL, 0 )
+		var t = cDeclarator( 0, decl, basedtype, basesubtype, gccattribs, NULL, 0, 0 )
 		if( t = NULL ) then
 			astDelete( group )
 			exit function
@@ -1416,16 +1580,11 @@ private function cMultDecl _
 		byval gccattribs as integer _
 	) as ASTNODE ptr
 
-	'' __ATTRIBUTE__((...))
-	if( cGccAttributeList( gccattribs ) = FALSE ) then
-		exit function
-	end if
-
 	'' BaseType
 	var typebegin = parse.x
 	dim as integer dtype
 	dim as ASTNODE ptr subtype
-	if( cBaseType( dtype, subtype, decl ) = FALSE ) then
+	if( cBaseType( dtype, subtype, gccattribs, decl ) = FALSE ) then
 		exit function
 	end if
 	var typeend = parse.x
