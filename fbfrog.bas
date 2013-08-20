@@ -299,6 +299,76 @@ private sub hMakeProcsDefaultToCdecl( byval n as ASTNODE ptr )
 	wend
 end sub
 
+private function hCountCallConv _
+	( _
+		byval n as ASTNODE ptr, _
+		byval callconv as integer _
+	) as integer
+
+	var count = 0
+
+	if( n->class = ASTCLASS_PROC ) then
+		if( n->attrib and callconv ) then
+			count += 1
+		end if
+	end if
+
+	'' Don't forget the procptr subtypes
+	if( typeGetDt( n->dtype ) = TYPE_PROC ) then
+		count += hCountCallConv( n->subtype, callconv )
+	end if
+
+	var child = n->head
+	while( child )
+		count += hCountCallConv( child, callconv )
+		child = child->next
+	wend
+
+	function = count
+end function
+
+private sub hPurgeCallConv( byval n as ASTNODE ptr, byval callconv as integer )
+	if( n->class = ASTCLASS_PROC ) then
+		n->attrib and= not callconv
+	end if
+
+	'' Don't forget the procptr subtypes
+	if( typeGetDt( n->dtype ) = TYPE_PROC ) then
+		hPurgeCallConv( n->subtype, callconv )
+	end if
+
+	var child = n->head
+	while( child )
+		hPurgeCallConv( child, callconv )
+		child = child->next
+	wend
+end sub
+
+private sub hTurnCallConvsIntoExternBlock _
+	( _
+		byval ast as ASTNODE ptr, _
+		byval externwindows as zstring ptr = @"Windows" _
+	)
+
+	var   cdeclcount = hCountCallConv( ast, ASTATTRIB_CDECL   )
+	var stdcallcount = hCountCallConv( ast, ASTATTRIB_STDCALL )
+
+	var purgecallconv = ASTATTRIB_CDECL
+	var externblock = @"C"
+	if( stdcallcount > cdeclcount ) then
+		externblock = externwindows
+		purgecallconv = ASTATTRIB_STDCALL
+	end if
+
+	hPurgeCallConv( ast, purgecallconv )
+
+	assert( ast->class = ASTCLASS_GROUP )
+	astPrepend( ast, astNew( ASTCLASS_DIVIDER ) )
+	astPrepend( ast, astNew( ASTCLASS_EXTERNBLOCKBEGIN, externblock ) )
+	astAddChild( ast, astNew( ASTCLASS_DIVIDER ) )
+	astAddChild( ast, astNew( ASTCLASS_EXTERNBLOCKEND ) )
+end sub
+
 private sub hRemoveParamNames( byval n as ASTNODE ptr )
 	if( n->class = ASTCLASS_PARAM ) then
 		astRemoveText( n )
@@ -1199,6 +1269,9 @@ private function frogParse _
 	''
 	'' Work on the AST
 	''
+	hMergeDIVIDERs( ast )
+	hRemoveOuterDIVIDERs( ast )
+
 	select case( frog.preset )
 	case "zip"
 		hRemoveNode( ast, ASTCLASS_PPDEFINE, "_HAD_ZIP_H" )
@@ -1215,6 +1288,7 @@ private function frogParse _
 
 	case else
 		hMakeProcsDefaultToCdecl( ast )
+		hTurnCallConvsIntoExternBlock( ast )
 	end select
 
 	'hRemoveParamNames( ast )
@@ -1229,9 +1303,6 @@ private function frogParse _
 			hSetPPIndentAttrib( ast, FALSE )
 		end if
 	end select
-
-	hMergeDIVIDERs( ast )
-	hRemoveOuterDIVIDERs( ast )
 
 	function = ast
 end function

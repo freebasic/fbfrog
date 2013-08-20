@@ -423,6 +423,12 @@ private function emitAst _
 		emitLine( "'' TODO: unknown construct" )
 		emitLine( emitAst( n->head ) )
 
+	case ASTCLASS_EXTERNBLOCKBEGIN
+		emitLine( "extern """ + *n->text + """" )
+
+	case ASTCLASS_EXTERNBLOCKEND
+		emitLine( "end extern" )
+
 	case ASTCLASS_MACROPARAM
 		s += *n->text
 

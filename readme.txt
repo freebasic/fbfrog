@@ -92,7 +92,6 @@ To do:
 - ## PP merging should allow TK_ID ## TK_DECNUM or TK_UNDERSCORE,
   currently it only allows TK_ID ## TK_ID
 
-- add optional pass to drop parameter names from procdecls
 - add pass to check all identifiers against FB keywords, and to check for dupdefs
   due to case insensitivity
 

@@ -58,6 +58,8 @@ dim shared as ASTNODEINFO astnodeinfo(0 to ...) = _
 	( "array"   ), _
 	( "dimension" ), _
 	( "unknown" ), _
+	( "extern block" ), _
+	( "end extern" ), _
 	( "macrobody" ), _
 	( "macroparam" ), _
 	( "tk"      ), _
@@ -222,6 +224,40 @@ sub astDelete( byval n as ASTNODE ptr )
 	deallocate( n->text )
 	astDelete( n->subtype )
 	deallocate( n )
+end sub
+
+sub astPrepend( byval parent as ASTNODE ptr, byval n as ASTNODE ptr )
+	if( n = NULL ) then
+		exit sub
+	end if
+
+	select case( n->class )
+	case ASTCLASS_GROUP
+		'' If it's a GROUP, add its children and delete the GROUP itself
+		var child = n->tail
+		while( child )
+			astPrepend( parent, astClone( child ) )
+			child = child->prev
+		wend
+
+		astDelete( n )
+		exit sub
+
+	case ASTCLASS_NOP
+		'' Don't bother adding NOPs
+		astDelete( n )
+		exit sub
+
+	end select
+
+	n->next = parent->head
+	if( parent->head ) then
+		parent->head->prev = n
+	end if
+	parent->head = n
+	if( parent->tail = NULL ) then
+		parent->tail = n
+	end if
 end sub
 
 sub astAddChild( byval parent as ASTNODE ptr, byval n as ASTNODE ptr )

@@ -465,6 +465,8 @@ enum
 	ASTCLASS_ARRAY
 	ASTCLASS_DIMENSION
 	ASTCLASS_UNKNOWN
+	ASTCLASS_EXTERNBLOCKBEGIN
+	ASTCLASS_EXTERNBLOCKEND
 
 	ASTCLASS_MACROBODY
 	ASTCLASS_MACROPARAM
@@ -599,6 +601,7 @@ declare function astNewTK _
 	) as ASTNODE ptr
 declare function astNewMACROPARAM( byval paramindex as integer ) as ASTNODE ptr
 declare sub astDelete( byval n as ASTNODE ptr )
+declare sub astPrepend( byval parent as ASTNODE ptr, byval n as ASTNODE ptr )
 declare sub astAddChild( byval parent as ASTNODE ptr, byval n as ASTNODE ptr )
 declare sub astCloneAndAddAllChildrenOf( byval d as ASTNODE ptr, byval s as ASTNODE ptr )
 declare function astVersionsMatch( byval a as ASTNODE ptr, byval b as ASTNODE ptr ) as integer
