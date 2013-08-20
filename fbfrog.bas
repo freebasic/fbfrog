@@ -299,6 +299,23 @@ private sub hMakeProcsDefaultToCdecl( byval n as ASTNODE ptr )
 	wend
 end sub
 
+private sub hRemoveParamNames( byval n as ASTNODE ptr )
+	if( n->class = ASTCLASS_PARAM ) then
+		astRemoveText( n )
+	end if
+
+	'' Don't forget the procptr subtypes
+	if( typeGetDt( n->dtype ) = TYPE_PROC ) then
+		hRemoveParamNames( n->subtype )
+	end if
+
+	var child = n->head
+	while( child )
+		hRemoveParamNames( child )
+		child = child->next
+	wend
+end sub
+
 private sub hFixArrayParams( byval n as ASTNODE ptr )
 	if( n->class = ASTCLASS_PARAM ) then
 		'' C array parameters are really just pointers (i.e. the array
@@ -1196,6 +1213,7 @@ private function frogParse _
 		hMakeProcsDefaultToCdecl( ast )
 	end select
 
+	'hRemoveParamNames( ast )
 	hFixArrayParams( ast )
 	hRemoveRedundantTypedefs( ast )
 

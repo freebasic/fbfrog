@@ -371,6 +371,11 @@ sub astSetText( byval n as ASTNODE ptr, byval text as zstring ptr )
 	n->text = strDuplicate( text )
 end sub
 
+sub astRemoveText( byval n as ASTNODE ptr )
+	deallocate( n->text )
+	n->text = NULL
+end sub
+
 sub astSetType _
 	( _
 		byval n as ASTNODE ptr, _
