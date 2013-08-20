@@ -601,7 +601,13 @@ declare function astNewMACROPARAM( byval paramindex as integer ) as ASTNODE ptr
 declare sub astDelete( byval n as ASTNODE ptr )
 declare sub astAddChild( byval parent as ASTNODE ptr, byval n as ASTNODE ptr )
 declare sub astCloneAndAddAllChildrenOf( byval d as ASTNODE ptr, byval s as ASTNODE ptr )
+declare function astVersionsMatch( byval a as ASTNODE ptr, byval b as ASTNODE ptr ) as integer
 declare sub astAddVersionedChild( byval n as ASTNODE ptr, byval child as ASTNODE ptr )
+declare function astSolveVersionsOut _
+	( _
+		byval nodes as ASTNODE ptr, _
+		byval matchversion as ASTNODE ptr _
+	) as ASTNODE ptr
 declare function astIsChildOf _
 	( _
 		byval parent as ASTNODE ptr, _
@@ -621,6 +627,7 @@ declare function astReplaceChild _
 	) as ASTNODE ptr
 declare sub astRemoveChild( byval parent as ASTNODE ptr, byval a as ASTNODE ptr )
 declare sub astSetText( byval n as ASTNODE ptr, byval text as zstring ptr )
+declare sub astRemoveText( byval n as ASTNODE ptr )
 declare sub astSetType _
 	( _
 		byval n as ASTNODE ptr, _

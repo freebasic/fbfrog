@@ -266,6 +266,12 @@ sub astCloneAndAddAllChildrenOf( byval d as ASTNODE ptr, byval s as ASTNODE ptr 
 	wend
 end sub
 
+function astVersionsMatch( byval a as ASTNODE ptr, byval b as ASTNODE ptr ) as integer
+	assert( a->class = ASTCLASS_VERSION )
+	assert( b->class = ASTCLASS_VERSION )
+	function = astIsEqualDecl( a->initializer, b->initializer )
+end function
+
 sub astAddVersionedChild( byval n as ASTNODE ptr, byval child as ASTNODE ptr )
 	assert( n->class = ASTCLASS_GROUP )
 	assert( child->class = ASTCLASS_VERSION )
@@ -275,7 +281,7 @@ sub astAddVersionedChild( byval n as ASTNODE ptr, byval child as ASTNODE ptr )
 	'' separate VERSION node.
 	if( n->tail ) then
 		assert( n->tail->class = ASTCLASS_VERSION )
-		if( astIsEqualDecl( n->tail->initializer, child->initializer ) ) then
+		if( astVersionsMatch( n->tail, child ) ) then
 			astCloneAndAddAllChildrenOf( n->tail, child )
 			astDelete( child )
 			exit sub
@@ -284,6 +290,35 @@ sub astAddVersionedChild( byval n as ASTNODE ptr, byval child as ASTNODE ptr )
 
 	astAddChild( n, child )
 end sub
+
+function astSolveVersionsOut _
+	( _
+		byval nodes as ASTNODE ptr, _
+		byval matchversion as ASTNODE ptr _
+	) as ASTNODE ptr
+
+	var cleannodes = astNew( ASTCLASS_GROUP )
+
+	assert( nodes->class = ASTCLASS_GROUP )
+	var version = nodes->head
+	while( version )
+		assert( version->class = ASTCLASS_VERSION )
+
+		if( astVersionsMatch( version, matchversion ) ) then
+			'' Add only the VERSION's child nodes
+			astCloneAndAddAllChildrenOf( cleannodes, version )
+		else
+			'' Add the whole VERSION
+			astAddChild( cleannodes, astClone( version ) )
+		end if
+
+		version = version->next
+	wend
+
+	astDelete( nodes )
+	astDelete( matchversion )
+	function = cleannodes
+end function
 
 function astIsChildOf _
 	( _

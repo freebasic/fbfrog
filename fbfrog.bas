@@ -708,9 +708,13 @@ private function hMergeStructsManually _
 	'' Merge both set of fields
 	var fields = hMergeVersions( hMergeVersions( NULL, afields ), bfields )
 
+	'' Solve out any VERSIONs (but preserving their children) that have the
+	'' same version numbers that the struct itself is going to have.
+	var cleanfields = astSolveVersionsOut( fields, astNewVERSION( NULL, aversion, bversion ) )
+
 	'' Create a result struct with the new set of fields
 	var cstruct = astCloneNode( astruct )
-	astAddChild( cstruct, fields )
+	astAddChild( cstruct, cleanfields )
 
 	function = cstruct
 end function
@@ -1337,6 +1341,10 @@ end function
 			case "png"
 				f->ast = hMergeVersions( NULL  , astNewVERSION( frogParse( f, 0 ), 0 ) )
 				f->ast = hMergeVersions( f->ast, astNewVERSION( frogParse( f, 1 ), 1 ) )
+				f->ast = astSolveVersionsOut( f->ast, _
+					astNewVERSION( NULL, _
+						astNewVERSION( NULL, 0 ), _
+						astNewVERSION( NULL, 1 ) ) )
 			case else
 				f->ast = frogParse( f )
 			end select
