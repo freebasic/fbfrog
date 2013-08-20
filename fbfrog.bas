@@ -777,6 +777,7 @@ private sub hAstMerge _
 	end if
 
 	'' Find longest common substring
+	DEBUG( "searching LCS..." )
 	dim as integer alcsfirst, alcslast, blcsfirst, blcslast
 	hAstLCS( a, afirst, alast, alcsfirst, alcslast, _
 	         b, bfirst, blast, blcsfirst, blcslast )
@@ -913,9 +914,12 @@ end function
 private function frogParse _
 	( _
 		byval f as FROGFILE ptr, _
-		byval version as integer, _
-		byval mode as integer _
+		byval version as integer = 0 _
 	) as ASTNODE ptr
+
+	if( frog.verbose ) then
+		print "version " & version
+	end if
 
 	tkInit( )
 	lexLoadFile( 0, f->normed )
@@ -943,7 +947,11 @@ private function frogParse _
 					x -= 1
 					lexLoadFile( x, incf->normed )
 					x -= 1
-					print "(merged in: " + incf->pretty + ")"
+
+					incf->mergeparent = f
+					if( frog.verbose ) then
+						print "    merged in: " + incf->pretty
+					end if
 				end if
 			end if
 
@@ -1263,11 +1271,19 @@ end function
 
 			select case( frog.preset )
 			case "test"
-				f->ast = hMergeVersions( NULL  , astNewVERSION( frogParse( f, 0, 0 ), 0 ) )
-				f->ast = hMergeVersions( f->ast, astNewVERSION( frogParse( f, 1, 0 ), 1 ) )
+				f->ast = hMergeVersions( NULL  , astNewVERSION( frogParse( f, 0 ), 0 ) )
+				f->ast = hMergeVersions( f->ast, astNewVERSION( frogParse( f, 1 ), 1 ) )
 			case else
-				f->ast = frogParse( f, 0, 0 )
+				f->ast = frogParse( f )
 			end select
+
+			dim as FROGFILE ptr incf = listGetHead( @frog.files )
+			while( incf )
+				if( incf->mergeparent = f ) then
+					print "merged in: " + incf->pretty
+				end if
+				incf = listGetNext( incf )
+			wend
 		end if
 
 		f = listGetNext( f )

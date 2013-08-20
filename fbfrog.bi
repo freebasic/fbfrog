@@ -687,6 +687,7 @@ type FROGFILE_
 	missing		as integer '' File missing/not found?
 	ast		as ASTNODE ptr  '' AST representing file content, when loaded
 	refcount	as integer
+	mergeparent	as FROGFILE ptr '' The file this one was merged into
 end type
 
 type FROGSTUFF
