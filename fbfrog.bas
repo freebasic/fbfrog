@@ -486,103 +486,42 @@ private sub hRemoveOuterDIVIDERs( byval n as ASTNODE ptr )
 	end if
 end sub
 
-private function hFindNthDecl _
-	( _
-		byval ast as ASTNODE ptr, _
-		byval index as integer, _
-		byref version as ASTNODE ptr _
-	) as ASTNODE ptr
+type DECLNODE
+	decl as ASTNODE ptr     '' The declaration at that index
+	version as ASTNODE ptr  '' Parent VERSION node of the declaration
+end type
 
-	if( ast = NULL ) then
-		exit function
-	end if
-
-	version = ast
-	if( version->class = ASTCLASS_GROUP ) then
-		version = version->head
-		if( version = NULL ) then
-			exit function
-		end if
-	end if
-
-	'' For each VERSION...
-	do
-		assert( version->class = ASTCLASS_VERSION )
-
-		'' For each declaration in that VERSION...
-		var decl = version->head
-		while( decl )
-			if( index <= 0 ) then
-				return decl
-			end if
-			index -= 1
-			decl = decl->next
-		wend
-
-		version = version->next
-	loop while( version )
-
-end function
-
-private function hAstCountDecls( byval n as ASTNODE ptr ) as integer
-	if( n = NULL ) then
-		exit function
-	end if
-
-	var version = n
-	if( version->class = ASTCLASS_GROUP ) then
-		version = version->head
-		if( version = NULL ) then
-			exit function
-		end if
-	end if
-
-	'' For each VERSION...
-	var count = 0
-	do
-		assert( version->class = ASTCLASS_VERSION )
-
-		'' For each declaration in that VERSION...
-		var decl = version->head
-		while( decl )
-			count += 1
-			decl = decl->next
-		wend
-
-		version = version->next
-	loop while( version )
-
-	function = count
-end function
+type DECLTABLE
+	array	as DECLNODE ptr
+	count	as integer
+	room	as integer
+end type
 
 private sub hAddDecl _
 	( _
 		byval c as ASTNODE ptr, _
-		byval t as ASTNODE ptr, _
+		byval array as DECLNODE ptr, _
 		byval i as integer _
 	)
 
-	dim as ASTNODE ptr tversion
-	var tdecl = hFindNthDecl( t, i, tversion )
-
-	astAddVersionedChild( c, astNewVERSION( astClone( tdecl ), tversion, NULL ) )
+	astAddVersionedChild( c, _
+		astNewVERSION( astClone( array[i].decl ), array[i].version, NULL ) )
 
 end sub
 
 private sub hAddMergedDecl _
 	( _
 		byval c as ASTNODE ptr, _
-		byval a as ASTNODE ptr, _
+		byval aarray as DECLNODE ptr, _
 		byval ai as integer, _
-		byval b as ASTNODE ptr, _
+		byval barray as DECLNODE ptr, _
 		byval bi as integer _
 	)
 
-	dim as ASTNODE ptr aversion, bversion
-	var adecl = hFindNthDecl( a, ai, aversion )
-	var bdecl = hFindNthDecl( b, bi, bversion )
-
-	astAddVersionedChild( c, astNewVERSION( astClone( adecl ), aversion, bversion ) )
+	astAddVersionedChild( c, _
+		astNewVERSION( astClone( aarray[ai].decl ), _
+				aarray[ai].version, _
+				barray[bi].version ) )
 
 end sub
 
@@ -628,12 +567,12 @@ end sub
 ''
 private sub hAstLCS _
 	( _
-		byval l as ASTNODE ptr, _
+		byval larray as DECLNODE ptr, _
 		byval lfirst as integer, _
 		byval llast as integer, _
 		byref llcsfirst as integer, _
 		byref llcslast as integer, _
-		byval r as ASTNODE ptr, _
+		byval rarray as DECLNODE ptr, _
 		byval rfirst as integer, _
 		byval rlast as integer, _
 		byref rlcsfirst as integer, _
@@ -649,8 +588,8 @@ private sub hAstLCS _
 	for i as integer = 0 to llen-1
 		for j as integer = 0 to rlen-1
 			var newval = 0
-			if( astIsEqualDecl( hFindNthDecl( l, lfirst + i, NULL ), _
-			                    hFindNthDecl( r, rfirst + j, NULL ), _
+			if( astIsEqualDecl( larray[lfirst+i].decl, _
+			                    rarray[rfirst+j].decl, _
 			                    TRUE ) ) then
 				if( (i = 0) or (j = 0) ) then
 					newval = 1
@@ -742,10 +681,10 @@ end function
 private sub hAstMerge _
 	( _
 		byval c as ASTNODE ptr, _
-		byval a as ASTNODE ptr, _
+		byval aarray as DECLNODE ptr, _
 		byval afirst as integer, _
 		byval alast as integer, _
-		byval b as ASTNODE ptr, _
+		byval barray as DECLNODE ptr, _
 		byval bfirst as integer, _
 		byval blast as integer _
 	)
@@ -764,14 +703,14 @@ private sub hAstMerge _
 		'' Add bfirst..blast to result
 		DEBUG( "no LCS possible due to a, adding b as-is" )
 		for i as integer = bfirst to blast
-			hAddDecl( c, b, i )
+			hAddDecl( c, barray, i )
 		next
 		exit sub
 	elseif( bfirst > blast ) then
 		'' Add afirst..alast to result
 		DEBUG( "no LCS possible due to b, adding a as-is" )
 		for i as integer = afirst to alast
-			hAddDecl( c, a, i )
+			hAddDecl( c, aarray, i )
 		next
 		exit sub
 	end if
@@ -779,8 +718,8 @@ private sub hAstMerge _
 	'' Find longest common substring
 	DEBUG( "searching LCS..." )
 	dim as integer alcsfirst, alcslast, blcsfirst, blcslast
-	hAstLCS( a, afirst, alast, alcsfirst, alcslast, _
-	         b, bfirst, blast, blcsfirst, blcslast )
+	hAstLCS( aarray, afirst, alast, alcsfirst, alcslast, _
+	         barray, bfirst, blast, blcsfirst, blcslast )
 	DEBUG( "LCS: a=" & alcsfirst & ".." & alcslast & ", b=" & blcsfirst & ".." & blcslast )
 
 	'' No LCS found?
@@ -789,10 +728,10 @@ private sub hAstMerge _
 		'' the old declarations at the top, add new ones to the bottom.
 		DEBUG( "no LCS found, adding both as-is" )
 		for i as integer = afirst to alast
-			hAddDecl( c, a, i )
+			hAddDecl( c, aarray, i )
 		next
 		for i as integer = bfirst to blast
-			hAddDecl( c, b, i )
+			hAddDecl( c, barray, i )
 		next
 		exit sub
 	end if
@@ -802,19 +741,20 @@ private sub hAstMerge _
 		'' Do LCS on that recursively
 		DEBUG( "both sides have decls before LCS, recursing" )
 		reclevel += 1
-		hAstMerge( c, a, afirst, alcsfirst - 1, b, bfirst, blcsfirst - 1 )
+		hAstMerge( c, aarray, afirst, alcsfirst - 1, _
+		              barray, bfirst, blcsfirst - 1 )
 		reclevel -= 1
 	elseif( alcsfirst > afirst ) then
 		'' Only a has decls before the LCS; copy them into result first
 		DEBUG( "only a has decls before LCS" )
 		for i as integer = afirst to alcsfirst - 1
-			hAddDecl( c, a, i )
+			hAddDecl( c, aarray, i )
 		next
 	elseif( blcsfirst > bfirst ) then
 		'' Only b has decls before the LCS; copy them into result first
 		DEBUG( "only b has decls before LCS" )
 		for i as integer = bfirst to blcsfirst - 1
-			hAddDecl( c, b, i )
+			hAddDecl( c, barray, i )
 		next
 	end if
 
@@ -827,11 +767,11 @@ private sub hAstMerge _
 		'' be common, but the fields may be version dependant.
 		'' (relying on hAstLCS() to allow structs to match even if they
 		'' have different fields)
-		dim as ASTNODE ptr aversion
-		var astruct = hFindNthDecl( a, alcsfirst + i, aversion )
+		var astruct = aarray[alcsfirst+i].decl
 		if( astruct->class = ASTCLASS_STRUCT ) then
-			dim as ASTNODE ptr bversion
-			var bstruct = hFindNthDecl( b, blcsfirst + i, bversion )
+			var aversion = aarray[alcsfirst+i].version
+			var bstruct  = barray[blcsfirst+i].decl
+			var bversion = barray[blcsfirst+i].version
 			assert( bstruct->class = ASTCLASS_STRUCT )
 
 			var cstruct = hMergeStructsManually( astruct, aversion, bstruct, bversion )
@@ -842,7 +782,7 @@ private sub hAstMerge _
 			continue for
 		end if
 
-		hAddMergedDecl( c, a, alcsfirst + i, b, blcsfirst + i )
+		hAddMergedDecl( c, aarray, alcsfirst + i, barray, blcsfirst + i )
 	next
 
 	'' Do both sides have decls behind the LCS?
@@ -850,22 +790,80 @@ private sub hAstMerge _
 		'' Do LCS on that recursively
 		DEBUG( "both sides have decls behind LCS, recursing" )
 		reclevel += 1
-		hAstMerge( c, a, alcslast + 1, alast, b, blcslast + 1, blast )
+		hAstMerge( c, aarray, alcslast + 1, alast, barray, blcslast + 1, blast )
 		reclevel -= 1
 	elseif( alcslast < alast ) then
 		'' Only a has decls behind the LCS
 		DEBUG( "only a has decls behind LCS" )
 		for i as integer = alcslast + 1 to alast
-			hAddDecl( c, a, i )
+			hAddDecl( c, aarray, i )
 		next
 	elseif( blcslast < blast ) then
 		'' Only b has decls behind the LCS
 		DEBUG( "only b has decls behind LCS" )
 		for i as integer = blcslast + 1 to blast
-			hAddDecl( c, b, i )
+			hAddDecl( c, barray, i )
 		next
 	end if
 
+end sub
+
+private sub decltableAdd _
+	( _
+		byval table as DECLTABLE ptr, _
+		byval decl as ASTNODE ptr, _
+		byval version as ASTNODE ptr _
+	)
+
+	if( table->count = table->room ) then
+		table->room += 256
+		table->array = reallocate( table->array, table->room * sizeof( DECLNODE ) )
+	end if
+
+	with( table->array[table->count] )
+		.decl = decl
+		.version = version
+	end with
+
+	table->count += 1
+
+end sub
+
+private sub decltableInit( byval table as DECLTABLE ptr, byval n as ASTNODE ptr )
+	table->array = NULL
+	table->count = 0
+	table->room = 0
+
+	'' Add each declaration node from the AST to the table
+	if( n = NULL ) then
+		exit sub
+	end if
+
+	var version = n
+	if( version->class = ASTCLASS_GROUP ) then
+		version = version->head
+		if( version = NULL ) then
+			exit sub
+		end if
+	end if
+
+	'' For each VERSION...
+	do
+		assert( version->class = ASTCLASS_VERSION )
+
+		'' For each declaration in that VERSION...
+		var decl = version->head
+		while( decl )
+			decltableAdd( table, decl, version )
+			decl = decl->next
+		wend
+
+		version = version->next
+	loop while( version )
+end sub
+
+private sub decltableEnd( byval table as DECLTABLE ptr )
+	deallocate( table->array )
 end sub
 
 private function hMergeVersions _
@@ -900,8 +898,22 @@ private function hMergeVersions _
 	assert( a->head->class = ASTCLASS_VERSION )
 	assert( b->class = ASTCLASS_VERSION )
 
-	hAstMerge( c, a, 0, hAstCountDecls( a ) - 1, _
-	              b, 0, hAstCountDecls( b ) - 1 )
+	'' Create a lookup table for each side, so we can find the declarations
+	'' at certain indices in O(1) instead of having to cycle through the
+	'' whole list of preceding nodes everytime. Especially by the LCS
+	'' algorithm needs to find declaratinos by index a lot, this makes that
+	'' much faster.
+	dim atable as DECLTABLE
+	dim btable as DECLTABLE
+
+	decltableInit( @atable, a )
+	decltableInit( @btable, b )
+
+	hAstMerge( c, atable.array, 0, atable.count - 1, _
+	              btable.array, 0, btable.count - 1 )
+
+	decltableEnd( @btable )
+	decltableEnd( @atable )
 
 	#if 0
 		print "c:"
