@@ -1166,7 +1166,9 @@ private function frogParseVersion _
 					var incf = frogAddFile( f, incfile )
 					t->includefile = incf
 
-					if( (not incf->missing) and (incf->refcount = 1) and (incf->mergeparent = NULL) and (incf <> f) ) then
+					if( (not incf->missing) and (incf->refcount = 1) and _
+					    ((incf->mergeparent = NULL) or (incf->mergeparent = f)) and _
+					    (incf <> f) ) then
 						'' Replace #include by included file's content
 						tkRemove( x, x )
 						lexLoadFile( x, incf->normed )
