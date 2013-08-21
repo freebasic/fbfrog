@@ -533,7 +533,8 @@ function astIsEqualDecl _
 	( _
 		byval a as ASTNODE ptr, _
 		byval b as ASTNODE ptr, _
-		byval ignore_fields as integer _
+		byval ignore_fields as integer, _
+		byval ignore_hiddencallconv as integer _
 	) as integer
 
 	'' If one is NULL, both must be NULL
@@ -563,14 +564,23 @@ function astIsEqualDecl _
 		exit function
 	end if
 
-	if( (a->attrib and ASTATTRIB_CDECL) <> _
-	    (b->attrib and ASTATTRIB_CDECL) ) then
-		exit function
+	var ignore_callconv = FALSE
+	if( ignore_hiddencallconv ) then
+		var ahidden = ((a->attrib and ASTATTRIB_HIDECALLCONV) <> 0)
+		var bhidden = ((b->attrib and ASTATTRIB_HIDECALLCONV) <> 0)
+		ignore_callconv = (ahidden = bhidden)
 	end if
 
-	if( (a->attrib and ASTATTRIB_STDCALL) <> _
-	    (b->attrib and ASTATTRIB_STDCALL) ) then
-		exit function
+	if( ignore_callconv = FALSE ) then
+		if( (a->attrib and ASTATTRIB_CDECL) <> _
+		    (b->attrib and ASTATTRIB_CDECL) ) then
+			exit function
+		end if
+
+		if( (a->attrib and ASTATTRIB_STDCALL) <> _
+		    (b->attrib and ASTATTRIB_STDCALL) ) then
+			exit function
+		end if
 	end if
 
 	if( (a->text <> NULL) and (b->text <> NULL) ) then
@@ -580,10 +590,10 @@ function astIsEqualDecl _
 	end if
 
 	if( a->dtype <> b->dtype ) then exit function
-	if( astIsEqualDecl( a->subtype, b->subtype, ignore_fields ) = FALSE ) then exit function
-	if( astIsEqualDecl( a->array, b->array, ignore_fields ) = FALSE ) then exit function
+	if( astIsEqualDecl( a->subtype, b->subtype, ignore_fields, ignore_hiddencallconv ) = FALSE ) then exit function
+	if( astIsEqualDecl( a->array, b->array, ignore_fields, ignore_hiddencallconv ) = FALSE ) then exit function
 
-	if( astIsEqualDecl( a->initializer, b->initializer, ignore_fields ) = FALSE ) then exit function
+	if( astIsEqualDecl( a->initializer, b->initializer, ignore_fields, ignore_hiddencallconv ) = FALSE ) then exit function
 
 	if( a->includefile <> b->includefile ) then exit function
 
@@ -613,7 +623,7 @@ function astIsEqualDecl _
 	a = a->head
 	b = b->head
 	while( (a <> NULL) and (b <> NULL) )
-		if( astIsEqualDecl( a, b, ignore_fields ) = FALSE ) then
+		if( astIsEqualDecl( a, b, ignore_fields, ignore_hiddencallconv ) = FALSE ) then
 			exit function
 		end if
 		a = a->next
@@ -677,6 +687,7 @@ function astDumpOne( byval n as ASTNODE ptr ) as string
 	checkAttrib( STRINGIFY )
 	checkAttrib( CDECL )
 	checkAttrib( STDCALL )
+	checkAttrib( HIDECALLCONV )
 
 	function = s
 end function

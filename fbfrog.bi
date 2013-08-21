@@ -514,6 +514,7 @@ enum
 	ASTATTRIB_STRINGIFY	= 1 shl 7  '' MACROPARAM, to distinguish "param" from "#param"
 	ASTATTRIB_CDECL		= 1 shl 8
 	ASTATTRIB_STDCALL	= 1 shl 9
+	ASTATTRIB_HIDECALLCONV	= 1 shl 10 '' Whether the calling convention is covered by an Extern block, then it doesn't need to be emitted
 end enum
 
 type ASTNODECONST
@@ -644,7 +645,8 @@ declare function astIsEqualDecl _
 	( _
 		byval a as ASTNODE ptr, _
 		byval b as ASTNODE ptr, _
-		byval ignore_fields as integer = FALSE _
+		byval ignore_fields as integer = FALSE, _
+		byval ignore_hiddencallconv as integer = FALSE _
 	) as integer
 declare function astDumpOne( byval n as ASTNODE ptr ) as string
 declare function astDumpInline( byval n as ASTNODE ptr ) as string

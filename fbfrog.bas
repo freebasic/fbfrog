@@ -327,46 +327,57 @@ private function hCountCallConv _
 	function = count
 end function
 
-private sub hPurgeCallConv( byval n as ASTNODE ptr, byval callconv as integer )
+private sub hHideCallConv( byval n as ASTNODE ptr, byval callconv as integer )
 	if( n->class = ASTCLASS_PROC ) then
-		n->attrib and= not callconv
+		if( n->attrib and callconv ) then
+			n->attrib or= ASTATTRIB_HIDECALLCONV
+		end if
 	end if
 
 	'' Don't forget the procptr subtypes
 	if( typeGetDt( n->dtype ) = TYPE_PROC ) then
-		hPurgeCallConv( n->subtype, callconv )
+		hHideCallConv( n->subtype, callconv )
 	end if
 
 	var child = n->head
 	while( child )
-		hPurgeCallConv( child, callconv )
+		hHideCallConv( child, callconv )
 		child = child->next
 	wend
 end sub
 
-private sub hTurnCallConvsIntoExternBlock _
-	( _
-		byval ast as ASTNODE ptr, _
-		byval externwindows as zstring ptr = @"Windows" _
-	)
-
+private function hFindMainCallConv( byval ast as ASTNODE ptr ) as integer
 	var   cdeclcount = hCountCallConv( ast, ASTATTRIB_CDECL   )
 	var stdcallcount = hCountCallConv( ast, ASTATTRIB_STDCALL )
-
-	var purgecallconv = ASTATTRIB_CDECL
-	var externblock = @"C"
 	if( stdcallcount > cdeclcount ) then
+		function = ASTATTRIB_STDCALL
+	else
+		function = ASTATTRIB_CDECL
+	end if
+end function
+
+private sub hTurnCallConvIntoExternBlock _
+	( _
+		byval ast as ASTNODE ptr, _
+		byval externcallconv as integer, _
+		byval externwindows as zstring ptr = @"Windows" _  '' To allow changing to "Windows-MS"
+	)
+
+	var externblock = @"C"
+	if( externcallconv = ASTATTRIB_STDCALL ) then
 		externblock = externwindows
-		purgecallconv = ASTATTRIB_STDCALL
 	end if
 
-	hPurgeCallConv( ast, purgecallconv )
+	'' Remove the calling convention from all procdecls, the Extern block
+	'' will take over
+	hHideCallConv( ast, externcallconv )
 
 	assert( ast->class = ASTCLASS_GROUP )
 	astPrepend( ast, astNew( ASTCLASS_DIVIDER ) )
 	astPrepend( ast, astNew( ASTCLASS_EXTERNBLOCKBEGIN, externblock ) )
 	astAppend( ast, astNew( ASTCLASS_DIVIDER ) )
 	astAppend( ast, astNew( ASTCLASS_EXTERNBLOCKEND ) )
+
 end sub
 
 private sub hRemoveParamNames( byval n as ASTNODE ptr )
@@ -625,8 +636,47 @@ private sub hAddMergedDecl _
 		byval bi as integer _
 	)
 
+	var adecl = aarray[ai].decl
+	var bdecl = barray[bi].decl
+	var mergeddecl = astClone( adecl )
+
+	'' See also hTurnCallConvIntoExternBlock():
+	''
+	'' Procdecls with callconv covered by the Extern block are given the
+	'' ASTATTRIB_HIDECALLCONV flag.
+	''
+	'' If we're merging two procdecls here, and they both have
+	'' ASTATTRIB_HIDECALLCONV, then they can be emitted without explicit
+	'' callconv, as the Extern blocks will take care of that and remap
+	'' the callconv as needed. In this case, the merged node shouldn't have
+	'' any callconv flag at all, but only ASTATTRIB_HIDECALLCONV.
+	'' hAstLCS() calls astIsEqualDecl() with the proper flags to allow this.
+	''
+	'' If merging two procdecls and only one side has
+	'' ASTATTRIB_HIDECALLCONV, then they must have the same callconv,
+	'' otherwise hAstLCS()'s astIsEqualDecl() call wouldn't have treated
+	'' them as equal. In this case the callconv must be preserved on
+	'' the merged node, so it will be emitted explicitly, since the Extern
+	'' blocks don't cover it. ASTATTRIB_HIDECALLCONV shouldn't be preserved
+	'' in this case.
+
+	assert( adecl->class = bdecl->class )
+	if( mergeddecl->class = ASTCLASS_PROC ) then
+		if( ((adecl->attrib and ASTATTRIB_HIDECALLCONV) <> 0) and _
+		    ((bdecl->attrib and ASTATTRIB_HIDECALLCONV) <> 0) ) then
+			mergeddecl->attrib and= not (ASTATTRIB_CDECL or ASTATTRIB_STDCALL)
+			assert( mergeddecl->attrib and ASTATTRIB_HIDECALLCONV ) '' was preserved by astClone() already
+		elseif( ((adecl->attrib and ASTATTRIB_HIDECALLCONV) <> 0) or _
+			((bdecl->attrib and ASTATTRIB_HIDECALLCONV) <> 0) ) then
+			assert( (adecl->attrib and (ASTATTRIB_CDECL or ASTATTRIB_STDCALL)) = _
+				(bdecl->attrib and (ASTATTRIB_CDECL or ASTATTRIB_STDCALL)) )
+			mergeddecl->attrib and= not ASTATTRIB_HIDECALLCONV
+			assert( (mergeddecl->attrib and (ASTATTRIB_CDECL or ASTATTRIB_STDCALL)) <> 0 ) '' ditto
+		end if
+	end if
+
 	astAddVersionedChild( c, _
-		astNewVERSION( astClone( aarray[ai].decl ), _
+		astNewVERSION( mergeddecl, _
 				aarray[ai].version, _
 				barray[bi].version ) )
 
@@ -697,7 +747,7 @@ private sub hAstLCS _
 			var newval = 0
 			if( astIsEqualDecl( larray[lfirst+i].decl, _
 			                    rarray[rfirst+j].decl, _
-			                    TRUE ) ) then
+			                    TRUE, TRUE ) ) then
 				if( (i = 0) or (j = 0) ) then
 					newval = 1
 				else
@@ -1283,17 +1333,12 @@ private function frogParse _
 		hRemoveNode( ast, ASTCLASS_PPDEFINE, "PNG_CONST" )
 	end select
 
-	select case( frog.preset )
-	case "tests", "test"
-
-	case else
-		hMakeProcsDefaultToCdecl( ast )
-		hTurnCallConvsIntoExternBlock( ast )
-	end select
-
 	'hRemoveParamNames( ast )
 	hFixArrayParams( ast )
 	hRemoveRedundantTypedefs( ast )
+
+	hMakeProcsDefaultToCdecl( ast )
+	hTurnCallConvIntoExternBlock( ast, hFindMainCallConv( ast ) )
 
 	hSetPPIndentAttrib( ast, TRUE )
 	hRemovePPIndentFromIncludeGuard( ast )
@@ -1412,6 +1457,7 @@ end function
 			case "png"
 				f->ast = hMergeVersions( NULL  , astNewVERSION( frogParse( f, 0 ), 0 ) )
 				f->ast = hMergeVersions( f->ast, astNewVERSION( frogParse( f, 1 ), 1 ) )
+
 				f->ast = astSolveVersionsOut( f->ast, _
 					astNewVERSION( NULL, _
 						astNewVERSION( NULL, 0 ), _

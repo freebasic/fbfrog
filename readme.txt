@@ -103,3 +103,5 @@ To do:
 - allow the AST diffing to find partial matches, e.g. if a procdecl differs only
   in calling convention.
 - VERSION nodes should be merged/turned into #if checks on the binding's version #define
+
+- astVersionsMatch() should allow matches also if version numbers are in different order
