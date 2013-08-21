@@ -100,8 +100,21 @@ To do:
   themselves are implemented as #if/#endif...
     - perhaps #if/#endif can be merged into #if blocks so they appear as single nodes
       that will be merged or not, like structs and their fields?
-- allow the AST diffing to find partial matches, e.g. if a procdecl differs only
-  in calling convention.
 - VERSION nodes should be merged/turned into #if checks on the binding's version #define
 
-- astVersionsMatch() should allow matches also if version numbers are in different order
+- astVersionsMatch() should allow matches also if version numbers are in different order,
+  though currently that won't ever happen since versions are always merged in the same order
+
+- Perhaps load presets from .ini files afterall, one .ini per preset or similar
+    - Working on/adding/sharing presets becomes easier because fbfrog itself
+      doesn't need to be patched, rebuilt, re-released, etc.
+    - Things like the list of known symbols are better stored in a config file
+      than in form of a bunch of hard-coded ppAddSym() calls, because the config
+      file allows for a smaller and potentially easier to read format.
+    - Of course no "dynamic" coding will be possible, so everything must be
+      encoded in the format: tarball URLs, input file names, version numbers,
+      restricting certain symbols to certain versions, etc.
+    - Allow passing multiple .ini's on command line to run multiple presets one
+      after another (can even use fbfrog sub-processes if needed), this would
+      allow for .ini's for more complex test cases, to be run simply via
+          fbfrog tests/*.ini

@@ -627,6 +627,78 @@ private sub hAddDecl _
 
 end sub
 
+'' See also hTurnCallConvIntoExternBlock():
+''
+'' Procdecls with callconv covered by the Extern block are given the
+'' ASTATTRIB_HIDECALLCONV flag.
+''
+'' If we're merging two procdecls here, and they both have
+'' ASTATTRIB_HIDECALLCONV, then they can be emitted without explicit
+'' callconv, as the Extern blocks will take care of that and remap
+'' the callconv as needed. In this case, the merged node shouldn't have
+'' any callconv flag at all, but only ASTATTRIB_HIDECALLCONV.
+'' hAstLCS() calls astIsEqualDecl() with the proper flags to allow this.
+''
+'' If merging two procdecls and only one side has
+'' ASTATTRIB_HIDECALLCONV, then they must have the same callconv,
+'' otherwise hAstLCS()'s astIsEqualDecl() call wouldn't have treated
+'' them as equal. In this case the callconv must be preserved on
+'' the merged node, so it will be emitted explicitly, since the Extern
+'' blocks don't cover it. ASTATTRIB_HIDECALLCONV shouldn't be preserved
+'' in this case.
+''
+'' The same applies to procptr subtypes, though to handle it for those,
+'' we need a recursive function.
+
+private sub hFindCommonCallConvsOnMergedDecl _
+	( _
+		byval mdecl as ASTNODE ptr, _
+		byval adecl as ASTNODE ptr, _
+		byval bdecl as ASTNODE ptr _
+	)
+
+	assert( mdecl->class = adecl->class )
+	assert( adecl->class = bdecl->class )
+
+	if( mdecl->class = ASTCLASS_PROC ) then
+		if( ((adecl->attrib and ASTATTRIB_HIDECALLCONV) <> 0) and _
+		    ((bdecl->attrib and ASTATTRIB_HIDECALLCONV) <> 0) ) then
+			mdecl->attrib and= not (ASTATTRIB_CDECL or ASTATTRIB_STDCALL)
+			assert( mdecl->attrib and ASTATTRIB_HIDECALLCONV ) '' was preserved by astClone() already
+		elseif( ((adecl->attrib and ASTATTRIB_HIDECALLCONV) <> 0) or _
+			((bdecl->attrib and ASTATTRIB_HIDECALLCONV) <> 0) ) then
+			assert( (adecl->attrib and (ASTATTRIB_CDECL or ASTATTRIB_STDCALL)) = _
+				(bdecl->attrib and (ASTATTRIB_CDECL or ASTATTRIB_STDCALL)) )
+			mdecl->attrib and= not ASTATTRIB_HIDECALLCONV
+			assert( (mdecl->attrib and (ASTATTRIB_CDECL or ASTATTRIB_STDCALL)) <> 0 ) '' ditto
+		end if
+	end if
+
+	'' Don't forget the procptr subtypes
+	if( typeGetDt( mdecl->dtype ) = TYPE_PROC ) then
+		assert( typeGetDt( adecl->dtype ) = TYPE_PROC )
+		assert( typeGetDt( bdecl->dtype ) = TYPE_PROC )
+		hFindCommonCallConvsOnMergedDecl( mdecl->subtype, adecl->subtype, bdecl->subtype )
+	end if
+
+	var mchild = mdecl->head
+	var achild = adecl->head
+	var bchild = bdecl->head
+	while( mchild )
+		assert( achild )
+		assert( bchild )
+
+		hFindCommonCallConvsOnMergedDecl( mchild, achild, bchild )
+
+		mchild = mchild->next
+		achild = achild->next
+		bchild = bchild->next
+	wend
+	assert( mchild = NULL )
+	assert( achild = NULL )
+	assert( bchild = NULL )
+end sub
+
 private sub hAddMergedDecl _
 	( _
 		byval c as ASTNODE ptr, _
@@ -638,45 +710,12 @@ private sub hAddMergedDecl _
 
 	var adecl = aarray[ai].decl
 	var bdecl = barray[bi].decl
-	var mergeddecl = astClone( adecl )
+	var mdecl = astClone( adecl )
 
-	'' See also hTurnCallConvIntoExternBlock():
-	''
-	'' Procdecls with callconv covered by the Extern block are given the
-	'' ASTATTRIB_HIDECALLCONV flag.
-	''
-	'' If we're merging two procdecls here, and they both have
-	'' ASTATTRIB_HIDECALLCONV, then they can be emitted without explicit
-	'' callconv, as the Extern blocks will take care of that and remap
-	'' the callconv as needed. In this case, the merged node shouldn't have
-	'' any callconv flag at all, but only ASTATTRIB_HIDECALLCONV.
-	'' hAstLCS() calls astIsEqualDecl() with the proper flags to allow this.
-	''
-	'' If merging two procdecls and only one side has
-	'' ASTATTRIB_HIDECALLCONV, then they must have the same callconv,
-	'' otherwise hAstLCS()'s astIsEqualDecl() call wouldn't have treated
-	'' them as equal. In this case the callconv must be preserved on
-	'' the merged node, so it will be emitted explicitly, since the Extern
-	'' blocks don't cover it. ASTATTRIB_HIDECALLCONV shouldn't be preserved
-	'' in this case.
-
-	assert( adecl->class = bdecl->class )
-	if( mergeddecl->class = ASTCLASS_PROC ) then
-		if( ((adecl->attrib and ASTATTRIB_HIDECALLCONV) <> 0) and _
-		    ((bdecl->attrib and ASTATTRIB_HIDECALLCONV) <> 0) ) then
-			mergeddecl->attrib and= not (ASTATTRIB_CDECL or ASTATTRIB_STDCALL)
-			assert( mergeddecl->attrib and ASTATTRIB_HIDECALLCONV ) '' was preserved by astClone() already
-		elseif( ((adecl->attrib and ASTATTRIB_HIDECALLCONV) <> 0) or _
-			((bdecl->attrib and ASTATTRIB_HIDECALLCONV) <> 0) ) then
-			assert( (adecl->attrib and (ASTATTRIB_CDECL or ASTATTRIB_STDCALL)) = _
-				(bdecl->attrib and (ASTATTRIB_CDECL or ASTATTRIB_STDCALL)) )
-			mergeddecl->attrib and= not ASTATTRIB_HIDECALLCONV
-			assert( (mergeddecl->attrib and (ASTATTRIB_CDECL or ASTATTRIB_STDCALL)) <> 0 ) '' ditto
-		end if
-	end if
+	hFindCommonCallConvsOnMergedDecl( mdecl, adecl, bdecl )
 
 	astAddVersionedChild( c, _
-		astNewVERSION( mergeddecl, _
+		astNewVERSION( mdecl, _
 				aarray[ai].version, _
 				barray[bi].version ) )
 
