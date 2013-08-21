@@ -350,7 +350,9 @@ end sub
 private function hFindMainCallConv( byval ast as ASTNODE ptr ) as integer
 	var   cdeclcount = hCountCallConv( ast, ASTATTRIB_CDECL   )
 	var stdcallcount = hCountCallConv( ast, ASTATTRIB_STDCALL )
-	if( stdcallcount > cdeclcount ) then
+	if( (cdeclcount = 0) and (stdcallcount = 0) ) then
+		function = -1
+	elseif( stdcallcount > cdeclcount ) then
 		function = ASTATTRIB_STDCALL
 	else
 		function = ASTATTRIB_CDECL
@@ -1375,7 +1377,10 @@ private function frogParseVersion _
 	hRemoveRedundantTypedefs( ast )
 
 	hMakeProcsDefaultToCdecl( ast )
-	hTurnCallConvIntoExternBlock( ast, hFindMainCallConv( ast ) )
+	var maincallconv = hFindMainCallConv( ast )
+	if( maincallconv >= 0 ) then
+		hTurnCallConvIntoExternBlock( ast, maincallconv )
+	end if
 
 	hSetPPIndentAttrib( ast, TRUE )
 	hRemovePPIndentFromIncludeGuard( ast )
