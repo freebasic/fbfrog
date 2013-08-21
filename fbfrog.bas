@@ -1124,7 +1124,7 @@ private function hMergeVersions _
 	function = c
 end function
 
-private function frogParse _
+private function frogParseVersion _
 	( _
 		byval f as FROGFILE ptr, _
 		byval version as integer = 0 _
@@ -1389,6 +1389,23 @@ private function frogParse _
 	function = ast
 end function
 
+private sub frogParse( byval f as FROGFILE ptr )
+	print "parsing: ";f->pretty
+
+	select case( frog.preset )
+	case "png"
+		f->ast = hMergeVersions( NULL  , astNewVERSION( frogParseVersion( f, 0 ), 0 ) )
+		f->ast = hMergeVersions( f->ast, astNewVERSION( frogParseVersion( f, 1 ), 1 ) )
+
+		f->ast = astSolveVersionsOut( f->ast, _
+			astNewVERSION( NULL, _
+				astNewVERSION( NULL, 0 ), _
+				astNewVERSION( NULL, 1 ) ) )
+	case else
+		f->ast = frogParseVersion( f )
+	end select
+end sub
+
 function hShell( byref ln as string ) as integer
 	print "$ " + ln
 	var result = shell( ln )
@@ -1525,41 +1542,49 @@ end function
 		print "---"
 	#endif
 
-	'' Read in files that were found
-	f = listGetHead( @frog.files )
-	while( f )
-
-		'' Only parse this one if it was found and if it's not going to
-		'' be merged into another one
-		if( (not f->missing) and (f->refcount <> 1) ) then
-			print "parsing: ";f->pretty
-
-			select case( frog.preset )
-			case "png"
-				f->ast = hMergeVersions( NULL  , astNewVERSION( frogParse( f, 0 ), 0 ) )
-				f->ast = hMergeVersions( f->ast, astNewVERSION( frogParse( f, 1 ), 1 ) )
-
-				f->ast = astSolveVersionsOut( f->ast, _
-					astNewVERSION( NULL, _
-						astNewVERSION( NULL, 0 ), _
-						astNewVERSION( NULL, 1 ) ) )
-			case else
-				f->ast = frogParse( f )
-			end select
-
-			dim as FROGFILE ptr incf = listGetHead( @frog.files )
-			while( incf )
-				if( incf->mergeparent = f ) then
-					print "merged in: " + incf->pretty
-				end if
-				incf = listGetNext( incf )
-			wend
-		end if
-
-		f = listGetNext( f )
-	wend
-
 	if( frog.merge ) then
+		'' Pass 1: Process any files that don't look like they'll be
+		'' merged, i.e. refcount <> 1.
+		f = listGetHead( @frog.files )
+		while( f )
+
+			if( (not f->missing) and (f->refcount <> 1) ) then
+				frogParse( f )
+
+				dim as FROGFILE ptr incf = listGetHead( @frog.files )
+				while( incf )
+					if( incf->mergeparent = f ) then
+						print "merged in: " + incf->pretty
+					end if
+					incf = listGetNext( incf )
+				wend
+			end if
+
+			f = listGetNext( f )
+		wend
+
+		'' Pass 2: Process files that looked like they should be merged,
+		'' but weren't. This happens with recursive #includes, where all
+		'' have refcount > 0, so none of them were processed during the
+		'' 1st pass.
+		f = listGetHead( @frog.files )
+		while( f )
+
+			if( (not f->missing) and (f->refcount = 1) and (f->mergeparent = NULL) ) then
+				frogParse( f )
+
+				dim as FROGFILE ptr incf = listGetHead( @frog.files )
+				while( incf )
+					if( incf->mergeparent = f ) then
+						print "merged in: " + incf->pretty
+					end if
+					incf = listGetNext( incf )
+				wend
+			end if
+
+			f = listGetNext( f )
+		wend
+
 		'' Concatenate files with refcount=0
 		dim as FROGFILE ptr first
 		f = listGetHead( @frog.files )
@@ -1578,9 +1603,19 @@ end function
 			end if
 			f = listGetNext( f )
 		wend
+	else
+		'' No merging requested, just process each file that was found
+		'' individually.
+		f = listGetHead( @frog.files )
+		while( f )
+			if( f->missing = FALSE ) then
+				frogParseVersion( f )
+			end if
+			f = listGetNext( f )
+		wend
 	end if
 
-	'' Emit all files that have an AST left (i.e. weren't merged into or
+	'' Emit all files that have an AST (i.e. weren't merged into or
 	'' appended to anything)
 	f = listGetHead( @frog.files )
 	while( f )
