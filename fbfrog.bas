@@ -1184,9 +1184,9 @@ private function frogParse _
 	var do_pp = TRUE
 	select case( frog.preset )
 	case "tests"
-		do_pp and= not strMatches( "tests/*", f->pretty )
-		do_pp or= strMatches( "tests/pp/eval-*", f->pretty )
-		do_pp or= strMatches( "tests/pp/expand/*", f->pretty )
+		do_pp and= not strMatches( "tests/basic/*", f->pretty )
+		do_pp or= strMatches( "tests/basic/pp/eval-*", f->pretty )
+		do_pp or= strMatches( "tests/basic/pp/expand/*", f->pretty )
 	end select
 
 	if( do_pp ) then
@@ -1205,9 +1205,6 @@ private function frogParse _
 			ppAddSym( "KNOWNDEFINED2", TRUE )
 			ppAddSym( "KNOWNUNDEFINED1", FALSE )
 			ppAddSym( "KNOWNUNDEFINED2", FALSE )
-		case "test"
-			ppMacroBegin( "TEST", -1 )
-			ppMacroToken( TK_DECNUM, str( version ) )
 		case "zip"
 			ppAddSym( "ZIP_EXTERN", TRUE )
 			ppAddSym( "__cplusplus", FALSE )
@@ -1383,7 +1380,7 @@ private function frogParse _
 	hRemovePPIndentFromIncludeGuard( ast )
 	select case( frog.preset )
 	case "tests"
-		if( strMatches( "tests/pp/expr-*", f->pretty ) ) then
+		if( strMatches( "tests/basic/pp/expr-*", f->pretty ) ) then
 			hSetPPIndentAttrib( ast, FALSE )
 		end if
 	end select
@@ -1406,7 +1403,7 @@ end function
 	if( listGetHead( @frog.files ) = NULL ) then
 		select case( frog.preset )
 		case "tests"
-			hAddFromDir( "tests" )
+			hAddFromDir( "tests/basic" )
 		end select
 	end if
 
@@ -1490,9 +1487,6 @@ end function
 			print "parsing: ";f->pretty
 
 			select case( frog.preset )
-			case "test"
-				f->ast = hMergeVersions( NULL  , astNewVERSION( frogParse( f, 0 ), 0 ) )
-				f->ast = hMergeVersions( f->ast, astNewVERSION( frogParse( f, 1 ), 1 ) )
 			case "png"
 				f->ast = hMergeVersions( NULL  , astNewVERSION( frogParse( f, 0 ), 0 ) )
 				f->ast = hMergeVersions( f->ast, astNewVERSION( frogParse( f, 1 ), 1 ) )
