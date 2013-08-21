@@ -1139,46 +1139,53 @@ private function frogParseVersion _
 	tkInit( )
 	lexLoadFile( 0, f->normed )
 
-	ppComments( )
-	ppDividers( )
-	ppDirectives1( )
+	'' Parse PP directives, and expand #includes if wanted and possible.
+	''
+	'' If new tokens were loaded from an #include, we have to parse for PP
+	'' directives etc. again, to handle any PP directives in the added
+	'' tokens. There may even be new #include directives in them which
+	'' themselves may need expanding.
 
-	'' Expand #includes if wanted and possible
-	if( frog.merge ) then
-		var x = 0
-		while( tkGet( x ) <> TK_EOF )
+	var have_new_tokens = TRUE
+	while( have_new_tokens )
 
-			'' #include?
-			if( tkGet( x ) = TK_PPINCLUDE ) then
-				var t = tkGetAst( x )
-
-				var incfile = *t->text
-				var incf = frogAddFile( f, incfile )
-				t->includefile = incf
-
-				if( (incf->refcount = 1) and (not incf->missing) ) then
-					'' Replace #include by included file's content
-					tkRemove( x, x )
-					lexLoadFile( x, incf->normed )
-
-					'' Counter the +1 below, so this position is re-parsed
-					x -= 1
-
-					incf->mergeparent = f
-					if( frog.verbose ) then
-						print "    merged in: " + incf->pretty
-					end if
-				end if
-			end if
-
-			x += 1
-		wend
-
-		'' Parse PP directives etc. again after new tokens were loaded
 		ppComments( )
 		ppDividers( )
 		ppDirectives1( )
-	end if
+		have_new_tokens = FALSE
+
+		if( frog.merge ) then
+			var x = 0
+			while( tkGet( x ) <> TK_EOF )
+
+				'' #include?
+				if( tkGet( x ) = TK_PPINCLUDE ) then
+					var t = tkGetAst( x )
+
+					var incfile = *t->text
+					var incf = frogAddFile( f, incfile )
+					t->includefile = incf
+
+					if( (incf->refcount = 1) and (not incf->missing) ) then
+						'' Replace #include by included file's content
+						tkRemove( x, x )
+						lexLoadFile( x, incf->normed )
+						have_new_tokens = TRUE
+
+						'' Counter the +1 below, so this position is re-parsed
+						x -= 1
+
+						incf->mergeparent = f
+						if( frog.verbose ) then
+							print "    merged in: " + incf->pretty
+						end if
+					end if
+				end if
+
+				x += 1
+			wend
+		end if
+	wend
 
 	ppDirectives2( )
 
