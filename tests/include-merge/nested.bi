@@ -1,7 +1,7 @@
 extern "C"
 
-declare sub nested1 cdecl( )
-declare sub nested2 cdecl( )
-declare sub nested3 cdecl( )
+declare sub nested1( )
+declare sub nested2( )
+declare sub nested3( )
 
 end extern

@@ -1,7 +1,7 @@
 extern "C"
 
-declare sub A cdecl( )
+declare sub A( )
 #include "nested-recursive-1.h"
-declare sub B cdecl( )
+declare sub B( )
 
 end extern

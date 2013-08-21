@@ -373,11 +373,13 @@ private function emitAst _
 			s += " " + *n->text
 		end if
 
-		if( n->attrib and ASTATTRIB_CDECL ) then
-			assert( (n->attrib and ASTATTRIB_STDCALL) = 0 ) '' can't have both
-			s += " cdecl"
-		elseif( n->attrib and ASTATTRIB_STDCALL ) then
-			s += " stdcall"
+		if( (n->attrib and ASTATTRIB_HIDECALLCONV) = 0 ) then
+			if( n->attrib and ASTATTRIB_CDECL ) then
+				assert( (n->attrib and ASTATTRIB_STDCALL) = 0 ) '' can't have both
+				s += " cdecl"
+			elseif( n->attrib and ASTATTRIB_STDCALL ) then
+				s += " stdcall"
+			end if
 		end if
 
 		s += hCommaList( n, TRUE )

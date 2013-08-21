@@ -1,7 +1,7 @@
 extern "C"
 
-declare sub simpleA cdecl( )
-declare sub simple1 cdecl( )
-declare sub simpleB cdecl( )
+declare sub simpleA( )
+declare sub simple1( )
+declare sub simpleB( )
 
 end extern
