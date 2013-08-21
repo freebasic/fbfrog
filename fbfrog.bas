@@ -1,6 +1,7 @@
 '' Main module, command line interface
 
 #include once "fbfrog.bi"
+#include once "file.bi"
 
 dim shared as FROGSTUFF frog
 
@@ -1388,6 +1389,47 @@ private function frogParse _
 	function = ast
 end function
 
+function hShell( byref ln as string ) as integer
+	print "$ " + ln
+	var result = shell( ln )
+	if( result = 0 ) then
+		function = TRUE
+	elseif( result = -1 ) then
+		print "command not found: '" + ln + "'"
+	else
+		print "'" + ln + "' terminated with exit code " + str( result )
+	end if
+end function
+
+function hDownload( byref url as string, byref file as string ) as integer
+	if( fileexists( "tarballs/" & file ) ) then
+		function = TRUE
+	else
+		function = hShell( "mkdir -p tarballs" ) andalso _
+			hShell( "wget " + url + " -O tarballs/" + file )
+	end if
+end function
+
+function hExtract( byref file as string ) as integer
+	if( strEndsWith( file, ".zip" ) ) then
+		function = hShell( "unzip -q -d tarballs tarballs/" + file )
+	elseif( strEndsWith( file, ".tar.gz" ) or _
+	        strEndsWith( file, ".tar.bz2" ) or _
+	        strEndsWith( file, ".tar.xz" ) ) then
+		function = hShell( "tar xf tarballs/" + file + " -C tarballs" )
+	else
+		function = FALSE
+	end if
+end function
+
+function hDownloadAndExtract( byref url as string, byref file as string ) as integer
+	function = hDownload( url, file ) andalso hExtract( file )
+end function
+
+function hDownloadAndExtract2( byref url as string, byref file as string ) as integer
+	function = hDownloadAndExtract( url + file, file )
+end function
+
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 	frogInit( )
@@ -1404,6 +1446,12 @@ end function
 		select case( frog.preset )
 		case "tests"
 			hAddFromDir( "tests/basic" )
+		case "zip"
+			hDownloadAndExtract2( "http://www.nih.at/libzip/", "libzip-0.11.1.tar.xz" )
+		case "png"
+			hDownloadAndExtract( "http://prdownloads.sourceforge.net/libpng/libpng-1.6.3.tar.xz?download", "libpng-1.6.3.tar.xz" )
+			frogAddFile( NULL, "tarballs/libpng-1.6.3/png.h" )
+			hShell( "cp tarballs/libpng-1.6.3/scripts/pnglibconf.h.prebuilt tarballs/libpng-1.6.3/pnglibconf.h" )
 		end select
 	end if
 
