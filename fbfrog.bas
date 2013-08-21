@@ -1159,8 +1159,9 @@ private function frogParseVersion _
 				if( (incf->refcount = 1) and (not incf->missing) ) then
 					'' Replace #include by included file's content
 					tkRemove( x, x )
-					x -= 1
 					lexLoadFile( x, incf->normed )
+
+					'' Counter the +1 below, so this position is re-parsed
 					x -= 1
 
 					incf->mergeparent = f
@@ -1570,8 +1571,8 @@ end function
 
 		'' Pass 2: Process files that looked like they should be merged,
 		'' but weren't. This happens with recursive #includes, where all
-		'' have refcount > 0, so none of them were processed during the
-		'' 1st pass.
+		'' have refcount > 0, so none of them were merged in anywhere
+		'' during the 1st pass.
 		f = listGetHead( @frog.files )
 		while( f )
 
