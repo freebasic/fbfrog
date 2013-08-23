@@ -1625,7 +1625,7 @@ end function
 		f = listGetHead( @frog.files )
 		while( f )
 			if( f->missing = FALSE ) then
-				frogParseVersion( f )
+				frogParse( f )
 			end if
 			f = listGetNext( f )
 		wend
