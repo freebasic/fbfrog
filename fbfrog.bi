@@ -691,7 +691,12 @@ declare function astIsEqualDecl _
 	) as integer
 declare function astDumpOne( byval n as ASTNODE ptr ) as string
 declare function astDumpInline( byval n as ASTNODE ptr ) as string
-declare sub astDump( byval n as ASTNODE ptr, byval nestlevel as integer = 0 )
+declare sub astDump _
+	( _
+		byval n as ASTNODE ptr, _
+		byval nestlevel as integer = 0, _
+		byref prefix as string = "" _
+	)
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 

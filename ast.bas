@@ -62,33 +62,12 @@ dim shared as ASTNODEINFO astnodeinfo(0 to ...) = _
 	( "const"   ), _
 	( "id"      ), _
 	( "text"    ), _
-	( "defined" ), _
-	( "iif"     ), _
-	( "orelse"  ), _
-	( "andalso" ), _
-	( "or"  ), _
-	( "xor" ), _
-	( "and" ), _
-	( "="   ), _
-	( "<>"  ), _
-	( "<"   ), _
-	( "<="  ), _
-	( ">"   ), _
-	( ">="  ), _
-	( "shl" ), _
-	( "shr" ), _
-	( "+"   ), _
-	( "-"   ), _
-	( "*"   ), _
-	( "/"   ), _
-	( "mod" ), _
-	( "lognot"  ), _
-	( "not"     ), _
-	( "unary -" ), _
-	( "unary +" )  _
+	( "uop"     ), _
+	( "bop"     ), _
+	( "iif"     )  _
 }
 
-#if ubound( astnodeinfo ) < ASTCLASS__COUNT - 1
+#if ubound( astnodeinfo ) <> ASTCLASS__COUNT - 1
 #error "please update the astnodeinfo() table!"
 #endif
 
@@ -721,8 +700,39 @@ function astDumpOne( byval n as ASTNODE ptr ) as string
 				s += " " + str( n->vali )
 			end if
 		end if
+
 	case ASTCLASS_TK
 		s += " " + tkDumpBasic( n->tk, n->text )
+
+	case ASTCLASS_UOP, ASTCLASS_BOP
+		static as zstring * 10 ops(ASTOP_LOGOR to ASTOP_DEFINED) = _
+		{ _
+			"orelse"  , _  '' ASTOP_LOGOR
+			"andalso" , _  '' ASTOP_LOGAND
+			"or"      , _  '' ASTOP_BITOR
+			"xor"     , _  '' ASTOP_BITXOR
+			"and"     , _  '' ASTOP_BITAND
+			"="       , _  '' ASTOP_EQ
+			"<>"      , _  '' ASTOP_NE
+			"<"       , _  '' ASTOP_LT
+			"<="      , _  '' ASTOP_LE
+			">"       , _  '' ASTOP_GT
+			">="      , _  '' ASTOP_GE
+			"shl"     , _  '' ASTOP_SHL
+			"shr"     , _  '' ASTOP_SHR
+			"+"       , _  '' ASTOP_ADD
+			"-"       , _  '' ASTOP_SUB
+			"*"       , _  '' ASTOP_MUL
+			"/"       , _  '' ASTOP_DIV
+			"mod"     , _  '' ASTOP_MOD
+			"lognot"  , _  '' ASTOP_LOGNOT
+			"bitnot"  , _  '' ASTOP_BITNOT
+			"negate"  , _  '' ASTOP_NEGATE
+			"unary +" , _  '' ASTOP_UNARYPLUS
+			"defined()" _  '' ASTOP_DEFINED
+		}
+
+		s += " " + ops(n->op)
 	end select
 
 	if( n->dtype <> TYPE_NONE ) then
@@ -794,20 +804,25 @@ private sub hPrintIndentation( byval nestlevel as integer )
 	next
 end sub
 
-sub astDump( byval n as ASTNODE ptr, byval nestlevel as integer )
+sub astDump _
+	( _
+		byval n as ASTNODE ptr, _
+		byval nestlevel as integer, _
+		byref prefix as string _
+	)
+
 	nestlevel += 1
 
 	if( n ) then
 		hPrintIndentation( nestlevel )
+		if( len( prefix ) > 0 ) then
+			print prefix + ": ";
+		end if
 		print astDumpOne( n )
 
 		#macro dumpField( field )
 			if( n->field ) then
-				nestlevel += 1
-				hPrintIndentation( nestlevel )
-				print #field + ":"
-				astDump( n->field, nestlevel )
-				nestlevel -= 1
+				astDump( n->field, nestlevel, #field )
 			end if
 		#endmacro
 
