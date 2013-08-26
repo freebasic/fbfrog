@@ -1199,8 +1199,16 @@ private function cToplevel( byval body as integer ) as ASTNODE ptr
 				cSkip( )
 				cSkip( )
 				cSkip( )
-			else
+			elseif( (tkGet( parse.x + 1 ) = TK_LBRACE) or _
+			        ((tkGet( parse.x + 1 ) = TK_ID) and _
+			         (tkGet( parse.x + 2 ) = TK_LBRACE)) ) then
 				t = cStructCompound( )
+			else
+				if( body = BODY_STRUCT ) then
+					t = cMultDecl( DECL_FIELD, 0 )
+				else
+					t = cMultDecl( DECL_VAR, 0 )
+				end if
 			end if
 
 		'' ';'
