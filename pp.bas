@@ -1270,7 +1270,7 @@ private function hParseIfCondition( byval x as integer ) as ASTNODE ptr
 	if( tkGet( x ) <> TK_END ) then
 		'' Then either no expression could be parsed at all,
 		'' or it was followed by "junk" tokens...
-		tkOops( begin, "couldn't parse #if condition expression" )
+		tkOops( begin - 1, "couldn't parse #if condition expression" )
 	end if
 
 	'' END
