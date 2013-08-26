@@ -19,11 +19,8 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	( NULL  , @"ppelse"   ), _
 	( NULL  , @"ppendif"  ), _
 	( NULL  , @"ppundef"  ), _
-	( NULL  , @"ppunknown" ), _
 	( NULL  , @"begin"    ), _
 	( NULL  , @"end"      ), _
-	( NULL  , @"byte"     ), _
-	( NULL  , @"space"    ), _
 	( NULL  , @"eol"      ), _
 	( NULL  , @"comment"  ), _
 	( NULL  , @"decnum"   ), _ '' Number literals
@@ -203,14 +200,10 @@ end function
 
 type ONETOKEN
 	id		as short  '' TK_*
-
-	'' Tokens from unknown constructs that couldn't be parsed successfully
-	'' will be marked poisoned, so the parser can avoid them in the 2nd run
-	poisoned	as short
-
 	text		as zstring ptr  '' Identifiers/literals, or NULL
 	ast		as ASTNODE ptr  '' for TK_PP* high level tokens
-	linenum		as integer      '' where this token was found
+	location	as TKLOCATION   '' where this token was found
+	behindspace	as integer      '' whether this token was preceded by spaces
 	comment		as zstring ptr
 end type
 
@@ -228,17 +221,7 @@ end type
 dim shared as TKBUFFER tk
 
 sub tkInit( )
-	tk.p = NULL
-	tk.front = 0
-	tk.gap = 0
-	tk.size = 0
-
-	tk.eof.id = TK_EOF
-	tk.eof.poisoned = FALSE
-	tk.eof.text = NULL
-	tk.eof.ast = NULL
-	tk.eof.linenum = -1
-	tk.eof.comment = NULL
+	clear( tk, 0, sizeof( tk ) )
 end sub
 
 private function tkAccess( byval x as integer ) as ONETOKEN ptr
@@ -284,9 +267,6 @@ function tkDumpOne( byval x as integer ) as string
 	s += str( x ) + " "
 	s += "["
 	s += *tk_info(p->id).debug
-	if( p->poisoned ) then
-		s += " posioned"
-	end if
 	s += "]"
 
 	s += " "
@@ -378,10 +358,13 @@ sub tkInsert _
 	end if
 
 	p->id = id
-	p->poisoned = FALSE
 	p->text = strDuplicate( text )
 	p->ast = ast
-	p->linenum = -1
+	p->location.file = NULL
+	p->location.linenum = 0
+	p->location.column = 0
+	p->location.length = 0
+	p->behindspace = FALSE
 	p->comment = NULL
 
 	'' Extend front part of the buffer
@@ -441,14 +424,43 @@ sub tkCopy( byval x as integer, byval first as integer, byval last as integer )
 
 		src = tkAccess( first )
 		var dst = tkAccess( x )
-		dst->poisoned = src->poisoned
 		dst->ast = astClone( src->ast )
-		dst->linenum = src->linenum
+		dst->location = src->location
+		dst->behindspace = src->behindspace
 		dst->comment = strDuplicate( src->comment )
 
 		x += 1
 		first += 1
 	loop while( first <= last )
+end sub
+
+'' Combine first..last tokens into a single new one
+sub tkFold _
+	( _
+		byval first as integer, _
+		byval last as integer, _
+		byval id as integer, _
+		byval text as zstring ptr, _
+		byval ast as ASTNODE ptr _
+	)
+
+	var location = *tkGetLocation( first )
+	var lastloc  = tkGetLocation( last )
+
+	'' Sum up all the token lengths and space in between, resulting in one
+	'' big combined token.
+	location.length = lastloc->column + lastloc->length - location.column
+
+	'' Insert first - the text/ast pointers may reference one of the tokens
+	'' that will be removed; this way we can be sure they're valid when
+	'' accessed by tkInsert()
+	tkInsert( first, id, text, ast )
+	tkSetLocation( first, @location )
+	first += 1
+	last += 1
+
+	tkRemove( first, last )
+
 end sub
 
 function tkGet( byval x as integer ) as integer
@@ -479,28 +491,26 @@ sub tkSetAst( byval x as integer, byval ast as ASTNODE ptr )
 	p->ast = ast
 end sub
 
-sub tkSetPoisoned( byval first as integer, byval last as integer )
-	for i as integer = first to last
-		var p = tkAccess( i )
-		if( p->id <> TK_EOF ) then
-			p->poisoned = TRUE
-		end if
-	next
-end sub
-
-function tkIsPoisoned( byval x as integer ) as integer
-	function = tkAccess( x )->poisoned
-end function
-
-sub tkSetLineNum( byval x as integer, byval linenum as integer )
+sub tkSetLocation( byval x as integer, byval location as TKLOCATION ptr )
 	var p = tkAccess( x )
 	if( p->id <> TK_EOF ) then
-		p->linenum = linenum
+		p->location = *location
 	end if
 end sub
 
-function tkGetLineNum( byval x as integer ) as integer
-	function = tkAccess( x )->linenum
+function tkGetLocation( byval x as integer ) as TKLOCATION ptr
+	function = @(tkAccess( x )->location)
+end function
+
+sub tkSetBehindSpace( byval x as integer )
+	var p = tkAccess( x )
+	if( p->id <> TK_EOF ) then
+		p->behindspace = TRUE
+	end if
+end sub
+
+function tkGetBehindSpace( byval x as integer ) as integer
+	function = tkAccess( x )->behindspace
 end function
 
 sub tkSetComment( byval x as integer, byval comment as zstring ptr )
@@ -536,7 +546,7 @@ function tkCount _
 	function = count
 end function
 
-function tkSkipSpaceAndComments _
+function tkSkipComment _
 	( _
 		byval x as integer, _
 		byval delta as integer _
@@ -546,7 +556,27 @@ function tkSkipSpaceAndComments _
 		x += delta
 
 		select case( tkGet( x ) )
-		case TK_SPACE, TK_COMMENT
+		case TK_COMMENT
+
+		case else
+			exit do
+		end select
+	loop
+
+	function = x
+end function
+
+function tkSkipCommentEol _
+	( _
+		byval x as integer, _
+		byval delta as integer _
+	) as integer
+
+	do
+		x += delta
+
+		select case( tkGet( x ) )
+		case TK_COMMENT, TK_EOL
 
 		case else
 			exit do
@@ -560,9 +590,8 @@ function tkToCText( byval id as integer, byval text as zstring ptr ) as string
 	select case as const( id )
 	case TK_DIVIDER, TK_EOL : function = !"\n"
 	case TK_BEGIN, TK_END   :
-	case TK_BYTE            : function = *text
-	case TK_SPACE           : function = " "
 	case TK_COMMENT         : function = "/* " + *text + " */"
+	case TK_PPENDIF         : function = "#endif"
 	case TK_DECNUM          : function = *text
 	case TK_HEXNUM          : function = "0x" + *text
 	case TK_OCTNUM          : function = "0" + *text
@@ -576,6 +605,7 @@ function tkToCText( byval id as integer, byval text as zstring ptr ) as string
 	case KW__C_FIRST to KW__C_LAST
 		function = *tk_info(id).text
 	case else
+		print tkDumpBasic( id, text )
 		assert( FALSE )
 	end select
 end function
@@ -683,4 +713,33 @@ sub tkRemoveAllOf( byval id as integer, byval text as zstring ptr )
 			end if
 		end if
 	next
+end sub
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+sub tkOops( byval x as integer, byref message as string )
+	var location = tkGetLocation( x )
+	if( location->file ) then
+		oopsLocation( location, message )
+	else
+		TRACE( x )
+		print message
+		end 1
+	end if
+end sub
+
+sub tkOopsExpected( byval x as integer, byref message as string )
+	select case( tkGet( x ) )
+	case TK_EOL, TK_EOF
+		tkOops( x, "missing " + message )
+	case else
+		tkOops( x, "expected " + message + " " + _
+			"but found '" + tkToCText( tkGet( x ), tkGetText( x ) ) + "'" )
+	end select
+end sub
+
+sub tkExpect( byval x as integer, byval tk as integer )
+	if( tkGet( x ) <> tk ) then
+		tkOopsExpected( x, "'" + *tkInfoText( tk ) + "'" )
+	end if
 end sub

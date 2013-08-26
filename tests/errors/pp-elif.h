@@ -1,0 +1,3 @@
+#ifdef A
+#elif
+#endif

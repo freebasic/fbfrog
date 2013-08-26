@@ -6,47 +6,38 @@
 '' their text to other tokens (tkSetComment()) if comments should be preserved
 '' for later.
 ''
-'' ppDividers() merges empty lines (i.e. multiple TK_EOLs separated only by
-'' TK_SPACEs) into TK_DIVIDERs, for nicer output formatting later. It can be
-'' nice to preserve the block/section/paragraph layout of the input, and still
-'' trim down unnecessary newlines.
+'' ppDividers() merges empty lines (i.e. multiple TK_EOLs) into TK_DIVIDERs,
+'' for nicer output formatting later. It can be nice to preserve the
+'' block/section/paragraph layout of the input, and still trim down unnecessary
+'' newlines.
 ''
 ''
-'' CPP directive parsing
-'' ---------------------
+'' CPP directive parsing, #if evaluation, macro expansion
+'' ------------------------------------------------------
 ''
 '' ppDirectives1() merges PP directives into TK_PP* tokens, except that #define
 '' bodies and #if expressions are not yet parsed, but only enclosed in TK_BEGIN
-'' and TK_END tokens.
+'' and TK_END tokens. This basic identification of PP directives is enough for
+'' an #include detection pre-parsing step.
 ''
 '' ppDirectives2() goes through all #defines and finishes the parsing job by
 '' parsing the #define bodies into ASTs and removing the TK_BEGIN/END parts.
+'' This allows for token replacements in #define bodies before this step.
 ''
-'' ppEval() or ppNoEval() will do the same for #if conditions.
-''
-'' With this separation it's possible to identify PP directives, possibly do
-'' macro expansion in #define bodies, and finally do macro expansion in #if
-'' conditions while knowing all #defines completely.
-''
-'' #if evaluation, macro expansion
-'' -------------------------------
-''
-'' ppEval() does selective macro expansion, including inside #if conditions,
-'' evaluates #if conditions, and solves out #if/#else blocks where possible.
+'' ppEval() goes through the token buffer almost like a C preprocessor would do.
+'' It keeps track of #defines and #undefs and expands macro calls for "precious"
+'' macros. It also expands macros inside #if conditions, then parses them as
+'' expressions, evaluates them, and solves out #if blocks, preserving only the
+'' #if/#else paths, depending on whether the expression evaluated to TRUE/FALSE.
 ''
 '' ppAddSym() can be used to register symbols as initially "defined" or
-'' "undefined" for #if defined() or #ifdef checks. defined() checks on unknown
-'' symbols are not solved out.
+'' "undefined". This helps evaluating #if defined() or #ifdef checks for symbols
+'' that aren't #define'd in code. If an #if block can't be solved out because of
+'' an unknown symbol, an error will be shown.
 ''
-'' ppExpandSym() can be used to mark symbols as precious, telling ppEval() that
-'' it should try to do macro expansion for it, if a corresponding #define is
-'' found. ppEval() also handles #undefs.
-''
-'' ppMacro*() can be used to register initial #defines for use by ppEval().
-''
-'' ppNoEval() only finishes parsing #if conditions but doesn't do any #if
-'' evaluation or macro expansion. This is mostly useful for fbfrog test cases
-'' where #if evaluation or macro expansion sometimes aren't wanted.
+'' ppExpandSym() can be used to mark symbols as "precious", telling ppEval()
+'' that it should try to do macro expansion for it, if a corresponding #define
+'' is found. ppMacro*() can be used to register initial #defines.
 ''
 
 #include once "fbfrog.bi"
@@ -64,13 +55,13 @@ private function hIsBeforeEol _
 		x += delta
 
 		select case( tkGet( x ) )
-		case TK_SPACE, TK_COMMENT
+		case TK_COMMENT
 
 		case TK_EOL, TK_EOF
 			exit do
 
 		case TK_PPINCLUDE, TK_PPDEFINE, TK_PPIF, TK_PPELSEIF, _
-		     TK_PPELSE, TK_PPENDIF, TK_PPUNDEF, TK_PPUNKNOWN, TK_DIVIDER
+		     TK_PPELSE, TK_PPENDIF, TK_PPUNDEF, TK_DIVIDER
 			'' High-level tokens count as separate lines
 			exit do
 
@@ -117,6 +108,89 @@ private sub hStripAllComments( )
 	wend
 end sub
 
+private function hFindClosingParen( byval x as integer ) as integer
+	dim as integer level = any, opening = any, closing = any
+
+	opening = tkGet( x )
+	level = 0
+	select case( opening )
+	case TK_LBRACE
+		closing = TK_RBRACE
+	case TK_LBRACKET
+		closing = TK_RBRACKET
+	case TK_LPAREN
+		closing = TK_RPAREN
+	case else
+		return x
+	end select
+
+	do
+		x = tkSkipCommentEol( x )
+
+		select case( tkGet( x ) )
+		case opening
+			level += 1
+
+		case closing
+			if( level = 0 ) then
+				exit do
+			end if
+
+			level -= 1
+
+		case TK_EOF
+			x -= 1
+			exit do
+
+		case TK_PPINCLUDE, TK_PPDEFINE, TK_PPIF, TK_PPELSEIF, _
+		     TK_PPELSE, TK_PPENDIF, TK_PPUNDEF, TK_DIVIDER
+			x = tkSkipCommentEol( x, -1 )
+			exit do
+
+		end select
+	loop
+
+	function = x
+end function
+
+private function hSkipStatement( byval x as integer ) as integer
+	var begin = x
+
+	do
+		select case( tkGet( x ) )
+		case TK_EOF
+			exit do
+
+		'' ';' (statement separator)
+		case TK_SEMI
+			x = tkSkipCommentEol( x )
+			exit do
+
+		'' '}': usually indicates end of statement, unless we're trying
+		'' to skip a '}' itself
+		case TK_RBRACE
+			if( x > begin ) then
+				exit do
+			end if
+
+		case TK_PPINCLUDE, TK_PPDEFINE, TK_PPIF, TK_PPELSEIF, _
+		     TK_PPELSE, TK_PPENDIF, TK_PPUNDEF, TK_DIVIDER
+			'' Reached high-level token after having seen normals?
+			if( x > begin ) then
+				exit do
+			end if
+
+		case TK_LPAREN, TK_LBRACKET, TK_LBRACE
+			x = hFindClosingParen( x )
+		end select
+
+		x = tkSkipCommentEol( x )
+	loop
+
+	assert( x > begin )
+	function = x
+end function
+
 private function ppComment( byval x as integer ) as integer
 	dim as integer y = any, at_bol = any, at_eol = any
 
@@ -148,26 +222,26 @@ private function ppComment( byval x as integer ) as integer
 
 	if( at_bol and at_eol ) then
 		'' Comment above empty line?
-		if( tkCount( TK_EOL, x + 1, cSkip( x ) ) >= 2 ) then
-			hAccumTkComment( tkSkipSpaceAndComments( x ), x )
+		if( tkCount( TK_EOL, x + 1, tkSkipCommentEol( x ) ) >= 2 ) then
+			hAccumTkComment( tkSkipComment( x ), x )
 		else
 			'' Comment above multiple statements,
 			'' that aren't separated by empty lines?
-			y = cSkipStatement( x )
-			if( (y < cSkipStatement( y )) and _
-			    (tkCount( TK_EOL, cSkipRev( y ) + 1, y - 1 ) < 2) ) then
-				hAccumTkComment( tkSkipSpaceAndComments( x ), x )
+			y = hSkipStatement( x )
+			if( (y < hSkipStatement( y )) and _
+			    (tkCount( TK_EOL, tkSkipCommentEol( y, -1 ) + 1, y - 1 ) < 2) ) then
+				hAccumTkComment( tkSkipComment( x ), x )
 			else
 				'' Comment above single statement
-				hAccumTkComment( cSkip( x ), x )
+				hAccumTkComment( tkSkipCommentEol( x ), x )
 			end if
 		end if
 	elseif( at_bol ) then
-		hAccumTkComment( tkSkipSpaceAndComments( x ), x )
+		hAccumTkComment( tkSkipComment( x ), x )
 	elseif( at_eol ) then
-		hAccumTkComment( tkSkipSpaceAndComments( x, -1 ), x )
+		hAccumTkComment( tkSkipComment( x, -1 ), x )
 	else
-		hAccumTkComment( tkSkipSpaceAndComments( x ), x )
+		hAccumTkComment( tkSkipComment( x ), x )
 	end if
 
 	tkRemove( x, x )
@@ -201,19 +275,14 @@ end sub
 
 '' Merge empty lines into TK_DIVIDER, assuming we're starting at BOL.
 private function ppDivider( byval x as integer ) as integer
-	dim as integer lines = any, begin = any, eol1 = any, eol2 = any
-	dim as string comment, blockcomment
-
-	begin = x
+	var begin = x
 
 	'' Count empty lines in a row
-	lines = 0
+	var lines = 0
 	do
 		select case( tkGet( x ) )
 		case TK_EOL
 			lines += 1
-
-		case TK_SPACE
 
 		case else
 			exit do
@@ -237,11 +306,11 @@ private function ppDivider( byval x as integer ) as integer
 	'' associated with the following block of code, stored as TK_DIVIDER's
 	'' text.
 
-	eol2 = tkSkipSpaceAndComments( x, -1 )
-	eol1 = tkSkipSpaceAndComments( eol2 - 1, -1 )
-	blockcomment = tkCollectComments( eol1 + 1, eol2 )
+	var eol2 = tkSkipComment( x, -1 )
+	var eol1 = tkSkipComment( eol2 - 1, -1 )
+	var blockcomment = tkCollectComments( eol1 + 1, eol2 )
 
-	comment = tkCollectComments( begin, eol1 )
+	var comment = tkCollectComments( begin, eol1 )
 	tkRemove( begin, x - 1 )
 	tkInsert( begin, TK_DIVIDER, blockcomment )
 	tkSetComment( begin, comment )
@@ -251,11 +320,9 @@ private function ppDivider( byval x as integer ) as integer
 end function
 
 sub ppDividers( )
-	dim as integer x = any, old = any
-
-	x = 0
+	var x = 0
 	while( tkGet( x ) <> TK_EOF )
-		old = x
+		var old = x
 
 		x = ppDivider( old )
 		if( x >= 0 ) then
@@ -280,37 +347,6 @@ end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-private function ppSkip( byval x as integer ) as integer
-	dim as integer y = any
-
-	do
-		x += 1
-
-		select case( tkGet( x ) )
-		case TK_SPACE, TK_COMMENT
-
-		'' Escaped EOLs don't end PP directives, though normal EOLs do
-		'' '\' [Space] EOL
-		case TK_BACKSLASH
-			y = x
-
-			do
-				y += 1
-			loop while( tkGet( y ) = TK_SPACE )
-
-			if( tkGet( y ) <> TK_EOL ) then
-				exit do
-			end if
-			x = y
-
-		case else
-			exit do
-		end select
-	loop
-
-	function = x
-end function
-
 private function ppSkipToEOL( byval x as integer ) as integer
 	do
 		select case( tkGet( x ) )
@@ -318,7 +354,7 @@ private function ppSkipToEOL( byval x as integer ) as integer
 			exit do
 		end select
 
-		x = ppSkip( x )
+		x += 1
 	loop
 
 	function = x
@@ -384,11 +420,8 @@ dim shared as PPOPINFO ppopinfo(ASTCLASS_IIF to ASTCLASS_UNARYPLUS) = _
 private function ppExpression _
 	( _
 		byref x as integer, _
-		byval level as integer = 0, _
-		byval allow_id_atoms as integer _
+		byval level as integer = 0 _
 	) as ASTNODE ptr
-
-	function = NULL
 
 	'' Unary prefix operators
 	var astclass = -1
@@ -401,78 +434,70 @@ private function ppExpression _
 
 	dim as ASTNODE ptr a
 	if( astclass >= 0 ) then
-		x = ppSkip( x )
-		a = astNew( astclass, ppExpression( x, ppopinfo(astclass).level, allow_id_atoms ) )
+		var uopx = x
+		x += 1
+		a = astNew( astclass, ppExpression( x, ppopinfo(astclass).level ) )
+		a->location = *tkGetLocation( uopx )
 	else
 		'' Atoms
 		select case( tkGet( x ) )
 		'' '(' Expression ')'
 		case TK_LPAREN
 			'' '('
-			x = ppSkip( x )
+			x += 1
 
 			'' Expression
-			a = ppExpression( x, , allow_id_atoms )
-			if( a = NULL ) then
-				exit function
-			end if
+			a = ppExpression( x )
 
 			'' ')'
-			if( tkGet( x ) <> TK_RPAREN ) then
-				astDelete( a )
-				exit function
-			end if
-			x = ppSkip( x )
+			tkExpect( x, TK_RPAREN )
+			x += 1
 
 		'' Number literals
 		case TK_OCTNUM, TK_DECNUM, TK_HEXNUM, TK_DECFLOAT
 			a = hNumberLiteral( x )
-			x = ppSkip( x )
+			a->location = *tkGetLocation( x )
+			x += 1
 
 		'' Identifier
 		case TK_ID
-			if( allow_id_atoms = FALSE ) then
-				exit function
-			end if
-
 			'' Accepting identifiers as atoms to allow more PP
 			'' expressions to be parsed, such as
 			''    defined FOO && FOO == 123
 			'' without having to expand FOO.
 			a = astNew( ASTCLASS_ID, tkGetText( x ) )
-			x = ppSkip( x )
+			a->location = *tkGetLocation( x )
+			x += 1
 
 		'' DEFINED '(' Identifier ')'
 		case KW_DEFINED
-			x = ppSkip( x )
+			var definedx = x
+			x += 1
 
 			'' '('
 			var have_parens = FALSE
 			if( tkGet( x ) = TK_LPAREN ) then
 				have_parens = TRUE
-				x = ppSkip( x )
+				x += 1
 			end if
 
 			'' Identifier
-			if( tkGet( x ) <> TK_ID ) then
-				exit function
-			end if
+			tkExpect( x, TK_ID )
 			a = astNew( ASTCLASS_ID, tkGetText( x ) )
-			x = ppSkip( x )
+			a->location = *tkGetLocation( x )
+			x += 1
 
 			if( have_parens ) then
 				'' ')'
-				if( tkGet( x ) <> TK_RPAREN ) then
-					astDelete( a )
-					exit function
-				end if
-				x = ppSkip( x )
+				tkExpect( x, TK_RPAREN )
+				x += 1
 			end if
 
 			a = astNew( ASTCLASS_DEFINED, a )
+			a->location = *tkGetLocation( definedx )
 
 		case else
-			exit function
+			tkOopsExpected( x, "number literal or '(...)' (atom expression)" )
 		end select
 	end if
 
@@ -513,35 +538,24 @@ private function ppExpression _
 		end if
 
 		'' operator
-		x = ppSkip( x )
+		var bopx = x
+		x += 1
 
 		'' rhs
-		var b = ppExpression( x, oplevel, allow_id_atoms )
-		if( b = NULL ) then
-			astDelete( a )
-			exit function
-		end if
+		var b = ppExpression( x, oplevel )
 
 		'' Handle ?: special case
 		dim as ASTNODE ptr c
 		if( astclass = ASTCLASS_IIF ) then
 			'' ':'?
-			if( tkGet( x ) <> TK_COLON ) then
-				astDelete( a )
-				astDelete( b )
-				exit function
-			end if
-			x = ppSkip( x )
+			tkExpect( x, TK_COLON )
+			x += 1
 
-			c = ppExpression( x, oplevel, allow_id_atoms )
-			if( c = NULL ) then
-				astDelete( a )
-				astDelete( b )
-				exit function
-			end if
+			c = ppExpression( x, oplevel )
 		end if
 
 		a = astNew( astclass, a, b, c )
+		a->location = *tkGetLocation( bopx )
 	loop
 
 	function = a
@@ -551,46 +565,27 @@ end function
 
 private function ppDirective( byval x as integer ) as integer
 	var begin = x
-	var keepbegin = -1
-	dim as ASTNODE ptr t
-
-	'' not at BOL?
-	select case( tkGet( tkSkipSpaceAndComments( x, -1 ) ) )
-	case TK_EOL, TK_EOF, TK_END, _
-	     TK_PPINCLUDE, TK_PPDEFINE, TK_PPIF, TK_PPELSEIF, _
-	     TK_PPELSE, TK_PPENDIF, TK_PPUNDEF, TK_PPUNKNOWN, TK_DIVIDER
-
-	case else
-		return -1
-	end select
 
 	'' '#'
-	if( tkGet( x ) <> TK_HASH ) then
-		return -1
-	end if
-	x = ppSkip( x )
+	tkExpect( x, TK_HASH )
+	x += 1
 
 	var tk = tkGet( x )
+
 	select case( tk )
-	'' DEFINE Identifier ['(' ParameterList ')'] Body Eol .
+	'' DEFINE Identifier ['(' ParameterList ')'] Body Eol
 	case KW_DEFINE
-		'' DEFINE
-		x = ppSkip( x )
+		x += 1
 
 		'' Identifier?
-		if( tkGet( x ) <> TK_ID ) then
-			return -1
-		end if
-		t = astNew( ASTCLASS_PPDEFINE, tkGetText( x ) )
+		tkExpect( x, TK_ID )
+		var t = astNew( ASTCLASS_PPDEFINE, tkGetText( x ) )
 		t->paramcount = -1
+		x += 1
 
-		'' '('? (+1 instead of ppSkip() so TK_SPACE won't be ignored)
-		if( tkGet( x + 1 ) = TK_LPAREN ) then
-			'' #define's Identifier
+		'' '(' following directly, no spaces in between?
+		if( (tkGet( x ) = TK_LPAREN) and (not tkGetBehindSpace( x )) ) then
 			x += 1
-
-			'' '('
-			x = ppSkip( x )
 			t->paramcount = 0
 
 			'' List of macro parameters:
@@ -602,212 +597,138 @@ private function ppDirective( byval x as integer ) as integer
 				end if
 				astAppend( t, astNew( ASTCLASS_MACROPARAM, tkGetText( x ) ) )
 				t->paramcount += 1
-				x = ppSkip( x )
+				x += 1
 
 				'' ','?
 				if( tkGet( x ) <> TK_COMMA ) then
 					exit do
 				end if
-				x = ppSkip( x )
+				x += 1
 			loop
 
 			'' ')'?
-			if( tkGet( x ) <> TK_RPAREN ) then
-				return -1
-			end if
-			x = ppSkip( x )
-		else
-			'' #define's Identifier
-			x = ppSkip( x )
+			tkExpect( x, TK_RPAREN )
+			x += 1
 		end if
 
-		keepbegin = x
+		tkFold( begin, x, TK_PPDEFINE, , t )
+		x = begin + 1
+
+		'' Enclose body tokens in TK_BEGIN/END
+		tkInsert( x, TK_BEGIN )
+		x += 1
 		x = ppSkipToEOL( x )
+		tkInsert( x, TK_END )
+		x += 1
 
 	case KW_INCLUDE
-		'' INCLUDE
-		x = ppSkip( x )
+		x += 1
 
 		'' "filename"
-		if( tkGet( x ) <> TK_STRING ) then
-			return -1
-		end if
-		t = astNew( ASTCLASS_PPINCLUDE, tkGetText( x ) )
-		x = ppSkip( x )
+		tkExpect( x, TK_STRING )
+
+		tkFold( begin, x, TK_PPINCLUDE, tkGetText( x ) )
+		x = begin + 1
 
 	case KW_IF, KW_ELIF
-		x = ppSkip( x )
-		keepbegin = x
+		tkFold( begin, x, iif( tk = KW_IF, TK_PPIF, TK_PPELSEIF ) )
+		x = begin + 1
 
+		'' Enclose #if condition expression tokens in TK_BEGIN/END
+		tkInsert( x, TK_BEGIN )
+		x += 1
+		var exprbegin = x
 		x = ppSkipToEOL( x )
-		if( x = keepbegin ) then
-			return -1
+		if( x = exprbegin ) then
+			tkOopsExpected( x, "#if condition" )
 		end if
-
-		t = astNew( iif( tk = KW_IF, ASTCLASS_PPIF, ASTCLASS_PPELSEIF ) )
+		tkInsert( x, TK_END )
+		x += 1
 
 	case KW_IFDEF, KW_IFNDEF
-		x = ppSkip( x )
+		x += 1
 
 		'' Identifier?
-		if( tkGet( x ) <> TK_ID ) then
-			return -1
-		end if
-		t = astNew( ASTCLASS_ID, tkGetText( x ) )
-		x = ppSkip( x )
+		tkExpect( x, TK_ID )
 
-		t = astNew( ASTCLASS_DEFINED, t )
+		'' Build up "[!]defined id" expression
+		var expr = astNew( ASTCLASS_ID, tkGetText( x ) )
+		expr->location = *tkGetLocation( x )
+		expr = astNew( ASTCLASS_DEFINED, expr )
+		expr->location = *tkGetLocation( x - 1 )
+		expr->location.column += 2  '' ifdef -> def, ifndef -> ndef
+		expr->location.length = 3
 		if( tk = KW_IFNDEF ) then
-			t = astNew( ASTCLASS_LOGNOT, t )
+			expr->location.column += 1  '' ndef -> def
+			expr = astNew( ASTCLASS_LOGNOT, expr )
+			expr->location = *tkGetLocation( x - 1 )
+			expr->location.column += 2  '' ifndef -> n
+			expr->location.length = 1
 		end if
-		t = astNew( ASTCLASS_PPIF, t )
+
+		tkFold( begin, x, TK_PPIF, , expr )
+		x = begin + 1
 
 	case KW_ELSE, KW_ENDIF
-		x = ppSkip( x )
-		t = astNew( iif( tk = KW_ELSE, ASTCLASS_PPELSE, ASTCLASS_PPENDIF ) )
+		tkFold( begin, x, iif( tk = KW_ELSE, TK_PPELSE, TK_PPENDIF ) )
+		x = begin + 1
 
 	case KW_UNDEF
-		x = ppSkip( x )
+		x += 1
 
 		'' Identifier?
-		if( tkGet( x ) <> TK_ID ) then
-			return -1
-		end if
-		t = astNew( ASTCLASS_ID, tkGetText( x ) )
-		x = ppSkip( x )
+		tkExpect( x, TK_ID )
 
-		t = astNew( ASTCLASS_PPUNDEF, t )
+		tkFold( begin, x, TK_PPUNDEF, tkGetText( x ) )
+		x = begin + 1
 
 	case else
-		return -1
+		tkOops( x, "unknown PP directive" )
 	end select
 
 	'' EOL?
 	select case( tkGet( x ) )
-	case TK_EOL, TK_EOF
+	case TK_EOL
+		tkRemove( x, x )
+
+	case TK_EOF
 
 	case else
-		astDelete( t )
-		return -1
+		tkOopsExpected( x, "EOL behind PP directive" )
 	end select
-
-	dim tkid as integer
-	select case( t->class )
-	case ASTCLASS_PPINCLUDE : tkid = TK_PPINCLUDE
-	case ASTCLASS_PPDEFINE  : tkid = TK_PPDEFINE
-	case ASTCLASS_PPIF      : tkid = TK_PPIF
-	case ASTCLASS_PPELSEIF  : tkid = TK_PPELSEIF
-	case ASTCLASS_PPELSE    : tkid = TK_PPELSE
-	case ASTCLASS_PPENDIF   : tkid = TK_PPENDIF
-	case ASTCLASS_PPUNDEF   : tkid = TK_PPUNDEF
-	case else               : assert( FALSE )
-	end select
-
-	if( keepbegin >= 0 ) then
-		tkRemove( begin, keepbegin - 1 )
-		x -= keepbegin - begin
-		keepbegin -= keepbegin - begin
-
-		tkInsert( begin, tkid, , t )
-		begin += 1
-		keepbegin += 1
-		x += 1
-
-		tkInsert( keepbegin, TK_BEGIN )
-		x += 1
-		tkInsert( x, TK_END )
-		x += 1
-	else
-		tkRemove( begin, x - 1 )
-		tkInsert( begin, tkid, , t )
-		begin += 1
-		x = begin
-	end if
-
-	if( tkGet( x ) = TK_EOL ) then
-		tkRemove( x, ppSkip( x ) - 1 )
-	end if
-
-	function = x
-end function
-
-private function ppSimpleToken( byval x as integer ) as integer
-	'' Handle pre-existing high-level tokens
-	select case( tkGet( x ) )
-	case TK_PPINCLUDE, TK_PPDEFINE, TK_PPIF, TK_PPELSEIF, _
-	     TK_PPELSE, TK_PPENDIF, TK_PPUNDEF, TK_PPUNKNOWN, TK_DIVIDER
-		x += 1
-	case else
-		x = -1
-	end select
-	function = x
-end function
-
-private function ppUnknownDirective( byval x as integer ) as integer
-	dim as integer begin = any, y = any
-	dim as ASTNODE ptr expr = any
-
-	begin = x
-
-	'' not at BOL?
-	select case( tkGet( tkSkipSpaceAndComments( x, -1 ) ) )
-	case TK_EOL, TK_EOF, TK_END, _
-	     TK_PPINCLUDE, TK_PPDEFINE, TK_PPIF, TK_PPELSEIF, _
-	     TK_PPELSE, TK_PPENDIF, TK_PPUNDEF, TK_PPUNKNOWN, TK_DIVIDER
-
-	case else
-		return -1
-	end select
-
-	'' '#'
-	if( tkGet( x ) <> TK_HASH ) then
-		return -1
-	end if
-	x = ppSkip( x )
-
-	y = ppSkipToEOL( x )
-	expr = tkToAstText( begin, y )
-	expr = astNew( ASTCLASS_PPUNKNOWN, expr )
-	x = y
-
-	'' EOL? (could also be EOF)
-	if( tkGet( x ) = TK_EOL ) then
-		x = ppSkip( x )
-	end if
-
-	tkRemove( begin, x - 1 )
-	tkInsert( begin, TK_PPUNKNOWN, , expr )
-	begin += 1
-	x = begin
 
 	function = x
 end function
 
 sub ppDirectives1( )
-	dim as integer x = any, old = any
+	var x = 0
+	do
+		select case( tkGet( x ) )
+		case TK_EOF
+			exit do
 
-	x = ppSkip( -1 )
-	while( tkGet( x ) <> TK_EOF )
-		old = x
+		'' '#'
+		case TK_HASH
+			'' At BOL?
+			select case( tkGet( tkSkipComment( x, -1 ) ) )
+			case TK_EOL, TK_EOF, TK_END, TK_DIVIDER, _
+			     TK_PPINCLUDE, TK_PPDEFINE, TK_PPIF, TK_PPELSEIF, _
+			     TK_PPELSE, TK_PPENDIF, TK_PPUNDEF
+				x = ppDirective( x )
+			case else
+				'' Skip to next line
+				x = ppSkipToEOL( x ) + 1
+			end select
 
-		x = ppDirective( old )
-		if( x >= 0 ) then
-			continue while
-		end if
+		case TK_PPINCLUDE, TK_PPDEFINE, TK_PPIF, TK_PPELSEIF, _
+		     TK_PPELSE, TK_PPENDIF, TK_PPUNDEF, TK_DIVIDER
+			x += 1
 
-		x = ppSimpleToken( old )
-		if( x >= 0 ) then
-			continue while
-		end if
-
-		x = ppUnknownDirective( old )
-		if( x >= 0 ) then
-			continue while
-		end if
-
-		'' Skip to next line
-		x = ppSkip( ppSkipToEOL( old ) )
-	wend
+		case else
+			'' Skip to next line
+			x = ppSkipToEOL( x ) + 1
+		end select
+	loop
 end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -819,15 +740,11 @@ end sub
 ''
 '' This sequence of macro body nodes will be created:
 ''
-''      tk TK_SPACE
 ''      param 0
-''      tk TK_SPACE
 ''      tk TK_ID "foo"
 ''      param 1 (stringify)
-''      tk TK_SPACE
 ''      param 0 (merge right)
 ''      param 1 (merge left)
-''      tk TK_SPACE
 ''      param 0 (merge right)
 ''      tk TK_ID "foo" (merge left)
 ''
@@ -843,25 +760,14 @@ private sub hTakeMergeAttrib _
 	)
 
 	if( record.merge ) then
-		'' Remove TK_SPACE's preceding the '##'
-		while( macrobody->tail )
-			if( macrobody->tail->class <> ASTCLASS_TK ) then exit while
-			if( macrobody->tail->tk <> TK_SPACE ) then exit while
-			astRemoveChild( macrobody, macrobody->tail )
-		wend
-
 		n->attrib or= ASTATTRIB_MERGEWITHPREV
 		record.merge = FALSE
 	end if
+
 end sub
 
 '' Used for uninteresting tokens
 private sub hRecordToken( )
-	'' Don't add TK_SPACE's behind a '##'
-	if( record.merge and (tkGet( record.x ) = TK_SPACE) ) then
-		exit sub
-	end if
-
 	var n = astNew( ASTCLASS_TK, tkGetText( record.x ) )
 	n->tk = tkGet( record.x )
 	hTakeMergeAttrib( record.macro->initializer, n )
@@ -885,6 +791,7 @@ private sub hRecordParam _
 	hTakeMergeAttrib( record.macro->initializer, n )
 
 	astAppend( record.macro->initializer, n )
+
 end sub
 
 private sub hRecordMerge( )
@@ -919,21 +826,10 @@ private sub hRecordBody( )
 
 			'' Check for escaped EOL, solve them out
 			'' '\' [Space] EOL
-			if( tkGet( record.x ) = TK_SPACE ) then
-				record.x += 1
-			end if
-
 			if( tkGet( record.x ) = TK_EOL ) then
 				'' Remove the escaped EOL
 				tkRemove( xbackslash, record.x )
-				record.x = xbackslash
-
-				'' Insert a space instead if there is no space yet
-				if( (tkGet( record.x - 1 ) <> TK_SPACE) and _
-				    (tkGet( record.x     ) <> TK_SPACE) ) then
-					tkInsert( record.x, TK_SPACE )
-				end if
-				record.x -= 1
+				record.x = xbackslash - 1
 			else
 				record.x = xbackslash
 				hRecordToken( )
@@ -994,6 +890,7 @@ sub ppDirectives2( )
 
 		case TK_PPDEFINE
 			var t = tkGetAst( x )
+			assert( t->class = ASTCLASS_PPDEFINE )
 			x += 1
 
 			'' BEGIN
@@ -1001,31 +898,15 @@ sub ppDirectives2( )
 			var begin = x
 			x += 1
 
-			'' Body tokens
+			'' Parse macro body
 			assert( t->initializer = NULL )
-
-			'' Try to parse the body as expression
-			var expr = ppExpression( x, , FALSE )
-
-			'' Expression found and TK_END reached?
-			if( (expr <> NULL) and (tkGet( x ) = TK_END) ) then
-				t->initializer = expr
-			else
-				'' Then either no expression could be parsed at all,
-				'' or it was an expression followed by more tokens.
-				x = begin + 1
-				astDelete( expr )
-				expr = NULL
-
-				'' Parse macro body properly
-				t->initializer = astNew( ASTCLASS_MACROBODY )
-				record.macro = t
-				record.x = x
-				record.stringify = FALSE
-				record.merge = FALSE
-				hRecordBody( )
-				x = record.x
-			end if
+			t->initializer = astNew( ASTCLASS_MACROBODY )
+			record.macro = t
+			record.x = x
+			record.stringify = FALSE
+			record.merge = FALSE
+			hRecordBody( )
+			x = record.x
 
 			'' END
 			assert( tkGet( x ) = TK_END )
@@ -1040,112 +921,8 @@ end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-private sub hExprToTokens( byval n as ASTNODE ptr, byref x as integer )
-	if( n = NULL ) then
-		exit sub
-	end if
-
-	select case as const( n->class )
-	case ASTCLASS_CONST
-		dim s as string
-		dim tk as integer
-		if( typeIsFloat( n->dtype ) ) then
-			tk = TK_DECFLOAT
-			s = str( n->val.f )
-		elseif( n->attrib and ASTATTRIB_OCT ) then
-			tk = TK_OCTNUM
-			s = "0" + oct( n->val.i )
-		elseif( n->attrib and ASTATTRIB_HEX ) then
-			tk = TK_HEXNUM
-			s = "0x" + hex( n->val.i )
-		else
-			tk = TK_DECNUM
-			s = str( n->val.i )
-		end if
-		tkInsert( x, tk, s ) : x += 1
-
-	case ASTCLASS_ID
-		tkInsert( x, TK_ID, n->text ) : x += 1
-
-	case ASTCLASS_DEFINED
-		'' defined id
-		tkInsert( x, KW_DEFINED ) : x += 1
-		tkInsert( x, TK_SPACE )   : x += 1
-		hExprToTokens( n->head, x )
-
-	case ASTCLASS_IIF
-		'' condition ? l : r
-		hExprToTokens( n->head, x )
-		tkInsert( x, TK_SPACE )   : x += 1
-		tkInsert( x, TK_QUEST )   : x += 1  '' ?
-		tkInsert( x, TK_SPACE )   : x += 1
-		hExprToTokens( n->head->next, x )
-		tkInsert( x, TK_SPACE )   : x += 1
-		tkInsert( x, TK_COLON )   : x += 1  '' :
-		tkInsert( x, TK_SPACE )   : x += 1
-		hExprToTokens( n->tail, x )
-
-	case ASTCLASS_LOGOR, ASTCLASS_LOGAND, _
-	     ASTCLASS_BITOR, ASTCLASS_BITXOR, ASTCLASS_BITAND, _
-	     ASTCLASS_EQ, ASTCLASS_NE, _
-	     ASTCLASS_LT, ASTCLASS_LE, _
-	     ASTCLASS_GT, ASTCLASS_GE, _
-	     ASTCLASS_SHL, ASTCLASS_SHR, _
-	     ASTCLASS_ADD, ASTCLASS_SUB, _
-	     ASTCLASS_MUL, ASTCLASS_DIV, ASTCLASS_MOD
-
-		hExprToTokens( n->head, x )
-		tkInsert( x, TK_SPACE ) : x += 1
-
-		dim as integer tk
-		select case as const( n->class )
-		case ASTCLASS_LOGOR  : tk = TK_PIPEPIPE  '' ||
-		case ASTCLASS_LOGAND : tk = TK_AMPAMP    '' &&
-		case ASTCLASS_BITOR  : tk = TK_PIPE      '' |
-		case ASTCLASS_BITXOR : tk = TK_CIRC      '' ^
-		case ASTCLASS_BITAND : tk = TK_AMP       '' &
-		case ASTCLASS_EQ     : tk = TK_EQEQ      '' ==
-		case ASTCLASS_NE     : tk = TK_EXCLEQ    '' !=
-		case ASTCLASS_LT     : tk = TK_LT        '' <
-		case ASTCLASS_LE     : tk = TK_LTEQ      '' <=
-		case ASTCLASS_GT     : tk = TK_GT        '' >
-		case ASTCLASS_GE     : tk = TK_GTEQ      '' >=
-		case ASTCLASS_SHL    : tk = TK_LTLT      '' <<
-		case ASTCLASS_SHR    : tk = TK_GTGT      '' >>
-		case ASTCLASS_ADD    : tk = TK_PLUS      '' +
-		case ASTCLASS_SUB    : tk = TK_MINUS     '' -
-		case ASTCLASS_MUL    : tk = TK_STAR      '' *
-		case ASTCLASS_DIV    : tk = TK_SLASH     '' /
-		case ASTCLASS_MOD    : tk = TK_PERCENT   '' %
-		case else
-			assert( FALSE )
-		end select
-		tkInsert( x, tk ) : x += 1
-
-		tkInsert( x, TK_SPACE ) : x += 1
-		hExprToTokens( n->tail, x )
-
-	case ASTCLASS_LOGNOT, ASTCLASS_BITNOT, _
-	     ASTCLASS_NEGATE, ASTCLASS_UNARYPLUS
-
-		dim as integer tk
-		select case as const( n->class )
-		case ASTCLASS_LOGNOT    : tk = TK_EXCL  '' !
-		case ASTCLASS_BITNOT    : tk = TK_TILDE '' ~
-		case ASTCLASS_NEGATE    : tk = TK_MINUS '' -
-		case ASTCLASS_UNARYPLUS : tk = TK_PLUS  '' +
-		case else
-			assert( FALSE )
-		end select
-		tkInsert( x, tk ) : x += 1
-
-		tkInsert( x, TK_SPACE ) : x += 1
-		hExprToTokens( n->head, x )
-
-	case else
-		assert( FALSE )
-	end select
-end sub
+const MAXARGS = 128
+dim shared as integer argbegin(0 to MAXARGS-1), argend(0 to MAXARGS-1)
 
 private function hMacroCall _
 	( _
@@ -1153,8 +930,6 @@ private function hMacroCall _
 		byval x as integer _
 	) as integer
 
-	const MAXARGS = 32
-	dim as integer argbegin(0 to MAXARGS-1), argend(0 to MAXARGS-1)
 	var args = 0
 	var begin = x
 
@@ -1175,7 +950,7 @@ private function hMacroCall _
 			'' For each arg...
 			do
 				if( args = MAXARGS ) then
-					return FALSE
+					tkOops( x, "macro call arg buffer too small, MAXARGS=" & MAXARGS )
 				end if
 
 				argbegin(args) = x
@@ -1196,7 +971,7 @@ private function hMacroCall _
 							exit do
 						end if
 					case TK_EOF
-						return FALSE
+						tkOopsExpected( x, "')' to close macro call argument list" )
 					end select
 					x += 1
 				loop
@@ -1212,15 +987,21 @@ private function hMacroCall _
 			loop
 
 			'' As many args as params?
-			if( macro->paramcount <> args ) then
-				return FALSE
+			if( args <> macro->paramcount ) then
+				dim s as string
+				if( args > macro->paramcount ) then
+					s = "too many"
+				else
+					s = "not enough"
+				end if
+				s += " arguments for '" + *macro->text + "' macro call: "
+				s &= args & " given, " & macro->paramcount & " needed"
+				tkOops( x, s )
 			end if
 		end if
 
 		'' ')'?
-		if( tkGet( x ) <> TK_RPAREN ) then
-			return FALSE
-		end if
+		tkExpect( x, TK_RPAREN )
 		x += 1
 	end if
 
@@ -1231,60 +1012,55 @@ private function hMacroCall _
 	if( macrobody ) then
 		'' Insert the macro body behind the call
 
-		'' #define body parsed as tokens?
-		if( macrobody->class = ASTCLASS_MACROBODY ) then
-			var child = macrobody->head
-			while( child )
-				var y = x
+		assert( macrobody->class = ASTCLASS_MACROBODY )
 
-				select case( child->class )
-				case ASTCLASS_TK
-					tkInsert( x, child->tk, child->text )
+		var child = macrobody->head
+		while( child )
+			var y = x
+
+			select case( child->class )
+			case ASTCLASS_TK
+				tkInsert( x, child->tk, child->text )
+				x += 1
+
+			case ASTCLASS_MACROPARAM
+				var arg = child->paramindex
+				assert( (arg >= 0) and (arg < args) )
+
+				if( child->attrib and ASTATTRIB_STRINGIFY ) then
+					'' Turn the arg's tokens into a string and insert it as string literal
+					tkInsert( x, TK_STRING, tkManyToCText( argbegin(arg), argend(arg) ) )
 					x += 1
-
-				case ASTCLASS_MACROPARAM
-					var arg = child->paramindex
-					assert( (arg >= 0) and (arg < args) )
-
-					if( child->attrib and ASTATTRIB_STRINGIFY ) then
-						'' Turn the arg's tokens into a string and insert it as string literal
-						tkInsert( x, TK_STRING, tkManyToCText( argbegin(arg), argend(arg) ) )
-						x += 1
-					else
-						'' Copy the arg's tokens into the body
-						tkCopy( x, argbegin(arg), argend(arg) )
-						x += argend(arg) - argbegin(arg) + 1
-					end if
-
-				case else
-					assert( FALSE )
-				end select
-
-				if( child->attrib and ASTATTRIB_MERGEWITHPREV ) then
-					'' Not the first token? (it wouldn't have a previous token to merge with)
-					if( bodybegin < y ) then
-						'' Assuming every token >= TK_ID is mergable (i.e. an identifier or keyword)
-						'' Assuming TK_SPACE's around '##' have already been removed
-						if( (tkGet( y - 1 ) >= TK_ID) and _
-						    (tkGet( y     ) >= TK_ID) ) then
-							tkInsert( x, TK_ID, *tkGetIdOrKw( y - 1 ) + *tkGetIdOrKw( y ) )
-							x += 1
-							tkRemove( y - 1, y )
-							x -= 2
-						else
-							print tkDumpOne( y - 1 )
-							print tkDumpOne( y )
-							oops( "cannot merge these two tokens when expanding macro '" & *macro->text & "'" )
-						end if
-					end if
+				else
+					'' Copy the arg's tokens into the body
+					tkCopy( x, argbegin(arg), argend(arg) )
+					x += argend(arg) - argbegin(arg) + 1
 				end if
 
-				child = child->next
-			wend
-		'' #define body is an expression
-		else
-			hExprToTokens( macrobody, x )
-		end if
+			case else
+				assert( FALSE )
+			end select
+
+			if( child->attrib and ASTATTRIB_MERGEWITHPREV ) then
+				'' Not the first token? (it wouldn't have a previous token to merge with)
+				if( bodybegin < y ) then
+					'' Assuming every token >= TK_ID is mergable (i.e. an identifier or keyword)
+					if( (tkGet( y - 1 ) >= TK_ID) and _
+					    (tkGet( y     ) >= TK_ID) ) then
+						tkInsert( x, TK_ID, *tkGetIdOrKw( y - 1 ) + *tkGetIdOrKw( y ) )
+						x += 1
+						tkRemove( y - 1, y )
+						x -= 2
+					else
+						print tkDumpOne( y - 1 )
+						print tkDumpOne( y )
+						oops( "cannot merge these two tokens when expanding macro '" & *macro->text & "'" )
+					end if
+				end if
+			end if
+
+			child = child->next
+		wend
 	end if
 
 	'' Then remove the call tokens
@@ -1430,157 +1206,6 @@ end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-'' Find corresponding #else and closing #endif, while stepping over nested
-'' #if blocks.
-private sub hFindElseEndIf _
-	( _
-		byval x as integer, _
-		byref xelse as integer, _
-		byref xendif as integer _
-	)
-
-	xelse = -1
-	xendif = -1
-
-	var level = 0
-	do
-		select case( tkGet( x ) )
-		case TK_EOF
-			exit do
-
-		case TK_PPIF
-			level += 1
-
-		case TK_PPELSE
-			if( level = 0 ) then
-				xelse = x
-			end if
-
-		case TK_PPENDIF
-			if( level = 0 ) then
-				xendif = x
-				exit do
-			end if
-			level -= 1
-
-		end select
-
-		x = ppSkip( x )
-	loop
-
-	'' If no #else was found, use same position as for #endif
-	if( xelse < 0 ) then
-		xelse = xendif
-	end if
-end sub
-
-'' Expand #elseifs into normal #if blocks:
-''
-'' 1.   #if 1       2. #if 1          3. #if 1
-''      #elseif 2      #else             #else
-''      #elseif 3          #if 2             #if 2
-''      #else              #elseif 3         #else
-''      #endif             #else                 #if 3
-''                         #endif                #else
-''                     #endif                    #endif
-''                                           #endif
-''                                       #endif
-private sub hSplitElseIfs( )
-	var x = -1
-	do
-		x = ppSkip( x )
-
-		select case( tkGet( x ) )
-		case TK_EOF
-			exit do
-
-		'' Found an #elseif? Replace it by #else #if
-		case TK_PPELSEIF
-			tkRemove( x, x )
-			tkInsert( x, TK_PPELSE, , astNew( ASTCLASS_PPELSE ) )
-			x += 1
-			tkInsert( x, TK_PPIF, , astNew( ASTCLASS_PPIF ) )
-			'' Note: there may be TK_BEGIN/END following, but that's ok
-
-			'' Find the corresponding #endif,
-			'' and insert another #endif in front of it
-			dim as integer xelse, xendif
-			hFindElseEndIf( ppSkip( x ), xelse, xendif )
-			tkInsert( xendif, TK_PPENDIF, , astNew( ASTCLASS_PPENDIF ) )
-
-		end select
-	loop
-end sub
-
-'' Merge #else #if back into #elseifs
-private sub hMergeElseIfs( )
-	var x = 0
-
-	do
-		select case( tkGet( x ) )
-		case TK_EOF
-			exit do
-
-		'' Found an #else followed by an #if?
-		case TK_PPELSE
-			if( tkGet( x + 1 ) = TK_PPIF ) then
-				'' Find the #endif corresponding to the #if
-				dim as integer xelse, xendif
-				hFindElseEndIf( x + 1, xelse, xendif )
-
-				'' Followed immediately by the #endif
-				'' corresponding to the #else?
-				if( tkGet( xendif + 1 ) = TK_PPENDIF ) then
-					'' #else #if expr -> #elseif expr
-					var t = astClone( tkGetAst( x + 1 )->head )
-					tkRemove( x, x + 1 )
-					tkInsert( x, TK_PPELSEIF, , astNew( ASTCLASS_PPELSEIF, t ) )
-
-					'' Remove the #endif
-					tkRemove( xendif, xendif )
-				end if
-			end if
-
-		end select
-
-		x += 1
-	loop
-end sub
-
-'' Check whether an #if/#else block includes precious #defines/#undefs
-private function hCheckIfBlockForPreciousDefine( byval x as integer ) as integer
-	assert( tkGet( x ) = TK_PPIF )
-	x = ppSkip( x )
-
-	dim as integer xelse, xendif
-	hFindElseEndIf( x, xelse, xendif )
-
-	while( x < xendif )
-		select case( tkGet( x ) )
-		case TK_PPDEFINE
-			var id = tkGetAst( x )->text
-			if( hLookupExpandSym( id ) ) then
-				print "#define " + *id + " found in unsolved #if block, aborting preprocessing"
-				exit function
-			end if
-
-		case TK_PPUNDEF
-			var t = tkGetAst( x )
-			assert( t->head->class = ASTCLASS_ID )
-			var id = t->head->text
-			if( hLookupExpandSym( id ) ) then
-				print "#undef " + *id + " found in unsolved #if block, aborting preprocessing"
-				exit function
-			end if
-
-		end select
-
-		x = ppSkip( x )
-	wend
-
-	function = TRUE
-end function
-
 private function hMaybeExpandId( byval x as integer ) as integer
 	assert( tkGet( x ) = TK_ID )
 	var id = tkGetText( x )
@@ -1611,24 +1236,24 @@ private sub hExpandInIfCondition( byval x as integer )
 
 		'' DEFINED ['('] Identifier [')']
 		case KW_DEFINED
-			x = ppSkip( x )
+			x += 1
 
 			'' '('?
 			var have_lparen = FALSE
 			if( tkGet( x ) = TK_LPAREN ) then
 				have_lparen = TRUE
-				x = ppSkip( x )
+				x += 1
 			end if
 
 			'' Identifier? (not doing any expansion here)
 			if( tkGet( x ) = TK_ID ) then
-				x = ppSkip( x )
+				x += 1
 			end if
 
 			'' ')'?
 			if( have_lparen ) then
 				if( tkGet( x ) = TK_RPAREN ) then
-					x = ppSkip( x )
+					x += 1
 				end if
 			end if
 
@@ -1642,38 +1267,27 @@ private sub hExpandInIfCondition( byval x as integer )
 	loop
 end sub
 
-private sub hParseIfCondition( byval t as ASTNODE ptr, byval x as integer )
+private function hParseIfCondition( byval x as integer ) as ASTNODE ptr
 	'' BEGIN
 	assert( tkGet( x ) = TK_BEGIN )
 	var begin = x
 	x += 1
 
 	'' Try parsing an expression
-	var expr = ppExpression( x, , TRUE )
+	function = ppExpression( x )
 
 	'' TK_END not reached after ppExpression()?
 	if( tkGet( x ) <> TK_END ) then
 		'' Then either no expression could be parsed at all,
 		'' or it was followed by "junk" tokens...
-		astDelete( expr )
-
-		do
-			x += 1
-		loop while( tkGet( x ) <> TK_END )
-
-		'' Turn the #if into a PPUNKNOWN
-		astAppend( t, tkToAstText( begin + 1, x - 1 ) )
-		t = astNew( ASTCLASS_PPUNKNOWN, astClone( t ) )
-		tkSetAst( begin - 1, t )
-	else
-		astAppend( t, expr )
+		tkOops( begin, "couldn't parse #if condition expression" )
 	end if
 
 	'' END
 	assert( tkGet( x ) = TK_END )
 	'' Remove the TK_BEGIN/END and the expression tokens in between
 	tkRemove( begin, x )
-end sub
+end function
 
 private function hFold( byval n as ASTNODE ptr ) as ASTNODE ptr
 	function = n
@@ -1693,7 +1307,11 @@ private function hFold( byval n as ASTNODE ptr ) as ASTNODE ptr
 		'' defined() on known symbol?
 		assert( n->head->class = ASTCLASS_ID )
 		var cond = hLookupKnownSym( n->head->text )
-		if( cond <> COND_UNKNOWN ) then
+		if( cond = COND_UNKNOWN ) then
+			if( n->head->location.file ) then
+				oopsLocation( @n->head->location, "unknown symbol, need more info" )
+			end if
+		else
 			'' defined()    ->    1|0
 			function = astNewCONST( iif( cond = COND_TRUE, 1, 0 ), 0, TYPE_LONG )
 			astDelete( n )
@@ -1913,112 +1531,181 @@ private function hFold( byval n as ASTNODE ptr ) as ASTNODE ptr
 	end select
 end function
 
-sub ppEval( )
-	'' Splits #elseifs blocks up into normal #else/#if/#endif blocks,
-	'' this simplifies the #if evaluation step because then its a yes/no
-	'' decision for every #if block with known condition whether to preserve
-	'' the #if or #else code paths. With #elseifs present this becomes
-	'' somewhat more complex.
-	hSplitElseIfs( )
+private function hEvalIfCondition( byval x as integer ) as integer
+	assert( (tkGet( x ) = TK_PPIF) or (tkGet( x ) = TK_PPELSEIF) )
+	var xif = x
 
+	'' No #if expression yet?
+	var t = tkGetAst( x )
+	if( t = NULL ) then
+		x += 1
+
+		'' Expand macros in the #if condition expression, before parsing
+		'' it, but don't expand the "id" in "defined id".
+		hExpandInIfCondition( x )
+
+		t = hParseIfCondition( x )
+
+		x = xif
+	end if
+
+	'' 1. Try to evaluate the condition
+	t = hFold( astClone( t ) )
+
+	'' 2. Check the condition
+	if( (t->class <> ASTCLASS_CONST) or typeIsFloat( t->dtype ) ) then
+		tkOops( x, "cannot evaluate #if condition, need more info" )
+	end if
+
+	function = (t->val.i <> 0)
+end function
+
+type IFSTACKNODE
+	saw_true	as integer
+	saw_else	as integer
+end type
+
+const MAXIFBLOCKS = 128
+dim shared ifstack(0 to MAXIFBLOCKS-1) as IFSTACKNODE
+
+sub ppEval( )
 	var x = 0
+	var level = -1
+	var skiplevel = MAXIFBLOCKS+1
 	do
 		select case( tkGet( x ) )
 		case TK_EOF
 			exit do
 
 		case TK_PPIF
-			var xif = x
-			var t = tkGetAst( x )
-
-			'' No #if expression yet?
-			if( t->head = NULL ) then
-				x += 1
-
-				'' Expand macros in the #if condition expression, before parsing
-				'' it, but don't expand the "id" in "defined id".
-				hExpandInIfCondition( x )
-
-				hParseIfCondition( t, x )
-
-				x = xif
+			if( level = MAXIFBLOCKS ) then
+				tkOops( x, "#if stack too small, MAXIFBLOCKS=" & MAXIFBLOCKS )
 			end if
+			level += 1
+			ifstack(level).saw_true = FALSE
+			ifstack(level).saw_else = FALSE
 
-			'' 1. Try to evaluate the condition
-			assert( tkGet( x ) = TK_PPIF )
-			tkSetAst( x, hFold( astClone( tkGetAst( x ) ) ) )
-
-			'' 2. Check the condition
-			t = tkGetAst( x )
-			var cond = COND_UNKNOWN
-			if( t->head->class = ASTCLASS_CONST ) then
-				if( typeIsFloat( t->head->dtype ) = FALSE ) then
-					cond = iif( t->head->val.i <> 0, COND_TRUE, COND_FALSE )
-				end if
-			end if
-
-			if( cond = COND_UNKNOWN ) then
-				'' If the #if can't be solved out, it mustn't contain any
-				'' #defines/#undefs for symbols we want to expand, because
-				'' we don't know whether the #define/#undef would be reached...
-				if( hCheckIfBlockForPreciousDefine( x ) = FALSE ) then
-					'' Aborting ppEval(), but still finish parsing #if conditions...
-					ppNoEval( )
-					exit do
-				end if
-			else
-				dim as integer xelse, xendif
-				hFindElseEndIf( x + 1, xelse, xendif )
-
-				if( cond = COND_TRUE ) then
-					'' Remove whole #else..#endif block and the #if
-					tkRemove( xelse, xendif )
-					tkRemove( x, x )
+			'' Not skipping? Then evaluate
+			if( skiplevel = MAXIFBLOCKS+1 ) then
+				if( hEvalIfCondition( x ) ) then
+					'' #if TRUE, don't skip
+					ifstack(level).saw_true = TRUE
 				else
-					if( xelse = xendif ) then
-						'' No #else found; remove whole #if..#endif block
-						tkRemove( x, xendif )
+					'' #if FALSE, start skipping
+					skiplevel = level
+				end if
+			end if
+
+			tkRemove( x, x )
+			x -= 1
+
+		case TK_PPELSEIF
+			if( level < 0 ) then
+				tkOops( x, "#elseif without #if" )
+			elseif( ifstack(level).saw_else ) then
+				tkOops( x, "#elseif after #else" )
+			end if
+
+			'' Not skipping, or skipping due to previous #if/#elseif FALSE?
+			'' Then evaluate the #elseif to check whether to continue skipping or not
+			if( (skiplevel = MAXIFBLOCKS+1) or (skiplevel = level) ) then
+				'' If there was a previous #if/#elseif TRUE on this level,
+				'' then this #elseif must be skipped no matter what its condition is.
+				if( ifstack(level).saw_true ) then
+					'' Start/continue skipping
+					skiplevel = level
+				else
+					if( hEvalIfCondition( x ) ) then
+						'' #elseif TRUE, don't skip
+						ifstack(level).saw_true = TRUE
+						skiplevel = MAXIFBLOCKS+1
 					else
-						'' Remove whole #if..#else block and the #endif
-						tkRemove( xendif, xendif )
-						tkRemove( x, xelse )
+						'' #elseif FALSE, start/continue skipping
+						skiplevel = level
 					end if
 				end if
+			end if
+
+			tkRemove( x, x )
+			x -= 1
+
+		case TK_PPELSE
+			if( level < 0 ) then
+				tkOops( x, "#else without #if" )
+			end if
+
+			if( ifstack(level).saw_else ) then
+				tkOops( x, "#else after #else" )
+			end if
+			ifstack(level).saw_else = TRUE
+
+			'' Not skipping, or skipping due to previous #if/#elseif FALSE?
+			'' Then check whether to skip this #else block or not.
+			if( (skiplevel = MAXIFBLOCKS+1) or (skiplevel = level) ) then
+				if( ifstack(level).saw_true ) then
+					'' Previous #if/#elseif TRUE, skip #else
+					skiplevel = level
+				else
+					'' Previous #if/#elseif FALSE, don't skip #else
+					skiplevel = MAXIFBLOCKS+1
+				end if
+			end if
+
+			tkRemove( x, x )
+			x -= 1
+
+		case TK_PPENDIF
+			if( level < 0 ) then
+				tkOops( x, "#endif without #if" )
+			end if
+
+			'' If skipping due to current level, then stop skipping.
+			if( skiplevel = level ) then
+				skiplevel = MAXIFBLOCKS+1
+			end if
+
+			tkRemove( x, x )
+			x -= 1
+
+			level -= 1
+
+		case else
+			'' Remove tokens if skipping
+			if( skiplevel <> MAXIFBLOCKS+1 ) then
+				tkRemove( x, x )
 				x -= 1
+			else
+				select case( tkGet( x ) )
+				case TK_PPDEFINE
+					'' Register/overwrite as known defined symbol
+					var t = tkGetAst( x )
+					assert( t->class = ASTCLASS_PPDEFINE )
+					hAddKnownSym( t->text, TRUE )
+
+					'' Register #define for expansion if it's a precious symbol
+					if( hLookupExpandSym( t->text ) ) then
+						hAddMacro( astClone( t ) )
+					end if
+
+				case TK_PPUNDEF
+					'' Register/overwrite as known undefined symbol
+					var id = tkGetText( x )
+					hAddKnownSym( id, FALSE )
+
+					'' Forget previous #define if it's a precious symbol
+					if( hLookupExpandSym( id ) ) then
+						hUndefMacro( id )
+					end if
+
+				case TK_ID
+					x = hMaybeExpandId( x )
+
+				end select
 			end if
-
-		case TK_PPDEFINE
-			'' Register/overwrite as known defined symbol
-			var t = tkGetAst( x )
-			hAddKnownSym( t->text, TRUE )
-
-			'' Register #define for expansion if it's a precious symbol
-			if( hLookupExpandSym( t->text ) ) then
-				hAddMacro( astClone( t ) )
-			end if
-
-		case TK_PPUNDEF
-			'' Register/overwrite as known undefined symbol
-			var t = tkGetAst( x )
-			assert( t->head->class = ASTCLASS_ID )
-			var id = t->head->text
-			hAddKnownSym( id, FALSE )
-
-			'' Forget previous #define if it's a precious symbol
-			if( hLookupExpandSym( id ) ) then
-				hUndefMacro( id )
-			end if
-
-		case TK_ID
-			x = hMaybeExpandId( x )
-
 		end select
 
 		x += 1
 	loop
-
-	'' Undo hSplitElseIfs()
-	hMergeElseIfs( )
 
 	astDelete( eval.macros )
 	hashEnd( @eval.expandsymhash )
@@ -2027,24 +1714,16 @@ sub ppEval( )
 	astDelete( eval.knownsyms )
 end sub
 
-sub ppNoEval( )
+sub ppRemoveEOLs( )
 	var x = 0
 	do
 		select case( tkGet( x ) )
 		case TK_EOF
 			exit do
-
-		case TK_PPIF, TK_PPELSEIF
-			var t = tkGetAst( x )
-			x += 1
-
-			'' No #if expression yet?
-			if( t->head = NULL ) then
-				hParseIfCondition( t, x )
-			end if
-
-		case else
-			x += 1
+		case TK_EOL
+			tkRemove( x, x )
+			x -= 1
 		end select
+		x += 1
 	loop
 end sub

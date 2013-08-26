@@ -14,6 +14,113 @@ sub oops( byref message as string )
 	end 1
 end sub
 
+private sub hCalcErrorLine _
+	( _
+		byval file as FROGFILE ptr, _
+		byval linenum as integer, _
+		byval column as integer, _
+		byval limit as integer, _
+		byref s as string, _
+		byref offset as integer _
+	)
+
+	s = lexPeekLine( file, linenum )
+
+	'' Line too long to fit in console?
+	if( len( s ) > limit ) then
+		var shift = 0
+
+		if( column < ((limit * 3) / 4) ) then
+			'' Offset is still well visible, so align to left.
+			s = left( s, limit )
+		else
+			'' Must scroll the line to the left (and the offset too),
+			'' to make the location visible.
+			'' a) center it, if the string is long enough for this,
+			'' b) or align to the right.
+
+			'' Enough chars behind the offset to fill up a half?
+			var half = limit / 2
+			if( (len( s ) - column) >= half ) then
+				'' Center: shift left to align offset to visible boundary,
+				shift = column - limit
+				'' and shift further to reach the middle.
+				shift += half
+				s = mid( s, shift+1, limit )
+			else
+				'' Right align:
+				shift = len( s ) - limit
+				s = right( s, limit )
+			end if
+		end if
+
+		offset = column - shift
+	else
+		offset = column
+	end if
+
+end sub
+
+'' Prints out a message like this:
+'' filename.bas(123): duplicate definition of 'i'
+''          dim i as integer
+''              ^
+sub oopsLocation _
+	( _
+		byval location as TKLOCATION ptr, _
+		byref message as string _
+	)
+
+	print location->file->pretty + "(" & (location->linenum + 1) & "): " + message
+
+	'' Determine how many chars can be printed for the error line:
+	'' Normally we can fill a line in the console, so get the console width.
+	dim as integer limit = loword( width( ) ) - 1
+	if( limit < 0 ) then
+		limit = 0
+	end if
+
+	'' Show the error line and the 3 lines before it for more context,
+	'' with line numbers prefixed to them:
+	''    8:    sub main( )
+	''    9:        print "hi!"
+	''   10:        do
+	''   11:            dim i as integer
+	''                      ^
+	dim as string linenums(-2 to 2)
+
+	var min = location->linenum + lbound( linenums )
+	if( min < 0 ) then min = 0
+	min -= location->linenum
+
+	var max = location->linenum + ubound( linenums )
+	if( max >= location->file->linecount ) then max = location->file->linecount - 1
+	max -= location->linenum
+
+	for i as integer = min to max
+		linenums(i) = str( location->linenum + i + 1 )
+		if( len( linenums(i) ) < len( str( location->linenum + 1 ) ) ) then
+			linenums(i) = " " + linenums(i)
+		end if
+		linenums(i) += ": "
+	next
+
+	for i as integer = min to max
+		dim s as string
+		dim offset as integer
+		hCalcErrorLine( location->file, location->linenum + i, location->column, limit, s, offset )
+
+		print linenums(i) + s
+
+		if( i = 0 ) then
+			print space( len( linenums(i) ) + offset ) + "^" + string( location->length - 1, "~" )
+		end if
+	next
+
+	end 1
+
+end sub
+
 function strDuplicate( byval s as zstring ptr ) as zstring ptr
 	dim as zstring ptr p = any
 	if( s ) then

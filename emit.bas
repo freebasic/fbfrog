@@ -181,10 +181,6 @@ private function emitAst _
 		exit function
 	end if
 
-	if( n->attrib and ASTATTRIB_PPINDENTEND ) then
-		emit.indent -= 1
-	end if
-
 	select case as const( n->class )
 	case ASTCLASS_NOP
 
@@ -256,41 +252,8 @@ private function emitAst _
 		emitLine( s )
 		s = ""
 
-	case ASTCLASS_PPIF
-		select case( n->head->class )
-		'' #if defined id     ->    #ifdef id
-		case ASTCLASS_DEFINED
-			s += "#ifdef " + emitAst( n->head->head )
-
-		'' #if !defined id    ->    #ifndef id
-		case ASTCLASS_LOGNOT
-			if( n->head->head->class = ASTCLASS_DEFINED ) then
-				s += "#ifndef " + emitAst( n->head->head->head )
-			end if
-		end select
-
-		if( len( s ) = 0 ) then
-			s += "#if " + emitAst( n->head )
-		end if
-
-		emitLine( s )
-		s = ""
-
-	case ASTCLASS_PPELSEIF
-		emitLine( "#elseif " + emitAst( n->head ) )
-
-	case ASTCLASS_PPELSE
-		emitLine( "#else" )
-
-	case ASTCLASS_PPENDIF
-		emitLine( "#endif" )
-
 	case ASTCLASS_PPUNDEF
-		emitLine( "#undef " + emitAst( n->head ) )
-
-	case ASTCLASS_PPUNKNOWN
-		emitLine( "'' TODO: unknown PP directive" )
-		emitLine( emitAst( n->head ) )
+		emitLine( "#undef " + emitAst( n->initializer ) )
 
 	case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
 		dim as string compoundkeyword
@@ -421,10 +384,6 @@ private function emitAst _
 		s += " to "
 		s += emitAst( n->tail, FALSE )
 
-	case ASTCLASS_UNKNOWN
-		emitLine( "'' TODO: unknown construct" )
-		emitLine( emitAst( n->head ) )
-
 	case ASTCLASS_EXTERNBLOCKBEGIN
 		emitLine( "extern """ + *n->text + """" )
 
@@ -537,10 +496,6 @@ private function emitAst _
 		astDump( n )
 		assert( FALSE )
 	end select
-
-	if( n->attrib and ASTATTRIB_PPINDENTBEGIN ) then
-		emit.indent += 1
-	end if
 
 	function = s
 end function

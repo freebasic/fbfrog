@@ -11,7 +11,7 @@ dim shared as integer x
 
 private sub imOops( )
 	print "error: unknown construct in AST dump, at this token:"
-	print tkDumpOne( x ) & ", line " & tkGetLineNum( x )
+	print tkDumpOne( x )
 	end 1
 end sub
 
@@ -20,7 +20,7 @@ private function imSkip( byval y as integer ) as integer
 		y += 1
 
 		select case( tkGet( y ) )
-		case TK_SPACE, TK_COMMENT
+		case TK_COMMENT
 
 		case else
 			exit do
@@ -241,36 +241,6 @@ private function imPPDirective( ) as ASTNODE ptr
 		hExpect( TK_STRING )
 		function = astNew( ASTCLASS_PPINCLUDE, tkGetText( x ) )
 		hSkip( )
-
-	case KW_IF, KW_ELSEIF
-		hSkip( )
-
-		'' Expression
-		var t = imExpression( TRUE )
-
-		function = astNew( iif( tk = KW_IF, ASTCLASS_PPIF, ASTCLASS_PPELSEIF ), t )
-
-	case KW_IFDEF, KW_IFNDEF
-		hSkip( )
-
-		'' Identifier?
-		hExpect( TK_ID )
-		var t = astNew( ASTCLASS_ID, tkGetText( x ) )
-		hSkip( )
-
-		t = astNew( ASTCLASS_DEFINED, t )
-		if( tk = KW_IFNDEF ) then
-			t = astNew( ASTCLASS_LOGNOT, t )
-		end if
-		function = astNew( ASTCLASS_PPIF, t )
-
-	case KW_ELSE
-		hSkip( )
-		function = astNew( ASTCLASS_PPELSE )
-
-	case KW_ENDIF
-		hSkip( )
-		function = astNew( ASTCLASS_PPENDIF )
 
 	case KW_UNDEF
 		hSkip( )
@@ -682,7 +652,7 @@ private function imToplevel( ) as ASTNODE ptr
 	function = group
 end function
 
-function importFile( byref file as string ) as ASTNODE ptr
+function importFile( byval file as FROGFILE ptr ) as ASTNODE ptr
 	tkInit( )
 	lexLoadFile( 0, file, TRUE )
 	function = imToplevel( )

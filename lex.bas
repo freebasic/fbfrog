@@ -68,15 +68,19 @@ enum
 	CH_PIPE         '' |
 	CH_RBRACE       '' }
 	CH_TILDE        '' ~
+
+	CH_DEL
 end enum
 
 type LEXSTUFF
 	buffer		as ubyte ptr  '' File content buffer
 	i		as ubyte ptr  '' Current char, will always be <= limit
+	bol		as ubyte ptr  '' Last begin-of-line
 	limit		as ubyte ptr  '' (end of buffer)
 
 	x		as integer
-	linenum		as integer
+	location	as TKLOCATION
+	behindspace	as integer
 	filename	as string
 	fb_mode		as integer    '' C or FB?
 
@@ -87,23 +91,24 @@ end type
 
 dim shared as LEXSTUFF lex
 
-private sub lexOops( byval message as zstring ptr )
-	print lex.filename + "(" & lex.linenum & "): error: " + *message
-	end 1
+private sub lexOops( byref message as string )
+	oopsLocation( @lex.location, message )
+end sub
+
+private sub hSetLocation( )
+	lex.location.length = (lex.i - lex.bol) - lex.location.column
+	tkSetLocation( lex.x, @lex.location )
+	tkSetBehindSpace( lex.x )
 end sub
 
 private sub hAddTextToken( byval tk as integer, byval begin as ubyte ptr )
-	dim as integer old = any
-	dim as uinteger hash = any
-	dim as THASHITEM ptr item = any
-
 	'' Insert a null terminator temporarily
-	old = lex.i[0]
+	var old = lex.i[0]
 	lex.i[0] = 0
 
 	'' Lookup C keyword
-	hash = hashHash( begin )
-	item = hashLookup( lex.kwhash, begin, hash )
+	var hash = hashHash( begin )
+	var item = hashLookup( lex.kwhash, begin, hash )
 
 	'' Is it a C keyword?
 	if( item->s ) then
@@ -113,7 +118,7 @@ private sub hAddTextToken( byval tk as integer, byval begin as ubyte ptr )
 		'' TK_ID
 		tkInsert( lex.x, tk, begin )
 	end if
-	tkSetLineNum( lex.x, lex.linenum )
+	hSetLocation( )
 	lex.x += 1
 
 	lex.i[0] = old
@@ -122,20 +127,13 @@ end sub
 private sub hReadBytes( byval tk as integer, byval length as integer )
 	lex.i += length
 	tkInsert( lex.x, tk )
-	tkSetLineNum( lex.x, lex.linenum )
+	hSetLocation( )
 	lex.x += 1
 end sub
 
-private sub hReadSpace( )
-	dim as ubyte ptr begin = any
-
-	begin = lex.i
-
-	do
-		lex.i += 1
-	loop while( (lex.i[0] = CH_SPACE) and (lex.i[0] = CH_TAB) )
-
-	hAddTextToken( TK_SPACE, begin )
+private sub hNewLine( )
+	lex.bol = lex.i
+	lex.location.linenum += 1
 end sub
 
 private sub hReadLineComment( )
@@ -151,39 +149,40 @@ private sub hReadLineComment( )
 
 	do
 		select case( lex.i[0] )
+		case 0
+			exit do
+
 		case CH_CR
 			if( escaped = FALSE ) then
 				exit do
 			end if
 
-			lex.i += 1
-			if( lex.i[0] = CH_LF ) then	'' CRLF
+			if( lex.i[1] = CH_LF ) then	'' CRLF
 				lex.i += 1
 			end if
-
-			lex.linenum += 1
+			lex.i += 1
+			hNewLine( )
 
 		case CH_LF
 			if( escaped = FALSE ) then
 				exit do
 			end if
-			lex.linenum += 1
+			lex.i += 1
+			hNewLine( )
 
 		case CH_SPACE, CH_TAB
 			'' Spaces don't change escaped status
 			'' (at least gcc/clang support spaces between \ and EOL)
+			lex.i += 1
 
 		case CH_BACKSLASH
 			escaped = not lex.fb_mode
-
-		case 0
-			exit do
+			lex.i += 1
 
 		case else
 			escaped = FALSE
+			lex.i += 1
 		end select
-
-		lex.i += 1
 	loop
 
 	hAddTextToken( TK_COMMENT, begin )
@@ -205,10 +204,22 @@ private sub hReadComment( )
 				saw_end = TRUE
 				exit do
 			end if
+			lex.i += 1
 
+		case CH_CR
+			if( lex.i[1] = CH_LF ) then	'' CRLF
+				lex.i += 1
+			end if
+			lex.i += 1
+			hNewLine( )
+
+		case CH_LF
+			lex.i += 1
+			hNewLine( )
+
+		case else
+			lex.i += 1
 		end select
-
-		lex.i += 1
 	loop
 
 	hAddTextToken( TK_COMMENT, begin )
@@ -219,13 +230,11 @@ private sub hReadComment( )
 end sub
 
 private sub hReadId( )
-	dim as ubyte ptr begin = any
-
 	'' Identifier/keyword parsing: sequences of a-z, A-Z, 0-9, _
 	'' The current char is one of those already. The whole identifier
 	'' will be stored into a TK_ID, or if it's a keyword the proper KW_*
 	'' is used instead of TK_ID and the text is not stored.
-	begin = lex.i
+	var begin = lex.i
 
 	do
 		lex.i += 1
@@ -368,9 +377,6 @@ enum
 end enum
 
 private sub hReadString( )
-	dim as ubyte ptr begin = any
-	dim as integer saw_end = any, id = any, strflags = any, quotechar = any
-
 	'' String/char literal parsing, starting at ", ', or L, covering:
 	''    'a'
 	''    "foo"
@@ -380,15 +386,15 @@ private sub hReadString( )
 	'' of TK_STRING, so the emitter can prepend an '!', for example:
 	''    "\n" -> \n -> !"\n"
 
-	strflags = 0
+	var id = TK_STRING
+	var strflags = 0
 
-	id = TK_STRING
 	if( lex.i[0] = CH_L ) then
 		lex.i += 1
 		strflags or= STRFLAG_WIDE
 	end if
 
-	quotechar = lex.i[0]
+	var quotechar = lex.i[0]
 	select case( quotechar )
 	case CH_QUOTE
 		strflags or= STRFLAG_CHAR
@@ -397,8 +403,8 @@ private sub hReadString( )
 	end select
 
 	lex.i += 1
-	begin = lex.i
-	saw_end = FALSE
+	var begin = lex.i
+	var saw_end = FALSE
 	do
 		select case( lex.i[0] )
 		case quotechar
@@ -435,28 +441,31 @@ private sub hReadString( )
 end sub
 
 private sub lexNext( )
-	dim as integer y = any
+	'' Skip spaces
+	lex.behindspace = FALSE
+	while( (lex.i[0] = CH_TAB) or (lex.i[0] = CH_SPACE) )
+		lex.i += 1
+		lex.behindspace = TRUE
+	wend
+
+	lex.location.column = lex.i - lex.bol
+	lex.location.length = 1
 
 	'' Identify the next token
 	select case as const( lex.i[0] )
 	case CH_CR
-		hReadBytes( TK_EOL, 1 )
-
-		if( lex.i[0] = CH_LF ) then	'' CRLF
+		if( lex.i[1] = CH_LF ) then	'' CRLF
 			lex.i += 1
 		end if
-
-		lex.linenum += 1
+		hReadBytes( TK_EOL, 1 )
+		hNewLine( )
 
 	case CH_LF
 		hReadBytes( TK_EOL, 1 )
-		lex.linenum += 1
+		hNewLine( )
 
 	case CH_FORMFEED
 		hReadBytes( TK_DIVIDER, 1 )
-
-	case CH_TAB, CH_SPACE
-		hReadSpace( )
 
 	case CH_EXCL		'' !
 		if( lex.i[1] = CH_EQ ) then	'' !=
@@ -600,12 +609,12 @@ private sub lexNext( )
 			hReadBytes( TK_LTGT, 2 )
 		case else
 			'' If it's an #include, parse <...> as string literal
-			y = lex.x
-			y = tkSkipSpaceAndComments( y, -1 )
+			var y = lex.x
+			y = tkSkipComment( y, -1 )
 			if( tkGet( y ) = KW_INCLUDE ) then
-				y = tkSkipSpaceAndComments( y, -1 )
+				y = tkSkipComment( y, -1 )
 				if( tkGet( y ) = TK_HASH ) then
-					y = tkSkipSpaceAndComments( y, -1 )
+					y = tkSkipComment( y, -1 )
 					select case( tkGet( y ) )
 					case TK_EOL, TK_EOF
 						hReadString( )
@@ -656,7 +665,33 @@ private sub lexNext( )
 		hReadBytes( TK_LBRACKET, 1 )
 
 	case CH_BACKSLASH	'' \
-		hReadBytes( TK_BACKSLASH, 1 )
+		'' Check for escaped EOLs and solve them out
+		'' '\' [Space] EOL
+
+		var i = 1
+		while( (lex.i[i] = CH_TAB) or (lex.i[i] = CH_SPACE) )
+			i += 1
+		wend
+
+		var found_eol = FALSE
+		select case( lex.i[i] )
+		case CH_CR
+			i += 1
+			if( lex.i[i] = CH_LF ) then	'' CRLF
+				i += 1
+			end if
+			found_eol = TRUE
+		case CH_LF
+			i += 1
+			found_eol = TRUE
+		end select
+
+		if( found_eol ) then
+			lex.i += i
+			hNewLine( )
+		else
+			hReadBytes( TK_BACKSLASH, 1 )
+		end if
 
 	case CH_RBRACKET	'' ]
 		hReadBytes( TK_RBRACKET, 1 )
@@ -692,23 +727,25 @@ private sub lexNext( )
 		hReadBytes( TK_TILDE, 1 )
 
 	case else
-		lex.i += 1
-		hAddTextToken( TK_BYTE, lex.i - 1 )
+		lexOops( "stray &h" + hex( lex.i[0], 2 ) + " byte" )
 
 	end select
 end sub
 
-private sub hLoadFile( byref filename as string )
-	dim as integer f = any, found = any, result = any, size = any
-	dim as longint filesize = any
+private sub hLoadFile _
+	( _
+		byval file as FROGFILE ptr, _
+		byref buffer as ubyte ptr, _
+		byref limit as ubyte ptr _
+	)
 
 	'' Read in the whole file content into lex.buffer
-	f = freefile( )
-	if( open( filename, for binary, access read, as #f ) ) then
-		oops( "could not open file: '" + filename + "'" )
+	var f = freefile( )
+	if( open( file->normed, for binary, access read, as #f ) ) then
+		oops( "could not open file: '" + file->normed + "'" )
 	end if
 
-	filesize = lof( f )
+	var filesize = lof( f )
 	if( filesize > &h40000000 ) then
 		oops( "a header file bigger than 1 GiB? no way..." )
 	end if
@@ -716,15 +753,14 @@ private sub hLoadFile( byref filename as string )
 	'' An extra 0 byte at the end of the buffer so we can look ahead
 	'' without bound checks, and don't need to give special treatment
 	'' to empty files
-	size = filesize
-	lex.buffer = callocate( size + 1 )
-	lex.buffer[size] = 0
-	lex.i = lex.buffer
-	lex.limit = lex.buffer + size
+	dim as integer size = filesize
+	buffer = callocate( size + 1 )
+	buffer[size] = 0
+	limit = buffer + size
 
 	if( size > 0 ) then
-		found = 0
-		result = get( #f, , *lex.buffer, size, found )
+		var found = 0
+		var result = get( #f, , *buffer, size, found )
 		if( result or (found <> size) ) then
 			oops( "file I/O failed" )
 		end if
@@ -733,16 +769,23 @@ private sub hLoadFile( byref filename as string )
 	close #f
 end sub
 
-private sub hComplainAboutEmbeddedNulls( )
+private sub hComplainAboutEmbeddedNulls _
+	( _
+		byval file as FROGFILE ptr, _
+		byval buffer as ubyte ptr, _
+		byval limit as ubyte ptr _
+	)
+
 	'' Currently tokens store text as null-terminated strings, so they
 	'' can't allow embedded nulls, and null also indicates EOF to the lexer.
-	while( lex.i < lex.limit )
-		if( lex.i[0] = 0 ) then
-			oops( "file has embedded nulls, please fix that first!" )
+	var i = buffer
+	while( i < limit )
+		if( i[0] = 0 ) then
+			oops( file->pretty + ": file has embedded nulls, please fix that first!" )
 		end if
-		lex.i += 1
+		i += 1
 	wend
-	lex.i = lex.buffer
+
 end sub
 
 private sub hInitKeywords( )
@@ -774,16 +817,18 @@ end sub
 function lexLoadFile _
 	( _
 		byval x as integer, _
-		byref filename as string, _
+		byval file as FROGFILE ptr, _
 		byval fb_mode as integer _
 	) as integer
 
 	lex.x = x
-	lex.linenum = 1
-	lex.filename = filename
+	lex.location.file = file
+	lex.location.linenum = 0
 	lex.fb_mode = fb_mode
-	hLoadFile( filename )
-	hComplainAboutEmbeddedNulls( )
+	hLoadFile( file, lex.buffer, lex.limit )
+	lex.i = lex.buffer
+	lex.bol = lex.i
+	hComplainAboutEmbeddedNulls( file, lex.buffer, lex.limit )
 	hInitKeywords( )
 
 	'' Tokenize and insert into tk buffer
@@ -798,6 +843,70 @@ function lexLoadFile _
 	end if
 	#endif
 
+	file->linecount = lex.location.linenum + 1
+
 	deallocate( lex.buffer )
 	function = lex.x
+end function
+
+'' Retrieve a line of source code from the original input file for display in
+'' error messages.
+function lexPeekLine _
+	( _
+		byval file as FROGFILE ptr, _
+		byval targetlinenum as integer _
+	) as string
+
+	dim as ubyte ptr buffer, limit
+	hLoadFile( file, buffer, limit )
+	hComplainAboutEmbeddedNulls( file, buffer, limit )
+
+	'' Find the targetlinenum'th line of code, bol will end up pointing
+	'' to the begin of line of the target line, i will point to the end of
+	'' the target line.
+	var i = buffer
+	var bol = i
+	var linenum = 0
+	do
+		select case( i[0] )
+		case 0, CH_LF, CH_CR  '' EOF or EOL
+			if( linenum = targetlinenum ) then
+				exit do
+			end if
+
+			select case( i[0] )
+			case CH_CR
+				if( i[1] = CH_LF ) then '' CRLF
+					i += 1
+				end if
+			case 0
+				exit do
+			end select
+
+			i += 1
+			linenum += 1
+			bol = i
+
+		case else
+			i += 1
+		end select
+	loop
+
+	'' Turn the target line of code into a pretty string
+	dim s as string
+	while( bol < i )
+		dim as integer ch = bol[0]
+
+		'' Replace nulls, tabs, and other control chars with spaces
+		select case( ch )
+		case is < CH_SPACE, CH_DEL
+			ch = CH_SPACE
+		end select
+
+		s += chr( ch )
+
+		bol += 1
+	wend
+
+	function = s
 end function

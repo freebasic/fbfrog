@@ -2,7 +2,21 @@
 #define FALSE 0
 #define TRUE (-1)
 
+type FROGFILE as FROGFILE_
+
+type TKLOCATION
+	file		as FROGFILE ptr
+	linenum		as integer
+	column		as integer
+	length		as integer
+end type
+
 declare sub oops( byref message as string )
+declare sub oopsLocation _
+	( _
+		byval location as TKLOCATION ptr, _
+		byref message as string _
+	)
 declare function strDuplicate( byval s as zstring ptr ) as zstring ptr
 declare function strReplace _
 	( _
@@ -125,12 +139,8 @@ enum
 	TK_PPELSE
 	TK_PPENDIF
 	TK_PPUNDEF
-	TK_PPUNKNOWN
 	TK_BEGIN
 	TK_END
-
-	TK_BYTE         '' For stray bytes that don't fit in elsewhere
-	TK_SPACE        '' Spaces/tabs (merged)
 	TK_EOL
 	TK_COMMENT
 
@@ -326,7 +336,6 @@ declare function tkInfoText( byval tk as integer ) as zstring ptr
 #define TRACE( x ) print __FUNCTION__ + "(" + str( __LINE__ ) + "): " + tkDumpOne( x )
 
 type ASTNODE as ASTNODE_
-type FROGFILE as FROGFILE_
 
 declare sub tkInit( )
 declare sub tkEnd( )
@@ -343,15 +352,23 @@ declare sub tkInsert _
 	)
 declare sub tkRemove( byval first as integer, byval last as integer )
 declare sub tkCopy( byval x as integer, byval first as integer, byval last as integer )
+declare sub tkFold _
+	( _
+		byval first as integer, _
+		byval last as integer, _
+		byval id as integer, _
+		byval text as zstring ptr = NULL, _
+		byval ast as ASTNODE ptr = NULL _
+	)
 declare function tkGet( byval x as integer ) as integer
 declare function tkGetText( byval x as integer ) as zstring ptr
 declare function tkGetIdOrKw( byval x as integer ) as zstring ptr
 declare function tkGetAst( byval x as integer ) as ASTNODE ptr
 declare sub tkSetAst( byval x as integer, byval ast as ASTNODE ptr )
-declare sub tkSetPoisoned( byval first as integer, byval last as integer )
-declare function tkIsPoisoned( byval x as integer ) as integer
-declare sub tkSetLineNum( byval x as integer, byval linenum as integer )
-declare function tkGetLineNum( byval x as integer ) as integer
+declare sub tkSetLocation( byval x as integer, byval location as TKLOCATION ptr )
+declare function tkGetLocation( byval x as integer ) as TKLOCATION ptr
+declare sub tkSetBehindSpace( byval x as integer )
+declare function tkGetBehindSpace( byval x as integer ) as integer
 declare sub tkSetComment( byval x as integer, byval comment as zstring ptr )
 declare function tkGetComment( byval x as integer ) as zstring ptr
 declare function tkCount _
@@ -360,7 +377,12 @@ declare function tkCount _
 		byval first as integer, _
 		byval last as integer _
 	) as integer
-declare function tkSkipSpaceAndComments _
+declare function tkSkipComment _
+	( _
+		byval x as integer, _
+		byval delta as integer = 1 _
+	) as integer
+declare function tkSkipCommentEol _
 	( _
 		byval x as integer, _
 		byval delta as integer = 1 _
@@ -382,6 +404,9 @@ declare function tkCollectComments _
 		byval last as integer _
 	) as string
 declare sub tkRemoveAllOf( byval id as integer, byval text as zstring ptr )
+declare sub tkOops( byval x as integer, byref message as string )
+declare sub tkOopsExpected( byval x as integer, byref message as string )
+declare sub tkExpect( byval x as integer, byval tk as integer )
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
@@ -445,18 +470,15 @@ enum
 
 	ASTCLASS_PPINCLUDE
 	ASTCLASS_PPDEFINE
-	ASTCLASS_PPIF
-	ASTCLASS_PPELSEIF
-	ASTCLASS_PPELSE
-	ASTCLASS_PPENDIF
 	ASTCLASS_PPUNDEF
-	ASTCLASS_PPUNKNOWN
 
 	ASTCLASS_STRUCT
 	ASTCLASS_UNION
 	ASTCLASS_ENUM
 	ASTCLASS_TYPEDEF
 	ASTCLASS_STRUCTFWD
+	ASTCLASS_UNIONFWD
+	ASTCLASS_ENUMFWD
 	ASTCLASS_VAR
 	ASTCLASS_FIELD
 	ASTCLASS_ENUMCONST
@@ -464,7 +486,6 @@ enum
 	ASTCLASS_PARAM
 	ASTCLASS_ARRAY
 	ASTCLASS_DIMENSION
-	ASTCLASS_UNKNOWN
 	ASTCLASS_EXTERNBLOCKBEGIN
 	ASTCLASS_EXTERNBLOCKEND
 
@@ -508,13 +529,11 @@ enum
 	ASTATTRIB_PRIVATE	= 1 shl 1  '' VAR
 	ASTATTRIB_OCT		= 1 shl 2  '' CONST
 	ASTATTRIB_HEX		= 1 shl 3  '' CONST
-	ASTATTRIB_PPINDENTBEGIN	= 1 shl 4  '' PP*
-	ASTATTRIB_PPINDENTEND	= 1 shl 5  '' PP*
-	ASTATTRIB_MERGEWITHPREV	= 1 shl 6  '' TK, MACROPARAM: Macro body tokens that were preceded by the '##' PP merge operator
-	ASTATTRIB_STRINGIFY	= 1 shl 7  '' MACROPARAM, to distinguish "param" from "#param"
-	ASTATTRIB_CDECL		= 1 shl 8
-	ASTATTRIB_STDCALL	= 1 shl 9
-	ASTATTRIB_HIDECALLCONV	= 1 shl 10 '' Whether the calling convention is covered by an Extern block, then it doesn't need to be emitted
+	ASTATTRIB_MERGEWITHPREV	= 1 shl 4  '' TK, MACROPARAM: Macro body tokens that were preceded by the '##' PP merge operator
+	ASTATTRIB_STRINGIFY	= 1 shl 5  '' MACROPARAM, to distinguish "param" from "#param"
+	ASTATTRIB_CDECL		= 1 shl 6
+	ASTATTRIB_STDCALL	= 1 shl 7
+	ASTATTRIB_HIDECALLCONV	= 1 shl 8  '' Whether the calling convention is covered by an Extern block, then it doesn't need to be emitted
 end enum
 
 type ASTNODECONST
@@ -544,11 +563,7 @@ type ASTNODE_
 	initializer	as ASTNODE ptr
 
 	'' Source location where this declaration/statement was found
-	sourcefile	as FROGFILE ptr
-	sourceline	as integer
-
-	'' PPINCLUDE: back link after the #include was resolved to a real file
-	includefile	as FROGFILE ptr
+	location	as TKLOCATION
 
 	val		as ASTNODECONST
 	tk		as integer  '' ASTCLASS_TK
@@ -657,9 +672,14 @@ declare sub astDump( byval n as ASTNODE ptr, byval nestlevel as integer = 0 )
 declare function lexLoadFile _
 	( _
 		byval x as integer, _
-		byref filename as string, _
+		byval file as FROGFILE ptr, _
 		byval fb_mode as integer = FALSE _
 	) as integer
+declare function lexPeekLine _
+	( _
+		byval file as FROGFILE ptr, _
+		byval targetlinenum as integer _
+	) as string
 declare function emitType _
 	( _
 		byval dtype as integer, _
@@ -667,7 +687,7 @@ declare function emitType _
 		byval debugdump as integer = FALSE _
 	) as string
 declare sub emitFile( byref filename as string, byval ast as ASTNODE ptr )
-declare function importFile( byref file as string ) as ASTNODE ptr
+declare function importFile( byval file as FROGFILE ptr ) as ASTNODE ptr
 
 declare sub ppComments( )
 declare sub ppDividers( )
@@ -681,15 +701,8 @@ declare sub ppMacroParam( byval index as integer )
 declare sub ppAddSym( byval id as zstring ptr, byval is_defined as integer )
 declare sub ppExpandSym( byval id as zstring ptr )
 declare sub ppEval( )
-declare sub ppNoEval( )
-declare function cSkip( byval x as integer ) as integer
-declare function cSkipRev( byval x as integer ) as integer
-declare function cSkipStatement _
-	( _
-		byval x as integer, _
-		byval is_enum as integer = FALSE _
-	) as integer
-declare function cToplevel( ) as ASTNODE ptr
+declare sub ppRemoveEOLs( )
+declare function cFile( ) as ASTNODE ptr
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
@@ -700,6 +713,7 @@ type FROGFILE_
 	ast		as ASTNODE ptr  '' AST representing file content, when loaded
 	refcount	as integer
 	mergeparent	as FROGFILE ptr '' The file this one was merged into
+	linecount	as integer
 end type
 
 type FROGSTUFF

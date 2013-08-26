@@ -39,17 +39,14 @@ dim shared as ASTNODEINFO astnodeinfo(0 to ...) = _
 	( "divider"  ), _
 	( "#include" ), _
 	( "#define"  ), _
-	( "#if"      ), _
-	( "#elseif"  ), _
-	( "#else"    ), _
-	( "#endif"   ), _
 	( "#undef"   ), _
-	( "#unknown" ), _
 	( "struct"  ), _
 	( "union"   ), _
 	( "enum"    ), _
 	( "typedef" ), _
 	( "structfwd" ), _
+	( "unionfwd" ), _
+	( "enumfwd" ), _
 	( "var"     ), _
 	( "field"   ), _
 	( "enumconst" ), _
@@ -57,9 +54,8 @@ dim shared as ASTNODEINFO astnodeinfo(0 to ...) = _
 	( "param"   ), _
 	( "array"   ), _
 	( "dimension" ), _
-	( "unknown" ), _
-	( "extern block" ), _
-	( "end extern" ), _
+	( "externbegin" ), _
+	( "externend" ), _
 	( "macrobody" ), _
 	( "macroparam" ), _
 	( "tk"      ), _
@@ -495,10 +491,7 @@ function astCloneNode( byval n as ASTNODE ptr ) as ASTNODE ptr
 
 	c->initializer = astClone( n->initializer )
 
-	c->sourcefile  = n->sourcefile
-	c->sourceline  = n->sourceline
-
-	c->includefile = n->includefile
+	c->location    = n->location
 
 	c->val         = n->val
 	c->tk          = n->tk
@@ -595,8 +588,6 @@ function astIsEqualDecl _
 
 	if( astIsEqualDecl( a->initializer, b->initializer, ignore_fields, ignore_hiddencallconv ) = FALSE ) then exit function
 
-	if( a->includefile <> b->includefile ) then exit function
-
 	select case( a->class )
 	case ASTCLASS_CONST
 		if( typeIsFloat( a->dtype ) ) then
@@ -681,8 +672,6 @@ function astDumpOne( byval n as ASTNODE ptr ) as string
 	checkAttrib( PRIVATE )
 	checkAttrib( OCT )
 	checkAttrib( HEX )
-	checkAttrib( PPINDENTBEGIN )
-	checkAttrib( PPINDENTEND )
 	checkAttrib( MERGEWITHPREV )
 	checkAttrib( STRINGIFY )
 	checkAttrib( CDECL )

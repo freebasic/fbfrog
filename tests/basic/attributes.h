@@ -61,70 +61,70 @@ extern void __attribute__((stdcall)) (*f1)(void);
 extern __attribute__((stdcall)) void (*f1)(void);
 extern void (*f1)(void) __attribute__((stdcall));
 
+// declare function f( byval a as long ) as sub stdcall( byval b as long );
 extern int separator1;
-declare function f( byval a as long ) as sub stdcall( byval b as long );
 void (__attribute__((stdcall)) * f(int a))(int b);
 
+// declare function f( byval a as long ) as sub stdcall( byval b as long );
 extern int separator2;
-declare function f( byval a as long ) as sub stdcall( byval b as long );
 void (* __attribute__((stdcall)) f(int a))(int b);
 
+// declare function f stdcall( byval a as long ) as sub( byval b as long );
 extern int separator3;
-declare function f stdcall( byval a as long ) as sub( byval b as long );
 __attribute__((stdcall)) void (*f(int a))(int b);
 
+// declare function f stdcall( byval a as long ) as sub( byval b as long );
 extern int separator4;
-declare function f stdcall( byval a as long ) as sub( byval b as long );
 void __attribute__((stdcall)) (*f(int a))(int b);
 
+// declare function f stdcall( byval a as long ) as sub( byval b as long );
 extern int separator5;
-declare function f stdcall( byval a as long ) as sub( byval b as long );
 void (*f(int a))(int b) __attribute__((stdcall));
 
+// declare function f stdcall( byval a as long ) as function( byval b as long ) as sub( byval c as long );
 extern int separator6;
-declare function f stdcall( byval a as long ) as function( byval b as long ) as sub( byval c as long );
 __attribute__((stdcall)) void (*(*f(int a))(int b))(int c);
 
+// declare function f stdcall( byval a as long ) as function( byval b as long ) as sub( byval c as long );
 extern int separator7;
-declare function f stdcall( byval a as long ) as function( byval b as long ) as sub( byval c as long );
 void __attribute__((stdcall)) (*(*f(int a))(int b))(int c);
 
+// declare function f stdcall( byval a as long ) as function( byval b as long ) as sub( byval c as long );
 extern int separator8;
-declare function f stdcall( byval a as long ) as function( byval b as long ) as sub( byval c as long );
 void (*(*f(int a))(int b))(int c) __attribute__((stdcall));
 
+// declare function f( byval a as long ) as function( byval b as long ) as sub stdcall( byval c as long );
 extern int separator9;
-declare function f( byval a as long ) as function( byval b as long ) as sub stdcall( byval c as long );
 void (__attribute__((stdcall)) *(*f(int a))(int b))(int c);
 
+// declare function f( byval a as long ) as function stdcall( byval b as long ) as sub( byval c as long );
 extern int separator10;
-declare function f( byval a as long ) as function stdcall( byval b as long ) as sub( byval c as long );
 void (*(__attribute__((stdcall)) *f(int a))(int b))(int c);
 
+// extern p as function stdcall( byval a as long ) as sub( byval b as long );
 extern int separator11;
-extern p as function stdcall( byval a as long ) as sub( byval b as long );
 extern __attribute__((stdcall)) void (*(*p)(int a))(int b);
 extern void (*(__attribute__((stdcall)) *p)(int a))(int b);
 extern void (*(*p)(int a))(int b) __attribute__((stdcall));
 
+// extern p as function( byval a as long ) as sub stdcall( byval b as long );
 extern int separator12;
-extern p as function( byval a as long ) as sub stdcall( byval b as long );
 extern void (__attribute__((stdcall)) *(*p)(int a))(int b);
 
+// declare sub f stdcall( );
 extern int separator13;
-declare sub f stdcall( );
 void   (__attribute__((stdcall)) f)  (void);
 void  ((__attribute__((stdcall)) f)) (void);
 void (((__attribute__((stdcall)) f)))(void);
 
+// declare function f stdcall( ) as sub( );
 extern int separator14;
-declare function f stdcall( ) as sub( );
 void (*  (__attribute__((stdcall)) f)  (void))(void);
 void (* ((__attribute__((stdcall)) f)) (void))(void);
 void (*(((__attribute__((stdcall)) f)))(void))(void);
 
+// extern p as sub stdcall( );
 extern int separator15;
-extern p as sub stdcall( );
 extern void (  __attribute__((stdcall))    *p     )(void);
 extern void (  __attribute__((stdcall))   (*p)    )(void);
 extern void (  __attribute__((stdcall))  ((*p))   )(void);
