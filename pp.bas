@@ -582,10 +582,9 @@ private function ppDirective( byval x as integer ) as integer
 		tkExpect( x, TK_ID )
 		var t = astNew( ASTCLASS_PPDEFINE, tkGetText( x ) )
 		t->paramcount = -1
-		x += 1
 
 		'' '(' following directly, no spaces in between?
-		if( (tkGet( x ) = TK_LPAREN) and (not tkGetBehindSpace( x )) ) then
+		if( (tkGet( x + 1 ) = TK_LPAREN) and (not tkGetBehindSpace( x + 1 )) ) then
 			x += 1
 			t->paramcount = 0
 
