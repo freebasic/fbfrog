@@ -545,7 +545,7 @@ private function ppExpression _
 		var b = ppExpression( x, oplevel )
 
 		'' Handle ?: special case
-		if( op = ASTCLASS_IIF ) then
+		if( op = ASTOP_IIF ) then
 			'' ':'?
 			tkExpect( x, TK_COLON )
 			x += 1
