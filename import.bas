@@ -60,30 +60,30 @@ type FBOPINFO
 end type
 
 '' FB operator precedence (higher value = higher precedence)
-dim shared as FBOPINFO fbopinfo(ASTCLASS_LOGOR to ASTCLASS_UNARYPLUS) = _
+dim shared as FBOPINFO fbopinfo(ASTOP_LOGOR to ASTOP_UNARYPLUS) = _
 { _
-	(10, TRUE ), _ '' ASTCLASS_LOGOR
-	(10, TRUE ), _ '' ASTCLASS_LOGAND
-	(12, TRUE ), _ '' ASTCLASS_BITOR
-	(11, TRUE ), _ '' ASTCLASS_BITXOR
-	(13, TRUE ), _ '' ASTCLASS_BITAND
-	(15, TRUE ), _ '' ASTCLASS_EQ
-	(15, TRUE ), _ '' ASTCLASS_NE
-	(15, TRUE ), _ '' ASTCLASS_LT
-	(15, TRUE ), _ '' ASTCLASS_LE
-	(15, TRUE ), _ '' ASTCLASS_GT
-	(15, TRUE ), _ '' ASTCLASS_GE
-	(17, TRUE ), _ '' ASTCLASS_SHL
-	(17, TRUE ), _ '' ASTCLASS_SHR
-	(16, TRUE ), _ '' ASTCLASS_ADD
-	(16, TRUE ), _ '' ASTCLASS_SUB
-	(19, TRUE ), _ '' ASTCLASS_MUL
-	(19, TRUE ), _ '' ASTCLASS_DIV
-	(18, TRUE ), _ '' ASTCLASS_MOD
-	( 0, TRUE ), _ '' ASTCLASS_LOGNOT
-	(14, TRUE ), _ '' ASTCLASS_BITNOT
-	(20, TRUE ), _ '' ASTCLASS_NEGATE
-	(20, TRUE )  _ '' ASTCLASS_UNARYPLUS
+	(10, TRUE ), _ '' ASTOP_LOGOR
+	(10, TRUE ), _ '' ASTOP_LOGAND
+	(12, TRUE ), _ '' ASTOP_BITOR
+	(11, TRUE ), _ '' ASTOP_BITXOR
+	(13, TRUE ), _ '' ASTOP_BITAND
+	(15, TRUE ), _ '' ASTOP_EQ
+	(15, TRUE ), _ '' ASTOP_NE
+	(15, TRUE ), _ '' ASTOP_LT
+	(15, TRUE ), _ '' ASTOP_LE
+	(15, TRUE ), _ '' ASTOP_GT
+	(15, TRUE ), _ '' ASTOP_GE
+	(17, TRUE ), _ '' ASTOP_SHL
+	(17, TRUE ), _ '' ASTOP_SHR
+	(16, TRUE ), _ '' ASTOP_ADD
+	(16, TRUE ), _ '' ASTOP_SUB
+	(19, TRUE ), _ '' ASTOP_MUL
+	(19, TRUE ), _ '' ASTOP_DIV
+	(18, TRUE ), _ '' ASTOP_MOD
+	( 0, TRUE ), _ '' ASTOP_LOGNOT
+	(14, TRUE ), _ '' ASTOP_BITNOT
+	(20, TRUE ), _ '' ASTOP_NEGATE
+	(20, TRUE )  _ '' ASTOP_UNARYPLUS
 }
 
 '' FB expression parser based on precedence climbing
@@ -94,17 +94,17 @@ private function imExpression _
 	) as ASTNODE ptr
 
 	'' Unary prefix operators
-	var astclass = -1
+	var op = -1
 	select case( tkGet( x ) )
-	case KW_NOT    : astclass = ASTCLASS_BITNOT    '' NOT
-	case TK_MINUS  : astclass = ASTCLASS_NEGATE    '' -
-	case TK_PLUS   : astclass = ASTCLASS_UNARYPLUS '' +
+	case KW_NOT   : op = ASTOP_BITNOT    '' NOT
+	case TK_MINUS : op = ASTOP_NEGATE    '' -
+	case TK_PLUS  : op = ASTOP_UNARYPLUS '' +
 	end select
 
 	dim as ASTNODE ptr a
-	if( astclass >= 0 ) then
+	if( op >= 0 ) then
 		hSkip( )
-		a = astNew( astclass, imExpression( is_pp, fbopinfo(astclass).level ) )
+		a = astNewUOP( op, imExpression( is_pp, fbopinfo(op).level ) )
 	else
 		'' Atoms
 		select case( tkGet( x ) )
@@ -140,7 +140,7 @@ private function imExpression _
 			'' ')'
 			hExpectAndSkip( TK_RPAREN )
 
-			a = astNew( ASTCLASS_DEFINED, a )
+			a = astNewUOP( ASTOP_DEFINED, a )
 
 		'' IIF '(' Expression ',' Expression ',' Expression ')'
 		case KW_IIF
@@ -164,7 +164,7 @@ private function imExpression _
 			'' ')'
 			hExpectAndSkip( TK_RPAREN )
 
-			a = astNew( ASTCLASS_IIF, a, b, c )
+			a = astNewIIF( a, b, c )
 
 		case else
 			imOops( )
@@ -174,35 +174,35 @@ private function imExpression _
 	'' Infix operators
 	do
 		select case as const( tkGet( x ) )
-		case KW_ORELSE   : astclass = ASTCLASS_LOGOR  '' ORELSE
-		case KW_ANDALSO  : astclass = ASTCLASS_LOGAND '' ANDALSO
-		case KW_OR       : astclass = ASTCLASS_BITOR  '' OR
-		case KW_XOR      : astclass = ASTCLASS_BITXOR '' XOR
-		case KW_AND      : astclass = ASTCLASS_BITAND '' AND
-		case TK_EQ       : astclass = ASTCLASS_EQ     '' =
-		case TK_LTGT     : astclass = ASTCLASS_NE     '' <>
-		case TK_LT       : astclass = ASTCLASS_LT     '' <
-		case TK_LTEQ     : astclass = ASTCLASS_LE     '' <=
-		case TK_GT       : astclass = ASTCLASS_GT     '' >
-		case TK_GTEQ     : astclass = ASTCLASS_GE     '' >=
-		case KW_SHL      : astclass = ASTCLASS_SHL    '' SHL
-		case KW_SHR      : astclass = ASTCLASS_SHR    '' SHR
-		case TK_PLUS     : astclass = ASTCLASS_ADD    '' +
-		case TK_MINUS    : astclass = ASTCLASS_SUB    '' -
-		case TK_STAR     : astclass = ASTCLASS_MUL    '' *
-		case TK_SLASH    : astclass = ASTCLASS_DIV    '' /
-		case KW_MOD      : astclass = ASTCLASS_MOD    '' MOD
+		case KW_ORELSE   : op = ASTOP_LOGOR  '' ORELSE
+		case KW_ANDALSO  : op = ASTOP_LOGAND '' ANDALSO
+		case KW_OR       : op = ASTOP_BITOR  '' OR
+		case KW_XOR      : op = ASTOP_BITXOR '' XOR
+		case KW_AND      : op = ASTOP_BITAND '' AND
+		case TK_EQ       : op = ASTOP_EQ     '' =
+		case TK_LTGT     : op = ASTOP_NE     '' <>
+		case TK_LT       : op = ASTOP_LT     '' <
+		case TK_LTEQ     : op = ASTOP_LE     '' <=
+		case TK_GT       : op = ASTOP_GT     '' >
+		case TK_GTEQ     : op = ASTOP_GE     '' >=
+		case KW_SHL      : op = ASTOP_SHL    '' SHL
+		case KW_SHR      : op = ASTOP_SHR    '' SHR
+		case TK_PLUS     : op = ASTOP_ADD    '' +
+		case TK_MINUS    : op = ASTOP_SUB    '' -
+		case TK_STAR     : op = ASTOP_MUL    '' *
+		case TK_SLASH    : op = ASTOP_DIV    '' /
+		case KW_MOD      : op = ASTOP_MOD    '' MOD
 		case else        : exit do
 		end select
 
 		'' Higher/same level means process now (takes precedence),
 		'' lower level means we're done and the parent call will
 		'' continue. The first call will start with level 0.
-		var oplevel = fbopinfo(astclass).level
+		var oplevel = fbopinfo(op).level
 		if( oplevel < level ) then
 			exit do
 		end if
-		if( fbopinfo(astclass).is_leftassoc ) then
+		if( fbopinfo(op).is_leftassoc ) then
 			oplevel += 1
 		end if
 
@@ -212,7 +212,7 @@ private function imExpression _
 		'' rhs
 		var b = imExpression( is_pp, oplevel )
 
-		a = astNew( astclass, a, b )
+		a = astNewBOP( op, a, b )
 	loop
 
 	function = a
@@ -247,10 +247,8 @@ private function imPPDirective( ) as ASTNODE ptr
 
 		'' Identifier?
 		hExpect( TK_ID )
-		var t = astNew( ASTCLASS_ID, tkGetText( x ) )
+		function = astNew( ASTCLASS_PPUNDEF, tkGetText( x ) )
 		hSkip( )
-
-		function = astNew( ASTCLASS_PPUNDEF, t )
 
 	case else
 		imOops( )
@@ -461,7 +459,7 @@ private function imEnumConst( ) as ASTNODE ptr
 		hSkip( )
 
 		'' Expression
-		astAppend( enumconst, imExpression( FALSE ) )
+		enumconst->expr = imExpression( FALSE )
 	end if
 
 	hExpectAndSkip( TK_EOL )

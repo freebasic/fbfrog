@@ -86,31 +86,31 @@ type COPINFO
 end type
 
 '' C operator precedence (higher value = higher precedence)
-dim shared as COPINFO copinfo(ASTCLASS_IIF to ASTCLASS_UNARYPLUS) = _
+dim shared as COPINFO copinfo(ASTOP_IIF to ASTOP_UNARYPLUS) = _
 { _
-	( 2, FALSE), _ '' ASTCLASS_IIF
-	( 3, TRUE ), _ '' ASTCLASS_LOGOR
-	( 4, TRUE ), _ '' ASTCLASS_LOGAND
-	( 5, TRUE ), _ '' ASTCLASS_BITOR
-	( 6, TRUE ), _ '' ASTCLASS_BITXOR
-	( 7, TRUE ), _ '' ASTCLASS_BITAND
-	( 8, TRUE ), _ '' ASTCLASS_EQ
-	( 8, TRUE ), _ '' ASTCLASS_NE
-	( 9, TRUE ), _ '' ASTCLASS_LT
-	( 9, TRUE ), _ '' ASTCLASS_LE
-	( 9, TRUE ), _ '' ASTCLASS_GT
-	( 9, TRUE ), _ '' ASTCLASS_GE
-	(10, TRUE ), _ '' ASTCLASS_SHL
-	(10, TRUE ), _ '' ASTCLASS_SHR
-	(11, TRUE ), _ '' ASTCLASS_ADD
-	(11, TRUE ), _ '' ASTCLASS_SUB
-	(12, TRUE ), _ '' ASTCLASS_MUL
-	(12, TRUE ), _ '' ASTCLASS_DIV
-	(12, TRUE ), _ '' ASTCLASS_MOD
-	(13, TRUE ), _ '' ASTCLASS_LOGNOT
-	(13, TRUE ), _ '' ASTCLASS_BITNOT
-	(13, TRUE ), _ '' ASTCLASS_NEGATE
-	(13, TRUE )  _ '' ASTCLASS_UNARYPLUS
+	( 2, FALSE), _ '' ASTOP_IIF
+	( 3, TRUE ), _ '' ASTOP_LOGOR
+	( 4, TRUE ), _ '' ASTOP_LOGAND
+	( 5, TRUE ), _ '' ASTOP_BITOR
+	( 6, TRUE ), _ '' ASTOP_BITXOR
+	( 7, TRUE ), _ '' ASTOP_BITAND
+	( 8, TRUE ), _ '' ASTOP_EQ
+	( 8, TRUE ), _ '' ASTOP_NE
+	( 9, TRUE ), _ '' ASTOP_LT
+	( 9, TRUE ), _ '' ASTOP_LE
+	( 9, TRUE ), _ '' ASTOP_GT
+	( 9, TRUE ), _ '' ASTOP_GE
+	(10, TRUE ), _ '' ASTOP_SHL
+	(10, TRUE ), _ '' ASTOP_SHR
+	(11, TRUE ), _ '' ASTOP_ADD
+	(11, TRUE ), _ '' ASTOP_SUB
+	(12, TRUE ), _ '' ASTOP_MUL
+	(12, TRUE ), _ '' ASTOP_DIV
+	(12, TRUE ), _ '' ASTOP_MOD
+	(13, TRUE ), _ '' ASTOP_LOGNOT
+	(13, TRUE ), _ '' ASTOP_BITNOT
+	(13, TRUE ), _ '' ASTOP_NEGATE
+	(13, TRUE )  _ '' ASTOP_UNARYPLUS
 }
 
 '' C expression parser based on precedence climbing
@@ -121,18 +121,18 @@ private function cExpression _
 	) as ASTNODE ptr
 
 	'' Unary prefix operators
-	var astclass = -1
+	var op = -1
 	select case( tkGet( x ) )
-	case TK_EXCL   : astclass = ASTCLASS_LOGNOT    '' !
-	case TK_TILDE  : astclass = ASTCLASS_BITNOT    '' ~
-	case TK_MINUS  : astclass = ASTCLASS_NEGATE    '' -
-	case TK_PLUS   : astclass = ASTCLASS_UNARYPLUS '' +
+	case TK_EXCL  : op = ASTOP_LOGNOT    '' !
+	case TK_TILDE : op = ASTOP_BITNOT    '' ~
+	case TK_MINUS : op = ASTOP_NEGATE    '' -
+	case TK_PLUS  : op = ASTOP_UNARYPLUS '' +
 	end select
 
 	dim as ASTNODE ptr a
-	if( astclass >= 0 ) then
+	if( op >= 0 ) then
 		x += 1
-		a = astNew( astclass, cExpression( x, copinfo(astclass).level ) )
+		a = astNewUOP( op, cExpression( x, copinfo(op).level ) )
 	else
 		'' Atoms
 		select case( tkGet( x ) )
@@ -160,36 +160,36 @@ private function cExpression _
 	'' Infix operators
 	do
 		select case as const( tkGet( x ) )
-		case TK_QUEST    : astclass = ASTCLASS_IIF    '' ? (a ? b : c)
-		case TK_PIPEPIPE : astclass = ASTCLASS_LOGOR  '' ||
-		case TK_AMPAMP   : astclass = ASTCLASS_LOGAND '' &&
-		case TK_PIPE     : astclass = ASTCLASS_BITOR  '' |
-		case TK_CIRC     : astclass = ASTCLASS_BITXOR '' ^
-		case TK_AMP      : astclass = ASTCLASS_BITAND '' &
-		case TK_EQEQ     : astclass = ASTCLASS_EQ     '' ==
-		case TK_EXCLEQ   : astclass = ASTCLASS_NE     '' !=
-		case TK_LT       : astclass = ASTCLASS_LT     '' <
-		case TK_LTEQ     : astclass = ASTCLASS_LE     '' <=
-		case TK_GT       : astclass = ASTCLASS_GT     '' >
-		case TK_GTEQ     : astclass = ASTCLASS_GE     '' >=
-		case TK_LTLT     : astclass = ASTCLASS_SHL    '' <<
-		case TK_GTGT     : astclass = ASTCLASS_SHR    '' >>
-		case TK_PLUS     : astclass = ASTCLASS_ADD    '' +
-		case TK_MINUS    : astclass = ASTCLASS_SUB    '' -
-		case TK_STAR     : astclass = ASTCLASS_MUL    '' *
-		case TK_SLASH    : astclass = ASTCLASS_DIV    '' /
-		case TK_PERCENT  : astclass = ASTCLASS_MOD    '' %
+		case TK_QUEST    : op = ASTOP_IIF    '' ? (a ? b : c)
+		case TK_PIPEPIPE : op = ASTOP_LOGOR  '' ||
+		case TK_AMPAMP   : op = ASTOP_LOGAND '' &&
+		case TK_PIPE     : op = ASTOP_BITOR  '' |
+		case TK_CIRC     : op = ASTOP_BITXOR '' ^
+		case TK_AMP      : op = ASTOP_BITAND '' &
+		case TK_EQEQ     : op = ASTOP_EQ     '' ==
+		case TK_EXCLEQ   : op = ASTOP_NE     '' !=
+		case TK_LT       : op = ASTOP_LT     '' <
+		case TK_LTEQ     : op = ASTOP_LE     '' <=
+		case TK_GT       : op = ASTOP_GT     '' >
+		case TK_GTEQ     : op = ASTOP_GE     '' >=
+		case TK_LTLT     : op = ASTOP_SHL    '' <<
+		case TK_GTGT     : op = ASTOP_SHR    '' >>
+		case TK_PLUS     : op = ASTOP_ADD    '' +
+		case TK_MINUS    : op = ASTOP_SUB    '' -
+		case TK_STAR     : op = ASTOP_MUL    '' *
+		case TK_SLASH    : op = ASTOP_DIV    '' /
+		case TK_PERCENT  : op = ASTOP_MOD    '' %
 		case else        : exit do
 		end select
 
 		'' Higher/same level means process now (takes precedence),
 		'' lower level means we're done and the parent call will
 		'' continue. The first call will start with level 0.
-		var oplevel = copinfo(astclass).level
+		var oplevel = copinfo(op).level
 		if( oplevel < level ) then
 			exit do
 		end if
-		if( copinfo(astclass).is_leftassoc ) then
+		if( copinfo(op).is_leftassoc ) then
 			oplevel += 1
 		end if
 
@@ -200,16 +200,16 @@ private function cExpression _
 		var b = cExpression( x, oplevel )
 
 		'' Handle ?: special case
-		dim as ASTNODE ptr c
-		if( astclass = ASTCLASS_IIF ) then
+		if( op = ASTOP_IIF ) then
 			'' ':'
 			tkExpect( x, TK_COLON )
 			x += 1
 
-			c = cExpression( x, oplevel )
+			var c = cExpression( x, oplevel )
+			a = astNewIIF( a, b, c )
+		else
+			a = astNewBOP( op, a, b )
 		end if
-
-		a = astNew( astclass, a, b, c )
 	loop
 
 	function = a
@@ -318,7 +318,7 @@ private function cEnumConst( ) as ASTNODE ptr
 	'' '='?
 	if( cMatch( TK_EQ ) ) then
 		'' Expression
-		astAppend( n, cExpression( parse.x ) )
+		n->expr = cExpression( parse.x )
 	end if
 
 	'' (',' | '}')
@@ -399,7 +399,10 @@ private function cStructCompound( ) as ASTNODE ptr
 		var subtype = astNew( ASTCLASS_ID, id )
 		var t = cIdList( DECL_TYPEDEF, TYPE_UDT, subtype, 0 )
 		astDelete( subtype )
-		function = astNew( ASTCLASS_GROUP, struct, t )
+		var group = astNew( ASTCLASS_GROUP )
+		astAppend( group, struct )
+		astAppend( group, t )
+		function = group
 	else
 		'' ';'
 		cExpectSkip( TK_SEMI )
@@ -954,17 +957,15 @@ private function cDeclarator _
 			'' '['
 			cSkip( )
 
-			var dimension = astNew( ASTCLASS_DIMENSION )
-			astAppend( node->array, dimension )
-
 			var elements = cExpression( parse.x )
 
+			'' Add new DIMENSION to the ARRAY:
 			'' lbound = 0, ubound = elements - 1
-			astAppend( dimension, astNewCONST( 0, 0, TYPE_LONG ) )
-			astAppend( dimension, _
-				astNew( ASTCLASS_SUB, _
-					elements, _
-					astNewCONST( 1, 0, TYPE_LONG ) ) )
+			astAppend( node->array, _
+				astNewDIMENSION( astNewCONST( 0, 0, TYPE_LONG ), _
+					astNewBOP( ASTOP_SUB, _
+						elements, _
+						astNewCONST( 1, 0, TYPE_LONG ) ) ) )
 
 			'' ']'
 			cExpectSkip( TK_RBRACKET )
@@ -1026,8 +1027,8 @@ private function cDeclarator _
 	if( decl = DECL_PARAM ) then
 		'' ['=' Initializer]
 		if( cMatch( TK_EQ ) ) then
-			assert( node->initializer = NULL )
-			node->initializer = cExpression( parse.x )
+			assert( node->expr = NULL )
+			node->expr = cExpression( parse.x )
 		end if
 	end if
 

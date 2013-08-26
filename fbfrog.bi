@@ -463,6 +463,33 @@ declare function typeToUnsigned( byval dtype as integer ) as integer
 declare function typeIsFloat( byval dtype as integer ) as integer
 
 enum
+	ASTOP_IIF = 0  '' just for the operator precedence tables
+	ASTOP_LOGOR
+	ASTOP_LOGAND
+	ASTOP_BITOR
+	ASTOP_BITXOR
+	ASTOP_BITAND
+	ASTOP_EQ
+	ASTOP_NE
+	ASTOP_LT
+	ASTOP_LE
+	ASTOP_GT
+	ASTOP_GE
+	ASTOP_SHL
+	ASTOP_SHR
+	ASTOP_ADD
+	ASTOP_SUB
+	ASTOP_MUL
+	ASTOP_DIV
+	ASTOP_MOD
+	ASTOP_LOGNOT
+	ASTOP_BITNOT
+	ASTOP_NEGATE
+	ASTOP_UNARYPLUS
+	ASTOP_DEFINED
+end enum
+
+enum
 	ASTCLASS_NOP = 0
 	ASTCLASS_GROUP
 	ASTCLASS_VERSION
@@ -495,31 +522,10 @@ enum
 	ASTCLASS_CONST
 	ASTCLASS_ID
 	ASTCLASS_TEXT
-	ASTCLASS_DEFINED
 
+	ASTCLASS_UOP
+	ASTCLASS_BOP
 	ASTCLASS_IIF
-	ASTCLASS_LOGOR
-	ASTCLASS_LOGAND
-	ASTCLASS_BITOR
-	ASTCLASS_BITXOR
-	ASTCLASS_BITAND
-	ASTCLASS_EQ
-	ASTCLASS_NE
-	ASTCLASS_LT
-	ASTCLASS_LE
-	ASTCLASS_GT
-	ASTCLASS_GE
-	ASTCLASS_SHL
-	ASTCLASS_SHR
-	ASTCLASS_ADD
-	ASTCLASS_SUB
-	ASTCLASS_MUL
-	ASTCLASS_DIV
-	ASTCLASS_MOD
-	ASTCLASS_LOGNOT
-	ASTCLASS_BITNOT
-	ASTCLASS_NEGATE
-	ASTCLASS_UNARYPLUS
 
 	ASTCLASS__COUNT
 end enum
@@ -536,13 +542,6 @@ enum
 	ASTATTRIB_HIDECALLCONV	= 1 shl 8  '' Whether the calling convention is covered by an Extern block, then it doesn't need to be emitted
 end enum
 
-type ASTNODECONST
-	union
-		i	as longint
-		f	as double
-	end union
-end type
-
 '' When changing, adjust astClone()
 type ASTNODE_
 	class		as integer  '' ASTCLASS_*
@@ -557,24 +556,33 @@ type ASTNODE_
 	subtype		as ASTNODE ptr
 	array		as ASTNODE ptr '' ARRAY holding DIMENSIONs, or NULL
 
-	'' PARAM: initializer
-	'' PPDEFINE: macro body
-	'' VERSION: version information (a GROUP holding a list of CONSTs)
-	initializer	as ASTNODE ptr
-
 	'' Source location where this declaration/statement was found
 	location	as TKLOCATION
 
-	val		as ASTNODECONST
-	tk		as integer  '' ASTCLASS_TK
-	paramindex	as integer  '' ASTCLASS_MACROPARAM
-	paramcount	as integer  '' ASTCLASS_PPDEFINE: -1 = #define m, 0 = #define m(), 1 = #define m(a), ...
+	'' PARAM: initializer
+	'' PPDEFINE: MACROBODY
+	'' VERSION: GROUP holding CONSTs (the individual version numbers)
+	'' IIF: condition expression
+	expr		as ASTNODE ptr
 
-	'' Child nodes: operands/fields/parameters/...
+	'' Left/right operands for UOPs/BOPs
+	l		as ASTNODE ptr
+	r		as ASTNODE ptr
+
+	union
+		'' CONST: integer (longint) or float (double) value
+		vali		as longint
+		valf		as double
+
+		tk		as integer  '' TK: TK_*
+		paramindex	as integer  '' MACROPARAM
+		paramcount	as integer  '' PPDEFINE: -1 = #define m, 0 = #define m(), 1 = #define m(a), ...
+		op		as integer  '' UOP/BOP: ASTOP_*
+	end union
+
+	'' Linked list of child nodes, where l/r aren't enough: fields/parameters/...
 	head		as ASTNODE ptr
 	tail		as ASTNODE ptr
-
-	'' Sibling nodes
 	next		as ASTNODE ptr
 	prev		as ASTNODE ptr
 end type
@@ -583,14 +591,24 @@ declare function astNew overload( byval class_ as integer ) as ASTNODE ptr
 declare function astNew overload _
 	( _
 		byval class_ as integer, _
-		byval a as ASTNODE ptr, _
-		byval b as ASTNODE ptr = NULL, _
-		byval c as ASTNODE ptr = NULL _
-	) as ASTNODE ptr
-declare function astNew overload _
-	( _
-		byval class_ as integer, _
 		byval text as zstring ptr _
+	) as ASTNODE ptr
+declare function astNewUOP _
+	( _
+		byval op as integer, _
+		byval l as ASTNODE ptr _
+	) as ASTNODE ptr
+declare function astNewBOP _
+	( _
+		byval op as integer, _
+		byval l as ASTNODE ptr, _
+		byval r as ASTNODE ptr _
+	) as ASTNODE ptr
+declare function astNewIIF _
+	( _
+		byval cond as ASTNODE ptr, _
+		byval l as ASTNODE ptr, _
+		byval r as ASTNODE ptr _
 	) as ASTNODE ptr
 declare function astNewVERSION overload _
 	( _
@@ -602,6 +620,11 @@ declare function astNewVERSION overload _
 		byval child as ASTNODE ptr, _
 		byval version1 as ASTNODE ptr, _
 		byval version2 as ASTNODE ptr _
+	) as ASTNODE ptr
+declare function astNewDIMENSION _
+	( _
+		byval lb as ASTNODE ptr, _
+		byval ub as ASTNODE ptr _
 	) as ASTNODE ptr
 declare function astNewCONST _
 	( _
@@ -615,7 +638,11 @@ declare function astNewTK _
 		byval tk as integer, _
 		byval text as zstring ptr _
 	) as ASTNODE ptr
-declare function astNewMACROPARAM( byval paramindex as integer ) as ASTNODE ptr
+declare function astNewMACROPARAM _
+	( _
+		byval id as zstring ptr, _
+		byval paramindex as integer _
+	) as ASTNODE ptr
 declare sub astDelete( byval n as ASTNODE ptr )
 declare sub astPrepend( byval parent as ASTNODE ptr, byval n as ASTNODE ptr )
 declare sub astAppend( byval parent as ASTNODE ptr, byval n as ASTNODE ptr )
@@ -645,7 +672,6 @@ declare function astReplaceChild _
 		byval b as ASTNODE ptr _
 	) as ASTNODE ptr
 declare sub astRemoveChild( byval parent as ASTNODE ptr, byval a as ASTNODE ptr )
-declare sub astSetText( byval n as ASTNODE ptr, byval text as zstring ptr )
 declare sub astRemoveText( byval n as ASTNODE ptr )
 declare sub astSetType _
 	( _

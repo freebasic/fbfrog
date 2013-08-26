@@ -193,7 +193,7 @@ private function emitAst _
 		s = ""
 
 	case ASTCLASS_VERSION
-		emitLine( "version" + hCommaList( n->initializer, TRUE ) )
+		emitLine( "version" + hCommaList( n->expr, TRUE ) )
 		emit.indent += 1
 		var child = n->head
 		while( child )
@@ -216,44 +216,41 @@ private function emitAst _
 			s += hCommaList( n, TRUE )
 		end if
 
-		if( n->initializer ) then
+		if( n->expr ) then
 			s += " "
 
-			'' Macro body, or expression?
-			if( n->initializer->class = ASTCLASS_MACROBODY ) then
-				var child = n->initializer->head
-				while( child )
+			assert( n->expr->class = ASTCLASS_MACROBODY )
 
-					if( child->attrib and ASTATTRIB_MERGEWITHPREV ) then
-						s += "##"
+			var child = n->expr->head
+			while( child )
+
+				if( child->attrib and ASTATTRIB_MERGEWITHPREV ) then
+					s += "##"
+				end if
+
+				select case( child->class )
+				case ASTCLASS_MACROPARAM
+					if( child->attrib and ASTATTRIB_STRINGIFY ) then
+						s += "#"
 					end if
+					s += *child->text
 
-					select case( child->class )
-					case ASTCLASS_MACROPARAM
-						if( child->attrib and ASTATTRIB_STRINGIFY ) then
-							s += "#"
-						end if
-						s += *child->text
+				case ASTCLASS_TK
+					s += tkToCText( child->tk, child->text )
 
-					case ASTCLASS_TK
-						s += tkToCText( child->tk, child->text )
+				case else
+					assert( FALSE )
+				end select
 
-					case else
-						assert( FALSE )
-					end select
-
-					child = child->next
-				wend
-			else
-				s += emitAst( n->initializer )
-			end if
+				child = child->next
+			wend
 		end if
 
 		emitLine( s )
 		s = ""
 
 	case ASTCLASS_PPUNDEF
-		emitLine( "#undef " + emitAst( n->initializer ) )
+		emitLine( "#undef " + *n->text )
 
 	case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
 		dim as string compoundkeyword
@@ -311,8 +308,8 @@ private function emitAst _
 
 	case ASTCLASS_ENUMCONST
 		s += *n->text
-		if( n->head ) then
-			s += " = " + emitAst( n->head )
+		if( n->expr ) then
+			s += " = " + emitAst( n->expr )
 		end if
 		emitLine( s )
 		s = ""
@@ -371,8 +368,8 @@ private function emitAst _
 			end if
 			s += " as " + emitType( n->dtype, n->subtype )
 
-			if( n->initializer ) then
-				s += " = " + emitAst( n->initializer )
+			if( n->expr ) then
+				s += " = " + emitAst( n->expr )
 			end if
 		end if
 
@@ -380,9 +377,9 @@ private function emitAst _
 		s += hCommaList( n, FALSE )
 
 	case ASTCLASS_DIMENSION
-		s += emitAst( n->head, FALSE )
+		s += emitAst( n->l )
 		s += " to "
-		s += emitAst( n->tail, FALSE )
+		s += emitAst( n->r )
 
 	case ASTCLASS_EXTERNBLOCKBEGIN
 		emitLine( "extern """ + *n->text + """" )
@@ -395,14 +392,14 @@ private function emitAst _
 
 	case ASTCLASS_CONST
 		if( typeIsFloat( n->dtype ) ) then
-			s += str( n->val.f )
+			s += str( n->valf )
 		else
 			if( n->attrib and ASTATTRIB_OCT ) then
-				s += "&o" + oct( n->val.i )
+				s += "&o" + oct( n->vali )
 			elseif( n->attrib and ASTATTRIB_HEX ) then
-				s += "&h" + hex( n->val.i )
+				s += "&h" + hex( n->vali )
 			else
-				s += str( n->val.i )
+				s += str( n->vali )
 			end if
 		end if
 
@@ -412,85 +409,74 @@ private function emitAst _
 	case ASTCLASS_TEXT
 		s += *n->text
 
-	case ASTCLASS_DEFINED
-		s += "defined( " + emitAst( n->head ) + " )"
-
 	case ASTCLASS_IIF
 		s += "iif( " + _
-			emitAst( n->head       ) + ", " + _
-			emitAst( n->head->next ) + ", " + _
-			emitAst( n->tail       ) + " )"
+			emitAst( n->expr ) + ", " + _
+			emitAst( n->l    ) + ", " + _
+			emitAst( n->r    ) + " )"
 
-	case ASTCLASS_LOGOR, ASTCLASS_LOGAND, _
-	     ASTCLASS_BITOR, ASTCLASS_BITXOR, ASTCLASS_BITAND, _
-	     ASTCLASS_EQ, ASTCLASS_NE, _
-	     ASTCLASS_LT, ASTCLASS_LE, _
-	     ASTCLASS_GT, ASTCLASS_GE, _
-	     ASTCLASS_SHL, ASTCLASS_SHR, _
-	     ASTCLASS_ADD, ASTCLASS_SUB, _
-	     ASTCLASS_MUL, ASTCLASS_DIV, ASTCLASS_MOD
+	case ASTCLASS_BOP
+		static as zstring * 8 fbbops(ASTOP_LOGOR to ASTOP_MOD) = _
+		{ _
+			"orelse" , _  '' ASTOP_LOGOR 
+			"andalso", _  '' ASTOP_LOGAND
+			"or"     , _  '' ASTOP_BITOR 
+			"xor"    , _  '' ASTOP_BITXOR
+			"and"    , _  '' ASTOP_BITAND
+			"="      , _  '' ASTOP_EQ    
+			"<>"     , _  '' ASTOP_NE    
+			"<"      , _  '' ASTOP_LT    
+			"<="     , _  '' ASTOP_LE    
+			">"      , _  '' ASTOP_GT    
+			">="     , _  '' ASTOP_GE    
+			"shl"    , _  '' ASTOP_SHL   
+			"shr"    , _  '' ASTOP_SHR   
+			"+"      , _  '' ASTOP_ADD   
+			"-"      , _  '' ASTOP_SUB   
+			"*"      , _  '' ASTOP_MUL   
+			"/"      , _  '' ASTOP_DIV   
+			"mod"      _  '' ASTOP_MOD   
+		}
 
 		if( need_parens ) then
 			s += "("
 		end if
 
-		s += emitAst( n->head, TRUE )
+		s += emitAst( n->l, TRUE )
 		s += " "
-
-		select case as const( n->class )
-		case ASTCLASS_LOGOR  : s += "orelse"
-		case ASTCLASS_LOGAND : s += "andalso"
-		case ASTCLASS_BITOR  : s += "or"
-		case ASTCLASS_BITXOR : s += "xor"
-		case ASTCLASS_BITAND : s += "and"
-		case ASTCLASS_EQ     : s += "="
-		case ASTCLASS_NE     : s += "<>"
-		case ASTCLASS_LT     : s += "<"
-		case ASTCLASS_LE     : s += "<="
-		case ASTCLASS_GT     : s += ">"
-		case ASTCLASS_GE     : s += ">="
-		case ASTCLASS_SHL    : s += "shl"
-		case ASTCLASS_SHR    : s += "shr"
-		case ASTCLASS_ADD    : s += "+"
-		case ASTCLASS_SUB    : s += "-"
-		case ASTCLASS_MUL    : s += "*"
-		case ASTCLASS_DIV    : s += "/"
-		case ASTCLASS_MOD    : s += "mod"
-		case else
-			assert( FALSE )
-		end select
-
+		s += fbbops(n->op)
 		s += " "
-		s += emitAst( n->tail, TRUE )
+		s += emitAst( n->r, TRUE )
 
 		if( need_parens ) then
 			s += ")"
 		end if
 
-	case ASTCLASS_LOGNOT
-		s += "iif( " + emitAst( n->head, FALSE ) + ", 0, 1 )"
-
-	case ASTCLASS_BITNOT, ASTCLASS_NEGATE, ASTCLASS_UNARYPLUS
-		if( need_parens ) then
-			s += "("
-		end if
-
-		select case as const( n->class )
-		case ASTCLASS_BITNOT
-			s += "not "
-		case ASTCLASS_NEGATE
-			s += "-"
-		case ASTCLASS_UNARYPLUS
-			s += "+"
+	case ASTCLASS_UOP
+		select case( n->op )
+		case ASTOP_LOGNOT
+			s += "iif( " + emitAst( n->l ) + ", 0, 1 )"
+		case ASTOP_DEFINED
+			s += "defined( " + emitAst( n->l ) + " )"
 		case else
-			assert( FALSE )
+			if( need_parens ) then
+				s += "("
+			end if
+
+			select case( n->op )
+			case ASTOP_BITNOT    : s += "not "
+			case ASTOP_NEGATE    : s += "-"
+			case ASTOP_UNARYPLUS : s += "+"
+			case else
+				assert( FALSE )
+			end select
+
+			s += emitAst( n->l, TRUE )
+
+			if( need_parens ) then
+				s += ")"
+			end if
 		end select
-
-		s += emitAst( n->head, TRUE )
-
-		if( need_parens ) then
-			s += ")"
-		end if
 
 	case else
 		astDump( n )

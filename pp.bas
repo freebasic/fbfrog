@@ -389,31 +389,31 @@ type PPOPINFO
 end type
 
 '' C PP operator precedence (higher value = higher precedence)
-dim shared as PPOPINFO ppopinfo(ASTCLASS_IIF to ASTCLASS_UNARYPLUS) = _
+dim shared as PPOPINFO ppopinfo(ASTOP_IIF to ASTOP_UNARYPLUS) = _
 { _
-	( 2, FALSE), _ '' ASTCLASS_IIF
-	( 3, TRUE ), _ '' ASTCLASS_LOGOR
-	( 4, TRUE ), _ '' ASTCLASS_LOGAND
-	( 5, TRUE ), _ '' ASTCLASS_BITOR
-	( 6, TRUE ), _ '' ASTCLASS_BITXOR
-	( 7, TRUE ), _ '' ASTCLASS_BITAND
-	( 8, TRUE ), _ '' ASTCLASS_EQ
-	( 8, TRUE ), _ '' ASTCLASS_NE
-	( 9, TRUE ), _ '' ASTCLASS_LT
-	( 9, TRUE ), _ '' ASTCLASS_LE
-	( 9, TRUE ), _ '' ASTCLASS_GT
-	( 9, TRUE ), _ '' ASTCLASS_GE
-	(10, TRUE ), _ '' ASTCLASS_SHL
-	(10, TRUE ), _ '' ASTCLASS_SHR
-	(11, TRUE ), _ '' ASTCLASS_ADD
-	(11, TRUE ), _ '' ASTCLASS_SUB
-	(12, TRUE ), _ '' ASTCLASS_MUL
-	(12, TRUE ), _ '' ASTCLASS_DIV
-	(12, TRUE ), _ '' ASTCLASS_MOD
-	(13, TRUE ), _ '' ASTCLASS_LOGNOT
-	(13, TRUE ), _ '' ASTCLASS_BITNOT
-	(13, TRUE ), _ '' ASTCLASS_NEGATE
-	(13, TRUE )  _ '' ASTCLASS_UNARYPLUS
+	( 2, FALSE), _ '' ASTOP_IIF
+	( 3, TRUE ), _ '' ASTOP_LOGOR
+	( 4, TRUE ), _ '' ASTOP_LOGAND
+	( 5, TRUE ), _ '' ASTOP_BITOR
+	( 6, TRUE ), _ '' ASTOP_BITXOR
+	( 7, TRUE ), _ '' ASTOP_BITAND
+	( 8, TRUE ), _ '' ASTOP_EQ
+	( 8, TRUE ), _ '' ASTOP_NE
+	( 9, TRUE ), _ '' ASTOP_LT
+	( 9, TRUE ), _ '' ASTOP_LE
+	( 9, TRUE ), _ '' ASTOP_GT
+	( 9, TRUE ), _ '' ASTOP_GE
+	(10, TRUE ), _ '' ASTOP_SHL
+	(10, TRUE ), _ '' ASTOP_SHR
+	(11, TRUE ), _ '' ASTOP_ADD
+	(11, TRUE ), _ '' ASTOP_SUB
+	(12, TRUE ), _ '' ASTOP_MUL
+	(12, TRUE ), _ '' ASTOP_DIV
+	(12, TRUE ), _ '' ASTOP_MOD
+	(13, TRUE ), _ '' ASTOP_LOGNOT
+	(13, TRUE ), _ '' ASTOP_BITNOT
+	(13, TRUE ), _ '' ASTOP_NEGATE
+	(13, TRUE )  _ '' ASTOP_UNARYPLUS
 }
 
 '' C PP expression parser based on precedence climbing
@@ -424,19 +424,19 @@ private function ppExpression _
 	) as ASTNODE ptr
 
 	'' Unary prefix operators
-	var astclass = -1
+	var op = -1
 	select case( tkGet( x ) )
-	case TK_EXCL   : astclass = ASTCLASS_LOGNOT    '' !
-	case TK_TILDE  : astclass = ASTCLASS_BITNOT    '' ~
-	case TK_MINUS  : astclass = ASTCLASS_NEGATE    '' -
-	case TK_PLUS   : astclass = ASTCLASS_UNARYPLUS '' +
+	case TK_EXCL  : op = ASTOP_LOGNOT    '' !
+	case TK_TILDE : op = ASTOP_BITNOT    '' ~
+	case TK_MINUS : op = ASTOP_NEGATE    '' -
+	case TK_PLUS  : op = ASTOP_UNARYPLUS '' +
 	end select
 
 	dim as ASTNODE ptr a
-	if( astclass >= 0 ) then
+	if( op >= 0 ) then
 		var uopx = x
 		x += 1
-		a = astNew( astclass, ppExpression( x, ppopinfo(astclass).level ) )
+		a = astNewUOP( op, ppExpression( x, ppopinfo(op).level ) )
 		a->location = *tkGetLocation( uopx )
 	else
 		'' Atoms
@@ -493,7 +493,7 @@ private function ppExpression _
 				x += 1
 			end if
 
-			a = astNew( ASTCLASS_DEFINED, a )
+			a = astNewUOP( ASTOP_DEFINED, a )
 			a->location = *tkGetLocation( definedx )
 
 		case else
@@ -504,36 +504,36 @@ private function ppExpression _
 	'' Infix operators
 	do
 		select case as const( tkGet( x ) )
-		case TK_QUEST    : astclass = ASTCLASS_IIF    '' ? (a ? b : c)
-		case TK_PIPEPIPE : astclass = ASTCLASS_LOGOR  '' ||
-		case TK_AMPAMP   : astclass = ASTCLASS_LOGAND '' &&
-		case TK_PIPE     : astclass = ASTCLASS_BITOR  '' |
-		case TK_CIRC     : astclass = ASTCLASS_BITXOR '' ^
-		case TK_AMP      : astclass = ASTCLASS_BITAND '' &
-		case TK_EQEQ     : astclass = ASTCLASS_EQ     '' ==
-		case TK_EXCLEQ   : astclass = ASTCLASS_NE     '' !=
-		case TK_LT       : astclass = ASTCLASS_LT     '' <
-		case TK_LTEQ     : astclass = ASTCLASS_LE     '' <=
-		case TK_GT       : astclass = ASTCLASS_GT     '' >
-		case TK_GTEQ     : astclass = ASTCLASS_GE     '' >=
-		case TK_LTLT     : astclass = ASTCLASS_SHL    '' <<
-		case TK_GTGT     : astclass = ASTCLASS_SHR    '' >>
-		case TK_PLUS     : astclass = ASTCLASS_ADD    '' +
-		case TK_MINUS    : astclass = ASTCLASS_SUB    '' -
-		case TK_STAR     : astclass = ASTCLASS_MUL    '' *
-		case TK_SLASH    : astclass = ASTCLASS_DIV    '' /
-		case TK_PERCENT  : astclass = ASTCLASS_MOD    '' %
+		case TK_QUEST    : op = ASTOP_IIF    '' ? (a ? b : c)
+		case TK_PIPEPIPE : op = ASTOP_LOGOR  '' ||
+		case TK_AMPAMP   : op = ASTOP_LOGAND '' &&
+		case TK_PIPE     : op = ASTOP_BITOR  '' |
+		case TK_CIRC     : op = ASTOP_BITXOR '' ^
+		case TK_AMP      : op = ASTOP_BITAND '' &
+		case TK_EQEQ     : op = ASTOP_EQ     '' ==
+		case TK_EXCLEQ   : op = ASTOP_NE     '' !=
+		case TK_LT       : op = ASTOP_LT     '' <
+		case TK_LTEQ     : op = ASTOP_LE     '' <=
+		case TK_GT       : op = ASTOP_GT     '' >
+		case TK_GTEQ     : op = ASTOP_GE     '' >=
+		case TK_LTLT     : op = ASTOP_SHL    '' <<
+		case TK_GTGT     : op = ASTOP_SHR    '' >>
+		case TK_PLUS     : op = ASTOP_ADD    '' +
+		case TK_MINUS    : op = ASTOP_SUB    '' -
+		case TK_STAR     : op = ASTOP_MUL    '' *
+		case TK_SLASH    : op = ASTOP_DIV    '' /
+		case TK_PERCENT  : op = ASTOP_MOD    '' %
 		case else        : exit do
 		end select
 
 		'' Higher/same level means process now (takes precedence),
 		'' lower level means we're done and the parent call will
 		'' continue. The first call will start with level 0.
-		var oplevel = ppopinfo(astclass).level
+		var oplevel = ppopinfo(op).level
 		if( oplevel < level ) then
 			exit do
 		end if
-		if( ppopinfo(astclass).is_leftassoc ) then
+		if( ppopinfo(op).is_leftassoc ) then
 			oplevel += 1
 		end if
 
@@ -545,16 +545,17 @@ private function ppExpression _
 		var b = ppExpression( x, oplevel )
 
 		'' Handle ?: special case
-		dim as ASTNODE ptr c
-		if( astclass = ASTCLASS_IIF ) then
+		if( op = ASTCLASS_IIF ) then
 			'' ':'?
 			tkExpect( x, TK_COLON )
 			x += 1
 
-			c = ppExpression( x, oplevel )
-		end if
+			var c = ppExpression( x, oplevel )
 
-		a = astNew( astclass, a, b, c )
+			a = astNewIIF( a, b, c )
+		else
+			a = astNewBOP( op, a, b )
+		end if
 		a->location = *tkGetLocation( bopx )
 	loop
 
@@ -654,13 +655,13 @@ private function ppDirective( byval x as integer ) as integer
 		'' Build up "[!]defined id" expression
 		var expr = astNew( ASTCLASS_ID, tkGetText( x ) )
 		expr->location = *tkGetLocation( x )
-		expr = astNew( ASTCLASS_DEFINED, expr )
+		expr = astNewUOP( ASTOP_DEFINED, expr )
 		expr->location = *tkGetLocation( x - 1 )
 		expr->location.column += 2  '' ifdef -> def, ifndef -> ndef
 		expr->location.length = 3
 		if( tk = KW_IFNDEF ) then
 			expr->location.column += 1  '' ndef -> def
-			expr = astNew( ASTCLASS_LOGNOT, expr )
+			expr = astNewUOP( ASTOP_LOGNOT, expr )
 			expr->location = *tkGetLocation( x - 1 )
 			expr->location.column += 2  '' ifndef -> n
 			expr->location.length = 1
@@ -753,25 +754,18 @@ namespace record
 	dim shared as integer x, stringify, merge
 end namespace
 
-private sub hTakeMergeAttrib _
-	( _
-		byval macrobody as ASTNODE ptr, _
-		byval n as ASTNODE ptr _
-	)
-
+private sub hTakeMergeAttrib( byval n as ASTNODE ptr )
 	if( record.merge ) then
 		n->attrib or= ASTATTRIB_MERGEWITHPREV
 		record.merge = FALSE
 	end if
-
 end sub
 
 '' Used for uninteresting tokens
 private sub hRecordToken( )
-	var n = astNew( ASTCLASS_TK, tkGetText( record.x ) )
-	n->tk = tkGet( record.x )
-	hTakeMergeAttrib( record.macro->initializer, n )
-	astAppend( record.macro->initializer, n )
+	var n = astNewTK( tkGet( record.x ), tkGetText( record.x ) )
+	hTakeMergeAttrib( n )
+	astAppend( record.macro->expr, n )
 end sub
 
 '' Used when a 'param' or '#param' was found in the macro body.
@@ -782,15 +776,14 @@ private sub hRecordParam _
 		byval stringify as integer _
 	)
 
-	var n = astNew( ASTCLASS_MACROPARAM, id )
-	n->paramindex = paramindex
+	var n = astNewMACROPARAM( id, paramindex )
 
 	if( stringify ) then
 		n->attrib or= ASTATTRIB_STRINGIFY
 	end if
-	hTakeMergeAttrib( record.macro->initializer, n )
+	hTakeMergeAttrib( n )
 
-	astAppend( record.macro->initializer, n )
+	astAppend( record.macro->expr, n )
 
 end sub
 
@@ -899,8 +892,8 @@ sub ppDirectives2( )
 			x += 1
 
 			'' Parse macro body
-			assert( t->initializer = NULL )
-			t->initializer = astNew( ASTCLASS_MACROBODY )
+			assert( t->expr = NULL )
+			t->expr = astNew( ASTCLASS_MACROBODY )
 			record.macro = t
 			record.x = x
 			record.stringify = FALSE
@@ -1008,13 +1001,11 @@ private function hMacroCall _
 	var bodybegin = x
 
 	'' Not an empty #define?
-	var macrobody = macro->initializer
-	if( macrobody ) then
+	if( macro->expr ) then
 		'' Insert the macro body behind the call
+		assert( macro->expr->class = ASTCLASS_MACROBODY )
 
-		assert( macrobody->class = ASTCLASS_MACROBODY )
-
-		var child = macrobody->head
+		var child = macro->expr->head
 		while( child )
 			var y = x
 
@@ -1188,20 +1179,20 @@ sub ppMacroBegin( byval id as zstring ptr, byval paramcount as integer )
 	ppExpandSym( id )
 	var macro = astNew( ASTCLASS_PPDEFINE, id )
 	macro->paramcount = paramcount
-	macro->initializer = astNew( ASTCLASS_MACROBODY )
+	macro->expr = astNew( ASTCLASS_MACROBODY )
 	astAppend( eval.macros, macro )
 end sub
 
 sub ppMacroToken( byval tk as integer, byval text as zstring ptr )
 	var macro = eval.macros->tail
-	astAppend( macro->initializer, astNewTK( tk, text ) )
+	astAppend( macro->expr, astNewTK( tk, text ) )
 end sub
 
 sub ppMacroParam( byval index as integer )
 	var macro = eval.macros->tail
 	assert( macro->paramcount > 0 )
 	assert( (index >= 0) and (index < macro->paramcount) )
-	astAppend( macro->initializer, astNewMACROPARAM( index ) )
+	astAppend( macro->expr, astNewMACROPARAM( NULL, index ) )
 end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -1290,80 +1281,79 @@ private function hParseIfCondition( byval x as integer ) as ASTNODE ptr
 end function
 
 private function hFold( byval n as ASTNODE ptr ) as ASTNODE ptr
-	function = n
-
 	if( n = NULL ) then
 		exit function
 	end if
 
-	var child = n->head
-	while( child )
-		child = astReplaceChild( n, child, hFold( astClone( child ) ) )
-		child = child->next
-	wend
+	n = astClone( n )
+	function = n
 
 	select case as const( n->class )
-	case ASTCLASS_DEFINED
-		'' defined() on known symbol?
-		assert( n->head->class = ASTCLASS_ID )
-		var cond = hLookupKnownSym( n->head->text )
-		if( cond = COND_UNKNOWN ) then
-			if( n->head->location.file ) then
-				oopsLocation( @n->head->location, "unknown symbol, need more info" )
+	case ASTCLASS_UOP
+		n->l = hFold( n->l )
+
+		if( n->op = ASTOP_DEFINED ) then
+			'' defined() on known symbol?
+			assert( n->l->class = ASTCLASS_ID )
+			var cond = hLookupKnownSym( n->l->text )
+			if( cond = COND_UNKNOWN ) then
+				if( n->l->location.file ) then
+					oopsLocation( @n->l->location, "unknown symbol, need more info" )
+				end if
+			else
+				'' defined()    ->    1|0
+				function = astNewCONST( iif( cond = COND_TRUE, 1, 0 ), 0, TYPE_LONG )
+				astDelete( n )
 			end if
 		else
-			'' defined()    ->    1|0
-			function = astNewCONST( iif( cond = COND_TRUE, 1, 0 ), 0, TYPE_LONG )
-			astDelete( n )
-		end if
+			if( (n->l->class = ASTCLASS_CONST) and _
+			    (not typeIsFloat( n->l->dtype )) ) then
+				var v1 = n->l->vali
 
-	case ASTCLASS_IIF
-		if( n->head->class = ASTCLASS_CONST ) then
-			if( typeIsFloat( n->head->dtype ) = FALSE ) then
-				if( n->head->val.i ) then
-					function = astClone( n->head->next )
-				else
-					function = astClone( n->tail )
-				end if
+				select case( n->op )
+				case ASTOP_LOGNOT    : v1 = iif( v1, 0, 1 )
+				case ASTOP_BITNOT    : v1 = not v1
+				case ASTOP_NEGATE    : v1 = -v1
+				case ASTOP_UNARYPLUS : '' nothing to do
+				case else
+					assert( FALSE )
+				end select
+
+				function = astNewCONST( v1, 0, TYPE_LONG )
 				astDelete( n )
 			end if
 		end if
 
-	case ASTCLASS_LOGOR, ASTCLASS_LOGAND, _
-	     ASTCLASS_BITOR, ASTCLASS_BITXOR, ASTCLASS_BITAND, _
-	     ASTCLASS_EQ, ASTCLASS_NE, _
-	     ASTCLASS_LT, ASTCLASS_LE, _
-	     ASTCLASS_GT, ASTCLASS_GE, _
-	     ASTCLASS_SHL, ASTCLASS_SHR, _
-	     ASTCLASS_ADD, ASTCLASS_SUB, _
-	     ASTCLASS_MUL, ASTCLASS_DIV, ASTCLASS_MOD
+	case ASTCLASS_BOP
+		n->l = hFold( n->l )
+		n->r = hFold( n->r )
 
-		if( (n->head->class = ASTCLASS_CONST) and _
-		    (n->tail->class = ASTCLASS_CONST) ) then
-			if( (not typeIsFloat( n->head->dtype )) and _
-			    (not typeIsFloat( n->tail->dtype )) ) then
-				var v1 = n->head->val.i
-				var v2 = n->tail->val.i
+		if( (n->l->class = ASTCLASS_CONST) and _
+		    (n->r->class = ASTCLASS_CONST) ) then
+			if( (not typeIsFloat( n->l->dtype )) and _
+			    (not typeIsFloat( n->r->dtype )) ) then
+				var v1 = n->l->vali
+				var v2 = n->r->vali
 
-				select case as const( n->class )
-				case ASTCLASS_LOGOR  : v1    = iif( v1 orelse  v2, 1, 0 )
-				case ASTCLASS_LOGAND : v1    = iif( v1 andalso v2, 1, 0 )
-				case ASTCLASS_BITOR  : v1  or= v2
-				case ASTCLASS_BITXOR : v1 xor= v2
-				case ASTCLASS_BITAND : v1 and= v2
-				case ASTCLASS_EQ     : v1    = iif( v1 =  v2, 1, 0 )
-				case ASTCLASS_NE     : v1    = iif( v1 <> v2, 1, 0 )
-				case ASTCLASS_LT     : v1    = iif( v1 <  v2, 1, 0 )
-				case ASTCLASS_LE     : v1    = iif( v1 <= v2, 1, 0 )
-				case ASTCLASS_GT     : v1    = iif( v1 >  v2, 1, 0 )
-				case ASTCLASS_GE     : v1    = iif( v1 >= v2, 1, 0 )
-				case ASTCLASS_SHL    : v1 shl= v2
-				case ASTCLASS_SHR    : v1 shr= v2
-				case ASTCLASS_ADD    : v1   += v2
-				case ASTCLASS_SUB    : v1   -= v2
-				case ASTCLASS_MUL    : v1   *= v2
-				case ASTCLASS_DIV    : v1   /= v2
-				case ASTCLASS_MOD    : v1 mod= v2
+				select case as const( n->op )
+				case ASTOP_LOGOR  : v1    = iif( v1 orelse  v2, 1, 0 )
+				case ASTOP_LOGAND : v1    = iif( v1 andalso v2, 1, 0 )
+				case ASTOP_BITOR  : v1  or= v2
+				case ASTOP_BITXOR : v1 xor= v2
+				case ASTOP_BITAND : v1 and= v2
+				case ASTOP_EQ     : v1    = iif( v1 =  v2, 1, 0 )
+				case ASTOP_NE     : v1    = iif( v1 <> v2, 1, 0 )
+				case ASTOP_LT     : v1    = iif( v1 <  v2, 1, 0 )
+				case ASTOP_LE     : v1    = iif( v1 <= v2, 1, 0 )
+				case ASTOP_GT     : v1    = iif( v1 >  v2, 1, 0 )
+				case ASTOP_GE     : v1    = iif( v1 >= v2, 1, 0 )
+				case ASTOP_SHL    : v1 shl= v2
+				case ASTOP_SHR    : v1 shr= v2
+				case ASTOP_ADD    : v1   += v2
+				case ASTOP_SUB    : v1   -= v2
+				case ASTOP_MUL    : v1   *= v2
+				case ASTOP_DIV    : v1   /= v2
+				case ASTOP_MOD    : v1 mod= v2
 				case else
 					assert( FALSE )
 				end select
@@ -1373,29 +1363,29 @@ private function hFold( byval n as ASTNODE ptr ) as ASTNODE ptr
 			end if
 
 		'' Only the lhs is a CONST? Check for NOPs
-		elseif( (n->head->class = ASTCLASS_CONST) and _
-		        (n->tail->class <> ASTCLASS_CONST) ) then
+		elseif( (n->l->class = ASTCLASS_CONST) and _
+		        (n->r->class <> ASTCLASS_CONST) ) then
 
-			if( typeIsFloat( n->head->dtype ) = FALSE ) then
-				var v1 = n->head->val.i
+			if( typeIsFloat( n->l->dtype ) = FALSE ) then
+				var v1 = n->l->vali
 
-				select case( n->class )
+				select case( n->op )
 
 				'' true  || x   = 1
 				'' false || x   = x
-				case ASTCLASS_LOGOR
+				case ASTOP_LOGOR
 					if( v1 ) then
 						function = astNewCONST( 1, 0, TYPE_LONG )
 					else
-						function = astClone( n->tail )
+						function = astClone( n->r )
 					end if
 					astDelete( n )
 
 				'' true  && x   = x
 				'' false && x   = 0
-				case ASTCLASS_LOGAND
+				case ASTOP_LOGAND
 					if( v1 ) then
-						function = astClone( n->tail )
+						function = astClone( n->r )
 					else
 						function = astNewCONST( 0, 0, TYPE_LONG )
 					end if
@@ -1403,9 +1393,9 @@ private function hFold( byval n as ASTNODE ptr ) as ASTNODE ptr
 
 				'' 0 | x = x
 				'' 0 + x = x
-				case ASTCLASS_BITOR, ASTCLASS_ADD
+				case ASTOP_BITOR, ASTOP_ADD
 					if( v1 = 0 ) then
-						function = astClone( n->tail )
+						function = astClone( n->r )
 						astDelete( n )
 					end if
 
@@ -1414,8 +1404,8 @@ private function hFold( byval n as ASTNODE ptr ) as ASTNODE ptr
 				'' 0 >> x = 0
 				'' 0 /  x = 0
 				'' 0 %  x = 0
-				case ASTCLASS_BITAND, ASTCLASS_SHL, ASTCLASS_SHR, _
-				     ASTCLASS_DIV, ASTCLASS_MOD
+				case ASTOP_BITAND, ASTOP_SHL, ASTOP_SHR, _
+				     ASTOP_DIV, ASTOP_MOD
 					if( v1 = 0 ) then
 						function = astNewCONST( 0, 0, TYPE_LONG )
 						astDelete( n )
@@ -1423,20 +1413,20 @@ private function hFold( byval n as ASTNODE ptr ) as ASTNODE ptr
 
 				'' 0 * x = 0
 				'' 1 * x = x
-				case ASTCLASS_MUL
+				case ASTOP_MUL
 					select case( v1 )
 					case 0
 						function = astNewCONST( 0, 0, TYPE_LONG )
 						astDelete( n )
 					case 1
-						function = astClone( n->tail )
+						function = astClone( n->r )
 						astDelete( n )
 					end select
 
 				'' 0 - x = -x
-				case ASTCLASS_SUB
+				case ASTOP_SUB
 					if( v1 = 0 ) then
-						function = astNew( ASTCLASS_NEGATE, astClone( n->tail ) )
+						function = astNewUOP( ASTOP_NEGATE, astClone( n->r ) )
 						astDelete( n )
 					end if
 
@@ -1444,29 +1434,29 @@ private function hFold( byval n as ASTNODE ptr ) as ASTNODE ptr
 			end if
 
 		'' Only the rhs is a CONST? Check for NOPs
-		elseif( (n->head->class <> ASTCLASS_CONST) and _
-		        (n->tail->class = ASTCLASS_CONST) ) then
+		elseif( (n->l->class <> ASTCLASS_CONST) and _
+		        (n->r->class = ASTCLASS_CONST) ) then
 
-			if( typeIsFloat( n->tail->dtype ) = FALSE ) then
-				var v2 = n->tail->val.i
+			if( typeIsFloat( n->r->dtype ) = FALSE ) then
+				var v2 = n->r->vali
 
-				select case( n->class )
+				select case( n->op )
 
 				'' x || true    = 1
 				'' x || false   = x
-				case ASTCLASS_LOGOR
+				case ASTOP_LOGOR
 					if( v2 ) then
 						function = astNewCONST( 1, 0, TYPE_LONG )
 					else
-						function = astClone( n->head )
+						function = astClone( n->l )
 					end if
 					astDelete( n )
 
 				'' x && true    = x
 				'' x && false   = 0
-				case ASTCLASS_LOGAND
+				case ASTOP_LOGAND
 					if( v2 ) then
-						function = astClone( n->head )
+						function = astClone( n->l )
 					else
 						function = astNewCONST( 0, 0, TYPE_LONG )
 					end if
@@ -1477,15 +1467,15 @@ private function hFold( byval n as ASTNODE ptr ) as ASTNODE ptr
 				'' x - 0 = x
 				'' x << 0 = x
 				'' x >> 0 = x
-				case ASTCLASS_BITOR, ASTCLASS_ADD, ASTCLASS_SUB, _
-				     ASTCLASS_SHL, ASTCLASS_SHR
+				case ASTOP_BITOR, ASTOP_ADD, ASTOP_SUB, _
+				     ASTOP_SHL, ASTOP_SHR
 					if( v2 = 0 ) then
-						function = astClone( n->head )
+						function = astClone( n->l )
 						astDelete( n )
 					end if
 
 				'' x & 0 = 0
-				case ASTCLASS_BITAND
+				case ASTOP_BITAND
 					if( v2 = 0 ) then
 						function = astNewCONST( 0, 0, TYPE_LONG )
 						astDelete( n )
@@ -1493,13 +1483,13 @@ private function hFold( byval n as ASTNODE ptr ) as ASTNODE ptr
 
 				'' x * 0 = 0
 				'' x * 1 = x
-				case ASTCLASS_MUL
+				case ASTOP_MUL
 					select case( v2 )
 					case 0
 						function = astNewCONST( 0, 0, TYPE_LONG )
 						astDelete( n )
 					case 1
-						function = astClone( n->head )
+						function = astClone( n->l )
 						astDelete( n )
 					end select
 
@@ -1507,25 +1497,19 @@ private function hFold( byval n as ASTNODE ptr ) as ASTNODE ptr
 			end if
 		end if
 
-	case ASTCLASS_LOGNOT, ASTCLASS_BITNOT, _
-	     ASTCLASS_NEGATE, ASTCLASS_UNARYPLUS
+	case ASTCLASS_IIF
+		n->expr = hFold( n->expr )
+		n->l = hFold( n->l )
+		n->r = hFold( n->r )
 
-		if( n->head->class = ASTCLASS_CONST ) then
-			if( typeIsFloat( n->head->dtype ) = FALSE ) then
-				var v1 = n->head->val.i
-
-				select case as const( n->class )
-				case ASTCLASS_LOGNOT    : v1 = iif( v1, 0, 1 )
-				case ASTCLASS_BITNOT    : v1 = not v1
-				case ASTCLASS_NEGATE    : v1 = -v1
-				case ASTCLASS_UNARYPLUS : '' nothing to do
-				case else
-					assert( FALSE )
-				end select
-
-				function = astNewCONST( v1, 0, TYPE_LONG )
-				astDelete( n )
+		if( (n->expr->class = ASTCLASS_CONST) and _
+		    (not typeIsFloat( n->expr->dtype )) ) then
+			if( n->expr->vali ) then
+				function = astClone( n->l )
+			else
+				function = astClone( n->r )
 			end if
+			astDelete( n )
 		end if
 
 	end select
@@ -1534,9 +1518,9 @@ end function
 private function hEvalIfCondition( byval x as integer ) as integer
 	assert( (tkGet( x ) = TK_PPIF) or (tkGet( x ) = TK_PPELSEIF) )
 	var xif = x
+	var t = tkGetAst( x )
 
 	'' No #if expression yet?
-	var t = tkGetAst( x )
 	if( t = NULL ) then
 		x += 1
 
@@ -1550,14 +1534,14 @@ private function hEvalIfCondition( byval x as integer ) as integer
 	end if
 
 	'' 1. Try to evaluate the condition
-	t = hFold( astClone( t ) )
+	t = hFold( t )
 
 	'' 2. Check the condition
 	if( (t->class <> ASTCLASS_CONST) or typeIsFloat( t->dtype ) ) then
 		tkOops( x, "cannot evaluate #if condition, need more info" )
 	end if
 
-	function = (t->val.i <> 0)
+	function = (t->vali <> 0)
 end function
 
 type IFSTACKNODE

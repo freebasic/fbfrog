@@ -101,22 +101,6 @@ end function
 function astNew overload _
 	( _
 		byval class_ as integer, _
-		byval a as ASTNODE ptr, _
-		byval b as ASTNODE ptr, _
-		byval c as ASTNODE ptr _
-	) as ASTNODE ptr
-
-	var n = astNew( class_ )
-	astAppend( n, a )
-	astAppend( n, b )
-	astAppend( n, c )
-
-	function = n
-end function
-
-function astNew overload _
-	( _
-		byval class_ as integer, _
 		byval text as zstring ptr _
 	) as ASTNODE ptr
 
@@ -126,9 +110,52 @@ function astNew overload _
 	function = n
 end function
 
+function astNewUOP _
+	( _
+		byval op as integer, _
+		byval l as ASTNODE ptr _
+	) as ASTNODE ptr
+
+	var n = astNew( ASTCLASS_UOP )
+	n->l = l
+	n->op = op
+
+	function = n
+end function
+
+function astNewBOP _
+	( _
+		byval op as integer, _
+		byval l as ASTNODE ptr, _
+		byval r as ASTNODE ptr _
+	) as ASTNODE ptr
+
+	var n = astNew( ASTCLASS_BOP )
+	n->l = l
+	n->r = r
+	n->op = op
+
+	function = n
+end function
+
+function astNewIIF _
+	( _
+		byval cond as ASTNODE ptr, _
+		byval l as ASTNODE ptr, _
+		byval r as ASTNODE ptr _
+	) as ASTNODE ptr
+
+	var n = astNew( ASTCLASS_IIF )
+	n->expr = cond
+	n->l = l
+	n->r = r
+
+	function = n
+end function
+
 private function astNewVERSION overload( ) as ASTNODE ptr
 	var n = astNew( ASTCLASS_VERSION )
-	n->initializer = astNew( ASTCLASS_GROUP )
+	n->expr = astNew( ASTCLASS_GROUP )
 	function = n
 end function
 
@@ -140,7 +167,7 @@ function astNewVERSION overload _
 
 	var n = astNewVERSION( )
 
-	astAppend( n->initializer, astNewCONST( versionnum, 0, TYPE_INTEGER ) )
+	astAppend( n->expr, astNewCONST( versionnum, 0, TYPE_INTEGER ) )
 	astAppend( n, child )
 
 	function = n
@@ -156,14 +183,27 @@ function astNewVERSION overload _
 	var n = astNewVERSION( )
 
 	assert( version1->class = ASTCLASS_VERSION )
-	astCloneAndAddAllChildrenOf( n->initializer, version1->initializer )
+	astCloneAndAddAllChildrenOf( n->expr, version1->expr )
 
 	if( version2 ) then
 		assert( version2->class = ASTCLASS_VERSION )
-		astCloneAndAddAllChildrenOf( n->initializer, version2->initializer )
+		astCloneAndAddAllChildrenOf( n->expr, version2->expr )
 	end if
 
 	astAppend( n, child )
+
+	function = n
+end function
+
+function astNewDIMENSION _
+	( _
+		byval lb as ASTNODE ptr, _
+		byval ub as ASTNODE ptr _
+	) as ASTNODE ptr
+
+	var n = astNew( ASTCLASS_DIMENSION )
+	n->l = lb
+	n->r = ub
 
 	function = n
 end function
@@ -179,9 +219,9 @@ function astNewCONST _
 	n->dtype = dtype
 
 	if( typeIsFloat( dtype ) ) then
-		n->val.f = f
+		n->valf = f
 	else
-		n->val.i = i
+		n->vali = i
 	end if
 
 	function = n
@@ -192,14 +232,22 @@ function astNewTK _
 		byval tk as integer, _
 		byval text as zstring ptr _
 	) as ASTNODE ptr
+
 	var n = astNew( ASTCLASS_TK, text )
 	n->tk = tk
+
 	function = n
 end function
 
-function astNewMACROPARAM( byval paramindex as integer ) as ASTNODE ptr
-	var n = astNew( ASTCLASS_MACROPARAM )
+function astNewMACROPARAM _
+	( _
+		byval id as zstring ptr, _
+		byval paramindex as integer _
+	) as ASTNODE ptr
+
+	var n = astNew( ASTCLASS_MACROPARAM, id )
 	n->paramindex = paramindex
+
 	function = n
 end function
 
@@ -215,7 +263,9 @@ sub astDelete( byval n as ASTNODE ptr )
 		child = nxt
 	wend
 
-	astDelete( n->initializer )
+	astDelete( n->r )
+	astDelete( n->l )
+	astDelete( n->expr )
 	astDelete( n->array )
 	deallocate( n->text )
 	astDelete( n->subtype )
@@ -301,7 +351,7 @@ end sub
 function astVersionsMatch( byval a as ASTNODE ptr, byval b as ASTNODE ptr ) as integer
 	assert( a->class = ASTCLASS_VERSION )
 	assert( b->class = ASTCLASS_VERSION )
-	function = astIsEqualDecl( a->initializer, b->initializer )
+	function = astIsEqualDecl( a->expr, b->expr )
 end function
 
 sub astAddVersionedChild( byval n as ASTNODE ptr, byval child as ASTNODE ptr )
@@ -433,11 +483,6 @@ sub astRemoveChild( byval parent as ASTNODE ptr, byval a as ASTNODE ptr )
 	astDelete( a )
 end sub
 
-sub astSetText( byval n as ASTNODE ptr, byval text as zstring ptr )
-	deallocate( n->text )
-	n->text = strDuplicate( text )
-end sub
-
 sub astRemoveText( byval n as ASTNODE ptr )
 	deallocate( n->text )
 	n->text = NULL
@@ -489,14 +534,28 @@ function astCloneNode( byval n as ASTNODE ptr ) as ASTNODE ptr
 	c->subtype     = astClone( n->subtype )
 	c->array       = astClone( n->array )
 
-	c->initializer = astClone( n->initializer )
-
 	c->location    = n->location
 
-	c->val         = n->val
-	c->tk          = n->tk
-	c->paramindex  = n->paramindex
-	c->paramcount  = n->paramcount
+	c->expr        = astClone( n->expr )
+	c->l           = astClone( n->l )
+	c->r           = astClone( n->r )
+
+	select case( n->class )
+	case ASTCLASS_CONST
+		if( typeIsFloat( n->dtype ) ) then
+			c->valf = n->valf
+		else
+			c->vali = n->vali
+		end if
+	case ASTCLASS_TK
+		c->tk = n->tk
+	case ASTCLASS_MACROPARAM
+		c->paramindex = n->paramindex
+	case ASTCLASS_PPDEFINE
+		c->paramcount = n->paramcount
+	case ASTCLASS_UOP, ASTCLASS_BOP
+		c->op = n->op
+	end select
 
 	function = c
 end function
@@ -586,15 +645,17 @@ function astIsEqualDecl _
 	if( astIsEqualDecl( a->subtype, b->subtype, ignore_fields, ignore_hiddencallconv ) = FALSE ) then exit function
 	if( astIsEqualDecl( a->array, b->array, ignore_fields, ignore_hiddencallconv ) = FALSE ) then exit function
 
-	if( astIsEqualDecl( a->initializer, b->initializer, ignore_fields, ignore_hiddencallconv ) = FALSE ) then exit function
+	if( astIsEqualDecl( a->expr, b->expr, ignore_fields, ignore_hiddencallconv ) = FALSE ) then exit function
+	if( astIsEqualDecl( a->l, b->l, ignore_fields, ignore_hiddencallconv ) = FALSE ) then exit function
+	if( astIsEqualDecl( a->r, b->r, ignore_fields, ignore_hiddencallconv ) = FALSE ) then exit function
 
 	select case( a->class )
 	case ASTCLASS_CONST
 		if( typeIsFloat( a->dtype ) ) then
 			const EPSILON_DBL as double = 2.2204460492503131e-016
-			if( abs( a->val.f - b->val.f ) >= EPSILON_DBL ) then exit function
+			if( abs( a->valf - b->valf ) >= EPSILON_DBL ) then exit function
 		else
-			if( a->val.i <> b->val.i ) then exit function
+			if( a->vali <> b->vali ) then exit function
 		end if
 
 	case ASTCLASS_TK
@@ -605,6 +666,9 @@ function astIsEqualDecl _
 
 	case ASTCLASS_PPDEFINE
 		if( a->paramcount <> b->paramcount ) then exit function
+
+	case ASTCLASS_UOP, ASTCLASS_BOP
+		if( a->op <> b->op ) then exit function
 
 	case ASTCLASS_STRUCT
 		if( ignore_fields ) then return TRUE
@@ -647,14 +711,14 @@ function astDumpOne( byval n as ASTNODE ptr ) as string
 	select case( n->class )
 	case ASTCLASS_CONST
 		if( typeIsFloat( n->dtype ) ) then
-			s += " " + str( n->val.f )
+			s += " " + str( n->valf )
 		else
 			if( n->attrib and ASTATTRIB_OCT ) then
-				s += " &o" + oct( n->val.i )
+				s += " &o" + oct( n->vali )
 			elseif( n->attrib and ASTATTRIB_HEX ) then
-				s += " &h" + hex( n->val.i )
+				s += " &h" + hex( n->vali )
 			else
-				s += " " + str( n->val.i )
+				s += " " + str( n->vali )
 			end if
 		end if
 	case ASTCLASS_TK
@@ -701,8 +765,14 @@ function astDumpInline( byval n as ASTNODE ptr ) as string
 	if( n->array ) then
 		more( "array=" + astDumpInline( n->array ) )
 	end if
-	if( n->initializer ) then
-		more( "initializer=" + astDumpInline( n->initializer ) )
+	if( n->expr ) then
+		more( "expr=" + astDumpInline( n->expr ) )
+	end if
+	if( n->l ) then
+		more( "l=" + astDumpInline( n->l ) )
+	end if
+	if( n->r ) then
+		more( "r=" + astDumpInline( n->r ) )
 	end if
 
 	var child = n->head
@@ -731,29 +801,21 @@ sub astDump( byval n as ASTNODE ptr, byval nestlevel as integer )
 		hPrintIndentation( nestlevel )
 		print astDumpOne( n )
 
-		if( n->subtype ) then
-			nestlevel += 1
-			hPrintIndentation( nestlevel )
-			print "subtype:"
-			astDump( n->subtype, nestlevel )
-			nestlevel -= 1
-		end if
+		#macro dumpField( field )
+			if( n->field ) then
+				nestlevel += 1
+				hPrintIndentation( nestlevel )
+				print #field + ":"
+				astDump( n->field, nestlevel )
+				nestlevel -= 1
+			end if
+		#endmacro
 
-		if( n->array ) then
-			nestlevel += 1
-			hPrintIndentation( nestlevel )
-			print "array:"
-			astDump( n->array, nestlevel )
-			nestlevel -= 1
-		end if
-
-		if( n->initializer ) then
-			nestlevel += 1
-			hPrintIndentation( nestlevel )
-			print "initializer:"
-			astDump( n->initializer, nestlevel )
-			nestlevel -= 1
-		end if
+		dumpField( subtype )
+		dumpField( array )
+		dumpField( expr )
+		dumpField( l )
+		dumpField( r )
 
 		var child = n->head
 		while( child )

@@ -182,3 +182,5 @@ To do:
   not in the toplevel file context, shouldn't they?
 
 - It'd be nice if fbfrog could preserve comments and dividers optionally
+
+- should share C operator precedence table between C/PP modules
