@@ -722,7 +722,10 @@ sub tkOops( byval x as integer, byref message as string )
 	if( location->file ) then
 		oopsLocation( location, message )
 	else
-		TRACE( x )
+		TRACE( x ), "<= error here"
+		print string( 40, "-" )
+		tkDump( )
+		print string( 40, "-" )
 		print message
 		end 1
 	end if
