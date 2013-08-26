@@ -1602,14 +1602,14 @@ dim shared ifstack(0 to MAXIFBLOCKS-1) as IFSTACKNODE
 sub ppEval( )
 	var x = 0
 	var level = -1
-	var skiplevel = MAXIFBLOCKS+1
+	var skiplevel = MAXIFBLOCKS
 	do
 		select case( tkGet( x ) )
 		case TK_EOF
 			exit do
 
 		case TK_PPIF
-			if( level = MAXIFBLOCKS ) then
+			if( level >= MAXIFBLOCKS-1 ) then
 				tkOops( x, "#if stack too small, MAXIFBLOCKS=" & MAXIFBLOCKS )
 			end if
 			level += 1
@@ -1617,7 +1617,7 @@ sub ppEval( )
 			ifstack(level).saw_else = FALSE
 
 			'' Not skipping? Then evaluate
-			if( skiplevel = MAXIFBLOCKS+1 ) then
+			if( skiplevel = MAXIFBLOCKS ) then
 				if( hEvalIfCondition( x ) ) then
 					'' #if TRUE, don't skip
 					ifstack(level).saw_true = TRUE
@@ -1639,7 +1639,7 @@ sub ppEval( )
 
 			'' Not skipping, or skipping due to previous #if/#elseif FALSE?
 			'' Then evaluate the #elseif to check whether to continue skipping or not
-			if( (skiplevel = MAXIFBLOCKS+1) or (skiplevel = level) ) then
+			if( (skiplevel = MAXIFBLOCKS) or (skiplevel = level) ) then
 				'' If there was a previous #if/#elseif TRUE on this level,
 				'' then this #elseif must be skipped no matter what its condition is.
 				if( ifstack(level).saw_true ) then
@@ -1649,7 +1649,7 @@ sub ppEval( )
 					if( hEvalIfCondition( x ) ) then
 						'' #elseif TRUE, don't skip
 						ifstack(level).saw_true = TRUE
-						skiplevel = MAXIFBLOCKS+1
+						skiplevel = MAXIFBLOCKS
 					else
 						'' #elseif FALSE, start/continue skipping
 						skiplevel = level
@@ -1672,13 +1672,13 @@ sub ppEval( )
 
 			'' Not skipping, or skipping due to previous #if/#elseif FALSE?
 			'' Then check whether to skip this #else block or not.
-			if( (skiplevel = MAXIFBLOCKS+1) or (skiplevel = level) ) then
+			if( (skiplevel = MAXIFBLOCKS) or (skiplevel = level) ) then
 				if( ifstack(level).saw_true ) then
 					'' Previous #if/#elseif TRUE, skip #else
 					skiplevel = level
 				else
 					'' Previous #if/#elseif FALSE, don't skip #else
-					skiplevel = MAXIFBLOCKS+1
+					skiplevel = MAXIFBLOCKS
 				end if
 			end if
 
@@ -1692,7 +1692,7 @@ sub ppEval( )
 
 			'' If skipping due to current level, then stop skipping.
 			if( skiplevel = level ) then
-				skiplevel = MAXIFBLOCKS+1
+				skiplevel = MAXIFBLOCKS
 			end if
 
 			tkRemove( x, x )
@@ -1702,7 +1702,7 @@ sub ppEval( )
 
 		case else
 			'' Remove tokens if skipping
-			if( skiplevel <> MAXIFBLOCKS+1 ) then
+			if( skiplevel <> MAXIFBLOCKS ) then
 				tkRemove( x, x )
 				x -= 1
 			else
