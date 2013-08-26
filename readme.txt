@@ -54,17 +54,6 @@ To do:
 
 - Must do automated formatting of macro bodies in emitter now that TK_SPACE is gone
 
-- hFold() shouldn't try to evaluate both operands of shirt-circuit operations
-  at the same time, because the 2nd one could be an unsolvable #define, and
-  hFold() will immediately show an error for those, preventing it from just
-  ignoring it in case short-curcuiting is possible, e.g. "0 && defined FOO".
-    - for this it'd be easiest to have the AST keep expression operands in
-      ASTNODE.uop.l, ASTNODE.bop.l/r, ASTNODE.iif.cond/l/r fields, instead of a
-      linked list of children which should be turned into ASTNODE.group.head/tail
-      and used by things that need it such as GROUPs/PPDEFINEs/PROCs
-        - hFold() and emit.bas would benefit (smaller code) from ASTCLASS_UOP/BOP/IIF
-          and uop.op/bop.op fields holding an ASTOP_* instead of encoding the op in the ASTCLASS_*
-
 - Add preset files, *.txt with FB-like syntax
     - Working on/adding/sharing presets becomes easier because fbfrog itself
       doesn't need to be patched, rebuilt, re-released, etc.
@@ -184,3 +173,4 @@ To do:
 - It'd be nice if fbfrog could preserve comments and dividers optionally
 
 - should share C operator precedence table between C/PP modules
+- let hFold() solve out iif( x, true, true ) and iif( x, false, false )

@@ -1296,11 +1296,7 @@ private function hFold( byval n as ASTNODE ptr ) as ASTNODE ptr
 			'' defined() on known symbol?
 			assert( n->l->class = ASTCLASS_ID )
 			var cond = hLookupKnownSym( n->l->text )
-			if( cond = COND_UNKNOWN ) then
-				if( n->l->location.file ) then
-					oopsLocation( @n->l->location, "unknown symbol, need more info" )
-				end if
-			else
+			if( cond <> COND_UNKNOWN ) then
 				'' defined()    ->    1|0
 				function = astNewCONST( iif( cond = COND_TRUE, 1, 0 ), 0, TYPE_LONG )
 				astDelete( n )
@@ -1515,6 +1511,42 @@ private function hFold( byval n as ASTNODE ptr ) as ASTNODE ptr
 	end select
 end function
 
+private function hFindRemainingDefined( byval n as ASTNODE ptr ) as ASTNODE ptr
+	if( n = NULL ) then
+		exit function
+	end if
+
+	dim as ASTNODE ptr d = NULL
+
+	select case as const( n->class )
+	case ASTCLASS_UOP
+		if( n->op = ASTOP_DEFINED ) then
+			d = n
+		else
+			d = hFindRemainingDefined( n->l )
+		end if
+
+	case ASTCLASS_BOP
+		d = hFindRemainingDefined( n->l )
+		if( d = NULL ) then
+			d = hFindRemainingDefined( n->r )
+		end if
+
+	case ASTCLASS_IIF
+		d = hFindRemainingDefined( n->expr )
+		if( d = NULL ) then
+			d = hFindRemainingDefined( n->l )
+			if( d = NULL ) then
+				d = hFindRemainingDefined( n->r )
+			end if
+		end if
+
+
+	end select
+
+	function = d
+end function
+
 private function hEvalIfCondition( byval x as integer ) as integer
 	assert( (tkGet( x ) = TK_PPIF) or (tkGet( x ) = TK_PPELSEIF) )
 	var xif = x
@@ -1538,7 +1570,23 @@ private function hEvalIfCondition( byval x as integer ) as integer
 
 	'' 2. Check the condition
 	if( (t->class <> ASTCLASS_CONST) or typeIsFloat( t->dtype ) ) then
-		tkOops( x, "cannot evaluate #if condition, need more info" )
+		'' If there's an unsolved defined() in the expression, try to
+		'' show an error pointing to that defined(), otherwise fallback
+		'' to showing the error for the whole #if condition.
+		''
+		'' Note: This is done here, after hFold() has fully finished,
+		'' instead of inside hFold() in the ASTOP_DEFINED handler,
+		'' because there it could be too early to show an error about
+		'' an unsolved defined(), afterall NOP optimizations for parent
+		'' nodes may cause that unsolved defined() to be solved out
+		'' completely because its result doesn't matter (can happen with
+		'' short-curcuiting operators and iif).
+		var remainingdefined = hFindRemainingDefined( t )
+		if( remainingdefined andalso remainingdefined->l->location.file ) then
+			oopsLocation( @remainingdefined->l->location, "unknown symbol, need more info" )
+		else
+			tkOops( x, "cannot evaluate #if condition, need more info" )
+		end if
 	end if
 
 	function = (t->vali <> 0)
