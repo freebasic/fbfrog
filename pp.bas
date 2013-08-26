@@ -585,7 +585,7 @@ private function ppDirective( byval x as integer ) as integer
 
 		'' '(' following directly, no spaces in between?
 		if( (tkGet( x + 1 ) = TK_LPAREN) and (not tkGetBehindSpace( x + 1 )) ) then
-			x += 1
+			x += 2  '' id and '('
 			t->paramcount = 0
 
 			'' List of macro parameters:
@@ -608,7 +608,6 @@ private function ppDirective( byval x as integer ) as integer
 
 			'' ')'?
 			tkExpect( x, TK_RPAREN )
-			x += 1
 		end if
 
 		tkFold( begin, x, TK_PPDEFINE, , t )
