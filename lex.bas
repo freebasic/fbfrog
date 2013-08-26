@@ -98,7 +98,9 @@ end sub
 private sub hSetLocation( )
 	lex.location.length = (lex.i - lex.bol) - lex.location.column
 	tkSetLocation( lex.x, @lex.location )
-	tkSetBehindSpace( lex.x )
+	if( lex.behindspace ) then
+		tkSetBehindSpace( lex.x )
+	end if
 end sub
 
 private sub hAddTextToken( byval tk as integer, byval begin as ubyte ptr )
