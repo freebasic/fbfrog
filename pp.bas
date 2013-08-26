@@ -39,6 +39,10 @@
 '' that it should try to do macro expansion for it, if a corresponding #define
 '' is found. ppMacro*() can be used to register initial #defines.
 ''
+'' ppParseIfExprOnly() is a ppEval() replacement that just parses #if
+'' expressions into ASTs but doesn't evaluate/expand anything, for use by PP
+'' expression parser test cases.
+''
 
 #include once "fbfrog.bi"
 
@@ -1085,6 +1089,14 @@ sub ppEvalInit( )
 	eval.macros = astNew( ASTCLASS_GROUP )
 end sub
 
+sub ppEvalEnd( )
+	astDelete( eval.macros )
+	hashEnd( @eval.expandsymhash )
+	astDelete( eval.expandsyms )
+	hashEnd( @eval.knownsymhash )
+	astDelete( eval.knownsyms )
+end sub
+
 private function hSymExists _
 	( _
 		byval group as ASTNODE ptr, _
@@ -1736,12 +1748,32 @@ sub ppEval( )
 
 		x += 1
 	loop
+end sub
 
-	astDelete( eval.macros )
-	hashEnd( @eval.expandsymhash )
-	astDelete( eval.expandsyms )
-	hashEnd( @eval.knownsymhash )
-	astDelete( eval.knownsyms )
+sub ppParseIfExprOnly( byval do_fold as integer )
+	var x = 0
+	do
+		select case( tkGet( x ) )
+		case TK_EOF
+			exit do
+
+		case TK_PPIF, TK_PPELSEIF
+			var t = tkGetAst( x )
+			x += 1
+
+			'' No #if expression yet?
+			if( t = NULL ) then
+				t = hParseIfCondition( x )
+				if( do_fold ) then
+					t = hFold( t )
+				end if
+				tkSetAst( x - 1, t )
+			end if
+
+		case else
+			x += 1
+		end select
+	loop
 end sub
 
 sub ppRemoveEOLs( )

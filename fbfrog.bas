@@ -1022,12 +1022,27 @@ private function frogParseVersion _
 	''
 	'' Macro expansion, #if evaluation
 	''
-	var do_pp = TRUE
 	select case( frog.preset )
 	case "tests"
-		do_pp and= not strMatches( "tests/basic/*", f->pretty )
-		do_pp or= strMatches( "tests/basic/pp/eval-*", f->pretty )
-		do_pp or= strMatches( "tests/basic/pp/expand/*", f->pretty )
+		if( strMatches( "tests/basic/pp/expr-*", f->pretty ) ) then
+			ppEvalInit( )
+			ppParseIfExprOnly( FALSE )
+			ppEvalEnd( )
+
+			tkDumpToFile( pathStripExt( f->normed ) + ".txt" )
+			tkEnd( )
+			exit function
+		end if
+
+		if( strMatches( "tests/basic/pp/fold-*", f->pretty ) ) then
+			ppEvalInit( )
+			ppParseIfExprOnly( TRUE )
+			ppEvalEnd( )
+
+			tkDumpToFile( pathStripExt( f->normed ) + ".txt" )
+			tkEnd( )
+			exit function
+		end if
 	end select
 
 	ppEvalInit( )
@@ -1183,6 +1198,8 @@ private function frogParseVersion _
 	end select
 
 	ppEval( )
+
+	ppEvalEnd( )
 
 	ppRemoveEOLs( )
 
@@ -1452,7 +1469,7 @@ end function
 			var binormed = pathStripExt( f->normed ) + ".bi"
 			var bipretty = pathStripExt( f->pretty ) + ".bi"
 			print "emitting: " + bipretty
-			astDump( f->ast )
+			'astDump( f->ast )
 			emitFile( binormed, f->ast )
 		end if
 		f = listGetNext( f )

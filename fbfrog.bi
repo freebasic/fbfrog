@@ -342,6 +342,7 @@ declare sub tkEnd( )
 declare function tkDumpBasic( byval id as integer, byval text as zstring ptr ) as string
 declare function tkDumpOne( byval x as integer ) as string
 declare sub tkDump( )
+declare sub tkDumpToFile( byref filename as string )
 declare function tkGetCount( ) as integer
 declare sub tkInsert _
 	( _
@@ -726,12 +727,14 @@ declare function hNumberLiteral( byval x as integer ) as ASTNODE ptr
 declare sub ppDirectives1( )
 declare sub ppDirectives2( )
 declare sub ppEvalInit( )
+declare sub ppEvalEnd( )
 declare sub ppMacroBegin( byval id as zstring ptr, byval paramcount as integer )
 declare sub ppMacroToken( byval tk as integer, byval text as zstring ptr = NULL )
 declare sub ppMacroParam( byval index as integer )
 declare sub ppAddSym( byval id as zstring ptr, byval is_defined as integer )
 declare sub ppExpandSym( byval id as zstring ptr )
 declare sub ppEval( )
+declare sub ppParseIfExprOnly( byval do_fold as integer )
 declare sub ppRemoveEOLs( )
 declare function cFile( ) as ASTNODE ptr
 
