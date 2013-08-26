@@ -1158,6 +1158,11 @@ private function cToplevel( byval body as integer ) as ASTNODE ptr
 		'' TYPEDEF BaseType IdList ';'
 		'' TYPEDEF STRUCT|UNION|ENUM [Identifier] '{' StructBody '}' IdList ';'
 		case KW_TYPEDEF
+			if( body = BODY_ENUM ) then
+				t = cEnumConst( )
+				exit select
+			end if
+
 			var y = parse.x + 1
 
 			'' STRUCT|UNION|ENUM
@@ -1182,7 +1187,13 @@ private function cToplevel( byval body as integer ) as ASTNODE ptr
 
 		'' STRUCT|UNION|ENUM [Identifier] ';'
 		'' STRUCT|UNION|ENUM [Identifier] '{' StructBody '}' ';'
+		'' STRUCT|UNION|ENUM Identifier MultDecl
 		case KW_STRUCT, KW_UNION, KW_ENUM
+			if( body = BODY_ENUM ) then
+				t = cEnumConst( )
+				exit select
+			end if
+
 			'' (Identifier ';')?
 			if( (tkGet( parse.x + 1 ) = TK_ID) and _
 			    (tkGet( parse.x + 2 ) = TK_SEMI) ) then
@@ -1213,6 +1224,11 @@ private function cToplevel( byval body as integer ) as ASTNODE ptr
 
 		'' ';'
 		case TK_SEMI
+			if( body = BODY_ENUM ) then
+				t = cEnumConst( )
+				exit select
+			end if
+
 			cSkip( )
 
 		'' '}'
