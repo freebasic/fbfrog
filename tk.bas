@@ -35,159 +35,159 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	( NULL  , @"echar"    ), _
 	( NULL  , @"ewstring" ), _
 	( NULL  , @"ewchar"   ), _
-	( @"!"  , @"tk" ), _ '' Main tokens
-	( @"!=" , @"tk" ), _
-	( @"#"  , @"tk" ), _
-	( @"##" , @"tk" ), _
-	( @"%"  , @"tk" ), _
-	( @"%=" , @"tk" ), _
-	( @"&"  , @"tk" ), _
-	( @"&=" , @"tk" ), _
-	( @"&&" , @"tk" ), _
-	( @"("  , @"tk" ), _
-	( @")"  , @"tk" ), _
-	( @"*"  , @"tk" ), _
-	( @"*=" , @"tk" ), _
-	( @"+"  , @"tk" ), _
-	( @"+=" , @"tk" ), _
-	( @"++" , @"tk" ), _
-	( @","  , @"tk" ), _
-	( @"-"  , @"tk" ), _
-	( @"-=" , @"tk" ), _
-	( @"--" , @"tk" ), _
-	( @"->" , @"tk" ), _
-	( @"."  , @"tk" ), _
-	( @"...", @"tk" ), _
-	( @"/"  , @"tk" ), _
-	( @"/=" , @"tk" ), _
-	( @":"  , @"tk" ), _
-	( @";"  , @"tk" ), _
-	( @"<"  , @"tk" ), _
-	( @"<<" , @"tk" ), _
-	( @"<<=", @"tk" ), _
-	( @"<=" , @"tk" ), _
-	( @"<>" , @"tk" ), _
-	( @"="  , @"tk" ), _
-	( @"==" , @"tk" ), _
-	( @">"  , @"tk" ), _
-	( @">>" , @"tk" ), _
-	( @">>=", @"tk" ), _
-	( @">=" , @"tk" ), _
-	( @"?"  , @"tk" ), _
-	( @"@"  , @"tk" ), _
-	( @"["  , @"tk" ), _
-	( @"\"  , @"tk" ), _
-	( @"]"  , @"tk" ), _
-	( @"^"  , @"tk" ), _
-	( @"^=" , @"tk" ), _
-	( @"_"  , @"tk" ), _
-	( @"{"  , @"tk" ), _
-	( @"|"  , @"tk" ), _
-	( @"|=" , @"tk" ), _
-	( @"||" , @"tk" ), _
-	( @"}"  , @"tk" ), _
-	( @"~"  , @"tk" ), _
+	( @"!"  , NULL ), _ '' Main tokens
+	( @"!=" , NULL ), _
+	( @"#"  , NULL ), _
+	( @"##" , NULL ), _
+	( @"%"  , NULL ), _
+	( @"%=" , NULL ), _
+	( @"&"  , NULL ), _
+	( @"&=" , NULL ), _
+	( @"&&" , NULL ), _
+	( @"("  , NULL ), _
+	( @")"  , NULL ), _
+	( @"*"  , NULL ), _
+	( @"*=" , NULL ), _
+	( @"+"  , NULL ), _
+	( @"+=" , NULL ), _
+	( @"++" , NULL ), _
+	( @","  , NULL ), _
+	( @"-"  , NULL ), _
+	( @"-=" , NULL ), _
+	( @"--" , NULL ), _
+	( @"->" , NULL ), _
+	( @"."  , NULL ), _
+	( @"...", NULL ), _
+	( @"/"  , NULL ), _
+	( @"/=" , NULL ), _
+	( @":"  , NULL ), _
+	( @";"  , NULL ), _
+	( @"<"  , NULL ), _
+	( @"<<" , NULL ), _
+	( @"<<=", NULL ), _
+	( @"<=" , NULL ), _
+	( @"<>" , NULL ), _
+	( @"="  , NULL ), _
+	( @"==" , NULL ), _
+	( @">"  , NULL ), _
+	( @">>" , NULL ), _
+	( @">>=", NULL ), _
+	( @">=" , NULL ), _
+	( @"?"  , NULL ), _
+	( @"@"  , NULL ), _
+	( @"["  , NULL ), _
+	( @"\"  , NULL ), _
+	( @"]"  , NULL ), _
+	( @"^"  , NULL ), _
+	( @"^=" , NULL ), _
+	( @"_"  , NULL ), _
+	( @"{"  , NULL ), _
+	( @"|"  , NULL ), _
+	( @"|=" , NULL ), _
+	( @"||" , NULL ), _
+	( @"}"  , NULL ), _
+	( @"~"  , NULL ), _
 	( NULL  , @"id" ), _ '' TK_ID
-	( @"__attribute__", @"kw" ), _ '' C-only keywords
-	( @"__cdecl" , @"kw" ), _
-	( @"__restrict", @"kw" ), _
-	( @"__restrict__", @"kw" ), _
-	( @"__stdcall", @"kw" ), _
-	( @"auto"    , @"kw" ), _
-	( @"break"   , @"kw" ), _
-	( @"char"    , @"kw" ), _
-	( @"default" , @"kw" ), _
-	( @"elif"    , @"kw" ), _
-	( @"float"   , @"kw" ), _
-	( @"inline"  , @"kw" ), _
-	( @"register", @"kw" ), _
-	( @"restrict", @"kw" ), _
-	( @"signed"  , @"kw" ), _
-	( @"struct"  , @"kw" ), _
-	( @"switch"  , @"kw" ), _
-	( @"typedef" , @"kw" ), _
-	( @"void"    , @"kw" ), _
-	( @"volatile", @"kw" ), _
-	( @"case"    , @"kw" ), _  '' C/FB shared keywords
-	( @"const"   , @"kw" ), _
-	( @"continue", @"kw" ), _
-	( @"define"  , @"kw" ), _
-	( @"defined" , @"kw" ), _
-	( @"do"      , @"kw" ), _
-	( @"double"  , @"kw" ), _
-	( @"else"    , @"kw" ), _
-	( @"endif"   , @"kw" ), _
-	( @"enum"    , @"kw" ), _
-	( @"extern"  , @"kw" ), _
-	( @"for"     , @"kw" ), _
-	( @"goto"    , @"kw" ), _
-	( @"if"      , @"kw" ), _
-	( @"ifdef"   , @"kw" ), _
-	( @"ifndef"  , @"kw" ), _
-	( @"include" , @"kw" ), _
-	( @"int"     , @"kw" ), _
-	( @"long"    , @"kw" ), _
-	( @"pragma"  , @"kw" ), _
-	( @"return"  , @"kw" ), _
-	( @"short"   , @"kw" ), _
-	( @"sizeof"  , @"kw" ), _
-	( @"static"  , @"kw" ), _
-	( @"undef"   , @"kw" ), _
-	( @"union"   , @"kw" ), _
-	( @"unsigned", @"kw" ), _
-	( @"while"   , @"kw" ), _
-	( @"alias"   , @"kw" ), _  '' FB-only keywords
-	( @"and"     , @"kw" ), _
-	( @"andalso" , @"kw" ), _
-	( @"any"     , @"kw" ), _
-	( @"as"      , @"kw" ), _
-	( @"byte"    , @"kw" ), _
-	( @"byval"   , @"kw" ), _
-	( @"cast"    , @"kw" ), _
-	( @"cdecl"   , @"kw" ), _
-	( @"cptr"    , @"kw" ), _
-	( @"declare" , @"kw" ), _
-	( @"dim"     , @"kw" ), _
-	( @"elseif"  , @"kw" ), _
-	( @"end"     , @"kw" ), _
-	( @"exit"    , @"kw" ), _
-	( @"export"  , @"kw" ), _
-	( @"field"   , @"kw" ), _
-	( @"function", @"kw" ), _
-	( @"iif"     , @"kw" ), _
-	( @"integer" , @"kw" ), _
-	( @"longint" , @"kw" ), _
-	( @"loop"    , @"kw" ), _
-	( @"mod"     , @"kw" ), _
-	( @"next"    , @"kw" ), _
-	( @"not"     , @"kw" ), _
-	( @"or"      , @"kw" ), _
-	( @"orelse"  , @"kw" ), _
-	( @"pascal"  , @"kw" ), _
-	( @"private" , @"kw" ), _
-	( @"ptr"     , @"kw" ), _
-	( @"scope"   , @"kw" ), _
-	( @"select"  , @"kw" ), _
-	( @"shared"  , @"kw" ), _
-	( @"shl"     , @"kw" ), _
-	( @"shr"     , @"kw" ), _
-	( @"single"  , @"kw" ), _
-	( @"stdcall" , @"kw" ), _
-	( @"sub"     , @"kw" ), _
-	( @"then"    , @"kw" ), _
-	( @"to"      , @"kw" ), _
-	( @"type"    , @"kw" ), _
-	( @"typeof"  , @"kw" ), _
-	( @"ubyte"   , @"kw" ), _
-	( @"uinteger", @"kw" ), _
-	( @"ulong"   , @"kw" ), _
-	( @"ulongint", @"kw" ), _
-	( @"ushort"  , @"kw" ), _
-	( @"wend"    , @"kw" ), _
-	( @"wstr"    , @"kw" ), _
-	( @"wstring" , @"kw" ), _
-	( @"xor"     , @"kw" ), _
-	( @"zstring" , @"kw" )  _
+	( @"__attribute__", NULL ), _ '' C-only keywords
+	( @"__cdecl"      , NULL ), _
+	( @"__restrict"   , NULL ), _
+	( @"__restrict__" , NULL ), _
+	( @"__stdcall"    , NULL ), _
+	( @"auto"    , NULL ), _
+	( @"break"   , NULL ), _
+	( @"char"    , NULL ), _
+	( @"default" , NULL ), _
+	( @"elif"    , NULL ), _
+	( @"float"   , NULL ), _
+	( @"inline"  , NULL ), _
+	( @"register", NULL ), _
+	( @"restrict", NULL ), _
+	( @"signed"  , NULL ), _
+	( @"struct"  , NULL ), _
+	( @"switch"  , NULL ), _
+	( @"typedef" , NULL ), _
+	( @"void"    , NULL ), _
+	( @"volatile", NULL ), _
+	( @"case"    , NULL ), _  '' C/FB shared keywords
+	( @"const"   , NULL ), _
+	( @"continue", NULL ), _
+	( @"define"  , NULL ), _
+	( @"defined" , NULL ), _
+	( @"do"      , NULL ), _
+	( @"double"  , NULL ), _
+	( @"else"    , NULL ), _
+	( @"endif"   , NULL ), _
+	( @"enum"    , NULL ), _
+	( @"extern"  , NULL ), _
+	( @"for"     , NULL ), _
+	( @"goto"    , NULL ), _
+	( @"if"      , NULL ), _
+	( @"ifdef"   , NULL ), _
+	( @"ifndef"  , NULL ), _
+	( @"include" , NULL ), _
+	( @"int"     , NULL ), _
+	( @"long"    , NULL ), _
+	( @"pragma"  , NULL ), _
+	( @"return"  , NULL ), _
+	( @"short"   , NULL ), _
+	( @"sizeof"  , NULL ), _
+	( @"static"  , NULL ), _
+	( @"undef"   , NULL ), _
+	( @"union"   , NULL ), _
+	( @"unsigned", NULL ), _
+	( @"while"   , NULL ), _
+	( @"alias"   , NULL ), _  '' FB-only keywords
+	( @"and"     , NULL ), _
+	( @"andalso" , NULL ), _
+	( @"any"     , NULL ), _
+	( @"as"      , NULL ), _
+	( @"byte"    , NULL ), _
+	( @"byval"   , NULL ), _
+	( @"cast"    , NULL ), _
+	( @"cdecl"   , NULL ), _
+	( @"cptr"    , NULL ), _
+	( @"declare" , NULL ), _
+	( @"dim"     , NULL ), _
+	( @"elseif"  , NULL ), _
+	( @"end"     , NULL ), _
+	( @"exit"    , NULL ), _
+	( @"export"  , NULL ), _
+	( @"field"   , NULL ), _
+	( @"function", NULL ), _
+	( @"iif"     , NULL ), _
+	( @"integer" , NULL ), _
+	( @"longint" , NULL ), _
+	( @"loop"    , NULL ), _
+	( @"mod"     , NULL ), _
+	( @"next"    , NULL ), _
+	( @"not"     , NULL ), _
+	( @"or"      , NULL ), _
+	( @"orelse"  , NULL ), _
+	( @"pascal"  , NULL ), _
+	( @"private" , NULL ), _
+	( @"ptr"     , NULL ), _
+	( @"scope"   , NULL ), _
+	( @"select"  , NULL ), _
+	( @"shared"  , NULL ), _
+	( @"shl"     , NULL ), _
+	( @"shr"     , NULL ), _
+	( @"single"  , NULL ), _
+	( @"stdcall" , NULL ), _
+	( @"sub"     , NULL ), _
+	( @"then"    , NULL ), _
+	( @"to"      , NULL ), _
+	( @"type"    , NULL ), _
+	( @"typeof"  , NULL ), _
+	( @"ubyte"   , NULL ), _
+	( @"uinteger", NULL ), _
+	( @"ulong"   , NULL ), _
+	( @"ulongint", NULL ), _
+	( @"ushort"  , NULL ), _
+	( @"wend"    , NULL ), _
+	( @"wstr"    , NULL ), _
+	( @"wstring" , NULL ), _
+	( @"xor"     , NULL ), _
+	( @"zstring" , NULL )  _
 }
 
 #assert ubound( tk_info ) = TK__COUNT - 1
@@ -248,45 +248,34 @@ sub tkEnd( )
 end sub
 
 function tkDumpBasic( byval id as integer, byval text as zstring ptr ) as string
-	var s = "[" + *tk_info(id).debug + "]"
-	s += " "
-	if( text ) then
-		s += "'" + *text + "'"
-	elseif( tk_info(id).text ) then
-		s += "'" + *tk_info(id).text + "'"
+	var s = "["
+	if( tk_info(id).debug ) then
+		s += *tk_info(id).debug
+	else
+		s += ucase( *tk_info(id).text )
 	end if
+	if( text ) then
+		s += " """ + *text + """"
+	end if
+	s += "]"
 	function = s
 end function
 
 function tkDumpOne( byval x as integer ) as string
-	dim as ONETOKEN ptr p = any
-	dim as string s, comment
-	dim as zstring ptr text = any
+	var p = tkAccess( x )
+	var s = str( x ) + " " + tkDumpBasic( p->id, p->text )
 
-	p = tkAccess( x )
-	s += str( x ) + " "
-	s += "["
-	s += *tk_info(p->id).debug
-	s += "]"
-
-	s += " "
-	if( p->text ) then
-		s += "'" + *p->text + "'"
-	elseif( tk_info(p->id).text ) then
-		s += "'" + *tk_info(p->id).text + "'"
-	end if
-
-	text = tkGetComment( x )
-	if( text ) then
-		comment = strReplace( *text, !"\n", "\n" )
-		if( len( comment ) > 40 ) then
-			comment = left( comment, 40 ) + "..."
+	var comment = p->comment
+	if( comment ) then
+		var scomment = strReplace( *comment, !"\n", "\n" )
+		if( len( scomment ) > 40 ) then
+			scomment = left( scomment, 40 ) + "..."
 		end if
-		s += " comment(" + comment + ")"
+		s += " comment=""" + scomment + """"
 	end if
 
 	if( tkGetAst( x ) ) then
-		s += "ast=" & astDumpInline( tkGetAst( x ) )
+		s += " ast=" & astDumpInline( tkGetAst( x ) )
 	end if
 
 	function = s
