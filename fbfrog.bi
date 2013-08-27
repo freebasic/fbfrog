@@ -705,7 +705,8 @@ declare function lexLoadFile _
 	( _
 		byval x as integer, _
 		byval file as FROGFILE ptr, _
-		byval fb_mode as integer = FALSE _
+		byval fb_mode as integer = FALSE, _
+		byval keep_comments as integer = FALSE _
 	) as integer
 declare function lexPeekLine _
 	( _

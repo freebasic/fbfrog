@@ -2,9 +2,14 @@
 '' Token buffer preprocessing
 '' --------------------------
 ''
-'' ppComments() removes TK_COMMENTs, for easier parsing later. It can assign
-'' their text to other tokens (tkSetComment()) if comments should be preserved
-'' for later.
+'' ppComments() assigns comments from TK_COMMENTs (if any exist even, depending
+'' on whether lexLoadFile() was asked to preserve them or not) to other,
+'' non-whitespace, tokens. It tries to be smart and effectively assign comments
+'' to corresponding high-level constructs. For example, if a comment is found
+'' at the end of a non-empty line, it will be given to the last non-whitespace
+'' token in that line. This way, the C parser later won't be disturbed by any
+'' TK_COMMENTs and can easily collect assigned comments from the tokens of
+'' high-level constructs.
 ''
 '' ppDividers() merges empty lines (i.e. multiple TK_EOLs) into TK_DIVIDERs,
 '' for nicer output formatting later. It can be nice to preserve the
@@ -100,23 +105,11 @@ private sub hAccumTkComment( byval x as integer, byval comment as integer )
 	hAccumComment( x, *tkGetText( comment ) )
 end sub
 
-private sub hStripAllComments( )
-	dim as integer x = any
-	x = 0
-	while( tkGet( x ) <> TK_EOF )
-		if( tkGet( x ) = TK_COMMENT ) then
-			tkRemove( x, x )
-			x -= 1
-		end if
-		x += 1
-	wend
-end sub
-
 private function hFindClosingParen( byval x as integer ) as integer
-	dim as integer level = any, opening = any, closing = any
+	var opening = tkGet( x )
+	var level = 0
 
-	opening = tkGet( x )
-	level = 0
+	dim as integer closing
 	select case( opening )
 	case TK_LBRACE
 		closing = TK_RBRACE
@@ -191,7 +184,7 @@ private function hSkipStatement( byval x as integer ) as integer
 		x = tkSkipCommentEol( x )
 	loop
 
-	assert( x > begin )
+	assert( iif( tkGet( begin ) <> TK_EOF, x > begin, TRUE ) )
 	function = x
 end function
 
@@ -255,24 +248,13 @@ private function ppComment( byval x as integer ) as integer
 end function
 
 sub ppComments( )
-	dim as integer x = any
-
-	'' TODO
-	hStripAllComments( )
-
-	x = 0
-	do
-		select case( tkGet( x ) )
-		case TK_EOF
-			exit do
-
-		case TK_COMMENT
+	var x = 0
+	while( tkGet( x ) <> TK_EOF )
+		if( tkGet( x ) = TK_COMMENT ) then
 			x = ppComment( x )
-
-		end select
-
+		end if
 		x += 1
-	loop
+	wend
 end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''

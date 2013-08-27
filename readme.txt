@@ -52,7 +52,14 @@ Compiling:
 
 To do:
 
+- hAddTextToken() could accidentially look up comment/string bodies in the
+  keyword table, then produce the wrong token?
+
+- hRemoveOuterDIVIDERs() crashes if there's just one DIVIDER in the AST
+  (.h file with just a newline)
+
 - Must do automated formatting of macro bodies in emitter now that TK_SPACE is gone
+- Macro bodies should be emitted as FB text, not C text
 
 - Add preset files, *.txt with FB-like syntax
     - Working on/adding/sharing presets becomes easier because fbfrog itself
@@ -156,6 +163,14 @@ To do:
 
 - ## PP merging should allow TK_ID ## TK_DECNUM or TK_UNDERSCORE,
   currently it only allows TK_ID ## TK_ID
+	careful:
+		#define m(a) a##0x
+		void m(test)(void);
+	should become:
+		void m0x(void);
+	and not one of:
+		void m0x0(void);
+		void m0(void);
 
 - AST merging should also handle nested nodes in unions/enums, not just structs
 
@@ -171,6 +186,12 @@ To do:
   not in the toplevel file context, shouldn't they?
 
 - It'd be nice if fbfrog could preserve comments and dividers optionally
+    - rely on ppComments() to distribute comments to non-whitespace tokens
+    - comment given to a TK_ID that is a macro call and will be expanded should
+      be given to first non-whitespace token from the expansion
+    - comments from macro call argument list should just be ignored
+    - comments behind #define bodies should go to the #define not the body tokens
+    - comments in #define bodies should be ignored?
 
 - should share C operator precedence table between C/PP modules
 - let hFold() solve out iif( x, true, true ) and iif( x, false, false )

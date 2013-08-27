@@ -83,6 +83,7 @@ type LEXSTUFF
 	behindspace	as integer
 	filename	as string
 	fb_mode		as integer    '' C or FB?
+	keep_comments	as integer    '' Whether to ignore comments or produce TK_COMMENTs
 
 	fbkwhash	as THASH
 	ckwhash		as THASH
@@ -187,7 +188,9 @@ private sub hReadLineComment( )
 		end select
 	loop
 
-	hAddTextToken( TK_COMMENT, begin )
+	if( lex.keep_comments ) then
+		hAddTextToken( TK_COMMENT, begin )
+	end if
 end sub
 
 private sub hReadComment( )
@@ -224,7 +227,9 @@ private sub hReadComment( )
 		end select
 	loop
 
-	hAddTextToken( TK_COMMENT, begin )
+	if( lex.keep_comments ) then
+		hAddTextToken( TK_COMMENT, begin )
+	end if
 
 	if( saw_end ) then
 		lex.i += 2
@@ -820,13 +825,15 @@ function lexLoadFile _
 	( _
 		byval x as integer, _
 		byval file as FROGFILE ptr, _
-		byval fb_mode as integer _
+		byval fb_mode as integer, _
+		byval keep_comments as integer _
 	) as integer
 
 	lex.x = x
 	lex.location.file = file
 	lex.location.linenum = 0
 	lex.fb_mode = fb_mode
+	lex.keep_comments = keep_comments
 	hLoadFile( file, lex.buffer, lex.limit )
 	lex.i = lex.buffer
 	lex.bol = lex.i

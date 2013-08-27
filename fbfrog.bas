@@ -968,7 +968,14 @@ private function frogParseVersion _
 	end if
 
 	tkInit( )
-	lexLoadFile( 0, f )
+
+	var keep_comments = FALSE
+	select case( frog.preset )
+	case "tests"
+		keep_comments = TRUE
+	end select
+
+	lexLoadFile( 0, f, , keep_comments )
 
 	'' Parse PP directives, and expand #includes if wanted and possible.
 	''
@@ -999,7 +1006,7 @@ private function frogParseVersion _
 					    (incf <> f) ) then
 						'' Replace #include by included file's content
 						tkRemove( x, x )
-						lexLoadFile( x, incf )
+						lexLoadFile( x, incf, , keep_comments )
 						have_new_tokens = TRUE
 
 						'' Counter the +1 below, so this position is re-parsed
@@ -1338,8 +1345,6 @@ end function
 			tkInit( )
 			lexLoadFile( 0, f )
 
-			ppComments( )
-			ppDividers( )
 			ppDirectives1( )
 
 			'' Find #include directives
