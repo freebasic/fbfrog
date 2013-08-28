@@ -21,12 +21,14 @@ declare function cIdList _
 		byval decl as integer, _
 		byval basedtype as integer, _
 		byval basesubtype as ASTNODE ptr, _
-		byval gccattribs as integer _
+		byval gccattribs as integer, _
+		byref comment as string _
 	) as ASTNODE ptr
 declare function cMultDecl _
 	( _
 		byval decl as integer, _
-		byval gccattribs as integer _
+		byval gccattribs as integer, _
+		byref comment as string _
 	) as ASTNODE ptr
 
 enum
@@ -339,9 +341,10 @@ end function
 ''    TYPEDEF MultDecl
 private function cTypedef( ) as ASTNODE ptr
 	'' TYPEDEF?
+	var comment = tkCollectComments( parse.x, parse.x )
 	cExpectSkip( KW_TYPEDEF )
 
-	function = cMultDecl( DECL_TYPEDEF, 0 )
+	function = cMultDecl( DECL_TYPEDEF, 0, comment )
 end function
 
 '' Structs/Unions, Enums
@@ -397,7 +400,7 @@ private function cStructCompound( ) as ASTNODE ptr
 	if( is_typedef ) then
 		'' IdList
 		var subtype = astNew( ASTCLASS_ID, id )
-		var t = cIdList( DECL_TYPEDEF, TYPE_UDT, subtype, 0 )
+		var t = cIdList( DECL_TYPEDEF, TYPE_UDT, subtype, 0, "" )
 		astDelete( subtype )
 		var group = astNew( ASTCLASS_GROUP )
 		astAppend( group, struct )
@@ -655,28 +658,24 @@ private sub cBaseType _
 	cGccAttributeList( gccattribs )
 end sub
 
-'' ParamDecl = '...' | MultDecl{Param}
-private function cParamDecl( ) as ASTNODE ptr
-	dim as ASTNODE ptr t = any
-
-	'' '...'?
-	if( tkGet( parse.x ) = TK_ELLIPSIS ) then
-		t = astNew( ASTCLASS_PARAM )
-		astAddComment( t, tkCollectComments( parse.x, parse.x ) )
-		cSkip( )
-	else
-		t = cMultDecl( DECL_PARAM, 0 )
-	end if
-
-	function = t
-end function
-
 '' ParamDeclList = ParamDecl (',' ParamDecl)*
+'' ParamDecl = '...' | MultDecl{Param}
 private function cParamDeclList( ) as ASTNODE ptr
 	var group = astNew( ASTCLASS_GROUP )
 
 	do
-		astAppend( group, cParamDecl( ) )
+		dim as ASTNODE ptr t
+
+		'' '...'?
+		if( tkGet( parse.x ) = TK_ELLIPSIS ) then
+			t = astNew( ASTCLASS_PARAM )
+			astAddComment( t, tkCollectComments( parse.x, parse.x ) )
+			cSkip( )
+		else
+			t = cMultDecl( DECL_PARAM, 0, "" )
+		end if
+
+		astAppend( group, t )
 
 		'' ','?
 	loop while( cMatch( TK_COMMA ) )
@@ -1073,14 +1072,26 @@ private function cIdList _
 		byval decl as integer, _
 		byval basedtype as integer, _
 		byval basesubtype as ASTNODE ptr, _
-		byval gccattribs as integer _
+		byval gccattribs as integer, _
+		byref comment as string _
 	) as ASTNODE ptr
 
 	var group = astNew( ASTCLASS_GROUP )
 
 	'' ... (',' ...)*
 	do
+		var begin = parse.x
+
 		astAppend( group, cDeclarator( 0, decl, basedtype, basesubtype, gccattribs, NULL, 0, 0 ) )
+
+		'' The first declaration takes the comments from the base type
+		if( len( comment ) > 0 ) then
+			astAddComment( group->tail, comment )
+			comment = ""
+		end if
+
+		'' Every declaration takes the comments on its declarator tokens
+		astAddComment( group->tail, tkCollectComments( begin, parse.x - 1 ) )
 
 		'' Everything can have a comma and more identifiers,
 		'' except for parameters.
@@ -1114,16 +1125,21 @@ end function
 private function cMultDecl _
 	( _
 		byval decl as integer, _
-		byval gccattribs as integer _
+		byval gccattribs as integer, _
+		byref comment as string _
 	) as ASTNODE ptr
+
+	var begin = parse.x
 
 	'' BaseType
 	dim as integer dtype
 	dim as ASTNODE ptr subtype
 	cBaseType( dtype, subtype, gccattribs, decl )
 
+	comment += tkCollectComments( begin, parse.x - 1 )
+
 	'' IdList
-	function = cIdList( decl, dtype, subtype, gccattribs )
+	function = cIdList( decl, dtype, subtype, gccattribs, comment )
 	astDelete( subtype )
 end function
 
@@ -1139,20 +1155,23 @@ private function cToplevel( byval body as integer ) as ASTNODE ptr
 
 		case TK_PPINCLUDE
 			t = astNew( ASTCLASS_PPINCLUDE, tkGetText( parse.x ) )
+			astAddComment( t, tkCollectComments( parse.x, parse.x ) )
 			cSkip( )
 
 		case TK_PPDEFINE
 			t = astClone( tkGetAst( parse.x ) )
-			assert( t->class = ASTCLASS_PPDEFINE )
+			astAddComment( t, tkCollectComments( parse.x, parse.x ) )
 			cSkip( )
 
 		case TK_PPUNDEF
 			t = astNew( ASTCLASS_PPUNDEF, tkGetText( parse.x ) )
+			astAddComment( t, tkCollectComments( parse.x, parse.x ) )
 			cSkip( )
 
 		case TK_DIVIDER
 			'' (ditto)
-			t = astNew( ASTCLASS_DIVIDER )
+			t = astNew( ASTCLASS_DIVIDER, tkGetText( parse.x ) )
+			astAddComment( t, tkCollectComments( parse.x, parse.x ) )
 			cSkip( )
 
 		'' TYPEDEF BaseType IdList ';'
@@ -1216,9 +1235,9 @@ private function cToplevel( byval body as integer ) as ASTNODE ptr
 				t = cStructCompound( )
 			else
 				if( body = BODY_STRUCT ) then
-					t = cMultDecl( DECL_FIELD, 0 )
+					t = cMultDecl( DECL_FIELD, 0, "" )
 				else
-					t = cMultDecl( DECL_VAR, 0 )
+					t = cMultDecl( DECL_VAR, 0, "" )
 				end if
 			end if
 
@@ -1243,10 +1262,12 @@ private function cToplevel( byval body as integer ) as ASTNODE ptr
 		case else
 			select case( body )
 			case BODY_STRUCT
-				t = cMultDecl( DECL_FIELD, 0 )
+				t = cMultDecl( DECL_FIELD, 0, "" )
 			case BODY_ENUM
 				t = cEnumConst( )
 			case else
+				var begin = parse.x
+
 				'' Global variable/procedure declarations
 				''    GccAttributeList [EXTERN|STATIC] MultDecl
 				'' __ATTRIBUTE__((...))
@@ -1264,7 +1285,9 @@ private function cToplevel( byval body as integer ) as ASTNODE ptr
 					cSkip( )
 				end select
 
-				t = cMultDecl( decl, gccattribs )
+				var comment = tkCollectComments( begin, parse.x - 1 )
+
+				t = cMultDecl( decl, gccattribs, comment )
 			end select
 		end select
 

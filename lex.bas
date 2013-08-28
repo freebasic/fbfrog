@@ -143,9 +143,11 @@ private sub hReadLineComment( )
 	'' Line comments:
 	''    'abcd
 	''    //abcd
-	'' The whole comment body except for the ' or // iss put into the token.
-	'' EOL remains a separate token. Escaped newlines ('\' [Spaces] EOL)
-	'' means the comment continues on the next line (C mode only).
+	'' The whole comment body except for the ' or // is put into the
+	'' TK_COMMENT. The EOL behind the comment remains a separate token.
+	'' In C mode the comment may contain escaped newlines ('\' [Spaces] EOL)
+	'' which means the comment continues on the next line.
+
 	lex.i += 2
 	var begin = lex.i
 	var escaped = FALSE

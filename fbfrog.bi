@@ -24,6 +24,7 @@ declare function strReplace _
 		byref a as string, _
 		byref b as string _
 	) as string
+declare function strMakePrintable( byref a as string ) as string
 declare function strMatches _
 	( _
 		byref origpattern as string, _
@@ -340,6 +341,7 @@ type ASTNODE as ASTNODE_
 declare sub tkInit( )
 declare sub tkEnd( )
 declare function tkDumpBasic( byval id as integer, byval text as zstring ptr ) as string
+declare function hDumpComment( byval comment as zstring ptr ) as string
 declare function tkDumpOne( byval x as integer ) as string
 declare sub tkDump( )
 declare sub tkDumpToFile( byref filename as string )

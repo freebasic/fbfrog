@@ -8,6 +8,8 @@
 
 #include once "fbfrog.bi"
 
+declare sub emitStmt( byref s as string, byval comment as zstring ptr = NULL )
+
 declare function emitAst _
 	( _
 		byval n as ASTNODE ptr, _
@@ -117,16 +119,85 @@ namespace emit
 	dim shared as integer indent, fo
 end namespace
 
-private sub emitLine( byref ln as string )
-	var s = trim( ln, any !" \t\n\r" )
+private sub emitEmptyLine( )
+	print #emit.fo, ""
+end sub
 
-	if( len( s ) > 0 ) then
-		for i as integer = 1 to emit.indent
-			print #emit.fo, !"\t";
-		next
+private sub emitIndentedLine( byref ln as string )
+	assert( len( ln ) > 0 )
+
+	dim s as string
+
+	for i as integer = 1 to emit.indent
+		s += !"\t"
+	next
+
+	s += ln
+	print #emit.fo, s
+end sub
+
+private function hPrependSpace( byref comment as string ) as string
+	var s = comment
+
+	'' Prepend a space if none is there yet
+	if( left( s, 1 ) <> " " ) then
+		s = " " + s
 	end if
 
-	print #emit.fo, s
+	function = s
+end function
+
+private sub emitLineComment( byref comment as string )
+	emitIndentedLine( "''" + hPrependSpace( comment ) )
+end sub
+
+private sub hFlushLineComment( byref ln as string )
+	if( len( ln ) > 0 ) then
+		emitLineComment( ln )
+		ln = ""
+	end if
+end sub
+
+'' The comment text may contain newlines, but we need to emit every line
+'' individually to be able to prepend it with the ' and indentation.
+private sub emitLineComments( byval comment as zstring ptr )
+	dim ln as string
+	for i as integer = 0 to len( *comment )-1
+		select case( (*comment)[i] )
+		case &h0A, &h0D  '' LF, CR
+			'' Flush previous line, ignore this newline, and then
+			'' continue with next line
+			hFlushLineComment( ln )
+		case else
+			ln += chr( (*comment)[i] )
+		end select
+	next
+	hFlushLineComment( ln )
+end sub
+
+private function hIsMultiLineComment( byval comment as zstring ptr ) as integer
+	do
+		select case( (*comment)[0] )
+		case 0 : exit do
+		case &h0A, &h0D : return TRUE
+		end select
+		comment += 1
+	loop
+	function = FALSE
+end function
+
+private sub emitStmt( byref s as string, byval comment as zstring ptr )
+	assert( len( s ) > 0 )
+	if( comment ) then
+		if( hIsMultiLineComment( comment ) ) then
+			emitLineComments( comment )
+			emitIndentedLine( s )
+		else
+			emitIndentedLine( s + "  ''" + hPrependSpace( *comment ) )
+		end if
+	else
+		emitIndentedLine( s )
+	end if
 end sub
 
 private function hIdAndArray( byval n as ASTNODE ptr ) as string
@@ -193,7 +264,7 @@ private function emitAst _
 		s = ""
 
 	case ASTCLASS_VERSION
-		emitLine( "version" + hCommaList( n->expr, TRUE ) )
+		emitStmt( "version" + hCommaList( n->expr, TRUE ) )
 		emit.indent += 1
 		var child = n->head
 		while( child )
@@ -202,13 +273,20 @@ private function emitAst _
 		wend
 		s = ""
 		emit.indent -= 1
-		emitLine( "end version" )
+		emitStmt( "end version" )
 
 	case ASTCLASS_DIVIDER
-		emitLine( "" )
+		emitEmptyLine( )
+		if( n->comment ) then
+			emitLineComments( n->comment )
+			emitEmptyLine( )
+		end if
+		if( n->text ) then
+			emitLineComments( n->text )
+		end if
 
 	case ASTCLASS_PPINCLUDE
-		emitLine( "#include """ + *n->text + """" )
+		emitStmt( "#include """ + *n->text + """", n->comment )
 
 	case ASTCLASS_PPDEFINE
 		s += "#define " + *n->text
@@ -246,11 +324,11 @@ private function emitAst _
 			wend
 		end if
 
-		emitLine( s )
+		emitStmt( s, n->comment )
 		s = ""
 
 	case ASTCLASS_PPUNDEF
-		emitLine( "#undef " + *n->text )
+		emitStmt( "#undef " + *n->text, n->comment )
 
 	case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
 		dim as string compoundkeyword
@@ -267,7 +345,7 @@ private function emitAst _
 		if( n->text ) then
 			s += " " + *n->text
 		end if
-		emitLine( s )
+		emitStmt( s, n->comment )
 		s = ""
 		emit.indent += 1
 
@@ -279,11 +357,11 @@ private function emitAst _
 		s = ""
 
 		emit.indent -= 1
-		emitLine( "end " + compoundkeyword )
+		emitStmt( "end " + compoundkeyword )
 
 	case ASTCLASS_TYPEDEF
 		assert( n->array = NULL )
-		emitLine( "type " + *n->text + " as " + emitType( n->dtype, n->subtype ) )
+		emitStmt( "type " + *n->text + " as " + emitType( n->dtype, n->subtype ), n->comment )
 
 	case ASTCLASS_STRUCTFWD
 		'' type UDT as UDT_
@@ -291,27 +369,27 @@ private function emitAst _
 		'' body as <type UDT_ : ... : end type>, and everything else
 		'' can keep using UDT, that's easier than adjusting all
 		'' declarations to use UDT_ in place of UDT.
-		emitLine( "type " + *n->text + " as " + *n->text + "_" )
+		emitStmt( "type " + *n->text + " as " + *n->text + "_", n->comment )
 
 	case ASTCLASS_VAR
 		if( n->attrib and ASTATTRIB_EXTERN ) then
-			emitLine( "extern "     + hIdAndArray( n ) + " as " + emitType( n->dtype, n->subtype ) )
+			emitStmt( "extern "     + hIdAndArray( n ) + " as " + emitType( n->dtype, n->subtype ), n->comment )
 		elseif( n->attrib and ASTATTRIB_PRIVATE ) then
-			emitLine( "dim shared " + hIdAndArray( n ) + " as " + emitType( n->dtype, n->subtype ) )
+			emitStmt( "dim shared " + hIdAndArray( n ) + " as " + emitType( n->dtype, n->subtype ), n->comment )
 		else
-			emitLine( "extern     " + hIdAndArray( n ) + " as " + emitType( n->dtype, n->subtype ) )
-			emitLine( "dim shared " + hIdAndArray( n ) + " as " + emitType( n->dtype, n->subtype ) )
+			emitStmt( "extern     " + hIdAndArray( n ) + " as " + emitType( n->dtype, n->subtype ), n->comment )
+			emitStmt( "dim shared " + hIdAndArray( n ) + " as " + emitType( n->dtype, n->subtype ), n->comment )
 		end if
 
 	case ASTCLASS_FIELD
-		emitLine( hIdAndArray( n ) + " as " + emitType( n->dtype, n->subtype ) )
+		emitStmt( hIdAndArray( n ) + " as " + emitType( n->dtype, n->subtype ), n->comment )
 
 	case ASTCLASS_ENUMCONST
 		s += *n->text
 		if( n->expr ) then
 			s += " = " + emitAst( n->expr )
 		end if
-		emitLine( s )
+		emitStmt( s, n->comment )
 		s = ""
 
 	case ASTCLASS_PROC
@@ -350,7 +428,7 @@ private function emitAst _
 		end if
 
 		if( n->text ) then
-			emitLine( s )
+			emitStmt( s, n->comment )
 			s = ""
 		end if
 
@@ -382,10 +460,10 @@ private function emitAst _
 		s += emitAst( n->r )
 
 	case ASTCLASS_EXTERNBLOCKBEGIN
-		emitLine( "extern """ + *n->text + """" )
+		emitStmt( "extern """ + *n->text + """" )
 
 	case ASTCLASS_EXTERNBLOCKEND
-		emitLine( "end extern" )
+		emitStmt( "end extern" )
 
 	case ASTCLASS_MACROPARAM
 		s += *n->text
@@ -407,7 +485,7 @@ private function emitAst _
 		s += *n->text
 
 	case ASTCLASS_TEXT
-		s += *n->text
+		s += *n->text + emitAst( n->expr )
 
 	case ASTCLASS_IIF
 		s += "iif( " + _

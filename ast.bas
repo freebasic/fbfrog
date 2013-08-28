@@ -683,8 +683,21 @@ function astDumpOne( byval n as ASTNODE ptr ) as string
 
 	s += astnodeinfo(n->class).name
 
+	#macro checkAttrib( a )
+		if( n->attrib and ASTATTRIB_##a ) then s += " " + lcase( #a, 1 )
+	#endmacro
+	checkAttrib( EXTERN )
+	checkAttrib( PRIVATE )
+	checkAttrib( OCT )
+	checkAttrib( HEX )
+	checkAttrib( MERGEWITHPREV )
+	checkAttrib( STRINGIFY )
+	checkAttrib( CDECL )
+	checkAttrib( STDCALL )
+	checkAttrib( HIDECALLCONV )
+
 	if( n->text ) then
-		s += " " + strReplace( *n->text, !"\n", "\n" )
+		s += " """ + strMakePrintable( *n->text ) + """"
 	end if
 
 	select case( n->class )
@@ -739,18 +752,7 @@ function astDumpOne( byval n as ASTNODE ptr ) as string
 		s += " as " + emitType( n->dtype, NULL, TRUE )
 	end if
 
-	#macro checkAttrib( a )
-		if( n->attrib and ASTATTRIB_##a ) then s += " " + lcase( #a, 1 )
-	#endmacro
-	checkAttrib( EXTERN )
-	checkAttrib( PRIVATE )
-	checkAttrib( OCT )
-	checkAttrib( HEX )
-	checkAttrib( MERGEWITHPREV )
-	checkAttrib( STRINGIFY )
-	checkAttrib( CDECL )
-	checkAttrib( STDCALL )
-	checkAttrib( HIDECALLCONV )
+	s += hDumpComment( n->comment )
 
 	function = s
 end function

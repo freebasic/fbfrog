@@ -82,27 +82,26 @@ private function hIsBeforeEol _
 
 end function
 
-private sub hAccumComment( byval x as integer, byref comment as string )
-	dim as zstring ptr s = any
-	dim as string text
-
-	if( len( comment ) = 0 ) then
+private sub hAccumComment( byval x as integer, byval comment as zstring ptr )
+	if( len( *comment ) = 0 ) then
 		exit sub
 	end if
 
-	s = tkGetComment( x )
+	dim as string text
+	var s = tkGetComment( x )
 	if( s ) then
 		text = *s + !"\n"
 	end if
 
-	text += comment
+	text += *comment
 
 	tkSetComment( x, text )
 end sub
 
 private sub hAccumTkComment( byval x as integer, byval comment as integer )
 	assert( tkGet( comment ) = TK_COMMENT )
-	hAccumComment( x, *tkGetText( comment ) )
+	assert( tkGet( x ) <> TK_EOF )
+	hAccumComment( x, tkGetText( comment ) )
 end sub
 
 private function hFindClosingParen( byval x as integer ) as integer
@@ -189,8 +188,6 @@ private function hSkipStatement( byval x as integer ) as integer
 end function
 
 private function ppComment( byval x as integer ) as integer
-	dim as integer y = any, at_bol = any, at_eol = any
-
 	''
 	'' int A; //FOO    -> assign FOO to ';', so it can be
 	''                    picked up by the A vardecl
@@ -214,31 +211,69 @@ private function ppComment( byval x as integer ) as integer
 	'' //FOO
 	'' A;
 
-	at_bol = hIsBeforeEol( x, -1 )
-	at_eol = hIsBeforeEol( x,  1 )
+	var at_bol = hIsBeforeEol( x, -1 )
+	var at_eol = hIsBeforeEol( x,  1 )
+
+	var xnext = tkSkipComment( x )
+	var xprev = tkSkipComment( x, -1 )
 
 	if( at_bol and at_eol ) then
-		'' Comment above empty line?
-		if( tkCount( TK_EOL, x + 1, tkSkipCommentEol( x ) ) >= 2 ) then
-			hAccumTkComment( tkSkipComment( x ), x )
+		var xnextnonspace = tkSkipCommentEol( x )
+		var xnextstmt = hSkipStatement( x )
+
+		'' Comment above empty line (ie. above two EOLs or EOL & EOF)?
+		if( (tkCount( TK_EOL, x + 1, xnextnonspace ) >= 2) or _
+		    ((tkGet(                xnext   ) = TK_EOL) and _
+		     (tkGet( tkSkipComment( xnext ) ) = TK_EOF)) ) then
+			hAccumTkComment( xnext, x )
+
+		'' Comment above multiple consecutive statements? (not separated by empty lines)
+		elseif( (xnextstmt < hSkipStatement( xnextstmt )) and _
+		        (tkCount( TK_EOL, tkSkipCommentEol( xnextstmt, -1 ) + 1, xnextstmt - 1 ) < 2) ) then
+			hAccumTkComment( xnext, x )
+
+		'' Comment(s) is/are the only token(s) in the file?
+		elseif( (tkGet( xprev ) = TK_EOF) and (tkGet( xnext ) = TK_EOF) ) then
+			'' Insert a TK_EOL to hold the comment
+			tkInsert( x, TK_EOL )
+			x += 1
+			hAccumTkComment( x - 1, x )
+
+		'' Comment at EOF?
+		elseif( tkGet( xnext ) = TK_EOF ) then
+			hAccumTkComment( xprev, x )
+
+		'' Comment above single statement
 		else
-			'' Comment above multiple statements,
-			'' that aren't separated by empty lines?
-			y = hSkipStatement( x )
-			if( (y < hSkipStatement( y )) and _
-			    (tkCount( TK_EOL, tkSkipCommentEol( y, -1 ) + 1, y - 1 ) < 2) ) then
-				hAccumTkComment( tkSkipComment( x ), x )
-			else
-				'' Comment above single statement
-				hAccumTkComment( tkSkipCommentEol( x ), x )
-			end if
+			hAccumTkComment( xnextnonspace, x )
 		end if
+
 	elseif( at_bol ) then
-		hAccumTkComment( tkSkipComment( x ), x )
+		hAccumTkComment( xnext, x )
+
 	elseif( at_eol ) then
-		hAccumTkComment( tkSkipComment( x, -1 ), x )
+		'' If behind a ',' (parameter/declarator list) or ';',
+		'' assign to token before that, making it easier to handle in
+		'' the parser, because it only has to collect tokens from the
+		'' core of a declaration, not the separator tokens like ',' or
+		'' ';' which are typically handled by separate functions.
+		select case( tkGet( xprev ) )
+		case TK_COMMA, TK_SEMI
+			'' Unless that ',' or ';' is the only token in this line
+			'' (which should be rare though in practice)
+			var xprevprev = tkSkipComment( xprev, -1 )
+			select case( xprevprev )
+			case TK_EOL, TK_EOF
+
+			case else
+				xprev = xprevprev
+			end select
+		end select
+
+		hAccumTkComment( xprev, x )
+
 	else
-		hAccumTkComment( tkSkipComment( x ), x )
+		hAccumTkComment( xnext, x )
 	end if
 
 	tkRemove( x, x )
@@ -292,11 +327,9 @@ private function ppDivider( byval x as integer ) as integer
 	'' associated with the following block of code, stored as TK_DIVIDER's
 	'' text.
 
-	var eol2 = tkSkipComment( x, -1 )
-	var eol1 = tkSkipComment( eol2 - 1, -1 )
-	var blockcomment = tkCollectComments( eol1 + 1, eol2 )
+	var blockcomment = tkCollectComments( x - 1, x - 1 )
 
-	var comment = tkCollectComments( begin, eol1 )
+	var comment = tkCollectComments( begin, x - 2 )
 	tkRemove( begin, x - 1 )
 	tkInsert( begin, TK_DIVIDER, blockcomment )
 	tkSetComment( begin, comment )

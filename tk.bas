@@ -252,27 +252,30 @@ function tkDumpBasic( byval id as integer, byval text as zstring ptr ) as string
 	if( tk_info(id).debug ) then
 		s += *tk_info(id).debug
 	else
-		s += ucase( *tk_info(id).text )
+		s += *tk_info(id).text
 	end if
 	if( text ) then
-		s += " """ + *text + """"
+		s += " """ + strMakePrintable( *text ) + """"
 	end if
 	s += "]"
 	function = s
+end function
+
+function hDumpComment( byval comment as zstring ptr ) as string
+	if( comment ) then
+		var scomment = strMakePrintable( *comment )
+		if( len( scomment ) > 40 ) then
+			scomment = left( scomment, 40 ) + "..."
+		end if
+		function = " comment=""" + scomment + """"
+	end if
 end function
 
 function tkDumpOne( byval x as integer ) as string
 	var p = tkAccess( x )
 	var s = str( x ) + " " + tkDumpBasic( p->id, p->text )
 
-	var comment = p->comment
-	if( comment ) then
-		var scomment = strReplace( *comment, !"\n", "\n" )
-		if( len( scomment ) > 40 ) then
-			scomment = left( scomment, 40 ) + "..."
-		end if
-		s += " comment=""" + scomment + """"
-	end if
+	s += hDumpComment( p->comment )
 
 	if( tkGetAst( x ) ) then
 		s += " ast=" & astDumpInline( tkGetAst( x ) )
