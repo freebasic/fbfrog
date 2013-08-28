@@ -339,6 +339,39 @@ private function emitAst _
 	case ASTCLASS_PPUNDEF
 		emitStmt( "#undef " + *n->text, n->comment )
 
+	case ASTCLASS_PPIF
+		if( n->expr->class = ASTCLASS_UOP ) then
+			select case( n->expr->op )
+			'' #if defined id     ->    #ifdef id
+			case ASTOP_DEFINED
+				s += "#ifdef " + emitAst( n->expr->l )
+
+			'' #if !defined id    ->    #ifndef id
+			case ASTOP_LOGNOT
+				if( n->expr->l->class = ASTCLASS_UOP ) then
+					if( n->expr->l->op = ASTOP_DEFINED ) then
+						s += "#ifndef " + emitAst( n->expr->l->l )
+					end if
+				end if
+			end select
+		end if
+
+		if( len( s ) = 0 ) then
+			s += "#if " + emitAst( n->expr )
+		end if
+
+		emitStmt( s )
+		s = ""
+
+	case ASTCLASS_PPELSEIF
+		emitStmt( "#elseif " + emitAst( n->expr ) )
+
+	case ASTCLASS_PPELSE
+		emitStmt( "#else" )
+
+	case ASTCLASS_PPENDIF
+		emitStmt( "#endif" )
+
 	case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
 		dim as string compoundkeyword
 		select case( n->class )

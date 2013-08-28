@@ -1168,6 +1168,19 @@ private function cToplevel( byval body as integer ) as ASTNODE ptr
 			astAddComment( t, tkCollectComments( parse.x, parse.x ) )
 			cSkip( )
 
+		case TK_PPIF, TK_PPELSEIF
+			t = astNew( iif( tkGet( parse.x ) = TK_PPIF, _
+					ASTCLASS_PPIF, ASTCLASS_PPELSEIF ) )
+			t->expr = astClone( tkGetAst( parse.x ) )
+			astAddComment( t, tkCollectComments( parse.x, parse.x ) )
+			cSkip( )
+
+		case TK_PPELSE, TK_PPENDIF
+			t = astNew( iif( tkGet( parse.x ) = TK_PPELSE, _
+					ASTCLASS_PPELSE, ASTCLASS_PPENDIF ) )
+			astAddComment( t, tkCollectComments( parse.x, parse.x ) )
+			cSkip( )
+
 		case TK_DIVIDER
 			'' (ditto)
 			t = astNew( ASTCLASS_DIVIDER, tkGetText( parse.x ) )

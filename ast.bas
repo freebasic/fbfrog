@@ -40,6 +40,10 @@ dim shared as ASTNODEINFO astnodeinfo(0 to ...) = _
 	( "#include" ), _
 	( "#define"  ), _
 	( "#undef"   ), _
+	( "#if"      ), _
+	( "#elseif"  ), _
+	( "#else"    ), _
+	( "#endif"   ), _
 	( "struct"  ), _
 	( "union"   ), _
 	( "enum"    ), _
