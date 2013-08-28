@@ -1356,6 +1356,8 @@ private function hFold( byval n as ASTNODE ptr ) as ASTNODE ptr
 				var v1 = n->l->vali
 				var v2 = n->r->vali
 
+				var divbyzero = FALSE
+
 				select case as const( n->op )
 				case ASTOP_LOGOR  : v1    = iif( v1 orelse  v2, 1, 0 )
 				case ASTOP_LOGAND : v1    = iif( v1 andalso v2, 1, 0 )
@@ -1373,14 +1375,26 @@ private function hFold( byval n as ASTNODE ptr ) as ASTNODE ptr
 				case ASTOP_ADD    : v1   += v2
 				case ASTOP_SUB    : v1   -= v2
 				case ASTOP_MUL    : v1   *= v2
-				case ASTOP_DIV    : v1   /= v2
-				case ASTOP_MOD    : v1 mod= v2
+				case ASTOP_DIV
+					if( v2 = 0 ) then
+						divbyzero = TRUE
+					else
+						v1 \= v2
+					end if
+				case ASTOP_MOD
+					if( v2 = 0 ) then
+						divbyzero = TRUE
+					else
+						v1 mod= v2
+					end if
 				case else
 					assert( FALSE )
 				end select
 
-				function = astNewCONST( v1, 0, TYPE_LONG )
-				astDelete( n )
+				if( divbyzero = FALSE ) then
+					function = astNewCONST( v1, 0, TYPE_LONG )
+					astDelete( n )
+				end if
 			end if
 
 		'' Only the lhs is a CONST? Check for NOPs
@@ -1536,40 +1550,83 @@ private function hFold( byval n as ASTNODE ptr ) as ASTNODE ptr
 	end select
 end function
 
-private function hFindRemainingDefined( byval n as ASTNODE ptr ) as ASTNODE ptr
-	if( n = NULL ) then
-		exit function
+private function hComplainAboutExpr _
+	( _
+		byval n as ASTNODE ptr, _
+		byref message as string _
+	) as integer
+
+	if( n->location.file ) then
+		oopsLocation( @n->location, message )
+		function = FALSE
+	else
+		function = TRUE
 	end if
 
-	dim as ASTNODE ptr d = NULL
+end function
+
+'' Returns FALSE if it reports an error, returns TRUE to indicate the caller
+'' needs to show a generic/fallback error
+private function hCheckUnsolvedExpr( byval n as ASTNODE ptr ) as integer
+	if( n = NULL ) then
+		return TRUE
+	end if
+
+	function = FALSE
 
 	select case as const( n->class )
+	case ASTCLASS_ID
+		if( hComplainAboutExpr( n, "unknown symbol, need more info" ) = FALSE ) then
+			exit function
+		end if
+
 	case ASTCLASS_UOP
-		if( n->op = ASTOP_DEFINED ) then
-			d = n
-		else
-			d = hFindRemainingDefined( n->l )
+		if( hCheckUnsolvedExpr( n->l ) = FALSE ) then
+			exit function
 		end if
 
 	case ASTCLASS_BOP
-		d = hFindRemainingDefined( n->l )
-		if( d = NULL ) then
-			d = hFindRemainingDefined( n->r )
+		if( hCheckUnsolvedExpr( n->l ) = FALSE ) then
+			exit function
+		end if
+		if( hCheckUnsolvedExpr( n->r ) = FALSE ) then
+			exit function
 		end if
 
-	case ASTCLASS_IIF
-		d = hFindRemainingDefined( n->expr )
-		if( d = NULL ) then
-			d = hFindRemainingDefined( n->l )
-			if( d = NULL ) then
-				d = hFindRemainingDefined( n->r )
+		if( (n->l->class = ASTCLASS_CONST) and _
+		    (n->r->class = ASTCLASS_CONST) ) then
+			if( (not typeIsFloat( n->l->dtype )) and _
+			    (not typeIsFloat( n->r->dtype )) ) then
+				var v2 = n->r->vali
+
+				var divbyzero = FALSE
+				select case( n->op )
+				case ASTOP_DIV, ASTOP_MOD
+					divbyzero = (v2 = 0)
+				end select
+
+				if( divbyzero ) then
+					if( hComplainAboutExpr( n, "division by zero" ) = FALSE ) then
+						exit function
+					end if
+				end if
 			end if
 		end if
 
+	case ASTCLASS_IIF
+		if( hCheckUnsolvedExpr( n->expr ) = FALSE ) then
+			exit function
+		end if
+		if( hCheckUnsolvedExpr( n->l ) = FALSE ) then
+			exit function
+		end if
+		if( hCheckUnsolvedExpr( n->r ) = FALSE ) then
+			exit function
+		end if
 
 	end select
 
-	function = d
+	function = TRUE
 end function
 
 private function hEvalIfCondition( byval x as integer ) as integer
@@ -1606,11 +1663,13 @@ private function hEvalIfCondition( byval x as integer ) as integer
 		'' nodes may cause that unsolved defined() to be solved out
 		'' completely because its result doesn't matter (can happen with
 		'' short-curcuiting operators and iif).
-		var remainingdefined = hFindRemainingDefined( t )
-		if( remainingdefined andalso remainingdefined->l->location.file ) then
-			oopsLocation( @remainingdefined->l->location, "unknown symbol, need more info" )
-		else
-			tkOops( x, "cannot evaluate #if condition, need more info" )
+		astDump( t )
+		if( hCheckUnsolvedExpr( t ) = FALSE ) then
+			if( t->location.file ) then
+				oopsLocation( @t->location, "couldn't evaluate #if condition" )
+			else
+				tkOops( x, "couldn't evaluate #if condition" )
+			end if
 		end if
 	end if
 
