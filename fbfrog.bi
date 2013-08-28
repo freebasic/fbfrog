@@ -344,7 +344,6 @@ declare function tkDumpBasic( byval id as integer, byval text as zstring ptr ) a
 declare function hDumpComment( byval comment as zstring ptr ) as string
 declare function tkDumpOne( byval x as integer ) as string
 declare sub tkDump( )
-declare sub tkDumpToFile( byref filename as string )
 declare function tkGetCount( ) as integer
 declare sub tkInsert _
 	( _

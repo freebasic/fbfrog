@@ -332,12 +332,16 @@ private sub hTurnCallConvIntoExternBlock _
 	( _
 		byval ast as ASTNODE ptr, _
 		byval externcallconv as integer, _
-		byval externwindows as zstring ptr = @"Windows" _  '' To allow changing to "Windows-MS"
+		byval use_stdcallms as integer _
 	)
 
 	var externblock = @"C"
 	if( externcallconv = ASTATTRIB_STDCALL ) then
-		externblock = externwindows
+		if( use_stdcallms ) then
+			externblock = @"Windows-MS"
+		else
+			externblock = @"Windows"
+		end if
 	end if
 
 	'' Remove the calling convention from all procdecls, the Extern block
@@ -943,6 +947,21 @@ private function hMergeVersions _
 	function = c
 end function
 
+private sub hAutoExtern _
+	( _
+		byval ast as ASTNODE ptr, _
+		byval use_stdcallms as integer = FALSE _
+	)
+
+	hMakeProcsDefaultToCdecl( ast )
+
+	var maincallconv = hFindMainCallConv( ast )
+	if( maincallconv >= 0 ) then
+		hTurnCallConvIntoExternBlock( ast, maincallconv, use_stdcallms )
+	end if
+
+end sub
+
 private function frogParseVersion _
 	( _
 		byval f as FROGFILE ptr, _
@@ -1015,33 +1034,20 @@ private function frogParseVersion _
 	''
 	'' Macro expansion, #if evaluation
 	''
-	select case( frog.preset )
-	case "tests"
-		if( strMatches( "tests/basic/pp/expr-*", f->pretty ) ) then
-			ppEvalInit( )
-			ppParseIfExprOnly( FALSE )
-			ppEvalEnd( )
-
-			tkDumpToFile( pathStripExt( f->normed ) + ".txt" )
-			tkEnd( )
-			exit function
-		end if
-
-		if( strMatches( "tests/basic/pp/fold-*", f->pretty ) ) then
-			ppEvalInit( )
-			ppParseIfExprOnly( TRUE )
-			ppEvalEnd( )
-
-			tkDumpToFile( pathStripExt( f->normed ) + ".txt" )
-			tkEnd( )
-			exit function
-		end if
-	end select
+	var do_pp = TRUE
+	var do_ppfold = FALSE
 
 	ppEvalInit( )
 
 	select case( frog.preset )
 	case "tests"
+		var is_ppexpr_test = strMatches( "tests/parser/pp/expr-*", f->pretty )
+		var is_fold_test   = strMatches( "tests/parser/pp/fold-*", f->pretty )
+		if( is_ppexpr_test or is_fold_test ) then
+			do_pp = FALSE
+		end if
+		do_ppfold = is_fold_test
+
 		ppExpandSym( "EXPANDTHIS" )
 		ppExpandSym( "EXPANDME1" )
 		ppExpandSym( "EXPANDME2" )
@@ -1053,12 +1059,14 @@ private function frogParseVersion _
 		ppAddSym( "KNOWNDEFINED2", TRUE )
 		ppAddSym( "KNOWNUNDEFINED1", FALSE )
 		ppAddSym( "KNOWNUNDEFINED2", FALSE )
+
 	case "zip"
 		ppAddSym( "ZIP_EXTERN", TRUE )
 		ppAddSym( "__cplusplus", FALSE )
 		ppAddSym( "ZIP_DISABLE_DEPRECATED", FALSE )
 		ppAddSym( "_HAD_ZIP_H", FALSE )
 		ppAddSym( "_HAD_ZIPCONF_H", FALSE )
+
 	case "png"
 		ppAddSym( "__cplusplus", FALSE )
 		ppAddSym( "PNG_H", FALSE )
@@ -1190,7 +1198,11 @@ private function frogParseVersion _
 
 	end select
 
-	ppEval( )
+	if( do_pp ) then
+		ppEval( )
+	else
+		ppParseIfExprOnly( do_ppfold )
+	end if
 
 	ppEvalEnd( )
 
@@ -1220,11 +1232,14 @@ private function frogParseVersion _
 	hFixArrayParams( ast )
 	hRemoveRedundantTypedefs( ast )
 
-	hMakeProcsDefaultToCdecl( ast )
-	var maincallconv = hFindMainCallConv( ast )
-	if( maincallconv >= 0 ) then
-		hTurnCallConvIntoExternBlock( ast, maincallconv )
-	end if
+	select case( frog.preset )
+	case "tests"
+		if( strMatches( "tests/autoextern/*", f->pretty ) ) then
+			hAutoExtern( ast, ("tests/autoextern/extern-windows-ms.h" = f->pretty) )
+		end if
+	case else
+		hAutoExtern( ast )
+	end select
 
 	hMergeDIVIDERs( ast )
 
@@ -1304,7 +1319,8 @@ end function
 	if( listGetHead( @frog.files ) = NULL ) then
 		select case( frog.preset )
 		case "tests"
-			hAddFromDir( "tests/basic" )
+			hAddFromDir( "tests/parser" )
+			hAddFromDir( "tests/autoextern" )
 		case "zip"
 			hDownloadAndExtract2( "http://www.nih.at/libzip/", "libzip-0.11.1.tar.xz" )
 		case "png"

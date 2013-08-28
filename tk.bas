@@ -290,19 +290,6 @@ sub tkDump( )
 	next
 end sub
 
-sub tkDumpToFile( byref filename as string )
-	var f = freefile( )
-	if( open( filename, for output, as #f ) ) then
-		oops( "couldn't open output file: '" + filename + "'" )
-	end if
-
-	for i as integer = 0 to tk.size - 1
-		print #f, tkDumpOne( i )
-	next
-
-	close #f
-end sub
-
 private sub hMoveTo( byval x as integer )
 	dim as integer old = any
 	dim as ONETOKEN ptr p = any
