@@ -55,9 +55,6 @@ To do:
 - hAddTextToken() could accidentially look up comment/string bodies in the
   keyword table, then produce the wrong token?
 
-- hRemoveOuterDIVIDERs() crashes if there's just one DIVIDER in the AST
-  (.h file with just a newline)
-
 - Must do automated formatting of macro bodies in emitter now that TK_SPACE is gone
 - Macro bodies should be emitted as FB text, not C text
 

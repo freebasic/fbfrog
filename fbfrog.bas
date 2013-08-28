@@ -424,20 +424,6 @@ private sub hMergeDIVIDERs( byval n as ASTNODE ptr )
 	wend
 end sub
 
-private sub hRemoveOuterDIVIDERs( byval n as ASTNODE ptr )
-	if( n->head = NULL ) then
-		exit sub
-	end if
-
-	if( n->head->class = ASTCLASS_DIVIDER ) then
-		astRemoveChild( n, n->head )
-	end if
-
-	if( n->tail->class = ASTCLASS_DIVIDER ) then
-		astRemoveChild( n, n->tail )
-	end if
-end sub
-
 type DECLNODE
 	decl as ASTNODE ptr     '' The declaration at that index
 	version as ASTNODE ptr  '' Parent VERSION node of the declaration
@@ -1218,8 +1204,6 @@ private function frogParseVersion _
 	''
 	'' Work on the AST
 	''
-	hMergeDIVIDERs( ast )
-	hRemoveOuterDIVIDERs( ast )
 
 	select case( frog.preset )
 	case "zip"
@@ -1241,6 +1225,8 @@ private function frogParseVersion _
 	if( maincallconv >= 0 ) then
 		hTurnCallConvIntoExternBlock( ast, maincallconv )
 	end if
+
+	hMergeDIVIDERs( ast )
 
 	function = ast
 end function

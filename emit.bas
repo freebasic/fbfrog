@@ -276,11 +276,20 @@ private function emitAst _
 		emitStmt( "end version" )
 
 	case ASTCLASS_DIVIDER
-		emitEmptyLine( )
-		if( n->comment ) then
-			emitLineComments( n->comment )
+		if( (n->prev <> NULL) and _
+		    ((n->next <> NULL) or _
+		     (n->comment <> NULL) or _
+		     (n->text <> NULL)) ) then
 			emitEmptyLine( )
 		end if
+
+		if( n->comment ) then
+			emitLineComments( n->comment )
+			if( n->next ) then
+				emitEmptyLine( )
+			end if
+		end if
+
 		if( n->text ) then
 			emitLineComments( n->text )
 		end if
