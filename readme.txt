@@ -79,6 +79,11 @@ To do:
       token of the macro body
     - file format should use define/undef instead of #define/#undef, so the #
       can be reserved for meta-commands such as #include.
+    - since LEXMODE_FBFROG now uses all keywords, "undef string" would appear
+      as two keywords instead of keyword+id and fail to be parsed. Need to find
+      better solution than sharing keywords between C/FB/fbfrog or allow
+      anything >= TK_ID as arguments to undef|define|expand|macro.
+      Some bindings may need to register symbols that happen to be FB keywords etc...
 
 	example.fbfrog:
 		'' Tell fbfrog about library versions, plus the version selection

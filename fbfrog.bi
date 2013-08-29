@@ -274,8 +274,7 @@ enum
 	KW__C_LAST = KW_WHILE
 
 	'' FB-only keywords
-	KW__FROG_FIRST
-	KW_ALIAS = KW__FROG_FIRST
+	KW_ALIAS
 	KW_AND
 	KW_ANDALSO
 	KW_ANY

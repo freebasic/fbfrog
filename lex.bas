@@ -814,7 +814,7 @@ private sub hInitKeywords( )
 		last = KW__FB_LAST
 	case LEXMODE_FBFROG
 		lex.kwhash = @lex.frogkwhash
-		first = KW__FROG_FIRST
+		first = KW__C_FIRST
 		last = KW__FROG_LAST
 	case else
 		assert( FALSE )
