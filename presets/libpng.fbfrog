@@ -1,0 +1,120 @@
+declare version "1.6.3" __LIBPNG_VER__=163
+
+version "1.6.3"
+	download "http://prdownloads.sourceforge.net/libpng/libpng-1.6.3.tar.xz?download" "libpng-1.6.3.tar.xz"
+	extract "libpng-1.6.3.tar.xz" "libpng-1.6.3"
+	copyfile "libpng-1.6.3/scripts/pnglibconf.h.prebuilt" "libpng-1.6.3/pnglibconf.h"
+	file "libpng-1.6.3/png.h"
+end version
+
+undef __cplusplus
+undef PNG_H
+undef PNGCONF_H
+undef PNGLCONF_H
+
+undef PNG_VERSION_INFO_ONLY
+undef PNG_BUILDING_SYMBOL_TABLE
+undef PNG_USE_READ_MACROS
+undef PNG_NO_PEDANTIC_WARNINGS
+undef PNG_PEDANTIC_WARNINGS_SUPPORTED
+undef PNG_SMALL_SIZE_T
+undef PNG_SAFE_LIMITS_SUPPORTED
+
+define PNG_NO_USE_READ_MACROS
+define PNG_STDIO_SUPPORTED
+define PNG_FLOATING_POINT_SUPPORTED
+define PNG_TEXT_SUPPORTED
+define PNG_STORE_UNKNOWN_CHUNKS_SUPPORTED
+define PNG_PROGRESSIVE_READ_SUPPORTED
+define PNG_READ_USER_TRANSFORM_SUPPORTED
+define PNG_WRITE_USER_TRANSFORM_SUPPORTED
+define PNG_USER_CHUNKS_SUPPORTED
+define PNG_UNKNOWN_CHUNKS_SUPPORTED
+define PNG_SETJMP_SUPPORTED
+define PNG_USER_MEM_SUPPORTED
+
+macro CHAR_BIT  8
+macro UCHAR_MAX 255
+macro SHRT_MIN  -&h8000
+macro SHRT_MAX  &h7FFF
+macro USHRT_MAX &hFFFF
+macro INT_MIN   -&h80000000
+macro INT_MAX   &h7FFFFFFF
+macro UINT_MAX  &hFFFFFFFF
+macro LONG_MIN  -&h80000000
+macro LONG_MAX  &h7FFFFFFF
+macro ULONG_MAX &hFFFFFFFF
+
+macro __GNUC__ 4
+undef _MSC_VER
+undef __BORLANDC__
+undef __IBMC__
+undef __IBMCPP__
+undef __OS2__
+undef __TURBOC__
+undef __FLAT__
+undef MAXSEG_64K
+
+undef _Windows
+undef _WINDOWS
+undef __WIN32__
+undef WIN32
+undef __CYGWIN__
+
+version "win32"
+	define _WIN32
+end version
+
+version "linux"
+	undef _WIN32
+end version
+
+undef PNG_USE_DLL
+undef PNG_DLL_IMPORT
+
+undef PNGARG
+undef PNG_USER_PRIVATEBUILD
+undef PNG_LIBPNG_SPECIALBUILD
+undef PNGAPI
+undef PNGCAPI
+undef PNGCBAPI
+undef PNG_IMPEXP
+undef PNG_FUNCTION
+undef PNG_EXPORTA
+undef PNG_EXPORT_TYPE
+undef PNG_REMOVED
+undef PNG_CALLBACK
+undef PNG_FP_EXPORT
+undef PNG_FIXED_EXPORT
+undef PNG_RESTRICT
+undef PNG_ALLOCATED
+undef PNG_NORETURN
+undef PNG_DEPRECATED
+undef PNG_PRIVATE
+undef PNG_USE_RESULT
+undef PNG_EXPORT_LAST_ORDINAL
+
+expand PNG_API_RULE
+expand PNG_EXPORT
+expand PNG_EXPORTA
+expand PNG_CALLBACK
+expand PNG_RESTRICT
+expand PNG_FP_EXPORT
+expand PNG_FIXED_EXPORT
+expand PNG_EXPORT_TYPE
+expand PNG_EMPTY
+expand PNG_IMPEXP
+expand PNGAPI
+expand PNGCAPI
+expand PNGCBAPI
+expand PNGARG
+expand PNG_FUNCTION
+expand PNG_ALLOCATED
+expand PNG_NORETURN
+expand PNG_DEPRECATED
+expand PNG_REMOVED
+
+remove define PNG_H
+remove define PNGCONF_H
+remove define PNGLCONF_H
+remove define PNG_CONST

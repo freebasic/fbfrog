@@ -1060,142 +1060,6 @@ private function frogParseVersion _
 		ppAddSym( "KNOWNUNDEFINED1", FALSE )
 		ppAddSym( "KNOWNUNDEFINED2", FALSE )
 
-	case "zip"
-		ppAddSym( "ZIP_EXTERN", TRUE )
-		ppAddSym( "__cplusplus", FALSE )
-		ppAddSym( "ZIP_DISABLE_DEPRECATED", FALSE )
-		ppAddSym( "_HAD_ZIP_H", FALSE )
-		ppAddSym( "_HAD_ZIPCONF_H", FALSE )
-
-	case "png"
-		ppAddSym( "__cplusplus", FALSE )
-		ppAddSym( "PNG_H", FALSE )
-		ppAddSym( "PNGCONF_H", FALSE )
-		ppAddSym( "PNGLCONF_H", FALSE )
-
-		ppAddSym( "PNG_VERSION_INFO_ONLY", FALSE )
-		ppAddSym( "PNG_BUILDING_SYMBOL_TABLE", FALSE )
-		ppAddSym( "PNG_USE_READ_MACROS", FALSE )
-		ppAddSym( "PNG_NO_USE_READ_MACROS", TRUE )
-		ppAddSym( "PNG_NO_PEDANTIC_WARNINGS", FALSE )
-		ppAddSym( "PNG_PEDANTIC_WARNINGS_SUPPORTED", FALSE )
-		ppAddSym( "PNG_SMALL_SIZE_T", FALSE )
-		ppAddSym( "PNG_STDIO_SUPPORTED", TRUE )
-		ppAddSym( "PNG_FLOATING_POINT_SUPPORTED", TRUE )
-		ppAddSym( "PNG_TEXT_SUPPORTED", TRUE )
-		ppAddSym( "PNG_STORE_UNKNOWN_CHUNKS_SUPPORTED", TRUE )
-		ppAddSym( "PNG_PROGRESSIVE_READ_SUPPORTED", TRUE )
-		ppAddSym( "PNG_READ_USER_TRANSFORM_SUPPORTED", TRUE )
-		ppAddSym( "PNG_WRITE_USER_TRANSFORM_SUPPORTED", TRUE )
-		ppAddSym( "PNG_USER_CHUNKS_SUPPORTED", TRUE )
-		ppAddSym( "PNG_UNKNOWN_CHUNKS_SUPPORTED", TRUE )
-		ppAddSym( "PNG_SETJMP_SUPPORTED", TRUE )
-		ppAddSym( "PNG_USER_MEM_SUPPORTED", TRUE )
-		ppAddSym( "PNG_SAFE_LIMITS_SUPPORTED", FALSE )
-
-		ppMacroBegin( "CHAR_BIT", -1 )
-		ppMacroToken( TK_DECNUM, "8" )
-
-		ppMacroBegin( "UCHAR_MAX", -1 )
-		ppMacroToken( TK_DECNUM, "255" )
-
-		ppMacroBegin( "SHRT_MIN", -1 )
-		ppMacroToken( TK_MINUS )
-		ppMacroToken( TK_DECNUM, str( &h8000 ) )
-
-		ppMacroBegin( "SHRT_MAX", -1 )
-		ppMacroToken( TK_DECNUM, str( &h7FFF ) )
-
-		ppMacroBegin( "USHRT_MAX", -1 )
-		ppMacroToken( TK_DECNUM, str( &hFFFF ) )
-
-		ppMacroBegin( "INT_MIN", -1 )
-		ppMacroToken( TK_MINUS )
-		ppMacroToken( TK_DECNUM, str( &h80000000ul ) )
-
-		ppMacroBegin( "INT_MAX", -1 )
-		ppMacroToken( TK_DECNUM, str( &h7FFFFFFFul ) )
-
-		ppMacroBegin( "UINT_MAX", -1 )
-		ppMacroToken( TK_DECNUM, str( &hFFFFFFFFul ) )
-
-		ppMacroBegin( "LONG_MIN", -1 )
-		ppMacroToken( TK_MINUS )
-		ppMacroToken( TK_DECNUM, str( &h80000000ul ) )
-
-		ppMacroBegin( "LONG_MAX", -1 )
-		ppMacroToken( TK_DECNUM, str( &h7FFFFFFFul ) )
-
-		ppMacroBegin( "ULONG_MAX", -1 )
-		ppMacroToken( TK_DECNUM, str( &hFFFFFFFFul ) )
-
-		ppMacroBegin( "__GNUC__", -1 )
-		ppMacroToken( TK_DECNUM, "4" )
-		ppAddSym( "_MSC_VER", FALSE )
-		ppAddSym( "__BORLANDC__", FALSE )
-		ppAddSym( "__IBMC__", FALSE )
-		ppAddSym( "__IBMCPP__", FALSE )
-		ppAddSym( "__OS2__", FALSE )
-		ppAddSym( "__TURBOC__", FALSE )
-		ppAddSym( "__FLAT__", FALSE )
-		ppAddSym( "MAXSEG_64K", FALSE )
-
-		ppAddSym( "_Windows", FALSE )
-		ppAddSym( "_WINDOWS", FALSE )
-		ppAddSym( "__WIN32__", FALSE )
-		ppAddSym( "WIN32", FALSE )
-		ppAddSym( "__CYGWIN__", FALSE )
-
-		if( version = 1 ) then
-			ppAddSym( "_WIN32", TRUE )
-		else
-			ppAddSym( "_WIN32", FALSE )
-		end if
-		ppAddSym( "PNG_USE_DLL", FALSE )
-		ppAddSym( "PNG_DLL_IMPORT", FALSE )
-
-		ppAddSym( "PNGARG", FALSE )
-		ppAddSym( "PNG_USER_PRIVATEBUILD", FALSE )
-		ppAddSym( "PNG_LIBPNG_SPECIALBUILD", FALSE )
-		ppAddSym( "PNGAPI", FALSE )
-		ppAddSym( "PNGCAPI", FALSE )
-		ppAddSym( "PNGCBAPI", FALSE )
-		ppAddSym( "PNG_IMPEXP", FALSE )
-		ppAddSym( "PNG_FUNCTION", FALSE )
-		ppAddSym( "PNG_EXPORTA", FALSE )
-		ppAddSym( "PNG_EXPORT_TYPE", FALSE )
-		ppAddSym( "PNG_REMOVED", FALSE )
-		ppAddSym( "PNG_CALLBACK", FALSE )
-		ppAddSym( "PNG_FP_EXPORT", FALSE )
-		ppAddSym( "PNG_FIXED_EXPORT", FALSE )
-		ppAddSym( "PNG_RESTRICT", FALSE )
-		ppAddSym( "PNG_ALLOCATED", FALSE )
-		ppAddSym( "PNG_NORETURN", FALSE )
-		ppAddSym( "PNG_DEPRECATED", FALSE )
-		ppAddSym( "PNG_PRIVATE", FALSE )
-		ppAddSym( "PNG_USE_RESULT", FALSE )
-		ppAddSym( "PNG_EXPORT_LAST_ORDINAL", FALSE )
-
-		ppExpandSym( "PNG_API_RULE" )
-		ppExpandSym( "PNG_EXPORT" )
-		ppExpandSym( "PNG_EXPORTA" )
-		ppExpandSym( "PNG_CALLBACK" )
-		ppExpandSym( "PNG_RESTRICT" )
-		ppExpandSym( "PNG_FP_EXPORT" )
-		ppExpandSym( "PNG_FIXED_EXPORT" )
-		ppExpandSym( "PNG_EXPORT_TYPE" )
-		ppExpandSym( "PNG_EMPTY" )
-		ppExpandSym( "PNG_IMPEXP" )
-		ppExpandSym( "PNGAPI" )
-		ppExpandSym( "PNGCAPI" )
-		ppExpandSym( "PNGCBAPI" )
-		ppExpandSym( "PNGARG" )
-		ppExpandSym( "PNG_FUNCTION" )
-		ppExpandSym( "PNG_ALLOCATED" )
-		ppExpandSym( "PNG_NORETURN" )
-		ppExpandSym( "PNG_DEPRECATED" )
-		ppExpandSym( "PNG_REMOVED" )
-
 	end select
 
 	if( do_pp ) then
@@ -1216,17 +1080,6 @@ private function frogParseVersion _
 	''
 	'' Work on the AST
 	''
-
-	select case( frog.preset )
-	case "zip"
-		hRemoveNode( ast, ASTCLASS_PPDEFINE, "_HAD_ZIP_H" )
-		hRemoveNode( ast, ASTCLASS_PPDEFINE, "_HAD_ZIPCONF_H" )
-	case "png"
-		hRemoveNode( ast, ASTCLASS_PPDEFINE, "PNG_H" )
-		hRemoveNode( ast, ASTCLASS_PPDEFINE, "PNGCONF_H" )
-		hRemoveNode( ast, ASTCLASS_PPDEFINE, "PNGLCONF_H" )
-		hRemoveNode( ast, ASTCLASS_PPDEFINE, "PNG_CONST" )
-	end select
 
 	'hRemoveParamNames( ast )
 	hFixArrayParams( ast )
@@ -1311,22 +1164,11 @@ end function
 	hParseArgs1( __FB_ARGC__, __FB_ARGV__ )
 	hParseArgs2( __FB_ARGC__, __FB_ARGV__ )
 
-	select case( frog.preset )
-	case "png"
-		frog.merge = TRUE
-	end select
-
 	if( listGetHead( @frog.files ) = NULL ) then
 		select case( frog.preset )
 		case "tests"
 			hAddFromDir( "tests/parser" )
 			hAddFromDir( "tests/autoextern" )
-		case "zip"
-			hDownloadAndExtract2( "http://www.nih.at/libzip/", "libzip-0.11.1.tar.xz" )
-		case "png"
-			hDownloadAndExtract( "http://prdownloads.sourceforge.net/libpng/libpng-1.6.3.tar.xz?download", "libpng-1.6.3.tar.xz" )
-			frogAddFile( NULL, "tarballs/libpng-1.6.3/png.h" )
-			hShell( "cp tarballs/libpng-1.6.3/scripts/pnglibconf.h.prebuilt tarballs/libpng-1.6.3/pnglibconf.h" )
 		end select
 	end if
 
