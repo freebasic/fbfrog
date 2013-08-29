@@ -95,7 +95,6 @@ sub frogLoadPreset( byval pre as FROGPRESET ptr, byref presetfile as string )
 			exit do
 
 		case TK_EOL
-			hSkip( )
 
 #if 0
 		'' '#' INCLUDE "filename"
