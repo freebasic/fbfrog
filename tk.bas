@@ -191,7 +191,8 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	( @"wstring" , NULL ), _
 	( @"xor"     , NULL ), _
 	( @"zstring" , NULL ), _
-	( @"download", NULL ), _  '' fbfrog-only keywords
+	( @"copyfile", NULL ), _  '' fbfrog-only keywords
+	( @"download", NULL ), _
 	( @"extract" , NULL ), _
 	( @"expand"  , NULL ), _
 	( @"file"    , NULL ), _

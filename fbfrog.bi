@@ -331,6 +331,7 @@ enum
 	KW__FB_LAST = KW_ZSTRING
 
 	'' fbfrog-only keywords
+	KW_COPYFILE
 	KW_DOWNLOAD
 	KW_EXTRACT
 	KW_EXPAND
@@ -778,7 +779,7 @@ type FROGPRESET
 
 	downloads		as ASTNODE ptr
 	extracts		as ASTNODE ptr
-	filecopies		as ASTNODE ptr
+	copyfiles		as ASTNODE ptr
 	files			as ASTNODE ptr
 
 	defines			as ASTNODE ptr

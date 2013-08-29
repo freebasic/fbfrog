@@ -36,6 +36,12 @@ private function hMatch( byval tk as integer ) as integer
 	end if
 end function
 
+private function hExpectSkipString( ) as string
+	hExpect( TK_STRING )
+	function = *tkGetText( x )
+	hSkip( )
+end function
+
 private function hFindVersion _
 	( _
 		byval pre as FROGPRESET ptr, _
@@ -69,10 +75,10 @@ sub frogLoadPreset( byval pre as FROGPRESET ptr, byref presetfile as string )
 
 	pre->versions = astNew( ASTCLASS_GROUP )
 
-	pre->downloads  = astNew( ASTCLASS_GROUP )
-	pre->extracts   = astNew( ASTCLASS_GROUP )
-	pre->filecopies = astNew( ASTCLASS_GROUP )
-	pre->files      = astNew( ASTCLASS_GROUP )
+	pre->downloads = astNew( ASTCLASS_GROUP )
+	pre->extracts  = astNew( ASTCLASS_GROUP )
+	pre->copyfiles = astNew( ASTCLASS_GROUP )
+	pre->files     = astNew( ASTCLASS_GROUP )
 
 	pre->defines = astNew( ASTCLASS_GROUP )
 	pre->undefs  = astNew( ASTCLASS_GROUP )
@@ -105,9 +111,7 @@ sub frogLoadPreset( byval pre as FROGPRESET ptr, byref presetfile as string )
 			hExpectSkip( KW_INCLUDE )
 
 			'' "filename"
-			hExpect( TK_STRING )
-			var incfile = *tkGetText( x )
-			hSkip( )
+			var incfile = hExpectSkipString( )
 
 			hExpectSkip( TK_EOL )
 			hIncludeFile( incfile )
@@ -172,14 +176,8 @@ sub frogLoadPreset( byval pre as FROGPRESET ptr, byref presetfile as string )
 		'' DOWNLOAD "URL" "output file name"
 		case KW_DOWNLOAD
 			hSkip( )
-
-			hExpect( TK_STRING )
-			var url = *tkGetText( x )
-			hSkip( )
-
-			hExpect( TK_STRING )
-			var outfile = *tkGetText( x )
-			hSkip( )
+			var url = hExpectSkipString( )
+			var outfile = hExpectSkipString( )
 
 			var download = astNew( ASTCLASS_TEXT, url )
 			astSetComment( download, outfile )
@@ -188,26 +186,27 @@ sub frogLoadPreset( byval pre as FROGPRESET ptr, byref presetfile as string )
 		'' EXTRACT "tarball file name" "output directory name"
 		case KW_EXTRACT
 			hSkip( )
-
-			hExpect( TK_STRING )
-			var tarball = *tkGetText( x )
-			hSkip( )
-
-			hExpect( TK_STRING )
-			var outdir = *tkGetText( x )
-			hSkip( )
+			var tarball = hExpectSkipString( )
+			var outdir = hExpectSkipString( )
 
 			var extract = astNew( ASTCLASS_TEXT, tarball )
 			astSetComment( extract, outdir )
 			astAppend( pre->extracts, extract )
 
+		'' COPYFILE "old name" "new name"
+		case KW_COPYFILE
+			hSkip( )
+			var oldname = hExpectSkipString( )
+			var newname = hExpectSkipString( )
+
+			var copyfile = astNew( ASTCLASS_TEXT, oldname )
+			astSetComment( copyfile, newname )
+			astAppend( pre->copyfiles, copyfile )
+
 		'' FILE "file name"
 		case KW_FILE
 			hSkip( )
-
-			hExpect( TK_STRING )
-			var filename = *tkGetText( x )
-			hSkip( )
+			var filename = hExpectSkipString( )
 
 			astAppend( pre->files, astNew( ASTCLASS_TEXT, filename ) )
 
@@ -288,7 +287,7 @@ sub frogFreePreset( byval pre as FROGPRESET ptr )
 
 	astDelete( pre->downloads )
 	astDelete( pre->extracts )
-	astDelete( pre->filecopies )
+	astDelete( pre->copyfiles )
 	astDelete( pre->files )
 
 	astDelete( pre->defines )
