@@ -583,6 +583,38 @@ end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
+sub hMacroParamList( byref x as integer, byval t as ASTNODE ptr )
+	assert( tkGet( x ) = TK_ID )
+	t->paramcount = -1
+
+	'' '(' following directly behind the macro id, no spaces in between?
+	if( (tkGet( x + 1 ) = TK_LPAREN) and (not tkGetBehindSpace( x + 1 )) ) then
+		x += 2  '' id and '('
+		t->paramcount = 0
+
+		'' List of macro parameters:
+		'' Identifier (',' Identifier)*
+		do
+			'' macro parameter's Identifier
+			if( tkGet( x ) <> TK_ID ) then
+				exit do
+			end if
+			astAppend( t, astNew( ASTCLASS_MACROPARAM, tkGetText( x ) ) )
+			t->paramcount += 1
+			x += 1
+
+			'' ','?
+			if( tkGet( x ) <> TK_COMMA ) then
+				exit do
+			end if
+			x += 1
+		loop
+
+		'' ')'?
+		tkExpect( x, TK_RPAREN )
+	end if
+end sub
+
 private function ppDirective( byval x as integer ) as integer
 	var begin = x
 
@@ -599,37 +631,11 @@ private function ppDirective( byval x as integer ) as integer
 
 		'' Identifier?
 		tkExpect( x, TK_ID )
-		var t = astNew( ASTCLASS_PPDEFINE, tkGetText( x ) )
-		t->paramcount = -1
+		var macro = astNew( ASTCLASS_PPDEFINE, tkGetText( x ) )
 
-		'' '(' following directly, no spaces in between?
-		if( (tkGet( x + 1 ) = TK_LPAREN) and (not tkGetBehindSpace( x + 1 )) ) then
-			x += 2  '' id and '('
-			t->paramcount = 0
+		hMacroParamList( x, macro )
 
-			'' List of macro parameters:
-			'' Identifier (',' Identifier)*
-			do
-				'' macro parameter's Identifier
-				if( tkGet( x ) <> TK_ID ) then
-					exit do
-				end if
-				astAppend( t, astNew( ASTCLASS_MACROPARAM, tkGetText( x ) ) )
-				t->paramcount += 1
-				x += 1
-
-				'' ','?
-				if( tkGet( x ) <> TK_COMMA ) then
-					exit do
-				end if
-				x += 1
-			loop
-
-			'' ')'?
-			tkExpect( x, TK_RPAREN )
-		end if
-
-		tkFold( begin, x, TK_PPDEFINE, , t )
+		tkFold( begin, x, TK_PPDEFINE, , macro )
 		x = begin + 1
 
 		'' Enclose body tokens in TK_BEGIN/END
@@ -766,28 +772,33 @@ end sub
 ''      param 0 (merge right)
 ''      tk TK_ID "foo" (merge left)
 ''
-namespace record
-	dim shared as ASTNODE ptr macro
-	dim shared as integer x, stringify, merge
-end namespace
 
-private sub hTakeMergeAttrib( byval n as ASTNODE ptr )
-	if( record.merge ) then
+private sub hTakeMergeAttrib( byref merge as integer, byval n as ASTNODE ptr )
+	if( merge ) then
 		n->attrib or= ASTATTRIB_MERGEWITHPREV
-		record.merge = FALSE
+		merge = FALSE
 	end if
 end sub
 
 '' Used for uninteresting tokens
-private sub hRecordToken( )
-	var n = astNewTK( tkGet( record.x ), tkGetText( record.x ) )
-	hTakeMergeAttrib( n )
-	astAppend( record.macro->expr, n )
+private sub hRecordToken _
+	( _
+		byval x as integer, _
+		byval macro as ASTNODE ptr, _
+		byref merge as integer _
+	)
+
+	var n = astNewTK( tkGet( x ), tkGetText( x ) )
+	hTakeMergeAttrib( merge, n )
+	astAppend( macro->expr, n )
+
 end sub
 
 '' Used when a 'param' or '#param' was found in the macro body.
 private sub hRecordParam _
 	( _
+		byval macro as ASTNODE ptr, _
+		byref merge as integer, _
 		byval id as zstring ptr, _
 		byval paramindex as integer, _
 		byval stringify as integer _
@@ -798,96 +809,105 @@ private sub hRecordParam _
 	if( stringify ) then
 		n->attrib or= ASTATTRIB_STRINGIFY
 	end if
-	hTakeMergeAttrib( n )
+	hTakeMergeAttrib( merge, n )
 
-	astAppend( record.macro->expr, n )
+	astAppend( macro->expr, n )
 
 end sub
 
-private sub hRecordMerge( )
-	'' The next token/param (if any) will recieve the '##' merge attribute
-	record.merge = TRUE
-end sub
+private function hLookupMacroParam _
+	( _
+		byval macro as ASTNODE ptr, _
+		byval id as zstring ptr _
+	) as integer
 
-private function hLookupMacroParam( byval id as zstring ptr ) as integer
 	var index = 0
-	var param = record.macro->head
+
+	var param = macro->head
 	while( param )
+
 		assert( param->class = ASTCLASS_MACROPARAM )
 		if( *param->text = *id ) then
 			return index
 		end if
+
 		index += 1
 		param = param->next
 	wend
+
 	function = -1
 end function
 
-private sub hRecordBody( )
+sub hRecordMacroBody( byref x as integer, byval macro as ASTNODE ptr )
+	assert( macro->expr = NULL )
+	macro->expr = astNew( ASTCLASS_MACROBODY )
+	var merge = FALSE
+
 	do
-		select case( tkGet( record.x ) )
-		case TK_END
+		select case( tkGet( x ) )
+		case TK_END, TK_EOL, TK_EOF
 			exit do
 
 		'' '\'?
 		case TK_BACKSLASH
-			var xbackslash = record.x
-			record.x += 1
+			var xbackslash = x
+			x += 1
 
 			'' Check for escaped EOL, solve them out
 			'' '\' [Space] EOL
-			if( tkGet( record.x ) = TK_EOL ) then
+			if( tkGet( x ) = TK_EOL ) then
 				'' Remove the escaped EOL
-				tkRemove( xbackslash, record.x )
-				record.x = xbackslash - 1
+				tkRemove( xbackslash, x )
+				x = xbackslash - 1
 			else
-				record.x = xbackslash
-				hRecordToken( )
+				x = xbackslash
+				hRecordToken( x, macro, merge )
 			end if
 
 		case TK_ID
 			'' Is it one of the #define's parameters?
-			var id = tkGetText( record.x )
-			var paramindex = hLookupMacroParam( id )
+			var id = tkGetText( x )
+			var paramindex = hLookupMacroParam( macro, id )
 			if( paramindex >= 0 ) then
-				hRecordParam( id, paramindex, FALSE )
+				hRecordParam( macro, merge, id, paramindex, FALSE )
 			else
-				hRecordToken( )
+				hRecordToken( x, macro, merge )
 			end if
 
 		'' '#'?
 		case TK_HASH
 			'' '#param'?
-			if( tkGet( record.x + 1 ) = TK_ID ) then
+			if( tkGet( x + 1 ) = TK_ID ) then
 				'' Is it one of the #define's parameters?
-				var id = tkGetText( record.x + 1 )
-				var paramindex = hLookupMacroParam( id )
+				var id = tkGetText( x + 1 )
+				var paramindex = hLookupMacroParam( macro, id )
 				if( paramindex >= 0 ) then
 					'' '#'
-					record.x += 1
+					x += 1
 
-					hRecordParam( id, paramindex, TRUE )
+					hRecordParam( macro, merge, id, paramindex, TRUE )
 				else
 					'' '#'
-					hRecordToken( )
-					record.x += 1
+					hRecordToken( x, macro, merge )
+					x += 1
 
-					hRecordToken( )
+					hRecordToken( x, macro, merge )
 				end if
 			else
 				'' '#'
-				hRecordToken( )
+				hRecordToken( x, macro, merge )
 			end if
 
 		'' '##'?
 		case TK_HASHHASH
-			hRecordMerge( )
+			'' The next token/param (if any) will recieve the '##' merge attribute
+			merge = TRUE
 
 		case else
-			hRecordToken( )
+			hRecordToken( x, macro, merge )
 		end select
 
-		record.x += 1
+		x += 1
 	loop
 end sub
 
@@ -899,8 +919,8 @@ sub ppDirectives2( )
 			exit do
 
 		case TK_PPDEFINE
-			var t = tkGetAst( x )
-			assert( t->class = ASTCLASS_PPDEFINE )
+			var macro = tkGetAst( x )
+			assert( macro->class = ASTCLASS_PPDEFINE )
 			x += 1
 
 			'' BEGIN
@@ -909,14 +929,7 @@ sub ppDirectives2( )
 			x += 1
 
 			'' Parse macro body
-			assert( t->expr = NULL )
-			t->expr = astNew( ASTCLASS_MACROBODY )
-			record.macro = t
-			record.x = x
-			record.stringify = FALSE
-			record.merge = FALSE
-			hRecordBody( )
-			x = record.x
+			hRecordMacroBody( x, macro )
 
 			'' END
 			assert( tkGet( x ) = TK_END )

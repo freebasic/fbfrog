@@ -652,7 +652,7 @@ end function
 
 function importFile( byval file as FROGFILE ptr ) as ASTNODE ptr
 	tkInit( )
-	lexLoadFile( 0, file, TRUE )
+	lexLoadFile( 0, file, LEXMODE_FB, FALSE )
 	function = imToplevel( )
 	tkEnd( )
 end function

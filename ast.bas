@@ -484,6 +484,10 @@ sub astSetType _
 
 end sub
 
+sub astSetComment( byval n as ASTNODE ptr, byval comment as zstring ptr )
+	n->comment = strDuplicate( comment )
+end sub
+
 sub astAddComment( byval n as ASTNODE ptr, byval comment as zstring ptr )
 	dim as string s
 
@@ -498,7 +502,7 @@ sub astAddComment( byval n as ASTNODE ptr, byval comment as zstring ptr )
 
 	s += *comment
 
-	n->comment = strDuplicate( s )
+	astSetComment( n, s )
 end sub
 
 '' astClone() but without children

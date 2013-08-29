@@ -82,12 +82,13 @@ type LEXSTUFF
 	location	as TKLOCATION
 	behindspace	as integer
 	filename	as string
-	fb_mode		as integer    '' C or FB?
+	mode		as integer    '' LEXMODE_*
 	keep_comments	as integer    '' Whether to ignore comments or produce TK_COMMENTs
 
 	fbkwhash	as THASH
 	ckwhash		as THASH
-	kwhash		as THASH ptr  '' Points to keywords hash tb for current mode, C or FB
+	frogkwhash	as THASH
+	kwhash		as THASH ptr  '' Points to keywords hash tb for current mode
 end type
 
 dim shared as LEXSTUFF lex
@@ -181,7 +182,7 @@ private sub hReadLineComment( )
 			lex.i += 1
 
 		case CH_BACKSLASH
-			escaped = not lex.fb_mode
+			escaped = (lex.mode = LEXMODE_C)
 			lex.i += 1
 
 		case else
@@ -511,10 +512,10 @@ private sub lexNext( )
 		end select
 
 	case CH_QUOTE		'' '
-		if( lex.fb_mode ) then
-			hReadLineComment( )
-		else
+		if( lex.mode = LEXMODE_C ) then
 			hReadString( )
+		else
+			hReadLineComment( )
 		end if
 
 	case CH_LPAREN		'' (
@@ -574,22 +575,22 @@ private sub lexNext( )
 		case CH_EQ	'' /=
 			hReadBytes( TK_SLASHEQ, 2 )
 		case CH_SLASH	'' //
-			if( lex.fb_mode ) then
-				hReadBytes( TK_SLASH, 1 )
-			else
+			if( lex.mode = LEXMODE_C ) then
 				hReadLineComment( )
+			else
+				hReadBytes( TK_SLASH, 1 )
 			end if
 		case CH_QUOTE	'' /'
-			if( lex.fb_mode ) then
-				hReadComment( )
-			else
+			if( lex.mode = LEXMODE_C ) then
 				hReadBytes( TK_SLASH, 1 )
+			else
+				hReadComment( )
 			end if
 		case CH_STAR	'' /*
-			if( lex.fb_mode ) then
-				hReadBytes( TK_SLASH, 1 )
-			else
+			if( lex.mode = LEXMODE_C ) then
 				hReadComment( )
+			else
+				hReadBytes( TK_SLASH, 1 )
 			end if
 		case else
 			hReadBytes( TK_SLASH, 1 )
@@ -802,15 +803,22 @@ private sub hInitKeywords( )
 	'' hash tables to match the requested mode.
 
 	dim as integer first, last
-	if( lex.fb_mode ) then
-		lex.kwhash = @lex.fbkwhash
-		first = KW__FB_FIRST
-		last = KW__FB_LAST
-	else
+	select case( lex.mode )
+	case LEXMODE_C
 		lex.kwhash = @lex.ckwhash
 		first = KW__C_FIRST
 		last = KW__C_LAST
-	end if
+	case LEXMODE_FB
+		lex.kwhash = @lex.fbkwhash
+		first = KW__FB_FIRST
+		last = KW__FB_LAST
+	case LEXMODE_FBFROG
+		lex.kwhash = @lex.frogkwhash
+		first = KW__FROG_FIRST
+		last = KW__FROG_LAST
+	case else
+		assert( FALSE )
+	end select
 
 	if( lex.kwhash->items = NULL ) then
 		hashInit( lex.kwhash, 12 )
@@ -827,14 +835,14 @@ function lexLoadFile _
 	( _
 		byval x as integer, _
 		byval file as FROGFILE ptr, _
-		byval fb_mode as integer, _
+		byval mode as integer, _
 		byval keep_comments as integer _
 	) as integer
 
 	lex.x = x
 	lex.location.file = file
 	lex.location.linenum = 0
-	lex.fb_mode = fb_mode
+	lex.mode = mode
 	lex.keep_comments = keep_comments
 	hLoadFile( file, lex.buffer, lex.limit )
 	lex.i = lex.buffer

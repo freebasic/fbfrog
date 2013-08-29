@@ -274,7 +274,8 @@ enum
 	KW__C_LAST = KW_WHILE
 
 	'' FB-only keywords
-	KW_ALIAS
+	KW__FROG_FIRST
+	KW_ALIAS = KW__FROG_FIRST
 	KW_AND
 	KW_ANDALSO
 	KW_ANY
@@ -296,9 +297,11 @@ enum
 	KW_INTEGER
 	KW_LONGINT
 	KW_LOOP
+	KW_MACRO
 	KW_MOD
 	KW_NEXT
 	KW_NOT
+	KW_OPTION
 	KW_OR
 	KW_ORELSE
 	KW_PASCAL
@@ -327,6 +330,14 @@ enum
 	KW_XOR
 	KW_ZSTRING
 	KW__FB_LAST = KW_ZSTRING
+
+	'' fbfrog-only keywords
+	KW_DOWNLOAD
+	KW_EXTRACT
+	KW_EXPAND
+	KW_FILE
+	KW_VERSION
+	KW__FROG_LAST = KW_VERSION
 
 	TK__COUNT
 end enum
@@ -685,6 +696,7 @@ declare sub astSetType _
 		byval dtype as integer, _
 		byval subtype as ASTNODE ptr _
 	)
+declare sub astSetComment( byval n as ASTNODE ptr, byval comment as zstring ptr )
 declare sub astAddComment( byval n as ASTNODE ptr, byval comment as zstring ptr )
 declare function astCloneNode( byval n as ASTNODE ptr ) as ASTNODE ptr
 declare function astClone( byval n as ASTNODE ptr ) as ASTNODE ptr
@@ -706,12 +718,18 @@ declare sub astDump _
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
+enum
+	LEXMODE_C = 0
+	LEXMODE_FB
+	LEXMODE_FBFROG
+end enum
+
 declare function lexLoadFile _
 	( _
 		byval x as integer, _
 		byval file as FROGFILE ptr, _
-		byval fb_mode as integer = FALSE, _
-		byval keep_comments as integer = FALSE _
+		byval mode as integer, _
+		byval keep_comments as integer _
 	) as integer
 declare function lexPeekLine _
 	( _
@@ -730,7 +748,9 @@ declare function importFile( byval file as FROGFILE ptr ) as ASTNODE ptr
 declare sub ppComments( )
 declare sub ppDividers( )
 declare function hNumberLiteral( byval x as integer ) as ASTNODE ptr
+declare sub hMacroParamList( byref x as integer, byval t as ASTNODE ptr )
 declare sub ppDirectives1( )
+declare sub hRecordMacroBody( byref x as integer, byval macro as ASTNODE ptr )
 declare sub ppDirectives2( )
 declare sub ppEvalInit( )
 declare sub ppEvalEnd( )
@@ -743,6 +763,35 @@ declare sub ppEval( )
 declare sub ppParseIfExprOnly( byval do_fold as integer )
 declare sub ppRemoveEOLs( )
 declare function cFile( ) as ASTNODE ptr
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+enum
+	PRESETOPT_NOMERGE	= 1 shl 0
+	PRESETOPT_COMMENTS	= 1 shl 1
+	PRESETOPT_NOPP		= 1 shl 2
+	PRESETOPT_NOPPFOLD	= 1 shl 3
+	PRESETOPT_NOAUTOEXTERN	= 1 shl 4
+end enum
+
+type FROGPRESET
+	versions		as ASTNODE ptr
+
+	downloads		as ASTNODE ptr
+	extracts		as ASTNODE ptr
+	filecopies		as ASTNODE ptr
+	files			as ASTNODE ptr
+
+	defines			as ASTNODE ptr
+	undefs			as ASTNODE ptr
+	expands			as ASTNODE ptr
+	macros			as ASTNODE ptr
+
+	options			as integer
+end type
+
+declare sub frogLoadPreset( byval pre as FROGPRESET ptr, byref filename as string )
+declare sub frogFreePreset( byval pre as FROGPRESET ptr )
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 

@@ -54,11 +54,13 @@ To do:
 
 - hAddTextToken() could accidentially look up comment/string bodies in the
   keyword table, then produce the wrong token?
-
+- comments are sometimes duplicated
+- pp's macro body recording still handles escaped EOLs, those are handled by
+  the lexer already now, so pp doesn't need to do it
 - Must do automated formatting of macro bodies in emitter now that TK_SPACE is gone
 - Macro bodies should be emitted as FB text, not C text
 
-- Add preset files, *.txt with FB-like syntax
+- Add preset files, *.fbfrog with FB-like syntax
     - Working on/adding/sharing presets becomes easier because fbfrog itself
       doesn't need to be patched, rebuilt, re-released, etc.
     - Things like the list of known symbols are better stored in a config file
@@ -71,12 +73,14 @@ To do:
       presets one after another (can even use fbfrog sub-processes if needed),
       this would allow for presets for more complex test cases, to be run simply
       via
-          fbfrog tests/*.txt
-    - #defines in an FB-like preset file format could be read in with lex/tk,
+          fbfrog tests/*.fbfrog
+    - defines in an FB-like preset file format could be read in with lex/tk,
       this is much nicer than hard-coding a ppMacro*() call for every single
       token of the macro body
+    - file format should use define/undef instead of #define/#undef, so the #
+      can be reserved for meta-commands such as #include.
 
-	example.txt:
+	example.fbfrog:
 		'' Tell fbfrog about library versions, plus the version selection
 		'' #define and possible values that can be used to select the
 		'' API version in the final FB binding
@@ -91,15 +95,15 @@ To do:
 		declare version *.linux __FB_LINUX__
 
 		'' Register some known symbols
-		#undef _MSC_VER     '' never bother with MSVC code
-		#define __GNUC__ 4  '' pretend to be gcc 4
+		undef _MSC_VER     '' never bother with MSVC code
+		define __GNUC__ 4  '' pretend to be gcc 4
 
 		'' Register some known symbols only for the version 1.0 parsing passes (linux/win32):
 		version 1.0
-			#define ENABLE_FOO_SUPPORT
+			define ENABLE_FOO_SUPPORT
 			'' Some only for version 1.0's linux parsing pass:
 			version linux
-				#define ENABLE_BAR_SUPPORT
+				define ENABLE_BAR_SUPPORT
 			end version
 		end version
 
@@ -110,15 +114,15 @@ To do:
 		end version
 
 		'' Share code for common symbols such as compiler/OS pre-#defines
-		#include "common-symbols.txt"
+		#include "common.fbfrog"
 
-	common-symbols.txt:
+	common.fbfrog:
 		'' #define _WIN32 for all win32 versions, and #undef it for all linux ones...
 		version *.win32
-			#define _WIN32
+			define _WIN32
 		end version
 		version *.linux
-			#undef _WIN32
+			undef _WIN32
 		end version
 
 	Additional commands needed:

@@ -980,7 +980,7 @@ private function frogParseVersion _
 		keep_comments = TRUE
 	end select
 
-	lexLoadFile( 0, f, , keep_comments )
+	lexLoadFile( 0, f, LEXMODE_C, keep_comments )
 
 	'' Parse PP directives, and expand #includes if wanted and possible.
 	''
@@ -1011,7 +1011,7 @@ private function frogParseVersion _
 					    (incf <> f) ) then
 						'' Replace #include by included file's content
 						tkRemove( x, x )
-						lexLoadFile( x, incf, , keep_comments )
+						lexLoadFile( x, incf, LEXMODE_C, keep_comments )
 						have_new_tokens = TRUE
 
 						'' Counter the +1 below, so this position is re-parsed
@@ -1345,7 +1345,7 @@ end function
 			print "preparsing: ";f->pretty
 
 			tkInit( )
-			lexLoadFile( 0, f )
+			lexLoadFile( 0, f, LEXMODE_C, FALSE )
 
 			ppDirectives1( )
 

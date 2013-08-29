@@ -64,7 +64,7 @@ private sub cExpect( byval tk as integer )
 end sub
 
 private sub cExpectSkip( byval tk as integer )
-	tkExpect( parse.x, tk )
+	cExpect( tk )
 	cSkip( )
 end sub
 
