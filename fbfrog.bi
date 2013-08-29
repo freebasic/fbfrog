@@ -336,6 +336,7 @@ enum
 	KW_EXTRACT
 	KW_EXPAND
 	KW_FILE
+	KW_REMOVE
 	KW_VERSION
 	KW__FROG_LAST = KW_VERSION
 
@@ -786,6 +787,8 @@ type FROGPRESET
 	undefs			as ASTNODE ptr
 	expands			as ASTNODE ptr
 	macros			as ASTNODE ptr
+
+	removes			as ASTNODE ptr
 
 	options			as integer
 end type

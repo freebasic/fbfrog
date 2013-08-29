@@ -85,6 +85,8 @@ sub frogLoadPreset( byval pre as FROGPRESET ptr, byref presetfile as string )
 	pre->expands = astNew( ASTCLASS_GROUP )
 	pre->macros  = astNew( ASTCLASS_GROUP )
 
+	pre->removes = astNew( ASTCLASS_GROUP )
+
 	pre->options = 0
 
 	x = 0
@@ -247,6 +249,23 @@ sub frogLoadPreset( byval pre as FROGPRESET ptr, byref presetfile as string )
 
 			astAppend( pre->macros, macro )
 
+		'' REMOVE (DEFINE|STRUCT|PROC|...) Identifier
+		case KW_REMOVE
+			hSkip( )
+
+			var astclass = -1
+			select case( tkGet( x ) )
+			case KW_DEFINE
+				astclass = ASTCLASS_PPDEFINE
+			case else
+				hOops( "unknown REMOVE command" )
+			end select
+
+			'' Identifier
+			hExpect( TK_ID )
+			astAppend( pre->removes, astNew( astclass, tkGetText( x ) ) )
+			hSkip( )
+
 		'' OPTION optionid
 		case KW_OPTION
 			hSkip( )
@@ -294,4 +313,6 @@ sub frogFreePreset( byval pre as FROGPRESET ptr )
 	astDelete( pre->undefs )
 	astDelete( pre->expands )
 	astDelete( pre->macros )
+
+	astDelete( pre->removes )
 end sub
