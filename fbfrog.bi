@@ -342,7 +342,7 @@ enum
 	TK__COUNT
 end enum
 
-declare function tkInfoText( byval tk as integer ) as zstring ptr
+declare function tkInfoText( byval id as integer ) as zstring ptr
 
 '' Debugging helper, for example: TRACE( x ), "decl begin"
 #define TRACE( x ) print __FUNCTION__ + "(" + str( __LINE__ ) + "): " + tkDumpOne( x )

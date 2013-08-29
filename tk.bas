@@ -6,6 +6,7 @@
 type TOKENINFO
 	text		as zstring ptr
 	debug		as zstring ptr
+	pretty		as zstring ptr
 end type
 
 dim shared as TOKENINFO tk_info(0 to ...) = _
@@ -199,8 +200,8 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 
 #assert ubound( tk_info ) = TK__COUNT - 1
 
-function tkInfoText( byval tk as integer ) as zstring ptr
-	function = tk_info(tk).text
+function tkInfoText( byval id as integer ) as zstring ptr
+	function = tk_info(id).text
 end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -742,6 +743,21 @@ end sub
 
 sub tkExpect( byval x as integer, byval tk as integer )
 	if( tkGet( x ) <> tk ) then
-		tkOopsExpected( x, "'" + *tkInfoText( tk ) + "'" )
+		dim as string expected
+
+		select case( tk )
+		case TK_EOF    : expected = "end of file"
+		case TK_EOL    : expected = "end of line"
+		case TK_ID     : expected = "identifier"
+		case TK_STRING : expected = """..."" string literal"
+		case else
+			if( tk_info(tk).debug ) then
+				expected = *tk_info(tk).debug
+			else
+				expected = "'" + *tk_info(tk).text + "'"
+			end if
+		end select
+
+		tkOopsExpected( x, expected )
 	end if
 end sub
