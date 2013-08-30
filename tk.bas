@@ -196,6 +196,7 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	( @"extract" , NULL ), _
 	( @"expand"  , NULL ), _
 	( @"file"    , NULL ), _
+	( @"dir"     , NULL ), _
 	( @"remove"  , NULL ), _
 	( @"version" , NULL )  _
 }

@@ -336,6 +336,7 @@ enum
 	KW_EXTRACT
 	KW_EXPAND
 	KW_FILE
+	KW_DIR
 	KW_REMOVE
 	KW_VERSION
 	KW__FROG_LAST = KW_VERSION
@@ -782,6 +783,7 @@ type FROGPRESET
 	extracts		as ASTNODE ptr
 	copyfiles		as ASTNODE ptr
 	files			as ASTNODE ptr
+	dirs			as ASTNODE ptr
 
 	defines			as ASTNODE ptr
 	undefs			as ASTNODE ptr

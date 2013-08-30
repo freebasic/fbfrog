@@ -79,6 +79,7 @@ sub frogLoadPreset( byval pre as FROGPRESET ptr, byref presetfile as string )
 	pre->extracts  = astNew( ASTCLASS_GROUP )
 	pre->copyfiles = astNew( ASTCLASS_GROUP )
 	pre->files     = astNew( ASTCLASS_GROUP )
+	pre->dirs      = astNew( ASTCLASS_GROUP )
 
 	pre->defines = astNew( ASTCLASS_GROUP )
 	pre->undefs  = astNew( ASTCLASS_GROUP )
@@ -212,6 +213,13 @@ sub frogLoadPreset( byval pre as FROGPRESET ptr, byref presetfile as string )
 
 			astAppend( pre->files, astNew( ASTCLASS_TEXT, filename ) )
 
+		'' DIR "dir name"
+		case KW_DIR
+			hSkip( )
+			var dirname = hExpectSkipString( )
+
+			astAppend( pre->dirs, astNew( ASTCLASS_TEXT, dirname ) )
+
 		'' DEFINE Identifier
 		case KW_DEFINE
 			hSkip( )
@@ -308,6 +316,7 @@ sub frogFreePreset( byval pre as FROGPRESET ptr )
 	astDelete( pre->extracts )
 	astDelete( pre->copyfiles )
 	astDelete( pre->files )
+	astDelete( pre->dirs )
 
 	astDelete( pre->defines )
 	astDelete( pre->undefs )
