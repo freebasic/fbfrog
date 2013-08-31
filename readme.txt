@@ -58,7 +58,6 @@ To do:
 - should remove TLIST and use AST GROUPs instead
 - FROGFILEs should use zstring ptr instead of string, and perhaps even be turned
   into ASTNODE
-- should move AST merging code from fbfrog.bas into ast.bas
 - how to handle locations for constructs spanning across multiple lines?
   must have begin/end etc.
 

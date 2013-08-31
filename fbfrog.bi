@@ -721,6 +721,26 @@ declare sub astDump _
 		byval nestlevel as integer = 0, _
 		byref prefix as string = "" _
 	)
+declare sub astNodeToNop _
+	( _
+		byval n as ASTNODE ptr, _
+		byval astclass as integer, _
+		byref id as string _
+	)
+declare sub astAutoExtern _
+	( _
+		byval ast as ASTNODE ptr, _
+		byval use_stdcallms as integer = FALSE _
+	)
+declare sub astRemoveParamNames( byval n as ASTNODE ptr )
+declare sub astFixArrayParams( byval n as ASTNODE ptr )
+declare sub astRemoveRedundantTypedefs( byval n as ASTNODE ptr )
+declare sub astMergeDIVIDERs( byval n as ASTNODE ptr )
+declare function astMergeVersions _
+	( _
+		byval a as ASTNODE ptr, _
+		byval b as ASTNODE ptr _
+	) as ASTNODE ptr
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
