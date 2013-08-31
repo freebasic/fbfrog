@@ -42,7 +42,7 @@
 ''
 '' ppExpandSym() can be used to mark symbols as "precious", telling ppEval()
 '' that it should try to do macro expansion for it, if a corresponding #define
-'' is found. ppMacro*() can be used to register initial #defines.
+'' is found. ppAddMacro() can be used to register initial #defines.
 ''
 '' ppParseIfExprOnly() is a ppEval() replacement that just parses #if
 '' expressions into ASTs but doesn't evaluate/expand anything, for use by PP
@@ -1194,26 +1194,10 @@ private sub hUndefMacro( byval id as zstring ptr )
 	end if
 end sub
 
-sub ppMacroBegin( byval id as zstring ptr, byval paramcount as integer )
-	assert( paramcount >= -1 )
-	ppAddSym( id, TRUE )
-	ppExpandSym( id )
-	var macro = astNew( ASTCLASS_PPDEFINE, id )
-	macro->paramcount = paramcount
-	macro->expr = astNew( ASTCLASS_MACROBODY )
+sub ppAddMacro( byval macro as ASTNODE ptr )
+	ppAddSym( macro->text, TRUE )
+	ppExpandSym( macro->text )
 	astAppend( eval.macros, macro )
-end sub
-
-sub ppMacroToken( byval tk as integer, byval text as zstring ptr )
-	var macro = eval.macros->tail
-	astAppend( macro->expr, astNewTK( tk, text ) )
-end sub
-
-sub ppMacroParam( byval index as integer )
-	var macro = eval.macros->tail
-	assert( macro->paramcount > 0 )
-	assert( (index >= 0) and (index < macro->paramcount) )
-	astAppend( macro->expr, astNewMACROPARAM( NULL, index ) )
 end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''

@@ -1,4 +1,4 @@
-extern     i as long
-dim shared i as long
+extern     i as long  '' static
+dim shared i as long  '' static
 
 #define A "int"

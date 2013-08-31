@@ -4,6 +4,7 @@ dir "tests/pp"
 dir "tests/udt"
 option nomerge
 option comments
+option noautoextern
 
 define KNOWNDEFINED1
 define KNOWNDEFINED2

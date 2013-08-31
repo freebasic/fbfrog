@@ -228,6 +228,39 @@ private function frogParseVersion _
 	'' Macro expansion, #if evaluation
 	''
 	ppEvalInit( )
+
+	scope
+		var child = pre->undefs->head
+		while( child )
+			ppAddSym( child->text, FALSE )
+			child = child->next
+		wend
+	end scope
+
+	scope
+		var child = pre->defines->head
+		while( child )
+			ppAddSym( child->text, TRUE )
+			child = child->next
+		wend
+	end scope
+
+	scope
+		var child = pre->expands->head
+		while( child )
+			ppExpandSym( child->text )
+			child = child->next
+		wend
+	end scope
+
+	scope
+		var child = pre->macros->head
+		while( child )
+			ppAddMacro( astClone( child ) )
+			child = child->next
+		wend
+	end scope
+
 	if( (pre->options and PRESETOPT_NOPP) = 0 ) then
 		ppEval( )
 	else
