@@ -848,22 +848,6 @@ sub hRecordMacroBody( byref x as integer, byval macro as ASTNODE ptr )
 		case TK_END, TK_EOL, TK_EOF
 			exit do
 
-		'' '\'?
-		case TK_BACKSLASH
-			var xbackslash = x
-			x += 1
-
-			'' Check for escaped EOL, solve them out
-			'' '\' [Space] EOL
-			if( tkGet( x ) = TK_EOL ) then
-				'' Remove the escaped EOL
-				tkRemove( xbackslash, x )
-				x = xbackslash - 1
-			else
-				x = xbackslash
-				hRecordToken( x, macro, merge )
-			end if
-
 		case TK_ID
 			'' Is it one of the #define's parameters?
 			var id = tkGetText( x )

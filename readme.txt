@@ -55,85 +55,25 @@ To do:
 - hAddTextToken() could accidentially look up comment/string bodies in the
   keyword table, then produce the wrong token?
 - comments are sometimes duplicated
-- pp's macro body recording still handles escaped EOLs, those are handled by
-  the lexer already now, so pp doesn't need to do it
 - Must do automated formatting of macro bodies in emitter now that TK_SPACE is gone
 - Macro bodies should be emitted as FB text, not C text
+- should remove TLIST and use AST GROUPs instead
+- FROGFILEs should use zstring ptr instead of string, and perhaps even be turned
+  into ASTNODE
+- add astNewID(), astNewTEXT(), astNewGROUP(), etc.
+- should move AST merging code from fbfrog.bas into ast.bas
 
-- Add preset files, *.fbfrog with FB-like syntax
-    - Working on/adding/sharing presets becomes easier because fbfrog itself
-      doesn't need to be patched, rebuilt, re-released, etc.
-    - Things like the list of known symbols are better stored in a config file
-      than in form of a bunch of hard-coded ppAddSym() calls, because the config
-      file allows for a smaller and potentially easier to read format.
-    - Of course no "dynamic" coding will be possible, so everything must be
-      encoded in the format: tarball URLs, input file names, version numbers,
-      restricting certain symbols to certain versions, etc.
-    - Allow passing multiple preset files on command line to run multiple
-      presets one after another (can even use fbfrog sub-processes if needed),
-      this would allow for presets for more complex test cases, to be run simply
-      via
-          fbfrog tests/*.fbfrog
-    - defines in an FB-like preset file format could be read in with lex/tk,
-      this is much nicer than hard-coding a ppMacro*() call for every single
-      token of the macro body
-    - file format should use define/undef instead of #define/#undef, so the #
-      can be reserved for meta-commands such as #include.
-    - since LEXMODE_FBFROG now uses all keywords, "undef string" would appear
-      as two keywords instead of keyword+id and fail to be parsed. Need to find
-      better solution than sharing keywords between C/FB/fbfrog or allow
-      anything >= TK_ID as arguments to undef|define|expand|macro.
-      Some bindings may need to register symbols that happen to be FB keywords etc...
-
-	example.fbfrog:
-		'' Tell fbfrog about library versions, plus the version selection
-		'' #define and possible values that can be used to select the
-		'' API version in the final FB binding
-		declare version 1.0 __MYLIB_VER__=10
-		declare version 2.0 __MYLIB_VER__=20
-
-		'' Tell fbfrog that all of the currently known versions should
-		'' recieve win32/linux sub-versions, "accessible" through
-		'' __FB_WIN32/LINUX__ #defines, no values given means it should
-		'' use #ifdef to check for those.
-		declare version *.win32 __FB_WIN32__
-		declare version *.linux __FB_LINUX__
-
-		'' Register some known symbols
-		undef _MSC_VER     '' never bother with MSVC code
-		define __GNUC__ 4  '' pretend to be gcc 4
-
-		'' Register some known symbols only for the version 1.0 parsing passes (linux/win32):
-		version 1.0
-			define ENABLE_FOO_SUPPORT
-			'' Some only for version 1.0's linux parsing pass:
-			version linux
-				define ENABLE_BAR_SUPPORT
-			end version
-		end version
-
-		'' Can have more complex version specifiers:
-		version >= 1.0, <> 4.1, *.win32
-			'' Stuff only for versions >= 1.0 except for 4.1,
-			'' and of those only the win32 sub-versions
-		end version
-
-		'' Share code for common symbols such as compiler/OS pre-#defines
-		#include "common.fbfrog"
-
-	common.fbfrog:
-		'' #define _WIN32 for all win32 versions, and #undef it for all linux ones...
-		version *.win32
-			define _WIN32
-		end version
-		version *.linux
-			undef _WIN32
-		end version
-
-	Additional commands needed:
-		- download & extract & auto-cleanup tarballs: URL, filename, extraction directory name
-		- register input files, relative file name (possibly from extracted tarballs)
-		- ... probably many more eventually, depending on what the bindings will need
+- version specific parts of preset:
+    - should use VERSION blocks in a GROUP to represent
+    - anything at toplevel will be under VERSION block covering all versions
+    - this requires all DECLARE VERSION statements to be at the top
+    - then perhaps we can use the same solve-version-out code to retrieve the
+      preset statements for a specific version?
+- since LEXMODE_FBFROG now uses all keywords, "undef string" would appear
+  as two keywords instead of keyword+id and fail to be parsed. Need to find
+  better solution than sharing keywords between C/FB/fbfrog or allow
+  anything >= TK_ID as arguments to undef|define|expand|macro.
+  Some bindings may need to register symbols that happen to be FB keywords etc...
 
 - Macro expansion should preserve token locations, perhaps even a stack of
   locations in case of nested macros. It'd be nice if the tkOops() functions
