@@ -1,0 +1,18 @@
+dir "tests/decl"
+dir "tests/lex"
+dir "tests/pp"
+dir "tests/udt"
+option nomerge
+option comments
+
+define KNOWNDEFINED1
+define KNOWNDEFINED2
+undef KNOWNUNDEFINED1
+undef KNOWNUNDEFINED2
+expand EXPANDTHIS
+expand EXPANDME1
+expand EXPANDME2
+expand EXPANDME3
+expand EXPANDME4
+expand EXPANDME5
+expand EXPANDME6

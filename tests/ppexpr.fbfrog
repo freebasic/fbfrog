@@ -1,0 +1,4 @@
+dir "tests/ppexpr"
+option nomerge
+option nopp
+option noppfold

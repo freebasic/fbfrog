@@ -136,7 +136,7 @@ function astNewIIF _
 	function = n
 end function
 
-private function astNewVERSION overload( ) as ASTNODE ptr
+function astNewVERSION overload( ) as ASTNODE ptr
 	var n = astNew( ASTCLASS_VERSION )
 	n->expr = astNew( ASTCLASS_GROUP )
 	function = n
@@ -144,13 +144,14 @@ end function
 
 function astNewVERSION overload _
 	( _
-		byval child as ASTNODE ptr, _
-		byval versionnum as integer _
+		byval versionnum as ASTNODE ptr, _
+		byval child as ASTNODE ptr _
 	) as ASTNODE ptr
 
 	var n = astNewVERSION( )
 
-	astAppend( n->expr, astNewCONST( versionnum, 0, TYPE_INTEGER ) )
+	assert( versionnum->class = ASTCLASS_TEXT )
+	astAppend( n->expr, versionnum )
 	astAppend( n, child )
 
 	function = n
@@ -158,9 +159,9 @@ end function
 
 function astNewVERSION overload _
 	( _
-		byval child as ASTNODE ptr, _
 		byval version1 as ASTNODE ptr, _
-		byval version2 as ASTNODE ptr _
+		byval version2 as ASTNODE ptr, _
+		byval child as ASTNODE ptr _
 	) as ASTNODE ptr
 
 	var n = astNewVERSION( )

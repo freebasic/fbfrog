@@ -70,25 +70,8 @@ private sub hIncludeFile( byref incfile as string )
 end sub
 #endif
 
-sub frogLoadPreset( byval pre as FROGPRESET ptr, byref presetfile as string )
+sub presetParse( byval pre as FROGPRESET ptr, byref presetfile as string )
 	tkInit( )
-
-	pre->versions = astNew( ASTCLASS_GROUP )
-
-	pre->downloads = astNew( ASTCLASS_GROUP )
-	pre->extracts  = astNew( ASTCLASS_GROUP )
-	pre->copyfiles = astNew( ASTCLASS_GROUP )
-	pre->files     = astNew( ASTCLASS_GROUP )
-	pre->dirs      = astNew( ASTCLASS_GROUP )
-
-	pre->defines = astNew( ASTCLASS_GROUP )
-	pre->undefs  = astNew( ASTCLASS_GROUP )
-	pre->expands = astNew( ASTCLASS_GROUP )
-	pre->macros  = astNew( ASTCLASS_GROUP )
-
-	pre->removes = astNew( ASTCLASS_GROUP )
-
-	pre->options = 0
 
 	x = 0
 	verlevel = -1
@@ -209,16 +192,12 @@ sub frogLoadPreset( byval pre as FROGPRESET ptr, byref presetfile as string )
 		'' FILE "file name"
 		case KW_FILE
 			hSkip( )
-			var filename = hExpectSkipString( )
-
-			astAppend( pre->files, astNew( ASTCLASS_TEXT, filename ) )
+			presetAddFile( pre, hExpectSkipString( ) )
 
 		'' DIR "dir name"
 		case KW_DIR
 			hSkip( )
-			var dirname = hExpectSkipString( )
-
-			astAppend( pre->dirs, astNew( ASTCLASS_TEXT, dirname ) )
+			presetAddDir( pre, hExpectSkipString( ) )
 
 		'' DEFINE Identifier
 		case KW_DEFINE
@@ -309,7 +288,26 @@ sub frogLoadPreset( byval pre as FROGPRESET ptr, byref presetfile as string )
 	tkEnd( )
 end sub
 
-sub frogFreePreset( byval pre as FROGPRESET ptr )
+sub presetInit( byval pre as FROGPRESET ptr )
+	pre->versions = astNew( ASTCLASS_GROUP )
+
+	pre->downloads = astNew( ASTCLASS_GROUP )
+	pre->extracts  = astNew( ASTCLASS_GROUP )
+	pre->copyfiles = astNew( ASTCLASS_GROUP )
+	pre->files     = astNew( ASTCLASS_GROUP )
+	pre->dirs      = astNew( ASTCLASS_GROUP )
+
+	pre->defines = astNew( ASTCLASS_GROUP )
+	pre->undefs  = astNew( ASTCLASS_GROUP )
+	pre->expands = astNew( ASTCLASS_GROUP )
+	pre->macros  = astNew( ASTCLASS_GROUP )
+
+	pre->removes = astNew( ASTCLASS_GROUP )
+
+	pre->options = 0
+end sub
+
+sub presetEnd( byval pre as FROGPRESET ptr )
 	astDelete( pre->versions )
 
 	astDelete( pre->downloads )
@@ -324,4 +322,34 @@ sub frogFreePreset( byval pre as FROGPRESET ptr )
 	astDelete( pre->macros )
 
 	astDelete( pre->removes )
+end sub
+
+sub presetAddFile( byval pre as FROGPRESET ptr, byref filename as string )
+	astAppend( pre->files, astNew( ASTCLASS_TEXT, filename ) )
+end sub
+
+sub presetAddDir( byval pre as FROGPRESET ptr, byref dirname as string )
+	astAppend( pre->dirs, astNew( ASTCLASS_TEXT, dirname ) )
+end sub
+
+function presetHasInput( byval pre as FROGPRESET ptr ) as integer
+	function = _
+		(pre->downloads->head <> NULL) or _
+		(pre->extracts->head <> NULL) or _
+		(pre->copyfiles->head <> NULL) or _
+		(pre->files->head <> NULL) or _
+		(pre->dirs->head <> NULL)
+end function
+
+sub presetOverrideInput( byval a as FROGPRESET ptr, byval b as FROGPRESET ptr )
+	astDelete( a->downloads )
+	astDelete( a->extracts  )
+	astDelete( a->copyfiles )
+	astDelete( a->files     )
+	astDelete( a->dirs      )
+	a->downloads = astClone( b->downloads )
+	a->extracts  = astClone( b->extracts  )
+	a->copyfiles = astClone( b->copyfiles )
+	a->files     = astClone( b->files     )
+	a->dirs      = astClone( b->dirs      )
 end sub

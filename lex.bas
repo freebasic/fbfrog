@@ -856,7 +856,7 @@ function lexLoadFile _
 	wend
 
 	#if 0
-	if( frog.verbose ) then
+	if( verbose ) then
 		print "  lex: " & cuint( lex.limit ) - cuint( lex.buffer ) & _
 			" bytes -> " & lex.x - x & " tokens"
 	end if

@@ -894,3 +894,15 @@ sub hScanDirectoryForH _
 	wend
 
 end sub
+
+function hShell( byref ln as string ) as integer
+	print "$ " + ln
+	var result = shell( ln )
+	if( result = 0 ) then
+		function = TRUE
+	elseif( result = -1 ) then
+		print "command not found: '" + ln + "'"
+	else
+		print "'" + ln + "' terminated with exit code " + str( result )
+	end if
+end function

@@ -1,0 +1,3 @@
+dir "tests/ppexprfold"
+option nomerge
+option nopp

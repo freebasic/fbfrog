@@ -126,6 +126,7 @@ declare sub hScanDirectoryForH _
 		byref rootdir as string, _
 		byval resultlist as TLIST ptr _
 	)
+declare function hShell( byref ln as string ) as integer
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
@@ -629,16 +630,17 @@ declare function astNewIIF _
 		byval l as ASTNODE ptr, _
 		byval r as ASTNODE ptr _
 	) as ASTNODE ptr
+declare function astNewVERSION overload( ) as ASTNODE ptr
 declare function astNewVERSION overload _
 	( _
-		byval child as ASTNODE ptr, _
-		byval versionnum as integer _
+		byval versionnum as ASTNODE ptr, _
+		byval child as ASTNODE ptr _
 	) as ASTNODE ptr
 declare function astNewVERSION overload _
 	( _
-		byval child as ASTNODE ptr, _
 		byval version1 as ASTNODE ptr, _
-		byval version2 as ASTNODE ptr _
+		byval version2 as ASTNODE ptr, _
+		byval child as ASTNODE ptr _
 	) as ASTNODE ptr
 declare function astNewDIMENSION _
 	( _
@@ -795,8 +797,13 @@ type FROGPRESET
 	options			as integer
 end type
 
-declare sub frogLoadPreset( byval pre as FROGPRESET ptr, byref filename as string )
-declare sub frogFreePreset( byval pre as FROGPRESET ptr )
+declare sub presetParse( byval pre as FROGPRESET ptr, byref filename as string )
+declare sub presetInit( byval pre as FROGPRESET ptr )
+declare sub presetEnd( byval pre as FROGPRESET ptr )
+declare sub presetAddFile( byval pre as FROGPRESET ptr, byref filename as string )
+declare sub presetAddDir( byval pre as FROGPRESET ptr, byref dirname as string )
+declare function presetHasInput( byval pre as FROGPRESET ptr ) as integer
+declare sub presetOverrideInput( byval a as FROGPRESET ptr, byval b as FROGPRESET ptr )
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
@@ -810,14 +817,4 @@ type FROGFILE_
 	linecount	as integer
 end type
 
-type FROGSTUFF
-	merge		as integer
-	verbose		as integer
-	preset		as string
-
-	files		as TLIST '' FROGFILE
-	filehash	as THASH
-	commonparent	as string
-end type
-
-extern as FROGSTUFF frog
+extern verbose as integer
