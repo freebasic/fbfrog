@@ -736,11 +736,11 @@ end sub
 
 sub tkOopsExpected( byval x as integer, byref message as string )
 	select case( tkGet( x ) )
-	case TK_EOL, TK_EOF
+	case TK_EOL, TK_EOF, TK_DIVIDER
 		tkOops( x, "missing " + message )
 	case else
-		tkOops( x, "expected " + message + " " + _
-			"but found '" + tkToCText( tkGet( x ), tkGetText( x ) ) + "'" )
+		var found = "'" + tkToCText( tkGet( x ), tkGetText( x ) ) + "'"
+		tkOops( x, "expected " + message + " but found " + found )
 	end select
 end sub
 

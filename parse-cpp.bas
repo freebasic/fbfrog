@@ -330,8 +330,7 @@ private function ppDivider( byval x as integer ) as integer
 	var blockcomment = tkCollectComments( x - 1, x - 1 )
 
 	var comment = tkCollectComments( begin, x - 2 )
-	tkRemove( begin, x - 1 )
-	tkInsert( begin, TK_DIVIDER, blockcomment )
+	tkFold( begin, x - 1, TK_DIVIDER, blockcomment )
 	tkSetComment( begin, comment )
 	x = begin
 

@@ -62,7 +62,10 @@ To do:
   into ASTNODE
 - add astNewID(), astNewTEXT(), astNewGROUP(), etc.
 - should move AST merging code from fbfrog.bas into ast.bas
+- how to handle locations for constructs spanning across multiple lines?
+  must have begin/end etc.
 
+- preset defines/undefs etc. are not yet passed to pp
 - version specific parts of preset:
     - should use VERSION blocks in a GROUP to represent
     - anything at toplevel will be under VERSION block covering all versions
