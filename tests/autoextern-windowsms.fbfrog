@@ -1,0 +1,3 @@
+file "tests/autoextern/extern-windows-ms.h"
+option nomerge
+option windowsms

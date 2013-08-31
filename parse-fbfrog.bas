@@ -265,6 +265,7 @@ sub presetParse( byval pre as FROGPRESET ptr, byref presetfile as string )
 				case "nopp"         : opt = PRESETOPT_NOPP
 				case "noppfold"     : opt = PRESETOPT_NOPPFOLD
 				case "noautoextern" : opt = PRESETOPT_NOAUTOEXTERN
+				case "windowsms"    : opt = PRESETOPT_WINDOWSMS
 				end select
 			end if
 			if( opt < 0 ) then

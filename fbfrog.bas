@@ -281,7 +281,7 @@ private function frogParseVersion _
 	astFixArrayParams( ast )
 	astRemoveRedundantTypedefs( ast )
 	if( (pre->options and PRESETOPT_NOAUTOEXTERN) = 0 ) then
-		astAutoExtern( ast )
+		astAutoExtern( ast, ((pre->options and PRESETOPT_WINDOWSMS) <> 0) )
 	end if
 	astMergeDIVIDERs( ast )
 
