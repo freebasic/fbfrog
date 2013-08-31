@@ -58,8 +58,6 @@ To do:
 - should remove TLIST and use AST GROUPs instead
 - FROGFILEs should use zstring ptr instead of string, and perhaps even be turned
   into ASTNODE
-- how to handle locations for constructs spanning across multiple lines?
-  must have begin/end etc.
 
 - preset defines/undefs etc. are not yet passed to pp
 - version specific parts of preset:

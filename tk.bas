@@ -292,6 +292,10 @@ function tkDumpOne( byval x as integer ) as string
 		s += " ast=" & astDumpInline( tkGetAst( x ) )
 	end if
 
+	if( p->location.file ) then
+		s += " location: " + p->location.file->pretty + "(" & p->location.linenum+1 & ") column=" & p->location.column & " length=" & p->location.length
+	end if
+
 	function = s
 end function
 
@@ -447,11 +451,20 @@ sub tkFold _
 		byval ast as ASTNODE ptr _
 	)
 
-	var location = *tkGetLocation( first )
-	var lastloc  = tkGetLocation( last )
+	var lastin1stline = first
+	for i as integer = first+2 to last
+		select case( tkGet( i ) )
+		case TK_EOL, TK_DIVIDER, TK_PPINCLUDE, TK_PPDEFINE, TK_PPIF, _
+		     TK_PPELSEIF, TK_PPELSE, TK_PPENDIF, TK_PPUNDEF
+			lastin1stline = i - 1
+			exit for
+		end select
+	next
 
 	'' Sum up all the token lengths and space in between, resulting in one
-	'' big combined token.
+	'' big combined token; unless it spans across multiple lines.
+	var location = *tkGetLocation( first )
+	var lastloc  = tkGetLocation( lastin1stline )
 	location.length = lastloc->column + lastloc->length - location.column
 
 	'' Insert first - the text/ast pointers may reference one of the tokens
