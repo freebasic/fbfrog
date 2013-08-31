@@ -1,0 +1,97 @@
+*.fbfrog file format
+--------------------
+
+  Similar to FB code: ' or /''/ for comments, case insensitive keywords,
+  "..." string literals, number literals.
+
+Preprocessing (#if block evaluation, macro expansion)
+-----------------------------------------------------
+
+  DEFINE Identifier
+    Register a symbol that's known to be #defined initially, so #ifdef checks
+    on it can be evaluated. Useful for compiler pre-#defines such as _WIN32,
+    or to get rid of uninteresting #if blocks.
+
+  UNDEF Identifier
+    Same thing except that the symbol is known to be *not* #defined initially.
+    Common case:
+       undef __cplusplus
+
+  EXPAND Identifier
+    Do macro expansion if a #define with that name is ever found and then
+    invoked in following code. Useful to solve out macros that are declared and
+    used in the header file.
+
+  MACRO Identifier
+  MACRO Identifier MacroBody
+  MACRO Identifier(MacroParameters) MacroBody
+    Declare a #define macro that will be expanded if invoked in the header.
+    Same syntax as a #define statement in C/FB. Useful for compiler pre-#defines
+    that need to have a value, such as __GNUC__=4:
+      macro __GNUC__ 4
+    MACRO implies and automatically does EXPAND and DEFINE.
+
+
+Input files
+-----------
+
+  DOWNLOAD "URL" "outputfilename"
+    For downloading tarballs
+
+  EXTRACT "tarballfilename" "outputdirectoryname"
+    For extracting tarballs
+
+  COPYFILE "oldname" "newname"
+    For copying files around after extracting a tarball, if needed
+
+  FILE "filename.h"
+    To register input files from the extracted tarballs
+
+  DIR "dirname"
+    To register all *.h files found in the directory and sub-directories
+
+Versions
+--------
+
+  DECLARE VERSION "1.0"
+  DECLARE VERSION "1.2"
+  DECLARE VERSION "2.0.linux"
+  DECLARE VERSION "2.0.win32"
+    Used to tell fbfrog about multiple versions of a binding. fbfrog will
+    parse input files registered for each version, do preprocessing with
+    the symbols registered for each version, and combine the resulting
+    declarations into a single binding.
+    This can be used to handle different versions of a library, and also
+    Win32/Linux/DOS versions of the same header (in case the header has
+    system-specific elements).
+
+  DECLARE VERSION "1.5" __MYLIB_VER__=15
+  DECLARE VERSION "2.0" __MYLIB_VER__=20
+  DECLARE VERSION "*.win32" __FB_WIN32__
+    An identifier and a value can optionally be given. This is the #define
+    that fbfrog will check via #if blocks, to handle version-specific parts
+    in the final binding. If no value is given for the #define, then fbfrog
+    will do an #ifdef check.
+      #if __MYLIB_VER__ = 15
+        declare sub functionFromVersion15( )
+      #endif
+      #if __MYLIB_VER__ = 20
+        declare sub functionFromVersion20( )
+      #endif
+      #ifdef __FB_WIN32__
+        declare sub functionOnlyOnWin32( )
+      #endif
+
+The rest
+--------
+
+  REMOVE DEFINE Identifier
+    Remove any #define statements for that symbol from the binding.
+
+  OPTION <name>
+    NOMERGE       - create one *.bi per *.h, instead of a single *.bi
+    COMMENTS      - preserve comments
+    NOPP          - disable preprocessing (for test cases)
+    NOPPFOLD      - disable #if expression folding (for test cases)
+    NOAUTOEXTERN  - disable automated calling convention to Extern block
+                    conversion (for test cases)
