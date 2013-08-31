@@ -1228,11 +1228,13 @@ private sub frogWork( byval pre as FROGPRESET ptr, byref presetfile as string )
 	hashEnd( @frog.filehash )
 	do
 		f = listGetHead( @frog.files )
+		if( f = NULL ) then exit do
 		f->pretty = ""
 		f->normed = ""
 		astDelete( f->ast )
 		listDelete( @frog.files, f )
 	loop
+	listEnd( @frog.files )
 end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
