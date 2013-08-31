@@ -110,16 +110,20 @@ private sub hAddTextToken( byval tk as integer, byval begin as ubyte ptr )
 	var old = lex.i[0]
 	lex.i[0] = 0
 
-	'' Lookup C keyword
-	var hash = hashHash( begin )
-	var item = hashLookup( lex.kwhash, begin, hash )
+	if( tk = TK_ID ) then
+		'' Lookup C keyword
+		var hash = hashHash( begin )
+		var item = hashLookup( lex.kwhash, begin, hash )
 
-	'' Is it a C keyword?
-	if( item->s ) then
-		'' Then use the proper KW_* instead of TK_ID
-		tkInsert( lex.x, cint( item->data ) )
+		'' Is it a C keyword?
+		if( item->s ) then
+			'' Then use the proper KW_* instead of TK_ID
+			tkInsert( lex.x, cint( item->data ) )
+		else
+			'' TK_ID
+			tkInsert( lex.x, tk, begin )
+		end if
 	else
-		'' TK_ID
 		tkInsert( lex.x, tk, begin )
 	end if
 	hSetLocation( )

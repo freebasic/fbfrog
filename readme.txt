@@ -52,8 +52,6 @@ Compiling:
 
 To do:
 
-- hAddTextToken() could accidentially look up comment/string bodies in the
-  keyword table, then produce the wrong token?
 - comments are sometimes duplicated
 - Must do automated formatting of macro bodies in emitter now that TK_SPACE is gone
 - Macro bodies should be emitted as FB text, not C text
