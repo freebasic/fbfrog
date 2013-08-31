@@ -399,10 +399,10 @@ private function cStructCompound( ) as ASTNODE ptr
 
 	if( is_typedef ) then
 		'' IdList
-		var subtype = astNew( ASTCLASS_ID, id )
+		var subtype = astNewID( id )
 		var t = cIdList( DECL_TYPEDEF, TYPE_UDT, subtype, 0, "" )
 		astDelete( subtype )
-		var group = astNew( ASTCLASS_GROUP )
+		var group = astNewGROUP( )
 		astAppend( group, struct )
 		astAppend( group, t )
 		function = group
@@ -591,7 +591,7 @@ private sub cBaseType _
 				dtype = TYPE_ULONGINT
 			case else
 				dtype = TYPE_UDT
-				subtype = astNew( ASTCLASS_ID, tkGetText( basetypex ) )
+				subtype = astNewID( tkGetText( basetypex ) )
 			end select
 		case KW_VOID
 			dtype = TYPE_ANY
@@ -661,7 +661,7 @@ end sub
 '' ParamDeclList = ParamDecl (',' ParamDecl)*
 '' ParamDecl = '...' | MultDecl{Param}
 private function cParamDeclList( ) as ASTNODE ptr
-	var group = astNew( ASTCLASS_GROUP )
+	var group = astNewGROUP( )
 
 	do
 		dim as ASTNODE ptr t
@@ -1076,7 +1076,7 @@ private function cIdList _
 		byref comment as string _
 	) as ASTNODE ptr
 
-	var group = astNew( ASTCLASS_GROUP )
+	var group = astNewGROUP( )
 
 	'' ... (',' ...)*
 	do
@@ -1144,7 +1144,7 @@ private function cMultDecl _
 end function
 
 private function cToplevel( byval body as integer ) as ASTNODE ptr
-	var group = astNew( ASTCLASS_GROUP )
+	var group = astNewGROUP( )
 
 	do
 		dim as ASTNODE ptr t

@@ -647,10 +647,10 @@ function tkToAstText _
 		var p = tkAccess( i )
 		if( p->ast ) then
 			if( len( s ) > 0 ) then
-				text = astNew( ASTCLASS_TEXT, s )
+				text = astNewTEXT( s )
 			end if
 			if( group = NULL ) then
-				group = astNew( ASTCLASS_GROUP )
+				group = astNewGROUP( )
 			end if
 			astAppend( group, text )
 			astAppend( group, astClone( p->ast ) )
@@ -662,7 +662,7 @@ function tkToAstText _
 	next
 
 	if( len( s ) > 0 ) then
-		text = astNew( ASTCLASS_TEXT, s )
+		text = astNewTEXT( s )
 	end if
 
 	if( group ) then

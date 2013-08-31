@@ -630,6 +630,7 @@ declare function astNewIIF _
 		byval l as ASTNODE ptr, _
 		byval r as ASTNODE ptr _
 	) as ASTNODE ptr
+#define astNewGROUP( ) astNew( ASTCLASS_GROUP )
 declare function astNewVERSION overload( ) as ASTNODE ptr
 declare function astNewVERSION overload _
 	( _
@@ -654,6 +655,7 @@ declare function astNewCONST _
 		byval dtype as integer _
 	) as ASTNODE ptr
 #define astNewID( id ) astNew( ASTCLASS_ID, id )
+#define astNewTEXT( text ) astNew( ASTCLASS_TEXT, text )
 declare function astNewTK _
 	( _
 		byval tk as integer, _

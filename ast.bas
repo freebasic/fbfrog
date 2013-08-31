@@ -138,7 +138,7 @@ end function
 
 function astNewVERSION overload( ) as ASTNODE ptr
 	var n = astNew( ASTCLASS_VERSION )
-	n->expr = astNew( ASTCLASS_GROUP )
+	n->expr = astNewGROUP( )
 	function = n
 end function
 
@@ -363,7 +363,7 @@ function astSolveVersionsOut _
 		byval matchversion as ASTNODE ptr _
 	) as ASTNODE ptr
 
-	var cleannodes = astNew( ASTCLASS_GROUP )
+	var cleannodes = astNewGROUP( )
 
 	assert( nodes->class = ASTCLASS_GROUP )
 	var version = nodes->head

@@ -483,7 +483,7 @@ private function ppExpression _
 			'' expressions to be parsed, such as
 			''    defined FOO && FOO == 123
 			'' without having to expand FOO.
-			a = astNew( ASTCLASS_ID, tkGetText( x ) )
+			a = astNewID( tkGetText( x ) )
 			a->location = *tkGetLocation( x )
 			x += 1
 
@@ -501,7 +501,7 @@ private function ppExpression _
 
 			'' Identifier
 			tkExpect( x, TK_ID )
-			a = astNew( ASTCLASS_ID, tkGetText( x ) )
+			a = astNewID( tkGetText( x ) )
 			a->location = *tkGetLocation( x )
 			x += 1
 
@@ -675,7 +675,7 @@ private function ppDirective( byval x as integer ) as integer
 		tkExpect( x, TK_ID )
 
 		'' Build up "[!]defined id" expression
-		var expr = astNew( ASTCLASS_ID, tkGetText( x ) )
+		var expr = astNewID( tkGetText( x ) )
 		expr->location = *tkGetLocation( x )
 		expr = astNewUOP( ASTOP_DEFINED, expr )
 		expr->location = *tkGetLocation( x - 1 )
@@ -1093,11 +1093,11 @@ namespace eval
 end namespace
 
 sub ppEvalInit( )
-	eval.knownsyms = astNew( ASTCLASS_GROUP )
+	eval.knownsyms = astNewGROUP( )
 	hashInit( @eval.knownsymhash, 4 )
-	eval.expandsyms = astNew( ASTCLASS_GROUP )
+	eval.expandsyms = astNewGROUP( )
 	hashInit( @eval.expandsymhash, 4 )
-	eval.macros = astNew( ASTCLASS_GROUP )
+	eval.macros = astNewGROUP( )
 end sub
 
 sub ppEvalEnd( )

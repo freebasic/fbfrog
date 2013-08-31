@@ -165,7 +165,7 @@ sub presetParse( byval pre as FROGPRESET ptr, byref presetfile as string )
 			var url = hExpectSkipString( )
 			var outfile = hExpectSkipString( )
 
-			var download = astNew( ASTCLASS_TEXT, url )
+			var download = astNewTEXT( url )
 			astSetComment( download, outfile )
 			astAppend( pre->downloads, download )
 
@@ -175,7 +175,7 @@ sub presetParse( byval pre as FROGPRESET ptr, byref presetfile as string )
 			var tarball = hExpectSkipString( )
 			var outdir = hExpectSkipString( )
 
-			var extract = astNew( ASTCLASS_TEXT, tarball )
+			var extract = astNewTEXT( tarball )
 			astSetComment( extract, outdir )
 			astAppend( pre->extracts, extract )
 
@@ -185,7 +185,7 @@ sub presetParse( byval pre as FROGPRESET ptr, byref presetfile as string )
 			var oldname = hExpectSkipString( )
 			var newname = hExpectSkipString( )
 
-			var copyfile = astNew( ASTCLASS_TEXT, oldname )
+			var copyfile = astNewTEXT( oldname )
 			astSetComment( copyfile, newname )
 			astAppend( pre->copyfiles, copyfile )
 
@@ -204,7 +204,7 @@ sub presetParse( byval pre as FROGPRESET ptr, byref presetfile as string )
 			hSkip( )
 
 			hExpect( TK_ID )
-			astAppend( pre->defines, astNew( ASTCLASS_ID, tkGetText( x ) ) )
+			astAppend( pre->defines, astNewID( tkGetText( x ) ) )
 			hSkip( )
 
 		'' UNDEF Identifier
@@ -212,7 +212,7 @@ sub presetParse( byval pre as FROGPRESET ptr, byref presetfile as string )
 			hSkip( )
 
 			hExpect( TK_ID )
-			astAppend( pre->undefs, astNew( ASTCLASS_ID, tkGetText( x ) ) )
+			astAppend( pre->undefs, astNewID( tkGetText( x ) ) )
 			hSkip( )
 
 		'' EXPAND Identifier
@@ -220,7 +220,7 @@ sub presetParse( byval pre as FROGPRESET ptr, byref presetfile as string )
 			hSkip( )
 
 			hExpect( TK_ID )
-			astAppend( pre->expands, astNew( ASTCLASS_ID, tkGetText( x ) ) )
+			astAppend( pre->expands, astNewID( tkGetText( x ) ) )
 			hSkip( )
 
 		'' MACRO Identifier ['(' MacroParameters ')'] [MacroBody]
@@ -289,20 +289,20 @@ sub presetParse( byval pre as FROGPRESET ptr, byref presetfile as string )
 end sub
 
 sub presetInit( byval pre as FROGPRESET ptr )
-	pre->versions = astNew( ASTCLASS_GROUP )
+	pre->versions = astNewGROUP( )
 
-	pre->downloads = astNew( ASTCLASS_GROUP )
-	pre->extracts  = astNew( ASTCLASS_GROUP )
-	pre->copyfiles = astNew( ASTCLASS_GROUP )
-	pre->files     = astNew( ASTCLASS_GROUP )
-	pre->dirs      = astNew( ASTCLASS_GROUP )
+	pre->downloads = astNewGROUP( )
+	pre->extracts  = astNewGROUP( )
+	pre->copyfiles = astNewGROUP( )
+	pre->files     = astNewGROUP( )
+	pre->dirs      = astNewGROUP( )
 
-	pre->defines = astNew( ASTCLASS_GROUP )
-	pre->undefs  = astNew( ASTCLASS_GROUP )
-	pre->expands = astNew( ASTCLASS_GROUP )
-	pre->macros  = astNew( ASTCLASS_GROUP )
+	pre->defines = astNewGROUP( )
+	pre->undefs  = astNewGROUP( )
+	pre->expands = astNewGROUP( )
+	pre->macros  = astNewGROUP( )
 
-	pre->removes = astNew( ASTCLASS_GROUP )
+	pre->removes = astNewGROUP( )
 
 	pre->options = 0
 end sub
@@ -325,11 +325,11 @@ sub presetEnd( byval pre as FROGPRESET ptr )
 end sub
 
 sub presetAddFile( byval pre as FROGPRESET ptr, byref filename as string )
-	astAppend( pre->files, astNew( ASTCLASS_TEXT, filename ) )
+	astAppend( pre->files, astNewTEXT( filename ) )
 end sub
 
 sub presetAddDir( byval pre as FROGPRESET ptr, byref dirname as string )
-	astAppend( pre->dirs, astNew( ASTCLASS_TEXT, dirname ) )
+	astAppend( pre->dirs, astNewTEXT( dirname ) )
 end sub
 
 function presetHasInput( byval pre as FROGPRESET ptr ) as integer

@@ -134,7 +134,7 @@ private function imExpression _
 
 			'' Identifier
 			hExpect( TK_ID )
-			a = astNew( ASTCLASS_ID, tkGetText( x ) )
+			a = astNewID( tkGetText( x ) )
 			hSkip( )
 
 			'' ')'
@@ -640,7 +640,7 @@ private function imCompoundOrStatement( ) as ASTNODE ptr
 end function
 
 private function imToplevel( ) as ASTNODE ptr
-	var group = astNew( ASTCLASS_GROUP )
+	var group = astNewGROUP( )
 
 	x = imSkip( -1 )
 	while( tkGet( x ) <> TK_EOF )

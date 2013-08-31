@@ -605,12 +605,12 @@ private function hMergeStructsManually _
 	''
 
 	'' Copy astruct's fields into temp VERSION for a's version(s)
-	var afields = astNew( ASTCLASS_GROUP )
+	var afields = astNewGROUP( )
 	astCloneAndAddAllChildrenOf( afields, astruct )
 	afields = astNewVERSION( aversion, NULL, afields )
 
 	'' Copy bstruct's fields into temp VERSION for b's version(s)
-	var bfields = astNew( ASTCLASS_GROUP )
+	var bfields = astNewGROUP( )
 	astCloneAndAddAllChildrenOf( bfields, bstruct )
 	bfields = astNewVERSION( bversion, NULL, bfields )
 
@@ -831,7 +831,7 @@ private function hMergeVersions _
 		return astClone( a )
 	end if
 
-	var c = astNew( ASTCLASS_GROUP )
+	var c = astNewGROUP( )
 
 	if( a = NULL ) then
 		astAppend( c, astClone( b ) )
@@ -1245,7 +1245,7 @@ end sub
 	cmdline.options or= PRESETOPT_NOMERGE
 
 	'' *.fbfrog files from command line
-	var presetfiles = astNew( ASTCLASS_GROUP )
+	var presetfiles = astNewGROUP( )
 
 	for i as integer = 1 to __FB_ARGC__-1
 		var arg = *__FB_ARGV__[i]
@@ -1275,7 +1275,7 @@ end sub
 				'' No extension? Treat as directory
 				presetAddDir( @cmdline, arg )
 			case "fbfrog"
-				astAppend( presetfiles, astNew( ASTCLASS_TEXT, arg ) )
+				astAppend( presetfiles, astNewTEXT( arg ) )
 			case else
 				hPrintHelp( "'" + arg + "' is not a *.h file" )
 			end select
