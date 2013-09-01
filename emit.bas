@@ -304,33 +304,7 @@ private function emitAst _
 		end if
 
 		if( n->expr ) then
-			s += " "
-
-			assert( n->expr->class = ASTCLASS_MACROBODY )
-
-			var child = n->expr->head
-			while( child )
-
-				if( child->attrib and ASTATTRIB_MERGEWITHPREV ) then
-					s += "##"
-				end if
-
-				select case( child->class )
-				case ASTCLASS_MACROPARAM
-					if( child->attrib and ASTATTRIB_STRINGIFY ) then
-						s += "#"
-					end if
-					s += *child->text
-
-				case ASTCLASS_TK
-					s += tkToCText( child->tk, child->text )
-
-				case else
-					assert( FALSE )
-				end select
-
-				child = child->next
-			wend
+			s += " " + emitAst( n->expr )
 		end if
 
 		emitStmt( s, n->comment )

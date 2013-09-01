@@ -219,6 +219,51 @@ end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
+private function hReInsertMacroBody _
+	( _
+		byval y as integer, _
+		byval macrobody as ASTNODE ptr _
+	) as integer
+
+	var child = macrobody->head
+	while( child )
+
+		if( child->attrib and ASTATTRIB_MERGEWITHPREV ) then
+			'' '##'
+			tkInsert( y, TK_HASHHASH )
+			y += 1
+		end if
+
+		select case( child->class )
+		case ASTCLASS_MACROPARAM
+			if( child->attrib and ASTATTRIB_STRINGIFY ) then
+				'' '#'
+				tkInsert( y, TK_HASH )
+				y += 1
+			end if
+
+			'' 'paramid'
+			tkInsert( y, TK_ID, child->text )
+			tkSetLocation( y, @child->location )
+			y += 1
+
+		case ASTCLASS_TK
+			tkInsert( y, child->tk, child->text )
+			tkSetLocation( y, @child->location )
+			y += 1
+
+		case else
+			assert( FALSE )
+		end select
+
+		child = child->next
+	wend
+
+	function = y
+end function
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
 private sub hCdeclAttribute( byref gccattribs as integer )
 	if( gccattribs and ASTATTRIB_STDCALL ) then
 		cOops( "cdecl attribute specified together with stdcall" )
@@ -1159,6 +1204,48 @@ private function cToplevel( byval body as integer ) as ASTNODE ptr
 		case TK_PPDEFINE
 			t = astClone( tkGetAst( parse.x ) )
 			astAddComment( t, tkCollectComments( parse.x, parse.x ) )
+
+			if( t->expr->class = ASTCLASS_MACROBODY ) then
+				'' Temporarily re-insert the macro body tokens,
+				'' then try to parse an expression
+
+				'' Insert TK_BEGIN to match TK_END below, not
+				'' really needed
+				var y = parse.x + 1
+				var begin = y
+				tkInsert( y, TK_BEGIN )
+				y += 1
+
+				y = hReInsertMacroBody( y, t->expr )
+
+				'' Insert TK_END to ensure the cExpression() has
+				'' something to stop at, otherwise it may try
+				'' to continue parsing into the code following
+				'' the #define, since EOLs are gone already etc.
+				tkInsert( y, TK_END )
+
+				var z = begin + 1
+				dim as ASTNODE ptr expr
+
+				'' Macro body empty?
+				if( z = y ) then
+					expr = NULL
+				else
+					expr = cExpression( z )
+
+					'' Must have reached the TK_END
+					if( z <> y ) then
+						tkOops( y, "couldn't parse #define body as expression" )
+					end if
+				end if
+
+				'' Remove the macro body tokens and TK_BEGIN/END again
+				tkRemove( begin, y )
+
+				astDelete( t->expr )
+				t->expr = expr
+			end if
+
 			cSkip( )
 
 		case TK_PPUNDEF
