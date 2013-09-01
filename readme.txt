@@ -52,14 +52,24 @@ Compiling:
 
 To do:
 
-- comments are sometimes duplicated
-- Must do automated formatting of macro bodies in emitter now that TK_SPACE is gone
-- Macro bodies should be emitted as FB text, not C text
-- should remove TLIST and use AST GROUPs instead
-- FROGFILEs should use zstring ptr instead of string, and perhaps even be turned
-  into ASTNODE
+- How to translate #define bodies?
+    - try to parse as C expression, handles number literals, calls, casts, flag ORs, etc.
+    - allow arbitrary identifier atoms (could be variables, other #defines, ...)
+    - allow data type atoms
+    - check for 2nd expression following a '(' ... ')' parentheses expression,
+      then that's a cast
+    - could allow ## in identifiers (atom expressions), same for #
+    - macro body tokens from PPDEFINE ASTNODE must be reinserted into tk buffer,
+      restoring locations too, then they can be parsed
+    - show error if it can't be parsed
+    - add REPLACE DEFINE/MACRO [MacroParamList] [MacroBody] to presets, to allow
+      replacing macro bodies before ppEval()
+    - FB translation must be given manually after PP pass, because something
+      like <#define FOO )>
+        a) can't be parsed as expression
+        b) if it was replaced by something else before the PP pass that could
+           break the header if FOO is supposed to expand to ')'
 
-- preset defines/undefs etc. are not yet passed to pp
 - version specific parts of preset:
     - should use VERSION blocks in a GROUP to represent
     - anything at toplevel will be under VERSION block covering all versions
@@ -76,7 +86,6 @@ To do:
   locations in case of nested macros. It'd be nice if the tkOops() functions
   could show the context of a token that caused an error as it appears in the
   tk buffer, and then where the token came from...
-
 - Error context output should expand/align TABs to 8 spaces based on column position from BOL
   as it would happen in the source file
 
@@ -128,13 +137,11 @@ To do:
 - nested #includes should be frogAddFile()'d in their parent include file context,
   not in the toplevel file context, shouldn't they?
 
-- It'd be nice if fbfrog could preserve comments and dividers optionally
-    - rely on ppComments() to distribute comments to non-whitespace tokens
-    - comment given to a TK_ID that is a macro call and will be expanded should
-      be given to first non-whitespace token from the expansion
-    - comments from macro call argument list should just be ignored
-    - comments behind #define bodies should go to the #define not the body tokens
-    - comments in #define bodies should be ignored?
+- Comments given to a TK_ID that is a macro call and will be expanded should
+  be given to first non-whitespace token from the expansion, for example:
+        // foo
+        CALLCONV void f(void);
+- comments behind #define bodies should go to the #define not the body tokens
 
 - should share C operator precedence table between C/PP modules
 - let hFold() solve out iif( x, true, true ) and iif( x, false, false )

@@ -67,54 +67,22 @@ dim shared c as long ptr ptr const ptr ptr
 dim shared a as const long
 dim shared x as UDT ptr
 
-'' int ptr ptr
-'' int ptr ptr
-dim shared a as long ptr ptr
-'' int ptr const ptr
-'' int ptr const ptr
-dim shared a as long ptr const ptr
-'' int const ptr ptr
-'' int const ptr ptr
-dim shared a as long const ptr ptr
-'' int const ptr const ptr
-'' int const ptr const ptr
-dim shared a as long const ptr const ptr
-'' const int ptr ptr
-'' const int ptr ptr
-dim shared a as const long ptr ptr
-'' const int ptr const ptr
-'' const int ptr const ptr
-dim shared a as const long ptr const ptr
-'' const int const ptr ptr
-'' const int const ptr ptr
-dim shared a as const long const ptr ptr
-'' const int const ptr const ptr
-'' const int const ptr const ptr
-dim shared a as const long const ptr const ptr
-'' const int ptr ptr
-'' const int ptr ptr
-dim shared a as const long ptr ptr
-'' const int ptr const ptr
-'' const int ptr const ptr
-dim shared a as const long ptr const ptr
-'' const int const ptr ptr
-'' const int const ptr ptr
-dim shared a as const long const ptr ptr
-'' const int const ptr const ptr
-'' const int const ptr const ptr
-dim shared a as const long const ptr const ptr
-'' const int ptr ptr
-'' const int ptr ptr
-dim shared a as const long ptr ptr
-'' const int ptr const ptr
-'' const int ptr const ptr
-dim shared a as const long ptr const ptr
-'' const int const ptr ptr
-'' const int const ptr ptr
-dim shared a as const long const ptr ptr
-'' const int const ptr const ptr
-'' const int const ptr const ptr
-dim shared a as const long const ptr const ptr
+dim shared a as long ptr ptr  '' int ptr ptr
+dim shared a as long ptr const ptr  '' int ptr const ptr
+dim shared a as long const ptr ptr  '' int const ptr ptr
+dim shared a as long const ptr const ptr  '' int const ptr const ptr
+dim shared a as const long ptr ptr  '' const int ptr ptr
+dim shared a as const long ptr const ptr  '' const int ptr const ptr
+dim shared a as const long const ptr ptr  '' const int const ptr ptr
+dim shared a as const long const ptr const ptr  '' const int const ptr const ptr
+dim shared a as const long ptr ptr  '' const int ptr ptr
+dim shared a as const long ptr const ptr  '' const int ptr const ptr
+dim shared a as const long const ptr ptr  '' const int const ptr ptr
+dim shared a as const long const ptr const ptr  '' const int const ptr const ptr
+dim shared a as const long ptr ptr  '' const int ptr ptr
+dim shared a as const long ptr const ptr  '' const int ptr const ptr
+dim shared a as const long const ptr ptr  '' const int const ptr ptr
+dim shared a as const long const ptr const ptr  '' const int const ptr const ptr
 
 dim shared p as long ptr
 dim shared p as long ptr

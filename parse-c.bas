@@ -837,7 +837,6 @@ private function cDeclarator _
 		byref gccattribs as integer _
 	) as ASTNODE ptr
 
-	var begin = parse.x
 	var dtype = outerdtype
 	var innerprocptrdtype = TYPE_PROC
 	var innergccattribs = 0
@@ -930,7 +929,6 @@ private function cDeclarator _
 		end select
 
 		astSetType( t, dtype, basesubtype )
-		astAddComment( t, tkCollectComments( begin, parse.x - 1 ) )
 	end if
 
 	node = t

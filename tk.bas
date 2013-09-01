@@ -292,9 +292,11 @@ function tkDumpOne( byval x as integer ) as string
 		s += " ast=" & astDumpInline( tkGetAst( x ) )
 	end if
 
+	#if 0
 	if( p->location.file ) then
 		s += " location: " + p->location.file->pretty + "(" & p->location.linenum+1 & ") column=" & p->location.column & " length=" & p->location.length
 	end if
+	#endif
 
 	function = s
 end function
