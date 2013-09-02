@@ -6,7 +6,6 @@
 type TOKENINFO
 	text		as zstring ptr
 	debug		as zstring ptr
-	pretty		as zstring ptr
 end type
 
 dim shared as TOKENINFO tk_info(0 to ...) = _
