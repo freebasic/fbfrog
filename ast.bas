@@ -1436,8 +1436,10 @@ function astDumpOne( byval n as ASTNODE ptr ) as string
 	checkAttrib( STDCALL )
 	checkAttrib( HIDECALLCONV )
 
-	if( n->text ) then
-		s += " """ + strMakePrintable( *n->text ) + """"
+	if( n->class <> ASTCLASS_TK ) then
+		if( n->text ) then
+			s += " """ + strMakePrintable( *n->text ) + """"
+		end if
 	end if
 
 	select case( n->class )
