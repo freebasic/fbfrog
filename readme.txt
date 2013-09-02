@@ -110,7 +110,6 @@ To do:
   -> it's not clear whether AST should represent C or FB?
      -> maybe have both C/FB relational/defined ops
 
-- defined() should be an atom, not a UOP
 - How to handle string/char literals, escaped/unescaped, zstring/wstring?
 
 - #include foo.h  ->  #include foo.bi, if foo.bi will be generated too
