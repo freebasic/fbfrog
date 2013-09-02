@@ -110,8 +110,6 @@ To do:
   -> it's not clear whether AST should represent C or FB?
      -> maybe have both C/FB relational/defined ops
 
-- How to handle string/char literals, escaped/unescaped, zstring/wstring?
-
 - #include foo.h  ->  #include foo.bi, if foo.bi will be generated too
 - #include stdio.h -> #include crt/stdio.bi, for some known default headers
   (or perhaps let presets do this)

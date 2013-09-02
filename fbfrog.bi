@@ -2,6 +2,68 @@
 #define FALSE 0
 #define TRUE (-1)
 
+enum
+	CH_BELL      = &h07  '' \a
+	CH_BACKSPACE = &h08  '' \b
+	CH_TAB       = &h09  '' \t
+	CH_LF        = &h0A  '' \n
+	CH_VTAB      = &h0B  '' \v
+	CH_FORMFEED  = &h0C  '' \f
+	CH_CR        = &h0D  '' \r
+	CH_ESC       = &h1B
+
+	CH_SPACE     = &h20
+	CH_EXCL         '' !
+	CH_DQUOTE       '' "
+	CH_HASH         '' #
+	CH_DOLLAR       '' $
+	CH_PERCENT      '' %
+	CH_AMP          '' &
+	CH_QUOTE        '' '
+	CH_LPAREN       '' (
+	CH_RPAREN       '' )
+	CH_STAR         '' *
+	CH_PLUS         '' +
+	CH_COMMA        '' ,
+	CH_MINUS        '' -
+	CH_DOT          '' .
+	CH_SLASH        '' /
+
+	CH_0, CH_1, CH_2, CH_3, CH_4, CH_5, CH_6, CH_7, CH_8, CH_9
+
+	CH_COLON        '' :
+	CH_SEMI         '' ;
+	CH_LT           '' <
+	CH_EQ           '' =
+	CH_GT           '' >
+	CH_QUEST        '' ?
+	CH_AT           '' @
+
+	CH_A, CH_B, CH_C, CH_D, CH_E, CH_F, CH_G
+	CH_H, CH_I, CH_J, CH_K, CH_L, CH_M, CH_N, CH_O, CH_P
+	CH_Q, CH_R, CH_S, CH_T, CH_U, CH_V, CH_W
+	CH_X, CH_Y, CH_Z
+
+	CH_LBRACKET     '' [
+	CH_BACKSLASH    '' \
+	CH_RBRACKET     '' ]
+	CH_CIRC         '' ^
+	CH_UNDERSCORE   '' _
+	CH_GRAVE        '' `
+
+	CH_L_A, CH_L_B, CH_L_C, CH_L_D, CH_L_E, CH_L_F, CH_L_G
+	CH_L_H, CH_L_I, CH_L_J, CH_L_K, CH_L_L, CH_L_M, CH_L_N, CH_L_O, CH_L_P
+	CH_L_Q, CH_L_R, CH_L_S, CH_L_T, CH_L_U, CH_L_V, CH_L_W
+	CH_L_X, CH_L_Y, CH_L_Z
+
+	CH_LBRACE       '' {
+	CH_PIPE         '' |
+	CH_RBRACE       '' }
+	CH_TILDE        '' ~
+
+	CH_DEL
+end enum
+
 type FROGFILE as FROGFILE_
 
 type TKLOCATION
@@ -146,21 +208,15 @@ enum
 	TK_EOL
 	TK_COMMENT
 
-	'' Number literals
+	'' Number/string literals
 	TK_DECNUM
 	TK_HEXNUM
 	TK_OCTNUM
 	TK_DECFLOAT
-
-	'' String literals, sorted to match STRFLAG_*:
-	TK_STRING       '' 000    "foo"
-	TK_CHAR         '' 001    'c'
-	TK_WSTRING      '' 010    L"foo"
-	TK_WCHAR        '' 011    L'c'
-	TK_ESTRING      '' 100    "\n"
-	TK_ECHAR        '' 101    '\n'
-	TK_EWSTRING     '' 110    L"\n"
-	TK_EWCHAR       '' 111    L'\n'
+	TK_STRING
+	TK_CHAR
+	TK_WSTRING
+	TK_WCHAR
 
 	'' C/FB tokens
 	TK_EXCL         '' !
@@ -363,8 +419,7 @@ declare sub tkInsert _
 	( _
 		byval x as integer, _
 		byval id as integer, _
-		byval text as zstring ptr = NULL, _
-		byval ast as ASTNODE ptr = NULL _
+		byval text as zstring ptr = NULL _
 	)
 declare sub tkRemove( byval first as integer, byval last as integer )
 declare sub tkCopy( byval x as integer, byval first as integer, byval last as integer )
@@ -373,8 +428,7 @@ declare sub tkFold _
 		byval first as integer, _
 		byval last as integer, _
 		byval id as integer, _
-		byval text as zstring ptr = NULL, _
-		byval ast as ASTNODE ptr = NULL _
+		byval text as zstring ptr = NULL _
 	)
 declare function tkGet( byval x as integer ) as integer
 declare function tkGetText( byval x as integer ) as zstring ptr
@@ -404,16 +458,6 @@ declare function tkSkipCommentEol _
 		byval delta as integer = 1 _
 	) as integer
 declare function tkToCText( byval id as integer, byval text as zstring ptr ) as string
-declare function tkManyToCText _
-	( _
-		byval first as integer, _
-		byval last as integer _
-	) as string
-declare function tkToAstText _
-	( _
-		byval first as integer, _
-		byval last as integer _
-	) as ASTNODE ptr
 declare function tkCollectComments _
 	( _
 		byval first as integer, _
@@ -431,7 +475,6 @@ enum
 	TYPE_ANY
 	TYPE_BYTE
 	TYPE_UBYTE
-	TYPE_ZSTRING
 	TYPE_SHORT
 	TYPE_USHORT
 	TYPE_LONG
@@ -444,6 +487,8 @@ enum
 	TYPE_DOUBLE
 	TYPE_UDT
 	TYPE_PROC
+	TYPE_ZSTRING
+	TYPE_WSTRING
 	TYPE__COUNT
 end enum
 
@@ -551,6 +596,8 @@ enum
 	ASTCLASS_CONST
 	ASTCLASS_ID
 	ASTCLASS_TEXT
+	ASTCLASS_STRING
+	ASTCLASS_CHAR
 
 	ASTCLASS_UOP
 	ASTCLASS_BOP

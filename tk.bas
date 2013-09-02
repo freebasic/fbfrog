@@ -31,10 +31,6 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	( NULL  , @"char"     ), _
 	( NULL  , @"wstring"  ), _
 	( NULL  , @"wchar"    ), _
-	( NULL  , @"estring"  ), _
-	( NULL  , @"echar"    ), _
-	( NULL  , @"ewstring" ), _
-	( NULL  , @"ewchar"   ), _
 	( @"!"  , NULL ), _ '' Main tokens
 	( @"!=" , NULL ), _
 	( @"#"  , NULL ), _
@@ -210,10 +206,28 @@ end function
 
 type ONETOKEN
 	id		as short  '' TK_*
-	text		as zstring ptr  '' Identifiers/literals, or NULL
-	ast		as ASTNODE ptr  '' for TK_PP* high level tokens
+	behindspace	as short  '' whether this token was preceded by spaces
+
+	'' TK_ID: Identifier
+	''
+	'' TK_STRING: String literal's content with escape sequences solved out,
+	'' except for \\ and \0 (so it can still be represented as
+	'' null-terminated string)
+	''
+	'' TK_DECNUM/TK_HEXNUM/TK_OCTNUM: Original token text without octal/hex
+	'' prefixes ('0' or '0x'), this is enough for
+	''    - parsing code to easily retrieve the integer values by doing
+	''      valulng( "&h" + *text )
+	''    - CPP code to differentiate '0', '0x', '0x0', etc. when doing
+	''      ## merging
+	''
+	'' rest: NULL
+	text		as zstring ptr
+
+	'' TK_PP* high level tokens
+	ast		as ASTNODE ptr
+
 	location	as TKLOCATION   '' where this token was found
-	behindspace	as integer      '' whether this token was preceded by spaces
 	comment		as zstring ptr
 end type
 
@@ -307,23 +321,20 @@ sub tkDump( )
 end sub
 
 private sub hMoveTo( byval x as integer )
-	dim as integer old = any
-	dim as ONETOKEN ptr p = any
-
 	if( x < 0 ) then
 		x = 0
 	elseif( x > tk.size ) then
 		x = tk.size
 	end if
 
-	old = tk.front
+	var old = tk.front
 	if( x < old ) then
 		'' Move gap left
-		p = tk.p + x
+		var p = tk.p + x
 		memmove( p + tk.gap, p, (old - x) * sizeof( ONETOKEN ) )
 	elseif( x > old ) then
 		'' Move gap right
-		p = tk.p + old
+		var p = tk.p + old
 		memmove( p, p + tk.gap, (x - old) * sizeof( ONETOKEN ) )
 	end if
 
@@ -340,8 +351,7 @@ sub tkInsert _
 	( _
 		byval x as integer, _
 		byval id as integer, _
-		byval text as zstring ptr, _
-		byval ast as ASTNODE ptr _
+		byval text as zstring ptr _
 	)
 
 	const NEWGAP = 512
@@ -365,15 +375,9 @@ sub tkInsert _
 		p = tk.p + tk.front
 	end if
 
+	clear( *p, 0, sizeof( *p ) )
 	p->id = id
 	p->text = strDuplicate( text )
-	p->ast = ast
-	p->location.file = NULL
-	p->location.linenum = 0
-	p->location.column = 0
-	p->location.length = 0
-	p->behindspace = FALSE
-	p->comment = NULL
 
 	'' Extend front part of the buffer
 	tk.front += 1
@@ -432,9 +436,9 @@ sub tkCopy( byval x as integer, byval first as integer, byval last as integer )
 
 		src = tkAccess( first )
 		var dst = tkAccess( x )
+		dst->behindspace = src->behindspace
 		dst->ast = astClone( src->ast )
 		dst->location = src->location
-		dst->behindspace = src->behindspace
 		dst->comment = strDuplicate( src->comment )
 
 		x += 1
@@ -448,8 +452,7 @@ sub tkFold _
 		byval first as integer, _
 		byval last as integer, _
 		byval id as integer, _
-		byval text as zstring ptr, _
-		byval ast as ASTNODE ptr _
+		byval text as zstring ptr _
 	)
 
 	var lastin1stline = first
@@ -471,7 +474,7 @@ sub tkFold _
 	'' Insert first - the text/ast pointers may reference one of the tokens
 	'' that will be removed; this way we can be sure they're valid when
 	'' accessed by tkInsert()
-	tkInsert( first, id, text, ast )
+	tkInsert( first, id, text )
 	tkSetLocation( first, @location )
 	first += 1
 	last += 1
@@ -550,9 +553,7 @@ function tkCount _
 		byval last as integer _
 	) as integer
 
-	dim as integer count = any
-
-	count = 0
+	var count = 0
 
 	for i as integer = first to last
 		if( tkGet( i ) = tk ) then
@@ -603,90 +604,6 @@ function tkSkipCommentEol _
 	function = x
 end function
 
-function tkToCText( byval id as integer, byval text as zstring ptr ) as string
-	select case as const( id )
-	case TK_DIVIDER, TK_EOL : function = !"\n"
-	case TK_BEGIN, TK_END   :
-	case TK_COMMENT         : function = "/* " + *text + " */"
-	case TK_PPENDIF         : function = "#endif"
-	case TK_DECNUM          : function = *text
-	case TK_HEXNUM          : function = "0x" + *text
-	case TK_OCTNUM          : function = "0" + *text
-	case TK_DECFLOAT        : function = *text
-	case TK_STRING, TK_ESTRING   : function = """" + *text + """"
-	case TK_CHAR, TK_ECHAR       : function = "'" + *text + "'"
-	case TK_WSTRING, TK_EWSTRING : function = "L""" + *text + """"
-	case TK_WCHAR, TK_EWCHAR     : function = "L'" + *text + "'"
-	case TK_EXCL to TK_TILDE     : function = *tk_info(id).text
-	case TK_ID                   : function = *text
-	case KW__C_FIRST to KW__C_LAST
-		function = *tk_info(id).text
-	case else
-		print tkDumpBasic( id, text )
-		assert( FALSE )
-	end select
-end function
-
-function tkManyToCText _
-	( _
-		byval first as integer, _
-		byval last as integer _
-	) as string
-
-	dim as string s
-
-	for i as integer = first to last
-		var p = tkAccess( i )
-
-		'' This shouldn't be used with high-level tokens; that'd be
-		'' pretty difficult
-		assert( p->ast = NULL )
-
-		s += tkToCText( p->id, p->text )
-	next
-
-	function = s
-end function
-
-function tkToAstText _
-	( _
-		byval first as integer, _
-		byval last as integer _
-	) as ASTNODE ptr
-
-	dim as string s
-	dim as ASTNODE ptr group, text
-
-	for i as integer = first to last
-		var p = tkAccess( i )
-		if( p->ast ) then
-			if( len( s ) > 0 ) then
-				text = astNewTEXT( s )
-			end if
-			if( group = NULL ) then
-				group = astNewGROUP( )
-			end if
-			astAppend( group, text )
-			astAppend( group, astClone( p->ast ) )
-			text = NULL
-			s = ""
-		else
-			s += tkToCText( p->id, p->text )
-		end if
-	next
-
-	if( len( s ) > 0 ) then
-		text = astNewTEXT( s )
-	end if
-
-	if( group ) then
-		astAppend( group, text )
-		function = group
-	else
-		function = text
-	end if
-end function
-
 function tkCollectComments _
 	( _
 		byval first as integer, _
@@ -734,6 +651,66 @@ end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
+private function hMakePrettyCStrLit( byval text as zstring ptr ) as string
+	dim s as string
+
+	do
+		select case( (*text)[0] )
+		case 0
+			exit do
+
+		'' Internal format: can contain \\ and \0 escape sequences to
+		'' encode embedded null chars
+		case CH_BACKSLASH
+			text += 1
+			assert( (text[0] = CH_BACKSLASH) or (text[0] = CH_0) )
+			s += "\"
+			s += chr( (*text)[0] )
+
+		case CH_DQUOTE    : s += "\"""
+		case CH_QUOTE     : s += "\'"
+		case CH_QUEST     : s += "\?"
+		case CH_BELL      : s += "\a"
+		case CH_BACKSPACE : s += "\b"
+		case CH_FORMFEED  : s += "\f"
+		case CH_LF        : s += "\n"
+		case CH_CR        : s += "\r"
+		case CH_TAB       : s += "\t"
+		case CH_VTAB      : s += "\v"
+		case is < 32, 127 : s += "\" + oct( (*text)[0] )
+		case else         : s += chr( (*text)[0] )
+		end select
+
+		text += 1
+	loop
+
+	function = s
+end function
+
+private function hMakePrettyCTokenText _
+	( _
+		byval id as integer, _
+		byval text as zstring ptr _
+	) as string
+
+	select case as const( id )
+	case TK_PPENDIF   : function = "#endif"
+	case TK_DECNUM    : function = *text
+	case TK_HEXNUM    : function = "0x" + *text
+	case TK_OCTNUM    : function = "0" + *text
+	case TK_DECFLOAT  : function = *text
+	case TK_STRING    : function = """" + hMakePrettyCStrLit( *text ) + """"
+	case TK_CHAR      : function = "'" + hMakePrettyCStrLit( *text ) + "'"
+	case TK_WSTRING   : function = "L""" + hMakePrettyCStrLit( *text ) + """"
+	case TK_WCHAR     : function = "L'" + hMakePrettyCStrLit( *text ) + "'"
+	case TK_EXCL to TK_TILDE : function = *tk_info(id).text
+	case TK_ID               : function = *text
+	case KW__C_FIRST to KW__C_LAST
+		function = *tk_info(id).text
+	end select
+
+end function
+
 sub tkOops( byval x as integer, byref message as string )
 	var location = tkGetLocation( x )
 	if( location->file ) then
@@ -753,8 +730,11 @@ sub tkOopsExpected( byval x as integer, byref message as string )
 	case TK_EOL, TK_EOF, TK_DIVIDER
 		tkOops( x, "missing " + message )
 	case else
-		var found = "'" + tkToCText( tkGet( x ), tkGetText( x ) ) + "'"
-		tkOops( x, "expected " + message + " but found " + found )
+		var found = "'" + hMakePrettyCTokenText( tkGet( x ), tkGetText( x ) ) + "'"
+		if( len( found ) > 0 ) then
+			found = " but found " + found
+		end if
+		tkOops( x, "expected " + message + found )
 	end select
 end sub
 

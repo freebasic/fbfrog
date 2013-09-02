@@ -29,7 +29,6 @@ function emitType _
 		@"any"     , _
 		@"byte"    , _
 		@"ubyte"   , _
-		@"zstring" , _
 		@"short"   , _
 		@"ushort"  , _
 		@"long"    , _
@@ -41,7 +40,9 @@ function emitType _
 		@"single"  , _
 		@"double"  , _
 		@"udt"     , _
-		@"proc"      _
+		@"proc"    , _
+		@"zstring" , _
+		@"wstring"   _
 	}
 
 	dim as string s
@@ -164,7 +165,7 @@ private sub emitLineComments( byval comment as zstring ptr )
 	dim ln as string
 	for i as integer = 0 to len( *comment )-1
 		select case( (*comment)[i] )
-		case &h0A, &h0D  '' LF, CR
+		case CH_LF, CH_CR
 			'' Flush previous line, ignore this newline, and then
 			'' continue with next line
 			hFlushLineComment( ln )
@@ -179,7 +180,7 @@ private function hIsMultiLineComment( byval comment as zstring ptr ) as integer
 	do
 		select case( (*comment)[0] )
 		case 0 : exit do
-		case &h0A, &h0D : return TRUE
+		case CH_LF, CH_CR : return TRUE
 		end select
 		comment += 1
 	loop

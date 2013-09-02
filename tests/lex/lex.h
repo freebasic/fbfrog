@@ -28,6 +28,46 @@
 #define B 'a'
 #define B L'a'
 
+#define C "\""
+#define C "\'"
+#define C "'"
+#define C "\?"
+#define C "\\"
+#define C "\a"
+#define C "\b"
+#define C "\f"
+#define C "\n"
+#define C "\r"
+#define C "\t"
+#define C "\v"
+
+#define C '\''
+#define C '\"'
+#define C '"'
+#define C '\?'
+#define C '\\'
+#define C '\a'
+#define C '\b'
+#define C '\f'
+#define C '\n'
+#define C '\r'
+#define C '\t'
+#define C '\v'
+
+#define D "\0"
+#define D "\1"
+#define D "\11"
+#define D "\111"
+#define D "\01"
+#define D "\001"
+#define D "a\100b"
+#define D "1\1002"
+#define D "\xFF"
+#define D "\x0"
+#define D "\x0000000000000000000"
+#define D "\x00000000000AA"
+#define D "a\x00000000g"
+
 /* foo */
 
 // foo

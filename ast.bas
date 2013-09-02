@@ -66,15 +66,15 @@ dim shared as ASTNODEINFO astnodeinfo(0 to ...) = _
 	( "const"   ), _
 	( "id"      ), _
 	( "text"    ), _
+	( "string"  ), _
+	( "char"    ), _
 	( "uop"     ), _
 	( "bop"     ), _
 	( "iif"     ), _
 	( "call"    )  _
 }
 
-#if ubound( astnodeinfo ) <> ASTCLASS__COUNT - 1
-#error "please update the astnodeinfo() table!"
-#endif
+#assert ubound( astnodeinfo ) = ASTCLASS__COUNT - 1
 
 function astNew overload( byval class_ as integer ) as ASTNODE ptr
 	dim as ASTNODE ptr n = callocate( sizeof( ASTNODE ) )

@@ -10,68 +10,6 @@
 
 #include once "fbfrog.bi"
 
-enum
-	CH_BELL     = &h07  '' \a
-	CH_BKSPC    = &h08  '' \b
-	CH_TAB      = &h09  '' \t
-	CH_LF       = &h0A  '' \n
-	CH_VTAB     = &h0B  '' \v
-	CH_FORMFEED = &h0C  '' \f
-	CH_CR       = &h0D  '' \r
-	CH_ESC      = &h1B
-
-	CH_SPACE    = &h20
-	CH_EXCL         '' !
-	CH_DQUOTE       '' "
-	CH_HASH         '' #
-	CH_DOLLAR       '' $
-	CH_PERCENT      '' %
-	CH_AMP          '' &
-	CH_QUOTE        '' '
-	CH_LPAREN       '' (
-	CH_RPAREN       '' )
-	CH_STAR         '' *
-	CH_PLUS         '' +
-	CH_COMMA        '' ,
-	CH_MINUS        '' -
-	CH_DOT          '' .
-	CH_SLASH        '' /
-
-	CH_0, CH_1, CH_2, CH_3, CH_4, CH_5, CH_6, CH_7, CH_8, CH_9
-
-	CH_COLON        '' :
-	CH_SEMI         '' ;
-	CH_LT           '' <
-	CH_EQ           '' =
-	CH_GT           '' >
-	CH_QUEST        '' ?
-	CH_AT           '' @
-
-	CH_A, CH_B, CH_C, CH_D, CH_E, CH_F, CH_G
-	CH_H, CH_I, CH_J, CH_K, CH_L, CH_M, CH_N, CH_O, CH_P
-	CH_Q, CH_R, CH_S, CH_T, CH_U, CH_V, CH_W
-	CH_X, CH_Y, CH_Z
-
-	CH_LBRACKET     '' [
-	CH_BACKSLASH    '' \
-	CH_RBRACKET     '' ]
-	CH_CIRC         '' ^
-	CH_UNDERSCORE   '' _
-	CH_GRAVE        '' `
-
-	CH_L_A, CH_L_B, CH_L_C, CH_L_D, CH_L_E, CH_L_F, CH_L_G
-	CH_L_H, CH_L_I, CH_L_J, CH_L_K, CH_L_L, CH_L_M, CH_L_N, CH_L_O, CH_L_P
-	CH_L_Q, CH_L_R, CH_L_S, CH_L_T, CH_L_U, CH_L_V, CH_L_W
-	CH_L_X, CH_L_Y, CH_L_Z
-
-	CH_LBRACE       '' {
-	CH_PIPE         '' |
-	CH_RBRACE       '' }
-	CH_TILDE        '' ~
-
-	CH_DEL
-end enum
-
 type LEXSTUFF
 	buffer		as ubyte ptr  '' File content buffer
 	i		as ubyte ptr  '' Current char, will always be <= limit
@@ -384,41 +322,98 @@ private sub hReadNumber( )
 	hAddTextToken( id, begin )
 end sub
 
-enum
-	STRFLAG_CHAR = &b001 '' is char literal?
-	STRFLAG_WIDE = &b010 '' is wide (wchar) literal?
-	STRFLAG_ESC  = &b100 '' contains escape sequences?
-end enum
+private function hReadEscapeSequence( ) as ulongint
+	select case( lex.i[0] )
+	case CH_DQUOTE    : lex.i += 1 : function = CH_DQUOTE     '' \"
+	case CH_QUOTE     : lex.i += 1 : function = CH_QUOTE      '' \'
+	case CH_QUEST     : lex.i += 1 : function = CH_QUEST      '' \?
+	case CH_BACKSLASH : lex.i += 1 : function = CH_BACKSLASH  '' \\
+	case CH_L_A       : lex.i += 1 : function = CH_BELL       '' \a
+	case CH_L_B       : lex.i += 1 : function = CH_BACKSPACE  '' \b
+	case CH_L_F       : lex.i += 1 : function = CH_FORMFEED   '' \f
+	case CH_L_N       : lex.i += 1 : function = CH_LF         '' \n
+	case CH_L_R       : lex.i += 1 : function = CH_CR         '' \r
+	case CH_L_T       : lex.i += 1 : function = CH_TAB        '' \t
+	case CH_L_V       : lex.i += 1 : function = CH_VTAB       '' \v
+
+	'' \NNN (octal, max 3 digits)
+	case CH_0 to CH_7
+		dim as uinteger value
+		var length = 0
+		do
+			value = (value shl 3) + (lex.i[0] - asc( "0" ))
+			length += 1
+			lex.i += 1
+		loop while( (lex.i[0] >= CH_0) and (lex.i[0] <= CH_7) and _
+		            (length < 3) )
+
+		function = value
+
+	'' \xNNNN... (hexadecimal, as many digits as possible)
+	case CH_L_X
+		dim as ulongint value
+		var length = 0
+		lex.i += 1
+		do
+			dim as uinteger digit = lex.i[0]
+
+			select case( digit )
+			case CH_0 to CH_9
+				digit -= CH_0
+			case CH_A to CH_F
+				digit -= (CH_A - 10)
+			case CH_L_A to CH_L_F
+				digit -= (CH_L_A - 10)
+			case else
+				exit do
+			end select
+
+			value = (value shl 4) + digit
+
+			length += 1
+			lex.i += 1
+		loop
+
+		function = value
+
+	case else
+		lexOops( "unknown escape sequence" )
+	end select
+end function
 
 private sub hReadString( )
 	'' String/char literal parsing, starting at ", ', or L, covering:
 	''    'a'
+	''    L'a'
 	''    "foo"
 	''    L"foo"
 	'' The string content is stored into the token, but not the quotes.
-	'' If escape sequences are found, we'll generate a TK_ESTRING instead
-	'' of TK_STRING, so the emitter can prepend an '!', for example:
-	''    "\n" -> \n -> !"\n"
+	'' Escape sequences are expanded except for \\ and \0.
 
 	var id = TK_STRING
-	var strflags = 0
+	var is_wchar = FALSE
 
 	if( lex.i[0] = CH_L ) then
 		lex.i += 1
-		strflags or= STRFLAG_WIDE
+		id = TK_WSTRING
 	end if
 
 	var quotechar = lex.i[0]
 	select case( quotechar )
 	case CH_QUOTE
-		strflags or= STRFLAG_CHAR
+		id = iif( (id = TK_WSTRING), TK_WCHAR, TK_CHAR )
 	case CH_LT
 		quotechar = CH_GT
 	end select
 
+	const MAXTEXTLEN = 2048
+	static text as zstring * MAXTEXTLEN+2+1
+	'' +2 extra room to allow for some "overflowing" to reduce the amount
+	'' of checking needed below, +1 for null terminator.
+
 	lex.i += 1
-	var begin = lex.i
 	var saw_end = FALSE
+	var j = 0  '' current write position in text buffer
 	do
 		select case( lex.i[0] )
 		case quotechar
@@ -429,25 +424,45 @@ private sub hReadString( )
 			lexOops( "string/char literal left open" )
 
 		case CH_BACKSLASH	'' \
-			strflags or= STRFLAG_ESC
-			select case( lex.i[0] )
-			case CH_BACKSLASH, _ '' \\
-			     quotechar       '' \" | \'
-				lex.i += 1
+			lex.i += 1
+
+			var value = hReadEscapeSequence( )
+
+			select case( value )
+			case is > &hFFu
+				lexOops( "escape sequence value bigger than " & &hFFu & " (&hFF): " & value & " (&h" & hex( value ) & " )" )
+
+			'' Encode embedded nulls as "\0", and then also backslashes
+			'' as "\\" to prevent ambiguity with the backslash in "\0".
+			'' This allows the string literal content to still be
+			'' represented as null-terminated string.
+			case 0
+				text[j] = CH_BACKSLASH : j += 1
+				text[j] = CH_0         : j += 1
+			case CH_BACKSLASH
+				text[j] = CH_BACKSLASH : j += 1
+				text[j] = CH_BACKSLASH : j += 1
+
+			case else
+				text[j] = value : j += 1
 			end select
 
+		case else
+			text[j] = lex.i[0] : j += 1
+			lex.i += 1
 		end select
 
-		lex.i += 1
+		if( j > MAXTEXTLEN ) then
+			lexOops( "string literal too long, MAXTEXTLEN=" & MAXTEXTLEN )
+		end if
 	loop
 
-	if( strflags ) then
-		if( strflags and STRFLAG_CHAR ) then
-			id = TK_CHAR
-		end if
-	end if
+	'' null-terminator
+	text[j] = 0
 
-	hAddTextToken( id, begin )
+	tkInsert( lex.x, id, text )
+	hSetLocation( )
+	lex.x += 1
 
 	if( saw_end ) then
 		lex.i += 1
@@ -669,11 +684,12 @@ private sub lexNext( )
 		hReadId( )
 
 	case CH_L		'' L
-		if( lex.i[1] = CH_DQUOTE ) then
+		select case( lex.i[1] )
+		case CH_QUOTE, CH_DQUOTE	'' ', "
 			hReadString( )
-		else
+		case else
 			hReadId( )
-		end if
+		end select
 
 	case CH_LBRACKET	'' [
 		hReadBytes( TK_LBRACKET, 1 )

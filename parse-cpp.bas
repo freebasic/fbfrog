@@ -633,7 +633,8 @@ private function ppDirective( byval x as integer ) as integer
 
 		hMacroParamList( x, macro )
 
-		tkFold( begin, x, TK_PPDEFINE, , macro )
+		tkFold( begin, x, TK_PPDEFINE )
+		tkSetAst( begin, macro )
 		x = begin + 1
 
 		'' Enclose body tokens in TK_BEGIN/END
@@ -688,7 +689,8 @@ private function ppDirective( byval x as integer ) as integer
 			expr->location.length = 1
 		end if
 
-		tkFold( begin, x, TK_PPIF, , expr )
+		tkFold( begin, x, TK_PPIF )
+		tkSetAst( begin, expr )
 		x = begin + 1
 
 	case KW_ELSE, KW_ENDIF
@@ -1032,7 +1034,31 @@ private function hMacroCall _
 
 				if( child->attrib and ASTATTRIB_STRINGIFY ) then
 					'' Turn the arg's tokens into a string and insert it as string literal
-					tkInsert( x, TK_STRING, tkManyToCText( argbegin(arg), argend(arg) ) )
+
+					dim as string s
+					for i as integer = argbegin(arg) to argend(arg)
+						if( tkGetBehindSpace( i ) ) then
+							s += " "
+						end if
+
+						select case as const( tkGet( i ) )
+						case TK_ID       : s += *tkGetText( i )
+						case TK_DECNUM   : s += *tkGetText( i )
+						case TK_HEXNUM   : s += "0x" + *tkGetText( i )
+						case TK_OCTNUM   : s += "0" + *tkGetText( i )
+						case TK_DECFLOAT : s += *tkGetText( i )
+						case TK_STRING   : s += """" + *tkGetText( i ) + """"
+						case TK_CHAR     : s += "'" + *tkGetText( i ) + "'"
+						case TK_WSTRING  : s += "L""" + *tkGetText( i ) + """"
+						case TK_WCHAR    : s += "L'" + *tkGetText( i ) + "'"
+						case TK_EXCL to TK_TILDE, KW__C_FIRST to KW__C_LAST
+							s += *tkInfoText( tkGet( i ) )
+						case else
+							tkOops( i, "can't #stringify this token" )
+						end select
+					next
+
+					tkInsert( x, TK_STRING, s )
 					x += 1
 				else
 					'' Copy the arg's tokens into the body

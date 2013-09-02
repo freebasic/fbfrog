@@ -172,9 +172,29 @@ private function cExpression _
 			a = hNumberLiteral( x )
 			x += 1
 
+		case TK_STRING
+			a = astNew( ASTCLASS_STRING, tkGetText( x ) )
+			astSetType( a, TYPE_ZSTRING, NULL )
+			x += 1
+
+		case TK_WSTRING
+			a = astNew( ASTCLASS_STRING, tkGetText( x ) )
+			astSetType( a, TYPE_WSTRING, NULL )
+			x += 1
+
+		case TK_CHAR
+			a = astNew( ASTCLASS_CHAR, tkGetText( x ) )
+			astSetType( a, TYPE_ZSTRING, NULL )
+			x += 1
+
+		case TK_WCHAR
+			a = astNew( ASTCLASS_CHAR, tkGetText( x ) )
+			astSetType( a, TYPE_WSTRING, NULL )
+			x += 1
+
 		'' Identifier ['(' CallArguments ')']
 		case TK_ID
-			a = astNew( ASTCLASS_ID, tkGetText( x ) )
+			a = astNewID( tkGetText( x ) )
 			x += 1
 
 			'' '('?

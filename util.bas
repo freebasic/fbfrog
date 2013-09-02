@@ -169,11 +169,11 @@ function strMakePrintable( byref a as string ) as string
 	dim b as string
 
 	for i as integer = 0 to len( a )-1
-		select case as const( a[i] )
-		case &h0A : b += "\n"
-		case &h0D : b += "\r"
-		case 9    : b += "\t"
-		case 1 to 8, 11, 12, 14 to 31, 127 : b += "?"
+		select case( a[i] )
+		case CH_LF  : b += "\n"
+		case CH_CR  : b += "\r"
+		case CH_TAB : b += "\t"
+		case is < 32, 127 : b += "?"
 		case else   : b += chr( a[i] )
 		end select
 	next
