@@ -80,6 +80,9 @@ dim shared as FBOPINFO fbopinfo(ASTOP_LOGOR to ASTOP_UNARYPLUS) = _
 	(19, TRUE ), _ '' ASTOP_MUL
 	(19, TRUE ), _ '' ASTOP_DIV
 	(18, TRUE ), _ '' ASTOP_MOD
+	( 0, TRUE ), _ '' ASTOP_INDEX (not yet implemented)
+	( 0, TRUE ), _ '' ASTOP_MEMBER
+	( 0, TRUE ), _ '' ASTOP_MEMBERDEREF
 	( 0, TRUE ), _ '' ASTOP_LOGNOT
 	(14, TRUE ), _ '' ASTOP_BITNOT
 	(20, TRUE ), _ '' ASTOP_NEGATE

@@ -68,7 +68,8 @@ dim shared as ASTNODEINFO astnodeinfo(0 to ...) = _
 	( "text"    ), _
 	( "uop"     ), _
 	( "bop"     ), _
-	( "iif"     )  _
+	( "iif"     ), _
+	( "call"    )  _
 }
 
 #if ubound( astnodeinfo ) <> ASTCLASS__COUNT - 1

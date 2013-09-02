@@ -479,7 +479,9 @@ declare function typeToUnsigned( byval dtype as integer ) as integer
 declare function typeIsFloat( byval dtype as integer ) as integer
 
 enum
-	ASTOP_IIF = 0  '' just for the operator precedence tables
+	ASTOP_IIF = 0  '' iif() just for the operator precedence tables
+
+	'' BOPs
 	ASTOP_LOGOR
 	ASTOP_LOGAND
 	ASTOP_BITOR
@@ -498,11 +500,18 @@ enum
 	ASTOP_MUL
 	ASTOP_DIV
 	ASTOP_MOD
+	ASTOP_INDEX
+	ASTOP_MEMBER
+	ASTOP_MEMBERDEREF
+
+	'' UOPs
 	ASTOP_LOGNOT
 	ASTOP_BITNOT
 	ASTOP_NEGATE
 	ASTOP_UNARYPLUS
 	ASTOP_DEFINED
+	ASTOP_ADDROF
+	ASTOP_DEREF
 end enum
 
 enum
@@ -546,6 +555,7 @@ enum
 	ASTCLASS_UOP
 	ASTCLASS_BOP
 	ASTCLASS_IIF
+	ASTCLASS_CALL
 
 	ASTCLASS__COUNT
 end enum

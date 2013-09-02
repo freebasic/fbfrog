@@ -428,6 +428,9 @@ dim shared as PPOPINFO ppopinfo(ASTOP_IIF to ASTOP_UNARYPLUS) = _
 	(12, TRUE ), _ '' ASTOP_MUL
 	(12, TRUE ), _ '' ASTOP_DIV
 	(12, TRUE ), _ '' ASTOP_MOD
+	( 0, TRUE ), _ '' ASTOP_INDEX (unused)
+	( 0, TRUE ), _ '' ASTOP_MEMBER (unused)
+	( 0, TRUE ), _ '' ASTOP_MEMBERDEREF (unused)
 	(13, TRUE ), _ '' ASTOP_LOGNOT
 	(13, TRUE ), _ '' ASTOP_BITNOT
 	(13, TRUE ), _ '' ASTOP_NEGATE

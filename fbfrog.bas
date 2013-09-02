@@ -561,6 +561,8 @@ end sub
 			select case( arg )
 			case "h", "?", "help", "version"
 				hPrintHelp( "" )
+			case "comments"
+				cmdline.options or= PRESETOPT_COMMENTS
 			case "m", "merge"
 				cmdline.options and= not PRESETOPT_NOMERGE
 			case "v", "verbose"

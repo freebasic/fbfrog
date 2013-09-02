@@ -88,7 +88,7 @@ type COPINFO
 end type
 
 '' C operator precedence (higher value = higher precedence)
-dim shared as COPINFO copinfo(ASTOP_IIF to ASTOP_UNARYPLUS) = _
+dim shared as COPINFO copinfo(ASTOP_IIF to ASTOP_DEREF) = _
 { _
 	( 2, FALSE), _ '' ASTOP_IIF
 	( 3, TRUE ), _ '' ASTOP_LOGOR
@@ -109,32 +109,48 @@ dim shared as COPINFO copinfo(ASTOP_IIF to ASTOP_UNARYPLUS) = _
 	(12, TRUE ), _ '' ASTOP_MUL
 	(12, TRUE ), _ '' ASTOP_DIV
 	(12, TRUE ), _ '' ASTOP_MOD
+	(14, TRUE ), _ '' ASTOP_INDEX
+	(14, TRUE ), _ '' ASTOP_MEMBER
+	(14, TRUE ), _ '' ASTOP_MEMBERDEREF
 	(13, TRUE ), _ '' ASTOP_LOGNOT
 	(13, TRUE ), _ '' ASTOP_BITNOT
 	(13, TRUE ), _ '' ASTOP_NEGATE
-	(13, TRUE )  _ '' ASTOP_UNARYPLUS
+	(13, TRUE ), _ '' ASTOP_UNARYPLUS
+	( 0, TRUE ), _ '' ASTOP_DEFINED (unused)
+	(13, TRUE ), _ '' ASTOP_ADDROF
+	(13, TRUE )  _ '' ASTOP_DEREF
 }
 
 '' C expression parser based on precedence climbing
 private function cExpression _
 	( _
 		byref x as integer, _
-		byval level as integer = 0 _
+		byval level as integer = 0, _
+		byref errorx as integer, _
+		byref errormessage as string _
 	) as ASTNODE ptr
 
 	'' Unary prefix operators
 	var op = -1
 	select case( tkGet( x ) )
-	case TK_EXCL  : op = ASTOP_LOGNOT    '' !
-	case TK_TILDE : op = ASTOP_BITNOT    '' ~
-	case TK_MINUS : op = ASTOP_NEGATE    '' -
-	case TK_PLUS  : op = ASTOP_UNARYPLUS '' +
+	case TK_EXCL   : op = ASTOP_LOGNOT    '' !
+	case TK_TILDE  : op = ASTOP_BITNOT    '' ~
+	case TK_MINUS  : op = ASTOP_NEGATE    '' -
+	case TK_PLUS   : op = ASTOP_UNARYPLUS '' +
+	case TK_AMP    : op = ASTOP_ADDROF    '' &
+	case TK_STAR   : op = ASTOP_DEREF     '' *
 	end select
 
 	dim as ASTNODE ptr a
 	if( op >= 0 ) then
 		x += 1
-		a = astNewUOP( op, cExpression( x, copinfo(op).level ) )
+
+		a = cExpression( x, copinfo(op).level, errorx, errormessage )
+		if( a = NULL ) then
+			exit function
+		end if
+
+		a = astNewUOP( op, a )
 	else
 		'' Atoms
 		select case( tkGet( x ) )
@@ -144,18 +160,61 @@ private function cExpression _
 			x += 1
 
 			'' Expression
-			a = cExpression( x )
+			a = cExpression( x, , errorx, errormessage )
+			if( a = NULL ) then
+				exit function
+			end if
 
 			'' ')'
-			tkExpect( x, TK_RPAREN )
+			if( tkGet( x ) <> TK_RPAREN ) then
+				errorx = x
+				errormessage = "missing ')'"
+				exit function
+			end if
 			x += 1
 
 		case TK_OCTNUM, TK_DECNUM, TK_HEXNUM, TK_DECFLOAT
 			a = hNumberLiteral( x )
 			x += 1
 
+		'' Identifier ['(' CallArguments ')']
+		case TK_ID
+			a = astNew( ASTCLASS_ID, tkGetText( x ) )
+			x += 1
+
+			'' '('?
+			if( tkGet( x ) = TK_LPAREN ) then
+				a->class = ASTCLASS_CALL
+				x += 1
+
+				'' CallArguments:
+				'' Expression (',' Expression)*
+				do
+					var arg = cExpression( x, , errorx, errormessage )
+					if( arg = NULL ) then
+						exit function
+					end if
+
+					astAppend( a, arg )
+
+					'' ','?
+					if( tkGet( x ) <> TK_COMMA ) then exit do
+					x += 1
+				loop
+
+				'' ')'?
+				if( tkGet( x ) <> TK_RPAREN ) then
+					errorx = x
+					errormessage = "missing ')' to close function call's argument list"
+					exit function
+				end if
+				x += 1
+			end if
+
 		case else
-			tkOopsExpected( x, "number literal or '(...)' (atom expression)" )
+			errorx = x
+			errormessage = "not an atomic expression (identifier, literal, ...)"
+			exit function
 		end select
 	end if
 
@@ -181,6 +240,9 @@ private function cExpression _
 		case TK_STAR     : op = ASTOP_MUL    '' *
 		case TK_SLASH    : op = ASTOP_DIV    '' /
 		case TK_PERCENT  : op = ASTOP_MOD    '' %
+		case TK_LBRACKET : op = ASTOP_INDEX  '' [ (a[b])
+		case TK_DOT      : op = ASTOP_MEMBER '' .
+		case TK_ARROW    : op = ASTOP_MEMBERDEREF '' ->
 		case else        : exit do
 		end select
 
@@ -199,17 +261,39 @@ private function cExpression _
 		x += 1
 
 		'' rhs
-		var b = cExpression( x, oplevel )
+		var b = cExpression( x, oplevel, errorx, errormessage )
+		if( b = NULL ) then
+			exit function
+		end if
 
 		'' Handle ?: special case
 		if( op = ASTOP_IIF ) then
 			'' ':'
-			tkExpect( x, TK_COLON )
+			if( tkGet( x ) <> TK_COLON ) then
+				errorx = x
+				errormessage = "missing ':' of a?b:c iif operator"
+				exit function
+			end if
 			x += 1
 
-			var c = cExpression( x, oplevel )
+			var c = cExpression( x, oplevel, errorx, errormessage )
+			if( c = NULL ) then
+				exit function
+			end if
+
 			a = astNewIIF( a, b, c )
 		else
+			'' Handle [] special case
+			if( op = ASTOP_INDEX ) then
+				'' ']'
+				if( tkGet( x ) <> TK_RBRACKET ) then
+					errorx = x
+					errormessage = "missing ']'"
+					exit function
+				end if
+				x += 1
+			end if
+
 			a = astNewBOP( op, a, b )
 		end if
 	loop
@@ -365,7 +449,12 @@ private function cEnumConst( ) as ASTNODE ptr
 	'' '='?
 	if( cMatch( TK_EQ ) ) then
 		'' Expression
-		n->expr = cExpression( parse.x )
+		dim errorx as integer
+		dim errormessage as string
+		n->expr = cExpression( parse.x, , errorx, errormessage )
+		if( n->expr = NULL ) then
+			tkOops( errorx, errormessage )
+		end if
 	end if
 
 	'' (',' | '}')
@@ -999,7 +1088,12 @@ private function cDeclarator _
 			'' '['
 			cSkip( )
 
-			var elements = cExpression( parse.x )
+			dim errorx as integer
+			dim errormessage as string
+			var elements = cExpression( parse.x, , errorx, errormessage )
+			if( elements = NULL ) then
+				tkOops( errorx, errormessage )
+			end if
 
 			'' Add new DIMENSION to the ARRAY:
 			'' lbound = 0, ubound = elements - 1
@@ -1070,7 +1164,12 @@ private function cDeclarator _
 		'' ['=' Initializer]
 		if( cMatch( TK_EQ ) ) then
 			assert( node->expr = NULL )
-			node->expr = cExpression( parse.x )
+			dim errorx as integer
+			dim errormessage as string
+			node->expr = cExpression( parse.x, , errorx, errormessage )
+			if( node->expr = NULL ) then
+				tkOops( errorx, errormessage )
+			end if
 		end if
 	end if
 
@@ -1231,7 +1330,12 @@ private function cToplevel( byval body as integer ) as ASTNODE ptr
 				if( z = y ) then
 					expr = NULL
 				else
-					expr = cExpression( z )
+					dim errorx as integer
+					dim errormessage as string
+					expr = cExpression( z, , errorx, errormessage )
+					if( expr = NULL ) then
+						tkOops( errorx, errormessage )
+					end if
 
 					'' Must have reached the TK_END
 					if( z <> y ) then

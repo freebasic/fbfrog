@@ -62,13 +62,14 @@ To do:
     - macro body tokens from PPDEFINE ASTNODE must be reinserted into tk buffer,
       restoring locations too, then they can be parsed
     - show error if it can't be parsed
-    - add REPLACE DEFINE/MACRO [MacroParamList] [MacroBody] to presets, to allow
-      replacing macro bodies before ppEval()
     - FB translation must be given manually after PP pass, because something
       like <#define FOO )>
         a) can't be parsed as expression
         b) if it was replaced by something else before the PP pass that could
            break the header if FOO is supposed to expand to ')'
+        REPLACE DEFINE OldCBodyTokens "new FB body text"
+        - having the old C body tokens allows us to compare and error if the
+          macro changed, in which case the preset must be adjusted
 
 - version specific parts of preset:
     - should use VERSION blocks in a GROUP to represent
@@ -108,6 +109,11 @@ To do:
      iif/#if condition for example.
   -> it's not clear whether AST should represent C or FB?
      -> maybe have both C/FB relational/defined ops
+
+- defined() should be an atom, not a UOP
+- is_leftassoc opinfo field can probably be removed, if it's only iif() we can
+  for it manually
+- How to handle string/char literals, escaped/unescaped, zstring/wstring?
 
 - #include foo.h  ->  #include foo.bi, if foo.bi will be generated too
 - #include stdio.h -> #include crt/stdio.bi, for some known default headers
