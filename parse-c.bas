@@ -82,43 +82,38 @@ end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-type COPINFO
-	level		as integer
-	is_leftassoc	as integer
-end type
-
 '' C operator precedence (higher value = higher precedence)
-dim shared as COPINFO copinfo(ASTOP_IIF to ASTOP_DEREF) = _
+dim shared as integer cprecedence(ASTOP_IIF to ASTOP_DEREF) = _
 { _
-	( 2, FALSE), _ '' ASTOP_IIF
-	( 3, TRUE ), _ '' ASTOP_LOGOR
-	( 4, TRUE ), _ '' ASTOP_LOGAND
-	( 5, TRUE ), _ '' ASTOP_BITOR
-	( 6, TRUE ), _ '' ASTOP_BITXOR
-	( 7, TRUE ), _ '' ASTOP_BITAND
-	( 8, TRUE ), _ '' ASTOP_EQ
-	( 8, TRUE ), _ '' ASTOP_NE
-	( 9, TRUE ), _ '' ASTOP_LT
-	( 9, TRUE ), _ '' ASTOP_LE
-	( 9, TRUE ), _ '' ASTOP_GT
-	( 9, TRUE ), _ '' ASTOP_GE
-	(10, TRUE ), _ '' ASTOP_SHL
-	(10, TRUE ), _ '' ASTOP_SHR
-	(11, TRUE ), _ '' ASTOP_ADD
-	(11, TRUE ), _ '' ASTOP_SUB
-	(12, TRUE ), _ '' ASTOP_MUL
-	(12, TRUE ), _ '' ASTOP_DIV
-	(12, TRUE ), _ '' ASTOP_MOD
-	(14, TRUE ), _ '' ASTOP_INDEX
-	(14, TRUE ), _ '' ASTOP_MEMBER
-	(14, TRUE ), _ '' ASTOP_MEMBERDEREF
-	(13, TRUE ), _ '' ASTOP_LOGNOT
-	(13, TRUE ), _ '' ASTOP_BITNOT
-	(13, TRUE ), _ '' ASTOP_NEGATE
-	(13, TRUE ), _ '' ASTOP_UNARYPLUS
-	( 0, TRUE ), _ '' ASTOP_DEFINED (unused)
-	(13, TRUE ), _ '' ASTOP_ADDROF
-	(13, TRUE )  _ '' ASTOP_DEREF
+	 2, _ '' ASTOP_IIF
+	 3, _ '' ASTOP_LOGOR
+	 4, _ '' ASTOP_LOGAND
+	 5, _ '' ASTOP_BITOR
+	 6, _ '' ASTOP_BITXOR
+	 7, _ '' ASTOP_BITAND
+	 8, _ '' ASTOP_EQ
+	 8, _ '' ASTOP_NE
+	 9, _ '' ASTOP_LT
+	 9, _ '' ASTOP_LE
+	 9, _ '' ASTOP_GT
+	 9, _ '' ASTOP_GE
+	10, _ '' ASTOP_SHL
+	10, _ '' ASTOP_SHR
+	11, _ '' ASTOP_ADD
+	11, _ '' ASTOP_SUB
+	12, _ '' ASTOP_MUL
+	12, _ '' ASTOP_DIV
+	12, _ '' ASTOP_MOD
+	14, _ '' ASTOP_INDEX
+	14, _ '' ASTOP_MEMBER
+	14, _ '' ASTOP_MEMBERDEREF
+	13, _ '' ASTOP_LOGNOT
+	13, _ '' ASTOP_BITNOT
+	13, _ '' ASTOP_NEGATE
+	13, _ '' ASTOP_UNARYPLUS
+	 0, _ '' ASTOP_DEFINED (unused)
+	13, _ '' ASTOP_ADDROF
+	13  _ '' ASTOP_DEREF
 }
 
 '' C expression parser based on precedence climbing
@@ -145,7 +140,7 @@ private function cExpression _
 	if( op >= 0 ) then
 		x += 1
 
-		a = cExpression( x, copinfo(op).level, errorx, errormessage )
+		a = cExpression( x, cprecedence(op), errorx, errormessage )
 		if( a = NULL ) then
 			exit function
 		end if
@@ -249,11 +244,12 @@ private function cExpression _
 		'' Higher/same level means process now (takes precedence),
 		'' lower level means we're done and the parent call will
 		'' continue. The first call will start with level 0.
-		var oplevel = copinfo(op).level
+		var oplevel = cprecedence(op)
 		if( oplevel < level ) then
 			exit do
 		end if
-		if( copinfo(op).is_leftassoc ) then
+		'' Left associative?
+		if( op = ASTOP_IIF ) then
 			oplevel += 1
 		end if
 

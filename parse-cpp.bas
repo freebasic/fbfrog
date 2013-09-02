@@ -401,40 +401,35 @@ function hNumberLiteral( byval x as integer ) as ASTNODE ptr
 	function = n
 end function
 
-type PPOPINFO
-	level		as integer
-	is_leftassoc	as integer
-end type
-
 '' C PP operator precedence (higher value = higher precedence)
-dim shared as PPOPINFO ppopinfo(ASTOP_IIF to ASTOP_UNARYPLUS) = _
+dim shared as integer ppprecedence(ASTOP_IIF to ASTOP_UNARYPLUS) = _
 { _
-	( 2, FALSE), _ '' ASTOP_IIF
-	( 3, TRUE ), _ '' ASTOP_LOGOR
-	( 4, TRUE ), _ '' ASTOP_LOGAND
-	( 5, TRUE ), _ '' ASTOP_BITOR
-	( 6, TRUE ), _ '' ASTOP_BITXOR
-	( 7, TRUE ), _ '' ASTOP_BITAND
-	( 8, TRUE ), _ '' ASTOP_EQ
-	( 8, TRUE ), _ '' ASTOP_NE
-	( 9, TRUE ), _ '' ASTOP_LT
-	( 9, TRUE ), _ '' ASTOP_LE
-	( 9, TRUE ), _ '' ASTOP_GT
-	( 9, TRUE ), _ '' ASTOP_GE
-	(10, TRUE ), _ '' ASTOP_SHL
-	(10, TRUE ), _ '' ASTOP_SHR
-	(11, TRUE ), _ '' ASTOP_ADD
-	(11, TRUE ), _ '' ASTOP_SUB
-	(12, TRUE ), _ '' ASTOP_MUL
-	(12, TRUE ), _ '' ASTOP_DIV
-	(12, TRUE ), _ '' ASTOP_MOD
-	( 0, TRUE ), _ '' ASTOP_INDEX (unused)
-	( 0, TRUE ), _ '' ASTOP_MEMBER (unused)
-	( 0, TRUE ), _ '' ASTOP_MEMBERDEREF (unused)
-	(13, TRUE ), _ '' ASTOP_LOGNOT
-	(13, TRUE ), _ '' ASTOP_BITNOT
-	(13, TRUE ), _ '' ASTOP_NEGATE
-	(13, TRUE )  _ '' ASTOP_UNARYPLUS
+	 2, _ '' ASTOP_IIF
+	 3, _ '' ASTOP_LOGOR
+	 4, _ '' ASTOP_LOGAND
+	 5, _ '' ASTOP_BITOR
+	 6, _ '' ASTOP_BITXOR
+	 7, _ '' ASTOP_BITAND
+	 8, _ '' ASTOP_EQ
+	 8, _ '' ASTOP_NE
+	 9, _ '' ASTOP_LT
+	 9, _ '' ASTOP_LE
+	 9, _ '' ASTOP_GT
+	 9, _ '' ASTOP_GE
+	10, _ '' ASTOP_SHL
+	10, _ '' ASTOP_SHR
+	11, _ '' ASTOP_ADD
+	11, _ '' ASTOP_SUB
+	12, _ '' ASTOP_MUL
+	12, _ '' ASTOP_DIV
+	12, _ '' ASTOP_MOD
+	 0, _ '' ASTOP_INDEX (unused)
+	 0, _ '' ASTOP_MEMBER (unused)
+	 0, _ '' ASTOP_MEMBERDEREF (unused)
+	13, _ '' ASTOP_LOGNOT
+	13, _ '' ASTOP_BITNOT
+	13, _ '' ASTOP_NEGATE
+	13  _ '' ASTOP_UNARYPLUS
 }
 
 '' C PP expression parser based on precedence climbing
@@ -457,7 +452,7 @@ private function ppExpression _
 	if( op >= 0 ) then
 		var uopx = x
 		x += 1
-		a = astNewUOP( op, ppExpression( x, ppopinfo(op).level ) )
+		a = astNewUOP( op, ppExpression( x, ppprecedence(op) ) )
 		a->location = *tkGetLocation( uopx )
 	else
 		'' Atoms
@@ -550,11 +545,12 @@ private function ppExpression _
 		'' Higher/same level means process now (takes precedence),
 		'' lower level means we're done and the parent call will
 		'' continue. The first call will start with level 0.
-		var oplevel = ppopinfo(op).level
+		var oplevel = ppprecedence(op)
 		if( oplevel < level ) then
 			exit do
 		end if
-		if( ppopinfo(op).is_leftassoc ) then
+		'' Left associative?
+		if( op = ASTOP_IIF ) then
 			oplevel += 1
 		end if
 

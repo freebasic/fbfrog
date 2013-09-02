@@ -54,39 +54,34 @@ end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-type FBOPINFO
-	level		as integer
-	is_leftassoc	as integer
-end type
-
 '' FB operator precedence (higher value = higher precedence)
-dim shared as FBOPINFO fbopinfo(ASTOP_LOGOR to ASTOP_UNARYPLUS) = _
+dim shared as integer fbprecedence(ASTOP_LOGOR to ASTOP_UNARYPLUS) = _
 { _
-	(10, TRUE ), _ '' ASTOP_LOGOR
-	(10, TRUE ), _ '' ASTOP_LOGAND
-	(12, TRUE ), _ '' ASTOP_BITOR
-	(11, TRUE ), _ '' ASTOP_BITXOR
-	(13, TRUE ), _ '' ASTOP_BITAND
-	(15, TRUE ), _ '' ASTOP_EQ
-	(15, TRUE ), _ '' ASTOP_NE
-	(15, TRUE ), _ '' ASTOP_LT
-	(15, TRUE ), _ '' ASTOP_LE
-	(15, TRUE ), _ '' ASTOP_GT
-	(15, TRUE ), _ '' ASTOP_GE
-	(17, TRUE ), _ '' ASTOP_SHL
-	(17, TRUE ), _ '' ASTOP_SHR
-	(16, TRUE ), _ '' ASTOP_ADD
-	(16, TRUE ), _ '' ASTOP_SUB
-	(19, TRUE ), _ '' ASTOP_MUL
-	(19, TRUE ), _ '' ASTOP_DIV
-	(18, TRUE ), _ '' ASTOP_MOD
-	( 0, TRUE ), _ '' ASTOP_INDEX (not yet implemented)
-	( 0, TRUE ), _ '' ASTOP_MEMBER
-	( 0, TRUE ), _ '' ASTOP_MEMBERDEREF
-	( 0, TRUE ), _ '' ASTOP_LOGNOT
-	(14, TRUE ), _ '' ASTOP_BITNOT
-	(20, TRUE ), _ '' ASTOP_NEGATE
-	(20, TRUE )  _ '' ASTOP_UNARYPLUS
+	10, _ '' ASTOP_LOGOR
+	10, _ '' ASTOP_LOGAND
+	12, _ '' ASTOP_BITOR
+	11, _ '' ASTOP_BITXOR
+	13, _ '' ASTOP_BITAND
+	15, _ '' ASTOP_EQ
+	15, _ '' ASTOP_NE
+	15, _ '' ASTOP_LT
+	15, _ '' ASTOP_LE
+	15, _ '' ASTOP_GT
+	15, _ '' ASTOP_GE
+	17, _ '' ASTOP_SHL
+	17, _ '' ASTOP_SHR
+	16, _ '' ASTOP_ADD
+	16, _ '' ASTOP_SUB
+	19, _ '' ASTOP_MUL
+	19, _ '' ASTOP_DIV
+	18, _ '' ASTOP_MOD
+	 0, _ '' ASTOP_INDEX (not yet implemented)
+	 0, _ '' ASTOP_MEMBER
+	 0, _ '' ASTOP_MEMBERDEREF
+	 0, _ '' ASTOP_LOGNOT
+	14, _ '' ASTOP_BITNOT
+	20, _ '' ASTOP_NEGATE
+	20  _ '' ASTOP_UNARYPLUS
 }
 
 '' FB expression parser based on precedence climbing
@@ -107,7 +102,7 @@ private function imExpression _
 	dim as ASTNODE ptr a
 	if( op >= 0 ) then
 		hSkip( )
-		a = astNewUOP( op, imExpression( is_pp, fbopinfo(op).level ) )
+		a = astNewUOP( op, imExpression( is_pp, fbprecedence(op) ) )
 	else
 		'' Atoms
 		select case( tkGet( x ) )
@@ -201,12 +196,9 @@ private function imExpression _
 		'' Higher/same level means process now (takes precedence),
 		'' lower level means we're done and the parent call will
 		'' continue. The first call will start with level 0.
-		var oplevel = fbopinfo(op).level
+		var oplevel = fbprecedence(op)
 		if( oplevel < level ) then
 			exit do
-		end if
-		if( fbopinfo(op).is_leftassoc ) then
-			oplevel += 1
 		end if
 
 		'' operator

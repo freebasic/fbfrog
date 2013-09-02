@@ -111,8 +111,6 @@ To do:
      -> maybe have both C/FB relational/defined ops
 
 - defined() should be an atom, not a UOP
-- is_leftassoc opinfo field can probably be removed, if it's only iif() we can
-  for it manually
 - How to handle string/char literals, escaped/unescaped, zstring/wstring?
 
 - #include foo.h  ->  #include foo.bi, if foo.bi will be generated too
