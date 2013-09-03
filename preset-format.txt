@@ -31,6 +31,9 @@ Preprocessing (#if block evaluation, macro expansion)
       macro __GNUC__ 4
     MACRO implies and automatically does EXPAND and DEFINE.
 
+  REMOVE DEFINE Identifier
+    Don't preserve #defines/#undefs for that symbol
+
 
 Input files
 -----------
@@ -84,9 +87,6 @@ Versions
 
 The rest
 --------
-
-  REMOVE DEFINE Identifier
-    Remove any #define statements for that symbol from the binding.
 
   OPTION <name>
     NOMERGE       - create one *.bi per *.h, instead of a single *.bi

@@ -261,6 +261,16 @@ private function frogParseVersion _
 		wend
 	end scope
 
+	scope
+		var child = pre->removes->head
+		while( child )
+			if( child->class = ASTCLASS_PPDEFINE ) then
+				ppRemoveSym( child->text )
+			end if
+			child = child->next
+		wend
+	end scope
+
 	if( (pre->options and PRESETOPT_NOPP) = 0 ) then
 		ppEval( )
 	else

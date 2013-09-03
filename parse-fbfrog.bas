@@ -247,6 +247,7 @@ sub presetParse( byval pre as FROGPRESET ptr, byref presetfile as string )
 			case else
 				hOops( "unknown REMOVE command" )
 			end select
+			hSkip( )
 
 			'' Identifier
 			hExpect( TK_ID )

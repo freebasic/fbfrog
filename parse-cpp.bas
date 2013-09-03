@@ -42,7 +42,14 @@
 ''
 '' ppExpandSym() can be used to mark symbols as "precious", telling ppEval()
 '' that it should try to do macro expansion for it, if a corresponding #define
-'' is found. ppAddMacro() can be used to register initial #defines.
+'' is found.
+''
+'' ppAddMacro() can be used to register initial #defines.
+''
+'' ppRemoveSym() can be used to register symbols, #defines/#undefs for which
+'' should be removed instead of being preserved in the binding. Doing this on
+'' the PP level instead of later in the AST is useful for #defines whose bodies
+'' can't be parsed as C expressions.
 ''
 '' ppParseIfExprOnly() is a ppEval() replacement that just parses #if
 '' expressions into ASTs but doesn't evaluate/expand anything, for use by PP
@@ -1112,25 +1119,34 @@ namespace eval
 	'' ppEval(), then it will use and adjust the lists while parsing.
 	dim shared knownsyms     as ASTNODE ptr  '' symbols known to be defined or undefined
 	dim shared knownsymhash  as THASH
+
 	dim shared expandsyms    as ASTNODE ptr  '' precious symbols: registered for macro expansion
 	dim shared expandsymhash as THASH
+
 	dim shared macros        as ASTNODE ptr  '' known #defines for use by expansion
+	dim shared removes       as ASTNODE ptr  '' #defines/#undefs to remove instead of preserving
 end namespace
 
 sub ppEvalInit( )
 	eval.knownsyms = astNewGROUP( )
 	hashInit( @eval.knownsymhash, 4 )
+
 	eval.expandsyms = astNewGROUP( )
 	hashInit( @eval.expandsymhash, 4 )
+
 	eval.macros = astNewGROUP( )
+	eval.removes = astNewGROUP( )
 end sub
 
 sub ppEvalEnd( )
-	astDelete( eval.macros )
-	hashEnd( @eval.expandsymhash )
-	astDelete( eval.expandsyms )
-	hashEnd( @eval.knownsymhash )
 	astDelete( eval.knownsyms )
+	hashEnd( @eval.knownsymhash )
+
+	astDelete( eval.expandsyms )
+	hashEnd( @eval.expandsymhash )
+
+	astDelete( eval.macros )
+	astDelete( eval.removes )
 end sub
 
 private function hSymExists _
@@ -1186,19 +1202,25 @@ sub ppExpandSym( byval id as zstring ptr )
 	hashAddOverwrite( @eval.expandsymhash, n->text, NULL )
 end sub
 
-private function hLookupMacro( byval id as zstring ptr ) as ASTNODE ptr
-	var child = eval.macros->head
+private function hLookupId _
+	( _
+		byval list as ASTNODE ptr, _
+		byval id as zstring ptr _
+	) as ASTNODE ptr
+
+	var child = list->head
 	while( child )
 		if( *child->text = *id ) then
 			return child
 		end if
 		child = child->next
 	wend
+
 	function = NULL
 end function
 
 private sub hAddMacro( byval macro as ASTNODE ptr )
-	var existing = hLookupMacro( macro->text )
+	var existing = hLookupId( eval.macros, macro->text )
 	if( existing ) then
 		if( astIsEqualDecl( macro, existing ) = FALSE ) then
 			print "1st #define:"
@@ -1213,7 +1235,7 @@ private sub hAddMacro( byval macro as ASTNODE ptr )
 end sub
 
 private sub hUndefMacro( byval id as zstring ptr )
-	var macro = hLookupMacro( id )
+	var macro = hLookupId( eval.macros, id )
 	if( macro ) then
 		astRemoveChild( eval.macros, macro )
 	end if
@@ -1225,6 +1247,11 @@ sub ppAddMacro( byval macro as ASTNODE ptr )
 	astAppend( eval.macros, macro )
 end sub
 
+sub ppRemoveSym( byval id as zstring ptr )
+	assert( hLookupId( eval.removes, id ) = NULL )
+	astAppend( eval.removes, astNewID( id ) )
+end sub
+
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 private function hMaybeExpandId( byval x as integer ) as integer
@@ -1232,7 +1259,7 @@ private function hMaybeExpandId( byval x as integer ) as integer
 	var id = tkGetText( x )
 
 	if( hLookupExpandSym( id ) ) then
-		var macro = hLookupMacro( id )
+		var macro = hLookupId( eval.macros, id )
 		if( macro ) then
 			if( hMacroCall( macro, x ) ) then
 				'' The macro call will be replaced with the body,
@@ -1808,6 +1835,12 @@ sub ppEval( )
 						hAddMacro( astClone( t ) )
 					end if
 
+					'' Don't preserve the #define if the symbol was registed for removal
+					if( hLookupId( eval.removes, t->text ) ) then
+						tkRemove( x, x )
+						x -= 1
+					end if
+
 				case TK_PPUNDEF
 					'' Register/overwrite as known undefined symbol
 					var id = tkGetText( x )
@@ -1816,6 +1849,12 @@ sub ppEval( )
 					'' Forget previous #define if it's a precious symbol
 					if( hLookupExpandSym( id ) ) then
 						hUndefMacro( id )
+					end if
+
+					'' Don't preserve the #undef if the symbol was registed for removal
+					if( hLookupId( eval.removes, id ) ) then
+						tkRemove( x, x )
+						x -= 1
 					end if
 
 				case TK_ID

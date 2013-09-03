@@ -17,3 +17,11 @@ expand EXPANDME3
 expand EXPANDME4
 expand EXPANDME5
 expand EXPANDME6
+
+remove define EXPANDTHIS
+remove define EXPANDME1
+remove define EXPANDME2
+remove define EXPANDME3
+remove define EXPANDME4
+remove define EXPANDME5
+remove define EXPANDME6

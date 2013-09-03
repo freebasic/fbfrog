@@ -70,6 +70,8 @@ To do:
         REPLACE DEFINE OldCBodyTokens "new FB body text"
         - having the old C body tokens allows us to compare and error if the
           macro changed, in which case the preset must be adjusted
+    - REMOVE DEFINE Identifier works at the same level now, could perhaps be
+      integrated with this
 
 - version specific parts of preset:
     - should use VERSION blocks in a GROUP to represent
