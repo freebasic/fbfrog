@@ -591,6 +591,7 @@ end sub
 		'' For each *.fbfrog file...
 		do
 			var presetfilename = *presetfile->text
+			print "* " + presetfilename
 
 			'' Read in the *.fbfrog preset
 			dim as FROGPRESET pre
