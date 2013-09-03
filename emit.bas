@@ -510,6 +510,14 @@ private function emitAst _
 			emitAst( n->l    ) + ", " + _
 			emitAst( n->r    ) + " )"
 
+	case ASTCLASS_PPMERGE
+		var child = n->head
+		while( child )
+			if( child <> n->head ) then s += "##"
+			s += emitAst( child )
+			child = child->next
+		wend
+
 	case ASTCLASS_BOP
 		static as zstring * 8 fbbops(ASTOP_LOGOR to ASTOP_MOD) = _
 		{ _
@@ -553,6 +561,8 @@ private function emitAst _
 			s += "iif( " + emitAst( n->l ) + ", 0, 1 )"
 		case ASTOP_DEFINED
 			s += "defined( " + emitAst( n->l ) + " )"
+		case ASTOP_STRINGIFY
+			s += "#" + emitAst( n->l )
 		case else
 			if( need_parens ) then
 				s += "("

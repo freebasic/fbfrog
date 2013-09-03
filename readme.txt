@@ -53,20 +53,10 @@ Compiling:
 To do:
 
 - How to translate #define bodies?
-    - try to parse as C expression, handles number literals, calls, casts, flag ORs, etc.
-    - allow arbitrary identifier atoms (could be variables, other #defines, ...)
-    - allow data type atoms
-    - check for 2nd expression following a '(' ... ')' parentheses expression,
-      then that's a cast
-    - could allow ## in identifiers (atom expressions), same for #
-    - macro body tokens from PPDEFINE ASTNODE must be reinserted into tk buffer,
-      restoring locations too, then they can be parsed
-    - show error if it can't be parsed
-    - FB translation must be given manually after PP pass, because something
-      like <#define FOO )>
-        a) can't be parsed as expression
-        b) if it was replaced by something else before the PP pass that could
-           break the header if FOO is supposed to expand to ')'
+  - Most #defines are just constants (expressions) and can be parsed & translated
+  - The rest is partial C constructs or relies on macro expansion etc. They can
+    only be removed, and if wanted an FB translation can be given manually after
+    the PP pass.
         REPLACE DEFINE OldCBodyTokens "new FB body text"
         - having the old C body tokens allows us to compare and error if the
           macro changed, in which case the preset must be adjusted

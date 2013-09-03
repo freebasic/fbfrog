@@ -71,6 +71,7 @@ dim shared as ASTNODEINFO astnodeinfo(0 to ...) = _
 	( "uop"     ), _
 	( "bop"     ), _
 	( "iif"     ), _
+	( "ppmerge" ), _
 	( "call"    )  _
 }
 

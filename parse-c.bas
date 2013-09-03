@@ -197,8 +197,9 @@ private function cExpression _
 			a = astNewID( tkGetText( x ) )
 			x += 1
 
+			select case( tkGet( x ) )
 			'' '('?
-			if( tkGet( x ) = TK_LPAREN ) then
+			case TK_LPAREN
 				a->class = ASTCLASS_CALL
 				x += 1
 
@@ -224,7 +225,43 @@ private function cExpression _
 					exit function
 				end if
 				x += 1
+
+			'' '##'?
+			case TK_HASHHASH
+				var t = astNew( ASTCLASS_PPMERGE )
+				astAppend( t, a )
+				a = t
+
+				'' Identifier ('##' Identifier)*
+				do
+					x += 1
+
+					'' Identifier?
+					if( tkGet( x ) <> TK_ID ) then
+						errorx = x
+						errormessage = "expected '##' to be used on identifiers (a##b)"
+						exit function
+					end if
+					astAppend( a, astNewID( tkGetText( x ) ) )
+					x += 1
+
+					'' '##'?
+				loop while( tkGet( x ) = TK_HASHHASH )
+
+			end select
+
+		'' '#' stringify operator
+		case TK_HASH
+			x += 1
+
+			'' #id?
+			if( tkGet( x ) <> TK_ID ) then
+				errorx = x
+				errormessage = "expected '#' to be used on an identifier (#id)"
+				exit function
 			end if
+			a = astNewUOP( ASTOP_STRINGIFY, astNewID( tkGetText( x ) ) )
+			x += 1
 
 		case else
 			errorx = x

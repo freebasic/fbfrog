@@ -1695,7 +1695,6 @@ private function hEvalIfCondition( byval x as integer ) as integer
 		'' nodes may cause that unsolved defined() to be solved out
 		'' completely because its result doesn't matter (can happen with
 		'' short-curcuiting operators and iif).
-		astDump( t )
 		if( hCheckUnsolvedExpr( t ) = FALSE ) then
 			if( t->location.file ) then
 				oopsLocation( @t->location, "couldn't evaluate #if condition" )

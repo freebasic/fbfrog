@@ -33,17 +33,10 @@
 #define B01 1 + 1
 #define B02 ((1))
 
-#define X01
-#define X02 
-#define X03 1 1
-#define X04 foo
-#define X05 1 foo
-#define X06 foo 1
-#define X07 1 +
-#define X08 (
-#define X09 )
-#define X10 -
-#define X11 /*foo*/
+#define A
+#define A 
+#define A foo
+#define A /*foo*/
 
 #define m(a)
 #define m(a) 
@@ -53,20 +46,6 @@
 #define m(foo, abcdefg, something, bar, buzzzz)
 #define m(a) foo
 #define m(a)foo
-
-#define m(a)     a
-#define m(a)     a foo
-#define m(a) foo a
-#define m(a) foo a foo
-
-#define m(a, b)     a     b
-#define m(a, b)     a     b foo
-#define m(a, b)     a foo b
-#define m(a, b)     a foo b foo
-#define m(a, b) foo a     b
-#define m(a, b) foo a     b foo
-#define m(a, b) foo a foo b
-#define m(a, b) foo a foo b foo
 
 #define m(a)      a##foo
 #define m(a) foo##a
