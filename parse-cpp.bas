@@ -871,7 +871,7 @@ private function hStringify( byval arg as integer ) as string
 	function = s
 end function
 
-private sub hInsertMacroBody _
+private sub hInsertMacroExpansion _
 	( _
 		byref x as integer, _
 		byval xmacro as integer, _
@@ -1034,6 +1034,8 @@ private sub hInsertMacroBody _
 				y -= 1
 				x -= 1
 			end if
+
+			y += 1
 		wend
 	end scope
 
@@ -1046,6 +1048,7 @@ private sub hInsertMacroBody _
 				y -= 1
 				x -= 1
 			end if
+			y += 1
 		wend
 	end scope
 
@@ -1090,18 +1093,15 @@ private function hMacroCall _
 		x += 1
 	end if
 
-	var bodybegin = x
+	var expansionbegin = x
 
-	'' Not an empty #define?
-	if( macro->expr ) then
-		'' Insert the macro body behind the call (this way the positions
-		'' stored in argbegin()/argend() stay valid)
-		hInsertMacroBody( x, xmacro, macro )
-	end if
+	'' Insert the macro body behind the call (this way the positions
+	'' stored in argbegin()/argend() stay valid)
+	hInsertMacroExpansion( x, xmacro, macro )
 
 	'' Then remove the call tokens
-	tkRemove( begin, bodybegin - 1 )
-	x -= (bodybegin - 1) - begin + 1
+	tkRemove( begin, expansionbegin - 1 )
+	x -= (expansionbegin - 1) - begin + 1
 
 	function = TRUE
 end function
