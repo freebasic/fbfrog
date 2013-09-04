@@ -571,7 +571,7 @@ private function ppExpression _
 			exit do
 		end if
 		'' Left associative?
-		if( op = ASTOP_IIF ) then
+		if( op <> ASTOP_IIF ) then
 			oplevel += 1
 		end if
 
