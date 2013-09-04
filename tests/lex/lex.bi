@@ -1,32 +1,90 @@
 #define A 0
 #define A 1
 #define A 11
-#define A 01
-#define A 0123
-#define A 0x
-#define A 0x0
-#define A 0x1
-#define A 0xFF
-#define A 1.0
-#define A 1.0f
-#define A 1.0d
+#define A &o1
+#define A &o123
+#define A &h0
+#define A &h0
+#define A &h1
+#define A &hFF
+#define A 1
+#define A 1
+#define A 1
 #define A 0.1
-#define A 0.0
+#define A 0
 #define A 1.123
-#define A 1e+1
-#define A 1.0e+1
-#define A 1u
-#define A 1l
-#define A 1ul
-#define A 1ll
-#define A 1ull
+#define A 10
+#define A 10
+#define A 1
+#define A 1
+#define A 1
+#define A 1
+#define A 1
 
 #define B "foo"
-#define B "foo"
-#define B "foo\n"
-#define B "\"foo\""
-#define B 'a'
-#define B L'a'
+#define B wstr( "foo" )
+#define B !"foo\n"
+#define B !"\"foo\""
+#define B asc( "a" )
+#define B asc( wstr( "a" ) )
+
+#define C !"\""
+#define C "'"
+#define C "'"
+#define C "?"
+#define C !"\\"
+#define C !"\a"
+#define C !"\b"
+#define C !"\f"
+#define C !"\n"
+#define C !"\r"
+#define C !"\t"
+#define C !"\v"
+
+#define C asc( "'" )
+#define C asc( !"\"" )
+#define C asc( !"\"" )
+#define C asc( "?" )
+#define C asc( !"\\" )
+#define C asc( !"\a" )
+#define C asc( !"\b" )
+#define C asc( !"\f" )
+#define C asc( !"\n" )
+#define C asc( !"\r" )
+#define C asc( !"\t" )
+#define C asc( !"\v" )
+
+#define D !"\0"
+#define D !"\0"
+#define D !"\0"
+#define D !"\0000"
+#define D !"\1"
+#define D !"\1"
+#define D !"\0001"
+
+#define E !"\0a"
+#define E !"\0a"
+#define E !"\0a"
+#define E !"\0g"
+#define E !"\0g"
+#define E !"\0g"
+
+#define F !"\1"
+#define F !"\t"
+#define F "I"
+#define F "I1"
+
+#define G !"\0010"
+#define G !"\0270"
+#define G !"\2550"
+
+#define H "a@b"
+#define H "1@2"
+#define H !"\0"
+#define H !"\0"
+#define H !"\255"
+#define H !"\170"
+#define H !"a\0g"
 
 declare sub f( )  '' Some escaped newlines 
 

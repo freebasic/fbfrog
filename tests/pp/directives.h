@@ -61,7 +61,5 @@
 #define m(a, b) foo ## a ## foo ## b ## foo
 
 #define m(a) #a
-#define m(a, b) #a #b
 
 #define no_parameters_here (a)
-#define no_parameters_here (a, b, c)

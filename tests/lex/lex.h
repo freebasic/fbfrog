@@ -55,18 +55,36 @@
 #define C '\v'
 
 #define D "\0"
-#define D "\1"
-#define D "\11"
-#define D "\111"
+#define D "\00"
+#define D "\000"
+#define D "\0000"
 #define D "\01"
 #define D "\001"
-#define D "a\100b"
-#define D "1\1002"
-#define D "\xFF"
-#define D "\x0"
-#define D "\x0000000000000000000"
-#define D "\x00000000000AA"
-#define D "a\x00000000g"
+#define D "\0001"
+
+#define E "\0a"
+#define E "\00a"
+#define E "\000a"
+#define E "\0g"
+#define E "\00g"
+#define E "\000g"
+
+#define F "\1"
+#define F "\11"
+#define F "\111"
+#define F "\1111"
+
+#define G "\0010"
+#define G "\0330"
+#define G "\3770"
+
+#define H "a\100b"
+#define H "1\1002"
+#define H "\x0"
+#define H "\x0000000000000000000"
+#define H "\xFF"
+#define H "\x00000000000AA"
+#define H "a\x00000000g"
 
 /* foo */
 
