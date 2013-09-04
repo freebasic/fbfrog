@@ -505,15 +505,7 @@ private function emitAst _
 		s += *n->text + emitAst( n->expr )
 
 	case ASTCLASS_STRING, ASTCLASS_CHAR
-		if( n->class = ASTCLASS_CHAR ) then
-			s += "asc( "
-		end if
-
-		if( typeGetDtAndPtr( n->dtype ) = TYPE_WSTRING ) then
-			s += "wstr( "
-		end if
-
-		s += """"
+		s = """"
 
 		'' Turn the string literal from the internal format into
 		'' something nice for FB code
@@ -561,12 +553,16 @@ private function emitAst _
 
 		s += """"
 
+		if( has_escapes ) then
+			s = "!" + s
+		end if
+
 		if( typeGetDtAndPtr( n->dtype ) = TYPE_WSTRING ) then
-			s += " )"
+			s = "wstr( " + s + " )"
 		end if
 
 		if( n->class = ASTCLASS_CHAR ) then
-			s += " )"
+			s = "asc( " + s + " )"
 		end if
 
 	case ASTCLASS_IIF
