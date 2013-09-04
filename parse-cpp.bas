@@ -1908,21 +1908,26 @@ sub ppParseIfExprOnly( byval do_fold as integer )
 			exit do
 
 		case TK_PPIF, TK_PPELSEIF
+			var xif = x
 			var t = tkGetAst( x )
-			x += 1
 
 			'' No #if expression yet?
 			if( t = NULL ) then
+				x += 1
+
 				t = hParseIfCondition( x )
 				if( do_fold ) then
 					t = hFold( t )
 				end if
-				tkSetAst( x - 1, t )
+
+				x = xif
+				tkSetAst( x, t )
 			end if
 
-		case else
-			x += 1
+			hRemoveTokenAndTkBeginEnd( x )
 		end select
+
+		x += 1
 	loop
 end sub
 
