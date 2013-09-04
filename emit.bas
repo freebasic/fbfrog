@@ -504,6 +504,71 @@ private function emitAst _
 	case ASTCLASS_TEXT
 		s += *n->text + emitAst( n->expr )
 
+	case ASTCLASS_STRING, ASTCLASS_CHAR
+		if( n->class = ASTCLASS_CHAR ) then
+			s += "asc( "
+		end if
+
+		if( typeGetDtAndPtr( n->dtype ) = TYPE_WSTRING ) then
+			s += "wstr( "
+		end if
+
+		s += """"
+
+		'' Turn the string literal from the internal format into
+		'' something nice for FB code
+		var has_escapes = FALSE
+		dim as ubyte ptr i = n->text
+		do
+			select case( i[0] )
+			case 0
+				exit do
+
+			'' Internal format: can contain \\ and \0 escape
+			'' sequences to encode embedded null chars
+			case CH_BACKSLASH
+				i += 1
+				if( i[0] = CH_0 ) then
+					s += $"\0"
+				else
+					assert( i[0] = CH_BACKSLASH )
+					s += $"\\"
+				end if
+				has_escapes = TRUE
+
+			case CH_LF
+				s += $"\n"
+				has_escapes = TRUE
+
+			case CH_CR
+				s += $"\r"
+				has_escapes = TRUE
+
+			case CH_DQUOTE
+				s += $"\"""
+				has_escapes = TRUE
+
+			case is < 32, 127
+				s += $"\&h" + hex( i[0] )
+				has_escapes = TRUE
+
+			case else
+				s += chr( i[0] )
+			end select
+
+			i += 1
+		loop
+
+		s += """"
+
+		if( typeGetDtAndPtr( n->dtype ) = TYPE_WSTRING ) then
+			s += " )"
+		end if
+
+		if( n->class = ASTCLASS_CHAR ) then
+			s += " )"
+		end if
+
 	case ASTCLASS_IIF
 		s += "iif( " + _
 			emitAst( n->expr ) + ", " + _
