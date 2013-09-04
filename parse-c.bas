@@ -1258,6 +1258,7 @@ private function cToplevel( byval body as integer ) as ASTNODE ptr
 				assert( tkGet( parse.x ) = TK_END )
 				cSkip( )
 
+				t = NULL
 				exit select
 			end if
 
