@@ -1926,6 +1926,32 @@ sub ppParseIfExprOnly( byval do_fold as integer )
 				'' Remove the TK_BEGIN/END, but not the #if/#elseif token
 				tkRemove( x + 1, hSkipFromBeginToEnd( x + 1 ) )
 			end if
+
+		case TK_PPDEFINE
+			'' Register/overwrite as known defined symbol
+			var t = tkGetAst( x )
+			assert( t->class = ASTCLASS_PPDEFINE )
+			hAddKnownSym( t->text, TRUE )
+
+			'' Don't preserve the #define if the symbol was registed for removal
+			if( hLookupRemoveSym( t->text ) ) then
+				'' #define body may still be needed for expansion,
+				'' so can't be removed yet. Instead, tell the C parser to
+				'' ignore this #define instead of trying to parse it.
+				''hRemoveTokenAndTkBeginEnd( x )
+				t->attrib or= ASTATTRIB_REMOVE
+			end if
+
+		case TK_PPUNDEF
+			'' Register/overwrite as known undefined symbol
+			var id = tkGetText( x )
+			hAddKnownSym( id, FALSE )
+
+			'' Don't preserve the #undef if the symbol was registed for removal
+			if( hLookupRemoveSym( id ) ) then
+				hRemoveTokenAndTkBeginEnd( x )
+			end if
+
 		end select
 
 		x += 1
