@@ -1922,9 +1922,10 @@ sub ppParseIfExprOnly( byval do_fold as integer )
 
 				x = xif
 				tkSetAst( x, t )
-			end if
 
-			hRemoveTokenAndTkBeginEnd( x )
+				'' Remove the TK_BEGIN/END, but not the #if/#elseif token
+				tkRemove( x + 1, hSkipFromBeginToEnd( x + 1 ) )
+			end if
 		end select
 
 		x += 1
