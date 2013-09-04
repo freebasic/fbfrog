@@ -1066,6 +1066,8 @@ private function hMacroCall _
 	assert( tkGet( x ) = TK_ID )
 	x += 1
 
+	argcount = -1
+
 	'' Not just "#define m"?
 	if( macro->paramcount >= 0 ) then
 		'' '('?
@@ -1073,6 +1075,8 @@ private function hMacroCall _
 			return FALSE
 		end if
 		x += 1
+
+		argcount = 0
 
 		'' Not just "#define m()"?
 		if( macro->paramcount > 0 ) then
