@@ -722,7 +722,7 @@ sub tkOops( byval x as integer, byval message as zstring ptr )
 		print string( 40, "-" )
 		tkDump( )
 		print string( 40, "-" )
-		print message
+		print *message
 		end 1
 	end if
 end sub
