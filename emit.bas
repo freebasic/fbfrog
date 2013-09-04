@@ -521,27 +521,41 @@ private function emitAst _
 			case CH_BACKSLASH
 				i += 1
 				if( i[0] = CH_0 ) then
-					s += $"\0"
+					'' If a digit is following, then ensure it doesn't
+					'' become part of this escape sequence
+					'' (FB's \NNN decimal escape sequence is limited to 3 chars)
+					select case( i[1] )
+					case CH_0 to CH_9
+						s += $"\000"
+					case else
+						s += $"\0"
+					end select
 				else
 					assert( i[0] = CH_BACKSLASH )
 					s += $"\\"
 				end if
 				has_escapes = TRUE
 
-			case CH_LF
-				s += $"\n"
-				has_escapes = TRUE
+			case CH_BELL      : s += $"\a"  : has_escapes = TRUE
+			case CH_BACKSPACE : s += $"\b"  : has_escapes = TRUE
+			case CH_TAB       : s += $"\t"  : has_escapes = TRUE
+			case CH_LF        : s += $"\n"  : has_escapes = TRUE
+			case CH_VTAB      : s += $"\v"  : has_escapes = TRUE
+			case CH_FORMFEED  : s += $"\f"  : has_escapes = TRUE
+			case CH_CR        : s += $"\r"  : has_escapes = TRUE
+			case CH_DQUOTE    : s += $"\""" : has_escapes = TRUE
 
-			case CH_CR
-				s += $"\r"
-				has_escapes = TRUE
+			case is < 32, is >= 127
+				var n = str( i[0] )
 
-			case CH_DQUOTE
-				s += $"\"""
-				has_escapes = TRUE
-
-			case is < 32, 127
-				s += $"\&h" + hex( i[0] )
+				'' If a digit is following, then ensure it doesn't
+				'' become part of this escape sequence
+				'' (FB's \NNN decimal escape sequence is limited to 3 chars)
+				select case( i[1] )
+				case CH_0 to CH_9
+					n = string( 3 - len( n ), "0" ) + n
+				end select
+				s += $"\" + n
 				has_escapes = TRUE
 
 			case else
