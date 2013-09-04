@@ -1709,22 +1709,28 @@ private function hLookupRemoveSym( byval id as zstring ptr ) as integer
 	function = (hashLookup( @eval.removes, id, hashHash( id ) )->s <> NULL)
 end function
 
+private function hSkipFromBeginToEnd( byval x as integer ) as integer
+	assert( tkGet( x ) = TK_BEGIN )
+	'' Find TK_END
+	do
+		x += 1
+	loop while( tkGet( x ) <> TK_END )
+	function = x
+end function
+
 private sub hRemoveTokenAndTkBeginEnd( byref x as integer )
+	var last = x
+
 	select case( tkGet( x ) )
-	case TK_PPIF, TK_PPELSEIF, TK_PPDEFINE
-		var y = x + 1
-		assert( tkGet( y ) = TK_BEGIN )
-
-		'' Find TK_END
-		do
-			y += 1
-		loop while( tkGet( y ) <> TK_END )
-
-		'' Remove whole TK_BEGIN/END
-		tkRemove( x, y )
-	case else
-		tkRemove( x, x )
+	case TK_PPIF, TK_PPELSEIF
+		if( tkGet( x + 1 ) = TK_BEGIN ) then
+			last = hSkipFromBeginToEnd( x + 1 )
+		end if
+	case TK_PPDEFINE
+		last = hSkipFromBeginToEnd( x + 1 )
 	end select
+
+	tkRemove( x, last )
 	x -= 1
 end sub
 
