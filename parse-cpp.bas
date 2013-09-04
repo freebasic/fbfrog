@@ -25,31 +25,45 @@
 '' and TK_END tokens. This basic identification of PP directives is enough for
 '' an #include detection pre-parsing step.
 ''
-'' ppDirectives2() goes through all #defines and finishes the parsing job by
-'' parsing the #define bodies into ASTs and removing the TK_BEGIN/END parts.
-'' This allows for token replacements in #define bodies before this step.
-''
 '' ppEval() goes through the token buffer almost like a C preprocessor would do.
 '' It keeps track of #defines and #undefs and expands macro calls for "precious"
 '' macros. It also expands macros inside #if conditions, then parses them as
 '' expressions, evaluates them, and solves out #if blocks, preserving only the
 '' #if/#else paths, depending on whether the expression evaluated to TRUE/FALSE.
+'' If an #if block can't be solved out because of an unknown symbol, an error
+'' will be shown.
 ''
-'' ppAddSym() can be used to register symbols as initially "defined" or
-'' "undefined". This helps evaluating #if defined() or #ifdef checks for symbols
-'' that aren't #define'd in code. If an #if block can't be solved out because of
-'' an unknown symbol, an error will be shown.
+'' ppExpandSym() registers "precious" symbols that should be macro-expanded,
+'' if ppEval() finds a corresponding #define. ppEval() doesn't expand macros
+'' automatically in order to allow presets to select what to expand.
 ''
-'' ppExpandSym() can be used to mark symbols as "precious", telling ppEval()
-'' that it should try to do macro expansion for it, if a corresponding #define
-'' is found.
+'' ppRemoveSym() registers symbols (#defines/#undefs) which should be removed
+'' instead of being preserved in the binding. Doing this on the PP level instead
+'' of later in the AST is useful for #defines whose bodies can't be parsed as
+'' C expressions.
 ''
-'' ppAddMacro() can be used to register initial #defines.
+'' ppPreDefine() adds initial macros, including simple symbols that should be
+'' treated as initially defined.
 ''
-'' ppRemoveSym() can be used to register symbols, #defines/#undefs for which
-'' should be removed instead of being preserved in the binding. Doing this on
-'' the PP level instead of later in the AST is useful for #defines whose bodies
-'' can't be parsed as C expressions.
+'' ppPreUndef() registers symbols as initially undefined.
+''
+'' Pre-#defines/#undefs are simply inserted at the top of the token buffer,
+'' so ppEval() parses them like any other #define/#undef it finds, except that
+'' pre-#defines/#undefs are also automatically registered with ppRemoveSym().
+''
+'' #define bodies are preserved (enclosed in TK_BEGIN/END):
+''  - macros can be expanded simply by copying the tokens from the original body
+''  - no need to store the macro body tokens in an AST
+''  - makes the expansion easier, because tk*() functions can be used for
+''    everything - no need to walk AST nodes
+''  - good for C parser later which can just parse the #define bodies and
+''    doesn't need to worry about re-inserting them into the tk buffer to be
+''    able to parse them
+''  - of course pre-#defines read in from presets must still be represented in
+''    the AST before ppPreDefine() can insert them at the top of the tk buffer
+''  - since the #define bodies are needed for expansion, #defines registered
+''    for removal instead of C parsing can't be removed immediately - they must
+''    be marked with ASTATTRIB_REMOVE so the C parser will ignore them.
 ''
 '' ppParseIfExprOnly() is a ppEval() replacement that just parses #if
 '' expressions into ASTs but doesn't evaluate/expand anything, for use by PP
@@ -763,188 +777,289 @@ sub ppDirectives1( )
 end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-''
-'' Example of recording the body of a #define:
-''
-''      #define m(a, b) a foo #b a##b a##foo
-''                     |------- body ------|
-''
-'' This sequence of macro body nodes will be created:
-''
-''      param 0
-''      tk TK_ID "foo"
-''      param 1 (stringify)
-''      param 0 (merge right)
-''      param 1 (merge left)
-''      param 0 (merge right)
-''      tk TK_ID "foo" (merge left)
-''
-
-private sub hTakeMergeAttrib( byref merge as integer, byval n as ASTNODE ptr )
-	if( merge ) then
-		n->attrib or= ASTATTRIB_MERGEWITHPREV
-		merge = FALSE
-	end if
-end sub
-
-'' Used for uninteresting tokens
-private sub hRecordToken _
-	( _
-		byval x as integer, _
-		byval macro as ASTNODE ptr, _
-		byref merge as integer _
-	)
-
-	var n = astNewTK( tkGet( x ), tkGetText( x ) )
-	hTakeMergeAttrib( merge, n )
-	astAppend( macro->expr, n )
-
-end sub
-
-'' Used when a 'param' or '#param' was found in the macro body.
-private sub hRecordParam _
-	( _
-		byval macro as ASTNODE ptr, _
-		byref merge as integer, _
-		byval id as zstring ptr, _
-		byval paramindex as integer, _
-		byval stringify as integer _
-	)
-
-	var n = astNewMACROPARAM( id, paramindex )
-
-	if( stringify ) then
-		n->attrib or= ASTATTRIB_STRINGIFY
-	end if
-	hTakeMergeAttrib( merge, n )
-
-	astAppend( macro->expr, n )
-
-end sub
-
-private function hLookupMacroParam _
-	( _
-		byval macro as ASTNODE ptr, _
-		byval id as zstring ptr _
-	) as integer
-
-	var index = 0
-
-	var param = macro->head
-	while( param )
-
-		assert( param->class = ASTCLASS_MACROPARAM )
-		if( *param->text = *id ) then
-			return index
-		end if
-
-		index += 1
-		param = param->next
-	wend
-
-	function = -1
-end function
-
-sub hRecordMacroBody( byref x as integer, byval macro as ASTNODE ptr )
-	assert( macro->expr = NULL )
-	macro->expr = astNew( ASTCLASS_MACROBODY )
-	var merge = FALSE
-
-	do
-		select case( tkGet( x ) )
-		case TK_END, TK_EOL, TK_EOF
-			exit do
-
-		case TK_ID
-			'' Is it one of the #define's parameters?
-			var id = tkGetText( x )
-			var paramindex = hLookupMacroParam( macro, id )
-			if( paramindex >= 0 ) then
-				hRecordParam( macro, merge, id, paramindex, FALSE )
-			else
-				hRecordToken( x, macro, merge )
-			end if
-
-		'' '#'?
-		case TK_HASH
-			'' '#param'?
-			if( tkGet( x + 1 ) = TK_ID ) then
-				'' Is it one of the #define's parameters?
-				var id = tkGetText( x + 1 )
-				var paramindex = hLookupMacroParam( macro, id )
-				if( paramindex >= 0 ) then
-					'' '#'
-					x += 1
-
-					hRecordParam( macro, merge, id, paramindex, TRUE )
-				else
-					'' '#'
-					hRecordToken( x, macro, merge )
-					x += 1
-
-					hRecordToken( x, macro, merge )
-				end if
-			else
-				'' '#'
-				hRecordToken( x, macro, merge )
-			end if
-
-		'' '##'?
-		case TK_HASHHASH
-			'' The next token/param (if any) will recieve the '##' merge attribute
-			merge = TRUE
-
-		case else
-			hRecordToken( x, macro, merge )
-		end select
-
-		x += 1
-	loop
-end sub
-
-sub ppDirectives2( )
-	var x = 0
-	do
-		select case( tkGet( x ) )
-		case TK_EOF
-			exit do
-
-		case TK_PPDEFINE
-			var macro = tkGetAst( x )
-			assert( macro->class = ASTCLASS_PPDEFINE )
-			x += 1
-
-			'' BEGIN
-			assert( tkGet( x ) = TK_BEGIN )
-			var begin = x
-			x += 1
-
-			'' Parse macro body
-			hRecordMacroBody( x, macro )
-
-			'' END
-			assert( tkGet( x ) = TK_END )
-			tkRemove( begin, x )
-			x = begin
-
-		case else
-			x += 1
-		end select
-	loop
-end sub
-
-''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 const MAXARGS = 128
-dim shared as integer argbegin(0 to MAXARGS-1), argend(0 to MAXARGS-1)
+dim shared as integer argbegin(0 to MAXARGS-1), argend(0 to MAXARGS-1), argcount
+
+private sub hMacroCallArgs _
+	( _
+		byref x as integer, _
+		byval macro as ASTNODE ptr _
+	)
+
+	'' For each arg...
+	do
+		if( argcount = MAXARGS ) then
+			tkOops( x, "macro call arg buffer too small, MAXARGS=" & MAXARGS )
+		end if
+
+		argbegin(argcount) = x
+
+		'' For each token that's part of this arg...
+		var level = 0
+		do
+			select case( tkGet( x ) )
+			case TK_LPAREN
+				level += 1
+			case TK_RPAREN
+				if( level <= 0 ) then
+					exit do
+				end if
+				level -= 1
+			case TK_COMMA
+				if( level <= 0 ) then
+					exit do
+				end if
+			case TK_EOF
+				tkOopsExpected( x, "')' to close macro call argument list" )
+			end select
+			x += 1
+		loop
+
+		argend(argcount) = x - 1
+		argcount += 1
+
+		'' ','?
+		if( tkGet( x ) <> TK_COMMA ) then
+			exit do
+		end if
+		x += 1
+	loop
+
+	'' As many args as params?
+	if( argcount <> macro->paramcount ) then
+		dim s as string
+		if( argcount > macro->paramcount ) then
+			s = "too many"
+		else
+			s = "not enough"
+		end if
+		s += " arguments for '" + *macro->text + "' macro call: "
+		s &= argcount & " given, " & macro->paramcount & " needed"
+		tkOops( x, s )
+	end if
+end sub
+
+private function hStringify( byval arg as integer ) as string
+	'' Turn this macro argument's tokens into a string and
+	'' insert it as string literal
+	dim as string s
+
+	assert( (arg >= 0) and (arg < argcount) )
+	for i as integer = argbegin(arg) to argend(arg)
+		if( tkGetBehindSpace( i ) ) then
+			s += " "
+		end if
+
+		select case as const( tkGet( i ) )
+		case TK_ID       : s += *tkGetText( i )
+		case TK_DECNUM   : s += *tkGetText( i )
+		case TK_HEXNUM   : s += "0x" + *tkGetText( i )
+		case TK_OCTNUM   : s += "0" + *tkGetText( i )
+		case TK_DECFLOAT : s += *tkGetText( i )
+		case TK_STRING   : s += """" + *tkGetText( i ) + """"
+		case TK_CHAR     : s += "'" + *tkGetText( i ) + "'"
+		case TK_WSTRING  : s += "L""" + *tkGetText( i ) + """"
+		case TK_WCHAR    : s += "L'" + *tkGetText( i ) + "'"
+		case TK_EXCL to TK_TILDE, KW__C_FIRST to KW__C_LAST
+			s += *tkInfoText( tkGet( i ) )
+		case else
+			tkOops( i, "can't #stringify this token" )
+		end select
+	next
+
+	function = s
+end function
+
+private sub hInsertMacroBody _
+	( _
+		byref x as integer, _
+		byval xmacro as integer, _
+		byval macro as ASTNODE ptr _
+	)
+
+	''
+	'' Note: The macro body is surrounded by TK_BEGIN/END, so it's ok to
+	'' read "out-of-bounds" here by -1 or +1. This is useful to handle the
+	'' '#' stringify and '##' merge operators.
+	''
+	'' Notes on '##' merging:
+	''
+	'' The operands of '##' must be expanded in case they're macro
+	'' parameters. If the corresponding arguments are empty and the macro
+	'' parameters expand to nothing, then no merging is done on that side,
+	'' perhaps none at all.
+	''
+	'' Specifically, no merging is done with preceding or following tokens
+	'' coming from somewhere else besides those macro parameters.
+	''
+	'' If a macro parameter expands to multiple tokens, the merging operator
+	'' affects the last/first token from the lhs/rhs operands respectively,
+	'' not necessarily all the tokens inserted in place of the parameter(s).
+	''
+	'' It seems like a good idea to do parameter expansion and '##' merging
+	'' in two separate passes. For this, the 1st pass
+	''  - must expand empty macro parameters to a place-holder token
+	''    (TK_EMPTYMACROPARAM)
+	''  - and also somehow mark '##' from the macro body for merging
+	''    (TK_HASHHASH turned into TK_PPMERGE)
+	'' allowing the 2nd pass to
+	''  - tell when a '##' operand was empty, to avoid accidentially using
+	''    unrelated preceding/following tokens as '##' operand(s)
+	''  - tell when a '##' came from the macro body (then it should be used
+	''    for merging) or a macro argument (then no merging)
+	''
+
+	'' Pass 1: For each token in the macro body...
+	assert( tkGet( xmacro     ) = TK_PPDEFINE )
+	assert( tkGet( xmacro + 1 ) = TK_BEGIN    )
+	var b = xmacro + 2
+	var xbegin = x
+	do
+		select case( tkGet( b ) )
+		case TK_END
+			exit do
+
+		'' '#' stringify operator
+		case TK_HASH
+			b += 1
+
+			'' Followed by identifier?
+			if( tkGet( b ) = TK_ID ) then
+				'' Is it a macro parameter?
+				var arg = astLookupMacroParam( macro, tkGetText( b ) )
+				if( arg >= 0 ) then
+					tkInsert( x, TK_STRING, hStringify( arg ) )
+					x += 1
+				end if
+			else
+				'' Plain '#' (probably never used in practice?)
+				b -= 1
+				tkCopy( x, b, b )
+				x += 1
+			end if
+
+		'' '##'
+		case TK_HASHHASH
+			'' Insert TK_PPMERGE instead, for pass 2
+			tkInsert( x, TK_PPMERGE )
+			x += 1
+
+		'' Identifier
+		case TK_ID
+			'' Expand if it's a macro parameter
+			var arg = astLookupMacroParam( macro, tkGetText( b ) )
+			if( arg >= 0 ) then
+				'' Argument was empty?
+				if( argbegin(arg) > argend(arg) ) then
+					'' Insert place-holder, for pass 2
+					tkInsert( x, TK_EMPTYMACROPARAM )
+					x += 1
+				else
+					'' Insert the arg's tokens into the expansion
+					tkCopy( x, argbegin(arg), argend(arg) )
+					x += argend(arg) - argbegin(arg) + 1
+				end if
+			else
+				'' Not a macro parameter, insert as-is
+				tkCopy( x, b, b )
+				x += 1
+			end if
+
+		case else
+			'' Uninteresting token, insert as-is
+			tkCopy( x, b, b )
+			x += 1
+		end select
+
+		b += 1
+	loop
+
+	'' Pass 2: Do '##' merging in the expansion
+	scope
+		var y = xbegin
+		while( y < x )
+			'' '##' from original macro body (and not '##' from a macro argument)?
+			if( tkGet( y ) = TK_PPMERGE ) then
+				'' Find lhs/rhs tokens, unless they're TK_EMPTYMACROPARAMs,
+				'' or don't exist at all (out-of-bounds), in case of '##'
+				'' at begin and/or end of the macro body.
+				var l = y - 1
+				if( l < xbegin ) then
+					l = -1
+				elseif( tkGet( l ) = TK_EMPTYMACROPARAM ) then
+					l = -1
+				end if
+
+				var r = y + 1
+				if( r >= x ) then
+					r = -1
+				elseif( tkGet( r ) = TK_EMPTYMACROPARAM ) then
+					r = -1
+				end if
+
+				if( (l >= 0) and (r >= 0) ) then
+					'' Try to merge the two tokens
+					'' Assuming every token >= TK_ID is mergable (i.e. an identifier or keyword)
+					if( (tkGet( l ) >= TK_ID) and (tkGet( r ) >= TK_ID) ) then
+						'' Insert merged token in front of the '##'
+						tkInsert( y, TK_ID, *tkGetIdOrKw( l ) + *tkGetIdOrKw( r ) )
+						y += 1
+						r += 1
+						x += 1
+
+						'' Remove l/r
+						tkRemove( l, l )
+						y -= 1
+						r -= 1
+						x -= 1
+						tkRemove( r, r )
+						x -= 1
+					else
+						print tkDumpOne( l )
+						print tkDumpOne( r )
+						oops( "cannot merge these two tokens when expanding macro '" & *macro->text & "'" )
+					end if
+				'elseif( l >= 0 ) then
+					'' No rhs, simply preserve the lhs
+				'elseif( r >= 0 ) then
+					'' No lhs, simply preserve the rhs
+				'else
+					'' Nothing to merge at all
+				end if
+
+				'' '##'
+				assert( tkGet( y ) = TK_PPMERGE )
+				tkRemove( y, y )
+				y -= 1
+				x -= 1
+			end if
+		wend
+	end scope
+
+	'' Pass 3: Remove TK_EMPTYMACROPARAM place holders from the expansion
+	scope
+		var y = xbegin
+		while( y < x )
+			if( tkGet( y ) = TK_EMPTYMACROPARAM ) then
+				tkRemove( y, y )
+				y -= 1
+				x -= 1
+			end if
+		wend
+	end scope
+
+end sub
 
 private function hMacroCall _
 	( _
-		byval macro as ASTNODE ptr, _
-		byval x as integer _
+		byval x as integer, _
+		byval xmacro as integer _
 	) as integer
 
-	var args = 0
+	assert( tkGet( xmacro ) = TK_PPDEFINE )
+	var macro = tkGetAst( xmacro )
+
 	var begin = x
 
 	'' ID
@@ -961,57 +1076,9 @@ private function hMacroCall _
 
 		'' Not just "#define m()"?
 		if( macro->paramcount > 0 ) then
-			'' For each arg...
-			do
-				if( args = MAXARGS ) then
-					tkOops( x, "macro call arg buffer too small, MAXARGS=" & MAXARGS )
-				end if
-
-				argbegin(args) = x
-
-				'' For each token that's part of this arg...
-				var level = 0
-				do
-					select case( tkGet( x ) )
-					case TK_LPAREN
-						level += 1
-					case TK_RPAREN
-						if( level <= 0 ) then
-							exit do
-						end if
-						level -= 1
-					case TK_COMMA
-						if( level <= 0 ) then
-							exit do
-						end if
-					case TK_EOF
-						tkOopsExpected( x, "')' to close macro call argument list" )
-					end select
-					x += 1
-				loop
-
-				argend(args) = x - 1
-				args += 1
-
-				'' ','?
-				if( tkGet( x ) <> TK_COMMA ) then
-					exit do
-				end if
-				x += 1
-			loop
-
-			'' As many args as params?
-			if( args <> macro->paramcount ) then
-				dim s as string
-				if( args > macro->paramcount ) then
-					s = "too many"
-				else
-					s = "not enough"
-				end if
-				s += " arguments for '" + *macro->text + "' macro call: "
-				s &= args & " given, " & macro->paramcount & " needed"
-				tkOops( x, s )
-			end if
+			'' Parse the argument list and fill the argbegin() and
+			'' argend() arrays accordingly
+			hMacroCallArgs( x, macro )
 		end if
 
 		'' ')'?
@@ -1023,80 +1090,9 @@ private function hMacroCall _
 
 	'' Not an empty #define?
 	if( macro->expr ) then
-		'' Insert the macro body behind the call
-		assert( macro->expr->class = ASTCLASS_MACROBODY )
-
-		var child = macro->expr->head
-		while( child )
-			var y = x
-
-			select case( child->class )
-			case ASTCLASS_TK
-				tkInsert( x, child->tk, child->text )
-				x += 1
-
-			case ASTCLASS_MACROPARAM
-				var arg = child->paramindex
-				assert( (arg >= 0) and (arg < args) )
-
-				if( child->attrib and ASTATTRIB_STRINGIFY ) then
-					'' Turn the arg's tokens into a string and insert it as string literal
-
-					dim as string s
-					for i as integer = argbegin(arg) to argend(arg)
-						if( tkGetBehindSpace( i ) ) then
-							s += " "
-						end if
-
-						select case as const( tkGet( i ) )
-						case TK_ID       : s += *tkGetText( i )
-						case TK_DECNUM   : s += *tkGetText( i )
-						case TK_HEXNUM   : s += "0x" + *tkGetText( i )
-						case TK_OCTNUM   : s += "0" + *tkGetText( i )
-						case TK_DECFLOAT : s += *tkGetText( i )
-						case TK_STRING   : s += """" + *tkGetText( i ) + """"
-						case TK_CHAR     : s += "'" + *tkGetText( i ) + "'"
-						case TK_WSTRING  : s += "L""" + *tkGetText( i ) + """"
-						case TK_WCHAR    : s += "L'" + *tkGetText( i ) + "'"
-						case TK_EXCL to TK_TILDE, KW__C_FIRST to KW__C_LAST
-							s += *tkInfoText( tkGet( i ) )
-						case else
-							tkOops( i, "can't #stringify this token" )
-						end select
-					next
-
-					tkInsert( x, TK_STRING, s )
-					x += 1
-				else
-					'' Copy the arg's tokens into the body
-					tkCopy( x, argbegin(arg), argend(arg) )
-					x += argend(arg) - argbegin(arg) + 1
-				end if
-
-			case else
-				assert( FALSE )
-			end select
-
-			if( child->attrib and ASTATTRIB_MERGEWITHPREV ) then
-				'' Not the first token? (it wouldn't have a previous token to merge with)
-				if( bodybegin < y ) then
-					'' Assuming every token >= TK_ID is mergable (i.e. an identifier or keyword)
-					if( (tkGet( y - 1 ) >= TK_ID) and _
-					    (tkGet( y     ) >= TK_ID) ) then
-						tkInsert( x, TK_ID, *tkGetIdOrKw( y - 1 ) + *tkGetIdOrKw( y ) )
-						x += 1
-						tkRemove( y - 1, y )
-						x -= 2
-					else
-						print tkDumpOne( y - 1 )
-						print tkDumpOne( y )
-						oops( "cannot merge these two tokens when expanding macro '" & *macro->text & "'" )
-					end if
-				end if
-			end if
-
-			child = child->next
-		wend
+		'' Insert the macro body behind the call (this way the positions
+		'' stored in argbegin()/argend() stay valid)
+		hInsertMacroBody( x, xmacro, macro )
 	end if
 
 	'' Then remove the call tokens
@@ -1117,160 +1113,147 @@ end enum
 namespace eval
 	'' Lists of known symbols etc. Initial symbols can be added before
 	'' ppEval(), then it will use and adjust the lists while parsing.
-	dim shared knownsyms     as ASTNODE ptr  '' symbols known to be defined or undefined
-	dim shared knownsymhash  as THASH
 
-	dim shared expandsyms    as ASTNODE ptr  '' precious symbols: registered for macro expansion
-	dim shared expandsymhash as THASH
+	'' symbols known to be defined or undefined
+	dim shared knowns		as THASH
 
-	dim shared macros        as ASTNODE ptr  '' known #defines for use by expansion
-	dim shared removes       as ASTNODE ptr  '' #defines/#undefs to remove instead of preserving
+	dim shared expands		as THASH
+	'' #defines/#undefs to remove instead of preserving
+	dim shared removes		as THASH
+
+	'' Lookup table of #define token positions
+	dim shared macros		as THASH
+
+	'' Token position where to insert pre-#defines/#undefs
+	'' - starts out at 0, the top of the tk buffer, that's the best place
+	''   for pre-#defines and pretty much the only option anyways
+	'' - instead of inserting each one of the pre-#defines at position 0
+	''   (they would end up in reverse order), this counter keeps advancing
+	''   so pre-#defines can be inserted in the original order
+	dim shared xpre          as integer
 end namespace
 
 sub ppEvalInit( )
-	eval.knownsyms = astNewGROUP( )
-	hashInit( @eval.knownsymhash, 4 )
-
-	eval.expandsyms = astNewGROUP( )
-	hashInit( @eval.expandsymhash, 4 )
-
-	eval.macros = astNewGROUP( )
-	eval.removes = astNewGROUP( )
+	hashInit( @eval.knowns, 4, TRUE )
+	hashInit( @eval.expands, 4, TRUE )
+	hashInit( @eval.removes, 4, TRUE )
+	hashInit( @eval.macros, 4, TRUE )
+	eval.xpre = 0
 end sub
 
 sub ppEvalEnd( )
-	astDelete( eval.knownsyms )
-	hashEnd( @eval.knownsymhash )
-
-	astDelete( eval.expandsyms )
-	hashEnd( @eval.expandsymhash )
-
-	astDelete( eval.macros )
-	astDelete( eval.removes )
+	hashEnd( @eval.knowns )
+	hashEnd( @eval.expands )
+	hashEnd( @eval.removes )
+	hashEnd( @eval.macros )
 end sub
-
-private function hSymExists _
-	( _
-		byval group as ASTNODE ptr, _
-		byval id as zstring ptr _
-	) as integer
-
-	var child = group->head
-	while( child )
-		if( *child->text = *id ) then
-			return TRUE
-		end if
-		child = child->next
-	wend
-
-	function = FALSE
-end function
-
-private sub hAddKnownSym( byval id as zstring ptr, byval is_defined as integer )
-	var n = astNewID( id )
-	astAppend( eval.knownsyms, n )
-	hashAddOverwrite( @eval.knownsymhash, n->text, cptr( any ptr, is_defined ) )
-end sub
-
-private function hLookupKnownSym( byval id as zstring ptr ) as integer
-	var item = hashLookup( @eval.knownsymhash, id, hashHash( id ) )
-	if( item->s ) then
-		function = iif( item->data, COND_TRUE, COND_FALSE )
-	else
-		function = COND_UNKNOWN
-	end if
-end function
-
-sub ppAddSym( byval id as zstring ptr, byval is_defined as integer )
-	if( hSymExists( eval.knownsyms, id ) ) then
-		oops( "ppAddSym( """ & *id & """, " & iif( is_defined, "TRUE", "FALSE" ) & " ) called, but already exists" )
-	end if
-	hAddKnownSym( id, is_defined )
-end sub
-
-'' Check whether the given id is a precious symbol
-private function hLookupExpandSym( byval id as zstring ptr ) as integer
-	function = (hashLookup( @eval.expandsymhash, id, hashHash( id ) )->s <> NULL)
-end function
 
 sub ppExpandSym( byval id as zstring ptr )
-	if( hSymExists( eval.expandsyms, id ) ) then
-		oops( "ppExpandSym( """ & *id & """ ) called, but already exists" )
-	end if
-	var n = astNewID( id )
-	astAppend( eval.expandsyms, n )
-	hashAddOverwrite( @eval.expandsymhash, n->text, NULL )
-end sub
-
-private function hLookupId _
-	( _
-		byval list as ASTNODE ptr, _
-		byval id as zstring ptr _
-	) as ASTNODE ptr
-
-	var child = list->head
-	while( child )
-		if( *child->text = *id ) then
-			return child
-		end if
-		child = child->next
-	wend
-
-	function = NULL
-end function
-
-private sub hAddMacro( byval macro as ASTNODE ptr )
-	var existing = hLookupId( eval.macros, macro->text )
-	if( existing ) then
-		if( astIsEqualDecl( macro, existing ) = FALSE ) then
-			print "1st #define:"
-			astDump( existing )
-			print "2nd #define:"
-			astDump( macro )
-			oops( "conflicting #define for " + *macro->text )
-		end if
-		exit sub
-	end if
-	astAppend( eval.macros, macro )
-end sub
-
-private sub hUndefMacro( byval id as zstring ptr )
-	var macro = hLookupId( eval.macros, id )
-	if( macro ) then
-		astRemoveChild( eval.macros, macro )
-	end if
-end sub
-
-sub ppAddMacro( byval macro as ASTNODE ptr )
-	ppAddSym( macro->text, TRUE )
-	ppExpandSym( macro->text )
-	astAppend( eval.macros, macro )
+	hashAddOverwrite( @eval.expands, id, NULL )
 end sub
 
 sub ppRemoveSym( byval id as zstring ptr )
-	assert( hLookupId( eval.removes, id ) = NULL )
-	astAppend( eval.removes, astNewID( id ) )
+	hashAddOverwrite( @eval.removes, id, NULL )
 end sub
 
-''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+sub ppPreUndef( byval id as zstring ptr )
+	'' Add #undef at the top of the tk buffer, where ppEval() will see it
+	tkInsert( eval.xpre, TK_PPUNDEF, id )
+	eval.xpre += 1
+end sub
 
-private function hMaybeExpandId( byval x as integer ) as integer
+sub ppPreDefine overload( byval macro as ASTNODE ptr )
+	'' Insert the #define with body tokens in TK_BEGIN/END at the top of
+	'' the tk buffer, where ppEval() will see it.
+	var newmacro = astClone( macro )
+	astDelete( newmacro->expr )
+	newmacro->expr = NULL
+
+	tkInsert( eval.xpre, TK_PPDEFINE )
+	tkSetAst( eval.xpre, newmacro )
+	eval.xpre += 1
+
+	tkInsert( eval.xpre, TK_BEGIN )
+	eval.xpre += 1
+
+	var macrobody = macro->expr
+	if( macrobody ) then
+		assert( macrobody->class = ASTCLASS_MACROBODY )
+		var tk = macrobody->head
+		while( tk )
+			assert( tk->class = ASTCLASS_TK )
+
+			tkInsert( eval.xpre, tk->tk, tk->text )
+			eval.xpre += 1
+
+			tk = tk->next
+		wend
+	end if
+
+	tkInsert( eval.xpre, TK_END )
+	eval.xpre += 1
+end sub
+
+sub ppPreDefine overload( byval id as zstring ptr )
+	var macro = astNew( ASTCLASS_PPDEFINE, id )
+	macro->paramcount = -1
+	ppPreDefine( macro )
+	astDelete( macro )
+end sub
+
+private function hLookupMacro( byval id as zstring ptr ) as integer
+	var item = hashLookup( @eval.macros, id, hashHash( id ) )
+	if( item->s ) then
+		function = cint( item->data )
+	else
+		function = -1
+	end if
+end function
+
+private sub hAddMacro( byval macro as ASTNODE ptr, byval xmacro as integer )
+	assert( tkGetAst( xmacro ) = macro )
+
+	var xexisting = hLookupMacro( macro->text )
+	if( xexisting >= 0 ) then
+		assert( tkGet( xexisting ) = TK_PPDEFINE )
+		var existing = tkGetAst( xexisting )
+		if( astIsEqualDecl( macro, existing ) = FALSE ) then
+			print "1st #define:"
+			TRACE( xexisting )
+			print "2nd #define:"
+			TRACE( xmacro )
+			oops( "conflicting #define for " + *macro->text )
+		end if
+	end if
+
+	hashAddOverwrite( @eval.macros, macro->text, cptr( any ptr, xmacro ) )
+end sub
+
+private sub hUndefMacro( byval id as zstring ptr )
+	var xexisting = hLookupMacro( id )
+	if( xexisting >= 0 ) then
+		hashAddOverwrite( @eval.macros, id, cptr( any ptr, -1 ) )
+	end if
+end sub
+
+private function hLookupExpandSym( byval id as zstring ptr ) as integer
+	function = (hashLookup( @eval.expands, id, hashHash( id ) )->s <> NULL)
+end function
+
+private sub hMaybeExpandId( byref x as integer )
 	assert( tkGet( x ) = TK_ID )
 	var id = tkGetText( x )
-
 	if( hLookupExpandSym( id ) ) then
-		var macro = hLookupId( eval.macros, id )
-		if( macro ) then
-			if( hMacroCall( macro, x ) ) then
+		var xmacro = hLookupMacro( id )
+		if( xmacro >= 0 ) then
+			if( hMacroCall( x, xmacro ) ) then
 				'' The macro call will be replaced with the body,
 				'' the token at the TK_ID's position must be re-parsed.
 				x -= 1
 			end if
 		end if
 	end if
-
-	function = x
-end function
+end sub
 
 private sub hExpandInIfCondition( byval x as integer )
 	assert( tkGet( x ) = TK_BEGIN )
@@ -1309,7 +1292,7 @@ private sub hExpandInIfCondition( byval x as integer )
 
 		'' Identifier (anything unrelated to DEFINED)
 		case TK_ID
-			x = hMaybeExpandId( x )
+			hMaybeExpandId( x )
 
 		end select
 	loop
@@ -1333,8 +1316,15 @@ private function hParseIfCondition( byval x as integer ) as ASTNODE ptr
 
 	'' END
 	assert( tkGet( x ) = TK_END )
-	'' Remove the TK_BEGIN/END and the expression tokens in between
-	tkRemove( begin, x )
+end function
+
+private function hLookupKnownSym( byval id as zstring ptr ) as integer
+	var item = hashLookup( @eval.knowns, id, hashHash( id ) )
+	if( item->s ) then
+		function = iif( item->data, COND_TRUE, COND_FALSE )
+	else
+		function = COND_UNKNOWN
+	end if
 end function
 
 private function hFold( byval n as ASTNODE ptr ) as ASTNODE ptr
@@ -1707,6 +1697,33 @@ private function hEvalIfCondition( byval x as integer ) as integer
 	function = (t->vali <> 0)
 end function
 
+private sub hAddKnownSym( byval id as zstring ptr, byval is_defined as integer )
+	hashAddOverwrite( @eval.knowns, id, cptr( any ptr, is_defined ) )
+end sub
+
+private function hLookupRemoveSym( byval id as zstring ptr ) as integer
+	function = (hashLookup( @eval.removes, id, hashHash( id ) )->s <> NULL)
+end function
+
+private sub hRemoveTokenAndTkBeginEnd( byref x as integer )
+	select case( tkGet( x ) )
+	case TK_PPIF, TK_PPELSEIF, TK_PPDEFINE
+		var y = x + 1
+		assert( tkGet( y ) = TK_BEGIN )
+
+		'' Find TK_END
+		do
+			y += 1
+		loop while( tkGet( y ) <> TK_END )
+
+		'' Remove whole TK_BEGIN/END
+		tkRemove( x, y )
+	case else
+		tkRemove( x, x )
+	end select
+	x -= 1
+end sub
+
 type IFSTACKNODE
 	saw_true	as integer
 	saw_else	as integer
@@ -1743,8 +1760,7 @@ sub ppEval( )
 				end if
 			end if
 
-			tkRemove( x, x )
-			x -= 1
+			hRemoveTokenAndTkBeginEnd( x )
 
 		case TK_PPELSEIF
 			if( level < 0 ) then
@@ -1773,8 +1789,7 @@ sub ppEval( )
 				end if
 			end if
 
-			tkRemove( x, x )
-			x -= 1
+			hRemoveTokenAndTkBeginEnd( x )
 
 		case TK_PPELSE
 			if( level < 0 ) then
@@ -1798,8 +1813,7 @@ sub ppEval( )
 				end if
 			end if
 
-			tkRemove( x, x )
-			x -= 1
+			hRemoveTokenAndTkBeginEnd( x )
 
 		case TK_PPENDIF
 			if( level < 0 ) then
@@ -1811,55 +1825,64 @@ sub ppEval( )
 				skiplevel = MAXIFBLOCKS
 			end if
 
-			tkRemove( x, x )
-			x -= 1
+			hRemoveTokenAndTkBeginEnd( x )
 
 			level -= 1
+
+		case TK_PPDEFINE
+			if( skiplevel <> MAXIFBLOCKS ) then
+				hRemoveTokenAndTkBeginEnd( x )
+			else
+				'' Register/overwrite as known defined symbol
+				var t = tkGetAst( x )
+				assert( t->class = ASTCLASS_PPDEFINE )
+				hAddKnownSym( t->text, TRUE )
+
+				'' Register #define for expansion if it's a precious symbol
+				if( hLookupExpandSym( t->text ) ) then
+					hAddMacro( t, x )
+				end if
+
+				'' Don't preserve the #define if the symbol was registed for removal
+				if( hLookupRemoveSym( t->text ) ) then
+					'' #define body may still be needed for expansion,
+					'' so can't be removed yet. Instead, tell the C parser to
+					'' ignore this #define instead of trying to parse it.
+					''hRemoveTokenAndTkBeginEnd( x )
+					t->attrib or= ASTATTRIB_REMOVE
+				end if
+			end if
+
+		case TK_PPUNDEF
+			if( skiplevel <> MAXIFBLOCKS ) then
+				hRemoveTokenAndTkBeginEnd( x )
+			else
+				'' Register/overwrite as known undefined symbol
+				var id = tkGetText( x )
+				hAddKnownSym( id, FALSE )
+
+				'' Forget previous #define if it's a precious symbol
+				if( hLookupExpandSym( id ) ) then
+					hUndefMacro( id )
+				end if
+
+				'' Don't preserve the #undef if the symbol was registed for removal
+				if( hLookupRemoveSym( id ) ) then
+					hRemoveTokenAndTkBeginEnd( x )
+				end if
+			end if
+
+		case TK_ID
+			if( skiplevel <> MAXIFBLOCKS ) then
+				hRemoveTokenAndTkBeginEnd( x )
+			else
+				hMaybeExpandId( x )
+			end if
 
 		case else
 			'' Remove tokens if skipping
 			if( skiplevel <> MAXIFBLOCKS ) then
-				tkRemove( x, x )
-				x -= 1
-			else
-				select case( tkGet( x ) )
-				case TK_PPDEFINE
-					'' Register/overwrite as known defined symbol
-					var t = tkGetAst( x )
-					assert( t->class = ASTCLASS_PPDEFINE )
-					hAddKnownSym( t->text, TRUE )
-
-					'' Register #define for expansion if it's a precious symbol
-					if( hLookupExpandSym( t->text ) ) then
-						hAddMacro( astClone( t ) )
-					end if
-
-					'' Don't preserve the #define if the symbol was registed for removal
-					if( hLookupId( eval.removes, t->text ) ) then
-						tkRemove( x, x )
-						x -= 1
-					end if
-
-				case TK_PPUNDEF
-					'' Register/overwrite as known undefined symbol
-					var id = tkGetText( x )
-					hAddKnownSym( id, FALSE )
-
-					'' Forget previous #define if it's a precious symbol
-					if( hLookupExpandSym( id ) ) then
-						hUndefMacro( id )
-					end if
-
-					'' Don't preserve the #undef if the symbol was registed for removal
-					if( hLookupId( eval.removes, id ) ) then
-						tkRemove( x, x )
-						x -= 1
-					end if
-
-				case TK_ID
-					x = hMaybeExpandId( x )
-
-				end select
+				hRemoveTokenAndTkBeginEnd( x )
 			end if
 		end select
 

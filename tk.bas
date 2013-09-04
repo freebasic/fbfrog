@@ -21,6 +21,8 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	( NULL  , @"ppundef"  ), _
 	( NULL  , @"begin"    ), _
 	( NULL  , @"end"      ), _
+	( NULL  , @"ppmerge"  ), _
+	( NULL  , @"emptymacroparam" ), _
 	( NULL  , @"eol"      ), _
 	( NULL  , @"comment"  ), _
 	( NULL  , @"decnum"   ), _ '' Number literals

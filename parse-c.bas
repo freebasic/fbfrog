@@ -117,17 +117,10 @@ dim shared as integer cprecedence(ASTOP_IIF to ASTOP_DEREF) = _
 }
 
 '' C expression parser based on precedence climbing
-private function cExpression _
-	( _
-		byref x as integer, _
-		byval level as integer = 0, _
-		byref errorx as integer, _
-		byref errormessage as string _
-	) as ASTNODE ptr
-
+private function cExpression( byval level as integer = 0 ) as ASTNODE ptr
 	'' Unary prefix operators
 	var op = -1
-	select case( tkGet( x ) )
+	select case( tkGet( parse.x ) )
 	case TK_EXCL   : op = ASTOP_LOGNOT    '' !
 	case TK_TILDE  : op = ASTOP_BITNOT    '' ~
 	case TK_MINUS  : op = ASTOP_NEGATE    '' -
@@ -138,141 +131,104 @@ private function cExpression _
 
 	dim as ASTNODE ptr a
 	if( op >= 0 ) then
-		x += 1
-
-		a = cExpression( x, cprecedence(op), errorx, errormessage )
-		if( a = NULL ) then
-			exit function
-		end if
-
-		a = astNewUOP( op, a )
+		cSkip( )
+		a = astNewUOP( op, cExpression( cprecedence(op) ) )
 	else
 		'' Atoms
-		select case( tkGet( x ) )
+		select case( tkGet( parse.x ) )
 		'' '(' Expression ')'
 		case TK_LPAREN
 			'' '('
-			x += 1
+			cSkip( )
 
 			'' Expression
-			a = cExpression( x, , errorx, errormessage )
-			if( a = NULL ) then
-				exit function
-			end if
+			a = cExpression( )
 
 			'' ')'
-			if( tkGet( x ) <> TK_RPAREN ) then
-				errorx = x
-				errormessage = "missing ')'"
-				exit function
-			end if
-			x += 1
+			cExpectSkip( TK_RPAREN )
 
 		case TK_OCTNUM, TK_DECNUM, TK_HEXNUM, TK_DECFLOAT
-			a = hNumberLiteral( x )
-			x += 1
+			a = hNumberLiteral( parse.x )
+			cSkip( )
 
 		case TK_STRING
-			a = astNew( ASTCLASS_STRING, tkGetText( x ) )
+			a = astNew( ASTCLASS_STRING, tkGetText( parse.x ) )
 			astSetType( a, TYPE_ZSTRING, NULL )
-			x += 1
+			cSkip( )
 
 		case TK_WSTRING
-			a = astNew( ASTCLASS_STRING, tkGetText( x ) )
+			a = astNew( ASTCLASS_STRING, tkGetText( parse.x ) )
 			astSetType( a, TYPE_WSTRING, NULL )
-			x += 1
+			cSkip( )
 
 		case TK_CHAR
-			a = astNew( ASTCLASS_CHAR, tkGetText( x ) )
+			a = astNew( ASTCLASS_CHAR, tkGetText( parse.x ) )
 			astSetType( a, TYPE_ZSTRING, NULL )
-			x += 1
+			cSkip( )
 
 		case TK_WCHAR
-			a = astNew( ASTCLASS_CHAR, tkGetText( x ) )
+			a = astNew( ASTCLASS_CHAR, tkGetText( parse.x ) )
 			astSetType( a, TYPE_WSTRING, NULL )
-			x += 1
+			cSkip( )
 
 		'' Identifier ['(' CallArguments ')']
 		case TK_ID
-			a = astNewID( tkGetText( x ) )
-			x += 1
+			a = astNewID( tkGetText( parse.x ) )
+			cSkip( )
 
-			select case( tkGet( x ) )
+			select case( tkGet( parse.x ) )
 			'' '('?
 			case TK_LPAREN
 				a->class = ASTCLASS_CALL
-				x += 1
+				cSkip( )
 
 				'' CallArguments:
 				'' Expression (',' Expression)*
 				do
-					var arg = cExpression( x, , errorx, errormessage )
-					if( arg = NULL ) then
-						exit function
-					end if
-
-					astAppend( a, arg )
+					astAppend( a, cExpression( ) )
 
 					'' ','?
-					if( tkGet( x ) <> TK_COMMA ) then exit do
-					x += 1
-				loop
+				loop while( cMatch( TK_COMMA ) )
 
 				'' ')'?
-				if( tkGet( x ) <> TK_RPAREN ) then
-					errorx = x
-					errormessage = "missing ')' to close function call's argument list"
-					exit function
-				end if
-				x += 1
+				cExpectSkip( TK_RPAREN )
 
 			'' '##'?
 			case TK_HASHHASH
 				var t = astNew( ASTCLASS_PPMERGE )
 				astAppend( t, a )
 				a = t
+				cSkip( )
 
 				'' Identifier ('##' Identifier)*
 				do
-					x += 1
-
 					'' Identifier?
-					if( tkGet( x ) <> TK_ID ) then
-						errorx = x
-						errormessage = "expected '##' to be used on identifiers (a##b)"
-						exit function
-					end if
-					astAppend( a, astNewID( tkGetText( x ) ) )
-					x += 1
+					cExpect( TK_ID )
+					astAppend( a, astNewID( tkGetText( parse.x ) ) )
+					cSkip( )
 
 					'' '##'?
-				loop while( tkGet( x ) = TK_HASHHASH )
+				loop while( cMatch( TK_HASHHASH ) )
 
 			end select
 
 		'' '#' stringify operator
 		case TK_HASH
-			x += 1
+			cSkip( )
 
 			'' #id?
-			if( tkGet( x ) <> TK_ID ) then
-				errorx = x
-				errormessage = "expected '#' to be used on an identifier (#id)"
-				exit function
-			end if
-			a = astNewUOP( ASTOP_STRINGIFY, astNewID( tkGetText( x ) ) )
-			x += 1
+			cExpect( TK_ID )
+			a = astNewUOP( ASTOP_STRINGIFY, astNewID( tkGetText( parse.x ) ) )
+			cSkip( )
 
 		case else
-			errorx = x
-			errormessage = "not an atomic expression (identifier, literal, ...)"
-			exit function
+			cOops( "not an atomic expression (identifier, literal, ...), or not yet implemented" )
 		end select
 	end if
 
 	'' Infix operators
 	do
-		select case as const( tkGet( x ) )
+		select case as const( tkGet( parse.x ) )
 		case TK_QUEST    : op = ASTOP_IIF    '' ? (a ? b : c)
 		case TK_PIPEPIPE : op = ASTOP_LOGOR  '' ||
 		case TK_AMPAMP   : op = ASTOP_LOGAND '' &&
@@ -311,40 +267,24 @@ private function cExpression _
 		end if
 
 		'' operator
-		x += 1
+		cSkip( )
 
 		'' rhs
-		var b = cExpression( x, oplevel, errorx, errormessage )
-		if( b = NULL ) then
-			exit function
-		end if
+		var b = cExpression( oplevel )
 
 		'' Handle ?: special case
 		if( op = ASTOP_IIF ) then
 			'' ':'
-			if( tkGet( x ) <> TK_COLON ) then
-				errorx = x
-				errormessage = "missing ':' of a?b:c iif operator"
-				exit function
-			end if
-			x += 1
+			cExpectSkip( TK_COLON )
 
-			var c = cExpression( x, oplevel, errorx, errormessage )
-			if( c = NULL ) then
-				exit function
-			end if
+			var c = cExpression( oplevel )
 
 			a = astNewIIF( a, b, c )
 		else
 			'' Handle [] special case
 			if( op = ASTOP_INDEX ) then
 				'' ']'
-				if( tkGet( x ) <> TK_RBRACKET ) then
-					errorx = x
-					errormessage = "missing ']'"
-					exit function
-				end if
-				x += 1
+				cExpectSkip( TK_RBRACKET )
 			end if
 
 			a = astNewBOP( op, a, b )
@@ -352,51 +292,6 @@ private function cExpression _
 	loop
 
 	function = a
-end function
-
-''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-
-private function hReInsertMacroBody _
-	( _
-		byval y as integer, _
-		byval macrobody as ASTNODE ptr _
-	) as integer
-
-	var child = macrobody->head
-	while( child )
-
-		if( child->attrib and ASTATTRIB_MERGEWITHPREV ) then
-			'' '##'
-			tkInsert( y, TK_HASHHASH )
-			y += 1
-		end if
-
-		select case( child->class )
-		case ASTCLASS_MACROPARAM
-			if( child->attrib and ASTATTRIB_STRINGIFY ) then
-				'' '#'
-				tkInsert( y, TK_HASH )
-				y += 1
-			end if
-
-			'' 'paramid'
-			tkInsert( y, TK_ID, child->text )
-			tkSetLocation( y, @child->location )
-			y += 1
-
-		case ASTCLASS_TK
-			tkInsert( y, child->tk, child->text )
-			tkSetLocation( y, @child->location )
-			y += 1
-
-		case else
-			assert( FALSE )
-		end select
-
-		child = child->next
-	wend
-
-	function = y
 end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -502,12 +397,7 @@ private function cEnumConst( ) as ASTNODE ptr
 	'' '='?
 	if( cMatch( TK_EQ ) ) then
 		'' Expression
-		dim errorx as integer
-		dim errormessage as string
-		n->expr = cExpression( parse.x, , errorx, errormessage )
-		if( n->expr = NULL ) then
-			tkOops( errorx, errormessage )
-		end if
+		n->expr = cExpression( )
 	end if
 
 	'' (',' | '}')
@@ -1141,12 +1031,7 @@ private function cDeclarator _
 			'' '['
 			cSkip( )
 
-			dim errorx as integer
-			dim errormessage as string
-			var elements = cExpression( parse.x, , errorx, errormessage )
-			if( elements = NULL ) then
-				tkOops( errorx, errormessage )
-			end if
+			var elements = cExpression( )
 
 			'' Add new DIMENSION to the ARRAY:
 			'' lbound = 0, ubound = elements - 1
@@ -1217,12 +1102,7 @@ private function cDeclarator _
 		'' ['=' Initializer]
 		if( cMatch( TK_EQ ) ) then
 			assert( node->expr = NULL )
-			dim errorx as integer
-			dim errormessage as string
-			node->expr = cExpression( parse.x, , errorx, errormessage )
-			if( node->expr = NULL ) then
-				tkOops( errorx, errormessage )
-			end if
+			node->expr = cExpression( )
 		end if
 	end if
 
@@ -1354,56 +1234,56 @@ private function cToplevel( byval body as integer ) as ASTNODE ptr
 			cSkip( )
 
 		case TK_PPDEFINE
-			t = astClone( tkGetAst( parse.x ) )
-			astAddComment( t, tkCollectComments( parse.x, parse.x ) )
+			t = tkGetAst( parse.x )
 
-			if( t->expr->class = ASTCLASS_MACROBODY ) then
-				'' Temporarily re-insert the macro body tokens,
-				'' then try to parse an expression
+			'' Did the PP mark this #define for removal? Then just
+			'' skip it (and its TK_BEGIN/END body) instead of
+			'' parsing it into an AST...
+			if( t->attrib and ASTATTRIB_REMOVE ) then
+				cSkip( )
 
-				'' Insert TK_BEGIN to match TK_END below, not
-				'' really needed
-				var y = parse.x + 1
-				var begin = y
-				tkInsert( y, TK_BEGIN )
-				y += 1
+				assert( tkGet( parse.x ) = TK_BEGIN )
+				cSkip( )
 
-				y = hReInsertMacroBody( y, t->expr )
+				while( tkGet( parse.x ) <> TK_END )
+					cSkip( )
+				wend
 
-				'' Insert TK_END to ensure the cExpression() has
-				'' something to stop at, otherwise it may try
-				'' to continue parsing into the code following
-				'' the #define, since EOLs are gone already etc.
-				tkInsert( y, TK_END )
+				assert( tkGet( parse.x ) = TK_END )
+				cSkip( )
 
-				var z = begin + 1
-				dim as ASTNODE ptr expr
-
-				'' Macro body empty?
-				if( z = y ) then
-					expr = NULL
-				else
-					dim errorx as integer
-					dim errormessage as string
-					expr = cExpression( z, , errorx, errormessage )
-					if( expr = NULL ) then
-						tkOops( errorx, errormessage )
-					end if
-
-					'' Must have reached the TK_END
-					if( z <> y ) then
-						tkOops( y, "couldn't parse #define body as expression" )
-					end if
-				end if
-
-				'' Remove the macro body tokens and TK_BEGIN/END again
-				tkRemove( begin, y )
-
-				astDelete( t->expr )
-				t->expr = expr
+				exit select
 			end if
 
+			t = astClone( t )
+			astAddComment( t, tkCollectComments( parse.x, parse.x ) )
 			cSkip( )
+
+			'' Macro body should still be enclosed in TK_BEGIN/END
+			assert( t->expr = NULL )
+
+			assert( tkGet( parse.x ) = TK_BEGIN )
+			cSkip( )
+
+			dim as ASTNODE ptr expr
+
+			'' Macro body empty?
+			if( tkGet( parse.x ) = TK_END ) then
+				expr = NULL
+			else
+				expr = cExpression( )
+
+				'' Must have reached the TK_END
+				if( tkGet( parse.x ) <> TK_END ) then
+					cOops( "couldn't parse #define body as expression" )
+				end if
+			end if
+
+			assert( tkGet( parse.x ) = TK_END )
+			cSkip( )
+
+			astDelete( t->expr )
+			t->expr = expr
 
 		case TK_PPUNDEF
 			t = astNew( ASTCLASS_PPUNDEF, tkGetText( parse.x ) )

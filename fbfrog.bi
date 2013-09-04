@@ -113,6 +113,12 @@ type THASH
 	lookups		as integer  '' lookup counter
 	perfects	as integer  '' lookups successful after first probe
 	collisions	as integer  '' sum of collisions during all lookups
+
+	'' Whether this hash table should strDuplicate() when storing strings
+	'' and free them on hashEnd(). If FALSE, the caller is responsible for
+	'' ensuring that strings passed to hashAdd*() stay valid as long as
+	'' hashLookup()'s may be done, i.e. typically until hashEnd().
+	duplicate_strings	as integer
 end type
 
 declare function hashHash( byval s as zstring ptr ) as uinteger
@@ -136,7 +142,12 @@ declare sub hashAddOverwrite _
 		byval s as zstring ptr, _
 		byval dat as any ptr _
 	)
-declare sub hashInit( byval h as THASH ptr, byval exponent as integer )
+declare sub hashInit _
+	( _
+		byval h as THASH ptr, _
+		byval exponent as integer, _
+		byval duplicate_strings as integer = FALSE _
+	)
 declare sub hashEnd( byval h as THASH ptr )
 declare sub hashStats( byval h as THASH ptr, byref prefix as string )
 
@@ -205,6 +216,8 @@ enum
 	TK_PPUNDEF
 	TK_BEGIN
 	TK_END
+	TK_PPMERGE
+	TK_EMPTYMACROPARAM
 	TK_EOL
 	TK_COMMENT
 
@@ -614,11 +627,10 @@ enum
 	ASTATTRIB_PRIVATE	= 1 shl 1  '' VAR
 	ASTATTRIB_OCT		= 1 shl 2  '' CONST
 	ASTATTRIB_HEX		= 1 shl 3  '' CONST
-	ASTATTRIB_MERGEWITHPREV	= 1 shl 4  '' TK, MACROPARAM: Macro body tokens that were preceded by the '##' PP merge operator
-	ASTATTRIB_STRINGIFY	= 1 shl 5  '' MACROPARAM, to distinguish "param" from "#param"
-	ASTATTRIB_CDECL		= 1 shl 6
-	ASTATTRIB_STDCALL	= 1 shl 7
-	ASTATTRIB_HIDECALLCONV	= 1 shl 8  '' Whether the calling convention is covered by an Extern block, then it doesn't need to be emitted
+	ASTATTRIB_CDECL		= 1 shl 4
+	ASTATTRIB_STDCALL	= 1 shl 5
+	ASTATTRIB_HIDECALLCONV	= 1 shl 6  '' Whether the calling convention is covered by an Extern block, then it doesn't need to be emitted
+	ASTATTRIB_REMOVE	= 1 shl 7
 end enum
 
 '' When changing, adjust astClone()
@@ -654,9 +666,14 @@ type ASTNODE_
 		valf		as double
 
 		tk		as integer  '' TK: TK_*
-		paramindex	as integer  '' MACROPARAM
 		paramcount	as integer  '' PPDEFINE: -1 = #define m, 0 = #define m(), 1 = #define m(a), ...
 		op		as integer  '' UOP/BOP: ASTOP_*
+
+		'' MACROINFO
+		type
+			bodybegin	as integer
+			bodyend		as integer
+		end type
 	end union
 
 	'' Linked list of child nodes, where l/r aren't enough: fields/parameters/...
@@ -715,16 +732,7 @@ declare function astNewCONST _
 	) as ASTNODE ptr
 #define astNewID( id ) astNew( ASTCLASS_ID, id )
 #define astNewTEXT( text ) astNew( ASTCLASS_TEXT, text )
-declare function astNewTK _
-	( _
-		byval tk as integer, _
-		byval text as zstring ptr _
-	) as ASTNODE ptr
-declare function astNewMACROPARAM _
-	( _
-		byval id as zstring ptr, _
-		byval paramindex as integer _
-	) as ASTNODE ptr
+declare function astNewTK( byval x as integer ) as ASTNODE ptr
 declare sub astDelete( byval n as ASTNODE ptr )
 declare sub astPrepend( byval parent as ASTNODE ptr, byval n as ASTNODE ptr )
 declare sub astAppend( byval parent as ASTNODE ptr, byval n as ASTNODE ptr )
@@ -780,6 +788,11 @@ declare sub astDump _
 		byval nestlevel as integer = 0, _
 		byref prefix as string = "" _
 	)
+declare function astLookupMacroParam _
+	( _
+		byval macro as ASTNODE ptr, _
+		byval id as zstring ptr _
+	) as integer
 declare sub astNodeToNop _
 	( _
 		byval n as ASTNODE ptr, _
@@ -835,14 +848,13 @@ declare sub ppDividers( )
 declare function hNumberLiteral( byval x as integer ) as ASTNODE ptr
 declare sub hMacroParamList( byref x as integer, byval t as ASTNODE ptr )
 declare sub ppDirectives1( )
-declare sub hRecordMacroBody( byref x as integer, byval macro as ASTNODE ptr )
-declare sub ppDirectives2( )
 declare sub ppEvalInit( )
 declare sub ppEvalEnd( )
-declare sub ppAddSym( byval id as zstring ptr, byval is_defined as integer )
 declare sub ppExpandSym( byval id as zstring ptr )
-declare sub ppAddMacro( byval macro as ASTNODE ptr )
 declare sub ppRemoveSym( byval id as zstring ptr )
+declare sub ppPreUndef( byval id as zstring ptr )
+declare sub ppPreDefine overload( byval macro as ASTNODE ptr )
+declare sub ppPreDefine overload( byval id as zstring ptr )
 declare sub ppEval( )
 declare sub ppParseIfExprOnly( byval do_fold as integer )
 declare sub ppRemoveEOLs( )

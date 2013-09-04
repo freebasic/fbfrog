@@ -1,10 +1,3 @@
-'' Generic linked list
-''
-'' Generic hash table (open addressing/closed hashing),
-'' based on GCC's libcpp's hash table.
-''
-'' Path/file name handling functions, directory tree search
-
 #include once "fbfrog.bi"
 #include once "crt.bi"
 #include once "dir.bi"
@@ -213,6 +206,7 @@ function strMatches _
 end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+'' Generic linked list
 
 #define listGetPtr( node ) cptr( any ptr, cptr( ubyte ptr, node ) + sizeof( LISTNODE ) )
 #define listGetNode( p ) cptr( LISTNODE ptr, cptr( ubyte ptr, p ) - sizeof( LISTNODE ) )
@@ -314,28 +308,32 @@ sub listEnd( byval l as TLIST ptr )
 end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+'' Generic hash table (open addressing/closed hashing), based on GCC's libcpp's
+'' hash table.
+''
+'' Note: No deletions possible due to the collision resolution adding duplicates
+'' to other entries in the table, instead of adding to the same bucket.
+'' Each duplicate can be reached by following through the chain of steps
+'' indicated by hashHash2(), the first free entry reached indicates the end of
+'' the chain -- that's where duplicates are inserted. Removing an entry from
+'' this chain would cause the following entries to become unreachable/lost,
+'' as the free item in the middle would appear as the end of the chain now.
 
 function hashHash( byval s as zstring ptr ) as uinteger
-	dim as uinteger hash = any
-
-	hash = 5381
+	dim as uinteger hash = 5381
 	while( (*s)[0] )
 		hash = (*s)[0] + (hash shl 5) - hash
 		s += 1
 	wend
-
 	function = hash
 end function
 
 private function hashHash2( byval s as zstring ptr ) as uinteger
-	dim as uinteger hash = any
-
-	hash = 0
+	dim as uinteger hash = 0
 	while( (*s)[0] )
 		hash = (*s)[0] + (hash shl 6) + (hash shl 16) - hash
 		s += 1
 	wend
-
 	function = hash
 end function
 
@@ -346,11 +344,8 @@ private sub hAllocTable( byval h as THASH ptr )
 end sub
 
 private sub hGrowTable( byval h as THASH ptr )
-	dim as THASHITEM ptr old = any
-	dim as integer oldroom = any
-
-	old = h->items
-	oldroom = h->room
+	var old = h->items
+	var oldroom = h->room
 
 	h->resizes += 1
 	h->room shl= 1
@@ -376,9 +371,6 @@ function hashLookup _
 		byval hash as uinteger _
 	) as THASHITEM ptr
 
-	dim as uinteger roommask = any, i = any, stepsize = any
-	dim as THASHITEM ptr item = any
-
 	'' Enlarge the hash map when >= 75% is used up, for better lookup
 	'' performance (it's easier to find free items if there are many; i.e.
 	'' less collisions), and besides there always must be free slots,
@@ -389,11 +381,11 @@ function hashLookup _
 
 	h->lookups += 1
 
-	roommask = h->room - 1
+	dim as uinteger roommask = h->room - 1
 
 	'' First probe
-	i = hash and roommask
-	item = h->items + i
+	var i = hash and roommask
+	var item = h->items + i
 
 	'' Found unused item with first probe?
 	if( item->s = NULL ) then
@@ -415,7 +407,7 @@ function hashLookup _
 	'' The step size is calculated based on a 2nd hash value. It is or'ed
 	'' with 1 to make sure it's odd, so all items will eventually be
 	'' reached, because h->room always is a power of 2.
-	stepsize = (hashHash2( s ) and roommask) or 1
+	var stepsize = (hashHash2( s ) and roommask) or 1
 
 	do
 #if 0
@@ -454,6 +446,10 @@ sub hashAdd _
 		byval dat as any ptr _
 	)
 
+	if( h->duplicate_strings ) then
+		s = strDuplicate( s )
+	end if
+
 	item->s = s
 	item->hash = hash
 	item->data = dat
@@ -468,15 +464,21 @@ sub hashAddOverwrite _
 		byval dat as any ptr _
 	)
 
-	dim as uinteger hash = any
-	dim as THASHITEM ptr item = any
-
-	hash = hashHash( s )
-	item = hashLookup( h, s, hash )
+	var hash = hashHash( s )
+	var item = hashLookup( h, s, hash )
 
 	'' Update count if entry doesn't exist yet
 	if( item->s = NULL ) then
 		h->count += 1
+	end if
+
+	if( h->duplicate_strings ) then
+		'' Free existing string if overwriting
+		if( item->s ) then
+			deallocate( item->s )
+		end if
+
+		s = strDuplicate( s )
 	end if
 
 	'' Overwrite existing entry (if any)
@@ -486,17 +488,35 @@ sub hashAddOverwrite _
 
 end sub
 
-sub hashInit( byval h as THASH ptr, byval exponent as integer )
+sub hashInit _
+	( _
+		byval h as THASH ptr, _
+		byval exponent as integer, _
+		byval duplicate_strings as integer _
+	)
+
 	h->count = 0
 	h->room = 1 shl exponent
 	h->resizes = 0
 	h->lookups = 0
 	h->perfects = 0
 	h->collisions = 0
+	h->duplicate_strings = duplicate_strings
 	hAllocTable( h )
+
 end sub
 
 sub hashEnd( byval h as THASH ptr )
+	'' Free each item's string if they were duplicated
+	if( h->duplicate_strings ) then
+		var i = h->items
+		var limit = i + h->room
+		while( i < limit )
+			deallocate( i->s )
+			i += 1
+		wend
+	end if
+
 	deallocate( h->items )
 end sub
 
@@ -511,6 +531,7 @@ sub hashStats( byval h as THASH ptr, byref prefix as string )
 end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+'' Path/file name handling functions
 
 '' Searches backwards for the last '.' while still behind '/' or '\'.
 private function hFindExtBegin( byref path as string ) as integer
@@ -791,6 +812,9 @@ function pathNormalize( byref path as string ) as string
 	solverEnd( )
 	function = left( s, w )
 end function
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+'' Directory tree search
 
 function hFileExists( byref file as string ) as integer
 	dim as integer f = any

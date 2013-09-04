@@ -213,27 +213,10 @@ function astNewCONST _
 	function = n
 end function
 
-function astNewTK _
-	( _
-		byval tk as integer, _
-		byval text as zstring ptr _
-	) as ASTNODE ptr
-
-	var n = astNew( ASTCLASS_TK, text )
-	n->tk = tk
-
-	function = n
-end function
-
-function astNewMACROPARAM _
-	( _
-		byval id as zstring ptr, _
-		byval paramindex as integer _
-	) as ASTNODE ptr
-
-	var n = astNew( ASTCLASS_MACROPARAM, id )
-	n->paramindex = paramindex
-
+function astNewTK( byval x as integer ) as ASTNODE ptr
+	var n = astNew( ASTCLASS_TK, tkGetText( x ) )
+	n->tk = tkGet( x )
+	n->location = *tkGetLocation( x )
 	function = n
 end function
 
@@ -539,8 +522,6 @@ function astCloneNode( byval n as ASTNODE ptr ) as ASTNODE ptr
 		end if
 	case ASTCLASS_TK
 		c->tk = n->tk
-	case ASTCLASS_MACROPARAM
-		c->paramindex = n->paramindex
 	case ASTCLASS_PPDEFINE
 		c->paramcount = n->paramcount
 	case ASTCLASS_UOP, ASTCLASS_BOP
@@ -596,16 +577,6 @@ function astIsEqualDecl _
 		exit function
 	end if
 
-	if( (a->attrib and ASTATTRIB_MERGEWITHPREV) <> _
-	    (b->attrib and ASTATTRIB_MERGEWITHPREV) ) then
-		exit function
-	end if
-
-	if( (a->attrib and ASTATTRIB_STRINGIFY) <> _
-	    (b->attrib and ASTATTRIB_STRINGIFY) ) then
-		exit function
-	end if
-
 	var ignore_callconv = FALSE
 	if( ignore_hiddencallconv ) then
 		var ahidden = ((a->attrib and ASTATTRIB_HIDECALLCONV) <> 0)
@@ -651,9 +622,6 @@ function astIsEqualDecl _
 	case ASTCLASS_TK
 		if( a->tk <> b->tk ) then exit function
 
-	case ASTCLASS_MACROPARAM
-		if( a->paramindex <> b->paramindex ) then exit function
-
 	case ASTCLASS_PPDEFINE
 		if( a->paramcount <> b->paramcount ) then exit function
 
@@ -680,6 +648,31 @@ function astIsEqualDecl _
 end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+function astLookupMacroParam _
+	( _
+		byval macro as ASTNODE ptr, _
+		byval id as zstring ptr _
+	) as integer
+
+	var index = 0
+
+	assert( macro->class = ASTCLASS_PPDEFINE )
+
+	var param = macro->head
+	while( param )
+
+		assert( param->class = ASTCLASS_MACROPARAM )
+		if( *param->text = *id ) then
+			return index
+		end if
+
+		index += 1
+		param = param->next
+	wend
+
+	function = -1
+end function
 
 sub astNodeToNop _
 	( _
@@ -1431,11 +1424,10 @@ function astDumpOne( byval n as ASTNODE ptr ) as string
 	checkAttrib( PRIVATE )
 	checkAttrib( OCT )
 	checkAttrib( HEX )
-	checkAttrib( MERGEWITHPREV )
-	checkAttrib( STRINGIFY )
 	checkAttrib( CDECL )
 	checkAttrib( STDCALL )
 	checkAttrib( HIDECALLCONV )
+	checkAttrib( REMOVE )
 
 	if( n->class <> ASTCLASS_TK ) then
 		if( n->text ) then

@@ -70,6 +70,15 @@ private sub hIncludeFile( byref incfile as string )
 end sub
 #endif
 
+private sub hRecordMacroBody( byref x as integer, byval macro as ASTNODE ptr )
+	assert( macro->expr = NULL )
+	macro->expr = astNew( ASTCLASS_MACROBODY )
+	while( tkGet( x ) <> TK_END )
+		astAppend( macro->expr, astNewTK( x ) )
+		x += 1
+	wend
+end sub
+
 sub presetParse( byval pre as FROGPRESET ptr, byref presetfile as string )
 	tkInit( )
 

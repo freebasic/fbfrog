@@ -222,8 +222,6 @@ private function frogParseVersion _
 		end if
 	wend
 
-	ppDirectives2( )
-
 	''
 	'' Macro expansion, #if evaluation
 	''
@@ -232,7 +230,8 @@ private function frogParseVersion _
 	scope
 		var child = pre->undefs->head
 		while( child )
-			ppAddSym( child->text, FALSE )
+			ppPreUndef( child->text )
+			ppRemoveSym( child->text )
 			child = child->next
 		wend
 	end scope
@@ -240,7 +239,8 @@ private function frogParseVersion _
 	scope
 		var child = pre->defines->head
 		while( child )
-			ppAddSym( child->text, TRUE )
+			ppPreDefine( child->text )
+			ppRemoveSym( child->text )
 			child = child->next
 		wend
 	end scope
@@ -256,7 +256,9 @@ private function frogParseVersion _
 	scope
 		var child = pre->macros->head
 		while( child )
-			ppAddMacro( astClone( child ) )
+			ppPreDefine( child )
+			ppExpandSym( child->text )
+			ppRemoveSym( child->text )
 			child = child->next
 		wend
 	end scope
