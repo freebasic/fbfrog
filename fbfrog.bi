@@ -73,11 +73,11 @@ type TKLOCATION
 	length		as integer
 end type
 
-declare sub oops( byref message as string )
+declare sub oops( byval message as zstring ptr )
 declare sub oopsLocation _
 	( _
 		byval location as TKLOCATION ptr, _
-		byref message as string _
+		byval message as zstring ptr _
 	)
 declare function strDuplicate( byval s as zstring ptr ) as zstring ptr
 declare function strReplace _
@@ -477,9 +477,19 @@ declare function tkCollectComments _
 		byval last as integer _
 	) as string
 declare sub tkRemoveAllOf( byval id as integer, byval text as zstring ptr )
-declare sub tkOops( byval x as integer, byref message as string )
-declare sub tkOopsExpected( byval x as integer, byref message as string )
-declare sub tkExpect( byval x as integer, byval tk as integer )
+declare sub tkOops( byval x as integer, byval message as zstring ptr )
+declare sub tkOopsExpected _
+	( _
+		byval x as integer, _
+		byval message as zstring ptr, _
+		byval whatfor as zstring ptr _
+	)
+declare sub tkExpect _
+	( _
+		byval x as integer, _
+		byval tk as integer, _
+		byval whatfor as zstring ptr _
+	)
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 

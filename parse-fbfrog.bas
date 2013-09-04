@@ -8,24 +8,20 @@ dim shared as integer x, verlevel
 const MAXVERBLOCKS = 8
 dim shared as ASTNODE ptr verstack(0 to MAXVERBLOCKS-1)
 
-private sub hOops( byref message as string )
+private sub hOops( byval message as zstring ptr )
 	tkOops( x, message )
-end sub
-
-private sub hOopsExpected( byref message as string )
-	tkOopsExpected( x, message )
 end sub
 
 private sub hSkip( )
 	x += 1
 end sub
 
-private sub hExpect( byval tk as integer )
-	tkExpect( x, tk )
+private sub hExpect( byval tk as integer, byval whatfor as zstring ptr )
+	tkExpect( x, tk, whatfor )
 end sub
 
-private sub hExpectSkip( byval tk as integer )
-	hExpect( tk )
+private sub hExpectSkip( byval tk as integer, byval whatfor as zstring ptr )
+	hExpect( tk, whatfor )
 	hSkip( )
 end sub
 
@@ -36,8 +32,8 @@ private function hMatch( byval tk as integer ) as integer
 	end if
 end function
 
-private function hExpectSkipString( ) as string
-	hExpect( TK_STRING )
+private function hExpectSkipString( byval whatfor as zstring ptr ) as string
+	hExpect( TK_STRING, whatfor )
 	function = *tkGetText( x )
 	hSkip( )
 end function
@@ -103,12 +99,12 @@ sub presetParse( byval pre as FROGPRESET ptr, byref presetfile as string )
 			hSkip( )
 
 			'' INCLUDE
-			hExpectSkip( KW_INCLUDE )
+			hExpectSkip( KW_INCLUDE, "as in '#include ""...""'" )
 
 			'' "filename"
-			var incfile = hExpectSkipString( )
+			var incfile = hExpectSkipString( "containing the #include file name" )
 
-			hExpectSkip( TK_EOL )
+			hExpectSkip( TK_EOL, "behind #include statement" )
 			hIncludeFile( incfile )
 			continue do
 #endif
@@ -118,10 +114,10 @@ sub presetParse( byval pre as FROGPRESET ptr, byref presetfile as string )
 			hSkip( )
 
 			'' VERSION
-			hExpectSkip( KW_VERSION )
+			hExpectSkip( KW_VERSION, "as in 'DECLARE VERSION ...'" )
 
 			'' "version id"
-			hExpect( TK_STRING )
+			hExpect( TK_STRING, "containing the version identifier" )
 			var versionid = *tkGetText( x )
 			if( hFindVersion( pre, versionid ) ) then
 				hOops( "duplicate version" )
@@ -136,7 +132,7 @@ sub presetParse( byval pre as FROGPRESET ptr, byref presetfile as string )
 
 				'' '='?
 				if( hMatch( TK_EQ ) ) then
-					hExpectSkip( TK_DECNUM )
+					hExpectSkip( TK_DECNUM, "(the value to check the version #define against)" )
 				end if
 			end if
 
@@ -149,7 +145,7 @@ sub presetParse( byval pre as FROGPRESET ptr, byref presetfile as string )
 			hSkip( )
 
 			'' "version id"
-			hExpect( TK_STRING )
+			hExpect( TK_STRING, "containing a version identifier" )
 			var version = hFindVersion( pre, tkGetText( x ) )
 			if( version = NULL ) then
 				hOops( "undeclared version" )
@@ -160,8 +156,8 @@ sub presetParse( byval pre as FROGPRESET ptr, byref presetfile as string )
 		'' END VERSION
 		case KW_END
 			hSkip( )
-			hExpectSkip( KW_VERSION )
-			hExpectSkip( TK_EOL )
+			hExpectSkip( KW_VERSION, "as in 'END VERSION" )
+			hExpectSkip( TK_EOL, "behind END VERSION statement" )
 
 			if( verlevel < 0 ) then
 				hOops( "END VERSION without corresponding VERSION block begin" )
@@ -171,8 +167,8 @@ sub presetParse( byval pre as FROGPRESET ptr, byref presetfile as string )
 		'' DOWNLOAD "URL" "output file name"
 		case KW_DOWNLOAD
 			hSkip( )
-			var url = hExpectSkipString( )
-			var outfile = hExpectSkipString( )
+			var url = hExpectSkipString( "containing the download URL" )
+			var outfile = hExpectSkipString( "containing the output file name" )
 
 			var download = astNewTEXT( url )
 			astSetComment( download, outfile )
@@ -181,8 +177,8 @@ sub presetParse( byval pre as FROGPRESET ptr, byref presetfile as string )
 		'' EXTRACT "tarball file name" "output directory name"
 		case KW_EXTRACT
 			hSkip( )
-			var tarball = hExpectSkipString( )
-			var outdir = hExpectSkipString( )
+			var tarball = hExpectSkipString( "containing the archive file name" )
+			var outdir = hExpectSkipString( "containing the output directory name" )
 
 			var extract = astNewTEXT( tarball )
 			astSetComment( extract, outdir )
@@ -191,8 +187,8 @@ sub presetParse( byval pre as FROGPRESET ptr, byref presetfile as string )
 		'' COPYFILE "old name" "new name"
 		case KW_COPYFILE
 			hSkip( )
-			var oldname = hExpectSkipString( )
-			var newname = hExpectSkipString( )
+			var oldname = hExpectSkipString( "containing the original file name" )
+			var newname = hExpectSkipString( "containing the new file name" )
 
 			var copyfile = astNewTEXT( oldname )
 			astSetComment( copyfile, newname )
@@ -201,18 +197,18 @@ sub presetParse( byval pre as FROGPRESET ptr, byref presetfile as string )
 		'' FILE "file name"
 		case KW_FILE
 			hSkip( )
-			presetAddFile( pre, hExpectSkipString( ) )
+			presetAddFile( pre, hExpectSkipString( "containing the file name" ) )
 
 		'' DIR "dir name"
 		case KW_DIR
 			hSkip( )
-			presetAddDir( pre, hExpectSkipString( ) )
+			presetAddDir( pre, hExpectSkipString( "containing the directory name" ) )
 
 		'' DEFINE Identifier
 		case KW_DEFINE
 			hSkip( )
 
-			hExpect( TK_ID )
+			hExpect( TK_ID, "(the symbol that should be pre-#defined)" )
 			astAppend( pre->defines, astNewID( tkGetText( x ) ) )
 			hSkip( )
 
@@ -220,7 +216,7 @@ sub presetParse( byval pre as FROGPRESET ptr, byref presetfile as string )
 		case KW_UNDEF
 			hSkip( )
 
-			hExpect( TK_ID )
+			hExpect( TK_ID, "(the symbol that should be initially un-#defined)" )
 			astAppend( pre->undefs, astNewID( tkGetText( x ) ) )
 			hSkip( )
 
@@ -228,7 +224,7 @@ sub presetParse( byval pre as FROGPRESET ptr, byref presetfile as string )
 		case KW_EXPAND
 			hSkip( )
 
-			hExpect( TK_ID )
+			hExpect( TK_ID, "(the #define symbol that should be macro-expanded)" )
 			astAppend( pre->expands, astNewID( tkGetText( x ) ) )
 			hSkip( )
 
@@ -236,7 +232,7 @@ sub presetParse( byval pre as FROGPRESET ptr, byref presetfile as string )
 		case KW_MACRO
 			hSkip( )
 
-			hExpect( TK_ID )
+			hExpect( TK_ID, "(this macro's name)" )
 			var macro = astNew( ASTCLASS_PPDEFINE, tkGetText( x ) )
 
 			hMacroParamList( x, macro )
@@ -259,7 +255,7 @@ sub presetParse( byval pre as FROGPRESET ptr, byref presetfile as string )
 			hSkip( )
 
 			'' Identifier
-			hExpect( TK_ID )
+			hExpect( TK_ID, "(the symbol to remove by name)" )
 			astAppend( pre->removes, astNew( astclass, tkGetText( x ) ) )
 			hSkip( )
 
@@ -289,7 +285,7 @@ sub presetParse( byval pre as FROGPRESET ptr, byref presetfile as string )
 			hOops( "unknown construct" )
 		end select
 
-		hExpectSkip( TK_EOL )
+		hExpectSkip( TK_EOL, "behind this statement" )
 	loop
 
 	if( verlevel >= 0 ) then

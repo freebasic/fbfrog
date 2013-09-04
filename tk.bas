@@ -713,7 +713,7 @@ private function hMakePrettyCTokenText _
 
 end function
 
-sub tkOops( byval x as integer, byref message as string )
+sub tkOops( byval x as integer, byval message as zstring ptr )
 	var location = tkGetLocation( x )
 	if( location->file ) then
 		oopsLocation( location, message )
@@ -727,20 +727,39 @@ sub tkOops( byval x as integer, byref message as string )
 	end if
 end sub
 
-sub tkOopsExpected( byval x as integer, byref message as string )
+sub tkOopsExpected _
+	( _
+		byval x as integer, _
+		byval message as zstring ptr, _
+		byval whatfor as zstring ptr _
+	)
+
+	dim s as string
+
 	select case( tkGet( x ) )
 	case TK_EOL, TK_EOF, TK_DIVIDER
-		tkOops( x, "missing " + message )
+		s = "missing " + *message
+		if( whatfor ) then s += " " + *whatfor
 	case else
 		var found = "'" + hMakePrettyCTokenText( tkGet( x ), tkGetText( x ) ) + "'"
 		if( len( found ) > 0 ) then
 			found = " but found " + found
 		end if
-		tkOops( x, "expected " + message + found )
+		s = "expected " + *message
+		if( whatfor ) then s += " " + *whatfor
+		s += found
 	end select
+
+	tkOops( x, s )
 end sub
 
-sub tkExpect( byval x as integer, byval tk as integer )
+sub tkExpect _
+	( _
+		byval x as integer, _
+		byval tk as integer, _
+		byval whatfor as zstring ptr _
+	)
+
 	if( tkGet( x ) <> tk ) then
 		dim as string expected
 
@@ -757,6 +776,7 @@ sub tkExpect( byval x as integer, byval tk as integer )
 			end if
 		end select
 
-		tkOopsExpected( x, expected )
+		tkOopsExpected( x, expected, whatfor )
 	end if
+
 end sub

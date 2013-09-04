@@ -81,6 +81,10 @@ To do:
   tk buffer, and then where the token came from...
 - Error context output should expand/align TABs to 8 spaces based on column position from BOL
   as it would happen in the source file
+- Stack of error context information, hints: for example the parser could
+  errPushHint( ERRHINT_* ) before parsing an expression, so if there is an error
+  while parsing the expression, the error report could contain the information
+  what the expression is for.
 
 - Improve FB parser to allow re-importing generated bindings, this could be
   used to amend bindings much more easily than re-making from scratch (which may

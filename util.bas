@@ -2,8 +2,8 @@
 #include once "crt.bi"
 #include once "dir.bi"
 
-sub oops( byref message as string )
-	print "oops, " & message
+sub oops( byval message as zstring ptr )
+	print "oops, " + *message
 	end 1
 end sub
 
@@ -61,10 +61,10 @@ end sub
 sub oopsLocation _
 	( _
 		byval location as TKLOCATION ptr, _
-		byref message as string _
+		byval message as zstring ptr _
 	)
 
-	print location->file->pretty + "(" & (location->linenum + 1) & "): " + message
+	print location->file->pretty + "(" & (location->linenum + 1) & "): " + *message
 
 	'' Determine how many chars can be printed for the error line:
 	'' Normally we can fill a line in the console, so get the console width.

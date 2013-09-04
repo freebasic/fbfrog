@@ -487,7 +487,7 @@ private function ppExpression _
 			a = ppExpression( x )
 
 			'' ')'
-			tkExpect( x, TK_RPAREN )
+			tkExpect( x, TK_RPAREN, "for '(...)' parenthesized expression" )
 			x += 1
 
 		'' Number literals
@@ -519,14 +519,14 @@ private function ppExpression _
 			end if
 
 			'' Identifier
-			tkExpect( x, TK_ID )
+			tkExpect( x, TK_ID, "as operand of DEFINED" )
 			a = astNewID( tkGetText( x ) )
 			a->location = *tkGetLocation( x )
 			x += 1
 
 			if( have_parens ) then
 				'' ')'
-				tkExpect( x, TK_RPAREN )
+				tkExpect( x, TK_RPAREN, "for DEFINED(...)" )
 				x += 1
 			end if
 
@@ -534,7 +534,7 @@ private function ppExpression _
 			a->location = *tkGetLocation( definedx )
 
 		case else
-			tkOopsExpected( x, "number literal or '(...)' (atom expression)" )
+			tkOopsExpected( x, "number literal or '(...)' (atom expression)", NULL )
 		end select
 	end if
 
@@ -585,7 +585,7 @@ private function ppExpression _
 		'' Handle ?: special case
 		if( op = ASTOP_IIF ) then
 			'' ':'?
-			tkExpect( x, TK_COLON )
+			tkExpect( x, TK_COLON, "for a?b:c iif operator" )
 			x += 1
 
 			var c = ppExpression( x, oplevel )
@@ -630,7 +630,7 @@ sub hMacroParamList( byref x as integer, byval t as ASTNODE ptr )
 		loop
 
 		'' ')'?
-		tkExpect( x, TK_RPAREN )
+		tkExpect( x, TK_RPAREN, "to close the parameter list in this macro declaration" )
 	end if
 end sub
 
@@ -638,7 +638,7 @@ private function ppDirective( byval x as integer ) as integer
 	var begin = x
 
 	'' '#'
-	tkExpect( x, TK_HASH )
+	assert( tkGet( x ) = TK_HASH )
 	x += 1
 
 	var tk = tkGet( x )
@@ -649,7 +649,7 @@ private function ppDirective( byval x as integer ) as integer
 		x += 1
 
 		'' Identifier?
-		tkExpect( x, TK_ID )
+		tkExpect( x, TK_ID, "behind #define" )
 		var macro = astNew( ASTCLASS_PPDEFINE, tkGetText( x ) )
 
 		hMacroParamList( x, macro )
@@ -669,7 +669,7 @@ private function ppDirective( byval x as integer ) as integer
 		x += 1
 
 		'' "filename"
-		tkExpect( x, TK_STRING )
+		tkExpect( x, TK_STRING, "containing the #include file name" )
 
 		tkFold( begin, x, TK_PPINCLUDE, tkGetText( x ) )
 		x = begin + 1
@@ -684,7 +684,7 @@ private function ppDirective( byval x as integer ) as integer
 		var exprbegin = x
 		x = ppSkipToEOL( x )
 		if( x = exprbegin ) then
-			tkOopsExpected( x, "#if condition" )
+			tkOopsExpected( x, "#if condition", NULL )
 		end if
 		tkInsert( x, TK_END )
 		x += 1
@@ -693,7 +693,7 @@ private function ppDirective( byval x as integer ) as integer
 		x += 1
 
 		'' Identifier?
-		tkExpect( x, TK_ID )
+		tkExpect( x, TK_ID, iif( tk = KW_IFNDEF, @"behind #ifndef", @"behind #ifdef" ) )
 
 		'' Build up "[!]defined id" expression
 		var expr = astNewID( tkGetText( x ) )
@@ -722,7 +722,7 @@ private function ppDirective( byval x as integer ) as integer
 		x += 1
 
 		'' Identifier?
-		tkExpect( x, TK_ID )
+		tkExpect( x, TK_ID, "behind #undef" )
 
 		tkFold( begin, x, TK_PPUNDEF, tkGetText( x ) )
 		x = begin + 1
@@ -739,7 +739,7 @@ private function ppDirective( byval x as integer ) as integer
 	case TK_EOF
 
 	case else
-		tkOopsExpected( x, "EOL behind PP directive" )
+		tkOopsExpected( x, "EOL behind PP directive", NULL )
 	end select
 
 	function = x
@@ -811,7 +811,7 @@ private sub hMacroCallArgs _
 					exit do
 				end if
 			case TK_EOF
-				tkOopsExpected( x, "')' to close macro call argument list" )
+				tkOopsExpected( x, "')' to close macro call argument list", NULL )
 			end select
 			x += 1
 		loop
@@ -1082,7 +1082,7 @@ private function hMacroCall _
 		end if
 
 		'' ')'?
-		tkExpect( x, TK_RPAREN )
+		tkExpect( x, TK_RPAREN, "to close macro call argument list" )
 		x += 1
 	end if
 
