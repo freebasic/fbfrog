@@ -672,6 +672,8 @@ private sub cBaseType _
 				dtype = TYPE_LONGINT
 			case "uint64_t"
 				dtype = TYPE_ULONGINT
+			case "wchar_t"
+				dtype = TYPE_WSTRING
 			case else
 				dtype = TYPE_UDT
 				subtype = astNewID( tkGetText( basetypex ) )

@@ -46,6 +46,9 @@ dim shared a as uinteger
 dim shared a as integer
 dim shared a as integer
 
+dim shared a as wstring
+dim shared a as wstring ptr
+
 dim shared a as A
 dim shared a as A
 dim shared a as A

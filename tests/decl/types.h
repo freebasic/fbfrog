@@ -46,6 +46,9 @@ static size_t a;
 static ssize_t a;
 static ptrdiff_t a;
 
+static wchar_t a;
+static wchar_t *a;
+
 static A a;
 static enum A a;
 static union A a;

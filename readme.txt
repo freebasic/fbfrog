@@ -116,8 +116,6 @@ To do:
 - astVersionsMatch() should allow matches also if version numbers are in different order,
   though currently that won't ever happen since versions are always merged in the same order
 
-- wchar_t not translated to wstring?
-
 - nested #includes should be frogAddFile()'d in their parent include file context,
   not in the toplevel file context, shouldn't they?
 
