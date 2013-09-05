@@ -680,12 +680,6 @@ type ASTNODE_
 		tk		as integer  '' TK: TK_*
 		paramcount	as integer  '' PPDEFINE: -1 = #define m, 0 = #define m(), 1 = #define m(a), ...
 		op		as integer  '' UOP/BOP: ASTOP_*
-
-		'' MACROINFO
-		type
-			bodybegin	as integer
-			bodyend		as integer
-		end type
 	end union
 
 	'' Linked list of child nodes, where l/r aren't enough: fields/parameters/...
