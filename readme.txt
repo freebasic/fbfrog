@@ -110,8 +110,6 @@ To do:
 - #include stdio.h -> #include crt/stdio.bi, for some known default headers
   (or perhaps let presets do this)
 
-- AST merging should also handle nested nodes in unions/enums, not just structs
-
 - add pass to check all identifiers against FB keywords, and to check for dupdefs
   due to case insensitivity
 

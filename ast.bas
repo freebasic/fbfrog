@@ -628,7 +628,7 @@ function astIsEqualDecl _
 	case ASTCLASS_UOP, ASTCLASS_BOP
 		if( a->op <> b->op ) then exit function
 
-	case ASTCLASS_STRUCT
+	case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
 		if( ignore_fields ) then return TRUE
 	end select
 
@@ -1241,13 +1241,17 @@ private sub hAstMerge _
 	DEBUG( "adding LCS" )
 	assert( (alcslast - alcsfirst + 1) = (blcslast - blcsfirst + 1) )
 	for i as integer = 0 to (alcslast - alcsfirst + 1)-1
-		'' The LCS may include structs but with different fields on both
-		'' sides, they must be merged manually so the struct itself can
-		'' be common, but the fields may be version dependant.
-		'' (relying on hAstLCS() to allow structs to match even if they
-		'' have different fields)
+		'' The LCS may include merged structs/unions/enums that were put
+		'' into the LCS despite having different fields on both sides.
+		''
+		'' They should be merged recursively now, so the struct/union/enum itself
+		'' can be common, while the fields/enumconsts may be version dependant.
+		''
+		'' (relying on hAstLCS() to allow structs/unions/enums to match
+		'' even if they have different fields/enumconsts)
 		var astruct = aarray[alcsfirst+i].decl
-		if( astruct->class = ASTCLASS_STRUCT ) then
+		select case( astruct->class )
+		case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
 			var aversion = aarray[alcsfirst+i].version
 			var bstruct  = barray[blcsfirst+i].decl
 			var bversion = barray[blcsfirst+i].version
@@ -1259,7 +1263,7 @@ private sub hAstMerge _
 			astAddVersionedChild( c, astNewVERSION( aversion, bversion, cstruct ) )
 
 			continue for
-		end if
+		end select
 
 		hAddMergedDecl( c, aarray, alcsfirst + i, barray, blcsfirst + i )
 	next
