@@ -126,6 +126,3 @@ To do:
         // foo
         CALLCONV void f(void);
 - comments behind #define bodies should go to the #define not the body tokens
-
-- should share C operator precedence table between C/PP modules
-- let hFold() solve out iif( x, true, true ) and iif( x, false, false )

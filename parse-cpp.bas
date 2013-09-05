@@ -1687,13 +1687,22 @@ private function hFold( byval n as ASTNODE ptr ) as ASTNODE ptr
 		n->l = hFold( n->l )
 		n->r = hFold( n->r )
 
+		'' Constant condition?
 		if( (n->expr->class = ASTCLASS_CONST) and _
 		    (not typeIsFloat( n->expr->dtype )) ) then
+			'' iif( true , l, r ) = l
+			'' iif( false, l, r ) = r
 			if( n->expr->vali ) then
 				function = astClone( n->l )
 			else
 				function = astClone( n->r )
 			end if
+			astDelete( n )
+
+		'' Same true/false expressions?
+		'' iif( condition, X, X ) = X
+		elseif( astIsEqualDecl( n->l, n->r ) ) then
+			function = astClone( n->l )
 			astDelete( n )
 		end if
 

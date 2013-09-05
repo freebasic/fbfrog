@@ -65,6 +65,12 @@
 #if defined foo_0 == (0 / 1)
 #if defined foo_0 == (0 % 1)
 
+// iif nop
+#if defined foo_0 == (defined x ? 0 : 0)
+#if defined foo_123 == (defined x ? 123 : 123)
+#if defined foo_defined_y == (defined x ? defined y : defined y)
+#if defined foo_defined_y_1_2 == (defined x ? (defined y ? 1 : 2) : (defined y ? 1 : 2))
+
 // orelse nop
 #if defined foo_1 == (1 || defined bar)
 #if defined foo_1 == (2 || defined bar)

@@ -56,6 +56,11 @@
 #if defined( foo_0 ) = 0
 #if defined( foo_0 ) = 0
 
+#if defined( foo_0 ) = 0
+#if defined( foo_123 ) = 123
+#if defined( foo_defined_y ) = defined( y )
+#if defined( foo_defined_y_1_2 ) = iif( defined( y ), 1, 2 )
+
 #if defined( foo_1 ) = 1
 #if defined( foo_1 ) = 1
 #if defined( foo_defined_bar ) = defined( bar )
