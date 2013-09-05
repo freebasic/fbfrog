@@ -1,6 +1,7 @@
 #define A 0
 #define A 1
 #define A 11
+#define A 00
 #define A 01
 #define A 0123
 #define A 0x

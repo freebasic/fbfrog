@@ -110,17 +110,6 @@ To do:
 - #include stdio.h -> #include crt/stdio.bi, for some known default headers
   (or perhaps let presets do this)
 
-- ## PP merging should allow TK_ID ## TK_DECNUM or TK_UNDERSCORE,
-  currently it only allows TK_ID ## TK_ID
-	careful:
-		#define m(a) a##0x
-		void m(test)(void);
-	should become:
-		void m0x(void);
-	and not one of:
-		void m0x0(void);
-		void m0(void);
-
 - AST merging should also handle nested nodes in unions/enums, not just structs
 
 - add pass to check all identifiers against FB keywords, and to check for dupdefs

@@ -87,13 +87,15 @@ declare function strReplace _
 		byref b as string _
 	) as string
 declare function strMakePrintable( byref a as string ) as string
+declare function strStartsWith( byref s as string, byref lookfor as string ) as integer
+declare function strEndsWith( byref s as string, byref lookfor as string ) as integer
 declare function strMatches _
 	( _
 		byref origpattern as string, _
 		byref s as string _
 	) as integer
-declare function strStartsWith( byref s as string, byref lookfor as string ) as integer
-declare function strEndsWith( byref s as string, byref lookfor as string ) as integer
+declare function strContainsNonHexDigits( byval s as zstring ptr ) as integer
+declare function strContainsNonOctDigits( byval s as zstring ptr ) as integer
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 

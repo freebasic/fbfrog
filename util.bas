@@ -205,6 +205,48 @@ function strMatches _
 	end if
 end function
 
+function strContainsNonHexDigits( byval s as zstring ptr ) as integer
+	dim as ubyte ptr p = s
+
+	if( p ) then
+		do
+			select case( p[0] )
+			case 0
+				exit do
+			case CH_0 to CH_9, CH_A to CH_F, CH_L_A to CH_L_F
+
+			case else
+				return TRUE
+			end select
+
+			p += 1
+		loop
+	end if
+
+	function = FALSE
+end function
+
+function strContainsNonOctDigits( byval s as zstring ptr ) as integer
+	dim as ubyte ptr p = s
+
+	if( p ) then
+		do
+			select case( p[0] )
+			case 0
+				exit do
+			case CH_0 to CH_7
+
+			case else
+				return TRUE
+			end select
+
+			p += 1
+		loop
+	end if
+
+	function = FALSE
+end function
+
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 '' Generic linked list
 

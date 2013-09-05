@@ -871,6 +871,127 @@ private function hStringify( byval arg as integer ) as string
 	function = s
 end function
 
+private sub hTryMergeTokens _
+	( _
+		byval l as integer, _
+		byval r as integer, _
+		byref mergetk as integer, _
+		byref mergetext as string _
+	)
+
+	'' Try to merge the two tokens
+	select case( tkGet( l ) )
+	case is >= TK_ID
+		select case( tkGet( r ) )
+		'' id ## id -> id
+		case is >= TK_ID
+			mergetk = TK_ID
+			mergetext = *tkGetIdOrKw( l ) + *tkGetIdOrKw( r )
+
+		'' id ## decnum -> id
+		case TK_DECNUM
+			mergetk = TK_ID
+			mergetext = *tkGetIdOrKw( l ) + *tkGetText( r )
+
+		'' id ## hexnum -> id
+		case TK_HEXNUM
+			mergetk = TK_ID
+			mergetext = *tkGetIdOrKw( l ) + "0x" + *tkGetText( r )
+
+		'' id ## octnum -> id
+		case TK_OCTNUM
+			mergetk = TK_ID
+			mergetext = *tkGetIdOrKw( l ) + "0" + *tkGetText( r )
+
+		end select
+
+	case TK_DECNUM
+		select case( tkGet( r ) )
+		'' decnum ## id -> hexnum (0##xFF)
+		case is >= TK_ID
+			var ltext = *tkGetText( l )
+			var rtext = *tkGetIdOrKw( r )
+			'' lhs must be '0', rhs must start with 'x'
+			if( (ltext = "0") and (left( rtext, 1 ) = "x") ) then
+				'' Rest of rhs must be only hex digits, or empty
+				var hexdigits = right( rtext, len( rtext ) - 1 )
+				if( strContainsNonHexDigits( hexdigits ) = FALSE ) then
+					mergetk = TK_HEXNUM
+					mergetext = hexdigits
+				end if
+			end if
+
+		'' decnum ## decnum -> octnum (0##1), decnum (1##2)
+		case TK_DECNUM
+			var ltext = *tkGetText( l )
+			var rtext = *tkGetText( r )
+			if( ltext = "0" ) then
+				if( strContainsNonOctDigits( rtext ) = FALSE ) then
+					mergetk = TK_OCTNUM
+					mergetext = rtext
+				end if
+			else
+				mergetk = TK_DECNUM
+				mergetext = ltext + rtext
+			end if
+
+		'' decnum ## octnum -> octnum (0##01), decnum (1##01)
+		case TK_OCTNUM
+			var ltext = *tkGetText( l )
+			var rtext = *tkGetText( r )
+			if( ltext = "0" ) then
+				mergetk = TK_OCTNUM
+				mergetext = rtext
+			else
+				mergetk = TK_DECNUM
+				mergetext = ltext + "0" + rtext
+			end if
+
+		end select
+
+	case TK_HEXNUM
+		select case( tkGet( r ) )
+		'' hexnum ## id -> hexnum (0xAA##BB)
+		case is >= TK_ID
+			var rtext = tkGetIdOrKw( r )
+			if( strContainsNonHexDigits( rtext ) = FALSE ) then
+				mergetk = TK_HEXNUM
+				mergetext = *tkGetText( l ) + *rtext
+			end if
+
+		'' hexnum ## decnum -> hexnum (0xFF##123)
+		case TK_DECNUM
+			mergetk = TK_HEXNUM
+			mergetext = *tkGetText( l ) + *tkGetText( r )
+
+		'' hexnum ## octnum -> hexnum (0xFF##01)
+		case TK_OCTNUM
+			mergetk = TK_HEXNUM
+			mergetext = *tkGetText( l ) + "0" + *tkGetText( r )
+
+		end select
+
+	case TK_OCTNUM
+		select case( tkGet( r ) )
+		'' octnum ## decnum -> octnum (01##2)
+		case TK_DECNUM
+			var rtext = tkGetText( r )
+			if( strContainsNonOctDigits( rtext ) = FALSE ) then
+				mergetk = TK_OCTNUM
+				mergetext = *tkGetText( l ) + *rtext
+			end if
+
+		'' octnum ## octnum -> octnum (01##01)
+		case TK_OCTNUM
+			mergetk = TK_OCTNUM
+			mergetext = *tkGetText( l ) + "0" + *tkGetText( r )
+
+		end select
+
+	end select
+
+end sub
+
 private sub hInsertMacroExpansion _
 	( _
 		byref x as integer, _
@@ -999,27 +1120,30 @@ private sub hInsertMacroExpansion _
 				end if
 
 				if( (l >= 0) and (r >= 0) ) then
-					'' Try to merge the two tokens
-					'' Assuming every token >= TK_ID is mergable (i.e. an identifier or keyword)
-					if( (tkGet( l ) >= TK_ID) and (tkGet( r ) >= TK_ID) ) then
-						'' Insert merged token in front of the '##'
-						tkInsert( y, TK_ID, *tkGetIdOrKw( l ) + *tkGetIdOrKw( r ) )
-						y += 1
-						r += 1
-						x += 1
+					dim as integer mergetk = -1
+					dim as string mergetext
 
-						'' Remove l/r
-						tkRemove( l, l )
-						y -= 1
-						r -= 1
-						x -= 1
-						tkRemove( r, r )
-						x -= 1
-					else
+					hTryMergeTokens( l, r, mergetk, mergetext )
+
+					if( mergetk < 0 ) then
 						print tkDumpOne( l )
 						print tkDumpOne( r )
 						oops( "cannot merge these two tokens when expanding macro '" & *macro->text & "'" )
 					end if
+
+					'' Insert merged token in front of the '##'
+					tkInsert( y, mergetk, mergetext )
+					y += 1
+					r += 1
+					x += 1
+
+					'' Remove l/r
+					tkRemove( l, l )
+					y -= 1
+					r -= 1
+					x -= 1
+					tkRemove( r, r )
+					x -= 1
 				'elseif( l >= 0 ) then
 					'' No rhs, simply preserve the lhs
 				'elseif( r >= 0 ) then
