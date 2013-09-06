@@ -44,7 +44,7 @@ private function hFindVersion _
 		byval versionid as zstring ptr _
 	) as ASTNODE ptr
 
-	var version = pre->versions
+	var version = pre->versions->head
 	while( version )
 		if( *version->text = *versionid ) then
 			exit while
