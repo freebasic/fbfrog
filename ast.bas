@@ -77,9 +77,29 @@ dim shared as ASTNODEINFO astnodeinfo(0 to ...) = _
 
 #assert ubound( astnodeinfo ) = ASTCLASS__COUNT - 1
 
+namespace aststats
+	dim shared as integer maxnodes, livenodes, maxlivenodes
+	dim shared as integer foldpasses, minfoldpasses, maxfoldpasses
+end namespace
+
+sub astPrintStats( )
+	using aststats
+	print "ast nodes: " & _
+		maxlivenodes & " max (" + hMakePrettyByteSize( maxlivenodes * sizeof( ASTNODE ) ) + "), " & _
+		maxnodes &   " total"
+	print "ast folding passes: min " & minfoldpasses & ", max " & maxfoldpasses & ", total " & foldpasses
+end sub
+
 function astNew overload( byval class_ as integer ) as ASTNODE ptr
 	dim as ASTNODE ptr n = callocate( sizeof( ASTNODE ) )
 	n->class = class_
+
+	aststats.maxnodes += 1
+	aststats.livenodes += 1
+	if( aststats.maxlivenodes < aststats.livenodes ) then
+		aststats.maxlivenodes = aststats.livenodes
+	end if
+
 	function = n
 end function
 
@@ -239,6 +259,8 @@ sub astDelete( byval n as ASTNODE ptr )
 	deallocate( n->text )
 	astDelete( n->subtype )
 	deallocate( n )
+
+	aststats.livenodes -= 1
 end sub
 
 sub astPrepend( byval parent as ASTNODE ptr, byval n as ASTNODE ptr )
@@ -645,6 +667,649 @@ function astIsEqualDecl _
 
 	'' Both a's and b's last child must be reached at the same time
 	function = ((a = NULL) and (b = NULL))
+end function
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+private function astExprContains _
+	( _
+		byval n as ASTNODE ptr, _
+		byval nodeclass as integer _
+	) as integer
+
+	if( n = NULL ) then return FALSE
+	if( n->class = nodeclass ) then return TRUE
+
+	function = astExprContains( n->expr, nodeclass ) or _
+		astExprContains( n->l, nodeclass ) or _
+		astExprContains( n->r, nodeclass )
+end function
+
+#define astExprHasSideFx( n ) astExprContains( n, ASTCLASS_CALL )
+
+private function astOpC2FB _
+	( _
+		byval n as ASTNODE ptr, _
+		byval fbop as integer _
+	) as ASTNODE ptr
+
+	assert( (n->class = ASTCLASS_UOP) or (n->class = ASTCLASS_BOP) )
+	n->op = fbop
+
+	function = astNewUOP( ASTOP_NEGATE, n )
+end function
+
+function astOpsC2FB( byval n as ASTNODE ptr ) as ASTNODE ptr
+	if( n = NULL ) then exit function
+
+	n->expr = astOpsC2FB( n->expr )
+	n->l = astOpsC2FB( n->l )
+	n->r = astOpsC2FB( n->r )
+
+	select case( n->class )
+	case ASTCLASS_UOP
+		select case( n->op )
+		case ASTOP_CLOGNOT
+			'' !x    =    x = 0
+			n->class = ASTCLASS_BOP
+			n->r = astNewCONST( 0, 0, TYPE_LONG )
+			n = astOpC2FB( n, ASTOP_EQ )
+
+		case ASTOP_CDEFINED
+			n = astOpC2FB( n, ASTOP_DEFINED )
+		end select
+
+	case ASTCLASS_BOP
+		select case( n->op )
+		case ASTOP_CLOGOR  : n = astOpC2FB( n, ASTOP_ORELSE )
+		case ASTOP_CLOGAND : n = astOpC2FB( n, ASTOP_ANDALSO )
+		case ASTOP_CEQ     : n = astOpC2FB( n, ASTOP_EQ )
+		case ASTOP_CNE     : n = astOpC2FB( n, ASTOP_NE )
+		case ASTOP_CLT     : n = astOpC2FB( n, ASTOP_LT )
+		case ASTOP_CLE     : n = astOpC2FB( n, ASTOP_LE )
+		case ASTOP_CGT     : n = astOpC2FB( n, ASTOP_GT )
+		case ASTOP_CGE     : n = astOpC2FB( n, ASTOP_GE )
+		end select
+
+	end select
+
+	function = n
+end function
+
+private function astFoldDefineds _
+	( _
+		byval n as ASTNODE ptr, _
+		byval knownsyms as THASH ptr _
+	) as ASTNODE ptr
+
+	if( n = NULL ) then exit function
+	function = n
+
+	n->expr = astFoldDefineds( n->expr, knownsyms )
+	n->l = astFoldDefineds( n->l, knownsyms )
+	n->r = astFoldDefineds( n->r, knownsyms )
+
+	if( n->class = ASTCLASS_UOP ) then
+		if( n->op = ASTOP_DEFINED ) then
+			'' defined() on known symbol?
+			assert( n->l->class = ASTCLASS_ID )
+			var id = n->l->text
+			var item = hashLookup( knownsyms, id, hashHash( id ) )
+			if( item->s ) then
+				'' FB defined()    ->   -1|0
+				'' item->data = is_defined
+				function = astNewCONST( cint( item->data ), 0, TYPE_LONG )
+				astDelete( n )
+			end if
+		end if
+	end if
+
+end function
+
+private function astFoldConsts( byval n as ASTNODE ptr ) as ASTNODE ptr
+	if( n = NULL ) then exit function
+	function = n
+
+	n->expr = astFoldConsts( n->expr )
+	n->l = astFoldConsts( n->l )
+	n->r = astFoldConsts( n->r )
+
+	select case( n->class )
+	case ASTCLASS_UOP
+		if( (n->l->class = ASTCLASS_CONST) and _
+		    (not typeIsFloat( n->l->dtype )) ) then
+			var v1 = n->l->vali
+
+			select case( n->op )
+			'case ASTOP_CLOGNOT   : v1 = iif( v1, 0, 1 )
+			case ASTOP_NOT       : v1 = not v1
+			case ASTOP_NEGATE    : v1 = -v1
+			case ASTOP_UNARYPLUS : '' nothing to do
+			case else
+				assert( FALSE )
+			end select
+
+			function = astNewCONST( v1, 0, TYPE_LONG )
+			astDelete( n )
+		end if
+
+	case ASTCLASS_BOP
+		if( (n->l->class = ASTCLASS_CONST) and _
+		    (n->r->class = ASTCLASS_CONST) ) then
+			if( (not typeIsFloat( n->l->dtype )) and _
+			    (not typeIsFloat( n->r->dtype )) ) then
+				var v1 = n->l->vali
+				var v2 = n->r->vali
+
+				var divbyzero = FALSE
+
+				select case as const( n->op )
+				'case ASTOP_CLOGOR   : v1    = -(v1 orelse  v2)
+				'case ASTOP_CLOGAND  : v1    = -(v1 andalso v2)
+				case ASTOP_ORELSE   : v1    =   v1 orelse  v2
+				case ASTOP_ANDALSO  : v1    =   v1 andalso v2
+				case ASTOP_OR       : v1  or= v2
+				case ASTOP_XOR      : v1 xor= v2
+				case ASTOP_AND      : v1 and= v2
+				'case ASTOP_CEQ      : v1    = -(v1 =  v2)
+				'case ASTOP_CNE      : v1    = -(v1 <> v2)
+				'case ASTOP_CLT      : v1    = -(v1 <  v2)
+				'case ASTOP_CLE      : v1    = -(v1 <= v2)
+				'case ASTOP_CGT      : v1    = -(v1 >  v2)
+				'case ASTOP_CGE      : v1    = -(v1 >= v2)
+				case ASTOP_EQ       : v1    =   v1 =  v2
+				case ASTOP_NE       : v1    =   v1 <> v2
+				case ASTOP_LT       : v1    =   v1 <  v2
+				case ASTOP_LE       : v1    =   v1 <= v2
+				case ASTOP_GT       : v1    =   v1 >  v2
+				case ASTOP_GE       : v1    =   v1 >= v2
+				case ASTOP_SHL      : v1 shl= v2
+				case ASTOP_SHR      : v1 shr= v2
+				case ASTOP_ADD      : v1   += v2
+				case ASTOP_SUB      : v1   -= v2
+				case ASTOP_MUL      : v1   *= v2
+				case ASTOP_DIV
+					if( v2 = 0 ) then
+						divbyzero = TRUE
+					else
+						v1 \= v2
+					end if
+				case ASTOP_MOD
+					if( v2 = 0 ) then
+						divbyzero = TRUE
+					else
+						v1 mod= v2
+					end if
+				case else
+					assert( FALSE )
+				end select
+
+				if( divbyzero = FALSE ) then
+					function = astNewCONST( v1, 0, TYPE_LONG )
+					astDelete( n )
+				end if
+			end if
+		end if
+
+	case ASTCLASS_IIF
+		'' Constant condition?
+		if( (n->expr->class = ASTCLASS_CONST) and _
+		    (not typeIsFloat( n->expr->dtype )) ) then
+			'' iif( true , l, r ) = l
+			'' iif( false, l, r ) = r
+			if( n->expr->vali ) then
+				function = n->l
+				n->l = NULL
+			else
+				function = n->r
+				n->r = NULL
+			end if
+			astDelete( n )
+
+		end if
+	end select
+
+end function
+
+'' For commutative BOPs where only the lhs is a CONST, swap lhs/rhs so the
+'' CONST ends up on the rhs on as many BOPs as possible (not on all, because
+'' not all are commutative). That simplifies some checks for BOPs with only
+'' one CONST operand, because only the rhs needs to be checked.
+private sub astSwapConstsToRhs( byval n as ASTNODE ptr )
+	if( n = NULL ) then exit sub
+
+	astSwapConstsToRhs( n->expr )
+	astSwapConstsToRhs( n->l )
+	astSwapConstsToRhs( n->r )
+
+	if( n->class = ASTCLASS_BOP ) then
+		'' Only the lhs is a CONST?
+		if( (n->l->class = ASTCLASS_CONST) and _
+		    (n->r->class <> ASTCLASS_CONST) ) then
+			select case( n->op )
+			'' N and x   =   x and N
+			'' N or  x   =   x or  N
+			'' N xor x   =   x xor N
+			'' N =   x   =   x =   N
+			'' N <>  x   =   x <>  N
+			'' N +   x   =   x +   N
+			'' N *   x   =   x *   N
+			case ASTOP_ADD, ASTOP_MUL, ASTOP_AND, ASTOP_OR, _
+			     ASTOP_XOR, ASTOP_EQ, ASTOP_NE
+				swap n->l, n->r
+
+			'' N <  x   =   x >  N
+			'' N <= x   =   x >= N
+			'' N >  x   =   x <  N
+			'' N >= x   =   x <= N
+			case ASTOP_LT, ASTOP_LE, ASTOP_GT, ASTOP_GE
+				select case( n->op )
+				case ASTOP_LT : n->op = ASTOP_GT
+				case ASTOP_LE : n->op = ASTOP_GE
+				case ASTOP_GT : n->op = ASTOP_LT
+				case ASTOP_GE : n->op = ASTOP_LE
+				end select
+				swap n->l, n->r
+
+			'' N - x   =   -x + N
+			case ASTOP_SUB
+				swap n->l, n->r
+				n->l = astNewUOP( ASTOP_NEGATE, n->l )
+				n->op = ASTOP_ADD
+			end select
+		end if
+	end if
+end sub
+
+private function hIsBoolOp( byval n as ASTNODE ptr ) as integer
+	select case( n->class )
+	case ASTCLASS_UOP
+		function = (n->op = ASTOP_DEFINED)
+	case ASTCLASS_BOP
+		select case( n->op )
+		case ASTOP_EQ, ASTOP_NE, ASTOP_LT, _
+		     ASTOP_LE, ASTOP_GT, ASTOP_GE, _
+		     ASTOP_ORELSE, ASTOP_ANDALSO
+			function = TRUE
+		end select
+	end select
+end function
+
+private function astFoldNops( byval n as ASTNODE ptr ) as ASTNODE ptr
+	if( n = NULL ) then exit function
+	function = n
+
+	n->expr = astFoldNops( n->expr )
+	n->l = astFoldNops( n->l )
+	n->r = astFoldNops( n->r )
+
+	select case( n->class )
+	case ASTCLASS_UOP
+		select case( n->op )
+		'' +x = x
+		case ASTOP_UNARYPLUS
+			function = n->l : n->l = NULL
+			astDelete( n )
+		end select
+
+	case ASTCLASS_BOP
+		'' Only the lhs is a CONST? Check for NOPs
+		if( (n->l->class = ASTCLASS_CONST) and _
+		    (n->r->class <> ASTCLASS_CONST) ) then
+			if( typeIsFloat( n->l->dtype ) = FALSE ) then
+				var v1 = n->l->vali
+
+				select case( n->op )
+
+				'' true  orelse x   = -1
+				'' false orelse x   = x
+				case ASTOP_ORELSE
+					if( v1 ) then
+						function = astNewCONST( -1, 0, TYPE_LONG )
+					else
+						function = n->r : n->r = NULL
+					end if
+					astDelete( n )
+
+				'' true  andalso x   = x
+				'' false andalso x   = 0
+				case ASTOP_ANDALSO
+					if( v1 ) then
+						function = n->r : n->r = NULL
+					else
+						function = astNewCONST( 0, 0, TYPE_LONG )
+					end if
+					astDelete( n )
+
+				'' 0 shl x = 0    unless sidefx
+				'' 0 shr x = 0    unless sidefx
+				'' 0 /   x = 0    unless sidefx
+				'' 0 mod x = 0    unless sidefx
+				case ASTOP_AND, ASTOP_SHL, ASTOP_SHR, _
+				     ASTOP_DIV, ASTOP_MOD
+					if( v1 = 0 ) then
+						if( astExprHasSideFx( n->r ) = FALSE ) then
+							function = astNewCONST( 0, 0, TYPE_LONG )
+							astDelete( n )
+						end if
+					end if
+
+				end select
+			end if
+
+		'' Only the rhs is a CONST? Check for NOPs
+		elseif( (n->l->class <> ASTCLASS_CONST) and _
+		        (n->r->class = ASTCLASS_CONST) ) then
+			if( typeIsFloat( n->r->dtype ) = FALSE ) then
+				var v2 = n->r->vali
+
+				select case( n->op )
+				'' x orelse true    = -1    unless sidefx
+				'' x orelse false   = x
+				case ASTOP_ORELSE
+					if( v2 ) then
+						if( astExprHasSideFx( n->l ) = FALSE ) then
+							function = astNewCONST( -1, 0, TYPE_LONG )
+							astDelete( n )
+						end if
+					else
+						function = n->l : n->l = NULL
+						astDelete( n )
+					end if
+
+				'' x andalso true    = x
+				'' x andalso false   = 0    unless sidefx
+				case ASTOP_ANDALSO
+					if( v2 ) then
+						function = n->l : n->l = NULL
+						astDelete( n )
+					else
+						if( astExprHasSideFx( n->l ) = FALSE ) then
+							function = astNewCONST( 0, 0, TYPE_LONG )
+							astDelete( n )
+						end if
+					end if
+
+				'' bool <>  0   =    bool
+				'' bool <> -1   =    not bool
+				case ASTOP_NE
+					if( hIsBoolOp( n->l ) ) then
+						select case( v2 )
+						case 0
+							function = n->l : n->l = NULL
+							astDelete( n )
+						case -1
+							'' Delete rhs and turn <> BOP into not UOP
+							astDelete( n->r ) : n->r = NULL
+							n->class = ASTCLASS_UOP
+							n->op = ASTOP_NOT
+						end select
+					end if
+
+				'' bool =  0    =    not bool
+				'' bool = -1    =    bool
+				case ASTOP_EQ
+					if( hIsBoolOp( n->l ) ) then
+						select case( v2 )
+						case 0
+							'' Delete rhs and turn = BOP into not UOP
+							astDelete( n->r ) : n->r = NULL
+							n->class = ASTCLASS_UOP
+							n->op = ASTOP_NOT
+						case -1
+							function = n->l : n->l = NULL
+							astDelete( n )
+						end select
+					end if
+
+				'' x or  0 =  x
+				'' x or -1 = -1    unless sidefx
+				case ASTOP_OR
+					select case( v2 )
+					case 0
+						function = n->l : n->l = NULL
+						astDelete( n )
+					case -1
+						if( astExprHasSideFx( n->l ) = FALSE ) then
+							function = astNewCONST( -1, 0, TYPE_LONG )
+							astDelete( n )
+						end if
+					end select
+
+				'' x +   0 =  x
+				'' x -   0 =  x
+				'' x shl 0 =  x
+				'' x shr 0 =  x
+				case ASTOP_ADD, ASTOP_SUB, ASTOP_SHL, ASTOP_SHR
+					if( v2 = 0 ) then
+						function = n->l : n->l = NULL
+						astDelete( n )
+					end if
+
+				'' x and 0 = 0    unless sidefx
+				case ASTOP_AND
+					if( v2 = 0 ) then
+						if( astExprHasSideFx( n->l ) = FALSE ) then
+							function = astNewCONST( 0, 0, TYPE_LONG )
+							astDelete( n )
+						end if
+					end if
+
+				'' x * 0 = 0    unless sidefx
+				'' x * 1 = x
+				case ASTOP_MUL
+					select case( v2 )
+					case 0
+						if( astExprHasSideFx( n->l ) = FALSE ) then
+							function = astNewCONST( 0, 0, TYPE_LONG )
+							astDelete( n )
+						end if
+					case 1
+						function = n->l : n->l = NULL
+						astDelete( n )
+					end select
+
+				end select
+			end if
+		end if
+
+	case ASTCLASS_IIF
+		'' Same true/false expressions?
+		'' iif( condition, X, X ) = X    unless sidefx in condition
+		if( astIsEqualDecl( n->l, n->r ) ) then
+			if( astExprHasSideFx( n->expr ) = FALSE ) then
+				function = n->l : n->l = NULL
+				astDelete( n )
+			end if
+		end if
+	end select
+
+end function
+
+private function astFoldNestedOps( byval n as ASTNODE ptr ) as ASTNODE ptr
+	if( n = NULL ) then exit function
+	function = n
+
+	n->expr = astFoldNestedOps( n->expr )
+	n->l = astFoldNestedOps( n->l )
+	n->r = astFoldNestedOps( n->r )
+
+	select case( n->class )
+	case ASTCLASS_UOP
+		'' l = UOP?
+		if( n->l->class = ASTCLASS_UOP ) then
+			select case( n->op )
+			'' not (not x)   = x
+			''       -(-x)   = x
+			case ASTOP_NOT, ASTOP_NEGATE
+				if( n->op = n->l->op ) then
+					function = n->l->l : n->l->l = NULL
+					astDelete( n )
+				end if
+			end select
+
+		'' l = BOP?
+		elseif( n->l->class = ASTCLASS_BOP ) then
+			select case( n->op )
+			'' not (ll relbop lr)   = ll inverse_relbop lr
+			case ASTOP_NOT
+				select case( n->l->op )
+				case ASTOP_EQ, ASTOP_NE, ASTOP_LT, _
+				     ASTOP_LE, ASTOP_GT, ASTOP_GE
+					select case( n->l->op )
+					case ASTOP_EQ : n->l->op = ASTOP_NE '' not =   ->  <>
+					case ASTOP_NE : n->l->op = ASTOP_EQ '' not <>  ->  =
+					case ASTOP_LT : n->l->op = ASTOP_GE '' not <   ->  >=
+					case ASTOP_LE : n->l->op = ASTOP_GT '' not <=  ->  >
+					case ASTOP_GT : n->l->op = ASTOP_LE '' not >   ->  <=
+					case ASTOP_GE : n->l->op = ASTOP_LT '' not >=  ->  <
+					end select
+
+					function = n->l : n->l = NULL
+					astDelete( n )
+				end select
+			end select
+		end if
+
+	case ASTCLASS_BOP
+
+		'' l=UOP, r=CONST?
+		if( (n->l->class = ASTCLASS_UOP) and _
+		    (n->r->class = ASTCLASS_CONST) ) then
+			'' (-bool) = 1    =    bool = -1
+			if( n->op = ASTOP_EQ ) then
+				if( n->l->op = ASTOP_NEGATE ) then
+					if( n->r->vali = 1 ) then
+						if( hIsBoolOp( n->l->l ) ) then
+							'' On the lhs, replace the - UOP by its own operand
+							var negatenode = n->l
+							n->l = negatenode->l : negatenode->l = NULL
+							astDelete( negatenode )
+							'' On the rhs, turn 1 into -1
+							n->r->vali = -1
+						end if
+					end if
+				end if
+			end if
+
+		'' l=BOP, r=CONST?
+		elseif( (n->l->class = ASTCLASS_BOP) and _
+		        (n->r->class = ASTCLASS_CONST) ) then
+			'' (x = 0) = 0    =    x <> 0
+			if( n->op = ASTOP_EQ ) then
+				if( n->l->op = ASTOP_EQ ) then
+					'' lr=CONST?
+					if( n->l->r->class = ASTCLASS_CONST ) then
+						'' r and lr both '0'?
+						if( (n->r->vali = 0) and (n->l->r->vali = 0) ) then
+							n->l->op = ASTOP_NE
+							function = n->l : n->l = NULL
+							astDelete( n )
+						end if
+					end if
+				end if
+			end if
+		end if
+	end select
+
+end function
+
+private function astFoldBoolContextNops _
+	( _
+		byval n as ASTNODE ptr, _
+		byval is_bool_context as integer _
+	) as ASTNODE ptr
+
+	if( n = NULL ) then exit function
+	function = n
+
+	select case( n->class )
+	case ASTCLASS_UOP
+		n->l = astFoldBoolContextNops( n->l, FALSE )
+
+		select case( n->op )
+		'' if( -x ) then   =   if( x ) then
+		case ASTOP_NEGATE
+			if( is_bool_context ) then
+				function = n->l : n->l = NULL
+				astDelete( n )
+			end if
+		end select
+
+	case ASTCLASS_BOP
+		var l_is_bool_context = FALSE
+		var r_is_bool_context = FALSE
+
+		'' BOP operand in bool context?
+		select case( n->op )
+		'' x = 0
+		'' x <> 0
+		case ASTOP_EQ, ASTOP_NE
+			if( n->r->class = ASTCLASS_CONST ) then
+				l_is_bool_context = (n->r->vali = 0)
+			end if
+
+		'' andalso/orelse operands are always treated as bools
+		case ASTOP_ORELSE, ASTOP_ANDALSO
+			l_is_bool_context = TRUE
+			r_is_bool_context = TRUE
+		end select
+
+		n->l = astFoldBoolContextNops( n->l, l_is_bool_context )
+		n->r = astFoldBoolContextNops( n->r, r_is_bool_context )
+
+	case ASTCLASS_IIF
+		'' iif() condition always is treated as bool
+		n->expr = astFoldBoolContextNops( n->expr, TRUE )
+		n->l = astFoldBoolContextNops( n->l, FALSE )
+		n->r = astFoldBoolContextNops( n->r, FALSE )
+
+	end select
+end function
+
+function astFold _
+	( _
+		byval n as ASTNODE ptr, _
+		byval knownsyms as THASH ptr, _
+		byval is_bool_context as integer _
+	) as ASTNODE ptr
+
+	n = astFoldDefineds( n, knownsyms )
+
+	dim as ASTNODE ptr c
+	var passes = 0
+	do
+		c = astClone( n )
+		passes += 1
+		aststats.foldpasses += 1
+
+		n = astFoldConsts( n )
+		astSwapConstsToRhs( n )
+		n = astFoldNops( n )
+		n = astFoldNestedOps( n )
+		n = astFoldBoolContextNops( n, is_bool_context )
+
+		'' Loop until the folding no longer changes the expression
+		if( astIsEqualDecl( n, c ) ) then
+			exit do
+		end if
+
+		astDelete( c )
+	loop
+
+	if( aststats.minfoldpasses = 0 ) then
+		aststats.minfoldpasses = passes
+		aststats.maxfoldpasses = passes
+	else
+		if( aststats.minfoldpasses > passes ) then
+			aststats.minfoldpasses = passes
+		end if
+		if( aststats.maxfoldpasses < passes ) then
+			aststats.maxfoldpasses = passes
+		end if
+	end if
+
+	function = n
 end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -1457,31 +2122,46 @@ function astDumpOne( byval n as ASTNODE ptr ) as string
 		s += " " + tkDumpBasic( n->tk, n->text )
 
 	case ASTCLASS_UOP, ASTCLASS_BOP
-		static as zstring * 10 ops(ASTOP_LOGOR to ASTOP_DEFINED) = _
+		static as zstring * 16 ops(ASTOP_CLOGOR to ASTOP_STRINGIFY) = _
 		{ _
-			"orelse"  , _  '' ASTOP_LOGOR
-			"andalso" , _  '' ASTOP_LOGAND
-			"or"      , _  '' ASTOP_BITOR
-			"xor"     , _  '' ASTOP_BITXOR
-			"and"     , _  '' ASTOP_BITAND
-			"="       , _  '' ASTOP_EQ
-			"<>"      , _  '' ASTOP_NE
-			"<"       , _  '' ASTOP_LT
-			"<="      , _  '' ASTOP_LE
-			">"       , _  '' ASTOP_GT
-			">="      , _  '' ASTOP_GE
-			"shl"     , _  '' ASTOP_SHL
-			"shr"     , _  '' ASTOP_SHR
-			"+"       , _  '' ASTOP_ADD
-			"-"       , _  '' ASTOP_SUB
-			"*"       , _  '' ASTOP_MUL
-			"/"       , _  '' ASTOP_DIV
-			"mod"     , _  '' ASTOP_MOD
-			"lognot"  , _  '' ASTOP_LOGNOT
-			"bitnot"  , _  '' ASTOP_BITNOT
-			"negate"  , _  '' ASTOP_NEGATE
-			"unary +" , _  '' ASTOP_UNARYPLUS
-			"defined()" _  '' ASTOP_DEFINED
+			"c ||"		, _ '' ASTOP_CLOGOR
+			"c &&"		, _ '' ASTOP_CLOGAND
+			"orelse"	, _ '' ASTOP_ORELSE
+			"andalso"	, _ '' ASTOP_ANDALSO
+			"or"		, _ '' ASTOP_OR
+			"xor"		, _ '' ASTOP_XOR
+			"and"		, _ '' ASTOP_AND
+			"c ="		, _ '' ASTOP_CEQ
+			"c <>"		, _ '' ASTOP_CNE
+			"c <"		, _ '' ASTOP_CLT
+			"c <="		, _ '' ASTOP_CLE
+			"c >"		, _ '' ASTOP_CGT
+			"c >="		, _ '' ASTOP_CGE
+			"="		, _ '' ASTOP_EQ
+			"<>"		, _ '' ASTOP_NE
+			"<"		, _ '' ASTOP_LT
+			"<="		, _ '' ASTOP_LE
+			">"		, _ '' ASTOP_GT
+			">="		, _ '' ASTOP_GE
+			"shl"		, _ '' ASTOP_SHL
+			"shr"		, _ '' ASTOP_SHR
+			"+"		, _ '' ASTOP_ADD
+			"-"		, _ '' ASTOP_SUB
+			"*"		, _ '' ASTOP_MUL
+			"/"		, _ '' ASTOP_DIV
+			"mod"		, _ '' ASTOP_MOD
+			"[]"		, _ '' ASTOP_INDEX
+			"."		, _ '' ASTOP_MEMBER
+			"->"		, _ '' ASTOP_MEMBERDEREF
+			"C !"		, _ '' ASTOP_CLOGNOT
+			"not"		, _ '' ASTOP_NOT
+			"negate"	, _ '' ASTOP_NEGATE
+			"unary +"	, _ '' ASTOP_UNARYPLUS
+			"C defined()"	, _ '' ASTOP_CDEFINED
+			"defined()"	, _ '' ASTOP_DEFINED
+			"@"		, _ '' ASTOP_ADDROF
+			"deref"		, _ '' ASTOP_DEREF
+			"#"		  _ '' ASTOP_STRINGIFY
 		}
 
 		s += " " + ops(n->op)

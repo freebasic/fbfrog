@@ -6,7 +6,7 @@
 #if &h100
 #if 123
 #if 123
-#ifdef ID
-#ifdef ID
-#ifdef ID
+#if -defined( ID )
+#if -defined( ID )
+#if -defined( ID )
 #if ID

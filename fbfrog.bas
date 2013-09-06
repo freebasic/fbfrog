@@ -630,3 +630,7 @@ end sub
 		'' options.
 		frogWork( @cmdline, "" )
 	end if
+
+	if( verbose ) then
+		astPrintStats( )
+	end if

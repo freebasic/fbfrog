@@ -317,22 +317,22 @@ private function emitAst _
 	case ASTCLASS_PPIF
 		if( n->expr->class = ASTCLASS_UOP ) then
 			select case( n->expr->op )
-			'' #if defined id     ->    #ifdef id
+			'' #if defined( id )        ->    #ifdef id
 			case ASTOP_DEFINED
-				s += "#ifdef " + emitAst( n->expr->l )
+				s = "#ifdef " + emitAst( n->expr->l )
 
-			'' #if !defined id    ->    #ifndef id
-			case ASTOP_LOGNOT
+			'' #if not defined( id )    ->    #ifndef id
+			case ASTOP_NOT
 				if( n->expr->l->class = ASTCLASS_UOP ) then
 					if( n->expr->l->op = ASTOP_DEFINED ) then
-						s += "#ifndef " + emitAst( n->expr->l->l )
+						s = "#ifndef " + emitAst( n->expr->l->l )
 					end if
 				end if
 			end select
 		end if
 
 		if( len( s ) = 0 ) then
-			s += "#if " + emitAst( n->expr )
+			s = "#if " + emitAst( n->expr )
 		end if
 
 		emitStmt( s )
@@ -579,6 +579,68 @@ private function emitAst _
 			s = "asc( " + s + " )"
 		end if
 
+	case ASTCLASS_UOP
+		select case as const( n->op )
+		'case ASTOP_CLOGNOT
+		'	s = "iif( " + emitAst( n->l ) + ", 0, 1 )"
+		'	need_parens = FALSE
+		case ASTOP_NOT       : s = "not " + emitAst( n->l, TRUE )
+		case ASTOP_NEGATE    : s = "-"    + emitAst( n->l, TRUE )
+		case ASTOP_UNARYPLUS : s = "+"    + emitAst( n->l, TRUE )
+		'case ASTOP_CDEFINED
+		'	s = "-defined( " + emitAst( n->l ) + " )"
+		case ASTOP_DEFINED
+			s = "defined( " + emitAst( n->l ) + " )"
+			need_parens = FALSE
+		case ASTOP_STRINGIFY : s = "#"    + emitAst( n->l ) : need_parens = FALSE
+		case ASTOP_ADDROF    : s = "@"    + emitAst( n->l, TRUE )
+		case ASTOP_DEREF     : s = "*"    + emitAst( n->l, TRUE )
+		case else
+			assert( FALSE )
+		end select
+
+		if( need_parens ) then s = "(" + s + ")"
+
+	case ASTCLASS_BOP
+		#define lhs emitAst( n->l, TRUE )
+		#define rhs emitAst( n->r, TRUE )
+
+		select case as const( n->op )
+		'case ASTOP_CLOGOR      : s = "-(" + lhs + " orelse "  + rhs + ")"
+		'case ASTOP_CLOGAND     : s = "-(" + lhs + " andalso " + rhs + ")"
+		case ASTOP_ORELSE      : s =        lhs + " orelse "  + rhs
+		case ASTOP_ANDALSO     : s =        lhs + " andalso " + rhs
+		case ASTOP_OR          : s =        lhs + " or "      + rhs
+		case ASTOP_XOR         : s =        lhs + " xor "     + rhs
+		case ASTOP_AND         : s =        lhs + " and "     + rhs
+		'case ASTOP_CEQ         : s = "-(" + lhs + " = "       + rhs + ")"
+		'case ASTOP_CNE         : s = "-(" + lhs + " <> "      + rhs + ")"
+		'case ASTOP_CLT         : s = "-(" + lhs + " < "       + rhs + ")"
+		'case ASTOP_CLE         : s = "-(" + lhs + " <= "      + rhs + ")"
+		'case ASTOP_CGT         : s = "-(" + lhs + " > "       + rhs + ")"
+		'case ASTOP_CGE         : s = "-(" + lhs + " >= "      + rhs + ")"
+		case ASTOP_EQ          : s =        lhs + " = "       + rhs
+		case ASTOP_NE          : s =        lhs + " <> "      + rhs
+		case ASTOP_LT          : s =        lhs + " < "       + rhs
+		case ASTOP_LE          : s =        lhs + " <= "      + rhs
+		case ASTOP_GT          : s =        lhs + " > "       + rhs
+		case ASTOP_GE          : s =        lhs + " >= "      + rhs
+		case ASTOP_SHL         : s =        lhs + " shl "     + rhs
+		case ASTOP_SHR         : s =        lhs + " shr "     + rhs
+		case ASTOP_ADD         : s =        lhs + " + "       + rhs
+		case ASTOP_SUB         : s =        lhs + " - "       + rhs
+		case ASTOP_MUL         : s =        lhs + " * "       + rhs
+		case ASTOP_DIV         : s =        lhs + " / "       + rhs
+		case ASTOP_MOD         : s =        lhs + " mod "     + rhs
+		case ASTOP_INDEX       : s =        lhs + "["         + rhs + "]"
+		case ASTOP_MEMBER      : s =        lhs + "."         + rhs
+		case ASTOP_MEMBERDEREF : s =        lhs + "->"        + rhs
+		case else
+			assert( FALSE )
+		end select
+
+		if( need_parens ) then s = "(" + s + ")"
+
 	case ASTCLASS_IIF
 		s += "iif( " + _
 			emitAst( n->expr ) + ", " + _
@@ -592,71 +654,6 @@ private function emitAst _
 			s += emitAst( child )
 			child = child->next
 		wend
-
-	case ASTCLASS_BOP
-		static as zstring * 8 fbbops(ASTOP_LOGOR to ASTOP_MOD) = _
-		{ _
-			"orelse" , _  '' ASTOP_LOGOR 
-			"andalso", _  '' ASTOP_LOGAND
-			"or"     , _  '' ASTOP_BITOR 
-			"xor"    , _  '' ASTOP_BITXOR
-			"and"    , _  '' ASTOP_BITAND
-			"="      , _  '' ASTOP_EQ    
-			"<>"     , _  '' ASTOP_NE    
-			"<"      , _  '' ASTOP_LT    
-			"<="     , _  '' ASTOP_LE    
-			">"      , _  '' ASTOP_GT    
-			">="     , _  '' ASTOP_GE    
-			"shl"    , _  '' ASTOP_SHL   
-			"shr"    , _  '' ASTOP_SHR   
-			"+"      , _  '' ASTOP_ADD   
-			"-"      , _  '' ASTOP_SUB   
-			"*"      , _  '' ASTOP_MUL   
-			"/"      , _  '' ASTOP_DIV   
-			"mod"      _  '' ASTOP_MOD   
-		}
-
-		if( need_parens ) then
-			s += "("
-		end if
-
-		s += emitAst( n->l, TRUE )
-		s += " "
-		s += fbbops(n->op)
-		s += " "
-		s += emitAst( n->r, TRUE )
-
-		if( need_parens ) then
-			s += ")"
-		end if
-
-	case ASTCLASS_UOP
-		select case( n->op )
-		case ASTOP_LOGNOT
-			s += "iif( " + emitAst( n->l ) + ", 0, 1 )"
-		case ASTOP_DEFINED
-			s += "defined( " + emitAst( n->l ) + " )"
-		case ASTOP_STRINGIFY
-			s += "#" + emitAst( n->l )
-		case else
-			if( need_parens ) then
-				s += "("
-			end if
-
-			select case( n->op )
-			case ASTOP_BITNOT    : s += "not "
-			case ASTOP_NEGATE    : s += "-"
-			case ASTOP_UNARYPLUS : s += "+"
-			case else
-				assert( FALSE )
-			end select
-
-			s += emitAst( n->l, TRUE )
-
-			if( need_parens ) then
-				s += ")"
-			end if
-		end select
 
 	case else
 		astDump( n )

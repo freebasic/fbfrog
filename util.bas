@@ -247,6 +247,65 @@ function strContainsNonOctDigits( byval s as zstring ptr ) as integer
 	function = FALSE
 end function
 
+function hMakePrettyByteSize( byval size as uinteger ) as string
+	'' Determine the max power of 1024 in the number, and the remainder
+	'' corresponding to that part
+	'' (1024 is the unit of bytes/KiB/MiB/GiB)
+	''         0 = power of 1024 = 0 (bytes), size = 0, remainder = 0
+	''        10 = power of 1024 = 0 (bytes), size = 10
+	''      1024 = power of 1024 = 1 (KiB), size = 1, remainder = 0
+	''      2048 = power of 1024 = 1 (KiB), size = 2, remainder = 0
+	'' 1024*7+13 = power of 1024 = 1 (KiB), size = 7, remainder = 13
+	'' 3146753 = 1024^2 * 3 + 1025 = MiB, size = 0, remainder = 1
+	'' 1024^a * b + c  =  power of 1024 = a, size = b, remainder = c mod 1024^a
+	dim as uinteger r
+	var i = 0
+	while( size >= 1024 )
+		r = size and 1023
+		size shr= 10
+		i += 1
+	wend
+
+	'' This will use 4 digits at most, because size will be < 1024 by now
+	var s = str( size )
+
+	'' If there are less than 3 digits, add a '.' dot and the remainder,
+	'' so that e.g. 1536 shows up as 1.50 KiB, and (1024 * 10 + 512) shows
+	'' up as 10.5 KiB.
+	if( size < 10 ) then
+		'' x.xx
+		r = (r * 100) shr 10
+		if( r > 0 ) then
+			'' .0x or .xx
+			s += "."
+			if( r < 10 ) then s += "0"
+			s &= r
+		end if
+	elseif( size < 100 ) then
+		'' xx.x
+		r = (r * 10) shr 10
+		if( r > 0 ) then
+			'' .x
+			s += "." & r
+		end if
+	end if
+
+	static as zstring ptr units(0 to 3) = _
+	{ _
+		@"byte", @"KiB", @"MiB", @"GiB" _
+	}
+
+	'' Unit string
+	s += " " + *units(i)
+
+	'' byte -> bytes, unless the number is 1
+	if( (i = 0) and (size <> 1) ) then
+		s += "s"
+	end if
+
+	function = s
+end function
+
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 '' Generic linked list
 

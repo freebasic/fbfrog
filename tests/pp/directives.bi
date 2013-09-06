@@ -30,7 +30,7 @@
 #define A21 1
 #define A22 1
 
-#define B01 1 + 1
+#define B01 2
 #define B02 1
 
 #define A

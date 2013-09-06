@@ -1,7 +1,7 @@
 enum
 	A = 0
 	B
-	C = 1 shl 4
+	C = 16
 	D
 	E = 1
 	F

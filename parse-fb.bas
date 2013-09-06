@@ -54,34 +54,48 @@ end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-'' FB operator precedence (higher value = higher precedence)
-dim shared as integer fbprecedence(ASTOP_LOGOR to ASTOP_UNARYPLUS) = _
+'' FB operator precedence, starting at 1, higher value = higher precedence
+dim shared as integer fbprecedence(ASTOP_IIF to ASTOP_STRINGIFY) = _
 { _
-	10, _ '' ASTOP_LOGOR
-	10, _ '' ASTOP_LOGAND
-	12, _ '' ASTOP_BITOR
-	11, _ '' ASTOP_BITXOR
-	13, _ '' ASTOP_BITAND
-	15, _ '' ASTOP_EQ
-	15, _ '' ASTOP_NE
-	15, _ '' ASTOP_LT
-	15, _ '' ASTOP_LE
-	15, _ '' ASTOP_GT
-	15, _ '' ASTOP_GE
-	17, _ '' ASTOP_SHL
-	17, _ '' ASTOP_SHR
-	16, _ '' ASTOP_ADD
-	16, _ '' ASTOP_SUB
-	19, _ '' ASTOP_MUL
-	19, _ '' ASTOP_DIV
-	18, _ '' ASTOP_MOD
-	 0, _ '' ASTOP_INDEX (not yet implemented)
+	 0, _ '' ASTOP_IIF
+	 0, _ '' ASTOP_CLOGOR
+	 0, _ '' ASTOP_CLOGAND
+	 1, _ '' ASTOP_ORELSE
+	 1, _ '' ASTOP_ANDALSO
+	 3, _ '' ASTOP_OR
+	 2, _ '' ASTOP_XOR
+	 4, _ '' ASTOP_AND
+	 0, _ '' ASTOP_CEQ
+	 0, _ '' ASTOP_CNE
+	 0, _ '' ASTOP_CLT
+	 0, _ '' ASTOP_CLE
+	 0, _ '' ASTOP_CGT
+	 0, _ '' ASTOP_CGE
+	 6, _ '' ASTOP_EQ
+	 6, _ '' ASTOP_NE
+	 6, _ '' ASTOP_LT
+	 6, _ '' ASTOP_LE
+	 6, _ '' ASTOP_GT
+	 6, _ '' ASTOP_GE
+	 8, _ '' ASTOP_SHL
+	 8, _ '' ASTOP_SHR
+	 7, _ '' ASTOP_ADD
+	 7, _ '' ASTOP_SUB
+	10, _ '' ASTOP_MUL
+	10, _ '' ASTOP_DIV
+	 9, _ '' ASTOP_MOD
+	 0, _ '' ASTOP_INDEX
 	 0, _ '' ASTOP_MEMBER
 	 0, _ '' ASTOP_MEMBERDEREF
-	 0, _ '' ASTOP_LOGNOT
-	14, _ '' ASTOP_BITNOT
-	20, _ '' ASTOP_NEGATE
-	20  _ '' ASTOP_UNARYPLUS
+	 0, _ '' ASTOP_CLOGNOT
+	 5, _ '' ASTOP_NOT
+	11, _ '' ASTOP_NEGATE
+	11, _ '' ASTOP_UNARYPLUS
+	 0, _ '' ASTOP_CDEFINED
+	 0, _ '' ASTOP_DEFINED
+	 0, _ '' ASTOP_ADDROF
+	 0, _ '' ASTOP_DEREF
+	 0  _ '' ASTOP_STRINGIFY
 }
 
 '' FB expression parser based on precedence climbing
@@ -94,7 +108,7 @@ private function imExpression _
 	'' Unary prefix operators
 	var op = -1
 	select case( tkGet( x ) )
-	case KW_NOT   : op = ASTOP_BITNOT    '' NOT
+	case KW_NOT   : op = ASTOP_NOT       '' NOT
 	case TK_MINUS : op = ASTOP_NEGATE    '' -
 	case TK_PLUS  : op = ASTOP_UNARYPLUS '' +
 	end select
@@ -172,24 +186,24 @@ private function imExpression _
 	'' Infix operators
 	do
 		select case as const( tkGet( x ) )
-		case KW_ORELSE   : op = ASTOP_LOGOR  '' ORELSE
-		case KW_ANDALSO  : op = ASTOP_LOGAND '' ANDALSO
-		case KW_OR       : op = ASTOP_BITOR  '' OR
-		case KW_XOR      : op = ASTOP_BITXOR '' XOR
-		case KW_AND      : op = ASTOP_BITAND '' AND
-		case TK_EQ       : op = ASTOP_EQ     '' =
-		case TK_LTGT     : op = ASTOP_NE     '' <>
-		case TK_LT       : op = ASTOP_LT     '' <
-		case TK_LTEQ     : op = ASTOP_LE     '' <=
-		case TK_GT       : op = ASTOP_GT     '' >
-		case TK_GTEQ     : op = ASTOP_GE     '' >=
-		case KW_SHL      : op = ASTOP_SHL    '' SHL
-		case KW_SHR      : op = ASTOP_SHR    '' SHR
-		case TK_PLUS     : op = ASTOP_ADD    '' +
-		case TK_MINUS    : op = ASTOP_SUB    '' -
-		case TK_STAR     : op = ASTOP_MUL    '' *
-		case TK_SLASH    : op = ASTOP_DIV    '' /
-		case KW_MOD      : op = ASTOP_MOD    '' MOD
+		case KW_ORELSE   : op = ASTOP_ORELSE  '' ORELSE
+		case KW_ANDALSO  : op = ASTOP_ANDALSO '' ANDALSO
+		case KW_OR       : op = ASTOP_OR      '' OR
+		case KW_XOR      : op = ASTOP_XOR     '' XOR
+		case KW_AND      : op = ASTOP_AND     '' AND
+		case TK_EQ       : op = ASTOP_EQ      '' =
+		case TK_LTGT     : op = ASTOP_NE      '' <>
+		case TK_LT       : op = ASTOP_LT      '' <
+		case TK_LTEQ     : op = ASTOP_LE      '' <=
+		case TK_GT       : op = ASTOP_GT      '' >
+		case TK_GTEQ     : op = ASTOP_GE      '' >=
+		case KW_SHL      : op = ASTOP_SHL     '' SHL
+		case KW_SHR      : op = ASTOP_SHR     '' SHR
+		case TK_PLUS     : op = ASTOP_ADD     '' +
+		case TK_MINUS    : op = ASTOP_SUB     '' -
+		case TK_STAR     : op = ASTOP_MUL     '' *
+		case TK_SLASH    : op = ASTOP_DIV     '' /
+		case KW_MOD      : op = ASTOP_MOD     '' MOD
 		case else        : exit do
 		end select
 

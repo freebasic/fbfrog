@@ -96,6 +96,7 @@ declare function strMatches _
 	) as integer
 declare function strContainsNonHexDigits( byval s as zstring ptr ) as integer
 declare function strContainsNonOctDigits( byval s as zstring ptr ) as integer
+declare function hMakePrettyByteSize( byval size as uinteger ) as string
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
@@ -548,15 +549,26 @@ declare function typeToSigned( byval dtype as integer ) as integer
 declare function typeToUnsigned( byval dtype as integer ) as integer
 declare function typeIsFloat( byval dtype as integer ) as integer
 
+'' Generally the AST expressions should represent FB semantics. The ASTOP_C*
+'' ops are only here to make C expression parsing easier, however astOpsC2FB()
+'' has to be used afterwards to convert the C expressions to FB.
 enum
 	ASTOP_IIF = 0  '' iif() just for the operator precedence tables
 
 	'' BOPs
-	ASTOP_LOGOR
-	ASTOP_LOGAND
-	ASTOP_BITOR
-	ASTOP_BITXOR
-	ASTOP_BITAND
+	ASTOP_CLOGOR
+	ASTOP_CLOGAND
+	ASTOP_ORELSE
+	ASTOP_ANDALSO
+	ASTOP_OR
+	ASTOP_XOR
+	ASTOP_AND
+	ASTOP_CEQ
+	ASTOP_CNE
+	ASTOP_CLT
+	ASTOP_CLE
+	ASTOP_CGT
+	ASTOP_CGE
 	ASTOP_EQ
 	ASTOP_NE
 	ASTOP_LT
@@ -575,10 +587,11 @@ enum
 	ASTOP_MEMBERDEREF
 
 	'' UOPs
-	ASTOP_LOGNOT
-	ASTOP_BITNOT
+	ASTOP_CLOGNOT
+	ASTOP_NOT
 	ASTOP_NEGATE
 	ASTOP_UNARYPLUS
+	ASTOP_CDEFINED
 	ASTOP_DEFINED
 	ASTOP_ADDROF
 	ASTOP_DEREF
@@ -689,6 +702,7 @@ type ASTNODE_
 	prev		as ASTNODE ptr
 end type
 
+declare sub astPrintStats( )
 declare function astNew overload( byval class_ as integer ) as ASTNODE ptr
 declare function astNew overload _
 	( _
@@ -786,14 +800,13 @@ declare function astIsEqualDecl _
 		byval ignore_fields as integer = FALSE, _
 		byval ignore_hiddencallconv as integer = FALSE _
 	) as integer
-declare function astDumpOne( byval n as ASTNODE ptr ) as string
-declare function astDumpInline( byval n as ASTNODE ptr ) as string
-declare sub astDump _
+declare function astOpsC2FB( byval n as ASTNODE ptr ) as ASTNODE ptr
+declare function astFold _
 	( _
 		byval n as ASTNODE ptr, _
-		byval nestlevel as integer = 0, _
-		byref prefix as string = "" _
-	)
+		byval knownsyms as THASH ptr, _
+		byval is_bool_context as integer _
+	) as ASTNODE ptr
 declare function astLookupMacroParam _
 	( _
 		byval macro as ASTNODE ptr, _
@@ -819,6 +832,14 @@ declare function astMergeVersions _
 		byval a as ASTNODE ptr, _
 		byval b as ASTNODE ptr _
 	) as ASTNODE ptr
+declare function astDumpOne( byval n as ASTNODE ptr ) as string
+declare function astDumpInline( byval n as ASTNODE ptr ) as string
+declare sub astDump _
+	( _
+		byval n as ASTNODE ptr, _
+		byval nestlevel as integer = 0, _
+		byref prefix as string = "" _
+	)
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
@@ -852,6 +873,7 @@ declare function importFile( byval file as FROGFILE ptr ) as ASTNODE ptr
 declare sub ppComments( )
 declare sub ppDividers( )
 declare function hNumberLiteral( byval x as integer ) as ASTNODE ptr
+extern as integer cprecedence(ASTOP_IIF to ASTOP_STRINGIFY)
 declare sub hMacroParamList( byref x as integer, byval t as ASTNODE ptr )
 declare sub ppDirectives1( )
 declare sub ppEvalInit( )

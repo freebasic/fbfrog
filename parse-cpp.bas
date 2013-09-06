@@ -422,35 +422,48 @@ function hNumberLiteral( byval x as integer ) as ASTNODE ptr
 	function = n
 end function
 
-'' C PP operator precedence (higher value = higher precedence)
-dim shared as integer ppprecedence(ASTOP_IIF to ASTOP_UNARYPLUS) = _
+'' C operator precedence, starting at 1, higher value = higher precedence
+dim shared as integer cprecedence(ASTOP_IIF to ASTOP_STRINGIFY) = _
 { _
-	 2, _ '' ASTOP_IIF
-	 3, _ '' ASTOP_LOGOR
-	 4, _ '' ASTOP_LOGAND
-	 5, _ '' ASTOP_BITOR
-	 6, _ '' ASTOP_BITXOR
-	 7, _ '' ASTOP_BITAND
-	 8, _ '' ASTOP_EQ
-	 8, _ '' ASTOP_NE
-	 9, _ '' ASTOP_LT
-	 9, _ '' ASTOP_LE
-	 9, _ '' ASTOP_GT
-	 9, _ '' ASTOP_GE
-	10, _ '' ASTOP_SHL
-	10, _ '' ASTOP_SHR
-	11, _ '' ASTOP_ADD
-	11, _ '' ASTOP_SUB
-	12, _ '' ASTOP_MUL
-	12, _ '' ASTOP_DIV
-	12, _ '' ASTOP_MOD
-	 0, _ '' ASTOP_INDEX (unused)
-	 0, _ '' ASTOP_MEMBER (unused)
-	 0, _ '' ASTOP_MEMBERDEREF (unused)
-	13, _ '' ASTOP_LOGNOT
-	13, _ '' ASTOP_BITNOT
-	13, _ '' ASTOP_NEGATE
-	13  _ '' ASTOP_UNARYPLUS
+	 1, _ '' ASTOP_IIF
+	 2, _ '' ASTOP_CLOGOR
+	 3, _ '' ASTOP_CLOGAND
+	 0, _ '' ASTOP_ORELSE (unused)
+	 0, _ '' ASTOP_ANDALSO (unused)
+	 4, _ '' ASTOP_OR
+	 5, _ '' ASTOP_XOR
+	 6, _ '' ASTOP_AND
+	 7, _ '' ASTOP_CEQ
+	 7, _ '' ASTOP_CNE
+	 8, _ '' ASTOP_CLT
+	 8, _ '' ASTOP_CLE
+	 8, _ '' ASTOP_CGT
+	 8, _ '' ASTOP_CGE
+	 0, _ '' ASTOP_EQ (unused)
+	 0, _ '' ASTOP_NE (unused)
+	 0, _ '' ASTOP_LT (unused)
+	 0, _ '' ASTOP_LE (unused)
+	 0, _ '' ASTOP_GT (unused)
+	 0, _ '' ASTOP_GE (unused)
+	 9, _ '' ASTOP_SHL
+	 9, _ '' ASTOP_SHR
+	10, _ '' ASTOP_ADD
+	10, _ '' ASTOP_SUB
+	11, _ '' ASTOP_MUL
+	11, _ '' ASTOP_DIV
+	11, _ '' ASTOP_MOD
+	13, _ '' ASTOP_INDEX
+	13, _ '' ASTOP_MEMBER
+	13, _ '' ASTOP_MEMBERDEREF
+	12, _ '' ASTOP_CLOGNOT
+	12, _ '' ASTOP_NOT
+	12, _ '' ASTOP_NEGATE
+	12, _ '' ASTOP_UNARYPLUS
+	 0, _ '' ASTOP_CDEFINED (unused)
+	 0, _ '' ASTOP_DEFINED (unused)
+	12, _ '' ASTOP_ADDROF
+	12, _ '' ASTOP_DEREF
+	 0  _ '' ASTOP_STRINGIFY (unused)
 }
 
 '' C PP expression parser based on precedence climbing
@@ -463,8 +476,8 @@ private function ppExpression _
 	'' Unary prefix operators
 	var op = -1
 	select case( tkGet( x ) )
-	case TK_EXCL  : op = ASTOP_LOGNOT    '' !
-	case TK_TILDE : op = ASTOP_BITNOT    '' ~
+	case TK_EXCL  : op = ASTOP_CLOGNOT   '' !
+	case TK_TILDE : op = ASTOP_NOT       '' ~
 	case TK_MINUS : op = ASTOP_NEGATE    '' -
 	case TK_PLUS  : op = ASTOP_UNARYPLUS '' +
 	end select
@@ -473,7 +486,7 @@ private function ppExpression _
 	if( op >= 0 ) then
 		var uopx = x
 		x += 1
-		a = astNewUOP( op, ppExpression( x, ppprecedence(op) ) )
+		a = astNewUOP( op, ppExpression( x, cprecedence(op) ) )
 		a->location = *tkGetLocation( uopx )
 	else
 		'' Atoms
@@ -530,7 +543,7 @@ private function ppExpression _
 				x += 1
 			end if
 
-			a = astNewUOP( ASTOP_DEFINED, a )
+			a = astNewUOP( ASTOP_CDEFINED, a )
 			a->location = *tkGetLocation( definedx )
 
 		case else
@@ -541,32 +554,32 @@ private function ppExpression _
 	'' Infix operators
 	do
 		select case as const( tkGet( x ) )
-		case TK_QUEST    : op = ASTOP_IIF    '' ? (a ? b : c)
-		case TK_PIPEPIPE : op = ASTOP_LOGOR  '' ||
-		case TK_AMPAMP   : op = ASTOP_LOGAND '' &&
-		case TK_PIPE     : op = ASTOP_BITOR  '' |
-		case TK_CIRC     : op = ASTOP_BITXOR '' ^
-		case TK_AMP      : op = ASTOP_BITAND '' &
-		case TK_EQEQ     : op = ASTOP_EQ     '' ==
-		case TK_EXCLEQ   : op = ASTOP_NE     '' !=
-		case TK_LT       : op = ASTOP_LT     '' <
-		case TK_LTEQ     : op = ASTOP_LE     '' <=
-		case TK_GT       : op = ASTOP_GT     '' >
-		case TK_GTEQ     : op = ASTOP_GE     '' >=
-		case TK_LTLT     : op = ASTOP_SHL    '' <<
-		case TK_GTGT     : op = ASTOP_SHR    '' >>
-		case TK_PLUS     : op = ASTOP_ADD    '' +
-		case TK_MINUS    : op = ASTOP_SUB    '' -
-		case TK_STAR     : op = ASTOP_MUL    '' *
-		case TK_SLASH    : op = ASTOP_DIV    '' /
-		case TK_PERCENT  : op = ASTOP_MOD    '' %
+		case TK_QUEST    : op = ASTOP_IIF     '' ? (a ? b : c)
+		case TK_PIPEPIPE : op = ASTOP_CLOGOR  '' ||
+		case TK_AMPAMP   : op = ASTOP_CLOGAND '' &&
+		case TK_PIPE     : op = ASTOP_OR      '' |
+		case TK_CIRC     : op = ASTOP_XOR     '' ^
+		case TK_AMP      : op = ASTOP_AND     '' &
+		case TK_EQEQ     : op = ASTOP_CEQ     '' ==
+		case TK_EXCLEQ   : op = ASTOP_CNE     '' !=
+		case TK_LT       : op = ASTOP_CLT     '' <
+		case TK_LTEQ     : op = ASTOP_CLE     '' <=
+		case TK_GT       : op = ASTOP_CGT     '' >
+		case TK_GTEQ     : op = ASTOP_CGE     '' >=
+		case TK_LTLT     : op = ASTOP_SHL     '' <<
+		case TK_GTGT     : op = ASTOP_SHR     '' >>
+		case TK_PLUS     : op = ASTOP_ADD     '' +
+		case TK_MINUS    : op = ASTOP_SUB     '' -
+		case TK_STAR     : op = ASTOP_MUL     '' *
+		case TK_SLASH    : op = ASTOP_DIV     '' /
+		case TK_PERCENT  : op = ASTOP_MOD     '' %
 		case else        : exit do
 		end select
 
 		'' Higher/same level means process now (takes precedence),
 		'' lower level means we're done and the parent call will
 		'' continue. The first call will start with level 0.
-		var oplevel = ppprecedence(op)
+		var oplevel = cprecedence(op)
 		if( oplevel < level ) then
 			exit do
 		end if
@@ -698,13 +711,13 @@ private function ppDirective( byval x as integer ) as integer
 		'' Build up "[!]defined id" expression
 		var expr = astNewID( tkGetText( x ) )
 		expr->location = *tkGetLocation( x )
-		expr = astNewUOP( ASTOP_DEFINED, expr )
+		expr = astNewUOP( ASTOP_CDEFINED, expr )
 		expr->location = *tkGetLocation( x - 1 )
 		expr->location.column += 2  '' ifdef -> def, ifndef -> ndef
 		expr->location.length = 3
 		if( tk = KW_IFNDEF ) then
 			expr->location.column += 1  '' ndef -> def
-			expr = astNewUOP( ASTOP_LOGNOT, expr )
+			expr = astNewUOP( ASTOP_CLOGNOT, expr )
 			expr->location = *tkGetLocation( x - 1 )
 			expr->location.column += 2  '' ifndef -> n
 			expr->location.length = 1
@@ -1446,269 +1459,6 @@ private function hParseIfCondition( byval x as integer ) as ASTNODE ptr
 	assert( tkGet( x ) = TK_END )
 end function
 
-private function hLookupKnownSym( byval id as zstring ptr ) as integer
-	var item = hashLookup( @eval.knowns, id, hashHash( id ) )
-	if( item->s ) then
-		function = iif( item->data, COND_TRUE, COND_FALSE )
-	else
-		function = COND_UNKNOWN
-	end if
-end function
-
-private function hFold( byval n as ASTNODE ptr ) as ASTNODE ptr
-	if( n = NULL ) then
-		exit function
-	end if
-
-	n = astClone( n )
-	function = n
-
-	select case as const( n->class )
-	case ASTCLASS_UOP
-		n->l = hFold( n->l )
-
-		if( n->op = ASTOP_DEFINED ) then
-			'' defined() on known symbol?
-			assert( n->l->class = ASTCLASS_ID )
-			var cond = hLookupKnownSym( n->l->text )
-			if( cond <> COND_UNKNOWN ) then
-				'' defined()    ->    1|0
-				function = astNewCONST( iif( cond = COND_TRUE, 1, 0 ), 0, TYPE_LONG )
-				astDelete( n )
-			end if
-		else
-			if( (n->l->class = ASTCLASS_CONST) and _
-			    (not typeIsFloat( n->l->dtype )) ) then
-				var v1 = n->l->vali
-
-				select case( n->op )
-				case ASTOP_LOGNOT    : v1 = iif( v1, 0, 1 )
-				case ASTOP_BITNOT    : v1 = not v1
-				case ASTOP_NEGATE    : v1 = -v1
-				case ASTOP_UNARYPLUS : '' nothing to do
-				case else
-					assert( FALSE )
-				end select
-
-				function = astNewCONST( v1, 0, TYPE_LONG )
-				astDelete( n )
-			end if
-		end if
-
-	case ASTCLASS_BOP
-		n->l = hFold( n->l )
-		n->r = hFold( n->r )
-
-		if( (n->l->class = ASTCLASS_CONST) and _
-		    (n->r->class = ASTCLASS_CONST) ) then
-			if( (not typeIsFloat( n->l->dtype )) and _
-			    (not typeIsFloat( n->r->dtype )) ) then
-				var v1 = n->l->vali
-				var v2 = n->r->vali
-
-				var divbyzero = FALSE
-
-				select case as const( n->op )
-				case ASTOP_LOGOR  : v1    = iif( v1 orelse  v2, 1, 0 )
-				case ASTOP_LOGAND : v1    = iif( v1 andalso v2, 1, 0 )
-				case ASTOP_BITOR  : v1  or= v2
-				case ASTOP_BITXOR : v1 xor= v2
-				case ASTOP_BITAND : v1 and= v2
-				case ASTOP_EQ     : v1    = iif( v1 =  v2, 1, 0 )
-				case ASTOP_NE     : v1    = iif( v1 <> v2, 1, 0 )
-				case ASTOP_LT     : v1    = iif( v1 <  v2, 1, 0 )
-				case ASTOP_LE     : v1    = iif( v1 <= v2, 1, 0 )
-				case ASTOP_GT     : v1    = iif( v1 >  v2, 1, 0 )
-				case ASTOP_GE     : v1    = iif( v1 >= v2, 1, 0 )
-				case ASTOP_SHL    : v1 shl= v2
-				case ASTOP_SHR    : v1 shr= v2
-				case ASTOP_ADD    : v1   += v2
-				case ASTOP_SUB    : v1   -= v2
-				case ASTOP_MUL    : v1   *= v2
-				case ASTOP_DIV
-					if( v2 = 0 ) then
-						divbyzero = TRUE
-					else
-						v1 \= v2
-					end if
-				case ASTOP_MOD
-					if( v2 = 0 ) then
-						divbyzero = TRUE
-					else
-						v1 mod= v2
-					end if
-				case else
-					assert( FALSE )
-				end select
-
-				if( divbyzero = FALSE ) then
-					function = astNewCONST( v1, 0, TYPE_LONG )
-					astDelete( n )
-				end if
-			end if
-
-		'' Only the lhs is a CONST? Check for NOPs
-		elseif( (n->l->class = ASTCLASS_CONST) and _
-		        (n->r->class <> ASTCLASS_CONST) ) then
-
-			if( typeIsFloat( n->l->dtype ) = FALSE ) then
-				var v1 = n->l->vali
-
-				select case( n->op )
-
-				'' true  || x   = 1
-				'' false || x   = x
-				case ASTOP_LOGOR
-					if( v1 ) then
-						function = astNewCONST( 1, 0, TYPE_LONG )
-					else
-						function = astClone( n->r )
-					end if
-					astDelete( n )
-
-				'' true  && x   = x
-				'' false && x   = 0
-				case ASTOP_LOGAND
-					if( v1 ) then
-						function = astClone( n->r )
-					else
-						function = astNewCONST( 0, 0, TYPE_LONG )
-					end if
-					astDelete( n )
-
-				'' 0 | x = x
-				'' 0 + x = x
-				case ASTOP_BITOR, ASTOP_ADD
-					if( v1 = 0 ) then
-						function = astClone( n->r )
-						astDelete( n )
-					end if
-
-				'' 0 &  x = 0
-				'' 0 << x = 0
-				'' 0 >> x = 0
-				'' 0 /  x = 0
-				'' 0 %  x = 0
-				case ASTOP_BITAND, ASTOP_SHL, ASTOP_SHR, _
-				     ASTOP_DIV, ASTOP_MOD
-					if( v1 = 0 ) then
-						function = astNewCONST( 0, 0, TYPE_LONG )
-						astDelete( n )
-					end if
-
-				'' 0 * x = 0
-				'' 1 * x = x
-				case ASTOP_MUL
-					select case( v1 )
-					case 0
-						function = astNewCONST( 0, 0, TYPE_LONG )
-						astDelete( n )
-					case 1
-						function = astClone( n->r )
-						astDelete( n )
-					end select
-
-				'' 0 - x = -x
-				case ASTOP_SUB
-					if( v1 = 0 ) then
-						function = astNewUOP( ASTOP_NEGATE, astClone( n->r ) )
-						astDelete( n )
-					end if
-
-				end select
-			end if
-
-		'' Only the rhs is a CONST? Check for NOPs
-		elseif( (n->l->class <> ASTCLASS_CONST) and _
-		        (n->r->class = ASTCLASS_CONST) ) then
-
-			if( typeIsFloat( n->r->dtype ) = FALSE ) then
-				var v2 = n->r->vali
-
-				select case( n->op )
-
-				'' x || true    = 1
-				'' x || false   = x
-				case ASTOP_LOGOR
-					if( v2 ) then
-						function = astNewCONST( 1, 0, TYPE_LONG )
-					else
-						function = astClone( n->l )
-					end if
-					astDelete( n )
-
-				'' x && true    = x
-				'' x && false   = 0
-				case ASTOP_LOGAND
-					if( v2 ) then
-						function = astClone( n->l )
-					else
-						function = astNewCONST( 0, 0, TYPE_LONG )
-					end if
-					astDelete( n )
-
-				'' x | 0 = x
-				'' x + 0 = x
-				'' x - 0 = x
-				'' x << 0 = x
-				'' x >> 0 = x
-				case ASTOP_BITOR, ASTOP_ADD, ASTOP_SUB, _
-				     ASTOP_SHL, ASTOP_SHR
-					if( v2 = 0 ) then
-						function = astClone( n->l )
-						astDelete( n )
-					end if
-
-				'' x & 0 = 0
-				case ASTOP_BITAND
-					if( v2 = 0 ) then
-						function = astNewCONST( 0, 0, TYPE_LONG )
-						astDelete( n )
-					end if
-
-				'' x * 0 = 0
-				'' x * 1 = x
-				case ASTOP_MUL
-					select case( v2 )
-					case 0
-						function = astNewCONST( 0, 0, TYPE_LONG )
-						astDelete( n )
-					case 1
-						function = astClone( n->l )
-						astDelete( n )
-					end select
-
-				end select
-			end if
-		end if
-
-	case ASTCLASS_IIF
-		n->expr = hFold( n->expr )
-		n->l = hFold( n->l )
-		n->r = hFold( n->r )
-
-		'' Constant condition?
-		if( (n->expr->class = ASTCLASS_CONST) and _
-		    (not typeIsFloat( n->expr->dtype )) ) then
-			'' iif( true , l, r ) = l
-			'' iif( false, l, r ) = r
-			if( n->expr->vali ) then
-				function = astClone( n->l )
-			else
-				function = astClone( n->r )
-			end if
-			astDelete( n )
-
-		'' Same true/false expressions?
-		'' iif( condition, X, X ) = X
-		elseif( astIsEqualDecl( n->l, n->r ) ) then
-			function = astClone( n->l )
-			astDelete( n )
-		end if
-
-	end select
-end function
-
 private function hComplainAboutExpr _
 	( _
 		byval n as ASTNODE ptr, _
@@ -1807,7 +1557,8 @@ private function hEvalIfCondition( byval x as integer ) as integer
 	end if
 
 	'' 1. Try to evaluate the condition
-	t = hFold( t )
+	t = astFold( astOpsC2FB( astClone( t ) ), @eval.knowns, TRUE )
+	tkSetAst( x, t )
 
 	'' 2. Check the condition
 	if( (t->class <> ASTCLASS_CONST) or typeIsFloat( t->dtype ) ) then
@@ -1815,8 +1566,8 @@ private function hEvalIfCondition( byval x as integer ) as integer
 		'' show an error pointing to that defined(), otherwise fallback
 		'' to showing the error for the whole #if condition.
 		''
-		'' Note: This is done here, after hFold() has fully finished,
-		'' instead of inside hFold() in the ASTOP_DEFINED handler,
+		'' Note: This is done here, after astFold() has fully finished,
+		'' instead of inside astFold() in the ASTOP_DEFINED handler,
 		'' because there it could be too early to show an error about
 		'' an unsolved defined(), afterall NOP optimizations for parent
 		'' nodes may cause that unsolved defined() to be solved out
@@ -2049,16 +1800,20 @@ sub ppParseIfExprOnly( byval do_fold as integer )
 				x += 1
 
 				t = hParseIfCondition( x )
-				if( do_fold ) then
-					t = hFold( t )
-				end if
 
 				x = xif
-				tkSetAst( x, t )
 
-				'' Remove the TK_BEGIN/END, but not the #if/#elseif token
+				'' Remove the TK_BEGIN/END, but not the #if/#elseif token,
+				'' since this pass is supposed to just parse #if expressions,
+				'' but not evaluate the #if blocks.
 				tkRemove( x + 1, hSkipFromBeginToEnd( x + 1 ) )
 			end if
+
+			t = astOpsC2FB( astClone( t ) )
+			if( do_fold ) then
+				t = astFold( t, @eval.knowns, TRUE )
+			end if
+			tkSetAst( x, t )
 
 		case TK_PPDEFINE
 			'' Register/overwrite as known defined symbol

@@ -875,14 +875,12 @@ function lexLoadFile _
 		lexNext( )
 	wend
 
-	#if 0
-	if( verbose ) then
-		print "  lex: " & cuint( lex.limit ) - cuint( lex.buffer ) & _
-			" bytes -> " & lex.x - x & " tokens"
-	end if
-	#endif
-
 	file->linecount = lex.location.linenum + 1
+
+	if( verbose ) then
+		print "lex: " + file->pretty + ", " & cuint( lex.limit ) - cuint( lex.buffer ) & _
+			" bytes, " & file->linecount & " lines, " & lex.x - x & " tokens"
+	end if
 
 	deallocate( lex.buffer )
 	function = lex.x

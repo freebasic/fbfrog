@@ -62,6 +62,9 @@ To do:
           macro changed, in which case the preset must be adjusted
     - REMOVE DEFINE Identifier works at the same level now, could perhaps be
       integrated with this
+    - add option to tell the C #define parser whether a #define is supposed to
+      return a bool or not, so it can decide whether to use is_bool_context=TRUE
+      when folding the #define body expression
 
 - version specific parts of preset:
     - should use VERSION blocks in a GROUP to represent
@@ -96,28 +99,17 @@ To do:
 - libzip: zip_source_free() vs. enumconst ZIP_SOURCE_FREE,
           zip_stat_index() vs. #define ZIP_STAT_INDEX
 
-- CPP relational BOPs shouldn't just be emitted as FB relational BOPs always,
-  because the result values differ (1 vs. -1). This should only be done where
-  a boolean check is done, but not if it's used in a math expression.
-  -> related to ! vs. not: "!defined" should be turned into "not defined" if
-     used in boolean context.
-  -> is_bool parameter to hFold(), which can be set to TRUE by callers for
-     iif/#if condition for example.
-  -> it's not clear whether AST should represent C or FB?
-     -> maybe have both C/FB relational/defined ops
+- astVersionsMatch() should allow matches also if version numbers are in different order,
+  though currently that won't ever happen since versions are always merged in the same order
 
 - #include foo.h  ->  #include foo.bi, if foo.bi will be generated too
 - #include stdio.h -> #include crt/stdio.bi, for some known default headers
   (or perhaps let presets do this)
+- nested #includes should be frogAddFile()'d in their parent include file context,
+  not in the toplevel file context, shouldn't they?
 
 - add pass to check all identifiers against FB keywords, and to check for dupdefs
   due to case insensitivity
-
-- astVersionsMatch() should allow matches also if version numbers are in different order,
-  though currently that won't ever happen since versions are always merged in the same order
-
-- nested #includes should be frogAddFile()'d in their parent include file context,
-  not in the toplevel file context, shouldn't they?
 
 - Comments given to a TK_ID that is a macro call and will be expanded should
   be given to first non-whitespace token from the expansion, for example:

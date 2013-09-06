@@ -82,47 +82,13 @@ end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-'' C operator precedence (higher value = higher precedence)
-dim shared as integer cprecedence(ASTOP_IIF to ASTOP_DEREF) = _
-{ _
-	 2, _ '' ASTOP_IIF
-	 3, _ '' ASTOP_LOGOR
-	 4, _ '' ASTOP_LOGAND
-	 5, _ '' ASTOP_BITOR
-	 6, _ '' ASTOP_BITXOR
-	 7, _ '' ASTOP_BITAND
-	 8, _ '' ASTOP_EQ
-	 8, _ '' ASTOP_NE
-	 9, _ '' ASTOP_LT
-	 9, _ '' ASTOP_LE
-	 9, _ '' ASTOP_GT
-	 9, _ '' ASTOP_GE
-	10, _ '' ASTOP_SHL
-	10, _ '' ASTOP_SHR
-	11, _ '' ASTOP_ADD
-	11, _ '' ASTOP_SUB
-	12, _ '' ASTOP_MUL
-	12, _ '' ASTOP_DIV
-	12, _ '' ASTOP_MOD
-	14, _ '' ASTOP_INDEX
-	14, _ '' ASTOP_MEMBER
-	14, _ '' ASTOP_MEMBERDEREF
-	13, _ '' ASTOP_LOGNOT
-	13, _ '' ASTOP_BITNOT
-	13, _ '' ASTOP_NEGATE
-	13, _ '' ASTOP_UNARYPLUS
-	 0, _ '' ASTOP_DEFINED (unused)
-	13, _ '' ASTOP_ADDROF
-	13  _ '' ASTOP_DEREF
-}
-
 '' C expression parser based on precedence climbing
 private function cExpression( byval level as integer = 0 ) as ASTNODE ptr
 	'' Unary prefix operators
 	var op = -1
 	select case( tkGet( parse.x ) )
-	case TK_EXCL   : op = ASTOP_LOGNOT    '' !
-	case TK_TILDE  : op = ASTOP_BITNOT    '' ~
+	case TK_EXCL   : op = ASTOP_CLOGNOT   '' !
+	case TK_TILDE  : op = ASTOP_NOT       '' ~
 	case TK_MINUS  : op = ASTOP_NEGATE    '' -
 	case TK_PLUS   : op = ASTOP_UNARYPLUS '' +
 	case TK_AMP    : op = ASTOP_ADDROF    '' &
@@ -229,27 +195,27 @@ private function cExpression( byval level as integer = 0 ) as ASTNODE ptr
 	'' Infix operators
 	do
 		select case as const( tkGet( parse.x ) )
-		case TK_QUEST    : op = ASTOP_IIF    '' ? (a ? b : c)
-		case TK_PIPEPIPE : op = ASTOP_LOGOR  '' ||
-		case TK_AMPAMP   : op = ASTOP_LOGAND '' &&
-		case TK_PIPE     : op = ASTOP_BITOR  '' |
-		case TK_CIRC     : op = ASTOP_BITXOR '' ^
-		case TK_AMP      : op = ASTOP_BITAND '' &
-		case TK_EQEQ     : op = ASTOP_EQ     '' ==
-		case TK_EXCLEQ   : op = ASTOP_NE     '' !=
-		case TK_LT       : op = ASTOP_LT     '' <
-		case TK_LTEQ     : op = ASTOP_LE     '' <=
-		case TK_GT       : op = ASTOP_GT     '' >
-		case TK_GTEQ     : op = ASTOP_GE     '' >=
-		case TK_LTLT     : op = ASTOP_SHL    '' <<
-		case TK_GTGT     : op = ASTOP_SHR    '' >>
-		case TK_PLUS     : op = ASTOP_ADD    '' +
-		case TK_MINUS    : op = ASTOP_SUB    '' -
-		case TK_STAR     : op = ASTOP_MUL    '' *
-		case TK_SLASH    : op = ASTOP_DIV    '' /
-		case TK_PERCENT  : op = ASTOP_MOD    '' %
-		case TK_LBRACKET : op = ASTOP_INDEX  '' [ (a[b])
-		case TK_DOT      : op = ASTOP_MEMBER '' .
+		case TK_QUEST    : op = ASTOP_IIF     '' ? (a ? b : c)
+		case TK_PIPEPIPE : op = ASTOP_CLOGOR  '' ||
+		case TK_AMPAMP   : op = ASTOP_CLOGAND '' &&
+		case TK_PIPE     : op = ASTOP_OR      '' |
+		case TK_CIRC     : op = ASTOP_XOR     '' ^
+		case TK_AMP      : op = ASTOP_AND     '' &
+		case TK_EQEQ     : op = ASTOP_CEQ     '' ==
+		case TK_EXCLEQ   : op = ASTOP_CNE     '' !=
+		case TK_LT       : op = ASTOP_CLT     '' <
+		case TK_LTEQ     : op = ASTOP_CLE     '' <=
+		case TK_GT       : op = ASTOP_CGT     '' >
+		case TK_GTEQ     : op = ASTOP_CGE     '' >=
+		case TK_LTLT     : op = ASTOP_SHL     '' <<
+		case TK_GTGT     : op = ASTOP_SHR     '' >>
+		case TK_PLUS     : op = ASTOP_ADD     '' +
+		case TK_MINUS    : op = ASTOP_SUB     '' -
+		case TK_STAR     : op = ASTOP_MUL     '' *
+		case TK_SLASH    : op = ASTOP_DIV     '' /
+		case TK_PERCENT  : op = ASTOP_MOD     '' %
+		case TK_LBRACKET : op = ASTOP_INDEX   '' [ (a[b])
+		case TK_DOT      : op = ASTOP_MEMBER  '' .
 		case TK_ARROW    : op = ASTOP_MEMBERDEREF '' ->
 		case else        : exit do
 		end select
@@ -292,6 +258,10 @@ private function cExpression( byval level as integer = 0 ) as ASTNODE ptr
 	loop
 
 	function = a
+end function
+
+private function hExpr( byval is_bool_context as integer ) as ASTNODE ptr
+	function = astFold( astOpsC2FB( cExpression( ) ), NULL, is_bool_context )
 end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -397,7 +367,7 @@ private function cEnumConst( ) as ASTNODE ptr
 	'' '='?
 	if( cMatch( TK_EQ ) ) then
 		'' Expression
-		n->expr = cExpression( )
+		n->expr = hExpr( FALSE )
 	end if
 
 	'' (',' | '}')
@@ -1039,7 +1009,7 @@ private function cDeclarator _
 			'' '['
 			cSkip( )
 
-			var elements = cExpression( )
+			var elements = hExpr( FALSE )
 
 			'' Add new DIMENSION to the ARRAY:
 			'' lbound = 0, ubound = elements - 1
@@ -1110,7 +1080,7 @@ private function cDeclarator _
 		'' ['=' Initializer]
 		if( cMatch( TK_EQ ) ) then
 			assert( node->expr = NULL )
-			node->expr = cExpression( )
+			node->expr = hExpr( FALSE )
 		end if
 	end if
 
@@ -1280,7 +1250,7 @@ private function cToplevel( byval body as integer ) as ASTNODE ptr
 			if( tkGet( parse.x ) = TK_END ) then
 				expr = NULL
 			else
-				expr = cExpression( )
+				expr = hExpr( TRUE )
 
 				'' Must have reached the TK_END
 				if( tkGet( parse.x ) <> TK_END ) then
