@@ -339,10 +339,50 @@ sub astCloneAndAddAllChildrenOf( byval d as ASTNODE ptr, byval s as ASTNODE ptr 
 	wend
 end sub
 
-function astVersionsMatch( byval a as ASTNODE ptr, byval b as ASTNODE ptr ) as integer
+private function astVersionContainsNum _
+	( _
+		byval version as ASTNODE ptr, _
+		byval versionnum as ASTNODE ptr _
+	) as integer
+
+	assert( version->class = ASTCLASS_VERSION )
+	assert( version->expr->class = ASTCLASS_GROUP )
+
+	var existingnum = version->expr->head
+	while( existingnum )
+		if( astIsEqualDecl( existingnum, versionnum ) ) then
+			return TRUE
+		end if
+		existingnum = existingnum->next
+	wend
+
+	function = FALSE
+end function
+
+private function hAllVersionNumbersOfAExistInB _
+	( _
+		byval a as ASTNODE ptr, _
+		byval b as ASTNODE ptr _
+	) as integer
+
 	assert( a->class = ASTCLASS_VERSION )
 	assert( b->class = ASTCLASS_VERSION )
-	function = astIsEqualDecl( a->expr, b->expr )
+	assert( a->expr->class = ASTCLASS_GROUP )
+
+	var versionnum = a->expr->head
+	while( versionnum )
+		if( astVersionContainsNum( b, versionnum ) = FALSE ) then
+			return FALSE
+		end if
+		versionnum = versionnum->next
+	wend
+
+	function = TRUE
+end function
+
+function astVersionsMatch( byval a as ASTNODE ptr, byval b as ASTNODE ptr ) as integer
+	function = hAllVersionNumbersOfAExistInB( a, b ) and _
+	           hAllVersionNumbersOfAExistInB( b, a )
 end function
 
 sub astAddVersionedChild( byval n as ASTNODE ptr, byval child as ASTNODE ptr )

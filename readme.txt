@@ -88,6 +88,11 @@ To do:
   errPushHint( ERRHINT_* ) before parsing an expression, so if there is an error
   while parsing the expression, the error report could contain the information
   what the expression is for.
+- Comments given to a TK_ID that is a macro call and will be expanded should
+  be given to first non-whitespace token from the expansion, for example:
+        // foo
+        CALLCONV void f(void);
+- comments behind #define bodies should go to the #define not the body tokens
 
 - Improve FB parser to allow re-importing generated bindings, this could be
   used to amend bindings much more easily than re-making from scratch (which may
@@ -99,9 +104,6 @@ To do:
 - libzip: zip_source_free() vs. enumconst ZIP_SOURCE_FREE,
           zip_stat_index() vs. #define ZIP_STAT_INDEX
 
-- astVersionsMatch() should allow matches also if version numbers are in different order,
-  though currently that won't ever happen since versions are always merged in the same order
-
 - #include foo.h  ->  #include foo.bi, if foo.bi will be generated too
 - #include stdio.h -> #include crt/stdio.bi, for some known default headers
   (or perhaps let presets do this)
@@ -110,9 +112,3 @@ To do:
 
 - add pass to check all identifiers against FB keywords, and to check for dupdefs
   due to case insensitivity
-
-- Comments given to a TK_ID that is a macro call and will be expanded should
-  be given to first non-whitespace token from the expansion, for example:
-        // foo
-        CALLCONV void f(void);
-- comments behind #define bodies should go to the #define not the body tokens
