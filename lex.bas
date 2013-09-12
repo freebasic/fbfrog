@@ -32,6 +32,8 @@ end type
 dim shared as LEXSTUFF lex
 
 private sub lexOops( byref message as string )
+	lex.location.column = lex.i - lex.bol
+	lex.location.length = 1
 	oopsLocation( @lex.location, message )
 end sub
 
@@ -389,6 +391,8 @@ private sub hReadString( )
 	''    L"foo"
 	'' The string content is stored into the token, but not the quotes.
 	'' Escape sequences are expanded except for \\ and \0.
+	'' In C mode, string literals may contain escaped EOLs and continue
+	'' on the next line.
 
 	var id = TK_STRING
 	var is_wchar = FALSE
