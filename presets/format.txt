@@ -41,6 +41,7 @@ Input files
   DOWNLOAD "URL" "outputfilename"
     For downloading tarballs
 
+  EXTRACT "tarballfilename"
   EXTRACT "tarballfilename" "outputdirectoryname"
     For extracting tarballs
 

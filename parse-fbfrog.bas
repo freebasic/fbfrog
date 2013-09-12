@@ -146,11 +146,16 @@ sub presetParse( byval pre as FROGPRESET ptr, byref presetfile as string )
 			astSetComment( download, outfile )
 			astAppend( verspacestack(verlevel), download )
 
-		'' EXTRACT "tarball file name" "output directory name"
+		'' EXTRACT "tarball file name" ["output directory name"]
 		case KW_EXTRACT
 			hSkip( )
 			var tarball = hExpectSkipString( "containing the archive file name" )
-			var outdir = hExpectSkipString( "containing the output directory name" )
+
+			dim outdir as zstring ptr
+			if( tkGet( x ) = TK_STRING ) then
+				outdir = tkGetText( x )
+				hSkip( )
+			end if
 
 			var extract = astNew( ASTCLASS_EXTRACT, tarball )
 			astSetComment( extract, outdir )

@@ -28,13 +28,29 @@ private function frogDownload( byref url as string, byref file as string ) as in
 end function
 
 private function frogExtract( byref tarball as string, byref dirname as string ) as integer
-	hShell( "mkdir -p """ + dirname + """" )
+	if( len( dirname ) > 0 ) then
+		hShell( "mkdir -p """ + dirname + """" )
+	end if
+
+	dim s as string
+
 	if( strEndsWith( tarball, ".zip" ) ) then
-		function = hShell( "unzip -q -d """ + dirname + """ ""tarballs/" + tarball + """" )
+		s = "unzip -q"
+		if( len( dirname ) > 0 ) then
+			s += " -d """ + dirname + """"
+		end if
+		s += " ""tarballs/" + tarball + """"
 	elseif( strEndsWith( tarball, ".tar.gz" ) or _
 	        strEndsWith( tarball, ".tar.bz2" ) or _
 	        strEndsWith( tarball, ".tar.xz" ) ) then
-		function = hShell( "tar xf ""tarballs/" + tarball + """ -C """ + dirname + """" )
+		s = "tar xf ""tarballs/" + tarball + """"
+		if( len( dirname ) > 0 ) then
+			s += " -C """ + dirname + """"
+		end if
+	end if
+
+	if( len( s ) > 0 ) then
+		function = hShell( s )
 	else
 		function = FALSE
 	end if
