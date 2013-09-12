@@ -2,6 +2,8 @@
 #define FALSE 0
 #define TRUE (-1)
 
+type ASTNODE as ASTNODE_
+
 enum
 	CH_BELL      = &h07  '' \a
 	CH_BACKSPACE = &h08  '' \b
@@ -64,10 +66,8 @@ enum
 	CH_DEL
 end enum
 
-type FROGFILE as FROGFILE_
-
 type TKLOCATION
-	file		as FROGFILE ptr
+	file		as ASTNODE ptr
 	linenum		as integer
 	column		as integer
 	length		as integer
@@ -422,8 +422,6 @@ declare function tkInfoText( byval id as integer ) as zstring ptr
 '' Debugging helper, for example: TRACE( x ), "decl begin"
 #define TRACE( x ) print __FUNCTION__ + "(" + str( __LINE__ ) + "): " + tkDumpOne( x )
 
-type ASTNODE as ASTNODE_
-
 declare sub tkInit( )
 declare sub tkEnd( )
 declare function tkDumpBasic( byval id as integer, byval text as zstring ptr ) as string
@@ -601,8 +599,22 @@ end enum
 enum
 	ASTCLASS_NOP = 0
 	ASTCLASS_GROUP
-	ASTCLASS_VERSION
 	ASTCLASS_DIVIDER
+
+	ASTCLASS_VERSION
+	ASTCLASS_WILDCARD
+	ASTCLASS_DOS
+	ASTCLASS_LINUX
+	ASTCLASS_WIN32
+
+	ASTCLASS_DOWNLOAD
+	ASTCLASS_EXTRACT
+	ASTCLASS_COPYFILE
+	ASTCLASS_FILE
+	ASTCLASS_DIR
+	ASTCLASS_DEFINE
+	ASTCLASS_EXPAND
+	ASTCLASS_REMOVE
 
 	ASTCLASS_PPINCLUDE
 	ASTCLASS_PPDEFINE
@@ -644,6 +656,8 @@ enum
 	ASTCLASS_PPMERGE
 	ASTCLASS_CALL
 
+	ASTCLASS_FROGFILE
+
 	ASTCLASS__COUNT
 end enum
 
@@ -656,6 +670,7 @@ enum
 	ASTATTRIB_STDCALL	= 1 shl 5
 	ASTATTRIB_HIDECALLCONV	= 1 shl 6  '' Whether the calling convention is covered by an Extern block, then it doesn't need to be emitted
 	ASTATTRIB_REMOVE	= 1 shl 7
+	ASTATTRIB_MISSING	= 1 shl 8  '' FROGFILE: File missing/not found?
 end enum
 
 '' When changing, adjust astClone()
@@ -664,8 +679,8 @@ type ASTNODE_
 	attrib		as integer  '' ASTATTRIB_*
 
 	'' Identifiers/string literals, or NULL
-	text		as zstring ptr
-	comment		as zstring ptr
+	text		as zstring ptr  '' FROGFILE: normalized path
+	comment		as zstring ptr  '' FROGFILE: pretty file name
 
 	'' Data type (vars, fields, params, function results, expressions)
 	dtype		as integer
@@ -679,6 +694,7 @@ type ASTNODE_
 	'' PPDEFINE: MACROBODY
 	'' VERSION: GROUP holding CONSTs (the individual version numbers)
 	'' IIF: condition expression
+	'' FROGFILE: AST representing file content
 	expr		as ASTNODE ptr
 
 	'' Left/right operands for UOPs/BOPs
@@ -693,6 +709,12 @@ type ASTNODE_
 		tk		as integer  '' TK: TK_*
 		paramcount	as integer  '' PPDEFINE: -1 = #define m, 0 = #define m(), 1 = #define m(a), ...
 		op		as integer  '' UOP/BOP: ASTOP_*
+
+		'' FROGFILE
+		type
+			refcount	as integer      '' references by #includes
+			mergeparent	as ASTNODE ptr  '' the file this one was merged into
+		end type
 	end union
 
 	'' Linked list of child nodes, where l/r aren't enough: fields/parameters/...
@@ -730,7 +752,7 @@ declare function astNewIIF _
 declare function astNewVERSION overload( ) as ASTNODE ptr
 declare function astNewVERSION overload _
 	( _
-		byval versionnum as ASTNODE ptr, _
+		byval id as ASTNODE ptr, _
 		byval child as ASTNODE ptr _
 	) as ASTNODE ptr
 declare function astNewVERSION overload _
@@ -753,13 +775,25 @@ declare function astNewCONST _
 #define astNewID( id ) astNew( ASTCLASS_ID, id )
 #define astNewTEXT( text ) astNew( ASTCLASS_TEXT, text )
 declare function astNewTK( byval x as integer ) as ASTNODE ptr
+declare function astNewFROGFILE _
+	( _
+		byval normed as zstring ptr, _
+		byval pretty as zstring ptr _
+	) as ASTNODE ptr
 declare sub astDelete( byval n as ASTNODE ptr )
 declare sub astPrepend( byval parent as ASTNODE ptr, byval n as ASTNODE ptr )
 declare sub astAppend( byval parent as ASTNODE ptr, byval n as ASTNODE ptr )
 declare sub astCloneAndAddAllChildrenOf( byval d as ASTNODE ptr, byval s as ASTNODE ptr )
 declare function astVersionsMatch( byval a as ASTNODE ptr, byval b as ASTNODE ptr ) as integer
+declare function astStringifyVersion( byval version as ASTNODE ptr ) as string
+declare function astCollectVersions( byval context as ASTNODE ptr ) as ASTNODE ptr
 declare sub astAddVersionedChild( byval n as ASTNODE ptr, byval child as ASTNODE ptr )
-declare function astSolveVersionsOut _
+declare function astGet1VersionOnly _
+	( _
+		byval code as ASTNODE ptr, _
+		byval matchversion as ASTNODE ptr _
+	) as ASTNODE ptr
+declare function astRemoveVersionWrapping _
 	( _
 		byval nodes as ASTNODE ptr, _
 		byval matchversion as ASTNODE ptr _
@@ -852,15 +886,16 @@ end enum
 declare function lexLoadFile _
 	( _
 		byval x as integer, _
-		byval file as FROGFILE ptr, _
+		byval file as ASTNODE ptr, _
 		byval mode as integer, _
 		byval keep_comments as integer _
 	) as integer
 declare function lexPeekLine _
 	( _
-		byval file as FROGFILE ptr, _
+		byval file as ASTNODE ptr, _
 		byval targetlinenum as integer _
 	) as string
+declare function lexCountLines( byval file as ASTNODE ptr ) as integer
 declare function emitType _
 	( _
 		byval dtype as integer, _
@@ -868,7 +903,7 @@ declare function emitType _
 		byval debugdump as integer = FALSE _
 	) as string
 declare sub emitFile( byref filename as string, byval ast as ASTNODE ptr )
-declare function importFile( byval file as FROGFILE ptr ) as ASTNODE ptr
+declare function importFile( byval file as ASTNODE ptr ) as ASTNODE ptr
 
 declare sub ppComments( )
 declare sub ppDividers( )
@@ -900,42 +935,14 @@ enum
 end enum
 
 type FROGPRESET
-	versions		as ASTNODE ptr
-
-	downloads		as ASTNODE ptr
-	extracts		as ASTNODE ptr
-	copyfiles		as ASTNODE ptr
-	files			as ASTNODE ptr
-	dirs			as ASTNODE ptr
-
-	defines			as ASTNODE ptr
-	undefs			as ASTNODE ptr
-	expands			as ASTNODE ptr
-	macros			as ASTNODE ptr
-
-	removes			as ASTNODE ptr
-
+	code			as ASTNODE ptr
 	options			as integer
 end type
 
 declare sub presetParse( byval pre as FROGPRESET ptr, byref filename as string )
 declare sub presetInit( byval pre as FROGPRESET ptr )
 declare sub presetEnd( byval pre as FROGPRESET ptr )
-declare sub presetAddFile( byval pre as FROGPRESET ptr, byref filename as string )
-declare sub presetAddDir( byval pre as FROGPRESET ptr, byref dirname as string )
-declare function presetHasInput( byval pre as FROGPRESET ptr ) as integer
-declare sub presetOverrideInput( byval a as FROGPRESET ptr, byval b as FROGPRESET ptr )
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-
-type FROGFILE_
-	pretty		as string '' Pretty name from command line or #include
-	normed		as string '' Normalized path used in hash table
-	missing		as integer '' File missing/not found?
-	ast		as ASTNODE ptr  '' AST representing file content, when loaded
-	refcount	as integer
-	mergeparent	as FROGFILE ptr '' The file this one was merged into
-	linecount	as integer
-end type
 
 extern verbose as integer

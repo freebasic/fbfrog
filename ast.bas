@@ -35,8 +35,20 @@ dim shared as ASTNODEINFO astnodeinfo(0 to ...) = _
 { _
 	( "nop"      ), _
 	( "group"    ), _
-	( "version"  ), _
 	( "divider"  ), _
+	( "version"  ), _
+	( "wildcard" ), _
+	( "dos"      ), _
+	( "linux"    ), _
+	( "win32"    ), _
+	( "download" ), _
+	( "extract"  ), _
+	( "copyfile" ), _
+	( "file"     ), _
+	( "dir"      ), _
+	( "define"   ), _
+	( "expand"   ), _
+	( "remove"   ), _
 	( "#include" ), _
 	( "#define"  ), _
 	( "#undef"   ), _
@@ -72,7 +84,8 @@ dim shared as ASTNODEINFO astnodeinfo(0 to ...) = _
 	( "bop"     ), _
 	( "iif"     ), _
 	( "ppmerge" ), _
-	( "call"    )  _
+	( "call"    ), _
+	( "frogfile" ) _
 }
 
 #assert ubound( astnodeinfo ) = ASTCLASS__COUNT - 1
@@ -166,14 +179,13 @@ end function
 
 function astNewVERSION overload _
 	( _
-		byval versionnum as ASTNODE ptr, _
+		byval id as ASTNODE ptr, _
 		byval child as ASTNODE ptr _
 	) as ASTNODE ptr
 
 	var n = astNewVERSION( )
 
-	assert( versionnum->class = ASTCLASS_TEXT )
-	astAppend( n->expr, versionnum )
+	astAppend( n->expr, id )
 	astAppend( n, child )
 
 	function = n
@@ -237,6 +249,18 @@ function astNewTK( byval x as integer ) as ASTNODE ptr
 	var n = astNew( ASTCLASS_TK, tkGetText( x ) )
 	n->tk = tkGet( x )
 	n->location = *tkGetLocation( x )
+	function = n
+end function
+
+function astNewFROGFILE _
+	( _
+		byval normed as zstring ptr, _
+		byval pretty as zstring ptr _
+	) as ASTNODE ptr
+
+	var n = astNew( ASTCLASS_FROGFILE, normed )
+	astSetComment( n, pretty )
+
 	function = n
 end function
 
@@ -385,6 +409,101 @@ function astVersionsMatch( byval a as ASTNODE ptr, byval b as ASTNODE ptr ) as i
 	           hAllVersionNumbersOfAExistInB( b, a )
 end function
 
+function astStringifyVersion( byval version as ASTNODE ptr ) as string
+	function = astDumpInline( version )
+end function
+
+private function astPrefixVersion _
+	( _
+		byval id as ASTNODE ptr, _
+		byval nestedversions as ASTNODE ptr _
+	) as ASTNODE ptr
+
+	var versions = astNewGROUP( )
+
+	var nestedversion = nestedversions->head
+	while( nestedversion )
+
+		assert( nestedversion->expr->class = ASTCLASS_GROUP )
+		assert( nestedversion->expr->head = nestedversion->expr->tail )
+
+		astAppend( versions, _
+			astNewVERSION( _
+				astNewBOP( ASTOP_MEMBER, _
+					astClone( id ), _
+					astClone( nestedversion->expr->head ) ), _
+				NULL ) )
+
+		nestedversion = nestedversion->next
+	wend
+
+	function = versions
+end function
+
+function astCollectVersions( byval context as ASTNODE ptr ) as ASTNODE ptr
+	var versions = astNewGROUP( )
+
+	'' For each nested version...
+	var child = context->head
+	while( child )
+
+		if( child->class = ASTCLASS_VERSION ) then
+			var nestedversions = astCollectVersions( child )
+
+			'' If this is a wildcard, apply nestedversions to all
+			'' versions in this context except for other wildcards
+			'' or itself:
+			''
+			''    version "1"
+			''    version "2"
+			''    version *
+			''        version linux
+			''
+			'' should result in these colected versions:
+			''
+			''    version "1"
+			''    version "1".linux
+			''    version "2"
+			''    version "2".linux
+			''
+			'' Otherwise, apply nestedversions just to this version:
+			''
+			''    version "1"
+			''    version "2"
+			''    version "3"
+			''        version linux
+			''
+			'' should result in these colected versions:
+			''
+			''    version "1"
+			''    version "2"
+			''    version "3"
+			''    version "3".linux
+
+			assert( child->expr->class = ASTCLASS_GROUP )
+			if( child->expr->head->class = ASTCLASS_WILDCARD ) then
+				var child2 = context->head
+				do
+					if( child2->class = ASTCLASS_VERSION ) then
+						assert( child2->expr->class = ASTCLASS_GROUP )
+						if( child2->expr->head->class <> ASTCLASS_WILDCARD ) then
+							astAppend( versions, astPrefixVersion( child2->expr, nestedversions ) )
+						end if
+					end if
+					child2 = child2->next
+				loop while( child2 )
+			else
+				astAppend( versions, astNewVERSION( astClone( child->expr ), NULL ) )
+				astAppend( versions, astPrefixVersion( child->expr, nestedversions ) )
+			end if
+		end if
+
+		child = child->next
+	wend
+
+	function = versions
+end function
+
 sub astAddVersionedChild( byval n as ASTNODE ptr, byval child as ASTNODE ptr )
 	assert( n->class = ASTCLASS_GROUP )
 	assert( child->class = ASTCLASS_VERSION )
@@ -404,7 +523,32 @@ sub astAddVersionedChild( byval n as ASTNODE ptr, byval child as ASTNODE ptr )
 	astAppend( n, child )
 end sub
 
-function astSolveVersionsOut _
+function astGet1VersionOnly _
+	( _
+		byval code as ASTNODE ptr, _
+		byval matchversion as ASTNODE ptr _
+	) as ASTNODE ptr
+
+	var result = astNewGROUP( )
+
+	var child = code->head
+	while( child )
+
+		if( child->class = ASTCLASS_VERSION ) then
+			if( astVersionsMatch( child, matchversion ) ) then
+				astAppend( result, astGet1VersionOnly( child, matchversion ) )
+			end if
+		else
+			astAppend( result, astClone( child ) )
+		end if
+
+		child = child->next
+	wend
+
+	function = result
+end function
+
+function astRemoveVersionWrapping _
 	( _
 		byval nodes as ASTNODE ptr, _
 		byval matchversion as ASTNODE ptr _
@@ -588,6 +732,9 @@ function astCloneNode( byval n as ASTNODE ptr ) as ASTNODE ptr
 		c->paramcount = n->paramcount
 	case ASTCLASS_UOP, ASTCLASS_BOP
 		c->op = n->op
+	case ASTCLASS_FROGFILE
+		c->refcount = n->refcount
+		c->mergeparent = n->mergeparent
 	end select
 
 	function = c
@@ -692,6 +839,10 @@ function astIsEqualDecl _
 
 	case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
 		if( ignore_fields ) then return TRUE
+
+	case ASTCLASS_FROGFILE
+		if( a->refcount <> b->refcount ) then exit function
+		if( a->mergeparent <> b->mergeparent ) then exit function
 	end select
 
 	'' Children
@@ -1852,7 +2003,7 @@ private function hMergeStructsManually _
 
 	'' Solve out any VERSIONs (but preserving their children) that have the
 	'' same version numbers that the struct itself is going to have.
-	var cleanfields = astSolveVersionsOut( fields, _
+	var cleanfields = astRemoveVersionWrapping( fields, _
 			astNewVERSION( aversion, bversion, NULL ) )
 
 	'' Create a result struct with the new set of fields

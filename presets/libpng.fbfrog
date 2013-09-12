@@ -1,7 +1,23 @@
-declare version "1.6.3" __LIBPNG_VER__=163
+version "1.2.50"
+	download "http://sourceforge.net/projects/libpng/files/libpng12/1.2.50/libpng-1.2.50.tar.xz/download" "libpng-1.2.50.tar.xz"
+	extract "libpng-1.2.50.tar.xz" "libpng-1.2.50"
+	file "libpng-1.2.50/png.h"
+end version
+
+version "1.4.12"
+	download "http://sourceforge.net/projects/libpng/files/libpng14/1.4.12/libpng-1.4.12.tar.xz/download" "libpng-1.4.12.tar.xz"
+	extract "libpng-1.4.12.tar.xz" "libpng-1.4.12"
+	file "libpng-1.4.12/png.h"
+end version
+
+version "1.5.17"
+	download "http://sourceforge.net/projects/libpng/files/libpng15/1.5.17/libpng-1.5.17.tar.xz/download" "libpng-1.5.17.tar.xz"
+	extract "libpng-1.5.17.tar.xz" "libpng-1.5.17"
+	file "libpng-1.5.17/png.h"
+end version
 
 version "1.6.3"
-	download "http://prdownloads.sourceforge.net/libpng/libpng-1.6.3.tar.xz?download" "libpng-1.6.3.tar.xz"
+	download "http://sourceforge.net/projects/libpng/files/libpng16/1.6.3/libpng-1.6.3.tar.xz/download" "libpng-1.6.3.tar.xz"
 	extract "libpng-1.6.3.tar.xz" "libpng-1.6.3"
 	copyfile "libpng-1.6.3/scripts/pnglibconf.h.prebuilt" "libpng-1.6.3/pnglibconf.h"
 	file "libpng-1.6.3/png.h"
@@ -61,11 +77,11 @@ undef __WIN32__
 undef WIN32
 undef __CYGWIN__
 
-version "win32"
+version *.win32
 	define _WIN32
 end version
 
-version "linux"
+version *.linux
 	undef _WIN32
 end version
 

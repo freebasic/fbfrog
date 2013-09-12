@@ -4,9 +4,7 @@
 
 #include once "fbfrog.bi"
 
-dim shared as integer x, verlevel
-const MAXVERBLOCKS = 8
-dim shared as ASTNODE ptr verstack(0 to MAXVERBLOCKS-1)
+dim shared as integer x
 
 private sub hOops( byval message as zstring ptr )
 	tkOops( x, message )
@@ -38,24 +36,27 @@ private function hExpectSkipString( byval whatfor as zstring ptr ) as string
 	hSkip( )
 end function
 
-private function hFindVersion _
-	( _
-		byval pre as FROGPRESET ptr, _
-		byval versionid as zstring ptr _
-	) as ASTNODE ptr
-
-	var version = pre->versions->head
-	while( version )
-		if( *version->text = *versionid ) then
-			exit while
-		end if
-		version = version->next
-	wend
-
-	function = version
+'' VersionId = StringLiteral | Identifier | WIN32 | LINUX | DOS | '*'
+private function hVersionId( ) as ASTNODE ptr
+	select case( tkGet( x ) )
+	case TK_STRING
+		function = astNew( ASTCLASS_STRING, tkGetText( x ) )
+	case is >= TK_ID
+		select case( lcase( *tkGetText( x ) ) )
+		case "dos"   : function = astNew( ASTCLASS_DOS )
+		case "linux" : function = astNew( ASTCLASS_LINUX )
+		case "win32" : function = astNew( ASTCLASS_WIN32 )
+		case else    : function = astNewID( tkGetText( x ) )
+		end select
+	case TK_STAR
+		function = astNew( ASTCLASS_WILDCARD )
+	case else
+		tkOopsExpected( x, "version identifier (""1.2.3"", 'foo', one of dos|linux|win32, '*')", NULL )
+	end select
+	hSkip( )
 end function
 
-private sub hLoadFile( byval file as FROGFILE ptr )
+private sub hLoadFile( byval file as ASTNODE ptr )
 	lexLoadFile( x, file, LEXMODE_FBFROG, FALSE )
 end sub
 
@@ -67,16 +68,17 @@ end sub
 #endif
 
 sub presetParse( byval pre as FROGPRESET ptr, byref presetfile as string )
+	var presetf = astNewFROGFILE( presetfile, presetfile )
 	tkInit( )
 
+	hLoadFile( presetf )
+
+	const MAXVERSPACES = 16
+	dim verspacestack(0 to MAXVERSPACES-1) as ASTNODE ptr
+	var verlevel = 0
+	verspacestack(0) = pre->code
+
 	x = 0
-	verlevel = -1
-
-	dim as FROGFILE presetf
-	presetf.pretty = presetfile
-	presetf.normed = presetfile
-	hLoadFile( @presetf )
-
 	do
 		select case( tkGet( x ) )
 		case TK_EOF
@@ -100,49 +102,28 @@ sub presetParse( byval pre as FROGPRESET ptr, byref presetfile as string )
 			continue do
 #endif
 
-		'' DECLARE VERSION "version id" [Identifier(version #define) ['=' NumberLiteral(version #define value)]]
-		case KW_DECLARE
-			hSkip( )
-
-			'' VERSION
-			hExpectSkip( KW_VERSION, "as in 'DECLARE VERSION ...'" )
-
-			'' "version id"
-			hExpect( TK_STRING, "containing the version identifier" )
-			var versionid = *tkGetText( x )
-			if( hFindVersion( pre, versionid ) ) then
-				hOops( "duplicate version" )
-			end if
-			astAppend( pre->versions, astNew( ASTCLASS_VERSION, versionid ) )
-			hSkip( )
-
-			'' Identifier?
-			if( tkGet( x ) = TK_ID ) then
-				var defineid = *tkGetText( x )
-				hSkip( )
-
-				'' '='?
-				if( hMatch( TK_EQ ) ) then
-					hExpectSkip( TK_DECNUM, "(the value to check the version #define against)" )
-				end if
-			end if
-
-		'' VERSION "version id"
+		'' VERSION VersionId ('.' VersionId)*
 		case KW_VERSION
-			verlevel += 1
-			if( verlevel = MAXVERBLOCKS ) then
-				hOops( "VERSION block stack too small, MAXVERBLOCKS=" & MAXVERBLOCKS )
-			end if
 			hSkip( )
 
-			'' "version id"
-			hExpect( TK_STRING, "containing a version identifier" )
-			var version = hFindVersion( pre, tkGetText( x ) )
-			if( version = NULL ) then
-				hOops( "undeclared version" )
+			var context = verspacestack(verlevel)
+			verlevel += 1
+			if( verlevel = MAXVERSPACES ) then
+				hOops( "VERSION block stack too small, MAXVERSPACES=" & MAXVERSPACES )
 			end if
-			verstack(verlevel) = version
-			hSkip( )
+
+			do
+				'' VersionId
+				var id = hVersionId( )
+
+				var newver = astNewVERSION( id, NULL )
+				astAppend( context, newver )
+				context = newver
+
+				'' '.'?
+			loop while( hMatch( TK_DOT ) )
+
+			verspacestack(verlevel) = context
 
 		'' END VERSION
 		case KW_END
@@ -150,7 +131,7 @@ sub presetParse( byval pre as FROGPRESET ptr, byref presetfile as string )
 			hExpectSkip( KW_VERSION, "as in 'END VERSION" )
 			hExpectSkip( TK_EOL, "behind END VERSION statement" )
 
-			if( verlevel < 0 ) then
+			if( verlevel < 1 ) then
 				hOops( "END VERSION without corresponding VERSION block begin" )
 			end if
 			verlevel -= 1
@@ -161,9 +142,9 @@ sub presetParse( byval pre as FROGPRESET ptr, byref presetfile as string )
 			var url = hExpectSkipString( "containing the download URL" )
 			var outfile = hExpectSkipString( "containing the output file name" )
 
-			var download = astNewTEXT( url )
+			var download = astNew( ASTCLASS_DOWNLOAD, url )
 			astSetComment( download, outfile )
-			astAppend( pre->downloads, download )
+			astAppend( verspacestack(verlevel), download )
 
 		'' EXTRACT "tarball file name" "output directory name"
 		case KW_EXTRACT
@@ -171,9 +152,9 @@ sub presetParse( byval pre as FROGPRESET ptr, byref presetfile as string )
 			var tarball = hExpectSkipString( "containing the archive file name" )
 			var outdir = hExpectSkipString( "containing the output directory name" )
 
-			var extract = astNewTEXT( tarball )
+			var extract = astNew( ASTCLASS_EXTRACT, tarball )
 			astSetComment( extract, outdir )
-			astAppend( pre->extracts, extract )
+			astAppend( verspacestack(verlevel), extract )
 
 		'' COPYFILE "old name" "new name"
 		case KW_COPYFILE
@@ -181,26 +162,28 @@ sub presetParse( byval pre as FROGPRESET ptr, byref presetfile as string )
 			var oldname = hExpectSkipString( "containing the original file name" )
 			var newname = hExpectSkipString( "containing the new file name" )
 
-			var copyfile = astNewTEXT( oldname )
+			var copyfile = astNew( ASTCLASS_COPYFILE, oldname )
 			astSetComment( copyfile, newname )
-			astAppend( pre->copyfiles, copyfile )
+			astAppend( verspacestack(verlevel), copyfile )
 
 		'' FILE "file name"
 		case KW_FILE
 			hSkip( )
-			presetAddFile( pre, hExpectSkipString( "containing the file name" ) )
+			astAppend( verspacestack(verlevel), astNew( ASTCLASS_FILE, _
+				hExpectSkipString( "containing the file name" ) ) )
 
 		'' DIR "dir name"
 		case KW_DIR
 			hSkip( )
-			presetAddDir( pre, hExpectSkipString( "containing the directory name" ) )
+			astAppend( verspacestack(verlevel), astNew( ASTCLASS_DIR, _
+				hExpectSkipString( "containing the directory name" ) ) )
 
 		'' DEFINE Identifier
 		case KW_DEFINE
 			hSkip( )
 
 			hExpect( TK_ID, "(the symbol that should be pre-#defined)" )
-			astAppend( pre->defines, astNewID( tkGetText( x ) ) )
+			astAppend( verspacestack(verlevel), astNew( ASTCLASS_DEFINE, tkGetText( x ) ) )
 			hSkip( )
 
 		'' UNDEF Identifier
@@ -208,7 +191,7 @@ sub presetParse( byval pre as FROGPRESET ptr, byref presetfile as string )
 			hSkip( )
 
 			hExpect( TK_ID, "(the symbol that should be initially un-#defined)" )
-			astAppend( pre->undefs, astNewID( tkGetText( x ) ) )
+			astAppend( verspacestack(verlevel), astNew( ASTCLASS_PPUNDEF, tkGetText( x ) ) )
 			hSkip( )
 
 		'' EXPAND Identifier
@@ -216,7 +199,7 @@ sub presetParse( byval pre as FROGPRESET ptr, byref presetfile as string )
 			hSkip( )
 
 			hExpect( TK_ID, "(the #define symbol that should be macro-expanded)" )
-			astAppend( pre->expands, astNewID( tkGetText( x ) ) )
+			astAppend( verspacestack(verlevel), astNew( ASTCLASS_EXPAND, tkGetText( x ) ) )
 			hSkip( )
 
 		'' MACRO Identifier ['(' MacroParameters ')'] [MacroBody]
@@ -241,7 +224,7 @@ sub presetParse( byval pre as FROGPRESET ptr, byref presetfile as string )
 				x += 1
 			loop
 
-			astAppend( pre->macros, macro )
+			astAppend( verspacestack(verlevel), macro )
 
 		'' REMOVE (DEFINE|STRUCT|PROC|...) Identifier
 		case KW_REMOVE
@@ -250,7 +233,7 @@ sub presetParse( byval pre as FROGPRESET ptr, byref presetfile as string )
 			var astclass = -1
 			select case( tkGet( x ) )
 			case KW_DEFINE
-				astclass = ASTCLASS_PPDEFINE
+				astclass = ASTCLASS_REMOVE
 			case else
 				hOops( "unknown REMOVE command" )
 			end select
@@ -258,7 +241,7 @@ sub presetParse( byval pre as FROGPRESET ptr, byref presetfile as string )
 
 			'' Identifier
 			hExpect( TK_ID, "(the symbol to remove by name)" )
-			astAppend( pre->removes, astNew( astclass, tkGetText( x ) ) )
+			astAppend( verspacestack(verlevel), astNew( astclass, tkGetText( x ) ) )
 			hSkip( )
 
 		'' OPTION optionid
@@ -290,75 +273,19 @@ sub presetParse( byval pre as FROGPRESET ptr, byref presetfile as string )
 		hExpectSkip( TK_EOL, "behind this statement" )
 	loop
 
-	if( verlevel >= 0 ) then
+	if( verlevel > 0 ) then
 		hOops( "missing END VERSION" )
 	end if
 
 	tkEnd( )
+	astDelete( presetf )
 end sub
 
 sub presetInit( byval pre as FROGPRESET ptr )
-	pre->versions = astNewGROUP( )
-
-	pre->downloads = astNewGROUP( )
-	pre->extracts  = astNewGROUP( )
-	pre->copyfiles = astNewGROUP( )
-	pre->files     = astNewGROUP( )
-	pre->dirs      = astNewGROUP( )
-
-	pre->defines = astNewGROUP( )
-	pre->undefs  = astNewGROUP( )
-	pre->expands = astNewGROUP( )
-	pre->macros  = astNewGROUP( )
-
-	pre->removes = astNewGROUP( )
-
+	pre->code = astNewGROUP( )
 	pre->options = 0
 end sub
 
 sub presetEnd( byval pre as FROGPRESET ptr )
-	astDelete( pre->versions )
-
-	astDelete( pre->downloads )
-	astDelete( pre->extracts )
-	astDelete( pre->copyfiles )
-	astDelete( pre->files )
-	astDelete( pre->dirs )
-
-	astDelete( pre->defines )
-	astDelete( pre->undefs )
-	astDelete( pre->expands )
-	astDelete( pre->macros )
-
-	astDelete( pre->removes )
-end sub
-
-sub presetAddFile( byval pre as FROGPRESET ptr, byref filename as string )
-	astAppend( pre->files, astNewTEXT( filename ) )
-end sub
-
-sub presetAddDir( byval pre as FROGPRESET ptr, byref dirname as string )
-	astAppend( pre->dirs, astNewTEXT( dirname ) )
-end sub
-
-function presetHasInput( byval pre as FROGPRESET ptr ) as integer
-	function = _
-		(pre->downloads->head <> NULL) or _
-		(pre->extracts->head <> NULL) or _
-		(pre->copyfiles->head <> NULL) or _
-		(pre->files->head <> NULL) or _
-		(pre->dirs->head <> NULL)
-end function
-
-sub presetOverrideInput( byval a as FROGPRESET ptr, byval b as FROGPRESET ptr )
-	astDelete( a->downloads )
-	astDelete( a->extracts  )
-	astDelete( a->copyfiles )
-	astDelete( a->files     )
-	astDelete( a->dirs      )
-	a->downloads = astClone( b->downloads )
-	a->extracts  = astClone( b->extracts  )
-	a->copyfiles = astClone( b->copyfiles )
-	a->files     = astClone( b->files     )
-	a->dirs      = astClone( b->dirs      )
+	astDelete( pre->code )
 end sub

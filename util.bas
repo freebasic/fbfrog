@@ -9,7 +9,7 @@ end sub
 
 private sub hCalcErrorLine _
 	( _
-		byval file as FROGFILE ptr, _
+		byval file as ASTNODE ptr, _
 		byval linenum as integer, _
 		byval column as integer, _
 		byval limit as integer, _
@@ -64,7 +64,7 @@ sub oopsLocation _
 		byval message as zstring ptr _
 	)
 
-	print location->file->pretty + "(" & (location->linenum + 1) & "): " + *message
+	print *location->file->comment + "(" & (location->linenum + 1) & "): " + *message
 
 	'' Determine how many chars can be printed for the error line:
 	'' Normally we can fill a line in the console, so get the console width.
@@ -72,6 +72,8 @@ sub oopsLocation _
 	if( limit < 0 ) then
 		limit = 0
 	end if
+
+	var linecount = lexCountLines( location->file )
 
 	'' Show the error line and the 3 lines before it for more context,
 	'' with line numbers prefixed to them:
@@ -87,7 +89,7 @@ sub oopsLocation _
 	min -= location->linenum
 
 	var max = location->linenum + ubound( linenums )
-	if( max >= location->file->linecount ) then max = location->file->linecount - 1
+	if( max >= linecount ) then max = linecount - 1
 	max -= location->linenum
 
 	for i as integer = min to max

@@ -66,17 +66,25 @@ To do:
       return a bool or not, so it can decide whether to use is_bool_context=TRUE
       when folding the #define body expression
 
-- version specific parts of preset:
-    - should use VERSION blocks in a GROUP to represent
-    - anything at toplevel will be under VERSION block covering all versions
-    - this requires all DECLARE VERSION statements to be at the top
-    - then perhaps we can use the same solve-version-out code to retrieve the
-      preset statements for a specific version?
+- version-specific frogfiles
+	- input files are version-specific
+	- so in order to merge different versions
+		1. find common files?
+			- with -m it doesn't matter since everything is combined
+			- but without -m, must find LCS in input file names
+			  so that
+				lib1/foo.h
+				lib2/foo.h
+			  are merged
+			- or perhaps let presets specify what to do instead of -m
+		2. merge their ASTs
+
 - since LEXMODE_FBFROG now uses all keywords, "undef string" would appear
   as two keywords instead of keyword+id and fail to be parsed. Need to find
   better solution than sharing keywords between C/FB/fbfrog or allow
   anything >= TK_ID as arguments to undef|define|expand|macro.
   Some bindings may need to register symbols that happen to be FB keywords etc...
+- presets: combine DEFINE/MACRO statements
 
 - Macro expansion should preserve token locations, perhaps even a stack of
   locations in case of nested macros. It'd be nice if the tkOops() functions

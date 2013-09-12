@@ -18,66 +18,66 @@ private sub hPrintHelp( byref message as string )
 	end (iif( len( message ) > 0, 1, 0 ))
 end sub
 
-type FROGSTUFF
-	files		as TLIST '' FROGFILE
-	filehash	as THASH
-	commonparent	as string
-end type
-
-dim shared frog as FROGSTUFF
-
 private function frogDownload( byref url as string, byref file as string ) as integer
-	if( fileexists( "tarballs/" & file ) ) then
+	if( fileexists( "tarballs/" + file ) ) then
 		function = TRUE
 	else
 		function = hShell( "mkdir -p tarballs" ) andalso _
-			hShell( "wget " + url + " -O tarballs/" + file )
+			hShell( "wget '" + url + "' -O ""tarballs/" + file + """" )
 	end if
 end function
 
 private function frogExtract( byref tarball as string, byref dirname as string ) as integer
+	hShell( "mkdir -p """ + dirname + """" )
 	if( strEndsWith( tarball, ".zip" ) ) then
-		function = hShell( "unzip -q -d " + dirname + " tarballs/" + tarball )
+		function = hShell( "unzip -q -d """ + dirname + """ ""tarballs/" + tarball + """" )
 	elseif( strEndsWith( tarball, ".tar.gz" ) or _
 	        strEndsWith( tarball, ".tar.bz2" ) or _
 	        strEndsWith( tarball, ".tar.xz" ) ) then
-		function = hShell( "tar xf tarballs/" + tarball + " -C " + dirname )
+		function = hShell( "tar xf ""tarballs/" + tarball + """ -C """ + dirname + """" )
 	else
 		function = FALSE
 	end if
 end function
 
-private function hFindCommonParent( ) as string
+private function hFindCommonParent( byval files as ASTNODE ptr ) as string
 	dim as string s
-	dim as FROGFILE ptr f = listGetHead( @frog.files )
+
+	var f = files->head
 	while( f )
-		if( f->missing = FALSE ) then
+
+		if( (f->attrib and ASTATTRIB_MISSING) = 0 ) then
 			if( len( s ) > 0 ) then
-				s = pathFindCommonBase( s, f->normed )
+				s = pathFindCommonBase( s, *f->text )
 			else
-				s = pathOnly( f->normed )
+				s = pathOnly( *f->text )
 			end if
 		end if
-		f = listGetNext( f )
+
+		f = f->next
 	wend
+
 	function = s
 end function
 
 private function frogAddFile _
 	( _
-		byval context as FROGFILE ptr, _
-		byref pretty as string _
-	) as FROGFILE ptr
+		byval files as ASTNODE ptr, _
+		byval context as ASTNODE ptr, _
+		byval pretty as zstring ptr _
+	) as ASTNODE ptr
 
 	dim as string normed, report
 
 	if( context ) then
+		var commonparent = hFindCommonParent( files )
+
 		'' Search for #included files in one of the parent directories
 		'' of the current file. Usually the #include will refer to a
 		'' file in the same directory or in a sub-directory at the same
 		'' level or some levels up.
 
-		var parent = pathOnly( context->normed )
+		var parent = pathOnly( *context->text )
 		do
 			'' File not found anywhere, ignore it.
 			if( len( parent ) = 0 ) then
@@ -85,7 +85,7 @@ private function frogAddFile _
 				exit do
 			end if
 
-			normed = parent + pretty
+			normed = parent + *pretty
 			if( hFileExists( normed ) ) then
 				if( verbose ) then
 					if( len( report ) ) then print report
@@ -101,7 +101,7 @@ private function frogAddFile _
 
 			'' Stop searching parent directories after trying
 			'' the common base
-			if( parent = frog.commonparent ) then
+			if( parent = commonparent ) then
 				normed = ""
 				exit do
 			end if
@@ -109,9 +109,9 @@ private function frogAddFile _
 			parent = pathStripLastComponent( parent )
 		loop
 	else
-		normed = pathMakeAbsolute( pretty )
+		normed = pathMakeAbsolute( *pretty )
 		if( verbose ) then
-			report = "    root: " + pretty
+			report = "    root: " + *pretty
 		end if
 	end if
 
@@ -120,19 +120,23 @@ private function frogAddFile _
 		normed = pathNormalize( normed )
 	else
 		'' File missing/not found; still add it to the hash
-		normed = pretty
+		normed = *pretty
 		missing = TRUE
 	end if
 
-	var hash = hashHash( normed )
-	var item = hashLookup( @frog.filehash, normed, hash )
-	if( item->s ) then
-		'' Already exists
-		if( verbose ) then
-			print report + " (old news)"
+	var f = files->head
+	while( f )
+
+		if( *f->text = normed ) then
+			'' Already exists
+			if( verbose ) then
+				print report + " (old news)"
+			end if
+			return f
 		end if
-		return item->data
-	end if
+
+		f = f->next
+	wend
 
 	if( verbose ) then
 		if( missing ) then
@@ -143,32 +147,20 @@ private function frogAddFile _
 	end if
 
 	'' Add file
-	dim as FROGFILE ptr f = listAppend( @frog.files )
-	f->pretty = pretty
-	f->normed = normed
-	f->missing = missing
-
-	'' Add to hash table
-	hashAdd( @frog.filehash, item, hash, f->normed, f )
-
-	'' Update/recalculate common base path
-	frog.commonparent = hFindCommonParent( )
+	f = astNewFROGFILE( normed, pretty )
+	f->attrib or= ASTATTRIB_MISSING and missing
+	astAppend( files, f )
 
 	function = f
 end function
 
-private function frogParseVersion _
+private function frogWorkFile _
 	( _
 		byval pre as FROGPRESET ptr, _
-		byval f as FROGFILE ptr, _
-		byval version as ASTNODE ptr _
+		byval presetcode as ASTNODE ptr, _
+		byval files as ASTNODE ptr, _
+		byval f as ASTNODE ptr _
 	) as ASTNODE ptr
-
-	if( verbose ) then
-		if( version ) then
-			print "version " + *version->text
-		end if
-	end if
 
 	tkInit( )
 
@@ -196,10 +188,9 @@ private function frogParseVersion _
 
 				'' #include?
 				if( tkGet( x ) = TK_PPINCLUDE ) then
-					var incfile = *tkGetText( x )
-					var incf = frogAddFile( f, incfile )
+					var incf = frogAddFile( files, f, tkGetText( x ) )
 
-					if( (not incf->missing) and (incf->refcount = 1) and _
+					if( ((incf->attrib and ASTATTRIB_MISSING) = 0) and (incf->refcount = 1) and _
 					    ((incf->mergeparent = NULL) or (incf->mergeparent = f)) and _
 					    (incf <> f) ) then
 						'' Replace #include by included file's content
@@ -212,7 +203,7 @@ private function frogParseVersion _
 
 						incf->mergeparent = f
 						if( verbose ) then
-							print "    merged in: " + incf->pretty
+							print "    merged in: " + *incf->comment
 						end if
 					end if
 				end if
@@ -227,51 +218,30 @@ private function frogParseVersion _
 	''
 	ppEvalInit( )
 
-	scope
-		var child = pre->undefs->head
+	if( presetcode ) then
+		var child = presetcode->head
 		while( child )
-			ppPreUndef( child->text )
-			ppRemoveSym( child->text )
-			child = child->next
-		wend
-	end scope
 
-	scope
-		var child = pre->defines->head
-		while( child )
-			ppPreDefine( child->text )
-			ppRemoveSym( child->text )
-			child = child->next
-		wend
-	end scope
-
-	scope
-		var child = pre->expands->head
-		while( child )
-			ppExpandSym( child->text )
-			child = child->next
-		wend
-	end scope
-
-	scope
-		var child = pre->macros->head
-		while( child )
-			ppPreDefine( child )
-			ppExpandSym( child->text )
-			ppRemoveSym( child->text )
-			child = child->next
-		wend
-	end scope
-
-	scope
-		var child = pre->removes->head
-		while( child )
-			if( child->class = ASTCLASS_PPDEFINE ) then
+			select case( child->class )
+			case ASTCLASS_PPUNDEF
+				ppPreUndef( child->text )
 				ppRemoveSym( child->text )
-			end if
+			case ASTCLASS_DEFINE
+				ppPreDefine( child->text )
+				ppRemoveSym( child->text )
+			case ASTCLASS_EXPAND
+				ppExpandSym( child->text )
+			case ASTCLASS_PPDEFINE
+				ppPreDefine( child )
+				ppExpandSym( child->text )
+				ppRemoveSym( child->text )
+			case ASTCLASS_REMOVE
+				ppRemoveSym( child->text )
+			end select
+
 			child = child->next
 		wend
-	end scope
+	end if
 
 	if( (pre->options and PRESETOPT_NOPP) = 0 ) then
 		ppEval( )
@@ -300,82 +270,41 @@ private function frogParseVersion _
 	function = ast
 end function
 
-private sub frogParse( byval pre as FROGPRESET ptr, byval f as FROGFILE ptr )
-	print "parsing: ";f->pretty
+private function frogWorkVersion _
+	( _
+		byval pre as FROGPRESET ptr, _
+		byval version as ASTNODE ptr, _
+		byval presetcode as ASTNODE ptr, _
+		byref presetfilename as string _
+	) as ASTNODE ptr
 
-	dim as ASTNODE ptr ast
+	var files = astNewGROUP( )
 
-	'' Any versions specified?
-	var version = pre->versions->head
-	if( version ) then
-		var fullversion = astNewVERSION( )
+	print "frogWorkVersion(): presetcode:"
+	astDump( presetcode, 1 )
 
-		'' For each version...
-		do
-			'' Parse files into AST, put the AST into a VERSION block, and merge
-			'' it with previous ones
-			ast = astMergeVersions( ast, astNewVERSION( version, frogParseVersion( pre, f, version ) ) )
+	var child = presetcode->head
+	while( child )
 
-			'' Collect each version's version number
-			astCloneAndAddAllChildrenOf( fullversion->expr, version->expr )
-
-			version = version->next
-		loop while( version )
-
-		'' Remove VERSION blocks if they cover all versions, because if
-		'' code they contain appears in all versions, then the VERSION
-		'' block isn't needed. VERSION blocks are only needed for code
-		'' that is specific to some versions but not all.
-		ast = astSolveVersionsOut( ast, fullversion )
-	else
-		'' Just do a single pass, don't worry about version specifics or AST merging
-		ast = frogParseVersion( pre, f, NULL )
-	end if
-
-	f->ast = ast
-end sub
-
-private sub frogWork( byval pre as FROGPRESET ptr, byref presetfile as string )
-	listInit( @frog.files, sizeof( FROGFILE ) )
-	hashInit( @frog.filehash, 6 )
-
-	'' Download tarballs
-	scope
-		var child = pre->downloads->head
-		while( child )
+		select case( child->class )
+		case ASTCLASS_DOWNLOAD
+			'' Download tarballs
 			if( frogDownload( *child->text, *child->comment ) = FALSE ) then
 				oops( "failed to download " + *child->comment )
 			end if
-			child = child->next
-		wend
-	end scope
 
-	'' Extract tarballs
-	scope
-		var child = pre->extracts->head
-		while( child )
+		case ASTCLASS_EXTRACT
+			'' Extract tarballs
 			if( frogExtract( *child->text, *child->comment ) = FALSE ) then
 				oops( "failed to extract " + *child->text )
 			end if
-			child = child->next
-		wend
-	end scope
 
-	'' Input files
-	scope
-		var child = pre->files->head
-		while( child )
-			'' File from command line, search in current directory
-			frogAddFile( NULL, *child->text )
-			child = child->next
-		wend
-	end scope
+		case ASTCLASS_FILE
+			'' Input files
+			frogAddFile( files, NULL, child->text )
 
-	'' Input files from directories
-	scope
-		var child = pre->dirs->head
-		while( child )
-
+		case ASTCLASS_DIR
+			'' Input files from directories
 			dim as TLIST list
 			listInit( @list, sizeof( string ) )
 
@@ -383,26 +312,31 @@ private sub frogWork( byval pre as FROGPRESET ptr, byref presetfile as string )
 
 			dim as string ptr s = listGetHead( @list )
 			while( s )
-				frogAddFile( NULL, *s )
+				frogAddFile( files, NULL, *s )
 				*s = ""
 				s = listGetNext( s )
 			wend
 
 			listEnd( @list )
 
-			child = child->next
-		wend
-	end scope
+		end select
 
-	if( listGetHead( @frog.files ) = NULL ) then
-		if( len( presetfile ) > 0 ) then
-			oops( "no input files for '" + presetfile + "'" )
+		child = child->next
+	wend
+
+	if( files->head = NULL ) then
+		if( len( presetfilename ) > 0 ) then
+			if( version ) then
+				oops( "no input files for version " + astStringifyVersion( version ) + " in " + presetfilename )
+			else
+				oops( "no input files for " + presetfilename )
+			end if
 		else
 			oops( "no input files" )
 		end if
 	end if
 
-	dim as FROGFILE ptr f
+	dim as ASTNODE ptr f
 
 	if( (pre->options and PRESETOPT_NOMERGE) = 0 ) then
 		print "preparsing to determine #include dependencies..."
@@ -410,10 +344,10 @@ private sub frogWork( byval pre as FROGPRESET ptr, byref presetfile as string )
 		'' Preparse to find #includes and calculate refcounts
 		'' Files newly registered by the inner loop will eventually be worked
 		'' off by the outer loop, as they're appended to the files list.
-		f = listGetHead( @frog.files )
+		f = files->head
 		while( f )
-			if( f->missing = FALSE ) then
-				print "preparsing: ";f->pretty
+			if( (f->attrib and ASTATTRIB_MISSING) = 0 ) then
+				print "preparsing: ";*f->comment
 
 				tkInit( )
 				lexLoadFile( 0, f, LEXMODE_C, FALSE )
@@ -425,18 +359,18 @@ private sub frogWork( byval pre as FROGPRESET ptr, byref presetfile as string )
 				while( tkGet( x ) <> TK_EOF )
 
 					if( tkGet( x ) = TK_PPINCLUDE ) then
-						var incfile = *tkGetText( x )
+						var incfile = tkGetText( x )
 
-						print "  #include: " & incfile;
+						print "  #include: " + *incfile;
 						if( verbose ) then
 							print
 						end if
 
-						var incf = frogAddFile( f, incfile )
+						var incf = frogAddFile( files, f, incfile )
 						incf->refcount += 1
 
 						if( verbose = FALSE ) then
-							if( incf->missing ) then
+							if( incf->attrib and ASTATTRIB_MISSING ) then
 								print " (not found)"
 							end if
 						end if
@@ -448,106 +382,154 @@ private sub frogWork( byval pre as FROGPRESET ptr, byref presetfile as string )
 				tkEnd( )
 			end if
 
-			f = listGetNext( f )
+			f = f->next
 		wend
 
 		'' Pass 1: Process any files that don't look like they'll be
 		'' merged, i.e. refcount <> 1.
-		f = listGetHead( @frog.files )
+		f = files->head
 		while( f )
 
-			if( (not f->missing) and (f->refcount <> 1) ) then
+			if( ((f->attrib and ASTATTRIB_MISSING) = 0) and (f->refcount <> 1) ) then
 				assert( f->mergeparent = NULL )
-				frogParse( pre, f )
+				f->expr = frogWorkFile( pre, presetcode, files, f )
 
-				dim as FROGFILE ptr incf = listGetHead( @frog.files )
+				var incf = files->head
 				while( incf )
 					if( incf->mergeparent = f ) then
-						print "merged in: " + incf->pretty
+						print "merged in: " + *incf->comment
 					end if
-					incf = listGetNext( incf )
+					incf = incf->next
 				wend
 			end if
 
-			f = listGetNext( f )
+			f = f->next
 		wend
 
 		'' Pass 2: Process files that looked like they should be merged,
 		'' but weren't. This happens with recursive #includes, where all
 		'' have refcount > 0, so none of them were merged in anywhere
 		'' during the 1st pass.
-		f = listGetHead( @frog.files )
+		f = files->head
 		while( f )
 
-			if( (not f->missing) and (f->refcount = 1) and (f->mergeparent = NULL) ) then
-				frogParse( pre, f )
+			if( ((f->attrib and ASTATTRIB_MISSING) = 0) and (f->refcount = 1) and (f->mergeparent = NULL) ) then
+				f->expr = frogWorkFile( pre, presetcode, files, f )
 
-				dim as FROGFILE ptr incf = listGetHead( @frog.files )
+				var incf = files->head
 				while( incf )
 					if( incf->mergeparent = f ) then
-						print "merged in: " + incf->pretty
+						print "merged in: " + *incf->comment
 					end if
-					incf = listGetNext( incf )
+					incf = incf->next
 				wend
 			end if
 
-			f = listGetNext( f )
+			f = f->next
 		wend
 
 		'' Concatenate files with refcount=0
-		dim as FROGFILE ptr first
-		f = listGetHead( @frog.files )
+		dim as ASTNODE ptr first
+		f = files->head
 		while( f )
 			if( f->refcount = 0 ) then
 				if( first ) then
 					'' Already have a first; append to it
-					if( f->ast ) then
-						astAppend( first->ast, f->ast )
-						f->ast = NULL
+					if( f->expr ) then
+						astAppend( first->expr, f->expr )
+						f->expr = NULL
 					end if
 				else
 					'' This is the first
 					first = f
 				end if
 			end if
-			f = listGetNext( f )
+			f = f->next
 		wend
 	else
 		'' No merging requested, just process each file that was found
 		'' individually.
-		f = listGetHead( @frog.files )
+		f = files->head
 		while( f )
-			if( f->missing = FALSE ) then
-				frogParse( pre, f )
+			if( (f->attrib and ASTATTRIB_MISSING) = 0 ) then
+				f->expr = frogWorkFile( pre, presetcode, files, f )
 			end if
-			f = listGetNext( f )
+			f = f->next
 		wend
 	end if
 
 	'' Emit all files that have an AST (i.e. weren't merged into or
 	'' appended to anything)
-	f = listGetHead( @frog.files )
+	f = files->head
 	while( f )
-		if( f->ast ) then
-			var binormed = pathStripExt( f->normed ) + ".bi"
-			var bipretty = pathStripExt( f->pretty ) + ".bi"
+		if( f->expr ) then
+			var binormed = pathStripExt( *f->text ) + ".bi"
+			var bipretty = pathStripExt( *f->comment ) + ".bi"
 			print "emitting: " + bipretty
-			'astDump( f->ast )
-			emitFile( binormed, f->ast )
+			emitFile( binormed, f->expr )
 		end if
-		f = listGetNext( f )
+		f = f->next
 	wend
 
-	hashEnd( @frog.filehash )
-	do
-		f = listGetHead( @frog.files )
-		if( f = NULL ) then exit do
-		f->pretty = ""
-		f->normed = ""
-		astDelete( f->ast )
-		listDelete( @frog.files, f )
-	loop
-	listEnd( @frog.files )
+	function = files
+end function
+
+private sub frogWorkPreset _
+	( _
+		byval pre as FROGPRESET ptr, _
+		byref presetfilename as string _
+	)
+
+	var versions = astCollectVersions( pre->code )
+
+	'' Any versions specified?
+	var version = versions->head
+	if( version ) then
+		'' For each version...
+		do
+			if( verbose ) then
+				print "version:"
+				astDump( version->expr, 1 )
+			end if
+
+			'' Determine preset code for that version
+			var presetcode = astGet1VersionOnly( pre->code, version )
+
+			var files = frogWorkVersion( pre, version, presetcode, presetfilename )
+			astDump( files )
+			astDelete( files )
+
+			astDelete( presetcode )
+
+			version = version->next
+		loop while( version )
+
+#if 0
+		var fullversion = astNewVERSION( )
+		for each file
+			'' Parse files into AST, put the AST into a VERSION block, and merge
+			'' it with previous ones
+			ast = astMergeVersions( ast, _
+				astNewVERSION( version, _
+					f->expr, _
+					NULL ) )
+			'' Collect each version's version number
+			astCloneAndAddAllChildrenOf( fullversion->expr, version->expr )
+		'' Remove VERSION blocks if they cover all versions, because if
+		'' code they contain appears in all versions, then the VERSION
+		'' block isn't needed. VERSION blocks are only needed for code
+		'' that is specific to some versions but not all.
+		ast = astRemoveVersionWrapping( ast, fullversion )
+#endif
+	else
+		'' Just do a single pass, don't worry about version specifics or AST merging
+		var files = frogWorkVersion( pre, NULL, pre->code, presetfilename )
+		astDump( files )
+		astDelete( files )
+	end if
+
+	astDelete( versions )
+
 end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -585,10 +567,10 @@ end sub
 		else
 			select case( pathExtOnly( arg ) )
 			case "h", "hh", "hxx", "hpp", "c", "cc", "cxx", "cpp"
-				presetAddFile( @cmdline, arg )
+				astAppend( cmdline.code, astNew( ASTCLASS_FILE, arg ) )
 			case ""
 				'' No extension? Treat as directory
-				presetAddDir( @cmdline, arg )
+				astAppend( cmdline.code, astNew( ASTCLASS_DIR, arg ) )
 			case "fbfrog"
 				astAppend( presetfiles, astNewTEXT( arg ) )
 			case else
@@ -610,15 +592,7 @@ end sub
 			presetInit( @pre )
 			presetParse( @pre, presetfilename )
 
-			'' Any additional *.h input files given on the command
-			'' line (besides the *.fbfrog file(s)) override input
-			'' files from the *.fbfrog file. This allows the preset
-			'' to be used on other files for testing.
-			if( presetHasInput( @cmdline ) ) then
-				presetOverrideInput( @pre, @cmdline )
-			end if
-
-			frogWork( @pre, presetfilename )
+			frogWorkPreset( @pre, presetfilename )
 			presetEnd( @pre )
 
 			presetfile = presetfile->next
@@ -628,7 +602,7 @@ end sub
 		'' on the command line, it's basically a "preset" too, just not
 		'' stored in a *.fbfrog file but given through command line
 		'' options.
-		frogWork( @cmdline, "" )
+		frogWorkPreset( @cmdline, "" )
 	end if
 
 	if( verbose ) then

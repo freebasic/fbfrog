@@ -659,7 +659,7 @@ private function imToplevel( ) as ASTNODE ptr
 	function = group
 end function
 
-function importFile( byval file as FROGFILE ptr ) as ASTNODE ptr
+function importFile( byval file as ASTNODE ptr ) as ASTNODE ptr
 	tkInit( )
 	lexLoadFile( 0, file, LEXMODE_FB, FALSE )
 	function = imToplevel( )

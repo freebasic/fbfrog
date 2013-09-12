@@ -764,15 +764,15 @@ end sub
 
 private sub hLoadFile _
 	( _
-		byval file as FROGFILE ptr, _
+		byval file as ASTNODE ptr, _
 		byref buffer as ubyte ptr, _
 		byref limit as ubyte ptr _
 	)
 
 	'' Read in the whole file content into lex.buffer
 	var f = freefile( )
-	if( open( file->normed, for binary, access read, as #f ) ) then
-		oops( "could not open file: '" + file->normed + "'" )
+	if( open( *file->text, for binary, access read, as #f ) ) then
+		oops( "could not open file: '" + *file->text + "'" )
 	end if
 
 	var filesize = lof( f )
@@ -801,7 +801,7 @@ end sub
 
 private sub hComplainAboutEmbeddedNulls _
 	( _
-		byval file as FROGFILE ptr, _
+		byval file as ASTNODE ptr, _
 		byval buffer as ubyte ptr, _
 		byval limit as ubyte ptr _
 	)
@@ -811,7 +811,7 @@ private sub hComplainAboutEmbeddedNulls _
 	var i = buffer
 	while( i < limit )
 		if( i[0] = 0 ) then
-			oops( file->pretty + ": file has embedded nulls, please fix that first!" )
+			oops( *file->comment + ": file has embedded nulls, please fix that first!" )
 		end if
 		i += 1
 	wend
@@ -854,7 +854,7 @@ end sub
 function lexLoadFile _
 	( _
 		byval x as integer, _
-		byval file as FROGFILE ptr, _
+		byval file as ASTNODE ptr, _
 		byval mode as integer, _
 		byval keep_comments as integer _
 	) as integer
@@ -875,11 +875,9 @@ function lexLoadFile _
 		lexNext( )
 	wend
 
-	file->linecount = lex.location.linenum + 1
-
 	if( verbose ) then
-		print "lex: " + file->pretty + ", " & cuint( lex.limit ) - cuint( lex.buffer ) & _
-			" bytes, " & file->linecount & " lines, " & lex.x - x & " tokens"
+		print "lex: " + *file->comment + ", " & cuint( lex.limit ) - cuint( lex.buffer ) & _
+			" bytes, " & (lex.location.linenum + 1) & " lines, " & lex.x - x & " tokens"
 	end if
 
 	deallocate( lex.buffer )
@@ -890,7 +888,7 @@ end function
 '' error messages.
 function lexPeekLine _
 	( _
-		byval file as FROGFILE ptr, _
+		byval file as ASTNODE ptr, _
 		byval targetlinenum as integer _
 	) as string
 
@@ -946,4 +944,33 @@ function lexPeekLine _
 	wend
 
 	function = s
+end function
+
+function lexCountLines( byval file as ASTNODE ptr ) as integer
+	dim as ubyte ptr buffer, limit
+	hLoadFile( file, buffer, limit )
+	hComplainAboutEmbeddedNulls( file, buffer, limit )
+
+	var i = buffer
+	var lines = 1
+	do
+		select case( i[0] )
+		case 0
+			exit do
+
+		case CH_CR
+			if( i[1] = CH_LF ) then '' CRLF
+				i += 1
+			end if
+			lines += 1
+
+		case CH_LF
+			lines += 1
+
+		end select
+
+		i += 1
+	loop
+
+	function = lines
 end function
