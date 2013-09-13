@@ -772,6 +772,11 @@ private function ppDirective( byval x as integer ) as integer
 			tkOops( x, "unknown #pragma" )
 		end select
 
+	case TK_EOL
+		'' '#' followed by EOL (accepted by gcc/clang too)
+		tkRemove( begin, x - 1 )
+		x = begin
+
 	case else
 		tkOops( x, "unknown PP directive" )
 	end select

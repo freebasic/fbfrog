@@ -7,6 +7,11 @@
  # include "7"
  # include <8>
 
+// "empty" PP directive
+#
+# /* another "empty" with just a comment */
+# // ditto
+
 #define A01 0
 #define A02 1
 #define A03 11
