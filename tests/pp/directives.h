@@ -63,3 +63,6 @@
 #define m(a) #a
 
 #define no_parameters_here (a)
+
+#pragma message("test")
+static int separator1;

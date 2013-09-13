@@ -740,6 +740,34 @@ private function ppDirective( byval x as integer ) as integer
 		tkFold( begin, x, TK_PPUNDEF, tkGetText( x ) )
 		x = begin + 1
 
+	case KW_PRAGMA
+		x += 1
+
+		select case( tkGet( x ) )
+		case TK_ID
+			'' #pragma message("...")
+			select case( *tkGetText( x ) )
+			case "message"
+				x += 1
+
+				tkExpect( x, TK_LPAREN, "for #pragma message" )
+				x += 1
+
+				tkExpect( x, TK_STRING, "for #pragma message" )
+				x += 1
+
+				tkExpect( x, TK_RPAREN, "for #pragma message" )
+
+				tkRemove( begin, x )
+				x = begin
+
+			case else
+				tkOops( x, "unknown #pragma" )
+			end select
+		case else
+			tkOops( x, "unknown #pragma" )
+		end select
+
 	case else
 		tkOops( x, "unknown PP directive" )
 	end select

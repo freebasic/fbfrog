@@ -63,3 +63,5 @@
 #define m( a ) #a
 
 #define no_parameters_here a
+
+dim shared separator1 as long
