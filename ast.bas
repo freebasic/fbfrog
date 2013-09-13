@@ -2310,6 +2310,10 @@ function astMergeFiles _
 		byval files2 as ASTNODE ptr _
 	) as ASTNODE ptr
 
+	if( files1 = NULL ) then
+		return files2
+	end if
+
 	'' Merge files2 into files1
 	''
 	'' For example:
