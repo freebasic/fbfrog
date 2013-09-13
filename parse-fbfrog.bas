@@ -129,7 +129,6 @@ sub presetParse( byval pre as FROGPRESET ptr, byref presetfile as string )
 		case KW_END
 			hSkip( )
 			hExpectSkip( KW_VERSION, "as in 'END VERSION" )
-			hExpectSkip( TK_EOL, "behind END VERSION statement" )
 
 			if( verlevel < 1 ) then
 				hOops( "END VERSION without corresponding VERSION block begin" )
