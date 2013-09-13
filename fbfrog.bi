@@ -182,6 +182,7 @@ declare sub listEnd( byval l as TLIST ptr )
 declare function pathStripExt( byref path as string ) as string
 declare function pathExtOnly( byref path as string ) as string
 declare function pathOnly( byref path as string ) as string
+declare function pathStrip( byref path as string ) as string
 declare function pathAddDiv( byref path as string ) as string
 declare function pathStripLastComponent( byref path as string ) as string
 declare function pathFindCommonBase _
@@ -793,11 +794,11 @@ declare function astGet1VersionOnly _
 		byval code as ASTNODE ptr, _
 		byval matchversion as ASTNODE ptr _
 	) as ASTNODE ptr
-declare function astRemoveVersionWrapping _
+declare sub astRemoveFullVersionWrappingFromFiles _
 	( _
-		byval nodes as ASTNODE ptr, _
-		byval matchversion as ASTNODE ptr _
-	) as ASTNODE ptr
+		byval files as ASTNODE ptr, _
+		byval versions as ASTNODE ptr _
+	)
 declare function astIsChildOf _
 	( _
 		byval parent as ASTNODE ptr, _
@@ -865,6 +866,11 @@ declare function astMergeVersions _
 	( _
 		byval a as ASTNODE ptr, _
 		byval b as ASTNODE ptr _
+	) as ASTNODE ptr
+declare function astMergeFiles _
+	( _
+		byval files1 as ASTNODE ptr, _
+		byval files2 as ASTNODE ptr _
 	) as ASTNODE ptr
 declare function astDumpOne( byval n as ASTNODE ptr ) as string
 declare function astDumpInline( byval n as ASTNODE ptr ) as string

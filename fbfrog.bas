@@ -170,13 +170,14 @@ private function frogAddFile _
 	function = f
 end function
 
-private function frogWorkFile _
+private sub frogWorkFile _
 	( _
 		byval pre as FROGPRESET ptr, _
 		byval presetcode as ASTNODE ptr, _
+		byval version as ASTNODE ptr, _
 		byval files as ASTNODE ptr, _
 		byval f as ASTNODE ptr _
-	) as ASTNODE ptr
+	)
 
 	tkInit( )
 
@@ -283,8 +284,13 @@ private function frogWorkFile _
 	end if
 	astMergeDIVIDERs( ast )
 
-	function = ast
-end function
+	'' Put file's AST into a VERSION block, if a version was given
+	if( version ) then
+		ast = astNewVERSION( version, NULL, ast )
+	end if
+
+	f->expr = ast
+end sub
 
 private function frogWorkVersion _
 	( _
@@ -295,9 +301,6 @@ private function frogWorkVersion _
 	) as ASTNODE ptr
 
 	var files = astNewGROUP( )
-
-	print "frogWorkVersion(): presetcode:"
-	astDump( presetcode, 1 )
 
 	var child = presetcode->head
 	while( child )
@@ -408,7 +411,7 @@ private function frogWorkVersion _
 
 			if( ((f->attrib and ASTATTRIB_MISSING) = 0) and (f->refcount <> 1) ) then
 				assert( f->mergeparent = NULL )
-				f->expr = frogWorkFile( pre, presetcode, files, f )
+				frogWorkFile( pre, presetcode, version, files, f )
 
 				var incf = files->head
 				while( incf )
@@ -430,7 +433,7 @@ private function frogWorkVersion _
 		while( f )
 
 			if( ((f->attrib and ASTATTRIB_MISSING) = 0) and (f->refcount = 1) and (f->mergeparent = NULL) ) then
-				f->expr = frogWorkFile( pre, presetcode, files, f )
+				frogWorkFile( pre, presetcode, version, files, f )
 
 				var incf = files->head
 				while( incf )
@@ -468,24 +471,11 @@ private function frogWorkVersion _
 		f = files->head
 		while( f )
 			if( (f->attrib and ASTATTRIB_MISSING) = 0 ) then
-				f->expr = frogWorkFile( pre, presetcode, files, f )
+				frogWorkFile( pre, presetcode, version, files, f )
 			end if
 			f = f->next
 		wend
 	end if
-
-	'' Emit all files that have an AST (i.e. weren't merged into or
-	'' appended to anything)
-	f = files->head
-	while( f )
-		if( f->expr ) then
-			var binormed = pathStripExt( *f->text ) + ".bi"
-			var bipretty = pathStripExt( *f->comment ) + ".bi"
-			print "emitting: " + bipretty
-			emitFile( binormed, f->expr )
-		end if
-		f = f->next
-	wend
 
 	function = files
 end function
@@ -497,53 +487,48 @@ private sub frogWorkPreset _
 	)
 
 	var versions = astCollectVersions( pre->code )
+	dim as ASTNODE ptr files
 
 	'' Any versions specified?
 	var version = versions->head
 	if( version ) then
 		'' For each version...
 		do
-			if( verbose ) then
-				print "version:"
-				astDump( version->expr, 1 )
-			end if
+			print "version: " + astStringifyVersion( version )
 
 			'' Determine preset code for that version
 			var presetcode = astGet1VersionOnly( pre->code, version )
 
-			var files = frogWorkVersion( pre, version, presetcode, presetfilename )
-			astDump( files )
-			astDelete( files )
+			'' Parse files for this version and combine them with files
+			'' from previous versions if possible
+			files = astMergeFiles( files, _
+				frogWorkVersion( pre, version, presetcode, presetfilename ) )
 
 			astDelete( presetcode )
 
 			version = version->next
 		loop while( version )
 
-#if 0
-		var fullversion = astNewVERSION( )
-		for each file
-			'' Parse files into AST, put the AST into a VERSION block, and merge
-			'' it with previous ones
-			ast = astMergeVersions( ast, _
-				astNewVERSION( version, _
-					f->expr, _
-					NULL ) )
-			'' Collect each version's version number
-			astCloneAndAddAllChildrenOf( fullversion->expr, version->expr )
-		'' Remove VERSION blocks if they cover all versions, because if
-		'' code they contain appears in all versions, then the VERSION
-		'' block isn't needed. VERSION blocks are only needed for code
-		'' that is specific to some versions but not all.
-		ast = astRemoveVersionWrapping( ast, fullversion )
-#endif
+		astRemoveFullVersionWrappingFromFiles( files, versions )
 	else
 		'' Just do a single pass, don't worry about version specifics or AST merging
-		var files = frogWorkVersion( pre, NULL, pre->code, presetfilename )
-		astDump( files )
-		astDelete( files )
+		files = frogWorkVersion( pre, NULL, pre->code, presetfilename )
 	end if
 
+	'' Emit all files that have an AST (i.e. weren't merged into or
+	'' appended to anything)
+	var f = files->head
+	while( f )
+		if( f->expr ) then
+			var binormed = pathStripExt( *f->text ) + ".bi"
+			var bipretty = pathStripExt( *f->comment ) + ".bi"
+			print "emitting: " + bipretty
+			emitFile( binormed, f->expr )
+		end if
+		f = f->next
+	wend
+
+	astDelete( files )
 	astDelete( versions )
 
 end sub

@@ -548,7 +548,7 @@ function astGet1VersionOnly _
 	function = result
 end function
 
-function astRemoveVersionWrapping _
+private function astRemoveVersionWrapping _
 	( _
 		byval nodes as ASTNODE ptr, _
 		byval matchversion as ASTNODE ptr _
@@ -576,6 +576,48 @@ function astRemoveVersionWrapping _
 	astDelete( matchversion )
 	function = cleannodes
 end function
+
+'' Collect each version's version number into a "full" version number,
+'' which can be used to match VERSION blocks that cover all versions.
+private function astBuildFullVersion( byval versions as ASTNODE ptr ) as ASTNODE ptr
+	var fullversion = astNewVERSION( )
+
+	var version = versions->head
+	while( version )
+		astCloneAndAddAllChildrenOf( fullversion->expr, version->expr )
+		version = version->next
+	wend
+
+	function = fullversion
+end function
+
+'' Removes VERSION blocks if they cover all versions, because if code they
+'' contain appears in all versions, then the VERSION block isn't needed.
+'' VERSION blocks are only needed for code that is specific to some versions
+'' but not all.
+private function astRemoveFullVersionWrapping _
+	( _
+		byval ast as ASTNODE ptr, _
+		byval versions as ASTNODE ptr _
+	) as ASTNODE ptr
+	function = astRemoveVersionWrapping( ast, astBuildFullVersion( versions ) )
+end function
+
+sub astRemoveFullVersionWrappingFromFiles _
+	( _
+		byval files as ASTNODE ptr, _
+		byval versions as ASTNODE ptr _
+	)
+
+	var f = files->head
+	while( f )
+
+		f->expr = astRemoveFullVersionWrapping( f->expr, versions )
+
+		f = f->next
+	wend
+
+end sub
 
 function astIsChildOf _
 	( _
@@ -2260,6 +2302,58 @@ function astMergeVersions _
 	#endif
 
 	function = c
+end function
+
+function astMergeFiles _
+	( _
+		byval files1 as ASTNODE ptr, _
+		byval files2 as ASTNODE ptr _
+	) as ASTNODE ptr
+
+	'' Merge files2 into files1
+	''
+	'' For example:
+	'' files1:
+	''    libfoo-1/foo.h
+	''    libfoo-1/fooconfig.h
+	'' files2:
+	''    libfoo-2/foo.h
+	''    libfoo-2/foo2.h
+	'' foo.h exists in both versions and thus the two should be combined,
+	'' but the other files only exist in their respective version,
+	'' so they shouldn't be combined, just preserved.
+
+	var f2 = files2->head
+	while( f2 )
+
+		'' Does a file with similar name exist in files1?
+		var name2 = pathStrip( *f2->text )
+
+		var f1 = files1->head
+		while( f1 )
+
+			var name1 = pathStrip( *f1->text )
+			if( name1 = name2 ) then
+				exit while
+			end if
+
+			f1 = f1->next
+		wend
+
+		if( f1 ) then
+			'' File found in files1; merge the two files' ASTs
+			f1->expr = astMergeVersions( f1->expr, f2->expr )
+			f2->expr = NULL
+		else
+			'' File exists only in files2, copy over to files1
+			astAppend( files1, astClone( f2 ) )
+		end if
+
+		f2 = f2->next
+	wend
+
+	astDelete( files2 )
+	function = files1
 end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''

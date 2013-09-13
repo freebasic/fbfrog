@@ -654,6 +654,7 @@ function pathStripExt( byref path as string ) as string
 end function
 
 function pathExtOnly( byref path as string ) as string
+	'' -1 to strip the '.' in front of the file extension
 	function = right( path, len( path ) - hFindExtBegin( path ) - 1 )
 end function
 
@@ -672,6 +673,10 @@ end function
 
 function pathOnly( byref path as string ) as string
 	function = left( path, hFindFileName( path ) )
+end function
+
+function pathStrip( byref path as string ) as string
+	function = right( path, len( path ) - hFindFileName( path ) )
 end function
 
 function pathAddDiv( byref path as string ) as string
