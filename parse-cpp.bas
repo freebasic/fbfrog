@@ -1794,6 +1794,9 @@ sub ppEval( )
 					''hRemoveTokenAndTkBeginEnd( x )
 					t->attrib or= ASTATTRIB_REMOVE
 				end if
+
+				'' Skip over the #define body, so no macro expansion will be done inside
+				x = hSkipFromBeginToEnd( x + 1 )
 			end if
 
 		case TK_PPUNDEF
@@ -1878,6 +1881,9 @@ sub ppParseIfExprOnly( byval do_fold as integer )
 				''hRemoveTokenAndTkBeginEnd( x )
 				t->attrib or= ASTATTRIB_REMOVE
 			end if
+
+			'' Skip over the #define body here, just for consistency with ppEval()
+			x = hSkipFromBeginToEnd( x + 1 )
 
 		case TK_PPUNDEF
 			'' Register/overwrite as known undefined symbol
