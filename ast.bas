@@ -2407,7 +2407,7 @@ function astDumpOne( byval n as ASTNODE ptr ) as string
 		s += " " + tkDumpBasic( n->tk, n->text )
 
 	case ASTCLASS_UOP, ASTCLASS_BOP
-		static as zstring * 16 ops(ASTOP_CLOGOR to ASTOP_STRINGIFY) = _
+		static as zstring * 16 ops(ASTOP_CLOGOR to ASTOP_SIZEOF) = _
 		{ _
 			"c ||"		, _ '' ASTOP_CLOGOR
 			"c &&"		, _ '' ASTOP_CLOGAND
@@ -2446,7 +2446,8 @@ function astDumpOne( byval n as ASTNODE ptr ) as string
 			"defined()"	, _ '' ASTOP_DEFINED
 			"@"		, _ '' ASTOP_ADDROF
 			"deref"		, _ '' ASTOP_DEREF
-			"#"		  _ '' ASTOP_STRINGIFY
+			"#"		, _ '' ASTOP_STRINGIFY
+			"sizeof"	  _ '' ASTOP_SIZEOF
 		}
 
 		s += " " + ops(n->op)

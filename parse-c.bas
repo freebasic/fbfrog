@@ -93,6 +93,7 @@ private function cExpression( byval level as integer = 0 ) as ASTNODE ptr
 	case TK_PLUS   : op = ASTOP_UNARYPLUS '' +
 	case TK_AMP    : op = ASTOP_ADDROF    '' &
 	case TK_STAR   : op = ASTOP_DEREF     '' *
+	case KW_SIZEOF : op = ASTOP_SIZEOF    '' sizeof
 	end select
 
 	dim as ASTNODE ptr a

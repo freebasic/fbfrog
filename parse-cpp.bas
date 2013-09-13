@@ -423,7 +423,7 @@ function hNumberLiteral( byval x as integer ) as ASTNODE ptr
 end function
 
 '' C operator precedence, starting at 1, higher value = higher precedence
-dim shared as integer cprecedence(ASTOP_IIF to ASTOP_STRINGIFY) = _
+dim shared as integer cprecedence(ASTOP_IIF to ASTOP_SIZEOF) = _
 { _
 	 1, _ '' ASTOP_IIF
 	 2, _ '' ASTOP_CLOGOR
@@ -463,7 +463,8 @@ dim shared as integer cprecedence(ASTOP_IIF to ASTOP_STRINGIFY) = _
 	 0, _ '' ASTOP_DEFINED (unused)
 	12, _ '' ASTOP_ADDROF
 	12, _ '' ASTOP_DEREF
-	 0  _ '' ASTOP_STRINGIFY (unused)
+	 0, _ '' ASTOP_STRINGIFY (unused)
+	12  _ '' ASTOP_SIZEOF
 }
 
 '' C PP expression parser based on precedence climbing

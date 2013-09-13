@@ -594,9 +594,10 @@ private function emitAst _
 		case ASTOP_DEFINED
 			s = "defined( " + emitAst( n->l ) + " )"
 			need_parens = FALSE
-		case ASTOP_STRINGIFY : s = "#"    + emitAst( n->l ) : need_parens = FALSE
 		case ASTOP_ADDROF    : s = "@"    + emitAst( n->l, TRUE )
 		case ASTOP_DEREF     : s = "*"    + emitAst( n->l, TRUE )
+		case ASTOP_STRINGIFY : s = "#"    + emitAst( n->l ) : need_parens = FALSE
+		case ASTOP_SIZEOF    : s = "sizeof( " + emitAst( n->l ) + " )" : need_parens = FALSE
 		case else
 			assert( FALSE )
 		end select

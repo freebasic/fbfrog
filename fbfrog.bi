@@ -597,6 +597,7 @@ enum
 	ASTOP_ADDROF
 	ASTOP_DEREF
 	ASTOP_STRINGIFY
+	ASTOP_SIZEOF
 end enum
 
 enum
@@ -916,7 +917,7 @@ declare function importFile( byval file as ASTNODE ptr ) as ASTNODE ptr
 declare sub ppComments( )
 declare sub ppDividers( )
 declare function hNumberLiteral( byval x as integer ) as ASTNODE ptr
-extern as integer cprecedence(ASTOP_IIF to ASTOP_STRINGIFY)
+extern as integer cprecedence(ASTOP_IIF to ASTOP_SIZEOF)
 declare sub hMacroParamList( byref x as integer, byval t as ASTNODE ptr )
 declare sub ppDirectives1( )
 declare sub ppEvalInit( )
