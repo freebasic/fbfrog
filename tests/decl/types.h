@@ -17,6 +17,14 @@ static          int a;
 static   signed int a;
 static unsigned int a;
 
+static          long a;
+static   signed long a;
+static unsigned long a;
+
+static          long int a;
+static   signed long int a;
+static unsigned long int a;
+
 static          long long a;
 static   signed long long a;
 static unsigned long long a;

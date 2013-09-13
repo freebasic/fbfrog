@@ -680,7 +680,7 @@ private sub cBaseType _
 		if( shortmods = 1 ) then
 			dtype = iif( unsignedmods > 0, TYPE_USHORT, TYPE_SHORT )
 		elseif( longmods = 1 ) then
-			cOops( "TODO: How to handle translation of C longs (32bit vs. 64bit)?" )
+			dtype = iif( unsignedmods > 0, TYPE_CULONG, TYPE_CLONG )
 		elseif( longmods = 2 ) then
 			dtype = iif( unsignedmods > 0, TYPE_ULONGINT, TYPE_LONGINT )
 		elseif( tkGet( basetypex ) = KW_INT ) then

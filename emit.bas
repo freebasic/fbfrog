@@ -33,6 +33,8 @@ function emitType _
 		@"ushort"  , _
 		@"long"    , _
 		@"ulong"   , _
+		@"clong"   , _
+		@"culong"  , _
 		@"integer" , _
 		@"uinteger", _
 		@"longint" , _

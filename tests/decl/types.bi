@@ -17,6 +17,14 @@ dim shared a as long
 dim shared a as long
 dim shared a as ulong
 
+dim shared a as clong
+dim shared a as clong
+dim shared a as culong
+
+dim shared a as clong
+dim shared a as clong
+dim shared a as culong
+
 dim shared a as longint
 dim shared a as longint
 dim shared a as ulongint
