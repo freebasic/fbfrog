@@ -1075,9 +1075,22 @@ private sub hInsertMacroExpansion _
 	''    for merging) or a macro argument (then no merging)
 	''
 
-	'' Pass 1: For each token in the macro body...
+
 	assert( tkGet( xmacro     ) = TK_PPDEFINE )
 	assert( tkGet( xmacro + 1 ) = TK_BEGIN    )
+	#if __FB_DEBUG__
+		var bodyend = xmacro + 2
+		while( tkGet( bodyend ) <> TK_END )
+			bodyend += 1
+		wend
+		'' The code below assumes that the expansion is inserted behind
+		'' the macro body, so that the token positions referencing the
+		'' body don't need to be adjusted every time an expansion token
+		'' is inserted...
+		assert( x > bodyend )
+	#endif
+
+	'' Pass 1: For each token in the macro body...
 	var b = xmacro + 2
 	var xbegin = x
 	do
