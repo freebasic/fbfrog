@@ -618,10 +618,12 @@ end function
 sub hMacroParamList( byref x as integer, byval t as ASTNODE ptr )
 	assert( tkGet( x ) = TK_ID )
 	t->paramcount = -1
+	x += 1
 
 	'' '(' following directly behind the macro id, no spaces in between?
-	if( (tkGet( x + 1 ) = TK_LPAREN) and (not tkGetBehindSpace( x + 1 )) ) then
-		x += 2  '' id and '('
+	if( (tkGet( x ) = TK_LPAREN) and (not tkGetBehindSpace( x )) ) then
+		'' '('
+		x += 1
 		t->paramcount = 0
 
 		'' List of macro parameters:
@@ -644,6 +646,7 @@ sub hMacroParamList( byref x as integer, byval t as ASTNODE ptr )
 
 		'' ')'?
 		tkExpect( x, TK_RPAREN, "to close the parameter list in this macro declaration" )
+		x += 1
 	end if
 end sub
 
@@ -667,7 +670,7 @@ private function ppDirective( byval x as integer ) as integer
 
 		hMacroParamList( x, macro )
 
-		tkFold( begin, x, TK_PPDEFINE )
+		tkFold( begin, x - 1, TK_PPDEFINE )
 		tkSetAst( begin, macro )
 		x = begin + 1
 
