@@ -430,26 +430,51 @@ private sub hReadString( )
 		case CH_BACKSLASH	'' \
 			lex.i += 1
 
-			var value = hReadEscapeSequence( )
+			'' Look-ahead and check whether it's an escaped EOL.
+			'' Escaped EOLs are not included in the string literal.
+			var i = 0
+			while( (lex.i[i] = CH_TAB) or (lex.i[i] = CH_SPACE) )
+				i += 1
+			wend
 
-			select case( value )
-			case is > &hFFu
-				lexOops( "escape sequence value bigger than " & &hFFu & " (&hFF): " & value & " (&h" & hex( value ) & " )" )
-
-			'' Encode embedded nulls as "\0", and then also backslashes
-			'' as "\\" to prevent ambiguity with the backslash in "\0".
-			'' This allows the string literal content to still be
-			'' represented as null-terminated string.
-			case 0
-				text[j] = CH_BACKSLASH : j += 1
-				text[j] = CH_0         : j += 1
-			case CH_BACKSLASH
-				text[j] = CH_BACKSLASH : j += 1
-				text[j] = CH_BACKSLASH : j += 1
-
-			case else
-				text[j] = value : j += 1
+			var found_eol = FALSE
+			select case( lex.i[i] )
+			case CH_CR
+				i += 1
+				if( lex.i[i] = CH_LF ) then	'' CRLF
+					i += 1
+				end if
+				found_eol = TRUE
+			case CH_LF
+				i += 1
+				found_eol = TRUE
 			end select
+
+			if( found_eol ) then
+				lex.i += i
+				hNewLine( )
+			else
+				var value = hReadEscapeSequence( )
+
+				select case( value )
+				case is > &hFFu
+					lexOops( "escape sequence value bigger than " & &hFFu & " (&hFF): " & value & " (&h" & hex( value ) & " )" )
+
+				'' Encode embedded nulls as "\0", and then also backslashes
+				'' as "\\" to prevent ambiguity with the backslash in "\0".
+				'' This allows the string literal content to still be
+				'' represented as null-terminated string.
+				case 0
+					text[j] = CH_BACKSLASH : j += 1
+					text[j] = CH_0         : j += 1
+				case CH_BACKSLASH
+					text[j] = CH_BACKSLASH : j += 1
+					text[j] = CH_BACKSLASH : j += 1
+
+				case else
+					text[j] = value : j += 1
+				end select
+			end if
 
 		case else
 			text[j] = lex.i[0] : j += 1

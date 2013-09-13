@@ -84,6 +84,9 @@ To do:
   better solution than sharing keywords between C/FB/fbfrog or allow
   anything >= TK_ID as arguments to undef|define|expand|macro.
   Some bindings may need to register symbols that happen to be FB keywords etc...
+- lex: should only allow escaped EOLs in C mode
+- lex: add support for FB escape sequences, or at least only allow C escapes
+  in C modee
 - presets: combine DEFINE/MACRO statements
 
 - Macro expansion should preserve token locations, perhaps even a stack of

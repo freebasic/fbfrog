@@ -100,3 +100,8 @@ declare sub f( )  '' Some escaped newlines
 '' inside\
 '' multi-line\
 '' comment 
+
+#define A "abcdef"
+#define A "abcdef"
+#define A ""
+#define A ""

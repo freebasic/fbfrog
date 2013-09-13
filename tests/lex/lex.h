@@ -128,3 +128,13 @@ newlines
 inside\
 multi-line\
 comment */
+
+// escaped newline in string literal
+#define A "abc\
+def"
+#define A "abc\ 
+def"
+#define A "\
+"
+#define A "\ 
+"
