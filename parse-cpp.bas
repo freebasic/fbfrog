@@ -1089,6 +1089,8 @@ private sub hInsertMacroExpansion _
 		case TK_HASH
 			b += 1
 
+			var is_stringify = FALSE
+
 			'' Followed by identifier?
 			if( tkGet( b ) = TK_ID ) then
 				'' Is it a macro parameter?
@@ -1096,8 +1098,11 @@ private sub hInsertMacroExpansion _
 				if( arg >= 0 ) then
 					tkInsert( x, TK_STRING, hStringify( arg ) )
 					x += 1
+					is_stringify = TRUE
 				end if
-			else
+			end if
+
+			if( is_stringify = FALSE ) then
 				'' Plain '#' (probably never used in practice?)
 				b -= 1
 				tkCopy( x, b, b )
