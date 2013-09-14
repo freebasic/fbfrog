@@ -329,15 +329,12 @@ private function frogWorkVersion _
 			dim as TLIST list
 			listInit( @list, sizeof( string ) )
 
-			hScanDirectoryForH( *child->text, @list )
+			var dirname = presetdir + "/" + *child->text
+			hScanDirectoryForH( dirname, @list )
 
 			dim as string ptr s = listGetHead( @list )
 			while( s )
-
-				var dirname = *s
-				dirname = presetdir + "/" + dirname
-				frogAddFile( files, NULL, dirname )
-
+				frogAddFile( files, NULL, *s )
 				*s = ""
 				s = listGetNext( s )
 			wend
