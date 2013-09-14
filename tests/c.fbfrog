@@ -1,7 +1,4 @@
-dir "tests/decl"
-dir "tests/lex"
-dir "tests/pp"
-dir "tests/udt"
+dir "tests/c"
 option nomerge
 option comments
 option noautoextern

@@ -1,3 +1,9 @@
+struct UDT {
+};
+
+union U {
+};
+
 struct T {
 	int a;
 };
