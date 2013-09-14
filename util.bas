@@ -642,7 +642,11 @@ private function hFindExtBegin( byref path as string ) as integer
 		select case( path[i] )
 		case asc( "." )
 			return i
-		case asc( "/" ), asc( "\" )
+#if defined( __FB_WIN32__ ) or defined( __FB_DOS__ )
+		case asc( "\" ), asc( "/" )
+#else
+		case asc( "/" )
+#endif
 			exit for
 		end select
 	next
@@ -1038,3 +1042,30 @@ function hShell( byref ln as string ) as integer
 		print "'" + ln + "' terminated with exit code " + str( result )
 	end if
 end function
+
+sub hMkdir( byref path as string )
+	if( mkdir( path ) ) then
+	end if
+end sub
+
+sub hMkdirP( byref path as string )
+	'' Given a path like this:
+	''    foo/bar/baz
+	'' Do these mkdir()'s:
+	''    foo
+	''    foo/bar
+	''    foo/bar/baz
+
+	for i as integer = 0 to len( path )-1
+		select case( path[i] )
+#if defined( __FB_WIN32__ ) or defined( __FB_DOS__ )
+		case asc( "\" ), asc( "/" )
+#else
+		case asc( "/" )
+#endif
+			hMkdir( left( path, i ) )
+		end select
+	next
+
+	hMkdir( path )
+end sub

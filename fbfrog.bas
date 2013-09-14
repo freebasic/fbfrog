@@ -22,14 +22,14 @@ private function frogDownload( byref url as string, byref file as string ) as in
 	if( fileexists( "tarballs/" + file ) ) then
 		function = TRUE
 	else
-		function = hShell( "mkdir -p tarballs" ) andalso _
-			hShell( "wget '" + url + "' -O ""tarballs/" + file + """" )
+		hMkdir( "tarballs" )
+		function = hShell( "wget '" + url + "' -O ""tarballs/" + file + """" )
 	end if
 end function
 
 private function frogExtract( byref tarball as string, byref dirname as string ) as integer
 	if( len( dirname ) > 0 ) then
-		hShell( "mkdir -p """ + dirname + """" )
+		hMkdirP( dirname )
 	end if
 
 	dim s as string
