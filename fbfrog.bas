@@ -239,11 +239,10 @@ private sub frogWorkFile _
 			case ASTCLASS_DEFINE
 				ppPreDefine( child->text )
 				ppRemoveSym( child->text )
-			case ASTCLASS_EXPAND
-				ppExpandSym( child->text )
+			case ASTCLASS_NOEXPAND
+				ppNoExpandSym( child->text )
 			case ASTCLASS_PPDEFINE
 				ppPreDefine( child )
-				ppExpandSym( child->text )
 				ppRemoveSym( child->text )
 			case ASTCLASS_REMOVE
 				ppRemoveSym( child->text )

@@ -198,12 +198,12 @@ sub presetParse( byval pre as FROGPRESET ptr, byref presetfile as string )
 			astAppend( verspacestack(verlevel), astNew( ASTCLASS_PPUNDEF, tkGetText( x ) ) )
 			hSkip( )
 
-		'' EXPAND Identifier
-		case KW_EXPAND
+		'' NOEXPAND Identifier
+		case KW_NOEXPAND
 			hSkip( )
 
-			hExpect( TK_ID, "(the #define symbol that should be macro-expanded)" )
-			astAppend( verspacestack(verlevel), astNew( ASTCLASS_EXPAND, tkGetText( x ) ) )
+			hExpect( TK_ID, "(a #defined symbol)" )
+			astAppend( verspacestack(verlevel), astNew( ASTCLASS_NOEXPAND, tkGetText( x ) ) )
 			hSkip( )
 
 		'' MACRO Identifier ['(' MacroParameters ')'] [MacroBody]

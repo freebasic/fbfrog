@@ -33,9 +33,10 @@
 '' If an #if block can't be solved out because of an unknown symbol, an error
 '' will be shown.
 ''
-'' ppExpandSym() registers "precious" symbols that should be macro-expanded,
-'' if ppEval() finds a corresponding #define. ppEval() doesn't expand macros
-'' automatically in order to allow presets to select what to expand.
+'' ppNoExpandSym() can be used to disable macro expansion for certain symbols.
+'' This should be pretty rare though; usually in headers where function
+'' declarations etc. are obfuscated by macros, they're going to need to be
+'' expanded.
 ''
 '' ppRemoveSym() registers symbols (#defines/#undefs) which should be removed
 '' instead of being preserved in the binding. Doing this on the PP level instead
@@ -1313,7 +1314,7 @@ namespace eval
 	'' symbols known to be defined or undefined
 	dim shared knowns		as THASH
 
-	dim shared expands		as THASH
+	dim shared noexpands		as THASH
 	'' #defines/#undefs to remove instead of preserving
 	dim shared removes		as THASH
 
@@ -1331,7 +1332,7 @@ end namespace
 
 sub ppEvalInit( )
 	hashInit( @eval.knowns, 4, TRUE )
-	hashInit( @eval.expands, 4, TRUE )
+	hashInit( @eval.noexpands, 4, TRUE )
 	hashInit( @eval.removes, 4, TRUE )
 	hashInit( @eval.macros, 4, TRUE )
 	eval.xpre = 0
@@ -1339,13 +1340,13 @@ end sub
 
 sub ppEvalEnd( )
 	hashEnd( @eval.knowns )
-	hashEnd( @eval.expands )
+	hashEnd( @eval.noexpands )
 	hashEnd( @eval.removes )
 	hashEnd( @eval.macros )
 end sub
 
-sub ppExpandSym( byval id as zstring ptr )
-	hashAddOverwrite( @eval.expands, id, NULL )
+sub ppNoExpandSym( byval id as zstring ptr )
+	hashAddOverwrite( @eval.noexpands, id, NULL )
 end sub
 
 sub ppRemoveSym( byval id as zstring ptr )
@@ -1432,14 +1433,15 @@ private sub hUndefMacro( byval id as zstring ptr )
 	end if
 end sub
 
-private function hLookupExpandSym( byval id as zstring ptr ) as integer
-	function = (hashLookup( @eval.expands, id, hashHash( id ) )->s <> NULL)
+private function hShouldExpandSym( byval id as zstring ptr ) as integer
+	function = (hashLookup( @eval.noexpands, id, hashHash( id ) )->s = NULL)
 end function
 
 private sub hMaybeExpandId( byref x as integer )
 	assert( tkGet( x ) = TK_ID )
 	var id = tkGetText( x )
-	if( hLookupExpandSym( id ) ) then
+	'' Only expand if not registered as NOEXPAND
+	if( hShouldExpandSym( id ) ) then
 		var xmacro = hLookupMacro( id )
 		if( xmacro >= 0 ) then
 			if( hMacroCall( x, xmacro ) ) then
@@ -1787,8 +1789,8 @@ sub ppEval( )
 				assert( t->class = ASTCLASS_PPDEFINE )
 				hAddKnownSym( t->text, TRUE )
 
-				'' Register #define for expansion if it's a precious symbol
-				if( hLookupExpandSym( t->text ) ) then
+				'' Register #define for expansion unless it's a NOEXPAND symbol
+				if( hShouldExpandSym( t->text ) ) then
 					hAddMacro( t, x )
 				end if
 
@@ -1813,8 +1815,8 @@ sub ppEval( )
 				var id = tkGetText( x )
 				hAddKnownSym( id, FALSE )
 
-				'' Forget previous #define if it's a precious symbol
-				if( hLookupExpandSym( id ) ) then
+				'' Forget previous #define
+				if( hShouldExpandSym( id ) ) then
 					hUndefMacro( id )
 				end if
 

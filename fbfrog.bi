@@ -409,11 +409,11 @@ enum
 
 	'' fbfrog-only keywords
 	KW_COPYFILE
+	KW_DIR
 	KW_DOWNLOAD
 	KW_EXTRACT
-	KW_EXPAND
 	KW_FILE
-	KW_DIR
+	KW_NOEXPAND
 	KW_REMOVE
 	KW_VERSION
 	KW__FROG_LAST = KW_VERSION
@@ -620,7 +620,7 @@ enum
 	ASTCLASS_FILE
 	ASTCLASS_DIR
 	ASTCLASS_DEFINE
-	ASTCLASS_EXPAND
+	ASTCLASS_NOEXPAND
 	ASTCLASS_REMOVE
 
 	ASTCLASS_PPINCLUDE
@@ -925,7 +925,7 @@ declare sub hMacroParamList( byref x as integer, byval t as ASTNODE ptr )
 declare sub ppDirectives1( )
 declare sub ppEvalInit( )
 declare sub ppEvalEnd( )
-declare sub ppExpandSym( byval id as zstring ptr )
+declare sub ppNoExpandSym( byval id as zstring ptr )
 declare sub ppRemoveSym( byval id as zstring ptr )
 declare sub ppPreUndef( byval id as zstring ptr )
 declare sub ppPreDefine overload( byval macro as ASTNODE ptr )

@@ -1,4 +1,4 @@
-dir "tests/c"
+dir ""
 option nomerge
 option comments
 option noautoextern
@@ -7,13 +7,6 @@ define KNOWNDEFINED1
 define KNOWNDEFINED2
 undef KNOWNUNDEFINED1
 undef KNOWNUNDEFINED2
-expand EXPANDTHIS
-expand EXPANDME1
-expand EXPANDME2
-expand EXPANDME3
-expand EXPANDME4
-expand EXPANDME5
-expand EXPANDME6
 
 remove define EXPANDTHIS
 remove define EXPANDME1
@@ -22,3 +15,5 @@ remove define EXPANDME3
 remove define EXPANDME4
 remove define EXPANDME5
 remove define EXPANDME6
+
+noexpand m

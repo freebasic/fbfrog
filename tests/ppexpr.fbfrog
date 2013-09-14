@@ -1,4 +1,4 @@
-dir "tests/ppexpr"
+dir ""
 option nomerge
 option nopp
 option noppfold

@@ -1,3 +1,6 @@
+enum E
+end enum
+
 enum
 	A = 0
 	B

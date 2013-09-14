@@ -1,3 +1,9 @@
+type UDT
+end type
+
+union U
+end union
+
 type T
 	a as long
 end type

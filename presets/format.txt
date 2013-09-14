@@ -17,10 +17,8 @@ Preprocessing (#if block evaluation, macro expansion)
     Common case:
        undef __cplusplus
 
-  EXPAND Identifier
-    Do macro expansion if a #define with that name is ever found and then
-    invoked in following code. Useful to solve out macros that are declared and
-    used in the header file.
+  NOEXPAND Identifier
+    Don't do macro expansion for this symbol
 
   MACRO Identifier
   MACRO Identifier MacroBody
