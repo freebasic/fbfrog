@@ -720,7 +720,12 @@ sub tkOops( byval x as integer, byval message as zstring ptr )
 	else
 		TRACE( x ), "<= error here"
 		print string( 40, "-" )
-		tkDump( )
+		const CONTEXT = 10
+		for i as integer = x - CONTEXT to x + CONTEXT
+			if( (i >= 0) and (i < tk.size) ) then
+				print tkDumpOne( i )
+			end if
+		next
 		print string( 40, "-" )
 		print *message
 		end 1
