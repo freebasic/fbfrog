@@ -197,6 +197,7 @@ declare function pathStripCommonBase _
 	) as string
 declare function pathMakeAbsolute( byref path as string ) as string
 declare function pathNormalize( byref path as string ) as string
+declare function hDirExists( byref path as string ) as integer
 declare function hFileExists( byref file as string ) as integer
 declare sub hScanDirectoryForH _
 	( _

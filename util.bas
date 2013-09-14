@@ -928,15 +928,12 @@ end function
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 '' Directory tree search
 
-function hFileExists( byref file as string ) as integer
-	dim as integer f = any
-	f = freefile( )
-	if( open( file, for binary, access read, as #f ) = 0 ) then
-		close #f
-		function = TRUE
-	else
-		function = FALSE
-	end if
+function hDirExists( byref path as string ) as integer
+	function = (dir( path, fbDirectory ) <> "")
+end function
+
+function hFileExists( byref path as string ) as integer
+	function = (dir( path, fbNormal ) <> "")
 end function
 
 type DIRNODE

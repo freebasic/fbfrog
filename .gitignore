@@ -2,3 +2,4 @@ fbfrog
 fbfrog.exe
 *.o
 tarballs/*
+presets/*/

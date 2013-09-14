@@ -1,7 +1,6 @@
 '' Main module, command line interface
 
 #include once "fbfrog.bi"
-#include once "file.bi"
 
 dim shared verbose as integer
 
@@ -19,7 +18,7 @@ private sub hPrintHelp( byref message as string )
 end sub
 
 private function frogDownload( byref url as string, byref file as string ) as integer
-	if( fileexists( "tarballs/" + file ) ) then
+	if( hFileExists( "tarballs/" + file ) ) then
 		function = TRUE
 	else
 		hMkdir( "tarballs" )
@@ -28,25 +27,19 @@ private function frogDownload( byref url as string, byref file as string ) as in
 end function
 
 private function frogExtract( byref tarball as string, byref dirname as string ) as integer
-	if( len( dirname ) > 0 ) then
-		hMkdirP( dirname )
-	end if
+	hMkdir( dirname )
 
 	dim s as string
 
 	if( strEndsWith( tarball, ".zip" ) ) then
 		s = "unzip -q"
-		if( len( dirname ) > 0 ) then
-			s += " -d """ + dirname + """"
-		end if
+		s += " -d """ + dirname + """"
 		s += " ""tarballs/" + tarball + """"
 	elseif( strEndsWith( tarball, ".tar.gz" ) or _
 	        strEndsWith( tarball, ".tar.bz2" ) or _
 	        strEndsWith( tarball, ".tar.xz" ) ) then
 		s = "tar xf ""tarballs/" + tarball + """"
-		if( len( dirname ) > 0 ) then
-			s += " -C """ + dirname + """"
-		end if
+		s += " -C """ + dirname + """"
 	end if
 
 	if( len( s ) > 0 ) then
@@ -302,6 +295,11 @@ private function frogWorkVersion _
 
 	var files = astNewGROUP( )
 
+	'' tarballs are extracted into a directory specific to the preset:
+	'' foo/bar.fbfrog  ->  foo/bar/
+	var presetdir = pathStripExt( presetfilename )
+	hMkdir( presetdir )
+
 	var child = presetcode->head
 	while( child )
 
@@ -314,13 +312,17 @@ private function frogWorkVersion _
 
 		case ASTCLASS_EXTRACT
 			'' Extract tarballs
-			if( frogExtract( *child->text, *child->comment ) = FALSE ) then
+			var dirname = *child->comment
+			dirname = presetdir + "/" + dirname
+			if( frogExtract( *child->text, dirname ) = FALSE ) then
 				oops( "failed to extract " + *child->text )
 			end if
 
 		case ASTCLASS_FILE
 			'' Input files
-			frogAddFile( files, NULL, child->text )
+			var filename = *child->text
+			filename = presetdir + "/" + filename
+			frogAddFile( files, NULL, filename )
 
 		case ASTCLASS_DIR
 			'' Input files from directories
@@ -331,7 +333,11 @@ private function frogWorkVersion _
 
 			dim as string ptr s = listGetHead( @list )
 			while( s )
-				frogAddFile( files, NULL, *s )
+
+				var dirname = *s
+				dirname = presetdir + "/" + dirname
+				frogAddFile( files, NULL, dirname )
+
 				*s = ""
 				s = listGetNext( s )
 			wend
