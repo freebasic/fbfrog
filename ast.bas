@@ -1540,7 +1540,7 @@ private function astFoldUnknownIds( byval n as ASTNODE ptr ) as ASTNODE ptr
 			'' Unsolved defined(), must be an unknown symbol, so it
 			'' should expand to FALSE. (see also astFoldKnownDefineds())
 			assert( n->l->class = ASTCLASS_ID )
-			hComplainAboutExpr( n, "assuming symbol '" + *n->l->text + "' is undefined" )
+			hComplainAboutExpr( n->l, "assuming symbol '" + *n->l->text + "' is undefined" )
 
 			'' defined()   ->   0
 			function = astNewCONST( 0, 0, TYPE_LONGINT )
