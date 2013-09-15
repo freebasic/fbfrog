@@ -283,15 +283,11 @@ private function frogWorkVersion _
 		byval pre as FROGPRESET ptr, _
 		byval version as ASTNODE ptr, _
 		byval presetcode as ASTNODE ptr, _
-		byref presetfilename as string _
+		byref presetfilename as string, _
+		byref presetprefix as string _
 	) as ASTNODE ptr
 
 	var files = astNewGROUP( )
-
-	'' tarballs are extracted into a directory specific to the preset:
-	'' foo/bar.fbfrog  ->  foo/bar/
-	var presetdir = pathStripExt( presetfilename )
-	hMkdir( presetdir )
 
 	var child = presetcode->head
 	while( child )
@@ -305,25 +301,20 @@ private function frogWorkVersion _
 
 		case ASTCLASS_EXTRACT
 			'' Extract tarballs
-			var dirname = *child->comment
-			dirname = presetdir + "/" + dirname
-			if( frogExtract( *child->text, dirname ) = FALSE ) then
+			if( frogExtract( *child->text, presetprefix + *child->comment ) = FALSE ) then
 				oops( "failed to extract " + *child->text )
 			end if
 
 		case ASTCLASS_FILE
 			'' Input files
-			var filename = *child->text
-			filename = presetdir + "/" + filename
-			frogAddFile( files, NULL, filename )
+			frogAddFile( files, NULL, presetprefix + *child->text )
 
 		case ASTCLASS_DIR
 			'' Input files from directories
 			dim as TLIST list
 			listInit( @list, sizeof( string ) )
 
-			var dirname = presetdir + "/" + *child->text
-			hScanDirectoryForH( dirname, @list )
+			hScanDirectoryForH( presetprefix + *child->text, @list )
 
 			dim as string ptr s = listGetHead( @list )
 			while( s )
@@ -479,7 +470,8 @@ end function
 private sub frogWorkPreset _
 	( _
 		byval pre as FROGPRESET ptr, _
-		byref presetfilename as string _
+		byref presetfilename as string, _
+		byref presetprefix as string _
 	)
 
 	var versions = astCollectVersions( pre->code )
@@ -498,7 +490,7 @@ private sub frogWorkPreset _
 			'' Parse files for this version and combine them with files
 			'' from previous versions if possible
 			files = astMergeFiles( files, _
-				frogWorkVersion( pre, version, presetcode, presetfilename ) )
+				frogWorkVersion( pre, version, presetcode, presetfilename, presetprefix ) )
 
 			astDelete( presetcode )
 
@@ -508,7 +500,7 @@ private sub frogWorkPreset _
 		astRemoveFullVersionWrappingFromFiles( files, versions )
 	else
 		'' Just do a single pass, don't worry about version specifics or AST merging
-		files = frogWorkVersion( pre, NULL, pre->code, presetfilename )
+		files = frogWorkVersion( pre, NULL, pre->code, presetfilename, presetprefix )
 	end if
 
 	'' Emit all files that have an AST (i.e. weren't merged into or
@@ -589,7 +581,15 @@ end sub
 			presetInit( @pre )
 			presetParse( @pre, presetfilename )
 
-			frogWorkPreset( @pre, presetfilename )
+			'' The preset's input/output files, especially extracted
+			'' tarballs, should be put into a directory specific to
+			'' the preset:
+			'' foo/bar.fbfrog  ->  foo/bar/
+			var presetdir = pathStripExt( presetfilename )
+			hMkdir( presetdir )
+			presetdir += "/"
+
+			frogWorkPreset( @pre, presetfilename, presetdir )
 			presetEnd( @pre )
 
 			presetfile = presetfile->next
@@ -599,7 +599,7 @@ end sub
 		'' on the command line, it's basically a "preset" too, just not
 		'' stored in a *.fbfrog file but given through command line
 		'' options.
-		frogWorkPreset( @cmdline, "" )
+		frogWorkPreset( @cmdline, "", "" )
 	end if
 
 	if( verbose ) then
