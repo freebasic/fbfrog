@@ -746,6 +746,10 @@ private function pathGetRootLength( byref s as string ) as integer
 #endif
 end function
 
+function pathIsAbsolute( byref s as string ) as integer
+	function = (pathGetRootLength( s ) > 0)
+end function
+
 function pathStripLastComponent( byref path as string ) as string
 	function = pathOnly( left( path, len( path ) - 1 ) )
 end function
@@ -795,6 +799,19 @@ function pathStripCommonBase _
 	function = right( a, len( a ) - len( pathFindCommonBase( a, b ) ) )
 end function
 
+'' Turns a relative path into an absolute path
+function pathMakeAbsolute( byref path as string ) as string
+	if( pathIsAbsolute( path ) ) then
+		function = path
+	else
+		function = pathAddDiv( curdir( ) ) + path
+	end if
+end function
+
+function hExepath( ) as string
+	function = pathAddDiv( exepath( ) )
+end function
+
 '' Component stack for the path solver
 type PATHSOLVER
 	p	as integer ptr
@@ -828,15 +845,6 @@ private function solverPop( ) as integer
 		solver.top -= 1
 	end if
 	function = solver.p[solver.top]
-end function
-
-'' Turns a relative path into an absolute path
-function pathMakeAbsolute( byref path as string ) as string
-	if( pathGetRootLength( path ) = 0 ) then
-		function = pathAddDiv( curdir( ) ) + path
-	else
-		function = path
-	end if
 end function
 
 '' Resolves .'s and ..'s in the path,

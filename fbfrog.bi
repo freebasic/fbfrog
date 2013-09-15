@@ -180,11 +180,18 @@ declare sub listEnd( byval l as TLIST ptr )
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
+#if defined( __FB_WIN32__ ) or defined( __FB_DOS__ )
+	const PATHDIV = $"\"
+#else
+	const PATHDIV = "/"
+#endif
+
 declare function pathStripExt( byref path as string ) as string
 declare function pathExtOnly( byref path as string ) as string
 declare function pathOnly( byref path as string ) as string
 declare function pathStrip( byref path as string ) as string
 declare function pathAddDiv( byref path as string ) as string
+declare function pathIsAbsolute( byref s as string ) as integer
 declare function pathStripLastComponent( byref path as string ) as string
 declare function pathFindCommonBase _
 	( _
@@ -197,6 +204,7 @@ declare function pathStripCommonBase _
 		byref b as string _
 	) as string
 declare function pathMakeAbsolute( byref path as string ) as string
+declare function hExepath( ) as string
 declare function pathNormalize( byref path as string ) as string
 declare function hDirExists( byref path as string ) as integer
 declare function hFileExists( byref file as string ) as integer

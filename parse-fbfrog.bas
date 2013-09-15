@@ -56,22 +56,25 @@ private function hVersionId( ) as ASTNODE ptr
 	hSkip( )
 end function
 
-private sub hLoadFile( byval file as ASTNODE ptr )
-	lexLoadFile( x, file, LEXMODE_FBFROG, FALSE )
-end sub
+private sub hLoadFile _
+	( _
+		byval files as ASTNODE ptr, _
+		byref normed as string, _
+		byref pretty as string _
+	)
 
-#if 0
-private sub hIncludeFile( byref incfile as string )
-	do include file search
-	hLoadFile( ... )
+	var f = astNewFROGFILE( normed, pretty )
+	astAppend( files, f )
+
+	lexLoadFile( x, f, LEXMODE_FBFROG, FALSE )
+
 end sub
-#endif
 
 sub presetParse( byval pre as FROGPRESET ptr, byref presetfile as string )
-	var presetf = astNewFROGFILE( presetfile, presetfile )
+	var presetfiles = astNewGROUP( )
 	tkInit( )
 
-	hLoadFile( presetf )
+	hLoadFile( presetfiles, presetfile, presetfile )
 
 	const MAXVERSPACES = 16
 	dim verspacestack(0 to MAXVERSPACES-1) as ASTNODE ptr
@@ -86,7 +89,6 @@ sub presetParse( byval pre as FROGPRESET ptr, byref presetfile as string )
 
 		case TK_EOL
 
-#if 0
 		'' '#' INCLUDE "filename"
 		case TK_HASH
 			hSkip( )
@@ -95,12 +97,20 @@ sub presetParse( byval pre as FROGPRESET ptr, byref presetfile as string )
 			hExpectSkip( KW_INCLUDE, "as in '#include ""...""'" )
 
 			'' "filename"
-			var incfile = hExpectSkipString( "containing the #include file name" )
+			hExpect( TK_STRING, "containing the #include file name" )
+			var incfile = *tkGetText( x )
+			var location = tkGetLocation( x )
+			'' Try to open the #include relative to the parent file's directory
+			incfile = pathAddDiv( pathOnly( *location->file->text ) ) + incfile
+			if( hFileExists( incfile ) = FALSE ) then
+				hReportLocation( location, "file not found: '" + incfile + "'" )
+				end 1
+			end if
+			hSkip( )
 
 			hExpectSkip( TK_EOL, "behind #include statement" )
-			hIncludeFile( incfile )
+			hLoadFile( presetfiles, incfile, incfile )
 			continue do
-#endif
 
 		'' VERSION VersionId ('.' VersionId)*
 		case KW_VERSION
@@ -274,7 +284,7 @@ sub presetParse( byval pre as FROGPRESET ptr, byref presetfile as string )
 	end if
 
 	tkEnd( )
-	astDelete( presetf )
+	astDelete( presetfiles )
 end sub
 
 sub presetInit( byval pre as FROGPRESET ptr )

@@ -590,7 +590,7 @@ end sub
 			'' foo/bar.fbfrog  ->  foo/bar/
 			var presetdir = pathStripExt( presetfilename )
 			hMkdir( presetdir )
-			presetdir += "/"
+			presetdir += PATHDIV
 
 			frogWorkPreset( @pre, presetfilename, presetdir )
 			presetEnd( @pre )
