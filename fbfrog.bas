@@ -238,6 +238,9 @@ private sub frogWorkFile _
 			case ASTCLASS_PPDEFINE
 				ppPreDefine( child )
 				ppRemoveSym( child->text )
+			case ASTCLASS_PPUNDEF
+				ppPreUndef( child->text )
+				ppRemoveSym( child->text )
 			case ASTCLASS_REMOVE
 				ppRemoveSym( child->text )
 			end select

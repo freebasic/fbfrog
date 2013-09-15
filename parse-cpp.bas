@@ -1377,6 +1377,12 @@ sub ppPreDefine overload( byval id as zstring ptr )
 	astDelete( macro )
 end sub
 
+sub ppPreUndef( byval id as zstring ptr )
+	'' Add #undef at the top of the tk buffer, where ppEval() will see it
+	tkInsert( eval.xpre, TK_PPUNDEF, id )
+	eval.xpre += 1
+end sub
+
 sub ppNoExpandSym( byval id as zstring ptr )
 	hashAddOverwrite( @eval.noexpands, id, NULL )
 end sub

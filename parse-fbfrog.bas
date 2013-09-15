@@ -214,6 +214,14 @@ sub presetParse( byval pre as FROGPRESET ptr, byref presetfile as string )
 
 			astAppend( verspacestack(verlevel), macro )
 
+		'' UNDEF Identifier
+		case KW_UNDEF
+			hSkip( )
+
+			hExpect( TK_ID, "(a symbol that's initially un-#defined)" )
+			astAppend( verspacestack(verlevel), astNew( ASTCLASS_PPUNDEF, tkGetText( x ) ) )
+			hSkip( )
+
 		'' REMOVE (DEFINE|STRUCT|PROC|...) Identifier
 		case KW_REMOVE
 			hSkip( )
