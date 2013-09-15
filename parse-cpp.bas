@@ -1394,6 +1394,50 @@ private function hLookupMacro( byval id as zstring ptr ) as integer
 	end if
 end function
 
+private function hMacrosEqual _
+	( _
+		byval a as integer, _
+		byval b as integer _
+	) as integer
+
+	assert( tkGet( a ) = TK_PPDEFINE )
+	assert( tkGet( b ) = TK_PPDEFINE )
+
+	function = FALSE
+
+	'' Check #define ASTs (identifier, parameters)
+	if( astIsEqualDecl( tkGetAst( a ), tkGetAst( b ) ) = FALSE ) then
+		exit function
+	end if
+
+	'' Check #define bodies
+	a += 1 : b += 1
+	assert( tkGet( a ) = TK_BEGIN ) : assert( tkGet( b ) = TK_BEGIN )
+	a += 1 : b += 1
+
+	do
+		'' Must be the same token id
+		if( tkGet( a ) <> tkGet( b ) ) then exit function
+
+		if( tkGet( a ) = TK_END ) then exit do
+
+		'' Check the token text, if any (identifiers, literals, ...)
+		var atext = tkGetText( a )
+		var btext = tkGetText( b )
+		'' If one is NULL, both must be
+		if( (atext <> NULL) <> (btext <> NULL) ) then exit function
+		if( atext ) then
+			if( *atext <> *btext ) then exit function
+		end if
+
+		a += 1 : b += 1
+	loop
+
+	assert( tkGet( a ) = TK_END ) : assert( tkGet( b ) = TK_END )
+
+	function = TRUE
+end function
+
 private sub hAddMacro( byval macro as ASTNODE ptr, byval xmacro as integer )
 	assert( tkGetAst( xmacro ) = macro )
 
@@ -1401,9 +1445,7 @@ private sub hAddMacro( byval macro as ASTNODE ptr, byval xmacro as integer )
 	if( verbose ) then
 		var xexisting = hLookupMacro( macro->text )
 		if( xexisting >= 0 ) then
-			assert( tkGet( xexisting ) = TK_PPDEFINE )
-			var existing = tkGetAst( xexisting )
-			if( astIsEqualDecl( macro, existing ) = FALSE ) then
+			if( hMacrosEqual( xmacro, xexisting ) = FALSE ) then
 				tkReport( xmacro, "conflicting #define for '" + *macro->text + "'" )
 				tkReport( xexisting, "previous one was here" )
 			end if
