@@ -1446,8 +1446,18 @@ private sub hAddMacro( byval macro as ASTNODE ptr, byval xmacro as integer )
 		var xexisting = hLookupMacro( macro->text )
 		if( xexisting >= 0 ) then
 			if( hMacrosEqual( xmacro, xexisting ) = FALSE ) then
-				tkReport( xmacro, "conflicting #define for '" + *macro->text + "'" )
-				tkReport( xexisting, "previous one was here" )
+				assert( tkGet( xexisting ) = TK_PPDEFINE )
+				var existing = tkGetAst( xexisting )
+
+				'' Existing #define wasn't reported yet?
+				if( (existing->attrib and ASTATTRIB_REPORTED) = 0 ) then
+					tkReport( xexisting, "conflicting #define for '" + *macro->text + "', first one:", FALSE )
+					existing->attrib or= ASTATTRIB_REPORTED
+				end if
+
+				assert( (macro->attrib and ASTATTRIB_REPORTED) = 0 )
+				tkReport( xmacro, "conflicting #define for '" + *macro->text + "', new one:", FALSE )
+				macro->attrib or= ASTATTRIB_REPORTED
 			end if
 		end if
 	end if

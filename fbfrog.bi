@@ -77,7 +77,8 @@ declare sub oops( byval message as zstring ptr )
 declare sub hReportLocation _
 	( _
 		byval location as TKLOCATION ptr, _
-		byval message as zstring ptr _
+		byval message as zstring ptr, _
+		byval more_context as integer = TRUE _
 	)
 declare function strDuplicate( byval s as zstring ptr ) as zstring ptr
 declare function strReplace _
@@ -482,7 +483,12 @@ declare function tkCollectComments _
 		byval last as integer _
 	) as string
 declare sub tkRemoveAllOf( byval id as integer, byval text as zstring ptr )
-declare sub tkReport( byval x as integer, byval message as zstring ptr )
+declare sub tkReport _
+	( _
+		byval x as integer, _
+		byval message as zstring ptr, _
+		byval more_context as integer = TRUE _
+	)
 declare sub tkOops( byval x as integer, byval message as zstring ptr )
 declare sub tkOopsExpected _
 	( _
@@ -678,6 +684,7 @@ enum
 	ASTATTRIB_HIDECALLCONV	= 1 shl 6  '' Whether the calling convention is covered by an Extern block, then it doesn't need to be emitted
 	ASTATTRIB_REMOVE	= 1 shl 7
 	ASTATTRIB_MISSING	= 1 shl 8  '' FROGFILE: File missing/not found?
+	ASTATTRIB_REPORTED	= 1 shl 9  '' Used to mark #defines about which the CPP has already complained, so it can avoid duplicate error messages
 end enum
 
 '' When changing, adjust astClone()

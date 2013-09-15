@@ -61,7 +61,8 @@ end sub
 sub hReportLocation _
 	( _
 		byval location as TKLOCATION ptr, _
-		byval message as zstring ptr _
+		byval message as zstring ptr, _
+		byval more_context as integer _
 	)
 
 	print *location->file->comment + "(" & (location->linenum + 1) & "): " + *message
@@ -75,22 +76,29 @@ sub hReportLocation _
 
 	var linecount = lexCountLines( location->file )
 
-	'' Show the error line and the 3 lines before it for more context,
-	'' with line numbers prefixed to them:
-	''    8:    sub main( )
-	''    9:        print "hi!"
-	''   10:        do
-	''   11:            dim i as integer
+	'' Show the error line and maybe some extra lines above and below it,
+	'' for more context, with line numbers prefixed to them:
+	''    9:        do
+	''   10:            dim i as integer
 	''                      ^
+	''   11:            i = 123
+	''   12:            print i
 	dim as string linenums(-2 to 2)
 
-	var min = location->linenum + lbound( linenums )
-	if( min < 0 ) then min = 0
-	min -= location->linenum
+	dim as integer min, max
 
-	var max = location->linenum + ubound( linenums )
-	if( max >= linecount ) then max = linecount - 1
-	max -= location->linenum
+	if( more_context ) then
+		min = location->linenum + lbound( linenums )
+		if( min < 0 ) then min = 0
+		min -= location->linenum
+
+		max = location->linenum + ubound( linenums )
+		if( max >= linecount ) then max = linecount - 1
+		max -= location->linenum
+	else
+		min = 0
+		max = 0
+	end if
 
 	for i as integer = min to max
 		linenums(i) = str( location->linenum + i + 1 )

@@ -2462,6 +2462,7 @@ function astDumpOne( byval n as ASTNODE ptr ) as string
 	checkAttrib( STDCALL )
 	checkAttrib( HIDECALLCONV )
 	checkAttrib( REMOVE )
+	checkAttrib( REPORTED )
 
 	if( n->class <> ASTCLASS_TK ) then
 		if( n->text ) then
