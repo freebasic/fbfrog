@@ -233,12 +233,6 @@ private sub frogWorkFile _
 		while( child )
 
 			select case( child->class )
-			case ASTCLASS_PPUNDEF
-				ppPreUndef( child->text )
-				ppRemoveSym( child->text )
-			case ASTCLASS_DEFINE
-				ppPreDefine( child->text )
-				ppRemoveSym( child->text )
 			case ASTCLASS_NOEXPAND
 				ppNoExpandSym( child->text )
 			case ASTCLASS_PPDEFINE

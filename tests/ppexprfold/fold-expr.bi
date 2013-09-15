@@ -1,3 +1,6 @@
+#define KNOWNDEFINED1
+#undef KNOWNUNDEFINED1
+
 #ifdef FOO
 #ifndef FOO
 #ifdef FOO

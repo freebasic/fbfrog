@@ -513,10 +513,15 @@ private function ppExpression _
 
 		'' Identifier
 		case TK_ID
-			'' Accepting identifiers as atoms to allow more PP
-			'' expressions to be parsed, such as
-			''    defined FOO && FOO == 123
-			'' without having to expand FOO.
+			'' Accepting identifiers as atoms, so that they can
+			'' later be replaced with literal zeros (unexpanded
+			'' identifiers in #if conditions are treated as literal
+			'' zero in C) if they need to be evaluated, perhaps with
+			'' a warning, and otherwise be ignored (depends on NOP
+			'' folding). For example:
+			''    #if defined A && B == 123
+			'' If A isn't defined then B doesn't need to be
+			'' evaluated and no warning should be shown.
 			a = astNewID( tkGetText( x ) )
 			a->location = *tkGetLocation( x )
 			x += 1
@@ -1301,27 +1306,17 @@ end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-enum
-	COND_UNKNOWN = 0
-	COND_TRUE
-	COND_FALSE
-end enum
-
 namespace eval
-	'' Lists of known symbols etc. Initial symbols can be added before
+	'' Lists of known macros etc. Initial symbols can be added before
 	'' ppEval(), then it will use and adjust the lists while parsing.
-
-	'' symbols known to be defined or undefined
-	dim shared knowns		as THASH
-
-	dim shared noexpands		as THASH
-	'' #defines/#undefs to remove instead of preserving
-	dim shared removes		as THASH
 
 	'' Lookup table of #define token positions
 	dim shared macros		as THASH
 
-	'' Token position where to insert pre-#defines/#undefs
+	dim shared noexpands		as THASH
+	dim shared removes		as THASH
+
+	'' Token position where to insert pre-#defines
 	'' - starts out at 0, the top of the tk buffer, that's the best place
 	''   for pre-#defines and pretty much the only option anyways
 	'' - instead of inserting each one of the pre-#defines at position 0
@@ -1331,32 +1326,16 @@ namespace eval
 end namespace
 
 sub ppEvalInit( )
-	hashInit( @eval.knowns, 4, TRUE )
+	hashInit( @eval.macros, 4, TRUE )
 	hashInit( @eval.noexpands, 4, TRUE )
 	hashInit( @eval.removes, 4, TRUE )
-	hashInit( @eval.macros, 4, TRUE )
 	eval.xpre = 0
 end sub
 
 sub ppEvalEnd( )
-	hashEnd( @eval.knowns )
+	hashEnd( @eval.macros )
 	hashEnd( @eval.noexpands )
 	hashEnd( @eval.removes )
-	hashEnd( @eval.macros )
-end sub
-
-sub ppNoExpandSym( byval id as zstring ptr )
-	hashAddOverwrite( @eval.noexpands, id, NULL )
-end sub
-
-sub ppRemoveSym( byval id as zstring ptr )
-	hashAddOverwrite( @eval.removes, id, NULL )
-end sub
-
-sub ppPreUndef( byval id as zstring ptr )
-	'' Add #undef at the top of the tk buffer, where ppEval() will see it
-	tkInsert( eval.xpre, TK_PPUNDEF, id )
-	eval.xpre += 1
 end sub
 
 sub ppPreDefine overload( byval macro as ASTNODE ptr )
@@ -1398,6 +1377,14 @@ sub ppPreDefine overload( byval id as zstring ptr )
 	astDelete( macro )
 end sub
 
+sub ppNoExpandSym( byval id as zstring ptr )
+	hashAddOverwrite( @eval.noexpands, id, NULL )
+end sub
+
+sub ppRemoveSym( byval id as zstring ptr )
+	hashAddOverwrite( @eval.removes, id, NULL )
+end sub
+
 private function hLookupMacro( byval id as zstring ptr ) as integer
 	var item = hashLookup( @eval.macros, id, hashHash( id ) )
 	if( item->s ) then
@@ -1410,16 +1397,16 @@ end function
 private sub hAddMacro( byval macro as ASTNODE ptr, byval xmacro as integer )
 	assert( tkGetAst( xmacro ) = macro )
 
-	var xexisting = hLookupMacro( macro->text )
-	if( xexisting >= 0 ) then
-		assert( tkGet( xexisting ) = TK_PPDEFINE )
-		var existing = tkGetAst( xexisting )
-		if( astIsEqualDecl( macro, existing ) = FALSE ) then
-			print "1st #define:"
-			TRACE( xexisting )
-			print "2nd #define:"
-			TRACE( xmacro )
-			oops( "conflicting #define for " + *macro->text )
+	'' Report conflicting #defines
+	if( verbose ) then
+		var xexisting = hLookupMacro( macro->text )
+		if( xexisting >= 0 ) then
+			assert( tkGet( xexisting ) = TK_PPDEFINE )
+			var existing = tkGetAst( xexisting )
+			if( astIsEqualDecl( macro, existing ) = FALSE ) then
+				tkReport( xmacro, "conflicting #define for '" + *macro->text + "'" )
+				tkReport( xexisting, "previous one was here" )
+			end if
 		end if
 	end if
 
@@ -1427,10 +1414,7 @@ private sub hAddMacro( byval macro as ASTNODE ptr, byval xmacro as integer )
 end sub
 
 private sub hUndefMacro( byval id as zstring ptr )
-	var xexisting = hLookupMacro( id )
-	if( xexisting >= 0 ) then
-		hashAddOverwrite( @eval.macros, id, cptr( any ptr, -1 ) )
-	end if
+	hashAddOverwrite( @eval.macros, id, cptr( any ptr, -1 ) )
 end sub
 
 private function hShouldExpandSym( byval id as zstring ptr ) as integer
@@ -1440,10 +1424,10 @@ end function
 private sub hMaybeExpandId( byref x as integer )
 	assert( tkGet( x ) = TK_ID )
 	var id = tkGetText( x )
-	'' Only expand if not registered as NOEXPAND
-	if( hShouldExpandSym( id ) ) then
-		var xmacro = hLookupMacro( id )
-		if( xmacro >= 0 ) then
+	var xmacro = hLookupMacro( id )
+	if( xmacro >= 0 ) then
+		'' Only expand if not registered as NOEXPAND
+		if( hShouldExpandSym( id ) ) then
 			if( hMacroCall( x, xmacro ) ) then
 				'' The macro call will be replaced with the body,
 				'' the token at the TK_ID's position must be re-parsed.
@@ -1516,85 +1500,6 @@ private function hParseIfCondition( byval x as integer ) as ASTNODE ptr
 	assert( tkGet( x ) = TK_END )
 end function
 
-private function hComplainAboutExpr _
-	( _
-		byval n as ASTNODE ptr, _
-		byref message as string _
-	) as integer
-
-	if( n->location.file ) then
-		oopsLocation( @n->location, message )
-		function = FALSE
-	else
-		function = TRUE
-	end if
-
-end function
-
-'' Returns FALSE if it reports an error, returns TRUE to indicate the caller
-'' needs to show a generic/fallback error
-private function hCheckUnsolvedExpr( byval n as ASTNODE ptr ) as integer
-	if( n = NULL ) then
-		return TRUE
-	end if
-
-	function = FALSE
-
-	select case as const( n->class )
-	case ASTCLASS_ID
-		if( hComplainAboutExpr( n, "unknown symbol, need more info" ) = FALSE ) then
-			exit function
-		end if
-
-	case ASTCLASS_UOP
-		if( hCheckUnsolvedExpr( n->l ) = FALSE ) then
-			exit function
-		end if
-
-	case ASTCLASS_BOP
-		if( hCheckUnsolvedExpr( n->l ) = FALSE ) then
-			exit function
-		end if
-		if( hCheckUnsolvedExpr( n->r ) = FALSE ) then
-			exit function
-		end if
-
-		if( (n->l->class = ASTCLASS_CONST) and _
-		    (n->r->class = ASTCLASS_CONST) ) then
-			if( (not typeIsFloat( n->l->dtype )) and _
-			    (not typeIsFloat( n->r->dtype )) ) then
-				var v2 = n->r->vali
-
-				var divbyzero = FALSE
-				select case( n->op )
-				case ASTOP_DIV, ASTOP_MOD
-					divbyzero = (v2 = 0)
-				end select
-
-				if( divbyzero ) then
-					if( hComplainAboutExpr( n, "division by zero" ) = FALSE ) then
-						exit function
-					end if
-				end if
-			end if
-		end if
-
-	case ASTCLASS_IIF
-		if( hCheckUnsolvedExpr( n->expr ) = FALSE ) then
-			exit function
-		end if
-		if( hCheckUnsolvedExpr( n->l ) = FALSE ) then
-			exit function
-		end if
-		if( hCheckUnsolvedExpr( n->r ) = FALSE ) then
-			exit function
-		end if
-
-	end select
-
-	function = TRUE
-end function
-
 private function hEvalIfCondition( byval x as integer ) as integer
 	assert( (tkGet( x ) = TK_PPIF) or (tkGet( x ) = TK_PPELSEIF) )
 	var xif = x
@@ -1614,37 +1519,21 @@ private function hEvalIfCondition( byval x as integer ) as integer
 	end if
 
 	'' 1. Try to evaluate the condition
-	t = astFold( astOpsC2FB( astClone( t ) ), @eval.knowns, TRUE )
+	t = astFold( astOpsC2FB( astClone( t ) ), @eval.macros, TRUE, TRUE )
 	tkSetAst( x, t )
 
 	'' 2. Check the condition
 	if( (t->class <> ASTCLASS_CONST) or typeIsFloat( t->dtype ) ) then
-		'' If there's an unsolved defined() in the expression, try to
-		'' show an error pointing to that defined(), otherwise fallback
-		'' to showing the error for the whole #if condition.
-		''
-		'' Note: This is done here, after astFold() has fully finished,
-		'' instead of inside astFold() in the ASTOP_DEFINED handler,
-		'' because there it could be too early to show an error about
-		'' an unsolved defined(), afterall NOP optimizations for parent
-		'' nodes may cause that unsolved defined() to be solved out
-		'' completely because its result doesn't matter (can happen with
-		'' short-curcuiting operators and iif).
-		if( hCheckUnsolvedExpr( t ) = FALSE ) then
-			if( t->location.file ) then
-				oopsLocation( @t->location, "couldn't evaluate #if condition" )
-			else
-				tkOops( x, "couldn't evaluate #if condition" )
-			end if
+		const MESSAGE = "couldn't evaluate #if condition"
+		if( t->location.file ) then
+			hReportLocation( @t->location, MESSAGE )
+			end 1
 		end if
+		tkOops( x, MESSAGE )
 	end if
 
 	function = (t->vali <> 0)
 end function
-
-private sub hAddKnownSym( byval id as zstring ptr, byval is_defined as integer )
-	hashAddOverwrite( @eval.knowns, id, cptr( any ptr, is_defined ) )
-end sub
 
 private function hLookupRemoveSym( byval id as zstring ptr ) as integer
 	function = (hashLookup( @eval.removes, id, hashHash( id ) )->s <> NULL)
@@ -1787,12 +1676,7 @@ sub ppEval( )
 				'' Register/overwrite as known defined symbol
 				var t = tkGetAst( x )
 				assert( t->class = ASTCLASS_PPDEFINE )
-				hAddKnownSym( t->text, TRUE )
-
-				'' Register #define for expansion unless it's a NOEXPAND symbol
-				if( hShouldExpandSym( t->text ) ) then
-					hAddMacro( t, x )
-				end if
+				hAddMacro( t, x )
 
 				'' Don't preserve the #define if the symbol was registed for removal
 				if( hLookupRemoveSym( t->text ) ) then
@@ -1813,12 +1697,7 @@ sub ppEval( )
 			else
 				'' Register/overwrite as known undefined symbol
 				var id = tkGetText( x )
-				hAddKnownSym( id, FALSE )
-
-				'' Forget previous #define
-				if( hShouldExpandSym( id ) ) then
-					hUndefMacro( id )
-				end if
+				hUndefMacro( id )
 
 				'' Don't preserve the #undef if the symbol was registed for removal
 				if( hLookupRemoveSym( id ) ) then
@@ -1871,7 +1750,7 @@ sub ppParseIfExprOnly( byval do_fold as integer )
 
 			t = astOpsC2FB( astClone( t ) )
 			if( do_fold ) then
-				t = astFold( t, @eval.knowns, TRUE )
+				t = astFold( t, @eval.macros, FALSE, TRUE )
 			end if
 			tkSetAst( x, t )
 
@@ -1879,7 +1758,7 @@ sub ppParseIfExprOnly( byval do_fold as integer )
 			'' Register/overwrite as known defined symbol
 			var t = tkGetAst( x )
 			assert( t->class = ASTCLASS_PPDEFINE )
-			hAddKnownSym( t->text, TRUE )
+			hAddMacro( t, x )
 
 			'' Don't preserve the #define if the symbol was registed for removal
 			if( hLookupRemoveSym( t->text ) ) then
@@ -1896,7 +1775,7 @@ sub ppParseIfExprOnly( byval do_fold as integer )
 		case TK_PPUNDEF
 			'' Register/overwrite as known undefined symbol
 			var id = tkGetText( x )
-			hAddKnownSym( id, FALSE )
+			hUndefMacro( id )
 
 			'' Don't preserve the #undef if the symbol was registed for removal
 			if( hLookupRemoveSym( id ) ) then

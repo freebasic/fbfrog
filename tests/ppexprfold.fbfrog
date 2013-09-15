@@ -1,6 +1,3 @@
 dir ""
 option nomerge
 option nopp
-
-define KNOWNDEFINED1
-undef KNOWNUNDEFINED1

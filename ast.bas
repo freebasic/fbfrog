@@ -46,7 +46,6 @@ dim shared as ASTNODEINFO astnodeinfo(0 to ...) = _
 	( "copyfile" ), _
 	( "file"     ), _
 	( "dir"      ), _
-	( "define"   ), _
 	( "expand"   ), _
 	( "remove"   ), _
 	( "#include" ), _
@@ -969,29 +968,33 @@ function astOpsC2FB( byval n as ASTNODE ptr ) as ASTNODE ptr
 	function = n
 end function
 
-private function astFoldDefineds _
+private function astFoldKnownDefineds _
 	( _
 		byval n as ASTNODE ptr, _
-		byval knownsyms as THASH ptr _
+		byval macros as THASH ptr _
 	) as ASTNODE ptr
 
 	if( n = NULL ) then exit function
 	function = n
 
-	n->expr = astFoldDefineds( n->expr, knownsyms )
-	n->l = astFoldDefineds( n->l, knownsyms )
-	n->r = astFoldDefineds( n->r, knownsyms )
+	n->expr = astFoldKnownDefineds( n->expr, macros )
+	n->l = astFoldKnownDefineds( n->l, macros )
+	n->r = astFoldKnownDefineds( n->r, macros )
 
 	if( n->class = ASTCLASS_UOP ) then
 		if( n->op = ASTOP_DEFINED ) then
 			'' defined() on known symbol?
+			'' (assuming it's the eval.macros hash table from parse-cpp.bas)
 			assert( n->l->class = ASTCLASS_ID )
 			var id = n->l->text
-			var item = hashLookup( knownsyms, id, hashHash( id ) )
+			var item = hashLookup( macros, id, hashHash( id ) )
 			if( item->s ) then
+				'' Currently defined?
+				var is_defined = (cint( item->data ) >= 0)
+
 				'' FB defined()    ->   -1|0
 				'' item->data = is_defined
-				function = astNewCONST( cint( item->data ), 0, TYPE_LONG )
+				function = astNewCONST( is_defined, 0, TYPE_LONG )
 				astDelete( n )
 			end if
 		end if
@@ -1500,14 +1503,81 @@ private function astFoldBoolContextNops _
 	end select
 end function
 
+private sub hComplainAboutExpr _
+	( _
+		byval n as ASTNODE ptr, _
+		byval message as zstring ptr _
+	)
+
+	if( verbose ) then
+		if( n->location.file ) then
+			hReportLocation( @n->location, message )
+		else
+			print *message
+		end if
+	end if
+
+end sub
+
+private function astFoldUnknownIds( byval n as ASTNODE ptr ) as ASTNODE ptr
+	function = n
+	if( n = NULL ) then
+		exit function
+	end if
+
+	select case( n->class )
+	case ASTCLASS_ID
+		'' Unexpanded identifier, assume it's undefined, like a CPP
+		hComplainAboutExpr( n, "treating unexpanded identifier '" + *n->text + "' as literal zero" )
+
+		'' id   ->   0
+		function = astNewCONST( 0, 0, TYPE_LONGINT )
+		astDelete( n )
+
+	case ASTCLASS_UOP
+		select case( n->op )
+		case ASTOP_DEFINED
+			'' Unsolved defined(), must be an unknown symbol, so it
+			'' should expand to FALSE. (see also astFoldKnownDefineds())
+			assert( n->l->class = ASTCLASS_ID )
+			hComplainAboutExpr( n, "assuming symbol '" + *n->l->text + "' is undefined" )
+
+			'' defined()   ->   0
+			function = astNewCONST( 0, 0, TYPE_LONGINT )
+			astDelete( n )
+
+		case ASTOP_SIZEOF, ASTOP_STRINGIFY
+			'' Don't handle the ID for these recursively, because
+			'' astFoldConsts() would currently choke, trying to
+			'' fold sizeof()/#stringify with CONST operands. But
+			'' luckily, these two UOPs can't appear in CPP
+			'' expressions anyways.
+
+		case else
+			n->l = astFoldUnknownIds( n->l )
+		end select
+
+	case ASTCLASS_BOP
+		n->l = astFoldUnknownIds( n->l )
+		n->r = astFoldUnknownIds( n->r )
+
+	case ASTCLASS_IIF
+		n->expr = astFoldUnknownIds( n->expr )
+		n->l = astFoldUnknownIds( n->l )
+		n->r = astFoldUnknownIds( n->r )
+	end select
+
+end function
+
 function astFold _
 	( _
 		byval n as ASTNODE ptr, _
-		byval knownsyms as THASH ptr, _
+		byval macros as THASH ptr, _
+		byval fold_unknowns as integer, _
 		byval is_bool_context as integer _
 	) as ASTNODE ptr
 
-	n = astFoldDefineds( n, knownsyms )
+	n = astFoldKnownDefineds( n, macros )
 
 	dim as ASTNODE ptr c
 	var passes = 0
@@ -1521,6 +1591,12 @@ function astFold _
 		n = astFoldNops( n )
 		n = astFoldNestedOps( n )
 		n = astFoldBoolContextNops( n, is_bool_context )
+
+		'' At the end of the 1st pass only, report unsolved defined()'s
+		'' and atom identifiers, then solve them out like a CPP would
+		if( (passes = 1) and fold_unknowns ) then
+			n = astFoldUnknownIds( n )
+		end if
 
 		'' Loop until the folding no longer changes the expression
 		if( astIsEqualDecl( n, c ) ) then

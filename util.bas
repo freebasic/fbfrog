@@ -58,7 +58,7 @@ end sub
 '' filename.bas(123): duplicate definition of 'i'
 ''          dim i as integer
 ''              ^
-sub oopsLocation _
+sub hReportLocation _
 	( _
 		byval location as TKLOCATION ptr, _
 		byval message as zstring ptr _
@@ -111,8 +111,6 @@ sub oopsLocation _
 			print space( len( linenums(i) ) + offset ) + "^" + string( location->length - 1, "~" )
 		end if
 	next
-
-	end 1
 
 end sub
 

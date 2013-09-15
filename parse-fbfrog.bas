@@ -182,22 +182,6 @@ sub presetParse( byval pre as FROGPRESET ptr, byref presetfile as string )
 			astAppend( verspacestack(verlevel), astNew( ASTCLASS_DIR, _
 				hExpectSkipString( "containing the directory name" ) ) )
 
-		'' DEFINE Identifier
-		case KW_DEFINE
-			hSkip( )
-
-			hExpect( TK_ID, "(the symbol that should be pre-#defined)" )
-			astAppend( verspacestack(verlevel), astNew( ASTCLASS_DEFINE, tkGetText( x ) ) )
-			hSkip( )
-
-		'' UNDEF Identifier
-		case KW_UNDEF
-			hSkip( )
-
-			hExpect( TK_ID, "(the symbol that should be initially un-#defined)" )
-			astAppend( verspacestack(verlevel), astNew( ASTCLASS_PPUNDEF, tkGetText( x ) ) )
-			hSkip( )
-
 		'' NOEXPAND Identifier
 		case KW_NOEXPAND
 			hSkip( )
@@ -206,8 +190,8 @@ sub presetParse( byval pre as FROGPRESET ptr, byref presetfile as string )
 			astAppend( verspacestack(verlevel), astNew( ASTCLASS_NOEXPAND, tkGetText( x ) ) )
 			hSkip( )
 
-		'' MACRO Identifier ['(' MacroParameters ')'] [MacroBody]
-		case KW_MACRO
+		'' DEFINE Identifier ['(' MacroParameters ')'] [MacroBody]
+		case KW_DEFINE
 			hSkip( )
 
 			hExpect( TK_ID, "(this macro's name)" )

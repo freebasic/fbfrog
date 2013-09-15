@@ -3,11 +3,6 @@ option nomerge
 option comments
 option noautoextern
 
-define KNOWNDEFINED1
-define KNOWNDEFINED2
-undef KNOWNUNDEFINED1
-undef KNOWNUNDEFINED2
-
 remove define EXPANDTHIS
 remove define EXPANDME1
 remove define EXPANDME2
@@ -15,5 +10,3 @@ remove define EXPANDME3
 remove define EXPANDME4
 remove define EXPANDME5
 remove define EXPANDME6
-
-noexpand m

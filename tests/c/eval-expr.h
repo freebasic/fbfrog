@@ -13,16 +13,6 @@ extern short separator4;
 #endif
 extern short separator5;
 
-#ifdef KNOWNDEFINED1
-	extern short yes;
-#endif
-extern short separator7;
-
-#ifndef KNOWNUNDEFINED1
-	extern short yes;
-#endif
-extern short separator8;
-
 #define UNKNOWNSYM
 #ifdef UNKNOWNSYM
 	extern short yes;

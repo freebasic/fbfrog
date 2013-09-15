@@ -713,10 +713,10 @@ private function hMakePrettyCTokenText _
 
 end function
 
-sub tkOops( byval x as integer, byval message as zstring ptr )
+sub tkReport( byval x as integer, byval message as zstring ptr )
 	var location = tkGetLocation( x )
 	if( location->file ) then
-		oopsLocation( location, message )
+		hReportLocation( location, message )
 	else
 		TRACE( x ), "<= error here"
 		print string( 40, "-" )
@@ -728,8 +728,12 @@ sub tkOops( byval x as integer, byval message as zstring ptr )
 		next
 		print string( 40, "-" )
 		print *message
-		end 1
 	end if
+end sub
+
+sub tkOops( byval x as integer, byval message as zstring ptr )
+	tkReport( x, message )
+	end 1
 end sub
 
 sub tkOopsExpected _

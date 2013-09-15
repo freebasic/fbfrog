@@ -1,3 +1,6 @@
+#define KNOWNDEFINED1
+#undef KNOWNUNDEFINED1
+
 // defined()
 #if defined FOO
 #if !defined FOO

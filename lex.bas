@@ -34,7 +34,8 @@ dim shared as LEXSTUFF lex
 private sub lexOops( byref message as string )
 	lex.location.column = lex.i - lex.bol
 	lex.location.length = 1
-	oopsLocation( @lex.location, message )
+	hReportLocation( @lex.location, message )
+	end 1
 end sub
 
 private sub hSetLocation( )

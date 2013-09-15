@@ -66,18 +66,6 @@ To do:
       return a bool or not, so it can decide whether to use is_bool_context=TRUE
       when folding the #define body expression
 
-- fbfrog should immitate gcc:
-    - have the same pre-#defines
-    - treat unknown symbols as undefined
-    - unsafe assumptions, missing pre-#defines
-    - but asking someone to write the libpng preset with tons of symbols that
-      need to be UNDEF'ed or DEFINE'ed, is just as unsafe
-    - add option to report symbols that were assumed to be undefined
-
-- #defined symbols should be expanded by default.
-    - allow presets to disable expansion for individual symbols
-    - it's much more common to want to expand macros than not
-
 - LEXMODE_FBFROG doesn't support &hFF FB number literals
 - since LEXMODE_FBFROG now uses all keywords, "undef string" would appear
   as two keywords instead of keyword+id and fail to be parsed. Need to find

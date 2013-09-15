@@ -262,7 +262,7 @@ private function cExpression( byval level as integer = 0 ) as ASTNODE ptr
 end function
 
 private function hExpr( byval is_bool_context as integer ) as ASTNODE ptr
-	function = astFold( astOpsC2FB( cExpression( ) ), NULL, is_bool_context )
+	function = astFold( astOpsC2FB( cExpression( ) ), NULL, FALSE, is_bool_context )
 end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''

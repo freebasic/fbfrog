@@ -74,7 +74,7 @@ type TKLOCATION
 end type
 
 declare sub oops( byval message as zstring ptr )
-declare sub oopsLocation _
+declare sub hReportLocation _
 	( _
 		byval location as TKLOCATION ptr, _
 		byval message as zstring ptr _
@@ -482,6 +482,7 @@ declare function tkCollectComments _
 		byval last as integer _
 	) as string
 declare sub tkRemoveAllOf( byval id as integer, byval text as zstring ptr )
+declare sub tkReport( byval x as integer, byval message as zstring ptr )
 declare sub tkOops( byval x as integer, byval message as zstring ptr )
 declare sub tkOopsExpected _
 	( _
@@ -619,7 +620,6 @@ enum
 	ASTCLASS_COPYFILE
 	ASTCLASS_FILE
 	ASTCLASS_DIR
-	ASTCLASS_DEFINE
 	ASTCLASS_NOEXPAND
 	ASTCLASS_REMOVE
 
@@ -845,7 +845,8 @@ declare function astOpsC2FB( byval n as ASTNODE ptr ) as ASTNODE ptr
 declare function astFold _
 	( _
 		byval n as ASTNODE ptr, _
-		byval knownsyms as THASH ptr, _
+		byval macros as THASH ptr, _
+		byval fold_unknowns as integer, _
 		byval is_bool_context as integer _
 	) as ASTNODE ptr
 declare function astLookupMacroParam _
