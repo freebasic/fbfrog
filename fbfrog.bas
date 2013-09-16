@@ -556,15 +556,10 @@ end sub
 		else
 			if( hDirExists( arg ) ) then
 				astAppend( cmdline.code, astNew( ASTCLASS_DIR, arg ) )
+			elseif( pathExtOnly( arg ) = "fbfrog" ) then
+				astAppend( presetfiles, astNewTEXT( arg ) )
 			else
-				select case( pathExtOnly( arg ) )
-				case "h", "hh", "hxx", "hpp", "c", "cc", "cxx", "cpp"
-					astAppend( cmdline.code, astNew( ASTCLASS_FILE, arg ) )
-				case "fbfrog"
-					astAppend( presetfiles, astNewTEXT( arg ) )
-				case else
-					hPrintHelp( "'" + arg + "' is not a *.h file" )
-				end select
+				astAppend( cmdline.code, astNew( ASTCLASS_FILE, arg ) )
 			end if
 		end if
 	next
