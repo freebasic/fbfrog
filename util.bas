@@ -108,15 +108,19 @@ sub hReportLocation _
 		linenums(i) += ": "
 	next
 
+	'' Indentation and line numbers reduce the available width for the error line
+	limit -= len( linenums(0) )
+	limit -= 4
+
 	for i as integer = min to max
 		dim s as string
 		dim offset as integer
 		hCalcErrorLine( location->file, location->linenum + i, location->column, limit, s, offset )
 
-		print linenums(i) + s
+		print "    " + linenums(i) + s
 
 		if( i = 0 ) then
-			print space( len( linenums(i) ) + offset ) + "^" + string( location->length - 1, "~" )
+			print space( 4 + len( linenums(i) ) + offset ) + "^" + string( location->length - 1, "~" )
 		end if
 	next
 
