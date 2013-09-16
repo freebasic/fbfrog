@@ -659,6 +659,9 @@ private function emitAst _
 			child = child->next
 		wend
 
+	case ASTCLASS_CALL
+		s = *n->text + hCommaList( n, TRUE )
+
 	case else
 		astDump( n )
 		assert( FALSE )

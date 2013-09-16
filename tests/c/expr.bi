@@ -1,6 +1,8 @@
 enum E
 	A = sizeof( A )
 	A = sizeof( A )
+	A = f( A )
+	A = f( 1, 2, 3, 4 )
 end enum
 
 #define A( x ) "a" + "b"
