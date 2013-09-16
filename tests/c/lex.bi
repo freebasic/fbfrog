@@ -87,6 +87,8 @@
 #define H !"\170"
 #define H !"a\0g"
 
+'' Even stray form feed characters
+
 declare sub f( )  '' Some escaped newlines 
 
 '' single-line \

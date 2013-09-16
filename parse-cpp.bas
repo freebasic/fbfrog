@@ -184,19 +184,26 @@ private function hSkipStatement( byval x as integer ) as integer
 			x = tkSkipCommentEol( x )
 			exit do
 
-		'' '}': usually indicates end of statement, unless we're trying
-		'' to skip a '}' itself
-		case TK_RBRACE
-			if( x > begin ) then
-				exit do
+		'' '#' usually starts PP directives, so that'd be the beginning
+		'' of a new statement, unless we're skipping that '#' itself.
+		case TK_HASH
+			if( x <= begin ) then
+				'' Otherwise, skip the whole PP directive -- until EOL
+				do
+					x = tkSkipComment( x )
+
+					select case( tkGet( x ) )
+					case TK_EOF
+						exit do
+					case TK_EOL
+						'' Skip to next non-space token behind the EOL
+						x = tkSkipCommentEol( x )
+						exit do
+					end select
+				loop
 			end if
 
-		case TK_PPINCLUDE, TK_PPDEFINE, TK_PPIF, TK_PPELSEIF, _
-		     TK_PPELSE, TK_PPENDIF, TK_PPUNDEF, TK_DIVIDER
-			'' Reached high-level token after having seen normals?
-			if( x > begin ) then
-				exit do
-			end if
+			exit do
 
 		case TK_LPAREN, TK_LBRACKET, TK_LBRACE
 			x = hFindClosingParen( x )
@@ -316,72 +323,81 @@ end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-'' Merge empty lines into TK_DIVIDER, assuming we're starting at BOL.
-private function ppDivider( byval x as integer ) as integer
-	var begin = x
-
-	'' Count empty lines in a row
-	var lines = 0
-	do
-		select case( tkGet( x ) )
-		case TK_EOL
-			lines += 1
-
-		case else
-			exit do
-		end select
-
-		x += 1
-	loop
-
-	if( lines < 1 ) then
-		return -1
-	end if
-
-	''  ...code...
-	''
-	''  //foo
-	''
-	''  //bar
-	''  ...code...
-	''
-	'' "foo" is the comment associated with TK_DIVIDER, "bar" the one
-	'' associated with the following block of code, stored as TK_DIVIDER's
-	'' text.
-
-	var blockcomment = tkCollectComments( x - 1, x - 1 )
-
-	var comment = tkCollectComments( begin, x - 2 )
-	tkFold( begin, x - 1, TK_DIVIDER, blockcomment )
-	tkSetComment( begin, comment )
-	x = begin
-
-	function = x
-end function
-
 sub ppDividers( )
 	var x = 0
+
 	while( tkGet( x ) <> TK_EOF )
-		var old = x
+		var begin = x
 
-		x = ppDivider( old )
-		if( x >= 0 ) then
-			continue while
-		end if
-
-		'' Skip to next BOL
-		x = old
-		do
-			select case( tkGet( x ) )
-			case TK_EOF
-				exit do
-			case TK_EOL
-				x += 1
-				exit do
-			end select
-
+		'' Count empty lines in a row
+		var lines = 0
+		while( tkGet( x ) = TK_EOL )
+			lines += 1
 			x += 1
-		loop
+		wend
+
+		if( lines >= 1 ) then
+			'' Merge empty lines into TK_DIVIDER, assuming we're starting at BOL.
+			''
+			''  ...code...
+			''
+			''  //foo
+			''
+			''  //bar
+			''  ...code...
+			''
+			'' "foo" is the comment associated with TK_DIVIDER, "bar" the one
+			'' associated with the following block of code, stored as TK_DIVIDER's
+			'' text.
+
+			var blockcomment = tkCollectComments( x - 1, x - 1 )
+
+			var comment = tkCollectComments( begin, x - 2 )
+			tkFold( begin, x - 1, TK_DIVIDER, blockcomment )
+			tkSetComment( begin, comment )
+			x = begin
+		else
+			'' Skip to next BOL
+			x = begin
+			do
+				select case( tkGet( x ) )
+				case TK_EOF
+					exit do
+				case TK_EOL
+					x += 1
+					exit do
+				end select
+				x += 1
+			loop
+		end if
+	wend
+
+	'' And remove DIVIDERs again inside statements, otherwise the C parser
+	'' will choke on them...
+	x = 0
+	while( tkGet( x ) <> TK_EOF )
+		var y = hSkipStatement( x ) - 1
+
+		'' But don't touch DIVIDERs at begin/end of statement, only
+		'' remove those in the middle, if any
+		while( (x < y) and (tkGet( x ) = TK_DIVIDER) )
+			x += 1
+		wend
+
+		while( (x < y) and (tkGet( y ) = TK_DIVIDER) )
+			y -= 1
+		wend
+
+		while( x < y )
+			if( tkGet( x ) = TK_DIVIDER ) then
+				tkRemove( x, x )
+				x -= 1
+				y -= 1
+			end if
+			x += 1
+		wend
+
+		x = tkSkipCommentEol( x )
 	wend
 end sub
 

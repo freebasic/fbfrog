@@ -5,7 +5,6 @@ type UDT
 	a as double
 	b as double
 	c as double
-
 	a as long ptr ptr
 	a as long ptr
 	a as long
@@ -46,7 +45,6 @@ type UDT
 	a(0 to 2 - 1, 0 to 3 - 1) as long
 	p(0 to 40 - 1) as sub( )
 	p(0 to 2 - 1, 0 to 3 - 1) as sub( )
-
 	declare sub f( )
 	declare function f( ) as long
 	declare sub f( )
