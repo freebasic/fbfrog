@@ -265,7 +265,7 @@ private sub frogWorkFile _
 
 	'' Put file's AST into a VERBLOCK, if a version was given
 	if( version ) then
-		ast = astNewVERBLOCK( astClone( version ), NULL, ast )
+		ast = astNewGROUP( astNewVERBLOCK( astClone( version ), NULL, ast ) )
 	end if
 
 	f->expr = ast

@@ -170,6 +170,16 @@ function astNewIIF _
 	function = n
 end function
 
+function astNewGROUP( ) as ASTNODE ptr
+	function = astNew( ASTCLASS_GROUP )
+end function
+
+function astNewGROUP( byval child as ASTNODE ptr ) as ASTNODE ptr
+	var n = astNewGROUP( )
+	astAppend( n, child )
+	function = n
+end function
+
 function astNewVERBLOCK overload _
 	( _
 		byval verexpr1 as ASTNODE ptr, _
@@ -2242,15 +2252,15 @@ private function hMergeStructsManually _
 	'' Copy astruct's fields into temp VERSION for a's version(s)
 	var afields = astNewGROUP( )
 	astCloneAndAddAllChildrenOf( afields, astruct )
-	afields = astNewVERBLOCK( astClone( aversion ), NULL, afields )
+	afields = astNewGROUP( astNewVERBLOCK( astClone( aversion ), NULL, afields ) )
 
 	'' Copy bstruct's fields into temp VERSION for b's version(s)
 	var bfields = astNewGROUP( )
 	astCloneAndAddAllChildrenOf( bfields, bstruct )
-	bfields = astNewVERBLOCK( astClone( bversion ), NULL, bfields )
+	bfields = astNewGROUP( astNewVERBLOCK( astClone( bversion ), NULL, bfields ) )
 
 	'' Merge both set of fields
-	var fields = astMergeVerBlocks( astMergeVerBlocks( NULL, afields ), bfields )
+	var fields = astMergeVerBlocks( afields, bfields )
 
 	'' Solve out any VERSIONs (but preserving their children) that have the
 	'' same version numbers that the struct itself is going to have.
@@ -2419,26 +2429,21 @@ private sub decltableAdd _
 
 end sub
 
-private sub decltableInit( byval table as DECLTABLE ptr, byval n as ASTNODE ptr )
+private sub decltableInit _
+	( _
+		byval table as DECLTABLE ptr, _
+		byval code as ASTNODE ptr _
+	)
+
 	table->array = NULL
 	table->count = 0
 	table->room = 0
 
 	'' Add each declaration node from the AST to the table
-	if( n = NULL ) then
-		exit sub
-	end if
-
-	var verblock = n
-	if( verblock->class = ASTCLASS_GROUP ) then
-		verblock = verblock->head
-		if( verblock = NULL ) then
-			exit sub
-		end if
-	end if
-
 	'' For each VERBLOCK...
-	do
+	assert( code->class = ASTCLASS_GROUP )
+	var verblock = code->head
+	while( verblock )
 		assert( verblock->class = ASTCLASS_VERBLOCK )
 
 		'' For each declaration in that VERBLOCK...
@@ -2449,7 +2454,7 @@ private sub decltableInit( byval table as DECLTABLE ptr, byval n as ASTNODE ptr 
 		wend
 
 		verblock = verblock->next
-	loop while( verblock )
+	wend
 end sub
 
 private sub decltableEnd( byval table as DECLTABLE ptr )
@@ -2462,35 +2467,23 @@ function astMergeVerBlocks _
 		byval b as ASTNODE ptr _
 	) as ASTNODE ptr
 
-	'' a = existing GROUP holding one or more VERSIONs, or NULL
-	'' b = new VERSION that should be integrated into a
-	'' c = resulting GROUP holding one or more VERSIONs
-
-	#if __FB_DEBUG__
-		if( a ) then
-			assert( a->class = ASTCLASS_GROUP )
-			assert( a->head->class = ASTCLASS_VERBLOCK )
-		end if
-	#endif
-
-	if( b = NULL ) then
-		return astClone( a )
-	end if
-	assert( b->class = ASTCLASS_VERBLOCK )
-
-	var c = astNewGROUP( )
-
-	if( a = NULL ) then
-		astAppend( c, astClone( b ) )
-		return c
-	end if
-
 	#if 0
 		print "a:"
 		astDump( a, 1 )
 		print "b:"
 		astDump( b, 1 )
 	#endif
+
+	if( a = NULL ) then
+		return b
+	end if
+	if( b = NULL ) then
+		return a
+	end if
+
+	var c = astNewGROUP( )
+	assert( a->class = ASTCLASS_GROUP )
+	assert( b->class = ASTCLASS_GROUP )
 
 	'' Create a lookup table for each side, so we can find the declarations
 	'' at certain indices in O(1) instead of having to cycle through the
@@ -2559,7 +2552,7 @@ function astMergeFiles _
 
 		if( f1 ) then
 			'' File found in files1; merge the two files' ASTs
-			f1->expr = astMergeVerBlocks( astMergeVerBlocks( NULL, f1->expr ), f2->expr )
+			f1->expr = astMergeVerBlocks( f1->expr, f2->expr )
 			f2->expr = NULL
 		else
 			'' File exists only in files2, copy over to files1
