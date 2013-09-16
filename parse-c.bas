@@ -42,7 +42,6 @@ declare function cToplevel( byval body as integer ) as ASTNODE ptr
 
 type PARSERSTUFF
 	x		as integer
-	tempidcount	as integer
 end type
 
 dim shared as PARSERSTUFF parse
@@ -76,8 +75,9 @@ private function cMatch( byval tk as integer ) as integer
 end function
 
 private function hMakeTempId( ) as string
-	parse.tempidcount += 1
-	function = "__fbfrog_AnonStruct" & parse.tempidcount
+	static n as integer
+	function = FROG_ANON_PREFIX & n
+	n += 1
 end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -1457,6 +1457,5 @@ end function
 
 function cFile( ) as ASTNODE ptr
 	parse.x = 0
-	parse.tempidcount = 0
 	function = cToplevel( BODY_TOPLEVEL )
 end function

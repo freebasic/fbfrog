@@ -502,6 +502,8 @@ declare sub tkExpect _
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
+const FROG_ANON_PREFIX = "__fbfrog_anon"
+
 enum
 	TYPE_NONE = 0
 	TYPE_ANY
@@ -830,6 +832,7 @@ declare function astReplaceChild _
 		byval b as ASTNODE ptr _
 	) as ASTNODE ptr
 declare sub astRemoveChild( byval parent as ASTNODE ptr, byval a as ASTNODE ptr )
+declare sub astSetText( byval n as ASTNODE ptr, byval text as zstring ptr )
 declare sub astRemoveText( byval n as ASTNODE ptr )
 declare sub astSetType _
 	( _
@@ -874,6 +877,7 @@ declare sub astAutoExtern _
 	)
 declare sub astRemoveParamNames( byval n as ASTNODE ptr )
 declare sub astFixArrayParams( byval n as ASTNODE ptr )
+declare sub astFixAnonUDTs( byval n as ASTNODE ptr )
 declare sub astRemoveRedundantTypedefs( byval n as ASTNODE ptr )
 declare sub astMergeDIVIDERs( byval n as ASTNODE ptr )
 declare function astMergeVerBlocks _

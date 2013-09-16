@@ -18,20 +18,18 @@ type UDT
 	a as long
 end type
 type A as UDT
-type __fbfrog_AnonStruct1
+type A
 	a as long
 end type
-type A as __fbfrog_AnonStruct1
 
 type UDT
 	a as long
 end type
 type A as UDT
 
-type __fbfrog_AnonStruct2
+type A
 	a as long
 end type
-type A as __fbfrog_AnonStruct2
 
 type UDT
 	a as long
@@ -41,22 +39,20 @@ type B as UDT
 type C as UDT ptr
 type D as function() as UDT
 
-type __fbfrog_AnonStruct3
+type A
 	a as long
 end type
-type A as __fbfrog_AnonStruct3
-type PA as __fbfrog_AnonStruct3 ptr
+type PA as A ptr
 
 union U
 	a as long
 end union
 type UU as U
-union __fbfrog_AnonStruct4
+union UU
 	a as long
 end union
-type UU as __fbfrog_AnonStruct4
 
-type __fbfrog_AnonStruct5
+type T
 	union
 		type
 			a as long
@@ -65,7 +61,6 @@ type __fbfrog_AnonStruct5
 		c as long
 	end union
 end type
-type T as __fbfrog_AnonStruct5
 
 union Nested
 	a as long
@@ -91,3 +86,26 @@ union Nested
 		end union
 	end type
 end union
+
+type A  '' Anonymous, will be given a temp id, requiring AST fix up later
+	i as long
+end type
+type B as A
+type C as A
+type D as A ptr
+type E as A ptr ptr
+type F as function() as A
+
+'' However, B shouldn't be typedeffed to A here
+type B
+	i as long
+end type
+type A as B ptr
+type B
+	i as long
+end type
+type A as B ptr ptr
+type B
+	i as long
+end type
+type A as function() as B

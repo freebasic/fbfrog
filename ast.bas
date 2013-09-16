@@ -704,6 +704,11 @@ sub astRemoveChild( byval parent as ASTNODE ptr, byval a as ASTNODE ptr )
 	astDelete( a )
 end sub
 
+sub astSetText( byval n as ASTNODE ptr, byval text as zstring ptr )
+	deallocate( n->text )
+	n->text = strDuplicate( text )
+end sub
+
 sub astRemoveText( byval n as ASTNODE ptr )
 	deallocate( n->text )
 	n->text = NULL
@@ -1829,6 +1834,126 @@ sub astFixArrayParams( byval n as ASTNODE ptr )
 	while( child )
 		astFixArrayParams( child )
 		child = child->next
+	wend
+end sub
+
+private sub hReplaceTypedefBaseSubtype _
+	( _
+		byval n as ASTNODE ptr, _
+		byval anon as ASTNODE ptr, _
+		byval aliastypedef as ASTNODE ptr _
+	)
+
+	if( n->subtype = NULL ) then exit sub
+
+	select case( n->subtype->class )
+	'' UDT subtypes
+	case ASTCLASS_ID
+		if( *n->subtype->text = *anon->text ) then
+			astDelete( n->subtype )
+			n->subtype = astNewID( aliastypedef->text )
+		end if
+
+	'' Function pointer subtypes too
+	case ASTCLASS_PROC
+		hReplaceTypedefBaseSubtype( n->subtype, anon, aliastypedef )
+	end select
+
+end sub
+
+''
+'' Look for TYPEDEFs that have the given anon UDT as subtype. There should be
+'' at least one; if not, report an error.
+'' The first TYPEDEF's id can become the anon UDT's id, and then that TYPEDEF
+'' can be removed. All other TYPEDEFs need to be changed over from the old anon
+'' subtype to the new id subtype.
+''
+'' For example:
+''    typedef struct { ... } A, B, C;
+'' is parsed into:
+''    struct __fbfrog_anon1
+''        ...
+''    typedef A as __fbfrog_anon1
+''    typedef B as __fbfrog_anon1
+''    typedef C as __fbfrog_anon1
+'' and should now be changed to:
+''    struct A
+''        ...
+''    typedef B as A
+''    typedef C as A
+''
+'' Not all cases can be solved out, for example:
+''    typedef struct { ... } *A;
+'' is parsed into:
+''    struct __fbfrog_anon1
+''        ...
+''    typedef A as __fbfrog_anon1 ptr
+'' i.e. the typedef is a pointer to the anon struct, not an alias for it.
+''
+private sub hTryFixAnon(  byval anon as ASTNODE ptr )
+	'' (Assuming that the parser will only insert typedefs using the anon id
+	'' behind the anon UDT node...)
+
+	'' 1. Find alias typedef
+	dim as ASTNODE ptr aliastypedef
+	var typedef = anon->next
+	while( typedef )
+		if( typedef->class <> ASTCLASS_TYPEDEF ) then
+			typedef = NULL
+			exit while
+		end if
+
+		'' Must be a plain alias, can't be a pointer or non-UDT
+		if( typeGetDtAndPtr( typedef->dtype ) = TYPE_UDT ) then
+			assert( typedef->subtype->class = ASTCLASS_ID )
+			if( *typedef->subtype->text = *anon->text ) then
+				aliastypedef = typedef
+				exit while
+			end if
+		end if
+
+		typedef = typedef->next
+	wend
+
+	'' Can't be solved out?
+	if( aliastypedef = NULL ) then
+		exit sub
+	end if
+
+	'' 2. Go through all typedefs behind the anon, and replace the subtypes
+	'' (or perhaps the subtype's subtype, in case it's a procptr typedef)
+	typedef = anon->next
+	while( typedef )
+		if( typedef->class <> ASTCLASS_TYPEDEF ) then
+			exit while
+		end if
+
+		hReplaceTypedefBaseSubtype( typedef, anon, aliastypedef )
+
+		typedef = typedef->next
+	wend
+
+	'' Rename the anon UDT to the alias typedef's id, now that its old
+	'' __fbfrog_anon* isn't need for comparison above anymore
+	astSetText( anon, aliastypedef->text )
+
+	'' "Remove" the alias typedef
+	aliastypedef->class = ASTCLASS_NOP
+end sub
+
+sub astFixAnonUDTs( byval n as ASTNODE ptr )
+	var udt = n->head
+	while( udt )
+
+		'' Anon UDT?
+		select case( udt->class )
+		case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
+			if( strStartsWith( *udt->text, FROG_ANON_PREFIX ) ) then
+				hTryFixAnon( udt )
+			end if
+		end select
+
+		udt = udt->next
 	wend
 end sub
 

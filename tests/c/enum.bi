@@ -37,12 +37,11 @@ end enum
 
 dim shared __typedef_enums as long
 
-enum __fbfrog_AnonStruct1
+enum EE
 	A
 	B
 	C
 end enum
-type EE as __fbfrog_AnonStruct1
 
 enum E
 	A

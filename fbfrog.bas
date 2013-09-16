@@ -256,6 +256,7 @@ private sub frogWorkFile _
 	''
 	'astRemoveParamNames( ast )
 	astFixArrayParams( ast )
+	astFixAnonUDTs( ast )
 	astRemoveRedundantTypedefs( ast )
 	if( (pre->options and PRESETOPT_NOAUTOEXTERN) = 0 ) then
 		astAutoExtern( ast, ((pre->options and PRESETOPT_WINDOWSMS) <> 0) )
