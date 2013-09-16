@@ -515,7 +515,7 @@ sub astAddVersionedChild( byval n as ASTNODE ptr, byval child as ASTNODE ptr )
 	'' separate VERBLOCK.
 	if( n->tail ) then
 		assert( n->tail->class = ASTCLASS_VERBLOCK )
-		if( astVersionsMatch2WayOr( n->tail, child ) ) then
+		if( astVersionsMatch2WayOr( n->tail->expr, child->expr ) ) then
 			astCloneAndAddAllChildrenOf( n->tail, child )
 			astDelete( child )
 			exit sub
@@ -2341,9 +2341,17 @@ function astMergeVerBlocks _
 	'' b = new VERSION that should be integrated into a
 	'' c = resulting GROUP holding one or more VERSIONs
 
+	#if __FB_DEBUG__
+		if( a ) then
+			assert( a->class = ASTCLASS_GROUP )
+			assert( a->head->class = ASTCLASS_VERBLOCK )
+		end if
+	#endif
+
 	if( b = NULL ) then
 		return astClone( a )
 	end if
+	assert( b->class = ASTCLASS_VERBLOCK )
 
 	var c = astNewGROUP( )
 
@@ -2358,10 +2366,6 @@ function astMergeVerBlocks _
 		print "b:"
 		astDump( b, 1 )
 	#endif
-
-	assert( a->class = ASTCLASS_GROUP )
-	assert( a->head->class = ASTCLASS_VERBLOCK )
-	assert( b->class = ASTCLASS_VERBLOCK )
 
 	'' Create a lookup table for each side, so we can find the declarations
 	'' at certain indices in O(1) instead of having to cycle through the
@@ -2430,7 +2434,7 @@ function astMergeFiles _
 
 		if( f1 ) then
 			'' File found in files1; merge the two files' ASTs
-			f1->expr = astMergeVerBlocks( f1->expr, f2->expr )
+			f1->expr = astMergeVerBlocks( astMergeVerBlocks( NULL, f1->expr ), f2->expr )
 			f2->expr = NULL
 		else
 			'' File exists only in files2, copy over to files1
