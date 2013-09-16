@@ -176,7 +176,11 @@ private sub frogWorkFile _
 					if( contextf = NULL ) then
 						contextf = f
 					end if
-					var incf = frogAddFile( files, contextf, tkGetText( x ) )
+					var incfile = *tkGetText( x )
+					if( verbose ) then
+						print "    #include: " + incfile
+					end if
+					var incf = frogAddFile( files, contextf, incfile )
 
 					if( ((incf->attrib and ASTATTRIB_MISSING) = 0) and (incf->refcount = 1) and _
 					    ((incf->mergeparent = NULL) or (incf->mergeparent = f)) and _
@@ -191,7 +195,11 @@ private sub frogWorkFile _
 
 						incf->mergeparent = f
 						if( verbose ) then
-							print "    merged in: " + *incf->comment
+							print "    (merged in)"
+						end if
+					else
+						if( verbose ) then
+							print "    (not merged)"
 						end if
 					end if
 				end if
