@@ -184,7 +184,7 @@ private function cExpression( byval level as integer = 0 ) as ASTNODE ptr
 			astSetType( a, TYPE_WSTRING, NULL )
 			cSkip( )
 
-		'' Identifier ['(' CallArguments ')']
+		'' Identifier ['(' [CallArguments] ')']
 		case TK_ID
 			a = astNewID( tkGetText( parse.x ) )
 			cSkip( )
@@ -195,13 +195,15 @@ private function cExpression( byval level as integer = 0 ) as ASTNODE ptr
 				a->class = ASTCLASS_CALL
 				cSkip( )
 
-				'' CallArguments:
-				'' Expression (',' Expression)*
-				do
-					astAppend( a, cExpression( ) )
+				'' [CallArguments]
+				if( tkGet( parse.x ) <> TK_RPAREN ) then
+					'' Expression (',' Expression)*
+					do
+						astAppend( a, cExpression( ) )
 
-					'' ','?
-				loop while( cMatch( TK_COMMA ) )
+						'' ','?
+					loop while( cMatch( TK_COMMA ) )
+				end if
 
 				'' ')'?
 				cExpectSkip( TK_RPAREN, "to close call argument list" )

@@ -3,6 +3,7 @@ enum E {
 	A = sizeof(A),
 	A = f(A),
 	A = f(1,2,3,4),
+	A = f(),
 };
 
 #define A(x) "a" "b"
