@@ -376,6 +376,15 @@ private function frogWorkVersion _
 			f = f->next
 		wend
 
+		if( verbose ) then
+			print "#include refcounts (how often #included):"
+			f = files->head
+			while( f )
+				print "    " & f->refcount, *f->comment
+				f = f->next
+			wend
+		end if
+
 		'' Pass 1: Process any files that don't look like they'll be
 		'' merged, i.e. refcount <> 1.
 		f = files->head
