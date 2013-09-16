@@ -143,6 +143,8 @@ private sub frogWorkFile _
 		byval f as ASTNODE ptr _
 	)
 
+	print "parsing: " + *f->comment
+
 	tkInit( )
 
 	var comments = ((pre->options and PRESETOPT_COMMENTS) <> 0)
@@ -255,6 +257,16 @@ private sub frogWorkFile _
 	end if
 
 	f->expr = ast
+
+	'' Report merged #includes
+	var incf = files->head
+	while( incf )
+		if( incf->mergeparent = f ) then
+			print "merged in: " + *incf->comment
+		end if
+		incf = incf->next
+	wend
+
 end sub
 
 private function frogWorkVersion _
@@ -332,7 +344,7 @@ private function frogWorkVersion _
 		f = files->head
 		while( f )
 			if( (f->attrib and ASTATTRIB_MISSING) = 0 ) then
-				print "preparsing: ";*f->comment
+				print "preparsing: " + *f->comment
 
 				tkInit( )
 				lexLoadFile( 0, f, FALSE, FALSE )
@@ -393,14 +405,6 @@ private function frogWorkVersion _
 			if( ((f->attrib and ASTATTRIB_MISSING) = 0) and (f->refcount <> 1) ) then
 				assert( f->mergeparent = NULL )
 				frogWorkFile( pre, presetcode, version, files, f )
-
-				var incf = files->head
-				while( incf )
-					if( incf->mergeparent = f ) then
-						print "merged in: " + *incf->comment
-					end if
-					incf = incf->next
-				wend
 			end if
 
 			f = f->next
@@ -415,14 +419,6 @@ private function frogWorkVersion _
 
 			if( ((f->attrib and ASTATTRIB_MISSING) = 0) and (f->refcount = 1) and (f->mergeparent = NULL) ) then
 				frogWorkFile( pre, presetcode, version, files, f )
-
-				var incf = files->head
-				while( incf )
-					if( incf->mergeparent = f ) then
-						print "merged in: " + *incf->comment
-					end if
-					incf = incf->next
-				wend
 			end if
 
 			f = f->next
