@@ -66,7 +66,7 @@ private sub hLoadFile _
 	var f = astNewFROGFILE( normed, pretty )
 	astAppend( files, f )
 
-	lexLoadFile( x, f, LEXMODE_FBFROG, FALSE )
+	lexLoadFile( x, f, FALSE, FALSE )
 
 end sub
 
@@ -112,92 +112,12 @@ sub presetParse( byval pre as FROGPRESET ptr, byref presetfile as string )
 			hLoadFile( presetfiles, incfile, incfile )
 			continue do
 
-		'' VERSION VersionId ('.' VersionId)*
-		case KW_VERSION
+		'' UNDEF Identifier
+		case KW_UNDEF
 			hSkip( )
 
-			var context = verspacestack(verlevel)
-			verlevel += 1
-			if( verlevel = MAXVERSPACES ) then
-				hOops( "VERSION block stack too small, MAXVERSPACES=" & MAXVERSPACES )
-			end if
-
-			do
-				'' VersionId
-				var id = hVersionId( )
-
-				var newver = astNewVERBLOCK( id, NULL, NULL )
-				astAppend( context, newver )
-				context = newver
-
-				'' '.'?
-			loop while( hMatch( TK_DOT ) )
-
-			verspacestack(verlevel) = context
-
-		'' END VERSION
-		case KW_END
-			hSkip( )
-			hExpectSkip( KW_VERSION, "as in 'END VERSION" )
-
-			if( verlevel < 1 ) then
-				hOops( "END VERSION without corresponding VERSION block begin" )
-			end if
-			verlevel -= 1
-
-		'' DOWNLOAD "URL" "output file name"
-		case KW_DOWNLOAD
-			hSkip( )
-			var url = hExpectSkipString( "containing the download URL" )
-			var outfile = hExpectSkipString( "containing the output file name" )
-
-			var download = astNew( ASTCLASS_DOWNLOAD, url )
-			astSetComment( download, outfile )
-			astAppend( verspacestack(verlevel), download )
-
-		'' EXTRACT "tarball file name" ["output directory name"]
-		case KW_EXTRACT
-			hSkip( )
-			var tarball = hExpectSkipString( "containing the archive file name" )
-
-			dim outdir as zstring ptr
-			if( tkGet( x ) = TK_STRING ) then
-				outdir = tkGetText( x )
-				hSkip( )
-			end if
-
-			var extract = astNew( ASTCLASS_EXTRACT, tarball )
-			astSetComment( extract, outdir )
-			astAppend( verspacestack(verlevel), extract )
-
-		'' COPYFILE "old name" "new name"
-		case KW_COPYFILE
-			hSkip( )
-			var oldname = hExpectSkipString( "containing the original file name" )
-			var newname = hExpectSkipString( "containing the new file name" )
-
-			var copyfile = astNew( ASTCLASS_COPYFILE, oldname )
-			astSetComment( copyfile, newname )
-			astAppend( verspacestack(verlevel), copyfile )
-
-		'' FILE "file name"
-		case KW_FILE
-			hSkip( )
-			astAppend( verspacestack(verlevel), astNew( ASTCLASS_FILE, _
-				hExpectSkipString( "containing the file name" ) ) )
-
-		'' DIR "dir name"
-		case KW_DIR
-			hSkip( )
-			astAppend( verspacestack(verlevel), astNew( ASTCLASS_DIR, _
-				hExpectSkipString( "containing the directory name" ) ) )
-
-		'' NOEXPAND Identifier
-		case KW_NOEXPAND
-			hSkip( )
-
-			hExpect( TK_ID, "(a #defined symbol)" )
-			astAppend( verspacestack(verlevel), astNew( ASTCLASS_NOEXPAND, tkGetText( x ) ) )
+			hExpect( TK_ID, "(a symbol that's initially un-#defined)" )
+			astAppend( verspacestack(verlevel), astNew( ASTCLASS_PPUNDEF, tkGetText( x ) ) )
 			hSkip( )
 
 		'' DEFINE Identifier ['(' MacroParameters ')'] [MacroBody]
@@ -224,53 +144,137 @@ sub presetParse( byval pre as FROGPRESET ptr, byref presetfile as string )
 
 			astAppend( verspacestack(verlevel), macro )
 
-		'' UNDEF Identifier
-		case KW_UNDEF
-			hSkip( )
+		case is >= TK_ID
+			select case( *tkGetText( x ) )
+			'' VERSION VersionId ('.' VersionId)*
+			case "version"
+				hSkip( )
 
-			hExpect( TK_ID, "(a symbol that's initially un-#defined)" )
-			astAppend( verspacestack(verlevel), astNew( ASTCLASS_PPUNDEF, tkGetText( x ) ) )
-			hSkip( )
+				var context = verspacestack(verlevel)
+				verlevel += 1
+				if( verlevel = MAXVERSPACES ) then
+					hOops( "VERSION block stack too small, MAXVERSPACES=" & MAXVERSPACES )
+				end if
 
-		'' REMOVE (DEFINE|STRUCT|PROC|...) Identifier
-		case KW_REMOVE
-			hSkip( )
+				do
+					'' VersionId
+					var id = hVersionId( )
 
-			var astclass = -1
-			select case( tkGet( x ) )
-			case KW_DEFINE
-				astclass = ASTCLASS_REMOVE
-			case else
-				hOops( "unknown REMOVE command" )
-			end select
-			hSkip( )
+					var newver = astNewVERBLOCK( id, NULL, NULL )
+					astAppend( context, newver )
+					context = newver
 
-			'' Identifier
-			hExpect( TK_ID, "(the symbol to remove by name)" )
-			astAppend( verspacestack(verlevel), astNew( astclass, tkGetText( x ) ) )
-			hSkip( )
+					'' '.'?
+				loop while( hMatch( TK_DOT ) )
 
-		'' OPTION optionid
-		case KW_OPTION
-			hSkip( )
+				verspacestack(verlevel) = context
 
-			var opt = -1
-			if( tkGet( x ) >= TK_ID ) then
-				select case( lcase( *tkGetText( x ) ) )
-				case "nomerge"      : opt = PRESETOPT_NOMERGE
-				case "comments"     : opt = PRESETOPT_COMMENTS
-				case "nopp"         : opt = PRESETOPT_NOPP
-				case "noppfold"     : opt = PRESETOPT_NOPPFOLD
-				case "noautoextern" : opt = PRESETOPT_NOAUTOEXTERN
-				case "windowsms"    : opt = PRESETOPT_WINDOWSMS
+			'' ENDVERSION
+			case "endversion"
+				hSkip( )
+
+				if( verlevel < 1 ) then
+					hOops( "ENDVERSION without corresponding VERSION block begin" )
+				end if
+				verlevel -= 1
+
+			'' DOWNLOAD "URL" "output file name"
+			case "download"
+				hSkip( )
+				var url = hExpectSkipString( "containing the download URL" )
+				var outfile = hExpectSkipString( "containing the output file name" )
+
+				var download = astNew( ASTCLASS_DOWNLOAD, url )
+				astSetComment( download, outfile )
+				astAppend( verspacestack(verlevel), download )
+
+			'' EXTRACT "tarball file name" ["output directory name"]
+			case "extract"
+				hSkip( )
+				var tarball = hExpectSkipString( "containing the archive file name" )
+
+				dim outdir as zstring ptr
+				if( tkGet( x ) = TK_STRING ) then
+					outdir = tkGetText( x )
+					hSkip( )
+				end if
+
+				var extract = astNew( ASTCLASS_EXTRACT, tarball )
+				astSetComment( extract, outdir )
+				astAppend( verspacestack(verlevel), extract )
+
+			'' COPYFILE "old name" "new name"
+			case "copyfile"
+				hSkip( )
+				var oldname = hExpectSkipString( "containing the original file name" )
+				var newname = hExpectSkipString( "containing the new file name" )
+
+				var copyfile = astNew( ASTCLASS_COPYFILE, oldname )
+				astSetComment( copyfile, newname )
+				astAppend( verspacestack(verlevel), copyfile )
+
+			'' FILE "file name"
+			case "file"
+				hSkip( )
+				astAppend( verspacestack(verlevel), astNew( ASTCLASS_FILE, _
+					hExpectSkipString( "containing the file name" ) ) )
+
+			'' DIR "dir name"
+			case "dir"
+				hSkip( )
+				astAppend( verspacestack(verlevel), astNew( ASTCLASS_DIR, _
+					hExpectSkipString( "containing the directory name" ) ) )
+
+			'' NOEXPAND Identifier
+			case "noexpand"
+				hSkip( )
+
+				hExpect( TK_ID, "(a #defined symbol)" )
+				astAppend( verspacestack(verlevel), astNew( ASTCLASS_NOEXPAND, tkGetText( x ) ) )
+				hSkip( )
+
+			'' REMOVE (DEFINE|STRUCT|PROC|...) Identifier
+			case "remove"
+				hSkip( )
+
+				var astclass = -1
+				select case( tkGet( x ) )
+				case KW_DEFINE
+					astclass = ASTCLASS_REMOVE
+				case else
+					hOops( "unknown REMOVE command" )
 				end select
-			end if
-			if( opt < 0 ) then
-				hOops( "unknown option" )
-			end if
-			hSkip( )
+				hSkip( )
 
-			pre->options or= opt
+				'' Identifier
+				hExpect( TK_ID, "(the symbol to remove by name)" )
+				astAppend( verspacestack(verlevel), astNew( astclass, tkGetText( x ) ) )
+				hSkip( )
+
+			'' OPTION optionid
+			case "option"
+				hSkip( )
+
+				var opt = -1
+				if( tkGet( x ) >= TK_ID ) then
+					select case( lcase( *tkGetText( x ) ) )
+					case "nomerge"      : opt = PRESETOPT_NOMERGE
+					case "comments"     : opt = PRESETOPT_COMMENTS
+					case "nopp"         : opt = PRESETOPT_NOPP
+					case "noppfold"     : opt = PRESETOPT_NOPPFOLD
+					case "noautoextern" : opt = PRESETOPT_NOAUTOEXTERN
+					case "windowsms"    : opt = PRESETOPT_WINDOWSMS
+					end select
+				end if
+				if( opt < 0 ) then
+					hOops( "unknown option" )
+				end if
+				hSkip( )
+
+				pre->options or= opt
+			case else
+				hOops( "unknown construct" )
+			end select
 
 		case else
 			hOops( "unknown construct" )
@@ -280,7 +284,7 @@ sub presetParse( byval pre as FROGPRESET ptr, byref presetfile as string )
 	loop
 
 	if( verlevel > 0 ) then
-		hOops( "missing END VERSION" )
+		hOops( "missing ENDVERSION" )
 	end if
 
 	tkEnd( )

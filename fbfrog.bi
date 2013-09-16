@@ -416,17 +416,6 @@ enum
 	KW_ZSTRING
 	KW__FB_LAST = KW_ZSTRING
 
-	'' fbfrog-only keywords
-	KW_COPYFILE
-	KW_DIR
-	KW_DOWNLOAD
-	KW_EXTRACT
-	KW_FILE
-	KW_NOEXPAND
-	KW_REMOVE
-	KW_VERSION
-	KW__FROG_LAST = KW_VERSION
-
 	TK__COUNT
 end enum
 
@@ -907,17 +896,11 @@ declare sub astDump _
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-enum
-	LEXMODE_C = 0
-	LEXMODE_FB
-	LEXMODE_FBFROG
-end enum
-
 declare function lexLoadFile _
 	( _
 		byval x as integer, _
 		byval file as ASTNODE ptr, _
-		byval mode as integer, _
+		byval fbmode as integer, _
 		byval keep_comments as integer _
 	) as integer
 declare function lexPeekLine _

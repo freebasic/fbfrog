@@ -187,15 +187,7 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	( @"wstr"    , NULL ), _
 	( @"wstring" , NULL ), _
 	( @"xor"     , NULL ), _
-	( @"zstring" , NULL ), _
-	( @"copyfile", NULL ), _  '' fbfrog-only keywords
-	( @"dir"     , NULL ), _
-	( @"download", NULL ), _
-	( @"extract" , NULL ), _
-	( @"file"    , NULL ), _
-	( @"noexpand", NULL ), _
-	( @"remove"  , NULL ), _
-	( @"version" , NULL )  _
+	( @"zstring" , NULL )  _
 }
 
 #assert ubound( tk_info ) = TK__COUNT - 1

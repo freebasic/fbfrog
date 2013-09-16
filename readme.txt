@@ -52,30 +52,15 @@ Compiling:
 
 To do:
 
-- How to translate #define bodies?
-  - Most #defines are just constants (expressions) and can be parsed & translated
-  - The rest is partial C constructs or relies on macro expansion etc. They can
-    only be removed, and if wanted an FB translation can be given manually after
-    the PP pass.
-        REPLACE DEFINE OldCBodyTokens "new FB body text"
-        - having the old C body tokens allows us to compare and error if the
-          macro changed, in which case the preset must be adjusted
-    - REMOVE DEFINE Identifier works at the same level now, could perhaps be
-      integrated with this
-    - add option to tell the C #define parser whether a #define is supposed to
-      return a bool or not, so it can decide whether to use is_bool_context=TRUE
-      when folding the #define body expression
+- For #defines that can't be parsed & translated as simple expressions:
+  REPLACE DEFINE Symbol [MacroParams] OldBody "NewBody"
+  - "NewBody" is FB code in a C string, as the preset is lexed in C mode
+- Add BOOLDEFINE to mark a macro as "returns a bool", so the C #define parser
+  can set is_bool_context=TRUE when folding
 
-- LEXMODE_FBFROG doesn't support &hFF FB number literals
-- since LEXMODE_FBFROG now uses all keywords, "undef string" would appear
-  as two keywords instead of keyword+id and fail to be parsed. Need to find
-  better solution than sharing keywords between C/FB/fbfrog or allow
-  anything >= TK_ID as arguments to undef|define|expand|macro.
-  Some bindings may need to register symbols that happen to be FB keywords etc...
 - lex: should only allow escaped EOLs in C mode
 - lex: add support for FB escape sequences, or at least only allow C escapes
-  in C modee
-- presets: combine DEFINE/MACRO statements
+  in C mode
 
 - Macro expansion should preserve token locations, perhaps even a stack of
   locations in case of nested macros. It'd be nice if the tkOops() functions

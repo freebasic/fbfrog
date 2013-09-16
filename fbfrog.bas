@@ -175,7 +175,7 @@ private sub frogWorkFile _
 	tkInit( )
 
 	var comments = ((pre->options and PRESETOPT_COMMENTS) <> 0)
-	lexLoadFile( 0, f, LEXMODE_C, comments )
+	lexLoadFile( 0, f, FALSE, comments )
 
 	'' Parse PP directives, and expand #includes if wanted and possible.
 	''
@@ -205,7 +205,7 @@ private sub frogWorkFile _
 					    (incf <> f) ) then
 						'' Replace #include by included file's content
 						tkRemove( x, x )
-						lexLoadFile( x, incf, LEXMODE_C, comments )
+						lexLoadFile( x, incf, FALSE, comments )
 						have_new_tokens = TRUE
 
 						'' Counter the +1 below, so this position is re-parsed
@@ -359,7 +359,7 @@ private function frogWorkVersion _
 				print "preparsing: ";*f->comment
 
 				tkInit( )
-				lexLoadFile( 0, f, LEXMODE_C, FALSE )
+				lexLoadFile( 0, f, FALSE, FALSE )
 
 				ppDirectives1( )
 
