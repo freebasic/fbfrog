@@ -554,17 +554,18 @@ end sub
 				hPrintHelp( "unknown option: " + *__FB_ARGV__[i] )
 			end select
 		else
-			select case( pathExtOnly( arg ) )
-			case "h", "hh", "hxx", "hpp", "c", "cc", "cxx", "cpp"
-				astAppend( cmdline.code, astNew( ASTCLASS_FILE, arg ) )
-			case ""
-				'' No extension? Treat as directory
+			if( hDirExists( arg ) ) then
 				astAppend( cmdline.code, astNew( ASTCLASS_DIR, arg ) )
-			case "fbfrog"
-				astAppend( presetfiles, astNewTEXT( arg ) )
-			case else
-				hPrintHelp( "'" + arg + "' is not a *.h file" )
-			end select
+			else
+				select case( pathExtOnly( arg ) )
+				case "h", "hh", "hxx", "hpp", "c", "cc", "cxx", "cpp"
+					astAppend( cmdline.code, astNew( ASTCLASS_FILE, arg ) )
+				case "fbfrog"
+					astAppend( presetfiles, astNewTEXT( arg ) )
+				case else
+					hPrintHelp( "'" + arg + "' is not a *.h file" )
+				end select
+			end if
 		end if
 	next
 
