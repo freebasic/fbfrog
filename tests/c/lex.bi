@@ -89,7 +89,7 @@
 
 '' Even stray form feed characters
 
-declare sub f( )  '' Some escaped newlines 
+declare sub f()  '' Some escaped newlines 
 
 '' single-line \
 '' comment \

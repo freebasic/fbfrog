@@ -1,1 +1,1 @@
-declare sub EXPANDME1( )
+declare sub EXPANDME1()

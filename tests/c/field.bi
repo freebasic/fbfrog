@@ -23,9 +23,9 @@ type UDT
 	a as T ptr ptr ptr ptr
 	a as T
 
-	p as function( byval as long ptr ) as long ptr
-	declare function f( byval as long, byval as long ) as long
-	declare sub proc( )
+	p as function(byval as long ptr) as long ptr
+	declare function f(byval as long, byval as long) as long
+	declare sub proc()
 
 	a as long
 	b as long
@@ -43,28 +43,28 @@ type UDT
 	d as long ptr ptr ptr
 	a(0 to 20 - 1) as long
 	a(0 to 2 - 1, 0 to 3 - 1) as long
-	p(0 to 40 - 1) as sub( )
-	p(0 to 2 - 1, 0 to 3 - 1) as sub( )
-	declare sub f( )
-	declare function f( ) as long
-	declare sub f( )
-	declare function f( ) as UDT ptr ptr
-	declare sub f( byval a as long ptr, byval b as long ptr ptr ptr )
+	p(0 to 40 - 1) as sub()
+	p(0 to 2 - 1, 0 to 3 - 1) as sub()
+	declare sub f()
+	declare function f() as long
+	declare sub f()
+	declare function f() as UDT ptr ptr
+	declare sub f(byval a as long ptr, byval b as long ptr ptr ptr)
 
-	a as sub( )
-	a as function( byval as long ) as long
-	a as function( byval a as long ) as long
-	b as function( byval a as long ) as long
+	a as sub()
+	a as function(byval as long) as long
+	a as function(byval a as long) as long
+	b as function(byval a as long) as long
 	c as long
 	a as long
-	b as function( byval a as long ) as long
+	b as function(byval a as long) as long
 	c as long
-	d as function( byval a as long ) as long
-	a as function( byval as long ) as long ptr ptr
+	d as function(byval a as long) as long
+	a as function(byval as long) as long ptr ptr
 
-	declare sub f( byval a as sub( ) )
-	declare sub f( byval as sub( ) )
+	declare sub f(byval a as sub())
+	declare sub f(byval as sub())
 
-	a as sub( byval a as sub( ) )
-	p as function( byval as function( byval as long ptr ptr ptr ) as long ptr ptr ptr ) as long ptr ptr ptr
+	a as sub(byval a as sub())
+	p as function(byval as function(byval as long ptr ptr ptr) as long ptr ptr ptr) as long ptr ptr ptr
 end type

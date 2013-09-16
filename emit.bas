@@ -211,12 +211,7 @@ private function hIdAndArray( byval n as ASTNODE ptr ) as string
 	function = s
 end function
 
-private function hCommaList _
-	( _
-		byval n as ASTNODE ptr, _
-		byval spaced as integer _
-	) as string
-
+private function hCommaList( byval n as ASTNODE ptr ) as string
 	var s = "("
 
 	var count = 0
@@ -224,9 +219,6 @@ private function hCommaList _
 	while( child )
 		if( count > 0 ) then
 			s += ", "
-		elseif( spaced ) then
-			'' space behind '('
-			s += " "
 		end if
 
 		s += emitAst( child )
@@ -234,11 +226,6 @@ private function hCommaList _
 		count += 1
 		child = child->next
 	wend
-
-	if( spaced ) then
-		'' space before ')'
-		s += " "
-	end if
 
 	function = s + ")"
 end function
@@ -303,7 +290,7 @@ private function emitAst _
 	case ASTCLASS_PPDEFINE
 		s += "#define " + *n->text
 		if( n->head ) then
-			s += hCommaList( n, TRUE )
+			s += hCommaList( n )
 		end if
 
 		if( n->expr ) then
@@ -439,7 +426,7 @@ private function emitAst _
 			end if
 		end if
 
-		s += hCommaList( n, TRUE )
+		s += hCommaList( n )
 
 		'' Function result type
 		if( n->dtype <> TYPE_ANY ) then
@@ -471,7 +458,7 @@ private function emitAst _
 		end if
 
 	case ASTCLASS_ARRAY
-		s += hCommaList( n, FALSE )
+		s += hCommaList( n )
 
 	case ASTCLASS_DIMENSION
 		s += emitAst( n->l )
@@ -660,7 +647,7 @@ private function emitAst _
 		wend
 
 	case ASTCLASS_CALL
-		s = *n->text + hCommaList( n, TRUE )
+		s = *n->text + hCommaList( n )
 
 	case else
 		astDump( n )

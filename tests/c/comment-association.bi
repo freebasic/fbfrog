@@ -22,4 +22,4 @@ dim shared g as long  '' comment for g
 '' comment for j
 '' comment for k
 '' comment for l
-declare sub i( byval j as long, byval k as long, byval l as long )
+declare sub i(byval j as long, byval k as long, byval l as long)

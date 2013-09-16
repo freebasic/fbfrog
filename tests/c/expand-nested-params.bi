@@ -1,1 +1,1 @@
-declare sub foo( )
+declare sub foo()

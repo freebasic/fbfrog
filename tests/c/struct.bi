@@ -39,7 +39,7 @@ end type
 type A as UDT
 type B as UDT
 type C as UDT ptr
-type D as function( ) as UDT
+type D as function() as UDT
 
 type __fbfrog_AnonStruct3
 	a as long
