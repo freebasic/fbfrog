@@ -2319,7 +2319,7 @@ private sub decltableInit( byval table as DECLTABLE ptr, byval n as ASTNODE ptr 
 		'' For each declaration in that VERBLOCK...
 		var decl = verblock->head
 		while( decl )
-			decltableAdd( table, decl, verblock )
+			decltableAdd( table, decl, verblock->expr )
 			decl = decl->next
 		wend
 
