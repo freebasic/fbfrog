@@ -88,7 +88,7 @@ private function frogAddFile _
 
 		var parent = pathOnly( *context->text )
 		do
-			'' File not found anywhere, ignore it.
+			'' File not found anywhere?
 			if( len( parent ) = 0 ) then
 				normed = ""
 				exit do
@@ -98,7 +98,7 @@ private function frogAddFile _
 			if( hFileExists( normed ) ) then
 				if( verbose ) then
 					if( len( report ) ) then print report
-					report = "    found: " + normed
+					report = "        found: " + normed
 				end if
 				exit do
 			end if
@@ -370,9 +370,9 @@ private function frogWorkVersion _
 					if( tkGet( x ) = TK_PPINCLUDE ) then
 						var incfile = tkGetText( x )
 
-						print "  #include: " + *incfile;
+						var report = "    #include: " + *incfile
 						if( verbose ) then
-							print
+							print report
 						end if
 
 						var incf = frogAddFile( files, f, incfile )
@@ -380,8 +380,9 @@ private function frogWorkVersion _
 
 						if( verbose = FALSE ) then
 							if( incf->attrib and ASTATTRIB_MISSING ) then
-								print " (not found)"
+								report += " (not found)"
 							end if
+							print report
 						end if
 					end if
 
