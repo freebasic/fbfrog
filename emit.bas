@@ -638,6 +638,7 @@ private function emitAst _
 		case ASTOP_INDEX       : s =        lhs + "["         + rhs + "]"
 		case ASTOP_MEMBER      : s =        lhs + "."         + rhs
 		case ASTOP_MEMBERDEREF : s =        lhs + "->"        + rhs
+		case ASTOP_STRCAT      : s =        lhs + " + "       + rhs
 		case else
 			assert( FALSE )
 		end select

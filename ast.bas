@@ -2531,6 +2531,7 @@ function astDumpOne( byval n as ASTNODE ptr ) as string
 			"[]"		, _ '' ASTOP_INDEX
 			"."		, _ '' ASTOP_MEMBER
 			"->"		, _ '' ASTOP_MEMBERDEREF
+			"str +"		, _ '' ASTOP_STRCAT
 			"C !"		, _ '' ASTOP_CLOGNOT
 			"not"		, _ '' ASTOP_NOT
 			"negate"	, _ '' ASTOP_NEGATE

@@ -472,6 +472,7 @@ dim shared as integer cprecedence(ASTOP_IIF to ASTOP_SIZEOF) = _
 	13, _ '' ASTOP_INDEX
 	13, _ '' ASTOP_MEMBER
 	13, _ '' ASTOP_MEMBERDEREF
+	 0, _ '' ASTOP_STRCAT
 	12, _ '' ASTOP_CLOGNOT
 	12, _ '' ASTOP_NOT
 	12, _ '' ASTOP_NEGATE

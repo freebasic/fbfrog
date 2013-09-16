@@ -82,6 +82,56 @@ end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
+private function hAppendStrLit _
+	( _
+		byval a as ASTNODE ptr, _
+		byval s as ASTNODE ptr _
+	) as ASTNODE ptr
+
+	if( a = NULL ) then
+		function = s
+	else
+		function = astNewBOP( ASTOP_STRCAT, a, s )
+	end if
+
+end function
+
+'' ("..." | #id)*
+private function hStringLiteralSequence( ) as ASTNODE ptr
+	dim as ASTNODE ptr a
+
+	do
+		select case( tkGet( parse.x ) )
+		case TK_STRING
+			var s = astNew( ASTCLASS_STRING, tkGetText( parse.x ) )
+			astSetType( s, TYPE_ZSTRING, NULL )
+			a = hAppendStrLit( a, s )
+			cSkip( )
+
+		case TK_WSTRING
+			var s = astNew( ASTCLASS_STRING, tkGetText( parse.x ) )
+			astSetType( s, TYPE_WSTRING, NULL )
+			a = hAppendStrLit( a, s )
+			cSkip( )
+
+		'' '#' stringify operator
+		case TK_HASH
+			cSkip( )
+
+			'' #id?
+			cExpect( TK_ID, "as operand of '#' PP stringify operator" )
+			var s = astNewUOP( ASTOP_STRINGIFY, astNewID( tkGetText( parse.x ) ) )
+			a = hAppendStrLit( a, s )
+			cSkip( )
+
+		case else
+			exit do
+		end select
+	loop
+
+	function = a
+end function
+
 '' C expression parser based on precedence climbing
 private function cExpression( byval level as integer = 0 ) as ASTNODE ptr
 	'' Unary prefix operators
@@ -119,14 +169,10 @@ private function cExpression( byval level as integer = 0 ) as ASTNODE ptr
 			cSkip( )
 
 		case TK_STRING
-			a = astNew( ASTCLASS_STRING, tkGetText( parse.x ) )
-			astSetType( a, TYPE_ZSTRING, NULL )
-			cSkip( )
+			a = hStringLiteralSequence( )
 
 		case TK_WSTRING
-			a = astNew( ASTCLASS_STRING, tkGetText( parse.x ) )
-			astSetType( a, TYPE_WSTRING, NULL )
-			cSkip( )
+			a = hStringLiteralSequence( )
 
 		case TK_CHAR
 			a = astNew( ASTCLASS_CHAR, tkGetText( parse.x ) )
@@ -181,12 +227,7 @@ private function cExpression( byval level as integer = 0 ) as ASTNODE ptr
 
 		'' '#' stringify operator
 		case TK_HASH
-			cSkip( )
-
-			'' #id?
-			cExpect( TK_ID, "as operand of '#' PP stringify operator" )
-			a = astNewUOP( ASTOP_STRINGIFY, astNewID( tkGetText( parse.x ) ) )
-			cSkip( )
+			a = hStringLiteralSequence( )
 
 		case else
 			cOops( "not an atomic expression (identifier, literal, ...), or not yet implemented" )

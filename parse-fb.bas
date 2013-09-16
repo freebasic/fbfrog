@@ -87,6 +87,7 @@ dim shared as integer fbprecedence(ASTOP_IIF to ASTOP_STRINGIFY) = _
 	 0, _ '' ASTOP_INDEX
 	 0, _ '' ASTOP_MEMBER
 	 0, _ '' ASTOP_MEMBERDEREF
+	 0, _ '' ASTOP_STRCAT
 	 0, _ '' ASTOP_CLOGNOT
 	 5, _ '' ASTOP_NOT
 	11, _ '' ASTOP_NEGATE
