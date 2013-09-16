@@ -259,7 +259,7 @@ sub presetParse( byval pre as FROGPRESET ptr, byref presetfile as string )
 				if( tkGet( x ) >= TK_ID ) then
 					select case( lcase( *tkGetText( x ) ) )
 					case "nomerge"      : opt = PRESETOPT_NOMERGE
-					case "comments"     : opt = PRESETOPT_COMMENTS
+					case "whitespace"   : opt = PRESETOPT_WHITESPACE
 					case "nopp"         : opt = PRESETOPT_NOPP
 					case "noppfold"     : opt = PRESETOPT_NOPPFOLD
 					case "noautoextern" : opt = PRESETOPT_NOAUTOEXTERN

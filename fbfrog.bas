@@ -10,10 +10,11 @@ private sub hPrintHelp( byref message as string )
 	end if
 	print "fbfrog 0.1 from " + __DATE_ISO__ + ", usage: fbfrog [options] *.h"
 	print "options:"
-	print "  -m           Merge multiple headers into one"
-	print "  -v           Show debugging info"
+	print "  -m    Merge multiple headers into one"
+	print "  -w    Whitespace: Try to preserve comments and empty lines"
+	print "  -v    Show debugging info"
 	print "By default, fbfrog will generate a *.bi file for each given *.h file."
-	print "*.bi files need to be reviewed and tested! Watch out for calling conventions!"
+	print "*.bi files should be reviewed and need to be tested!"
 	end (iif( len( message ) > 0, 1, 0 ))
 end sub
 
@@ -147,8 +148,8 @@ private sub frogWorkFile _
 
 	tkInit( )
 
-	var comments = ((pre->options and PRESETOPT_COMMENTS) <> 0)
-	lexLoadFile( 0, f, FALSE, comments )
+	var whitespace = ((pre->options and PRESETOPT_WHITESPACE) <> 0)
+	lexLoadFile( 0, f, FALSE, whitespace )
 
 	'' Parse PP directives, and expand #includes if wanted and possible.
 	''
@@ -160,8 +161,10 @@ private sub frogWorkFile _
 	var have_new_tokens = TRUE
 	while( have_new_tokens )
 
-		ppComments( )
-		ppDividers( )
+		if( whitespace ) then
+			ppComments( )
+			ppDividers( )
+		end if
 		ppDirectives1( )
 		have_new_tokens = FALSE
 
@@ -187,7 +190,7 @@ private sub frogWorkFile _
 					    (incf <> f) ) then
 						'' Replace #include by included file's content
 						tkRemove( x, x )
-						lexLoadFile( x, incf, FALSE, comments )
+						lexLoadFile( x, incf, FALSE, whitespace )
 						have_new_tokens = TRUE
 
 						'' Counter the +1 below, so this position is re-parsed
@@ -544,8 +547,8 @@ end sub
 			select case( arg )
 			case "h", "?", "help", "version"
 				hPrintHelp( "" )
-			case "comments"
-				cmdline.options or= PRESETOPT_COMMENTS
+			case "w", "whitespace"
+				cmdline.options or= PRESETOPT_WHITESPACE
 			case "m", "merge"
 				cmdline.options and= not PRESETOPT_NOMERGE
 			case "v", "verbose"

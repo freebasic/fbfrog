@@ -1,6 +1,6 @@
 dir ""
 option nomerge
-option comments
+option whitespace
 option noautoextern
 
 remove define EXPANDTHIS

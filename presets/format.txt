@@ -89,7 +89,7 @@ The rest
 
   OPTION <name>
     NOMERGE       - create one *.bi per *.h, instead of a single *.bi
-    COMMENTS      - preserve comments
+    WHITESPACE    - try to preserve comments and empty lines
     NOPP          - disable preprocessing (for test cases)
     NOPPFOLD      - disable #if expression folding (for test cases)
     NOAUTOEXTERN  - disable automated calling convention to Extern block
