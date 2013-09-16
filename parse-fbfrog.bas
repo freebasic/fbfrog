@@ -299,3 +299,70 @@ end sub
 sub presetEnd( byval pre as FROGPRESET ptr )
 	astDelete( pre->code )
 end sub
+
+private function hHasInputFiles( byval n as ASTNODE ptr ) as integer
+	var child = n->head
+	while( child )
+		select case( child->class )
+		case ASTCLASS_VERBLOCK
+			if( hHasInputFiles( child ) ) then
+				return TRUE
+			end if
+		case ASTCLASS_FILE, ASTCLASS_DIR
+			return TRUE
+		end select
+		child = child->next
+	wend
+	function = FALSE
+end function
+
+function presetHasInputFiles( byval pre as FROGPRESET ptr ) as integer
+	function = hHasInputFiles( pre->code )
+end function
+
+private sub hRemoveInputFiles( byval n as ASTNODE ptr )
+	var child = n->head
+	while( child )
+		select case( child->class )
+		case ASTCLASS_VERBLOCK
+			hRemoveInputFiles( child )
+		case ASTCLASS_FILE, ASTCLASS_DIR
+			child->class = ASTCLASS_NOP
+		end select
+		child = child->next
+	wend
+end sub
+
+private sub hCopyInputFiles _
+	( _
+		byval code as ASTNODE ptr, _
+		byval source as ASTNODE ptr _
+	)
+
+	var child = source->head
+	while( child )
+		select case( child->class )
+		case ASTCLASS_VERBLOCK
+			'' Copying versioned input files would be more difficult,
+			'' assuming the version info should be preserved, but
+			'' for the command line this isn't needed anyways,
+			'' because no version can be specified there.
+			assert( FALSE )
+		case ASTCLASS_FILE, ASTCLASS_DIR
+			astAppend( code, astClone( child ) )
+		end select
+		child = child->next
+	wend
+
+end sub
+
+sub presetOverrideInputFiles _
+	( _
+		byval pre as FROGPRESET ptr, _
+		byval source as FROGPRESET ptr _
+	)
+
+	hRemoveInputFiles( pre->code )
+	hCopyInputFiles( pre->code, source->code )
+
+end sub

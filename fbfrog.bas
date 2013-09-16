@@ -574,6 +574,15 @@ end sub
 			hMkdir( presetdir )
 			presetdir += PATHDIV
 
+			'' Allow overriding the preset's input files with those
+			'' from the command line
+			if( presetHasInputFiles( @cmdline ) ) then
+				presetOverrideInputFiles( @pre, @cmdline )
+				'' Also, then we'll rely on the paths from command line,
+				'' and no preset specific directory can be prefixed.
+				presetdir = ""
+			end if
+
 			frogWorkPreset( @pre, presetfilename, presetdir )
 			presetEnd( @pre )
 

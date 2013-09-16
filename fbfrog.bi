@@ -955,6 +955,12 @@ end type
 declare sub presetParse( byval pre as FROGPRESET ptr, byref filename as string )
 declare sub presetInit( byval pre as FROGPRESET ptr )
 declare sub presetEnd( byval pre as FROGPRESET ptr )
+declare function presetHasInputFiles( byval pre as FROGPRESET ptr ) as integer
+declare sub presetOverrideInputFiles _
+	( _
+		byval pre as FROGPRESET ptr, _
+		byval source as FROGPRESET ptr _
+	)
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
