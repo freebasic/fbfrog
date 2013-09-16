@@ -126,7 +126,7 @@ sub presetParse( byval pre as FROGPRESET ptr, byref presetfile as string )
 				'' VersionId
 				var id = hVersionId( )
 
-				var newver = astNewVERSION( id, NULL )
+				var newver = astNewVERBLOCK( id, NULL, NULL )
 				astAppend( context, newver )
 				context = newver
 

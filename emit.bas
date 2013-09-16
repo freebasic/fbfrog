@@ -266,8 +266,8 @@ private function emitAst _
 		wend
 		s = ""
 
-	case ASTCLASS_VERSION
-		emitStmt( "version" + hCommaList( n->expr, TRUE ) )
+	case ASTCLASS_VERBLOCK
+		emitStmt( "version " + emitAst( n->expr ) )
 		emit.indent += 1
 		var child = n->head
 		while( child )

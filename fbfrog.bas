@@ -273,9 +273,9 @@ private sub frogWorkFile _
 	end if
 	astMergeDIVIDERs( ast )
 
-	'' Put file's AST into a VERSION block, if a version was given
+	'' Put file's AST into a VERBLOCK, if a version was given
 	if( version ) then
-		ast = astNewVERSION( version, NULL, ast )
+		ast = astNewVERBLOCK( astClone( version ), NULL, ast )
 	end if
 
 	f->expr = ast
@@ -500,7 +500,7 @@ private sub frogWorkPreset _
 			version = version->next
 		loop while( version )
 
-		astRemoveFullVersionWrappingFromFiles( files, versions )
+		astRemoveFullVerBlockWrappingFromFiles( files, versions )
 	else
 		'' Just do a single pass, don't worry about version specifics or AST merging
 		files = frogWorkVersion( pre, NULL, pre->code, presetfilename, presetprefix )

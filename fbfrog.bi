@@ -621,13 +621,8 @@ end enum
 enum
 	ASTCLASS_NOP = 0
 	ASTCLASS_GROUP
+	ASTCLASS_VERBLOCK
 	ASTCLASS_DIVIDER
-
-	ASTCLASS_VERSION
-	ASTCLASS_WILDCARD
-	ASTCLASS_DOS
-	ASTCLASS_LINUX
-	ASTCLASS_WIN32
 
 	ASTCLASS_DOWNLOAD
 	ASTCLASS_EXTRACT
@@ -670,6 +665,10 @@ enum
 	ASTCLASS_TEXT
 	ASTCLASS_STRING
 	ASTCLASS_CHAR
+	ASTCLASS_WILDCARD
+	ASTCLASS_DOS
+	ASTCLASS_LINUX
+	ASTCLASS_WIN32
 
 	ASTCLASS_UOP
 	ASTCLASS_BOP
@@ -714,7 +713,7 @@ type ASTNODE_
 
 	'' PARAM: initializer
 	'' PPDEFINE: MACROBODY
-	'' VERSION: GROUP holding CONSTs (the individual version numbers)
+	'' VERBLOCK: version expression
 	'' IIF: condition expression
 	'' FROGFILE: AST representing file content
 	expr		as ASTNODE ptr
@@ -771,16 +770,10 @@ declare function astNewIIF _
 		byval r as ASTNODE ptr _
 	) as ASTNODE ptr
 #define astNewGROUP( ) astNew( ASTCLASS_GROUP )
-declare function astNewVERSION overload( ) as ASTNODE ptr
-declare function astNewVERSION overload _
+declare function astNewVERBLOCK overload _
 	( _
-		byval id as ASTNODE ptr, _
-		byval child as ASTNODE ptr _
-	) as ASTNODE ptr
-declare function astNewVERSION overload _
-	( _
-		byval version1 as ASTNODE ptr, _
-		byval version2 as ASTNODE ptr, _
+		byval verexpr1 as ASTNODE ptr, _
+		byval verexpr2 as ASTNODE ptr, _
 		byval child as ASTNODE ptr _
 	) as ASTNODE ptr
 declare function astNewDIMENSION _
@@ -806,8 +799,17 @@ declare sub astDelete( byval n as ASTNODE ptr )
 declare sub astPrepend( byval parent as ASTNODE ptr, byval n as ASTNODE ptr )
 declare sub astAppend( byval parent as ASTNODE ptr, byval n as ASTNODE ptr )
 declare sub astCloneAndAddAllChildrenOf( byval d as ASTNODE ptr, byval s as ASTNODE ptr )
-declare function astVersionsMatch( byval a as ASTNODE ptr, byval b as ASTNODE ptr ) as integer
-declare function astStringifyVersion( byval version as ASTNODE ptr ) as string
+declare function astVersionsMatch1Way _
+	( _
+		byval pattern as ASTNODE ptr, _
+		byval target as ASTNODE ptr _
+	) as integer
+declare function astVersionsMatch2WayOr _
+	( _
+		byval a as ASTNODE ptr, _
+		byval b as ASTNODE ptr _
+	) as integer
+declare function astStringifyVersion( byval n as ASTNODE ptr ) as string
 declare function astCollectVersions( byval context as ASTNODE ptr ) as ASTNODE ptr
 declare sub astAddVersionedChild( byval n as ASTNODE ptr, byval child as ASTNODE ptr )
 declare function astGet1VersionOnly _
@@ -815,7 +817,7 @@ declare function astGet1VersionOnly _
 		byval code as ASTNODE ptr, _
 		byval matchversion as ASTNODE ptr _
 	) as ASTNODE ptr
-declare sub astRemoveFullVersionWrappingFromFiles _
+declare sub astRemoveFullVerBlockWrappingFromFiles _
 	( _
 		byval files as ASTNODE ptr, _
 		byval versions as ASTNODE ptr _
@@ -884,7 +886,7 @@ declare sub astRemoveParamNames( byval n as ASTNODE ptr )
 declare sub astFixArrayParams( byval n as ASTNODE ptr )
 declare sub astRemoveRedundantTypedefs( byval n as ASTNODE ptr )
 declare sub astMergeDIVIDERs( byval n as ASTNODE ptr )
-declare function astMergeVersions _
+declare function astMergeVerBlocks _
 	( _
 		byval a as ASTNODE ptr, _
 		byval b as ASTNODE ptr _
