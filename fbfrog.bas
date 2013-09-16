@@ -436,12 +436,14 @@ private function frogWorkVersion _
 				if( first ) then
 					'' Already have a first; append to it
 					if( f->expr ) then
+						print "concatenating: " + *f->comment
 						astAppend( first->expr, f->expr )
 						f->expr = NULL
 					end if
 				else
 					'' This is the first
 					first = f
+					print "concatenating: " + *f->comment + " (first)"
 				end if
 			end if
 			f = f->next
