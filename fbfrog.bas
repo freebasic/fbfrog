@@ -49,26 +49,6 @@ private function frogExtract( byref tarball as string, byref dirname as string )
 	end if
 end function
 
-private function hFindCommonParent( byval files as ASTNODE ptr ) as string
-	dim as string s
-
-	var f = files->head
-	while( f )
-
-		if( (f->attrib and ASTATTRIB_MISSING) = 0 ) then
-			if( len( s ) > 0 ) then
-				s = pathFindCommonBase( s, *f->text )
-			else
-				s = pathOnly( *f->text )
-			end if
-		end if
-
-		f = f->next
-	wend
-
-	function = s
-end function
-
 private function frogAddFile _
 	( _
 		byval files as ASTNODE ptr, _
@@ -79,8 +59,6 @@ private function frogAddFile _
 	dim as string normed, report
 
 	if( context ) then
-		var commonparent = hFindCommonParent( files )
-
 		'' Search for #included files in one of the parent directories
 		'' of the current file. Usually the #include will refer to a
 		'' file in the same directory or in a sub-directory at the same
@@ -106,13 +84,6 @@ private function frogAddFile _
 			if( verbose ) then
 				if( len( report ) ) then print report
 				report = "    not found: " + normed
-			end if
-
-			'' Stop searching parent directories after trying
-			'' the common base
-			if( parent = commonparent ) then
-				normed = ""
-				exit do
 			end if
 
 			parent = pathStripLastComponent( parent )
