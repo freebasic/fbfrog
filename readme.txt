@@ -91,8 +91,6 @@ To do:
 - #include foo.h  ->  #include foo.bi, if foo.bi will be generated too
 - #include stdio.h -> #include crt/stdio.bi, for some known default headers
   (or perhaps let presets do this)
-- nested #includes should be frogAddFile()'d in their parent include file context,
-  not in the toplevel file context, shouldn't they?
 
 - add pass to check all identifiers against FB keywords, and to check for dupdefs
   due to case insensitivity

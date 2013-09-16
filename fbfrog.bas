@@ -169,7 +169,12 @@ private sub frogWorkFile _
 
 				'' #include?
 				if( tkGet( x ) = TK_PPINCLUDE ) then
-					var incf = frogAddFile( files, f, tkGetText( x ) )
+					var location = tkGetLocation( x )
+					var contextf = location->file
+					if( contextf = NULL ) then
+						contextf = f
+					end if
+					var incf = frogAddFile( files, contextf, tkGetText( x ) )
 
 					if( ((incf->attrib and ASTATTRIB_MISSING) = 0) and (incf->refcount = 1) and _
 					    ((incf->mergeparent = NULL) or (incf->mergeparent = f)) and _
@@ -346,7 +351,12 @@ private function frogWorkVersion _
 							print report
 						end if
 
-						var incf = frogAddFile( files, f, incfile )
+						var location = tkGetLocation( x )
+						var contextf = location->file
+						if( contextf = NULL ) then
+							contextf = f
+						end if
+						var incf = frogAddFile( files, contextf, incfile )
 						incf->refcount += 1
 
 						if( verbose = FALSE ) then
