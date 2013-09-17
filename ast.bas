@@ -626,7 +626,9 @@ sub astRemoveFullVerBlockWrappingFromFiles _
 	var f = files->head
 	while( f )
 
-		f->expr = astRemoveFullVerBlockWrapping( f->expr, versions )
+		if( f->expr ) then
+			f->expr = astRemoveFullVerBlockWrapping( f->expr, versions )
+		end if
 
 		f = f->next
 	wend
@@ -2475,10 +2477,10 @@ function astMergeVerBlocks _
 	#endif
 
 	if( a = NULL ) then
-		return b
+		a = astNewGROUP( )
 	end if
 	if( b = NULL ) then
-		return a
+		b = astNewGROUP( )
 	end if
 
 	var c = astNewGROUP( )
@@ -2552,7 +2554,11 @@ function astMergeFiles _
 
 		if( f1 ) then
 			'' File found in files1; merge the two files' ASTs
-			f1->expr = astMergeVerBlocks( f1->expr, f2->expr )
+			if( (f1->expr <> NULL) and (f2->expr <> NULL) ) then
+				f1->expr = astMergeVerBlocks( f1->expr, f2->expr )
+			elseif( f2->expr ) then
+				f1->expr = f2->expr
+			end if
 			f2->expr = NULL
 		else
 			'' File exists only in files2, copy over to files1
