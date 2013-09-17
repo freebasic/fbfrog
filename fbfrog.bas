@@ -342,7 +342,7 @@ private function frogWorkVersion _
 	if( files->head = NULL ) then
 		if( len( presetfilename ) > 0 ) then
 			if( version ) then
-				oops( "no input files for version " + astStringifyVersion( version ) + " in " + presetfilename )
+				oops( "no input files for version " + emitAst( version ) + " in " + presetfilename )
 			else
 				oops( "no input files for " + presetfilename )
 			end if
@@ -492,7 +492,7 @@ private sub frogWorkPreset _
 	if( version ) then
 		'' For each version...
 		do
-			print "version: " + astStringifyVersion( version )
+			print "version: " + emitAst( version )
 
 			'' Determine preset code for that version
 			var presetcode = astGet1VersionOnly( pre->code, version )

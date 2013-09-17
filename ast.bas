@@ -408,21 +408,6 @@ private function astVersionMatches _
 
 end function
 
-function astStringifyVersion( byval n as ASTNODE ptr ) as string
-	select case( n->class )
-	case ASTCLASS_BOP
-		assert( n->op = ASTOP_MEMBER )
-		function = astStringifyVersion( n->l ) + "." + astStringifyVersion( n->r )
-	case ASTCLASS_STRING : function = """" + *n->text + """"
-	case ASTCLASS_ID     : function = *n->text
-	case ASTCLASS_DOS    : function = "dos"
-	case ASTCLASS_LINUX  : function = "linux"
-	case ASTCLASS_WIN32  : function = "win32"
-	case else
-		assert( FALSE )
-	end select
-end function
-
 private function astPrefixVersion _
 	( _
 		byval verprefix as ASTNODE ptr, _

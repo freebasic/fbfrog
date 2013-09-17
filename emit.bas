@@ -10,12 +10,6 @@
 
 declare sub emitStmt( byref s as string, byval comment as zstring ptr = NULL )
 
-declare function emitAst _
-	( _
-		byval n as ASTNODE ptr, _
-		byval need_parens as integer = FALSE _
-	) as string
-
 function emitType _
 	( _
 		byval dtype as integer, _
@@ -230,7 +224,7 @@ private function hCommaList( byval n as ASTNODE ptr ) as string
 	function = s + ")"
 end function
 
-private function emitAst _
+function emitAst _
 	( _
 		byval n as ASTNODE ptr, _
 		byval need_parens as integer _

@@ -798,7 +798,6 @@ declare sub astDelete( byval n as ASTNODE ptr )
 declare sub astPrepend( byval parent as ASTNODE ptr, byval n as ASTNODE ptr )
 declare sub astAppend( byval parent as ASTNODE ptr, byval n as ASTNODE ptr )
 declare sub astCloneAndAddAllChildrenOf( byval d as ASTNODE ptr, byval s as ASTNODE ptr )
-declare function astStringifyVersion( byval n as ASTNODE ptr ) as string
 declare function astCollectVersions( byval context as ASTNODE ptr ) as ASTNODE ptr
 declare sub astAddVersionedChild( byval n as ASTNODE ptr, byval child as ASTNODE ptr )
 declare function astGet1VersionOnly _
@@ -916,6 +915,11 @@ declare function emitType _
 		byval dtype as integer, _
 		byval subtype as ASTNODE ptr, _
 		byval debugdump as integer = FALSE _
+	) as string
+declare function emitAst _
+	( _
+		byval n as ASTNODE ptr, _
+		byval need_parens as integer = FALSE _
 	) as string
 declare sub emitFile( byref filename as string, byval ast as ASTNODE ptr )
 declare function importFile( byval file as ASTNODE ptr ) as ASTNODE ptr
