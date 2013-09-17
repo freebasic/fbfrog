@@ -798,16 +798,6 @@ declare sub astDelete( byval n as ASTNODE ptr )
 declare sub astPrepend( byval parent as ASTNODE ptr, byval n as ASTNODE ptr )
 declare sub astAppend( byval parent as ASTNODE ptr, byval n as ASTNODE ptr )
 declare sub astCloneAndAddAllChildrenOf( byval d as ASTNODE ptr, byval s as ASTNODE ptr )
-declare function astVersionsMatch1Way _
-	( _
-		byval pattern as ASTNODE ptr, _
-		byval target as ASTNODE ptr _
-	) as integer
-declare function astVersionsMatch2WayOr _
-	( _
-		byval a as ASTNODE ptr, _
-		byval b as ASTNODE ptr _
-	) as integer
 declare function astStringifyVersion( byval n as ASTNODE ptr ) as string
 declare function astCollectVersions( byval context as ASTNODE ptr ) as ASTNODE ptr
 declare sub astAddVersionedChild( byval n as ASTNODE ptr, byval child as ASTNODE ptr )

@@ -350,7 +350,7 @@ sub astCloneAndAddAllChildrenOf( byval d as ASTNODE ptr, byval s as ASTNODE ptr 
 	wend
 end sub
 
-function astVersionsMatch1Way _
+private function astVersionMatches _
 	( _
 		byval pattern as ASTNODE ptr, _
 		byval target as ASTNODE ptr _
@@ -365,15 +365,15 @@ function astVersionsMatch1Way _
 	case ASTCLASS_BOP
 		select case( pattern->op )
 		case ASTOP_OR
-			function = astVersionsMatch1Way( pattern->l, target ) or _
-			           astVersionsMatch1Way( pattern->r, target )
+			function = astVersionMatches( pattern->l, target ) or _
+			           astVersionMatches( pattern->r, target )
 
 		case ASTOP_MEMBER
 			'' pattern a.a should match a.a, but not a.b or a
 			if( target->class <> ASTCLASS_BOP ) then exit function
 			if( target->op <> ASTOP_MEMBER ) then exit function
-			function = astVersionsMatch1Way( pattern->l, target->l ) and _
-			           astVersionsMatch1Way( pattern->r, target->r )
+			function = astVersionMatches( pattern->l, target->l ) and _
+			           astVersionMatches( pattern->r, target->r )
 
 		case else
 			assert( FALSE )
@@ -397,23 +397,15 @@ function astVersionsMatch1Way _
 			select case( target->op )
 			case ASTOP_MEMBER
 				'' pattern a should match any of a.a, a.b, a.c etc.
-				function = astVersionsMatch1Way( pattern, target->l )
+				function = astVersionMatches( pattern, target->l )
 			case ASTOP_OR
 				'' pattern a should match a or b, but also b or a
-				function = astVersionsMatch1Way( pattern, target->l ) or _
-				           astVersionsMatch1Way( pattern, target->r )
+				function = astVersionMatches( pattern, target->l ) or _
+				           astVersionMatches( pattern, target->r )
 			end select
 		end select
 	end select
 
-end function
-
-function astVersionsMatch2WayOr _
-	( _
-		byval a as ASTNODE ptr, _
-		byval b as ASTNODE ptr _
-	) as integer
-	function = astVersionsMatch1Way( a, b ) or astVersionsMatch1Way( b, a )
 end function
 
 function astStringifyVersion( byval n as ASTNODE ptr ) as string
@@ -528,7 +520,7 @@ sub astAddVersionedChild( byval n as ASTNODE ptr, byval child as ASTNODE ptr )
 	'' separate VERBLOCK.
 	if( n->tail ) then
 		assert( n->tail->class = ASTCLASS_VERBLOCK )
-		if( astVersionsMatch2WayOr( n->tail->expr, child->expr ) ) then
+		if( astIsEqualDecl( n->tail->expr, child->expr ) ) then
 			astCloneAndAddAllChildrenOf( n->tail, child )
 			astDelete( child )
 			exit sub
@@ -550,7 +542,7 @@ function astGet1VersionOnly _
 	while( child )
 
 		if( child->class = ASTCLASS_VERBLOCK ) then
-			if( astVersionsMatch2WayOr( child->expr, matchversion ) ) then
+			if( astVersionMatches( matchversion, child->expr ) ) then
 				astAppend( result, astGet1VersionOnly( child, matchversion ) )
 			end if
 		else
@@ -576,7 +568,7 @@ private function astRemoveVerBlockWrapping _
 	while( verblock )
 		assert( verblock->class = ASTCLASS_VERBLOCK )
 
-		if( astVersionsMatch2WayOr( verblock->expr, matchversion ) ) then
+		if( astIsEqualDecl( verblock->expr, matchversion ) ) then
 			'' Add only the VERBLOCK's child nodes
 			astCloneAndAddAllChildrenOf( cleannodes, verblock )
 		else
