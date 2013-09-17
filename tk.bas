@@ -19,6 +19,8 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	( NULL  , @"ppelse"   ), _
 	( NULL  , @"ppendif"  ), _
 	( NULL  , @"ppundef"  ), _
+	( NULL  , @"pperror"  ), _
+	( NULL  , @"ppwarning" ), _
 	( NULL  , @"begin"    ), _
 	( NULL  , @"end"      ), _
 	( NULL  , @"ppmerge"  ), _
@@ -116,6 +118,7 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	( @"else"    , NULL ), _
 	( @"endif"   , NULL ), _
 	( @"enum"    , NULL ), _
+	( @"error"   , NULL ), _
 	( @"extern"  , NULL ), _
 	( @"for"     , NULL ), _
 	( @"goto"    , NULL ), _
@@ -133,6 +136,7 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	( @"undef"   , NULL ), _
 	( @"union"   , NULL ), _
 	( @"unsigned", NULL ), _
+	( @"warning" , NULL ), _
 	( @"while"   , NULL ), _
 	( @"alias"   , NULL ), _  '' FB-only keywords
 	( @"and"     , NULL ), _

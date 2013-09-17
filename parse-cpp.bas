@@ -795,6 +795,15 @@ private function ppDirective( byval x as integer ) as integer
 			tkOops( x, "unknown #pragma" )
 		end select
 
+	case KW_ERROR, KW_WARNING
+		x += 1
+
+		'' "message"
+		tkExpect( x, TK_STRING, "containing the #error/#warning message" )
+
+		tkFold( begin, x, iif( tk = KW_ERROR, TK_PPERROR, TK_PPWARNING ), tkGetText( x ) )
+		x = begin + 1
+
 	case TK_EOL
 		'' '#' followed by EOL (accepted by gcc/clang too)
 		tkRemove( begin, x - 1 )
@@ -1778,6 +1787,20 @@ sub ppEval( )
 				if( hLookupRemoveSym( id ) ) then
 					hRemoveTokenAndTkBeginEnd( x )
 				end if
+			end if
+
+		case TK_PPERROR
+			if( skiplevel <> MAXIFBLOCKS ) then
+				hRemoveTokenAndTkBeginEnd( x )
+			else
+				tkOops( x, tkGetText( x ) )
+			end if
+
+		case TK_PPWARNING
+			if( skiplevel <> MAXIFBLOCKS ) then
+				hRemoveTokenAndTkBeginEnd( x )
+			else
+				tkReport( x, tkGetText( x ) )
 			end if
 
 		case TK_ID
