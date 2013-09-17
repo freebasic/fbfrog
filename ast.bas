@@ -527,7 +527,9 @@ function astGet1VersionOnly _
 	while( child )
 
 		if( child->class = ASTCLASS_VERBLOCK ) then
-			if( astVersionMatches( matchversion, child->expr ) ) then
+			'' (the version block here acts as the pattern, the 1 version
+			'' we want to extract is the target)
+			if( astVersionMatches( child->expr, matchversion ) ) then
 				astAppend( result, astGet1VersionOnly( child, matchversion ) )
 			end if
 		else
