@@ -604,13 +604,8 @@ end sub
 			presetInit( @pre )
 			presetParse( @pre, presetfilename )
 
-			'' The preset's input/output files, especially extracted
-			'' tarballs, should be put into a directory specific to
-			'' the preset:
-			'' foo/bar.fbfrog  ->  foo/bar/
-			var presetdir = pathStripExt( presetfilename )
-			hMkdir( presetdir )
-			presetdir += PATHDIV
+			'' The preset's input files are given relative to the preset's directory
+			var presetdir = pathAddDiv( pathOnly( presetfilename ) )
 
 			'' Allow overriding the preset's input files with those
 			'' from the command line

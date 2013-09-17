@@ -1,4 +1,4 @@
-dir ""
+dir "."
 option nomerge
 option whitespace
 option noautoextern
