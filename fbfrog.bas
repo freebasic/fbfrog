@@ -323,7 +323,7 @@ private function frogWorkVersion _
 			dim as TLIST list
 			listInit( @list, sizeof( string ) )
 
-			hScanDirectoryForH( presetprefix + *child->text, @list )
+			hScanDirectory( presetprefix + *child->text, "*.h", @list )
 
 			dim as string ptr s = listGetHead( @list )
 			while( s )
@@ -565,7 +565,24 @@ end sub
 			end select
 		else
 			if( hDirExists( arg ) ) then
-				astAppend( cmdline.code, astNew( ASTCLASS_DIR, arg ) )
+				'' Search input directory for *.fbfrog files, if none found,
+				'' add it for *.h search later
+				dim as TLIST list
+				listInit( @list, sizeof( string ) )
+
+				hScanDirectory( arg, "*.fbfrog", @list )
+
+				dim as string ptr s = listGetHead( @list )
+				if( s ) then
+					do
+						astAppend( presetfiles, astNewTEXT( *s ) )
+						*s = ""
+						s = listGetNext( s )
+					loop while( s )
+				else
+					astAppend( cmdline.code, astNew( ASTCLASS_DIR, arg ) )
+				end if
+				listEnd( @list )
 			elseif( pathExtOnly( arg ) = "fbfrog" ) then
 				astAppend( presetfiles, astNewTEXT( arg ) )
 			else

@@ -947,7 +947,11 @@ end function
 '' Directory tree search
 
 function hDirExists( byref path as string ) as integer
-	function = (dir( path, fbDirectory ) <> "")
+	var fixed = path
+	if( right( fixed, len( PATHDIV ) ) = PATHDIV ) then
+		fixed = left( fixed, len( fixed ) - len( PATHDIV ) )
+	end if
+	function = (dir( fixed, fbDirectory ) <> "")
 end function
 
 function hFileExists( byref path as string ) as integer
@@ -997,13 +1001,14 @@ end sub
 private sub hScanParent _
 	( _
 		byref parent as string, _
+		byref filepattern as string, _
 		byval resultlist as TLIST ptr _
 	)
 
 	dim as string found
 
 	'' Scan for *.h files
-	found = dir( parent + "*.h", fbNormal )
+	found = dir( parent + filepattern, fbNormal )
 	while( len( found ) > 0 )
 		'' Add the file name to the result list
 		*cptr( string ptr, listAppend( resultlist ) ) = parent + found
@@ -1028,19 +1033,20 @@ private sub hScanParent _
 
 end sub
 
-sub hScanDirectoryForH _
+sub hScanDirectory _
 	( _
 		byref rootdir as string, _
+		byref filepattern as string, _
 		byval resultlist as TLIST ptr _
 	)
 
 	dirsAppend( rootdir )
 
-	print "scanning tree for *.h files: '" + dirs.head->path + "'"
+	print "scanning tree for " + filepattern + " files: '" + dirs.head->path + "'"
 
 	'' Work off the queue -- each subdir scan can append new subdirs
 	while( dirs.head )
-		hScanParent( dirs.head->path, resultlist )
+		hScanParent( dirs.head->path, filepattern, resultlist )
 		dirsDropHead( )
 	wend
 

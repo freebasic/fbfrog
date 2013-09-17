@@ -208,9 +208,10 @@ declare function hExepath( ) as string
 declare function pathNormalize( byref path as string ) as string
 declare function hDirExists( byref path as string ) as integer
 declare function hFileExists( byref file as string ) as integer
-declare sub hScanDirectoryForH _
+declare sub hScanDirectory _
 	( _
 		byref rootdir as string, _
+		byref filepattern as string, _
 		byval resultlist as TLIST ptr _
 	)
 declare function hShell( byref ln as string ) as integer
