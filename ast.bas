@@ -392,12 +392,16 @@ function astVersionsMatch1Way _
 		end select
 
 	case else
-		'' pattern a should match any of a.a, a.b, a.c etc.
 		select case( target->class )
 		case ASTCLASS_BOP
 			select case( target->op )
 			case ASTOP_MEMBER
+				'' pattern a should match any of a.a, a.b, a.c etc.
 				function = astVersionsMatch1Way( pattern, target->l )
+			case ASTOP_OR
+				'' pattern a should match a or b, but also b or a
+				function = astVersionsMatch1Way( pattern, target->l ) or _
+				           astVersionsMatch1Way( pattern, target->r )
 			end select
 		end select
 	end select
@@ -409,8 +413,7 @@ function astVersionsMatch2WayOr _
 		byval a as ASTNODE ptr, _
 		byval b as ASTNODE ptr _
 	) as integer
-	function = astVersionsMatch1Way( a, b ) or _
-	           astVersionsMatch1Way( b, a )
+	function = astVersionsMatch1Way( a, b ) or astVersionsMatch1Way( b, a )
 end function
 
 function astStringifyVersion( byval n as ASTNODE ptr ) as string
