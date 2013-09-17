@@ -568,6 +568,18 @@ private function emitAst _
 			s = "asc( " + s + " )"
 		end if
 
+	case ASTCLASS_WILDCARD
+		s = "*"
+
+	case ASTCLASS_DOS
+		s = "dos"
+
+	case ASTCLASS_LINUX
+		s = "linux"
+
+	case ASTCLASS_WIN32
+		s = "win32"
+
 	case ASTCLASS_UOP
 		select case as const( n->op )
 		'case ASTOP_CLOGNOT
