@@ -216,6 +216,7 @@ declare sub hScanDirectoryForH _
 declare function hShell( byref ln as string ) as integer
 declare sub hMkdir( byref path as string )
 declare sub hMkdirP( byref path as string )
+declare sub hKill( byref path as string )
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 

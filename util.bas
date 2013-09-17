@@ -1084,3 +1084,8 @@ sub hMkdirP( byref path as string )
 
 	hMkdir( path )
 end sub
+
+sub hKill( byref path as string )
+	if( kill( path ) ) then
+	end if
+end sub

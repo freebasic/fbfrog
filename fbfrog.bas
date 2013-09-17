@@ -19,11 +19,17 @@ private sub hPrintHelp( byref message as string )
 end sub
 
 private function frogDownload( byref url as string, byref file as string ) as integer
-	if( hFileExists( "tarballs/" + file ) ) then
+	var downloadfile = "tarballs" + PATHDIV + file
+	if( hFileExists( downloadfile ) ) then
 		function = TRUE
 	else
 		hMkdir( "tarballs" )
-		function = hShell( "wget '" + url + "' -O ""tarballs/" + file + """" )
+		if( hShell( "wget '" + url + "' -O """ + downloadfile + """" ) ) then
+			function = TRUE
+		else
+			hKill( downloadfile )
+			function = FALSE
+		end if
 	end if
 end function
 
