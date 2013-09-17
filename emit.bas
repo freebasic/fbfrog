@@ -288,7 +288,7 @@ function emitAst _
 		end if
 
 		if( n->expr ) then
-			s += " " + emitAst( n->expr )
+			s += " " + emitAst( n->expr, TRUE )
 		end if
 
 		emitStmt( s, n->comment )
