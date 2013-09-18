@@ -2818,6 +2818,9 @@ function astDumpOne( byval n as ASTNODE ptr ) as string
 	end if
 
 	select case( n->class )
+	case ASTCLASS_VERBLOCK
+		s += " " + emitAst( n->expr )
+
 	case ASTCLASS_CONST
 		if( typeIsFloat( n->dtype ) ) then
 			s += " " + str( n->valf )
@@ -2912,7 +2915,9 @@ function astDumpInline( byval n as ASTNODE ptr ) as string
 		more( "array=" + astDumpInline( n->array ) )
 	end if
 	if( n->expr ) then
-		more( "expr=" + astDumpInline( n->expr ) )
+		if( n->class <> ASTCLASS_VERBLOCK ) then
+			more( "expr=" + astDumpInline( n->expr ) )
+		end if
 	end if
 	if( n->l ) then
 		more( "l=" + astDumpInline( n->l ) )
@@ -2964,7 +2969,9 @@ sub astDump _
 
 		dumpField( subtype )
 		dumpField( array )
-		dumpField( expr )
+		if( n->class <> ASTCLASS_VERBLOCK ) then
+			dumpField( expr )
+		end if
 		dumpField( l )
 		dumpField( r )
 
