@@ -635,62 +635,44 @@ sub astAddVersionedChild( byval n as ASTNODE ptr, byval child as ASTNODE ptr )
 	astAppend( n, child )
 end sub
 
-private function hVersionMatches _
+private function h1VersionMatchesVerBlock _
 	( _
-		byval pattern as ASTNODE ptr, _
-		byval target as ASTNODE ptr _
+		byval version as ASTNODE ptr, _
+		byval blockexpr as ASTNODE ptr _
 	) as integer
 
-	function = FALSE
+	'' If it's the same version expression, allow immediately
+	if( astIsEqualVersion( version, blockexpr ) ) then
+		return TRUE
+	end if
 
-	select case( pattern->class )
+	select case( blockexpr->class )
+	'' If the block is a wildcard, it allows anything
 	case ASTCLASS_WILDCARD
-		function = TRUE
-
+		return TRUE
+	'' block <a or b> should allow <a> aswell as <b>
 	case ASTCLASS_BOP
-		select case( pattern->op )
-		case ASTOP_OR
-			function = astVersionMatches( pattern->l, target ) or _
-			           astVersionMatches( pattern->r, target )
-
-		case ASTOP_MEMBER
-			'' pattern a.a should match a.a, but not a.b or a
-			if( target->class <> ASTCLASS_BOP ) then exit function
-			if( target->op <> ASTOP_MEMBER ) then exit function
-			function = astVersionMatches( pattern->l, target->l ) and _
-			           astVersionMatches( pattern->r, target->r )
-
-		case else
-			assert( FALSE )
-		end select
-
-	'' Same node class?
-	case target->class
-		'' pattern a should match a, but not b
-		select case( pattern->class )
-		case ASTCLASS_STRING, ASTCLASS_ID
-			function = (*pattern->text = *target->text)
-		case ASTCLASS_DOS, ASTCLASS_LINUX, ASTCLASS_WIN32
-			function = TRUE
-		case else
-			assert( FALSE )
-		end select
-
-	case else
-		select case( target->class )
-		case ASTCLASS_BOP
-			select case( target->op )
-			case ASTOP_MEMBER
-				'' pattern a should match any of a.a, a.b, a.c etc.
-				function = astVersionMatches( pattern, target->l )
-			case ASTOP_OR
-				'' pattern a should match a or b, but also b or a
-				function = astVersionMatches( pattern, target->l ) or _
-				           astVersionMatches( pattern, target->r )
-			end select
-		end select
+		if( blockexpr->op = ASTOP_OR ) then
+			return h1VersionMatchesVerBlock( blockexpr->l, version ) or _
+			       h1VersionMatchesVerBlock( blockexpr->r, version )
+		end if
 	end select
 
+	if( version->class = ASTCLASS_BOP ) then
+		select case( version->op )
+		case ASTOP_MEMBER
+			'' blockexpr <a> should allow <a.?>
+			return h1VersionMatchesVerBlock( blockexpr, version->l )
+		case ASTOP_OR
+			'' blockexpr <a> should allow <a or b>, but also <b or a>
+			return h1VersionMatchesVerBlock( blockexpr, version->l ) or _
+			       h1VersionMatchesVerBlock( blockexpr, version->r )
+		case else
+			assert( FALSE )
+		end select
+	end if
+
+	function = FALSE
 end function
 
 function astGet1VersionOnly _
@@ -705,9 +687,7 @@ function astGet1VersionOnly _
 	while( child )
 
 		if( child->class = ASTCLASS_VERBLOCK ) then
-			'' (the version block here acts as the pattern, the 1 version
-			'' we want to extract is the target)
-			if( hVersionMatches( child->expr, matchversion ) ) then
+			if( h1VersionMatchesVerBlock( matchversion, child->expr ) ) then
 				astAppend( result, astGet1VersionOnly( child, matchversion ) )
 			end if
 		else
