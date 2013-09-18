@@ -29,3 +29,13 @@ static int i;
 #else
 	#error "unexpected MINOR value"
 #endif
+
+struct UDT {
+	#if MAJOR == 1
+		int fieldmajor1;
+	#elif MAJOR == 2
+		int fieldmajor2;
+	#else
+		int fieldmajor3456;
+	#endif
+};

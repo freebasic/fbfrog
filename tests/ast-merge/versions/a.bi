@@ -44,3 +44,14 @@ end version
 version "6"."3"
 	dim shared minor3 as long
 end version
+type UDT
+	version "1"."0" or "1"."99"
+		fieldmajor1 as long
+	end version
+	version "2"."0" or "2"."99"
+		fieldmajor2 as long
+	end version
+	version ((((((((((((("3"."1" or "3"."0") or "3"."99") or "4"."1") or "4"."0") or "4"."99") or "5"."1") or "5"."2") or "5"."0") or "5"."99") or "6"."1") or "6"."2") or "6"."3") or "6"."0") or "6"."99"
+		fieldmajor3456 as long
+	end version
+end type

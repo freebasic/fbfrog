@@ -2424,6 +2424,33 @@ private sub hAstLCS _
 	rlcslast  = rlcsfirst + max - 1
 end sub
 
+private function hWrapFieldsIntoVerblocks _
+	( _
+		byval struct as ASTNODE ptr, _
+		byval structversion as ASTNODE ptr _
+	) as ASTNODE ptr
+
+	var fields = astNewGROUP( )
+
+	var i = struct->head
+	while( i )
+
+		if( i->class = ASTCLASS_VERBLOCK ) then
+			'' Versioned field(s), copy as-is
+			astAddVersionedChild( fields, astClone( i ) )
+		else
+			'' Unversioned field, wrap into new verblock
+			'' corresponding to struct's version
+			astAddVersionedChild( fields, _
+				astNewVERBLOCK( astClone( structversion ), NULL, astClone( i ) ) )
+		end if
+
+		i = i->next
+	wend
+
+	function = fields
+end function
+
 private function hMergeStructsManually _
 	( _
 		byval astruct as ASTNODE ptr, _
@@ -2462,15 +2489,18 @@ private function hMergeStructsManually _
 	''             field c as integer
 	''
 
-	'' Copy astruct's fields into temp VERSION for a's version(s)
-	var afields = astNewGROUP( )
-	astCloneAndAddAllChildrenOf( afields, astruct )
-	afields = astNewGROUP( astNewVERBLOCK( astClone( aversion ), NULL, afields ) )
+	'' The structs on each side may contain versioned fields, from previous
+	'' struct body merge like this one, and/or unversioned fields, meaning
+	'' those fields appeared in all version(s) of the respective structs.
+	var afields = hWrapFieldsIntoVerblocks( astruct, aversion )
+	var bfields = hWrapFieldsIntoVerblocks( bstruct, bversion )
 
-	'' Copy bstruct's fields into temp VERSION for b's version(s)
-	var bfields = astNewGROUP( )
-	astCloneAndAddAllChildrenOf( bfields, bstruct )
-	bfields = astNewGROUP( astNewVERBLOCK( astClone( bversion ), NULL, bfields ) )
+	#if 0
+		print "afields:"
+		astDump( afields, 1 )
+		print "bfields:"
+		astDump( bfields, 1 )
+	#endif
 
 	'' Merge both set of fields
 	var fields = astMergeVerBlocks( afields, bfields )
@@ -2483,6 +2513,11 @@ private function hMergeStructsManually _
 	'' Create a result struct with the new set of fields
 	var cstruct = astCloneNode( astruct )
 	astAppend( cstruct, fields )
+
+	#if 0
+		print "cstruct:"
+		astDump( cstruct, 1 )
+	#endif
 
 	function = cstruct
 end function
