@@ -457,7 +457,7 @@ sub tkFold _
 	for i as integer = first+2 to last
 		select case( tkGet( i ) )
 		case TK_EOL, TK_DIVIDER, TK_PPINCLUDE, TK_PPDEFINE, TK_PPIF, _
-		     TK_PPELSEIF, TK_PPELSE, TK_PPENDIF, TK_PPUNDEF
+		     TK_PPELSEIF, TK_PPELSE, TK_PPENDIF, TK_PPUNDEF, TK_PPERROR, TK_PPWARNING
 			lastin1stline = i - 1
 			exit for
 		end select

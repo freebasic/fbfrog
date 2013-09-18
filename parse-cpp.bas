@@ -91,8 +91,8 @@ private function hIsBeforeEol _
 		case TK_EOL, TK_EOF
 			exit do
 
-		case TK_PPINCLUDE, TK_PPDEFINE, TK_PPIF, TK_PPELSEIF, _
-		     TK_PPELSE, TK_PPENDIF, TK_PPUNDEF, TK_DIVIDER
+		case TK_PPINCLUDE, TK_PPDEFINE, TK_PPIF, TK_PPELSEIF, TK_PPELSE, _
+		     TK_PPENDIF, TK_PPUNDEF, TK_PPERROR, TK_PPWARNING, TK_DIVIDER
 			'' High-level tokens count as separate lines
 			exit do
 
@@ -160,8 +160,8 @@ private function hFindClosingParen( byval x as integer ) as integer
 			x -= 1
 			exit do
 
-		case TK_PPINCLUDE, TK_PPDEFINE, TK_PPIF, TK_PPELSEIF, _
-		     TK_PPELSE, TK_PPENDIF, TK_PPUNDEF, TK_DIVIDER
+		case TK_PPINCLUDE, TK_PPDEFINE, TK_PPIF, TK_PPELSEIF, TK_PPELSE, _
+		     TK_PPENDIF, TK_PPUNDEF, TK_PPERROR, TK_PPWARNING, TK_DIVIDER
 			x = tkSkipCommentEol( x, -1 )
 			exit do
 
@@ -840,15 +840,15 @@ sub ppDirectives1( )
 			select case( tkGet( tkSkipComment( x, -1 ) ) )
 			case TK_EOL, TK_EOF, TK_END, TK_DIVIDER, _
 			     TK_PPINCLUDE, TK_PPDEFINE, TK_PPIF, TK_PPELSEIF, _
-			     TK_PPELSE, TK_PPENDIF, TK_PPUNDEF
+			     TK_PPELSE, TK_PPENDIF, TK_PPUNDEF, TK_PPERROR, TK_PPWARNING
 				x = ppDirective( x )
 			case else
 				'' Skip to next line
 				x = ppSkipToEOL( x ) + 1
 			end select
 
-		case TK_PPINCLUDE, TK_PPDEFINE, TK_PPIF, TK_PPELSEIF, _
-		     TK_PPELSE, TK_PPENDIF, TK_PPUNDEF, TK_DIVIDER
+		case TK_PPINCLUDE, TK_PPDEFINE, TK_PPIF, TK_PPELSEIF, TK_PPELSE, _
+		     TK_PPENDIF, TK_PPUNDEF, TK_PPERROR, TK_PPWARNING, TK_DIVIDER
 			x += 1
 
 		case else
