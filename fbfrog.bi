@@ -769,7 +769,7 @@ declare function astNewIIF _
 	) as ASTNODE ptr
 declare function astNewGROUP overload( ) as ASTNODE ptr
 declare function astNewGROUP overload( byval child as ASTNODE ptr ) as ASTNODE ptr
-declare function astNewVERBLOCK overload _
+declare function astNewVERBLOCK _
 	( _
 		byval verexpr1 as ASTNODE ptr, _
 		byval verexpr2 as ASTNODE ptr, _

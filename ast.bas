@@ -232,7 +232,7 @@ private function astNewVersionOR _
 	function = astNewBOP( ASTOP_OR, l, r )
 end function
 
-function astNewVERBLOCK overload _
+function astNewVERBLOCK _
 	( _
 		byval verexpr1 as ASTNODE ptr, _
 		byval verexpr2 as ASTNODE ptr, _
@@ -624,11 +624,12 @@ sub astAddVersionedChild( byval n as ASTNODE ptr, byval child as ASTNODE ptr )
 	'' just add the new children nodes to that instead of opening a new
 	'' separate VERBLOCK.
 	if( n->tail ) then
-		assert( n->tail->class = ASTCLASS_VERBLOCK )
-		if( astIsEqualDecl( n->tail->expr, child->expr ) ) then
-			astCloneAndAddAllChildrenOf( n->tail, child )
-			astDelete( child )
-			exit sub
+		if( n->tail->class = ASTCLASS_VERBLOCK ) then
+			if( astIsEqualDecl( n->tail->expr, child->expr ) ) then
+				astCloneAndAddAllChildrenOf( n->tail, child )
+				astDelete( child )
+				exit sub
+			end if
 		end if
 	end if
 
@@ -650,23 +651,39 @@ private function h1VersionMatchesVerBlock _
 	'' If the block is a wildcard, it allows anything
 	case ASTCLASS_WILDCARD
 		return TRUE
-	'' block <a or b> should allow <a> aswell as <b>
 	case ASTCLASS_BOP
-		if( blockexpr->op = ASTOP_OR ) then
-			return h1VersionMatchesVerBlock( blockexpr->l, version ) or _
-			       h1VersionMatchesVerBlock( blockexpr->r, version )
-		end if
+		select case( blockexpr->op )
+		'' block <a or b> should allow <a> aswell as <b>
+		case ASTOP_OR
+			return h1VersionMatchesVerBlock( version, blockexpr->l ) or _
+			       h1VersionMatchesVerBlock( version, blockexpr->r )
+		'' block <a.b> should allow <a.b> and <a.b.c> etc.
+		case ASTOP_MEMBER
+			if( version->class = ASTCLASS_BOP ) then
+				if( version->op = ASTOP_MEMBER ) then
+					return h1VersionMatchesVerBlock( version->l, blockexpr->l ) and _
+					       h1VersionMatchesVerBlock( version->r, blockexpr->r )
+				end if
+			end if
+		case else
+			assert( FALSE )
+		end select
 	end select
 
 	if( version->class = ASTCLASS_BOP ) then
 		select case( version->op )
 		case ASTOP_MEMBER
 			'' blockexpr <a> should allow <a.?>
-			return h1VersionMatchesVerBlock( blockexpr, version->l )
+			return h1VersionMatchesVerBlock( version->l, blockexpr )
+
+		'' (currently unused, ORs won't ever be part of the version, only blocks)
+		#if 0
 		case ASTOP_OR
 			'' blockexpr <a> should allow <a or b>, but also <b or a>
-			return h1VersionMatchesVerBlock( blockexpr, version->l ) or _
-			       h1VersionMatchesVerBlock( blockexpr, version->r )
+			return h1VersionMatchesVerBlock( version->l, blockexpr ) or _
+			       h1VersionMatchesVerBlock( version->r, blockexpr )
+		#endif
+
 		case else
 			assert( FALSE )
 		end select
@@ -675,28 +692,82 @@ private function h1VersionMatchesVerBlock _
 	function = FALSE
 end function
 
+private function hFlattenVerblocks( byval code as ASTNODE ptr ) as ASTNODE ptr
+	var flattened = astNewGROUP( )
+
+	var i = code->head
+	while( i )
+
+		if( i->class = ASTCLASS_VERBLOCK ) then
+			var nestedflattened = hFlattenVerblocks( i )
+
+			var nestedi = nestedflattened->head
+			while( nestedi )
+				'' For nested verblocks, add its children,
+				'' under their version prefixed with this verblock's version
+				if( nestedi->class = ASTCLASS_VERBLOCK ) then
+					var j = nestedi->head
+					while( j )
+						assert( j->class <> ASTCLASS_VERBLOCK )  '' should have been solved out by recursive call
+						astAddVersionedChild( flattened, _
+							astNewVERBLOCK( _
+								astNewBOP( ASTOP_MEMBER, _
+									astClone( i->expr ), _
+									astClone( nestedi->expr ) ), _
+								NULL, _
+								astClone( j ) ) )
+						j = j->next
+					wend
+				else
+					'' Add other nodes under this verblock's version
+					astAddVersionedChild( flattened, _
+						astNewVERBLOCK( _
+							astClone( i->expr ), _
+							NULL, _
+							astClone( nestedi ) ) )
+				end if
+				nestedi = nestedi->next
+			wend
+
+			astDelete( nestedflattened )
+		else
+			'' Nodes outside any verblocks (from this level's point of view at least)
+			'' are added unversioned
+			astAppend( flattened, astClone( i ) )
+		end if
+
+		i = i->next
+	wend
+
+	function = flattened
+end function
+
 function astGet1VersionOnly _
 	( _
 		byval code as ASTNODE ptr, _
-		byval matchversion as ASTNODE ptr _
+		byval version as ASTNODE ptr _
 	) as ASTNODE ptr
 
+	var flattened = hFlattenVerblocks( astClone( code ) )
 	var result = astNewGROUP( )
 
-	var child = code->head
-	while( child )
+	var i = flattened->head
+	while( i )
 
-		if( child->class = ASTCLASS_VERBLOCK ) then
-			if( h1VersionMatchesVerBlock( matchversion, child->expr ) ) then
-				astAppend( result, astGet1VersionOnly( child, matchversion ) )
+		if( i->class = ASTCLASS_VERBLOCK ) then
+			'' Only add versioned nodes if their version matches the version we're looking for
+			if( h1VersionMatchesVerBlock( version, i->expr ) ) then
+				astCloneAndAddAllChildrenOf( result, i )
 			end if
 		else
-			astAppend( result, astClone( child ) )
+			'' Unversioned nodes are added no matter what version we want
+			astAppend( result, astClone( i ) )
 		end if
 
-		child = child->next
+		i = i->next
 	wend
 
+	astDelete( flattened )
 	function = result
 end function
 
