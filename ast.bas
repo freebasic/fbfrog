@@ -194,15 +194,20 @@ private function astIsEqualVersion _
 	case ASTCLASS_BOP
 		if( a->op <> b->op ) then exit function
 
-		if( a->op = ASTOP_OR ) then
+		select case( a->op )
+		case ASTOP_OR
 			'' al or ar  =  bl or br,
 			''    if al = bl and ar = br
 			'' or if al = br and ar = bl
 			function = (astIsEqualVersion( a->l, b->l ) and astIsEqualVersion( a->r, b->r )) or _
 			           (astIsEqualVersion( a->l, b->r ) and astIsEqualVersion( a->r, b->l ))
-		else
-			function = TRUE
-		end if
+
+		case ASTOP_MEMBER
+			function = astIsEqualVersion( a->l, b->l ) and astIsEqualVersion( a->r, b->r )
+
+		case else
+			assert( FALSE )
+		end select
 
 	case ASTCLASS_STRING, ASTCLASS_ID
 		function = (*a->text = *b->text)
