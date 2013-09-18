@@ -490,6 +490,15 @@ private sub frogWorkPreset _
 	'' Any versions specified?
 	var version = versions->head
 	if( version ) then
+		if( verbose ) then
+			print "versions:"
+			do
+				print "    " + emitAst( version )
+				version = version->next
+			loop while( version )
+			version = versions->head
+		end if
+
 		'' For each version...
 		do
 			print "version: " + emitAst( version )
@@ -509,6 +518,9 @@ private sub frogWorkPreset _
 
 		astRemoveFullVerBlockWrappingFromFiles( files, versions )
 	else
+		if( versions ) then
+			print "no version(s) specified, just doing a single pass"
+		end if
 		'' Just do a single pass, don't worry about version specifics or AST merging
 		files = frogWorkVersion( pre, NULL, pre->code, presetfilename, presetprefix )
 	end if

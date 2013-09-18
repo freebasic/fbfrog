@@ -180,6 +180,53 @@ function astNewGROUP( byval child as ASTNODE ptr ) as ASTNODE ptr
 	function = n
 end function
 
+private function astIsEqualVersion _
+	( _
+		byval a as ASTNODE ptr, _
+		byval b as ASTNODE ptr _
+	) as integer
+
+	function = FALSE
+
+	if( a->class <> b->class ) then exit function
+
+	select case( a->class )
+	case ASTCLASS_BOP
+		if( a->op <> b->op ) then exit function
+
+		if( a->op = ASTOP_OR ) then
+			'' al or ar  =  bl or br,
+			''    if al = bl and ar = br
+			'' or if al = br and ar = bl
+			function = (astIsEqualVersion( a->l, b->l ) and astIsEqualVersion( a->r, b->r )) or _
+			           (astIsEqualVersion( a->l, b->r ) and astIsEqualVersion( a->r, b->l ))
+		else
+			function = TRUE
+		end if
+
+	case ASTCLASS_STRING, ASTCLASS_ID
+		function = (*a->text = *b->text)
+
+	case else
+		function = TRUE
+	end select
+
+end function
+
+private function astNewVersionOR _
+	( _
+		byval l as ASTNODE ptr, _
+		byval r as ASTNODE ptr _
+	) as ASTNODE ptr
+
+	if( astIsEqualVersion( l, r ) ) then
+		astDelete( r )
+		return l
+	end if
+
+	function = astNewBOP( ASTOP_OR, l, r )
+end function
+
 function astNewVERBLOCK overload _
 	( _
 		byval verexpr1 as ASTNODE ptr, _
@@ -191,7 +238,7 @@ function astNewVERBLOCK overload _
 
 	if( verexpr2 ) then
 		assert( verexpr1 )
-		n->expr = astNewBOP( ASTOP_OR, verexpr1, verexpr2 )
+		n->expr = astNewVersionOR( verexpr1, verexpr2 )
 	else
 		n->expr = verexpr1
 	end if
@@ -350,7 +397,240 @@ sub astCloneAndAddAllChildrenOf( byval d as ASTNODE ptr, byval s as ASTNODE ptr 
 	wend
 end sub
 
-private function astVersionMatches _
+private function hGetVerBlocksOnly( byval code as ASTNODE ptr ) as ASTNODE ptr
+	var verblocks = astNewGROUP( )
+
+	var i = code->head
+	while( i )
+
+		if( i->class = ASTCLASS_VERBLOCK ) then
+			var verblock = astCloneNode( i )
+			astAppend( verblocks, verblock )
+
+			'' Process nested verblocks too
+			astAppend( verblock, hGetVerBlocksOnly( i ) )
+		end if
+
+		i = i->next
+	wend
+
+	function = verblocks
+end function
+
+private sub hCombineEqualVerBlocks( byval verblocks as ASTNODE ptr )
+	var i = verblocks->head
+	while( i )
+
+		assert( i->class = ASTCLASS_VERBLOCK )
+
+		'' For all equal blocks amongst the verblocks following this verblock...
+		do
+			dim as ASTNODE ptr equal
+
+			var j = i->next
+			while( j )
+				assert( j->class = ASTCLASS_VERBLOCK )
+				if( astIsEqualVersion( i->expr, j->expr ) ) then
+					equal = j
+					exit while
+				end if
+				j = j->next
+			wend
+
+			if( equal = NULL ) then
+				exit do
+			end if
+
+			'' Copy the equal's children into this verblock,
+			'' and then remove the equal
+			astCloneAndAddAllChildrenOf( i, equal )
+			astRemoveChild( verblocks, equal )
+		loop
+
+		'' Now process this verblock's chilren recursively
+		hCombineEqualVerBlocks( i )
+
+		i = i->next
+	wend
+end sub
+
+''
+'' Expand the wildcard VERBLOCKs:
+''        verblock 1
+''        verblock 2
+''        verblock *
+''            verblock 0
+'' becomes
+''        verblock 1.0
+''        verblock 2.0
+''
+private sub hExpandWildcard( byval verblocks as ASTNODE ptr )
+	'' Find the wildcard VERBLOCK on this level, if any
+	'' (relying on hCombineEqualVerBlocks() to have merged multiple ones
+	'' into a single one)
+	dim as ASTNODE ptr wildcard
+
+	var i = verblocks->head
+	while( i )
+		assert( i->class = ASTCLASS_VERBLOCK )
+		if( i->expr->class = ASTCLASS_WILDCARD ) then
+			wildcard = i
+			exit while
+		end if
+		i = i->next
+	wend
+
+	if( wildcard = NULL ) then
+		exit sub
+	end if
+
+	'' Copy the wildcard's children into all the other VERBLOCKs
+	i = verblocks->head
+	while( i )
+		if( i <> wildcard ) then
+			astCloneAndAddAllChildrenOf( i, wildcard )
+		end if
+		i = i->next
+	wend
+
+	'' Then the wildcard node can be removed
+	astRemoveChild( verblocks, wildcard )
+
+	'' Now process all nested verblocks recursively
+	i = verblocks->head
+	while( i )
+		hExpandWildcard( i )
+		i = i->next
+	wend
+end sub
+
+''
+'' Build up a list of all the version represented by the VERBLOCKs in the list
+'' and the VERBLOCKs nested in them.
+''
+'' If a VERBLOCK has nested VERBLOCKs, then its version expression is prefixed
+'' to those from the nested VERBLOCKs. For "leaf" verblocks, their version
+'' expression can be added as-is.
+''
+''    verblock a
+''        verblock 1
+''        verblock 2
+''    verblock b
+'' =
+''    a.1
+''    a.2
+''    b
+''
+private function hCollectVersions( byval verblocks as ASTNODE ptr ) as ASTNODE ptr
+	var versions = astNewGROUP( )
+
+	var i = verblocks->head
+	while( i )
+
+		assert( i->class = ASTCLASS_VERBLOCK )
+		assert( i->expr->class <> ASTCLASS_BOP )
+
+		'' If this VERBLOCK has nested versions, prefix its version
+		'' expression to each of theirs and then add all of them to
+		'' the result list.
+		var nestedversions = hCollectVersions( i )
+		var nestedver = nestedversions->head
+		if( nestedver ) then
+			do
+				astAppend( versions, _
+					astNewBOP( ASTOP_MEMBER, _
+						astClone( i->expr ), _
+						astClone( nestedver ) ) )
+
+				nestedver = nestedver->next
+			loop while( nestedver )
+		else
+			'' Otherwise if this is a leaf version, just add it
+			'' as is to the result list.
+			astAppend( versions, astClone( i->expr ) )
+		end if
+
+		i = i->next
+	wend
+
+	function = versions
+end function
+
+''
+'' Given preset code containing VERBLOCKs, this should extract the possible
+'' versions represented by those VERBLOCKs. For example:
+''        ...
+''        verblock "1"
+''        ...
+''        verblock "2"
+''        ...
+'' should result in these collected versions:
+''        "1"
+''        "2"
+''
+'' VERBLOCKs may be nested:
+''        verblock "1"
+''            verblock "0"
+''        verblock "2"
+''            verblock "0"
+''            verblock "beta"
+''                verblock "1"
+'' should produce
+''        "1"."0"
+''        "2"."0"
+''        "2"."beta"."1"
+''
+'' There may be wildcards that need to be expanded:
+''        verblock "1"
+''        verblock "2"
+''        verblock *
+''            verblock linux
+'' should produce
+''        "1".linux
+''        "2".linux
+''
+function astCollectVersions( byval code as ASTNODE ptr ) as ASTNODE ptr
+	'' Filter out any nodes except VERBLOCKs
+	var verblocks = hGetVerBlocksOnly( code )
+
+	'' Merge VERBLOCKs with the same version expression, for example:
+	''        verblock "1"
+	''        verblock "2"
+	''        verblock "1"
+	'' should be turned into
+	''        verblock "1"
+	''        verblock "2"
+	'' and that must be done recursively for nested verblocks too.
+	'' This prevents duplicates amongst the collected versions.
+	hCombineEqualVerBlocks( verblocks )
+
+	hExpandWildcard( verblocks  )
+
+	function = hCollectVersions( verblocks )
+
+	astDelete( verblocks )
+end function
+
+sub astAddVersionedChild( byval n as ASTNODE ptr, byval child as ASTNODE ptr )
+	assert( n->class = ASTCLASS_GROUP )
+	assert( child->class = ASTCLASS_VERBLOCK )
+
+	'' If the tree's last VERBLOCK has the same version numbers, then
+	'' just add the new children nodes to that instead of opening a new
+	'' separate VERBLOCK.
+	if( n->tail ) then
+		assert( n->tail->class = ASTCLASS_VERBLOCK )
+		if( astIsEqualDecl( n->tail->expr, child->expr ) ) then
+			astCloneAndAddAllChildrenOf( n->tail, child )
+			astDelete( child )
+			exit sub
+		end if
+	end if
+
+	astAppend( n, child )
+end sub
+
+private function hVersionMatches _
 	( _
 		byval pattern as ASTNODE ptr, _
 		byval target as ASTNODE ptr _
@@ -408,113 +688,6 @@ private function astVersionMatches _
 
 end function
 
-private function astPrefixVersion _
-	( _
-		byval verprefix as ASTNODE ptr, _
-		byval nestedversions as ASTNODE ptr _
-	) as ASTNODE ptr
-
-	var versions = astNewGROUP( )
-
-	var nestedversion = nestedversions->head
-	while( nestedversion )
-
-		astAppend( versions, _
-			astNewBOP( ASTOP_MEMBER, _
-				astClone( verprefix ), _
-				astClone( nestedversion ) ) )
-
-		nestedversion = nestedversion->next
-	wend
-
-	function = versions
-end function
-
-function astCollectVersions( byval context as ASTNODE ptr ) as ASTNODE ptr
-	var versions = astNewGROUP( )
-
-	'' For each nested VERBLOCK...
-	var child = context->head
-	while( child )
-
-		if( child->class = ASTCLASS_VERBLOCK ) then
-			var nestedversions = astCollectVersions( child )
-
-			'' If this is a wildcard, apply nestedversions to all
-			'' versions in this context except for other wildcards
-			'' or itself:
-			''
-			''    version "1"
-			''    version "2"
-			''    version *
-			''        version linux
-			''
-			'' should result in these colected versions:
-			''
-			''    version "1"
-			''    version "1".linux
-			''    version "2"
-			''    version "2".linux
-			''
-			'' Otherwise, apply nestedversions just to this version:
-			''
-			''    version "1"
-			''    version "2"
-			''    version "3"
-			''        version linux
-			''
-			'' should result in these colected versions:
-			''
-			''    version "1"
-			''    version "2"
-			''    version "3"
-			''    version "3".linux
-
-			'' a.b should have been split up into separate a and b VERBLOCKs
-			assert( child->expr->class <> ASTCLASS_BOP )
-
-			if( child->expr->class = ASTCLASS_WILDCARD ) then
-				var child2 = context->head
-				do
-					if( child2->class = ASTCLASS_VERBLOCK ) then
-						assert( child2->expr->class <> ASTCLASS_BOP )
-						if( child2->expr->class <> ASTCLASS_WILDCARD ) then
-							astAppend( versions, astPrefixVersion( child2->expr, nestedversions ) )
-						end if
-					end if
-					child2 = child2->next
-				loop while( child2 )
-			else
-				astAppend( versions, astClone( child->expr ) )
-				astAppend( versions, astPrefixVersion( child->expr, nestedversions ) )
-			end if
-		end if
-
-		child = child->next
-	wend
-
-	function = versions
-end function
-
-sub astAddVersionedChild( byval n as ASTNODE ptr, byval child as ASTNODE ptr )
-	assert( n->class = ASTCLASS_GROUP )
-	assert( child->class = ASTCLASS_VERBLOCK )
-
-	'' If the tree's last VERBLOCK has the same version numbers, then
-	'' just add the new children nodes to that instead of opening a new
-	'' separate VERBLOCK.
-	if( n->tail ) then
-		assert( n->tail->class = ASTCLASS_VERBLOCK )
-		if( astIsEqualDecl( n->tail->expr, child->expr ) ) then
-			astCloneAndAddAllChildrenOf( n->tail, child )
-			astDelete( child )
-			exit sub
-		end if
-	end if
-
-	astAppend( n, child )
-end sub
-
 function astGet1VersionOnly _
 	( _
 		byval code as ASTNODE ptr, _
@@ -529,7 +702,7 @@ function astGet1VersionOnly _
 		if( child->class = ASTCLASS_VERBLOCK ) then
 			'' (the version block here acts as the pattern, the 1 version
 			'' we want to extract is the target)
-			if( astVersionMatches( child->expr, matchversion ) ) then
+			if( hVersionMatches( child->expr, matchversion ) ) then
 				astAppend( result, astGet1VersionOnly( child, matchversion ) )
 			end if
 		else
@@ -581,7 +754,7 @@ private function astBuildFullVersion( byval versions as ASTNODE ptr ) as ASTNODE
 	do
 		v = v->next
 		if( v = NULL ) then exit do
-		r = astNewBOP( ASTOP_OR, r, astClone( v ) )
+		r = astNewVersionOR( r, astClone( v ) )
 	loop
 
 	function = r
@@ -2249,7 +2422,7 @@ private function hMergeStructsManually _
 	'' Solve out any VERSIONs (but preserving their children) that have the
 	'' same version numbers that the struct itself is going to have.
 	fields = astRemoveVerBlockWrapping( fields, _
-			astNewBOP( ASTOP_OR, astClone( aversion ), astClone( bversion ) ) )
+			astNewVersionOR( astClone( aversion ), astClone( bversion ) ) )
 
 	'' Create a result struct with the new set of fields
 	var cstruct = astCloneNode( astruct )
