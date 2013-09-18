@@ -628,9 +628,9 @@ function emitAst _
 		case ASTOP_MUL         : s =        lhs + " * "       + rhs
 		case ASTOP_DIV         : s =        lhs + " / "       + rhs
 		case ASTOP_MOD         : s =        lhs + " mod "     + rhs
-		case ASTOP_INDEX       : s =        lhs + "["         + rhs + "]"
-		case ASTOP_MEMBER      : s =        lhs + "."         + rhs
-		case ASTOP_MEMBERDEREF : s =        lhs + "->"        + rhs
+		case ASTOP_INDEX       : s =        lhs + "["         + rhs + "]" : need_parens = FALSE
+		case ASTOP_MEMBER      : s =        lhs + "."         + rhs : need_parens = FALSE
+		case ASTOP_MEMBERDEREF : s =        lhs + "->"        + rhs : need_parens = FALSE
 		case ASTOP_STRCAT      : s =        lhs + " + "       + rhs
 		case else
 			assert( FALSE )
