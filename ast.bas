@@ -200,7 +200,7 @@ private function astIsEqualVersion _
 			function = (astIsEqualVersion( a->l, b->l ) and astIsEqualVersion( a->r, b->r )) or _
 			           (astIsEqualVersion( a->l, b->r ) and astIsEqualVersion( a->r, b->l ))
 
-		case ASTOP_MEMBER
+		case ASTOP_AND
 			function = astIsEqualVersion( a->l, b->l ) and astIsEqualVersion( a->r, b->r )
 
 		case else
@@ -549,7 +549,7 @@ private function hCollectVersions( byval verblocks as ASTNODE ptr ) as ASTNODE p
 		if( nestedver ) then
 			do
 				astAppend( versions, _
-					astNewBOP( ASTOP_MEMBER, _
+					astNewBOP( ASTOP_AND, _
 						astClone( i->expr ), _
 						astClone( nestedver ) ) )
 
@@ -664,9 +664,9 @@ private function h1VersionMatchesVerBlock _
 			return h1VersionMatchesVerBlock( version, blockexpr->l ) or _
 			       h1VersionMatchesVerBlock( version, blockexpr->r )
 		'' block <a.b> should allow <a.b> and <a.b.c> etc.
-		case ASTOP_MEMBER
+		case ASTOP_AND
 			if( version->class = ASTCLASS_BOP ) then
-				if( version->op = ASTOP_MEMBER ) then
+				if( version->op = ASTOP_AND ) then
 					return h1VersionMatchesVerBlock( version->l, blockexpr->l ) and _
 					       h1VersionMatchesVerBlock( version->r, blockexpr->r )
 				end if
@@ -678,7 +678,7 @@ private function h1VersionMatchesVerBlock _
 
 	if( version->class = ASTCLASS_BOP ) then
 		select case( version->op )
-		case ASTOP_MEMBER
+		case ASTOP_AND
 			'' blockexpr <a> should allow <a.?>
 			return h1VersionMatchesVerBlock( version->l, blockexpr )
 
@@ -717,7 +717,7 @@ private function hFlattenVerblocks( byval code as ASTNODE ptr ) as ASTNODE ptr
 						assert( j->class <> ASTCLASS_VERBLOCK )  '' should have been solved out by recursive call
 						astAddVersionedChild( flattened, _
 							astNewVERBLOCK( _
-								astNewBOP( ASTOP_MEMBER, _
+								astNewBOP( ASTOP_AND, _
 									astClone( i->expr ), _
 									astClone( nestedi->expr ) ), _
 								NULL, _
@@ -877,12 +877,12 @@ private function astFoldVersion( byval n as ASTNODE ptr ) as ASTNODE ptr
 					astClone( n->l->r ), _
 					astClone( n->r ) ) ) )
 		astDelete( n )
-	elseif( (n->l->op = ASTOP_MEMBER) and _
-		(n->r->op = ASTOP_MEMBER) ) then
+	elseif( (n->l->op = ASTOP_AND) and _
+		(n->r->op = ASTOP_AND) ) then
 		'' a.b or a.c  ->  a.(b or c)
 		if( astIsEqualVersion( n->l->l, n->r->l ) ) then
 			function = astFoldVersion( _
-				astNewBOP( ASTOP_MEMBER, _
+				astNewBOP( ASTOP_AND, _
 					astClone( n->l->l ), _
 					astNewBOP( ASTOP_OR, _
 						astClone( n->l->r ), _
@@ -891,7 +891,7 @@ private function astFoldVersion( byval n as ASTNODE ptr ) as ASTNODE ptr
 		'' a.b or c.b  ->  (a or c).b
 		elseif( astIsEqualVersion( n->l->r, n->r->r ) ) then
 			function = astFoldVersion( _
-				astNewBOP( ASTOP_MEMBER, _
+				astNewBOP( ASTOP_AND, _
 					astNewBOP( ASTOP_OR, _
 						astClone( n->l->l ), _
 						astClone( n->r->l ) ), _
@@ -928,7 +928,7 @@ private sub hUnmergeVerblocks( byval code as ASTNODE ptr )
 
 		if( i->class = ASTCLASS_VERBLOCK ) then
 			if( i->expr->class = ASTCLASS_BOP ) then
-				if( i->expr->op = ASTOP_MEMBER ) then
+				if( i->expr->op = ASTOP_AND ) then
 					var newverblock = astNewVERBLOCK( astClone( i->expr->r ), NULL, NULL )
 					astCloneAndAddAllChildrenOf( newverblock, i )
 					newverblock = astNewVERBLOCK( astClone( i->expr->l ), NULL, newverblock )
@@ -988,7 +988,7 @@ private sub hRemergeVerblocks( byval code as ASTNODE ptr )
 			'' If the only child is a verblock, then merge it with the parent verblock,
 			'' and update the parent verblock's version expression
 			if( (i->head->class = ASTCLASS_VERBLOCK) and (i->head = i->tail) ) then
-				i->expr = astNewBOP( ASTOP_MEMBER, i->expr, astClone( i->head->expr ) )
+				i->expr = astNewBOP( ASTOP_AND, i->expr, astClone( i->head->expr ) )
 				astCloneAndAddAllChildrenOf( i, i->head )
 				astRemoveChild( i, i->head )
 			end if
