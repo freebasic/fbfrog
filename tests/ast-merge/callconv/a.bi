@@ -1,7 +1,7 @@
-version "1"
+version ver(1)
 	extern "Windows"
 end version
-version "2"
+version ver(2)
 	extern "C"
 end version
 

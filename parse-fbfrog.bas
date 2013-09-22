@@ -36,24 +36,41 @@ private function hExpectSkipString( byval whatfor as zstring ptr ) as string
 	hSkip( )
 end function
 
-'' VersionId = StringLiteral | Identifier | WIN32 | LINUX | DOS | '*'
+'' VersionId = '*' | (Identifier ['(' String|Number ')'])
 private function hVersionId( ) as ASTNODE ptr
 	select case( tkGet( x ) )
-	case TK_STRING
-		function = astNew( ASTCLASS_STRING, tkGetText( x ) )
 	case is >= TK_ID
-		select case( lcase( *tkGetText( x ) ) )
-		case "dos"   : function = astNew( ASTCLASS_DOS )
-		case "linux" : function = astNew( ASTCLASS_LINUX )
-		case "win32" : function = astNew( ASTCLASS_WIN32 )
-		case else    : function = astNewID( tkGetText( x ) )
-		end select
+		var id = tkGetIdOrKw( x )
+		hSkip( )
+
+		'' '('
+		if( tkGet( x ) = TK_LPAREN ) then
+			hSkip( )
+
+			var n = astNew( ASTCLASS_VERVAL, id )
+			function = n
+
+			select case( tkGet( x ) )
+			case TK_STRING
+				n->l = astNew( ASTCLASS_STRING, tkGetText( x ) )
+			case TK_DECNUM
+				n->l = astNewCONST( vallng( *tkGetText( x ) ), 0, TYPE_LONGINT )
+			case else
+				hOops( "expected ""..."" string or 123 number literal" )
+			end select
+			hSkip( )
+
+			'' ')'
+			hExpectSkip( TK_RPAREN, "corresponding to the '('" )
+		else
+			function = astNewID( id )
+		end if
 	case TK_STAR
 		function = astNew( ASTCLASS_WILDCARD )
+		hSkip( )
 	case else
-		tkOopsExpected( x, "version identifier (""1.2.3"", 'foo', one of dos|linux|win32, '*')", NULL )
+		tkOopsExpected( x, "'*' or version #define identifier", NULL )
 	end select
-	hSkip( )
 end function
 
 private sub hLoadFile _

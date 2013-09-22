@@ -76,14 +76,12 @@ dim shared as ASTNODEINFO astnodeinfo(0 to ...) = _
 	( "string"  ), _
 	( "char"    ), _
 	( "wildcard" ), _
-	( "dos"     ), _
-	( "linux"   ), _
-	( "win32"   ), _
 	( "uop"     ), _
 	( "bop"     ), _
 	( "iif"     ), _
 	( "ppmerge" ), _
 	( "call"    ), _
+	( "verval"  ), _
 	( "frogfile" ) _
 }
 
@@ -209,8 +207,16 @@ private function astIsEqualVersion _
 			assert( FALSE )
 		end select
 
+	case ASTCLASS_VERVAL
+		function = (*a->text = *b->text) and astIsEqualVersion( a->l, b->l )
+
 	case ASTCLASS_STRING, ASTCLASS_ID
 		function = (*a->text = *b->text)
+
+	case ASTCLASS_CONST
+		assert( typeIsFloat( a->dtype ) = FALSE )
+		assert( typeIsFloat( b->dtype ) = FALSE )
+		function = (a->vali = b->vali)
 
 	case else
 		function = TRUE

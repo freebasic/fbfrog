@@ -1,57 +1,57 @@
 dim shared i as long
-version "1"."0" or "1"."99"
+version major(1).minor(0) or major(1).minor(99)
 	dim shared major1 as long
 end version
-version "2"."0" or "2"."99"
+version major(2).minor(0) or major(2).minor(99)
 	dim shared major2 as long
 end version
-version "3"."0" or "3"."99"
+version major(3).minor(0) or major(3).minor(99)
 	dim shared major3 as long
 end version
-version "4"."0" or "4"."99"
+version major(4).minor(0) or major(4).minor(99)
 	dim shared major4 as long
 end version
-version "5"."0" or "5"."99"
+version major(5).minor(0) or major(5).minor(99)
 	dim shared major5 as long
 end version
-version "6"."0" or "6"."99"
+version major(6).minor(0) or major(6).minor(99)
 	dim shared major6 as long
 end version
-version (((("1"."0" or "2"."0") or "3"."0") or "4"."0") or "5"."0") or "6"."0"
+version ((((major(1).minor(0) or major(2).minor(0)) or major(3).minor(0)) or major(4).minor(0)) or major(5).minor(0)) or major(6).minor(0)
 	dim shared minor0 as long
 end version
-version (((("1"."99" or "2"."99") or "3"."99") or "4"."99") or "5"."99") or "6"."99"
+version ((((major(1).minor(99) or major(2).minor(99)) or major(3).minor(99)) or major(4).minor(99)) or major(5).minor(99)) or major(6).minor(99)
 	dim shared minor99 as long
 end version
-version "3"."1"
+version major(3).minor(1)
 	dim shared major3 as long
 end version
-version "4"."1"
+version major(4).minor(1)
 	dim shared major4 as long
 end version
-version "5"."1" or "5"."2"
+version major(5).minor(1) or major(5).minor(2)
 	dim shared major5 as long
 end version
-version ("6"."1" or "6"."2") or "6"."3"
+version (major(6).minor(1) or major(6).minor(2)) or major(6).minor(3)
 	dim shared major6 as long
 end version
-version (("3"."1" or "4"."1") or "5"."1") or "6"."1"
+version ((major(3).minor(1) or major(4).minor(1)) or major(5).minor(1)) or major(6).minor(1)
 	dim shared minor1 as long
 end version
-version "5"."2" or "6"."2"
+version major(5).minor(2) or major(6).minor(2)
 	dim shared minor2 as long
 end version
-version "6"."3"
+version major(6).minor(3)
 	dim shared minor3 as long
 end version
 type UDT
-	version "1"."0" or "1"."99"
+	version major(1).minor(0) or major(1).minor(99)
 		fieldmajor1 as long
 	end version
-	version "2"."0" or "2"."99"
+	version major(2).minor(0) or major(2).minor(99)
 		fieldmajor2 as long
 	end version
-	version ((((((((((((("3"."1" or "3"."0") or "3"."99") or "4"."1") or "4"."0") or "4"."99") or "5"."1") or "5"."2") or "5"."0") or "5"."99") or "6"."1") or "6"."2") or "6"."3") or "6"."0") or "6"."99"
+	version (((((((((((((major(3).minor(1) or major(3).minor(0)) or major(3).minor(99)) or major(4).minor(1)) or major(4).minor(0)) or major(4).minor(99)) or major(5).minor(1)) or major(5).minor(2)) or major(5).minor(0)) or major(5).minor(99)) or major(6).minor(1)) or major(6).minor(2)) or major(6).minor(3)) or major(6).minor(0)) or major(6).minor(99)
 		fieldmajor3456 as long
 	end version
 end type

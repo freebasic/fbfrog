@@ -565,15 +565,6 @@ function emitAst _
 	case ASTCLASS_WILDCARD
 		s = "*"
 
-	case ASTCLASS_DOS
-		s = "dos"
-
-	case ASTCLASS_LINUX
-		s = "linux"
-
-	case ASTCLASS_WIN32
-		s = "win32"
-
 	case ASTCLASS_UOP
 		select case as const( n->op )
 		'case ASTOP_CLOGNOT
@@ -654,6 +645,9 @@ function emitAst _
 
 	case ASTCLASS_CALL
 		s = *n->text + hCommaList( n )
+
+	case ASTCLASS_VERVAL
+		s = *n->text + "(" + emitAst( n->l ) + ")"
 
 	case else
 		astDump( n )

@@ -1,54 +1,54 @@
 dir "."
 
-version *."0"
+version *.minor(0)
 	define MINOR 0
 endversion
 
-version "1"
+version major(1)
 	define MAJOR 1
 endversion
 
-version "2"
+version major(2)
 	define MAJOR 2
 endversion
 
-version "3"
+version major(3)
 	define MAJOR 3
-	version "1"
+	version minor(1)
 		define MINOR 1
 	endversion
 endversion
 
-version "4"
+version major(4)
 	define MAJOR 4
 endversion
-version "4"."1"
+version major(4).minor(1)
 	define MINOR 1
 endversion
 
-version "5"
+version major(5)
 	define MAJOR 5
-	version "1"
+	version minor(1)
 		define MINOR 1
 	endversion
-	version "2"
+	version minor(2)
 		define MINOR 2
 	endversion
 endversion
 
-version "6"
+version major(6)
 	define MAJOR 6
-	version "1"
+	version minor(1)
 		define MINOR 1
 	endversion
-	version "2"
+	version minor(2)
 		define MINOR 2
 	endversion
-	version "3"
+	version minor(3)
 		define MINOR 3
 	endversion
 endversion
 
-version *."99"
+version *.minor(99)
 	define MINOR 99
 endversion
