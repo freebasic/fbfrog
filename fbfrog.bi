@@ -808,6 +808,7 @@ declare sub astRemoveFullVerBlockWrappingFromFiles _
 		byval files as ASTNODE ptr, _
 		byval versions as ASTNODE ptr _
 	)
+declare sub astOptimizeVerblocksOnFiles( byval files as ASTNODE ptr )
 declare function astIsChildOf _
 	( _
 		byval parent as ASTNODE ptr, _

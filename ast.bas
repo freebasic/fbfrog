@@ -852,6 +852,171 @@ sub astRemoveFullVerBlockWrappingFromFiles _
 
 end sub
 
+private function astFoldVersion( byval n as ASTNODE ptr ) as ASTNODE ptr
+	function = n
+
+	if( n->class <> ASTCLASS_BOP ) then exit function
+
+	if( n->l ) then n->l = astFoldVersion( n->l )
+	if( n->r ) then n->r = astFoldVersion( n->r )
+
+
+	if( n->op <> ASTOP_OR ) then exit function
+
+	if( (n->l->class <> ASTCLASS_BOP) or _
+	    (n->r->class <> ASTCLASS_BOP) ) then
+		exit function
+	end if
+
+	'' (a or b) or c  ->  a or (b or c)
+	if( n->l->op = ASTOP_OR ) then
+		function = astFoldVersion( _
+			astNewBOP( ASTOP_OR, _
+				astClone( n->l->l ), _
+				astNewBOP( ASTOP_OR, _
+					astClone( n->l->r ), _
+					astClone( n->r ) ) ) )
+		astDelete( n )
+	elseif( (n->l->op = ASTOP_MEMBER) and _
+		(n->r->op = ASTOP_MEMBER) ) then
+		'' a.b or a.c  ->  a.(b or c)
+		if( astIsEqualVersion( n->l->l, n->r->l ) ) then
+			function = astFoldVersion( _
+				astNewBOP( ASTOP_MEMBER, _
+					astClone( n->l->l ), _
+					astNewBOP( ASTOP_OR, _
+						astClone( n->l->r ), _
+						astClone( n->r->r ) ) ) )
+			astDelete( n )
+		'' a.b or c.b  ->  (a or c).b
+		elseif( astIsEqualVersion( n->l->r, n->r->r ) ) then
+			function = astFoldVersion( _
+				astNewBOP( ASTOP_MEMBER, _
+					astNewBOP( ASTOP_OR, _
+						astClone( n->l->l ), _
+						astClone( n->r->l ) ), _
+					astClone( n->r->r ) ) )
+			astDelete( n )
+		end if
+	end if
+
+end function
+
+private sub hFoldVerblockVersions( byval code as ASTNODE ptr )
+	var i = code->head
+	while( i )
+
+		hFoldVerblockVersions( i )
+
+		if( i->class = ASTCLASS_VERBLOCK ) then
+			i->expr = astFoldVersion( i->expr )
+		end if
+
+		i = i->next
+	wend
+end sub
+
+'' version a.b
+'' ->
+'' version a
+''    version b
+private sub hUnmergeVerblocks( byval code as ASTNODE ptr )
+	var i = code->head
+	while( i )
+
+		hUnmergeVerblocks( i )
+
+		if( i->class = ASTCLASS_VERBLOCK ) then
+			if( i->expr->class = ASTCLASS_BOP ) then
+				if( i->expr->op = ASTOP_MEMBER ) then
+					var newverblock = astNewVERBLOCK( astClone( i->expr->r ), NULL, NULL )
+					astCloneAndAddAllChildrenOf( newverblock, i )
+					newverblock = astNewVERBLOCK( astClone( i->expr->l ), NULL, newverblock )
+					i = astReplaceChild( code, i, newverblock )
+				end if
+			end if
+		end if
+
+		i = i->next
+	wend
+end sub
+
+''     version a
+''         ...
+''     version a
+''         ...
+'' ->
+''     version a
+''         ...
+''         ...
+private sub hMergeAdjacentVerblocks( byval code as ASTNODE ptr )
+	var i = code->head
+	while( i )
+
+		hMergeAdjacentVerblocks( i )
+
+		'' Verblock followed by a 2nd one?
+		if( i->class = ASTCLASS_VERBLOCK ) then
+			var j = i->next
+			if( j ) then
+				if( j->class = ASTCLASS_VERBLOCK ) then
+					if( astIsEqualVersion( i->expr, j->expr ) ) then
+						astCloneAndAddAllChildrenOf( i, j )
+						astRemoveChild( code, j )
+						'' Re-check this verblock in case there are more following
+						i = i->prev
+					end if
+				end if
+			end if
+		end if
+
+		i = i->next
+	wend
+end sub
+
+'' version a
+''    version b
+'' ->
+'' version a.b
+private sub hRemergeVerblocks( byval code as ASTNODE ptr )
+	var i = code->head
+	while( i )
+
+		hRemergeVerblocks( i )
+
+		if( i->class = ASTCLASS_VERBLOCK ) then
+			'' If the only child is a verblock, then merge it with the parent verblock,
+			'' and update the parent verblock's version expression
+			if( (i->head->class = ASTCLASS_VERBLOCK) and (i->head = i->tail) ) then
+				i->expr = astNewBOP( ASTOP_MEMBER, i->expr, astClone( i->head->expr ) )
+				astCloneAndAddAllChildrenOf( i, i->head )
+				astRemoveChild( i, i->head )
+			end if
+		end if
+
+		i = i->next
+	wend
+end sub
+
+private sub astOptimizeVerblocks( byval code as ASTNODE ptr )
+	hFoldVerblockVersions( code )
+	hUnmergeVerblocks( code )
+	hMergeAdjacentVerblocks( code )
+	hRemergeVerblocks( code )
+end sub
+
+sub astOptimizeVerblocksOnFiles( byval files as ASTNODE ptr )
+	var f = files->head
+	while( f )
+
+		if( f->expr ) then
+			astOptimizeVerblocks( f->expr )
+		end if
+
+		f = f->next
+	wend
+end sub
+
 function astIsChildOf _
 	( _
 		byval parent as ASTNODE ptr, _

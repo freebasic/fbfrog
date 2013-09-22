@@ -517,6 +517,7 @@ private sub frogWorkPreset _
 		loop while( version )
 
 		astRemoveFullVerBlockWrappingFromFiles( files, versions )
+		astOptimizeVerblocksOnFiles( files )
 	else
 		if( versions ) then
 			print "no version(s) specified, just doing a single pass"
