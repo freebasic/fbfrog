@@ -620,6 +620,7 @@ enum
 	ASTCLASS_NOP = 0
 	ASTCLASS_GROUP
 	ASTCLASS_VERBLOCK
+	ASTCLASS_VERIF
 	ASTCLASS_DIVIDER
 
 	ASTCLASS_DOWNLOAD
@@ -803,12 +804,11 @@ declare function astGet1VersionOnly _
 		byval code as ASTNODE ptr, _
 		byval matchversion as ASTNODE ptr _
 	) as ASTNODE ptr
-declare sub astRemoveFullVerBlockWrappingFromFiles _
+declare sub astProcessVerblocksOnFiles _
 	( _
 		byval files as ASTNODE ptr, _
 		byval versions as ASTNODE ptr _
 	)
-declare sub astOptimizeVerblocksOnFiles( byval files as ASTNODE ptr )
 declare function astIsChildOf _
 	( _
 		byval parent as ASTNODE ptr, _

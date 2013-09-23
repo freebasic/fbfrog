@@ -1,5 +1,5 @@
 extern a1 as long
-version ver(1)
+#if ver = 1
 	extern a2 as long
-end version
+#endif
 extern a3 as long

@@ -1,9 +1,9 @@
-version ver(1)
+#if ver = 1
 	extern "Windows"
-end version
-version ver(2)
+#endif
+#if ver = 2
 	extern "C"
-end version
+#endif
 
 declare sub f1()
 declare sub f2()

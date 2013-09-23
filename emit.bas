@@ -257,7 +257,19 @@ function emitAst _
 		wend
 		s = ""
 		emit.indent -= 1
-		emitStmt( "end version" )
+		emitStmt( "endversion" )
+
+	case ASTCLASS_VERIF
+		emitStmt( "#if " + emitAst( n->expr ) )
+		emit.indent += 1
+		var child = n->head
+		while( child )
+			s = emitAst( child )
+			child = child->next
+		wend
+		s = ""
+		emit.indent -= 1
+		emitStmt( "#endif" )
 
 	case ASTCLASS_DIVIDER
 		if( (n->prev <> NULL) and _

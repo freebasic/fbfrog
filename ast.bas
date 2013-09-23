@@ -36,6 +36,7 @@ dim shared as ASTNODEINFO astnodeinfo(0 to ...) = _
 	( "nop"      ), _
 	( "group"    ), _
 	( "verblock" ), _
+	( "verif"    ), _
 	( "divider"  ), _
 	( "download" ), _
 	( "extract"  ), _
@@ -834,24 +835,6 @@ private function astRemoveFullVerBlockWrapping _
 	function = astRemoveVerBlockWrapping( ast, astBuildFullVersion( versions ) )
 end function
 
-sub astRemoveFullVerBlockWrappingFromFiles _
-	( _
-		byval files as ASTNODE ptr, _
-		byval versions as ASTNODE ptr _
-	)
-
-	var f = files->head
-	while( f )
-
-		if( f->expr ) then
-			f->expr = astRemoveFullVerBlockWrapping( f->expr, versions )
-		end if
-
-		f = f->next
-	wend
-
-end sub
-
 private function astFoldVersion( byval n as ASTNODE ptr ) as ASTNODE ptr
 	function = n
 
@@ -1005,16 +988,55 @@ private sub astOptimizeVerblocks( byval code as ASTNODE ptr )
 	hRemergeVerblocks( code )
 end sub
 
-sub astOptimizeVerblocksOnFiles( byval files as ASTNODE ptr )
+private function hTurnVerValIntoIfExpr( byval n as ASTNODE ptr ) as ASTNODE ptr
+	function = n
+
+	select case( n->class )
+	case ASTCLASS_BOP
+		n->l = hTurnVerValIntoIfExpr( n->l )
+		n->r = hTurnVerValIntoIfExpr( n->r )
+	case ASTCLASS_ID
+		function = astNewUOP( ASTOP_DEFINED, astClone( n ) )
+		astDelete( n )
+	case ASTCLASS_VERVAL
+		function = astNewBOP( ASTOP_EQ, astNewID( n->text ), astClone( n->l ) )
+		astDelete( n )
+	end select
+end function
+
+private sub astTurnVerblocksIntoIfs( byval code as ASTNODE ptr )
+	var i = code->head
+	while( i )
+
+		astTurnVerblocksIntoIfs( i )
+
+		if( i->class = ASTCLASS_VERBLOCK ) then
+			i->class = ASTCLASS_VERIF
+			i->expr = hTurnVerValIntoIfExpr( i->expr )
+		end if
+
+		i = i->next
+	wend
+end sub
+
+sub astProcessVerblocksOnFiles _
+	( _
+		byval files as ASTNODE ptr, _
+		byval versions as ASTNODE ptr _
+	)
+
 	var f = files->head
 	while( f )
 
 		if( f->expr ) then
+			f->expr = astRemoveFullVerBlockWrapping( f->expr, versions )
 			astOptimizeVerblocks( f->expr )
+			astTurnVerblocksIntoIfs( f->expr )
 		end if
 
 		f = f->next
 	wend
+
 end sub
 
 function astIsChildOf _

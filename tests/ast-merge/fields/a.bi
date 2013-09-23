@@ -4,11 +4,11 @@ type UDT
 end type
 type UDT
 	field1 as long
-	version ver(1)
+	#if ver = 1
 		field2 as long
-	end version
-	version ver(2)
+	#endif
+	#if ver = 2
 		field3 as long
-	end version
+	#endif
 	field4 as long
 end type
