@@ -290,21 +290,48 @@ function emitAst _
 			emitLineComments( n->text )
 		end if
 
+	case ASTCLASS_SCOPEBLOCK
+		emitStmt( "scope" )
+		emit.indent += 1
+		var child = n->head
+		while( child )
+			emitStmt( emitAst( child ) )
+			child = child->next
+		wend
+		s = ""
+		emit.indent -= 1
+		emitStmt( "end scope" )
+
 	case ASTCLASS_PPINCLUDE
 		emitStmt( "#include """ + *n->text + """", n->comment )
 
 	case ASTCLASS_PPDEFINE
-		s += "#define " + *n->text
-		if( n->head ) then
-			s += hCommaList( n )
-		end if
+		if( n->expr andalso (n->expr->class = ASTCLASS_SCOPEBLOCK) ) then
+			s += "#macro " + *n->text
+			if( n->head ) then
+				s += hCommaList( n )
+			end if
+			emitStmt( s, n->comment )
+			s = ""
 
-		if( n->expr ) then
-			s += " " + emitAst( n->expr, TRUE )
-		end if
+			emit.indent += 1
+			s = emitAst( n->expr )
+			emit.indent -= 1
 
-		emitStmt( s, n->comment )
-		s = ""
+			emitStmt( "#endmacro" )
+		else
+			s += "#define " + *n->text
+			if( n->head ) then
+				s += hCommaList( n )
+			end if
+
+			if( n->expr ) then
+				s += " " + emitAst( n->expr, TRUE )
+			end if
+
+			emitStmt( s, n->comment )
+			s = ""
+		end if
 
 	case ASTCLASS_PPUNDEF
 		emitStmt( "#undef " + *n->text, n->comment )

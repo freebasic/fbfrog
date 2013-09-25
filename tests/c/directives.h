@@ -71,3 +71,7 @@
 
 #pragma message("test")
 static int separator1;
+
+#define A { f( 123 ); }
+#define A(x) { f( x ); }
+#define A(x) { f1( (x) + 1 ); f2( (x) + 2 ); f3( (x) + 3 ); }

@@ -231,6 +231,20 @@ private function cExpression( byval level as integer = 0 ) as ASTNODE ptr
 		case TK_HASH
 			a = hStringLiteralSequence( )
 
+		'' '{' Statements '}'
+		case TK_LBRACE
+			a = astNew( ASTCLASS_SCOPEBLOCK )
+			cSkip( )
+
+			'' Statements = Statement*
+			while( tkGet( parse.x ) <> TK_RBRACE )
+				'' Statement = Expression ';'
+				astAppend( a, cExpression( ) )
+				cExpectSkip( TK_SEMI, "to terminate statement" )
+			wend
+
+			cExpectSkip( TK_RBRACE, "to close scope block" )
+
 		case else
 			cOops( "not an atomic expression (identifier, literal, ...), or not yet implemented" )
 		end select

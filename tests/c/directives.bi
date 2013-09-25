@@ -65,3 +65,21 @@
 #define no_parameters_here a
 
 dim shared separator1 as long
+
+#macro A
+	scope
+		f(123)
+	end scope
+#endmacro
+#macro A(x)
+	scope
+		f(x)
+	end scope
+#endmacro
+#macro A(x)
+	scope
+		f1(x + 1)
+		f2(x + 2)
+		f3(x + 3)
+	end scope
+#endmacro

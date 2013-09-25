@@ -38,6 +38,7 @@ dim shared as ASTNODEINFO astnodeinfo(0 to ...) = _
 	( "verblock" ), _
 	( "verif"    ), _
 	( "divider"  ), _
+	( "scopeblock" ), _
 	( "download" ), _
 	( "extract"  ), _
 	( "copyfile" ), _
