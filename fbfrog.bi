@@ -939,6 +939,7 @@ declare sub ppPreDefine overload( byval id as zstring ptr )
 declare sub ppEval( )
 declare sub ppParseIfExprOnly( byval do_fold as integer )
 declare sub ppRemoveEOLs( )
+declare sub ppTurnCPPTokensIntoCIds( )
 declare function cFile( ) as ASTNODE ptr
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''

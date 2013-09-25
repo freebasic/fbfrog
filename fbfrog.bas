@@ -251,6 +251,7 @@ private sub frogWorkFile _
 	end if
 	ppEvalEnd( )
 	ppRemoveEOLs( )
+	ppTurnCPPTokensIntoCIds( )
 
 	'' Parse C constructs
 	var ast = cFile( )

@@ -1899,3 +1899,15 @@ sub ppRemoveEOLs( )
 		x += 1
 	loop
 end sub
+
+sub ppTurnCPPTokensIntoCIds( )
+	for x as integer = 0 to tkGetCount( )-1
+		var tk = tkGet( x )
+		select case( tk )
+		case KW_DEFINE, KW_INCLUDE, KW_ELIF, KW_IFDEF, KW_IFNDEF, _
+		     KW_ENDIF, KW_UNDEF, KW_PRAGMA, KW_ERROR, KW_WARNING
+			tkRemove( x, x )
+			tkInsert( x, TK_ID, tkInfoText( tk ) )
+		end select
+	next
+end sub
