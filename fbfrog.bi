@@ -498,7 +498,7 @@ declare sub tkOopsExpected _
 	( _
 		byval x as integer, _
 		byval message as zstring ptr, _
-		byval whatfor as zstring ptr _
+		byval whatfor as zstring ptr = NULL _
 	)
 declare sub tkExpect _
 	( _

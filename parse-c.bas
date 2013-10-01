@@ -18,6 +18,7 @@ end enum
 
 declare function cIdList _
 	( _
+		byref x as integer, _
 		byval decl as integer, _
 		byval basedtype as integer, _
 		byval basesubtype as ASTNODE ptr, _
@@ -26,9 +27,15 @@ declare function cIdList _
 	) as ASTNODE ptr
 declare function cMultDecl _
 	( _
+		byref x as integer, _
 		byval decl as integer, _
 		byval gccattribs as integer, _
 		byref comment as string _
+	) as ASTNODE ptr
+declare function cToplevel _
+	( _
+		byref x as integer, _
+		byval body as integer _
 	) as ASTNODE ptr
 
 enum
@@ -38,38 +45,9 @@ enum
 	BODY_PPIF
 end enum
 
-declare function cToplevel( byval body as integer ) as ASTNODE ptr
-
-type PARSERSTUFF
-	x		as integer
-end type
-
-dim shared as PARSERSTUFF parse
-
-private sub cOops( byval message as zstring ptr )
-	tkOops( parse.x, message )
-end sub
-
-private sub cOopsExpected( byval message as zstring ptr )
-	tkOopsExpected( parse.x, message, NULL )
-end sub
-
-private sub cSkip( )
-	parse.x += 1
-end sub
-
-private sub cExpect( byval tk as integer, byval whatfor as zstring ptr )
-	tkExpect( parse.x, tk, whatfor )
-end sub
-
-private sub cExpectSkip( byval tk as integer, byval whatfor as zstring ptr )
-	cExpect( tk, whatfor )
-	cSkip( )
-end sub
-
-private function cMatch( byval tk as integer ) as integer
-	if( tkGet( parse.x ) = tk ) then
-		cSkip( )
+private function hMatch( byref x as integer, byval tk as integer ) as integer
+	if( tkGet( x ) = tk ) then
+		x += 1
 		function = TRUE
 	end if
 end function
@@ -97,32 +75,32 @@ private function hAppendStrLit _
 end function
 
 '' ("..." | #id)*
-private function hStringLiteralSequence( ) as ASTNODE ptr
+private function hStringLiteralSequence( byref x as integer ) as ASTNODE ptr
 	dim as ASTNODE ptr a
 
 	do
-		select case( tkGet( parse.x ) )
+		select case( tkGet( x ) )
 		case TK_STRING
-			var s = astNew( ASTCLASS_STRING, tkGetText( parse.x ) )
+			var s = astNew( ASTCLASS_STRING, tkGetText( x ) )
 			astSetType( s, TYPE_ZSTRING, NULL )
 			a = hAppendStrLit( a, s )
-			cSkip( )
+			x += 1
 
 		case TK_WSTRING
-			var s = astNew( ASTCLASS_STRING, tkGetText( parse.x ) )
+			var s = astNew( ASTCLASS_STRING, tkGetText( x ) )
 			astSetType( s, TYPE_WSTRING, NULL )
 			a = hAppendStrLit( a, s )
-			cSkip( )
+			x += 1
 
 		'' '#' stringify operator
 		case TK_HASH
-			cSkip( )
+			x += 1
 
 			'' #id?
-			cExpect( TK_ID, "as operand of '#' PP stringify operator" )
-			var s = astNewUOP( ASTOP_STRINGIFY, astNewID( tkGetText( parse.x ) ) )
+			tkExpect( x, TK_ID, "as operand of '#' PP stringify operator" )
+			var s = astNewUOP( ASTOP_STRINGIFY, astNewID( tkGetText( x ) ) )
 			a = hAppendStrLit( a, s )
-			cSkip( )
+			x += 1
 
 		case else
 			exit do
@@ -133,10 +111,15 @@ private function hStringLiteralSequence( ) as ASTNODE ptr
 end function
 
 '' C expression parser based on precedence climbing
-private function cExpression( byval level as integer = 0 ) as ASTNODE ptr
+private function cExpression _
+	( _
+		byref x as integer, _
+		byval level as integer _
+	) as ASTNODE ptr
+
 	'' Unary prefix operators
 	var op = -1
-	select case( tkGet( parse.x ) )
+	select case( tkGet( x ) )
 	case TK_EXCL   : op = ASTOP_CLOGNOT   '' !
 	case TK_TILDE  : op = ASTOP_NOT       '' ~
 	case TK_MINUS  : op = ASTOP_NEGATE    '' -
@@ -148,111 +131,115 @@ private function cExpression( byval level as integer = 0 ) as ASTNODE ptr
 
 	dim as ASTNODE ptr a
 	if( op >= 0 ) then
-		cSkip( )
-		a = astNewUOP( op, cExpression( cprecedence(op) ) )
+		x += 1
+		a = astNewUOP( op, cExpression( x, cprecedence(op) ) )
 	else
 		'' Atoms
-		select case( tkGet( parse.x ) )
+		select case( tkGet( x ) )
 		'' '(' Expression ')'
 		case TK_LPAREN
 			'' '('
-			cSkip( )
+			x += 1
 
 			'' Expression
-			a = cExpression( )
+			a = cExpression( x, 0 )
 
 			'' ')'
-			cExpectSkip( TK_RPAREN, "for '(...)' parenthesized expression" )
+			tkExpect( x, TK_RPAREN, "for '(...)' parenthesized expression" )
+			x += 1
 
 		case TK_OCTNUM, TK_DECNUM, TK_HEXNUM, TK_DECFLOAT
-			a = hNumberLiteral( parse.x )
-			cSkip( )
+			a = hNumberLiteral( x )
+			x += 1
 
 		case TK_STRING
-			a = hStringLiteralSequence( )
+			a = hStringLiteralSequence( x )
 
 		case TK_WSTRING
-			a = hStringLiteralSequence( )
+			a = hStringLiteralSequence( x )
 
 		case TK_CHAR
-			a = astNew( ASTCLASS_CHAR, tkGetText( parse.x ) )
+			a = astNew( ASTCLASS_CHAR, tkGetText( x ) )
 			astSetType( a, TYPE_ZSTRING, NULL )
-			cSkip( )
+			x += 1
 
 		case TK_WCHAR
-			a = astNew( ASTCLASS_CHAR, tkGetText( parse.x ) )
+			a = astNew( ASTCLASS_CHAR, tkGetText( x ) )
 			astSetType( a, TYPE_WSTRING, NULL )
-			cSkip( )
+			x += 1
 
 		'' Identifier ['(' [CallArguments] ')']
 		case TK_ID
-			a = astNewID( tkGetText( parse.x ) )
-			cSkip( )
+			a = astNewID( tkGetText( x ) )
+			x += 1
 
-			select case( tkGet( parse.x ) )
+			select case( tkGet( x ) )
 			'' '('?
 			case TK_LPAREN
 				a->class = ASTCLASS_CALL
-				cSkip( )
+				x += 1
 
 				'' [CallArguments]
-				if( tkGet( parse.x ) <> TK_RPAREN ) then
+				if( tkGet( x ) <> TK_RPAREN ) then
 					'' Expression (',' Expression)*
 					do
-						astAppend( a, cExpression( ) )
+						astAppend( a, cExpression( x, 0 ) )
 
 						'' ','?
-					loop while( cMatch( TK_COMMA ) )
+					loop while( hMatch( x, TK_COMMA ) )
 				end if
 
 				'' ')'?
-				cExpectSkip( TK_RPAREN, "to close call argument list" )
+				tkExpect( x, TK_RPAREN, "to close call argument list" )
+				x += 1
 
 			'' '##'?
 			case TK_HASHHASH
 				var t = astNew( ASTCLASS_PPMERGE )
 				astAppend( t, a )
 				a = t
-				cSkip( )
+				x += 1
 
 				'' Identifier ('##' Identifier)*
 				do
 					'' Identifier?
-					cExpect( TK_ID, "as operand of '##' PP merge operator" )
-					astAppend( a, astNewID( tkGetText( parse.x ) ) )
-					cSkip( )
+					tkExpect( x, TK_ID, "as operand of '##' PP merge operator" )
+					astAppend( a, astNewID( tkGetText( x ) ) )
+					x += 1
 
 					'' '##'?
-				loop while( cMatch( TK_HASHHASH ) )
+				loop while( hMatch( x, TK_HASHHASH ) )
 
 			end select
 
 		'' '#' stringify operator
 		case TK_HASH
-			a = hStringLiteralSequence( )
+			a = hStringLiteralSequence( x )
 
 		'' '{' Statements '}'
 		case TK_LBRACE
 			a = astNew( ASTCLASS_SCOPEBLOCK )
-			cSkip( )
+			x += 1
 
 			'' Statements = Statement*
-			while( tkGet( parse.x ) <> TK_RBRACE )
+			while( tkGet( x ) <> TK_RBRACE )
 				'' Statement = Expression ';'
-				astAppend( a, cExpression( ) )
-				cExpectSkip( TK_SEMI, "to terminate statement" )
+				astAppend( a, cExpression( x, 0 ) )
+				tkExpect( x, TK_SEMI, "to terminate statement" )
+				x += 1
 			wend
 
-			cExpectSkip( TK_RBRACE, "to close scope block" )
+			tkExpect( x, TK_RBRACE, "to close scope block" )
+			x += 1
 
 		case else
-			cOops( "not an atomic expression (identifier, literal, ...), or not yet implemented" )
+			tkOops( x, "not an atomic expression (identifier, literal, ...), or not yet implemented" )
 		end select
 	end if
 
 	'' Infix operators
 	do
-		select case as const( tkGet( parse.x ) )
+		select case as const( tkGet( x ) )
 		case TK_QUEST    : op = ASTOP_IIF     '' ? (a ? b : c)
 		case TK_PIPEPIPE : op = ASTOP_CLOGOR  '' ||
 		case TK_AMPAMP   : op = ASTOP_CLOGAND '' &&
@@ -291,24 +278,26 @@ private function cExpression( byval level as integer = 0 ) as ASTNODE ptr
 		end if
 
 		'' operator
-		cSkip( )
+		x += 1
 
 		'' rhs
-		var b = cExpression( oplevel )
+		var b = cExpression( x, oplevel )
 
 		'' Handle ?: special case
 		if( op = ASTOP_IIF ) then
 			'' ':'
-			cExpectSkip( TK_COLON, "for a?b:c iif operator" )
+			tkExpect( x, TK_COLON, "for a?b:c iif operator" )
+			x += 1
 
-			var c = cExpression( oplevel )
+			var c = cExpression( x, oplevel )
 
 			a = astNewIIF( a, b, c )
 		else
 			'' Handle [] special case
 			if( op = ASTOP_INDEX ) then
 				'' ']'
-				cExpectSkip( TK_RBRACKET, "for [] indexing operator" )
+				tkExpect( x, TK_RBRACKET, "for [] indexing operator" )
+				x += 1
 			end if
 
 			a = astNewBOP( op, a, b )
@@ -318,94 +307,103 @@ private function cExpression( byval level as integer = 0 ) as ASTNODE ptr
 	function = a
 end function
 
-private function hExpr( byval is_bool_context as integer ) as ASTNODE ptr
-	function = astFold( astOpsC2FB( cExpression( ) ), NULL, FALSE, is_bool_context )
+private function hExpr _
+	( _
+		byref x as integer, _
+		byval is_bool_context as integer _
+	) as ASTNODE ptr
+
+	var expr = cExpression( x, 0 )
+
+	function = astFold( astOpsC2FB( expr ), NULL, FALSE, is_bool_context )
 end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-private sub hCdeclAttribute( byref gccattribs as integer )
+private sub hCdeclAttribute( byref x as integer, byref gccattribs as integer )
 	if( gccattribs and ASTATTRIB_STDCALL ) then
-		cOops( "cdecl attribute specified together with stdcall" )
+		tkOops( x, "cdecl attribute specified together with stdcall" )
 	end if
 	gccattribs or= ASTATTRIB_CDECL
+	x += 1
 end sub
 
-private sub hStdcallAttribute( byref gccattribs as integer )
+private sub hStdcallAttribute( byref x as integer, byref gccattribs as integer )
 	if( gccattribs and ASTATTRIB_CDECL ) then
-		cOops( "stdcall attribute specified together with cdecl" )
+		tkOops( x, "stdcall attribute specified together with cdecl" )
 	end if
 	gccattribs or= ASTATTRIB_STDCALL
+	x += 1
 end sub
 
-private sub cGccAttribute( byref gccattribs as integer )
-	if( tkGet( parse.x ) < TK_ID ) then
-		cOopsExpected( "expected attribute identifier inside __attribute__((...))" )
+private sub cGccAttribute( byref x as integer, byref gccattribs as integer )
+	if( tkGet( x ) < TK_ID ) then
+		tkOopsExpected( x, "expected attribute identifier inside __attribute__((...))" )
 	end if
 
-	select case( *tkGetText( parse.x ) )
+	select case( *tkGetText( x ) )
 	case "warn_unused_result", "__warn_unused_result__", _
 	     "noreturn", "__noreturn__", _
 	     "malloc", "__malloc__", _
 	     "deprecated", "__deprecated__"
 		'' Ignore, not interesting for FB bindings
-		cSkip( )
+		x += 1
 
 	case "cdecl", "__cdecl__"
-		hCdeclAttribute( gccattribs )
-		cSkip( )
+		hCdeclAttribute( x, gccattribs )
 
 	case "stdcall", "__stdcall__"
-		hStdcallAttribute( gccattribs )
-		cSkip( )
+		hStdcallAttribute( x, gccattribs )
 
 	case else
-		cOops( "unknown attribute" )
+		tkOops( x, "unknown attribute" )
 	end select
 end sub
 
-private sub cGccAttributeList( byref gccattribs as integer )
+private sub cGccAttributeList( byref x as integer, byref gccattribs as integer )
 	do
-		select case( tkGet( parse.x ) )
+		select case( tkGet( x ) )
 		'' __cdecl
 		case KW___CDECL
-			hCdeclAttribute( gccattribs )
-			cSkip( )
+			hCdeclAttribute( x, gccattribs )
 
 		'' __stdcall
 		case KW___STDCALL
-			hStdcallAttribute( gccattribs )
-			cSkip( )
+			hStdcallAttribute( x, gccattribs )
 
 		'' __attribute__((...)):
 		'' __ATTRIBUTE__ '((' Attribute (',' Attribute)* '))'
 		case KW___ATTRIBUTE__
-			cSkip( )
+			x += 1
 
 			'' '('?
-			cExpectSkip( TK_LPAREN, "as 1st '(' in '__attribute__((...))'" )
+			tkExpect( x, TK_LPAREN, "as 1st '(' in '__attribute__((...))'" )
+			x += 1
 
 			'' '('?
-			cExpectSkip( TK_LPAREN, "as 2nd '(' in '__attribute__((...))'" )
+			tkExpect( x, TK_LPAREN, "as 2nd '(' in '__attribute__((...))'" )
+			x += 1
 
 			'' Attribute (',' Attribute)*
 			do
 				'' ')'?
-				if( tkGet( parse.x ) = TK_RPAREN ) then
+				if( tkGet( x ) = TK_RPAREN ) then
 					exit do
 				end if
 
 				'' Attribute
-				cGccAttribute( gccattribs )
+				cGccAttribute( x, gccattribs )
 
 				'' ','?
-			loop while( cMatch( TK_COMMA ) )
+			loop while( hMatch( x, TK_COMMA ) )
 
 			'' ')'?
-			cExpectSkip( TK_RPAREN, "as 1st ')' in '__attribute__((...))'" )
+			tkExpect( x, TK_RPAREN, "as 1st ')' in '__attribute__((...))'" )
+			x += 1
 
 			'' ')'?
-			cExpectSkip( TK_RPAREN, "as 2nd ')' in '__attribute__((...))'" )
+			tkExpect( x, TK_RPAREN, "as 2nd ')' in '__attribute__((...))'" )
+			x += 1
 
 		case else
 			exit do
@@ -416,27 +414,27 @@ end sub
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 '' Identifier ['=' Expression] (',' | '}')
-private function cEnumConst( ) as ASTNODE ptr
+private function cEnumConst( byref x as integer ) as ASTNODE ptr
 	'' Identifier
-	cExpect( TK_ID, "for an enum constant" )
-	var n = astNew( ASTCLASS_ENUMCONST, tkGetText( parse.x ) )
-	cSkip( )
+	tkExpect( x, TK_ID, "for an enum constant" )
+	var n = astNew( ASTCLASS_ENUMCONST, tkGetText( x ) )
+	x += 1
 
 	'' '='?
-	if( cMatch( TK_EQ ) ) then
+	if( hMatch( x, TK_EQ ) ) then
 		'' Expression
-		n->expr = hExpr( FALSE )
+		n->expr = hExpr( x, FALSE )
 	end if
 
 	'' (',' | '}')
-	select case( tkGet( parse.x ) )
+	select case( tkGet( x ) )
 	case TK_COMMA
-		cSkip( )
+		x += 1
 
 	case TK_RBRACE
 
 	case else
-		cOopsExpected( "',' or '}' behind enum constant" )
+		tkOopsExpected( x, "',' or '}' behind enum constant" )
 	end select
 
 	function = n
@@ -444,27 +442,28 @@ end function
 
 '' Typedefs
 ''    TYPEDEF MultDecl
-private function cTypedef( ) as ASTNODE ptr
+private function cTypedef( byref x as integer ) as ASTNODE ptr
 	'' TYPEDEF?
-	var comment = tkCollectComments( parse.x, parse.x )
-	cExpectSkip( KW_TYPEDEF, "for typedef declaration" )
+	var comment = tkCollectComments( x, x )
+	tkExpect( x, KW_TYPEDEF, "for typedef declaration" )
+	x += 1
 
-	function = cMultDecl( DECL_TYPEDEF, 0, comment )
+	function = cMultDecl( x, DECL_TYPEDEF, 0, comment )
 end function
 
 '' Structs/Unions, Enums
 '' [TYPEDEF] {STRUCT|UNION|ENUM} [Identifier] '{'
 ''     {StructBody|EnumBody}
 '' '}' [MultDecl] ';'
-private function cStructCompound( ) as ASTNODE ptr
-	var head = parse.x
+private function cStructCompound( byref x as integer ) as ASTNODE ptr
+	var head = x
 
 	'' TYPEDEF?
-	var is_typedef = cMatch( KW_TYPEDEF )
+	var is_typedef = hMatch( x, KW_TYPEDEF )
 
 	'' {STRUCT|UNION|ENUM}
 	dim as integer astclass
-	select case( tkGet( parse.x ) )
+	select case( tkGet( x ) )
 	case KW_UNION
 		astclass = ASTCLASS_UNION
 	case KW_ENUM
@@ -472,15 +471,15 @@ private function cStructCompound( ) as ASTNODE ptr
 	case KW_STRUCT
 		astclass = ASTCLASS_STRUCT
 	case else
-		cOopsExpected( "STRUCT|UNION|ENUM at beginning of struct/union/enum block" )
+		tkOopsExpected( x, "STRUCT|UNION|ENUM at beginning of struct/union/enum block" )
 	end select
-	cSkip( )
+	x += 1
 
 	'' [Identifier]
 	dim as string id
-	if( tkGet( parse.x ) = TK_ID ) then
-		id = *tkGetText( parse.x )
-		cSkip( )
+	if( tkGet( x ) = TK_ID ) then
+		id = *tkGetText( x )
+		x += 1
 	elseif( is_typedef ) then
 		'' If it's a typedef with anonymous struct block, we need to
 		'' make up an id for it, for use in the base type of the
@@ -490,26 +489,28 @@ private function cStructCompound( ) as ASTNODE ptr
 	end if
 
 	'' '{'
-	cExpectSkip( TK_LBRACE, iif( astclass = ASTCLASS_ENUM, _
+	tkExpect( x, TK_LBRACE, iif( astclass = ASTCLASS_ENUM, _
 			@"to open enum block", _
 			@"to open struct block" ) )
+	x += 1
 
 	var struct = astNew( astclass, id )
-	astAddComment( struct, tkCollectComments( head, parse.x - 1 ) )
+	astAddComment( struct, tkCollectComments( head, x - 1 ) )
 
 	astAppend( struct, _
-		cToplevel( iif( astclass = ASTCLASS_ENUM, _
+		cToplevel( x, iif( astclass = ASTCLASS_ENUM, _
 			BODY_ENUM, BODY_STRUCT ) ) )
 
 	'' '}'
-	cExpectSkip( TK_RBRACE, iif( astclass = ASTCLASS_ENUM, _
+	tkExpect( x, TK_RBRACE, iif( astclass = ASTCLASS_ENUM, _
 			@"to close enum block", _
 			@"to close struct block" ) )
+	x += 1
 
 	if( is_typedef ) then
 		'' IdList
 		var subtype = astNewID( id )
-		var t = cIdList( DECL_TYPEDEF, TYPE_UDT, subtype, 0, "" )
+		var t = cIdList( x, DECL_TYPEDEF, TYPE_UDT, subtype, 0, "" )
 		astDelete( subtype )
 		var group = astNewGROUP( )
 		astAppend( group, struct )
@@ -517,9 +518,10 @@ private function cStructCompound( ) as ASTNODE ptr
 		function = group
 	else
 		'' ';'
-		cExpectSkip( TK_SEMI, iif( astclass = ASTCLASS_ENUM, _
+		tkExpect( x, TK_SEMI, iif( astclass = ASTCLASS_ENUM, _
 				@"to finish enum block declaration", _
 				@"to finish struct block declaration" ) )
+		x += 1
 		function = struct
 	end if
 end function
@@ -555,6 +557,7 @@ end function
 ''
 private sub cBaseType _
 	( _
+		byref x as integer, _
 		byref dtype as integer, _
 		byref subtype as ASTNODE ptr, _
 		byref gccattribs as integer, _
@@ -577,18 +580,18 @@ private sub cBaseType _
 
 	do
 		'' __ATTRIBUTE__((...))
-		cGccAttributeList( gccattribs )
+		cGccAttributeList( x, gccattribs )
 
-		select case as const( tkGet( parse.x ) )
+		select case as const( tkGet( x ) )
 		case KW_SIGNED
 			if( unsignedmods > 0 ) then
-				cOops( "mixed SIGNED with previous UNSIGNED modifier" )
+				tkOops( x, "mixed SIGNED with previous UNSIGNED modifier" )
 			end if
 			signedmods += 1
 
 		case KW_UNSIGNED
 			if( signedmods > 0 ) then
-				cOops( "mixed UNSIGNED with previous SIGNED modifier" )
+				tkOops( x, "mixed UNSIGNED with previous SIGNED modifier" )
 			end if
 			unsignedmods += 1
 
@@ -597,20 +600,20 @@ private sub cBaseType _
 
 		case KW_SHORT
 			if( longmods > 0 ) then
-				cOops( "mixed SHORT with previous LONG modifier" )
+				tkOops( x, "mixed SHORT with previous LONG modifier" )
 			end if
 			shortmods += 1
 			if( shortmods > 1 ) then
-				cOops( "more than 1 SHORT modifier" )
+				tkOops( x, "more than 1 SHORT modifier" )
 			end if
 
 		case KW_LONG
 			if( shortmods > 0 ) then
-				cOops( "mixed LONG with previous SHORT modifier" )
+				tkOops( x, "mixed LONG with previous SHORT modifier" )
 			end if
 			longmods += 1
 			if( longmods > 2 ) then
-				cOops( "more than 2 LONG modifiers" )
+				tkOops( x, "more than 2 LONG modifiers" )
 			end if
 
 		case else
@@ -619,14 +622,14 @@ private sub cBaseType _
 				exit do
 			end if
 
-			select case as const( tkGet( parse.x ) )
+			select case as const( tkGet( x ) )
 			case KW_ENUM, KW_STRUCT, KW_UNION
 				'' {ENUM|STRUCT|UNION}
-				cSkip( )
+				x += 1
 
 				'' Identifier
-				cExpect( TK_ID, "to treat this as data type as in 'enum|struct|union foo'" )
-				basetypex = parse.x
+				tkExpect( x, TK_ID, "to treat this as data type as in 'enum|struct|union foo'" )
+				basetypex = x
 
 			case TK_ID
 				''
@@ -654,17 +657,17 @@ private sub cBaseType _
 				end if
 
 				'' Treat the id as the type
-				basetypex = parse.x
+				basetypex = x
 
 			case KW_VOID, KW_CHAR, KW_FLOAT, KW_DOUBLE, KW_INT
-				basetypex = parse.x
+				basetypex = x
 
 			case else
 				exit do
 			end select
 		end select
 
-		cSkip( )
+		x += 1
 	loop
 
 	''
@@ -674,7 +677,7 @@ private sub cBaseType _
 	select case( tkGet( basetypex ) )
 	case TK_ID, KW_VOID, KW_FLOAT, KW_DOUBLE
 		if( signedmods or unsignedmods or shortmods or longmods ) then
-			cOops( "SIGNED|UNSIGNED|SHORT|LONG modifiers used with typedef/UDT/float/double/void" )
+			tkOops( x, "SIGNED|UNSIGNED|SHORT|LONG modifiers used with typedef/UDT/float/double/void" )
 		end if
 
 		select case( tkGet( basetypex ) )
@@ -718,7 +721,7 @@ private sub cBaseType _
 
 	case KW_CHAR
 		if( shortmods or longmods ) then
-			cOops( "SHORT|LONG modifiers used with CHAR type" )
+			tkOops( x, "SHORT|LONG modifiers used with CHAR type" )
 		end if
 
 		'' SIGNED|UNSIGNED CHAR becomes BYTE|UBYTE,
@@ -752,7 +755,7 @@ private sub cBaseType _
 			dtype = TYPE_LONG
 		else
 			'' No modifiers and no explicit "int" either
-			cOopsExpected( "a data type at the beginning of this declaration" )
+			tkOopsExpected( x, "a data type at the beginning of this declaration" )
 		end if
 
 	end select
@@ -768,30 +771,30 @@ private sub cBaseType _
 	end if
 
 	'' __ATTRIBUTE__((...))
-	cGccAttributeList( gccattribs )
+	cGccAttributeList( x, gccattribs )
 end sub
 
 '' ParamDeclList = ParamDecl (',' ParamDecl)*
 '' ParamDecl = '...' | MultDecl{Param}
-private function cParamDeclList( ) as ASTNODE ptr
+private function cParamDeclList( byref x as integer ) as ASTNODE ptr
 	var group = astNewGROUP( )
 
 	do
 		dim as ASTNODE ptr t
 
 		'' '...'?
-		if( tkGet( parse.x ) = TK_ELLIPSIS ) then
+		if( tkGet( x ) = TK_ELLIPSIS ) then
 			t = astNew( ASTCLASS_PARAM )
-			astAddComment( t, tkCollectComments( parse.x, parse.x ) )
-			cSkip( )
+			astAddComment( t, tkCollectComments( x, x ) )
+			x += 1
 		else
-			t = cMultDecl( DECL_PARAM, 0, "" )
+			t = cMultDecl( x, DECL_PARAM, 0, "" )
 		end if
 
 		astAppend( group, t )
 
 		'' ','?
-	loop while( cMatch( TK_COMMA ) )
+	loop while( hMatch( x, TK_COMMA ) )
 
 	function = group
 end function
@@ -940,6 +943,7 @@ end function
 ''
 private function cDeclarator _
 	( _
+		byref x as integer, _
 		byval nestlevel as integer, _
 		byval decl as integer, _
 		byval outerdtype as integer, _
@@ -969,26 +973,27 @@ private function cDeclarator _
 	'' or at the front of follow-up declarators in a multdecl:
 	''    int f1(void), __attribute__((stdcall)) f2(void);
 	''
-	cGccAttributeList( gccattribs )
+	cGccAttributeList( x, gccattribs )
 
 	'' Pointers: ('*')*
-	while( cMatch( TK_STAR ) )
+	while( hMatch( x, TK_STAR ) )
 		procptrdtype = typeAddrOf( procptrdtype )
 		dtype = typeAddrOf( dtype )
 
 		'' (CONST|RESTRICT|__ATTRIBUTE__((...)))*
 		do
 			'' __ATTRIBUTE__((...))
-			cGccAttributeList( gccattribs )
+			cGccAttributeList( x, gccattribs )
 
-			select case( tkGet( parse.x ) )
+			select case( tkGet( x ) )
 			case KW_CONST
 				procptrdtype = typeSetIsConst( procptrdtype )
 				dtype = typeSetIsConst( dtype )
-				cSkip( )
+				x += 1
 
 			case KW_RESTRICT, KW___RESTRICT, KW___RESTRICT__
-				cSkip( )
+				'' The restrict keyword is not interesting for FB bindings, just ignore
+				x += 1
 
 			case else
 				exit do
@@ -1000,21 +1005,22 @@ private function cDeclarator _
 	dim as ASTNODE ptr t, innernode
 
 	'' '('?
-	if( cMatch( TK_LPAREN ) ) then
-		t = cDeclarator( nestlevel + 1, decl, dtype, basesubtype, 0, innernode, innerprocptrdtype, innergccattribs )
+	if( hMatch( x, TK_LPAREN ) ) then
+		t = cDeclarator( x, nestlevel + 1, decl, dtype, basesubtype, 0, innernode, innerprocptrdtype, innergccattribs )
 
 		'' ')'
-		cExpectSkip( TK_RPAREN, "for '(...)' parenthesized declarator" )
+		tkExpect( x, TK_RPAREN, "for '(...)' parenthesized declarator" )
+		x += 1
 	else
 		'' [Identifier]
 		dim as string id
-		if( tkGet( parse.x ) = TK_ID ) then
-			id = *tkGetText( parse.x )
-			cSkip( )
+		if( tkGet( x ) = TK_ID ) then
+			id = *tkGetText( x )
+			x += 1
 		else
 			'' An identifier must exist, except for parameters
 			if( decl <> DECL_PARAM ) then
-				cOopsExpected( "identifier for the symbol declared in this declaration" )
+				tkOopsExpected( x, "identifier for the symbol declared in this declaration" )
 			end if
 		end if
 
@@ -1046,7 +1052,7 @@ private function cDeclarator _
 
 	node = t
 
-	select case( tkGet( parse.x ) )
+	select case( tkGet( x ) )
 	'' ('[' ArrayElements ']')*
 	case TK_LBRACKET
 		'' Can't allow arrays on everything - currently, it's only
@@ -1056,7 +1062,7 @@ private function cDeclarator _
 		     DECL_FIELD, DECL_PARAM
 
 		case else
-			cOops( "TODO: arrays not supported here yet" )
+			tkOops( x, "TODO: arrays not supported here yet" )
 		end select
 
 		assert( node->array = NULL )
@@ -1065,9 +1071,9 @@ private function cDeclarator _
 		'' For each array dimension...
 		do
 			'' '['
-			cSkip( )
+			x += 1
 
-			var elements = hExpr( FALSE )
+			var elements = hExpr( x, FALSE )
 
 			'' Add new DIMENSION to the ARRAY:
 			'' lbound = 0, ubound = elements - 1
@@ -1078,14 +1084,15 @@ private function cDeclarator _
 						astNewCONST( 1, 0, TYPE_LONG ) ) ) )
 
 			'' ']'
-			cExpectSkip( TK_RBRACKET, "to close this array dimension declaration" )
+			tkExpect( x, TK_RBRACKET, "to close this array dimension declaration" )
+			x += 1
 
 			'' '['? (next dimension)
-		loop while( tkGet( parse.x ) = TK_LBRACKET )
+		loop while( tkGet( x ) = TK_LBRACKET )
 
 	'' '(' ParamList ')'
 	case TK_LPAREN
-		cSkip( )
+		x += 1
 
 		'' Parameters turn a vardecl/fielddecl into a procdecl,
 		'' unless they're for a procptr type.
@@ -1118,27 +1125,28 @@ private function cDeclarator _
 		end if
 
 		'' Just '(void)'?
-		if( (tkGet( parse.x ) = KW_VOID) and (tkGet( parse.x + 1 ) = TK_RPAREN) ) then
+		if( (tkGet( x ) = KW_VOID) and (tkGet( x + 1 ) = TK_RPAREN) ) then
 			'' VOID
-			cSkip( )
+			x += 1
 		'' Not just '()'?
-		elseif( tkGet( parse.x ) <> TK_RPAREN ) then
-			astAppend( node, cParamDeclList( ) )
+		elseif( tkGet( x ) <> TK_RPAREN ) then
+			astAppend( node, cParamDeclList( x ) )
 		end if
 
 		'' ')'
-		cExpectSkip( TK_RPAREN, "to close parameter list in function declaration" )
+		tkExpect( x, TK_RPAREN, "to close parameter list in function declaration" )
+		x += 1
 	end select
 
 	'' __ATTRIBUTE__((...))
 	var endgccattribs = 0
-	cGccAttributeList( endgccattribs )
+	cGccAttributeList( x, endgccattribs )
 
 	if( decl = DECL_PARAM ) then
 		'' ['=' Initializer]
-		if( cMatch( TK_EQ ) ) then
+		if( hMatch( x, TK_EQ ) ) then
 			assert( node->expr = NULL )
-			node->expr = hExpr( FALSE )
+			node->expr = hExpr( x, FALSE )
 		end if
 	end if
 
@@ -1180,6 +1188,7 @@ end function
 '' IdList = Declarator (',' Declarator)* [';']
 private function cIdList _
 	( _
+		byref x as integer, _
 		byval decl as integer, _
 		byval basedtype as integer, _
 		byval basesubtype as ASTNODE ptr, _
@@ -1191,9 +1200,9 @@ private function cIdList _
 
 	'' ... (',' ...)*
 	do
-		var begin = parse.x
+		var begin = x
 
-		astAppend( group, cDeclarator( 0, decl, basedtype, basesubtype, gccattribs, NULL, 0, 0 ) )
+		astAppend( group, cDeclarator( x, 0, decl, basedtype, basesubtype, gccattribs, NULL, 0, 0 ) )
 
 		'' The first declaration takes the comments from the base type
 		if( len( comment ) > 0 ) then
@@ -1202,7 +1211,7 @@ private function cIdList _
 		end if
 
 		'' Every declaration takes the comments on its declarator tokens
-		astAddComment( group->tail, tkCollectComments( begin, parse.x - 1 ) )
+		astAddComment( group->tail, tkCollectComments( begin, x - 1 ) )
 
 		'' Everything can have a comma and more identifiers,
 		'' except for parameters.
@@ -1211,12 +1220,13 @@ private function cIdList _
 		end if
 
 		'' ','?
-	loop while( cMatch( TK_COMMA ) )
+	loop while( hMatch( x, TK_COMMA ) )
 
 	'' Everything except parameters must end with a ';'
 	if( decl <> DECL_PARAM ) then
 		'' ';'
-		cExpectSkip( TK_SEMI, "to finish this declaration" )
+		tkExpect( x, TK_SEMI, "to finish this declaration" )
+		x += 1
 	end if
 
 	function = group
@@ -1235,126 +1245,131 @@ end function
 ''
 private function cMultDecl _
 	( _
+		byref x as integer, _
 		byval decl as integer, _
 		byval gccattribs as integer, _
 		byref comment as string _
 	) as ASTNODE ptr
 
-	var begin = parse.x
+	var begin = x
 
 	'' BaseType
 	dim as integer dtype
 	dim as ASTNODE ptr subtype
-	cBaseType( dtype, subtype, gccattribs, decl )
+	cBaseType( x, dtype, subtype, gccattribs, decl )
 
-	comment += tkCollectComments( begin, parse.x - 1 )
+	comment += tkCollectComments( begin, x - 1 )
 
 	'' IdList
-	function = cIdList( decl, dtype, subtype, gccattribs, comment )
+	function = cIdList( x, decl, dtype, subtype, gccattribs, comment )
 	astDelete( subtype )
 end function
 
-private function cToplevel( byval body as integer ) as ASTNODE ptr
+private function cToplevel _
+	( _
+		byref x as integer, _
+		byval body as integer _
+	) as ASTNODE ptr
+
 	var group = astNewGROUP( )
 
 	do
 		dim as ASTNODE ptr t
 
-		select case( tkGet( parse.x ) )
+		select case( tkGet( x ) )
 		case TK_EOF
 			exit do
 
 		case TK_PPINCLUDE
-			t = astNew( ASTCLASS_PPINCLUDE, tkGetText( parse.x ) )
-			astAddComment( t, tkCollectComments( parse.x, parse.x ) )
-			cSkip( )
+			t = astNew( ASTCLASS_PPINCLUDE, tkGetText( x ) )
+			astAddComment( t, tkCollectComments( x, x ) )
+			x += 1
 
 		case TK_PPDEFINE
-			t = tkGetAst( parse.x )
+			t = tkGetAst( x )
 
 			'' Did the PP mark this #define for removal? Then just
 			'' skip it (and its TK_BEGIN/END body) instead of
 			'' parsing it into an AST...
 			if( t->attrib and ASTATTRIB_REMOVE ) then
-				cSkip( )
+				x += 1
 
-				assert( tkGet( parse.x ) = TK_BEGIN )
-				cSkip( )
+				assert( tkGet( x ) = TK_BEGIN )
+				x += 1
 
-				while( tkGet( parse.x ) <> TK_END )
-					cSkip( )
+				while( tkGet( x ) <> TK_END )
+					x += 1
 				wend
 
-				assert( tkGet( parse.x ) = TK_END )
-				cSkip( )
+				assert( tkGet( x ) = TK_END )
+				x += 1
 
 				t = NULL
 				exit select
 			end if
 
 			t = astClone( t )
-			astAddComment( t, tkCollectComments( parse.x, parse.x ) )
-			cSkip( )
+			astAddComment( t, tkCollectComments( x, x ) )
+			x += 1
 
 			'' Macro body should still be enclosed in TK_BEGIN/END
 			assert( t->expr = NULL )
 
-			assert( tkGet( parse.x ) = TK_BEGIN )
-			cSkip( )
+			assert( tkGet( x ) = TK_BEGIN )
+			x += 1
 
 			dim as ASTNODE ptr expr
 
 			'' Macro body empty?
-			if( tkGet( parse.x ) = TK_END ) then
+			if( tkGet( x ) = TK_END ) then
 				expr = NULL
 			else
-				expr = hExpr( TRUE )
+				expr = hExpr( x, TRUE )
 
 				'' Must have reached the TK_END
-				if( tkGet( parse.x ) <> TK_END ) then
-					cOops( "couldn't parse #define body as expression" )
+				if( tkGet( x ) <> TK_END ) then
+					tkOops( x, "couldn't parse #define body as expression" )
 				end if
 			end if
 
-			assert( tkGet( parse.x ) = TK_END )
-			cSkip( )
+			assert( tkGet( x ) = TK_END )
+			x += 1
 
 			astDelete( t->expr )
 			t->expr = expr
 
 		case TK_PPUNDEF
-			t = astNew( ASTCLASS_PPUNDEF, tkGetText( parse.x ) )
-			astAddComment( t, tkCollectComments( parse.x, parse.x ) )
-			cSkip( )
+			t = astNew( ASTCLASS_PPUNDEF, tkGetText( x ) )
+			astAddComment( t, tkCollectComments( x, x ) )
+			x += 1
 
 		case TK_PPIF, TK_PPELSEIF
-			t = astNew( iif( tkGet( parse.x ) = TK_PPIF, _
+			t = astNew( iif( tkGet( x ) = TK_PPIF, _
 					ASTCLASS_PPIF, ASTCLASS_PPELSEIF ) )
-			t->expr = astClone( tkGetAst( parse.x ) )
-			astAddComment( t, tkCollectComments( parse.x, parse.x ) )
-			cSkip( )
+			t->expr = astClone( tkGetAst( x ) )
+			astAddComment( t, tkCollectComments( x, x ) )
+			x += 1
 
 		case TK_PPELSE, TK_PPENDIF
-			t = astNew( iif( tkGet( parse.x ) = TK_PPELSE, _
+			t = astNew( iif( tkGet( x ) = TK_PPELSE, _
 					ASTCLASS_PPELSE, ASTCLASS_PPENDIF ) )
-			astAddComment( t, tkCollectComments( parse.x, parse.x ) )
-			cSkip( )
+			astAddComment( t, tkCollectComments( x, x ) )
+			x += 1
 
 		case TK_DIVIDER
-			'' (ditto)
-			t = astNew( ASTCLASS_DIVIDER, tkGetText( parse.x ) )
-			astAddComment( t, tkCollectComments( parse.x, parse.x ) )
-			cSkip( )
+			t = astNew( ASTCLASS_DIVIDER, tkGetText( x ) )
+			astAddComment( t, tkCollectComments( x, x ) )
+			x += 1
 
 		'' TYPEDEF BaseType IdList ';'
 		'' TYPEDEF STRUCT|UNION|ENUM [Identifier] '{' StructBody '}' IdList ';'
 		case KW_TYPEDEF
 			if( body = BODY_ENUM ) then
-				t = cEnumConst( )
+				t = cEnumConst( x )
 				exit select
 			end if
 
-			var y = parse.x + 1
+			var y = x + 1
 
 			'' STRUCT|UNION|ENUM
 			select case( tkGet( y ) )
@@ -1368,12 +1383,12 @@ private function cToplevel( byval body as integer ) as ASTNODE ptr
 
 				'' '{'?
 				if( tkGet( y ) = TK_LBRACE ) then
-					t = cStructCompound( )
+					t = cStructCompound( x )
 				else
-					t = cTypedef( )
+					t = cTypedef( x )
 				end if
 			case else
-				t = cTypedef( )
+				t = cTypedef( x )
 			end select
 
 		'' STRUCT|UNION|ENUM [Identifier] ';'
@@ -1381,46 +1396,41 @@ private function cToplevel( byval body as integer ) as ASTNODE ptr
 		'' STRUCT|UNION|ENUM Identifier MultDecl
 		case KW_STRUCT, KW_UNION, KW_ENUM
 			if( body = BODY_ENUM ) then
-				t = cEnumConst( )
+				t = cEnumConst( x )
 				exit select
 			end if
 
 			'' (Identifier ';')?
-			if( (tkGet( parse.x + 1 ) = TK_ID) and _
-			    (tkGet( parse.x + 2 ) = TK_SEMI) ) then
+			if( (tkGet( x + 1 ) = TK_ID) and _
+			    (tkGet( x + 2 ) = TK_SEMI) ) then
 				var astclass = ASTCLASS_STRUCTFWD
-				select case( tkGet( parse.x ) )
+				select case( tkGet( x ) )
 				case KW_UNION
 					astclass = ASTCLASS_UNIONFWD
 				case KW_ENUM
 					astclass = ASTCLASS_ENUMFWD
 				case else
-					assert( tkGet( parse.x ) = KW_STRUCT )
+					assert( tkGet( x ) = KW_STRUCT )
 				end select
-				t = astNew( astclass, tkGetText( parse.x + 1 ) )
-				cSkip( )
-				cSkip( )
-				cSkip( )
-			elseif( (tkGet( parse.x + 1 ) = TK_LBRACE) or _
-			        ((tkGet( parse.x + 1 ) = TK_ID) and _
-			         (tkGet( parse.x + 2 ) = TK_LBRACE)) ) then
-				t = cStructCompound( )
+				t = astNew( astclass, tkGetText( x + 1 ) )
+				x += 3
+			elseif( (tkGet( x + 1 ) = TK_LBRACE) or _
+			        ((tkGet( x + 1 ) = TK_ID) and _
+			         (tkGet( x + 2 ) = TK_LBRACE)) ) then
+				t = cStructCompound( x )
 			else
-				if( body = BODY_STRUCT ) then
-					t = cMultDecl( DECL_FIELD, 0, "" )
-				else
-					t = cMultDecl( DECL_VAR, 0, "" )
-				end if
+				t = cMultDecl( x, iif( body = BODY_STRUCT, DECL_FIELD, DECL_VAR ), 0, "" )
 			end if
 
 		'' ';'
 		case TK_SEMI
 			if( body = BODY_ENUM ) then
-				t = cEnumConst( )
+				t = cEnumConst( x )
 				exit select
 			end if
 
-			cSkip( )
+			'' Just ignore single semi-colons
+			x += 1
 
 		'' '}'
 		case TK_RBRACE
@@ -1429,37 +1439,37 @@ private function cToplevel( byval body as integer ) as ASTNODE ptr
 				exit do
 			end select
 
-			cOopsExpected( "a toplevel declaration, not the end of a block" )
+			tkOopsExpected( x, "a toplevel declaration, not the end of a block" )
 
 		case else
 			select case( body )
 			case BODY_STRUCT
-				t = cMultDecl( DECL_FIELD, 0, "" )
+				t = cMultDecl( x, DECL_FIELD, 0, "" )
 			case BODY_ENUM
-				t = cEnumConst( )
+				t = cEnumConst( x )
 			case else
-				var begin = parse.x
+				var begin = x
 
 				'' Global variable/procedure declarations
 				''    GccAttributeList [EXTERN|STATIC] MultDecl
 				'' __ATTRIBUTE__((...))
 				var gccattribs = 0
-				cGccAttributeList( gccattribs )
+				cGccAttributeList( x, gccattribs )
 
 				'' [EXTERN|STATIC]
 				var decl = DECL_VAR
-				select case( tkGet( parse.x ) )
+				select case( tkGet( x ) )
 				case KW_EXTERN
 					decl = DECL_EXTERNVAR
-					cSkip( )
+					x += 1
 				case KW_STATIC
 					decl = DECL_STATICVAR
-					cSkip( )
+					x += 1
 				end select
 
-				var comment = tkCollectComments( begin, parse.x - 1 )
+				var comment = tkCollectComments( begin, x - 1 )
 
-				t = cMultDecl( decl, gccattribs, comment )
+				t = cMultDecl( x, decl, gccattribs, comment )
 			end select
 		end select
 
@@ -1470,6 +1480,5 @@ private function cToplevel( byval body as integer ) as ASTNODE ptr
 end function
 
 function cFile( ) as ASTNODE ptr
-	parse.x = 0
-	function = cToplevel( BODY_TOPLEVEL )
+	function = cToplevel( 0, BODY_TOPLEVEL )
 end function

@@ -571,7 +571,7 @@ private function ppExpression _
 			a->location = *tkGetLocation( definedx )
 
 		case else
-			tkOopsExpected( x, "number literal or '(...)' (atom expression)", NULL )
+			tkOopsExpected( x, "number literal or '(...)' (atom expression)" )
 		end select
 	end if
 
@@ -724,7 +724,7 @@ private function ppDirective( byval x as integer ) as integer
 		var exprbegin = x
 		x = ppSkipToEOL( x )
 		if( x = exprbegin ) then
-			tkOopsExpected( x, "#if condition", NULL )
+			tkOopsExpected( x, "#if condition" )
 		end if
 		tkInsert( x, TK_END )
 		x += 1
@@ -821,7 +821,7 @@ private function ppDirective( byval x as integer ) as integer
 	case TK_EOF
 
 	case else
-		tkOopsExpected( x, "EOL behind PP directive", NULL )
+		tkOopsExpected( x, "EOL behind PP directive" )
 	end select
 
 	function = x
@@ -893,7 +893,7 @@ private sub hMacroCallArgs _
 					exit do
 				end if
 			case TK_EOF
-				tkOopsExpected( x, "')' to close macro call argument list", NULL )
+				tkOopsExpected( x, "')' to close macro call argument list" )
 			end select
 			x += 1
 		loop
