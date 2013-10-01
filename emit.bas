@@ -205,24 +205,47 @@ private function hIdAndArray( byval n as ASTNODE ptr ) as string
 	function = s
 end function
 
-private function hCommaList( byval n as ASTNODE ptr ) as string
-	var s = "("
+private function hSeparatedList _
+	( _
+		byval n as ASTNODE ptr, _
+		byval separator as zstring ptr, _
+		byval need_parens as integer _
+	) as string
+
+	dim s as string
 
 	var count = 0
 	var child = n->head
 	while( child )
 		if( count > 0 ) then
-			s += ", "
+			s += *separator
 		end if
 
-		s += emitAst( child )
+		s += emitAst( child, need_parens )
 
 		count += 1
 		child = child->next
 	wend
 
-	function = s + ")"
+	function = s
 end function
+
+private function hParamList( byval n as ASTNODE ptr ) as string
+	function = "(" + hSeparatedList( n, ", ", FALSE ) + ")"
+end function
+
+private sub hEmitIndentedChildren( byval n as ASTNODE ptr )
+	emit.indent += 1
+	var i = n->head
+	while( i )
+		var s = emitAst( i )
+		if( len( s ) > 0 ) then
+			emitStmt( s )
+		end if
+		i = i->next
+	wend
+	emit.indent -= 1
+end sub
 
 function emitAst _
 	( _
@@ -248,28 +271,24 @@ function emitAst _
 		s = ""
 
 	case ASTCLASS_VERBLOCK
-		emitStmt( "version " + emitAst( n->expr ) )
-		emit.indent += 1
-		var child = n->head
-		while( child )
-			s = emitAst( child )
-			child = child->next
-		wend
-		s = ""
-		emit.indent -= 1
+		emitStmt( "version " + hSeparatedList( n->expr, ", ", FALSE ) )
+		hEmitIndentedChildren( n )
 		emitStmt( "endversion" )
 
-	case ASTCLASS_VERIF
-		emitStmt( "#if " + emitAst( n->expr ) )
-		emit.indent += 1
-		var child = n->head
-		while( child )
-			s = emitAst( child )
-			child = child->next
-		wend
+	case ASTCLASS_TARGETBLOCK
+		if( n->attrib and ASTATTRIB_DOS   ) then s += "dos, "
+		if( n->attrib and ASTATTRIB_LINUX ) then s += "linux, "
+		if( n->attrib and ASTATTRIB_WIN32 ) then s += "win32, "
+
+		'' Cut off ", " at the end
+		s = left( s, len( s ) - 2 )
+
+		emitStmt( "target " + s )
 		s = ""
-		emit.indent -= 1
-		emitStmt( "#endif" )
+
+		hEmitIndentedChildren( n )
+
+		emitStmt( "endtarget" )
 
 	case ASTCLASS_DIVIDER
 		if( (n->prev <> NULL) and _
@@ -292,14 +311,7 @@ function emitAst _
 
 	case ASTCLASS_SCOPEBLOCK
 		emitStmt( "scope" )
-		emit.indent += 1
-		var child = n->head
-		while( child )
-			emitStmt( emitAst( child ) )
-			child = child->next
-		wend
-		s = ""
-		emit.indent -= 1
+		hEmitIndentedChildren( n )
 		emitStmt( "end scope" )
 
 	case ASTCLASS_PPINCLUDE
@@ -309,7 +321,7 @@ function emitAst _
 		if( n->expr andalso (n->expr->class = ASTCLASS_SCOPEBLOCK) ) then
 			s += "#macro " + *n->text
 			if( n->head ) then
-				s += hCommaList( n )
+				s += hParamList( n )
 			end if
 			emitStmt( s, n->comment )
 			s = ""
@@ -322,7 +334,7 @@ function emitAst _
 		else
 			s += "#define " + *n->text
 			if( n->head ) then
-				s += hCommaList( n )
+				s += hParamList( n )
 			end if
 
 			if( n->expr ) then
@@ -352,19 +364,21 @@ function emitAst _
 				end if
 			end select
 		end if
-
 		if( len( s ) = 0 ) then
 			s = "#if " + emitAst( n->expr )
 		end if
-
 		emitStmt( s )
 		s = ""
 
+		hEmitIndentedChildren( n )
+
 	case ASTCLASS_PPELSEIF
 		emitStmt( "#elseif " + emitAst( n->expr ) )
+		hEmitIndentedChildren( n )
 
 	case ASTCLASS_PPELSE
 		emitStmt( "#else" )
+		hEmitIndentedChildren( n )
 
 	case ASTCLASS_PPENDIF
 		emitStmt( "#endif" )
@@ -459,7 +473,7 @@ function emitAst _
 			end if
 		end if
 
-		s += hCommaList( n )
+		s += hParamList( n )
 
 		'' Function result type
 		if( n->dtype <> TYPE_ANY ) then
@@ -491,7 +505,7 @@ function emitAst _
 		end if
 
 	case ASTCLASS_ARRAY
-		s += hCommaList( n )
+		s += hParamList( n )
 
 	case ASTCLASS_DIMENSION
 		s += emitAst( n->l )
@@ -601,9 +615,6 @@ function emitAst _
 			s = "asc( " + s + " )"
 		end if
 
-	case ASTCLASS_WILDCARD
-		s = "*"
-
 	case ASTCLASS_UOP
 		select case as const( n->op )
 		'case ASTOP_CLOGNOT
@@ -683,10 +694,7 @@ function emitAst _
 		wend
 
 	case ASTCLASS_CALL
-		s = *n->text + hCommaList( n )
-
-	case ASTCLASS_VERVAL
-		s = *n->text + "(" + emitAst( n->l ) + ")"
+		s = *n->text + hParamList( n )
 
 	case else
 		astDump( n )

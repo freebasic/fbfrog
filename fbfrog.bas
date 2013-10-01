@@ -145,7 +145,7 @@ private sub frogWorkFile _
 	( _
 		byval pre as FROGPRESET ptr, _
 		byval presetcode as ASTNODE ptr, _
-		byval version as ASTNODE ptr, _
+		byval targetversion as ASTNODE ptr, _
 		byval files as ASTNODE ptr, _
 		byval f as ASTNODE ptr _
 	)
@@ -251,7 +251,7 @@ private sub frogWorkFile _
 	end if
 	ppEvalEnd( )
 	ppRemoveEOLs( )
-	ppTurnCPPTokensIntoCIds( )
+	tkTurnCPPTokensIntoCIds( )
 
 	'' Parse C constructs
 	var ast = cFile( )
@@ -270,9 +270,10 @@ private sub frogWorkFile _
 	end if
 	astMergeDIVIDERs( ast )
 
-	'' Put file's AST into a VERBLOCK, if a version was given
-	if( version ) then
-		ast = astNewGROUP( astNewVERBLOCK( astClone( version ), NULL, ast ) )
+	'' Put file's AST into a VERBLOCK, if a targetversion was given,
+	'' in preparation for the astMergeFiles() call later
+	if( targetversion ) then
+		ast = astWrapFileInVerblock( ast, targetversion )
 	end if
 
 	f->expr = ast
@@ -291,7 +292,7 @@ end sub
 private function frogWorkVersion _
 	( _
 		byval pre as FROGPRESET ptr, _
-		byval version as ASTNODE ptr, _
+		byval targetversion as ASTNODE ptr, _
 		byval presetcode as ASTNODE ptr, _
 		byref presetfilename as string, _
 		byref presetprefix as string _
@@ -342,8 +343,8 @@ private function frogWorkVersion _
 
 	if( files->head = NULL ) then
 		if( len( presetfilename ) > 0 ) then
-			if( version ) then
-				oops( "no input files for version " + emitAst( version ) + " in " + presetfilename )
+			if( targetversion ) then
+				oops( "no input files for version " + emitAst( targetversion ) + " in " + presetfilename )
 			else
 				oops( "no input files for " + presetfilename )
 			end if
@@ -423,7 +424,7 @@ private function frogWorkVersion _
 
 			if( ((f->attrib and ASTATTRIB_MISSING) = 0) and (f->refcount <> 1) ) then
 				assert( f->mergeparent = NULL )
-				frogWorkFile( pre, presetcode, version, files, f )
+				frogWorkFile( pre, presetcode, targetversion, files, f )
 			end if
 
 			f = f->next
@@ -437,7 +438,7 @@ private function frogWorkVersion _
 		while( f )
 
 			if( ((f->attrib and ASTATTRIB_MISSING) = 0) and (f->refcount = 1) and (f->mergeparent = NULL) ) then
-				frogWorkFile( pre, presetcode, version, files, f )
+				frogWorkFile( pre, presetcode, targetversion, files, f )
 			end if
 
 			f = f->next
@@ -469,7 +470,7 @@ private function frogWorkVersion _
 		f = files->head
 		while( f )
 			if( (f->attrib and ASTATTRIB_MISSING) = 0 ) then
-				frogWorkFile( pre, presetcode, version, files, f )
+				frogWorkFile( pre, presetcode, targetversion, files, f )
 			end if
 			f = f->next
 		wend
@@ -485,42 +486,57 @@ private sub frogWorkPreset _
 		byref presetprefix as string _
 	)
 
-	var versions = astCollectVersions( pre->code )
-	dim as ASTNODE ptr files
+	dim as ASTNODE ptr files, versions, targetversions
+	dim as integer targets
 
-	'' Any versions specified?
-	var version = versions->head
-	if( version ) then
-		if( verbose ) then
-			print "versions:"
-			do
-				print "    " + emitAst( version )
-				version = version->next
-			loop while( version )
-			version = versions->head
-		end if
+	print "---------------------------------------------------------"
+	versions = astCollectVersions( pre->code )
+	targets = astCollectTargets( pre->code )
+	print "versions:"
+	astDump( versions, 1 )
+	print "targets:"
+	print "    " + bin( targets, 32 )
+
+	'' If no targets given, assume all
+	if( targets = 0 ) then
+		targets = ASTATTRIB__ALLTARGET
+		print "no targets given, assuming all:"
+		print "    " + bin( targets, 32 )
+	end if
+
+	targetversions = astCombineVersionsAndTargets( versions, targets )
+
+	'' Multiple versions specified?
+	if( targetversions->head <> targetversions->tail ) then
+		var targetversion = targetversions->head
 
 		'' For each version...
 		do
-			print "version: " + emitAst( version )
+			print "version: " + astDumpInline( targetversion )
 
 			'' Determine preset code for that version
-			var presetcode = astGet1VersionOnly( pre->code, version )
+			var presetcode = astGet1VersionAndTargetOnly( pre->code, targetversion )
 
 			'' Parse files for this version and combine them with files
 			'' from previous versions if possible
 			files = astMergeFiles( files, _
-				frogWorkVersion( pre, version, presetcode, presetfilename, presetprefix ) )
+				frogWorkVersion( pre, targetversion, presetcode, presetfilename, presetprefix ) )
 
 			astDelete( presetcode )
 
-			version = version->next
-		loop while( version )
+			targetversion = targetversion->next
+		loop while( targetversion )
 
-		astProcessVerblocksOnFiles( files, versions )
+		var versiondefine = "__" + ucase( pathStripExt( pathStrip( presetfilename ) ), 1 ) + "_VERSION__"
+
+		astProcessVerblocksOnFiles( files, versions, targets, versiondefine )
 	else
-		if( versions ) then
-			print "no version(s) specified, just doing a single pass"
+		if( verbose ) then
+			if( targetversions->head ) then
+				print "just a single version specified, doing a single pass"
+			else
+				print "no version(s) specified, just doing a single pass"
+			end if
 		end if
 		'' Just do a single pass, don't worry about version specifics or AST merging
 		files = frogWorkVersion( pre, NULL, pre->code, presetfilename, presetprefix )
@@ -541,6 +557,7 @@ private sub frogWorkPreset _
 
 	astDelete( files )
 	astDelete( versions )
+	astDelete( targetversions )
 
 end sub
 

@@ -52,6 +52,26 @@ Compiling:
 
 To do:
 
+- Add to top of binding:
+    - if versiondefine not #defined, use a default version
+    - complain if versiondefine #defined to unsupported value
+    - for __FB_<target>__ #defines we can ensure the header is only used on
+      systems that it supports
+
+- Add cast parsing support, in many cases we can "guess" that it's a cast
+    - if it's a built-in type:
+         (int)
+         (foo *)
+    - if it's a common typedef:
+         (int32_t)
+         (wchar_t)
+    - if inside #define, always lookup and compare id's against macro params
+    - must use cBaseType() and cDeclarator(), because it could be a function pointer cast etc.
+        -> add DECL_CAST which is a declarator but without a symbol id
+        -> do look ahead parsing? unless we're doing custom look ahead, try cExpression()
+           first, and if it fails or returns something that could be a type (e.g. ID atom),
+           then try to parse as cBaseType/cDeclarator
+
 - For #defines that can't be parsed & translated as simple expressions:
   REPLACE DEFINE Symbol [MacroParams] OldBody "NewBody"
   - "NewBody" is FB code in a C string, as the preset is lexed in C mode
@@ -68,10 +88,6 @@ To do:
   tk buffer, and then where the token came from...
 - Error context output should expand/align TABs to 8 spaces based on column position from BOL
   as it would happen in the source file
-- Stack of error context information, hints: for example the parser could
-  errPushHint( ERRHINT_* ) before parsing an expression, so if there is an error
-  while parsing the expression, the error report could contain the information
-  what the expression is for.
 - Comments given to a TK_ID that is a macro call and will be expanded should
   be given to first non-whitespace token from the expansion, for example:
         // foo

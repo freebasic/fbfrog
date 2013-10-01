@@ -1,10 +1,10 @@
 file "a.h"
 
-version ver(1)
+version 1
 	define A
 endversion
 
-version ver(2)
+version 2
 	undef A
 endversion
 

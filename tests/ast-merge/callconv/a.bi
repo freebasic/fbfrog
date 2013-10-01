@@ -1,7 +1,6 @@
-#if ver = 1
+#if __TEST_VERSION__ = 1
 	extern "Windows"
-#endif
-#if ver = 2
+#else
 	extern "C"
 #endif
 

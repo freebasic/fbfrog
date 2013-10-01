@@ -1,41 +1,50 @@
-static int i;
+static int common;
 
-#if MAJOR == 1
-	static int major1;
-#elif MAJOR == 2
-	static int major2;
-#elif MAJOR == 3
-	static int major3;
-#elif MAJOR == 4
-	static int major4;
-#elif MAJOR == 5
-	static int major5;
-#elif MAJOR == 6
-	static int major6;
+#if VER == 1
+	static int v1;
+	struct UDTv1 {
+		int fieldv1;
+	};
+#elif VER == 2
+	static int v2;
+	struct UDTv2 {
+		int fieldv2;
+	};
+#elif VER == 3
+	static int v3;
+	struct UDTv3 {
+		int fieldv3;
+	};
 #else
-	#error "unexpected MAJOR value"
+	#error "invalid VER value"
 #endif
 
-#if MINOR == 0
-	static int minor0;
-#elif MINOR == 1
-	static int minor1;
-#elif MINOR == 2
-	static int minor2;
-#elif MINOR == 3
-	static int minor3;
-#elif MINOR == 99
-	static int minor99;
-#else
-	#error "unexpected MINOR value"
+#if VER == 1 || VER == 2
+	static int v12;
+
+	struct UDTv12 {
+		int fieldv12;
+	};
+
+	struct UDTv12 {
+		#if VER == 1
+			int fieldv1;
+		#else
+			int fieldv2;
+		#endif
+	};
 #endif
 
-struct UDT {
-	#if MAJOR == 1
-		int fieldmajor1;
-	#elif MAJOR == 2
-		int fieldmajor2;
-	#else
-		int fieldmajor3456;
+struct UDTv123 {
+	int fieldv123;
+};
+
+struct UDTv123 {
+	#if VER == 1
+		int fieldv1;
+	#elif VER == 2
+		int fieldv2;
+	#elif VER == 3
+		int fieldv3;
 	#endif
 };

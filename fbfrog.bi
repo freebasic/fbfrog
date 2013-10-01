@@ -486,6 +486,7 @@ declare function tkCollectComments _
 		byval last as integer _
 	) as string
 declare sub tkRemoveAllOf( byval id as integer, byval text as zstring ptr )
+declare sub tkTurnCPPTokensIntoCIds( )
 declare sub tkReport _
 	( _
 		byval x as integer, _
@@ -620,7 +621,7 @@ enum
 	ASTCLASS_NOP = 0
 	ASTCLASS_GROUP
 	ASTCLASS_VERBLOCK
-	ASTCLASS_VERIF
+	ASTCLASS_TARGETBLOCK
 	ASTCLASS_DIVIDER
 	ASTCLASS_SCOPEBLOCK
 
@@ -665,14 +666,12 @@ enum
 	ASTCLASS_TEXT
 	ASTCLASS_STRING
 	ASTCLASS_CHAR
-	ASTCLASS_WILDCARD
 
 	ASTCLASS_UOP
 	ASTCLASS_BOP
 	ASTCLASS_IIF
 	ASTCLASS_PPMERGE
 	ASTCLASS_CALL
-	ASTCLASS_VERVAL
 
 	ASTCLASS_FROGFILE
 
@@ -690,6 +689,10 @@ enum
 	ASTATTRIB_REMOVE	= 1 shl 7
 	ASTATTRIB_MISSING	= 1 shl 8  '' FROGFILE: File missing/not found?
 	ASTATTRIB_REPORTED	= 1 shl 9  '' Used to mark #defines about which the CPP has already complained, so it can avoid duplicate error messages
+	ASTATTRIB_DOS		= 1 shl 10
+	ASTATTRIB_LINUX		= 1 shl 11
+	ASTATTRIB_WIN32		= 1 shl 12
+	ASTATTRIB__ALLTARGET	= ASTATTRIB_DOS or ASTATTRIB_LINUX or ASTATTRIB_WIN32
 end enum
 
 '' When changing, adjust astClone()
@@ -750,6 +753,11 @@ declare function astNew overload _
 		byval class_ as integer, _
 		byval text as zstring ptr _
 	) as ASTNODE ptr
+declare function astNew overload _
+	( _
+		byval class_ as integer, _
+		byval child as ASTNODE ptr _
+	) as ASTNODE ptr
 declare function astNewUOP _
 	( _
 		byval op as integer, _
@@ -768,12 +776,10 @@ declare function astNewIIF _
 		byval r as ASTNODE ptr _
 	) as ASTNODE ptr
 declare function astNewGROUP overload( ) as ASTNODE ptr
-declare function astNewGROUP overload( byval child as ASTNODE ptr ) as ASTNODE ptr
-declare function astNewVERBLOCK _
+declare function astNewGROUP overload _
 	( _
-		byval verexpr1 as ASTNODE ptr, _
-		byval verexpr2 as ASTNODE ptr, _
-		byval child as ASTNODE ptr _
+		byval child1 as ASTNODE ptr, _
+		byval child2 as ASTNODE ptr = NULL _
 	) as ASTNODE ptr
 declare function astNewDIMENSION _
 	( _
@@ -797,39 +803,31 @@ declare function astNewFROGFILE _
 declare sub astDelete( byval n as ASTNODE ptr )
 declare sub astPrepend( byval parent as ASTNODE ptr, byval n as ASTNODE ptr )
 declare sub astAppend( byval parent as ASTNODE ptr, byval n as ASTNODE ptr )
-declare sub astCloneAndAddAllChildrenOf( byval d as ASTNODE ptr, byval s as ASTNODE ptr )
-declare function astCollectVersions( byval context as ASTNODE ptr ) as ASTNODE ptr
-declare sub astAddVersionedChild( byval n as ASTNODE ptr, byval child as ASTNODE ptr )
-declare function astGet1VersionOnly _
+declare function astNewVERBLOCK _
+	( _
+		byval version1 as ASTNODE ptr, _
+		byval version2 as ASTNODE ptr, _
+		byval child as ASTNODE ptr _
+	) as ASTNODE ptr
+declare function astCollectVersions( byval code as ASTNODE ptr ) as ASTNODE ptr
+declare function astCollectTargets( byval code as ASTNODE ptr ) as integer
+declare function astCombineVersionsAndTargets _
+	( _
+		byval versions as ASTNODE ptr, _
+		byval targets as integer _
+	) as ASTNODE ptr
+declare function astGet1VersionAndTargetOnly _
 	( _
 		byval code as ASTNODE ptr, _
-		byval matchversion as ASTNODE ptr _
+		byval version as ASTNODE ptr _
 	) as ASTNODE ptr
 declare sub astProcessVerblocksOnFiles _
 	( _
 		byval files as ASTNODE ptr, _
-		byval versions as ASTNODE ptr _
+		byval versions as ASTNODE ptr, _
+		byval targets as integer, _
+		byval versiondefine as zstring ptr _
 	)
-declare function astIsChildOf _
-	( _
-		byval parent as ASTNODE ptr, _
-		byval lookfor as ASTNODE ptr _
-	) as integer
-declare sub astAddChildBefore _
-	( _
-		byval parent as ASTNODE ptr, _
-		byval n as ASTNODE ptr, _
-		byval ref as ASTNODE ptr _
-	)
-declare function astReplaceChild _
-	( _
-		byval parent as ASTNODE ptr, _
-		byval a as ASTNODE ptr, _
-		byval b as ASTNODE ptr _
-	) as ASTNODE ptr
-declare sub astRemoveChild( byval parent as ASTNODE ptr, byval a as ASTNODE ptr )
-declare sub astSetText( byval n as ASTNODE ptr, byval text as zstring ptr )
-declare sub astRemoveText( byval n as ASTNODE ptr )
 declare sub astSetType _
 	( _
 		byval n as ASTNODE ptr, _
@@ -838,14 +836,17 @@ declare sub astSetType _
 	)
 declare sub astSetComment( byval n as ASTNODE ptr, byval comment as zstring ptr )
 declare sub astAddComment( byval n as ASTNODE ptr, byval comment as zstring ptr )
-declare function astCloneNode( byval n as ASTNODE ptr ) as ASTNODE ptr
 declare function astClone( byval n as ASTNODE ptr ) as ASTNODE ptr
-declare function astIsEqualDecl _
+enum
+	ASTEQ_IGNOREHIDDENCALLCONV = 0
+	ASTEQ_IGNOREFIELDS
+	ASTEQ_IGNORETARGET
+end enum
+declare function astIsEqual _
 	( _
 		byval a as ASTNODE ptr, _
 		byval b as ASTNODE ptr, _
-		byval ignore_fields as integer = FALSE, _
-		byval ignore_hiddencallconv as integer = FALSE _
+		byval options as integer = 0 _
 	) as integer
 declare function astOpsC2FB( byval n as ASTNODE ptr ) as ASTNODE ptr
 declare function astFold _
@@ -876,10 +877,10 @@ declare sub astFixArrayParams( byval n as ASTNODE ptr )
 declare sub astFixAnonUDTs( byval n as ASTNODE ptr )
 declare sub astRemoveRedundantTypedefs( byval n as ASTNODE ptr )
 declare sub astMergeDIVIDERs( byval n as ASTNODE ptr )
-declare function astMergeVerBlocks _
+declare function astWrapFileInVerblock _
 	( _
-		byval a as ASTNODE ptr, _
-		byval b as ASTNODE ptr _
+		byval code as ASTNODE ptr, _
+		byval version as ASTNODE ptr _
 	) as ASTNODE ptr
 declare function astMergeFiles _
 	( _
@@ -940,7 +941,6 @@ declare sub ppPreDefine overload( byval id as zstring ptr )
 declare sub ppEval( )
 declare sub ppParseIfExprOnly( byval do_fold as integer )
 declare sub ppRemoveEOLs( )
-declare sub ppTurnCPPTokensIntoCIds( )
 declare function cFile( ) as ASTNODE ptr
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''

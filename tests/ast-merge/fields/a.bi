@@ -4,10 +4,9 @@ type UDT
 end type
 type UDT
 	field1 as long
-	#if ver = 1
+	#if __TEST_VERSION__ = 1
 		field2 as long
-	#endif
-	#if ver = 2
+	#else
 		field3 as long
 	#endif
 	field4 as long

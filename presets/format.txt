@@ -55,38 +55,58 @@ Input files
 Versions
 --------
 
-  version <spec>
-    <version-specific code...>
+  version NumberLiteral|StringLiteral
+    <version-specific preset statements...>
   endversion
 
     Used to tell fbfrog about multiple versions of a binding. fbfrog will
     parse input files registered for each version, do preprocessing with
     the symbols registered for each version, and combine the resulting
     declarations into a single binding.
-    This can be used to handle different versions of a library, and also
-    Win32/Linux/DOS versions of the same header (in case the header has
-    system-specific elements).
 
-    For example:
-        version FOO                  ->    #ifdef FOO
-        version FOO.BAR              ->    #if defined(FOO) and defined(BAR)
-        version FOO(1)               ->    #if FOO = 1
-        version FOO(2)               ->    #if FOO = 2
-        version FOO("1.0")           ->    #if FOO = "1.0"
-        version FOO("1.2")           ->    #if FOO = "1.2"
-        version MAJOR(1).MINOR(1)    ->    #if MAJOR = 1 and MINOR = 1
-        version __FB_WIN32__         ->    #ifdef __FB_WIN32__
+    This should be used to handle different versions of a library, for example:
 
-    How to use:
-        version __MYLIB_VERSION__(1)
-            <define/undef/etc. for mylib version 1>
-        endversion
-        version *.__FB_WIN32__
-            <add win32-specific statements for all versions, effectively creating win32-specific versions>
-        end version
-        version *.__FB_LINUX__
-            <add win32-specific statements for all versions, effectively creating win32-specific versions>
-        end version
+        file "common-to-all-versions.h"
+        version 1
+            define ONLY_DEFINED_FOR_V1
+        version 2
+            file "header-preset-in-v2-only.h"
+        version 3
+            file "header-preset-in-v3-only.h"
+
+    fbfrog will try to combine declarations common to all versions, and put
+    other declarations (that exist in some versions only, but not all) inside
+    #if checks such as <#if __MYLIB_VERSION__ = 1>, which allows the binding's
+    user to select the API version by #defining __MYLIB_VERSION__ as wanted.
+
+    Version blocks can be used to represent the original library version
+    numbers, if wanted:
+        version "1.0.0"
+        version "1.0.1"
+        version "1.1.0"
+        version "1.2.0"
+        version "2.0.0"
+    or just API versions (which may be good enough, depending on the library):
+        version 1
+        version 2
+    or perhaps:
+        version 10
+        version 11
+        version 12
+        version 20
+    or other arbitrary strings/values:
+        version "new"
+        version "old"
+        version "1"
+        version "1-static"
+        version "1-dll"
+
+  target dos|linux|win32
+    <target-specific preset statements...>
+  endtarget
+
+    Similar to version blocks, but for target system specifics.
+
 
 The rest
 --------
