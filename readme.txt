@@ -58,20 +58,6 @@ To do:
     - for __FB_<target>__ #defines we can ensure the header is only used on
       systems that it supports
 
-- Add cast parsing support, in many cases we can "guess" that it's a cast
-    - if it's a built-in type:
-         (int)
-         (foo *)
-    - if it's a common typedef:
-         (int32_t)
-         (wchar_t)
-    - if inside #define, always lookup and compare id's against macro params
-    - must use cBaseType() and cDeclarator(), because it could be a function pointer cast etc.
-        -> add DECL_CAST which is a declarator but without a symbol id
-        -> do look ahead parsing? unless we're doing custom look ahead, try cExpression()
-           first, and if it fails or returns something that could be a type (e.g. ID atom),
-           then try to parse as cBaseType/cDeclarator
-
 - For #defines that can't be parsed & translated as simple expressions:
   REPLACE DEFINE Symbol [MacroParams] OldBody "NewBody"
   - "NewBody" is FB code in a C string, as the preset is lexed in C mode

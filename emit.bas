@@ -632,6 +632,30 @@ function emitAst _
 		case ASTOP_DEREF     : s = "*"    + emitAst( n->l, TRUE )
 		case ASTOP_STRINGIFY : s = "#"    + emitAst( n->l ) : need_parens = FALSE
 		case ASTOP_SIZEOF    : s = "sizeof( " + emitAst( n->l ) + " )" : need_parens = FALSE
+		case ASTOP_CAST
+			select case( n->dtype )
+			case TYPE_BYTE     : s =    "cbyte("
+			case TYPE_UBYTE    : s =   "cubyte("
+			case TYPE_SHORT    : s =   "cshort("
+			case TYPE_USHORT   : s =  "cushort("
+			case TYPE_LONG     : s =     "clng("
+			case TYPE_ULONG    : s =    "culng("
+			case TYPE_INTEGER  : s =     "cint("
+			case TYPE_UINTEGER : s =    "cuint("
+			case TYPE_LONGINT  : s =  "clngint("
+			case TYPE_ULONGINT : s = "culngint("
+			case else
+				if( typeGetPtrCount( n->dtype ) > 0 ) then
+					s = "cptr("
+				else
+					s = "cast("
+				end if
+				s += emitType( n->dtype, n->subtype ) + ", "
+			end select
+
+			s += emitAst( n->l ) + ")"
+			need_parens = FALSE
+
 		case else
 			assert( FALSE )
 		end select

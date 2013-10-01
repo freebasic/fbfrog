@@ -1504,6 +1504,8 @@ private function astFoldConsts( byval n as ASTNODE ptr ) as ASTNODE ptr
 
 	select case( n->class )
 	case ASTCLASS_UOP
+		if( n->op = ASTOP_CAST ) then exit select
+
 		if( (n->l->class = ASTCLASS_CONST) and _
 		    (not typeIsFloat( n->l->dtype )) ) then
 			var v1 = n->l->vali
@@ -3123,7 +3125,7 @@ function astDumpOne( byval n as ASTNODE ptr ) as string
 		s += " " + tkDumpBasic( n->tk, n->text )
 
 	case ASTCLASS_UOP, ASTCLASS_BOP
-		static as zstring * 16 ops(ASTOP_CLOGOR to ASTOP_SIZEOF) = _
+		static as zstring * 16 ops(ASTOP_CLOGOR to ASTOP_CAST) = _
 		{ _
 			"c ||"		, _ '' ASTOP_CLOGOR
 			"c &&"		, _ '' ASTOP_CLOGAND
@@ -3164,7 +3166,8 @@ function astDumpOne( byval n as ASTNODE ptr ) as string
 			"@"		, _ '' ASTOP_ADDROF
 			"deref"		, _ '' ASTOP_DEREF
 			"#"		, _ '' ASTOP_STRINGIFY
-			"sizeof"	  _ '' ASTOP_SIZEOF
+			"sizeof"	, _ '' ASTOP_SIZEOF
+			"cast"		  _ '' ASTOP_CAST
 		}
 
 		s += " " + ops(n->op)

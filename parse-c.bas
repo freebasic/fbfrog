@@ -14,6 +14,8 @@ enum
 	DECL_FIELD
 	DECL_PARAM
 	DECL_TYPEDEF
+	DECL_CAST
+	DECL__COUNT
 end enum
 
 declare function cIdList _
@@ -114,7 +116,8 @@ end function
 private function cExpression _
 	( _
 		byref x as integer, _
-		byval level as integer _
+		byval level as integer, _
+		byval macro as ASTNODE ptr _
 	) as ASTNODE ptr
 
 	'' Unary prefix operators
@@ -132,21 +135,80 @@ private function cExpression _
 	dim as ASTNODE ptr a
 	if( op >= 0 ) then
 		x += 1
-		a = astNewUOP( op, cExpression( x, cprecedence(op) ) )
+		a = astNewUOP( op, cExpression( x, cprecedence(op), macro ) )
 	else
 		'' Atoms
 		select case( tkGet( x ) )
-		'' '(' Expression ')'
+
+		''     '(' Expression ')'
+		'' or: '(' DataType ')' Expression
 		case TK_LPAREN
 			'' '('
 			x += 1
 
-			'' Expression
-			a = cExpression( x, 0 )
+			''
+			'' Try to disambiguate between DataType and Expression,
+			'' even without being a full C compiler, good guesses can be made.
+			''
+			'' If it starts with a data type keyword, and isn't inside
+			'' a macro where that's a macro parameter, then it must be
+			'' a data type, because it couldn't appear in an expression.
+			'' (#defines should already have been expanded)
+			''
+			'' If there's just an identifier then it could be a typedef
+			'' but we can't be sure. Finding out whether it is a typedef
+			'' would require checking all previous declarations in this
+			'' file and in #includes, that's not possible currently
+			'' because #includes aren't always merged in.
+			''
+			var is_cast = FALSE
 
-			'' ')'
-			tkExpect( x, TK_RPAREN, "for '(...)' parenthesized expression" )
-			x += 1
+			select case( tkGet( x ) )
+			case KW___CDECL, KW___STDCALL, KW___ATTRIBUTE__, _
+			     KW_SIGNED, KW_UNSIGNED, KW_CONST, _
+			     KW_SHORT, KW_LONG, _
+			     KW_ENUM, KW_STRUCT, KW_UNION, _
+			     KW_VOID, KW_CHAR, KW_FLOAT, KW_DOUBLE, KW_INT
+				if( macro ) then
+					is_cast = (astLookupMacroParam( macro, tkGetIdOrKw( x ) ) < 0)
+				else
+					is_cast = TRUE
+				end if
+			end select
+
+			if( is_cast ) then
+				'' BaseType Declarator
+				'' (parsing just the base data type isn't enough, because it
+				'' could be a function pointer cast with parameter list etc.)
+				a = cMultDecl( x, DECL_CAST, 0, "" )
+
+				'' cMultDecl()/cIdList() will have built up a GROUP,
+				'' for DECL_CAST there should be 1 child only, extract it.
+				assert( a->class = ASTCLASS_GROUP )
+				assert( a->head )
+				assert( a->head = a->tail )
+				var tmp = astClone( a->head )
+				astDelete( a )
+				a = tmp
+
+				'' For DECL_CAST, cDeclarator() should build up the CAST UOP
+				assert( a->class = ASTCLASS_UOP )
+				assert( a->op = ASTOP_CAST )
+
+				'' ')'
+				tkExpect( x, TK_RPAREN, "to close '(...)' type cast" )
+				x += 1
+
+				'' Expression
+				a->l = cExpression( x, 0, macro )
+			else
+				'' Expression
+				a = cExpression( x, 0, macro )
+
+				'' ')'
+				tkExpect( x, TK_RPAREN, "to close '(...)' parenthesized expression" )
+				x += 1
+			end if
 
 		case TK_OCTNUM, TK_DECNUM, TK_HEXNUM, TK_DECFLOAT
 			a = hNumberLiteral( x )
@@ -183,7 +245,7 @@ private function cExpression _
 				if( tkGet( x ) <> TK_RPAREN ) then
 					'' Expression (',' Expression)*
 					do
-						astAppend( a, cExpression( x, 0 ) )
+						astAppend( a, cExpression( x, 0, macro ) )
 
 						'' ','?
 					loop while( hMatch( x, TK_COMMA ) )
@@ -224,7 +286,7 @@ private function cExpression _
 			'' Statements = Statement*
 			while( tkGet( x ) <> TK_RBRACE )
 				'' Statement = Expression ';'
-				astAppend( a, cExpression( x, 0 ) )
+				astAppend( a, cExpression( x, 0, macro ) )
 				tkExpect( x, TK_SEMI, "to terminate statement" )
 				x += 1
 			wend
@@ -281,7 +343,7 @@ private function cExpression _
 		x += 1
 
 		'' rhs
-		var b = cExpression( x, oplevel )
+		var b = cExpression( x, oplevel, macro )
 
 		'' Handle ?: special case
 		if( op = ASTOP_IIF ) then
@@ -289,7 +351,7 @@ private function cExpression _
 			tkExpect( x, TK_COLON, "for a?b:c iif operator" )
 			x += 1
 
-			var c = cExpression( x, oplevel )
+			var c = cExpression( x, oplevel, macro )
 
 			a = astNewIIF( a, b, c )
 		else
@@ -310,10 +372,11 @@ end function
 private function hExpr _
 	( _
 		byref x as integer, _
-		byval is_bool_context as integer _
+		byval is_bool_context as integer, _
+		byval macro as ASTNODE ptr _
 	) as ASTNODE ptr
 
-	var expr = cExpression( x, 0 )
+	var expr = cExpression( x, 0, macro )
 
 	function = astFold( astOpsC2FB( expr ), NULL, FALSE, is_bool_context )
 end function
@@ -423,7 +486,7 @@ private function cEnumConst( byref x as integer ) as ASTNODE ptr
 	'' '='?
 	if( hMatch( x, TK_EQ ) ) then
 		'' Expression
-		n->expr = hExpr( x, FALSE )
+		n->expr = hExpr( x, FALSE, NULL )
 	end if
 
 	'' (',' | '}')
@@ -582,7 +645,7 @@ private sub cBaseType _
 		'' __ATTRIBUTE__((...))
 		cGccAttributeList( x, gccattribs )
 
-		select case as const( tkGet( x ) )
+		select case( tkGet( x ) )
 		case KW_SIGNED
 			if( unsignedmods > 0 ) then
 				tkOops( x, "mixed SIGNED with previous UNSIGNED modifier" )
@@ -622,13 +685,13 @@ private sub cBaseType _
 				exit do
 			end if
 
-			select case as const( tkGet( x ) )
+			select case( tkGet( x ) )
 			case KW_ENUM, KW_STRUCT, KW_UNION
 				'' {ENUM|STRUCT|UNION}
 				x += 1
 
 				'' Identifier
-				tkExpect( x, TK_ID, "to treat this as data type as in 'enum|struct|union foo'" )
+				tkExpect( x, TK_ID, ", the tag name as in 'struct|union|enum TAGNAME'" )
 				basetypex = x
 
 			case TK_ID
@@ -755,7 +818,9 @@ private sub cBaseType _
 			dtype = TYPE_LONG
 		else
 			'' No modifiers and no explicit "int" either
-			tkOopsExpected( x, "a data type at the beginning of this declaration" )
+			tkOopsExpected( x, iif( decl = DECL_CAST, _
+					@"a data type in this '(...)' type cast", _
+					@"a data type at the beginning of this declaration" ) )
 		end if
 
 	end select
@@ -1013,38 +1078,37 @@ private function cDeclarator _
 		x += 1
 	else
 		'' [Identifier]
+		'' An identifier must exist, except for parameters/casts, and
+		'' in fact for casts there mustn't be an id.
 		dim as string id
-		if( tkGet( x ) = TK_ID ) then
-			id = *tkGetText( x )
-			x += 1
-		else
-			'' An identifier must exist, except for parameters
-			if( decl <> DECL_PARAM ) then
-				tkOopsExpected( x, "identifier for the symbol declared in this declaration" )
+		if( decl <> DECL_CAST ) then
+			if( tkGet( x ) = TK_ID ) then
+				id = *tkGetText( x )
+				x += 1
+			else
+				if( decl <> DECL_PARAM ) then
+					tkOopsExpected( x, "identifier for the symbol declared in this declaration" )
+				end if
 			end if
 		end if
 
-		dim as integer astclass
-		select case( decl )
-		case DECL_VAR, DECL_EXTERNVAR, DECL_STATICVAR
-			astclass = ASTCLASS_VAR
-		case DECL_FIELD
-			astclass = ASTCLASS_FIELD
-		case DECL_PARAM
-			astclass = ASTCLASS_PARAM
-		case DECL_TYPEDEF
-			astclass = ASTCLASS_TYPEDEF
-		case else
-			assert( FALSE )
-		end select
+		static as integer decl_to_astclass(0 to DECL__COUNT-1) = _
+		{ _
+			ASTCLASS_VAR    , _ '' DECL_VAR
+			ASTCLASS_VAR    , _ '' DECL_EXTERNVAR
+			ASTCLASS_VAR    , _ '' DECL_STATICVAR
+			ASTCLASS_FIELD  , _ '' DECL_FIELD
+			ASTCLASS_PARAM  , _ '' DECL_PARAM
+			ASTCLASS_TYPEDEF, _ '' DECL_TYPEDEF
+			ASTCLASS_UOP      _ '' DECL_CAST
+		}
 
-		t = astNew( astclass, id )
+		t = astNew( decl_to_astclass(decl), id )
 
 		select case( decl )
-		case DECL_EXTERNVAR
-			t->attrib or= ASTATTRIB_EXTERN
-		case DECL_STATICVAR
-			t->attrib or= ASTATTRIB_PRIVATE
+		case DECL_EXTERNVAR : t->attrib or= ASTATTRIB_EXTERN
+		case DECL_STATICVAR : t->attrib or= ASTATTRIB_PRIVATE
+		case DECL_CAST      : t->op = ASTOP_CAST : assert( t->class = ASTCLASS_UOP )
 		end select
 
 		astSetType( t, dtype, basesubtype )
@@ -1073,7 +1137,7 @@ private function cDeclarator _
 			'' '['
 			x += 1
 
-			var elements = hExpr( x, FALSE )
+			var elements = hExpr( x, FALSE, NULL )
 
 			'' Add new DIMENSION to the ARRAY:
 			'' lbound = 0, ubound = elements - 1
@@ -1146,7 +1210,7 @@ private function cDeclarator _
 		'' ['=' Initializer]
 		if( hMatch( x, TK_EQ ) ) then
 			assert( node->expr = NULL )
-			node->expr = hExpr( x, FALSE )
+			node->expr = hExpr( x, FALSE, NULL )
 		end if
 	end if
 
@@ -1214,20 +1278,23 @@ private function cIdList _
 		astAddComment( group->tail, tkCollectComments( begin, x - 1 ) )
 
 		'' Everything can have a comma and more identifiers,
-		'' except for parameters.
-		if( decl = DECL_PARAM ) then
+		'' except for parameters/casts.
+		select case( decl )
+		case DECL_PARAM, DECL_CAST
 			exit do
-		end if
+		end select
 
 		'' ','?
 	loop while( hMatch( x, TK_COMMA ) )
 
-	'' Everything except parameters must end with a ';'
-	if( decl <> DECL_PARAM ) then
+	'' Everything except parameters/casts must end with a ';'
+	select case( decl )
+	case DECL_PARAM, DECL_CAST
+	case else
 		'' ';'
 		tkExpect( x, TK_SEMI, "to finish this declaration" )
 		x += 1
-	end if
+	end select
 
 	function = group
 end function
@@ -1324,7 +1391,7 @@ private function cToplevel _
 			if( tkGet( x ) = TK_END ) then
 				expr = NULL
 			else
-				expr = hExpr( x, TRUE )
+				expr = hExpr( x, TRUE, t )
 
 				'' Must have reached the TK_END
 				if( tkGet( x ) <> TK_END ) then
