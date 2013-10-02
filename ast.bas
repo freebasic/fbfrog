@@ -426,8 +426,10 @@ private sub astCloneAppendChildren( byval d as ASTNODE ptr, byval s as ASTNODE p
 	wend
 end sub
 
-private sub astRemove( byval parent as ASTNODE ptr, byval a as ASTNODE ptr )
+private function astRemove( byval parent as ASTNODE ptr, byval a as ASTNODE ptr ) as ASTNODE ptr
 	assert( astIsChildOf( parent, a ) )
+
+	function = a->next
 
 	if( a->prev ) then
 		a->prev->next = a->next
@@ -444,13 +446,23 @@ private sub astRemove( byval parent as ASTNODE ptr, byval a as ASTNODE ptr )
 	end if
 
 	astDelete( a )
-end sub
+end function
 
 private sub astRemoveChildren( byval parent as ASTNODE ptr )
 	while( parent->head )
 		astRemove( parent, parent->head )
 	wend
 end sub
+
+private function astReplace _
+	( _
+		byval parent as ASTNODE ptr, _
+		byval old as ASTNODE ptr, _
+		byval n as ASTNODE ptr _
+	) as ASTNODE ptr
+	astInsert( parent, n, old )
+	function = astRemove( parent, old )
+end function
 
 private sub astSetText( byval n as ASTNODE ptr, byval text as zstring ptr )
 	deallocate( n->text )
@@ -974,8 +986,7 @@ private sub hSimplifyVerblocks _
 			''     <...>
 			if( astIsEqual( i->expr, versions ) ) then
 				'' Remove the block but preserve its children
-				astInsert( code, astBuildGROUPFromChildren( i ), i )
-				astRemove( code, i )
+				astReplace( code, i, astBuildGROUPFromChildren( i ) )
 			end if
 		end if
 
@@ -1014,9 +1025,7 @@ private sub hSolveOutRedundantNestedVerblocks _
 				'' Are all the parent's versions covered?
 				if( astGroupContainsAllChildrenOf( i->expr, parentversions ) ) then
 					'' Remove this verblock, preserve only its children
-					astInsert( code, astBuildGROUPFromChildren( i ), i->next )
-					nxt = i->next
-					astRemove( code, i )
+					astReplace( code, i, astBuildGROUPFromChildren( i ) )
 				end if
 			end if
 		else
@@ -1047,9 +1056,7 @@ private sub hSolveOutRedundantNestedTargetblocks _
 				'' Are all the parent's targets covered?
 				if( (i->attrib and parenttargets) = parenttargets ) then
 					'' Remove this targetblock, preserve only its children
-					astInsert( code, astBuildGROUPFromChildren( i ), i->next )
-					nxt = i->next
-					astRemove( code, i )
+					astReplace( code, i, astBuildGROUPFromChildren( i ) )
 				end if
 			end if
 		else
