@@ -91,6 +91,9 @@ enum E {
 	A = { },
 	A = { 1 },
 	A = { 1, },
+
+	// C UOP nested inside scope block
+	A = { !a },
 };
 
 #define A(x) "a" "b"

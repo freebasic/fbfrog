@@ -655,7 +655,6 @@ enum
 	ASTCLASS_PROC
 	ASTCLASS_PARAM
 	ASTCLASS_ARRAY
-	ASTCLASS_DIMENSION
 	ASTCLASS_EXTERNBLOCKBEGIN
 	ASTCLASS_EXTERNBLOCKEND
 
@@ -674,6 +673,7 @@ enum
 	ASTCLASS_PPMERGE
 	ASTCLASS_CALL
 	ASTCLASS_STRUCTINIT
+	ASTCLASS_DIMENSION
 
 	ASTCLASS_FROGFILE
 
@@ -722,6 +722,7 @@ type ASTNODE_
 	expr		as ASTNODE ptr
 
 	'' Left/right operands for UOPs/BOPs
+	'' lbound/ubound for DIMENSIONs
 	l		as ASTNODE ptr
 	r		as ASTNODE ptr
 
@@ -746,6 +747,9 @@ type ASTNODE_
 	tail		as ASTNODE ptr
 	next		as ASTNODE ptr
 	prev		as ASTNODE ptr
+
+	'' expr/l/r should be used for expression trees,
+	'' the child list for statement trees
 end type
 
 declare sub astPrintStats( )
@@ -858,6 +862,7 @@ declare function astFold _
 		byval fold_unknowns as integer, _
 		byval is_bool_context as integer _
 	) as ASTNODE ptr
+declare sub astCleanUpExpressions( byval code as ASTNODE ptr )
 declare function astLookupMacroParam _
 	( _
 		byval macro as ASTNODE ptr, _

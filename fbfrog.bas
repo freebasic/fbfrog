@@ -261,6 +261,9 @@ private sub frogWorkFile _
 	''
 	'' Work on the AST
 	''
+	if( (pre->options and PRESETOPT_NOPPFOLD) = 0 ) then
+		astCleanUpExpressions( ast )
+	end if
 	'astRemoveParamNames( ast )
 	astFixArrayParams( ast )
 	astFixAnonUDTs( ast )

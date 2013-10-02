@@ -85,6 +85,7 @@ enum E
 	A = ()
 	A = (1)
 	A = (1)
+	A = (-(a = 0))
 end enum
 
 #define A(x) ("a" + "b")

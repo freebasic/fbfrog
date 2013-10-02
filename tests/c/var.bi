@@ -29,17 +29,17 @@ extern a as long ptr ptr ptr ptr
 extern c as long ptr
 
 dim shared __arrays as long
-dim shared a(0 to 1 - 1) as long
-dim shared a(0 to 10 - 1) as long
-dim shared a(0 to 2 - 1, 0 to 2 - 1) as long
-dim shared a(0 to 2 - 1, 0 to 2 - 1, 0 to 2 - 1) as long
-dim shared a(0 to 2 - 1, 0 to 3 - 1, 0 to 4 - 1, 0 to 5 - 1, 0 to 6 - 1) as long
-dim shared p(0 to 4 - 1) as sub()
-dim shared p(0 to 2 - 1, 0 to 3 - 1) as sub()
-extern     a(0 to 10 - 1) as long
-dim shared a(0 to 10 - 1) as long
-extern a(0 to 10 - 1) as long
-dim shared a(0 to 41 - 1) as long
+dim shared a(0 to 0) as long
+dim shared a(0 to 9) as long
+dim shared a(0 to 1, 0 to 1) as long
+dim shared a(0 to 1, 0 to 1, 0 to 1) as long
+dim shared a(0 to 1, 0 to 2, 0 to 3, 0 to 4, 0 to 5) as long
+dim shared p(0 to 3) as sub()
+dim shared p(0 to 1, 0 to 2) as sub()
+extern     a(0 to 9) as long
+dim shared a(0 to 9) as long
+extern a(0 to 9) as long
+dim shared a(0 to 40) as long
 
 dim shared __various_procptr_vars as long
 extern a as sub()

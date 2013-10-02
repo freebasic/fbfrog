@@ -455,18 +455,6 @@ private function cExpression _
 	function = a
 end function
 
-private function hExpr _
-	( _
-		byref x as integer, _
-		byval is_bool_context as integer, _
-		byval macro as ASTNODE ptr _
-	) as ASTNODE ptr
-
-	var expr = cExpression( x, 0, macro )
-
-	function = astFold( astOpsC2FB( expr ), NULL, FALSE, is_bool_context )
-end function
-
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 private sub hCdeclAttribute( byref x as integer, byref gccattribs as integer )
@@ -572,7 +560,7 @@ private function cEnumConst( byref x as integer ) as ASTNODE ptr
 	'' '='?
 	if( hMatch( x, TK_EQ ) ) then
 		'' Expression
-		n->expr = hExpr( x, FALSE, NULL )
+		n->expr = cExpression( x, 0, NULL )
 	end if
 
 	'' (',' | '}')
@@ -1216,7 +1204,7 @@ private function cDeclarator _
 				end if
 				d = astNewDIMENSION( NULL, NULL )
 			else
-				d = hExpr( x, FALSE, NULL )
+				d = cExpression( x, 0, NULL )
 
 				'' Add new DIMENSION to the ARRAY:
 				'' lbound = 0, ubound = elements - 1
@@ -1291,7 +1279,7 @@ private function cDeclarator _
 		'' ['=' Initializer]
 		if( hMatch( x, TK_EQ ) ) then
 			assert( node->expr = NULL )
-			node->expr = hExpr( x, FALSE, NULL )
+			node->expr = cExpression( x, 0, NULL )
 		end if
 	end if
 
@@ -1472,7 +1460,7 @@ private function cToplevel _
 			if( tkGet( x ) = TK_END ) then
 				expr = NULL
 			else
-				expr = hExpr( x, TRUE, t )
+				expr = cExpression( x, 0, t )
 
 				'' Must have reached the TK_END
 				if( tkGet( x ) <> TK_END ) then

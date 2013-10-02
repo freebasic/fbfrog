@@ -73,7 +73,6 @@ dim shared as ASTNODEINFO astnodeinfo(0 to ...) = _
 	( "proc"    ), _
 	( "param"   ), _
 	( "array"   ), _
-	( "dimension" ), _
 	( "externbegin" ), _
 	( "externend" ), _
 	( "macrobody" ), _
@@ -90,6 +89,7 @@ dim shared as ASTNODEINFO astnodeinfo(0 to ...) = _
 	( "ppmerge" ), _
 	( "call"    ), _
 	( "structinit" ), _
+	( "dimension" ), _
 	( "frogfile" ) _
 }
 
@@ -1474,6 +1474,8 @@ private function astFoldKnownDefineds _
 		byval macros as THASH ptr _
 	) as ASTNODE ptr
 
+	assert( macros )
+
 	if( n = NULL ) then exit function
 	function = n
 
@@ -2079,7 +2081,9 @@ function astFold _
 		byval is_bool_context as integer _
 	) as ASTNODE ptr
 
-	n = astFoldKnownDefineds( n, macros )
+	if( macros ) then
+		n = astFoldKnownDefineds( n, macros )
+	end if
 
 	dim as ASTNODE ptr c
 	var passes = 0
@@ -2125,6 +2129,56 @@ end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 '' Higher level code transformations
+
+private function hIsFoldableExpr( byval n as ASTNODE ptr ) as integer
+	select case( n->class )
+	case ASTCLASS_UOP, ASTCLASS_BOP, ASTCLASS_IIF, _
+	     ASTCLASS_CALL, ASTCLASS_DIMENSION
+		function = TRUE
+	end select
+end function
+
+private function hCleanExpr _
+	( _
+		byval n as ASTNODE ptr, _
+		byval is_bool_context as integer _
+	) as ASTNODE ptr
+	if( n ) then
+		if( hIsFoldableExpr( n ) ) then
+			function = astFold( astOpsC2FB( n ), NULL, FALSE, is_bool_context )
+		else
+			astCleanUpExpressions( n )
+			function = n
+		end if
+	end if
+end function
+
+'' C expressions should be converted to FB, and folded (this generates pretty
+'' FB expressions while still preserving the values/behaviour of the original
+'' C expression)
+sub astCleanUpExpressions( byval n as ASTNODE ptr )
+	var is_bool_context = (n->class = ASTCLASS_PPDEFINE)  '' bold assumption
+
+	n->expr = hCleanExpr( n->expr, is_bool_context )
+	n->array = hCleanExpr( n->array, FALSE )
+	n->subtype = hCleanExpr( n->subtype, FALSE )
+
+	'' Node that uses the children list to hold expressions?
+	select case( n->class )
+	case ASTCLASS_SCOPEBLOCK, ASTCLASS_ARRAY, _
+	     ASTCLASS_PPMERGE, ASTCLASS_CALL, ASTCLASS_STRUCTINIT
+		var i = n->head
+		while( i )
+			i = astReplace( n, i, hCleanExpr( astClone( i ), FALSE ) )
+		wend
+	case else
+		var i = n->head
+		while( i )
+			astCleanUpExpressions( i )
+			i = i->next
+		wend
+	end select
+end sub
 
 function astLookupMacroParam _
 	( _
