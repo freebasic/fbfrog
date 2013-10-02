@@ -60,7 +60,38 @@ private function hMakeTempId( ) as string
 	n += 1
 end function
 
+private function hIdentifyCommonTypedef( byval id as zstring ptr ) as integer
+	select case( *id )
+	case "size_t"			: function = TYPE_UINTEGER
+	case "ssize_t", "ptrdiff_t"	: function = TYPE_INTEGER
+	case "int8_t", "__int8"		: function = TYPE_BYTE
+	case "uint8_t"			: function = TYPE_UBYTE
+	case "int16_t", "__int16"	: function = TYPE_SHORT
+	case "uint16_t"			: function = TYPE_USHORT
+	case "int32_t", "__int32"	: function = TYPE_LONG
+	case "uint32_t"			: function = TYPE_ULONG
+	case "int64_t", "__int64"	: function = TYPE_LONGINT
+	case "uint64_t"			: function = TYPE_ULONGINT
+	case "wchar_t"			: function = TYPE_WSTRING
+	case else			: function = TYPE_NONE
+	end select
+end function
+
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+private function hIdentifierIsMacroParam _
+	( _
+		byval macro as ASTNODE ptr, _
+		byval id as zstring ptr _
+	) as integer
+
+	if( macro ) then
+		function = (astLookupMacroParam( macro, id ) >= 0)
+	else
+		function = FALSE
+	end if
+
+end function
 
 private function hAppendStrLit _
 	( _
@@ -153,7 +184,12 @@ private function cExpression _
 			'' If it starts with a data type keyword, and isn't inside
 			'' a macro where that's a macro parameter, then it must be
 			'' a data type, because it couldn't appear in an expression.
-			'' (#defines should already have been expanded)
+			''
+			'' Of course that's an unsafe assumption because any identifier
+			'' could have been re-#defined to something different than what
+			'' fbfrog assumes, in #include files that fbfrog doesn't even parse,
+			'' etc... but for common typedefs such as size_t that probably won't
+			'' be a problem in practice.
 			''
 			'' If there's just an identifier then it could be a typedef
 			'' but we can't be sure. Finding out whether it is a typedef
@@ -169,10 +205,14 @@ private function cExpression _
 			     KW_SHORT, KW_LONG, _
 			     KW_ENUM, KW_STRUCT, KW_UNION, _
 			     KW_VOID, KW_CHAR, KW_FLOAT, KW_DOUBLE, KW_INT
-				if( macro ) then
-					is_cast = (astLookupMacroParam( macro, tkGetIdOrKw( x ) ) < 0)
-				else
-					is_cast = TRUE
+				is_cast = not hIdentifierIsMacroParam( macro, tkGetIdOrKw( x ) )
+			case TK_ID
+				var id = tkGetText( x )
+				if( hIdentifyCommonTypedef( id ) <> TYPE_NONE ) then
+					is_cast = not hIdentifierIsMacroParam( macro, id )
+					if( is_cast and verbose ) then
+						tkReport( x, "treating id as typedef" )
+					end if
 				end if
 			end select
 
@@ -745,33 +785,12 @@ private sub cBaseType _
 
 		select case( tkGet( basetypex ) )
 		case TK_ID
-			select case( *tkGetText( basetypex ) )
-			case "size_t"
-				dtype = TYPE_UINTEGER
-			case "ssize_t", "ptrdiff_t"
-				dtype = TYPE_INTEGER
-			case "int8_t", "__int8"
-				dtype = TYPE_BYTE
-			case "uint8_t"
-				dtype = TYPE_UBYTE
-			case "int16_t", "__int16"
-				dtype = TYPE_SHORT
-			case "uint16_t"
-				dtype = TYPE_USHORT
-			case "int32_t", "__int32"
-				dtype = TYPE_LONG
-			case "uint32_t"
-				dtype = TYPE_ULONG
-			case "int64_t", "__int64"
-				dtype = TYPE_LONGINT
-			case "uint64_t"
-				dtype = TYPE_ULONGINT
-			case "wchar_t"
-				dtype = TYPE_WSTRING
-			case else
+			var id = tkGetText( basetypex )
+			dtype = hIdentifyCommonTypedef( id )
+			if( dtype = TYPE_NONE ) then
 				dtype = TYPE_UDT
-				subtype = astNewID( tkGetText( basetypex ) )
-			end select
+				subtype = astNewID( id )
+			end if
 		case KW_VOID
 			dtype = TYPE_ANY
 		case KW_FLOAT

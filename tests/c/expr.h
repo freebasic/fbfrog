@@ -32,6 +32,22 @@ enum E {
 	A = (int *)0,
 	A = (struct UDT *)0,
 	A = (union UDT *)0,
+	A = (wchar_t)0,
+	A = (size_t)0,
+	A = (ssize_t)0,
+	A = (ptrdiff_t)0,
+	A = (int8_t)0,
+	A = (uint8_t)0,
+	A = (int16_t)0,
+	A = (uint16_t)0,
+	A = (int32_t)0,
+	A = (uint32_t)0,
+	A = (int64_t)0,
+	A = (uint64_t)0,
+	A = (__int8)0,
+	A = (__int16)0,
+	A = (__int32)0,
+	A = (__int64)0,
 	A = 1,
 	A = 01,
 	A = 0x1,
@@ -95,3 +111,19 @@ enum E {
 #define A (int *)0
 #define A (struct UDT *)0
 #define A (union UDT *)0
+#define A (wchar_t)0
+#define A (size_t)0
+#define A (ssize_t)0
+#define A (ptrdiff_t)0
+#define A (int8_t)0
+#define A (uint8_t)0
+#define A (int16_t)0
+#define A (uint16_t)0
+#define A (int32_t)0
+#define A (uint32_t)0
+#define A (int64_t)0
+#define A (uint64_t)0
+#define A (__int8)0
+#define A (__int16)0
+#define A (__int32)0
+#define A (__int64)0
