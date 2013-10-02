@@ -89,6 +89,7 @@ dim shared as ASTNODEINFO astnodeinfo(0 to ...) = _
 	( "iif"     ), _
 	( "ppmerge" ), _
 	( "call"    ), _
+	( "structinit" ), _
 	( "frogfile" ) _
 }
 

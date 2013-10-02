@@ -81,6 +81,10 @@ enum E
 	A = a[b]
 	A = a.b
 	A = a->b
+	A = (1, 2, 3)
+	A = ()
+	A = (1)
+	A = (1)
 end enum
 
 #define A(x) ("a" + "b")
@@ -126,3 +130,14 @@ end enum
 #define A clng(0)
 #define A clngint(0)
 #define A cast(MYINT, 0)
+
+#macro A
+	scope
+		a(0)
+		b(1)
+	end scope
+#endmacro
+#define A (1, 2, 3)
+#define A ()
+#define A (1)
+#define A (1)

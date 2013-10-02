@@ -335,20 +335,49 @@ private function cExpression _
 		case TK_HASH
 			a = hStringLiteralSequence( x )
 
-		'' '{' Statements '}'
+		'' Scope block: '{' (Expression ';')* '}'
+		'' Initializer: '{' Expression (',' Expression)* '}'
 		case TK_LBRACE
-			a = astNew( ASTCLASS_SCOPEBLOCK )
+			a = astNewGROUP( )
 			x += 1
 
-			'' Statements = Statement*
 			while( tkGet( x ) <> TK_RBRACE )
-				'' Statement = Expression ';'
 				astAppend( a, cExpression( x, 0, macro ) )
-				tkExpect( x, TK_SEMI, "to terminate statement" )
-				x += 1
+
+				select case( a->class )
+				case ASTCLASS_STRUCTINIT
+					if( tkGet( x ) = TK_RBRACE ) then exit while
+
+					tkExpect( x, TK_COMMA, "(expression separator in struct initializer)" )
+					x += 1
+
+				case ASTCLASS_SCOPEBLOCK
+					tkExpect( x, TK_SEMI, "(end of statement in scope block)" )
+					x += 1
+
+				case else
+					select case( tkGet( x ) )
+					case TK_SEMI
+						a->class = ASTCLASS_SCOPEBLOCK
+						x += 1
+					case TK_COMMA
+						a->class = ASTCLASS_STRUCTINIT
+						x += 1
+					case TK_RBRACE
+						a->class = ASTCLASS_STRUCTINIT
+					case else
+						tkOopsExpected( x, "',' (expression separator in struct initializer), or ';' (end of statement in scope block), or '}' (end of block)" )
+					end select
+				end select
 			wend
 
-			tkExpect( x, TK_RBRACE, "to close scope block" )
+			if( a->class = ASTCLASS_GROUP ) then
+				a->class = ASTCLASS_STRUCTINIT
+			end if
+
+			tkExpect( x, TK_RBRACE, iif( a->class = ASTCLASS_STRUCTINIT, _
+				@"to close struct initializer", _
+				@"to close scope block" ) )
 			x += 1
 
 		case else

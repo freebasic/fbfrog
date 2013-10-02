@@ -720,6 +720,9 @@ function emitAst _
 	case ASTCLASS_CALL
 		s = *n->text + hParamList( n )
 
+	case ASTCLASS_STRUCTINIT
+		s = hParamList( n )
+
 	case else
 		astDump( n )
 		assert( FALSE )

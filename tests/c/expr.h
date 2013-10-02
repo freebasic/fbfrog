@@ -86,6 +86,11 @@ enum E {
 	A = a[b],
 	A = a.b,
 	A = a->b,
+
+	A = { 1, 2, 3 },
+	A = { },
+	A = { 1 },
+	A = { 1, },
 };
 
 #define A(x) "a" "b"
@@ -131,3 +136,9 @@ enum E {
 #define A (__int32)0
 #define A (__int64)0
 #define A (MYINT)0
+
+#define A { a(0); b(1); }
+#define A { 1, 2, 3 }
+#define A { }
+#define A { 1 }
+#define A { 1, }
