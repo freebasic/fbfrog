@@ -1,3 +1,5 @@
+type MYINT as long
+
 enum E
 	A = -(A = 0)
 	A = not A
@@ -45,6 +47,7 @@ enum E
 	A = cshort(0)
 	A = clng(0)
 	A = clngint(0)
+	A = cast(MYINT, 0)
 	A = 1
 	A = &o1
 	A = &h1
@@ -122,3 +125,4 @@ end enum
 #define A cshort(0)
 #define A clng(0)
 #define A clngint(0)
+#define A cast(MYINT, 0)

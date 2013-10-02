@@ -1,3 +1,5 @@
+typedef int MYINT;
+
 enum E {
 	// UOPs
 	A = !A,
@@ -48,6 +50,7 @@ enum E {
 	A = (__int16)0,
 	A = (__int32)0,
 	A = (__int64)0,
+	A = (MYINT)0,
 	A = 1,
 	A = 01,
 	A = 0x1,
@@ -127,3 +130,4 @@ enum E {
 #define A (__int16)0
 #define A (__int32)0
 #define A (__int64)0
+#define A (MYINT)0

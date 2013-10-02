@@ -47,6 +47,18 @@ enum
 	BODY_PPIF
 end enum
 
+namespace file
+	dim shared typedefs as THASH
+end namespace
+
+private sub hAddTypedef( byval id as zstring ptr )
+	hashAddOverwrite( @file.typedefs, id, NULL )
+end sub
+
+private function hIsTypedef( byval id as zstring ptr ) as integer
+	function = (hashLookup( @file.typedefs, id, hashHash( id ) )->s <> NULL)
+end function
+
 private function hMatch( byref x as integer, byval tk as integer ) as integer
 	if( tkGet( x ) = tk ) then
 		x += 1
@@ -178,25 +190,32 @@ private function cExpression _
 			x += 1
 
 			''
-			'' Try to disambiguate between DataType and Expression,
-			'' even without being a full C compiler, good guesses can be made.
+			'' Trying to disambiguate between DataType and Expression,
+			'' even without being a full C compiler, and even without seeing
+			'' the whole C source (system #includes etc), good guesses can be made.
 			''
-			'' If it starts with a data type keyword, and isn't inside
-			'' a macro where that's a macro parameter, then it must be
-			'' a data type, because it couldn't appear in an expression.
+			'' If it starts with a data type keyword, and isn't inside a macro where
+			'' that's a macro parameter, then it must be a data type, because it couldn't
+			'' appear in an expression.
 			''
-			'' Of course that's an unsafe assumption because any identifier
-			'' could have been re-#defined to something different than what
-			'' fbfrog assumes, in #include files that fbfrog doesn't even parse,
-			'' etc... but for common typedefs such as size_t that probably won't
-			'' be a problem in practice.
+			'' Of course that's an unsafe assumption because any identifier could have been
+			'' re-#defined to something different than what fbfrog assumes, in #include files
+			'' that fbfrog doesn't even parse, etc... but for common typedefs such as size_t
+			'' that shouldn't be a problem in practice.
 			''
-			'' If there's just an identifier then it could be a typedef
-			'' but we can't be sure. Finding out whether it is a typedef
-			'' would require checking all previous declarations in this
-			'' file and in #includes, that's not possible currently
+			'' If there's just an identifier then it could be a typedef but we can't be sure.
+			'' Finding out whether it is a typedef would require checking all previous
+			'' declarations in this file and in #includes, that's not possible currently
 			'' because #includes aren't always merged in.
 			''
+			'' Note: fbfrog could show a warning then making such an unsafe assumption,
+			'' but on the other hand, that's rather pointless because without seeing
+			'' all #defines, no C code is safe to parse. If int/void etc. are re-#defined
+			'' without fbfrog knowing then the for example the declaration parser would
+			'' make the same mistake, but it doesn't show any warning. That would be crazy
+			'' to do for every re-#definable keyword...
+			''
+
 			var is_cast = FALSE
 
 			select case( tkGet( x ) )
@@ -208,11 +227,9 @@ private function cExpression _
 				is_cast = not hIdentifierIsMacroParam( macro, tkGetIdOrKw( x ) )
 			case TK_ID
 				var id = tkGetText( x )
-				if( hIdentifyCommonTypedef( id ) <> TYPE_NONE ) then
+				if( (hIdentifyCommonTypedef( id ) <> TYPE_NONE) or _
+				    hIsTypedef( id ) ) then
 					is_cast = not hIdentifierIsMacroParam( macro, id )
-					if( is_cast and verbose ) then
-						tkReport( x, "treating id as typedef" )
-					end if
 				end if
 			end select
 
@@ -1122,6 +1139,10 @@ private function cDeclarator _
 			ASTCLASS_UOP      _ '' DECL_CAST
 		}
 
+		if( decl = DECL_TYPEDEF ) then
+			hAddTypedef( id )
+		end if
+
 		t = astNew( decl_to_astclass(decl), id )
 
 		select case( decl )
@@ -1566,5 +1587,7 @@ private function cToplevel _
 end function
 
 function cFile( ) as ASTNODE ptr
+	hashInit( @file.typedefs, 4, TRUE )
 	function = cToplevel( 0, BODY_TOPLEVEL )
+	hashEnd( @file.typedefs )
 end function
