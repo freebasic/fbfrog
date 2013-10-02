@@ -508,9 +508,13 @@ function emitAst _
 		s += hParamList( n )
 
 	case ASTCLASS_DIMENSION
-		s += emitAst( n->l )
-		s += " to "
-		s += emitAst( n->r )
+		if( n->l ) then
+			assert( n->r )
+			s += emitAst( n->l ) + " to " + emitAst( n->r )
+		else
+			assert( n->r = NULL )
+			s += "0 to ..."
+		end if
 
 	case ASTCLASS_EXTERNBLOCKBEGIN
 		emitStmt( "extern """ + *n->text + """" )

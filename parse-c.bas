@@ -1186,7 +1186,7 @@ private function cDeclarator _
 	node = t
 
 	select case( tkGet( x ) )
-	'' ('[' ArrayElements ']')*
+	'' ('[' [ArrayElements] ']')*
 	case TK_LBRACKET
 		'' Can't allow arrays on everything - currently, it's only
 		'' handled for vars/fields/params
@@ -1206,15 +1206,27 @@ private function cDeclarator _
 			'' '['
 			x += 1
 
-			var elements = hExpr( x, FALSE, NULL )
+			dim as ASTNODE ptr d
 
-			'' Add new DIMENSION to the ARRAY:
-			'' lbound = 0, ubound = elements - 1
-			astAppend( node->array, _
-				astNewDIMENSION( astNewCONST( 0, 0, TYPE_LONG ), _
-					astNewBOP( ASTOP_SUB, _
-						elements, _
-						astNewCONST( 1, 0, TYPE_LONG ) ) ) )
+			'' Just '[]'?
+			if( tkGet( x ) = TK_RBRACKET ) then
+				'' Only allowed on parameters, not variables etc.
+				if( decl <> DECL_PARAM ) then
+					tkOops( x, "array dimension must have an explicit size" )
+				end if
+				d = astNewDIMENSION( NULL, NULL )
+			else
+				d = hExpr( x, FALSE, NULL )
+
+				'' Add new DIMENSION to the ARRAY:
+				'' lbound = 0, ubound = elements - 1
+				d = astNewDIMENSION( _
+						astNewCONST( 0, 0, TYPE_LONG ), _
+						astNewBOP( ASTOP_SUB, _
+							d, _
+							astNewCONST( 1, 0, TYPE_LONG ) ) )
+			end if
+			astAppend( node->array, d )
 
 			'' ']'
 			tkExpect( x, TK_RBRACKET, "to close this array dimension declaration" )

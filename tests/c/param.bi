@@ -21,6 +21,7 @@ declare sub f(byval a as long, byval b as long ptr)
 declare sub f(byval a as long ptr, byval b as long)
 declare sub f(byval a as long, byval b as long ptr, byval c as long)
 declare sub f(byval a as long ptr, byval b as long ptr, byval c as long ptr)
+declare sub f(byval a as long ptr)
 
 dim shared __nested_id as long
 declare sub f(byval a as long)
