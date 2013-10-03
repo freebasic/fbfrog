@@ -86,6 +86,7 @@ enum E
 	A = (1)
 	A = (1)
 	A = (-(a = 0))
+	A = f(-(a = 0))
 end enum
 
 #define A(x) ("a" + "b")
@@ -142,3 +143,10 @@ end enum
 #define A ()
 #define A (1)
 #define A (1)
+
+#define A (-(a = 0), -(a = 0))
+#macro A
+	scope
+		f(-(a = 0))
+	end scope
+#endmacro

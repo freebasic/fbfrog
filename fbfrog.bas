@@ -553,6 +553,7 @@ private sub frogWorkPreset _
 			var binormed = pathStripExt( *f->text ) + ".bi"
 			var bipretty = pathStripExt( *f->comment ) + ".bi"
 			print "emitting: " + bipretty
+			'astDump( f->expr )
 			emitFile( binormed, f->expr )
 		end if
 		f = f->next

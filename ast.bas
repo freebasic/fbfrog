@@ -2132,8 +2132,7 @@ end function
 
 private function hIsFoldableExpr( byval n as ASTNODE ptr ) as integer
 	select case( n->class )
-	case ASTCLASS_UOP, ASTCLASS_BOP, ASTCLASS_IIF, _
-	     ASTCLASS_CALL, ASTCLASS_DIMENSION
+	case ASTCLASS_UOP, ASTCLASS_BOP, ASTCLASS_IIF, ASTCLASS_DIMENSION
 		function = TRUE
 	end select
 end function
@@ -2143,6 +2142,7 @@ private function hCleanExpr _
 		byval n as ASTNODE ptr, _
 		byval is_bool_context as integer _
 	) as ASTNODE ptr
+
 	if( n ) then
 		if( hIsFoldableExpr( n ) ) then
 			function = astFold( astOpsC2FB( n ), NULL, FALSE, is_bool_context )
@@ -2151,6 +2151,7 @@ private function hCleanExpr _
 			function = n
 		end if
 	end if
+
 end function
 
 '' C expressions should be converted to FB, and folded (this generates pretty

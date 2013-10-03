@@ -92,8 +92,9 @@ enum E {
 	A = { 1 },
 	A = { 1, },
 
-	// C UOP nested inside scope block
+	// C UOP nested inside children list
 	A = { !a },
+	A = f( !a ),
 };
 
 #define A(x) "a" "b"
@@ -145,3 +146,7 @@ enum E {
 #define A { }
 #define A { 1 }
 #define A { 1, }
+
+// C UOP nested inside children list
+#define A { !a, !a }
+#define A { f( !a ); }
