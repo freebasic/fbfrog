@@ -482,6 +482,30 @@ private function frogWorkVersion _
 	function = files
 end function
 
+private sub hPrintPresetVersions( byval versions as ASTNODE ptr, byval targets as integer )
+	dim s as string
+
+	var i = versions->head
+	while( i )
+		s += emitAst( i ) + ", "
+		i = i->next
+	wend
+	s = left( s, len( s ) - 2 )
+	if( len( s ) = 0 ) then
+		s = "none specified"
+	end if
+
+	print "versions: " + s
+
+	s = ""
+	if( targets and ASTATTRIB_DOS   ) then s += "dos, "
+	if( targets and ASTATTRIB_LINUX ) then s += "linux, "
+	if( targets and ASTATTRIB_WIN32 ) then s += "win32, "
+	s = left( s, len( s ) - 2 )
+
+	print "targets: " + s
+end sub
+
 private sub frogWorkPreset _
 	( _
 		byval pre as FROGPRESET ptr, _
@@ -492,19 +516,16 @@ private sub frogWorkPreset _
 	dim as ASTNODE ptr files, versions, targetversions
 	dim as integer targets
 
-	print "---------------------------------------------------------"
 	versions = astCollectVersions( pre->code )
 	targets = astCollectTargets( pre->code )
-	print "versions:"
-	astDump( versions, 1 )
-	print "targets:"
-	print "    " + bin( targets, 32 )
 
 	'' If no targets given, assume all
 	if( targets = 0 ) then
 		targets = ASTATTRIB__ALLTARGET
-		print "no targets given, assuming all:"
-		print "    " + bin( targets, 32 )
+	end if
+
+	if( verbose ) then
+		hPrintPresetVersions( versions, targets )
 	end if
 
 	targetversions = astCombineVersionsAndTargets( versions, targets )
