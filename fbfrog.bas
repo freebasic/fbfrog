@@ -744,6 +744,11 @@ end sub
 				presetdir = ""
 			end if
 
+			if( cmdline.outdir ) then
+				assert( pre.outdir = NULL )
+				pre.outdir = strDuplicate( cmdline.outdir )
+			end if
+
 			frogWorkPreset( @pre, presetfilename, presetdir )
 			presetEnd( @pre )
 
