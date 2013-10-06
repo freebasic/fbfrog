@@ -1,5 +1,5 @@
 
-  fbfrog -- FreeBASIC binding creation tool
+  fbfrog -- FreeBASIC binding generator
   Copyright (C) 2011 - 2013  Daniel C. Klauer <daniel.c.klauer[at]web.de>
 
   This program is free software: you can redistribute it and/or modify
@@ -24,8 +24,8 @@ Goal:
 
 Usage:
 
-  Translate a header:                 ./fbfrog foo.h
-  Translate a whole directory:        ./fbfrog path/to/foo/
+  Create .bi binding for a C header:       ./fbfrog foo.h
+  Do it for all C headers in a directory:  ./fbfrog path/to/foo/
   ...
 
 Compiling:

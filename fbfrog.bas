@@ -8,13 +8,14 @@ private sub hPrintHelp( byref message as string )
 	if( len( message ) > 0 ) then
 		print message
 	end if
-	print "fbfrog 0.1 from " + __DATE_ISO__ + ", usage: fbfrog [options] *.h"
+	print "fbfrog 0.1 (" + __DATE_ISO__ + "), FreeBASIC binding generator"
+	print "usage: fbfrog [options] *.h"
+	print "Generates .bi files next to given .h files."
 	print "options:"
-	print "  -m    Merge multiple headers into one"
-	print "  -w    Whitespace: Try to preserve comments and empty lines"
-	print "  -v    Show debugging info"
-	print "By default, fbfrog will generate a *.bi file for each given *.h file."
-	print "*.bi files should be reviewed and need to be tested!"
+	print "  -m         Merge multiple headers into one"
+	print "  -w         Whitespace: Try to preserve comments and empty lines"
+	print "  -o <path>  Set output directory for generated .bi files"
+	print "  -v         Show verbose/debugging info"
 	end (iif( len( message ) > 0, 1, 0 ))
 end sub
 
