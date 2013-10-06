@@ -588,6 +588,10 @@ end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
+	if( __FB_ARGC__ = 1 ) then
+		hPrintHelp( "" )
+	end if
+
 	'' Input files and various other info from command line
 	dim cmdline as FROGPRESET
 	presetInit( @cmdline )
