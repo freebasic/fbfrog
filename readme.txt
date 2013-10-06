@@ -52,6 +52,23 @@ Compiling:
 
 To do:
 
+- Massively reduce default fbfrog stdout output
+  - should just print the names of generated .bi files, per preset (if any)
+  - ideally could show some progress indicator, not necessarily in %, but at least
+    a counter like "parsing files 2/20...", or "parsing file 1/20, version 1/3, target 1/3"
+  - also something for the AST merging step, which could be a huge part
+    - test how long the AST merging takes for huge headers
+    - could a progress indicator be shown? yes, based on decltables and number of decls in the result
+
+- can't scan /usr/include, dir() problem?
+
+- #include foo.h  ->  #include foo.bi, if foo.bi will be generated too
+- #include stdio.h -> #include crt/stdio.bi, for some known default headers
+  (or perhaps let presets do this)
+
+- add pass to check all identifiers against FB keywords, and to check for dupdefs
+  due to case insensitivity
+
 - Add to top of binding:
     - if versiondefine not #defined, use a default version
     - complain if versiondefine #defined to unsupported value
@@ -67,6 +84,13 @@ To do:
 - lex: should only allow escaped EOLs in C mode
 - lex: add support for FB escape sequences, or at least only allow C escapes
   in C mode
+
+- -m should somehow allow concatenating even #includes with refcount >= 2.
+    - if multiple leaf headers #include a common header each once, then the
+      leafs should be concatendated into 1, and the common header prepended at
+      its top, and the #includes for it should be removed.
+    - this isn't right as it changes the order of code which could break
+      declaration dependencies, but at least presets should be allowed to enable this
 
 - Macro expansion should preserve token locations, perhaps even a stack of
   locations in case of nested macros. It'd be nice if the tkOops() functions
@@ -85,14 +109,5 @@ To do:
   require downloading many tarballs for different versions of the library),
   and it allows modifications made to the binding to be preserved...
 
-- Add output directory option
-
 - libzip: zip_source_free() vs. enumconst ZIP_SOURCE_FREE,
           zip_stat_index() vs. #define ZIP_STAT_INDEX
-
-- #include foo.h  ->  #include foo.bi, if foo.bi will be generated too
-- #include stdio.h -> #include crt/stdio.bi, for some known default headers
-  (or perhaps let presets do this)
-
-- add pass to check all identifiers against FB keywords, and to check for dupdefs
-  due to case insensitivity

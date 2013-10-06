@@ -566,19 +566,81 @@ private sub frogWorkPreset _
 		files = frogWorkVersion( pre, NULL, pre->code, presetfilename, presetprefix )
 	end if
 
-	'' Emit all files that have an AST (i.e. weren't merged into or
-	'' appended to anything)
+	'' Remove files that don't have an AST left, i.e. were combined into
+	'' others and shouldn't be emitted individually anymore.
 	var f = files->head
 	while( f )
-		if( f->expr ) then
-			var binormed = pathStripExt( *f->text ) + ".bi"
-			var bipretty = pathStripExt( *f->comment ) + ".bi"
-			print "emitting: " + bipretty
-			'astDump( f->expr )
-			emitFile( binormed, f->expr )
+		if( f->expr = NULL ) then
+			f = astRemove( files, f )
+		else
+			f = f->next
 		end if
-		f = f->next
 	wend
+
+	'' There should always be at least 1 file left to emit
+	assert( files->head )
+
+	'' Normally, each .bi file should be generated just next to the
+	'' corresponding .h file (or one of them in case of merging...).
+	'' In that case no directories need to be created.
+	''
+	'' If an output directory was given, then all .bi files should be
+	'' emitted there. This might require creating some sub-directories to
+	'' preserve the original directory structure.
+	''     commonparent/a.bi
+	''     commonparent/foo/a.bi
+	''     commonparent/foo/b.bi
+	'' shouldn't just become:
+	''     outdir/a.bi
+	''     outdir/a.bi
+	''     outdir/b.bi
+	'' because a.bi would be overwritten and the foo/ sub-directory would
+	'' be lost. Instead, it should be:
+	''     outdir/a.bi
+	''     outdir/foo/a.bi
+	''     outdir/foo/b.bi
+	if( pre->outdir ) then
+		var f = files->head
+		var commonparent = pathOnly( *f->text )
+		f = f->next
+		while( f )
+			commonparent = pathFindCommonBase( commonparent, *f->text )
+			f = f->next
+		wend
+		print "common parent: " + commonparent
+
+		f = files->head
+		do
+			'' Remove the common parent prefix
+			var normed = *f->text
+			assert( strStartsWith( normed, commonparent ) )
+			normed = right( normed, len( normed ) - len( commonparent ) )
+
+			'' And prefix the output dir instead
+			normed = pathAddDiv( *pre->outdir ) + normed
+
+			astSetText( f, normed )
+			astSetComment( f, normed )
+
+			f = f->next
+		loop while( f )
+	end if
+
+	f = files->head
+	do
+		'' Replace the file extension, .h -> .bi
+		astSetText( f, pathStripExt( *f->text ) + ".bi" )
+		astSetComment( f, pathStripExt( *f->comment ) + ".bi" )
+		f = f->next
+	loop while( f )
+
+	f = files->head
+	do
+		print "emitting: " + *f->comment
+		'astDump( f->expr )
+		emitFile( *f->text, f->expr )
+		f = f->next
+	loop while( f )
 
 	astDelete( files )
 	astDelete( versions )
@@ -617,6 +679,12 @@ end sub
 				cmdline.options or= PRESETOPT_WHITESPACE
 			case "m", "merge"
 				cmdline.options and= not PRESETOPT_NOMERGE
+			case "o", "outdir"
+				i += 1
+				if( i >= __FB_ARGC__ ) then
+					hPrintHelp( "missing output directory path for -o" )
+				end if
+				cmdline.outdir = strDuplicate( __FB_ARGV__[i] )
 			case "v", "verbose"
 				verbose = TRUE
 			case else

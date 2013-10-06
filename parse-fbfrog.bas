@@ -324,9 +324,11 @@ end sub
 sub presetInit( byval pre as FROGPRESET ptr )
 	pre->code = astNewGROUP( )
 	pre->options = 0
+	pre->outdir = NULL
 end sub
 
 sub presetEnd( byval pre as FROGPRESET ptr )
+	deallocate( pre->outdir )
 	astDelete( pre->code )
 end sub
 

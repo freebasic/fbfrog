@@ -809,6 +809,7 @@ declare function astNewFROGFILE _
 declare sub astDelete( byval n as ASTNODE ptr )
 declare sub astPrepend( byval parent as ASTNODE ptr, byval n as ASTNODE ptr )
 declare sub astAppend( byval parent as ASTNODE ptr, byval n as ASTNODE ptr )
+declare function astRemove( byval parent as ASTNODE ptr, byval a as ASTNODE ptr ) as ASTNODE ptr
 declare function astNewVERBLOCK _
 	( _
 		byval version1 as ASTNODE ptr, _
@@ -834,6 +835,7 @@ declare sub astProcessVerblocksOnFiles _
 		byval targets as integer, _
 		byval versiondefine as zstring ptr _
 	)
+declare sub astSetText( byval n as ASTNODE ptr, byval text as zstring ptr )
 declare sub astSetType _
 	( _
 		byval n as ASTNODE ptr, _
@@ -962,8 +964,9 @@ enum
 end enum
 
 type FROGPRESET
-	code			as ASTNODE ptr
-	options			as integer
+	code		as ASTNODE ptr
+	options		as integer
+	outdir		as zstring ptr
 end type
 
 declare sub presetParse( byval pre as FROGPRESET ptr, byref filename as string )

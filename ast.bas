@@ -426,7 +426,7 @@ private sub astCloneAppendChildren( byval d as ASTNODE ptr, byval s as ASTNODE p
 	wend
 end sub
 
-private function astRemove( byval parent as ASTNODE ptr, byval a as ASTNODE ptr ) as ASTNODE ptr
+function astRemove( byval parent as ASTNODE ptr, byval a as ASTNODE ptr ) as ASTNODE ptr
 	assert( astIsChildOf( parent, a ) )
 
 	function = a->next
@@ -464,7 +464,7 @@ private function astReplace _
 	function = astRemove( parent, old )
 end function
 
-private sub astSetText( byval n as ASTNODE ptr, byval text as zstring ptr )
+sub astSetText( byval n as ASTNODE ptr, byval text as zstring ptr )
 	deallocate( n->text )
 	n->text = strDuplicate( text )
 end sub
