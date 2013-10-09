@@ -1,5 +1,4 @@
 extern "Windows"
-
 declare sub f()
 declare sub f()
 declare sub f()
@@ -9,5 +8,4 @@ declare sub f()
 declare sub f()
 declare sub f()
 declare sub f()
-
 end extern

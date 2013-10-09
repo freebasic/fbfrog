@@ -879,7 +879,8 @@ declare sub astNodeToNop _
 declare sub astAutoExtern _
 	( _
 		byval ast as ASTNODE ptr, _
-		byval use_stdcallms as integer = FALSE _
+		byval use_stdcallms as integer, _
+		byval whitespace as integer _
 	)
 declare sub astRemoveParamNames( byval n as ASTNODE ptr )
 declare sub astFixArrayParams( byval n as ASTNODE ptr )

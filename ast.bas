@@ -2309,7 +2309,8 @@ private sub astTurnCallConvIntoExternBlock _
 	( _
 		byval ast as ASTNODE ptr, _
 		byval externcallconv as integer, _
-		byval use_stdcallms as integer _
+		byval use_stdcallms as integer, _
+		byval whitespace as integer _
 	)
 
 	var externblock = @"C"
@@ -2326,9 +2327,13 @@ private sub astTurnCallConvIntoExternBlock _
 	astHideCallConv( ast, externcallconv )
 
 	assert( ast->class = ASTCLASS_GROUP )
-	astPrepend( ast, astNew( ASTCLASS_DIVIDER ) )
+	if( whitespace ) then
+		astPrepend( ast, astNew( ASTCLASS_DIVIDER ) )
+	end if
 	astPrepend( ast, astNew( ASTCLASS_EXTERNBLOCKBEGIN, externblock ) )
-	astAppend( ast, astNew( ASTCLASS_DIVIDER ) )
+	if( whitespace ) then
+		astAppend( ast, astNew( ASTCLASS_DIVIDER ) )
+	end if
 	astAppend( ast, astNew( ASTCLASS_EXTERNBLOCKEND ) )
 
 end sub
@@ -2336,14 +2341,15 @@ end sub
 sub astAutoExtern _
 	( _
 		byval ast as ASTNODE ptr, _
-		byval use_stdcallms as integer = FALSE _
+		byval use_stdcallms as integer, _
+		byval whitespace as integer _
 	)
 
 	astMakeProcsDefaultToCdecl( ast )
 
 	var maincallconv = astFindMainCallConv( ast )
 	if( maincallconv >= 0 ) then
-		astTurnCallConvIntoExternBlock( ast, maincallconv, use_stdcallms )
+		astTurnCallConvIntoExternBlock( ast, maincallconv, use_stdcallms, whitespace )
 	end if
 
 end sub
