@@ -946,12 +946,12 @@ end function
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 '' Directory tree search
 
-function hDirExists( byref path as string ) as integer
+function hReadableDirExists( byref path as string ) as integer
 	var fixed = path
 	if( right( fixed, len( PATHDIV ) ) = PATHDIV ) then
 		fixed = left( fixed, len( fixed ) - len( PATHDIV ) )
 	end if
-	function = (dir( fixed, fbDirectory ) <> "")
+	function = (dir( fixed, fbDirectory or fbReadOnly ) <> "")
 end function
 
 function hFileExists( byref path as string ) as integer

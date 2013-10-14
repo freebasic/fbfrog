@@ -696,7 +696,7 @@ end sub
 				hPrintHelp( "unknown option: " + *__FB_ARGV__[i] )
 			end select
 		else
-			if( hDirExists( arg ) ) then
+			if( hReadableDirExists( arg ) ) then
 				'' Search input directory for *.fbfrog files, if none found,
 				'' add it for *.h search later
 				dim as TLIST list

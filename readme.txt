@@ -52,8 +52,6 @@ Compiling:
 
 To do:
 
-- can't scan /usr/include, dir() problem?
-
 - #include foo.h  ->  #include foo.bi, if foo.bi will be generated too
 - #include stdio.h -> #include crt/stdio.bi, for some known default headers
   (or perhaps let presets do this)
