@@ -145,6 +145,7 @@ private function hStatementOrBlock( byval body as integer ) as ASTNODE ptr
 		case else
 			hOops( "expected dos|linux|win32" )
 		end select
+		hSkip( )
 
 		'' EOL
 		hExpectSkip( TK_EOL, "behind this statement" )
