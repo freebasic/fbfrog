@@ -52,14 +52,6 @@ Compiling:
 
 To do:
 
-- Massively reduce default fbfrog stdout output
-  - should just print the names of generated .bi files, per preset (if any)
-  - ideally could show some progress indicator, not necessarily in %, but at least
-    a counter like "parsing files 2/20...", or "parsing file 1/20, version 1/3, target 1/3"
-  - also something for the AST merging step, which could be a huge part
-    - test how long the AST merging takes for huge headers
-    - could a progress indicator be shown? yes, based on decltables and number of decls in the result
-
 - can't scan /usr/include, dir() problem?
 
 - #include foo.h  ->  #include foo.bi, if foo.bi will be generated too
@@ -81,9 +73,13 @@ To do:
 - Add BOOLDEFINE to mark a macro as "returns a bool", so the C #define parser
   can set is_bool_context=TRUE when folding
 
+- parentheses around macro params should be preserved (can use a flag on the AST node)
 - lex: should only allow escaped EOLs in C mode
 - lex: add support for FB escape sequences, or at least only allow C escapes
   in C mode
+
+- how to handle Enums? Need to be translated to LONG currently, but it's hard to
+  detect what's an enum and what isn't...
 
 - -m should somehow allow concatenating even #includes with refcount >= 2.
     - if multiple leaf headers #include a common header each once, then the

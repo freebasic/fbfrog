@@ -1042,7 +1042,9 @@ sub hScanDirectory _
 
 	dirsAppend( rootdir )
 
-	print "scanning tree for " + filepattern + " files: '" + dirs.head->path + "'"
+	if( verbose ) then
+		print "scanning tree for " + filepattern + " files: '" + dirs.head->path + "'"
+	end if
 
 	'' Work off the queue -- each subdir scan can append new subdirs
 	while( dirs.head )

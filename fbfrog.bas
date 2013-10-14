@@ -151,7 +151,7 @@ private sub frogWorkFile _
 		byval f as ASTNODE ptr _
 	)
 
-	print "parsing: " + *f->comment
+	print , *f->comment
 
 	tkInit( )
 
@@ -188,7 +188,7 @@ private sub frogWorkFile _
 					end if
 					var incfile = *tkGetText( x )
 					if( verbose ) then
-						print "    #include: " + incfile
+						print "#include: " + incfile
 					end if
 					var incf = frogAddFile( files, contextf, incfile )
 
@@ -205,11 +205,11 @@ private sub frogWorkFile _
 
 						incf->mergeparent = f
 						if( verbose ) then
-							print "    (merged in)"
+							print "(merged in)"
 						end if
 					else
 						if( verbose ) then
-							print "    (not merged)"
+							print "(not merged)"
 						end if
 					end if
 				end if
@@ -282,14 +282,16 @@ private sub frogWorkFile _
 
 	f->expr = ast
 
-	'' Report merged #includes
-	var incf = files->head
-	while( incf )
-		if( incf->mergeparent = f ) then
-			print "merged in: " + *incf->comment
-		end if
-		incf = incf->next
-	wend
+	if( verbose ) then
+		'' Report merged #includes
+		var incf = files->head
+		while( incf )
+			if( incf->mergeparent = f ) then
+				print "merged in: " + *incf->comment
+			end if
+			incf = incf->next
+		wend
+	end if
 
 end sub
 
@@ -360,7 +362,8 @@ private function frogWorkVersion _
 	dim as ASTNODE ptr f
 
 	if( (pre->options and PRESETOPT_NOMERGE) = 0 ) then
-		print "preparsing to determine #include dependencies..."
+		'print "preparsing to determine #include dependencies..."
+		print "preparsing:";
 
 		'' Preparse to find #includes and calculate refcounts
 		'' Files newly registered by the inner loop will eventually be worked
@@ -368,7 +371,7 @@ private function frogWorkVersion _
 		f = files->head
 		while( f )
 			if( (f->attrib and ASTATTRIB_MISSING) = 0 ) then
-				print "preparsing: " + *f->comment
+				print , *f->comment
 
 				tkInit( )
 				lexLoadFile( 0, f, FALSE, FALSE )
@@ -382,9 +385,8 @@ private function frogWorkVersion _
 					if( tkGet( x ) = TK_PPINCLUDE ) then
 						var incfile = tkGetText( x )
 
-						var report = "    #include: " + *incfile
 						if( verbose ) then
-							print report
+							print "#include: " + *incfile
 						end if
 
 						var location = tkGetLocation( x )
@@ -394,13 +396,6 @@ private function frogWorkVersion _
 						end if
 						var incf = frogAddFile( files, contextf, incfile )
 						incf->refcount += 1
-
-						if( verbose = FALSE ) then
-							if( incf->attrib and ASTATTRIB_MISSING ) then
-								report += " (not found)"
-							end if
-							print report
-						end if
 					end if
 
 					x += 1
@@ -420,6 +415,8 @@ private function frogWorkVersion _
 				f = f->next
 			wend
 		end if
+
+		print "parsing:";
 
 		'' Pass 1: Process any files that don't look like they'll be
 		'' merged, i.e. refcount <> 1.
@@ -456,19 +453,21 @@ private function frogWorkVersion _
 				if( first ) then
 					'' Already have a first; append to it
 					if( f->expr ) then
-						print "concatenating: " + *f->comment
+						if( verbose ) then print "concatenating: " + *f->comment
 						astAppend( first->expr, f->expr )
 						f->expr = NULL
 					end if
 				else
 					'' This is the first
 					first = f
-					print "concatenating: " + *f->comment + " (first)"
+					if( verbose ) then print "concatenating: " + *f->comment + " (first)"
 				end if
 			end if
 			f = f->next
 		wend
 	else
+		print "parsing:";
+
 		'' No merging requested, just process each file that was found
 		'' individually.
 		f = files->head
@@ -537,7 +536,9 @@ private sub frogWorkPreset _
 
 		'' For each version...
 		do
-			print "version: " + astDumpInline( targetversion )
+			if( verbose ) then
+				print "version: " + astDumpInline( targetversion )
+			end if
 
 			'' Determine preset code for that version
 			var presetcode = astGet1VersionAndTargetOnly( pre->code, targetversion )
@@ -608,7 +609,9 @@ private sub frogWorkPreset _
 			commonparent = pathFindCommonBase( commonparent, *f->text )
 			f = f->next
 		wend
-		print "common parent: " + commonparent
+		if( verbose ) then
+			print "common parent: " + commonparent
+		end if
 
 		f = files->head
 		do
@@ -635,9 +638,10 @@ private sub frogWorkPreset _
 		f = f->next
 	loop while( f )
 
+	print "emitting:";
 	f = files->head
 	do
-		print "emitting: " + *f->comment
+		print , *f->comment
 		'astDump( f->expr )
 		emitFile( *f->text, f->expr )
 		f = f->next
@@ -725,7 +729,9 @@ end sub
 		'' For each *.fbfrog file...
 		do
 			var presetfilename = *presetfile->text
-			print "* " + presetfilename
+			print "+" + string( len( presetfilename ) + 2, "-" ) + "+"
+			print "| " + presetfilename + " |"
+			print "+" + string( len( presetfilename ) + 2, "-" ) + "+"
 
 			'' Read in the *.fbfrog preset
 			dim as FROGPRESET pre
