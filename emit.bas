@@ -619,6 +619,9 @@ function emitAst _
 			s = "asc( " + s + " )"
 		end if
 
+	case ASTCLASS_DUMMYVERSION
+		s = "dummyversion"
+
 	case ASTCLASS_UOP
 		select case as const( n->op )
 		'case ASTOP_CLOGNOT

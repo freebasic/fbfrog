@@ -1,0 +1,13 @@
+file "a.h"
+
+target dos
+	define DOS
+endtarget
+
+target linux
+	define LINUX
+endtarget
+
+target win32
+	define WIN32
+endtarget

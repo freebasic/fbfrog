@@ -666,6 +666,7 @@ enum
 	ASTCLASS_TEXT
 	ASTCLASS_STRING
 	ASTCLASS_CHAR
+	ASTCLASS_DUMMYVERSION
 
 	ASTCLASS_UOP
 	ASTCLASS_BOP
@@ -828,7 +829,7 @@ declare function astGet1VersionAndTargetOnly _
 		byval code as ASTNODE ptr, _
 		byval version as ASTNODE ptr _
 	) as ASTNODE ptr
-declare sub astProcessVerblocksOnFiles _
+declare sub astProcessVerblocksAndTargetblocksOnFiles _
 	( _
 		byval files as ASTNODE ptr, _
 		byval versions as ASTNODE ptr, _

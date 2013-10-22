@@ -1,0 +1,5 @@
+file "a.h"
+
+version 1
+	define VER 1
+endversion

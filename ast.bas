@@ -83,6 +83,7 @@ dim shared as ASTNODEINFO astnodeinfo(0 to ...) = _
 	( "text"    ), _
 	( "string"  ), _
 	( "char"    ), _
+	( "dummyversion" ), _
 	( "uop"     ), _
 	( "bop"     ), _
 	( "iif"     ), _
@@ -787,15 +788,21 @@ function astCombineVersionsAndTargets _
 
 	var result = astNewGROUP( )
 
+	'' Multiply version(s) with the targets, for example:
+	''    versions: 1, 2
+	''    targets: linux, win32
+	''    combined: 1.linux, 1.win32, 2.linux, 2.win32
+
 	var i = versions->head
-	while( i )
+	assert( i )
+	do
 
 		hCombineVersionAndTarget( result, targets, i, ASTATTRIB_DOS )
 		hCombineVersionAndTarget( result, targets, i, ASTATTRIB_LINUX )
 		hCombineVersionAndTarget( result, targets, i, ASTATTRIB_WIN32 )
 
 		i = i->next
-	wend
+	loop while( i )
 
 	function = result
 end function
@@ -1355,7 +1362,7 @@ private sub hTurnTargetblocksIntoPpIfs _
 	wend
 end sub
 
-private sub hProcessVerblocks _
+private sub hProcessVerblocksAndTargetblocks _
 	( _
 		byval code as ASTNODE ptr, _
 		byval versions as ASTNODE ptr, _
@@ -1380,7 +1387,7 @@ private sub hProcessVerblocks _
 
 end sub
 
-sub astProcessVerblocksOnFiles _
+sub astProcessVerblocksAndTargetblocksOnFiles _
 	( _
 		byval files as ASTNODE ptr, _
 		byval versions as ASTNODE ptr, _
@@ -1392,7 +1399,10 @@ sub astProcessVerblocksOnFiles _
 	while( f )
 
 		if( f->expr ) then
-			hProcessVerblocks( f->expr, versions, targets, versiondefine )
+			if( f->expr->class <> ASTCLASS_GROUP ) then
+				f->expr = astNewGROUP( f->expr )
+			end if
+			hProcessVerblocksAndTargetblocks( f->expr, versions, targets, versiondefine )
 		end if
 
 		f = f->next

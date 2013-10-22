@@ -1,0 +1,5 @@
+file "a.h"
+
+target linux
+	define LINUX
+endtarget
