@@ -2947,7 +2947,9 @@ private sub hAstMerge _
 			var aversion = aarray[alcsfirst+i].v
 			var bstruct  = barray[blcsfirst+i].n
 			var bversion = barray[blcsfirst+i].v
-			assert( bstruct->class = ASTCLASS_STRUCT )
+			assert( (bstruct->class = ASTCLASS_STRUCT) or _
+			        (bstruct->class = ASTCLASS_UNION) or _
+			        (bstruct->class = ASTCLASS_ENUM) )
 
 			var cstruct = hMergeStructsManually( astruct, bstruct )
 
