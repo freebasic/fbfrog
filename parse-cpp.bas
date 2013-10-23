@@ -795,11 +795,14 @@ private function ppDirective( byval x as integer ) as integer
 			tkOops( x, "unknown #pragma" )
 		end select
 
+	'' #error|#warning ...Tokens until EOL...
 	case KW_ERROR, KW_WARNING
 		x += 1
 
-		'' "message"
-		tkExpect( x, TK_STRING, "containing the #error/#warning message" )
+		while( tkGet( x ) <> TK_EOL )
+			x += 1
+		wend
+		x -= 1
 
 		tkFold( begin, x, iif( tk = KW_ERROR, TK_PPERROR, TK_PPWARNING ), tkGetText( x ) )
 		x = begin + 1
