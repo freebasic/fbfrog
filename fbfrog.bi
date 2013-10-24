@@ -667,6 +667,7 @@ enum
 	ASTCLASS_STRING
 	ASTCLASS_CHAR
 	ASTCLASS_DUMMYVERSION
+	ASTCLASS_TYPE
 
 	ASTCLASS_UOP
 	ASTCLASS_BOP
@@ -675,6 +676,7 @@ enum
 	ASTCLASS_CALL
 	ASTCLASS_STRUCTINIT
 	ASTCLASS_DIMENSION
+	ASTCLASS_SIZEOFTYPE
 
 	ASTCLASS_FROGFILE
 
@@ -936,6 +938,7 @@ declare function emitAst _
 declare sub emitFile( byref filename as string, byval ast as ASTNODE ptr )
 declare function importFile( byval file as ASTNODE ptr ) as ASTNODE ptr
 
+declare function hFindClosingParen( byval x as integer ) as integer
 declare sub ppComments( )
 declare sub ppDividers( )
 declare function hNumberLiteral( byval x as integer ) as ASTNODE ptr

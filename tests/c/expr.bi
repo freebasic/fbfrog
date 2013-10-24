@@ -9,6 +9,13 @@ enum E
 	A = *A
 	A = sizeof( A )
 	A = sizeof( A )
+	A = sizeof(long)
+	A = sizeof(long) * 2
+	A = sizeof(long) shl 1
+	A = sizeof(MYINT)
+	A = sizeof(MYINT) * 2
+	A = sizeof(MYINT) shl 1
+	A = sizeof(sub stdcall())
 	A = A
 	A = A
 	A = cast(any, 0)

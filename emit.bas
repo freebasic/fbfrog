@@ -507,15 +507,6 @@ function emitAst _
 	case ASTCLASS_ARRAY
 		s += hParamList( n )
 
-	case ASTCLASS_DIMENSION
-		if( n->l ) then
-			assert( n->r )
-			s += emitAst( n->l ) + " to " + emitAst( n->r )
-		else
-			assert( n->r = NULL )
-			s += "0 to ..."
-		end if
-
 	case ASTCLASS_EXTERNBLOCKBEGIN
 		emitStmt( "extern """ + *n->text + """" )
 
@@ -729,6 +720,18 @@ function emitAst _
 
 	case ASTCLASS_STRUCTINIT
 		s = hParamList( n )
+
+	case ASTCLASS_DIMENSION
+		if( n->l ) then
+			assert( n->r )
+			s += emitAst( n->l ) + " to " + emitAst( n->r )
+		else
+			assert( n->r = NULL )
+			s += "0 to ..."
+		end if
+
+	case ASTCLASS_SIZEOFTYPE
+		s = "sizeof(" + emitType( n->dtype, n->subtype ) + ")"
 
 	case else
 		astDump( n )

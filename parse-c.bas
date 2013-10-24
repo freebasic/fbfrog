@@ -14,7 +14,8 @@ enum
 	DECL_FIELD
 	DECL_PARAM
 	DECL_TYPEDEF
-	DECL_CAST
+	DECL_CASTTYPE
+	DECL_SIZEOFTYPE
 	DECL__COUNT
 end enum
 
@@ -52,6 +53,9 @@ namespace file
 end namespace
 
 private sub hAddTypedef( byval id as zstring ptr )
+	if( verbose ) then
+		print "registering typedef '" + *id + "'"
+	end if
 	hashAddOverwrite( @file.typedefs, id, NULL )
 end sub
 
@@ -90,20 +94,6 @@ private function hIdentifyCommonTypedef( byval id as zstring ptr ) as integer
 end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-
-private function hIdentifierIsMacroParam _
-	( _
-		byval macro as ASTNODE ptr, _
-		byval id as zstring ptr _
-	) as integer
-
-	if( macro ) then
-		function = (astLookupMacroParam( macro, id ) >= 0)
-	else
-		function = FALSE
-	end if
-
-end function
 
 private function hAppendStrLit _
 	( _
@@ -155,6 +145,99 @@ private function hStringLiteralSequence( byref x as integer ) as ASTNODE ptr
 	function = a
 end function
 
+private function hIdentifierIsMacroParam _
+	( _
+		byval macro as ASTNODE ptr, _
+		byval id as zstring ptr _
+	) as integer
+
+	if( macro ) then
+		function = (astLookupMacroParam( macro, id ) >= 0)
+	else
+		function = FALSE
+	end if
+
+end function
+
+''
+'' Trying to disambiguate between DataType and Expression,
+'' even without being a full C compiler, and even without seeing
+'' the whole C source (system #includes etc), good guesses can be made.
+''
+'' If it starts with a data type keyword, and isn't inside a macro where
+'' that's a macro parameter, then it must be a data type, because it couldn't
+'' appear in an expression.
+''
+'' Of course that's an unsafe assumption because any identifier could have been
+'' re-#defined to something different than what fbfrog assumes, in #include files
+'' that fbfrog doesn't even parse, etc... but for common typedefs such as size_t
+'' that shouldn't be a problem in practice.
+''
+'' If there's just an identifier then it could be a typedef but we can't be sure.
+'' Finding out whether it is a typedef would require checking all previous
+'' declarations in this file and in #includes, that's not possible currently
+'' because #includes aren't always merged in.
+''
+'' Note: fbfrog could show a warning then making such an unsafe assumption,
+'' but on the other hand, that's rather pointless because without seeing
+'' all #defines, no C code is safe to parse. If int/void etc. are re-#defined
+'' without fbfrog knowing then the for example the declaration parser would
+'' make the same mistake, but it doesn't show any warning. That would be crazy
+'' to do for every re-#definable keyword...
+''
+private function hIsDataType _
+	( _
+		byval x as integer, _
+		byval macro as ASTNODE ptr _
+	) as integer
+
+	var is_type = FALSE
+
+	select case( tkGet( x ) )
+	case KW___CDECL, KW___STDCALL, KW___ATTRIBUTE__, _
+	     KW_SIGNED, KW_UNSIGNED, KW_CONST, _
+	     KW_SHORT, KW_LONG, _
+	     KW_ENUM, KW_STRUCT, KW_UNION, _
+	     KW_VOID, KW_CHAR, KW_FLOAT, KW_DOUBLE, KW_INT
+		is_type = not hIdentifierIsMacroParam( macro, tkGetIdOrKw( x ) )
+	case TK_ID
+		var id = tkGetText( x )
+		if( (hIdentifyCommonTypedef( id ) <> TYPE_NONE) or _
+		    hIsTypedef( id ) ) then
+			is_type = not hIdentifierIsMacroParam( macro, id )
+		end if
+	end select
+
+	function = is_type
+end function
+
+private function hDataTypeInParens _
+	( _
+		byref x as integer, _
+		byval decl as integer _
+	) as ASTNODE ptr
+
+	'' BaseType Declarator
+	'' (parsing just the base data type isn't enough, because it
+	'' could be a function pointer cast with parameter list etc.)
+	var t = cMultDecl( x, DECL_CASTTYPE, 0, "" )
+
+	'' cMultDecl()/cIdList() will have built up a GROUP,
+	'' for DECL_CASTTYPE there should be 1 child only, extract it.
+	assert( t->class = ASTCLASS_GROUP )
+	assert( t->head )
+	assert( t->head = t->tail )
+
+	function = astClone( t->head )
+	astDelete( t )
+
+	'' ')'
+	tkExpect( x, TK_RPAREN, iif( decl = DECL_CASTTYPE, _
+			@"to close '(...)' type cast", _
+			@"to close 'sizeof (...)'" ) )
+	x += 1
+end function
+
 '' C expression parser based on precedence climbing
 private function cExpression _
 	( _
@@ -172,7 +255,6 @@ private function cExpression _
 	case TK_PLUS   : op = ASTOP_UNARYPLUS '' +
 	case TK_AMP    : op = ASTOP_ADDROF    '' &
 	case TK_STAR   : op = ASTOP_DEREF     '' *
-	case KW_SIZEOF : op = ASTOP_SIZEOF    '' sizeof
 	end select
 
 	dim as ASTNODE ptr a
@@ -189,75 +271,26 @@ private function cExpression _
 			'' '('
 			x += 1
 
-			''
-			'' Trying to disambiguate between DataType and Expression,
-			'' even without being a full C compiler, and even without seeing
-			'' the whole C source (system #includes etc), good guesses can be made.
-			''
-			'' If it starts with a data type keyword, and isn't inside a macro where
-			'' that's a macro parameter, then it must be a data type, because it couldn't
-			'' appear in an expression.
-			''
-			'' Of course that's an unsafe assumption because any identifier could have been
-			'' re-#defined to something different than what fbfrog assumes, in #include files
-			'' that fbfrog doesn't even parse, etc... but for common typedefs such as size_t
-			'' that shouldn't be a problem in practice.
-			''
-			'' If there's just an identifier then it could be a typedef but we can't be sure.
-			'' Finding out whether it is a typedef would require checking all previous
-			'' declarations in this file and in #includes, that's not possible currently
-			'' because #includes aren't always merged in.
-			''
-			'' Note: fbfrog could show a warning then making such an unsafe assumption,
-			'' but on the other hand, that's rather pointless because without seeing
-			'' all #defines, no C code is safe to parse. If int/void etc. are re-#defined
-			'' without fbfrog knowing then the for example the declaration parser would
-			'' make the same mistake, but it doesn't show any warning. That would be crazy
-			'' to do for every re-#definable keyword...
-			''
+			var is_cast = hIsDataType( x, macro )
 
-			var is_cast = FALSE
-
-			select case( tkGet( x ) )
-			case KW___CDECL, KW___STDCALL, KW___ATTRIBUTE__, _
-			     KW_SIGNED, KW_UNSIGNED, KW_CONST, _
-			     KW_SHORT, KW_LONG, _
-			     KW_ENUM, KW_STRUCT, KW_UNION, _
-			     KW_VOID, KW_CHAR, KW_FLOAT, KW_DOUBLE, KW_INT
-				is_cast = not hIdentifierIsMacroParam( macro, tkGetIdOrKw( x ) )
-			case TK_ID
-				var id = tkGetText( x )
-				if( (hIdentifyCommonTypedef( id ) <> TYPE_NONE) or _
-				    hIsTypedef( id ) ) then
-					is_cast = not hIdentifierIsMacroParam( macro, id )
-				end if
+			'' Find the ')' and check the token behind it, in some cases
+			'' we can tell that it can't be a cast.
+			var y = hFindClosingParen( x - 1 ) + 1
+			select case( tkGet( y ) )
+			case TK_RPAREN, TK_EOF, TK_END
+				is_cast = FALSE
 			end select
 
 			if( is_cast ) then
-				'' BaseType Declarator
-				'' (parsing just the base data type isn't enough, because it
-				'' could be a function pointer cast with parameter list etc.)
-				a = cMultDecl( x, DECL_CAST, 0, "" )
-
-				'' cMultDecl()/cIdList() will have built up a GROUP,
-				'' for DECL_CAST there should be 1 child only, extract it.
-				assert( a->class = ASTCLASS_GROUP )
-				assert( a->head )
-				assert( a->head = a->tail )
-				var tmp = astClone( a->head )
-				astDelete( a )
-				a = tmp
-
-				'' For DECL_CAST, cDeclarator() should build up the CAST UOP
-				assert( a->class = ASTCLASS_UOP )
-				assert( a->op = ASTOP_CAST )
-
-				'' ')'
-				tkExpect( x, TK_RPAREN, "to close '(...)' type cast" )
-				x += 1
+				'' DataType ')'
+				var t = hDataTypeInParens( x, DECL_CASTTYPE )
 
 				'' Expression
-				a->l = cExpression( x, 0, macro )
+				a = astNewUOP( ASTOP_CAST, cExpression( x, 0, macro ) )
+
+				assert( t->class = ASTCLASS_TYPE )
+				astSetType( a, t->dtype, astClone( t->subtype ) )
+				astDelete( t )
 			else
 				'' Expression
 				a = cExpression( x, 0, macro )
@@ -379,6 +412,29 @@ private function cExpression _
 				@"to close struct initializer", _
 				@"to close scope block" ) )
 			x += 1
+
+		'' SIZEOF Expression
+		'' SIZEOF '(' DataType ')'
+		case KW_SIZEOF
+			x += 1
+
+			'' ('(' DataType)?
+			if( (tkGet( x ) = TK_LPAREN) andalso _
+			    hIsDataType( x + 1, macro ) ) then
+				'' '('
+				x += 1
+
+				'' DataType ')'
+				var t = hDataTypeInParens( x, DECL_SIZEOFTYPE )
+
+				a = astNew( ASTCLASS_SIZEOFTYPE )
+
+				assert( t->class = ASTCLASS_TYPE )
+				astSetType( a, t->dtype, astClone( t->subtype ) )
+				astDelete( t )
+			else
+				a = astNewUOP( ASTOP_SIZEOF, cExpression( x, cprecedence(ASTOP_SIZEOF), macro ) )
+			end if
 
 		case else
 			tkOops( x, "not an atomic expression (identifier, literal, ...), or not yet implemented" )
@@ -871,9 +927,14 @@ private sub cBaseType _
 			dtype = TYPE_LONG
 		else
 			'' No modifiers and no explicit "int" either
-			tkOopsExpected( x, iif( decl = DECL_CAST, _
-					@"a data type in this '(...)' type cast", _
-					@"a data type at the beginning of this declaration" ) )
+			select case( decl )
+			case DECL_CASTTYPE
+				tkOopsExpected( x, "a data type in this '(...)' type cast" )
+			case DECL_SIZEOFTYPE
+				tkOopsExpected( x, "a data type as operand in this 'sizeof(...)'" )
+			case else
+				tkOopsExpected( x, "a data type at the beginning of this declaration" )
+			end select
 		end if
 
 	end select
@@ -1131,10 +1192,12 @@ private function cDeclarator _
 		x += 1
 	else
 		'' [Identifier]
-		'' An identifier must exist, except for parameters/casts, and
-		'' in fact for casts there mustn't be an id.
+		'' An identifier must exist, except for parameters/types, and
+		'' in fact for types there mustn't be an id.
 		dim as string id
-		if( decl <> DECL_CAST ) then
+		select case( decl )
+		case DECL_CASTTYPE, DECL_SIZEOFTYPE
+		case else
 			if( tkGet( x ) = TK_ID ) then
 				id = *tkGetText( x )
 				x += 1
@@ -1143,7 +1206,7 @@ private function cDeclarator _
 					tkOopsExpected( x, "identifier for the symbol declared in this declaration" )
 				end if
 			end if
-		end if
+		end select
 
 		static as integer decl_to_astclass(0 to DECL__COUNT-1) = _
 		{ _
@@ -1153,7 +1216,8 @@ private function cDeclarator _
 			ASTCLASS_FIELD  , _ '' DECL_FIELD
 			ASTCLASS_PARAM  , _ '' DECL_PARAM
 			ASTCLASS_TYPEDEF, _ '' DECL_TYPEDEF
-			ASTCLASS_UOP      _ '' DECL_CAST
+			ASTCLASS_TYPE   , _ '' DECL_CASTTYPE
+			ASTCLASS_TYPE     _ '' DECL_SIZEOFTYPE
 		}
 
 		if( decl = DECL_TYPEDEF ) then
@@ -1165,7 +1229,6 @@ private function cDeclarator _
 		select case( decl )
 		case DECL_EXTERNVAR : t->attrib or= ASTATTRIB_EXTERN
 		case DECL_STATICVAR : t->attrib or= ASTATTRIB_PRIVATE
-		case DECL_CAST      : t->op = ASTOP_CAST : assert( t->class = ASTCLASS_UOP )
 		end select
 
 		astSetType( t, dtype, basesubtype )
@@ -1347,18 +1410,18 @@ private function cIdList _
 		astAddComment( group->tail, tkCollectComments( begin, x - 1 ) )
 
 		'' Everything can have a comma and more identifiers,
-		'' except for parameters/casts.
+		'' except for parameters/types.
 		select case( decl )
-		case DECL_PARAM, DECL_CAST
+		case DECL_PARAM, DECL_CASTTYPE, DECL_SIZEOFTYPE
 			exit do
 		end select
 
 		'' ','?
 	loop while( hMatch( x, TK_COMMA ) )
 
-	'' Everything except parameters/casts must end with a ';'
+	'' Everything except parameters/types must end with a ';'
 	select case( decl )
-	case DECL_PARAM, DECL_CAST
+	case DECL_PARAM, DECL_CASTTYPE, DECL_SIZEOFTYPE
 	case else
 		'' ';'
 		tkExpect( x, TK_SEMI, "to finish this declaration" )

@@ -10,6 +10,13 @@ enum E {
 	A = *A,
 	A = sizeof A,
 	A = sizeof(A),
+	A = sizeof (int),
+	A = sizeof (int) * 2,
+	A = sizeof (int) << 1,
+	A = sizeof (MYINT),
+	A = sizeof (MYINT) * 2,
+	A = sizeof (MYINT) << 1,
+	A = sizeof (__attribute__((stdcall)) void (*)(void)),
 
 	// atoms
 	A = (A),

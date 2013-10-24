@@ -126,7 +126,7 @@ private sub hAccumTkComment( byval x as integer, byval comment as integer )
 	hAccumComment( x, tkGetText( comment ) )
 end sub
 
-private function hFindClosingParen( byval x as integer ) as integer
+function hFindClosingParen( byval x as integer ) as integer
 	var opening = tkGet( x )
 	var level = 0
 

@@ -84,6 +84,7 @@ dim shared as ASTNODEINFO astnodeinfo(0 to ...) = _
 	( "string"  ), _
 	( "char"    ), _
 	( "dummyversion" ), _
+	( "type"    ), _
 	( "uop"     ), _
 	( "bop"     ), _
 	( "iif"     ), _
@@ -91,6 +92,7 @@ dim shared as ASTNODEINFO astnodeinfo(0 to ...) = _
 	( "call"    ), _
 	( "structinit" ), _
 	( "dimension" ), _
+	( "sizeoftype" ), _
 	( "frogfile" ) _
 }
 
@@ -1524,7 +1526,10 @@ private function astFoldConsts( byval n as ASTNODE ptr ) as ASTNODE ptr
 
 	select case( n->class )
 	case ASTCLASS_UOP
-		if( n->op = ASTOP_CAST ) then exit select
+		select case( n->op )
+		case ASTOP_CAST, ASTOP_DEREF
+			exit select, select
+		end select
 
 		if( (n->l->class = ASTCLASS_CONST) and _
 		    (not typeIsFloat( n->l->dtype )) ) then
