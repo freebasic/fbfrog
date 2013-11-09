@@ -59,12 +59,6 @@ To do:
 - add pass to check all identifiers against FB keywords, and to check for dupdefs
   due to case insensitivity
 
-- Add to top of binding:
-    - if versiondefine not #defined, use a default version
-    - complain if versiondefine #defined to unsupported value
-    - for __FB_<target>__ #defines we can ensure the header is only used on
-      systems that it supports
-
 - For #defines that can't be parsed & translated as simple expressions:
   REPLACE DEFINE Symbol [MacroParams] OldBody "NewBody"
   - "NewBody" is FB code in a C string, as the preset is lexed in C mode

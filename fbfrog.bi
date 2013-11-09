@@ -641,6 +641,7 @@ enum
 	ASTCLASS_PPELSEIF
 	ASTCLASS_PPELSE
 	ASTCLASS_PPENDIF
+	ASTCLASS_PPERROR
 
 	ASTCLASS_STRUCT
 	ASTCLASS_UNION
@@ -767,6 +768,7 @@ declare function astNew overload _
 		byval class_ as integer, _
 		byval child as ASTNODE ptr _
 	) as ASTNODE ptr
+declare function astNewPPIF( byval expr as ASTNODE ptr ) as ASTNODE ptr
 declare function astNewUOP _
 	( _
 		byval op as integer, _

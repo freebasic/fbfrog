@@ -383,6 +383,9 @@ function emitAst _
 	case ASTCLASS_PPENDIF
 		emitStmt( "#endif" )
 
+	case ASTCLASS_PPERROR
+		emitStmt( "#error """ + *n->text + """" )
+
 	case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
 		dim as string compoundkeyword
 		select case( n->class )

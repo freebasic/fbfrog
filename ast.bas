@@ -60,6 +60,7 @@ dim shared as ASTNODEINFO astnodeinfo(0 to ...) = _
 	( "#elseif"  ), _
 	( "#else"    ), _
 	( "#endif"   ), _
+	( "#error"   ), _
 	( "struct"  ), _
 	( "union"   ), _
 	( "enum"    ), _
@@ -145,6 +146,12 @@ function astNew overload _
 	var n = astNew( class_ )
 	astAppend( n, child )
 
+	function = n
+end function
+
+function astNewPPIF( byval expr as ASTNODE ptr ) as ASTNODE ptr
+	var n = astNew( ASTCLASS_PPIF )
+	n->expr = expr
 	function = n
 end function
 
@@ -1364,6 +1371,89 @@ private sub hTurnTargetblocksIntoPpIfs _
 	wend
 end sub
 
+'' Add some checks at the top of each of the binding's files, to verify the
+'' version-selection #define and the target system.
+private sub hAddVersionDefineChecks _
+	( _
+		byval code as ASTNODE ptr, _
+		byval versions as ASTNODE ptr, _
+		byval targets as integer, _
+		byval versiondefine as zstring ptr, _
+		byval defaultversion as ASTNODE ptr _
+	)
+
+	var checks = astNewGROUP( )
+
+	'' If the version #define wasn't #defined, use the default version
+	'' (chosen by preset)
+	''     #ifndef VER
+	''         #define VER default
+	''     #endif
+	if( defaultversion->class <> ASTCLASS_DUMMYVERSION ) then
+		var ppif = astNewPPIF( astNewUOP( ASTOP_NOT, astNewUOP( ASTOP_DEFINED, astNewID( versiondefine ) ) ) )
+		var macro = astNew( ASTCLASS_PPDEFINE, versiondefine )
+		macro->expr = astClone( defaultversion )
+		astAppend( ppif, macro )
+		astAppend( checks, ppif )
+		astAppend( checks, astNew( ASTCLASS_PPENDIF ) )
+	end if
+
+	'' Complain if the version #define was #defined to an unsupported value
+	''     #if VER <> good1 and VER <> good2 and VER <> good3 etc.
+	''         #error "VER is #defined to an unsupported value; expected one of: a, b, c"
+	''     #endif
+	scope
+		dim expr as ASTNODE ptr
+		dim commalist as string
+
+		scope
+			var i = versions->head
+			while( i )
+
+				if( i->class <> ASTCLASS_DUMMYVERSION ) then
+					'' VER <> version
+					var comparison = astNewBOP( ASTOP_NE, astNewID( versiondefine ), astClone( i ) )
+
+					dim versionvalue as string
+					if( i->class = ASTCLASS_CONST ) then
+						assert( typeIsFloat( i->dtype ) = FALSE )
+						versionvalue = str( i->vali )
+					else
+						assert( i->class = ASTCLASS_STRING )
+						versionvalue = """" + *i->text + """"
+					end if
+
+					'' AND with previous expression, if any
+					if( expr ) then
+						expr = astNewBOP( ASTOP_AND, expr, comparison )
+						commalist += ", " + versionvalue
+					else
+						expr = comparison
+						commalist = versionvalue
+					end if
+				end if
+
+				i = i->next
+			wend
+		end scope
+
+		if( expr ) then
+			var ppif = astNewPPIF( expr )
+			astAppend( ppif, astNew( ASTCLASS_PPERROR, "'" + *versiondefine + "' is #defined to an unsupported value; expected one of: " + commalist ) )
+			astAppend( checks, ppif )
+			astAppend( checks, astNew( ASTCLASS_PPENDIF ) )
+		end if
+	end scope
+
+	'' Check the target system (some bindings aren't intended to work on DOS, etc.)
+	''     #if not defined( __FB_WIN32__ ) and not defined( __FB_LINUX__ )
+	''         #error "unsupported target system; this binding supports only: win32, linux"
+	''     #endif
+
+	astPrepend( code, checks )
+
+end sub
+
 private sub hProcessVerblocksAndTargetblocks _
 	( _
 		byval code as ASTNODE ptr, _
@@ -1386,6 +1476,8 @@ private sub hProcessVerblocksAndTargetblocks _
 
 	hTurnVerblocksIntoPpIfs( code, versions, versiondefine )
 	hTurnTargetblocksIntoPpIfs( code, targets )
+
+	hAddVersionDefineChecks( code, versions, targets, versiondefine, versions->head )
 
 end sub
 
