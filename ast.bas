@@ -2563,6 +2563,64 @@ sub astMergeDIVIDERs( byval n as ASTNODE ptr )
 	wend
 end sub
 
+private function hIsPpIfBegin( byval n as ASTNODE ptr ) as integer
+	select case( n->class )
+	case ASTCLASS_PPIF, ASTCLASS_PPELSEIF, ASTCLASS_PPELSE
+		function = TRUE
+	end select
+end function
+
+private function hIsPpIfEnd( byval n as ASTNODE ptr ) as integer
+	select case( n->class )
+	case ASTCLASS_PPELSEIF, ASTCLASS_PPELSE, ASTCLASS_PPENDIF
+		function = TRUE
+	end select
+end function
+
+private function hIsCompound( byval n as ASTNODE ptr ) as integer
+	select case( n->class )
+	case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
+		function = TRUE
+	end select
+end function
+
+private function hShouldSeparate _
+	( _
+		byval a as ASTNODE ptr, _
+		byval b as ASTNODE ptr _
+	) as integer
+
+	if( hIsPpIfBegin( a ) and hIsPpIfEnd( b ) ) then
+		exit function
+	end if
+
+	function = (a->class <> b->class) or _
+	           hIsCompound( a ) or hIsCompound( b )
+end function
+
+''
+'' Insert DIVIDERs between statements of different kind, e.g. all #defines in
+'' a row shouldn't be divided, but a #define should be divided from a typedef.
+'' Structs/unions/enums should always be separated by a divider because they're
+'' compounds and normally span multiple lines themselves.
+''
+sub astAutoAddDividers( byval code as ASTNODE ptr )
+	var i = code->head
+	while( i )
+		var nxt = i->next
+
+		astAutoAddDividers( i )
+
+		if( nxt ) then
+			if( hShouldSeparate( i, nxt ) ) then
+				astInsert( code, astNew( ASTCLASS_DIVIDER ), nxt )
+			end if
+		end if
+
+		i = nxt
+	wend
+end sub
+
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 '' AST merging
 

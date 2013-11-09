@@ -641,8 +641,15 @@ private sub frogWorkPreset _
 	f = files->head
 	do
 		print , *f->comment
+
+		'' Do auto-formatting if not preserving whitespace
+		if( (pre->options and PRESETOPT_WHITESPACE) = 0 ) then
+			astAutoAddDividers( f->expr )
+		end if
+
 		'astDump( f->expr )
 		emitFile( *f->text, f->expr )
+
 		f = f->next
 	loop while( f )
 

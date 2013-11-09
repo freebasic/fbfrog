@@ -890,6 +890,7 @@ declare sub astFixArrayParams( byval n as ASTNODE ptr )
 declare sub astFixAnonUDTs( byval n as ASTNODE ptr )
 declare sub astRemoveRedundantTypedefs( byval n as ASTNODE ptr )
 declare sub astMergeDIVIDERs( byval n as ASTNODE ptr )
+declare sub astAutoAddDividers( byval code as ASTNODE ptr )
 declare function astWrapFileInVerblock _
 	( _
 		byval code as ASTNODE ptr, _
