@@ -268,8 +268,9 @@ private function hStatementOrBlock( byval body as integer ) as ASTNODE ptr
 
 	'' OPTION OptionId+
 	case "option"
+		hSkip( )
+
 		do
-			hSkip( )
 			select case( hKeyword( ) )
 			case "nomerge"      : presetoptions or= PRESETOPT_NOMERGE
 			case "whitespace"   : presetoptions or= PRESETOPT_WHITESPACE
