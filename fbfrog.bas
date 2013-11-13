@@ -10,9 +10,10 @@ private sub hPrintHelp( byref message as string )
 	end if
 	print "fbfrog 0.1 (" + __DATE_ISO__ + "), FreeBASIC binding generator"
 	print "usage: fbfrog [options] *.h"
-	print "Generates .bi files next to given .h files."
+	print "Generates a .bi file containing FB API declarations corresponding"
+	print "to the C API declarations from the given *.h file(s)."
 	print "options:"
-	print "  -m         Merge multiple headers into one"
+	print "  -nomerge   Produce one .bi per .h, instead of a single .bi"
 	print "  -w         Whitespace: Try to preserve comments and empty lines"
 	print "  -o <path>  Set output directory for generated .bi files"
 	print "  -v         Show verbose/debugging info"
@@ -668,7 +669,6 @@ end sub
 	'' Input files and various other info from command line
 	dim cmdline as FROGPRESET
 	presetInit( @cmdline )
-	cmdline.options or= PRESETOPT_NOMERGE
 
 	'' *.fbfrog files from command line
 	var presetfiles = astNewGROUP( )
@@ -686,11 +686,11 @@ end sub
 			select case( arg )
 			case "h", "?", "help", "version"
 				hPrintHelp( "" )
-			case "w", "whitespace"
+			case "w"
 				cmdline.options or= PRESETOPT_WHITESPACE
-			case "m", "merge"
-				cmdline.options and= not PRESETOPT_NOMERGE
-			case "o", "outdir"
+			case "nomerge"
+				cmdline.options or= PRESETOPT_NOMERGE
+			case "o"
 				i += 1
 				if( i >= __FB_ARGC__ ) then
 					hPrintHelp( "missing output directory path for -o" )

@@ -24,9 +24,9 @@ Goal:
 
 Usage:
 
-  Create .bi binding for a C header:       ./fbfrog foo.h
-  Do it for all C headers in a directory:  ./fbfrog path/to/foo/
-  ...
+  Pass *.h files (C API declarations) to fbfrog:
+    $ ./fbfrog foo.h
+  and fbfrog generates a corresponding *.bi file (FB API declarations).
 
 Compiling:
 

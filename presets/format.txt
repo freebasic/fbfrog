@@ -112,7 +112,7 @@ The rest
 --------
 
   option <name>
-    nomerge       - create one *.bi per *.h, instead of a single *.bi
+    nomerge       - produce one *.bi per *.h, instead of a single *.bi
     whitespace    - try to preserve comments and empty lines
     nopp          - disable preprocessing (for test cases)
     noppfold      - disable #if expression folding (for test cases)

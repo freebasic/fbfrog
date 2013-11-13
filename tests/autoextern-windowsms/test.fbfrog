@@ -1,3 +1,2 @@
 file "extern-windows-ms.h"
-option nomerge
-option windowsms
+option nomerge windowsms
