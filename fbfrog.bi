@@ -160,29 +160,6 @@ declare sub hashDump( byval h as THASH ptr )
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-type LISTNODE
-	next		as LISTNODE ptr
-	prev		as LISTNODE ptr
-end type
-
-type TLIST
-	head		as LISTNODE ptr
-	tail		as LISTNODE ptr
-	nodesize	as integer
-end type
-
-declare function listGetHead( byval l as TLIST ptr) as any ptr
-declare function listGetTail( byval l as TLIST ptr) as any ptr
-declare function listGetNext( byval p as any ptr ) as any ptr
-declare function listGetPrev( byval p as any ptr ) as any ptr
-declare function listAppend( byval l as TLIST ptr ) as any ptr
-declare sub listDelete( byval l as TLIST ptr, byval p as any ptr )
-declare function listCount( byval l as TLIST ptr ) as integer
-declare sub listInit( byval l as TLIST ptr, byval unit as integer )
-declare sub listEnd( byval l as TLIST ptr )
-
-''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-
 #if defined( __FB_WIN32__ ) or defined( __FB_DOS__ )
 	const PATHDIV = $"\"
 #else
@@ -211,12 +188,11 @@ declare function hExepath( ) as string
 declare function pathNormalize( byref path as string ) as string
 declare function hReadableDirExists( byref path as string ) as integer
 declare function hFileExists( byref file as string ) as integer
-declare sub hScanDirectory _
+declare function hScanDirectory _
 	( _
 		byref rootdir as string, _
-		byref filepattern as string, _
-		byval resultlist as TLIST ptr _
-	)
+		byref filepattern as string _
+	) as ASTNODE ptr
 declare function hShell( byref ln as string ) as integer
 declare sub hMkdir( byref path as string )
 declare sub hMkdirP( byref path as string )

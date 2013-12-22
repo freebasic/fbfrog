@@ -64,8 +64,6 @@ To do:
   common declarations, extract them into common header). That requires multiple
   roots to be passed without them being concatenated.
 
-- Remove TLIST, just use ASTNODEs for everything
-
 - Remove FB parser, useless
 - lex: should only allow escaped EOLs in C mode
 - lex: add support for FB escape sequences, or at least only allow C escapes

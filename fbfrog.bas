@@ -204,19 +204,7 @@ private function frogWorkVersion _
 
 		case ASTCLASS_DIR
 			'' Input files from directories
-			dim as TLIST list
-			listInit( @list, sizeof( string ) )
-
-			hScanDirectory( presetprefix + *child->text, "*.h", @list )
-
-			dim as string ptr s = listGetHead( @list )
-			while( s )
-				astAppend( rootfiles, astNewTEXT( *s ) )
-				*s = ""
-				s = listGetNext( s )
-			wend
-
-			listEnd( @list )
+			astAppend( rootfiles, hScanDirectory( presetprefix + *child->text, "*.h" ) )
 
 		end select
 
@@ -451,22 +439,12 @@ end sub
 			if( hReadableDirExists( arg ) ) then
 				'' Search input directory for *.fbfrog files, if none found,
 				'' add it for *.h search later
-				dim as TLIST list
-				listInit( @list, sizeof( string ) )
-
-				hScanDirectory( arg, "*.fbfrog", @list )
-
-				dim as string ptr s = listGetHead( @list )
-				if( s ) then
-					do
-						astAppend( presetfiles, astNewTEXT( *s ) )
-						*s = ""
-						s = listGetNext( s )
-					loop while( s )
+				var foundfiles = hScanDirectory( arg, "*.fbfrog" )
+				if( foundfiles->head ) then
+					astAppend( presetfiles, foundfiles )
 				else
 					astAppend( cmdline.code, astNew( ASTCLASS_DIR, arg ) )
 				end if
-				listEnd( @list )
 			elseif( pathExtOnly( arg ) = "fbfrog" ) then
 				astAppend( presetfiles, astNewTEXT( arg ) )
 			else
