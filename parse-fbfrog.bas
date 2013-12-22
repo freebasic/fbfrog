@@ -7,7 +7,6 @@
 declare function hBody( byval body as integer ) as ASTNODE ptr
 
 dim shared as integer x
-dim shared as ASTNODE ptr presetfiles
 dim shared as integer presetoptions
 
 private function hKeyword( ) as string
@@ -46,10 +45,8 @@ private function hExpectSkipString( byval whatfor as zstring ptr ) as string
 	hSkip( )
 end function
 
-private sub hLoadFile( byref file as string )
-	var f = astNewFROGFILE( file, file )
-	astAppend( presetfiles, f )
-	lexLoadFile( x, f, FALSE, FALSE )
+private sub hLoadFile( byref filename as string )
+	lexLoadFile( x, filename, FALSE, FALSE )
 	tkTurnCPPTokensIntoCIds( )
 end sub
 
@@ -73,7 +70,7 @@ private function hStatementOrBlock( byval body as integer ) as ASTNODE ptr
 		var incfile = *tkGetText( x )
 		var location = tkGetLocation( x )
 		'' Try to open the #include relative to the parent file's directory
-		incfile = pathAddDiv( pathOnly( *location->file->text ) ) + incfile
+		incfile = pathAddDiv( pathOnly( *location->filename ) ) + incfile
 		if( hFileExists( incfile ) = FALSE ) then
 			hReportLocation( location, "file not found: '" + incfile + "'" )
 			end 1
@@ -311,7 +308,6 @@ end function
 
 sub presetParse( byval pre as FROGPRESET ptr, byref presetfile as string )
 	x = 0
-	presetfiles = astNewGROUP( )
 	presetoptions = 0
 	tkInit( )
 
@@ -320,7 +316,6 @@ sub presetParse( byval pre as FROGPRESET ptr, byref presetfile as string )
 	pre->options or= presetoptions
 
 	tkEnd( )
-	astDelete( presetfiles )
 end sub
 
 sub presetInit( byval pre as FROGPRESET ptr )

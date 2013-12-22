@@ -791,17 +791,36 @@ private sub lexNext( )
 	end select
 end sub
 
+private sub hComplainAboutEmbeddedNulls _
+	( _
+		byval filename as zstring ptr, _
+		byval buffer as ubyte ptr, _
+		byval limit as ubyte ptr _
+	)
+
+	'' Currently tokens store text as null-terminated strings, so they
+	'' can't allow embedded nulls, and null also indicates EOF to the lexer.
+	var i = buffer
+	while( i < limit )
+		if( i[0] = 0 ) then
+			oops( "file '" + *filename + "' has embedded nulls, please fix that first!" )
+		end if
+		i += 1
+	wend
+
+end sub
+
 private sub hLoadFile _
 	( _
-		byval file as ASTNODE ptr, _
+		byval filename as zstring ptr, _
 		byref buffer as ubyte ptr, _
 		byref limit as ubyte ptr _
 	)
 
 	'' Read in the whole file content into lex.buffer
 	var f = freefile( )
-	if( open( *file->text, for binary, access read, as #f ) ) then
-		oops( "could not open file: '" + *file->text + "'" )
+	if( open( *filename, for binary, access read, as #f ) ) then
+		oops( "could not open file: '" + *filename + "'" )
 	end if
 
 	var filesize = lof( f )
@@ -826,25 +845,8 @@ private sub hLoadFile _
 	end if
 
 	close #f
-end sub
 
-private sub hComplainAboutEmbeddedNulls _
-	( _
-		byval file as ASTNODE ptr, _
-		byval buffer as ubyte ptr, _
-		byval limit as ubyte ptr _
-	)
-
-	'' Currently tokens store text as null-terminated strings, so they
-	'' can't allow embedded nulls, and null also indicates EOF to the lexer.
-	var i = buffer
-	while( i < limit )
-		if( i[0] = 0 ) then
-			oops( *file->comment + ": file has embedded nulls, please fix that first!" )
-		end if
-		i += 1
-	wend
-
+	hComplainAboutEmbeddedNulls( filename, buffer, limit )
 end sub
 
 private sub hInitKeywords( )
@@ -876,20 +878,19 @@ end sub
 function lexLoadFile _
 	( _
 		byval x as integer, _
-		byval file as ASTNODE ptr, _
+		byval filename as zstring ptr, _
 		byval fbmode as integer, _
 		byval keep_comments as integer _
 	) as integer
 
 	lex.x = x
-	lex.location.file = file
+	lex.location.filename = filesysStore( filename )
 	lex.location.linenum = 0
 	lex.fbmode = fbmode
 	lex.keep_comments = keep_comments
-	hLoadFile( file, lex.buffer, lex.limit )
+	hLoadFile( filename, lex.buffer, lex.limit )
 	lex.i = lex.buffer
 	lex.bol = lex.i
-	hComplainAboutEmbeddedNulls( file, lex.buffer, lex.limit )
 	hInitKeywords( )
 
 	'' Tokenize and insert into tk buffer
@@ -898,7 +899,7 @@ function lexLoadFile _
 	wend
 
 	if( verbose ) then
-		print "lex: " + *file->comment + ", " & cuint( lex.limit ) - cuint( lex.buffer ) & _
+		print "lex: " + *filename + ", " & cuint( lex.limit ) - cuint( lex.buffer ) & _
 			" bytes, " & (lex.location.linenum + 1) & " lines, " & lex.x - x & " tokens"
 	end if
 
@@ -910,13 +911,12 @@ end function
 '' error messages.
 function lexPeekLine _
 	( _
-		byval file as ASTNODE ptr, _
+		byval filename as zstring ptr, _
 		byval targetlinenum as integer _
 	) as string
 
 	dim as ubyte ptr buffer, limit
-	hLoadFile( file, buffer, limit )
-	hComplainAboutEmbeddedNulls( file, buffer, limit )
+	hLoadFile( filename, buffer, limit )
 
 	'' Find the targetlinenum'th line of code, bol will end up pointing
 	'' to the begin of line of the target line, i will point to the end of
@@ -968,10 +968,9 @@ function lexPeekLine _
 	function = s
 end function
 
-function lexCountLines( byval file as ASTNODE ptr ) as integer
+function lexCountLines( byval filename as zstring ptr ) as integer
 	dim as ubyte ptr buffer, limit
-	hLoadFile( file, buffer, limit )
-	hComplainAboutEmbeddedNulls( file, buffer, limit )
+	hLoadFile( filename, buffer, limit )
 
 	var i = buffer
 	var lines = 1

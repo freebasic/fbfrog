@@ -660,9 +660,9 @@ private function imToplevel( ) as ASTNODE ptr
 	function = group
 end function
 
-function importFile( byval file as ASTNODE ptr ) as ASTNODE ptr
+function importFile( byval topfile as zstring ptr ) as ASTNODE ptr
 	tkInit( )
-	lexLoadFile( 0, file, TRUE, FALSE )
+	lexLoadFile( 0, topfile, TRUE, FALSE )
 	function = imToplevel( )
 	tkEnd( )
 end function

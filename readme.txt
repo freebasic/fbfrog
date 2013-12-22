@@ -49,8 +49,35 @@ Compiling:
   The *.xpm files are exported from the *.pngs using GIMP.
   To recreate the xpms.bas module, compile and run embed-xpms.bas.
 
-
 To do:
+
+- Each input .h is 1 root
+- Make #include expansion optional (-i option to enable?)
+    - But always parse/evaluate them to see #defines/#undefs, just not always
+      preserve the resulting tokens
+- Allow user to concat roots via the CLI, i.e. to specify pre/post-#includes
+  for certain roots (-include <file>?, and make it matter whether it's given
+  before/behind a root?)
+- Or, just concat all roots given. If that's not wanted, then must use separate
+  fbfrog invocations.
+- But, should support "common sub-header extraction" (if multiple roots have
+  common declarations, extract them into common header). That requires multiple
+  roots to be passed without them being concatenated.
+
+- Remove TLIST, just use ASTNODEs for everything
+
+- Remove FB parser, useless
+- lex: should only allow escaped EOLs in C mode
+- lex: add support for FB escape sequences, or at least only allow C escapes
+  in C mode
+- Should remove *.fbfrog files and use @response files and command line options
+  for everything
+
+- when seeing #error, report "found an #error" instead of the #error's message,
+  otherwise it looks like that message is coming from fbfrog
+- use CONSTI and CONSTF nodes instead of just CONST, so we don't need typeIsFloat() checks?
+- should re-add support for unknown-construct-error-recovery (emitting TODOs+original code in comment)
+    - C constructs, and for CPP, #pragmas and such
 
 - #include foo.h  ->  #include foo.bi, if foo.bi will be generated too
 - #include stdio.h -> #include crt/stdio.bi, for some known default headers
@@ -66,12 +93,15 @@ To do:
   can set is_bool_context=TRUE when folding
 
 - parentheses around macro params should be preserved (can use a flag on the AST node)
-- lex: should only allow escaped EOLs in C mode
-- lex: add support for FB escape sequences, or at least only allow C escapes
-  in C mode
 
 - how to handle Enums? Need to be translated to LONG currently, but it's hard to
   detect what's an enum and what isn't...
+    - look for enums in the API
+    - look for data types like "enum foo"...
+    - or just add "enum FOO as long" to FB and translate all enums to that
+    - of course that can't be done for enums that aren't declared in this API,
+      but for example in system headers, but those should be translated properly
+      in our crt/ bindings etc.
 
 - -m should somehow allow concatenating even #includes with refcount >= 2.
     - if multiple leaf headers #include a common header each once, then the
@@ -84,18 +114,11 @@ To do:
   locations in case of nested macros. It'd be nice if the tkOops() functions
   could show the context of a token that caused an error as it appears in the
   tk buffer, and then where the token came from...
-- Error context output should expand/align TABs to 8 spaces based on column position from BOL
-  as it would happen in the source file
 - Comments given to a TK_ID that is a macro call and will be expanded should
   be given to first non-whitespace token from the expansion, for example:
         // foo
         CALLCONV void f(void);
 - comments behind #define bodies should go to the #define not the body tokens
-
-- Improve FB parser to allow re-importing generated bindings, this could be
-  used to amend bindings much more easily than re-making from scratch (which may
-  require downloading many tarballs for different versions of the library),
-  and it allows modifications made to the binding to be preserved...
 
 - libzip: zip_source_free() vs. enumconst ZIP_SOURCE_FREE,
           zip_stat_index() vs. #define ZIP_STAT_INDEX

@@ -2,7 +2,7 @@
 '' Token buffer preprocessing
 '' --------------------------
 ''
-'' ppComments() assigns comments from TK_COMMENTs (if any exist even, depending
+'' cppComments() assigns comments from TK_COMMENTs (if any exist even, depending
 '' on whether lexLoadFile() was asked to preserve them or not) to other,
 '' non-whitespace, tokens. It tries to be smart and effectively assign comments
 '' to corresponding high-level constructs. For example, if a comment is found
@@ -11,7 +11,7 @@
 '' TK_COMMENTs and can easily collect assigned comments from the tokens of
 '' high-level constructs.
 ''
-'' ppDividers() merges empty lines (i.e. multiple TK_EOLs) into TK_DIVIDERs,
+'' cppDividers() merges empty lines (i.e. multiple TK_EOLs) into TK_DIVIDERs,
 '' for nicer output formatting later. It can be nice to preserve the
 '' block/section/paragraph layout of the input, and still trim down unnecessary
 '' newlines.
@@ -20,37 +20,33 @@
 '' CPP directive parsing, #if evaluation, macro expansion
 '' ------------------------------------------------------
 ''
-'' ppDirectives1() merges PP directives into TK_PP* tokens, except that #define
-'' bodies and #if expressions are not yet parsed, but only enclosed in TK_BEGIN
-'' and TK_END tokens. This basic identification of PP directives is enough for
-'' an #include detection pre-parsing step.
+'' cppIdentifyDirectives() parses the input tokens, looking for CPP directives.
+'' For any directives found, it merges the tokens into single TK_PP* tokens,
+'' to make further parsing easier. #define bodies and #if expressions are not
+'' yet parsed though, but only enclosed in TK_BEGIN and TK_END tokens.
 ''
-'' ppEval() goes through the token buffer almost like a C preprocessor would do.
-'' It keeps track of #defines and #undefs and expands macro calls for "precious"
-'' macros. It also expands macros inside #if conditions, then parses them as
-'' expressions, evaluates them, and solves out #if blocks, preserving only the
-'' #if/#else paths, depending on whether the expression evaluated to TRUE/FALSE.
-'' If an #if block can't be solved out because of an unknown symbol, an error
-'' will be shown.
+'' cppMain() goes through the token buffer much like a C preprocessor would do,
+'' keeping track of #defines and #undefs, doing macro expansion, evaluating #if
+'' blocks, and expanding #includes.
 ''
-'' ppNoExpandSym() can be used to disable macro expansion for certain symbols.
+'' cppNoExpandSym() can be used to disable macro expansion for certain symbols.
 '' This should be pretty rare though; usually in headers where function
 '' declarations etc. are obfuscated by macros, they're going to need to be
 '' expanded.
 ''
-'' ppRemoveSym() registers symbols (#defines/#undefs) which should be removed
+'' cppRemoveSym() registers symbols (#defines/#undefs) which should be removed
 '' instead of being preserved in the binding. Doing this on the PP level instead
 '' of later in the AST is useful for #defines whose bodies can't be parsed as
 '' C expressions.
 ''
-'' ppPreDefine() adds initial macros, including simple symbols that should be
+'' cppPreDefine() adds initial macros, including simple symbols that should be
 '' treated as initially defined.
 ''
-'' ppPreUndef() registers symbols as initially undefined.
+'' cppPreUndef() registers symbols as initially undefined.
 ''
 '' Pre-#defines/#undefs are simply inserted at the top of the token buffer,
-'' so ppEval() parses them like any other #define/#undef it finds, except that
-'' pre-#defines/#undefs are also automatically registered with ppRemoveSym().
+'' so cppMain() parses them like any other #define/#undef it finds, except that
+'' pre-#defines/#undefs are also automatically registered with cppRemoveSym().
 ''
 '' #define bodies are preserved (enclosed in TK_BEGIN/END):
 ''  - macros can be expanded simply by copying the tokens from the original body
@@ -66,9 +62,9 @@
 ''    for removal instead of C parsing can't be removed immediately - they must
 ''    be marked with ASTATTRIB_REMOVE so the C parser will ignore them.
 ''
-'' ppParseIfExprOnly() is a ppEval() replacement that just parses #if
-'' expressions into ASTs but doesn't evaluate/expand anything, for use by PP
-'' expression parser test cases.
+'' cppMainForTestingIfExpr() is a tiny version of cppMain() that just parses #if
+'' expressions into ASTs but doesn't evaluate/expand anything, for use by the
+'' CPP expression parser test cases.
 ''
 
 #include once "fbfrog.bi"
@@ -216,7 +212,7 @@ private function hSkipStatement( byval x as integer ) as integer
 	function = x
 end function
 
-private function ppComment( byval x as integer ) as integer
+private function cppComment( byval x as integer ) as integer
 	''
 	'' int A; //FOO    -> assign FOO to ';', so it can be
 	''                    picked up by the A vardecl
@@ -311,11 +307,11 @@ private function ppComment( byval x as integer ) as integer
 	function = x
 end function
 
-sub ppComments( )
+private sub cppComments( )
 	var x = 0
 	while( tkGet( x ) <> TK_EOF )
 		if( tkGet( x ) = TK_COMMENT ) then
-			x = ppComment( x )
+			x = cppComment( x )
 		end if
 		x += 1
 	wend
@@ -323,7 +319,7 @@ end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-sub ppDividers( )
+private sub cppDividers( )
 	var x = 0
 
 	while( tkGet( x ) <> TK_EOF )
@@ -403,7 +399,7 @@ end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-private function ppSkipToEOL( byval x as integer ) as integer
+private function hSkipToEOL( byval x as integer ) as integer
 	do
 		select case( tkGet( x ) )
 		case TK_EOL, TK_EOF
@@ -417,6 +413,7 @@ private function ppSkipToEOL( byval x as integer ) as integer
 end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+'' #if expression parser used by cppMain()
 
 function hNumberLiteral( byval x as integer ) as ASTNODE ptr
 	dim as ASTNODE ptr n
@@ -486,7 +483,7 @@ dim shared as integer cprecedence(ASTOP_IIF to ASTOP_SIZEOF) = _
 }
 
 '' C PP expression parser based on precedence climbing
-private function ppExpression _
+private function cppExpression _
 	( _
 		byref x as integer, _
 		byval level as integer = 0 _
@@ -505,7 +502,7 @@ private function ppExpression _
 	if( op >= 0 ) then
 		var uopx = x
 		x += 1
-		a = astNewUOP( op, ppExpression( x, cprecedence(op) ) )
+		a = astNewUOP( op, cppExpression( x, cprecedence(op) ) )
 		a->location = *tkGetLocation( uopx )
 	else
 		'' Atoms
@@ -516,7 +513,7 @@ private function ppExpression _
 			x += 1
 
 			'' Expression
-			a = ppExpression( x )
+			a = cppExpression( x )
 
 			'' ')'
 			tkExpect( x, TK_RPAREN, "for '(...)' parenthesized expression" )
@@ -617,7 +614,7 @@ private function ppExpression _
 		x += 1
 
 		'' rhs
-		var b = ppExpression( x, oplevel )
+		var b = cppExpression( x, oplevel )
 
 		'' Handle ?: special case
 		if( op = ASTOP_IIF ) then
@@ -625,7 +622,7 @@ private function ppExpression _
 			tkExpect( x, TK_COLON, "for a?b:c iif operator" )
 			x += 1
 
-			var c = ppExpression( x, oplevel )
+			var c = cppExpression( x, oplevel )
 
 			a = astNewIIF( a, b, c )
 		else
@@ -674,7 +671,7 @@ sub hMacroParamList( byref x as integer, byval t as ASTNODE ptr )
 	end if
 end sub
 
-private function ppDirective( byval x as integer ) as integer
+private function cppDirective( byval x as integer ) as integer
 	var begin = x
 
 	'' '#'
@@ -701,7 +698,7 @@ private function ppDirective( byval x as integer ) as integer
 		'' Enclose body tokens in TK_BEGIN/END
 		tkInsert( x, TK_BEGIN )
 		x += 1
-		x = ppSkipToEOL( x )
+		x = hSkipToEOL( x )
 		tkInsert( x, TK_END )
 		x += 1
 
@@ -722,7 +719,7 @@ private function ppDirective( byval x as integer ) as integer
 		tkInsert( x, TK_BEGIN )
 		x += 1
 		var exprbegin = x
-		x = ppSkipToEOL( x )
+		x = hSkipToEOL( x )
 		if( x = exprbegin ) then
 			tkOopsExpected( x, "#if condition" )
 		end if
@@ -830,7 +827,7 @@ private function ppDirective( byval x as integer ) as integer
 	function = x
 end function
 
-sub ppDirectives1( )
+private sub cppIdentifyDirectives( )
 	var x = 0
 	do
 		select case( tkGet( x ) )
@@ -844,24 +841,19 @@ sub ppDirectives1( )
 			case TK_EOL, TK_EOF, TK_END, TK_DIVIDER, _
 			     TK_PPINCLUDE, TK_PPDEFINE, TK_PPIF, TK_PPELSEIF, _
 			     TK_PPELSE, TK_PPENDIF, TK_PPUNDEF, TK_PPERROR, TK_PPWARNING
-				x = ppDirective( x )
+				x = cppDirective( x )
 			case else
-				'' Skip to next line
-				x = ppSkipToEOL( x ) + 1
+				x += 1
 			end select
 
-		case TK_PPINCLUDE, TK_PPDEFINE, TK_PPIF, TK_PPELSEIF, TK_PPELSE, _
-		     TK_PPENDIF, TK_PPUNDEF, TK_PPERROR, TK_PPWARNING, TK_DIVIDER
-			x += 1
-
 		case else
-			'' Skip to next line
-			x = ppSkipToEOL( x ) + 1
+			x += 1
 		end select
 	loop
 end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+'' Macro call parsing & macro expansion functions used by cppMain()
 
 const MAXARGS = 128
 dim shared as integer argbegin(0 to MAXARGS-1), argend(0 to MAXARGS-1), argcount
@@ -1354,20 +1346,20 @@ namespace eval
 	dim shared xpre          as integer
 end namespace
 
-sub ppEvalInit( )
+sub cppInit( )
 	hashInit( @eval.macros, 4, TRUE )
 	hashInit( @eval.noexpands, 4, TRUE )
 	hashInit( @eval.removes, 4, TRUE )
 	eval.xpre = 0
 end sub
 
-sub ppEvalEnd( )
+sub cppEnd( )
 	hashEnd( @eval.macros )
 	hashEnd( @eval.noexpands )
 	hashEnd( @eval.removes )
 end sub
 
-sub ppPreDefine overload( byval macro as ASTNODE ptr )
+sub cppPreDefine overload( byval macro as ASTNODE ptr )
 	'' Insert the #define with body tokens in TK_BEGIN/END at the top of
 	'' the tk buffer, where ppEval() will see it.
 	var newmacro = astClone( macro )
@@ -1399,24 +1391,24 @@ sub ppPreDefine overload( byval macro as ASTNODE ptr )
 	eval.xpre += 1
 end sub
 
-sub ppPreDefine overload( byval id as zstring ptr )
+sub cppPreDefine overload( byval id as zstring ptr )
 	var macro = astNew( ASTCLASS_PPDEFINE, id )
 	macro->paramcount = -1
-	ppPreDefine( macro )
+	cppPreDefine( macro )
 	astDelete( macro )
 end sub
 
-sub ppPreUndef( byval id as zstring ptr )
+sub cppPreUndef( byval id as zstring ptr )
 	'' Add #undef at the top of the tk buffer, where ppEval() will see it
 	tkInsert( eval.xpre, TK_PPUNDEF, id )
 	eval.xpre += 1
 end sub
 
-sub ppNoExpandSym( byval id as zstring ptr )
+sub cppNoExpandSym( byval id as zstring ptr )
 	hashAddOverwrite( @eval.noexpands, id, NULL )
 end sub
 
-sub ppRemoveSym( byval id as zstring ptr )
+sub cppRemoveSym( byval id as zstring ptr )
 	hashAddOverwrite( @eval.removes, id, NULL )
 end sub
 
@@ -1574,9 +1566,9 @@ private function hParseIfCondition( byval x as integer ) as ASTNODE ptr
 	x += 1
 
 	'' Try parsing an expression
-	function = ppExpression( x )
+	function = cppExpression( x )
 
-	'' TK_END not reached after ppExpression()?
+	'' TK_END not reached after cppExpression()?
 	if( tkGet( x ) <> TK_END ) then
 		'' Then either no expression could be parsed at all,
 		'' or it was followed by "junk" tokens...
@@ -1612,7 +1604,7 @@ private function hEvalIfCondition( byval x as integer ) as integer
 	'' 2. Check the condition
 	if( (t->class <> ASTCLASS_CONST) or typeIsFloat( t->dtype ) ) then
 		const MESSAGE = "couldn't evaluate #if condition"
-		if( t->location.file ) then
+		if( t->location.filename ) then
 			hReportLocation( @t->location, MESSAGE )
 			end 1
 		end if
@@ -1651,36 +1643,163 @@ private sub hRemoveTokenAndTkBeginEnd( byref x as integer )
 	x -= 1
 end sub
 
-type IFSTACKNODE
-	saw_true	as integer
-	saw_else	as integer
-end type
+''
+'' #if/file context stack
+''
+'' The stack starts out with only the toplevel file context.
+'' Both #if blocks and #include contexts are put on the same stack, so that an
+'' #endif found in an #include won't be able to close an #if from the parent
+'' file, since the #include stack node is in the way, and must be popped first.
+''
+enum
+	'' States:
+	'' 0 = file context
+	PPSTACK_IF = 1  '' #if context, fresh
+	PPSTACK_TRUE    '' #if context, saw #if/#elseif TRUE (and thus, further #elseif TRUE's must be skipped)
+	PPSTACK_ELSE    '' #if context, saw #else (and no further #elseif/#else can be allowed)
+end enum
 
-const MAXIFBLOCKS = 128
-dim shared ifstack(0 to MAXIFBLOCKS-1) as IFSTACKNODE
+const MAXPPSTACK = 128
+dim shared ppstack(0 to MAXPPSTACK-1) as integer
 
-sub ppEval( )
+private sub hCheckStackLevel( byval x as integer, byval level as integer )
+	if( level >= MAXPPSTACK ) then
+		tkOops( x, "#if/#include stack too small, MAXPPSTACK=" & MAXPPSTACK )
+	end if
+end sub
+
+private sub hLoadFile _
+	( _
+		byval x as integer, _
+		byval filename as zstring ptr, _
+		byval whitespace as integer _
+	)
+
+	lexLoadFile( x, filename, FALSE, whitespace )
+
+	if( whitespace ) then
+		cppComments( )
+		cppDividers( )
+	end if
+	cppIdentifyDirectives( )
+
+end sub
+
+'' Search for #included files in one of the parent directories
+'' of the context file. Usually the #include will refer to a
+'' file in the same directory or in a sub-directory at the same
+'' level or some levels up.
+private function hSearchHeaderFile _
+	( _
+		byval contextfile as zstring ptr, _
+		byval pretty as zstring ptr _
+	) as string
+
+	dim as string normed
+
+	var parent = pathOnly( *contextfile )
+	do
+		'' File not found anywhere?
+		if( len( parent ) = 0 ) then
+			exit do
+		end if
+
+		normed = parent + *pretty
+		if( hFileExists( normed ) ) then
+			exit do
+		end if
+
+		if( verbose ) then
+			print "not found: " + normed
+		end if
+
+		parent = pathStripLastComponent( parent )
+	loop
+
+	function = pathNormalize( normed )
+end function
+
+sub cppMain( byval topfile as zstring ptr, byval whitespace as integer )
 	var x = 0
-	var level = -1
-	var skiplevel = MAXIFBLOCKS
+	var skiplevel = MAXPPSTACK
+	var level = 0
+
+	'' Add toplevel file behind current tokens (could be pre-#defines)
+	hLoadFile( tkGetCount( ), topfile, whitespace )
+	ppstack(level) = 0
+
 	do
 		select case( tkGet( x ) )
 		case TK_EOF
+			'' If anything is left on the stack at EOF, it can only be #ifs
+			'' (#includes should be popped due to TK_ENDINCLUDE's already)
+			if( level > 0 ) then
+				assert( ppstack(level) >= PPSTACK_IF )
+				tkOops( x - 1, "missing #endif" )
+			end if
 			exit do
 
-		case TK_PPIF
-			if( level >= MAXIFBLOCKS-1 ) then
-				tkOops( x, "#if stack too small, MAXIFBLOCKS=" & MAXIFBLOCKS )
+		case TK_ENDINCLUDE
+			assert( skiplevel = MAXPPSTACK )
+			assert( level > 0 )
+			if( ppstack(level) >= PPSTACK_IF ) then
+				tkOops( x - 1, "missing #endif in #included file" )
 			end if
+			level -= 1
+			tkRemove( x, x )
+			x -= 1
+
+		case TK_PPINCLUDE
+			'' Not skipping? Then evaluate
+			if( skiplevel = MAXPPSTACK ) then
+				var location = tkGetLocation( x )
+				var context = location->filename
+				if( context = NULL ) then
+					context = topfile
+				end if
+				var inctext = *tkGetText( x )
+				var incfile = hSearchHeaderFile( context, inctext )
+
+				if( len( incfile ) > 0 ) then
+					print "include: " + incfile
+
+					level += 1
+					hCheckStackLevel( x, level )
+					ppstack(level) = 0
+
+					'' Remove the #include
+					tkRemove( x, x )
+
+					'' Put EOL in its place, so cppIdentifyDirectives() can identify BOL
+					'' when parsing the #included tokens, to be able to detect CPP
+					'' directives at the beginning of the #included tokens.
+					tkInsert( x, TK_EOL )
+					x += 1
+
+					'' Load the included file's tokens and put a TK_ENDINCLUDE behind it,
+					'' so we can detect the included EOF and pop the #include context from
+					'' the ppstack.
+					tkInsert( x, TK_ENDINCLUDE )
+					hLoadFile( x, incfile, whitespace )
+
+					'' Start parsing the #included content
+					'' (starting after the EOL inserted above)
+					x -= 1
+				else
+					print "include: " + inctext + " (not found)"
+				end if
+			end if
+
+		case TK_PPIF
 			level += 1
-			ifstack(level).saw_true = FALSE
-			ifstack(level).saw_else = FALSE
+			hCheckStackLevel( x, level )
+			ppstack(level) = PPSTACK_IF
 
 			'' Not skipping? Then evaluate
-			if( skiplevel = MAXIFBLOCKS ) then
+			if( skiplevel = MAXPPSTACK ) then
 				if( hEvalIfCondition( x ) ) then
 					'' #if TRUE, don't skip
-					ifstack(level).saw_true = TRUE
+					ppstack(level) = PPSTACK_TRUE
 				else
 					'' #if FALSE, start skipping
 					skiplevel = level
@@ -1690,25 +1809,27 @@ sub ppEval( )
 			hRemoveTokenAndTkBeginEnd( x )
 
 		case TK_PPELSEIF
-			if( level < 0 ) then
+			if( ppstack(level) < PPSTACK_IF ) then
 				tkOops( x, "#elseif without #if" )
-			elseif( ifstack(level).saw_else ) then
+			end if
+
+			if( ppstack(level) = PPSTACK_ELSE ) then
 				tkOops( x, "#elseif after #else" )
 			end if
 
 			'' Not skipping, or skipping due to previous #if/#elseif FALSE?
 			'' Then evaluate the #elseif to check whether to continue skipping or not
-			if( (skiplevel = MAXIFBLOCKS) or (skiplevel = level) ) then
+			if( (skiplevel = MAXPPSTACK) or (skiplevel = level) ) then
 				'' If there was a previous #if/#elseif TRUE on this level,
 				'' then this #elseif must be skipped no matter what its condition is.
-				if( ifstack(level).saw_true ) then
+				if( ppstack(level) = PPSTACK_TRUE ) then
 					'' Start/continue skipping
 					skiplevel = level
 				else
 					if( hEvalIfCondition( x ) ) then
 						'' #elseif TRUE, don't skip
-						ifstack(level).saw_true = TRUE
-						skiplevel = MAXIFBLOCKS
+						ppstack(level) = PPSTACK_TRUE
+						skiplevel = MAXPPSTACK
 					else
 						'' #elseif FALSE, start/continue skipping
 						skiplevel = level
@@ -1719,37 +1840,38 @@ sub ppEval( )
 			hRemoveTokenAndTkBeginEnd( x )
 
 		case TK_PPELSE
-			if( level < 0 ) then
+			if( ppstack(level) < PPSTACK_IF ) then
 				tkOops( x, "#else without #if" )
 			end if
 
-			if( ifstack(level).saw_else ) then
+			if( ppstack(level) = PPSTACK_ELSE ) then
 				tkOops( x, "#else after #else" )
 			end if
-			ifstack(level).saw_else = TRUE
 
 			'' Not skipping, or skipping due to previous #if/#elseif FALSE?
 			'' Then check whether to skip this #else block or not.
-			if( (skiplevel = MAXIFBLOCKS) or (skiplevel = level) ) then
-				if( ifstack(level).saw_true ) then
+			if( (skiplevel = MAXPPSTACK) or (skiplevel = level) ) then
+				if( ppstack(level) = PPSTACK_TRUE ) then
 					'' Previous #if/#elseif TRUE, skip #else
 					skiplevel = level
 				else
 					'' Previous #if/#elseif FALSE, don't skip #else
-					skiplevel = MAXIFBLOCKS
+					skiplevel = MAXPPSTACK
 				end if
 			end if
+
+			ppstack(level) = PPSTACK_ELSE
 
 			hRemoveTokenAndTkBeginEnd( x )
 
 		case TK_PPENDIF
-			if( level < 0 ) then
+			if( ppstack(level) < PPSTACK_IF ) then
 				tkOops( x, "#endif without #if" )
 			end if
 
 			'' If skipping due to current level, then stop skipping.
 			if( skiplevel = level ) then
-				skiplevel = MAXIFBLOCKS
+				skiplevel = MAXPPSTACK
 			end if
 
 			hRemoveTokenAndTkBeginEnd( x )
@@ -1757,7 +1879,7 @@ sub ppEval( )
 			level -= 1
 
 		case TK_PPDEFINE
-			if( skiplevel <> MAXIFBLOCKS ) then
+			if( skiplevel <> MAXPPSTACK ) then
 				hRemoveTokenAndTkBeginEnd( x )
 			else
 				'' Register/overwrite as known defined symbol
@@ -1779,7 +1901,7 @@ sub ppEval( )
 			end if
 
 		case TK_PPUNDEF
-			if( skiplevel <> MAXIFBLOCKS ) then
+			if( skiplevel <> MAXPPSTACK ) then
 				hRemoveTokenAndTkBeginEnd( x )
 			else
 				'' Register/overwrite as known undefined symbol
@@ -1793,21 +1915,21 @@ sub ppEval( )
 			end if
 
 		case TK_PPERROR
-			if( skiplevel <> MAXIFBLOCKS ) then
+			if( skiplevel <> MAXPPSTACK ) then
 				hRemoveTokenAndTkBeginEnd( x )
 			else
 				tkOops( x, tkGetText( x ) )
 			end if
 
 		case TK_PPWARNING
-			if( skiplevel <> MAXIFBLOCKS ) then
+			if( skiplevel <> MAXPPSTACK ) then
 				hRemoveTokenAndTkBeginEnd( x )
 			else
 				tkReport( x, tkGetText( x ) )
 			end if
 
 		case TK_ID
-			if( skiplevel <> MAXIFBLOCKS ) then
+			if( skiplevel <> MAXPPSTACK ) then
 				hRemoveTokenAndTkBeginEnd( x )
 			else
 				hMaybeExpandId( x )
@@ -1815,7 +1937,7 @@ sub ppEval( )
 
 		case else
 			'' Remove tokens if skipping
-			if( skiplevel <> MAXIFBLOCKS ) then
+			if( skiplevel <> MAXPPSTACK ) then
 				hRemoveTokenAndTkBeginEnd( x )
 			end if
 		end select
@@ -1824,8 +1946,18 @@ sub ppEval( )
 	loop
 end sub
 
-sub ppParseIfExprOnly( byval do_fold as integer )
+sub cppMainForTestingIfExpr _
+	( _
+		byval topfile as zstring ptr, _
+		byval whitespace as integer, _
+		byval do_fold as integer _
+	)
+
 	var x = 0
+
+	'' Add toplevel file behind current tokens (could be pre-#defines)
+	hLoadFile( tkGetCount( ), topfile, whitespace )
+
 	do
 		select case( tkGet( x ) )
 		case TK_EOF
@@ -1885,20 +2017,6 @@ sub ppParseIfExprOnly( byval do_fold as integer )
 
 		end select
 
-		x += 1
-	loop
-end sub
-
-sub ppRemoveEOLs( )
-	var x = 0
-	do
-		select case( tkGet( x ) )
-		case TK_EOF
-			exit do
-		case TK_EOL
-			tkRemove( x, x )
-			x -= 1
-		end select
 		x += 1
 	loop
 end sub

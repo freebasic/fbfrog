@@ -553,9 +553,6 @@ private function astCloneNode( byval n as ASTNODE ptr ) as ASTNODE ptr
 		c->paramcount = n->paramcount
 	case ASTCLASS_UOP, ASTCLASS_BOP
 		c->op = n->op
-	case ASTCLASS_FROGFILE
-		c->refcount = n->refcount
-		c->mergeparent = n->mergeparent
 	end select
 
 	function = c
@@ -669,10 +666,6 @@ function astIsEqual _
 		if( options and ASTEQ_IGNOREFIELDS ) then
 			return TRUE
 		end if
-
-	case ASTCLASS_FROGFILE
-		if( a->refcount <> b->refcount ) then exit function
-		if( a->mergeparent <> b->mergeparent ) then exit function
 	end select
 
 	'' Children
@@ -2121,7 +2114,7 @@ private sub hComplainAboutExpr _
 	)
 
 	if( verbose ) then
-		if( n->location.file ) then
+		if( n->location.filename ) then
 			hReportLocation( @n->location, message )
 		else
 			print *message

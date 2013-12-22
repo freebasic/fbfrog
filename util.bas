@@ -9,7 +9,7 @@ end sub
 
 private sub hCalcErrorLine _
 	( _
-		byval file as ASTNODE ptr, _
+		byval filename as zstring ptr, _
 		byval linenum as integer, _
 		byval column as integer, _
 		byval limit as integer, _
@@ -17,7 +17,7 @@ private sub hCalcErrorLine _
 		byref offset as integer _
 	)
 
-	s = lexPeekLine( file, linenum )
+	s = lexPeekLine( filename, linenum )
 
 	'' Line too long to fit in console?
 	if( len( s ) > limit ) then
@@ -65,7 +65,7 @@ sub hReportLocation _
 		byval more_context as integer _
 	)
 
-	print *location->file->comment + "(" & (location->linenum + 1) & "): " + *message
+	print *location->filename + "(" & (location->linenum + 1) & "): " + *message
 
 	'' Determine how many chars can be printed for the error line:
 	'' Normally we can fill a line in the console, so get the console width.
@@ -74,7 +74,7 @@ sub hReportLocation _
 		limit = 0
 	end if
 
-	var linecount = lexCountLines( location->file )
+	var linecount = lexCountLines( location->filename )
 
 	'' Show the error line and maybe some extra lines above and below it,
 	'' for more context, with line numbers prefixed to them:
@@ -115,7 +115,7 @@ sub hReportLocation _
 	for i as integer = min to max
 		dim s as string
 		dim offset as integer
-		hCalcErrorLine( location->file, location->linenum + i, location->column, limit, s, offset )
+		hCalcErrorLine( location->filename, location->linenum + i, location->column, limit, s, offset )
 
 		print "    " + linenums(i) + s
 
@@ -125,6 +125,25 @@ sub hReportLocation _
 	next
 
 end sub
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+'' Hash table for storing away file names for TKLOCATION's, each file name only
+'' once, while further requests re-use the existing string, so they aren't
+'' duplicated for each token...
+
+namespace filesys
+	dim shared hash as THASH
+end namespace
+
+sub filesysInit( )
+	hashInit( @filesys.hash, 8, TRUE )
+end sub
+
+function filesysStore( byval filename as zstring ptr ) as zstring ptr
+	function = hashAddOverwrite( @filesys.hash, filename, 0 )->s
+end function
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 function strDuplicate( byval s as zstring ptr ) as zstring ptr
 	dim as zstring ptr p = any
@@ -570,36 +589,36 @@ sub hashAdd _
 
 end sub
 
-sub hashAddOverwrite _
+'' Add entry, overwriting previous user data stored in that slot
+function hashAddOverwrite _
 	( _
 		byval h as THASH ptr, _
 		byval s as zstring ptr, _
 		byval dat as any ptr _
-	)
+	) as THASHITEM ptr
 
 	var hash = hashHash( s )
 	var item = hashLookup( h, s, hash )
 
-	'' Update count if entry doesn't exist yet
-	if( item->s = NULL ) then
+	if( item->s ) then
+		'' Already exists
+		assert( *item->s = *s )
+		assert( item->hash = hash )
+	else
+		'' New entry
+		if( h->duplicate_strings ) then
+			item->s = strDuplicate( s )
+		else
+			item->s = s
+		end if
+		item->hash = hash
 		h->count += 1
 	end if
 
-	if( h->duplicate_strings ) then
-		'' Free existing string if overwriting
-		if( item->s ) then
-			deallocate( item->s )
-		end if
-
-		s = strDuplicate( s )
-	end if
-
-	'' Overwrite existing entry (if any)
-	item->s = s
-	item->hash = hash
 	item->data = dat
 
-end sub
+	function = item
+end function
 
 sub hashInit _
 	( _
@@ -641,6 +660,20 @@ sub hashStats( byval h as THASH ptr, byref prefix as string )
 		h->count; h->room; _
 		cint( (100 / h->room) * h->count ); _
 		h->resizes
+end sub
+
+sub hashDump( byval h as THASH ptr )
+	print "hash: " & h->count & "/" & h->room & " slots used"
+	for i as integer = 0 to h->room-1
+		with( h->items[i] )
+			print "    " & i & ": ";
+			if( .s ) then
+				print "hash=" + hex( .hash ) + ", s=""" + *.s + """, data=" + hex( .data )
+			else
+				print "(free)"
+			end if
+		end with
+	next
 end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''

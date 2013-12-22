@@ -58,172 +58,45 @@ private function frogExtract( byref tarball as string, byref dirname as string )
 	end if
 end function
 
-private function frogAddFile _
-	( _
-		byval files as ASTNODE ptr, _
-		byval context as ASTNODE ptr, _
-		byval pretty as zstring ptr _
-	) as ASTNODE ptr
-
-	dim as string normed, report
-
-	if( context ) then
-		'' Search for #included files in one of the parent directories
-		'' of the current file. Usually the #include will refer to a
-		'' file in the same directory or in a sub-directory at the same
-		'' level or some levels up.
-
-		var parent = pathOnly( *context->text )
-		do
-			'' File not found anywhere?
-			if( len( parent ) = 0 ) then
-				normed = ""
-				exit do
-			end if
-
-			normed = parent + *pretty
-			if( hFileExists( normed ) ) then
-				if( verbose ) then
-					if( len( report ) ) then print report
-					report = "        found: " + normed
-				end if
-				exit do
-			end if
-
-			if( verbose ) then
-				if( len( report ) ) then print report
-				report = "    not found: " + normed
-			end if
-
-			parent = pathStripLastComponent( parent )
-		loop
-	else
-		normed = pathMakeAbsolute( *pretty )
-		if( verbose ) then
-			report = "    root: " + *pretty
-		end if
-	end if
-
-	var missing = FALSE
-	if( len( normed ) > 0 ) then
-		normed = pathNormalize( normed )
-	else
-		'' File missing/not found; still add it to the hash
-		normed = *pretty
-		missing = TRUE
-	end if
-
-	var f = files->head
-	while( f )
-
-		if( *f->text = normed ) then
-			'' Already exists
-			if( verbose ) then
-				print report + " (old news)"
-			end if
-			return f
-		end if
-
-		f = f->next
-	wend
-
-	if( verbose ) then
-		if( missing ) then
-			print report + " (missing)"
-		else
-			print report + " (new)"
-		end if
-	end if
-
-	'' Add file
-	f = astNewFROGFILE( normed, pretty )
-	f->attrib or= ASTATTRIB_MISSING and missing
-	astAppend( files, f )
-
-	function = f
+private function hPrettyTarget( byval v as ASTNODE ptr ) as string
+	select case( v->attrib and ASTATTRIB__ALLTARGET )
+	case ASTATTRIB_DOS   : function = "dos"
+	case ASTATTRIB_LINUX : function = "linux"
+	case ASTATTRIB_WIN32 : function = "win32"
+	case else            : assert( FALSE )
+	end select
 end function
 
-private sub frogWorkFile _
+private function hPrettyVersion( byval v as ASTNODE ptr ) as string
+	select case( v->class )
+	case ASTCLASS_DUMMYVERSION
+		return hPrettyTarget( v )
+
+	case ASTCLASS_CONST
+		if( typeIsFloat( v->dtype ) = FALSE ) then
+			return v->vali & "." & hPrettyTarget( v )
+		end if
+
+	end select
+
+	return astDumpInline( v )
+end function
+
+private function frogWorkRootFile _
 	( _
 		byval pre as FROGPRESET ptr, _
 		byval presetcode as ASTNODE ptr, _
 		byval targetversion as ASTNODE ptr, _
-		byval files as ASTNODE ptr, _
-		byval f as ASTNODE ptr _
-	)
+		byval rootfile as zstring ptr _
+	) as ASTNODE ptr
 
-	print , *f->comment
+	print "parsing: " + *rootfile + " (" + hPrettyVersion( targetversion ) + ")"
 
 	tkInit( )
 
 	var whitespace = ((pre->options and PRESETOPT_WHITESPACE) <> 0)
-	lexLoadFile( 0, f, FALSE, whitespace )
 
-	'' Parse PP directives, and expand #includes if wanted and possible.
-	''
-	'' If new tokens were loaded from an #include, we have to parse for PP
-	'' directives etc. again, to handle any PP directives in the added
-	'' tokens. There may even be new #include directives in them which
-	'' themselves may need expanding.
-
-	var have_new_tokens = TRUE
-	while( have_new_tokens )
-
-		if( whitespace ) then
-			ppComments( )
-			ppDividers( )
-		end if
-		ppDirectives1( )
-		have_new_tokens = FALSE
-
-		if( (pre->options and PRESETOPT_NOMERGE) = 0 ) then
-			var x = 0
-			while( tkGet( x ) <> TK_EOF )
-
-				'' #include?
-				if( tkGet( x ) = TK_PPINCLUDE ) then
-					var location = tkGetLocation( x )
-					var contextf = location->file
-					if( contextf = NULL ) then
-						contextf = f
-					end if
-					var incfile = *tkGetText( x )
-					if( verbose ) then
-						print "#include: " + incfile
-					end if
-					var incf = frogAddFile( files, contextf, incfile )
-
-					if( ((incf->attrib and ASTATTRIB_MISSING) = 0) and (incf->refcount = 1) and _
-					    ((incf->mergeparent = NULL) or (incf->mergeparent = f)) and _
-					    (incf <> f) ) then
-						'' Replace #include by included file's content
-						tkRemove( x, x )
-						lexLoadFile( x, incf, FALSE, whitespace )
-						have_new_tokens = TRUE
-
-						'' Counter the +1 below, so this position is re-parsed
-						x -= 1
-
-						incf->mergeparent = f
-						if( verbose ) then
-							print "(merged in)"
-						end if
-					else
-						if( verbose ) then
-							print "(not merged)"
-						end if
-					end if
-				end if
-
-				x += 1
-			wend
-		end if
-	wend
-
-	''
-	'' Macro expansion, #if evaluation
-	''
-	ppEvalInit( )
+	cppInit( )
 
 	if( presetcode ) then
 		var child = presetcode->head
@@ -231,15 +104,15 @@ private sub frogWorkFile _
 
 			select case( child->class )
 			case ASTCLASS_NOEXPAND
-				ppNoExpandSym( child->text )
+				cppNoExpandSym( child->text )
 			case ASTCLASS_PPDEFINE
-				ppPreDefine( child )
-				ppRemoveSym( child->text )
+				cppPreDefine( child )
+				cppRemoveSym( child->text )
 			case ASTCLASS_PPUNDEF
-				ppPreUndef( child->text )
-				ppRemoveSym( child->text )
+				cppPreUndef( child->text )
+				cppRemoveSym( child->text )
 			case ASTCLASS_REMOVE
-				ppRemoveSym( child->text )
+				cppRemoveSym( child->text )
 			end select
 
 			child = child->next
@@ -247,12 +120,14 @@ private sub frogWorkFile _
 	end if
 
 	if( (pre->options and PRESETOPT_NOPP) = 0 ) then
-		ppEval( )
+		cppMain( rootfile, whitespace )
 	else
-		ppParseIfExprOnly( ((pre->options and PRESETOPT_NOPPFOLD) = 0) )
+		cppMainForTestingIfExpr( rootfile, whitespace, ((pre->options and PRESETOPT_NOPPFOLD) = 0) )
 	end if
-	ppEvalEnd( )
-	ppRemoveEOLs( )
+
+	cppEnd( )
+
+	tkRemoveEOLs( )
 	tkTurnCPPTokensIntoCIds( )
 
 	'' Parse C constructs
@@ -281,19 +156,19 @@ private sub frogWorkFile _
 		ast = astWrapFileInVerblock( ast, targetversion )
 	end if
 
-	f->expr = ast
+	function = ast
+end function
 
-	if( verbose ) then
-		'' Report merged #includes
-		var incf = files->head
-		while( incf )
-			if( incf->mergeparent = f ) then
-				print "merged in: " + *incf->comment
-			end if
-			incf = incf->next
-		wend
+private sub hOopsNoInputFiles( byval targetversion as ASTNODE ptr, byref presetfilename as string )
+	var message = "no input files"
+	if( len( presetfilename ) > 0 ) then
+		message += " for "
+		if( targetversion ) then
+			message += "version " + emitAst( targetversion ) + " in "
+		end if
+		message += presetfilename
 	end if
-
+	oops( message )
 end sub
 
 private function frogWorkVersion _
@@ -305,7 +180,7 @@ private function frogWorkVersion _
 		byref presetprefix as string _
 	) as ASTNODE ptr
 
-	var files = astNewGROUP( )
+	var rootfiles = astNewGROUP( )
 
 	var child = presetcode->head
 	while( child )
@@ -325,7 +200,7 @@ private function frogWorkVersion _
 
 		case ASTCLASS_FILE
 			'' Input files
-			frogAddFile( files, NULL, presetprefix + *child->text )
+			astAppend( rootfiles, astNewTEXT( presetprefix + *child->text ) )
 
 		case ASTCLASS_DIR
 			'' Input files from directories
@@ -336,7 +211,7 @@ private function frogWorkVersion _
 
 			dim as string ptr s = listGetHead( @list )
 			while( s )
-				frogAddFile( files, NULL, *s )
+				astAppend( rootfiles, astNewTEXT( *s ) )
 				*s = ""
 				s = listGetNext( s )
 			wend
@@ -348,142 +223,17 @@ private function frogWorkVersion _
 		child = child->next
 	wend
 
-	if( files->head = NULL ) then
-		if( len( presetfilename ) > 0 ) then
-			if( targetversion ) then
-				oops( "no input files for version " + emitAst( targetversion ) + " in " + presetfilename )
-			else
-				oops( "no input files for " + presetfilename )
-			end if
-		else
-			oops( "no input files" )
-		end if
+	if( rootfiles->head = NULL ) then
+		hOopsNoInputFiles( targetversion, presetfilename )
 	end if
 
-	dim as ASTNODE ptr f
+	var f = rootfiles->head
+	while( f )
+		f->expr = frogWorkRootFile( pre, presetcode, targetversion, f->text )
+		f = f->next
+	wend
 
-	if( (pre->options and PRESETOPT_NOMERGE) = 0 ) then
-		'print "preparsing to determine #include dependencies..."
-		print "preparsing:";
-
-		'' Preparse to find #includes and calculate refcounts
-		'' Files newly registered by the inner loop will eventually be worked
-		'' off by the outer loop, as they're appended to the files list.
-		f = files->head
-		while( f )
-			if( (f->attrib and ASTATTRIB_MISSING) = 0 ) then
-				print , *f->comment
-
-				tkInit( )
-				lexLoadFile( 0, f, FALSE, FALSE )
-
-				ppDirectives1( )
-
-				'' Find #include directives
-				var x = 0
-				while( tkGet( x ) <> TK_EOF )
-
-					if( tkGet( x ) = TK_PPINCLUDE ) then
-						var incfile = tkGetText( x )
-
-						if( verbose ) then
-							print "#include: " + *incfile
-						end if
-
-						var location = tkGetLocation( x )
-						var contextf = location->file
-						if( contextf = NULL ) then
-							contextf = f
-						end if
-						var incf = frogAddFile( files, contextf, incfile )
-						incf->refcount += 1
-					end if
-
-					x += 1
-				wend
-
-				tkEnd( )
-			end if
-
-			f = f->next
-		wend
-
-		if( verbose ) then
-			print "#include refcounts (how often #included):"
-			f = files->head
-			while( f )
-				print "    " & f->refcount, *f->comment
-				f = f->next
-			wend
-		end if
-
-		print "parsing:";
-
-		'' Pass 1: Process any files that don't look like they'll be
-		'' merged, i.e. refcount <> 1.
-		f = files->head
-		while( f )
-
-			if( ((f->attrib and ASTATTRIB_MISSING) = 0) and (f->refcount <> 1) ) then
-				assert( f->mergeparent = NULL )
-				frogWorkFile( pre, presetcode, targetversion, files, f )
-			end if
-
-			f = f->next
-		wend
-
-		'' Pass 2: Process files that looked like they should be merged,
-		'' but weren't. This happens with recursive #includes, where all
-		'' have refcount > 0, so none of them were merged in anywhere
-		'' during the 1st pass.
-		f = files->head
-		while( f )
-
-			if( ((f->attrib and ASTATTRIB_MISSING) = 0) and (f->refcount = 1) and (f->mergeparent = NULL) ) then
-				frogWorkFile( pre, presetcode, targetversion, files, f )
-			end if
-
-			f = f->next
-		wend
-
-		'' Concatenate files with refcount=0
-		dim as ASTNODE ptr first
-		f = files->head
-		while( f )
-			if( f->refcount = 0 ) then
-				if( first ) then
-					'' Already have a first; append to it
-					if( f->expr ) then
-						if( verbose ) then print "concatenating: " + *f->comment
-						if( first->expr->class <> ASTCLASS_GROUP ) then
-							first->expr = astNewGROUP( first->expr )
-						end if
-						astAppend( first->expr, f->expr )
-						f->expr = NULL
-					end if
-				else
-					'' This is the first
-					first = f
-					if( verbose ) then print "concatenating: " + *f->comment + " (first)"
-				end if
-			end if
-			f = f->next
-		wend
-	else
-		print "parsing:";
-
-		'' No merging requested, just process each file that was found
-		'' individually.
-		f = files->head
-		while( f )
-			if( (f->attrib and ASTATTRIB_MISSING) = 0 ) then
-				frogWorkFile( pre, presetcode, targetversion, files, f )
-			end if
-			f = f->next
-		wend
-	end if
-
-	function = files
+	function = rootfiles
 end function
 
 private sub hPrintPresetVersions( byval versions as ASTNODE ptr, byval targets as integer )
@@ -548,10 +298,6 @@ private sub frogWorkPreset _
 
 	'' For each version...
 	do
-		if( verbose ) then
-			print "version: " + astDumpInline( targetversion )
-		end if
-
 		'' Determine preset code for that version
 		var presetcode = astGet1VersionAndTargetOnly( pre->code, targetversion )
 
@@ -634,14 +380,12 @@ private sub frogWorkPreset _
 	do
 		'' Replace the file extension, .h -> .bi
 		astSetText( f, pathStripExt( *f->text ) + ".bi" )
-		astSetComment( f, pathStripExt( *f->comment ) + ".bi" )
 		f = f->next
 	loop while( f )
 
-	print "emitting:";
 	f = files->head
 	do
-		print , *f->comment
+		print "emitting: " + *f->text
 
 		'' Do auto-formatting if not preserving whitespace
 		if( (pre->options and PRESETOPT_WHITESPACE) = 0 ) then
@@ -661,6 +405,8 @@ private sub frogWorkPreset _
 end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+	filesysInit( )
 
 	if( __FB_ARGC__ = 1 ) then
 		hPrintHelp( "" )

@@ -27,6 +27,7 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	( NULL  , @"emptymacroparam" ), _
 	( NULL  , @"eol"      ), _
 	( NULL  , @"comment"  ), _
+	( NULL  , @"endinclude" ), _
 	( NULL  , @"decnum"   ), _ '' Number literals
 	( NULL  , @"hexnum"   ), _
 	( NULL  , @"octnum"   ), _
@@ -646,6 +647,20 @@ sub tkRemoveAllOf( byval id as integer, byval text as zstring ptr )
 	next
 end sub
 
+sub tkRemoveEOLs( )
+	var x = 0
+	do
+		select case( tkGet( x ) )
+		case TK_EOF
+			exit do
+		case TK_EOL
+			tkRemove( x, x )
+			x -= 1
+		end select
+		x += 1
+	loop
+end sub
+
 sub tkTurnCPPTokensIntoCIds( )
 	for x as integer = 0 to tkGetCount( )-1
 		var tk = tkGet( x )
@@ -728,7 +743,7 @@ sub tkReport _
 	)
 
 	var location = tkGetLocation( x )
-	if( location->file ) then
+	if( location->filename ) then
 		hReportLocation( location, message, more_context )
 	else
 		TRACE( x ), "<= error here"

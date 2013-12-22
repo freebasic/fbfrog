@@ -67,7 +67,7 @@ enum
 end enum
 
 type TKLOCATION
-	file		as ASTNODE ptr
+	filename	as zstring ptr  '' Supposed to point to permanent memory, whoever fills the structure 1st must ensure that
 	linenum		as integer
 	column		as integer
 	length		as integer
@@ -80,6 +80,8 @@ declare sub hReportLocation _
 		byval message as zstring ptr, _
 		byval more_context as integer = TRUE _
 	)
+declare sub filesysInit( )
+declare function filesysStore( byval filename as zstring ptr ) as zstring ptr
 declare function strDuplicate( byval s as zstring ptr ) as zstring ptr
 declare function strReplace _
 	( _
@@ -140,12 +142,12 @@ declare sub hashAdd _
 		byval s as zstring ptr, _
 		byval dat as any ptr _
 	)
-declare sub hashAddOverwrite _
+declare function hashAddOverwrite _
 	( _
 		byval h as THASH ptr, _
 		byval s as zstring ptr, _
 		byval dat as any ptr _
-	)
+	) as THASHITEM ptr
 declare sub hashInit _
 	( _
 		byval h as THASH ptr, _
@@ -154,6 +156,7 @@ declare sub hashInit _
 	)
 declare sub hashEnd( byval h as THASH ptr )
 declare sub hashStats( byval h as THASH ptr, byref prefix as string )
+declare sub hashDump( byval h as THASH ptr )
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
@@ -240,6 +243,7 @@ enum
 	TK_EMPTYMACROPARAM
 	TK_EOL
 	TK_COMMENT
+	TK_ENDINCLUDE
 
 	'' Number/string literals
 	TK_DECNUM
@@ -486,6 +490,7 @@ declare function tkCollectComments _
 		byval last as integer _
 	) as string
 declare sub tkRemoveAllOf( byval id as integer, byval text as zstring ptr )
+declare sub tkRemoveEOLs( )
 declare sub tkTurnCPPTokensIntoCIds( )
 declare sub tkReport _
 	( _
@@ -691,9 +696,9 @@ enum
 	ASTATTRIB_HEX		= 1 shl 3  '' CONST
 	ASTATTRIB_CDECL		= 1 shl 4
 	ASTATTRIB_STDCALL	= 1 shl 5
-	ASTATTRIB_HIDECALLCONV	= 1 shl 6  '' Whether the calling convention is covered by an Extern block, then it doesn't need to be emitted
+	ASTATTRIB_HIDECALLCONV	= 1 shl 6  '' Whether the calling convention is covered by an Extern block, in which case it doesn't need to be emitted.
 	ASTATTRIB_REMOVE	= 1 shl 7
-	ASTATTRIB_MISSING	= 1 shl 8  '' FROGFILE: File missing/not found?
+				''= 1 shl 8
 	ASTATTRIB_REPORTED	= 1 shl 9  '' Used to mark #defines about which the CPP has already complained, so it can avoid duplicate error messages
 	ASTATTRIB_DOS		= 1 shl 10
 	ASTATTRIB_LINUX		= 1 shl 11
@@ -738,12 +743,6 @@ type ASTNODE_
 		tk		as integer  '' TK: TK_*
 		paramcount	as integer  '' PPDEFINE: -1 = #define m, 0 = #define m(), 1 = #define m(a), ...
 		op		as integer  '' UOP/BOP: ASTOP_*
-
-		'' FROGFILE
-		type
-			refcount	as integer      '' references by #includes
-			mergeparent	as ASTNODE ptr  '' the file this one was merged into
-		end type
 	end union
 
 	'' Linked list of child nodes, where l/r aren't enough: fields/parameters/...
@@ -917,16 +916,16 @@ declare sub astDump _
 declare function lexLoadFile _
 	( _
 		byval x as integer, _
-		byval file as ASTNODE ptr, _
+		byval filename as zstring ptr, _
 		byval fbmode as integer, _
 		byval keep_comments as integer _
 	) as integer
 declare function lexPeekLine _
 	( _
-		byval file as ASTNODE ptr, _
+		byval filename as zstring ptr, _
 		byval targetlinenum as integer _
 	) as string
-declare function lexCountLines( byval file as ASTNODE ptr ) as integer
+declare function lexCountLines( byval filename as zstring ptr ) as integer
 declare function emitType _
 	( _
 		byval dtype as integer, _
@@ -939,7 +938,7 @@ declare function emitAst _
 		byval need_parens as integer = FALSE _
 	) as string
 declare sub emitFile( byref filename as string, byval ast as ASTNODE ptr )
-declare function importFile( byval file as ASTNODE ptr ) as ASTNODE ptr
+declare function importFile( byval topfile as zstring ptr ) as ASTNODE ptr
 
 declare function hFindClosingParen( byval x as integer ) as integer
 declare sub ppComments( )
@@ -947,17 +946,20 @@ declare sub ppDividers( )
 declare function hNumberLiteral( byval x as integer ) as ASTNODE ptr
 extern as integer cprecedence(ASTOP_IIF to ASTOP_SIZEOF)
 declare sub hMacroParamList( byref x as integer, byval t as ASTNODE ptr )
-declare sub ppDirectives1( )
-declare sub ppEvalInit( )
-declare sub ppEvalEnd( )
-declare sub ppNoExpandSym( byval id as zstring ptr )
-declare sub ppRemoveSym( byval id as zstring ptr )
-declare sub ppPreUndef( byval id as zstring ptr )
-declare sub ppPreDefine overload( byval macro as ASTNODE ptr )
-declare sub ppPreDefine overload( byval id as zstring ptr )
-declare sub ppEval( )
-declare sub ppParseIfExprOnly( byval do_fold as integer )
-declare sub ppRemoveEOLs( )
+declare sub cppInit( )
+declare sub cppEnd( )
+declare sub cppNoExpandSym( byval id as zstring ptr )
+declare sub cppRemoveSym( byval id as zstring ptr )
+declare sub cppPreUndef( byval id as zstring ptr )
+declare sub cppPreDefine overload( byval macro as ASTNODE ptr )
+declare sub cppPreDefine overload( byval id as zstring ptr )
+declare sub cppMain( byval topfile as zstring ptr, byval whitespace as integer )
+declare sub cppMainForTestingIfExpr _
+	( _
+		byval topfile as zstring ptr, _
+		byval whitespace as integer, _
+		byval do_fold as integer _
+	)
 declare function cFile( ) as ASTNODE ptr
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -990,3 +992,8 @@ declare sub presetOverrideInputFiles _
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 extern verbose as integer
+declare function frogRegisterFile _
+	( _
+		byval normed as zstring ptr, _
+		byval pretty as zstring ptr _
+	) as ASTNODE ptr
