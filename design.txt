@@ -1,0 +1,16 @@
+How about using existing C preprocessors/parser (e.g. libclang)
++ not really fully investigated yet
++ less work, more complete and less bugs than a custom parser
+- dependency on external tool/library makes development/distribution/usage more
+  difficult
+- fbfrog needs to see #defines, typically pre-existing C-to-AST parsers don't
+  preserve them
+
+Storing AST in "API files" in some intermediate format (which is not the final
+.bi) to make later translations of the same API easier, by no longer requiring
+the original tarballs for which "API files" were once generated.
++ can keep "API files" in VCS, have to download much less tarballs
+- such API files are final; they'd need to be regenerated in order to benefit
+  from fbfrog fixes or preset changes (e.g. different pre-#defines). Easy to
+  have hidden bugs thanks to this, and to be safe, they'd have to be regenerated
+  every time, at which point they become pointless.
