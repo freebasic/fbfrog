@@ -101,8 +101,8 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	( @"const"   , NULL ), _
 	( @"continue", NULL ), _
 	( @"default" , NULL ), _
-	( @"defined" , NULL ), _
 	( @"define"  , NULL ), _
+	( @"defined" , NULL ), _
 	( @"do"      , NULL ), _
 	( @"double"  , NULL ), _
 	( @"elif"    , NULL ), _
@@ -114,9 +114,9 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	( @"float"   , NULL ), _
 	( @"for"     , NULL ), _
 	( @"goto"    , NULL ), _
+	( @"if"      , NULL ), _
 	( @"ifdef"   , NULL ), _
 	( @"ifndef"  , NULL ), _
-	( @"if"      , NULL ), _
 	( @"include" , NULL ), _
 	( @"inline"  , NULL ), _
 	( @"int"     , NULL ), _
