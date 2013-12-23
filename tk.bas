@@ -27,6 +27,7 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	( NULL  , @"emptymacroparam" ), _
 	( NULL  , @"eol"      ), _
 	( NULL  , @"comment"  ), _
+	( NULL  , @"begininclude" ), _
 	( NULL  , @"endinclude" ), _
 	( NULL  , @"decnum"   ), _ '' Number literals
 	( NULL  , @"hexnum"   ), _

@@ -1697,6 +1697,10 @@ private function hSearchHeaderFile _
 
 	dim as string normed
 
+	if( verbose ) then
+		print "searching '" + *pretty + "' in context of '" + *contextfile + "'"
+	end if
+
 	var parent = pathOnly( *contextfile )
 	do
 		'' File not found anywhere?
@@ -1705,12 +1709,11 @@ private function hSearchHeaderFile _
 		end if
 
 		normed = parent + *pretty
+		if( verbose ) then
+			print "trying: " + normed
+		end if
 		if( hFileExists( normed ) ) then
 			exit do
-		end if
-
-		if( verbose ) then
-			print "not found: " + normed
 		end if
 
 		parent = pathStripLastComponent( parent )
@@ -1719,7 +1722,20 @@ private function hSearchHeaderFile _
 	function = pathNormalize( normed )
 end function
 
-sub cppMain( byval topfile as zstring ptr, byval whitespace as integer )
+private function hFindIncludeBOF( byval x as integer ) as integer
+	do
+		x -= 1
+	loop while( tkGet( x ) <> TK_BEGININCLUDE )
+	function = x
+end function
+
+sub cppMain _
+	( _
+		byval topfile as zstring ptr, _
+		byval whitespace as integer, _
+		byval nomerge as integer _
+	)
+
 	var x = 0
 	var skiplevel = MAXPPSTACK
 	var level = 0
@@ -1746,8 +1762,24 @@ sub cppMain( byval topfile as zstring ptr, byval whitespace as integer )
 				tkOops( x - 1, "missing #endif in #included file" )
 			end if
 			level -= 1
-			tkRemove( x, x )
-			x -= 1
+
+			var begin = hFindIncludeBOF( x )
+
+			if( nomerge ) then
+				'' #include expansion wasn't requested, so remove the
+				'' #included tokens now, after they've been parsed.
+				'' (i.e. all #defines/#undefs were seen, but the code
+				'' won't be preserved)
+				tkRemove( begin, x )
+				x = begin - 1
+			else
+				'' Remove just the TK_BEGININCLUDE/TK_ENDINCLUDE,
+				'' keep the #included tokens.
+				tkRemove( begin, begin )
+				x -= 1
+				tkRemove( x, x )
+				x -= 1
+			end if
 
 		case TK_PPINCLUDE
 			'' Not skipping? Then evaluate
@@ -1770,7 +1802,11 @@ sub cppMain( byval topfile as zstring ptr, byval whitespace as integer )
 					'' Remove the #include
 					tkRemove( x, x )
 
-					'' Put EOL in its place, so cppIdentifyDirectives() can identify BOL
+					'' Insert this so we can go back end delete all the #included tokens easily
+					tkInsert( x, TK_BEGININCLUDE )
+					x += 1
+
+					'' Insert an EOL, so cppIdentifyDirectives() can identify BOL
 					'' when parsing the #included tokens, to be able to detect CPP
 					'' directives at the beginning of the #included tokens.
 					tkInsert( x, TK_EOL )

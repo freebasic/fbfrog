@@ -52,9 +52,6 @@ Compiling:
 To do:
 
 - Each input .h is 1 root
-- Make #include expansion optional (-i option to enable?)
-    - But always parse/evaluate them to see #defines/#undefs, just not always
-      preserve the resulting tokens
 - Allow user to concat roots via the CLI, i.e. to specify pre/post-#includes
   for certain roots (-include <file>?, and make it matter whether it's given
   before/behind a root?)
@@ -96,13 +93,6 @@ To do:
     - of course that can't be done for enums that aren't declared in this API,
       but for example in system headers, but those should be translated properly
       in our crt/ bindings etc.
-
-- -m should somehow allow concatenating even #includes with refcount >= 2.
-    - if multiple leaf headers #include a common header each once, then the
-      leafs should be concatendated into 1, and the common header prepended at
-      its top, and the #includes for it should be removed.
-    - this isn't right as it changes the order of code which could break
-      declaration dependencies, but at least presets should be allowed to enable this
 
 - Macro expansion should preserve token locations, perhaps even a stack of
   locations in case of nested macros. It'd be nice if the tkOops() functions

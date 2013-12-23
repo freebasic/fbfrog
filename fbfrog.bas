@@ -13,7 +13,7 @@ private sub hPrintHelp( byref message as string )
 	print "Generates a .bi file containing FB API declarations corresponding"
 	print "to the C API declarations from the given *.h file(s)."
 	print "options:"
-	print "  -nomerge   Produce one .bi per .h, instead of a single .bi"
+	print "  -nomerge   Don't preserve code from #includes"
 	print "  -w         Whitespace: Try to preserve comments and empty lines"
 	print "  -o <path>  Set output directory for generated .bi files"
 	print "  -v         Show verbose/debugging info"
@@ -120,7 +120,7 @@ private function frogWorkRootFile _
 	end if
 
 	if( (pre->options and PRESETOPT_NOPP) = 0 ) then
-		cppMain( rootfile, whitespace )
+		cppMain( rootfile, whitespace, (pre->options and PRESETOPT_NOMERGE) <> 0 )
 	else
 		cppMainForTestingIfExpr( rootfile, whitespace, ((pre->options and PRESETOPT_NOPPFOLD) = 0) )
 	end if

@@ -27,3 +27,7 @@ Re-importing existing FB binding in order to extend/update them
   int was used in C, but this would break for 64bit)
 - Same as for the issue of "storing AST in some intermediate format": need to
   re-parse the original headers in order for fbfrog/preset updates to take effect
+
+#includes are always parsed, so that any #defines/#undefs they contain are seen,
+but the -nomerge option can be used to prevent the code they contain from being
+preserved in the final binding.

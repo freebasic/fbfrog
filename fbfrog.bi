@@ -219,6 +219,7 @@ enum
 	TK_EMPTYMACROPARAM
 	TK_EOL
 	TK_COMMENT
+	TK_BEGININCLUDE
 	TK_ENDINCLUDE
 
 	'' Number/string literals
@@ -867,7 +868,12 @@ declare sub cppRemoveSym( byval id as zstring ptr )
 declare sub cppPreUndef( byval id as zstring ptr )
 declare sub cppPreDefine overload( byval macro as ASTNODE ptr )
 declare sub cppPreDefine overload( byval id as zstring ptr )
-declare sub cppMain( byval topfile as zstring ptr, byval whitespace as integer )
+declare sub cppMain _
+	( _
+		byval topfile as zstring ptr, _
+		byval whitespace as integer, _
+		byval nomerge as integer _
+	)
 declare sub cppMainForTestingIfExpr _
 	( _
 		byval topfile as zstring ptr, _
