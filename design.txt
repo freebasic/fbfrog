@@ -6,6 +6,12 @@ How about using existing C preprocessors/parser (e.g. libclang)
 - fbfrog needs to see #defines, typically pre-existing C-to-AST parsers don't
   preserve them
 
+Using an AST instead of just "rearranging tokens" or doing text replacements
++ Complex C constructs (nested function pointer declarations & co) require a
+  recursive parser, and can only be represented as a tree
++ Allows high-level steps such as replacing identifiers of certain symbols to
+  work with the AST instead of tokens
+
 Storing AST in "API files" in some intermediate format (which is not the final
 .bi) to make later translations of the same API easier, by no longer requiring
 the original tarballs for which "API files" were once generated.
