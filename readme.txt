@@ -64,9 +64,6 @@ To do:
   common declarations, extract them into common header). That requires multiple
   roots to be passed without them being concatenated.
 
-- lex: should only allow escaped EOLs in C mode
-- lex: add support for FB escape sequences, or at least only allow C escapes
-  in C mode
 - Should remove *.fbfrog files and use @response files and command line options
   for everything
 
