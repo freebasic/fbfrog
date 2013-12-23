@@ -1675,7 +1675,7 @@ private sub hLoadFile _
 		byval whitespace as integer _
 	)
 
-	lexLoadFile( x, filename, FALSE, whitespace )
+	lexLoadFile( x, filename, whitespace )
 
 	if( whitespace ) then
 		cppComments( )

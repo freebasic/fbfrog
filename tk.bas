@@ -89,110 +89,56 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	( @"}"  , NULL ), _
 	( @"~"  , NULL ), _
 	( NULL  , @"id" ), _ '' TK_ID
-	( @"__attribute__", NULL ), _ '' C-only keywords
+	( @"__attribute__", NULL ), _ '' C keywords
 	( @"__cdecl"      , NULL ), _
 	( @"__restrict"   , NULL ), _
 	( @"__restrict__" , NULL ), _
 	( @"__stdcall"    , NULL ), _
 	( @"auto"    , NULL ), _
 	( @"break"   , NULL ), _
+	( @"case"    , NULL ), _
 	( @"char"    , NULL ), _
-	( @"default" , NULL ), _
-	( @"elif"    , NULL ), _
-	( @"float"   , NULL ), _
-	( @"inline"  , NULL ), _
-	( @"register", NULL ), _
-	( @"restrict", NULL ), _
-	( @"signed"  , NULL ), _
-	( @"struct"  , NULL ), _
-	( @"switch"  , NULL ), _
-	( @"typedef" , NULL ), _
-	( @"void"    , NULL ), _
-	( @"volatile", NULL ), _
-	( @"case"    , NULL ), _  '' C/FB shared keywords
 	( @"const"   , NULL ), _
 	( @"continue", NULL ), _
-	( @"define"  , NULL ), _
+	( @"default" , NULL ), _
 	( @"defined" , NULL ), _
+	( @"define"  , NULL ), _
 	( @"do"      , NULL ), _
 	( @"double"  , NULL ), _
+	( @"elif"    , NULL ), _
 	( @"else"    , NULL ), _
 	( @"endif"   , NULL ), _
 	( @"enum"    , NULL ), _
 	( @"error"   , NULL ), _
 	( @"extern"  , NULL ), _
+	( @"float"   , NULL ), _
 	( @"for"     , NULL ), _
 	( @"goto"    , NULL ), _
-	( @"if"      , NULL ), _
 	( @"ifdef"   , NULL ), _
 	( @"ifndef"  , NULL ), _
+	( @"if"      , NULL ), _
 	( @"include" , NULL ), _
+	( @"inline"  , NULL ), _
 	( @"int"     , NULL ), _
 	( @"long"    , NULL ), _
 	( @"pragma"  , NULL ), _
+	( @"register", NULL ), _
+	( @"restrict", NULL ), _
 	( @"return"  , NULL ), _
 	( @"short"   , NULL ), _
+	( @"signed"  , NULL ), _
 	( @"sizeof"  , NULL ), _
 	( @"static"  , NULL ), _
+	( @"struct"  , NULL ), _
+	( @"switch"  , NULL ), _
+	( @"typedef" , NULL ), _
 	( @"undef"   , NULL ), _
 	( @"union"   , NULL ), _
 	( @"unsigned", NULL ), _
+	( @"void"    , NULL ), _
+	( @"volatile", NULL ), _
 	( @"warning" , NULL ), _
-	( @"while"   , NULL ), _
-	( @"alias"   , NULL ), _  '' FB-only keywords
-	( @"and"     , NULL ), _
-	( @"andalso" , NULL ), _
-	( @"any"     , NULL ), _
-	( @"as"      , NULL ), _
-	( @"byte"    , NULL ), _
-	( @"byval"   , NULL ), _
-	( @"cast"    , NULL ), _
-	( @"cdecl"   , NULL ), _
-	( @"cptr"    , NULL ), _
-	( @"declare" , NULL ), _
-	( @"dim"     , NULL ), _
-	( @"elseif"  , NULL ), _
-	( @"end"     , NULL ), _
-	( @"exit"    , NULL ), _
-	( @"export"  , NULL ), _
-	( @"field"   , NULL ), _
-	( @"function", NULL ), _
-	( @"iif"     , NULL ), _
-	( @"integer" , NULL ), _
-	( @"longint" , NULL ), _
-	( @"loop"    , NULL ), _
-	( @"macro"   , NULL ), _
-	( @"mod"     , NULL ), _
-	( @"next"    , NULL ), _
-	( @"not"     , NULL ), _
-	( @"option"  , NULL ), _
-	( @"or"      , NULL ), _
-	( @"orelse"  , NULL ), _
-	( @"pascal"  , NULL ), _
-	( @"private" , NULL ), _
-	( @"ptr"     , NULL ), _
-	( @"scope"   , NULL ), _
-	( @"select"  , NULL ), _
-	( @"shared"  , NULL ), _
-	( @"shl"     , NULL ), _
-	( @"shr"     , NULL ), _
-	( @"single"  , NULL ), _
-	( @"stdcall" , NULL ), _
-	( @"sub"     , NULL ), _
-	( @"then"    , NULL ), _
-	( @"to"      , NULL ), _
-	( @"type"    , NULL ), _
-	( @"typeof"  , NULL ), _
-	( @"ubyte"   , NULL ), _
-	( @"uinteger", NULL ), _
-	( @"ulong"   , NULL ), _
-	( @"ulongint", NULL ), _
-	( @"ushort"  , NULL ), _
-	( @"wend"    , NULL ), _
-	( @"wstr"    , NULL ), _
-	( @"wstring" , NULL ), _
-	( @"xor"     , NULL ), _
-	( @"zstring" , NULL )  _
+	( @"while"   , NULL )  _
 }
 
 #assert ubound( tk_info ) = TK__COUNT - 1

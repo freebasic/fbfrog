@@ -20,12 +20,9 @@ type LEXSTUFF
 	location	as TKLOCATION
 	behindspace	as integer
 	filename	as string
-	fbmode		as integer    '' FB mode or C mode?
 	keep_comments	as integer    '' Whether to ignore comments or produce TK_COMMENTs
 
-	fbkwhash	as THASH
-	ckwhash		as THASH
-	kwhash		as THASH ptr  '' Points to keywords hash tb for current mode
+	kwhash		as THASH      '' C keywords hash table
 end type
 
 dim shared as LEXSTUFF lex
@@ -53,7 +50,7 @@ private sub hAddTextToken( byval tk as integer, byval begin as ubyte ptr )
 	if( tk = TK_ID ) then
 		'' Lookup C keyword
 		var hash = hashHash( begin )
-		var item = hashLookup( lex.kwhash, begin, hash )
+		var item = hashLookup( @lex.kwhash, begin, hash )
 
 		'' Is it a C keyword?
 		if( item->s ) then
@@ -126,7 +123,7 @@ private sub hReadLineComment( )
 			lex.i += 1
 
 		case CH_BACKSLASH
-			escaped = not lex.fbmode
+			escaped = TRUE
 			lex.i += 1
 
 		case else
@@ -141,7 +138,7 @@ private sub hReadLineComment( )
 end sub
 
 private sub hReadComment( )
-	var quote = lex.i[1]  '' ' (FB mode's /' '/) or * (C mode's /* */)
+	var quote = lex.i[1]  '' '*' from either '/*' or '*/'
 	lex.i += 2
 	var begin = lex.i
 
@@ -560,11 +557,7 @@ private sub lexNext( )
 		end select
 
 	case CH_QUOTE		'' '
-		if( lex.fbmode ) then
-			hReadLineComment( )
-		else
-			hReadString( )
-		end if
+		hReadString( )
 
 	case CH_LPAREN		'' (
 		hReadBytes( TK_LPAREN, 1 )
@@ -623,23 +616,9 @@ private sub lexNext( )
 		case CH_EQ	'' /=
 			hReadBytes( TK_SLASHEQ, 2 )
 		case CH_SLASH	'' //
-			if( lex.fbmode ) then
-				hReadBytes( TK_SLASH, 1 )
-			else
-				hReadLineComment( )
-			end if
-		case CH_QUOTE	'' /'
-			if( lex.fbmode ) then
-				hReadComment( )
-			else
-				hReadBytes( TK_SLASH, 1 )
-			end if
+			hReadLineComment( )
 		case CH_STAR	'' /*
-			if( lex.fbmode ) then
-				hReadBytes( TK_SLASH, 1 )
-			else
-				hReadComment( )
-			end if
+			hReadComment( )
 		case else
 			hReadBytes( TK_SLASH, 1 )
 		end select
@@ -849,29 +828,16 @@ private sub hLoadFile _
 	hComplainAboutEmbeddedNulls( filename, buffer, limit )
 end sub
 
+'' Load keywords if not yet done
 private sub hInitKeywords( )
-	'' Load keywords if not yet done, and switch between C/FB keyword
-	'' hash tables to match the requested mode.
-
-	dim as integer first, last
-	if( lex.fbmode ) then
-		lex.kwhash = @lex.fbkwhash
-		first = KW__FB_FIRST
-		last = KW__FB_LAST
-	else
-		lex.kwhash = @lex.ckwhash
-		first = KW__C_FIRST
-		last = KW__C_LAST
+	if( lex.kwhash.items = NULL ) then
+		hashInit( @lex.kwhash, 12 )
 	end if
 
-	if( lex.kwhash->items = NULL ) then
-		hashInit( lex.kwhash, 12 )
-	end if
-
-	for i as integer = first to last
+	for i as integer = KW__C_FIRST to KW__C_LAST
 		var hash = hashHash( tkInfoText( i ) )
-		var item = hashLookup( lex.kwhash, tkInfoText( i ), hash )
-		hashAdd( lex.kwhash, item, hash, tkInfoText( i ), cast( any ptr, i ) )
+		var item = hashLookup( @lex.kwhash, tkInfoText( i ), hash )
+		hashAdd( @lex.kwhash, item, hash, tkInfoText( i ), cast( any ptr, i ) )
 	next
 end sub
 
@@ -879,14 +845,12 @@ function lexLoadFile _
 	( _
 		byval x as integer, _
 		byval filename as zstring ptr, _
-		byval fbmode as integer, _
 		byval keep_comments as integer _
 	) as integer
 
 	lex.x = x
 	lex.location.filename = filesysStore( filename )
 	lex.location.linenum = 0
-	lex.fbmode = fbmode
 	lex.keep_comments = keep_comments
 	hLoadFile( filename, lex.buffer, lex.limit )
 	lex.i = lex.buffer

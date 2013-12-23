@@ -46,7 +46,7 @@ private function hExpectSkipString( byval whatfor as zstring ptr ) as string
 end function
 
 private sub hLoadFile( byref filename as string )
-	lexLoadFile( x, filename, FALSE, FALSE )
+	lexLoadFile( x, filename, FALSE )
 	tkTurnCPPTokensIntoCIds( )
 end sub
 

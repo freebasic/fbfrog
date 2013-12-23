@@ -14,3 +14,10 @@ the original tarballs for which "API files" were once generated.
   from fbfrog fixes or preset changes (e.g. different pre-#defines). Easy to
   have hidden bugs thanks to this, and to be safe, they'd have to be regenerated
   every time, at which point they become pointless.
+
+Re-importing existing FB binding in order to extend/update them
+- Old bindings are likely to contain bugs or simply not conform to latest
+  API/ABI requirements (e.g., 32bit FB headers use Integer in many places where
+  int was used in C, but this would break for 64bit)
+- Same as for the issue of "storing AST in some intermediate format": need to
+  re-parse the original headers in order for fbfrog/preset updates to take effect
