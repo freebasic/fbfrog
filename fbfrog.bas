@@ -2,7 +2,7 @@
 
 #include once "fbfrog.bi"
 
-dim shared verbose as integer
+dim shared frog as FROGSTUFF
 
 private sub hPrintHelp( byref message as string )
 	if( len( message ) > 0 ) then
@@ -10,14 +10,63 @@ private sub hPrintHelp( byref message as string )
 	end if
 	print "fbfrog 0.1 (" + __DATE_ISO__ + "), FreeBASIC binding generator"
 	print "usage: fbfrog [options] *.h"
+	print
 	print "Generates a .bi file containing FB API declarations corresponding"
 	print "to the C API declarations from the given *.h file(s)."
+	print
 	print "options:"
+	print
+	print "  -D<symbol>[=<body>]    Add pre-#define"
+	print "  -d <symbol>[=<body>]"
+	print "  -include <file>        Add pre-#include"
+	print
 	print "  -nomerge   Don't preserve code from #includes"
 	print "  -w         Whitespace: Try to preserve comments and empty lines"
 	print "  -o <path>  Set output directory for generated .bi files"
 	print "  -v         Show verbose/debugging info"
 	end (iif( len( message ) > 0, 1, 0 ))
+end sub
+
+private sub hAddPreDefine _
+	( _
+		byval cmdline as FROGPRESET ptr, _
+		byref fullarg as string, _
+		byref arg as string _
+	)
+
+	dim as string symbol, body
+	strSplit( arg, "=", symbol, body )
+
+	if( len( symbol ) = 0 ) then
+		oops( "missing CPP symbol in '" + fullarg + "'" )
+	end if
+
+	''    -DA      =    #define A 1
+	''    -DA=     =    #define A
+	''    -DA=1    =    #define A 1
+
+	'' No '=' found? Then default to body=1, like gcc
+	if( (arg = symbol) and (len( body ) = 0) ) then
+		body = "1"
+	end if
+
+	cmdline->cppheader += "#define " + symbol
+	if( len( body ) > 0 ) then
+		cmdline->cppheader += " " + body
+	end if
+	cmdline->cppheader += !"\n"
+
+end sub
+
+private sub hAddPreInclude _
+	( _
+		byval cmdline as FROGPRESET ptr, _
+		byref fullarg as string, _
+		byref arg as string _
+	)
+
+	cmdline->cppheader += "#include """ + arg + """" + !"\n"
+
 end sub
 
 private function frogDownload( byref url as string, byref file as string ) as integer
@@ -98,6 +147,11 @@ private function frogWorkRootFile _
 
 	cppInit( )
 
+	if( len( pre->cppheader ) > 0 ) then
+		frog.cppheader = strDuplicate( pre->cppheader )
+		lexLoadZstring( 0, "<command line>", frog.cppheader, FALSE )
+	end if
+
 	if( presetcode ) then
 		var child = presetcode->head
 		while( child )
@@ -155,6 +209,9 @@ private function frogWorkRootFile _
 	if( targetversion ) then
 		ast = astWrapFileInVerblock( ast, targetversion )
 	end if
+
+	deallocate( frog.cppheader )
+	frog.cppheader = NULL
 
 	function = ast
 end function
@@ -271,7 +328,7 @@ private sub frogWorkPreset _
 		astAppend( versions, astNew( ASTCLASS_DUMMYVERSION ) )
 	end if
 
-	if( verbose ) then
+	if( frog.verbose ) then
 		hPrintPresetVersions( versions, targets )
 	end if
 
@@ -343,7 +400,7 @@ private sub frogWorkPreset _
 			commonparent = pathFindCommonBase( commonparent, *f->text )
 			f = f->next
 		wend
-		if( verbose ) then
+		if( frog.verbose ) then
 			print "common parent: " + commonparent
 		end if
 
@@ -412,6 +469,8 @@ end sub
 
 		'' option?
 		if( left( arg, 1 ) = "-" ) then
+			var fullarg = arg
+
 			'' Strip all preceding '-'s
 			do
 				arg = right( arg, len( arg ) - 1 )
@@ -420,20 +479,47 @@ end sub
 			select case( arg )
 			case "h", "?", "help", "version"
 				hPrintHelp( "" )
-			case "w"
-				cmdline.options or= PRESETOPT_WHITESPACE
+
+			case "d"
+				i += 1
+				if( i >= __FB_ARGC__ ) then
+					hPrintHelp( "missing <symbol>[=<body>] argument in '" + fullarg + "'" )
+				end if
+				arg = *__FB_ARGV__[i]
+				hAddPreDefine( @cmdline, fullarg + " " + arg, arg )
+
+			case "include"
+				i += 1
+				if( i >= __FB_ARGC__ ) then
+					hPrintHelp( "missing <file> argument in '" + fullarg + "'" )
+				end if
+				arg = *__FB_ARGV__[i]
+				hAddPreInclude( @cmdline, fullarg + " " + arg, arg )
+
 			case "nomerge"
 				cmdline.options or= PRESETOPT_NOMERGE
+
+			case "w"
+				cmdline.options or= PRESETOPT_WHITESPACE
+
 			case "o"
 				i += 1
 				if( i >= __FB_ARGC__ ) then
 					hPrintHelp( "missing output directory path for -o" )
 				end if
 				cmdline.outdir = strDuplicate( __FB_ARGV__[i] )
+
 			case "v", "verbose"
-				verbose = TRUE
+				frog.verbose = TRUE
+
 			case else
-				hPrintHelp( "unknown option: " + *__FB_ARGV__[i] )
+				select case( left( arg, 1 ) )
+				case "D"
+					hAddPreDefine( @cmdline, fullarg, right( arg, len( arg ) - 1 ) )
+
+				case else
+					hPrintHelp( "unknown option: " + fullarg )
+				end select
 			end select
 		else
 			if( hReadableDirExists( arg ) ) then
@@ -498,6 +584,6 @@ end sub
 		frogWorkPreset( @cmdline, "", "" )
 	end if
 
-	if( verbose ) then
+	if( frog.verbose ) then
 		astPrintStats( )
 	end if

@@ -11,10 +11,8 @@
 #include once "fbfrog.bi"
 
 type LEXSTUFF
-	buffer		as ubyte ptr  '' File content buffer
 	i		as ubyte ptr  '' Current char, will always be <= limit
 	bol		as ubyte ptr  '' Last begin-of-line
-	limit		as ubyte ptr  '' (end of buffer)
 
 	x		as integer
 	location	as TKLOCATION
@@ -796,7 +794,7 @@ private sub hLoadFile _
 		byref limit as ubyte ptr _
 	)
 
-	'' Read in the whole file content into lex.buffer
+	'' Read in the whole file content
 	var f = freefile( )
 	if( open( *filename, for binary, access read, as #f ) ) then
 		oops( "could not open file: '" + *filename + "'" )
@@ -841,6 +839,37 @@ private sub hInitKeywords( )
 	next
 end sub
 
+function lexLoadZstring _
+	( _
+		byval x as integer, _
+		byval filename as zstring ptr, _
+		byval s as zstring ptr, _
+		byval keep_comments as integer _
+	) as integer
+
+	lex.x = x
+	lex.location.filename = filename
+	lex.location.linenum = 0
+	lex.keep_comments = keep_comments
+	lex.i = s
+	lex.bol = lex.i
+	hInitKeywords( )
+
+	'' Tokenize and insert into tk buffer
+	var size = 0
+	while( lex.i[0] )
+		lexNext( )
+		size += 1
+	wend
+
+	if( frog.verbose ) then
+		print "lex: " + *filename + ", " & size & " bytes, " & _
+			(lex.location.linenum + 1) & " lines, " & lex.x - x & " tokens"
+	end if
+
+	function = lex.x
+end function
+
 function lexLoadFile _
 	( _
 		byval x as integer, _
@@ -848,44 +877,26 @@ function lexLoadFile _
 		byval keep_comments as integer _
 	) as integer
 
-	lex.x = x
-	lex.location.filename = filesysStore( filename )
-	lex.location.linenum = 0
-	lex.keep_comments = keep_comments
-	hLoadFile( filename, lex.buffer, lex.limit )
-	lex.i = lex.buffer
-	lex.bol = lex.i
-	hInitKeywords( )
-
-	'' Tokenize and insert into tk buffer
-	while( lex.i < lex.limit )
-		lexNext( )
-	wend
-
-	if( verbose ) then
-		print "lex: " + *filename + ", " & cuint( lex.limit ) - cuint( lex.buffer ) & _
-			" bytes, " & (lex.location.linenum + 1) & " lines, " & lex.x - x & " tokens"
-	end if
-
-	deallocate( lex.buffer )
-	function = lex.x
-end function
-
-'' Retrieve a line of source code from the original input file for display in
-'' error messages.
-function lexPeekLine _
-	( _
-		byval filename as zstring ptr, _
-		byval targetlinenum as integer _
-	) as string
-
 	dim as ubyte ptr buffer, limit
 	hLoadFile( filename, buffer, limit )
+
+	function = lexLoadZstring( x, filesysStore( filename ), buffer, keep_comments )
+
+	deallocate( buffer )
+end function
+
+'' Retrieve a line of source code from the original input data for display in
+'' error messages.
+function lexPeekLineFromZstring _
+	( _
+		byval buffer as zstring ptr, _
+		byval targetlinenum as integer _
+	) as string
 
 	'' Find the targetlinenum'th line of code, bol will end up pointing
 	'' to the begin of line of the target line, i will point to the end of
 	'' the target line.
-	var i = buffer
+	dim as ubyte ptr i = buffer
 	var bol = i
 	var linenum = 0
 	do
@@ -932,11 +943,19 @@ function lexPeekLine _
 	function = s
 end function
 
-function lexCountLines( byval filename as zstring ptr ) as integer
+function lexPeekLineFromFile _
+	( _
+		byval filename as zstring ptr, _
+		byval targetlinenum as integer _
+	) as string
 	dim as ubyte ptr buffer, limit
 	hLoadFile( filename, buffer, limit )
+	function = lexPeekLineFromZstring( buffer, targetlinenum )
+	deallocate( buffer )
+end function
 
-	var i = buffer
+function lexCountLinesInZstring( byval buffer as zstring ptr ) as integer
+	dim as ubyte ptr i = buffer
 	var lines = 1
 	do
 		select case( i[0] )
@@ -956,6 +975,12 @@ function lexCountLines( byval filename as zstring ptr ) as integer
 
 		i += 1
 	loop
-
 	function = lines
+end function
+
+function lexCountLinesInFile( byval filename as zstring ptr ) as integer
+	dim as ubyte ptr buffer, limit
+	hLoadFile( filename, buffer, limit )
+	function = lexCountLinesInZstring( buffer )
+	deallocate( buffer )
 end function

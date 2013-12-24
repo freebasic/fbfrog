@@ -53,7 +53,7 @@ namespace file
 end namespace
 
 private sub hAddTypedef( byval id as zstring ptr )
-	if( verbose ) then
+	if( frog.verbose ) then
 		print "registering typedef '" + *id + "'"
 	end if
 	hashAddOverwrite( @file.typedefs, id, NULL )

@@ -2113,7 +2113,7 @@ private sub hComplainAboutExpr _
 		byval message as zstring ptr _
 	)
 
-	if( verbose ) then
+	if( frog.verbose ) then
 		if( n->location.filename ) then
 			hReportLocation( @n->location, message )
 		else

@@ -89,6 +89,13 @@ declare function strReplace _
 		byref a as string, _
 		byref b as string _
 	) as string
+declare sub strSplit _
+	( _
+		byref origs as string, _
+		byref delimiter as string, _
+		byref l as string, _
+		byref r as string _
+	)
 declare function strMakePrintable( byref a as string ) as string
 declare function strStartsWith( byref s as string, byref lookfor as string ) as integer
 declare function strEndsWith( byref s as string, byref lookfor as string ) as integer
@@ -830,18 +837,31 @@ declare sub astDump _
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
+declare function lexLoadZstring _
+	( _
+		byval x as integer, _
+		byval filename as zstring ptr, _
+		byval s as zstring ptr, _
+		byval keep_comments as integer _
+	) as integer
 declare function lexLoadFile _
 	( _
 		byval x as integer, _
 		byval filename as zstring ptr, _
 		byval keep_comments as integer _
 	) as integer
-declare function lexPeekLine _
+declare function lexPeekLineFromZstring _
+	( _
+		byval buffer as zstring ptr, _
+		byval targetlinenum as integer _
+	) as string
+declare function lexPeekLineFromFile _
 	( _
 		byval filename as zstring ptr, _
 		byval targetlinenum as integer _
 	) as string
-declare function lexCountLines( byval filename as zstring ptr ) as integer
+declare function lexCountLinesInZstring( byval buffer as zstring ptr ) as integer
+declare function lexCountLinesInFile( byval filename as zstring ptr ) as integer
 declare function emitType _
 	( _
 		byval dtype as integer, _
@@ -897,6 +917,7 @@ type FROGPRESET
 	code		as ASTNODE ptr
 	options		as integer
 	outdir		as zstring ptr
+	cppheader	as string
 end type
 
 declare sub presetParse( byval pre as FROGPRESET ptr, byref filename as string )
@@ -911,7 +932,11 @@ declare sub presetOverrideInputFiles _
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-extern verbose as integer
+type FROGSTUFF
+	verbose as integer
+	cppheader as zstring ptr
+end type
+extern frog as FROGSTUFF
 declare function frogRegisterFile _
 	( _
 		byval normed as zstring ptr, _

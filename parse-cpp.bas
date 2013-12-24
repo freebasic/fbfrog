@@ -1329,28 +1329,19 @@ end function
 
 namespace eval
 	'' Lists of known macros etc. Initial symbols can be added before
-	'' ppEval(), then it will use and adjust the lists while parsing.
+	'' cppMain(), then it will use and adjust the lists while parsing.
 
 	'' Lookup table of #define token positions
 	dim shared macros		as THASH
 
 	dim shared noexpands		as THASH
 	dim shared removes		as THASH
-
-	'' Token position where to insert pre-#defines
-	'' - starts out at 0, the top of the tk buffer, that's the best place
-	''   for pre-#defines and pretty much the only option anyways
-	'' - instead of inserting each one of the pre-#defines at position 0
-	''   (they would end up in reverse order), this counter keeps advancing
-	''   so pre-#defines can be inserted in the original order
-	dim shared xpre          as integer
 end namespace
 
 sub cppInit( )
 	hashInit( @eval.macros, 4, TRUE )
 	hashInit( @eval.noexpands, 4, TRUE )
 	hashInit( @eval.removes, 4, TRUE )
-	eval.xpre = 0
 end sub
 
 sub cppEnd( )
@@ -1361,17 +1352,20 @@ end sub
 
 sub cppPreDefine overload( byval macro as ASTNODE ptr )
 	'' Insert the #define with body tokens in TK_BEGIN/END at the top of
-	'' the tk buffer, where ppEval() will see it.
+	'' the tk buffer, where cppMain() will see it, but behind existing
+	'' tokens (could have other pre-#defines already).
+	var x = tkGetCount( )
+
 	var newmacro = astClone( macro )
 	astDelete( newmacro->expr )
 	newmacro->expr = NULL
 
-	tkInsert( eval.xpre, TK_PPDEFINE )
-	tkSetAst( eval.xpre, newmacro )
-	eval.xpre += 1
+	tkInsert( x, TK_PPDEFINE )
+	tkSetAst( x, newmacro )
+	x += 1
 
-	tkInsert( eval.xpre, TK_BEGIN )
-	eval.xpre += 1
+	tkInsert( x, TK_BEGIN )
+	x += 1
 
 	var macrobody = macro->expr
 	if( macrobody ) then
@@ -1380,15 +1374,15 @@ sub cppPreDefine overload( byval macro as ASTNODE ptr )
 		while( tk )
 			assert( tk->class = ASTCLASS_TK )
 
-			tkInsert( eval.xpre, tk->tk, tk->text )
-			eval.xpre += 1
+			tkInsert( x, tk->tk, tk->text )
+			x += 1
 
 			tk = tk->next
 		wend
 	end if
 
-	tkInsert( eval.xpre, TK_END )
-	eval.xpre += 1
+	tkInsert( x, TK_END )
+	x += 1
 end sub
 
 sub cppPreDefine overload( byval id as zstring ptr )
@@ -1399,9 +1393,11 @@ sub cppPreDefine overload( byval id as zstring ptr )
 end sub
 
 sub cppPreUndef( byval id as zstring ptr )
-	'' Add #undef at the top of the tk buffer, where ppEval() will see it
-	tkInsert( eval.xpre, TK_PPUNDEF, id )
-	eval.xpre += 1
+	'' Add #undef at the top of the tk buffer, where cppMain() will see it,
+	'' but behind existing tokens (could have other pre-#defines already).
+	var x = tkGetCount( )
+	tkInsert( x, TK_PPUNDEF, id )
+	x += 1
 end sub
 
 sub cppNoExpandSym( byval id as zstring ptr )
@@ -1469,7 +1465,7 @@ private sub hAddMacro( byval macro as ASTNODE ptr, byval xmacro as integer )
 	assert( tkGetAst( xmacro ) = macro )
 
 	'' Report conflicting #defines
-	if( verbose ) then
+	if( frog.verbose ) then
 		var xexisting = hLookupMacro( macro->text )
 		if( xexisting >= 0 ) then
 			if( hMacrosEqual( xmacro, xexisting ) = FALSE ) then
@@ -1697,7 +1693,7 @@ private function hSearchHeaderFile _
 
 	dim as string normed
 
-	if( verbose ) then
+	if( frog.verbose ) then
 		print "searching '" + *pretty + "' in context of '" + *contextfile + "'"
 	end if
 
@@ -1709,7 +1705,7 @@ private function hSearchHeaderFile _
 		end if
 
 		normed = parent + *pretty
-		if( verbose ) then
+		if( frog.verbose ) then
 			print "trying: " + normed
 		end if
 		if( hFileExists( normed ) ) then
@@ -2038,7 +2034,7 @@ sub cppMainForTestingIfExpr _
 				t->attrib or= ASTATTRIB_REMOVE
 			end if
 
-			'' Skip over the #define body here, just for consistency with ppEval()
+			'' Skip over the #define body here, just for consistency with cppMain()
 			x = hSkipFromBeginToEnd( x + 1 )
 
 		case TK_PPUNDEF

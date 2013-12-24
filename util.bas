@@ -9,15 +9,11 @@ end sub
 
 private sub hCalcErrorLine _
 	( _
-		byval filename as zstring ptr, _
-		byval linenum as integer, _
 		byval column as integer, _
 		byval limit as integer, _
 		byref s as string, _
 		byref offset as integer _
 	)
-
-	s = lexPeekLine( filename, linenum )
 
 	'' Line too long to fit in console?
 	if( len( s ) > limit ) then
@@ -74,7 +70,17 @@ sub hReportLocation _
 		limit = 0
 	end if
 
-	var linecount = lexCountLines( location->filename )
+	var is_cmdline = (*location->filename = "<command line>")
+
+	dim as integer linecount = any
+	if( is_cmdline ) then
+		if( frog.cppheader = NULL ) then
+			exit sub
+		end if
+		linecount = lexCountLinesInZstring( frog.cppheader )
+	else
+		linecount = lexCountLinesInFile( location->filename )
+	end if
 
 	'' Show the error line and maybe some extra lines above and below it,
 	'' for more context, with line numbers prefixed to them:
@@ -115,7 +121,14 @@ sub hReportLocation _
 	for i as integer = min to max
 		dim s as string
 		dim offset as integer
-		hCalcErrorLine( location->filename, location->linenum + i, location->column, limit, s, offset )
+
+		if( is_cmdline ) then
+			s = lexPeekLineFromZstring( frog.cppheader, location->linenum + i )
+		else
+			s = lexPeekLineFromFile( location->filename, location->linenum + i )
+		end if
+
+		hCalcErrorLine( location->column, limit, s, offset )
 
 		print "    " + linenums(i) + s
 
@@ -188,6 +201,27 @@ function strReplace _
 
 	function = result
 end function
+
+sub strSplit _
+	( _
+		byref origs as string, _
+		byref delimiter as string, _
+		byref l as string, _
+		byref r as string _
+	)
+
+	var s = origs
+	var leftlen = instr( s, delimiter ) - 1
+
+	if( leftlen >= 0 ) then
+		l = left( s, leftlen )
+		r = right( s, len( s ) - leftlen - len( delimiter ) )
+	else
+		l = s
+		r = ""
+	end if
+
+end sub
 
 function strMakePrintable( byref a as string ) as string
 	dim b as string
@@ -974,7 +1008,7 @@ function hScanDirectory _
 
 	dirsAppend( rootdir )
 
-	if( verbose ) then
+	if( frog.verbose ) then
 		print "scanning tree for " + filepattern + " files: '" + dirs.head->path + "'"
 	end if
 

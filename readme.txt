@@ -51,16 +51,6 @@ Compiling:
 
 To do:
 
-- Each input .h is 1 root
-- Allow user to concat roots via the CLI, i.e. to specify pre/post-#includes
-  for certain roots (-include <file>?, and make it matter whether it's given
-  before/behind a root?)
-- Or, just concat all roots given. If that's not wanted, then must use separate
-  fbfrog invocations.
-- But, should support "common sub-header extraction" (if multiple roots have
-  common declarations, extract them into common header). That requires multiple
-  roots to be passed without them being concatenated.
-
 - Should remove *.fbfrog files and use @response files and command line options
   for everything
 

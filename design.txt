@@ -31,3 +31,9 @@ Re-importing existing FB binding in order to extend/update them
 #includes are always parsed, so that any #defines/#undefs they contain are seen,
 but the -nomerge option can be used to prevent the code they contain from being
 preserved in the final binding.
+
+Each input .h is a root header for which fbfrog will produce an AST representing
+the API as seen from that root's point of view. Each root is emitted as separate
+.bi because typically they'll be incompatible. Common parts of the root's APIs
+will automatically be extracted into common headers. It's also possible to use
+pre-#includes to concatenate separate roots manually.
