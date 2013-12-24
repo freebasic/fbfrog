@@ -1688,34 +1688,42 @@ end sub
 private function hSearchHeaderFile _
 	( _
 		byval contextfile as zstring ptr, _
-		byval pretty as zstring ptr _
+		byref inctext as string _
 	) as string
 
-	dim as string normed
-
 	if( frog.verbose ) then
-		print "searching '" + *pretty + "' in context of '" + *contextfile + "'"
+		print "searching: " + inctext + " (context = " + *contextfile + ")"
 	end if
 
-	var parent = pathOnly( *contextfile )
-	do
-		'' File not found anywhere?
-		if( len( parent ) = 0 ) then
-			exit do
-		end if
+	'' 1. If #including by absolute path, use it as-is
+	if( pathIsAbsolute( inctext ) ) then
+		return inctext
+	end if
 
-		normed = parent + *pretty
+	'' 2. Relative to context file
+	var incfile = pathAddDiv( pathOnly( *contextfile ) ) + inctext
+	if( frog.verbose ) then
+		print "trying: " + incfile
+	end if
+	if( hFileExists( incfile ) ) then
+		return incfile
+	end if
+
+	var i = frog.incdirs->head
+	while( i )
+
+		incfile = pathAddDiv( *i->text ) + inctext
 		if( frog.verbose ) then
-			print "trying: " + normed
+			print "trying: " + incfile
 		end if
-		if( hFileExists( normed ) ) then
-			exit do
+		if( hFileExists( incfile ) ) then
+			return incfile
 		end if
 
-		parent = pathStripLastComponent( parent )
-	loop
+		i = i->next
+	wend
 
-	function = pathNormalize( normed )
+	function = ""
 end function
 
 private function hFindIncludeBOF( byval x as integer ) as integer

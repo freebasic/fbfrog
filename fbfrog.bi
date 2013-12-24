@@ -933,8 +933,9 @@ declare sub presetOverrideInputFiles _
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 type FROGSTUFF
-	verbose as integer
-	cppheader as zstring ptr
+	verbose		as integer
+	cppheader	as zstring ptr
+	incdirs		as ASTNODE ptr
 end type
 extern frog as FROGSTUFF
 declare function frogRegisterFile _

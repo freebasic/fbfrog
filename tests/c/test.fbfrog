@@ -1,5 +1,5 @@
 dir "."
-option nomerge whitespace noautoextern
+option whitespace noautoextern
 
 remove define EXPANDTHIS
 remove define EXPANDME1

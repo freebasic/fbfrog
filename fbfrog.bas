@@ -69,6 +69,10 @@ private sub hAddPreInclude _
 
 end sub
 
+private sub hAddIncDir( byref arg as string )
+	astAppend( frog.incdirs, astNewTEXT( arg ) )
+end sub
+
 private function frogDownload( byref url as string, byref file as string ) as integer
 	var downloadfile = "tarballs" + PATHDIV + file
 	if( hFileExists( downloadfile ) ) then
@@ -451,6 +455,7 @@ end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
+	frog.incdirs = astNewGROUP( )
 	filesysInit( )
 
 	if( __FB_ARGC__ = 1 ) then
@@ -496,6 +501,14 @@ end sub
 				arg = *__FB_ARGV__[i]
 				hAddPreInclude( @cmdline, fullarg + " " + arg, arg )
 
+			case "i"
+				i += 1
+				if( i >= __FB_ARGC__ ) then
+					hPrintHelp( "missing <path> argument in '" + fullarg + "'" )
+				end if
+				arg = *__FB_ARGV__[i]
+				hAddIncDir( arg )
+
 			case "nomerge"
 				cmdline.options or= PRESETOPT_NOMERGE
 
@@ -513,9 +526,14 @@ end sub
 				frog.verbose = TRUE
 
 			case else
+				var tail = right( arg, len( arg ) - 1 )
+
 				select case( left( arg, 1 ) )
 				case "D"
-					hAddPreDefine( @cmdline, fullarg, right( arg, len( arg ) - 1 ) )
+					hAddPreDefine( @cmdline, fullarg, tail )
+
+				case "I"
+					hAddIncDir( tail )
 
 				case else
 					hPrintHelp( "unknown option: " + fullarg )

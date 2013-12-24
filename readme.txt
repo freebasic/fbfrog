@@ -51,11 +51,11 @@ Compiling:
 
 To do:
 
+- CPP errors when re#defining C keywords because it only accepts TK_ID as #define id
+
 - Should remove *.fbfrog files and use @response files and command line options
   for everything
 
-- when seeing #error, report "found an #error" instead of the #error's message,
-  otherwise it looks like that message is coming from fbfrog
 - use CONSTI and CONSTF nodes instead of just CONST, so we don't need typeIsFloat() checks?
 - should re-add support for unknown-construct-error-recovery (emitting TODOs+original code in comment)
     - C constructs, and for CPP, #pragmas and such
@@ -87,7 +87,10 @@ To do:
 - Macro expansion should preserve token locations, perhaps even a stack of
   locations in case of nested macros. It'd be nice if the tkOops() functions
   could show the context of a token that caused an error as it appears in the
-  tk buffer, and then where the token came from...
+  tk buffer, and then where the token came from... an even better, show the line
+  of code in each state from current (as seen by the parser) to original.
+- when seeing #error, report "found an #error" instead of the #error's message,
+  otherwise it looks like that message is coming from fbfrog
 - Comments given to a TK_ID that is a macro call and will be expanded should
   be given to first non-whitespace token from the expansion, for example:
         // foo
