@@ -398,21 +398,6 @@ private sub cppDividers( )
 end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-
-private function hSkipToEOL( byval x as integer ) as integer
-	do
-		select case( tkGet( x ) )
-		case TK_EOL, TK_EOF
-			exit do
-		end select
-
-		x += 1
-	loop
-
-	function = x
-end function
-
-''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 '' #if expression parser used by cppMain()
 
 function hNumberLiteral( byval x as integer ) as ASTNODE ptr
@@ -691,16 +676,23 @@ private function cppDirective( byval x as integer ) as integer
 
 		hMacroParamList( x, macro )
 
+		'' Load body tokens into AST
+		assert( macro->expr = NULL )
+		macro->expr = astNew( ASTCLASS_MACROBODY )
+		do
+			select case( tkGet( x ) )
+			case TK_EOL, TK_EOF
+				exit do
+			end select
+
+			astAppend( macro->expr, astNewTK( x ) )
+
+			x += 1
+		loop
+
 		tkFold( begin, x - 1, TK_PPDEFINE )
 		tkSetAst( begin, macro )
 		x = begin + 1
-
-		'' Enclose body tokens in TK_BEGIN/END
-		tkInsert( x, TK_BEGIN )
-		x += 1
-		x = hSkipToEOL( x )
-		tkInsert( x, TK_END )
-		x += 1
 
 	case KW_INCLUDE
 		x += 1
@@ -719,7 +711,13 @@ private function cppDirective( byval x as integer ) as integer
 		tkInsert( x, TK_BEGIN )
 		x += 1
 		var exprbegin = x
-		x = hSkipToEOL( x )
+		do
+			select case( tkGet( x ) )
+			case TK_EOL, TK_EOF
+				exit do
+			end select
+			x += 1
+		loop
 		if( x = exprbegin ) then
 			tkOopsExpected( x, "#if condition" )
 		end if
@@ -1069,17 +1067,69 @@ private sub hTryMergeTokens _
 
 end sub
 
+function hInsertMacroBody _
+	( _
+		byval x as integer, _
+		byval macro as ASTNODE ptr _
+	) as integer
+
+	tkInsert( x, TK_BEGIN )
+	x += 1
+
+	var macrobody = macro->expr
+	if( macrobody ) then
+		assert( macrobody->class = ASTCLASS_MACROBODY )
+		var tk = macrobody->head
+		while( tk )
+			assert( tk->class = ASTCLASS_TK )
+
+			tkInsert( x, tk->tk, tk->text )
+			x += 1
+
+			tk = tk->next
+		wend
+	end if
+
+	tkInsert( x, TK_END )
+	x += 1
+
+	function = x
+end function
+
 private sub hInsertMacroExpansion _
 	( _
 		byref x as integer, _
-		byval xmacro as integer, _
 		byval macro as ASTNODE ptr _
 	)
 
 	''
-	'' Note: The macro body is surrounded by TK_BEGIN/END, so it's ok to
-	'' read "out-of-bounds" here by -1 or +1. This is useful to handle the
-	'' '#' stringify and '##' merge operators.
+	'' Temporarily insert the macro body tokens from AST back into the
+	'' tk buffer, allowing them to be accessed easily be index, instead of
+	'' the linked list of ASTNODEs. Once done with the macro expansion, the
+	'' inserted body needs to be removed again.
+	''
+	'' It's easiest to insert the body at the front of the tk buffer, since
+	'' then only the x position has to be shifted once at the beginning and
+	'' once at the end. The code below assumes that the expansion is
+	'' inserted behind the macro body, so that the token positions
+	'' referencing the body don't need to be adjusted every time an
+	'' expansion token is inserted.
+	''
+	'' Also, surround the macro body with TK_BEGIN/TK_END, to allow the code
+	'' below to read "out-of-bounds" by -1 or +1, which simplifies handling
+	'' of '#' stringify and '##' merge operators.
+	''
+	const bodybegin = 0
+	var bodyend = hInsertMacroBody( bodybegin, macro ) - 1
+	assert( tkGet( bodybegin ) = TK_BEGIN )
+	assert( tkGet( bodyend ) = TK_END )
+	'' x and the positions stored into argbegin()/argend() must be updated
+	x += bodyend - bodybegin + 1
+	for i as integer = 0 to argcount-1
+		argbegin(i) += bodyend - bodybegin + 1
+		argend(i)   += bodyend - bodybegin + 1
+	next
+
 	''
 	'' Notes on '##' merging:
 	''
@@ -1108,24 +1158,10 @@ private sub hInsertMacroExpansion _
 	''    for merging) or a macro argument (then no merging)
 	''
 
-
-	assert( tkGet( xmacro     ) = TK_PPDEFINE )
-	assert( tkGet( xmacro + 1 ) = TK_BEGIN    )
-	#if __FB_DEBUG__
-		var bodyend = xmacro + 2
-		while( tkGet( bodyend ) <> TK_END )
-			bodyend += 1
-		wend
-		'' The code below assumes that the expansion is inserted behind
-		'' the macro body, so that the token positions referencing the
-		'' body don't need to be adjusted every time an expansion token
-		'' is inserted...
-		assert( x > bodyend )
-	#endif
+	var xbegin = x
 
 	'' Pass 1: For each token in the macro body...
-	var b = xmacro + 2
-	var xbegin = x
+	var b = bodybegin + 1
 	do
 		select case( tkGet( b ) )
 		case TK_END
@@ -1271,16 +1307,16 @@ private sub hInsertMacroExpansion _
 		wend
 	end scope
 
+	'' Remove the macro body that was temporarily inserted above
+	tkRemove( bodybegin, bodyend )
+	x -= bodyend - bodybegin + 1
 end sub
 
 private function hMacroCall _
 	( _
 		byval x as integer, _
-		byval xmacro as integer _
+		byval macro as ASTNODE ptr _
 	) as integer
-
-	assert( tkGet( xmacro ) = TK_PPDEFINE )
-	var macro = tkGetAst( xmacro )
 
 	var begin = x
 
@@ -1316,7 +1352,7 @@ private function hMacroCall _
 
 	'' Insert the macro body behind the call (this way the positions
 	'' stored in argbegin()/argend() stay valid)
-	hInsertMacroExpansion( x, xmacro, macro )
+	hInsertMacroExpansion( x, macro )
 
 	'' Then remove the call tokens
 	tkRemove( begin, expansionbegin - 1 )
@@ -1345,44 +1381,23 @@ sub cppInit( )
 end sub
 
 sub cppEnd( )
+	scope
+		'' Free all macro ASTs
+		for i as integer = 0 to eval.macros.room-1
+			astDelete( eval.macros.items[i].data )
+		next
+	end scope
 	hashEnd( @eval.macros )
 	hashEnd( @eval.noexpands )
 	hashEnd( @eval.removes )
 end sub
 
 sub cppPreDefine overload( byval macro as ASTNODE ptr )
-	'' Insert the #define with body tokens in TK_BEGIN/END at the top of
-	'' the tk buffer, where cppMain() will see it, but behind existing
-	'' tokens (could have other pre-#defines already).
+	'' Insert the #define at the top of the tk buffer, where cppMain() will
+	'' see it, but behind existing tokens (e.g. other pre-#defines).
 	var x = tkGetCount( )
-
-	var newmacro = astClone( macro )
-	astDelete( newmacro->expr )
-	newmacro->expr = NULL
-
 	tkInsert( x, TK_PPDEFINE )
-	tkSetAst( x, newmacro )
-	x += 1
-
-	tkInsert( x, TK_BEGIN )
-	x += 1
-
-	var macrobody = macro->expr
-	if( macrobody ) then
-		assert( macrobody->class = ASTCLASS_MACROBODY )
-		var tk = macrobody->head
-		while( tk )
-			assert( tk->class = ASTCLASS_TK )
-
-			tkInsert( x, tk->tk, tk->text )
-			x += 1
-
-			tk = tk->next
-		wend
-	end if
-
-	tkInsert( x, TK_END )
-	x += 1
+	tkSetAst( x, astClone( macro ) )
 end sub
 
 sub cppPreDefine overload( byval id as zstring ptr )
@@ -1408,88 +1423,56 @@ sub cppRemoveSym( byval id as zstring ptr )
 	hashAddOverwrite( @eval.removes, id, NULL )
 end sub
 
-private function hLookupMacro( byval id as zstring ptr ) as integer
+private function hLookupMacro( byval id as zstring ptr ) as ASTNODE ptr
 	var item = hashLookup( @eval.macros, id, hashHash( id ) )
 	if( item->s ) then
-		function = cint( item->data )
-	else
-		function = -1
+		function = item->data
 	end if
 end function
 
-private function hMacrosEqual _
+private sub hRegisterMacro _
 	( _
-		byval a as integer, _
-		byval b as integer _
-	) as integer
+		byval id as zstring ptr, _
+		byval macro as ASTNODE ptr _
+	)
 
-	assert( tkGet( a ) = TK_PPDEFINE )
-	assert( tkGet( b ) = TK_PPDEFINE )
+	var hash = hashHash( id )
+	var item = hashLookup( @eval.macros, id, hash )
 
-	function = FALSE
-
-	'' Check #define ASTs (identifier, parameters)
-	if( astIsEqual( tkGetAst( a ), tkGetAst( b ) ) = FALSE ) then
-		exit function
+	'' Free existing macro AST for this id, if any
+	if( item->data ) then
+		astDelete( item->data )
 	end if
 
-	'' Check #define bodies
-	a += 1 : b += 1
-	assert( tkGet( a ) = TK_BEGIN ) : assert( tkGet( b ) = TK_BEGIN )
-	a += 1 : b += 1
+	hashAdd( @eval.macros, item, hash, id, macro )
+end sub
 
-	do
-		'' Must be the same token id
-		if( tkGet( a ) <> tkGet( b ) ) then exit function
-
-		if( tkGet( a ) = TK_END ) then exit do
-
-		'' Check the token text, if any (identifiers, literals, ...)
-		var atext = tkGetText( a )
-		var btext = tkGetText( b )
-		'' If one is NULL, both must be
-		if( (atext <> NULL) <> (btext <> NULL) ) then exit function
-		if( atext ) then
-			if( *atext <> *btext ) then exit function
-		end if
-
-		a += 1 : b += 1
-	loop
-
-	assert( tkGet( a ) = TK_END ) : assert( tkGet( b ) = TK_END )
-
-	function = TRUE
-end function
-
-private sub hAddMacro( byval macro as ASTNODE ptr, byval xmacro as integer )
-	assert( tkGetAst( xmacro ) = macro )
+private sub hAddMacro( byval macro as ASTNODE ptr )
+	assert( macro->class = ASTCLASS_PPDEFINE )
 
 	'' Report conflicting #defines
 	if( frog.verbose ) then
-		var xexisting = hLookupMacro( macro->text )
-		if( xexisting >= 0 ) then
-			if( hMacrosEqual( xmacro, xexisting ) = FALSE ) then
-				assert( tkGet( xexisting ) = TK_PPDEFINE )
-				var existing = tkGetAst( xexisting )
-
+		var macro2 = hLookupMacro( macro->text )
+		if( macro2 ) then
+			if( astIsEqual( macro, macro2 ) = FALSE ) then
 				'' Existing #define wasn't reported yet?
-				if( (existing->attrib and ASTATTRIB_REPORTED) = 0 ) then
-					tkReport( xexisting, "conflicting #define for '" + *macro->text + "', first one:", FALSE )
-					existing->attrib or= ASTATTRIB_REPORTED
+				if( (macro2->attrib and ASTATTRIB_REPORTED) = 0 ) then
+					astReport( macro2, "conflicting #define for '" + *macro->text + "', first one:", FALSE )
+					macro2->attrib or= ASTATTRIB_REPORTED
 				end if
 
 				assert( (macro->attrib and ASTATTRIB_REPORTED) = 0 )
-				tkReport( xmacro, "conflicting #define for '" + *macro->text + "', new one:", FALSE )
+				astReport( macro, "conflicting #define for '" + *macro->text + "', new one:", FALSE )
 				macro->attrib or= ASTATTRIB_REPORTED
 			end if
 		end if
 	end if
 
-	hashAddOverwrite( @eval.macros, macro->text, cptr( any ptr, xmacro ) )
+	hRegisterMacro( macro->text, macro )
 end sub
 
 private sub hUndefMacro( byval id as zstring ptr )
-	hashAddOverwrite( @eval.macros, id, cptr( any ptr, -1 ) )
+	hRegisterMacro( id, NULL )
 end sub
 
 private function hShouldExpandSym( byval id as zstring ptr ) as integer
@@ -1499,11 +1482,11 @@ end function
 private sub hMaybeExpandId( byref x as integer )
 	assert( tkGet( x ) = TK_ID )
 	var id = tkGetText( x )
-	var xmacro = hLookupMacro( id )
-	if( xmacro >= 0 ) then
+	var macro = hLookupMacro( id )
+	if( macro ) then
 		'' Only expand if not registered as NOEXPAND
 		if( hShouldExpandSym( id ) ) then
-			if( hMacroCall( x, xmacro ) ) then
+			if( hMacroCall( x, macro ) ) then
 				'' The macro call will be replaced with the body,
 				'' the token at the TK_ID's position must be re-parsed.
 				x -= 1
@@ -1631,8 +1614,6 @@ private sub hRemoveTokenAndTkBeginEnd( byref x as integer )
 		if( tkGet( x + 1 ) = TK_BEGIN ) then
 			last = hSkipFromBeginToEnd( x + 1 )
 		end if
-	case TK_PPDEFINE
-		last = hSkipFromBeginToEnd( x + 1 )
 	end select
 
 	tkRemove( x, last )
@@ -1924,20 +1905,12 @@ sub cppMain _
 			else
 				'' Register/overwrite as known defined symbol
 				var t = tkGetAst( x )
-				assert( t->class = ASTCLASS_PPDEFINE )
-				hAddMacro( t, x )
+				hAddMacro( astClone( t ) )
 
 				'' Don't preserve the #define if the symbol was registed for removal
 				if( hLookupRemoveSym( t->text ) ) then
-					'' #define body may still be needed for expansion,
-					'' so can't be removed yet. Instead, tell the C parser to
-					'' ignore this #define instead of trying to parse it.
-					''hRemoveTokenAndTkBeginEnd( x )
-					t->attrib or= ASTATTRIB_REMOVE
+					hRemoveTokenAndTkBeginEnd( x )
 				end if
-
-				'' Skip over the #define body, so no macro expansion will be done inside
-				x = hSkipFromBeginToEnd( x + 1 )
 			end if
 
 		case TK_PPUNDEF
@@ -2030,20 +2003,12 @@ sub cppMainForTestingIfExpr _
 		case TK_PPDEFINE
 			'' Register/overwrite as known defined symbol
 			var t = tkGetAst( x )
-			assert( t->class = ASTCLASS_PPDEFINE )
-			hAddMacro( t, x )
+			hAddMacro( astClone( t ) )
 
 			'' Don't preserve the #define if the symbol was registed for removal
 			if( hLookupRemoveSym( t->text ) ) then
-				'' #define body may still be needed for expansion,
-				'' so can't be removed yet. Instead, tell the C parser to
-				'' ignore this #define instead of trying to parse it.
-				''hRemoveTokenAndTkBeginEnd( x )
-				t->attrib or= ASTATTRIB_REMOVE
+				hRemoveTokenAndTkBeginEnd( x )
 			end if
-
-			'' Skip over the #define body here, just for consistency with cppMain()
-			x = hSkipFromBeginToEnd( x + 1 )
 
 		case TK_PPUNDEF
 			'' Register/overwrite as known undefined symbol

@@ -784,6 +784,12 @@ declare function astIsEqual _
 		byval b as ASTNODE ptr, _
 		byval options as integer = 0 _
 	) as integer
+declare sub astReport _
+	( _
+		byval n as ASTNODE ptr, _
+		byval message as zstring ptr, _
+		byval more_context as integer = TRUE _
+	)
 declare function astOpsC2FB( byval n as ASTNODE ptr ) as ASTNODE ptr
 declare function astFold _
 	( _
@@ -881,6 +887,11 @@ declare sub ppDividers( )
 declare function hNumberLiteral( byval x as integer ) as ASTNODE ptr
 extern as integer cprecedence(ASTOP_IIF to ASTOP_SIZEOF)
 declare sub hMacroParamList( byref x as integer, byval t as ASTNODE ptr )
+declare function hInsertMacroBody _
+	( _
+		byval x as integer, _
+		byval macro as ASTNODE ptr _
+	) as integer
 declare sub cppInit( )
 declare sub cppEnd( )
 declare sub cppNoExpandSym( byval id as zstring ptr )

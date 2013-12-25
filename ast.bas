@@ -683,6 +683,21 @@ function astIsEqual _
 	function = ((a = NULL) and (b = NULL))
 end function
 
+sub astReport _
+	( _
+		byval n as ASTNODE ptr, _
+		byval message as zstring ptr, _
+		byval more_context as integer _
+	)
+
+	if( n->location.filename ) then
+		hReportLocation( @n->location, message, more_context )
+	else
+		print *message
+	end if
+
+end sub
+
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 '' Version expression/block handling functions
 
@@ -1571,8 +1586,6 @@ private function astFoldKnownDefineds _
 		byval macros as THASH ptr _
 	) as ASTNODE ptr
 
-	assert( macros )
-
 	if( n = NULL ) then exit function
 	function = n
 
@@ -1589,7 +1602,7 @@ private function astFoldKnownDefineds _
 			var item = hashLookup( macros, id, hashHash( id ) )
 			if( item->s ) then
 				'' Currently defined?
-				var is_defined = (cint( item->data ) >= 0)
+				var is_defined = (item->data <> NULL)
 
 				'' FB defined()    ->   -1|0
 				'' item->data = is_defined
@@ -2107,22 +2120,6 @@ private function astFoldBoolContextNops _
 	end select
 end function
 
-private sub hComplainAboutExpr _
-	( _
-		byval n as ASTNODE ptr, _
-		byval message as zstring ptr _
-	)
-
-	if( frog.verbose ) then
-		if( n->location.filename ) then
-			hReportLocation( @n->location, message )
-		else
-			print *message
-		end if
-	end if
-
-end sub
-
 private function astFoldUnknownIds( byval n as ASTNODE ptr ) as ASTNODE ptr
 	function = n
 	if( n = NULL ) then
@@ -2132,7 +2129,9 @@ private function astFoldUnknownIds( byval n as ASTNODE ptr ) as ASTNODE ptr
 	select case( n->class )
 	case ASTCLASS_ID
 		'' Unexpanded identifier, assume it's undefined, like a CPP
-		hComplainAboutExpr( n, "treating unexpanded identifier '" + *n->text + "' as literal zero" )
+		if( frog.verbose ) then
+			astReport( n, "treating unexpanded identifier '" + *n->text + "' as literal zero" )
+		end if
 
 		'' id   ->   0
 		function = astNewCONST( 0, 0, TYPE_LONGINT )
@@ -2144,7 +2143,9 @@ private function astFoldUnknownIds( byval n as ASTNODE ptr ) as ASTNODE ptr
 			'' Unsolved defined(), must be an unknown symbol, so it
 			'' should expand to FALSE. (see also astFoldKnownDefineds())
 			assert( n->l->class = ASTCLASS_ID )
-			hComplainAboutExpr( n->l, "assuming symbol '" + *n->l->text + "' is undefined" )
+			if( frog.verbose ) then
+				astReport( n->l, "assuming symbol '" + *n->l->text + "' is undefined" )
+			end if
 
 			'' defined()   ->   0
 			function = astNewCONST( 0, 0, TYPE_LONGINT )

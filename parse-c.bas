@@ -1488,21 +1488,9 @@ private function cToplevel _
 			t = tkGetAst( x )
 
 			'' Did the PP mark this #define for removal? Then just
-			'' skip it (and its TK_BEGIN/END body) instead of
-			'' parsing it into an AST...
+			'' skip it instead of parsing it into an AST...
 			if( t->attrib and ASTATTRIB_REMOVE ) then
 				x += 1
-
-				assert( tkGet( x ) = TK_BEGIN )
-				x += 1
-
-				while( tkGet( x ) <> TK_END )
-					x += 1
-				wend
-
-				assert( tkGet( x ) = TK_END )
-				x += 1
-
 				t = NULL
 				exit select
 			end if
@@ -1511,8 +1499,10 @@ private function cToplevel _
 			astAddComment( t, tkCollectComments( x, x ) )
 			x += 1
 
-			'' Macro body should still be enclosed in TK_BEGIN/END
-			assert( t->expr = NULL )
+			'' Temporarily insert the macro body tokens from AST back into the
+			'' tk buffer, allowing them to be parsed by cExpression() here.
+			var bodybegin = x
+			hInsertMacroBody( bodybegin, t )
 
 			assert( tkGet( x ) = TK_BEGIN )
 			x += 1
@@ -1532,8 +1522,12 @@ private function cToplevel _
 			end if
 
 			assert( tkGet( x ) = TK_END )
-			x += 1
 
+			'' Remove the temporarily inserted macro body
+			tkRemove( bodybegin, x )
+			x = bodybegin
+
+			assert( t->expr->class = ASTCLASS_MACROBODY )
 			astDelete( t->expr )
 			t->expr = expr
 
