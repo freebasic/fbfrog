@@ -1767,8 +1767,9 @@ sub cppMain _
 			end if
 
 		case TK_PPINCLUDE
-			'' Not skipping? Then evaluate
-			if( skiplevel = MAXPPSTACK ) then
+			if( skiplevel <> MAXPPSTACK ) then
+				hRemoveTokenAndTkBeginEnd( x )
+			else
 				var location = tkGetLocation( x )
 				var context = location->filename
 				if( context = NULL ) then
