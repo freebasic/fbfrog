@@ -53,8 +53,10 @@ To do:
 
 - CPP errors when re#defining C keywords because it only accepts TK_ID as #define id
 
-- Should remove *.fbfrog files and use @response files and command line options
-  for everything
+- @response files instead of *.fbfrog files
+	+ command line = preset, same syntax, same parser, good for serious testing,
+	  good for sharing, good for quick copy/paste tests...
+	- potentially slightly less pretty syntax
 
 - use CONSTI and CONSTF nodes instead of just CONST, so we don't need typeIsFloat() checks?
 - should re-add support for unknown-construct-error-recovery (emitting TODOs+original code in comment)

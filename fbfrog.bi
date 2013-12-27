@@ -622,7 +622,7 @@ enum
 	ASTATTRIB_STDCALL	= 1 shl 5
 	ASTATTRIB_HIDECALLCONV	= 1 shl 6  '' Whether the calling convention is covered by an Extern block, in which case it doesn't need to be emitted.
 	ASTATTRIB_REMOVE	= 1 shl 7
-				''= 1 shl 8
+	ASTATTRIB_UNIQUE	= 1 shl 8  '' Telling astIsEqual() to never treat a node with this flag as equal to any other
 	ASTATTRIB_REPORTED	= 1 shl 9  '' Used to mark #defines about which the CPP has already complained, so it can avoid duplicate error messages
 	ASTATTRIB_DOS		= 1 shl 10
 	ASTATTRIB_LINUX		= 1 shl 11
@@ -832,6 +832,12 @@ declare function astMergeFiles _
 		byval files1 as ASTNODE ptr, _
 		byval files2 as ASTNODE ptr _
 	) as ASTNODE ptr
+declare sub astExtractCommonCodeFromFiles _
+	( _
+		byval files as ASTNODE ptr, _
+		byval versions as ASTNODE ptr _
+	)
+declare function astCountDecls( byval code as ASTNODE ptr ) as integer
 declare function astDumpOne( byval n as ASTNODE ptr ) as string
 declare function astDumpInline( byval n as ASTNODE ptr ) as string
 declare sub astDump _
@@ -922,6 +928,7 @@ enum
 	PRESETOPT_NOPPFOLD	= 1 shl 3
 	PRESETOPT_NOAUTOEXTERN	= 1 shl 4
 	PRESETOPT_WINDOWSMS	= 1 shl 5
+	PRESETOPT_COMMON	= 1 shl 6
 end enum
 
 type FROGPRESET

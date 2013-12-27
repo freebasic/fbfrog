@@ -593,6 +593,11 @@ function astIsEqual _
 
 	if( a->class <> b->class ) then exit function
 
+	if( (a->attrib and ASTATTRIB_UNIQUE) or _
+	    (b->attrib and ASTATTRIB_UNIQUE) ) then
+		exit function
+	end if
+
 	if( (a->attrib and ASTATTRIB_EXTERN) <> _
 	    (b->attrib and ASTATTRIB_EXTERN) ) then
 		exit function
@@ -924,7 +929,7 @@ private sub hCombineVersionTargets( byval group as ASTNODE ptr )
 	wend
 end sub
 
-'' Then if a version covers all targets then they can simply be forgotten,
+'' If a version covers all targets then they can simply be forgotten,
 '' because the check would always be true:
 ''     verblock a.(dos|linux|win32), b.(dos|linux|win32), c.win32
 '' becomes:
@@ -1500,12 +1505,10 @@ sub astProcessVerblocksAndTargetblocksOnFiles _
 	var f = files->head
 	while( f )
 
-		if( f->expr ) then
-			if( f->expr->class <> ASTCLASS_GROUP ) then
-				f->expr = astNewGROUP( f->expr )
-			end if
-			hProcessVerblocksAndTargetblocks( f->expr, versions, targets, versiondefine )
+		if( f->expr->class <> ASTCLASS_GROUP ) then
+			f->expr = astNewGROUP( f->expr )
 		end if
+		hProcessVerblocksAndTargetblocks( f->expr, versions, targets, versiondefine )
 
 		f = f->next
 	wend
@@ -2745,7 +2748,7 @@ function astWrapFileInVerblock _
 end function
 
 type DECLNODE
-	n as ASTNODE ptr     '' The declaration at that index
+	n as ASTNODE ptr  '' The declaration at that index
 	v as ASTNODE ptr  '' Parent VERSION node of the declaration
 end type
 
@@ -2772,23 +2775,20 @@ end sub
 '' Procdecls with callconv covered by the Extern block are given the
 '' ASTATTRIB_HIDECALLCONV flag.
 ''
-'' If we're merging two procdecls here, and they both have
-'' ASTATTRIB_HIDECALLCONV, then they can be emitted without explicit
-'' callconv, as the Extern blocks will take care of that and remap
-'' the callconv as needed. In this case, the merged node shouldn't have
-'' any callconv flag at all, but only ASTATTRIB_HIDECALLCONV.
-'' hAstLCS() calls astIsEqual() with the proper flags to allow this.
+'' If we're merging two procdecls here, and they both have ASTATTRIB_HIDECALLCONV,
+'' then they can be emitted without explicit callconv, as the Extern blocks will
+'' take care of that and remap the callconv as needed. In this case, the merged
+'' node shouldn't have any callconv flag at all, but only ASTATTRIB_HIDECALLCONV.
+'' hAstLCS() must be given the proper option flags for astIsEqual() to allow this.
 ''
-'' If merging two procdecls and only one side has
-'' ASTATTRIB_HIDECALLCONV, then they must have the same callconv,
-'' otherwise hAstLCS()'s astIsEqual() call wouldn't have treated
-'' them as equal. In this case the callconv must be preserved on
-'' the merged node, so it will be emitted explicitly, since the Extern
-'' blocks don't cover it. ASTATTRIB_HIDECALLCONV shouldn't be preserved
-'' in this case.
+'' If merging two procdecls and only one side has ASTATTRIB_HIDECALLCONV, then they
+'' must have the same callconv, otherwise the hAstLCS()'s astIsEqual() wouldn't
+'' have treated them as equal. In this case the callconv must be preserved on the
+'' merged node, so it will be emitted explicitly, since the Extern blocks don't
+'' cover it. ASTATTRIB_HIDECALLCONV shouldn't be preserved in this case.
 ''
-'' The same applies to procptr subtypes, though to handle it for those,
-'' we need a recursive function.
+'' The same applies to procptr subtypes, and to be able to handle them, this
+'' function is recursive.
 ''
 private sub hFindCommonCallConvsOnMergedDecl _
 	( _
@@ -2910,7 +2910,8 @@ private sub hAstLCS _
 		byval rfirst as integer, _
 		byval rlast as integer, _
 		byref rlcsfirst as integer, _
-		byref rlcslast as integer _
+		byref rlcslast as integer, _
+		byval equaloptions as integer _
 	)
 
 	var llen = llast - lfirst + 1
@@ -2922,7 +2923,7 @@ private sub hAstLCS _
 	for i as integer = 0 to llen-1
 		for j as integer = 0 to rlen-1
 			var newval = 0
-			if( astIsEqual( larray[lfirst+i].n, rarray[rfirst+j].n, ASTEQ_IGNOREHIDDENCALLCONV or ASTEQ_IGNOREFIELDS ) ) then
+			if( astIsEqual( larray[lfirst+i].n, rarray[rfirst+j].n, equaloptions ) ) then
 				if( (i = 0) or (j = 0) ) then
 					newval = 1
 				else
@@ -3049,7 +3050,8 @@ private sub hAstMerge _
 	DEBUG( "searching LCS..." )
 	dim as integer alcsfirst, alcslast, blcsfirst, blcslast
 	hAstLCS( aarray, afirst, alast, alcsfirst, alcslast, _
-	         barray, bfirst, blast, blcsfirst, blcslast )
+	         barray, bfirst, blast, blcsfirst, blcslast, _
+	         ASTEQ_IGNOREHIDDENCALLCONV or ASTEQ_IGNOREFIELDS )
 	DEBUG( "LCS: a=" & alcsfirst & ".." & alcslast & ", b=" & blcsfirst & ".." & blcslast )
 
 	'' No LCS found?
@@ -3098,8 +3100,8 @@ private sub hAstMerge _
 		'' They should be merged recursively now, so the struct/union/enum itself
 		'' can be common, while the fields/enumconsts may be version dependant.
 		''
-		'' (relying on hAstLCS() to allow structs/unions/enums to match
-		'' even if they have different fields/enumconsts)
+		'' (relying on structs/unions/enums to be allowed to match in the
+		'' hAstLCS() call, even if they have different fields/enumconsts)
 		var astruct = aarray[alcsfirst+i].n
 		select case( astruct->class )
 		case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
@@ -3214,11 +3216,9 @@ private function astMergeVerblocks _
 		astDump( b, 1 )
 	#endif
 
-	'' Create a lookup table for each side, so we can find the declarations
-	'' at certain indices in O(1) instead of having to cycle through the
-	'' whole list of preceding nodes everytime. Especially by the LCS
-	'' algorithm needs to find declaratinos by index a lot, this makes that
-	'' much faster.
+	'' Create a lookup table for each side, so the LCS algorithm can do
+	'' index-based lookups in O(1) instead of having to cycle through the
+	'' whole list of preceding nodes everytime which was terribly slow.
 	dim atable as DECLTABLE
 	dim btable as DECLTABLE
 
@@ -3297,6 +3297,291 @@ function astMergeFiles _
 
 	astDelete( files2 )
 	function = files1
+end function
+
+private sub hFindLcs _
+	( _
+		byval a as ASTNODE ptr, _
+		byref alcsfirst as integer, _
+		byref alcslast as integer, _
+		byval b as ASTNODE ptr, _
+		byref blcsfirst as integer, _
+		byref blcslast as integer _
+	)
+
+	dim atable as DECLTABLE
+	dim btable as DECLTABLE
+
+	decltableInit( @atable, a )
+	decltableInit( @btable, b )
+
+	hAstLCS( atable.array, 0, atable.count - 1, alcsfirst, alcslast, _
+	         btable.array, 0, btable.count - 1, blcsfirst, blcslast, _
+	         ASTEQ_IGNOREHIDDENCALLCONV )
+
+	decltableEnd( @btable )
+	decltableEnd( @atable )
+
+end sub
+
+private sub hFindMaxLcs _
+	( _
+		byval files as ASTNODE ptr, _
+		byref maxa as ASTNODE ptr, _
+		byref maxalcsfirst as integer, _
+		byref maxalcslast as integer, _
+		byref maxb as ASTNODE ptr, _
+		byref maxblcsfirst as integer, _
+		byref maxblcslast as integer _
+	)
+
+	maxalcsfirst = 0
+	maxblcsfirst = 0
+	maxalcslast = -1
+	maxblcslast = -1
+
+	var a = files->head
+	do
+		var b = files->head
+		do
+
+			if( a <> b ) then
+				dim as integer alcsfirst, alcslast
+				dim as integer blcsfirst, blcslast
+				hFindLcs( a->expr, alcsfirst, alcslast, _
+				          b->expr, blcsfirst, blcslast )
+
+				'' Found LCS?
+				if( alcsfirst <= alcslast ) then
+					'' Found a pair of files with longer LCS than the previous max?
+					if( (maxalcslast - maxalcsfirst + 1) < (alcslast - alcsfirst + 1) ) then
+						'' Remember this pair of files as the new max
+						maxa = a
+						maxalcsfirst = alcsfirst
+						maxalcslast  = alcslast
+						maxb = b
+						maxblcsfirst = blcsfirst
+						maxblcslast  = blcslast
+					end if
+				end if
+			end if
+
+			b = b->next
+		loop while( b )
+
+		a = a->next
+	loop while( a )
+
+end sub
+
+'' Rewrites file content (VERBLOCKs containing declarations), such that the
+'' given range of declarations is removed and an #include statement is inserted
+'' in their place, referencing the given file name.
+''
+'' The #include statement is inserted in a VERBLOCK covering all versions, so
+'' that it isn't version-specific, because the common header itself contains
+'' the common code's VERBLOCKs already (so the version checks are done there,
+'' and the #include statement can be generic).
+private function hReplaceDeclsWithInclude _
+	( _
+		byval code as ASTNODE ptr, _
+		byval table as DECLTABLE ptr, _
+		byval first as integer, _
+		byval last as integer, _
+		byval versions as ASTNODE ptr, _
+		byval includefile as zstring ptr _
+	) as ASTNODE ptr
+
+	var result = astNewGROUP( )
+
+	for i as integer = 0 to table->count - 1
+		'' First common declaration? Add #include instead of preserving it
+		if( i = first ) then
+			var inc = astNew( ASTCLASS_PPINCLUDE, includefile )
+			inc->attrib or= ASTATTRIB_UNIQUE
+			astAppendVerblock( result, astClone( versions ), NULL, _
+					inc )
+		'' Preserve other declarations as long as they're not part of the common ones
+		elseif( (i < first) or (i > last) ) then
+			astAppendVerblock( result, astClone( table->array[i].v ), NULL, _
+					astClone( table->array[i].n ) )
+		end if
+	next
+
+	assert( result->head )  '' should at least contain the #include
+
+	function = result
+end function
+
+private function hMakeUniqueNameForExtractedHeader( ) as zstring ptr
+	static s as zstring * 32
+	static count as integer
+	s = "fbfrog-common-" & count & ".h"
+	function = @s
+	count += 1
+end function
+
+private sub hExtractCommonCode _
+	( _
+		byval files as ASTNODE ptr, _
+		byval versions as ASTNODE ptr, _
+		byref a as ASTNODE ptr, _
+		byref alcsfirst as integer, _
+		byref alcslast as integer, _
+		byref b as ASTNODE ptr, _
+		byref blcsfirst as integer, _
+		byref blcslast as integer _
+	)
+
+	dim atable as DECLTABLE
+	dim btable as DECLTABLE
+
+	decltableInit( @atable, a->expr )
+	decltableInit( @btable, b->expr )
+
+	assert( (alcsfirst <= alcslast) and (alcslast < atable.count) )
+	assert( (blcsfirst <= blcslast) and (blcslast < btable.count) )
+
+	'' If the LCS covers all of a or b, then we can use that as the common #include,
+	'' instead of adding a new file.
+	dim as zstring ptr commonname = any
+	var rewrite_a = TRUE, rewrite_b = TRUE
+	if( (alcslast - alcsfirst + 1) = atable.count ) then
+		commonname = a->text
+		rewrite_a = FALSE
+	elseif( (blcslast - blcsfirst + 1) = btable.count ) then
+		commonname = b->text
+		rewrite_b = FALSE
+	else
+		'' Create a new file out of those common decls
+		commonname = hMakeUniqueNameForExtractedHeader( )
+
+		'' Copy the common decls into a new GROUP, preserving their VERBLOCKs
+		var commondecls = astNewGROUP( )
+		for i as integer = 0 to (alcslast - alcsfirst + 1) - 1
+			astAppendVerblock( commondecls, _
+					astClone( atable.array[alcsfirst+i].v ), _
+					astClone( btable.array[blcsfirst+i].v ), _
+					astClone( atable.array[alcsfirst+i].n ) )
+		next
+
+		'' Add the new file
+		var commonfile = astNewTEXT( commonname )
+		commonfile->expr = commondecls
+		astAppend( files, commonfile )
+	end if
+
+	'' Rewrite a and b, removing the common decls, and inserting #includes
+	if( rewrite_a ) then a->expr = hReplaceDeclsWithInclude( a->expr, @atable, alcsfirst, alcslast, versions, commonname )
+	if( rewrite_b ) then b->expr = hReplaceDeclsWithInclude( b->expr, @btable, blcsfirst, blcslast, versions, commonname )
+
+	decltableEnd( @btable )
+	decltableEnd( @atable )
+
+end sub
+
+''
+'' Given a list of root headers each containing all declarations that were
+'' reachable through #includes, it's possible that they contain some common
+'' code due to a common #include. This duplication of code should be reverted
+'' by finding such common sequences of declarations and extracting them into
+'' common #includes again.
+''
+'' For example, 3 files called a, b, c:
+''	a	b	c
+''	1	1	2
+''	2	2	4
+''	3	4	5
+'' Some have some declarations in common, e.g. a/1,2 and b/1,2.
+''
+'' Simple solution, 1st common declarations found, extracted into new header d:
+''	a	b	c	d
+''	<d>	<d>	2	1
+''	2	2	4
+''	3	4	5
+''
+''	a	b	c	d	e
+''	<d>	<d>	2	1	2
+''	<e>	<e>	4
+''	3	4	5
+''
+''	a	b	c	d	e	f
+''	<d>	<d>	<f>	1	<f>	2
+''	<e>	<e>	4
+''	3	4	5
+''
+''	a	b	c	d	f
+''	<d>	<d>	<f>	1	2
+''	<f>	<f>	4
+''	3	4	5
+''
+''	a	b	c	d	f	g
+''	<d>	<d>	<f>	1	2	4
+''	<f>	<f>	<g>
+''	3	<g>	5
+''
+'' Better solution, where the longest common substring is extracted first:
+''	a	b	c	d
+''	<d>	<d>	2	1
+''			4	2
+''	3	4	5
+''
+''	a	b	c	d	e
+''	<d>	<d>	<e>	1	2
+''			4	<e>
+''	3	4	5
+''
+''	a	b	c	d	e	f
+''	<d>	<d>	<e>	1	2	4
+''			<f>	<e>
+''	3	<f>	5
+''
+sub astExtractCommonCodeFromFiles _
+	( _
+		byval files as ASTNODE ptr, _
+		byval versions as ASTNODE ptr _
+	)
+
+	do
+		dim as ASTNODE ptr a, b
+		dim as integer alcsfirst, alcslast, blcsfirst, blcslast
+
+		hFindMaxLcs( files, a, alcsfirst, alcslast, b, blcsfirst, blcslast )
+
+		'' No LCS found?
+		if( a = NULL ) then
+			exit do
+		end if
+
+		print (alcslast - alcsfirst + 1) & " common declarations in " + *a->text + " and " + *b->text
+
+		hExtractCommonCode( files, versions, _
+			a, alcsfirst, alcslast, b, blcsfirst, blcslast )
+	loop
+
+end sub
+
+function astCountDecls( byval code as ASTNODE ptr ) as integer
+	var count = 0
+
+	var i = code->head
+	while( i )
+
+		select case( i->class )
+		case ASTCLASS_DIVIDER, ASTCLASS_PPINCLUDE, ASTCLASS_PPENDIF, _
+		     ASTCLASS_EXTERNBLOCKBEGIN, ASTCLASS_EXTERNBLOCKEND
+
+		case ASTCLASS_PPIF, ASTCLASS_PPELSEIF, ASTCLASS_PPELSE
+			count += astCountDecls( i )
+
+		case else
+			count += 1
+		end select
+
+		i = i->next
+	wend
+
+	function = count
 end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''

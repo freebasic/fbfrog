@@ -21,6 +21,7 @@ private sub hPrintHelp( byref message as string )
 	print "  -include <file>        Add pre-#include"
 	print
 	print "  -nomerge   Don't preserve code from #includes"
+	print "  -common    Extract common code into common header"
 	print "  -w         Whitespace: Try to preserve comments and empty lines"
 	print "  -o <path>  Set output directory for generated .bi files"
 	print "  -v         Show verbose/debugging info"
@@ -210,9 +211,7 @@ private function frogWorkRootFile _
 
 	'' Put file's AST into a VERBLOCK, if a targetversion was given,
 	'' in preparation for the astMergeFiles() call later
-	if( targetversion ) then
-		ast = astWrapFileInVerblock( ast, targetversion )
-	end if
+	ast = astWrapFileInVerblock( ast, targetversion )
 
 	deallocate( frog.cppheader )
 	frog.cppheader = NULL
@@ -309,6 +308,25 @@ private sub hPrintPresetVersions( byval versions as ASTNODE ptr, byval targets a
 	print "targets: " + s
 end sub
 
+private sub hRemoveEmptyFiles( byval files as ASTNODE ptr )
+	var f = files->head
+	while( f )
+		if( f->expr = NULL ) then
+			f = astRemove( files, f )
+		else
+			f = f->next
+		end if
+	wend
+end sub
+
+private function hMakeDeclCountMessage( byval declcount as integer ) as string
+	if( declcount = 1 ) then
+		function = "1 declaration"
+	else
+		function = declcount & " declarations"
+	end if
+end function
+
 private sub frogWorkPreset _
 	( _
 		byval pre as FROGPRESET ptr, _
@@ -360,19 +378,16 @@ private sub frogWorkPreset _
 		targetversion = targetversion->next
 	loop while( targetversion )
 
+	'' Remove files that don't have an AST left, i.e. were combined into
+	'' others by astMergeFiles() and shouldn't be emitted individually anymore.
+	hRemoveEmptyFiles( files )
+
+	if( pre->options and PRESETOPT_COMMON ) then
+		astExtractCommonCodeFromFiles( files, versions )
+	end if
+
 	var versiondefine = "__" + ucase( pathStripExt( pathStrip( presetfilename ) ), 1 ) + "_VERSION__"
 	astProcessVerblocksAndTargetblocksOnFiles( files, versions, targets, versiondefine )
-
-	'' Remove files that don't have an AST left, i.e. were combined into
-	'' others and shouldn't be emitted individually anymore.
-	var f = files->head
-	while( f )
-		if( f->expr = NULL ) then
-			f = astRemove( files, f )
-		else
-			f = f->next
-		end if
-	wend
 
 	'' There should always be at least 1 file left to emit
 	assert( files->head )
@@ -425,23 +440,18 @@ private sub frogWorkPreset _
 		loop while( f )
 	end if
 
-	f = files->head
+	var f = files->head
 	do
 		'' Replace the file extension, .h -> .bi
 		astSetText( f, pathStripExt( *f->text ) + ".bi" )
-		f = f->next
-	loop while( f )
-
-	f = files->head
-	do
-		print "emitting: " + *f->text
 
 		'' Do auto-formatting if not preserving whitespace
 		if( (pre->options and PRESETOPT_WHITESPACE) = 0 ) then
 			astAutoAddDividers( f->expr )
 		end if
 
-		'astDump( f->expr )
+		print "emitting: " + *f->text + " (" + _
+			hMakeDeclCountMessage( astCountDecls( f->expr ) ) + ")"
 		emitFile( *f->text, f->expr )
 
 		f = f->next
@@ -511,6 +521,9 @@ end sub
 
 			case "nomerge"
 				cmdline.options or= PRESETOPT_NOMERGE
+
+			case "common"
+				cmdline.options or= PRESETOPT_COMMON
 
 			case "w"
 				cmdline.options or= PRESETOPT_WHITESPACE
