@@ -51,8 +51,6 @@ Compiling:
 
 To do:
 
-- CPP errors when re#defining C keywords because it only accepts TK_ID as #define id
-
 - @response files instead of *.fbfrog files
 	+ command line = preset, same syntax, same parser, good for serious testing,
 	  good for sharing, good for quick copy/paste tests...

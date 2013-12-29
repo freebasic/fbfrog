@@ -622,7 +622,7 @@ end function
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 sub hMacroParamList( byref x as integer, byval t as ASTNODE ptr )
-	assert( tkGet( x ) = TK_ID )
+	assert( tkGet( x ) >= TK_ID )
 	t->paramcount = -1
 	x += 1
 
@@ -670,9 +670,11 @@ private function cppDirective( byval x as integer ) as integer
 	case KW_DEFINE
 		x += 1
 
-		'' Identifier?
-		tkExpect( x, TK_ID, "behind #define" )
-		var macro = astNew( ASTCLASS_PPDEFINE, tkGetText( x ) )
+		'' Identifier? (keywords should be allowed to, so anything >= TK_ID)
+		if( tkGet( x ) < TK_ID ) then
+			tkExpect( x, TK_ID, "behind #define" )
+		end if
+		var macro = astNew( ASTCLASS_PPDEFINE, tkGetIdOrKw( x ) )
 
 		hMacroParamList( x, macro )
 
