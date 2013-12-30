@@ -548,6 +548,7 @@ enum
 end enum
 
 enum
+	'' Internal helper nodes
 	ASTCLASS_NOP = 0
 	ASTCLASS_GROUP
 	ASTCLASS_VERBLOCK
@@ -555,6 +556,7 @@ enum
 	ASTCLASS_DIVIDER
 	ASTCLASS_SCOPEBLOCK
 
+	'' Preset helper nodes
 	ASTCLASS_DOWNLOAD
 	ASTCLASS_EXTRACT
 	ASTCLASS_COPYFILE
@@ -563,6 +565,7 @@ enum
 	ASTCLASS_NOEXPAND
 	ASTCLASS_REMOVE
 
+	'' CPP directives
 	ASTCLASS_PPINCLUDE
 	ASTCLASS_PPDEFINE
 	ASTCLASS_PPUNDEF
@@ -572,6 +575,7 @@ enum
 	ASTCLASS_PPENDIF
 	ASTCLASS_PPERROR
 
+	'' C declarations
 	ASTCLASS_STRUCT
 	ASTCLASS_UNION
 	ASTCLASS_ENUM
@@ -588,6 +592,7 @@ enum
 	ASTCLASS_EXTERNBLOCKBEGIN
 	ASTCLASS_EXTERNBLOCKEND
 
+	'' Expression atoms  & co
 	ASTCLASS_MACROBODY
 	ASTCLASS_MACROPARAM
 	ASTCLASS_TK
@@ -599,6 +604,7 @@ enum
 	ASTCLASS_DUMMYVERSION
 	ASTCLASS_TYPE
 
+	'' Expressions
 	ASTCLASS_UOP
 	ASTCLASS_BOP
 	ASTCLASS_IIF
@@ -607,8 +613,6 @@ enum
 	ASTCLASS_STRUCTINIT
 	ASTCLASS_DIMENSION
 	ASTCLASS_SIZEOFTYPE
-
-	ASTCLASS_FROGFILE
 
 	ASTCLASS__COUNT
 end enum
@@ -636,8 +640,8 @@ type ASTNODE_
 	attrib		as integer  '' ASTATTRIB_*
 
 	'' Identifiers/string literals, or NULL
-	text		as zstring ptr  '' FROGFILE: normalized path
-	comment		as zstring ptr  '' FROGFILE: pretty file name
+	text		as zstring ptr
+	comment		as zstring ptr
 
 	'' Data type (vars, fields, params, function results, expressions)
 	dtype		as integer
@@ -651,7 +655,6 @@ type ASTNODE_
 	'' PPDEFINE: MACROBODY
 	'' VERBLOCK: version expression
 	'' IIF: condition expression
-	'' FROGFILE: AST representing file content
 	expr		as ASTNODE ptr
 
 	'' Left/right operands for UOPs/BOPs
@@ -729,11 +732,6 @@ declare function astNewCONST _
 #define astNewID( id ) astNew( ASTCLASS_ID, id )
 #define astNewTEXT( text ) astNew( ASTCLASS_TEXT, text )
 declare function astNewTK( byval x as integer ) as ASTNODE ptr
-declare function astNewFROGFILE _
-	( _
-		byval normed as zstring ptr, _
-		byval pretty as zstring ptr _
-	) as ASTNODE ptr
 declare sub astDelete( byval n as ASTNODE ptr )
 declare sub astPrepend( byval parent as ASTNODE ptr, byval n as ASTNODE ptr )
 declare sub astAppend( byval parent as ASTNODE ptr, byval n as ASTNODE ptr )

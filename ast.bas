@@ -93,8 +93,7 @@ dim shared as ASTNODEINFO astnodeinfo(0 to ...) = _
 	( "call"    ), _
 	( "structinit" ), _
 	( "dimension" ), _
-	( "sizeoftype" ), _
-	( "frogfile" ) _
+	( "sizeoftype" ) _
 }
 
 #assert ubound( astnodeinfo ) = ASTCLASS__COUNT - 1
@@ -292,18 +291,6 @@ function astNewTK( byval x as integer ) as ASTNODE ptr
 	var n = astNew( ASTCLASS_TK, tkGetText( x ) )
 	n->tk = tkGet( x )
 	n->location = *tkGetLocation( x )
-	function = n
-end function
-
-function astNewFROGFILE _
-	( _
-		byval normed as zstring ptr, _
-		byval pretty as zstring ptr _
-	) as ASTNODE ptr
-
-	var n = astNew( ASTCLASS_FROGFILE, normed )
-	astSetComment( n, pretty )
-
 	function = n
 end function
 
