@@ -6,17 +6,17 @@
 	#error "'__TEST_VERSION__' is #defined to an unsupported value; expected one of: 1"
 #endif
 
-dim shared common as long
+dim shared common_ as long
 dim shared v1 as long
 
 type UDTv1
 	fieldv1 as long
 end type
 
-type UDTv1
+type UDTv1_
 	fieldv1 as long
 end type
 
-type UDTv1
+type UDTv1__
 	fieldv1 as long
 end type

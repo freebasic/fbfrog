@@ -275,6 +275,7 @@ private function hStatementOrBlock( byval body as integer ) as ASTNODE ptr
 			case "noppfold"     : presetoptions or= PRESETOPT_NOPPFOLD
 			case "noautoextern" : presetoptions or= PRESETOPT_NOAUTOEXTERN
 			case "windowsms"    : presetoptions or= PRESETOPT_WINDOWSMS
+			case "nonamefixup"  : presetoptions or= PRESETOPT_NONAMEFIXUP
 			case else
 				hOops( "unknown option" )
 			end select

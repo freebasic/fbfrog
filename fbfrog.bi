@@ -141,6 +141,12 @@ declare function hashLookup _
 		byval s as zstring ptr, _
 		byval hash as uinteger _
 	) as THASHITEM ptr
+declare function hashContains _
+	( _
+		byval h as THASH ptr, _
+		byval s as zstring ptr, _
+		byval hash as uinteger _
+	) as integer
 declare sub hashAdd _
 	( _
 		byval h as THASH ptr, _
@@ -164,6 +170,11 @@ declare sub hashInit _
 declare sub hashEnd( byval h as THASH ptr )
 declare sub hashStats( byval h as THASH ptr, byref prefix as string )
 declare sub hashDump( byval h as THASH ptr )
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+extern fbkeywordhash as THASH
+declare sub fbkeywordsInit( )
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
@@ -632,9 +643,10 @@ enum
 	ASTATTRIB_LINUX		= 1 shl 11
 	ASTATTRIB_WIN32		= 1 shl 12
 	ASTATTRIB__ALLTARGET	= ASTATTRIB_DOS or ASTATTRIB_LINUX or ASTATTRIB_WIN32
+	ASTATTRIB_NEEDRENAME	= 1 shl 13
 end enum
 
-'' When changing, adjust astClone()
+'' When changing, adjust astClone(), astIsEqual(), astDump*()
 type ASTNODE_
 	class		as integer  '' ASTCLASS_*
 	attrib		as integer  '' ASTATTRIB_*
@@ -642,6 +654,7 @@ type ASTNODE_
 	'' Identifiers/string literals, or NULL
 	text		as zstring ptr
 	comment		as zstring ptr
+	alias		as zstring ptr  '' Original identifier, if symbol was renamed
 
 	'' Data type (vars, fields, params, function results, expressions)
 	dtype		as integer
@@ -820,6 +833,7 @@ declare sub astFixAnonUDTs( byval n as ASTNODE ptr )
 declare sub astRemoveRedundantTypedefs( byval n as ASTNODE ptr )
 declare sub astMergeDIVIDERs( byval n as ASTNODE ptr )
 declare sub astAutoAddDividers( byval code as ASTNODE ptr )
+declare sub astFixIds( byval code as ASTNODE ptr )
 declare function astWrapFileInVerblock _
 	( _
 		byval code as ASTNODE ptr, _
@@ -836,6 +850,7 @@ declare sub astExtractCommonCodeFromFiles _
 		byval versions as ASTNODE ptr _
 	)
 declare function astCountDecls( byval code as ASTNODE ptr ) as integer
+declare function astDumpPrettyDecl( byval n as ASTNODE ptr ) as string
 declare function astDumpOne( byval n as ASTNODE ptr ) as string
 declare function astDumpInline( byval n as ASTNODE ptr ) as string
 declare sub astDump _
@@ -927,6 +942,7 @@ enum
 	PRESETOPT_NOAUTOEXTERN	= 1 shl 4
 	PRESETOPT_WINDOWSMS	= 1 shl 5
 	PRESETOPT_COMMON	= 1 shl 6
+	PRESETOPT_NONAMEFIXUP	= 1 shl 7
 end enum
 
 type FROGPRESET

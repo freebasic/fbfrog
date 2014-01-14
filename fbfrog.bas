@@ -23,6 +23,9 @@ private sub hPrintHelp( byref message as string )
 	print "  -nomerge   Don't preserve code from #includes"
 	print "  -common    Extract common code into common header"
 	print "  -w         Whitespace: Try to preserve comments and empty lines"
+	print "  -nonamefixup  Don't fix symbol identifier conflicts (which can happen"
+	print "                due to FB's keywords and/or case insensitivity"
+	print
 	print "  -o <path>  Set output directory for generated .bi files"
 	print "  -v         Show verbose/debugging info"
 	end (iif( len( message ) > 0, 1, 0 ))
@@ -204,6 +207,9 @@ private function frogWorkRootFile _
 	astFixArrayParams( ast )
 	astFixAnonUDTs( ast )
 	astRemoveRedundantTypedefs( ast )
+	if( (pre->options and PRESETOPT_NONAMEFIXUP) = 0 ) then
+		astFixIds( ast )
+	end if
 	if( (pre->options and PRESETOPT_NOAUTOEXTERN) = 0 ) then
 		astAutoExtern( ast, ((pre->options and PRESETOPT_WINDOWSMS) <> 0), whitespace )
 	end if
@@ -467,6 +473,7 @@ end sub
 
 	frog.incdirs = astNewGROUP( )
 	filesysInit( )
+	fbkeywordsInit( )
 
 	if( __FB_ARGC__ = 1 ) then
 		hPrintHelp( "" )
@@ -527,6 +534,9 @@ end sub
 
 			case "w"
 				cmdline.options or= PRESETOPT_WHITESPACE
+
+			case "nonamefixup"
+				cmdline.options or= PRESETOPT_NONAMEFIXUP
 
 			case "o"
 				i += 1

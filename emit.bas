@@ -197,8 +197,17 @@ private sub emitStmt( byref s as string, byval comment as zstring ptr )
 	end if
 end sub
 
-private function hIdAndArray( byval n as ASTNODE ptr ) as string
+private function hEmitAlias( byval n as ASTNODE ptr ) as string
+	if( n->alias ) then
+		function = " alias """ + *n->alias + """"
+	end if
+end function
+
+private function hIdAndArray( byval n as ASTNODE ptr, byval allow_alias as integer ) as string
 	var s = *n->text
+	if( allow_alias ) then
+		s += hEmitAlias( n )
+	end if
 	if( n->array ) then
 		s += emitAst( n->array )
 	end if
@@ -429,16 +438,16 @@ function emitAst _
 
 	case ASTCLASS_VAR
 		if( n->attrib and ASTATTRIB_EXTERN ) then
-			emitStmt( "extern "     + hIdAndArray( n ) + " as " + emitType( n->dtype, n->subtype ), n->comment )
+			emitStmt( "extern "     + hIdAndArray( n, TRUE  ) + " as " + emitType( n->dtype, n->subtype ), n->comment )
 		elseif( n->attrib and ASTATTRIB_PRIVATE ) then
-			emitStmt( "dim shared " + hIdAndArray( n ) + " as " + emitType( n->dtype, n->subtype ), n->comment )
+			emitStmt( "dim shared " + hIdAndArray( n, FALSE ) + " as " + emitType( n->dtype, n->subtype ), n->comment )
 		else
-			emitStmt( "extern     " + hIdAndArray( n ) + " as " + emitType( n->dtype, n->subtype ), n->comment )
-			emitStmt( "dim shared " + hIdAndArray( n ) + " as " + emitType( n->dtype, n->subtype ), n->comment )
+			emitStmt( "extern     " + hIdAndArray( n, TRUE  ) + " as " + emitType( n->dtype, n->subtype ), n->comment )
+			emitStmt( "dim shared " + hIdAndArray( n, FALSE ) + " as " + emitType( n->dtype, n->subtype ), n->comment )
 		end if
 
 	case ASTCLASS_FIELD
-		emitStmt( hIdAndArray( n ) + " as " + emitType( n->dtype, n->subtype ), n->comment )
+		emitStmt( hIdAndArray( n, FALSE ) + " as " + emitType( n->dtype, n->subtype ), n->comment )
 
 	case ASTCLASS_ENUMCONST
 		s += *n->text
@@ -464,7 +473,7 @@ function emitAst _
 		end if
 
 		if( n->text ) then
-			s += " " + *n->text
+			s += " " + *n->text + hEmitAlias( n )
 		end if
 
 		if( (n->attrib and ASTATTRIB_HIDECALLCONV) = 0 ) then

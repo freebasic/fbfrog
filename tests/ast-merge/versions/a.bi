@@ -6,7 +6,7 @@
 	#error "'__TEST_VERSION__' is #defined to an unsupported value; expected one of: 1, 2, 3"
 #endif
 
-dim shared common as long
+dim shared common_ as long
 
 #if __TEST_VERSION__ = 1
 	dim shared v1 as long
@@ -29,7 +29,7 @@ dim shared common as long
 		fieldv12 as long
 	end type
 
-	type UDTv12
+	type UDTv12_
 		fieldv1 as long
 		fieldv2 as long
 	end type
@@ -45,7 +45,7 @@ type UDTv123
 	fieldv123 as long
 end type
 
-type UDTv123
+type UDTv123_
 	#if __TEST_VERSION__ = 1
 		fieldv1 as long
 	#elseif __TEST_VERSION__ = 2

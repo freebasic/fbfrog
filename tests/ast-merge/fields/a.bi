@@ -11,7 +11,7 @@ type UDT
 	field2 as long
 end type
 
-type UDT
+type UDT_
 	field1 as long
 
 	#if __TEST_VERSION__ = 1

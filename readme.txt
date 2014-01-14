@@ -55,35 +55,47 @@ To do:
 	+ command line = preset, same syntax, same parser, good for serious testing,
 	  good for sharing, good for quick copy/paste tests...
 	- potentially slightly less pretty syntax
-
 - use CONSTI and CONSTF nodes instead of just CONST, so we don't need typeIsFloat() checks?
-- should re-add support for unknown-construct-error-recovery (emitting TODOs+original code in comment)
-    - C constructs, and for CPP, #pragmas and such
-
+- Re-add "unknown construct -> TODO" handling
+    + inline functions etc. are likely too hard to translate properly automatically
+    + having 99% good result with some declarations commented out is a better user
+      experience than no result at all
+    * Example:
+         FOO void f(void);
+      Produces:
+         '' TODO: fbfrog: foo.h(123): unknown construct; declaration parser expected identifier but found "void"
+         'FOO void f(void);
+         ''   ^~~~
+- Consider adding symbol tables separate from the AST, so e.g. all UDT dtypes
+  would reference the same subtype symbol instead of allocating an id everytime.
+    - define/const/proc/var ids aren't re-used much, but type ids are. Perhaps
+      add a UDT map? ie. use dtype values >= TYPE_UDT to represent UDTs (by name)
+      Then UDT types wouldn't have to allocate a subtype ID anymore (only function pointers).
+    - of course having the completely self-contained AST is great aswell
+- Do not preserve #defines that are #undeffed, such that ultimately it'll become
+  pointless to preserve #undefs at all
+- Support 32bit vs 64bit somehow? C long is already mapped to CLONG, but what
+  if a header checks for 32bit/64bit pre-#defines? Just add linux64/win64/etc. os blocks?
+- Long Double and other built-in types that FB doesn't have:
+    a) just omit, except fields in a struct that is needed
+    b) replace with byte array, other dtypes, or custom struct
+- Prettier "assuming undefined" reports: just 1 line, no source context
+- Only one "assuming undefined" report per symbol (at least only one per CPP run,
+  perhaps even only one per fbfrog run)
+- Translate #defines to consts if possible (it would be the more proper FB translation...)
 - #include foo.h  ->  #include foo.bi, if foo.bi will be generated too
 - #include stdio.h -> #include crt/stdio.bi, for some known default headers
   (or perhaps let presets do this)
-
-- add pass to check all identifiers against FB keywords, and to check for dupdefs
-  due to case insensitivity
-
-- For #defines that can't be parsed & translated as simple expressions:
-  REPLACE DEFINE Symbol [MacroParams] OldBody "NewBody"
-  - "NewBody" is FB code in a C string, as the preset is lexed in C mode
+- CPP works too much like FB's PP (e.g. recursive expansion...)
+- Check params/fields for name conflicts
+- Emit list of renamed symbols at top of header
 - Add BOOLDEFINE to mark a macro as "returns a bool", so the C #define parser
   can set is_bool_context=TRUE when folding
-
 - parentheses around macro params should be preserved (can use a flag on the AST node)
-
-- how to handle Enums? Need to be translated to LONG currently, but it's hard to
-  detect what's an enum and what isn't...
-    - look for enums in the API
-    - look for data types like "enum foo"...
-    - or just add "enum FOO as long" to FB and translate all enums to that
-    - of course that can't be done for enums that aren't declared in this API,
-      but for example in system headers, but those should be translated properly
-      in our crt/ bindings etc.
-
+- Enums: must be emitted as Long for 64bit compat:
+	Type Foo As Long (and make enum anonymous)
+	Enum Foo As Long (must be added to FB first)
+- Support bitfields?
 - Macro expansion should preserve token locations, perhaps even a stack of
   locations in case of nested macros. It'd be nice if the tkOops() functions
   could show the context of a token that caused an error as it appears in the
@@ -96,6 +108,3 @@ To do:
         // foo
         CALLCONV void f(void);
 - comments behind #define bodies should go to the #define not the body tokens
-
-- libzip: zip_source_free() vs. enumconst ZIP_SOURCE_FREE,
-          zip_stat_index() vs. #define ZIP_STAT_INDEX

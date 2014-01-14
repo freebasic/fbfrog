@@ -37,3 +37,24 @@ the API as seen from that root's point of view. Each root is emitted as separate
 .bi because typically they'll be incompatible. Common parts of the root's APIs
 will automatically be extracted into common headers. It's also possible to use
 pre-#includes to concatenate separate roots manually.
+
+Split fbfrog into separate tools: cpp, c2ast, ast2fb
++ Possible to tweak output of a tool before passing to next tool
++ Easier testing of individual steps
+- Too much manual work needed when adjusting output between steps
+- Internal representation exposed, may need to start maintaining compatibility etc.
+- Not as easy to build & use anymore compared to having a single tool
+
+Preserving white space (i.e. input C code's formatting) and commentary
+- Creating bindings, not translations. Declarations may be re-ordered.
+
+Should stop when encountering unknown constructs instead of recovering and
+emitting the unknown construct into a comment in the .bi output, together with
+a TODO note.
+- Producing almost complete .bi output is better than none, can fix rest manually
+- Need to support full C before having the problem go away, lots of work
++ Forces C parsing support to be improved. Any construct can be parsed, it just
+  needs to be implemented.
++ Fixing unknown constructs manually is nice for one-time translation, but
+  usually headers need updating/retranslation repeatedly; then the whole process
+  should be automated.

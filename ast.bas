@@ -2,6 +2,72 @@
 
 #include once "fbfrog.bi"
 
+type DECLNODE
+	n as ASTNODE ptr  '' The declaration at that index
+	v as ASTNODE ptr  '' Parent VERSION node of the declaration
+end type
+
+type DECLTABLE
+	array	as DECLNODE ptr
+	count	as integer
+	room	as integer
+end type
+
+private sub decltableAdd _
+	( _
+		byval table as DECLTABLE ptr, _
+		byval n as ASTNODE ptr, _
+		byval v as ASTNODE ptr _
+	)
+
+	if( table->count = table->room ) then
+		table->room += 256
+		table->array = reallocate( table->array, table->room * sizeof( DECLNODE ) )
+	end if
+
+	with( table->array[table->count] )
+		.n = n
+		.v = v
+	end with
+
+	table->count += 1
+
+end sub
+
+private sub decltableInit _
+	( _
+		byval table as DECLTABLE ptr, _
+		byval code as ASTNODE ptr _
+	)
+
+	table->array = NULL
+	table->count = 0
+	table->room = 0
+
+	'' Add each declaration node from the AST to the table
+	'' For each VERBLOCK...
+	assert( code->class = ASTCLASS_GROUP )
+	var verblock = code->head
+	while( verblock )
+		assert( verblock->class = ASTCLASS_VERBLOCK )
+
+		'' For each declaration in that VERBLOCK...
+		var decl = verblock->head
+		while( decl )
+			decltableAdd( table, decl, verblock->expr )
+			decl = decl->next
+		wend
+
+		verblock = verblock->next
+	wend
+end sub
+
+private sub decltableEnd( byval table as DECLTABLE ptr )
+	deallocate( table->array )
+end sub
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
 function typeToSigned( byval dtype as integer ) as integer
 	select case( typeGetDtAndPtr( dtype ) )
 	case TYPE_UBYTE, TYPE_USHORT, TYPE_ULONG, TYPE_ULONGINT
@@ -471,6 +537,12 @@ private sub astRemoveText( byval n as ASTNODE ptr )
 	n->text = NULL
 end sub
 
+sub astRenameSymbol( byval n as ASTNODE ptr, byval newid as zstring ptr )
+	assert( n->alias = NULL )
+	n->alias = n->text
+	n->text = strDuplicate( newid )
+end sub
+
 sub astSetType _
 	( _
 		byval n as ASTNODE ptr, _
@@ -516,6 +588,7 @@ private function astCloneNode( byval n as ASTNODE ptr ) as ASTNODE ptr
 
 	c->text        = strDuplicate( n->text )
 	c->comment     = strDuplicate( n->comment )
+	c->alias       = strDuplicate( n->alias )
 
 	c->dtype       = n->dtype
 	c->subtype     = astClone( n->subtype )
@@ -622,11 +695,11 @@ function astIsEqual _
 		end if
 	end if
 
-	if( (a->text <> NULL) and (b->text <> NULL) ) then
-		if( *a->text <> *b->text ) then exit function
-	else
-		if( (a->text <> NULL) <> (b->text <> NULL) ) then exit function
-	end if
+	if( (a->text <> NULL) <> (b->text <> NULL) ) then exit function
+	if( a->text ) then if( *a->text <> *b->text ) then exit function
+
+	if( (a->alias <> NULL) <> (b->alias <> NULL) ) then exit function
+	if( a->alias ) then if( *a->alias <> *b->alias ) then exit function
 
 	if( a->dtype <> b->dtype ) then exit function
 	if( astIsEqual( a->subtype, b->subtype, options ) = FALSE ) then exit function
@@ -2621,6 +2694,302 @@ sub astRemoveRedundantTypedefs( byval n as ASTNODE ptr )
 	end if
 end sub
 
+'' If two symbols are conflicting, one of them must be renamed, prefering to
+'' rename #defines/constants over renaming types/procedures. Fallback mode:
+'' rename the 2nd symbol. If conflicting with an FB keyword, the second symbol
+'' must be renamed.
+private function hDecideWhichSymbolToRename _
+	( _
+		byval first as ASTNODE ptr, _
+		byval other as ASTNODE ptr _
+	) as ASTNODE ptr
+
+	function = other
+
+	'' Not conflicting with FB keyword?
+	if( first ) then
+		select case( other->class )
+		case ASTCLASS_PPDEFINE, ASTCLASS_ENUMCONST
+
+		case else
+			select case( first->class )
+			case ASTCLASS_PPDEFINE, ASTCLASS_ENUMCONST
+				function = first
+			end select
+		end select
+	end if
+end function
+
+private sub hCheckId _
+	( _
+		byval h as THASH ptr, _
+		byval n as ASTNODE ptr, _
+		byval add_here as integer _
+	)
+
+	assert( n->text )
+	var id = ucase( *n->text )
+
+	var hash = hashHash( id )
+	var item = hashLookup( h, id, hash )
+	if( item->s ) then
+		dim as ASTNODE ptr first = item->data
+
+		if( frog.verbose ) then
+			print "name conflict: " + astDumpPrettyDecl( n ) + ", " + _
+				iif( first, astDumpPrettyDecl( first ), "FB keyword" )
+		end if
+
+		hDecideWhichSymbolToRename( first, n )->attrib or= ASTATTRIB_NEEDRENAME
+
+	elseif( add_here ) then
+		hashAdd( h, item, hash, id, n )
+	end if
+
+end sub
+
+private sub hWalkAndCheckIds _
+	( _
+		byval defines as THASH ptr, _
+		byval types as THASH ptr, _
+		byval globals as THASH ptr, _
+		byval n as ASTNODE ptr _
+	)
+
+	var i = n->head
+	while( i )
+
+		select case( i->class )
+		case ASTCLASS_PPDEFINE
+			hCheckId( @fbkeywordhash, i, FALSE )
+			hCheckId( defines, i, TRUE )
+			hCheckId( types, i, FALSE )
+			hCheckId( globals, i, FALSE )
+
+		case ASTCLASS_PROC, ASTCLASS_VAR, ASTCLASS_ENUMCONST
+			hCheckId( @fbkeywordhash, i, FALSE )
+			hCheckId( defines, i, FALSE )
+			hCheckId( globals, i, TRUE )
+
+		case ASTCLASS_STRUCT, ASTCLASS_UNION, _
+		     ASTCLASS_STRUCTFWD, ASTCLASS_UNIONFWD, ASTCLASS_ENUMFWD, _
+		     ASTCLASS_TYPEDEF
+			hCheckId( @fbkeywordhash, i, FALSE )
+			hCheckId( defines, i, FALSE )
+			hCheckId( types, i, TRUE )
+
+		case ASTCLASS_ENUM
+			'' Only check named enums
+			if( i->text ) then
+				hCheckId( @fbkeywordhash, i, FALSE )
+				hCheckId( defines, i, FALSE )
+				hCheckId( types, i, TRUE )
+			end if
+
+			'' Check enum's constants, which belong to global namespace too,
+			'' unlike struct fields or proc params. Note: not checking the
+			'' enum's id though, because it's in the type namespace.
+			hWalkAndCheckIds( defines, types, globals, i )
+
+		end select
+
+		i = i->next
+	wend
+end sub
+
+private sub hReplaceCalls _
+	( _
+		byval n as ASTNODE ptr, _
+		byval oldid as zstring ptr, _
+		byval newid as zstring ptr _
+	)
+
+	if( n = NULL ) then exit sub
+
+	select case( n->class )
+	case ASTCLASS_CALL, ASTCLASS_ID
+		if( *n->text = *oldid ) then
+			astSetText( n, newid )
+		end if
+	end select
+
+	if( n->subtype ) then hReplaceCalls( n->subtype, oldid, newid )
+	if( n->array   ) then hReplaceCalls( n->array  , oldid, newid )
+	if( n->expr    ) then hReplaceCalls( n->expr   , oldid, newid )
+	if( n->l       ) then hReplaceCalls( n->l      , oldid, newid )
+	if( n->r       ) then hReplaceCalls( n->r      , oldid, newid )
+
+	var i = n->head
+	while( i )
+		hReplaceCalls( i, oldid, newid )
+		i = i->next
+	wend
+
+end sub
+
+private sub hReplaceTypes _
+	( _
+		byval n as ASTNODE ptr, _
+		byval oldid as zstring ptr, _
+		byval newid as zstring ptr _
+	)
+
+	if( n->subtype ) then
+		if( n->class = ASTCLASS_ID ) then
+			if( *n->text = *oldid ) then
+				astSetText( n, newid )
+			end if
+		else
+			hReplaceTypes( n->subtype, oldid, newid )
+		end if
+	end if
+
+	if( n->array   ) then hReplaceCalls( n->array  , oldid, newid )
+	if( n->expr    ) then hReplaceCalls( n->expr   , oldid, newid )
+	if( n->l       ) then hReplaceCalls( n->l      , oldid, newid )
+	if( n->r       ) then hReplaceCalls( n->r      , oldid, newid )
+
+	var i = n->head
+	while( i )
+		hReplaceTypes( i, oldid, newid )
+		i = i->next
+	wend
+
+end sub
+
+private sub hRenameSymbol _
+	( _
+		byval defines as THASH ptr, _
+		byval types as THASH ptr, _
+		byval globals as THASH ptr, _
+		byval n as ASTNODE ptr, _
+		byval code as ASTNODE ptr _
+	)
+
+	dim as string newid, hashid
+
+	'' Build a new name by appending _ underscores, as long as needed to
+	'' find an identifier that's not yet used in the namespace corresponding
+	'' to the symbol. (otherwise renaming could cause more conflicts)
+	assert( n->text )
+	newid = *n->text
+
+	do
+		newid += "_"
+
+		hashid = ucase( newid )
+		var hash = hashHash( hashid )
+
+		var exists = hashContains( @fbkeywordhash, hashid, hash )
+
+		select case( n->class )
+		case ASTCLASS_PPDEFINE
+			exists or= hashContains( defines , hashid, hash )
+			exists or= hashContains( types   , hashid, hash )
+			exists or= hashContains( globals , hashid, hash )
+
+		case ASTCLASS_PROC, ASTCLASS_VAR, ASTCLASS_ENUMCONST
+			exists or= hashContains( defines , hashid, hash )
+			exists or= hashContains( globals , hashid, hash )
+
+		case ASTCLASS_STRUCT, ASTCLASS_UNION, _
+		     ASTCLASS_STRUCTFWD, ASTCLASS_UNIONFWD, ASTCLASS_ENUMFWD, _
+		     ASTCLASS_TYPEDEF, ASTCLASS_ENUM
+			exists or= hashContains( defines , hashid, hash )
+			exists or= hashContains( types   , hashid, hash )
+
+		case else
+			assert( FALSE )
+		end select
+
+		if( exists = FALSE ) then exit do
+	loop
+
+	'' Adjust all nodes using the original symbol name to use the new one
+	'' Renaming a procedure? Should update all CALL expressions.
+	'' Renaming a type? Should update all references to it.
+	'' (chances are this is the right thing to do, because headers won't
+	'' usually contain duplicates amongst types/globals internally; it's
+	'' just the case-insensitivity and FB keywords that cause problems)
+	select case( n->class )
+	case ASTCLASS_PPDEFINE, ASTCLASS_PROC, ASTCLASS_VAR, ASTCLASS_ENUMCONST
+		hReplaceCalls( code, n->text, newid )
+	case ASTCLASS_STRUCT, ASTCLASS_UNION, _
+	     ASTCLASS_STRUCTFWD, ASTCLASS_UNIONFWD, ASTCLASS_ENUMFWD, _
+	     ASTCLASS_TYPEDEF, ASTCLASS_ENUM
+		hReplaceTypes( code, n->text, newid )
+	case else
+		assert( FALSE )
+	end select
+
+	var origdump = astDumpPrettyDecl( n )
+
+	'' Update the symbol and add it to the hash table
+	astRenameSymbol( n, newid )
+	select case( n->class )
+	case ASTCLASS_PPDEFINE
+		hashAddOverwrite( defines, hashid, n )
+	case ASTCLASS_PROC, ASTCLASS_VAR, ASTCLASS_ENUMCONST
+		hashAddOverwrite( globals, hashid, n )
+	case ASTCLASS_STRUCT, ASTCLASS_UNION, _
+	     ASTCLASS_STRUCTFWD, ASTCLASS_UNIONFWD, ASTCLASS_ENUMFWD, _
+	     ASTCLASS_TYPEDEF, ASTCLASS_ENUM
+		hashAddOverwrite( types, hashid, n )
+	case else
+		assert( FALSE )
+	end select
+
+	if( frog.verbose ) then
+		print "renaming " + origdump + " to " + astDumpPrettyDecl( n )
+	end if
+
+end sub
+
+private sub hWalkAndRenameSymbols _
+	( _
+		byval defines as THASH ptr, _
+		byval types as THASH ptr, _
+		byval globals as THASH ptr, _
+		byval n as ASTNODE ptr, _
+		byval code as ASTNODE ptr _
+	)
+
+	var i = n->head
+	while( i )
+
+		if( i->attrib and ASTATTRIB_NEEDRENAME ) then
+			hRenameSymbol( defines, types, globals, i, code )
+		end if
+
+		select case( i->class )
+		case ASTCLASS_ENUM
+
+			'' Check enum's constants, which belong to global namespace too,
+			'' unlike struct fields or proc params. Note: not checking the
+			'' enum's id though, because it's in the type namespace.
+			hWalkAndRenameSymbols( defines, types, globals, i, code )
+
+		end select
+
+		i = i->next
+	wend
+end sub
+
+sub astFixIds( byval code as ASTNODE ptr )
+	dim as THASH defines, types, globals
+	hashInit( @defines, 16, TRUE )
+	hashInit( @types, 16, TRUE )
+	hashInit( @globals, 16, TRUE )
+
+	hWalkAndCheckIds( @defines, @types, @globals, code )
+
+	hWalkAndRenameSymbols( @defines, @types, @globals, code, code )
+
+	hashEnd( @globals )
+	hashEnd( @types )
+	hashEnd( @defines )
+end sub
+
 sub astMergeDIVIDERs( byval n as ASTNODE ptr )
 	assert( n->class = ASTCLASS_GROUP )
 
@@ -2733,17 +3102,6 @@ function astWrapFileInVerblock _
 	hWrapStructFieldsInVerblocks( code, version )
 	function = astNewVERBLOCK( astClone( version ), NULL, code )
 end function
-
-type DECLNODE
-	n as ASTNODE ptr  '' The declaration at that index
-	v as ASTNODE ptr  '' Parent VERSION node of the declaration
-end type
-
-type DECLTABLE
-	array	as DECLNODE ptr
-	count	as integer
-	room	as integer
-end type
 
 private sub hAddDecl _
 	( _
@@ -3133,59 +3491,6 @@ private sub hAstMerge _
 
 end sub
 
-private sub decltableAdd _
-	( _
-		byval table as DECLTABLE ptr, _
-		byval n as ASTNODE ptr, _
-		byval v as ASTNODE ptr _
-	)
-
-	if( table->count = table->room ) then
-		table->room += 256
-		table->array = reallocate( table->array, table->room * sizeof( DECLNODE ) )
-	end if
-
-	with( table->array[table->count] )
-		.n = n
-		.v = v
-	end with
-
-	table->count += 1
-
-end sub
-
-private sub decltableInit _
-	( _
-		byval table as DECLTABLE ptr, _
-		byval code as ASTNODE ptr _
-	)
-
-	table->array = NULL
-	table->count = 0
-	table->room = 0
-
-	'' Add each declaration node from the AST to the table
-	'' For each VERBLOCK...
-	assert( code->class = ASTCLASS_GROUP )
-	var verblock = code->head
-	while( verblock )
-		assert( verblock->class = ASTCLASS_VERBLOCK )
-
-		'' For each declaration in that VERBLOCK...
-		var decl = verblock->head
-		while( decl )
-			decltableAdd( table, decl, verblock->expr )
-			decl = decl->next
-		wend
-
-		verblock = verblock->next
-	wend
-end sub
-
-private sub decltableEnd( byval table as DECLTABLE ptr )
-	deallocate( table->array )
-end sub
-
 private function astMergeVerblocks _
 	( _
 		byval a as ASTNODE ptr, _
@@ -3572,7 +3877,30 @@ function astCountDecls( byval code as ASTNODE ptr ) as integer
 end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-'' AST dumping for debugging
+'' AST dumping for pretty output and debugging
+
+function astDumpPrettyDecl( byval n as ASTNODE ptr ) as string
+	dim as string s
+
+	select case( n->class )
+	case ASTCLASS_VAR       : s += "variable"
+	case ASTCLASS_PROC      : s += "function"
+	case ASTCLASS_ENUMCONST : s += "enum constant"
+	case else               : s += astnodeinfo(n->class).name
+	end select
+
+	s += " " + strMakePrintable( *n->text )
+
+	if( n->alias ) then
+		s += " alias """ + strMakePrintable( *n->alias ) + """"
+	end if
+
+	if( n->class = ASTCLASS_PROC ) then
+		s += "()"
+	end if
+
+	function = s
+end function
 
 function astDumpOne( byval n as ASTNODE ptr ) as string
 	dim as string s
@@ -3602,10 +3930,14 @@ function astDumpOne( byval n as ASTNODE ptr ) as string
 	checkAttrib( DOS )
 	checkAttrib( LINUX )
 	checkAttrib( WIN32 )
+	checkAttrib( NEEDRENAME )
 
 	if( n->class <> ASTCLASS_TK ) then
 		if( n->text ) then
 			s += " """ + strMakePrintable( *n->text ) + """"
+		end if
+		if( n->alias ) then
+			s += " alias """ + strMakePrintable( *n->alias ) + """"
 		end if
 	end if
 

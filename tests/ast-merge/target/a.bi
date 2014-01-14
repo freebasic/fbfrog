@@ -1,11 +1,11 @@
 dim shared linux as long
-dim shared linux as long
+dim shared linux_ as long
 
 type UDTlinux
 	fieldlinux as long
 end type
 
-type UDTlinux
+type UDTlinux_
 	fieldlinux as long
 	fieldlinux as long
 end type
