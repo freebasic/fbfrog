@@ -112,9 +112,6 @@ dim shared as ASTNODEINFO astnodeinfo(0 to ...) = _
 	( "targetblock" ), _
 	( "divider"  ), _
 	( "scopeblock" ), _
-	( "download" ), _
-	( "extract"  ), _
-	( "copyfile" ), _
 	( "file"     ), _
 	( "dir"      ), _
 	( "noexpand" ), _

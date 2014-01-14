@@ -77,44 +77,6 @@ private sub hAddIncDir( byref arg as string )
 	astAppend( frog.incdirs, astNewTEXT( arg ) )
 end sub
 
-private function frogDownload( byref url as string, byref file as string ) as integer
-	var downloadfile = "tarballs" + PATHDIV + file
-	if( hFileExists( downloadfile ) ) then
-		function = TRUE
-	else
-		hMkdir( "tarballs" )
-		if( hShell( "wget '" + url + "' -O """ + downloadfile + """" ) ) then
-			function = TRUE
-		else
-			hKill( downloadfile )
-			function = FALSE
-		end if
-	end if
-end function
-
-private function frogExtract( byref tarball as string, byref dirname as string ) as integer
-	hMkdir( dirname )
-
-	dim s as string
-
-	if( strEndsWith( tarball, ".zip" ) ) then
-		s = "unzip -q"
-		s += " -d """ + dirname + """"
-		s += " ""tarballs/" + tarball + """"
-	elseif( strEndsWith( tarball, ".tar.gz" ) or _
-	        strEndsWith( tarball, ".tar.bz2" ) or _
-	        strEndsWith( tarball, ".tar.xz" ) ) then
-		s = "tar xf ""tarballs/" + tarball + """"
-		s += " -C """ + dirname + """"
-	end if
-
-	if( len( s ) > 0 ) then
-		function = hShell( s )
-	else
-		function = FALSE
-	end if
-end function
-
 private function hPrettyTarget( byval v as ASTNODE ptr ) as string
 	select case( v->attrib and ASTATTRIB__ALLTARGET )
 	case ASTATTRIB_DOS   : function = "dos"
@@ -252,18 +214,6 @@ private function frogWorkVersion _
 	while( child )
 
 		select case( child->class )
-		case ASTCLASS_DOWNLOAD
-			'' Download tarballs
-			if( frogDownload( *child->text, *child->comment ) = FALSE ) then
-				oops( "failed to download " + *child->comment )
-			end if
-
-		case ASTCLASS_EXTRACT
-			'' Extract tarballs
-			if( frogExtract( *child->text, presetprefix + *child->comment ) = FALSE ) then
-				oops( "failed to extract " + *child->text )
-			end if
-
 		case ASTCLASS_FILE
 			'' Input files
 			astAppend( rootfiles, astNewTEXT( presetprefix + *child->text ) )

@@ -36,16 +36,6 @@ Preprocessing (#if block evaluation, macro expansion)
 Input files
 -----------
 
-  download "URL" "outputfilename"
-    For downloading tarballs
-
-  extract "tarballfilename"
-  extract "tarballfilename" "outputdirectoryname"
-    For extracting tarballs
-
-  copyfile "oldname" "newname"
-    For copying files around after extracting a tarball, if needed
-
   file "filename.h"
     To register input files from the extracted tarballs
 

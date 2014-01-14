@@ -158,41 +158,6 @@ private function hStatementOrBlock( byval body as integer ) as ASTNODE ptr
 		end if
 		hSkip( )
 
-	'' DOWNLOAD "URL" "output file name"
-	case "download"
-		hSkip( )
-		var url = hExpectSkipString( "containing the download URL" )
-		var outfile = hExpectSkipString( "containing the output file name" )
-
-		var download = astNew( ASTCLASS_DOWNLOAD, url )
-		astSetComment( download, outfile )
-		astAppend( code, download )
-
-	'' EXTRACT "tarball file name" ["output directory name"]
-	case "extract"
-		hSkip( )
-		var tarball = hExpectSkipString( "containing the archive file name" )
-
-		dim outdir as zstring ptr
-		if( tkGet( x ) = TK_STRING ) then
-			outdir = tkGetText( x )
-			hSkip( )
-		end if
-
-		var extract = astNew( ASTCLASS_EXTRACT, tarball )
-		astSetComment( extract, outdir )
-		astAppend( code, extract )
-
-	'' COPYFILE "old name" "new name"
-	case "copyfile"
-		hSkip( )
-		var oldname = hExpectSkipString( "containing the original file name" )
-		var newname = hExpectSkipString( "containing the new file name" )
-
-		var copyfile = astNew( ASTCLASS_COPYFILE, oldname )
-		astSetComment( copyfile, newname )
-		astAppend( code, copyfile )
-
 	'' FILE "file name"
 	case "file"
 		hSkip( )
@@ -363,12 +328,7 @@ private sub hRemoveInputFiles( byval n as ASTNODE ptr )
 	wend
 end sub
 
-private sub hCopyInputFiles _
-	( _
-		byval code as ASTNODE ptr, _
-		byval source as ASTNODE ptr _
-	)
-
+private sub hCopyInputFiles( byval code as ASTNODE ptr, byval source as ASTNODE ptr )
 	var child = source->head
 	while( child )
 		select case( child->class )
@@ -383,16 +343,9 @@ private sub hCopyInputFiles _
 		end select
 		child = child->next
 	wend
-
 end sub
 
-sub presetOverrideInputFiles _
-	( _
-		byval pre as FROGPRESET ptr, _
-		byval source as FROGPRESET ptr _
-	)
-
+sub presetOverrideInputFiles( byval pre as FROGPRESET ptr, byval source as FROGPRESET ptr )
 	hRemoveInputFiles( pre->code )
 	hCopyInputFiles( pre->code, source->code )
-
 end sub

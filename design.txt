@@ -58,3 +58,8 @@ a TODO note.
 + Fixing unknown constructs manually is nice for one-time translation, but
   usually headers need updating/retranslation repeatedly; then the whole process
   should be automated.
+
+fbfrog should not worry about where input files come from (downloading and
+extracting tarballs etc.). Headers may need all kinds of shell commands to be
+extracted and prepared, perhaps even execution of a package-specific build
+system. fbfrog shoudn't become a portable shell, but instead focus on its job.
