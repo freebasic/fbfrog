@@ -4,149 +4,387 @@
 
 dim shared frog as FROGSTUFF
 
-private sub hPrintHelp( byref message as string )
-	if( len( message ) > 0 ) then
-		print message
-	end if
+private sub hPrintHelpAndExit( )
 	print "fbfrog 0.1 (" + __DATE_ISO__ + "), FreeBASIC binding generator"
 	print "usage: fbfrog [options] *.h"
 	print
 	print "Generates a .bi file containing FB API declarations corresponding"
 	print "to the C API declarations from the given *.h file(s)."
 	print
-	print "options:"
-	print
-	print "  -D<symbol>[=<body>]    Add pre-#define"
-	print "  -d <symbol>[=<body>]"
-	print "  -include <file>        Add pre-#include"
-	print
+	print "global options:"
 	print "  -nomerge   Don't preserve code from #includes"
+	print "  -nopp      Disable CPP macro expansion/#if evaluation (testing/debugging)"
+	print "  -noppfold  Disable #if expression folding (testing/debugging)"
+	print "  -whitespace    Try to preserve comments and empty lines"
+	print "  -noautoextern  Don't add Extern blocks"
+	print "  -windowsms     Use Extern ""Windows-MS"" instead of Extern ""Windows"""
+	print "  -nonamefixup   Don't fix symbol identifier conflicts which happen"
+	print "                 e.g. due to FB's keywords and/or case insensitivity"
+	print "  -versiondefine <id>  Set identifier for version #define that may"
+	print "                       be used by the generated binding."
 	print "  -common    Extract common code into common header"
-	print "  -w         Whitespace: Try to preserve comments and empty lines"
-	print "  -nonamefixup  Don't fix symbol identifier conflicts (which can happen"
-	print "                due to FB's keywords and/or case insensitivity"
-	print
+	print "  -incdir <path>  Add #include search directory"
 	print "  -o <path>  Set output directory for generated .bi files"
 	print "  -v         Show verbose/debugging info"
-	end (iif( len( message ) > 0, 1, 0 ))
+	print
+	print "commands specific to binding version/target:"
+	print "  -version <string>  Begin version-specific block (ends at next -version, or EOL):"
+	print "                     Following commands will only be used for this version."
+	print "  -target dos|linux|win32  Begin target block, ditto. Can be"
+	print "                           nested inside -version blocks."
+	print "  -define <id> [<body>]  Add pre-#define"
+	print "  -undef <id>            Add pre-#undef"
+	print "  -include <file>        Add pre-#include"
+	print "  -noexpand <id>         Disable expansion of certain #define"
+	print "  -removedefine <id>     Don't preserve certain #defines/#undefs"
+	end 1
 end sub
 
-private sub hAddPreDefine _
-	( _
-		byval cmdline as FROGPRESET ptr, _
-		byref fullarg as string, _
-		byref arg as string _
-	)
+private function hTurnArgsIntoString( byval argc as integer, byval argv as zstring ptr ptr ) as string
+	dim s as string
 
-	dim as string symbol, body
-	strSplit( arg, "=", symbol, body )
+	'' Even including argv[0] so it's visible in error messages
+	'' (specially parsed in hParseArgs())
+	for i as integer = 0 to argc-1
+		var arg = *argv[i]
 
-	if( len( symbol ) = 0 ) then
-		oops( "missing CPP symbol in '" + fullarg + "'" )
-	end if
+		'' If the argument contains special chars (white-space, ", '),
+		'' enclose it in quotes as needed for lexLoadArgs().
 
-	''    -DA      =    #define A 1
-	''    -DA=     =    #define A
-	''    -DA=1    =    #define A 1
+		'' Contains '?
+		if( instr( arg, "'" ) > 0 ) then
+			'' Must enclose in "..." and escape included " or \ chars properly.
+			'' This also works if " or whitespace are included too.
 
-	'' No '=' found? Then default to body=1, like gcc
-	if( (arg = symbol) and (len( body ) = 0) ) then
-		body = "1"
-	end if
-
-	cmdline->cppheader += "#define " + symbol
-	if( len( body ) > 0 ) then
-		cmdline->cppheader += " " + body
-	end if
-	cmdline->cppheader += !"\n"
-
-end sub
-
-private sub hAddPreInclude _
-	( _
-		byval cmdline as FROGPRESET ptr, _
-		byref fullarg as string, _
-		byref arg as string _
-	)
-
-	cmdline->cppheader += "#include """ + arg + """" + !"\n"
-
-end sub
-
-private sub hAddIncDir( byref arg as string )
-	astAppend( frog.incdirs, astNewTEXT( arg ) )
-end sub
-
-private function hPrettyTarget( byval v as ASTNODE ptr ) as string
-	select case( v->attrib and ASTATTRIB__ALLTARGET )
-	case ASTATTRIB_DOS   : function = "dos"
-	case ASTATTRIB_LINUX : function = "linux"
-	case ASTATTRIB_WIN32 : function = "win32"
-	case else            : assert( FALSE )
-	end select
-end function
-
-private function hPrettyVersion( byval v as ASTNODE ptr ) as string
-	select case( v->class )
-	case ASTCLASS_DUMMYVERSION
-		return hPrettyTarget( v )
-
-	case ASTCLASS_CONST
-		if( typeIsFloat( v->dtype ) = FALSE ) then
-			return v->vali & "." & hPrettyTarget( v )
+			'' Insert \\ for \ before inserting \" for ", so \" won't accidentally
+			'' be turned into \\".
+			arg = strReplace( arg, $"\", $"\\" )
+			arg = strReplace( arg, """", $"\""" )
+			arg = """" + arg + """"
+		'' Contains no ', but " or white-space?
+		elseif( instr( arg, any !""" \t\f\r\n\v" ) > 0 ) then
+			'' Enclose in '...', so no escaping is needed.
+			arg = "'" + arg + "'"
 		end if
 
-	end select
+		if( len( s ) > 0 ) then
+			s += " "
+		end if
+		s += arg
+	next
 
-	return astDumpInline( v )
+	function = s
+end function
+
+enum
+	BODY_TOPLEVEL = 0
+	BODY_VERSION
+	BODY_TARGET
+end enum
+
+private function hParseArgs( byref x as integer, byval body as integer ) as ASTNODE ptr
+	var result = astNewGROUP( )
+
+	if( body = BODY_TOPLEVEL ) then
+		'' Skip argv[0]
+		assert( tkGet( x ) <> TK_EOF )
+		x += 1
+	end if
+
+	while( tkGet( x ) <> TK_EOF )
+		var text = *tkGetText( x )
+
+		select case( text )
+		case "-h", "-?", "-help", "--help", "/?", "/h", "/help", "--version"
+			hPrintHelpAndExit( )
+
+		case "-nomerge"
+			frog.nomerge = TRUE
+
+		case "-nopp"
+			frog.nopp = TRUE
+
+		case "-noppfold"
+			frog.noppfold = TRUE
+
+		case "-whitespace"
+			frog.whitespace = TRUE
+
+		case "-noautoextern"
+			frog.noautoextern = TRUE
+
+		case "-windowsms"
+			frog.windowsms = TRUE
+
+		case "-nonamefixup"
+			frog.nonamefixup = TRUE
+
+		case "-versiondefine"
+			x += 1
+
+			'' <id>
+			if( tkGet( x ) <> TK_STRING ) then
+				tkOops( x, "-versiondefine: missing <id> argument" )
+			end if
+			frog.versiondefine = *tkGetText( x )
+			if( strIsValidSymbolId( frog.versiondefine ) = FALSE ) then
+				tkOops( x, "-versiondefine: not a valid FB symbol: '" + frog.versiondefine + "'" )
+			end if
+
+		case "-common"
+			frog.common = TRUE
+
+		case "-incdir"
+			x += 1
+
+			'' <path>
+			if( tkGet( x ) <> TK_STRING ) then
+				tkOops( x, "-incdir: missing <path> argument" )
+			end if
+			var n = astNewTEXT( tkGetText( x ) )
+			n->location = *tkGetLocation( x )
+			astAppend( frog.incdirs, n )
+
+		case "-o"
+			x += 1
+
+			if( tkGet( x ) <> TK_STRING ) then
+				tkOops( x, "-o: missing <path> argument" )
+			end if
+			frog.outdir = *tkGetText( x )
+
+		case "-v", "-verbose", "--verbose"
+			frog.verbose = TRUE
+
+		'' -version <version-id> ...
+		case "-version"
+			'' Another -version is coming - end any current -version/-target blocks
+			if( body <> BODY_TOPLEVEL ) then
+				exit while
+			end if
+			var location1 = tkGetLocation( x )
+			x += 1
+
+			'' <version-id>
+			if( tkGet( x ) <> TK_STRING ) then
+				tkOops( x, "-version: missing <version> argument" )
+			end if
+			'' astNewCONST( vallng( nextarg ), 0, TYPE_LONGINT )
+			var id = astNew( ASTCLASS_STRING, tkGetText( x ) )
+			var location2 = tkGetLocation( x )
+			id->location = *location2
+			x += 1
+
+			var location = tkGetLocation( x )
+			var n = astNewVERBLOCK( id, NULL, hParseArgs( x, BODY_VERSION ) )
+			n->location = *location1
+			n->location.length = location2->column + location2->length - location1->column
+			astAppend( result, n )
+			x -= 1
+
+		'' -target <target-id> ...
+		case "-target"
+			'' Another -target is coming - end any current -target block
+			if( body = BODY_TARGET ) then
+				exit while
+			end if
+			var location1 = tkGetLocation( x )
+			x += 1
+
+			'' <target-id>
+			if( tkGet( x ) <> TK_STRING ) then
+				tkOops( x, "missing dos|linux|win32 argument" )
+			end if
+			var attrib = 0
+			select case( *tkGetText( x ) )
+			case "dos"   : attrib = ASTATTRIB_DOS
+			case "linux" : attrib = ASTATTRIB_LINUX
+			case "win32" : attrib = ASTATTRIB_WIN32
+			case else
+				tkOops( x, "unknown target '" + *tkGetText( x )  + "', expected one of dos|linux|win32" )
+			end select
+			var location2 = tkGetLocation( x )
+			x += 1
+
+			var n = astNew( ASTCLASS_TARGETBLOCK, hParseArgs( x, BODY_TARGET ) )
+			n->attrib or= attrib
+			n->location = *location1
+			n->location.length = location2->column + location2->length - location1->column
+			astAppend( result, n )
+			x -= 1
+
+		'' -define <id> [<body>]
+		case "-define"
+			x += 1
+
+			'' <id>
+			if( tkGet( x ) <> TK_STRING ) then
+				tkOops( x, "-define: missing <id> argument" )
+			end if
+			var id = tkGetText( x )
+			if( strIsValidSymbolId( id ) = FALSE ) then
+				tkOops( x, "-define: not a valid symbol identifier: '" + *id + "'" )
+			end if
+			var n = astNew( ASTCLASS_PPDEFINE, id )
+			n->location = *tkGetLocation( x )
+			assert( n->expr = NULL )
+
+			'' [<body>]
+			dim as zstring ptr body
+			if( tkGet( x + 1 ) = TK_STRING ) then
+				x += 1
+				n->expr = astNewTEXT( tkGetText( x ) )
+				n->expr->location = *tkGetLocation( x )
+			end if
+
+			astAppend( result, n )
+
+		case "-undef"
+			x += 1
+
+			'' <id>
+			if( tkGet( x ) <> TK_STRING ) then
+				tkOops( x, "-undef: missing <id> argument" )
+			end if
+			var id = tkGetText( x )
+			if( strIsValidSymbolId( id ) = FALSE ) then
+				tkOops( x, "-undef: not a valid symbol identifier: '" + *id + "'" )
+			end if
+			var n = astNew( ASTCLASS_PPUNDEF, id )
+			n->location = *tkGetLocation( x )
+			astAppend( result, n )
+
+		case "-include"
+			x += 1
+
+			'' <file>
+			if( tkGet( x ) <> TK_STRING ) then
+				tkOops( x, "-include: missing <file> argument" )
+			end if
+			var n = astNew( ASTCLASS_PPINCLUDE, tkGetText( x ) )
+			n->location = *tkGetLocation( x )
+			astAppend( result, n )
+
+		case "-noexpand"
+			x += 1
+
+			'' <id>
+			if( tkGet( x ) <> TK_STRING ) then
+				tkOops( x, "-noexpand: missing <id> argument" )
+			end if
+			var id = tkGetText( x )
+			if( strIsValidSymbolId( id ) = FALSE ) then
+				tkOops( x, "-noexpand: not a valid symbol identifier: '" + *id + "'" )
+			end if
+			var n = astNew( ASTCLASS_NOEXPAND, id )
+			n->location = *tkGetLocation( x )
+			astAppend( result, n )
+
+		case "-removedefine"
+			x += 1
+
+			'' <id>
+			if( tkGet( x ) <> TK_STRING ) then
+				tkOops( x, "-removedefine: missing <id> argument" )
+			end if
+			var id = tkGetText( x )
+			if( strIsValidSymbolId( id ) = FALSE ) then
+				tkOops( x, "-removedefine: not a valid symbol identifier: '" + *id + "'" )
+			end if
+			var n = astNew( ASTCLASS_REMOVEDEFINE, id )
+			n->location = *tkGetLocation( x )
+			astAppend( result, n )
+
+		case else
+			if( left( text, 1 ) = "-" ) then
+				tkOops( x, "unknown command line option '" + text + "'" )
+			end if
+
+			'' If the file/dir argument came from an @file, open it relative to
+			'' the @file's dir
+			var location = tkGetLocation( x )
+			if( location->file->is_file ) then
+				text = pathAddDiv( pathOnly( *location->file->name ) ) + text
+			end if
+
+			var astclass = ASTCLASS_FILE
+			if( hReadableDirExists( text ) ) then
+				astclass = ASTCLASS_DIR
+			end if
+
+			var n = astNew( astclass, text )
+			n->location = *location
+			astAppend( result, n )
+
+		end select
+
+		x += 1
+	wend
+
+	function = result
 end function
 
 private function frogWorkRootFile _
 	( _
-		byval pre as FROGPRESET ptr, _
 		byval presetcode as ASTNODE ptr, _
 		byval targetversion as ASTNODE ptr, _
-		byval rootfile as zstring ptr _
+		byval rootfile as ASTNODE ptr _
 	) as ASTNODE ptr
 
-	print "parsing: " + *rootfile + " (" + hPrettyVersion( targetversion ) + ")"
+	print space( frog.maxversionstrlen ) + "parsing: " + *rootfile->text
 
 	tkInit( )
 
-	var whitespace = ((pre->options and PRESETOPT_WHITESPACE) <> 0)
-
 	cppInit( )
 
-	if( len( pre->cppheader ) > 0 ) then
-		frog.cppheader = strDuplicate( pre->cppheader )
-		lexLoadZstring( 0, "<command line>", frog.cppheader, FALSE )
-	end if
-
 	if( presetcode ) then
-		var child = presetcode->head
-		while( child )
+		'' Pre-#defines/#undefs are simply inserted at the top of the
+		'' token buffer, so that cppMain() parses them like any other
+		'' #define/#undef.
+		dim cppheader as string
 
-			select case( child->class )
+		var i = presetcode->head
+		while( i )
+
+			select case( i->class )
 			case ASTCLASS_NOEXPAND
-				cppNoExpandSym( child->text )
+				cppNoExpandSym( i->text )
+
+			case ASTCLASS_REMOVEDEFINE
+				cppRemoveSym( i->text )
+
 			case ASTCLASS_PPDEFINE
-				cppPreDefine( child )
-				cppRemoveSym( child->text )
+				cppheader += "#define " + *i->text
+				if( i->expr ) then
+					assert( i->expr->class = ASTCLASS_TEXT )
+					cppheader += " " + *i->expr->text
+				end if
+				cppheader += !"\n"
+
+				cppRemoveSym( i->text )
+
 			case ASTCLASS_PPUNDEF
-				cppPreUndef( child->text )
-				cppRemoveSym( child->text )
-			case ASTCLASS_REMOVE
-				cppRemoveSym( child->text )
+				cppheader += "#undef " + *i->text + !"\n"
+				cppRemoveSym( i->text )
+
+			case ASTCLASS_PPINCLUDE
+				cppheader += "#include """ + *i->text + """" + !"\n"
+
 			end select
 
-			child = child->next
+			i = i->next
 		wend
+
+		if( len( cppheader ) > 0 ) then
+			var id = "<CPP code from command line for " + astDumpPrettyVersion( targetversion ) + ">"
+			lexLoadC( 0, filebufferFromZstring( id, cppheader ), FALSE )
+		end if
 	end if
 
-	if( (pre->options and PRESETOPT_NOPP) = 0 ) then
-		cppMain( rootfile, whitespace, (pre->options and PRESETOPT_NOMERGE) <> 0 )
+	if( frog.nopp ) then
+		cppMainForTestingIfExpr( rootfile, frog.whitespace, not frog.noppfold )
 	else
-		cppMainForTestingIfExpr( rootfile, whitespace, ((pre->options and PRESETOPT_NOPPFOLD) = 0) )
+		cppMain( rootfile, frog.whitespace, frog.nomerge )
 	end if
 
 	cppEnd( )
@@ -162,18 +400,18 @@ private function frogWorkRootFile _
 	''
 	'' Work on the AST
 	''
-	if( (pre->options and PRESETOPT_NOPPFOLD) = 0 ) then
+	if( frog.noppfold = FALSE ) then
 		astCleanUpExpressions( ast )
 	end if
 	'astRemoveParamNames( ast )
 	astFixArrayParams( ast )
 	astFixAnonUDTs( ast )
 	astRemoveRedundantTypedefs( ast )
-	if( (pre->options and PRESETOPT_NONAMEFIXUP) = 0 ) then
+	if( frog.nonamefixup = FALSE ) then
 		astFixIds( ast )
 	end if
-	if( (pre->options and PRESETOPT_NOAUTOEXTERN) = 0 ) then
-		astAutoExtern( ast, ((pre->options and PRESETOPT_WINDOWSMS) <> 0), whitespace )
+	if( frog.noautoextern = FALSE ) then
+		astAutoExtern( ast, frog.windowsms, frog.whitespace )
 	end if
 	astMergeDIVIDERs( ast )
 
@@ -181,60 +419,42 @@ private function frogWorkRootFile _
 	'' in preparation for the astMergeFiles() call later
 	ast = astWrapFileInVerblock( ast, targetversion )
 
-	deallocate( frog.cppheader )
-	frog.cppheader = NULL
-
 	function = ast
 end function
 
-private sub hOopsNoInputFiles( byval targetversion as ASTNODE ptr, byref presetfilename as string )
-	var message = "no input files"
-	if( len( presetfilename ) > 0 ) then
-		message += " for "
-		if( targetversion ) then
-			message += "version " + emitAst( targetversion ) + " in "
-		end if
-		message += presetfilename
-	end if
-	oops( message )
-end sub
-
 private function frogWorkVersion _
 	( _
-		byval pre as FROGPRESET ptr, _
 		byval targetversion as ASTNODE ptr, _
-		byval presetcode as ASTNODE ptr, _
-		byref presetfilename as string, _
-		byref presetprefix as string _
+		byval presetcode as ASTNODE ptr _
 	) as ASTNODE ptr
+
+	print "[" + astDumpPrettyVersion( targetversion ) + "]"
 
 	var rootfiles = astNewGROUP( )
 
-	var child = presetcode->head
-	while( child )
-
-		select case( child->class )
+	var i = presetcode->head
+	while( i )
+		select case( i->class )
 		case ASTCLASS_FILE
 			'' Input files
-			astAppend( rootfiles, astNewTEXT( presetprefix + *child->text ) )
-
+			astCloneAppend( rootfiles, i )
 		case ASTCLASS_DIR
 			'' Input files from directories
-			astAppend( rootfiles, hScanDirectory( presetprefix + *child->text, "*.h" ) )
-
+			var n = hScanDirectory( *i->text, "*.h" )
+			astSetLocationAndAlsoOnChildren( n, @i->location )
+			astAppend( rootfiles, n )
 		end select
-
-		child = child->next
+		i = i->next
 	wend
 
 	if( rootfiles->head = NULL ) then
-		hOopsNoInputFiles( targetversion, presetfilename )
+		oops( "no input files" )
 	end if
 
-	var f = rootfiles->head
-	while( f )
-		f->expr = frogWorkRootFile( pre, presetcode, targetversion, f->text )
-		f = f->next
+	i = rootfiles->head
+	while( i )
+		i->expr = frogWorkRootFile( presetcode, targetversion, i )
+		i = i->next
 	wend
 
 	function = rootfiles
@@ -283,18 +503,70 @@ private function hMakeDeclCountMessage( byval declcount as integer ) as string
 	end if
 end function
 
-private sub frogWorkPreset _
-	( _
-		byval pre as FROGPRESET ptr, _
-		byref presetfilename as string, _
-		byref presetprefix as string _
-	)
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-	dim as ASTNODE ptr files, versions, targetversions
-	dim as integer targets
+	frog.versiondefine = "__VERSION__"
+	frog.incdirs = astNewGROUP( )
+	filebufferInit( )
+	fbkeywordsInit( )
 
-	versions = astCollectVersions( pre->code )
-	targets = astCollectTargets( pre->code )
+	scope
+		tkInit( )
+
+		'' Load all command line arguments into the tk buffer
+		lexLoadArgs( 0, filebufferFromZstring( "<command line>", _
+				hTurnArgsIntoString( __FB_ARGC__, __FB_ARGV__ ) ) )
+
+		'' Expand @file arguments in the tk buffer
+		const MAX_FILES = 1024  '' Arbitrary limit to detect recursion
+		var filecount = 0
+		var x = 0
+		while( tkGet( x ) <> TK_EOF )
+			var arg = tkGetText( x )
+
+			if( (*arg)[0] = asc( "@" ) ) then
+				'' Complain if argument was only '@'
+				if( (*arg)[1] = 0 ) then
+					tkOops( x, "@: missing file name argument" )
+				end if
+
+				'' Cut off the '@' at the front to get just the file name,
+				var filename = *arg
+				filename = right( filename, len( filename ) - 1 )
+
+				if( filecount > MAX_FILES ) then
+					tkOops( x, "suspiciously many @response file expansions, recursion? (limit=" & MAX_FILES & ")" )
+				end if
+
+				'' If the @file argument comes from an @file,
+				'' open it relative to the parent @file's dir.
+				var location = tkGetLocation( x )
+				if( location->file->is_file ) then
+					filename = pathAddDiv( pathOnly( *location->file->name ) ) + filename
+				end if
+
+				'' Load the file content behind the @file token
+				lexLoadArgs( x + 1, filebufferFromFile( filename, location ) )
+				filecount += 1
+
+				'' Remove the @file token
+				tkRemove( x, x )
+
+				'' Re-check this position in case a new @file token was inserted right here
+				x -= 1
+			end if
+
+			x += 1
+		wend
+
+		'' Parse
+		frog.code = hParseArgs( 0, BODY_TOPLEVEL )
+
+		tkEnd( )
+	end scope
+
+	var versions = astCollectVersions( frog.code )
+	var targets = astCollectTargets( frog.code )
 
 	'' If no targets given, assume all
 	if( targets = 0 ) then
@@ -310,24 +582,37 @@ private sub frogWorkPreset _
 		hPrintPresetVersions( versions, targets )
 	end if
 
-	targetversions = astCombineVersionsAndTargets( versions, targets )
+	var targetversions = astCombineVersionsAndTargets( versions, targets )
 
 	'' There will always be at least one combined version; even if there
 	'' were only targets and no versions, one dummy version per target will
 	'' be used.
 	assert( targetversions->head )
 
+	'' Find longest version string, for pretty output
+	scope
+		var i = targetversions->head
+		do
+			var s = astDumpPrettyVersion( i )
+			if( frog.maxversionstrlen < len( s ) ) then
+				frog.maxversionstrlen = len( s )
+			end if
+			i = i->next
+		loop while( i )
+		frog.maxversionstrlen += 3
+	end scope
+
 	var targetversion = targetversions->head
 
 	'' For each version...
+	dim as ASTNODE ptr files
 	do
 		'' Determine preset code for that version
-		var presetcode = astGet1VersionAndTargetOnly( pre->code, targetversion )
+		var presetcode = astGet1VersionAndTargetOnly( frog.code, targetversion )
 
 		'' Parse files for this version and combine them with files
 		'' from previous versions if possible
-		files = astMergeFiles( files, _
-			frogWorkVersion( pre, targetversion, presetcode, presetfilename, presetprefix ) )
+		files = astMergeFiles( files, frogWorkVersion( targetversion, presetcode ) )
 
 		astDelete( presetcode )
 
@@ -338,12 +623,11 @@ private sub frogWorkPreset _
 	'' others by astMergeFiles() and shouldn't be emitted individually anymore.
 	hRemoveEmptyFiles( files )
 
-	if( pre->options and PRESETOPT_COMMON ) then
+	if( frog.common ) then
 		astExtractCommonCodeFromFiles( files, versions )
 	end if
 
-	var versiondefine = "__" + ucase( pathStripExt( pathStrip( presetfilename ) ), 1 ) + "_VERSION__"
-	astProcessVerblocksAndTargetblocksOnFiles( files, versions, targets, versiondefine )
+	astProcessVerblocksAndTargetblocksOnFiles( files, versions, targets, frog.versiondefine )
 
 	'' There should always be at least 1 file left to emit
 	assert( files->head )
@@ -367,7 +651,7 @@ private sub frogWorkPreset _
 	''     outdir/a.bi
 	''     outdir/foo/a.bi
 	''     outdir/foo/b.bi
-	if( pre->outdir ) then
+	if( len( frog.outdir ) > 0 ) then
 		var f = files->head
 		var commonparent = pathOnly( *f->text )
 		f = f->next
@@ -387,7 +671,7 @@ private sub frogWorkPreset _
 			normed = right( normed, len( normed ) - len( commonparent ) )
 
 			'' And prefix the output dir instead
-			normed = pathAddDiv( *pre->outdir ) + normed
+			normed = pathAddDiv( frog.outdir ) + normed
 
 			astSetText( f, normed )
 			astSetComment( f, normed )
@@ -402,7 +686,7 @@ private sub frogWorkPreset _
 		astSetText( f, pathStripExt( *f->text ) + ".bi" )
 
 		'' Do auto-formatting if not preserving whitespace
-		if( (pre->options and PRESETOPT_WHITESPACE) = 0 ) then
+		if( frog.whitespace = FALSE ) then
 			astAutoAddDividers( f->expr )
 		end if
 
@@ -416,164 +700,6 @@ private sub frogWorkPreset _
 	astDelete( files )
 	astDelete( versions )
 	astDelete( targetversions )
-
-end sub
-
-''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-
-	frog.incdirs = astNewGROUP( )
-	filesysInit( )
-	fbkeywordsInit( )
-
-	if( __FB_ARGC__ = 1 ) then
-		hPrintHelp( "" )
-	end if
-
-	'' Input files and various other info from command line
-	dim cmdline as FROGPRESET
-	presetInit( @cmdline )
-
-	'' *.fbfrog files from command line
-	var presetfiles = astNewGROUP( )
-
-	for i as integer = 1 to __FB_ARGC__-1
-		var arg = *__FB_ARGV__[i]
-
-		'' option?
-		if( left( arg, 1 ) = "-" ) then
-			var fullarg = arg
-
-			'' Strip all preceding '-'s
-			do
-				arg = right( arg, len( arg ) - 1 )
-			loop while( left( arg, 1 ) = "-" )
-
-			select case( arg )
-			case "h", "?", "help", "version"
-				hPrintHelp( "" )
-
-			case "d"
-				i += 1
-				if( i >= __FB_ARGC__ ) then
-					hPrintHelp( "missing <symbol>[=<body>] argument in '" + fullarg + "'" )
-				end if
-				arg = *__FB_ARGV__[i]
-				hAddPreDefine( @cmdline, fullarg + " " + arg, arg )
-
-			case "include"
-				i += 1
-				if( i >= __FB_ARGC__ ) then
-					hPrintHelp( "missing <file> argument in '" + fullarg + "'" )
-				end if
-				arg = *__FB_ARGV__[i]
-				hAddPreInclude( @cmdline, fullarg + " " + arg, arg )
-
-			case "i"
-				i += 1
-				if( i >= __FB_ARGC__ ) then
-					hPrintHelp( "missing <path> argument in '" + fullarg + "'" )
-				end if
-				arg = *__FB_ARGV__[i]
-				hAddIncDir( arg )
-
-			case "nomerge"
-				cmdline.options or= PRESETOPT_NOMERGE
-
-			case "common"
-				cmdline.options or= PRESETOPT_COMMON
-
-			case "w"
-				cmdline.options or= PRESETOPT_WHITESPACE
-
-			case "nonamefixup"
-				cmdline.options or= PRESETOPT_NONAMEFIXUP
-
-			case "o"
-				i += 1
-				if( i >= __FB_ARGC__ ) then
-					hPrintHelp( "missing output directory path for -o" )
-				end if
-				cmdline.outdir = strDuplicate( __FB_ARGV__[i] )
-
-			case "v", "verbose"
-				frog.verbose = TRUE
-
-			case else
-				var tail = right( arg, len( arg ) - 1 )
-
-				select case( left( arg, 1 ) )
-				case "D"
-					hAddPreDefine( @cmdline, fullarg, tail )
-
-				case "I"
-					hAddIncDir( tail )
-
-				case else
-					hPrintHelp( "unknown option: " + fullarg )
-				end select
-			end select
-		else
-			if( hReadableDirExists( arg ) ) then
-				'' Search input directory for *.fbfrog files, if none found,
-				'' add it for *.h search later
-				var foundfiles = hScanDirectory( arg, "*.fbfrog" )
-				if( foundfiles->head ) then
-					astAppend( presetfiles, foundfiles )
-				else
-					astAppend( cmdline.code, astNew( ASTCLASS_DIR, arg ) )
-				end if
-			elseif( pathExtOnly( arg ) = "fbfrog" ) then
-				astAppend( presetfiles, astNewTEXT( arg ) )
-			else
-				astAppend( cmdline.code, astNew( ASTCLASS_FILE, arg ) )
-			end if
-		end if
-	next
-
-	'' If *.fbfrog files were given, work them off one by one
-	var presetfile = presetfiles->head
-	if( presetfile ) then
-		'' For each *.fbfrog file...
-		do
-			var presetfilename = *presetfile->text
-			print "+" + string( len( presetfilename ) + 2, "-" ) + "+"
-			print "| " + presetfilename + " |"
-			print "+" + string( len( presetfilename ) + 2, "-" ) + "+"
-
-			'' Read in the *.fbfrog preset
-			dim as FROGPRESET pre
-			presetInit( @pre )
-			presetParse( @pre, presetfilename )
-
-			'' The preset's input files are given relative to the preset's directory
-			var presetdir = pathAddDiv( pathOnly( presetfilename ) )
-
-			'' Allow overriding the preset's input files with those
-			'' from the command line
-			if( presetHasInputFiles( @cmdline ) ) then
-				presetOverrideInputFiles( @pre, @cmdline )
-				'' Also, then we'll rely on the paths from command line,
-				'' and no preset specific directory can be prefixed.
-				presetdir = ""
-			end if
-
-			if( cmdline.outdir ) then
-				assert( pre.outdir = NULL )
-				pre.outdir = strDuplicate( cmdline.outdir )
-			end if
-
-			frogWorkPreset( @pre, presetfilename, presetdir )
-			presetEnd( @pre )
-
-			presetfile = presetfile->next
-		loop while( presetfile )
-	else
-		'' Otherwise just work off the input files and options given
-		'' on the command line, it's basically a "preset" too, just not
-		'' stored in a *.fbfrog file but given through command line
-		'' options.
-		frogWorkPreset( @cmdline, "", "" )
-	end if
 
 	if( frog.verbose ) then
 		astPrintStats( )

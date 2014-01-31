@@ -1,6 +1,6 @@
-#define NULL 0
-#define FALSE 0
-#define TRUE (-1)
+const NULL = 0
+const FALSE = 0
+const TRUE = -1
 
 type ASTNODE as ASTNODE_
 
@@ -66,22 +66,38 @@ enum
 	CH_DEL
 end enum
 
+type FILEBUFFER
+	name		as zstring ptr
+	is_file		as integer    '' whether name is a file path
+	buffer		as ubyte ptr  '' file content, null-terminated
+	size		as integer    '' allocated buffer size
+	lines		as integer    '' number of lines counted during lexing
+end type
+
 type TKLOCATION
-	filename	as zstring ptr  '' Supposed to point to permanent memory, whoever fills the structure 1st must ensure that
-	linenum		as integer
-	column		as integer
+	'' Supposed to point to permanent memory, whoever fills the structure
+	'' 1st must ensure that
+	file		as FILEBUFFER ptr
+
+	linenum		as integer  '' 0-based, but displayed 1-based in error messages
+	column		as integer  '' ditto
 	length		as integer
 end type
 
+declare sub filebufferInit( )
+declare function hDumpFileBuffer( byval file as FILEBUFFER ptr ) as string
+declare function filebufferAdd( byval filename as zstring ptr ) as FILEBUFFER ptr
+declare function filebufferFromFile( byval filename as zstring ptr, byval srcloc as TKLOCATION ptr ) as FILEBUFFER ptr
+declare function filebufferFromZstring( byval filename as zstring ptr, byval s as zstring ptr ) as FILEBUFFER ptr
 declare sub oops( byval message as zstring ptr )
+declare function hDumpLocation( byval location as TKLOCATION ptr ) as string
 declare sub hReportLocation _
 	( _
 		byval location as TKLOCATION ptr, _
 		byval message as zstring ptr, _
 		byval more_context as integer = TRUE _
 	)
-declare sub filesysInit( )
-declare function filesysStore( byval filename as zstring ptr ) as zstring ptr
+declare sub oopsLocation( byval location as TKLOCATION ptr, byval message as zstring ptr )
 declare function strDuplicate( byval s as zstring ptr ) as zstring ptr
 declare function strReplace _
 	( _
@@ -96,6 +112,8 @@ declare sub strSplit _
 		byref l as string, _
 		byref r as string _
 	)
+declare function strTrim( byref s as string ) as string
+declare function strUnquote( byref s as string ) as string
 declare function strMakePrintable( byref a as string ) as string
 declare function strStartsWith( byref s as string, byref lookfor as string ) as integer
 declare function strEndsWith( byref s as string, byref lookfor as string ) as integer
@@ -106,7 +124,31 @@ declare function strMatches _
 	) as integer
 declare function strContainsNonHexDigits( byval s as zstring ptr ) as integer
 declare function strContainsNonOctDigits( byval s as zstring ptr ) as integer
+declare function strIsValidSymbolId( byval s as zstring ptr ) as integer
 declare function hMakePrettyByteSize( byval size as uinteger ) as string
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+type LISTNODE
+	next		as LISTNODE ptr
+	prev		as LISTNODE ptr
+end type
+
+type TLIST
+	head		as LISTNODE ptr
+	tail		as LISTNODE ptr
+	nodesize	as integer
+end type
+
+declare function listGetHead( byval l as TLIST ptr) as any ptr
+declare function listGetTail( byval l as TLIST ptr) as any ptr
+declare function listGetNext( byval p as any ptr ) as any ptr
+declare function listGetPrev( byval p as any ptr ) as any ptr
+declare function listAppend( byval l as TLIST ptr ) as any ptr
+declare sub listDelete( byval l as TLIST ptr, byval p as any ptr )
+declare function listCount( byval l as TLIST ptr ) as integer
+declare sub listInit( byval l as TLIST ptr, byval unit as integer )
+declare sub listEnd( byval l as TLIST ptr )
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
@@ -571,7 +613,7 @@ enum
 	ASTCLASS_FILE
 	ASTCLASS_DIR
 	ASTCLASS_NOEXPAND
-	ASTCLASS_REMOVE
+	ASTCLASS_REMOVEDEFINE
 
 	'' CPP directives
 	ASTCLASS_PPINCLUDE
@@ -745,6 +787,7 @@ declare function astNewTK( byval x as integer ) as ASTNODE ptr
 declare sub astDelete( byval n as ASTNODE ptr )
 declare sub astPrepend( byval parent as ASTNODE ptr, byval n as ASTNODE ptr )
 declare sub astAppend( byval parent as ASTNODE ptr, byval n as ASTNODE ptr )
+declare sub astCloneAppend( byval parent as ASTNODE ptr, byval n as ASTNODE ptr )
 declare function astRemove( byval parent as ASTNODE ptr, byval a as ASTNODE ptr ) as ASTNODE ptr
 declare function astNewVERBLOCK _
 	( _
@@ -780,6 +823,7 @@ declare sub astSetType _
 	)
 declare sub astSetComment( byval n as ASTNODE ptr, byval comment as zstring ptr )
 declare sub astAddComment( byval n as ASTNODE ptr, byval comment as zstring ptr )
+declare sub astSetLocationAndAlsoOnChildren( byval n as ASTNODE ptr, byval location as TKLOCATION ptr )
 declare function astClone( byval n as ASTNODE ptr ) as ASTNODE ptr
 enum
 	ASTEQ_IGNOREHIDDENCALLCONV = 0
@@ -848,6 +892,7 @@ declare sub astExtractCommonCodeFromFiles _
 	)
 declare function astCountDecls( byval code as ASTNODE ptr ) as integer
 declare function astDumpPrettyDecl( byval n as ASTNODE ptr ) as string
+declare function astDumpPrettyVersion( byval v as ASTNODE ptr ) as string
 declare function astDumpOne( byval n as ASTNODE ptr ) as string
 declare function astDumpInline( byval n as ASTNODE ptr ) as string
 declare sub astDump _
@@ -859,31 +904,19 @@ declare sub astDump _
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-declare function lexLoadZstring _
+declare function lexLoadC _
 	( _
 		byval x as integer, _
-		byval filename as zstring ptr, _
-		byval s as zstring ptr, _
+		byval file as FILEBUFFER ptr, _
 		byval keep_comments as integer _
 	) as integer
-declare function lexLoadFile _
+declare function lexLoadArgs( byval x as integer, byval file as FILEBUFFER ptr ) as integer
+declare function lexPeekLine _
 	( _
-		byval x as integer, _
-		byval filename as zstring ptr, _
-		byval keep_comments as integer _
-	) as integer
-declare function lexPeekLineFromZstring _
-	( _
-		byval buffer as zstring ptr, _
+		byval file as FILEBUFFER ptr, _
 		byval targetlinenum as integer _
 	) as string
-declare function lexPeekLineFromFile _
-	( _
-		byval filename as zstring ptr, _
-		byval targetlinenum as integer _
-	) as string
-declare function lexCountLinesInZstring( byval buffer as zstring ptr ) as integer
-declare function lexCountLinesInFile( byval filename as zstring ptr ) as integer
+
 declare function emitType _
 	( _
 		byval dtype as integer, _
@@ -898,8 +931,6 @@ declare function emitAst _
 declare sub emitFile( byref filename as string, byval ast as ASTNODE ptr )
 
 declare function hFindClosingParen( byval x as integer ) as integer
-declare sub ppComments( )
-declare sub ppDividers( )
 declare function hNumberLiteral( byval x as integer ) as ASTNODE ptr
 extern as integer cprecedence(ASTOP_IIF to ASTOP_SIZEOF)
 declare sub hMacroParamList( byref x as integer, byval t as ASTNODE ptr )
@@ -912,18 +943,15 @@ declare sub cppInit( )
 declare sub cppEnd( )
 declare sub cppNoExpandSym( byval id as zstring ptr )
 declare sub cppRemoveSym( byval id as zstring ptr )
-declare sub cppPreUndef( byval id as zstring ptr )
-declare sub cppPreDefine overload( byval macro as ASTNODE ptr )
-declare sub cppPreDefine overload( byval id as zstring ptr )
 declare sub cppMain _
 	( _
-		byval topfile as zstring ptr, _
+		byval topfile as ASTNODE ptr, _
 		byval whitespace as integer, _
 		byval nomerge as integer _
 	)
 declare sub cppMainForTestingIfExpr _
 	( _
-		byval topfile as zstring ptr, _
+		byval topfile as ASTNODE ptr, _
 		byval whitespace as integer, _
 		byval do_fold as integer _
 	)
@@ -931,42 +959,27 @@ declare function cFile( ) as ASTNODE ptr
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-enum
-	PRESETOPT_NOMERGE	= 1 shl 0
-	PRESETOPT_WHITESPACE	= 1 shl 1
-	PRESETOPT_NOPP		= 1 shl 2
-	PRESETOPT_NOPPFOLD	= 1 shl 3
-	PRESETOPT_NOAUTOEXTERN	= 1 shl 4
-	PRESETOPT_WINDOWSMS	= 1 shl 5
-	PRESETOPT_COMMON	= 1 shl 6
-	PRESETOPT_NONAMEFIXUP	= 1 shl 7
-end enum
-
-type FROGPRESET
-	code		as ASTNODE ptr
-	options		as integer
-	outdir		as zstring ptr
-	cppheader	as string
-end type
-
-declare sub presetParse( byval pre as FROGPRESET ptr, byref filename as string )
-declare sub presetInit( byval pre as FROGPRESET ptr )
-declare sub presetEnd( byval pre as FROGPRESET ptr )
-declare function presetHasInputFiles( byval pre as FROGPRESET ptr ) as integer
-declare sub presetOverrideInputFiles _
-	( _
-		byval pre as FROGPRESET ptr, _
-		byval source as FROGPRESET ptr _
-	)
-
-''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-
 type FROGSTUFF
-	verbose		as integer
-	cppheader	as zstring ptr
+	nomerge		as integer
+	whitespace	as integer
+	nopp		as integer
+	noppfold	as integer
+	noautoextern	as integer
+	windowsms	as integer
+	common		as integer
+	nonamefixup	as integer
+	versiondefine	as string
 	incdirs		as ASTNODE ptr
+	outdir		as string
+	verbose		as integer
+
+	commandline	as string
+	code		as ASTNODE ptr
+	maxversionstrlen	as integer
 end type
+
 extern frog as FROGSTUFF
+
 declare function frogRegisterFile _
 	( _
 		byval normed as zstring ptr, _

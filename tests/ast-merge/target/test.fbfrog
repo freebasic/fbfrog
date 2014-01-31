@@ -1,5 +1,4 @@
-file "a.h"
+a.h
 
-target linux
-	define LINUX
-endtarget
+-target linux
+	-define LINUX

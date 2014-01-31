@@ -252,9 +252,7 @@ function tkDumpOne( byval x as integer ) as string
 	end if
 
 	#if 0
-	if( p->location.file ) then
-		s += " location: " + p->location.file->pretty + "(" & p->location.linenum+1 & ") column=" & p->location.column & " length=" & p->location.length
-	end if
+		s += " " + hDumpLocation( @p->location )
 	#endif
 
 	function = s
@@ -690,7 +688,7 @@ sub tkReport _
 	)
 
 	var location = tkGetLocation( x )
-	if( location->filename ) then
+	if( location->file ) then
 		hReportLocation( location, message, more_context )
 	else
 		TRACE( x ), "<= error here"

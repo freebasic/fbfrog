@@ -1,5 +1,1 @@
-dir "."
-option nomerge
-option whitespace
-option nopp
-option noppfold
+. -nomerge -whitespace -nopp -noppfold

@@ -1,9 +1,3 @@
-file "a.h"
-
-version 1
-	define A
-endversion
-
-version 2
-	undef A
-endversion
+a.h
+-version 1 -define A
+-version 2 -undef A

@@ -1,14 +1,10 @@
 ''
-'' C lexer
-''
-'' Call lexLoadFile() to insert tokens corresponding to the content of a
-'' certain file into the tk buffer.
-''
-'' lexLoadFile() loads the whole file into a buffer and then repeatedly calls
-'' lexNext() to parse it into tokens which are added to tk through tkInsert().
+'' C source code lexer, command line argument lexer
 ''
 
 #include once "fbfrog.bi"
+
+const MAXTEXTLEN = 2048
 
 type LEXSTUFF
 	i		as ubyte ptr  '' Current char, will always be <= limit
@@ -17,17 +13,24 @@ type LEXSTUFF
 	x		as integer
 	location	as TKLOCATION
 	behindspace	as integer
-	filename	as string
 	keep_comments	as integer    '' Whether to ignore comments or produce TK_COMMENTs
 
 	kwhash		as THASH      '' C keywords hash table
+
+	'' +2 extra room to allow for some "overflowing" to reduce the amount
+	'' of checking needed, +1 for null terminator.
+	text		as zstring * MAXTEXTLEN+2+1
 end type
 
 dim shared as LEXSTUFF lex
 
-private sub lexOops( byref message as string )
+private sub hResetColumn( )
 	lex.location.column = lex.i - lex.bol
 	lex.location.length = 1
+end sub
+
+private sub lexOops( byref message as string )
+	hResetColumn( )
 	hReportLocation( @lex.location, message )
 	end 1
 end sub
@@ -38,6 +41,7 @@ private sub hSetLocation( )
 	if( lex.behindspace ) then
 		tkSetBehindSpace( lex.x )
 	end if
+	lex.x += 1
 end sub
 
 private sub hAddTextToken( byval tk as integer, byval begin as ubyte ptr )
@@ -62,7 +66,6 @@ private sub hAddTextToken( byval tk as integer, byval begin as ubyte ptr )
 		tkInsert( lex.x, tk, begin )
 	end if
 	hSetLocation( )
-	lex.x += 1
 
 	lex.i[0] = old
 end sub
@@ -71,7 +74,6 @@ private sub hReadBytes( byval tk as integer, byval length as integer )
 	lex.i += length
 	tkInsert( lex.x, tk )
 	hSetLocation( )
-	lex.x += 1
 end sub
 
 private sub hNewLine( )
@@ -405,11 +407,6 @@ private sub hReadString( )
 		quotechar = CH_GT
 	end select
 
-	const MAXTEXTLEN = 2048
-	static text as zstring * MAXTEXTLEN+2+1
-	'' +2 extra room to allow for some "overflowing" to reduce the amount
-	'' of checking needed below, +1 for null terminator.
-
 	lex.i += 1
 	var saw_end = FALSE
 	var j = 0  '' current write position in text buffer
@@ -460,19 +457,19 @@ private sub hReadString( )
 				'' This allows the string literal content to still be
 				'' represented as null-terminated string.
 				case 0
-					text[j] = CH_BACKSLASH : j += 1
-					text[j] = CH_0         : j += 1
+					lex.text[j] = CH_BACKSLASH : j += 1
+					lex.text[j] = CH_0         : j += 1
 				case CH_BACKSLASH
-					text[j] = CH_BACKSLASH : j += 1
-					text[j] = CH_BACKSLASH : j += 1
+					lex.text[j] = CH_BACKSLASH : j += 1
+					lex.text[j] = CH_BACKSLASH : j += 1
 
 				case else
-					text[j] = value : j += 1
+					lex.text[j] = value : j += 1
 				end select
 			end if
 
 		case else
-			text[j] = lex.i[0] : j += 1
+			lex.text[j] = lex.i[0] : j += 1
 			lex.i += 1
 		end select
 
@@ -482,11 +479,10 @@ private sub hReadString( )
 	loop
 
 	'' null-terminator
-	text[j] = 0
+	lex.text[j] = 0
 
-	tkInsert( lex.x, id, text )
+	tkInsert( lex.x, id, lex.text )
 	hSetLocation( )
-	lex.x += 1
 
 	if( saw_end ) then
 		lex.i += 1
@@ -501,8 +497,7 @@ private sub lexNext( )
 		lex.behindspace = TRUE
 	wend
 
-	lex.location.column = lex.i - lex.bol
-	lex.location.length = 1
+	hResetColumn( )
 
 	'' Identify the next token
 	select case as const( lex.i[0] )
@@ -768,69 +763,13 @@ private sub lexNext( )
 	end select
 end sub
 
-private sub hComplainAboutEmbeddedNulls _
-	( _
-		byval filename as zstring ptr, _
-		byval buffer as ubyte ptr, _
-		byval limit as ubyte ptr _
-	)
-
-	'' Currently tokens store text as null-terminated strings, so they
-	'' can't allow embedded nulls, and null also indicates EOF to the lexer.
-	var i = buffer
-	while( i < limit )
-		if( i[0] = 0 ) then
-			oops( "file '" + *filename + "' has embedded nulls, please fix that first!" )
-		end if
-		i += 1
-	wend
-
-end sub
-
-private sub hLoadFile _
-	( _
-		byval filename as zstring ptr, _
-		byref buffer as ubyte ptr, _
-		byref limit as ubyte ptr _
-	)
-
-	'' Read in the whole file content
-	var f = freefile( )
-	if( open( *filename, for binary, access read, as #f ) ) then
-		oops( "could not open file: '" + *filename + "'" )
-	end if
-
-	var filesize = lof( f )
-	if( filesize > &h40000000 ) then
-		oops( "a header file bigger than 1 GiB? no way..." )
-	end if
-
-	'' An extra 0 byte at the end of the buffer so we can look ahead
-	'' without bound checks, and don't need to give special treatment
-	'' to empty files
-	dim as integer size = filesize
-	buffer = callocate( size + 1 )
-	buffer[size] = 0
-	limit = buffer + size
-
-	if( size > 0 ) then
-		var found = 0
-		var result = get( #f, , *buffer, size, found )
-		if( result or (found <> size) ) then
-			oops( "file I/O failed" )
-		end if
-	end if
-
-	close #f
-
-	hComplainAboutEmbeddedNulls( filename, buffer, limit )
-end sub
-
 '' Load keywords if not yet done
 private sub hInitKeywords( )
-	if( lex.kwhash.items = NULL ) then
-		hashInit( @lex.kwhash, 12 )
+	if( lex.kwhash.items ) then
+		exit sub
 	end if
+
+	hashInit( @lex.kwhash, 12 )
 
 	for i as integer = KW__C_FIRST to KW__C_LAST
 		var hash = hashHash( tkInfoText( i ) )
@@ -839,64 +778,179 @@ private sub hInitKeywords( )
 	next
 end sub
 
-function lexLoadZstring _
+''
+'' C lexer entry point
+''
+function lexLoadC _
 	( _
 		byval x as integer, _
-		byval filename as zstring ptr, _
-		byval s as zstring ptr, _
+		byval file as FILEBUFFER ptr, _
 		byval keep_comments as integer _
 	) as integer
 
 	lex.x = x
-	lex.location.filename = filename
+	lex.location.file = file
 	lex.location.linenum = 0
 	lex.keep_comments = keep_comments
-	lex.i = s
+	lex.i = file->buffer
 	lex.bol = lex.i
 	hInitKeywords( )
 
 	'' Tokenize and insert into tk buffer
-	var size = 0
 	while( lex.i[0] )
 		lexNext( )
-		size += 1
 	wend
 
+	file->lines = lex.location.linenum + 1
+
 	if( frog.verbose ) then
-		print "lex: " + *filename + ", " & size & " bytes, " & _
-			(lex.location.linenum + 1) & " lines, " & lex.x - x & " tokens"
+		print "lex: " + *file->name + ", " & (file->size - 1) & " bytes, " & _
+			file->lines & " lines, " & lex.x - x & " tokens"
 	end if
 
 	function = lex.x
 end function
 
-function lexLoadFile _
-	( _
-		byval x as integer, _
-		byval filename as zstring ptr, _
-		byval keep_comments as integer _
-	) as integer
+private sub hReadArg( )
+	var j = 0
 
-	dim as ubyte ptr buffer, limit
-	hLoadFile( filename, buffer, limit )
+	do
+		select case( lex.i[0] )
+		case CH_DQUOTE, CH_QUOTE
+			var quotechar = lex.i[0]
 
-	function = lexLoadZstring( x, filesysStore( filename ), buffer, keep_comments )
+			'' String, skip until closing dquote or EOL/EOF
+			do
+				lex.i += 1
 
-	deallocate( buffer )
+				select case( lex.i[0] )
+				case quotechar
+					exit do
+
+				'' Handle \\ and \" if inside "..." string
+				'' (so no escape sequences inside '...')
+				case CH_BACKSLASH
+					if( quotechar = CH_DQUOTE ) then
+						select case( lex.i[1] )
+						case CH_BACKSLASH
+							lex.text[j] = lex.i[0] : j += 1
+							lex.i += 1
+						case quotechar
+							lex.i += 1
+							lex.text[j] = lex.i[0] : j += 1
+						case else
+							lex.text[j] = lex.i[0] : j += 1
+						end select
+					else
+						lex.text[j] = lex.i[0] : j += 1
+					end if
+
+				case 0, CH_CR, CH_LF
+					lexOops( "string literal left open" )
+
+				case else
+					lex.text[j] = lex.i[0] : j += 1
+
+				end select
+
+				if( j > MAXTEXTLEN ) then
+					lexOops( "argument too long, MAXTEXTLEN=" & MAXTEXTLEN )
+				end if
+			loop
+
+		case else
+			lex.text[j] = lex.i[0] : j += 1
+		end select
+
+		if( j > MAXTEXTLEN ) then
+			lexOops( "argument too long, MAXTEXTLEN=" & MAXTEXTLEN )
+		end if
+
+		lex.i += 1
+
+		select case( lex.i[0] )
+		case 0, CH_TAB, CH_SPACE, CH_VTAB, CH_FORMFEED, CH_CR, CH_LF
+			exit do
+		end select
+	loop
+
+	'' null terminator
+	lex.text[j] = 0
+
+	if( lex.text[0] = asc( "-" ) ) then
+		tkInsert( tkGetCount( ), TK_ID, lex.text )
+	else
+		tkInsert( tkGetCount( ), TK_STRING, lex.text )
+	end if
+	hSetLocation( )
+end sub
+
+''
+'' "Command line" argument lexer, used for turning fbfrog's command line into
+'' tokens, and also for turning @response files into tokens.
+''
+'' Syntax rules:
+''   * white-space chars separate arguments
+''   * any non-white-space sequence is an argument
+''   * "..." or '...' can be used in arguments to include whitespace
+''   * "..." allows \" and \\ escape sequences
+''
+function lexLoadArgs( byval x as integer, byval file as FILEBUFFER ptr ) as integer
+	lex.x = x
+	lex.location.file = file
+	lex.location.linenum = 0
+	lex.keep_comments = FALSE
+	lex.i = file->buffer
+	lex.bol = lex.i
+	lex.behindspace = TRUE
+
+	do
+		hResetColumn( )
+
+		select case( lex.i[0] )
+		case 0
+			exit do
+
+		case CH_TAB, CH_SPACE, CH_VTAB, CH_FORMFEED
+			lex.i += 1
+
+		case CH_CR
+			lex.i += 1
+			lex.location.linenum += 1
+			if( lex.i[0] = CH_LF ) then
+				lex.i += 1
+			end if
+			lex.bol = lex.i
+
+		case CH_LF
+			lex.i += 1
+			lex.location.linenum += 1
+			lex.bol = lex.i
+
+		case else
+			'' Non-whitespace: argument starts here, until whitespace/EOF
+			hReadArg( )
+
+		end select
+	loop
+
+	file->lines = lex.location.linenum + 1
+
+	function = lex.x
 end function
 
 '' Retrieve a line of source code from the original input data for display in
 '' error messages.
-function lexPeekLineFromZstring _
+function lexPeekLine _
 	( _
-		byval buffer as zstring ptr, _
+		byval file as FILEBUFFER ptr, _
 		byval targetlinenum as integer _
 	) as string
 
 	'' Find the targetlinenum'th line of code, bol will end up pointing
 	'' to the begin of line of the target line, i will point to the end of
 	'' the target line.
-	dim as ubyte ptr i = buffer
+	dim as ubyte ptr i = file->buffer
 	var bol = i
 	var linenum = 0
 	do
@@ -941,46 +995,4 @@ function lexPeekLineFromZstring _
 	wend
 
 	function = s
-end function
-
-function lexPeekLineFromFile _
-	( _
-		byval filename as zstring ptr, _
-		byval targetlinenum as integer _
-	) as string
-	dim as ubyte ptr buffer, limit
-	hLoadFile( filename, buffer, limit )
-	function = lexPeekLineFromZstring( buffer, targetlinenum )
-	deallocate( buffer )
-end function
-
-function lexCountLinesInZstring( byval buffer as zstring ptr ) as integer
-	dim as ubyte ptr i = buffer
-	var lines = 1
-	do
-		select case( i[0] )
-		case 0
-			exit do
-
-		case CH_CR
-			if( i[1] = CH_LF ) then '' CRLF
-				i += 1
-			end if
-			lines += 1
-
-		case CH_LF
-			lines += 1
-
-		end select
-
-		i += 1
-	loop
-	function = lines
-end function
-
-function lexCountLinesInFile( byval filename as zstring ptr ) as integer
-	dim as ubyte ptr buffer, limit
-	hLoadFile( filename, buffer, limit )
-	function = lexCountLinesInZstring( buffer )
-	deallocate( buffer )
 end function

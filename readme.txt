@@ -22,40 +22,40 @@ Goal:
   C libraries, most importantly: converting C declarations to FB code.
 
 
+Compiling:
+
+  fbc *.bas -m fbfrog
+
+
 Usage:
 
   Pass *.h files (C API declarations) to fbfrog:
     $ ./fbfrog foo.h
   and fbfrog generates a corresponding *.bi file (FB API declarations).
 
-Compiling:
+  Creating a binding for multiple versions of a library:
+    $ ./fbfrog -version 1.0 foo1.0.h -version 2.0 foo2.0.h
 
-  fbfrog:
-        fbc -m fbfrog *.bas
+  Creating a binding for GCC 4 Win32/Linux versions of a header:
+    options.txt:
+        -define __GNUC__ 4
+        -target win32
+            -define _WIN32
+        -target linux
+            -define __linux__
+    $ ./fbfrog foo.h @options.txt
 
-  Linux GTK+ GUI:
-        cd gui/
-        fbc gui.bas gtk.bas xpms.bas -mt -x ../fbfrog-gui
-
-  Win32 GUI:
-        cd gui/
-        fbc gui.bas win32.bas resources.rc -mt -s gui -x ../fbfrog-gui.exe
-
-  The *.png images were hand-crafted in Paint.NET.
-  The win32 icon can be rebuild using GIMP: Open the 48x48 png, then load in
-  the others as layers, then duplicate them to have three of each, then save
-  as .ico and set the options so that it ends up with 8bpp, 24bpp and 32bpp
-  versions of each image.
-  The *.xpm files are exported from the *.pngs using GIMP.
-  To recreate the xpms.bas module, compile and run embed-xpms.bas.
+    -version can be used to tell fbfrog about multiple versions of a binding.
+    fbfrog will parse input files registered for each version, do preprocessing
+    with the symbols registered for each version, and combine the resulting
+    declarations into a single binding. fbfrog will try to combine declarations
+    common to all versions, and put other declarations (that exist in some
+    versions only, but not all) inside #if checks such as
+    <#if __MYLIB_VERSION__ = 1>, which allows the binding's user to select the
+    API version by #defining __MYLIB_VERSION__ as wanted.
 
 To do:
 
-- @response files instead of *.fbfrog files
-	+ command line = preset, same syntax, same parser, good for serious testing,
-	  good for sharing, good for quick copy/paste tests...
-	- potentially slightly less pretty syntax
-- use CONSTI and CONSTF nodes instead of just CONST, so we don't need typeIsFloat() checks?
 - Re-add "unknown construct -> TODO" handling
     + inline functions etc. are likely too hard to translate properly automatically
     + having 99% good result with some declarations commented out is a better user
@@ -66,6 +66,34 @@ To do:
          '' TODO: fbfrog: foo.h(123): unknown construct; declaration parser expected identifier but found "void"
          'FOO void f(void);
          ''   ^~~~
+
+	* need ASTCLASS_UNKNOWN which holds the series of tokens for that construct
+	  so that it can be written into the output file
+	    + they're at the same position they would be if translation would have worked
+	    + they automatically benefit from version-specific handling/AST version merging
+	    + much better to put them in-line than to report them on stdout
+	* C parser needs to do trial and error parsing again
+	   * set context (struct/union/enum, typedef, declaration, expression)
+	   * we can decide very early & easily which context of these it is
+	   * remember 1st token position (begin of construct)
+	   * if doesn't match any construct, or parsing of selected construct fails,
+	     go back to 1st token and try to find end of construct, and turn that into UNKNOWN node.
+	   * all parsing functions need to return TRUE/FALSE
+	   * token locations become unnecessary? only needed for error reports, but if we keep
+	     the tokens as seen by the C parser in the UNKNOWNs, then that's even better than
+	     the original location. It's not necessary useful to report the original source location (filename/linenum)
+	     although that would be nice too.
+
+- Need some way to easily pass tk locations on to AST nodes, perhaps astNewFromTK()
+  or similar that copies over the location automatically
+- Need some high-level way to combine locations into one, etc. which is currently
+  done manually in hParseArgs() at least
+- Use c.bas/cpp.bas
+- Add astFilter() to read in a GROUP and produce a new GROUP filtered by 1 or 2 classes (but cloned children of course)?
+- use CONSTI and CONSTF nodes instead of just CONST, so we don't need typeIsFloat() checks?
+- Remove hShell(), hMkdir[P], hKill...
+- Try using ASTNODEs instead of DIRNODE/DIRQUEUE
+
 - Consider adding symbol tables separate from the AST, so e.g. all UDT dtypes
   would reference the same subtype symbol instead of allocating an id everytime.
     - define/const/proc/var ids aren't re-used much, but type ids are. Perhaps
@@ -82,7 +110,8 @@ To do:
 - Prettier "assuming undefined" reports: just 1 line, no source context
 - Only one "assuming undefined" report per symbol (at least only one per CPP run,
   perhaps even only one per fbfrog run)
-- Translate #defines to consts if possible (it would be the more proper FB translation...)
+- emit case-preserving ALIASes if outside Extern block (i.e. no HIDDENCALLCONV flag)
+- Add option to translate #defines to consts if possible
 - #include foo.h  ->  #include foo.bi, if foo.bi will be generated too
 - #include stdio.h -> #include crt/stdio.bi, for some known default headers
   (or perhaps let presets do this)

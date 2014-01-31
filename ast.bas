@@ -115,7 +115,7 @@ dim shared as ASTNODEINFO astnodeinfo(0 to ...) = _
 	( "file"     ), _
 	( "dir"      ), _
 	( "noexpand" ), _
-	( "remove"   ), _
+	( "removedefine" ), _
 	( "#include" ), _
 	( "#define"  ), _
 	( "#undef"   ), _
@@ -474,7 +474,7 @@ private sub astAppendUnique( byval parent as ASTNODE ptr, byval n as ASTNODE ptr
 	astInsert( parent, n, NULL, TRUE )
 end sub
 
-private sub astCloneAppend( byval parent as ASTNODE ptr, byval n as ASTNODE ptr )
+sub astCloneAppend( byval parent as ASTNODE ptr, byval n as ASTNODE ptr )
 	astAppend( parent, astClone( n ) )
 end sub
 
@@ -572,6 +572,15 @@ sub astAddComment( byval n as ASTNODE ptr, byval comment as zstring ptr )
 	s += *comment
 
 	astSetComment( n, s )
+end sub
+
+sub astSetLocationAndAlsoOnChildren( byval n as ASTNODE ptr, byval location as TKLOCATION ptr )
+	n->location = *location
+	var i = n->head
+	while( i )
+		astSetLocationAndAlsoOnChildren( i, location )
+		i = i->next
+	wend
 end sub
 
 '' astClone() but without children
@@ -752,7 +761,7 @@ sub astReport _
 		byval more_context as integer _
 	)
 
-	if( n->location.filename ) then
+	if( n->location.file ) then
 		hReportLocation( @n->location, message, more_context )
 	else
 		print *message
@@ -3899,6 +3908,26 @@ function astDumpPrettyDecl( byval n as ASTNODE ptr ) as string
 	function = s
 end function
 
+private function astDumpPrettyTarget( byval v as ASTNODE ptr ) as string
+	select case( v->attrib and ASTATTRIB__ALLTARGET )
+	case ASTATTRIB_DOS   : function = "dos"
+	case ASTATTRIB_LINUX : function = "linux"
+	case ASTATTRIB_WIN32 : function = "win32"
+	case else            : assert( FALSE )
+	end select
+end function
+
+function astDumpPrettyVersion( byval v as ASTNODE ptr ) as string
+	select case( v->class )
+	case ASTCLASS_DUMMYVERSION
+		function = astDumpPrettyTarget( v )
+	case ASTCLASS_STRING
+		function = *v->text + "." + astDumpPrettyTarget( v )
+	case else
+		function = astDumpInline( v )
+	end select
+end function
+
 function astDumpOne( byval n as ASTNODE ptr ) as string
 	dim as string s
 
@@ -4009,6 +4038,10 @@ function astDumpOne( byval n as ASTNODE ptr ) as string
 	end if
 
 	s += hDumpComment( n->comment )
+
+	#if 0
+		s += " " + hDumpLocation( @n->location )
+	#endif
 
 	function = s
 end function

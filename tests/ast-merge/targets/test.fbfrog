@@ -1,13 +1,5 @@
-file "a.h"
+a.h
 
-target dos
-	define DOS
-endtarget
-
-target linux
-	define LINUX
-endtarget
-
-target win32
-	define WIN32
-endtarget
+-target dos -define DOS
+-target linux -define LINUX
+-target win32 -define WIN32

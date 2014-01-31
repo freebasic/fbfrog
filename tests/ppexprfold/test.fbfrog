@@ -1,2 +1,2 @@
-dir "."
-option nomerge whitespace nopp
+.
+-nomerge -whitespace -nopp

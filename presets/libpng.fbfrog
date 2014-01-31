@@ -1,41 +1,227 @@
-version "1.2.50"
-	download "http://sourceforge.net/projects/libpng/files/libpng12/1.2.50/libpng-1.2.50.tar.xz/download" "libpng-1.2.50.tar.xz"
+#include "common.fbfrog"
+
+version __LIBPNG_VER__("1.2.50")
+	download "http://downloads.sourceforge.net/libpng/libpng-1.2.50.tar.xz?download" "libpng-1.2.50.tar.xz"
 	extract "libpng-1.2.50.tar.xz"
 	file "libpng-1.2.50/png.h"
-end version
+endversion
 
-version "1.4.12"
-	download "http://sourceforge.net/projects/libpng/files/libpng14/1.4.12/libpng-1.4.12.tar.xz/download" "libpng-1.4.12.tar.xz"
+version __LIBPNG_VER__("1.4.12")
+	download "http://downloads.sourceforge.net/libpng/libpng-1.4.12.tar.xz?download" "libpng-1.4.12.tar.xz"
 	extract "libpng-1.4.12.tar.xz"
 	file "libpng-1.4.12/png.h"
-end version
+endversion
 
-version "1.5.17"
-	download "http://sourceforge.net/projects/libpng/files/libpng15/1.5.17/libpng-1.5.17.tar.xz/download" "libpng-1.5.17.tar.xz"
+version __LIBPNG_VER__("1.5.17")
+	download "http://downloads.sourceforge.net/libpng/libpng-1.5.17.tar.xz?download" "libpng-1.5.17.tar.xz"
 	extract "libpng-1.5.17.tar.xz"
 	file "libpng-1.5.17/png.h"
-end version
+endversion
 
-version "1.6.3"
-	download "http://sourceforge.net/projects/libpng/files/libpng16/1.6.3/libpng-1.6.3.tar.xz/download" "libpng-1.6.3.tar.xz"
+version __LIBPNG_VER__("1.6.3")
+	download "http://downloads.sourceforge.net/libpng/libpng-1.6.3.tar.xz?download" "libpng-1.6.3.tar.xz"
 	extract "libpng-1.6.3.tar.xz"
 	copyfile "libpng-1.6.3/scripts/pnglibconf.h.prebuilt" "libpng-1.6.3/pnglibconf.h"
 	file "libpng-1.6.3/png.h"
-end version
+endversion
 
-undef __cplusplus
+version __LIBPNG_VER__("1.6.6")
+	download "http://downloads.sourceforge.net/libpng/libpng-1.6.6.tar.xz?download" "libpng-1.6.6.tar.xz"
+	extract "libpng-1.6.6.tar.xz"
+	copyfile "libpng-1.6.6/scripts/pnglibconf.h.prebuilt" "libpng-1.6.6/pnglibconf.h"
+	file "libpng-1.6.6/png.h"
+endversion
+
 undef PNG_H
 undef PNGCONF_H
 undef PNGLCONF_H
-
+undef PNG_1_0_X
 undef PNG_VERSION_INFO_ONLY
 undef PNG_BUILDING_SYMBOL_TABLE
+undef PNG_BUILDSYMS
 undef PNG_USE_READ_MACROS
+undef PNG_NO_WARNINGS
 undef PNG_NO_PEDANTIC_WARNINGS
-undef PNG_PEDANTIC_WARNINGS_SUPPORTED
 undef PNG_SMALL_SIZE_T
-undef PNG_SAFE_LIMITS_SUPPORTED
-
+define PNG_SAFE_LIMITS_SUPPORTED
+define PNG_PEDANTIC_WARNINGS_SUPPORTED
+define PNG_PEDANTIC_WARNINGS
+undef PNG_ZBUF_SIZE
+undef PNG_NO_READ_SUPPORTED
+undef PNG_NO_WRITE_SUPPORTED
+undef PNG_NO_ERROR_TEXT
+undef PNG_NO_CHECK_cHRM
+undef PNG_NO_MNG_FEATURES
+undef PNG_NO_FLOATING_POINT_SUPPORTED
+undef PNG_NO_FIXED_POINT_SUPPORTED
+undef PNG_NO_STDIO
+undef PNG_NO_CONSOLE_IO
+undef PNG_SETJMP_NOT_SUPPORTED
+undef PNG_NO_SETJMP_SUPPORTED
+undef PNG_SKIP_SETJMP_CHECK
+undef PNG_NO_CONST
+undef PNG_NO_iTXt_SUPPORTED
+undef PNG_NO_READ_iTXt
+undef PNG_NO_WRITE_iTXt
+undef PNG_LEGACY_SUPPORTED
+undef PNG_NO_FREE_ME
+undef PNG_READ_TRANSFORMS_NOT_SUPPORTED
+undef PNG_NO_READ_TRANSFORMS
+undef PNG_NO_READ_EXPAND
+undef PNG_NO_READ_SHIFT
+undef PNG_NO_READ_PACK
+undef PNG_NO_READ_BGR
+undef PNG_NO_READ_SWAP
+undef PNG_NO_READ_PACKSWAP
+undef PNG_NO_READ_INVERT
+undef PNG_NO_READ_DITHER
+undef PNG_NO_READ_BACKGROUND
+undef PNG_NO_READ_16_TO_8
+undef PNG_NO_READ_FILLER
+undef PNG_NO_READ_GAMMA
+undef PNG_NO_READ_GRAY_TO_RGB
+undef PNG_NO_READ_SWAP_ALPHA
+undef PNG_NO_READ_INVERT_ALPHA
+undef PNG_NO_READ_STRIP_ALPHA
+undef PNG_NO_READ_USER_TRANSFORM
+undef PNG_NO_READ_RGB_TO_GRAY
+undef PNG_NO_PROGRESSIVE_READ
+undef PNG_PROGRESSIVE_READ_NOT_SUPPORTED
+undef PNG_NO_SEQUENTIAL_READ
+undef PNG_NO_READ_COMPOSITE_NODIV
+undef PNG_NO_READ_COMPOSITED_NODIV
+undef PNG_NO_READ_EMPTY_PLTE
+undef PNG_WRITE_TRANSFORMS_NOT_SUPPORTED
+undef PNG_NO_WRITE_TRANSFORMS
+undef PNG_NO_WRITE_SHIFT
+undef PNG_NO_WRITE_PACK
+undef PNG_NO_WRITE_BGR
+undef PNG_NO_WRITE_SWAP
+undef PNG_NO_WRITE_PACKSWAP
+undef PNG_NO_WRITE_INVERT
+undef PNG_NO_WRITE_FILLER
+undef PNG_NO_WRITE_SWAP_ALPHA
+undef PNG_NO_WRITE_INVERT_ALPHA
+undef PNG_NO_WRITE_USER_TRANSFORM
+undef PNG_NO_WRITE_INTERLACING_SUPPORTED
+undef PNG_NO_WRITE_WEIGHTED_FILTER
+undef PNG_NO_WRITE_FLUSH
+undef PNG_NO_WRITE_EMPTY_PLTE
+undef PNG_NO_ERROR_NUMBERS
+undef PNG_NO_USER_TRANSFORM_PTR
+undef PNG_NO_EASY_ACCESS
+undef PNG_NO_OPTIMIZED_CODE
+undef PNG_NO_ASSEMBLER_CODE
+undef PNG_NO_MMX_CODE
+undef PNG_USER_WIDTH_MAX
+undef PNG_USER_HEIGHT_MAX
+undef PNG_USER_CHUNK_CACHE_MAX
+undef PNG_USER_CHUNK_MALLOC_MAX
+undef PNG_LITERAL_SHARP
+undef PNG_LITERAL_LEFT_SQUARE_BRACKET
+undef PNG_LITERAL_RIGHT_SQUARE_BRACKET
+undef PNG_STRING_NEWLINE
+undef PNG_NO_POINTER_INDEXING
+undef PNG_READ_ANCILLARY_CHUNKS_NOT_SUPPORTED
+undef PNG_NO_READ_ANCILLARY_CHUNKS
+undef PNG_WRITE_ANCILLARY_CHUNKS_NOT_SUPPORTED
+undef PNG_NO_WRITE_ANCILLARY_CHUNKS
+undef PNG_NO_READ_TEXT
+undef PNG_NO_READ_bKGD
+undef PNG_NO_READ_cHRM
+undef PNG_NO_READ_gAMA
+undef PNG_NO_READ_hIST
+undef PNG_NO_READ_iCCP
+undef PNG_NO_READ_oFFs
+undef PNG_NO_READ_pCAL
+undef PNG_NO_READ_sCAL
+undef PNG_NO_READ_pHYs
+undef PNG_NO_READ_sBIT
+undef PNG_NO_READ_sPLT
+undef PNG_NO_READ_sRGB
+undef PNG_NO_READ_tEXt
+undef PNG_NO_READ_tIME
+undef PNG_NO_READ_tRNS
+undef PNG_NO_READ_zTXt
+undef PNG_NO_READ_OPT_PLTE
+undef PNG_NO_READ_UNKNOWN_CHUNKS
+undef PNG_NO_READ_USER_CHUNKS
+undef PNG_NO_HANDLE_AS_UNKNOWN
+undef PNG_NO_WRITE_TEXT
+undef PNG_NO_WRITE_bKGD
+undef PNG_NO_WRITE_cHRM
+undef PNG_NO_WRITE_gAMA
+undef PNG_NO_WRITE_hIST
+undef PNG_NO_WRITE_iCCP
+undef PNG_NO_WRITE_oFFs
+undef PNG_NO_WRITE_pCAL
+undef PNG_NO_WRITE_sCAL
+undef PNG_NO_WRITE_pHYs
+undef PNG_NO_WRITE_sBIT
+undef PNG_NO_WRITE_sPLT
+undef PNG_NO_WRITE_sRGB
+undef PNG_NO_WRITE_tEXt
+undef PNG_NO_WRITE_tIME
+undef PNG_NO_WRITE_tRNS
+undef PNG_NO_WRITE_zTXt
+undef PNG_NO_CONVERT_tIME
+undef PNG_NO_WRITE_FILTER
+undef PNG_NO_WRITE_UNKNOWN_CHUNKS
+undef PNG_NO_INFO_IMAGE
+undef PNG_SIZE_T
+undef PNG_USE_GLOBAL_ARRAYS
+undef PNG_NO_SNPRINTF
+define PNG_NO_TYPECAST_NULL
+undef PNG_NO_EXTERN
+undef PNG_NO_SEQUENTIAL_READ_SUPPORTED
+undef PNG_DEBUG
+undef png_debug
+undef png_debug1
+undef png_debug2
+undef PNG_READ_BIG_ENDIAN_SUPPORTED
+undef PNG_NO_LIMITS_H
+undef PNG_NO_ALIGNED_MEMORY
+undef PNG_NO_SETJMP
+undef PNG_DITHER_RED_BITS
+undef PNG_DITHER_GREEN_BITS
+undef PNG_DITHER_BLUE_BITS
+undef PNG_QUANTIZE_RED_BITS
+undef PNG_QUANTIZE_GREEN_BITS
+undef PNG_QUANTIZE_BLUE_BITS
+undef PNG_MAX_GAMMA_8
+undef PNG_GAMMA_THRESHOLD
+undef PNG_NO_READ_QUANTIZE
+undef PNG_NO_GET_INT_32
+undef PNG_NO_SAVE_INT_32
+undef PNG_NO_SET_USER_LIMITS
+undef PNG_NO_IO_STATE
+define PNG_READ_iTXt_SUPPORTED
+define PNG_READ_UNKNOWN_CHUNKS_SUPPORTED
+define PNG_READ_USER_CHUNKS_SUPPORTED
+define PNG_WRITE_iTXt_SUPPORTED
+define PNG_IO_STATE_SUPPORTED
+define PNG_SET_CHUNK_MALLOC_LIMIT_SUPPORTED
+define PNG_SET_CHUNK_CACHE_LIMIT_SUPPORTED
+define PNG_TIME_RFC1123_SUPPORTED
+define PNG_SAVE_INT_32_SUPPORTED
+define PNG_GET_INT_32_SUPPORTED
+define PNG_ALIGNED_MEMORY_SUPPORTED
+define PNG_USE_LOCAL_ARRAYS
+define PNG_WRITE_FILTER_SUPPORTED
+define PNG_CONVERT_tIME_SUPPORTED
+define PNG_HANDLE_AS_UNKNOWN_SUPPORTED
+define PNG_POINTER_INDEXING_SUPPORTED
+define PNG_SET_USER_LIMITS_SUPPORTED
+define PNG_USER_LIMITS_SUPPORTED
+define PNG_MMX_CODE_SUPPORTED
+define PNG_ASSEMBLER_CODE_SUPPORTED
+define PNG_OPTIMIZED_CODE_SUPPORTED
+define PNG_EASY_ACCESS_SUPPORTED
+define PNG_WRITE_WEIGHTED_FILTER
+define PNG_WRITE_INTERLACING_SUPPORTED
+define PNG_SEQUENTIAL_READ_SUPPORTED
+define PNG_ALLOW_BENIGN_ERRORS
+define PNG_NO_WARN_UNINITIALIZED_ROW
 define PNG_NO_USE_READ_MACROS
 define PNG_STDIO_SUPPORTED
 define PNG_FLOATING_POINT_SUPPORTED
@@ -48,54 +234,37 @@ define PNG_USER_CHUNKS_SUPPORTED
 define PNG_UNKNOWN_CHUNKS_SUPPORTED
 define PNG_SETJMP_SUPPORTED
 define PNG_USER_MEM_SUPPORTED
-
-macro CHAR_BIT  8
-macro UCHAR_MAX 255
-macro SHRT_MIN  -&h8000
-macro SHRT_MAX  &h7FFF
-macro USHRT_MAX &hFFFF
-macro INT_MIN   -&h80000000
-macro INT_MAX   &h7FFFFFFF
-macro UINT_MAX  &hFFFFFFFF
-macro LONG_MIN  -&h80000000
-macro LONG_MAX  &h7FFFFFFF
-macro ULONG_MAX &hFFFFFFFF
-
-macro __GNUC__ 4
-undef _MSC_VER
-undef __BORLANDC__
-undef __IBMC__
-undef __IBMCPP__
-undef __OS2__
-undef __TURBOC__
-undef __FLAT__
-undef MAXSEG_64K
-
-undef _Windows
-undef _WINDOWS
-undef __WIN32__
-undef WIN32
-undef __CYGWIN__
-
-version *.win32
-	define _WIN32
-end version
-
-version *.linux
-	undef _WIN32
-end version
-
+define PNG_WARNINGS_SUPPORTED
+define PNG_ERROR_TEXT_SUPPORTED
+define PNG_CHECK_cHRM_SUPPORTED
+define PNG_MNG_FEATURES_SUPPORTED
+define PNG_CONSOLE_IO_SUPPORTED
+define PNG_iTXt_SUPPORTED
+define PNG_WRITE_WEIGHTED_FILTER_SUPPORTED
+undef _SETJMP_H
+undef PNG_SAVE_BSD_SOURCE
+undef PNG_DLL
+undef _DLL
+undef __DLL__
 undef PNG_USE_DLL
 undef PNG_DLL_IMPORT
-
+undef PNG_BUILD_DLL
+undef OF
+undef _NO_PROTO
 undef PNGARG
+undef PNG_USER_CONFIG
+undef PNG_CONFIGURE_LIBPNG
 undef PNG_USER_PRIVATEBUILD
+undef SPECIALBUILD
+undef PRIVATEBUILD
 undef PNG_LIBPNG_SPECIALBUILD
+undef PNG_INTERNAL
 undef PNGAPI
 undef PNGCAPI
 undef PNGCBAPI
 undef PNG_IMPEXP
 undef PNG_FUNCTION
+undef PNG_EXPORT
 undef PNG_EXPORTA
 undef PNG_EXPORT_TYPE
 undef PNG_REMOVED
@@ -106,31 +275,30 @@ undef PNG_RESTRICT
 undef PNG_ALLOCATED
 undef PNG_NORETURN
 undef PNG_DEPRECATED
+undef PNG_DEPSTRUCT
 undef PNG_PRIVATE
+undef PNG_UNUSED
 undef PNG_USE_RESULT
 undef PNG_EXPORT_LAST_ORDINAL
-
-expand PNG_API_RULE
-expand PNG_EXPORT
-expand PNG_EXPORTA
-expand PNG_CALLBACK
-expand PNG_RESTRICT
-expand PNG_FP_EXPORT
-expand PNG_FIXED_EXPORT
-expand PNG_EXPORT_TYPE
-expand PNG_EMPTY
-expand PNG_IMPEXP
-expand PNGAPI
-expand PNGCAPI
-expand PNGCBAPI
-expand PNGARG
-expand PNG_FUNCTION
-expand PNG_ALLOCATED
-expand PNG_NORETURN
-expand PNG_DEPRECATED
-expand PNG_REMOVED
+undef PNG_ABORT
+undef USE_FAR_KEYWORD
+undef PNG_CONST
 
 remove define PNG_H
 remove define PNGCONF_H
 remove define PNGLCONF_H
 remove define PNG_CONST
+
+remove define PNG_UINT_31_MAX
+remove define PNG_UINT_32_MAX
+remove define PNG_SIZE_MAX
+remove define png_info_init
+remove define png_composite
+remove define png_composite_16
+remove define PNG_FP_MAX
+remove define png_get_uint_32
+remove define png_get_uint_16
+remove define png_get_int_32
+remove define PNG_get_uint_32
+remove define PNG_get_uint_16
+remove define PNG_get_int_32

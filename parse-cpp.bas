@@ -3,7 +3,7 @@
 '' --------------------------
 ''
 '' cppComments() assigns comments from TK_COMMENTs (if any exist even, depending
-'' on whether lexLoadFile() was asked to preserve them or not) to other,
+'' on whether lexLoadC() was asked to preserve them or not) to other,
 '' non-whitespace, tokens. It tries to be smart and effectively assign comments
 '' to corresponding high-level constructs. For example, if a comment is found
 '' at the end of a non-empty line, it will be given to the last non-whitespace
@@ -39,15 +39,6 @@
 '' of later in the AST is useful for #defines whose bodies can't be parsed as
 '' C expressions.
 ''
-'' cppPreDefine() adds initial macros, including simple symbols that should be
-'' treated as initially defined.
-''
-'' cppPreUndef() registers symbols as initially undefined.
-''
-'' Pre-#defines/#undefs are simply inserted at the top of the token buffer,
-'' so cppMain() parses them like any other #define/#undef it finds, except that
-'' pre-#defines/#undefs are also automatically registered with cppRemoveSym().
-''
 '' #define bodies are preserved (enclosed in TK_BEGIN/END):
 ''  - macros can be expanded simply by copying the tokens from the original body
 ''  - no need to store the macro body tokens in an AST
@@ -56,8 +47,6 @@
 ''  - good for C parser later which can just parse the #define bodies and
 ''    doesn't need to worry about re-inserting them into the tk buffer to be
 ''    able to parse them
-''  - of course pre-#defines read in from presets must still be represented in
-''    the AST before ppPreDefine() can insert them at the top of the tk buffer
 ''  - since the #define bodies are needed for expansion, #defines registered
 ''    for removal instead of C parsing can't be removed immediately - they must
 ''    be marked with ASTATTRIB_REMOVE so the C parser will ignore them.
@@ -1394,29 +1383,6 @@ sub cppEnd( )
 	hashEnd( @eval.removes )
 end sub
 
-sub cppPreDefine overload( byval macro as ASTNODE ptr )
-	'' Insert the #define at the top of the tk buffer, where cppMain() will
-	'' see it, but behind existing tokens (e.g. other pre-#defines).
-	var x = tkGetCount( )
-	tkInsert( x, TK_PPDEFINE )
-	tkSetAst( x, astClone( macro ) )
-end sub
-
-sub cppPreDefine overload( byval id as zstring ptr )
-	var macro = astNew( ASTCLASS_PPDEFINE, id )
-	macro->paramcount = -1
-	cppPreDefine( macro )
-	astDelete( macro )
-end sub
-
-sub cppPreUndef( byval id as zstring ptr )
-	'' Add #undef at the top of the tk buffer, where cppMain() will see it,
-	'' but behind existing tokens (could have other pre-#defines already).
-	var x = tkGetCount( )
-	tkInsert( x, TK_PPUNDEF, id )
-	x += 1
-end sub
-
 sub cppNoExpandSym( byval id as zstring ptr )
 	hashAddOverwrite( @eval.noexpands, id, NULL )
 end sub
@@ -1585,7 +1551,7 @@ private function hEvalIfCondition( byval x as integer ) as integer
 	'' 2. Check the condition
 	if( (t->class <> ASTCLASS_CONST) or typeIsFloat( t->dtype ) ) then
 		const MESSAGE = "couldn't evaluate #if condition"
-		if( t->location.filename ) then
+		if( t->location.file ) then
 			hReportLocation( @t->location, MESSAGE )
 			end 1
 		end if
@@ -1650,11 +1616,12 @@ end sub
 private sub hLoadFile _
 	( _
 		byval x as integer, _
+		byval includeloc as TKLOCATION ptr, _
 		byval filename as zstring ptr, _
 		byval whitespace as integer _
 	)
 
-	lexLoadFile( x, filename, whitespace )
+	lexLoadC( x, filebufferFromFile( filename, includeloc ), whitespace )
 
 	if( whitespace ) then
 		cppComments( )
@@ -1718,7 +1685,7 @@ end function
 
 sub cppMain _
 	( _
-		byval topfile as zstring ptr, _
+		byval topfile as ASTNODE ptr, _
 		byval whitespace as integer, _
 		byval nomerge as integer _
 	)
@@ -1728,7 +1695,7 @@ sub cppMain _
 	var level = 0
 
 	'' Add toplevel file behind current tokens (could be pre-#defines)
-	hLoadFile( tkGetCount( ), topfile, whitespace )
+	hLoadFile( tkGetCount( ), @topfile->location, topfile->text, whitespace )
 	ppstack(level) = 0
 
 	do
@@ -1773,22 +1740,23 @@ sub cppMain _
 				hRemoveTokenAndTkBeginEnd( x )
 			else
 				var location = tkGetLocation( x )
-				var context = location->filename
+				var context = iif( location->file, location->file->name, NULL )
 				if( context = NULL ) then
-					context = topfile
+					context = topfile->text
 				end if
 				var inctext = *tkGetText( x )
 				var incfile = hSearchHeaderFile( context, inctext )
 
 				if( len( incfile ) > 0 ) then
-					print "include: " + incfile
+					print space( frog.maxversionstrlen ) + "include: " + incfile
 
 					level += 1
 					hCheckStackLevel( x, level )
 					ppstack(level) = 0
 
-					'' Remove the #include
-					tkRemove( x, x )
+					'' Leave the #include token where it is, and insert the content behind it
+					var xinclude = x
+					x += 1
 
 					'' Insert this so we can go back end delete all the #included tokens easily
 					tkInsert( x, TK_BEGININCLUDE )
@@ -1804,13 +1772,18 @@ sub cppMain _
 					'' so we can detect the included EOF and pop the #include context from
 					'' the ppstack.
 					tkInsert( x, TK_ENDINCLUDE )
-					hLoadFile( x, incfile, whitespace )
+					hLoadFile( x, tkGetLocation( xinclude ), incfile, whitespace )
+
+					'' Remove the #include
+					tkRemove( xinclude, xinclude )
+					x -= 1
 
 					'' Start parsing the #included content
-					'' (starting after the EOL inserted above)
+					'' (starting behind the EOL inserted above)
 					x -= 1
+					assert( tkGet( x ) = TK_EOL )
 				else
-					print "include: " + inctext + " (not found)"
+					print space( frog.maxversionstrlen ) + "include: " + inctext + " (not found)"
 				end if
 			end if
 
@@ -1964,7 +1937,7 @@ end sub
 
 sub cppMainForTestingIfExpr _
 	( _
-		byval topfile as zstring ptr, _
+		byval topfile as ASTNODE ptr, _
 		byval whitespace as integer, _
 		byval do_fold as integer _
 	)
@@ -1972,7 +1945,7 @@ sub cppMainForTestingIfExpr _
 	var x = 0
 
 	'' Add toplevel file behind current tokens (could be pre-#defines)
-	hLoadFile( tkGetCount( ), topfile, whitespace )
+	hLoadFile( tkGetCount( ), @topfile->location, topfile->text, whitespace )
 
 	do
 		select case( tkGet( x ) )

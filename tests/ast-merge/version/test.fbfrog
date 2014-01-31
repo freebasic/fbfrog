@@ -1,5 +1,4 @@
-file "a.h"
+a.h
 
-version 1
-	define VER 1
-endversion
+-version 1
+	-define VER 1

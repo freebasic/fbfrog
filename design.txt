@@ -5,12 +5,18 @@ How about using existing C preprocessors/parser (e.g. libclang)
   difficult
 - fbfrog needs to see #defines, typically pre-existing C-to-AST parsers don't
   preserve them
+- fbfrog sometimes wants to allow conditional macro expansion (i.e. only expand
+  certain macros, not others), that's probably not possible with existing CPPs
 
 Using an AST instead of just "rearranging tokens" or doing text replacements
-+ Complex C constructs (nested function pointer declarations & co) require a
-  recursive parser, and can only be represented as a tree
-+ Allows high-level steps such as replacing identifiers of certain symbols to
-  work with the AST instead of tokens
++ Complex constructs (e.g. nested function pointer declarations, or expression
+  parsing and evaluation) require a recursive parser, and can only be
+  represented as a tree. This is much nicer to do with a real tree data
+  structure instead of a flat list of tokens.
++ Makes high-level analyses so much easier, e.g. replacing identifiers of
+  certain symbols: only have to cycle through AST nodes, checking declaration
+  type and touch the common identifier field; as opposed to re-parsing tokens
+  everytime to determine symbol type, where to insert the new identifier, etc.
 
 Storing AST in "API files" in some intermediate format (which is not the final
 .bi) to make later translations of the same API easier, by no longer requiring
@@ -38,6 +44,24 @@ the API as seen from that root's point of view. Each root is emitted as separate
 will automatically be extracted into common headers. It's also possible to use
 pre-#includes to concatenate separate roots manually.
 
+"Tiny" CLI to control fbfrog behaviour, instead of a bigger-scale custom
+*.fbfrog file format/language (as "presets" or scripts).
++ Should use CLI for both small/big use cases, instead of having 2 things to do
+  the same thing.
++ Support for @response files still allows big "presets" to be saved in files.
+* Only makes sense when allowing only one "preset at a time, which is ok though.
++ CLI forces simplification of "preset" commands/options because there can't be
+  much complexity (such as multiple levels of nested code blocks) on a command
+  line.
+- It's more difficult to specify complex #define bodies on the command line or
+  in general, in a single line (including inside @files). And care must be taken
+  with chars special to the shell or @file parser, so escaping may be needed.
+
+Just one "preset" per fbfrog invocation.
++ Allows for the "tiny"/simple CLI
++ Matches the idea that fbfrog works much like a compiler: It takes various
+  input files and generates a binding (one binding, not multiple ones).
+
 Split fbfrog into separate tools: cpp, c2ast, ast2fb
 + Possible to tweak output of a tool before passing to next tool
 + Easier testing of individual steps
@@ -63,3 +87,24 @@ fbfrog should not worry about where input files come from (downloading and
 extracting tarballs etc.). Headers may need all kinds of shell commands to be
 extracted and prepared, perhaps even execution of a package-specific build
 system. fbfrog shoudn't become a portable shell, but instead focus on its job.
+
+It's good to have both -version and -target, without allowing any nesting except
+-targets inside -versions.
++ Allowing arbitrary -version nesting has proven difficult for AST merging
+  and #if generation code etc.
++ It adds a nesting level which avoids duplicate code... it is nicer than
+  doing -version 1.win32 -version 1.linux etc. and that again for other
+  versions.
++ target system definitely is the most common nesting within a single
+  version, and pretty much the only that matters for FB. Though there also
+  is the static vs DLL issue, encoding that into the -version has the same
+  problem in the end.
++ -target could nicely be used to auto-add proper pre-#defines, and it's
+  very nice for generating #ifdef __FB_WIN32__ etc. checks. Could also use
+  -win32/-linux options to behave as if there were -define _WIN32 etc.
+  pre-#defines at that position, but then -versiondefine __FB_WIN32__ etc.
+  would have to be given manually.
++ -version 1.win32 etc. can still be used, if wanted, to specify all the
+  pre-#defines manually.
++ But in general, fbfrog having basic compiler pre-#defines built-in is
+  very useful. Otherwise every user would have to worry about them...

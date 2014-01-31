@@ -2,10 +2,149 @@
 #include once "crt.bi"
 #include once "dir.bi"
 
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+namespace filebuffers
+	dim shared hash as THASH
+	dim shared nodes as TLIST '' FILEBUFFER
+end namespace
+
+sub filebufferInit( )
+	hashInit( @filebuffers.hash, 8, FALSE )
+	listInit( @filebuffers.nodes, sizeof( FILEBUFFER ) )
+end sub
+
+function hDumpFileBuffer( byval file as FILEBUFFER ptr ) as string
+	var s = *file->name + "("
+
+	if( file->is_file ) then
+		s += "is a file, "
+	end if
+
+	if( file->buffer ) then
+		var realsize = file->size - 1  '' minus the extra null terminator
+		s += realsize & " byte"
+		if( realsize <> 1 ) then s += "s"
+		s += " loaded, "
+	end if
+
+	s += file->lines & " line"
+	if( file->lines <> 1 ) then s += "s"
+	s += ")"
+
+	function = s
+end function
+
+function filebufferAdd( byval filename as zstring ptr ) as FILEBUFFER ptr
+	var hash = hashHash( filename )
+	var item = hashLookup( @filebuffers.hash, filename, hash )
+
+	'' Doesn't exist yet?
+	if( item->s = NULL ) then
+		dim as FILEBUFFER ptr file = listAppend( @filebuffers.nodes )
+		file->name = strDuplicate( filename )
+		file->is_file = FALSE
+		file->buffer = NULL
+		file->size = 0
+		file->lines = 0
+		hashAdd( @filebuffers.hash, item, hash, file->name, file )
+	end if
+
+	function = item->data
+end function
+
+private function hLoadFile _
+	( _
+		byval filename as zstring ptr, _
+		byval srcloc as TKLOCATION ptr, _
+		byref size as integer _
+	) as ubyte ptr
+
+	'' Read in the whole file content
+	var f = freefile( )
+	if( open( *filename, for binary, access read, as #f ) ) then
+		oopsLocation( srcloc, "could not open file: '" + *filename + "'" )
+	end if
+
+	dim as ulongint filesize = lof( f )
+	if( filesize > &h40000000 ) then
+		oopsLocation( srcloc, "a header file bigger than 1 GiB? no way..." )
+	end if
+
+	'' An extra 0 byte at the end of the buffer so we can look ahead
+	'' without bound checks, and don't need to give special treatment
+	'' to empty files.
+	dim as integer sizetoload = filesize
+	size = sizetoload + 1
+	dim as ubyte ptr buffer = callocate( size )
+
+	if( sizetoload > 0 ) then
+		var sizeloaded = 0
+		var result = get( #f, , *buffer, sizetoload, sizeloaded )
+		if( result or (sizeloaded <> sizetoload) ) then
+			oopsLocation( srcloc, "file I/O failed" )
+		end if
+	end if
+
+	close #f
+
+	'' Currently tokens store text as null-terminated strings, so they
+	'' can't allow embedded nulls, and null also indicates EOF to the lexer.
+	for i as integer = 0 to sizetoload-1
+		if( buffer[i] = 0 ) then
+			oopsLocation( srcloc, "file '" + *filename + "' has embedded nulls, please fix that first!" )
+		end if
+	next
+
+	function = buffer
+end function
+
+function filebufferFromFile( byval filename as zstring ptr, byval srcloc as TKLOCATION ptr ) as FILEBUFFER ptr
+	var file = filebufferAdd( filename )
+
+	'' Load if not cached yet
+	if( file->buffer = NULL ) then
+		assert( file->buffer = NULL )
+		file->is_file = TRUE
+		file->buffer = hLoadFile( file->name, srcloc, file->size )
+	end if
+
+	function = file
+end function
+
+function filebufferFromZstring( byval filename as zstring ptr, byval s as zstring ptr ) as FILEBUFFER ptr
+	var file = filebufferAdd( filename )
+
+	'' Load if not cached yet
+	if( file->buffer = NULL ) then
+		assert( file->buffer = NULL )
+		file->buffer = strDuplicate( s )
+		file->size = len( *s ) + 1
+	end if
+
+	function = file
+end function
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
 sub oops( byval message as zstring ptr )
 	print "oops, " + *message
 	end 1
 end sub
+
+function hDumpLocation( byval location as TKLOCATION ptr ) as string
+	if( location->file ) then
+		var s = "location("
+		s += hDumpFileBuffer( location->file ) & ", "
+		s += "line " & location->linenum + 1 & ", "
+		s += "column " & location->column + 1 & ", "
+		s += "length " & location->length
+		s += ")"
+		function = s
+	else
+		function = "(no location info)"
+	end if
+end function
 
 private sub hCalcErrorLine _
 	( _
@@ -61,25 +200,17 @@ sub hReportLocation _
 		byval more_context as integer _
 	)
 
-	print *location->filename + "(" & (location->linenum + 1) & "): " + *message
+	assert( location )
+	assert( location->file )
+	assert( location->file->name )
+
+	print *location->file->name + "(" & (location->linenum + 1) & "): " + *message
 
 	'' Determine how many chars can be printed for the error line:
 	'' Normally we can fill a line in the console, so get the console width.
 	dim as integer limit = loword( width( ) ) - 1
 	if( limit < 0 ) then
 		limit = 0
-	end if
-
-	var is_cmdline = (*location->filename = "<command line>")
-
-	dim as integer linecount = any
-	if( is_cmdline ) then
-		if( frog.cppheader = NULL ) then
-			exit sub
-		end if
-		linecount = lexCountLinesInZstring( frog.cppheader )
-	else
-		linecount = lexCountLinesInFile( location->filename )
 	end if
 
 	'' Show the error line and maybe some extra lines above and below it,
@@ -99,7 +230,7 @@ sub hReportLocation _
 		min -= location->linenum
 
 		max = location->linenum + ubound( linenums )
-		if( max >= linecount ) then max = linecount - 1
+		if( max >= location->file->lines ) then max = location->file->lines - 1
 		max -= location->linenum
 	else
 		min = 0
@@ -122,11 +253,7 @@ sub hReportLocation _
 		dim s as string
 		dim offset as integer
 
-		if( is_cmdline ) then
-			s = lexPeekLineFromZstring( frog.cppheader, location->linenum + i )
-		else
-			s = lexPeekLineFromFile( location->filename, location->linenum + i )
-		end if
+		s = lexPeekLine( location->file, location->linenum + i )
 
 		hCalcErrorLine( location->column, limit, s, offset )
 
@@ -139,22 +266,10 @@ sub hReportLocation _
 
 end sub
 
-''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-'' Hash table for storing away file names for TKLOCATION's, each file name only
-'' once, while further requests re-use the existing string, so they aren't
-'' duplicated for each token...
-
-namespace filesys
-	dim shared hash as THASH
-end namespace
-
-sub filesysInit( )
-	hashInit( @filesys.hash, 8, TRUE )
+sub oopsLocation( byval location as TKLOCATION ptr, byval message as zstring ptr )
+	hReportLocation( location, message )
+	end 1
 end sub
-
-function filesysStore( byval filename as zstring ptr ) as zstring ptr
-	function = hashAddOverwrite( @filesys.hash, filename, 0 )->s
-end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
@@ -222,6 +337,27 @@ sub strSplit _
 	end if
 
 end sub
+
+function strTrim( byref s as string ) as string
+	function = trim( s, any !" \t" )
+end function
+
+'' Checks whether a string starts with and ends in [double-]quotes.
+private function strIsQuoted( byref s as string ) as integer
+	var last = len( s ) - 1
+	if( last >= 1 ) then
+		function = ((s[0] = CH_DQUOTE) and (s[last] = CH_DQUOTE)) or _
+		           ((s[0] = CH_QUOTE ) and (s[last] = CH_QUOTE ))
+	end if
+end function
+
+function strUnquote( byref s as string ) as string
+	if( strIsQuoted( s ) ) then
+		function = mid( s, 2, len( s ) - 2 )
+	else
+		function = s
+	end if
+end function
 
 function strMakePrintable( byref a as string ) as string
 	dim b as string
@@ -312,6 +448,33 @@ function strContainsNonOctDigits( byval s as zstring ptr ) as integer
 	function = FALSE
 end function
 
+function strIsValidSymbolId( byval s as zstring ptr ) as integer
+	var i = 0
+	do
+		select case as const( (*s)[0] )
+		case 0
+			exit do
+
+		case CH_A to CH_Z, CH_L_A to CH_L_Z, CH_UNDERSCORE
+			'' A-Z, a-z, _ are allowed
+
+		case CH_0 to CH_9
+			'' Numbers are allowed but not at the front
+			if( i = 0 ) then
+				exit function
+			end if
+
+		case else
+			exit function
+		end select
+
+		s += 1
+		i += 1
+	loop
+
+	function = TRUE
+end function
+
 function hMakePrettyByteSize( byval size as uinteger ) as string
 	'' Determine the max power of 1024 in the number, and the remainder
 	'' corresponding to that part
@@ -370,6 +533,108 @@ function hMakePrettyByteSize( byval size as uinteger ) as string
 
 	function = s
 end function
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+'' Generic linked list
+
+#define listGetPtr( node ) cptr( any ptr, cptr( ubyte ptr, node ) + sizeof( LISTNODE ) )
+#define listGetNode( p ) cptr( LISTNODE ptr, cptr( ubyte ptr, p ) - sizeof( LISTNODE ) )
+
+function listGetHead( byval l as TLIST ptr) as any ptr
+	if( l->head ) then
+		function = listGetPtr( l->head )
+	end if
+end function
+
+function listGetTail( byval l as TLIST ptr) as any ptr
+	if( l->tail ) then
+		function = listGetPtr( l->tail )
+	end if
+end function
+
+function listGetNext( byval p as any ptr ) as any ptr
+	dim as LISTNODE ptr nxt = any
+	nxt = listGetNode( p )->next
+	if( nxt ) then
+		function = listGetPtr( nxt )
+	end if
+end function
+
+function listGetPrev( byval p as any ptr ) as any ptr
+	dim as LISTNODE ptr prv = any
+	prv = listGetNode( p )->prev
+	if( prv ) then
+		function = listGetPtr( prv )
+	end if
+end function
+
+function listAppend( byval l as TLIST ptr ) as any ptr
+	dim as LISTNODE ptr node = any
+
+	node = callocate( l->nodesize )
+	node->next = NULL
+	node->prev = l->tail
+	if( l->tail ) then
+		l->tail->next = node
+	else
+		l->head = node
+	end if
+	l->tail = node
+
+	function = listGetPtr( node )
+end function
+
+sub listDelete( byval l as TLIST ptr, byval p as any ptr )
+	dim as LISTNODE ptr node = any, nxt = any, prv = any
+
+	if( p = NULL ) then exit sub
+	node = listGetNode( p )
+
+	nxt = node->next
+	prv = node->prev
+	if( prv ) then
+		prv->next = nxt
+	else
+		l->head = nxt
+	end if
+	if( nxt ) then
+		nxt->prev = prv
+	else
+		l->tail = prv
+	end if
+
+	deallocate( node )
+end sub
+
+function listCount( byval l as TLIST ptr ) as integer
+	dim as integer count = any
+	dim as LISTNODE ptr node = any
+
+	count = 0
+	node = l->head
+	while( node )
+		count += 1
+		node = node->next
+	wend
+
+	function = count
+end function
+
+sub listInit( byval l as TLIST ptr, byval unit as integer )
+	l->head = NULL
+	l->tail = NULL
+	l->nodesize = sizeof( LISTNODE ) + unit
+end sub
+
+sub listEnd( byval l as TLIST ptr )
+	dim as LISTNODE ptr node = any, nxt = any
+	node = l->head
+	while( node )
+		nxt = node->next
+		deallocate( node )
+		node = nxt
+	wend
+end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 '' Generic hash table (open addressing/closed hashing), based on GCC's libcpp's
@@ -1345,7 +1610,7 @@ function hReadableDirExists( byref path as string ) as integer
 	if( right( fixed, len( PATHDIV ) ) = PATHDIV ) then
 		fixed = left( fixed, len( fixed ) - len( PATHDIV ) )
 	end if
-	function = (dir( fixed, fbDirectory or fbReadOnly ) <> "")
+	function = (dir( fixed, fbDirectory or fbReadOnly or fbHidden ) <> "")
 end function
 
 function hFileExists( byref path as string ) as integer

@@ -1,20 +1,20 @@
-#ifndef __TEST_VERSION__
-	#define __TEST_VERSION__ 1
+#ifndef __VERSION__
+	#define __VERSION__ "1"
 #endif
 
-#if ((__TEST_VERSION__ <> 1) and (__TEST_VERSION__ <> 2)) and (__TEST_VERSION__ <> 3)
-	#error "'__TEST_VERSION__' is #defined to an unsupported value; expected one of: 1, 2, 3"
+#if ((__VERSION__ <> "1") and (__VERSION__ <> "2")) and (__VERSION__ <> "3")
+	#error "'__VERSION__' is #defined to an unsupported value; expected one of: "1", "2", "3""
 #endif
 
 dim shared common_ as long
 
-#if __TEST_VERSION__ = 1
+#if __VERSION__ = "1"
 	dim shared v1 as long
 
 	type UDTv1
 		fieldv1 as long
 	end type
-#elseif __TEST_VERSION__ = 2
+#elseif __VERSION__ = "2"
 	dim shared v2 as long
 
 	type UDTv2
@@ -22,7 +22,7 @@ dim shared common_ as long
 	end type
 #endif
 
-#if (__TEST_VERSION__ = 1) or (__TEST_VERSION__ = 2)
+#if (__VERSION__ = "1") or (__VERSION__ = "2")
 	dim shared v12 as long
 
 	type UDTv12
@@ -46,9 +46,9 @@ type UDTv123
 end type
 
 type UDTv123_
-	#if __TEST_VERSION__ = 1
+	#if __VERSION__ = "1"
 		fieldv1 as long
-	#elseif __TEST_VERSION__ = 2
+	#elseif __VERSION__ = "2"
 		fieldv2 as long
 	#else
 		fieldv3 as long

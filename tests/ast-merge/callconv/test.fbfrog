@@ -1,11 +1,4 @@
-file "a.h"
-
-version 1
-	define A
-endversion
-
-version 2
-	undef A
-endversion
-
-remove define CALLCONV
+a.h
+-removedefine CALLCONV
+-version 1 -define A
+-version 2 -undef A
