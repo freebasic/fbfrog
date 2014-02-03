@@ -1665,7 +1665,7 @@ private function astFoldKnownDefineds _
 	if( n->class = ASTCLASS_UOP ) then
 		if( n->op = ASTOP_DEFINED ) then
 			'' defined() on known symbol?
-			'' (assuming it's the eval.macros hash table from parse-cpp.bas)
+			'' (assuming it's the eval.macros hash table from cpp.bas)
 			assert( n->l->class = ASTCLASS_ID )
 			var id = n->l->text
 			var item = hashLookup( macros, id, hashHash( id ) )

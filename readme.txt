@@ -88,7 +88,6 @@ To do:
   or similar that copies over the location automatically
 - Need some high-level way to combine locations into one, etc. which is currently
   done manually in hParseArgs() at least
-- Use c.bas/cpp.bas
 - Add astFilter() to read in a GROUP and produce a new GROUP filtered by 1 or 2 classes (but cloned children of course)?
 - use CONSTI and CONSTF nodes instead of just CONST, so we don't need typeIsFloat() checks?
 - Remove hShell(), hMkdir[P], hKill...
