@@ -22,6 +22,60 @@ Goal:
   C libraries, most importantly: converting C declarations to FB code.
 
 
+Features:
+
+  * C pre-processor (CPP)
+      * tracks #defines/#undefs and does macro expansion (can be disabled for
+        specified symbol)
+      * preserves #define statements (can be disabled for specified symbol)
+      * expands #includes (always, so it gets to see #defines/#undefs, but the
+        #included code can be removed before it's given to the C parser)
+      * Evaluates #if blocks (always), based on an #if expression parser
+      * Allows for pre-#defines etc. to be specified
+
+  * C parser
+      * Recursive declaration parser that can handle multiple declarations in
+        the same statement, nested declarations, including function pointers
+        returning function pointers etc. Also parses some __attribute__'s, e.g.
+        calling conventions.
+      * Expression parser that's used to parse initializers, enum constant
+        values, #define bodies.
+      * Parses typedefs, structs, unions, enums, including nested
+        structs/unions.
+
+  * FB binding creation
+      * C expressions are converted to FB ones and then simplified to become
+        pretty without changing values.
+      * Array parameters are turned into pointers.
+      * Anonymous structs are given the name of the (first) typedef that uses
+        them, and the typedef is removed.
+      * Redundant typedefs (<typedef struct A A;>) are removed as in FB there
+        are no separate type/tag namespaces. <struct A> or <A> translate to the
+        same thing.
+      * Conflicting identifiers (conflicts with FB keywords, or amongst the
+        symbols declared in the binding, possibly due to FB's case
+        insensitivity) are fixed by appending _ underscores to the less
+        important symbol (e.g. renaming #defines if preferred over renaming
+        procedures). For renamed variables/procedures, ALIAS "<original-name>"
+        will be emitted.
+      * Extern blocks are added around the binding's declarations, for the
+        calling convention that the binding uses most often. Calling conventions
+        and case-preserving ALIASes are only emitted on procedures if they're
+        not covered by the Extern block (happens if a binding's procedures use
+        multiple calling conventions).
+      * Multiple parsing passes (each representing the binding for a certain
+        target system as in win32 or linux etc., or for a certain version of
+        input headers as in library 1.0 and library 2.0, etc.) produce multiple
+        ASTs per input header. These version/target-specific ASTs are merged
+        into one to produce the final binding. Declarations common to all
+        versions/targets are inserted once into the final binding. Other
+        declarations (that exist in some versions only, but not all) are put
+        inside #if blocks (e.g. <#if __MYLIB_VERSION__ = 1>, which allows the
+        binding's user to select the API version by #defining __MYLIB_VERSION__
+        as wanted. Target-specific declarations are put into #if blocks checking
+        FB's target-specific compiler-#defines (e.g. <#ifdef __FB_WIN32__>).
+
+
 Compiling:
 
   fbc *.bas -m fbfrog
@@ -45,17 +99,15 @@ Usage:
             -define __linux__
     $ ./fbfrog foo.h @options.txt
 
-    -version can be used to tell fbfrog about multiple versions of a binding.
-    fbfrog will parse input files registered for each version, do preprocessing
-    with the symbols registered for each version, and combine the resulting
-    declarations into a single binding. fbfrog will try to combine declarations
-    common to all versions, and put other declarations (that exist in some
-    versions only, but not all) inside #if checks such as
-    <#if __MYLIB_VERSION__ = 1>, which allows the binding's user to select the
-    API version by #defining __MYLIB_VERSION__ as wanted.
+  -version can be used to tell fbfrog about multiple versions of a binding.
+  -target is similar and causes fbfrog to parse multiple versions of the
+  binding as they would be used when compiling for the respective systems.
+  -targets can be nested in -versions. fbfrog will parse input files registered
+  for each version/target, do preprocessing with the symbols registered for each
+  version/target, and combine the resulting declarations into a single binding.
+
 
 To do:
-
 - Re-add "unknown construct -> TODO" handling
     + inline functions etc. are likely too hard to translate properly automatically
     + having 99% good result with some declarations commented out is a better user
