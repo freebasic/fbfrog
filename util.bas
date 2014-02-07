@@ -197,11 +197,11 @@ function hConsoleWidth( ) as integer
 	function = w
 end function
 
-'' Prints out a message like this:
-'' filename.bas(123): duplicate definition of 'i'
-''          dim i as integer
-''              ^
-sub hReportLocation _
+'' Prints an error message like this to the console:
+'' filename.bas(123): duplicate definition of 'foobar'
+''          dim foobar as integer
+''              ^~~~~~
+sub hReport _
 	( _
 		byval location as TKLOCATION ptr, _
 		byval message as zstring ptr, _
@@ -263,7 +263,7 @@ sub hReportLocation _
 end sub
 
 sub oopsLocation( byval location as TKLOCATION ptr, byval message as zstring ptr )
-	hReportLocation( location, message )
+	hReport( location, message, TRUE )
 	end 1
 end sub
 

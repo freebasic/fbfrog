@@ -1553,7 +1553,7 @@ private function hEvalIfCondition( byval x as integer ) as integer
 	if( (t->class <> ASTCLASS_CONST) or typeIsFloat( t->dtype ) ) then
 		const MESSAGE = "couldn't evaluate #if condition"
 		if( t->location.file ) then
-			hReportLocation( @t->location, MESSAGE )
+			hReport( @t->location, MESSAGE, TRUE )
 			end 1
 		end if
 		tkOops( x, MESSAGE )

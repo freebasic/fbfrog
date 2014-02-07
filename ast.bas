@@ -770,7 +770,7 @@ sub astReport _
 	)
 
 	if( n->location.file ) then
-		hReportLocation( @n->location, message, more_context )
+		hReport( @n->location, message, more_context )
 	else
 		print *message
 	end if

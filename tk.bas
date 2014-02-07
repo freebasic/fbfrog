@@ -689,7 +689,7 @@ sub tkReport _
 
 	var location = tkGetLocation( x )
 	if( location->file ) then
-		hReportLocation( location, message, more_context )
+		hReport( location, message, more_context )
 	else
 		TRACE( x ), "<= error here"
 		print string( 40, "-" )

@@ -92,11 +92,11 @@ declare function filebufferFromZstring( byval filename as zstring ptr, byval s a
 declare sub oops( byval message as zstring ptr )
 declare function hDumpLocation( byval location as TKLOCATION ptr ) as string
 declare function hConsoleWidth( ) as integer
-declare sub hReportLocation _
+declare sub hReport _
 	( _
 		byval location as TKLOCATION ptr, _
 		byval message as zstring ptr, _
-		byval more_context as integer = TRUE _
+		byval more_context as integer _
 	)
 declare sub oopsLocation( byval location as TKLOCATION ptr, byval message as zstring ptr )
 declare function strDuplicate( byval s as zstring ptr ) as zstring ptr
