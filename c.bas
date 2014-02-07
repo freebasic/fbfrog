@@ -101,51 +101,43 @@ end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-private function hAppendStrLit _
-	( _
-		byval a as ASTNODE ptr, _
-		byval s as ASTNODE ptr _
-	) as ASTNODE ptr
-
-	if( a = NULL ) then
-		function = s
-	else
-		function = astNewBOP( ASTOP_STRCAT, a, s )
-	end if
-
-end function
-
 '' ("..." | #id)*
 private function hStringLiteralSequence( byref x as integer ) as ASTNODE ptr
 	dim as ASTNODE ptr a
 
 	do
+		dim as ASTNODE ptr s
+
 		select case( tkGet( x ) )
 		case TK_STRING
-			var s = astNew( ASTCLASS_STRING, tkGetText( x ) )
+			s = astNew( ASTCLASS_STRING, tkGetText( x ) )
 			astSetType( s, TYPE_ZSTRING, NULL )
-			a = hAppendStrLit( a, s )
-			x += 1
 
 		case TK_WSTRING
-			var s = astNew( ASTCLASS_STRING, tkGetText( x ) )
+			s = astNew( ASTCLASS_STRING, tkGetText( x ) )
 			astSetType( s, TYPE_WSTRING, NULL )
-			a = hAppendStrLit( a, s )
-			x += 1
 
 		'' '#' stringify operator
 		case TK_HASH
+			'' #id?
+			if( tkGet( x + 1 ) <> TK_ID ) then
+				exit do
+			end if
 			x += 1
 
-			'' #id?
-			tkExpect( x, TK_ID, "as operand of '#' PP stringify operator" )
-			var s = astNewUOP( ASTOP_STRINGIFY, astNewID( tkGetText( x ) ) )
-			a = hAppendStrLit( a, s )
-			x += 1
+			s = astNewUOP( ASTOP_STRINGIFY, astNewID( tkGetText( x ) ) )
 
 		case else
 			exit do
 		end select
+
+		if( a = NULL ) then
+			a = s
+		else
+			a = astNewBOP( ASTOP_STRCAT, a, s )
+		end if
+
+		x += 1
 	loop
 
 	function = a
@@ -374,10 +366,7 @@ private function cExpression _
 			a = hNumberLiteral( x )
 			x += 1
 
-		case TK_STRING
-			a = hStringLiteralSequence( x )
-
-		case TK_WSTRING
+		case TK_STRING, TK_WSTRING, TK_HASH
 			a = hStringLiteralSequence( x )
 
 		case TK_CHAR
@@ -433,10 +422,6 @@ private function cExpression _
 				loop while( hMatch( x, TK_HASHHASH ) )
 
 			end select
-
-		'' '#' stringify operator
-		case TK_HASH
-			a = hStringLiteralSequence( x )
 
 		'' Scope block: '{' (Expression ';')* '}'
 		'' Initializer: '{' Expression (',' Expression)* '}'
