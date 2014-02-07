@@ -76,6 +76,50 @@ private function hTurnArgsIntoString( byval argc as integer, byval argv as zstri
 	function = s
 end function
 
+private sub hExpandResponseFileArguments( )
+	'' Expand @file arguments in the tk buffer
+	const MAX_FILES = 1024  '' Arbitrary limit to detect recursion
+	var filecount = 0
+	var x = 0
+	while( tkGet( x ) <> TK_EOF )
+		var arg = tkGetText( x )
+
+		if( (*arg)[0] = asc( "@" ) ) then
+			'' Complain if argument was only '@'
+			if( (*arg)[1] = 0 ) then
+				tkOops( x, "@: missing file name argument" )
+			end if
+
+			'' Cut off the '@' at the front to get just the file name,
+			var filename = *arg
+			filename = right( filename, len( filename ) - 1 )
+
+			if( filecount > MAX_FILES ) then
+				tkOops( x, "suspiciously many @response file expansions, recursion? (limit=" & MAX_FILES & ")" )
+			end if
+
+			'' If the @file argument comes from an @file,
+			'' open it relative to the parent @file's dir.
+			var location = tkGetLocation( x )
+			if( location->file->is_file ) then
+				filename = pathAddDiv( pathOnly( *location->file->name ) ) + filename
+			end if
+
+			'' Load the file content behind the @file token
+			lexLoadArgs( x + 1, filebufferFromFile( filename, location ) )
+			filecount += 1
+
+			'' Remove the @file token
+			tkRemove( x, x )
+
+			'' Re-check this position in case a new @file token was inserted right here
+			x -= 1
+		end if
+
+		x += 1
+	wend
+end sub
+
 enum
 	BODY_TOPLEVEL = 0
 	BODY_VERSION
@@ -510,60 +554,19 @@ end function
 	filebufferInit( )
 	fbkeywordsInit( )
 
-	scope
-		tkInit( )
+	tkInit( )
 
-		'' Load all command line arguments into the tk buffer
-		lexLoadArgs( 0, filebufferFromZstring( "<command line>", _
-				hTurnArgsIntoString( __FB_ARGC__, __FB_ARGV__ ) ) )
+	'' Load all command line arguments into the tk buffer
+	lexLoadArgs( 0, filebufferFromZstring( "<command line>", _
+			hTurnArgsIntoString( __FB_ARGC__, __FB_ARGV__ ) ) )
 
-		'' Expand @file arguments in the tk buffer
-		const MAX_FILES = 1024  '' Arbitrary limit to detect recursion
-		var filecount = 0
-		var x = 0
-		while( tkGet( x ) <> TK_EOF )
-			var arg = tkGetText( x )
+	'' Load content of @files too
+	hExpandResponseFileArguments( )
 
-			if( (*arg)[0] = asc( "@" ) ) then
-				'' Complain if argument was only '@'
-				if( (*arg)[1] = 0 ) then
-					tkOops( x, "@: missing file name argument" )
-				end if
+	'' Parse the command line arguments
+	frog.code = hParseArgs( 0, BODY_TOPLEVEL )
 
-				'' Cut off the '@' at the front to get just the file name,
-				var filename = *arg
-				filename = right( filename, len( filename ) - 1 )
-
-				if( filecount > MAX_FILES ) then
-					tkOops( x, "suspiciously many @response file expansions, recursion? (limit=" & MAX_FILES & ")" )
-				end if
-
-				'' If the @file argument comes from an @file,
-				'' open it relative to the parent @file's dir.
-				var location = tkGetLocation( x )
-				if( location->file->is_file ) then
-					filename = pathAddDiv( pathOnly( *location->file->name ) ) + filename
-				end if
-
-				'' Load the file content behind the @file token
-				lexLoadArgs( x + 1, filebufferFromFile( filename, location ) )
-				filecount += 1
-
-				'' Remove the @file token
-				tkRemove( x, x )
-
-				'' Re-check this position in case a new @file token was inserted right here
-				x -= 1
-			end if
-
-			x += 1
-		wend
-
-		'' Parse
-		frog.code = hParseArgs( 0, BODY_TOPLEVEL )
-
-		tkEnd( )
-	end scope
+	tkEnd( )
 
 	var versions = astCollectVersions( frog.code )
 	var targets = astCollectTargets( frog.code )
