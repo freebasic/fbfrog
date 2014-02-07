@@ -72,16 +72,24 @@ Split fbfrog into separate tools: cpp, c2ast, ast2fb
 Preserving white space (i.e. input C code's formatting) and commentary
 - Creating bindings, not translations. Declarations may be re-ordered.
 
-Should stop when encountering unknown constructs instead of recovering and
-emitting the unknown construct into a comment in the .bi output, together with
-a TODO note.
-- Producing almost complete .bi output is better than none, can fix rest manually
-- Need to support full C before having the problem go away, lots of work
+Should show an error when encountering unknown constructs instead of emitting
+the unknown construct and a TODO note into a comment in the .bi output.
 + Forces C parsing support to be improved. Any construct can be parsed, it just
   needs to be implemented.
-+ Fixing unknown constructs manually is nice for one-time translation, but
-  usually headers need updating/retranslation repeatedly; then the whole process
-  should be automated.
+- Need to support full GCC style C before having the problem go away, that's a
+  lot of work. For example inline functions etc. are likely too hard to
+  translate properly automatically.
++ C parser is already good enough, unknown constructs are rare in comparison to
+  known ones.
+- Some constructs (e.g. #defines whose bodies aren't just expressions) cannot be
+  supported automatically, they always must be fixed up by the user.
+- Having a 90% ok result is better than no result at all. Remaining issues can
+  be fixed manually.
++ User must specify proper command line options to fix/work around unknown
+  constructs. This means the fixup becomes part of the preset and can easily be
+  shared/repeated. Manually fixing unknown construct in the output .bi is not
+  acceptable: The user must search through all output .bi files, fix up the
+  constructs, and that every time the header is regenerated.
 
 fbfrog should not worry about where input files come from (downloading and
 extracting tarballs etc.). Headers may need all kinds of shell commands to be

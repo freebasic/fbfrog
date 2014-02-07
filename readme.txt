@@ -108,33 +108,6 @@ Usage:
 
 
 To do:
-- Re-add "unknown construct -> TODO" handling
-    + inline functions etc. are likely too hard to translate properly automatically
-    + having 99% good result with some declarations commented out is a better user
-      experience than no result at all
-    * Example:
-         FOO void f(void);
-      Produces:
-         '' TODO: fbfrog: foo.h(123): unknown construct; declaration parser expected identifier but found "void"
-         'FOO void f(void);
-         ''   ^~~~
-
-	* need ASTCLASS_UNKNOWN which holds the series of tokens for that construct
-	  so that it can be written into the output file
-	    + they're at the same position they would be if translation would have worked
-	    + they automatically benefit from version-specific handling/AST version merging
-	    + much better to put them in-line than to report them on stdout
-	* C parser needs to do trial and error parsing again
-	   * set context (struct/union/enum, typedef, declaration, expression)
-	   * we can decide very early & easily which context of these it is
-	   * remember 1st token position (begin of construct)
-	   * if doesn't match any construct, or parsing of selected construct fails,
-	     go back to 1st token and try to find end of construct, and turn that into UNKNOWN node.
-	   * all parsing functions need to return TRUE/FALSE
-	   * token locations become unnecessary? only needed for error reports, but if we keep
-	     the tokens as seen by the C parser in the UNKNOWNs, then that's even better than
-	     the original location. It's not necessary useful to report the original source location (filename/linenum)
-	     although that would be nice too.
 
 - Need some way to easily pass tk locations on to AST nodes, perhaps astNewFromTK()
   or similar that copies over the location automatically
@@ -144,6 +117,9 @@ To do:
 - use CONSTI and CONSTF nodes instead of just CONST, so we don't need typeIsFloat() checks?
 - Remove hShell(), hMkdir[P], hKill...
 - Try using ASTNODEs instead of DIRNODE/DIRQUEUE
+- Since the C parser no longer modifies the tk buffer, could it be turned into
+  an array? No, currently it still temporarily re-inserts macro bodies, but is
+  that really needed?
 - Remove all remaining cases of tkInsert() without corresponding tkSetLocation(),
   e.g. ## token merging, so tkReport() can be simplified. (although, tkToCText()
   etc. would still be useful for showing macro expansion stack history)
@@ -151,6 +127,9 @@ To do:
   piece of code, from what the parser saw to the main location where it all came
   from.
 
+- report "(N declarations and M errors)" for each emitted file
+- astMakeProcsDefaultToCdecl() should be unnecessary, it should be done by the
+  C parser already
 - Consider adding symbol tables separate from the AST, so e.g. all UDT dtypes
   would reference the same subtype symbol instead of allocating an id everytime.
     - define/const/proc/var ids aren't re-used much, but type ids are. Perhaps
