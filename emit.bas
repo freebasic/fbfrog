@@ -113,63 +113,47 @@ function emitType _
 end function
 
 namespace emit
-	dim shared as integer indent, fo
+	dim shared as integer indent, fo, comment
 end namespace
 
-private sub emitEmptyLine( )
-	print #emit.fo, ""
-end sub
-
-private sub emitIndentedLine( byref ln as string )
-	assert( len( ln ) > 0 )
-
+private sub emitLine( byref ln as string )
 	dim s as string
 
-	for i as integer = 1 to emit.indent
-		s += !"\t"
-	next
+	'' Only add indentation if the line will contain more than that
+	if( (len( ln ) > 0) or (emit.comment > 0) ) then
+		for i as integer = 1 to emit.indent
+			s += !"\t"
+		next
+	end if
+
+	if( emit.comment > 0 ) then
+		s += "'' "
+		'' Prepend a space if none is there yet
+		if( left( ln, 1 ) <> " " ) then
+			s += " "
+		end if
+	end if
 
 	s += ln
 	print #emit.fo, s
 end sub
 
-private function hPrependSpace( byref comment as string ) as string
-	var s = comment
-
-	'' Prepend a space if none is there yet
-	if( left( s, 1 ) <> " " ) then
-		s = " " + s
-	end if
-
-	function = s
-end function
-
-private sub emitLineComment( byref comment as string )
-	emitIndentedLine( "''" + hPrependSpace( comment ) )
-end sub
-
-private sub hFlushLineComment( byref ln as string )
-	if( len( ln ) > 0 ) then
-		emitLineComment( ln )
-		ln = ""
-	end if
-end sub
-
-'' The comment text may contain newlines, but we need to emit every line
-'' individually to be able to prepend it with the ' and indentation.
-private sub emitLineComments( byval comment as zstring ptr )
+'' Given text that contains newlines, emit every line individually and prepend
+'' indentation and/or <'' > if it's a comment.
+private sub emitLines( byval lines as zstring ptr )
 	dim ln as string
-	for i as integer = 0 to len( *comment )-1
-		select case( (*comment)[i] )
+	for i as integer = 0 to len( *lines )-1
+		select case( (*lines)[i] )
 		case CH_LF, CH_CR
 			'' Flush previous line, ignore this newline, and then
 			'' continue with next line
-			hFlushLineComment( ln )
+			emitLine( ln )
+			ln = ""
 		case else
-			ln += chr( (*comment)[i] )
+			ln += chr( (*lines)[i] )
 		end select
 	next
-	hFlushLineComment( ln )
+	emitLine( ln )
 end sub
 
 private function hIsMultiLineComment( byval comment as zstring ptr ) as integer
@@ -183,17 +167,29 @@ private function hIsMultiLineComment( byval comment as zstring ptr ) as integer
 	function = FALSE
 end function
 
-private sub emitStmt( byref s as string, byval comment as zstring ptr )
-	assert( len( s ) > 0 )
+private sub emitStmt( byref stmt as string, byval comment as zstring ptr )
+	assert( len( stmt ) > 0 )
 	if( comment ) then
 		if( hIsMultiLineComment( comment ) ) then
-			emitLineComments( comment )
-			emitIndentedLine( s )
+			'' Emit multi-line comment above the statement
+			emit.comment += 1
+			emitLines( comment )
+			emit.comment -= 1
+			emitLine( stmt )
 		else
-			emitIndentedLine( s + "  ''" + hPrependSpace( *comment ) )
+			'' Emit single-line comment behind the statement (not below)
+			var s = stmt
+			s += "  ''"
+
+			'' Prepend a space if none is there yet
+			if( left( stmt, 1 ) <> " " ) then
+				s += " "
+			end if
+
+			emitLine( s )
 		end if
 	else
-		emitIndentedLine( s )
+		emitLine( stmt )
 	end if
 end sub
 
@@ -304,18 +300,22 @@ function emitAst _
 		    ((n->next <> NULL) or _
 		     (n->comment <> NULL) or _
 		     (n->text <> NULL)) ) then
-			emitEmptyLine( )
+			emitLine( "" )
 		end if
 
 		if( n->comment ) then
-			emitLineComments( n->comment )
+			emit.comment += 1
+			emitLines( n->comment )
+			emit.comment -= 1
 			if( n->next ) then
-				emitEmptyLine( )
+				emitLine( "" )
 			end if
 		end if
 
 		if( n->text ) then
-			emitLineComments( n->text )
+			emit.comment += 1
+			emitLines( n->text )
+			emit.comment -= 1
 		end if
 
 	case ASTCLASS_SCOPEBLOCK
