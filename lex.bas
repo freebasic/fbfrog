@@ -31,8 +31,7 @@ end sub
 
 private sub lexOops( byref message as string )
 	hResetColumn( )
-	hReportLocation( @lex.location, message )
-	end 1
+	oopsLocation( @lex.location, message )
 end sub
 
 private sub hSetLocation( )
