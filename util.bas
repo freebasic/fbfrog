@@ -250,20 +250,16 @@ sub hReportLocation _
 	maxwidth -= 4
 
 	for i as integer = min to max
-		dim s as string
 		dim offset as integer
-
-		s = lexPeekLine( location->file, location->linenum + i )
-
-		hCalcErrorLine( location->column, maxwidth, s, offset )
-
-		print "    " + linenums(i) + s
-
+		var sourceline = lexPeekLine( location->file, location->linenum + i )
+		hCalcErrorLine( location->column, maxwidth, sourceline, offset )
+		print "    " + linenums(i) + sourceline
 		if( i = 0 ) then
-			print space( 4 + len( linenums(i) ) + offset ) + "^" + string( location->length - 1, "~" )
+			'' ^~~~ error marker
+			print space( 4 + len( linenums(i) ) + offset ) + _
+			      "^" + string( location->length - 1, "~" )
 		end if
 	next
-
 end sub
 
 sub oopsLocation( byval location as TKLOCATION ptr, byval message as zstring ptr )
