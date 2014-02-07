@@ -709,9 +709,7 @@ private function cStructCompound( byref x as integer ) as ASTNODE ptr
 			BODY_ENUM, BODY_STRUCT ) ) )
 
 	'' '}'
-	tkExpect( x, TK_RBRACE, iif( astclass = ASTCLASS_ENUM, _
-			@"to close enum block", _
-			@"to close struct block" ) )
+	tkExpect( x, TK_RBRACE, "to close " + astDumpPrettyDecl( struct ) + " block" )
 	x += 1
 
 	if( is_typedef ) then
@@ -725,9 +723,7 @@ private function cStructCompound( byref x as integer ) as ASTNODE ptr
 		function = group
 	else
 		'' ';'
-		tkExpect( x, TK_SEMI, iif( astclass = ASTCLASS_ENUM, _
-				@"to finish enum block declaration", _
-				@"to finish struct block declaration" ) )
+		tkExpect( x, TK_SEMI, "to finish " + astDumpPrettyDecl( struct ) + " block declaration" )
 		x += 1
 		function = struct
 	end if
