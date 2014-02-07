@@ -1613,44 +1613,10 @@ function hFileExists( byref path as string ) as integer
 	function = (dir( path, fbNormal ) <> "")
 end function
 
-type DIRNODE
-	next		as DIRNODE ptr
-	path		as string
-end type
-
-type DIRQUEUE
-	head		as DIRNODE ptr
-	tail		as DIRNODE ptr
-end type
-
-dim shared as DIRQUEUE dirs
+dim shared as ASTNODE ptr dirs
 
 private sub dirsAppend( byref path as string )
-	dim as DIRNODE ptr node = any
-
-	node = callocate( sizeof( DIRNODE ) )
-	node->path = pathAddDiv( path )
-
-	if( dirs.tail ) then
-		dirs.tail->next = node
-	end if
-	dirs.tail = node
-	if( dirs.head = NULL ) then
-		dirs.head = node
-	end if
-end sub
-
-private sub dirsDropHead( )
-	dim as DIRNODE ptr node = any
-	if( dirs.head ) then
-		node = dirs.head
-		dirs.head = node->next
-		if( dirs.head = NULL ) then
-			dirs.tail = NULL
-		end if
-		node->path = ""
-		deallocate( node )
-	end if
+	astAppend( dirs, astNewTEXT( pathAddDiv( path ) ) )
 end sub
 
 private function hScanParent _
@@ -1664,6 +1630,7 @@ private function hScanParent _
 	'' Scan for *.h files
 	var found = dir( parent + filepattern, fbNormal )
 	while( len( found ) > 0 )
+
 		'' Add the file name to the result list
 		astAppend( files, astNewTEXT( parent + found ) )
 
@@ -1673,6 +1640,7 @@ private function hScanParent _
 	'' Scan for subdirectories
 	found = dir( parent + "*", fbDirectory or fbReadOnly )
 	while( len( found ) > 0 )
+
 		select case( found )
 		case ".", ".."
 			'' Ignore these special subdirectories
@@ -1695,19 +1663,24 @@ function hScanDirectory _
 	) as ASTNODE ptr
 
 	var files = astNewGROUP( )
+	dirs = astNewGROUP( )
 
 	dirsAppend( rootdir )
 
 	if( frog.verbose ) then
-		print "scanning tree for " + filepattern + " files: '" + dirs.head->path + "'"
+		print "scanning tree for " + filepattern + " files: '" + *dirs->head->text + "'"
 	end if
 
 	'' Work off the queue -- each subdir scan can append new subdirs
-	while( dirs.head )
-		astAppend( files, hScanParent( dirs.head->path, filepattern ) )
-		dirsDropHead( )
+	while( dirs->head )
+		astAppend( files, hScanParent( *dirs->head->text, filepattern ) )
+		astRemove( dirs, dirs->head )
 	wend
 
+	astDelete( dirs )
+	dirs = NULL
+
+	astDump( files )
 	function = files
 end function
 

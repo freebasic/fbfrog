@@ -116,7 +116,6 @@ To do:
 - Add astFilter() to read in a GROUP and produce a new GROUP filtered by 1 or 2 classes (but cloned children of course)?
 - use CONSTI and CONSTF nodes instead of just CONST, so we don't need typeIsFloat() checks?
 - Remove hShell(), hMkdir[P], hKill...
-- Try using ASTNODEs instead of DIRNODE/DIRQUEUE
 - Since the C parser no longer modifies the tk buffer, could it be turned into
   an array? No, currently it still temporarily re-inserts macro bodies, but is
   that really needed?
