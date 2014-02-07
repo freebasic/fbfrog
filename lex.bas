@@ -477,15 +477,15 @@ private sub hReadString( )
 		end if
 	loop
 
+	if( saw_end ) then
+		lex.i += 1
+	end if
+
 	'' null-terminator
 	lex.text[j] = 0
 
 	tkInsert( lex.x, id, lex.text )
 	hSetLocation( )
-
-	if( saw_end ) then
-		lex.i += 1
-	end if
 end sub
 
 private sub lexNext( )
