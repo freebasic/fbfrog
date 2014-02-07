@@ -473,7 +473,7 @@ declare sub tkReport _
 	( _
 		byval x as integer, _
 		byval message as zstring ptr, _
-		byval more_context as integer = TRUE _
+		byval more_context as integer _
 	)
 declare sub tkOops( byval x as integer, byval message as zstring ptr )
 declare sub tkOopsExpected _

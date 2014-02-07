@@ -676,8 +676,88 @@ private function hMakePrettyCTokenText _
 	case TK_ID               : function = *text
 	case KW__C_FIRST to KW__C_LAST
 		function = *tk_info(id).text
+	case else
+		function = tkDumpBasic( id, text )
 	end select
 
+end function
+
+private function hMakePrettyCTokenTextForIndex( byval x as integer ) as string
+	var t = tkGetAst( x )
+	if( t ) then
+		function = astDumpInline( t )
+	else
+		function = hMakePrettyCTokenText( tkGet( x ), tkGetText( x ) )
+	end if
+end function
+
+private function tkToCText _
+	( _
+		byval first as integer, _
+		byval last as integer, _
+		byval x as integer, _
+		byref xcolumn as integer, _
+		byref xlength as integer _
+	) as string
+
+	dim as string s
+
+	for i as integer = first to last
+		if( tkGet( i ) = TK_EOF ) then
+			continue for
+		end if
+
+		if( len( s ) > 0 ) then
+			s += " "
+		end if
+
+		if( i = x ) then
+			xcolumn = len( s )
+		end if
+		s += hMakePrettyCTokenTextForIndex( i )
+		if( i = x ) then
+			xlength = len( s ) - xcolumn
+		end if
+	next
+
+	function = s
+end function
+
+private function hFindConstructEnd( byval x as integer ) as integer
+	do
+		select case( tkGet( x ) )
+		case TK_EOF, _
+		     TK_SEMI, _  '' ';'
+		     TK_END, _   '' end of inserted #define bodies
+		     TK_DIVIDER, _  '' known dividing whitespace
+		     TK_PPINCLUDE, TK_PPDEFINE, TK_PPUNDEF, _  '' PP directives
+		     TK_PPIF, TK_PPELSEIF, TK_PPELSE, TK_PPENDIF, _
+		     TK_PPERROR, TK_PPWARNING
+			exit do
+		case TK_LPAREN, TK_LBRACKET, TK_LBRACE
+			x = hFindClosingParen( x )
+		case else
+			x += 1
+		end select
+	loop
+	function = x
+end function
+
+private function hFindConstructBegin( byval x as integer ) as integer
+	'' Start at BOF and find the construct that contains x (easier than
+	'' parsing backwards!?)
+	var y = 0
+
+	do
+		var begin = y
+
+		y = hFindConstructEnd( y )
+		if( (begin <= x) and (x <= y) ) then
+			return begin
+		end if
+
+		y += 1
+	loop
 end function
 
 sub tkReport _
@@ -687,26 +767,30 @@ sub tkReport _
 		byval more_context as integer _
 	)
 
+	if( x >= tkGetCount( ) ) then
+		x = tkGetCount( )-1
+	end if
+
 	var location = tkGetLocation( x )
 	if( location->file ) then
 		hReport( location, message, more_context )
 	else
-		TRACE( x ), "<= error here"
-		print string( 40, "-" )
-		const CONTEXT = 10
-		for i as integer = x - CONTEXT to x + CONTEXT
-			if( (i >= 0) and (i < tk.size) ) then
-				print tkDumpOne( i )
-			end if
-		next
-		print string( 40, "-" )
 		print *message
+
+		var first = hFindConstructBegin( x )
+		var last = hFindConstructEnd( x )
+
+		var xcolumn = -1, xlength = 0
+		print "    " + tkToCText( first, last, x, xcolumn, xlength )
+		if( xcolumn >= 0 ) then
+			print string( 4 + xcolumn, " " ) + "^" + string( xlength - 1, "~" )
+		end if
 	end if
 
 end sub
 
 sub tkOops( byval x as integer, byval message as zstring ptr )
-	tkReport( x, message )
+	tkReport( x, message, TRUE )
 	end 1
 end sub
 

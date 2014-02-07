@@ -1915,7 +1915,7 @@ sub cppMain _
 			if( skiplevel <> MAXPPSTACK ) then
 				hRemoveTokenAndTkBeginEnd( x )
 			else
-				tkReport( x, tkGetText( x ) )
+				tkReport( x, tkGetText( x ), TRUE )
 			end if
 
 		case TK_ID

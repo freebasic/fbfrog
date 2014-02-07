@@ -92,6 +92,12 @@ To do:
 - use CONSTI and CONSTF nodes instead of just CONST, so we don't need typeIsFloat() checks?
 - Remove hShell(), hMkdir[P], hKill...
 - Try using ASTNODEs instead of DIRNODE/DIRQUEUE
+- Remove all remaining cases of tkInsert() without corresponding tkSetLocation(),
+  e.g. ## token merging, so tkReport() can be simplified. (although, tkToCText()
+  etc. would still be useful for showing macro expansion stack history)
+- Error messages should show the macro expansion steps that happened in a given
+  piece of code, from what the parser saw to the main location where it all came
+  from.
 
 - Consider adding symbol tables separate from the AST, so e.g. all UDT dtypes
   would reference the same subtype symbol instead of allocating an id everytime.
@@ -124,11 +130,6 @@ To do:
 	Type Foo As Long (and make enum anonymous)
 	Enum Foo As Long (must be added to FB first)
 - Support bitfields?
-- Macro expansion should preserve token locations, perhaps even a stack of
-  locations in case of nested macros. It'd be nice if the tkOops() functions
-  could show the context of a token that caused an error as it appears in the
-  tk buffer, and then where the token came from... an even better, show the line
-  of code in each state from current (as seen by the parser) to original.
 - when seeing #error, report "found an #error" instead of the #error's message,
   otherwise it looks like that message is coming from fbfrog
 - Comments given to a TK_ID that is a macro call and will be expanded should
