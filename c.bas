@@ -19,6 +19,12 @@ enum
 	DECL__COUNT
 end enum
 
+declare function cExpression _
+	( _
+		byref x as integer, _
+		byval level as integer, _
+		byval macro as ASTNODE ptr _
+	) as ASTNODE ptr
 declare function cIdList _
 	( _
 		byref x as integer, _
@@ -240,6 +246,68 @@ private function hDataTypeInParens _
 	x += 1
 end function
 
+'' Scope block: '{' (Expression ';')* '}'
+'' Initializer: '{' Expression (',' Expression)* '}'
+private function hScopeBlockOrInitializer _
+	( _
+		byref x as integer, _
+		byval macro as ASTNODE ptr _
+	) as ASTNODE ptr
+
+	var a = astNewGROUP( )
+	x += 1
+
+	'' '}'?
+	while( tkGet( x ) <> TK_RBRACE )
+		astAppend( a, cExpression( x, 0, macro ) )
+
+		select case( a->class )
+		case ASTCLASS_STRUCTINIT
+			'' '}'?
+			if( tkGet( x ) = TK_RBRACE ) then exit while
+
+			'' ','?
+			tkExpect( x, TK_COMMA, "(expression separator in struct initializer)" )
+			x += 1
+
+		case ASTCLASS_SCOPEBLOCK
+			'' ';'?
+			tkExpect( x, TK_SEMI, "(end of statement in scope block)" )
+			x += 1
+
+		case else
+			'' ',' -> it's a struct initializer
+			'' ';' -> it's a scope block
+			'' '}' -> end
+			select case( tkGet( x ) )
+			case TK_COMMA
+				a->class = ASTCLASS_STRUCTINIT
+				x += 1
+			case TK_SEMI
+				a->class = ASTCLASS_SCOPEBLOCK
+				x += 1
+			case TK_RBRACE
+				a->class = ASTCLASS_STRUCTINIT
+			case else
+				tkOopsExpected( x, "',' (expression separator in struct initializer), or ';' (end of statement in scope block), or '}' (end of block)" )
+			end select
+		end select
+	wend
+
+	'' If no ',' or ';' was found and we don't know whether it's a struct
+	'' initializer or a scope block, make an assumption...
+	if( a->class = ASTCLASS_GROUP ) then
+		a->class = ASTCLASS_STRUCTINIT
+	end if
+
+	tkExpect( x, TK_RBRACE, iif( a->class = ASTCLASS_STRUCTINIT, _
+		@"to close struct initializer", _
+		@"to close scope block" ) )
+	x += 1
+
+	function = a
+end function
+
 '' C expression parser based on precedence climbing
 private function cExpression _
 	( _
@@ -373,47 +441,7 @@ private function cExpression _
 		'' Scope block: '{' (Expression ';')* '}'
 		'' Initializer: '{' Expression (',' Expression)* '}'
 		case TK_LBRACE
-			a = astNewGROUP( )
-			x += 1
-
-			while( tkGet( x ) <> TK_RBRACE )
-				astAppend( a, cExpression( x, 0, macro ) )
-
-				select case( a->class )
-				case ASTCLASS_STRUCTINIT
-					if( tkGet( x ) = TK_RBRACE ) then exit while
-
-					tkExpect( x, TK_COMMA, "(expression separator in struct initializer)" )
-					x += 1
-
-				case ASTCLASS_SCOPEBLOCK
-					tkExpect( x, TK_SEMI, "(end of statement in scope block)" )
-					x += 1
-
-				case else
-					select case( tkGet( x ) )
-					case TK_SEMI
-						a->class = ASTCLASS_SCOPEBLOCK
-						x += 1
-					case TK_COMMA
-						a->class = ASTCLASS_STRUCTINIT
-						x += 1
-					case TK_RBRACE
-						a->class = ASTCLASS_STRUCTINIT
-					case else
-						tkOopsExpected( x, "',' (expression separator in struct initializer), or ';' (end of statement in scope block), or '}' (end of block)" )
-					end select
-				end select
-			wend
-
-			if( a->class = ASTCLASS_GROUP ) then
-				a->class = ASTCLASS_STRUCTINIT
-			end if
-
-			tkExpect( x, TK_RBRACE, iif( a->class = ASTCLASS_STRUCTINIT, _
-				@"to close struct initializer", _
-				@"to close scope block" ) )
-			x += 1
+			a = hScopeBlockOrInitializer( x, macro )
 
 		'' SIZEOF Expression
 		'' SIZEOF '(' DataType ')'
