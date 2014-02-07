@@ -461,7 +461,6 @@ declare function tkSkipCommentEol _
 		byval x as integer, _
 		byval delta as integer = 1 _
 	) as integer
-declare function tkToCText( byval id as integer, byval text as zstring ptr ) as string
 declare function tkCollectComments _
 	( _
 		byval first as integer, _
