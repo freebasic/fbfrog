@@ -189,6 +189,14 @@ private sub hCalcErrorLine _
 
 end sub
 
+function hConsoleWidth( ) as integer
+	dim as integer w = loword( width( ) ) - 1
+	if( w < 0 ) then
+		w = 0
+	end if
+	function = w
+end function
+
 '' Prints out a message like this:
 '' filename.bas(123): duplicate definition of 'i'
 ''          dim i as integer
@@ -206,13 +214,6 @@ sub hReportLocation _
 
 	print *location->file->name + "(" & (location->linenum + 1) & "): " + *message
 
-	'' Determine how many chars can be printed for the error line:
-	'' Normally we can fill a line in the console, so get the console width.
-	dim as integer limit = loword( width( ) ) - 1
-	if( limit < 0 ) then
-		limit = 0
-	end if
-
 	'' Show the error line and maybe some extra lines above and below it,
 	'' for more context, with line numbers prefixed to them:
 	''    9:        do
@@ -221,9 +222,7 @@ sub hReportLocation _
 	''   11:            i = 123
 	''   12:            print i
 	dim as string linenums(-2 to 2)
-
 	dim as integer min, max
-
 	if( more_context ) then
 		min = location->linenum + lbound( linenums )
 		if( min < 0 ) then min = 0
@@ -236,7 +235,6 @@ sub hReportLocation _
 		min = 0
 		max = 0
 	end if
-
 	for i as integer = min to max
 		linenums(i) = str( location->linenum + i + 1 )
 		if( len( linenums(i) ) < len( str( location->linenum + 1 ) ) ) then
@@ -245,9 +243,11 @@ sub hReportLocation _
 		linenums(i) += ": "
 	next
 
-	'' Indentation and line numbers reduce the available width for the error line
-	limit -= len( linenums(0) )
-	limit -= 4
+	var maxwidth = hConsoleWidth( )
+
+	'' Indentation and line numbers reduce the width available for the error line
+	maxwidth -= len( linenums(0) )
+	maxwidth -= 4
 
 	for i as integer = min to max
 		dim s as string
@@ -255,7 +255,7 @@ sub hReportLocation _
 
 		s = lexPeekLine( location->file, location->linenum + i )
 
-		hCalcErrorLine( location->column, limit, s, offset )
+		hCalcErrorLine( location->column, maxwidth, s, offset )
 
 		print "    " + linenums(i) + s
 

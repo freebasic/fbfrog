@@ -91,6 +91,7 @@ declare function filebufferFromFile( byval filename as zstring ptr, byval srcloc
 declare function filebufferFromZstring( byval filename as zstring ptr, byval s as zstring ptr ) as FILEBUFFER ptr
 declare sub oops( byval message as zstring ptr )
 declare function hDumpLocation( byval location as TKLOCATION ptr ) as string
+declare function hConsoleWidth( ) as integer
 declare sub hReportLocation _
 	( _
 		byval location as TKLOCATION ptr, _
