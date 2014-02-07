@@ -147,31 +147,29 @@ private function hIdentifierIsMacroParam _
 		byval macro as ASTNODE ptr, _
 		byval id as zstring ptr _
 	) as integer
-
 	if( macro ) then
 		function = (astLookupMacroParam( macro, id ) >= 0)
 	else
 		function = FALSE
 	end if
-
 end function
 
 ''
-'' Trying to disambiguate between DataType and Expression,
-'' even without being a full C compiler, and even without seeing
-'' the whole C source (system #includes etc), good guesses can be made.
+'' Trying to disambiguate between DataType and Expression: Even without being a
+'' full C compiler, and even without seeing the whole C source (system #includes
+'' etc), good guesses can be made.
 ''
-'' If it starts with a data type keyword, and isn't inside a macro where
-'' that's a macro parameter, then it must be a data type, because it couldn't
-'' appear in an expression.
+'' If it starts with a data type keyword, and isn't inside a macro where that's
+'' a macro parameter, then it must be a data type, because it couldn't appear in
+'' an expression.
 ''
 '' Of course that's an unsafe assumption because any identifier could have been
-'' re-#defined to something different than what fbfrog assumes, in #include files
-'' that fbfrog doesn't even parse, etc... but for common typedefs such as size_t
-'' that shouldn't be a problem in practice.
+'' re-#defined to something different than what fbfrog assumes, in #include
+'' files that fbfrog doesn't even parse, etc... but for common typedefs such as
+'' size_t that shouldn't be a problem in practice.
 ''
-'' If there's just an identifier then it could be a typedef but we can't be sure.
-'' Finding out whether it is a typedef would require checking all previous
+'' If there's just an identifier then it could be a typedef but we can't be
+'' sure. Finding out whether it is a typedef would require checking all previous
 '' declarations in this file and in #includes, that's not possible currently
 '' because #includes aren't always merged in.
 ''
@@ -620,17 +618,17 @@ end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-'' Identifier ['=' Expression] (',' | '}')
+'' Enum constant: Identifier ['=' Expression] (',' | '}')
 private function cEnumConst( byref x as integer ) as ASTNODE ptr
 	'' Identifier
 	tkExpect( x, TK_ID, "for an enum constant" )
-	var n = astNew( ASTCLASS_ENUMCONST, tkGetText( x ) )
+	var t = astNew( ASTCLASS_ENUMCONST, tkGetText( x ) )
 	x += 1
 
 	'' '='?
 	if( hMatch( x, TK_EQ ) ) then
 		'' Expression
-		n->expr = cExpression( x, 0, NULL )
+		t->expr = cExpression( x, 0, NULL )
 	end if
 
 	'' (',' | '}')
@@ -644,18 +642,11 @@ private function cEnumConst( byref x as integer ) as ASTNODE ptr
 		tkOopsExpected( x, "',' or '}' behind enum constant" )
 	end select
 
-	function = n
+	function = t
 end function
 
-'' Typedefs
-''    TYPEDEF MultDecl
-private function cTypedef( byref x as integer ) as ASTNODE ptr
-	'' TYPEDEF?
-	var comment = tkCollectComments( x, x )
-	tkExpect( x, KW_TYPEDEF, "for typedef declaration" )
-	x += 1
-
-	function = cMultDecl( x, DECL_TYPEDEF, 0, comment )
+private function cFieldDecl( byref x as integer ) as ASTNODE ptr
+	function = cMultDecl( x, DECL_FIELD, 0, "" )
 end function
 
 '' Structs/Unions, Enums
@@ -675,10 +666,9 @@ private function cStructCompound( byref x as integer ) as ASTNODE ptr
 		astclass = ASTCLASS_UNION
 	case KW_ENUM
 		astclass = ASTCLASS_ENUM
-	case KW_STRUCT
-		astclass = ASTCLASS_STRUCT
 	case else
-		tkOopsExpected( x, "STRUCT|UNION|ENUM at beginning of struct/union/enum block" )
+		assert( tkGet( x ) = KW_STRUCT )
+		astclass = ASTCLASS_STRUCT
 	end select
 	x += 1
 
@@ -696,9 +686,7 @@ private function cStructCompound( byref x as integer ) as ASTNODE ptr
 	end if
 
 	'' '{'
-	tkExpect( x, TK_LBRACE, iif( astclass = ASTCLASS_ENUM, _
-			@"to open enum block", _
-			@"to open struct block" ) )
+	assert( tkGet( x ) = TK_LBRACE )
 	x += 1
 
 	var struct = astNew( astclass, id )
@@ -727,6 +715,95 @@ private function cStructCompound( byref x as integer ) as ASTNODE ptr
 		x += 1
 		function = struct
 	end if
+end function
+
+private function cForwardStruct( byref x as integer ) as ASTNODE ptr
+	var astclass = ASTCLASS_STRUCTFWD
+	select case( tkGet( x ) )
+	case KW_UNION : astclass = ASTCLASS_UNIONFWD
+	case KW_ENUM  : astclass = ASTCLASS_ENUMFWD
+	case else     : assert( tkGet( x ) = KW_STRUCT )
+	end select
+
+	var t = astNew( astclass, tkGetText( x + 1 ) )
+	x += 3
+	function = t
+end function
+
+private function cTypedef( byref x as integer ) as ASTNODE ptr
+	'' TYPEDEF
+	var comment = tkCollectComments( x, x )
+	x += 1
+
+	function = cMultDecl( x, DECL_TYPEDEF, 0, comment )
+end function
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+private function cDefine( byref x as integer ) as ASTNODE ptr
+	var t = tkGetAst( x )
+
+	'' Did the PP mark this #define for removal? Then just
+	'' skip it instead of parsing it into an AST...
+	if( t->attrib and ASTATTRIB_REMOVE ) then
+		x += 1
+		return astNewNOP( )
+	end if
+
+	t = astClone( t )
+	astAddComment( t, tkCollectComments( x, x ) )
+	x += 1
+
+	'' Temporarily insert the macro body tokens from AST back into the
+	'' tk buffer, allowing them to be parsed by cExpression() here.
+	var bodybegin = x
+	hInsertMacroBody( bodybegin, t )
+
+	assert( tkGet( x ) = TK_BEGIN )
+	x += 1
+
+	dim as ASTNODE ptr expr
+
+	'' Macro body empty?
+	if( tkGet( x ) = TK_END ) then
+		expr = NULL
+	else
+		expr = cExpression( x, 0, t )
+
+		'' Must have reached the TK_END
+		if( tkGet( x ) <> TK_END ) then
+			tkOops( x, "couldn't parse all of the #define's body as an expression, only the beginning" )
+		end if
+	end if
+
+	assert( tkGet( x ) = TK_END )
+
+	'' Remove the temporarily inserted macro body
+	tkRemove( bodybegin, x )
+	x = bodybegin
+
+	assert( t->expr->class = ASTCLASS_MACROBODY )
+	astDelete( t->expr )
+	t->expr = expr
+	function = t
+end function
+
+private function cOtherPPToken( byref x as integer ) as ASTNODE ptr
+	var astclass = ASTCLASS_DIVIDER
+	select case( tkGet( x ) )
+	case TK_PPINCLUDE : astclass = ASTCLASS_PPINCLUDE
+	case TK_PPUNDEF   : astclass = ASTCLASS_PPUNDEF
+	case TK_PPIF      : astclass = ASTCLASS_PPIF
+	case TK_PPELSEIF  : astclass = ASTCLASS_PPELSEIF
+	case TK_PPELSE    : astclass = ASTCLASS_PPELSE
+	case TK_PPENDIF   : astclass = ASTCLASS_PPENDIF
+	case else         : assert( tkGet( x ) = TK_DIVIDER )
+	end select
+
+	var t = astNew( astclass, tkGetText( x ) )
+	astAddComment( t, tkCollectComments( x, x ) )
+	x += 1
+	function = t
 end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -1273,7 +1350,7 @@ private function cDeclarator _
 			if( tkGet( x ) = TK_RBRACKET ) then
 				'' Only allowed on parameters, not variables etc.
 				if( decl <> DECL_PARAM ) then
-					tkOops( x, "array dimension must have an explicit size" )
+					tkOops( x, "array dimension must have an explicit size here" )
 				end if
 				d = astNewDIMENSION( NULL, NULL )
 			else
@@ -1474,6 +1551,117 @@ private function cMultDecl _
 	astDelete( subtype )
 end function
 
+'' Global variable/procedure declarations
+''    GccAttributeList [EXTERN|STATIC] MultDecl
+private function cGlobalDecl( byref x as integer ) as ASTNODE ptr
+	var begin = x
+
+	'' __ATTRIBUTE__((...))
+	var gccattribs = 0
+	cGccAttributeList( x, gccattribs )
+
+	'' [EXTERN|STATIC]
+	var decl = DECL_VAR
+	select case( tkGet( x ) )
+	case KW_EXTERN
+		decl = DECL_EXTERNVAR
+		x += 1
+	case KW_STATIC
+		decl = DECL_STATICVAR
+		x += 1
+	end select
+
+	var comment = tkCollectComments( begin, x - 1 )
+
+	'' MultDecl
+	function = cMultDecl( x, decl, gccattribs, comment )
+end function
+
+private function cSemiColon( byref x as integer ) as ASTNODE ptr
+	'' Just ignore single semi-colons
+	x += 1
+	function = astNewNOP( )
+end function
+
+'' Parse a construct. The body parameter is used to determine the context,
+'' i.e. toplevel vs. struct body vs. enum body. All constructs are
+'' identified/disambiguated here, then parsing is handed of to helper functions
+'' for each construct.
+private function cConstruct _
+	( _
+		byref x as integer, _
+		byval body as integer _
+	) as ASTNODE ptr
+
+	select case( tkGet( x ) )
+	case TK_PPDEFINE
+		return cDefine( x )
+	case TK_PPINCLUDE, TK_PPUNDEF, TK_PPIF, TK_PPELSEIF, _
+	     TK_PPELSE, TK_PPENDIF, TK_DIVIDER
+		return cOtherPPToken( x )
+	end select
+
+	if( body = BODY_ENUM ) then
+		return cEnumConst( x )
+	end if
+
+	select case( tkGet( x ) )
+	'' TYPEDEF BaseType IdList ';'
+	'' TYPEDEF STRUCT|UNION|ENUM [Identifier] '{' StructBody '}' IdList ';'
+	'' Typedefs are currently only recognized if the TYPEDEF is at the front
+	'' of the declaration.
+	case KW_TYPEDEF
+		var y = x + 1
+
+		'' STRUCT|UNION|ENUM?
+		select case( tkGet( y ) )
+		case KW_STRUCT, KW_UNION, KW_ENUM
+			y += 1
+
+			'' [Identifier]
+			if( tkGet( y ) = TK_ID ) then
+				y += 1
+			end if
+
+			'' '{'?
+			if( tkGet( y ) = TK_LBRACE ) then
+				return cStructCompound( x )
+			end if
+		end select
+
+		return cTypedef( x )
+
+	'' STRUCT|UNION|ENUM [Identifier] ';'
+	'' STRUCT|UNION|ENUM [Identifier] '{' StructBody '}' ';'
+	'' STRUCT|UNION|ENUM Identifier MultDecl
+	case KW_STRUCT, KW_UNION, KW_ENUM
+		'' (Identifier ';')?
+		if( (tkGet( x + 1 ) = TK_ID) and _
+		    (tkGet( x + 2 ) = TK_SEMI) ) then
+			return cForwardStruct( x )
+		end if
+
+		'' ('{' | Identifier '{')?
+		if( (tkGet( x + 1 ) = TK_LBRACE) or _
+		        ((tkGet( x + 1 ) = TK_ID) and _
+		         (tkGet( x + 2 ) = TK_LBRACE)) ) then
+			return cStructCompound( x )
+		end if
+
+	'' ';'
+	case TK_SEMI
+		return cSemiColon( x )
+	end select
+
+	if( body = BODY_STRUCT ) then
+		return cFieldDecl( x )
+	end if
+
+	function = cGlobalDecl( x )
+end function
+
+'' Parse constructs in a file (at toplevel) or in a nested block (inside
+'' struct/union/enum bodies).
 private function cToplevel _
 	( _
 		byref x as integer, _
@@ -1482,202 +1670,18 @@ private function cToplevel _
 
 	var group = astNewGROUP( )
 
-	do
+	while( tkGet( x ) <> TK_EOF )
 		dim as ASTNODE ptr t
 
-		select case( tkGet( x ) )
-		case TK_EOF
-			exit do
-
-		case TK_PPINCLUDE
-			t = astNew( ASTCLASS_PPINCLUDE, tkGetText( x ) )
-			astAddComment( t, tkCollectComments( x, x ) )
-			x += 1
-
-		case TK_PPDEFINE
-			t = tkGetAst( x )
-
-			'' Did the PP mark this #define for removal? Then just
-			'' skip it instead of parsing it into an AST...
-			if( t->attrib and ASTATTRIB_REMOVE ) then
-				x += 1
-				t = NULL
-				exit select
+		if( body <> BODY_TOPLEVEL ) then
+			'' '}'?
+			if( tkGet( x ) = TK_RBRACE ) then
+				exit while
 			end if
+		end if
 
-			t = astClone( t )
-			astAddComment( t, tkCollectComments( x, x ) )
-			x += 1
-
-			'' Temporarily insert the macro body tokens from AST back into the
-			'' tk buffer, allowing them to be parsed by cExpression() here.
-			var bodybegin = x
-			hInsertMacroBody( bodybegin, t )
-
-			assert( tkGet( x ) = TK_BEGIN )
-			x += 1
-
-			dim as ASTNODE ptr expr
-
-			'' Macro body empty?
-			if( tkGet( x ) = TK_END ) then
-				expr = NULL
-			else
-				expr = cExpression( x, 0, t )
-
-				'' Must have reached the TK_END
-				if( tkGet( x ) <> TK_END ) then
-					tkOops( x, "couldn't parse #define body as expression" )
-				end if
-			end if
-
-			assert( tkGet( x ) = TK_END )
-
-			'' Remove the temporarily inserted macro body
-			tkRemove( bodybegin, x )
-			x = bodybegin
-
-			assert( t->expr->class = ASTCLASS_MACROBODY )
-			astDelete( t->expr )
-			t->expr = expr
-
-		case TK_PPUNDEF
-			t = astNew( ASTCLASS_PPUNDEF, tkGetText( x ) )
-			astAddComment( t, tkCollectComments( x, x ) )
-			x += 1
-
-		case TK_PPIF, TK_PPELSEIF
-			t = astNew( iif( tkGet( x ) = TK_PPIF, _
-					ASTCLASS_PPIF, ASTCLASS_PPELSEIF ) )
-			t->expr = astClone( tkGetAst( x ) )
-			astAddComment( t, tkCollectComments( x, x ) )
-			x += 1
-
-		case TK_PPELSE, TK_PPENDIF
-			t = astNew( iif( tkGet( x ) = TK_PPELSE, _
-					ASTCLASS_PPELSE, ASTCLASS_PPENDIF ) )
-			astAddComment( t, tkCollectComments( x, x ) )
-			x += 1
-
-		case TK_DIVIDER
-			t = astNew( ASTCLASS_DIVIDER, tkGetText( x ) )
-			astAddComment( t, tkCollectComments( x, x ) )
-			x += 1
-
-		'' TYPEDEF BaseType IdList ';'
-		'' TYPEDEF STRUCT|UNION|ENUM [Identifier] '{' StructBody '}' IdList ';'
-		case KW_TYPEDEF
-			if( body = BODY_ENUM ) then
-				t = cEnumConst( x )
-				exit select
-			end if
-
-			var y = x + 1
-
-			'' STRUCT|UNION|ENUM
-			select case( tkGet( y ) )
-			case KW_STRUCT, KW_UNION, KW_ENUM
-				y += 1
-
-				'' [Identifier]
-				if( tkGet( y ) = TK_ID ) then
-					y += 1
-				end if
-
-				'' '{'?
-				if( tkGet( y ) = TK_LBRACE ) then
-					t = cStructCompound( x )
-				else
-					t = cTypedef( x )
-				end if
-			case else
-				t = cTypedef( x )
-			end select
-
-		'' STRUCT|UNION|ENUM [Identifier] ';'
-		'' STRUCT|UNION|ENUM [Identifier] '{' StructBody '}' ';'
-		'' STRUCT|UNION|ENUM Identifier MultDecl
-		case KW_STRUCT, KW_UNION, KW_ENUM
-			if( body = BODY_ENUM ) then
-				t = cEnumConst( x )
-				exit select
-			end if
-
-			'' (Identifier ';')?
-			if( (tkGet( x + 1 ) = TK_ID) and _
-			    (tkGet( x + 2 ) = TK_SEMI) ) then
-				var astclass = ASTCLASS_STRUCTFWD
-				select case( tkGet( x ) )
-				case KW_UNION
-					astclass = ASTCLASS_UNIONFWD
-				case KW_ENUM
-					astclass = ASTCLASS_ENUMFWD
-				case else
-					assert( tkGet( x ) = KW_STRUCT )
-				end select
-				t = astNew( astclass, tkGetText( x + 1 ) )
-				x += 3
-			elseif( (tkGet( x + 1 ) = TK_LBRACE) or _
-			        ((tkGet( x + 1 ) = TK_ID) and _
-			         (tkGet( x + 2 ) = TK_LBRACE)) ) then
-				t = cStructCompound( x )
-			else
-				t = cMultDecl( x, iif( body = BODY_STRUCT, DECL_FIELD, DECL_VAR ), 0, "" )
-			end if
-
-		'' ';'
-		case TK_SEMI
-			if( body = BODY_ENUM ) then
-				t = cEnumConst( x )
-				exit select
-			end if
-
-			'' Just ignore single semi-colons
-			x += 1
-
-		'' '}'
-		case TK_RBRACE
-			select case( body )
-			case BODY_STRUCT, BODY_ENUM
-				exit do
-			end select
-
-			tkOopsExpected( x, "a toplevel declaration, not the end of a block" )
-
-		case else
-			select case( body )
-			case BODY_STRUCT
-				t = cMultDecl( x, DECL_FIELD, 0, "" )
-			case BODY_ENUM
-				t = cEnumConst( x )
-			case else
-				var begin = x
-
-				'' Global variable/procedure declarations
-				''    GccAttributeList [EXTERN|STATIC] MultDecl
-				'' __ATTRIBUTE__((...))
-				var gccattribs = 0
-				cGccAttributeList( x, gccattribs )
-
-				'' [EXTERN|STATIC]
-				var decl = DECL_VAR
-				select case( tkGet( x ) )
-				case KW_EXTERN
-					decl = DECL_EXTERNVAR
-					x += 1
-				case KW_STATIC
-					decl = DECL_STATICVAR
-					x += 1
-				end select
-
-				var comment = tkCollectComments( begin, x - 1 )
-
-				t = cMultDecl( x, decl, gccattribs, comment )
-			end select
-		end select
-
-		astAppend( group, t )
-	loop
+		astAppend( group, cConstruct( x, body ) )
+	wend
 
 	function = group
 end function

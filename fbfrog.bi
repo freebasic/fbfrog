@@ -735,6 +735,8 @@ type ASTNODE_
 	'' the child list for statement trees
 end type
 
+#define astNewNOP( ) astNew( ASTCLASS_NOP )
+
 declare sub astPrintStats( )
 declare function astNew overload( byval class_ as integer ) as ASTNODE ptr
 declare function astNew overload _
