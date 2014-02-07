@@ -1075,6 +1075,7 @@ function hInsertMacroBody _
 			assert( tk->class = ASTCLASS_TK )
 
 			tkInsert( x, tk->tk, tk->text )
+			tkSetLocation( x, @tk->location )
 			x += 1
 
 			tk = tk->next
