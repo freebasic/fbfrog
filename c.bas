@@ -211,25 +211,27 @@ private function hIsDataType _
 	function = is_type
 end function
 
+'' Parse cast expression for '(DataType) foo', or sizeof operand for
+'' 'sizeof (DataType)'.
 private function hDataTypeInParens _
 	( _
 		byref x as integer, _
 		byval decl as integer _
 	) as ASTNODE ptr
 
-	'' BaseType Declarator
-	'' (parsing just the base data type isn't enough, because it
-	'' could be a function pointer cast with parameter list etc.)
-	var t = cMultDecl( x, DECL_CASTTYPE, 0, "" )
-
-	'' cMultDecl()/cIdList() will have built up a GROUP,
-	'' for DECL_CASTTYPE there should be 1 child only, extract it.
-	assert( t->class = ASTCLASS_GROUP )
-	assert( t->head )
-	assert( t->head = t->tail )
-
-	function = astClone( t->head )
-	astDelete( t )
+	''
+	'' Using cMultDecl() to parse:
+	''
+	''    BaseType Declarator
+	''
+	'' Parsing just the base data type isn't enough, because it could be a
+	'' function pointer cast with parameter list etc. We need to do full
+	'' declarator parsing to handle that.
+	''
+	'' cMultDecl()/cIdList() will have built up a GROUP, for DECL_CASTTYPE
+	'' there should be 1 child only though, extract it.
+	''
+	function = astUngroupOne( cMultDecl( x, DECL_CASTTYPE, 0, "" ) )
 
 	'' ')'
 	tkExpect( x, TK_RPAREN, iif( decl = DECL_CASTTYPE, _

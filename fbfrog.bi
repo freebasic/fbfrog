@@ -770,6 +770,7 @@ declare function astNewGROUP overload _
 		byval child1 as ASTNODE ptr, _
 		byval child2 as ASTNODE ptr = NULL _
 	) as ASTNODE ptr
+declare function astUngroupOne( byval group as ASTNODE ptr ) as ASTNODE ptr
 declare function astNewDIMENSION _
 	( _
 		byval lb as ASTNODE ptr, _
