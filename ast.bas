@@ -562,6 +562,7 @@ sub astSetType _
 end sub
 
 sub astSetComment( byval n as ASTNODE ptr, byval comment as zstring ptr )
+	deallocate( n->comment )
 	n->comment = strDuplicate( comment )
 end sub
 
@@ -574,7 +575,6 @@ sub astAddComment( byval n as ASTNODE ptr, byval comment as zstring ptr )
 
 	if( n->comment ) then
 		s = *n->comment + !"\n"
-		deallocate( n->comment )
 	end if
 
 	s += *comment
