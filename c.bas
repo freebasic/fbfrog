@@ -51,7 +51,6 @@ enum
 	BODY_TOPLEVEL = 0
 	BODY_STRUCT
 	BODY_ENUM
-	BODY_PPIF
 end enum
 
 namespace file
