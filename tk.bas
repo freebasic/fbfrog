@@ -748,7 +748,7 @@ private function hFindConstructBegin( byval x as integer ) as integer
 	'' parsing backwards!?)
 	var y = 0
 
-	do
+	while( tkGet( y ) <> TK_EOF )
 		var begin = y
 
 		y = hFindConstructEnd( y )
@@ -757,7 +757,9 @@ private function hFindConstructBegin( byval x as integer ) as integer
 		end if
 
 		y += 1
-	loop
+	wend
+
+	function = 0
 end function
 
 sub tkReport _

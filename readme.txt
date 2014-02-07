@@ -125,7 +125,17 @@ To do:
 - Error messages should show the macro expansion steps that happened in a given
   piece of code, from what the parser saw to the main location where it all came
   from.
+- Need better error messages for things like "missing ';' to finish declaration"
+  should perhaps underline the entire declaration?
+- TK_EOF should have location information (toplevel file?), but then we need
+  TK_BOF too or else the two could be confused. Reporting errors like missing
+  #endif at last token instead of EOF feels wrong... also, cppMain() removes
+  #ifs from the tk buffer, so tkReport() can't rely on tk buffer content in that
+  case, and eof-1 may point at an unexpected token...
+- Add tests for error messages, using tests/run.bas this should be pretty easy
 
+- Show suggestions how to fix errors, e.g. if #define body couldn't be parsed,
+  suggest using -removedefine to exclude the #define from the binding...
 - report "(N declarations and M errors)" for each emitted file
 - astMakeProcsDefaultToCdecl() should be unnecessary, it should be done by the
   C parser already

@@ -1706,7 +1706,7 @@ sub cppMain _
 			'' (#includes should be popped due to TK_ENDINCLUDE's already)
 			if( level > 0 ) then
 				assert( ppstack(level) >= PPSTACK_IF )
-				tkOops( x - 1, "missing #endif" )
+				tkOops( x, "missing #endif" )
 			end if
 			exit do
 
