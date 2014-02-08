@@ -137,8 +137,6 @@ To do:
 - Show suggestions how to fix errors, e.g. if #define body couldn't be parsed,
   suggest using -removedefine to exclude the #define from the binding...
 - report "(N declarations and M errors)" for each emitted file
-- astMakeProcsDefaultToCdecl() should be unnecessary, it should be done by the
-  C parser already
 - Consider adding symbol tables separate from the AST, so e.g. all UDT dtypes
   would reference the same subtype symbol instead of allocating an id everytime.
     - define/const/proc/var ids aren't re-used much, but type ids are. Perhaps

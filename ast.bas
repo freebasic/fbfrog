@@ -2404,6 +2404,10 @@ sub astNodeToNop _
 
 end sub
 
+'' This isn't done by the C parser already because it has to handle calling
+'' convention attributes amongst others, and using a default would require it
+'' to remove the default if it will add another one, etc. Doing it here
+'' afterwards just is easier because all that's needed is to fill the gaps.
 private sub astMakeProcsDefaultToCdecl( byval n as ASTNODE ptr )
 	if( n->class = ASTCLASS_PROC ) then
 		'' No calling convention specified yet?
