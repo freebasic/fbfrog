@@ -254,10 +254,6 @@ declare function hScanDirectory _
 		byref rootdir as string, _
 		byref filepattern as string _
 	) as ASTNODE ptr
-declare function hShell( byref ln as string ) as integer
-declare sub hMkdir( byref path as string )
-declare sub hMkdirP( byref path as string )
-declare sub hKill( byref path as string )
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 

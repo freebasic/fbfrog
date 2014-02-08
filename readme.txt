@@ -113,9 +113,7 @@ To do:
   or similar that copies over the location automatically
 - Need some high-level way to combine locations into one, etc. which is currently
   done manually in hParseArgs() at least
-- Add astFilter() to read in a GROUP and produce a new GROUP filtered by 1 or 2 classes (but cloned children of course)?
 - use CONSTI and CONSTF nodes instead of just CONST, so we don't need typeIsFloat() checks?
-- Remove hShell(), hMkdir[P], hKill...
 - Since the C parser no longer modifies the tk buffer, could it be turned into
   an array? No, currently it still temporarily re-inserts macro bodies, but is
   that really needed?
@@ -136,7 +134,6 @@ To do:
 
 - Show suggestions how to fix errors, e.g. if #define body couldn't be parsed,
   suggest using -removedefine to exclude the #define from the binding...
-- report "(N declarations and M errors)" for each emitted file
 - Consider adding symbol tables separate from the AST, so e.g. all UDT dtypes
   would reference the same subtype symbol instead of allocating an id everytime.
     - define/const/proc/var ids aren't re-used much, but type ids are. Perhaps
