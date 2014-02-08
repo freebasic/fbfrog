@@ -802,7 +802,12 @@ private function cOtherPPToken( byref x as integer ) as ASTNODE ptr
 
 	var t = astNew( astclass, tkGetText( x ) )
 	astAddComment( t, tkCollectComments( x, x ) )
+	select case( tkGet( x ) )
+	case TK_PPIF, TK_PPELSEIF
+		t->expr = astClone( tkGetAst( x ) )
+	end select
 	x += 1
+
 	function = t
 end function
 
