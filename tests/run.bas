@@ -251,11 +251,26 @@ if( cur_dir + "tests" + PATHDIV = exe_path ) then
 	fbfrog = "./fbfrog"
 end if
 
+var clean_only = FALSE
+for i as integer = 1 to __FB_ARGC__-1
+	select case( *__FB_ARGV__[i] )
+	case "-clean"
+		clean_only = TRUE
+	case else
+		print "unknown option: " + *__FB_ARGV__[i]
+		end 1
+	end select
+next
+
 '' Clean test directories: Delete all *.txt and *.bi files
 hScanDirectory( exe_path, "*.txt" )
 hScanDirectory( exe_path, "*.bi" )
 hDeleteFiles( )
 hForgetFiles( )
+
+if( clean_only ) then
+	end 0
+end if
 
 '' Run fbfrog on all found *.fbfrog files (testing that parsing/AST stuff works)
 hScanDirectory( exe_path, "*.fbfrog" )
