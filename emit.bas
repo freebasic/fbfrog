@@ -464,7 +464,7 @@ function emitAst _
 			emitStmt( "dim shared " + hIdAndArray( n, FALSE ) + " as " + emitType( n->dtype, n->subtype ), n->comment )
 		else
 			emitStmt( "extern     " + hIdAndArray( n, TRUE  ) + " as " + emitType( n->dtype, n->subtype ), n->comment )
-			emitStmt( "dim shared " + hIdAndArray( n, FALSE ) + " as " + emitType( n->dtype, n->subtype ), n->comment )
+			emitStmt( "dim shared " + hIdAndArray( n, FALSE ) + " as " + emitType( n->dtype, n->subtype ) )
 		end if
 
 	case ASTCLASS_FIELD
