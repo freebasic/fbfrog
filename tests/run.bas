@@ -251,22 +251,13 @@ if( cur_dir + "tests" + PATHDIV = exe_path ) then
 	fbfrog = "./fbfrog"
 end if
 
-for i as integer = 1 to __FB_ARGC__-1
-	select case( *__FB_ARGV__[i] )
-	case "-clean"
-		hScanDirectory( exe_path, "*.txt" )
-		hDeleteFiles( )
-		hForgetFiles( )
-		hScanDirectory( exe_path, "*.bi" )
-		hDeleteFiles( )
-		hForgetFiles( )
-		end 0
-	case else
-		print "unknown option: " + *__FB_ARGV__[i]
-		end 1
-	end select
-next
+'' Clean test directories: Delete all *.txt and *.bi files
+hScanDirectory( exe_path, "*.txt" )
+hScanDirectory( exe_path, "*.bi" )
+hDeleteFiles( )
+hForgetFiles( )
 
+'' Run fbfrog on all found *.fbfrog files (testing that parsing/AST stuff works)
 hScanDirectory( exe_path, "*.fbfrog" )
 hSortFiles( )
 for i as integer = 0 to files.count-1
@@ -275,6 +266,7 @@ for i as integer = 0 to files.count-1
 next
 hForgetFiles( )
 
+'' Run fbfrog on all found errors/*.h files (testing for error messages)
 hScanDirectory( exe_path + "errors" + PATHDIV, "*.h" )
 hSortFiles( )
 for i as integer = 0 to files.count-1
