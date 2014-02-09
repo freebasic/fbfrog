@@ -88,7 +88,6 @@ sub hShell _
 		byval expectedresult as integer _
 	)
 
-	'print "$ " + ln
 	var result = shell( ln )
 
 	if( result = -1 ) then
