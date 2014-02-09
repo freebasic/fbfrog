@@ -97,6 +97,7 @@ declare sub f()  '' Some escaped newlines
 '' multiple \
 '' lines
 '' escaped
+''
 '' \
 '' newlines
 '' inside\

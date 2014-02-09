@@ -1680,6 +1680,5 @@ function hScanDirectory _
 	astDelete( dirs )
 	dirs = NULL
 
-	astDump( files )
 	function = files
 end function

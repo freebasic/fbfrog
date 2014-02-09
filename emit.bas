@@ -8,8 +8,6 @@
 
 #include once "fbfrog.bi"
 
-declare sub emitStmt( byref s as string, byval comment as zstring ptr = NULL )
-
 function emitType _
 	( _
 		byval dtype as integer, _
@@ -127,10 +125,12 @@ private sub emitLine( byref ln as string )
 	end if
 
 	if( emit.comment > 0 ) then
-		s += "'' "
-		'' Prepend a space if none is there yet
-		if( left( ln, 1 ) <> " " ) then
-			s += " "
+		s += "''"
+		'' Prepend a space if none is there yet and the line isn't empty
+		if( len( ln ) > 0 ) then
+			if( ln[0] <> CH_SPACE ) then
+				s += " "
+			end if
 		end if
 	end if
 
@@ -138,22 +138,47 @@ private sub emitLine( byref ln as string )
 	print #emit.fo, s
 end sub
 
+private sub hFlushLine( byval begin as zstring ptr, byval p as ubyte ptr )
+	if( begin > p ) then
+		exit sub
+	end if
+
+	'' Insert a null terminator at EOL temporarily, so the current line
+	'' text can be read from the string directly, instead of having to be
+	'' copied out char-by-char.
+	dim as integer old = p[0]
+	p[0] = 0
+	emitLine( *begin )
+	p[0] = old
+end sub
+
 '' Given text that contains newlines, emit every line individually and prepend
 '' indentation and/or <'' > if it's a comment.
 private sub emitLines( byval lines as zstring ptr )
-	dim ln as string
-	for i as integer = 0 to len( *lines )-1
-		select case( (*lines)[i] )
+	dim as ubyte ptr p = lines
+	dim as zstring ptr begin = p
+
+	do
+		select case( p[0] )
+		case 0
+			hFlushLine( begin, p )
+			exit do
+
 		case CH_LF, CH_CR
-			'' Flush previous line, ignore this newline, and then
-			'' continue with next line
-			emitLine( ln )
-			ln = ""
+			hFlushLine( begin, p )
+
+			'' CRLF?
+			if( (p[0] = CH_CR) and (p[1] = CH_LF) ) then
+				p += 1
+			end if
+
+			p += 1
+			begin = p
+
 		case else
-			ln += chr( (*lines)[i] )
+			p += 1
 		end select
-	next
-	emitLine( ln )
+	loop
 end sub
 
 private function hIsMultiLineComment( byval comment as zstring ptr ) as integer
@@ -167,7 +192,7 @@ private function hIsMultiLineComment( byval comment as zstring ptr ) as integer
 	function = FALSE
 end function
 
-private sub emitStmt( byref stmt as string, byval comment as zstring ptr )
+private sub emitStmt( byref stmt as string, byval comment as zstring ptr = NULL )
 	assert( len( stmt ) > 0 )
 	if( comment ) then
 		if( hIsMultiLineComment( comment ) ) then
@@ -175,22 +200,18 @@ private sub emitStmt( byref stmt as string, byval comment as zstring ptr )
 			emit.comment += 1
 			emitLines( comment )
 			emit.comment -= 1
-			emitLine( stmt )
 		else
 			'' Emit single-line comment behind the statement (not below)
-			var s = stmt
-			s += "  ''"
+			stmt += "  ''"
 
 			'' Prepend a space if none is there yet
-			if( left( stmt, 1 ) <> " " ) then
-				s += " "
+			if( (*comment)[0] <> CH_SPACE ) then
+				stmt += " "
 			end if
-
-			emitLine( s )
+			stmt += *comment
 		end if
-	else
-		emitLine( stmt )
 	end if
+	emitLine( stmt )
 end sub
 
 private function hEmitAlias( byval n as ASTNODE ptr ) as string
