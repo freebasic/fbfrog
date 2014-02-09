@@ -3,3 +3,5 @@ fbfrog.exe
 *.o
 tarballs/*
 presets/*/
+tests/run
+tests/run.exe
