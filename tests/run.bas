@@ -112,6 +112,17 @@ end sub
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 '' Directory tree search
 
+const MAXFILES = 1 shl 10
+
+namespace files
+	dim shared as string list(0 to MAXFILES-1)
+	dim shared as integer count
+end namespace
+
+sub hForgetFiles( )
+	files.count = 0
+end sub
+
 type DIRNODE
 	next		as DIRNODE ptr
 	path		as string
@@ -148,17 +159,14 @@ private sub dirsDropHead( )
 	end if
 end sub
 
-private sub hScanParent _
-	( _
-		byref parent as string, _
-		byref filepattern as string, _
-		byval testcallback as TESTCALLBACK _
-	)
-
+private sub hScanParent( byref parent as string, byref filepattern as string )
 	'' Scan for files
 	var found = dir( parent + filepattern, fbNormal )
 	while( len( found ) > 0 )
-		testcallback( strStripPrefix( parent + found, cur_dir ) )
+
+		files.list(files.count) = strStripPrefix( parent + found, cur_dir )
+		files.count += 1
+
 		found = dir( )
 	wend
 
@@ -176,43 +184,62 @@ private sub hScanParent _
 
 		found = dir( )
 	wend
-
 end sub
 
-sub hScanDirectory _
-	( _
-		byref rootdir as string, _
-		byref filepattern as string, _
-		byval testcallback as TESTCALLBACK _
-	)
-
+sub hScanDirectory( byref rootdir as string, byref filepattern as string )
 	dirsAppend( rootdir )
 
 	'' Work off the queue -- each subdir scan can append new subdirs
 	while( dirs.head )
-		hScanParent( dirs.head->path, filepattern, testcallback )
+		hScanParent( dirs.head->path, filepattern )
 		dirsDropHead( )
 	wend
+end sub
 
+private function hPartition _
+	( _
+		byval l as integer, _
+		byval m as integer, _
+		byval r as integer _
+	) as integer
+
+	dim as string pivot = files.list(m)
+	dim as integer store = l
+
+	swap files.list(m), files.list(r)
+
+	for i as integer = l to r - 1
+		if( lcase( files.list(i) ) <= lcase( pivot ) ) then
+			swap files.list(i), files.list(store)
+			store += 1
+		end if
+	next
+
+	swap files.list(store), files.list(r)
+
+	function = store
+end function
+
+private sub hQuickSort( byval l as integer, byval r as integer )
+	if( l < r ) then
+		dim as integer m = l + ((r - l) \ 2)
+		m = hPartition( l, m, r )
+		hQuickSort( l, m - 1 )
+		hQuickSort( m + 1, r )
+	end if
+end sub
+
+sub hSortFiles( )
+	hQuickSort( 0, files.count - 1 )
 end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-sub hDelete( byref file as string )
-	var dummy = kill( file )
+sub hDeleteFiles( )
+	for i as integer = 0 to files.count-1
+		var dummy = kill( files.list(i) )
+	next
 end sub
-
-sub hTestPreset( byref fbfrogfile as string )
-	hShell( "PRESET " + fbfrogfile, _
-		fbfrog + " @" + fbfrogfile + " > " + fbfrogfile + ".txt 2>&1", 0 )
-end sub
-
-sub hTestError( byref hfile as string )
-	hShell( "ERROR " + hfile, _
-		fbfrog + " " + hfile + " > " + hfile + ".txt 2>&1", 1 )
-end sub
-
-''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 exe_path = pathAddDiv( exepath( ) )
 cur_dir = pathAddDiv( curdir( ) )
@@ -224,8 +251,12 @@ end if
 for i as integer = 1 to __FB_ARGC__-1
 	select case( *__FB_ARGV__[i] )
 	case "-clean"
-		hScanDirectory( exe_path, "*.txt", @hDelete )
-		hScanDirectory( exe_path, "*.bi", @hDelete )
+		hScanDirectory( exe_path, "*.txt" )
+		hDeleteFiles( )
+		hForgetFiles( )
+		hScanDirectory( exe_path, "*.bi" )
+		hDeleteFiles( )
+		hForgetFiles( )
 		end 0
 	case else
 		print "unknown option: " + *__FB_ARGV__[i]
@@ -233,6 +264,20 @@ for i as integer = 1 to __FB_ARGC__-1
 	end select
 next
 
-hScanDirectory( exe_path, "*.fbfrog", @hTestPreset )
-hScanDirectory( exe_path + "errors" + PATHDIV, "*.h", @hTestError )
+hScanDirectory( exe_path, "*.fbfrog" )
+hSortFiles( )
+for i as integer = 0 to files.count-1
+	var f = files.list(i)
+	hShell( "PRESET " + f, fbfrog + " @" + f + " > " + f + ".txt 2>&1", 0 )
+next
+hForgetFiles( )
+
+hScanDirectory( exe_path + "errors" + PATHDIV, "*.h" )
+hSortFiles( )
+for i as integer = 0 to files.count-1
+	var f = files.list(i)
+	hShell( "ERROR " + f, fbfrog + " " + f + " > " + f + ".txt 2>&1", 1 )
+next
+hForgetFiles( )
+
 print "  " & stat.oks & " tests ok, " & stat.fails & " failed"
