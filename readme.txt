@@ -81,6 +81,12 @@ Compiling:
   fbc *.bas -m fbfrog
 
 
+Running the tests:
+
+  fbc tests/run.bas
+  tests/run
+
+
 Usage:
 
   Pass *.h files (C API declarations) to fbfrog:
@@ -130,7 +136,6 @@ To do:
   #endif at last token instead of EOF feels wrong... also, cppMain() removes
   #ifs from the tk buffer, so tkReport() can't rely on tk buffer content in that
   case, and eof-1 may point at an unexpected token...
-- Add tests for error messages, using tests/run.bas this should be pretty easy
 
 - Show suggestions how to fix errors, e.g. if #define body couldn't be parsed,
   suggest using -removedefine to exclude the #define from the binding...
