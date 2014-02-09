@@ -1,6 +1,6 @@
 [dos]
         parsing: tests/errors/pp-elif-without-if.h
-tests/errors/pp-elif-without-if.h(1): #elseif without #if
+tests/errors/pp-elif-without-if.h(1): #elif without #if
     1: #elif 0
        ^
     2: #endif

@@ -1808,11 +1808,11 @@ sub cppMain _
 
 		case TK_PPELSEIF
 			if( ppstack(level) < PPSTACK_IF ) then
-				tkOops( x, "#elseif without #if" )
+				tkOops( x, "#elif without #if" )
 			end if
 
 			if( ppstack(level) = PPSTACK_ELSE ) then
-				tkOops( x, "#elseif after #else" )
+				tkOops( x, "#elif after #else" )
 			end if
 
 			'' Not skipping, or skipping due to previous #if/#elseif FALSE?

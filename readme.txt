@@ -115,7 +115,6 @@ Usage:
 
 To do:
 
-- cpp's error messages about #elif call it #elseif
 - astDumpPrettyDecl() should handle anonymous structs/unions/enums better
   currently it produces "struct " instead of "anonymous struct" or just "struct"
 - should remove the cppMainForTestingIfExpr(). We don't need #if expr folding
