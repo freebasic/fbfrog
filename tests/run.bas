@@ -164,7 +164,7 @@ private sub hScanParent( byref parent as string, byref filepattern as string )
 	var found = dir( parent + filepattern, fbNormal )
 	while( len( found ) > 0 )
 
-		if( files.count >= MAXFILE ) then
+		if( files.count >= MAXFILES ) then
 			print "MAXFILE is too small"
 			end 1
 		end if
