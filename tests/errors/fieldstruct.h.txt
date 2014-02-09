@@ -1,0 +1,9 @@
+[dos]
+        parsing: tests/errors/fieldstruct.h
+tests/errors/fieldstruct.h(5): expected ';' to finish union  block declaration but found 'foo'
+    3:  union {
+    4:   int a;
+    5:  } foo;
+          ^~~
+    6: };
+    7: 

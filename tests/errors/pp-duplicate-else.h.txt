@@ -1,0 +1,9 @@
+[dos]
+        parsing: tests/errors/pp-duplicate-else.h
+tests/errors/pp-duplicate-else.h(3): #else after #else
+    1: #if 0
+    2: #else
+    3: #else
+       ^
+    4: #endif
+    5: 

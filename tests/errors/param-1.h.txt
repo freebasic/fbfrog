@@ -1,0 +1,6 @@
+[dos]
+        parsing: tests/errors/param-1.h
+tests/errors/param-1.h(1): expected a data type at the beginning of this declaration but found ','
+    1: void f(,);
+              ^
+    2: 

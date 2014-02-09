@@ -1,0 +1,10 @@
+[dos]
+        parsing: tests/include-merge/simple/simple.h
+        include: tests/include-merge/simple/simple-1.h
+[linux]
+        parsing: tests/include-merge/simple/simple.h
+        include: tests/include-merge/simple/simple-1.h
+[win32]
+        parsing: tests/include-merge/simple/simple.h
+        include: tests/include-merge/simple/simple-1.h
+emitting: tests/include-merge/simple/simple.bi (3 declarations)

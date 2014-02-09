@@ -1,0 +1,5 @@
+[dos]
+        parsing: tests/errors/missing-id-pasted-dtype.h
+missing identifier for the symbol declared in this declaration
+    void
+    ^~~~

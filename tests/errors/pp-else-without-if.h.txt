@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/errors/pp-else-without-if.h
+tests/errors/pp-else-without-if.h(1): #else without #if
+    1: #else
+       ^
+    2: #endif
+    3: 

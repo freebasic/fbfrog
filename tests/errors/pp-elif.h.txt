@@ -1,0 +1,8 @@
+[dos]
+        parsing: tests/errors/pp-elif.h
+tests/errors/pp-elif.h(2): missing #if condition
+    1: #ifdef A
+    2: #elif
+            ^
+    3: #endif
+    4: 

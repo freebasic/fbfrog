@@ -1,0 +1,6 @@
+[dos]
+        parsing: tests/errors/param-3.h
+tests/errors/param-3.h(1): expected an atomic expression (identifier, literal, ...), but this doesn't look familiar (support for this is probably just missing)
+    1: void f(int i =);
+                     ^
+    2: 

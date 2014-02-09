@@ -1,0 +1,9 @@
+[dos]
+        parsing: tests/errors/pp-elif-after-else.h
+tests/errors/pp-elif-after-else.h(3): #elseif after #else
+    1: #if 0
+    2: #else
+    3: #elif 0
+       ^
+    4: #endif
+    5: 

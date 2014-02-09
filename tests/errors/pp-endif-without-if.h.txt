@@ -1,0 +1,6 @@
+[dos]
+        parsing: tests/errors/pp-endif-without-if.h
+tests/errors/pp-endif-without-if.h(1): #endif without #if
+    1: #endif
+       ^
+    2: 

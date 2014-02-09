@@ -115,6 +115,13 @@ Usage:
 
 To do:
 
+- cpp's error messages about #elif call it #elseif
+- astDumpPrettyDecl() should handle anonymous structs/unions/enums better
+  currently it produces "struct " instead of "anonymous struct" or just "struct"
+- should remove the cppMainForTestingIfExpr(). We don't need #if expr folding
+  anymore since #ifs are always evaluated. The folding is only useful for
+  initializer expressions etc, so it should be tested there only.
+- emitType( n->dtype, n->subtype ) should be abstracted
 - Need some way to easily pass tk locations on to AST nodes, perhaps astNewFromTK()
   or similar that copies over the location automatically
 - Need some high-level way to combine locations into one, etc. which is currently

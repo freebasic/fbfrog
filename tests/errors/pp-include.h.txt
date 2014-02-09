@@ -1,0 +1,6 @@
+[dos]
+        parsing: tests/errors/pp-include.h
+tests/errors/pp-include.h(1): missing "..." string literal containing the #include file name
+    1: #include
+               ^
+    2: 

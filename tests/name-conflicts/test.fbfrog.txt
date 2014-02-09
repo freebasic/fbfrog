@@ -1,0 +1,23 @@
+[dos]
+        parsing: tests/name-conflicts/./name-conflicts-case-sensitivity.h
+        parsing: tests/name-conflicts/./name-conflicts-between-declarations.h
+        parsing: tests/name-conflicts/./name-conflicts-keywords.h
+        parsing: tests/name-conflicts/./name-conflicts-keywords-case-sensitivity.h
+        parsing: tests/name-conflicts/./name-conflicts-updating-references.h
+[linux]
+        parsing: tests/name-conflicts/./name-conflicts-case-sensitivity.h
+        parsing: tests/name-conflicts/./name-conflicts-between-declarations.h
+        parsing: tests/name-conflicts/./name-conflicts-keywords.h
+        parsing: tests/name-conflicts/./name-conflicts-keywords-case-sensitivity.h
+        parsing: tests/name-conflicts/./name-conflicts-updating-references.h
+[win32]
+        parsing: tests/name-conflicts/./name-conflicts-case-sensitivity.h
+        parsing: tests/name-conflicts/./name-conflicts-between-declarations.h
+        parsing: tests/name-conflicts/./name-conflicts-keywords.h
+        parsing: tests/name-conflicts/./name-conflicts-keywords-case-sensitivity.h
+        parsing: tests/name-conflicts/./name-conflicts-updating-references.h
+emitting: tests/name-conflicts/./name-conflicts-case-sensitivity.bi (14 declarations)
+emitting: tests/name-conflicts/./name-conflicts-between-declarations.bi (2 declarations)
+emitting: tests/name-conflicts/./name-conflicts-keywords.bi (408 declarations)
+emitting: tests/name-conflicts/./name-conflicts-keywords-case-sensitivity.bi (7 declarations)
+emitting: tests/name-conflicts/./name-conflicts-updating-references.bi (6 declarations)

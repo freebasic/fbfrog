@@ -1,0 +1,16 @@
+[dos]
+        parsing: tests/include-merge/simple-multiple/simple-multiple.h
+        include: tests/include-merge/simple-multiple/simple-multiple-1.h
+        include: tests/include-merge/simple-multiple/simple-multiple-2.h
+        include: tests/include-merge/simple-multiple/simple-multiple-3.h
+[linux]
+        parsing: tests/include-merge/simple-multiple/simple-multiple.h
+        include: tests/include-merge/simple-multiple/simple-multiple-1.h
+        include: tests/include-merge/simple-multiple/simple-multiple-2.h
+        include: tests/include-merge/simple-multiple/simple-multiple-3.h
+[win32]
+        parsing: tests/include-merge/simple-multiple/simple-multiple.h
+        include: tests/include-merge/simple-multiple/simple-multiple-1.h
+        include: tests/include-merge/simple-multiple/simple-multiple-2.h
+        include: tests/include-merge/simple-multiple/simple-multiple-3.h
+emitting: tests/include-merge/simple-multiple/simple-multiple.bi (5 declarations)

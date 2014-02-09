@@ -1,0 +1,6 @@
+[dos]
+        parsing: tests/errors/decl-2.h
+tests/errors/decl-2.h(1): missing identifier for the symbol declared in this declaration
+    1: void
+       ^~~~
+    2: 

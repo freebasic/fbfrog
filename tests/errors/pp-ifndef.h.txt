@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/errors/pp-ifndef.h
+tests/errors/pp-ifndef.h(1): missing identifier behind #ifndef
+    1: #ifndef
+              ^
+    2: #endif
+    3: 
