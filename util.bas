@@ -190,7 +190,7 @@ private sub hCalcErrorLine _
 end sub
 
 function hConsoleWidth( ) as integer
-	dim as integer w = loword( width( ) ) - 1
+	dim as integer w = loword( width( ) )
 	if( w < 0 ) then
 		w = 0
 	end if
