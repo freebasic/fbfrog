@@ -4,7 +4,17 @@ const NULL = 0
 const FALSE = 0
 const TRUE = -1
 
-dim shared as string exe_path, cur_dir
+type TESTCALLBACK as sub( byref as string )
+
+type STATS
+	oks as integer
+	fails as integer
+end type
+
+dim shared stat as STATS
+dim shared as string exe_path, cur_dir, fbfrog
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 function strStripPrefix( byref s as string, byref prefix as string ) as string
 	if( left( s, len( prefix ) ) = prefix ) then
@@ -63,28 +73,40 @@ function pathStripLastComponent( byref path as string ) as string
 	function = pathOnly( left( path, len( path ) - 1 ) )
 end function
 
-sub hShell( byref ln as string )
-	print "$ " + ln
+function hConsoleWidth( ) as integer
+	dim as integer w = loword( width( ) )
+	if( w < 0 ) then
+		w = 0
+	end if
+	function = w
+end function
+
+sub hShell _
+	( _
+		byref prefix as string, _
+		byref ln as string, _
+		byval expectedresult as integer _
+	)
+
+	'print "$ " + ln
 	var result = shell( ln )
-	if( result <> 0 ) then
-		if( result = -1 ) then
-			print "command not found: '" + ln + "'"
-		else
-			print "'" + ln + "' terminated with exit code " + str( result )
-		end if
+
+	if( result = -1 ) then
+		print "command not found: '" + ln + "'"
 		end 1
 	end if
-end sub
 
-''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-
-sub hTest( byref fbfrogfile as string )
-	var fbfrog = pathStripLastComponent( exe_path ) + "fbfrog"
-	fbfrogfile = strStripPrefix( fbfrogfile, cur_dir )
-	if( cur_dir + "tests" + PATHDIV = exe_path ) then
-		fbfrog = "./fbfrog"
+	dim suffix as string
+	if( result = expectedresult ) then
+		suffix = "[ ok ]"
+		stat.oks += 1
+	else
+		suffix = "[fail]"
+		stat.fails += 1
 	end if
-	hShell( fbfrog + " @" + fbfrogfile )
+
+	print prefix + space( hConsoleWidth( ) - len( prefix ) - len( suffix ) ) + suffix
+
 end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -126,11 +148,17 @@ private sub dirsDropHead( )
 	end if
 end sub
 
-private sub hScanParent( byref parent as string, byref filepattern as string )
+private sub hScanParent _
+	( _
+		byref parent as string, _
+		byref filepattern as string, _
+		byval testcallback as TESTCALLBACK _
+	)
+
 	'' Scan for files
 	var found = dir( parent + filepattern, fbNormal )
 	while( len( found ) > 0 )
-		hTest( parent + found )
+		testcallback( strStripPrefix( parent + found, cur_dir ) )
 		found = dir( )
 	wend
 
@@ -148,18 +176,63 @@ private sub hScanParent( byref parent as string, byref filepattern as string )
 
 		found = dir( )
 	wend
+
 end sub
 
-sub hScanDirectory( byref rootdir as string, byref filepattern as string )
+sub hScanDirectory _
+	( _
+		byref rootdir as string, _
+		byref filepattern as string, _
+		byval testcallback as TESTCALLBACK _
+	)
+
 	dirsAppend( rootdir )
 
 	'' Work off the queue -- each subdir scan can append new subdirs
 	while( dirs.head )
-		hScanParent( dirs.head->path, filepattern )
+		hScanParent( dirs.head->path, filepattern, testcallback )
 		dirsDropHead( )
 	wend
+
 end sub
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+sub hDelete( byref file as string )
+	var dummy = kill( file )
+end sub
+
+sub hTestPreset( byref fbfrogfile as string )
+	hShell( "PRESET " + fbfrogfile, _
+		fbfrog + " @" + fbfrogfile + " > " + fbfrogfile + ".txt 2>&1", 0 )
+end sub
+
+sub hTestError( byref hfile as string )
+	hShell( "ERROR " + hfile, _
+		fbfrog + " " + hfile + " > " + hfile + ".txt 2>&1", 1 )
+end sub
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 exe_path = pathAddDiv( exepath( ) )
 cur_dir = pathAddDiv( curdir( ) )
-hScanDirectory( exe_path, "*.fbfrog" )
+fbfrog = pathStripLastComponent( exe_path ) + "fbfrog"
+if( cur_dir + "tests" + PATHDIV = exe_path ) then
+	fbfrog = "./fbfrog"
+end if
+
+for i as integer = 1 to __FB_ARGC__-1
+	select case( *__FB_ARGV__[i] )
+	case "-clean"
+		hScanDirectory( exe_path, "*.txt", @hDelete )
+		hScanDirectory( exe_path, "*.bi", @hDelete )
+		end 0
+	case else
+		print "unknown option: " + *__FB_ARGV__[i]
+		end 1
+	end select
+next
+
+hScanDirectory( exe_path, "*.fbfrog", @hTestPreset )
+hScanDirectory( exe_path + "errors" + PATHDIV, "*.h", @hTestError )
+print "  " & stat.oks & " tests ok, " & stat.fails & " failed"
