@@ -164,6 +164,10 @@ private sub hScanParent( byref parent as string, byref filepattern as string )
 	var found = dir( parent + filepattern, fbNormal )
 	while( len( found ) > 0 )
 
+		if( files.count >= MAXFILE ) then
+			print "MAXFILE is too small"
+			end 1
+		end if
 		files.list(files.count) = strStripPrefix( parent + found, cur_dir )
 		files.count += 1
 
