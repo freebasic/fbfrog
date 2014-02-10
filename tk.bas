@@ -29,6 +29,8 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	( NULL  , @"comment"  ), _
 	( NULL  , @"begininclude" ), _
 	( NULL  , @"endinclude" ), _
+	( NULL  , @"option"   ), _
+	( NULL  , @"responsefile" ), _
 	( NULL  , @"decnum"   ), _ '' Number literals
 	( NULL  , @"hexnum"   ), _
 	( NULL  , @"octnum"   ), _

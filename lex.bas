@@ -810,11 +810,14 @@ function lexLoadC _
 	function = lex.x
 end function
 
-private sub hReadArg( )
+private sub hReadArg( byval tk as integer )
 	var j = 0
 
 	do
 		select case( lex.i[0] )
+		case 0, CH_TAB, CH_SPACE, CH_VTAB, CH_FORMFEED, CH_CR, CH_LF
+			exit do
+
 		case CH_DQUOTE, CH_QUOTE
 			var quotechar = lex.i[0]
 
@@ -866,21 +869,18 @@ private sub hReadArg( )
 		end if
 
 		lex.i += 1
-
-		select case( lex.i[0] )
-		case 0, CH_TAB, CH_SPACE, CH_VTAB, CH_FORMFEED, CH_CR, CH_LF
-			exit do
-		end select
 	loop
 
 	'' null terminator
 	lex.text[j] = 0
 
-	if( lex.text[0] = asc( "-" ) ) then
-		tkInsert( tkGetCount( ), TK_ID, lex.text )
-	else
-		tkInsert( tkGetCount( ), TK_STRING, lex.text )
+	if( tk = TK_STRING ) then
+		if( strIsValidSymbolId( lex.text ) ) then
+			tk = TK_ID
+		end if
 	end if
+
+	tkInsert( lex.x, tk, lex.text )
 	hSetLocation( )
 end sub
 
@@ -926,9 +926,19 @@ function lexLoadArgs( byval x as integer, byval file as FILEBUFFER ptr ) as inte
 			lex.location.linenum += 1
 			lex.bol = lex.i
 
+		'' -option
+		case CH_MINUS
+			lex.i += 1
+			hReadArg( TK_OPTION )
+
+		'' @filename
+		case CH_AT
+			lex.i += 1
+			hReadArg( TK_RESPONSEFILE )
+
 		case else
 			'' Non-whitespace: argument starts here, until whitespace/EOF
-			hReadArg( )
+			hReadArg( TK_STRING )
 
 		end select
 	loop

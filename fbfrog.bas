@@ -76,26 +76,37 @@ private function hTurnArgsIntoString( byval argc as integer, byval argv as zstri
 	function = s
 end function
 
-private sub hExpandResponseFileArguments( )
-	'' Expand @file arguments in the tk buffer
+private sub hLoadResponseFile _
+	( _
+		byval x as integer, _
+		byref filename as string, _
+		byval location as TKLOCATION ptr _
+	)
+
 	const MAX_FILES = 1024  '' Arbitrary limit to detect recursion
-	var filecount = 0
+	static filecount as integer
+
+	if( filecount > MAX_FILES ) then
+		tkOops( x, "suspiciously many @response file expansions, recursion? (limit=" & MAX_FILES & ")" )
+	end if
+
+	'' Load the file content at the specified position
+	lexLoadArgs( x, filebufferFromFile( filename, location ) )
+	filecount += 1
+
+end sub
+
+'' Expand @file arguments in the tk buffer
+private sub hExpandResponseFileArguments( )
 	var x = 0
 	while( tkGet( x ) <> TK_EOF )
-		var arg = tkGetText( x )
 
-		if( (*arg)[0] = asc( "@" ) ) then
+		if( tkGet( x ) = TK_RESPONSEFILE ) then
+			var filename = *tkGetText( x )
+
 			'' Complain if argument was only '@'
-			if( (*arg)[1] = 0 ) then
+			if( len( filename ) = 0 ) then
 				tkOops( x, "@: missing file name argument" )
-			end if
-
-			'' Cut off the '@' at the front to get just the file name,
-			var filename = *arg
-			filename = right( filename, len( filename ) - 1 )
-
-			if( filecount > MAX_FILES ) then
-				tkOops( x, "suspiciously many @response file expansions, recursion? (limit=" & MAX_FILES & ")" )
 			end if
 
 			'' If the @file argument comes from an @file,
@@ -106,10 +117,11 @@ private sub hExpandResponseFileArguments( )
 			end if
 
 			'' Load the file content behind the @file token
-			lexLoadArgs( x + 1, filebufferFromFile( filename, location ) )
-			filecount += 1
+			hLoadResponseFile( x + 1, filename, location )
 
-			'' Remove the @file token
+			'' Remove the @file token (now that its location is no
+			'' longer referenced), so it doesn't get in the way of
+			'' hParseArgs().
 			tkRemove( x, x )
 
 			'' Re-check this position in case a new @file token was inserted right here
@@ -118,6 +130,56 @@ private sub hExpandResponseFileArguments( )
 
 		x += 1
 	wend
+end sub
+
+private sub hLoadBuiltinResponseFile _
+	( _
+		byval x as integer, _
+		byref id as string, _
+		byval location as TKLOCATION ptr _
+	)
+
+	'' <exepath>/builtin/<id>.fbfrog.
+	var builtinfile = hExePath( ) + "builtin" + PATHDIV + id + ".fbfrog"
+	hLoadResponseFile( x, builtinfile, location )
+
+	'' Must expand @files again in case the loaded built-in file contained any
+	hExpandResponseFileArguments( )
+
+end sub
+
+private sub hExpectId( byval x as integer )
+	tkExpect( x, TK_ID, "valid symbol name" )
+end sub
+
+private function hIsStringOrId( byval x as integer ) as integer
+	function = (tkGet( x ) = TK_STRING) or (tkGet( x ) = TK_ID)
+end function
+
+private sub hExpectPath( byval x as integer )
+	if( hIsStringOrId( x ) = FALSE ) then
+		tkOops( x, "missing <path> argument" )
+	end if
+end sub
+
+private sub hReadFileArg( byval result as ASTNODE ptr, byval x as integer )
+	var path = *tkGetText( x )
+
+	'' If the file/dir argument came from an @file,
+	'' open it relative to the @file's dir
+	var location = tkGetLocation( x )
+	if( location->file->is_file ) then
+		path = pathAddDiv( pathOnly( *location->file->name ) ) + path
+	end if
+
+	'' File or directory?
+	var n = astNew( ASTCLASS_FILE, path )
+	if( hReadableDirExists( path ) ) then
+		n->class = ASTCLASS_DIR
+	end if
+
+	n->location = *location
+	astAppend( result, n )
 end sub
 
 enum
@@ -133,233 +195,178 @@ private function hParseArgs( byref x as integer, byval body as integer ) as ASTN
 		'' Skip argv[0]
 		assert( tkGet( x ) <> TK_EOF )
 		x += 1
+
+		'' Load pre-#defines that are always used
+		hLoadBuiltinResponseFile( x, "base", tkGetLocation( x - 1 ) )
 	end if
 
 	while( tkGet( x ) <> TK_EOF )
 		var text = *tkGetText( x )
 
-		select case( text )
-		case "-h", "-?", "-help", "--help", "/?", "/h", "/help", "--version"
-			hPrintHelpAndExit( )
+		select case( tkGet( x ) )
+		case TK_OPTION
+			select case( text )
+			case "h", "?", "help", "-help", "-version"
+				hPrintHelpAndExit( )
 
-		case "-nomerge"
-			frog.nomerge = TRUE
+			case "nomerge"      : frog.nomerge      = TRUE
+			case "nopp"         : frog.nopp         = TRUE
+			case "noppfold"     : frog.noppfold     = TRUE
+			case "whitespace"   : frog.whitespace   = TRUE
+			case "noautoextern" : frog.noautoextern = TRUE
+			case "windowsms"    : frog.windowsms    = TRUE
+			case "nonamefixup"  : frog.nonamefixup  = TRUE
+			case "common"       : frog.common = TRUE
+			case "v", "verbose", "-verbose" : frog.verbose = TRUE
 
-		case "-nopp"
-			frog.nopp = TRUE
-
-		case "-noppfold"
-			frog.noppfold = TRUE
-
-		case "-whitespace"
-			frog.whitespace = TRUE
-
-		case "-noautoextern"
-			frog.noautoextern = TRUE
-
-		case "-windowsms"
-			frog.windowsms = TRUE
-
-		case "-nonamefixup"
-			frog.nonamefixup = TRUE
-
-		case "-versiondefine"
-			x += 1
-
-			'' <id>
-			if( tkGet( x ) <> TK_STRING ) then
-				tkOops( x, "-versiondefine: missing <id> argument" )
-			end if
-			frog.versiondefine = *tkGetText( x )
-			if( strIsValidSymbolId( frog.versiondefine ) = FALSE ) then
-				tkOops( x, "-versiondefine: not a valid FB symbol: '" + frog.versiondefine + "'" )
-			end if
-
-		case "-common"
-			frog.common = TRUE
-
-		case "-incdir"
-			x += 1
-
-			'' <path>
-			if( tkGet( x ) <> TK_STRING ) then
-				tkOops( x, "-incdir: missing <path> argument" )
-			end if
-			var n = astNewTEXT( tkGetText( x ) )
-			n->location = *tkGetLocation( x )
-			astAppend( frog.incdirs, n )
-
-		case "-o"
-			x += 1
-
-			if( tkGet( x ) <> TK_STRING ) then
-				tkOops( x, "-o: missing <path> argument" )
-			end if
-			frog.outdir = *tkGetText( x )
-
-		case "-v", "-verbose", "--verbose"
-			frog.verbose = TRUE
-
-		'' -version <version-id> ...
-		case "-version"
-			'' Another -version is coming - end any current -version/-target blocks
-			if( body <> BODY_TOPLEVEL ) then
-				exit while
-			end if
-			var location1 = tkGetLocation( x )
-			x += 1
-
-			'' <version-id>
-			if( tkGet( x ) <> TK_STRING ) then
-				tkOops( x, "-version: missing <version> argument" )
-			end if
-			'' astNewCONST( vallng( nextarg ), 0, TYPE_LONGINT )
-			var id = astNew( ASTCLASS_STRING, tkGetText( x ) )
-			var location2 = tkGetLocation( x )
-			id->location = *location2
-			x += 1
-
-			var location = tkGetLocation( x )
-			var n = astNewVERBLOCK( id, NULL, hParseArgs( x, BODY_VERSION ) )
-			n->location = *location1
-			n->location.length = location2->column + location2->length - location1->column
-			astAppend( result, n )
-			x -= 1
-
-		'' -target <target-id> ...
-		case "-target"
-			'' Another -target is coming - end any current -target block
-			if( body = BODY_TARGET ) then
-				exit while
-			end if
-			var location1 = tkGetLocation( x )
-			x += 1
-
-			'' <target-id>
-			if( tkGet( x ) <> TK_STRING ) then
-				tkOops( x, "missing dos|linux|win32 argument" )
-			end if
-			var attrib = 0
-			select case( *tkGetText( x ) )
-			case "dos"   : attrib = ASTATTRIB_DOS
-			case "linux" : attrib = ASTATTRIB_LINUX
-			case "win32" : attrib = ASTATTRIB_WIN32
-			case else
-				tkOops( x, "unknown target '" + *tkGetText( x )  + "', expected one of dos|linux|win32" )
-			end select
-			var location2 = tkGetLocation( x )
-			x += 1
-
-			var n = astNew( ASTCLASS_TARGETBLOCK, hParseArgs( x, BODY_TARGET ) )
-			n->attrib or= attrib
-			n->location = *location1
-			n->location.length = location2->column + location2->length - location1->column
-			astAppend( result, n )
-			x -= 1
-
-		'' -define <id> [<body>]
-		case "-define"
-			x += 1
-
-			'' <id>
-			if( tkGet( x ) <> TK_STRING ) then
-				tkOops( x, "-define: missing <id> argument" )
-			end if
-			var id = tkGetText( x )
-			if( strIsValidSymbolId( id ) = FALSE ) then
-				tkOops( x, "-define: not a valid symbol identifier: '" + *id + "'" )
-			end if
-			var n = astNew( ASTCLASS_PPDEFINE, id )
-			n->location = *tkGetLocation( x )
-			assert( n->expr = NULL )
-
-			'' [<body>]
-			dim as zstring ptr body
-			if( tkGet( x + 1 ) = TK_STRING ) then
+			case "versiondefine"
 				x += 1
-				n->expr = astNewTEXT( tkGetText( x ) )
-				n->expr->location = *tkGetLocation( x )
-			end if
 
-			astAppend( result, n )
+				'' <id>
+				hExpectId( x )
+				frog.versiondefine = *tkGetText( x )
 
-		case "-undef"
-			x += 1
+			case "incdir"
+				x += 1
 
-			'' <id>
-			if( tkGet( x ) <> TK_STRING ) then
-				tkOops( x, "-undef: missing <id> argument" )
-			end if
-			var id = tkGetText( x )
-			if( strIsValidSymbolId( id ) = FALSE ) then
-				tkOops( x, "-undef: not a valid symbol identifier: '" + *id + "'" )
-			end if
-			var n = astNew( ASTCLASS_PPUNDEF, id )
-			n->location = *tkGetLocation( x )
-			astAppend( result, n )
+				'' <path>
+				hExpectPath( x )
+				var n = astNewTEXT( tkGetText( x ) )
+				n->location = *tkGetLocation( x )
+				astAppend( frog.incdirs, n )
 
-		case "-include"
-			x += 1
+			case "o"
+				x += 1
 
-			'' <file>
-			if( tkGet( x ) <> TK_STRING ) then
-				tkOops( x, "-include: missing <file> argument" )
-			end if
-			var n = astNew( ASTCLASS_PPINCLUDE, tkGetText( x ) )
-			n->location = *tkGetLocation( x )
-			astAppend( result, n )
+				'' <path>
+				hExpectPath( x )
+				frog.outdir = *tkGetText( x )
 
-		case "-noexpand"
-			x += 1
+			'' -version <version-id> ...
+			case "version"
+				'' Another -version is coming - end any current -version/-target blocks
+				if( body <> BODY_TOPLEVEL ) then
+					exit while
+				end if
+				var location1 = tkGetLocation( x )
+				x += 1
 
-			'' <id>
-			if( tkGet( x ) <> TK_STRING ) then
-				tkOops( x, "-noexpand: missing <id> argument" )
-			end if
-			var id = tkGetText( x )
-			if( strIsValidSymbolId( id ) = FALSE ) then
-				tkOops( x, "-noexpand: not a valid symbol identifier: '" + *id + "'" )
-			end if
-			var n = astNew( ASTCLASS_NOEXPAND, id )
-			n->location = *tkGetLocation( x )
-			astAppend( result, n )
+				'' <version-id>
+				if( hIsStringOrId( x ) = FALSE ) then
+					tkOops( x, "-version: missing <version> argument" )
+				end if
+				'' astNewCONST( vallng( nextarg ), 0, TYPE_LONGINT )
+				var id = astNew( ASTCLASS_STRING, tkGetText( x ) )
+				var location2 = tkGetLocation( x )
+				id->location = *location2
+				x += 1
 
-		case "-removedefine"
-			x += 1
+				var location = tkGetLocation( x )
+				var n = astNewVERBLOCK( id, NULL, hParseArgs( x, BODY_VERSION ) )
+				n->location = *location1
+				n->location.length = location2->column + location2->length - location1->column
+				astAppend( result, n )
+				x -= 1
 
-			'' <id>
-			if( tkGet( x ) <> TK_STRING ) then
-				tkOops( x, "-removedefine: missing <id> argument" )
-			end if
-			var id = tkGetText( x )
-			if( strIsValidSymbolId( id ) = FALSE ) then
-				tkOops( x, "-removedefine: not a valid symbol identifier: '" + *id + "'" )
-			end if
-			var n = astNew( ASTCLASS_REMOVEDEFINE, id )
-			n->location = *tkGetLocation( x )
-			astAppend( result, n )
+			'' -target <target-id> ...
+			case "target"
+				'' Another -target is coming - end any current -target block
+				if( body = BODY_TARGET ) then
+					exit while
+				end if
+				var location = *tkGetLocation( x )
+				x += 1
+
+				'' <target-id>
+				if( tkGet( x ) <> TK_ID ) then
+					tkOops( x, "missing dos|linux|win32 argument" )
+				end if
+				var attrib = 0
+				var targetid = *tkGetText( x )
+				select case( targetid )
+				case "dos"   : attrib = ASTATTRIB_DOS
+				case "linux" : attrib = ASTATTRIB_LINUX
+				case "win32" : attrib = ASTATTRIB_WIN32
+				case else
+					tkOops( x, "unknown target '" + *tkGetText( x )  + "', expected one of dos|linux|win32" )
+				end select
+				var location2 = tkGetLocation( x )
+				location.length = location2->column + location2->length - location.column
+				x += 1
+
+				hLoadBuiltinResponseFile( x, targetid, @location )
+
+				var n = astNew( ASTCLASS_TARGETBLOCK, hParseArgs( x, BODY_TARGET ) )
+				n->attrib or= attrib
+				n->location = location
+				astAppend( result, n )
+				x -= 1
+
+			'' -define <id> [<body>]
+			case "define"
+				x += 1
+
+				'' <id>
+				hExpectId( x )
+				var n = astNew( ASTCLASS_PPDEFINE, tkGetText( x ) )
+				n->location = *tkGetLocation( x )
+
+				'' [<body>]
+				if( hIsStringOrId( x + 1 ) ) then
+					x += 1
+					n->expr = astNewTEXT( tkGetText( x ) )
+					n->expr->location = *tkGetLocation( x )
+				end if
+
+				astAppend( result, n )
+
+			case "undef"
+				x += 1
+
+				'' <id>
+				hExpectId( x )
+				var n = astNew( ASTCLASS_PPUNDEF, tkGetText( x ) )
+				n->location = *tkGetLocation( x )
+				astAppend( result, n )
+
+			case "include"
+				x += 1
+
+				'' <file>
+				hExpectPath( x )
+				var n = astNew( ASTCLASS_PPINCLUDE, tkGetText( x ) )
+				n->location = *tkGetLocation( x )
+				astAppend( result, n )
+
+			case "noexpand"
+				x += 1
+
+				'' <id>
+				hExpectId( x )
+				var n = astNew( ASTCLASS_NOEXPAND, tkGetText( x ) )
+				n->location = *tkGetLocation( x )
+				astAppend( result, n )
+
+			case "removedefine"
+				x += 1
+
+				'' <id>
+				hExpectId( x )
+				var n = astNew( ASTCLASS_REMOVEDEFINE, tkGetText( x ) )
+				n->location = *tkGetLocation( x )
+				astAppend( result, n )
+
+			case else
+				tkOops( x, "unknown command line option '" + text + "'" )
+			end select
 
 		case else
-			if( left( text, 1 ) = "-" ) then
-				tkOops( x, "unknown command line option '" + text + "'" )
-			end if
-
-			'' If the file/dir argument came from an @file, open it relative to
-			'' the @file's dir
-			var location = tkGetLocation( x )
-			if( location->file->is_file ) then
-				text = pathAddDiv( pathOnly( *location->file->name ) ) + text
-			end if
-
-			var astclass = ASTCLASS_FILE
-			if( hReadableDirExists( text ) ) then
-				astclass = ASTCLASS_DIR
-			end if
-
-			var n = astNew( astclass, text )
-			n->location = *location
-			astAppend( result, n )
-
+			select case( text )
+			case "/?", "/h", "/help"
+				hPrintHelpAndExit( )
+			case else
+				hReadFileArg( result, x )
+			end select
 		end select
 
 		x += 1
@@ -420,6 +427,12 @@ private function frogWorkRootFile _
 		wend
 
 		if( len( cppheader ) > 0 ) then
+			'' Extra empty line between the header and regular input code,
+			'' so that cppMain()'s whitespace handling won't be confused.
+			'' (e.g. associating a comment at the top of regular code with
+			'' the last statement from the header code)
+			cppheader += !"\n"
+
 			var id = "<CPP code from command line for " + astDumpPrettyVersion( targetversion ) + ">"
 			lexLoadC( 0, filebufferFromZstring( id, cppheader ), FALSE )
 		end if

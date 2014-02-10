@@ -115,6 +115,8 @@ Usage:
 
 To do:
 
+- Allow -bi <file> or similar to insert a .bi file at the end of the output binding
+  This can be used to add arbitrary FB code (e.g. complex defines)
 - astDumpPrettyDecl() should handle anonymous structs/unions/enums better
   currently it produces "struct " instead of "anonymous struct" or just "struct"
 - should remove the cppMainForTestingIfExpr(). We don't need #if expr folding
@@ -142,7 +144,6 @@ To do:
   #endif at last token instead of EOF feels wrong... also, cppMain() removes
   #ifs from the tk buffer, so tkReport() can't rely on tk buffer content in that
   case, and eof-1 may point at an unexpected token...
-
 - Show suggestions how to fix errors, e.g. if #define body couldn't be parsed,
   suggest using -removedefine to exclude the #define from the binding...
 - Consider adding symbol tables separate from the AST, so e.g. all UDT dtypes
