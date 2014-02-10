@@ -26,12 +26,12 @@ Features:
 
   * C pre-processor (CPP)
       * tracks #defines/#undefs and does macro expansion (can be disabled for
-        specified symbol)
-      * preserves #define statements (can be disabled for specified symbol)
+        individual symbols)
+      * preserves #define statements (can be disabled for individual symbols)
       * expands #includes (always, so it gets to see #defines/#undefs, but the
         #included code can be removed before it's given to the C parser)
-      * Evaluates #if blocks (always), based on an #if expression parser
-      * Allows for pre-#defines etc. to be specified
+      * evaluates #if blocks (always), based on an #if expression parser
+      * allows for pre-#defines etc. to be specified
 
   * C parser
       * Recursive declaration parser that can handle multiple declarations in
@@ -44,18 +44,18 @@ Features:
         structs/unions.
 
   * FB binding creation
-      * C expressions are converted to FB ones and then simplified to become
-        pretty without changing values.
+      * C expressions are converted to FB ones, as pretty as possible without
+        changing result values.
       * Array parameters are turned into pointers.
       * Anonymous structs are given the name of the (first) typedef that uses
         them, and the typedef is removed.
-      * Redundant typedefs (<typedef struct A A;>) are removed as in FB there
-        are no separate type/tag namespaces. <struct A> or <A> translate to the
-        same thing.
+      * Redundant typedefs (<typedef struct A A;>) are removed, because in FB
+        there are no separate type/tag namespaces. <struct A> or <A> translate
+        to the same thing.
       * Conflicting identifiers (conflicts with FB keywords, or amongst the
         symbols declared in the binding, possibly due to FB's case
         insensitivity) are fixed by appending _ underscores to the less
-        important symbol (e.g. renaming #defines if preferred over renaming
+        important symbol (e.g. renaming #defines is preferred over renaming
         procedures). For renamed variables/procedures, ALIAS "<original-name>"
         will be emitted.
       * Extern blocks are added around the binding's declarations, for the
@@ -63,17 +63,14 @@ Features:
         and case-preserving ALIASes are only emitted on procedures if they're
         not covered by the Extern block (happens if a binding's procedures use
         multiple calling conventions).
-      * Multiple parsing passes (each representing the binding for a certain
-        target system as in win32 or linux etc., or for a certain version of
-        input headers as in library 1.0 and library 2.0, etc.) produce multiple
-        ASTs per input header. These version/target-specific ASTs are merged
-        into one to produce the final binding. Declarations common to all
-        versions/targets are inserted once into the final binding. Other
-        declarations (that exist in some versions only, but not all) are put
-        inside #if blocks (e.g. <#if __MYLIB_VERSION__ = 1>, which allows the
-        binding's user to select the API version by #defining __MYLIB_VERSION__
-        as wanted. Target-specific declarations are put into #if blocks checking
-        FB's target-specific compiler-#defines (e.g. <#ifdef __FB_WIN32__>).
+      * Multiple parsing passes produce multiple ASTs, each representing the
+        binding for a certain target system, e.g. win32 and linux, or for a
+        certain version of input headers, e.g. v1.0 and v2.0. These ASTs are
+        then merged into one to produce the final binding. Declarations that
+        exist in one version only, or can be used on a certain target only, are
+        put inside #if blocks, e.g. <#if __MYLIB_VERSION__ = 1> or
+        <#ifdef __FB_WIN32__>. To select the API for a specific version, the
+        binding's user can #define __MYLIB_VERSION__ as wanted.
 
 
 Compiling:
