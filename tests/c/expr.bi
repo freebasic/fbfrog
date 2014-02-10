@@ -1,21 +1,6 @@
 type MYINT as long
 
 enum E
-	A = -(A = 0)
-	A = not A
-	A = -A
-	A = A
-	A = @A
-	A = *A
-	A = sizeof( A )
-	A = sizeof( A )
-	A = sizeof(long)
-	A = sizeof(long) * 2
-	A = sizeof(long) shl 1
-	A = sizeof(MYINT)
-	A = sizeof(MYINT) * 2
-	A = sizeof(MYINT) shl 1
-	A = sizeof(sub stdcall())
 	A = A
 	A = A
 	A = cast(any, 0)
@@ -66,6 +51,110 @@ enum E
 	A = f(A)
 	A = f(1, 2, 3, 4)
 	A = f()
+	A = -(A = 0)
+	A = not A
+	A = -A
+	A = A
+	A = @A
+	A = *A
+	A = sizeof( A )
+	A = sizeof( A )
+	A = sizeof(long)
+	A = sizeof(long) * 2
+	A = sizeof(long) shl 1
+	A = sizeof(MYINT)
+	A = sizeof(MYINT) * 2
+	A = sizeof(MYINT) shl 1
+	A = sizeof(sub stdcall())
+	A = -(a = 0)
+	A = not a
+	A = -a
+	A = a
+	A = -(a = 0)
+	A = not a
+	A = -a
+	A = a
+	A = -(a = 0)
+	A = not a
+	A = -a
+	A = a
+	A = -(a <> 0)
+	A = a
+	A = a
+	A = a
+	A = -(a orelse b)
+	A = -(a orelse b)
+	A = -(a andalso b)
+	A = a or b
+	A = a xor b
+	A = a and b
+	A = -(a = b)
+	A = -(a <> b)
+	A = -(a < b)
+	A = -(a <= b)
+	A = -(a > b)
+	A = -(a >= b)
+	A = a shl b
+	A = a shr b
+	A = a + b
+	A = a - b
+	A = a * b
+	A = a / b
+	A = a mod b
+	A = -(a orelse b)
+	A = -(a orelse b)
+	A = -(a orelse b)
+	A = -(a andalso b)
+	A = -(a andalso b)
+	A = -(a andalso b)
+	A = a or b
+	A = a or b
+	A = a or b
+	A = a xor b
+	A = a xor b
+	A = a xor b
+	A = a and b
+	A = a and b
+	A = a and b
+	A = -(a = b)
+	A = -(a = b)
+	A = -(a = b)
+	A = -(a <> b)
+	A = -(a <> b)
+	A = -(a <> b)
+	A = -(a < b)
+	A = -(a < b)
+	A = -(a < b)
+	A = -(a <= b)
+	A = -(a <= b)
+	A = -(a <= b)
+	A = -(a > b)
+	A = -(a > b)
+	A = -(a > b)
+	A = -(a >= b)
+	A = -(a >= b)
+	A = -(a >= b)
+	A = a shl b
+	A = a shl b
+	A = a shl b
+	A = a shr b
+	A = a shr b
+	A = a shr b
+	A = a + b
+	A = a + b
+	A = a + b
+	A = a - b
+	A = a - b
+	A = a - b
+	A = a * b
+	A = a * b
+	A = a * b
+	A = a / b
+	A = a / b
+	A = a / b
+	A = a mod b
+	A = a mod b
+	A = a mod b
 	A = iif( a, b, c )
 	A = -(a orelse b)
 	A = -(a andalso b)
@@ -88,6 +177,203 @@ enum E
 	A = a[b]
 	A = a.b
 	A = a->b
+	A = -(a orelse b)
+	A = -(a andalso b)
+	A = a or b
+	A = a xor b
+	A = a and b
+	A = -(a = b)
+	A = -(a <> b)
+	A = -(a < b)
+	A = -(a <= b)
+	A = -(a > b)
+	A = -(a >= b)
+	A = a shl b
+	A = a shr b
+	A = a + b
+	A = a - b
+	A = a * b
+	A = a / b
+	A = a mod b
+	A = -(a orelse b)
+	A = -(a andalso b)
+	A = a or b
+	A = a xor b
+	A = a and b
+	A = -(a = b)
+	A = -(a <> b)
+	A = -(a < b)
+	A = -(a <= b)
+	A = -(a > b)
+	A = -(a >= b)
+	A = a shl b
+	A = a shr b
+	A = a + b
+	A = a - b
+	A = a * b
+	A = a / b
+	A = a mod b
+	A = -((a orelse b) orelse c)
+	A = -(a orelse (b orelse c))
+	A = -((a orelse b) orelse c)
+	A = -(a orelse (b andalso c))
+	A = -(a orelse (b andalso c))
+	A = -((a orelse b) andalso c)
+	A = -((a andalso b) orelse c)
+	A = -(a andalso (b orelse c))
+	A = -((a andalso b) orelse c)
+	A = -((a andalso b) andalso c)
+	A = -(a andalso (b andalso c))
+	A = -((a andalso b) andalso c)
+	A = -(a andalso (b or c))
+	A = -(a andalso (b or c))
+	A = (-(a andalso b)) or c
+	A = -((a or b) andalso c)
+	A = a or (-(b andalso c))
+	A = -((a or b) andalso c)
+	A = (a or b) or c
+	A = a or (b or c)
+	A = (a or b) or c
+	A = a or (b xor c)
+	A = a or (b xor c)
+	A = (a or b) xor c
+	A = (a xor b) or c
+	A = a xor (b or c)
+	A = (a xor b) or c
+	A = (a xor b) xor c
+	A = a xor (b xor c)
+	A = (a xor b) xor c
+	A = a xor (b and c)
+	A = a xor (b and c)
+	A = (a xor b) and c
+	A = (a and b) xor c
+	A = a and (b xor c)
+	A = (a and b) xor c
+	A = (a and b) and c
+	A = a and (b and c)
+	A = (a and b) and c
+	A = a and (-(b = c))
+	A = a and (-(b = c))
+	A = -((a and b) = c)
+	A = (-(a = b)) and c
+	A = -(a = (b and c))
+	A = (-(a = b)) and c
+	A = -((-(a = b)) = c)
+	A = -(a = (-(b = c)))
+	A = -((-(a = b)) = c)
+	A = -((-(a = b)) <> c)
+	A = -(a = (-(b <> c)))
+	A = -((-(a = b)) <> c)
+	A = -((-(a <> b)) = c)
+	A = -(a <> (-(b = c)))
+	A = -((-(a <> b)) = c)
+	A = -((-(a <> b)) <> c)
+	A = -(a <> (-(b <> c)))
+	A = -((-(a <> b)) <> c)
+	A = -(a <> (-(b < c)))
+	A = -(a <> (-(b < c)))
+	A = -((-(a <> b)) < c)
+	A = -((-(a < b)) <> c)
+	A = -(a < (-(b <> c)))
+	A = -((-(a < b)) <> c)
+	A = -((-(a < b)) < c)
+	A = -(a < (-(b < c)))
+	A = -((-(a < b)) < c)
+	A = -((-(a < b)) <= c)
+	A = -(a < (-(b <= c)))
+	A = -((-(a < b)) <= c)
+	A = -((-(a <= b)) < c)
+	A = -(a <= (-(b < c)))
+	A = -((-(a <= b)) < c)
+	A = -((-(a <= b)) <= c)
+	A = -(a <= (-(b <= c)))
+	A = -((-(a <= b)) <= c)
+	A = -((-(a <= b)) > c)
+	A = -(a <= (-(b > c)))
+	A = -((-(a <= b)) > c)
+	A = -((-(a > b)) <= c)
+	A = -(a > (-(b <= c)))
+	A = -((-(a > b)) <= c)
+	A = -((-(a > b)) > c)
+	A = -(a > (-(b > c)))
+	A = -((-(a > b)) > c)
+	A = -((-(a > b)) >= c)
+	A = -(a > (-(b >= c)))
+	A = -((-(a > b)) >= c)
+	A = -((-(a >= b)) > c)
+	A = -(a >= (-(b > c)))
+	A = -((-(a >= b)) > c)
+	A = -((-(a >= b)) >= c)
+	A = -(a >= (-(b >= c)))
+	A = -((-(a >= b)) >= c)
+	A = -(a >= (b shl c))
+	A = -(a >= (b shl c))
+	A = (-(a >= b)) shl c
+	A = -((a shl b) >= c)
+	A = a shl (-(b >= c))
+	A = -((a shl b) >= 1)
+	A = (a shl b) shl c
+	A = a shl (b shl c)
+	A = (a shl b) shl c
+	A = (a shl b) shr c
+	A = a shl (b shr c)
+	A = (a shl b) shr c
+	A = (a shr b) shl c
+	A = a shr (b shl c)
+	A = (a shr b) shl c
+	A = (a shr b) shr c
+	A = a shr (b shr c)
+	A = (a shr b) shr c
+	A = a shr (b + c)
+	A = a shr (b + c)
+	A = (a shr b) + c
+	A = (a + b) shr c
+	A = a + (b shr c)
+	A = (a + b) shr c
+	A = (a + b) + c
+	A = a + (b + c)
+	A = (a + b) + c
+	A = (a + b) - c
+	A = a + (b - c)
+	A = (a + b) - c
+	A = (a - b) + c
+	A = a - (b + c)
+	A = (a - b) + c
+	A = (a - b) - c
+	A = a - (b - c)
+	A = (a - b) - 1
+	A = a - (b * c)
+	A = a - (b * c)
+	A = (a - b) * c
+	A = (a * b) - c
+	A = a * (b - c)
+	A = (a * b) - c
+	A = (a * b) * c
+	A = a * (b * c)
+	A = (a * b) * c
+	A = (a * b) / c
+	A = a * (b / c)
+	A = (a * b) / c
+	A = (a / b) * c
+	A = a / (b * c)
+	A = (a / b) * c
+	A = (a / b) / c
+	A = a / (b / c)
+	A = (a / b) / c
+	A = (a / b) mod c
+	A = a / (b mod c)
+	A = (a / b) mod c
+	A = (a mod b) / c
+	A = a mod (b / c)
+	A = (a mod b) / c
+	A = (a mod b) mod c
+	A = a mod (b mod c)
+	A = (a mod b) mod c
+	A = -((a andalso (b + c)) andalso (d = e))
+	A = iif( a, b, c )
+	A = iif( a, b, iif( c, d, e ) )
+	A = iif( a, b, iif( c, d, e ) )
+	A = iif( iif( a, b, c ), d, e )
 	A = (1, 2, 3)
 	A = ()
 	A = (1)

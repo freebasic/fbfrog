@@ -13,8 +13,6 @@ private sub hPrintHelpAndExit( )
 	print
 	print "global options:"
 	print "  -nomerge   Don't preserve code from #includes"
-	print "  -nopp      Disable CPP macro expansion/#if evaluation (testing/debugging)"
-	print "  -noppfold  Disable #if expression folding (testing/debugging)"
 	print "  -whitespace    Try to preserve comments and empty lines"
 	print "  -noautoextern  Don't add Extern blocks"
 	print "  -windowsms     Use Extern ""Windows-MS"" instead of Extern ""Windows"""
@@ -210,8 +208,6 @@ private function hParseArgs( byref x as integer, byval body as integer ) as ASTN
 				hPrintHelpAndExit( )
 
 			case "nomerge"      : frog.nomerge      = TRUE
-			case "nopp"         : frog.nopp         = TRUE
-			case "noppfold"     : frog.noppfold     = TRUE
 			case "whitespace"   : frog.whitespace   = TRUE
 			case "noautoextern" : frog.noautoextern = TRUE
 			case "windowsms"    : frog.windowsms    = TRUE
@@ -438,11 +434,7 @@ private function frogWorkRootFile _
 		end if
 	end if
 
-	if( frog.nopp ) then
-		cppMainForTestingIfExpr( rootfile, frog.whitespace, not frog.noppfold )
-	else
-		cppMain( rootfile, frog.whitespace, frog.nomerge )
-	end if
+	cppMain( rootfile, frog.whitespace, frog.nomerge )
 
 	cppEnd( )
 
@@ -457,9 +449,7 @@ private function frogWorkRootFile _
 	''
 	'' Work on the AST
 	''
-	if( frog.noppfold = FALSE ) then
-		astCleanUpExpressions( ast )
-	end if
+	astCleanUpExpressions( ast )
 	'astRemoveParamNames( ast )
 	astFixArrayParams( ast )
 	astFixAnonUDTs( ast )

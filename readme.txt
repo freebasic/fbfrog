@@ -117,15 +117,13 @@ To do:
 
 - Allow -bi <file> or similar to insert a .bi file at the end of the output binding
   This can be used to add arbitrary FB code (e.g. complex defines)
-- should remove the cppMainForTestingIfExpr(). We don't need #if expr folding
-  anymore since #ifs are always evaluated. The folding is only useful for
-  initializer expressions etc, so it should be tested there only.
 - emitType( n->dtype, n->subtype ) should be abstracted
 - Need some way to easily pass tk locations on to AST nodes, perhaps astNewFromTK()
   or similar that copies over the location automatically
 - Need some high-level way to combine locations into one, etc. which is currently
   done manually in hParseArgs() at least
 - use CONSTI and CONSTF nodes instead of just CONST, so we don't need typeIsFloat() checks?
+- AST CONST folding should preserve bin/oct/hex flags
 - Since the C parser no longer modifies the tk buffer, could it be turned into
   an array? No, currently it still temporarily re-inserts macro bodies, but is
   that really needed?

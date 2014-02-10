@@ -1,7 +1,0 @@
-[dos]
-        parsing: tests/ppexprfold/./fold-expr.h
-[linux]
-        parsing: tests/ppexprfold/./fold-expr.h
-[win32]
-        parsing: tests/ppexprfold/./fold-expr.h
-emitting: tests/ppexprfold/./fold-expr.bi (2 declarations)

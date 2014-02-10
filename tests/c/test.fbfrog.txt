@@ -1,171 +1,67 @@
 [dos]
         parsing: tests/c/./struct.h
-        parsing: tests/c/./expand-escaped-eol.h
         parsing: tests/c/./special-identifiers.h
         parsing: tests/c/./types.h
-        parsing: tests/c/./expand-params.h
-        parsing: tests/c/./expand-no-expansion-in-defined-expr.h
         parsing: tests/c/./attributes.h
-        parsing: tests/c/./comment-association.h
-        parsing: tests/c/./lex.h
         parsing: tests/c/./param.h
-        parsing: tests/c/./comment-accumulation.h
-        parsing: tests/c/./eval-expr.h
         parsing: tests/c/./typedef.h
         parsing: tests/c/./field.h
         parsing: tests/c/./expr.h
-        parsing: tests/c/./empty-file.h
-        parsing: tests/c/./expand-merge.h
-        parsing: tests/c/./expand-undef-toplevel.h
-        parsing: tests/c/./directives-1.h
         parsing: tests/c/./var.h
-        parsing: tests/c/./dividers-inside-statements.h
-        parsing: tests/c/./expand-nested-params.h
         parsing: tests/c/./mixed.h
-        parsing: tests/c/./expand-params-none.h
-        parsing: tests/c/./token-text-is-not-a-keyword.h
         parsing: tests/c/./cpp-keywords-as-identifiers.h
-        parsing: tests/c/./comment-only.h
         parsing: tests/c/./forward.h
-        parsing: tests/c/./eval-if-nested.h
-        parsing: tests/c/./expand-params-zero.h
-        parsing: tests/c/./directives.h
-        include: tests/c/./directives-1.h
-        include: tests/c/./directives-1.h
-        include: tests/c/./directives-1.h
-        include: tests/c/./directives-1.h
-        include: tests/c/./directives-1.h
-        include: tests/c/./directives-1.h
-        include: tests/c/./directives-1.h
-        include: tests/c/./directives-1.h
+        parsing: tests/c/./expr-fold.h
         parsing: tests/c/./proc.h
         parsing: tests/c/./enum.h
-        parsing: tests/c/./expand-nested-body.h
         parsing: tests/c/./mixed-pp-and-decls.h
-        parsing: tests/c/./eval-if.h
 [linux]
         parsing: tests/c/./struct.h
-        parsing: tests/c/./expand-escaped-eol.h
         parsing: tests/c/./special-identifiers.h
         parsing: tests/c/./types.h
-        parsing: tests/c/./expand-params.h
-        parsing: tests/c/./expand-no-expansion-in-defined-expr.h
         parsing: tests/c/./attributes.h
-        parsing: tests/c/./comment-association.h
-        parsing: tests/c/./lex.h
         parsing: tests/c/./param.h
-        parsing: tests/c/./comment-accumulation.h
-        parsing: tests/c/./eval-expr.h
         parsing: tests/c/./typedef.h
         parsing: tests/c/./field.h
         parsing: tests/c/./expr.h
-        parsing: tests/c/./empty-file.h
-        parsing: tests/c/./expand-merge.h
-        parsing: tests/c/./expand-undef-toplevel.h
-        parsing: tests/c/./directives-1.h
         parsing: tests/c/./var.h
-        parsing: tests/c/./dividers-inside-statements.h
-        parsing: tests/c/./expand-nested-params.h
         parsing: tests/c/./mixed.h
-        parsing: tests/c/./expand-params-none.h
-        parsing: tests/c/./token-text-is-not-a-keyword.h
         parsing: tests/c/./cpp-keywords-as-identifiers.h
-        parsing: tests/c/./comment-only.h
         parsing: tests/c/./forward.h
-        parsing: tests/c/./eval-if-nested.h
-        parsing: tests/c/./expand-params-zero.h
-        parsing: tests/c/./directives.h
-        include: tests/c/./directives-1.h
-        include: tests/c/./directives-1.h
-        include: tests/c/./directives-1.h
-        include: tests/c/./directives-1.h
-        include: tests/c/./directives-1.h
-        include: tests/c/./directives-1.h
-        include: tests/c/./directives-1.h
-        include: tests/c/./directives-1.h
+        parsing: tests/c/./expr-fold.h
         parsing: tests/c/./proc.h
         parsing: tests/c/./enum.h
-        parsing: tests/c/./expand-nested-body.h
         parsing: tests/c/./mixed-pp-and-decls.h
-        parsing: tests/c/./eval-if.h
 [win32]
         parsing: tests/c/./struct.h
-        parsing: tests/c/./expand-escaped-eol.h
         parsing: tests/c/./special-identifiers.h
         parsing: tests/c/./types.h
-        parsing: tests/c/./expand-params.h
-        parsing: tests/c/./expand-no-expansion-in-defined-expr.h
         parsing: tests/c/./attributes.h
-        parsing: tests/c/./comment-association.h
-        parsing: tests/c/./lex.h
         parsing: tests/c/./param.h
-        parsing: tests/c/./comment-accumulation.h
-        parsing: tests/c/./eval-expr.h
         parsing: tests/c/./typedef.h
         parsing: tests/c/./field.h
         parsing: tests/c/./expr.h
-        parsing: tests/c/./empty-file.h
-        parsing: tests/c/./expand-merge.h
-        parsing: tests/c/./expand-undef-toplevel.h
-        parsing: tests/c/./directives-1.h
         parsing: tests/c/./var.h
-        parsing: tests/c/./dividers-inside-statements.h
-        parsing: tests/c/./expand-nested-params.h
         parsing: tests/c/./mixed.h
-        parsing: tests/c/./expand-params-none.h
-        parsing: tests/c/./token-text-is-not-a-keyword.h
         parsing: tests/c/./cpp-keywords-as-identifiers.h
-        parsing: tests/c/./comment-only.h
         parsing: tests/c/./forward.h
-        parsing: tests/c/./eval-if-nested.h
-        parsing: tests/c/./expand-params-zero.h
-        parsing: tests/c/./directives.h
-        include: tests/c/./directives-1.h
-        include: tests/c/./directives-1.h
-        include: tests/c/./directives-1.h
-        include: tests/c/./directives-1.h
-        include: tests/c/./directives-1.h
-        include: tests/c/./directives-1.h
-        include: tests/c/./directives-1.h
-        include: tests/c/./directives-1.h
+        parsing: tests/c/./expr-fold.h
         parsing: tests/c/./proc.h
         parsing: tests/c/./enum.h
-        parsing: tests/c/./expand-nested-body.h
         parsing: tests/c/./mixed-pp-and-decls.h
-        parsing: tests/c/./eval-if.h
 emitting: tests/c/./struct.bi (35 declarations)
-emitting: tests/c/./expand-escaped-eol.bi (6 declarations)
 emitting: tests/c/./special-identifiers.bi (1 declaration)
 emitting: tests/c/./types.bi (88 declarations)
-emitting: tests/c/./expand-params.bi (10 declarations)
-emitting: tests/c/./expand-no-expansion-in-defined-expr.bi (8 declarations)
 emitting: tests/c/./attributes.bi (126 declarations)
-emitting: tests/c/./comment-association.bi (9 declarations)
-emitting: tests/c/./lex.bi (85 declarations)
 emitting: tests/c/./param.bi (39 declarations)
-emitting: tests/c/./comment-accumulation.bi (1 declaration)
-emitting: tests/c/./eval-expr.bi (10 declarations)
 emitting: tests/c/./typedef.bi (14 declarations)
 emitting: tests/c/./field.bi (2 declarations)
 emitting: tests/c/./expr.bi (51 declarations)
-emitting: tests/c/./empty-file.bi (0 declarations)
-emitting: tests/c/./expand-merge.bi (95 declarations)
-emitting: tests/c/./expand-undef-toplevel.bi (1 declaration)
-emitting: tests/c/./directives-1.bi (1 declaration)
 emitting: tests/c/./var.bi (222 declarations)
-emitting: tests/c/./dividers-inside-statements.bi (6 declarations)
-emitting: tests/c/./expand-nested-params.bi (1 declaration)
 emitting: tests/c/./mixed.bi (5 declarations)
-emitting: tests/c/./expand-params-none.bi (3 declarations)
-emitting: tests/c/./token-text-is-not-a-keyword.bi (2 declarations)
 emitting: tests/c/./cpp-keywords-as-identifiers.bi (60 declarations)
-emitting: tests/c/./comment-only.bi (0 declarations)
 emitting: tests/c/./forward.bi (1 declaration)
-emitting: tests/c/./eval-if-nested.bi (78 declarations)
-emitting: tests/c/./expand-params-zero.bi (1 declaration)
-emitting: tests/c/./directives.bi (61 declarations)
+emitting: tests/c/./expr-fold.bi (1 declaration)
 emitting: tests/c/./proc.bi (23 declarations)
 emitting: tests/c/./enum.bi (17 declarations)
-emitting: tests/c/./expand-nested-body.bi (1 declaration)
 emitting: tests/c/./mixed-pp-and-decls.bi (2 declarations)
-emitting: tests/c/./eval-if.bi (53 declarations)

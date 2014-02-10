@@ -51,10 +51,6 @@
 ''    for removal instead of C parsing can't be removed immediately - they must
 ''    be marked with ASTATTRIB_REMOVE so the C parser will ignore them.
 ''
-'' cppMainForTestingIfExpr() is a tiny version of cppMain() that just parses #if
-'' expressions into ASTs but doesn't evaluate/expand anything, for use by the
-'' CPP expression parser test cases.
-''
 
 #include once "fbfrog.bi"
 
@@ -1930,73 +1926,6 @@ sub cppMain _
 			if( skiplevel <> MAXPPSTACK ) then
 				hRemoveTokenAndTkBeginEnd( x )
 			end if
-		end select
-
-		x += 1
-	loop
-end sub
-
-sub cppMainForTestingIfExpr _
-	( _
-		byval topfile as ASTNODE ptr, _
-		byval whitespace as integer, _
-		byval do_fold as integer _
-	)
-
-	var x = 0
-
-	'' Add toplevel file behind current tokens (could be pre-#defines)
-	hLoadFile( tkGetCount( ), @topfile->location, topfile->text, whitespace )
-
-	do
-		select case( tkGet( x ) )
-		case TK_EOF
-			exit do
-
-		case TK_PPIF, TK_PPELSEIF
-			var xif = x
-			var t = tkGetAst( x )
-
-			'' No #if expression yet?
-			if( t = NULL ) then
-				x += 1
-
-				t = hParseIfCondition( x )
-
-				x = xif
-
-				'' Remove the TK_BEGIN/END, but not the #if/#elseif token,
-				'' since this pass is supposed to just parse #if expressions,
-				'' but not evaluate the #if blocks.
-				tkRemove( x + 1, hSkipFromBeginToEnd( x + 1 ) )
-			end if
-
-			t = astOpsC2FB( astClone( t ) )
-			if( do_fold ) then
-				t = astFold( t, @eval.macros, FALSE, TRUE )
-			end if
-			tkSetAst( x, t )
-
-		case TK_PPDEFINE
-			'' Register/overwrite as known defined symbol
-			var t = tkGetAst( x )
-			hAddMacro( astClone( t ) )
-
-			'' Don't preserve the #define if the symbol was registed for removal
-			if( hLookupRemoveSym( t->text ) ) then
-				hRemoveTokenAndTkBeginEnd( x )
-			end if
-
-		case TK_PPUNDEF
-			'' Register/overwrite as known undefined symbol
-			var id = tkGetText( x )
-			hUndefMacro( id )
-
-			'' Don't preserve the #undef if the symbol was registed for removal
-			if( hLookupRemoveSym( id ) ) then
-				hRemoveTokenAndTkBeginEnd( x )
-			end if
-
 		end select
 
 		x += 1

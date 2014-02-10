@@ -950,12 +950,6 @@ declare sub cppMain _
 		byval whitespace as integer, _
 		byval nomerge as integer _
 	)
-declare sub cppMainForTestingIfExpr _
-	( _
-		byval topfile as ASTNODE ptr, _
-		byval whitespace as integer, _
-		byval do_fold as integer _
-	)
 declare function cFile( ) as ASTNODE ptr
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -963,8 +957,6 @@ declare function cFile( ) as ASTNODE ptr
 type FROGSTUFF
 	nomerge		as integer
 	whitespace	as integer
-	nopp		as integer
-	noppfold	as integer
 	noautoextern	as integer
 	windowsms	as integer
 	common		as integer
