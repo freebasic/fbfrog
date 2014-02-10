@@ -117,8 +117,6 @@ To do:
 
 - Allow -bi <file> or similar to insert a .bi file at the end of the output binding
   This can be used to add arbitrary FB code (e.g. complex defines)
-- astDumpPrettyDecl() should handle anonymous structs/unions/enums better
-  currently it produces "struct " instead of "anonymous struct" or just "struct"
 - should remove the cppMainForTestingIfExpr(). We don't need #if expr folding
   anymore since #ifs are always evaluated. The folding is only useful for
   initializer expressions etc, so it should be tested there only.

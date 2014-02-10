@@ -3900,6 +3900,10 @@ end function
 function astDumpPrettyDecl( byval n as ASTNODE ptr ) as string
 	dim as string s
 
+	if( n->text = NULL ) then
+		s += "anonymous "
+	end if
+
 	select case( n->class )
 	case ASTCLASS_VAR       : s += "variable"
 	case ASTCLASS_PROC      : s += "function"
@@ -3907,7 +3911,9 @@ function astDumpPrettyDecl( byval n as ASTNODE ptr ) as string
 	case else               : s += astnodeinfo(n->class).name
 	end select
 
-	s += " " + strMakePrintable( *n->text )
+	if( n->text ) then
+		s += " " + strMakePrintable( *n->text )
+	end if
 
 	if( n->alias ) then
 		s += " alias """ + strMakePrintable( *n->alias ) + """"
