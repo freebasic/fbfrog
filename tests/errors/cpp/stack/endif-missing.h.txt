@@ -1,0 +1,8 @@
+[dos]
+        parsing: tests/errors/cpp/stack/endif-missing.h
+<CPP code from command line for dos>(42): missing #endif
+    40: #undef _BSD_SOURCE
+    41: #undef BSD
+    42: 
+        ^
+    43: 

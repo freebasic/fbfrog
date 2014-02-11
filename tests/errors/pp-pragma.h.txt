@@ -1,6 +1,0 @@
-[dos]
-        parsing: tests/errors/pp-pragma.h
-tests/errors/pp-pragma.h(1): unknown #pragma
-    1: #pragma foo
-               ^~~
-    2: 

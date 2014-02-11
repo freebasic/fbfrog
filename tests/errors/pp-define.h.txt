@@ -1,6 +1,0 @@
-[dos]
-        parsing: tests/errors/pp-define.h
-tests/errors/pp-define.h(1): missing identifier behind #define
-    1: #define
-              ^
-    2: 

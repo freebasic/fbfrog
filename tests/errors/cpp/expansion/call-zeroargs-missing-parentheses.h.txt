@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/errors/cpp/expansion/call-zeroargs-missing-parentheses.h
+tests/errors/cpp/expansion/call-zeroargs-missing-parentheses.h(1): expected an atomic expression (identifier, literal, ...), but this doesn't look familiar (support for this is probably just missing)
+    1: #define EXPANDME1() void f(void);
+                           ^~~~
+    2: 
+    3: // Missing "()"

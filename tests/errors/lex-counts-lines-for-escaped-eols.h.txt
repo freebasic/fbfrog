@@ -1,8 +1,0 @@
-[dos]
-        parsing: tests/errors/lex-counts-lines-for-escaped-eols.h
-tests/errors/lex-counts-lines-for-escaped-eols.h(7): unknown PP directive
-    5: \
-    6: 
-    7: #foo
-        ^~~
-    8: 

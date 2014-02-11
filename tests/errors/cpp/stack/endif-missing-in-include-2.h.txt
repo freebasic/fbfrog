@@ -1,0 +1,6 @@
+[dos]
+        parsing: tests/errors/cpp/stack/endif-missing-in-include-2.h
+        include: tests/errors/cpp/stack/endif-missing.h
+missing #endif in #included file
+    [eol] [begininclude] [eol] [endinclude] [eol] [eol] #endif
+                         ^~~~~

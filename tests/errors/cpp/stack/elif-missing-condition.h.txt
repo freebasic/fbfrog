@@ -1,0 +1,8 @@
+[dos]
+        parsing: tests/errors/cpp/stack/elif-missing-condition.h
+tests/errors/cpp/stack/elif-missing-condition.h(2): missing #if condition
+    1: #ifdef A
+    2: #elif
+            ^
+    3: #endif
+    4: 

@@ -1,0 +1,6 @@
+[dos]
+        parsing: tests/errors/cpp/unknown-directive.h
+tests/errors/cpp/unknown-directive.h(1): unknown PP directive
+    1: #foo
+        ^~~
+    2: 

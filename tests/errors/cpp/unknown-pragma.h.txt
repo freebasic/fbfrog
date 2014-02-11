@@ -1,0 +1,6 @@
+[dos]
+        parsing: tests/errors/cpp/unknown-pragma.h
+tests/errors/cpp/unknown-pragma.h(1): unknown #pragma
+    1: #pragma foo
+               ^~~
+    2: 

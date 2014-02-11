@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/errors/cpp/stack/if-missing-condition.h
+tests/errors/cpp/stack/if-missing-condition.h(1): missing #if condition
+    1: #if
+          ^
+    2: #endif
+    3: 

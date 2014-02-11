@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/errors/cpp/stack/ifdef-missing-id.h
+tests/errors/cpp/stack/ifdef-missing-id.h(1): missing identifier behind #ifdef
+    1: #ifdef
+             ^
+    2: #endif
+    3: 

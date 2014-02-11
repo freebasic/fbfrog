@@ -1,8 +1,0 @@
-[dos]
-        parsing: tests/errors/pp-macrocall-2.h
-tests/errors/pp-macrocall-2.h(4): expected ')' to close macro call argument list but found 'a'
-    2: 
-    3: // Too many arguments
-    4: EXPANDME1(a)
-                 ^
-    5: 

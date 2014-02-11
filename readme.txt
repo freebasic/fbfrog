@@ -137,6 +137,14 @@ To do:
   #endif at last token instead of EOF feels wrong... also, cppMain() removes
   #ifs from the tk buffer, so tkReport() can't rely on tk buffer content in that
   case, and eof-1 may point at an unexpected token...
+- Various tests expose weird stuff:
+	errors/cpp/expansion/pp-merge-token-from-macro-arg-doesnt-merge.h, correct?
+	errors/cpp/expansion/pp-macrocall-1.h, shouldn't expand here
+	errors/lex/open-*, missing source context in error
+	errors/cpp/define-conflicting-duplicate, should cause error?
+	errors/c/typedef-{proc|array}, should be fixed up automatically where possible and be removed otherwise
+		(e.g. if the proc typedef is always used in a pointer context, then include the pointer in the typedef)
+	errors/cpp/stack/*, missing #endifs reported with wrong source context
 - Show suggestions how to fix errors, e.g. if #define body couldn't be parsed,
   suggest using -removedefine to exclude the #define from the binding...
 - Consider adding symbol tables separate from the AST, so e.g. all UDT dtypes
@@ -170,6 +178,7 @@ To do:
 	Type Foo As Long (and make enum anonymous)
 	Enum Foo As Long (must be added to FB first)
 - Support bitfields?
+- ## merging doesn't handle float literals, e.g. 1##. or .##0 ?!
 - when seeing #error, report "found an #error" instead of the #error's message,
   otherwise it looks like that message is coming from fbfrog
 - Comments given to a TK_ID that is a macro call and will be expanded should

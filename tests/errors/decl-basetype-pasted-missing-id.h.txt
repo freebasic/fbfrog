@@ -1,0 +1,8 @@
+[dos]
+        parsing: tests/errors/decl-basetype-pasted-missing-id.h
+tests/errors/decl-basetype-pasted-missing-id.h(4): expected identifier for the symbol declared in this declaration but found ';'
+    2: 
+    3: #define m(a,b) a##b
+    4: m(vo,id);
+               ^
+    5: 

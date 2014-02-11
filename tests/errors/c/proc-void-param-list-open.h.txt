@@ -1,0 +1,6 @@
+[dos]
+        parsing: tests/errors/c/proc-void-param-list-open.h
+tests/errors/c/proc-void-param-list-open.h(1): missing ')' to close parameter list in function declaration
+    1: void f(void
+              ^~~~
+    2: 

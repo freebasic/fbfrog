@@ -1,9 +1,0 @@
-[dos]
-        parsing: tests/errors/pp-if-stack-too-small.h
-tests/errors/pp-if-stack-too-small.h(128): #if/#include stack too small, MAXPPSTACK=128
-    126: #if 1
-    127: #if 1
-    128: #if 1
-         ^
-    129: #if 1
-    130: 

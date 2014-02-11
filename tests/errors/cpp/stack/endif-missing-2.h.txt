@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/errors/cpp/stack/endif-missing-2.h
+tests/errors/cpp/stack/endif-missing-2.h(1): missing #endif
+    1: 
+       ^
+    2: #if 1
+    3: 

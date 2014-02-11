@@ -1,8 +1,0 @@
-[dos]
-        parsing: tests/errors/lex-counts-lines-in-line-comment.h
-tests/errors/lex-counts-lines-in-line-comment.h(5): expected ';' to finish this declaration but found 'and'
-    3: c
-    4: 
-    5: provoke error and check the line number in the produced message
-                     ^~~
-    6: 

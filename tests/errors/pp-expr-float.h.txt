@@ -1,7 +1,0 @@
-[dos]
-        parsing: tests/errors/pp-expr-float.h
-tests/errors/pp-expr-float.h(2): couldn't evaluate #if condition
-    1: // Floating point literals in preprocessor expressions
-    2: #if 1.0 == 2.0
-               ^~
-    3: 

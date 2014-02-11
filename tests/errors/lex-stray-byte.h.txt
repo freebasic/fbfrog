@@ -1,3 +1,0 @@
-[dos]
-        parsing: tests/errors/lex-stray-byte.h
-tests/errors/lex-stray-byte.h(1): stray &hE2 byte

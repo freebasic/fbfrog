@@ -1,6 +1,0 @@
-[dos]
-        parsing: tests/errors/pp-unknown.h
-tests/errors/pp-unknown.h(1): unknown PP directive
-    1: #foo
-        ^~~
-    2: 

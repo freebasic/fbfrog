@@ -1,0 +1,6 @@
+[dos]
+        parsing: tests/errors/c/param-missing-initexpr.h
+tests/errors/c/param-missing-initexpr.h(1): expected an atomic expression (identifier, literal, ...), but this doesn't look familiar (support for this is probably just missing)
+    1: void f(int i =);
+                     ^
+    2: 

@@ -1,7 +1,0 @@
-[dos]
-        parsing: tests/errors/typedef-array.h
-tests/errors/typedef-array.h(2): TODO: arrays not supported here yet
-    1: /* Array typedef */
-    2: typedef int MYINTARRAY[10];
-                             ^
-    3: 

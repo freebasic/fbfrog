@@ -1,9 +1,0 @@
-[dos]
-        parsing: tests/errors/pp-elseif.h
-tests/errors/pp-elseif.h(3): unknown PP directive
-    1: /* CPP only accepts #elif, not #elseif */
-    2: #if 0
-    3: #elseif 0
-        ^~~~~~
-    4: #else
-    5: #endif

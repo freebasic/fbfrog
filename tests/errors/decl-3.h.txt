@@ -1,6 +1,0 @@
-[dos]
-        parsing: tests/errors/decl-3.h
-tests/errors/decl-3.h(1): missing ';' to finish this declaration
-    1: void f
-            ^
-    2: 

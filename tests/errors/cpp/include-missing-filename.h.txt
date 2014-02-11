@@ -1,0 +1,6 @@
+[dos]
+        parsing: tests/errors/cpp/include-missing-filename.h
+tests/errors/cpp/include-missing-filename.h(1): missing "..." string literal containing the #include file name
+    1: #include
+               ^
+    2: 

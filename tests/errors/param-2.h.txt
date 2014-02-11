@@ -1,6 +1,0 @@
-[dos]
-        parsing: tests/errors/param-2.h
-tests/errors/param-2.h(1): expected ')' to close parameter list in function declaration but found 'j'
-    1: void f(int i j);
-                    ^
-    2: 
