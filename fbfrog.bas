@@ -361,7 +361,17 @@ private function hParseArgs( byref x as integer, byval body as integer ) as ASTN
 			case "/?", "/h", "/help"
 				hPrintHelpAndExit( )
 			case else
-				hReadFileArg( result, x )
+				'' *.fbfrog file given (without @)? Treat as @file too
+				if( pathExtOnly( text ) = "fbfrog" ) then
+					hLoadResponseFile( x + 1, text, tkGetLocation( x ) )
+					tkRemove( x, x )
+					x -= 1
+
+					'' Must expand @files again in case the loaded file contained any
+					hExpandResponseFileArguments( )
+				else
+					hReadFileArg( result, x )
+				end if
 			end select
 		end select
 
