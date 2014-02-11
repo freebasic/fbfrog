@@ -1,5 +1,0 @@
-[dos]
-        parsing: tests/errors/cpp/expansion/merge-nonhexdigits.h
-14 [hexnum ""]
-16 [id "G"]
-oops, cannot merge these two tokens when expanding macro 'EXPANDME1'

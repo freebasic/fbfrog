@@ -1,0 +1,15 @@
+[dos]
+        parsing: tests/cpp/eval/./expr.h
+        parsing: tests/cpp/eval/./if-nested.h
+        parsing: tests/cpp/eval/./if.h
+[linux]
+        parsing: tests/cpp/eval/./expr.h
+        parsing: tests/cpp/eval/./if-nested.h
+        parsing: tests/cpp/eval/./if.h
+[win32]
+        parsing: tests/cpp/eval/./expr.h
+        parsing: tests/cpp/eval/./if-nested.h
+        parsing: tests/cpp/eval/./if.h
+emitting: tests/cpp/eval/./expr.bi (19 declarations)
+emitting: tests/cpp/eval/./if-nested.bi (78 declarations)
+emitting: tests/cpp/eval/./if.bi (53 declarations)

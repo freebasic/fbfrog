@@ -1,0 +1,39 @@
+[dos]
+        parsing: tests/cpp/expand/./escaped-eol.h
+        parsing: tests/cpp/expand/./params-zero.h
+        parsing: tests/cpp/expand/./params-none.h
+        parsing: tests/cpp/expand/./undef-toplevel.h
+        parsing: tests/cpp/expand/./merge.h
+        parsing: tests/cpp/expand/./params.h
+        parsing: tests/cpp/expand/./nested-body.h
+        parsing: tests/cpp/expand/./nested-params.h
+        parsing: tests/cpp/expand/./no-expansion-in-defined-expr.h
+[linux]
+        parsing: tests/cpp/expand/./escaped-eol.h
+        parsing: tests/cpp/expand/./params-zero.h
+        parsing: tests/cpp/expand/./params-none.h
+        parsing: tests/cpp/expand/./undef-toplevel.h
+        parsing: tests/cpp/expand/./merge.h
+        parsing: tests/cpp/expand/./params.h
+        parsing: tests/cpp/expand/./nested-body.h
+        parsing: tests/cpp/expand/./nested-params.h
+        parsing: tests/cpp/expand/./no-expansion-in-defined-expr.h
+[win32]
+        parsing: tests/cpp/expand/./escaped-eol.h
+        parsing: tests/cpp/expand/./params-zero.h
+        parsing: tests/cpp/expand/./params-none.h
+        parsing: tests/cpp/expand/./undef-toplevel.h
+        parsing: tests/cpp/expand/./merge.h
+        parsing: tests/cpp/expand/./params.h
+        parsing: tests/cpp/expand/./nested-body.h
+        parsing: tests/cpp/expand/./nested-params.h
+        parsing: tests/cpp/expand/./no-expansion-in-defined-expr.h
+emitting: tests/cpp/expand/./escaped-eol.bi (6 declarations)
+emitting: tests/cpp/expand/./params-zero.bi (1 declaration)
+emitting: tests/cpp/expand/./params-none.bi (3 declarations)
+emitting: tests/cpp/expand/./undef-toplevel.bi (1 declaration)
+emitting: tests/cpp/expand/./merge.bi (95 declarations)
+emitting: tests/cpp/expand/./params.bi (10 declarations)
+emitting: tests/cpp/expand/./nested-body.bi (1 declaration)
+emitting: tests/cpp/expand/./nested-params.bi (1 declaration)
+emitting: tests/cpp/expand/./no-expansion-in-defined-expr.bi (8 declarations)

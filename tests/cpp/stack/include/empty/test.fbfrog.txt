@@ -1,0 +1,10 @@
+[dos]
+        parsing: tests/cpp/stack/include/empty/empty.h
+        include: tests/cpp/stack/include/empty/empty-1.h
+[linux]
+        parsing: tests/cpp/stack/include/empty/empty.h
+        include: tests/cpp/stack/include/empty/empty-1.h
+[win32]
+        parsing: tests/cpp/stack/include/empty/empty.h
+        include: tests/cpp/stack/include/empty/empty-1.h
+emitting: tests/cpp/stack/include/empty/empty.bi (0 declarations)

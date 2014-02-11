@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/cpp/stack/if/./expr.h
+[linux]
+        parsing: tests/cpp/stack/if/./expr.h
+[win32]
+        parsing: tests/cpp/stack/if/./expr.h
+emitting: tests/cpp/stack/if/./expr.bi (0 declarations)

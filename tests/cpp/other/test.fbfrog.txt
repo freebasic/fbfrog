@@ -1,0 +1,55 @@
+[dos]
+        parsing: tests/cpp/other/./comment-association.h
+        parsing: tests/cpp/other/./comment-accumulation.h
+        parsing: tests/cpp/other/./empty-file.h
+        parsing: tests/cpp/other/./directives-1.h
+        parsing: tests/cpp/other/./dividers-inside-statements.h
+        parsing: tests/cpp/other/./comment-only.h
+        parsing: tests/cpp/other/./directives.h
+        include: tests/cpp/other/./directives-1.h
+        include: tests/cpp/other/./directives-1.h
+        include: tests/cpp/other/./directives-1.h
+        include: tests/cpp/other/./directives-1.h
+        include: tests/cpp/other/./directives-1.h
+        include: tests/cpp/other/./directives-1.h
+        include: tests/cpp/other/./directives-1.h
+        include: tests/cpp/other/./directives-1.h
+[linux]
+        parsing: tests/cpp/other/./comment-association.h
+        parsing: tests/cpp/other/./comment-accumulation.h
+        parsing: tests/cpp/other/./empty-file.h
+        parsing: tests/cpp/other/./directives-1.h
+        parsing: tests/cpp/other/./dividers-inside-statements.h
+        parsing: tests/cpp/other/./comment-only.h
+        parsing: tests/cpp/other/./directives.h
+        include: tests/cpp/other/./directives-1.h
+        include: tests/cpp/other/./directives-1.h
+        include: tests/cpp/other/./directives-1.h
+        include: tests/cpp/other/./directives-1.h
+        include: tests/cpp/other/./directives-1.h
+        include: tests/cpp/other/./directives-1.h
+        include: tests/cpp/other/./directives-1.h
+        include: tests/cpp/other/./directives-1.h
+[win32]
+        parsing: tests/cpp/other/./comment-association.h
+        parsing: tests/cpp/other/./comment-accumulation.h
+        parsing: tests/cpp/other/./empty-file.h
+        parsing: tests/cpp/other/./directives-1.h
+        parsing: tests/cpp/other/./dividers-inside-statements.h
+        parsing: tests/cpp/other/./comment-only.h
+        parsing: tests/cpp/other/./directives.h
+        include: tests/cpp/other/./directives-1.h
+        include: tests/cpp/other/./directives-1.h
+        include: tests/cpp/other/./directives-1.h
+        include: tests/cpp/other/./directives-1.h
+        include: tests/cpp/other/./directives-1.h
+        include: tests/cpp/other/./directives-1.h
+        include: tests/cpp/other/./directives-1.h
+        include: tests/cpp/other/./directives-1.h
+emitting: tests/cpp/other/./comment-association.bi (9 declarations)
+emitting: tests/cpp/other/./comment-accumulation.bi (1 declaration)
+emitting: tests/cpp/other/./empty-file.bi (0 declarations)
+emitting: tests/cpp/other/./directives-1.bi (1 declaration)
+emitting: tests/cpp/other/./dividers-inside-statements.bi (6 declarations)
+emitting: tests/cpp/other/./comment-only.bi (0 declarations)
+emitting: tests/cpp/other/./directives.bi (61 declarations)

@@ -1,0 +1,13 @@
+[1.dos]
+          parsing: tests/ast/merge/fields/a.h
+[1.linux]
+          parsing: tests/ast/merge/fields/a.h
+[1.win32]
+          parsing: tests/ast/merge/fields/a.h
+[2.dos]
+          parsing: tests/ast/merge/fields/a.h
+[2.linux]
+          parsing: tests/ast/merge/fields/a.h
+[2.win32]
+          parsing: tests/ast/merge/fields/a.h
+emitting: tests/ast/merge/fields/a.bi (4 declarations)

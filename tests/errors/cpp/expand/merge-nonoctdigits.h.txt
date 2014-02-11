@@ -1,0 +1,5 @@
+[dos]
+        parsing: tests/errors/cpp/expand/merge-nonoctdigits.h
+14 [decnum "0"]
+16 [decnum "8"]
+oops, cannot merge these two tokens when expanding macro 'EXPANDME1'

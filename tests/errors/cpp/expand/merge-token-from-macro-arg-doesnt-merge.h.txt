@@ -1,0 +1,9 @@
+[dos]
+        parsing: tests/errors/cpp/expand/merge-token-from-macro-arg-doesnt-merge.h
+tests/errors/cpp/expand/merge-token-from-macro-arg-doesnt-merge.h(5): expected an atomic expression (identifier, literal, ...), but this doesn't look familiar (support for this is probably just missing)
+    3: // not
+    4: //    typedef struct ab;
+    5: #define EXPANDME1(param) typedef struct param;
+                                ^~~~~~~
+    6: EXPANDME1(a ## b)
+    7: 

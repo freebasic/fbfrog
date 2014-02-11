@@ -1,0 +1,8 @@
+[dos]
+        parsing: tests/errors/cpp/expand/call-zeroargs-too-many-args.h
+tests/errors/cpp/expand/call-zeroargs-too-many-args.h(4): expected ')' to close macro call argument list but found 'a'
+    2: 
+    3: // Too many arguments
+    4: EXPANDME1(a)
+                 ^
+    5: 
