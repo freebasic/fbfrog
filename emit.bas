@@ -10,7 +10,7 @@ declare function emitAst _
 		byval need_parens as integer = FALSE _
 	) as string
 
-function emitType _
+function emitType overload _
 	( _
 		byval dtype as integer, _
 		byval subtype as ASTNODE ptr, _
@@ -110,6 +110,10 @@ function emitType _
 	next
 
 	function = s
+end function
+
+function emitType overload( byval n as ASTNODE ptr ) as string
+	function = emitType( n->dtype, n->subtype )
 end function
 
 namespace emit
@@ -429,7 +433,7 @@ private function emitAst _
 
 	case ASTCLASS_TYPEDEF
 		assert( n->array = NULL )
-		emitStmt( "type " + *n->text + " as " + emitType( n->dtype, n->subtype ), n->comment )
+		emitStmt( "type " + *n->text + " as " + emitType( n ), n->comment )
 
 	case ASTCLASS_STRUCTFWD
 		'' type UDT as UDT_
@@ -441,16 +445,16 @@ private function emitAst _
 
 	case ASTCLASS_VAR
 		if( n->attrib and ASTATTRIB_EXTERN ) then
-			emitStmt( "extern "     + hIdAndArray( n, TRUE  ) + " as " + emitType( n->dtype, n->subtype ), n->comment )
+			emitStmt( "extern "     + hIdAndArray( n, TRUE  ) + " as " + emitType( n ), n->comment )
 		elseif( n->attrib and ASTATTRIB_PRIVATE ) then
-			emitStmt( "dim shared " + hIdAndArray( n, FALSE ) + " as " + emitType( n->dtype, n->subtype ), n->comment )
+			emitStmt( "dim shared " + hIdAndArray( n, FALSE ) + " as " + emitType( n ), n->comment )
 		else
-			emitStmt( "extern     " + hIdAndArray( n, TRUE  ) + " as " + emitType( n->dtype, n->subtype ), n->comment )
-			emitStmt( "dim shared " + hIdAndArray( n, FALSE ) + " as " + emitType( n->dtype, n->subtype ) )
+			emitStmt( "extern     " + hIdAndArray( n, TRUE  ) + " as " + emitType( n ), n->comment )
+			emitStmt( "dim shared " + hIdAndArray( n, FALSE ) + " as " + emitType( n ) )
 		end if
 
 	case ASTCLASS_FIELD
-		emitStmt( hIdAndArray( n, FALSE ) + " as " + emitType( n->dtype, n->subtype ), n->comment )
+		emitStmt( hIdAndArray( n, FALSE ) + " as " + emitType( n ), n->comment )
 
 	case ASTCLASS_ENUMCONST
 		s += *n->text
@@ -492,7 +496,7 @@ private function emitAst _
 
 		'' Function result type
 		if( n->dtype <> TYPE_ANY ) then
-			s += " as " + emitType( n->dtype, n->subtype )
+			s += " as " + emitType( n )
 		end if
 
 		if( n->text ) then
@@ -512,7 +516,7 @@ private function emitAst _
 			if( n->text ) then
 				s += " " + *n->text
 			end if
-			s += " as " + emitType( n->dtype, n->subtype )
+			s += " as " + emitType( n )
 
 			if( n->expr ) then
 				s += " = " + emitAst( n->expr )
@@ -663,7 +667,7 @@ private function emitAst _
 				else
 					s = "cast("
 				end if
-				s += emitType( n->dtype, n->subtype ) + ", "
+				s += emitType( n ) + ", "
 			end select
 
 			s += emitAst( n->l ) + ")"
@@ -746,7 +750,7 @@ private function emitAst _
 		end if
 
 	case ASTCLASS_SIZEOFTYPE
-		s = "sizeof(" + emitType( n->dtype, n->subtype ) + ")"
+		s = "sizeof(" + emitType( n ) + ")"
 
 	case else
 		astDump( n )

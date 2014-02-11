@@ -918,12 +918,13 @@ declare function lexPeekLine _
 		byval targetlinenum as integer _
 	) as string
 
-declare function emitType _
+declare function emitType overload _
 	( _
 		byval dtype as integer, _
 		byval subtype as ASTNODE ptr, _
 		byval debugdump as integer = FALSE _
 	) as string
+declare function emitType overload( byval n as ASTNODE ptr ) as string
 declare sub emitFile( byref filename as string, byval ast as ASTNODE ptr )
 
 declare function hFindClosingParen( byval x as integer ) as integer

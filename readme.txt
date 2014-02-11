@@ -115,7 +115,6 @@ To do:
 
 - Allow -bi <file> or similar to insert a .bi file at the end of the output binding
   This can be used to add arbitrary FB code (e.g. complex defines)
-- emitType( n->dtype, n->subtype ) should be abstracted
 - Need some way to easily pass tk locations on to AST nodes, perhaps astNewFromTK()
   or similar that copies over the location automatically
 - Need some high-level way to combine locations into one, etc. which is currently
