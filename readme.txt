@@ -16,13 +16,12 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-Goal:
-
-  Automation of most of the work needed to create and maintain FB bindings to
-  C libraries, most importantly: converting C declarations to FB code.
-
-
 Features:
+
+  This program reads in *.h files (C API declarations) and generates
+  corresponding *.bi files (FreeBASIC API declarations). It automates most of
+  the work needed to create and maintain FB bindings to C libraries, most
+  importantly: converting C declarations to FB code.
 
   * C pre-processor (CPP)
       * tracks #defines/#undefs and does macro expansion (can be disabled for
@@ -75,13 +74,15 @@ Features:
 
 Compiling:
 
-  fbc *.bas -m fbfrog
+  $ fbc *.bas -m fbfrog
 
 
 Running the tests:
 
-  fbc tests/run.bas
-  tests/run
+  1. $ fbc tests/run.bas
+  2. $ tests/run
+  3. Use Git to check the status of the tests/ directory. Any changes indicate
+     test failures.
 
 
 Usage:
