@@ -1356,10 +1356,10 @@ private function cDeclarator _
 				'' Add new DIMENSION to the ARRAY:
 				'' lbound = 0, ubound = elements - 1
 				d = astNewDIMENSION( _
-						astNewCONST( 0, 0, TYPE_LONG ), _
+						astNewCONSTI( 0, TYPE_LONG ), _
 						astNewBOP( ASTOP_SUB, _
 							d, _
-							astNewCONST( 1, 0, TYPE_LONG ) ) )
+							astNewCONSTI( 1, TYPE_LONG ) ) )
 			end if
 			astAppend( node->array, d )
 

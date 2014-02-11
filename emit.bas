@@ -535,18 +535,17 @@ private function emitAst _
 	case ASTCLASS_MACROPARAM
 		s += *n->text
 
-	case ASTCLASS_CONST
-		if( typeIsFloat( n->dtype ) ) then
-			s += str( n->valf )
+	case ASTCLASS_CONSTI
+		if( n->attrib and ASTATTRIB_OCT ) then
+			s += "&o" + oct( n->vali )
+		elseif( n->attrib and ASTATTRIB_HEX ) then
+			s += "&h" + hex( n->vali )
 		else
-			if( n->attrib and ASTATTRIB_OCT ) then
-				s += "&o" + oct( n->vali )
-			elseif( n->attrib and ASTATTRIB_HEX ) then
-				s += "&h" + hex( n->vali )
-			else
-				s += str( n->vali )
-			end if
+			s += str( n->vali )
 		end if
+
+	case ASTCLASS_CONSTF
+		s += str( n->valf )
 
 	case ASTCLASS_ID
 		s += *n->text

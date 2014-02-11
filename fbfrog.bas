@@ -248,7 +248,7 @@ private function hParseArgs( byref x as integer, byval body as integer ) as ASTN
 				if( hIsStringOrId( x ) = FALSE ) then
 					tkOops( x, "-version: missing <version> argument" )
 				end if
-				'' astNewCONST( vallng( nextarg ), 0, TYPE_LONGINT )
+				'' astNewCONSTI( vallng( nextarg ), TYPE_LONGINT )
 				var id = astNew( ASTCLASS_STRING, tkGetText( x ) )
 				var location2 = tkGetLocation( x )
 				id->location = *location2

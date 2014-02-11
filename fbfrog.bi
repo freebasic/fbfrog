@@ -544,7 +544,6 @@ const TYPEMAX_PTR = 8
 
 declare function typeToSigned( byval dtype as integer ) as integer
 declare function typeToUnsigned( byval dtype as integer ) as integer
-declare function typeIsFloat( byval dtype as integer ) as integer
 
 '' Generally the AST expressions should represent FB semantics. The ASTOP_C*
 '' ops are only here to make C expression parsing easier, however astOpsC2FB()
@@ -644,7 +643,8 @@ enum
 	ASTCLASS_MACROBODY
 	ASTCLASS_MACROPARAM
 	ASTCLASS_TK
-	ASTCLASS_CONST
+	ASTCLASS_CONSTI
+	ASTCLASS_CONSTF
 	ASTCLASS_ID
 	ASTCLASS_TEXT
 	ASTCLASS_STRING
@@ -668,8 +668,8 @@ end enum
 enum
 	ASTATTRIB_EXTERN	= 1 shl 0  '' VAR
 	ASTATTRIB_PRIVATE	= 1 shl 1  '' VAR
-	ASTATTRIB_OCT		= 1 shl 2  '' CONST
-	ASTATTRIB_HEX		= 1 shl 3  '' CONST
+	ASTATTRIB_OCT		= 1 shl 2  '' CONSTI
+	ASTATTRIB_HEX		= 1 shl 3  '' CONSTI
 	ASTATTRIB_CDECL		= 1 shl 4
 	ASTATTRIB_STDCALL	= 1 shl 5
 	ASTATTRIB_HIDECALLCONV	= 1 shl 6  '' Whether the calling convention is covered by an Extern block, in which case it doesn't need to be emitted.
@@ -713,9 +713,8 @@ type ASTNODE_
 	r		as ASTNODE ptr
 
 	union
-		'' CONST: integer (longint) or float (double) value
-		vali		as longint
-		valf		as double
+		vali		as longint  '' CONSTI
+		valf		as double   '' CONSTF
 
 		tk		as integer  '' TK: TK_*
 		paramcount	as integer  '' PPDEFINE: -1 = #define m, 0 = #define m(), 1 = #define m(a), ...
@@ -776,12 +775,8 @@ declare function astNewDIMENSION _
 		byval lb as ASTNODE ptr, _
 		byval ub as ASTNODE ptr _
 	) as ASTNODE ptr
-declare function astNewCONST _
-	( _
-		byval i as longint, _
-		byval f as double, _
-		byval dtype as integer _
-	) as ASTNODE ptr
+declare function astNewCONSTI( byval i as longint, byval dtype as integer ) as ASTNODE ptr
+declare function astNewCONSTF( byval f as double, byval dtype as integer ) as ASTNODE ptr
 #define astNewID( id ) astNew( ASTCLASS_ID, id )
 #define astNewTEXT( text ) astNew( ASTCLASS_TEXT, text )
 declare function astNewTK( byval x as integer ) as ASTNODE ptr

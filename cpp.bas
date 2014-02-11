@@ -390,15 +390,15 @@ function hNumberLiteral( byval x as integer ) as ASTNODE ptr
 
 	select case( tkGet( x ) )
 	case TK_DECNUM
-		n = astNewCONST( vallng( *tkGetText( x ) ), 0, TYPE_LONGINT )
+		n = astNewCONSTI( vallng( *tkGetText( x ) ), TYPE_LONGINT )
 	case TK_HEXNUM
-		n = astNewCONST( vallng( "&h" + *tkGetText( x ) ), 0, TYPE_LONGINT )
+		n = astNewCONSTI( vallng( "&h" + *tkGetText( x ) ), TYPE_LONGINT )
 		n->attrib or= ASTATTRIB_HEX
 	case TK_OCTNUM
-		n = astNewCONST( vallng( "&o" + *tkGetText( x ) ), 0, TYPE_LONGINT )
+		n = astNewCONSTI( vallng( "&o" + *tkGetText( x ) ), TYPE_LONGINT )
 		n->attrib or= ASTATTRIB_OCT
 	case TK_DECFLOAT
-		n = astNewCONST( 0, val( *tkGetText( x ) ), TYPE_DOUBLE )
+		n = astNewCONSTF( val( *tkGetText( x ) ), TYPE_DOUBLE )
 	case else
 		assert( FALSE )
 	end select
@@ -1546,7 +1546,7 @@ private function hEvalIfCondition( byval x as integer ) as integer
 	tkSetAst( x, t )
 
 	'' 2. Check the condition
-	if( (t->class <> ASTCLASS_CONST) or typeIsFloat( t->dtype ) ) then
+	if( t->class <> ASTCLASS_CONSTI ) then
 		const MESSAGE = "couldn't evaluate #if condition"
 		if( t->location.file ) then
 			hReport( @t->location, MESSAGE, TRUE )
