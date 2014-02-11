@@ -1,0 +1,7 @@
+-define ZIP_EXTERN
+-undef ZIP_DISABLE_DEPRECATED
+-undef _HAD_ZIP_H
+-undef _HAD_ZIPCONF_H
+
+-removedefine _HAD_ZIP_H
+-removedefine _HAD_ZIPCONF_H
