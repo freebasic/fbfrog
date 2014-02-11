@@ -5,7 +5,7 @@
 dim shared frog as FROGSTUFF
 
 private sub hPrintHelpAndExit( )
-	print "fbfrog 0.1 (" + __DATE_ISO__ + "), FreeBASIC *.bi binding generator"
+	print "fbfrog 1.0 (" + __DATE_ISO__ + "), FreeBASIC *.bi binding generator"
 	print "usage: fbfrog *.h [options]"
 	print "*.fbfrog input files are special and treated similar to @<file>."
 	print "global options:"
