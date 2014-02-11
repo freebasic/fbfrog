@@ -1,11 +1,15 @@
-How about using existing C preprocessors/parser (e.g. libclang)
-+ not really fully investigated yet
-+ less work, more complete and less bugs than a custom parser
-- dependency on external tool/library makes development/distribution/usage more
+Design decisions
+----------------
+
+Using a custom C PP/parser instead of an existing one (e.g. libclang).
+- not really fully investigated yet what all existing ones can do
+- an existing parser would be less work and more complete, and have less bugs
+  than a custom parser
++ dependency on external tool/library makes development/distribution/usage more
   difficult
-- fbfrog needs to see #defines, typically pre-existing C-to-AST parsers don't
++ fbfrog needs to see #defines, typically pre-existing C-to-AST parsers don't
   preserve them
-- fbfrog sometimes wants to allow conditional macro expansion (i.e. only expand
++ fbfrog sometimes wants to allow conditional macro expansion (i.e. only expand
   certain macros, not others), that's probably not possible with existing CPPs
 
 Using an AST instead of just "rearranging tokens" or doing text replacements
@@ -18,21 +22,24 @@ Using an AST instead of just "rearranging tokens" or doing text replacements
   type and touch the common identifier field; as opposed to re-parsing tokens
   everytime to determine symbol type, where to insert the new identifier, etc.
 
-Storing AST in "API files" in some intermediate format (which is not the final
-.bi) to make later translations of the same API easier, by no longer requiring
-the original tarballs for which "API files" were once generated.
-+ can keep "API files" in VCS, have to download much less tarballs
-- such API files are final; they'd need to be regenerated in order to benefit
-  from fbfrog fixes or preset changes (e.g. different pre-#defines). Easy to
-  have hidden bugs thanks to this, and to be safe, they'd have to be regenerated
-  every time, at which point they become pointless.
+Not storing AST in "API files" in some intermediate format (which is not the
+final .bi), even though that could make later translations of the same API
+easier, by no longer requiring the original tarballs for which "API files" have
+once been generated.
+- Have to download/keep original headers/tarballs; "API files" on the other hand
+  could be stored in Git etc.
++ Forces original headers to be re-interpreted everytime. This means they always
+  benefit from fbfrog fixes or preset changes (e.g. different pre-#defines).
+  "API files" are final though and thus would easily include hidden bugs. They'd
+  need to be regenerated to avoid that, and at that point the original headers
+  are needed anyways.
 
-Re-importing existing FB binding in order to extend/update them
-- Old bindings are likely to contain bugs or simply not conform to latest
+Not re-importing existing FB binding in order to extend/update them.
++ Old bindings are likely to contain bugs or simply not conform to latest
   API/ABI requirements (e.g., 32bit FB headers use Integer in many places where
   int was used in C, but this would break for 64bit)
-- Same as for the issue of "storing AST in some intermediate format": need to
-  re-parse the original headers in order for fbfrog/preset updates to take effect
++ Need to re-parse the original headers in order for fbfrog/preset updates to
+  take effect.
 
 #includes are always parsed, so that any #defines/#undefs they contain are seen,
 but the -nomerge option can be used to prevent the code they contain from being
@@ -62,15 +69,17 @@ Just one "preset" per fbfrog invocation.
 + Matches the idea that fbfrog works much like a compiler: It takes various
   input files and generates a binding (one binding, not multiple ones).
 
-Split fbfrog into separate tools: cpp, c2ast, ast2fb
-+ Possible to tweak output of a tool before passing to next tool
-+ Easier testing of individual steps
-- Too much manual work needed when adjusting output between steps
-- Internal representation exposed, may need to start maintaining compatibility etc.
-- Not as easy to build & use anymore compared to having a single tool
+fbfrog is a single tool, not split up into separate tools: cpp, c2ast, ast2fb
++ All-in-one program is easier to build & use
++ Internals hidden, can easily be changed. With separate tools it'd be necessary
+  to start maintaining backwards compatibility etc.
+- Prevents manual adjustments to output of individual steps.
++ Wanting to adjust output manually isn't good anyways, because it's too much
+  manual work.
+- Prevents easy testing of individual steps
 
-Preserving white space (i.e. input C code's formatting) and commentary
-- Creating bindings, not translations. Declarations may be re-ordered.
+Not preserving white space (i.e. input C code's formatting) and commentary.
++ Creating bindings, not translations. Declarations may be re-ordered.
 
 Should show an error when encountering unknown constructs instead of emitting
 the unknown construct and a TODO note into a comment in the .bi output.
