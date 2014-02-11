@@ -514,30 +514,6 @@ private function frogWorkVersion _
 	function = rootfiles
 end function
 
-private sub hPrintPresetVersions( byval versions as ASTNODE ptr, byval targets as integer )
-	dim s as string
-
-	var i = versions->head
-	while( i )
-		s += emitAst( i ) + ", "
-		i = i->next
-	wend
-	s = left( s, len( s ) - 2 )
-	if( len( s ) = 0 ) then
-		s = "none specified"
-	end if
-
-	print "versions: " + s
-
-	s = ""
-	if( targets and ASTATTRIB_DOS   ) then s += "dos, "
-	if( targets and ASTATTRIB_LINUX ) then s += "linux, "
-	if( targets and ASTATTRIB_WIN32 ) then s += "win32, "
-	s = left( s, len( s ) - 2 )
-
-	print "targets: " + s
-end sub
-
 private sub hRemoveEmptyFiles( byval files as ASTNODE ptr )
 	var f = files->head
 	while( f )
@@ -591,16 +567,21 @@ end function
 		astAppend( versions, astNew( ASTCLASS_DUMMYVERSION ) )
 	end if
 
-	if( frog.verbose ) then
-		hPrintPresetVersions( versions, targets )
-	end if
-
 	var targetversions = astCombineVersionsAndTargets( versions, targets )
 
 	'' There will always be at least one combined version; even if there
 	'' were only targets and no versions, one dummy version per target will
 	'' be used.
 	assert( targetversions->head )
+
+	if( frog.verbose ) then
+		print "versions/targets:"
+		var i = targetversions->head
+		while( i )
+			print "  " + astDumpPrettyVersion( i )
+			i = i->next
+		wend
+	end if
 
 	'' Find longest version string, for pretty output
 	scope
