@@ -298,26 +298,6 @@ private function emitAst _
 		wend
 		s = ""
 
-	case ASTCLASS_VERBLOCK
-		emitStmt( "version " + hSeparatedList( n->expr, ", ", FALSE ) )
-		hEmitIndentedChildren( n )
-		emitStmt( "endversion" )
-
-	case ASTCLASS_TARGETBLOCK
-		if( n->attrib and ASTATTRIB_DOS   ) then s += "dos, "
-		if( n->attrib and ASTATTRIB_LINUX ) then s += "linux, "
-		if( n->attrib and ASTATTRIB_WIN32 ) then s += "win32, "
-
-		'' Cut off ", " at the end
-		s = left( s, len( s ) - 2 )
-
-		emitStmt( "target " + s )
-		s = ""
-
-		hEmitIndentedChildren( n )
-
-		emitStmt( "endtarget" )
-
 	case ASTCLASS_DIVIDER
 		if( (n->prev <> NULL) and _
 		    ((n->next <> NULL) or _
