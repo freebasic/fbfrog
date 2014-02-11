@@ -924,11 +924,6 @@ declare function emitType _
 		byval subtype as ASTNODE ptr, _
 		byval debugdump as integer = FALSE _
 	) as string
-declare function emitAst _
-	( _
-		byval n as ASTNODE ptr, _
-		byval need_parens as integer = FALSE _
-	) as string
 declare sub emitFile( byref filename as string, byval ast as ASTNODE ptr )
 
 declare function hFindClosingParen( byval x as integer ) as integer

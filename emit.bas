@@ -1,12 +1,14 @@
 ''
-'' AST emitter
-''
-'' emitAst() takes an AST and recursively generates a string containing
-'' corresponding formatted FB code. emitWriteFile() is used to create a file
-'' from such a string.
+'' "AST to FB .bi file" emitter
 ''
 
 #include once "fbfrog.bi"
+
+declare function emitAst _
+	( _
+		byval n as ASTNODE ptr, _
+		byval need_parens as integer = FALSE _
+	) as string
 
 function emitType _
 	( _
@@ -273,7 +275,7 @@ private sub hEmitIndentedChildren( byval n as ASTNODE ptr )
 	emit.indent -= 1
 end sub
 
-function emitAst _
+private function emitAst _
 	( _
 		byval n as ASTNODE ptr, _
 		byval need_parens as integer _
