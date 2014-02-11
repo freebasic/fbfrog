@@ -115,54 +115,21 @@ To do:
 
 - Allow -bi <file> or similar to insert a .bi file at the end of the output binding
   This can be used to add arbitrary FB code (e.g. complex defines)
-- Need some way to easily pass tk locations on to AST nodes, perhaps astNewFromTK()
-  or similar that copies over the location automatically
-- Need some high-level way to combine locations into one, etc. which is currently
-  done manually in hParseArgs() at least
-- use CONSTI and CONSTF nodes instead of just CONST, so we don't need typeIsFloat() checks?
-- AST CONST folding should preserve bin/oct/hex flags
-- Since the C parser no longer modifies the tk buffer, could it be turned into
-  an array? No, currently it still temporarily re-inserts macro bodies, but is
-  that really needed?
-- Remove all remaining cases of tkInsert() without corresponding tkSetLocation(),
-  e.g. ## token merging, so tkReport() can be simplified. (although, tkToCText()
-  etc. would still be useful for showing macro expansion stack history)
-- Error messages should show the macro expansion steps that happened in a given
-  piece of code, from what the parser saw to the main location where it all came
-  from.
-- Need better error messages for things like "missing ';' to finish declaration"
-  should perhaps underline the entire declaration?
-- TK_EOF should have location information (toplevel file?), but then we need
-  TK_BOF too or else the two could be confused. Reporting errors like missing
-  #endif at last token instead of EOF feels wrong... also, cppMain() removes
-  #ifs from the tk buffer, so tkReport() can't rely on tk buffer content in that
-  case, and eof-1 may point at an unexpected token...
-- Various tests expose weird stuff:
-	errors/cpp/expansion/pp-merge-token-from-macro-arg-doesnt-merge.h, correct?
-	errors/cpp/expansion/pp-macrocall-1.h, shouldn't expand here
-	errors/lex/open-*, missing source context in error
-	errors/cpp/define-conflicting-duplicate, should cause error?
-	errors/c/typedef-{proc|array}, should be fixed up automatically where possible and be removed otherwise
-		(e.g. if the proc typedef is always used in a pointer context, then include the pointer in the typedef)
-	errors/cpp/stack/*, missing #endifs reported with wrong source context
+- To remove unknown constructs: -removematch "<C code>"
+  We can parse the C code into tokens, store that in the AST, and then filter
+  out all constructs containing that sequence of tokens (before cFile() runs).
 - Show suggestions how to fix errors, e.g. if #define body couldn't be parsed,
   suggest using -removedefine to exclude the #define from the binding...
-- Consider adding symbol tables separate from the AST, so e.g. all UDT dtypes
-  would reference the same subtype symbol instead of allocating an id everytime.
-    - define/const/proc/var ids aren't re-used much, but type ids are. Perhaps
-      add a UDT map? ie. use dtype values >= TYPE_UDT to represent UDTs (by name)
-      Then UDT types wouldn't have to allocate a subtype ID anymore (only function pointers).
-    - of course having the completely self-contained AST is great aswell
 - Do not preserve #defines that are #undeffed, such that ultimately it'll become
   pointless to preserve #undefs at all
-- Support 32bit vs 64bit somehow? C long is already mapped to CLONG, but what
+- 64bit support:
+    * C long is already mapped to CLONG
+    * pre-#defines are missing
+    * what about , but what
   if a header checks for 32bit/64bit pre-#defines? Just add linux64/win64/etc. os blocks?
 - Long Double and other built-in types that FB doesn't have:
     a) just omit, except fields in a struct that is needed
     b) replace with byte array, other dtypes, or custom struct
-- Prettier "assuming undefined" reports: just 1 line, no source context
-- Only one "assuming undefined" report per symbol (at least only one per CPP run,
-  perhaps even only one per fbfrog run)
 - emit case-preserving ALIASes if outside Extern block (i.e. no HIDDENCALLCONV flag)
 - Add option to translate #defines to consts if possible
 - #include foo.h  ->  #include foo.bi, if foo.bi will be generated too
@@ -179,6 +146,49 @@ To do:
 	Enum Foo As Long (must be added to FB first)
 - Support bitfields?
 - ## merging doesn't handle float literals, e.g. 1##. or .##0 ?!
+- Const folding etc. has issues with 32bit/64bit, using Longint internally, so
+  e.g. ~(0xFFFFFFFF) comes out as &hFFFFFFFF00000000 instead of &h0. Need to
+  respect C number literal dtypes & sizes.
+- Const folding probably also doesn't handle unsigned relational BOPs properly
+  since it only does signed ones internally
+
+- use CONSTI and CONSTF nodes instead of just CONST, so we don't need typeIsFloat() checks?
+- Need some way to easily pass tk locations on to AST nodes, perhaps astNewFromTK()
+  or similar that copies over the location automatically
+- Need some high-level way to combine locations into one, etc. which is currently
+  done manually in hParseArgs() at least
+- Need better error messages for things like "missing ';' to finish declaration"
+  should perhaps underline the entire declaration?
+- TK_EOF should have location information (toplevel file?), but then we need
+  TK_BOF too or else the two could be confused. Reporting errors like missing
+  #endif at last token instead of EOF feels wrong... also, cppMain() removes
+  #ifs from the tk buffer, so tkReport() can't rely on tk buffer content in that
+  case, and eof-1 may point at an unexpected token...
+- Remove all remaining cases of tkInsert() without corresponding tkSetLocation(),
+  e.g. ## token merging, so tkReport() can be simplified. (although, tkToCText()
+  etc. would still be useful for showing macro expansion stack history)
+- Since the C parser no longer modifies the tk buffer, could it be turned into
+  an array? No, currently it still temporarily re-inserts macro bodies, but is
+  that really needed? Macro body parsing could surely be done after cFile():
+    - cpp creates TK_PPDEFINE at proper locations (containing the AST with the macro body tokens)
+    - c inserts PPDEFINE nodes into the AST at the proper locations
+    - then afterwards, we go through the PPDEFINE nodes, re-insert & try to parse each body.
+  Then c could use simple offsets to access tokens (tkLock/Unlock?)
+  Maybe even cpp could create new token runs instead of modifying the current one,
+  so that fixed TOKENRUNs could be re-used to store macro bodies, and to implement the
+  macro expansion error reporting stuff...
+- Error messages should show the macro expansion steps that happened in a given
+  piece of code, from what the parser saw to the main location where it all came
+  from.
+- Consider adding symbol tables separate from the AST, so e.g. all UDT dtypes
+  would reference the same subtype symbol instead of allocating an id everytime.
+    - define/const/proc/var ids aren't re-used much, but type ids are. Perhaps
+      add a UDT map? ie. use dtype values >= TYPE_UDT to represent UDTs (by name)
+      Then UDT types wouldn't have to allocate a subtype ID anymore (only function pointers).
+    - of course having the completely self-contained AST is great aswell
+- Prettier "assuming undefined" reports: just 1 line, no source context
+- Only one "assuming undefined" report per symbol (at least only one per CPP run,
+  perhaps even only one per fbfrog run)
 - when seeing #error, report "found an #error" instead of the #error's message,
   otherwise it looks like that message is coming from fbfrog
 - Comments given to a TK_ID that is a macro call and will be expanded should
@@ -186,3 +196,12 @@ To do:
         // foo
         CALLCONV void f(void);
 - comments behind #define bodies should go to the #define not the body tokens
+
+- Various tests expose weird stuff:
+	errors/cpp/expansion/pp-merge-token-from-macro-arg-doesnt-merge.h, correct?
+	errors/cpp/expansion/pp-macrocall-1.h, shouldn't expand here
+	errors/lex/open-*, missing source context in error
+	errors/cpp/define-conflicting-duplicate, should cause error?
+	errors/c/typedef-{proc|array}, should be fixed up automatically where possible and be removed otherwise
+		(e.g. if the proc typedef is always used in a pointer context, then include the pointer in the typedef)
+	errors/cpp/stack/*, missing #endifs reported with wrong source context

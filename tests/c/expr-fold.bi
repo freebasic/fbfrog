@@ -1,87 +1,159 @@
 enum E
-	A = -(foo_r = r)
-	A = -(foo_l = l)
-	A = -(foo_l = l)
-	A = -(foo_0 = 0)
-	A = -(foo_0 = 0)
-	A = -(foo_0 = 0)
-	A = -(foo_0 = 0)
-	A = -(foo_0 = 0)
-	A = -(foo_1 = 1)
-	A = -(foo_1 = 1)
-	A = -(foo_0 = 0)
-	A = -(foo_1 = 1)
-	A = -(foo_1 = 1)
-	A = -(foo_1 = 1)
-	A = -(foo_1 = 1)
-	A = -(foo_1 = 1)
-	A = -(foo_1 = 1)
-	A = -(foo_0xFF = 255)
-	A = -(foo_0x0F = 15)
-	A = -(foo_0xF0 = 240)
-	A = -(foo_1 = 1)
-	A = -(foo_2 = 2)
-	A = -(foo_4 = 4)
-	A = -(foo_8 = 8)
-	A = -(foo_0 = 0)
-	A = -(foo_1 = 1)
-	A = -(foo_0 = 0)
-	A = -(foo_1 = 1)
-	A = -(foo_2 = 2)
-	A = -(foo_0 = 0)
-	A = -(foo_1 = 1)
-	A = -(foo_0 = 0)
-	A = -(foo_0 = 0)
-	A = -(foo_1 = 1)
-	A = -(foo_0 = 0)
-	A = -(foo_1 = 1)
-	A = -(foo_0 = 0)
-	A = -(foo_1 = 1)
-	A = -(foo_1 = 1)
-	A = -(foo_0 = 0)
-	A = -(foo_3 = 3)
-	A = -(foo_3 = 3)
-	A = -(foo_4 = 4)
-	A = -(foo_3 = 3)
-	A = -(foo_2 = 2)
-	A = -(foo_0 = 0)
-	A = -(foo_0 = 0)
-	A = -(foo_0 = 0)
-	A = -(foo_123 = 123)
-	A = -(foo_y = y)
-	A = -(foo_y_1_2 = iif( y, 1, 2 ))
-	A = -(foo_1 = 1)
-	A = -(foo_1 = 1)
-	A = -(foo_x = (-x))
-	A = -(foo_1 = 1)
-	A = -(foo_1 = 1)
-	A = -(foo_x = (-x))
-	A = -(foo_x = (-x))
-	A = -(foo_x = (-x))
-	A = -(foo_0 = 0)
-	A = -(foo_x = (-x))
-	A = -(foo_x = (-x))
-	A = -(foo_0 = 0)
-	A = -(foo_x = x)
-	A = -(foo_x = x)
-	A = -(foo_0 = 0)
-	A = -(foo_0 = 0)
-	A = -(foo_0 = 0)
-	A = -(foo_0 = 0)
-	A = -(foo_x = x)
-	A = -(foo_x = x)
-	A = -(foo_x = x)
-	A = -(foo_x = x)
-	A = -(foo_0 = 0)
-	A = -(foo_0 = 0)
-	A = -(foo_0 = 0)
-	A = -(foo_x = x)
-	A = -(foo_0 = 0)
-	A = -(foo_x = x)
-	A = -(foo_minus_x = (-x))
-	A = -(foo_x = x)
+	_1 = 1
+	_0 = 0
+	_minus_1 = -1
+	_0 = 0
+	_0 = 0
+	_0 = 0
+	r = r
+	l = l
+	l = l
+	_0 = 0
+	_0 = 0
+	_0 = 0
+	_0 = 0
+	_0 = 0
+	_1 = 1
+	_1 = 1
+	_0 = 0
+	_1 = 1
+	_1 = 1
+	_1 = 1
+	_1 = 1
+	_1 = 1
+	_1 = 1
+	_0xFF = &hFF
+	_0x0F = &hF
+	_0xF0 = &hF0
+	_1 = 1
+	_2 = 2
+	_4 = 4
+	_8 = 8
+	_0 = 0
+	_1 = 1
+	_0 = 0
+	_1 = 1
+	_2 = 2
+	_0 = 0
+	_1 = 1
+	_0 = 0
+	_0 = 0
+	_1 = 1
+	_0 = 0
+	_1 = 1
+	_0 = 0
+	_1 = 1
+	_1 = 1
+	_0 = 0
+	_0 = 0
+	_1 = 1
+	_0 = 0
+	_1 = 1
+	_1 = 1
+	_0 = 0
+	_3 = 3
+	_3 = 3
+	_4 = 4
+	_3 = 3
+	_2 = 2
+	_0 = 0
+	_0 = 0
+	_0 = 0
+	_123 = 123
+	_y = y
+	_iif_y_1_2 = iif( y, 1, 2 )
+	_1 = 1
+	_1 = 1
+	_x = -x
+	_1 = 1
+	_1 = 1
+	_x = -x
+	_x = -x
+	_x = -x
+	_0 = 0
+	_x = -x
+	_x = -x
+	_0 = 0
+	_x = x
+	_x = x
+	_0 = 0
+	_0 = 0
+	_0 = 0
+	_0 = 0
+	_x = x
+	_x = x
+	_x = x
+	_x = x
+	_0 = 0
+	_0 = 0
+	_0 = 0
+	_x = x
+	_0 = 0
+	_x = x
+	_minus_x = -x
+	_x = x
 	A = 1 / 0
 	A = 0 / 0
 	A = 1 mod 0
 	A = 0 mod 0
+	_dec = 1
+	_dec = 0
+	_hex = &hFFFFFFFFFFFFFFFF
+	_hex = &hFFFFFFFF00000000
+	_hex = &h0
+	_hex = &h0
+	_dec = 0
+	_dec = 0
+	_hex = &h0
+	_hex = &h0
+	_hex = &h0
+	_hex = &h0
+	_hex = &h0
+	_dec = 1
+	_dec = 0
+	_dec = 0
+	_dec = 0
+	_dec = 1
+	_dec = 1
+	_hex = &h0
+	_hex = &h0
+	_hex = &h0
+	_hex = &h0
+	_hex = &h0
+	_dec = 1
+	_dec = 0
+	_oct = &o1777777777777777777777
+	_oct = &o1777777777740000000000
+	_oct = &o0
+	_oct = &o0
+	_dec = 0
+	_dec = 0
+	_hex = &o0
+	_hex = &o0
+	_hex = &o0
+	_hex = &o0
+	_hex = &o0
+	_dec = 1
+	_dec = 0
+	_dec = 0
+	_dec = 0
+	_dec = 1
+	_dec = 1
+	_hex = &o0
+	_hex = &o0
+	_hex = &o0
+	_hex = &o0
+	_hex = &o0
+	_hex = &hFF
+	_hex = &hFF
+	_hex = &h0
+	_hex = &h0
+	_hex = &h0
+	_hex = &h0
+	_hex = &h0
+	_hex = x or &hFFFFFFFF
+	_hex = &h0
+	_hex = &h0
+	_hex = x or &hFFFFFFFF
+	_hex = &h0
 end enum

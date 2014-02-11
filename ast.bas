@@ -1691,6 +1691,29 @@ private function astFoldKnownDefineds _
 
 end function
 
+private function hKeepAttribs _
+	( _
+		byval n as ASTNODE ptr, _
+		byval l as ASTNODE ptr, _
+		byval r as ASTNODE ptr = NULL _
+	) as ASTNODE ptr
+
+	var rattrib = iif( r, r->attrib, 0 )
+
+	const OCTHEX = ASTATTRIB_OCT or ASTATTRIB_HEX
+
+	'' If one operand is oct/hex, use that for the result too.
+	'' If both are decimal, keep using decimal for the result.
+	n->attrib or= (l->attrib or rattrib) and OCTHEX
+
+	'' If operands had different oct/hex status, default to hex.
+	if( (n->attrib and OCTHEX) = OCTHEX ) then
+		n->attrib and= not ASTATTRIB_OCT
+	end if
+
+	function = n
+end function
+
 private function astFoldConsts( byval n as ASTNODE ptr ) as ASTNODE ptr
 	if( n = NULL ) then exit function
 	function = n
@@ -1719,7 +1742,7 @@ private function astFoldConsts( byval n as ASTNODE ptr ) as ASTNODE ptr
 				assert( FALSE )
 			end select
 
-			function = astNewCONST( v1, 0, TYPE_LONG )
+			function = hKeepAttribs( astNewCONST( v1, 0, TYPE_LONG ), n->l )
 			astDelete( n )
 		end if
 
@@ -1732,15 +1755,16 @@ private function astFoldConsts( byval n as ASTNODE ptr ) as ASTNODE ptr
 				var v2 = n->r->vali
 
 				var divbyzero = FALSE
+				var keepattribs = FALSE
 
 				select case as const( n->op )
 				'case ASTOP_CLOGOR   : v1    = -(v1 orelse  v2)
 				'case ASTOP_CLOGAND  : v1    = -(v1 andalso v2)
 				case ASTOP_ORELSE   : v1    =   v1 orelse  v2
 				case ASTOP_ANDALSO  : v1    =   v1 andalso v2
-				case ASTOP_OR       : v1  or= v2
-				case ASTOP_XOR      : v1 xor= v2
-				case ASTOP_AND      : v1 and= v2
+				case ASTOP_OR       : v1  or= v2 : keepattribs = TRUE
+				case ASTOP_XOR      : v1 xor= v2 : keepattribs = TRUE
+				case ASTOP_AND      : v1 and= v2 : keepattribs = TRUE
 				'case ASTOP_CEQ      : v1    = -(v1 =  v2)
 				'case ASTOP_CNE      : v1    = -(v1 <> v2)
 				'case ASTOP_CLT      : v1    = -(v1 <  v2)
@@ -1753,18 +1777,20 @@ private function astFoldConsts( byval n as ASTNODE ptr ) as ASTNODE ptr
 				case ASTOP_LE       : v1    =   v1 <= v2
 				case ASTOP_GT       : v1    =   v1 >  v2
 				case ASTOP_GE       : v1    =   v1 >= v2
-				case ASTOP_SHL      : v1 shl= v2
-				case ASTOP_SHR      : v1 shr= v2
-				case ASTOP_ADD      : v1   += v2
-				case ASTOP_SUB      : v1   -= v2
-				case ASTOP_MUL      : v1   *= v2
+				case ASTOP_SHL      : v1 shl= v2 : keepattribs = TRUE
+				case ASTOP_SHR      : v1 shr= v2 : keepattribs = TRUE
+				case ASTOP_ADD      : v1   += v2 : keepattribs = TRUE
+				case ASTOP_SUB      : v1   -= v2 : keepattribs = TRUE
+				case ASTOP_MUL      : v1   *= v2 : keepattribs = TRUE
 				case ASTOP_DIV
+					keepattribs = TRUE
 					if( v2 = 0 ) then
 						divbyzero = TRUE
 					else
 						v1 \= v2
 					end if
 				case ASTOP_MOD
+					keepattribs = TRUE
 					if( v2 = 0 ) then
 						divbyzero = TRUE
 					else
@@ -1775,7 +1801,11 @@ private function astFoldConsts( byval n as ASTNODE ptr ) as ASTNODE ptr
 				end select
 
 				if( divbyzero = FALSE ) then
-					function = astNewCONST( v1, 0, TYPE_LONG )
+					var t = astNewCONST( v1, 0, TYPE_LONG )
+					if( keepattribs ) then
+						hKeepAttribs( t, n->l, n->r )
+					end if
+					function = t
 					astDelete( n )
 				end if
 			end if
@@ -1918,7 +1948,7 @@ private function astFoldNops( byval n as ASTNODE ptr ) as ASTNODE ptr
 				case ASTOP_SHL, ASTOP_SHR, ASTOP_DIV, ASTOP_MOD
 					if( v1 = 0 ) then
 						if( astExprHasSideFx( n->r ) = FALSE ) then
-							function = astNewCONST( 0, 0, TYPE_LONG )
+							function = hKeepAttribs( astNewCONST( 0, 0, TYPE_LONG ), n->l )
 							astDelete( n )
 						end if
 					end if
@@ -2000,7 +2030,7 @@ private function astFoldNops( byval n as ASTNODE ptr ) as ASTNODE ptr
 						astDelete( n )
 					case -1
 						if( astExprHasSideFx( n->l ) = FALSE ) then
-							function = astNewCONST( -1, 0, TYPE_LONG )
+							function = hKeepAttribs( astNewCONST( -1, 0, TYPE_LONG ), n->r )
 							astDelete( n )
 						end if
 					end select
@@ -2019,7 +2049,7 @@ private function astFoldNops( byval n as ASTNODE ptr ) as ASTNODE ptr
 				case ASTOP_AND
 					if( v2 = 0 ) then
 						if( astExprHasSideFx( n->l ) = FALSE ) then
-							function = astNewCONST( 0, 0, TYPE_LONG )
+							function = hKeepAttribs( astNewCONST( 0, 0, TYPE_LONG ), n->r )
 							astDelete( n )
 						end if
 					end if
@@ -2030,7 +2060,7 @@ private function astFoldNops( byval n as ASTNODE ptr ) as ASTNODE ptr
 					select case( v2 )
 					case 0
 						if( astExprHasSideFx( n->l ) = FALSE ) then
-							function = astNewCONST( 0, 0, TYPE_LONG )
+							function = hKeepAttribs( astNewCONST( 0, 0, TYPE_LONG ), n->r )
 							astDelete( n )
 						end if
 					case 1
