@@ -1915,8 +1915,7 @@ private function astFoldNops( byval n as ASTNODE ptr ) as ASTNODE ptr
 				'' 0 shr x = 0    unless sidefx
 				'' 0 /   x = 0    unless sidefx
 				'' 0 mod x = 0    unless sidefx
-				case ASTOP_AND, ASTOP_SHL, ASTOP_SHR, _
-				     ASTOP_DIV, ASTOP_MOD
+				case ASTOP_SHL, ASTOP_SHR, ASTOP_DIV, ASTOP_MOD
 					if( v1 = 0 ) then
 						if( astExprHasSideFx( n->r ) = FALSE ) then
 							function = astNewCONST( 0, 0, TYPE_LONG )
