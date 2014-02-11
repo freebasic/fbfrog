@@ -732,6 +732,7 @@ type ASTNODE_
 end type
 
 #define astNewNOP( ) astNew( ASTCLASS_NOP )
+#define astIsCONSTI( n ) ((n)->class = ASTCLASS_CONSTI)
 
 declare sub astPrintStats( )
 declare function astNew overload( byval class_ as integer ) as ASTNODE ptr

@@ -1497,7 +1497,7 @@ private sub hAddVersionDefineChecks _
 					var comparison = astNewBOP( ASTOP_NE, astNewID( versiondefine ), astClone( i ) )
 
 					dim versionvalue as string
-					if( i->class = ASTCLASS_CONSTI ) then
+					if( astIsCONSTI( i ) ) then
 						versionvalue = str( i->vali )
 					else
 						assert( i->class = ASTCLASS_STRING )
@@ -1723,7 +1723,7 @@ private function astFoldConsts( byval n as ASTNODE ptr ) as ASTNODE ptr
 			exit select, select
 		end select
 
-		if( n->l->class = ASTCLASS_CONSTI ) then
+		if( astIsCONSTI( n->l ) ) then
 			var v1 = n->l->vali
 
 			select case( n->op )
@@ -1740,8 +1740,7 @@ private function astFoldConsts( byval n as ASTNODE ptr ) as ASTNODE ptr
 		end if
 
 	case ASTCLASS_BOP
-		if( (n->l->class = ASTCLASS_CONSTI) and _
-		    (n->r->class = ASTCLASS_CONSTI) ) then
+		if( astIsCONSTI( n->l ) and astIsCONSTI( n->r ) ) then
 			var v1 = n->l->vali
 			var v2 = n->r->vali
 
@@ -1803,7 +1802,7 @@ private function astFoldConsts( byval n as ASTNODE ptr ) as ASTNODE ptr
 
 	case ASTCLASS_IIF
 		'' Constant condition?
-		if( n->expr->class = ASTCLASS_CONSTI ) then
+		if( astIsCONSTI( n->expr ) ) then
 			'' iif( true , l, r ) = l
 			'' iif( false, l, r ) = r
 			if( n->expr->vali ) then
@@ -1832,8 +1831,7 @@ private sub astSwapConstsToRhs( byval n as ASTNODE ptr )
 
 	if( n->class = ASTCLASS_BOP ) then
 		'' Only the lhs is a CONSTI?
-		if( (n->l->class = ASTCLASS_CONSTI) and _
-		    (n->r->class <> ASTCLASS_CONSTI) ) then
+		if( astIsCONSTI( n->l ) and (not astIsCONSTI( n->r )) ) then
 			select case( n->op )
 			'' N and x   =   x and N
 			'' N or  x   =   x or  N
@@ -1902,8 +1900,7 @@ private function astFoldNops( byval n as ASTNODE ptr ) as ASTNODE ptr
 
 	case ASTCLASS_BOP
 		'' Only the lhs is a CONSTI? Check for NOPs
-		if( (n->l->class = ASTCLASS_CONSTI) and _
-		    (n->r->class <> ASTCLASS_CONSTI) ) then
+		if( astIsCONSTI( n->l ) and (not astIsCONSTI( n->r )) ) then
 			var v1 = n->l->vali
 
 			select case( n->op )
@@ -1943,8 +1940,7 @@ private function astFoldNops( byval n as ASTNODE ptr ) as ASTNODE ptr
 			end select
 
 		'' Only the rhs is a CONSTI? Check for NOPs
-		elseif( (n->l->class <> ASTCLASS_CONSTI) and _
-		        (n->r->class = ASTCLASS_CONSTI) ) then
+		elseif( (not astIsCONSTI( n->l )) and astIsCONSTI( n->r ) ) then
 			var v2 = n->r->vali
 
 			select case( n->op )
@@ -2115,10 +2111,7 @@ private function astFoldNestedOps( byval n as ASTNODE ptr ) as ASTNODE ptr
 		end if
 
 	case ASTCLASS_BOP
-
-		'' l=UOP, r=CONSTI?
-		if( (n->l->class = ASTCLASS_UOP) and _
-		    (n->r->class = ASTCLASS_CONSTI) ) then
+		if( (n->l->class = ASTCLASS_UOP) and astIsCONSTI( n->r ) ) then
 			'' (-bool) = 1    =    bool = -1
 			if( n->op = ASTOP_EQ ) then
 				if( n->l->op = ASTOP_NEGATE ) then
@@ -2134,15 +2127,11 @@ private function astFoldNestedOps( byval n as ASTNODE ptr ) as ASTNODE ptr
 					end if
 				end if
 			end if
-
-		'' l=BOP, r=CONSTI?
-		elseif( (n->l->class = ASTCLASS_BOP) and _
-		        (n->r->class = ASTCLASS_CONSTI) ) then
+		elseif( (n->l->class = ASTCLASS_BOP) and astIsCONSTI( n->r ) ) then
 			'' (x = 0) = 0    =    x <> 0
 			if( n->op = ASTOP_EQ ) then
 				if( n->l->op = ASTOP_EQ ) then
-					'' lr=CONSTI?
-					if( n->l->r->class = ASTCLASS_CONSTI ) then
+					if( astIsCONSTI( n->l->r ) ) then
 						'' r and lr both '0'?
 						if( (n->r->vali = 0) and (n->l->r->vali = 0) ) then
 							n->l->op = ASTOP_NE
@@ -2188,7 +2177,7 @@ private function astFoldBoolContextNops _
 		'' x = 0
 		'' x <> 0
 		case ASTOP_EQ, ASTOP_NE
-			if( n->r->class = ASTCLASS_CONSTI ) then
+			if( astIsCONSTI( n->r ) ) then
 				l_is_bool_context = (n->r->vali = 0)
 			end if
 

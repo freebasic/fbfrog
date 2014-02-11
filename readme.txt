@@ -152,7 +152,6 @@ To do:
 - Const folding probably also doesn't handle unsigned relational BOPs properly
   since it only does signed ones internally
 
-- add astIsCONSTI(), used a lot
 - Need some way to easily pass tk locations on to AST nodes, perhaps astNewFromTK()
   or similar that copies over the location automatically
 - Need some high-level way to combine locations into one, etc. which is currently

@@ -1546,7 +1546,7 @@ private function hEvalIfCondition( byval x as integer ) as integer
 	tkSetAst( x, t )
 
 	'' 2. Check the condition
-	if( t->class <> ASTCLASS_CONSTI ) then
+	if( astIsCONSTI( t ) = FALSE ) then
 		const MESSAGE = "couldn't evaluate #if condition"
 		if( t->location.file ) then
 			hReport( @t->location, MESSAGE, TRUE )
