@@ -10,8 +10,6 @@ extern a as short
 
 #if __VERSION__ = "1"
 	declare sub morev1( )
-
 #else
 	declare sub morev2( )
-
 #endif

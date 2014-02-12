@@ -485,18 +485,20 @@ private function frogWorkRootFile _
 	if( frog.noautoextern = FALSE ) then
 		astAutoExtern( ast, frog.windowsms, frog.whitespace )
 	end if
-	astMergeDIVIDERs( ast )
 
 	if( presetcode ) then
 		assert( ast->class = ASTCLASS_GROUP )
 		var i = presetcode->head
 		while( i )
 			if( i->class = ASTCLASS_APPENDBI ) then
+				astAppend( ast, astNew( ASTCLASS_DIVIDER ) )
 				astAppend( ast, astClone( i ) )
 			end if
 			i = i->next
 		wend
 	end if
+
+	astMergeDIVIDERs( ast )
 
 	'' Put file's AST into a VERBLOCK, if a targetversion was given,
 	'' in preparation for the astMergeFiles() call later
@@ -715,6 +717,7 @@ end function
 
 		print "emitting: " + *f->text + " (" + _
 			hMakeDeclCountMessage( astCountDecls( f->expr ) ) + ")"
+		'astDump( f->expr )
 		emitFile( *f->text, f->expr )
 
 		f = f->next

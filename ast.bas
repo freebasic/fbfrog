@@ -2953,7 +2953,7 @@ end function
 
 private function hIsCompound( byval n as ASTNODE ptr ) as integer
 	select case( n->class )
-	case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
+	case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM, ASTCLASS_APPENDBI
 		function = TRUE
 	end select
 end function
@@ -2963,6 +2963,10 @@ private function hShouldSeparate _
 		byval a as ASTNODE ptr, _
 		byval b as ASTNODE ptr _
 	) as integer
+
+	if( (a->class = ASTCLASS_DIVIDER) or (b->class = ASTCLASS_DIVIDER) ) then
+		exit function
+	end if
 
 	if( hIsPpIfBegin( a ) and hIsPpIfEnd( b ) ) then
 		exit function

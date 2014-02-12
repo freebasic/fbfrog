@@ -170,6 +170,7 @@ private sub emitLines( byval lines as zstring ptr )
 	do
 		select case( p[0] )
 		case 0
+			'' EOF not behind EOL? Treat as EOL.
 			hFlushLine( begin, p )
 			exit do
 
@@ -182,6 +183,12 @@ private sub emitLines( byval lines as zstring ptr )
 			end if
 
 			p += 1
+
+			'' EOF after EOL? Don't emit another empty line.
+			if( p[0] = 0 ) then
+				exit do
+			end if
+
 			begin = p
 
 		case else
