@@ -158,15 +158,23 @@ private sub hExpectPath( byval x as integer )
 	end if
 end sub
 
-private sub hReadFileArg( byval result as ASTNODE ptr, byval x as integer )
+private function hPathRelativeToResponseFile( byval x as integer ) as string
 	var path = *tkGetText( x )
 
-	'' If the file/dir argument came from an @file,
-	'' open it relative to the @file's dir
-	var location = tkGetLocation( x )
-	if( location->file->is_file ) then
-		path = pathAddDiv( pathOnly( *location->file->name ) ) + path
+	'' If the file/dir argument isn't an absolute path, and it came from an
+	'' @file, open it relative to the @file's dir.
+	if( pathIsAbsolute( path ) = FALSE ) then
+		var location = tkGetLocation( x )
+		if( location->file->is_file ) then
+			path = pathAddDiv( pathOnly( *location->file->name ) ) + path
+		end if
 	end if
+
+	function = path
+end function
+
+private sub hReadFileArg( byval result as ASTNODE ptr, byval x as integer )
+	var path = hPathRelativeToResponseFile( x )
 
 	'' File or directory?
 	var n = astNew( ASTCLASS_FILE, path )
@@ -174,7 +182,7 @@ private sub hReadFileArg( byval result as ASTNODE ptr, byval x as integer )
 		n->class = ASTCLASS_DIR
 	end if
 
-	n->location = *location
+	n->location = *tkGetLocation( x )
 	astAppend( result, n )
 end sub
 
@@ -225,7 +233,7 @@ private function hParseArgs( byref x as integer, byval body as integer ) as ASTN
 
 				'' <path>
 				hExpectPath( x )
-				var n = astNewTEXT( tkGetText( x ) )
+				var n = astNewTEXT( hPathRelativeToResponseFile( x ) )
 				n->location = *tkGetLocation( x )
 				astAppend( frog.incdirs, n )
 
@@ -234,7 +242,7 @@ private function hParseArgs( byref x as integer, byval body as integer ) as ASTN
 
 				'' <path>
 				hExpectPath( x )
-				frog.outdir = *tkGetText( x )
+				frog.outdir = hPathRelativeToResponseFile( x )
 
 			'' -version <version-id> ...
 			case "version"
@@ -328,7 +336,7 @@ private function hParseArgs( byref x as integer, byval body as integer ) as ASTN
 
 				'' <file>
 				hExpectPath( x )
-				var n = astNew( ASTCLASS_PPINCLUDE, tkGetText( x ) )
+				var n = astNew( ASTCLASS_PPINCLUDE, hPathRelativeToResponseFile( x ) )
 				n->location = *tkGetLocation( x )
 				astAppend( result, n )
 
@@ -355,7 +363,7 @@ private function hParseArgs( byref x as integer, byval body as integer ) as ASTN
 
 				'' <file>
 				hExpectPath( x )
-				var n = astNew( ASTCLASS_APPENDBI, tkGetText( x ) )
+				var n = astNew( ASTCLASS_APPENDBI, hPathRelativeToResponseFile( x ) )
 				n->location = *tkGetLocation( x )
 				astAppend( result, n )
 
