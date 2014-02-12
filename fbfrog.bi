@@ -545,58 +545,6 @@ const TYPEMAX_PTR = 8
 declare function typeToSigned( byval dtype as integer ) as integer
 declare function typeToUnsigned( byval dtype as integer ) as integer
 
-'' Generally the AST expressions should represent FB semantics. The ASTOP_C*
-'' ops are only here to make C expression parsing easier, however astOpsC2FB()
-'' has to be used afterwards to convert the C expressions to FB.
-enum
-	ASTOP_IIF = 0  '' iif() just for the operator precedence tables
-
-	'' BOPs
-	ASTOP_CLOGOR
-	ASTOP_CLOGAND
-	ASTOP_ORELSE
-	ASTOP_ANDALSO
-	ASTOP_OR
-	ASTOP_XOR
-	ASTOP_AND
-	ASTOP_CEQ
-	ASTOP_CNE
-	ASTOP_CLT
-	ASTOP_CLE
-	ASTOP_CGT
-	ASTOP_CGE
-	ASTOP_EQ
-	ASTOP_NE
-	ASTOP_LT
-	ASTOP_LE
-	ASTOP_GT
-	ASTOP_GE
-	ASTOP_SHL
-	ASTOP_SHR
-	ASTOP_ADD
-	ASTOP_SUB
-	ASTOP_MUL
-	ASTOP_DIV
-	ASTOP_MOD
-	ASTOP_INDEX
-	ASTOP_MEMBER
-	ASTOP_MEMBERDEREF
-	ASTOP_STRCAT
-
-	'' UOPs
-	ASTOP_CLOGNOT
-	ASTOP_NOT
-	ASTOP_NEGATE
-	ASTOP_UNARYPLUS
-	ASTOP_CDEFINED
-	ASTOP_DEFINED
-	ASTOP_ADDROF
-	ASTOP_DEREF
-	ASTOP_STRINGIFY
-	ASTOP_SIZEOF
-	ASTOP_CAST
-end enum
-
 enum
 	'' Internal helper nodes
 	ASTCLASS_NOP = 0
@@ -653,8 +601,56 @@ enum
 	ASTCLASS_TYPE
 
 	'' Expressions
-	ASTCLASS_UOP
-	ASTCLASS_BOP
+	'' Generally the AST expressions should represent FB semantics.
+	'' The ASTCLASS_BOP_C* ops are used for easier parsing C expressions,
+	'' however astOpsC2FB() has to be used afterwards to convert them to FB.
+
+	'' BOPs
+	ASTCLASS_CLOGOR
+	ASTCLASS_CLOGAND
+	ASTCLASS_ORELSE
+	ASTCLASS_ANDALSO
+	ASTCLASS_OR
+	ASTCLASS_XOR
+	ASTCLASS_AND
+	ASTCLASS_CEQ
+	ASTCLASS_CNE
+	ASTCLASS_CLT
+	ASTCLASS_CLE
+	ASTCLASS_CGT
+	ASTCLASS_CGE
+	ASTCLASS_EQ
+	ASTCLASS_NE
+	ASTCLASS_LT
+	ASTCLASS_LE
+	ASTCLASS_GT
+	ASTCLASS_GE
+	ASTCLASS_SHL
+	ASTCLASS_SHR
+	ASTCLASS_ADD
+	ASTCLASS_SUB
+	ASTCLASS_MUL
+	ASTCLASS_DIV
+	ASTCLASS_MOD
+	ASTCLASS_INDEX
+	ASTCLASS_MEMBER
+	ASTCLASS_MEMBERDEREF
+	ASTCLASS_STRCAT
+
+	'' UOPs
+	ASTCLASS_CLOGNOT
+	ASTCLASS_NOT
+	ASTCLASS_NEGATE
+	ASTCLASS_UNARYPLUS
+	ASTCLASS_CDEFINED
+	ASTCLASS_DEFINED
+	ASTCLASS_ADDROF
+	ASTCLASS_DEREF
+	ASTCLASS_STRINGIFY
+	ASTCLASS_SIZEOF
+	ASTCLASS_CAST
+
+	'' Special expressions
 	ASTCLASS_IIF
 	ASTCLASS_PPMERGE
 	ASTCLASS_CALL
@@ -718,7 +714,6 @@ type ASTNODE_
 
 		tk		as integer  '' TK: TK_*
 		paramcount	as integer  '' PPDEFINE: -1 = #define m, 0 = #define m(), 1 = #define m(a), ...
-		op		as integer  '' UOP/BOP: ASTOP_*
 	end union
 
 	'' Linked list of child nodes, where l/r aren't enough: fields/parameters/...
@@ -749,12 +744,12 @@ declare function astNew overload _
 declare function astNewPPIF( byval expr as ASTNODE ptr ) as ASTNODE ptr
 declare function astNewUOP _
 	( _
-		byval op as integer, _
+		byval astclass as integer, _
 		byval l as ASTNODE ptr _
 	) as ASTNODE ptr
 declare function astNewBOP _
 	( _
-		byval op as integer, _
+		byval astclass as integer, _
 		byval l as ASTNODE ptr, _
 		byval r as ASTNODE ptr _
 	) as ASTNODE ptr
@@ -925,7 +920,7 @@ declare sub emitFile( byref filename as string, byval ast as ASTNODE ptr )
 
 declare function hFindClosingParen( byval x as integer ) as integer
 declare function hNumberLiteral( byval x as integer ) as ASTNODE ptr
-extern as integer cprecedence(ASTOP_IIF to ASTOP_SIZEOF)
+extern as integer cprecedence(ASTCLASS_CLOGOR to ASTCLASS_IIF)
 declare sub hMacroParamList( byref x as integer, byval t as ASTNODE ptr )
 declare function hInsertMacroBody _
 	( _

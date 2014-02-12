@@ -4,6 +4,9 @@
 
 #include once "fbfrog.bi"
 
+#define emitL( n ) emitAst( (n)->l, TRUE )
+#define emitR( n ) emitAst( (n)->r, TRUE )
+
 declare function emitAst _
 	( _
 		byval n as ASTNODE ptr, _
@@ -279,6 +282,13 @@ private sub hEmitIndentedChildren( byval n as ASTNODE ptr )
 	emit.indent -= 1
 end sub
 
+private function hParens( byref s as string, byval need_parens as integer ) as string
+	if( need_parens ) then
+		s = "(" + s + ")"
+	end if
+	function = s
+end function
+
 private function emitAst _
 	( _
 		byval n as ASTNODE ptr, _
@@ -365,21 +375,17 @@ private function emitAst _
 		emitStmt( "#undef " + *n->text, n->comment )
 
 	case ASTCLASS_PPIF
-		if( n->expr->class = ASTCLASS_UOP ) then
-			select case( n->expr->op )
-			'' #if defined( id )        ->    #ifdef id
-			case ASTOP_DEFINED
-				s = "#ifdef " + emitAst( n->expr->l )
+		select case( n->expr->class )
+		'' #if defined( id )        ->    #ifdef id
+		case ASTCLASS_DEFINED
+			s = "#ifdef " + emitAst( n->expr->l )
 
-			'' #if not defined( id )    ->    #ifndef id
-			case ASTOP_NOT
-				if( n->expr->l->class = ASTCLASS_UOP ) then
-					if( n->expr->l->op = ASTOP_DEFINED ) then
-						s = "#ifndef " + emitAst( n->expr->l->l )
-					end if
-				end if
-			end select
-		end if
+		'' #if not defined( id )    ->    #ifndef id
+		case ASTCLASS_NOT
+			if( n->expr->l->class = ASTCLASS_DEFINED ) then
+				s = "#ifndef " + emitAst( n->expr->l->l )
+			end if
+		end select
 		if( len( s ) = 0 ) then
 			s = "#if " + emitAst( n->expr )
 		end if
@@ -631,93 +637,58 @@ private function emitAst _
 	case ASTCLASS_DUMMYVERSION
 		s = "dummyversion"
 
-	case ASTCLASS_UOP
-		select case as const( n->op )
-		'case ASTOP_CLOGNOT
-		'	s = "iif( " + emitAst( n->l ) + ", 0, 1 )"
-		'	need_parens = FALSE
-		case ASTOP_NOT       : s = "not " + emitAst( n->l, TRUE )
-		case ASTOP_NEGATE    : s = "-"    + emitAst( n->l, TRUE )
-		case ASTOP_UNARYPLUS : s = "+"    + emitAst( n->l, TRUE )
-		'case ASTOP_CDEFINED
-		'	s = "-defined( " + emitAst( n->l ) + " )"
-		case ASTOP_DEFINED
-			s = "defined( " + emitAst( n->l ) + " )"
-			need_parens = FALSE
-		case ASTOP_ADDROF    : s = "@"    + emitAst( n->l, TRUE )
-		case ASTOP_DEREF     : s = "*"    + emitAst( n->l, TRUE )
-		case ASTOP_STRINGIFY : s = "#"    + emitAst( n->l ) : need_parens = FALSE
-		case ASTOP_SIZEOF    : s = "sizeof( " + emitAst( n->l ) + " )" : need_parens = FALSE
-		case ASTOP_CAST
-			select case( n->dtype )
-			case TYPE_BYTE     : s =    "cbyte("
-			case TYPE_UBYTE    : s =   "cubyte("
-			case TYPE_SHORT    : s =   "cshort("
-			case TYPE_USHORT   : s =  "cushort("
-			case TYPE_LONG     : s =     "clng("
-			case TYPE_ULONG    : s =    "culng("
-			case TYPE_INTEGER  : s =     "cint("
-			case TYPE_UINTEGER : s =    "cuint("
-			case TYPE_LONGINT  : s =  "clngint("
-			case TYPE_ULONGINT : s = "culngint("
-			case else
-				if( typeGetPtrCount( n->dtype ) > 0 ) then
-					s = "cptr("
-				else
-					s = "cast("
-				end if
-				s += emitType( n ) + ", "
-			end select
+	case ASTCLASS_ORELSE      : s = hParens( emitL( n ) + " orelse "  + emitR( n ), need_parens )
+	case ASTCLASS_ANDALSO     : s = hParens( emitL( n ) + " andalso " + emitR( n ), need_parens )
+	case ASTCLASS_OR          : s = hParens( emitL( n ) + " or "      + emitR( n ), need_parens )
+	case ASTCLASS_XOR         : s = hParens( emitL( n ) + " xor "     + emitR( n ), need_parens )
+	case ASTCLASS_AND         : s = hParens( emitL( n ) + " and "     + emitR( n ), need_parens )
+	case ASTCLASS_EQ          : s = hParens( emitL( n ) + " = "       + emitR( n ), need_parens )
+	case ASTCLASS_NE          : s = hParens( emitL( n ) + " <> "      + emitR( n ), need_parens )
+	case ASTCLASS_LT          : s = hParens( emitL( n ) + " < "       + emitR( n ), need_parens )
+	case ASTCLASS_LE          : s = hParens( emitL( n ) + " <= "      + emitR( n ), need_parens )
+	case ASTCLASS_GT          : s = hParens( emitL( n ) + " > "       + emitR( n ), need_parens )
+	case ASTCLASS_GE          : s = hParens( emitL( n ) + " >= "      + emitR( n ), need_parens )
+	case ASTCLASS_SHL         : s = hParens( emitL( n ) + " shl "     + emitR( n ), need_parens )
+	case ASTCLASS_SHR         : s = hParens( emitL( n ) + " shr "     + emitR( n ), need_parens )
+	case ASTCLASS_ADD         : s = hParens( emitL( n ) + " + "       + emitR( n ), need_parens )
+	case ASTCLASS_SUB         : s = hParens( emitL( n ) + " - "       + emitR( n ), need_parens )
+	case ASTCLASS_MUL         : s = hParens( emitL( n ) + " * "       + emitR( n ), need_parens )
+	case ASTCLASS_DIV         : s = hParens( emitL( n ) + " / "       + emitR( n ), need_parens )
+	case ASTCLASS_MOD         : s = hParens( emitL( n ) + " mod "     + emitR( n ), need_parens )
+	case ASTCLASS_INDEX       : s =          emitL( n ) + "["         + emitR( n ) + "]"
+	case ASTCLASS_MEMBER      : s =          emitL( n ) + "."         + emitR( n )
+	case ASTCLASS_MEMBERDEREF : s =          emitL( n ) + "->"        + emitR( n )
+	case ASTCLASS_STRCAT      : s = hParens( emitL( n ) + " + "       + emitR( n ), need_parens )
 
-			s += emitAst( n->l ) + ")"
-			need_parens = FALSE
-
+	case ASTCLASS_NOT       : s = hParens( "not "      + emitL( n ), need_parens )
+	case ASTCLASS_NEGATE    : s = hParens( "-"         + emitL( n ), need_parens )
+	case ASTCLASS_UNARYPLUS : s = hParens( "+"         + emitL( n ), need_parens )
+	case ASTCLASS_DEFINED   : s =          "defined( " + emitAst( n->l ) + " )"
+	case ASTCLASS_ADDROF    : s = hParens( "@"         + emitL( n ), need_parens )
+	case ASTCLASS_DEREF     : s = hParens( "*"         + emitL( n ), need_parens )
+	case ASTCLASS_STRINGIFY : s =          "#"         + emitAst( n->l )
+	case ASTCLASS_SIZEOF    : s =          "sizeof( "  + emitAst( n->l ) + " )"
+	case ASTCLASS_CAST
+		select case( n->dtype )
+		case TYPE_BYTE     : s =    "cbyte("
+		case TYPE_UBYTE    : s =   "cubyte("
+		case TYPE_SHORT    : s =   "cshort("
+		case TYPE_USHORT   : s =  "cushort("
+		case TYPE_LONG     : s =     "clng("
+		case TYPE_ULONG    : s =    "culng("
+		case TYPE_INTEGER  : s =     "cint("
+		case TYPE_UINTEGER : s =    "cuint("
+		case TYPE_LONGINT  : s =  "clngint("
+		case TYPE_ULONGINT : s = "culngint("
 		case else
-			assert( FALSE )
+			if( typeGetPtrCount( n->dtype ) > 0 ) then
+				s = "cptr("
+			else
+				s = "cast("
+			end if
+			s += emitType( n ) + ", "
 		end select
-
-		if( need_parens ) then s = "(" + s + ")"
-
-	case ASTCLASS_BOP
-		#define lhs emitAst( n->l, TRUE )
-		#define rhs emitAst( n->r, TRUE )
-
-		select case as const( n->op )
-		'case ASTOP_CLOGOR      : s = "-(" + lhs + " orelse "  + rhs + ")"
-		'case ASTOP_CLOGAND     : s = "-(" + lhs + " andalso " + rhs + ")"
-		case ASTOP_ORELSE      : s =        lhs + " orelse "  + rhs
-		case ASTOP_ANDALSO     : s =        lhs + " andalso " + rhs
-		case ASTOP_OR          : s =        lhs + " or "      + rhs
-		case ASTOP_XOR         : s =        lhs + " xor "     + rhs
-		case ASTOP_AND         : s =        lhs + " and "     + rhs
-		'case ASTOP_CEQ         : s = "-(" + lhs + " = "       + rhs + ")"
-		'case ASTOP_CNE         : s = "-(" + lhs + " <> "      + rhs + ")"
-		'case ASTOP_CLT         : s = "-(" + lhs + " < "       + rhs + ")"
-		'case ASTOP_CLE         : s = "-(" + lhs + " <= "      + rhs + ")"
-		'case ASTOP_CGT         : s = "-(" + lhs + " > "       + rhs + ")"
-		'case ASTOP_CGE         : s = "-(" + lhs + " >= "      + rhs + ")"
-		case ASTOP_EQ          : s =        lhs + " = "       + rhs
-		case ASTOP_NE          : s =        lhs + " <> "      + rhs
-		case ASTOP_LT          : s =        lhs + " < "       + rhs
-		case ASTOP_LE          : s =        lhs + " <= "      + rhs
-		case ASTOP_GT          : s =        lhs + " > "       + rhs
-		case ASTOP_GE          : s =        lhs + " >= "      + rhs
-		case ASTOP_SHL         : s =        lhs + " shl "     + rhs
-		case ASTOP_SHR         : s =        lhs + " shr "     + rhs
-		case ASTOP_ADD         : s =        lhs + " + "       + rhs
-		case ASTOP_SUB         : s =        lhs + " - "       + rhs
-		case ASTOP_MUL         : s =        lhs + " * "       + rhs
-		case ASTOP_DIV         : s =        lhs + " / "       + rhs
-		case ASTOP_MOD         : s =        lhs + " mod "     + rhs
-		case ASTOP_INDEX       : s =        lhs + "["         + rhs + "]" : need_parens = FALSE
-		case ASTOP_MEMBER      : s =        lhs + "."         + rhs : need_parens = FALSE
-		case ASTOP_MEMBERDEREF : s =        lhs + "->"        + rhs : need_parens = FALSE
-		case ASTOP_STRCAT      : s =        lhs + " + "       + rhs
-		case else
-			assert( FALSE )
-		end select
-
-		if( need_parens ) then s = "(" + s + ")"
+		s += emitAst( n->l ) + ")"
 
 	case ASTCLASS_IIF
 		s += "iif( " + _

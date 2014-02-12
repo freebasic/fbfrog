@@ -407,49 +407,50 @@ function hNumberLiteral( byval x as integer ) as ASTNODE ptr
 end function
 
 '' C operator precedence, starting at 1, higher value = higher precedence
-dim shared as integer cprecedence(ASTOP_IIF to ASTOP_SIZEOF) = _
+dim shared as integer cprecedence(ASTCLASS_CLOGOR to ASTCLASS_IIF) = _
 { _
-	 1, _ '' ASTOP_IIF
-	 2, _ '' ASTOP_CLOGOR
-	 3, _ '' ASTOP_CLOGAND
-	 0, _ '' ASTOP_ORELSE (unused)
-	 0, _ '' ASTOP_ANDALSO (unused)
-	 4, _ '' ASTOP_OR
-	 5, _ '' ASTOP_XOR
-	 6, _ '' ASTOP_AND
-	 7, _ '' ASTOP_CEQ
-	 7, _ '' ASTOP_CNE
-	 8, _ '' ASTOP_CLT
-	 8, _ '' ASTOP_CLE
-	 8, _ '' ASTOP_CGT
-	 8, _ '' ASTOP_CGE
-	 0, _ '' ASTOP_EQ (unused)
-	 0, _ '' ASTOP_NE (unused)
-	 0, _ '' ASTOP_LT (unused)
-	 0, _ '' ASTOP_LE (unused)
-	 0, _ '' ASTOP_GT (unused)
-	 0, _ '' ASTOP_GE (unused)
-	 9, _ '' ASTOP_SHL
-	 9, _ '' ASTOP_SHR
-	10, _ '' ASTOP_ADD
-	10, _ '' ASTOP_SUB
-	11, _ '' ASTOP_MUL
-	11, _ '' ASTOP_DIV
-	11, _ '' ASTOP_MOD
-	13, _ '' ASTOP_INDEX
-	13, _ '' ASTOP_MEMBER
-	13, _ '' ASTOP_MEMBERDEREF
-	 0, _ '' ASTOP_STRCAT
-	12, _ '' ASTOP_CLOGNOT
-	12, _ '' ASTOP_NOT
-	12, _ '' ASTOP_NEGATE
-	12, _ '' ASTOP_UNARYPLUS
-	 0, _ '' ASTOP_CDEFINED (unused)
-	 0, _ '' ASTOP_DEFINED (unused)
-	12, _ '' ASTOP_ADDROF
-	12, _ '' ASTOP_DEREF
-	 0, _ '' ASTOP_STRINGIFY (unused)
-	12  _ '' ASTOP_SIZEOF
+	 2, _ '' ASTCLASS_CLOGOR
+	 3, _ '' ASTCLASS_CLOGAND
+	 0, _ '' ASTCLASS_ORELSE (unused)
+	 0, _ '' ASTCLASS_ANDALSO (unused)
+	 4, _ '' ASTCLASS_OR
+	 5, _ '' ASTCLASS_XOR
+	 6, _ '' ASTCLASS_AND
+	 7, _ '' ASTCLASS_CEQ
+	 7, _ '' ASTCLASS_CNE
+	 8, _ '' ASTCLASS_CLT
+	 8, _ '' ASTCLASS_CLE
+	 8, _ '' ASTCLASS_CGT
+	 8, _ '' ASTCLASS_CGE
+	 0, _ '' ASTCLASS_EQ (unused)
+	 0, _ '' ASTCLASS_NE (unused)
+	 0, _ '' ASTCLASS_LT (unused)
+	 0, _ '' ASTCLASS_LE (unused)
+	 0, _ '' ASTCLASS_GT (unused)
+	 0, _ '' ASTCLASS_GE (unused)
+	 9, _ '' ASTCLASS_SHL
+	 9, _ '' ASTCLASS_SHR
+	10, _ '' ASTCLASS_ADD
+	10, _ '' ASTCLASS_SUB
+	11, _ '' ASTCLASS_MUL
+	11, _ '' ASTCLASS_DIV
+	11, _ '' ASTCLASS_MOD
+	13, _ '' ASTCLASS_INDEX
+	13, _ '' ASTCLASS_MEMBER
+	13, _ '' ASTCLASS_MEMBERDEREF
+	 0, _ '' ASTCLASS_STRCAT
+	12, _ '' ASTCLASS_CLOGNOT
+	12, _ '' ASTCLASS_NOT
+	12, _ '' ASTCLASS_NEGATE
+	12, _ '' ASTCLASS_UNARYPLUS
+	 0, _ '' ASTCLASS_CDEFINED (unused)
+	 0, _ '' ASTCLASS_DEFINED (unused)
+	12, _ '' ASTCLASS_ADDROF
+	12, _ '' ASTCLASS_DEREF
+	 0, _ '' ASTCLASS_STRINGIFY (unused)
+	12, _ '' ASTCLASS_SIZEOF
+	 0, _ '' ASTCLASS_CAST (unused)
+	 1  _ '' ASTCLASS_IIF
 }
 
 '' C PP expression parser based on precedence climbing
@@ -462,10 +463,10 @@ private function cppExpression _
 	'' Unary prefix operators
 	var op = -1
 	select case( tkGet( x ) )
-	case TK_EXCL  : op = ASTOP_CLOGNOT   '' !
-	case TK_TILDE : op = ASTOP_NOT       '' ~
-	case TK_MINUS : op = ASTOP_NEGATE    '' -
-	case TK_PLUS  : op = ASTOP_UNARYPLUS '' +
+	case TK_EXCL  : op = ASTCLASS_CLOGNOT   '' !
+	case TK_TILDE : op = ASTCLASS_NOT       '' ~
+	case TK_MINUS : op = ASTCLASS_NEGATE    '' -
+	case TK_PLUS  : op = ASTCLASS_UNARYPLUS '' +
 	end select
 
 	dim as ASTNODE ptr a
@@ -534,7 +535,7 @@ private function cppExpression _
 				x += 1
 			end if
 
-			a = astNewUOP( ASTOP_CDEFINED, a )
+			a = astNewUOP( ASTCLASS_CDEFINED, a )
 			a->location = *tkGetLocation( definedx )
 
 		case else
@@ -545,25 +546,25 @@ private function cppExpression _
 	'' Infix operators
 	do
 		select case as const( tkGet( x ) )
-		case TK_QUEST    : op = ASTOP_IIF     '' ? (a ? b : c)
-		case TK_PIPEPIPE : op = ASTOP_CLOGOR  '' ||
-		case TK_AMPAMP   : op = ASTOP_CLOGAND '' &&
-		case TK_PIPE     : op = ASTOP_OR      '' |
-		case TK_CIRC     : op = ASTOP_XOR     '' ^
-		case TK_AMP      : op = ASTOP_AND     '' &
-		case TK_EQEQ     : op = ASTOP_CEQ     '' ==
-		case TK_EXCLEQ   : op = ASTOP_CNE     '' !=
-		case TK_LT       : op = ASTOP_CLT     '' <
-		case TK_LTEQ     : op = ASTOP_CLE     '' <=
-		case TK_GT       : op = ASTOP_CGT     '' >
-		case TK_GTEQ     : op = ASTOP_CGE     '' >=
-		case TK_LTLT     : op = ASTOP_SHL     '' <<
-		case TK_GTGT     : op = ASTOP_SHR     '' >>
-		case TK_PLUS     : op = ASTOP_ADD     '' +
-		case TK_MINUS    : op = ASTOP_SUB     '' -
-		case TK_STAR     : op = ASTOP_MUL     '' *
-		case TK_SLASH    : op = ASTOP_DIV     '' /
-		case TK_PERCENT  : op = ASTOP_MOD     '' %
+		case TK_QUEST    : op = ASTCLASS_IIF     '' ? (a ? b : c)
+		case TK_PIPEPIPE : op = ASTCLASS_CLOGOR  '' ||
+		case TK_AMPAMP   : op = ASTCLASS_CLOGAND '' &&
+		case TK_PIPE     : op = ASTCLASS_OR      '' |
+		case TK_CIRC     : op = ASTCLASS_XOR     '' ^
+		case TK_AMP      : op = ASTCLASS_AND     '' &
+		case TK_EQEQ     : op = ASTCLASS_CEQ     '' ==
+		case TK_EXCLEQ   : op = ASTCLASS_CNE     '' !=
+		case TK_LT       : op = ASTCLASS_CLT     '' <
+		case TK_LTEQ     : op = ASTCLASS_CLE     '' <=
+		case TK_GT       : op = ASTCLASS_CGT     '' >
+		case TK_GTEQ     : op = ASTCLASS_CGE     '' >=
+		case TK_LTLT     : op = ASTCLASS_SHL     '' <<
+		case TK_GTGT     : op = ASTCLASS_SHR     '' >>
+		case TK_PLUS     : op = ASTCLASS_ADD     '' +
+		case TK_MINUS    : op = ASTCLASS_SUB     '' -
+		case TK_STAR     : op = ASTCLASS_MUL     '' *
+		case TK_SLASH    : op = ASTCLASS_DIV     '' /
+		case TK_PERCENT  : op = ASTCLASS_MOD     '' %
 		case else        : exit do
 		end select
 
@@ -575,7 +576,7 @@ private function cppExpression _
 			exit do
 		end if
 		'' Left associative?
-		if( op <> ASTOP_IIF ) then
+		if( op <> ASTCLASS_IIF ) then
 			oplevel += 1
 		end if
 
@@ -587,7 +588,7 @@ private function cppExpression _
 		var b = cppExpression( x, oplevel )
 
 		'' Handle ?: special case
-		if( op = ASTOP_IIF ) then
+		if( op = ASTCLASS_IIF ) then
 			'' ':'?
 			tkExpect( x, TK_COLON, "for a?b:c iif operator" )
 			x += 1
@@ -720,13 +721,13 @@ private function cppDirective( byval x as integer ) as integer
 		'' Build up "[!]defined id" expression
 		var expr = astNewID( tkGetText( x ) )
 		expr->location = *tkGetLocation( x )
-		expr = astNewUOP( ASTOP_CDEFINED, expr )
+		expr = astNewUOP( ASTCLASS_CDEFINED, expr )
 		expr->location = *tkGetLocation( x - 1 )
 		expr->location.column += 2  '' ifdef -> def, ifndef -> ndef
 		expr->location.length = 3
 		if( tk = KW_IFNDEF ) then
 			expr->location.column += 1  '' ndef -> def
-			expr = astNewUOP( ASTOP_CLOGNOT, expr )
+			expr = astNewUOP( ASTCLASS_CLOGNOT, expr )
 			expr->location = *tkGetLocation( x - 1 )
 			expr->location.column += 2  '' ifndef -> n
 			expr->location.length = 1

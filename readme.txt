@@ -151,7 +151,9 @@ To do:
   respect C number literal dtypes & sizes.
 - Const folding probably also doesn't handle unsigned relational BOPs properly
   since it only does signed ones internally
+- Remove stats stuff and do real profiling with huge headers
 
+- Combine C/CPP expression parsers into one
 - Need some way to easily pass tk locations on to AST nodes, perhaps astNewFromTK()
   or similar that copies over the location automatically
 - Need some high-level way to combine locations into one, etc. which is currently

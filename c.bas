@@ -124,7 +124,7 @@ private function hStringLiteralSequence( byref x as integer ) as ASTNODE ptr
 			end if
 			x += 1
 
-			s = astNewUOP( ASTOP_STRINGIFY, astNewID( tkGetText( x ) ) )
+			s = astNewUOP( ASTCLASS_STRINGIFY, astNewID( tkGetText( x ) ) )
 
 		case else
 			exit do
@@ -133,7 +133,7 @@ private function hStringLiteralSequence( byref x as integer ) as ASTNODE ptr
 		if( a = NULL ) then
 			a = s
 		else
-			a = astNewBOP( ASTOP_STRCAT, a, s )
+			a = astNewBOP( ASTCLASS_STRCAT, a, s )
 		end if
 
 		x += 1
@@ -308,12 +308,12 @@ private function cExpression _
 	'' Unary prefix operators
 	var op = -1
 	select case( tkGet( x ) )
-	case TK_EXCL   : op = ASTOP_CLOGNOT   '' !
-	case TK_TILDE  : op = ASTOP_NOT       '' ~
-	case TK_MINUS  : op = ASTOP_NEGATE    '' -
-	case TK_PLUS   : op = ASTOP_UNARYPLUS '' +
-	case TK_AMP    : op = ASTOP_ADDROF    '' &
-	case TK_STAR   : op = ASTOP_DEREF     '' *
+	case TK_EXCL   : op = ASTCLASS_CLOGNOT   '' !
+	case TK_TILDE  : op = ASTCLASS_NOT       '' ~
+	case TK_MINUS  : op = ASTCLASS_NEGATE    '' -
+	case TK_PLUS   : op = ASTCLASS_UNARYPLUS '' +
+	case TK_AMP    : op = ASTCLASS_ADDROF    '' &
+	case TK_STAR   : op = ASTCLASS_DEREF     '' *
 	end select
 
 	dim as ASTNODE ptr a
@@ -345,7 +345,7 @@ private function cExpression _
 				var t = hDataTypeInParens( x, DECL_CASTTYPE )
 
 				'' Expression
-				a = astNewUOP( ASTOP_CAST, cExpression( x, 0, macro ) )
+				a = astNewUOP( ASTCLASS_CAST, cExpression( x, 0, macro ) )
 
 				assert( t->class = ASTCLASS_TYPE )
 				astSetType( a, t->dtype, astClone( t->subtype ) )
@@ -445,7 +445,7 @@ private function cExpression _
 				astSetType( a, t->dtype, astClone( t->subtype ) )
 				astDelete( t )
 			else
-				a = astNewUOP( ASTOP_SIZEOF, cExpression( x, cprecedence(ASTOP_SIZEOF), macro ) )
+				a = astNewUOP( ASTCLASS_SIZEOF, cExpression( x, cprecedence(ASTCLASS_SIZEOF), macro ) )
 			end if
 
 		case else
@@ -456,28 +456,28 @@ private function cExpression _
 	'' Infix operators
 	do
 		select case as const( tkGet( x ) )
-		case TK_QUEST    : op = ASTOP_IIF     '' ? (a ? b : c)
-		case TK_PIPEPIPE : op = ASTOP_CLOGOR  '' ||
-		case TK_AMPAMP   : op = ASTOP_CLOGAND '' &&
-		case TK_PIPE     : op = ASTOP_OR      '' |
-		case TK_CIRC     : op = ASTOP_XOR     '' ^
-		case TK_AMP      : op = ASTOP_AND     '' &
-		case TK_EQEQ     : op = ASTOP_CEQ     '' ==
-		case TK_EXCLEQ   : op = ASTOP_CNE     '' !=
-		case TK_LT       : op = ASTOP_CLT     '' <
-		case TK_LTEQ     : op = ASTOP_CLE     '' <=
-		case TK_GT       : op = ASTOP_CGT     '' >
-		case TK_GTEQ     : op = ASTOP_CGE     '' >=
-		case TK_LTLT     : op = ASTOP_SHL     '' <<
-		case TK_GTGT     : op = ASTOP_SHR     '' >>
-		case TK_PLUS     : op = ASTOP_ADD     '' +
-		case TK_MINUS    : op = ASTOP_SUB     '' -
-		case TK_STAR     : op = ASTOP_MUL     '' *
-		case TK_SLASH    : op = ASTOP_DIV     '' /
-		case TK_PERCENT  : op = ASTOP_MOD     '' %
-		case TK_LBRACKET : op = ASTOP_INDEX   '' [ (a[b])
-		case TK_DOT      : op = ASTOP_MEMBER  '' .
-		case TK_ARROW    : op = ASTOP_MEMBERDEREF '' ->
+		case TK_QUEST    : op = ASTCLASS_IIF     '' ? (a ? b : c)
+		case TK_PIPEPIPE : op = ASTCLASS_CLOGOR  '' ||
+		case TK_AMPAMP   : op = ASTCLASS_CLOGAND '' &&
+		case TK_PIPE     : op = ASTCLASS_OR      '' |
+		case TK_CIRC     : op = ASTCLASS_XOR     '' ^
+		case TK_AMP      : op = ASTCLASS_AND     '' &
+		case TK_EQEQ     : op = ASTCLASS_CEQ     '' ==
+		case TK_EXCLEQ   : op = ASTCLASS_CNE     '' !=
+		case TK_LT       : op = ASTCLASS_CLT     '' <
+		case TK_LTEQ     : op = ASTCLASS_CLE     '' <=
+		case TK_GT       : op = ASTCLASS_CGT     '' >
+		case TK_GTEQ     : op = ASTCLASS_CGE     '' >=
+		case TK_LTLT     : op = ASTCLASS_SHL     '' <<
+		case TK_GTGT     : op = ASTCLASS_SHR     '' >>
+		case TK_PLUS     : op = ASTCLASS_ADD     '' +
+		case TK_MINUS    : op = ASTCLASS_SUB     '' -
+		case TK_STAR     : op = ASTCLASS_MUL     '' *
+		case TK_SLASH    : op = ASTCLASS_DIV     '' /
+		case TK_PERCENT  : op = ASTCLASS_MOD     '' %
+		case TK_LBRACKET : op = ASTCLASS_INDEX   '' [ (a[b])
+		case TK_DOT      : op = ASTCLASS_MEMBER  '' .
+		case TK_ARROW    : op = ASTCLASS_MEMBERDEREF '' ->
 		case else        : exit do
 		end select
 
@@ -489,7 +489,7 @@ private function cExpression _
 			exit do
 		end if
 		'' Left associative?
-		if( op <> ASTOP_IIF ) then
+		if( op <> ASTCLASS_IIF ) then
 			oplevel += 1
 		end if
 
@@ -500,7 +500,7 @@ private function cExpression _
 		var b = cExpression( x, oplevel, macro )
 
 		'' Handle ?: special case
-		if( op = ASTOP_IIF ) then
+		if( op = ASTCLASS_IIF ) then
 			'' ':'
 			tkExpect( x, TK_COLON, "for a?b:c iif operator" )
 			x += 1
@@ -510,7 +510,7 @@ private function cExpression _
 			a = astNewIIF( a, b, c )
 		else
 			'' Handle [] special case
-			if( op = ASTOP_INDEX ) then
+			if( op = ASTCLASS_INDEX ) then
 				'' ']'
 				tkExpect( x, TK_RBRACKET, "for [] indexing operator" )
 				x += 1
@@ -1357,7 +1357,7 @@ private function cDeclarator _
 				'' lbound = 0, ubound = elements - 1
 				d = astNewDIMENSION( _
 						astNewCONSTI( 0, TYPE_LONG ), _
-						astNewBOP( ASTOP_SUB, _
+						astNewBOP( ASTCLASS_SUB, _
 							d, _
 							astNewCONSTI( 1, TYPE_LONG ) ) )
 			end if
