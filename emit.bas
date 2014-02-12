@@ -340,6 +340,9 @@ private function emitAst _
 		hEmitIndentedChildren( n )
 		emitStmt( "end scope" )
 
+	case ASTCLASS_APPENDBI
+		emitLines( filebufferFromFile( n->text, @n->location )->buffer )
+
 	case ASTCLASS_PPINCLUDE
 		emitStmt( "#include """ + *n->text + """", n->comment )
 

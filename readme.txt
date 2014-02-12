@@ -113,8 +113,6 @@ Usage:
 
 To do:
 
-- Allow -bi <file> or similar to insert a .bi file at the end of the output binding
-  This can be used to add arbitrary FB code (e.g. complex defines)
 - To remove unknown constructs: -removematch "<C code>"
   We can parse the C code into tokens, store that in the AST, and then filter
   out all constructs containing that sequence of tokens (before cFile() runs).
@@ -153,7 +151,6 @@ To do:
   since it only does signed ones internally
 - Remove stats stuff and do real profiling with huge headers
 
-- Combine C/CPP expression parsers into one
 - Need some way to easily pass tk locations on to AST nodes, perhaps astNewFromTK()
   or similar that copies over the location automatically
 - Need some high-level way to combine locations into one, etc. which is currently
@@ -178,6 +175,11 @@ To do:
   Maybe even cpp could create new token runs instead of modifying the current one,
   so that fixed TOKENRUNs could be re-used to store macro bodies, and to implement the
   macro expansion error reporting stuff...
+    a) keep original tokens and a tree of expanded tokens for on each. tkGet() etc. have to
+       walk the whole thing each time to find the real tokens corresponding to x. Very slow...
+    b) keep expanded tokens, and parent context tokenrun on each. (context where the expansion
+       happened. perhaps only 1 line, otherwise it could become too much. That's enough for error
+       reporting)
 - Error messages should show the macro expansion steps that happened in a given
   piece of code, from what the parser saw to the main location where it all came
   from.

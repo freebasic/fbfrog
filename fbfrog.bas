@@ -32,6 +32,7 @@ private sub hPrintHelpAndExit( )
 	print "  -include <file>          Add pre-#include"
 	print "  -noexpand <id>           Disable expansion of certain #define"
 	print "  -removedefine <id>       Don't preserve certain #defines/#undefs"
+	print "  -appendbi <file>         Append arbitrary FB code from <file> to the binding"
 	end 1
 end sub
 
@@ -349,6 +350,15 @@ private function hParseArgs( byref x as integer, byval body as integer ) as ASTN
 				n->location = *tkGetLocation( x )
 				astAppend( result, n )
 
+			case "appendbi"
+				x += 1
+
+				'' <file>
+				hExpectPath( x )
+				var n = astNew( ASTCLASS_APPENDBI, tkGetText( x ) )
+				n->location = *tkGetLocation( x )
+				astAppend( result, n )
+
 			case else
 				tkOops( x, "unknown command line option '" + text + "'" )
 			end select
@@ -468,6 +478,17 @@ private function frogWorkRootFile _
 		astAutoExtern( ast, frog.windowsms, frog.whitespace )
 	end if
 	astMergeDIVIDERs( ast )
+
+	if( presetcode ) then
+		assert( ast->class = ASTCLASS_GROUP )
+		var i = presetcode->head
+		while( i )
+			if( i->class = ASTCLASS_APPENDBI ) then
+				astAppend( ast, astClone( i ) )
+			end if
+			i = i->next
+		wend
+	end if
 
 	'' Put file's AST into a VERBLOCK, if a targetversion was given,
 	'' in preparation for the astMergeFiles() call later
