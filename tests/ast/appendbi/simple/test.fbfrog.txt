@@ -1,7 +1,0 @@
-[dos]
-        parsing: tests/ast/appendbi/simple/a.h
-[linux]
-        parsing: tests/ast/appendbi/simple/a.h
-[win32]
-        parsing: tests/ast/appendbi/simple/a.h
-emitting: tests/ast/appendbi/simple/a.bi (2 declarations)
