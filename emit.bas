@@ -233,6 +233,13 @@ end sub
 private function hEmitAlias( byval n as ASTNODE ptr ) as string
 	if( n->alias ) then
 		function = " alias """ + *n->alias + """"
+	else
+		'' No explicit alias set by symbol renaming, but we may still
+		'' need to emit a case-preserving alias, if that's not covered
+		'' by an Extern block.
+		if( (n->attrib and ASTATTRIB_HIDECASEALIAS) = 0 ) then
+			function = " alias """ + *n->text + """"
+		end if
 	end if
 end function
 
@@ -499,6 +506,7 @@ private function emitAst _
 			s += " " + *n->text + hEmitAlias( n )
 		end if
 
+		'' Calling convention not covered by Extern block?
 		if( (n->attrib and ASTATTRIB_HIDECALLCONV) = 0 ) then
 			if( n->attrib and ASTATTRIB_CDECL ) then
 				assert( (n->attrib and ASTATTRIB_STDCALL) = 0 ) '' can't have both

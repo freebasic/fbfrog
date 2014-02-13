@@ -1,7 +1,6 @@
 .
--whitespace -noautoextern -nonamefixup
+-whitespace -nonamefixup
 
--removedefine EXPANDTHIS
 -removedefine EXPANDME1
 -removedefine EXPANDME2
 -removedefine EXPANDME3

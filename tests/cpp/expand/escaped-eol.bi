@@ -1,11 +1,15 @@
-declare sub f()
+extern "C"
 
 declare sub f()
 
-type b as a
+declare sub f()
 
 type b as a
 
 type b as a
 
 type b as a
+
+type b as a
+
+end extern

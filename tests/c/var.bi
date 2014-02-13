@@ -1,3 +1,5 @@
+extern "C"
+
 extern     __a_normal_variable as long
 dim shared __a_normal_variable as long
 
@@ -234,3 +236,5 @@ extern p as typeof( const sub() ) const ptr
 extern p as typeof( const sub() ) const ptr
 extern p as typeof( const sub() ) const ptr
 extern p as typeof( const sub() ) const ptr
+
+end extern

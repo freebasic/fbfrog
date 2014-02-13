@@ -1,3 +1,5 @@
+extern "C"
+
 #define INT_ 1
 #define Int__ 2
 
@@ -14,3 +16,5 @@ type Width_
 end type
 
 type type_ as long
+
+end extern

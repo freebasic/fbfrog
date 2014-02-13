@@ -1,3 +1,5 @@
+extern "C"
+
 type A as UDT
 type A as UDT
 type A as long
@@ -14,3 +16,5 @@ type C as function(byval as long) as UDT
 dim shared separator1 as long
 
 dim shared separator2 as long
+
+end extern

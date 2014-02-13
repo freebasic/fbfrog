@@ -1,3 +1,5 @@
+extern "C"
+
 '' comment for a
 '' another comment for a
 dim shared a as long
@@ -23,3 +25,5 @@ dim shared g as long  '' comment for g
 '' comment for k
 '' comment for l
 declare sub i(byval j as long, byval k as long, byval l as long)
+
+end extern

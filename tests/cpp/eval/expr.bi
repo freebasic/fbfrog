@@ -1,3 +1,5 @@
+extern "C"
+
 extern test_ifdef_abc_expect_no as short
 
 extern test_zero_andalso_defined_foo_expect_no as short
@@ -25,3 +27,5 @@ extern test_if_defined_C_andalso_C_equals_123_expect_no as short
 extern test_if_defined_D_andalso_D_equals_123_expect_yes as short
 #define D 123
 extern yes as short
+
+end extern

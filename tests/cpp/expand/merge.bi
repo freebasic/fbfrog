@@ -1,3 +1,5 @@
+extern "C"
+
 dim shared id_id as long
 declare sub idid()
 
@@ -286,3 +288,5 @@ enum E
 	G = 0
 	G = 0
 end enum
+
+end extern

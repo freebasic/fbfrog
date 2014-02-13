@@ -1,3 +1,5 @@
+extern "C"
+
 type UDT
 	i as long
 	j as ulongint
@@ -68,3 +70,5 @@ type UDT
 	a as sub(byval a as sub())
 	p as function(byval as function(byval as long ptr ptr ptr) as long ptr ptr ptr) as long ptr ptr ptr
 end type
+
+end extern

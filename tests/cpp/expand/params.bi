@@ -1,3 +1,5 @@
+extern "C"
+
 declare sub f()
 declare function f(byval as long, byval as long) as long
 
@@ -13,3 +15,5 @@ declare sub baz()
 declare sub f()
 
 declare sub f()
+
+end extern

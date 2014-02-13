@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/autoextern/neither/a.h
+[linux]
+        parsing: tests/autoextern/neither/a.h
+[win32]
+        parsing: tests/autoextern/neither/a.h
+emitting: tests/autoextern/neither/a.bi (6 declarations)

@@ -2368,6 +2368,43 @@ private function astCountCallConv _
 	function = count
 end function
 
+private function astFindMainCallConv( byval ast as ASTNODE ptr ) as integer
+	var   cdeclcount = astCountCallConv( ast, ASTATTRIB_CDECL   )
+	var stdcallcount = astCountCallConv( ast, ASTATTRIB_STDCALL )
+	if( (cdeclcount = 0) and (stdcallcount = 0) ) then
+		'' No procedures/function pointers at all, so no need for an
+		'' Extern block to cover a calling convention
+		function = -1
+	elseif( stdcallcount > cdeclcount ) then
+		'' Stdcall dominates
+		function = ASTATTRIB_STDCALL
+	else
+		'' Cdecl dominates, or equal to amount of Stdcalls
+		function = ASTATTRIB_CDECL
+	end if
+end function
+
+'' Does the AST contain any declarations that need to be emitted with a
+'' case-preserving ALIAS?
+private function astHaveDeclsNeedingCaseAlias( byval n as ASTNODE ptr ) as integer
+	select case( n->class )
+	case ASTCLASS_VAR
+		if( (n->attrib and ASTATTRIB_PRIVATE) = 0 ) then
+			return TRUE
+		end if
+	case ASTCLASS_PROC
+		return TRUE
+	end select
+
+	var child = n->head
+	while( child )
+		if( astHaveDeclsNeedingCaseAlias( child ) ) then
+			return TRUE
+		end if
+		child = child->next
+	wend
+end function
+
 private sub astHideCallConv( byval n as ASTNODE ptr, byval callconv as integer )
 	if( n->class = ASTCLASS_PROC ) then
 		if( n->attrib and callconv ) then
@@ -2387,19 +2424,20 @@ private sub astHideCallConv( byval n as ASTNODE ptr, byval callconv as integer )
 	wend
 end sub
 
-private function astFindMainCallConv( byval ast as ASTNODE ptr ) as integer
-	var   cdeclcount = astCountCallConv( ast, ASTATTRIB_CDECL   )
-	var stdcallcount = astCountCallConv( ast, ASTATTRIB_STDCALL )
-	if( (cdeclcount = 0) and (stdcallcount = 0) ) then
-		function = -1
-	elseif( stdcallcount > cdeclcount ) then
-		function = ASTATTRIB_STDCALL
-	else
-		function = ASTATTRIB_CDECL
-	end if
-end function
+private sub astHideCaseAlias( byval n as ASTNODE ptr )
+	'' The case-preserving ALIAS only needs to be hidden on toplevel
+	'' declarations for which it would otherwise be emitted. No need to
+	'' recurse into procptr subtypes, or expressions...
+	n->attrib or= ASTATTRIB_HIDECASEALIAS
 
-private sub astTurnCallConvIntoExternBlock _
+	var child = n->head
+	while( child )
+		astHideCaseAlias( child )
+		child = child->next
+	wend
+end sub
+
+private sub astWrapInExternBlock _
 	( _
 		byval ast as ASTNODE ptr, _
 		byval externcallconv as integer, _
@@ -2419,6 +2457,9 @@ private sub astTurnCallConvIntoExternBlock _
 	'' Remove the calling convention from all procdecls, the Extern block
 	'' will take over
 	astHideCallConv( ast, externcallconv )
+
+	'' Same for case-preserving ALIAS
+	astHideCaseAlias( ast )
 
 	assert( ast->class = ASTCLASS_GROUP )
 	if( whitespace ) then
@@ -2442,8 +2483,8 @@ sub astAutoExtern _
 	astMakeProcsDefaultToCdecl( ast )
 
 	var maincallconv = astFindMainCallConv( ast )
-	if( maincallconv >= 0 ) then
-		astTurnCallConvIntoExternBlock( ast, maincallconv, use_stdcallms, whitespace )
+	if( (maincallconv >= 0) or astHaveDeclsNeedingCaseAlias( ast ) ) then
+		astWrapInExternBlock( ast, maincallconv, use_stdcallms, whitespace )
 	end if
 
 end sub
@@ -3129,6 +3170,14 @@ private sub hAddMergedDecl _
 
 	var adecl = aarray[ai].n
 	var bdecl = barray[bi].n
+
+	'' "Merge" a and b by cloning a. They've compared equal in astIsEqual()
+	'' so this works. Below we only need to cover a few additional cases
+	'' where astIsEqual() is more permissive than a true equality check,
+	'' which allows merging of a/b even if they're slightly different.
+	'' This currently affects the calling convention only.
+	'' In such cases, just cloning a isn't enough and some actual merging
+	'' work is needed.
 	var mdecl = astClone( adecl )
 
 	hFindCommonCallConvsOnMergedDecl( mdecl, adecl, bdecl )

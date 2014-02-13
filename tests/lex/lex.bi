@@ -1,3 +1,5 @@
+extern "C"
+
 #define A 0
 #define A 1
 #define A 11
@@ -108,3 +110,5 @@ declare sub f()  '' Some escaped newlines
 #define A "abcdef"
 #define A ""
 #define A ""
+
+end extern

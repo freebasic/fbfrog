@@ -1,3 +1,5 @@
+extern "C"
+
 extern separator1 as short
 
 extern yes as short
@@ -78,3 +80,5 @@ extern separator27 as short
 
 extern yes as short
 extern separator28 as short
+
+end extern

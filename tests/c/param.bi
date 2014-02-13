@@ -1,3 +1,5 @@
+extern "C"
+
 dim shared __simple as long
 declare sub f(byval a as long)
 declare sub f(byval a as long, byval b as long)
@@ -45,3 +47,5 @@ declare sub f(byval as sub(byval as sub()))
 
 dim shared __vararg as long
 declare sub f(byval a as long, ...)
+
+end extern

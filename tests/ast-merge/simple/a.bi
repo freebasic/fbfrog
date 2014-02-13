@@ -6,6 +6,8 @@
 	#error "'__VERSION__' is #defined to an unsupported value; expected one of: "1", "2""
 #endif
 
+extern "C"
+
 extern a1 as long
 
 #if __VERSION__ = "1"
@@ -13,3 +15,5 @@ extern a1 as long
 #endif
 
 extern a3 as long
+
+end extern

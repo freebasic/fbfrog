@@ -6,7 +6,11 @@
 	#error "'__VERSION__' is #defined to an unsupported value; expected one of: "1", "2""
 #endif
 
+extern "C"
+
 extern a as short
+
+end extern
 
 #if __VERSION__ = "1"
 	declare sub morev1( )

@@ -1,3 +1,5 @@
+extern "C"
+
 type UDT
 end type
 
@@ -109,3 +111,5 @@ type B
 	i as long
 end type
 type A as function() as B
+
+end extern

@@ -113,6 +113,7 @@ Usage:
 
 To do:
 
+- astMakeProcsDefaultToCdecl() should be always done, not just for autoextern
 - Show suggestions how to fix errors, e.g. if #define body couldn't be parsed,
   suggest using -removedefine to exclude the #define from the binding...
 - Do not preserve #defines that are #undeffed, such that ultimately it'll become
@@ -125,7 +126,6 @@ To do:
 - Long Double and other built-in types that FB doesn't have:
     a) just omit, except fields in a struct that is needed
     b) replace with byte array, other dtypes, or custom struct
-- emit case-preserving ALIASes if outside Extern block (i.e. no HIDDENCALLCONV flag)
 - Add option to translate #defines to consts if possible
 - #include foo.h  ->  #include foo.bi, if foo.bi will be generated too
 - #include stdio.h -> #include crt/stdio.bi, for some known default headers
