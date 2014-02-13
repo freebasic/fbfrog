@@ -2320,7 +2320,7 @@ end sub
 '' convention attributes amongst others, and using a default would require it
 '' to remove the default if it will add another one, etc. Doing it here
 '' afterwards just is easier because all that's needed is to fill the gaps.
-private sub astMakeProcsDefaultToCdecl( byval n as ASTNODE ptr )
+sub astMakeProcsDefaultToCdecl( byval n as ASTNODE ptr )
 	if( n->class = ASTCLASS_PROC ) then
 		'' No calling convention specified yet?
 		if( (n->attrib and (ASTATTRIB_CDECL or ASTATTRIB_STDCALL)) = 0 ) then
@@ -2479,8 +2479,6 @@ sub astAutoExtern _
 		byval use_stdcallms as integer, _
 		byval whitespace as integer _
 	)
-
-	astMakeProcsDefaultToCdecl( ast )
 
 	var maincallconv = astFindMainCallConv( ast )
 	if( (maincallconv >= 0) or astHaveDeclsNeedingCaseAlias( ast ) ) then

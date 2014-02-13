@@ -113,7 +113,6 @@ Usage:
 
 To do:
 
-- astMakeProcsDefaultToCdecl() should be always done, not just for autoextern
 - Show suggestions how to fix errors, e.g. if #define body couldn't be parsed,
   suggest using -removedefine to exclude the #define from the binding...
 - Do not preserve #defines that are #undeffed, such that ultimately it'll become

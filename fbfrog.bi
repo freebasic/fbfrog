@@ -858,6 +858,7 @@ declare sub astNodeToNop _
 		byval astclass as integer, _
 		byref id as string _
 	)
+declare sub astMakeProcsDefaultToCdecl( byval n as ASTNODE ptr )
 declare sub astAutoExtern _
 	( _
 		byval ast as ASTNODE ptr, _
