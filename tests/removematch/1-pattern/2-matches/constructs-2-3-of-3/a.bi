@@ -1,0 +1,1 @@
+extern a as short

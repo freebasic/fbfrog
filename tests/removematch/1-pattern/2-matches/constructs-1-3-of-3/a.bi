@@ -1,0 +1,1 @@
+extern b as short

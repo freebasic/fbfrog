@@ -33,6 +33,8 @@ private sub hPrintHelpAndExit( )
 	print "  -noexpand <id>           Disable expansion of certain #define"
 	print "  -removedefine <id>       Don't preserve certain #defines/#undefs"
 	print "  -appendbi <file>         Append arbitrary FB code from <file> to the binding"
+	print "  -removematch ""<C token(s)>""    Drop constructs containing the given C token(s)."
+	print "                               This should be used to work-around parsing errors."
 	end 1
 end sub
 
@@ -102,7 +104,7 @@ private sub hExpandResponseFileArguments( )
 
 			'' Complain if argument was only '@'
 			if( len( filename ) = 0 ) then
-				tkOops( x, "@: missing file name argument" )
+				tkOopsExpected( x, "file name directly behind @ (no spaces in between)" )
 			end if
 
 			'' If the @file argument comes from an @file,
@@ -154,7 +156,7 @@ end function
 
 private sub hExpectPath( byval x as integer )
 	if( hIsStringOrId( x ) = FALSE ) then
-		tkOops( x, "missing <path> argument" )
+		tkOopsExpected( x, "<path> argument" )
 	end if
 end sub
 
@@ -244,7 +246,7 @@ private function hParseArgs( byref x as integer, byval body as integer ) as ASTN
 				hExpectPath( x )
 				frog.outdir = hPathRelativeToResponseFile( x )
 
-			'' -version <version-id> ...
+			'' -version <version id> ...
 			case "version"
 				'' Another -version is coming - end any current -version/-target blocks
 				if( body <> BODY_TOPLEVEL ) then
@@ -253,9 +255,9 @@ private function hParseArgs( byref x as integer, byval body as integer ) as ASTN
 				var location1 = tkGetLocation( x )
 				x += 1
 
-				'' <version-id>
+				'' <version id>
 				if( hIsStringOrId( x ) = FALSE ) then
-					tkOops( x, "-version: missing <version> argument" )
+					tkOopsExpected( x, "<version id> argument" )
 				end if
 				'' astNewCONSTI( vallng( nextarg ), TYPE_LONGINT )
 				var id = astNew( ASTCLASS_STRING, tkGetText( x ) )
@@ -280,18 +282,19 @@ private function hParseArgs( byref x as integer, byval body as integer ) as ASTN
 				x += 1
 
 				'' <target-id>
-				if( tkGet( x ) <> TK_ID ) then
-					tkOops( x, "missing dos|linux|win32 argument" )
-				end if
 				var attrib = 0
-				var targetid = *tkGetText( x )
-				select case( targetid )
-				case "dos"   : attrib = ASTATTRIB_DOS
-				case "linux" : attrib = ASTATTRIB_LINUX
-				case "win32" : attrib = ASTATTRIB_WIN32
-				case else
-					tkOops( x, "unknown target '" + *tkGetText( x )  + "', expected one of dos|linux|win32" )
-				end select
+				dim as string targetid
+				if( tkGet( x ) = TK_ID ) then
+					targetid = *tkGetText( x )
+					select case( targetid )
+					case "dos"   : attrib = ASTATTRIB_DOS
+					case "linux" : attrib = ASTATTRIB_LINUX
+					case "win32" : attrib = ASTATTRIB_WIN32
+					end select
+				end if
+				if( attrib = 0 ) then
+					tkOopsExpected( x, "one of dos|linux|win32" )
+				end if
 				var location2 = tkGetLocation( x )
 				location.length = location2->column + location2->length - location.column
 				x += 1
@@ -358,6 +361,17 @@ private function hParseArgs( byref x as integer, byval body as integer ) as ASTN
 				n->location = *tkGetLocation( x )
 				astAppend( result, n )
 
+			case "removematch"
+				x += 1
+
+				'' <C tokens>
+				if( (tkGet( x ) <> TK_ID) and (tkGet( x ) <> TK_STRING) ) then
+					tkOopsExpected( x, "C tokens" )
+				end if
+				var n = astNew( ASTCLASS_REMOVEMATCH, tkGetText( x ) )
+				n->location = *tkGetLocation( x )
+				astAppend( result, n )
+
 			case "appendbi"
 				x += 1
 
@@ -396,6 +410,90 @@ private function hParseArgs( byref x as integer, byval body as integer ) as ASTN
 	function = result
 end function
 
+private sub hLoadPatternTokens( byval n as ASTNODE ptr )
+	assert( n->class = ASTCLASS_REMOVEMATCH )
+
+	tkInit( )
+
+	'' Note: the FILEBUFFER id currently must be made unique, or else it
+	'' could be reused by other -removematch options, even if the pattern
+	'' text differs...
+	var id = "<-removematch """ + *n->text + """>"
+
+	lexLoadC( 0, filebufferFromZstring( id, n->text ), FALSE )
+
+	for x as integer = 0 to tkGetCount( )-1
+		astAppend( n, astNewTK( x ) )
+	next
+
+	tkEnd( )
+end sub
+
+private function hPatternMatchesHere _
+	( _
+		byval n as ASTNODE ptr, _
+		byval x as integer, _
+		byval last as integer _
+	) as integer
+
+	var tk = n->head
+	while( (tk <> NULL) and (x <= last) )
+		assert( tk->class = ASTCLASS_TK )
+
+		if( tk->tk <> tkGet( x ) ) then exit function
+
+		var text = tkGetText( x )
+		if( (tk->text <> NULL) <> (text <> NULL) ) then exit function
+		if( text ) then
+			if( *tk->text <> *text ) then exit function
+		end if
+
+		tk = tk->next
+		x += 1
+	wend
+
+	function = TRUE
+end function
+
+private function hConstructMatchesPattern _
+	( _
+		byval n as ASTNODE ptr, _
+		byval first as integer, _
+		byval last as integer _
+	) as integer
+
+	assert( n->class = ASTCLASS_REMOVEMATCH )
+
+	'' Check whether the pattern exists in the construct:
+	'' For each token in the construct, check whether the pattern starts
+	'' there and if so whether it continues...
+	for x as integer = first to last
+		if( hPatternMatchesHere( n, x, last ) ) then
+			return TRUE
+		end if
+	next
+
+end function
+
+private function hConstructMatchesAnyPattern _
+	( _
+		byval presetcode as ASTNODE ptr, _
+		byval first as integer, _
+		byval last as integer _
+	) as integer
+
+	var i = presetcode->head
+	while( i )
+		if( i->class = ASTCLASS_REMOVEMATCH ) then
+			if( hConstructMatchesPattern( i, first, last ) ) then
+				return TRUE
+			end if
+		end if
+		i = i->next
+	wend
+
+end function
+
 private function frogWorkRootFile _
 	( _
 		byval presetcode as ASTNODE ptr, _
@@ -404,6 +502,22 @@ private function frogWorkRootFile _
 	) as ASTNODE ptr
 
 	print space( frog.maxversionstrlen ) + "parsing: " + *rootfile->text
+
+	'' Go through -removematch options for this version and run lexLoadC()
+	'' on the C token string given behind -removematch on the command line.
+	'' This will write into the tk buffer so it must be done here before
+	'' the main parsing process starts...
+	var have_removematch = FALSE
+	if( presetcode ) then
+		var i = presetcode->head
+		while( i )
+			if( i->class = ASTCLASS_REMOVEMATCH ) then
+				have_removematch = TRUE
+				hLoadPatternTokens( i )
+			end if
+			i = i->next
+		wend
+	end if
 
 	tkInit( )
 
@@ -465,6 +579,22 @@ private function frogWorkRootFile _
 
 	tkRemoveEOLs( )
 	tkTurnCPPTokensIntoCIds( )
+
+	'' Apply -removematch options, if there are any
+	if( have_removematch ) then
+		var x = 0
+		while( tkGet( x ) <> TK_EOF )
+			var begin = x
+			x = hFindConstructEnd( x )
+
+			if( hConstructMatchesAnyPattern( presetcode, begin, x ) ) then
+				tkRemove( begin, x )
+				x = begin - 1
+			end if
+
+			x += 1
+		wend
+	end if
 
 	'' Parse C constructs
 	var ast = cFile( )

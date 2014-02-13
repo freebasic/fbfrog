@@ -725,7 +725,7 @@ private function tkToCText _
 	function = s
 end function
 
-private function hFindConstructEnd( byval x as integer ) as integer
+function hFindConstructEnd( byval x as integer ) as integer
 	do
 		select case( tkGet( x ) )
 		case TK_EOF, _

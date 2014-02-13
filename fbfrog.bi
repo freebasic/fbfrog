@@ -467,6 +467,7 @@ declare function tkCollectComments _
 declare sub tkRemoveAllOf( byval id as integer, byval text as zstring ptr )
 declare sub tkRemoveEOLs( )
 declare sub tkTurnCPPTokensIntoCIds( )
+declare function hFindConstructEnd( byval x as integer ) as integer
 declare sub tkReport _
 	( _
 		byval x as integer, _
@@ -559,6 +560,7 @@ enum
 	ASTCLASS_DIR
 	ASTCLASS_NOEXPAND
 	ASTCLASS_REMOVEDEFINE
+	ASTCLASS_REMOVEMATCH
 	ASTCLASS_APPENDBI
 
 	'' CPP directives

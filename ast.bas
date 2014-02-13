@@ -116,6 +116,7 @@ dim shared as ASTNODEINFO astnodeinfo(0 to ...) = _
 	("dir"          ), _
 	("noexpand"     ), _
 	("removedefine" ), _
+	("removematch"  ), _
 	("appendbi"     ), _
 	("#include"     ), _
 	("#define"      ), _

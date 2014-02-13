@@ -113,9 +113,6 @@ Usage:
 
 To do:
 
-- To remove unknown constructs: -removematch "<C code>"
-  We can parse the C code into tokens, store that in the AST, and then filter
-  out all constructs containing that sequence of tokens (before cFile() runs).
 - Show suggestions how to fix errors, e.g. if #define body couldn't be parsed,
   suggest using -removedefine to exclude the #define from the binding...
 - Do not preserve #defines that are #undeffed, such that ultimately it'll become
@@ -151,6 +148,20 @@ To do:
   since it only does signed ones internally
 - Remove stats stuff and do real profiling with huge headers
 
+- The filebufferFromZstring() function also re-uses FILEBUFFERs based on the id,
+  so fbfrog needs to ensure to use proper unique ids, or else the same FILEBUFFER
+  could be reused for different zstrings. For filebufferFromFile() we assume this
+  to be the wanted behaviour because the filename is unique, but internal strings are a different story...
+- Pre-#defines, -removematch, etc. text is loaded into tk using filebufferFromZstring/lexLoadC,
+  this process loses the command line location info. Should allow passing a source/base/start
+  location to filebufferFromZstring and lexLoadC so that it can reports lexing errors with the
+  command line context, instead of temp strings that are used to feed filebufferFromZstring.
+  To do this, each pre-#define/#include etc. should also be passed to filebufferFromZstring/lexLoadC
+  separately. filebufferFromFile() already accepts a srcloc for similar reasons: to be able to
+  report the "file not found" in the proper context. Of course filebufferFromFile() doesn't need
+  to pass it on to lexLoadC() because any issues with the loaded file should be reported in the context
+  of that file, not the code that caused that file to be #included. It makes sense though for "inline code",
+  such as pre-#defines and -removematch...
 - Need some way to easily pass tk locations on to AST nodes, perhaps astNewFromTK()
   or similar that copies over the location automatically
 - Need some high-level way to combine locations into one, etc. which is currently
@@ -208,3 +219,5 @@ To do:
 	errors/c/typedef-{proc|array}, should be fixed up automatically where possible and be removed otherwise
 		(e.g. if the proc typedef is always used in a pointer context, then include the pointer in the typedef)
 	errors/cpp/stack/*, missing #endifs reported with wrong source context
+- Use *.h.fail or similar for error tests, instead of scanning for *.h, so they
+  could be put into the same directories as the normal tests?

@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/removematch/match-whole-construct/a.h
+[linux]
+        parsing: tests/removematch/match-whole-construct/a.h
+[win32]
+        parsing: tests/removematch/match-whole-construct/a.h
+emitting: tests/removematch/match-whole-construct/a.bi (2 declarations)
