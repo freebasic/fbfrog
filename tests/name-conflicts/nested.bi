@@ -13,6 +13,12 @@ type UDT1
 	globaltype as long
 	foo as long
 	FOO_ as long
+
+	union
+		Foo__ as long
+		fOO___ as long
+	end union
+
 	as_ as long
 	IF_ as long
 end type

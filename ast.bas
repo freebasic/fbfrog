@@ -2696,7 +2696,6 @@ private sub hCheckId _
 		end if
 
 		hDecideWhichSymbolToRename( first, n )->attrib or= ASTATTRIB_NEEDRENAME
-
 	elseif( add_here ) then
 		hashAdd( h, item, hash, id, n )
 	end if
@@ -2750,13 +2749,20 @@ private sub hWalkAndCheckIds _
 			end if
 
 		case ASTCLASS_STRUCT, ASTCLASS_UNION
-			hCheckId( @fbkeywordhash, i, FALSE )
-			hCheckId( defines, i, FALSE )
-			hCheckId( types, i, TRUE )
+			'' Not anonymous?
+			if( i->text ) then
+				hCheckId( @fbkeywordhash, i, FALSE )
+				hCheckId( defines, i, FALSE )
+				hCheckId( types, i, TRUE )
 
-			'' Process fields recursively (nested scope),
-			'' with the #defines found so far.
-			hFixIdsInScope( defines, i )
+				'' Process fields recursively (nested scope),
+				'' with the #defines found so far.
+				hFixIdsInScope( defines, i )
+			else
+				'' Anonymous struct/union: Process the fields
+				'' recursively, they belong to this scope too.
+				hWalkAndCheckIds( defines, types, globals, i )
+			end if
 
 		case ASTCLASS_STRUCTFWD, ASTCLASS_UNIONFWD, ASTCLASS_ENUMFWD, ASTCLASS_TYPEDEF
 			hCheckId( @fbkeywordhash, i, FALSE )
@@ -2772,8 +2778,9 @@ private sub hWalkAndCheckIds _
 				hCheckId( types, i, TRUE )
 			end if
 
-			'' Check enum's constants: They belong to the global
-			'' namespace (unlike struct fields or proc params).
+			'' Check enum's constants: They belong to this scope
+			'' too, regardless of whether the enum is named or
+			'' anonymous.
 			hWalkAndCheckIds( defines, types, globals, i )
 
 		end select
@@ -2945,14 +2952,22 @@ private sub hWalkAndRenameSymbols _
 			hRenameSymbol( defines, types, globals, i, code )
 		end if
 
+		''
+		'' Recursively process nested symbols that still belong to this
+		'' scope though. (happens with enum consts and fields of
+		'' anonymous structs/unions, see also hWalkAndCheckIds())
+		''
+		'' Fields of named structs/unions and parameters should be
+		'' ignored here though: They're treated as separate scopes and
+		'' are supposed to be handled by their hFixIdsInScope() calls.
+		''
 		select case( i->class )
 		case ASTCLASS_ENUM
-
-			'' Check enum's constants, which belong to global namespace too,
-			'' unlike struct fields or proc params. Note: not checking the
-			'' enum's id though, because it's in the type namespace.
 			hWalkAndRenameSymbols( defines, types, globals, i, code )
-
+		case ASTCLASS_STRUCT, ASTCLASS_UNION
+			if( i->text = NULL ) then
+				hWalkAndRenameSymbols( defines, types, globals, i, code )
+			end if
 		end select
 
 		i = i->next
@@ -2967,8 +2982,8 @@ private sub hFixIdsInScope _
 
 	'' Scope-specific namespaces for types and vars/procs/consts/fields/params
 	dim as THASH types, globals
-	hashInit( @types, 16, TRUE )
-	hashInit( @globals, 16, TRUE )
+	hashInit( @types, 10, TRUE )
+	hashInit( @globals, 10, TRUE )
 
 	'' 1. Walk through symbols top-down, much like a C compiler, and mark
 	''    those that need renaming with ASTATTRIB_NEEDRENAME.
@@ -2988,7 +3003,7 @@ sub astFixIds( byval code as ASTNODE ptr )
 	'' Just one #define namespace, re-used also for nested scopes like
 	'' struct bodies/parameter lists.
 	dim as THASH defines
-	hashInit( @defines, 16, TRUE )
+	hashInit( @defines, 10, TRUE )
 
 	hFixIdsInScope( @defines, code )
 

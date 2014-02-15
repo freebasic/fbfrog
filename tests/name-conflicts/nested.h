@@ -12,6 +12,10 @@ struct UDT1 {
 	// conflict with each-other
 	int foo;
 	int FOO;
+	union {
+		int Foo;
+		int fOO;
+	};
 
 	// conflicts with FB keywords
 	int as;

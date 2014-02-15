@@ -1593,7 +1593,7 @@ dim shared as zstring ptr fbkeywords(0 to ...) => _
 dim shared fbkeywordhash as THASH
 
 sub fbkeywordsInit( )
-	hashInit( @fbkeywordhash, 16, TRUE )
+	hashInit( @fbkeywordhash, 10, TRUE )
 	for i as integer = lbound( fbkeywords ) to ubound( fbkeywords )
 		hashAddOverwrite( @fbkeywordhash, fbkeywords(i), NULL )
 	next
