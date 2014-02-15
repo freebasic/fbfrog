@@ -2641,6 +2641,42 @@ sub astRemoveRedundantTypedefs( byval n as ASTNODE ptr )
 	end if
 end sub
 
+private function hExtractNestedDefines( byval n as ASTNODE ptr ) as ASTNODE ptr
+	var result = astNewGROUP( )
+
+	var i = n->head
+	while( i )
+		var nxt = i->next
+
+		select case( i->class )
+		case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
+			astAppend( result, hExtractNestedDefines( i ) )
+		case ASTCLASS_PPDEFINE
+			astCloneAppend( result, i )
+			astRemove( n, i )
+		end select
+
+		i = nxt
+	wend
+
+	function = result
+end function
+
+sub astMoveNestedDefinesToToplevel( byval code as ASTNODE ptr )
+	var i = code->head
+	while( i )
+
+		'' Compound?
+		select case( i->class )
+		case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
+			'' Extract nested #defines and insert them behind the compound
+			astInsert( code, hExtractNestedDefines( i ), i->next )
+		end select
+
+		i = i->next
+	wend
+end sub
+
 '' If two symbols are conflicting, one of them must be renamed. Certain types
 '' of symbols are preferably renamed. (e.g. renaming a constant is preferred
 '' over renaming a procedure). If conflicting with an FB keyword, the symbol

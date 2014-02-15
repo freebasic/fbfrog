@@ -333,7 +333,7 @@ private function cExpression _
 			var is_cast = hIsDataType( x, macro )
 
 			'' Find the ')' and check the token behind it, in some cases
-			'' we can tell that it can't be a cast.
+			'' we can tell that it probably isn't a cast.
 			var y = hFindClosingParen( x - 1 ) + 1
 			select case( tkGet( y ) )
 			case TK_RPAREN, TK_EOF, TK_END

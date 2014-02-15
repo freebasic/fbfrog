@@ -38,11 +38,17 @@ Features:
         returning function pointers etc. Also parses some __attribute__'s, e.g.
         calling conventions.
       * Expression parser that's used to parse initializers, enum constant
-        values, #define bodies.
+        values, #define bodies. Includes parsing for type casting expressions,
+        based on a heuristic (whether the identifier in parentheses looks like a
+        type or is a known typedef, etc.).
       * Parses typedefs, structs, unions, enums, including nested
         structs/unions.
 
   * FB binding creation
+      * C's built-in data types (using the sizes typically used for x86) and
+        also typedefs such as size_t or int32_t are directly converted to
+        corresponding FB data types. <signed|unsigned char> is translated to
+        BYTE|UBYTE, while plain <char> is assumed to mean ZSTRING.
       * C expressions are converted to FB ones, as pretty as possible without
         changing result values.
       * Array parameters are turned into pointers.
@@ -51,6 +57,12 @@ Features:
       * Redundant typedefs (<typedef struct A A;>) are removed, because in FB
         there are no separate type/tag namespaces. <struct A> or <A> translate
         to the same thing.
+      * #defines "nested" inside struct bodies are moved to the toplevel. Even
+        though FB doesn't scope #defines inside UDTs (only inside scope blocks,
+        but not namespaces), this is better, because it represents the original
+        header's intentions more closely. It becomes more important when
+        converting #defines to constant declarations, because FB does scope
+        those inside UDTs.
       * Conflicting identifiers (conflicts with FB keywords, or amongst the
         symbols declared in the binding, possibly due to FB's case
         insensitivity) are fixed by appending _ underscores to the less
@@ -137,8 +149,6 @@ To do:
 - #include stdio.h -> #include crt/stdio.bi, for some known default headers
   (or perhaps let presets do this)
 - CPP works too much like FB's PP (e.g. recursive expansion...)
-- #defines inside struct bodies should be moved to toplevel first, that's needed
-  for the FB translation and may also affect symbol renaming
 - Emit list of renamed symbols at top of header
 - Add BOOLDEFINE to mark a macro as "returns a bool", so the C #define parser
   can set is_bool_context=TRUE when folding
@@ -158,6 +168,9 @@ To do:
   since it only does signed ones internally
 - Remove stats stuff and do real profiling with huge headers
 
+- Should use FILE nodes to represent C parser result, and have file*() functions
+  that work on that AST, and extract them from ast.bas into separate modules.
+  AST merging should merge "files" instead of "ASTs"...
 - The filebufferFromZstring() function also re-uses FILEBUFFERs based on the id,
   so fbfrog needs to ensure to use proper unique ids, or else the same FILEBUFFER
   could be reused for different zstrings. For filebufferFromFile() we assume this

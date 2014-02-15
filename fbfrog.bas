@@ -609,6 +609,7 @@ private function frogWorkRootFile _
 	astFixArrayParams( ast )
 	astFixAnonUDTs( ast )
 	astRemoveRedundantTypedefs( ast )
+	astMoveNestedDefinesToToplevel( ast )
 	if( frog.nonamefixup = FALSE ) then
 		astFixIds( ast )
 	end if
