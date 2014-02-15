@@ -426,7 +426,7 @@ type Width_
 	as_ as long
 	type_ as long
 	FLOAT as long
-	_ as long
+	__ as long
 end type
 
 type type_ as long

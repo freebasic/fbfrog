@@ -139,8 +139,6 @@ To do:
 - CPP works too much like FB's PP (e.g. recursive expansion...)
 - #defines inside struct bodies should be moved to toplevel first, that's needed
   for the FB translation and may also affect symbol renaming
-- symbols named "_" aren't renamed yet
-	@"_", _  '' FB's line continuation char
 - Emit list of renamed symbols at top of header
 - Add BOOLDEFINE to mark a macro as "returns a bool", so the C #define parser
   can set is_bool_context=TRUE when folding

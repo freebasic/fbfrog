@@ -1549,6 +1549,7 @@ dim shared as zstring ptr fbkeywords(0 to ...) => _
 	@"WSTRING", _
 	@"XOR", _
 	@"ZSTRING", _
+	@"_", _  '' FB's line continuation char
 	@"__DATE_ISO__", _
 	@"__DATE__", _
 	@"__FB_BACKEND__", _
