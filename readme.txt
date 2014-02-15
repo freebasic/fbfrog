@@ -120,8 +120,15 @@ To do:
 - 64bit support:
     * C long is already mapped to CLONG
     * pre-#defines are missing
-    * what about , but what
-  if a header checks for 32bit/64bit pre-#defines? Just add linux64/win64/etc. os blocks?
+    * need to use x86 32bit/64bit compiler #defines
+    * Use -target dos,linux,x86_64-linux,win32,x86_64-win32? or something else?
+    * Why bother having -target at all. Could just always parse headers for all
+      available modes... (perhaps allow disabling some modes if that's really
+      needed, e.g. if the header contains an #error for a certain target)
+      In general the headers work for all systems even if the library isn't
+      compilable for all targets.
+    * What target-specifics do we really have to handle? It's usually just that
+      headers #include certain target-specific headers or different declarations.
 - Long Double and other built-in types that FB doesn't have:
     a) just omit, except fields in a struct that is needed
     b) replace with byte array, other dtypes, or custom struct
@@ -130,7 +137,10 @@ To do:
 - #include stdio.h -> #include crt/stdio.bi, for some known default headers
   (or perhaps let presets do this)
 - CPP works too much like FB's PP (e.g. recursive expansion...)
-- Check params/fields for name conflicts
+- #defines inside struct bodies should be moved to toplevel first, that's needed
+  for the FB translation and may also affect symbol renaming
+- symbols named "_" aren't renamed yet
+	@"_", _  '' FB's line continuation char
 - Emit list of renamed symbols at top of header
 - Add BOOLDEFINE to mark a macro as "returns a bool", so the C #define parser
   can set is_bool_context=TRUE when folding
@@ -138,6 +148,9 @@ To do:
 - Enums: must be emitted as Long for 64bit compat:
 	Type Foo As Long (and make enum anonymous)
 	Enum Foo As Long (must be added to FB first)
+- Are forward declarations/references handled correctly? Consider merging the
+  {STRUCT|UNION|ENUM}FWD into one since in FB they'd all be emitted as the same
+  code anyways?!
 - Support bitfields?
 - ## merging doesn't handle float literals, e.g. 1##. or .##0 ?!
 - Const folding etc. has issues with 32bit/64bit, using Longint internally, so

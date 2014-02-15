@@ -7,5 +7,5 @@ end type
 
 type UDTlinux_
 	fieldlinux as long
-	fieldlinux as long
+	fieldlinux_ as long
 end type

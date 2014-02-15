@@ -574,11 +574,6 @@ sub astSetText( byval n as ASTNODE ptr, byval text as zstring ptr )
 	n->text = strDuplicate( text )
 end sub
 
-private sub astRemoveText( byval n as ASTNODE ptr )
-	deallocate( n->text )
-	n->text = NULL
-end sub
-
 sub astRenameSymbol( byval n as ASTNODE ptr, byval newid as zstring ptr )
 	assert( n->alias = NULL )
 	n->alias = n->text
@@ -2487,23 +2482,6 @@ sub astAutoExtern _
 
 end sub
 
-sub astRemoveParamNames( byval n as ASTNODE ptr )
-	if( n->class = ASTCLASS_PARAM ) then
-		astRemoveText( n )
-	end if
-
-	'' Don't forget the procptr subtypes
-	if( typeGetDt( n->dtype ) = TYPE_PROC ) then
-		astRemoveParamNames( n->subtype )
-	end if
-
-	var child = n->head
-	while( child )
-		astRemoveParamNames( child )
-		child = child->next
-	wend
-end sub
-
 sub astFixArrayParams( byval n as ASTNODE ptr )
 	if( n->class = ASTCLASS_PARAM ) then
 		'' C array parameters are really just pointers (i.e. the array
@@ -2663,30 +2641,38 @@ sub astRemoveRedundantTypedefs( byval n as ASTNODE ptr )
 	end if
 end sub
 
-'' If two symbols are conflicting, one of them must be renamed, prefering to
-'' rename #defines/constants over renaming types/procedures. Fallback mode:
-'' rename the 2nd symbol. If conflicting with an FB keyword, the second symbol
-'' must be renamed.
+'' If two symbols are conflicting, one of them must be renamed. Certain types
+'' of symbols are preferably renamed. (e.g. renaming a constant is preferred
+'' over renaming a procedure). If conflicting with an FB keyword, the symbol
+'' must always be renamed though.
 private function hDecideWhichSymbolToRename _
 	( _
 		byval first as ASTNODE ptr, _
 		byval other as ASTNODE ptr _
 	) as ASTNODE ptr
 
-	function = other
-
-	'' Not conflicting with FB keyword?
-	if( first ) then
-		select case( other->class )
-		case ASTCLASS_PPDEFINE, ASTCLASS_ENUMCONST
-
-		case else
-			select case( first->class )
-			case ASTCLASS_PPDEFINE, ASTCLASS_ENUMCONST
-				function = first
-			end select
-		end select
+	'' Conflicting with FB keyword?
+	if( first = NULL ) then
+		return other
 	end if
+
+	'' Parameters are the easiest to rename because renaming them doesn't
+	'' make a difference (in prototypes)
+	if( other->class = ASTCLASS_PARAM ) then return other
+	if( first->class = ASTCLASS_PARAM ) then return first
+
+	'' Prefer renaming #defines/constants over others
+	select case( other->class )
+	case ASTCLASS_PPDEFINE, ASTCLASS_ENUMCONST
+		return other
+	end select
+	select case( first->class )
+	case ASTCLASS_PPDEFINE, ASTCLASS_ENUMCONST
+		return first
+	end select
+
+	'' Fallback to renaming the symbol that appeared later
+	function = other
 end function
 
 private sub hCheckId _
@@ -2717,6 +2703,12 @@ private sub hCheckId _
 
 end sub
 
+declare sub hFixIdsInScope _
+	( _
+		byval defines as THASH ptr, _
+		byval code as ASTNODE ptr _
+	)
+
 private sub hWalkAndCheckIds _
 	( _
 		byval defines as THASH ptr, _
@@ -2735,29 +2727,53 @@ private sub hWalkAndCheckIds _
 			hCheckId( types, i, FALSE )
 			hCheckId( globals, i, FALSE )
 
-		case ASTCLASS_PROC, ASTCLASS_VAR, ASTCLASS_ENUMCONST
+		case ASTCLASS_PROC
 			hCheckId( @fbkeywordhash, i, FALSE )
 			hCheckId( defines, i, FALSE )
 			hCheckId( globals, i, TRUE )
 
-		case ASTCLASS_STRUCT, ASTCLASS_UNION, _
-		     ASTCLASS_STRUCTFWD, ASTCLASS_UNIONFWD, ASTCLASS_ENUMFWD, _
-		     ASTCLASS_TYPEDEF
+			'' Process parameters recursively (nested scope),
+			'' with the #defines found so far.
+			hFixIdsInScope( defines, i )
+
+		case ASTCLASS_VAR, ASTCLASS_ENUMCONST, ASTCLASS_FIELD
+			hCheckId( @fbkeywordhash, i, FALSE )
+			hCheckId( defines, i, FALSE )
+			hCheckId( globals, i, TRUE )
+
+		case ASTCLASS_PARAM
+			'' Don't check anonymous params
+			if( i->text ) then
+				hCheckId( @fbkeywordhash, i, FALSE )
+				hCheckId( defines, i, FALSE )
+				hCheckId( globals, i, TRUE )
+			end if
+
+		case ASTCLASS_STRUCT, ASTCLASS_UNION
+			hCheckId( @fbkeywordhash, i, FALSE )
+			hCheckId( defines, i, FALSE )
+			hCheckId( types, i, TRUE )
+
+			'' Process fields recursively (nested scope),
+			'' with the #defines found so far.
+			hFixIdsInScope( defines, i )
+
+		case ASTCLASS_STRUCTFWD, ASTCLASS_UNIONFWD, ASTCLASS_ENUMFWD, ASTCLASS_TYPEDEF
 			hCheckId( @fbkeywordhash, i, FALSE )
 			hCheckId( defines, i, FALSE )
 			hCheckId( types, i, TRUE )
 
 		case ASTCLASS_ENUM
-			'' Only check named enums
+			'' Check enum's id (unless it's an anonymous enum): It
+			'' belongs to the type namespace.
 			if( i->text ) then
 				hCheckId( @fbkeywordhash, i, FALSE )
 				hCheckId( defines, i, FALSE )
 				hCheckId( types, i, TRUE )
 			end if
 
-			'' Check enum's constants, which belong to global namespace too,
-			'' unlike struct fields or proc params. Note: not checking the
-			'' enum's id though, because it's in the type namespace.
+			'' Check enum's constants: They belong to the global
+			'' namespace (unlike struct fields or proc params).
 			hWalkAndCheckIds( defines, types, globals, i )
 
 		end select
@@ -2843,13 +2859,14 @@ private sub hRenameSymbol _
 	assert( n->text )
 	newid = *n->text
 
+	dim as integer exists
 	do
 		newid += "_"
 
 		hashid = ucase( newid )
 		var hash = hashHash( hashid )
 
-		var exists = hashContains( @fbkeywordhash, hashid, hash )
+		exists = hashContains( @fbkeywordhash, hashid, hash )
 
 		select case( n->class )
 		case ASTCLASS_PPDEFINE
@@ -2857,7 +2874,7 @@ private sub hRenameSymbol _
 			exists or= hashContains( types   , hashid, hash )
 			exists or= hashContains( globals , hashid, hash )
 
-		case ASTCLASS_PROC, ASTCLASS_VAR, ASTCLASS_ENUMCONST
+		case ASTCLASS_PROC, ASTCLASS_VAR, ASTCLASS_ENUMCONST, ASTCLASS_FIELD, ASTCLASS_PARAM
 			exists or= hashContains( defines , hashid, hash )
 			exists or= hashContains( globals , hashid, hash )
 
@@ -2870,9 +2887,7 @@ private sub hRenameSymbol _
 		case else
 			assert( FALSE )
 		end select
-
-		if( exists = FALSE ) then exit do
-	loop
+	loop while( exists )
 
 	'' Adjust all nodes using the original symbol name to use the new one
 	'' Renaming a procedure? Should update all CALL expressions.
@@ -2881,7 +2896,7 @@ private sub hRenameSymbol _
 	'' usually contain duplicates amongst types/globals internally; it's
 	'' just the case-insensitivity and FB keywords that cause problems)
 	select case( n->class )
-	case ASTCLASS_PPDEFINE, ASTCLASS_PROC, ASTCLASS_VAR, ASTCLASS_ENUMCONST
+	case ASTCLASS_PPDEFINE, ASTCLASS_PROC, ASTCLASS_VAR, ASTCLASS_ENUMCONST, ASTCLASS_FIELD, ASTCLASS_PARAM
 		hReplaceCalls( code, n->text, newid )
 	case ASTCLASS_STRUCT, ASTCLASS_UNION, _
 	     ASTCLASS_STRUCTFWD, ASTCLASS_UNIONFWD, ASTCLASS_ENUMFWD, _
@@ -2898,7 +2913,7 @@ private sub hRenameSymbol _
 	select case( n->class )
 	case ASTCLASS_PPDEFINE
 		hashAddOverwrite( defines, hashid, n )
-	case ASTCLASS_PROC, ASTCLASS_VAR, ASTCLASS_ENUMCONST
+	case ASTCLASS_PROC, ASTCLASS_VAR, ASTCLASS_ENUMCONST, ASTCLASS_FIELD, ASTCLASS_PARAM
 		hashAddOverwrite( globals, hashid, n )
 	case ASTCLASS_STRUCT, ASTCLASS_UNION, _
 	     ASTCLASS_STRUCTFWD, ASTCLASS_UNIONFWD, ASTCLASS_ENUMFWD, _
@@ -2944,18 +2959,39 @@ private sub hWalkAndRenameSymbols _
 	wend
 end sub
 
-sub astFixIds( byval code as ASTNODE ptr )
-	dim as THASH defines, types, globals
-	hashInit( @defines, 16, TRUE )
+private sub hFixIdsInScope _
+	( _
+		byval defines as THASH ptr, _
+		byval code as ASTNODE ptr _
+	)
+
+	'' Scope-specific namespaces for types and vars/procs/consts/fields/params
+	dim as THASH types, globals
 	hashInit( @types, 16, TRUE )
 	hashInit( @globals, 16, TRUE )
 
-	hWalkAndCheckIds( @defines, @types, @globals, code )
+	'' 1. Walk through symbols top-down, much like a C compiler, and mark
+	''    those that need renaming with ASTATTRIB_NEEDRENAME.
+	hWalkAndCheckIds( defines, @types, @globals, code )
 
-	hWalkAndRenameSymbols( @defines, @types, @globals, code, code )
+	'' 2. Rename all marked symbols. Now that all symbols are known, we can
+	''    generate new names for the symbols that need renaming without
+	''    introducing more conflicts.
+	hWalkAndRenameSymbols( defines, @types, @globals, code, code )
 
 	hashEnd( @globals )
 	hashEnd( @types )
+
+end sub
+
+sub astFixIds( byval code as ASTNODE ptr )
+	'' Just one #define namespace, re-used also for nested scopes like
+	'' struct bodies/parameter lists.
+	dim as THASH defines
+	hashInit( @defines, 16, TRUE )
+
+	hFixIdsInScope( @defines, code )
+
 	hashEnd( @defines )
 end sub
 

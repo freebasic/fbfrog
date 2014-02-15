@@ -606,7 +606,6 @@ private function frogWorkRootFile _
 	''
 	astMakeProcsDefaultToCdecl( ast )
 	astCleanUpExpressions( ast )
-	'astRemoveParamNames( ast )
 	astFixArrayParams( ast )
 	astFixAnonUDTs( ast )
 	astRemoveRedundantTypedefs( ast )

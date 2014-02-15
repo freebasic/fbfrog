@@ -414,4 +414,21 @@ end enum
 
 declare sub open__ alias "open"()
 
+#define INT__ 1
+#define Int___ 2
+
+extern     BASE__ alias "BASE" as long
+dim shared BASE__ as long
+dim shared WINDOW__ as long
+extern WINDOWTITLE__ alias "WINDOWTITLE" as long
+
+type Width_
+	as_ as long
+	type_ as long
+	FLOAT as long
+	_ as long
+end type
+
+type type_ as long
+
 end extern

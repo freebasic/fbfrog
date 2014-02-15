@@ -1,27 +1,35 @@
 [dos]
-        parsing: tests/name-conflicts/./name-conflicts-case-sensitivity.h
-        parsing: tests/name-conflicts/./name-conflicts-between-declarations.h
-        parsing: tests/name-conflicts/./name-conflicts-keywords.h
+        parsing: tests/name-conflicts/./case.h
+        parsing: tests/name-conflicts/./nested.h
+        parsing: tests/name-conflicts/./fb-keywords.h
+        parsing: tests/name-conflicts/./prefer.h
+        parsing: tests/name-conflicts/./anonymous.h
+        parsing: tests/name-conflicts/./different-namespaces.h
+        parsing: tests/name-conflicts/./renames-update-references.h
         parsing: tests/name-conflicts/./renames-should-not-trigger-renames.h
-        parsing: tests/name-conflicts/./name-conflicts-keywords-case-sensitivity.h
-        parsing: tests/name-conflicts/./name-conflicts-updating-references.h
 [linux]
-        parsing: tests/name-conflicts/./name-conflicts-case-sensitivity.h
-        parsing: tests/name-conflicts/./name-conflicts-between-declarations.h
-        parsing: tests/name-conflicts/./name-conflicts-keywords.h
+        parsing: tests/name-conflicts/./case.h
+        parsing: tests/name-conflicts/./nested.h
+        parsing: tests/name-conflicts/./fb-keywords.h
+        parsing: tests/name-conflicts/./prefer.h
+        parsing: tests/name-conflicts/./anonymous.h
+        parsing: tests/name-conflicts/./different-namespaces.h
+        parsing: tests/name-conflicts/./renames-update-references.h
         parsing: tests/name-conflicts/./renames-should-not-trigger-renames.h
-        parsing: tests/name-conflicts/./name-conflicts-keywords-case-sensitivity.h
-        parsing: tests/name-conflicts/./name-conflicts-updating-references.h
 [win32]
-        parsing: tests/name-conflicts/./name-conflicts-case-sensitivity.h
-        parsing: tests/name-conflicts/./name-conflicts-between-declarations.h
-        parsing: tests/name-conflicts/./name-conflicts-keywords.h
+        parsing: tests/name-conflicts/./case.h
+        parsing: tests/name-conflicts/./nested.h
+        parsing: tests/name-conflicts/./fb-keywords.h
+        parsing: tests/name-conflicts/./prefer.h
+        parsing: tests/name-conflicts/./anonymous.h
+        parsing: tests/name-conflicts/./different-namespaces.h
+        parsing: tests/name-conflicts/./renames-update-references.h
         parsing: tests/name-conflicts/./renames-should-not-trigger-renames.h
-        parsing: tests/name-conflicts/./name-conflicts-keywords-case-sensitivity.h
-        parsing: tests/name-conflicts/./name-conflicts-updating-references.h
-emitting: tests/name-conflicts/./name-conflicts-case-sensitivity.bi (14 declarations)
-emitting: tests/name-conflicts/./name-conflicts-between-declarations.bi (2 declarations)
-emitting: tests/name-conflicts/./name-conflicts-keywords.bi (408 declarations)
+emitting: tests/name-conflicts/./case.bi (14 declarations)
+emitting: tests/name-conflicts/./nested.bi (8 declarations)
+emitting: tests/name-conflicts/./fb-keywords.bi (415 declarations)
+emitting: tests/name-conflicts/./prefer.bi (12 declarations)
+emitting: tests/name-conflicts/./anonymous.bi (2 declarations)
+emitting: tests/name-conflicts/./different-namespaces.bi (4 declarations)
+emitting: tests/name-conflicts/./renames-update-references.bi (6 declarations)
 emitting: tests/name-conflicts/./renames-should-not-trigger-renames.bi (2 declarations)
-emitting: tests/name-conflicts/./name-conflicts-keywords-case-sensitivity.bi (7 declarations)
-emitting: tests/name-conflicts/./name-conflicts-updating-references.bi (6 declarations)

@@ -865,7 +865,6 @@ declare sub astAutoExtern _
 		byval use_stdcallms as integer, _
 		byval whitespace as integer _
 	)
-declare sub astRemoveParamNames( byval n as ASTNODE ptr )
 declare sub astFixArrayParams( byval n as ASTNODE ptr )
 declare sub astFixAnonUDTs( byval n as ASTNODE ptr )
 declare sub astRemoveRedundantTypedefs( byval n as ASTNODE ptr )

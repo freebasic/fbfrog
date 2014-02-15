@@ -19,8 +19,8 @@ enum
 end enum
 
 type Foo
-	FiElD as long
-	field as long
+	FiElD_ as long
+	field__ as long
 end type
 
 #define SAILINGBOAT_(x) sailingBoat(x + 9000)
