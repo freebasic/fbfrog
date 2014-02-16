@@ -22,8 +22,15 @@
 ''
 '' cppIdentifyDirectives() parses the input tokens, looking for CPP directives.
 '' For any directives found, it merges the tokens into single TK_PP* tokens,
-'' to make further parsing easier. #define bodies and #if expressions are not
-'' yet parsed though, but only enclosed in TK_BEGIN and TK_END tokens.
+'' to make further parsing easier.
+''
+'' #define bodies are loaded into ASTs which is attached to the TK_PPDEFINE
+'' token, and temporarily re-inserted into the tk buffer when it needs to be
+'' parsed by macro expansion code or later the C parser.
+''
+'' #if expressions are not yet parsed though, but only enclosed in TK_BEGIN and
+'' TK_END tokens, so they can later be macro-expanded and then parsed by
+'' cppExpression().
 ''
 '' cppMain() goes through the token buffer much like a C preprocessor would do,
 '' keeping track of #defines and #undefs, doing macro expansion, evaluating #if
@@ -38,18 +45,6 @@
 '' instead of being preserved in the binding. Doing this on the PP level instead
 '' of later in the AST is useful for #defines whose bodies can't be parsed as
 '' C expressions.
-''
-'' #define bodies are preserved (enclosed in TK_BEGIN/END):
-''  - macros can be expanded simply by copying the tokens from the original body
-''  - no need to store the macro body tokens in an AST
-''  - makes the expansion easier, because tk*() functions can be used for
-''    everything - no need to walk AST nodes
-''  - good for C parser later which can just parse the #define bodies and
-''    doesn't need to worry about re-inserting them into the tk buffer to be
-''    able to parse them
-''  - since the #define bodies are needed for expansion, #defines registered
-''    for removal instead of C parsing can't be removed immediately - they must
-''    be marked with ASTATTRIB_REMOVE so the C parser will ignore them.
 ''
 
 #include once "fbfrog.bi"
