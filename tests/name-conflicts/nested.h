@@ -1,6 +1,7 @@
 #define GLOBALDEFINE1 1
 void globalproc(void);
 typedef int globaltype;
+typedef int (*p)(int as);
 
 struct UDT1 {
 	// shouldn't conflict with symbols from global scope, except defines
@@ -20,6 +21,9 @@ struct UDT1 {
 	// conflicts with FB keywords
 	int as;
 	int IF;
+
+	int (*PTR)(int INT);
+	int (*PTR)(int (*PTR)(int INT));
 };
 
 void f1(
@@ -32,7 +36,10 @@ void f1(
 	int FOO,
 
 	int as,
-	int IF
+	int IF,
+
+	int (*PTR)(int INT),
+	int (*PTR)(int (*PTR)(int INT))
 );
 
 #define GLOBALDEFINE2 1

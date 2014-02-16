@@ -2755,6 +2755,14 @@ private sub hWalkAndCheckIds _
 	var i = n->head
 	while( i )
 
+		if( i->subtype ) then
+			if( i->subtype->class = ASTCLASS_PROC ) then
+				'' Process procptr subtype parameters recursively (nested scope),
+				'' with the #defines found so far.
+				hFixIdsInScope( defines, i->subtype )
+			end if
+		end if
+
 		select case( i->class )
 		case ASTCLASS_PPDEFINE
 			hCheckId( @fbkeywordhash, i, FALSE )
@@ -3008,6 +3016,7 @@ private sub hWalkAndRenameSymbols _
 
 		i = i->next
 	wend
+
 end sub
 
 private sub hFixIdsInScope _
