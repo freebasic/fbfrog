@@ -449,7 +449,7 @@ private function cExpression _
 			end if
 
 		case else
-			tkOops( x, "expected an atomic expression (identifier, literal, ...), but this doesn't look familiar (support for this is probably just missing)" )
+			tkOopsExpected( x, "an atomic expression" )
 		end select
 	end if
 
