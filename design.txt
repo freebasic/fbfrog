@@ -78,6 +78,18 @@ fbfrog is a single tool, not split up into separate tools: cpp, c2ast, ast2fb
   manual work.
 - Prevents easy testing of individual steps
 
+No GUI
++ The old GUI was just a frontend for the CLI. Click together a list of input
+  files, check some check boxes, click "Go!". That's not a useful GUI...
++ Anyone that wants to create bindings for FB but can't use the CLI can probably
+  not be trusted to do a good job anyways
++ No serious ideas for a useful GUI.
+  * Compare C headers + FB binding side-by-side, live? Many headers map to 1
+    binding, difficult to visualize...
+  * Show fbfrog errors inline in the C code, allowing right-clicking to tell
+    fbfrog to ignore certain constructs, i.e. build up presets via mouse clicks?
+    Lots of work to make an editor like that...
+
 Not preserving white space (i.e. input C code's formatting) and commentary.
 + Creating bindings, not translations. Declarations may be re-ordered.
 
