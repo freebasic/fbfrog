@@ -235,7 +235,8 @@ To do:
 - comments behind #define bodies should go to the #define not the body tokens
 
 - Various tests expose weird stuff:
-	errors/cpp/expansion/pp-merge-token-from-macro-arg-doesnt-merge.h, correct?
+	errors/cpp/expand/merge-token-from-macro-arg-doesnt-merge.h triggers wrong error
+	errors/cpp/expand/call-zero-args-missing-parentheses.h ditto
 	errors/cpp/expansion/pp-macrocall-1.h, shouldn't expand here
 	errors/lex/open-*, missing source context in error
 	errors/cpp/define-conflicting-duplicate, should cause error?
