@@ -1607,7 +1607,7 @@ function hReadableDirExists( byref path as string ) as integer
 	if( right( fixed, len( PATHDIV ) ) = PATHDIV ) then
 		fixed = left( fixed, len( fixed ) - len( PATHDIV ) )
 	end if
-	function = (dir( fixed, fbDirectory or fbReadOnly or fbHidden ) <> "")
+	function = (len( dir( fixed, fbDirectory or fbReadOnly or fbHidden ) ) > 0)
 end function
 
 function hFileExists( byref path as string ) as integer
