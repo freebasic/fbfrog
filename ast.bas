@@ -402,6 +402,20 @@ function astNewTK( byval x as integer ) as ASTNODE ptr
 	function = n
 end function
 
+function astTKMatchesPattern( byval tk as ASTNODE ptr, byval x as integer ) as integer
+	assert( tk->class = ASTCLASS_TK )
+
+	if( tk->tk <> tkGet( x ) ) then exit function
+
+	var text = tkGetText( x )
+	if( (tk->text <> NULL) <> (text <> NULL) ) then exit function
+	if( text ) then
+		if( *tk->text <> *text ) then exit function
+	end if
+
+	function = TRUE
+end function
+
 sub astDelete( byval n as ASTNODE ptr )
 	if( n = NULL ) then
 		exit sub

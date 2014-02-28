@@ -440,12 +440,8 @@ private function hPatternMatchesHere _
 	while( (tk <> NULL) and (x <= last) )
 		assert( tk->class = ASTCLASS_TK )
 
-		if( tk->tk <> tkGet( x ) ) then exit function
-
-		var text = tkGetText( x )
-		if( (tk->text <> NULL) <> (text <> NULL) ) then exit function
-		if( text ) then
-			if( *tk->text <> *text ) then exit function
+		if( astTKMatchesPattern( tk, x ) = FALSE ) then
+			exit function
 		end if
 
 		tk = tk->next

@@ -784,6 +784,7 @@ declare function astNewCONSTF( byval f as double, byval dtype as integer ) as AS
 #define astNewID( id ) astNew( ASTCLASS_ID, id )
 #define astNewTEXT( text ) astNew( ASTCLASS_TEXT, text )
 declare function astNewTK( byval x as integer ) as ASTNODE ptr
+declare function astTKMatchesPattern( byval tk as ASTNODE ptr, byval x as integer ) as integer
 declare sub astDelete( byval n as ASTNODE ptr )
 declare sub astPrepend( byval parent as ASTNODE ptr, byval n as ASTNODE ptr )
 declare sub astAppend( byval parent as ASTNODE ptr, byval n as ASTNODE ptr )
