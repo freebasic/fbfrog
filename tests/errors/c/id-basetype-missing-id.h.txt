@@ -4,3 +4,6 @@ tests/errors/c/id-basetype-missing-id.h(1): expected identifier for the symbol d
     1: a;
         ^
     2: 
+construct's code as seen by fbfrog:
+    a ;
+      ^

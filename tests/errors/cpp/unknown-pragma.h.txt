@@ -4,3 +4,6 @@ tests/errors/cpp/unknown-pragma.h(1): unknown #pragma
     1: #pragma foo
                ^~~
     2: 
+construct's code as seen by fbfrog:
+    [eol] # pragma foo [eol]
+                   ^~~

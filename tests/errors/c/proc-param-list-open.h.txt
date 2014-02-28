@@ -4,3 +4,6 @@ tests/errors/c/proc-param-list-open.h(1): missing a data type at the beginning o
     1: void f(
              ^
     2: 
+construct's code as seen by fbfrog:
+    void f (
+           ^

@@ -136,7 +136,8 @@ function hFindClosingParen( byval x as integer ) as integer
 			x -= 1
 			exit do
 
-		case TK_PPINCLUDE, TK_PPDEFINE, TK_PPIF, TK_PPELSEIF, TK_PPELSE, _
+		case TK_END, _
+		     TK_PPINCLUDE, TK_PPDEFINE, TK_PPIF, TK_PPELSEIF, TK_PPELSE, _
 		     TK_PPENDIF, TK_PPUNDEF, TK_PPERROR, TK_PPWARNING, TK_DIVIDER
 			x = tkSkipCommentEol( x, -1 )
 			exit do
@@ -1136,7 +1137,7 @@ private sub hInsertMacroExpansion _
 	''  - and also somehow mark '##' from the macro body for merging
 	''    (TK_HASHHASH turned into TK_PPMERGE)
 	'' allowing the 2nd pass to
-	''  - tell when a '##' operand was empty, to avoid accidentially using
+	''  - tell when a '##' operand was empty, to avoid accidentally using
 	''    unrelated preceding/following tokens as '##' operand(s)
 	''  - tell when a '##' came from the macro body (then it should be used
 	''    for merging) or a macro argument (then no merging)
@@ -1337,6 +1338,13 @@ private function hMacroCall _
 	'' Insert the macro body behind the call (this way the positions
 	'' stored in argbegin()/argend() stay valid)
 	hInsertMacroExpansion( x, macro )
+
+	'' Set expansion level on the expansion tokens,
+	'' = minlevel from macro call tokens + 1
+	tkSetExpansionLevel( expansionbegin, x - 1, _
+		tkGetExpansionLevel( _
+			tkFindTokenWithMinExpansionLevel( begin, expansionbegin - 1 ) _
+		) + 1 )
 
 	'' Then remove the call tokens
 	tkRemove( begin, expansionbegin - 1 )

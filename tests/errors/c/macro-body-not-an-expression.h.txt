@@ -1,0 +1,10 @@
+[dos]
+        parsing: tests/errors/c/macro-body-not-an-expression.h
+tests/errors/c/macro-body-not-an-expression.h(1): expected an atomic expression but found 'void'
+    1: #define m void f(void
+                 ^~~~
+    2: m
+    3: 
+construct's code as seen by fbfrog:
+    void f ( void
+    ^~~~

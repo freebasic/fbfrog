@@ -7,3 +7,6 @@ tests/errors/cpp/elseif.h(3): unknown PP directive
         ^~~~~~
     4: #else
     5: #endif
+construct's code as seen by fbfrog:
+    # elseif 0 [eol] # else [eol] # endif [eol]
+      ^~~~~~

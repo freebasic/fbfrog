@@ -1,0 +1,10 @@
+[dos]
+        parsing: tests/errors/c/id-basetype-missing-id-and-semicolon-in-macro.h
+tests/errors/c/id-basetype-missing-id-and-semicolon-in-macro.h(1): expected an atomic expression but found 'int'
+    1: #define m int a; int b; c
+                 ^~~
+    2: m
+    3: 
+construct's code as seen by fbfrog:
+    int a ;
+    ^~~

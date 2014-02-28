@@ -5,3 +5,6 @@ tests/errors/cpp/stack/ifdef-missing-id.h(1): missing identifier behind #ifdef
              ^
     2: #endif
     3: 
+construct's code as seen by fbfrog:
+    [eol] # ifdef [eol] # endif [eol]
+                  ^~~~~

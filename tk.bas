@@ -176,6 +176,7 @@ type ONETOKEN
 	ast		as ASTNODE ptr
 
 	location	as TKLOCATION   '' where this token was found
+	expansionlevel	as integer      '' toplevel = 0, nested tokens from macro expansion >= 1
 	comment		as zstring ptr
 end type
 
@@ -256,6 +257,10 @@ function tkDumpOne( byval x as integer ) as string
 	#if 0
 		s += " " + hDumpLocation( @p->location )
 	#endif
+
+	if( p->expansionlevel <> 0 ) then
+		s += " expansionlevel=" & p->expansionlevel
+	end if
 
 	function = s
 end function
@@ -385,6 +390,7 @@ sub tkCopy( byval x as integer, byval first as integer, byval last as integer )
 		dst->behindspace = src->behindspace
 		dst->ast = astClone( src->ast )
 		dst->location = src->location
+		dst->expansionlevel = src->expansionlevel
 		dst->comment = strDuplicate( src->comment )
 
 		x += 1
@@ -466,6 +472,47 @@ end sub
 
 function tkGetLocation( byval x as integer ) as TKLOCATION ptr
 	function = @(tkAccess( x )->location)
+end function
+
+sub tkSetExpansionLevel( byval first as integer, byval last as integer, byval expansionlevel as integer )
+	for i as integer = first to last
+		var p = tkAccess( i )
+		if( p->id <> TK_EOF ) then
+			p->expansionlevel = expansionlevel
+		end if
+	next
+end sub
+
+function tkGetExpansionLevel( byval x as integer ) as integer
+	function = tkAccess( x )->expansionlevel
+end function
+
+function tkFindTokenWithMinExpansionLevel( byval first as integer, byval last as integer ) as integer
+	var minlevel = &h7FFFFFFF
+	var x = first
+
+	for i as integer = first to last
+		var level = tkGetExpansionLevel( i )
+		if( minlevel > level ) then
+			minlevel = level
+			x = i
+		end if
+	next
+
+	function = x
+end function
+
+function tkGetMaxExpansionLevel( byval first as integer, byval last as integer ) as integer
+	var maxlevel = 0
+
+	for i as integer = first to last
+		var level = tkGetExpansionLevel( i )
+		if( maxlevel < level ) then
+			maxlevel = level
+		end if
+	next
+
+	function = maxlevel
 end function
 
 sub tkSetBehindSpace( byval x as integer )
@@ -678,6 +725,8 @@ private function hMakePrettyCTokenText _
 	case TK_ID               : function = *text
 	case KW__C_FIRST to KW__C_LAST
 		function = *tk_info(id).text
+	case TK_OPTION    : function = "-" + *text
+	case TK_RESPONSEFILE : function = "@" + *text
 	case else
 		function = tkDumpBasic( id, text )
 	end select
@@ -726,22 +775,40 @@ private function tkToCText _
 end function
 
 function hFindConstructEnd( byval x as integer ) as integer
+	var begin = x
+
 	do
 		select case( tkGet( x ) )
+		case TK_SEMI '' ';'
+			x += 1
+			exit do
+
 		case TK_EOF, _
-		     TK_SEMI, _  '' ';'
 		     TK_END, _   '' end of inserted #define bodies
 		     TK_DIVIDER, _  '' known dividing whitespace
 		     TK_PPINCLUDE, TK_PPDEFINE, TK_PPUNDEF, _  '' PP directives
 		     TK_PPIF, TK_PPELSEIF, TK_PPELSE, TK_PPENDIF, _
-		     TK_PPERROR, TK_PPWARNING
+		     TK_PPERROR, TK_PPWARNING, _
+		     TK_OPTION
 			exit do
+
 		case TK_LPAREN, TK_LBRACKET, TK_LBRACE
-			x = hFindClosingParen( x )
+			var y = hFindClosingParen( x )
+			if( y = x ) then
+				x += 1
+				exit do
+			end if
+			x = y
+
 		case else
 			x += 1
 		end select
 	loop
+
+	if( x = begin ) then
+		x += 1
+	end if
+
 	function = x
 end function
 
@@ -754,16 +821,59 @@ private function hFindConstructBegin( byval x as integer ) as integer
 		var begin = y
 
 		y = hFindConstructEnd( y )
-		if( (begin <= x) and (x <= y) ) then
+		if( (begin <= x) and (x < y) ) then
+			select case( tkGet( begin ) )
+			case TK_BEGIN
+				begin += 1
+			end select
 			return begin
 		end if
-
-		y += 1
 	wend
 
 	function = 0
 end function
 
+private function hReportErrorTokenLocation _
+	( _
+		byval x as integer, _
+		byval message as zstring ptr, _
+		byval more_context as integer _
+	) as integer
+
+	var location = tkGetLocation( x )
+	if( location->file ) then
+		hReport( location, message, more_context )
+		function = TRUE
+	else
+		function = FALSE
+	end if
+
+end function
+
+private sub hReportConstructTokens _
+	( _
+		byval x as integer, _
+		byval first as integer, _
+		byval last as integer, _
+		byval message as zstring ptr _
+	)
+
+	print *message
+	var xcolumn = -1, xlength = 0
+	print "    " + tkToCText( first, last, x, xcolumn, xlength )
+	if( xcolumn >= 0 ) then
+		print string( 4 + xcolumn, " " ) + "^" + string( xlength - 1, "~" )
+	end if
+
+end sub
+
+'' Report a message about some token that is part of some construct.
+'' Besides showing the message, this should also show the code where the error
+'' was encountered.
+''
+'' It's important that one way or another, we show the exact tokens present in
+'' the tk buffer, i.e. the exact tokens as seen by the C parser, this is needed
+'' for using -removematch and for improving fbfrog's C parser.
 sub tkReport _
 	( _
 		byval x as integer, _
@@ -775,19 +885,22 @@ sub tkReport _
 		x = tkGetCount( )-1
 	end if
 
-	var location = tkGetLocation( x )
-	if( location->file ) then
-		hReport( location, message, more_context )
+	var first = hFindConstructBegin( x )
+	var last = hFindConstructEnd( x ) - 1
+
+	'' Any macro expansion in this construct?
+	if( tkGetMaxExpansionLevel( first, last ) > 0 ) then
+		hReportConstructTokens( x, first, last, message )
+		var toplevelx = tkFindTokenWithMinExpansionLevel( first, last )
+		hReportErrorTokenLocation( toplevelx, "construct found here", more_context )
+		if( tkGetExpansionLevel( toplevelx ) <> tkGetExpansionLevel( x ) ) then
+			hReportErrorTokenLocation( x, "token found here", more_context )
+		end if
 	else
-		print *message
-
-		var first = hFindConstructBegin( x )
-		var last = hFindConstructEnd( x )
-
-		var xcolumn = -1, xlength = 0
-		print "    " + tkToCText( first, last, x, xcolumn, xlength )
-		if( xcolumn >= 0 ) then
-			print string( 4 + xcolumn, " " ) + "^" + string( xlength - 1, "~" )
+		if( hReportErrorTokenLocation( x, message, more_context ) ) then
+			hReportConstructTokens( x, first, last, "construct's code as seen by fbfrog:" )
+		else
+			hReportConstructTokens( x, first, last, message )
 		end if
 	end if
 
@@ -808,7 +921,7 @@ sub tkOopsExpected _
 	dim s as string
 
 	select case( tkGet( x ) )
-	case TK_EOL, TK_EOF, TK_DIVIDER
+	case TK_EOL, TK_EOF, TK_DIVIDER, TK_END
 		s = "missing " + *message
 		if( whatfor ) then s += " " + *whatfor
 	case else

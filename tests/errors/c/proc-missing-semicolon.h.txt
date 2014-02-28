@@ -4,3 +4,6 @@ tests/errors/c/proc-missing-semicolon.h(1): missing ';' to finish this declarati
     1: void f(void)
                   ^
     2: 
+construct's code as seen by fbfrog:
+    void f ( void )
+                  ^

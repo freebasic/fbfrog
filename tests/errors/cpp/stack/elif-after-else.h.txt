@@ -7,3 +7,6 @@ tests/errors/cpp/stack/elif-after-else.h(3): #elif after #else
        ^
     4: #endif
     5: 
+construct's code as seen by fbfrog:
+    [ppelseif]
+    ^~~~~~~~~~

@@ -4,3 +4,6 @@ tests/errors/c/param-missing-dtypes.h(1): expected a data type at the beginning 
     1: void f(,);
               ^
     2: 
+construct's code as seen by fbfrog:
+    void f ( , ) ;
+             ^

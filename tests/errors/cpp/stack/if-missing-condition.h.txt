@@ -5,3 +5,6 @@ tests/errors/cpp/stack/if-missing-condition.h(1): missing #if condition
           ^
     2: #endif
     3: 
+construct's code as seen by fbfrog:
+    [eol] # endif [eol]
+    ^~~~~

@@ -5,3 +5,6 @@ tests/errors/cpp/stack/elif-without-if.h(1): #elif without #if
        ^
     2: #endif
     3: 
+construct's code as seen by fbfrog:
+    [ppelseif]
+    ^~~~~~~~~~

@@ -6,3 +6,6 @@ tests/errors/cpp/expand/call-zeroargs-too-many-args-2.h(4): expected ')' to clos
     4: EXPANDME1(a,b)
                  ^
     5: 
+construct's code as seen by fbfrog:
+    [eol] [eol] EXPANDME1 ( a , b ) [eol]
+                            ^

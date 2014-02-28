@@ -4,3 +4,6 @@ tests/errors/c/keyword-basetype-missing-id.h(1): expected identifier for the sym
     1: int;
           ^
     2: 
+construct's code as seen by fbfrog:
+    int ;
+        ^

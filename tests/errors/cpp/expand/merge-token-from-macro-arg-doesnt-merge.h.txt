@@ -7,3 +7,6 @@ tests/errors/cpp/expand/merge-token-from-macro-arg-doesnt-merge.h(5): expected a
                                 ^~~~~~~
     6: EXPANDME1(a ## b)
     7: 
+construct's code as seen by fbfrog:
+    typedef struct param ;
+    ^~~~~~~

@@ -439,6 +439,10 @@ declare function tkGetAst( byval x as integer ) as ASTNODE ptr
 declare sub tkSetAst( byval x as integer, byval ast as ASTNODE ptr )
 declare sub tkSetLocation( byval x as integer, byval location as TKLOCATION ptr )
 declare function tkGetLocation( byval x as integer ) as TKLOCATION ptr
+declare sub tkSetExpansionLevel( byval first as integer, byval last as integer, byval expansionlevel as integer )
+declare function tkGetExpansionLevel( byval x as integer ) as integer
+declare function tkFindTokenWithMinExpansionLevel( byval first as integer, byval last as integer ) as integer
+declare function tkGetMaxExpansionLevel( byval first as integer, byval last as integer ) as integer
 declare sub tkSetBehindSpace( byval x as integer )
 declare function tkGetBehindSpace( byval x as integer ) as integer
 declare sub tkSetComment( byval x as integer, byval comment as zstring ptr )

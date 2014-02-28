@@ -147,7 +147,7 @@ private sub hLoadBuiltinResponseFile _
 end sub
 
 private sub hExpectId( byval x as integer )
-	tkExpect( x, TK_ID, "valid symbol name" )
+	tkExpect( x, TK_ID, "(valid symbol name)" )
 end sub
 
 private function hIsStringOrId( byval x as integer ) as integer
@@ -587,12 +587,10 @@ private function frogWorkRootFile _
 			var begin = x
 			x = hFindConstructEnd( x )
 
-			if( hConstructMatchesAnyPattern( presetcode, begin, x ) ) then
-				tkRemove( begin, x )
-				x = begin - 1
+			if( hConstructMatchesAnyPattern( presetcode, begin, x - 1 ) ) then
+				tkRemove( begin, x - 1 )
+				x = begin
 			end if
-
-			x += 1
 		wend
 	end if
 

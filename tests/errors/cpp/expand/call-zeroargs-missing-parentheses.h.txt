@@ -5,3 +5,6 @@ tests/errors/cpp/expand/call-zeroargs-missing-parentheses.h(1): expected an atom
                            ^~~~
     2: 
     3: // Missing "()"
+construct's code as seen by fbfrog:
+    void f ( void ) ;
+    ^~~~

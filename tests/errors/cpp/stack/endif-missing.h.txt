@@ -6,3 +6,6 @@
     42: 
         ^
     43: 
+construct's code as seen by fbfrog:
+    [eol]
+    ^~~~~

@@ -6,3 +6,6 @@ tests/errors/cpp/stack/elif-missing-condition.h(2): missing #if condition
             ^
     3: #endif
     4: 
+construct's code as seen by fbfrog:
+    [eol] # endif [eol]
+    ^~~~~

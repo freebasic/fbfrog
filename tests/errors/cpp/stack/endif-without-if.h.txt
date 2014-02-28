@@ -4,3 +4,6 @@ tests/errors/cpp/stack/endif-without-if.h(1): #endif without #if
     1: #endif
        ^
     2: 
+construct's code as seen by fbfrog:
+    #endif
+    ^~~~~~

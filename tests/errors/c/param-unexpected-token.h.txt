@@ -4,3 +4,6 @@ tests/errors/c/param-unexpected-token.h(1): expected ')' to close parameter list
     1: void f(int i j);
                     ^
     2: 
+construct's code as seen by fbfrog:
+    void f ( int i j ) ;
+                   ^

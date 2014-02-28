@@ -125,10 +125,23 @@ Usage:
 
 To do:
 
-- Show suggestions how to fix errors, e.g. if #define body couldn't be parsed,
-  suggest using -removedefine to exclude the #define from the binding...
+- CPP works too much like FB's PP (e.g. recursive expansion...)
+	- macro should be disabled for expansion while its body is parsed,
+	  but not while parsing its args (if it's a function-like macro)
+	- at end of macro body, the macro should be re-enabled for expansion
+	- macro args must be fully macro-expanded before being inserted into
+	  params in the macro body, unless they're used with # or ## sometimes be fully macro expanded before inserted in
+	  place of the param, depending on how the param is used.
+
 - Do not preserve #defines that are #undeffed, such that ultimately it'll become
   pointless to preserve #undefs at all
+- ## merging doesn't handle float literals, e.g. 1##. or .##0 ?!
+
+- Show suggestions how to fix errors, e.g. if #define body couldn't be parsed,
+  suggest using -removedefine to exclude the #define from the binding...
+- cDeclarator() should show the declaration type when showing errors, e.g. missing
+  data type in this parameter declaration, etc.
+- If a #define body can't be parsed, remove it automatically, and emit a warning about it... (like symbol id conflicts)
 - 64bit support:
     * C long is already mapped to CLONG
     * pre-#defines are missing
@@ -148,7 +161,6 @@ To do:
 - #include foo.h  ->  #include foo.bi, if foo.bi will be generated too
 - #include stdio.h -> #include crt/stdio.bi, for some known default headers
   (or perhaps let presets do this)
-- CPP works too much like FB's PP (e.g. recursive expansion...)
 - Emit list of renamed symbols at top of header
 - Add BOOLDEFINE to mark a macro as "returns a bool", so the C #define parser
   can set is_bool_context=TRUE when folding
@@ -160,10 +172,10 @@ To do:
   {STRUCT|UNION|ENUM}FWD into one since in FB they'd all be emitted as the same
   code anyways?!
 - Support bitfields?
-- ## merging doesn't handle float literals, e.g. 1##. or .##0 ?!
 - Const folding etc. has issues with 32bit/64bit, using Longint internally, so
   e.g. ~(0xFFFFFFFF) comes out as &hFFFFFFFF00000000 instead of &h0. Need to
   respect C number literal dtypes & sizes.
+- Don't crash on (INT_MIN / -1) or (INT_MIN % -1)
 - Const folding probably also doesn't handle unsigned relational BOPs properly
   since it only does signed ones internally
 - Remove stats stuff and do real profiling with huge headers
@@ -214,9 +226,6 @@ To do:
     b) keep expanded tokens, and parent context tokenrun on each. (context where the expansion
        happened. perhaps only 1 line, otherwise it could become too much. That's enough for error
        reporting)
-- Error messages should show the macro expansion steps that happened in a given
-  piece of code, from what the parser saw to the main location where it all came
-  from.
 - Consider adding symbol tables separate from the AST, so e.g. all UDT dtypes
   would reference the same subtype symbol instead of allocating an id everytime.
     - define/const/proc/var ids aren't re-used much, but type ids are. Perhaps
@@ -235,13 +244,17 @@ To do:
 - comments behind #define bodies should go to the #define not the body tokens
 
 - Various tests expose weird stuff:
-	errors/cpp/expand/merge-token-from-macro-arg-doesnt-merge.h triggers wrong error
-	errors/cpp/expand/call-zero-args-missing-parentheses.h ditto
+	triggers wrong error:
+		errors/cpp/expand/merge-token-from-macro-arg-doesnt-merge.h
+		errors/cpp/expand/call-zero-args-missing-parentheses.h
+		errors/c/*-in-macro.h
 	errors/cpp/expansion/pp-macrocall-1.h, shouldn't expand here
 	errors/lex/open-*, missing source context in error
 	errors/cpp/define-conflicting-duplicate, should cause error?
 	errors/c/typedef-{proc|array}, should be fixed up automatically where possible and be removed otherwise
 		(e.g. if the proc typedef is always used in a pointer context, then include the pointer in the typedef)
 	errors/cpp/stack/*, missing #endifs reported with wrong source context
+	errors/c/struct-nested-named.h, bad code-as-seen-by-fbfrog
+	errors/cpp/*, bad code-as-seen-by-fbfrog?
 - Use *.h.fail or similar for error tests, instead of scanning for *.h, so they
   could be put into the same directories as the normal tests?

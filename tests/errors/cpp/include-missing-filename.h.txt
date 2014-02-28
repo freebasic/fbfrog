@@ -4,3 +4,6 @@ tests/errors/cpp/include-missing-filename.h(1): missing "..." string literal con
     1: #include
                ^
     2: 
+construct's code as seen by fbfrog:
+    [eol] # include [eol]
+                    ^~~~~

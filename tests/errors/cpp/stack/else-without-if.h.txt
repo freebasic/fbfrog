@@ -5,3 +5,6 @@ tests/errors/cpp/stack/else-without-if.h(1): #else without #if
        ^
     2: #endif
     3: 
+construct's code as seen by fbfrog:
+    [ppelse]
+    ^~~~~~~~

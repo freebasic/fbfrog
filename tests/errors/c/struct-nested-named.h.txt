@@ -7,3 +7,6 @@ tests/errors/c/struct-nested-named.h(5): expected ';' to finish anonymous union 
           ^~~
     6: };
     7: 
+construct's code as seen by fbfrog:
+    struct T { union { int a ; } foo ;
+                                 ^~~

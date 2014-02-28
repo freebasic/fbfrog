@@ -4,3 +4,6 @@ tests/errors/cpp/define-missing-id.h(1): missing identifier behind #define
     1: #define
               ^
     2: 
+construct's code as seen by fbfrog:
+    [eol] # define [eol]
+                   ^~~~~

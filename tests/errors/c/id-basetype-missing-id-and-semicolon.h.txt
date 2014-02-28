@@ -4,3 +4,6 @@ tests/errors/c/id-basetype-missing-id-and-semicolon.h(1): missing identifier for
     1: a
        ^
     2: 
+construct's code as seen by fbfrog:
+    a
+    ^
