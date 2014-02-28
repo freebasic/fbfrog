@@ -88,9 +88,12 @@ sub hShell _
 		byval expectedresult as integer _
 	)
 
+	print prefix;
+
 	var result = shell( ln )
 
 	if( result = -1 ) then
+		print
 		print "command not found: '" + ln + "'"
 		end 1
 	end if
@@ -104,7 +107,7 @@ sub hShell _
 		stat.fails += 1
 	end if
 
-	print prefix + space( hConsoleWidth( ) - len( prefix ) - len( suffix ) ) + suffix
+	print space( hConsoleWidth( ) - len( prefix ) - len( suffix ) ) + suffix
 
 end sub
 
