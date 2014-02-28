@@ -112,6 +112,11 @@ the unknown construct and a TODO note into a comment in the .bi output.
   acceptable: The user must search through all output .bi files, fix up the
   constructs, and that every time the header is regenerated.
 
+Similar to this: Not automatically/silently removing #defines whose bodies
+couldn't be parsed.
++ Error message wouldn't be visible - no cause for exclusion shown = bad.
+- Symbols are renamed automatically too
+
 fbfrog should not worry about where input files come from (downloading and
 extracting tarballs etc.). Headers may need all kinds of shell commands to be
 extracted and prepared, perhaps even execution of a package-specific build

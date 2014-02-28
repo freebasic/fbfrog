@@ -126,22 +126,20 @@ Usage:
 To do:
 
 - CPP works too much like FB's PP (e.g. recursive expansion...)
-	- macro should be disabled for expansion while its body is parsed,
-	  but not while parsing its args (if it's a function-like macro)
-	- at end of macro body, the macro should be re-enabled for expansion
-	- macro args must be fully macro-expanded before being inserted into
-	  params in the macro body, unless they're used with # or ## sometimes be fully macro expanded before inserted in
-	  place of the param, depending on how the param is used.
+    - macro should be disabled for expansion while its body is parsed,
+      but not while parsing its args (if it's a function-like macro)
+    - at end of macro body, the macro should be re-enabled for expansion
+    - macro args must be fully macro-expanded before being inserted into
+      params in the macro body, unless they're used with # or ## sometimes be fully macro expanded before inserted in
+      place of the param, depending on how the param is used.
+    - ## merging doesn't handle float literals, e.g. 1##. or .##0 ?!
 
-- Do not preserve #defines that are #undeffed, such that ultimately it'll become
-  pointless to preserve #undefs at all
-- ## merging doesn't handle float literals, e.g. 1##. or .##0 ?!
+- #define handling
+    - Do not preserve #defines that are #undeffed, such that ultimately it'll
+      become pointless to preserve #undefs at all
+    - #defines that can be determined to be constants should automatically be
+      emitted as CONSTs
 
-- Show suggestions how to fix errors, e.g. if #define body couldn't be parsed,
-  suggest using -removedefine to exclude the #define from the binding...
-- cDeclarator() should show the declaration type when showing errors, e.g. missing
-  data type in this parameter declaration, etc.
-- If a #define body can't be parsed, remove it automatically, and emit a warning about it... (like symbol id conflicts)
 - 64bit support:
     * C long is already mapped to CLONG
     * pre-#defines are missing
@@ -154,20 +152,23 @@ To do:
       compilable for all targets.
     * What target-specifics do we really have to handle? It's usually just that
       headers #include certain target-specific headers or different declarations.
-- Long Double and other built-in types that FB doesn't have:
-    a) just omit, except fields in a struct that is needed
-    b) replace with byte array, other dtypes, or custom struct
-- Add option to translate #defines to consts if possible
-- #include foo.h  ->  #include foo.bi, if foo.bi will be generated too
-- #include stdio.h -> #include crt/stdio.bi, for some known default headers
-  (or perhaps let presets do this)
-- Emit list of renamed symbols at top of header
-- Add BOOLDEFINE to mark a macro as "returns a bool", so the C #define parser
-  can set is_bool_context=TRUE when folding
-- parentheses around macro params should be preserved (can use a flag on the AST node)
 - Enums: must be emitted as Long for 64bit compat:
 	Type Foo As Long (and make enum anonymous)
 	Enum Foo As Long (must be added to FB first)
+- Long Double and other built-in types that FB doesn't have:
+    a) just omit, except fields in a struct that is needed
+    b) replace with byte array, other dtypes, or custom struct
+
+- #include foo.h  ->  #include foo.bi, if foo.bi will be generated too
+- #include stdio.h -> #include crt/stdio.bi, for some known default headers
+  (or perhaps let presets do this)
+
+- Emit list of renamed symbols at top of header
+
+- Add -booldefine to mark a macro as "returns a bool", so the C #define parser
+  can set is_bool_context=TRUE when folding
+
+- parentheses around macro params should be preserved (can use a flag on the AST node)
 - Are forward declarations/references handled correctly? Consider merging the
   {STRUCT|UNION|ENUM}FWD into one since in FB they'd all be emitted as the same
   code anyways?!
@@ -197,8 +198,6 @@ To do:
   to pass it on to lexLoadC() because any issues with the loaded file should be reported in the context
   of that file, not the code that caused that file to be #included. It makes sense though for "inline code",
   such as pre-#defines and -removematch...
-- Need some way to easily pass tk locations on to AST nodes, perhaps astNewFromTK()
-  or similar that copies over the location automatically
 - Need some high-level way to combine locations into one, etc. which is currently
   done manually in hParseArgs() at least
 - Need better error messages for things like "missing ';' to finish declaration"
@@ -258,3 +257,6 @@ To do:
 	errors/cpp/*, bad code-as-seen-by-fbfrog?
 - Use *.h.fail or similar for error tests, instead of scanning for *.h, so they
   could be put into the same directories as the normal tests?
+
+- Show suggestions how to fix errors, e.g. if #define body couldn't be parsed,
+  suggest using -removedefine to exclude the #define from the binding...

@@ -184,8 +184,7 @@ private sub hReadFileArg( byval result as ASTNODE ptr, byval x as integer )
 		n->class = ASTCLASS_DIR
 	end if
 
-	n->location = *tkGetLocation( x )
-	astAppend( result, n )
+	astAppend( result, astTakeLoc( n, x ) )
 end sub
 
 enum
@@ -235,9 +234,7 @@ private function hParseArgs( byref x as integer, byval body as integer ) as ASTN
 
 				'' <path>
 				hExpectPath( x )
-				var n = astNewTEXT( hPathRelativeToResponseFile( x ) )
-				n->location = *tkGetLocation( x )
-				astAppend( frog.incdirs, n )
+				astAppend( frog.incdirs, astTakeLoc( astNewTEXT( hPathRelativeToResponseFile( x ) ), x ) )
 
 			case "o"
 				x += 1
@@ -313,14 +310,12 @@ private function hParseArgs( byref x as integer, byval body as integer ) as ASTN
 
 				'' <id>
 				hExpectId( x )
-				var n = astNew( ASTCLASS_PPDEFINE, tkGetText( x ) )
-				n->location = *tkGetLocation( x )
+				var n = astTakeLoc( astNew( ASTCLASS_PPDEFINE, tkGetText( x ) ), x )
 
 				'' [<body>]
 				if( hIsStringOrId( x + 1 ) ) then
 					x += 1
-					n->expr = astNewTEXT( tkGetText( x ) )
-					n->expr->location = *tkGetLocation( x )
+					n->expr = astTakeLoc( astNewTEXT( tkGetText( x ) ), x )
 				end if
 
 				astAppend( result, n )
@@ -330,36 +325,28 @@ private function hParseArgs( byref x as integer, byval body as integer ) as ASTN
 
 				'' <id>
 				hExpectId( x )
-				var n = astNew( ASTCLASS_PPUNDEF, tkGetText( x ) )
-				n->location = *tkGetLocation( x )
-				astAppend( result, n )
+				astAppend( result, astTakeLoc( astNew( ASTCLASS_PPUNDEF, tkGetText( x ) ), x ) )
 
 			case "include"
 				x += 1
 
 				'' <file>
 				hExpectPath( x )
-				var n = astNew( ASTCLASS_PPINCLUDE, hPathRelativeToResponseFile( x ) )
-				n->location = *tkGetLocation( x )
-				astAppend( result, n )
+				astAppend( result, astTakeLoc( astNew( ASTCLASS_PPINCLUDE, hPathRelativeToResponseFile( x ) ), x ) )
 
 			case "noexpand"
 				x += 1
 
 				'' <id>
 				hExpectId( x )
-				var n = astNew( ASTCLASS_NOEXPAND, tkGetText( x ) )
-				n->location = *tkGetLocation( x )
-				astAppend( result, n )
+				astAppend( result, astTakeLoc( astNew( ASTCLASS_NOEXPAND, tkGetText( x ) ), x ) )
 
 			case "removedefine"
 				x += 1
 
 				'' <id>
 				hExpectId( x )
-				var n = astNew( ASTCLASS_REMOVEDEFINE, tkGetText( x ) )
-				n->location = *tkGetLocation( x )
-				astAppend( result, n )
+				astAppend( result, astTakeLoc( astNew( ASTCLASS_REMOVEDEFINE, tkGetText( x ) ), x ) )
 
 			case "removematch"
 				x += 1
@@ -368,18 +355,14 @@ private function hParseArgs( byref x as integer, byval body as integer ) as ASTN
 				if( (tkGet( x ) <> TK_ID) and (tkGet( x ) <> TK_STRING) ) then
 					tkOopsExpected( x, "C tokens" )
 				end if
-				var n = astNew( ASTCLASS_REMOVEMATCH, tkGetText( x ) )
-				n->location = *tkGetLocation( x )
-				astAppend( result, n )
+				astAppend( result, astTakeLoc( astNew( ASTCLASS_REMOVEMATCH, tkGetText( x ) ), x ) )
 
 			case "appendbi"
 				x += 1
 
 				'' <file>
 				hExpectPath( x )
-				var n = astNew( ASTCLASS_APPENDBI, hPathRelativeToResponseFile( x ) )
-				n->location = *tkGetLocation( x )
-				astAppend( result, n )
+				astAppend( result, astTakeLoc( astNew( ASTCLASS_APPENDBI, hPathRelativeToResponseFile( x ) ), x ) )
 
 			case else
 				tkOops( x, "unknown command line option '" + text + "'" )

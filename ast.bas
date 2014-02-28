@@ -396,9 +396,8 @@ function astNewCONSTF( byval f as double, byval dtype as integer ) as ASTNODE pt
 end function
 
 function astNewTK( byval x as integer ) as ASTNODE ptr
-	var n = astNew( ASTCLASS_TK, tkGetText( x ) )
+	var n = astTakeLoc( astNew( ASTCLASS_TK, tkGetText( x ) ), x )
 	n->tk = tkGet( x )
-	n->location = *tkGetLocation( x )
 	function = n
 end function
 
@@ -414,6 +413,11 @@ function astTKMatchesPattern( byval tk as ASTNODE ptr, byval x as integer ) as i
 	end if
 
 	function = TRUE
+end function
+
+function astTakeLoc( byval n as ASTNODE ptr, byval x as integer ) as ASTNODE ptr
+	n->location = *tkGetLocation( x )
+	function = n
 end function
 
 sub astDelete( byval n as ASTNODE ptr )

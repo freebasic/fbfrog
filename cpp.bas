@@ -469,8 +469,7 @@ private function cppExpression _
 	if( op >= 0 ) then
 		var uopx = x
 		x += 1
-		a = astNewUOP( op, cppExpression( x, cprecedence(op) ) )
-		a->location = *tkGetLocation( uopx )
+		a = astTakeLoc( astNewUOP( op, cppExpression( x, cprecedence(op) ) ), uopx )
 	else
 		'' Atoms
 		select case( tkGet( x ) )
@@ -488,8 +487,7 @@ private function cppExpression _
 
 		'' Number literals
 		case TK_OCTNUM, TK_DECNUM, TK_HEXNUM, TK_DECFLOAT
-			a = hNumberLiteral( x )
-			a->location = *tkGetLocation( x )
+			a = astTakeLoc( hNumberLiteral( x ), x )
 			x += 1
 
 		'' Identifier
@@ -503,8 +501,7 @@ private function cppExpression _
 			''    #if defined A && B == 123
 			'' If A isn't defined then B doesn't need to be
 			'' evaluated and no warning should be shown.
-			a = astNewID( tkGetText( x ) )
-			a->location = *tkGetLocation( x )
+			a = astTakeLoc( astNewID( tkGetText( x ) ), x )
 			x += 1
 
 		'' DEFINED '(' Identifier ')'
@@ -521,8 +518,7 @@ private function cppExpression _
 
 			'' Identifier
 			tkExpect( x, TK_ID, "as operand of DEFINED" )
-			a = astNewID( tkGetText( x ) )
-			a->location = *tkGetLocation( x )
+			a = astTakeLoc( astNewID( tkGetText( x ) ), x )
 			x += 1
 
 			if( have_parens ) then
@@ -531,8 +527,7 @@ private function cppExpression _
 				x += 1
 			end if
 
-			a = astNewUOP( ASTCLASS_CDEFINED, a )
-			a->location = *tkGetLocation( definedx )
+			a = astTakeLoc( astNewUOP( ASTCLASS_CDEFINED, a ), definedx )
 
 		case else
 			tkOopsExpected( x, "number literal or '(...)' (atom expression)" )
@@ -595,7 +590,7 @@ private function cppExpression _
 		else
 			a = astNewBOP( op, a, b )
 		end if
-		a->location = *tkGetLocation( bopx )
+		astTakeLoc( a, bopx )
 	loop
 
 	function = a
@@ -715,16 +710,13 @@ private function cppDirective( byval x as integer ) as integer
 		tkExpect( x, TK_ID, iif( tk = KW_IFNDEF, @"behind #ifndef", @"behind #ifdef" ) )
 
 		'' Build up "[!]defined id" expression
-		var expr = astNewID( tkGetText( x ) )
-		expr->location = *tkGetLocation( x )
-		expr = astNewUOP( ASTCLASS_CDEFINED, expr )
-		expr->location = *tkGetLocation( x - 1 )
+		var expr = astTakeLoc( astNewID( tkGetText( x ) ), x )
+		expr = astTakeLoc( astNewUOP( ASTCLASS_CDEFINED, expr ), x - 1 )
 		expr->location.column += 2  '' ifdef -> def, ifndef -> ndef
 		expr->location.length = 3
 		if( tk = KW_IFNDEF ) then
 			expr->location.column += 1  '' ndef -> def
-			expr = astNewUOP( ASTCLASS_CLOGNOT, expr )
-			expr->location = *tkGetLocation( x - 1 )
+			expr = astTakeLoc( astNewUOP( ASTCLASS_CLOGNOT, expr ), x - 1 )
 			expr->location.column += 2  '' ifndef -> n
 			expr->location.length = 1
 		end if

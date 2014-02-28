@@ -19,6 +19,20 @@ enum
 	DECL__COUNT
 end enum
 
+#if 0
+dim shared as zstring ptr decl2str(0 to DECL__COUNT-1) => _
+{ _
+	@"variable declaration", _
+	@"extern variable declaration", _
+	@"static variable declaration", _
+	@"field declaration", _
+	@"parameter declaration", _
+	@"typedef declaration", _
+	@"type cast expression", _
+	@"sizeof() type argument" _
+}
+#endif
+
 declare function cExpression _
 	( _
 		byref x as integer, _
