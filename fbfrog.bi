@@ -849,7 +849,6 @@ declare function astFold _
 	( _
 		byval n as ASTNODE ptr, _
 		byval macros as THASH ptr, _
-		byval fold_unknowns as integer, _
 		byval is_bool_context as integer _
 	) as ASTNODE ptr
 declare sub astCleanUpExpressions( byval code as ASTNODE ptr )

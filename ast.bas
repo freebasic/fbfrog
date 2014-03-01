@@ -2176,7 +2176,6 @@ function astFold _
 	( _
 		byval n as ASTNODE ptr, _
 		byval macros as THASH ptr, _
-		byval fold_unknowns as integer, _
 		byval is_bool_context as integer _
 	) as ASTNODE ptr
 
@@ -2204,7 +2203,7 @@ function astFold _
 		'' to be undefined and/or are treated as literal 0, but only in
 		'' those cases where this assumption really matters, and not if
 		'' it would be solved out as no-op anyways.
-		if( (passes = 1) and fold_unknowns ) then
+		if( (passes = 1) and (macros <> NULL) ) then
 			n = astFoldUnknownIds( n )
 		end if
 
@@ -2248,7 +2247,7 @@ private function hCleanExpr _
 
 	if( n ) then
 		if( hIsFoldableExpr( n ) ) then
-			function = astFold( astOpsC2FB( n ), NULL, FALSE, is_bool_context )
+			function = astFold( astOpsC2FB( n ), NULL, is_bool_context )
 		else
 			astCleanUpExpressions( n )
 			function = n
