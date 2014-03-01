@@ -1682,38 +1682,6 @@ function astOpsC2FB( byval n as ASTNODE ptr ) as ASTNODE ptr
 	function = n
 end function
 
-private function astFoldKnownDefineds _
-	( _
-		byval n as ASTNODE ptr, _
-		byval macros as THASH ptr _
-	) as ASTNODE ptr
-
-	if( n = NULL ) then exit function
-	function = n
-
-	n->expr = astFoldKnownDefineds( n->expr, macros )
-	n->l = astFoldKnownDefineds( n->l, macros )
-	n->r = astFoldKnownDefineds( n->r, macros )
-
-	if( n->class = ASTCLASS_DEFINED ) then
-		'' defined() on known symbol?
-		'' (assuming it's the eval.macros hash table from cpp.bas)
-		assert( n->l->class = ASTCLASS_ID )
-		var id = n->l->text
-		var item = hashLookup( macros, id, hashHash( id ) )
-		if( item->s ) then
-			'' Currently defined?
-			var is_defined = (item->data <> NULL)
-
-			'' FB defined()    ->   -1|0
-			'' item->data = is_defined
-			function = astNewCONSTI( is_defined, TYPE_LONG )
-			astDelete( n )
-		end if
-	end if
-
-end function
-
 private function hKeepAttribs _
 	( _
 		byval n as ASTNODE ptr, _
@@ -2138,40 +2106,6 @@ private function astFoldBoolContextNops _
 	end if
 end function
 
-private function astFoldUnknownIds( byval n as ASTNODE ptr ) as ASTNODE ptr
-	if( n = NULL ) then exit function
-	function = n
-
-	select case( n->class )
-	case ASTCLASS_ID
-		'' Unexpanded identifier, assume it's undefined, like a CPP
-		if( frog.verbose ) then
-			astReport( n, "treating unexpanded identifier '" + *n->text + "' as literal zero" )
-		end if
-
-		'' id   ->   0
-		function = astNewCONSTI( 0, TYPE_LONGINT )
-		astDelete( n )
-
-	case ASTCLASS_DEFINED
-		'' Unsolved defined(), must be an unknown symbol, so it
-		'' should expand to FALSE. (see also astFoldKnownDefineds())
-		assert( n->l->class = ASTCLASS_ID )
-		if( frog.verbose ) then
-			astReport( n->l, "assuming symbol '" + *n->l->text + "' is undefined" )
-		end if
-
-		'' defined()   ->   0
-		function = astNewCONSTI( 0, TYPE_LONGINT )
-		astDelete( n )
-
-	case else
-		n->expr = astFoldUnknownIds( n->expr )
-		n->l = astFoldUnknownIds( n->l )
-		n->r = astFoldUnknownIds( n->r )
-	end select
-end function
-
 function astFold _
 	( _
 		byval n as ASTNODE ptr, _
@@ -2210,26 +2144,6 @@ function astFold _
 			aststats.maxfoldpasses = passes
 		end if
 	end if
-
-	function = n
-end function
-
-'' Folding for CPP #if conditions
-function astCppFold _
-	( _
-		byval n as ASTNODE ptr, _
-		byval macros as THASH ptr _
-	) as ASTNODE ptr
-
-	'' Solve out known defined()'s, and fold as much as possible. This
-	'' may also solve out unknown defined()'s/atomic identifiers, if they're
-	'' no-ops. (so that below, we have to make less assumptions)
-	n = astFold( astFoldKnownDefineds( n, macros ), TRUE )
-
-	'' Solve out unsolved defined()'s and atomic identifiers like a CPP,
-	'' by assuming they're undefined, while showing warnings about it,
-	'' and fold again.
-	n = astFold( astFoldUnknownIds( n ), TRUE )
 
 	function = n
 end function

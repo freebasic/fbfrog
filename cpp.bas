@@ -1519,6 +1519,83 @@ private function hParseIfCondition( byval x as integer ) as ASTNODE ptr
 	assert( tkGet( x ) = TK_END )
 end function
 
+private function cppFoldKnownDefineds( byval n as ASTNODE ptr ) as ASTNODE ptr
+	if( n = NULL ) then exit function
+	function = n
+
+	n->expr = cppFoldKnownDefineds( n->expr )
+	n->l = cppFoldKnownDefineds( n->l )
+	n->r = cppFoldKnownDefineds( n->r )
+
+	'' defined(id)?
+	if( n->class = ASTCLASS_DEFINED ) then
+		assert( n->l->class = ASTCLASS_ID )
+		var id = n->l->text
+
+		var item = hashLookup( @eval.macros, id, hashHash( id ) )
+
+		'' Known symbol?
+		if( item->s ) then
+			'' Currently defined?
+			var is_defined = (item->data <> NULL)
+
+			'' FB defined()    ->   -1|0
+			'' item->data = is_defined
+			function = astNewCONSTI( is_defined, TYPE_LONG )
+			astDelete( n )
+		end if
+	end if
+end function
+
+private function cppFoldUnknownIds( byval n as ASTNODE ptr ) as ASTNODE ptr
+	if( n = NULL ) then exit function
+	function = n
+
+	select case( n->class )
+	case ASTCLASS_ID
+		'' Unexpanded identifier, assume it's undefined, like a CPP
+		if( frog.verbose ) then
+			astReport( n, "treating unexpanded identifier '" + *n->text + "' as literal zero" )
+		end if
+
+		'' id   ->   0
+		function = astNewCONSTI( 0, TYPE_LONGINT )
+		astDelete( n )
+
+	case ASTCLASS_DEFINED
+		'' Unsolved defined(), must be an unknown symbol, so it
+		'' should expand to FALSE. (see also astFoldKnownDefineds())
+		assert( n->l->class = ASTCLASS_ID )
+		if( frog.verbose ) then
+			astReport( n->l, "assuming symbol '" + *n->l->text + "' is undefined" )
+		end if
+
+		'' defined()   ->   0
+		function = astNewCONSTI( 0, TYPE_LONGINT )
+		astDelete( n )
+
+	case else
+		n->expr = cppFoldUnknownIds( n->expr )
+		n->l = cppFoldUnknownIds( n->l )
+		n->r = cppFoldUnknownIds( n->r )
+	end select
+end function
+
+'' Folding for CPP #if condition expressions
+private function cppFold( byval n as ASTNODE ptr ) as ASTNODE ptr
+	'' Solve out known defined()'s, and fold as much as possible. This
+	'' may also solve out unknown defined()'s/atomic identifiers, if they're
+	'' no-ops. (so that below, we have to make less assumptions)
+	n = astFold( cppFoldKnownDefineds( n ), TRUE )
+
+	'' Solve out unsolved defined()'s and atomic identifiers like a CPP,
+	'' by assuming they're undefined, while showing warnings about it,
+	'' and fold again.
+	n = astFold( cppFoldUnknownIds( n ), TRUE )
+
+	function = n
+end function
+
 private function hEvalIfCondition( byval x as integer ) as integer
 	assert( (tkGet( x ) = TK_PPIF) or (tkGet( x ) = TK_PPELSEIF) )
 	var xif = x
@@ -1538,7 +1615,7 @@ private function hEvalIfCondition( byval x as integer ) as integer
 	end if
 
 	'' 1. Try to evaluate the condition
-	t = astCppFold( astOpsC2FB( astClone( t ) ), @eval.macros )
+	t = cppFold( astOpsC2FB( astClone( t ) ) )
 	tkSetAst( x, t )
 
 	'' 2. Check the condition
