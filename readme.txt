@@ -234,8 +234,6 @@ To do:
 - Prettier "assuming undefined" reports: just 1 line, no source context
 - Only one "assuming undefined" report per symbol (at least only one per CPP run,
   perhaps even only one per fbfrog run)
-- when seeing #error, report "found an #error" instead of the #error's message,
-  otherwise it looks like that message is coming from fbfrog
 - Comments given to a TK_ID that is a macro call and will be expanded should
   be given to first non-whitespace token from the expansion, for example:
         // foo

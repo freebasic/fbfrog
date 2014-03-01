@@ -1,0 +1,9 @@
+[dos]
+        parsing: tests/errors/cpp/error.h
+tests/errors/cpp/error.h(1): #error
+    1: #error "Something"
+       ^
+    2: 
+construct's code as seen by fbfrog:
+    [pperror "Something"]
+    ^~~~~~~~~~~~~~~~~~~~~
