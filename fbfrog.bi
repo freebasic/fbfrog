@@ -848,8 +848,12 @@ declare function astOpsC2FB( byval n as ASTNODE ptr ) as ASTNODE ptr
 declare function astFold _
 	( _
 		byval n as ASTNODE ptr, _
-		byval macros as THASH ptr, _
 		byval is_bool_context as integer _
+	) as ASTNODE ptr
+declare function astCppFold _
+	( _
+		byval n as ASTNODE ptr, _
+		byval macros as THASH ptr _
 	) as ASTNODE ptr
 declare sub astCleanUpExpressions( byval code as ASTNODE ptr )
 declare function astLookupMacroParam _

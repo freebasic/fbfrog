@@ -2175,13 +2175,8 @@ end function
 function astFold _
 	( _
 		byval n as ASTNODE ptr, _
-		byval macros as THASH ptr, _
 		byval is_bool_context as integer _
 	) as ASTNODE ptr
-
-	if( macros ) then
-		n = astFoldKnownDefineds( n, macros )
-	end if
 
 	dim as ASTNODE ptr c
 	var passes = 0
@@ -2195,17 +2190,6 @@ function astFold _
 		n = astFoldNops( n )
 		n = astFoldNestedOps( n )
 		n = astFoldBoolContextNops( n, is_bool_context )
-
-		'' At the end of the 1st pass only, report unsolved defined()'s
-		'' and atom identifiers, then solve them out like a CPP would.
-		'' This is still done here so we can show "assuming unknown"
-		'' warnings for identifiers in CPP expressions that are assumbed
-		'' to be undefined and/or are treated as literal 0, but only in
-		'' those cases where this assumption really matters, and not if
-		'' it would be solved out as no-op anyways.
-		if( (passes = 1) and (macros <> NULL) ) then
-			n = astFoldUnknownIds( n )
-		end if
 
 		'' Loop until the folding no longer changes the expression
 		if( astIsEqual( n, c ) ) then
@@ -2230,6 +2214,26 @@ function astFold _
 	function = n
 end function
 
+'' Folding for CPP #if conditions
+function astCppFold _
+	( _
+		byval n as ASTNODE ptr, _
+		byval macros as THASH ptr _
+	) as ASTNODE ptr
+
+	'' Solve out known defined()'s, and fold as much as possible. This
+	'' may also solve out unknown defined()'s/atomic identifiers, if they're
+	'' no-ops. (so that below, we have to make less assumptions)
+	n = astFold( astFoldKnownDefineds( n, macros ), TRUE )
+
+	'' Solve out unsolved defined()'s and atomic identifiers like a CPP,
+	'' by assuming they're undefined, while showing warnings about it,
+	'' and fold again.
+	n = astFold( astFoldUnknownIds( n ), TRUE )
+
+	function = n
+end function
+
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 '' Higher level code transformations
 
@@ -2247,7 +2251,7 @@ private function hCleanExpr _
 
 	if( n ) then
 		if( hIsFoldableExpr( n ) ) then
-			function = astFold( astOpsC2FB( n ), NULL, is_bool_context )
+			function = astFold( astOpsC2FB( n ), is_bool_context )
 		else
 			astCleanUpExpressions( n )
 			function = n

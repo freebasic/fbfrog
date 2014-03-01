@@ -1538,7 +1538,7 @@ private function hEvalIfCondition( byval x as integer ) as integer
 	end if
 
 	'' 1. Try to evaluate the condition
-	t = astFold( astOpsC2FB( astClone( t ) ), @eval.macros, TRUE )
+	t = astCppFold( astOpsC2FB( astClone( t ) ), @eval.macros )
 	tkSetAst( x, t )
 
 	'' 2. Check the condition
