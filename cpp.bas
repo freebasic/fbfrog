@@ -1547,7 +1547,12 @@ private function cppFoldKnownDefineds( byval n as ASTNODE ptr ) as ASTNODE ptr
 	end if
 end function
 
-private function cppFoldUnknownIds( byval n as ASTNODE ptr ) as ASTNODE ptr
+private function cppFold1stUnknownId _
+	( _
+		byval n as ASTNODE ptr, _
+		byref changes as integer _
+	) as ASTNODE ptr
+
 	if( n = NULL ) then exit function
 	function = n
 
@@ -1561,6 +1566,7 @@ private function cppFoldUnknownIds( byval n as ASTNODE ptr ) as ASTNODE ptr
 		'' id   ->   0
 		function = astNewCONSTI( 0, TYPE_LONGINT )
 		astDelete( n )
+		changes += 1
 
 	case ASTCLASS_DEFINED
 		'' Unsolved defined(), must be an unknown symbol, so it
@@ -1573,25 +1579,37 @@ private function cppFoldUnknownIds( byval n as ASTNODE ptr ) as ASTNODE ptr
 		'' defined()   ->   0
 		function = astNewCONSTI( 0, TYPE_LONGINT )
 		astDelete( n )
+		changes += 1
 
 	case else
-		n->expr = cppFoldUnknownIds( n->expr )
-		n->l = cppFoldUnknownIds( n->l )
-		n->r = cppFoldUnknownIds( n->r )
+		n->expr = cppFold1stUnknownId( n->expr, changes )
+		if( changes > 0 ) then exit function
+		n->l = cppFold1stUnknownId( n->l, changes )
+		if( changes > 0 ) then exit function
+		n->r = cppFold1stUnknownId( n->r, changes )
 	end select
 end function
 
+''
 '' Folding for CPP #if condition expressions
+''
+'' 1. Solve out defined()'s on known symbols, and fold as much as possible.
+'' 2. Solve 1st found remaining defined() on unknown symbol, then fold as much
+''    as possible again. Repeat until no defined() left.
+''
+'' Folding may eliminate no-ops which may include unsolved defined()'s and thus
+'' prevent us from having to make assumptions about the corresponding symbols.
+'' By retrying the folding everytime we reduce the number of assumptions and
+'' corresponding warnings shown to the user.
+''
 private function cppFold( byval n as ASTNODE ptr ) as ASTNODE ptr
-	'' Solve out known defined()'s, and fold as much as possible. This
-	'' may also solve out unknown defined()'s/atomic identifiers, if they're
-	'' no-ops. (so that below, we have to make less assumptions)
-	n = astFold( cppFoldKnownDefineds( n ), TRUE )
+	n = cppFoldKnownDefineds( n )
 
-	'' Solve out unsolved defined()'s and atomic identifiers like a CPP,
-	'' by assuming they're undefined, while showing warnings about it,
-	'' and fold again.
-	n = astFold( cppFoldUnknownIds( n ), TRUE )
+	dim as integer changes
+	do
+		changes = 0
+		n = cppFold1stUnknownId( astFold( n, TRUE ), changes )
+	loop while( changes > 0 )
 
 	function = n
 end function
