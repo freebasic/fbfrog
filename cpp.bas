@@ -1561,6 +1561,7 @@ private function cppFold1stUnknownId _
 		'' Unexpanded identifier, assume it's undefined, like a CPP
 		if( frog.verbose ) then
 			astReport( n, "treating unexpanded identifier '" + *n->text + "' as literal zero" )
+			hUndefMacro( n->text )
 		end if
 
 		'' id   ->   0
@@ -1574,6 +1575,7 @@ private function cppFold1stUnknownId _
 		assert( n->l->class = ASTCLASS_ID )
 		if( frog.verbose ) then
 			astReport( n->l, "assuming symbol '" + *n->l->text + "' is undefined" )
+			hUndefMacro( n->l->text )
 		end if
 
 		'' defined()   ->   0
@@ -1594,23 +1596,27 @@ end function
 '' Folding for CPP #if condition expressions
 ''
 '' 1. Solve out defined()'s on known symbols, and fold as much as possible.
-'' 2. Solve 1st found remaining defined() on unknown symbol, then fold as much
-''    as possible again. Repeat until no defined() left.
+'' 2. Solve 1st found remaining defined() on unknown symbol, and register the
+''    id as #undeffed. Then solve out known defined()'s again (could solve out
+''    more now that the #undef was added) and fold as much as possible again.
+''    Repeat until no defined() left.
 ''
 '' Folding may eliminate no-ops which may include unsolved defined()'s and thus
 '' prevent us from having to make assumptions about the corresponding symbols.
 '' By retrying the folding everytime we reduce the number of assumptions and
 '' corresponding warnings shown to the user.
 ''
+'' Registering unknown ids as known after showing the warning also prevents
+'' duplicate warnings about the same id.
+''
 private function cppFold( byval n as ASTNODE ptr ) as ASTNODE ptr
-	n = cppFoldKnownDefineds( n )
-
 	dim as integer changes
 	do
 		changes = 0
-		n = cppFold1stUnknownId( astFold( n, TRUE ), changes )
+		n = cppFoldKnownDefineds( n )
+		n = astFold( n, TRUE )
+		n = cppFold1stUnknownId( n, changes )
 	loop while( changes > 0 )
-
 	function = n
 end function
 

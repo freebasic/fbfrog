@@ -231,9 +231,6 @@ To do:
       add a UDT map? ie. use dtype values >= TYPE_UDT to represent UDTs (by name)
       Then UDT types wouldn't have to allocate a subtype ID anymore (only function pointers).
     - of course having the completely self-contained AST is great aswell
-- Prettier "assuming undefined" reports: just 1 line, no source context
-- Only one "assuming undefined" report per symbol (at least only one per CPP run,
-  perhaps even only one per fbfrog run)
 - Comments given to a TK_ID that is a macro call and will be expanded should
   be given to first non-whitespace token from the expansion, for example:
         // foo
