@@ -1705,13 +1705,13 @@ private function hKeepAttribs _
 	function = n
 end function
 
-private function astFoldConsts( byval n as ASTNODE ptr ) as ASTNODE ptr
+private function astFoldConsts( byval n as ASTNODE ptr, byref changes as integer ) as ASTNODE ptr
 	if( n = NULL ) then exit function
 	var t = n
 
-	n->expr = astFoldConsts( n->expr )
-	n->l = astFoldConsts( n->l )
-	n->r = astFoldConsts( n->r )
+	n->expr = astFoldConsts( n->expr, changes )
+	n->l = astFoldConsts( n->l, changes )
+	n->r = astFoldConsts( n->r, changes )
 
 	select case( n->class )
 	case ASTCLASS_NOT, ASTCLASS_NEGATE
@@ -1776,6 +1776,7 @@ private function astFoldConsts( byval n as ASTNODE ptr ) as ASTNODE ptr
 
 	if( t <> n ) then
 		astDelete( n )
+		changes += 1
 	end if
 	function = t
 end function
@@ -1784,12 +1785,12 @@ end function
 '' CONSTI ends up on the rhs on as many BOPs as possible (not on all, because
 '' not all are commutative). That simplifies some checks for BOPs with only
 '' one CONSTI operand, because only the rhs needs to be checked.
-private sub astSwapConstsToRhs( byval n as ASTNODE ptr )
+private sub astSwapConstsToRhs( byval n as ASTNODE ptr, byref changes as integer )
 	if( n = NULL ) then exit sub
 
-	astSwapConstsToRhs( n->expr )
-	astSwapConstsToRhs( n->l )
-	astSwapConstsToRhs( n->r )
+	astSwapConstsToRhs( n->expr, changes )
+	astSwapConstsToRhs( n->l, changes )
+	astSwapConstsToRhs( n->r, changes )
 
 	select case( n->class )
 	case ASTCLASS_ADD, ASTCLASS_MUL, ASTCLASS_AND, ASTCLASS_OR, _
@@ -1822,6 +1823,7 @@ private sub astSwapConstsToRhs( byval n as ASTNODE ptr )
 			end select
 
 			swap n->l, n->r
+			changes += 1
 		end if
 	end select
 end sub
@@ -1839,13 +1841,13 @@ private function hIsBoolOp( byval n as ASTNODE ptr ) as integer
 	end select
 end function
 
-private function astFoldNops( byval n as ASTNODE ptr ) as ASTNODE ptr
+private function astFoldNops( byval n as ASTNODE ptr, byref changes as integer ) as ASTNODE ptr
 	if( n = NULL ) then exit function
 	var t = n
 
-	n->expr = astFoldNops( n->expr )
-	n->l = astFoldNops( n->l )
-	n->r = astFoldNops( n->r )
+	n->expr = astFoldNops( n->expr, changes )
+	n->l = astFoldNops( n->l, changes )
+	n->r = astFoldNops( n->r, changes )
 
 	select case( n->class )
 	'' +x = x
@@ -1927,6 +1929,7 @@ private function astFoldNops( byval n as ASTNODE ptr ) as ASTNODE ptr
 				'' Delete rhs and turn = BOP into not UOP
 				astDelete( n->r ) : n->r = NULL
 				n->class = ASTCLASS_NOT
+				changes += 1
 			case -1
 				t = n->l : n->l = NULL
 			end select
@@ -1943,6 +1946,7 @@ private function astFoldNops( byval n as ASTNODE ptr ) as ASTNODE ptr
 				'' Delete rhs and turn <> BOP into not UOP
 				astDelete( n->r ) : n->r = NULL
 				n->class = ASTCLASS_NOT
+				changes += 1
 			end select
 		end if
 
@@ -2005,17 +2009,18 @@ private function astFoldNops( byval n as ASTNODE ptr ) as ASTNODE ptr
 
 	if( t <> n ) then
 		astDelete( n )
+		changes += 1
 	end if
 	function = t
 end function
 
-private function astFoldNestedOps( byval n as ASTNODE ptr ) as ASTNODE ptr
+private function astFoldNestedOps( byval n as ASTNODE ptr, byref changes as integer ) as ASTNODE ptr
 	if( n = NULL ) then exit function
 	var t = n
 
-	n->expr = astFoldNestedOps( n->expr )
-	n->l = astFoldNestedOps( n->l )
-	n->r = astFoldNestedOps( n->r )
+	n->expr = astFoldNestedOps( n->expr, changes )
+	n->l = astFoldNestedOps( n->l, changes )
+	n->r = astFoldNestedOps( n->r, changes )
 
 	select case( n->class )
 	'' not (not x) = x
@@ -2047,12 +2052,14 @@ private function astFoldNestedOps( byval n as ASTNODE ptr ) as ASTNODE ptr
 				astDelete( negatenode )
 				'' On the rhs, turn 1 into -1
 				n->r->vali = -1
+				changes += 1
 			end if
 		end if
 	end select
 
 	if( t <> n ) then
 		astDelete( n )
+		changes += 1
 	end if
 	function = t
 end function
@@ -2060,7 +2067,8 @@ end function
 private function astFoldBoolContextNops _
 	( _
 		byval n as ASTNODE ptr, _
-		byval is_bool_context as integer _
+		byval is_bool_context as integer, _
+		byref changes as integer _
 	) as ASTNODE ptr
 
 	if( n = NULL ) then exit function
@@ -2091,9 +2099,9 @@ private function astFoldBoolContextNops _
 		expr_is_bool_context = TRUE
 	end select
 
-	n->expr = astFoldBoolContextNops( n->expr, expr_is_bool_context )
-	n->l = astFoldBoolContextNops( n->l, l_is_bool_context )
-	n->r = astFoldBoolContextNops( n->r, r_is_bool_context )
+	n->expr = astFoldBoolContextNops( n->expr, expr_is_bool_context, changes )
+	n->l = astFoldBoolContextNops( n->l, l_is_bool_context, changes )
+	n->r = astFoldBoolContextNops( n->r, r_is_bool_context, changes )
 
 	if( is_bool_context ) then
 		select case( n->class )
@@ -2102,6 +2110,7 @@ private function astFoldBoolContextNops _
 		case ASTCLASS_NEGATE
 			function = n->l : n->l = NULL
 			astDelete( n )
+			changes += 1
 		end select
 	end if
 end function
@@ -2112,26 +2121,20 @@ function astFold _
 		byval is_bool_context as integer _
 	) as ASTNODE ptr
 
-	dim as ASTNODE ptr c
+	'' Loop until the folding no longer changes the expression
+	dim as integer changes
 	var passes = 0
 	do
-		c = astClone( n )
 		passes += 1
 		aststats.foldpasses += 1
 
-		n = astFoldConsts( n )
-		astSwapConstsToRhs( n )
-		n = astFoldNops( n )
-		n = astFoldNestedOps( n )
-		n = astFoldBoolContextNops( n, is_bool_context )
-
-		'' Loop until the folding no longer changes the expression
-		if( astIsEqual( n, c ) ) then
-			exit do
-		end if
-
-		astDelete( c )
-	loop
+		changes = 0
+		n = astFoldConsts( n, changes )
+		astSwapConstsToRhs( n, changes )
+		n = astFoldNops( n, changes )
+		n = astFoldNestedOps( n, changes )
+		n = astFoldBoolContextNops( n, is_bool_context, changes )
+	loop while( changes > 0 )
 
 	if( aststats.minfoldpasses = 0 ) then
 		aststats.minfoldpasses = passes
