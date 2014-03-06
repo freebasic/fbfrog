@@ -6,12 +6,10 @@
 
 namespace filebuffers
 	dim shared hash as THASH
-	dim shared nodes as TLIST '' FILEBUFFER
 end namespace
 
 sub filebufferInit( )
 	hashInit( @filebuffers.hash, 8, FALSE )
-	listInit( @filebuffers.nodes, sizeof( FILEBUFFER ) )
 end sub
 
 function hDumpFileBuffer( byval file as FILEBUFFER ptr ) as string
@@ -35,18 +33,19 @@ function hDumpFileBuffer( byval file as FILEBUFFER ptr ) as string
 	function = s
 end function
 
+function filebufferNew( byval filename as zstring ptr ) as FILEBUFFER ptr
+	dim as FILEBUFFER ptr file = callocate( sizeof( FILEBUFFER ) )
+	file->name = strDuplicate( filename )
+	function = file
+end function
+
 function filebufferAdd( byval filename as zstring ptr ) as FILEBUFFER ptr
 	var hash = hashHash( filename )
 	var item = hashLookup( @filebuffers.hash, filename, hash )
 
 	'' Doesn't exist yet?
 	if( item->s = NULL ) then
-		dim as FILEBUFFER ptr file = listAppend( @filebuffers.nodes )
-		file->name = strDuplicate( filename )
-		file->is_file = FALSE
-		file->buffer = NULL
-		file->size = 0
-		file->lines = 0
+		var file = filebufferNew( filename )
 		hashAdd( @filebuffers.hash, item, hash, file->name, file )
 	end if
 
