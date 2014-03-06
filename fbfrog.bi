@@ -968,9 +968,3 @@ type FROGSTUFF
 end type
 
 extern frog as FROGSTUFF
-
-declare function frogRegisterFile _
-	( _
-		byval normed as zstring ptr, _
-		byval pretty as zstring ptr _
-	) as ASTNODE ptr
