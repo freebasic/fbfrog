@@ -355,7 +355,7 @@ private function emitAst _
 		emitStmt( "end scope" )
 
 	case ASTCLASS_APPENDBI
-		emitLines( filebufferFromFile( n->text, @n->location )->buffer )
+		emitLines( sourcebufferFromFile( n->text, @n->location )->buffer )
 
 	case ASTCLASS_PPINCLUDE
 		emitStmt( "#include """ + *n->text + """", n->comment )

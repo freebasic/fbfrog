@@ -783,15 +783,15 @@ end sub
 function lexLoadC _
 	( _
 		byval x as integer, _
-		byval file as FILEBUFFER ptr, _
+		byval source as SOURCEBUFFER ptr, _
 		byval keep_comments as integer _
 	) as integer
 
 	lex.x = x
-	lex.location.file = file
+	lex.location.source = source
 	lex.location.linenum = 0
 	lex.keep_comments = keep_comments
-	lex.i = file->buffer
+	lex.i = source->buffer
 	lex.bol = lex.i
 	hInitKeywords( )
 
@@ -800,11 +800,11 @@ function lexLoadC _
 		lexNext( )
 	wend
 
-	file->lines = lex.location.linenum + 1
+	source->lines = lex.location.linenum + 1
 
 	if( frog.verbose ) then
-		print "lex: " + *file->name + ", " & (file->size - 1) & " bytes, " & _
-			file->lines & " lines, " & lex.x - x & " tokens"
+		print "lex: " + *source->name + ", " & (source->size - 1) & " bytes, " & _
+			source->lines & " lines, " & lex.x - x & " tokens"
 	end if
 
 	function = lex.x
@@ -894,12 +894,12 @@ end sub
 ''   * "..." or '...' can be used in arguments to include whitespace
 ''   * "..." allows \" and \\ escape sequences
 ''
-function lexLoadArgs( byval x as integer, byval file as FILEBUFFER ptr ) as integer
+function lexLoadArgs( byval x as integer, byval source as SOURCEBUFFER ptr ) as integer
 	lex.x = x
-	lex.location.file = file
+	lex.location.source = source
 	lex.location.linenum = 0
 	lex.keep_comments = FALSE
-	lex.i = file->buffer
+	lex.i = source->buffer
 	lex.bol = lex.i
 	lex.behindspace = TRUE
 
@@ -943,7 +943,7 @@ function lexLoadArgs( byval x as integer, byval file as FILEBUFFER ptr ) as inte
 		end select
 	loop
 
-	file->lines = lex.location.linenum + 1
+	source->lines = lex.location.linenum + 1
 
 	function = lex.x
 end function
@@ -952,14 +952,14 @@ end function
 '' error messages.
 function lexPeekLine _
 	( _
-		byval file as FILEBUFFER ptr, _
+		byval source as SOURCEBUFFER ptr, _
 		byval targetlinenum as integer _
 	) as string
 
 	'' Find the targetlinenum'th line of code, bol will end up pointing
 	'' to the begin of line of the target line, i will point to the end of
 	'' the target line.
-	dim as ubyte ptr i = file->buffer
+	dim as ubyte ptr i = source->buffer
 	var bol = i
 	var linenum = 0
 	do

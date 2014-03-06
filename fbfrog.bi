@@ -66,7 +66,7 @@ enum
 	CH_DEL
 end enum
 
-type FILEBUFFER
+type SOURCEBUFFER
 	name		as zstring ptr
 	is_file		as integer    '' whether name is a file path
 	buffer		as ubyte ptr  '' file content, null-terminated
@@ -77,18 +77,18 @@ end type
 type TKLOCATION
 	'' Supposed to point to permanent memory, whoever fills the structure
 	'' 1st must ensure that
-	file		as FILEBUFFER ptr
+	source		as SOURCEBUFFER ptr
 
 	linenum		as integer  '' 0-based, but displayed 1-based in error messages
 	column		as integer  '' ditto
 	length		as integer
 end type
 
-declare sub filebufferInit( )
-declare function hDumpFileBuffer( byval file as FILEBUFFER ptr ) as string
-declare function filebufferAdd( byval filename as zstring ptr ) as FILEBUFFER ptr
-declare function filebufferFromFile( byval filename as zstring ptr, byval srcloc as TKLOCATION ptr ) as FILEBUFFER ptr
-declare function filebufferFromZstring( byval filename as zstring ptr, byval s as zstring ptr ) as FILEBUFFER ptr
+declare sub sourcebuffersInit( )
+declare function hDumpSourceBuffer( byval source as SOURCEBUFFER ptr ) as string
+declare function sourcebufferAdd( byval filename as zstring ptr ) as SOURCEBUFFER ptr
+declare function sourcebufferFromFile( byval filename as zstring ptr, byval srcloc as TKLOCATION ptr ) as SOURCEBUFFER ptr
+declare function sourcebufferFromZstring( byval filename as zstring ptr, byval s as zstring ptr ) as SOURCEBUFFER ptr
 declare sub oops( byval message as zstring ptr )
 declare function hDumpLocation( byval location as TKLOCATION ptr ) as string
 declare function hConsoleWidth( ) as integer
@@ -908,13 +908,13 @@ declare sub astDump _
 declare function lexLoadC _
 	( _
 		byval x as integer, _
-		byval file as FILEBUFFER ptr, _
+		byval source as SOURCEBUFFER ptr, _
 		byval keep_comments as integer _
 	) as integer
-declare function lexLoadArgs( byval x as integer, byval file as FILEBUFFER ptr ) as integer
+declare function lexLoadArgs( byval x as integer, byval source as SOURCEBUFFER ptr ) as integer
 declare function lexPeekLine _
 	( _
-		byval file as FILEBUFFER ptr, _
+		byval source as SOURCEBUFFER ptr, _
 		byval targetlinenum as integer _
 	) as string
 

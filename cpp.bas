@@ -1645,7 +1645,7 @@ private function hEvalIfCondition( byval x as integer ) as integer
 	'' 2. Check the condition
 	if( astIsCONSTI( t ) = FALSE ) then
 		const MESSAGE = "couldn't evaluate #if condition"
-		if( t->location.file ) then
+		if( t->location.source ) then
 			hReport( @t->location, MESSAGE, TRUE )
 			end 1
 		end if
@@ -1715,7 +1715,7 @@ private sub hLoadFile _
 		byval whitespace as integer _
 	)
 
-	lexLoadC( x, filebufferFromFile( filename, includeloc ), whitespace )
+	lexLoadC( x, sourcebufferFromFile( filename, includeloc ), whitespace )
 
 	if( whitespace ) then
 		cppComments( )
@@ -1834,7 +1834,7 @@ sub cppMain _
 				hRemoveTokenAndTkBeginEnd( x )
 			else
 				var location = tkGetLocation( x )
-				var context = iif( location->file, location->file->name, NULL )
+				var context = iif( location->source, location->source->name, NULL )
 				if( context = NULL ) then
 					context = topfile->text
 				end if

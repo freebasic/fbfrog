@@ -152,9 +152,13 @@ To do:
       compilable for all targets.
     * What target-specifics do we really have to handle? It's usually just that
       headers #include certain target-specific headers or different declarations.
-- Enums: must be emitted as Long for 64bit compat:
-	Type Foo As Long (and make enum anonymous)
-	Enum Foo As Long (must be added to FB first)
+
+- Enums must be emitted as Long for 64bit compat:
+  a) On all enum bodies, do "enum Foo as long : ... : end enum" (must be added to FB first)
+  b) Do "type Foo as long" and make enum body anonymous (enums consts aren't type checked anyways)
+  c) Do "const EnumConst1 as long" for every enum const; don't emit the enum type at all,
+     do "long" in place of every "enum Foo" type.
+
 - Long Double and other built-in types that FB doesn't have:
     a) just omit, except fields in a struct that is needed
     b) replace with byte array, other dtypes, or custom struct
@@ -179,58 +183,38 @@ To do:
 - Don't crash on (INT_MIN / -1) or (INT_MIN % -1)
 - Const folding probably also doesn't handle unsigned relational BOPs properly
   since it only does signed ones internally
-- Remove stats stuff and do real profiling with huge headers
 
 - Should use FILE nodes to represent C parser result, and have file*() functions
   that work on that AST, and extract them from ast.bas into separate modules.
   AST merging should merge "files" instead of "ASTs"...
-- The filebufferFromZstring() function also re-uses FILEBUFFERs based on the id,
-  so fbfrog needs to ensure to use proper unique ids, or else the same FILEBUFFER
-  could be reused for different zstrings. For filebufferFromFile() we assume this
+
+- The sourcebufferFromZstring() function also re-uses SOURCEBUFFERs based on the id,
+  so fbfrog needs to ensure to use proper unique ids, or else the same SOURCEBUFFER
+  could be reused for different zstrings. For sourcebufferFromFile() we assume this
   to be the wanted behaviour because the filename is unique, but internal strings are a different story...
-- Pre-#defines, -removematch, etc. text is loaded into tk using filebufferFromZstring/lexLoadC,
+- Pre-#defines, -removematch, etc. text is loaded into tk using sourcebufferFromZstring/lexLoadC,
   this process loses the command line location info. Should allow passing a source/base/start
-  location to filebufferFromZstring and lexLoadC so that it can reports lexing errors with the
-  command line context, instead of temp strings that are used to feed filebufferFromZstring.
-  To do this, each pre-#define/#include etc. should also be passed to filebufferFromZstring/lexLoadC
-  separately. filebufferFromFile() already accepts a srcloc for similar reasons: to be able to
-  report the "file not found" in the proper context. Of course filebufferFromFile() doesn't need
+  location to sourcebufferFromZstring and lexLoadC so that it can reports lexing errors with the
+  command line context, instead of temp strings that are used to feed sourcebufferFromZstring.
+  To do this, each pre-#define/#include etc. should also be passed to sourcebufferFromZstring/lexLoadC
+  separately. sourcebufferFromFile() already accepts a srcloc for similar reasons: to be able to
+  report the "file not found" in the proper context. Of course sourcebufferFromFile() doesn't need
   to pass it on to lexLoadC() because any issues with the loaded file should be reported in the context
   of that file, not the code that caused that file to be #included. It makes sense though for "inline code",
   such as pre-#defines and -removematch...
-- Need some high-level way to combine locations into one, etc. which is currently
-  done manually in hParseArgs() at least
-- Need better error messages for things like "missing ';' to finish declaration"
-  should perhaps underline the entire declaration?
-- TK_EOF should have location information (toplevel file?), but then we need
-  TK_BOF too or else the two could be confused. Reporting errors like missing
-  #endif at last token instead of EOF feels wrong... also, cppMain() removes
-  #ifs from the tk buffer, so tkReport() can't rely on tk buffer content in that
-  case, and eof-1 may point at an unexpected token...
-- Remove all remaining cases of tkInsert() without corresponding tkSetLocation(),
-  e.g. ## token merging, so tkReport() can be simplified. (although, tkToCText()
-  etc. would still be useful for showing macro expansion stack history)
-- Since the C parser no longer modifies the tk buffer, could it be turned into
-  an array? No, currently it still temporarily re-inserts macro bodies, but is
-  that really needed? Macro body parsing could surely be done after cFile():
-    - cpp creates TK_PPDEFINE at proper locations (containing the AST with the macro body tokens)
-    - c inserts PPDEFINE nodes into the AST at the proper locations
-    - then afterwards, we go through the PPDEFINE nodes, re-insert & try to parse each body.
-  Then c could use simple offsets to access tokens (tkLock/Unlock?)
-  Maybe even cpp could create new token runs instead of modifying the current one,
-  so that fixed TOKENRUNs could be re-used to store macro bodies, and to implement the
-  macro expansion error reporting stuff...
-    a) keep original tokens and a tree of expanded tokens for on each. tkGet() etc. have to
-       walk the whole thing each time to find the real tokens corresponding to x. Very slow...
-    b) keep expanded tokens, and parent context tokenrun on each. (context where the expansion
-       happened. perhaps only 1 line, otherwise it could become too much. That's enough for error
-       reporting)
-- Consider adding symbol tables separate from the AST, so e.g. all UDT dtypes
-  would reference the same subtype symbol instead of allocating an id everytime.
-    - define/const/proc/var ids aren't re-used much, but type ids are. Perhaps
-      add a UDT map? ie. use dtype values >= TYPE_UDT to represent UDTs (by name)
-      Then UDT types wouldn't have to allocate a subtype ID anymore (only function pointers).
-    - of course having the completely self-contained AST is great aswell
+
+- Better error reporting: Single error token location isn't enough - especially
+  if it's EOF or part of the next construct, while the error is about the
+  previous one. Need to report entire constructs (token range), or for
+  expressions visualize operand(s) & operator, etc.
+    - Let caller determine construct boundaries? They're different for
+      cmdline/cpp/c anyways. -> pass in construct token range
+    - pass in additional token ranges: unexpected token + what was expected,
+      operator, operands
+- Show suggestions how to fix errors, e.g. if #define body couldn't be parsed,
+  suggest using -removedefine to exclude the #define from the binding...
+- Require source location on tkInsert(): All tokens should have some source info
+
 - Comments given to a TK_ID that is a macro call and will be expanded should
   be given to first non-whitespace token from the expansion, for example:
         // foo
@@ -252,6 +236,3 @@ To do:
 	errors/cpp/*, bad code-as-seen-by-fbfrog?
 - Use *.h.fail or similar for error tests, instead of scanning for *.h, so they
   could be put into the same directories as the normal tests?
-
-- Show suggestions how to fix errors, e.g. if #define body couldn't be parsed,
-  suggest using -removedefine to exclude the #define from the binding...

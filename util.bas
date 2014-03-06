@@ -4,15 +4,15 @@
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-namespace filebuffers
+namespace sourcebuffers
 	dim shared hash as THASH
 end namespace
 
-sub filebufferInit( )
-	hashInit( @filebuffers.hash, 8, FALSE )
+sub sourcebuffersInit( )
+	hashInit( @sourcebuffers.hash, 8, FALSE )
 end sub
 
-function hDumpFileBuffer( byval file as FILEBUFFER ptr ) as string
+function hDumpSourceBuffer( byval file as SOURCEBUFFER ptr ) as string
 	var s = *file->name + "("
 
 	if( file->is_file ) then
@@ -33,20 +33,20 @@ function hDumpFileBuffer( byval file as FILEBUFFER ptr ) as string
 	function = s
 end function
 
-function filebufferNew( byval filename as zstring ptr ) as FILEBUFFER ptr
-	dim as FILEBUFFER ptr file = callocate( sizeof( FILEBUFFER ) )
+function sourcebufferNew( byval filename as zstring ptr ) as SOURCEBUFFER ptr
+	dim as SOURCEBUFFER ptr file = callocate( sizeof( SOURCEBUFFER ) )
 	file->name = strDuplicate( filename )
 	function = file
 end function
 
-function filebufferAdd( byval filename as zstring ptr ) as FILEBUFFER ptr
+function sourcebufferAdd( byval filename as zstring ptr ) as SOURCEBUFFER ptr
 	var hash = hashHash( filename )
-	var item = hashLookup( @filebuffers.hash, filename, hash )
+	var item = hashLookup( @sourcebuffers.hash, filename, hash )
 
 	'' Doesn't exist yet?
 	if( item->s = NULL ) then
-		var file = filebufferNew( filename )
-		hashAdd( @filebuffers.hash, item, hash, file->name, file )
+		var file = sourcebufferNew( filename )
+		hashAdd( @sourcebuffers.hash, item, hash, file->name, file )
 	end if
 
 	function = item->data
@@ -98,8 +98,8 @@ private function hLoadFile _
 	function = buffer
 end function
 
-function filebufferFromFile( byval filename as zstring ptr, byval srcloc as TKLOCATION ptr ) as FILEBUFFER ptr
-	var file = filebufferAdd( filename )
+function sourcebufferFromFile( byval filename as zstring ptr, byval srcloc as TKLOCATION ptr ) as SOURCEBUFFER ptr
+	var file = sourcebufferAdd( filename )
 
 	'' Load if not cached yet
 	if( file->buffer = NULL ) then
@@ -111,8 +111,8 @@ function filebufferFromFile( byval filename as zstring ptr, byval srcloc as TKLO
 	function = file
 end function
 
-function filebufferFromZstring( byval filename as zstring ptr, byval s as zstring ptr ) as FILEBUFFER ptr
-	var file = filebufferAdd( filename )
+function sourcebufferFromZstring( byval filename as zstring ptr, byval s as zstring ptr ) as SOURCEBUFFER ptr
+	var file = sourcebufferAdd( filename )
 
 	'' Load if not cached yet
 	if( file->buffer = NULL ) then
@@ -132,9 +132,9 @@ sub oops( byval message as zstring ptr )
 end sub
 
 function hDumpLocation( byval location as TKLOCATION ptr ) as string
-	if( location->file ) then
+	if( location->source ) then
 		var s = "location("
-		s += hDumpFileBuffer( location->file ) & ", "
+		s += hDumpSourceBuffer( location->source ) & ", "
 		s += "line " & location->linenum + 1 & ", "
 		s += "column " & location->column + 1 & ", "
 		s += "length " & location->length
@@ -208,10 +208,10 @@ sub hReport _
 	)
 
 	assert( location )
-	assert( location->file )
-	assert( location->file->name )
+	assert( location->source )
+	assert( location->source->name )
 
-	print *location->file->name + "(" & (location->linenum + 1) & "): " + *message
+	print *location->source->name + "(" & (location->linenum + 1) & "): " + *message
 
 	'' Show the error line and maybe some extra lines above and below it,
 	'' for more context, with line numbers prefixed to them:
@@ -228,7 +228,7 @@ sub hReport _
 		min -= location->linenum
 
 		max = location->linenum + ubound( linenums )
-		if( max >= location->file->lines ) then max = location->file->lines - 1
+		if( max >= location->source->lines ) then max = location->source->lines - 1
 		max -= location->linenum
 	else
 		min = 0
@@ -250,7 +250,7 @@ sub hReport _
 
 	for i as integer = min to max
 		dim offset as integer
-		var sourceline = lexPeekLine( location->file, location->linenum + i )
+		var sourceline = lexPeekLine( location->source, location->linenum + i )
 		hCalcErrorLine( location->column, maxwidth, sourceline, offset )
 		print "    " + linenums(i) + sourceline
 		if( i = 0 ) then

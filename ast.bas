@@ -811,7 +811,7 @@ sub astReport _
 		byval more_context as integer _
 	)
 
-	if( n->location.file ) then
+	if( n->location.source ) then
 		hReport( @n->location, message, more_context )
 	else
 		print *message

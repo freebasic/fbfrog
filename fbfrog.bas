@@ -89,7 +89,7 @@ private sub hLoadResponseFile _
 	end if
 
 	'' Load the file content at the specified position
-	lexLoadArgs( x, filebufferFromFile( filename, location ) )
+	lexLoadArgs( x, sourcebufferFromFile( filename, location ) )
 	filecount += 1
 
 end sub
@@ -110,8 +110,8 @@ private sub hExpandResponseFileArguments( )
 			'' If the @file argument comes from an @file,
 			'' open it relative to the parent @file's dir.
 			var location = tkGetLocation( x )
-			if( location->file->is_file ) then
-				filename = pathAddDiv( pathOnly( *location->file->name ) ) + filename
+			if( location->source->is_file ) then
+				filename = pathAddDiv( pathOnly( *location->source->name ) ) + filename
 			end if
 
 			'' Load the file content behind the @file token
@@ -167,8 +167,8 @@ private function hPathRelativeToResponseFile( byval x as integer ) as string
 	'' @file, open it relative to the @file's dir.
 	if( pathIsAbsolute( path ) = FALSE ) then
 		var location = tkGetLocation( x )
-		if( location->file->is_file ) then
-			path = pathAddDiv( pathOnly( *location->file->name ) ) + path
+		if( location->source->is_file ) then
+			path = pathAddDiv( pathOnly( *location->source->name ) ) + path
 		end if
 	end if
 
@@ -398,12 +398,12 @@ private sub hLoadPatternTokens( byval n as ASTNODE ptr )
 
 	tkInit( )
 
-	'' Note: the FILEBUFFER id currently must be made unique, or else it
+	'' Note: the SOURCEBUFFER id currently must be made unique, or else it
 	'' could be reused by other -removematch options, even if the pattern
 	'' text differs...
 	var id = "<-removematch """ + *n->text + """>"
 
-	lexLoadC( 0, filebufferFromZstring( id, n->text ), FALSE )
+	lexLoadC( 0, sourcebufferFromZstring( id, n->text ), FALSE )
 
 	for x as integer = 0 to tkGetCount( )-1
 		astAppend( n, astNewTK( x ) )
@@ -548,7 +548,7 @@ private function frogWorkRootFile _
 			cppheader += !"\n"
 
 			var id = "<CPP code from command line for " + astDumpPrettyVersion( targetversion ) + ">"
-			lexLoadC( 0, filebufferFromZstring( id, cppheader ), FALSE )
+			lexLoadC( 0, sourcebufferFromZstring( id, cppheader ), FALSE )
 		end if
 	end if
 
@@ -676,13 +676,13 @@ end function
 
 	frog.versiondefine = "__VERSION__"
 	frog.incdirs = astNewGROUP( )
-	filebufferInit( )
+	sourcebuffersInit( )
 	fbkeywordsInit( )
 
 	tkInit( )
 
 	'' Load all command line arguments into the tk buffer
-	lexLoadArgs( 0, filebufferFromZstring( "<command line>", _
+	lexLoadArgs( 0, sourcebufferFromZstring( "<command line>", _
 			hTurnArgsIntoString( __FB_ARGC__, __FB_ARGV__ ) ) )
 
 	'' Load content of @files too

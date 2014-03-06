@@ -841,7 +841,7 @@ private function hReportErrorTokenLocation _
 	) as integer
 
 	var location = tkGetLocation( x )
-	if( location->file ) then
+	if( location->source ) then
 		hReport( location, message, more_context )
 		function = TRUE
 	else
