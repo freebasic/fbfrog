@@ -184,10 +184,6 @@ To do:
 - Const folding probably also doesn't handle unsigned relational BOPs properly
   since it only does signed ones internally
 
-- Should use FILE nodes to represent C parser result, and have file*() functions
-  that work on that AST, and extract them from ast.bas into separate modules.
-  AST merging should merge "files" instead of "ASTs"...
-
 - Better error reporting: Single error token location isn't enough - especially
   if it's EOF or part of the next construct, while the error is about the
   previous one. Need to report entire constructs (token range), or for

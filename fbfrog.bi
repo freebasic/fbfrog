@@ -746,7 +746,16 @@ type ASTNODE_
 	'' the child list for statement trees
 end type
 
+type ASTSTATSDATA
+	as integer maxnodes, livenodes, maxlivenodes
+	as integer foldpasses, minfoldpasses, maxfoldpasses
+end type
+
+extern aststats as ASTSTATSDATA
+
 #define astNewNOP( ) astNew( ASTCLASS_NOP )
+#define astNewID( id ) astNew( ASTCLASS_ID, id )
+#define astNewTEXT( text ) astNew( ASTCLASS_TEXT, text )
 #define astIsCONSTI( n ) ((n)->class = ASTCLASS_CONSTI)
 
 declare sub astPrintStats( )
@@ -785,6 +794,11 @@ declare function astNewGROUP overload _
 		byval child1 as ASTNODE ptr, _
 		byval child2 as ASTNODE ptr = NULL _
 	) as ASTNODE ptr
+declare function astBuildGROUPFromChildren( byval src as ASTNODE ptr ) as ASTNODE ptr
+declare function astGroupContains( byval group as ASTNODE ptr, byval lookfor as ASTNODE ptr ) as integer
+declare function astGroupContainsAnyChildrenOf( byval group as ASTNODE ptr, byval other as ASTNODE ptr ) as integer
+declare function astGroupContainsAllChildrenOf( byval group as ASTNODE ptr, byval other as ASTNODE ptr ) as integer
+declare function astGroupsContainEqualChildren( byval l as ASTNODE ptr, byval r as ASTNODE ptr ) as integer
 declare function astUngroupOne( byval group as ASTNODE ptr ) as ASTNODE ptr
 declare function astNewDIMENSION _
 	( _
@@ -793,42 +807,32 @@ declare function astNewDIMENSION _
 	) as ASTNODE ptr
 declare function astNewCONSTI( byval i as longint, byval dtype as integer ) as ASTNODE ptr
 declare function astNewCONSTF( byval f as double, byval dtype as integer ) as ASTNODE ptr
-#define astNewID( id ) astNew( ASTCLASS_ID, id )
-#define astNewTEXT( text ) astNew( ASTCLASS_TEXT, text )
 declare function astNewTK( byval x as integer ) as ASTNODE ptr
 declare function astTKMatchesPattern( byval tk as ASTNODE ptr, byval x as integer ) as integer
 declare function astTakeLoc( byval n as ASTNODE ptr, byval x as integer ) as ASTNODE ptr
 declare sub astDelete( byval n as ASTNODE ptr )
+declare sub astInsert _
+	( _
+		byval parent as ASTNODE ptr, _
+		byval n as ASTNODE ptr, _
+		byval ref as ASTNODE ptr, _
+		byval unique as integer = FALSE _
+	)
 declare sub astPrepend( byval parent as ASTNODE ptr, byval n as ASTNODE ptr )
 declare sub astAppend( byval parent as ASTNODE ptr, byval n as ASTNODE ptr )
+declare sub astAppendUnique( byval parent as ASTNODE ptr, byval n as ASTNODE ptr )
 declare sub astCloneAppend( byval parent as ASTNODE ptr, byval n as ASTNODE ptr )
+declare sub astCloneAppendChildren( byval d as ASTNODE ptr, byval s as ASTNODE ptr )
 declare function astRemove( byval parent as ASTNODE ptr, byval a as ASTNODE ptr ) as ASTNODE ptr
-declare function astNewVERBLOCK _
+declare sub astRemoveChildren( byval parent as ASTNODE ptr )
+declare function astReplace _
 	( _
-		byval version1 as ASTNODE ptr, _
-		byval version2 as ASTNODE ptr, _
-		byval child as ASTNODE ptr _
+		byval parent as ASTNODE ptr, _
+		byval old as ASTNODE ptr, _
+		byval n as ASTNODE ptr _
 	) as ASTNODE ptr
-declare function astCollectVersions( byval code as ASTNODE ptr ) as ASTNODE ptr
-declare function astCollectTargets( byval code as ASTNODE ptr ) as integer
-declare function astCombineVersionsAndTargets _
-	( _
-		byval versions as ASTNODE ptr, _
-		byval targets as integer _
-	) as ASTNODE ptr
-declare function astGet1VersionAndTargetOnly _
-	( _
-		byval code as ASTNODE ptr, _
-		byval version as ASTNODE ptr _
-	) as ASTNODE ptr
-declare sub astProcessVerblocksAndTargetblocksOnFiles _
-	( _
-		byval files as ASTNODE ptr, _
-		byval versions as ASTNODE ptr, _
-		byval targets as integer, _
-		byval versiondefine as zstring ptr _
-	)
 declare sub astSetText( byval n as ASTNODE ptr, byval text as zstring ptr )
+declare sub astRenameSymbol( byval n as ASTNODE ptr, byval newid as zstring ptr )
 declare sub astSetType _
 	( _
 		byval n as ASTNODE ptr, _
@@ -838,6 +842,7 @@ declare sub astSetType _
 declare sub astSetComment( byval n as ASTNODE ptr, byval comment as zstring ptr )
 declare sub astAddComment( byval n as ASTNODE ptr, byval comment as zstring ptr )
 declare sub astSetLocationAndAlsoOnChildren( byval n as ASTNODE ptr, byval location as TKLOCATION ptr )
+declare function astCloneNode( byval n as ASTNODE ptr ) as ASTNODE ptr
 declare function astClone( byval n as ASTNODE ptr ) as ASTNODE ptr
 enum
 	ASTEQ_IGNOREHIDDENCALLCONV = 0
@@ -856,12 +861,25 @@ declare sub astReport _
 		byval message as zstring ptr, _
 		byval more_context as integer = TRUE _
 	)
+declare function astCountDecls( byval code as ASTNODE ptr ) as integer
+declare function astDumpPrettyDecl( byval n as ASTNODE ptr ) as string
+declare function astDumpPrettyVersion( byval v as ASTNODE ptr ) as string
+declare function astDumpOne( byval n as ASTNODE ptr ) as string
+declare function astDumpInline( byval n as ASTNODE ptr ) as string
+declare sub astDump _
+	( _
+		byval n as ASTNODE ptr, _
+		byval nestlevel as integer = 0, _
+		byref prefix as string = "" _
+	)
+
 declare function astOpsC2FB( byval n as ASTNODE ptr ) as ASTNODE ptr
 declare function astFold _
 	( _
 		byval n as ASTNODE ptr, _
 		byval is_bool_context as integer _
 	) as ASTNODE ptr
+
 declare sub astCleanUpExpressions( byval code as ASTNODE ptr )
 declare function astLookupMacroParam _
 	( _
@@ -888,6 +906,7 @@ declare sub astMoveNestedDefinesToToplevel( byval code as ASTNODE ptr )
 declare sub astFixIds( byval code as ASTNODE ptr )
 declare sub astMergeDIVIDERs( byval n as ASTNODE ptr )
 declare sub astAutoAddDividers( byval code as ASTNODE ptr )
+
 declare function astWrapFileInVerblock _
 	( _
 		byval code as ASTNODE ptr, _
@@ -903,17 +922,33 @@ declare sub astExtractCommonCodeFromFiles _
 		byval files as ASTNODE ptr, _
 		byval versions as ASTNODE ptr _
 	)
-declare function astCountDecls( byval code as ASTNODE ptr ) as integer
-declare function astDumpPrettyDecl( byval n as ASTNODE ptr ) as string
-declare function astDumpPrettyVersion( byval v as ASTNODE ptr ) as string
-declare function astDumpOne( byval n as ASTNODE ptr ) as string
-declare function astDumpInline( byval n as ASTNODE ptr ) as string
-declare sub astDump _
+
+declare function astNewVERBLOCK _
 	( _
-		byval n as ASTNODE ptr, _
-		byval nestlevel as integer = 0, _
-		byref prefix as string = "" _
+		byval version1 as ASTNODE ptr, _
+		byval version2 as ASTNODE ptr, _
+		byval child as ASTNODE ptr _
+	) as ASTNODE ptr
+declare function astCollectVersions( byval code as ASTNODE ptr ) as ASTNODE ptr
+declare function astCollectTargets( byval code as ASTNODE ptr ) as integer
+declare function astCombineVersionsAndTargets _
+	( _
+		byval versions as ASTNODE ptr, _
+		byval targets as integer _
+	) as ASTNODE ptr
+declare function astGet1VersionAndTargetOnly _
+	( _
+		byval code as ASTNODE ptr, _
+		byval version as ASTNODE ptr _
+	) as ASTNODE ptr
+declare sub astProcessVerblocksAndTargetblocksOnFiles _
+	( _
+		byval files as ASTNODE ptr, _
+		byval versions as ASTNODE ptr, _
+		byval targets as integer, _
+		byval versiondefine as zstring ptr _
 	)
+
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
