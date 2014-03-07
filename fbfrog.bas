@@ -398,9 +398,6 @@ private sub hLoadPatternTokens( byval n as ASTNODE ptr )
 
 	tkInit( )
 
-	'' Note: the SOURCEBUFFER id currently must be made unique, or else it
-	'' could be reused by other -removematch options, even if the pattern
-	'' text differs...
 	var id = "<-removematch """ + *n->text + """>"
 
 	lexLoadC( 0, sourcebufferFromZstring( id, n->text ), FALSE )

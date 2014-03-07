@@ -39,19 +39,6 @@ function sourcebufferNew( byval filename as zstring ptr ) as SOURCEBUFFER ptr
 	function = file
 end function
 
-function sourcebufferAdd( byval filename as zstring ptr ) as SOURCEBUFFER ptr
-	var hash = hashHash( filename )
-	var item = hashLookup( @sourcebuffers.hash, filename, hash )
-
-	'' Doesn't exist yet?
-	if( item->s = NULL ) then
-		var file = sourcebufferNew( filename )
-		hashAdd( @sourcebuffers.hash, item, hash, file->name, file )
-	end if
-
-	function = item->data
-end function
-
 private function hLoadFile _
 	( _
 		byval filename as zstring ptr, _
@@ -99,29 +86,38 @@ private function hLoadFile _
 end function
 
 function sourcebufferFromFile( byval filename as zstring ptr, byval srcloc as TKLOCATION ptr ) as SOURCEBUFFER ptr
-	var file = sourcebufferAdd( filename )
+	'' Caching files based on the file name
+	var hash = hashHash( filename )
+	var item = hashLookup( @sourcebuffers.hash, filename, hash )
 
-	'' Load if not cached yet
-	if( file->buffer = NULL ) then
-		assert( file->buffer = NULL )
+	'' Doesn't exist yet?
+	if( item->s = NULL ) then
+		var file = sourcebufferNew( filename )
 		file->is_file = TRUE
 		file->buffer = hLoadFile( file->name, srcloc, file->size )
+
+		hashAdd( @sourcebuffers.hash, item, hash, file->name, file )
 	end if
 
-	function = file
+	function = item->data
 end function
 
 function sourcebufferFromZstring( byval filename as zstring ptr, byval s as zstring ptr ) as SOURCEBUFFER ptr
-	var file = sourcebufferAdd( filename )
+	'' Caching zstrings based on the string data ("filename" used only for
+	'' prettier error reports)
+	var hash = hashHash( s )
+	var item = hashLookup( @sourcebuffers.hash, s, hash )
 
-	'' Load if not cached yet
-	if( file->buffer = NULL ) then
-		assert( file->buffer = NULL )
+	'' Doesn't exist yet?
+	if( item->s = NULL ) then
+		var file = sourcebufferNew( filename )
 		file->buffer = strDuplicate( s )
 		file->size = len( *s ) + 1
+
+		hashAdd( @sourcebuffers.hash, item, hash, file->buffer, file )
 	end if
 
-	function = file
+	function = item->data
 end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''

@@ -188,10 +188,6 @@ To do:
   that work on that AST, and extract them from ast.bas into separate modules.
   AST merging should merge "files" instead of "ASTs"...
 
-- The sourcebufferFromZstring() function also re-uses SOURCEBUFFERs based on the id,
-  so fbfrog needs to ensure to use proper unique ids, or else the same SOURCEBUFFER
-  could be reused for different zstrings. For sourcebufferFromFile() we assume this
-  to be the wanted behaviour because the filename is unique, but internal strings are a different story...
 - Pre-#defines, -removematch, etc. text is loaded into tk using sourcebufferFromZstring/lexLoadC,
   this process loses the command line location info. Should allow passing a source/base/start
   location to sourcebufferFromZstring and lexLoadC so that it can reports lexing errors with the
