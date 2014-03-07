@@ -33,42 +33,46 @@ function hDumpSourceBuffer( byval file as SOURCEBUFFER ptr ) as string
 	function = s
 end function
 
-function sourcebufferNew( byval filename as zstring ptr ) as SOURCEBUFFER ptr
-	dim as SOURCEBUFFER ptr file = callocate( sizeof( SOURCEBUFFER ) )
-	file->name = strDuplicate( filename )
-	function = file
+function sourcebufferNew _
+	( _
+		byval name_ as zstring ptr, _
+		byval location as TKLOCATION ptr _
+	) as SOURCEBUFFER ptr
+
+	dim as SOURCEBUFFER ptr source = callocate( sizeof( SOURCEBUFFER ) )
+
+	source->name = strDuplicate( name_ )
+	if( location ) then
+		source->location = *location
+	end if
+
+	function = source
 end function
 
-private function hLoadFile _
-	( _
-		byval filename as zstring ptr, _
-		byval srcloc as TKLOCATION ptr, _
-		byref size as integer _
-	) as ubyte ptr
-
+private sub hLoadFile( byval source as SOURCEBUFFER ptr )
 	'' Read in the whole file content
 	var f = freefile( )
-	if( open( *filename, for binary, access read, as #f ) ) then
-		oopsLocation( srcloc, "could not open file: '" + *filename + "'" )
+	if( open( *source->name, for binary, access read, as #f ) ) then
+		oopsLocation( @source->location, "could not open file: '" + *source->name + "'" )
 	end if
 
 	dim as ulongint filesize = lof( f )
 	if( filesize > &h40000000 ) then
-		oopsLocation( srcloc, "a header file bigger than 1 GiB? no way..." )
+		oopsLocation( @source->location, "a header file bigger than 1 GiB? no way..." )
 	end if
 
 	'' An extra 0 byte at the end of the buffer so we can look ahead
 	'' without bound checks, and don't need to give special treatment
 	'' to empty files.
 	dim as integer sizetoload = filesize
-	size = sizetoload + 1
-	dim as ubyte ptr buffer = callocate( size )
+	source->size = sizetoload + 1
+	source->buffer = callocate( source->size )
 
 	if( sizetoload > 0 ) then
 		var sizeloaded = 0
-		var result = get( #f, , *buffer, sizetoload, sizeloaded )
+		var result = get( #f, , *source->buffer, sizetoload, sizeloaded )
 		if( result or (sizeloaded <> sizetoload) ) then
-			oopsLocation( srcloc, "file I/O failed" )
+			oopsLocation( @source->location, "file I/O failed" )
 		end if
 	end if
 
@@ -77,47 +81,59 @@ private function hLoadFile _
 	'' Currently tokens store text as null-terminated strings, so they
 	'' can't allow embedded nulls, and null also indicates EOF to the lexer.
 	for i as integer = 0 to sizetoload-1
-		if( buffer[i] = 0 ) then
-			oopsLocation( srcloc, "file '" + *filename + "' has embedded nulls, please fix that first!" )
+		if( source->buffer[i] = 0 ) then
+			oopsLocation( @source->location, "file '" + *source->name + "' has embedded nulls, please fix that first!" )
 		end if
 	next
+end sub
 
-	function = buffer
-end function
+function sourcebufferFromFile _
+	( _
+		byval filename as zstring ptr, _
+		byval location as TKLOCATION ptr _
+	) as SOURCEBUFFER ptr
 
-function sourcebufferFromFile( byval filename as zstring ptr, byval srcloc as TKLOCATION ptr ) as SOURCEBUFFER ptr
 	'' Caching files based on the file name
 	var hash = hashHash( filename )
 	var item = hashLookup( @sourcebuffers.hash, filename, hash )
 
 	'' Doesn't exist yet?
 	if( item->s = NULL ) then
-		var file = sourcebufferNew( filename )
-		file->is_file = TRUE
-		file->buffer = hLoadFile( file->name, srcloc, file->size )
+		var source = sourcebufferNew( filename, location )
+		source->is_file = TRUE
+		hLoadFile( source )
 
-		hashAdd( @sourcebuffers.hash, item, hash, file->name, file )
+		hashAdd( @sourcebuffers.hash, item, hash, source->name, source )
 	end if
 
 	function = item->data
 end function
 
-function sourcebufferFromZstring( byval filename as zstring ptr, byval s as zstring ptr ) as SOURCEBUFFER ptr
-	'' Caching zstrings based on the string data ("filename" used only for
-	'' prettier error reports)
-	var hash = hashHash( s )
-	var item = hashLookup( @sourcebuffers.hash, s, hash )
+function sourcebufferFromZstring _
+	( _
+		byval prettyname as zstring ptr, _
+		byval s as zstring ptr, _
+		byval location as TKLOCATION ptr _
+	) as SOURCEBUFFER ptr
 
-	'' Doesn't exist yet?
-	if( item->s = NULL ) then
-		var file = sourcebufferNew( filename )
-		file->buffer = strDuplicate( s )
-		file->size = len( *s ) + 1
+	'' Note: caching zstring source buffers
+	'' - They don't have a globally unique identifier
+	'' - The string data itself isn't unique either (e.g. there may be
+	''   two -removematch options with the same pattern), so comparing
+	''   that alone would give false positives
+	'' - However, if 2 options have the same pattern then they'll have the
+	''   same lexing errors etc. and only the 1st one ever matters. So it
+	''   doesn't make a difference if we alias the 2nd one to the 1st.
+	'' - But that's only true as long as they're the same option. Otherwise
+	''   we may accidentially alias "-a x" and "-b x". The "prettyname"
+	''   could be used to verify this here, but then we'd have to check both
+	''   prettyname and string data.
 
-		hashAdd( @sourcebuffers.hash, item, hash, file->buffer, file )
-	end if
+	var source = sourcebufferNew( prettyname, location )
+	source->buffer = strDuplicate( s )
+	source->size = len( *s ) + 1
 
-	function = item->data
+	function = source
 end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -203,10 +219,6 @@ sub hReport _
 		byval more_context as integer _
 	)
 
-	assert( location )
-	assert( location->source )
-	assert( location->source->name )
-
 	print *location->source->name + "(" & (location->linenum + 1) & "): " + *message
 
 	'' Show the error line and maybe some extra lines above and below it,
@@ -255,6 +267,10 @@ sub hReport _
 			      "^" + string( location->length - 1, "~" )
 		end if
 	next
+
+	if( (not location->source->is_file) and (location->source->location.source <> NULL) ) then
+		hReport( @location->source->location, "from here:", more_context )
+	end if
 end sub
 
 sub oopsLocation( byval location as TKLOCATION ptr, byval message as zstring ptr )

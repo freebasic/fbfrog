@@ -188,17 +188,6 @@ To do:
   that work on that AST, and extract them from ast.bas into separate modules.
   AST merging should merge "files" instead of "ASTs"...
 
-- Pre-#defines, -removematch, etc. text is loaded into tk using sourcebufferFromZstring/lexLoadC,
-  this process loses the command line location info. Should allow passing a source/base/start
-  location to sourcebufferFromZstring and lexLoadC so that it can reports lexing errors with the
-  command line context, instead of temp strings that are used to feed sourcebufferFromZstring.
-  To do this, each pre-#define/#include etc. should also be passed to sourcebufferFromZstring/lexLoadC
-  separately. sourcebufferFromFile() already accepts a srcloc for similar reasons: to be able to
-  report the "file not found" in the proper context. Of course sourcebufferFromFile() doesn't need
-  to pass it on to lexLoadC() because any issues with the loaded file should be reported in the context
-  of that file, not the code that caused that file to be #included. It makes sense though for "inline code",
-  such as pre-#defines and -removematch...
-
 - Better error reporting: Single error token location isn't enough - especially
   if it's EOF or part of the next construct, while the error is about the
   previous one. Need to report entire constructs (token range), or for

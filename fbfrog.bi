@@ -66,13 +66,7 @@ enum
 	CH_DEL
 end enum
 
-type SOURCEBUFFER
-	name		as zstring ptr
-	is_file		as integer    '' whether name is a file path
-	buffer		as ubyte ptr  '' file content, null-terminated
-	size		as integer    '' allocated buffer size
-	lines		as integer    '' number of lines counted during lexing
-end type
+type SOURCEBUFFER as SOURCEBUFFER_
 
 type TKLOCATION
 	'' Supposed to point to permanent memory, whoever fills the structure
@@ -84,11 +78,29 @@ type TKLOCATION
 	length		as integer
 end type
 
+type SOURCEBUFFER_
+	is_file		as integer    '' whether name is a file path
+	name		as zstring ptr
+	location	as TKLOCATION
+	buffer		as ubyte ptr  '' file content, null-terminated
+	size		as integer    '' allocated buffer size
+	lines		as integer    '' number of lines counted during lexing
+end type
+
 declare sub sourcebuffersInit( )
 declare function hDumpSourceBuffer( byval source as SOURCEBUFFER ptr ) as string
 declare function sourcebufferAdd( byval filename as zstring ptr ) as SOURCEBUFFER ptr
-declare function sourcebufferFromFile( byval filename as zstring ptr, byval srcloc as TKLOCATION ptr ) as SOURCEBUFFER ptr
-declare function sourcebufferFromZstring( byval filename as zstring ptr, byval s as zstring ptr ) as SOURCEBUFFER ptr
+declare function sourcebufferFromFile _
+	( _
+		byval filename as zstring ptr, _
+		byval location as TKLOCATION ptr _
+	) as SOURCEBUFFER ptr
+declare function sourcebufferFromZstring _
+	( _
+		byval filename as zstring ptr, _
+		byval s as zstring ptr, _
+		byval location as TKLOCATION ptr _
+	) as SOURCEBUFFER ptr
 declare sub oops( byval message as zstring ptr )
 declare function hDumpLocation( byval location as TKLOCATION ptr ) as string
 declare function hConsoleWidth( ) as integer

@@ -393,20 +393,30 @@ private function hParseArgs( byref x as integer, byval body as integer ) as ASTN
 	function = result
 end function
 
-private sub hLoadPatternTokens( byval n as ASTNODE ptr )
-	assert( n->class = ASTCLASS_REMOVEMATCH )
-
+private sub hLexRemoveMatchPattern( byval n as ASTNODE ptr )
 	tkInit( )
 
-	var id = "<-removematch """ + *n->text + """>"
-
-	lexLoadC( 0, sourcebufferFromZstring( id, n->text ), FALSE )
+	lexLoadC( 0, sourcebufferFromZstring( "-removematch", n->text, @n->location ), FALSE )
 
 	for x as integer = 0 to tkGetCount( )-1
 		astAppend( n, astNewTK( x ) )
 	next
 
 	tkEnd( )
+end sub
+
+private sub hLexRemoveMatchPatterns( byval code as ASTNODE ptr )
+	var i = code->head
+	while( i )
+
+		if( i->class = ASTCLASS_REMOVEMATCH ) then
+			hLexRemoveMatchPattern( i )
+		end if
+
+		hLexRemoveMatchPatterns( i )
+
+		i = i->next
+	wend
 end sub
 
 private function hPatternMatchesHere _
@@ -470,6 +480,19 @@ private function hConstructMatchesAnyPattern _
 
 end function
 
+private sub hApplyRemoveMatchOptions( byval presetcode as ASTNODE ptr )
+	var x = 0
+	while( tkGet( x ) <> TK_EOF )
+		var begin = x
+		x = hFindConstructEnd( x )
+
+		if( hConstructMatchesAnyPattern( presetcode, begin, x - 1 ) ) then
+			tkRemove( begin, x - 1 )
+			x = begin
+		end if
+	wend
+end sub
+
 private function frogWorkRootFile _
 	( _
 		byval presetcode as ASTNODE ptr, _
@@ -479,22 +502,6 @@ private function frogWorkRootFile _
 
 	print space( frog.maxversionstrlen ) + "parsing: " + *rootfile->text
 
-	'' Go through -removematch options for this version and run lexLoadC()
-	'' on the C token string given behind -removematch on the command line.
-	'' This will write into the tk buffer so it must be done here before
-	'' the main parsing process starts...
-	var have_removematch = FALSE
-	if( presetcode ) then
-		var i = presetcode->head
-		while( i )
-			if( i->class = ASTCLASS_REMOVEMATCH ) then
-				have_removematch = TRUE
-				hLoadPatternTokens( i )
-			end if
-			i = i->next
-		wend
-	end if
-
 	tkInit( )
 
 	cppInit( )
@@ -503,8 +510,8 @@ private function frogWorkRootFile _
 		'' Pre-#defines/#undefs are simply inserted at the top of the
 		'' token buffer, so that cppMain() parses them like any other
 		'' #define/#undef.
-		dim cppheader as string
 
+		var x = 0
 		var i = presetcode->head
 		while( i )
 
@@ -515,38 +522,44 @@ private function frogWorkRootFile _
 			case ASTCLASS_REMOVEDEFINE
 				cppRemoveSym( i->text )
 
-			case ASTCLASS_PPDEFINE
-				cppheader += "#define " + *i->text
-				if( i->expr ) then
-					assert( i->expr->class = ASTCLASS_TEXT )
-					cppheader += " " + *i->expr->text
-				end if
-				cppheader += !"\n"
+			case ASTCLASS_PPDEFINE, ASTCLASS_PPUNDEF, ASTCLASS_PPINCLUDE
+				dim as string prettyname, s
 
-				cppRemoveSym( i->text )
+				select case( i->class )
+				case ASTCLASS_PPDEFINE
+					cppRemoveSym( i->text )
 
-			case ASTCLASS_PPUNDEF
-				cppheader += "#undef " + *i->text + !"\n"
-				cppRemoveSym( i->text )
+					prettyname = "pre-#define"
+					s = "#define " + *i->text
+					if( i->expr ) then
+						assert( i->expr->class = ASTCLASS_TEXT )
+						s += " " + *i->expr->text
+					end if
+					s += !"\n"
 
-			case ASTCLASS_PPINCLUDE
-				cppheader += "#include """ + *i->text + """" + !"\n"
+				case ASTCLASS_PPUNDEF
+					cppRemoveSym( i->text )
+					prettyname = "pre-#undef"
+					s = "#undef " + *i->text + !"\n"
+
+				case ASTCLASS_PPINCLUDE
+					prettyname = "pre-#include"
+					s = "#include """ + *i->text + """" + !"\n"
+
+				end select
+
+				x = lexLoadC( x, sourcebufferFromZstring( prettyname, s, @i->location ), FALSE )
 
 			end select
 
 			i = i->next
 		wend
 
-		if( len( cppheader ) > 0 ) then
-			'' Extra empty line between the header and regular input code,
-			'' so that cppMain()'s whitespace handling won't be confused.
-			'' (e.g. associating a comment at the top of regular code with
-			'' the last statement from the header code)
-			cppheader += !"\n"
-
-			var id = "<CPP code from command line for " + astDumpPrettyVersion( targetversion ) + ">"
-			lexLoadC( 0, sourcebufferFromZstring( id, cppheader ), FALSE )
-		end if
+		'' Extra empty line between the header and regular input code,
+		'' so that cppMain()'s whitespace handling won't be confused.
+		'' (e.g. associating a comment at the top of regular code with
+		'' the last statement from the header code)
+		tkInsert( x, TK_EOL )
 	end if
 
 	cppMain( rootfile, frog.whitespace, frog.nomerge )
@@ -556,19 +569,7 @@ private function frogWorkRootFile _
 	tkRemoveEOLs( )
 	tkTurnCPPTokensIntoCIds( )
 
-	'' Apply -removematch options, if there are any
-	if( have_removematch ) then
-		var x = 0
-		while( tkGet( x ) <> TK_EOF )
-			var begin = x
-			x = hFindConstructEnd( x )
-
-			if( hConstructMatchesAnyPattern( presetcode, begin, x - 1 ) ) then
-				tkRemove( begin, x - 1 )
-				x = begin
-			end if
-		wend
-	end if
+	hApplyRemoveMatchOptions( presetcode )
 
 	'' Parse C constructs
 	var ast = cFile( )
@@ -680,7 +681,7 @@ end function
 
 	'' Load all command line arguments into the tk buffer
 	lexLoadArgs( 0, sourcebufferFromZstring( "<command line>", _
-			hTurnArgsIntoString( __FB_ARGC__, __FB_ARGV__ ) ) )
+			hTurnArgsIntoString( __FB_ARGC__, __FB_ARGV__ ), NULL ) )
 
 	'' Load content of @files too
 	hExpandResponseFileArguments( )
@@ -689,6 +690,12 @@ end function
 	frog.code = hParseArgs( 0, BODY_TOPLEVEL )
 
 	tkEnd( )
+
+	'' Go through -removematch options and run lexLoadC() on the C token
+	'' string that was given behind -removematch on the command line.
+	'' This will write into the tk buffer so it must be done here before
+	'' the main parsing process starts...
+	hLexRemoveMatchPatterns( frog.code )
 
 	var versions = astCollectVersions( frog.code )
 	var targets = astCollectTargets( frog.code )
