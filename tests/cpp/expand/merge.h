@@ -374,3 +374,15 @@ enum E {
 	G = EXPANDME1()
 };
 #undef EXPANDME1
+
+//------------------------------------------------------------------------------
+
+static int __L_char;
+#define EXPANDME1 L ## 'a'
+void f(wchar_t w = EXPANDME1);
+#undef EXPANDME1
+
+static int __L_string;
+#define EXPANDME1 L ## "abc"
+void f(wchar_t *w = EXPANDME1);
+#undef EXPANDME1

@@ -1,0 +1,2 @@
+#define EXPANDME1(x) ##
+EXPANDME1(0)

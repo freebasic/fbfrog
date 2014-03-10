@@ -1,0 +1,10 @@
+[dos]
+        parsing: tests/errors/cpp/expand/merge-alone-objectlike.h
+tests/errors/cpp/expand/merge-alone-objectlike.h(1): ## merge operator at beginning of macro body, missing operand to merge with
+    1: #define EXPANDME1 ##
+                         ^~
+    2: EXPANDME1
+    3: 
+construct's code as seen by fbfrog:
+    ##
+    ^~

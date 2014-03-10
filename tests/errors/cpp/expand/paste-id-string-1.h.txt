@@ -1,0 +1,10 @@
+[dos]
+        parsing: tests/errors/cpp/expand/paste-id-string-1.h
+tests/errors/cpp/expand/paste-id-string-1.h(1): ## merge operator cannot merge 'a' and '" b"'
+    1: #define m(l, r) l ## #r
+                         ^~
+    2: m(a, b)
+    3: 
+construct's code as seen by fbfrog:
+    a ## " b"
+      ^~

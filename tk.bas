@@ -24,7 +24,8 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	( NULL  , @"begin"    ), _
 	( NULL  , @"end"      ), _
 	( NULL  , @"ppmerge"  ), _
-	( NULL  , @"emptymacroparam" ), _
+	( NULL  , @"argbegin" ), _
+	( NULL  , @"argend"   ), _
 	( NULL  , @"eol"      ), _
 	( NULL  , @"comment"  ), _
 	( NULL  , @"begininclude" ), _
@@ -153,8 +154,8 @@ end function
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 type ONETOKEN
-	id		as short  '' TK_*
-	behindspace	as short  '' whether this token was preceded by spaces
+	id		as integer  '' TK_*
+	flags		as integer  '' TKFLAG_*
 
 	'' TK_ID: Identifier
 	''
@@ -247,6 +248,9 @@ end function
 function tkDumpOne( byval x as integer ) as string
 	var p = tkAccess( x )
 	var s = str( x ) + " " + tkDumpBasic( p->id, p->text )
+
+	if( tkGetFlags( x ) and TKFLAG_BEHINDSPACE ) then s += " behindspace"
+	if( tkGetFlags( x ) and TKFLAG_NOEXPAND    ) then s += " noexpand"
 
 	s += hDumpComment( p->comment )
 
@@ -387,11 +391,11 @@ sub tkCopy( byval x as integer, byval first as integer, byval last as integer )
 
 		src = tkAccess( first )
 		var dst = tkAccess( x )
-		dst->behindspace = src->behindspace
-		dst->ast = astClone( src->ast )
-		dst->location = src->location
+		dst->flags          = src->flags
+		dst->ast            = astClone( src->ast )
+		dst->location       = src->location
 		dst->expansionlevel = src->expansionlevel
-		dst->comment = strDuplicate( src->comment )
+		dst->comment        = strDuplicate( src->comment )
 
 		x += 1
 		first += 1
@@ -515,15 +519,15 @@ function tkGetMaxExpansionLevel( byval first as integer, byval last as integer )
 	function = maxlevel
 end function
 
-sub tkSetBehindSpace( byval x as integer )
+sub tkAddFlags( byval x as integer, byval flags as integer )
 	var p = tkAccess( x )
 	if( p->id <> TK_EOF ) then
-		p->behindspace = TRUE
+		p->flags or= flags
 	end if
 end sub
 
-function tkGetBehindSpace( byval x as integer ) as integer
-	function = tkAccess( x )->behindspace
+function tkGetFlags( byval x as integer ) as integer
+	function = tkAccess( x )->flags
 end function
 
 sub tkSetComment( byval x as integer, byval comment as zstring ptr )
@@ -712,6 +716,7 @@ private function hMakePrettyCTokenText _
 	) as string
 
 	select case as const( id )
+	case TK_PPMERGE   : function = "##"
 	case TK_PPENDIF   : function = "#endif"
 	case TK_DECNUM    : function = *text
 	case TK_HEXNUM    : function = "0x" + *text
@@ -733,7 +738,7 @@ private function hMakePrettyCTokenText _
 
 end function
 
-private function hMakePrettyCTokenTextForIndex( byval x as integer ) as string
+function tkMakePrettyCTokenText( byval x as integer ) as string
 	var t = tkGetAst( x )
 	if( t ) then
 		function = astDumpInline( t )
@@ -765,7 +770,7 @@ private function tkToCText _
 		if( i = x ) then
 			xcolumn = len( s )
 		end if
-		s += hMakePrettyCTokenTextForIndex( i )
+		s += tkMakePrettyCTokenText( i )
 		if( i = x ) then
 			xlength = len( s ) - xcolumn
 		end if
@@ -779,14 +784,14 @@ function hFindConstructEnd( byval x as integer ) as integer
 
 	do
 		select case( tkGet( x ) )
-		case TK_SEMI '' ';'
+		case TK_SEMI
 			x += 1
 			exit do
 
 		case TK_EOF, _
-		     TK_END, _   '' end of inserted #define bodies
-		     TK_DIVIDER, _  '' known dividing whitespace
-		     TK_PPINCLUDE, TK_PPDEFINE, TK_PPUNDEF, _  '' PP directives
+		     TK_BEGIN, TK_END, _
+		     TK_DIVIDER, _
+		     TK_PPINCLUDE, TK_PPDEFINE, TK_PPUNDEF, _
 		     TK_PPIF, TK_PPELSEIF, TK_PPELSE, TK_PPENDIF, _
 		     TK_PPERROR, TK_PPWARNING, _
 		     TK_OPTION

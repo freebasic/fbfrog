@@ -1,5 +1,10 @@
 [dos]
         parsing: tests/errors/cpp/expand/merge-nonhexdigits.h
-14 [hexnum ""]
-16 [id "G"]
-oops, cannot merge these two tokens when expanding macro 'EXPANDME1'
+tests/errors/cpp/expand/merge-nonhexdigits.h(1): ## merge operator cannot merge '0x' and 'G'
+    1: #define EXPANDME1 0x ## G
+                            ^~
+    2: enum E {
+    3:  A = EXPANDME1
+construct's code as seen by fbfrog:
+    enum E { [eol] A = EXPANDME1 [begin] 0x ## G
+                                            ^~

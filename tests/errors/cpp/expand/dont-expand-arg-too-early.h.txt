@@ -1,0 +1,11 @@
+[dos]
+        parsing: tests/errors/cpp/expand/dont-expand-arg-too-early.h
+tests/errors/cpp/expand/dont-expand-arg-too-early.h(3): not enough arguments for 'm' macro call: 1 given, 2 needed
+    1: #define comma ,
+    2: #define m(x, y)
+    3: m(1 comma 2) // error: only 1 arg given, but 2 required
+                  ^
+    4: 
+construct's code as seen by fbfrog:
+    m ( 1 comma 2 ) [eol]
+                  ^

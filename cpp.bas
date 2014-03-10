@@ -49,6 +49,8 @@
 
 #include once "fbfrog.bi"
 
+declare sub hMaybeExpandMacro( byref x as integer )
+
 private function hIsBeforeEol _
 	( _
 		byval x as integer, _
@@ -604,7 +606,8 @@ sub hMacroParamList( byref x as integer, byval t as ASTNODE ptr )
 	x += 1
 
 	'' '(' following directly behind the macro id, no spaces in between?
-	if( (tkGet( x ) = TK_LPAREN) and (not tkGetBehindSpace( x )) ) then
+	if( (tkGet( x ) = TK_LPAREN) and _
+	    ((tkGetFlags( x ) and TKFLAG_BEHINDSPACE) = 0) ) then
 		'' '('
 		x += 1
 		t->paramcount = 0
@@ -827,525 +830,6 @@ private sub cppIdentifyDirectives( )
 end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-'' Macro call parsing & macro expansion functions used by cppMain()
-
-const MAXARGS = 128
-dim shared as integer argbegin(0 to MAXARGS-1), argend(0 to MAXARGS-1), argcount
-
-private sub hMacroCallArgs _
-	( _
-		byref x as integer, _
-		byval macro as ASTNODE ptr _
-	)
-
-	'' For each arg...
-	do
-		if( argcount = MAXARGS ) then
-			tkOops( x, "macro call arg buffer too small, MAXARGS=" & MAXARGS )
-		end if
-
-		argbegin(argcount) = x
-
-		'' For each token that's part of this arg...
-		var level = 0
-		do
-			select case( tkGet( x ) )
-			case TK_LPAREN
-				level += 1
-			case TK_RPAREN
-				if( level <= 0 ) then
-					exit do
-				end if
-				level -= 1
-			case TK_COMMA
-				if( level <= 0 ) then
-					exit do
-				end if
-			case TK_EOF
-				tkOopsExpected( x, "')' to close macro call argument list" )
-			end select
-			x += 1
-		loop
-
-		argend(argcount) = x - 1
-		argcount += 1
-
-		'' ','?
-		if( tkGet( x ) <> TK_COMMA ) then
-			exit do
-		end if
-		x += 1
-	loop
-
-	'' As many args as params?
-	if( argcount <> macro->paramcount ) then
-		dim s as string
-		if( argcount > macro->paramcount ) then
-			s = "too many"
-		else
-			s = "not enough"
-		end if
-		s += " arguments for '" + *macro->text + "' macro call: "
-		s &= argcount & " given, " & macro->paramcount & " needed"
-		tkOops( x, s )
-	end if
-end sub
-
-private function hStringify( byval arg as integer ) as string
-	'' Turn this macro argument's tokens into a string and
-	'' insert it as string literal
-	dim as string s
-
-	assert( (arg >= 0) and (arg < argcount) )
-	for i as integer = argbegin(arg) to argend(arg)
-		if( tkGetBehindSpace( i ) ) then
-			s += " "
-		end if
-
-		select case as const( tkGet( i ) )
-		case TK_ID       : s += *tkGetText( i )
-		case TK_DECNUM   : s += *tkGetText( i )
-		case TK_HEXNUM   : s += "0x" + *tkGetText( i )
-		case TK_OCTNUM   : s += "0" + *tkGetText( i )
-		case TK_DECFLOAT : s += *tkGetText( i )
-		case TK_STRING   : s += """" + *tkGetText( i ) + """"
-		case TK_CHAR     : s += "'" + *tkGetText( i ) + "'"
-		case TK_WSTRING  : s += "L""" + *tkGetText( i ) + """"
-		case TK_WCHAR    : s += "L'" + *tkGetText( i ) + "'"
-		case TK_EXCL to TK_TILDE, KW__C_FIRST to KW__C_LAST
-			s += *tkInfoText( tkGet( i ) )
-		case else
-			tkOops( i, "can't #stringify this token" )
-		end select
-	next
-
-	function = s
-end function
-
-private sub hTryMergeTokens _
-	( _
-		byval l as integer, _
-		byval r as integer, _
-		byref mergetk as integer, _
-		byref mergetext as string _
-	)
-
-	'' Try to merge the two tokens
-	select case( tkGet( l ) )
-	case is >= TK_ID
-		select case( tkGet( r ) )
-		'' id ## id -> id
-		case is >= TK_ID
-			mergetk = TK_ID
-			mergetext = *tkGetIdOrKw( l ) + *tkGetIdOrKw( r )
-
-		'' id ## decnum -> id
-		case TK_DECNUM
-			mergetk = TK_ID
-			mergetext = *tkGetIdOrKw( l ) + *tkGetText( r )
-
-		'' id ## hexnum -> id
-		case TK_HEXNUM
-			mergetk = TK_ID
-			mergetext = *tkGetIdOrKw( l ) + "0x" + *tkGetText( r )
-
-		'' id ## octnum -> id
-		case TK_OCTNUM
-			mergetk = TK_ID
-			mergetext = *tkGetIdOrKw( l ) + "0" + *tkGetText( r )
-
-		end select
-
-	case TK_DECNUM
-		select case( tkGet( r ) )
-		'' decnum ## id -> hexnum (0##xFF)
-		case is >= TK_ID
-			var ltext = *tkGetText( l )
-			var rtext = *tkGetIdOrKw( r )
-			'' lhs must be '0', rhs must start with 'x'
-			if( (ltext = "0") and (left( rtext, 1 ) = "x") ) then
-				'' Rest of rhs must be only hex digits, or empty
-				var hexdigits = right( rtext, len( rtext ) - 1 )
-				if( strContainsNonHexDigits( hexdigits ) = FALSE ) then
-					mergetk = TK_HEXNUM
-					mergetext = hexdigits
-				end if
-			end if
-
-		'' decnum ## decnum -> octnum (0##1), decnum (1##2)
-		case TK_DECNUM
-			var ltext = *tkGetText( l )
-			var rtext = *tkGetText( r )
-			if( ltext = "0" ) then
-				if( strContainsNonOctDigits( rtext ) = FALSE ) then
-					mergetk = TK_OCTNUM
-					mergetext = rtext
-				end if
-			else
-				mergetk = TK_DECNUM
-				mergetext = ltext + rtext
-			end if
-
-		'' decnum ## octnum -> octnum (0##01), decnum (1##01)
-		case TK_OCTNUM
-			var ltext = *tkGetText( l )
-			var rtext = *tkGetText( r )
-			if( ltext = "0" ) then
-				mergetk = TK_OCTNUM
-				mergetext = rtext
-			else
-				mergetk = TK_DECNUM
-				mergetext = ltext + "0" + rtext
-			end if
-
-		end select
-
-	case TK_HEXNUM
-		select case( tkGet( r ) )
-		'' hexnum ## id -> hexnum (0xAA##BB)
-		case is >= TK_ID
-			var rtext = tkGetIdOrKw( r )
-			if( strContainsNonHexDigits( rtext ) = FALSE ) then
-				mergetk = TK_HEXNUM
-				mergetext = *tkGetText( l ) + *rtext
-			end if
-
-		'' hexnum ## decnum -> hexnum (0xFF##123)
-		case TK_DECNUM
-			mergetk = TK_HEXNUM
-			mergetext = *tkGetText( l ) + *tkGetText( r )
-
-		'' hexnum ## octnum -> hexnum (0xFF##01)
-		case TK_OCTNUM
-			mergetk = TK_HEXNUM
-			mergetext = *tkGetText( l ) + "0" + *tkGetText( r )
-
-		end select
-
-	case TK_OCTNUM
-		select case( tkGet( r ) )
-		'' octnum ## decnum -> octnum (01##2)
-		case TK_DECNUM
-			var rtext = tkGetText( r )
-			if( strContainsNonOctDigits( rtext ) = FALSE ) then
-				mergetk = TK_OCTNUM
-				mergetext = *tkGetText( l ) + *rtext
-			end if
-
-		'' octnum ## octnum -> octnum (01##01)
-		case TK_OCTNUM
-			mergetk = TK_OCTNUM
-			mergetext = *tkGetText( l ) + "0" + *tkGetText( r )
-
-		end select
-
-	end select
-
-end sub
-
-function hInsertMacroBody _
-	( _
-		byval x as integer, _
-		byval macro as ASTNODE ptr _
-	) as integer
-
-	tkInsert( x, TK_BEGIN )
-	x += 1
-
-	var macrobody = macro->expr
-	if( macrobody ) then
-		assert( macrobody->class = ASTCLASS_MACROBODY )
-		var tk = macrobody->head
-		while( tk )
-			assert( tk->class = ASTCLASS_TK )
-
-			tkInsert( x, tk->tk, tk->text )
-			tkSetLocation( x, @tk->location )
-			x += 1
-
-			tk = tk->next
-		wend
-	end if
-
-	tkInsert( x, TK_END )
-	x += 1
-
-	function = x
-end function
-
-private sub hInsertMacroExpansion _
-	( _
-		byref x as integer, _
-		byval macro as ASTNODE ptr _
-	)
-
-	''
-	'' Temporarily insert the macro body tokens from AST back into the
-	'' tk buffer, allowing them to be accessed easily be index, instead of
-	'' the linked list of ASTNODEs. Once done with the macro expansion, the
-	'' inserted body needs to be removed again.
-	''
-	'' It's easiest to insert the body at the front of the tk buffer, since
-	'' then only the x position has to be shifted once at the beginning and
-	'' once at the end. The code below assumes that the expansion is
-	'' inserted behind the macro body, so that the token positions
-	'' referencing the body don't need to be adjusted every time an
-	'' expansion token is inserted.
-	''
-	'' Also, surround the macro body with TK_BEGIN/TK_END, to allow the code
-	'' below to read "out-of-bounds" by -1 or +1, which simplifies handling
-	'' of '#' stringify and '##' merge operators.
-	''
-	const bodybegin = 0
-	var bodyend = hInsertMacroBody( bodybegin, macro ) - 1
-	assert( tkGet( bodybegin ) = TK_BEGIN )
-	assert( tkGet( bodyend ) = TK_END )
-	'' x and the positions stored into argbegin()/argend() must be updated
-	x += bodyend - bodybegin + 1
-	for i as integer = 0 to argcount-1
-		argbegin(i) += bodyend - bodybegin + 1
-		argend(i)   += bodyend - bodybegin + 1
-	next
-
-	''
-	'' Notes on '##' merging:
-	''
-	'' The operands of '##' must be expanded in case they're macro
-	'' parameters. If the corresponding arguments are empty and the macro
-	'' parameters expand to nothing, then no merging is done on that side,
-	'' perhaps none at all.
-	''
-	'' Specifically, no merging is done with preceding or following tokens
-	'' coming from somewhere else besides those macro parameters.
-	''
-	'' If a macro parameter expands to multiple tokens, the merging operator
-	'' affects the last/first token from the lhs/rhs operands respectively,
-	'' not necessarily all the tokens inserted in place of the parameter(s).
-	''
-	'' It seems like a good idea to do parameter expansion and '##' merging
-	'' in two separate passes. For this, the 1st pass
-	''  - must expand empty macro parameters to a place-holder token
-	''    (TK_EMPTYMACROPARAM)
-	''  - and also somehow mark '##' from the macro body for merging
-	''    (TK_HASHHASH turned into TK_PPMERGE)
-	'' allowing the 2nd pass to
-	''  - tell when a '##' operand was empty, to avoid accidentally using
-	''    unrelated preceding/following tokens as '##' operand(s)
-	''  - tell when a '##' came from the macro body (then it should be used
-	''    for merging) or a macro argument (then no merging)
-	''
-
-	var xbegin = x
-
-	'' Pass 1: For each token in the macro body...
-	var b = bodybegin + 1
-	do
-		select case( tkGet( b ) )
-		case TK_END
-			exit do
-
-		'' '#' stringify operator
-		case TK_HASH
-			b += 1
-
-			var is_stringify = FALSE
-
-			'' Followed by identifier?
-			if( tkGet( b ) = TK_ID ) then
-				'' Is it a macro parameter?
-				var arg = astLookupMacroParam( macro, tkGetText( b ) )
-				if( arg >= 0 ) then
-					tkInsert( x, TK_STRING, hStringify( arg ) )
-					x += 1
-					is_stringify = TRUE
-				end if
-			end if
-
-			if( is_stringify = FALSE ) then
-				'' Plain '#' (probably never used in practice?)
-				b -= 1
-				tkCopy( x, b, b )
-				x += 1
-			end if
-
-		'' '##'
-		case TK_HASHHASH
-			'' Insert TK_PPMERGE instead, for pass 2
-			tkInsert( x, TK_PPMERGE )
-			x += 1
-
-		'' Identifier
-		case TK_ID
-			'' Expand if it's a macro parameter
-			var arg = astLookupMacroParam( macro, tkGetText( b ) )
-			if( arg >= 0 ) then
-				'' Argument was empty?
-				if( argbegin(arg) > argend(arg) ) then
-					'' Insert place-holder, for pass 2
-					tkInsert( x, TK_EMPTYMACROPARAM )
-					x += 1
-				else
-					'' Insert the arg's tokens into the expansion
-					tkCopy( x, argbegin(arg), argend(arg) )
-					x += argend(arg) - argbegin(arg) + 1
-				end if
-			else
-				'' Not a macro parameter, insert as-is
-				tkCopy( x, b, b )
-				x += 1
-			end if
-
-		case else
-			'' Uninteresting token, insert as-is
-			tkCopy( x, b, b )
-			x += 1
-		end select
-
-		b += 1
-	loop
-
-	'' Pass 2: Do '##' merging in the expansion
-	scope
-		var y = xbegin
-		while( y < x )
-			'' '##' from original macro body (and not '##' from a macro argument)?
-			if( tkGet( y ) = TK_PPMERGE ) then
-				'' Find lhs/rhs tokens, unless they're TK_EMPTYMACROPARAMs,
-				'' or don't exist at all (out-of-bounds), in case of '##'
-				'' at begin and/or end of the macro body.
-				var l = y - 1
-				if( l < xbegin ) then
-					l = -1
-				elseif( tkGet( l ) = TK_EMPTYMACROPARAM ) then
-					l = -1
-				end if
-
-				var r = y + 1
-				if( r >= x ) then
-					r = -1
-				elseif( tkGet( r ) = TK_EMPTYMACROPARAM ) then
-					r = -1
-				end if
-
-				if( (l >= 0) and (r >= 0) ) then
-					dim as integer mergetk = -1
-					dim as string mergetext
-
-					hTryMergeTokens( l, r, mergetk, mergetext )
-
-					if( mergetk < 0 ) then
-						print tkDumpOne( l )
-						print tkDumpOne( r )
-						oops( "cannot merge these two tokens when expanding macro '" & *macro->text & "'" )
-					end if
-
-					'' Insert merged token in front of the '##'
-					tkInsert( y, mergetk, mergetext )
-					y += 1
-					r += 1
-					x += 1
-
-					'' Remove l/r
-					tkRemove( l, l )
-					y -= 1
-					r -= 1
-					x -= 1
-					tkRemove( r, r )
-					x -= 1
-				'elseif( l >= 0 ) then
-					'' No rhs, simply preserve the lhs
-				'elseif( r >= 0 ) then
-					'' No lhs, simply preserve the rhs
-				'else
-					'' Nothing to merge at all
-				end if
-
-				'' '##'
-				assert( tkGet( y ) = TK_PPMERGE )
-				tkRemove( y, y )
-				y -= 1
-				x -= 1
-			end if
-
-			y += 1
-		wend
-	end scope
-
-	'' Pass 3: Remove TK_EMPTYMACROPARAM place holders from the expansion
-	scope
-		var y = xbegin
-		while( y < x )
-			if( tkGet( y ) = TK_EMPTYMACROPARAM ) then
-				tkRemove( y, y )
-				y -= 1
-				x -= 1
-			end if
-			y += 1
-		wend
-	end scope
-
-	'' Remove the macro body that was temporarily inserted above
-	tkRemove( bodybegin, bodyend )
-	x -= bodyend - bodybegin + 1
-end sub
-
-private function hMacroCall _
-	( _
-		byval x as integer, _
-		byval macro as ASTNODE ptr _
-	) as integer
-
-	var begin = x
-
-	'' ID
-	assert( tkGet( x ) = TK_ID )
-	x += 1
-
-	argcount = -1
-
-	'' Not just "#define m"?
-	if( macro->paramcount >= 0 ) then
-		'' '('?
-		if( tkGet( x ) <> TK_LPAREN ) then
-			return FALSE
-		end if
-		x += 1
-
-		argcount = 0
-
-		'' Not just "#define m()"?
-		if( macro->paramcount > 0 ) then
-			'' Parse the argument list and fill the argbegin() and
-			'' argend() arrays accordingly
-			hMacroCallArgs( x, macro )
-		end if
-
-		'' ')'?
-		tkExpect( x, TK_RPAREN, "to close macro call argument list" )
-		x += 1
-	end if
-
-	var expansionbegin = x
-
-	'' Insert the macro body behind the call (this way the positions
-	'' stored in argbegin()/argend() stay valid)
-	hInsertMacroExpansion( x, macro )
-
-	'' Set expansion level on the expansion tokens,
-	'' = minlevel from macro call tokens + 1
-	tkSetExpansionLevel( expansionbegin, x - 1, _
-		tkGetExpansionLevel( _
-			tkFindTokenWithMinExpansionLevel( begin, expansionbegin - 1 ) _
-		) + 1 )
-
-	'' Then remove the call tokens
-	tkRemove( begin, expansionbegin - 1 )
-	x -= (expansionbegin - 1) - begin + 1
-
-	function = TRUE
-end function
-
-''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 namespace eval
 	'' Lists of known macros etc. Initial symbols can be added before
@@ -1440,20 +924,722 @@ private function hShouldExpandSym( byval id as zstring ptr ) as integer
 	function = (hashLookup( @eval.noexpands, id, hashHash( id ) )->s = NULL)
 end function
 
-private sub hMaybeExpandId( byref x as integer )
+private function hCheckForMacroCall( byval x as integer ) as ASTNODE ptr
 	assert( tkGet( x ) = TK_ID )
 	var id = tkGetText( x )
+
+	'' Is this id a macro?
 	var macro = hLookupMacro( id )
-	if( macro ) then
-		'' Only expand if not registered as NOEXPAND
-		if( hShouldExpandSym( id ) ) then
-			if( hMacroCall( x, macro ) ) then
-				'' The macro call will be replaced with the body,
-				'' the token at the TK_ID's position must be re-parsed.
+	if( macro = NULL ) then
+		exit function
+	end if
+
+	'' Only expand if not marked otherwise
+	if( (not hShouldExpandSym( id )) or _
+	    (tkGetFlags( x ) and TKFLAG_NOEXPAND) or _
+	    (macro->attrib and ASTATTRIB_POISONED) ) then
+		exit function
+	end if
+
+	function = macro
+end function
+
+const MAXARGS = 128
+
+private sub hParseMacroCallArgs _
+	( _
+		byref x as integer, _
+		byval macro as ASTNODE ptr, _
+		byval argbegin as integer ptr, _
+		byval argend as integer ptr, _
+		byref argcount as integer _
+	)
+
+	'' Note: The macro call argument list must be parsed without doing
+	'' macro expansion. Each argument individually must be expanded later,
+	'' but not before the list has been parsed & split up into individual
+	'' arguments. I.e. the commas or closing ')' cannot come from macro
+	'' expansions.
+
+	'' For each arg...
+	do
+		if( argcount >= MAXARGS ) then
+			tkOops( x, "macro call arg buffer too small, MAXARGS=" & MAXARGS )
+		end if
+
+		argbegin[argcount] = x
+
+		'' For each token that's part of this arg...
+		var level = 0
+		do
+			select case( tkGet( x ) )
+			case TK_LPAREN
+				level += 1
+			case TK_RPAREN
+				if( level <= 0 ) then
+					exit do
+				end if
+				level -= 1
+			case TK_COMMA
+				if( level <= 0 ) then
+					exit do
+				end if
+			case TK_EOF
+				tkOopsExpected( x, "')' to close macro call argument list" )
+			end select
+			x += 1
+		loop
+
+		argend[argcount] = x - 1
+		argcount += 1
+
+		'' ','?
+		if( tkGet( x ) <> TK_COMMA ) then
+			exit do
+		end if
+		x += 1
+	loop
+
+	'' As many args as params?
+	if( argcount <> macro->paramcount ) then
+		dim s as string
+		if( argcount > macro->paramcount ) then
+			s = "too many"
+		else
+			s = "not enough"
+		end if
+		s += " arguments for '" + *macro->text + "' macro call: "
+		s &= argcount & " given, " & macro->paramcount & " needed"
+		tkOops( x, s )
+	end if
+end sub
+
+private function hParseMacroCall _
+	( _
+		byval x as integer, _
+		byval macro as ASTNODE ptr, _
+		byval argbegin as integer ptr, _
+		byval argend as integer ptr, _
+		byref argcount as integer _
+	) as integer
+
+	var begin = x
+
+	'' ID
+	assert( tkGet( x ) = TK_ID )
+	x += 1
+
+	argcount = -1
+
+	'' Not just "#define m"?
+	if( macro->paramcount >= 0 ) then
+		'' '('?
+		if( tkGet( x ) <> TK_LPAREN ) then
+			return -1
+		end if
+		x += 1
+
+		argcount = 0
+
+		'' Not just "#define m()"?
+		if( macro->paramcount > 0 ) then
+			'' Parse the argument list and fill the argbegin() and
+			'' argend() arrays accordingly
+			hParseMacroCallArgs( x, macro, argbegin, argend, argcount )
+		end if
+
+		'' ')'?
+		tkExpect( x, TK_RPAREN, "to close macro call argument list" )
+		x += 1
+	end if
+
+	function = x - 1
+end function
+
+private function hStringify _
+	( _
+		byval arg as integer, _
+		byval argbegin as integer ptr, _
+		byval argend as integer ptr, _
+		byval argcount as integer _
+	) as string
+
+	'' Turn this macro argument's tokens into a string and
+	'' insert it as string literal
+	dim as string s
+
+	assert( (arg >= 0) and (arg < argcount) )
+	for i as integer = argbegin[arg] to argend[arg]
+		if( tkGetFlags( i ) and TKFLAG_BEHINDSPACE ) then
+			s += " "
+		end if
+
+		select case as const( tkGet( i ) )
+		case TK_ID       : s += *tkGetText( i )
+		case TK_DECNUM   : s += *tkGetText( i )
+		case TK_HEXNUM   : s += "0x" + *tkGetText( i )
+		case TK_OCTNUM   : s += "0" + *tkGetText( i )
+		case TK_DECFLOAT : s += *tkGetText( i )
+		case TK_STRING   : s += """" + *tkGetText( i ) + """"
+		case TK_CHAR     : s += "'" + *tkGetText( i ) + "'"
+		case TK_WSTRING  : s += "L""" + *tkGetText( i ) + """"
+		case TK_WCHAR    : s += "L'" + *tkGetText( i ) + "'"
+		case TK_EXCL to TK_TILDE, KW__C_FIRST to KW__C_LAST
+			s += *tkInfoText( tkGet( i ) )
+		case else
+			tkOops( i, "can't #stringify this token" )
+		end select
+	next
+
+	function = s
+end function
+
+private sub hTryMergeTokens _
+	( _
+		byval l as integer, _
+		byval r as integer, _
+		byref mergetk as integer, _
+		byref mergetext as string _
+	)
+
+	'' Try to merge the two tokens
+	select case( tkGet( l ) )
+	case is >= TK_ID
+		select case( tkGet( r ) )
+		'' id ## id -> id/keyword
+		case is >= TK_ID
+			mergetext = *tkGetIdOrKw( l ) + *tkGetIdOrKw( r )
+			mergetk = hIdentifyCKeyword( mergetext )
+			'' If it's a KW_*, no need to store the text
+			if( mergetk <> TK_ID ) then
+				mergetext = ""
+			end if
+
+		'' id ## decnum -> id
+		case TK_DECNUM
+			mergetk = TK_ID
+			mergetext = *tkGetIdOrKw( l ) + *tkGetText( r )
+
+		'' id ## hexnum -> id
+		case TK_HEXNUM
+			mergetk = TK_ID
+			mergetext = *tkGetIdOrKw( l ) + "0x" + *tkGetText( r )
+
+		'' id ## octnum -> id
+		case TK_OCTNUM
+			mergetk = TK_ID
+			mergetext = *tkGetIdOrKw( l ) + "0" + *tkGetText( r )
+
+		'' L ## "string" -> L"wstring"
+		case TK_STRING
+			if( *tkGetIdOrKw( l ) = "L" ) then
+				mergetk = TK_WSTRING
+				mergetext = *tkGetText( r )
+			end if
+
+		'' L ## 'c' -> L'w'
+		case TK_CHAR
+			if( *tkGetIdOrKw( l ) = "L" ) then
+				mergetk = TK_WCHAR
+				mergetext = *tkGetText( r )
+			end if
+		end select
+
+	case TK_DECNUM
+		select case( tkGet( r ) )
+		'' decnum ## id -> hexnum (0##xFF)
+		case is >= TK_ID
+			var ltext = *tkGetText( l )
+			var rtext = *tkGetIdOrKw( r )
+			'' lhs must be '0', rhs must start with 'x'
+			if( (ltext = "0") and (left( rtext, 1 ) = "x") ) then
+				'' Rest of rhs must be only hex digits, or empty
+				var hexdigits = right( rtext, len( rtext ) - 1 )
+				if( strContainsNonHexDigits( hexdigits ) = FALSE ) then
+					mergetk = TK_HEXNUM
+					mergetext = hexdigits
+				end if
+			end if
+
+		'' decnum ## decnum -> octnum (0##1), decnum (1##2)
+		case TK_DECNUM
+			var ltext = *tkGetText( l )
+			var rtext = *tkGetText( r )
+			if( ltext = "0" ) then
+				if( strContainsNonOctDigits( rtext ) = FALSE ) then
+					mergetk = TK_OCTNUM
+					mergetext = rtext
+				end if
+			else
+				mergetk = TK_DECNUM
+				mergetext = ltext + rtext
+			end if
+
+		'' decnum ## octnum -> octnum (0##01), decnum (1##01)
+		case TK_OCTNUM
+			var ltext = *tkGetText( l )
+			var rtext = *tkGetText( r )
+			if( ltext = "0" ) then
+				mergetk = TK_OCTNUM
+				mergetext = rtext
+			else
+				mergetk = TK_DECNUM
+				mergetext = ltext + "0" + rtext
+			end if
+
+		end select
+
+	case TK_HEXNUM
+		select case( tkGet( r ) )
+		'' hexnum ## id -> hexnum (0xAA##BB)
+		case is >= TK_ID
+			var rtext = tkGetIdOrKw( r )
+			if( strContainsNonHexDigits( rtext ) = FALSE ) then
+				mergetk = TK_HEXNUM
+				mergetext = *tkGetText( l ) + *rtext
+			end if
+
+		'' hexnum ## decnum -> hexnum (0xFF##123)
+		case TK_DECNUM
+			mergetk = TK_HEXNUM
+			mergetext = *tkGetText( l ) + *tkGetText( r )
+
+		'' hexnum ## octnum -> hexnum (0xFF##01)
+		case TK_OCTNUM
+			mergetk = TK_HEXNUM
+			mergetext = *tkGetText( l ) + "0" + *tkGetText( r )
+
+		end select
+
+	case TK_OCTNUM
+		select case( tkGet( r ) )
+		'' octnum ## decnum -> octnum (01##2)
+		case TK_DECNUM
+			var rtext = tkGetText( r )
+			if( strContainsNonOctDigits( rtext ) = FALSE ) then
+				mergetk = TK_OCTNUM
+				mergetext = *tkGetText( l ) + *rtext
+			end if
+
+		'' octnum ## octnum -> octnum (01##01)
+		case TK_OCTNUM
+			mergetk = TK_OCTNUM
+			mergetext = *tkGetText( l ) + "0" + *tkGetText( r )
+
+		end select
+
+	end select
+
+end sub
+
+sub hInsertMacroBody( byval x as integer, byval macro as ASTNODE ptr )
+	tkInsert( x, TK_BEGIN )
+	x += 1
+
+	var macrobody = macro->expr
+	if( macrobody ) then
+		assert( macrobody->class = ASTCLASS_MACROBODY )
+		var tk = macrobody->head
+		while( tk )
+			assert( tk->class = ASTCLASS_TK )
+
+			tkInsert( x, tk->tk, tk->text )
+			tkSetLocation( x, @tk->location )
+			x += 1
+
+			tk = tk->next
+		wend
+	end if
+
+	tkInsert( x, TK_END )
+end sub
+
+private function hExpandInRange _
+	( _
+		byval first as integer, _
+		byval last as integer _
+	) as integer
+
+	if( last < first ) then
+		return last
+	end if
+
+	'' Insert TK_BEGIN/TK_END around the argument's tokens, to prevent the
+	'' macro call parsing functions from reading out-of-bounds.
+	tkInsert( first, TK_BEGIN )
+	last += 1
+	last += 1
+	tkInsert( last, TK_END )
+	assert( tkGet( first ) = TK_BEGIN )
+	assert( tkGet( last ) = TK_END )
+
+	scope
+		'' Expand anything in the range
+		var x = first + 1
+		while( tkGet( x ) <> TK_END )
+			if( tkGet( x ) = TK_ID ) then
+				hMaybeExpandMacro( x )
+			end if
+			x += 1
+		wend
+		last = x
+	end scope
+
+	'' Remove TK_BEGIN/TK_END again
+	assert( tkGet( first ) = TK_BEGIN )
+	assert( tkGet( last ) = TK_END )
+	tkRemove( first, first )
+	last -= 1
+	tkRemove( last, last )
+	last -= 1
+
+	function = last
+end function
+
+''
+'' - Macro arguments must be inserted in place of macro parameters, and fully
+''   macro-expanded, but only self-contained without help from tokens outside
+''   the argument.
+''
+'' - Arguments used with # mustn't be macro-expanded, and for arguments used
+''   with ##, the last/first token musn't be macro-expanded depending on whether
+''   the parameter was on the lhs/rhs of the ## (but the rest of the argument's
+''   tokens that aren't used by the ##, if any, must be macro-expanded).
+''   I.e. macro expansion mustn't be done when parsing the arguments, but later
+''   when inserting them in place of parameters, with the given restrictions.
+''
+'' - # or ## tokens coming from arguments must not be treated as stringify/merge
+''   operators. This must be done only for # or ## in the macro body.
+''
+'' - #stringify operations must be solved before ## merging (e.g. <L ## #param>
+''   becomes <L"argtext">)
+''
+'' - ## operands may be empty: if an argument is used with ##, but the argument
+''   is empty, then the ## doesn't merge anything. ## with 2 empty operands
+''   is removed completely. Macro body token(s) preceding/following the ##
+''   operand are not taken into account for the merge. Empty ## operand doesn't
+''   cause preceding/following tokens to be used instead.
+''
+'' - If a macro parameter expands to multiple tokens, ## affects the last/first
+''   token from the lhs/rhs operands respectively, but not all the tokens
+''   inserted in place of the parameter(s).
+''
+private function hInsertMacroExpansion _
+	( _
+		byval expansionbegin as integer, _
+		byval macro as ASTNODE ptr, _
+		byval argbegin as integer ptr, _
+		byval argend as integer ptr, _
+		byval argcount as integer _
+	) as integer
+
+	'' Insert the macro body tokens from AST into the tk buffer, surrounded
+	'' with TK_BEGIN/TK_END, to allow the code below to read "out-of-bounds"
+	'' by -1 or +1, which simplifies handling of # and ## operators.
+	''
+	'' Having the TK_END also removes the need to keep track of the end of
+	'' the expansion through all the insertions/deletions done here.
+	'' Instead, if we need to know the end of the expansion, we can just
+	'' look for the TK_END.
+	hInsertMacroBody( expansionbegin, macro )
+
+	'' Solve #stringify operators (higher priority than ##, and no macro
+	'' expansion done for the arg)
+	var x = expansionbegin + 1
+	while( tkGet( x ) <> TK_END )
+
+		'' '#param'?
+		if( tkGet( x ) = TK_HASH ) then
+			'' Followed by identifier?
+			if( tkGet( x + 1 ) = TK_ID ) then
+				'' Is it a macro parameter?
+				var arg = astLookupMacroParam( macro, tkGetText( x + 1 ) )
+				if( arg >= 0 ) then
+					'' Remove #param, and insert stringify result instead
+					tkFold( x, x + 1, TK_STRING, hStringify( arg, argbegin, argend, argcount ) )
+				end if
+			end if
+		end if
+
+		x += 1
+	wend
+
+	'' Replace ## tokens by special internal merge operator tokens, so that
+	'' ## tokens from macro arguments aren't mistaken for merge operators.
+	x = expansionbegin + 1
+	while( tkGet( x ) <> TK_END )
+
+		'' '##'?
+		if( tkGet( x ) = TK_HASHHASH ) then
+			tkFold( x, x, TK_PPMERGE )
+		end if
+
+		x += 1
+	wend
+
+	'' Insert args into params, surrounded with TK_ARGBEGIN/END, so that
+	'' - we know when an arg was empty when doing ## merging (to avoid
+	''   merging with other tokens outside the arg),
+	'' - we know the arg's boundaries for macro-expanding it later. (must be
+	''   done after merging, because only the unmerged tokens of an arg
+	''   shall be macro-expanded)
+	x = expansionbegin + 1
+	while( tkGet( x ) <> TK_END )
+
+		'' Macro parameter?
+		if( tkGet( x ) = TK_ID ) then
+			var arg = astLookupMacroParam( macro, tkGetText( x ) )
+			if( arg >= 0 ) then
+				'' TK_ID
+				tkRemove( x, x )
+
+				'' TK_ARGBEGIN
+				tkInsert( x, TK_ARGBEGIN )
+				x += 1
+
+				'' arg's tokens
+				tkCopy( x, argbegin[arg], argend[arg] )
+				x += argend[arg] - argbegin[arg] + 1
+
+				'' TK_ARGEND
+				tkInsert( x, TK_ARGEND )
+			end if
+		end if
+
+		x += 1
+	wend
+
+	''
+	'' Do '##' merging
+	''
+	'' It's not clear how <a ## ## b> or <a ## b ## c> should be processed
+	'' (undefined behaviour), so fbfrog shows an error about the first
+	'' (cannot merge a and ##) and processes the 2nd as (a##b)##c, i.e.
+	'' left-associative.
+	''
+	x = expansionbegin + 1
+	while( tkGet( x ) <> TK_END )
+
+		'' '##' from original macro body (and not '##' from a macro argument)?
+		if( tkGet( x ) = TK_PPMERGE ) then
+
+			'' 1. If lhs/rhs of '##' were params, then now there will be TK_ARGBEGIN,...,TK_ARGEND sequences.
+			'' Move last/first token out of the arg boundaries, so that they end up right next to the '##'.
+			'' (can just move the TK_ARGEND/TK_ARGBEGIN respectively, that's easier & faster)
+			''
+			'' Example with arg on both sides:
+			'' from:
+			''    [argbegin] a b [argend] ## [argbegin] c d [argend]
+			'' to:
+			''    [argbegin] a [argend] b ## c [argbegin] d [argend]
+			''
+			'' If this causes an TK_ARGBEGIN/END to become empty, it must be removed,
+			'' so that it won't be misinterpreted as empty arg operand for a following ## operator:
+			'' from:
+			''    [argbegin] a [argend] ## [argbegin] b [argend] ## [argbegin] c [argend]
+			'' to:
+			''    a##b ## [argbegin] c [argend]
+			'' in order to avoid the situation where the 2nd ##'s lhs seems to be an empty arg:
+			''    [argbegin] [argend] a ## b [argbegin] [argend] ## [argbegin] c [argend]
+			'' because actually the merged "ab" token is supposed to be 2nd ##'s lhs.
+
+			'' lhs was a non-empty arg?
+			if( (tkGet( x - 1 ) = TK_ARGEND) and (tkGet( x - 2 ) <> TK_ARGBEGIN)  ) then
+				tkRemove( x - 1, x - 1 )
+				tkInsert( x - 2, TK_ARGEND )
+				assert( tkGet( x ) = TK_PPMERGE )
+				assert( tkGet( x - 1 ) <> TK_ARGEND )
+				assert( tkGet( x - 2 ) = TK_ARGEND )
+
+				'' Empty now? Then remove the TK_ARGBEGIN/END
+				if( tkGet( x - 3 ) = TK_ARGBEGIN ) then
+					tkRemove( x - 3, x - 2 )
+					x -= 2
+				end if
+			end if
+
+			'' rhs was a non-empty arg?
+			if( (tkGet( x + 1 ) = TK_ARGBEGIN) and (tkGet( x + 2 ) <> TK_ARGEND) ) then
+				tkRemove( x + 1, x + 1 )
+				tkInsert( x + 2, TK_ARGBEGIN )
+				assert( tkGet( x ) = TK_PPMERGE )
+				assert( tkGet( x + 1 ) <> TK_ARGBEGIN )
+				assert( tkGet( x + 2 ) = TK_ARGBEGIN )
+
+				'' Empty now? Then remove the TK_ARGBEGIN/END
+				if( tkGet( x + 3 ) = TK_ARGEND ) then
+					tkRemove( x + 2, x + 3 )
+				end if
+			end if
+
+			'' If one operand was an empty arg, then no merging needs to be done,
+			'' the other operand can just be preserved as-is; or in case both were
+			'' empty, the ## just disappears.
+
+			'' Non-empty on both sides?
+			assert( tkGet( x ) = TK_PPMERGE )
+			if( (tkGet( x - 1 ) <> TK_ARGEND) and _
+			    (tkGet( x + 1 ) <> TK_ARGBEGIN) ) then
+				dim as integer mergetk = -1
+				dim as string mergetext
+
+				hTryMergeTokens( x - 1, x + 1, mergetk, mergetext )
+
+				if( mergetk < 0 ) then
+					if( tkGet( x - 1 ) = TK_BEGIN ) then
+						tkOops( x, "## merge operator at beginning of macro body, missing operand to merge with" )
+					end if
+
+					if( tkGet( x + 1 ) = TK_END ) then
+						tkOops( x, "## merge operator at end of macro body, missing operand to merge with" )
+					end if
+
+					tkOops( x, "## merge operator cannot merge '" + tkMakePrettyCTokenText( x - 1 ) + "' and '" + tkMakePrettyCTokenText( x + 1 ) + "'" )
+				end if
+
+				tkFold( x - 1, x + 1, mergetk, mergetext )
+				x -= 1
+				assert( tkGet( x ) = mergetk )
+			else
+				'' Just remove the '##'
+				tkRemove( x, x )
 				x -= 1
 			end if
 		end if
+
+		x += 1
+	wend
+
+	'' Recursively macro-expand the tokens in each TK_ARGBEGIN/END sequence,
+	'' and then remove TK_ARGBEGIN/END.
+	x = expansionbegin + 1
+	while( tkGet( x ) <> TK_END )
+
+		'' Macro parameter?
+		if( tkGet( x ) = TK_ARGBEGIN ) then
+			var y = x
+			do
+				y += 1
+			loop while( tkGet( y ) <> TK_ARGEND )
+
+			'' Macro-expand the arg's tokens
+			y = hExpandInRange( x, y )
+
+			'' Remove TK_ARGBEGIN/END wrapping
+			assert( tkGet( x ) = TK_ARGBEGIN )
+			tkRemove( x, x )
+			x -= 1
+			y -= 1
+			assert( tkGet( y ) = TK_ARGEND )
+			tkRemove( y, y )
+			y -= 1
+
+			x = y
+		end if
+
+		x += 1
+	wend
+
+	'' Remove the TK_BEGIN/END wrapping around the expansion
+	assert( tkGet( expansionbegin ) = TK_BEGIN )
+	tkRemove( expansionbegin, expansionbegin )
+	x -= 1
+	assert( tkGet( x ) = TK_END )
+	tkRemove( x, x )
+	x -= 1
+
+	function = x
+end function
+
+private sub hExpandMacro _
+	( _
+		byval macro as ASTNODE ptr, _
+		byval callbegin as integer, _
+		byval callend as integer, _
+		byval argbegin as integer ptr, _
+		byval argend as integer ptr, _
+		byval argcount as integer _
+	)
+
+	'' Insert the macro body behind the call (this way the positions
+	'' stored in argbegin()/argend() stay valid)
+	var expansionbegin = callend + 1
+	var expansionend = hInsertMacroExpansion( expansionbegin, macro, argbegin, argend, argcount )
+
+	'' Set expansion level on the expansion tokens:
+	'' = minlevel from macro call tokens + 1
+	'' before doing nested macro expansion in the expansion tokens.
+	tkSetExpansionLevel( expansionbegin, expansionend, _
+		tkGetExpansionLevel( _
+			tkFindTokenWithMinExpansionLevel( callbegin, callend ) _
+		) + 1 )
+
+	'' Recursively do macro expansion in the expansion
+	'' - Marking the current macro as poisoned, so it won't be expanded
+	''   again within the expansion, preventing expansion of complete
+	''   recursive calls.
+	'' - Incomplete recursive calls need to be marked with NOEXPAND so they
+	''   won't be expanded later when they become complete by taking into
+	''   account tokens following behind the expansion.
+	macro->attrib or= ASTATTRIB_POISONED
+	expansionend = hExpandInRange( expansionbegin, expansionend )
+	macro->attrib and= not ASTATTRIB_POISONED
+
+	'' Disable future expansion of recursive macro calls to this macro
+	'' (those that weren't expanded due to the "poisoning")
+	scope
+		var x = expansionbegin
+		while( x <= expansionend )
+
+			if( tkGet( x ) = TK_ID ) then
+				'' Known macro, and it's the same as this one?
+				var calledmacro = hCheckForMacroCall( x )
+				if( (calledmacro <> NULL) and (calledmacro = macro) ) then
+					'' Can the macro call be parsed successfully,
+					'' and is it fully within the expansion?
+					dim as integer argbegin(0 to MAXARGS-1)
+					dim as integer argend(0 to MAXARGS-1)
+					dim as integer argcount
+					var callend = hParseMacroCall( x, calledmacro, @argbegin(0), @argend(0), argcount )
+					if( (callend >= 0) and (callend <= expansionend) ) then
+						tkAddFlags( x, TKFLAG_NOEXPAND )
+					end if
+				end if
+			end if
+
+			x += 1
+		wend
+	end scope
+
+	'' Then remove the call tokens
+	tkRemove( callbegin, callend )
+end sub
+
+private sub hMaybeExpandMacro( byref x as integer )
+	var begin = x
+
+	var macro = hCheckForMacroCall( x )
+	if( macro = NULL ) then
+		exit sub
 	end if
+
+	dim as integer argbegin(0 to MAXARGS-1)
+	dim as integer argend(0 to MAXARGS-1)
+	dim as integer argcount
+
+	'' Try to parse the macro call (can fail in case of function-like macro
+	'' without argument list)
+	var callbegin = x
+	var callend = hParseMacroCall( callbegin, macro, @argbegin(0), @argend(0), argcount )
+	if( callend < 0 ) then
+		exit sub
+	end if
+
+	hExpandMacro( macro, callbegin, callend, @argbegin(0), @argend(0), argcount )
+
+	'' The macro call was replaced with the body, the token at the TK_ID's
+	'' position must be re-parsed.
+	x -= 1
 end sub
 
 private sub hExpandInIfCondition( byval x as integer )
@@ -1493,7 +1679,7 @@ private sub hExpandInIfCondition( byval x as integer )
 
 		'' Identifier (anything unrelated to DEFINED)
 		case TK_ID
-			hMaybeExpandId( x )
+			hMaybeExpandMacro( x )
 
 		end select
 	loop
@@ -2018,7 +2204,7 @@ sub cppMain _
 			if( skiplevel <> MAXPPSTACK ) then
 				hRemoveTokenAndTkBeginEnd( x )
 			else
-				hMaybeExpandId( x )
+				hMaybeExpandMacro( x )
 			end if
 
 		case else

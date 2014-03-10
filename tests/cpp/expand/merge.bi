@@ -289,4 +289,12 @@ enum E
 	G = 0
 end enum
 
+'' ------------------------------------------------------------------------------
+
+dim shared __L_char as long
+declare sub f(byval w as wstring = asc( wstr( "a" ) ))
+
+dim shared __L_string as long
+declare sub f(byval w as wstring ptr = wstr( "abc" ))
+
 end extern

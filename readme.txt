@@ -125,15 +125,6 @@ Usage:
 
 To do:
 
-- CPP works too much like FB's PP (e.g. recursive expansion...)
-    - macro should be disabled for expansion while its body is parsed,
-      but not while parsing its args (if it's a function-like macro)
-    - at end of macro body, the macro should be re-enabled for expansion
-    - macro args must be fully macro-expanded before being inserted into
-      params in the macro body, unless they're used with # or ## sometimes be fully macro expanded before inserted in
-      place of the param, depending on how the param is used.
-    - ## merging doesn't handle float literals, e.g. 1##. or .##0 ?!
-
 - #define handling
     - Do not preserve #defines that are #undeffed, such that ultimately it'll
       become pointless to preserve #undefs at all
@@ -172,6 +163,9 @@ To do:
 - Add -booldefine to mark a macro as "returns a bool", so the C #define parser
   can set is_bool_context=TRUE when folding
 
+- ## merging missing support for lots of tokens, e.g. 1##. or .##0 or -##> or =##=
+- macro params named after keywords?
+- Support initializers for variables too, not just parameters
 - parentheses around macro params should be preserved (can use a flag on the AST node)
 - Are forward declarations/references handled correctly? Consider merging the
   {STRUCT|UNION|ENUM}FWD into one since in FB they'd all be emitted as the same

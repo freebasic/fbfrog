@@ -269,7 +269,9 @@ declare function hScanDirectory _
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-'' When changing, update the table in ast.bas too!
+const TKFLAG_BEHINDSPACE	= 1 shl 0  '' was preceded by spaces?
+const TKFLAG_NOEXPAND		= 1 shl 1  '' may be macro-expanded? (cpp)
+
 enum
 	TK_EOF
 	TK_DIVIDER
@@ -285,7 +287,8 @@ enum
 	TK_BEGIN
 	TK_END
 	TK_PPMERGE
-	TK_EMPTYMACROPARAM
+	TK_ARGBEGIN
+	TK_ARGEND
 	TK_EOL
 	TK_COMMENT
 	TK_BEGININCLUDE
@@ -455,8 +458,8 @@ declare sub tkSetExpansionLevel( byval first as integer, byval last as integer, 
 declare function tkGetExpansionLevel( byval x as integer ) as integer
 declare function tkFindTokenWithMinExpansionLevel( byval first as integer, byval last as integer ) as integer
 declare function tkGetMaxExpansionLevel( byval first as integer, byval last as integer ) as integer
-declare sub tkSetBehindSpace( byval x as integer )
-declare function tkGetBehindSpace( byval x as integer ) as integer
+declare sub tkAddFlags( byval x as integer, byval flags as integer )
+declare function tkGetFlags( byval x as integer ) as integer
 declare sub tkSetComment( byval x as integer, byval comment as zstring ptr )
 declare function tkGetComment( byval x as integer ) as zstring ptr
 declare function tkCount _
@@ -483,6 +486,7 @@ declare function tkCollectComments _
 declare sub tkRemoveAllOf( byval id as integer, byval text as zstring ptr )
 declare sub tkRemoveEOLs( )
 declare sub tkTurnCPPTokensIntoCIds( )
+declare function tkMakePrettyCTokenText( byval x as integer ) as string
 declare function hFindConstructEnd( byval x as integer ) as integer
 declare sub tkReport _
 	( _
@@ -697,6 +701,7 @@ enum
 	ASTATTRIB_WIN32         = 1 shl 13
 	ASTATTRIB__ALLTARGET    = ASTATTRIB_DOS or ASTATTRIB_LINUX or ASTATTRIB_WIN32
 	ASTATTRIB_NEEDRENAME    = 1 shl 14
+	ASTATTRIB_POISONED      = 1 shl 15
 end enum
 
 '' When changing, adjust astClone(), astIsEqual(), astDump*()
@@ -952,6 +957,7 @@ declare sub astProcessVerblocksAndTargetblocksOnFiles _
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
+declare function hIdentifyCKeyword( byval id as zstring ptr ) as integer
 declare function lexLoadC _
 	( _
 		byval x as integer, _
@@ -978,11 +984,7 @@ declare function hFindClosingParen( byval x as integer ) as integer
 declare function hNumberLiteral( byval x as integer ) as ASTNODE ptr
 extern as integer cprecedence(ASTCLASS_CLOGOR to ASTCLASS_IIF)
 declare sub hMacroParamList( byref x as integer, byval t as ASTNODE ptr )
-declare function hInsertMacroBody _
-	( _
-		byval x as integer, _
-		byval macro as ASTNODE ptr _
-	) as integer
+declare sub hInsertMacroBody( byval x as integer, byval macro as ASTNODE ptr )
 declare sub cppInit( )
 declare sub cppEnd( )
 declare sub cppNoExpandSym( byval id as zstring ptr )

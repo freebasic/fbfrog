@@ -24,6 +24,35 @@ end type
 
 dim shared as LEXSTUFF lex
 
+'' Load keywords if not yet done
+private sub hInitKeywords( )
+	if( lex.kwhash.items ) then
+		exit sub
+	end if
+
+	hashInit( @lex.kwhash, 12 )
+
+	for i as integer = KW__C_FIRST to KW__C_LAST
+		var hash = hashHash( tkInfoText( i ) )
+		var item = hashLookup( @lex.kwhash, tkInfoText( i ), hash )
+		hashAdd( @lex.kwhash, item, hash, tkInfoText( i ), cast( any ptr, i ) )
+	next
+end sub
+
+function hIdentifyCKeyword( byval id as zstring ptr ) as integer
+	hInitKeywords( )
+
+	'' Is it a C keyword?
+	var hash = hashHash( id )
+	var item = hashLookup( @lex.kwhash, id, hash )
+	if( item->s ) then
+		'' Return the corresponding KW_*
+		function = cint( item->data )
+	else
+		function = TK_ID
+	end if
+end function
+
 private sub hResetColumn( )
 	lex.location.column = lex.i - lex.bol
 	lex.location.length = 1
@@ -38,7 +67,7 @@ private sub hSetLocation( )
 	lex.location.length = (lex.i - lex.bol) - lex.location.column
 	tkSetLocation( lex.x, @lex.location )
 	if( lex.behindspace ) then
-		tkSetBehindSpace( lex.x )
+		tkAddFlags( lex.x, TKFLAG_BEHINDSPACE )
 	end if
 	lex.x += 1
 end sub
@@ -49,21 +78,16 @@ private sub hAddTextToken( byval tk as integer, byval begin as ubyte ptr )
 	lex.i[0] = 0
 
 	if( tk = TK_ID ) then
-		'' Lookup C keyword
-		var hash = hashHash( begin )
-		var item = hashLookup( @lex.kwhash, begin, hash )
-
-		'' Is it a C keyword?
-		if( item->s ) then
-			'' Then use the proper KW_* instead of TK_ID
-			tkInsert( lex.x, cint( item->data ) )
-		else
-			'' TK_ID
-			tkInsert( lex.x, tk, begin )
+		'' If it's a C keyword, insert the corresponding KW_* (without
+		'' storing any string data). Otherwise, if it's a random symbol,
+		'' just insert a TK_ID and store the string data on it.
+		tk = hIdentifyCKeyword( begin )
+		if( tk <> TK_ID ) then
+			begin = NULL
 		end if
-	else
-		tkInsert( lex.x, tk, begin )
 	end if
+
+	tkInsert( lex.x, tk, begin )
 	hSetLocation( )
 
 	lex.i[0] = old
@@ -762,21 +786,6 @@ private sub lexNext( )
 	end select
 end sub
 
-'' Load keywords if not yet done
-private sub hInitKeywords( )
-	if( lex.kwhash.items ) then
-		exit sub
-	end if
-
-	hashInit( @lex.kwhash, 12 )
-
-	for i as integer = KW__C_FIRST to KW__C_LAST
-		var hash = hashHash( tkInfoText( i ) )
-		var item = hashLookup( @lex.kwhash, tkInfoText( i ), hash )
-		hashAdd( @lex.kwhash, item, hash, tkInfoText( i ), cast( any ptr, i ) )
-	next
-end sub
-
 ''
 '' C lexer entry point
 ''
@@ -793,7 +802,6 @@ function lexLoadC _
 	lex.keep_comments = keep_comments
 	lex.i = source->buffer
 	lex.bol = lex.i
-	hInitKeywords( )
 
 	'' Tokenize and insert into tk buffer
 	while( lex.i[0] )

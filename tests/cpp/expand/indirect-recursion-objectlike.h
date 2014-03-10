@@ -1,0 +1,5 @@
+// Indirect recursion
+#define EXPANDME1 EXPANDME2
+#define EXPANDME2 EXPANDME1
+static int EXPANDME1; // -> EXPANDME2 -> EXPANDME1
+static int EXPANDME2; // -> EXPANDME1 -> EXPANDME2

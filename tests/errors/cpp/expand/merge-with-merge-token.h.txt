@@ -1,0 +1,11 @@
+[dos]
+        parsing: tests/errors/cpp/expand/merge-with-merge-token.h
+tests/errors/cpp/expand/merge-with-merge-token.h(2): ## merge operator cannot merge 'a' and '##'
+    1: // undefined behaviour
+    2: #define EXPANDME1 a ## ## b
+                           ^~
+    3: EXPANDME1
+    4: 
+construct's code as seen by fbfrog:
+    a ## ## b
+      ^~
