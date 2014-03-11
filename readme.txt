@@ -198,7 +198,6 @@ To do:
 
 - Various tests expose weird stuff:
 	triggers wrong error:
-		errors/cpp/expand/merge-token-from-macro-arg-doesnt-merge.h
 		errors/cpp/expand/call-zero-args-missing-parentheses.h
 		errors/c/*-in-macro.h
 	errors/cpp/expansion/pp-macrocall-1.h, shouldn't expand here
