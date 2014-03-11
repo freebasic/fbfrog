@@ -1,10 +1,11 @@
 [dos]
         parsing: tests/errors/cpp/expand/call-zeroargs-missing-parentheses.h
-tests/errors/cpp/expand/call-zeroargs-missing-parentheses.h(1): expected an atomic expression but found 'void'
-    1: #define EXPANDME1() void f(void);
-                           ^~~~
+tests/errors/cpp/expand/call-zeroargs-missing-parentheses.h(4): missing identifier for the symbol declared in this declaration
     2: 
-    3: // Missing "()"
+    3: // Should not be expanded (missing "()" for that)
+    4: EXPANDME1
+       ^~~~~~~~~
+    5: 
 construct's code as seen by fbfrog:
-    void f ( void ) ;
-    ^~~~
+    EXPANDME1
+    ^~~~~~~~~

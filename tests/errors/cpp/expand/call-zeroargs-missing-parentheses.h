@@ -1,4 +1,4 @@
-#define EXPANDME1() void f(void);
+#define EXPANDME1() 123
 
-// Missing "()"
+// Should not be expanded (missing "()" for that)
 EXPANDME1
