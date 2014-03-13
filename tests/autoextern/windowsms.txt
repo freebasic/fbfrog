@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/autoextern/windowsms.h
+[linux]
+        parsing: tests/autoextern/windowsms.h
+[win32]
+        parsing: tests/autoextern/windowsms.h
+emitting: tests/autoextern/windowsms.bi (9 declarations)

@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/name-conflicts/fb-keywords.h
+[linux]
+        parsing: tests/name-conflicts/fb-keywords.h
+[win32]
+        parsing: tests/name-conflicts/fb-keywords.h
+emitting: tests/name-conflicts/fb-keywords.bi (415 declarations)

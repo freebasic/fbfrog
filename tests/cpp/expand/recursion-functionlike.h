@@ -1,3 +1,4 @@
+// @fbfrog -nonamefixup
 // Recursion with params
-#define EXPANDME1(x) EXPANDME1(x)
-void EXPANDME1(void); // -> EXPANDME1(void)
+#define m(x) m(x)
+void m(void); // -> m(void)

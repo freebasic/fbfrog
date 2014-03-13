@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/name-conflicts/anonymous.h
+[linux]
+        parsing: tests/name-conflicts/anonymous.h
+[win32]
+        parsing: tests/name-conflicts/anonymous.h
+emitting: tests/name-conflicts/anonymous.bi (4 declarations)

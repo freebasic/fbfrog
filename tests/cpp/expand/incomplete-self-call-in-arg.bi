@@ -1,5 +1,5 @@
 extern "C"
 
-declare sub EXPANDME1()  '' void EXPANDME1(void);
+declare sub m1()
 
 end extern

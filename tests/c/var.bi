@@ -1,5 +1,7 @@
 extern "C"
 
+'' @fbfrog -whitespace -nonamefixup
+
 extern     __a_normal_variable as long
 dim shared __a_normal_variable as long
 

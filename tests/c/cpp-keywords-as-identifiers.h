@@ -1,3 +1,5 @@
+// @fbfrog -nonamefixup
+
 static int define;
 static int include;
 static int elif;

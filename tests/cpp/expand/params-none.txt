@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/cpp/expand/params-none.h
+[linux]
+        parsing: tests/cpp/expand/params-none.h
+[win32]
+        parsing: tests/cpp/expand/params-none.h
+emitting: tests/cpp/expand/params-none.bi (3 declarations)

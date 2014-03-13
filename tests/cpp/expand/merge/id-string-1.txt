@@ -1,0 +1,11 @@
+[dos]
+        parsing: tests/cpp/expand/merge/id-string-1.h
+tests/cpp/expand/merge/id-string-1.h(2): ## merge operator cannot merge 'a' and '" b"'
+    1: // @fail @fbfrog -removedefine m
+    2: #define m(l, r) l ## #r
+                         ^~
+    3: m(a, b)
+    4: 
+construct's code as seen by fbfrog:
+    a ## " b"
+      ^~

@@ -1,21 +1,29 @@
-#define EXPANDME1(a) a
-EXPANDME1(void f(void));
-EXPANDME1(int f(int, int));
+// @fbfrog -whitespace -nonamefixup -removedefine m
 
-#define EXPANDME2(a) void a
-EXPANDME2(bar(void);)
-EXPANDME2(baz(void);)
+#define m(a) a
+m(void f(void));
+m(int f(int, int));
+#undef m
 
-#define EXPANDME3(a) a(void);
-EXPANDME3(void bar)
-EXPANDME3(void baz)
+#define m(a) void a
+m(bar(void);)
+m(baz(void);)
+#undef m
 
-#define EXPANDME4(a) void a(void);
-EXPANDME4(bar)
-EXPANDME4(baz)
+#define m(a) a(void);
+m(void bar)
+m(void baz)
+#undef m
 
-#define EXPANDME5(a,b,c) a b c
-EXPANDME5(void, f, (void));
+#define m(a) void a(void);
+m(bar)
+m(baz)
+#undef m
 
-#define EXPANDME6(a,b,c) c b a
-EXPANDME6((void), f, void);
+#define m(a,b,c) a b c
+m(void, f, (void));
+#undef m
+
+#define m(a,b,c) c b a
+m((void), f, void);
+#undef m

@@ -1,3 +1,5 @@
+// @fbfrog -whitespace -nonamefixup
+
 static   signed a;
 static unsigned a;
 

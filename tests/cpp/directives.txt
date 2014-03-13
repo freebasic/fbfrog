@@ -1,0 +1,5 @@
+[dos]
+        parsing: tests/cpp/directives.h
+        include: tests/cpp/directives-1.h
+        include: tests/cpp/directives-1.h
+cpp.bas(2064): assertion failed at CPPMAIN: tkGet( x ) =TK_EOL

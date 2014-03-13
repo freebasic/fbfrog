@@ -1,0 +1,19 @@
+[1.dos]
+          parsing: tests/versions/versions.h
+[1.linux]
+          parsing: tests/versions/versions.h
+[1.win32]
+          parsing: tests/versions/versions.h
+[2.dos]
+          parsing: tests/versions/versions.h
+[2.linux]
+          parsing: tests/versions/versions.h
+[2.win32]
+          parsing: tests/versions/versions.h
+[3.dos]
+          parsing: tests/versions/versions.h
+[3.linux]
+          parsing: tests/versions/versions.h
+[3.win32]
+          parsing: tests/versions/versions.h
+emitting: tests/versions/versions.bi (14 declarations)

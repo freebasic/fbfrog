@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/name-conflicts/prefer.h
+[linux]
+        parsing: tests/name-conflicts/prefer.h
+[win32]
+        parsing: tests/name-conflicts/prefer.h
+emitting: tests/name-conflicts/prefer.bi (12 declarations)

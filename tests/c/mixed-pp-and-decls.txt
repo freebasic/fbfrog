@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/c/mixed-pp-and-decls.h
+[linux]
+        parsing: tests/c/mixed-pp-and-decls.h
+[win32]
+        parsing: tests/c/mixed-pp-and-decls.h
+emitting: tests/c/mixed-pp-and-decls.bi (2 declarations)

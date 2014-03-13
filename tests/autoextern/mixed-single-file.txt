@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/autoextern/mixed-single-file.h
+[linux]
+        parsing: tests/autoextern/mixed-single-file.h
+[win32]
+        parsing: tests/autoextern/mixed-single-file.h
+emitting: tests/autoextern/mixed-single-file.bi (11 declarations)

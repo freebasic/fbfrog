@@ -1,5 +1,7 @@
 extern "C"
 
-declare sub EXPANDME1()
+#define m(x) m(x)
+
+declare sub m()
 
 end extern

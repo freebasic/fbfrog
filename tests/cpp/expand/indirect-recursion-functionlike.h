@@ -1,5 +1,6 @@
+// @fbfrog -nonamefixup
 // Indirect recursion with params
-#define EXPANDME1(x) EXPANDME2(x)
-#define EXPANDME2(x) EXPANDME1(x)
-void EXPANDME1(void); // -> EXPANDME2(void) -> EXPANDME1(void)
-void EXPANDME2(void); // -> EXPANDME1(void) -> EXPANDME2(void)
+#define m1(x) m2(x)
+#define m2(x) m1(x)
+void m1(void); // -> m2(void) -> m1(void)
+void m2(void); // -> m1(void) -> m2(void)

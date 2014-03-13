@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/cpp/expand/no-expansion-before-pasting.h
+[linux]
+        parsing: tests/cpp/expand/no-expansion-before-pasting.h
+[win32]
+        parsing: tests/cpp/expand/no-expansion-before-pasting.h
+emitting: tests/cpp/expand/no-expansion-before-pasting.bi (5 declarations)

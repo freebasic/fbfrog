@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/cpp/if/eval-if.h
+[linux]
+        parsing: tests/cpp/if/eval-if.h
+[win32]
+        parsing: tests/cpp/if/eval-if.h
+emitting: tests/cpp/if/eval-if.bi (53 declarations)

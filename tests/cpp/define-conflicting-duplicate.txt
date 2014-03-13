@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/cpp/define-conflicting-duplicate.h
+[linux]
+        parsing: tests/cpp/define-conflicting-duplicate.h
+[win32]
+        parsing: tests/cpp/define-conflicting-duplicate.h
+emitting: tests/cpp/define-conflicting-duplicate.bi (2 declarations)

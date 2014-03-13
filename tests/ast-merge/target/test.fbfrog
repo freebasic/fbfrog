@@ -1,4 +1,0 @@
-a.h
-
--target linux
-	-define LINUX

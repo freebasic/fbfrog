@@ -1,1 +1,3 @@
-dim shared EXPANDME1 as long
+#define m m
+
+dim shared m as long

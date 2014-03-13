@@ -1,11 +1,16 @@
-#define EXPANDME1 void f(void);
-EXPANDME1
+// @fbfrog -whitespace -nonamefixup -removedefine m
 
-// The "(...)" following EXPANDME2 is not an argument list
-#define EXPANDME2 foo
-void EXPANDME2(void);
+#define m void f(void);
+m
+#undef m
+
+// The "(...)" following m2 is not an argument list
+#define m foo
+void m(void);
+#undef m
 
 // The "(...)" following the macro id isn't a parameter list, as it's separated
 // by spaces
-#define EXPANDME3 (void)
-void f EXPANDME3;
+#define m (void)
+void f m;
+#undef m

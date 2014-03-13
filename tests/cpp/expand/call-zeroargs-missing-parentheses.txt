@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/cpp/expand/call-zeroargs-missing-parentheses.h
+[linux]
+        parsing: tests/cpp/expand/call-zeroargs-missing-parentheses.h
+[win32]
+        parsing: tests/cpp/expand/call-zeroargs-missing-parentheses.h
+emitting: tests/cpp/expand/call-zeroargs-missing-parentheses.bi (2 declarations)

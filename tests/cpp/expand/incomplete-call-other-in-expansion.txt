@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/cpp/expand/incomplete-call-other-in-expansion.h
+[linux]
+        parsing: tests/cpp/expand/incomplete-call-other-in-expansion.h
+[win32]
+        parsing: tests/cpp/expand/incomplete-call-other-in-expansion.h
+emitting: tests/cpp/expand/incomplete-call-other-in-expansion.bi (5 declarations)

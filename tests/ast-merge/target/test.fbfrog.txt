@@ -1,3 +1,0 @@
-[linux]
-        parsing: tests/ast-merge/target/a.h
-emitting: tests/ast-merge/target/a.bi (4 declarations)

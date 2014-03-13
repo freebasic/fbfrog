@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/cpp/comment-only.h
+[linux]
+        parsing: tests/cpp/comment-only.h
+[win32]
+        parsing: tests/cpp/comment-only.h
+emitting: tests/cpp/comment-only.bi (0 declarations)

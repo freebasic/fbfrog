@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/cpp/expand/recursion-functionlike.h
+[linux]
+        parsing: tests/cpp/expand/recursion-functionlike.h
+[win32]
+        parsing: tests/cpp/expand/recursion-functionlike.h
+emitting: tests/cpp/expand/recursion-functionlike.bi (2 declarations)

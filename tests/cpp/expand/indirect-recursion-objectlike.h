@@ -1,5 +1,6 @@
+// @fbfrog -nonamefixup
 // Indirect recursion
-#define EXPANDME1 EXPANDME2
-#define EXPANDME2 EXPANDME1
-static int EXPANDME1; // -> EXPANDME2 -> EXPANDME1
-static int EXPANDME2; // -> EXPANDME1 -> EXPANDME2
+#define m1 m2
+#define m2 m1
+static int m1; // -> m2 -> m1
+static int m2; // -> m1 -> m2

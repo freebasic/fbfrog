@@ -1,0 +1,10 @@
+[dos]
+        parsing: tests/c/keyword-basetype-missing-id-and-semicolon.h
+tests/c/keyword-basetype-missing-id-and-semicolon.h(2): missing identifier for the symbol declared in this declaration
+    1: // @fail
+    2: int
+       ^~~
+    3: 
+construct's code as seen by fbfrog:
+    int
+    ^~~

@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/cpp/expand/recursion-after-pasting.h
+[linux]
+        parsing: tests/cpp/expand/recursion-after-pasting.h
+[win32]
+        parsing: tests/cpp/expand/recursion-after-pasting.h
+emitting: tests/cpp/expand/recursion-after-pasting.bi (1 declaration)

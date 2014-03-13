@@ -1,0 +1,3 @@
+[dos]
+        parsing: tests/lex/open-multiline-comment.h
+tests/lex/open-multiline-comment.h(4): comment left open

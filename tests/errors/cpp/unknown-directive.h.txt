@@ -1,9 +1,0 @@
-[dos]
-        parsing: tests/errors/cpp/unknown-directive.h
-tests/errors/cpp/unknown-directive.h(1): unknown PP directive
-    1: #foo
-        ^~~
-    2: 
-construct's code as seen by fbfrog:
-    [eol] # foo [eol]
-            ^~~

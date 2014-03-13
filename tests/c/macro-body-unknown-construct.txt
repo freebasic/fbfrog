@@ -1,0 +1,10 @@
+[dos]
+        parsing: tests/c/macro-body-unknown-construct.h
+tests/c/macro-body-unknown-construct.h(2): expected an atomic expression but found 'void'
+    1: // @fail
+    2: #define m void f(void
+                 ^~~~
+    3: 
+construct's code as seen by fbfrog:
+    void f ( void
+    ^~~~

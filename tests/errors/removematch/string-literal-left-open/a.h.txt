@@ -1,7 +1,0 @@
-[dos]
-        parsing: tests/errors/removematch/string-literal-left-open/a.h
-[linux]
-        parsing: tests/errors/removematch/string-literal-left-open/a.h
-[win32]
-        parsing: tests/errors/removematch/string-literal-left-open/a.h
-emitting: tests/errors/removematch/string-literal-left-open/a.bi (0 declarations)

@@ -1,0 +1,10 @@
+[dos]
+        parsing: tests/cpp/define-missing-id.h
+tests/cpp/define-missing-id.h(2): missing identifier behind #define
+    1: // @fail
+    2: #define
+              ^
+    3: 
+construct's code as seen by fbfrog:
+    [eol] [eol] # define [eol]
+                         ^~~~~

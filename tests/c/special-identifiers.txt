@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/c/special-identifiers.h
+[linux]
+        parsing: tests/c/special-identifiers.h
+[win32]
+        parsing: tests/c/special-identifiers.h
+emitting: tests/c/special-identifiers.bi (1 declaration)

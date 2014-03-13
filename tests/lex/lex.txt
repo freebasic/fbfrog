@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/lex/lex.h
+[linux]
+        parsing: tests/lex/lex.h
+[win32]
+        parsing: tests/lex/lex.h
+emitting: tests/lex/lex.bi (85 declarations)

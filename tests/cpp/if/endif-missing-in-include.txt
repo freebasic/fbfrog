@@ -1,0 +1,11 @@
+[dos]
+        parsing: tests/cpp/if/endif-missing-in-include.h
+        include: tests/cpp/if/endif-missing.h
+tests/cpp/if/endif-missing.h(1): missing #endif in #included file
+    1: // @fail
+               ^
+    2: #if 1
+    3: 
+construct's code as seen by fbfrog:
+    [eol] [eol] [begininclude] [eol] [eol] [endinclude]
+                                     ^~~~~

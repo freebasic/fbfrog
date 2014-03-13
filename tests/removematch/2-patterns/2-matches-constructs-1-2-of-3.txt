@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/removematch/2-patterns/2-matches-constructs-1-2-of-3.h
+[linux]
+        parsing: tests/removematch/2-patterns/2-matches-constructs-1-2-of-3.h
+[win32]
+        parsing: tests/removematch/2-patterns/2-matches-constructs-1-2-of-3.h
+emitting: tests/removematch/2-patterns/2-matches-constructs-1-2-of-3.bi (1 declaration)

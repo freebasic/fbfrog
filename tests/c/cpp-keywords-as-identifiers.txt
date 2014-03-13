@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/c/cpp-keywords-as-identifiers.h
+[linux]
+        parsing: tests/c/cpp-keywords-as-identifiers.h
+[win32]
+        parsing: tests/c/cpp-keywords-as-identifiers.h
+emitting: tests/c/cpp-keywords-as-identifiers.bi (60 declarations)

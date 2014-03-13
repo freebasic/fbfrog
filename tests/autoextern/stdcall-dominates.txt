@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/autoextern/stdcall-dominates.h
+[linux]
+        parsing: tests/autoextern/stdcall-dominates.h
+[win32]
+        parsing: tests/autoextern/stdcall-dominates.h
+emitting: tests/autoextern/stdcall-dominates.bi (9 declarations)

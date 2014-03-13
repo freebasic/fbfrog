@@ -1,0 +1,11 @@
+[dos]
+        parsing: tests/cpp/expand/merge/missing-operands-objectlike.h
+tests/cpp/expand/merge/missing-operands-objectlike.h(2): ## merge operator at beginning of macro body, missing operand to merge with
+    1: // @fail @fbfrog -removedefine m
+    2: #define m ##
+                 ^~
+    3: m
+    4: 
+construct's code as seen by fbfrog:
+    ##
+    ^~

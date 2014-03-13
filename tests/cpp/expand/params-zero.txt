@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/cpp/expand/params-zero.h
+[linux]
+        parsing: tests/cpp/expand/params-zero.h
+[win32]
+        parsing: tests/cpp/expand/params-zero.h
+emitting: tests/cpp/expand/params-zero.bi (1 declaration)

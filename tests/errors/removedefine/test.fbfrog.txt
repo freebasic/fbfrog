@@ -1,7 +1,0 @@
-tests/errors/removedefine/test.fbfrog(1): expected identifier (valid symbol name) but found '-m'
-    1: a.h -removedefine -m
-                         ^~
-    2: 
-construct's code as seen by fbfrog:
-    -m
-    ^~

@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/name-conflicts/renames-should-not-trigger-renames.h
+[linux]
+        parsing: tests/name-conflicts/renames-should-not-trigger-renames.h
+[win32]
+        parsing: tests/name-conflicts/renames-should-not-trigger-renames.h
+emitting: tests/name-conflicts/renames-should-not-trigger-renames.bi (2 declarations)

@@ -1,5 +1,0 @@
-[dos]
-        parsing: tests/errors/cpp/stack/endif-missing.h
-missing #endif
-    [eol]
-    ^~~~~

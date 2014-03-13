@@ -1,3 +1,5 @@
+'' @fbfrog -whitespace -nonamefixup
+
 type MYINT as long
 
 enum E

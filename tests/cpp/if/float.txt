@@ -1,0 +1,9 @@
+[dos]
+        parsing: tests/cpp/if/float.h
+tests/cpp/if/float.h(3): couldn't evaluate #if condition
+    1: // @fail
+    2: // CPP doesn't support floating point literals in #if expressions
+    3: #if 1.0 == 2.0
+               ^~
+    4: #endif
+    5: 

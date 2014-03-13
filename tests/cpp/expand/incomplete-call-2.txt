@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/cpp/expand/incomplete-call-2.h
+[linux]
+        parsing: tests/cpp/expand/incomplete-call-2.h
+[win32]
+        parsing: tests/cpp/expand/incomplete-call-2.h
+emitting: tests/cpp/expand/incomplete-call-2.bi (3 declarations)

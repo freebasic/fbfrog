@@ -1,0 +1,10 @@
+[dos]
+        parsing: tests/cpp/if/endif-missing.h
+tests/cpp/if/endif-missing.h(1): missing #endif
+    1: // @fail
+               ^
+    2: #if 1
+    3: 
+construct's code as seen by fbfrog:
+    [eol] [eol]
+          ^~~~~

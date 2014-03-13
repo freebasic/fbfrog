@@ -1,7 +1,0 @@
-[dos]
-        parsing: tests/errors/c/typedef-proc.h
-[linux]
-        parsing: tests/errors/c/typedef-proc.h
-[win32]
-        parsing: tests/errors/c/typedef-proc.h
-emitting: tests/errors/c/typedef-proc.bi (1 declaration)

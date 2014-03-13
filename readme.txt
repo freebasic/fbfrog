@@ -57,7 +57,7 @@ Features:
       * Redundant typedefs (<typedef struct A A;>) are removed, because in FB
         there are no separate type/tag namespaces. <struct A> or <A> translate
         to the same thing.
-      * #defines "nested" inside struct bodies are moved to the toplevel. Even
+      * #defines nested inside struct bodies are moved to the toplevel. Even
         though FB doesn't scope #defines inside UDTs (only inside scope blocks,
         but not namespaces), this is better, because it represents the original
         header's intentions more closely. It becomes more important when
@@ -171,21 +171,34 @@ To do:
   {STRUCT|UNION|ENUM}FWD into one since in FB they'd all be emitted as the same
   code anyways?!
 - Support bitfields?
+- Support nested named structs
 - Const folding etc. has issues with 32bit/64bit, using Longint internally, so
   e.g. ~(0xFFFFFFFF) comes out as &hFFFFFFFF00000000 instead of &h0. Need to
   respect C number literal dtypes & sizes.
 - Don't crash on (INT_MIN / -1) or (INT_MIN % -1)
 - Const folding probably also doesn't handle unsigned relational BOPs properly
   since it only does signed ones internally
+- Proc/array typedefs should be solved out automatically where possible, and
+  removed otherwise. (e.g. if the proc typedef is always used in a pointer
+  context, then include the pointer in the typedef)
+- A conflicting #define should simply override the 1st one, that's also what gcc does.
+  Should only the last known version be preserved for the final binding?
+  Currently all are preserved, triggering name conflicts...
 
+- Lexer doesn't show error code context
 - Better error reporting: Single error token location isn't enough - especially
   if it's EOF or part of the next construct, while the error is about the
   previous one. Need to report entire constructs (token range), or for
   expressions visualize operand(s) & operator, etc.
     - Let caller determine construct boundaries? They're different for
       cmdline/cpp/c anyways. -> pass in construct token range
+    - E.g. C usually wants to complain about construct, but CPP usually about
+      macro body or directive etc.
     - pass in additional token ranges: unexpected token + what was expected,
       operator, operands
+- CPP reports missing #endifs ect. with wrong source context, because it deletes
+  directives and then tkReport() does TK_EOF-1 which ends up pointing to
+  something unrelated.
 - Show suggestions how to fix errors, e.g. if #define body couldn't be parsed,
   suggest using -removedefine to exclude the #define from the binding...
 - Require source location on tkInsert(): All tokens should have some source info
@@ -196,16 +209,5 @@ To do:
         CALLCONV void f(void);
 - comments behind #define bodies should go to the #define not the body tokens
 
-- Various tests expose weird stuff:
-	triggers wrong error:
-		errors/c/*-in-macro.h
-	errors/cpp/expansion/pp-macrocall-1.h, shouldn't expand here
-	errors/lex/open-*, missing source context in error
-	errors/cpp/define-conflicting-duplicate, should cause error?
-	errors/c/typedef-{proc|array}, should be fixed up automatically where possible and be removed otherwise
-		(e.g. if the proc typedef is always used in a pointer context, then include the pointer in the typedef)
-	errors/cpp/stack/*, missing #endifs reported with wrong source context
-	errors/c/struct-nested-named.h, bad code-as-seen-by-fbfrog
-	errors/cpp/*, bad code-as-seen-by-fbfrog?
-- Use *.h.fail or similar for error tests, instead of scanning for *.h, so they
-  could be put into the same directories as the normal tests?
+- Add tk array implementation, and compare performance, on headers with lots
+  of macro expansion.

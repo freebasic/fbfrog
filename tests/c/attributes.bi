@@ -1,5 +1,7 @@
 extern "C"
 
+'' @fbfrog -whitespace -nonamefixup
+
 declare sub f()
 declare sub f()
 

@@ -1,0 +1,13 @@
+[1.dos]
+          parsing: tests/versions/callconv.h
+[1.linux]
+          parsing: tests/versions/callconv.h
+[1.win32]
+          parsing: tests/versions/callconv.h
+[2.dos]
+          parsing: tests/versions/callconv.h
+[2.linux]
+          parsing: tests/versions/callconv.h
+[2.win32]
+          parsing: tests/versions/callconv.h
+emitting: tests/versions/callconv.bi (4 declarations)

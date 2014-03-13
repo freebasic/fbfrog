@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/removematch/1-pattern/0-matches.h
+[linux]
+        parsing: tests/removematch/1-pattern/0-matches.h
+[win32]
+        parsing: tests/removematch/1-pattern/0-matches.h
+emitting: tests/removematch/1-pattern/0-matches.bi (3 declarations)

@@ -1,0 +1,10 @@
+[dos]
+        parsing: tests/cpp/unknown-pragma.h
+tests/cpp/unknown-pragma.h(2): unknown #pragma
+    1: // @fail
+    2: #pragma foo
+               ^~~
+    3: 
+construct's code as seen by fbfrog:
+    [eol] [eol] # pragma foo [eol]
+                         ^~~

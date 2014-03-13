@@ -1,6 +1,8 @@
-#define EXPANDME1(x) void x(foo)(void)
-#define EXPANDME2(x) x
+// @fbfrog -nonamefixup -removedefine m1
 
-EXPANDME1(EXPANDME2);
-void EXPANDME2(foo)(void);
+#define m1(x) void x(foo)(void)
+#define m2(x) x
+
+m1(m2);
+void m2(foo)(void);
 void foo(void);

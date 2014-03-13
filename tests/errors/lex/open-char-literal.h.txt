@@ -1,3 +1,0 @@
-[dos]
-        parsing: tests/errors/lex/open-char-literal.h
-tests/errors/lex/open-char-literal.h(1): string/char literal left open

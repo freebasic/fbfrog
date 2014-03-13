@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/c/mixed.h
+[linux]
+        parsing: tests/c/mixed.h
+[win32]
+        parsing: tests/c/mixed.h
+emitting: tests/c/mixed.bi (5 declarations)

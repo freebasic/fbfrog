@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/cpp/empty-file.h
+[linux]
+        parsing: tests/cpp/empty-file.h
+[win32]
+        parsing: tests/cpp/empty-file.h
+emitting: tests/cpp/empty-file.bi (0 declarations)

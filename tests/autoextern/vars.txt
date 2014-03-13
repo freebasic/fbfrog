@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/autoextern/vars.h
+[linux]
+        parsing: tests/autoextern/vars.h
+[win32]
+        parsing: tests/autoextern/vars.h
+emitting: tests/autoextern/vars.bi (2 declarations)

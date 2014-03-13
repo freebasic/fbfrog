@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/cpp/if/eval-if-nested.h
+[linux]
+        parsing: tests/cpp/if/eval-if-nested.h
+[win32]
+        parsing: tests/cpp/if/eval-if-nested.h
+emitting: tests/cpp/if/eval-if-nested.bi (78 declarations)

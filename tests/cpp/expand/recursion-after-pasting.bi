@@ -1,1 +1,1 @@
-dim shared EXPANDME1 as long
+dim shared m1 as long

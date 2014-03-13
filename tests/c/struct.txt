@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/c/struct.h
+[linux]
+        parsing: tests/c/struct.h
+[win32]
+        parsing: tests/c/struct.h
+emitting: tests/c/struct.bi (35 declarations)

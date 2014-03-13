@@ -1,0 +1,11 @@
+[dos]
+        parsing: tests/cpp/if/ifndef-missing-id.h
+tests/cpp/if/ifndef-missing-id.h(2): missing identifier behind #ifndef
+    1: // @fail
+    2: #ifndef
+              ^
+    3: #endif
+    4: 
+construct's code as seen by fbfrog:
+    [eol] [eol] # ifndef [eol] # endif [eol]
+                         ^~~~~

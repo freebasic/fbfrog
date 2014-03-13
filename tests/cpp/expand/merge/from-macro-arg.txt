@@ -1,0 +1,17 @@
+[dos]
+        parsing: tests/cpp/expand/merge/from-macro-arg.h
+expected identifier for the symbol declared in this declaration but found '##'
+    typedef struct a ## b ;
+                     ^~
+tests/cpp/expand/merge/from-macro-arg.h(7): construct found here
+    5: //    typedef struct ab;
+    6: #define m(param) param
+    7: typedef struct m(a ## b);
+       ^~~~~~~
+    8: 
+tests/cpp/expand/merge/from-macro-arg.h(7): token found here
+    5: //    typedef struct ab;
+    6: #define m(param) param
+    7: typedef struct m(a ## b);
+                          ^~
+    8: 

@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/name-conflicts/nested.h
+[linux]
+        parsing: tests/name-conflicts/nested.h
+[win32]
+        parsing: tests/name-conflicts/nested.h
+emitting: tests/name-conflicts/nested.bi (9 declarations)

@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/cpp/expand/undeffed-isnt-expanded-anymore.h
+[linux]
+        parsing: tests/cpp/expand/undeffed-isnt-expanded-anymore.h
+[win32]
+        parsing: tests/cpp/expand/undeffed-isnt-expanded-anymore.h
+emitting: tests/cpp/expand/undeffed-isnt-expanded-anymore.bi (3 declarations)

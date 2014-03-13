@@ -1,0 +1,11 @@
+[dos]
+        parsing: tests/cpp/expand/call-zeroargs-too-many-args.h
+tests/cpp/expand/call-zeroargs-too-many-args.h(5): expected ')' to close macro call argument list but found 'a'
+    3: 
+    4: // Too many arguments
+    5: m1(a)
+          ^
+    6: 
+construct's code as seen by fbfrog:
+    [eol] [eol] m1 ( a ) [eol]
+                     ^

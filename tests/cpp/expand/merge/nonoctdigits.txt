@@ -1,0 +1,11 @@
+[dos]
+        parsing: tests/cpp/expand/merge/nonoctdigits.h
+tests/cpp/expand/merge/nonoctdigits.h(2): ## merge operator cannot merge '0' and '8'
+    1: // @fail @fbfrog -removedefine m
+    2: #define m 0 ## 8
+                   ^~
+    3: enum E {
+    4:  A = m
+construct's code as seen by fbfrog:
+    [eol] [eol] enum E { [eol] A = m [begin] 0 ## 8
+                                               ^~

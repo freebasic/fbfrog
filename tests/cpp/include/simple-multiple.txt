@@ -1,0 +1,16 @@
+[dos]
+        parsing: tests/cpp/include/simple-multiple.h
+        include: tests/cpp/include/simple-multiple-1.h
+        include: tests/cpp/include/simple-multiple-2.h
+        include: tests/cpp/include/simple-multiple-3.h
+[linux]
+        parsing: tests/cpp/include/simple-multiple.h
+        include: tests/cpp/include/simple-multiple-1.h
+        include: tests/cpp/include/simple-multiple-2.h
+        include: tests/cpp/include/simple-multiple-3.h
+[win32]
+        parsing: tests/cpp/include/simple-multiple.h
+        include: tests/cpp/include/simple-multiple-1.h
+        include: tests/cpp/include/simple-multiple-2.h
+        include: tests/cpp/include/simple-multiple-3.h
+emitting: tests/cpp/include/simple-multiple.bi (5 declarations)

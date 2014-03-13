@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/cpp/expand/incomplete-self-call-in-arg.h
+[linux]
+        parsing: tests/cpp/expand/incomplete-self-call-in-arg.h
+[win32]
+        parsing: tests/cpp/expand/incomplete-self-call-in-arg.h
+emitting: tests/cpp/expand/incomplete-self-call-in-arg.bi (1 declaration)

@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/autoextern/no-callconv-at-all.h
+[linux]
+        parsing: tests/autoextern/no-callconv-at-all.h
+[win32]
+        parsing: tests/autoextern/no-callconv-at-all.h
+emitting: tests/autoextern/no-callconv-at-all.bi (6 declarations)

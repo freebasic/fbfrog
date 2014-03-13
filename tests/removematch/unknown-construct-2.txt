@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/removematch/unknown-construct-2.h
+[linux]
+        parsing: tests/removematch/unknown-construct-2.h
+[win32]
+        parsing: tests/removematch/unknown-construct-2.h
+emitting: tests/removematch/unknown-construct-2.bi (0 declarations)

@@ -1,7 +1,10 @@
-// Incomplete macro call, not expanded
-#define EXPANDME1 EXPANDME2
-#define EXPANDME2(x) x
-#define EXPANDME3 (void)
-void EXPANDME1 EXPANDME3;
-// void EXPANDME2 EXPANDME3;
-// void EXPANDME2 (void);
+// @fbfrog -nonamefixup -removedefine m3
+
+#define m1 m2
+#define m2(x) x
+#define m3 (void)
+
+// m2: incomplete macro call, not expanded
+void m1 m3;
+// void m2 m3;
+// void m2 (void);

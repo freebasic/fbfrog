@@ -1,0 +1,13 @@
+[1.dos]
+          parsing: tests/appendbi/versioned.h
+[1.linux]
+          parsing: tests/appendbi/versioned.h
+[1.win32]
+          parsing: tests/appendbi/versioned.h
+[2.dos]
+          parsing: tests/appendbi/versioned.h
+[2.linux]
+          parsing: tests/appendbi/versioned.h
+[2.win32]
+          parsing: tests/appendbi/versioned.h
+emitting: tests/appendbi/versioned.bi (5 declarations)

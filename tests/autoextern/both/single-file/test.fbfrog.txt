@@ -1,7 +1,0 @@
-[dos]
-        parsing: tests/autoextern/both/single-file/a.h
-[linux]
-        parsing: tests/autoextern/both/single-file/a.h
-[win32]
-        parsing: tests/autoextern/both/single-file/a.h
-emitting: tests/autoextern/both/single-file/a.bi (11 declarations)

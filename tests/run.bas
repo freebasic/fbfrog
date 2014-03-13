@@ -1,3 +1,22 @@
+''
+'' This helper program searches the tests/ directory for *.h files, and runs
+'' fbfrog on each one. Each test will either produce a .bi (for .h files that
+'' are expected to not cause any errors) or a .txt file containing fbfrog's
+'' console output (for .h files that are expected to cause errors).
+''
+'' The first line of each .h file is checked for the following strings:
+''
+''  @fbfrog <...>  Extra fbfrog command line options for this test.
+''                 Any occurences of "<dir>" are replaced with the .h file's
+''                 parent directory's path.
+''
+''  @fail        Used to mark error (expected-failure) tests. (may be used
+''               in front of @fbfrog)
+''
+''  @ignore      Skip this .h file completely, allowing it to be #included
+''               into others etc. without being seen as test cases itself.
+''
+
 #include once "dir.bi"
 
 const NULL = 0
@@ -22,6 +41,39 @@ function strStripPrefix( byref s as string, byref prefix as string ) as string
 	else
 		function = s
 	end if
+end function
+
+function strReplace _
+	( _
+		byref text as string, _
+		byref a as string, _
+		byref b as string _
+	) as string
+
+	var result = text
+
+	var alen = len( a )
+	var blen = len( b )
+
+	var i = 0
+	do
+		'' Does result contain an occurence of a?
+		i = instr( i + 1, result, a )
+		if( i = 0 ) then
+			exit do
+		end if
+
+		'' Cut out a and insert b in its place
+		'' result  =  front  +  b  +  back
+		var keep = right( result, len( result ) - ((i - 1) + alen) )
+		result = left( result, i - 1 )
+		result += b
+		result += keep
+
+		i += blen - 1
+	loop
+
+	function = result
 end function
 
 #if defined( __FB_WIN32__ ) or defined( __FB_DOS__ )
@@ -81,25 +133,63 @@ function hConsoleWidth( ) as integer
 	function = w
 end function
 
-sub hShell _
-	( _
-		byref prefix as string, _
-		byref ln as string, _
-		byval expectedresult as integer _
-	)
+function hExtractLine1( byref filename as string ) as string
+	var f = freefile( )
+	if( open( filename, for input, as #f ) ) then
+		print "couldn't open file '" + filename + "'"
+		end 1
+	end if
 
-	print prefix;
+	dim as string line1
+	line input #f, line1
 
-	var result = shell( ln )
+	close #f
 
+	function = line1
+end function
+
+sub hTest( byref hfile as string )
+	var line1 = hExtractLine1( hfile )
+
+	'' @ignore?
+	if( instr( line1, "@ignore" ) >= 1 ) then
+		exit sub
+	end if
+
+	'' @fail?
+	var is_failure_test = (instr( line1, "@fail" ) >= 1)
+
+	'' @fbfrog <...> extra command line options?
+	dim as string extraoptions
+	scope
+		const TOKEN = "@fbfrog "
+		var begin = instr( line1, TOKEN )
+		if( begin >= 1 ) then
+			begin += len( TOKEN )
+			extraoptions = right( line1, len( line1 ) - begin + 1 )
+			extraoptions = strReplace( extraoptions, "<dir>", pathOnly( hfile ) )
+		end if
+	end scope
+
+	assert( right( hfile, 2 ) = ".h" )
+	var txtfile = left( hfile, len( hfile ) - 2 ) + ".txt"
+
+	'' ./fbfrog *.h <extraoptions> > txtfile 2>&1
+	var ln = fbfrog + " " + hfile + " " + extraoptions
+	var result = shell( ln + " > " + txtfile + " 2>&1" )
 	if( result = -1 ) then
-		print
 		print "command not found: '" + ln + "'"
 		end 1
 	end if
 
-	dim suffix as string
-	if( result = expectedresult ) then
+	dim as string message, suffix
+	if( is_failure_test ) then
+		message = "FAIL"
+	else
+		message = "PASS"
+	end if
+	message += " " + hfile
+	if( (result <> 0) = is_failure_test ) then
 		suffix = "[ ok ]"
 		stat.oks += 1
 	else
@@ -107,8 +197,9 @@ sub hShell _
 		stat.fails += 1
 	end if
 
-	print space( hConsoleWidth( ) - len( prefix ) - len( suffix ) ) + suffix
-
+	message += space( hConsoleWidth( ) - len( message ) - len( suffix ) )
+	message += suffix
+	print message
 end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -120,10 +211,6 @@ namespace files
 	dim shared as string list(0 to MAXFILES-1)
 	dim shared as integer count
 end namespace
-
-sub hForgetFiles( )
-	files.count = 0
-end sub
 
 type DIRNODE
 	next		as DIRNODE ptr
@@ -241,12 +328,6 @@ end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-sub hDeleteFiles( )
-	for i as integer = 0 to files.count-1
-		var dummy = kill( files.list(i) )
-	next
-end sub
-
 exe_path = pathAddDiv( exepath( ) )
 cur_dir = pathAddDiv( curdir( ) )
 fbfrog = pathStripLastComponent( exe_path ) + "fbfrog"
@@ -265,32 +346,23 @@ for i as integer = 1 to __FB_ARGC__-1
 	end select
 next
 
-'' Clean test directories: Delete all *.txt and *.bi files
+'' Clean test directories: Delete existing *.txt and *.bi files
 hScanDirectory( exe_path, "*.txt" )
 hScanDirectory( exe_path, "*.bi" )
-hDeleteFiles( )
-hForgetFiles( )
+for i as integer = 0 to files.count-1
+	var dummy = kill( files.list(i) )
+next
+files.count = 0
 
 if( clean_only ) then
 	end 0
 end if
 
-'' Run fbfrog on all found *.fbfrog files (testing that parsing/AST stuff works)
-hScanDirectory( exe_path, "*.fbfrog" )
+'' Test each *.h file
+hScanDirectory( exe_path, "*.h" )
 hSortFiles( )
 for i as integer = 0 to files.count-1
-	var f = files.list(i)
-	hShell( "PRESET " + f, fbfrog + " @" + f + " > " + f + ".txt 2>&1", 0 )
+	hTest( files.list(i) )
 next
-hForgetFiles( )
-
-'' Run fbfrog on all found errors/*.h files (testing for error messages)
-hScanDirectory( exe_path + "errors" + PATHDIV, "*.h" )
-hSortFiles( )
-for i as integer = 0 to files.count-1
-	var f = files.list(i)
-	hShell( "ERROR " + f, fbfrog + " " + f + " > " + f + ".txt 2>&1", 1 )
-next
-hForgetFiles( )
 
 print "  " & stat.oks & " tests ok, " & stat.fails & " failed"

@@ -1,0 +1,10 @@
+[dos]
+        parsing: tests/c/proc-missing-semicolon.h
+tests/c/proc-missing-semicolon.h(2): missing ';' to finish this declaration
+    1: // @fail
+    2: void f(void)
+                  ^
+    3: 
+construct's code as seen by fbfrog:
+    void f ( void )
+                  ^

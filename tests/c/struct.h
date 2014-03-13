@@ -1,3 +1,5 @@
+// @fbfrog -whitespace -nonamefixup
+
 struct UDT {
 };
 

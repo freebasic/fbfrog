@@ -1,0 +1,10 @@
+[dos]
+        parsing: tests/cpp/include/simple.h
+        include: tests/cpp/include/simple-1.h
+[linux]
+        parsing: tests/cpp/include/simple.h
+        include: tests/cpp/include/simple-1.h
+[win32]
+        parsing: tests/cpp/include/simple.h
+        include: tests/cpp/include/simple-1.h
+emitting: tests/cpp/include/simple.bi (3 declarations)

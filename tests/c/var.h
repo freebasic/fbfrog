@@ -1,3 +1,5 @@
+// @fbfrog -whitespace -nonamefixup
+
 int __a_normal_variable;
 
 static int __a_static_variable;

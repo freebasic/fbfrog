@@ -1,0 +1,12 @@
+[dos]
+        parsing: tests/cpp/if/duplicate-else.h
+tests/cpp/if/duplicate-else.h(4): #else after #else
+    2: #if 0
+    3: #else
+    4: #else
+       ^
+    5: #endif
+    6: 
+construct's code as seen by fbfrog:
+    [ppelse]
+    ^~~~~~~~

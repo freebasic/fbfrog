@@ -1,7 +1,0 @@
-[dos]
-        parsing: tests/errors/removedefine/a.h
-[linux]
-        parsing: tests/errors/removedefine/a.h
-[win32]
-        parsing: tests/errors/removedefine/a.h
-emitting: tests/errors/removedefine/a.bi (1 declaration)

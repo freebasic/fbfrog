@@ -1,2 +1,4 @@
-#define EXPANDME1() void f(void);
-EXPANDME1()
+// @fbfrog -removedefine m
+
+#define m() void f(void);
+m()

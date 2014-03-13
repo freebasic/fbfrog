@@ -1,0 +1,10 @@
+[dos]
+        parsing: tests/cpp/error-directive.h
+tests/cpp/error-directive.h(2): #error
+    1: // @fail
+    2: #error "Something"
+       ^
+    3: 
+construct's code as seen by fbfrog:
+    [pperror "Something"]
+    ^~~~~~~~~~~~~~~~~~~~~

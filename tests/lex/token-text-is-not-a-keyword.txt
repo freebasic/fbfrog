@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/lex/token-text-is-not-a-keyword.h
+[linux]
+        parsing: tests/lex/token-text-is-not-a-keyword.h
+[win32]
+        parsing: tests/lex/token-text-is-not-a-keyword.h
+emitting: tests/lex/token-text-is-not-a-keyword.bi (2 declarations)

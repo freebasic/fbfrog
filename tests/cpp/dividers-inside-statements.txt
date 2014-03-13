@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/cpp/dividers-inside-statements.h
+[linux]
+        parsing: tests/cpp/dividers-inside-statements.h
+[win32]
+        parsing: tests/cpp/dividers-inside-statements.h
+emitting: tests/cpp/dividers-inside-statements.bi (6 declarations)

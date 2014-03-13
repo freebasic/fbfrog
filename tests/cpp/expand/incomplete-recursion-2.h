@@ -1,5 +1,7 @@
-// Incomplete recursive macro call, still not expanded
-#define EXPANDME1(x) EXPANDME1
-#define EXPANDME2 (void)
-// void EXPANDME1 (void);
-void EXPANDME1(void) EXPANDME2;
+// @fbfrog -nonamefixup -removedefine m2
+
+// Incomplete recursive macro call, not expanded
+#define m1(x) m1
+#define m2 (void)
+void m1(void) m2;
+// void m1 (void);

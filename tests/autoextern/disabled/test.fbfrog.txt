@@ -1,7 +1,0 @@
-[dos]
-        parsing: tests/autoextern/disabled/a.h
-[linux]
-        parsing: tests/autoextern/disabled/a.h
-[win32]
-        parsing: tests/autoextern/disabled/a.h
-emitting: tests/autoextern/disabled/a.bi (11 declarations)

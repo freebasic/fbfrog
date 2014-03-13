@@ -1,7 +1,0 @@
-[dos]
-        parsing: tests/removematch/multi-token-pattern-2/a.h
-[linux]
-        parsing: tests/removematch/multi-token-pattern-2/a.h
-[win32]
-        parsing: tests/removematch/multi-token-pattern-2/a.h
-emitting: tests/removematch/multi-token-pattern-2/a.bi (0 declarations)

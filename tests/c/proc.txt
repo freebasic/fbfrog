@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/c/proc.h
+[linux]
+        parsing: tests/c/proc.h
+[win32]
+        parsing: tests/c/proc.h
+emitting: tests/c/proc.bi (23 declarations)

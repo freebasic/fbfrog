@@ -1,0 +1,11 @@
+[dos]
+        parsing: tests/cpp/if/else-without-if.h
+tests/cpp/if/else-without-if.h(2): #else without #if
+    1: // @fail
+    2: #else
+       ^
+    3: #endif
+    4: 
+construct's code as seen by fbfrog:
+    [ppelse]
+    ^~~~~~~~

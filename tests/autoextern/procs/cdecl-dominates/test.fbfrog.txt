@@ -1,7 +1,0 @@
-[dos]
-        parsing: tests/autoextern/procs/cdecl-dominates/extern-c.h
-[linux]
-        parsing: tests/autoextern/procs/cdecl-dominates/extern-c.h
-[win32]
-        parsing: tests/autoextern/procs/cdecl-dominates/extern-c.h
-emitting: tests/autoextern/procs/cdecl-dominates/extern-c.bi (9 declarations)

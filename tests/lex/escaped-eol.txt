@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/lex/escaped-eol.h
+[linux]
+        parsing: tests/lex/escaped-eol.h
+[win32]
+        parsing: tests/lex/escaped-eol.h
+emitting: tests/lex/escaped-eol.bi (6 declarations)

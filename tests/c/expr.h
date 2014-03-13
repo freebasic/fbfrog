@@ -1,3 +1,5 @@
+// @fbfrog -whitespace -nonamefixup
+
 typedef int MYINT;
 
 enum E {

@@ -1,9 +1,0 @@
-[dos]
-        parsing: tests/errors/c/param-missing-initexpr.h
-tests/errors/c/param-missing-initexpr.h(1): expected an atomic expression but found ')'
-    1: void f(int i =);
-                     ^
-    2: 
-construct's code as seen by fbfrog:
-    void f ( int i = ) ;
-                     ^

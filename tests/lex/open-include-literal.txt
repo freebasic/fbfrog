@@ -1,0 +1,3 @@
+[dos]
+        parsing: tests/lex/open-include-literal.h
+tests/lex/open-include-literal.h(2): string/char literal left open

@@ -1,9 +1,0 @@
-[dos]
-        parsing: tests/errors/c/missing-semicolon.h
-tests/errors/c/missing-semicolon.h(1): missing ';' to finish this declaration
-    1: int a
-           ^
-    2: 
-construct's code as seen by fbfrog:
-    int a
-        ^

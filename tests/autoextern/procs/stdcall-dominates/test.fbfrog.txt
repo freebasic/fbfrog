@@ -1,7 +1,0 @@
-[dos]
-        parsing: tests/autoextern/procs/stdcall-dominates/extern-windows.h
-[linux]
-        parsing: tests/autoextern/procs/stdcall-dominates/extern-windows.h
-[win32]
-        parsing: tests/autoextern/procs/stdcall-dominates/extern-windows.h
-emitting: tests/autoextern/procs/stdcall-dominates/extern-windows.bi (9 declarations)

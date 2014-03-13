@@ -1,7 +1,0 @@
-[dos]
-        parsing: tests/removematch/2-patterns/1-match/construct-1-of-3/a.h
-[linux]
-        parsing: tests/removematch/2-patterns/1-match/construct-1-of-3/a.h
-[win32]
-        parsing: tests/removematch/2-patterns/1-match/construct-1-of-3/a.h
-emitting: tests/removematch/2-patterns/1-match/construct-1-of-3/a.bi (2 declarations)

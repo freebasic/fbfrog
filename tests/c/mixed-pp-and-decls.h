@@ -1,3 +1,5 @@
+// @fbfrog -nonamefixup
+
 enum E {
 #if 1
 	A

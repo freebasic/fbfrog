@@ -1,7 +1,0 @@
-[dos]
-        parsing: tests/ast-merge/targets/a.h
-[linux]
-        parsing: tests/ast-merge/targets/a.h
-[win32]
-        parsing: tests/ast-merge/targets/a.h
-emitting: tests/ast-merge/targets/a.bi (12 declarations)

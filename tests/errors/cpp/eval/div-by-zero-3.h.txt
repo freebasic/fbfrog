@@ -1,7 +1,0 @@
-[dos]
-        parsing: tests/errors/cpp/eval/div-by-zero-3.h
-tests/errors/cpp/eval/div-by-zero-3.h(1): couldn't evaluate #if condition
-    1: #if  1 /  (1  %  1)
-              ^
-    2: #endif
-    3: 

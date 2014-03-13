@@ -1,3 +1,5 @@
+'' @fbfrog -whitespace -nonamefixup
+
 enum E
 end enum
 

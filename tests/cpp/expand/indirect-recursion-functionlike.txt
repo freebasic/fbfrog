@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/cpp/expand/indirect-recursion-functionlike.h
+[linux]
+        parsing: tests/cpp/expand/indirect-recursion-functionlike.h
+[win32]
+        parsing: tests/cpp/expand/indirect-recursion-functionlike.h
+emitting: tests/cpp/expand/indirect-recursion-functionlike.bi (4 declarations)

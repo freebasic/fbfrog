@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/cpp/expand/params.h
+[linux]
+        parsing: tests/cpp/expand/params.h
+[win32]
+        parsing: tests/cpp/expand/params.h
+emitting: tests/cpp/expand/params.bi (10 declarations)

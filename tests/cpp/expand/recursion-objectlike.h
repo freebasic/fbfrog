@@ -1,3 +1,4 @@
+// @fbfrog -nonamefixup
 // Recursion
-#define EXPANDME1 EXPANDME1
-static int EXPANDME1; // -> EXPANDME1
+#define m m
+static int m; // -> m

@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/cpp/expand/unmerged-tokens-in-merged-arg-still-expanded.h
+[linux]
+        parsing: tests/cpp/expand/unmerged-tokens-in-merged-arg-still-expanded.h
+[win32]
+        parsing: tests/cpp/expand/unmerged-tokens-in-merged-arg-still-expanded.h
+emitting: tests/cpp/expand/unmerged-tokens-in-merged-arg-still-expanded.bi (6 declarations)

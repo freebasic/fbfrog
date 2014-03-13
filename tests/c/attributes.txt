@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/c/attributes.h
+[linux]
+        parsing: tests/c/attributes.h
+[win32]
+        parsing: tests/c/attributes.h
+emitting: tests/c/attributes.bi (156 declarations)

@@ -1,0 +1,10 @@
+[dos]
+        parsing: tests/cpp/if/endif-without-if.h
+tests/cpp/if/endif-without-if.h(2): #endif without #if
+    1: // @fail
+    2: #endif
+       ^
+    3: 
+construct's code as seen by fbfrog:
+    #endif
+    ^~~~~~

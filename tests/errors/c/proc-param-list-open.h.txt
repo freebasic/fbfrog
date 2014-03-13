@@ -1,9 +1,0 @@
-[dos]
-        parsing: tests/errors/c/proc-param-list-open.h
-tests/errors/c/proc-param-list-open.h(1): missing a data type at the beginning of this declaration
-    1: void f(
-             ^
-    2: 
-construct's code as seen by fbfrog:
-    void f (
-           ^

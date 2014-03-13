@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/nested-defines.h
+[linux]
+        parsing: tests/nested-defines.h
+[win32]
+        parsing: tests/nested-defines.h
+emitting: tests/nested-defines.bi (15 declarations)

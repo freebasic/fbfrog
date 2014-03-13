@@ -1,5 +1,7 @@
 extern "C"
 
+'' @fbfrog -whitespace -nonamefixup
+
 dim shared __storage_spec_on_procs as long
 declare sub f()
 declare sub f()

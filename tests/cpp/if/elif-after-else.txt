@@ -1,0 +1,12 @@
+[dos]
+        parsing: tests/cpp/if/elif-after-else.h
+tests/cpp/if/elif-after-else.h(4): #elif after #else
+    2: #if 0
+    3: #else
+    4: #elif 0
+       ^
+    5: #endif
+    6: 
+construct's code as seen by fbfrog:
+    [ppelseif]
+    ^~~~~~~~~~

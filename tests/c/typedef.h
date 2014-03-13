@@ -1,3 +1,5 @@
+// @fbfrog -whitespace -nonamefixup
+
 typedef UDT A;
 typedef struct UDT A;
 typedef int A;

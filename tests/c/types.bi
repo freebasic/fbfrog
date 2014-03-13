@@ -1,3 +1,5 @@
+'' @fbfrog -whitespace -nonamefixup
+
 dim shared a as long
 dim shared a as ulong
 

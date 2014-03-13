@@ -1,5 +1,7 @@
 extern "C"
 
+'' @fbfrog -whitespace -nonamefixup
+
 dim shared __simple as long
 declare sub f(byval a as long)
 declare sub f(byval a as long, byval b as long)

@@ -1,3 +1,5 @@
+// @fbfrog -whitespace -nonamefixup
+
 #define A 0
 #define A 1
 #define A 11

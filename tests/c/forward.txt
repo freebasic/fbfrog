@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/c/forward.h
+[linux]
+        parsing: tests/c/forward.h
+[win32]
+        parsing: tests/c/forward.h
+emitting: tests/c/forward.bi (1 declaration)

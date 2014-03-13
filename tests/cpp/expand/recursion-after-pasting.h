@@ -1,3 +1,4 @@
+// @fbfrog -removedefine m1
 // Recursion after pasting
-#define EXPANDME1 EXPAND##ME1
-static int EXPANDME1; // -> EXPANDME1
+#define m1 m##1
+static int m1; // -> m1

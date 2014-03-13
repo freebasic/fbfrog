@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/cpp/comment-accumulation.h
+[linux]
+        parsing: tests/cpp/comment-accumulation.h
+[win32]
+        parsing: tests/cpp/comment-accumulation.h
+emitting: tests/cpp/comment-accumulation.bi (1 declaration)

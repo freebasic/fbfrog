@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/cpp/expand/stringify-first-then-merge.h
+[linux]
+        parsing: tests/cpp/expand/stringify-first-then-merge.h
+[win32]
+        parsing: tests/cpp/expand/stringify-first-then-merge.h
+emitting: tests/cpp/expand/stringify-first-then-merge.bi (2 declarations)

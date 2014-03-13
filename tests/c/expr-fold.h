@@ -1,3 +1,5 @@
+// @fbfrog -whitespace -nonamefixup
+
 enum E {
 	// UOPs
 	_1 = !0,

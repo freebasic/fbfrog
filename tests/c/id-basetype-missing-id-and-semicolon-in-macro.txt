@@ -1,0 +1,11 @@
+[dos]
+        parsing: tests/c/id-basetype-missing-id-and-semicolon-in-macro.h
+missing identifier for the symbol declared in this declaration
+    c
+    ^
+tests/c/id-basetype-missing-id-and-semicolon-in-macro.h(2): construct found here
+    1: // @fail @fbfrog -removedefine m
+    2: #define m int a; int b; c
+                               ^
+    3: m
+    4: 

@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/autoextern/cdecl-dominates.h
+[linux]
+        parsing: tests/autoextern/cdecl-dominates.h
+[win32]
+        parsing: tests/autoextern/cdecl-dominates.h
+emitting: tests/autoextern/cdecl-dominates.bi (9 declarations)

@@ -1,5 +1,7 @@
 extern "C"
 
+'' @fbfrog -whitespace -nonamefixup -removedefine m
+
 declare sub f()
 declare function f(byval as long, byval as long) as long
 

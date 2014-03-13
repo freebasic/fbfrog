@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/cpp/expand/merge/merge.h
+[linux]
+        parsing: tests/cpp/expand/merge/merge.h
+[win32]
+        parsing: tests/cpp/expand/merge/merge.h
+emitting: tests/cpp/expand/merge/merge.bi (99 declarations)

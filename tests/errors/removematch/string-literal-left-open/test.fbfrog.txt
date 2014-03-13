@@ -1,5 +1,0 @@
--removematch(1): string/char literal left open
-tests/errors/removematch/string-literal-left-open/test.fbfrog(1): from here:
-    1: a.h -removematch 'abc "123'
-                        ^~~~~~~~~~
-    2: 

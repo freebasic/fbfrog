@@ -1,0 +1,12 @@
+[dos]
+        parsing: tests/cpp/if/elif-missing-condition.h
+tests/cpp/if/elif-missing-condition.h(3): missing #if condition
+    1: // @fail
+    2: #ifdef A
+    3: #elif
+            ^
+    4: #endif
+    5: 
+construct's code as seen by fbfrog:
+    [eol] # endif [eol]
+    ^~~~~

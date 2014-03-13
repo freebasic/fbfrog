@@ -1,0 +1,11 @@
+[dos]
+        parsing: tests/c/typedef-array.h
+tests/c/typedef-array.h(3): TODO: arrays not supported here yet
+    1: // @fail
+    2: /* Array typedef */
+    3: typedef int MYINTARRAY[10];
+                             ^
+    4: 
+construct's code as seen by fbfrog:
+    typedef int MYINTARRAY [ 10 ] ;
+                           ^

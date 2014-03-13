@@ -1,0 +1,12 @@
+[dos]
+        parsing: tests/cpp/expand/merge/merge-with-merge-token.h
+tests/cpp/expand/merge/merge-with-merge-token.h(3): ## merge operator cannot merge 'a' and '##'
+    1: // @fail @fbfrog -removedefine m
+    2: // undefined behaviour
+    3: #define m a ## ## b
+                   ^~
+    4: m
+    5: 
+construct's code as seen by fbfrog:
+    a ## ## b
+      ^~

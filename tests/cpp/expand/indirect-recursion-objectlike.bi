@@ -1,2 +1,5 @@
-dim shared EXPANDME1 as long
-dim shared EXPANDME2 as long
+#define m1 m2
+#define m2 m1
+
+dim shared m1 as long
+dim shared m2 as long

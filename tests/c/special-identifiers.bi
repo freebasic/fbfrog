@@ -1,5 +1,5 @@
 extern "C"
 
-declare sub _()
+declare sub __ alias "_"()
 
 end extern

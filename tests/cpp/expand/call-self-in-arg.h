@@ -1,4 +1,6 @@
+// @fbfrog -nonamefixup -removedefine m1
+
 // Self called in arg (ok, unlike recursion)
-#define EXPANDME1(x) x
-// static int i;
-EXPANDME1(EXPANDME1(static int i;))
+#define m1(x) x
+m1(m1(static int i;))
+static int i;

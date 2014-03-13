@@ -1,3 +1,5 @@
+// @fbfrog -whitespace -nonamefixup
+
 struct UDT {
 	signed int i;
 	unsigned long long int j;

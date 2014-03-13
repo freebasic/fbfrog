@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/cpp/expand/expansion-after-pasting.h
+[linux]
+        parsing: tests/cpp/expand/expansion-after-pasting.h
+[win32]
+        parsing: tests/cpp/expand/expansion-after-pasting.h
+emitting: tests/cpp/expand/expansion-after-pasting.bi (5 declarations)

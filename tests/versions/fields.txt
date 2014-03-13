@@ -1,0 +1,13 @@
+[1.dos]
+          parsing: tests/versions/fields.h
+[1.linux]
+          parsing: tests/versions/fields.h
+[1.win32]
+          parsing: tests/versions/fields.h
+[2.dos]
+          parsing: tests/versions/fields.h
+[2.linux]
+          parsing: tests/versions/fields.h
+[2.win32]
+          parsing: tests/versions/fields.h
+emitting: tests/versions/fields.bi (4 declarations)

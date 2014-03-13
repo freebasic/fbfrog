@@ -1,3 +1,8 @@
+'' @fbfrog -whitespace -nonamefixup -removedefine m2
+
+#define m3 foo
+
+#define m1(x) stat##x
 dim shared foo as long
 dim shared foo as long
 

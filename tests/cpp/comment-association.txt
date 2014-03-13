@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/cpp/comment-association.h
+[linux]
+        parsing: tests/cpp/comment-association.h
+[win32]
+        parsing: tests/cpp/comment-association.h
+emitting: tests/cpp/comment-association.bi (9 declarations)

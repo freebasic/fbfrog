@@ -1,5 +1,8 @@
+// @fbfrog -nonamefixup -removedefine m1 -removedefine m2
+
 // Other macro called in arg
-#define EXPANDME1(a) void a(void);
-#define EXPANDME2 foo
-// void foo(void);
-EXPANDME1(EXPANDME2)
+#define m1(a) void a(void);
+#define m2 foo
+m1(m2)
+
+void foo(void);

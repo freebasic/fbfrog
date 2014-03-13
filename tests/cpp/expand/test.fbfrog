@@ -1,9 +1,0 @@
-.
--whitespace -nonamefixup
-
--removedefine EXPANDME1
--removedefine EXPANDME2
--removedefine EXPANDME3
--removedefine EXPANDME4
--removedefine EXPANDME5
--removedefine EXPANDME6

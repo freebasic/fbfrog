@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/name-conflicts/case.h
+[linux]
+        parsing: tests/name-conflicts/case.h
+[win32]
+        parsing: tests/name-conflicts/case.h
+emitting: tests/name-conflicts/case.bi (14 declarations)
