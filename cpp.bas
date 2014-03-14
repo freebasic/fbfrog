@@ -290,8 +290,8 @@ private function cppComment( byval x as integer ) as integer
 	function = x
 end function
 
-private sub cppComments( )
-	var x = 0
+private sub cppComments( byval first as integer )
+	var x = first
 	while( tkGet( x ) <> TK_EOF )
 		if( tkGet( x ) = TK_COMMENT ) then
 			x = cppComment( x )
@@ -302,9 +302,8 @@ end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-private sub cppDividers( )
-	var x = 0
-
+private sub cppDividers( byval first as integer )
+	var x = first
 	while( tkGet( x ) <> TK_EOF )
 		var begin = x
 
@@ -353,7 +352,7 @@ private sub cppDividers( )
 
 	'' And remove DIVIDERs again inside statements, otherwise the C parser
 	'' will choke on them...
-	x = 0
+	x = first
 	while( tkGet( x ) <> TK_EOF )
 		var y = hSkipStatement( x ) - 1
 
@@ -804,8 +803,8 @@ private function cppDirective( byval x as integer ) as integer
 	function = x
 end function
 
-private sub cppIdentifyDirectives( )
-	var x = 0
+private sub cppIdentifyDirectives( byval first as integer )
+	var x = first
 	do
 		select case( tkGet( x ) )
 		case TK_EOF
@@ -1893,6 +1892,14 @@ private sub hCheckStackLevel( byval x as integer, byval level as integer )
 	end if
 end sub
 
+private sub hPreprocessTokens( byval x as integer, byval whitespace as integer )
+	if( whitespace ) then
+		cppComments( x )
+		cppDividers( x )
+	end if
+	cppIdentifyDirectives( x )
+end sub
+
 private sub hLoadFile _
 	( _
 		byval x as integer, _
@@ -1902,12 +1909,7 @@ private sub hLoadFile _
 	)
 
 	lexLoadC( x, sourcebufferFromFile( filename, includeloc ), whitespace )
-
-	if( whitespace ) then
-		cppComments( )
-		cppDividers( )
-	end if
-	cppIdentifyDirectives( )
+	hPreprocessTokens( x, whitespace )
 
 end sub
 
@@ -1970,14 +1972,16 @@ sub cppMain _
 		byval nomerge as integer _
 	)
 
-	var x = 0
-	var skiplevel = MAXPPSTACK
-	var level = 0
+	'' Identify pre-#define directives, if any
+	hPreprocessTokens( 0, whitespace )
 
 	'' Add toplevel file behind current tokens (could be pre-#defines)
 	hLoadFile( tkGetCount( ), @topfile->location, topfile->text, whitespace )
-	ppstack(level) = 0
 
+	var x = 0
+	var skiplevel = MAXPPSTACK
+	var level = 0
+	ppstack(0) = 0
 	do
 		select case( tkGet( x ) )
 		case TK_EOF
@@ -2019,8 +2023,8 @@ sub cppMain _
 			if( skiplevel <> MAXPPSTACK ) then
 				hRemoveTokenAndTkBeginEnd( x )
 			else
-				var location = tkGetLocation( x )
-				var context = iif( location->source, location->source->name, NULL )
+				var location = *tkGetLocation( x )
+				var context = iif( location.source, location.source->name, NULL )
 				if( context = NULL ) then
 					context = topfile->text
 				end if
@@ -2034,9 +2038,9 @@ sub cppMain _
 					hCheckStackLevel( x, level )
 					ppstack(level) = 0
 
-					'' Leave the #include token where it is, and insert the content behind it
-					var xinclude = x
-					x += 1
+					'' Remove the #include token
+					assert( tkGet( x ) = TK_PPINCLUDE )
+					tkRemove( x, x )
 
 					'' Insert this so we can go back end delete all the #included tokens easily
 					tkInsert( x, TK_BEGININCLUDE )
@@ -2052,11 +2056,7 @@ sub cppMain _
 					'' so we can detect the included EOF and pop the #include context from
 					'' the ppstack.
 					tkInsert( x, TK_ENDINCLUDE )
-					hLoadFile( x, tkGetLocation( xinclude ), incfile, whitespace )
-
-					'' Remove the #include
-					tkRemove( xinclude, xinclude )
-					x -= 1
+					hLoadFile( x, @location, incfile, whitespace )
 
 					'' Start parsing the #included content
 					'' (starting behind the EOL inserted above)

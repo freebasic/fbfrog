@@ -2,4 +2,30 @@
         parsing: tests/cpp/directives.h
         include: tests/cpp/directives-1.h
         include: tests/cpp/directives-1.h
-cpp.bas(2064): assertion failed at CPPMAIN: tkGet( x ) =TK_EOL
+        include: tests/cpp/directives-1.h
+        include: tests/cpp/directives-1.h
+        include: tests/cpp/directives-1.h
+        include: tests/cpp/directives-1.h
+        include: tests/cpp/directives-1.h
+        include: tests/cpp/directives-1.h
+[linux]
+        parsing: tests/cpp/directives.h
+        include: tests/cpp/directives-1.h
+        include: tests/cpp/directives-1.h
+        include: tests/cpp/directives-1.h
+        include: tests/cpp/directives-1.h
+        include: tests/cpp/directives-1.h
+        include: tests/cpp/directives-1.h
+        include: tests/cpp/directives-1.h
+        include: tests/cpp/directives-1.h
+[win32]
+        parsing: tests/cpp/directives.h
+        include: tests/cpp/directives-1.h
+        include: tests/cpp/directives-1.h
+        include: tests/cpp/directives-1.h
+        include: tests/cpp/directives-1.h
+        include: tests/cpp/directives-1.h
+        include: tests/cpp/directives-1.h
+        include: tests/cpp/directives-1.h
+        include: tests/cpp/directives-1.h
+emitting: tests/cpp/directives.bi (61 declarations)
