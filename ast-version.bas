@@ -670,7 +670,7 @@ private sub hAddVersionDefineChecks _
 	''     #endif
 	if( defaultversion->class <> ASTCLASS_DUMMYVERSION ) then
 		var ppif = astNewPPIF( astNewUOP( ASTCLASS_NOT, astNewUOP( ASTCLASS_DEFINED, astNewID( versiondefine ) ) ) )
-		var macro = astNew( ASTCLASS_PPDEFINE, versiondefine )
+		var macro = astNewPPDEFINE( versiondefine )
 		macro->expr = astClone( defaultversion )
 		astAppend( ppif, macro )
 		astAppend( checks, ppif )

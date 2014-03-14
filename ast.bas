@@ -179,6 +179,12 @@ function astNew overload _
 	function = n
 end function
 
+function astNewPPDEFINE( byval id as zstring ptr ) as ASTNODE ptr
+	var n = astNew( ASTCLASS_PPDEFINE, id )
+	n->paramcount = -1
+	function = n
+end function
+
 function astNewPPIF( byval expr as ASTNODE ptr ) as ASTNODE ptr
 	var n = astNew( ASTCLASS_PPIF )
 	n->expr = expr

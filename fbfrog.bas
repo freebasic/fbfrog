@@ -314,7 +314,7 @@ private function hParseArgs( byref x as integer, byval body as integer ) as ASTN
 
 				'' <id>
 				hExpectId( x )
-				var n = astTakeLoc( astNew( ASTCLASS_PPDEFINE, tkGetText( x ) ), x )
+				var n = astTakeLoc( astNewPPDEFINE( tkGetText( x ) ), x )
 
 				'' [<body>]
 				if( hIsStringOrId( x + 1 ) ) then

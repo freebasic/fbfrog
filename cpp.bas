@@ -601,7 +601,7 @@ end function
 
 sub hMacroParamList( byref x as integer, byval t as ASTNODE ptr )
 	assert( tkGet( x ) >= TK_ID )
-	t->paramcount = -1
+	assert( t->paramcount = -1 )
 	x += 1
 
 	'' '(' following directly behind the macro id, no spaces in between?
@@ -653,7 +653,7 @@ private function cppDirective( byval x as integer ) as integer
 		if( tkGet( x ) < TK_ID ) then
 			tkExpect( x, TK_ID, "behind #define" )
 		end if
-		var macro = astNew( ASTCLASS_PPDEFINE, tkGetIdOrKw( x ) )
+		var macro = astNewPPDEFINE( tkGetIdOrKw( x ) )
 
 		hMacroParamList( x, macro )
 

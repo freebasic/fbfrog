@@ -777,6 +777,7 @@ declare function astNew overload _
 		byval class_ as integer, _
 		byval child as ASTNODE ptr _
 	) as ASTNODE ptr
+declare function astNewPPDEFINE( byval id as zstring ptr ) as ASTNODE ptr
 declare function astNewPPIF( byval expr as ASTNODE ptr ) as ASTNODE ptr
 declare function astNewUOP _
 	( _
