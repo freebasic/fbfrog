@@ -1,0 +1,13 @@
+[dos]
+        parsing: tests/cpp/include/nested-nomerge.h
+        include: tests/cpp/include/nested-nomerge-1.h
+        include: tests/cpp/include/nested-nomerge-1-1.h
+[linux]
+        parsing: tests/cpp/include/nested-nomerge.h
+        include: tests/cpp/include/nested-nomerge-1.h
+        include: tests/cpp/include/nested-nomerge-1-1.h
+[win32]
+        parsing: tests/cpp/include/nested-nomerge.h
+        include: tests/cpp/include/nested-nomerge-1.h
+        include: tests/cpp/include/nested-nomerge-1-1.h
+emitting: tests/cpp/include/nested-nomerge.bi (2 declarations)

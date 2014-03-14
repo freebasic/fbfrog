@@ -1828,17 +1828,18 @@ private function hSkipFromBeginToEnd( byval x as integer ) as integer
 	function = x
 end function
 
+private sub hMarkForRemoval( byval first as integer, byval last as integer )
+	for i as integer = first to last
+		tkAddFlags( i, TKFLAG_REMOVE )
+	next
+end sub
+
 private sub hSkipIfAndMarkForRemoval( byref x as integer )
 	var last = x
-
 	if( tkGet( x + 1 ) = TK_BEGIN ) then
 		last = hSkipFromBeginToEnd( x + 1 )
 	end if
-
-	for i as integer = x to last
-		tkAddFlags( i, TKFLAG_REMOVE )
-	next
-
+	hMarkForRemoval( x, last )
 	x = last
 end sub
 
@@ -1933,10 +1934,23 @@ private function hSearchHeaderFile _
 	function = ""
 end function
 
-private function hFindIncludeBOF( byval x as integer ) as integer
+private function hFindBeginInclude( byval x as integer ) as integer
+	var level = 0
+
 	do
 		x -= 1
-	loop while( tkGet( x ) <> TK_BEGININCLUDE )
+
+		select case( tkGet( x ) )
+		case TK_BEGININCLUDE
+			if( level = 0 ) then
+				exit do
+			end if
+			level -= 1
+		case TK_ENDINCLUDE
+			level += 1
+		end select
+	loop
+
 	function = x
 end function
 
@@ -1975,6 +1989,18 @@ sub cppMain _
 				tkOops( x - 1, "missing #endif in #included file" )
 			end if
 			level -= 1
+
+			var begin = hFindBeginInclude( x )
+
+			if( nomerge ) then
+				'' #include expansion wasn't requested, so mark all the #included tokens for removal.
+				'' (i.e. all #defines/#undefs were seen, but the code won't be preserved)
+				hMarkForRemoval( begin, x )
+			else
+				'' Remove just the TK_BEGININCLUDE/TK_ENDINCLUDE, keep the #included tokens.
+				tkAddFlags( begin, TKFLAG_REMOVE )
+				tkAddFlags( x, TKFLAG_REMOVE )
+			end if
 
 		case TK_PPINCLUDE
 			if( skiplevel <> MAXPPSTACK ) then

@@ -1,0 +1,10 @@
+[dos]
+        parsing: tests/cpp/include/simple-nomerge.h
+        include: tests/cpp/include/simple-nomerge-1.h
+[linux]
+        parsing: tests/cpp/include/simple-nomerge.h
+        include: tests/cpp/include/simple-nomerge-1.h
+[win32]
+        parsing: tests/cpp/include/simple-nomerge.h
+        include: tests/cpp/include/simple-nomerge-1.h
+emitting: tests/cpp/include/simple-nomerge.bi (2 declarations)
