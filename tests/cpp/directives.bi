@@ -29,30 +29,30 @@
 '' @ignore
 
 #define INCLUDED
-#define A01 0
-#define A02 1
-#define A03 11
-#define A04 &o1
-#define A05 &o123
-#define A06 &h0
-#define A07 &h0
-#define A08 &h1
-#define A09 &hFF
-#define A10 1
-#define A11 1
-#define A12 1
-#define A13 0.1
-#define A14 0
-#define A15 1.123
-#define A16 10
-#define A17 10
-#define A18 1
-#define A19 1
-#define A20 1
-#define A21 1
-#define A22 1
-#define B01 2
-#define B02 1
+const A01 = 0
+const A02 = 1
+const A03 = 11
+const A04 = &o1
+const A05 = &o123
+const A06 = &h0
+const A07 = &h0
+const A08 = &h1
+const A09 = &hFF
+const A10 = 1
+const A11 = 1
+const A12 = 1
+const A13 = 0.1
+const A14 = 0
+const A15 = 1.123
+const A16 = 10
+const A17 = 10
+const A18 = 1
+const A19 = 1
+const A20 = 1
+const A21 = 1
+const A22 = 1
+const B01 = 2
+const B02 = 1
 #define A
 #define A
 #define A foo

@@ -466,6 +466,9 @@ private function emitAst _
 		'' declarations to use UDT_ in place of UDT.
 		emitStmt( "type " + *n->text + " as " + *n->text + "_", n->comment )
 
+	case ASTCLASS_CONSTANT
+		emitStmt( "const " + *n->text + " = " + emitAst( n->expr ), n->comment )
+
 	case ASTCLASS_VAR
 		if( n->attrib and ASTATTRIB_EXTERN ) then
 			emitStmt( "extern "     + hIdAndArray( n, TRUE  ) + " as " + emitType( n ), n->comment )

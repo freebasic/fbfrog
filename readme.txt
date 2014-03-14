@@ -63,6 +63,8 @@ Features:
         header's intentions more closely. It becomes more important when
         converting #defines to constant declarations, because FB does scope
         those inside UDTs.
+      * #defines are turned into constants automatically, if the macro body is
+        just a simple constant expression (can be disabled with -noconstants).
       * Conflicting identifiers (conflicts with FB keywords, or amongst the
         symbols declared in the binding, possibly due to FB's case
         insensitivity) are fixed by appending _ underscores to the less
@@ -130,6 +132,7 @@ To do:
       emitted as CONSTs
     - Add -booldefine to mark a macro as "returns a bool", so the C #define parser
       can set is_bool_context=TRUE when folding
+    - paramcount=0 is emitted as paramcount=-1 (missing ()'s)
 
 - 64bit support:
     * C long is already mapped to CLONG

@@ -9,5 +9,6 @@
 #undef C
 
 #define C
-#define D 1
-#define D 2
+
+const D = 1
+const D = 2

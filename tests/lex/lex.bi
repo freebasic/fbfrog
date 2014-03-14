@@ -2,29 +2,29 @@ extern "C"
 
 '' @fbfrog -whitespace -nonamefixup -keepundefs
 
-#define A 0
-#define A 1
-#define A 11
-#define A &o0
-#define A &o1
-#define A &o123
-#define A &h0
-#define A &h0
-#define A &h1
-#define A &hFF
-#define A 1
-#define A 1
-#define A 1
-#define A 0.1
-#define A 0
-#define A 1.123
-#define A 10
-#define A 10
-#define A 1
-#define A 1
-#define A 1
-#define A 1
-#define A 1
+const A = 0
+const A = 1
+const A = 11
+const A = &o0
+const A = &o1
+const A = &o123
+const A = &h0
+const A = &h0
+const A = &h1
+const A = &hFF
+const A = 1
+const A = 1
+const A = 1
+const A = 0.1
+const A = 0
+const A = 1.123
+const A = 10
+const A = 10
+const A = 1
+const A = 1
+const A = 1
+const A = 1
+const A = 1
 
 #define B "foo"
 #define B wstr( "foo" )

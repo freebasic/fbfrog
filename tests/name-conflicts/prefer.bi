@@ -24,4 +24,11 @@ enum
 	I6_
 end enum
 
+const I7_ = 1
+
+declare sub i7()
+declare sub i8()
+
+const I8_ = 1
+
 end extern

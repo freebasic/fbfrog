@@ -20,7 +20,7 @@ dim shared e as long
 dim shared f as long  '' comment for f
 dim shared g as long  '' comment for g
 
-#define h 0
+const h = 0
 
 '' comment for i
 '' comment for j

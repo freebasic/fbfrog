@@ -2,9 +2,13 @@ void Toaster1(void);
 void toaster1(void);
 void toASTER1(void);
 
-#define AAA 1
-#define Aaa 2
-#define aaa 3
+#define AAA() 1
+#define Aaa() 2
+#define aaa() 3
+
+#define BBB 1
+#define Bbb 2
+#define bbb 3
 
 typedef int myInt;
 typedef int MyInt;

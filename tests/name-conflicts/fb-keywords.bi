@@ -414,8 +414,8 @@ end enum
 
 declare sub open__ alias "open"()
 
-#define INT__ 1
-#define Int___ 2
+const INT__ = 1
+const Int___ = 2
 
 extern     BASE__ alias "BASE" as long
 dim shared BASE__ as long

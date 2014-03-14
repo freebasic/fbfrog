@@ -463,6 +463,78 @@ sub astMoveNestedDefinesToToplevel( byval code as ASTNODE ptr )
 	wend
 end sub
 
+'' Checks whether an expression is simple enough that it could be used in an
+'' FB constant declaration (const FOO = <...>).
+''
+'' Thus, it shouldn't contain any function calls, addrof/deref operations, or
+'' preprocessor operations, etc., but only a selected set of known-to-be-safe
+'' math operations & co.
+private function hIsSimpleConstantExpression( byval n as ASTNODE ptr ) as integer
+	if( n = NULL ) then return TRUE
+
+	select case( n->class )
+	'' Atoms
+	case ASTCLASS_CONSTI, ASTCLASS_CONSTF
+
+	'' UOPs
+	case ASTCLASS_NOT, ASTCLASS_NEGATE, ASTCLASS_SIZEOF, ASTCLASS_CAST
+		if( hIsSimpleConstantExpression( n->l ) = FALSE ) then exit function
+
+	'' BOPs
+	case ASTCLASS_ORELSE, ASTCLASS_ANDALSO, _
+	     ASTCLASS_OR, ASTCLASS_XOR, ASTCLASS_AND, _
+	     ASTCLASS_EQ, ASTCLASS_NE, _
+	     ASTCLASS_LT, ASTCLASS_LE, _
+	     ASTCLASS_GT, ASTCLASS_GE, _
+	     ASTCLASS_SHL, ASTCLASS_SHR, _
+	     ASTCLASS_ADD, ASTCLASS_SUB, _
+	     ASTCLASS_MUL, ASTCLASS_DIV, ASTCLASS_MOD, _
+	     ASTCLASS_STRCAT
+		if( hIsSimpleConstantExpression( n->l ) = FALSE ) then exit function
+		if( hIsSimpleConstantExpression( n->r ) = FALSE ) then exit function
+
+	'' IIF
+	case ASTCLASS_IIF
+		if( hIsSimpleConstantExpression( n->expr ) = FALSE ) then exit function
+		if( hIsSimpleConstantExpression( n->l ) = FALSE ) then exit function
+		if( hIsSimpleConstantExpression( n->r ) = FALSE ) then exit function
+
+	case else
+		exit function
+	end select
+
+	function = TRUE
+end function
+
+'' Turns simple #defines into constants, where it seems possible.
+sub astTurnDefinesIntoConstants( byval code as ASTNODE ptr )
+	var i = code->head
+	while( i )
+
+		if( i->class = ASTCLASS_PPDEFINE ) then
+			'' Object-like macro?
+			if( i->paramcount < 0 ) then
+				'' Has a body?
+				if( i->expr ) then
+					'' Body is a simple expression?
+					if( hIsSimpleConstantExpression( i->expr ) ) then
+						i->class = ASTCLASS_CONSTANT
+					end if
+				end if
+			end if
+		end if
+
+		i = i->next
+	wend
+end sub
+
+private function hPreferRenaming( byval n as ASTNODE ptr ) as integer
+	select case( n->class )
+	case ASTCLASS_PPDEFINE, ASTCLASS_CONSTANT, ASTCLASS_ENUMCONST
+		function = TRUE
+	end select
+end function
+
 '' If two symbols are conflicting, one of them must be renamed. Certain types
 '' of symbols are preferably renamed. (e.g. renaming a constant is preferred
 '' over renaming a procedure). If conflicting with an FB keyword, the symbol
@@ -484,14 +556,8 @@ private function hDecideWhichSymbolToRename _
 	if( first->class = ASTCLASS_PARAM ) then return first
 
 	'' Prefer renaming #defines/constants over others
-	select case( other->class )
-	case ASTCLASS_PPDEFINE, ASTCLASS_ENUMCONST
-		return other
-	end select
-	select case( first->class )
-	case ASTCLASS_PPDEFINE, ASTCLASS_ENUMCONST
-		return first
-	end select
+	if( hPreferRenaming( other ) ) then return other
+	if( hPreferRenaming( first ) ) then return first
 
 	'' Fallback to renaming the symbol that appeared later
 	function = other
@@ -565,7 +631,7 @@ private sub hWalkAndCheckIds _
 			'' with the #defines found so far.
 			hFixIdsInScope( defines, i )
 
-		case ASTCLASS_VAR, ASTCLASS_ENUMCONST, ASTCLASS_FIELD
+		case ASTCLASS_CONSTANT, ASTCLASS_VAR, ASTCLASS_ENUMCONST, ASTCLASS_FIELD
 			hCheckId( @fbkeywordhash, i, FALSE )
 			hCheckId( defines, i, FALSE )
 			hCheckId( globals, i, TRUE )
@@ -711,7 +777,7 @@ private sub hRenameSymbol _
 			exists or= hashContains( types   , hashid, hash )
 			exists or= hashContains( globals , hashid, hash )
 
-		case ASTCLASS_PROC, ASTCLASS_VAR, ASTCLASS_ENUMCONST, ASTCLASS_FIELD, ASTCLASS_PARAM
+		case ASTCLASS_PROC, ASTCLASS_CONSTANT, ASTCLASS_VAR, ASTCLASS_ENUMCONST, ASTCLASS_FIELD, ASTCLASS_PARAM
 			exists or= hashContains( defines , hashid, hash )
 			exists or= hashContains( globals , hashid, hash )
 
@@ -733,7 +799,7 @@ private sub hRenameSymbol _
 	'' usually contain duplicates amongst types/globals internally; it's
 	'' just the case-insensitivity and FB keywords that cause problems)
 	select case( n->class )
-	case ASTCLASS_PPDEFINE, ASTCLASS_PROC, ASTCLASS_VAR, ASTCLASS_ENUMCONST, ASTCLASS_FIELD, ASTCLASS_PARAM
+	case ASTCLASS_PPDEFINE, ASTCLASS_PROC, ASTCLASS_CONSTANT, ASTCLASS_VAR, ASTCLASS_ENUMCONST, ASTCLASS_FIELD, ASTCLASS_PARAM
 		hReplaceCalls( code, n->text, newid )
 	case ASTCLASS_STRUCT, ASTCLASS_UNION, _
 	     ASTCLASS_STRUCTFWD, ASTCLASS_UNIONFWD, ASTCLASS_ENUMFWD, _
@@ -750,7 +816,7 @@ private sub hRenameSymbol _
 	select case( n->class )
 	case ASTCLASS_PPDEFINE
 		hashAddOverwrite( defines, hashid, n )
-	case ASTCLASS_PROC, ASTCLASS_VAR, ASTCLASS_ENUMCONST, ASTCLASS_FIELD, ASTCLASS_PARAM
+	case ASTCLASS_PROC, ASTCLASS_CONSTANT, ASTCLASS_VAR, ASTCLASS_ENUMCONST, ASTCLASS_FIELD, ASTCLASS_PARAM
 		hashAddOverwrite( globals, hashid, n )
 	case ASTCLASS_STRUCT, ASTCLASS_UNION, _
 	     ASTCLASS_STRUCTFWD, ASTCLASS_UNIONFWD, ASTCLASS_ENUMFWD, _

@@ -62,6 +62,7 @@ dim shared as ASTNODEINFO astnodeinfo(0 to ...) = _
 	("structfwd"    ), _
 	("unionfwd"     ), _
 	("enumfwd"      ), _
+	("constant"     ), _
 	("var"          ), _
 	("field"        ), _
 	("enumconst"    ), _
@@ -757,6 +758,7 @@ function astDumpPrettyDecl( byval n as ASTNODE ptr ) as string
 	end if
 
 	select case( n->class )
+	case ASTCLASS_CONSTANT  : s += "constant"
 	case ASTCLASS_VAR       : s += "variable"
 	case ASTCLASS_PROC      : s += "function"
 	case ASTCLASS_ENUMCONST : s += "enum constant"

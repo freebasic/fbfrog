@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/noconstants.h
+[linux]
+        parsing: tests/noconstants.h
+[win32]
+        parsing: tests/noconstants.h
+emitting: tests/noconstants.bi (1 declaration)

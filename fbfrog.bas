@@ -15,6 +15,7 @@ private sub hPrintHelpAndExit( )
 	print "  -whitespace      Try to preserve comments and empty lines"
 	print "  -noautoextern    Don't add Extern blocks"
 	print "  -windowsms       Use Extern ""Windows-MS"" instead of Extern ""Windows"""
+	print "  -noconstants     Don't try to turn #defines into constants"
 	print "  -nonamefixup     Don't fix symbol identifier conflicts which happen"
 	print "                   e.g. due to FB's keywords and/or case insensitivity"
 	print "  -keepundefs      Don't default to removing #undefs and conflicting #defines"
@@ -219,6 +220,7 @@ private function hParseArgs( byref x as integer, byval body as integer ) as ASTN
 			case "whitespace"   : frog.whitespace   = TRUE
 			case "noautoextern" : frog.noautoextern = TRUE
 			case "windowsms"    : frog.windowsms    = TRUE
+			case "noconstants"  : frog.noconstants  = TRUE
 			case "nonamefixup"  : frog.nonamefixup  = TRUE
 			case "keepundefs"   : frog.keepundefs   = TRUE
 			case "common"       : frog.common = TRUE
@@ -585,13 +587,11 @@ private function frogWorkRootFile _
 	astFixAnonUDTs( ast )
 	astRemoveRedundantTypedefs( ast )
 	astMoveNestedDefinesToToplevel( ast )
-	if( frog.nonamefixup = FALSE ) then
-		astFixIds( ast )
-	end if
-	if( frog.noautoextern = FALSE ) then
-		astAutoExtern( ast, frog.windowsms, frog.whitespace )
-	end if
+	if( frog.noconstants = FALSE ) then astTurnDefinesIntoConstants( ast )
+	if( frog.nonamefixup = FALSE ) then astFixIds( ast )
+	if( frog.noautoextern = FALSE ) then astAutoExtern( ast, frog.windowsms, frog.whitespace )
 
+	'' Add the APPENDBI's, if any
 	if( presetcode ) then
 		assert( ast->class = ASTCLASS_GROUP )
 		var i = presetcode->head

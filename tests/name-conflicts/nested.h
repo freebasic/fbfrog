@@ -1,4 +1,5 @@
-#define GLOBALDEFINE1 1
+#define GLOBALDEFINE1() 1
+#define GLOBALCONSTANT1 1
 void globalproc(void);
 typedef int globaltype;
 typedef int (*p)(int as);
@@ -7,6 +8,8 @@ struct UDT1 {
 	// shouldn't conflict with symbols from global scope, except defines
 	int globaldefine1;
 	int globaldefine2;
+	int globalconstant1;
+	int globalconstant2;
 	int globalproc;
 	int globaltype;
 
@@ -29,6 +32,8 @@ struct UDT1 {
 void f1(
 	int globaldefine1,
 	int globaldefine2,
+	int globalconstant1,
+	int globalconstant2,
 	int globalproc,
 	int globaltype,
 
@@ -42,7 +47,8 @@ void f1(
 	int (*PTR)(int (*PTR)(int INT))
 );
 
-#define GLOBALDEFINE2 1
+#define GLOBALDEFINE2() 1
+#define GLOBALCONSTANT2 1
 
 struct UDT2 {
 	// shouldn't conflict with fields from UDT1

@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/define2constant.h
+[linux]
+        parsing: tests/define2constant.h
+[win32]
+        parsing: tests/define2constant.h
+emitting: tests/define2constant.bi (8 declarations)

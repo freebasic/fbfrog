@@ -19,13 +19,13 @@ extern test_ifdef_FOO_known_undefined_expect_no as short
 
 extern test_ifdef_A_known_defined_andalso_macro_expanded_one_expect_yes as short
 #define A
-#define B 1
+const B = 1
 extern yes as short
 
 extern test_if_defined_C_andalso_C_equals_123_expect_no as short
 
 extern test_if_defined_D_andalso_D_equals_123_expect_yes as short
-#define D 123
+const D = 123
 extern yes as short
 
 end extern

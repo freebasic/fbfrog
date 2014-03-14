@@ -594,7 +594,7 @@ enum
 	ASTCLASS_PPENDIF
 	ASTCLASS_PPERROR
 
-	'' C declarations
+	'' Declarations/statements
 	ASTCLASS_STRUCT
 	ASTCLASS_UNION
 	ASTCLASS_ENUM
@@ -602,6 +602,7 @@ enum
 	ASTCLASS_STRUCTFWD
 	ASTCLASS_UNIONFWD
 	ASTCLASS_ENUMFWD
+	ASTCLASS_CONSTANT
 	ASTCLASS_VAR
 	ASTCLASS_FIELD
 	ASTCLASS_ENUMCONST
@@ -909,6 +910,7 @@ declare sub astFixArrayParams( byval n as ASTNODE ptr )
 declare sub astFixAnonUDTs( byval n as ASTNODE ptr )
 declare sub astRemoveRedundantTypedefs( byval n as ASTNODE ptr )
 declare sub astMoveNestedDefinesToToplevel( byval code as ASTNODE ptr )
+declare sub astTurnDefinesIntoConstants( byval code as ASTNODE ptr )
 declare sub astFixIds( byval code as ASTNODE ptr )
 declare sub astMergeDIVIDERs( byval n as ASTNODE ptr )
 declare sub astAutoAddDividers( byval code as ASTNODE ptr )
@@ -1005,6 +1007,7 @@ type FROGSTUFF
 	noautoextern	as integer
 	windowsms	as integer
 	common		as integer
+	noconstants	as integer
 	nonamefixup	as integer
 	keepundefs	as integer
 	versiondefine	as string

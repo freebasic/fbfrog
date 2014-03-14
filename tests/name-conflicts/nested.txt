@@ -4,4 +4,4 @@
         parsing: tests/name-conflicts/nested.h
 [win32]
         parsing: tests/name-conflicts/nested.h
-emitting: tests/name-conflicts/nested.bi (9 declarations)
+emitting: tests/name-conflicts/nested.bi (11 declarations)
