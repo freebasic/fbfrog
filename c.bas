@@ -757,13 +757,6 @@ end function
 private function cDefine( byref x as integer ) as ASTNODE ptr
 	var t = tkGetAst( x )
 
-	'' Did the PP mark this #define for removal? Then just
-	'' skip it instead of parsing it into an AST...
-	if( t->attrib and ASTATTRIB_REMOVE ) then
-		x += 1
-		return astNewNOP( )
-	end if
-
 	t = astClone( t )
 	astAddComment( t, tkCollectComments( x, x ) )
 	x += 1

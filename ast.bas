@@ -821,7 +821,6 @@ function astDumpOne( byval n as ASTNODE ptr ) as string
 	checkAttrib( CDECL )
 	checkAttrib( STDCALL )
 	checkAttrib( HIDECALLCONV )
-	checkAttrib( REMOVE )
 	checkAttrib( REPORTED )
 	checkAttrib( DOS )
 	checkAttrib( LINUX )

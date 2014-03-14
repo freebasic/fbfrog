@@ -693,7 +693,7 @@ enum
 	ASTATTRIB_STDCALL       = 1 shl 5
 	ASTATTRIB_HIDECALLCONV  = 1 shl 6  '' Whether the calling convention is covered by an Extern block, in which case it doesn't need to be emitted.
 	ASTATTRIB_HIDECASEALIAS = 1 shl 7  '' same for the case-preserving ALIAS
-	ASTATTRIB_REMOVE        = 1 shl 8
+	                      ''= 1 shl 8
 	ASTATTRIB_UNIQUE        = 1 shl 9  '' Telling astIsEqual() to never treat a node with this flag as equal to any other
 	ASTATTRIB_REPORTED      = 1 shl 10 '' Used to mark #defines about which the CPP has already complained, so it can avoid duplicate error messages
 	ASTATTRIB_DOS           = 1 shl 11
