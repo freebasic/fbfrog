@@ -5,8 +5,8 @@ end enum
 dim shared a as long
 dim shared b as long
 
-#undef b
+#define b2
 
 dim shared c as long
 
-#undef c
+#define c2

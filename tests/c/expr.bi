@@ -1,4 +1,4 @@
-'' @fbfrog -whitespace -nonamefixup
+'' @fbfrog -whitespace -nonamefixup -keepundefs
 
 type MYINT as long
 

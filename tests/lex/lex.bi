@@ -1,6 +1,6 @@
 extern "C"
 
-'' @fbfrog -whitespace -nonamefixup
+'' @fbfrog -whitespace -nonamefixup -keepundefs
 
 #define A 0
 #define A 1

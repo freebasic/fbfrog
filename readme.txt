@@ -126,10 +126,10 @@ Usage:
 To do:
 
 - #define handling
-    - Do not preserve #defines that are #undeffed, such that ultimately it'll
-      become pointless to preserve #undefs at all
     - #defines that can be determined to be constants should automatically be
       emitted as CONSTs
+    - Add -booldefine to mark a macro as "returns a bool", so the C #define parser
+      can set is_bool_context=TRUE when folding
 
 - 64bit support:
     * C long is already mapped to CLONG
@@ -160,9 +160,6 @@ To do:
 
 - Emit list of renamed symbols at top of header
 
-- Add -booldefine to mark a macro as "returns a bool", so the C #define parser
-  can set is_bool_context=TRUE when folding
-
 - ## merging missing support for lots of tokens, e.g. 1##. or .##0 or -##> or =##=
 - macro params named after keywords?
 - Support initializers for variables too, not just parameters
@@ -181,9 +178,6 @@ To do:
 - Proc/array typedefs should be solved out automatically where possible, and
   removed otherwise. (e.g. if the proc typedef is always used in a pointer
   context, then include the pointer in the typedef)
-- A conflicting #define should simply override the 1st one, that's also what gcc does.
-  Should only the last known version be preserved for the final binding?
-  Currently all are preserved, triggering name conflicts...
 
 - Lexer doesn't show error code context
 - Better error reporting: Single error token location isn't enough - especially

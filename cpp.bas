@@ -847,13 +847,7 @@ sub cppInit( )
 	hashInit( @eval.removes, 4, TRUE )
 end sub
 
-sub cppEnd( )
-	scope
-		'' Free all macro ASTs
-		for i as integer = 0 to eval.macros.room-1
-			astDelete( eval.macros.items[i].data )
-		next
-	end scope
+private sub cppEnd( )
 	hashEnd( @eval.macros )
 	hashEnd( @eval.noexpands )
 	hashEnd( @eval.removes )
@@ -867,56 +861,42 @@ sub cppRemoveSym( byval id as zstring ptr )
 	hashAddOverwrite( @eval.removes, id, NULL )
 end sub
 
-private function hLookupMacro( byval id as zstring ptr ) as ASTNODE ptr
+private function hLookupMacro( byval id as zstring ptr ) as integer
 	var item = hashLookup( @eval.macros, id, hashHash( id ) )
 	if( item->s ) then
-		function = item->data
+		function = cint( item->data )
+	else
+		function = -1
 	end if
 end function
 
-private sub hRegisterMacro _
-	( _
-		byval id as zstring ptr, _
-		byval macro as ASTNODE ptr _
-	)
+private function hIsKnownSymbol( byval id as zstring ptr ) as integer
+	function = (hashLookup( @eval.macros, id, hashHash( id ) )->s <> NULL)
+end function
 
-	var hash = hashHash( id )
-	var item = hashLookup( @eval.macros, id, hash )
+private function hIsMacroCurrentlyDefined( byval id as zstring ptr ) as integer
+	function = (hLookupMacro( id ) >= 0)
+end function
 
-	'' Free existing macro AST for this id, if any
-	if( item->data ) then
-		astDelete( item->data )
-	end if
-
-	hashAdd( @eval.macros, item, hash, id, macro )
+private sub hRegisterMacro( byval id as zstring ptr, byval x as integer )
+	assert( iif( x >= 0, tkGet( x ) = TK_PPDEFINE, TRUE ) )
+	hashAddOverwrite( @eval.macros, id, cptr( any ptr, x ) )
 end sub
 
-private sub hAddMacro( byval macro as ASTNODE ptr )
-	assert( macro->class = ASTCLASS_PPDEFINE )
-
-	'' Report conflicting #defines
-	if( frog.verbose ) then
-		var macro2 = hLookupMacro( macro->text )
-		if( macro2 ) then
-			if( astIsEqual( macro, macro2 ) = FALSE ) then
-				'' Existing #define wasn't reported yet?
-				if( (macro2->attrib and ASTATTRIB_REPORTED) = 0 ) then
-					astReport( macro2, "conflicting #define for '" + *macro->text + "', first one:", FALSE )
-					macro2->attrib or= ASTATTRIB_REPORTED
-				end if
-
-				assert( (macro->attrib and ASTATTRIB_REPORTED) = 0 )
-				astReport( macro, "conflicting #define for '" + *macro->text + "', new one:", FALSE )
-				macro->attrib or= ASTATTRIB_REPORTED
-			end if
-		end if
+private sub hMaybeReportConflictingDefine( byval a as ASTNODE ptr, byval b as ASTNODE ptr )
+	if( astIsEqual( a, b ) ) then
+		exit sub
 	end if
 
-	hRegisterMacro( macro->text, macro )
-end sub
+	'' Existing #define wasn't reported yet?
+	if( (b->attrib and ASTATTRIB_REPORTED) = 0 ) then
+		astReport( b, "conflicting #define for '" + *a->text + "', first one:", FALSE )
+		b->attrib or= ASTATTRIB_REPORTED
+	end if
 
-private sub hUndefMacro( byval id as zstring ptr )
-	hRegisterMacro( id, NULL )
+	assert( (a->attrib and ASTATTRIB_REPORTED) = 0 )
+	astReport( a, "conflicting #define for '" + *a->text + "', new one:", FALSE )
+	a->attrib or= ASTATTRIB_REPORTED
 end sub
 
 private function hShouldExpandSym( byval id as zstring ptr ) as integer
@@ -928,12 +908,13 @@ private function hCheckForMacroCall( byval x as integer ) as ASTNODE ptr
 	var id = tkGetText( x )
 
 	'' Is this id a macro?
-	var macro = hLookupMacro( id )
-	if( macro = NULL ) then
+	var xdefine = hLookupMacro( id )
+	if( xdefine < 0 ) then
 		exit function
 	end if
 
 	'' Only expand if not marked otherwise
+	var macro = tkGetAst( xdefine )
 	if( (not hShouldExpandSym( id )) or _
 	    (tkGetFlags( x ) and TKFLAG_NOEXPAND) or _
 	    (macro->attrib and ASTATTRIB_POISONED) ) then
@@ -1716,17 +1697,10 @@ private function cppFoldKnownDefineds( byval n as ASTNODE ptr ) as ASTNODE ptr
 	if( n->class = ASTCLASS_DEFINED ) then
 		assert( n->l->class = ASTCLASS_ID )
 		var id = n->l->text
-
-		var item = hashLookup( @eval.macros, id, hashHash( id ) )
-
-		'' Known symbol?
-		if( item->s ) then
-			'' Currently defined?
-			var is_defined = (item->data <> NULL)
-
+		if( hIsKnownSymbol( id ) ) then
 			'' FB defined()    ->   -1|0
 			'' item->data = is_defined
-			function = astNewCONSTI( is_defined, TYPE_LONG )
+			function = astNewCONSTI( hIsMacroCurrentlyDefined( id ), TYPE_LONG )
 			astDelete( n )
 		end if
 	end if
@@ -1746,7 +1720,7 @@ private function cppFold1stUnknownId _
 		'' Unexpanded identifier, assume it's undefined, like a CPP
 		if( frog.verbose ) then
 			astReport( n, "treating unexpanded identifier '" + *n->text + "' as literal zero" )
-			hUndefMacro( n->text )
+			hRegisterMacro( n->text, -1 )
 		end if
 
 		'' id   ->   0
@@ -1760,7 +1734,7 @@ private function cppFold1stUnknownId _
 		assert( n->l->class = ASTCLASS_ID )
 		if( frog.verbose ) then
 			astReport( n->l, "assuming symbol '" + *n->l->text + "' is undefined" )
-			hUndefMacro( n->l->text )
+			hRegisterMacro( n->l->text, -1 )
 		end if
 
 		'' defined()   ->   0
@@ -1849,22 +1823,23 @@ private function hSkipFromBeginToEnd( byval x as integer ) as integer
 	'' Find TK_END
 	do
 		x += 1
+		assert( tkGet( x ) <> TK_BEGIN )
 	loop while( tkGet( x ) <> TK_END )
 	function = x
 end function
 
-private sub hRemoveTokenAndTkBeginEnd( byref x as integer )
+private sub hSkipIfAndMarkForRemoval( byref x as integer )
 	var last = x
 
-	select case( tkGet( x ) )
-	case TK_PPIF, TK_PPELSEIF
-		if( tkGet( x + 1 ) = TK_BEGIN ) then
-			last = hSkipFromBeginToEnd( x + 1 )
-		end if
-	end select
+	if( tkGet( x + 1 ) = TK_BEGIN ) then
+		last = hSkipFromBeginToEnd( x + 1 )
+	end if
 
-	tkRemove( x, last )
-	x -= 1
+	for i as integer = x to last
+		tkAddFlags( i, TKFLAG_REMOVE )
+	next
+
+	x = last
 end sub
 
 ''
@@ -2001,30 +1976,12 @@ sub cppMain _
 			end if
 			level -= 1
 
-			var begin = hFindIncludeBOF( x )
-
-			if( nomerge ) then
-				'' #include expansion wasn't requested, so remove the
-				'' #included tokens now, after they've been parsed.
-				'' (i.e. all #defines/#undefs were seen, but the code
-				'' won't be preserved)
-				tkRemove( begin, x )
-				x = begin - 1
-			else
-				'' Remove just the TK_BEGININCLUDE/TK_ENDINCLUDE,
-				'' keep the #included tokens.
-				tkRemove( begin, begin )
-				x -= 1
-				tkRemove( x, x )
-				x -= 1
-			end if
-
 		case TK_PPINCLUDE
 			if( skiplevel <> MAXPPSTACK ) then
-				hRemoveTokenAndTkBeginEnd( x )
+				tkAddFlags( x, TKFLAG_REMOVE )
 			else
-				var location = *tkGetLocation( x )
-				var context = iif( location.source, location.source->name, NULL )
+				var location = tkGetLocation( x )
+				var context = iif( location->source, location->source->name, NULL )
 				if( context = NULL ) then
 					context = topfile->text
 				end if
@@ -2040,10 +1997,12 @@ sub cppMain _
 
 					'' Remove the #include token
 					assert( tkGet( x ) = TK_PPINCLUDE )
-					tkRemove( x, x )
+					tkAddFlags( x, TKFLAG_REMOVE )
+					x += 1
 
 					'' Insert this so we can go back end delete all the #included tokens easily
 					tkInsert( x, TK_BEGININCLUDE )
+					tkAddFlags( x, TKFLAG_REMOVE )
 					x += 1
 
 					'' Insert an EOL, so cppIdentifyDirectives() can identify BOL
@@ -2056,7 +2015,8 @@ sub cppMain _
 					'' so we can detect the included EOF and pop the #include context from
 					'' the ppstack.
 					tkInsert( x, TK_ENDINCLUDE )
-					hLoadFile( x, @location, incfile, whitespace )
+					tkAddFlags( x, TKFLAG_REMOVE )
+					hLoadFile( x, location, incfile, whitespace )
 
 					'' Start parsing the #included content
 					'' (starting behind the EOL inserted above)
@@ -2083,7 +2043,7 @@ sub cppMain _
 				end if
 			end if
 
-			hRemoveTokenAndTkBeginEnd( x )
+			hSkipIfAndMarkForRemoval( x )
 
 		case TK_PPELSEIF
 			if( ppstack(level) < PPSTACK_IF ) then
@@ -2114,7 +2074,7 @@ sub cppMain _
 				end if
 			end if
 
-			hRemoveTokenAndTkBeginEnd( x )
+			hSkipIfAndMarkForRemoval( x )
 
 		case TK_PPELSE
 			if( ppstack(level) < PPSTACK_IF ) then
@@ -2139,7 +2099,7 @@ sub cppMain _
 
 			ppstack(level) = PPSTACK_ELSE
 
-			hRemoveTokenAndTkBeginEnd( x )
+			tkAddFlags( x, TKFLAG_REMOVE )
 
 		case TK_PPENDIF
 			if( ppstack(level) < PPSTACK_IF ) then
@@ -2151,41 +2111,67 @@ sub cppMain _
 				skiplevel = MAXPPSTACK
 			end if
 
-			hRemoveTokenAndTkBeginEnd( x )
+			tkAddFlags( x, TKFLAG_REMOVE )
 
 			level -= 1
 
 		case TK_PPDEFINE
 			if( skiplevel <> MAXPPSTACK ) then
-				hRemoveTokenAndTkBeginEnd( x )
+				tkAddFlags( x, TKFLAG_REMOVE )
 			else
+				var macro = tkGetAst( x )
+
+				'' Check for previous #define
+				var xprevdefine = hLookupMacro( macro->text )
+				if( xprevdefine >= 0 ) then
+					if( frog.verbose ) then
+						hMaybeReportConflictingDefine( macro, tkGetAst( xprevdefine ) )
+					end if
+
+					'' Don't preserve previous #define without -keepundefs
+					if( frog.keepundefs = FALSE ) then
+						tkAddFlags( xprevdefine, TKFLAG_REMOVE )
+					end if
+				end if
+
 				'' Register/overwrite as known defined symbol
-				var t = tkGetAst( x )
-				hAddMacro( astClone( t ) )
+				hRegisterMacro( macro->text, x )
 
 				'' Don't preserve the #define if the symbol was registed for removal
-				if( hLookupRemoveSym( t->text ) ) then
-					hRemoveTokenAndTkBeginEnd( x )
+				if( hLookupRemoveSym( macro->text ) ) then
+					tkAddFlags( x, TKFLAG_REMOVE )
 				end if
 			end if
 
 		case TK_PPUNDEF
 			if( skiplevel <> MAXPPSTACK ) then
-				hRemoveTokenAndTkBeginEnd( x )
+				tkAddFlags( x, TKFLAG_REMOVE )
 			else
-				'' Register/overwrite as known undefined symbol
 				var id = tkGetText( x )
-				hUndefMacro( id )
 
-				'' Don't preserve the #undef if the symbol was registed for removal
-				if( hLookupRemoveSym( id ) ) then
-					hRemoveTokenAndTkBeginEnd( x )
+				'' If #undeffing an existing #define, don't preserve it without -keepundefs
+				var xdefine = hLookupMacro( id )
+				if( xdefine >= 0 ) then
+					assert( tkGet( xdefine ) = TK_PPDEFINE )
+					assert( *tkGetAst( xdefine )->text = *id )
+					if( frog.keepundefs = FALSE ) then
+						tkAddFlags( xdefine, TKFLAG_REMOVE )
+					end if
+				end if
+
+				'' Register/overwrite as known undefined symbol
+				hRegisterMacro( id, -1 )
+
+				'' Don't preserve #undef without -keepundefs,
+				'' or if the symbol was registed for removal.
+				if( (frog.keepundefs = FALSE) or hLookupRemoveSym( id ) ) then
+					tkAddFlags( x, TKFLAG_REMOVE )
 				end if
 			end if
 
 		case TK_PPERROR
 			if( skiplevel <> MAXPPSTACK ) then
-				hRemoveTokenAndTkBeginEnd( x )
+				tkAddFlags( x, TKFLAG_REMOVE )
 			else
 				'' Not using the #error's text as error message,
 				'' otherwise it would be mistaken for being generated by fbfrog.
@@ -2194,7 +2180,7 @@ sub cppMain _
 
 		case TK_PPWARNING
 			if( skiplevel <> MAXPPSTACK ) then
-				hRemoveTokenAndTkBeginEnd( x )
+				tkAddFlags( x, TKFLAG_REMOVE )
 			else
 				'' ditto
 				tkReport( x, "#warning", TRUE )
@@ -2202,7 +2188,7 @@ sub cppMain _
 
 		case TK_ID
 			if( skiplevel <> MAXPPSTACK ) then
-				hRemoveTokenAndTkBeginEnd( x )
+				tkAddFlags( x, TKFLAG_REMOVE )
 			else
 				hMaybeExpandMacro( x )
 			end if
@@ -2210,10 +2196,24 @@ sub cppMain _
 		case else
 			'' Remove tokens if skipping
 			if( skiplevel <> MAXPPSTACK ) then
-				hRemoveTokenAndTkBeginEnd( x )
+				tkAddFlags( x, TKFLAG_REMOVE )
 			end if
 		end select
 
 		x += 1
 	loop
+
+	'' 2nd pass that actually removes directives/tokens marked for removal
+	'' (doing this in separate steps allows error reports during the 1st
+	'' pass to still view the complete input)
+	x = 0
+	while( tkGet( x ) <> TK_EOF )
+		if( tkGetFlags( x ) and TKFLAG_REMOVE ) then
+			tkRemove( x, x )
+			x -= 1
+		end if
+		x += 1
+	wend
+
+	cppEnd( )
 end sub

@@ -8,7 +8,7 @@ static int a
 ;
 
 static int b;
-#undef b
+#define b2
 
 static int c;
-#undef c
+#define c2

@@ -4,4 +4,4 @@
         parsing: tests/cpp/define-conflicting-duplicate.h
 [win32]
         parsing: tests/cpp/define-conflicting-duplicate.h
-emitting: tests/cpp/define-conflicting-duplicate.bi (2 declarations)
+emitting: tests/cpp/define-conflicting-duplicate.bi (1 declaration)

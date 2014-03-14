@@ -271,6 +271,7 @@ declare function hScanDirectory _
 
 const TKFLAG_BEHINDSPACE	= 1 shl 0  '' was preceded by spaces?
 const TKFLAG_NOEXPAND		= 1 shl 1  '' may be macro-expanded? (cpp)
+const TKFLAG_REMOVE		= 1 shl 2
 
 enum
 	TK_EOF
@@ -586,7 +587,7 @@ enum
 	'' CPP directives
 	ASTCLASS_PPINCLUDE
 	ASTCLASS_PPDEFINE
-	ASTCLASS_PPUNDEF
+	ASTCLASS_PPUNDEF  '' only used for pre-#undefs
 	ASTCLASS_PPIF
 	ASTCLASS_PPELSEIF
 	ASTCLASS_PPELSE
@@ -986,7 +987,6 @@ extern as integer cprecedence(ASTCLASS_CLOGOR to ASTCLASS_IIF)
 declare sub hMacroParamList( byref x as integer, byval t as ASTNODE ptr )
 declare sub hInsertMacroBody( byval x as integer, byval macro as ASTNODE ptr )
 declare sub cppInit( )
-declare sub cppEnd( )
 declare sub cppNoExpandSym( byval id as zstring ptr )
 declare sub cppRemoveSym( byval id as zstring ptr )
 declare sub cppMain _
@@ -1006,6 +1006,7 @@ type FROGSTUFF
 	windowsms	as integer
 	common		as integer
 	nonamefixup	as integer
+	keepundefs	as integer
 	versiondefine	as string
 	incdirs		as ASTNODE ptr
 	outdir		as string

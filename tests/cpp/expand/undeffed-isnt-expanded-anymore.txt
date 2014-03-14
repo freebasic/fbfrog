@@ -4,4 +4,4 @@
         parsing: tests/cpp/expand/undeffed-isnt-expanded-anymore.h
 [win32]
         parsing: tests/cpp/expand/undeffed-isnt-expanded-anymore.h
-emitting: tests/cpp/expand/undeffed-isnt-expanded-anymore.bi (3 declarations)
+emitting: tests/cpp/expand/undeffed-isnt-expanded-anymore.bi (1 declaration)

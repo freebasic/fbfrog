@@ -251,6 +251,7 @@ function tkDumpOne( byval x as integer ) as string
 
 	if( tkGetFlags( x ) and TKFLAG_BEHINDSPACE ) then s += " behindspace"
 	if( tkGetFlags( x ) and TKFLAG_NOEXPAND    ) then s += " noexpand"
+	if( tkGetFlags( x ) and TKFLAG_REMOVE      ) then s += " remove"
 
 	s += hDumpComment( p->comment )
 

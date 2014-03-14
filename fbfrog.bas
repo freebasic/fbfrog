@@ -17,6 +17,7 @@ private sub hPrintHelpAndExit( )
 	print "  -windowsms       Use Extern ""Windows-MS"" instead of Extern ""Windows"""
 	print "  -nonamefixup     Don't fix symbol identifier conflicts which happen"
 	print "                   e.g. due to FB's keywords and/or case insensitivity"
+	print "  -keepundefs      Don't default to removing #undefs and conflicting #defines"
 	print "  -versiondefine <id>  Set identifier for version #define that may"
 	print "                       be used by the generated binding."
 	print "  -common          Extract common code into common header"
@@ -219,6 +220,7 @@ private function hParseArgs( byref x as integer, byval body as integer ) as ASTN
 			case "noautoextern" : frog.noautoextern = TRUE
 			case "windowsms"    : frog.windowsms    = TRUE
 			case "nonamefixup"  : frog.nonamefixup  = TRUE
+			case "keepundefs"   : frog.keepundefs   = TRUE
 			case "common"       : frog.common = TRUE
 			case "v", "verbose", "-verbose" : frog.verbose = TRUE
 
@@ -563,8 +565,6 @@ private function frogWorkRootFile _
 	end if
 
 	cppMain( rootfile, frog.whitespace, frog.nomerge )
-
-	cppEnd( )
 
 	tkRemoveEOLs( )
 	tkTurnCPPTokensIntoCIds( )

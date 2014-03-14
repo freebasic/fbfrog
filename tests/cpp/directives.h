@@ -1,4 +1,4 @@
-// @fbfrog -whitespace -nonamefixup
+// @fbfrog -whitespace -nonamefixup -keepundefs
 
 #include "directives-1.h"
 #include <directives-1.h>
