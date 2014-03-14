@@ -599,7 +599,7 @@ end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-sub hMacroParamList( byref x as integer, byval t as ASTNODE ptr )
+private sub hMacroParamList( byref x as integer, byval t as ASTNODE ptr )
 	assert( tkGet( x ) >= TK_ID )
 	assert( t->paramcount = -1 )
 	x += 1

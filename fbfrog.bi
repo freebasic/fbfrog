@@ -987,7 +987,6 @@ declare sub emitFile( byref filename as string, byval ast as ASTNODE ptr )
 declare function hFindClosingParen( byval x as integer ) as integer
 declare function hNumberLiteral( byval x as integer ) as ASTNODE ptr
 extern as integer cprecedence(ASTCLASS_CLOGOR to ASTCLASS_IIF)
-declare sub hMacroParamList( byref x as integer, byval t as ASTNODE ptr )
 declare sub hInsertMacroBody( byval x as integer, byval macro as ASTNODE ptr )
 declare sub cppInit( )
 declare sub cppNoExpandSym( byval id as zstring ptr )
