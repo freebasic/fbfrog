@@ -4,9 +4,9 @@ declare sub Toaster1()
 declare sub toaster1_ alias "toaster1"()
 declare sub toASTER1__ alias "toASTER1"()
 
-#define AAA 1
-#define Aaa_ 2
-#define aaa__ 3
+#define AAA() 1
+#define Aaa_() 2
+#define aaa__() 3
 
 const BBB = 1
 const Bbb_ = 2

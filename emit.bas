@@ -376,7 +376,7 @@ private function emitAst _
 			emitStmt( "#endmacro" )
 		else
 			s += "#define " + *n->text
-			if( n->head ) then
+			if( n->paramcount >= 0 ) then
 				s += hParamList( n )
 			end if
 

@@ -1,6 +1,6 @@
 extern "C"
 
-#define GLOBALDEFINE1_ 1
+#define GLOBALDEFINE1_() 1
 
 const GLOBALCONSTANT1 = 1
 
@@ -32,7 +32,7 @@ end type
 
 declare sub f1(byval globaldefine1_ as long, byval globaldefine2 as long, byval globalconstant1 as long, byval globalconstant2 as long, byval globalproc as long, byval globaltype as long, byval foo as long, byval FOO_ as long, byval as_ as long, byval IF_ as long, byval PTR_ as function(byval INT_ as long) as long, byval PTR__ as function(byval PTR_ as function(byval INT_ as long) as long) as long)
 
-#define GLOBALDEFINE2 1
+#define GLOBALDEFINE2() 1
 
 const GLOBALCONSTANT2 = 1
 

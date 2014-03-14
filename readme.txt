@@ -132,7 +132,6 @@ To do:
       emitted as CONSTs
     - Add -booldefine to mark a macro as "returns a bool", so the C #define parser
       can set is_bool_context=TRUE when folding
-    - paramcount=0 is emitted as paramcount=-1 (missing ()'s)
 
 - 64bit support:
     * C long is already mapped to CLONG

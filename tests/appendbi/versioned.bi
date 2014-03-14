@@ -1,5 +1,5 @@
 #ifndef __VERSION__
-	#define __VERSION__ "1"
+	#define __VERSION__() "1"
 #endif
 
 #if (__VERSION__ <> "1") and (__VERSION__ <> "2")
