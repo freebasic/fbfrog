@@ -128,8 +128,6 @@ Usage:
 To do:
 
 - #define handling
-    - #defines that can be determined to be constants should automatically be
-      emitted as CONSTs
     - Add -booldefine to mark a macro as "returns a bool", so the C #define parser
       can set is_bool_context=TRUE when folding
 
