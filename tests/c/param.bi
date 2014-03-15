@@ -18,6 +18,8 @@ declare sub f(byval a as long, byval b as long = 123)
 declare sub f(byval a as long = 123, byval b as long)
 declare sub f(byval a as long, byval b as long = 123, byval c as long)
 declare sub f(byval a as long = 1, byval b as long = 2, byval c as long = 3)
+declare sub f(byval p as sub(byval as long) = 0)
+declare sub f(byval p as sub(byval i as long = 123) = 0)
 
 dim shared __arrays as long
 declare sub f(byval i as long ptr)

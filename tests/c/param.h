@@ -16,6 +16,8 @@ void f(int a, int b = 123);
 void f(int a = 123, int b);
 void f(int a, int b = 123, int c);
 void f(int a = 1, int b = 2, int c = 3);
+void f(void (*p)(int) = 0);
+void f(void (*p)(int i = 123) = 0);
 
 static int __arrays;
 void f(int i[5]);

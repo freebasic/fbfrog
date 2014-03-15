@@ -16,6 +16,14 @@ extern c as long ptr
 extern d as long
 extern e as long
 
+dim shared __initializer as long
+dim shared aa as long = 123
+extern     bb as long
+dim shared bb as long = 123
+dim shared p as any ptr = 0
+dim shared p as function() as long = @f
+dim shared p as function(byval i as long = 123) as long = 0
+
 dim shared __nested_id as long
 extern a as long
 extern a as long

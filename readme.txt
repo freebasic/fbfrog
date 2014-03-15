@@ -127,12 +127,8 @@ Usage:
 
 To do:
 
-- #define handling
-    - Add -booldefine to mark a macro as "returns a bool", so the C #define parser
-      can set is_bool_context=TRUE when folding
-
 - 64bit support:
-    * C long is already mapped to CLONG
+    * C long is already mapped to CLONG, still need to #include "crt/long.bi" as needed
     * pre-#defines are missing
     * need to use x86 32bit/64bit compiler #defines
     * Use -target dos,linux,x86_64-linux,win32,x86_64-win32? or something else?
@@ -143,42 +139,46 @@ To do:
       compilable for all targets.
     * What target-specifics do we really have to handle? It's usually just that
       headers #include certain target-specific headers or different declarations.
-
-- Enums must be emitted as Long for 64bit compat:
-  a) On all enum bodies, do "enum Foo as long : ... : end enum" (must be added to FB first)
-  b) Do "type Foo as long" and make enum body anonymous (enums consts aren't type checked anyways)
-  c) Do "const EnumConst1 as long" for every enum const; don't emit the enum type at all,
-     do "long" in place of every "enum Foo" type.
+    * Enums must be emitted as Long for 64bit compat:
+      a) On all enum bodies, do "enum Foo as long : ... : end enum" (must be added to FB first)
+      b) Do "type Foo as long" and make enum body anonymous (enums consts aren't type checked anyways)
+      c) Do "const EnumConst1 as long" for every enum const; don't emit the enum type at all,
+         do "long" in place of every "enum Foo" type.
 
 - Long Double and other built-in types that FB doesn't have:
     a) just omit, except fields in a struct that is needed
     b) replace with byte array, other dtypes, or custom struct
-
-- #include foo.h  ->  #include foo.bi, if foo.bi will be generated too
-- #include stdio.h -> #include crt/stdio.bi, for some known default headers
-  (or perhaps let presets do this)
-
-- Emit list of renamed symbols at top of header
-
-- ## merging missing support for lots of tokens, e.g. 1##. or .##0 or -##> or =##=
-- macro params named after keywords?
-- Support initializers for variables too, not just parameters
-- parentheses around macro params should be preserved (can use a flag on the AST node)
 - Are forward declarations/references handled correctly? Consider merging the
   {STRUCT|UNION|ENUM}FWD into one since in FB they'd all be emitted as the same
   code anyways?!
-- Support bitfields?
-- Support nested named structs
+- Bitfields
+- Nested named structs
+- Proc/array typedefs should be solved out automatically where possible, and
+  removed otherwise. (e.g. if the proc typedef is always used in a pointer
+  context, then include the pointer in the typedef)
+- Array initializers can be emitted as struct initializers:
+    static int a[10] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
+- char array/string initializer would need special handling:
+    static char s[10] = "hello";
+
+- CPP/#define handling:
+    * ## merging missing support for lots of tokens, e.g. 1##. or .##0 or -##> or =##=
+    * macro params named after keywords?
+    * parentheses around macro params should be preserved (can use a flag on the AST node)
+
 - Const folding etc. has issues with 32bit/64bit, using Longint internally, so
   e.g. ~(0xFFFFFFFF) comes out as &hFFFFFFFF00000000 instead of &h0. Need to
   respect C number literal dtypes & sizes.
 - Don't crash on (INT_MIN / -1) or (INT_MIN % -1)
 - Const folding probably also doesn't handle unsigned relational BOPs properly
   since it only does signed ones internally
-- Proc/array typedefs should be solved out automatically where possible, and
-  removed otherwise. (e.g. if the proc typedef is always used in a pointer
-  context, then include the pointer in the typedef)
 
+- #include foo.h  ->  #include foo.bi, if foo.bi will be generated too
+- #include stdio.h -> #include crt/stdio.bi, for some known default headers
+  (or perhaps let presets do this)
+- Emit list of renamed symbols at top of header
+- Add -booldefine to mark a macro as "returns a bool", so the C #define parser
+  can set is_bool_context=TRUE when folding
 - Lexer doesn't show error code context
 - Better error reporting: Single error token location isn't enough - especially
   if it's EOF or part of the next construct, while the error is about the
@@ -196,12 +196,10 @@ To do:
 - Show suggestions how to fix errors, e.g. if #define body couldn't be parsed,
   suggest using -removedefine to exclude the #define from the binding...
 - Require source location on tkInsert(): All tokens should have some source info
-
 - Comments given to a TK_ID that is a macro call and will be expanded should
   be given to first non-whitespace token from the expansion, for example:
         // foo
         CALLCONV void f(void);
 - comments behind #define bodies should go to the #define not the body tokens
-
 - Add tk array implementation, and compare performance, on headers with lots
   of macro expansion.

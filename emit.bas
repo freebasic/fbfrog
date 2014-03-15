@@ -303,6 +303,12 @@ private function hParens( byref s as string, byval need_parens as integer ) as s
 	function = s
 end function
 
+private function hInitializer( byval n as ASTNODE ptr ) as string
+	if( n->expr ) then
+		function = " = " + emitAst( n->expr )
+	end if
+end function
+
 private function emitAst _
 	( _
 		byval n as ASTNODE ptr, _
@@ -467,28 +473,23 @@ private function emitAst _
 		emitStmt( "type " + *n->text + " as " + *n->text + "_", n->comment )
 
 	case ASTCLASS_CONSTANT
-		emitStmt( "const " + *n->text + " = " + emitAst( n->expr ), n->comment )
+		emitStmt( "const " + *n->text + hInitializer( n ), n->comment )
 
 	case ASTCLASS_VAR
-		emitStmt( "extern     " + hIdAndArray( n, TRUE  ) + " as " + emitType( n ), n->comment )
-		emitStmt( "dim shared " + hIdAndArray( n, FALSE ) + " as " + emitType( n ) )
+		emitStmt( "extern     " + hIdAndArray( n, TRUE  ) + " as " + emitType( n )                          , n->comment )
+		emitStmt( "dim shared " + hIdAndArray( n, FALSE ) + " as " + emitType( n ) + hInitializer( n )             )
 
 	case ASTCLASS_EXTERNVAR
-		emitStmt( "extern "     + hIdAndArray( n, TRUE  ) + " as " + emitType( n ), n->comment )
+		emitStmt( "extern "     + hIdAndArray( n, TRUE  ) + " as " + emitType( n )                          , n->comment )
 
 	case ASTCLASS_STATICVAR
-		emitStmt( "dim shared " + hIdAndArray( n, FALSE ) + " as " + emitType( n ), n->comment )
+		emitStmt( "dim shared " + hIdAndArray( n, FALSE ) + " as " + emitType( n ) + hInitializer( n ), n->comment )
 
 	case ASTCLASS_FIELD
 		emitStmt( hIdAndArray( n, FALSE ) + " as " + emitType( n ), n->comment )
 
 	case ASTCLASS_ENUMCONST
-		s += *n->text
-		if( n->expr ) then
-			s += " = " + emitAst( n->expr )
-		end if
-		emitStmt( s, n->comment )
-		s = ""
+		emitStmt( *n->text + hInitializer( n ), n->comment )
 
 	case ASTCLASS_PROC
 		assert( n->array = NULL )
@@ -544,10 +545,7 @@ private function emitAst _
 				s += " " + *n->text
 			end if
 			s += " as " + emitType( n )
-
-			if( n->expr ) then
-				s += " = " + emitAst( n->expr )
-			end if
+			s += hInitializer( n )
 		end if
 
 	case ASTCLASS_ARRAY

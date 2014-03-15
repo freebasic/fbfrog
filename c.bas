@@ -1423,13 +1423,14 @@ private function cDeclarator _
 	var endgccattribs = 0
 	cGccAttributeList( x, endgccattribs )
 
-	if( decl = DECL_PARAM ) then
+	select case( t->class )
+	case ASTCLASS_PARAM, ASTCLASS_VAR, ASTCLASS_STATICVAR
 		'' ['=' Initializer]
 		if( hMatch( x, TK_EQ ) ) then
-			assert( node->expr = NULL )
-			node->expr = cExpression( x, 0, NULL )
+			assert( t->expr = NULL )
+			t->expr = cExpression( x, 0, NULL )
 		end if
-	end if
+	end select
 
 	if( nestlevel > 0 ) then
 		'' __attribute__'s from this level should always be passed up

@@ -9,6 +9,13 @@ extern int a;
 extern int *a;
 extern int ****a, b, *c, d, e;
 
+static int __initializer;
+static int aa = 123;
+int bb = 123;
+static void *p = 0;
+static int (*p)(void) = &f;
+static int (*p)(int i = 123) = 0;
+
 static int __nested_id;
 extern int (a);
 extern int ((a));

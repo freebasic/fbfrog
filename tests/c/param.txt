@@ -4,4 +4,4 @@
         parsing: tests/c/param.h
 [win32]
         parsing: tests/c/param.h
-emitting: tests/c/param.bi (39 declarations)
+emitting: tests/c/param.bi (41 declarations)
