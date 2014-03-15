@@ -64,6 +64,8 @@ dim shared as ASTNODEINFO astnodeinfo(0 to ...) = _
 	("enumfwd"      ), _
 	("constant"     ), _
 	("var"          ), _
+	("externvar"    ), _
+	("staticvar"    ), _
 	("field"        ), _
 	("enumconst"    ), _
 	("proc"         ), _
@@ -652,16 +654,6 @@ function astIsEqual _
 		exit function
 	end if
 
-	if( (a->attrib and ASTATTRIB_EXTERN) <> _
-	    (b->attrib and ASTATTRIB_EXTERN) ) then
-		exit function
-	end if
-
-	if( (a->attrib and ASTATTRIB_PRIVATE) <> _
-	    (b->attrib and ASTATTRIB_PRIVATE) ) then
-		exit function
-	end if
-
 	var check_callconv = FALSE
 	if( options and ASTEQ_IGNOREHIDDENCALLCONV ) then
 		'' Only check the callconv if not hidden on both sides
@@ -766,6 +758,8 @@ function astDumpPrettyDecl( byval n as ASTNODE ptr ) as string
 	select case( n->class )
 	case ASTCLASS_CONSTANT  : s += "constant"
 	case ASTCLASS_VAR       : s += "variable"
+	case ASTCLASS_EXTERNVAR : s += "extern variable"
+	case ASTCLASS_STATICVAR : s += "static variable"
 	case ASTCLASS_PROC      : s += "function"
 	case ASTCLASS_ENUMCONST : s += "enum constant"
 	case else               : s += astnodeinfo(n->class).name
@@ -822,8 +816,6 @@ function astDumpOne( byval n as ASTNODE ptr ) as string
 	#macro checkAttrib( a )
 		if( n->attrib and ASTATTRIB_##a ) then s += " " + lcase( #a, 1 )
 	#endmacro
-	checkAttrib( EXTERN )
-	checkAttrib( PRIVATE )
 	checkAttrib( OCT )
 	checkAttrib( HEX )
 	checkAttrib( CDECL )

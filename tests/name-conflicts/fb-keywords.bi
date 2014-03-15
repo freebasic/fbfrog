@@ -419,7 +419,9 @@ const Int___ = 2
 
 extern     BASE__ alias "BASE" as long
 dim shared BASE__ as long
+
 dim shared WINDOW__ as long
+
 extern WINDOWTITLE__ alias "WINDOWTITLE" as long
 
 type Width_

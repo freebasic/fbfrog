@@ -169,10 +169,8 @@ end function
 '' case-preserving ALIAS?
 private function astHaveDeclsNeedingCaseAlias( byval n as ASTNODE ptr ) as integer
 	select case( n->class )
-	case ASTCLASS_VAR
-		if( (n->attrib and ASTATTRIB_PRIVATE) = 0 ) then
-			return TRUE
-		end if
+	case ASTCLASS_VAR, ASTCLASS_EXTERNVAR
+		return TRUE
 	case ASTCLASS_PROC
 		return TRUE
 	end select
@@ -631,7 +629,8 @@ private sub hWalkAndCheckIds _
 			'' with the #defines found so far.
 			hFixIdsInScope( defines, i )
 
-		case ASTCLASS_CONSTANT, ASTCLASS_VAR, ASTCLASS_ENUMCONST, ASTCLASS_FIELD
+		case ASTCLASS_VAR, ASTCLASS_EXTERNVAR, ASTCLASS_STATICVAR, _
+		     ASTCLASS_CONSTANT, ASTCLASS_ENUMCONST, ASTCLASS_FIELD
 			hCheckId( @fbkeywordhash, i, FALSE )
 			hCheckId( defines, i, FALSE )
 			hCheckId( globals, i, TRUE )
@@ -777,7 +776,9 @@ private sub hRenameSymbol _
 			exists or= hashContains( types   , hashid, hash )
 			exists or= hashContains( globals , hashid, hash )
 
-		case ASTCLASS_PROC, ASTCLASS_CONSTANT, ASTCLASS_VAR, ASTCLASS_ENUMCONST, ASTCLASS_FIELD, ASTCLASS_PARAM
+		case ASTCLASS_PROC, ASTCLASS_PARAM, _
+		     ASTCLASS_VAR, ASTCLASS_EXTERNVAR, ASTCLASS_STATICVAR, _
+		     ASTCLASS_CONSTANT, ASTCLASS_ENUMCONST, ASTCLASS_FIELD
 			exists or= hashContains( defines , hashid, hash )
 			exists or= hashContains( globals , hashid, hash )
 
@@ -799,7 +800,9 @@ private sub hRenameSymbol _
 	'' usually contain duplicates amongst types/globals internally; it's
 	'' just the case-insensitivity and FB keywords that cause problems)
 	select case( n->class )
-	case ASTCLASS_PPDEFINE, ASTCLASS_PROC, ASTCLASS_CONSTANT, ASTCLASS_VAR, ASTCLASS_ENUMCONST, ASTCLASS_FIELD, ASTCLASS_PARAM
+	case ASTCLASS_PPDEFINE, ASTCLASS_PROC, ASTCLASS_PARAM, _
+	     ASTCLASS_VAR, ASTCLASS_EXTERNVAR, ASTCLASS_STATICVAR, _
+	     ASTCLASS_CONSTANT, ASTCLASS_ENUMCONST, ASTCLASS_FIELD
 		hReplaceCalls( code, n->text, newid )
 	case ASTCLASS_STRUCT, ASTCLASS_UNION, _
 	     ASTCLASS_STRUCTFWD, ASTCLASS_UNIONFWD, ASTCLASS_ENUMFWD, _
@@ -816,7 +819,9 @@ private sub hRenameSymbol _
 	select case( n->class )
 	case ASTCLASS_PPDEFINE
 		hashAddOverwrite( defines, hashid, n )
-	case ASTCLASS_PROC, ASTCLASS_CONSTANT, ASTCLASS_VAR, ASTCLASS_ENUMCONST, ASTCLASS_FIELD, ASTCLASS_PARAM
+	case ASTCLASS_PROC, ASTCLASS_PARAM, _
+	     ASTCLASS_VAR, ASTCLASS_EXTERNVAR, ASTCLASS_STATICVAR, _
+	     ASTCLASS_CONSTANT,  ASTCLASS_ENUMCONST, ASTCLASS_FIELD
 		hashAddOverwrite( globals, hashid, n )
 	case ASTCLASS_STRUCT, ASTCLASS_UNION, _
 	     ASTCLASS_STRUCTFWD, ASTCLASS_UNIONFWD, ASTCLASS_ENUMFWD, _

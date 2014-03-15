@@ -604,6 +604,8 @@ enum
 	ASTCLASS_ENUMFWD
 	ASTCLASS_CONSTANT
 	ASTCLASS_VAR
+	ASTCLASS_EXTERNVAR
+	ASTCLASS_STATICVAR
 	ASTCLASS_FIELD
 	ASTCLASS_ENUMCONST
 	ASTCLASS_PROC
@@ -687,23 +689,20 @@ enum
 end enum
 
 enum
-	ASTATTRIB_EXTERN        = 1 shl 0  '' VAR
-	ASTATTRIB_PRIVATE       = 1 shl 1  '' VAR
-	ASTATTRIB_OCT           = 1 shl 2  '' CONSTI
-	ASTATTRIB_HEX           = 1 shl 3  '' CONSTI
-	ASTATTRIB_CDECL         = 1 shl 4
-	ASTATTRIB_STDCALL       = 1 shl 5
-	ASTATTRIB_HIDECALLCONV  = 1 shl 6  '' Whether the calling convention is covered by an Extern block, in which case it doesn't need to be emitted.
-	ASTATTRIB_HIDECASEALIAS = 1 shl 7  '' same for the case-preserving ALIAS
-	                      ''= 1 shl 8
-	ASTATTRIB_UNIQUE        = 1 shl 9  '' Telling astIsEqual() to never treat a node with this flag as equal to any other
-	ASTATTRIB_REPORTED      = 1 shl 10 '' Used to mark #defines about which the CPP has already complained, so it can avoid duplicate error messages
-	ASTATTRIB_DOS           = 1 shl 11
-	ASTATTRIB_LINUX         = 1 shl 12
-	ASTATTRIB_WIN32         = 1 shl 13
+	ASTATTRIB_OCT           = 1 shl 0  '' CONSTI
+	ASTATTRIB_HEX           = 1 shl 1  '' CONSTI
+	ASTATTRIB_CDECL         = 1 shl 2
+	ASTATTRIB_STDCALL       = 1 shl 3
+	ASTATTRIB_HIDECALLCONV  = 1 shl 4  '' Whether the calling convention is covered by an Extern block, in which case it doesn't need to be emitted.
+	ASTATTRIB_HIDECASEALIAS = 1 shl 5  '' same for the case-preserving ALIAS
+	ASTATTRIB_UNIQUE        = 1 shl 6  '' Telling astIsEqual() to never treat a node with this flag as equal to any other
+	ASTATTRIB_REPORTED      = 1 shl 7 '' Used to mark #defines about which the CPP has already complained, so it can avoid duplicate error messages
+	ASTATTRIB_DOS           = 1 shl 8
+	ASTATTRIB_LINUX         = 1 shl 9
+	ASTATTRIB_WIN32         = 1 shl 10
 	ASTATTRIB__ALLTARGET    = ASTATTRIB_DOS or ASTATTRIB_LINUX or ASTATTRIB_WIN32
-	ASTATTRIB_NEEDRENAME    = 1 shl 14
-	ASTATTRIB_POISONED      = 1 shl 15
+	ASTATTRIB_NEEDRENAME    = 1 shl 11
+	ASTATTRIB_POISONED      = 1 shl 12
 end enum
 
 '' When changing, adjust astClone(), astIsEqual(), astDump*()

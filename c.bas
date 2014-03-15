@@ -1301,14 +1301,14 @@ private function cDeclarator _
 
 		static as integer decl_to_astclass(0 to DECL__COUNT-1) = _
 		{ _
-			ASTCLASS_VAR    , _ '' DECL_VAR
-			ASTCLASS_VAR    , _ '' DECL_EXTERNVAR
-			ASTCLASS_VAR    , _ '' DECL_STATICVAR
-			ASTCLASS_FIELD  , _ '' DECL_FIELD
-			ASTCLASS_PARAM  , _ '' DECL_PARAM
-			ASTCLASS_TYPEDEF, _ '' DECL_TYPEDEF
-			ASTCLASS_TYPE   , _ '' DECL_CASTTYPE
-			ASTCLASS_TYPE     _ '' DECL_SIZEOFTYPE
+			ASTCLASS_VAR      , _ '' DECL_VAR
+			ASTCLASS_EXTERNVAR, _ '' DECL_EXTERNVAR
+			ASTCLASS_STATICVAR, _ '' DECL_STATICVAR
+			ASTCLASS_FIELD    , _ '' DECL_FIELD
+			ASTCLASS_PARAM    , _ '' DECL_PARAM
+			ASTCLASS_TYPEDEF  , _ '' DECL_TYPEDEF
+			ASTCLASS_TYPE     , _ '' DECL_CASTTYPE
+			ASTCLASS_TYPE       _ '' DECL_SIZEOFTYPE
 		}
 
 		if( decl = DECL_TYPEDEF ) then
@@ -1316,12 +1316,6 @@ private function cDeclarator _
 		end if
 
 		t = astNew( decl_to_astclass(decl), id )
-
-		select case( decl )
-		case DECL_EXTERNVAR : t->attrib or= ASTATTRIB_EXTERN
-		case DECL_STATICVAR : t->attrib or= ASTATTRIB_PRIVATE
-		end select
-
 		astSetType( t, dtype, basesubtype )
 	end if
 
@@ -1406,7 +1400,7 @@ private function cDeclarator _
 		else
 			'' A plain symbol, not a pointer, becomes a function
 			select case( t->class )
-			case ASTCLASS_VAR, ASTCLASS_FIELD
+			case ASTCLASS_VAR, ASTCLASS_EXTERNVAR, ASTCLASS_STATICVAR, ASTCLASS_FIELD
 				t->class = ASTCLASS_PROC
 			end select
 		end if

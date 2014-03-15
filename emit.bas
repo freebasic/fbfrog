@@ -470,14 +470,14 @@ private function emitAst _
 		emitStmt( "const " + *n->text + " = " + emitAst( n->expr ), n->comment )
 
 	case ASTCLASS_VAR
-		if( n->attrib and ASTATTRIB_EXTERN ) then
-			emitStmt( "extern "     + hIdAndArray( n, TRUE  ) + " as " + emitType( n ), n->comment )
-		elseif( n->attrib and ASTATTRIB_PRIVATE ) then
-			emitStmt( "dim shared " + hIdAndArray( n, FALSE ) + " as " + emitType( n ), n->comment )
-		else
-			emitStmt( "extern     " + hIdAndArray( n, TRUE  ) + " as " + emitType( n ), n->comment )
-			emitStmt( "dim shared " + hIdAndArray( n, FALSE ) + " as " + emitType( n ) )
-		end if
+		emitStmt( "extern     " + hIdAndArray( n, TRUE  ) + " as " + emitType( n ), n->comment )
+		emitStmt( "dim shared " + hIdAndArray( n, FALSE ) + " as " + emitType( n ) )
+
+	case ASTCLASS_EXTERNVAR
+		emitStmt( "extern "     + hIdAndArray( n, TRUE  ) + " as " + emitType( n ), n->comment )
+
+	case ASTCLASS_STATICVAR
+		emitStmt( "dim shared " + hIdAndArray( n, FALSE ) + " as " + emitType( n ), n->comment )
 
 	case ASTCLASS_FIELD
 		emitStmt( hIdAndArray( n, FALSE ) + " as " + emitType( n ), n->comment )
