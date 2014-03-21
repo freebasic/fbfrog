@@ -34,6 +34,7 @@ sub astCleanUpExpressions( byval n as ASTNODE ptr )
 	n->expr = hCleanExpr( n->expr, is_bool_context )
 	n->array = hCleanExpr( n->array, FALSE )
 	n->subtype = hCleanExpr( n->subtype, FALSE )
+	n->bits = hCleanExpr( n->bits, FALSE )
 
 	'' Node that uses the children list to hold expressions?
 	select case( n->class )

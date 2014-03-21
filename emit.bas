@@ -251,6 +251,9 @@ private function hIdAndArray( byval n as ASTNODE ptr, byval allow_alias as integ
 	if( n->array ) then
 		s += emitAst( n->array )
 	end if
+	if( n->bits ) then
+		s += " : " + emitAst( n->bits )
+	end if
 	function = s
 end function
 

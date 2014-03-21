@@ -1371,6 +1371,15 @@ private function cDeclarator _
 			'' '['? (next dimension)
 		loop while( tkGet( x ) = TK_LBRACKET )
 
+	'' ':' <bits>
+	case TK_COLON
+		if( decl <> DECL_FIELD ) then
+			tkOops( x, "bitfields not supported here" )
+		end if
+		x += 1
+
+		node->bits = cExpression( x, 0, NULL )
+
 	'' '(' ParamList ')'
 	case TK_LPAREN
 		x += 1

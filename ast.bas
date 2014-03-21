@@ -593,6 +593,7 @@ function astCloneNode( byval n as ASTNODE ptr ) as ASTNODE ptr
 	c->dtype       = n->dtype
 	c->subtype     = astClone( n->subtype )
 	c->array       = astClone( n->array )
+	c->bits        = astClone( n->bits )
 
 	c->location    = n->location
 
@@ -690,6 +691,7 @@ function astIsEqual _
 	if( a->dtype <> b->dtype ) then exit function
 	if( astIsEqual( a->subtype, b->subtype, options ) = FALSE ) then exit function
 	if( astIsEqual( a->array, b->array, options ) = FALSE ) then exit function
+	if( astIsEqual( a->bits, b->bits, options ) = FALSE ) then exit function
 
 	if( astIsEqual( a->expr, b->expr, options ) = FALSE ) then exit function
 	if( astIsEqual( a->l, b->l, options ) = FALSE ) then exit function

@@ -22,9 +22,13 @@ struct UDT {
 	int b;
 #endif
 	int c;
-};
 
-struct UDT {
+	int a : 1;
+	int a : 3;
+	int a : 27;
+	int a : 1 + 5 * 4;
+	int a : 1, b : 1;
+
 	int a;
 	int **a;
 	int a, b;

@@ -719,6 +719,7 @@ type ASTNODE_
 	dtype		as integer
 	subtype		as ASTNODE ptr
 	array		as ASTNODE ptr '' ARRAY holding DIMENSIONs, or NULL
+	bits		as ASTNODE ptr '' bitfields only
 
 	'' Source location where this declaration/statement was found
 	location	as TKLOCATION

@@ -34,9 +34,14 @@ type UDT
 	a as long
 	b as long
 	c as long
-end type
 
-type UDT
+	a : 1 as long
+	a : 3 as long
+	a : 27 as long
+	a : 21 as long
+	a : 1 as long
+	b : 1 as long
+
 	a as long
 	a as long ptr ptr
 	a as long
@@ -49,6 +54,7 @@ type UDT
 	a(0 to 1, 0 to 2) as long
 	p(0 to 39) as sub()
 	p(0 to 1, 0 to 2) as sub()
+
 	declare sub f()
 	declare function f() as long
 	declare sub f()

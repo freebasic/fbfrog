@@ -151,27 +151,33 @@ To do:
 - Are forward declarations/references handled correctly? Consider merging the
   {STRUCT|UNION|ENUM}FWD into one since in FB they'd all be emitted as the same
   code anyways?!
-- Bitfields
 - Nested named structs
 - Proc/array typedefs should be solved out automatically where possible, and
   removed otherwise. (e.g. if the proc typedef is always used in a pointer
   context, then include the pointer in the typedef)
 - Array initializers can be emitted as struct initializers:
     static int a[10] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
-- char array/string initializer would need special handling:
+- char array should be translated to zstring * N:
     static char s[10] = "hello";
+    dim shared s as zstring * 10 => "hello"
 
 - CPP/#define handling:
     * ## merging missing support for lots of tokens, e.g. 1##. or .##0 or -##> or =##=
     * macro params named after keywords?
     * parentheses around macro params should be preserved (can use a flag on the AST node)
 
-- Const folding etc. has issues with 32bit/64bit, using Longint internally, so
-  e.g. ~(0xFFFFFFFF) comes out as &hFFFFFFFF00000000 instead of &h0. Need to
-  respect C number literal dtypes & sizes.
-- Don't crash on (INT_MIN / -1) or (INT_MIN % -1)
-- Const folding probably also doesn't handle unsigned relational BOPs properly
-  since it only does signed ones internally
+- Const folding etc.
+  - has issues with 32bit/64bit, using Longint internally, so e.g. ~(0xFFFFFFFF)
+    comes out as &hFFFFFFFF00000000 instead of &h0. Need to respect C number
+    literal dtypes & sizes.
+  - Don't crash on (INT_MIN / -1) or (INT_MIN % -1)
+  - Need to handle unsigned relational BOPs properly
+  - Only need to evaluate #if expressions, nothing else. gcc/clang calculate
+    #if expressions at 64bit, even supporting unsigned. I.e. literals here
+    need to be treated as long long instead of int.
+  - Should all the 32bit C op results go through clng(), similar to how
+    relational C op results already go through - negations? Because FB ops work
+    differently and it may matter in some cases but probably not in most.
 
 - #include foo.h  ->  #include foo.bi, if foo.bi will be generated too
 - #include stdio.h -> #include crt/stdio.bi, for some known default headers
@@ -190,12 +196,8 @@ To do:
       macro body or directive etc.
     - pass in additional token ranges: unexpected token + what was expected,
       operator, operands
-- CPP reports missing #endifs ect. with wrong source context, because it deletes
-  directives and then tkReport() does TK_EOF-1 which ends up pointing to
-  something unrelated.
-- Show suggestions how to fix errors, e.g. if #define body couldn't be parsed,
-  suggest using -removedefine to exclude the #define from the binding...
-- Require source location on tkInsert(): All tokens should have some source info
+    - Show suggestions how to fix errors, e.g. if #define body couldn't be parsed,
+      suggest using -removedefine to exclude the #define from the binding...
 - Comments given to a TK_ID that is a macro call and will be expanded should
   be given to first non-whitespace token from the expansion, for example:
         // foo

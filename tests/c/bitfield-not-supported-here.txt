@@ -1,0 +1,11 @@
+[dos]
+        parsing: tests/c/bitfield-not-supported-here.h
+tests/c/bitfield-not-supported-here.h(3): bitfields not supported here
+    1: // @fail
+    2: 
+    3: int i : 1;
+             ^
+    4: 
+construct's code as seen by fbfrog:
+    int i : 1 ;
+          ^
