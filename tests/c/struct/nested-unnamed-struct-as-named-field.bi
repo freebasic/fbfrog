@@ -1,23 +1,23 @@
 #ifdef __FB_DOS__
-	type __fbfrog_anon0
+	type __dummyid0
 		a as long
 	end type
 #elseif defined( __FB_LINUX__ )
-	type __fbfrog_anon1
+	type __dummyid1
 		a as long
 	end type
 #else
-	type __fbfrog_anon2
+	type __dummyid2
 		a as long
 	end type
 #endif
 
 type UDT
 	#ifdef __FB_DOS__
-		a as __fbfrog_anon0
+		a as __dummyid0
 	#elseif defined( __FB_LINUX__ )
-		a as __fbfrog_anon1
+		a as __dummyid1
 	#else
-		a as __fbfrog_anon2
+		a as __dummyid2
 	#endif
 end type

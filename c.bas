@@ -89,9 +89,13 @@ private function hMatch( byref x as integer, byval tk as integer ) as integer
 	end if
 end function
 
-private function hMakeTempId( ) as string
+'' Generate place-holder names for unnamed structs/unions/enums when needed.
+'' The id should be unique, no name conflicts should be introduced due to this,
+'' and multiple structs within one parsing pass or from separate parsing passes
+'' shouldn't share the same id.
+private function hMakeDummyId( ) as string
 	static n as integer
-	function = FROG_ANON_PREFIX & n
+	function = FROG_DUMMYID & n
 	n += 1
 end function
 
@@ -1518,7 +1522,7 @@ private function cMultDecl _
 			'' of following declarators. If it turns out to be unnecessary,
 			'' we can still solve it out later.
 			if( subtype->text = NULL ) then
-				astSetText( subtype, hMakeTempId( ) )
+				astSetText( subtype, hMakeDummyId( ) )
 			end if
 
 			astAppend( result, subtype )

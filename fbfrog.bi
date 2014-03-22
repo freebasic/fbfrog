@@ -511,7 +511,7 @@ declare sub tkExpect _
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-const FROG_ANON_PREFIX = "__fbfrog_anon"
+const FROG_DUMMYID = "__dummyid"
 
 enum
 	TYPE_NONE = 0
