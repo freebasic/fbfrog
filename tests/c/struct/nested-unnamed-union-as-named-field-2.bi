@@ -1,15 +1,11 @@
-#ifdef __FB_DOS__
-	union __dummyid0
-		a as long
-	end union
+union __dummyid0
+	a as long
+end union
+
+#ifdef __FB_WIN32__
+	type __dummyid2 as __dummyid0
 #elseif defined( __FB_LINUX__ )
-	union __dummyid1
-		a as long
-	end union
-#else
-	union __dummyid2
-		a as long
-	end union
+	type __dummyid1 as __dummyid0
 #endif
 
 type UDT

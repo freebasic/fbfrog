@@ -1,22 +1,20 @@
 extern "C"
 
-#ifdef __FB_DOS__
-	type __dummyid0
-		a as long
-	end type
+type __dummyid0
+	a as long
+end type
 
-	declare function f1() as __dummyid0
+#ifdef __FB_WIN32__
+	type __dummyid14 as __dummyid0
 #elseif defined( __FB_LINUX__ )
-	type __dummyid7
-		a as long
-	end type
-
-	declare function f1() as __dummyid7
+	type __dummyid7 as __dummyid0
 #else
-	type __dummyid14
-		a as long
-	end type
+	declare function f1() as __dummyid0
+#endif
 
+#ifdef __FB_LINUX__
+	declare function f1() as __dummyid7
+#elseif defined( __FB_WIN32__ )
 	declare function f1() as __dummyid14
 #endif
 
@@ -26,23 +24,21 @@ end type
 
 declare function f2() as UDT2
 
-#ifdef __FB_DOS__
-	type __dummyid1
-		a as long
-	end type
+type __dummyid1
+	a as long
+end type
 
-	declare function f3() as __dummyid1
+#ifdef __FB_WIN32__
+	type __dummyid15 as __dummyid1
 #elseif defined( __FB_LINUX__ )
-	type __dummyid8
-		a as long
-	end type
-
-	declare function f3() as __dummyid8
+	type __dummyid8 as __dummyid1
 #else
-	type __dummyid15
-		a as long
-	end type
+	declare function f3() as __dummyid1
+#endif
 
+#ifdef __FB_LINUX__
+	declare function f3() as __dummyid8
+#elseif defined( __FB_WIN32__ )
 	declare function f3() as __dummyid15
 #endif
 
@@ -52,25 +48,23 @@ end type
 
 declare function f4() as UDT4
 
-#ifdef __FB_DOS__
-	type __dummyid2
-		a as long
-	end type
+type __dummyid2
+	a as long
+end type
 
+#ifdef __FB_WIN32__
+	type __dummyid16 as __dummyid2
+#elseif defined( __FB_LINUX__ )
+	type __dummyid9 as __dummyid2
+#else
 	dim shared a5 as __dummyid2
 	dim shared b5 as __dummyid2
-#elseif defined( __FB_LINUX__ )
-	type __dummyid9
-		a as long
-	end type
+#endif
 
+#ifdef __FB_LINUX__
 	dim shared a5 as __dummyid9
 	dim shared b5 as __dummyid9
-#else
-	type __dummyid16
-		a as long
-	end type
-
+#elseif defined( __FB_WIN32__ )
 	dim shared a5 as __dummyid16
 	dim shared b5 as __dummyid16
 #endif
@@ -82,23 +76,21 @@ end type
 dim shared a6 as UDT6
 dim shared b6 as UDT6
 
-#ifdef __FB_DOS__
-	union __dummyid3
-		a as long
-	end union
+union __dummyid3
+	a as long
+end union
 
-	declare function f7() as __dummyid3
+#ifdef __FB_WIN32__
+	type __dummyid17 as __dummyid3
 #elseif defined( __FB_LINUX__ )
-	union __dummyid10
-		a as long
-	end union
-
-	declare function f7() as __dummyid10
+	type __dummyid10 as __dummyid3
 #else
-	union __dummyid17
-		a as long
-	end union
+	declare function f7() as __dummyid3
+#endif
 
+#ifdef __FB_LINUX__
+	declare function f7() as __dummyid10
+#elseif defined( __FB_WIN32__ )
 	declare function f7() as __dummyid17
 #endif
 
@@ -108,23 +100,21 @@ end union
 
 declare function f8() as UDT8
 
-#ifdef __FB_DOS__
-	enum __dummyid4
-		A = 0
-	end enum
+enum __dummyid4
+	A = 0
+end enum
 
-	declare function f9() as __dummyid4
+#ifdef __FB_WIN32__
+	type __dummyid18 as __dummyid4
 #elseif defined( __FB_LINUX__ )
-	enum __dummyid11
-		A = 0
-	end enum
-
-	declare function f9() as __dummyid11
+	type __dummyid11 as __dummyid4
 #else
-	enum __dummyid18
-		A = 0
-	end enum
+	declare function f9() as __dummyid4
+#endif
 
+#ifdef __FB_LINUX__
+	declare function f9() as __dummyid11
+#elseif defined( __FB_WIN32__ )
 	declare function f9() as __dummyid18
 #endif
 
@@ -134,36 +124,28 @@ end enum
 
 declare function f10() as UDT10
 
-#ifdef __FB_DOS__
-	type __dummyid5
-		a as long
-	end type
+type __dummyid5
+	a as long
+end type
+
+#ifdef __FB_WIN32__
+	type __dummyid19 as __dummyid5
 #elseif defined( __FB_LINUX__ )
-	type __dummyid12
-		a as long
-	end type
-#else
-	type __dummyid19
-		a as long
-	end type
+	type __dummyid12 as __dummyid5
 #endif
 
 type UDT12
 	a as long
 end type
 
-#ifdef __FB_DOS__
-	type __dummyid6
-		a as long
-	end type
+type __dummyid6
+	a as long
+end type
+
+#ifdef __FB_WIN32__
+	type __dummyid20 as __dummyid6
 #elseif defined( __FB_LINUX__ )
-	type __dummyid13
-		a as long
-	end type
-#else
-	type __dummyid20
-		a as long
-	end type
+	type __dummyid13 as __dummyid6
 #endif
 
 type UDT11

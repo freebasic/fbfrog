@@ -1,53 +1,43 @@
 extern "C"
 
-#ifdef __FB_DOS__
-	type __dummyid0
-		a as long
-	end type
+type __dummyid0
+	a as long
+end type
 
-	type __dummyid1
-		a as long
-	end type
-
-	type __dummyid2
-		a as long
-	end type
-
-	type __dummyid3
-		a as long
-	end type
+#ifdef __FB_WIN32__
+	type __dummyid8 as __dummyid0
 #elseif defined( __FB_LINUX__ )
-	type __dummyid4
-		a as long
-	end type
+	type __dummyid4 as __dummyid0
+#endif
 
-	type __dummyid5
-		a as long
-	end type
+type __dummyid1
+	a as long
+end type
 
-	type __dummyid6
-		a as long
-	end type
+#ifdef __FB_WIN32__
+	type __dummyid9 as __dummyid1
+#elseif defined( __FB_LINUX__ )
+	type __dummyid5 as __dummyid1
+#endif
 
-	type __dummyid7
-		a as long
-	end type
-#else
-	type __dummyid8
-		a as long
-	end type
+type __dummyid2
+	a as long
+end type
 
-	type __dummyid9
-		a as long
-	end type
+#ifdef __FB_WIN32__
+	type __dummyid10 as __dummyid2
+#elseif defined( __FB_LINUX__ )
+	type __dummyid6 as __dummyid2
+#endif
 
-	type __dummyid10
-		a as long
-	end type
+type __dummyid3
+	a as long
+end type
 
-	type __dummyid11
-		a as long
-	end type
+#ifdef __FB_WIN32__
+	type __dummyid11 as __dummyid3
+#elseif defined( __FB_LINUX__ )
+	type __dummyid7 as __dummyid3
 #endif
 
 type UDT

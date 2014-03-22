@@ -856,6 +856,8 @@ declare function astClone( byval n as ASTNODE ptr ) as ASTNODE ptr
 const ASTEQ_IGNOREHIDDENCALLCONV	= 1 shl 0
 const ASTEQ_IGNOREFIELDS		= 1 shl 1
 const ASTEQ_IGNORETARGET		= 1 shl 2
+const ASTEQ_IGNOREDUMMYIDSTRUCTS	= 1 shl 3
+
 declare function astIsEqual _
 	( _
 		byval a as ASTNODE ptr, _

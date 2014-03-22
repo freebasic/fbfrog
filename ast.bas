@@ -683,7 +683,23 @@ function astIsEqual _
 	end if
 
 	if( (a->text <> NULL) <> (b->text <> NULL) ) then exit function
-	if( a->text ) then if( *a->text <> *b->text ) then exit function
+	if( a->text ) then
+		var a_is_dummy = FALSE
+		if( options and ASTEQ_IGNOREDUMMYIDSTRUCTS ) then
+			select case( a->class )
+			case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
+				'' If both sides have place holder ids, treat them as equal,
+				'' without comparing the dummy ids any further.
+				a_is_dummy = strStartsWith( *a->text, FROG_DUMMYID )
+
+				'' If not both sides are dummy ids though, then they can't be equal anyways.
+				if( a_is_dummy <> strStartsWith( *b->text, FROG_DUMMYID ) ) then exit function
+			end select
+		end if
+		if( a_is_dummy = FALSE ) then
+			if( *a->text <> *b->text ) then exit function
+		end if
+	end if
 
 	if( (a->alias <> NULL) <> (b->alias <> NULL) ) then exit function
 	if( a->alias ) then if( *a->alias <> *b->alias ) then exit function

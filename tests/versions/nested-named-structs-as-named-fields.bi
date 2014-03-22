@@ -6,45 +6,37 @@
 	#error "'__VERSION__' is #defined to an unsupported value; expected one of: "1", "2""
 #endif
 
-#if __VERSION__ = "1"
-	#ifdef __FB_DOS__
-		type __dummyid0
-			v1_a as long
-		end type
-
-		type __dummyid1
-			v1_b as long
-		end type
-	#elseif defined( __FB_LINUX__ )
-		type __dummyid2
-			v1_a as long
-		end type
-
-		type __dummyid3
-			v1_b as long
-		end type
+type __dummyid0
+	#if __VERSION__ = "1"
+		v1_a as long
 	#else
-		type __dummyid4
-			v1_a as long
-		end type
+		v2_a as long
+	#endif
+end type
 
-		type __dummyid5
-			v1_b as long
-		end type
+#if __VERSION__ = "2"
+	#ifdef __FB_WIN32__
+		type __dummyid8 as __dummyid0
+	#elseif defined( __FB_LINUX__ )
+		type __dummyid7 as __dummyid0
+	#else
+		type __dummyid6 as __dummyid0
 	#endif
 #else
-	#ifdef __FB_DOS__
-		type __dummyid6
-			v2_a as long
-		end type
+	#ifdef __FB_WIN32__
+		type __dummyid4 as __dummyid0
 	#elseif defined( __FB_LINUX__ )
-		type __dummyid7
-			v2_a as long
-		end type
-	#else
-		type __dummyid8
-			v2_a as long
-		end type
+		type __dummyid2 as __dummyid0
+	#endif
+
+	type __dummyid1
+		v1_b as long
+	end type
+
+	#ifdef __FB_WIN32__
+		type __dummyid5 as __dummyid1
+	#elseif defined( __FB_LINUX__ )
+		type __dummyid3 as __dummyid1
 	#endif
 #endif
 

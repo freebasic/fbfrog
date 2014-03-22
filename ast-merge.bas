@@ -439,7 +439,7 @@ private sub hAstMerge _
 	dim as integer alcsfirst, alcslast, blcsfirst, blcslast
 	hAstLCS( aarray, afirst, alast, alcsfirst, alcslast, _
 	         barray, bfirst, blast, blcsfirst, blcslast, _
-	         ASTEQ_IGNOREHIDDENCALLCONV or ASTEQ_IGNOREFIELDS )
+	         ASTEQ_IGNOREHIDDENCALLCONV or ASTEQ_IGNOREFIELDS or ASTEQ_IGNOREDUMMYIDSTRUCTS )
 	DEBUG( "LCS: a=" & alcsfirst & ".." & alcslast & ", b=" & blcsfirst & ".." & blcslast )
 
 	'' No LCS found?
@@ -505,10 +505,26 @@ private sub hAstMerge _
 			'' Add struct to result tree, under both a's and b's version numbers
 			astAppendVerblock( c, astClone( aversion ), astClone( bversion ), cstruct )
 
-			continue for
-		end select
+			if( astruct->text ) then
+				if( strStartsWith( *astruct->text, FROG_DUMMYID ) ) then
+					assert( *astruct->text <> *bstruct->text )
+					assert( strStartsWith( *bstruct->text, FROG_DUMMYID ) )
+					assert( *cstruct->text = *astruct->text )
 
-		hAddMergedDecl( c, aarray, alcsfirst + i, barray, blcsfirst + i )
+					'' Two structs with dummy ids, being merged together.
+					'' hMergeStructsManually() will have re-use a's id as id
+					'' for the merged struct, and now we need to manually update
+					'' all uses of b's id to now use a's id too.
+					'' Or emit a typedef that makes b point to a.
+					var typedef = astNew( ASTCLASS_TYPEDEF, bstruct->text )
+					astSetType( typedef, TYPE_UDT, astNewID( cstruct->text ) )
+					astAppendVerblock( c, astClone( bversion ), NULL, typedef )
+				end if
+			end if
+
+		case else
+			hAddMergedDecl( c, aarray, alcsfirst + i, barray, blcsfirst + i )
+		end select
 	next
 
 	'' Do both sides have decls behind the LCS?

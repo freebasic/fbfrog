@@ -1,30 +1,28 @@
-#ifdef __FB_DOS__
-	type __dummyid0
-	end type
+type __dummyid0
+end type
 
-	type __dummyid1
-		union
-			a as __dummyid0
-		end union
-	end type
+#ifdef __FB_WIN32__
+	type __dummyid4 as __dummyid0
 #elseif defined( __FB_LINUX__ )
-	type __dummyid2
-	end type
+	type __dummyid2 as __dummyid0
+#endif
 
-	type __dummyid3
-		union
+type __dummyid1
+	union
+		#ifdef __FB_DOS__
+			a as __dummyid0
+		#elseif defined( __FB_LINUX__ )
 			a as __dummyid2
-		end union
-	end type
-#else
-	type __dummyid4
-	end type
-
-	type __dummyid5
-		union
+		#else
 			a as __dummyid4
-		end union
-	end type
+		#endif
+	end union
+end type
+
+#ifdef __FB_WIN32__
+	type __dummyid5 as __dummyid1
+#elseif defined( __FB_LINUX__ )
+	type __dummyid3 as __dummyid1
 #endif
 
 type UDT
