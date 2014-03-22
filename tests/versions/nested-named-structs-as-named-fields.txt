@@ -1,0 +1,13 @@
+[1.dos]
+          parsing: tests/versions/nested-named-structs-as-named-fields.h
+[1.linux]
+          parsing: tests/versions/nested-named-structs-as-named-fields.h
+[1.win32]
+          parsing: tests/versions/nested-named-structs-as-named-fields.h
+[2.dos]
+          parsing: tests/versions/nested-named-structs-as-named-fields.h
+[2.linux]
+          parsing: tests/versions/nested-named-structs-as-named-fields.h
+[2.win32]
+          parsing: tests/versions/nested-named-structs-as-named-fields.h
+emitting: tests/versions/nested-named-structs-as-named-fields.bi (12 declarations)
