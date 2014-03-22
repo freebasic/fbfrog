@@ -148,13 +148,46 @@ To do:
 - Long Double and other built-in types that FB doesn't have:
     a) just omit, except fields in a struct that is needed
     b) replace with byte array, other dtypes, or custom struct
+
 - Are forward declarations/references handled correctly? Consider merging the
   {STRUCT|UNION|ENUM}FWD into one since in FB they'd all be emitted as the same
   code anyways?!
-- Nested named structs
+
+- Solve out unnamed structs with anonymous fields if appearing in a struct
+  directly, because that's not allowed in FB and it's useless (not useless for
+  unions though, here it must be fixed up)
+		struct UDT1 {
+			struct {
+				int a;
+			};
+		};
+		type UDT1
+			a as integer
+		end type
+
+- Should fix typedef/structtag id conflicts in a reliable way, because they
+  could represent different types. Places using the struct tag mustn't silently
+  start using the typedef, and vice-versa.
+    - the subtype ID must encode the struct tag somehow, e.g. "<struct>" prefix
+      that higherlevel transformations can check for.
+
+- Unnamed structs for which fbfrog has to add place holder ids should be merged
+  better, i.e. if __fbfrog_anon structs have the same fields, they should be merged
+- Struct bodies should be parsed from cBaseType(), and stored as subtypes of
+  other declarations (or be converted to struct decl directly, if standalone).
+  Anonymous structs wouldn't have to be given place-holder names immediately,
+  which could make merging easier. Later, struct bodies must be moved from
+  subtypes to the toplevel, to be FB-compatible. An additional de-duplication
+  step will be needed, otherwise there would be redundant copies of the struct
+  emitted in case a multdecl used it as basetype.
+
+- If 2 symbols have the exact same id, should not rename either, so that fbc
+  catches the problem (ie. 2 structs, or 2 typedefs, or typedef/struct, etc.)
+
 - Proc/array typedefs should be solved out automatically where possible, and
   removed otherwise. (e.g. if the proc typedef is always used in a pointer
   context, then include the pointer in the typedef)
+
 - Array initializers can be emitted as struct initializers:
     static int a[10] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
 - char array should be translated to zstring * N:

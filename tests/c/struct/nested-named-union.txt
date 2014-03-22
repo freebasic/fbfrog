@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/c/struct/nested-named-union.h
+[linux]
+        parsing: tests/c/struct/nested-named-union.h
+[win32]
+        parsing: tests/c/struct/nested-named-union.h
+emitting: tests/c/struct/nested-named-union.bi (2 declarations)

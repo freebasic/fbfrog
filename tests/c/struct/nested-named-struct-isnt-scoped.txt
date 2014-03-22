@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/c/struct/nested-named-struct-isnt-scoped.h
+[linux]
+        parsing: tests/c/struct/nested-named-struct-isnt-scoped.h
+[win32]
+        parsing: tests/c/struct/nested-named-struct-isnt-scoped.h
+emitting: tests/c/struct/nested-named-struct-isnt-scoped.bi (3 declarations)

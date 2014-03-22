@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/c/struct/struct-body-followed-by-field-declarators.h
+[linux]
+        parsing: tests/c/struct/struct-body-followed-by-field-declarators.h
+[win32]
+        parsing: tests/c/struct/struct-body-followed-by-field-declarators.h
+emitting: tests/c/struct/struct-body-followed-by-field-declarators.bi (13 declarations)

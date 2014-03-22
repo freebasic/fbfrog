@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/c/struct/typedef-struct.h
+[linux]
+        parsing: tests/c/struct/typedef-struct.h
+[win32]
+        parsing: tests/c/struct/typedef-struct.h
+emitting: tests/c/struct/typedef-struct.bi (6 declarations)

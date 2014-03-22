@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/c/struct/typedef-fixup-2.h
+[linux]
+        parsing: tests/c/struct/typedef-fixup-2.h
+[win32]
+        parsing: tests/c/struct/typedef-fixup-2.h
+emitting: tests/c/struct/typedef-fixup-2.bi (6 declarations)

@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/c/struct/typedef-with-nesting.h
+[linux]
+        parsing: tests/c/struct/typedef-with-nesting.h
+[win32]
+        parsing: tests/c/struct/typedef-with-nesting.h
+emitting: tests/c/struct/typedef-with-nesting.bi (1 declaration)

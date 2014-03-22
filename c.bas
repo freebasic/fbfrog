@@ -686,24 +686,18 @@ private function cStructCompound( byref x as integer ) as ASTNODE ptr
 	end select
 	x += 1
 
+	var struct = astNew( astclass )
+
 	'' [Identifier]
-	dim as string id
 	if( tkGet( x ) = TK_ID ) then
-		id = *tkGetText( x )
+		astSetText( struct, tkGetText( x ) )
 		x += 1
-	elseif( is_typedef ) then
-		'' If it's a typedef with anonymous struct block, we need to
-		'' make up an id for it, for use in the base type of the
-		'' typedef MultDecl. If it turns out to be just a single
-		'' typedef, we can still solve it out later.
-		id = hMakeTempId( )
 	end if
 
 	'' '{'
 	assert( tkGet( x ) = TK_LBRACE )
 	x += 1
 
-	var struct = astNew( astclass, id )
 	astAddComment( struct, tkCollectComments( head, x - 1 ) )
 
 	astAppend( struct, _
@@ -714,10 +708,32 @@ private function cStructCompound( byref x as integer ) as ASTNODE ptr
 	tkExpect( x, TK_RBRACE, "to close " + astDumpPrettyDecl( struct ) + " block" )
 	x += 1
 
+	var idlistdecl = -1
 	if( is_typedef ) then
+		idlistdecl = DECL_TYPEDEF
+	else
+		select case( tkGet( x ) )
+		case is >= TK_ID, TK_LPAREN, TK_STAR   '' any id/keyword, or [function] pointers
+			'' Looks like the struct is just the base dtype of a field,
+			'' not an anonymous inner struct:
+			''   struct|union [id] {
+			''       ...
+			''   } somefield;
+			idlistdecl = DECL_FIELD
+		end select
+	end if
+
+	if( idlistdecl >= 0 ) then
+		'' Make up an id for anonymous structs, for use as the base type
+		'' of following declarators. If it turns out to be unnecessary,
+		'' we can still solve it out later.
+		if( struct->text = NULL ) then
+			astSetText( struct, hMakeTempId( ) )
+		end if
+
 		'' IdList
-		var subtype = astNewID( id )
-		var t = cIdList( x, DECL_TYPEDEF, TYPE_UDT, subtype, 0, "" )
+		var subtype = astNewID( struct->text )
+		var t = cIdList( x, idlistdecl, TYPE_UDT, subtype, 0, "" )
 		astDelete( subtype )
 		var group = astNewGROUP( )
 		astAppend( group, struct )

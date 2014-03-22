@@ -287,6 +287,84 @@ sub astFixArrayParams( byval n as ASTNODE ptr )
 	wend
 end sub
 
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+'' Unscoping of nested declarations:
+''
+'' For example nested named structs or constants/#defines nested in structs need
+'' to be moved to the toplevel, out of the parent struct, because FB does not
+'' support this or would scope them inside the parent struct, unlike C.
+''
+''        struct UDT1 {
+''            #define M1
+''            struct UDT2 {
+''                int a;
+''            } a;
+''            struct UDT3 {
+''                int a;
+''            };
+''        };
+''
+'' becomes:
+''
+''        #define M1
+''
+''        struct UDT2 {
+''            int a;
+''        };
+''
+''        struct UDT3 {
+''            int a;
+''        };
+''
+''        struct UDT1 {
+''            struct UDT2 a;
+''        };
+''
+'' Since such nested structs aren't even scoped/namespaced in the parent in C,
+'' we don't even have to worry about identifier conflicts.
+''
+
+private function hExtractNestedStructsForUnscoping( byval struct as ASTNODE ptr ) as ASTNODE ptr
+	var result = astNewGROUP( )
+
+	var i = struct->head
+	while( i )
+		var nxt = i->next
+
+		select case( i->class )
+		case ASTCLASS_STRUCT, ASTCLASS_UNION
+			if( i->text ) then
+				astCloneAppend( result, i )
+				astRemove( struct, i )
+			end if
+		case ASTCLASS_PPDEFINE
+			astCloneAppend( result, i )
+			astRemove( struct, i )
+		end select
+
+		i = nxt
+	wend
+
+	function = result
+end function
+
+sub astUnscopeDeclsNestedInStructs( byval n as ASTNODE ptr )
+	var struct = n->head
+	while( struct )
+
+		'' Recursively
+		astUnscopeDeclsNestedInStructs( struct )
+
+		select case( struct->class )
+		case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
+			astInsert( n, hExtractNestedStructsForUnscoping( struct ), struct )
+		end select
+
+		struct = struct->next
+	wend
+end sub
+
+
 private sub hReplaceTypedefBaseSubtype _
 	( _
 		byval n as ASTNODE ptr, _
@@ -312,10 +390,9 @@ private sub hReplaceTypedefBaseSubtype _
 end sub
 
 ''
-'' Look for TYPEDEFs that have the given anon UDT as subtype. There should be
-'' at least one; if not, report an error.
-'' The first TYPEDEF's id can become the anon UDT's id, and then that TYPEDEF
-'' can be removed. All other TYPEDEFs need to be changed over from the old anon
+'' Look for TYPEDEFs that have the given anon UDT as subtype. The first
+'' TYPEDEF's id can become the anon UDT's id, and then that TYPEDEF can be
+'' removed. All other TYPEDEFs need to be changed over from the old anon
 '' subtype to the new id subtype.
 ''
 '' For example:
@@ -340,16 +417,15 @@ end sub
 ''    typedef A as __fbfrog_anon1 ptr
 '' i.e. the typedef is a pointer to the anon struct, not an alias for it.
 ''
-private sub hTryFixAnon(  byval anon as ASTNODE ptr )
+private sub hTryNameAnonUdtAfterFirstAliasTypedef(  byval anon as ASTNODE ptr )
 	'' (Assuming that the parser will only insert typedefs using the anon id
-	'' behind the anon UDT node...)
+	'' behind the anon UDT node, not in front of it...)
 
 	'' 1. Find alias typedef
 	dim as ASTNODE ptr aliastypedef
 	var typedef = anon->next
 	while( typedef )
 		if( typedef->class <> ASTCLASS_TYPEDEF ) then
-			typedef = NULL
 			exit while
 		end if
 
@@ -391,7 +467,7 @@ private sub hTryFixAnon(  byval anon as ASTNODE ptr )
 	aliastypedef->class = ASTCLASS_NOP
 end sub
 
-sub astFixAnonUDTs( byval n as ASTNODE ptr )
+sub astNameAnonUdtsAfterFirstAliasTypedef( byval n as ASTNODE ptr )
 	var udt = n->head
 	while( udt )
 
@@ -399,7 +475,7 @@ sub astFixAnonUDTs( byval n as ASTNODE ptr )
 		select case( udt->class )
 		case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
 			if( strStartsWith( *udt->text, FROG_ANON_PREFIX ) ) then
-				hTryFixAnon( udt )
+				hTryNameAnonUdtAfterFirstAliasTypedef( udt )
 			end if
 		end select
 
@@ -424,42 +500,6 @@ sub astRemoveRedundantTypedefs( byval n as ASTNODE ptr )
 			n->class = ASTCLASS_NOP
 		end if
 	end if
-end sub
-
-private function hExtractNestedDefines( byval n as ASTNODE ptr ) as ASTNODE ptr
-	var result = astNewGROUP( )
-
-	var i = n->head
-	while( i )
-		var nxt = i->next
-
-		select case( i->class )
-		case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
-			astAppend( result, hExtractNestedDefines( i ) )
-		case ASTCLASS_PPDEFINE
-			astCloneAppend( result, i )
-			astRemove( n, i )
-		end select
-
-		i = nxt
-	wend
-
-	function = result
-end function
-
-sub astMoveNestedDefinesToToplevel( byval code as ASTNODE ptr )
-	var i = code->head
-	while( i )
-
-		'' Compound?
-		select case( i->class )
-		case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
-			'' Extract nested #defines and insert them behind the compound
-			astInsert( code, hExtractNestedDefines( i ), i->next )
-		end select
-
-		i = i->next
-	wend
 end sub
 
 '' Checks whether an expression is simple enough that it could be used in an

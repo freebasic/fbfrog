@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/c/struct/nested-named-enum.h
+[linux]
+        parsing: tests/c/struct/nested-named-enum.h
+[win32]
+        parsing: tests/c/struct/nested-named-enum.h
+emitting: tests/c/struct/nested-named-enum.bi (1 declaration)

@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/c/struct/toplevel.h
+[linux]
+        parsing: tests/c/struct/toplevel.h
+[win32]
+        parsing: tests/c/struct/toplevel.h
+emitting: tests/c/struct/toplevel.bi (4 declarations)
