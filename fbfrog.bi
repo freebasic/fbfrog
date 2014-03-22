@@ -852,11 +852,10 @@ declare sub astAddComment( byval n as ASTNODE ptr, byval comment as zstring ptr 
 declare sub astSetLocationAndAlsoOnChildren( byval n as ASTNODE ptr, byval location as TKLOCATION ptr )
 declare function astCloneNode( byval n as ASTNODE ptr ) as ASTNODE ptr
 declare function astClone( byval n as ASTNODE ptr ) as ASTNODE ptr
-enum
-	ASTEQ_IGNOREHIDDENCALLCONV = 0
-	ASTEQ_IGNOREFIELDS
-	ASTEQ_IGNORETARGET
-end enum
+
+const ASTEQ_IGNOREHIDDENCALLCONV	= 1 shl 0
+const ASTEQ_IGNOREFIELDS		= 1 shl 1
+const ASTEQ_IGNORETARGET		= 1 shl 2
 declare function astIsEqual _
 	( _
 		byval a as ASTNODE ptr, _
