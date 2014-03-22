@@ -173,13 +173,6 @@ To do:
 
 - Unnamed structs for which fbfrog has to add place holder ids should be merged
   better, i.e. if __fbfrog_anon structs have the same fields, they should be merged
-- Struct bodies should be parsed from cBaseType(), and stored as subtypes of
-  other declarations (or be converted to struct decl directly, if standalone).
-  Anonymous structs wouldn't have to be given place-holder names immediately,
-  which could make merging easier. Later, struct bodies must be moved from
-  subtypes to the toplevel, to be FB-compatible. An additional de-duplication
-  step will be needed, otherwise there would be redundant copies of the struct
-  emitted in case a multdecl used it as basetype.
 
 - If 2 symbols have the exact same id, should not rename either, so that fbc
   catches the problem (ie. 2 structs, or 2 typedefs, or typedef/struct, etc.)

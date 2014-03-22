@@ -663,15 +663,10 @@ private function cFieldDecl( byref x as integer ) as ASTNODE ptr
 	function = cMultDecl( x, DECL_FIELD, 0, "" )
 end function
 
-'' Structs/Unions, Enums
-'' [TYPEDEF] {STRUCT|UNION|ENUM} [Identifier] '{'
-''     {StructBody|EnumBody}
-'' '}' [MultDecl] ';'
-private function cStructCompound( byref x as integer ) as ASTNODE ptr
+'' {STRUCT|UNION|ENUM} [Identifier] '{' StructBody|EnumBody '}'
+'' {STRUCT|UNION|ENUM} Identifier
+private function cStruct( byref x as integer ) as ASTNODE ptr
 	var head = x
-
-	'' TYPEDEF?
-	var is_typedef = hMatch( x, KW_TYPEDEF )
 
 	'' {STRUCT|UNION|ENUM}
 	dim as integer astclass
@@ -694,70 +689,27 @@ private function cStructCompound( byref x as integer ) as ASTNODE ptr
 		x += 1
 	end if
 
-	'' '{'
-	assert( tkGet( x ) = TK_LBRACE )
-	x += 1
+	'' '{'?
+	if( tkGet( x ) = TK_LBRACE ) then
+		x += 1
 
-	astAddComment( struct, tkCollectComments( head, x - 1 ) )
+		astAppend( struct, _
+			cToplevel( x, iif( astclass = ASTCLASS_ENUM, _
+				BODY_ENUM, BODY_STRUCT ) ) )
 
-	astAppend( struct, _
-		cToplevel( x, iif( astclass = ASTCLASS_ENUM, _
-			BODY_ENUM, BODY_STRUCT ) ) )
-
-	'' '}'
-	tkExpect( x, TK_RBRACE, "to close " + astDumpPrettyDecl( struct ) + " block" )
-	x += 1
-
-	var idlistdecl = -1
-	if( is_typedef ) then
-		idlistdecl = DECL_TYPEDEF
+		'' '}'
+		tkExpect( x, TK_RBRACE, "to close " + astDumpPrettyDecl( struct ) + " block" )
+		x += 1
 	else
-		select case( tkGet( x ) )
-		case is >= TK_ID, TK_LPAREN, TK_STAR   '' any id/keyword, or [function] pointers
-			'' Looks like the struct is just the base dtype of a field,
-			'' not an anonymous inner struct:
-			''   struct|union [id] {
-			''       ...
-			''   } somefield;
-			idlistdecl = DECL_FIELD
-		end select
-	end if
-
-	if( idlistdecl >= 0 ) then
-		'' Make up an id for anonymous structs, for use as the base type
-		'' of following declarators. If it turns out to be unnecessary,
-		'' we can still solve it out later.
 		if( struct->text = NULL ) then
-			astSetText( struct, hMakeTempId( ) )
+			tkOopsExpected( x, "'{' or tag name behind " + astDumpPrettyDecl( struct ) )
 		end if
 
-		'' IdList
-		var subtype = astNewID( struct->text )
-		var t = cIdList( x, idlistdecl, TYPE_UDT, subtype, 0, "" )
-		astDelete( subtype )
-		var group = astNewGROUP( )
-		astAppend( group, struct )
-		astAppend( group, t )
-		function = group
-	else
-		'' ';'
-		tkExpect( x, TK_SEMI, "to finish " + astDumpPrettyDecl( struct ) + " block declaration" )
-		x += 1
-		function = struct
+		'' It's just a tag name, not a body
+		struct->class = ASTCLASS_ID
 	end if
-end function
 
-private function cForwardStruct( byref x as integer ) as ASTNODE ptr
-	var astclass = ASTCLASS_STRUCTFWD
-	select case( tkGet( x ) )
-	case KW_UNION : astclass = ASTCLASS_UNIONFWD
-	case KW_ENUM  : astclass = ASTCLASS_ENUMFWD
-	case else     : assert( tkGet( x ) = KW_STRUCT )
-	end select
-
-	var t = astNew( astclass, tkGetText( x + 1 ) )
-	x += 3
-	function = t
+	function = struct
 end function
 
 private function cTypedef( byref x as integer ) as ASTNODE ptr
@@ -841,6 +793,9 @@ end function
 ''    struct UDT const *p, **pp;
 ''    ^^^^^^^^^^^^^^^^
 ''
+''    struct { ...fields... } a;
+''    ^^^^^^^^^^^^^^^^^^^^^^^
+''
 '' Besides the base type there can be modifiers such as "signed", "unsigned",
 '' "const", "short", "long". They can be used together with some base types,
 '' for example "short int a;", or alone: "short a;". Modifiers can appear in
@@ -872,7 +827,6 @@ private sub cBaseType _
 	var constmods = 0
 	var shortmods = 0
 	var longmods = 0
-	var basetypex = -1
 
 	''
 	'' 1. Parse base type and all modifiers, and count them
@@ -918,18 +872,15 @@ private sub cBaseType _
 
 		case else
 			'' Only one base type is allowed
-			if( basetypex >= 0 ) then
+			if( dtype <> TYPE_NONE ) then
 				exit do
 			end if
 
 			select case( tkGet( x ) )
 			case KW_ENUM, KW_STRUCT, KW_UNION
-				'' {ENUM|STRUCT|UNION}
-				x += 1
-
-				'' Identifier
-				tkExpect( x, TK_ID, ", the tag name as in 'struct|union|enum TAGNAME'" )
-				basetypex = x
+				dtype = TYPE_UDT
+				subtype = cStruct( x )
+				x -= 1
 
 			case TK_ID
 				''
@@ -957,10 +908,18 @@ private sub cBaseType _
 				end if
 
 				'' Treat the id as the type
-				basetypex = x
+				var id = tkGetText( x )
+				dtype = hIdentifyCommonTypedef( id )
+				if( dtype = TYPE_NONE ) then
+					dtype = TYPE_UDT
+					subtype = astNewID( id )
+				end if
 
-			case KW_VOID, KW_CHAR, KW_FLOAT, KW_DOUBLE, KW_INT
-				basetypex = x
+			case KW_VOID   : dtype = TYPE_ANY
+			case KW_FLOAT  : dtype = TYPE_SINGLE
+			case KW_DOUBLE : dtype = TYPE_DOUBLE
+			case KW_CHAR   : dtype = TYPE_ZSTRING
+			case KW_INT    : dtype = TYPE_LONG
 
 			case else
 				exit do
@@ -970,50 +929,19 @@ private sub cBaseType _
 		x += 1
 	loop
 
-	''
-	'' 2. Refuse invalid modifier combinations etc.
-	''
-
-	select case( tkGet( basetypex ) )
-	case TK_ID, KW_VOID, KW_FLOAT, KW_DOUBLE
-		if( signedmods or unsignedmods or shortmods or longmods ) then
-			tkOops( x, "SIGNED|UNSIGNED|SHORT|LONG modifiers used with typedef/UDT/float/double/void" )
-		end if
-
-		select case( tkGet( basetypex ) )
-		case TK_ID
-			var id = tkGetText( basetypex )
-			dtype = hIdentifyCommonTypedef( id )
-			if( dtype = TYPE_NONE ) then
-				dtype = TYPE_UDT
-				subtype = astNewID( id )
-			end if
-		case KW_VOID
-			dtype = TYPE_ANY
-		case KW_FLOAT
-			dtype = TYPE_SINGLE
-		case KW_DOUBLE
-			dtype = TYPE_DOUBLE
-		case else
-			assert( FALSE )
-		end select
-
-	case KW_CHAR
-		if( shortmods or longmods ) then
-			tkOops( x, "SHORT|LONG modifiers used with CHAR type" )
-		end if
-
+	'' Some details can only be decided after parsing the whole thing,
+	'' because for example "unsigned int" and "int unsigned" both are allowed.
+	select case( dtype )
+	case TYPE_ZSTRING
 		'' SIGNED|UNSIGNED CHAR becomes BYTE|UBYTE,
 		'' but plain CHAR probably means ZSTRING
 		if( signedmods > 0 ) then
 			dtype = TYPE_BYTE
 		elseif( unsignedmods > 0 ) then
 			dtype = TYPE_UBYTE
-		else
-			dtype = TYPE_ZSTRING
 		end if
 
-	case else
+	case TYPE_LONG, TYPE_NONE
 		'' Base type is "int" (either explicitly given, or implied
 		'' because no other base type was given). Any modifiers are
 		'' just added on top of that.
@@ -1023,7 +951,7 @@ private sub cBaseType _
 			dtype = iif( unsignedmods > 0, TYPE_CULONG, TYPE_CLONG )
 		elseif( longmods = 2 ) then
 			dtype = iif( unsignedmods > 0, TYPE_ULONGINT, TYPE_LONGINT )
-		elseif( tkGet( basetypex ) = KW_INT ) then
+		elseif( dtype = TYPE_LONG ) then
 			'' Explicit "int" base type and no modifiers
 			dtype = iif( unsignedmods > 0, TYPE_ULONG, TYPE_LONG )
 		elseif( unsignedmods > 0 ) then
@@ -1043,7 +971,6 @@ private sub cBaseType _
 				tkOopsExpected( x, "a data type at the beginning of this declaration" )
 			end select
 		end if
-
 	end select
 
 	'' Any CONSTs on the base type are merged into one
@@ -1550,6 +1477,7 @@ end function
 ''    int *a, ***b, c;
 ''    int f(void);
 ''    int (*procptr)(void);
+''    struct UDT { int a; };  (special case for BaseType only)
 ''
 '' MultDecl = GccAttributeList BaseType IdList
 ''
@@ -1568,11 +1496,43 @@ private function cMultDecl _
 	dim as ASTNODE ptr subtype
 	cBaseType( x, dtype, subtype, gccattribs, decl )
 
+	'' Special case for standalone struct/union/enum declarations (no CONST bits):
+	if( dtype = TYPE_UDT ) then
+		select case( subtype->class )
+		case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
+			'' ';'?
+			if( tkGet( x ) = TK_SEMI ) then
+				x += 1
+				return subtype
+			end if
+		end select
+	end if
+
+	var result = astNewGROUP( )
+
+	'' Special case for struct/union/enum bodies used as basetype:
+	if( typeGetDtAndPtr( dtype ) = TYPE_UDT ) then
+		select case( subtype->class )
+		case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
+			'' Make up an id for anonymous structs, for use as the base type
+			'' of following declarators. If it turns out to be unnecessary,
+			'' we can still solve it out later.
+			if( subtype->text = NULL ) then
+				astSetText( subtype, hMakeTempId( ) )
+			end if
+
+			astAppend( result, subtype )
+			subtype = astNewID( subtype->text )
+		end select
+	end if
+
 	comment += tkCollectComments( begin, x - 1 )
 
 	'' IdList
-	function = cIdList( x, decl, dtype, subtype, gccattribs, comment )
+	astAppend( result, cIdList( x, decl, dtype, subtype, gccattribs, comment ) )
+
 	astDelete( subtype )
+	function = result
 end function
 
 '' Global variable/procedure declarations
@@ -1629,49 +1589,8 @@ private function cConstruct _
 	end if
 
 	select case( tkGet( x ) )
-	'' TYPEDEF BaseType IdList ';'
-	'' TYPEDEF STRUCT|UNION|ENUM [Identifier] '{' StructBody '}' IdList ';'
-	'' Typedefs are currently only recognized if the TYPEDEF is at the front
-	'' of the declaration.
 	case KW_TYPEDEF
-		var y = x + 1
-
-		'' STRUCT|UNION|ENUM?
-		select case( tkGet( y ) )
-		case KW_STRUCT, KW_UNION, KW_ENUM
-			y += 1
-
-			'' [Identifier]
-			if( tkGet( y ) = TK_ID ) then
-				y += 1
-			end if
-
-			'' '{'?
-			if( tkGet( y ) = TK_LBRACE ) then
-				return cStructCompound( x )
-			end if
-		end select
-
 		return cTypedef( x )
-
-	'' STRUCT|UNION|ENUM [Identifier] ';'
-	'' STRUCT|UNION|ENUM [Identifier] '{' StructBody '}' ';'
-	'' STRUCT|UNION|ENUM Identifier MultDecl
-	case KW_STRUCT, KW_UNION, KW_ENUM
-		'' (Identifier ';')?
-		if( (tkGet( x + 1 ) = TK_ID) and _
-		    (tkGet( x + 2 ) = TK_SEMI) ) then
-			return cForwardStruct( x )
-		end if
-
-		'' ('{' | Identifier '{')?
-		if( (tkGet( x + 1 ) = TK_LBRACE) or _
-		        ((tkGet( x + 1 ) = TK_ID) and _
-		         (tkGet( x + 2 ) = TK_LBRACE)) ) then
-			return cStructCompound( x )
-		end if
-
-	'' ';'
 	case TK_SEMI
 		return cSemiColon( x )
 	end select

@@ -1,7 +1,10 @@
 [dos]
         parsing: tests/c/forward.h
-[linux]
-        parsing: tests/c/forward.h
-[win32]
-        parsing: tests/c/forward.h
-emitting: tests/c/forward.bi (1 declaration)
+tests/c/forward.h(1): expected identifier for the symbol declared in this declaration but found ';'
+    1: struct A;
+               ^
+    2: //union B;
+    3: //enum E;
+construct's code as seen by fbfrog:
+    struct A ;
+             ^
