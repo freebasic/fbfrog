@@ -37,6 +37,8 @@ dim shared a as ulongint
 
 dim shared a as single
 dim shared a as double
+dim shared a as clongdouble
+dim shared a as clongdouble
 
 dim shared a as byte
 dim shared a as short

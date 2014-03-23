@@ -936,6 +936,11 @@ private sub cBaseType _
 	'' Some details can only be decided after parsing the whole thing,
 	'' because for example "unsigned int" and "int unsigned" both are allowed.
 	select case( dtype )
+	case TYPE_DOUBLE
+		if( longmods = 1 ) then
+			dtype = TYPE_CLONGDOUBLE
+		end if
+
 	case TYPE_ZSTRING
 		'' SIGNED|UNSIGNED CHAR becomes BYTE|UBYTE,
 		'' but plain CHAR probably means ZSTRING

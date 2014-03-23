@@ -1,6 +1,6 @@
 [dos]
-        parsing: tests/c/basetype/basetype-short-struct.h
-tests/c/basetype/basetype-short-struct.h(2): SIGNED|UNSIGNED|SHORT|LONG modifiers used with void/float/double/typedef/UDT
+        parsing: tests/c/basetype/short-struct.h
+tests/c/basetype/short-struct.h(2): SIGNED|UNSIGNED|SHORT|LONG modifiers used with void/float/double/typedef/UDT
     1: // @fail
     2: static short struct UDT i;
                                ^

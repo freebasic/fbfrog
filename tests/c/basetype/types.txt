@@ -4,4 +4,4 @@
         parsing: tests/c/basetype/types.h
 [win32]
         parsing: tests/c/basetype/types.h
-emitting: tests/c/basetype/types.bi (88 declarations)
+emitting: tests/c/basetype/types.bi (90 declarations)

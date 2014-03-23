@@ -128,7 +128,7 @@ Usage:
 To do:
 
 - 64bit support:
-    * C long is already mapped to CLONG, still need to #include "crt/long.bi" as needed
+    * C long is already mapped to CLONG, still need to #include "crt/long.bi" as needed (same for crt/longdouble.bi)
     * pre-#defines are missing
     * need to use x86 32bit/64bit compiler #defines
     * Use -target dos,linux,x86_64-linux,win32,x86_64-win32? or something else?
@@ -144,10 +144,6 @@ To do:
       b) Do "type Foo as long" and make enum body anonymous (enums consts aren't type checked anyways)
       c) Do "const EnumConst1 as long" for every enum const; don't emit the enum type at all,
          do "long" in place of every "enum Foo" type.
-
-- Long Double and other built-in types that FB doesn't have:
-    a) just omit, except fields in a struct that is needed
-    b) replace with byte array, other dtypes, or custom struct
 
 - Are forward declarations/references handled correctly? Consider merging the
   {STRUCT|UNION|ENUM}FWD into one since in FB they'd all be emitted as the same

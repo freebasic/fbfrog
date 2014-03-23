@@ -38,6 +38,7 @@ function emitType overload _
 		@"ulongint", _
 		@"single"  , _
 		@"double"  , _
+		@"clongdouble", _
 		@"udt"     , _
 		@"proc"    , _
 		@"zstring" , _

@@ -1,0 +1,10 @@
+[dos]
+        parsing: tests/c/basetype/short-void.h
+tests/c/basetype/short-void.h(2): SIGNED|UNSIGNED|SHORT|LONG modifiers used with void/float/double/typedef/UDT
+    1: // @fail
+    2: static short void *p;
+                         ^
+    3: 
+construct's code as seen by fbfrog:
+    static short void * p ;
+                      ^

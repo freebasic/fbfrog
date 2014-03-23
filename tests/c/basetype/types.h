@@ -37,6 +37,8 @@ static unsigned long long int a;
 
 static float a;
 static double a;
+static long double a;
+static double long a;
 
 static __int8 a;
 static __int16 a;
