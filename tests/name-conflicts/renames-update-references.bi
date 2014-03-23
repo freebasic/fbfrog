@@ -14,9 +14,9 @@ dim shared array1(0 to 0) as long
 #define A1 INT_(1)
 
 type DOUBLE_
-	a as DOUBLE ptr
+	a as DOUBLE_ ptr
 end type
 
-declare sub f(byval as DOUBLE)
+declare sub f(byval as DOUBLE_)
 
 end extern

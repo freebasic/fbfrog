@@ -763,9 +763,9 @@ private sub hReplaceTypes _
 	)
 
 	if( n->subtype ) then
-		if( n->class = ASTCLASS_ID ) then
-			if( *n->text = *oldid ) then
-				astSetText( n, newid )
+		if( n->subtype->class = ASTCLASS_ID ) then
+			if( *n->subtype->text = *oldid ) then
+				astSetText( n->subtype, newid )
 			end if
 		else
 			hReplaceTypes( n->subtype, oldid, newid )
