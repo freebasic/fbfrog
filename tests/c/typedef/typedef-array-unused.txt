@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/c/typedef/typedef-array-unused.h
+[linux]
+        parsing: tests/c/typedef/typedef-array-unused.h
+[win32]
+        parsing: tests/c/typedef/typedef-array-unused.h
+emitting: tests/c/typedef/typedef-array-unused.bi (0 declarations)

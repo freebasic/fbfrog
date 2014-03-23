@@ -282,17 +282,20 @@ end sub
 
 '' For each array typedef, remove it and update all uses
 sub astSolveOutArrayTypedefs( byval n as ASTNODE ptr, byval ast as ASTNODE ptr )
-	if( n->class = ASTCLASS_TYPEDEF ) then
-		if( n->array ) then
-			hSolveOutArrayTypedefSubtypes( ast, n )
-			n->class = ASTCLASS_NOP
-		end if
-	end if
-
 	var i = n->head
 	while( i )
+		var nxt = i->next
+
 		astSolveOutArrayTypedefs( i, ast )
-		i = i->next
+
+		if( i->class = ASTCLASS_TYPEDEF ) then
+			if( i->array ) then
+				hSolveOutArrayTypedefSubtypes( ast, i )
+				astRemove( n, i )
+			end if
+		end if
+
+		i = nxt
 	wend
 end sub
 
@@ -346,17 +349,20 @@ private sub hSolveOutProcTypedefSubtypes _
 end sub
 
 sub astSolveOutProcTypedefs( byval n as ASTNODE ptr, byval ast as ASTNODE ptr )
-	if( n->class = ASTCLASS_TYPEDEF ) then
-		if( typeGetDtAndPtr( n->dtype ) = TYPE_PROC ) then
-			hSolveOutProcTypedefSubtypes( ast, n )
-			n->class = ASTCLASS_NOP
-		end if
-	end if
-
 	var i = n->head
 	while( i )
+		var nxt = i->next
+
 		astSolveOutProcTypedefs( i, ast )
-		i = i->next
+
+		if( i->class = ASTCLASS_TYPEDEF ) then
+			if( typeGetDtAndPtr( i->dtype ) = TYPE_PROC ) then
+				hSolveOutProcTypedefSubtypes( ast, i )
+				astRemove( n, i )
+			end if
+		end if
+
+		i = nxt
 	wend
 end sub
 
@@ -485,7 +491,12 @@ end sub
 ''    typedef A as __fbfrog_anon1 ptr
 '' i.e. the typedef is a pointer to the anon struct, not an alias for it.
 ''
-private sub hTryNameAnonUdtAfterFirstAliasTypedef(  byval anon as ASTNODE ptr )
+private sub hTryNameAnonUdtAfterFirstAliasTypedef _
+	( _
+		byval parent as ASTNODE ptr, _
+		byval anon as ASTNODE ptr _
+	)
+
 	'' (Assuming that the parser will only insert typedefs using the anon id
 	'' behind the anon UDT node, not in front of it...)
 
@@ -531,23 +542,22 @@ private sub hTryNameAnonUdtAfterFirstAliasTypedef(  byval anon as ASTNODE ptr )
 	'' __fbfrog_anon* isn't need for comparison above anymore
 	astSetText( anon, aliastypedef->text )
 
-	'' "Remove" the alias typedef
-	aliastypedef->class = ASTCLASS_NOP
+	astRemove( parent, aliastypedef )
 end sub
 
 sub astNameAnonUdtsAfterFirstAliasTypedef( byval n as ASTNODE ptr )
-	var udt = n->head
-	while( udt )
+	var i = n->head
+	while( i )
 
 		'' Anon UDT?
-		select case( udt->class )
+		select case( i->class )
 		case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
-			if( strStartsWith( *udt->text, DUMMYID_PREFIX ) ) then
-				hTryNameAnonUdtAfterFirstAliasTypedef( udt )
+			if( strStartsWith( *i->text, DUMMYID_PREFIX ) ) then
+				hTryNameAnonUdtAfterFirstAliasTypedef( n, i )
 			end if
 		end select
 
-		udt = udt->next
+		i = i->next
 	wend
 end sub
 
@@ -603,24 +613,27 @@ end sub
 sub astRemoveRedundantTypedefs( byval n as ASTNODE ptr, byval ast as ASTNODE ptr )
 	var i = n->head
 	while( i )
+		var nxt = i->next
+
 		astRemoveRedundantTypedefs( i, ast )
-		i = i->next
+
+		if( i->class = ASTCLASS_TYPEDEF ) then
+			if( typeGetDtAndPtr( i->dtype ) = TYPE_UDT ) then
+				assert( i->subtype->class = ASTCLASS_ID )
+				var typedef = *i->text
+				var struct = *i->subtype->text
+				if( strStartsWith( struct, TAG_PREFIX ) ) then
+					struct = right( struct, len( struct ) - len( TAG_PREFIX ) )
+					if( typedef = struct ) then
+						astRemove( n, i )
+						astReplaceSubtypes( ast, typedef, struct )
+					end if
+				end if
+			end if
+		end if
+
+		i = nxt
 	wend
-
-	if( n->class <> ASTCLASS_TYPEDEF ) then exit sub
-	if( typeGetDtAndPtr( n->dtype ) <> TYPE_UDT ) then exit sub
-
-	assert( n->subtype->class = ASTCLASS_ID )
-	var typedef = *n->text
-	var struct = *n->subtype->text
-
-	if( strStartsWith( struct, TAG_PREFIX ) = FALSE ) then exit sub
-	struct = right( struct, len( struct ) - len( TAG_PREFIX ) )
-
-	if( typedef <> struct ) then exit sub
-
-	n->class = ASTCLASS_NOP
-	astReplaceSubtypes( ast, typedef, struct )
 end sub
 
 private function hHaveOrUseTypedef _
