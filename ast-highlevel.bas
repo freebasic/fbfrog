@@ -781,10 +781,10 @@ private sub hReplaceTypes _
 		end if
 	end if
 
-	if( n->array   ) then hReplaceCalls( n->array  , oldid, newid )
-	if( n->expr    ) then hReplaceCalls( n->expr   , oldid, newid )
-	if( n->l       ) then hReplaceCalls( n->l      , oldid, newid )
-	if( n->r       ) then hReplaceCalls( n->r      , oldid, newid )
+	if( n->array   ) then hReplaceTypes( n->array  , oldid, newid )
+	if( n->expr    ) then hReplaceTypes( n->expr   , oldid, newid )
+	if( n->l       ) then hReplaceTypes( n->l      , oldid, newid )
+	if( n->r       ) then hReplaceTypes( n->r      , oldid, newid )
 
 	var i = n->head
 	while( i )
