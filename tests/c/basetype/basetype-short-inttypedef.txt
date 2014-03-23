@@ -1,0 +1,11 @@
+[dos]
+        parsing: tests/c/basetype/basetype-short-inttypedef.h
+tests/c/basetype/basetype-short-inttypedef.h(3): expected ';' to finish this declaration but found 'i'
+    1: // @fail
+    2: typedef int myint;
+    3: static short myint i;
+                          ^
+    4: 
+construct's code as seen by fbfrog:
+    static short myint i ;
+                       ^

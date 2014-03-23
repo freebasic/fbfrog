@@ -1,0 +1,10 @@
+[dos]
+        parsing: tests/c/basetype/basetype-long-struct.h
+tests/c/basetype/basetype-long-struct.h(2): SIGNED|UNSIGNED|SHORT|LONG modifiers used with void/float/double/typedef/UDT
+    1: // @fail
+    2: static long struct UDT i;
+                              ^
+    3: 
+construct's code as seen by fbfrog:
+    static long struct UDT i ;
+                           ^

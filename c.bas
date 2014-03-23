@@ -977,6 +977,17 @@ private sub cBaseType _
 		end if
 	end select
 
+	select case( dtype )
+	case TYPE_ANY, TYPE_SINGLE, TYPE_DOUBLE, TYPE_UDT
+		if( signedmods or unsignedmods or shortmods or longmods ) then
+			tkOops( x, "SIGNED|UNSIGNED|SHORT|LONG modifiers used with void/float/double/typedef/UDT" )
+		end if
+	case TYPE_ZSTRING, TYPE_BYTE, TYPE_UBYTE
+		if( shortmods or longmods ) then
+			tkOops( x, "SHORT|LONG modifiers used with CHAR type" )
+		end if
+	end select
+
 	'' Any CONSTs on the base type are merged into one
 	''    const int a;
 	''    const int const a;
