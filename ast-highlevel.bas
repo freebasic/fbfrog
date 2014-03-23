@@ -78,26 +78,6 @@ function astLookupMacroParam _
 	function = -1
 end function
 
-sub astNodeToNop _
-	( _
-		byval n as ASTNODE ptr, _
-		byval astclass as integer, _
-		byref id as string _
-	)
-
-	if( (n->class = astclass) and (*n->text = id) ) then
-		n->class = ASTCLASS_NOP
-		exit sub
-	end if
-
-	var child = n->head
-	while( child )
-		astNodeToNop( child, astclass, id )
-		child = child->next
-	wend
-
-end sub
-
 '' This isn't done by the C parser already because it has to handle calling
 '' convention attributes amongst others, and using a default would require it
 '' to remove the default if it will add another one, etc. Doing it here

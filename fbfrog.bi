@@ -896,12 +896,6 @@ declare function astLookupMacroParam _
 		byval macro as ASTNODE ptr, _
 		byval id as zstring ptr _
 	) as integer
-declare sub astNodeToNop _
-	( _
-		byval n as ASTNODE ptr, _
-		byval astclass as integer, _
-		byref id as string _
-	)
 declare sub astMakeProcsDefaultToCdecl( byval n as ASTNODE ptr )
 declare sub astAutoExtern _
 	( _
