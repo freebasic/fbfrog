@@ -316,6 +316,70 @@ sub astSolveOutArrayTypedefs( byval n as ASTNODE ptr, byval ast as ASTNODE ptr )
 	wend
 end sub
 
+private sub hSolveOutProcTypedefSubtypes _
+	( _
+		byval n as ASTNODE ptr, _
+		byval typedef as ASTNODE ptr _
+	)
+
+	if( typeGetDtAndPtr( n->dtype ) = TYPE_UDT ) then
+		if( n->subtype->class = ASTCLASS_ID ) then
+			if( *n->subtype->text = *typedef->text ) then
+				select case( n->class )
+				case ASTCLASS_VAR, ASTCLASS_STATICVAR, ASTCLASS_EXTERNVAR, ASTCLASS_FIELD
+					assert( typeGetDtAndPtr( typedef->dtype ) = TYPE_PROC )
+					var proc = typedef->subtype
+					assert( proc->class = ASTCLASS_PROC )
+
+					'' Copy function result type
+					astSetType( n, proc->dtype, proc->subtype )
+
+					'' Copy over the parameters
+					assert( n->head = NULL )
+					astCloneAppendChildren( n, proc )
+
+					'' Copy attributes (especially calling convention)
+					n->attrib or= proc->attrib
+
+					'' Turn into a procedure
+					n->class = ASTCLASS_PROC
+				case else
+					oops( "can't solve out " + astDumpPrettyDecl( typedef ) + " in " + astDumpPrettyDecl( n ) )
+				end select
+			end if
+		else
+			hSolveOutProcTypedefSubtypes( n->subtype, typedef )
+		end if
+	end if
+
+	if( n->array ) then hSolveOutProcTypedefSubtypes( n->array, typedef )
+	if( n->expr  ) then hSolveOutProcTypedefSubtypes( n->expr , typedef )
+	if( n->l     ) then hSolveOutProcTypedefSubtypes( n->l    , typedef )
+	if( n->r     ) then hSolveOutProcTypedefSubtypes( n->r    , typedef )
+
+	var i = n->head
+	while( i )
+		hSolveOutProcTypedefSubtypes( i, typedef )
+		i = i->next
+	wend
+
+end sub
+
+sub astSolveOutProcTypedefs( byval n as ASTNODE ptr, byval ast as ASTNODE ptr )
+	if( n->class = ASTCLASS_TYPEDEF ) then
+		if( typeGetDtAndPtr( n->dtype ) = TYPE_PROC ) then
+			hSolveOutProcTypedefSubtypes( ast, n )
+			n->class = ASTCLASS_NOP
+		end if
+	end if
+
+	var i = n->head
+	while( i )
+		astSolveOutProcTypedefs( i, ast )
+		i = i->next
+	wend
+end sub
+
 sub astFixArrayParams( byval n as ASTNODE ptr )
 	if( n->class = ASTCLASS_PARAM ) then
 		'' C array parameters are really just pointers (i.e. the array

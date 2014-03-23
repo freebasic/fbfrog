@@ -910,6 +910,7 @@ declare sub astAutoExtern _
 		byval whitespace as integer _
 	)
 declare sub astSolveOutArrayTypedefs( byval n as ASTNODE ptr, byval ast as ASTNODE ptr )
+declare sub astSolveOutProcTypedefs( byval n as ASTNODE ptr, byval ast as ASTNODE ptr )
 declare sub astFixArrayParams( byval n as ASTNODE ptr )
 declare sub astUnscopeDeclsNestedInStructs( byval n as ASTNODE ptr )
 declare sub astNameAnonUdtsAfterFirstAliasTypedef( byval n as ASTNODE ptr )

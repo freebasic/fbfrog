@@ -1353,6 +1353,16 @@ private function cDeclarator _
 			innernode->subtype = node
 
 			innerprocptrdtype = TYPE_PROC
+
+		'' Typedefs with parameters aren't turned into procs, but must
+		'' be given a PROC subtype, similar to procptrs.
+		elseif( t->class = ASTCLASS_TYPEDEF ) then
+			node = astNew( ASTCLASS_PROC )
+			astSetType( node, dtype, basesubtype )
+
+			astDelete( t->subtype )
+			t->dtype = TYPE_PROC
+			t->subtype = node
 		else
 			'' A plain symbol, not a pointer, becomes a function
 			select case( t->class )
