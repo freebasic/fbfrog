@@ -149,9 +149,6 @@ To do:
     a) just omit, except fields in a struct that is needed
     b) replace with byte array, other dtypes, or custom struct
 
-- #errors for version #define checks are emitted with "'s while the text itself
-  contains unescaped "'s, should use ' there
-
 - Are forward declarations/references handled correctly? Consider merging the
   {STRUCT|UNION|ENUM}FWD into one since in FB they'd all be emitted as the same
   code anyways?!

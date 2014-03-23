@@ -717,7 +717,9 @@ private sub hAddVersionDefineChecks _
 
 		if( expr ) then
 			var ppif = astNewPPIF( expr )
-			astAppend( ppif, astNew( ASTCLASS_PPERROR, "'" + *versiondefine + "' is #defined to an unsupported value; expected one of: " + commalist ) )
+			var pperror = astNew( ASTCLASS_PPERROR )
+			pperror->expr = astNew( ASTCLASS_STRING, "'" + *versiondefine + "' is #defined to an unsupported value; expected one of: " + commalist )
+			astAppend( ppif, pperror )
 			astAppend( checks, ppif )
 			astAppend( checks, astNew( ASTCLASS_PPENDIF ) )
 		end if

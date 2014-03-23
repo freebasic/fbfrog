@@ -430,7 +430,7 @@ private function emitAst _
 		emitStmt( "#endif" )
 
 	case ASTCLASS_PPERROR
-		emitStmt( "#error """ + *n->text + """" )
+		emitStmt( "#error " + emitAst( n->expr ) )
 
 	case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
 		dim as string compoundkeyword

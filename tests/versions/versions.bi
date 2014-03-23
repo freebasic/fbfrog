@@ -3,7 +3,7 @@
 #endif
 
 #if ((__VERSION__ <> "1") and (__VERSION__ <> "2")) and (__VERSION__ <> "3")
-	#error "'__VERSION__' is #defined to an unsupported value; expected one of: "1", "2", "3""
+	#error !"'__VERSION__' is #defined to an unsupported value; expected one of: \"1\", \"2\", \"3\""
 #endif
 
 dim shared common_ as long
