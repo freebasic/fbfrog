@@ -4,4 +4,4 @@
         parsing: tests/c/var.h
 [win32]
         parsing: tests/c/var.h
-emitting: tests/c/var.bi (228 declarations)
+emitting: tests/c/var.bi (229 declarations)

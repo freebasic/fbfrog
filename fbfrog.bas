@@ -582,6 +582,7 @@ private function frogWorkRootFile _
 	'' Work on the AST
 	''
 	astMakeProcsDefaultToCdecl( ast )
+	astTurnStructInitIntoArrayInit( ast )
 	astCleanUpExpressions( ast )
 	astSolveOutArrayTypedefs( ast, ast )
 	astSolveOutProcTypedefs( ast, ast )

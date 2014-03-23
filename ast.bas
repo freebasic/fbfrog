@@ -128,6 +128,7 @@ dim shared as ASTNODEINFO astnodeinfo(0 to ...) = _
 	("ppmerge"      ), _
 	("call"         ), _
 	("structinit"   ), _
+	("arrayinit"    ), _
 	("dimension"    ), _
 	("sizeoftype"   ) _
 }

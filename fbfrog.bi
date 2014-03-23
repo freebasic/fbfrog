@@ -683,6 +683,7 @@ enum
 	ASTCLASS_PPMERGE
 	ASTCLASS_CALL
 	ASTCLASS_STRUCTINIT
+	ASTCLASS_ARRAYINIT
 	ASTCLASS_DIMENSION
 	ASTCLASS_SIZEOFTYPE
 
@@ -890,6 +891,7 @@ declare function astFold _
 	) as ASTNODE ptr
 
 declare sub astCleanUpExpressions( byval code as ASTNODE ptr )
+declare sub astTurnStructInitIntoArrayInit( byval n as ASTNODE ptr )
 declare function astLookupMacroParam _
 	( _
 		byval macro as ASTNODE ptr, _

@@ -731,6 +731,9 @@ private function emitAst _
 	case ASTCLASS_STRUCTINIT
 		s = hParamList( n )
 
+	case ASTCLASS_ARRAYINIT
+		s = "{" + hSeparatedList( n, ", ", FALSE ) + "}"
+
 	case ASTCLASS_DIMENSION
 		if( n->l ) then
 			assert( n->r )

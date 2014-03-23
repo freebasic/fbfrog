@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/missing/complex-initializer.h
+[linux]
+        parsing: tests/missing/complex-initializer.h
+[win32]
+        parsing: tests/missing/complex-initializer.h
+emitting: tests/missing/complex-initializer.bi (4 declarations)

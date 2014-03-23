@@ -149,8 +149,6 @@ To do:
   {STRUCT|UNION|ENUM}FWD into one since in FB they'd all be emitted as the same
   code anyways?!
 
-- Array initializers can be emitted as struct initializers:
-    static int a[10] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
 - char array should be translated to zstring * N:
     static char s[10] = "hello";
     dim shared s as zstring * 10 => "hello"

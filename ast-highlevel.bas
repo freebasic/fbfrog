@@ -39,7 +39,7 @@ sub astCleanUpExpressions( byval n as ASTNODE ptr )
 	'' Node that uses the children list to hold expressions?
 	select case( n->class )
 	case ASTCLASS_SCOPEBLOCK, ASTCLASS_ARRAY, _
-	     ASTCLASS_PPMERGE, ASTCLASS_CALL, ASTCLASS_STRUCTINIT
+	     ASTCLASS_PPMERGE, ASTCLASS_CALL, ASTCLASS_STRUCTINIT, ASTCLASS_ARRAYINIT
 		var i = n->head
 		while( i )
 			i = astReplace( n, i, hCleanExpr( astClone( i ), FALSE ) )
@@ -51,6 +51,25 @@ sub astCleanUpExpressions( byval n as ASTNODE ptr )
 			i = i->next
 		wend
 	end select
+end sub
+
+'' For arrays with struct initializer, turn that into an array initializer
+'' (in such cases the initializer parser couldn't do the disambiguation)
+sub astTurnStructInitIntoArrayInit( byval n as ASTNODE ptr )
+	var i = n->head
+	while( i )
+
+		select case( i->class )
+		case ASTCLASS_VAR, ASTCLASS_STATICVAR, ASTCLASS_EXTERNVAR
+			if( (i->expr <> NULL) and (i->array <> NULL) ) then
+				if( i->expr->class = ASTCLASS_STRUCTINIT ) then
+					i->expr->class = ASTCLASS_ARRAYINIT
+				end if
+			end if
+		end select
+
+		i = i->next
+	wend
 end sub
 
 function astLookupMacroParam _

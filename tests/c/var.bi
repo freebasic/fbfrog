@@ -23,6 +23,7 @@ dim shared bb as long = 123
 dim shared p as any ptr = 0
 dim shared p as function() as long = @f
 dim shared p as function(byval i as long = 123) as long = 0
+dim shared a(0 to 9) as long = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
 
 dim shared __nested_id as long
 extern a as long

@@ -15,6 +15,7 @@ int bb = 123;
 static void *p = 0;
 static int (*p)(void) = &f;
 static int (*p)(int i = 123) = 0;
+static int a[10] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
 
 static int __nested_id;
 extern int (a);
