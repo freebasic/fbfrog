@@ -364,42 +364,6 @@ sub astUnscopeDeclsNestedInStructs( byval n as ASTNODE ptr )
 	wend
 end sub
 
-private sub hMaybeUpdateSubtypeId _
-	( _
-		byval n as ASTNODE ptr, _
-		byval oldid as zstring ptr, _
-		byval newid as zstring ptr _
-	)
-
-	assert( n->subtype->class = ASTCLASS_ID )
-
-	if( *n->subtype->text = *oldid ) then
-		astSetText( n->subtype, newid )
-	end if
-
-end sub
-
-private sub hReplaceTypedefBaseSubtype _
-	( _
-		byval n as ASTNODE ptr, _
-		byval anon as ASTNODE ptr, _
-		byval aliastypedef as ASTNODE ptr _
-	)
-
-	if( n->subtype = NULL ) then exit sub
-
-	select case( n->subtype->class )
-	'' UDT subtypes
-	case ASTCLASS_ID
-		hMaybeUpdateSubtypeId( n, anon->text, aliastypedef->text )
-
-	'' Function pointer subtypes too
-	case ASTCLASS_PROC
-		hReplaceTypedefBaseSubtype( n->subtype, anon, aliastypedef )
-	end select
-
-end sub
-
 ''
 '' Look for TYPEDEFs that have the given anon UDT as subtype. The first
 '' TYPEDEF's id can become the anon UDT's id, and then that TYPEDEF can be
@@ -465,7 +429,7 @@ private sub hTryNameAnonUdtAfterFirstAliasTypedef(  byval anon as ASTNODE ptr )
 			exit while
 		end if
 
-		hReplaceTypedefBaseSubtype( typedef, anon, aliastypedef )
+		astReplaceSubtypes( typedef, anon->text, aliastypedef->text )
 
 		typedef = typedef->next
 	wend
@@ -766,7 +730,7 @@ private sub hReplaceCalls _
 
 end sub
 
-private sub hReplaceTypes _
+sub astReplaceSubtypes _
 	( _
 		byval n as ASTNODE ptr, _
 		byval oldid as zstring ptr, _
@@ -775,20 +739,22 @@ private sub hReplaceTypes _
 
 	if( n->subtype ) then
 		if( n->subtype->class = ASTCLASS_ID ) then
-			hMaybeUpdateSubtypeId( n, oldid, newid )
+			if( *n->subtype->text = *oldid ) then
+				astSetText( n->subtype, newid )
+			end if
 		else
-			hReplaceTypes( n->subtype, oldid, newid )
+			astReplaceSubtypes( n->subtype, oldid, newid )
 		end if
 	end if
 
-	if( n->array   ) then hReplaceTypes( n->array  , oldid, newid )
-	if( n->expr    ) then hReplaceTypes( n->expr   , oldid, newid )
-	if( n->l       ) then hReplaceTypes( n->l      , oldid, newid )
-	if( n->r       ) then hReplaceTypes( n->r      , oldid, newid )
+	if( n->array ) then astReplaceSubtypes( n->array, oldid, newid )
+	if( n->expr  ) then astReplaceSubtypes( n->expr , oldid, newid )
+	if( n->l     ) then astReplaceSubtypes( n->l    , oldid, newid )
+	if( n->r     ) then astReplaceSubtypes( n->r    , oldid, newid )
 
 	var i = n->head
 	while( i )
-		hReplaceTypes( i, oldid, newid )
+		astReplaceSubtypes( i, oldid, newid )
 		i = i->next
 	wend
 
@@ -857,7 +823,7 @@ private sub hRenameSymbol _
 	case ASTCLASS_STRUCT, ASTCLASS_UNION, _
 	     ASTCLASS_STRUCTFWD, ASTCLASS_UNIONFWD, ASTCLASS_ENUMFWD, _
 	     ASTCLASS_TYPEDEF, ASTCLASS_ENUM
-		hReplaceTypes( code, n->text, newid )
+		astReplaceSubtypes( code, n->text, newid )
 	case else
 		assert( FALSE )
 	end select

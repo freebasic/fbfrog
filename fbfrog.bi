@@ -913,6 +913,12 @@ declare sub astUnscopeDeclsNestedInStructs( byval n as ASTNODE ptr )
 declare sub astNameAnonUdtsAfterFirstAliasTypedef( byval n as ASTNODE ptr )
 declare sub astRemoveRedundantTypedefs( byval n as ASTNODE ptr )
 declare sub astTurnDefinesIntoConstants( byval code as ASTNODE ptr )
+declare sub astReplaceSubtypes _
+	( _
+		byval n as ASTNODE ptr, _
+		byval oldid as zstring ptr, _
+		byval newid as zstring ptr _
+	)
 declare sub astFixIds( byval code as ASTNODE ptr )
 declare sub astMergeDIVIDERs( byval n as ASTNODE ptr )
 declare sub astAutoAddDividers( byval code as ASTNODE ptr )
