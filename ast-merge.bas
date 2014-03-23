@@ -507,9 +507,9 @@ private sub hAstMerge _
 			astAppendVerblock( c, astClone( aversion ), astClone( bversion ), cstruct )
 
 			if( astruct->text ) then
-				if( strStartsWith( *astruct->text, FROG_DUMMYID ) ) then
+				if( strStartsWith( *astruct->text, DUMMYID_PREFIX ) ) then
 					assert( *astruct->text <> *bstruct->text )
-					assert( strStartsWith( *bstruct->text, FROG_DUMMYID ) )
+					assert( strStartsWith( *bstruct->text, DUMMYID_PREFIX ) )
 					assert( *cstruct->text = *astruct->text )
 
 					'' Two structs with dummy ids, being merged together.

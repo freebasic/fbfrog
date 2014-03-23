@@ -690,10 +690,10 @@ function astIsEqual _
 			case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
 				'' If both sides have place holder ids, treat them as equal,
 				'' without comparing the dummy ids any further.
-				a_is_dummy = strStartsWith( *a->text, FROG_DUMMYID )
+				a_is_dummy = strStartsWith( *a->text, DUMMYID_PREFIX )
 
 				'' If not both sides are dummy ids though, then they can't be equal anyways.
-				if( a_is_dummy <> strStartsWith( *b->text, FROG_DUMMYID ) ) then exit function
+				if( a_is_dummy <> strStartsWith( *b->text, DUMMYID_PREFIX ) ) then exit function
 			end select
 		end if
 		if( a_is_dummy = FALSE ) then

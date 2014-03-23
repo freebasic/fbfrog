@@ -95,7 +95,7 @@ end function
 '' shouldn't share the same id.
 private function hMakeDummyId( ) as string
 	static n as integer
-	function = FROG_DUMMYID & n
+	function = DUMMYID_PREFIX & n
 	n += 1
 end function
 

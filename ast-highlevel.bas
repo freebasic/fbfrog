@@ -449,7 +449,7 @@ sub astNameAnonUdtsAfterFirstAliasTypedef( byval n as ASTNODE ptr )
 		'' Anon UDT?
 		select case( udt->class )
 		case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
-			if( strStartsWith( *udt->text, FROG_DUMMYID ) ) then
+			if( strStartsWith( *udt->text, DUMMYID_PREFIX ) ) then
 				hTryNameAnonUdtAfterFirstAliasTypedef( udt )
 			end if
 		end select
