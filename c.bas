@@ -1272,10 +1272,10 @@ private function cDeclarator _
 	'' ('[' [ArrayElements] ']')*
 	case TK_LBRACKET
 		'' Can't allow arrays on everything - currently, it's only
-		'' handled for vars/fields/params
+		'' handled for vars/fields/params/typedefs
 		select case( decl )
 		case DECL_VAR, DECL_EXTERNVAR, DECL_STATICVAR, _
-		     DECL_FIELD, DECL_PARAM
+		     DECL_FIELD, DECL_PARAM, DECL_TYPEDEF
 
 		case else
 			tkOops( x, "TODO: arrays not supported here yet" )

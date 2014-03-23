@@ -267,6 +267,55 @@ sub astAutoExtern _
 
 end sub
 
+private sub hSolveOutArrayTypedefSubtypes _
+	( _
+		byval n as ASTNODE ptr, _
+		byval typedef as ASTNODE ptr _
+	)
+
+	if( typeGetDtAndPtr( n->dtype ) = TYPE_UDT ) then
+		if( n->subtype->class = ASTCLASS_ID ) then
+			if( *n->subtype->text = *typedef->text ) then
+				astSetType( n, typedef->dtype, typedef->subtype )
+				if( n->array = NULL ) then
+					n->array = astNew( ASTCLASS_ARRAY )
+				end if
+				astCloneAppendChildren( n->array, typedef->array )
+			end if
+		else
+			hSolveOutArrayTypedefSubtypes( n->subtype, typedef )
+		end if
+	end if
+
+	if( n->array ) then hSolveOutArrayTypedefSubtypes( n->array, typedef )
+	if( n->expr  ) then hSolveOutArrayTypedefSubtypes( n->expr , typedef )
+	if( n->l     ) then hSolveOutArrayTypedefSubtypes( n->l    , typedef )
+	if( n->r     ) then hSolveOutArrayTypedefSubtypes( n->r    , typedef )
+
+	var i = n->head
+	while( i )
+		hSolveOutArrayTypedefSubtypes( i, typedef )
+		i = i->next
+	wend
+
+end sub
+
+'' For each array typedef, remove it and update all uses
+sub astSolveOutArrayTypedefs( byval n as ASTNODE ptr, byval ast as ASTNODE ptr )
+	if( n->class = ASTCLASS_TYPEDEF ) then
+		if( n->array ) then
+			hSolveOutArrayTypedefSubtypes( ast, n )
+			n->class = ASTCLASS_NOP
+		end if
+	end if
+
+	var i = n->head
+	while( i )
+		astSolveOutArrayTypedefs( i, ast )
+		i = i->next
+	wend
+end sub
+
 sub astFixArrayParams( byval n as ASTNODE ptr )
 	if( n->class = ASTCLASS_PARAM ) then
 		'' C array parameters are really just pointers (i.e. the array

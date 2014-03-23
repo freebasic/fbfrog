@@ -583,6 +583,7 @@ private function frogWorkRootFile _
 	''
 	astMakeProcsDefaultToCdecl( ast )
 	astCleanUpExpressions( ast )
+	astSolveOutArrayTypedefs( ast, ast )
 	astFixArrayParams( ast )
 	astUnscopeDeclsNestedInStructs( ast )
 	astMakeNestedUnnamedStructsFbCompatible( ast )
