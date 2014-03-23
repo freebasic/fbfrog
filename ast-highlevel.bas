@@ -364,6 +364,20 @@ sub astUnscopeDeclsNestedInStructs( byval n as ASTNODE ptr )
 	wend
 end sub
 
+private sub hMaybeUpdateSubtypeId _
+	( _
+		byval n as ASTNODE ptr, _
+		byval oldid as zstring ptr, _
+		byval newid as zstring ptr _
+	)
+
+	assert( n->subtype->class = ASTCLASS_ID )
+
+	if( *n->subtype->text = *oldid ) then
+		astSetText( n->subtype, newid )
+	end if
+
+end sub
 
 private sub hReplaceTypedefBaseSubtype _
 	( _
@@ -377,10 +391,7 @@ private sub hReplaceTypedefBaseSubtype _
 	select case( n->subtype->class )
 	'' UDT subtypes
 	case ASTCLASS_ID
-		if( *n->subtype->text = *anon->text ) then
-			astDelete( n->subtype )
-			n->subtype = astNewID( aliastypedef->text )
-		end if
+		hMaybeUpdateSubtypeId( n, anon->text, aliastypedef->text )
 
 	'' Function pointer subtypes too
 	case ASTCLASS_PROC
@@ -764,9 +775,7 @@ private sub hReplaceTypes _
 
 	if( n->subtype ) then
 		if( n->subtype->class = ASTCLASS_ID ) then
-			if( *n->subtype->text = *oldid ) then
-				astSetText( n->subtype, newid )
-			end if
+			hMaybeUpdateSubtypeId( n, oldid, newid )
 		else
 			hReplaceTypes( n->subtype, oldid, newid )
 		end if
