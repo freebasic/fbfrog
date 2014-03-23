@@ -4,4 +4,4 @@
         parsing: tests/c/struct/nested-unnamed-union-as-named-field.h
 [win32]
         parsing: tests/c/struct/nested-unnamed-union-as-named-field.h
-emitting: tests/c/struct/nested-unnamed-union-as-named-field.bi (4 declarations)
+emitting: tests/c/struct/nested-unnamed-union-as-named-field.bi (2 declarations)

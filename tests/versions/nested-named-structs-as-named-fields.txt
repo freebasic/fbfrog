@@ -10,4 +10,4 @@
           parsing: tests/versions/nested-named-structs-as-named-fields.h
 [2.win32]
           parsing: tests/versions/nested-named-structs-as-named-fields.h
-emitting: tests/versions/nested-named-structs-as-named-fields.bi (12 declarations)
+emitting: tests/versions/nested-named-structs-as-named-fields.bi (5 declarations)

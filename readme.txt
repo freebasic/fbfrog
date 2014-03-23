@@ -174,15 +174,6 @@ To do:
     - the subtype ID must encode the struct tag somehow, e.g. "<struct>" prefix
       that higherlevel transformations can check for.
 
-- Unnamed structs for which fbfrog has to add place holder ids should be merged
-  better, i.e. if __fbfrog_anon structs have the same fields, they should be merged
-	a) should use an internal mangling instead of __fbfrog_anon<counter>, because then
-	   AST merging can succeed for structs with the same mangling.
-	   but what should the mangling be based on?
-	b) Ignore placeholder ids, treat such structs as equal; the fields will
-	   be merged separately anyways. Well yeah, but subtype ids of following
-	   decls still must be updated. This would be doable, but a little ugly.
-
 - If 2 symbols have the exact same id, should not rename either, so that fbc
   catches the problem (ie. 2 structs, or 2 typedefs, or typedef/struct, etc.)
 

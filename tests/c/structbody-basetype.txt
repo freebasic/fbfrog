@@ -4,4 +4,4 @@
         parsing: tests/c/structbody-basetype.h
 [win32]
         parsing: tests/c/structbody-basetype.h
-emitting: tests/c/structbody-basetype.bi (52 declarations)
+emitting: tests/c/structbody-basetype.bi (26 declarations)

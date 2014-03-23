@@ -405,7 +405,8 @@ private sub hAstMerge _
 		byval alast as integer, _
 		byval barray as DECLNODE ptr, _
 		byval bfirst as integer, _
-		byval blast as integer _
+		byval blast as integer, _
+		byval btablecount as integer _
 	)
 
 	static reclevel as integer
@@ -462,7 +463,7 @@ private sub hAstMerge _
 		DEBUG( "both sides have decls before LCS, recursing" )
 		reclevel += 1
 		hAstMerge( c, aarray, afirst, alcsfirst - 1, _
-		              barray, bfirst, blcsfirst - 1 )
+		              barray, bfirst, blcsfirst - 1, btablecount )
 		reclevel -= 1
 	elseif( alcsfirst > afirst ) then
 		'' Only a has decls before the LCS; copy them into result first
@@ -514,11 +515,13 @@ private sub hAstMerge _
 					'' Two structs with dummy ids, being merged together.
 					'' hMergeStructsManually() will have re-use a's id as id
 					'' for the merged struct, and now we need to manually update
-					'' all uses of b's id to now use a's id too.
-					'' Or emit a typedef that makes b point to a.
-					var typedef = astNew( ASTCLASS_TYPEDEF, bstruct->text )
-					astSetType( typedef, TYPE_UDT, astNewID( cstruct->text ) )
-					astAppendVerblock( c, astClone( bversion ), NULL, typedef )
+					'' all uses of b's id to now use a's id too so they'll be merged
+					'' successfully (assuming merging walks through declarations in order
+					'' like a single-pass compiler).
+
+					for bi as integer = blcsfirst+i+1 to btablecount-1
+						astReplaceSubtypes( barray[bi].n, bstruct->text, cstruct->text )
+					next
 				end if
 			end if
 
@@ -532,7 +535,7 @@ private sub hAstMerge _
 		'' Do LCS on that recursively
 		DEBUG( "both sides have decls behind LCS, recursing" )
 		reclevel += 1
-		hAstMerge( c, aarray, alcslast + 1, alast, barray, blcslast + 1, blast )
+		hAstMerge( c, aarray, alcslast + 1, alast, barray, blcslast + 1, blast, btablecount )
 		reclevel -= 1
 	elseif( alcslast < alast ) then
 		'' Only a has decls behind the LCS
@@ -577,7 +580,7 @@ private function astMergeVerblocks _
 	decltableInit( @btable, b )
 
 	hAstMerge( c, atable.array, 0, atable.count - 1, _
-	              btable.array, 0, btable.count - 1 )
+	              btable.array, 0, btable.count - 1, btable.count )
 
 	decltableEnd( @btable )
 	decltableEnd( @atable )
