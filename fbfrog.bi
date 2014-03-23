@@ -511,7 +511,7 @@ declare sub tkExpect _
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-const FROG_DUMMYID = "__dummyid"
+const FROG_DUMMYID = "__freebasic_dummyid_"
 
 enum
 	TYPE_NONE = 0

@@ -7,12 +7,12 @@
 #endif
 
 #if __VERSION__ = "1"
-	type __dummyid0
+	type __freebasic_dummyid_0
 		v1_a as long
 	end type
 #endif
 
-type __dummyid1
+type __freebasic_dummyid_1
 	#if __VERSION__ = "1"
 		v1_b as long
 	#else
@@ -22,9 +22,9 @@ end type
 
 type UDT
 	#if __VERSION__ = "1"
-		a as __dummyid0
-		b as __dummyid1
+		a as __freebasic_dummyid_0
+		b as __freebasic_dummyid_1
 	#else
-		a as __dummyid1
+		a as __freebasic_dummyid_1
 	#endif
 end type
