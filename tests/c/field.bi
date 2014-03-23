@@ -2,7 +2,7 @@ extern "C"
 
 '' @fbfrog -whitespace -nonamefixup
 
-type UDT
+type __freebasic_tagid_UDT
 	i as long
 	j as ulongint
 	k as ulong
@@ -22,10 +22,10 @@ type UDT
 	a as long ptr ptr
 	a as long
 
-	y as T ptr ptr ptr ptr
-	a as T ptr
-	a as T ptr ptr ptr ptr
-	a as T
+	y as __freebasic_tagid_T ptr ptr ptr ptr
+	a as __freebasic_tagid_T ptr
+	a as __freebasic_tagid_T ptr ptr ptr ptr
+	a as __freebasic_tagid_T
 
 	p as function(byval as long ptr) as long ptr
 	declare function f(byval as long, byval as long) as long

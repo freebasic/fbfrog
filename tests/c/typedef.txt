@@ -1,7 +1,0 @@
-[dos]
-        parsing: tests/c/typedef.h
-[linux]
-        parsing: tests/c/typedef.h
-[win32]
-        parsing: tests/c/typedef.h
-emitting: tests/c/typedef.bi (14 declarations)

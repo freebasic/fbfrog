@@ -512,6 +512,7 @@ declare sub tkExpect _
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 const DUMMYID_PREFIX = "__freebasic_dummyid_"
+const TAG_PREFIX = "__freebasic_tagid_"
 
 enum
 	TYPE_NONE = 0
@@ -912,7 +913,8 @@ declare sub astFixArrayParams( byval n as ASTNODE ptr )
 declare sub astUnscopeDeclsNestedInStructs( byval n as ASTNODE ptr )
 declare sub astNameAnonUdtsAfterFirstAliasTypedef( byval n as ASTNODE ptr )
 declare sub astMakeNestedUnnamedStructsFbCompatible( byval n as ASTNODE ptr )
-declare sub astRemoveRedundantTypedefs( byval n as ASTNODE ptr )
+declare sub astRemoveRedundantTypedefs( byval n as ASTNODE ptr, byval ast as ASTNODE ptr )
+declare sub astRemoveUnnecessaryTagPrefixes( byval n as ASTNODE ptr, byval ast as ASTNODE ptr )
 declare sub astTurnDefinesIntoConstants( byval code as ASTNODE ptr )
 declare sub astReplaceSubtypes _
 	( _

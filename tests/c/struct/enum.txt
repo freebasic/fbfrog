@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/c/struct/enum.h
+[linux]
+        parsing: tests/c/struct/enum.h
+[win32]
+        parsing: tests/c/struct/enum.h
+emitting: tests/c/struct/enum.bi (7 declarations)

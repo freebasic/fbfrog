@@ -507,20 +507,85 @@ end sub
 '' Removes typedefs where the typedef identifier is the same as the struct tag,
 '' e.g. "typedef struct T T;" since FB doesn't have separate struct/type
 '' namespaces and such typedefs aren't needed.
-sub astRemoveRedundantTypedefs( byval n as ASTNODE ptr )
-	var child = n->head
-	while( child )
-		astRemoveRedundantTypedefs( child )
-		child = child->next
+sub astRemoveRedundantTypedefs( byval n as ASTNODE ptr, byval ast as ASTNODE ptr )
+	var i = n->head
+	while( i )
+		astRemoveRedundantTypedefs( i, ast )
+		i = i->next
 	wend
 
-	if( (n->class = ASTCLASS_TYPEDEF) and _
-	    (typeGetDtAndPtr( n->dtype ) = TYPE_UDT) ) then
-		assert( n->subtype->class = ASTCLASS_ID )
-		if( ucase( *n->text, 1 ) = ucase( *n->subtype->text ) ) then
-			n->class = ASTCLASS_NOP
+	if( n->class <> ASTCLASS_TYPEDEF ) then exit sub
+	if( typeGetDtAndPtr( n->dtype ) <> TYPE_UDT ) then exit sub
+
+	assert( n->subtype->class = ASTCLASS_ID )
+	var typedef = *n->text
+	var struct = *n->subtype->text
+
+	if( strStartsWith( struct, TAG_PREFIX ) = FALSE ) then exit sub
+	struct = right( struct, len( struct ) - len( TAG_PREFIX ) )
+
+	if( typedef <> struct ) then exit sub
+
+	n->class = ASTCLASS_NOP
+	astReplaceSubtypes( ast, typedef, struct )
+end sub
+
+private function hHaveOrUseTypedef _
+	( _
+		byval n as ASTNODE ptr, _
+		byval id as zstring ptr _
+	) as integer
+
+	if( n->class = ASTCLASS_TYPEDEF ) then
+		if( *n->text = *id ) then return TRUE
+	end if
+
+	if( n->subtype ) then
+		if( n->subtype->class = ASTCLASS_ID ) then
+			if( *n->subtype->text = *id ) then return TRUE
+		else
+			if( hHaveOrUseTypedef( n->subtype, id ) ) then return TRUE
 		end if
 	end if
+
+	if( n->array ) then if( hHaveOrUseTypedef( n->array, id ) ) then return TRUE
+	if( n->expr  ) then if( hHaveOrUseTypedef( n->expr , id ) ) then return TRUE
+	if( n->l     ) then if( hHaveOrUseTypedef( n->l    , id ) ) then return TRUE
+	if( n->r     ) then if( hHaveOrUseTypedef( n->r    , id ) ) then return TRUE
+
+	var i = n->head
+	while( i )
+		if( hHaveOrUseTypedef( i, id ) ) then return TRUE
+		i = i->next
+	wend
+
+	function = FALSE
+end function
+
+'' For each struct/union/enum, check whether the <tag> prefix can be removed.
+'' That's possible if there's no conflicting typedef.
+sub astRemoveUnnecessaryTagPrefixes( byval n as ASTNODE ptr, byval ast as ASTNODE ptr )
+	select case( n->class )
+	case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
+		if( n->text ) then
+			var tagid = *n->text
+			if( strStartsWith( tagid, DUMMYID_PREFIX ) = FALSE ) then
+				assert( strStartsWith( tagid, TAG_PREFIX ) )
+				tagid = right( tagid, len( tagid ) - len( TAG_PREFIX ) )
+
+				if( hHaveOrUseTypedef( ast, tagid ) = FALSE ) then
+					astReplaceSubtypes( ast, n->text, tagid )
+					astSetText( n, tagid )
+				end if
+			end if
+		end if
+	end select
+
+	var i = n->head
+	while( i )
+		astRemoveUnnecessaryTagPrefixes( i, ast )
+		i = i->next
+	wend
 end sub
 
 '' Checks whether an expression is simple enough that it could be used in an

@@ -27,6 +27,8 @@ type Foo
 	field__ as long
 end type
 
+type FOO_ as Foo
+
 #define SAILINGBOAT_(x) sailingBoat(x + 9000)
 
 declare sub sailingBoat(byval as long)

@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/c/typedef/case-mismatch-alias-for-undeclared-struct.h
+[linux]
+        parsing: tests/c/typedef/case-mismatch-alias-for-undeclared-struct.h
+[win32]
+        parsing: tests/c/typedef/case-mismatch-alias-for-undeclared-struct.h
+emitting: tests/c/typedef/case-mismatch-alias-for-undeclared-struct.bi (1 declaration)

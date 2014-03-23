@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/name-conflicts/typedef-vs-tag.h
+[linux]
+        parsing: tests/name-conflicts/typedef-vs-tag.h
+[win32]
+        parsing: tests/name-conflicts/typedef-vs-tag.h
+emitting: tests/name-conflicts/typedef-vs-tag.bi (8 declarations)

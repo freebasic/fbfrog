@@ -4,4 +4,4 @@
         parsing: tests/name-conflicts/case.h
 [win32]
         parsing: tests/name-conflicts/case.h
-emitting: tests/name-conflicts/case.bi (17 declarations)
+emitting: tests/name-conflicts/case.bi (18 declarations)

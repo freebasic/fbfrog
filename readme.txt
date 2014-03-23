@@ -156,15 +156,6 @@ To do:
   {STRUCT|UNION|ENUM}FWD into one since in FB they'd all be emitted as the same
   code anyways?!
 
-- Should fix typedef/structtag id conflicts in a reliable way, because they
-  could represent different types. Places using the struct tag mustn't silently
-  start using the typedef, and vice-versa.
-    - the subtype ID must encode the struct tag somehow, e.g. "<struct>" prefix
-      that higherlevel transformations can check for.
-
-- If 2 symbols have the exact same id, should not rename either, so that fbc
-  catches the problem (ie. 2 structs, or 2 typedefs, or typedef/struct, etc.)
-
 - Proc/array typedefs should be solved out automatically where possible, and
   removed otherwise. (e.g. if the proc typedef is always used in a pointer
   context, then include the pointer in the typedef)

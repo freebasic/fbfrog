@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/missing/typedef-proc.h
+[linux]
+        parsing: tests/missing/typedef-proc.h
+[win32]
+        parsing: tests/missing/typedef-proc.h
+emitting: tests/missing/typedef-proc.bi (1 declaration)

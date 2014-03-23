@@ -689,7 +689,7 @@ private function cStruct( byref x as integer ) as ASTNODE ptr
 
 	'' [Identifier]
 	if( tkGet( x ) = TK_ID ) then
-		astSetText( struct, tkGetText( x ) )
+		astSetText( struct, TAG_PREFIX + *tkGetText( x ) )
 		x += 1
 	end if
 

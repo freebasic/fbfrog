@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/c/typedef/typedef-multdecl.h
+[linux]
+        parsing: tests/c/typedef/typedef-multdecl.h
+[win32]
+        parsing: tests/c/typedef/typedef-multdecl.h
+emitting: tests/c/typedef/typedef-multdecl.bi (7 declarations)

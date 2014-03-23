@@ -1,7 +1,0 @@
-[dos]
-        parsing: tests/c/struct/typedef-multdecl.h
-[linux]
-        parsing: tests/c/struct/typedef-multdecl.h
-[win32]
-        parsing: tests/c/struct/typedef-multdecl.h
-emitting: tests/c/struct/typedef-multdecl.bi (7 declarations)
