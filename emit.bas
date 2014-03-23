@@ -618,7 +618,7 @@ private function emitAst _
 			case CH_VTAB      : s += $"\v"  : has_escapes = TRUE
 			case CH_FORMFEED  : s += $"\f"  : has_escapes = TRUE
 			case CH_CR        : s += $"\r"  : has_escapes = TRUE
-			case CH_DQUOTE    : s += $"\""" : has_escapes = TRUE
+			case CH_DQUOTE    : s += $""""""
 
 			case is < 32, is >= 127
 				var n = str( i[0] )

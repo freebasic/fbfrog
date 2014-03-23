@@ -29,11 +29,11 @@ const A = 1
 #define B "foo"
 #define B wstr( "foo" )
 #define B !"foo\n"
-#define B !"\"foo\""
+#define B """foo"""
 #define B asc( "a" )
 #define B asc( wstr( "a" ) )
 
-#define C !"\""
+#define C """"
 #define C "'"
 #define C "'"
 #define C "?"
@@ -47,8 +47,8 @@ const A = 1
 #define C !"\v"
 
 #define C asc( "'" )
-#define C asc( !"\"" )
-#define C asc( !"\"" )
+#define C asc( """" )
+#define C asc( """" )
 #define C asc( "?" )
 #define C asc( !"\\" )
 #define C asc( !"\a" )
