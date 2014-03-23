@@ -156,10 +156,6 @@ To do:
   {STRUCT|UNION|ENUM}FWD into one since in FB they'd all be emitted as the same
   code anyways?!
 
-- Proc/array typedefs should be solved out automatically where possible, and
-  removed otherwise. (e.g. if the proc typedef is always used in a pointer
-  context, then include the pointer in the typedef)
-
 - Array initializers can be emitted as struct initializers:
     static int a[10] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
 - char array should be translated to zstring * N:
