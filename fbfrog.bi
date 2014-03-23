@@ -911,6 +911,7 @@ declare sub astAutoExtern _
 declare sub astFixArrayParams( byval n as ASTNODE ptr )
 declare sub astUnscopeDeclsNestedInStructs( byval n as ASTNODE ptr )
 declare sub astNameAnonUdtsAfterFirstAliasTypedef( byval n as ASTNODE ptr )
+declare sub astMakeNestedUnnamedStructsFbCompatible( byval n as ASTNODE ptr )
 declare sub astRemoveRedundantTypedefs( byval n as ASTNODE ptr )
 declare sub astTurnDefinesIntoConstants( byval code as ASTNODE ptr )
 declare sub astReplaceSubtypes _

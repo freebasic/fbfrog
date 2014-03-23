@@ -586,6 +586,7 @@ private function frogWorkRootFile _
 	astFixArrayParams( ast )
 	astUnscopeDeclsNestedInStructs( ast )
 	astNameAnonUdtsAfterFirstAliasTypedef( ast )
+	astMakeNestedUnnamedStructsFbCompatible( ast )
 	astRemoveRedundantTypedefs( ast )
 	if( frog.noconstants = FALSE ) then astTurnDefinesIntoConstants( ast )
 	if( frog.nonamefixup = FALSE ) then astFixIds( ast )

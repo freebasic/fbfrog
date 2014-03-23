@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/c/struct/union-in-union-4.h
+[linux]
+        parsing: tests/c/struct/union-in-union-4.h
+[win32]
+        parsing: tests/c/struct/union-in-union-4.h
+emitting: tests/c/struct/union-in-union-4.bi (1 declaration)

@@ -156,18 +156,6 @@ To do:
   {STRUCT|UNION|ENUM}FWD into one since in FB they'd all be emitted as the same
   code anyways?!
 
-- Solve out unnamed structs with anonymous fields if appearing in a struct
-  directly, because that's not allowed in FB and it's useless (not useless for
-  unions though, here it must be fixed up)
-		struct UDT1 {
-			struct {
-				int a;
-			};
-		};
-		type UDT1
-			a as integer
-		end type
-
 - Should fix typedef/structtag id conflicts in a reliable way, because they
   could represent different types. Places using the struct tag mustn't silently
   start using the typedef, and vice-versa.

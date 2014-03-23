@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/c/struct/struct-in-struct-1.h
+[linux]
+        parsing: tests/c/struct/struct-in-struct-1.h
+[win32]
+        parsing: tests/c/struct/struct-in-struct-1.h
+emitting: tests/c/struct/struct-in-struct-1.bi (1 declaration)

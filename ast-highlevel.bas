@@ -458,6 +458,52 @@ sub astNameAnonUdtsAfterFirstAliasTypedef( byval n as ASTNODE ptr )
 	wend
 end sub
 
+''
+'' C allows unnamed structs to be nested directly in other structs, and nested
+'' unnamed unions directly in unions, but FB only allows unnamed structs nested
+'' inside unions, and unnamed unions inside structs. Thus we need to insert the
+'' missing union/struct in between in such cases:
+''
+''    struct
+''        struct
+''            field
+''
+'' must be converted to:
+''
+''    struct
+''        union
+''            struct
+''                field
+''
+'' Nested unnamed structs can make a difference for field layout/alignment so it
+'' shouldn't be removed. And unions of course shouldn't be removed either
+'' because they clearly affect field layout.
+''
+sub astMakeNestedUnnamedStructsFbCompatible( byval n as ASTNODE ptr )
+	var i = n->head
+	while( i )
+		var nxt = i->next
+
+		astMakeNestedUnnamedStructsFbCompatible( i )
+
+		select case( n->class )
+		case ASTCLASS_STRUCT, ASTCLASS_UNION
+			if( i->class = n->class ) then
+				dim as integer newastclass
+				if( i->class = ASTCLASS_STRUCT ) then
+					newastclass = ASTCLASS_UNION
+				else
+					assert( i->class = ASTCLASS_UNION )
+					newastclass = ASTCLASS_STRUCT
+				end if
+				nxt = astReplace( n, i, astNew( newastclass, astClone( i ) ) )
+			end if
+		end select
+
+		i = nxt
+	wend
+end sub
+
 '' Removes typedefs where the typedef identifier is the same as the struct tag,
 '' e.g. "typedef struct T T;" since FB doesn't have separate struct/type
 '' namespaces and such typedefs aren't needed.
