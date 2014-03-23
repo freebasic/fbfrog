@@ -570,8 +570,7 @@ declare function typeToUnsigned( byval dtype as integer ) as integer
 
 enum
 	'' Internal helper nodes
-	ASTCLASS_NOP = 0
-	ASTCLASS_GROUP
+	ASTCLASS_GROUP = 0
 	ASTCLASS_VERBLOCK
 	ASTCLASS_TARGETBLOCK
 	ASTCLASS_DIVIDER
@@ -761,7 +760,6 @@ end type
 
 extern aststats as ASTSTATSDATA
 
-#define astNewNOP( ) astNew( ASTCLASS_NOP )
 #define astNewID( id ) astNew( ASTCLASS_ID, id )
 #define astNewTEXT( text ) astNew( ASTCLASS_TEXT, text )
 #define astIsCONSTI( n ) ((n)->class = ASTCLASS_CONSTI)

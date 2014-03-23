@@ -325,8 +325,6 @@ private function emitAst _
 	end if
 
 	select case as const( n->class )
-	case ASTCLASS_NOP
-
 	case ASTCLASS_GROUP
 		var child = n->head
 		while( child )

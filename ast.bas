@@ -35,7 +35,6 @@ end type
 
 dim shared as ASTNODEINFO astnodeinfo(0 to ...) = _
 { _
-	("nop"          ), _
 	("group"        ), _
 	("verblock"     ), _
 	("targetblock"  ), _
@@ -416,11 +415,6 @@ sub astInsert _
 			astInsert( parent, astClone( i ), ref, unique )
 			i = i->next
 		wend
-		astDelete( n )
-		exit sub
-
-	case ASTCLASS_NOP
-		'' Don't bother inserting NOPs
 		astDelete( n )
 		exit sub
 	end select

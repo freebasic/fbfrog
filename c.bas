@@ -1578,7 +1578,7 @@ end function
 private function cSemiColon( byref x as integer ) as ASTNODE ptr
 	'' Just ignore single semi-colons
 	x += 1
-	function = astNewNOP( )
+	function = astNewGROUP( )
 end function
 
 '' Parse a construct. The body parameter is used to determine the context,
