@@ -1,6 +1,6 @@
 extern "C"
 
-type __freebasic_tagid_AAA
+type AAA
 	i as long
 end type
 

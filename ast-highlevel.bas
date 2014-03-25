@@ -642,8 +642,8 @@ sub astRemoveRedundantTypedefs( byval n as ASTNODE ptr, byval ast as ASTNODE ptr
 				var typedef = *i->text
 				var struct = *i->subtype->text
 				if( strStartsWith( struct, TAG_PREFIX ) ) then
-					struct = right( struct, len( struct ) - len( TAG_PREFIX ) )
-					if( typedef = struct ) then
+					'' typedef = (struct without the TAG_PREFIX)?
+					if( typedef = right( struct, len( struct ) - len( TAG_PREFIX ) ) ) then
 						astRemove( n, i )
 						astReplaceSubtypes( ast, typedef, struct )
 					end if
