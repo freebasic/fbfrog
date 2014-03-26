@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/c/type-vs-tag/renametypedef-struct.h
+[linux]
+        parsing: tests/c/type-vs-tag/renametypedef-struct.h
+[win32]
+        parsing: tests/c/type-vs-tag/renametypedef-struct.h
+emitting: tests/c/type-vs-tag/renametypedef-struct.bi (4 declarations)

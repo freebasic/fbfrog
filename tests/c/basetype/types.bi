@@ -62,9 +62,9 @@ dim shared a as wstring
 dim shared a as wstring ptr
 
 dim shared a as A
-dim shared a as __freebasic_tagid_A
-dim shared a as __freebasic_tagid_A
-dim shared a as __freebasic_tagid_A
+dim shared a as A
+dim shared a as A
+dim shared a as A
 
 dim shared a as zstring ptr
 dim shared a as const zstring ptr

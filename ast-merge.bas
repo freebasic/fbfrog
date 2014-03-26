@@ -520,7 +520,7 @@ private sub hAstMerge _
 					'' like a single-pass compiler).
 
 					for bi as integer = blcsfirst+i+1 to btablecount-1
-						astReplaceSubtypes( barray[bi].n, bstruct->text, cstruct->text )
+						astReplaceSubtypes( barray[bi].n, ASTCLASS_TAGID, bstruct->text, ASTCLASS_TAGID, cstruct->text )
 					next
 				end if
 			end if

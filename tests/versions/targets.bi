@@ -17,11 +17,11 @@ dim shared doslinuxwin32 as long
 #if defined( __FB_DOS__ ) or defined( __FB_LINUX__ )
 	dim shared doslinux as long
 
-	type UDTdoslinux
+	type UDTdoslinux1
 		fielddoslinux as long
 	end type
 
-	type UDTdoslinux_
+	type UDTdoslinux2
 		#ifdef __FB_DOS__
 			fielddos as long
 		#elseif defined( __FB_LINUX__ )

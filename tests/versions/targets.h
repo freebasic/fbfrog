@@ -24,11 +24,11 @@ static int doslinuxwin32;
 #if defined DOS || defined LINUX
 	static int doslinux;
 
-	struct UDTdoslinux {
+	struct UDTdoslinux1 {
 		int fielddoslinux;
 	};
 
-	struct UDTdoslinux {
+	struct UDTdoslinux2 {
 		#ifdef DOS
 			int fielddos;
 		#else

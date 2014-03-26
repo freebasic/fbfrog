@@ -1,1 +1,1 @@
-type BBB as __freebasic_tagid_AAA
+type BBB as AAA

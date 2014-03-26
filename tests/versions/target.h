@@ -4,14 +4,14 @@ static int linux;
 
 #ifdef LINUX
 	static int linux;
-	struct UDTlinux {
+	struct UDTlinux1 {
 		int fieldlinux;
 	};
 #else
 	#error "invalid target"
 #endif
 
-struct UDTlinux {
+struct UDTlinux2 {
 	int fieldlinux;
 	#ifdef LINUX
 		int fieldlinux;

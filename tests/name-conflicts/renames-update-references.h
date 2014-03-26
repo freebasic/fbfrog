@@ -10,8 +10,12 @@ int array1[INT(1)];
 
 #define A1 INT(1)
 
+typedef struct DOUBLE DOUBLE;
+
 struct DOUBLE {
-	DOUBLE *a;
+	struct DOUBLE *a;
+	DOUBLE *b;
 };
 
-void f(struct DOUBLE);
+void f1(struct DOUBLE);
+void f2(DOUBLE);

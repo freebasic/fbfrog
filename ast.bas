@@ -44,6 +44,8 @@ dim shared as ASTNODEINFO astnodeinfo(0 to ...) = _
 	("dir"          ), _
 	("noexpand"     ), _
 	("removedefine" ), _
+	("renametypedef"), _
+	("renametag"    ), _
 	("removematch"  ), _
 	("appendbi"     ), _
 	("#include"     ), _
@@ -78,6 +80,7 @@ dim shared as ASTNODEINFO astnodeinfo(0 to ...) = _
 	("consti"       ), _
 	("constf"       ), _
 	("id"           ), _
+	("tagid"        ), _
 	("text"         ), _
 	("string"       ), _
 	("char"         ), _
@@ -754,6 +757,7 @@ sub astReport _
 		hReport( @n->location, message, more_context )
 	else
 		print *message
+		print astDumpPrettyDecl( n )
 	end if
 
 end sub

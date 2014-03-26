@@ -34,6 +34,8 @@ private sub hPrintHelpAndExit( )
 	print "  -include <file>          Add pre-#include"
 	print "  -noexpand <id>           Disable expansion of certain #define"
 	print "  -removedefine <id>       Don't preserve certain #defines/#undefs"
+	print "  -renametypedef <oldid> <newid>  Rename a typedef"
+	print "  -renametag <oldid> <newid>      Rename a struct/union/enum"
 	print "  -appendbi <file>         Append arbitrary FB code from <file> to the binding"
 	print "  -removematch ""<C token(s)>""    Drop constructs containing the given C token(s)."
 	print "                               This should be used to work-around parsing errors."
@@ -352,6 +354,27 @@ private function hParseArgs( byref x as integer, byval body as integer ) as ASTN
 				hExpectId( x )
 				astAppend( result, astTakeLoc( astNew( ASTCLASS_REMOVEDEFINE, tkGetText( x ) ), x ) )
 
+			case "renametypedef", "renametag"
+				x += 1
+
+				dim as integer astclass
+				select case( text )
+				case "renametypedef" : astclass = ASTCLASS_RENAMETYPEDEF
+				case "renametag"     : astclass = ASTCLASS_RENAMETAG
+				case else            : assert( FALSE )
+				end select
+
+				'' <oldid>
+				hExpectId( x )
+				var n = astTakeLoc( astNew( astclass, tkGetText( x ) ), x )
+				x += 1
+
+				'' <newid>
+				hExpectId( x )
+				astSetComment( n, tkGetText( x ) )
+
+				astAppend( result, n )
+
 			case "removematch"
 				x += 1
 
@@ -497,6 +520,72 @@ private sub hApplyRemoveMatchOptions( byval presetcode as ASTNODE ptr )
 	wend
 end sub
 
+private sub hApplyRenameTypedefOption _
+	( _
+		byval n as ASTNODE ptr, _
+		byval ast as ASTNODE ptr, _
+		byval renametypedef as ASTNODE ptr _
+	)
+
+	if( n->class = ASTCLASS_TYPEDEF ) then
+		if( *n->text = *renametypedef->text ) then
+			astReplaceSubtypes( ast, ASTCLASS_ID, renametypedef->text, ASTCLASS_ID, renametypedef->comment )
+			astSetText( n, renametypedef->comment )
+		end if
+	end if
+
+	var i = n->head
+	while( i )
+		hApplyRenameTypedefOption( i, ast, renametypedef )
+		i = i->next
+	wend
+
+end sub
+
+private sub hApplyRenameTagOption _
+	( _
+		byval n as ASTNODE ptr, _
+		byval ast as ASTNODE ptr, _
+		byval renametag as ASTNODE ptr _
+	)
+
+	select case( n->class )
+	case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
+		if( *n->text = *renametag->text ) then
+			astReplaceSubtypes( ast, ASTCLASS_TAGID, renametag->text, ASTCLASS_TAGID, renametag->comment )
+			astSetText( n, renametag->comment )
+		end if
+	end select
+
+	var i = n->head
+	while( i )
+		hApplyRenameTagOption( i, ast, renametag )
+		i = i->next
+	wend
+
+end sub
+
+private sub hApplyRenameTypedefOptions _
+	( _
+		byval presetcode as ASTNODE ptr, _
+		byval ast as ASTNODE ptr _
+	)
+
+	var i = presetcode->head
+	while( i )
+
+		select case( i->class )
+		case ASTCLASS_RENAMETYPEDEF
+			hApplyRenameTypedefOption( ast, ast, i )
+		case ASTCLASS_RENAMETAG
+			hApplyRenameTagOption( ast, ast, i )
+		end select
+
+		i = i->next
+	wend
+
+end sub
+
 private function frogWorkRootFile _
 	( _
 		byval presetcode as ASTNODE ptr, _
@@ -589,10 +678,12 @@ private function frogWorkRootFile _
 	astFixArrayParams( ast )
 	astUnscopeDeclsNestedInStructs( ast )
 	astMakeNestedUnnamedStructsFbCompatible( ast )
-	astRemoveRedundantTypedefs( ast, ast )
-	astRemoveUnnecessaryTagPrefixes( ast, ast )
-	astNameAnonUdtsAfterFirstAliasTypedef( ast )
 	if( frog.noconstants = FALSE ) then astTurnDefinesIntoConstants( ast )
+
+	hApplyRenameTypedefOptions( presetcode, ast )
+	astRemoveRedundantTypedefs( ast, ast )
+	astNameAnonUdtsAfterFirstAliasTypedef( ast )
+
 	if( frog.nonamefixup = FALSE ) then astFixIds( ast )
 	if( frog.noautoextern = FALSE ) then astAutoExtern( ast, frog.windowsms, frog.whitespace )
 

@@ -1,16 +1,16 @@
 extern "C"
 
-type A as UDT
-type A_ as __freebasic_tagid_UDT
-type A__ as long
-type A___ as long ptr
-type A____ as long
-type B as long
-type C as long
-type A_____ as sub()
-type A______ as function(byval as UDT) as UDT
-type A_______ as UDT ptr ptr
-type B_ as UDT
-type C_ as function(byval as long) as UDT
+type A1 as UDT
+type A2 as UDT
+type A3 as long
+type A4 as long ptr
+type A5 as long
+type B5 as long
+type C5 as long
+type A6 as sub()
+type A7 as function(byval as UDT) as UDT
+type A8 as UDT ptr ptr
+type B8 as UDT
+type C8 as function(byval as long) as UDT
 
 end extern

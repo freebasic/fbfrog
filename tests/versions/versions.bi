@@ -25,11 +25,11 @@ dim shared common_ as long
 #if (__VERSION__ = "1") or (__VERSION__ = "2")
 	dim shared v12 as long
 
-	type UDTv12
+	type UDT1v12
 		fieldv12 as long
 	end type
 
-	type UDTv12_
+	type UDT2v12
 		fieldv1 as long
 		fieldv2 as long
 	end type
@@ -41,11 +41,11 @@ dim shared common_ as long
 	end type
 #endif
 
-type UDTv123
+type UDT1v123
 	fieldv123 as long
 end type
 
-type UDTv123_
+type UDT2v123
 	#if __VERSION__ = "1"
 		fieldv1 as long
 	#elseif __VERSION__ = "2"

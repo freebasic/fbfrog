@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/c/type-vs-tag/conflict-enum.h
+[linux]
+        parsing: tests/c/type-vs-tag/conflict-enum.h
+[win32]
+        parsing: tests/c/type-vs-tag/conflict-enum.h
+emitting: tests/c/type-vs-tag/conflict-enum.bi (4 declarations)

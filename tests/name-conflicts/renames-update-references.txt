@@ -4,4 +4,4 @@
         parsing: tests/name-conflicts/renames-update-references.h
 [win32]
         parsing: tests/name-conflicts/renames-update-references.h
-emitting: tests/name-conflicts/renames-update-references.bi (6 declarations)
+emitting: tests/name-conflicts/renames-update-references.bi (7 declarations)

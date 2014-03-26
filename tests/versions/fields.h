@@ -1,11 +1,11 @@
 // @fbfrog -version 1 -define A -version 2 -undef A
 
-struct UDT {
+struct UDT1 {
 	int field1;
 	int field2;
 };
 
-struct UDT {
+struct UDT2 {
 	int field1;
 	#ifdef A
 		int field2;

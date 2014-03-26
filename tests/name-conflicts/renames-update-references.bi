@@ -13,10 +13,12 @@ dim shared array1(0 to 0) as long
 
 #define A1 INT_(1)
 
-type __freebasic_tagid_DOUBLE
-	a as DOUBLE ptr
+type DOUBLE_
+	a as DOUBLE_ ptr
+	b as DOUBLE_ ptr
 end type
 
-declare sub f(byval as __freebasic_tagid_DOUBLE)
+declare sub f1(byval as DOUBLE_)
+declare sub f2(byval as DOUBLE_)
 
 end extern

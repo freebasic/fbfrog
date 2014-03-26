@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/c/type-vs-tag/renametypedef-enum.h
+[linux]
+        parsing: tests/c/type-vs-tag/renametypedef-enum.h
+[win32]
+        parsing: tests/c/type-vs-tag/renametypedef-enum.h
+emitting: tests/c/type-vs-tag/renametypedef-enum.bi (4 declarations)

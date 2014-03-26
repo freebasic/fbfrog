@@ -24,11 +24,11 @@ static int common;
 #if VER == 1 || VER == 2
 	static int v12;
 
-	struct UDTv12 {
+	struct UDT1v12 {
 		int fieldv12;
 	};
 
-	struct UDTv12 {
+	struct UDT2v12 {
 		#if VER == 1
 			int fieldv1;
 		#else
@@ -37,11 +37,11 @@ static int common;
 	};
 #endif
 
-struct UDTv123 {
+struct UDT1v123 {
 	int fieldv123;
 };
 
-struct UDTv123 {
+struct UDT2v123 {
 	#if VER == 1
 		int fieldv1;
 	#elif VER == 2

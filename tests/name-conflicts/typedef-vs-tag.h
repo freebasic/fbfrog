@@ -1,3 +1,5 @@
+// @fbfrog -renametypedef UDT myint
+
 typedef int UDT;
 typedef int UDT2;
 

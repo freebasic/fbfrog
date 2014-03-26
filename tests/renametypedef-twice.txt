@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/renametypedef-twice.h
+[linux]
+        parsing: tests/renametypedef-twice.h
+[win32]
+        parsing: tests/renametypedef-twice.h
+emitting: tests/renametypedef-twice.bi (1 declaration)

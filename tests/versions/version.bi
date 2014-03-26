@@ -9,14 +9,14 @@
 dim shared common_ as long
 dim shared v1 as long
 
-type UDTv1
+type UDT1v1
 	fieldv1 as long
 end type
 
-type UDTv1_
+type UDT2v1
 	fieldv1 as long
 end type
 
-type UDTv1__
+type UDT3v1
 	fieldv1 as long
 end type

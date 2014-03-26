@@ -42,7 +42,8 @@ Features:
         based on a heuristic (whether the identifier in parentheses looks like a
         type or is a known typedef, etc.).
       * Parses typedefs, structs, unions, enums, including nested
-        structs/unions.
+        structs/unions, and even struct/union/enum bodies specified directly in
+        declarations of functions, parameters, variables, etc.
 
   * FB binding creation
       * C's built-in data types (using the sizes typically used for x86) and
@@ -143,7 +144,8 @@ To do:
       a) On all enum bodies, do "enum Foo as long : ... : end enum" (must be added to FB first)
       b) Do "type Foo as long" and make enum body anonymous (enums consts aren't type checked anyways)
       c) Do "const EnumConst1 as long" for every enum const; don't emit the enum type at all,
-         do "long" in place of every "enum Foo" type.
+         do "long" in place of every "enum Foo" type. (would have to calculate enumconst value
+         if no initializer given)
 
 - Are forward declarations/references handled correctly? Consider merging the
   {STRUCT|UNION|ENUM}FWD into one since in FB they'd all be emitted as the same

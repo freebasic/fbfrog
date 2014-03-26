@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/c/type-vs-tag/renametag-union.h
+[linux]
+        parsing: tests/c/type-vs-tag/renametag-union.h
+[win32]
+        parsing: tests/c/type-vs-tag/renametag-union.h
+emitting: tests/c/type-vs-tag/renametag-union.bi (4 declarations)

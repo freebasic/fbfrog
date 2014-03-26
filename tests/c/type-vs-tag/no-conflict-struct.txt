@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/c/type-vs-tag/no-conflict-struct.h
+[linux]
+        parsing: tests/c/type-vs-tag/no-conflict-struct.h
+[win32]
+        parsing: tests/c/type-vs-tag/no-conflict-struct.h
+emitting: tests/c/type-vs-tag/no-conflict-struct.bi (4 declarations)

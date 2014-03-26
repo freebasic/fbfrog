@@ -574,7 +574,7 @@ private function emitAst _
 	case ASTCLASS_CONSTF
 		s += str( n->valf )
 
-	case ASTCLASS_ID
+	case ASTCLASS_ID, ASTCLASS_TAGID
 		s += *n->text
 
 	case ASTCLASS_TEXT

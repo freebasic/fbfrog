@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/renametypedef.h
+[linux]
+        parsing: tests/renametypedef.h
+[win32]
+        parsing: tests/renametypedef.h
+emitting: tests/renametypedef.bi (6 declarations)

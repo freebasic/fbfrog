@@ -6,12 +6,12 @@
 	#error "'__VERSION__' is #defined to an unsupported value; expected one of: ""1"", ""2"""
 #endif
 
-type UDT
+type UDT1
 	field1 as long
 	field2 as long
 end type
 
-type UDT_
+type UDT2
 	field1 as long
 
 	#if __VERSION__ = "1"

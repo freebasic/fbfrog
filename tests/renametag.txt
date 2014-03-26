@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/renametag.h
+[linux]
+        parsing: tests/renametag.h
+[win32]
+        parsing: tests/renametag.h
+emitting: tests/renametag.bi (10 declarations)

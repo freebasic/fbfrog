@@ -142,3 +142,18 @@ It's good to have both -version and -target, without allowing any nesting except
   pre-#defines manually.
 + But in general, fbfrog having basic compiler pre-#defines built-in is
   very useful. Otherwise every user would have to worry about them...
+
+Typedef vs struct/union/enum tag symbols handling
+* FB doesn't have separate type/tag namespaces, so this always must be fixed.
+* Better automatically than manually, except for polishing.
+* <struct UDT> should just become <UDT> where possible
+* It's not possible if there already is an <UDT> typedef
+* If it's a redundant typedef though (<typedef struct UDT UDT;>) then it can
+  just be removed.
+* Otherwise, if <UDT> and <struct UDT> represent different things, one must be
+  renamed, and all references to it (but not to the other) must be updated.
+* Such conflicts are probably not a common problem
+* Symbol name conflict check can handle this too, provided that the C parser
+  preserves the information on whether a subtype was <UDT> or <struct UDT>.
+* That's better than aborting with an error or not detecting the issue at all.
+* The user can still specify -rename command line options if needed.

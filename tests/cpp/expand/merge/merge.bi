@@ -39,9 +39,9 @@ dim shared param1_param2_param3 as long
 declare sub abc()
 
 dim shared merge_affects_only_first_or_last_token_of_an_arg as long
-type A as __freebasic_tagid_left_UDT
-type A_right as __freebasic_tagid_UDT
-type A_right as __freebasic_tagid_left_UDT
+type A as left_UDT
+type A_right as UDT
+type A_right as left_UDT
 
 dim shared spacedid_param as long
 declare sub spacedidarg()

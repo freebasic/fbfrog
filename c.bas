@@ -689,7 +689,7 @@ private function cStruct( byref x as integer ) as ASTNODE ptr
 
 	'' [Identifier]
 	if( tkGet( x ) = TK_ID ) then
-		astSetText( struct, TAG_PREFIX + *tkGetText( x ) )
+		astSetText( struct, tkGetText( x ) )
 		x += 1
 	end if
 
@@ -710,7 +710,7 @@ private function cStruct( byref x as integer ) as ASTNODE ptr
 		end if
 
 		'' It's just a tag name, not a body
-		struct->class = ASTCLASS_ID
+		struct->class = ASTCLASS_TAGID
 	end if
 
 	function = struct
@@ -1552,7 +1552,7 @@ private function cMultDecl _
 			end if
 
 			astAppend( result, subtype )
-			subtype = astNewID( subtype->text )
+			subtype = astNew( ASTCLASS_TAGID, subtype->text )
 		end select
 	end if
 

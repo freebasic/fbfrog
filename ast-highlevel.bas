@@ -529,10 +529,11 @@ private sub hTryNameAnonUdtAfterFirstAliasTypedef _
 
 		'' Must be a plain alias, can't be a pointer or non-UDT
 		if( typeGetDtAndPtr( typedef->dtype ) = TYPE_UDT ) then
-			assert( typedef->subtype->class = ASTCLASS_ID )
-			if( *typedef->subtype->text = *anon->text ) then
-				aliastypedef = typedef
-				exit while
+			if( typedef->subtype->class = ASTCLASS_TAGID ) then
+				if( *typedef->subtype->text = *anon->text ) then
+					aliastypedef = typedef
+					exit while
+				end if
 			end if
 		end if
 
@@ -552,7 +553,7 @@ private sub hTryNameAnonUdtAfterFirstAliasTypedef _
 			exit while
 		end if
 
-		astReplaceSubtypes( typedef, anon->text, aliastypedef->text )
+		astReplaceSubtypes( typedef, ASTCLASS_TAGID, anon->text, ASTCLASS_ID, aliastypedef->text )
 
 		typedef = typedef->next
 	wend
@@ -626,9 +627,7 @@ sub astMakeNestedUnnamedStructsFbCompatible( byval n as ASTNODE ptr )
 	wend
 end sub
 
-'' Removes typedefs where the typedef identifier is the same as the struct tag,
-'' e.g. "typedef struct T T;" since FB doesn't have separate struct/type
-'' namespaces and such typedefs aren't needed.
+'' Removes typedefs of the form "typedef struct T T;" which aren't needed in FB.
 sub astRemoveRedundantTypedefs( byval n as ASTNODE ptr, byval ast as ASTNODE ptr )
 	var i = n->head
 	while( i )
@@ -638,78 +637,18 @@ sub astRemoveRedundantTypedefs( byval n as ASTNODE ptr, byval ast as ASTNODE ptr
 
 		if( i->class = ASTCLASS_TYPEDEF ) then
 			if( typeGetDtAndPtr( i->dtype ) = TYPE_UDT ) then
-				assert( i->subtype->class = ASTCLASS_ID )
-				var typedef = *i->text
-				var struct = *i->subtype->text
-				if( strStartsWith( struct, TAG_PREFIX ) ) then
-					'' typedef = (struct without the TAG_PREFIX)?
-					if( typedef = right( struct, len( struct ) - len( TAG_PREFIX ) ) ) then
+				if( i->subtype->class = ASTCLASS_TAGID ) then
+					var typedef = *i->text
+					var struct = *i->subtype->text
+					if( typedef = struct ) then
+						astReplaceSubtypes( ast, ASTCLASS_ID, typedef, ASTCLASS_TAGID, struct )
 						astRemove( n, i )
-						astReplaceSubtypes( ast, typedef, struct )
 					end if
 				end if
 			end if
 		end if
 
 		i = nxt
-	wend
-end sub
-
-private function hHaveOrUseTypedef _
-	( _
-		byval n as ASTNODE ptr, _
-		byval id as zstring ptr _
-	) as integer
-
-	if( n->class = ASTCLASS_TYPEDEF ) then
-		if( *n->text = *id ) then return TRUE
-	end if
-
-	if( n->subtype ) then
-		if( n->subtype->class = ASTCLASS_ID ) then
-			if( *n->subtype->text = *id ) then return TRUE
-		else
-			if( hHaveOrUseTypedef( n->subtype, id ) ) then return TRUE
-		end if
-	end if
-
-	if( n->array ) then if( hHaveOrUseTypedef( n->array, id ) ) then return TRUE
-	if( n->expr  ) then if( hHaveOrUseTypedef( n->expr , id ) ) then return TRUE
-	if( n->l     ) then if( hHaveOrUseTypedef( n->l    , id ) ) then return TRUE
-	if( n->r     ) then if( hHaveOrUseTypedef( n->r    , id ) ) then return TRUE
-
-	var i = n->head
-	while( i )
-		if( hHaveOrUseTypedef( i, id ) ) then return TRUE
-		i = i->next
-	wend
-
-	function = FALSE
-end function
-
-'' For each struct/union/enum, check whether the <tag> prefix can be removed.
-'' That's possible if there's no conflicting typedef.
-sub astRemoveUnnecessaryTagPrefixes( byval n as ASTNODE ptr, byval ast as ASTNODE ptr )
-	select case( n->class )
-	case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
-		if( n->text ) then
-			var tagid = *n->text
-			if( strStartsWith( tagid, DUMMYID_PREFIX ) = FALSE ) then
-				assert( strStartsWith( tagid, TAG_PREFIX ) )
-				tagid = right( tagid, len( tagid ) - len( TAG_PREFIX ) )
-
-				if( hHaveOrUseTypedef( ast, tagid ) = FALSE ) then
-					astReplaceSubtypes( ast, n->text, tagid )
-					astSetText( n, tagid )
-				end if
-			end if
-		end if
-	end select
-
-	var i = n->head
-	while( i )
-		astRemoveUnnecessaryTagPrefixes( i, ast )
-		i = i->next
 	wend
 end sub
 
@@ -813,6 +752,15 @@ private function hDecideWhichSymbolToRename _
 	function = other
 end function
 
+#if 0
+private function hIsTypedefOrStruct( byval n as ASTNODE ptr ) as integer
+	select case( n->class )
+	case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM, ASTCLASS_TYPEDEF
+		function = TRUE
+	end select
+end function
+#endif
+
 private sub hCheckId _
 	( _
 		byval h as THASH ptr, _
@@ -832,6 +780,21 @@ private sub hCheckId _
 			print "name conflict: " + astDumpPrettyDecl( n ) + ", " + _
 				iif( first, astDumpPrettyDecl( first ), "FB keyword" )
 		end if
+
+#if 0
+		if( first ) then
+			if( hIsTypedefOrStruct( first ) and hIsTypedefOrStruct( n ) ) then
+				'' Exact same id, even same capitalization?
+				if( *first->text = *n->text ) then
+					print "error: Suspicious name conflict between " + _
+						astDumpPrettyDecl( first ) + " and " + _
+						astDumpPrettyDecl( n )
+					print "Please use -renametypedef or -renametag to fix this."
+					end 1
+				end if
+			end if
+		end if
+#endif
 
 		hDecideWhichSymbolToRename( first, n )->attrib or= ASTATTRIB_NEEDRENAME
 	elseif( add_here ) then
@@ -969,28 +932,31 @@ end sub
 sub astReplaceSubtypes _
 	( _
 		byval n as ASTNODE ptr, _
+		byval oldclass as integer, _
 		byval oldid as zstring ptr, _
+		byval newclass as integer, _
 		byval newid as zstring ptr _
 	)
 
 	if( n->subtype ) then
-		if( n->subtype->class = ASTCLASS_ID ) then
+		if( n->subtype->class = oldclass ) then
 			if( *n->subtype->text = *oldid ) then
 				astSetText( n->subtype, newid )
+				n->subtype->class = newclass
 			end if
 		else
-			astReplaceSubtypes( n->subtype, oldid, newid )
+			astReplaceSubtypes( n->subtype, oldclass, oldid, newclass, newid )
 		end if
 	end if
 
-	if( n->array ) then astReplaceSubtypes( n->array, oldid, newid )
-	if( n->expr  ) then astReplaceSubtypes( n->expr , oldid, newid )
-	if( n->l     ) then astReplaceSubtypes( n->l    , oldid, newid )
-	if( n->r     ) then astReplaceSubtypes( n->r    , oldid, newid )
+	if( n->array ) then astReplaceSubtypes( n->array, oldclass, oldid, newclass, newid )
+	if( n->expr  ) then astReplaceSubtypes( n->expr , oldclass, oldid, newclass, newid )
+	if( n->l     ) then astReplaceSubtypes( n->l    , oldclass, oldid, newclass, newid )
+	if( n->r     ) then astReplaceSubtypes( n->r    , oldclass, oldid, newclass, newid )
 
 	var i = n->head
 	while( i )
-		astReplaceSubtypes( i, oldid, newid )
+		astReplaceSubtypes( i, oldclass, oldid, newclass, newid )
 		i = i->next
 	wend
 
@@ -1056,10 +1022,11 @@ private sub hRenameSymbol _
 	     ASTCLASS_VAR, ASTCLASS_EXTERNVAR, ASTCLASS_STATICVAR, _
 	     ASTCLASS_CONSTANT, ASTCLASS_ENUMCONST, ASTCLASS_FIELD
 		hReplaceCalls( code, n->text, newid )
-	case ASTCLASS_STRUCT, ASTCLASS_UNION, _
-	     ASTCLASS_STRUCTFWD, ASTCLASS_UNIONFWD, ASTCLASS_ENUMFWD, _
-	     ASTCLASS_TYPEDEF, ASTCLASS_ENUM
-		astReplaceSubtypes( code, n->text, newid )
+	case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM, _
+	     ASTCLASS_STRUCTFWD, ASTCLASS_UNIONFWD, ASTCLASS_ENUMFWD
+		astReplaceSubtypes( code, ASTCLASS_TAGID, n->text, ASTCLASS_TAGID, newid )
+	case ASTCLASS_TYPEDEF
+		astReplaceSubtypes( code, ASTCLASS_ID, n->text, ASTCLASS_ID, newid )
 	case else
 		assert( FALSE )
 	end select
@@ -1075,9 +1042,9 @@ private sub hRenameSymbol _
 	     ASTCLASS_VAR, ASTCLASS_EXTERNVAR, ASTCLASS_STATICVAR, _
 	     ASTCLASS_CONSTANT,  ASTCLASS_ENUMCONST, ASTCLASS_FIELD
 		hashAddOverwrite( globals, hashid, n )
-	case ASTCLASS_STRUCT, ASTCLASS_UNION, _
+	case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM, _
 	     ASTCLASS_STRUCTFWD, ASTCLASS_UNIONFWD, ASTCLASS_ENUMFWD, _
-	     ASTCLASS_TYPEDEF, ASTCLASS_ENUM
+	     ASTCLASS_TYPEDEF
 		hashAddOverwrite( types, hashid, n )
 	case else
 		assert( FALSE )
