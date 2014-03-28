@@ -581,26 +581,62 @@ sub astNameAnonUdtsAfterFirstAliasTypedef( byval n as ASTNODE ptr )
 	wend
 end sub
 
-'' Collect all used subtype tag ids into a hash table, setting their data=FALSE.
-'' Also collect the tag ids of all found struct/union/enum declarations with
-'' data=TRUE, so that in the end, we have a list of declared and undeclared
-'' tag ids.
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+''
+'' Collect information about the declared/used state of struct/union/enum tag
+'' ids, such that in the end we have a list of tag ids, and we can tell for
+'' which ones a forward declaration must be emitted at the top:
+''    a) it's used above the declaration
+''    b) it's used without being declared at all
+''
+
+const STATE_DECLARED		= 1 shl 0
+const STATE_USED_ABOVE_DECL	= 1 shl 1
+const STATE_USED		= 1 shl 2
+
+private function hUsedButNotDeclared( byval state as integer ) as integer
+	function = ((state and (STATE_DECLARED or STATE_USED)) = STATE_USED)
+end function
+
+private sub hOnTagId _
+	( _
+		byval hashtb as THASH ptr, _
+		byval id as zstring ptr, _
+		byval addstate as integer _
+	)
+
+	var hash = hashHash( id )
+	var item = hashLookup( hashtb, id, hash )
+	if( item->s ) then
+		var state = cint( item->data )
+
+		'' Adding a declaration?
+		if( addstate = STATE_DECLARED ) then
+			'' Already used, but not declared yet?
+			if( hUsedButNotDeclared( state ) ) then
+				state or= STATE_USED_ABOVE_DECL
+			end if
+		end if
+
+		state or= addstate
+
+		item->data = cptr( any ptr, state )
+	else
+		hashAdd( hashtb, item, hash, id, cptr( any ptr, addstate ) )
+	end if
+end sub
+
 private sub hCollectTagIds( byval n as ASTNODE ptr, byval hashtb as THASH ptr )
 	select case( n->class )
 	case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
 		if( n->text ) then
-			hashAddOverwrite( hashtb, n->text, cptr( any ptr, TRUE ) )
+			hOnTagId( hashtb, n->text, STATE_DECLARED )
 		end if
 	end select
 
 	if( n->subtype ) then
 		if( n->subtype->class = ASTCLASS_TAGID ) then
-			var id = n->subtype->text
-			var hash = hashHash( id )
-			var item = hashLookup( hashtb, id, hash )
-			if( item->s = NULL ) then
-				hashAdd( hashtb, item, hash, id, cptr( any ptr, FALSE ) )
-			end if
+			hOnTagId( hashtb, n->subtype->text, STATE_USED )
 		else
 			hCollectTagIds( n->subtype, hashtb )
 		end if
@@ -618,6 +654,30 @@ private sub hCollectTagIds( byval n as ASTNODE ptr, byval hashtb as THASH ptr )
 	wend
 end sub
 
+private sub hRenameTagDecls _
+	( _
+		byval n as ASTNODE ptr, _
+		byval oldid as zstring ptr, _
+		byval newid as zstring ptr _
+	)
+
+	select case( n->class )
+	case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
+		if( n->text ) then
+			if( *n->text = *oldid ) then
+				astSetText( n, newid )
+			end if
+		end if
+	end select
+
+	var i = n->head
+	while( i )
+		hRenameTagDecls( i, oldid, newid )
+		i = i->next
+	wend
+
+end sub
+
 sub astAddForwardDeclsForUndeclaredTagIds( byval ast as ASTNODE ptr )
 	dim hashtb as THASH
 	hashInit( @hashtb, 4, FALSE )
@@ -629,7 +689,8 @@ sub astAddForwardDeclsForUndeclaredTagIds( byval ast as ASTNODE ptr )
 		var item = hashtb.items + i
 		if( item->s ) then
 			'' No declaration seen by hCollectTagIds() for this one?
-			if( cint( item->data ) = FALSE ) then
+			var state = cint( item->data )
+			if( hUsedButNotDeclared( state ) ) then
 				'' Add a forward typedef for this id and a dummy declaration
 				'' for the forward id, so that astFixIds() will take care of fixing
 				'' name conflicts involving the forward id, if any. The dummy
@@ -643,12 +704,27 @@ sub astAddForwardDeclsForUndeclaredTagIds( byval ast as ASTNODE ptr )
 				var dummydecl = astNew( ASTCLASS_STRUCT, forwardid )
 				dummydecl->attrib or= ASTATTRIB_DONTEMIT
 				astPrepend( ast, dummydecl )
+
+			'' or it was found below the first use?
+			elseif( state and STATE_USED_ABOVE_DECL ) then
+				'' Rename the struct and add a forward declaration for it using the
+				'' old id. astFixIds() will take care of fixing name conflicts involving
+				'' the new struct id, if any.
+				var forwardid = *item->s + "_"
+
+				var typedef = astNew( ASTCLASS_TYPEDEF, item->s )
+				astSetType( typedef, TYPE_UDT, astNewID( forwardid ) )
+				astPrepend( ast, typedef )
+
+				hRenameTagDecls( ast, item->s, forwardid )
 			end if
 		end if
 	next
 
 	hashEnd( @hashtb )
 end sub
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 ''
 '' C allows unnamed structs to be nested directly in other structs, and nested

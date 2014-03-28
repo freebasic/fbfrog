@@ -4,4 +4,4 @@
         parsing: tests/c/forward/resolved-forward-typedef-used-2.h
 [win32]
         parsing: tests/c/forward/resolved-forward-typedef-used-2.h
-emitting: tests/c/forward/resolved-forward-typedef-used-2.bi (2 declarations)
+emitting: tests/c/forward/resolved-forward-typedef-used-2.bi (3 declarations)
