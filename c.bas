@@ -1528,12 +1528,25 @@ private function cMultDecl _
 
 	'' Special case for standalone struct/union/enum declarations (no CONST bits):
 	if( dtype = TYPE_UDT ) then
+		'' Tag declaration with body?
+		''    STRUCT|UNION|ENUM Identifier '{' ... '}' ';'
 		select case( subtype->class )
 		case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
 			'' ';'?
 			if( tkGet( x ) = TK_SEMI ) then
 				x += 1
 				return subtype
+			end if
+
+		'' Useless tag declaration?
+		''    STRUCT|UNION|ENUM Identifier ';'
+		case ASTCLASS_TAGID
+			'' ';'?
+			if( tkGet( x ) = TK_SEMI ) then
+				x += 1
+				'' Ignore & treat as no-op
+				astDelete( subtype )
+				return astNewGROUP( )
 			end if
 		end select
 	end if

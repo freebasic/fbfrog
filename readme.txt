@@ -147,10 +147,6 @@ To do:
          do "long" in place of every "enum Foo" type. (would have to calculate enumconst value
          if no initializer given)
 
-- Are forward declarations/references handled correctly? Consider merging the
-  {STRUCT|UNION|ENUM}FWD into one since in FB they'd all be emitted as the same
-  code anyways?!
-
 - char array should be translated to zstring * N:
     static char s[10] = "hello";
     dim shared s as zstring * 10 => "hello"

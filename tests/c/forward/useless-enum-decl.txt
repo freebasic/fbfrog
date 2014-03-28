@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/c/forward/useless-enum-decl.h
+[linux]
+        parsing: tests/c/forward/useless-enum-decl.h
+[win32]
+        parsing: tests/c/forward/useless-enum-decl.h
+emitting: tests/c/forward/useless-enum-decl.bi (0 declarations)
