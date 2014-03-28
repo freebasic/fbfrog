@@ -325,6 +325,10 @@ private function emitAst _
 		exit function
 	end if
 
+	if( n->attrib and ASTATTRIB_DONTEMIT ) then
+		exit function
+	end if
+
 	select case as const( n->class )
 	case ASTCLASS_GROUP
 		var child = n->head
@@ -465,14 +469,6 @@ private function emitAst _
 	case ASTCLASS_TYPEDEF
 		assert( n->array = NULL )
 		emitStmt( "type " + *n->text + " as " + emitType( n ), n->comment )
-
-	case ASTCLASS_STRUCTFWD
-		'' type UDT as UDT_
-		'' This way, we only need to translate the <struct UDT { ... }>
-		'' body as <type UDT_ : ... : end type>, and everything else
-		'' can keep using UDT, that's easier than adjusting all
-		'' declarations to use UDT_ in place of UDT.
-		emitStmt( "type " + *n->text + " as " + *n->text + "_", n->comment )
 
 	case ASTCLASS_CONSTANT
 		emitStmt( "const " + *n->text + hInitializer( n ), n->comment )

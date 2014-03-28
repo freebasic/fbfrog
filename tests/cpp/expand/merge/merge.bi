@@ -1,5 +1,8 @@
 extern "C"
 
+type left_UDT as left_UDT_
+type UDT as UDT_
+
 '' @fbfrog -whitespace -nonamefixup -removedefine m1
 
 dim shared id_id as long

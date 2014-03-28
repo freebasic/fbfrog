@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/c/forward/resolved-forward-typedef-used-3.h
+[linux]
+        parsing: tests/c/forward/resolved-forward-typedef-used-3.h
+[win32]
+        parsing: tests/c/forward/resolved-forward-typedef-used-3.h
+emitting: tests/c/forward/resolved-forward-typedef-used-3.bi (3 declarations)

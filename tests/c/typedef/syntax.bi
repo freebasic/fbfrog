@@ -1,5 +1,6 @@
 extern "C"
 
+type UDT as UDT_
 type A1 as UDT
 type A2 as UDT
 type A3 as long

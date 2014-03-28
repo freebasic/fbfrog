@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/c/forward/implicit-forward.h
+[linux]
+        parsing: tests/c/forward/implicit-forward.h
+[win32]
+        parsing: tests/c/forward/implicit-forward.h
+emitting: tests/c/forward/implicit-forward.bi (2 declarations)

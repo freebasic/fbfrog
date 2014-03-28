@@ -1,1 +1,2 @@
-type a as A
+type A as A_
+type a__ as A

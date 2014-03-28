@@ -1,3 +1,5 @@
+type UDT as UDT_
+
 '' @fbfrog -whitespace -nonamefixup -keepundefs
 
 type MYINT as long

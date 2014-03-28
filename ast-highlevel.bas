@@ -581,6 +581,75 @@ sub astNameAnonUdtsAfterFirstAliasTypedef( byval n as ASTNODE ptr )
 	wend
 end sub
 
+'' Collect all used subtype tag ids into a hash table, setting their data=FALSE.
+'' Also collect the tag ids of all found struct/union/enum declarations with
+'' data=TRUE, so that in the end, we have a list of declared and undeclared
+'' tag ids.
+private sub hCollectTagIds( byval n as ASTNODE ptr, byval hashtb as THASH ptr )
+	select case( n->class )
+	case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
+		if( n->text ) then
+			hashAddOverwrite( hashtb, n->text, cptr( any ptr, TRUE ) )
+		end if
+	end select
+
+	if( n->subtype ) then
+		if( n->subtype->class = ASTCLASS_TAGID ) then
+			var id = n->subtype->text
+			var hash = hashHash( id )
+			var item = hashLookup( hashtb, id, hash )
+			if( item->s = NULL ) then
+				hashAdd( hashtb, item, hash, id, cptr( any ptr, FALSE ) )
+			end if
+		else
+			hCollectTagIds( n->subtype, hashtb )
+		end if
+	end if
+
+	if( n->array ) then hCollectTagIds( n->array, hashtb )
+	if( n->expr  ) then hCollectTagIds( n->expr , hashtb )
+	if( n->l     ) then hCollectTagIds( n->l    , hashtb )
+	if( n->r     ) then hCollectTagIds( n->r    , hashtb )
+
+	var i = n->head
+	while( i )
+		hCollectTagIds( i, hashtb )
+		i = i->next
+	wend
+end sub
+
+sub astAddForwardDeclsForUndeclaredTagIds( byval ast as ASTNODE ptr )
+	dim hashtb as THASH
+	hashInit( @hashtb, 4, FALSE )
+
+	hCollectTagIds( ast, @hashtb )
+
+	'' For each undeclared tag id...
+	for i as integer = 0 to hashtb.room-1
+		var item = hashtb.items + i
+		if( item->s ) then
+			'' No declaration seen by hCollectTagIds() for this one?
+			if( cint( item->data ) = FALSE ) then
+				'' Add a forward typedef for this id and a dummy declaration
+				'' for the forward id, so that astFixIds() will take care of fixing
+				'' name conflicts involving the forward id, if any. The dummy
+				'' declaration won't be emitted though.
+				var forwardid = *item->s + "_"
+
+				var typedef = astNew( ASTCLASS_TYPEDEF, item->s )
+				astSetType( typedef, TYPE_UDT, astNewID( forwardid ) )
+				astPrepend( ast, typedef )
+
+				var dummydecl = astNew( ASTCLASS_STRUCT, forwardid )
+				dummydecl->attrib or= ASTATTRIB_DONTEMIT
+				astPrepend( ast, dummydecl )
+			end if
+		end if
+	next
+
+	hashEnd( @hashtb )
+end sub
+
 ''
 '' C allows unnamed structs to be nested directly in other structs, and nested
 '' unnamed unions directly in unions, but FB only allows unnamed structs nested
@@ -874,7 +943,7 @@ private sub hWalkAndCheckIds _
 				hWalkAndCheckIds( defines, types, globals, i )
 			end if
 
-		case ASTCLASS_STRUCTFWD, ASTCLASS_UNIONFWD, ASTCLASS_ENUMFWD, ASTCLASS_TYPEDEF
+		case ASTCLASS_TYPEDEF
 			hCheckId( @fbkeywordhash, i, FALSE )
 			hCheckId( defines, i, FALSE )
 			hCheckId( types, i, TRUE )
@@ -1001,7 +1070,6 @@ private sub hRenameSymbol _
 			exists or= hashContains( globals , hashid, hash )
 
 		case ASTCLASS_STRUCT, ASTCLASS_UNION, _
-		     ASTCLASS_STRUCTFWD, ASTCLASS_UNIONFWD, ASTCLASS_ENUMFWD, _
 		     ASTCLASS_TYPEDEF, ASTCLASS_ENUM
 			exists or= hashContains( defines , hashid, hash )
 			exists or= hashContains( types   , hashid, hash )
@@ -1022,8 +1090,7 @@ private sub hRenameSymbol _
 	     ASTCLASS_VAR, ASTCLASS_EXTERNVAR, ASTCLASS_STATICVAR, _
 	     ASTCLASS_CONSTANT, ASTCLASS_ENUMCONST, ASTCLASS_FIELD
 		hReplaceCalls( code, n->text, newid )
-	case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM, _
-	     ASTCLASS_STRUCTFWD, ASTCLASS_UNIONFWD, ASTCLASS_ENUMFWD
+	case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
 		astReplaceSubtypes( code, ASTCLASS_TAGID, n->text, ASTCLASS_TAGID, newid )
 	case ASTCLASS_TYPEDEF
 		astReplaceSubtypes( code, ASTCLASS_ID, n->text, ASTCLASS_ID, newid )
@@ -1042,9 +1109,7 @@ private sub hRenameSymbol _
 	     ASTCLASS_VAR, ASTCLASS_EXTERNVAR, ASTCLASS_STATICVAR, _
 	     ASTCLASS_CONSTANT,  ASTCLASS_ENUMCONST, ASTCLASS_FIELD
 		hashAddOverwrite( globals, hashid, n )
-	case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM, _
-	     ASTCLASS_STRUCTFWD, ASTCLASS_UNIONFWD, ASTCLASS_ENUMFWD, _
-	     ASTCLASS_TYPEDEF
+	case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM, ASTCLASS_TYPEDEF
 		hashAddOverwrite( types, hashid, n )
 	case else
 		assert( FALSE )
@@ -1176,7 +1241,8 @@ private function hShouldSeparate _
 		byval b as ASTNODE ptr _
 	) as integer
 
-	if( (a->class = ASTCLASS_DIVIDER) or (b->class = ASTCLASS_DIVIDER) ) then
+	if( (a->class = ASTCLASS_DIVIDER) or _
+	    (b->class = ASTCLASS_DIVIDER) ) then
 		exit function
 	end if
 
@@ -1188,6 +1254,16 @@ private function hShouldSeparate _
 	           hIsCompound( a ) or hIsCompound( b )
 end function
 
+private function hSkipDontEmits( byval n as ASTNODE ptr ) as ASTNODE ptr
+	while( n )
+		if( (n->attrib and ASTATTRIB_DONTEMIT) = 0 ) then
+			exit while
+		end if
+		n = n->next
+	wend
+	function = n
+end function
+
 ''
 '' Insert DIVIDERs between statements of different kind, e.g. all #defines in
 '' a row shouldn't be divided, but a #define should be divided from a typedef.
@@ -1195,9 +1271,9 @@ end function
 '' compounds and normally span multiple lines themselves.
 ''
 sub astAutoAddDividers( byval code as ASTNODE ptr )
-	var i = code->head
+	var i = hSkipDontEmits( code->head )
 	while( i )
-		var nxt = i->next
+		var nxt = hSkipDontEmits( i->next )
 
 		astAutoAddDividers( i )
 
@@ -1225,7 +1301,9 @@ function astCountDecls( byval code as ASTNODE ptr ) as integer
 			count += astCountDecls( i )
 
 		case else
-			count += 1
+			if( (i->attrib and ASTATTRIB_DONTEMIT) = 0 ) then
+				count += 1
+			end if
 		end select
 
 		i = i->next

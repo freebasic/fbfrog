@@ -1,3 +1,5 @@
+type A as A_
+
 '' @fbfrog -whitespace -nonamefixup
 
 dim shared a as long

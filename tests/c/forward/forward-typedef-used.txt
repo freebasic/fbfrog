@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/c/forward/forward-typedef-used.h
+[linux]
+        parsing: tests/c/forward/forward-typedef-used.h
+[win32]
+        parsing: tests/c/forward/forward-typedef-used.h
+emitting: tests/c/forward/forward-typedef-used.bi (2 declarations)

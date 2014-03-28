@@ -4,4 +4,4 @@
         parsing: tests/c/expr.h
 [win32]
         parsing: tests/c/expr.h
-emitting: tests/c/expr.bi (51 declarations)
+emitting: tests/c/expr.bi (52 declarations)

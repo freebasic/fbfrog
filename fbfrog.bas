@@ -683,6 +683,7 @@ private function frogWorkRootFile _
 	hApplyRenameTypedefOptions( presetcode, ast )
 	astRemoveRedundantTypedefs( ast, ast )
 	astNameAnonUdtsAfterFirstAliasTypedef( ast )
+	astAddForwardDeclsForUndeclaredTagIds( ast )
 
 	if( frog.nonamefixup = FALSE ) then astFixIds( ast )
 	if( frog.noautoextern = FALSE ) then astAutoExtern( ast, frog.windowsms, frog.whitespace )

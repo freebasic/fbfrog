@@ -4,4 +4,4 @@
         parsing: tests/c/field.h
 [win32]
         parsing: tests/c/field.h
-emitting: tests/c/field.bi (1 declaration)
+emitting: tests/c/field.bi (2 declarations)

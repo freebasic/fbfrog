@@ -601,9 +601,6 @@ enum
 	ASTCLASS_UNION
 	ASTCLASS_ENUM
 	ASTCLASS_TYPEDEF
-	ASTCLASS_STRUCTFWD
-	ASTCLASS_UNIONFWD
-	ASTCLASS_ENUMFWD
 	ASTCLASS_CONSTANT
 	ASTCLASS_VAR
 	ASTCLASS_EXTERNVAR
@@ -707,6 +704,7 @@ enum
 	ASTATTRIB__ALLTARGET    = ASTATTRIB_DOS or ASTATTRIB_LINUX or ASTATTRIB_WIN32
 	ASTATTRIB_NEEDRENAME    = 1 shl 11
 	ASTATTRIB_POISONED      = 1 shl 12
+	ASTATTRIB_DONTEMIT      = 1 shl 13
 end enum
 
 '' When changing, adjust astClone(), astIsEqual(), astDump*()
@@ -911,6 +909,7 @@ declare sub astSolveOutProcTypedefs( byval n as ASTNODE ptr, byval ast as ASTNOD
 declare sub astFixArrayParams( byval n as ASTNODE ptr )
 declare sub astUnscopeDeclsNestedInStructs( byval n as ASTNODE ptr )
 declare sub astNameAnonUdtsAfterFirstAliasTypedef( byval n as ASTNODE ptr )
+declare sub astAddForwardDeclsForUndeclaredTagIds( byval ast as ASTNODE ptr )
 declare sub astMakeNestedUnnamedStructsFbCompatible( byval n as ASTNODE ptr )
 declare sub astRemoveRedundantTypedefs( byval n as ASTNODE ptr, byval ast as ASTNODE ptr )
 declare sub astTurnDefinesIntoConstants( byval code as ASTNODE ptr )

@@ -1,5 +1,7 @@
 extern "C"
 
+type T as T_
+
 '' @fbfrog -whitespace -nonamefixup
 
 type UDT
