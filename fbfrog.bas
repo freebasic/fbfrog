@@ -29,6 +29,7 @@ private sub hPrintHelpAndExit( )
 	print "  -version <string>        Begin of version-specific arguments"
 	print "                           (ends at next -version or EOL)"
 	print "  -target dos|linux|win32  Begin of target-specific arguments (ditto)"
+	print "  -inclib <name>           Add an #inclib ""<name>"" statement"
 	print "  -define <id> [<body>]    Add pre-#define"
 	print "  -undef <id>              Add pre-#undef"
 	print "  -include <file>          Add pre-#include"
@@ -36,8 +37,8 @@ private sub hPrintHelpAndExit( )
 	print "  -removedefine <id>       Don't preserve certain #defines/#undefs"
 	print "  -renametypedef <oldid> <newid>  Rename a typedef"
 	print "  -renametag <oldid> <newid>      Rename a struct/union/enum"
-	print "  -appendbi <file>         Append arbitrary FB code from <file> to the binding"
-	print "  -removematch ""<C token(s)>""    Drop constructs containing the given C token(s)."
+	print "  -appendbi <file>                Append arbitrary FB code from <file> to the binding"
+	print "  -removematch ""<C token(s)>""  Drop constructs containing the given C token(s)."
 	print "                               This should be used to work-around parsing errors."
 	end 1
 end sub
@@ -309,6 +310,15 @@ private function hParseArgs( byref x as integer, byval body as integer ) as ASTN
 				n->location = location
 				astAppend( result, n )
 				x -= 1
+
+			'' -inclib <name>
+			case "inclib"
+				x += 1
+
+				if( hIsStringOrId( x ) = FALSE ) then
+					tkOopsExpected( x, "<name> argument" )
+				end if
+				astAppend( result, astTakeLoc( astNew( ASTCLASS_INCLIB, tkGetText( x ) ), x ) )
 
 			'' -define <id> [<body>]
 			case "define"
@@ -687,6 +697,19 @@ private function frogWorkRootFile _
 
 	if( frog.nonamefixup = FALSE ) then astFixIds( ast )
 	if( frog.noautoextern = FALSE ) then astAutoExtern( ast, frog.windowsms, frog.whitespace )
+
+	'' Prepend #inclibs
+	if( presetcode ) then
+		assert( ast->class = ASTCLASS_GROUP )
+		var i = presetcode->tail
+		while( i )
+			if( i->class = ASTCLASS_INCLIB ) then
+				astPrepend( ast, astNew( ASTCLASS_DIVIDER ) )
+				astPrepend( ast, astClone( i ) )
+			end if
+			i = i->prev
+		wend
+	end if
 
 	'' Add the APPENDBI's, if any
 	if( presetcode ) then

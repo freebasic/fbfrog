@@ -369,6 +369,9 @@ private function emitAst _
 	case ASTCLASS_APPENDBI
 		emitLines( sourcebufferFromFile( n->text, @n->location )->buffer )
 
+	case ASTCLASS_INCLIB
+		emitStmt( "#inclib """ + *n->text + """", n->comment )
+
 	case ASTCLASS_PPINCLUDE
 		emitStmt( "#include """ + *n->text + """", n->comment )
 

@@ -133,11 +133,10 @@ To do:
     * pre-#defines are missing
     * need to use x86 32bit/64bit compiler #defines
     * Use -target dos,linux,x86_64-linux,win32,x86_64-win32? or something else?
-    * Why bother having -target at all. Could just always parse headers for all
-      available modes... (perhaps allow disabling some modes if that's really
-      needed, e.g. if the header contains an #error for a certain target)
-      In general the headers work for all systems even if the library isn't
-      compilable for all targets.
+    * All targets should be enabled by default, and -target should just add specific options,
+      but not enable/disable targets. Should have -disabletarget or similar to
+      disable parsing for certain target and add a corresponding #ifdef/#error check
+      to the binding.
     * What target-specifics do we really have to handle? It's usually just that
       headers #include certain target-specific headers or different declarations.
     * Enums must be emitted as Long for 64bit compat:
@@ -155,6 +154,17 @@ To do:
     * ## merging missing support for lots of tokens, e.g. 1##. or .##0 or -##> or =##=
     * macro params named after keywords?
     * parentheses around macro params should be preserved (can use a flag on the AST node)
+- #include handling
+    * If all #includes are expanded, then none need to be preserved.
+    * System headers usually won't be found, unless -incdir is given, but code
+      from system headers shouldn't be included in library bindings.
+    * Thus, need to preserve #includes that aren't expanded, or code from which
+      isn't preserved
+      #include foo.h  ->  #include foo.bi, if foo.bi will be generated too
+      #include stdio.h -> #include crt/stdio.bi, for some known default headers
+    * Ideal behaviour? See all headers but only emit binding for some of them.
+    * -common should be renamed to -split, and it should split based on original
+      .h files, not based on diff algorithm.
 
 - Const folding etc.
   - has issues with 32bit/64bit, using Longint internally, so e.g. ~(0xFFFFFFFF)
@@ -169,9 +179,6 @@ To do:
     relational C op results already go through - negations? Because FB ops work
     differently and it may matter in some cases but probably not in most.
 
-- #include foo.h  ->  #include foo.bi, if foo.bi will be generated too
-- #include stdio.h -> #include crt/stdio.bi, for some known default headers
-  (or perhaps let presets do this)
 - Emit list of renamed symbols at top of header
 - Add -booldefine to mark a macro as "returns a bool", so the C #define parser
   can set is_bool_context=TRUE when folding

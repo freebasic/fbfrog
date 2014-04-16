@@ -1,0 +1,13 @@
+[1.dos]
+          parsing: tests/inclib.h
+[1.linux]
+          parsing: tests/inclib.h
+[1.win32]
+          parsing: tests/inclib.h
+[2.dos]
+          parsing: tests/inclib.h
+[2.linux]
+          parsing: tests/inclib.h
+[2.win32]
+          parsing: tests/inclib.h
+emitting: tests/inclib.bi (6 declarations)
