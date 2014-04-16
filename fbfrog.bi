@@ -586,6 +586,7 @@ enum
 	ASTCLASS_REMOVEMATCH
 	ASTCLASS_APPENDBI
 	ASTCLASS_INCLIB
+	ASTCLASS_PRAGMAONCE
 
 	'' CPP directives
 	ASTCLASS_PPINCLUDE
@@ -1020,6 +1021,7 @@ type FROGSTUFF
 	noconstants	as integer
 	nonamefixup	as integer
 	keepundefs	as integer
+	pragmaonce	as integer
 	versiondefine	as string
 	incdirs		as ASTNODE ptr
 	outdir		as string

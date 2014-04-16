@@ -49,6 +49,7 @@ dim shared as ASTNODEINFO astnodeinfo(0 to ...) = _
 	("removematch"  ), _
 	("appendbi"     ), _
 	("inclib"       ), _
+	("pragmaonce"   ), _
 	("#include"     ), _
 	("#define"      ), _
 	("#undef"       ), _

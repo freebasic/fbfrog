@@ -372,6 +372,9 @@ private function emitAst _
 	case ASTCLASS_INCLIB
 		emitStmt( "#inclib """ + *n->text + """", n->comment )
 
+	case ASTCLASS_PRAGMAONCE
+		emitStmt( "#pragma once", n->comment )
+
 	case ASTCLASS_PPINCLUDE
 		emitStmt( "#include """ + *n->text + """", n->comment )
 

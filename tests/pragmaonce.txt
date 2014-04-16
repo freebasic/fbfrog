@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/pragmaonce.h
+[linux]
+        parsing: tests/pragmaonce.h
+[win32]
+        parsing: tests/pragmaonce.h
+emitting: tests/pragmaonce.bi (2 declarations)

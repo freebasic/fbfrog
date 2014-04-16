@@ -21,6 +21,7 @@ private sub hPrintHelpAndExit( )
 	print "  -keepundefs      Don't default to removing #undefs and conflicting #defines"
 	print "  -versiondefine <id>  Set identifier for version #define that may"
 	print "                       be used by the generated binding."
+	print "  -pragmaonce      Add #pragma once statements"
 	print "  -common          Extract common code into common header"
 	print "  -incdir <path>   Add #include search directory"
 	print "  -o <path>        Set output directory for generated .bi files"
@@ -226,7 +227,8 @@ private function hParseArgs( byref x as integer, byval body as integer ) as ASTN
 			case "noconstants"  : frog.noconstants  = TRUE
 			case "nonamefixup"  : frog.nonamefixup  = TRUE
 			case "keepundefs"   : frog.keepundefs   = TRUE
-			case "common"       : frog.common = TRUE
+			case "common"       : frog.common       = TRUE
+			case "pragmaonce"   : frog.pragmaonce   = TRUE
 			case "v", "verbose", "-verbose" : frog.verbose = TRUE
 
 			case "versiondefine"
@@ -709,6 +711,12 @@ private function frogWorkRootFile _
 			end if
 			i = i->prev
 		wend
+	end if
+
+	'' Prepend #pragma once
+	if( frog.pragmaonce ) then
+		astPrepend( ast, astNew( ASTCLASS_DIVIDER ) )
+		astPrepend( ast, astNew( ASTCLASS_PRAGMAONCE ) )
 	end if
 
 	'' Add the APPENDBI's, if any
