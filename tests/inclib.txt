@@ -10,4 +10,4 @@
           parsing: tests/inclib.h
 [2.win32]
           parsing: tests/inclib.h
-emitting: tests/inclib.bi (6 declarations)
+emitting: tests/inclib.bi (3 declarations)

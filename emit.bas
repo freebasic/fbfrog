@@ -376,7 +376,13 @@ private function emitAst _
 		emitStmt( "#pragma once", n->comment )
 
 	case ASTCLASS_PPINCLUDE
-		emitStmt( "#include """ + *n->text + """", n->comment )
+		s = "#include "
+		if( n->attrib and ASTATTRIB_ONCE ) then
+			s += "once "
+		end if
+		s += """" + *n->text + """"
+		emitStmt( s, n->comment )
+		s = ""
 
 	case ASTCLASS_PPDEFINE
 		if( n->expr andalso (n->expr->class = ASTCLASS_SCOPEBLOCK) ) then

@@ -1272,6 +1272,24 @@ sub astFixIds( byval code as ASTNODE ptr )
 	hashEnd( @defines )
 end sub
 
+function astUsesDtype( byval n as ASTNODE ptr, byval dtype as integer ) as integer
+	if( typeGetDt( n->dtype ) = dtype ) then return TRUE
+
+	if( n->subtype ) then if( astUsesDtype( n->subtype, dtype ) ) then return TRUE
+	if( n->array   ) then if( astUsesDtype( n->array  , dtype ) ) then return TRUE
+	if( n->expr    ) then if( astUsesDtype( n->expr   , dtype ) ) then return TRUE
+	if( n->l       ) then if( astUsesDtype( n->l      , dtype ) ) then return TRUE
+	if( n->r       ) then if( astUsesDtype( n->r      , dtype ) ) then return TRUE
+
+	var i = n->head
+	while( i )
+		if( astUsesDtype( i, dtype ) ) then return TRUE
+		i = i->next
+	wend
+
+	function = FALSE
+end function
+
 sub astMergeDIVIDERs( byval n as ASTNODE ptr )
 	assert( n->class = ASTCLASS_GROUP )
 
@@ -1363,6 +1381,13 @@ sub astAutoAddDividers( byval code as ASTNODE ptr )
 	wend
 end sub
 
+sub astPrependMaybeWithDivider( byval group as ASTNODE ptr, byval n as ASTNODE ptr )
+	if( group->head andalso hShouldSeparate( n, group->head ) ) then
+		astPrepend( group, astNew( ASTCLASS_DIVIDER ) )
+	end if
+	astPrepend( group, n )
+end sub
+
 function astCountDecls( byval code as ASTNODE ptr ) as integer
 	var count = 0
 
@@ -1371,7 +1396,8 @@ function astCountDecls( byval code as ASTNODE ptr ) as integer
 
 		select case( i->class )
 		case ASTCLASS_DIVIDER, ASTCLASS_PPINCLUDE, ASTCLASS_PPENDIF, _
-		     ASTCLASS_EXTERNBLOCKBEGIN, ASTCLASS_EXTERNBLOCKEND
+		     ASTCLASS_EXTERNBLOCKBEGIN, ASTCLASS_EXTERNBLOCKEND, _
+		     ASTCLASS_INCLIB, ASTCLASS_PRAGMAONCE
 
 		case ASTCLASS_PPIF, ASTCLASS_PPELSEIF, ASTCLASS_PPELSE
 			count += astCountDecls( i )

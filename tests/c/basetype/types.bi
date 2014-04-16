@@ -1,3 +1,6 @@
+#include once "crt/long.bi"
+#include once "crt/longdouble.bi"
+
 type A as A_
 
 '' @fbfrog -whitespace -nonamefixup

@@ -129,7 +129,6 @@ Usage:
 To do:
 
 - 64bit support:
-    * C long is already mapped to CLONG, still need to #include "crt/long.bi" as needed (same for crt/longdouble.bi)
     * pre-#defines are missing
     * need to use x86 32bit/64bit compiler #defines
     * Use -target dos,linux,x86_64-linux,win32,x86_64-win32? or something else?

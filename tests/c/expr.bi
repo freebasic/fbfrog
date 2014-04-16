@@ -1,3 +1,5 @@
+#include once "crt/long.bi"
+
 type UDT as UDT_
 
 '' @fbfrog -whitespace -nonamefixup -keepundefs

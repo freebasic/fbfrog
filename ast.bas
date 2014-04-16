@@ -183,6 +183,12 @@ function astNew overload _
 	function = n
 end function
 
+function astNewIncludeOnce( byval filename as zstring ptr ) as ASTNODE ptr
+	var n = astNew( ASTCLASS_PPINCLUDE, filename )
+	n->attrib or= ASTATTRIB_ONCE
+	function = n
+end function
+
 function astNewPPDEFINE( byval id as zstring ptr ) as ASTNODE ptr
 	var n = astNew( ASTCLASS_PPDEFINE, id )
 	n->paramcount = -1

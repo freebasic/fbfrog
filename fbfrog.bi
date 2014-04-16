@@ -588,7 +588,7 @@ enum
 	ASTCLASS_INCLIB
 	ASTCLASS_PRAGMAONCE
 
-	'' CPP directives
+	'' Preprocessor directives
 	ASTCLASS_PPINCLUDE
 	ASTCLASS_PPDEFINE
 	ASTCLASS_PPUNDEF  '' only used for pre-#undefs
@@ -707,6 +707,7 @@ enum
 	ASTATTRIB_NEEDRENAME    = 1 shl 11
 	ASTATTRIB_POISONED      = 1 shl 12
 	ASTATTRIB_DONTEMIT      = 1 shl 13
+	ASTATTRIB_ONCE          = 1 shl 14  '' Marks #includes as "#include once"
 end enum
 
 '' When changing, adjust astClone(), astIsEqual(), astDump*()
@@ -780,6 +781,7 @@ declare function astNew overload _
 		byval class_ as integer, _
 		byval child as ASTNODE ptr _
 	) as ASTNODE ptr
+declare function astNewIncludeOnce( byval filename as zstring ptr ) as ASTNODE ptr
 declare function astNewPPDEFINE( byval id as zstring ptr ) as ASTNODE ptr
 declare function astNewPPIF( byval expr as ASTNODE ptr ) as ASTNODE ptr
 declare function astNewUOP _
@@ -924,8 +926,10 @@ declare sub astReplaceSubtypes _
 		byval newid as zstring ptr _
 	)
 declare sub astFixIds( byval code as ASTNODE ptr )
+declare function astUsesDtype( byval n as ASTNODE ptr, byval dtype as integer ) as integer
 declare sub astMergeDIVIDERs( byval n as ASTNODE ptr )
 declare sub astAutoAddDividers( byval code as ASTNODE ptr )
+declare sub astPrependMaybeWithDivider( byval group as ASTNODE ptr, byval n as ASTNODE ptr )
 
 declare function astWrapFileInVerblock _
 	( _

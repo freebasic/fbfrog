@@ -4,4 +4,4 @@
         parsing: tests/pragmaonce.h
 [win32]
         parsing: tests/pragmaonce.h
-emitting: tests/pragmaonce.bi (2 declarations)
+emitting: tests/pragmaonce.bi (1 declaration)

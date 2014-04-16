@@ -700,14 +700,22 @@ private function frogWorkRootFile _
 	if( frog.nonamefixup = FALSE ) then astFixIds( ast )
 	if( frog.noautoextern = FALSE ) then astAutoExtern( ast, frog.windowsms, frog.whitespace )
 
+	assert( ast->class = ASTCLASS_GROUP )
+
+	'' Add #include "crt/long.bi" to the binding, if it uses CLONG
+	if( astUsesDtype( ast, TYPE_CLONGDOUBLE ) ) then
+		astPrependMaybeWithDivider( ast, astNewIncludeOnce( "crt/longdouble.bi" ) )
+	end if
+	if( astUsesDtype( ast, TYPE_CLONG ) or astUsesDtype( ast, TYPE_CULONG ) ) then
+		astPrependMaybeWithDivider( ast, astNewIncludeOnce( "crt/long.bi" ) )
+	end if
+
 	'' Prepend #inclibs
 	if( presetcode ) then
-		assert( ast->class = ASTCLASS_GROUP )
 		var i = presetcode->tail
 		while( i )
 			if( i->class = ASTCLASS_INCLIB ) then
-				astPrepend( ast, astNew( ASTCLASS_DIVIDER ) )
-				astPrepend( ast, astClone( i ) )
+				astPrependMaybeWithDivider( ast, astClone( i ) )
 			end if
 			i = i->prev
 		wend
@@ -715,8 +723,7 @@ private function frogWorkRootFile _
 
 	'' Prepend #pragma once
 	if( frog.pragmaonce ) then
-		astPrepend( ast, astNew( ASTCLASS_DIVIDER ) )
-		astPrepend( ast, astNew( ASTCLASS_PRAGMAONCE ) )
+		astPrependMaybeWithDivider( ast, astNew( ASTCLASS_PRAGMAONCE ) )
 	end if
 
 	'' Add the APPENDBI's, if any
