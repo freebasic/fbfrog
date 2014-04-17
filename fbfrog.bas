@@ -833,12 +833,7 @@ end function
 	hLexRemoveMatchPatterns( frog.code )
 
 	var versions = astCollectVersions( frog.code )
-	var targets = astCollectTargets( frog.code )
-
-	'' If no targets given, assume all
-	if( targets = 0 ) then
-		targets = ASTATTRIB__ALLTARGET
-	end if
+	var targets = ASTATTRIB__ALLTARGET
 
 	'' If no versions given, use a dummy, to hold the targets
 	if( versions->head = NULL ) then

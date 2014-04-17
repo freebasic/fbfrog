@@ -128,16 +128,12 @@ Usage:
 
 To do:
 
+- Add -splitversions option that puts each version into a separate .bi instead
+  of merging them into one, and generates a "master .bi" that just #includes
+  the version-specific .bi depending on the versiondefine.
+
 - 64bit support:
-    * pre-#defines are missing
-    * need to use x86 32bit/64bit compiler #defines
-    * Use -target dos,linux,x86_64-linux,win32,x86_64-win32? or something else?
-    * All targets should be enabled by default, and -target should just add specific options,
-      but not enable/disable targets. Should have -disabletarget or similar to
-      disable parsing for certain target and add a corresponding #ifdef/#error check
-      to the binding.
-    * What target-specifics do we really have to handle? It's usually just that
-      headers #include certain target-specific headers or different declarations.
+    * Add arch-specific pre-#defines too
     * Enums must be emitted as Long for 64bit compat:
       a) On all enum bodies, do "enum Foo as long : ... : end enum" (must be added to FB first)
       b) Do "type Foo as long" and make enum body anonymous (enums consts aren't type checked anyways)

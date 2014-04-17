@@ -1,3 +1,0 @@
-[linux]
-        parsing: tests/versions/target.h
-emitting: tests/versions/target.bi (4 declarations)

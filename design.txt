@@ -143,6 +143,20 @@ It's good to have both -version and -target, without allowing any nesting except
 + But in general, fbfrog having basic compiler pre-#defines built-in is
   very useful. Otherwise every user would have to worry about them...
 
+All targets should be enabled by default.
++ FB and thus the bindings in general are/should be portable. Even though a
+  binding may only be useful on one target, there's no point in enforcing that
+  via #if checks.
++ It's probably rare that a C header really won't compile for a certain target,
+  e.g. due to an #error, but if that ever is a problem, a -disabletarget option
+  could be added to fbfrog.
++ Improved usability: -target can still be used to add -target options, but it
+  won't specify which targets are enabled or disabled anymore. Enabling all
+  targets while having target-specific options for some no longer requires
+  passing a -target option for each target, which would become more and more
+  annoying as the number of targets increases (dos/linux/win32 + missing ones,
+  32bit/64bit, x86/ARM + missing ones...)
+
 Typedef vs struct/union/enum tag symbols handling
 * FB doesn't have separate type/tag namespaces, so this always must be fixed.
 * Better automatically than manually, except for polishing.

@@ -33,25 +33,6 @@ function astCollectVersions( byval code as ASTNODE ptr ) as ASTNODE ptr
 	function = versions
 end function
 
-function astCollectTargets( byval code as ASTNODE ptr ) as integer
-	dim as integer attrib
-
-	var i = code->head
-	while( i )
-
-		'' Recurse, because targetblocks can be nested inside verblocks
-		attrib or= astCollectTargets( i )
-
-		if( i->class = ASTCLASS_TARGETBLOCK ) then
-			attrib or= i->attrib and ASTATTRIB__ALLTARGET
-		end if
-
-		i = i->next
-	wend
-
-	function = attrib
-end function
-
 private sub hCombineVersionAndTarget _
 	( _
 		byval result as ASTNODE ptr, _
