@@ -783,6 +783,8 @@ private function frogWorkVersion _
 		i = i->next
 	wend
 
+	astDelete( presetcode )
+
 	function = rootfiles
 end function
 
@@ -839,22 +841,7 @@ end function
 	if( versions->head = NULL ) then
 		astAppend( versions, astNew( ASTCLASS_DUMMYVERSION ) )
 	end if
-
 	var targetversions = astCombineVersionsAndTargets( versions, targets )
-
-	'' There will always be at least one combined version; even if there
-	'' were only targets and no versions, one dummy version per target will
-	'' be used.
-	assert( targetversions->head )
-
-	if( frog.verbose ) then
-		print "versions/targets:"
-		var i = targetversions->head
-		while( i )
-			print "  " + astDumpPrettyVersion( i )
-			i = i->next
-		wend
-	end if
 
 	'' Find longest version string, for pretty output
 	scope
@@ -869,22 +856,24 @@ end function
 		frog.maxversionstrlen += 3
 	end scope
 
-	var targetversion = targetversions->head
+	'' Parse files for each version, using the options for that version
+	scope
+		var i = targetversions->head
+		do
+			i->expr = frogWorkVersion( i, astGet1VersionAndTargetOnly( frog.code, i ) )
+			i = i->next
+		loop while( i )
+	end scope
 
-	'' For each version...
 	dim as ASTNODE ptr files
-	do
-		'' Determine preset code for that version
-		var presetcode = astGet1VersionAndTargetOnly( frog.code, targetversion )
-
-		'' Parse files for this version and combine them with files
-		'' from previous versions if possible
-		files = astMergeFiles( files, frogWorkVersion( targetversion, presetcode ) )
-
-		astDelete( presetcode )
-
-		targetversion = targetversion->next
-	loop while( targetversion )
+	scope
+		var i = targetversions->head
+		do
+			files = astMergeFiles( files, i->expr )
+			i->expr = NULL
+			i = i->next
+		loop while( i )
+	end scope
 
 	'' Remove files that don't have an AST left, i.e. were combined into
 	'' others by astMergeFiles() and shouldn't be emitted individually anymore.
