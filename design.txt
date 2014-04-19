@@ -41,18 +41,36 @@ Not re-importing existing FB binding in order to extend/update them.
 + Need to re-parse the original headers in order for fbfrog/preset updates to
   take effect.
 
-#includes are always parsed, so that any #defines/#undefs they contain are seen,
-but the -nomerge option can be used to prevent the code they contain from being
-preserved in the final binding.
+fbfrog's file model
+* .h files given on the command line are "roots" which will be parsed into an
+  AST representing the API that would become available to a program #including
+  those headers.
+* parsing roots includes the expansion of any #includes, so that as many
+  #defines etc. as possible are visible to fbfrog's CPP. The -nomerge option can
+  be used to prevent the code they contain from being preserved in the binding.
+* 1 fbfrog invocation generates 1 binding, for exactly the API that'd be visible
+  to programs #including the roots passed to fbfrog, with the pre-#defines
+  passed to fbfrog, etc.
+* If multiple roots are given, they'll just be concatenated and treated as one
+  API, just like they'd be when #included into C code.
+* Thus it doesn't make sense to pass incompatible headers to fbfrog at the same
+  time.
+* Generating 1 binding usually means generating 1 .bi file, however fbfrog
+  allows even single bindings to be split (back) up into multiple .bi files if
+  that's desired.
+* Treating roots as separate incompatible APIs would allow for a -common option
+  which would automatically extract common code from the separate bindings and
+  create shared sub-headers. This is useless though: The -nomerge option is
+  already enough to preserve the original header structure (even if it requires
+  that fbfrog be invoked once for each API), and a -common code extraction
+  algorithm wouldn't offer advantages, but only potentially break the original
+  header structure, produce too many unwanted sub-headers, be too slow, etc.
+* It wouldn't even help the binding creation process if fbfrog could see multiple
+  separate APIs at once, because fbfrog already sees all code relevant to a
+  binding by expanding all #includes.
 
-Each input .h is a root header for which fbfrog will produce an AST representing
-the API as seen from that root's point of view. Each root is emitted as separate
-.bi because typically they'll be incompatible. Common parts of the root's APIs
-will automatically be extracted into common headers. It's also possible to use
-pre-#includes to concatenate separate roots manually.
-
-"Tiny" CLI to control fbfrog behaviour, instead of a bigger-scale custom
-*.fbfrog file format/language (as "presets" or scripts).
+"Tiny" CLI to control fbfrog behaviour, instead of a bigger-scale custom .fbfrog
+file format/language (as "presets" or scripts).
 + Should use CLI for both small/big use cases, instead of having 2 things to do
   the same thing.
 + Support for @response files still allows big "presets" to be saved in files.

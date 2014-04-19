@@ -167,7 +167,7 @@ sub hTest( byref hfile as string )
 		if( begin >= 1 ) then
 			begin += len( TOKEN )
 			extraoptions = right( line1, len( line1 ) - begin + 1 )
-			extraoptions = strReplace( extraoptions, "<dir>", pathOnly( hfile ) )
+			extraoptions = strReplace( extraoptions, "<dir>", pathAddDiv( pathOnly( hfile ) ) )
 		end if
 	end scope
 

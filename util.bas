@@ -1000,193 +1000,26 @@ function pathIsAbsolute( byref s as string ) as integer
 	function = (pathGetRootLength( s ) > 0)
 end function
 
-function pathStripLastComponent( byref path as string ) as string
-	function = pathOnly( left( path, len( path ) - 1 ) )
-end function
-
-function pathFindCommonBase _
-	( _
-		byref aorig as string, _
-		byref borig as string _
-	) as string
-
-	dim as string a, b
-	dim as integer aroot = any, broot = any, alen = any, blen = any
-
-	a = aorig
-	b = borig
-	aroot = pathGetRootLength( a )
-	broot = pathGetRootLength( b )
-
-	do
-		alen = len( a )
-		blen = len( b )
-
-		if( (alen < aroot) or (blen < broot) ) then
-			exit do
-		end if
-
-		if( alen = blen ) then
-			if( a = b ) then
-				return a
-			end if
-		end if
-
-		if( alen > blen ) then
-			a = pathStripLastComponent( a )
-		else
-			b = pathStripLastComponent( b )
-		end if
-	loop
-
-end function
-
-function pathStripCommonBase _
-	( _
-		byref a as string, _
-		byref b as string _
-	) as string
-	function = right( a, len( a ) - len( pathFindCommonBase( a, b ) ) )
-end function
-
-'' Turns a relative path into an absolute path
-function pathMakeAbsolute( byref path as string ) as string
-	if( pathIsAbsolute( path ) ) then
-		function = path
-	else
-		function = pathAddDiv( curdir( ) ) + path
-	end if
-end function
-
 function hExepath( ) as string
 	function = pathAddDiv( exepath( ) )
 end function
 
-'' Component stack for the path solver
-type PATHSOLVER
-	p	as integer ptr
-	room	as integer
-	top	as integer
-end type
-
-dim shared as PATHSOLVER solver
-
-private sub solverInit( )
-	solver.p = NULL
-	solver.room = 0
-	solver.top = -1
-end sub
-
-private sub solverEnd( )
-	deallocate( solver.p )
-end sub
-
-private sub solverPush( byval w as integer )
-	solver.top += 1
-	if( solver.top >= solver.room ) then
-		solver.room += 128
-		solver.p = reallocate( solver.p, sizeof( integer ) * solver.room )
+private function pathEndsWithDiv( byref s as string ) as integer
+	var length = len( s )
+	if( length > 0 ) then
+#if defined( __FB_WIN32__ ) or defined( __FB_DOS__ )
+		select case( s[length-1] )
+		case asc( "\" ), asc( "/" )
+			function = TRUE
+		end select
+#else
+		function = (s[length-1] = asc( "/" ))
+#endif
 	end if
-	solver.p[solver.top] = w
-end sub
-
-private function solverPop( ) as integer
-	if( solver.top > 0 ) then
-		solver.top -= 1
-	end if
-	function = solver.p[solver.top]
 end function
 
-'' Resolves .'s and ..'s in the path,
-'' normalizes path separators to the host standard.
-function pathNormalize( byref path as string ) as string
-	dim as integer rootlen = any, dots = any, chars = any, r = any, w = any
-	dim as string s
-
-	rootlen = pathGetRootLength( path )
-	if( rootlen = 0 ) then
-		return path
-	end if
-
-	'' r: read position, w: write position
-	'' r reads ahead, while w slowly writes out the result.
-	'' First r and w stay together, but as soon as r finds a .., w is set
-	'' back a bit, right in front of the path component it wrote last, so
-	'' that the component is dropped (it will be overwritten by following
-	'' components).
-	'' The stack is needed to be able to skip back over multiple components
-	'' in succession, for example in 'aa/bb/../..'.
-
-	'' r and w start out behind the root path (/ or C:\ etc.) so that it's
-	'' not touched. The begin of the first component after the root path
-	'' must be on the stack to be able to skip back to it (although the
-	'' begin of the root path itself, 0, is not on the stack, so it can't
-	'' be removed with a '..').
-	solverInit( )
-	solverPush( rootlen )
-
-	s = path
-	dots = 0 '' Number of .'s in the current component
-	chars = 0 '' Number of chars in the current component
-	w = rootlen
-
-	for r = rootlen to len( s )-1
-		select case( s[r] )
-#if defined( __FB_WIN32__ ) or defined( __FB_DOS__ )
-		case asc( "\" ), asc( "/" )
-#else
-		case asc( "/" )
-#endif
-			'' Component closed: check whether it was /./ or /../
-			select case( dots )
-			case 1    '' /./
-				'' Ignore: don't write this /, and remove the .
-				w -= 1
-
-			case 2    '' /../
-				'' Go back to the begin of the component this
-				'' '..' refers to
-				w = solverPop( )
-
-			case else
-				if( chars = 0 ) then
-					'' // (Ignore: don't write this /)
-				else
-					'' Write this /
-#if defined( __FB_WIN32__ ) or defined( __FB_DOS__ )
-					s[w] = asc( "\" ) '' This also normalizes / to \
-#else
-					s[w] = asc( "/" )
-#endif
-					'' New component starts behind this /
-					w += 1
-					'' Remember this begin position so
-					'' w can be reset to it during '..'.
-					solverPush( w )
-				end if
-
-			end select
-
-			dots = 0
-			chars = 0
-
-		case asc( "." )
-			dots += 1
-			chars += 1
-			s[w] = s[r]
-			w += 1
-
-		case else
-			dots = 0
-			chars += 1
-			s[w] = s[r]
-			w += 1
-
-		end select
-	next
-
-	solverEnd( )
-	function = left( s, w )
+function pathIsDir( byref s as string ) as integer
+	function = hReadableDirExists( s ) or pathEndsWithDiv( s )
 end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''

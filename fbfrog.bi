@@ -245,20 +245,8 @@ declare function pathOnly( byref path as string ) as string
 declare function pathStrip( byref path as string ) as string
 declare function pathAddDiv( byref path as string ) as string
 declare function pathIsAbsolute( byref s as string ) as integer
-declare function pathStripLastComponent( byref path as string ) as string
-declare function pathFindCommonBase _
-	( _
-		byref aorig as string, _
-		byref borig as string _
-	) as string
-declare function pathStripCommonBase _
-	( _
-		byref a as string, _
-		byref b as string _
-	) as string
-declare function pathMakeAbsolute( byref path as string ) as string
 declare function hExepath( ) as string
-declare function pathNormalize( byref path as string ) as string
+declare function pathIsDir( byref s as string ) as integer
 declare function hReadableDirExists( byref path as string ) as integer
 declare function hFileExists( byref file as string ) as integer
 declare function hScanDirectory _
@@ -934,16 +922,11 @@ declare function astWrapFileInVerblock _
 		byval code as ASTNODE ptr, _
 		byval version as ASTNODE ptr _
 	) as ASTNODE ptr
-declare function astMergeFiles _
+declare function astMergeVerblocks _
 	( _
-		byval files1 as ASTNODE ptr, _
-		byval files2 as ASTNODE ptr _
+		byval a as ASTNODE ptr, _
+		byval b as ASTNODE ptr _
 	) as ASTNODE ptr
-declare sub astExtractCommonCodeFromFiles _
-	( _
-		byval files as ASTNODE ptr, _
-		byval versions as ASTNODE ptr _
-	)
 
 declare function astNewVERBLOCK _
 	( _
@@ -962,14 +945,13 @@ declare function astGet1VersionAndTargetOnly _
 		byval code as ASTNODE ptr, _
 		byval version as ASTNODE ptr _
 	) as ASTNODE ptr
-declare sub astProcessVerblocksAndTargetblocksOnFiles _
+declare sub astProcessVerblocksAndTargetblocks _
 	( _
-		byval files as ASTNODE ptr, _
+		byval code as ASTNODE ptr, _
 		byval versions as ASTNODE ptr, _
 		byval targets as integer, _
 		byval versiondefine as zstring ptr _
 	)
-
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
@@ -1003,12 +985,7 @@ declare sub hInsertMacroBody( byval x as integer, byval macro as ASTNODE ptr )
 declare sub cppInit( )
 declare sub cppNoExpandSym( byval id as zstring ptr )
 declare sub cppRemoveSym( byval id as zstring ptr )
-declare sub cppMain _
-	( _
-		byval topfile as ASTNODE ptr, _
-		byval whitespace as integer, _
-		byval nomerge as integer _
-	)
+declare sub cppMain( byval whitespace as integer, byval nomerge as integer )
 declare function cFile( ) as ASTNODE ptr
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -1018,14 +995,14 @@ type FROGSTUFF
 	whitespace	as integer
 	noautoextern	as integer
 	windowsms	as integer
-	common		as integer
 	noconstants	as integer
 	nonamefixup	as integer
 	keepundefs	as integer
 	pragmaonce	as integer
 	versiondefine	as string
 	incdirs		as ASTNODE ptr
-	outdir		as string
+	outname		as string
+	defaultoutname	as string
 	verbose		as integer
 
 	commandline	as string

@@ -22,9 +22,8 @@ private sub hPrintHelpAndExit( )
 	print "  -versiondefine <id>  Set identifier for version #define that may"
 	print "                       be used by the generated binding."
 	print "  -pragmaonce      Add #pragma once statements"
-	print "  -common          Extract common code into common header"
 	print "  -incdir <path>   Add #include search directory"
-	print "  -o <path>        Set output directory for generated .bi files"
+	print "  -o <path/file>   Set output .bi file name, or just the output directory"
 	print "  -v               Show verbose/debugging info"
 	print "commands specific to binding version/target:"
 	print "  -version <string>        Begin of version-specific arguments"
@@ -227,7 +226,6 @@ private function hParseArgs( byref x as integer, byval body as integer ) as ASTN
 			case "noconstants"  : frog.noconstants  = TRUE
 			case "nonamefixup"  : frog.nonamefixup  = TRUE
 			case "keepundefs"   : frog.keepundefs   = TRUE
-			case "common"       : frog.common       = TRUE
 			case "pragmaonce"   : frog.pragmaonce   = TRUE
 			case "v", "verbose", "-verbose" : frog.verbose = TRUE
 
@@ -250,7 +248,7 @@ private function hParseArgs( byref x as integer, byval body as integer ) as ASTN
 
 				'' <path>
 				hExpectPath( x )
-				frog.outdir = hPathRelativeToResponseFile( x )
+				frog.outname = hPathRelativeToResponseFile( x )
 
 			'' -version <version id> ...
 			case "version"
@@ -598,14 +596,39 @@ private sub hApplyRenameTypedefOptions _
 
 end sub
 
-private function frogWorkRootFile _
+private function frogWorkVersion _
 	( _
-		byval presetcode as ASTNODE ptr, _
 		byval targetversion as ASTNODE ptr, _
-		byval rootfile as ASTNODE ptr _
+		byval presetcode as ASTNODE ptr _
 	) as ASTNODE ptr
 
-	print space( frog.maxversionstrlen ) + "parsing: " + *rootfile->text
+	print "[" + astDumpPrettyVersion( targetversion ) + "]"
+
+	var rootfiles = astNewGROUP( )
+	scope
+		var i = presetcode->head
+		while( i )
+			select case( i->class )
+			case ASTCLASS_FILE
+				'' Input files
+				astCloneAppend( rootfiles, i )
+			case ASTCLASS_DIR
+				'' Input files from directories
+				var n = hScanDirectory( *i->text, "*.h" )
+				astSetLocationAndAlsoOnChildren( n, @i->location )
+				astAppend( rootfiles, n )
+			end select
+			i = i->next
+		wend
+	end scope
+	if( rootfiles->head = NULL ) then
+		oops( "no input files" )
+	end if
+
+	'' The first .h file name seen will be used for the final .bi
+	if( len( frog.defaultoutname ) = 0 ) then
+		frog.defaultoutname = pathStripExt( *rootfiles->head->text ) + ".bi"
+	end if
 
 	tkInit( )
 
@@ -616,7 +639,6 @@ private function frogWorkRootFile _
 		'' token buffer, so that cppMain() parses them like any other
 		'' #define/#undef.
 
-		var x = 0
 		var i = presetcode->head
 		while( i )
 
@@ -653,21 +675,46 @@ private function frogWorkRootFile _
 
 				end select
 
-				x = lexLoadC( x, sourcebufferFromZstring( prettyname, s, @i->location ), FALSE )
+				lexLoadC( tkGetCount( ), sourcebufferFromZstring( prettyname, s, @i->location ), FALSE )
 
 			end select
 
 			i = i->next
 		wend
-
-		'' Extra empty line between the header and regular input code,
-		'' so that cppMain()'s whitespace handling won't be confused.
-		'' (e.g. associating a comment at the top of regular code with
-		'' the last statement from the header code)
-		tkInsert( x, TK_EOL )
 	end if
 
-	cppMain( rootfile, frog.whitespace, frog.nomerge )
+	''
+	'' Add toplevel file(s) behind current tokens (could be pre-#defines etc.)
+	''
+	'' Note: pre-#defines should appear before tokens from root files, such
+	'' that the order of -define vs *.h command line arguments doesn't
+	'' matter. The -include option can be used to have files #included in
+	'' between pre-#defines.
+	''
+	scope
+		var i = rootfiles->head
+		while( i )
+
+			if( tkGetCount( ) > 0 ) then
+				'' Extra EOL to separate from previous tokens
+				tkInsert( tkGetCount( ), TK_EOL )
+			end if
+
+			print space( frog.maxversionstrlen ) + "parsing: " + *i->text
+			lexLoadC( tkGetCount( ), sourcebufferFromFile( i->text, @i->location ), frog.whitespace )
+
+			if( tkGetCount( ) > 0 ) then
+				'' EOL at EOF, if missing
+				if( tkGet( tkGetCount( ) - 1 ) <> TK_EOL ) then
+					tkInsert( tkGetCount( ), TK_EOL )
+				end if
+			end if
+
+			i = i->next
+		wend
+	end scope
+
+	cppMain( frog.whitespace, frog.nomerge )
 
 	tkRemoveEOLs( )
 	tkTurnCPPTokensIntoCIds( )
@@ -728,7 +775,6 @@ private function frogWorkRootFile _
 
 	'' Add the APPENDBI's, if any
 	if( presetcode ) then
-		assert( ast->class = ASTCLASS_GROUP )
 		var i = presetcode->head
 		while( i )
 			if( i->class = ASTCLASS_APPENDBI ) then
@@ -742,62 +788,13 @@ private function frogWorkRootFile _
 	astMergeDIVIDERs( ast )
 
 	'' Put file's AST into a VERBLOCK, if a targetversion was given,
-	'' in preparation for the astMergeFiles() call later
+	'' in preparation for the astMergeVerblocks() call later
 	ast = astWrapFileInVerblock( ast, targetversion )
 
+	astDelete( presetcode )
+	astDelete( rootfiles )
 	function = ast
 end function
-
-private function frogWorkVersion _
-	( _
-		byval targetversion as ASTNODE ptr, _
-		byval presetcode as ASTNODE ptr _
-	) as ASTNODE ptr
-
-	print "[" + astDumpPrettyVersion( targetversion ) + "]"
-
-	var rootfiles = astNewGROUP( )
-
-	var i = presetcode->head
-	while( i )
-		select case( i->class )
-		case ASTCLASS_FILE
-			'' Input files
-			astCloneAppend( rootfiles, i )
-		case ASTCLASS_DIR
-			'' Input files from directories
-			var n = hScanDirectory( *i->text, "*.h" )
-			astSetLocationAndAlsoOnChildren( n, @i->location )
-			astAppend( rootfiles, n )
-		end select
-		i = i->next
-	wend
-
-	if( rootfiles->head = NULL ) then
-		oops( "no input files" )
-	end if
-
-	i = rootfiles->head
-	while( i )
-		i->expr = frogWorkRootFile( presetcode, targetversion, i )
-		i = i->next
-	wend
-
-	astDelete( presetcode )
-
-	function = rootfiles
-end function
-
-private sub hRemoveEmptyFiles( byval files as ASTNODE ptr )
-	var f = files->head
-	while( f )
-		if( f->expr = NULL ) then
-			f = astRemove( files, f )
-		else
-			f = f->next
-		end if
-	wend
-end sub
 
 private function hMakeDeclCountMessage( byval declcount as integer ) as string
 	if( declcount = 1 ) then
@@ -865,96 +862,44 @@ end function
 		loop while( i )
 	end scope
 
-	dim as ASTNODE ptr files
+	'' Merge version-specific ASTs into one
+	dim as ASTNODE ptr final
 	scope
 		var i = targetversions->head
 		do
-			files = astMergeFiles( files, i->expr )
+
+			if( final = NULL ) then
+				final = i->expr
+			else
+				final = astMergeVerblocks( final, i->expr )
+			end if
 			i->expr = NULL
+
 			i = i->next
 		loop while( i )
 	end scope
 
-	'' Remove files that don't have an AST left, i.e. were combined into
-	'' others by astMergeFiles() and shouldn't be emitted individually anymore.
-	hRemoveEmptyFiles( files )
+	'' Turn VERBLOCKs into #ifs etc.
+	astProcessVerblocksAndTargetblocks( final, versions, targets, frog.versiondefine )
 
-	if( frog.common ) then
-		astExtractCommonCodeFromFiles( files, versions )
+	'' Do auto-formatting if not preserving whitespace
+	if( frog.whitespace = FALSE ) then
+		astAutoAddDividers( final )
 	end if
 
-	astProcessVerblocksAndTargetblocksOnFiles( files, versions, targets, frog.versiondefine )
-
-	'' There should always be at least 1 file left to emit
-	assert( files->head )
-
-	'' Normally, each .bi file should be generated just next to the
-	'' corresponding .h file (or one of them in case of merging...).
-	'' In that case no directories need to be created.
-	''
-	'' If an output directory was given, then all .bi files should be
-	'' emitted there. This might require creating some sub-directories to
-	'' preserve the original directory structure.
-	''     commonparent/a.bi
-	''     commonparent/foo/a.bi
-	''     commonparent/foo/b.bi
-	'' shouldn't just become:
-	''     outdir/a.bi
-	''     outdir/a.bi
-	''     outdir/b.bi
-	'' because a.bi would be overwritten and the foo/ sub-directory would
-	'' be lost. Instead, it should be:
-	''     outdir/a.bi
-	''     outdir/foo/a.bi
-	''     outdir/foo/b.bi
-	if( len( frog.outdir ) > 0 ) then
-		var f = files->head
-		var commonparent = pathOnly( *f->text )
-		f = f->next
-		while( f )
-			commonparent = pathFindCommonBase( commonparent, *f->text )
-			f = f->next
-		wend
-		if( frog.verbose ) then
-			print "common parent: " + commonparent
-		end if
-
-		f = files->head
-		do
-			'' Remove the common parent prefix
-			var normed = *f->text
-			assert( strStartsWith( normed, commonparent ) )
-			normed = right( normed, len( normed ) - len( commonparent ) )
-
-			'' And prefix the output dir instead
-			normed = pathAddDiv( frog.outdir ) + normed
-
-			astSetText( f, normed )
-			astSetComment( f, normed )
-
-			f = f->next
-		loop while( f )
+	'' Write out the .bi file
+	if( len( frog.defaultoutname ) = 0 ) then
+		frog.defaultoutname = "unknown.bi"
 	end if
+	if( len( frog.outname ) = 0 ) then
+		frog.outname = frog.defaultoutname
+	elseif( pathIsDir( frog.outname ) ) then
+		frog.outname = pathAddDiv( frog.outname ) + pathStrip( frog.defaultoutname )
+	end if
+	print "emitting: " + frog.outname + " (" + hMakeDeclCountMessage( astCountDecls( final ) ) + ")"
+	emitFile( frog.outname, final )
 
-	var f = files->head
-	do
-		'' Replace the file extension, .h -> .bi
-		astSetText( f, pathStripExt( *f->text ) + ".bi" )
-
-		'' Do auto-formatting if not preserving whitespace
-		if( frog.whitespace = FALSE ) then
-			astAutoAddDividers( f->expr )
-		end if
-
-		print "emitting: " + *f->text + " (" + _
-			hMakeDeclCountMessage( astCountDecls( f->expr ) ) + ")"
-		'astDump( f->expr )
-		emitFile( *f->text, f->expr )
-
-		f = f->next
-	loop while( f )
-
-	astDelete( files )
+	astDelete( final )
 	astDelete( versions )
 	astDelete( targetversions )
 

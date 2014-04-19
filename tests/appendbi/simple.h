@@ -1,2 +1,2 @@
-// @fbfrog -appendbi <dir>/simple-more.bas
+// @fbfrog -appendbi <dir>simple-more.bas
 extern short a;

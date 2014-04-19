@@ -715,7 +715,7 @@ private sub hAddVersionDefineChecks _
 
 end sub
 
-private sub hProcessVerblocksAndTargetblocks _
+sub astProcessVerblocksAndTargetblocks _
 	( _
 		byval code as ASTNODE ptr, _
 		byval versions as ASTNODE ptr, _
@@ -739,26 +739,5 @@ private sub hProcessVerblocksAndTargetblocks _
 	hTurnTargetblocksIntoPpIfs( code, targets )
 
 	hAddVersionDefineChecks( code, versions, targets, versiondefine, versions->head )
-
-end sub
-
-sub astProcessVerblocksAndTargetblocksOnFiles _
-	( _
-		byval files as ASTNODE ptr, _
-		byval versions as ASTNODE ptr, _
-		byval targets as integer, _
-		byval versiondefine as zstring ptr _
-	)
-
-	var f = files->head
-	while( f )
-
-		if( f->expr->class <> ASTCLASS_GROUP ) then
-			f->expr = astNewGROUP( f->expr )
-		end if
-		hProcessVerblocksAndTargetblocks( f->expr, versions, targets, versiondefine )
-
-		f = f->next
-	wend
 
 end sub

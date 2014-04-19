@@ -1889,18 +1889,17 @@ private sub hLoadFile _
 
 end sub
 
-'' Search for #included files in one of the parent directories
-'' of the context file. Usually the #include will refer to a
-'' file in the same directory or in a sub-directory at the same
-'' level or some levels up.
+'' Search for #included files in one of the parent directories of the context
+'' file. Usually the #include will refer to a file in the same directory or in
+'' a sub-directory at the same level or some levels up.
 private function hSearchHeaderFile _
 	( _
-		byval contextfile as zstring ptr, _
+		byref contextfile as string, _
 		byref inctext as string _
 	) as string
 
 	if( frog.verbose ) then
-		print "searching: " + inctext + " (context = " + *contextfile + ")"
+		print "searching: " + inctext + " (context = " + contextfile + ")"
 	end if
 
 	'' 1. If #including by absolute path, use it as-is
@@ -1909,7 +1908,7 @@ private function hSearchHeaderFile _
 	end if
 
 	'' 2. Relative to context file
-	var incfile = pathAddDiv( pathOnly( *contextfile ) ) + inctext
+	var incfile = pathAddDiv( pathOnly( contextfile ) ) + inctext
 	if( frog.verbose ) then
 		print "trying: " + incfile
 	end if
@@ -1954,18 +1953,9 @@ private function hFindBeginInclude( byval x as integer ) as integer
 	function = x
 end function
 
-sub cppMain _
-	( _
-		byval topfile as ASTNODE ptr, _
-		byval whitespace as integer, _
-		byval nomerge as integer _
-	)
-
+sub cppMain( byval whitespace as integer, byval nomerge as integer )
 	'' Identify pre-#define directives, if any
 	hPreprocessTokens( 0, whitespace )
-
-	'' Add toplevel file behind current tokens (could be pre-#defines)
-	hLoadFile( tkGetCount( ), @topfile->location, topfile->text, whitespace )
 
 	var x = 0
 	var skiplevel = MAXPPSTACK
@@ -2007,12 +1997,12 @@ sub cppMain _
 				tkAddFlags( x, TKFLAG_REMOVE )
 			else
 				var location = tkGetLocation( x )
-				var context = iif( location->source, location->source->name, NULL )
-				if( context = NULL ) then
-					context = topfile->text
+				dim as string contextfile
+				if( location->source ) then
+					contextfile = *location->source->name
 				end if
 				var inctext = *tkGetText( x )
-				var incfile = hSearchHeaderFile( context, inctext )
+				var incfile = hSearchHeaderFile( contextfile, inctext )
 
 				if( len( incfile ) > 0 ) then
 					print space( frog.maxversionstrlen ) + "include: " + incfile
