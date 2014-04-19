@@ -464,6 +464,9 @@ private function emitAst _
 		if( n->text ) then
 			s += " " + *n->text
 		end if
+		if( n->attrib and ASTATTRIB_PACKED ) then
+			s += " field = 1"
+		end if
 		emitStmt( s, n->comment )
 		s = ""
 		emit.indent += 1

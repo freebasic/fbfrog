@@ -578,6 +578,10 @@ private sub cGccAttribute( byref x as integer, byref gccattribs as integer )
 	case "stdcall", "__stdcall__"
 		hStdcallAttribute( x, gccattribs )
 
+	case "packed", "__packed__"
+		gccattribs or= ASTATTRIB_PACKED
+		x += 1
+
 	case else
 		tkOops( x, "unknown attribute" )
 	end select
@@ -687,6 +691,9 @@ private function cStruct( byref x as integer ) as ASTNODE ptr
 
 	var struct = astNew( astclass )
 
+	'' __attribute__((...))
+	cGccAttributeList( x, struct->attrib )
+
 	'' [Identifier]
 	if( tkGet( x ) = TK_ID ) then
 		astSetText( struct, tkGetText( x ) )
@@ -704,6 +711,9 @@ private function cStruct( byref x as integer ) as ASTNODE ptr
 		'' '}'
 		tkExpect( x, TK_RBRACE, "to close " + astDumpPrettyDecl( struct ) + " block" )
 		x += 1
+
+		'' __attribute__((...))
+		cGccAttributeList( x, struct->attrib )
 	else
 		if( struct->text = NULL ) then
 			tkOopsExpected( x, "'{' or tag name behind " + astDumpPrettyDecl( struct ) )

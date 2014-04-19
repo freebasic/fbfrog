@@ -128,6 +128,12 @@ Usage:
 
 To do:
 
+- version-specific "no input files" errors should show the version number
+- shouldn't capture output of pass tests!? it's useless and wastes disk space
+- remove all the stats reporting functions, or at least use them in debug mode
+  only, they're useless
+- remove -whitespace etc., why bother?
+
 - Add -splitversions option that puts each version into a separate .bi instead
   of merging them into one, and generates a "master .bi" that just #includes
   the version-specific .bi depending on the versiondefine.
@@ -197,3 +203,15 @@ To do:
 - comments behind #define bodies should go to the #define not the body tokens
 - Add tk array implementation, and compare performance, on headers with lots
   of macro expansion.
+
+Integrate C parsing into fbc, so we can just #include .h files directly?
++ Easy to use, no bindings to maintain
+- Have to maintain separate CPP & C/C++ parser as part of fbc
+- Cannot re-use fbc's existing lex/pp code because it's way too FB-specific and
+  that's way too different from C
+
+Use fbfrog live as pre-processor before fbc is run?
+* #fbfrog "foo.h" could be replaced with the generated binding code in a temp
+  file that's then passed to fbc
+* binding would only have to be specific to 1 version/target
+* but would probably have to recognize #defines etc.

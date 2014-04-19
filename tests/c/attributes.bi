@@ -222,4 +222,107 @@ declare sub f()
 declare sub f()
 declare sub f()
 
+type A1 field = 1
+	a as short
+	b as long
+end type
+type A2 field = 1
+	a as short
+	b as long
+end type
+type A3 field = 1
+	a as short
+	b as long
+end type
+type A4 field = 1
+	a as short
+	b as long
+end type
+extern     A4_ as A4
+dim shared A4_ as A4
+type A5 field = 1
+	a as short
+	b as long
+end type
+extern     A5_ as A5
+dim shared A5_ as A5
+
+type B1 field = 1
+	a as short
+	b as long
+end type
+type UDT4 as B1
+type B2 field = 1
+	a as short
+	b as long
+end type
+type UDT5 as B2
+type B3 field = 1
+	a as short
+	b as long
+end type
+type PFUDT6 as function() as B3
+
+'' stdcall here is wrong, and should be ignored
+type C1
+	a as short
+	b as long
+end type
+type PFC1 as function() as C1
+type C2 field = 1
+	a as short
+	b as long
+end type
+type PFC2 as function() as C2
+type C3 field = 1
+	a as short
+	b as long
+end type
+type PFC3 as function() as C3
+type C4
+	a as short
+	b as long
+end type
+type C5 field = 1
+	a as short
+	b as long
+end type
+type C6 field = 1
+	a as short
+	b as long
+end type
+type D1
+	a as short
+	b as long
+end type
+extern     PFD1 as function() as D1
+dim shared PFD1 as function() as D1
+type D2 field = 1
+	a as short
+	b as long
+end type
+extern     PFD2 as function() as D2
+dim shared PFD2 as function() as D2
+type D3 field = 1
+	a as short
+	b as long
+end type
+extern     PFD3 as function() as D3
+dim shared PFD3 as function() as D3
+type D4
+	a as short
+	b as long
+end type
+declare function FD4() as D4
+type D5 field = 1
+	a as short
+	b as long
+end type
+declare function FD5() as D5
+type D6 field = 1
+	a as short
+	b as long
+end type
+declare function FD6() as D6
+
 end extern

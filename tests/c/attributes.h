@@ -198,3 +198,27 @@ void f(void);
 void f(void);
 void f(void);
 void f(void);
+
+struct __attribute__((packed)) A1 { short a; int b; };
+struct __attribute__((__packed__)) A2 { short a; int b; };
+struct A3 { short a; int b; } __attribute__((packed));
+struct __attribute__((packed)) A4 { short a; int b; } A4_;
+struct A5 { short a; int b; } __attribute__((packed)) A5_;
+
+typedef struct __attribute__((packed)) B1 { short a; int b; } UDT4;
+typedef struct B2 { short a; int b; } __attribute__((packed)) UDT5;
+typedef struct B3 { short a; int b; } __attribute__((packed)) (*PFUDT6)(void);
+
+// stdcall here is wrong, and should be ignored
+typedef struct C1 { short a; int b; }                         __attribute__((stdcall)) (*PFC1)(void);
+typedef struct C2 { short a; int b; } __attribute__((packed)) __attribute__((stdcall)) (*PFC2)(void);
+typedef struct C3 { short a; int b; } __attribute__((packed, stdcall))                 (*PFC3)(void);
+typedef struct C4 { short a; int b; }                         __attribute__((stdcall)) FC4(void);
+typedef struct C5 { short a; int b; } __attribute__((packed)) __attribute__((stdcall)) FC5(void);
+typedef struct C6 { short a; int b; } __attribute__((packed, stdcall))                 FC6(void);
+        struct D1 { short a; int b; }                         __attribute__((stdcall)) (*PFD1)(void);
+        struct D2 { short a; int b; } __attribute__((packed)) __attribute__((stdcall)) (*PFD2)(void);
+        struct D3 { short a; int b; } __attribute__((packed, stdcall))                 (*PFD3)(void);
+        struct D4 { short a; int b; }                         __attribute__((stdcall)) FD4(void);
+        struct D5 { short a; int b; } __attribute__((packed)) __attribute__((stdcall)) FD5(void);
+        struct D6 { short a; int b; } __attribute__((packed, stdcall))                 FD6(void);

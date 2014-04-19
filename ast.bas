@@ -843,12 +843,17 @@ function astDumpOne( byval n as ASTNODE ptr ) as string
 	checkAttrib( CDECL )
 	checkAttrib( STDCALL )
 	checkAttrib( HIDECALLCONV )
+	checkAttrib( HIDECASEALIAS )
+	checkAttrib( UNIQUE )
 	checkAttrib( REPORTED )
 	checkAttrib( DOS )
 	checkAttrib( LINUX )
 	checkAttrib( WIN32 )
 	checkAttrib( NEEDRENAME )
 	checkAttrib( POISONED )
+	checkAttrib( DONTEMIT )
+	checkAttrib( ONCE )
+	checkAttrib( PACKED )
 
 	if( n->class <> ASTCLASS_TK ) then
 		if( n->text ) then

@@ -695,6 +695,7 @@ const ASTATTRIB_NEEDRENAME    = 1 shl 11
 const ASTATTRIB_POISONED      = 1 shl 12
 const ASTATTRIB_DONTEMIT      = 1 shl 13
 const ASTATTRIB_ONCE          = 1 shl 14  '' Marks #includes as "#include once"
+const ASTATTRIB_PACKED        = 1 shl 15  '' __attribute__((packed))
 
 '' When changing, adjust astClone(), astIsEqual(), astDump*()
 type ASTNODE_

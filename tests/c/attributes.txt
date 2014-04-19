@@ -4,4 +4,4 @@
         parsing: tests/c/attributes.h
 [win32]
         parsing: tests/c/attributes.h
-emitting: tests/c/attributes.bi (156 declarations)
+emitting: tests/c/attributes.bi (190 declarations)
