@@ -634,7 +634,7 @@ private function frogWorkVersion _
 
 	cppInit( )
 
-	if( presetcode ) then
+	scope
 		'' Pre-#defines/#undefs are simply inserted at the top of the
 		'' token buffer, so that cppMain() parses them like any other
 		'' #define/#undef.
@@ -681,7 +681,7 @@ private function frogWorkVersion _
 
 			i = i->next
 		wend
-	end if
+	end scope
 
 	''
 	'' Add toplevel file(s) behind current tokens (could be pre-#defines etc.)
@@ -758,7 +758,7 @@ private function frogWorkVersion _
 	end if
 
 	'' Prepend #inclibs
-	if( presetcode ) then
+	scope
 		var i = presetcode->tail
 		while( i )
 			if( i->class = ASTCLASS_INCLIB ) then
@@ -766,7 +766,7 @@ private function frogWorkVersion _
 			end if
 			i = i->prev
 		wend
-	end if
+	end scope
 
 	'' Prepend #pragma once
 	if( frog.pragmaonce ) then
@@ -774,7 +774,7 @@ private function frogWorkVersion _
 	end if
 
 	'' Add the APPENDBI's, if any
-	if( presetcode ) then
+	scope
 		var i = presetcode->head
 		while( i )
 			if( i->class = ASTCLASS_APPENDBI ) then
@@ -783,7 +783,7 @@ private function frogWorkVersion _
 			end if
 			i = i->next
 		wend
-	end if
+	end scope
 
 	astMergeDIVIDERs( ast )
 
