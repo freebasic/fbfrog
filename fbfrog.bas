@@ -806,6 +806,10 @@ end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
+	if( __FB_ARGC__ <= 1 ) then
+		hPrintHelpAndExit( )
+	end if
+
 	frog.versiondefine = "__VERSION__"
 	frog.incdirs = astNewGROUP( )
 	sourcebuffersInit( )
