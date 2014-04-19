@@ -706,11 +706,6 @@ private sub hAddVersionDefineChecks _
 		end if
 	end scope
 
-	'' Check the target system (some bindings aren't intended to work on DOS, etc.)
-	''     #if not defined( __FB_WIN32__ ) and not defined( __FB_LINUX__ )
-	''         #error "unsupported target system; this binding supports only: win32, linux"
-	''     #endif
-
 	astPrepend( code, checks )
 
 end sub
