@@ -1,5 +1,24 @@
-Design decisions
-----------------
+How about integrating C parsing into fbc one way or another, so we can just
+#include .h files directly?
++ Easier because no bindings need to be maintained. External C APIs can be used
+  much faster (no waiting for the binding to be created/updated) and with much
+  less trouble (no broken bindings, no incompatibilites due to mismatching
+  versions, etc).
+- Feels like giving up. fbc is the FB compiler, not a C compiler. FB itself
+  should be good enough to specify the API/ABI for accessing external libraries.
+  Having FB bindings enforces FB to be further improved in this aspect.
+- Cannot re-use fbc's existing lex/pp code because it's way too FB-specific and
+  that's way too different from C.
+- Requires being able to specify #defines using C syntax & semantics either on
+  the fbc command line or in FB code appearing above an #include "foo.h"
+  statement, such that those #defines would be visible to the .h files. How
+  should this be done?
+* Maintaining a full CPP and C/C++ parser as part of fbc or as a separate tool
+  is more or less the same amount of work.
+
+
+fbfrog design decisions
+-----------------------
 
 Using a custom C PP/parser instead of an existing one (e.g. libclang).
 - not really fully investigated yet what all existing ones can do
