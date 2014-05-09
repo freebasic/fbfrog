@@ -33,49 +33,6 @@ function astCollectVersions( byval code as ASTNODE ptr ) as ASTNODE ptr
 	function = versions
 end function
 
-private sub hCombineVersionAndTarget _
-	( _
-		byval result as ASTNODE ptr, _
-		byval targets as integer, _
-		byval i as ASTNODE ptr, _
-		byval target as integer _
-	)
-
-	if( targets and target ) then
-		var newi = astClone( i )
-		newi->attrib or= target
-		astAppend( result, newi )
-	end if
-
-end sub
-
-function astCombineVersionsAndTargets _
-	( _
-		byval versions as ASTNODE ptr, _
-		byval targets as integer _
-	) as ASTNODE ptr
-
-	var result = astNewGROUP( )
-
-	'' Multiply version(s) with the targets, for example:
-	''    versions: 1, 2
-	''    targets: linux, win32
-	''    combined: 1.linux, 1.win32, 2.linux, 2.win32
-
-	var i = versions->head
-	assert( i )
-	do
-
-		hCombineVersionAndTarget( result, targets, i, ASTATTRIB_DOS )
-		hCombineVersionAndTarget( result, targets, i, ASTATTRIB_LINUX )
-		hCombineVersionAndTarget( result, targets, i, ASTATTRIB_WIN32 )
-
-		i = i->next
-	loop while( i )
-
-	function = result
-end function
-
 '' Extract nodes corresponding to the wanted version only, i.e. all nodes except
 '' those inside verblocks for other versions.
 private function hGet1VersionOnly( byval code as ASTNODE ptr, byval v as ASTNODE ptr ) as ASTNODE ptr
@@ -181,10 +138,10 @@ end sub
 ''     verblock a.(dos|linux|win32), b.(dos|linux|win32), c.win32
 '' becomes:
 ''     verblock a, b, c.win32
-private sub hRemoveFullTargets( byval group as ASTNODE ptr, byval targets as integer )
+private sub hRemoveFullTargets( byval group as ASTNODE ptr )
 	var i = group->head
 	while( i )
-		if( (i->attrib and ASTATTRIB__ALLTARGET) = targets ) then
+		if( (i->attrib and ASTATTRIB__ALLTARGET) = ASTATTRIB__ALLTARGET ) then
 			i->attrib and= not ASTATTRIB__ALLTARGET
 		end if
 		i = i->next
@@ -228,8 +185,7 @@ end function
 private sub hSimplifyVerblocks _
 	( _
 		byval code as ASTNODE ptr, _
-		byval versions as ASTNODE ptr, _
-		byval targets as integer _
+		byval versions as ASTNODE ptr _
 	)
 
 	var i = code->head
@@ -237,11 +193,11 @@ private sub hSimplifyVerblocks _
 		var nxt = i->next
 
 		'' Handle nested verblocks inside structs
-		hSimplifyVerblocks( i, versions, targets )
+		hSimplifyVerblocks( i, versions )
 
 		if( i->class = ASTCLASS_VERBLOCK ) then
 			hCombineVersionTargets( i->expr )
-			hRemoveFullTargets( i->expr, targets )
+			hRemoveFullTargets( i->expr )
 
 			var extractedtargets = hExtractCommonTargets( i->expr )
 			if( extractedtargets ) then
@@ -585,17 +541,12 @@ private function hBuildIfExprFromTargets( byval targets as integer ) as ASTNODE 
 end function
 
 '' Same but for targetblocks
-private sub hTurnTargetblocksIntoPpIfs _
-	( _
-		byval code as ASTNODE ptr, _
-		byval targets as integer _
-	)
-
+private sub hTurnTargetblocksIntoPpIfs( byval code as ASTNODE ptr )
 	var i = code->head
 	while( i )
 
 		'' Process targetblocks nested inside verblocks/structs etc.
-		hTurnTargetblocksIntoPpIfs( i, targets )
+		hTurnTargetblocksIntoPpIfs( i )
 
 		if( i->class = ASTCLASS_TARGETBLOCK ) then
 			'' Find end of "mergable" targetblocks...
@@ -619,7 +570,7 @@ private sub hTurnTargetblocksIntoPpIfs _
 			loop while( k <> j )
 
 			'' Perhaps turn the last #elseif into an #else
-			if( collectedtargets = targets ) then
+			if( collectedtargets = ASTATTRIB__ALLTARGET ) then
 				hTurnLastElseIfIntoElse( code, i, j )
 			end if
 
@@ -631,13 +582,12 @@ private sub hTurnTargetblocksIntoPpIfs _
 	wend
 end sub
 
-'' Add some checks at the top of each of the binding's files, to verify the
-'' version-selection #define and the target system.
+'' Add some checks at the top of each of the binding to verify that the
+'' version-#define has a valid value.
 private sub hAddVersionDefineChecks _
 	( _
 		byval code as ASTNODE ptr, _
 		byval versions as ASTNODE ptr, _
-		byval targets as integer, _
 		byval versiondefine as zstring ptr, _
 		byval defaultversion as ASTNODE ptr _
 	)
@@ -714,13 +664,12 @@ sub astProcessVerblocksAndTargetblocks _
 	( _
 		byval code as ASTNODE ptr, _
 		byval versions as ASTNODE ptr, _
-		byval targets as integer, _
 		byval versiondefine as zstring ptr _
 	)
 
 	assert( code->class = ASTCLASS_GROUP )
 
-	hSimplifyVerblocks( code, versions, targets )
+	hSimplifyVerblocks( code, versions )
 
 	hSolveOutRedundantNestedVerblocks( code, NULL )
 	hSolveOutRedundantNestedTargetblocks( code, -1 )
@@ -731,8 +680,8 @@ sub astProcessVerblocksAndTargetblocks _
 	hMergeAdjacentTargetblocks( code )
 
 	hTurnVerblocksIntoPpIfs( code, versions, versiondefine )
-	hTurnTargetblocksIntoPpIfs( code, targets )
+	hTurnTargetblocksIntoPpIfs( code )
 
-	hAddVersionDefineChecks( code, versions, targets, versiondefine, versions->head )
+	hAddVersionDefineChecks( code, versions, versiondefine, versions->head )
 
 end sub

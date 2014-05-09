@@ -526,6 +526,11 @@ function astReplace _
 	function = astRemove( parent, old )
 end function
 
+function astAddAttrib( byval n as ASTNODE ptr, byval attrib as integer ) as ASTNODE ptr
+	n->attrib or= attrib
+	function = n
+end function
+
 sub astSetText( byval n as ASTNODE ptr, byval text as zstring ptr )
 	deallocate( n->text )
 	n->text = strDuplicate( text )

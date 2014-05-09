@@ -836,13 +836,26 @@ end function
 	hLexRemoveMatchPatterns( frog.code )
 
 	var versions = astCollectVersions( frog.code )
-	var targets = ASTATTRIB__ALLTARGET
 
 	'' If no versions given, use a dummy, to hold the targets
 	if( versions->head = NULL ) then
 		astAppend( versions, astNew( ASTCLASS_DUMMYVERSION ) )
 	end if
-	var targetversions = astCombineVersionsAndTargets( versions, targets )
+
+	'' Multiply version(s) with the targets, for example:
+	''    versions: 1, 2
+	''    targets: linux, win32
+	''    result: 1.linux, 1.win32, 2.linux, 2.win32
+	var targetversions = astNewGROUP( )
+	scope
+		var i = versions->head
+		do
+			astAppend( targetversions, astAddAttrib( astClone( i ), ASTATTRIB_DOS ) )
+			astAppend( targetversions, astAddAttrib( astClone( i ), ASTATTRIB_LINUX ) )
+			astAppend( targetversions, astAddAttrib( astClone( i ), ASTATTRIB_WIN32 ) )
+			i = i->next
+		loop while( i )
+	end scope
 
 	'' Find longest version string, for pretty output
 	scope
@@ -884,7 +897,7 @@ end function
 	end scope
 
 	'' Turn VERBLOCKs into #ifs etc.
-	astProcessVerblocksAndTargetblocks( final, versions, targets, frog.versiondefine )
+	astProcessVerblocksAndTargetblocks( final, versions, frog.versiondefine )
 
 	'' Do auto-formatting if not preserving whitespace
 	if( frog.whitespace = FALSE ) then

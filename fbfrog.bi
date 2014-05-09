@@ -831,6 +831,7 @@ declare function astReplace _
 		byval old as ASTNODE ptr, _
 		byval n as ASTNODE ptr _
 	) as ASTNODE ptr
+declare function astAddAttrib( byval n as ASTNODE ptr, byval attrib as integer ) as ASTNODE ptr
 declare sub astSetText( byval n as ASTNODE ptr, byval text as zstring ptr )
 declare sub astRenameSymbol( byval n as ASTNODE ptr, byval newid as zstring ptr )
 declare sub astSetType _
@@ -936,11 +937,6 @@ declare function astNewVERBLOCK _
 		byval child as ASTNODE ptr _
 	) as ASTNODE ptr
 declare function astCollectVersions( byval code as ASTNODE ptr ) as ASTNODE ptr
-declare function astCombineVersionsAndTargets _
-	( _
-		byval versions as ASTNODE ptr, _
-		byval targets as integer _
-	) as ASTNODE ptr
 declare function astGet1VersionAndTargetOnly _
 	( _
 		byval code as ASTNODE ptr, _
@@ -950,7 +946,6 @@ declare sub astProcessVerblocksAndTargetblocks _
 	( _
 		byval code as ASTNODE ptr, _
 		byval versions as ASTNODE ptr, _
-		byval targets as integer, _
 		byval versiondefine as zstring ptr _
 	)
 
