@@ -138,7 +138,6 @@ declare function strMatches _
 declare function strContainsNonHexDigits( byval s as zstring ptr ) as integer
 declare function strContainsNonOctDigits( byval s as zstring ptr ) as integer
 declare function strIsValidSymbolId( byval s as zstring ptr ) as integer
-declare function hMakePrettyByteSize( byval size as uinteger ) as string
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
