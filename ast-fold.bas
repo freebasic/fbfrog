@@ -492,11 +492,7 @@ function astFold _
 
 	'' Loop until the folding no longer changes the expression
 	dim as integer changes
-	var passes = 0
 	do
-		passes += 1
-		aststats.foldpasses += 1
-
 		changes = 0
 		n = astFoldConsts( n, changes )
 		astSwapConstsToRhs( n, changes )
@@ -504,18 +500,6 @@ function astFold _
 		n = astFoldNestedOps( n, changes )
 		n = astFoldBoolContextNops( n, is_bool_context, changes )
 	loop while( changes > 0 )
-
-	if( aststats.minfoldpasses = 0 ) then
-		aststats.minfoldpasses = passes
-		aststats.maxfoldpasses = passes
-	else
-		if( aststats.minfoldpasses > passes ) then
-			aststats.minfoldpasses = passes
-		end if
-		if( aststats.maxfoldpasses < passes ) then
-			aststats.maxfoldpasses = passes
-		end if
-	end if
 
 	function = n
 end function

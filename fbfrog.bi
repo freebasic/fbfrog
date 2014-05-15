@@ -745,18 +745,10 @@ type ASTNODE_
 	'' the child list for statement trees
 end type
 
-type ASTSTATSDATA
-	as integer maxnodes, livenodes, maxlivenodes
-	as integer foldpasses, minfoldpasses, maxfoldpasses
-end type
-
-extern aststats as ASTSTATSDATA
-
 #define astNewID( id ) astNew( ASTCLASS_ID, id )
 #define astNewTEXT( text ) astNew( ASTCLASS_TEXT, text )
 #define astIsCONSTI( n ) ((n)->class = ASTCLASS_CONSTI)
 
-declare sub astPrintStats( )
 declare function astNew overload( byval class_ as integer ) as ASTNODE ptr
 declare function astNew overload _
 	( _

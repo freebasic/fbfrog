@@ -919,7 +919,3 @@ end function
 	astDelete( final )
 	astDelete( versions )
 	astDelete( targetversions )
-
-	if( frog.verbose ) then
-		astPrintStats( )
-	end if

@@ -137,25 +137,9 @@ dim shared as ASTNODEINFO astnodeinfo(0 to ...) = _
 
 #assert ubound( astnodeinfo ) = ASTCLASS__COUNT - 1
 
-dim shared aststats as ASTSTATSDATA
-
-sub astPrintStats( )
-	print "ast nodes: " & _
-		aststats.maxlivenodes & " max (" + hMakePrettyByteSize( aststats.maxlivenodes * sizeof( ASTNODE ) ) + "), " & _
-		aststats.maxnodes &   " total"
-	print "ast folding passes: min " & aststats.minfoldpasses & ", max " & aststats.maxfoldpasses & ", total " & aststats.foldpasses
-end sub
-
 function astNew overload( byval class_ as integer ) as ASTNODE ptr
 	dim as ASTNODE ptr n = callocate( sizeof( ASTNODE ) )
 	n->class = class_
-
-	aststats.maxnodes += 1
-	aststats.livenodes += 1
-	if( aststats.maxlivenodes < aststats.livenodes ) then
-		aststats.maxlivenodes = aststats.livenodes
-	end if
-
 	function = n
 end function
 
@@ -381,8 +365,6 @@ sub astDelete( byval n as ASTNODE ptr )
 	deallocate( n->text )
 	astDelete( n->subtype )
 	deallocate( n )
-
-	aststats.livenodes -= 1
 end sub
 
 #if __FB_DEBUG__
