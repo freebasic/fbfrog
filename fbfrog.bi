@@ -222,8 +222,10 @@ declare sub hashInit _
 		byval duplicate_strings as integer = FALSE _
 	)
 declare sub hashEnd( byval h as THASH ptr )
+#if __FB_DEBUG__
 declare sub hashStats( byval h as THASH ptr, byref prefix as string )
 declare sub hashDump( byval h as THASH ptr )
+#endif
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 

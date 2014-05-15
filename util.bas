@@ -806,6 +806,7 @@ sub hashEnd( byval h as THASH ptr )
 	deallocate( h->items )
 end sub
 
+#if __FB_DEBUG__
 sub hashStats( byval h as THASH ptr, byref prefix as string )
 	print using "  " + prefix + " hash: " + _
 		"&/& hits (&%), &/& used (&%), & resizes"; _
@@ -829,6 +830,7 @@ sub hashDump( byval h as THASH ptr )
 		end with
 	next
 end sub
+#endif
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 '' Path/file name handling functions
