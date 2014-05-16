@@ -754,6 +754,16 @@ sub astReport _
 
 end sub
 
+sub astOops _
+	( _
+		byval n as ASTNODE ptr, _
+		byval message as zstring ptr, _
+		byval more_context as integer _
+	)
+	astReport( n, message, more_context )
+	end 1
+end sub
+
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 '' AST dumping for pretty output and debugging
 

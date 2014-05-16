@@ -1685,98 +1685,106 @@ private function hParseIfCondition( byval x as integer ) as ASTNODE ptr
 	assert( tkGet( x ) = TK_END )
 end function
 
-private function cppFoldKnownDefineds( byval n as ASTNODE ptr ) as ASTNODE ptr
+''
+'' Evaluation of CPP #if condition expressions
+''
+'' - directly evaluating instead of doing complex node folding, because that's
+''   all that's needed - #if expressions always need to be evaluated anyways.
+''
+'' - only evaluating &&, || and ?: operands when they're actually reached. This
+''    - prevents "assuming undefined" warnings about the unreached code
+''    - allows division by zero to be ignored if it doesn't need to be evaluated
+''
+'' - taking care to produce C's 1|0 boolean values, instead of FB's -1|0
+''
+private function cppEval( byval n as ASTNODE ptr ) as longint
 	if( n = NULL ) then exit function
-	function = n
-
-	n->expr = cppFoldKnownDefineds( n->expr )
-	n->l = cppFoldKnownDefineds( n->l )
-	n->r = cppFoldKnownDefineds( n->r )
-
-	'' defined(id)?
-	if( n->class = ASTCLASS_DEFINED ) then
-		assert( n->l->class = ASTCLASS_ID )
-		var id = n->l->text
-		if( hIsKnownSymbol( id ) ) then
-			'' FB defined()    ->   -1|0
-			'' item->data = is_defined
-			function = astNewCONSTI( hIsMacroCurrentlyDefined( id ), TYPE_LONG )
-			astDelete( n )
-		end if
-	end if
-end function
-
-private function cppFold1stUnknownId _
-	( _
-		byval n as ASTNODE ptr, _
-		byref changes as integer _
-	) as ASTNODE ptr
-
-	if( n = NULL ) then exit function
-	function = n
 
 	select case( n->class )
+	case ASTCLASS_CONSTI  : function = n->vali
+
+	case ASTCLASS_CLOGNOT   : function = -(cppEval( n->l ) = 0)
+	case ASTCLASS_NOT       : function = not cppEval( n->l )
+	case ASTCLASS_NEGATE    : function = -cppEval( n->l )
+	case ASTCLASS_UNARYPLUS : function = cppEval( n->l )
+	case ASTCLASS_CLOGOR    : function = -(cppEval( n->l ) orelse cppEval( n->r ))
+	case ASTCLASS_CLOGAND   : function = -(cppEval( n->l ) andalso cppEval( n->r ))
+
+	case ASTCLASS_OR, ASTCLASS_XOR, ASTCLASS_AND, _
+	     ASTCLASS_CEQ, ASTCLASS_CNE, _
+	     ASTCLASS_CLT, ASTCLASS_CLE, _
+	     ASTCLASS_CGT, ASTCLASS_CGE, _
+	     ASTCLASS_SHL, ASTCLASS_SHR, _
+	     ASTCLASS_ADD, ASTCLASS_SUB, _
+	     ASTCLASS_MUL, ASTCLASS_DIV, ASTCLASS_MOD
+		var l = cppEval( n->l )
+		var r = cppEval( n->r )
+
+		select case( n->class )
+		case ASTCLASS_DIV, ASTCLASS_MOD
+			if( r = 0 ) then
+				astOops( n, "division by zero" )
+			end if
+		end select
+
+		select case( n->class )
+		case ASTCLASS_OR  : function =   l or  r
+		case ASTCLASS_XOR : function =   l xor r
+		case ASTCLASS_AND : function =   l and r
+		case ASTCLASS_CEQ : function = -(l =   r)
+		case ASTCLASS_CNE : function = -(l <>  r)
+		case ASTCLASS_CLT : function = -(l <   r)
+		case ASTCLASS_CLE : function = -(l <=  r)
+		case ASTCLASS_CGT : function = -(l >   r)
+		case ASTCLASS_CGE : function = -(l >=  r)
+		case ASTCLASS_SHL : function =   l shl r
+		case ASTCLASS_SHR : function =   l shr r
+		case ASTCLASS_ADD : function =   l +   r
+		case ASTCLASS_SUB : function =   l -   r
+		case ASTCLASS_MUL : function =   l *   r
+		case ASTCLASS_DIV : function =   l \   r
+		case ASTCLASS_MOD : function =   l mod r
+		case else         : assert( FALSE )
+		end select
+
+	case ASTCLASS_IIF
+		function = iif( cppEval( n->expr ), cppEval( n->l ), cppEval( n->r ) )
+
 	case ASTCLASS_ID
-		'' Unexpanded identifier, assume it's undefined, like a CPP
+		'' Unexpanded identifier, assume it's a literal 0, like a CPP
 		if( frog.verbose ) then
 			astReport( n, "treating unexpanded identifier '" + *n->text + "' as literal zero" )
-			hRegisterMacro( n->text, -1 )
 		end if
 
-		'' id   ->   0
-		function = astNewCONSTI( 0, TYPE_LONGINT )
-		astDelete( n )
-		changes += 1
+		'' And register as known undefined (it wasn't expanded so it
+		'' must be undefined), so the warning won't be shown again.
+		hRegisterMacro( n->text, -1 )
 
-	case ASTCLASS_DEFINED
-		'' Unsolved defined(), must be an unknown symbol, so it
-		'' should expand to FALSE. (see also astFoldKnownDefineds())
+		'' id  ->  0
+		function = 0
+
+	case ASTCLASS_CDEFINED
 		assert( n->l->class = ASTCLASS_ID )
-		if( frog.verbose ) then
-			astReport( n->l, "assuming symbol '" + *n->l->text + "' is undefined" )
+		var id = n->l->text
+
+		if( hIsKnownSymbol( id ) = FALSE ) then
+			'' Unknown symbol, assume it's undefined
+			if( frog.verbose ) then
+				astReport( n->l, "assuming symbol '" + *n->l->text + "' is undefined" )
+			end if
+
+			'' Register as known undefined
+			'' This also prevents the above warning from being shown
+			'' multiple times for a single symbol.
 			hRegisterMacro( n->l->text, -1 )
 		end if
 
-		'' defined()   ->   0
-		function = astNewCONSTI( 0, TYPE_LONGINT )
-		astDelete( n )
-		changes += 1
+		'' defined()  ->  1|0
+		function = -hIsMacroCurrentlyDefined( id )
 
 	case else
-		n->expr = cppFold1stUnknownId( n->expr, changes )
-		if( changes > 0 ) then exit function
-		n->l = cppFold1stUnknownId( n->l, changes )
-		if( changes > 0 ) then exit function
-		n->r = cppFold1stUnknownId( n->r, changes )
+		astOops( n, "couldn't evaluate #if condition" )
 	end select
-end function
-
-''
-'' Folding for CPP #if condition expressions
-''
-'' 1. Solve out defined()'s on known symbols, and fold as much as possible.
-'' 2. Solve 1st found remaining defined() on unknown symbol, and register the
-''    id as #undeffed. Then solve out known defined()'s again (could solve out
-''    more now that the #undef was added) and fold as much as possible again.
-''    Repeat until no defined() left.
-''
-'' Folding may eliminate no-ops which may include unsolved defined()'s and thus
-'' prevent us from having to make assumptions about the corresponding symbols.
-'' By retrying the folding everytime we reduce the number of assumptions and
-'' corresponding warnings shown to the user.
-''
-'' Registering unknown ids as known after showing the warning also prevents
-'' duplicate warnings about the same id.
-''
-private function cppFold( byval n as ASTNODE ptr ) as ASTNODE ptr
-	dim as integer changes
-	do
-		changes = 0
-		n = cppFoldKnownDefineds( n )
-		n = astFold( n, TRUE )
-		n = cppFold1stUnknownId( n, changes )
-	loop while( changes > 0 )
-	function = n
 end function
 
 private function hEvalIfCondition( byval x as integer ) as integer
@@ -1797,21 +1805,8 @@ private function hEvalIfCondition( byval x as integer ) as integer
 		x = xif
 	end if
 
-	'' 1. Try to evaluate the condition
-	t = cppFold( astOpsC2FB( astClone( t ) ) )
-	tkSetAst( x, t )
-
-	'' 2. Check the condition
-	if( astIsCONSTI( t ) = FALSE ) then
-		const MESSAGE = "couldn't evaluate #if condition"
-		if( t->location.source ) then
-			hReport( @t->location, MESSAGE, TRUE )
-			end 1
-		end if
-		tkOops( x, MESSAGE )
-	end if
-
-	function = (t->vali <> 0)
+	'' Evaluate the condition
+	function = (cppEval( t ) <> 0)
 end function
 
 private function hLookupRemoveSym( byval id as zstring ptr ) as integer

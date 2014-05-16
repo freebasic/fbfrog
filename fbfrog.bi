@@ -856,6 +856,12 @@ declare sub astReport _
 		byval message as zstring ptr, _
 		byval more_context as integer = TRUE _
 	)
+declare sub astOops _
+	( _
+		byval n as ASTNODE ptr, _
+		byval message as zstring ptr, _
+		byval more_context as integer = TRUE _
+	)
 declare function astCountDecls( byval code as ASTNODE ptr ) as integer
 declare function astDumpPrettyDecl( byval n as ASTNODE ptr ) as string
 declare function astDumpPrettyVersion( byval v as ASTNODE ptr ) as string

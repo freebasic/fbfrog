@@ -1,6 +1,6 @@
 [dos]
         parsing: tests/cpp/div-by-zero-2.h
-tests/cpp/div-by-zero-2.h(2): couldn't evaluate #if condition
+tests/cpp/div-by-zero-2.h(2): division by zero
     1: // @fail
     2: #if 1 % 0
              ^

@@ -128,58 +128,59 @@ Usage:
 
 To do:
 
-- version-specific "no input files" errors should show the version number
-- shouldn't capture output of pass tests!? it's useless and wastes disk space
-- remove all the stats reporting functions, or at least use them in debug mode
-  only, they're useless
-- remove -whitespace etc., why bother?
+- Turn -nomerge into -insert <absolute-file-name-pattern>
+  By default: Don't insert #includes
+  Can use -insert '*' to insert all #includes that can be found,
+  or -insert '*/gtk/*' to insert only certain ones, etc.
+    - Seems nicest to match against the absolute path but with common prefix
+      removed already. #include messages should use the stripped filename, and
+      show whether the #include will be inserted or not - that will help the
+      user to tell what the pattern being matched against, and whether it
+      matched or not.
+- If an #include was found but not inserted, then the #include statement should
+  be preserved (but renamed .h -> .bi)
+- #includes that can't be found should just be removed, e.g. system headers
+- fbfrog should automatically add the proper crt/* #include if needed
 
-- Add -splitversions option that puts each version into a separate .bi instead
-  of merging them into one, and generates a "master .bi" that just #includes
-  the version-specific .bi depending on the versiondefine.
+- remove -undef and the "assuming undefined" warnings
+- -appendbi is pointless, can aswell just do "cat foo.bi >> my.bi"
+- consider splitting statement vs. expression AST into 2 sorts of nodes
+  statements = array of statements
+  expression = binary tree
+
+- Performance issues:
+  - speed: AST walking, especially astReplaceSubtypes()
+      - Could be fixed by using a type map - then astReplaceSubtypes() would only
+        need to update an entry in the type map instead of walking the whole AST
+  - speed: String comparisons (also as part of AST walking)
+  - memory usage: hAstLCS() matrix; also string/AST node/token buffer allocations
 
 - 64bit support:
-    * Add arch-specific pre-#defines too
-    * Enums must be emitted as Long for 64bit compat:
-      a) On all enum bodies, do "enum Foo as long : ... : end enum" (must be added to FB first)
-      b) Do "type Foo as long" and make enum body anonymous (enums consts aren't type checked anyways)
-      c) Do "const EnumConst1 as long" for every enum const; don't emit the enum type at all,
-         do "long" in place of every "enum Foo" type. (would have to calculate enumconst value
-         if no initializer given)
+  * Add arch-specific pre-#defines too
+  * Enums must be emitted as Long for 64bit compat:
+    a) On all enum bodies, do "enum Foo as long : ... : end enum" (must be added to FB first)
+    b) Do "type Foo as long" and make enum body anonymous (enums consts aren't type checked anyways)
+    c) Do "const EnumConst1 as long" for every enum const; don't emit the enum type at all,
+       do "long" in place of every "enum Foo" type. (would have to calculate enumconst value
+       if no initializer given)
 
-- char array should be translated to zstring * N:
-    static char s[10] = "hello";
-    dim shared s as zstring * 10 => "hello"
-
-- CPP/#define handling:
-    * ## merging missing support for lots of tokens, e.g. 1##. or .##0 or -##> or =##=
-    * macro params named after keywords?
-    * parentheses around macro params should be preserved (can use a flag on the AST node)
-- #include handling
-    * If all #includes are expanded, then none need to be preserved.
-    * System headers usually won't be found, unless -incdir is given, but code
-      from system headers shouldn't be included in library bindings.
-    * Thus, need to preserve #includes that aren't expanded, or code from which
-      isn't preserved
-      #include foo.h  ->  #include foo.bi, if foo.bi will be generated too
-      #include stdio.h -> #include crt/stdio.bi, for some known default headers
-    * Ideal behaviour? See all headers but only emit binding for some of them.
-    * -common should be renamed to -split, and it should split based on original
-      .h files, not based on diff algorithm.
-
-- Const folding etc.
+- Expressions/const folding:
   - has issues with 32bit/64bit, using Longint internally, so e.g. ~(0xFFFFFFFF)
     comes out as &hFFFFFFFF00000000 instead of &h0. Need to respect C number
     literal dtypes & sizes.
   - Don't crash on (INT_MIN / -1) or (INT_MIN % -1)
   - Need to handle unsigned relational BOPs properly
-  - Only need to evaluate #if expressions, nothing else. gcc/clang calculate
-    #if expressions at 64bit, even supporting unsigned. I.e. literals here
-    need to be treated as long long instead of int.
-  - Should all the 32bit C op results go through clng(), similar to how
-    relational C op results already go through - negations? Because FB ops work
-    differently and it may matter in some cases but probably not in most.
+  - Only #if expressions need to be evaluated, but nothing else. astOpsC2FB()
+    is still needed, and may also have to insert clng()'s at certain places to
+    ensure FB produces 32bit int values...
+  - Only insert - negation UOPs around logical ops if not in bool context, then
+    the complex folding functions can be removed.
 
+- char array should be translated to zstring * N:
+    static char s[10] = "hello";
+    dim shared s as zstring * 10 => "hello"
+- macro params named after keywords?
+- parentheses around macro params should be preserved (can use a flag on the AST node)
 - Emit list of renamed symbols at top of header
 - Add -booldefine to mark a macro as "returns a bool", so the C #define parser
   can set is_bool_context=TRUE when folding
@@ -204,14 +205,9 @@ To do:
 - Add tk array implementation, and compare performance, on headers with lots
   of macro expansion.
 
-Integrate C parsing into fbc, so we can just #include .h files directly?
-+ Easy to use, no bindings to maintain
-- Have to maintain separate CPP & C/C++ parser as part of fbc
-- Cannot re-use fbc's existing lex/pp code because it's way too FB-specific and
-  that's way too different from C
-
-Use fbfrog live as pre-processor before fbc is run?
-* #fbfrog "foo.h" could be replaced with the generated binding code in a temp
-  file that's then passed to fbc
-* binding would only have to be specific to 1 version/target
-* but would probably have to recognize #defines etc.
+- Write fbc wrapper that would allow using fbfrog as fbc pre-processor:
+  Search for
+    #fbfrog <fbfrog command line>
+  and replace it with the generated binding code (in a temp copy of the input
+  .bas file). Of course it will only recognize stuff from the fbfrog command
+  line, not any FB #defines appearing above the #fbfrog statement...

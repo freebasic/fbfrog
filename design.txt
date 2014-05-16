@@ -208,3 +208,12 @@ Typedef vs struct/union/enum tag symbols handling
   preserves the information on whether a subtype was <UDT> or <struct UDT>.
 * That's better than aborting with an error or not detecting the issue at all.
 * The user can still specify -rename command line options if needed.
+
+No expression folding/constant evaluation for initializers/#define expressions.
++ Never really needed, rarely ever useful.
++ Avoids lots of ugly code
+- Converting C expressions to FB may become more difficult due to the different
+  operator/data type semantics. Having fbfrog calculate the expressions using
+  the C semantics would avoid the issue.
++ But that problem exists for non-constant expressions aswell anyways, so must
+  be solved differently.
