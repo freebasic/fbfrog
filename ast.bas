@@ -638,11 +638,6 @@ function astIsEqual _
 
 	if( a->class <> b->class ) then exit function
 
-	if( (a->attrib and ASTATTRIB_UNIQUE) or _
-	    (b->attrib and ASTATTRIB_UNIQUE) ) then
-		exit function
-	end if
-
 	var check_callconv = FALSE
 	if( options and ASTEQ_IGNOREHIDDENCALLCONV ) then
 		'' Only check the callconv if not hidden on both sides
@@ -839,7 +834,6 @@ function astDumpOne( byval n as ASTNODE ptr ) as string
 	checkAttrib( STDCALL )
 	checkAttrib( HIDECALLCONV )
 	checkAttrib( HIDECASEALIAS )
-	checkAttrib( UNIQUE )
 	checkAttrib( REPORTED )
 	checkAttrib( DOS )
 	checkAttrib( LINUX )

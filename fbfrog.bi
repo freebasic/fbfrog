@@ -684,7 +684,6 @@ const ASTATTRIB_CDECL         = 1 shl 2
 const ASTATTRIB_STDCALL       = 1 shl 3
 const ASTATTRIB_HIDECALLCONV  = 1 shl 4  '' Whether the calling convention is covered by an Extern block, in which case it doesn't need to be emitted.
 const ASTATTRIB_HIDECASEALIAS = 1 shl 5  '' same for the case-preserving ALIAS
-const ASTATTRIB_UNIQUE        = 1 shl 6  '' Telling astIsEqual() to never treat a node with this flag as equal to any other
 const ASTATTRIB_REPORTED      = 1 shl 7 '' Used to mark #defines about which the CPP has already complained, so it can avoid duplicate error messages
 const ASTATTRIB_DOS           = 1 shl 8
 const ASTATTRIB_LINUX         = 1 shl 9
