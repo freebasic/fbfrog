@@ -412,9 +412,6 @@ private function emitAst _
 			s = ""
 		end if
 
-	case ASTCLASS_PPUNDEF
-		emitStmt( "#undef " + *n->text, n->comment )
-
 	case ASTCLASS_PPIF
 		select case( n->expr->class )
 		'' #if defined( id )        ->    #ifdef id

@@ -52,7 +52,6 @@ dim shared as ASTNODEINFO astnodeinfo(0 to ...) = _
 	("pragmaonce"   ), _
 	("#include"     ), _
 	("#define"      ), _
-	("#undef"       ), _
 	("#if"          ), _
 	("#elseif"      ), _
 	("#else"        ), _

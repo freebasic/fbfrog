@@ -779,11 +779,11 @@ end function
 
 private function cOtherPPToken( byref x as integer ) as ASTNODE ptr
 	var astclass = ASTCLASS_DIVIDER
-	select case( tkGet( x ) )
-	case TK_PPINCLUDE : astclass = ASTCLASS_PPINCLUDE
-	case TK_PPUNDEF   : astclass = ASTCLASS_PPUNDEF
-	case else         : assert( tkGet( x ) = TK_DIVIDER )
-	end select
+	if( tkGet( x ) = TK_PPINCLUDE ) then
+		astclass = ASTCLASS_PPINCLUDE
+	else
+		assert( tkGet( x ) = TK_DIVIDER )
+	end if
 
 	var t = astNew( astclass, tkGetText( x ) )
 	astAddComment( t, tkCollectComments( x, x ) )
@@ -1633,7 +1633,7 @@ private function cConstruct _
 	select case( tkGet( x ) )
 	case TK_PPDEFINE
 		return cDefine( x )
-	case TK_PPINCLUDE, TK_PPUNDEF, TK_DIVIDER
+	case TK_PPINCLUDE, TK_DIVIDER
 		return cOtherPPToken( x )
 	end select
 
