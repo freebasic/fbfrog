@@ -32,7 +32,6 @@ private sub hPrintHelpAndExit( )
 	print "  -inclib <name>           Add an #inclib ""<name>"" statement"
 	print "  -define <id> [<body>]    Add pre-#define"
 	print "  -undef <id>              Add pre-#undef"
-	print "  -include <file>          Add pre-#include"
 	print "  -noexpand <id>           Disable expansion of certain #define"
 	print "  -removedefine <id>       Don't preserve certain #defines/#undefs"
 	print "  -renametypedef <oldid> <newid>  Rename a typedef"
@@ -343,13 +342,6 @@ private function hParseArgs( byref x as integer, byval body as integer ) as ASTN
 				hExpectId( x )
 				astAppend( result, astTakeLoc( astNew( ASTCLASS_PPUNDEF, tkGetText( x ) ), x ) )
 
-			case "include"
-				x += 1
-
-				'' <file>
-				hExpectPath( x )
-				astAppend( result, astTakeLoc( astNew( ASTCLASS_PPINCLUDE, hPathRelativeToResponseFile( x ) ), x ) )
-
 			case "noexpand"
 				x += 1
 
@@ -649,7 +641,7 @@ private function frogWorkVersion _
 			case ASTCLASS_REMOVEDEFINE
 				cppRemoveSym( i->text )
 
-			case ASTCLASS_PPDEFINE, ASTCLASS_PPUNDEF, ASTCLASS_PPINCLUDE
+			case ASTCLASS_PPDEFINE, ASTCLASS_PPUNDEF
 				dim as string prettyname, s
 
 				select case( i->class )
@@ -669,10 +661,6 @@ private function frogWorkVersion _
 					prettyname = "pre-#undef"
 					s = "#undef " + *i->text + !"\n"
 
-				case ASTCLASS_PPINCLUDE
-					prettyname = "pre-#include"
-					s = "#include """ + *i->text + """" + !"\n"
-
 				end select
 
 				lexLoadC( tkGetCount( ), sourcebufferFromZstring( prettyname, s, @i->location ), FALSE )
@@ -688,8 +676,7 @@ private function frogWorkVersion _
 	''
 	'' Note: pre-#defines should appear before tokens from root files, such
 	'' that the order of -define vs *.h command line arguments doesn't
-	'' matter. The -include option can be used to have files #included in
-	'' between pre-#defines.
+	'' matter.
 	''
 	scope
 		var i = rootfiles->head
