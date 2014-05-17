@@ -1,5 +1,2 @@
-@non-dos.fbfrog
-@non-linux.fbfrog
-
 -define __MINGW32__
 -define _WIN32

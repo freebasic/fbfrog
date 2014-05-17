@@ -1,4 +1,1 @@
-@non-linux.fbfrog
-@non-win32.fbfrog
-
 -define __DJGPP__

@@ -1,4 +1,1 @@
-@non-dos.fbfrog
-@non-win32.fbfrog
-
 -define __linux__

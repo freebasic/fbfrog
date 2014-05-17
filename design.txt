@@ -220,3 +220,9 @@ No expression folding/constant evaluation for initializers/#define expressions.
   the C semantics would avoid the issue.
 + But that problem exists for non-constant expressions aswell anyways, so must
   be solved differently.
+
+No -undef command line option to allow adding pre-#undefs. The CPP already
+treats all unknown symbols as undefined. The only purpose of -undef would be to
+suppress the "assuming undefined" warnings, but specifying an -undef for all
+known-to-be-undefined symbols seems excessive and unmaintainable, i.e. not
+really useful in practice.

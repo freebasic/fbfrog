@@ -31,9 +31,8 @@ private sub hPrintHelpAndExit( )
 	print "  -target dos|linux|win32  Begin of target-specific arguments (ditto)"
 	print "  -inclib <name>           Add an #inclib ""<name>"" statement"
 	print "  -define <id> [<body>]    Add pre-#define"
-	print "  -undef <id>              Add pre-#undef"
 	print "  -noexpand <id>           Disable expansion of certain #define"
-	print "  -removedefine <id>       Don't preserve certain #defines/#undefs"
+	print "  -removedefine <id>       Don't preserve a certain #define"
 	print "  -renametypedef <oldid> <newid>  Rename a typedef"
 	print "  -renametag <oldid> <newid>      Rename a struct/union/enum"
 	print "  -appendbi <file>                Append arbitrary FB code from <file> to the binding"
@@ -335,13 +334,6 @@ private function hParseArgs( byref x as integer, byval body as integer ) as ASTN
 
 				astAppend( result, n )
 
-			case "undef"
-				x += 1
-
-				'' <id>
-				hExpectId( x )
-				astAppend( result, astTakeLoc( astNew( ASTCLASS_PPUNDEF, tkGetText( x ) ), x ) )
-
 			case "noexpand"
 				x += 1
 
@@ -627,9 +619,8 @@ private function frogWorkVersion _
 	cppInit( )
 
 	scope
-		'' Pre-#defines/#undefs are simply inserted at the top of the
-		'' token buffer, so that cppMain() parses them like any other
-		'' #define/#undef.
+		'' Pre-#defines are simply inserted at the top of the token
+		'' buffer, so that cppMain() parses them like any other #define.
 
 		var i = presetcode->head
 		while( i )
@@ -641,27 +632,18 @@ private function frogWorkVersion _
 			case ASTCLASS_REMOVEDEFINE
 				cppRemoveSym( i->text )
 
-			case ASTCLASS_PPDEFINE, ASTCLASS_PPUNDEF
+			case ASTCLASS_PPDEFINE
 				dim as string prettyname, s
 
-				select case( i->class )
-				case ASTCLASS_PPDEFINE
-					cppRemoveSym( i->text )
+				cppRemoveSym( i->text )
 
-					prettyname = "pre-#define"
-					s = "#define " + *i->text
-					if( i->expr ) then
-						assert( i->expr->class = ASTCLASS_TEXT )
-						s += " " + *i->expr->text
-					end if
-					s += !"\n"
-
-				case ASTCLASS_PPUNDEF
-					cppRemoveSym( i->text )
-					prettyname = "pre-#undef"
-					s = "#undef " + *i->text + !"\n"
-
-				end select
+				prettyname = "pre-#define"
+				s = "#define " + *i->text
+				if( i->expr ) then
+					assert( i->expr->class = ASTCLASS_TEXT )
+					s += " " + *i->expr->text
+				end if
+				s += !"\n"
 
 				lexLoadC( tkGetCount( ), sourcebufferFromZstring( prettyname, s, @i->location ), FALSE )
 

@@ -1,4 +1,4 @@
-// @fbfrog -removedefine CALLCONV -version 1 -define A -version 2 -undef A
+// @fbfrog -removedefine CALLCONV -version 1 -define A -version 2
 
 #ifdef A
 	#define CALLCONV __attribute__((stdcall))

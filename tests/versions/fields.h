@@ -1,4 +1,4 @@
-// @fbfrog -version 1 -define A -version 2 -undef A
+// @fbfrog -version 1 -define A -version 2
 
 struct UDT1 {
 	int field1;
