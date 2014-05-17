@@ -1,4 +1,4 @@
-// @fbfrog -whitespace -nonamefixup -keepundefs
+// @fbfrog -whitespace -nonamefixup
 
 #include "directives-1.h"
 #include <directives-1.h>
@@ -40,40 +40,42 @@
 #define B01 1 + 1
 #define B02 ((1))
 
-#define A
-#define A 
-#define A foo
-#define A /*foo*/
+// no space following
+#define C1
+// trailing space
+#define C2 
+#define C3 foo
+#define C4 /*foo*/
 
-#define m(a)
-#define m(a) 
-#define m(a,b)
-#define m(a, b)
-#define m( a , b )
-#define m(foo, abcdefg, something, bar, buzzzz)
-#define m(a) foo
-#define m(a)foo
+#define m01(a)
+#define m02(a) 
+#define m03(a,b)
+#define m04(a, b)
+#define m05( a , b )
+#define m06(foo, abcdefg, something, bar, buzzzz)
+#define m07(a) foo
+#define m08(a)foo
 
-#define m(a)      a##foo
-#define m(a) foo##a
-#define m(a) foo##a##foo
+#define m09(a)      a##foo
+#define m10(a) foo##a
+#define m11(a) foo##a##foo
 
-#define m(a, b)        a    ##     b
-#define m(a, b)        a    ##     b ## foo
-#define m(a, b)        a ## foo ## b
-#define m(a, b)        a ## foo ## b ## foo
-#define m(a, b) foo ## a    ##     b
-#define m(a, b) foo ## a    ##     b ## foo
-#define m(a, b) foo ## a ## foo ## b
-#define m(a, b) foo ## a ## foo ## b ## foo
+#define m12(a, b)        a    ##     b
+#define m13(a, b)        a    ##     b ## foo
+#define m14(a, b)        a ## foo ## b
+#define m15(a, b)        a ## foo ## b ## foo
+#define m16(a, b) foo ## a    ##     b
+#define m17(a, b) foo ## a    ##     b ## foo
+#define m18(a, b) foo ## a ## foo ## b
+#define m19(a, b) foo ## a ## foo ## b ## foo
 
-#define m(a) #a
+#define m20(a) #a
 
 #define no_parameters_here (a)
 
 #pragma message("test")
 static int separator1;
 
-#define A { f( 123 ); }
-#define A(x) { f( x ); }
-#define A(x) { f1( (x) + 1 ); f2( (x) + 2 ); f3( (x) + 3 ); }
+#define D1 { f( 123 ); }
+#define D2(x) { f( x ); }
+#define D3(x) { f1( (x) + 1 ); f2( (x) + 2 ); f3( (x) + 3 ); }

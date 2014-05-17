@@ -1,7 +1,0 @@
-[dos]
-        parsing: tests/cpp/keepundefs.h
-[linux]
-        parsing: tests/cpp/keepundefs.h
-[win32]
-        parsing: tests/cpp/keepundefs.h
-emitting: tests/cpp/keepundefs.bi (8 declarations)

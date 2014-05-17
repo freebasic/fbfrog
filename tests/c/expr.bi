@@ -2,7 +2,7 @@
 
 type UDT as UDT_
 
-'' @fbfrog -whitespace -nonamefixup -keepundefs
+'' @fbfrog -whitespace -nonamefixup
 
 type MYINT as long
 
@@ -388,63 +388,63 @@ enum E
 	A = f(-(a = 0))
 end enum
 
-#define A(x) ("a" + "b")
-#define A(x) ((("a" + "b") + "c") + "d")
-#define A(x) ("a" + "b")
-#define A(x) (("a" + #x) + "b")
-#define A(x) (((("a" + #x) + "b") + #x) + "c")
+#define A01(x) ("a" + "b")
+#define A02(x) ((("a" + "b") + "c") + "d")
+#define A03(x) ("a" + "b")
+#define A04(x) (("a" + #x) + "b")
+#define A05(x) (((("a" + #x) + "b") + #x) + "c")
 
-const A = cast(any, 0)
-const A = cast(zstring, 0)
-const A = cast(single, 0)
-const A = cast(double, 0)
-const A = clng(0)
-const A = clng(0)
-const A = culng(0)
-const A = cast(const long, 0)
-const A = cshort(0)
-const A = cast(clong, 0)
-const A = cast(E, 0)
-const A = cast(UDT, 0)
-const A = cast(UDT, 0)
-const A = cptr(sub stdcall(), 0)
-const A = cptr(sub cdecl(), 0)
-const A = cptr(sub stdcall(), 0)
-const A = cptr(any ptr, 0)
-const A = cptr(long ptr, 0)
-const A = cptr(UDT ptr, 0)
-const A = cptr(UDT ptr, 0)
-const A = cast(wstring, 0)
-const A = cuint(0)
-const A = cint(0)
-const A = cint(0)
-const A = cbyte(0)
-const A = cubyte(0)
-const A = cshort(0)
-const A = cushort(0)
-const A = clng(0)
-const A = culng(0)
-const A = clngint(0)
-const A = culngint(0)
-const A = cbyte(0)
-const A = cshort(0)
-const A = clng(0)
-const A = clngint(0)
-const A = cast(MYINT, 0)
+const A06 = cast(any, 0)
+const A07 = cast(zstring, 0)
+const A08 = cast(single, 0)
+const A09 = cast(double, 0)
+const A10 = clng(0)
+const A11 = clng(0)
+const A12 = culng(0)
+const A13 = cast(const long, 0)
+const A14 = cshort(0)
+const A15 = cast(clong, 0)
+const A16 = cast(E, 0)
+const A17 = cast(UDT, 0)
+const A18 = cast(UDT, 0)
+const A19 = cptr(sub stdcall(), 0)
+const A20 = cptr(sub cdecl(), 0)
+const A21 = cptr(sub stdcall(), 0)
+const A22 = cptr(any ptr, 0)
+const A23 = cptr(long ptr, 0)
+const A24 = cptr(UDT ptr, 0)
+const A25 = cptr(UDT ptr, 0)
+const A26 = cast(wstring, 0)
+const A27 = cuint(0)
+const A28 = cint(0)
+const A29 = cint(0)
+const A30 = cbyte(0)
+const A31 = cubyte(0)
+const A32 = cshort(0)
+const A33 = cushort(0)
+const A34 = clng(0)
+const A35 = culng(0)
+const A36 = clngint(0)
+const A37 = culngint(0)
+const A38 = cbyte(0)
+const A39 = cshort(0)
+const A40 = clng(0)
+const A41 = clngint(0)
+const A42 = cast(MYINT, 0)
 
-#macro A
+#macro A43
 	scope
 		a(0)
 		b(1)
 	end scope
 #endmacro
-#define A (1, 2, 3)
-#define A ()
-#define A (1)
-#define A (1)
+#define A44 (1, 2, 3)
+#define A45 ()
+#define A46 (1)
+#define A47 (1)
 
-#define A (-(a = 0), -(a = 0))
-#macro A
+#define A48 (-(a = 0), -(a = 0))
+#macro A49
 	scope
 		f(-(a = 0))
 	end scope

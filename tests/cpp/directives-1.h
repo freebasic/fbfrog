@@ -1,3 +1,3 @@
 // @ignore
 
-#define INCLUDED
+static int included;

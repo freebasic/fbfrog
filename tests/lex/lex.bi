@@ -1,95 +1,94 @@
 extern "C"
 
-'' @fbfrog -whitespace -nonamefixup -keepundefs
+'' @fbfrog -whitespace -nonamefixup
 
-const A = 0
-const A = 1
-const A = 11
-const A = &o0
-const A = &o1
-const A = &o123
-const A = &h0
-const A = &h0
-const A = &h1
-const A = &hFF
-const A = 1
-const A = 1
-const A = 1
-const A = 0.1
-const A = 0
-const A = 1.123
-const A = 10
-const A = 10
-const A = 1
-const A = 1
-const A = 1
-const A = 1
-const A = 1
+const A01 = 0
+const A02 = 1
+const A03 = 11
+const A04 = &o0
+const A05 = &o1
+const A06 = &o123
+const A07 = &h0
+const A08 = &h0
+const A09 = &h1
+const A10 = &hFF
+const A11 = 1
+const A12 = 1
+const A13 = 1
+const A14 = 0.1
+const A15 = 0
+const A16 = 1.123
+const A17 = 10
+const A18 = 10
+const A19 = 1
+const A20 = 1
+const A21 = 1
+const A22 = 1
+const A23 = 1
 
-#define B "foo"
-#define B wstr( "foo" )
-#define B !"foo\n"
-#define B """foo"""
-#define B asc( "a" )
-#define B asc( wstr( "a" ) )
+#define B1 "foo"
+#define B2 wstr( "foo" )
+#define B3 !"foo\n"
+#define B4 """foo"""
+#define B5 asc( "a" )
+#define B6 asc( wstr( "a" ) )
 
-#define C """"
-#define C "'"
-#define C "'"
-#define C "?"
-#define C !"\\"
-#define C !"\a"
-#define C !"\b"
-#define C !"\f"
-#define C !"\n"
-#define C !"\r"
-#define C !"\t"
-#define C !"\v"
+#define C01 """"
+#define C02 "'"
+#define C03 "'"
+#define C04 "?"
+#define C05 !"\\"
+#define C06 !"\a"
+#define C07 !"\b"
+#define C08 !"\f"
+#define C09 !"\n"
+#define C10 !"\r"
+#define C11 !"\t"
+#define C12 !"\v"
+#define C13 asc( "'" )
+#define C14 asc( """" )
+#define C15 asc( """" )
+#define C16 asc( "?" )
+#define C17 asc( !"\\" )
+#define C18 asc( !"\a" )
+#define C19 asc( !"\b" )
+#define C20 asc( !"\f" )
+#define C21 asc( !"\n" )
+#define C22 asc( !"\r" )
+#define C23 asc( !"\t" )
+#define C24 asc( !"\v" )
 
-#define C asc( "'" )
-#define C asc( """" )
-#define C asc( """" )
-#define C asc( "?" )
-#define C asc( !"\\" )
-#define C asc( !"\a" )
-#define C asc( !"\b" )
-#define C asc( !"\f" )
-#define C asc( !"\n" )
-#define C asc( !"\r" )
-#define C asc( !"\t" )
-#define C asc( !"\v" )
+#define D1 !"\0"
+#define D2 !"\0"
+#define D3 !"\0"
+#define D4 !"\0000"
+#define D5 !"\1"
+#define D6 !"\1"
+#define D7 !"\0001"
 
-#define D !"\0"
-#define D !"\0"
-#define D !"\0"
-#define D !"\0000"
-#define D !"\1"
-#define D !"\1"
-#define D !"\0001"
+#define E1 !"\0a"
+#define E2 !"\0a"
+#define E3 !"\0a"
+#define E4 !"\0g"
+#define E5 !"\0g"
+#define E6 !"\0g"
 
-#define E !"\0a"
-#define E !"\0a"
-#define E !"\0a"
-#define E !"\0g"
-#define E !"\0g"
-#define E !"\0g"
+#define F1 !"\1"
+#define F2 !"\t"
+#define F3 "I"
+#define F4 "I1"
 
-#define F !"\1"
-#define F !"\t"
-#define F "I"
-#define F "I1"
+#define G1 !"\0010"
+#define G2 !"\0270"
+#define G3 !"\2550"
 
-#define G !"\0010"
-#define G !"\0270"
-#define G !"\2550"
-
-#define H "a@b"
-#define H "1@2"
-#define H !"\0"
-#define H !"\0"
-#define H !"\255"
-#define H !"\170"
-#define H !"a\0g"
+#define H1 "a@b"
+#define H2 "1@2"
+#define H3 !"\0"
+#define H4 !"\0"
+#define H5 !"\255"
+#define H6 !"\170"
+#define H7 !"a\0g"
 
 '' Even stray form feed characters
 
@@ -108,9 +107,9 @@ declare sub f()  '' Some escaped newlines
 '' multi-line\
 '' comment 
 
-#define A "abcdef"
-#define A "abcdef"
-#define A ""
-#define A ""
+#define Z1 "abcdef"
+#define Z2 "abcdef"
+#define Z3 ""
+#define Z4 ""
 
 end extern

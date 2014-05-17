@@ -18,7 +18,6 @@ private sub hPrintHelpAndExit( )
 	print "  -noconstants     Don't try to turn #defines into constants"
 	print "  -nonamefixup     Don't fix symbol identifier conflicts which happen"
 	print "                   e.g. due to FB's keywords and/or case insensitivity"
-	print "  -keepundefs      Don't default to removing #undefs and conflicting #defines"
 	print "  -versiondefine <id>  Set identifier for version #define that may"
 	print "                       be used by the generated binding."
 	print "  -pragmaonce      Add #pragma once statements"
@@ -223,7 +222,6 @@ private function hParseArgs( byref x as integer, byval body as integer ) as ASTN
 			case "windowsms"    : frog.windowsms    = TRUE
 			case "noconstants"  : frog.noconstants  = TRUE
 			case "nonamefixup"  : frog.nonamefixup  = TRUE
-			case "keepundefs"   : frog.keepundefs   = TRUE
 			case "pragmaonce"   : frog.pragmaonce   = TRUE
 			case "v", "verbose", "-verbose" : frog.verbose = TRUE
 

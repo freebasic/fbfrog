@@ -226,3 +226,10 @@ treats all unknown symbols as undefined. The only purpose of -undef would be to
 suppress the "assuming undefined" warnings, but specifying an -undef for all
 known-to-be-undefined symbols seems excessive and unmaintainable, i.e. not
 really useful in practice.
+
+#undefs and duplicate/conflicting #defines aren't preserved.
+1. #undefs and overridden/undef'ed #defines aren't part of the public API, but
+   more like internal helpers used by headers.
+2. The CPP does macro expansion etc. anyways, so the internal helper macros
+   aren't needed.
+so preserving them is not useful.

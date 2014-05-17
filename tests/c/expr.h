@@ -1,4 +1,4 @@
-// @fbfrog -whitespace -nonamefixup -keepundefs
+// @fbfrog -whitespace -nonamefixup
 
 typedef int MYINT;
 
@@ -437,56 +437,56 @@ enum E {
 	A = f( !a ),
 };
 
-#define A(x) "a" "b"
-#define A(x) "a" "b" "c" "d"
-#define A(x) "a""b"
-#define A(x) "a" #x "b"
-#define A(x) "a"#x"b"#x"c"
+#define A01(x) "a" "b"
+#define A02(x) "a" "b" "c" "d"
+#define A03(x) "a""b"
+#define A04(x) "a" #x "b"
+#define A05(x) "a"#x"b"#x"c"
 
-#define A (void)0
-#define A (char)0
-#define A (float)0
-#define A (double)0
-#define A (int)0
-#define A (signed int)0
-#define A (unsigned int)0
-#define A (const int)0
-#define A (short)0
-#define A (long)0
-#define A (enum E)0
-#define A (struct UDT)0
-#define A (union UDT)0
-#define A (__stdcall void (*)(void))0
-#define A (__cdecl void (*)(void))0
-#define A (__attribute__((stdcall)) void (*)(void))0
-#define A (void *)0
-#define A (int *)0
-#define A (struct UDT *)0
-#define A (union UDT *)0
-#define A (wchar_t)0
-#define A (size_t)0
-#define A (ssize_t)0
-#define A (ptrdiff_t)0
-#define A (int8_t)0
-#define A (uint8_t)0
-#define A (int16_t)0
-#define A (uint16_t)0
-#define A (int32_t)0
-#define A (uint32_t)0
-#define A (int64_t)0
-#define A (uint64_t)0
-#define A (__int8)0
-#define A (__int16)0
-#define A (__int32)0
-#define A (__int64)0
-#define A (MYINT)0
+#define A06 (void)0
+#define A07 (char)0
+#define A08 (float)0
+#define A09 (double)0
+#define A10 (int)0
+#define A11 (signed int)0
+#define A12 (unsigned int)0
+#define A13 (const int)0
+#define A14 (short)0
+#define A15 (long)0
+#define A16 (enum E)0
+#define A17 (struct UDT)0
+#define A18 (union UDT)0
+#define A19 (__stdcall void (*)(void))0
+#define A20 (__cdecl void (*)(void))0
+#define A21 (__attribute__((stdcall)) void (*)(void))0
+#define A22 (void *)0
+#define A23 (int *)0
+#define A24 (struct UDT *)0
+#define A25 (union UDT *)0
+#define A26 (wchar_t)0
+#define A27 (size_t)0
+#define A28 (ssize_t)0
+#define A29 (ptrdiff_t)0
+#define A30 (int8_t)0
+#define A31 (uint8_t)0
+#define A32 (int16_t)0
+#define A33 (uint16_t)0
+#define A34 (int32_t)0
+#define A35 (uint32_t)0
+#define A36 (int64_t)0
+#define A37 (uint64_t)0
+#define A38 (__int8)0
+#define A39 (__int16)0
+#define A40 (__int32)0
+#define A41 (__int64)0
+#define A42 (MYINT)0
 
-#define A { a(0); b(1); }
-#define A { 1, 2, 3 }
-#define A { }
-#define A { 1 }
-#define A { 1, }
+#define A43 { a(0); b(1); }
+#define A44 { 1, 2, 3 }
+#define A45 { }
+#define A46 { 1 }
+#define A47 { 1, }
 
 // C UOP nested inside children list
-#define A { !a, !a }
-#define A { f( !a ); }
+#define A48 { !a, !a }
+#define A49 { f( !a ); }

@@ -2139,10 +2139,8 @@ sub cppMain( byval whitespace as integer, byval nomerge as integer )
 						hMaybeReportConflictingDefine( macro, tkGetAst( xprevdefine ) )
 					end if
 
-					'' Don't preserve previous #define without -keepundefs
-					if( frog.keepundefs = FALSE ) then
-						tkAddFlags( xprevdefine, TKFLAG_REMOVE )
-					end if
+					'' Don't preserve previous #define
+					tkAddFlags( xprevdefine, TKFLAG_REMOVE )
 				end if
 
 				'' Register/overwrite as known defined symbol
@@ -2160,24 +2158,19 @@ sub cppMain( byval whitespace as integer, byval nomerge as integer )
 			else
 				var id = tkGetText( x )
 
-				'' If #undeffing an existing #define, don't preserve it without -keepundefs
+				'' If #undeffing an existing #define, don't preserve it
 				var xdefine = hLookupMacro( id )
 				if( xdefine >= 0 ) then
 					assert( tkGet( xdefine ) = TK_PPDEFINE )
 					assert( *tkGetAst( xdefine )->text = *id )
-					if( frog.keepundefs = FALSE ) then
-						tkAddFlags( xdefine, TKFLAG_REMOVE )
-					end if
+					tkAddFlags( xdefine, TKFLAG_REMOVE )
 				end if
 
 				'' Register/overwrite as known undefined symbol
 				hRegisterMacro( id, -1 )
 
-				'' Don't preserve #undef without -keepundefs,
-				'' or if the symbol was registed for removal.
-				if( (frog.keepundefs = FALSE) or hLookupRemoveSym( id ) ) then
-					tkAddFlags( x, TKFLAG_REMOVE )
-				end if
+				'' Don't preserve #undefs
+				tkAddFlags( x, TKFLAG_REMOVE )
 			end if
 
 		case TK_PPERROR
