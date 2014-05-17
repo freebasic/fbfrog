@@ -366,9 +366,6 @@ private function emitAst _
 		hEmitIndentedChildren( n )
 		emitStmt( "end scope" )
 
-	case ASTCLASS_APPENDBI
-		emitLines( sourcebufferFromFile( n->text, @n->location )->buffer )
-
 	case ASTCLASS_INCLIB
 		emitStmt( "#inclib """ + *n->text + """", n->comment )
 

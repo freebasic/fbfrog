@@ -142,7 +142,6 @@ To do:
 - #includes that can't be found should just be removed, e.g. system headers
 - fbfrog should automatically add the proper crt/* #include if needed
 
-- -appendbi is pointless, can aswell just do "cat foo.bi >> my.bi"
 - consider splitting statement vs. expression AST into 2 sorts of nodes
   statements = array of statements
   expression = binary tree

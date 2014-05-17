@@ -1,1 +1,0 @@
-declare sub morev1( )

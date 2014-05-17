@@ -34,7 +34,6 @@ private sub hPrintHelpAndExit( )
 	print "  -removedefine <id>       Don't preserve a certain #define"
 	print "  -renametypedef <oldid> <newid>  Rename a typedef"
 	print "  -renametag <oldid> <newid>      Rename a struct/union/enum"
-	print "  -appendbi <file>                Append arbitrary FB code from <file> to the binding"
 	print "  -removematch ""<C token(s)>""  Drop constructs containing the given C token(s)."
 	print "                               This should be used to work-around parsing errors."
 	end 1
@@ -375,13 +374,6 @@ private function hParseArgs( byref x as integer, byval body as integer ) as ASTN
 					tkOopsExpected( x, "C tokens" )
 				end if
 				astAppend( result, astTakeLoc( astNew( ASTCLASS_REMOVEMATCH, tkGetText( x ) ), x ) )
-
-			case "appendbi"
-				x += 1
-
-				'' <file>
-				hExpectPath( x )
-				astAppend( result, astTakeLoc( astNew( ASTCLASS_APPENDBI, hPathRelativeToResponseFile( x ) ), x ) )
 
 			case else
 				tkOops( x, "unknown command line option '" + text + "'" )
@@ -739,18 +731,6 @@ private function frogWorkVersion _
 	if( frog.pragmaonce ) then
 		astPrependMaybeWithDivider( ast, astNew( ASTCLASS_PRAGMAONCE ) )
 	end if
-
-	'' Add the APPENDBI's, if any
-	scope
-		var i = presetcode->head
-		while( i )
-			if( i->class = ASTCLASS_APPENDBI ) then
-				astAppend( ast, astNew( ASTCLASS_DIVIDER ) )
-				astAppend( ast, astClone( i ) )
-			end if
-			i = i->next
-		wend
-	end scope
 
 	astMergeDIVIDERs( ast )
 

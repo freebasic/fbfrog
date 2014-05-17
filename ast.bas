@@ -47,7 +47,6 @@ dim shared as ASTNODEINFO astnodeinfo(0 to ...) = _
 	("renametypedef"), _
 	("renametag"    ), _
 	("removematch"  ), _
-	("appendbi"     ), _
 	("inclib"       ), _
 	("pragmaonce"   ), _
 	("#include"     ), _

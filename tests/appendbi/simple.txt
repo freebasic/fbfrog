@@ -1,7 +1,0 @@
-[dos]
-        parsing: tests/appendbi/simple.h
-[linux]
-        parsing: tests/appendbi/simple.h
-[win32]
-        parsing: tests/appendbi/simple.h
-emitting: tests/appendbi/simple.bi (2 declarations)

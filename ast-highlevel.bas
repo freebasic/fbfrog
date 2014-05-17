@@ -1398,7 +1398,7 @@ end function
 
 private function hIsCompound( byval n as ASTNODE ptr ) as integer
 	select case( n->class )
-	case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM, ASTCLASS_APPENDBI
+	case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
 		function = TRUE
 	end select
 end function
