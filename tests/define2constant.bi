@@ -1,7 +1,7 @@
 extern "C"
 
 const A1 = 1
-const A2 = 7
+const A2 = 1 + (2 * 3)
 
 #define B1(x) x
 #define B2() x

@@ -40,7 +40,7 @@ type UDT
 	a : 1 as long
 	a : 3 as long
 	a : 27 as long
-	a : 21 as long
+	a : 1 + (5 * 4) as long
 	a : 1 as long
 	b : 1 as long
 
@@ -52,10 +52,10 @@ type UDT
 	b as long
 	c as long ptr
 	d as long ptr ptr ptr
-	a(0 to 19) as long
-	a(0 to 1, 0 to 2) as long
-	p(0 to 39) as sub()
-	p(0 to 1, 0 to 2) as sub()
+	a(0 to 20 - 1) as long
+	a(0 to 2 - 1, 0 to 3 - 1) as long
+	p(0 to 40 - 1) as sub()
+	p(0 to 2 - 1, 0 to 3 - 1) as sub()
 
 	declare sub f()
 	declare function f() as long

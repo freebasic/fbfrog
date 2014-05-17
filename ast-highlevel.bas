@@ -16,7 +16,7 @@ private function hCleanExpr _
 
 	if( n ) then
 		if( hIsFoldableExpr( n ) ) then
-			function = astFold( astOpsC2FB( n ), is_bool_context )
+			function = astOpsC2FB( n, is_bool_context )
 		else
 			astCleanUpExpressions( n )
 			function = n

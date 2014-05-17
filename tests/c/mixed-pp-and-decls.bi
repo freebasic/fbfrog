@@ -3,6 +3,6 @@ enum E
 end enum
 
 enum E
-	A = 3
+	A = 1 + 2
 	B
 end enum

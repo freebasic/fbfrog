@@ -4,7 +4,7 @@ end enum
 enum
 	A2 = 0
 	B2
-	C2 = 16
+	C2 = 1 shl 4
 	D2
 	E2 = 1
 	F2

@@ -874,7 +874,11 @@ declare sub astDump _
 		byref prefix as string = "" _
 	)
 
-declare function astOpsC2FB( byval n as ASTNODE ptr ) as ASTNODE ptr
+declare function astOpsC2FB _
+	( _
+		byval n as ASTNODE ptr, _
+		byval is_bool_context as integer _
+	) as ASTNODE ptr
 declare function astFold _
 	( _
 		byval n as ASTNODE ptr, _

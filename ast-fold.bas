@@ -16,36 +16,75 @@ private function astExprContains _
 		astExprContains( n->r, nodeclass )
 end function
 
-private function astOpC2FB _
+function astOpsC2FB _
 	( _
 		byval n as ASTNODE ptr, _
-		byval fbop as integer _
+		byval is_bool_context as integer _
 	) as ASTNODE ptr
-	n->class = fbop
-	function = astNewUOP( ASTCLASS_NEGATE, n )
-end function
 
-function astOpsC2FB( byval n as ASTNODE ptr ) as ASTNODE ptr
 	if( n = NULL ) then exit function
 
-	n->expr = astOpsC2FB( n->expr )
-	n->l = astOpsC2FB( n->l )
-	n->r = astOpsC2FB( n->r )
+	var expr_is_bool_context = FALSE
+	var l_is_bool_context = FALSE
+	var r_is_bool_context = FALSE
 
 	select case( n->class )
+	'' ! operand is treated as bool
 	case ASTCLASS_CLOGNOT
-		'' !x    =    x == 0
-		n->r = astNewCONSTI( 0, TYPE_LONG )
-		n = astOpC2FB( n, ASTCLASS_EQ )
-	case ASTCLASS_CDEFINED : n = astOpC2FB( n, ASTCLASS_DEFINED )
-	case ASTCLASS_CLOGOR   : n = astOpC2FB( n, ASTCLASS_ORELSE )
-	case ASTCLASS_CLOGAND  : n = astOpC2FB( n, ASTCLASS_ANDALSO )
-	case ASTCLASS_CEQ      : n = astOpC2FB( n, ASTCLASS_EQ )
-	case ASTCLASS_CNE      : n = astOpC2FB( n, ASTCLASS_NE )
-	case ASTCLASS_CLT      : n = astOpC2FB( n, ASTCLASS_LT )
-	case ASTCLASS_CLE      : n = astOpC2FB( n, ASTCLASS_LE )
-	case ASTCLASS_CGT      : n = astOpC2FB( n, ASTCLASS_GT )
-	case ASTCLASS_CGE      : n = astOpC2FB( n, ASTCLASS_GE )
+		l_is_bool_context = TRUE
+
+	'' andalso/orelse operands are always treated as bools
+	case ASTCLASS_CLOGOR, ASTCLASS_CLOGAND
+		l_is_bool_context = TRUE
+		r_is_bool_context = TRUE
+
+	'' BOP operands may sometimes be in bool context:
+	''    x = 0
+	''    x <> 0
+	'' (not x = -1 and x <> -1 because if checks check against 0 and <> 0,
+	'' not 0 and -1)
+	case ASTCLASS_CEQ, ASTCLASS_CNE
+		if( astIsCONSTI( n->r ) ) then
+			l_is_bool_context = (n->r->vali = 0)
+		end if
+
+	'' iif() condition always is treated as bool
+	case ASTCLASS_IIF
+		expr_is_bool_context = TRUE
+	end select
+
+	n->expr = astOpsC2FB( n->expr, expr_is_bool_context )
+	n->l = astOpsC2FB( n->l, l_is_bool_context )
+	n->r = astOpsC2FB( n->r, r_is_bool_context )
+
+	select case( n->class )
+	case ASTCLASS_CLOGNOT, ASTCLASS_CDEFINED, _
+	     ASTCLASS_CLOGOR, ASTCLASS_CLOGAND, _
+	     ASTCLASS_CEQ, ASTCLASS_CNE, _
+	     ASTCLASS_CLT, ASTCLASS_CLE, _
+	     ASTCLASS_CGT, ASTCLASS_CGE
+
+		select case( n->class )
+		case ASTCLASS_CLOGNOT
+			'' Turn C's "!x" into FB's "x = 0"
+			n->class = ASTCLASS_EQ
+			n->r = astNewCONSTI( 0, TYPE_LONG )
+		case ASTCLASS_CDEFINED : n->class = ASTCLASS_DEFINED
+		case ASTCLASS_CLOGOR   : n->class = ASTCLASS_ORELSE
+		case ASTCLASS_CLOGAND  : n->class = ASTCLASS_ANDALSO
+		case ASTCLASS_CEQ      : n->class = ASTCLASS_EQ
+		case ASTCLASS_CNE      : n->class = ASTCLASS_NE
+		case ASTCLASS_CLT      : n->class = ASTCLASS_LT
+		case ASTCLASS_CLE      : n->class = ASTCLASS_LE
+		case ASTCLASS_CGT      : n->class = ASTCLASS_GT
+		case ASTCLASS_CGE      : n->class = ASTCLASS_GE
+		case else              : assert( FALSE )
+		end select
+
+		'' Turn -1|0 into 1|0 if the value may be used in math calculations etc.
+		if( is_bool_context = FALSE ) then
+			n = astNewUOP( ASTCLASS_NEGATE, n )
+		end if
 	end select
 
 	function = n

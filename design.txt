@@ -210,7 +210,10 @@ Typedef vs struct/union/enum tag symbols handling
 * The user can still specify -rename command line options if needed.
 
 No expression folding/constant evaluation for initializers/#define expressions.
-+ Never really needed, rarely ever useful.
++ Never really needed, rarely ever useful - it's purely a coding style thing.
+  But if an expression was written a certain way in a C header, then there's
+  probably a reason for it, for example to make its value easier to understand.
+  Folding would destroy that.
 + Avoids lots of ugly code
 - Converting C expressions to FB may become more difficult due to the different
   operator/data type semantics. Having fbfrog calculate the expressions using

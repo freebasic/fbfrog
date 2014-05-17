@@ -164,17 +164,12 @@ To do:
        do "long" in place of every "enum Foo" type. (would have to calculate enumconst value
        if no initializer given)
 
-- Expressions/const folding:
-  - has issues with 32bit/64bit, using Longint internally, so e.g. ~(0xFFFFFFFF)
-    comes out as &hFFFFFFFF00000000 instead of &h0. Need to respect C number
-    literal dtypes & sizes.
+- #if expression evaluation:
+  - Support unsigned values
   - Don't crash on (INT_MIN / -1) or (INT_MIN % -1)
-  - Need to handle unsigned relational BOPs properly
-  - Only #if expressions need to be evaluated, but nothing else. astOpsC2FB()
-    is still needed, and may also have to insert clng()'s at certain places to
-    ensure FB produces 32bit int values...
-  - Only insert - negation UOPs around logical ops if not in bool context, then
-    the complex folding functions can be removed.
+
+- Should astOpsC2FB() insert clng() at various places to ensure that C int
+  expressions produce 32bit values even in 64bit FB?
 
 - char array should be translated to zstring * N:
     static char s[10] = "hello";

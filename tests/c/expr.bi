@@ -60,7 +60,7 @@ enum E
 	A = -(A = 0)
 	A = not A
 	A = -A
-	A = A
+	A = +A
 	A = @A
 	A = *A
 	A = sizeof( A )
@@ -75,92 +75,92 @@ enum E
 	A = -(a = 0)
 	A = not a
 	A = -a
-	A = a
+	A = +a
 	A = -(a = 0)
 	A = not a
 	A = -a
-	A = a
+	A = +a
 	A = -(a = 0)
 	A = not a
 	A = -a
-	A = a
-	A = -(a <> 0)
-	A = a
-	A = a
-	A = a
-	A = -(a orelse b)
-	A = -(a orelse b)
-	A = -(a andalso b)
-	A = a or b
-	A = a xor b
-	A = a and b
-	A = -(a = b)
-	A = -(a <> b)
-	A = -(a < b)
-	A = -(a <= b)
-	A = -(a > b)
-	A = -(a >= b)
-	A = a shl b
-	A = a shr b
-	A = a + b
-	A = a - b
-	A = a * b
-	A = a / b
-	A = a mod b
-	A = -(a orelse b)
-	A = -(a orelse b)
-	A = -(a orelse b)
-	A = -(a andalso b)
-	A = -(a andalso b)
-	A = -(a andalso b)
-	A = a or b
-	A = a or b
-	A = a or b
-	A = a xor b
-	A = a xor b
-	A = a xor b
-	A = a and b
-	A = a and b
-	A = a and b
-	A = -(a = b)
-	A = -(a = b)
-	A = -(a = b)
-	A = -(a <> b)
-	A = -(a <> b)
-	A = -(a <> b)
-	A = -(a < b)
-	A = -(a < b)
-	A = -(a < b)
-	A = -(a <= b)
-	A = -(a <= b)
-	A = -(a <= b)
-	A = -(a > b)
-	A = -(a > b)
-	A = -(a > b)
-	A = -(a >= b)
-	A = -(a >= b)
-	A = -(a >= b)
-	A = a shl b
-	A = a shl b
-	A = a shl b
-	A = a shr b
-	A = a shr b
-	A = a shr b
-	A = a + b
-	A = a + b
-	A = a + b
-	A = a - b
-	A = a - b
-	A = a - b
-	A = a * b
-	A = a * b
-	A = a * b
-	A = a / b
-	A = a / b
-	A = a / b
-	A = a mod b
-	A = a mod b
-	A = a mod b
+	A = +a
+	A = -((a = 0) = 0)
+	A = not (not a)
+	A = -(-a)
+	A = +(+a)
+	A = -(a orelse (-(-b)))
+	A = -(a orelse (-(-b)))
+	A = -(a andalso (-(-b)))
+	A = a or (-(-b))
+	A = a xor (-(-b))
+	A = a and (-(-b))
+	A = -(a = (-(-b)))
+	A = -(a <> (-(-b)))
+	A = -(a < (-(-b)))
+	A = -(a <= (-(-b)))
+	A = -(a > (-(-b)))
+	A = -(a >= (-(-b)))
+	A = a shl (-(-b))
+	A = a shr (-(-b))
+	A = a + (-(-b))
+	A = a - (-(-b))
+	A = a * (-(-b))
+	A = a / (-(-b))
+	A = a mod (-(-b))
+	A = -((-(-a)) orelse b)
+	A = -(-(-(a orelse b)))
+	A = -((-(-a)) orelse b)
+	A = -((-(-a)) andalso b)
+	A = -(-(-(a andalso b)))
+	A = -((-(-a)) andalso b)
+	A = (-(-a)) or b
+	A = -(-(a or b))
+	A = (-(-a)) or b
+	A = (-(-a)) xor b
+	A = -(-(a xor b))
+	A = (-(-a)) xor b
+	A = (-(-a)) and b
+	A = -(-(a and b))
+	A = (-(-a)) and b
+	A = -((-(-a)) = b)
+	A = -(-(-(a = b)))
+	A = -((-(-a)) = b)
+	A = -((-(-a)) <> b)
+	A = -(-(-(a <> b)))
+	A = -((-(-a)) <> b)
+	A = -((-(-a)) < b)
+	A = -(-(-(a < b)))
+	A = -((-(-a)) < b)
+	A = -((-(-a)) <= b)
+	A = -(-(-(a <= b)))
+	A = -((-(-a)) <= b)
+	A = -((-(-a)) > b)
+	A = -(-(-(a > b)))
+	A = -((-(-a)) > b)
+	A = -((-(-a)) >= b)
+	A = -(-(-(a >= b)))
+	A = -((-(-a)) >= b)
+	A = (-(-a)) shl b
+	A = -(-(a shl b))
+	A = (-(-a)) shl b
+	A = (-(-a)) shr b
+	A = -(-(a shr b))
+	A = (-(-a)) shr b
+	A = (-(-a)) + b
+	A = -(-(a + b))
+	A = (-(-a)) + b
+	A = (-(-a)) - b
+	A = -(-(a - b))
+	A = (-(-a)) - b
+	A = (-(-a)) * b
+	A = -(-(a * b))
+	A = (-(-a)) * b
+	A = (-(-a)) / b
+	A = -(-(a / b))
+	A = (-(-a)) / b
+	A = (-(-a)) mod b
+	A = -(-(a mod b))
+	A = (-(-a)) mod b
 	A = iif( a, b, c )
 	A = -(a orelse b)
 	A = -(a andalso b)

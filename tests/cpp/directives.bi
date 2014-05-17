@@ -51,7 +51,7 @@ const A19 = 1
 const A20 = 1
 const A21 = 1
 const A22 = 1
-const B01 = 2
+const B01 = 1 + 1
 const B02 = 1
 #define A
 #define A
