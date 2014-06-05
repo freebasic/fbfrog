@@ -817,27 +817,25 @@ end function
 		frog.maxversionstrlen += 3
 	end scope
 
-	'' Parse files for each version, using the options for that version
-	scope
-		var i = targetversions->head
-		do
-			i->expr = frogWorkVersion( i, astGet1VersionAndTargetOnly( frog.code, i ) )
-			i = i->next
-		loop while( i )
-	end scope
-
-	'' Merge version-specific ASTs into one
+	'' For each version, parse the input into an AST, using the options for
+	'' that version, and then merge the AST with the previous one, so that
+	'' finally we get a single AST representing all versions.
+	''
+	'' Doing the merging here step-by-step vs. collecting all ASTs and then
+	'' merging them afterwards: Merging here immediately saves memory, and
+	'' also means that the slow merging process for a version happens after
+	'' parsing that version. Instead of one single big delay at the end,
+	'' there is a small delay at each version.
 	dim as ASTNODE ptr final
 	scope
 		var i = targetversions->head
 		do
-
+			var ast = frogWorkVersion( i, astGet1VersionAndTargetOnly( frog.code, i ) )
 			if( final = NULL ) then
-				final = i->expr
+				final = ast
 			else
-				final = astMergeVerblocks( final, i->expr )
+				final = astMergeVerblocks( final, ast )
 			end if
-			i->expr = NULL
 
 			i = i->next
 		loop while( i )
