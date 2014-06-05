@@ -1,3 +1,5 @@
+#pragma once
+
 extern "C"
 
 declare function f11(byval i as long) as long

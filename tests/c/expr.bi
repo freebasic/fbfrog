@@ -1,3 +1,5 @@
+#pragma once
+
 #include once "crt/long.bi"
 
 type UDT as UDT_

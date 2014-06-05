@@ -1,3 +1,5 @@
+#pragma once
+
 extern "C"
 
 declare sub f1(byval p as wstring ptr = wstr( "a" ))

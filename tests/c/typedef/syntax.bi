@@ -1,3 +1,5 @@
+#pragma once
+
 extern "C"
 
 type UDT as UDT_

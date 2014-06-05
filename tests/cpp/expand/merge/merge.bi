@@ -1,3 +1,5 @@
+#pragma once
+
 extern "C"
 
 type left_UDT as left_UDT_

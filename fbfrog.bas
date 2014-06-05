@@ -19,7 +19,6 @@ private sub hPrintHelpAndExit( )
 	print "                   e.g. due to FB's keywords and/or case insensitivity"
 	print "  -versiondefine <id>  Set identifier for version #define that may"
 	print "                       be used by the generated binding."
-	print "  -pragmaonce      Add #pragma once statements"
 	print "  -incdir <path>   Add #include search directory"
 	print "  -o <path/file>   Set output .bi file name, or just the output directory"
 	print "  -v               Show verbose/debugging info"
@@ -219,7 +218,6 @@ private function hParseArgs( byref x as integer, byval body as integer ) as ASTN
 			case "windowsms"    : frog.windowsms    = TRUE
 			case "noconstants"  : frog.noconstants  = TRUE
 			case "nonamefixup"  : frog.nonamefixup  = TRUE
-			case "pragmaonce"   : frog.pragmaonce   = TRUE
 			case "v", "verbose", "-verbose" : frog.verbose = TRUE
 
 			case "versiondefine"
@@ -726,9 +724,9 @@ private function frogWorkVersion _
 	end scope
 
 	'' Prepend #pragma once
-	if( frog.pragmaonce ) then
-		astPrependMaybeWithDivider( ast, astNew( ASTCLASS_PRAGMAONCE ) )
-	end if
+	'' It's always "needed": C headers typically have #include guards, but
+	'' we don't preserve those.
+	astPrependMaybeWithDivider( ast, astNew( ASTCLASS_PRAGMAONCE ) )
 
 	astMergeDIVIDERs( ast )
 

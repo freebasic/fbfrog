@@ -1,3 +1,5 @@
+#pragma once
+
 type A
 	a1 as A ptr
 end type

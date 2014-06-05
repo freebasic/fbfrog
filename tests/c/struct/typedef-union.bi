@@ -1,3 +1,5 @@
+#pragma once
+
 union U1
 	a as long
 end union

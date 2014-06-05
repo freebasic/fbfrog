@@ -1,3 +1,5 @@
+#pragma once
+
 extern "C"
 
 type B1

@@ -981,7 +981,6 @@ type FROGSTUFF
 	windowsms	as integer
 	noconstants	as integer
 	nonamefixup	as integer
-	pragmaonce	as integer
 	versiondefine	as string
 	incdirs		as ASTNODE ptr
 	outname		as string

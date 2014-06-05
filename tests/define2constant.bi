@@ -1,3 +1,5 @@
+#pragma once
+
 extern "C"
 
 const A1 = 1

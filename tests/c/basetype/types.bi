@@ -1,3 +1,5 @@
+#pragma once
+
 #include once "crt/long.bi"
 #include once "crt/longdouble.bi"
 

@@ -1,3 +1,5 @@
+#pragma once
+
 enum E1
 end enum
 

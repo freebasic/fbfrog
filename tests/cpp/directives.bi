@@ -1,3 +1,5 @@
+#pragma once
+
 '' @ignore
 
 dim shared included as long

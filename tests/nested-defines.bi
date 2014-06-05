@@ -1,3 +1,5 @@
+#pragma once
+
 #define D1
 #define D2
 

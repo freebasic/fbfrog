@@ -1,3 +1,5 @@
+#pragma once
+
 enum B
 	FOO
 end enum

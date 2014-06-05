@@ -1,3 +1,5 @@
+#pragma once
+
 extern "C"
 
 #define GLOBALDEFINE1_() 1

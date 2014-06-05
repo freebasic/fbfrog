@@ -1,3 +1,5 @@
+#pragma once
+
 union Nested
 	a as long
 	b as long

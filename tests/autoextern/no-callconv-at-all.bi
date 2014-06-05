@@ -1,3 +1,5 @@
+#pragma once
+
 #define A
 #define B
 #define C

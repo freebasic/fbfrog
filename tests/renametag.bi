@@ -1,3 +1,5 @@
+#pragma once
+
 type a
 	f as long
 end type

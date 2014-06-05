@@ -1,3 +1,5 @@
+#pragma once
+
 type __freebasic_dummyid_0
 end type
 

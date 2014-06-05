@@ -1,3 +1,5 @@
+#pragma once
+
 type UDT1
 	a as long
 end type

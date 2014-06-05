@@ -1,3 +1,5 @@
+#pragma once
+
 type AAA
 	a as long
 end type

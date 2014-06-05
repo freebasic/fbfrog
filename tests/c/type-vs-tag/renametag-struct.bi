@@ -1,3 +1,5 @@
+#pragma once
+
 type B
 	d as double
 end type

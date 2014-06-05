@@ -1,3 +1,5 @@
+#pragma once
+
 #define m1(x) m##x
 #define m2 x2
 #define m3 x3

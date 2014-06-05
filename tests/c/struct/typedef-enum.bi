@@ -1,3 +1,5 @@
+#pragma once
+
 enum EE1
 	A1
 	B1

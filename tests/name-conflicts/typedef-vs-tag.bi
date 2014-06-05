@@ -1,3 +1,5 @@
+#pragma once
+
 type myint as long
 type UDT2 as long
 

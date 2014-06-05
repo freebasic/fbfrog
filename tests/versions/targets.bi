@@ -1,3 +1,5 @@
+#pragma once
+
 dim shared doslinuxwin32 as long
 
 #ifdef __FB_DOS__

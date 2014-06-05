@@ -1,3 +1,5 @@
+#pragma once
+
 type Vector2A
 	x as long
 	y as long

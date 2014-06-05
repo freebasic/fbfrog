@@ -1,3 +1,5 @@
+#pragma once
+
 union B
 	d as double
 end union

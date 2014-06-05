@@ -1,3 +1,5 @@
+#pragma once
+
 extern "C"
 
 #define m1 m2

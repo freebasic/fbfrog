@@ -1,3 +1,5 @@
+#pragma once
+
 extern "C"
 
 '' @fbfrog -whitespace -nonamefixup -removedefine m

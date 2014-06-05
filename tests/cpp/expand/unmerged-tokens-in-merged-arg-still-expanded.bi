@@ -1,3 +1,5 @@
+#pragma once
+
 '' @fbfrog -whitespace -nonamefixup -removedefine m2
 
 #define m3 foo

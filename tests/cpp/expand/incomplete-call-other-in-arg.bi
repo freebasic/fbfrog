@@ -1,3 +1,5 @@
+#pragma once
+
 extern "C"
 
 #define m2(x) x

@@ -1,3 +1,5 @@
+#pragma once
+
 '' @fbfrog -whitespace
 '' a
 '' b

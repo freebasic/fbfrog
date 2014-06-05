@@ -1,3 +1,5 @@
+#pragma once
+
 extern "C"
 
 type __freebasic_dummyid_0

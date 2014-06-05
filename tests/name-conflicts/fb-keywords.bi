@@ -1,3 +1,5 @@
+#pragma once
+
 extern "C"
 
 dim shared ABS_ as long

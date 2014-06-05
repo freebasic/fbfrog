@@ -1,3 +1,5 @@
+#pragma once
+
 union UDT2
 	a as long
 end union

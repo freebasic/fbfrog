@@ -1,3 +1,5 @@
+#pragma once
+
 type UDT
 	union
 		type

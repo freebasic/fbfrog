@@ -1,3 +1,5 @@
+#pragma once
+
 dim shared define as long
 dim shared include as long
 dim shared elif as long

@@ -6,6 +6,8 @@
 	#error "'__VERSION__' is #defined to an unsupported value; expected one of: ""1"", ""2"""
 #endif
 
+#pragma once
+
 type UDT1
 	field1 as long
 	field2 as long

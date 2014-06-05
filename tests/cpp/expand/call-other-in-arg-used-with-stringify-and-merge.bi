@@ -1,3 +1,5 @@
+#pragma once
+
 extern "C"
 
 declare sub f1(byval pm2 as zstring ptr = "m2")

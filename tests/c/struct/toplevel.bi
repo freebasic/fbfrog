@@ -1,3 +1,5 @@
+#pragma once
+
 type T1
 end type
 

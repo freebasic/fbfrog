@@ -1,3 +1,5 @@
+#pragma once
+
 enum E
 	FOO = 1
 end enum

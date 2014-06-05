@@ -1,3 +1,5 @@
+#pragma once
+
 extern "Windows"
 
 declare sub f1()

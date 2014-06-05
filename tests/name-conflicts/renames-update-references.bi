@@ -1,3 +1,5 @@
+#pragma once
+
 extern "C"
 
 #define INT_(x) x

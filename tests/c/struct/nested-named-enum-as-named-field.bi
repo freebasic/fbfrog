@@ -1,3 +1,5 @@
+#pragma once
+
 type T
 	enum E
 		A = 123

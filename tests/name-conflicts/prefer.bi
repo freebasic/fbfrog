@@ -1,3 +1,5 @@
+#pragma once
+
 extern "C"
 
 #define I1() 1
