@@ -978,7 +978,6 @@ declare function cFile( ) as ASTNODE ptr
 type FROGSTUFF
 	nomerge		as integer
 	whitespace	as integer
-	noautoextern	as integer
 	windowsms	as integer
 	noconstants	as integer
 	nonamefixup	as integer

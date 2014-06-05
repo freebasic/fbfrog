@@ -13,7 +13,6 @@ private sub hPrintHelpAndExit( )
 	print "                   (will be expanded in place before other parsing)"
 	print "  -nomerge         Don't preserve code from #includes"
 	print "  -whitespace      Try to preserve comments and empty lines"
-	print "  -noautoextern    Don't add Extern blocks"
 	print "  -windowsms       Use Extern ""Windows-MS"" instead of Extern ""Windows"""
 	print "  -noconstants     Don't try to turn #defines into constants"
 	print "  -nonamefixup     Don't fix symbol identifier conflicts which happen"
@@ -217,7 +216,6 @@ private function hParseArgs( byref x as integer, byval body as integer ) as ASTN
 
 			case "nomerge"      : frog.nomerge      = TRUE
 			case "whitespace"   : frog.whitespace   = TRUE
-			case "noautoextern" : frog.noautoextern = TRUE
 			case "windowsms"    : frog.windowsms    = TRUE
 			case "noconstants"  : frog.noconstants  = TRUE
 			case "nonamefixup"  : frog.nonamefixup  = TRUE
@@ -704,7 +702,7 @@ private function frogWorkVersion _
 	astAddForwardDeclsForUndeclaredTagIds( ast )
 
 	if( frog.nonamefixup = FALSE ) then astFixIds( ast )
-	if( frog.noautoextern = FALSE ) then astAutoExtern( ast, frog.windowsms, frog.whitespace )
+	astAutoExtern( ast, frog.windowsms, frog.whitespace )
 
 	assert( ast->class = ASTCLASS_GROUP )
 
