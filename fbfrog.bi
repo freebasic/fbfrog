@@ -987,7 +987,6 @@ type FROGSTUFF
 	defaultoutname	as string
 	verbose		as integer
 
-	commandline	as string
 	code		as ASTNODE ptr
 	maxversionstrlen	as integer
 end type
