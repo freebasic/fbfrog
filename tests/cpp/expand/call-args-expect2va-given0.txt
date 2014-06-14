@@ -1,0 +1,11 @@
+[dos]
+        parsing: tests/cpp/expand/call-args-expect2va-given0.h
+tests/cpp/expand/call-args-expect2va-given0.h(3): not enough arguments for 'm' macro call: 2 given, 3 needed
+    1: // @fail
+    2: #define m(a, b, ...)
+    3: m()
+         ^
+    4: 
+construct's code as seen by fbfrog:
+    m ( ) [eol]
+        ^

@@ -79,6 +79,11 @@ const B02 = 1
 #define m18(a, b) foo##a##foo##b
 #define m19(a, b) foo##a##foo##b##foo
 #define m20(a) #a
+#define m21(__VA_ARGS__...) f(__VA_ARGS__)
+#define m22(a, __VA_ARGS__...) a(__VA_ARGS__)
+#define m23(a, __VA_ARGS__...) f(a, __VA_ARGS__)
+#define m24(a, b, __VA_ARGS__...) f(a, b, __VA_ARGS__)
+#define m25(a, b, args...) f(a, b, args)
 #define no_parameters_here a
 dim shared separator1 as long
 

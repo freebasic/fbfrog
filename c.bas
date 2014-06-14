@@ -82,7 +82,7 @@ private function hIsTypedef( byval id as zstring ptr ) as integer
 	function = (hashLookup( @file.typedefs, id, hashHash( id ) )->s <> NULL)
 end function
 
-private function hMatch( byref x as integer, byval tk as integer ) as integer
+function hMatch( byref x as integer, byval tk as integer ) as integer
 	if( tkGet( x ) = tk ) then
 		x += 1
 		function = TRUE

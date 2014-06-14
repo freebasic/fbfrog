@@ -599,9 +599,57 @@ end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-private sub hMacroParamList( byref x as integer, byval t as ASTNODE ptr )
+'' MacroParameter =
+''      Identifier         (named parameter)
+''    | Identifier '...'   (named + variadic)
+''    | '...'              (variadic, using __VA_ARGS__)
+'' ('...' can only appear on the last parameter)
+private function hMacroParam _
+	( _
+		byref x as integer, _
+		byval macro as ASTNODE ptr _
+	) as integer
+
+	dim id as zstring ptr
+	if( tkGet( x ) = TK_ID ) then
+		id = tkGetText( x )
+		x += 1
+	end if
+
+	'' Shouldn't have seen a '...' yet
+	assert( (macro->attrib and ASTATTRIB_VARIADIC) = 0 )
+	var maybevariadic = 0
+
+	if( tkGet( x ) = TK_ELLIPSIS ) then
+		x += 1
+		maybevariadic = ASTATTRIB_VARIADIC
+
+		if( id = NULL ) then
+			''    #define m(a, ...)
+			'' must become
+			''    #define m(a, __VA_ARGS__...)
+			'' in FB, because in FB, the '...' parameter of variadic macros must always have a name,
+			'' and using __VA_ARGS__ for that is the easiest solution, because then we don't need to
+			'' go replacing that in the macro body.
+			id = @"__VA_ARGS__"
+		end if
+	elseif( id = NULL ) then
+		'' No identifier and no '...'
+		exit function
+	end if
+
+	var param = astNew( ASTCLASS_MACROPARAM, id )
+	param->attrib or= maybevariadic
+	astAppend( macro, param )
+	macro->attrib or= maybevariadic
+	macro->paramcount += 1
+	function = TRUE
+end function
+
+'' Identifier <no whitespace> '(' MacroParameters ')'
+private sub hMacroParamList( byref x as integer, byval macro as ASTNODE ptr )
 	assert( tkGet( x ) >= TK_ID )
-	assert( t->paramcount = -1 )
+	assert( macro->paramcount = -1 )
 	x += 1
 
 	'' '(' following directly behind the macro id, no spaces in between?
@@ -609,25 +657,17 @@ private sub hMacroParamList( byref x as integer, byval t as ASTNODE ptr )
 	    ((tkGetFlags( x ) and TKFLAG_BEHINDSPACE) = 0) ) then
 		'' '('
 		x += 1
-		t->paramcount = 0
+		macro->paramcount = 0
 
-		'' List of macro parameters:
-		'' Identifier (',' Identifier)*
+		'' List of macro parameters =
+		''    MacroParam (',' MacroParam)*
 		do
-			'' macro parameter's Identifier
-			if( tkGet( x ) <> TK_ID ) then
+			if( hMacroParam( x, macro ) = FALSE ) then
 				exit do
 			end if
-			astAppend( t, astNew( ASTCLASS_MACROPARAM, tkGetText( x ) ) )
-			t->paramcount += 1
-			x += 1
 
 			'' ','?
-			if( tkGet( x ) <> TK_COMMA ) then
-				exit do
-			end if
-			x += 1
-		loop
+		loop while( hMatch( x, TK_COMMA ) )
 
 		'' ')'?
 		tkExpect( x, TK_RPAREN, "to close the parameter list in this macro declaration" )
@@ -941,7 +981,10 @@ private sub hParseMacroCallArgs _
 	'' arguments. I.e. the commas or closing ')' cannot come from macro
 	'' expansions.
 
-	'' For each arg...
+	var is_variadic = ((macro->attrib and ASTATTRIB_VARIADIC) <> 0)
+
+	'' For each arg in the input...
+	var reached_lastarg = FALSE
 	do
 		if( argcount >= MAXARGS ) then
 			tkOops( x, "macro call arg buffer too small, MAXARGS=" & MAXARGS )
@@ -949,24 +992,38 @@ private sub hParseMacroCallArgs _
 
 		argbegin[argcount] = x
 
+		'' Is this the argument for the last parameter of a variadic macro?
+		'' We're going to read all the remaining tokens into this last argument,
+		'' even commas, thus there won't be any other arguments following after this one.
+		assert( (not is_variadic) or (not reached_lastarg) )
+		reached_lastarg = (argcount = (macro->paramcount - 1))
+
 		'' For each token that's part of this arg...
 		var level = 0
 		do
 			select case( tkGet( x ) )
 			case TK_LPAREN
 				level += 1
+
 			case TK_RPAREN
 				if( level <= 0 ) then
 					exit do
 				end if
 				level -= 1
+
 			case TK_COMMA
+				'' A toplevel comma ends the current arg, unless it's a "..." vararg,
+				'' which just "absorbs" everything until the closing ')'.
 				if( level <= 0 ) then
-					exit do
+					if( (not is_variadic) or (not reached_lastarg) ) then
+						exit do
+					end if
 				end if
+
 			case TK_EOF
 				tkOopsExpected( x, "')' to close macro call argument list" )
 			end select
+
 			x += 1
 		loop
 
@@ -974,13 +1031,19 @@ private sub hParseMacroCallArgs _
 		argcount += 1
 
 		'' ','?
-		if( tkGet( x ) <> TK_COMMA ) then
-			exit do
-		end if
-		x += 1
-	loop
+	loop while( hMatch( x, TK_COMMA ) )
 
-	'' As many args as params?
+	'' It's ok to omit the arg(s) for the variadic parameter of a variadic macro.
+	if( is_variadic and (not reached_lastarg) ) then
+		if( argcount >= MAXARGS ) then
+			tkOops( x, "macro call arg buffer too small, MAXARGS=" & MAXARGS )
+		end if
+		argbegin[argcount] = x
+		argend[argcount] = x - 1
+		argcount += 1
+	end if
+
+	'' Not the expected amount of args?
 	if( argcount <> macro->paramcount ) then
 		dim s as string
 		if( argcount > macro->paramcount ) then

@@ -71,6 +71,12 @@
 
 #define m20(a) #a
 
+#define m21(...) f(__VA_ARGS__)
+#define m22(a, ...) a(__VA_ARGS__)
+#define m23(a, ...) f(a, __VA_ARGS__)
+#define m24(a, b, ...) f(a, b, __VA_ARGS__)
+#define m25(a, b, args...) f(a, b, args)
+
 #define no_parameters_here (a)
 
 #pragma message("test")

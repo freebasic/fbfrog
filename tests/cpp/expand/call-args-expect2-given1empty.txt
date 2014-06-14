@@ -1,0 +1,11 @@
+[dos]
+        parsing: tests/cpp/expand/call-args-expect2-given1empty.h
+tests/cpp/expand/call-args-expect2-given1empty.h(3): not enough arguments for 'm' macro call: 1 given, 2 needed
+    1: // @fail
+    2: #define m(a, b)
+    3: m()
+         ^
+    4: 
+construct's code as seen by fbfrog:
+    m ( ) [eol]
+        ^

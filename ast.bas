@@ -843,6 +843,7 @@ function astDumpOne( byval n as ASTNODE ptr ) as string
 	checkAttrib( DONTEMIT )
 	checkAttrib( ONCE )
 	checkAttrib( PACKED )
+	checkAttrib( VARIADIC )
 
 	if( n->class <> ASTCLASS_TK ) then
 		if( n->text ) then

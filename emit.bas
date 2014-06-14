@@ -566,6 +566,9 @@ private function emitAst _
 
 	case ASTCLASS_MACROPARAM
 		s += *n->text
+		if( n->attrib and ASTATTRIB_VARIADIC ) then
+			s += "..."
+		end if
 
 	case ASTCLASS_CONSTI
 		if( n->attrib and ASTATTRIB_OCT ) then

@@ -28,4 +28,4 @@
         include: tests/cpp/directives-1.h
         include: tests/cpp/directives-1.h
         include: tests/cpp/directives-1.h
-emitting: tests/cpp/directives.bi (61 declarations)
+emitting: tests/cpp/directives.bi (66 declarations)

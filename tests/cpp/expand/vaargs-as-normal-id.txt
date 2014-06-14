@@ -1,0 +1,7 @@
+[dos]
+        parsing: tests/cpp/expand/vaargs-as-normal-id.h
+[linux]
+        parsing: tests/cpp/expand/vaargs-as-normal-id.h
+[win32]
+        parsing: tests/cpp/expand/vaargs-as-normal-id.h
+emitting: tests/cpp/expand/vaargs-as-normal-id.bi (5 declarations)

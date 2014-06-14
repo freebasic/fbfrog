@@ -694,6 +694,7 @@ const ASTATTRIB_POISONED      = 1 shl 12
 const ASTATTRIB_DONTEMIT      = 1 shl 13
 const ASTATTRIB_ONCE          = 1 shl 14  '' Marks #includes as "#include once"
 const ASTATTRIB_PACKED        = 1 shl 15  '' __attribute__((packed))
+const ASTATTRIB_VARIADIC      = 1 shl 16  '' PPDEFINE/MACROPARAM: variadic macros
 
 '' When changing, adjust astClone(), astIsEqual(), astDump*()
 type ASTNODE_
@@ -971,6 +972,7 @@ declare sub cppInit( )
 declare sub cppNoExpandSym( byval id as zstring ptr )
 declare sub cppRemoveSym( byval id as zstring ptr )
 declare sub cppMain( byval whitespace as integer, byval nomerge as integer )
+declare function hMatch( byref x as integer, byval tk as integer ) as integer
 declare function cFile( ) as ASTNODE ptr
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''

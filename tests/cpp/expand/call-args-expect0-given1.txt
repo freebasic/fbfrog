@@ -1,0 +1,11 @@
+[dos]
+        parsing: tests/cpp/expand/call-args-expect0-given1.h
+tests/cpp/expand/call-args-expect0-given1.h(3): expected ')' to close macro call argument list but found 'a'
+    1: // @fail
+    2: #define m1()
+    3: m1(a)
+          ^
+    4: 
+construct's code as seen by fbfrog:
+    m1 ( a ) [eol]
+         ^
