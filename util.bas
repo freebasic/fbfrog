@@ -324,48 +324,6 @@ function strReplace _
 	function = result
 end function
 
-sub strSplit _
-	( _
-		byref origs as string, _
-		byref delimiter as string, _
-		byref l as string, _
-		byref r as string _
-	)
-
-	var s = origs
-	var leftlen = instr( s, delimiter ) - 1
-
-	if( leftlen >= 0 ) then
-		l = left( s, leftlen )
-		r = right( s, len( s ) - leftlen - len( delimiter ) )
-	else
-		l = s
-		r = ""
-	end if
-
-end sub
-
-function strTrim( byref s as string ) as string
-	function = trim( s, any !" \t" )
-end function
-
-'' Checks whether a string starts with and ends in [double-]quotes.
-private function strIsQuoted( byref s as string ) as integer
-	var last = len( s ) - 1
-	if( last >= 1 ) then
-		function = ((s[0] = CH_DQUOTE) and (s[last] = CH_DQUOTE)) or _
-		           ((s[0] = CH_QUOTE ) and (s[last] = CH_QUOTE ))
-	end if
-end function
-
-function strUnquote( byref s as string ) as string
-	if( strIsQuoted( s ) ) then
-		function = mid( s, 2, len( s ) - 2 )
-	else
-		function = s
-	end if
-end function
-
 function strMakePrintable( byref a as string ) as string
 	dim b as string
 
@@ -384,33 +342,6 @@ end function
 
 function strStartsWith( byref s as string, byref lookfor as string ) as integer
 	function = (left( s, len( lookfor ) ) = lookfor)
-end function
-
-function strEndsWith( byref s as string, byref lookfor as string ) as integer
-	function = (right( s, len( lookfor ) ) = lookfor)
-end function
-
-function strMatches _
-	( _
-		byref origpattern as string, _
-		byref s as string _
-	) as integer
-
-	dim as string pattern = origpattern
-	dim as integer wildcard = instr( pattern, "*" )
-	if( instr( wildcard + 1, pattern, "*" ) > 0 ) then
-		oops( __FUNCTION__ & "(): pattern with more than one wildcard" )
-		end 1
-	end if
-
-	if( wildcard > 0 ) then
-		dim as integer lhs = wildcard - 1
-		dim as integer rhs = len( pattern ) - wildcard
-		function = (( left( s, lhs ) =  left( pattern, lhs )) and _
-		            (right( s, rhs ) = right( pattern, rhs )))
-	else
-		function = (pattern = s)
-	end if
 end function
 
 function strContainsNonHexDigits( byval s as zstring ptr ) as integer
