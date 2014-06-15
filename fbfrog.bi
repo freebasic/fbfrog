@@ -411,6 +411,8 @@ declare function tkGetExpansionLevel( byval x as integer ) as integer
 declare function tkFindTokenWithMinExpansionLevel( byval first as integer, byval last as integer ) as integer
 declare function tkGetMaxExpansionLevel( byval first as integer, byval last as integer ) as integer
 declare sub tkAddFlags( byval x as integer, byval flags as integer )
+declare sub tkSetRemove overload( byval x as integer )
+declare sub tkSetRemove overload( byval first as integer, byval last as integer )
 declare function tkGetFlags( byval x as integer ) as integer
 declare sub tkSetComment( byval x as integer, byval comment as zstring ptr )
 declare function tkGetComment( byval x as integer ) as zstring ptr
@@ -436,6 +438,7 @@ declare function tkCollectComments _
 		byval last as integer _
 	) as string
 declare sub tkRemoveAllOf( byval id as integer, byval text as zstring ptr )
+declare sub tkApplyRemoves( )
 declare sub tkRemoveEOLs( )
 declare sub tkTurnCPPTokensIntoCIds( )
 declare function tkMakePrettyCTokenText( byval x as integer ) as string

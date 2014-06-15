@@ -527,6 +527,16 @@ sub tkAddFlags( byval x as integer, byval flags as integer )
 	end if
 end sub
 
+sub tkSetRemove overload( byval x as integer )
+	tkAddFlags( x, TKFLAG_REMOVE )
+end sub
+
+sub tkSetRemove overload( byval first as integer, byval last as integer )
+	for x as integer = first to last
+		tkSetRemove( x )
+	next
+end sub
+
 function tkGetFlags( byval x as integer ) as integer
 	function = tkAccess( x )->flags
 end function
@@ -644,6 +654,17 @@ sub tkRemoveAllOf( byval id as integer, byval text as zstring ptr )
 			end if
 		end if
 	next
+end sub
+
+sub tkApplyRemoves( )
+	var x = 0
+	while( tkGet( x ) <> TK_EOF )
+		if( tkGetFlags( x ) and TKFLAG_REMOVE ) then
+			tkRemove( x, x )
+			x -= 1
+		end if
+		x += 1
+	wend
 end sub
 
 sub tkRemoveEOLs( )
