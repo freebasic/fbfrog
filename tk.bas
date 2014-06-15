@@ -40,109 +40,109 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	( NULL  , @"char"     ), _
 	( NULL  , @"wstring"  ), _
 	( NULL  , @"wchar"    ), _
-	( @"!"  , NULL ), _ '' Main tokens
-	( @"!=" , NULL ), _
-	( @"#"  , NULL ), _
-	( @"##" , NULL ), _
-	( @"%"  , NULL ), _
-	( @"%=" , NULL ), _
-	( @"&"  , NULL ), _
-	( @"&=" , NULL ), _
-	( @"&&" , NULL ), _
-	( @"("  , NULL ), _
-	( @")"  , NULL ), _
-	( @"*"  , NULL ), _
-	( @"*=" , NULL ), _
-	( @"+"  , NULL ), _
-	( @"+=" , NULL ), _
-	( @"++" , NULL ), _
-	( @","  , NULL ), _
-	( @"-"  , NULL ), _
-	( @"-=" , NULL ), _
-	( @"--" , NULL ), _
-	( @"->" , NULL ), _
-	( @"."  , NULL ), _
-	( @"...", NULL ), _
-	( @"/"  , NULL ), _
-	( @"/=" , NULL ), _
-	( @":"  , NULL ), _
-	( @";"  , NULL ), _
-	( @"<"  , NULL ), _
-	( @"<<" , NULL ), _
-	( @"<<=", NULL ), _
-	( @"<=" , NULL ), _
-	( @"<>" , NULL ), _
-	( @"="  , NULL ), _
-	( @"==" , NULL ), _
-	( @">"  , NULL ), _
-	( @">>" , NULL ), _
-	( @">>=", NULL ), _
-	( @">=" , NULL ), _
-	( @"?"  , NULL ), _
-	( @"@"  , NULL ), _
-	( @"["  , NULL ), _
-	( @"\"  , NULL ), _
-	( @"]"  , NULL ), _
-	( @"^"  , NULL ), _
-	( @"^=" , NULL ), _
-	( @"_"  , NULL ), _
-	( @"{"  , NULL ), _
-	( @"|"  , NULL ), _
-	( @"|=" , NULL ), _
-	( @"||" , NULL ), _
-	( @"}"  , NULL ), _
-	( @"~"  , NULL ), _
+	( @"!"   ), _ '' Main tokens
+	( @"!="  ), _
+	( @"#"   ), _
+	( @"##"  ), _
+	( @"%"   ), _
+	( @"%="  ), _
+	( @"&"   ), _
+	( @"&="  ), _
+	( @"&&"  ), _
+	( @"("   ), _
+	( @")"   ), _
+	( @"*"   ), _
+	( @"*="  ), _
+	( @"+"   ), _
+	( @"+="  ), _
+	( @"++"  ), _
+	( @","   ), _
+	( @"-"   ), _
+	( @"-="  ), _
+	( @"--"  ), _
+	( @"->"  ), _
+	( @"."   ), _
+	( @"..." ), _
+	( @"/"   ), _
+	( @"/="  ), _
+	( @":"   ), _
+	( @";"   ), _
+	( @"<"   ), _
+	( @"<<"  ), _
+	( @"<<=" ), _
+	( @"<="  ), _
+	( @"<>"  ), _
+	( @"="   ), _
+	( @"=="  ), _
+	( @">"   ), _
+	( @">>"  ), _
+	( @">>=" ), _
+	( @">="  ), _
+	( @"?"   ), _
+	( @"@"   ), _
+	( @"["   ), _
+	( @"\"   ), _
+	( @"]"   ), _
+	( @"^"   ), _
+	( @"^="  ), _
+	( @"_"   ), _
+	( @"{"   ), _
+	( @"|"   ), _
+	( @"|="  ), _
+	( @"||"  ), _
+	( @"}"   ), _
+	( @"~"   ), _
 	( NULL  , @"id" ), _ '' TK_ID
-	( @"__attribute__", NULL ), _ '' C keywords
-	( @"__cdecl"      , NULL ), _
-	( @"__restrict"   , NULL ), _
-	( @"__restrict__" , NULL ), _
-	( @"__stdcall"    , NULL ), _
-	( @"auto"    , NULL ), _
-	( @"break"   , NULL ), _
-	( @"case"    , NULL ), _
-	( @"char"    , NULL ), _
-	( @"const"   , NULL ), _
-	( @"continue", NULL ), _
-	( @"default" , NULL ), _
-	( @"define"  , NULL ), _
-	( @"defined" , NULL ), _
-	( @"do"      , NULL ), _
-	( @"double"  , NULL ), _
-	( @"elif"    , NULL ), _
-	( @"else"    , NULL ), _
-	( @"endif"   , NULL ), _
-	( @"enum"    , NULL ), _
-	( @"error"   , NULL ), _
-	( @"extern"  , NULL ), _
-	( @"float"   , NULL ), _
-	( @"for"     , NULL ), _
-	( @"goto"    , NULL ), _
-	( @"if"      , NULL ), _
-	( @"ifdef"   , NULL ), _
-	( @"ifndef"  , NULL ), _
-	( @"include" , NULL ), _
-	( @"inline"  , NULL ), _
-	( @"int"     , NULL ), _
-	( @"long"    , NULL ), _
-	( @"pragma"  , NULL ), _
-	( @"register", NULL ), _
-	( @"restrict", NULL ), _
-	( @"return"  , NULL ), _
-	( @"short"   , NULL ), _
-	( @"signed"  , NULL ), _
-	( @"sizeof"  , NULL ), _
-	( @"static"  , NULL ), _
-	( @"struct"  , NULL ), _
-	( @"switch"  , NULL ), _
-	( @"typedef" , NULL ), _
-	( @"undef"   , NULL ), _
-	( @"union"   , NULL ), _
-	( @"unsigned", NULL ), _
-	( @"void"    , NULL ), _
-	( @"volatile", NULL ), _
-	( @"warning" , NULL ), _
-	( @"while"   , NULL )  _
+	( @"__attribute__" ), _ '' C keywords
+	( @"__cdecl"       ), _
+	( @"__restrict"    ), _
+	( @"__restrict__"  ), _
+	( @"__stdcall"     ), _
+	( @"auto"     ), _
+	( @"break"    ), _
+	( @"case"     ), _
+	( @"char"     ), _
+	( @"const"    ), _
+	( @"continue" ), _
+	( @"default"  ), _
+	( @"define"   ), _
+	( @"defined"  ), _
+	( @"do"       ), _
+	( @"double"   ), _
+	( @"elif"     ), _
+	( @"else"     ), _
+	( @"endif"    ), _
+	( @"enum"     ), _
+	( @"error"    ), _
+	( @"extern"   ), _
+	( @"float"    ), _
+	( @"for"      ), _
+	( @"goto"     ), _
+	( @"if"       ), _
+	( @"ifdef"    ), _
+	( @"ifndef"   ), _
+	( @"include"  ), _
+	( @"inline"   ), _
+	( @"int"      ), _
+	( @"long"     ), _
+	( @"pragma"   ), _
+	( @"register" ), _
+	( @"restrict" ), _
+	( @"return"   ), _
+	( @"short"    ), _
+	( @"signed"   ), _
+	( @"sizeof"   ), _
+	( @"static"   ), _
+	( @"struct"   ), _
+	( @"switch"   ), _
+	( @"typedef"  ), _
+	( @"undef"    ), _
+	( @"union"    ), _
+	( @"unsigned" ), _
+	( @"void"     ), _
+	( @"volatile" ), _
+	( @"warning"  ), _
+	( @"while"    )  _
 }
 
 #assert ubound( tk_info ) = TK__COUNT - 1
