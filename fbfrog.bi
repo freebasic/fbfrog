@@ -126,29 +126,6 @@ declare function strIsValidSymbolId( byval s as zstring ptr ) as integer
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-type LISTNODE
-	next		as LISTNODE ptr
-	prev		as LISTNODE ptr
-end type
-
-type TLIST
-	head		as LISTNODE ptr
-	tail		as LISTNODE ptr
-	nodesize	as integer
-end type
-
-declare function listGetHead( byval l as TLIST ptr) as any ptr
-declare function listGetTail( byval l as TLIST ptr) as any ptr
-declare function listGetNext( byval p as any ptr ) as any ptr
-declare function listGetPrev( byval p as any ptr ) as any ptr
-declare function listAppend( byval l as TLIST ptr ) as any ptr
-declare sub listDelete( byval l as TLIST ptr, byval p as any ptr )
-declare function listCount( byval l as TLIST ptr ) as integer
-declare sub listInit( byval l as TLIST ptr, byval unit as integer )
-declare sub listEnd( byval l as TLIST ptr )
-
-''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-
 '' The hash table is an array of items,
 '' which associate a string to some user data.
 type THASHITEM
