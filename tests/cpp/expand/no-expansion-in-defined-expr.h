@@ -1,4 +1,4 @@
-// @fbfrog -whitespace -nonamefixup
+// @fbfrog -whitespace -nonamefixup -removedefine B_is_defined
 
 // "defined m1" shouldn't be expanded to "defined 123", because no
 // expansion should be done for "defined id" expressions. "defined <number>" is
@@ -28,3 +28,24 @@ extern int separator4;
 #if defined m1 && defined m1
 #endif
 extern int separator5;
+
+// Here, the defined operator appears as the result of macro expansion. We
+// should still not expand its operand, like gcc.
+#define B_is_defined defined B
+#define B 1/0
+#if B_is_defined
+	void f(void);
+#endif
+extern int separator6;
+#undef B_is_defined
+#undef B
+
+// defined operator as macro call arg
+#define some(x) x
+#define B 1/0
+#if some(defined) B
+	void f(void);
+#endif
+extern int separator7;
+#undef some
+#undef B

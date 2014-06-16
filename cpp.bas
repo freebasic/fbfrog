@@ -49,7 +49,7 @@
 
 #include once "fbfrog.bi"
 
-declare sub hMaybeExpandMacro( byref x as integer )
+declare sub hMaybeExpandMacro( byref x as integer, byval inside_ifexpr as integer )
 
 private function hIsBeforeEol _
 	( _
@@ -1297,10 +1297,66 @@ sub hInsertMacroBody( byval x as integer, byval macro as ASTNODE ptr )
 	tkInsert( x, TK_END )
 end sub
 
+'' DEFINED ['('] Identifier [')']
+private sub hSkipDefinedUop( byref x as integer )
+	assert( tkGet( x ) = KW_DEFINED )
+	x += 1
+
+	'' '('?
+	var have_lparen = FALSE
+	if( tkGet( x ) = TK_LPAREN ) then
+		have_lparen = TRUE
+		x += 1
+	end if
+
+	'' Identifier? (not doing any expansion here)
+	if( tkGet( x ) = TK_ID ) then
+		x += 1
+	end if
+
+	'' ')'?
+	if( have_lparen ) then
+		if( tkGet( x ) = TK_RPAREN ) then
+			x += 1
+		end if
+	end if
+end sub
+
+private function hExpandUntilTK_END _
+	( _
+		byval x as integer, _
+		byval inside_ifexpr as integer _
+	) as integer
+
+	do
+		select case( tkGet( x ) )
+		case TK_END
+			exit do
+
+		case KW_DEFINED
+			'' If inside an #if condition expression, don't expand symbols behind the defined operator.
+			'' According to the C standard, the handling of defined's that result from macro expansion
+			'' is undefined, but gcc handles them as normal defined's, so we do too.
+			if( inside_ifexpr ) then
+				hSkipDefinedUop( x )
+				x -= 1
+			end if
+
+		case TK_ID
+			hMaybeExpandMacro( x, inside_ifexpr )
+		end select
+
+		x += 1
+	loop
+
+	function = x
+end function
+
 private function hExpandInRange _
 	( _
 		byval first as integer, _
-		byval last as integer _
+		byval last as integer, _
+		byval inside_ifexpr as integer _
 	) as integer
 
 	if( last < first ) then
@@ -1316,17 +1372,8 @@ private function hExpandInRange _
 	assert( tkGet( first ) = TK_BEGIN )
 	assert( tkGet( last ) = TK_END )
 
-	scope
-		'' Expand anything in the range
-		var x = first + 1
-		while( tkGet( x ) <> TK_END )
-			if( tkGet( x ) = TK_ID ) then
-				hMaybeExpandMacro( x )
-			end if
-			x += 1
-		wend
-		last = x
-	end scope
+	'' Expand anything in the range
+	last = hExpandUntilTK_END( first + 1, inside_ifexpr )
 
 	'' Remove TK_BEGIN/TK_END again
 	assert( tkGet( first ) = TK_BEGIN )
@@ -1373,7 +1420,8 @@ private function hInsertMacroExpansion _
 		byval macro as ASTNODE ptr, _
 		byval argbegin as integer ptr, _
 		byval argend as integer ptr, _
-		byval argcount as integer _
+		byval argcount as integer, _
+		byval inside_ifexpr as integer _
 	) as integer
 
 	'' Insert the macro body tokens from AST into the tk buffer, surrounded
@@ -1566,7 +1614,7 @@ private function hInsertMacroExpansion _
 			loop while( tkGet( y ) <> TK_ARGEND )
 
 			'' Macro-expand the arg's tokens
-			y = hExpandInRange( x, y )
+			y = hExpandInRange( x, y, inside_ifexpr )
 
 			'' Remove TK_ARGBEGIN/END wrapping
 			assert( tkGet( x ) = TK_ARGBEGIN )
@@ -1601,13 +1649,14 @@ private sub hExpandMacro _
 		byval callend as integer, _
 		byval argbegin as integer ptr, _
 		byval argend as integer ptr, _
-		byval argcount as integer _
+		byval argcount as integer, _
+		byval inside_ifexpr as integer _
 	)
 
 	'' Insert the macro body behind the call (this way the positions
 	'' stored in argbegin()/argend() stay valid)
 	var expansionbegin = callend + 1
-	var expansionend = hInsertMacroExpansion( expansionbegin, macro, argbegin, argend, argcount )
+	var expansionend = hInsertMacroExpansion( expansionbegin, macro, argbegin, argend, argcount, inside_ifexpr )
 
 	'' Set expansion level on the expansion tokens:
 	'' = minlevel from macro call tokens + 1
@@ -1625,7 +1674,7 @@ private sub hExpandMacro _
 	''   won't be expanded later when they become complete by taking into
 	''   account tokens following behind the expansion.
 	macro->attrib or= ASTATTRIB_POISONED
-	expansionend = hExpandInRange( expansionbegin, expansionend )
+	expansionend = hExpandInRange( expansionbegin, expansionend, inside_ifexpr )
 	macro->attrib and= not ASTATTRIB_POISONED
 
 	'' Disable future expansion of recursive macro calls to this macro
@@ -1658,7 +1707,7 @@ private sub hExpandMacro _
 	tkRemove( callbegin, callend )
 end sub
 
-private sub hMaybeExpandMacro( byref x as integer )
+private sub hMaybeExpandMacro( byref x as integer, byval inside_ifexpr as integer )
 	var begin = x
 
 	var macro = hCheckForMacroCall( x )
@@ -1678,54 +1727,11 @@ private sub hMaybeExpandMacro( byref x as integer )
 		exit sub
 	end if
 
-	hExpandMacro( macro, callbegin, callend, @argbegin(0), @argend(0), argcount )
+	hExpandMacro( macro, callbegin, callend, @argbegin(0), @argend(0), argcount, inside_ifexpr )
 
 	'' The macro call was replaced with the body, the token at the TK_ID's
 	'' position must be re-parsed.
 	x -= 1
-end sub
-
-private sub hExpandInIfCondition( byval x as integer )
-	assert( tkGet( x ) = TK_BEGIN )
-
-	do
-		x += 1
-
-		select case( tkGet( x ) )
-		case TK_END
-			exit do
-
-		'' DEFINED ['('] Identifier [')']
-		case KW_DEFINED
-			x += 1
-
-			'' '('?
-			var have_lparen = FALSE
-			if( tkGet( x ) = TK_LPAREN ) then
-				have_lparen = TRUE
-				x += 1
-			end if
-
-			'' Identifier? (not doing any expansion here)
-			if( tkGet( x ) = TK_ID ) then
-				x += 1
-			end if
-
-			'' ')'?
-			if( have_lparen ) then
-				if( tkGet( x ) = TK_RPAREN ) then
-					x += 1
-				end if
-			end if
-
-			x -= 1
-
-		'' Identifier (anything unrelated to DEFINED)
-		case TK_ID
-			hMaybeExpandMacro( x )
-
-		end select
-	loop
 end sub
 
 private function hParseIfCondition( byval x as integer ) as ASTNODE ptr
@@ -1861,7 +1867,8 @@ private function hEvalIfCondition( byval x as integer ) as integer
 
 		'' Expand macros in the #if condition expression, before parsing
 		'' it, but don't expand the "id" in "defined id".
-		hExpandInIfCondition( x )
+		assert( tkGet( x ) = TK_BEGIN )
+		hExpandUntilTK_END( x + 1, TRUE )
 
 		t = hParseIfCondition( x )
 
@@ -2251,7 +2258,7 @@ sub cppMain( byval whitespace as integer, byval nomerge as integer )
 			if( skiplevel <> MAXPPSTACK ) then
 				tkSetRemove( x )
 			else
-				hMaybeExpandMacro( x )
+				hMaybeExpandMacro( x, FALSE )
 			end if
 
 		case else

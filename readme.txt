@@ -128,6 +128,9 @@ Usage:
 
 To do:
 
+- support defined() in #define bodies (C expression parser)
+- support macro expansion for C/CPP keywords, not just TK_ID
+
 - Turn -nomerge into -insert <absolute-file-name-pattern>
   By default: Don't insert #includes
   Can use -insert '*' to insert all #includes that can be found,
