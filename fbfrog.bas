@@ -369,7 +369,18 @@ private function hParseArgs( byref x as integer, byval body as integer ) as ASTN
 				if( (tkGet( x ) <> TK_ID) and (tkGet( x ) <> TK_STRING) ) then
 					tkOopsExpected( x, "C tokens" )
 				end if
-				astAppend( result, astTakeLoc( astNew( ASTCLASS_REMOVEMATCH, tkGetText( x ) ), x ) )
+
+				'' Lex the C tokens into the tk buffer, load them into AST, and remove them again
+				var cbegin = x + 1
+				var cend = lexLoadC( cbegin, _
+					sourcebufferFromZstring( "-removematch", tkGetText( x ), tkGetLocation( x ) ), _
+					FALSE ) - 1
+				var n = astTakeLoc( astNew( ASTCLASS_REMOVEMATCH ), x )
+				for i as integer = cbegin to cend
+					astAppend( n, astNewTK( i ) )
+				next
+				tkRemove( cbegin, cend )
+				astAppend( result, n )
 
 			case else
 				tkOops( x, "unknown command line option '" + text + "'" )
@@ -399,32 +410,6 @@ private function hParseArgs( byref x as integer, byval body as integer ) as ASTN
 
 	function = result
 end function
-
-private sub hLexRemoveMatchPattern( byval n as ASTNODE ptr )
-	tkInit( )
-
-	lexLoadC( 0, sourcebufferFromZstring( "-removematch", n->text, @n->location ), FALSE )
-
-	for x as integer = 0 to tkGetCount( )-1
-		astAppend( n, astNewTK( x ) )
-	next
-
-	tkEnd( )
-end sub
-
-private sub hLexRemoveMatchPatterns( byval code as ASTNODE ptr )
-	var i = code->head
-	while( i )
-
-		if( i->class = ASTCLASS_REMOVEMATCH ) then
-			hLexRemoveMatchPattern( i )
-		end if
-
-		hLexRemoveMatchPatterns( i )
-
-		i = i->next
-	wend
-end sub
 
 private function hPatternMatchesHere _
 	( _
@@ -771,12 +756,6 @@ end function
 	frog.code = hParseArgs( 0, BODY_TOPLEVEL )
 
 	tkEnd( )
-
-	'' Go through -removematch options and run lexLoadC() on the C token
-	'' string that was given behind -removematch on the command line.
-	'' This will write into the tk buffer so it must be done here before
-	'' the main parsing process starts...
-	hLexRemoveMatchPatterns( frog.code )
 
 	var versions = astCollectVersions( frog.code )
 
