@@ -73,7 +73,7 @@ private function hTurnArgsIntoString( byval argc as integer, byval argv as zstri
 	function = s
 end function
 
-private sub hLoadResponseFile _
+private sub hLoadArgsFile _
 	( _
 		byval x as integer, _
 		byref filename as string, _
@@ -84,7 +84,7 @@ private sub hLoadResponseFile _
 	static filecount as integer
 
 	if( filecount > MAX_FILES ) then
-		tkOops( x, "suspiciously many @response file expansions, recursion? (limit=" & MAX_FILES & ")" )
+		tkOops( x, "suspiciously many @file expansions, recursion? (limit=" & MAX_FILES & ")" )
 	end if
 
 	'' Load the file content at the specified position
@@ -94,7 +94,7 @@ private sub hLoadResponseFile _
 end sub
 
 '' Expand @file arguments in the tk buffer
-private sub hExpandResponseFileArguments( )
+private sub hExpandArgsFileArguments( )
 	var x = 0
 	while( tkGet( x ) <> TK_EOF )
 
@@ -114,7 +114,7 @@ private sub hExpandResponseFileArguments( )
 			end if
 
 			'' Load the file content behind the @file token
-			hLoadResponseFile( x + 1, filename, location )
+			hLoadArgsFile( x + 1, filename, location )
 
 			'' Remove the @file token (now that its location is no
 			'' longer referenced), so it doesn't get in the way of
@@ -129,7 +129,7 @@ private sub hExpandResponseFileArguments( )
 	wend
 end sub
 
-private sub hLoadBuiltinResponseFile _
+private sub hLoadBuiltinArgsFile _
 	( _
 		byval x as integer, _
 		byref id as string, _
@@ -138,10 +138,10 @@ private sub hLoadBuiltinResponseFile _
 
 	'' <exepath>/builtin/<id>.fbfrog.
 	var builtinfile = hExePath( ) + "builtin" + PATHDIV + id + ".fbfrog"
-	hLoadResponseFile( x, builtinfile, location )
+	hLoadArgsFile( x, builtinfile, location )
 
 	'' Must expand @files again in case the loaded built-in file contained any
-	hExpandResponseFileArguments( )
+	hExpandArgsFileArguments( )
 
 end sub
 
@@ -159,7 +159,7 @@ private sub hExpectPath( byval x as integer )
 	end if
 end sub
 
-private function hPathRelativeToResponseFile( byval x as integer ) as string
+private function hPathRelativeToArgsFile( byval x as integer ) as string
 	var path = *tkGetText( x )
 
 	'' If the file/dir argument isn't an absolute path, and it came from an
@@ -189,7 +189,7 @@ private function hParseArgs( byref x as integer, byval body as integer ) as ASTN
 		x += 1
 
 		'' Load pre-#defines that are always used
-		hLoadBuiltinResponseFile( x, "base", tkGetLocation( x - 1 ) )
+		hLoadBuiltinArgsFile( x, "base", tkGetLocation( x - 1 ) )
 	end if
 
 	while( tkGet( x ) <> TK_EOF )
@@ -220,14 +220,14 @@ private function hParseArgs( byref x as integer, byval body as integer ) as ASTN
 
 				'' <path>
 				hExpectPath( x )
-				astAppend( frog.incdirs, astTakeLoc( astNewTEXT( hPathRelativeToResponseFile( x ) ), x ) )
+				astAppend( frog.incdirs, astTakeLoc( astNewTEXT( hPathRelativeToArgsFile( x ) ), x ) )
 
 			case "o"
 				x += 1
 
 				'' <path>
 				hExpectPath( x )
-				frog.outname = hPathRelativeToResponseFile( x )
+				frog.outname = hPathRelativeToArgsFile( x )
 
 			'' -version <version id> ...
 			case "version"
@@ -282,7 +282,7 @@ private function hParseArgs( byref x as integer, byval body as integer ) as ASTN
 				location.length = location2->column + location2->length - location.column
 				x += 1
 
-				hLoadBuiltinResponseFile( x, targetid, @location )
+				hLoadBuiltinArgsFile( x, targetid, @location )
 
 				var n = astNew( ASTCLASS_TARGETBLOCK, hParseArgs( x, BODY_TARGET ) )
 				n->attrib or= attrib
@@ -381,14 +381,14 @@ private function hParseArgs( byref x as integer, byval body as integer ) as ASTN
 			case else
 				'' *.fbfrog file given (without @)? Treat as @file too
 				if( pathExtOnly( text ) = "fbfrog" ) then
-					hLoadResponseFile( x + 1, text, tkGetLocation( x ) )
+					hLoadArgsFile( x + 1, text, tkGetLocation( x ) )
 					tkRemove( x, x )
 					x -= 1
 
 					'' Must expand @files again in case the loaded file contained any
-					hExpandResponseFileArguments( )
+					hExpandArgsFileArguments( )
 				else
-					var path = hPathRelativeToResponseFile( x )
+					var path = hPathRelativeToArgsFile( x )
 
 					'' File or directory?
 					var n = astNew( ASTCLASS_FILE, path )
@@ -746,7 +746,7 @@ end function
 			hTurnArgsIntoString( __FB_ARGC__, __FB_ARGV__ ), NULL ) )
 
 	'' Load content of @files too
-	hExpandResponseFileArguments( )
+	hExpandArgsFileArguments( )
 
 	'' Parse the command line arguments
 	frog.code = hParseArgs( 0, BODY_TOPLEVEL )
