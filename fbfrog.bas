@@ -174,18 +174,6 @@ private function hPathRelativeToResponseFile( byval x as integer ) as string
 	function = path
 end function
 
-private sub hReadFileArg( byval result as ASTNODE ptr, byval x as integer )
-	var path = hPathRelativeToResponseFile( x )
-
-	'' File or directory?
-	var n = astNew( ASTCLASS_FILE, path )
-	if( hReadableDirExists( path ) ) then
-		n->class = ASTCLASS_DIR
-	end if
-
-	astAppend( result, astTakeLoc( n, x ) )
-end sub
-
 enum
 	BODY_TOPLEVEL = 0
 	BODY_VERSION
@@ -400,7 +388,15 @@ private function hParseArgs( byref x as integer, byval body as integer ) as ASTN
 					'' Must expand @files again in case the loaded file contained any
 					hExpandResponseFileArguments( )
 				else
-					hReadFileArg( result, x )
+					var path = hPathRelativeToResponseFile( x )
+
+					'' File or directory?
+					var n = astNew( ASTCLASS_FILE, path )
+					if( hReadableDirExists( path ) ) then
+						n->class = ASTCLASS_DIR
+					end if
+
+					astAppend( result, astTakeLoc( n, x ) )
 				end if
 			end select
 		end select
