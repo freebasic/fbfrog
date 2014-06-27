@@ -177,6 +177,29 @@ private function hPathRelativeToArgsFile( byval x as integer ) as string
 	function = path
 end function
 
+private function hParseOptionWithId _
+	( _
+		byref x as integer, _
+		byval astclass as integer, _
+		byval require_2nd_id as integer _
+	) as ASTNODE ptr
+
+	x += 1
+
+	'' <id>
+	hExpectId( x )
+	var n = astNew( astclass, tkGetText( x ) )
+	x += 1
+
+	if( require_2nd_id ) then
+		hExpectId( x )
+		astSetComment( n, tkGetText( x ) )
+		x += 1
+	end if
+
+	function = n
+end function
+
 enum
 	BODY_TOPLEVEL = 0
 	BODY_VERSION
@@ -317,38 +340,10 @@ private function hParseArgs( byref x as integer, byval body as integer ) as ASTN
 			astAppend( result, n )
 			x += 1
 
-		case OPT_NOEXPAND
-			x += 1
-
-			'' <id>
-			hExpectId( x )
-			astAppend( result, astNew( ASTCLASS_NOEXPAND, tkGetText( x ) ) )
-			x += 1
-
-		case OPT_REMOVEDEFINE
-			x += 1
-
-			'' <id>
-			hExpectId( x )
-			astAppend( result, astNew( ASTCLASS_REMOVEDEFINE, tkGetText( x ) ) )
-			x += 1
-
-		case OPT_RENAMETYPEDEF, OPT_RENAMETAG
-			var astclass = iif( tkGet( x ) = OPT_RENAMETYPEDEF, _
-					ASTCLASS_RENAMETYPEDEF, ASTCLASS_RENAMETAG )
-			x += 1
-
-			'' <oldid>
-			hExpectId( x )
-			var n = astNew( astclass, tkGetText( x ) )
-			x += 1
-
-			'' <newid>
-			hExpectId( x )
-			astSetComment( n, tkGetText( x ) )
-
-			astAppend( result, n )
-			x += 1
+		case OPT_NOEXPAND      : astAppend( result, hParseOptionWithId( x, ASTCLASS_NOEXPAND     , FALSE ) )
+		case OPT_REMOVEDEFINE  : astAppend( result, hParseOptionWithId( x, ASTCLASS_REMOVEDEFINE , FALSE ) )
+		case OPT_RENAMETYPEDEF : astAppend( result, hParseOptionWithId( x, ASTCLASS_RENAMETYPEDEF, TRUE  ) )
+		case OPT_RENAMETAG     : astAppend( result, hParseOptionWithId( x, ASTCLASS_RENAMETAG    , TRUE  ) )
 
 		case OPT_REMOVEMATCH
 			x += 1
