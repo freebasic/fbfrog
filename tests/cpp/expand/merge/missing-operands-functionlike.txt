@@ -6,6 +6,6 @@ tests/cpp/expand/merge/missing-operands-functionlike.h(2): ## merge operator at 
                     ^~
     3: m(0)
     4: 
-construct's code as seen by fbfrog:
+context as seen by fbfrog:
     ##
     ^~

@@ -6,6 +6,6 @@ tests/cpp/expand/merge/strings-1.h(2): ## merge operator cannot merge '"a"' and 
                           ^~
     3: m(a, b)
     4: 
-construct's code as seen by fbfrog:
+context as seen by fbfrog:
     "a" ## " b"
         ^~

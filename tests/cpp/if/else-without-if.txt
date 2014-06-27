@@ -6,6 +6,6 @@ tests/cpp/if/else-without-if.h(2): #else without #if
        ^
     3: #endif
     4: 
-construct's code as seen by fbfrog:
+context as seen by fbfrog:
     [ppelse]
     ^~~~~~~~

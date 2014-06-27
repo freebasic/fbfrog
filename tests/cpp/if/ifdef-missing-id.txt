@@ -6,6 +6,6 @@ tests/cpp/if/ifdef-missing-id.h(2): missing identifier behind #ifdef
              ^
     3: #endif
     4: 
-construct's code as seen by fbfrog:
+context as seen by fbfrog:
     [eol] [eol] # ifdef [eol] # endif [eol]
                         ^~~~~

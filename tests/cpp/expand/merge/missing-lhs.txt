@@ -6,6 +6,6 @@ tests/cpp/expand/merge/missing-lhs.h(2): ## merge operator at beginning of macro
                     ^~
     3: m(0)
     4: 
-construct's code as seen by fbfrog:
+context as seen by fbfrog:
     ## 0
     ^~

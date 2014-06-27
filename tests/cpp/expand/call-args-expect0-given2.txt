@@ -6,6 +6,6 @@ tests/cpp/expand/call-args-expect0-given2.h(3): expected ')' to close macro call
     3: m1(a, b)
           ^
     4: 
-construct's code as seen by fbfrog:
+context as seen by fbfrog:
     m1 ( a , b ) [eol]
          ^

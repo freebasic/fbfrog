@@ -7,6 +7,6 @@ tests/cpp/if/elseif.h(4): unknown PP directive
         ^~~~~~
     5: #else
     6: #endif
-construct's code as seen by fbfrog:
+context as seen by fbfrog:
     # elseif 0 [eol] # else [eol] # endif [eol]
       ^~~~~~

@@ -6,6 +6,6 @@ tests/cpp/expand/call-args-expect1-given2.h(3): too many arguments for 'm' macro
     3: m(a, b)
              ^
     4: 
-construct's code as seen by fbfrog:
+context as seen by fbfrog:
     m ( a , b ) [eol]
               ^

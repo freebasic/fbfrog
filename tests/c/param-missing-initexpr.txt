@@ -5,6 +5,6 @@ tests/c/param-missing-initexpr.h(2): expected an atomic expression but found ')'
     2: void f(int i =);
                      ^
     3: 
-construct's code as seen by fbfrog:
+context as seen by fbfrog:
     void f ( int i = ) ;
                      ^

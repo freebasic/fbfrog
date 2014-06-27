@@ -7,6 +7,6 @@ tests/cpp/expand/merge/merge-with-merge-token.h(3): ## merge operator cannot mer
                    ^~
     4: m
     5: 
-construct's code as seen by fbfrog:
+context as seen by fbfrog:
     a ## ## b
       ^~

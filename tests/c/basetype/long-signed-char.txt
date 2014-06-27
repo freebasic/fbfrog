@@ -5,6 +5,6 @@ tests/c/basetype/long-signed-char.h(2): SHORT|LONG modifiers used with CHAR type
     2: static long signed char *p;
                                ^
     3: 
-construct's code as seen by fbfrog:
+context as seen by fbfrog:
     static long signed char * p ;
                             ^

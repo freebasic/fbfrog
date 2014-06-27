@@ -6,6 +6,6 @@ tests/cpp/if/if-missing-condition.h(2): missing #if condition
           ^
     3: #endif
     4: 
-construct's code as seen by fbfrog:
+context as seen by fbfrog:
     [eol] # endif [eol]
     ^~~~~

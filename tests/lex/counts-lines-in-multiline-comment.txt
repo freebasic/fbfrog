@@ -6,6 +6,6 @@ tests/lex/counts-lines-in-multiline-comment.h(6): expected ';' to finish this de
     6: provoke error and check the line number in the produced message
                      ^~~
     7: 
-construct's code as seen by fbfrog:
+context as seen by fbfrog:
     provoke error and check the line number in the produced message
                   ^~~

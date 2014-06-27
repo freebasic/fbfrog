@@ -6,6 +6,6 @@ tests/c/basetype/unsigned-inttypedef.h(3): expected ';' to finish this declarati
     3: static unsigned myint i;
                              ^
     4: 
-construct's code as seen by fbfrog:
+context as seen by fbfrog:
     static unsigned myint i ;
                           ^

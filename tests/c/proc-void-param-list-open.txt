@@ -5,6 +5,6 @@ tests/c/proc-void-param-list-open.h(2): missing ')' to close parameter list in f
     2: void f(void
               ^~~~
     3: 
-construct's code as seen by fbfrog:
+context as seen by fbfrog:
     void f ( void
              ^~~~

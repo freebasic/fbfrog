@@ -5,6 +5,6 @@ tests/cpp/unknown-pragma.h(2): unknown #pragma
     2: #pragma foo
                ^~~
     3: 
-construct's code as seen by fbfrog:
+context as seen by fbfrog:
     [eol] [eol] # pragma foo [eol]
                          ^~~

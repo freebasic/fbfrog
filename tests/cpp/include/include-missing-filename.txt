@@ -5,6 +5,6 @@ tests/cpp/include/include-missing-filename.h(2): missing "..." string literal co
     2: #include
                ^
     3: 
-construct's code as seen by fbfrog:
+context as seen by fbfrog:
     [eol] [eol] # include [eol]
                           ^~~~~

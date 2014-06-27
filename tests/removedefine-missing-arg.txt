@@ -1,6 +1,6 @@
 <command line>(1): expected identifier (valid symbol name) but found '"-m"'
     1: ./fbfrog tests/removedefine-missing-arg.h -removedefine -m
                                                                ^~
-construct's code as seen by fbfrog:
+context as seen by fbfrog:
     ULONG_MAX "0xFFFFFFFF" "tests/removedefine-missing-arg.h" -removedefine "-m"
                                                                             ^~~~

@@ -6,6 +6,6 @@ tests/lex/counts-lines-for-escaped-eols.h(9): expected ';' to finish this declar
     9: provoke error and check the line number in the produced message
                      ^~~
     10: 
-construct's code as seen by fbfrog:
+context as seen by fbfrog:
     provoke error and check the line number in the produced message
                   ^~~

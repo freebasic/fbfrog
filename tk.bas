@@ -943,7 +943,7 @@ sub tkReport _
 		end if
 	else
 		if( hReportErrorTokenLocation( x, message, more_context ) ) then
-			hReportConstructTokens( x, first, last, "construct's code as seen by fbfrog:" )
+			hReportConstructTokens( x, first, last, "context as seen by fbfrog:" )
 		else
 			hReportConstructTokens( x, first, last, message )
 		end if

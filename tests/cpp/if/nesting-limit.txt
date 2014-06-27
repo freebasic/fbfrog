@@ -7,6 +7,6 @@ tests/cpp/if/nesting-limit.h(129): #if/#include stack too small, MAXPPSTACK=128
          ^
     130: #if 1
     131: 
-construct's code as seen by fbfrog:
+context as seen by fbfrog:
     [ppif]
     ^~~~~~

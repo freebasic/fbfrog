@@ -6,6 +6,6 @@ tests/cpp/expand/call-args-expect2-given1.h(3): not enough arguments for 'm' mac
     3: m(a)
           ^
     4: 
-construct's code as seen by fbfrog:
+context as seen by fbfrog:
     m ( a ) [eol]
           ^

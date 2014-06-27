@@ -5,6 +5,6 @@ tests/c/id-basetype-missing-id.h(2): expected identifier for the symbol declared
     2: a;
         ^
     3: 
-construct's code as seen by fbfrog:
+context as seen by fbfrog:
     a ;
       ^

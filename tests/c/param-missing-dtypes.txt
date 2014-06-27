@@ -5,6 +5,6 @@ tests/c/param-missing-dtypes.h(2): expected a data type at the beginning of this
     2: void f(,);
               ^
     3: 
-construct's code as seen by fbfrog:
+context as seen by fbfrog:
     void f ( , ) ;
              ^

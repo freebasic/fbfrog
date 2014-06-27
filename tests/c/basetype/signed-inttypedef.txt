@@ -6,6 +6,6 @@ tests/c/basetype/signed-inttypedef.h(3): expected ';' to finish this declaration
     3: static signed myint i;
                            ^
     4: 
-construct's code as seen by fbfrog:
+context as seen by fbfrog:
     static signed myint i ;
                         ^
