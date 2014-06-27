@@ -29,111 +29,122 @@ end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-type ASTNODEINFO
-	name		as zstring * 16
-end type
-
-dim shared as ASTNODEINFO astnodeinfo(0 to ...) = _
+dim shared as zstring ptr astnodename(0 to ...) => _
 { _
-	("group"        ), _
-	("verblock"     ), _
-	("targetblock"  ), _
-	("divider"      ), _
-	("scopeblock"   ), _
-	("file"         ), _
-	("dir"          ), _
-	("noexpand"     ), _
-	("removedefine" ), _
-	("renametypedef"), _
-	("renametag"    ), _
-	("removematch"  ), _
-	("inclib"       ), _
-	("pragmaonce"   ), _
-	("#include"     ), _
-	("#define"      ), _
-	("#if"          ), _
-	("#elseif"      ), _
-	("#else"        ), _
-	("#endif"       ), _
-	("#error"       ), _
-	("struct"       ), _
-	("union"        ), _
-	("enum"         ), _
-	("typedef"      ), _
-	("constant"     ), _
-	("var"          ), _
-	("externvar"    ), _
-	("staticvar"    ), _
-	("field"        ), _
-	("enumconst"    ), _
-	("proc"         ), _
-	("param"        ), _
-	("array"        ), _
-	("externbegin"  ), _
-	("externend"    ), _
-	("macrobody"    ), _
-	("macroparam"   ), _
-	("tk"           ), _
-	("consti"       ), _
-	("constf"       ), _
-	("id"           ), _
-	("tagid"        ), _
-	("text"         ), _
-	("string"       ), _
-	("char"         ), _
-	("dummyversion" ), _
-	("type"         ), _
-	("c ||"         ), _
-	("c &&"         ), _
-	("orelse"       ), _
-	("andalso"      ), _
-	("or"           ), _
-	("xor"          ), _
-	("and"          ), _
-	("c ="          ), _
-	("c <>"         ), _
-	("c <"          ), _
-	("c <="         ), _
-	("c >"          ), _
-	("c >="         ), _
-	("="            ), _
-	("<>"           ), _
-	("<"            ), _
-	("<="           ), _
-	(">"            ), _
-	(">="           ), _
-	("shl"          ), _
-	("shr"          ), _
-	("+"            ), _
-	("-"            ), _
-	("*"            ), _
-	("/"            ), _
-	("mod"          ), _
-	("[]"           ), _
-	("."            ), _
-	("->"           ), _
-	("str +"        ), _
-	("C !"          ), _
-	("not"          ), _
-	("negate"       ), _
-	("unary +"      ), _
-	("C defined()"  ), _
-	("defined()"    ), _
-	("@"            ), _
-	("deref"        ), _
-	("#"            ), _
-	("sizeof"       ), _
-	("cast"         ), _
-	("iif"          ), _
-	("ppmerge"      ), _
-	("call"         ), _
-	("structinit"   ), _
-	("arrayinit"    ), _
-	("dimension"    ), _
-	("sizeoftype"   ) _
+	_ '' Internal helper nodes
+	@"group"     , _
+	@"verblock"  , _
+	@"veror"     , _
+	@"verand"    , _
+	@"divider"   , _
+	@"scopeblock", _
+	_
+	_ '' Script helper nodes
+	@"file"         , _
+	@"dir"          , _
+	@"noexpand"     , _
+	@"removedefine" , _
+	@"renametypedef", _
+	@"renametag"    , _
+	@"removematch"  , _
+	@"inclib"       , _
+	@"pragmaonce"   , _
+	_
+	_ '' Preprocessor directives
+	@"#include", _
+	@"#define" , _
+	@"#if"     , _
+	@"#elseif" , _
+	@"#else"   , _
+	@"#endif"  , _
+	@"#error"  , _
+	_
+	_ '' Declarations/statements
+	@"struct"     , _
+	@"union"      , _
+	@"enum"       , _
+	@"typedef"    , _
+	@"constant"   , _
+	@"var"        , _
+	@"externvar"  , _
+	@"staticvar"  , _
+	@"field"      , _
+	@"enumconst"  , _
+	@"proc"       , _
+	@"param"      , _
+	@"array"      , _
+	@"externbegin", _
+	@"externend"  , _
+	_
+	_ '' Expression atoms etc.
+	@"macrobody" , _
+	@"macroparam", _
+	@"tk"        , _
+	@"consti"    , _
+	@"constf"    , _
+	@"id"        , _
+	@"tagid"     , _
+	@"text"      , _
+	@"string"    , _
+	@"char"      , _
+	@"type"      , _
+	_
+	_ '' BOPs
+	@"C ||"   , _
+	@"C &&"   , _
+	@"orelse" , _
+	@"andalso", _
+	@"or"     , _
+	@"xor"    , _
+	@"and"    , _
+	@"C ="    , _
+	@"C <>"   , _
+	@"C <"    , _
+	@"C <="   , _
+	@"C >"    , _
+	@"C >="   , _
+	@"="      , _
+	@"<>"     , _
+	@"<"      , _
+	@"<="     , _
+	@">"      , _
+	@">="     , _
+	@"shl"    , _
+	@"shr"    , _
+	@"+"      , _
+	@"-"      , _
+	@"*"      , _
+	@"/"      , _
+	@"mod"    , _
+	@"[]"     , _
+	@"."      , _
+	@"->"     , _
+	@"str +"  , _
+	_
+	_ '' UOPs
+	@"C !"        , _
+	@"not"        , _
+	@"negate"     , _
+	@"unary +"    , _
+	@"C defined()", _
+	@"defined()"  , _
+	@"@"          , _
+	@"deref"      , _
+	@"#"          , _
+	@"sizeof"     , _
+	@"cast"       , _
+	_
+	_ '' Special expressions
+	@"iif"       , _
+	@"ppmerge"   , _
+	@"call"      , _
+	@"structinit", _
+	@"arrayinit" , _
+	@"dimension" , _
+	@"sizeoftype" _
 }
 
-#assert ubound( astnodeinfo ) = ASTCLASS__COUNT - 1
+#assert ubound( astnodename ) = ASTCLASS__COUNT - 1
 
 function astNew overload( byval class_ as integer ) as ASTNODE ptr
 	dim as ASTNODE ptr n = callocate( sizeof( ASTNODE ) )
@@ -774,7 +785,7 @@ function astDumpPrettyDecl( byval n as ASTNODE ptr ) as string
 	case ASTCLASS_STATICVAR : s += "static variable"
 	case ASTCLASS_PROC      : s += "function"
 	case ASTCLASS_ENUMCONST : s += "enum constant"
-	case else               : s += astnodeinfo(n->class).name
+	case else               : s += *astnodename(n->class)
 	end select
 
 	if( n->text ) then
@@ -823,7 +834,7 @@ function astDumpOne( byval n as ASTNODE ptr ) as string
 		s += "[" & hex( n ) & "] "
 	#endif
 
-	s += astnodeinfo(n->class).name
+	s += *astnodename(n->class)
 
 	#macro checkAttrib( a )
 		if( n->attrib and ASTATTRIB_##a ) then s += " " + lcase( #a, 1 )
