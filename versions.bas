@@ -86,7 +86,7 @@ private sub hWrapStructFieldsInVerblocks _
 
 	select case( code->class )
 	case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
-		var newfields = astNewVERBLOCK( astClone( version ), NULL, astBuildGROUPFromChildren( code ) )
+		var newfields = astNewVERBLOCK( astClone( version ), NULL, astCloneChildren( code ) )
 		astRemoveChildren( code )
 		astAppend( code, newfields )
 	end select
@@ -366,8 +366,8 @@ private function hMergeStructsManually _
 	''             field c as integer
 	''
 
-	var afields = astBuildGROUPFromChildren( astruct )
-	var bfields = astBuildGROUPFromChildren( bstruct )
+	var afields = astCloneChildren( astruct )
+	var bfields = astCloneChildren( bstruct )
 
 	#if 0
 		print "afields:"
@@ -805,7 +805,7 @@ private sub hSimplifyVerblocks _
 			''     <...>
 			if( astIsEqual( i->expr, versions ) ) then
 				'' Remove the block but preserve its children
-				astReplace( code, i, astBuildGROUPFromChildren( i ) )
+				astReplace( code, i, astCloneChildren( i ) )
 			end if
 		end if
 
@@ -844,7 +844,7 @@ private sub hSolveOutRedundantNestedVerblocks _
 				'' Are all the parent's versions covered?
 				if( astGroupContainsAllChildrenOf( i->expr, parentversions ) ) then
 					'' Remove this verblock, preserve only its children
-					astReplace( code, i, astBuildGROUPFromChildren( i ) )
+					astReplace( code, i, astCloneChildren( i ) )
 				end if
 			end if
 		else
@@ -875,7 +875,7 @@ private sub hSolveOutRedundantNestedTargetblocks _
 				'' Are all the parent's targets covered?
 				if( (i->attrib and parenttargets) = parenttargets ) then
 					'' Remove this targetblock, preserve only its children
-					astReplace( code, i, astBuildGROUPFromChildren( i ) )
+					astReplace( code, i, astCloneChildren( i ) )
 				end if
 			end if
 		else

@@ -250,7 +250,7 @@ function astNewGROUP overload _
 	function = n
 end function
 
-function astBuildGROUPFromChildren( byval src as ASTNODE ptr ) as ASTNODE ptr
+function astCloneChildren( byval src as ASTNODE ptr ) as ASTNODE ptr
 	var n = astNewGROUP( )
 	astCloneAppendChildren( n, src )
 	function = n

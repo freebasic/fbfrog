@@ -750,7 +750,7 @@ declare function astNewGROUP overload _
 		byval child1 as ASTNODE ptr, _
 		byval child2 as ASTNODE ptr = NULL _
 	) as ASTNODE ptr
-declare function astBuildGROUPFromChildren( byval src as ASTNODE ptr ) as ASTNODE ptr
+declare function astCloneChildren( byval src as ASTNODE ptr ) as ASTNODE ptr
 declare function astGroupContains( byval group as ASTNODE ptr, byval lookfor as ASTNODE ptr ) as integer
 declare function astGroupContainsAnyChildrenOf( byval group as ASTNODE ptr, byval other as ASTNODE ptr ) as integer
 declare function astGroupContainsAllChildrenOf( byval group as ASTNODE ptr, byval other as ASTNODE ptr ) as integer
