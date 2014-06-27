@@ -157,7 +157,7 @@ function hDumpLocation( byval location as TKLOCATION ptr ) as string
 	end if
 end function
 
-private sub hCalcErrorLine _
+sub hCalcErrorLine _
 	( _
 		byval column as integer, _
 		byval limit as integer, _

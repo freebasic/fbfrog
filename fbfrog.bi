@@ -103,6 +103,13 @@ declare function sourcebufferFromZstring _
 	) as SOURCEBUFFER ptr
 declare sub oops( byval message as zstring ptr )
 declare function hDumpLocation( byval location as TKLOCATION ptr ) as string
+declare sub hCalcErrorLine _
+	( _
+		byval column as integer, _
+		byval limit as integer, _
+		byref s as string, _
+		byref offset as integer _
+	)
 declare function hConsoleWidth( ) as integer
 declare sub hReport _
 	( _

@@ -900,12 +900,15 @@ private sub hReportConstructTokens _
 		byval message as zstring ptr _
 	)
 
-	print *message
+	var maxwidth = hConsoleWidth( ) - 4
 	var xcolumn = -1, xlength = 0
-	print "    " + tkToCText( first, last, x, xcolumn, xlength )
-	if( xcolumn >= 0 ) then
-		print string( 4 + xcolumn, " " ) + "^" + string( xlength - 1, "~" )
-	end if
+	var text = tkToCText( first, last, x, xcolumn, xlength )
+	dim offset as integer
+	hCalcErrorLine( xcolumn, maxwidth, text, offset )
+
+	print *message
+	print "    " + text
+	print string( 4 + offset, " " ) + "^" + string( xlength - 1, "~" )
 
 end sub
 
