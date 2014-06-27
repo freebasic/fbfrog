@@ -10,139 +10,139 @@ end type
 
 dim shared as TOKENINFO tk_info(0 to ...) = _
 { _
-	( NULL  , @"eof"      ), _
-	( NULL  , @"divider"  ), _
-	( NULL  , @"ppinclude" ), _
-	( NULL  , @"ppdefine" ), _
-	( NULL  , @"ppif"     ), _
-	( NULL  , @"ppelseif" ), _
-	( NULL  , @"ppelse"   ), _
-	( NULL  , @"ppendif"  ), _
-	( NULL  , @"ppundef"  ), _
-	( NULL  , @"pperror"  ), _
-	( NULL  , @"ppwarning" ), _
-	( NULL  , @"begin"    ), _
-	( NULL  , @"end"      ), _
-	( NULL  , @"ppmerge"  ), _
-	( NULL  , @"argbegin" ), _
-	( NULL  , @"argend"   ), _
-	( NULL  , @"eol"      ), _
-	( NULL  , @"comment"  ), _
-	( NULL  , @"begininclude" ), _
-	( NULL  , @"endinclude" ), _
-	( NULL  , @"option"   ), _
-	( NULL  , @"argsfile" ), _
-	( NULL  , @"decnum"   ), _ '' Number literals
-	( NULL  , @"hexnum"   ), _
-	( NULL  , @"octnum"   ), _
-	( NULL  , @"decfloat" ), _
-	( NULL  , @"string"   ), _ '' String literals
-	( NULL  , @"char"     ), _
-	( NULL  , @"wstring"  ), _
-	( NULL  , @"wchar"    ), _
-	( @"!"   ), _ '' Main tokens
-	( @"!="  ), _
-	( @"#"   ), _
-	( @"##"  ), _
-	( @"%"   ), _
-	( @"%="  ), _
-	( @"&"   ), _
-	( @"&="  ), _
-	( @"&&"  ), _
-	( @"("   ), _
-	( @")"   ), _
-	( @"*"   ), _
-	( @"*="  ), _
-	( @"+"   ), _
-	( @"+="  ), _
-	( @"++"  ), _
-	( @","   ), _
-	( @"-"   ), _
-	( @"-="  ), _
-	( @"--"  ), _
-	( @"->"  ), _
-	( @"."   ), _
-	( @"..." ), _
-	( @"/"   ), _
-	( @"/="  ), _
-	( @":"   ), _
-	( @";"   ), _
-	( @"<"   ), _
-	( @"<<"  ), _
-	( @"<<=" ), _
-	( @"<="  ), _
-	( @"<>"  ), _
-	( @"="   ), _
-	( @"=="  ), _
-	( @">"   ), _
-	( @">>"  ), _
-	( @">>=" ), _
-	( @">="  ), _
-	( @"?"   ), _
-	( @"@"   ), _
-	( @"["   ), _
-	( @"\"   ), _
-	( @"]"   ), _
-	( @"^"   ), _
-	( @"^="  ), _
-	( @"_"   ), _
-	( @"{"   ), _
-	( @"|"   ), _
-	( @"|="  ), _
-	( @"||"  ), _
-	( @"}"   ), _
-	( @"~"   ), _
-	( NULL  , @"id" ), _ '' TK_ID
-	( @"__attribute__" ), _ '' C keywords
-	( @"__cdecl"       ), _
-	( @"__restrict"    ), _
-	( @"__restrict__"  ), _
-	( @"__stdcall"     ), _
-	( @"auto"     ), _
-	( @"break"    ), _
-	( @"case"     ), _
-	( @"char"     ), _
-	( @"const"    ), _
-	( @"continue" ), _
-	( @"default"  ), _
-	( @"define"   ), _
-	( @"defined"  ), _
-	( @"do"       ), _
-	( @"double"   ), _
-	( @"elif"     ), _
-	( @"else"     ), _
-	( @"endif"    ), _
-	( @"enum"     ), _
-	( @"error"    ), _
-	( @"extern"   ), _
-	( @"float"    ), _
-	( @"for"      ), _
-	( @"goto"     ), _
-	( @"if"       ), _
-	( @"ifdef"    ), _
-	( @"ifndef"   ), _
-	( @"include"  ), _
-	( @"inline"   ), _
-	( @"int"      ), _
-	( @"long"     ), _
-	( @"pragma"   ), _
-	( @"register" ), _
-	( @"restrict" ), _
-	( @"return"   ), _
-	( @"short"    ), _
-	( @"signed"   ), _
-	( @"sizeof"   ), _
-	( @"static"   ), _
-	( @"struct"   ), _
-	( @"switch"   ), _
-	( @"typedef"  ), _
-	( @"undef"    ), _
-	( @"union"    ), _
-	( @"unsigned" ), _
-	( @"void"     ), _
-	( @"volatile" ), _
-	( @"warning"  ), _
-	( @"while"    )  _
+	(NULL, @"eof"     ), _
+	(NULL, @"divider" ), _
+	(NULL, @"ppinclude"), _
+	(NULL, @"ppdefine"), _
+	(NULL, @"ppif"    ), _
+	(NULL, @"ppelseif"), _
+	(NULL, @"ppelse"  ), _
+	(NULL, @"ppendif" ), _
+	(NULL, @"ppundef" ), _
+	(NULL, @"pperror" ), _
+	(NULL, @"ppwarning"), _
+	(NULL, @"begin"   ), _
+	(NULL, @"end"     ), _
+	(NULL, @"ppmerge" ), _
+	(NULL, @"argbegin"), _
+	(NULL, @"argend"  ), _
+	(NULL, @"eol"     ), _
+	(NULL, @"comment" ), _
+	(NULL, @"begininclude"), _
+	(NULL, @"endinclude"), _
+	(NULL, @"option"  ), _
+	(NULL, @"argsfile"), _
+	(NULL, @"decnum"  ), _ '' Number literals
+	(NULL, @"hexnum"  ), _
+	(NULL, @"octnum"  ), _
+	(NULL, @"decfloat"), _
+	(NULL, @"string"  ), _ '' String literals
+	(NULL, @"char"    ), _
+	(NULL, @"wstring" ), _
+	(NULL, @"wchar"   ), _
+	(@"!"  ), _ '' Main tokens
+	(@"!=" ), _
+	(@"#"  ), _
+	(@"##" ), _
+	(@"%"  ), _
+	(@"%=" ), _
+	(@"&"  ), _
+	(@"&=" ), _
+	(@"&&" ), _
+	(@"("  ), _
+	(@")"  ), _
+	(@"*"  ), _
+	(@"*=" ), _
+	(@"+"  ), _
+	(@"+=" ), _
+	(@"++" ), _
+	(@","  ), _
+	(@"-"  ), _
+	(@"-=" ), _
+	(@"--" ), _
+	(@"->" ), _
+	(@"."  ), _
+	(@"..."), _
+	(@"/"  ), _
+	(@"/=" ), _
+	(@":"  ), _
+	(@";"  ), _
+	(@"<"  ), _
+	(@"<<" ), _
+	(@"<<="), _
+	(@"<=" ), _
+	(@"<>" ), _
+	(@"="  ), _
+	(@"==" ), _
+	(@">"  ), _
+	(@">>" ), _
+	(@">>="), _
+	(@">=" ), _
+	(@"?"  ), _
+	(@"@"  ), _
+	(@"["  ), _
+	(@"\"  ), _
+	(@"]"  ), _
+	(@"^"  ), _
+	(@"^=" ), _
+	(@"_"  ), _
+	(@"{"  ), _
+	(@"|"  ), _
+	(@"|=" ), _
+	(@"||" ), _
+	(@"}"  ), _
+	(@"~"  ), _
+	(NULL, @"id" ), _ '' TK_ID
+	(@"__attribute__"), _ '' C keywords
+	(@"__cdecl"      ), _
+	(@"__restrict"   ), _
+	(@"__restrict__" ), _
+	(@"__stdcall"    ), _
+	(@"auto"    ), _
+	(@"break"   ), _
+	(@"case"    ), _
+	(@"char"    ), _
+	(@"const"   ), _
+	(@"continue"), _
+	(@"default" ), _
+	(@"define"  ), _
+	(@"defined" ), _
+	(@"do"      ), _
+	(@"double"  ), _
+	(@"elif"    ), _
+	(@"else"    ), _
+	(@"endif"   ), _
+	(@"enum"    ), _
+	(@"error"   ), _
+	(@"extern"  ), _
+	(@"float"   ), _
+	(@"for"     ), _
+	(@"goto"    ), _
+	(@"if"      ), _
+	(@"ifdef"   ), _
+	(@"ifndef"  ), _
+	(@"include" ), _
+	(@"inline"  ), _
+	(@"int"     ), _
+	(@"long"    ), _
+	(@"pragma"  ), _
+	(@"register"), _
+	(@"restrict"), _
+	(@"return"  ), _
+	(@"short"   ), _
+	(@"signed"  ), _
+	(@"sizeof"  ), _
+	(@"static"  ), _
+	(@"struct"  ), _
+	(@"switch"  ), _
+	(@"typedef" ), _
+	(@"undef"   ), _
+	(@"union"   ), _
+	(@"unsigned"), _
+	(@"void"    ), _
+	(@"volatile"), _
+	(@"warning" ), _
+	(@"while"   )  _
 }
 
 #assert ubound( tk_info ) = TK__COUNT - 1
