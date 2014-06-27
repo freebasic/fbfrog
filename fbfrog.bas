@@ -200,12 +200,12 @@ private function hParseArgs( byref x as integer, byval body as integer ) as ASTN
 		case TK_EOF
 			exit do
 
-		case OPT_NOMERGE     : frog.nomerge      = TRUE
-		case OPT_WHITESPACE  : frog.whitespace   = TRUE
-		case OPT_WINDOWSMS   : frog.windowsms    = TRUE
-		case OPT_NOCONSTANTS : frog.noconstants  = TRUE
-		case OPT_NONAMEFIXUP : frog.nonamefixup  = TRUE
-		case OPT_V           : frog.verbose      = TRUE
+		case OPT_NOMERGE     : frog.nomerge      = TRUE : x += 1
+		case OPT_WHITESPACE  : frog.whitespace   = TRUE : x += 1
+		case OPT_WINDOWSMS   : frog.windowsms    = TRUE : x += 1
+		case OPT_NOCONSTANTS : frog.noconstants  = TRUE : x += 1
+		case OPT_NONAMEFIXUP : frog.nonamefixup  = TRUE : x += 1
+		case OPT_V           : frog.verbose      = TRUE : x += 1
 
 		case OPT_VERSIONDEFINE
 			x += 1
@@ -213,6 +213,7 @@ private function hParseArgs( byref x as integer, byval body as integer ) as ASTN
 			'' <id>
 			hExpectId( x )
 			frog.versiondefine = *tkGetText( x )
+			x += 1
 
 		case OPT_INCDIR
 			x += 1
@@ -220,6 +221,7 @@ private function hParseArgs( byref x as integer, byval body as integer ) as ASTN
 			'' <path>
 			hExpectPath( x )
 			astAppend( frog.incdirs, astTakeLoc( astNewTEXT( hPathRelativeToArgsFile( x ) ), x ) )
+			x += 1
 
 		case OPT_O
 			x += 1
@@ -227,6 +229,7 @@ private function hParseArgs( byref x as integer, byval body as integer ) as ASTN
 			'' <path>
 			hExpectPath( x )
 			frog.outname = hPathRelativeToArgsFile( x )
+			x += 1
 
 		'' -version <version id> ...
 		case OPT_VERSION
@@ -252,7 +255,6 @@ private function hParseArgs( byref x as integer, byval body as integer ) as ASTN
 			n->location = *location1
 			n->location.length = location2->column + location2->length - location1->column
 			astAppend( result, n )
-			x -= 1
 
 		'' -target <target-id> ...
 		case OPT_TARGET
@@ -287,7 +289,6 @@ private function hParseArgs( byref x as integer, byval body as integer ) as ASTN
 			n->attrib or= attrib
 			n->location = location
 			astAppend( result, n )
-			x -= 1
 
 		'' -inclib <name>
 		case OPT_INCLIB
@@ -297,6 +298,7 @@ private function hParseArgs( byref x as integer, byval body as integer ) as ASTN
 				tkOopsExpected( x, "<name> argument" )
 			end if
 			astAppend( result, astTakeLoc( astNew( ASTCLASS_INCLIB, tkGetText( x ) ), x ) )
+			x += 1
 
 		'' -define <id> [<body>]
 		case OPT_DEFINE
@@ -313,6 +315,7 @@ private function hParseArgs( byref x as integer, byval body as integer ) as ASTN
 			end if
 
 			astAppend( result, n )
+			x += 1
 
 		case OPT_NOEXPAND
 			x += 1
@@ -320,6 +323,7 @@ private function hParseArgs( byref x as integer, byval body as integer ) as ASTN
 			'' <id>
 			hExpectId( x )
 			astAppend( result, astTakeLoc( astNew( ASTCLASS_NOEXPAND, tkGetText( x ) ), x ) )
+			x += 1
 
 		case OPT_REMOVEDEFINE
 			x += 1
@@ -327,6 +331,7 @@ private function hParseArgs( byref x as integer, byval body as integer ) as ASTN
 			'' <id>
 			hExpectId( x )
 			astAppend( result, astTakeLoc( astNew( ASTCLASS_REMOVEDEFINE, tkGetText( x ) ), x ) )
+			x += 1
 
 		case OPT_RENAMETYPEDEF, OPT_RENAMETAG
 			var astclass = iif( tkGet( x ) = OPT_RENAMETYPEDEF, _
@@ -343,6 +348,7 @@ private function hParseArgs( byref x as integer, byval body as integer ) as ASTN
 			astSetComment( n, tkGetText( x ) )
 
 			astAppend( result, n )
+			x += 1
 
 		case OPT_REMOVEMATCH
 			x += 1
@@ -363,6 +369,7 @@ private function hParseArgs( byref x as integer, byval body as integer ) as ASTN
 			next
 			tkRemove( cbegin, cend )
 			astAppend( result, n )
+			x += 1
 
 		case else
 			dim as zstring ptr text = tkGetText( x )
@@ -375,7 +382,6 @@ private function hParseArgs( byref x as integer, byval body as integer ) as ASTN
 				if( pathExtOnly( filename ) = "fbfrog" ) then
 					hLoadArgsFile( x + 1, filename, tkGetLocation( x ) )
 					tkRemove( x, x )
-					x -= 1
 
 					'' Must expand @files again in case the loaded file contained any
 					hExpandArgsFiles( )
@@ -389,11 +395,10 @@ private function hParseArgs( byref x as integer, byval body as integer ) as ASTN
 					end if
 
 					astAppend( result, astTakeLoc( n, x ) )
+					x += 1
 				end if
 			end if
 		end select
-
-		x += 1
 	loop
 
 	function = result
