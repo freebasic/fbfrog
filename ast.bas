@@ -272,20 +272,20 @@ function astGroupContains( byval group as ASTNODE ptr, byval lookfor as ASTNODE 
 	function = FALSE
 end function
 
-function astGroupContainsAnyChildrenOf( byval group as ASTNODE ptr, byval other as ASTNODE ptr ) as integer
-	assert( group->class = ASTCLASS_GROUP )
-	var i = group->head
+function astGroupContainsAnyChildrenOf( byval l as ASTNODE ptr, byval r as ASTNODE ptr ) as integer
+	assert( l->class = ASTCLASS_GROUP )
+	var i = r->head
 	while( i )
-		if( astGroupContains( other, i ) ) then return TRUE
+		if( astGroupContains( l, i ) ) then return TRUE
 		i = i->next
 	wend
 end function
 
-function astGroupContainsAllChildrenOf( byval group as ASTNODE ptr, byval other as ASTNODE ptr ) as integer
-	assert( group->class = ASTCLASS_GROUP )
-	var i = group->head
+function astGroupContainsAllChildrenOf( byval l as ASTNODE ptr, byval r as ASTNODE ptr ) as integer
+	assert( l->class = ASTCLASS_GROUP )
+	var i = r->head
 	while( i )
-		if( astGroupContains( other, i ) = FALSE ) then exit function
+		if( astGroupContains( l, i ) = FALSE ) then exit function
 		i = i->next
 	wend
 	function = TRUE

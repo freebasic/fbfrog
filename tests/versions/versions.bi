@@ -32,8 +32,11 @@ dim shared common_ as long
 	end type
 
 	type UDT2v12
-		fieldv1 as long
-		fieldv2 as long
+		#if __VERSION__ = "1"
+			fieldv1 as long
+		#elseif __VERSION__ = "2"
+			fieldv2 as long
+		#endif
 	end type
 #else
 	dim shared v3 as long
