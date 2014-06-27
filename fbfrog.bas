@@ -220,7 +220,7 @@ private function hParseArgs( byref x as integer, byval body as integer ) as ASTN
 
 			'' <path>
 			hExpectPath( x )
-			astAppend( frog.incdirs, astTakeLoc( astNewTEXT( hPathRelativeToArgsFile( x ) ), x ) )
+			astAppend( frog.incdirs, astNewTEXT( hPathRelativeToArgsFile( x ) ) )
 			x += 1
 
 		case OPT_O
@@ -297,7 +297,7 @@ private function hParseArgs( byref x as integer, byval body as integer ) as ASTN
 			if( hIsStringOrId( x ) = FALSE ) then
 				tkOopsExpected( x, "<name> argument" )
 			end if
-			astAppend( result, astTakeLoc( astNew( ASTCLASS_INCLIB, tkGetText( x ) ), x ) )
+			astAppend( result, astNew( ASTCLASS_INCLIB, tkGetText( x ) ) )
 			x += 1
 
 		'' -define <id> [<body>]
@@ -306,12 +306,12 @@ private function hParseArgs( byref x as integer, byval body as integer ) as ASTN
 
 			'' <id>
 			hExpectId( x )
-			var n = astTakeLoc( astNewPPDEFINE( tkGetText( x ) ), x )
+			var n = astNewPPDEFINE( tkGetText( x ) )
 
 			'' [<body>]
 			if( hIsStringOrId( x + 1 ) ) then
 				x += 1
-				n->expr = astTakeLoc( astNewTEXT( tkGetText( x ) ), x )
+				n->expr = astNewTEXT( tkGetText( x ) )
 			end if
 
 			astAppend( result, n )
@@ -322,7 +322,7 @@ private function hParseArgs( byref x as integer, byval body as integer ) as ASTN
 
 			'' <id>
 			hExpectId( x )
-			astAppend( result, astTakeLoc( astNew( ASTCLASS_NOEXPAND, tkGetText( x ) ), x ) )
+			astAppend( result, astNew( ASTCLASS_NOEXPAND, tkGetText( x ) ) )
 			x += 1
 
 		case OPT_REMOVEDEFINE
@@ -330,7 +330,7 @@ private function hParseArgs( byref x as integer, byval body as integer ) as ASTN
 
 			'' <id>
 			hExpectId( x )
-			astAppend( result, astTakeLoc( astNew( ASTCLASS_REMOVEDEFINE, tkGetText( x ) ), x ) )
+			astAppend( result, astNew( ASTCLASS_REMOVEDEFINE, tkGetText( x ) ) )
 			x += 1
 
 		case OPT_RENAMETYPEDEF, OPT_RENAMETAG
@@ -340,7 +340,7 @@ private function hParseArgs( byref x as integer, byval body as integer ) as ASTN
 
 			'' <oldid>
 			hExpectId( x )
-			var n = astTakeLoc( astNew( astclass, tkGetText( x ) ), x )
+			var n = astNew( astclass, tkGetText( x ) )
 			x += 1
 
 			'' <newid>
@@ -363,7 +363,7 @@ private function hParseArgs( byref x as integer, byval body as integer ) as ASTN
 			var cend = lexLoadC( cbegin, _
 				sourcebufferFromZstring( "-removematch", tkGetText( x ), tkGetLocation( x ) ), _
 				FALSE ) - 1
-			var n = astTakeLoc( astNew( ASTCLASS_REMOVEMATCH ), x )
+			var n = astNew( ASTCLASS_REMOVEMATCH )
 			for i as integer = cbegin to cend
 				astAppend( n, astNewTK( i ) )
 			next
