@@ -197,172 +197,172 @@ private function hParseArgs( byref x as integer, byval body as integer ) as ASTN
 
 	do
 		select case( tkGet( x ) )
-			case TK_EOF
+		case TK_EOF
+			exit do
+
+		case OPT_NOMERGE     : frog.nomerge      = TRUE
+		case OPT_WHITESPACE  : frog.whitespace   = TRUE
+		case OPT_WINDOWSMS   : frog.windowsms    = TRUE
+		case OPT_NOCONSTANTS : frog.noconstants  = TRUE
+		case OPT_NONAMEFIXUP : frog.nonamefixup  = TRUE
+		case OPT_V           : frog.verbose      = TRUE
+
+		case OPT_VERSIONDEFINE
+			x += 1
+
+			'' <id>
+			hExpectId( x )
+			frog.versiondefine = *tkGetText( x )
+
+		case OPT_INCDIR
+			x += 1
+
+			'' <path>
+			hExpectPath( x )
+			astAppend( frog.incdirs, astTakeLoc( astNewTEXT( hPathRelativeToArgsFile( x ) ), x ) )
+
+		case OPT_O
+			x += 1
+
+			'' <path>
+			hExpectPath( x )
+			frog.outname = hPathRelativeToArgsFile( x )
+
+		'' -version <version id> ...
+		case OPT_VERSION
+			'' Another -version is coming - end any current -version/-target blocks
+			if( body <> BODY_TOPLEVEL ) then
 				exit do
+			end if
+			var location1 = tkGetLocation( x )
+			x += 1
 
-			case OPT_NOMERGE     : frog.nomerge      = TRUE
-			case OPT_WHITESPACE  : frog.whitespace   = TRUE
-			case OPT_WINDOWSMS   : frog.windowsms    = TRUE
-			case OPT_NOCONSTANTS : frog.noconstants  = TRUE
-			case OPT_NONAMEFIXUP : frog.nonamefixup  = TRUE
-			case OPT_V           : frog.verbose      = TRUE
+			'' <version id>
+			if( hIsStringOrId( x ) = FALSE ) then
+				tkOopsExpected( x, "<version id> argument" )
+			end if
+			'' astNewCONSTI( vallng( nextarg ), TYPE_LONGINT )
+			var id = astNew( ASTCLASS_STRING, tkGetText( x ) )
+			var location2 = tkGetLocation( x )
+			id->location = *location2
+			x += 1
 
-			case OPT_VERSIONDEFINE
+			var location = tkGetLocation( x )
+			var n = astNewVERBLOCK( id, NULL, hParseArgs( x, BODY_VERSION ) )
+			n->location = *location1
+			n->location.length = location2->column + location2->length - location1->column
+			astAppend( result, n )
+			x -= 1
+
+		'' -target <target-id> ...
+		case OPT_TARGET
+			'' Another -target is coming - end any current -target block
+			if( body = BODY_TARGET ) then
+				exit do
+			end if
+			var location = *tkGetLocation( x )
+			x += 1
+
+			'' <target-id>
+			var attrib = 0
+			dim as string targetid
+			if( tkGet( x ) = TK_ID ) then
+				targetid = *tkGetText( x )
+				select case( targetid )
+				case "dos"   : attrib = ASTATTRIB_DOS
+				case "linux" : attrib = ASTATTRIB_LINUX
+				case "win32" : attrib = ASTATTRIB_WIN32
+				end select
+			end if
+			if( attrib = 0 ) then
+				tkOopsExpected( x, "one of dos|linux|win32" )
+			end if
+			var location2 = tkGetLocation( x )
+			location.length = location2->column + location2->length - location.column
+			x += 1
+
+			hLoadBuiltinArgsFile( x, targetid, @location )
+
+			var n = astNew( ASTCLASS_TARGETBLOCK, hParseArgs( x, BODY_TARGET ) )
+			n->attrib or= attrib
+			n->location = location
+			astAppend( result, n )
+			x -= 1
+
+		'' -inclib <name>
+		case OPT_INCLIB
+			x += 1
+
+			if( hIsStringOrId( x ) = FALSE ) then
+				tkOopsExpected( x, "<name> argument" )
+			end if
+			astAppend( result, astTakeLoc( astNew( ASTCLASS_INCLIB, tkGetText( x ) ), x ) )
+
+		'' -define <id> [<body>]
+		case OPT_DEFINE
+			x += 1
+
+			'' <id>
+			hExpectId( x )
+			var n = astTakeLoc( astNewPPDEFINE( tkGetText( x ) ), x )
+
+			'' [<body>]
+			if( hIsStringOrId( x + 1 ) ) then
 				x += 1
+				n->expr = astTakeLoc( astNewTEXT( tkGetText( x ) ), x )
+			end if
 
-				'' <id>
-				hExpectId( x )
-				frog.versiondefine = *tkGetText( x )
+			astAppend( result, n )
 
-			case OPT_INCDIR
-				x += 1
+		case OPT_NOEXPAND
+			x += 1
 
-				'' <path>
-				hExpectPath( x )
-				astAppend( frog.incdirs, astTakeLoc( astNewTEXT( hPathRelativeToArgsFile( x ) ), x ) )
+			'' <id>
+			hExpectId( x )
+			astAppend( result, astTakeLoc( astNew( ASTCLASS_NOEXPAND, tkGetText( x ) ), x ) )
 
-			case OPT_O
-				x += 1
+		case OPT_REMOVEDEFINE
+			x += 1
 
-				'' <path>
-				hExpectPath( x )
-				frog.outname = hPathRelativeToArgsFile( x )
+			'' <id>
+			hExpectId( x )
+			astAppend( result, astTakeLoc( astNew( ASTCLASS_REMOVEDEFINE, tkGetText( x ) ), x ) )
 
-			'' -version <version id> ...
-			case OPT_VERSION
-				'' Another -version is coming - end any current -version/-target blocks
-				if( body <> BODY_TOPLEVEL ) then
-					exit do
-				end if
-				var location1 = tkGetLocation( x )
-				x += 1
+		case OPT_RENAMETYPEDEF, OPT_RENAMETAG
+			var astclass = iif( tkGet( x ) = OPT_RENAMETYPEDEF, _
+					ASTCLASS_RENAMETYPEDEF, ASTCLASS_RENAMETAG )
+			x += 1
 
-				'' <version id>
-				if( hIsStringOrId( x ) = FALSE ) then
-					tkOopsExpected( x, "<version id> argument" )
-				end if
-				'' astNewCONSTI( vallng( nextarg ), TYPE_LONGINT )
-				var id = astNew( ASTCLASS_STRING, tkGetText( x ) )
-				var location2 = tkGetLocation( x )
-				id->location = *location2
-				x += 1
+			'' <oldid>
+			hExpectId( x )
+			var n = astTakeLoc( astNew( astclass, tkGetText( x ) ), x )
+			x += 1
 
-				var location = tkGetLocation( x )
-				var n = astNewVERBLOCK( id, NULL, hParseArgs( x, BODY_VERSION ) )
-				n->location = *location1
-				n->location.length = location2->column + location2->length - location1->column
-				astAppend( result, n )
-				x -= 1
+			'' <newid>
+			hExpectId( x )
+			astSetComment( n, tkGetText( x ) )
 
-			'' -target <target-id> ...
-			case OPT_TARGET
-				'' Another -target is coming - end any current -target block
-				if( body = BODY_TARGET ) then
-					exit do
-				end if
-				var location = *tkGetLocation( x )
-				x += 1
+			astAppend( result, n )
 
-				'' <target-id>
-				var attrib = 0
-				dim as string targetid
-				if( tkGet( x ) = TK_ID ) then
-					targetid = *tkGetText( x )
-					select case( targetid )
-					case "dos"   : attrib = ASTATTRIB_DOS
-					case "linux" : attrib = ASTATTRIB_LINUX
-					case "win32" : attrib = ASTATTRIB_WIN32
-					end select
-				end if
-				if( attrib = 0 ) then
-					tkOopsExpected( x, "one of dos|linux|win32" )
-				end if
-				var location2 = tkGetLocation( x )
-				location.length = location2->column + location2->length - location.column
-				x += 1
+		case OPT_REMOVEMATCH
+			x += 1
 
-				hLoadBuiltinArgsFile( x, targetid, @location )
+			'' <C tokens>
+			if( (tkGet( x ) <> TK_ID) and (tkGet( x ) <> TK_STRING) ) then
+				tkOopsExpected( x, "C tokens" )
+			end if
 
-				var n = astNew( ASTCLASS_TARGETBLOCK, hParseArgs( x, BODY_TARGET ) )
-				n->attrib or= attrib
-				n->location = location
-				astAppend( result, n )
-				x -= 1
-
-			'' -inclib <name>
-			case OPT_INCLIB
-				x += 1
-
-				if( hIsStringOrId( x ) = FALSE ) then
-					tkOopsExpected( x, "<name> argument" )
-				end if
-				astAppend( result, astTakeLoc( astNew( ASTCLASS_INCLIB, tkGetText( x ) ), x ) )
-
-			'' -define <id> [<body>]
-			case OPT_DEFINE
-				x += 1
-
-				'' <id>
-				hExpectId( x )
-				var n = astTakeLoc( astNewPPDEFINE( tkGetText( x ) ), x )
-
-				'' [<body>]
-				if( hIsStringOrId( x + 1 ) ) then
-					x += 1
-					n->expr = astTakeLoc( astNewTEXT( tkGetText( x ) ), x )
-				end if
-
-				astAppend( result, n )
-
-			case OPT_NOEXPAND
-				x += 1
-
-				'' <id>
-				hExpectId( x )
-				astAppend( result, astTakeLoc( astNew( ASTCLASS_NOEXPAND, tkGetText( x ) ), x ) )
-
-			case OPT_REMOVEDEFINE
-				x += 1
-
-				'' <id>
-				hExpectId( x )
-				astAppend( result, astTakeLoc( astNew( ASTCLASS_REMOVEDEFINE, tkGetText( x ) ), x ) )
-
-			case OPT_RENAMETYPEDEF, OPT_RENAMETAG
-				var astclass = iif( tkGet( x ) = OPT_RENAMETYPEDEF, _
-						ASTCLASS_RENAMETYPEDEF, ASTCLASS_RENAMETAG )
-				x += 1
-
-				'' <oldid>
-				hExpectId( x )
-				var n = astTakeLoc( astNew( astclass, tkGetText( x ) ), x )
-				x += 1
-
-				'' <newid>
-				hExpectId( x )
-				astSetComment( n, tkGetText( x ) )
-
-				astAppend( result, n )
-
-			case OPT_REMOVEMATCH
-				x += 1
-
-				'' <C tokens>
-				if( (tkGet( x ) <> TK_ID) and (tkGet( x ) <> TK_STRING) ) then
-					tkOopsExpected( x, "C tokens" )
-				end if
-
-				'' Lex the C tokens into the tk buffer, load them into AST, and remove them again
-				var cbegin = x + 1
-				var cend = lexLoadC( cbegin, _
-					sourcebufferFromZstring( "-removematch", tkGetText( x ), tkGetLocation( x ) ), _
-					FALSE ) - 1
-				var n = astTakeLoc( astNew( ASTCLASS_REMOVEMATCH ), x )
-				for i as integer = cbegin to cend
-					astAppend( n, astNewTK( i ) )
-				next
-				tkRemove( cbegin, cend )
-				astAppend( result, n )
+			'' Lex the C tokens into the tk buffer, load them into AST, and remove them again
+			var cbegin = x + 1
+			var cend = lexLoadC( cbegin, _
+				sourcebufferFromZstring( "-removematch", tkGetText( x ), tkGetLocation( x ) ), _
+				FALSE ) - 1
+			var n = astTakeLoc( astNew( ASTCLASS_REMOVEMATCH ), x )
+			for i as integer = cbegin to cend
+				astAppend( n, astNewTK( i ) )
+			next
+			tkRemove( cbegin, cend )
+			astAppend( result, n )
 
 		case else
 			dim as zstring ptr text = tkGetText( x )
