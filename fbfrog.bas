@@ -96,9 +96,12 @@ end sub
 '' Expand @file arguments in the tk buffer
 private sub hExpandArgsFiles( )
 	var x = 0
-	while( tkGet( x ) <> TK_EOF )
+	do
+		select case( tkGet( x ) )
+		case TK_EOF
+			exit do
 
-		if( tkGet( x ) = TK_ARGSFILE ) then
+		case TK_ARGSFILE
 			var filename = *tkGetText( x )
 
 			'' Complain if argument was only '@'
@@ -123,10 +126,10 @@ private sub hExpandArgsFiles( )
 
 			'' Re-check this position in case a new @file token was inserted right here
 			x -= 1
-		end if
+		end select
 
 		x += 1
-	wend
+	loop
 end sub
 
 private sub hLoadBuiltinArgsFile _
@@ -192,37 +195,33 @@ private function hParseArgs( byref x as integer, byval body as integer ) as ASTN
 		hLoadBuiltinArgsFile( x, "base", tkGetLocation( x - 1 ) )
 	end if
 
-	while( tkGet( x ) <> TK_EOF )
-		var text = *tkGetText( x )
-
+	do
 		select case( tkGet( x ) )
-		case TK_OPTION
-			select case( text )
-			case "h", "?", "help", "-help", "-version"
-				hPrintHelpAndExit( )
+			case TK_EOF
+				exit do
 
-			case "nomerge"      : frog.nomerge      = TRUE
-			case "whitespace"   : frog.whitespace   = TRUE
-			case "windowsms"    : frog.windowsms    = TRUE
-			case "noconstants"  : frog.noconstants  = TRUE
-			case "nonamefixup"  : frog.nonamefixup  = TRUE
-			case "v", "verbose", "-verbose" : frog.verbose = TRUE
+			case OPT_NOMERGE     : frog.nomerge      = TRUE
+			case OPT_WHITESPACE  : frog.whitespace   = TRUE
+			case OPT_WINDOWSMS   : frog.windowsms    = TRUE
+			case OPT_NOCONSTANTS : frog.noconstants  = TRUE
+			case OPT_NONAMEFIXUP : frog.nonamefixup  = TRUE
+			case OPT_V           : frog.verbose      = TRUE
 
-			case "versiondefine"
+			case OPT_VERSIONDEFINE
 				x += 1
 
 				'' <id>
 				hExpectId( x )
 				frog.versiondefine = *tkGetText( x )
 
-			case "incdir"
+			case OPT_INCDIR
 				x += 1
 
 				'' <path>
 				hExpectPath( x )
 				astAppend( frog.incdirs, astTakeLoc( astNewTEXT( hPathRelativeToArgsFile( x ) ), x ) )
 
-			case "o"
+			case OPT_O
 				x += 1
 
 				'' <path>
@@ -230,10 +229,10 @@ private function hParseArgs( byref x as integer, byval body as integer ) as ASTN
 				frog.outname = hPathRelativeToArgsFile( x )
 
 			'' -version <version id> ...
-			case "version"
+			case OPT_VERSION
 				'' Another -version is coming - end any current -version/-target blocks
 				if( body <> BODY_TOPLEVEL ) then
-					exit while
+					exit do
 				end if
 				var location1 = tkGetLocation( x )
 				x += 1
@@ -256,10 +255,10 @@ private function hParseArgs( byref x as integer, byval body as integer ) as ASTN
 				x -= 1
 
 			'' -target <target-id> ...
-			case "target"
+			case OPT_TARGET
 				'' Another -target is coming - end any current -target block
 				if( body = BODY_TARGET ) then
-					exit while
+					exit do
 				end if
 				var location = *tkGetLocation( x )
 				x += 1
@@ -291,7 +290,7 @@ private function hParseArgs( byref x as integer, byval body as integer ) as ASTN
 				x -= 1
 
 			'' -inclib <name>
-			case "inclib"
+			case OPT_INCLIB
 				x += 1
 
 				if( hIsStringOrId( x ) = FALSE ) then
@@ -300,7 +299,7 @@ private function hParseArgs( byref x as integer, byval body as integer ) as ASTN
 				astAppend( result, astTakeLoc( astNew( ASTCLASS_INCLIB, tkGetText( x ) ), x ) )
 
 			'' -define <id> [<body>]
-			case "define"
+			case OPT_DEFINE
 				x += 1
 
 				'' <id>
@@ -315,29 +314,24 @@ private function hParseArgs( byref x as integer, byval body as integer ) as ASTN
 
 				astAppend( result, n )
 
-			case "noexpand"
+			case OPT_NOEXPAND
 				x += 1
 
 				'' <id>
 				hExpectId( x )
 				astAppend( result, astTakeLoc( astNew( ASTCLASS_NOEXPAND, tkGetText( x ) ), x ) )
 
-			case "removedefine"
+			case OPT_REMOVEDEFINE
 				x += 1
 
 				'' <id>
 				hExpectId( x )
 				astAppend( result, astTakeLoc( astNew( ASTCLASS_REMOVEDEFINE, tkGetText( x ) ), x ) )
 
-			case "renametypedef", "renametag"
+			case OPT_RENAMETYPEDEF, OPT_RENAMETAG
+				var astclass = iif( tkGet( x ) = OPT_RENAMETYPEDEF, _
+						ASTCLASS_RENAMETYPEDEF, ASTCLASS_RENAMETAG )
 				x += 1
-
-				dim as integer astclass
-				select case( text )
-				case "renametypedef" : astclass = ASTCLASS_RENAMETYPEDEF
-				case "renametag"     : astclass = ASTCLASS_RENAMETAG
-				case else            : assert( FALSE )
-				end select
 
 				'' <oldid>
 				hExpectId( x )
@@ -350,7 +344,7 @@ private function hParseArgs( byref x as integer, byval body as integer ) as ASTN
 
 				astAppend( result, n )
 
-			case "removematch"
+			case OPT_REMOVEMATCH
 				x += 1
 
 				'' <C tokens>
@@ -370,18 +364,16 @@ private function hParseArgs( byref x as integer, byval body as integer ) as ASTN
 				tkRemove( cbegin, cend )
 				astAppend( result, n )
 
-			case else
-				tkOops( x, "unknown command line option '" + text + "'" )
-			end select
-
 		case else
-			select case( text )
-			case "/?", "/h", "/help"
+			dim as zstring ptr text = tkGetText( x )
+			if( (text = NULL) orelse ((*text)[0] = CH_MINUS) ) then
+				tkReport( x, "unknown command line option '" + *text + "'", TRUE )
 				hPrintHelpAndExit( )
-			case else
+			else
 				'' *.fbfrog file given (without @)? Treat as @file too
-				if( pathExtOnly( text ) = "fbfrog" ) then
-					hLoadArgsFile( x + 1, text, tkGetLocation( x ) )
+				var filename = *text
+				if( pathExtOnly( filename ) = "fbfrog" ) then
+					hLoadArgsFile( x + 1, filename, tkGetLocation( x ) )
 					tkRemove( x, x )
 					x -= 1
 
@@ -398,11 +390,11 @@ private function hParseArgs( byref x as integer, byval body as integer ) as ASTN
 
 					astAppend( result, astTakeLoc( n, x ) )
 				end if
-			end select
+			end if
 		end select
 
 		x += 1
-	wend
+	loop
 
 	function = result
 end function
@@ -738,6 +730,7 @@ end function
 	frog.incdirs = astNewGROUP( )
 	sourcebuffersInit( )
 	fbkeywordsInit( )
+	lexInit( )
 
 	tkInit( )
 

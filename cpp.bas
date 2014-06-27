@@ -1152,7 +1152,7 @@ private sub hTryMergeTokens _
 		'' id ## id -> id/keyword
 		case is >= TK_ID
 			mergetext = *tkGetIdOrKw( l ) + *tkGetIdOrKw( r )
-			mergetk = hIdentifyCKeyword( mergetext )
+			mergetk = lexIdentifyCKeyword( mergetext )
 			'' If it's a KW_*, no need to store the text
 			if( mergetk <> TK_ID ) then
 				mergetext = ""

@@ -245,8 +245,6 @@ enum
 	TK_COMMENT
 	TK_BEGININCLUDE
 	TK_ENDINCLUDE
-	TK_OPTION
-	TK_ARGSFILE
 
 	'' Number/string literals
 	TK_DECNUM
@@ -368,6 +366,26 @@ enum
 	KW_WARNING
 	KW_WHILE
 	KW__C_LAST = KW_WHILE
+
+	TK_ARGSFILE
+	OPT_NOMERGE
+	OPT_WHITESPACE
+	OPT_WINDOWSMS
+	OPT_NOCONSTANTS
+	OPT_NONAMEFIXUP
+	OPT_V
+	OPT_VERSIONDEFINE
+	OPT_INCDIR
+	OPT_O
+	OPT_VERSION
+	OPT_TARGET
+	OPT_INCLIB
+	OPT_DEFINE
+	OPT_NOEXPAND
+	OPT_REMOVEDEFINE
+	OPT_RENAMETYPEDEF
+	OPT_RENAMETAG
+	OPT_REMOVEMATCH
 
 	TK__COUNT
 end enum
@@ -906,7 +924,8 @@ declare sub astProcessVerblocksAndTargetblocks _
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-declare function hIdentifyCKeyword( byval id as zstring ptr ) as integer
+declare sub lexInit( )
+declare function lexIdentifyCKeyword( byval id as zstring ptr ) as integer
 declare function lexLoadC _
 	( _
 		byval x as integer, _

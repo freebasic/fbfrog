@@ -15,7 +15,8 @@ type LEXSTUFF
 	behindspace	as integer
 	keep_comments	as integer    '' Whether to ignore comments or produce TK_COMMENTs
 
-	kwhash		as THASH      '' C keywords hash table
+	ckeywords	as THASH
+	frogoptions	as THASH
 
 	'' +2 extra room to allow for some "overflowing" to reduce the amount
 	'' of checking needed, +1 for null terminator.
@@ -24,33 +25,45 @@ end type
 
 dim shared as LEXSTUFF lex
 
-'' Load keywords if not yet done
-private sub hInitKeywords( )
-	if( lex.kwhash.items ) then
-		exit sub
-	end if
+private sub hInitKeywords _
+	( _
+		byval h as THASH ptr, _
+		byval first as integer, _
+		byval last as integer _
+	)
 
-	hashInit( @lex.kwhash, 12 )
+	hashInit( h, 12 )
 
-	for i as integer = KW__C_FIRST to KW__C_LAST
+	for i as integer = first to last
 		var hash = hashHash( tkInfoText( i ) )
-		var item = hashLookup( @lex.kwhash, tkInfoText( i ), hash )
-		hashAdd( @lex.kwhash, item, hash, tkInfoText( i ), cast( any ptr, i ) )
+		var item = hashLookup( h, tkInfoText( i ), hash )
+		hashAdd( h, item, hash, tkInfoText( i ), cast( any ptr, i ) )
 	next
 end sub
 
-function hIdentifyCKeyword( byval id as zstring ptr ) as integer
-	hInitKeywords( )
+sub lexInit( )
+	hInitKeywords( @lex.ckeywords, KW__C_FIRST, KW__C_LAST )
+	hInitKeywords( @lex.frogoptions, OPT_NOMERGE, OPT_REMOVEMATCH )
+end sub
 
-	'' Is it a C keyword?
-	var hash = hashHash( id )
-	var item = hashLookup( @lex.kwhash, id, hash )
+private function hLookupKeyword _
+	( _
+		byval h as THASH ptr, _
+		byval id as zstring ptr, _
+		byval defaulttk as integer _
+	) as integer
+
+	var item = hashLookup( h, id, hashHash( id ) )
 	if( item->s ) then
-		'' Return the corresponding KW_*
+		'' Return the corresponding KW_* (C keyword) or OPT_* (command line option)
 		function = cint( item->data )
 	else
-		function = TK_ID
+		function = defaulttk
 	end if
+end function
+
+function lexIdentifyCKeyword( byval id as zstring ptr ) as integer
+	function = hLookupKeyword( @lex.ckeywords, id, TK_ID )
 end function
 
 private sub hResetColumn( )
@@ -81,7 +94,7 @@ private sub hAddTextToken( byval tk as integer, byval begin as ubyte ptr )
 		'' If it's a C keyword, insert the corresponding KW_* (without
 		'' storing any string data). Otherwise, if it's a random symbol,
 		'' just insert a TK_ID and store the string data on it.
-		tk = hIdentifyCKeyword( begin )
+		tk = lexIdentifyCKeyword( begin )
 		if( tk <> TK_ID ) then
 			begin = NULL
 		end if
@@ -881,14 +894,21 @@ private sub hReadArg( byval tk as integer )
 
 	'' null terminator
 	lex.text[j] = 0
+	var text = @lex.text
 
-	if( tk = TK_STRING ) then
-		if( strIsValidSymbolId( lex.text ) ) then
+	select case( tk )
+	case TK_MINUS
+		tk = hLookupKeyword( @lex.frogoptions, text, TK_STRING )
+		if( tk <> TK_STRING ) then
+			text = NULL
+		end if
+	case TK_STRING
+		if( strIsValidSymbolId( text ) ) then
 			tk = TK_ID
 		end if
-	end if
+	end select
 
-	tkInsert( lex.x, tk, lex.text )
+	tkInsert( lex.x, tk, text )
 	hSetLocation( )
 end sub
 
@@ -923,21 +943,18 @@ function lexLoadArgs( byval x as integer, byval source as SOURCEBUFFER ptr ) as 
 
 		case CH_CR
 			lex.i += 1
-			lex.location.linenum += 1
 			if( lex.i[0] = CH_LF ) then
 				lex.i += 1
 			end if
-			lex.bol = lex.i
+			hNewLine( )
 
 		case CH_LF
 			lex.i += 1
-			lex.location.linenum += 1
-			lex.bol = lex.i
+			hNewLine( )
 
 		'' -option
 		case CH_MINUS
-			lex.i += 1
-			hReadArg( TK_OPTION )
+			hReadArg( TK_MINUS )
 
 		'' @filename
 		case CH_AT

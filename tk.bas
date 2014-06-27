@@ -30,8 +30,6 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	(NULL, @"comment" ), _
 	(NULL, @"begininclude"), _
 	(NULL, @"endinclude"), _
-	(NULL, @"option"  ), _
-	(NULL, @"argsfile"), _
 	(NULL, @"decnum"  ), _ '' Number literals
 	(NULL, @"hexnum"  ), _
 	(NULL, @"octnum"  ), _
@@ -142,7 +140,27 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	(@"void"    ), _
 	(@"volatile"), _
 	(@"warning" ), _
-	(@"while"   )  _
+	(@"while"   ), _
+	_
+	(NULL, @"argsfile"), _
+	(@"-nomerge"      ), _
+	(@"-whitespace"   ), _
+	(@"-windowsms"    ), _
+	(@"-noconstants"  ), _
+	(@"-nonamefixup"  ), _
+	(@"-v"            ), _
+	(@"-versiondefine"), _
+	(@"-incdir"       ), _
+	(@"-o"            ), _
+	(@"-version"      ), _
+	(@"-target"       ), _
+	(@"-inclib"       ), _
+	(@"-define"       ), _
+	(@"-noexpand"     ), _
+	(@"-removedefine" ), _
+	(@"-renametypedef"), _
+	(@"-renametag"    ), _
+	(@"-removematch"  )  _
 }
 
 #assert ubound( tk_info ) = TK__COUNT - 1
@@ -428,9 +446,8 @@ sub tkFold _
 	var lastloc  = tkGetLocation( lastin1stline )
 	location.length = lastloc->column + lastloc->length - location.column
 
-	'' Insert first - the text/ast pointers may reference one of the tokens
-	'' that will be removed; this way we can be sure they're valid when
-	'' accessed by tkInsert()
+	'' Must insert first, because the "text" pointer may reference one of
+	'' the tokens that will be removed.
 	tkInsert( first, id, text )
 	tkSetLocation( first, @location )
 	first += 1
@@ -750,10 +767,9 @@ private function hMakePrettyCTokenText _
 	case TK_WCHAR     : function = "L'" + hMakePrettyCStrLit( *text ) + "'"
 	case TK_EXCL to TK_TILDE : function = *tk_info(id).text
 	case TK_ID               : function = *text
-	case KW__C_FIRST to KW__C_LAST
+	case KW__C_FIRST to KW__C_LAST, OPT_NOMERGE to OPT_REMOVEMATCH
 		function = *tk_info(id).text
-	case TK_OPTION   : function = "-" + *text
-	case TK_ARGSFILE : function = "@" + *text
+	case TK_ARGSFILE  : function = "@" + *text
 	case else
 		function = tkDumpBasic( id, text )
 	end select
@@ -815,8 +831,7 @@ function hFindConstructEnd( byval x as integer ) as integer
 		     TK_DIVIDER, _
 		     TK_PPINCLUDE, TK_PPDEFINE, TK_PPUNDEF, _
 		     TK_PPIF, TK_PPELSEIF, TK_PPELSE, TK_PPENDIF, _
-		     TK_PPERROR, TK_PPWARNING, _
-		     TK_OPTION
+		     TK_PPERROR, TK_PPWARNING
 			exit do
 
 		case TK_LPAREN, TK_LBRACKET, TK_LBRACE
