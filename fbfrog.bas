@@ -94,7 +94,7 @@ private sub hLoadArgsFile _
 end sub
 
 '' Expand @file arguments in the tk buffer
-private sub hExpandArgsFileArguments( )
+private sub hExpandArgsFiles( )
 	var x = 0
 	while( tkGet( x ) <> TK_EOF )
 
@@ -141,7 +141,7 @@ private sub hLoadBuiltinArgsFile _
 	hLoadArgsFile( x, builtinfile, location )
 
 	'' Must expand @files again in case the loaded built-in file contained any
-	hExpandArgsFileArguments( )
+	hExpandArgsFiles( )
 
 end sub
 
@@ -386,7 +386,7 @@ private function hParseArgs( byref x as integer, byval body as integer ) as ASTN
 					x -= 1
 
 					'' Must expand @files again in case the loaded file contained any
-					hExpandArgsFileArguments( )
+					hExpandArgsFiles( )
 				else
 					var path = hPathRelativeToArgsFile( x )
 
@@ -746,7 +746,7 @@ end function
 			hTurnArgsIntoString( __FB_ARGC__, __FB_ARGV__ ), NULL ) )
 
 	'' Load content of @files too
-	hExpandArgsFileArguments( )
+	hExpandArgsFiles( )
 
 	'' Parse the command line arguments
 	frog.code = hParseArgs( 0, BODY_TOPLEVEL )
