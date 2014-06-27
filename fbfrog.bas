@@ -98,7 +98,7 @@ private sub hExpandArgsFiles( )
 	var x = 0
 	while( tkGet( x ) <> TK_EOF )
 
-		if( tkGet( x ) = TK_RESPONSEFILE ) then
+		if( tkGet( x ) = TK_ARGSFILE ) then
 			var filename = *tkGetText( x )
 
 			'' Complain if argument was only '@'

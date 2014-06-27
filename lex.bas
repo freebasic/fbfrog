@@ -894,7 +894,7 @@ end sub
 
 ''
 '' "Command line" argument lexer, used for turning fbfrog's command line into
-'' tokens, and also for turning @response files into tokens.
+'' tokens, and also for turning @files into tokens.
 ''
 '' Syntax rules:
 ''   * white-space chars separate arguments
@@ -942,7 +942,7 @@ function lexLoadArgs( byval x as integer, byval source as SOURCEBUFFER ptr ) as 
 		'' @filename
 		case CH_AT
 			lex.i += 1
-			hReadArg( TK_RESPONSEFILE )
+			hReadArg( TK_ARGSFILE )
 
 		case else
 			'' Non-whitespace: argument starts here, until whitespace/EOF

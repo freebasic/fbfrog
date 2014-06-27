@@ -92,7 +92,7 @@ fbfrog's file model
 file format/language (as "presets" or scripts).
 + Should use CLI for both small/big use cases, instead of having 2 things to do
   the same thing.
-+ Support for @response files still allows big "presets" to be saved in files.
++ Support for @files still allows big "presets" to be saved in files.
 * Only makes sense when allowing only one "preset at a time, which is ok though.
 + CLI forces simplification of "preset" commands/options because there can't be
   much complexity (such as multiple levels of nested code blocks) on a command

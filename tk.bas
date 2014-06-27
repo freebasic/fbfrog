@@ -31,7 +31,7 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	( NULL  , @"begininclude" ), _
 	( NULL  , @"endinclude" ), _
 	( NULL  , @"option"   ), _
-	( NULL  , @"responsefile" ), _
+	( NULL  , @"argsfile" ), _
 	( NULL  , @"decnum"   ), _ '' Number literals
 	( NULL  , @"hexnum"   ), _
 	( NULL  , @"octnum"   ), _
@@ -752,8 +752,8 @@ private function hMakePrettyCTokenText _
 	case TK_ID               : function = *text
 	case KW__C_FIRST to KW__C_LAST
 		function = *tk_info(id).text
-	case TK_OPTION    : function = "-" + *text
-	case TK_RESPONSEFILE : function = "@" + *text
+	case TK_OPTION   : function = "-" + *text
+	case TK_ARGSFILE : function = "@" + *text
 	case else
 		function = tkDumpBasic( id, text )
 	end select
