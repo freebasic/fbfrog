@@ -819,7 +819,6 @@ declare function astReplace _
 		byval old as ASTNODE ptr, _
 		byval n as ASTNODE ptr _
 	) as ASTNODE ptr
-declare function astAddAttrib( byval n as ASTNODE ptr, byval attrib as integer ) as ASTNODE ptr
 declare sub astSetText( byval n as ASTNODE ptr, byval text as zstring ptr )
 declare sub astRenameSymbol( byval n as ASTNODE ptr, byval newid as zstring ptr )
 declare sub astSetType _
