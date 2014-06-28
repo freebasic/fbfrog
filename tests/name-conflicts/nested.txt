@@ -1,7 +1,11 @@
-[dos]
-        parsing: tests/name-conflicts/nested.h
-[linux]
-        parsing: tests/name-conflicts/nested.h
-[win32]
-        parsing: tests/name-conflicts/nested.h
+[1/5] __FB_WIN32__.__FB_64BIT__
+      tests/name-conflicts/nested.h
+[2/5] __FB_WIN32__.(not __FB_64BIT__)
+      tests/name-conflicts/nested.h
+[3/5] __FB_LINUX__.__FB_64BIT__
+      tests/name-conflicts/nested.h
+[4/5] __FB_LINUX__.(not __FB_64BIT__)
+      tests/name-conflicts/nested.h
+[5/5] __FB_DOS__
+      tests/name-conflicts/nested.h
 emitting: tests/name-conflicts/nested.bi (11 declarations)

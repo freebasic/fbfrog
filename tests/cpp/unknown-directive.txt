@@ -1,5 +1,5 @@
-[dos]
-        parsing: tests/cpp/unknown-directive.h
+[1/5] __FB_WIN32__.__FB_64BIT__
+      tests/cpp/unknown-directive.h
 tests/cpp/unknown-directive.h(2): unknown PP directive
     1: // @fail
     2: #foo

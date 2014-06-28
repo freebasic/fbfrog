@@ -1,5 +1,5 @@
-[dos]
-        parsing: tests/c/basetype/signed-struct.h
+[1/5] __FB_WIN32__.__FB_64BIT__
+      tests/c/basetype/signed-struct.h
 tests/c/basetype/signed-struct.h(2): SIGNED|UNSIGNED|SHORT|LONG modifiers used with void/float/double/typedef/UDT
     1: // @fail
     2: static signed struct UDT i;

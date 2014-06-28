@@ -361,6 +361,21 @@ private function emitAst _
 			emit.comment -= 1
 		end if
 
+	case ASTCLASS_VEROR, ASTCLASS_VERAND
+		var i = n->head
+		while( i )
+			s += emitAst( i, TRUE )
+			if( i->next ) then
+				if( astIsVEROR( n ) ) then
+					s += " or "
+				else
+					s += " and "
+				end if
+			end if
+			i = i->next
+		wend
+		s = hParens( s, need_parens )
+
 	case ASTCLASS_SCOPEBLOCK
 		emitStmt( "scope" )
 		hEmitIndentedChildren( n )
@@ -662,9 +677,6 @@ private function emitAst _
 		if( n->class = ASTCLASS_CHAR ) then
 			s = "asc( " + s + " )"
 		end if
-
-	case ASTCLASS_DUMMYVERSION
-		s = "dummyversion"
 
 	case ASTCLASS_ORELSE      : s = hParens( emitL( n ) + " orelse "  + emitR( n ), need_parens )
 	case ASTCLASS_ANDALSO     : s = hParens( emitL( n ) + " andalso " + emitR( n ), need_parens )

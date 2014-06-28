@@ -1,5 +1,5 @@
-[dos]
-        parsing: tests/cpp/expand/merge/nonoctdigits.h
+[1/5] __FB_WIN32__.__FB_64BIT__
+      tests/cpp/expand/merge/nonoctdigits.h
 tests/cpp/expand/merge/nonoctdigits.h(2): ## merge operator cannot merge '0' and '8'
     1: // @fail @fbfrog -removedefine m
     2: #define m 0 ## 8

@@ -219,6 +219,16 @@ sub hReport _
 		byval more_context as integer _
 	)
 
+	if( location = NULL ) then
+		print *message
+		exit sub
+	end if
+
+	if( location->source = NULL ) then
+		print "(" & (location->linenum + 1) & "): " + *message
+		exit sub
+	end if
+
 	print *location->source->name + "(" & (location->linenum + 1) & "): " + *message
 
 	'' Show the error line and maybe some extra lines above and below it,

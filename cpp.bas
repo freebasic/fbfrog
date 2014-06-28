@@ -1958,7 +1958,7 @@ private function hSearchHeaderFile _
 	) as string
 
 	if( frog.verbose ) then
-		print "searching: " + inctext + " (context = " + contextfile + ")"
+		frogPrint( "searching: " + inctext + " (context = " + contextfile + ")" )
 	end if
 
 	'' 1. If #including by absolute path, use it as-is
@@ -1969,7 +1969,7 @@ private function hSearchHeaderFile _
 	'' 2. Relative to context file
 	var incfile = pathAddDiv( pathOnly( contextfile ) ) + inctext
 	if( frog.verbose ) then
-		print "trying: " + incfile
+		frogPrint( "trying: " + incfile )
 	end if
 	if( hFileExists( incfile ) ) then
 		return incfile
@@ -1980,7 +1980,7 @@ private function hSearchHeaderFile _
 
 		incfile = pathAddDiv( *i->text ) + inctext
 		if( frog.verbose ) then
-			print "trying: " + incfile
+			frogPrint( "trying: " + incfile )
 		end if
 		if( hFileExists( incfile ) ) then
 			return incfile
@@ -2064,7 +2064,7 @@ sub cppMain( byval whitespace as integer, byval nomerge as integer )
 				var incfile = hSearchHeaderFile( contextfile, inctext )
 
 				if( len( incfile ) > 0 ) then
-					print space( frog.maxversionstrlen ) + "include: " + incfile
+					frogPrint( incfile )
 
 					level += 1
 					hCheckStackLevel( x, level )
@@ -2098,7 +2098,7 @@ sub cppMain( byval whitespace as integer, byval nomerge as integer )
 					x -= 1
 					assert( tkGet( x ) = TK_EOL )
 				else
-					print space( frog.maxversionstrlen ) + "include: " + inctext + " (not found)"
+					frogPrint( inctext + " (not found)" )
 				end if
 			end if
 

@@ -1,7 +1,11 @@
-[dos]
-        parsing: tests/c/type-vs-tag/no-conflict-struct.h
-[linux]
-        parsing: tests/c/type-vs-tag/no-conflict-struct.h
-[win32]
-        parsing: tests/c/type-vs-tag/no-conflict-struct.h
+[1/5] __FB_WIN32__.__FB_64BIT__
+      tests/c/type-vs-tag/no-conflict-struct.h
+[2/5] __FB_WIN32__.(not __FB_64BIT__)
+      tests/c/type-vs-tag/no-conflict-struct.h
+[3/5] __FB_LINUX__.__FB_64BIT__
+      tests/c/type-vs-tag/no-conflict-struct.h
+[4/5] __FB_LINUX__.(not __FB_64BIT__)
+      tests/c/type-vs-tag/no-conflict-struct.h
+[5/5] __FB_DOS__
+      tests/c/type-vs-tag/no-conflict-struct.h
 emitting: tests/c/type-vs-tag/no-conflict-struct.bi (4 declarations)

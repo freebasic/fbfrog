@@ -1,0 +1,6 @@
+<command line>(1): -caseelse behind -caseelse
+    1: caseelse-behind-caseelse.h -select -case A -caseelse -caseelse -endselect
+                                                            ^~~~~~~~~
+context as seen by fbfrog:
+    i/caseelse-behind-caseelse.h" -select -case A -caseelse -caseelse -endselect
+                                                            ^~~~~~~~~

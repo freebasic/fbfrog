@@ -1,5 +1,5 @@
-[dos]
-        parsing: tests/cpp/expand/call-args-expect1-given2.h
+[1/5] __FB_WIN32__.__FB_64BIT__
+      tests/cpp/expand/call-args-expect1-given2.h
 tests/cpp/expand/call-args-expect1-given2.h(3): too many arguments for 'm' macro call: 2 given, 1 needed
     1: // @fail
     2: #define m(a)

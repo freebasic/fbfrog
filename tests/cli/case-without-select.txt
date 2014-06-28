@@ -1,0 +1,6 @@
+<command line>(1): -case without -select
+    1: ./fbfrog tests/cli/case-without-select.h -case a -endselect
+                                                ^~~~~
+context as seen by fbfrog:
+    __ -define _X86_ -endif "tests/cli/case-without-select.h" -case a -endselect
+                                                              ^~~~~

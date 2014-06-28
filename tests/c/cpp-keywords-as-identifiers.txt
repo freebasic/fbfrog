@@ -1,7 +1,11 @@
-[dos]
-        parsing: tests/c/cpp-keywords-as-identifiers.h
-[linux]
-        parsing: tests/c/cpp-keywords-as-identifiers.h
-[win32]
-        parsing: tests/c/cpp-keywords-as-identifiers.h
+[1/5] __FB_WIN32__.__FB_64BIT__
+      tests/c/cpp-keywords-as-identifiers.h
+[2/5] __FB_WIN32__.(not __FB_64BIT__)
+      tests/c/cpp-keywords-as-identifiers.h
+[3/5] __FB_LINUX__.__FB_64BIT__
+      tests/c/cpp-keywords-as-identifiers.h
+[4/5] __FB_LINUX__.(not __FB_64BIT__)
+      tests/c/cpp-keywords-as-identifiers.h
+[5/5] __FB_DOS__
+      tests/c/cpp-keywords-as-identifiers.h
 emitting: tests/c/cpp-keywords-as-identifiers.bi (60 declarations)

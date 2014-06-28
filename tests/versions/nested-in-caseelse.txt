@@ -1,0 +1,41 @@
+[ 1/20] __FB_WIN32__.__FB_64BIT__.A
+        tests/versions/nested-in-caseelse.h
+[ 2/20] __FB_WIN32__.__FB_64BIT__.B
+        tests/versions/nested-in-caseelse.h
+[ 3/20] __FB_WIN32__.__FB_64BIT__.C.VER=1
+        tests/versions/nested-in-caseelse.h
+[ 4/20] __FB_WIN32__.__FB_64BIT__.C.VER=2
+        tests/versions/nested-in-caseelse.h
+[ 5/20] __FB_WIN32__.(not __FB_64BIT__).A
+        tests/versions/nested-in-caseelse.h
+[ 6/20] __FB_WIN32__.(not __FB_64BIT__).B
+        tests/versions/nested-in-caseelse.h
+[ 7/20] __FB_WIN32__.(not __FB_64BIT__).C.VER=1
+        tests/versions/nested-in-caseelse.h
+[ 8/20] __FB_WIN32__.(not __FB_64BIT__).C.VER=2
+        tests/versions/nested-in-caseelse.h
+[ 9/20] __FB_LINUX__.__FB_64BIT__.A
+        tests/versions/nested-in-caseelse.h
+[10/20] __FB_LINUX__.__FB_64BIT__.B
+        tests/versions/nested-in-caseelse.h
+[11/20] __FB_LINUX__.__FB_64BIT__.C.VER=1
+        tests/versions/nested-in-caseelse.h
+[12/20] __FB_LINUX__.__FB_64BIT__.C.VER=2
+        tests/versions/nested-in-caseelse.h
+[13/20] __FB_LINUX__.(not __FB_64BIT__).A
+        tests/versions/nested-in-caseelse.h
+[14/20] __FB_LINUX__.(not __FB_64BIT__).B
+        tests/versions/nested-in-caseelse.h
+[15/20] __FB_LINUX__.(not __FB_64BIT__).C.VER=1
+        tests/versions/nested-in-caseelse.h
+[16/20] __FB_LINUX__.(not __FB_64BIT__).C.VER=2
+        tests/versions/nested-in-caseelse.h
+[17/20] __FB_DOS__.A
+        tests/versions/nested-in-caseelse.h
+[18/20] __FB_DOS__.B
+        tests/versions/nested-in-caseelse.h
+[19/20] __FB_DOS__.C.VER=1
+        tests/versions/nested-in-caseelse.h
+[20/20] __FB_DOS__.C.VER=2
+        tests/versions/nested-in-caseelse.h
+emitting: tests/versions/nested-in-caseelse.bi (3 declarations)

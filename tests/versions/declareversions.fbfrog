@@ -1,0 +1,9 @@
+-declareversions VER 1 2 3
+-select VER
+-case 1
+	-define VER 1
+-case 2
+	-define VER 2
+-case 3
+	-define VER 3
+-endselect

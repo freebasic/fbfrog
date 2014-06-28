@@ -1,5 +1,5 @@
-[dos]
-        parsing: tests/cpp/if/ifdef-missing-id.h
+[1/5] __FB_WIN32__.__FB_64BIT__
+      tests/cpp/if/ifdef-missing-id.h
 tests/cpp/if/ifdef-missing-id.h(2): missing identifier behind #ifdef
     1: // @fail
     2: #ifdef

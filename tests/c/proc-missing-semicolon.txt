@@ -1,5 +1,5 @@
-[dos]
-        parsing: tests/c/proc-missing-semicolon.h
+[1/5] __FB_WIN32__.__FB_64BIT__
+      tests/c/proc-missing-semicolon.h
 tests/c/proc-missing-semicolon.h(2): missing ';' to finish this declaration
     1: // @fail
     2: void f(void)

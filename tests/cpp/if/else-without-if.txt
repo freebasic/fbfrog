@@ -1,5 +1,5 @@
-[dos]
-        parsing: tests/cpp/if/else-without-if.h
+[1/5] __FB_WIN32__.__FB_64BIT__
+      tests/cpp/if/else-without-if.h
 tests/cpp/if/else-without-if.h(2): #else without #if
     1: // @fail
     2: #else

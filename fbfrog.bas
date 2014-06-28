@@ -2,38 +2,56 @@
 
 #include once "fbfrog.bi"
 
-dim shared frog as FROGSTUFF
+namespace frog
+	dim shared as integer verbose, nomerge, whitespace, windowsms, noconstants, nonamefixup
+	dim shared as ASTNODE ptr incdirs
+	dim shared as string outname, defaultoutname
+
+	dim shared as ASTNODE ptr script
+	dim shared as ASTNODE ptr completeverors, fullveror
+	dim shared as FROGVERSION ptr versions
+	dim shared as integer versioncount
+
+	dim shared as string prefix
+end namespace
+
+private sub frogAddVersion( byval verand as ASTNODE ptr, byval options as ASTNODE ptr )
+	assert( astIsVERAND( verand ) )
+	var i = frog.versioncount
+	frog.versioncount += 1
+	frog.versions = reallocate( frog.versions, frog.versioncount * sizeof( FROGVERSION ) )
+	frog.versions[i].verand = verand
+	frog.versions[i].options = options
+end sub
 
 private sub hPrintHelpAndExit( )
 	print "fbfrog 1.0 (" + __DATE_ISO__ + "), FreeBASIC *.bi binding generator"
 	print "usage: fbfrog *.h [options]"
-	print "*.fbfrog input files are special and treated similar to @<file>."
 	print "global options:"
-	print "  @<file>          Read more command line arguments from that file."
-	print "                   (will be expanded in place before other parsing)"
+	print "  @<file>          Read more command line arguments from a file"
 	print "  -nomerge         Don't preserve code from #includes"
 	print "  -whitespace      Try to preserve comments and empty lines"
 	print "  -windowsms       Use Extern ""Windows-MS"" instead of Extern ""Windows"""
 	print "  -noconstants     Don't try to turn #defines into constants"
-	print "  -nonamefixup     Don't fix symbol identifier conflicts which happen"
-	print "                   e.g. due to FB's keywords and/or case insensitivity"
-	print "  -versiondefine <id>  Set identifier for version #define that may"
-	print "                       be used by the generated binding."
+	print "  -nonamefixup     Don't fix symbol identifier conflicts"
 	print "  -incdir <path>   Add #include search directory"
 	print "  -o <path/file>   Set output .bi file name, or just the output directory"
 	print "  -v               Show verbose/debugging info"
-	print "commands specific to binding version/target:"
-	print "  -version <string>        Begin of version-specific arguments"
-	print "                           (ends at next -version or EOL)"
-	print "  -target dos|linux|win32  Begin of target-specific arguments (ditto)"
+	print "version-specific commands:"
 	print "  -inclib <name>           Add an #inclib ""<name>"" statement"
 	print "  -define <id> [<body>]    Add pre-#define"
 	print "  -noexpand <id>           Disable expansion of certain #define"
 	print "  -removedefine <id>       Don't preserve a certain #define"
 	print "  -renametypedef <oldid> <newid>  Rename a typedef"
 	print "  -renametag <oldid> <newid>      Rename a struct/union/enum"
-	print "  -removematch ""<C token(s)>""  Drop constructs containing the given C token(s)."
-	print "                               This should be used to work-around parsing errors."
+	print "  -removematch ""<C token(s)>""   Drop constructs containing the given C token(s)."
+	print "version script logic:"
+	print "  -declaredefines (<symbol>)+ [-unchecked]  Exclusive #defines"
+	print "  -declareversions <symbol> (<number>)+     Version numbers"
+	print "  -declarebool <symbol>                     Single on/off #define"
+	print "  -select          (-case <symbol> ...)+ [-caseelse ...] -endselect"
+	print "  -select <symbol> (-case <number> ...)+ [-caseelse ...] -endselect"
+	print "  -ifdef <symbol> ... [-else ...] -endif"
 	end 1
 end sub
 
@@ -132,22 +150,6 @@ private sub hExpandArgsFiles( )
 	loop
 end sub
 
-private sub hLoadBuiltinArgsFile _
-	( _
-		byval x as integer, _
-		byref id as string, _
-		byval location as TKLOCATION ptr _
-	)
-
-	'' <exepath>/builtin/<id>.fbfrog.
-	var builtinfile = hExePath( ) + "builtin" + PATHDIV + id + ".fbfrog"
-	hLoadArgsFile( x, builtinfile, location )
-
-	'' Must expand @files again in case the loaded built-in file contained any
-	hExpandArgsFiles( )
-
-end sub
-
 private sub hExpectId( byval x as integer )
 	tkExpect( x, TK_ID, "(valid symbol name)" )
 end sub
@@ -177,46 +179,149 @@ private function hPathRelativeToArgsFile( byval x as integer ) as string
 	function = path
 end function
 
-private function hParseOptionWithId _
+declare sub hParseArgs( byref x as integer )
+
+private sub hParseSelectCompound( byref x as integer )
+	'' -select
+	astAppend( frog.script, astNew( ASTCLASS_SELECT ) )
+	var xblockbegin = x
+	x += 1
+
+	'' [<symbol>]
+	dim as zstring ptr selectsymbol
+	if( tkGet( x ) = TK_ID ) then
+		selectsymbol = tkGetText( x )
+		x += 1
+	end if
+
+	'' -case
+	if( tkGet( x ) <> OPT_CASE ) then
+		tkOopsExpected( x, "-case after the -select" )
+	end if
+
+	do
+		hParseArgs( x )
+
+		select case( tkGet( x ) )
+		case TK_EOF
+			tkOops( xblockbegin, "missing -endselect for this" )
+
+		case OPT_CASE
+			if( frog.script->tail->class = ASTCLASS_CASEELSE ) then
+				tkOops( x, "-case behind -caseelse" )
+			end if
+			xblockbegin = x
+			x += 1
+
+			dim as ASTNODE ptr condition
+			if( selectsymbol ) then
+				'' <version number>
+				if( hIsStringOrId( x ) = FALSE ) then
+					tkOopsExpected( x, @"<version number> argument" )
+				end if
+
+				'' <symbol> = <versionnumber>
+				condition = astNewBOP( ASTCLASS_EQ, astNewID( selectsymbol ), astNewTEXT( tkGetText( x ) ) )
+			else
+				'' <symbol>
+				hExpectId( x )
+
+				'' defined(<symbol>)
+				condition = astNewUOP( ASTCLASS_DEFINED, astNewID( tkGetText( x ) ) )
+			end if
+			var n = astNew( ASTCLASS_CASE )
+			n->expr = condition
+			astAppend( frog.script, n )
+			x += 1
+
+		case OPT_CASEELSE
+			if( frog.script->tail->class = ASTCLASS_CASEELSE ) then
+				tkOops( x, "-caseelse behind -caseelse" )
+			end if
+			astAppend( frog.script, astNew( ASTCLASS_CASEELSE ) )
+			xblockbegin = x
+			x += 1
+
+		case OPT_ENDSELECT
+			astAppend( frog.script, astNew( ASTCLASS_ENDSELECT ) )
+			x += 1
+			exit do
+
+		case else
+			tkOopsExpected( x, "-case or -endselect" )
+		end select
+	loop
+end sub
+
+private sub hParseIfDefCompound( byref x as integer )
+	'' -ifdef
+	var xblockbegin = x
+	x += 1
+
+	'' <symbol>
+	hExpectId( x )
+	'' -ifdef <symbol>  =>  -select -case <symbol>
+	astAppend( frog.script, astNew( ASTCLASS_SELECT ) )
+	scope
+		var n = astNew( ASTCLASS_CASE )
+		n->expr = astNewUOP( ASTCLASS_DEFINED, astNewID( tkGetText( x ) ) )
+		astAppend( frog.script, n )
+	end scope
+	x += 1
+
+	do
+		hParseArgs( x )
+
+		select case( tkGet( x ) )
+		case TK_EOF
+			tkOops( xblockbegin, "missing -endif for this" )
+
+		case OPT_ELSE
+			if( frog.script->tail->class = ASTCLASS_CASEELSE ) then
+				tkOops( x, "-else behind -else" )
+			end if
+			astAppend( frog.script, astNew( ASTCLASS_CASEELSE ) )
+			xblockbegin = x
+			x += 1
+
+		case OPT_ENDIF
+			astAppend( frog.script, astNew( ASTCLASS_ENDSELECT ) )
+			x += 1
+			exit do
+
+		case else
+			tkOopsExpected( x, iif( tkGet( xblockbegin ) = OPT_ELSE, _
+					@"-endif", @"-else or -endif" ) )
+		end select
+	loop
+end sub
+
+private sub hParseOptionWithId _
 	( _
 		byref x as integer, _
 		byval astclass as integer, _
 		byval require_2nd_id as integer _
-	) as ASTNODE ptr
+	)
 
 	x += 1
 
 	'' <id>
 	hExpectId( x )
-	var n = astNew( astclass, tkGetText( x ) )
+	astAppend( frog.script, astNew( astclass, tkGetText( x ) ) )
 	x += 1
 
 	if( require_2nd_id ) then
 		hExpectId( x )
-		astSetComment( n, tkGetText( x ) )
+		astSetComment( frog.script->tail, tkGetText( x ) )
 		x += 1
 	end if
 
-	function = n
-end function
+end sub
 
-enum
-	BODY_TOPLEVEL = 0
-	BODY_VERSION
-	BODY_TARGET
-end enum
+private sub hParseArgs( byref x as integer )
+	static nestinglevel as integer
 
-private function hParseArgs( byref x as integer, byval body as integer ) as ASTNODE ptr
-	var result = astNewGROUP( )
-
-	if( body = BODY_TOPLEVEL ) then
-		'' Skip argv[0]
-		assert( tkGet( x ) <> TK_EOF )
-		x += 1
-
-		'' Load pre-#defines that are always used
-		hLoadBuiltinArgsFile( x, "base", tkGetLocation( x - 1 ) )
-	end if
+	nestinglevel += 1
 
 	do
 		select case( tkGet( x ) )
@@ -229,14 +334,6 @@ private function hParseArgs( byref x as integer, byval body as integer ) as ASTN
 		case OPT_NOCONSTANTS : frog.noconstants  = TRUE : x += 1
 		case OPT_NONAMEFIXUP : frog.nonamefixup  = TRUE : x += 1
 		case OPT_V           : frog.verbose      = TRUE : x += 1
-
-		case OPT_VERSIONDEFINE
-			x += 1
-
-			'' <id>
-			hExpectId( x )
-			frog.versiondefine = *tkGetText( x )
-			x += 1
 
 		case OPT_INCDIR
 			x += 1
@@ -254,64 +351,76 @@ private function hParseArgs( byref x as integer, byval body as integer ) as ASTN
 			frog.outname = hPathRelativeToArgsFile( x )
 			x += 1
 
-		'' -version <version id> ...
-		case OPT_VERSION
-			'' Another -version is coming - end any current -version/-target blocks
-			if( body <> BODY_TOPLEVEL ) then
-				exit do
-			end if
-			var location1 = tkGetLocation( x )
+		'' -declaredefines (<symbol>)+
+		case OPT_DECLAREDEFINES
 			x += 1
 
-			'' <version id>
-			if( hIsStringOrId( x ) = FALSE ) then
-				tkOopsExpected( x, "<version id> argument" )
+			'' (<symbol>)+
+			var n = astNew( ASTCLASS_DECLAREDEFINES )
+			hExpectId( x )
+			do
+				astAppend( n, astNewTEXT( tkGetText( x ) ) )
+				x += 1
+			loop while( tkGet( x ) = TK_ID )
+
+			'' [-unchecked]
+			if( tkGet( x ) = OPT_UNCHECKED ) then
+				x += 1
+				n->attrib or= ASTATTRIB_UNCHECKED
 			end if
-			'' astNewCONSTI( vallng( nextarg ), TYPE_LONGINT )
-			var id = astNew( ASTCLASS_STRING, tkGetText( x ) )
-			var location2 = tkGetLocation( x )
-			id->location = *location2
+
+			astAppend( frog.script, n )
+
+		'' -unchecked
+		case OPT_UNCHECKED
+			tkOops( x, "-unchecked without preceding -declaredefines" )
+
+		'' -declareversions <symbol> (<string>)+
+		case OPT_DECLAREVERSIONS
 			x += 1
 
-			var location = tkGetLocation( x )
-			var n = astNewVERBLOCK( id, NULL, hParseArgs( x, BODY_VERSION ) )
-			n->location = *location1
-			n->location.length = location2->column + location2->length - location1->column
-			astAppend( result, n )
-
-		'' -target <target-id> ...
-		case OPT_TARGET
-			'' Another -target is coming - end any current -target block
-			if( body = BODY_TARGET ) then
-				exit do
-			end if
-			var location = *tkGetLocation( x )
+			'' <symbol>
+			hExpectId( x )
+			var n = astNew( ASTCLASS_DECLAREVERSIONS, tkGetText( x ) )
 			x += 1
 
-			'' <target-id>
-			var attrib = 0
-			dim as string targetid
-			if( tkGet( x ) = TK_ID ) then
-				targetid = *tkGetText( x )
-				select case( targetid )
-				case "dos"   : attrib = ASTATTRIB_DOS
-				case "linux" : attrib = ASTATTRIB_LINUX
-				case "win32" : attrib = ASTATTRIB_WIN32
+			'' (<string>)+
+			if( tkGet( x ) <> TK_STRING ) then
+				tkOopsExpected( x, "<version number> argument" )
+			end if
+			do
+				astAppend( n, astNewTEXT( tkGetText( x ) ) )
+				x += 1
+			loop while( tkGet( x ) = TK_STRING )
+
+			astAppend( frog.script, n )
+
+		'' -declarebool <symbol>
+		case OPT_DECLAREBOOL
+			x += 1
+
+			'' <symbol>
+			hExpectId( x )
+			astAppend( frog.script, astNew( ASTCLASS_DECLAREBOOL, tkGetText( x ) ) )
+			x += 1
+
+		case OPT_SELECT
+			hParseSelectCompound( x )
+
+		case OPT_IFDEF
+			hParseIfDefCompound( x )
+
+		case OPT_CASE, OPT_CASEELSE, OPT_ENDSELECT, OPT_ELSE, OPT_ENDIF
+			if( nestinglevel <= 1 ) then
+				select case( tkGet( x ) )
+				case OPT_CASE      : tkOops( x, "-case without -select" )
+				case OPT_CASEELSE  : tkOops( x, "-caseelse without -select" )
+				case OPT_ENDSELECT : tkOops( x, "-endselect without -select" )
+				case OPT_ELSE      : tkOops( x, "-else without -ifdef" )
+				case else          : tkOops( x, "-endif without -ifdef" )
 				end select
 			end if
-			if( attrib = 0 ) then
-				tkOopsExpected( x, "one of dos|linux|win32" )
-			end if
-			var location2 = tkGetLocation( x )
-			location.length = location2->column + location2->length - location.column
-			x += 1
-
-			hLoadBuiltinArgsFile( x, targetid, @location )
-
-			var n = astNew( ASTCLASS_TARGETBLOCK, hParseArgs( x, BODY_TARGET ) )
-			n->attrib or= attrib
-			n->location = location
-			astAppend( result, n )
+			exit do
 
 		'' -inclib <name>
 		case OPT_INCLIB
@@ -320,7 +429,7 @@ private function hParseArgs( byref x as integer, byval body as integer ) as ASTN
 			if( hIsStringOrId( x ) = FALSE ) then
 				tkOopsExpected( x, "<name> argument" )
 			end if
-			astAppend( result, astNew( ASTCLASS_INCLIB, tkGetText( x ) ) )
+			astAppend( frog.script, astNew( ASTCLASS_INCLIB, tkGetText( x ) ) )
 			x += 1
 
 		'' -define <id> [<body>]
@@ -329,21 +438,19 @@ private function hParseArgs( byref x as integer, byval body as integer ) as ASTN
 
 			'' <id>
 			hExpectId( x )
-			var n = astNewPPDEFINE( tkGetText( x ) )
-
-			'' [<body>]
-			if( hIsStringOrId( x + 1 ) ) then
-				x += 1
-				n->expr = astNewTEXT( tkGetText( x ) )
-			end if
-
-			astAppend( result, n )
+			astAppend( frog.script, astNew( ASTCLASS_PPDEFINE, tkGetText( x ) ) )
 			x += 1
 
-		case OPT_NOEXPAND      : astAppend( result, hParseOptionWithId( x, ASTCLASS_NOEXPAND     , FALSE ) )
-		case OPT_REMOVEDEFINE  : astAppend( result, hParseOptionWithId( x, ASTCLASS_REMOVEDEFINE , FALSE ) )
-		case OPT_RENAMETYPEDEF : astAppend( result, hParseOptionWithId( x, ASTCLASS_RENAMETYPEDEF, TRUE  ) )
-		case OPT_RENAMETAG     : astAppend( result, hParseOptionWithId( x, ASTCLASS_RENAMETAG    , TRUE  ) )
+			'' [<body>]
+			if( hIsStringOrId( x ) ) then
+				frog.script->tail->expr = astNewTEXT( tkGetText( x ) )
+				x += 1
+			end if
+
+		case OPT_NOEXPAND      : hParseOptionWithId( x, ASTCLASS_NOEXPAND     , FALSE )
+		case OPT_REMOVEDEFINE  : hParseOptionWithId( x, ASTCLASS_REMOVEDEFINE , FALSE )
+		case OPT_RENAMETYPEDEF : hParseOptionWithId( x, ASTCLASS_RENAMETYPEDEF, TRUE  )
+		case OPT_RENAMETAG     : hParseOptionWithId( x, ASTCLASS_RENAMETAG    , TRUE  )
 
 		case OPT_REMOVEMATCH
 			x += 1
@@ -363,7 +470,7 @@ private function hParseArgs( byref x as integer, byval body as integer ) as ASTN
 				astAppend( n, astNewTK( i ) )
 			next
 			tkRemove( cbegin, cend )
-			astAppend( result, n )
+			astAppend( frog.script, n )
 			x += 1
 
 		case else
@@ -371,33 +478,216 @@ private function hParseArgs( byref x as integer, byval body as integer ) as ASTN
 			if( (text = NULL) orelse ((*text)[0] = CH_MINUS) ) then
 				tkReport( x, "unknown command line option '" + *text + "'", TRUE )
 				hPrintHelpAndExit( )
+			end if
+
+			'' *.fbfrog file given (without @)? Treat as @file too
+			var filename = *text
+			if( pathExtOnly( filename ) = "fbfrog" ) then
+				hLoadArgsFile( x + 1, filename, tkGetLocation( x ) )
+				tkRemove( x, x )
+
+				'' Must expand @files again in case the loaded file contained any
+				hExpandArgsFiles( )
 			else
-				'' *.fbfrog file given (without @)? Treat as @file too
-				var filename = *text
-				if( pathExtOnly( filename ) = "fbfrog" ) then
-					hLoadArgsFile( x + 1, filename, tkGetLocation( x ) )
-					tkRemove( x, x )
-
-					'' Must expand @files again in case the loaded file contained any
-					hExpandArgsFiles( )
-				else
-					var path = hPathRelativeToArgsFile( x )
-
-					'' File or directory?
-					var n = astNew( ASTCLASS_FILE, path )
-					if( hReadableDirExists( path ) ) then
-						n->class = ASTCLASS_DIR
-					end if
-
-					astAppend( result, astTakeLoc( n, x ) )
-					x += 1
-				end if
+				'' Input file/directory
+				astAppend( frog.script, astTakeLoc( astNewTEXT( hPathRelativeToArgsFile( x ) ), x ) )
+				x += 1
 			end if
 		end select
 	loop
 
-	function = result
+	nestinglevel -= 1
+end sub
+
+private function hSkipToEndOfBlock( byval i as ASTNODE ptr ) as ASTNODE ptr
+	var level = 0
+
+	do
+		select case( i->class )
+		case ASTCLASS_SELECT
+			level += 1
+
+		case ASTCLASS_CASE, ASTCLASS_CASEELSE
+			if( level = 0 ) then
+				exit do
+			end if
+
+		case ASTCLASS_ENDSELECT
+			if( level = 0 ) then
+				exit do
+			end if
+			level -= 1
+		end select
+
+		i = i->next
+	loop
+
+	function = i
 end function
+
+''
+'' The script is a linear list of the command line options, for example:
+'' (each line is a sibling AST node)
+''    selectversion __LIBFOO_VERSION
+''    case 1
+''    #define VERSION 1
+''    case 2
+''    #define VERSION 2
+''    endselect
+''    ifdef UNICODE
+''    #define UNICODE
+''    else
+''    #define ANSI
+''    endif
+''    #define COMMON
+'' We want to follow each possible code path to determine which versions fbfrog
+'' should work with and what their options are. The possible code paths for this
+'' example are:
+''    <conditions>                                <options>
+''    __LIBFOO_VERSION=1, defined(UNICODE)     => #define VERSION 1, #define UNICODE, #define COMMON
+''    __LIBFOO_VERSION=2, defined(UNICODE)     => #define VERSION 2, #define UNICODE, #define COMMON
+''    __LIBFOO_VERSION=1, not defined(UNICODE) => #define VERSION 1, #define ANSI, #define COMMON
+''    __LIBFOO_VERSION=2, not defined(UNICODE) => #define VERSION 2, #define ANSI, #define COMMON
+''
+'' All the evaluation code assumes that the script is valid, especially that
+'' if/else/endif and select/case/endselect nodes are properly used.
+''
+'' In order to evaluate multiple code paths, we start walking at the beginning,
+'' and start a recursive call at every condition. The if path of an -ifdef is
+'' evaluated by a recursive call, and we then go on to evaluate the else path.
+'' Similar for -select's, except that there can be 1..n possible code paths
+'' instead of always 2. Each -case code path except the last is evaluated by a
+'' recursive call, and then we go on to evaluate the last -case code path.
+''
+'' Evaluating the first (couple) code path(s) first, and the last code path
+'' last, means that they'll be evaluated in the order they appear in the script,
+'' and the results will be in the pretty order expected by the user.
+''
+'' While evaluating, we keep track of the conditions and visited options of each
+'' code path. Recursive calls are given the conditions/options so far seen by
+'' the parent. This way, common conditions/options from before the last
+'' conditional branch are passed into each code path resulting from the
+'' conditional branch.
+''
+private sub frogEvaluateScript _
+	( _
+		byval start as ASTNODE ptr, _
+		byval conditions as ASTNODE ptr, _
+		byval options as ASTNODE ptr _
+	)
+
+	var i = start
+	while( i )
+
+		select case( i->class )
+		case ASTCLASS_DECLAREDEFINES, ASTCLASS_DECLAREVERSIONS
+			var decl = i
+			i = i->next
+
+			var completeveror = astNew( ASTCLASS_VEROR )
+
+			'' Evaluate a separate code path for each #define/version
+			var k = decl->head
+			do
+				dim as ASTNODE ptr condition
+				if( decl->class = ASTCLASS_DECLAREDEFINES ) then
+					'' defined(<symbol>)
+					condition = astNewUOP( ASTCLASS_DEFINED, astNewID( k->text ) )
+				else
+					'' <symbol> = <versionnumber>
+					condition = astNewBOP( ASTCLASS_EQ, astNewID( decl->text ), astClone( k ) )
+				end if
+				astAppend( completeveror, astClone( condition ) )
+
+				k = k->next
+				if( k = NULL ) then
+					'' This is the last #define/version, so don't branch
+					astAppend( conditions, condition )
+					exit do
+				end if
+
+				'' Branch for this #define/version
+				frogEvaluateScript( i, _
+					astNewGROUP( astClone( conditions ), condition ), _
+					astClone( options ) )
+			loop
+
+			astAppend( frog.completeverors, astClone( completeveror ) )
+
+		case ASTCLASS_DECLAREBOOL
+			var symbol = i->text
+			i = i->next
+
+			var completeveror = astNew( ASTCLASS_VEROR )
+
+			'' Branch for the true code path
+			'' defined(<symbol>)
+			var condition = astNewUOP( ASTCLASS_DEFINED, astNewID( symbol ) )
+			astAppend( completeveror, astClone( condition ) )
+			frogEvaluateScript( i, _
+				astNewGROUP( astClone( conditions ), astClone( condition ) ), _
+				astClone( options ) )
+
+			'' And follow the false code path here
+			'' (not defined(<symbol>))
+			condition = astNewUOP( ASTCLASS_NOT, condition )
+			astAppend( completeveror, astClone( condition ) )
+			astAppend( conditions, condition )
+
+			astAppend( frog.completeverors, completeveror )
+
+		case ASTCLASS_SELECT
+			var selectnode = i
+			i = i->next
+
+			do
+				'' -case
+				assert( i->class = ASTCLASS_CASE )
+				var condition = i->expr
+				i = i->next
+
+				'' Evaluate the first -case whose condition is true
+				if( astGroupContains( conditions, condition ) ) then
+					exit do
+				end if
+
+				'' Condition was false, skip over the -case's body
+				var eob = hSkipToEndOfBlock( i )
+				select case( eob->class )
+				case ASTCLASS_CASEELSE, ASTCLASS_ENDSELECT
+					'' Reached -caseelse/-endselect
+					i = eob->next
+					exit do
+				end select
+
+				'' Go to next -case
+				i = eob
+			loop
+
+		case ASTCLASS_CASE, ASTCLASS_CASEELSE
+			'' When reaching a case/else block instead of the corresponding
+			'' select, that means we're evaluating the code path of the
+			'' previous case code path, and must now step over the
+			'' block(s) of the alternate code path(s).
+			i = hSkipToEndOfBlock( i->next )
+			assert( (i->class = ASTCLASS_CASE) or _
+				(i->class = ASTCLASS_CASEELSE) or _
+				(i->class = ASTCLASS_ENDSELECT) )
+
+		case ASTCLASS_ENDSELECT
+			'' Ignore - nothing to do
+			i = i->next
+
+		case else
+			astAppend( options, astClone( i ) )
+			i = i->next
+		end select
+	wend
+
+	assert( conditions->class = ASTCLASS_GROUP )
+	conditions->class = ASTCLASS_VERAND
+	frogAddVersion( conditions, options )
+end sub
 
 private function hPatternMatchesHere _
 	( _
@@ -443,12 +733,12 @@ end function
 
 private function hConstructMatchesAnyPattern _
 	( _
-		byval presetcode as ASTNODE ptr, _
+		byval options as ASTNODE ptr, _
 		byval first as integer, _
 		byval last as integer _
 	) as integer
 
-	var i = presetcode->head
+	var i = options->head
 	while( i )
 		if( i->class = ASTCLASS_REMOVEMATCH ) then
 			if( hConstructMatchesPattern( i, first, last ) ) then
@@ -460,13 +750,13 @@ private function hConstructMatchesAnyPattern _
 
 end function
 
-private sub hApplyRemoveMatchOptions( byval presetcode as ASTNODE ptr )
+private sub hApplyRemoveMatchOptions( byval options as ASTNODE ptr )
 	var x = 0
 	while( tkGet( x ) <> TK_EOF )
 		var begin = x
 		x = hFindConstructEnd( x )
 
-		if( hConstructMatchesAnyPattern( presetcode, begin, x - 1 ) ) then
+		if( hConstructMatchesAnyPattern( options, begin, x - 1 ) ) then
 			tkRemove( begin, x - 1 )
 			x = begin
 		end if
@@ -520,11 +810,11 @@ end sub
 
 private sub hApplyRenameTypedefOptions _
 	( _
-		byval presetcode as ASTNODE ptr, _
+		byval options as ASTNODE ptr, _
 		byval ast as ASTNODE ptr _
 	)
 
-	var i = presetcode->head
+	var i = options->head
 	while( i )
 
 		select case( i->class )
@@ -539,28 +829,23 @@ private sub hApplyRenameTypedefOptions _
 
 end sub
 
-private function frogWorkVersion _
-	( _
-		byval targetversion as ASTNODE ptr, _
-		byval presetcode as ASTNODE ptr _
-	) as ASTNODE ptr
-
-	print "[" + astDumpPrettyVersion( targetversion ) + "]"
-
+private function frogReadAPI( byval options as ASTNODE ptr ) as ASTNODE ptr
 	var rootfiles = astNewGROUP( )
 	scope
-		var i = presetcode->head
+		var i = options->head
 		while( i )
-			select case( i->class )
-			case ASTCLASS_FILE
-				'' Input files
-				astCloneAppend( rootfiles, i )
-			case ASTCLASS_DIR
-				'' Input files from directories
-				var n = hScanDirectory( *i->text, "*.h" )
-				astSetLocationAndAlsoOnChildren( n, @i->location )
-				astAppend( rootfiles, n )
-			end select
+			if( i->class = ASTCLASS_TEXT ) then
+				var path = *i->text
+				if( hReadableDirExists( path ) ) then
+					'' Input files from directories
+					var n = hScanDirectory( *i->text, "*.h" )
+					astSetLocationAndAlsoOnChildren( n, @i->location )
+					astAppend( rootfiles, n )
+				else
+					'' Input files
+					astCloneAppend( rootfiles, i )
+				end if
+			end if
 			i = i->next
 		wend
 	end scope
@@ -569,7 +854,7 @@ private function frogWorkVersion _
 	end if
 
 	'' The first .h file name seen will be used for the final .bi
-	if( len( frog.defaultoutname ) = 0 ) then
+	if( len( (frog.defaultoutname) ) = 0 ) then
 		frog.defaultoutname = pathStripExt( *rootfiles->head->text ) + ".bi"
 	end if
 
@@ -581,7 +866,7 @@ private function frogWorkVersion _
 		'' Pre-#defines are simply inserted at the top of the token
 		'' buffer, so that cppMain() parses them like any other #define.
 
-		var i = presetcode->head
+		var i = options->head
 		while( i )
 
 			select case( i->class )
@@ -628,11 +913,11 @@ private function frogWorkVersion _
 				tkInsert( tkGetCount( ), TK_EOL )
 			end if
 
-			print space( frog.maxversionstrlen ) + "parsing: " + *i->text
+			frogPrint( *i->text )
 			lexLoadC( tkGetCount( ), sourcebufferFromFile( i->text, @i->location ), frog.whitespace )
 
 			if( tkGetCount( ) > 0 ) then
-				'' EOL at EOF, if missing
+				'' Add EOL at EOF, if missing
 				if( tkGet( tkGetCount( ) - 1 ) <> TK_EOL ) then
 					tkInsert( tkGetCount( ), TK_EOL )
 				end if
@@ -647,7 +932,7 @@ private function frogWorkVersion _
 	tkRemoveEOLs( )
 	tkTurnCPPTokensIntoCIds( )
 
-	hApplyRemoveMatchOptions( presetcode )
+	hApplyRemoveMatchOptions( options )
 
 	'' Parse C constructs
 	var ast = cFile( )
@@ -667,7 +952,7 @@ private function frogWorkVersion _
 	astMakeNestedUnnamedStructsFbCompatible( ast )
 	if( frog.noconstants = FALSE ) then astTurnDefinesIntoConstants( ast )
 
-	hApplyRenameTypedefOptions( presetcode, ast )
+	hApplyRenameTypedefOptions( options, ast )
 	astRemoveRedundantTypedefs( ast, ast )
 	astNameAnonUdtsAfterFirstAliasTypedef( ast )
 	astAddForwardDeclsForUndeclaredTagIds( ast )
@@ -687,7 +972,7 @@ private function frogWorkVersion _
 
 	'' Prepend #inclibs
 	scope
-		var i = presetcode->tail
+		var i = options->tail
 		while( i )
 			if( i->class = ASTCLASS_INCLIB ) then
 				astPrependMaybeWithDivider( ast, astClone( i ) )
@@ -703,13 +988,15 @@ private function frogWorkVersion _
 
 	astMergeDIVIDERs( ast )
 
-	'' Put file's AST into a VERBLOCK, if a targetversion was given,
-	'' in preparation for the astMergeVerblocks() call later
-	ast = astWrapFileInVerblock( ast, targetversion )
-
-	astDelete( presetcode )
+	astDelete( options )
 	astDelete( rootfiles )
 	function = ast
+end function
+
+private function hMakeProgressString( byval position as integer, byval total as integer ) as string
+	var sposition = str( position ), stotal = str( total )
+	sposition = string( len( stotal ) - len( sposition ), " " ) + sposition
+	function = "[" + sposition + "/" + stotal + "]"
 end function
 
 private function hMakeDeclCountMessage( byval declcount as integer ) as string
@@ -720,14 +1007,16 @@ private function hMakeDeclCountMessage( byval declcount as integer ) as string
 	end if
 end function
 
+sub frogPrint( byref s as string )
+	print frog.prefix + s
+end sub
+
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 	if( __FB_ARGC__ <= 1 ) then
 		hPrintHelpAndExit( )
 	end if
 
-	frog.versiondefine = "__VERSION__"
-	frog.incdirs = astNewGROUP( )
 	sourcebuffersInit( )
 	fbkeywordsInit( )
 	lexInit( )
@@ -738,48 +1027,30 @@ end function
 	lexLoadArgs( 0, sourcebufferFromZstring( "<command line>", _
 			hTurnArgsIntoString( __FB_ARGC__, __FB_ARGV__ ), NULL ) )
 
+	'' Add the implicit @builtin.fbfrog
+	tkInsert( 1, TK_ARGSFILE, hExePath( ) + "builtin.fbfrog" )
+	tkSetLocation( 1, tkGetLocation( 0 ) )
+
 	'' Load content of @files too
 	hExpandArgsFiles( )
 
-	'' Parse the command line arguments
-	frog.code = hParseArgs( 0, BODY_TOPLEVEL )
+	'' Parse the command line arguments, skipping argv[0]. Global options
+	'' are added to various frog.* fields, version-specific options are
+	'' added to the frog.script list in their original order.
+	frog.incdirs = astNewGROUP( )
+	frog.script = astNewGROUP( )
+	hParseArgs( 1 )
 
 	tkEnd( )
 
-	var versions = astCollectVersions( frog.code )
+	'' Parse the version-specific options ("script"), following each
+	'' possible code path, and determine how many and which versions there
+	'' are.
+	frog.completeverors = astNewGROUP( )
+	frogEvaluateScript( frog.script->head, astNewGROUP( ), astNewGROUP( ) )
+	assert( frog.versioncount > 0 )
 
-	'' If no versions given, use a dummy, to hold the targets
-	if( versions->head = NULL ) then
-		astAppend( versions, astNew( ASTCLASS_DUMMYVERSION ) )
-	end if
-
-	'' Multiply version(s) with the targets, for example:
-	''    versions: 1, 2
-	''    targets: linux, win32
-	''    result: 1.linux, 1.win32, 2.linux, 2.win32
-	var targetversions = astNewGROUP( )
-	scope
-		var i = versions->head
-		do
-			astAppend( targetversions, astAddAttrib( astClone( i ), ASTATTRIB_DOS ) )
-			astAppend( targetversions, astAddAttrib( astClone( i ), ASTATTRIB_LINUX ) )
-			astAppend( targetversions, astAddAttrib( astClone( i ), ASTATTRIB_WIN32 ) )
-			i = i->next
-		loop while( i )
-	end scope
-
-	'' Find longest version string, for pretty output
-	scope
-		var i = targetversions->head
-		do
-			var s = astDumpPrettyVersion( i )
-			if( frog.maxversionstrlen < len( s ) ) then
-				frog.maxversionstrlen = len( s )
-			end if
-			i = i->next
-		loop while( i )
-		frog.maxversionstrlen += 3
-	end scope
+	frog.prefix = space( (len( str( frog.versioncount ) ) * 2) + 4 )
 
 	'' For each version, parse the input into an AST, using the options for
 	'' that version, and then merge the AST with the previous one, so that
@@ -791,22 +1062,23 @@ end function
 	'' parsing that version. Instead of one single big delay at the end,
 	'' there is a small delay at each version.
 	dim as ASTNODE ptr final
-	scope
-		var i = targetversions->head
-		do
-			var ast = frogWorkVersion( i, astGet1VersionAndTargetOnly( frog.code, i ) )
-			if( final = NULL ) then
-				final = ast
-			else
-				final = astMergeVerblocks( final, ast )
-			end if
+	for i as integer = 0 to frog.versioncount - 1
+		var verand = astClone( frog.versions[i].verand )
+		print hMakeProgressString( i + 1, frog.versioncount ) + " " + astDumpPrettyVersion( verand )
 
-			i = i->next
-		loop while( i )
-	end scope
+		var ast = frogReadAPI( frog.versions[i].options )
+
+		ast = astWrapFileInVerblock( astNewVEROR( astClone( verand ) ), ast )
+		if( final = NULL ) then
+			final = astNewGROUP( ast )
+		else
+			final = astMergeVerblocks( final, ast )
+		end if
+		frog.fullveror = astNewVEROR( frog.fullveror, verand )
+	next
 
 	'' Turn VERBLOCKs into #ifs etc.
-	astProcessVerblocksAndTargetblocks( final, versions, frog.versiondefine )
+	astProcessVerblocks( final )
 
 	'' Do auto-formatting if not preserving whitespace
 	if( frog.whitespace = FALSE ) then
@@ -814,10 +1086,10 @@ end function
 	end if
 
 	'' Write out the .bi file
-	if( len( frog.defaultoutname ) = 0 ) then
+	if( len( (frog.defaultoutname) ) = 0 ) then
 		frog.defaultoutname = "unknown.bi"
 	end if
-	if( len( frog.outname ) = 0 ) then
+	if( len( (frog.outname) ) = 0 ) then
 		frog.outname = frog.defaultoutname
 	elseif( pathIsDir( frog.outname ) ) then
 		frog.outname = pathAddDiv( frog.outname ) + pathStrip( frog.defaultoutname )
@@ -826,5 +1098,3 @@ end function
 	emitFile( frog.outname, final )
 
 	astDelete( final )
-	astDelete( versions )
-	astDelete( targetversions )

@@ -1,7 +1,11 @@
-[dos]
-        parsing: tests/autoextern/windowsms.h
-[linux]
-        parsing: tests/autoextern/windowsms.h
-[win32]
-        parsing: tests/autoextern/windowsms.h
+[1/5] __FB_WIN32__.__FB_64BIT__
+      tests/autoextern/windowsms.h
+[2/5] __FB_WIN32__.(not __FB_64BIT__)
+      tests/autoextern/windowsms.h
+[3/5] __FB_LINUX__.__FB_64BIT__
+      tests/autoextern/windowsms.h
+[4/5] __FB_LINUX__.(not __FB_64BIT__)
+      tests/autoextern/windowsms.h
+[5/5] __FB_DOS__
+      tests/autoextern/windowsms.h
 emitting: tests/autoextern/windowsms.bi (9 declarations)

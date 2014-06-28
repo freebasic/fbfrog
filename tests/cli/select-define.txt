@@ -1,0 +1,6 @@
+<command line>(1): expected identifier (valid symbol name) but found '-endselect'
+    1: ./fbfrog tests/cli/select-define.h -select -case -endselect
+                                                        ^~~~~~~~~~
+context as seen by fbfrog:
+    __ -define _X86_ -endif "tests/cli/select-define.h" -select -case -endselect
+                                                                      ^~~~~~~~~~

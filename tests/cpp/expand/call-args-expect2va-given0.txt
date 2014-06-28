@@ -1,5 +1,5 @@
-[dos]
-        parsing: tests/cpp/expand/call-args-expect2va-given0.h
+[1/5] __FB_WIN32__.__FB_64BIT__
+      tests/cpp/expand/call-args-expect2va-given0.h
 tests/cpp/expand/call-args-expect2va-given0.h(3): not enough arguments for 'm' macro call: 2 given, 3 needed
     1: // @fail
     2: #define m(a, b, ...)

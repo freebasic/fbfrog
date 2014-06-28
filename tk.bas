@@ -149,11 +149,19 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	(@"-noconstants"  ), _
 	(@"-nonamefixup"  ), _
 	(@"-v"            ), _
-	(@"-versiondefine"), _
 	(@"-incdir"       ), _
 	(@"-o"            ), _
-	(@"-version"      ), _
-	(@"-target"       ), _
+	(@"-declaredefines"), _
+	(@"-unchecked"    ), _
+	(@"-declareversions"), _
+	(@"-declarebool"  ), _
+	(@"-select"       ), _
+	(@"-case"         ), _
+	(@"-caseelse"     ), _
+	(@"-endselect"    ), _
+	(@"-ifdef"        ), _
+	(@"-else"         ), _
+	(@"-endif"        ), _
 	(@"-inclib"       ), _
 	(@"-define"       ), _
 	(@"-noexpand"     ), _

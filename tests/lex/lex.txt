@@ -1,7 +1,11 @@
-[dos]
-        parsing: tests/lex/lex.h
-[linux]
-        parsing: tests/lex/lex.h
-[win32]
-        parsing: tests/lex/lex.h
+[1/5] __FB_WIN32__.__FB_64BIT__
+      tests/lex/lex.h
+[2/5] __FB_WIN32__.(not __FB_64BIT__)
+      tests/lex/lex.h
+[3/5] __FB_LINUX__.__FB_64BIT__
+      tests/lex/lex.h
+[4/5] __FB_LINUX__.(not __FB_64BIT__)
+      tests/lex/lex.h
+[5/5] __FB_DOS__
+      tests/lex/lex.h
 emitting: tests/lex/lex.bi (85 declarations)

@@ -1,0 +1,6 @@
+<command line>(1): -endselect without -select
+    1: ./fbfrog tests/cli/endselect-without-select.h -endselect
+                                                     ^~~~~~~~~~
+context as seen by fbfrog:
+    X86__ -define _X86_ -endif "tests/cli/endselect-without-select.h" -endselect
+                                                                      ^~~~~~~~~~

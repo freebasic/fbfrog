@@ -1,7 +1,11 @@
-[dos]
-        parsing: tests/c/forward/resolved-forward-typedef-used-3.h
-[linux]
-        parsing: tests/c/forward/resolved-forward-typedef-used-3.h
-[win32]
-        parsing: tests/c/forward/resolved-forward-typedef-used-3.h
+[1/5] __FB_WIN32__.__FB_64BIT__
+      tests/c/forward/resolved-forward-typedef-used-3.h
+[2/5] __FB_WIN32__.(not __FB_64BIT__)
+      tests/c/forward/resolved-forward-typedef-used-3.h
+[3/5] __FB_LINUX__.__FB_64BIT__
+      tests/c/forward/resolved-forward-typedef-used-3.h
+[4/5] __FB_LINUX__.(not __FB_64BIT__)
+      tests/c/forward/resolved-forward-typedef-used-3.h
+[5/5] __FB_DOS__
+      tests/c/forward/resolved-forward-typedef-used-3.h
 emitting: tests/c/forward/resolved-forward-typedef-used-3.bi (4 declarations)

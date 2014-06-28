@@ -1,7 +1,11 @@
-[dos]
-        parsing: tests/cpp/expand/call-other-in-arg-used-with-stringify-and-merge.h
-[linux]
-        parsing: tests/cpp/expand/call-other-in-arg-used-with-stringify-and-merge.h
-[win32]
-        parsing: tests/cpp/expand/call-other-in-arg-used-with-stringify-and-merge.h
+[1/5] __FB_WIN32__.__FB_64BIT__
+      tests/cpp/expand/call-other-in-arg-used-with-stringify-and-merge.h
+[2/5] __FB_WIN32__.(not __FB_64BIT__)
+      tests/cpp/expand/call-other-in-arg-used-with-stringify-and-merge.h
+[3/5] __FB_LINUX__.__FB_64BIT__
+      tests/cpp/expand/call-other-in-arg-used-with-stringify-and-merge.h
+[4/5] __FB_LINUX__.(not __FB_64BIT__)
+      tests/cpp/expand/call-other-in-arg-used-with-stringify-and-merge.h
+[5/5] __FB_DOS__
+      tests/cpp/expand/call-other-in-arg-used-with-stringify-and-merge.h
 emitting: tests/cpp/expand/call-other-in-arg-used-with-stringify-and-merge.bi (6 declarations)

@@ -1,5 +1,5 @@
-[dos]
-        parsing: tests/cpp/include/include-missing-filename.h
+[1/5] __FB_WIN32__.__FB_64BIT__
+      tests/cpp/include/include-missing-filename.h
 tests/cpp/include/include-missing-filename.h(2): missing "..." string literal containing the #include file name
     1: // @fail
     2: #include

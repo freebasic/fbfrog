@@ -1,5 +1,5 @@
-[dos]
-        parsing: tests/c/basetype/long-inttypedef.h
+[1/5] __FB_WIN32__.__FB_64BIT__
+      tests/c/basetype/long-inttypedef.h
 tests/c/basetype/long-inttypedef.h(3): expected ';' to finish this declaration but found 'i'
     1: // @fail
     2: typedef int myint;

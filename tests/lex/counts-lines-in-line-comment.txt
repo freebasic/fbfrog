@@ -1,5 +1,5 @@
-[dos]
-        parsing: tests/lex/counts-lines-in-line-comment.h
+[1/5] __FB_WIN32__.__FB_64BIT__
+      tests/lex/counts-lines-in-line-comment.h
 tests/lex/counts-lines-in-line-comment.h(6): expected ';' to finish this declaration but found 'and'
     4: c
     5: 

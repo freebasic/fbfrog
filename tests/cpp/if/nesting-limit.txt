@@ -1,5 +1,5 @@
-[dos]
-        parsing: tests/cpp/if/nesting-limit.h
+[1/5] __FB_WIN32__.__FB_64BIT__
+      tests/cpp/if/nesting-limit.h
 tests/cpp/if/nesting-limit.h(129): #if/#include stack too small, MAXPPSTACK=128
     127: #if 1
     128: #if 1

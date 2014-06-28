@@ -1,0 +1,6 @@
+<command line>(1): expected identifier (valid symbol name) but found '"123"'
+    1: ./fbfrog tests/cli/ifdef-non-id.h -ifdef 123 -endif
+                                                ^~~
+context as seen by fbfrog:
+     __X86__ -define _X86_ -endif "tests/cli/ifdef-non-id.h" -ifdef "123" -endif
+                                                                    ^~~~~

@@ -1,5 +1,5 @@
-[dos]
-        parsing: tests/c/keyword-basetype-missing-id-and-semicolon.h
+[1/5] __FB_WIN32__.__FB_64BIT__
+      tests/c/keyword-basetype-missing-id-and-semicolon.h
 tests/c/keyword-basetype-missing-id-and-semicolon.h(2): missing identifier for the symbol declared in this declaration
     1: // @fail
     2: int

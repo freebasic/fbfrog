@@ -1,10 +1,28 @@
-'' Version expression/block handling functions
+''
+'' AST merging based on longest-common-substring algorithm (diff'ing),
+''    which results in individual sections of the AST being wrapped in VERBLOCK
+''    nodes holding the conditions (e.g. #ifdef __FB_WIN32__) for that block of
+''    code.
+''
+'' #if generation,
+''    which (after all merging is done) converts the VERBLOCKs into #ifs and
+''    tries to reduce the #if condition expressions as much as possible to
+''    eliminate duplicate checks. For example, for a VERBLOCK that covers all
+''    possible APIs, we don't need to generate any #if at all since its
+''    condition would always be true. And in case we have a check like this:
+''        #if (__FB_WIN32__ and __FB_64BIT__) or (__FB_LINUX__ and __FB_64BIT__)
+''    that can be simplified to:
+''        #if __FB_64BIT__ and (__FB_WIN32__ or __FB_LINUX__)
+''    etc.
+''
 
 #include once "fbfrog.bi"
 
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
 type DECLNODE
-	n as ASTNODE ptr  '' The declaration at that index
-	v as ASTNODE ptr  '' Parent VERSION node of the declaration
+	n	as ASTNODE ptr  '' The declaration at that index
+	veror	as ASTNODE ptr  '' Points to the VEROR expression of the declaration's parent VERBLOCK
 end type
 
 type DECLTABLE
@@ -17,8 +35,10 @@ private sub decltableAdd _
 	( _
 		byval table as DECLTABLE ptr, _
 		byval n as ASTNODE ptr, _
-		byval v as ASTNODE ptr _
+		byval veror as ASTNODE ptr _
 	)
+
+	assert( astIsVEROR( veror ) )
 
 	if( table->count = table->room ) then
 		table->room += 256
@@ -27,7 +47,7 @@ private sub decltableAdd _
 
 	with( table->array[table->count] )
 		.n = n
-		.v = v
+		.veror = veror
 	end with
 
 	table->count += 1
@@ -49,7 +69,7 @@ private sub decltableInit _
 	assert( code->class = ASTCLASS_GROUP )
 	var verblock = code->head
 	while( verblock )
-		assert( verblock->class = ASTCLASS_VERBLOCK )
+		assert( astIsVERBLOCK( verblock ) )
 
 		'' For each declaration in that VERBLOCK...
 		var decl = verblock->head
@@ -68,68 +88,109 @@ end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
+function astDumpPrettyVersion( byval n as ASTNODE ptr ) as string
+	dim s as string
+
+	select case( n->class )
+	case ASTCLASS_VERAND
+		var i = n->head
+		while( i )
+			s += astDumpPrettyVersion( i )
+			i = i->next
+			if( i ) then
+				s += "."
+			end if
+		wend
+
+	case ASTCLASS_EQ
+		s = *n->l->text + "=" + *n->r->text
+
+	case ASTCLASS_DEFINED
+		s = *n->l->text
+
+	case ASTCLASS_NOT
+		s = "(not " + astDumpPrettyVersion( n->l ) + ")"
+
+	case else
+		s = astDumpInline( n )
+	end select
+
+	function = s
+end function
+
+private function astNewGroupLike _
+	( _
+		byval astclass as integer, _
+		byval a as ASTNODE ptr, _
+		byval b as ASTNODE ptr _
+	) as ASTNODE ptr
+
+	if( a andalso (a->class = astclass) ) then a->class = ASTCLASS_GROUP
+	if( b andalso (b->class = astclass) ) then b->class = ASTCLASS_GROUP
+
+	function = astNew( astclass, astNewGROUP( a, b ) )
+end function
+
+function astNewVERAND( byval a as ASTNODE ptr, byval b as ASTNODE ptr ) as ASTNODE ptr
+	function = astNewGroupLike( ASTCLASS_VERAND, a, b )
+end function
+
+function astNewVEROR( byval a as ASTNODE ptr, byval b as ASTNODE ptr ) as ASTNODE ptr
+	function = astNewGroupLike( ASTCLASS_VEROR, a, b )
+end function
+
+private function astNewVERBLOCK( byval veror as ASTNODE ptr, byval children as ASTNODE ptr ) as ASTNODE ptr
+	assert( astIsVEROR( veror ) )
+	var n = astNew( ASTCLASS_VERBLOCK, children )
+	n->expr = veror
+	function = n
+end function
+
 '' Just as the whole file AST is wrapped in a verblock, the fields of struct
 '' should be aswell, so hMergeStructsManually() doesn't have to handle both
 '' cases of "fresh still unwrapped fields" and "already wrapped from previous
 '' merge", but only the latter.
-private sub hWrapStructFieldsInVerblocks _
-	( _
-		byval code as ASTNODE ptr, _
-		byval version as ASTNODE ptr _
-	)
-
+private sub hWrapStructFieldsInVerblocks( byval veror as ASTNODE ptr, byval code as ASTNODE ptr )
 	var i = code->head
 	while( i )
-		hWrapStructFieldsInVerblocks( i, version )
+		hWrapStructFieldsInVerblocks( veror, i )
 		i = i->next
 	wend
 
 	select case( code->class )
 	case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
-		var newfields = astNewVERBLOCK( astClone( version ), NULL, astCloneChildren( code ) )
+		var newfields = astNewVERBLOCK( astClone( veror ), astCloneChildren( code ) )
 		astRemoveChildren( code )
 		astAppend( code, newfields )
 	end select
-
 end sub
 
-function astWrapFileInVerblock _
-	( _
-		byval code as ASTNODE ptr, _
-		byval version as ASTNODE ptr _
-	) as ASTNODE ptr
-	hWrapStructFieldsInVerblocks( code, version )
-	function = astNewVERBLOCK( astClone( version ), NULL, code )
+function astWrapFileInVerblock( byval veror as ASTNODE ptr, byval code as ASTNODE ptr ) as ASTNODE ptr
+	hWrapStructFieldsInVerblocks( veror, code )
+	function = astNewVERBLOCK( veror, code )
 end function
 
-private sub astAppendVerblock _
+private sub hVerblockAppend _
 	( _
 		byval n as ASTNODE ptr, _
-		byval version1 as ASTNODE ptr, _
-		byval version2 as ASTNODE ptr, _
+		byval veror1 as ASTNODE ptr, _
+		byval veror2 as ASTNODE ptr, _
 		byval child as ASTNODE ptr _
 	)
 
-	'' If the tree's last VERBLOCK has the same version numbers, then
-	'' just add the new children nodes to that instead of opening a new
-	'' separate VERBLOCK.
-	if( n->tail ) then
-		if( n->tail->class = ASTCLASS_VERBLOCK ) then
-			var tmp = astNewGROUP( astClone( version1 ) )
-			astAppendUnique( tmp, astClone( version2 ) )
+	var veror = astNewVEROR( veror1, veror2 )
 
-			var ismatch = astIsEqual( n->tail->expr, tmp )
-
-			astDelete( tmp )
-
-			if( ismatch ) then
-				astAppend( n->tail, child )
-				exit sub
-			end if
+	'' If the tree's last VERBLOCK covers the same versions, then just add
+	'' the new children nodes to that instead of opening a new VERBLOCK.
+	var verblock = n->tail
+	if( verblock andalso astIsVERBLOCK( verblock ) ) then
+		if( astIsEqual( n->tail->expr, veror ) ) then
+			astAppend( n->tail, child )
+			exit sub
 		end if
 	end if
 
-	astAppend( n, astNewVERBLOCK( version1, version2, child ) )
+	astAppend( n, astNewVERBLOCK( veror, child ) )
 end sub
 
 private sub hAddDecl _
@@ -139,7 +200,7 @@ private sub hAddDecl _
 		byval i as integer _
 	)
 
-	astAppendVerblock( c, astClone( array[i].v ), NULL, astClone( array[i].n ) )
+	hVerblockAppend( c, astClone( array[i].veror ), NULL, astClone( array[i].n ) )
 
 end sub
 
@@ -236,7 +297,7 @@ private sub hAddMergedDecl _
 
 	hFindCommonCallConvsOnMergedDecl( mdecl, adecl, bdecl )
 
-	astAppendVerblock( c, astClone( aarray[ai].v ), astClone( barray[bi].v ), mdecl )
+	hVerblockAppend( c, astClone( aarray[ai].veror ), astClone( barray[bi].veror ), mdecl )
 
 end sub
 
@@ -488,9 +549,9 @@ private sub hAstMerge _
 		var astruct = aarray[alcsfirst+i].n
 		select case( astruct->class )
 		case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
-			var aversion = aarray[alcsfirst+i].v
-			var bstruct  = barray[blcsfirst+i].n
-			var bversion = barray[blcsfirst+i].v
+			var averor  = aarray[alcsfirst+i].veror
+			var bstruct = barray[blcsfirst+i].n
+			var bveror  = barray[blcsfirst+i].veror
 			assert( (bstruct->class = ASTCLASS_STRUCT) or _
 			        (bstruct->class = ASTCLASS_UNION) or _
 			        (bstruct->class = ASTCLASS_ENUM) )
@@ -498,7 +559,7 @@ private sub hAstMerge _
 			var cstruct = hMergeStructsManually( astruct, bstruct )
 
 			'' Add struct to result tree, under both a's and b's version numbers
-			astAppendVerblock( c, astClone( aversion ), astClone( bversion ), cstruct )
+			hVerblockAppend( c, astClone( averor ), astClone( bveror ), cstruct )
 
 			if( astruct->text ) then
 				if( strStartsWith( *astruct->text, DUMMYID_PREFIX ) ) then
@@ -589,686 +650,556 @@ end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-function astNewVERBLOCK _
-	( _
-		byval version1 as ASTNODE ptr, _
-		byval version2 as ASTNODE ptr, _
-		byval child as ASTNODE ptr _
-	) as ASTNODE ptr
-
-	var n = astNew( ASTCLASS_VERBLOCK, child )
-
-	n->expr = astNewGROUP( version1 )
-	astAppendUnique( n->expr, version2 )
-
-	function = n
-end function
-
-function astCollectVersions( byval code as ASTNODE ptr ) as ASTNODE ptr
-	var versions = astNewGROUP( )
-
-	var i = code->head
-	while( i )
-
-		if( i->class = ASTCLASS_VERBLOCK ) then
-			astAppendUnique( versions, astClone( i->expr ) )
-		end if
-
-		i = i->next
-	wend
-
-	function = versions
-end function
-
-'' Extract nodes corresponding to the wanted version only, i.e. all nodes except
-'' those inside verblocks for other versions.
-private function hGet1VersionOnly( byval code as ASTNODE ptr, byval v as ASTNODE ptr ) as ASTNODE ptr
-	var result = astNewGROUP( )
-
-	var i = code->head
-	while( i )
-
-		if( i->class = ASTCLASS_VERBLOCK ) then
-			'' Nodes in verblocks are only added if the verblock matches the wanted version
-			if( astGroupContains( i->expr, v ) ) then
-				astCloneAppendChildren( result, i )
-			end if
-		else
-			'' Unversioned nodes are added no matter what version we want
-			astCloneAppend( result, i )
-		end if
-
-		i = i->next
-	wend
-
-	function = result
-end function
-
-private function hGet1TargetOnly( byval code as ASTNODE ptr, byval target as integer ) as ASTNODE ptr
-	var result = astNewGROUP( )
-
-	var i = code->head
-	while( i )
-
-		if( i->class = ASTCLASS_TARGETBLOCK ) then
-			'' Nodes in targetblocks are only added if it's the wanted target
-			if( (i->attrib and ASTATTRIB__ALLTARGET) = target ) then
-				astCloneAppendChildren( result, i )
-			end if
-		else
-			'' Non-OS-specific nodes are always used
-			astCloneAppend( result, i )
-		end if
-
-		i = i->next
-	wend
-
-	function = result
-end function
-
-'' Extract only the nodes corresponding to one specific version & OS from the
-'' given preset code.
-function astGet1VersionAndTargetOnly _
-	( _
-		byval code as ASTNODE ptr, _
-		byval version as ASTNODE ptr _
-	) as ASTNODE ptr
-
-	'' Remove the OS attrib from the version, so it can be matched against
-	'' the original verblocks which aren't OS specific. The OS attrib is
-	'' used to match OS blocks though.
-	var v = astClone( version )
-	var target = v->attrib and ASTATTRIB__ALLTARGET
-	v->attrib and= not ASTATTRIB__ALLTARGET
-
-	code = hGet1VersionOnly( code, v )
-	code = hGet1TargetOnly( code, target )
-
-	astDelete( v )
-
-	function = code
-end function
-
-'' For each version in the version expression, if it exists multiple times,
-'' combined with each target, then that can be folded to a single version each,
-'' with all the target attributes.
-''     verblock a.dos, a.linux, a.win32, b.dos, b.linux, b.win32, c.win32
-'' becomes:
-''     verblock a.(dos|linux|win32), b.(dos|linux|win32), c.win32
-private sub hCombineVersionTargets( byval group as ASTNODE ptr )
-	var i = group->head
-	while( i )
-
-		var nxt = i->next
-
-		'' Find a second node with the same version but potentially
-		'' different target attribute, and merge the two
-		var j = nxt
-		while( j )
-
-			if( astIsEqual( i, j, ASTEQ_IGNORETARGET ) ) then
-				i->attrib or= j->attrib and ASTATTRIB__ALLTARGET
-				astRemove( group, j )
-				nxt = i  '' Recheck i in case there are more duplicates
-				exit while
-			end if
-
-			j = j->next
-		wend
-
-		i = nxt
-	wend
-end sub
-
-'' If a version covers all targets then they can simply be forgotten,
-'' because the check would always be true:
-''     verblock a.(dos|linux|win32), b.(dos|linux|win32), c.win32
-'' becomes:
-''     verblock a, b, c.win32
-private sub hRemoveFullTargets( byval group as ASTNODE ptr )
-	var i = group->head
-	while( i )
-		if( (i->attrib and ASTATTRIB__ALLTARGET) = ASTATTRIB__ALLTARGET ) then
-			i->attrib and= not ASTATTRIB__ALLTARGET
-		end if
-		i = i->next
-	wend
-end sub
-
-'' If all versions in an expression use the same target, then that can be solved
-'' out into a separate check to reduce the amount of checks generated in the end:
-''     verblock a.(dos|win32), b.(dos|win32), c.(dos|win32)
-'' becomes:
-''     verblock a, b, c
-''         targetblock dos|win32
-'' (in many cases, the next step will then be able to solve out the verblock)
-private function hExtractCommonTargets( byval group as ASTNODE ptr ) as integer
-	var i = group->head
-	if( i = NULL ) then exit function
-
-	'' Get the target attribs of the first node...
-	var targets = i->attrib and ASTATTRIB__ALLTARGET
-
-	'' And compare each other node against it...
-	do
-		i = i->next
-		if( i = NULL ) then exit do
-		if( (i->attrib and ASTATTRIB__ALLTARGET) <> targets ) then exit function
-	loop
-
-	'' If the end of the list was reached without finding a mismatch,
-	'' the target attrib(s) can be extracted. Remove attribs from each node:
-	i = group->head
-	do
-		i->attrib and= not ASTATTRIB__ALLTARGET
-		i = i->next
-	loop while( i )
-
-	'' Let the caller add the targetblock...
-	function = targets
-end function
-
-'' Try to simplify each verblock's version expression
-private sub hSimplifyVerblocks _
-	( _
-		byval code as ASTNODE ptr, _
-		byval versions as ASTNODE ptr _
-	)
-
-	var i = code->head
-	while( i )
-		var nxt = i->next
-
-		'' Handle nested verblocks inside structs
-		hSimplifyVerblocks( i, versions )
-
-		if( i->class = ASTCLASS_VERBLOCK ) then
-			hCombineVersionTargets( i->expr )
-			hRemoveFullTargets( i->expr )
-
-			var extractedtargets = hExtractCommonTargets( i->expr )
-			if( extractedtargets ) then
-				'' Put this verblock's children into an targetblock,
-				'' and add it in place of the children.
-				var block = astNew( ASTCLASS_TARGETBLOCK )
-				block->attrib or= extractedtargets
-				astCloneAppendChildren( block, i )
-				astRemoveChildren( i )
-				astAppend( i, block )
-			end if
-
-			'' If a verblock covers all versions (without targets),
-			'' then that can be solved out, since the check would always be true:
-			''     verblock a, b, c
-			''         <...>
-			'' becomes:
-			''     <...>
-			if( astIsEqual( i->expr, versions ) ) then
-				'' Remove the block but preserve its children
-				astReplace( code, i, astCloneChildren( i ) )
-			end if
-		end if
-
-		i = nxt
-	wend
-
-end sub
-
-'' Structs/unions/enums can have nested verblocks (to allow fields to be versioned).
-''     verblock 1
+''
+'' Structs/unions/enums can have nested verblocks (to allow fields to be
+'' versioned). If a nested verblock covers >= of the parent verblock's versions,
+'' then its checking expression would always evaluate to true, so it's useless
+'' and can be removed.
+''
+'' At the very least,
+''
+''     verblock <foo>
 ''         struct UDT
-''             verblock 1
+''             verblock <foo>
 ''                 field x as integer
+''
 '' can be simplified to:
-''     verblock 1
+''
+''     verblock <foo>
 ''         struct UDT
 ''             field x as integer
-private sub hSolveOutRedundantNestedVerblocks _
-	( _
-		byval code as ASTNODE ptr, _
-		byval parentversions as ASTNODE ptr _
-	)
+''
+'' Similar to that, verblocks at the toplevel can be solved out, if they cover
+'' all possible versions. (think of them as being nested in a global verblock)
+''
+private sub hSolveOutRedundantVerblocks( byval code as ASTNODE ptr, byval parentveror as ASTNODE ptr )
+	assert( astIsVEROR( parentveror ) )
 
 	var i = code->head
 	while( i )
 		var nxt = i->next
 
-		'' If a nested verblock covers >= of the parent verblock's versions,
-		'' then its checking expression would always evaluate to true, so it's
-		'' useless and can be removed.
 		if( i->class = ASTCLASS_VERBLOCK ) then
-			hSolveOutRedundantNestedVerblocks( i, i->expr )
+			hSolveOutRedundantVerblocks( i, i->expr )
 
 			'' Has a parent?
-			if( parentversions ) then
-				'' Are all the parent's versions covered?
-				if( astGroupContainsAllChildrenOf( i->expr, parentversions ) ) then
+			if( parentveror ) then
+				'' Nested verblock covers at least the parent's versions?
+				if( astGroupContainsAllChildrenOf( i->expr, parentveror ) ) then
 					'' Remove this verblock, preserve only its children
 					astReplace( code, i, astCloneChildren( i ) )
 				end if
 			end if
 		else
-			hSolveOutRedundantNestedVerblocks( i, parentversions )
+			hSolveOutRedundantVerblocks( i, parentveror )
 		end if
 
 		i = nxt
 	wend
-
-end sub
-
-'' Same for targetblocks
-private sub hSolveOutRedundantNestedTargetblocks _
-	( _
-		byval code as ASTNODE ptr, _
-		byval parenttargets as integer _
-	)
-
-	var i = code->head
-	while( i )
-		var nxt = i->next
-
-		if( i->class = ASTCLASS_TARGETBLOCK ) then
-			hSolveOutRedundantNestedTargetblocks( i, i->attrib and ASTATTRIB__ALLTARGET )
-
-			'' Has a parent?
-			if( parenttargets <> -1 ) then
-				'' Are all the parent's targets covered?
-				if( (i->attrib and parenttargets) = parenttargets ) then
-					'' Remove this targetblock, preserve only its children
-					astReplace( code, i, astCloneChildren( i ) )
-				end if
-			end if
-		else
-			hSolveOutRedundantNestedTargetblocks( i, parenttargets )
-		end if
-
-		i = nxt
-	wend
-
 end sub
 
 ''
-''     version a
+'' verblocks must be turned into #if/#endif blocks. Doing that on the AST level
+'' instead of when emitting allows us to generate #elseifs/#elses for adjacent
+'' verblocks as long as they cover different versions.
+''
+'' For example: (VER=1, VER=2, VER=3).(defined(FOO), (not defined(FOO)))
+''
+''     verblock VER=1
 ''         <...>
-''     version a
+''     verblock VER=2
+''         <...>
+''     <...>
+''     verblock defined(FOO)
+''         <...>
+''     verblock (not defined(FOO))
 ''         <...>
 ''
 '' becomes:
 ''
-''     version a
+''     #if VER=1
 ''         <...>
+''     #elseif VER=2
 ''         <...>
-''
-private sub hMergeAdjacentVerblocks( byval code as ASTNODE ptr )
-	var i = code->head
-	while( i )
-		var nxt = i->next
-
-		hMergeAdjacentVerblocks( i )
-
-		'' Verblock followed by a 2nd one with the same version(s)?
-		if( (i->class = ASTCLASS_VERBLOCK) and (nxt <> NULL) ) then
-			if( nxt->class = ASTCLASS_VERBLOCK ) then
-				if( astIsEqual( i->expr, nxt->expr ) ) then
-					astCloneAppendChildren( i, nxt )
-					astRemove( code, nxt )
-					'' Re-check this verblock in case there are more following
-					nxt = i
-				end if
-			end if
-		end if
-
-		i = nxt
-	wend
-end sub
-
-'' Same but for targetblocks
-private sub hMergeAdjacentTargetblocks( byval code as ASTNODE ptr )
-	var i = code->head
-	while( i )
-		var nxt = i->next
-
-		hMergeAdjacentTargetblocks( i )
-
-		'' Targetblock followed by a 2nd one with the same target(s)?
-		if( (i->class = ASTCLASS_TARGETBLOCK) and (nxt <> NULL) ) then
-			if( nxt->class = ASTCLASS_TARGETBLOCK ) then
-				if( (i->attrib and ASTATTRIB__ALLTARGET) = (nxt->attrib and ASTATTRIB__ALLTARGET) ) then
-					astCloneAppendChildren( i, nxt )
-					astRemove( code, nxt )
-					'' Re-check this targetblock in case there are more following
-					nxt = i
-				end if
-			end if
-		end if
-
-		i = nxt
-	wend
-end sub
-
-private function hBuildIfExprFromVerblockExpr _
-	( _
-		byval group as ASTNODE ptr, _
-		byval versiondefine as zstring ptr _
-	) as ASTNODE ptr
-
-	dim as ASTNODE ptr l
-
-	'' a, b, c  ->  (a or b) or c
-	assert( group->class = ASTCLASS_GROUP )
-	var i = group->head
-	do
-		'' a  ->  __MYLIB_VERSION__ = a
-		var r = astNewBOP( ASTCLASS_EQ, astNewID( versiondefine ), astClone( i ) )
-
-		if( l ) then
-			l = astNewBOP( ASTCLASS_OR, l, r )
-		else
-			l = r
-		end if
-
-		i = i->next
-	loop while( i )
-
-	function = l
-end function
-
-private sub hTurnLastElseIfIntoElse _
-	( _
-		byval code as ASTNODE ptr, _
-		byval i as ASTNODE ptr, _
-		byval j as ASTNODE ptr _
-	)
-
-	dim as ASTNODE ptr last
-	if( j ) then
-		last = j->prev
-	else
-		last = code->tail
-	end if
-
-	assert( i <> last )
-	assert( last->class = ASTCLASS_PPELSEIF )
-	last->class = ASTCLASS_PPELSE
-	astDelete( last->expr )
-	last->expr = NULL
-
-end sub
-
-''
-''     verblock a
-''         <...>
-''     targetblock win32
-''         <...>
-''
-'' must be ultimately turned into:
-''
-''     #if __FOO__ = a
-''     <...>
 ''     #endif
-''     #ifdef __FB_WIN32__
 ''     <...>
-''     #endif
-''
-'' As an optimization, we can generate #elseif/#else blocks for adjacent verblocks
-'' whose versions aren't overlapping:
-''
-''     verblock a
+''     #ifdef FOO
 ''         <...>
-''     verblock b
-''         <...>
-''     verblock c
-''         <...>
-''
-'' becomes:
-''
-''     #if __FOO__ = a
-''     <...>
-''     #elseif __FOO__ = b
-''     <...>
 ''     #else
-''     <...>
+''         <...>
 ''     #endif
 ''
-private sub hTurnVerblocksIntoPpIfs _
-	( _
-		byval code as ASTNODE ptr, _
-		byval versions as ASTNODE ptr, _
-		byval versiondefine as zstring ptr _
-	)
-
+private sub hTurnVerblocksIntoPpIfs( byval code as ASTNODE ptr )
 	var i = code->head
 	while( i )
 
 		'' Process verblocks nested inside structs etc.
-		hTurnVerblocksIntoPpIfs( i, versions, versiondefine )
+		hTurnVerblocksIntoPpIfs( i )
 
-		'' If this is a verblock, try to combine it and following ones
-		'' into a "single" #if/#elseif/#endif, as long as they all cover
-		'' different versions.
-		if( i->class = ASTCLASS_VERBLOCK ) then
-			'' Collect a list of all the versions checked for. It's ok to keep
-			'' "combining" verblocks into #if/#elseif as long as no duplicates
-			'' would have to be added to this list, because an #if/#elseif will
-			'' only ever evaluate a single code path.
-			var collectedversions = astNewGROUP( astClone( i->expr ) )
+		if( astIsVERBLOCK( i ) ) then
+			'' Turn the 1st verblock into an #if
+			i->class = ASTCLASS_PPIF
 
+			'' Find all VERBLOCKs in a row, if any, as long as they cover different versions
+			'' (as long as no duplicates would be added to the list of collected versions)
+			'' and turn them into #elseif's while at it.
 			var j = i->next
-			while( j )
-				if( j->class <> ASTCLASS_VERBLOCK ) then exit while
-				if( astGroupContainsAnyChildrenOf( collectedversions, j->expr ) ) then exit while
-				astCloneAppend( collectedversions, j->expr )
+			var collected = astClone( i->expr )
+			assert( astIsVEROR( collected ) )
+			while( j andalso astIsVERBLOCK( j ) andalso _
+			       (not astGroupContainsAnyChildrenOf( collected, j->expr )) )
+				j->class = ASTCLASS_PPELSEIF
+				collected = astNewVEROR( collected, astClone( j->expr ) )
 				j = j->next
 			wend
 
-			'' j = last verblock following i that may be combined into an #if/#elseif/#else
-
-			'' The first verblock must become an #if, any following become #elseifs, and the
-			'' last can perhaps be an #else. At the end, an #endif must be inserted.
-			var k = i
-			do
-				k->class = iif( k = i, ASTCLASS_PPIF, ASTCLASS_PPELSEIF )
-				var newexpr = hBuildIfExprFromVerblockExpr( k->expr, versiondefine )
-				astDelete( k->expr )
-				k->expr = newexpr
-
-				k = k->next
-			loop while( k <> j )
+			'' j = node behind the last VERBLOCK in the row, or NULL if at EOF
 
 			'' If the collected verblocks cover all versions, then only the first #if check
 			'' and any intermediate #elseif checks are needed, but the last check can be turned
 			'' into a simple #else.
-			if( astGroupsContainEqualChildren( versions, collectedversions ) ) then
-				hTurnLastElseIfIntoElse( code, i, j )
+			if( astIsEqual( collected, frog.fullveror ) ) then
+				var last = iif( j, j->prev, code->tail )
+				'' But only if we've got more than 1 verblock
+				if( i <> last ) then
+					assert( last->class = ASTCLASS_PPELSEIF )
+					last->class = ASTCLASS_PPELSE
+					astDelete( last->expr )
+					last->expr = NULL
+				end if
 			end if
 
 			'' Insert #endif
 			astInsert( code, astNew( ASTCLASS_PPENDIF ), j )
 
-			astDelete( collectedversions )
+			astDelete( collected )
 		end if
 
 		i = i->next
 	wend
 end sub
 
-private sub hOrDefined _
-	( _
-		byref n as ASTNODE ptr, _
-		byref targets as integer, _
-		byval target as integer, _
-		byval targetdefine as zstring ptr _
-	)
+type CONDINFO
+	cond		as ASTNODE ptr	'' The condition expression
+	count		as integer	'' How often it was seen
+end type
 
-	if( targets and target ) then
-		targets and= not target
+namespace condcounter
+	dim shared conds as CONDINFO ptr
+	dim shared condcount as integer
+end namespace
 
-		'' defined( __FB_TARGET__ )
-		var def = astNewUOP( ASTCLASS_DEFINED, astNewID( targetdefine ) )
-
-		'' OR with previous expression, if any
-		if( n ) then
-			n = astNewBOP( ASTCLASS_OR, n, def )
-		else
-			n = def
+private sub condcounterCount( byval cond as ASTNODE ptr )
+	'' If this condition is already known, increase the count.
+	for i as integer = 0 to condcounter.condcount - 1
+		if( astIsEqual( condcounter.conds[i].cond, cond ) ) then
+			condcounter.conds[i].count += 1
+			exit sub
 		end if
-	end if
+	next
 
+	'' Otherwise, register it as new.
+	var i = condcounter.condcount
+	condcounter.condcount += 1
+	condcounter.conds = reallocate( condcounter.conds, _
+			condcounter.condcount * sizeof( CONDINFO ) )
+	condcounter.conds[i].cond = cond
+	condcounter.conds[i].count = 1
 end sub
 
-'' win32     -> defined( __FB_WIN32__ )
-'' dos|linux -> defined( __FB_DOS__ ) or defined( __FB_LINUX__ )
-private function hBuildIfExprFromTargets( byval targets as integer ) as ASTNODE ptr
-	dim as ASTNODE ptr n
-	hOrDefined( n, targets, ASTATTRIB_DOS  , @"__FB_DOS__"   )
-	hOrDefined( n, targets, ASTATTRIB_LINUX, @"__FB_LINUX__" )
-	hOrDefined( n, targets, ASTATTRIB_WIN32, @"__FB_WIN32__" )
-	assert( targets = 0 )
+private sub condcounterEnd( )
+	deallocate( condcounter.conds )
+	condcounter.conds = NULL
+	condcounter.condcount = 0
+end sub
+
+private function condcounterFindMostCommon( ) as ASTNODE ptr
+	if( condcounter.condcount = 0 ) then
+		return NULL
+	end if
+
+	var max = 0
+	var imax = -1
+	for i as integer = 0 to condcounter.condcount - 1
+		if( max < condcounter.conds[i].count ) then
+			max = condcounter.conds[i].count
+			imax = i
+		end if
+	next
+	assert( (imax >= 0) and (imax < condcounter.condcount) )
+
+	'' No point extracting a condition that only appeared once
+	if( condcounter.conds[imax].count < 2 ) then
+		return NULL
+	end if
+
+	function = condcounter.conds[imax].cond
+end function
+
+private function hDetermineMostCommonCondition( byval veror as ASTNODE ptr ) as ASTNODE ptr
+	assert( astIsVEROR( veror ) )
+
+	'' Build list of all conditions and count them. The one with the max
+	'' count is the most common.
+
+	var verand = veror->head
+	while( verand )
+		if( astIsVERAND( verand ) ) then
+			var cond = verand->head
+			while( cond )
+				condcounterCount( cond )
+				cond = cond->next
+			wend
+		end if
+		verand = verand->next
+	wend
+
+	function = condcounterFindMostCommon( )
+
+	condcounterEnd( )
+end function
+
+private function hIsCondition( byval n as ASTNODE ptr ) as integer
+	function = (not astIsVEROR( n )) and (not astIsVERAND( n ))
+end function
+
+private function hSimplify( byval n as ASTNODE ptr, byref changed as integer ) as ASTNODE ptr
+	if( n = NULL ) then return NULL
+	if( hIsCondition( n ) ) then return n
+
+	scope
+		var i = n->head
+		while( i )
+			i = astReplace( n, i, hSimplify( astClone( i ), changed ) )
+		wend
+	end scope
+
+	'' Single child, or none at all? Solve out the VEROR/VERAND.
+	if( n->head = n->tail ) then
+		changed = TRUE
+		function = astClone( n->head )
+		astDelete( n )
+		exit function
+	end if
+
+	if( astIsVEROR( n ) = FALSE ) then
+		return n
+	end if
+
+	'' Solve out "complete" VERORs - VERORs that cover all possible choices
+	if( astGroupContains( frog.completeverors, n ) ) then
+		changed = TRUE
+		astDelete( n )
+		return NULL
+	end if
+
+	''
+	'' If two VERANDs in a VEROR have a common condition, they can be
+	'' simplified:
+	''    a.b, a.c        =  a.(b, c)
+	''    x, a.b, a.c, y  =  x, a.(b, c), y
+	'' and this applies not only to common prefixes/suffixes, but to
+	'' just any common conditions:
+	''    1.a.x, 2.a.y  =  a.(1.x, 2.y)
+	'' The order of operands really doesn't matter:
+	''    a.(b, c)
+	'' is the same as:
+	''    (b, c).a
+	''
+	'' Sometimes there are multiple solutions:
+	''    a.1, a.2, b.2    =    a.(1, 2), b.2    vs.    a.1, 2.(a, b)
+	''
+	'' We should simplify as much as possible, and we should simplify the
+	'' most common conditions first, because that's what you'd do if doing
+	'' it manually. I.e., it produced the best and most expected results.
+	''
+
+	var mostcommoncond = hDetermineMostCommonCondition( n )
+	if( mostcommoncond = NULL ) then
+		return n
+	end if
+	mostcommoncond = astClone( mostcommoncond )
+
+	var extracted = astNew( ASTCLASS_VEROR )
+
+	'' Extract VERANDs that contain the most common condition
+	scope
+		var verand = n->head
+		while( verand )
+			var verandnext = verand->next
+			if( astIsVERAND( verand ) ) then
+				if( astGroupContains( verand, mostcommoncond ) ) then
+					astAppend( extracted, astClone( verand ) )
+					astRemove( n, verand )
+				end if
+			end if
+			verand = verandnext
+		wend
+	end scope
+
+	'' Remove the most common condition from the extracted VERANDs
+	scope
+		var verand = extracted->head
+		while( verand )
+			var verandnext = verand->next
+
+			'' Remove common condition from this VERAND
+			var cond = verand->head
+			while( cond )
+				var condnext = cond->next
+				if( astIsEqual( cond, mostcommoncond ) ) then
+					astRemove( verand, cond )
+				end if
+				cond = condnext
+			wend
+
+			'' If this VERAND now only contains 1 condition,
+			'' solve out the VERAND
+			if( verand->head = verand->tail ) then
+				astReplace( extracted, verand, astClone( verand->head ) )
+			end if
+
+			verand = verandnext
+		wend
+	end scope
+
+	'' Add the common condition on top of the extracted VERANDs
+	extracted = astNewVERAND( mostcommoncond, extracted )
+
+	'' And re-add that to the original VEROR
+	astAppend( n, extracted )
+	changed = TRUE
+
 	function = n
 end function
 
-'' Same but for targetblocks
-private sub hTurnTargetblocksIntoPpIfs( byval code as ASTNODE ptr )
+private function hSimplifyVersionExpr( byval n as ASTNODE ptr ) as ASTNODE ptr
+	dim as integer changed
+	do
+		changed = FALSE
+		n = hSimplify( n, changed )
+	loop while( changed )
+	function = n
+end function
+
+private sub hSimplifyVersionExpressions( byval code as ASTNODE ptr )
 	var i = code->head
 	while( i )
+		var inext = i->next
 
-		'' Process targetblocks nested inside verblocks/structs etc.
-		hTurnTargetblocksIntoPpIfs( i )
+		'' Handle #if checks nested inside structs
+		hSimplifyVersionExpressions( i )
 
-		if( i->class = ASTCLASS_TARGETBLOCK ) then
-			'' Find end of "mergable" targetblocks...
-			var collectedtargets = i->attrib and ASTATTRIB__ALLTARGET
-			var j = i->next
-			while( j )
-				if( j->class <> ASTCLASS_TARGETBLOCK ) then exit while
-				if( collectedtargets and (j->attrib and ASTATTRIB__ALLTARGET) ) then exit while
-				collectedtargets or= j->attrib and ASTATTRIB__ALLTARGET
-				j = j->next
-			wend
+		select case( i->class )
+		case ASTCLASS_PPIF, ASTCLASS_PPELSEIF
+			i->expr = hSimplifyVersionExpr( i->expr )
 
-			'' Turn them into #ifs/#elseifs
-			var k = i
-			do
+			'' If we were able to solve it out completely that means
+			'' the check was always true -- thus, we can remove this
+			'' #if check and insert the body in its place.
+			if( i->expr = NULL ) then
+				astReplace( code, i, astCloneChildren( i ) )
 
-				k->class = iif( k = i, ASTCLASS_PPIF, ASTCLASS_PPELSEIF )
-				k->expr = hBuildIfExprFromTargets( k->attrib and ASTATTRIB__ALLTARGET )
-
-				k = k->next
-			loop while( k <> j )
-
-			'' Perhaps turn the last #elseif into an #else
-			if( collectedtargets = ASTATTRIB__ALLTARGET ) then
-				hTurnLastElseIfIntoElse( code, i, j )
+				'' If the next node is an #endif, remove that too.
+				'' If it's an #elseif, turn that into an #if.
+				select case( inext->class )
+				case ASTCLASS_PPENDIF
+					inext = astRemove( code, inext )
+				case ASTCLASS_PPELSEIF
+					inext->class = ASTCLASS_PPIF
+				end select
 			end if
+		end select
 
-			'' Insert #endif
-			astInsert( code, astNew( ASTCLASS_PPENDIF ), j )
-		end if
-
-		i = i->next
+		i = inext
 	wend
 end sub
 
-'' Add some checks at the top of each of the binding to verify that the
-'' version-#define has a valid value.
-private sub hAddVersionDefineChecks _
-	( _
-		byval code as ASTNODE ptr, _
-		byval versions as ASTNODE ptr, _
-		byval versiondefine as zstring ptr, _
-		byval defaultversion as ASTNODE ptr _
-	)
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+'' We add some #if checks at the top of the final binding to verify that the
+'' proper symbols are defined, and/or that they're #defined to valid values (in
+'' case of -declareversions). This means the user will be shown an error when
+'' using the binding incorrectly, which should be a good thing.
+''
+'' -declaredefines: Selecting between multiple symbols, only one of which may be
+'' defined (e.g. __FB_WIN32__, __FB_LINUX__). We emit a check to verify that at
+'' least one and only one of these symbols is defined, unless that was disabled
+'' with -unchecked.
+''
+'' -declareversions: We should emit a check to verify the symbol is defined to
+'' a valid version number, and add a default version selection in front of that,
+'' such that the default version will be used automatically if the user didn't
+'' #define the symbol at all. The last version can be used as the default:
+'' 1) If the version numbers are specified in oldest-to-newest order (as if
+''    being enumerated), then the last one is the most recent version.
+'' 2) It usually makes sense to use the latest version by default.
+''
+'' -declarebool: It's a boolean choice, so there's nothing to verify (either
+'' it's #defined or it's not, both are valid).
+''
+'' The verification code corresponds directly to the fbfrog command line script.
+'' We have to emit the checks at the position of each -declare* option in the
+'' script, including those nested in -ifdef/-select blocks, so that the checks
+'' are in the same order (less important) and have the same nesting (very
+'' important) as in the script.
+''
 
-	var checks = astNewGROUP( )
+'' #ifndef SYMBOL
+''     #define SYMBOL default
+'' #endif
+private sub hBuildDefaultVersionSelection( byval code as ASTNODE ptr, byval decl as ASTNODE ptr )
+	var ppdefine = astNewPPDEFINE( decl->text )
+	ppdefine->expr = astClone( decl->tail )
 
-	'' If the version #define wasn't #defined, use the default version
-	'' (chosen by preset)
-	''     #ifndef VER
-	''         #define VER default
-	''     #endif
-	if( defaultversion->class <> ASTCLASS_DUMMYVERSION ) then
-		var ppif = astNewPPIF( astNewUOP( ASTCLASS_NOT, astNewUOP( ASTCLASS_DEFINED, astNewID( versiondefine ) ) ) )
-		var macro = astNewPPDEFINE( versiondefine )
-		macro->expr = astClone( defaultversion )
-		astAppend( ppif, macro )
-		astAppend( checks, ppif )
-		astAppend( checks, astNew( ASTCLASS_PPENDIF ) )
-	end if
+	var ppif = astNew( ASTCLASS_PPIF )
+	ppif->expr = astNewUOP( ASTCLASS_NOT, astNewUOP( ASTCLASS_DEFINED, astNewID( decl->text ) ) )
+	astAppend( ppif, ppdefine )
 
-	'' Complain if the version #define was #defined to an unsupported value
-	''     #if VER <> good1 and VER <> good2 and VER <> good3 etc.
-	''         #error "VER is #defined to an unsupported value; expected one of: a, b, c"
-	''     #endif
-	scope
-		dim expr as ASTNODE ptr
-		dim commalist as string
-
-		scope
-			var i = versions->head
-			while( i )
-
-				if( i->class <> ASTCLASS_DUMMYVERSION ) then
-					'' VER <> version
-					var comparison = astNewBOP( ASTCLASS_NE, astNewID( versiondefine ), astClone( i ) )
-
-					dim versionvalue as string
-					if( astIsCONSTI( i ) ) then
-						versionvalue = str( i->vali )
-					else
-						assert( i->class = ASTCLASS_STRING )
-						versionvalue = """" + *i->text + """"
-					end if
-
-					'' AND with previous expression, if any
-					if( expr ) then
-						expr = astNewBOP( ASTCLASS_AND, expr, comparison )
-						commalist += ", " + versionvalue
-					else
-						expr = comparison
-						commalist = versionvalue
-					end if
-				end if
-
-				i = i->next
-			wend
-		end scope
-
-		if( expr ) then
-			var ppif = astNewPPIF( expr )
-			var pperror = astNew( ASTCLASS_PPERROR )
-			pperror->expr = astNew( ASTCLASS_STRING, "'" + *versiondefine + "' is #defined to an unsupported value; expected one of: " + commalist )
-			astAppend( ppif, pperror )
-			astAppend( checks, ppif )
-			astAppend( checks, astNew( ASTCLASS_PPENDIF ) )
-		end if
-	end scope
-
-	astPrepend( code, checks )
-
+	astAppend( code, ppif )
+	astAppend( code, astNew( ASTCLASS_PPENDIF ) )
 end sub
 
-sub astProcessVerblocksAndTargetblocks _
-	( _
-		byval code as ASTNODE ptr, _
-		byval versions as ASTNODE ptr, _
-		byval versiondefine as zstring ptr _
-	)
+private sub hVerifyDefinesOrVersions( byval code as ASTNODE ptr, byval decl as ASTNODE ptr )
+	'' #if for the first choice, #elseifs for the rest
+	scope
+		var ppifclass = ASTCLASS_PPIF
+		var k = decl->head
+		do
+			var ppif = astNew( ppifclass )
+			if( decl->class = ASTCLASS_DECLAREDEFINES ) then
+				'' defined(<symbol>)
+				ppif->expr = astNewUOP( ASTCLASS_DEFINED, astNewID( k->text ) )
+			else
+				'' <symbol> = <versionnumber>
+				ppif->expr = astNewBOP( ASTCLASS_EQ, astNewID( decl->text ), astClone( k ) )
+			end if
+			astAppend( code, ppif )
+			ppifclass = ASTCLASS_PPELSEIF
+			k = k->next
+		loop while( k )
+	end scope
 
+	'' #else
+	''     #error "..."
+	scope
+		'' Collect a pretty comma-separated list of the possible values
+		dim valuelist as string
+		scope
+			var k = decl->head
+			do
+				valuelist += *k->text
+				k = k->next
+				if( k = NULL ) then exit do
+				valuelist += ", "
+			loop
+		end scope
+		var pperror = astNew( ASTCLASS_PPERROR )
+		if( decl->class = ASTCLASS_DECLAREDEFINES ) then
+			pperror->expr = astNew( ASTCLASS_STRING, "Not one of these symbols is #defined: " + valuelist )
+		else
+			pperror->expr = astNew( ASTCLASS_STRING, "'" + *decl->text + "' is #defined to an unsupported value; expected one of: " + valuelist )
+		end if
+		astAppend( code, astNew( ASTCLASS_PPELSE, pperror ) )
+	end scope
+
+	'' #endif
+	astAppend( code, astNew( ASTCLASS_PPENDIF ) )
+end sub
+
+private function hIsSomeIfBlock( byval n as ASTNODE ptr ) as integer
+	if( n ) then
+		select case( n->class )
+		case ASTCLASS_PPIF, ASTCLASS_PPELSEIF, ASTCLASS_PPELSE
+			function = TRUE
+		end select
+	end if
+end function
+
+private function hCanEliminate( byval n as ASTNODE ptr ) as integer
+	'' #if/#elseif/#else with empty body?
+	function = hIsSomeIfBlock( n ) andalso (n->head = NULL)
+end function
+
+'' Eliminate all empty #if/#elseif/#else blocks at the end (can't eliminate
+'' empty ones at the beginning, because their conditions must be checked before
+'' the #elseif/#else code paths are allowed to be reached)
+private sub hEliminateTrailingEmptyBlocks( byval code as ASTNODE ptr )
+	while( hCanEliminate( code->tail ) )
+		astRemove( code, code->tail )
+	wend
+end sub
+
+private function hBuildVerificationCode( byref i as ASTNODE ptr ) as ASTNODE ptr
+	var code = astNewGROUP( )
+
+	while( i )
+		select case( i->class )
+		case ASTCLASS_DECLAREDEFINES
+			if( (i->attrib and ASTATTRIB_UNCHECKED) = 0 ) then
+				hVerifyDefinesOrVersions( code, i )
+			end if
+
+		case ASTCLASS_DECLAREVERSIONS
+			hBuildDefaultVersionSelection( code, i )
+			hVerifyDefinesOrVersions( code, i )
+
+		case ASTCLASS_SELECT
+			i = i->next
+
+			'' #if for the first -case, #elseif for the rest, #else for -caseelse (if any)
+			var ppifclass = ASTCLASS_PPIF
+			do
+				'' -case
+				assert( (i->class = ASTCLASS_CASE) or _
+					(i->class = ASTCLASS_CASEELSE) )
+				var ppif = astNew( ppifclass )
+				ppif->expr = astClone( i->expr )
+				i = i->next
+
+				'' -case's body
+				astAppend( ppif, hBuildVerificationCode( i ) )
+				astAppend( code, ppif )
+				ppifclass = iif( i->class = ASTCLASS_CASEELSE, ASTCLASS_PPELSE, ASTCLASS_PPELSEIF )
+			loop while( i->class <> ASTCLASS_ENDSELECT )
+
+			hEliminateTrailingEmptyBlocks( code )
+
+			'' #endif, if any #if left after the above elimination
+			if( hIsSomeIfBlock( code->tail ) ) then
+				astAppend( code, astNew( ASTCLASS_PPENDIF ) )
+			end if
+
+		case ASTCLASS_CASE, ASTCLASS_CASEELSE, ASTCLASS_ENDSELECT
+			'' When reaching a case/caseelse/endselect instead of the corresponding
+			'' select, that means we've been evaluating the nested code path of the
+			'' previous case code path recursively, and should now return from the
+			'' recursion.
+			exit while
+		end select
+
+		i = i->next
+	wend
+
+	function = code
+end function
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+sub astProcessVerblocks( byval code as ASTNODE ptr )
 	assert( code->class = ASTCLASS_GROUP )
 
-	hSimplifyVerblocks( code, versions )
+	'' These 2 rely on version expressions not being simplified yet:
+	'' It's much easier to check which versions are covered by a certain
+	'' VERBLOCK if the VERBLOCK's version expression is just a VEROR of all
+	'' VERANDs (each VERAND representing one version), as opposed to a
+	'' simplified but arbitrary tree of VERORs/VERANDs.
+	hSolveOutRedundantVerblocks( code, frog.fullveror )
+	hTurnVerblocksIntoPpIfs( code )
 
-	hSolveOutRedundantNestedVerblocks( code, NULL )
-	hSolveOutRedundantNestedTargetblocks( code, -1 )
+	'' Beautification: Apply some trivial refactoring to the version
+	'' conditions, to eliminate duplicate checks where possible.
+	hSimplifyVersionExpressions( code )
 
-	'' It's possible that the above simplification opened up some merging
-	'' possibilities between adjacent verblocks.
-	hMergeAdjacentVerblocks( code )
-	hMergeAdjacentTargetblocks( code )
-
-	hTurnVerblocksIntoPpIfs( code, versions, versiondefine )
-	hTurnTargetblocksIntoPpIfs( code )
-
-	hAddVersionDefineChecks( code, versions, versiondefine, versions->head )
-
+	var i = frog.script->head
+	astPrepend( code, hBuildVerificationCode( i ) )
 end sub

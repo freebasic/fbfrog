@@ -1,5 +1,5 @@
-[dos]
-        parsing: tests/cpp/if/endif-missing.h
+[1/5] __FB_WIN32__.__FB_64BIT__
+      tests/cpp/if/endif-missing.h
 missing #endif
     [end]
     ^~~~~

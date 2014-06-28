@@ -1,5 +1,5 @@
-[dos]
-        parsing: tests/cpp/expand/merge/from-macro-arg.h
+[1/5] __FB_WIN32__.__FB_64BIT__
+      tests/cpp/expand/merge/from-macro-arg.h
 expected identifier for the symbol declared in this declaration but found '##'
     typedef struct a ## b ;
                      ^~

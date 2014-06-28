@@ -16,80 +16,82 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-Features:
+What's this?
 
-  This program reads in *.h files (C API declarations) and generates
-  corresponding *.bi files (FreeBASIC API declarations). It automates most of
-  the work needed to create and maintain FB bindings to C libraries, most
-  importantly: converting C declarations to FB code.
-
-  * C pre-processor (CPP)
-      * tracks #defines/#undefs and does macro expansion (can be disabled for
-        individual symbols)
-      * preserves #define statements (can be disabled for individual symbols)
-      * expands #includes (always, so it gets to see #defines/#undefs, but the
-        #included code can be removed before it's given to the C parser)
-      * evaluates #if blocks (always), based on an #if expression parser
-      * allows for pre-#defines etc. to be specified
-
-  * C parser
-      * Recursive declaration parser that can handle multiple declarations in
-        the same statement, nested declarations, including function pointers
-        returning function pointers etc. Also parses some __attribute__'s, e.g.
-        calling conventions.
-      * Expression parser that's used to parse initializers, enum constant
-        values, #define bodies. Includes parsing for type casting expressions,
-        based on a heuristic (whether the identifier in parentheses looks like a
-        type or is a known typedef, etc.).
-      * Parses typedefs, structs, unions, enums, including nested
-        structs/unions, and even struct/union/enum bodies specified directly in
-        declarations of functions, parameters, variables, etc.
-
-  * FB binding creation
-      * C's built-in data types (using the sizes typically used for x86) and
-        also typedefs such as size_t or int32_t are directly converted to
-        corresponding FB data types. <signed|unsigned char> is translated to
-        BYTE|UBYTE, while plain <char> is assumed to mean ZSTRING.
-      * C expressions are converted to FB ones, as pretty as possible without
-        changing result values.
-      * Array parameters are turned into pointers.
-      * Anonymous structs are given the name of the (first) typedef that uses
-        them, and the typedef is removed.
-      * Redundant typedefs (<typedef struct A A;>) are removed, because in FB
-        there are no separate type/tag namespaces. <struct A> or <A> translate
-        to the same thing.
-      * #defines nested inside struct bodies are moved to the toplevel. Even
-        though FB doesn't scope #defines inside UDTs (only inside scope blocks,
-        but not namespaces), this is better, because it represents the original
-        header's intentions more closely. It becomes more important when
-        converting #defines to constant declarations, because FB does scope
-        those inside UDTs.
-      * #defines are turned into constants automatically, if the macro body is
-        just a simple constant expression (can be disabled with -noconstants).
-      * Conflicting identifiers (conflicts with FB keywords, or amongst the
-        symbols declared in the binding, possibly due to FB's case
-        insensitivity) are fixed by appending _ underscores to the less
-        important symbol (e.g. renaming #defines is preferred over renaming
-        procedures). For renamed variables/procedures, ALIAS "<original-name>"
-        will be emitted.
-      * Extern blocks are added around the binding's declarations, for the
-        calling convention that the binding uses most often. Calling conventions
-        and case-preserving ALIASes are only emitted on procedures if they're
-        not covered by the Extern block (happens if a binding's procedures use
-        multiple calling conventions).
-      * Multiple parsing passes produce multiple ASTs, each representing the
-        binding for a certain target system, e.g. win32 and linux, or for a
-        certain version of input headers, e.g. v1.0 and v2.0. These ASTs are
-        then merged into one to produce the final binding. Declarations that
-        exist in one version only, or can be used on a certain target only, are
-        put inside #if blocks, e.g. <#if __MYLIB_VERSION__ = 1> or
-        <#ifdef __FB_WIN32__>. To select the API for a specific version, the
-        binding's user can #define __MYLIB_VERSION__ as wanted.
+  * This program reads *.h files (C API declarations) and generates a *.bi file
+    (FreeBASIC API declarations)
+  * Automates most of the work needed to create and maintain FB bindings
+  * Has its own C pre-processor (CPP) and C parser capable of parsing most
+    declarations (but not function bodies)
+  * Uses an AST to represent the input API's struct/function declarations etc.
+    declarations, makes that AST FB-friendly and emits it as FB code
+  * Can read multiple versions of an API and merge them into a single binding
 
 
 Compiling:
 
-  $ fbc *.bas -m fbfrog
+    $ fbc *.bas -m fbfrog
+
+
+Usage:
+
+  Generate *.bi from *.h:
+    $ ./fbfrog foo.h
+
+  Work-around fbfrog #define parsing error:
+    $ ./fbfrog foo.h -removedefine FOO
+
+  Add a pre-define to be used during the CPP step:
+    $ ./fbfrog foo.h -removedefine FOO -define FOO 123
+
+
+  Ideally fbfrog will accept the .h file without the need for any work-arounds,
+  but usually it's necessary to use some extra options. It can be useful to put
+  those options into a file, so they can easily be re-used/shared:
+    file example.fbfrog:
+        -define A
+        -define B
+        -define FOO 123
+        -removedefine BAR1
+        -removedefine BAR2
+        -removedefine BAR3
+  Finally:
+    $ ./fbfrog @example.fbfrog
+
+
+  fbfrog's C preprocessor & parser are incomplete and you may see errors because
+  of that. Please report such issues/missing features, they're probably not too
+  hard to implement. Temporary work-arounds:
+    a) remove the offending constructs from the input .h files
+    b) use one of the -remove* command line options
+
+  The code generated by fbfrog may be wrong. Hopefully that won't happen a lot,
+  but fbfrog uses heuristics and despite everything it's not a fully complete C
+  compiler, and it doesn't even require expanding all #includes. Thus, it's a
+  good idea to at least look at the binding code generated by fbfrog, and to
+  make an FB code example that uses the binding and tests that it is basically
+  working; i.e. it should at least compile fine under fbc.
+
+
+  fbfrog is able to read in multiple APIs and merge them into a single binding.
+  This is used for combining the target-specific versions of an API (DOS, Linux,
+  Win32, x86, x86_64, etc.), and it can also be used to combine multiple
+  versions of a library such that the user of the final binding can select the
+  API versions by specifying a certain #define when compiling.
+
+  Combining multiple versions of a library into one binding, by reading in both
+  libfoo-1.0/foo.h and libfoo-2.0/foo.h as separate versions:
+    -declareversions __LIBFOO_VERSION 1 2
+    -select __LIBFOO_VERSION
+    -case 1
+        libfoo-1.0/foo.h
+    -case 2
+        libfoo-2.0/foo.h
+    -endselect
+  Save those options into a foo.fbfrog helper file, and pass it to fbfrog:
+    $ ./fbfrog @foo.fbfrog
+  The created binding will allow the user to #define __LIBFOO_VERSION to 1 or
+  2 in order to select that specific API version.
 
 
 Running the tests:
@@ -100,36 +102,33 @@ Running the tests:
      test failures.
 
 
-Usage:
-
-  Pass *.h files (C API declarations) to fbfrog:
-    $ ./fbfrog foo.h
-  and fbfrog generates a corresponding *.bi file (FB API declarations).
-
-  Creating a binding for multiple versions of a library:
-    $ ./fbfrog -version 1.0 foo1.0.h -version 2.0 foo2.0.h
-
-  Creating a binding for GCC 4 Win32/Linux versions of a header:
-    options.txt:
-        -define __GNUC__ 4
-        -target win32
-            -define _WIN32
-        -target linux
-            -define __linux__
-    $ ./fbfrog foo.h @options.txt
-
-  -version can be used to tell fbfrog about multiple versions of a binding.
-  -target is similar and causes fbfrog to parse multiple versions of the
-  binding as they would be used when compiling for the respective systems.
-  -targets can be nested in -versions. fbfrog will parse input files registered
-  for each version/target, do preprocessing with the symbols registered for each
-  version/target, and combine the resulting declarations into a single binding.
-
-
 To do:
+
+- 64bit support:
+	Reverting 04324839e6a05cdaad6d55b67e453ce952597ddc
 
 - support defined() in #define bodies (C expression parser)
 - support macro expansion for C/CPP keywords, not just TK_ID
+- support -o - to write to stdout, or just -stdout, or similar
+- remove unused AST functions etc.
+- ASTNODE.l/r aren't needed anymore - we're not doing constant folding anymore
+- rename ASTNODE -> AST, ASTCLASS_* -> AST_*?
+- re-use TK_* enum as ASTNODE classes, replacing ASTCLASS_*
+    (there's lots of overlap, and it doesn't matter if we have some enumconsts
+     used as only tokens or ASTNODEs...)
+- emit.bas: should generate defined(A), not defined( A )
+- add #pragma once in the final AST, not in the individual ASTs
+- only add #pragma once if final binding non-empty
+
+- Unparsable constructs should perhaps be handled automatically afterall, even
+  though that will result in requiring hand-editing the generated .bi everytime.
+  But how else to deal with inline functions or untranslatable #defines?
+  The hand-editing is highly annoying, but fbfrog would at least still do most
+  of the hard work. And it could help with the hand-editing by showing stats
+  and emitting TODOs and the original code (commented out).
+  - it's a good reason for having a custom C parser
+
+- Since we always generate Extern blocks, we never need case-preserving ALIASes
 
 - Turn -nomerge into -insert <absolute-file-name-pattern>
   By default: Don't insert #includes
@@ -145,10 +144,6 @@ To do:
 - #includes that can't be found should just be removed, e.g. system headers
 - fbfrog should automatically add the proper crt/* #include if needed
 
-- consider splitting statement vs. expression AST into 2 sorts of nodes
-  statements = array of statements
-  expression = binary tree
-
 - Performance issues:
   - speed: AST walking, especially astReplaceSubtypes()
       - Could be fixed by using a type map - then astReplaceSubtypes() would only
@@ -156,9 +151,7 @@ To do:
   - speed: String comparisons (also as part of AST walking)
   - memory usage: hAstLCS() matrix; also string/AST node/token buffer allocations
 
-- 64bit support:
-  * Add arch-specific pre-#defines too
-  * Enums must be emitted as Long for 64bit compat:
+- 64bit support & enums: must be emitted as Long because they're always 32bit under GCC
     a) On all enum bodies, do "enum Foo as long : ... : end enum" (must be added to FB first)
     b) Do "type Foo as long" and make enum body anonymous (enums consts aren't type checked anyways)
     c) Do "const EnumConst1 as long" for every enum const; don't emit the enum type at all,

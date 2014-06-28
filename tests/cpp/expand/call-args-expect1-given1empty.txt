@@ -1,7 +1,11 @@
-[dos]
-        parsing: tests/cpp/expand/call-args-expect1-given1empty.h
-[linux]
-        parsing: tests/cpp/expand/call-args-expect1-given1empty.h
-[win32]
-        parsing: tests/cpp/expand/call-args-expect1-given1empty.h
+[1/5] __FB_WIN32__.__FB_64BIT__
+      tests/cpp/expand/call-args-expect1-given1empty.h
+[2/5] __FB_WIN32__.(not __FB_64BIT__)
+      tests/cpp/expand/call-args-expect1-given1empty.h
+[3/5] __FB_LINUX__.__FB_64BIT__
+      tests/cpp/expand/call-args-expect1-given1empty.h
+[4/5] __FB_LINUX__.(not __FB_64BIT__)
+      tests/cpp/expand/call-args-expect1-given1empty.h
+[5/5] __FB_DOS__
+      tests/cpp/expand/call-args-expect1-given1empty.h
 emitting: tests/cpp/expand/call-args-expect1-given1empty.bi (1 declaration)

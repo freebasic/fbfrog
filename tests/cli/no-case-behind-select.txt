@@ -1,0 +1,6 @@
+<command line>(1): expected -case after the -select but found '-define'
+    1: ./fbfrog tests/cli/no-case-behind-select.h -select -define foo -case a -e
+                                                          ^~~~~~~
+context as seen by fbfrog:
+    f "tests/cli/no-case-behind-select.h" -select -define foo -case a -endselect
+                                                  ^~~~~~~

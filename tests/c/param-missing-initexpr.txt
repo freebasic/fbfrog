@@ -1,5 +1,5 @@
-[dos]
-        parsing: tests/c/param-missing-initexpr.h
+[1/5] __FB_WIN32__.__FB_64BIT__
+      tests/c/param-missing-initexpr.h
 tests/c/param-missing-initexpr.h(2): expected an atomic expression but found ')'
     1: // @fail
     2: void f(int i =);

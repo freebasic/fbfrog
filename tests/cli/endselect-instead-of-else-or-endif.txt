@@ -1,0 +1,6 @@
+<command line>(1): expected -else or -endif but found '-endselect'
+    1: fbfrog tests/cli/endselect-instead-of-else-or-endif.h -ifdef A -endselect
+                                                                      ^~~~~~~~~~
+context as seen by fbfrog:
+     -endif "tests/cli/endselect-instead-of-else-or-endif.h" -ifdef A -endselect
+                                                                      ^~~~~~~~~~

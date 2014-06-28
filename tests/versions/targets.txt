@@ -1,7 +1,0 @@
-[dos]
-        parsing: tests/versions/targets.h
-[linux]
-        parsing: tests/versions/targets.h
-[win32]
-        parsing: tests/versions/targets.h
-emitting: tests/versions/targets.bi (12 declarations)

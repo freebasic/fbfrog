@@ -40,6 +40,13 @@ dim shared as zstring ptr astnodename(0 to ...) => _
 	@"scopeblock", _
 	_
 	_ '' Script helper nodes
+	@"declaredefines", _
+	@"declareversions", _
+	@"declarebool"  , _
+	@"select"       , _
+	@"case"         , _
+	@"caseelse"     , _
+	@"endselect"    , _
 	@"file"         , _
 	@"dir"          , _
 	@"noexpand"     , _
@@ -188,12 +195,6 @@ function astNewPPDEFINE( byval id as zstring ptr ) as ASTNODE ptr
 	function = n
 end function
 
-function astNewPPIF( byval expr as ASTNODE ptr ) as ASTNODE ptr
-	var n = astNew( ASTCLASS_PPIF )
-	n->expr = expr
-	function = n
-end function
-
 function astNewUOP _
 	( _
 		byval astclass as integer, _
@@ -257,23 +258,17 @@ function astCloneChildren( byval src as ASTNODE ptr ) as ASTNODE ptr
 end function
 
 function astGroupContains( byval group as ASTNODE ptr, byval lookfor as ASTNODE ptr ) as integer
-	assert( group->class = ASTCLASS_GROUP )
-
 	var i = group->head
 	while( i )
-
 		if( astIsEqual( i, lookfor ) ) then
 			return TRUE
 		end if
-
 		i = i->next
 	wend
-
 	function = FALSE
 end function
 
 function astGroupContainsAnyChildrenOf( byval l as ASTNODE ptr, byval r as ASTNODE ptr ) as integer
-	assert( l->class = ASTCLASS_GROUP )
 	var i = r->head
 	while( i )
 		if( astGroupContains( l, i ) ) then return TRUE
@@ -282,7 +277,6 @@ function astGroupContainsAnyChildrenOf( byval l as ASTNODE ptr, byval r as ASTNO
 end function
 
 function astGroupContainsAllChildrenOf( byval l as ASTNODE ptr, byval r as ASTNODE ptr ) as integer
-	assert( l->class = ASTCLASS_GROUP )
 	var i = r->head
 	while( i )
 		if( astGroupContains( l, i ) = FALSE ) then exit function
@@ -472,10 +466,10 @@ sub astCloneAppend( byval parent as ASTNODE ptr, byval n as ASTNODE ptr )
 end sub
 
 sub astCloneAppendChildren( byval d as ASTNODE ptr, byval s as ASTNODE ptr )
-	var child = s->head
-	while( child )
-		astCloneAppend( d, child )
-		child = child->next
+	var i = s->head
+	while( i )
+		astCloneAppend( d, i )
+		i = i->next
 	wend
 end sub
 
@@ -601,14 +595,10 @@ function astCloneNode( byval n as ASTNODE ptr ) as ASTNODE ptr
 	c->r           = astClone( n->r )
 
 	select case( n->class )
-	case ASTCLASS_CONSTI
-		c->vali = n->vali
-	case ASTCLASS_CONSTF
-		c->valf = n->valf
-	case ASTCLASS_TK
-		c->tk = n->tk
-	case ASTCLASS_PPDEFINE
-		c->paramcount = n->paramcount
+	case ASTCLASS_CONSTI   : c->vali = n->vali
+	case ASTCLASS_CONSTF   : c->valf = n->valf
+	case ASTCLASS_TK       : c->tk = n->tk
+	case ASTCLASS_PPDEFINE : c->paramcount = n->paramcount
 	end select
 
 	function = c
@@ -669,13 +659,6 @@ function astIsEqual _
 		end if
 	end if
 
-	if( (options and ASTEQ_IGNORETARGET) = 0 ) then
-		if( (a->attrib and ASTATTRIB__ALLTARGET) <> _
-		    (b->attrib and ASTATTRIB__ALLTARGET) ) then
-			exit function
-		end if
-	end if
-
 	if( (a->text <> NULL) <> (b->text <> NULL) ) then exit function
 	if( a->text ) then
 		var a_is_dummy = FALSE
@@ -725,6 +708,9 @@ function astIsEqual _
 		if( options and ASTEQ_IGNOREFIELDS ) then
 			return TRUE
 		end if
+
+	case ASTCLASS_VEROR, ASTCLASS_VERAND
+		return astGroupsContainEqualChildren( a, b )
 	end select
 
 	'' Children
@@ -803,26 +789,6 @@ function astDumpPrettyDecl( byval n as ASTNODE ptr ) as string
 	function = s
 end function
 
-private function astDumpPrettyTarget( byval v as ASTNODE ptr ) as string
-	select case( v->attrib and ASTATTRIB__ALLTARGET )
-	case ASTATTRIB_DOS   : function = "dos"
-	case ASTATTRIB_LINUX : function = "linux"
-	case ASTATTRIB_WIN32 : function = "win32"
-	case else            : assert( FALSE )
-	end select
-end function
-
-function astDumpPrettyVersion( byval v as ASTNODE ptr ) as string
-	select case( v->class )
-	case ASTCLASS_DUMMYVERSION
-		function = astDumpPrettyTarget( v )
-	case ASTCLASS_STRING
-		function = *v->text + "." + astDumpPrettyTarget( v )
-	case else
-		function = astDumpInline( v )
-	end select
-end function
-
 function astDumpOne( byval n as ASTNODE ptr ) as string
 	dim as string s
 
@@ -846,9 +812,6 @@ function astDumpOne( byval n as ASTNODE ptr ) as string
 	checkAttrib( HIDECALLCONV )
 	checkAttrib( HIDECASEALIAS )
 	checkAttrib( REPORTED )
-	checkAttrib( DOS )
-	checkAttrib( LINUX )
-	checkAttrib( WIN32 )
 	checkAttrib( NEEDRENAME )
 	checkAttrib( POISONED )
 	checkAttrib( DONTEMIT )

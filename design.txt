@@ -16,220 +16,346 @@ How about integrating C parsing into fbc one way or another, so we can just
 * Maintaining a full CPP and C/C++ parser as part of fbc or as a separate tool
   is more or less the same amount of work.
 
+o The fbfrog tool ...
 
-fbfrog design decisions
------------------------
+  * basically does these things:
+      1. Read in one or more APIs, which means:
+          * Preprocessing and parsing *.h input headers into an AST
+          * Modifying that AST to make it FB-friendly
+      2. Merging multiple APIs into one (if working with multiple APIs)
+      3. Emit the combined AST as FB code into a .bi file
 
-Using a custom C PP/parser instead of an existing one (e.g. libclang).
-- not really fully investigated yet what all existing ones can do
-- an existing parser would be less work and more complete, and have less bugs
-  than a custom parser
-+ dependency on external tool/library makes development/distribution/usage more
-  difficult
-+ fbfrog needs to see #defines, typically pre-existing C-to-AST parsers don't
-  preserve them
-+ fbfrog sometimes wants to allow conditional macro expansion (i.e. only expand
-  certain macros, not others), that's probably not possible with existing CPPs
+      Steps 1 and 3 basically make it a C compiler that emits FB code, albeit
+      incomplete (parsing of function bodies isn't supported [yet]).
 
-Using an AST instead of just "rearranging tokens" or doing text replacements
-+ Complex constructs (e.g. nested function pointer declarations, or expression
-  parsing and evaluation) require a recursive parser, and can only be
-  represented as a tree. This is much nicer to do with a real tree data
-  structure instead of a flat list of tokens.
-+ Makes high-level analyses so much easier, e.g. replacing identifiers of
-  certain symbols: only have to cycle through AST nodes, checking declaration
-  type and touch the common identifier field; as opposed to re-parsing tokens
-  everytime to determine symbol type, where to insert the new identifier, etc.
+      The use of an AST as opposed to just "rearranging tokens" (or doing text
+      replacements) as done by the first version of fbfrog seems absolutely
+      necessary, even though it loses lots of formatting information, in order
+      to support nested function pointer declarations or expressions etc. And
+      besides that, it makes high-level analyses so much easier, for example
+      replacing identifiers of certain symbols: All that's necessary is to cycle
+      through the AST nodes, checking declaration type and touch the common
+      identifier field; as opposed to re-parsing tokens everytime to determine
+      symbol type, where to insert the new identifier, etc.
 
-Not storing AST in "API files" in some intermediate format (which is not the
-final .bi), even though that could make later translations of the same API
-easier, by no longer requiring the original tarballs for which "API files" have
-once been generated.
-- Have to download/keep original headers/tarballs; "API files" on the other hand
-  could be stored in Git etc.
-+ Forces original headers to be re-interpreted everytime. This means they always
-  benefit from fbfrog fixes or preset changes (e.g. different pre-#defines).
-  "API files" are final though and thus would easily include hidden bugs. They'd
-  need to be regenerated to avoid that, and at that point the original headers
-  are needed anyways.
+  * works similar to a compiler: It takes one or more input header files and
+    generates one binding for them. The binding will cover the API that would
+    become available to a program #including those headers in the same order.
+    #includes are expanded if found but can also be excluded explicitly.
+    Separate headers that aren't intended to be #included together shouldn't be
+    passed to fbfrog together, but in separate invocations.
 
-Not re-importing existing FB binding in order to extend/update them.
-+ Old bindings are likely to contain bugs or simply not conform to latest
-  API/ABI requirements (e.g., 32bit FB headers use Integer in many places where
-  int was used in C, but this would break for 64bit)
-+ Need to re-parse the original headers in order for fbfrog/preset updates to
-  take effect.
+  * does not care about where input files come from - that's the user's
+    responsibility. Usually it requires downloading and extracting tarballs,
+    perhaps even running some build system. fbfrog coudn't possibly handle that
+    automatically. And it shouldn't become a portable shell either, but instead
+    focus on its job.
 
-fbfrog's file model
-* .h files given on the command line are "roots" which will be parsed into an
-  AST representing the API that would become available to a program #including
-  those headers.
-* parsing roots includes the expansion of any #includes, so that as many
-  #defines etc. as possible are visible to fbfrog's CPP. The -nomerge option can
-  be used to prevent the code they contain from being preserved in the binding.
-* 1 fbfrog invocation generates 1 binding, for exactly the API that'd be visible
-  to programs #including the roots passed to fbfrog, with the pre-#defines
-  passed to fbfrog, etc.
-* If multiple roots are given, they'll just be concatenated and treated as one
-  API, just like they'd be when #included into C code.
-* Thus it doesn't make sense to pass incompatible headers to fbfrog at the same
-  time.
-* Generating 1 binding usually means generating 1 .bi file, however fbfrog
-  allows even single bindings to be split (back) up into multiple .bi files if
-  that's desired.
-* Treating roots as separate incompatible APIs would allow for a -common option
-  which would automatically extract common code from the separate bindings and
-  create shared sub-headers. This is useless though: The -nomerge option is
-  already enough to preserve the original header structure (even if it requires
-  that fbfrog be invoked once for each API), and a -common code extraction
-  algorithm wouldn't offer advantages, but only potentially break the original
-  header structure, produce too many unwanted sub-headers, be too slow, etc.
-* It wouldn't even help the binding creation process if fbfrog could see multiple
-  separate APIs at once, because fbfrog already sees all code relevant to a
-  binding by expanding all #includes.
+  * does not support re-importing existing FB bindings in order to extend/update
+    them, as old bindings are likely to contain bugs or simply not conform to
+    latest API/ABI requirements (e.g. old 32bit-only FB headers use Integer in
+    place of C's int, but this breaks with 64bit Integer). Starting from the
+    original C headers everytime means benefiting from fbfrog updates such C
+    parser fixes. For the same reasons, fbfrog does not support making the
+    internal AST public, for example by storing it into "API files" in some
+    intermediate format (which is not the final .bi), even though that could
+    make later translations of the same API easier by no longer requiring the
+    original tarballs for which the "API files" have once been generated.
 
-"Tiny" CLI to control fbfrog behaviour, instead of a bigger-scale custom .fbfrog
-file format/language (as "presets" or scripts).
-+ Should use CLI for both small/big use cases, instead of having 2 things to do
-  the same thing.
-+ Support for @files still allows big "presets" to be saved in files.
-* Only makes sense when allowing only one "preset at a time, which is ok though.
-+ CLI forces simplification of "preset" commands/options because there can't be
-  much complexity (such as multiple levels of nested code blocks) on a command
-  line.
-- It's more difficult to specify complex #define bodies on the command line or
-  in general, in a single line (including inside @files). And care must be taken
-  with chars special to the shell or @file parser, so escaping may be needed.
 
-Just one "preset" per fbfrog invocation.
-+ Allows for the "tiny"/simple CLI
-+ Matches the idea that fbfrog works much like a compiler: It takes various
-  input files and generates a binding (one binding, not multiple ones).
+o Parsing multiple versions and merging them
 
-fbfrog is a single tool, not split up into separate tools: cpp, c2ast, ast2fb
-+ All-in-one program is easier to build & use
-+ Internals hidden, can easily be changed. With separate tools it'd be necessary
-  to start maintaining backwards compatibility etc.
-- Prevents manual adjustments to output of individual steps.
-+ Wanting to adjust output manually isn't good anyways, because it's too much
-  manual work.
-- Prevents easy testing of individual steps
+  fbfrog can parse multiple headers, or multiple versions of the same header,
+  and merge the resulting ASTs together into one binding. This mechanism is used
+  to parse target-specific versions of input headers and combine them into one
+  binding that supports all those targets, and similar to that, it can also be
+  used to combine the headers of multiple versions of a library into one
+  binding, or pretty much any headers.
 
-No GUI
-+ The old GUI was just a frontend for the CLI. Click together a list of input
-  files, check some check boxes, click "Go!". That's not a useful GUI...
-+ Anyone that wants to create bindings for FB but can't use the CLI can probably
-  not be trusted to do a good job anyways
-+ No serious ideas for a useful GUI.
-  * Compare C headers + FB binding side-by-side, live? Many headers map to 1
-    binding, difficult to visualize...
-  * Show fbfrog errors inline in the C code, allowing right-clicking to tell
-    fbfrog to ignore certain constructs, i.e. build up presets via mouse clicks?
-    Lots of work to make an editor like that...
+  The idea is that instead of looking for #ifs in the input headers and possibly
+  trying to preserve those, fbfrog preprocesses the input header files multiple
+  times, and then merges and (re-)inserts #ifs where needed.
 
-Not preserving white space (i.e. input C code's formatting) and commentary.
-+ Creating bindings, not translations. Declarations may be re-ordered.
+  Parsing an API means loading the input headers given for that API,
+  preprocessing them with the CPP options (-define etc.) given for that API,
+  parsing the C code into an AST and making that AST FB-friendly.
 
-Should show an error when encountering unknown constructs instead of emitting
-the unknown construct and a TODO note into a comment in the .bi output.
-+ Forces C parsing support to be improved. Any construct can be parsed, it just
-  needs to be implemented.
-- Need to support full GCC style C before having the problem go away, that's a
-  lot of work. For example inline functions etc. are likely too hard to
-  translate properly automatically.
-+ C parser is already good enough, unknown constructs are rare in comparison to
-  known ones.
-- Some constructs (e.g. #defines whose bodies aren't just expressions) cannot be
-  supported automatically, they always must be fixed up by the user.
-- Having a 90% ok result is better than no result at all. Remaining issues can
-  be fixed manually.
-+ User must specify proper command line options to fix/work around unknown
-  constructs. This means the fixup becomes part of the preset and can easily be
-  shared/repeated. Manually fixing unknown construct in the output .bi is not
-  acceptable: The user must search through all output .bi files, fix up the
-  constructs, and that every time the header is regenerated.
+  Merging multiple APIs together is done based on the longest-common-substring
+  algorithm (basically diff'ing). Declarations common to all APIs will appear
+  only once in the final binding, while declarations that don't exist in all
+  APIs, but only in a subset, are wrapped in #if blocks such that they only
+  appear as part of that subset of APIs.
 
-Similar to this: Not automatically/silently removing #defines whose bodies
-couldn't be parsed.
-+ Error message wouldn't be visible - no cause for exclusion shown = bad.
-- Symbols are renamed automatically too
+  APIs can be identified based on #define symbols that will be checked for with
+  #ifdef blocks (e.g. fbc pre-#defines such as __FB_WIN32__ or custom
+  conditional #defines), or a version symbol that's #defined to a certain
+  version number and will be tested via #if <symbol> = <version number>. The
+  -declare* command line options can be used to tell fbfrog to work with
+  multiple APIs. If none are given then fbfrog will just work with a single API.
 
-fbfrog should not worry about where input files come from (downloading and
-extracting tarballs etc.). Headers may need all kinds of shell commands to be
-extracted and prepared, perhaps even execution of a package-specific build
-system. fbfrog shoudn't become a portable shell, but instead focus on its job.
 
-It's good to have both -version and -target, without allowing any nesting except
--targets inside -versions.
-+ Allowing arbitrary -version nesting has proven difficult for AST merging
-  and #if generation code etc.
-+ It adds a nesting level which avoids duplicate code... it is nicer than
-  doing -version 1.win32 -version 1.linux etc. and that again for other
-  versions.
-+ target system definitely is the most common nesting within a single
-  version, and pretty much the only that matters for FB. Though there also
-  is the static vs DLL issue, encoding that into the -version has the same
-  problem in the end.
-+ -target could nicely be used to auto-add proper pre-#defines, and it's
-  very nice for generating #ifdef __FB_WIN32__ etc. checks. Could also use
-  -win32/-linux options to behave as if there were -define _WIN32 etc.
-  pre-#defines at that position, but then -versiondefine __FB_WIN32__ etc.
-  would have to be given manually.
-+ -version 1.win32 etc. can still be used, if wanted, to specify all the
-  pre-#defines manually.
-+ But in general, fbfrog having basic compiler pre-#defines built-in is
-  very useful. Otherwise every user would have to worry about them...
+o Telling fbfrog about multiple APIs
 
-All targets should be enabled by default.
-+ FB and thus the bindings in general are/should be portable. Even though a
-  binding may only be useful on one target, there's no point in enforcing that
-  via #if checks.
-+ It's probably rare that a C header really won't compile for a certain target,
-  e.g. due to an #error, but if that ever is a problem, a -disabletarget option
-  could be added to fbfrog.
-+ Improved usability: -target can still be used to add -target options, but it
-  won't specify which targets are enabled or disabled anymore. Enabling all
-  targets while having target-specific options for some no longer requires
-  passing a -target option for each target, which would become more and more
-  annoying as the number of targets increases (dos/linux/win32 + missing ones,
-  32bit/64bit, x86/ARM + missing ones...)
+  There are 3 types of command line options:
+      * global, e.g. -v or -o
+      * API-specific, e.g. input headers or -define
+      * Script controls, e.g. -declare* or -ifdef
 
-Typedef vs struct/union/enum tag symbols handling
-* FB doesn't have separate type/tag namespaces, so this always must be fixed.
-* Better automatically than manually, except for polishing.
-* <struct UDT> should just become <UDT> where possible
-* It's not possible if there already is an <UDT> typedef
-* If it's a redundant typedef though (<typedef struct UDT UDT;>) then it can
-  just be removed.
-* Otherwise, if <UDT> and <struct UDT> represent different things, one must be
-  renamed, and all references to it (but not to the other) must be updated.
-* Such conflicts are probably not a common problem
-* Symbol name conflict check can handle this too, provided that the C parser
-  preserves the information on whether a subtype was <UDT> or <struct UDT>.
-* That's better than aborting with an error or not detecting the issue at all.
-* The user can still specify -rename command line options if needed.
+  After the global options have been filtered out, fbfrog treats the rest of
+  options much like a script that controls its behaviour. Each -declare* option
+  creates new APIs on the current code path and causes new code paths to be
+  branched of (1 per declared API). All API-specific options found on an API's
+  code path will be used for that API. -ifdef and -select blocks can be used to
+  conditionally include options in the code path of certain APIs only.
 
-No expression folding/constant evaluation for initializers/#define expressions.
-+ Never really needed, rarely ever useful - it's purely a coding style thing.
-  But if an expression was written a certain way in a C header, then there's
-  probably a reason for it, for example to make its value easier to understand.
-  Folding would destroy that.
-+ Avoids lots of ugly code
-- Converting C expressions to FB may become more difficult due to the different
-  operator/data type semantics. Having fbfrog calculate the expressions using
-  the C semantics would avoid the issue.
-+ But that problem exists for non-constant expressions aswell anyways, so must
-  be solved differently.
+  For example:
+    -define A
+    -declarebool FOO
+    -define B
+    -ifdef FOO
+        -define C
+    -else
+        -define D
+    -endif
+  There are 2 APIs: defined(FOO) and (not defined(FOO)).
+  #defines A and B will be used by the CPP when preprocessing all APIs.
+  #define C will only be used for defined(FOO), while #define D will only be
+  used for (not defined(FOO)).
 
-No -undef command line option to allow adding pre-#undefs. The CPP already
-treats all unknown symbols as undefined. The only purpose of -undef would be to
-suppress the "assuming undefined" warnings, but specifying an -undef for all
-known-to-be-undefined symbols seems excessive and unmaintainable, i.e. not
-really useful in practice.
+  Example with 2 -declare* (they multiply):
+    -define A
+    -declarebool FOO1
+    -declarebool FOO2
+    -define B
+    -ifdef FOO2
+        -define C
+    -else
+        -define D
+    -endif
+  There are 4 APIs:
+      1.      defined(FOO1)  and      defined(FOO2)
+      2.      defined(FOO1)  and (not defined(FOO2))
+      3. (not defined(FOO1)) and      defined(FOO2)
+      4. (not defined(FOO1)) and (not defined(FOO2))
+  A and B are used for all, C is used for APIs where FOO2 is defined (1 and 3);
+  D is used for APIs where FOO2 is not defined (2 and 4).
 
-#undefs and duplicate/conflicting #defines aren't preserved.
-1. #undefs and overridden/undef'ed #defines aren't part of the public API, but
-   more like internal helpers used by headers.
-2. The CPP does macro expansion etc. anyways, so the internal helper macros
-   aren't needed.
-so preserving them is not useful.
+  Example with -declare* nested in a conditional block:
+    -declarebool FOO1
+    -ifdef FOO1
+        -declarebool FOO2
+    -endif
+  There are 3 APIs:
+      1.      defined(FOO1)  and      defined(FOO2)
+      2.      defined(FOO1)  and (not defined(FOO2))
+      3. (not defined(FOO1))
+  FOO2 multiplied with FOO1 only on the defined(FOO1) code path, but not on the
+  (not defined(FOO1)) code path.
+
+  Since these API scripts can easily become quite big, fbfrog supports reading
+  options from files via the @filename syntax. This way it's possible to use the
+  same command line options for small and big use cases.
+
+  fbfrog comes with a builtin.fbfrog file which contains common options which
+  will be needed for most bindings. It is processed even before the command line
+  options. Specifically, it contains the -declare* and -define options to
+  support the DOS/Linux/Win32 x86/x86_64 targets. Having this built-in is good
+  because it's needed very often and then it will just work out-of-the-box and
+  nobody has to worry about it much.
+
+
+o Why -declare* and -ifdef options etc.?
+
+  The reason for this fairly complex -declare* and -ifdef script stuff is that
+  it's a good way to tell fbfrog about arbitrary condition trees for multiple
+  APIs, without having to duplicate command line options.
+
+  It would be easy enough to support just DOS/Linux/Win32 as 3 separate APIs:
+      1. condition = __FB_DOS__
+      2. condition = __FB_LINUX__
+      3. condition = __FB_WIN32__
+  and on the command line we could do something like this:
+      -target dos
+          -define __DJGPP__
+      -target linux
+          -define __linux__
+      -target win32
+          -define _WIN32
+          -define __MINGW32__
+  but then how to add 64bit support to that? Now we have 5 separate APIs:
+      1. condition = __FB_DOS__
+      2. condition = __FB_LINUX__ and (not __FB_64BIT__)
+      3. condition = __FB_LINUX__ and __FB_64BIT__
+      4. condition = __FB_WIN32__ and (not __FB_64BIT__)
+      5. condition = __FB_WIN32__ and __FB_64BIT__
+  on the command line it would become something like:
+      -target dos
+          -define i386
+          -define __DJGPP__
+      -target linux32
+          -define i386
+          -define __linux__
+      -target linux64
+          -define __x86_64__
+          -define __linux__
+      -target win32
+          -define i386
+          -define _WIN32
+          -define __MINGW32__
+      -target win64
+          -define __x86_64__
+          -define _WIN32
+          -define __MINGW32__
+          -define _WIN64
+  i.e. there'd be lots of duplication (and in reality there are many more
+  target-specific pre-#defines than this, just check builtin.fbfrog). And even
+  if we'd add -os and -arch options to allow handling this better, that would
+  only work target-related conditions, but not custom ones such as version
+  numbers.
+
+  With the -declare* and -ifdef options on the other hand it's easily possible
+  to generate arbitrary API conditions such as:
+       ("+" means "defined", "-" means "not defined"):
+       1. VERSION=1 +__FB_DOS__                             (library v1, DOS)
+       2. VERSION=1 +__FB_LINUX__ -__FB_64BIT__             (library v1, x86 Linux)
+       3. VERSION=1 +__FB_LINUX__ +__FB_64BIT__             (library v1, x86_64 Linux)
+       4. VERSION=1 +__FB_WIN32__ -__FB_64BIT__ -UNICODE    (library v1, Win32 without UNICODE)
+       5. VERSION=1 +__FB_WIN32__ -__FB_64BIT__ +UNICODE    (library v1, Win32 with UNICODE)
+       6. VERSION=1 +__FB_WIN32__ +__FB_64BIT__ -UNICODE    (library v1, Win64 without UNICODE)
+       7. VERSION=1 +__FB_WIN32__ +__FB_64BIT__ +UNICODE    (library v1, Win64 with UNICODE)
+       8. VERSION=2 +__FB_DOS__                             (library v2, DOS)
+       9. VERSION=2 +__FB_LINUX__ -__FB_64BIT__             (library v2, x86 Linux)
+      10. VERSION=2 +__FB_LINUX__ +__FB_64BIT__             (library v2, x86_64 Linux)
+      11. VERSION=2 +__FB_WIN32__ -__FB_64BIT__ -UNICODE    (library v2, Win32 without UNICODE)
+      12. VERSION=2 +__FB_WIN32__ -__FB_64BIT__ +UNICODE    (library v2, Win32 with UNICODE)
+      13. VERSION=2 +__FB_WIN32__ +__FB_64BIT__ -UNICODE    (library v2, Win64 without UNICODE)
+      14. VERSION=2 +__FB_WIN32__ +__FB_64BIT__ +UNICODE    (library v2, Win64 with UNICODE)
+  where the resulting binding would support DOS/Linux/Win32, x86 and x86_64,
+  aswell as library version selection based on whether VERSION was #defined to
+  1 or 2, and a conditional UNICODE #define for Windows targets. There are other
+  conditional #defines that may be interesting, for example:
+      * SHAREDLIB/DLLBUILD to select whether symbols are exported from a DLL or
+        whether a static library should be assumed,
+      * DEPRECATED: some #define to select whether deprecated parts of a header
+        should be enabled or not.
+      etc.
+
+  Of course, the more conditions there are, the more total APIs there will be.
+  14 is already quite a lot, since it means having to parse the input headers
+  14 times.
+
+
+o C pre-processor and parser
+
+  fbfrog (currently) uses a custom hand-written C pre-processor and parser,
+  instead of an existing one (e.g. libclang). An existing parser would surely be
+  less work and more complete, and have less bugs than a custom parser, but
+  fbfrog wants to do things that existing preprocessors/parsers don't support:
+    * preserve #defines and parse their bodies
+    * selective/optional expansion of macros and #includes
+    * fully configurable pre-#defines, no hard-coded target/compiler-specifics
+    * modify the AST to make it FB-friendly, insert FB-specific constructs
+  Besides that, the dependency on an external tool/library would make
+  development/distribution more difficult. And even when using an external C
+  parser, fbfrog would probably have to convert the external AST into its own
+  AST, so that it's able to do the transformations to make it FB-friendly.
+
+  The CPP ...
+  * Tracks #defines/#undefs and does macro expansion
+  * Evaluates #if blocks (always), based on an #if expression parser
+  * Expands #includes (always, so it gets to see #defines/#undefs, but the
+    #included code can be removed again before it's given to the C parser)
+  * Allows for pre-#defines etc. to be specified
+  * Preserves #define statements
+
+  No -undef command line option to allow adding pre-#undefs. The CPP already
+  treats all unknown symbols as undefined. The only purpose of -undef would be
+  to suppress the "assuming undefined" warnings, but specifying an -undef for
+  all known-to-be-undefined symbols seems excessive and unmaintainable, i.e. not
+  really useful in practice.
+
+  #undefs and duplicate/conflicting #defines aren't preserved.
+  1. #undefs and overridden/undef'ed #defines aren't part of the public API, but
+     more like internal helpers used by headers.
+  2. The CPP does macro expansion etc. anyways, so the internal helper macros
+     aren't needed.
+  so preserving them is not useful.
+
+  The C parser has ...
+  * A recursive declaration parser that can handle multiple declarations in the
+    same statement, nested declarations, including function pointers returning
+    function pointers etc.
+  * An expression parser: variable/parameter initializers, enum constants,
+    #define bodies.
+  * A data type parser: base types in declarations including struct/union/enum
+    with or without body, type casts, sizeof().
+
+  Currently, fbfrog will show an error when encountering unknown constructs
+  instead of silently dropping it, or emitting it amongst FB code into the .bi
+  file.
+    + This forces C parsing support to be improved. Any construct can be parsed,
+      it just needs to be implemented.
+    - Need to support full GCC style C before having the problem go away, that's
+      a lot of work. And inline functions can probably never be supported...
+    + C parser is already good enough, unknown constructs are rare in comparison
+      to known ones.
+    - #defines whose bodies aren't just expressions can never be supported
+      automatically, they always must be fixed up by the user.
+    - Having a 90% ok result is better than no result at all. Remaining issues
+      can be fixed manually.
+    + User must specify proper command line options to fix/work around unknown
+      constructs. This means the fixup becomes part of the preset and can easily
+      be shared/repeated. Manually fixing unknown construct in the output .bi is
+      not acceptable: The user must search through all output .bi files, fix up
+      the constructs, and that every time the header is regenerated.
+    - Some small editing after the .bi was generated is likely always necessary
+      though...
+
+
+o Making things FB-friendly
+
+  * Data types: C's built-in data types (using the sizes typically used by GCC
+    for x86 and x86_64) and also typedefs such as size_t or int32_t are directly
+    converted to corresponding FB data types. <signed|unsigned char> is
+    translated to BYTE|UBYTE, while plain <char> is assumed to mean ZSTRING.
+
+  * Array parameters are turned into pointers.
+
+  * Typedefs vs struct/union/enum tags: FB doesn't have separate type/tag
+    namespaces, so if there is a typedef FOO and also a tag FOO, we may need to
+    do some fix up to make that FB-friendly.
+
+    In general, fbfrog will just turn <struct UDT> into <UDT>, as long as there
+    is no <UDT> typedef yet. If there already is a <UDT> typedef, but it's
+    redundant (<typedef struct UDT UDT;>), then that typedef declaration will
+    just be removed.
+
+    Otherwise, if <UDT> and <struct UDT> represent different things, one must be
+    renamed, and all references to it (but not to the other) must be updated.
+    This is probably pretty rare in practice though. fbfrog's symbol name
+    conflict checking simply handles this too, relying on the C parser to have
+    preserved the information on whether a subtype was <UDT> or <struct UDT>.
+
+  * Anonymous structs are given the name of the (first) typedef that uses
+    them, and the typedef is removed. If the anonymous struct is never used in
+    a typedef then it will be given an auto-generated name.
+
+  * #defines nested inside struct bodies are moved to the toplevel. Even though
+    FB doesn't scope #defines inside UDTs (only inside scope blocks, but not
+    namespaces), this is better, because it represents the original header's
+    intentions more closely. It becomes more important when converting #defines
+    to constant declarations, because FB does scope those inside UDTs.
+
+  * #defines are turned into constants automatically, if the macro body is
+    just a simple constant expression (can be disabled with -noconstants).
+
+  * Symbols whose identifiers conflict with an FB keyword or each-other (e.g.
+    due to FB's case insensitivity) will be automatically renamed. fbfrog will
+    append _ underscores to the less important symbol. For example, renaming
+    #defines is preferred over renaming procedures. For renamed
+    variables/procedures, ALIAS "<original-name>" will be emitted.
+
+  * Extern blocks are added around the binding's declarations, for the calling
+    convention that the binding uses most often. Calling conventions are only
+    emitted on procedures if they're not covered by the Extern block (happens if
+    a binding's procedures use multiple calling conventions).

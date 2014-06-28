@@ -1,0 +1,6 @@
+<command line>(1): expected <version number> argument but found '-endselect'
+    1: ./fbfrog tests/cli/select-version-number.h -select VER -case -endselect
+                                                                    ^~~~~~~~~~
+context as seen by fbfrog:
+    X86_ -endif "tests/cli/select-version-number.h" -select VER -case -endselect
+                                                                      ^~~~~~~~~~

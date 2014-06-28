@@ -1,0 +1,6 @@
+<command line>(1): -unchecked without preceding -declaredefines
+    1: ./fbfrog tests/cli/unchecked-standalone.h -unchecked
+                                                 ^~~~~~~~~~
+context as seen by fbfrog:
+    e __X86__ -define _X86_ -endif "tests/cli/unchecked-standalone.h" -unchecked
+                                                                      ^~~~~~~~~~

@@ -1,0 +1,6 @@
+<command line>(1): -endif without -ifdef
+    1: ./fbfrog tests/cli/endif-without-ifdef.h -endif
+                                                ^~~~~~
+context as seen by fbfrog:
+    define __X86__ -define _X86_ -endif "tests/cli/endif-without-ifdef.h" -endif
+                                                                          ^~~~~~

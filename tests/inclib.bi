@@ -1,16 +1,18 @@
-#ifndef __VERSION__
-	#define __VERSION__ "1"
+#ifndef VER
+	#define VER 2
 #endif
 
-#if (__VERSION__ <> "1") and (__VERSION__ <> "2")
-	#error "'__VERSION__' is #defined to an unsupported value; expected one of: ""1"", ""2"""
+#if VER = 1
+#elseif VER = 2
+#else
+	#error "'VER' is #defined to an unsupported value; expected one of: 1, 2"
 #endif
 
 #pragma once
 
 #inclib "main"
 
-#if __VERSION__ = "1"
+#if VER = 1
 	#inclib "cool1"
 #else
 	#inclib "cool-2.0"

@@ -1,5 +1,5 @@
-[dos]
-        parsing: tests/cpp/unknown-pragma.h
+[1/5] __FB_WIN32__.__FB_64BIT__
+      tests/cpp/unknown-pragma.h
 tests/cpp/unknown-pragma.h(2): unknown #pragma
     1: // @fail
     2: #pragma foo

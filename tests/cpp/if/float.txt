@@ -1,5 +1,5 @@
-[dos]
-        parsing: tests/cpp/if/float.h
+[1/5] __FB_WIN32__.__FB_64BIT__
+      tests/cpp/if/float.h
 tests/cpp/if/float.h(3): couldn't evaluate #if condition
     1: // @fail
     2: // CPP doesn't support floating point literals in #if expressions

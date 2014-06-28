@@ -1,0 +1,21 @@
+[ 1/10] __FB_WIN32__.__FB_64BIT__.VER=1
+        tests/merging/nested-named-structs-as-named-fields.h
+[ 2/10] __FB_WIN32__.__FB_64BIT__.VER=2
+        tests/merging/nested-named-structs-as-named-fields.h
+[ 3/10] __FB_WIN32__.(not __FB_64BIT__).VER=1
+        tests/merging/nested-named-structs-as-named-fields.h
+[ 4/10] __FB_WIN32__.(not __FB_64BIT__).VER=2
+        tests/merging/nested-named-structs-as-named-fields.h
+[ 5/10] __FB_LINUX__.__FB_64BIT__.VER=1
+        tests/merging/nested-named-structs-as-named-fields.h
+[ 6/10] __FB_LINUX__.__FB_64BIT__.VER=2
+        tests/merging/nested-named-structs-as-named-fields.h
+[ 7/10] __FB_LINUX__.(not __FB_64BIT__).VER=1
+        tests/merging/nested-named-structs-as-named-fields.h
+[ 8/10] __FB_LINUX__.(not __FB_64BIT__).VER=2
+        tests/merging/nested-named-structs-as-named-fields.h
+[ 9/10] __FB_DOS__.VER=1
+        tests/merging/nested-named-structs-as-named-fields.h
+[10/10] __FB_DOS__.VER=2
+        tests/merging/nested-named-structs-as-named-fields.h
+emitting: tests/merging/nested-named-structs-as-named-fields.bi (5 declarations)

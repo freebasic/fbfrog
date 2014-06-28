@@ -1,0 +1,369 @@
+[  1/184] __FB_WIN32__.__FB_64BIT__.VER=1.UNICODE.DLL
+          tests/versions/various-nesting.h
+[  2/184] __FB_WIN32__.__FB_64BIT__.VER=1.UNICODE.(not DLL)
+          tests/versions/various-nesting.h
+[  3/184] __FB_WIN32__.__FB_64BIT__.VER=1.(not UNICODE).DLL
+          tests/versions/various-nesting.h
+[  4/184] __FB_WIN32__.__FB_64BIT__.VER=1.(not UNICODE).(not DLL)
+          tests/versions/various-nesting.h
+[  5/184] __FB_WIN32__.__FB_64BIT__.VER=2.UNICODE.DLL
+          tests/versions/various-nesting.h
+[  6/184] __FB_WIN32__.__FB_64BIT__.VER=2.UNICODE.(not DLL)
+          tests/versions/various-nesting.h
+[  7/184] __FB_WIN32__.__FB_64BIT__.VER=2.(not UNICODE).DLL
+          tests/versions/various-nesting.h
+[  8/184] __FB_WIN32__.__FB_64BIT__.VER=2.(not UNICODE).(not DLL)
+          tests/versions/various-nesting.h
+[  9/184] __FB_WIN32__.__FB_64BIT__.VER=3.DEPRECATED_V3.UNICODE.DLL
+          tests/versions/various-nesting.h
+[ 10/184] __FB_WIN32__.__FB_64BIT__.VER=3.DEPRECATED_V3.UNICODE.(not DLL)
+          tests/versions/various-nesting.h
+[ 11/184] __FB_WIN32__.__FB_64BIT__.VER=3.DEPRECATED_V3.(not UNICODE).DLL
+          tests/versions/various-nesting.h
+[ 12/184] __FB_WIN32__.__FB_64BIT__.VER=3.DEPRECATED_V3.(not UNICODE).(not DLL)
+          tests/versions/various-nesting.h
+[ 13/184] __FB_WIN32__.__FB_64BIT__.VER=3.(not DEPRECATED_V3).UNICODE.DLL
+          tests/versions/various-nesting.h
+[ 14/184] __FB_WIN32__.__FB_64BIT__.VER=3.(not DEPRECATED_V3).UNICODE.(not DLL)
+          tests/versions/various-nesting.h
+[ 15/184] __FB_WIN32__.__FB_64BIT__.VER=3.(not DEPRECATED_V3).(not UNICODE).DLL
+          tests/versions/various-nesting.h
+[ 16/184] __FB_WIN32__.__FB_64BIT__.VER=3.(not DEPRECATED_V3).(not UNICODE).(not DLL)
+          tests/versions/various-nesting.h
+[ 17/184] __FB_WIN32__.__FB_64BIT__.VER=4.DEPRECATED_V3.UNICODE.DLL
+          tests/versions/various-nesting.h
+[ 18/184] __FB_WIN32__.__FB_64BIT__.VER=4.DEPRECATED_V3.UNICODE.(not DLL)
+          tests/versions/various-nesting.h
+[ 19/184] __FB_WIN32__.__FB_64BIT__.VER=4.DEPRECATED_V3.(not UNICODE).DLL
+          tests/versions/various-nesting.h
+[ 20/184] __FB_WIN32__.__FB_64BIT__.VER=4.DEPRECATED_V3.(not UNICODE).(not DLL)
+          tests/versions/various-nesting.h
+[ 21/184] __FB_WIN32__.__FB_64BIT__.VER=4.(not DEPRECATED_V3).UNICODE.DLL
+          tests/versions/various-nesting.h
+[ 22/184] __FB_WIN32__.__FB_64BIT__.VER=4.(not DEPRECATED_V3).UNICODE.(not DLL)
+          tests/versions/various-nesting.h
+[ 23/184] __FB_WIN32__.__FB_64BIT__.VER=4.(not DEPRECATED_V3).(not UNICODE).DLL
+          tests/versions/various-nesting.h
+[ 24/184] __FB_WIN32__.__FB_64BIT__.VER=4.(not DEPRECATED_V3).(not UNICODE).(not DLL)
+          tests/versions/various-nesting.h
+[ 25/184] __FB_WIN32__.__FB_64BIT__.VER=5.DEPRECATED_V3.DEPRECATED_V5.UNICODE.DLL
+          tests/versions/various-nesting.h
+[ 26/184] __FB_WIN32__.__FB_64BIT__.VER=5.DEPRECATED_V3.DEPRECATED_V5.UNICODE.(not DLL)
+          tests/versions/various-nesting.h
+[ 27/184] __FB_WIN32__.__FB_64BIT__.VER=5.DEPRECATED_V3.DEPRECATED_V5.(not UNICODE).DLL
+          tests/versions/various-nesting.h
+[ 28/184] __FB_WIN32__.__FB_64BIT__.VER=5.DEPRECATED_V3.DEPRECATED_V5.(not UNICODE).(not DLL)
+          tests/versions/various-nesting.h
+[ 29/184] __FB_WIN32__.__FB_64BIT__.VER=5.DEPRECATED_V3.(not DEPRECATED_V5).UNICODE.DLL
+          tests/versions/various-nesting.h
+[ 30/184] __FB_WIN32__.__FB_64BIT__.VER=5.DEPRECATED_V3.(not DEPRECATED_V5).UNICODE.(not DLL)
+          tests/versions/various-nesting.h
+[ 31/184] __FB_WIN32__.__FB_64BIT__.VER=5.DEPRECATED_V3.(not DEPRECATED_V5).(not UNICODE).DLL
+          tests/versions/various-nesting.h
+[ 32/184] __FB_WIN32__.__FB_64BIT__.VER=5.DEPRECATED_V3.(not DEPRECATED_V5).(not UNICODE).(not DLL)
+          tests/versions/various-nesting.h
+[ 33/184] __FB_WIN32__.__FB_64BIT__.VER=5.(not DEPRECATED_V3).DEPRECATED_V5.UNICODE.DLL
+          tests/versions/various-nesting.h
+[ 34/184] __FB_WIN32__.__FB_64BIT__.VER=5.(not DEPRECATED_V3).DEPRECATED_V5.UNICODE.(not DLL)
+          tests/versions/various-nesting.h
+[ 35/184] __FB_WIN32__.__FB_64BIT__.VER=5.(not DEPRECATED_V3).DEPRECATED_V5.(not UNICODE).DLL
+          tests/versions/various-nesting.h
+[ 36/184] __FB_WIN32__.__FB_64BIT__.VER=5.(not DEPRECATED_V3).DEPRECATED_V5.(not UNICODE).(not DLL)
+          tests/versions/various-nesting.h
+[ 37/184] __FB_WIN32__.__FB_64BIT__.VER=5.(not DEPRECATED_V3).(not DEPRECATED_V5).UNICODE.DLL
+          tests/versions/various-nesting.h
+[ 38/184] __FB_WIN32__.__FB_64BIT__.VER=5.(not DEPRECATED_V3).(not DEPRECATED_V5).UNICODE.(not DLL)
+          tests/versions/various-nesting.h
+[ 39/184] __FB_WIN32__.__FB_64BIT__.VER=5.(not DEPRECATED_V3).(not DEPRECATED_V5).(not UNICODE).DLL
+          tests/versions/various-nesting.h
+[ 40/184] __FB_WIN32__.__FB_64BIT__.VER=5.(not DEPRECATED_V3).(not DEPRECATED_V5).(not UNICODE).(not DLL)
+          tests/versions/various-nesting.h
+[ 41/184] __FB_WIN32__.(not __FB_64BIT__).VER=1.UNICODE.DLL
+          tests/versions/various-nesting.h
+[ 42/184] __FB_WIN32__.(not __FB_64BIT__).VER=1.UNICODE.(not DLL)
+          tests/versions/various-nesting.h
+[ 43/184] __FB_WIN32__.(not __FB_64BIT__).VER=1.(not UNICODE).DLL
+          tests/versions/various-nesting.h
+[ 44/184] __FB_WIN32__.(not __FB_64BIT__).VER=1.(not UNICODE).(not DLL)
+          tests/versions/various-nesting.h
+[ 45/184] __FB_WIN32__.(not __FB_64BIT__).VER=2.UNICODE.DLL
+          tests/versions/various-nesting.h
+[ 46/184] __FB_WIN32__.(not __FB_64BIT__).VER=2.UNICODE.(not DLL)
+          tests/versions/various-nesting.h
+[ 47/184] __FB_WIN32__.(not __FB_64BIT__).VER=2.(not UNICODE).DLL
+          tests/versions/various-nesting.h
+[ 48/184] __FB_WIN32__.(not __FB_64BIT__).VER=2.(not UNICODE).(not DLL)
+          tests/versions/various-nesting.h
+[ 49/184] __FB_WIN32__.(not __FB_64BIT__).VER=3.DEPRECATED_V3.UNICODE.DLL
+          tests/versions/various-nesting.h
+[ 50/184] __FB_WIN32__.(not __FB_64BIT__).VER=3.DEPRECATED_V3.UNICODE.(not DLL)
+          tests/versions/various-nesting.h
+[ 51/184] __FB_WIN32__.(not __FB_64BIT__).VER=3.DEPRECATED_V3.(not UNICODE).DLL
+          tests/versions/various-nesting.h
+[ 52/184] __FB_WIN32__.(not __FB_64BIT__).VER=3.DEPRECATED_V3.(not UNICODE).(not DLL)
+          tests/versions/various-nesting.h
+[ 53/184] __FB_WIN32__.(not __FB_64BIT__).VER=3.(not DEPRECATED_V3).UNICODE.DLL
+          tests/versions/various-nesting.h
+[ 54/184] __FB_WIN32__.(not __FB_64BIT__).VER=3.(not DEPRECATED_V3).UNICODE.(not DLL)
+          tests/versions/various-nesting.h
+[ 55/184] __FB_WIN32__.(not __FB_64BIT__).VER=3.(not DEPRECATED_V3).(not UNICODE).DLL
+          tests/versions/various-nesting.h
+[ 56/184] __FB_WIN32__.(not __FB_64BIT__).VER=3.(not DEPRECATED_V3).(not UNICODE).(not DLL)
+          tests/versions/various-nesting.h
+[ 57/184] __FB_WIN32__.(not __FB_64BIT__).VER=4.DEPRECATED_V3.UNICODE.DLL
+          tests/versions/various-nesting.h
+[ 58/184] __FB_WIN32__.(not __FB_64BIT__).VER=4.DEPRECATED_V3.UNICODE.(not DLL)
+          tests/versions/various-nesting.h
+[ 59/184] __FB_WIN32__.(not __FB_64BIT__).VER=4.DEPRECATED_V3.(not UNICODE).DLL
+          tests/versions/various-nesting.h
+[ 60/184] __FB_WIN32__.(not __FB_64BIT__).VER=4.DEPRECATED_V3.(not UNICODE).(not DLL)
+          tests/versions/various-nesting.h
+[ 61/184] __FB_WIN32__.(not __FB_64BIT__).VER=4.(not DEPRECATED_V3).UNICODE.DLL
+          tests/versions/various-nesting.h
+[ 62/184] __FB_WIN32__.(not __FB_64BIT__).VER=4.(not DEPRECATED_V3).UNICODE.(not DLL)
+          tests/versions/various-nesting.h
+[ 63/184] __FB_WIN32__.(not __FB_64BIT__).VER=4.(not DEPRECATED_V3).(not UNICODE).DLL
+          tests/versions/various-nesting.h
+[ 64/184] __FB_WIN32__.(not __FB_64BIT__).VER=4.(not DEPRECATED_V3).(not UNICODE).(not DLL)
+          tests/versions/various-nesting.h
+[ 65/184] __FB_WIN32__.(not __FB_64BIT__).VER=5.DEPRECATED_V3.DEPRECATED_V5.UNICODE.DLL
+          tests/versions/various-nesting.h
+[ 66/184] __FB_WIN32__.(not __FB_64BIT__).VER=5.DEPRECATED_V3.DEPRECATED_V5.UNICODE.(not DLL)
+          tests/versions/various-nesting.h
+[ 67/184] __FB_WIN32__.(not __FB_64BIT__).VER=5.DEPRECATED_V3.DEPRECATED_V5.(not UNICODE).DLL
+          tests/versions/various-nesting.h
+[ 68/184] __FB_WIN32__.(not __FB_64BIT__).VER=5.DEPRECATED_V3.DEPRECATED_V5.(not UNICODE).(not DLL)
+          tests/versions/various-nesting.h
+[ 69/184] __FB_WIN32__.(not __FB_64BIT__).VER=5.DEPRECATED_V3.(not DEPRECATED_V5).UNICODE.DLL
+          tests/versions/various-nesting.h
+[ 70/184] __FB_WIN32__.(not __FB_64BIT__).VER=5.DEPRECATED_V3.(not DEPRECATED_V5).UNICODE.(not DLL)
+          tests/versions/various-nesting.h
+[ 71/184] __FB_WIN32__.(not __FB_64BIT__).VER=5.DEPRECATED_V3.(not DEPRECATED_V5).(not UNICODE).DLL
+          tests/versions/various-nesting.h
+[ 72/184] __FB_WIN32__.(not __FB_64BIT__).VER=5.DEPRECATED_V3.(not DEPRECATED_V5).(not UNICODE).(not DLL)
+          tests/versions/various-nesting.h
+[ 73/184] __FB_WIN32__.(not __FB_64BIT__).VER=5.(not DEPRECATED_V3).DEPRECATED_V5.UNICODE.DLL
+          tests/versions/various-nesting.h
+[ 74/184] __FB_WIN32__.(not __FB_64BIT__).VER=5.(not DEPRECATED_V3).DEPRECATED_V5.UNICODE.(not DLL)
+          tests/versions/various-nesting.h
+[ 75/184] __FB_WIN32__.(not __FB_64BIT__).VER=5.(not DEPRECATED_V3).DEPRECATED_V5.(not UNICODE).DLL
+          tests/versions/various-nesting.h
+[ 76/184] __FB_WIN32__.(not __FB_64BIT__).VER=5.(not DEPRECATED_V3).DEPRECATED_V5.(not UNICODE).(not DLL)
+          tests/versions/various-nesting.h
+[ 77/184] __FB_WIN32__.(not __FB_64BIT__).VER=5.(not DEPRECATED_V3).(not DEPRECATED_V5).UNICODE.DLL
+          tests/versions/various-nesting.h
+[ 78/184] __FB_WIN32__.(not __FB_64BIT__).VER=5.(not DEPRECATED_V3).(not DEPRECATED_V5).UNICODE.(not DLL)
+          tests/versions/various-nesting.h
+[ 79/184] __FB_WIN32__.(not __FB_64BIT__).VER=5.(not DEPRECATED_V3).(not DEPRECATED_V5).(not UNICODE).DLL
+          tests/versions/various-nesting.h
+[ 80/184] __FB_WIN32__.(not __FB_64BIT__).VER=5.(not DEPRECATED_V3).(not DEPRECATED_V5).(not UNICODE).(not DLL)
+          tests/versions/various-nesting.h
+[ 81/184] __FB_LINUX__.__FB_64BIT__.VER=1.FOO1
+          tests/versions/various-nesting.h
+[ 82/184] __FB_LINUX__.__FB_64BIT__.VER=1.(not FOO1).FOO2.FOO3
+          tests/versions/various-nesting.h
+[ 83/184] __FB_LINUX__.__FB_64BIT__.VER=1.(not FOO1).FOO2.(not FOO3).FOO4
+          tests/versions/various-nesting.h
+[ 84/184] __FB_LINUX__.__FB_64BIT__.VER=1.(not FOO1).FOO2.(not FOO3).(not FOO4)
+          tests/versions/various-nesting.h
+[ 85/184] __FB_LINUX__.__FB_64BIT__.VER=1.(not FOO1).(not FOO2)
+          tests/versions/various-nesting.h
+[ 86/184] __FB_LINUX__.__FB_64BIT__.VER=2.FOO1
+          tests/versions/various-nesting.h
+[ 87/184] __FB_LINUX__.__FB_64BIT__.VER=2.(not FOO1).FOO2.FOO3
+          tests/versions/various-nesting.h
+[ 88/184] __FB_LINUX__.__FB_64BIT__.VER=2.(not FOO1).FOO2.(not FOO3).FOO4
+          tests/versions/various-nesting.h
+[ 89/184] __FB_LINUX__.__FB_64BIT__.VER=2.(not FOO1).FOO2.(not FOO3).(not FOO4)
+          tests/versions/various-nesting.h
+[ 90/184] __FB_LINUX__.__FB_64BIT__.VER=2.(not FOO1).(not FOO2)
+          tests/versions/various-nesting.h
+[ 91/184] __FB_LINUX__.__FB_64BIT__.VER=3.DEPRECATED_V3.FOO1
+          tests/versions/various-nesting.h
+[ 92/184] __FB_LINUX__.__FB_64BIT__.VER=3.DEPRECATED_V3.(not FOO1).FOO2.FOO3
+          tests/versions/various-nesting.h
+[ 93/184] __FB_LINUX__.__FB_64BIT__.VER=3.DEPRECATED_V3.(not FOO1).FOO2.(not FOO3).FOO4
+          tests/versions/various-nesting.h
+[ 94/184] __FB_LINUX__.__FB_64BIT__.VER=3.DEPRECATED_V3.(not FOO1).FOO2.(not FOO3).(not FOO4)
+          tests/versions/various-nesting.h
+[ 95/184] __FB_LINUX__.__FB_64BIT__.VER=3.DEPRECATED_V3.(not FOO1).(not FOO2)
+          tests/versions/various-nesting.h
+[ 96/184] __FB_LINUX__.__FB_64BIT__.VER=3.(not DEPRECATED_V3).FOO1
+          tests/versions/various-nesting.h
+[ 97/184] __FB_LINUX__.__FB_64BIT__.VER=3.(not DEPRECATED_V3).(not FOO1).FOO2.FOO3
+          tests/versions/various-nesting.h
+[ 98/184] __FB_LINUX__.__FB_64BIT__.VER=3.(not DEPRECATED_V3).(not FOO1).FOO2.(not FOO3).FOO4
+          tests/versions/various-nesting.h
+[ 99/184] __FB_LINUX__.__FB_64BIT__.VER=3.(not DEPRECATED_V3).(not FOO1).FOO2.(not FOO3).(not FOO4)
+          tests/versions/various-nesting.h
+[100/184] __FB_LINUX__.__FB_64BIT__.VER=3.(not DEPRECATED_V3).(not FOO1).(not FOO2)
+          tests/versions/various-nesting.h
+[101/184] __FB_LINUX__.__FB_64BIT__.VER=4.DEPRECATED_V3.FOO1
+          tests/versions/various-nesting.h
+[102/184] __FB_LINUX__.__FB_64BIT__.VER=4.DEPRECATED_V3.(not FOO1).FOO2.FOO3
+          tests/versions/various-nesting.h
+[103/184] __FB_LINUX__.__FB_64BIT__.VER=4.DEPRECATED_V3.(not FOO1).FOO2.(not FOO3).FOO4
+          tests/versions/various-nesting.h
+[104/184] __FB_LINUX__.__FB_64BIT__.VER=4.DEPRECATED_V3.(not FOO1).FOO2.(not FOO3).(not FOO4)
+          tests/versions/various-nesting.h
+[105/184] __FB_LINUX__.__FB_64BIT__.VER=4.DEPRECATED_V3.(not FOO1).(not FOO2)
+          tests/versions/various-nesting.h
+[106/184] __FB_LINUX__.__FB_64BIT__.VER=4.(not DEPRECATED_V3).FOO1
+          tests/versions/various-nesting.h
+[107/184] __FB_LINUX__.__FB_64BIT__.VER=4.(not DEPRECATED_V3).(not FOO1).FOO2.FOO3
+          tests/versions/various-nesting.h
+[108/184] __FB_LINUX__.__FB_64BIT__.VER=4.(not DEPRECATED_V3).(not FOO1).FOO2.(not FOO3).FOO4
+          tests/versions/various-nesting.h
+[109/184] __FB_LINUX__.__FB_64BIT__.VER=4.(not DEPRECATED_V3).(not FOO1).FOO2.(not FOO3).(not FOO4)
+          tests/versions/various-nesting.h
+[110/184] __FB_LINUX__.__FB_64BIT__.VER=4.(not DEPRECATED_V3).(not FOO1).(not FOO2)
+          tests/versions/various-nesting.h
+[111/184] __FB_LINUX__.__FB_64BIT__.VER=5.DEPRECATED_V3.DEPRECATED_V5.FOO1
+          tests/versions/various-nesting.h
+[112/184] __FB_LINUX__.__FB_64BIT__.VER=5.DEPRECATED_V3.DEPRECATED_V5.(not FOO1).FOO2.FOO3
+          tests/versions/various-nesting.h
+[113/184] __FB_LINUX__.__FB_64BIT__.VER=5.DEPRECATED_V3.DEPRECATED_V5.(not FOO1).FOO2.(not FOO3).FOO4
+          tests/versions/various-nesting.h
+[114/184] __FB_LINUX__.__FB_64BIT__.VER=5.DEPRECATED_V3.DEPRECATED_V5.(not FOO1).FOO2.(not FOO3).(not FOO4)
+          tests/versions/various-nesting.h
+[115/184] __FB_LINUX__.__FB_64BIT__.VER=5.DEPRECATED_V3.DEPRECATED_V5.(not FOO1).(not FOO2)
+          tests/versions/various-nesting.h
+[116/184] __FB_LINUX__.__FB_64BIT__.VER=5.DEPRECATED_V3.(not DEPRECATED_V5).FOO1
+          tests/versions/various-nesting.h
+[117/184] __FB_LINUX__.__FB_64BIT__.VER=5.DEPRECATED_V3.(not DEPRECATED_V5).(not FOO1).FOO2.FOO3
+          tests/versions/various-nesting.h
+[118/184] __FB_LINUX__.__FB_64BIT__.VER=5.DEPRECATED_V3.(not DEPRECATED_V5).(not FOO1).FOO2.(not FOO3).FOO4
+          tests/versions/various-nesting.h
+[119/184] __FB_LINUX__.__FB_64BIT__.VER=5.DEPRECATED_V3.(not DEPRECATED_V5).(not FOO1).FOO2.(not FOO3).(not FOO4)
+          tests/versions/various-nesting.h
+[120/184] __FB_LINUX__.__FB_64BIT__.VER=5.DEPRECATED_V3.(not DEPRECATED_V5).(not FOO1).(not FOO2)
+          tests/versions/various-nesting.h
+[121/184] __FB_LINUX__.__FB_64BIT__.VER=5.(not DEPRECATED_V3).DEPRECATED_V5.FOO1
+          tests/versions/various-nesting.h
+[122/184] __FB_LINUX__.__FB_64BIT__.VER=5.(not DEPRECATED_V3).DEPRECATED_V5.(not FOO1).FOO2.FOO3
+          tests/versions/various-nesting.h
+[123/184] __FB_LINUX__.__FB_64BIT__.VER=5.(not DEPRECATED_V3).DEPRECATED_V5.(not FOO1).FOO2.(not FOO3).FOO4
+          tests/versions/various-nesting.h
+[124/184] __FB_LINUX__.__FB_64BIT__.VER=5.(not DEPRECATED_V3).DEPRECATED_V5.(not FOO1).FOO2.(not FOO3).(not FOO4)
+          tests/versions/various-nesting.h
+[125/184] __FB_LINUX__.__FB_64BIT__.VER=5.(not DEPRECATED_V3).DEPRECATED_V5.(not FOO1).(not FOO2)
+          tests/versions/various-nesting.h
+[126/184] __FB_LINUX__.__FB_64BIT__.VER=5.(not DEPRECATED_V3).(not DEPRECATED_V5).FOO1
+          tests/versions/various-nesting.h
+[127/184] __FB_LINUX__.__FB_64BIT__.VER=5.(not DEPRECATED_V3).(not DEPRECATED_V5).(not FOO1).FOO2.FOO3
+          tests/versions/various-nesting.h
+[128/184] __FB_LINUX__.__FB_64BIT__.VER=5.(not DEPRECATED_V3).(not DEPRECATED_V5).(not FOO1).FOO2.(not FOO3).FOO4
+          tests/versions/various-nesting.h
+[129/184] __FB_LINUX__.__FB_64BIT__.VER=5.(not DEPRECATED_V3).(not DEPRECATED_V5).(not FOO1).FOO2.(not FOO3).(not FOO4)
+          tests/versions/various-nesting.h
+[130/184] __FB_LINUX__.__FB_64BIT__.VER=5.(not DEPRECATED_V3).(not DEPRECATED_V5).(not FOO1).(not FOO2)
+          tests/versions/various-nesting.h
+[131/184] __FB_LINUX__.(not __FB_64BIT__).VER=1.FOO1
+          tests/versions/various-nesting.h
+[132/184] __FB_LINUX__.(not __FB_64BIT__).VER=1.(not FOO1).FOO2.FOO3
+          tests/versions/various-nesting.h
+[133/184] __FB_LINUX__.(not __FB_64BIT__).VER=1.(not FOO1).FOO2.(not FOO3).FOO4
+          tests/versions/various-nesting.h
+[134/184] __FB_LINUX__.(not __FB_64BIT__).VER=1.(not FOO1).FOO2.(not FOO3).(not FOO4)
+          tests/versions/various-nesting.h
+[135/184] __FB_LINUX__.(not __FB_64BIT__).VER=1.(not FOO1).(not FOO2)
+          tests/versions/various-nesting.h
+[136/184] __FB_LINUX__.(not __FB_64BIT__).VER=2.FOO1
+          tests/versions/various-nesting.h
+[137/184] __FB_LINUX__.(not __FB_64BIT__).VER=2.(not FOO1).FOO2.FOO3
+          tests/versions/various-nesting.h
+[138/184] __FB_LINUX__.(not __FB_64BIT__).VER=2.(not FOO1).FOO2.(not FOO3).FOO4
+          tests/versions/various-nesting.h
+[139/184] __FB_LINUX__.(not __FB_64BIT__).VER=2.(not FOO1).FOO2.(not FOO3).(not FOO4)
+          tests/versions/various-nesting.h
+[140/184] __FB_LINUX__.(not __FB_64BIT__).VER=2.(not FOO1).(not FOO2)
+          tests/versions/various-nesting.h
+[141/184] __FB_LINUX__.(not __FB_64BIT__).VER=3.DEPRECATED_V3.FOO1
+          tests/versions/various-nesting.h
+[142/184] __FB_LINUX__.(not __FB_64BIT__).VER=3.DEPRECATED_V3.(not FOO1).FOO2.FOO3
+          tests/versions/various-nesting.h
+[143/184] __FB_LINUX__.(not __FB_64BIT__).VER=3.DEPRECATED_V3.(not FOO1).FOO2.(not FOO3).FOO4
+          tests/versions/various-nesting.h
+[144/184] __FB_LINUX__.(not __FB_64BIT__).VER=3.DEPRECATED_V3.(not FOO1).FOO2.(not FOO3).(not FOO4)
+          tests/versions/various-nesting.h
+[145/184] __FB_LINUX__.(not __FB_64BIT__).VER=3.DEPRECATED_V3.(not FOO1).(not FOO2)
+          tests/versions/various-nesting.h
+[146/184] __FB_LINUX__.(not __FB_64BIT__).VER=3.(not DEPRECATED_V3).FOO1
+          tests/versions/various-nesting.h
+[147/184] __FB_LINUX__.(not __FB_64BIT__).VER=3.(not DEPRECATED_V3).(not FOO1).FOO2.FOO3
+          tests/versions/various-nesting.h
+[148/184] __FB_LINUX__.(not __FB_64BIT__).VER=3.(not DEPRECATED_V3).(not FOO1).FOO2.(not FOO3).FOO4
+          tests/versions/various-nesting.h
+[149/184] __FB_LINUX__.(not __FB_64BIT__).VER=3.(not DEPRECATED_V3).(not FOO1).FOO2.(not FOO3).(not FOO4)
+          tests/versions/various-nesting.h
+[150/184] __FB_LINUX__.(not __FB_64BIT__).VER=3.(not DEPRECATED_V3).(not FOO1).(not FOO2)
+          tests/versions/various-nesting.h
+[151/184] __FB_LINUX__.(not __FB_64BIT__).VER=4.DEPRECATED_V3.FOO1
+          tests/versions/various-nesting.h
+[152/184] __FB_LINUX__.(not __FB_64BIT__).VER=4.DEPRECATED_V3.(not FOO1).FOO2.FOO3
+          tests/versions/various-nesting.h
+[153/184] __FB_LINUX__.(not __FB_64BIT__).VER=4.DEPRECATED_V3.(not FOO1).FOO2.(not FOO3).FOO4
+          tests/versions/various-nesting.h
+[154/184] __FB_LINUX__.(not __FB_64BIT__).VER=4.DEPRECATED_V3.(not FOO1).FOO2.(not FOO3).(not FOO4)
+          tests/versions/various-nesting.h
+[155/184] __FB_LINUX__.(not __FB_64BIT__).VER=4.DEPRECATED_V3.(not FOO1).(not FOO2)
+          tests/versions/various-nesting.h
+[156/184] __FB_LINUX__.(not __FB_64BIT__).VER=4.(not DEPRECATED_V3).FOO1
+          tests/versions/various-nesting.h
+[157/184] __FB_LINUX__.(not __FB_64BIT__).VER=4.(not DEPRECATED_V3).(not FOO1).FOO2.FOO3
+          tests/versions/various-nesting.h
+[158/184] __FB_LINUX__.(not __FB_64BIT__).VER=4.(not DEPRECATED_V3).(not FOO1).FOO2.(not FOO3).FOO4
+          tests/versions/various-nesting.h
+[159/184] __FB_LINUX__.(not __FB_64BIT__).VER=4.(not DEPRECATED_V3).(not FOO1).FOO2.(not FOO3).(not FOO4)
+          tests/versions/various-nesting.h
+[160/184] __FB_LINUX__.(not __FB_64BIT__).VER=4.(not DEPRECATED_V3).(not FOO1).(not FOO2)
+          tests/versions/various-nesting.h
+[161/184] __FB_LINUX__.(not __FB_64BIT__).VER=5.DEPRECATED_V3.DEPRECATED_V5.FOO1
+          tests/versions/various-nesting.h
+[162/184] __FB_LINUX__.(not __FB_64BIT__).VER=5.DEPRECATED_V3.DEPRECATED_V5.(not FOO1).FOO2.FOO3
+          tests/versions/various-nesting.h
+[163/184] __FB_LINUX__.(not __FB_64BIT__).VER=5.DEPRECATED_V3.DEPRECATED_V5.(not FOO1).FOO2.(not FOO3).FOO4
+          tests/versions/various-nesting.h
+[164/184] __FB_LINUX__.(not __FB_64BIT__).VER=5.DEPRECATED_V3.DEPRECATED_V5.(not FOO1).FOO2.(not FOO3).(not FOO4)
+          tests/versions/various-nesting.h
+[165/184] __FB_LINUX__.(not __FB_64BIT__).VER=5.DEPRECATED_V3.DEPRECATED_V5.(not FOO1).(not FOO2)
+          tests/versions/various-nesting.h
+[166/184] __FB_LINUX__.(not __FB_64BIT__).VER=5.DEPRECATED_V3.(not DEPRECATED_V5).FOO1
+          tests/versions/various-nesting.h
+[167/184] __FB_LINUX__.(not __FB_64BIT__).VER=5.DEPRECATED_V3.(not DEPRECATED_V5).(not FOO1).FOO2.FOO3
+          tests/versions/various-nesting.h
+[168/184] __FB_LINUX__.(not __FB_64BIT__).VER=5.DEPRECATED_V3.(not DEPRECATED_V5).(not FOO1).FOO2.(not FOO3).FOO4
+          tests/versions/various-nesting.h
+[169/184] __FB_LINUX__.(not __FB_64BIT__).VER=5.DEPRECATED_V3.(not DEPRECATED_V5).(not FOO1).FOO2.(not FOO3).(not FOO4)
+          tests/versions/various-nesting.h
+[170/184] __FB_LINUX__.(not __FB_64BIT__).VER=5.DEPRECATED_V3.(not DEPRECATED_V5).(not FOO1).(not FOO2)
+          tests/versions/various-nesting.h
+[171/184] __FB_LINUX__.(not __FB_64BIT__).VER=5.(not DEPRECATED_V3).DEPRECATED_V5.FOO1
+          tests/versions/various-nesting.h
+[172/184] __FB_LINUX__.(not __FB_64BIT__).VER=5.(not DEPRECATED_V3).DEPRECATED_V5.(not FOO1).FOO2.FOO3
+          tests/versions/various-nesting.h
+[173/184] __FB_LINUX__.(not __FB_64BIT__).VER=5.(not DEPRECATED_V3).DEPRECATED_V5.(not FOO1).FOO2.(not FOO3).FOO4
+          tests/versions/various-nesting.h
+[174/184] __FB_LINUX__.(not __FB_64BIT__).VER=5.(not DEPRECATED_V3).DEPRECATED_V5.(not FOO1).FOO2.(not FOO3).(not FOO4)
+          tests/versions/various-nesting.h
+[175/184] __FB_LINUX__.(not __FB_64BIT__).VER=5.(not DEPRECATED_V3).DEPRECATED_V5.(not FOO1).(not FOO2)
+          tests/versions/various-nesting.h
+[176/184] __FB_LINUX__.(not __FB_64BIT__).VER=5.(not DEPRECATED_V3).(not DEPRECATED_V5).FOO1
+          tests/versions/various-nesting.h
+[177/184] __FB_LINUX__.(not __FB_64BIT__).VER=5.(not DEPRECATED_V3).(not DEPRECATED_V5).(not FOO1).FOO2.FOO3
+          tests/versions/various-nesting.h
+[178/184] __FB_LINUX__.(not __FB_64BIT__).VER=5.(not DEPRECATED_V3).(not DEPRECATED_V5).(not FOO1).FOO2.(not FOO3).FOO4
+          tests/versions/various-nesting.h
+[179/184] __FB_LINUX__.(not __FB_64BIT__).VER=5.(not DEPRECATED_V3).(not DEPRECATED_V5).(not FOO1).FOO2.(not FOO3).(not FOO4)
+          tests/versions/various-nesting.h
+[180/184] __FB_LINUX__.(not __FB_64BIT__).VER=5.(not DEPRECATED_V3).(not DEPRECATED_V5).(not FOO1).(not FOO2)
+          tests/versions/various-nesting.h
+[181/184] __FB_DOS__.VER=1
+          tests/versions/various-nesting.h
+[182/184] __FB_DOS__.VER=2
+          tests/versions/various-nesting.h
+[183/184] __FB_DOS__.VER=3.DEPRECATED_V3
+          tests/versions/various-nesting.h
+[184/184] __FB_DOS__.VER=3.(not DEPRECATED_V3)
+          tests/versions/various-nesting.h
+emitting: tests/versions/various-nesting.bi (4 declarations)

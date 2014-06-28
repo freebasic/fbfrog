@@ -1,0 +1,9 @@
+-declaredefines A B C
+-select
+-case A
+	-define A
+-case B
+	-define B
+-case C
+	-define C
+-endselect

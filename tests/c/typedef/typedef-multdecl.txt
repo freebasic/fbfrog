@@ -1,7 +1,11 @@
-[dos]
-        parsing: tests/c/typedef/typedef-multdecl.h
-[linux]
-        parsing: tests/c/typedef/typedef-multdecl.h
-[win32]
-        parsing: tests/c/typedef/typedef-multdecl.h
+[1/5] __FB_WIN32__.__FB_64BIT__
+      tests/c/typedef/typedef-multdecl.h
+[2/5] __FB_WIN32__.(not __FB_64BIT__)
+      tests/c/typedef/typedef-multdecl.h
+[3/5] __FB_LINUX__.__FB_64BIT__
+      tests/c/typedef/typedef-multdecl.h
+[4/5] __FB_LINUX__.(not __FB_64BIT__)
+      tests/c/typedef/typedef-multdecl.h
+[5/5] __FB_DOS__
+      tests/c/typedef/typedef-multdecl.h
 emitting: tests/c/typedef/typedef-multdecl.bi (7 declarations)

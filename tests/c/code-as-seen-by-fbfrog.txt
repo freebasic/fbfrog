@@ -1,5 +1,5 @@
-[dos]
-        parsing: tests/c/code-as-seen-by-fbfrog.h
+[1/5] __FB_WIN32__.__FB_64BIT__
+      tests/c/code-as-seen-by-fbfrog.h
 tests/c/code-as-seen-by-fbfrog.h(7): expected ')' to close parameter list in function declaration but found ';'
     5: /* Some comment in the
     6: middle of things.*/

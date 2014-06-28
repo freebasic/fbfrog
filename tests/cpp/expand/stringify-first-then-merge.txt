@@ -1,7 +1,11 @@
-[dos]
-        parsing: tests/cpp/expand/stringify-first-then-merge.h
-[linux]
-        parsing: tests/cpp/expand/stringify-first-then-merge.h
-[win32]
-        parsing: tests/cpp/expand/stringify-first-then-merge.h
+[1/5] __FB_WIN32__.__FB_64BIT__
+      tests/cpp/expand/stringify-first-then-merge.h
+[2/5] __FB_WIN32__.(not __FB_64BIT__)
+      tests/cpp/expand/stringify-first-then-merge.h
+[3/5] __FB_LINUX__.__FB_64BIT__
+      tests/cpp/expand/stringify-first-then-merge.h
+[4/5] __FB_LINUX__.(not __FB_64BIT__)
+      tests/cpp/expand/stringify-first-then-merge.h
+[5/5] __FB_DOS__
+      tests/cpp/expand/stringify-first-then-merge.h
 emitting: tests/cpp/expand/stringify-first-then-merge.bi (2 declarations)

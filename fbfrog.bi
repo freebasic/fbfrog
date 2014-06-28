@@ -381,11 +381,19 @@ enum
 	OPT_NOCONSTANTS
 	OPT_NONAMEFIXUP
 	OPT_V
-	OPT_VERSIONDEFINE
 	OPT_INCDIR
 	OPT_O
-	OPT_VERSION
-	OPT_TARGET
+	OPT_DECLAREDEFINES
+	OPT_UNCHECKED
+	OPT_DECLAREVERSIONS
+	OPT_DECLAREBOOL
+	OPT_SELECT
+	OPT_CASE
+	OPT_CASEELSE
+	OPT_ENDSELECT
+	OPT_IFDEF
+	OPT_ELSE
+	OPT_ENDIF
 	OPT_INCLIB
 	OPT_DEFINE
 	OPT_NOEXPAND
@@ -551,11 +559,19 @@ enum
 	'' Internal helper nodes
 	ASTCLASS_GROUP = 0
 	ASTCLASS_VERBLOCK
-	ASTCLASS_TARGETBLOCK
+	ASTCLASS_VEROR
+	ASTCLASS_VERAND
 	ASTCLASS_DIVIDER
 	ASTCLASS_SCOPEBLOCK
 
-	'' Preset helper nodes
+	'' Script helper nodes
+	ASTCLASS_DECLAREDEFINES
+	ASTCLASS_DECLAREVERSIONS
+	ASTCLASS_DECLAREBOOL
+	ASTCLASS_SELECT
+	ASTCLASS_CASE
+	ASTCLASS_CASEELSE
+	ASTCLASS_ENDSELECT
 	ASTCLASS_FILE
 	ASTCLASS_DIR
 	ASTCLASS_NOEXPAND
@@ -592,7 +608,7 @@ enum
 	ASTCLASS_EXTERNBLOCKBEGIN
 	ASTCLASS_EXTERNBLOCKEND
 
-	'' Expression atoms  & co
+	'' Expression atoms etc.
 	ASTCLASS_MACROBODY
 	ASTCLASS_MACROPARAM
 	ASTCLASS_TK
@@ -603,7 +619,6 @@ enum
 	ASTCLASS_TEXT
 	ASTCLASS_STRING
 	ASTCLASS_CHAR
-	ASTCLASS_DUMMYVERSION
 	ASTCLASS_TYPE
 
 	'' Expressions
@@ -674,11 +689,8 @@ const ASTATTRIB_CDECL         = 1 shl 2
 const ASTATTRIB_STDCALL       = 1 shl 3
 const ASTATTRIB_HIDECALLCONV  = 1 shl 4  '' Whether the calling convention is covered by an Extern block, in which case it doesn't need to be emitted.
 const ASTATTRIB_HIDECASEALIAS = 1 shl 5  '' same for the case-preserving ALIAS
+const ASTATTRIB_UNCHECKED     = 1 shl 6
 const ASTATTRIB_REPORTED      = 1 shl 7 '' Used to mark #defines about which the CPP has already complained, so it can avoid duplicate error messages
-const ASTATTRIB_DOS           = 1 shl 8
-const ASTATTRIB_LINUX         = 1 shl 9
-const ASTATTRIB_WIN32         = 1 shl 10
-const ASTATTRIB__ALLTARGET    = ASTATTRIB_DOS or ASTATTRIB_LINUX or ASTATTRIB_WIN32
 const ASTATTRIB_NEEDRENAME    = 1 shl 11
 const ASTATTRIB_POISONED      = 1 shl 12
 const ASTATTRIB_DONTEMIT      = 1 shl 13
@@ -737,6 +749,9 @@ end type
 #define astNewID( id ) astNew( ASTCLASS_ID, id )
 #define astNewTEXT( text ) astNew( ASTCLASS_TEXT, text )
 #define astIsCONSTI( n ) ((n)->class = ASTCLASS_CONSTI)
+#define astIsVERBLOCK( n ) ((n)->class = ASTCLASS_VERBLOCK)
+#define astIsVERAND( n ) ((n)->class = ASTCLASS_VERAND)
+#define astIsVEROR( n )  ((n)->class = ASTCLASS_VEROR)
 
 declare function astNew overload( byval class_ as integer ) as ASTNODE ptr
 declare function astNew overload _
@@ -751,7 +766,6 @@ declare function astNew overload _
 	) as ASTNODE ptr
 declare function astNewIncludeOnce( byval filename as zstring ptr ) as ASTNODE ptr
 declare function astNewPPDEFINE( byval id as zstring ptr ) as ASTNODE ptr
-declare function astNewPPIF( byval expr as ASTNODE ptr ) as ASTNODE ptr
 declare function astNewUOP _
 	( _
 		byval astclass as integer, _
@@ -829,7 +843,6 @@ declare function astClone( byval n as ASTNODE ptr ) as ASTNODE ptr
 
 const ASTEQ_IGNOREHIDDENCALLCONV	= 1 shl 0
 const ASTEQ_IGNOREFIELDS		= 1 shl 1
-const ASTEQ_IGNORETARGET		= 1 shl 2
 const ASTEQ_IGNOREDUMMYIDSTRUCTS	= 1 shl 3
 
 declare function astIsEqual _
@@ -852,7 +865,6 @@ declare sub astOops _
 	)
 declare function astCountDecls( byval code as ASTNODE ptr ) as integer
 declare function astDumpPrettyDecl( byval n as ASTNODE ptr ) as string
-declare function astDumpPrettyVersion( byval v as ASTNODE ptr ) as string
 declare function astDumpOne( byval n as ASTNODE ptr ) as string
 declare function astDumpInline( byval n as ASTNODE ptr ) as string
 declare sub astDump _
@@ -899,35 +911,16 @@ declare sub astMergeDIVIDERs( byval n as ASTNODE ptr )
 declare sub astAutoAddDividers( byval code as ASTNODE ptr )
 declare sub astPrependMaybeWithDivider( byval group as ASTNODE ptr, byval n as ASTNODE ptr )
 
-declare function astWrapFileInVerblock _
-	( _
-		byval code as ASTNODE ptr, _
-		byval version as ASTNODE ptr _
-	) as ASTNODE ptr
+declare function astDumpPrettyVersion( byval n as ASTNODE ptr ) as string
+declare function astNewVERAND( byval a as ASTNODE ptr = NULL, byval b as ASTNODE ptr = NULL ) as ASTNODE ptr
+declare function astNewVEROR( byval a as ASTNODE ptr = NULL, byval b as ASTNODE ptr = NULL ) as ASTNODE ptr
+declare function astWrapFileInVerblock( byval veror as ASTNODE ptr, byval code as ASTNODE ptr ) as ASTNODE ptr
 declare function astMergeVerblocks _
 	( _
 		byval a as ASTNODE ptr, _
 		byval b as ASTNODE ptr _
 	) as ASTNODE ptr
-
-declare function astNewVERBLOCK _
-	( _
-		byval version1 as ASTNODE ptr, _
-		byval version2 as ASTNODE ptr, _
-		byval child as ASTNODE ptr _
-	) as ASTNODE ptr
-declare function astCollectVersions( byval code as ASTNODE ptr ) as ASTNODE ptr
-declare function astGet1VersionAndTargetOnly _
-	( _
-		byval code as ASTNODE ptr, _
-		byval version as ASTNODE ptr _
-	) as ASTNODE ptr
-declare sub astProcessVerblocksAndTargetblocks _
-	( _
-		byval code as ASTNODE ptr, _
-		byval versions as ASTNODE ptr, _
-		byval versiondefine as zstring ptr _
-	)
+declare sub astProcessVerblocks( byval code as ASTNODE ptr )
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
@@ -968,20 +961,20 @@ declare function cFile( ) as ASTNODE ptr
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-type FROGSTUFF
-	nomerge		as integer
-	whitespace	as integer
-	windowsms	as integer
-	noconstants	as integer
-	nonamefixup	as integer
-	versiondefine	as string
-	incdirs		as ASTNODE ptr
-	outname		as string
-	defaultoutname	as string
-	verbose		as integer
-
-	code		as ASTNODE ptr
-	maxversionstrlen	as integer
+type FROGVERSION
+	verand		as ASTNODE ptr
+	options		as ASTNODE ptr
 end type
 
-extern frog as FROGSTUFF
+namespace frog
+	extern as integer verbose
+	extern incdirs as ASTNODE ptr
+
+	extern as ASTNODE ptr script
+	extern as ASTNODE ptr completeverors, fullveror
+
+	extern as FROGVERSION ptr versions
+	extern as integer versioncount
+end namespace
+
+declare sub frogPrint( byref s as string )

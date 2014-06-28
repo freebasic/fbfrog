@@ -1,0 +1,51 @@
+[ 1/25] __FB_WIN32__.__FB_64BIT__.A.VER=1
+        tests/versions/empty-elseif-block.h
+[ 2/25] __FB_WIN32__.__FB_64BIT__.A.VER=2
+        tests/versions/empty-elseif-block.h
+[ 3/25] __FB_WIN32__.__FB_64BIT__.B
+        tests/versions/empty-elseif-block.h
+[ 4/25] __FB_WIN32__.__FB_64BIT__.C.VER=1
+        tests/versions/empty-elseif-block.h
+[ 5/25] __FB_WIN32__.__FB_64BIT__.C.VER=2
+        tests/versions/empty-elseif-block.h
+[ 6/25] __FB_WIN32__.(not __FB_64BIT__).A.VER=1
+        tests/versions/empty-elseif-block.h
+[ 7/25] __FB_WIN32__.(not __FB_64BIT__).A.VER=2
+        tests/versions/empty-elseif-block.h
+[ 8/25] __FB_WIN32__.(not __FB_64BIT__).B
+        tests/versions/empty-elseif-block.h
+[ 9/25] __FB_WIN32__.(not __FB_64BIT__).C.VER=1
+        tests/versions/empty-elseif-block.h
+[10/25] __FB_WIN32__.(not __FB_64BIT__).C.VER=2
+        tests/versions/empty-elseif-block.h
+[11/25] __FB_LINUX__.__FB_64BIT__.A.VER=1
+        tests/versions/empty-elseif-block.h
+[12/25] __FB_LINUX__.__FB_64BIT__.A.VER=2
+        tests/versions/empty-elseif-block.h
+[13/25] __FB_LINUX__.__FB_64BIT__.B
+        tests/versions/empty-elseif-block.h
+[14/25] __FB_LINUX__.__FB_64BIT__.C.VER=1
+        tests/versions/empty-elseif-block.h
+[15/25] __FB_LINUX__.__FB_64BIT__.C.VER=2
+        tests/versions/empty-elseif-block.h
+[16/25] __FB_LINUX__.(not __FB_64BIT__).A.VER=1
+        tests/versions/empty-elseif-block.h
+[17/25] __FB_LINUX__.(not __FB_64BIT__).A.VER=2
+        tests/versions/empty-elseif-block.h
+[18/25] __FB_LINUX__.(not __FB_64BIT__).B
+        tests/versions/empty-elseif-block.h
+[19/25] __FB_LINUX__.(not __FB_64BIT__).C.VER=1
+        tests/versions/empty-elseif-block.h
+[20/25] __FB_LINUX__.(not __FB_64BIT__).C.VER=2
+        tests/versions/empty-elseif-block.h
+[21/25] __FB_DOS__.A.VER=1
+        tests/versions/empty-elseif-block.h
+[22/25] __FB_DOS__.A.VER=2
+        tests/versions/empty-elseif-block.h
+[23/25] __FB_DOS__.B
+        tests/versions/empty-elseif-block.h
+[24/25] __FB_DOS__.C.VER=1
+        tests/versions/empty-elseif-block.h
+[25/25] __FB_DOS__.C.VER=2
+        tests/versions/empty-elseif-block.h
+emitting: tests/versions/empty-elseif-block.bi (5 declarations)

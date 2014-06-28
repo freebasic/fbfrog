@@ -1,0 +1,6 @@
+<command line>(1): expected -case or -endselect but found '-endif'
+    1: ./fbfrog tests/cli/endif-instead-of-endselect.h -select -case a -endif
+                                                                       ^~~~~~
+context as seen by fbfrog:
+    _X86_ -endif "tests/cli/endif-instead-of-endselect.h" -select -case a -endif
+                                                                          ^~~~~~

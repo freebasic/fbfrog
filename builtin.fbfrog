@@ -1,0 +1,53 @@
+-define __STDC__ 1
+-define __GNUC__ 4
+
+-define CHAR_BIT  8
+-define UCHAR_MAX 255
+-define SHRT_MIN  (-0x8000)
+-define SHRT_MAX  0x7FFF
+-define USHRT_MAX 0xFFFF
+-define INT_MIN   (-0x80000000)
+-define INT_MAX   0x7FFFFFFF
+-define UINT_MAX  0xFFFFFFFF
+-define LONG_MIN  (-0x80000000)
+-define LONG_MAX  0x7FFFFFFF
+-define ULONG_MAX 0xFFFFFFFF
+
+-declaredefines __FB_WIN32__ __FB_LINUX__ __FB_DOS__ -unchecked
+
+-select
+-case __FB_WIN32__
+	-define __MINGW32__
+	-define _WIN32
+-case __FB_LINUX__
+	-define __linux__
+-case __FB_DOS__
+	-define __DJGPP__
+-endselect
+
+-ifdef __FB_DOS__
+-else
+	-declarebool __FB_64BIT__
+-endif
+
+-ifdef __FB_64BIT__
+	-define __amd64__
+	-define __amd64
+	-define __x86_64__
+	-define __x86_64
+	-define _M_X64
+	-define _M_AMD64
+	-ifdef __FB_WIN32__
+		-define _WIN64
+	-endif
+-else
+	-define i386
+	-define __i386
+	-define __i386__
+	-define __i486__
+	-define __i586__
+	-define __i686__
+	-define _M_IX86
+	-define __X86__
+	-define _X86_
+-endif
