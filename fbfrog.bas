@@ -836,7 +836,6 @@ private function frogReadAPI( byval options as ASTNODE ptr ) as ASTNODE ptr
 		var i = options->head
 		while( i )
 			if( i->class = ASTCLASS_TEXT ) then
-				var path = *i->text
 				if( hReadableDirExists( path ) ) then
 					'' Input files from directories
 					var n = hScanDirectory( *i->text, "*.h" )
