@@ -844,7 +844,7 @@ private function frogReadAPI( byval options as ASTNODE ptr ) as ASTNODE ptr
 					astAppend( rootfiles, n )
 				else
 					'' Input files
-					astCloneAppend( rootfiles, i )
+					astAppend( rootfiles, astClone( i ) )
 				end if
 			end if
 			i = i->next

@@ -429,14 +429,10 @@ sub astAppend( byval parent as ASTNODE ptr, byval n as ASTNODE ptr )
 	astInsert( parent, n, NULL )
 end sub
 
-sub astCloneAppend( byval parent as ASTNODE ptr, byval n as ASTNODE ptr )
-	astAppend( parent, astClone( n ) )
-end sub
-
 sub astCloneAppendChildren( byval d as ASTNODE ptr, byval s as ASTNODE ptr )
 	var i = s->head
 	while( i )
-		astCloneAppend( d, i )
+		astAppend( d, astClone( i ) )
 		i = i->next
 	wend
 end sub
@@ -574,16 +570,13 @@ end function
 
 function astClone( byval n as ASTNODE ptr ) as ASTNODE ptr
 	var c = astCloneNode( n )
-	if( c = NULL ) then
-		return NULL
+	if( c ) then
+		var i = n->head
+		while( i )
+			astAppend( c, astClone( i ) )
+			i = i->next
+		wend
 	end if
-
-	var child = n->head
-	while( child )
-		astCloneAppend( c, child )
-		child = child->next
-	wend
-
 	function = c
 end function
 

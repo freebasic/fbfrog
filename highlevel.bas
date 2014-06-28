@@ -526,11 +526,11 @@ private function hExtractNestedStructsForUnscoping( byval struct as ASTNODE ptr 
 		select case( i->class )
 		case ASTCLASS_STRUCT, ASTCLASS_UNION
 			if( i->text ) then
-				astCloneAppend( result, i )
+				astAppend( result, astClone( i ) )
 				astRemove( struct, i )
 			end if
 		case ASTCLASS_PPDEFINE
-			astCloneAppend( result, i )
+			astAppend( result, astClone( i ) )
 			astRemove( struct, i )
 		end select
 
