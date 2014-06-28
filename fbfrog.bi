@@ -811,7 +811,6 @@ declare sub astInsert _
 	)
 declare sub astPrepend( byval parent as ASTNODE ptr, byval n as ASTNODE ptr )
 declare sub astAppend( byval parent as ASTNODE ptr, byval n as ASTNODE ptr )
-declare sub astCloneAppendChildren( byval d as ASTNODE ptr, byval s as ASTNODE ptr )
 declare function astRemove( byval parent as ASTNODE ptr, byval a as ASTNODE ptr ) as ASTNODE ptr
 declare sub astRemoveChildren( byval parent as ASTNODE ptr )
 declare function astReplace _

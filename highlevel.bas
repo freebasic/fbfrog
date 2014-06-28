@@ -353,7 +353,7 @@ private sub hSolveOutArrayTypedefSubtypes _
 				if( n->array = NULL ) then
 					n->array = astNew( ASTCLASS_ARRAY )
 				end if
-				astCloneAppendChildren( n->array, typedef->array )
+				astAppend( n->array, astCloneChildren( typedef->array ) )
 			end if
 		else
 			hSolveOutArrayTypedefSubtypes( n->subtype, typedef )
@@ -412,7 +412,7 @@ private sub hSolveOutProcTypedefSubtypes _
 
 					'' Copy over the parameters
 					assert( n->head = NULL )
-					astCloneAppendChildren( n, proc )
+					astAppend( n, astCloneChildren( proc ) )
 
 					'' Copy attributes (especially calling convention)
 					n->attrib or= proc->attrib

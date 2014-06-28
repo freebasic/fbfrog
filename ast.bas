@@ -228,7 +228,11 @@ end function
 
 function astCloneChildren( byval src as ASTNODE ptr ) as ASTNODE ptr
 	var n = astNewGROUP( )
-	astCloneAppendChildren( n, src )
+	var i = src->head
+	while( i )
+		astAppend( n, astClone( i ) )
+		i = i->next
+	wend
 	function = n
 end function
 
@@ -427,14 +431,6 @@ end sub
 
 sub astAppend( byval parent as ASTNODE ptr, byval n as ASTNODE ptr )
 	astInsert( parent, n, NULL )
-end sub
-
-sub astCloneAppendChildren( byval d as ASTNODE ptr, byval s as ASTNODE ptr )
-	var i = s->head
-	while( i )
-		astAppend( d, astClone( i ) )
-		i = i->next
-	wend
 end sub
 
 function astRemove( byval parent as ASTNODE ptr, byval a as ASTNODE ptr ) as ASTNODE ptr
