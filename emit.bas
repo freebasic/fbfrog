@@ -426,11 +426,11 @@ private function emitAst _
 
 	case ASTCLASS_PPIF
 		select case( n->expr->class )
-		'' #if defined( id )        ->    #ifdef id
+		'' #if defined(id)        ->    #ifdef id
 		case ASTCLASS_DEFINED
 			s = "#ifdef " + emitAst( n->expr->l )
 
-		'' #if not defined( id )    ->    #ifndef id
+		'' #if not defined(id)    ->    #ifndef id
 		case ASTCLASS_NOT
 			if( n->expr->l->class = ASTCLASS_DEFINED ) then
 				s = "#ifndef " + emitAst( n->expr->l->l )
@@ -671,11 +671,11 @@ private function emitAst _
 		end if
 
 		if( typeGetDtAndPtr( n->dtype ) = TYPE_WSTRING ) then
-			s = "wstr( " + s + " )"
+			s = "wstr(" + s + ")"
 		end if
 
 		if( n->class = ASTCLASS_CHAR ) then
-			s = "asc( " + s + " )"
+			s = "asc(" + s + ")"
 		end if
 
 	case ASTCLASS_ORELSE      : s = hParens( emitL( n ) + " orelse "  + emitR( n ), need_parens )
@@ -701,14 +701,14 @@ private function emitAst _
 	case ASTCLASS_MEMBERDEREF : s =          emitL( n ) + "->"        + emitR( n )
 	case ASTCLASS_STRCAT      : s = hParens( emitL( n ) + " + "       + emitR( n ), need_parens )
 
-	case ASTCLASS_NOT       : s = hParens( "not "      + emitL( n ), need_parens )
-	case ASTCLASS_NEGATE    : s = hParens( "-"         + emitL( n ), need_parens )
-	case ASTCLASS_UNARYPLUS : s = hParens( "+"         + emitL( n ), need_parens )
-	case ASTCLASS_DEFINED   : s =          "defined( " + emitAst( n->l ) + " )"
-	case ASTCLASS_ADDROF    : s = hParens( "@"         + emitL( n ), need_parens )
-	case ASTCLASS_DEREF     : s = hParens( "*"         + emitL( n ), need_parens )
-	case ASTCLASS_STRINGIFY : s =          "#"         + emitAst( n->l )
-	case ASTCLASS_SIZEOF    : s =          "sizeof( "  + emitAst( n->l ) + " )"
+	case ASTCLASS_NOT       : s = hParens( "not "     + emitL( n ), need_parens )
+	case ASTCLASS_NEGATE    : s = hParens( "-"        + emitL( n ), need_parens )
+	case ASTCLASS_UNARYPLUS : s = hParens( "+"        + emitL( n ), need_parens )
+	case ASTCLASS_DEFINED   : s =          "defined(" + emitAst( n->l ) + ")"
+	case ASTCLASS_ADDROF    : s = hParens( "@"        + emitL( n ), need_parens )
+	case ASTCLASS_DEREF     : s = hParens( "*"        + emitL( n ), need_parens )
+	case ASTCLASS_STRINGIFY : s =          "#"        + emitAst( n->l )
+	case ASTCLASS_SIZEOF    : s =          "sizeof("  + emitAst( n->l ) + ")"
 	case ASTCLASS_CAST
 		select case( n->dtype )
 		case TYPE_BYTE     : s =    "cbyte("
@@ -732,10 +732,10 @@ private function emitAst _
 		s += emitAst( n->l ) + ")"
 
 	case ASTCLASS_IIF
-		s += "iif( " + _
+		s += "iif(" + _
 			emitAst( n->expr ) + ", " + _
 			emitAst( n->l    ) + ", " + _
-			emitAst( n->r    ) + " )"
+			emitAst( n->r    ) + ")"
 
 	case ASTCLASS_PPMERGE
 		var child = n->head

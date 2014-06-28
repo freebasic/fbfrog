@@ -29,11 +29,11 @@ const A22 = 1
 const A23 = 1
 
 #define B1 "foo"
-#define B2 wstr( "foo" )
+#define B2 wstr("foo")
 #define B3 !"foo\n"
 #define B4 """foo"""
-#define B5 asc( "a" )
-#define B6 asc( wstr( "a" ) )
+#define B5 asc("a")
+#define B6 asc(wstr("a"))
 
 #define C01 """"
 #define C02 "'"
@@ -47,18 +47,18 @@ const A23 = 1
 #define C10 !"\r"
 #define C11 !"\t"
 #define C12 !"\v"
-#define C13 asc( "'" )
-#define C14 asc( """" )
-#define C15 asc( """" )
-#define C16 asc( "?" )
-#define C17 asc( !"\\" )
-#define C18 asc( !"\a" )
-#define C19 asc( !"\b" )
-#define C20 asc( !"\f" )
-#define C21 asc( !"\n" )
-#define C22 asc( !"\r" )
-#define C23 asc( !"\t" )
-#define C24 asc( !"\v" )
+#define C13 asc("'")
+#define C14 asc("""")
+#define C15 asc("""")
+#define C16 asc("?")
+#define C17 asc(!"\\")
+#define C18 asc(!"\a")
+#define C19 asc(!"\b")
+#define C20 asc(!"\f")
+#define C21 asc(!"\n")
+#define C22 asc(!"\r")
+#define C23 asc(!"\t")
+#define C24 asc(!"\v")
 
 #define D1 !"\0"
 #define D2 !"\0"

@@ -116,7 +116,6 @@ To do:
 - re-use TK_* enum as ASTNODE classes, replacing ASTCLASS_*
     (there's lots of overlap, and it doesn't matter if we have some enumconsts
      used as only tokens or ASTNODEs...)
-- emit.bas: should generate defined(A), not defined( A )
 - add #pragma once in the final AST, not in the individual ASTs
 - only add #pragma once if final binding non-empty
 

@@ -1,12 +1,12 @@
 #ifdef A
-#elseif defined( B )
-#elseif defined( C )
+#elseif defined(B)
+#elseif defined(C)
 #else
 	#error "Not one of these symbols is #defined: A, B, C"
 #endif
 
 #ifdef A
-#elseif defined( B )
+#elseif defined(B)
 	#ifndef VER
 		#define VER 2
 	#endif

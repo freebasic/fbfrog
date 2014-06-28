@@ -52,9 +52,9 @@ enum E
 	A = &o1
 	A = &h1
 	A = "a"
-	A = wstr( "a" )
-	A = asc( "a" )
-	A = asc( wstr( "a" ) )
+	A = wstr("a")
+	A = asc("a")
+	A = asc(wstr("a"))
 	A = A
 	A = f(A)
 	A = f(1, 2, 3, 4)
@@ -65,8 +65,8 @@ enum E
 	A = +A
 	A = @A
 	A = *A
-	A = sizeof( A )
-	A = sizeof( A )
+	A = sizeof(A)
+	A = sizeof(A)
 	A = sizeof(long)
 	A = sizeof(long) * 2
 	A = sizeof(long) shl 1
@@ -163,7 +163,7 @@ enum E
 	A = (-(-a)) mod b
 	A = -(-(a mod b))
 	A = (-(-a)) mod b
-	A = iif( a, b, c )
+	A = iif(a, b, c)
 	A = -(a orelse b)
 	A = -(a andalso b)
 	A = a or b
@@ -378,10 +378,10 @@ enum E
 	A = a mod (b mod c)
 	A = (a mod b) mod c
 	A = -((a andalso (b + c)) andalso (d = e))
-	A = iif( a, b, c )
-	A = iif( a, b, iif( c, d, e ) )
-	A = iif( a, b, iif( c, d, e ) )
-	A = iif( iif( a, b, c ), d, e )
+	A = iif(a, b, c)
+	A = iif(a, b, iif(c, d, e))
+	A = iif(a, b, iif(c, d, e))
+	A = iif(iif(a, b, c), d, e)
 	A = (1, 2, 3)
 	A = ()
 	A = (1)
