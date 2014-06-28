@@ -2,31 +2,6 @@
 
 #include once "fbfrog.bi"
 
-function typeToSigned( byval dtype as integer ) as integer
-	select case( typeGetDtAndPtr( dtype ) )
-	case TYPE_UBYTE, TYPE_USHORT, TYPE_ULONG, TYPE_ULONGINT
-		dtype = typeGetConst( dtype ) or (typeGetDt( dtype ) - 1)
-	end select
-	function = dtype
-end function
-
-function typeToUnsigned( byval dtype as integer ) as integer
-	select case( typeGetDtAndPtr( dtype ) )
-	case TYPE_BYTE, TYPE_SHORT, TYPE_LONG, TYPE_LONGINT
-		dtype = typeGetConst( dtype ) or (typeGetDt( dtype ) + 1)
-	end select
-	function = dtype
-end function
-
-#if __FB_DEBUG__
-private function typeIsFloat( byval dtype as integer ) as integer
-	select case( typeGetDtAndPtr( dtype ) )
-	case TYPE_SINGLE, TYPE_DOUBLE
-		function = TRUE
-	end select
-end function
-#endif
-
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 dim shared as zstring ptr astnodename(0 to ...) => _
@@ -309,7 +284,6 @@ function astNewDIMENSION _
 end function
 
 function astNewCONSTI( byval i as longint, byval dtype as integer ) as ASTNODE ptr
-	assert( typeIsFloat( dtype ) = FALSE )
 	var n = astNew( ASTCLASS_CONSTI )
 	n->dtype = dtype
 	n->vali = i
@@ -317,7 +291,6 @@ function astNewCONSTI( byval i as longint, byval dtype as integer ) as ASTNODE p
 end function
 
 function astNewCONSTF( byval f as double, byval dtype as integer ) as ASTNODE ptr
-	assert( typeIsFloat( dtype ) )
 	var n = astNew( ASTCLASS_CONSTF )
 	n->dtype = dtype
 	n->valf = f
