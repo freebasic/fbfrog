@@ -219,11 +219,6 @@ declare function hExepath( ) as string
 declare function pathIsDir( byref s as string ) as integer
 declare function hReadableDirExists( byref path as string ) as integer
 declare function hFileExists( byref file as string ) as integer
-declare function hScanDirectory _
-	( _
-		byref rootdir as string, _
-		byref filepattern as string _
-	) as ASTNODE ptr
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
@@ -829,7 +824,6 @@ declare sub astSetType _
 	)
 declare sub astSetComment( byval n as ASTNODE ptr, byval comment as zstring ptr )
 declare sub astAddComment( byval n as ASTNODE ptr, byval comment as zstring ptr )
-declare sub astSetLocationAndAlsoOnChildren( byval n as ASTNODE ptr, byval location as TKLOCATION ptr )
 declare function astCloneNode( byval n as ASTNODE ptr ) as ASTNODE ptr
 declare function astClone( byval n as ASTNODE ptr ) as ASTNODE ptr
 

@@ -516,15 +516,6 @@ sub astAddComment( byval n as ASTNODE ptr, byval comment as zstring ptr )
 	astSetComment( n, s )
 end sub
 
-sub astSetLocationAndAlsoOnChildren( byval n as ASTNODE ptr, byval location as TKLOCATION ptr )
-	n->location = *location
-	var i = n->head
-	while( i )
-		astSetLocationAndAlsoOnChildren( i, location )
-		i = i->next
-	wend
-end sub
-
 '' astClone() but without children
 function astCloneNode( byval n as ASTNODE ptr ) as ASTNODE ptr
 	if( n = NULL ) then

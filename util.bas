@@ -1226,7 +1226,6 @@ sub fbkeywordsInit( )
 end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-'' Directory tree search
 
 function hReadableDirExists( byref path as string ) as integer
 	var fixed = path
@@ -1238,74 +1237,4 @@ end function
 
 function hFileExists( byref path as string ) as integer
 	function = (dir( path, fbNormal ) <> "")
-end function
-
-dim shared as ASTNODE ptr dirs
-
-private sub dirsAppend( byref path as string )
-	astAppend( dirs, astNewTEXT( pathAddDiv( path ) ) )
-end sub
-
-private function hScanParent _
-	( _
-		byref parent as string, _
-		byref filepattern as string _
-	) as ASTNODE ptr
-
-	var files = astNewGROUP( )
-
-	'' Scan for *.h files
-	var found = dir( parent + filepattern, fbNormal )
-	while( len( found ) > 0 )
-
-		'' Add the file name to the result list
-		astAppend( files, astNewTEXT( parent + found ) )
-
-		found = dir( )
-	wend
-
-	'' Scan for subdirectories
-	found = dir( parent + "*", fbDirectory or fbReadOnly )
-	while( len( found ) > 0 )
-
-		select case( found )
-		case ".", ".."
-			'' Ignore these special subdirectories
-
-		case else
-			'' Remember the subdirectory for further scanning
-			dirsAppend( parent + found )
-		end select
-
-		found = dir( )
-	wend
-
-	function = files
-end function
-
-function hScanDirectory _
-	( _
-		byref rootdir as string, _
-		byref filepattern as string _
-	) as ASTNODE ptr
-
-	var files = astNewGROUP( )
-	dirs = astNewGROUP( )
-
-	dirsAppend( rootdir )
-
-	if( frog.verbose ) then
-		print "scanning tree for " + filepattern + " files: '" + *dirs->head->text + "'"
-	end if
-
-	'' Work off the queue -- each subdir scan can append new subdirs
-	while( dirs->head )
-		astAppend( files, hScanParent( *dirs->head->text, filepattern ) )
-		astRemove( dirs, dirs->head )
-	wend
-
-	astDelete( dirs )
-	dirs = NULL
-
-	function = files
 end function
