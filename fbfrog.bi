@@ -790,7 +790,6 @@ declare function astCloneChildren( byval src as ASTNODE ptr ) as ASTNODE ptr
 declare function astGroupContains( byval group as ASTNODE ptr, byval lookfor as ASTNODE ptr ) as integer
 declare function astGroupContainsAnyChildrenOf( byval l as ASTNODE ptr, byval r as ASTNODE ptr ) as integer
 declare function astGroupContainsAllChildrenOf( byval l as ASTNODE ptr, byval r as ASTNODE ptr ) as integer
-declare function astGroupsContainEqualChildren( byval l as ASTNODE ptr, byval r as ASTNODE ptr ) as integer
 declare function astUngroupOne( byval group as ASTNODE ptr ) as ASTNODE ptr
 declare function astNewDIMENSION _
 	( _

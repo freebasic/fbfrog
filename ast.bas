@@ -260,7 +260,7 @@ function astGroupContainsAllChildrenOf( byval l as ASTNODE ptr, byval r as ASTNO
 	function = TRUE
 end function
 
-function astGroupsContainEqualChildren( byval l as ASTNODE ptr, byval r as ASTNODE ptr ) as integer
+private function astGroupsContainEqualChildren( byval l as ASTNODE ptr, byval r as ASTNODE ptr ) as integer
 	function = astGroupContainsAllChildrenOf( l, r ) and astGroupContainsAllChildrenOf( r, l )
 end function
 
