@@ -1,3 +1,5 @@
+#pragma once
+
 #ifdef __FB_DOS__
 	#ifndef VER
 		#define VER 3
@@ -23,5 +25,3 @@
 		#error "'VER' is #defined to an unsupported value; expected one of: 1, 2, 3, 4, 5"
 	#endif
 #endif
-
-#pragma once

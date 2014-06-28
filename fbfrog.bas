@@ -981,11 +981,6 @@ private function frogReadAPI( byval options as ASTNODE ptr ) as ASTNODE ptr
 		wend
 	end scope
 
-	'' Prepend #pragma once
-	'' It's always "needed": C headers typically have #include guards, but
-	'' we don't preserve those.
-	astPrependMaybeWithDivider( ast, astNew( ASTCLASS_PRAGMAONCE ) )
-
 	astMergeDIVIDERs( ast )
 
 	astDelete( options )
@@ -1079,6 +1074,14 @@ end sub
 
 	'' Turn VERBLOCKs into #ifs etc.
 	astProcessVerblocks( final )
+
+	'' Prepend #pragma once
+	'' It's always needed, except if the binding is empty: C headers
+	'' typically have #include guards, but we don't preserve those.
+	assert( final->class = ASTCLASS_GROUP )
+	if( final->head ) then
+		astPrependMaybeWithDivider( final, astNew( ASTCLASS_PRAGMAONCE ) )
+	end if
 
 	'' Do auto-formatting if not preserving whitespace
 	if( frog.whitespace = FALSE ) then

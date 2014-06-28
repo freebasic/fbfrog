@@ -1,3 +1,5 @@
+#pragma once
+
 #ifndef VER
 	#define VER 2
 #endif
@@ -7,8 +9,6 @@
 #else
 	#error "'VER' is #defined to an unsupported value; expected one of: 1, 2"
 #endif
-
-#pragma once
 
 #inclib "main"
 

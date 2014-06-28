@@ -1,3 +1,5 @@
+#pragma once
+
 #ifdef A
 #elseif defined(B)
 #elseif defined(C)
@@ -18,5 +20,3 @@
 		#error "'VER' is #defined to an unsupported value; expected one of: 1, 2"
 	#endif
 #endif
-
-#pragma once

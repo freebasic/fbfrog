@@ -1,3 +1,5 @@
+#pragma once
+
 #ifndef VER
 	#define VER 1
 #endif
@@ -6,8 +8,6 @@
 #else
 	#error "'VER' is #defined to an unsupported value; expected one of: 1"
 #endif
-
-#pragma once
 
 dim shared common_ as long
 dim shared v1 as long

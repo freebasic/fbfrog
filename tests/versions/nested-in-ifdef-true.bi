@@ -1,3 +1,5 @@
+#pragma once
+
 #ifdef A
 	#ifndef VER
 		#define VER 2
@@ -9,5 +11,3 @@
 		#error "'VER' is #defined to an unsupported value; expected one of: 1, 2"
 	#endif
 #endif
-
-#pragma once
