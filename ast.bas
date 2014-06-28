@@ -429,11 +429,6 @@ sub astAppend( byval parent as ASTNODE ptr, byval n as ASTNODE ptr )
 	astInsert( parent, n, NULL )
 end sub
 
-'' Append a node unless it already exists in the list of children
-sub astAppendUnique( byval parent as ASTNODE ptr, byval n as ASTNODE ptr )
-	astInsert( parent, n, NULL, TRUE )
-end sub
-
 sub astCloneAppend( byval parent as ASTNODE ptr, byval n as ASTNODE ptr )
 	astAppend( parent, astClone( n ) )
 end sub
