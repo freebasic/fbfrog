@@ -438,7 +438,8 @@ private sub hParseArgs( byref x as integer )
 
 			'' <id>
 			hExpectId( x )
-			astAppend( frog.script, astNew( ASTCLASS_PPDEFINE, tkGetText( x ) ) )
+			'' Produce an object-like #define
+			astAppend( frog.script, astNewPPDEFINE( tkGetText( x ) ) )
 			x += 1
 
 			'' [<body>]
