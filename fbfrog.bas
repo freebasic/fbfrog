@@ -221,13 +221,13 @@ private sub hParseSelectCompound( byref x as integer )
 				end if
 
 				'' <symbol> = <versionnumber>
-				condition = astNewBOP( ASTCLASS_EQ, astNewID( selectsymbol ), astNewTEXT( tkGetText( x ) ) )
+				condition = astNew( ASTCLASS_EQ, astNewID( selectsymbol ), astNewTEXT( tkGetText( x ) ) )
 			else
 				'' <symbol>
 				hExpectId( x )
 
 				'' defined(<symbol>)
-				condition = astNewUOP( ASTCLASS_DEFINED, astNewID( tkGetText( x ) ) )
+				condition = astNew( ASTCLASS_DEFINED, astNewID( tkGetText( x ) ) )
 			end if
 			var n = astNew( ASTCLASS_CASE )
 			n->expr = condition
@@ -264,7 +264,7 @@ private sub hParseIfDefCompound( byref x as integer )
 	astAppend( frog.script, astNew( ASTCLASS_SELECT ) )
 	scope
 		var n = astNew( ASTCLASS_CASE )
-		n->expr = astNewUOP( ASTCLASS_DEFINED, astNewID( tkGetText( x ) ) )
+		n->expr = astNew( ASTCLASS_DEFINED, astNewID( tkGetText( x ) ) )
 		astAppend( frog.script, n )
 	end scope
 	x += 1
@@ -593,10 +593,10 @@ private sub frogEvaluateScript _
 				dim as ASTNODE ptr condition
 				if( decl->class = ASTCLASS_DECLAREDEFINES ) then
 					'' defined(<symbol>)
-					condition = astNewUOP( ASTCLASS_DEFINED, astNewID( k->text ) )
+					condition = astNew( ASTCLASS_DEFINED, astNewID( k->text ) )
 				else
 					'' <symbol> = <versionnumber>
-					condition = astNewBOP( ASTCLASS_EQ, astNewID( decl->text ), astClone( k ) )
+					condition = astNew( ASTCLASS_EQ, astNewID( decl->text ), astClone( k ) )
 				end if
 				astAppend( completeveror, astClone( condition ) )
 
@@ -623,7 +623,7 @@ private sub frogEvaluateScript _
 
 			'' Branch for the true code path
 			'' defined(<symbol>)
-			var condition = astNewUOP( ASTCLASS_DEFINED, astNewID( symbol ) )
+			var condition = astNew( ASTCLASS_DEFINED, astNewID( symbol ) )
 			astAppend( completeveror, astClone( condition ) )
 			frogEvaluateScript( i, _
 				astNewGROUP( astClone( conditions ), astClone( condition ) ), _
@@ -631,7 +631,7 @@ private sub frogEvaluateScript _
 
 			'' And follow the false code path here
 			'' (not defined(<symbol>))
-			condition = astNewUOP( ASTCLASS_NOT, condition )
+			condition = astNew( ASTCLASS_NOT, condition )
 			astAppend( completeveror, astClone( condition ) )
 			astAppend( conditions, condition )
 

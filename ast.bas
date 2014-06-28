@@ -134,27 +134,16 @@ function astNew overload( byval class_ as integer ) as ASTNODE ptr
 	function = n
 end function
 
-function astNew overload _
-	( _
-		byval class_ as integer, _
-		byval text as zstring ptr _
-	) as ASTNODE ptr
-
+function astNew overload( byval class_ as integer, byval text as zstring ptr ) as ASTNODE ptr
 	var n = astNew( class_ )
 	n->text = strDuplicate( text )
-
 	function = n
 end function
 
-function astNew overload _
-	( _
-		byval class_ as integer, _
-		byval child as ASTNODE ptr _
-	) as ASTNODE ptr
-
+function astNew overload( byval class_ as integer, byval c1 as ASTNODE ptr, byval c2 as ASTNODE ptr ) as ASTNODE ptr
 	var n = astNew( class_ )
-	astAppend( n, child )
-
+	astAppend( n, c1 )
+	astAppend( n, c2 )
 	function = n
 end function
 
@@ -170,44 +159,9 @@ function astNewPPDEFINE( byval id as zstring ptr ) as ASTNODE ptr
 	function = n
 end function
 
-function astNewUOP _
-	( _
-		byval astclass as integer, _
-		byval l as ASTNODE ptr _
-	) as ASTNODE ptr
-
-	var n = astNew( astclass )
-	n->l = l
-
-	function = n
-end function
-
-function astNewBOP _
-	( _
-		byval astclass as integer, _
-		byval l as ASTNODE ptr, _
-		byval r as ASTNODE ptr _
-	) as ASTNODE ptr
-
-	var n = astNew( astclass )
-	n->l = l
-	n->r = r
-
-	function = n
-end function
-
-function astNewIIF _
-	( _
-		byval cond as ASTNODE ptr, _
-		byval l as ASTNODE ptr, _
-		byval r as ASTNODE ptr _
-	) as ASTNODE ptr
-
-	var n = astNew( ASTCLASS_IIF )
+function astNewIIF( byval cond as ASTNODE ptr, byval l as ASTNODE ptr, byval r as ASTNODE ptr ) as ASTNODE ptr
+	var n = astNew( ASTCLASS_IIF, l, r )
 	n->expr = cond
-	n->l = l
-	n->r = r
-
 	function = n
 end function
 
@@ -276,17 +230,6 @@ function astUngroupOne( byval group as ASTNODE ptr ) as ASTNODE ptr
 	astDelete( group )
 end function
 
-function astNewDIMENSION _
-	( _
-		byval lb as ASTNODE ptr, _
-		byval ub as ASTNODE ptr _
-	) as ASTNODE ptr
-	var n = astNew( ASTCLASS_DIMENSION )
-	n->l = lb
-	n->r = ub
-	function = n
-end function
-
 function astNewCONSTI( byval i as longint, byval dtype as integer ) as ASTNODE ptr
 	var n = astNew( ASTCLASS_CONSTI )
 	n->dtype = dtype
@@ -331,15 +274,13 @@ sub astDelete( byval n as ASTNODE ptr )
 		exit sub
 	end if
 
-	var child = n->head
-	while( child )
-		var nxt = child->next
-		astDelete( child )
-		child = nxt
+	var i = n->head
+	while( i )
+		var nxt = i->next
+		astDelete( i )
+		i = nxt
 	wend
 
-	astDelete( n->r )
-	astDelete( n->l )
 	astDelete( n->expr )
 	astDelete( n->array )
 	deallocate( n->text )
@@ -434,6 +375,7 @@ sub astAppend( byval parent as ASTNODE ptr, byval n as ASTNODE ptr )
 end sub
 
 function astRemove( byval parent as ASTNODE ptr, byval a as ASTNODE ptr ) as ASTNODE ptr
+	assert( a )
 	assert( astIsChildOf( parent, a ) )
 
 	function = a->next
@@ -467,6 +409,7 @@ function astReplace _
 		byval old as ASTNODE ptr, _
 		byval n as ASTNODE ptr _
 	) as ASTNODE ptr
+	assert( old )
 	astInsert( parent, n, old )
 	function = astRemove( parent, old )
 end function
@@ -537,8 +480,6 @@ function astCloneNode( byval n as ASTNODE ptr ) as ASTNODE ptr
 	c->location    = n->location
 
 	c->expr        = astClone( n->expr )
-	c->l           = astClone( n->l )
-	c->r           = astClone( n->r )
 
 	select case( n->class )
 	case ASTCLASS_CONSTI   : c->vali = n->vali
@@ -630,8 +571,6 @@ function astIsEqual _
 	if( astIsEqual( a->bits, b->bits, options ) = FALSE ) then exit function
 
 	if( astIsEqual( a->expr, b->expr, options ) = FALSE ) then exit function
-	if( astIsEqual( a->l, b->l, options ) = FALSE ) then exit function
-	if( astIsEqual( a->r, b->r, options ) = FALSE ) then exit function
 
 	select case( a->class )
 	case ASTCLASS_CONSTI
@@ -822,12 +761,6 @@ function astDumpInline( byval n as ASTNODE ptr ) as string
 	if( n->expr ) then
 		more( "expr=" + astDumpInline( n->expr ) )
 	end if
-	if( n->l ) then
-		more( "l=" + astDumpInline( n->l ) )
-	end if
-	if( n->r ) then
-		more( "r=" + astDumpInline( n->r ) )
-	end if
 
 	var child = n->head
 	while( child )
@@ -873,8 +806,6 @@ sub astDump _
 		dumpField( subtype )
 		dumpField( array )
 		dumpField( expr )
-		dumpField( l )
-		dumpField( r )
 
 		var child = n->head
 		while( child )

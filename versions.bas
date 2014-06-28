@@ -103,13 +103,13 @@ function astDumpPrettyVersion( byval n as ASTNODE ptr ) as string
 		wend
 
 	case ASTCLASS_EQ
-		s = *n->l->text + "=" + *n->r->text
+		s = *n->head->text + "=" + *n->tail->text
 
 	case ASTCLASS_DEFINED
-		s = *n->l->text
+		s = *n->head->text
 
 	case ASTCLASS_NOT
-		s = "(not " + astDumpPrettyVersion( n->l ) + ")"
+		s = "(not " + astDumpPrettyVersion( n->head ) + ")"
 
 	case else
 		s = astDumpInline( n )
@@ -1052,7 +1052,7 @@ private sub hBuildDefaultVersionSelection( byval code as ASTNODE ptr, byval decl
 	ppdefine->expr = astClone( decl->tail )
 
 	var ppif = astNew( ASTCLASS_PPIF )
-	ppif->expr = astNewUOP( ASTCLASS_NOT, astNewUOP( ASTCLASS_DEFINED, astNewID( decl->text ) ) )
+	ppif->expr = astNew( ASTCLASS_NOT, astNew( ASTCLASS_DEFINED, astNewID( decl->text ) ) )
 	astAppend( ppif, ppdefine )
 
 	astAppend( code, ppif )
@@ -1068,10 +1068,10 @@ private sub hVerifyDefinesOrVersions( byval code as ASTNODE ptr, byval decl as A
 			var ppif = astNew( ppifclass )
 			if( decl->class = ASTCLASS_DECLAREDEFINES ) then
 				'' defined(<symbol>)
-				ppif->expr = astNewUOP( ASTCLASS_DEFINED, astNewID( k->text ) )
+				ppif->expr = astNew( ASTCLASS_DEFINED, astNewID( k->text ) )
 			else
 				'' <symbol> = <versionnumber>
-				ppif->expr = astNewBOP( ASTCLASS_EQ, astNewID( decl->text ), astClone( k ) )
+				ppif->expr = astNew( ASTCLASS_EQ, astNewID( decl->text ), astClone( k ) )
 			end if
 			astAppend( code, ppif )
 			ppifclass = ASTCLASS_PPELSEIF

@@ -715,11 +715,6 @@ type ASTNODE_
 	'' IIF: condition expression
 	expr		as ASTNODE ptr
 
-	'' Left/right operands for UOPs/BOPs
-	'' lbound/ubound for DIMENSIONs
-	l		as ASTNODE ptr
-	r		as ASTNODE ptr
-
 	union
 		vali		as longint  '' CONSTI
 		valf		as double   '' CONSTF
@@ -728,14 +723,11 @@ type ASTNODE_
 		paramcount	as integer  '' PPDEFINE: -1 = #define m, 0 = #define m(), 1 = #define m(a), ...
 	end union
 
-	'' Linked list of child nodes, where l/r aren't enough: fields/parameters/...
+	'' Linked list of child nodes, operands/fields/parameters/...
 	head		as ASTNODE ptr
 	tail		as ASTNODE ptr
 	next		as ASTNODE ptr
 	prev		as ASTNODE ptr
-
-	'' expr/l/r should be used for expression trees,
-	'' the child list for statement trees
 end type
 
 #define astNewID( id ) astNew( ASTCLASS_ID, id )
@@ -746,29 +738,10 @@ end type
 #define astIsVEROR( n )  ((n)->class = ASTCLASS_VEROR)
 
 declare function astNew overload( byval class_ as integer ) as ASTNODE ptr
-declare function astNew overload _
-	( _
-		byval class_ as integer, _
-		byval text as zstring ptr _
-	) as ASTNODE ptr
-declare function astNew overload _
-	( _
-		byval class_ as integer, _
-		byval child as ASTNODE ptr _
-	) as ASTNODE ptr
+declare function astNew overload( byval class_ as integer, byval text as zstring ptr ) as ASTNODE ptr
+declare function astNew overload( byval class_ as integer, byval c1 as ASTNODE ptr, byval c2 as ASTNODE ptr = NULL ) as ASTNODE ptr
 declare function astNewIncludeOnce( byval filename as zstring ptr ) as ASTNODE ptr
 declare function astNewPPDEFINE( byval id as zstring ptr ) as ASTNODE ptr
-declare function astNewUOP _
-	( _
-		byval astclass as integer, _
-		byval l as ASTNODE ptr _
-	) as ASTNODE ptr
-declare function astNewBOP _
-	( _
-		byval astclass as integer, _
-		byval l as ASTNODE ptr, _
-		byval r as ASTNODE ptr _
-	) as ASTNODE ptr
 declare function astNewIIF _
 	( _
 		byval cond as ASTNODE ptr, _
@@ -786,11 +759,6 @@ declare function astGroupContains( byval group as ASTNODE ptr, byval lookfor as 
 declare function astGroupContainsAnyChildrenOf( byval l as ASTNODE ptr, byval r as ASTNODE ptr ) as integer
 declare function astGroupContainsAllChildrenOf( byval l as ASTNODE ptr, byval r as ASTNODE ptr ) as integer
 declare function astUngroupOne( byval group as ASTNODE ptr ) as ASTNODE ptr
-declare function astNewDIMENSION _
-	( _
-		byval lb as ASTNODE ptr, _
-		byval ub as ASTNODE ptr _
-	) as ASTNODE ptr
 declare function astNewCONSTI( byval i as longint, byval dtype as integer ) as ASTNODE ptr
 declare function astNewCONSTF( byval f as double, byval dtype as integer ) as ASTNODE ptr
 declare function astNewTK( byval x as integer ) as ASTNODE ptr

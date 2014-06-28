@@ -30,8 +30,8 @@ private function astOpsC2FB _
 	'' (not x = -1 and x <> -1 because if checks check against 0 and <> 0,
 	'' not 0 and -1)
 	case ASTCLASS_CEQ, ASTCLASS_CNE
-		if( astIsCONSTI( n->r ) ) then
-			l_is_bool_context = (n->r->vali = 0)
+		if( astIsCONSTI( n->tail ) ) then
+			l_is_bool_context = (n->tail->vali = 0)
 		end if
 
 	'' iif() condition always is treated as bool
@@ -40,8 +40,13 @@ private function astOpsC2FB _
 	end select
 
 	n->expr = astOpsC2FB( n->expr, expr_is_bool_context )
-	n->l = astOpsC2FB( n->l, l_is_bool_context )
-	n->r = astOpsC2FB( n->r, r_is_bool_context )
+	if( n->head ) then
+		astReplace( n, n->head, astOpsC2FB( astClone( n->head ), l_is_bool_context ) )
+		if( n->head <> n->tail ) then
+			assert( n->head->next = n->tail )
+			astReplace( n, n->tail, astOpsC2FB( astClone( n->tail ), r_is_bool_context ) )
+		end if
+	end if
 
 	select case( n->class )
 	case ASTCLASS_CLOGNOT, ASTCLASS_CDEFINED, _
@@ -54,7 +59,7 @@ private function astOpsC2FB _
 		case ASTCLASS_CLOGNOT
 			'' Turn C's "!x" into FB's "x = 0"
 			n->class = ASTCLASS_EQ
-			n->r = astNewCONSTI( 0, TYPE_LONG )
+			astAppend( n, astNewCONSTI( 0, TYPE_LONG ) )
 		case ASTCLASS_CDEFINED : n->class = ASTCLASS_DEFINED
 		case ASTCLASS_CLOGOR   : n->class = ASTCLASS_ORELSE
 		case ASTCLASS_CLOGAND  : n->class = ASTCLASS_ANDALSO
@@ -69,7 +74,7 @@ private function astOpsC2FB _
 
 		'' Turn -1|0 into 1|0 if the value may be used in math calculations etc.
 		if( is_bool_context = FALSE ) then
-			n = astNewUOP( ASTCLASS_NEGATE, n )
+			n = astNew( ASTCLASS_NEGATE, n )
 		end if
 	end select
 
@@ -362,8 +367,6 @@ private sub hSolveOutArrayTypedefSubtypes _
 
 	if( n->array ) then hSolveOutArrayTypedefSubtypes( n->array, typedef )
 	if( n->expr  ) then hSolveOutArrayTypedefSubtypes( n->expr , typedef )
-	if( n->l     ) then hSolveOutArrayTypedefSubtypes( n->l    , typedef )
-	if( n->r     ) then hSolveOutArrayTypedefSubtypes( n->r    , typedef )
 
 	var i = n->head
 	while( i )
@@ -430,8 +433,6 @@ private sub hSolveOutProcTypedefSubtypes _
 
 	if( n->array ) then hSolveOutProcTypedefSubtypes( n->array, typedef )
 	if( n->expr  ) then hSolveOutProcTypedefSubtypes( n->expr , typedef )
-	if( n->l     ) then hSolveOutProcTypedefSubtypes( n->l    , typedef )
-	if( n->r     ) then hSolveOutProcTypedefSubtypes( n->r    , typedef )
 
 	var i = n->head
 	while( i )
@@ -718,8 +719,6 @@ private sub hCollectTagIds( byval n as ASTNODE ptr, byval hashtb as THASH ptr )
 
 	if( n->array ) then hCollectTagIds( n->array, hashtb )
 	if( n->expr  ) then hCollectTagIds( n->expr , hashtb )
-	if( n->l     ) then hCollectTagIds( n->l    , hashtb )
-	if( n->r     ) then hCollectTagIds( n->r    , hashtb )
 
 	var i = n->head
 	while( i )
@@ -886,7 +885,7 @@ private function hIsSimpleConstantExpression( byval n as ASTNODE ptr ) as intege
 
 	'' UOPs
 	case ASTCLASS_NOT, ASTCLASS_NEGATE, ASTCLASS_SIZEOF, ASTCLASS_CAST
-		if( hIsSimpleConstantExpression( n->l ) = FALSE ) then exit function
+		if( hIsSimpleConstantExpression( n->head ) = FALSE ) then exit function
 
 	'' BOPs
 	case ASTCLASS_ORELSE, ASTCLASS_ANDALSO, _
@@ -898,14 +897,14 @@ private function hIsSimpleConstantExpression( byval n as ASTNODE ptr ) as intege
 	     ASTCLASS_ADD, ASTCLASS_SUB, _
 	     ASTCLASS_MUL, ASTCLASS_DIV, ASTCLASS_MOD, _
 	     ASTCLASS_STRCAT
-		if( hIsSimpleConstantExpression( n->l ) = FALSE ) then exit function
-		if( hIsSimpleConstantExpression( n->r ) = FALSE ) then exit function
+		if( hIsSimpleConstantExpression( n->head ) = FALSE ) then exit function
+		if( hIsSimpleConstantExpression( n->tail ) = FALSE ) then exit function
 
 	'' IIF
 	case ASTCLASS_IIF
 		if( hIsSimpleConstantExpression( n->expr ) = FALSE ) then exit function
-		if( hIsSimpleConstantExpression( n->l ) = FALSE ) then exit function
-		if( hIsSimpleConstantExpression( n->r ) = FALSE ) then exit function
+		if( hIsSimpleConstantExpression( n->head ) = FALSE ) then exit function
+		if( hIsSimpleConstantExpression( n->tail ) = FALSE ) then exit function
 
 	case else
 		exit function
@@ -1137,8 +1136,6 @@ private sub hReplaceCalls _
 	if( n->subtype ) then hReplaceCalls( n->subtype, oldid, newid )
 	if( n->array   ) then hReplaceCalls( n->array  , oldid, newid )
 	if( n->expr    ) then hReplaceCalls( n->expr   , oldid, newid )
-	if( n->l       ) then hReplaceCalls( n->l      , oldid, newid )
-	if( n->r       ) then hReplaceCalls( n->r      , oldid, newid )
 
 	var i = n->head
 	while( i )
@@ -1170,8 +1167,6 @@ sub astReplaceSubtypes _
 
 	if( n->array ) then astReplaceSubtypes( n->array, oldclass, oldid, newclass, newid )
 	if( n->expr  ) then astReplaceSubtypes( n->expr , oldclass, oldid, newclass, newid )
-	if( n->l     ) then astReplaceSubtypes( n->l    , oldclass, oldid, newclass, newid )
-	if( n->r     ) then astReplaceSubtypes( n->r    , oldclass, oldid, newclass, newid )
 
 	var i = n->head
 	while( i )
@@ -1352,8 +1347,6 @@ function astUsesDtype( byval n as ASTNODE ptr, byval dtype as integer ) as integ
 	if( n->subtype ) then if( astUsesDtype( n->subtype, dtype ) ) then return TRUE
 	if( n->array   ) then if( astUsesDtype( n->array  , dtype ) ) then return TRUE
 	if( n->expr    ) then if( astUsesDtype( n->expr   , dtype ) ) then return TRUE
-	if( n->l       ) then if( astUsesDtype( n->l      , dtype ) ) then return TRUE
-	if( n->r       ) then if( astUsesDtype( n->r      , dtype ) ) then return TRUE
 
 	var i = n->head
 	while( i )

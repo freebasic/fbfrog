@@ -4,8 +4,8 @@
 
 #include once "fbfrog.bi"
 
-#define emitL( n ) emitAst( (n)->l, TRUE )
-#define emitR( n ) emitAst( (n)->r, TRUE )
+#define emitL( n ) emitAst( (n)->head, TRUE )
+#define emitR( n ) emitAst( (n)->tail, TRUE )
 
 declare function emitAst _
 	( _
@@ -428,12 +428,12 @@ private function emitAst _
 		select case( n->expr->class )
 		'' #if defined(id)        ->    #ifdef id
 		case ASTCLASS_DEFINED
-			s = "#ifdef " + emitAst( n->expr->l )
+			s = "#ifdef " + emitAst( n->expr->head )
 
 		'' #if not defined(id)    ->    #ifndef id
 		case ASTCLASS_NOT
-			if( n->expr->l->class = ASTCLASS_DEFINED ) then
-				s = "#ifndef " + emitAst( n->expr->l->l )
+			if( n->expr->head->class = ASTCLASS_DEFINED ) then
+				s = "#ifndef " + emitAst( n->expr->head->head )
 			end if
 		end select
 		if( len( s ) = 0 ) then
@@ -704,11 +704,11 @@ private function emitAst _
 	case ASTCLASS_NOT       : s = hParens( "not "     + emitL( n ), need_parens )
 	case ASTCLASS_NEGATE    : s = hParens( "-"        + emitL( n ), need_parens )
 	case ASTCLASS_UNARYPLUS : s = hParens( "+"        + emitL( n ), need_parens )
-	case ASTCLASS_DEFINED   : s =          "defined(" + emitAst( n->l ) + ")"
+	case ASTCLASS_DEFINED   : s =          "defined(" + emitAst( n->head ) + ")"
 	case ASTCLASS_ADDROF    : s = hParens( "@"        + emitL( n ), need_parens )
 	case ASTCLASS_DEREF     : s = hParens( "*"        + emitL( n ), need_parens )
-	case ASTCLASS_STRINGIFY : s =          "#"        + emitAst( n->l )
-	case ASTCLASS_SIZEOF    : s =          "sizeof("  + emitAst( n->l ) + ")"
+	case ASTCLASS_STRINGIFY : s =          "#"        + emitAst( n->head )
+	case ASTCLASS_SIZEOF    : s =          "sizeof("  + emitAst( n->head ) + ")"
 	case ASTCLASS_CAST
 		select case( n->dtype )
 		case TYPE_BYTE     : s =    "cbyte("
@@ -729,13 +729,13 @@ private function emitAst _
 			end if
 			s += emitType( n ) + ", "
 		end select
-		s += emitAst( n->l ) + ")"
+		s += emitAst( n->head ) + ")"
 
 	case ASTCLASS_IIF
 		s += "iif(" + _
 			emitAst( n->expr ) + ", " + _
-			emitAst( n->l    ) + ", " + _
-			emitAst( n->r    ) + ")"
+			emitAst( n->head ) + ", " + _
+			emitAst( n->tail ) + ")"
 
 	case ASTCLASS_PPMERGE
 		var child = n->head
@@ -755,11 +755,9 @@ private function emitAst _
 		s = "{" + hSeparatedList( n, ", ", FALSE ) + "}"
 
 	case ASTCLASS_DIMENSION
-		if( n->l ) then
-			assert( n->r )
-			s += emitAst( n->l ) + " to " + emitAst( n->r )
+		if( n->head ) then
+			s += emitAst( n->head ) + " to " + emitAst( n->tail )
 		else
-			assert( n->r = NULL )
 			s += "0 to ..."
 		end if
 

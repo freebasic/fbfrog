@@ -142,7 +142,7 @@ private function hStringLiteralSequence( byref x as integer ) as ASTNODE ptr
 			end if
 			x += 1
 
-			s = astNewUOP( ASTCLASS_STRINGIFY, astNewID( tkGetText( x ) ) )
+			s = astNew( ASTCLASS_STRINGIFY, astNewID( tkGetText( x ) ) )
 
 		case else
 			exit do
@@ -151,7 +151,7 @@ private function hStringLiteralSequence( byref x as integer ) as ASTNODE ptr
 		if( a = NULL ) then
 			a = s
 		else
-			a = astNewBOP( ASTCLASS_STRCAT, a, s )
+			a = astNew( ASTCLASS_STRCAT, a, s )
 		end if
 
 		x += 1
@@ -337,7 +337,7 @@ private function cExpression _
 	dim as ASTNODE ptr a
 	if( op >= 0 ) then
 		x += 1
-		a = astNewUOP( op, cExpression( x, cprecedence(op), macro ) )
+		a = astNew( op, cExpression( x, cprecedence(op), macro ) )
 	else
 		'' Atoms
 		select case( tkGet( x ) )
@@ -363,7 +363,7 @@ private function cExpression _
 				var t = hDataTypeInParens( x, DECL_CASTTYPE )
 
 				'' Expression
-				a = astNewUOP( ASTCLASS_CAST, cExpression( x, 0, macro ) )
+				a = astNew( ASTCLASS_CAST, cExpression( x, 0, macro ) )
 
 				assert( t->class = ASTCLASS_TYPE )
 				astSetType( a, t->dtype, astClone( t->subtype ) )
@@ -463,7 +463,7 @@ private function cExpression _
 				astSetType( a, t->dtype, astClone( t->subtype ) )
 				astDelete( t )
 			else
-				a = astNewUOP( ASTCLASS_SIZEOF, cExpression( x, cprecedence(ASTCLASS_SIZEOF), macro ) )
+				a = astNew( ASTCLASS_SIZEOF, cExpression( x, cprecedence(ASTCLASS_SIZEOF), macro ) )
 			end if
 
 		case else
@@ -534,7 +534,7 @@ private function cExpression _
 				x += 1
 			end if
 
-			a = astNewBOP( op, a, b )
+			a = astNew( op, a, b )
 		end if
 	loop
 
@@ -1323,15 +1323,15 @@ private function cDeclarator _
 				if( decl <> DECL_PARAM ) then
 					tkOops( x, "array dimension must have an explicit size here" )
 				end if
-				d = astNewDIMENSION( NULL, NULL )
+				d = astNew( ASTCLASS_DIMENSION )
 			else
 				d = cExpression( x, 0, NULL )
 
 				'' Add new DIMENSION to the ARRAY:
 				'' lbound = 0, ubound = elements - 1
-				d = astNewDIMENSION( _
+				d = astNew( ASTCLASS_DIMENSION, _
 						astNewCONSTI( 0, TYPE_LONG ), _
-						astNewBOP( ASTCLASS_SUB, _
+						astNew( ASTCLASS_SUB, _
 							d, _
 							astNewCONSTI( 1, TYPE_LONG ) ) )
 			end if

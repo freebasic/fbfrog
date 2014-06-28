@@ -104,14 +104,9 @@ Running the tests:
 
 To do:
 
-- 64bit support:
-	Reverting 04324839e6a05cdaad6d55b67e453ce952597ddc
-
 - support defined() in #define bodies (C expression parser)
 - support macro expansion for C/CPP keywords, not just TK_ID
 - support -o - to write to stdout, or just -stdout, or similar
-- remove unused AST functions etc.
-- ASTNODE.l/r aren't needed anymore - we're not doing constant folding anymore
 - rename ASTNODE -> AST, ASTCLASS_* -> AST_*?
 - re-use TK_* enum as ASTNODE classes, replacing ASTCLASS_*
     (there's lots of overlap, and it doesn't matter if we have some enumconsts

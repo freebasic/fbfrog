@@ -470,7 +470,7 @@ private function cppExpression _
 	if( op >= 0 ) then
 		var uopx = x
 		x += 1
-		a = astTakeLoc( astNewUOP( op, cppExpression( x, cprecedence(op) ) ), uopx )
+		a = astTakeLoc( astNew( op, cppExpression( x, cprecedence(op) ) ), uopx )
 	else
 		'' Atoms
 		select case( tkGet( x ) )
@@ -528,7 +528,7 @@ private function cppExpression _
 				x += 1
 			end if
 
-			a = astTakeLoc( astNewUOP( ASTCLASS_CDEFINED, a ), definedx )
+			a = astTakeLoc( astNew( ASTCLASS_CDEFINED, a ), definedx )
 
 		case else
 			tkOopsExpected( x, "number literal or '(...)' (atom expression)" )
@@ -589,7 +589,7 @@ private function cppExpression _
 
 			a = astNewIIF( a, b, c )
 		else
-			a = astNewBOP( op, a, b )
+			a = astNew( op, a, b )
 		end if
 		astTakeLoc( a, bopx )
 	loop
@@ -753,12 +753,12 @@ private function cppDirective( byval x as integer ) as integer
 
 		'' Build up "[!]defined id" expression
 		var expr = astTakeLoc( astNewID( tkGetText( x ) ), x )
-		expr = astTakeLoc( astNewUOP( ASTCLASS_CDEFINED, expr ), x - 1 )
+		expr = astTakeLoc( astNew( ASTCLASS_CDEFINED, expr ), x - 1 )
 		expr->location.column += 2  '' ifdef -> def, ifndef -> ndef
 		expr->location.length = 3
 		if( tk = KW_IFNDEF ) then
 			expr->location.column += 1  '' ndef -> def
-			expr = astTakeLoc( astNewUOP( ASTCLASS_CLOGNOT, expr ), x - 1 )
+			expr = astTakeLoc( astNew( ASTCLASS_CLOGNOT, expr ), x - 1 )
 			expr->location.column += 2  '' ifndef -> n
 			expr->location.length = 1
 		end if
@@ -1772,12 +1772,12 @@ private function cppEval( byval n as ASTNODE ptr ) as longint
 	select case( n->class )
 	case ASTCLASS_CONSTI  : function = n->vali
 
-	case ASTCLASS_CLOGNOT   : function = -(cppEval( n->l ) = 0)
-	case ASTCLASS_NOT       : function = not cppEval( n->l )
-	case ASTCLASS_NEGATE    : function = -cppEval( n->l )
-	case ASTCLASS_UNARYPLUS : function = cppEval( n->l )
-	case ASTCLASS_CLOGOR    : function = -(cppEval( n->l ) orelse cppEval( n->r ))
-	case ASTCLASS_CLOGAND   : function = -(cppEval( n->l ) andalso cppEval( n->r ))
+	case ASTCLASS_CLOGNOT   : function =   -(cppEval( n->head ) = 0)
+	case ASTCLASS_NOT       : function = not cppEval( n->head )
+	case ASTCLASS_NEGATE    : function =   - cppEval( n->head )
+	case ASTCLASS_UNARYPLUS : function =     cppEval( n->head )
+	case ASTCLASS_CLOGOR    : function =   -(cppEval( n->head ) orelse  cppEval( n->tail ))
+	case ASTCLASS_CLOGAND   : function =   -(cppEval( n->head ) andalso cppEval( n->tail ))
 
 	case ASTCLASS_OR, ASTCLASS_XOR, ASTCLASS_AND, _
 	     ASTCLASS_CEQ, ASTCLASS_CNE, _
@@ -1786,8 +1786,8 @@ private function cppEval( byval n as ASTNODE ptr ) as longint
 	     ASTCLASS_SHL, ASTCLASS_SHR, _
 	     ASTCLASS_ADD, ASTCLASS_SUB, _
 	     ASTCLASS_MUL, ASTCLASS_DIV, ASTCLASS_MOD
-		var l = cppEval( n->l )
-		var r = cppEval( n->r )
+		var l = cppEval( n->head )
+		var r = cppEval( n->tail )
 
 		select case( n->class )
 		case ASTCLASS_DIV, ASTCLASS_MOD
@@ -1817,7 +1817,7 @@ private function cppEval( byval n as ASTNODE ptr ) as longint
 		end select
 
 	case ASTCLASS_IIF
-		function = iif( cppEval( n->expr ), cppEval( n->l ), cppEval( n->r ) )
+		function = iif( cppEval( n->expr ), cppEval( n->head ), cppEval( n->tail ) )
 
 	case ASTCLASS_ID
 		'' Unexpanded identifier, assume it's a literal 0, like a CPP
@@ -1833,19 +1833,19 @@ private function cppEval( byval n as ASTNODE ptr ) as longint
 		function = 0
 
 	case ASTCLASS_CDEFINED
-		assert( n->l->class = ASTCLASS_ID )
-		var id = n->l->text
+		assert( n->head->class = ASTCLASS_ID )
+		var id = n->head->text
 
 		if( hIsKnownSymbol( id ) = FALSE ) then
 			'' Unknown symbol, assume it's undefined
 			if( frog.verbose ) then
-				astReport( n->l, "assuming symbol '" + *n->l->text + "' is undefined" )
+				astReport( n->head, "assuming symbol '" + *n->head->text + "' is undefined" )
 			end if
 
 			'' Register as known undefined
 			'' This also prevents the above warning from being shown
 			'' multiple times for a single symbol.
-			hRegisterMacro( n->l->text, -1 )
+			hRegisterMacro( n->head->text, -1 )
 		end if
 
 		'' defined()  ->  1|0
