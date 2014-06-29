@@ -227,7 +227,7 @@ private sub hParseSelectCompound( byref x as integer )
 				hExpectId( x )
 
 				'' defined(<symbol>)
-				condition = astNew( ASTCLASS_DEFINED, astNewID( tkGetText( x ) ) )
+				condition = astNewDEFINED( tkGetText( x ) )
 			end if
 			var n = astNew( ASTCLASS_CASE )
 			n->expr = condition
@@ -264,7 +264,7 @@ private sub hParseIfDefCompound( byref x as integer )
 	astAppend( frog.script, astNew( ASTCLASS_SELECT ) )
 	scope
 		var n = astNew( ASTCLASS_CASE )
-		n->expr = astNew( ASTCLASS_DEFINED, astNewID( tkGetText( x ) ) )
+		n->expr = astNewDEFINED( tkGetText( x ) )
 		astAppend( frog.script, n )
 	end scope
 	x += 1
@@ -593,7 +593,7 @@ private sub frogEvaluateScript _
 				dim as ASTNODE ptr condition
 				if( decl->class = ASTCLASS_DECLAREDEFINES ) then
 					'' defined(<symbol>)
-					condition = astNew( ASTCLASS_DEFINED, astNewID( k->text ) )
+					condition = astNewDEFINED( k->text )
 				else
 					'' <symbol> = <versionnumber>
 					condition = astNew( ASTCLASS_EQ, astNewID( decl->text ), astClone( k ) )
@@ -623,7 +623,7 @@ private sub frogEvaluateScript _
 
 			'' Branch for the true code path
 			'' defined(<symbol>)
-			var condition = astNew( ASTCLASS_DEFINED, astNewID( symbol ) )
+			var condition = astNewDEFINED( symbol )
 			astAppend( completeveror, astClone( condition ) )
 			frogEvaluateScript( i, _
 				astNewGROUP( astClone( conditions ), astClone( condition ) ), _

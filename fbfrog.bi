@@ -749,11 +749,8 @@ declare function astNewIIF _
 		byval r as ASTNODE ptr _
 	) as ASTNODE ptr
 declare function astNewGROUP overload( ) as ASTNODE ptr
-declare function astNewGROUP overload _
-	( _
-		byval child1 as ASTNODE ptr, _
-		byval child2 as ASTNODE ptr = NULL _
-	) as ASTNODE ptr
+declare function astNewGROUP overload( byval c1 as ASTNODE ptr, byval c2 as ASTNODE ptr = NULL ) as ASTNODE ptr
+declare function astNewDEFINED( byval id as zstring ptr ) as ASTNODE ptr
 declare function astCloneChildren( byval src as ASTNODE ptr ) as ASTNODE ptr
 declare function astGroupContains( byval group as ASTNODE ptr, byval lookfor as ASTNODE ptr ) as integer
 declare function astGroupContainsAnyChildrenOf( byval l as ASTNODE ptr, byval r as ASTNODE ptr ) as integer

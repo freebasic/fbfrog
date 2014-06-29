@@ -169,15 +169,15 @@ function astNewGROUP overload( ) as ASTNODE ptr
 	function = astNew( ASTCLASS_GROUP )
 end function
 
-function astNewGROUP overload _
-	( _
-		byval child1 as ASTNODE ptr, _
-		byval child2 as ASTNODE ptr _
-	) as ASTNODE ptr
+function astNewGROUP overload( byval c1 as ASTNODE ptr, byval c2 as ASTNODE ptr ) as ASTNODE ptr
 	var n = astNewGROUP( )
-	astAppend( n, child1 )
-	astAppend( n, child2 )
+	astAppend( n, c1 )
+	astAppend( n, c2 )
 	function = n
+end function
+
+function astNewDEFINED( byval id as zstring ptr ) as ASTNODE ptr
+	function = astNew( ASTCLASS_DEFINED, astNewID( id ) )
 end function
 
 function astCloneChildren( byval src as ASTNODE ptr ) as ASTNODE ptr

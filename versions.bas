@@ -1052,7 +1052,7 @@ private sub hBuildDefaultVersionSelection( byval code as ASTNODE ptr, byval decl
 	ppdefine->expr = astClone( decl->tail )
 
 	var ppif = astNew( ASTCLASS_PPIF )
-	ppif->expr = astNew( ASTCLASS_NOT, astNew( ASTCLASS_DEFINED, astNewID( decl->text ) ) )
+	ppif->expr = astNew( ASTCLASS_NOT, astNewDEFINED( decl->text ) )
 	astAppend( ppif, ppdefine )
 
 	astAppend( code, ppif )
@@ -1068,7 +1068,7 @@ private sub hVerifyDefinesOrVersions( byval code as ASTNODE ptr, byval decl as A
 			var ppif = astNew( ppifclass )
 			if( decl->class = ASTCLASS_DECLAREDEFINES ) then
 				'' defined(<symbol>)
-				ppif->expr = astNew( ASTCLASS_DEFINED, astNewID( k->text ) )
+				ppif->expr = astNewDEFINED( k->text )
 			else
 				'' <symbol> = <versionnumber>
 				ppif->expr = astNew( ASTCLASS_EQ, astNewID( decl->text ), astClone( k ) )
