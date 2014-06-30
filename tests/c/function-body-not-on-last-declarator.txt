@@ -1,0 +1,10 @@
+[1/5] __FB_WIN32__.__FB_64BIT__
+      tests/c/function-body-not-on-last-declarator.h
+tests/c/function-body-not-on-last-declarator.h(2): expected an atomic expression but found 'return'
+    1: // @fail
+    2: int a(void) { return 0 }, b;
+                     ^~~~~~
+    3: 
+context as seen by fbfrog:
+    int a ( void ) { return 0 } , b ;
+                     ^~~~~~

@@ -19,19 +19,12 @@ enum
 	DECL__COUNT
 end enum
 
-#if 0
-dim shared as zstring ptr decl2str(0 to DECL__COUNT-1) => _
-{ _
-	@"variable declaration", _
-	@"extern variable declaration", _
-	@"static variable declaration", _
-	@"field declaration", _
-	@"parameter declaration", _
-	@"typedef declaration", _
-	@"type cast expression", _
-	@"sizeof() type argument" _
-}
-#endif
+enum
+	BODY_TOPLEVEL = 0
+	BODY_SCOPE
+	BODY_STRUCT
+	BODY_ENUM
+end enum
 
 declare function cExpression _
 	( _
@@ -39,33 +32,16 @@ declare function cExpression _
 		byval level as integer, _
 		byval macro as ASTNODE ptr _
 	) as ASTNODE ptr
-declare function cIdList _
-	( _
-		byref x as integer, _
-		byval decl as integer, _
-		byval basedtype as integer, _
-		byval basesubtype as ASTNODE ptr, _
-		byval gccattribs as integer, _
-		byref comment as string _
-	) as ASTNODE ptr
-declare function cMultDecl _
+declare function cDeclaration _
 	( _
 		byref x as integer, _
 		byval decl as integer, _
 		byval gccattribs as integer, _
 		byref comment as string _
 	) as ASTNODE ptr
-declare function cToplevel _
-	( _
-		byref x as integer, _
-		byval body as integer _
-	) as ASTNODE ptr
-
-enum
-	BODY_TOPLEVEL = 0
-	BODY_STRUCT
-	BODY_ENUM
-end enum
+declare function cScope( byref x as integer ) as ASTNODE ptr
+declare function cConstruct( byref x as integer, byval body as integer ) as ASTNODE ptr
+declare function cBody( byref x as integer, byval body as integer ) as ASTNODE ptr
 
 namespace file
 	dim shared typedefs as THASH
@@ -208,8 +184,7 @@ private function hIsDataType _
 
 	select case( tkGet( x ) )
 	case KW___CDECL, KW___STDCALL, KW___ATTRIBUTE__, _
-	     KW_SIGNED, KW_UNSIGNED, KW_CONST, _
-	     KW_SHORT, KW_LONG, _
+	     KW_SIGNED, KW_UNSIGNED, KW_CONST, KW_SHORT, KW_LONG, _
 	     KW_ENUM, KW_STRUCT, KW_UNION, _
 	     KW_VOID, KW_CHAR, KW_FLOAT, KW_DOUBLE, KW_INT
 		is_type = not hIdentifierIsMacroParam( macro, tkGetIdOrKw( x ) )
@@ -233,7 +208,7 @@ private function hDataTypeInParens _
 	) as ASTNODE ptr
 
 	''
-	'' Using cMultDecl() to parse:
+	'' Using cDeclaration() to parse:
 	''
 	''    BaseType Declarator
 	''
@@ -241,10 +216,10 @@ private function hDataTypeInParens _
 	'' function pointer cast with parameter list etc. We need to do full
 	'' declarator parsing to handle that.
 	''
-	'' cMultDecl()/cIdList() will have built up a GROUP, for DECL_CASTTYPE
-	'' there should be 1 child only though, extract it.
+	'' cDeclaration() will have built up a GROUP, for DECL_CASTTYPE there
+	'' should be 1 child only though, extract it.
 	''
-	function = astUngroupOne( cMultDecl( x, DECL_CASTTYPE, 0, "" ) )
+	function = astUngroupOne( cDeclaration( x, decl, 0, "" ) )
 
 	'' ')'
 	tkExpect( x, TK_RPAREN, iif( decl = DECL_CASTTYPE, _
@@ -667,10 +642,6 @@ private function cEnumConst( byref x as integer ) as ASTNODE ptr
 	function = t
 end function
 
-private function cFieldDecl( byref x as integer ) as ASTNODE ptr
-	function = cMultDecl( x, DECL_FIELD, 0, "" )
-end function
-
 '' {STRUCT|UNION|ENUM} [Identifier] '{' StructBody|EnumBody '}'
 '' {STRUCT|UNION|ENUM} Identifier
 private function cStruct( byref x as integer ) as ASTNODE ptr
@@ -705,7 +676,7 @@ private function cStruct( byref x as integer ) as ASTNODE ptr
 		x += 1
 
 		astAppend( struct, _
-			cToplevel( x, iif( astclass = ASTCLASS_ENUM, _
+			cBody( x, iif( astclass = ASTCLASS_ENUM, _
 				BODY_ENUM, BODY_STRUCT ) ) )
 
 		'' '}'
@@ -731,7 +702,7 @@ private function cTypedef( byref x as integer ) as ASTNODE ptr
 	var comment = tkCollectComments( x, x )
 	x += 1
 
-	function = cMultDecl( x, DECL_TYPEDEF, 0, comment )
+	function = cDeclaration( x, DECL_TYPEDEF, 0, comment )
 end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -777,18 +748,10 @@ private function cDefine( byref x as integer ) as ASTNODE ptr
 	function = t
 end function
 
-private function cOtherPPToken( byref x as integer ) as ASTNODE ptr
-	var astclass = ASTCLASS_DIVIDER
-	if( tkGet( x ) = TK_PPINCLUDE ) then
-		astclass = ASTCLASS_PPINCLUDE
-	else
-		assert( tkGet( x ) = TK_DIVIDER )
-	end if
-
+private function cOtherPPToken( byref x as integer, byval astclass as integer ) as ASTNODE ptr
 	var t = astNew( astclass, tkGetText( x ) )
 	astAddComment( t, tkCollectComments( x, x ) )
 	x += 1
-
 	function = t
 end function
 
@@ -1018,7 +981,7 @@ private sub cBaseType _
 end sub
 
 '' ParamDeclList = ParamDecl (',' ParamDecl)*
-'' ParamDecl = '...' | MultDecl{Param}
+'' ParamDecl = '...' | Declaration{Param}
 private function cParamDeclList( byref x as integer ) as ASTNODE ptr
 	var group = astNewGROUP( )
 
@@ -1031,7 +994,7 @@ private function cParamDeclList( byref x as integer ) as ASTNODE ptr
 			astAddComment( t, tkCollectComments( x, x ) )
 			x += 1
 		else
-			t = cMultDecl( x, DECL_PARAM, 0, "" )
+			t = cDeclaration( x, DECL_PARAM, 0, "" )
 		end if
 
 		astAppend( group, t )
@@ -1206,14 +1169,14 @@ private function cDeclarator _
 	'' __ATTRIBUTE__((...))
 	''
 	'' Note: __attribute__'s behind the base type are handled by cBaseType()
-	'' already because they apply to the whole multdecl:
+	'' already because they apply to the whole declaration:
 	''    int __attribute__((stdcall)) f1(void), f2(void);
 	'' both should be stdcall.
 	''
 	'' But this is still here, to handle __attribute__'s appearing in
 	'' nested declarators:
 	''    int (__attribute__((stdcall)) f1)(void);
-	'' or at the front of follow-up declarators in a multdecl:
+	'' or at the front of follow-up declarators in a declaration:
 	''    int f1(void), __attribute__((stdcall)) f2(void);
 	''
 	cGccAttributeList( x, gccattribs )
@@ -1459,56 +1422,6 @@ private function cDeclarator _
 	function = t
 end function
 
-'' IdList = Declarator (',' Declarator)* [';']
-private function cIdList _
-	( _
-		byref x as integer, _
-		byval decl as integer, _
-		byval basedtype as integer, _
-		byval basesubtype as ASTNODE ptr, _
-		byval gccattribs as integer, _
-		byref comment as string _
-	) as ASTNODE ptr
-
-	var group = astNewGROUP( )
-
-	'' ... (',' ...)*
-	do
-		var begin = x
-
-		astAppend( group, cDeclarator( x, 0, decl, basedtype, basesubtype, gccattribs, NULL, 0, 0 ) )
-
-		'' The first declaration takes the comments from the base type
-		if( len( comment ) > 0 ) then
-			astAddComment( group->tail, comment )
-			comment = ""
-		end if
-
-		'' Every declaration takes the comments on its declarator tokens
-		astAddComment( group->tail, tkCollectComments( begin, x - 1 ) )
-
-		'' Everything can have a comma and more identifiers,
-		'' except for parameters/types.
-		select case( decl )
-		case DECL_PARAM, DECL_CASTTYPE, DECL_SIZEOFTYPE
-			exit do
-		end select
-
-		'' ','?
-	loop while( hMatch( x, TK_COMMA ) )
-
-	'' Everything except parameters/types must end with a ';'
-	select case( decl )
-	case DECL_PARAM, DECL_CASTTYPE, DECL_SIZEOFTYPE
-	case else
-		'' ';'
-		tkExpect( x, TK_SEMI, "to finish this declaration" )
-		x += 1
-	end select
-
-	function = group
-end function
-
 ''
 '' Generic 'type *a, **b;' parsing, used for vars/fields/protos/params/typedefs
 '' ("multiple declaration" syntax)
@@ -1519,9 +1432,9 @@ end function
 ''    int (*procptr)(void);
 ''    struct UDT { int a; };  (special case for BaseType only)
 ''
-'' MultDecl = GccAttributeList BaseType IdList
+'' Declaration = GccAttributeList BaseType Declarator (',' Declarator)* [';']
 ''
-private function cMultDecl _
+private function cDeclaration _
 	( _
 		byref x as integer, _
 		byval decl as integer, _
@@ -1535,6 +1448,7 @@ private function cMultDecl _
 	dim as integer dtype
 	dim as ASTNODE ptr subtype
 	cBaseType( x, dtype, subtype, gccattribs, decl )
+	comment += tkCollectComments( begin, x - 1 )
 
 	'' Special case for standalone struct/union/enum declarations (no CONST bits):
 	if( dtype = TYPE_UDT ) then
@@ -1563,7 +1477,9 @@ private function cMultDecl _
 
 	var result = astNewGROUP( )
 
-	'' Special case for struct/union/enum bodies used as basetype:
+	'' Special case for struct/union/enum bodies used as basedtype:
+	'' Make the struct/union/enum body a separate declaration (as needed
+	'' by FB) and make the basedtype reference it by name.
 	if( typeGetDtAndPtr( dtype ) = TYPE_UDT ) then
 		select case( subtype->class )
 		case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
@@ -1579,18 +1495,62 @@ private function cMultDecl _
 		end select
 	end if
 
-	comment += tkCollectComments( begin, x - 1 )
+	var require_semi = TRUE
 
-	'' IdList
-	astAppend( result, cIdList( x, decl, dtype, subtype, gccattribs, comment ) )
+	'' ... (',' ...)*
+	var declarator_count = 0
+	do
+		declarator_count += 1
+		begin = x
+
+		astAppend( result, cDeclarator( x, 0, decl, dtype, subtype, gccattribs, NULL, 0, 0 ) )
+		var t = result->tail
+
+		'' The first declaration takes the comments from the base type
+		if( len( comment ) > 0 ) then
+			astAddComment( t, comment )
+			comment = ""
+		end if
+
+		'' Every declaration takes the comments on its declarator tokens
+		astAddComment( t, tkCollectComments( begin, x - 1 ) )
+
+		'' Parameters/types can't have commas and more identifiers,
+		'' and don't need with ';' either.
+		select case( decl )
+		case DECL_PARAM, DECL_CASTTYPE, DECL_SIZEOFTYPE
+			require_semi = FALSE
+			exit do
+		end select
+
+		'' '{', procedure body?
+		if( (t->class = ASTCLASS_PROC) and (tkGet( x ) = TK_LBRACE) ) then
+			'' A procedure with body must be the first and only
+			'' declarator in the declaration.
+			if( declarator_count = 1 ) then
+				assert( t->expr = NULL )
+				t->expr = cScope( x )
+				require_semi = FALSE
+				exit do
+			end if
+		end if
+
+		'' ','?
+	loop while( hMatch( x, TK_COMMA ) )
+
+	if( require_semi ) then
+		'' ';'
+		tkExpect( x, TK_SEMI, "to finish this declaration" )
+		x += 1
+	end if
 
 	astDelete( subtype )
 	function = result
 end function
 
-'' Global variable/procedure declarations
-''    GccAttributeList [EXTERN|STATIC] MultDecl
-private function cGlobalDecl( byref x as integer ) as ASTNODE ptr
+'' Variable/procedure declarations
+''    GccAttributeList [EXTERN|STATIC] Declaration
+private function cVarOrProcDecl( byref x as integer ) as ASTNODE ptr
 	var begin = x
 
 	'' __ATTRIBUTE__((...))
@@ -1610,31 +1570,40 @@ private function cGlobalDecl( byref x as integer ) as ASTNODE ptr
 
 	var comment = tkCollectComments( begin, x - 1 )
 
-	'' MultDecl
-	function = cMultDecl( x, decl, gccattribs, comment )
+	'' Declaration
+	function = cDeclaration( x, decl, gccattribs, comment )
 end function
 
-private function cSemiColon( byref x as integer ) as ASTNODE ptr
-	'' Just ignore single semi-colons
+'' Expression statement: Assignments, function calls, i++, etc.
+private function cExpressionStatement( byref x as integer ) as ASTNODE ptr
+	function = cExpression( x, 0, NULL )
+
+	'' ';'?
+	tkExpect( x, TK_SEMI, "(end of expression statement)" )
 	x += 1
-	function = astNewGROUP( )
 end function
 
-'' Parse a construct. The body parameter is used to determine the context,
-'' i.e. toplevel vs. struct body vs. enum body. All constructs are
-'' identified/disambiguated here, then parsing is handed of to helper functions
-'' for each construct.
-private function cConstruct _
-	( _
-		byref x as integer, _
-		byval body as integer _
-	) as ASTNODE ptr
+'' '{ ... }' statement block
+private function cScope( byref x as integer ) as ASTNODE ptr
+	'' '{'
+	assert( tkGet( x ) = TK_LBRACE )
+	x += 1
 
+	function = cBody( x, BODY_SCOPE )
+
+	'' '}'
+	tkExpect( x, TK_RBRACE, "to close compound statement" )
+	x += 1
+end function
+
+private function cConstruct( byref x as integer, byval body as integer ) as ASTNODE ptr
 	select case( tkGet( x ) )
 	case TK_PPDEFINE
 		return cDefine( x )
-	case TK_PPINCLUDE, TK_DIVIDER
-		return cOtherPPToken( x )
+	case TK_PPINCLUDE
+		return cOtherPPToken( x, ASTCLASS_PPINCLUDE )
+	case TK_DIVIDER
+		return cOtherPPToken( x, ASTCLASS_DIVIDER )
 	end select
 
 	if( body = BODY_ENUM ) then
@@ -1645,36 +1614,41 @@ private function cConstruct _
 	case KW_TYPEDEF
 		return cTypedef( x )
 	case TK_SEMI
-		return cSemiColon( x )
+		'' Ignore standalone ';'
+		x += 1
+		return astNewGROUP( )
 	end select
 
-	if( body = BODY_STRUCT ) then
-		return cFieldDecl( x )
-	end if
+	select case( body )
+	case BODY_STRUCT
+		'' Field declaration
+		function = cDeclaration( x, DECL_FIELD, 0, "" )
 
-	function = cGlobalDecl( x )
+	case BODY_SCOPE
+		'' Disambiguate: local declaration vs. expression
+		'' If it starts with a data type, __attribute__, or 'static',
+		'' then it must be a declaration.
+		if( hIsDataType( x, NULL ) or (tkGet( x ) = KW_STATIC) ) then
+			function = cVarOrProcDecl( x )
+		else
+			function = cExpressionStatement( x )
+		end if
+
+	case else
+		function = cVarOrProcDecl( x )
+	end select
 end function
 
-'' Parse constructs in a file (at toplevel) or in a nested block (inside
-'' struct/union/enum bodies).
-private function cToplevel _
-	( _
-		byref x as integer, _
-		byval body as integer _
-	) as ASTNODE ptr
-
+private function cBody( byref x as integer, byval body as integer ) as ASTNODE ptr
 	var group = astNewGROUP( )
 
 	while( tkGet( x ) <> TK_EOF )
-		dim as ASTNODE ptr t
-
 		if( body <> BODY_TOPLEVEL ) then
 			'' '}'?
 			if( tkGet( x ) = TK_RBRACE ) then
 				exit while
 			end if
 		end if
-
 		astAppend( group, cConstruct( x, body ) )
 	wend
 
@@ -1683,6 +1657,6 @@ end function
 
 function cFile( ) as ASTNODE ptr
 	hashInit( @file.typedefs, 4, TRUE )
-	function = cToplevel( 0, BODY_TOPLEVEL )
+	function = cBody( 0, BODY_TOPLEVEL )
 	hashEnd( @file.typedefs )
 end function

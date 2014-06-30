@@ -107,18 +107,15 @@ To do:
 - support defined() in #define bodies (C expression parser)
 - support macro expansion for C/CPP keywords, not just TK_ID
 - support -o - to write to stdout, or just -stdout, or similar
-- rename ASTNODE -> AST, ASTCLASS_* -> AST_*?
-- re-use TK_* enum as ASTNODE classes, replacing ASTCLASS_*
-    (there's lots of overlap, and it doesn't matter if we have some enumconsts
-     used as only tokens or ASTNODEs...)
 
-- Unparsable constructs should perhaps be handled automatically afterall, even
-  though that will result in requiring hand-editing the generated .bi everytime.
-  But how else to deal with inline functions or untranslatable #defines?
-  The hand-editing is highly annoying, but fbfrog would at least still do most
-  of the hard work. And it could help with the hand-editing by showing stats
-  and emitting TODOs and the original code (commented out).
-  - it's a good reason for having a custom C parser
+- Add support for parsing function bodies: if/else blocks, for/while/do/while
+  loops, local vars, assignments, goto, break, return, switch, labels including 'case'.
+  - This is probably easier and better than preserving unknown constructs and leaving
+    them for the user to fix
+  - -removematch stuff can be removed
+  - change hScopeBlockOrInitializer(): depending on context it doesn't need and
+    shouldn't do this disambiguation
+  - Scope block parsing should be the same as parsing function bodies
 
 - Since we always generate Extern blocks, we never need case-preserving ALIASes
 

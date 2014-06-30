@@ -516,18 +516,15 @@ private function emitAst _
 	case ASTCLASS_PROC
 		assert( n->array = NULL )
 
-		'' Is this a procedure declaration,
-		'' or the subtype of a procedure pointer?
-		if( n->text ) then
+		var compound = iif( n->dtype = TYPE_ANY, "sub", "function" )
+
+		'' Declaration and not a procptr subtype or body?
+		if( (n->text <> NULL) and (n->expr = NULL) ) then
 			s += "declare "
 		end if
 
-		if( n->dtype = TYPE_ANY ) then
-			s += "sub"
-		else
-			s += "function"
-		end if
-
+		'' SUB|FUNCTION [<id>]
+		s += compound
 		if( n->text ) then
 			s += " " + *n->text + hEmitAlias( n )
 		end if
@@ -542,6 +539,7 @@ private function emitAst _
 			end if
 		end if
 
+		'' '(' Parameters... ')'
 		s += hParamList( n )
 
 		'' Function result type
@@ -549,9 +547,17 @@ private function emitAst _
 			s += " as " + emitType( n )
 		end if
 
+		'' Statement?
 		if( n->text ) then
 			emitStmt( s, n->comment )
 			s = ""
+
+			'' Body
+			if( n->expr ) then
+				assert( n->expr->class = ASTCLASS_GROUP )
+				hEmitIndentedChildren( n->expr )
+				emitStmt( "end " + compound, n->comment )
+			end if
 		end if
 
 	case ASTCLASS_PARAM

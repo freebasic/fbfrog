@@ -1,0 +1,10 @@
+[1/5] __FB_WIN32__.__FB_64BIT__
+      tests/c/function-body-not-on-first-declarator.h
+tests/c/function-body-not-on-first-declarator.h(2): expected ';' to finish this declaration but found '{'
+    1: // @fail
+    2: int a, b(void) { return 0 };
+                      ^
+    3: 
+context as seen by fbfrog:
+    int a , b ( void ) { return 0 } ;
+                       ^
