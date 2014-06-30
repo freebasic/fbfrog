@@ -908,7 +908,6 @@ declare sub cppInit( )
 declare sub cppNoExpandSym( byval id as zstring ptr )
 declare sub cppRemoveSym( byval id as zstring ptr )
 declare sub cppMain( byval whitespace as integer, byval nomerge as integer )
-declare function hMatch( byref x as integer, byval tk as integer ) as integer
 declare function cFile( ) as ASTNODE ptr
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''

@@ -51,6 +51,13 @@
 
 declare sub hMaybeExpandMacro( byref x as integer, byval inside_ifexpr as integer )
 
+private function hMatch( byref x as integer, byval tk as integer ) as integer
+	if( tkGet( x ) = tk ) then
+		x += 1
+		function = TRUE
+	end if
+end function
+
 private function hIsBeforeEol _
 	( _
 		byval x as integer, _
