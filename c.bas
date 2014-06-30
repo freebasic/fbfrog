@@ -662,8 +662,6 @@ end function
 '' {STRUCT|UNION|ENUM} [Identifier] '{' StructBody|EnumBody '}'
 '' {STRUCT|UNION|ENUM} Identifier
 private function cStruct( byref x as integer ) as ASTNODE ptr
-	var head = x
-
 	'' {STRUCT|UNION|ENUM}
 	dim as integer astclass
 	select case( tkGet( x ) )
