@@ -619,7 +619,8 @@ end sub
 private function cEnumConst( byref x as integer ) as ASTNODE ptr
 	'' Identifier
 	tkExpect( x, TK_ID, "for an enum constant" )
-	var t = astNew( ASTCLASS_ENUMCONST, tkGetText( x ) )
+	var t = astNew( ASTCLASS_CONST, tkGetText( x ) )
+	t->attrib or= ASTATTRIB_ENUMCONST
 	x += 1
 
 	'' '='?

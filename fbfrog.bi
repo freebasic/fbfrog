@@ -593,7 +593,6 @@ enum
 	ASTCLASS_EXTERNVAR
 	ASTCLASS_STATICVAR
 	ASTCLASS_FIELD
-	ASTCLASS_ENUMCONST
 	ASTCLASS_PROC
 	ASTCLASS_PARAM
 	ASTCLASS_ARRAY
@@ -683,6 +682,7 @@ const ASTATTRIB_HIDECALLCONV  = 1 shl 4  '' Whether the calling convention is co
 const ASTATTRIB_HIDECASEALIAS = 1 shl 5  '' same for the case-preserving ALIAS
 const ASTATTRIB_UNCHECKED     = 1 shl 6
 const ASTATTRIB_REPORTED      = 1 shl 7 '' Used to mark #defines about which the CPP has already complained, so it can avoid duplicate error messages
+const ASTATTRIB_ENUMCONST     = 1 shl 8
 const ASTATTRIB_NEEDRENAME    = 1 shl 11
 const ASTATTRIB_POISONED      = 1 shl 12
 const ASTATTRIB_DONTEMIT      = 1 shl 13

@@ -937,7 +937,7 @@ end sub
 
 private function hPreferRenaming( byval n as ASTNODE ptr ) as integer
 	select case( n->class )
-	case ASTCLASS_PPDEFINE, ASTCLASS_CONST, ASTCLASS_ENUMCONST
+	case ASTCLASS_PPDEFINE, ASTCLASS_CONST
 		function = TRUE
 	end select
 end function
@@ -1063,7 +1063,7 @@ private sub hWalkAndCheckIds _
 			hFixIdsInScope( defines, i )
 
 		case ASTCLASS_VAR, ASTCLASS_EXTERNVAR, ASTCLASS_STATICVAR, _
-		     ASTCLASS_CONST, ASTCLASS_ENUMCONST, ASTCLASS_FIELD
+		     ASTCLASS_CONST, ASTCLASS_FIELD
 			hCheckId( @fbkeywordhash, i, FALSE )
 			hCheckId( defines, i, FALSE )
 			hCheckId( globals, i, TRUE )
@@ -1210,7 +1210,7 @@ private sub hRenameSymbol _
 
 		case ASTCLASS_PROC, ASTCLASS_PARAM, _
 		     ASTCLASS_VAR, ASTCLASS_EXTERNVAR, ASTCLASS_STATICVAR, _
-		     ASTCLASS_CONST, ASTCLASS_ENUMCONST, ASTCLASS_FIELD
+		     ASTCLASS_CONST, ASTCLASS_FIELD
 			exists or= hashContains( defines , hashid, hash )
 			exists or= hashContains( globals , hashid, hash )
 
@@ -1233,7 +1233,7 @@ private sub hRenameSymbol _
 	select case( n->class )
 	case ASTCLASS_PPDEFINE, ASTCLASS_PROC, ASTCLASS_PARAM, _
 	     ASTCLASS_VAR, ASTCLASS_EXTERNVAR, ASTCLASS_STATICVAR, _
-	     ASTCLASS_CONST, ASTCLASS_ENUMCONST, ASTCLASS_FIELD
+	     ASTCLASS_CONST, ASTCLASS_FIELD
 		hReplaceCalls( code, n->text, newid )
 	case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
 		astReplaceSubtypes( code, ASTCLASS_TAGID, n->text, ASTCLASS_TAGID, newid )
@@ -1252,7 +1252,7 @@ private sub hRenameSymbol _
 		hashAddOverwrite( defines, hashid, n )
 	case ASTCLASS_PROC, ASTCLASS_PARAM, _
 	     ASTCLASS_VAR, ASTCLASS_EXTERNVAR, ASTCLASS_STATICVAR, _
-	     ASTCLASS_CONST,  ASTCLASS_ENUMCONST, ASTCLASS_FIELD
+	     ASTCLASS_CONST, ASTCLASS_FIELD
 		hashAddOverwrite( globals, hashid, n )
 	case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM, ASTCLASS_TYPEDEF
 		hashAddOverwrite( types, hashid, n )

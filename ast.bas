@@ -51,7 +51,6 @@ dim shared as zstring ptr astnodename(0 to ...) => _
 	@"externvar"  , _
 	@"staticvar"  , _
 	@"field"      , _
-	@"enumconst"  , _
 	@"proc"       , _
 	@"param"      , _
 	@"array"      , _
@@ -652,7 +651,6 @@ function astDumpPrettyDecl( byval n as ASTNODE ptr ) as string
 	case ASTCLASS_EXTERNVAR : s += "extern variable"
 	case ASTCLASS_STATICVAR : s += "static variable"
 	case ASTCLASS_PROC      : s += "function"
-	case ASTCLASS_ENUMCONST : s += "enum constant"
 	case else               : s += *astnodename(n->class)
 	end select
 
@@ -693,7 +691,9 @@ function astDumpOne( byval n as ASTNODE ptr ) as string
 	checkAttrib( STDCALL )
 	checkAttrib( HIDECALLCONV )
 	checkAttrib( HIDECASEALIAS )
+	checkAttrib( UNCHECKED )
 	checkAttrib( REPORTED )
+	checkAttrib( ENUMCONST )
 	checkAttrib( NEEDRENAME )
 	checkAttrib( POISONED )
 	checkAttrib( DONTEMIT )

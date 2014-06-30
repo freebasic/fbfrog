@@ -495,7 +495,10 @@ private function emitAst _
 		emitStmt( "type " + *n->text + " as " + emitType( n ), n->comment )
 
 	case ASTCLASS_CONST
-		emitStmt( "const " + *n->text + hInitializer( n ), n->comment )
+		if( (n->attrib and ASTATTRIB_ENUMCONST) = 0 ) then
+			s = "const "
+		end if
+		emitStmt( s + *n->text + hInitializer( n ), n->comment )
 
 	case ASTCLASS_VAR
 		emitStmt( "extern     " + hIdAndArray( n, TRUE  ) + " as " + emitType( n )                          , n->comment )
@@ -509,9 +512,6 @@ private function emitAst _
 
 	case ASTCLASS_FIELD
 		emitStmt( hIdAndArray( n, FALSE ) + " as " + emitType( n ), n->comment )
-
-	case ASTCLASS_ENUMCONST
-		emitStmt( *n->text + hInitializer( n ), n->comment )
 
 	case ASTCLASS_PROC
 		assert( n->array = NULL )
