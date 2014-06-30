@@ -8,9 +8,11 @@
 #include once "fbfrog.bi"
 
 enum
-	DECL_VAR = 0
-	DECL_EXTERNVAR
-	DECL_STATICVAR
+	DECL_EXTERNVAR = 0
+	DECL_GLOBALVAR
+	DECL_GLOBALSTATICVAR
+	DECL_LOCALVAR
+	DECL_LOCALSTATICVAR
 	DECL_FIELD
 	DECL_PARAM
 	DECL_TYPEDEF
@@ -18,6 +20,20 @@ enum
 	DECL_SIZEOFTYPE
 	DECL__COUNT
 end enum
+
+dim shared as integer decl_to_astclass(0 to DECL__COUNT-1) = _
+{ _
+	ASTCLASS_VAR    , _ '' DECL_EXTERNVAR
+	ASTCLASS_VAR    , _ '' DECL_GLOBALVAR
+	ASTCLASS_VAR    , _ '' DECL_GLOBALSTATICVAR
+	ASTCLASS_VAR    , _ '' DECL_LOCALVAR
+	ASTCLASS_VAR    , _ '' DECL_LOCALSTATICVAR
+	ASTCLASS_FIELD  , _ '' DECL_FIELD
+	ASTCLASS_PARAM  , _ '' DECL_PARAM
+	ASTCLASS_TYPEDEF, _ '' DECL_TYPEDEF
+	ASTCLASS_TYPE   , _ '' DECL_CASTTYPE
+	ASTCLASS_TYPE     _ '' DECL_SIZEOFTYPE
+}
 
 enum
 	BODY_TOPLEVEL = 0
@@ -1006,6 +1022,15 @@ private function cParamDeclList( byref x as integer ) as ASTNODE ptr
 	function = group
 end function
 
+private function hCanHaveInitializer( byval n as ASTNODE ptr ) as integer
+	select case( n->class )
+	case ASTCLASS_PARAM
+		function = TRUE
+	case ASTCLASS_VAR
+		function = ((n->attrib and ASTATTRIB_EXTERN) = 0)
+	end select
+end function
+
 ''
 '' Declarator =
 ''    GccAttributeList
@@ -1236,23 +1261,19 @@ private function cDeclarator _
 			end if
 		end select
 
-		static as integer decl_to_astclass(0 to DECL__COUNT-1) = _
-		{ _
-			ASTCLASS_VAR      , _ '' DECL_VAR
-			ASTCLASS_EXTERNVAR, _ '' DECL_EXTERNVAR
-			ASTCLASS_STATICVAR, _ '' DECL_STATICVAR
-			ASTCLASS_FIELD    , _ '' DECL_FIELD
-			ASTCLASS_PARAM    , _ '' DECL_PARAM
-			ASTCLASS_TYPEDEF  , _ '' DECL_TYPEDEF
-			ASTCLASS_TYPE     , _ '' DECL_CASTTYPE
-			ASTCLASS_TYPE       _ '' DECL_SIZEOFTYPE
-		}
-
-		if( decl = DECL_TYPEDEF ) then
-			hAddTypedef( id )
-		end if
-
 		t = astNew( decl_to_astclass(decl), id )
+		select case( decl )
+		case DECL_EXTERNVAR
+			t->attrib or= ASTATTRIB_EXTERN
+		case DECL_GLOBALSTATICVAR
+			t->attrib or= ASTATTRIB_STATIC
+		case DECL_LOCALVAR
+			t->attrib or= ASTATTRIB_LOCAL
+		case DECL_LOCALSTATICVAR
+			t->attrib or= ASTATTRIB_LOCAL or ASTATTRIB_STATIC
+		case DECL_TYPEDEF
+			hAddTypedef( id )
+		end select
 		astSetType( t, dtype, basesubtype )
 	end if
 
@@ -1264,10 +1285,7 @@ private function cDeclarator _
 		'' Can't allow arrays on everything - currently, it's only
 		'' handled for vars/fields/params/typedefs
 		select case( decl )
-		case DECL_VAR, DECL_EXTERNVAR, DECL_STATICVAR, _
-		     DECL_FIELD, DECL_PARAM, DECL_TYPEDEF
-
-		case else
+		case DECL_CASTTYPE, DECL_SIZEOFTYPE
 			tkOops( x, "TODO: arrays not supported here yet" )
 		end select
 
@@ -1356,7 +1374,7 @@ private function cDeclarator _
 		else
 			'' A plain symbol, not a pointer, becomes a function
 			select case( t->class )
-			case ASTCLASS_VAR, ASTCLASS_EXTERNVAR, ASTCLASS_STATICVAR, ASTCLASS_FIELD
+			case ASTCLASS_VAR, ASTCLASS_FIELD
 				t->class = ASTCLASS_PROC
 			end select
 		end if
@@ -1379,14 +1397,13 @@ private function cDeclarator _
 	var endgccattribs = 0
 	cGccAttributeList( x, endgccattribs )
 
-	select case( t->class )
-	case ASTCLASS_PARAM, ASTCLASS_VAR, ASTCLASS_STATICVAR
+	if( hCanHaveInitializer( t ) ) then
 		'' ['=' Initializer]
 		if( hMatch( x, TK_EQ ) ) then
 			assert( t->expr = NULL )
 			t->expr = cExpression( x, 0, NULL )
 		end if
-	end select
+	end if
 
 	if( nestlevel > 0 ) then
 		'' __attribute__'s from this level should always be passed up
@@ -1551,7 +1568,7 @@ end function
 
 '' Variable/procedure declarations
 ''    GccAttributeList [EXTERN|STATIC] Declaration
-private function cVarOrProcDecl( byref x as integer ) as ASTNODE ptr
+private function cVarOrProcDecl( byref x as integer, byval is_local as integer ) as ASTNODE ptr
 	var begin = x
 
 	'' __ATTRIBUTE__((...))
@@ -1559,13 +1576,13 @@ private function cVarOrProcDecl( byref x as integer ) as ASTNODE ptr
 	cGccAttributeList( x, gccattribs )
 
 	'' [EXTERN|STATIC]
-	var decl = DECL_VAR
+	var decl = iif( is_local, DECL_LOCALVAR, DECL_GLOBALVAR )
 	select case( tkGet( x ) )
 	case KW_EXTERN
 		decl = DECL_EXTERNVAR
 		x += 1
 	case KW_STATIC
-		decl = DECL_STATICVAR
+		decl = iif( is_local, DECL_LOCALSTATICVAR, DECL_GLOBALSTATICVAR )
 		x += 1
 	end select
 
@@ -1630,13 +1647,13 @@ private function cConstruct( byref x as integer, byval body as integer ) as ASTN
 		'' If it starts with a data type, __attribute__, or 'static',
 		'' then it must be a declaration.
 		if( hIsDataType( x, NULL ) or (tkGet( x ) = KW_STATIC) ) then
-			function = cVarOrProcDecl( x )
+			function = cVarOrProcDecl( x, TRUE )
 		else
 			function = cExpressionStatement( x )
 		end if
 
 	case else
-		function = cVarOrProcDecl( x )
+		function = cVarOrProcDecl( x, FALSE )
 	end select
 end function
 

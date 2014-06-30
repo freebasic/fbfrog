@@ -48,8 +48,6 @@ dim shared as zstring ptr astnodename(0 to ...) => _
 	@"typedef"    , _
 	@"const"      , _
 	@"var"        , _
-	@"externvar"  , _
-	@"staticvar"  , _
 	@"field"      , _
 	@"proc"       , _
 	@"param"      , _
@@ -646,12 +644,10 @@ function astDumpPrettyDecl( byval n as ASTNODE ptr ) as string
 	end if
 
 	select case( n->class )
-	case ASTCLASS_CONST     : s += "constant"
-	case ASTCLASS_VAR       : s += "variable"
-	case ASTCLASS_EXTERNVAR : s += "extern variable"
-	case ASTCLASS_STATICVAR : s += "static variable"
-	case ASTCLASS_PROC      : s += "function"
-	case else               : s += *astnodename(n->class)
+	case ASTCLASS_CONST : s += "constant"
+	case ASTCLASS_VAR   : s += "variable"
+	case ASTCLASS_PROC  : s += "procedure"
+	case else           : s += *astnodename(n->class)
 	end select
 
 	if( n->text ) then
@@ -685,6 +681,9 @@ function astDumpOne( byval n as ASTNODE ptr ) as string
 	#macro checkAttrib( a )
 		if( n->attrib and ASTATTRIB_##a ) then s += " " + lcase( #a, 1 )
 	#endmacro
+	checkAttrib( LOCAL )
+	checkAttrib( STATIC )
+	checkAttrib( EXTERN )
 	checkAttrib( OCT )
 	checkAttrib( HEX )
 	checkAttrib( CDECL )

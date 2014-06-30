@@ -313,6 +313,12 @@ private function hInitializer( byval n as ASTNODE ptr ) as string
 	end if
 end function
 
+private sub emitVarDecl( byref prefix as string, byval n as ASTNODE ptr, byval is_extern as integer, byval comment as zstring ptr )
+	var s = prefix + hIdAndArray( n, is_extern ) + " as " + emitType( n )
+	if( is_extern = FALSE ) then s += hInitializer( n )
+	emitStmt( s, comment )
+end sub
+
 private function emitAst _
 	( _
 		byval n as ASTNODE ptr, _
@@ -501,14 +507,22 @@ private function emitAst _
 		emitStmt( s + *n->text + hInitializer( n ), n->comment )
 
 	case ASTCLASS_VAR
-		emitStmt( "extern     " + hIdAndArray( n, TRUE  ) + " as " + emitType( n )                          , n->comment )
-		emitStmt( "dim shared " + hIdAndArray( n, FALSE ) + " as " + emitType( n ) + hInitializer( n )             )
-
-	case ASTCLASS_EXTERNVAR
-		emitStmt( "extern "     + hIdAndArray( n, TRUE  ) + " as " + emitType( n )                          , n->comment )
-
-	case ASTCLASS_STATICVAR
-		emitStmt( "dim shared " + hIdAndArray( n, FALSE ) + " as " + emitType( n ) + hInitializer( n ), n->comment )
+		if( n->attrib and ASTATTRIB_LOCAL ) then
+			if( n->attrib and ASTATTRIB_STATIC ) then
+				emitVarDecl( "static ", n, FALSE, n->comment )
+			else
+				emitVarDecl( "dim ", n, FALSE, n->comment )
+			end if
+		else
+			if( n->attrib and ASTATTRIB_EXTERN ) then
+				emitVarDecl( "extern ", n, TRUE, n->comment )
+			elseif( n->attrib and ASTATTRIB_STATIC ) then
+				emitVarDecl( "dim shared ", n, FALSE, n->comment )
+			else
+				emitVarDecl( "extern     ", n, TRUE, n->comment )
+				emitVarDecl( "dim shared ", n, FALSE, NULL )
+			end if
+		end if
 
 	case ASTCLASS_FIELD
 		emitStmt( hIdAndArray( n, FALSE ) + " as " + emitType( n ), n->comment )

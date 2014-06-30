@@ -590,8 +590,6 @@ enum
 	ASTCLASS_TYPEDEF
 	ASTCLASS_CONST
 	ASTCLASS_VAR
-	ASTCLASS_EXTERNVAR
-	ASTCLASS_STATICVAR
 	ASTCLASS_FIELD
 	ASTCLASS_PROC
 	ASTCLASS_PARAM
@@ -674,21 +672,24 @@ enum
 	ASTCLASS__COUNT
 end enum
 
-const ASTATTRIB_OCT           = 1 shl 0  '' CONSTI
-const ASTATTRIB_HEX           = 1 shl 1  '' CONSTI
-const ASTATTRIB_CDECL         = 1 shl 2
-const ASTATTRIB_STDCALL       = 1 shl 3
-const ASTATTRIB_HIDECALLCONV  = 1 shl 4  '' Whether the calling convention is covered by an Extern block, in which case it doesn't need to be emitted.
-const ASTATTRIB_HIDECASEALIAS = 1 shl 5  '' same for the case-preserving ALIAS
-const ASTATTRIB_UNCHECKED     = 1 shl 6
-const ASTATTRIB_REPORTED      = 1 shl 7 '' Used to mark #defines about which the CPP has already complained, so it can avoid duplicate error messages
-const ASTATTRIB_ENUMCONST     = 1 shl 8
-const ASTATTRIB_NEEDRENAME    = 1 shl 11
-const ASTATTRIB_POISONED      = 1 shl 12
-const ASTATTRIB_DONTEMIT      = 1 shl 13
-const ASTATTRIB_ONCE          = 1 shl 14  '' Marks #includes as "#include once"
-const ASTATTRIB_PACKED        = 1 shl 15  '' __attribute__((packed))
-const ASTATTRIB_VARIADIC      = 1 shl 16  '' PPDEFINE/MACROPARAM: variadic macros
+const ASTATTRIB_LOCAL         = 1 shl 0  '' VAR
+const ASTATTRIB_STATIC        = 1 shl 1  '' VAR
+const ASTATTRIB_EXTERN        = 1 shl 2  '' VAR
+const ASTATTRIB_OCT           = 1 shl 3  '' CONSTI
+const ASTATTRIB_HEX           = 1 shl 4  '' CONSTI
+const ASTATTRIB_CDECL         = 1 shl 5  '' PROC
+const ASTATTRIB_STDCALL       = 1 shl 6  '' PROC
+const ASTATTRIB_HIDECALLCONV  = 1 shl 7  '' Whether the calling convention is covered by an Extern block, in which case it doesn't need to be emitted.
+const ASTATTRIB_HIDECASEALIAS = 1 shl 8  '' same for the case-preserving ALIAS
+const ASTATTRIB_UNCHECKED     = 1 shl 9
+const ASTATTRIB_REPORTED      = 1 shl 10 '' Used to mark #defines about which the CPP has already complained, so it can avoid duplicate error messages
+const ASTATTRIB_ENUMCONST     = 1 shl 11  '' CONSTI
+const ASTATTRIB_NEEDRENAME    = 1 shl 12
+const ASTATTRIB_POISONED      = 1 shl 13
+const ASTATTRIB_DONTEMIT      = 1 shl 14
+const ASTATTRIB_ONCE          = 1 shl 15  '' Marks #includes as "#include once"
+const ASTATTRIB_PACKED        = 1 shl 16  '' __attribute__((packed))
+const ASTATTRIB_VARIADIC      = 1 shl 17  '' PPDEFINE/MACROPARAM: variadic macros
 
 '' When changing, adjust astClone(), astIsEqual(), astDump*()
 type ASTNODE_

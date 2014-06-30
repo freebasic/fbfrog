@@ -138,14 +138,13 @@ sub astTurnStructInitIntoArrayInit( byval n as ASTNODE ptr )
 	var i = n->head
 	while( i )
 
-		select case( i->class )
-		case ASTCLASS_VAR, ASTCLASS_STATICVAR, ASTCLASS_EXTERNVAR
+		if( i->class = ASTCLASS_VAR ) then
 			if( (i->expr <> NULL) and (i->array <> NULL) ) then
 				if( i->expr->class = ASTCLASS_STRUCTINIT ) then
 					i->expr->class = ASTCLASS_ARRAYINIT
 				end if
 			end if
-		end select
+		end if
 
 		i = i->next
 	wend
@@ -248,18 +247,18 @@ end function
 '' case-preserving ALIAS?
 private function astHaveDeclsNeedingCaseAlias( byval n as ASTNODE ptr ) as integer
 	select case( n->class )
-	case ASTCLASS_VAR, ASTCLASS_EXTERNVAR
-		return TRUE
+	case ASTCLASS_VAR
+		return ((n->attrib and (ASTATTRIB_LOCAL or ASTATTRIB_STATIC)) = 0)
 	case ASTCLASS_PROC
 		return TRUE
 	end select
 
-	var child = n->head
-	while( child )
-		if( astHaveDeclsNeedingCaseAlias( child ) ) then
+	var i = n->head
+	while( i )
+		if( astHaveDeclsNeedingCaseAlias( i ) ) then
 			return TRUE
 		end if
-		child = child->next
+		i = i->next
 	wend
 end function
 
@@ -405,7 +404,7 @@ private sub hSolveOutProcTypedefSubtypes _
 		if( n->subtype->class = ASTCLASS_ID ) then
 			if( *n->subtype->text = *typedef->text ) then
 				select case( n->class )
-				case ASTCLASS_VAR, ASTCLASS_STATICVAR, ASTCLASS_EXTERNVAR, ASTCLASS_FIELD
+				case ASTCLASS_VAR, ASTCLASS_FIELD
 					assert( typeGetDtAndPtr( typedef->dtype ) = TYPE_PROC )
 					var proc = typedef->subtype
 					assert( proc->class = ASTCLASS_PROC )
@@ -1062,8 +1061,7 @@ private sub hWalkAndCheckIds _
 			'' with the #defines found so far.
 			hFixIdsInScope( defines, i )
 
-		case ASTCLASS_VAR, ASTCLASS_EXTERNVAR, ASTCLASS_STATICVAR, _
-		     ASTCLASS_CONST, ASTCLASS_FIELD
+		case ASTCLASS_VAR, ASTCLASS_CONST, ASTCLASS_FIELD
 			hCheckId( @fbkeywordhash, i, FALSE )
 			hCheckId( defines, i, FALSE )
 			hCheckId( globals, i, TRUE )
@@ -1209,8 +1207,7 @@ private sub hRenameSymbol _
 			exists or= hashContains( globals , hashid, hash )
 
 		case ASTCLASS_PROC, ASTCLASS_PARAM, _
-		     ASTCLASS_VAR, ASTCLASS_EXTERNVAR, ASTCLASS_STATICVAR, _
-		     ASTCLASS_CONST, ASTCLASS_FIELD
+		     ASTCLASS_VAR, ASTCLASS_CONST, ASTCLASS_FIELD
 			exists or= hashContains( defines , hashid, hash )
 			exists or= hashContains( globals , hashid, hash )
 
@@ -1232,8 +1229,7 @@ private sub hRenameSymbol _
 	'' just the case-insensitivity and FB keywords that cause problems)
 	select case( n->class )
 	case ASTCLASS_PPDEFINE, ASTCLASS_PROC, ASTCLASS_PARAM, _
-	     ASTCLASS_VAR, ASTCLASS_EXTERNVAR, ASTCLASS_STATICVAR, _
-	     ASTCLASS_CONST, ASTCLASS_FIELD
+	     ASTCLASS_VAR, ASTCLASS_CONST, ASTCLASS_FIELD
 		hReplaceCalls( code, n->text, newid )
 	case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
 		astReplaceSubtypes( code, ASTCLASS_TAGID, n->text, ASTCLASS_TAGID, newid )
@@ -1251,8 +1247,7 @@ private sub hRenameSymbol _
 	case ASTCLASS_PPDEFINE
 		hashAddOverwrite( defines, hashid, n )
 	case ASTCLASS_PROC, ASTCLASS_PARAM, _
-	     ASTCLASS_VAR, ASTCLASS_EXTERNVAR, ASTCLASS_STATICVAR, _
-	     ASTCLASS_CONST, ASTCLASS_FIELD
+	     ASTCLASS_VAR, ASTCLASS_CONST, ASTCLASS_FIELD
 		hashAddOverwrite( globals, hashid, n )
 	case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM, ASTCLASS_TYPEDEF
 		hashAddOverwrite( types, hashid, n )

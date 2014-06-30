@@ -110,12 +110,14 @@ To do:
 
 - Add support for parsing function bodies: if/else blocks, for/while/do/while
   loops, local vars, assignments, goto, break, return, switch, labels including 'case'.
-  - This is probably easier and better than preserving unknown constructs and leaving
-    them for the user to fix
-  - -removematch stuff can be removed
   - change hScopeBlockOrInitializer(): depending on context it doesn't need and
     shouldn't do this disambiguation
   - Scope block parsing should be the same as parsing function bodies
+  - Identifier fixup inside scopes
+  - How to handle assignments in the middle of expressions or as if/while conditions?
+        if (a = 1) ...          =>    a = 1 : if a then ...
+        if (a = 1 && b = 2) ... =>    a = 1 : if a then : b = 2 : if b then ... : end if
+    ?: and &&/|| operands containing assignments must be expanded to real if blocks.
 
 - Since we always generate Extern blocks, we never need case-preserving ALIASes
 

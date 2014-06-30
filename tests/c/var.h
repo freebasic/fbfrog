@@ -228,3 +228,8 @@ extern void (((* const  ((* const (((p))) ))  )))(void);
 extern void   (* const (((* const (((p))) ))) )  (void);
 extern void  ((* const (((* const (((p))) ))) )) (void);
 extern void (((* const (((* const (((p))) ))) )))(void);
+
+void f1(void) {
+	int a;
+	static int b;
+}
