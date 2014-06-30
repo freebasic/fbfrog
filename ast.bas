@@ -46,7 +46,7 @@ dim shared as zstring ptr astnodename(0 to ...) => _
 	@"union"      , _
 	@"enum"       , _
 	@"typedef"    , _
-	@"constant"   , _
+	@"const"      , _
 	@"var"        , _
 	@"externvar"  , _
 	@"staticvar"  , _
@@ -647,7 +647,7 @@ function astDumpPrettyDecl( byval n as ASTNODE ptr ) as string
 	end if
 
 	select case( n->class )
-	case ASTCLASS_CONSTANT  : s += "constant"
+	case ASTCLASS_CONST     : s += "constant"
 	case ASTCLASS_VAR       : s += "variable"
 	case ASTCLASS_EXTERNVAR : s += "extern variable"
 	case ASTCLASS_STATICVAR : s += "static variable"

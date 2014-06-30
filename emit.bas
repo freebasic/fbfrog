@@ -494,7 +494,7 @@ private function emitAst _
 		assert( n->array = NULL )
 		emitStmt( "type " + *n->text + " as " + emitType( n ), n->comment )
 
-	case ASTCLASS_CONSTANT
+	case ASTCLASS_CONST
 		emitStmt( "const " + *n->text + hInitializer( n ), n->comment )
 
 	case ASTCLASS_VAR
