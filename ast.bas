@@ -13,6 +13,7 @@ dim shared as zstring ptr astnodename(0 to ...) => _
 	@"verand"    , _
 	@"divider"   , _
 	@"scopeblock", _
+	@"unknown"   , _
 	_
 	_ '' Script helper nodes
 	@"declaredefines", _
@@ -244,6 +245,9 @@ end function
 function astNewTK( byval x as integer ) as ASTNODE ptr
 	var n = astTakeLoc( astNew( ASTCLASS_TK, tkGetText( x ) ), x )
 	n->tk = tkGet( x )
+	if( tkGetFlags( x ) and TKFLAG_BEHINDSPACE ) then
+		n->attrib or= ASTATTRIB_BEHINDSPACE
+	end if
 	function = n
 end function
 
@@ -615,7 +619,7 @@ sub astReport _
 	)
 
 	if( n->location.source ) then
-		hReport( @n->location, message, more_context )
+		print hReport( @n->location, message )
 	else
 		print *message
 		print astDumpPrettyDecl( n )
@@ -699,6 +703,7 @@ function astDumpOne( byval n as ASTNODE ptr ) as string
 	checkAttrib( ONCE )
 	checkAttrib( PACKED )
 	checkAttrib( VARIADIC )
+	checkAttrib( BEHINDSPACE )
 
 	if( n->class <> ASTCLASS_TK ) then
 		if( n->text ) then

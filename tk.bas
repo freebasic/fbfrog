@@ -177,6 +177,21 @@ function tkInfoText( byval id as integer ) as zstring ptr
 	function = tk_info(id).text
 end function
 
+function tkInfoPretty( byval id as integer ) as string
+	select case( id )
+	case TK_EOF    : function = "end of file"
+	case TK_EOL    : function = "end of line"
+	case TK_ID     : function = "identifier"
+	case TK_STRING : function = """..."" string literal"
+	case else
+		if( tk_info(id).debug ) then
+			function = *tk_info(id).debug
+		else
+			function = "'" + *tk_info(id).text + "'"
+		end if
+	end select
+end function
+
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 type ONETOKEN
@@ -756,12 +771,7 @@ private function hMakePrettyCStrLit( byval text as zstring ptr ) as string
 	function = s
 end function
 
-private function hMakePrettyCTokenText _
-	( _
-		byval id as integer, _
-		byval text as zstring ptr _
-	) as string
-
+function hMakePrettyCTokenText( byval id as integer, byval text as zstring ptr ) as string
 	select case as const( id )
 	case TK_PPMERGE   : function = "##"
 	case TK_PPENDIF   : function = "#endif"
@@ -781,7 +791,6 @@ private function hMakePrettyCTokenText _
 	case else
 		function = tkDumpBasic( id, text )
 	end select
-
 end function
 
 function tkMakePrettyCTokenText( byval x as integer ) as string
@@ -793,36 +802,72 @@ function tkMakePrettyCTokenText( byval x as integer ) as string
 	end if
 end function
 
-private function tkToCText _
-	( _
-		byval first as integer, _
-		byval last as integer, _
-		byval x as integer, _
-		byref xcolumn as integer, _
-		byref xlength as integer _
-	) as string
-
+function tkToCText( byval first as integer, byval last as integer ) as string
 	dim as string s
 
 	for i as integer = first to last
-		if( tkGet( i ) = TK_EOF ) then
-			continue for
+
+		if( i > first ) then
+			var add_space = ((tkGetFlags( i ) and TKFLAG_BEHINDSPACE) <> 0)
+			add_space or= (tkGet( i - 1 ) >= TK_ID) and (tkGet( i ) >= TK_ID)
+			if( add_space ) then
+				s += " "
+			end if
 		end if
 
-		if( len( s ) > 0 ) then
-			s += " "
-		end if
+		var id = tkGet( i )
+		var text = tkGetText( i )
 
-		if( i = x ) then
-			xcolumn = len( s )
-		end if
-		s += tkMakePrettyCTokenText( i )
-		if( i = x ) then
-			xlength = len( s ) - xcolumn
-		end if
+		select case as const( id )
+		case TK_PPDEFINE
+			s += "#define"
+
+			var n = tkGetAst( i )
+			if( n ) then
+				assert( n->class = ASTCLASS_PPDEFINE )
+				s += " " + *n->text
+
+				if( n->paramcount >= 0 ) then
+					s += "("
+					var param = n->head
+					while( param )
+						s += *param->text
+						param = param->next
+						if( param ) then
+							s += ", "
+						end if
+					wend
+					s += ")"
+				end if
+			end if
+
+		case TK_BEGIN    : s += " "
+		case TK_END      : s += !"\n"
+		case TK_DECNUM   : s += *text
+		case TK_HEXNUM   : s += "0x" + *text
+		case TK_OCTNUM   : s += "0" + *text
+		case TK_DECFLOAT : s += *text
+		case TK_STRING   : s += """" + hMakePrettyCStrLit( *text ) + """"
+		case TK_CHAR     : s += "'" + hMakePrettyCStrLit( *text ) + "'"
+		case TK_WSTRING  : s += "L""" + hMakePrettyCStrLit( *text ) + """"
+		case TK_WCHAR    : s += "L'" + hMakePrettyCStrLit( *text ) + "'"
+		case TK_ID       : s += *text
+		case TK_EXCL to TK_TILDE, KW__C_FIRST to KW__C_LAST
+			s += *tk_info(id).text
+		case else
+			s += tkDumpBasic( id, text )
+		end select
 	next
 
 	function = s
+end function
+
+function hSkipToTK_END( byval x as integer ) as integer
+	assert( tkGet( x ) = TK_BEGIN )
+	do
+		x += 1
+	loop while( tkGet( x ) <> TK_END )
+	function = x
 end function
 
 function hFindConstructEnd( byval x as integer ) as integer
@@ -837,9 +882,15 @@ function hFindConstructEnd( byval x as integer ) as integer
 		case TK_EOF, _
 		     TK_BEGIN, TK_END, _
 		     TK_DIVIDER, _
-		     TK_PPINCLUDE, TK_PPDEFINE, TK_PPUNDEF, _
+		     TK_PPINCLUDE, TK_PPUNDEF, _
 		     TK_PPIF, TK_PPELSEIF, TK_PPELSE, TK_PPENDIF, _
 		     TK_PPERROR, TK_PPWARNING
+			exit do
+
+		case TK_PPDEFINE, TK_PPIF
+			if( tkGet( x + 1 ) = TK_BEGIN ) then
+				x = hSkipToTK_END( x + 1 )
+			end if
 			exit do
 
 		case TK_LPAREN, TK_LBRACKET, TK_LBRACE
@@ -883,43 +934,47 @@ private function hFindConstructBegin( byval x as integer ) as integer
 	function = 0
 end function
 
-private function hReportErrorTokenLocation _
-	( _
-		byval x as integer, _
-		byval message as zstring ptr, _
-		byval more_context as integer _
-	) as integer
-
-	var location = tkGetLocation( x )
-	if( location->source ) then
-		hReport( location, message, more_context )
-		function = TRUE
-	else
-		function = FALSE
-	end if
-
-end function
-
-private sub hReportConstructTokens _
+private function hReportConstructTokens _
 	( _
 		byval x as integer, _
 		byval first as integer, _
 		byval last as integer, _
 		byval message as zstring ptr _
-	)
+	) as string
 
-	var maxwidth = hConsoleWidth( ) - 4
+	const INDENT = 4
+	const MAXWIDTH = 80 - INDENT
+
 	var xcolumn = -1, xlength = 0
-	var text = tkToCText( first, last, x, xcolumn, xlength )
+
+	dim text as string
+	for i as integer = first to last
+		if( tkGet( i ) = TK_EOF ) then
+			continue for
+		end if
+
+		if( len( text ) > 0 ) then
+			text += " "
+		end if
+
+		if( i = x ) then
+			xcolumn = len( text )
+		end if
+		text += tkMakePrettyCTokenText( i )
+		if( i = x ) then
+			xlength = len( text ) - xcolumn
+		end if
+	next
+
 	dim offset as integer
-	hCalcErrorLine( xcolumn, maxwidth, text, offset )
+	hCalcErrorLine( xcolumn, MAXWIDTH, text, offset )
 
-	print *message
-	print "    " + text
-	print string( 4 + offset, " " ) + "^" + string( xlength - 1, "~" )
+	function = *message + _
+		!"\n" + space( INDENT ) + text + _
+		!"\n" + hErrorMarker( INDENT + offset, xlength )
+end function
 
-end sub
-
+''
 '' Report a message about some token that is part of some construct.
 '' Besides showing the message, this should also show the code where the error
 '' was encountered.
@@ -927,13 +982,8 @@ end sub
 '' It's important that one way or another, we show the exact tokens present in
 '' the tk buffer, i.e. the exact tokens as seen by the C parser, this is needed
 '' for using -removematch and for improving fbfrog's C parser.
-sub tkReport _
-	( _
-		byval x as integer, _
-		byval message as zstring ptr, _
-		byval more_context as integer _
-	)
-
+''
+function tkReport( byval x as integer, byval message as zstring ptr ) as string
 	if( x >= tkGetCount( ) ) then
 		x = tkGetCount( )-1
 	end if
@@ -941,79 +991,56 @@ sub tkReport _
 	var first = hFindConstructBegin( x )
 	var last = hFindConstructEnd( x ) - 1
 
+	dim s as string
+
 	'' Any macro expansion in this construct?
 	if( tkGetMaxExpansionLevel( first, last ) > 0 ) then
-		hReportConstructTokens( x, first, last, message )
+		s = hReportConstructTokens( x, first, last, message )
+
 		var toplevelx = tkFindTokenWithMinExpansionLevel( first, last )
-		hReportErrorTokenLocation( toplevelx, "construct found here", more_context )
+		if( tkGetLocation( toplevelx )->source ) then
+			s += !"\n" + hReport( tkGetLocation( toplevelx ), "construct found here" )
+		end if
+
 		if( tkGetExpansionLevel( toplevelx ) <> tkGetExpansionLevel( x ) ) then
-			hReportErrorTokenLocation( x, "token found here", more_context )
+			if( tkGetLocation( x )->source ) then
+				s += !"\n" + hReport( tkGetLocation( x ), "token found here" )
+			end if
 		end if
 	else
-		if( hReportErrorTokenLocation( x, message, more_context ) ) then
-			hReportConstructTokens( x, first, last, "context as seen by fbfrog:" )
+		if( tkGetLocation( x )->source ) then
+			s = hReport( tkGetLocation( x ), message )
+			s += !"\n" + hReportConstructTokens( x, first, last, "context as seen by fbfrog:" )
 		else
-			hReportConstructTokens( x, first, last, message )
+			s = hReportConstructTokens( x, first, last, message )
 		end if
 	end if
 
-end sub
+	function = s
+end function
 
 sub tkOops( byval x as integer, byval message as zstring ptr )
-	tkReport( x, message, TRUE )
+	print tkReport( x, message )
 	end 1
 end sub
 
-sub tkOopsExpected _
-	( _
-		byval x as integer, _
-		byval message as zstring ptr, _
-		byval whatfor as zstring ptr _
-	)
-
-	dim s as string
-
+function tkMakeExpectedMessage( byval x as integer, byval something as zstring ptr ) as string
 	select case( tkGet( x ) )
 	case TK_EOL, TK_EOF, TK_DIVIDER, TK_END
-		s = "missing " + *message
-		if( whatfor ) then s += " " + *whatfor
+		function = "missing " + *something
 	case else
-		var found = "'" + hMakePrettyCTokenText( tkGet( x ), tkGetText( x ) ) + "'"
-		if( len( found ) > 0 ) then
-			found = " but found " + found
-		end if
-		s = "expected " + *message
-		if( whatfor ) then s += " " + *whatfor
-		s += found
+		function = "expected " + *something + " but found '" + _
+			hMakePrettyCTokenText( tkGet( x ), tkGetText( x ) ) + "'"
 	end select
+end function
 
-	tkOops( x, s )
+sub tkOopsExpected( byval x as integer, byval message as zstring ptr )
+	print tkReport( x, tkMakeExpectedMessage( x, message ) )
+	end 1
 end sub
 
-sub tkExpect _
-	( _
-		byval x as integer, _
-		byval tk as integer, _
-		byval whatfor as zstring ptr _
-	)
-
+sub tkExpect( byval x as integer, byval tk as integer, byval message as zstring ptr )
 	if( tkGet( x ) <> tk ) then
-		dim as string expected
-
-		select case( tk )
-		case TK_EOF    : expected = "end of file"
-		case TK_EOL    : expected = "end of line"
-		case TK_ID     : expected = "identifier"
-		case TK_STRING : expected = """..."" string literal"
-		case else
-			if( tk_info(tk).debug ) then
-				expected = *tk_info(tk).debug
-			else
-				expected = "'" + *tk_info(tk).text + "'"
-			end if
-		end select
-
-		tkOopsExpected( x, expected, whatfor )
+		tkOopsExpected( x, tkInfoPretty( tk ) + " " + *message )
 	end if
-
 end sub

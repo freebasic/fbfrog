@@ -2,6 +2,16 @@
 #include once "crt.bi"
 #include once "dir.bi"
 
+function min( byval a as integer, byval b as integer ) as integer
+	if( b < a ) then a = b
+	function = a
+end function
+
+function max( byval a as integer, byval b as integer ) as integer
+	if( b > a ) then a = b
+	function = a
+end function
+
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 namespace sourcebuffers
@@ -200,91 +210,83 @@ sub hCalcErrorLine _
 
 end sub
 
-function hConsoleWidth( ) as integer
-	dim as integer w = loword( width( ) )
-	if( w < 0 ) then
-		w = 0
-	end if
-	function = w
+private function hLineNumberPrefix( byval linenum as integer ) as string
+	function = str( linenum + 1 ) + ": "
 end function
 
-'' Prints an error message like this to the console:
-'' filename.bas(123): duplicate definition of 'foobar'
-''          dim foobar as integer
-''              ^~~~~~
-sub hReport _
+private function hRightAlignedLineNumber( byval maxwidth as integer, byval linenum as integer ) as string
+	var slinenum = hLineNumberPrefix( linenum )
+	function = space( maxwidth - len( slinenum ) ) + slinenum
+end function
+
+function hErrorMarker( byval indent as integer, byval length as integer ) as string
+	function = space( indent ) + "^" + string( length - 1, "~" )
+end function
+
+private function hTrimmedSourceLine _
 	( _
 		byval location as TKLOCATION ptr, _
-		byval message as zstring ptr, _
-		byval more_context as integer _
-	)
+		byval linenum as integer, _
+		byval maxwidth as integer, _
+		byref adjustedcolumn as integer _
+	) as string
 
-	if( location = NULL ) then
-		print *message
-		exit sub
-	end if
+	var ln = lexPeekLine( location->source, linenum )
+	hCalcErrorLine( location->column, maxwidth, ln, adjustedcolumn )
 
-	if( location->source = NULL ) then
-		print "(" & (location->linenum + 1) & "): " + *message
-		exit sub
-	end if
+	function = ln
+end function
 
-	print *location->source->name + "(" & (location->linenum + 1) & "): " + *message
+''
+'' Builds an error message string like this:
+''
+''    filename.bas(10): duplicate definition of 'foo'
+''       9:    do
+''      10:        dim foo as integer
+''                     ^~~
+''      11:        foo = 123
+''      12:        print foo
+''
+function hReport( byval location as TKLOCATION ptr, byval message as zstring ptr ) as string
+	var s = *location->source->name + "(" & (location->linenum + 1) & "): " + *message
 
-	'' Show the error line and maybe some extra lines above and below it,
-	'' for more context, with line numbers prefixed to them:
-	''    9:        do
-	''   10:            dim i as integer
-	''                      ^
-	''   11:            i = 123
-	''   12:            print i
-	dim as string linenums(-2 to 2)
-	dim as integer min, max
-	if( more_context ) then
-		min = location->linenum + lbound( linenums )
-		if( min < 0 ) then min = 0
-		min -= location->linenum
-
-		max = location->linenum + ubound( linenums )
-		if( max >= location->source->lines ) then max = location->source->lines - 1
-		max -= location->linenum
-	else
-		min = 0
-		max = 0
-	end if
-	for i as integer = min to max
-		linenums(i) = str( location->linenum + i + 1 )
-		if( len( linenums(i) ) < len( str( location->linenum + 1 ) ) ) then
-			linenums(i) = " " + linenums(i)
-		end if
-		linenums(i) += ": "
-	next
-
-	var maxwidth = hConsoleWidth( )
+	'' Show the error line and some extra lines above and below it,
+	'' for more context, with line numbers prefixed to them.
+	const CONTEXTLINES = 2
+	var firstline = max( location->linenum - CONTEXTLINES, 0 )
+	var lastline  = min( location->linenum + CONTEXTLINES, location->source->lines - 1 )
 
 	'' Indentation and line numbers reduce the width available for the error line
-	maxwidth -= len( linenums(0) )
-	maxwidth -= 4
+	const INDENT = 4
+	const MAXWIDTH = 80 - INDENT
+	var wlinenum = len( hLineNumberPrefix( lastline ) )  '' width of biggest line number
+	var wsource = MAXWIDTH - wlinenum          '' available witdh for error line source code
 
-	for i as integer = min to max
-		dim offset as integer
-		var sourceline = lexPeekLine( location->source, location->linenum + i )
-		hCalcErrorLine( location->column, maxwidth, sourceline, offset )
-		print "    " + linenums(i) + sourceline
-		if( i = 0 ) then
-			'' ^~~~ error marker
-			print space( 4 + len( linenums(i) ) + offset ) + _
-			      "^" + string( location->length - 1, "~" )
+	for linenum as integer = firstline to lastline
+		s += !"\n" + space( INDENT )
+
+		'' Right-align line numbers, in case we're going from 9 (1 char) to 10 (2 chars) or similar
+		s += hRightAlignedLineNumber( wlinenum, linenum )
+
+		'' A line of source code, trimmed to fit into the width limit
+		dim markeroffset as integer
+		s += hTrimmedSourceLine( location, linenum, wsource, markeroffset )
+
+		'' Error marker below the erroneous line
+		if( linenum = location->linenum ) then
+			s += !"\n" + hErrorMarker( INDENT + wlinenum + markeroffset, location->length )
 		end if
 	next
 
 	if( (not location->source->is_file) and (location->source->location.source <> NULL) ) then
-		hReport( @location->source->location, "from here:", more_context )
+		s += !"\n" + hReport( @location->source->location, "from here:" )
 	end if
-end sub
+
+	function = s
+end function
 
 sub oopsLocation( byval location as TKLOCATION ptr, byval message as zstring ptr )
-	hReport( location, message, TRUE )
+	print hReport( location, message )
 	end 1
 end sub
 

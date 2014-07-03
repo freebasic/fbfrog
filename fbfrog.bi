@@ -2,6 +2,9 @@ const NULL = 0
 const FALSE = 0
 const TRUE = -1
 
+declare function min( byval a as integer, byval b as integer ) as integer
+declare function max( byval a as integer, byval b as integer ) as integer
+
 type ASTNODE as ASTNODE_
 
 enum
@@ -110,13 +113,8 @@ declare sub hCalcErrorLine _
 		byref s as string, _
 		byref offset as integer _
 	)
-declare function hConsoleWidth( ) as integer
-declare sub hReport _
-	( _
-		byval location as TKLOCATION ptr, _
-		byval message as zstring ptr, _
-		byval more_context as integer _
-	)
+declare function hErrorMarker( byval indent as integer, byval length as integer ) as string
+declare function hReport( byval location as TKLOCATION ptr, byval message as zstring ptr ) as string
 declare sub oopsLocation( byval location as TKLOCATION ptr, byval message as zstring ptr )
 declare function strDuplicate( byval s as zstring ptr ) as zstring ptr
 declare function strReplace _
@@ -401,6 +399,7 @@ enum
 end enum
 
 declare function tkInfoText( byval id as integer ) as zstring ptr
+declare function tkInfoPretty( byval tk as integer ) as string
 
 '' Debugging helper, for example: TRACE( x ), "decl begin"
 #define TRACE( x ) print __FUNCTION__ + "(" + str( __LINE__ ) + "): " + tkDumpOne( x )
@@ -469,27 +468,16 @@ declare sub tkRemoveAllOf( byval id as integer, byval text as zstring ptr )
 declare sub tkApplyRemoves( )
 declare sub tkRemoveEOLs( )
 declare sub tkTurnCPPTokensIntoCIds( )
+declare function hMakePrettyCTokenText( byval id as integer, byval text as zstring ptr ) as string
 declare function tkMakePrettyCTokenText( byval x as integer ) as string
+declare function tkToCText( byval first as integer, byval last as integer ) as string
+declare function hSkipToTK_END( byval x as integer ) as integer
 declare function hFindConstructEnd( byval x as integer ) as integer
-declare sub tkReport _
-	( _
-		byval x as integer, _
-		byval message as zstring ptr, _
-		byval more_context as integer _
-	)
+declare function tkReport( byval x as integer, byval message as zstring ptr ) as string
 declare sub tkOops( byval x as integer, byval message as zstring ptr )
-declare sub tkOopsExpected _
-	( _
-		byval x as integer, _
-		byval message as zstring ptr, _
-		byval whatfor as zstring ptr = NULL _
-	)
-declare sub tkExpect _
-	( _
-		byval x as integer, _
-		byval tk as integer, _
-		byval whatfor as zstring ptr _
-	)
+declare function tkMakeExpectedMessage( byval x as integer, byval message as zstring ptr ) as string
+declare sub tkOopsExpected( byval x as integer, byval message as zstring ptr )
+declare sub tkExpect( byval x as integer, byval tk as integer, byval message as zstring ptr )
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
@@ -555,6 +543,7 @@ enum
 	ASTCLASS_VERAND
 	ASTCLASS_DIVIDER
 	ASTCLASS_SCOPEBLOCK
+	ASTCLASS_UNKNOWN
 
 	'' Script helper nodes
 	ASTCLASS_DECLAREDEFINES
@@ -690,6 +679,7 @@ const ASTATTRIB_DONTEMIT      = 1 shl 14
 const ASTATTRIB_ONCE          = 1 shl 15  '' Marks #includes as "#include once"
 const ASTATTRIB_PACKED        = 1 shl 16  '' __attribute__((packed))
 const ASTATTRIB_VARIADIC      = 1 shl 17  '' PPDEFINE/MACROPARAM: variadic macros
+const ASTATTRIB_BEHINDSPACE   = 1 shl 18  '' TK
 
 '' When changing, adjust astClone(), astIsEqual(), astDump*()
 type ASTNODE_
@@ -901,6 +891,7 @@ declare function emitType overload( byval n as ASTNODE ptr ) as string
 declare sub emitFile( byref filename as string, byval ast as ASTNODE ptr )
 
 declare function hFindClosingParen( byval x as integer ) as integer
+declare function hSkipStatement( byval x as integer ) as integer
 declare function hNumberLiteral( byval x as integer ) as ASTNODE ptr
 extern as integer cprecedence(ASTCLASS_CLOGOR to ASTCLASS_IIF)
 declare sub hInsertMacroBody( byval x as integer, byval macro as ASTNODE ptr )

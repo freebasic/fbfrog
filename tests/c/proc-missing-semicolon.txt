@@ -1,10 +1,11 @@
 [1/5] __FB_WIN32__.__FB_64BIT__
       tests/c/proc-missing-semicolon.h
-tests/c/proc-missing-semicolon.h(2): missing ';' to finish this declaration
-    1: // @fail
-    2: void f(void)
-                  ^
-    3: 
-context as seen by fbfrog:
-    void f ( void )
-                  ^
+[2/5] __FB_WIN32__.(not __FB_64BIT__)
+      tests/c/proc-missing-semicolon.h
+[3/5] __FB_LINUX__.__FB_64BIT__
+      tests/c/proc-missing-semicolon.h
+[4/5] __FB_LINUX__.(not __FB_64BIT__)
+      tests/c/proc-missing-semicolon.h
+[5/5] __FB_DOS__
+      tests/c/proc-missing-semicolon.h
+emitting: tests/c/proc-missing-semicolon.bi (1 declaration)

@@ -1,4 +1,3 @@
-// @fail
 // should become
 //    typedef struct a ## b;
 // not

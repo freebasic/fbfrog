@@ -157,7 +157,7 @@ function hFindClosingParen( byval x as integer ) as integer
 	function = x
 end function
 
-private function hSkipStatement( byval x as integer ) as integer
+function hSkipStatement( byval x as integer ) as integer
 	var begin = x
 
 	do
@@ -1890,20 +1890,10 @@ private function hLookupRemoveSym( byval id as zstring ptr ) as integer
 	function = (hashLookup( @eval.removes, id, hashHash( id ) )->s <> NULL)
 end function
 
-private function hSkipFromBeginToEnd( byval x as integer ) as integer
-	assert( tkGet( x ) = TK_BEGIN )
-	'' Find TK_END
-	do
-		x += 1
-		assert( tkGet( x ) <> TK_BEGIN )
-	loop while( tkGet( x ) <> TK_END )
-	function = x
-end function
-
 private sub hSkipIfAndSetRemove( byref x as integer )
 	var last = x
 	if( tkGet( x + 1 ) = TK_BEGIN ) then
-		last = hSkipFromBeginToEnd( x + 1 )
+		last = hSkipToTK_END( x + 1 )
 	end if
 	tkSetRemove( x, last )
 	x = last
@@ -2258,7 +2248,7 @@ sub cppMain( byval whitespace as integer, byval nomerge as integer )
 				tkSetRemove( x )
 			else
 				'' ditto
-				tkReport( x, "#warning", TRUE )
+				print tkReport( x, "#warning" )
 			end if
 
 		case TK_ID

@@ -1,10 +1,11 @@
 [1/5] __FB_WIN32__.__FB_64BIT__
       tests/c/proc-param-list-open.h
-tests/c/proc-param-list-open.h(2): missing a data type at the beginning of this declaration
-    1: // @fail
-    2: void f(
-             ^
-    3: 
-context as seen by fbfrog:
-    void f (
-           ^
+[2/5] __FB_WIN32__.(not __FB_64BIT__)
+      tests/c/proc-param-list-open.h
+[3/5] __FB_LINUX__.__FB_64BIT__
+      tests/c/proc-param-list-open.h
+[4/5] __FB_LINUX__.(not __FB_64BIT__)
+      tests/c/proc-param-list-open.h
+[5/5] __FB_DOS__
+      tests/c/proc-param-list-open.h
+emitting: tests/c/proc-param-list-open.bi (1 declaration)

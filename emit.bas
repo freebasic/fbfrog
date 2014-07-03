@@ -387,6 +387,14 @@ private function emitAst _
 		hEmitIndentedChildren( n )
 		emitStmt( "end scope" )
 
+	case ASTCLASS_UNKNOWN
+		emit.comment += 1
+		emitLine( "TODO: unrecognized construct:" )
+		emitLines( n->text )
+		emitLine( string( 75, "-" ) )
+		emitLines( n->comment )
+		emit.comment -= 1
+
 	case ASTCLASS_INCLIB
 		emitStmt( "#inclib """ + *n->text + """", n->comment )
 

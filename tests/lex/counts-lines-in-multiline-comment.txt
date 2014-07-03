@@ -1,11 +1,11 @@
 [1/5] __FB_WIN32__.__FB_64BIT__
       tests/lex/counts-lines-in-multiline-comment.h
-tests/lex/counts-lines-in-multiline-comment.h(6): expected ';' to finish this declaration but found 'and'
+tests/lex/counts-lines-in-multiline-comment.h(6): expected ')' to close the parameter list in this macro declaration but found 'error'
     4: c */
     5: 
-    6: provoke error and check the line number in the produced message
-                     ^~~
+    6: #define m(provoke error and check the line number in the produced message
+                         ^~~~~
     7: 
 context as seen by fbfrog:
-    provoke error and check the line number in the produced message
-                  ^~~
+    [eol] [eol] [eol] [eol] # define m ( provoke error and check the line number
+                                                 ^~~~~

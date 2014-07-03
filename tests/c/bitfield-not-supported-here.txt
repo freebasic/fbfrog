@@ -1,11 +1,11 @@
 [1/5] __FB_WIN32__.__FB_64BIT__
       tests/c/bitfield-not-supported-here.h
-tests/c/bitfield-not-supported-here.h(3): bitfields not supported here
-    1: // @fail
-    2: 
-    3: int i : 1;
-             ^
-    4: 
-context as seen by fbfrog:
-    int i : 1 ;
-          ^
+[2/5] __FB_WIN32__.(not __FB_64BIT__)
+      tests/c/bitfield-not-supported-here.h
+[3/5] __FB_LINUX__.__FB_64BIT__
+      tests/c/bitfield-not-supported-here.h
+[4/5] __FB_LINUX__.(not __FB_64BIT__)
+      tests/c/bitfield-not-supported-here.h
+[5/5] __FB_DOS__
+      tests/c/bitfield-not-supported-here.h
+emitting: tests/c/bitfield-not-supported-here.bi (1 declaration)

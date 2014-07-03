@@ -359,7 +359,7 @@ private sub hAstLCS _
 
 	var llen = llast - lfirst + 1
 	var rlen = rlast - rfirst + 1
-	var max = 0, maxi = 0, maxj = 0
+	var maxlen = 0, maxleni = 0, maxlenj = 0
 
 	dim as integer ptr matrix = callocate( sizeof( integer ) * llen * rlen )
 
@@ -373,10 +373,10 @@ private sub hAstLCS _
 					newval = matrix[(i-1)+((j-1)*llen)] + 1
 				end if
 			end if
-			if( max < newval ) then
-				max = newval
-				maxi = i
-				maxj = j
+			if( maxlen < newval ) then
+				maxlen = newval
+				maxleni = i
+				maxlenj = j
 			end if
 			matrix[i+(j*llen)] = newval
 		next
@@ -384,10 +384,10 @@ private sub hAstLCS _
 
 	deallocate( matrix )
 
-	llcsfirst = lfirst + maxi - max + 1
-	rlcsfirst = rfirst + maxj - max + 1
-	llcslast  = llcsfirst + max - 1
-	rlcslast  = rlcsfirst + max - 1
+	llcsfirst = lfirst + maxleni - maxlen + 1
+	rlcsfirst = rfirst + maxlenj - maxlen + 1
+	llcslast = llcsfirst + maxlen - 1
+	rlcslast = rlcsfirst + maxlen - 1
 end sub
 
 private function hMergeStructsManually _
@@ -818,22 +818,22 @@ private function condcounterFindMostCommon( ) as ASTNODE ptr
 		return NULL
 	end if
 
-	var max = 0
-	var imax = -1
+	var maxcount = 0
+	var imaxcount = -1
 	for i as integer = 0 to condcounter.condcount - 1
-		if( max < condcounter.conds[i].count ) then
-			max = condcounter.conds[i].count
-			imax = i
+		if( maxcount < condcounter.conds[i].count ) then
+			maxcount = condcounter.conds[i].count
+			imaxcount = i
 		end if
 	next
-	assert( (imax >= 0) and (imax < condcounter.condcount) )
+	assert( (imaxcount >= 0) and (imaxcount < condcounter.condcount) )
 
 	'' No point extracting a condition that only appeared once
-	if( condcounter.conds[imax].count < 2 ) then
+	if( condcounter.conds[imaxcount].count < 2 ) then
 		return NULL
 	end if
 
-	function = condcounter.conds[imax].cond
+	function = condcounter.conds[imaxcount].cond
 end function
 
 private function hDetermineMostCommonCondition( byval veror as ASTNODE ptr ) as ASTNODE ptr

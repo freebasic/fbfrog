@@ -1,2 +1,1 @@
-// @fail
-int a, b(void) { return 0 };
+void *a, b(void) { ; };

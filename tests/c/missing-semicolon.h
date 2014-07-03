@@ -1,2 +1,1 @@
-// @fail
 int a

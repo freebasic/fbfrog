@@ -1,11 +1,11 @@
 [1/5] __FB_WIN32__.__FB_64BIT__
       tests/c/code-as-seen-by-fbfrog.h
-tests/c/code-as-seen-by-fbfrog.h(7): expected ')' to close parameter list in function declaration but found ';'
-    5: /* Some comment in the
-    6: middle of things.*/
-    7: int i; /* invalid code */
-            ^
-    8: 
-context as seen by fbfrog:
-    void f ( int i ;
-                   ^
+[2/5] __FB_WIN32__.(not __FB_64BIT__)
+      tests/c/code-as-seen-by-fbfrog.h
+[3/5] __FB_LINUX__.__FB_64BIT__
+      tests/c/code-as-seen-by-fbfrog.h
+[4/5] __FB_LINUX__.(not __FB_64BIT__)
+      tests/c/code-as-seen-by-fbfrog.h
+[5/5] __FB_DOS__
+      tests/c/code-as-seen-by-fbfrog.h
+emitting: tests/c/code-as-seen-by-fbfrog.bi (1 declaration)

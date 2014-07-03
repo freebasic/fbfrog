@@ -1,4 +1,3 @@
-// @fail
 void
 f
 (

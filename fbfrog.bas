@@ -477,7 +477,7 @@ private sub hParseArgs( byref x as integer )
 		case else
 			dim as zstring ptr text = tkGetText( x )
 			if( (text = NULL) orelse ((*text)[0] = CH_MINUS) ) then
-				tkReport( x, "unknown command line option '" + *text + "'", TRUE )
+				print tkReport( x, "unknown command line option '" + *text + "'" )
 				hPrintHelpAndExit( )
 			end if
 
