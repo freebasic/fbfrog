@@ -268,16 +268,16 @@ private function hSeparatedList _
 	dim s as string
 
 	var count = 0
-	var child = n->head
-	while( child )
+	var i = n->head
+	while( i )
 		if( count > 0 ) then
 			s += *separator
 		end if
 
-		s += emitAst( child, need_parens )
+		s += emitAst( i, need_parens )
 
 		count += 1
-		child = child->next
+		i = i->next
 	wend
 
 	function = s
@@ -337,12 +337,11 @@ private function emitAst _
 
 	select case as const( n->class )
 	case ASTCLASS_GROUP
-		var child = n->head
-		while( child )
-			s = emitAst( child )
-			child = child->next
+		var i = n->head
+		while( i )
+			emitAst( i )
+			i = i->next
 		wend
-		s = ""
 
 	case ASTCLASS_DIVIDER
 		if( (n->prev <> NULL) and _
@@ -420,7 +419,7 @@ private function emitAst _
 			s = ""
 
 			emit.indent += 1
-			s = emitAst( n->expr )
+			emitAst( n->expr )
 			emit.indent -= 1
 
 			emitStmt( "#endmacro" )
@@ -494,12 +493,11 @@ private function emitAst _
 		s = ""
 		emit.indent += 1
 
-		var child = n->head
-		while( child )
-			s = emitAst( child )
-			child = child->next
+		var i = n->head
+		while( i )
+			emitAst( i )
+			i = i->next
 		wend
-		s = ""
 
 		emit.indent -= 1
 		emitStmt( "end " + compoundkeyword )
@@ -766,11 +764,11 @@ private function emitAst _
 			emitAst( n->tail ) + ")"
 
 	case ASTCLASS_PPMERGE
-		var child = n->head
-		while( child )
-			if( child <> n->head ) then s += "##"
-			s += emitAst( child )
-			child = child->next
+		var i = n->head
+		while( i )
+			if( i <> n->head ) then s += "##"
+			s += emitAst( i )
+			i = i->next
 		wend
 
 	case ASTCLASS_CALL
