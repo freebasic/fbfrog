@@ -472,10 +472,14 @@ sub astFixArrayParams( byval n as ASTNODE ptr )
 		end if
 	end if
 
-	var child = n->head
-	while( child )
-		astFixArrayParams( child )
-		child = child->next
+	if( n->subtype ) then astFixArrayParams( n->subtype )
+	if( n->array   ) then astFixArrayParams( n->array )
+	if( n->expr    ) then astFixArrayParams( n->expr )
+
+	var i = n->head
+	while( i )
+		astFixArrayParams( i )
+		i = i->next
 	wend
 end sub
 
