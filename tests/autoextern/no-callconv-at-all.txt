@@ -8,4 +8,4 @@
       tests/autoextern/no-callconv-at-all.h
 [5/5] __FB_DOS__
       tests/autoextern/no-callconv-at-all.h
-emitting: tests/autoextern/no-callconv-at-all.bi (6 declarations)
+emitting: tests/autoextern/no-callconv-at-all.bi (6 declarations, 0 TODOs)

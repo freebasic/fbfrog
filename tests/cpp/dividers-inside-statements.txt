@@ -8,4 +8,4 @@
       tests/cpp/dividers-inside-statements.h
 [5/5] __FB_DOS__
       tests/cpp/dividers-inside-statements.h
-emitting: tests/cpp/dividers-inside-statements.bi (6 declarations)
+emitting: tests/cpp/dividers-inside-statements.bi (6 declarations, 0 TODOs)

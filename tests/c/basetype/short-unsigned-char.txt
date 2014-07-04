@@ -8,4 +8,4 @@
       tests/c/basetype/short-unsigned-char.h
 [5/5] __FB_DOS__
       tests/c/basetype/short-unsigned-char.h
-emitting: tests/c/basetype/short-unsigned-char.bi (1 declaration)
+emitting: tests/c/basetype/short-unsigned-char.bi (0 declarations, 1 TODO)

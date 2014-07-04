@@ -48,4 +48,4 @@
       tests/cpp/directives-1.h
       tests/cpp/directives-1.h
       tests/cpp/directives-1.h
-emitting: tests/cpp/directives.bi (66 declarations)
+emitting: tests/cpp/directives.bi (66 declarations, 0 TODOs)

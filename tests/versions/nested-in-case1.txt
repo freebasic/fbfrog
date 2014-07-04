@@ -28,4 +28,4 @@
         tests/versions/nested-in-case1.h
 [15/15] __FB_DOS__.(not A)
         tests/versions/nested-in-case1.h
-emitting: tests/versions/nested-in-case1.bi (2 declarations)
+emitting: tests/versions/nested-in-case1.bi (2 declarations, 0 TODOs)

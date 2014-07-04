@@ -8,4 +8,4 @@
       tests/cpp/expand/incomplete-call-other-in-expansion.h
 [5/5] __FB_DOS__
       tests/cpp/expand/incomplete-call-other-in-expansion.h
-emitting: tests/cpp/expand/incomplete-call-other-in-expansion.bi (5 declarations)
+emitting: tests/cpp/expand/incomplete-call-other-in-expansion.bi (5 declarations, 0 TODOs)

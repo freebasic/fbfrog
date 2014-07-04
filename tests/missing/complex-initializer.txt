@@ -8,4 +8,4 @@
       tests/missing/complex-initializer.h
 [5/5] __FB_DOS__
       tests/missing/complex-initializer.h
-emitting: tests/missing/complex-initializer.bi (4 declarations)
+emitting: tests/missing/complex-initializer.bi (4 declarations, 0 TODOs)

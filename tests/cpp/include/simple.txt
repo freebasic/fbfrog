@@ -13,4 +13,4 @@
 [5/5] __FB_DOS__
       tests/cpp/include/simple.h
       tests/cpp/include/simple-1.h
-emitting: tests/cpp/include/simple.bi (3 declarations)
+emitting: tests/cpp/include/simple.bi (3 declarations, 0 TODOs)

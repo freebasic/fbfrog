@@ -8,4 +8,4 @@
       tests/c/forward/forward-typedef-used.h
 [5/5] __FB_DOS__
       tests/c/forward/forward-typedef-used.h
-emitting: tests/c/forward/forward-typedef-used.bi (2 declarations)
+emitting: tests/c/forward/forward-typedef-used.bi (2 declarations, 0 TODOs)

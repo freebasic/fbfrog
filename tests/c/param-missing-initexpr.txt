@@ -8,4 +8,4 @@
       tests/c/param-missing-initexpr.h
 [5/5] __FB_DOS__
       tests/c/param-missing-initexpr.h
-emitting: tests/c/param-missing-initexpr.bi (1 declaration)
+emitting: tests/c/param-missing-initexpr.bi (0 declarations, 1 TODO)

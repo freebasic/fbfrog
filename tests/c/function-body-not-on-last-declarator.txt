@@ -8,4 +8,4 @@
       tests/c/function-body-not-on-last-declarator.h
 [5/5] __FB_DOS__
       tests/c/function-body-not-on-last-declarator.h
-emitting: tests/c/function-body-not-on-last-declarator.bi (2 declarations)
+emitting: tests/c/function-body-not-on-last-declarator.bi (1 declaration, 1 TODO)

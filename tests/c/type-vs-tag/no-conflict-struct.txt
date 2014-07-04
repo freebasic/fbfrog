@@ -8,4 +8,4 @@
       tests/c/type-vs-tag/no-conflict-struct.h
 [5/5] __FB_DOS__
       tests/c/type-vs-tag/no-conflict-struct.h
-emitting: tests/c/type-vs-tag/no-conflict-struct.bi (4 declarations)
+emitting: tests/c/type-vs-tag/no-conflict-struct.bi (4 declarations, 0 TODOs)

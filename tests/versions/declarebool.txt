@@ -18,4 +18,4 @@
         tests/versions/declarebool.h
 [10/10] __FB_DOS__.(not A)
         tests/versions/declarebool.h
-emitting: tests/versions/declarebool.bi (2 declarations)
+emitting: tests/versions/declarebool.bi (2 declarations, 0 TODOs)

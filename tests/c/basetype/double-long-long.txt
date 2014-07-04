@@ -8,4 +8,4 @@
       tests/c/basetype/double-long-long.h
 [5/5] __FB_DOS__
       tests/c/basetype/double-long-long.h
-emitting: tests/c/basetype/double-long-long.bi (1 declaration)
+emitting: tests/c/basetype/double-long-long.bi (0 declarations, 1 TODO)

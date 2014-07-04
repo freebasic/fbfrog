@@ -8,4 +8,4 @@
       tests/cpp/empty-file.h
 [5/5] __FB_DOS__
       tests/cpp/empty-file.h
-emitting: tests/cpp/empty-file.bi (0 declarations)
+emitting: tests/cpp/empty-file.bi (0 declarations, 0 TODOs)

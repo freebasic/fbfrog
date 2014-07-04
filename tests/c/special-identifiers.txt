@@ -8,4 +8,4 @@
       tests/c/special-identifiers.h
 [5/5] __FB_DOS__
       tests/c/special-identifiers.h
-emitting: tests/c/special-identifiers.bi (1 declaration)
+emitting: tests/c/special-identifiers.bi (1 declaration, 0 TODOs)

@@ -8,4 +8,4 @@
       tests/name-conflicts/renames-update-references.h
 [5/5] __FB_DOS__
       tests/name-conflicts/renames-update-references.h
-emitting: tests/name-conflicts/renames-update-references.bi (7 declarations)
+emitting: tests/name-conflicts/renames-update-references.bi (7 declarations, 0 TODOs)

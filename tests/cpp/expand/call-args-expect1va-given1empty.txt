@@ -8,4 +8,4 @@
       tests/cpp/expand/call-args-expect1va-given1empty.h
 [5/5] __FB_DOS__
       tests/cpp/expand/call-args-expect1va-given1empty.h
-emitting: tests/cpp/expand/call-args-expect1va-given1empty.bi (1 declaration)
+emitting: tests/cpp/expand/call-args-expect1va-given1empty.bi (1 declaration, 0 TODOs)

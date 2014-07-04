@@ -8,4 +8,4 @@
       tests/missing/typedef-self.h
 [5/5] __FB_DOS__
       tests/missing/typedef-self.h
-emitting: tests/missing/typedef-self.bi (2 declarations)
+emitting: tests/missing/typedef-self.bi (2 declarations, 0 TODOs)

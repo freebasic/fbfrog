@@ -8,4 +8,4 @@
       tests/c/struct/typedef-struct.h
 [5/5] __FB_DOS__
       tests/c/struct/typedef-struct.h
-emitting: tests/c/struct/typedef-struct.bi (6 declarations)
+emitting: tests/c/struct/typedef-struct.bi (6 declarations, 0 TODOs)

@@ -8,4 +8,4 @@
       tests/cpp/expand/unmerged-tokens-in-merged-arg-still-expanded.h
 [5/5] __FB_DOS__
       tests/cpp/expand/unmerged-tokens-in-merged-arg-still-expanded.h
-emitting: tests/cpp/expand/unmerged-tokens-in-merged-arg-still-expanded.bi (6 declarations)
+emitting: tests/cpp/expand/unmerged-tokens-in-merged-arg-still-expanded.bi (6 declarations, 0 TODOs)

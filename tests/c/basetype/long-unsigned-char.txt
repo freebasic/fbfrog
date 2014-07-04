@@ -8,4 +8,4 @@
       tests/c/basetype/long-unsigned-char.h
 [5/5] __FB_DOS__
       tests/c/basetype/long-unsigned-char.h
-emitting: tests/c/basetype/long-unsigned-char.bi (1 declaration)
+emitting: tests/c/basetype/long-unsigned-char.bi (0 declarations, 1 TODO)

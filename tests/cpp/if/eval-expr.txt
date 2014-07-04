@@ -8,4 +8,4 @@
       tests/cpp/if/eval-expr.h
 [5/5] __FB_DOS__
       tests/cpp/if/eval-expr.h
-emitting: tests/cpp/if/eval-expr.bi (17 declarations)
+emitting: tests/cpp/if/eval-expr.bi (17 declarations, 0 TODOs)

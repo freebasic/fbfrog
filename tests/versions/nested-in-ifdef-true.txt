@@ -28,4 +28,4 @@
         tests/versions/nested-in-ifdef-true.h
 [15/15] __FB_DOS__.(not A)
         tests/versions/nested-in-ifdef-true.h
-emitting: tests/versions/nested-in-ifdef-true.bi (2 declarations)
+emitting: tests/versions/nested-in-ifdef-true.bi (2 declarations, 0 TODOs)

@@ -13,4 +13,4 @@
 [5/5] __FB_DOS__
       tests/autoextern/procs-multiple-files-extern-c.h
       tests/autoextern/procs-multiple-files-extern-windows.h
-emitting: tests/autoextern/procs-multiple-files-extern-c.bi (18 declarations)
+emitting: tests/autoextern/procs-multiple-files-extern-c.bi (18 declarations, 0 TODOs)

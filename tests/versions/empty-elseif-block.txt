@@ -48,4 +48,4 @@
         tests/versions/empty-elseif-block.h
 [25/25] __FB_DOS__.C.VER=2
         tests/versions/empty-elseif-block.h
-emitting: tests/versions/empty-elseif-block.bi (5 declarations)
+emitting: tests/versions/empty-elseif-block.bi (5 declarations, 0 TODOs)

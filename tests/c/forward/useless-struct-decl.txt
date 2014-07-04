@@ -8,4 +8,4 @@
       tests/c/forward/useless-struct-decl.h
 [5/5] __FB_DOS__
       tests/c/forward/useless-struct-decl.h
-emitting: tests/c/forward/useless-struct-decl.bi (0 declarations)
+emitting: tests/c/forward/useless-struct-decl.bi (0 declarations, 0 TODOs)

@@ -8,4 +8,4 @@
       tests/merging/version.h
 [5/5] __FB_DOS__.VER=1
       tests/merging/version.h
-emitting: tests/merging/version.bi (7 declarations)
+emitting: tests/merging/version.bi (7 declarations, 0 TODOs)

@@ -8,4 +8,4 @@
       tests/cpp/expand/indirect-recursion-functionlike.h
 [5/5] __FB_DOS__
       tests/cpp/expand/indirect-recursion-functionlike.h
-emitting: tests/cpp/expand/indirect-recursion-functionlike.bi (4 declarations)
+emitting: tests/cpp/expand/indirect-recursion-functionlike.bi (4 declarations, 0 TODOs)

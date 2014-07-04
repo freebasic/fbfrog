@@ -8,4 +8,4 @@
       tests/c/struct/nested-unnamed-struct-as-named-field-3.h
 [5/5] __FB_DOS__
       tests/c/struct/nested-unnamed-struct-as-named-field-3.h
-emitting: tests/c/struct/nested-unnamed-struct-as-named-field-3.bi (3 declarations)
+emitting: tests/c/struct/nested-unnamed-struct-as-named-field-3.bi (3 declarations, 0 TODOs)

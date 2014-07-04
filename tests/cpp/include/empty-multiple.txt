@@ -23,4 +23,4 @@
       tests/cpp/include/empty-multiple-1.h
       tests/cpp/include/empty-multiple-2.h
       tests/cpp/include/empty-multiple-3.h
-emitting: tests/cpp/include/empty-multiple.bi (0 declarations)
+emitting: tests/cpp/include/empty-multiple.bi (0 declarations, 0 TODOs)

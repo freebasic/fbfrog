@@ -8,4 +8,4 @@
       tests/cpp/expand/params-none.h
 [5/5] __FB_DOS__
       tests/cpp/expand/params-none.h
-emitting: tests/cpp/expand/params-none.bi (3 declarations)
+emitting: tests/cpp/expand/params-none.bi (3 declarations, 0 TODOs)

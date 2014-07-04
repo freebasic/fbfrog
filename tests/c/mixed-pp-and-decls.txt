@@ -8,4 +8,4 @@
       tests/c/mixed-pp-and-decls.h
 [5/5] __FB_DOS__
       tests/c/mixed-pp-and-decls.h
-emitting: tests/c/mixed-pp-and-decls.bi (2 declarations)
+emitting: tests/c/mixed-pp-and-decls.bi (2 declarations, 0 TODOs)

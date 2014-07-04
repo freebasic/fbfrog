@@ -8,4 +8,4 @@
       tests/c/basetype/unsigned-void.h
 [5/5] __FB_DOS__
       tests/c/basetype/unsigned-void.h
-emitting: tests/c/basetype/unsigned-void.bi (1 declaration)
+emitting: tests/c/basetype/unsigned-void.bi (0 declarations, 1 TODO)

@@ -8,4 +8,4 @@
       tests/cpp/expand/incomplete-call-other-in-arg.h
 [5/5] __FB_DOS__
       tests/cpp/expand/incomplete-call-other-in-arg.h
-emitting: tests/cpp/expand/incomplete-call-other-in-arg.bi (4 declarations)
+emitting: tests/cpp/expand/incomplete-call-other-in-arg.bi (4 declarations, 0 TODOs)

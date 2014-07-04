@@ -8,4 +8,4 @@
       tests/name-conflicts/typedef-vs-tag.h
 [5/5] __FB_DOS__
       tests/name-conflicts/typedef-vs-tag.h
-emitting: tests/name-conflicts/typedef-vs-tag.bi (8 declarations)
+emitting: tests/name-conflicts/typedef-vs-tag.bi (8 declarations, 0 TODOs)

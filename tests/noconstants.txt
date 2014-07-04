@@ -8,4 +8,4 @@
       tests/noconstants.h
 [5/5] __FB_DOS__
       tests/noconstants.h
-emitting: tests/noconstants.bi (1 declaration)
+emitting: tests/noconstants.bi (1 declaration, 0 TODOs)

@@ -8,4 +8,4 @@
       tests/cpp/expand/vaargs-as-normal-id.h
 [5/5] __FB_DOS__
       tests/cpp/expand/vaargs-as-normal-id.h
-emitting: tests/cpp/expand/vaargs-as-normal-id.bi (5 declarations)
+emitting: tests/cpp/expand/vaargs-as-normal-id.bi (5 declarations, 0 TODOs)

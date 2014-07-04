@@ -13,4 +13,4 @@
 [5/5] __FB_DOS__
       tests/cpp/include/empty.h
       tests/cpp/include/empty-1.h
-emitting: tests/cpp/include/empty.bi (0 declarations)
+emitting: tests/cpp/include/empty.bi (0 declarations, 0 TODOs)

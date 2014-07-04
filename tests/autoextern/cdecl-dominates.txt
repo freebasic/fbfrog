@@ -8,4 +8,4 @@
       tests/autoextern/cdecl-dominates.h
 [5/5] __FB_DOS__
       tests/autoextern/cdecl-dominates.h
-emitting: tests/autoextern/cdecl-dominates.bi (9 declarations)
+emitting: tests/autoextern/cdecl-dominates.bi (9 declarations, 0 TODOs)

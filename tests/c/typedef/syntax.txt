@@ -8,4 +8,4 @@
       tests/c/typedef/syntax.h
 [5/5] __FB_DOS__
       tests/c/typedef/syntax.h
-emitting: tests/c/typedef/syntax.bi (13 declarations)
+emitting: tests/c/typedef/syntax.bi (13 declarations, 0 TODOs)

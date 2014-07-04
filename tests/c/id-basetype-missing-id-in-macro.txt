@@ -8,4 +8,4 @@
       tests/c/id-basetype-missing-id-in-macro.h
 [5/5] __FB_DOS__
       tests/c/id-basetype-missing-id-in-macro.h
-emitting: tests/c/id-basetype-missing-id-in-macro.bi (3 declarations)
+emitting: tests/c/id-basetype-missing-id-in-macro.bi (2 declarations, 1 TODO)

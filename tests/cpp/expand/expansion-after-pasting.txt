@@ -8,4 +8,4 @@
       tests/cpp/expand/expansion-after-pasting.h
 [5/5] __FB_DOS__
       tests/cpp/expand/expansion-after-pasting.h
-emitting: tests/cpp/expand/expansion-after-pasting.bi (5 declarations)
+emitting: tests/cpp/expand/expansion-after-pasting.bi (5 declarations, 0 TODOs)

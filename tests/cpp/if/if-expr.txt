@@ -8,4 +8,4 @@
       tests/cpp/if/if-expr.h
 [5/5] __FB_DOS__
       tests/cpp/if/if-expr.h
-emitting: tests/cpp/if/if-expr.bi (0 declarations)
+emitting: tests/cpp/if/if-expr.bi (0 declarations, 0 TODOs)

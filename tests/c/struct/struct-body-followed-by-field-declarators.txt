@@ -8,4 +8,4 @@
       tests/c/struct/struct-body-followed-by-field-declarators.h
 [5/5] __FB_DOS__
       tests/c/struct/struct-body-followed-by-field-declarators.h
-emitting: tests/c/struct/struct-body-followed-by-field-declarators.bi (5 declarations)
+emitting: tests/c/struct/struct-body-followed-by-field-declarators.bi (5 declarations, 0 TODOs)

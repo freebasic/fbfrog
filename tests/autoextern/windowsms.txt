@@ -8,4 +8,4 @@
       tests/autoextern/windowsms.h
 [5/5] __FB_DOS__
       tests/autoextern/windowsms.h
-emitting: tests/autoextern/windowsms.bi (9 declarations)
+emitting: tests/autoextern/windowsms.bi (9 declarations, 0 TODOs)

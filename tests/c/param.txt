@@ -8,4 +8,4 @@
       tests/c/param.h
 [5/5] __FB_DOS__
       tests/c/param.h
-emitting: tests/c/param.bi (41 declarations)
+emitting: tests/c/param.bi (41 declarations, 0 TODOs)

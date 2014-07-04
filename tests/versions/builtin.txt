@@ -8,4 +8,4 @@
       tests/versions/builtin.h
 [5/5] __FB_DOS__
       tests/versions/builtin.h
-emitting: tests/versions/builtin.bi (0 declarations)
+emitting: tests/versions/builtin.bi (0 declarations, 0 TODOs)

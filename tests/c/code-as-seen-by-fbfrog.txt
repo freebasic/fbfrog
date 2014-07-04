@@ -8,4 +8,4 @@
       tests/c/code-as-seen-by-fbfrog.h
 [5/5] __FB_DOS__
       tests/c/code-as-seen-by-fbfrog.h
-emitting: tests/c/code-as-seen-by-fbfrog.bi (1 declaration)
+emitting: tests/c/code-as-seen-by-fbfrog.bi (0 declarations, 1 TODO)

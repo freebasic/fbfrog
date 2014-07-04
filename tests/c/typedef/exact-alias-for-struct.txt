@@ -8,4 +8,4 @@
       tests/c/typedef/exact-alias-for-struct.h
 [5/5] __FB_DOS__
       tests/c/typedef/exact-alias-for-struct.h
-emitting: tests/c/typedef/exact-alias-for-struct.bi (1 declaration)
+emitting: tests/c/typedef/exact-alias-for-struct.bi (1 declaration, 0 TODOs)

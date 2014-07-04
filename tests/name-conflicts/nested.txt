@@ -8,4 +8,4 @@
       tests/name-conflicts/nested.h
 [5/5] __FB_DOS__
       tests/name-conflicts/nested.h
-emitting: tests/name-conflicts/nested.bi (11 declarations)
+emitting: tests/name-conflicts/nested.bi (11 declarations, 0 TODOs)

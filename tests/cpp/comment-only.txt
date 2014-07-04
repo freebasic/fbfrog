@@ -8,4 +8,4 @@
       tests/cpp/comment-only.h
 [5/5] __FB_DOS__
       tests/cpp/comment-only.h
-emitting: tests/cpp/comment-only.bi (0 declarations)
+emitting: tests/cpp/comment-only.bi (0 declarations, 0 TODOs)

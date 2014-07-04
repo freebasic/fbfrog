@@ -8,4 +8,4 @@
       tests/cpp/comment-association.h
 [5/5] __FB_DOS__
       tests/cpp/comment-association.h
-emitting: tests/cpp/comment-association.bi (9 declarations)
+emitting: tests/cpp/comment-association.bi (9 declarations, 0 TODOs)

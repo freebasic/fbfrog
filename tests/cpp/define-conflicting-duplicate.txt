@@ -8,4 +8,4 @@
       tests/cpp/define-conflicting-duplicate.h
 [5/5] __FB_DOS__
       tests/cpp/define-conflicting-duplicate.h
-emitting: tests/cpp/define-conflicting-duplicate.bi (1 declaration)
+emitting: tests/cpp/define-conflicting-duplicate.bi (1 declaration, 0 TODOs)

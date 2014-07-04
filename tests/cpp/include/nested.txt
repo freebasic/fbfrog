@@ -18,4 +18,4 @@
       tests/cpp/include/nested.h
       tests/cpp/include/nested-1.h
       tests/cpp/include/nested-1-1.h
-emitting: tests/cpp/include/nested.bi (3 declarations)
+emitting: tests/cpp/include/nested.bi (3 declarations, 0 TODOs)

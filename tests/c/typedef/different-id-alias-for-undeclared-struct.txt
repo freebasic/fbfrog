@@ -8,4 +8,4 @@
       tests/c/typedef/different-id-alias-for-undeclared-struct.h
 [5/5] __FB_DOS__
       tests/c/typedef/different-id-alias-for-undeclared-struct.h
-emitting: tests/c/typedef/different-id-alias-for-undeclared-struct.bi (2 declarations)
+emitting: tests/c/typedef/different-id-alias-for-undeclared-struct.bi (2 declarations, 0 TODOs)

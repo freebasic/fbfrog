@@ -8,4 +8,4 @@
       tests/cpp/expand/recursion-objectlike.h
 [5/5] __FB_DOS__
       tests/cpp/expand/recursion-objectlike.h
-emitting: tests/cpp/expand/recursion-objectlike.bi (2 declarations)
+emitting: tests/cpp/expand/recursion-objectlike.bi (2 declarations, 0 TODOs)

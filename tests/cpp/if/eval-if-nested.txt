@@ -8,4 +8,4 @@
       tests/cpp/if/eval-if-nested.h
 [5/5] __FB_DOS__
       tests/cpp/if/eval-if-nested.h
-emitting: tests/cpp/if/eval-if-nested.bi (78 declarations)
+emitting: tests/cpp/if/eval-if-nested.bi (78 declarations, 0 TODOs)

@@ -8,4 +8,4 @@
       tests/c/missing-semicolon.h
 [5/5] __FB_DOS__
       tests/c/missing-semicolon.h
-emitting: tests/c/missing-semicolon.bi (1 declaration)
+emitting: tests/c/missing-semicolon.bi (0 declarations, 1 TODO)

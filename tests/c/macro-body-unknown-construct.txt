@@ -8,4 +8,4 @@
       tests/c/macro-body-unknown-construct.h
 [5/5] __FB_DOS__
       tests/c/macro-body-unknown-construct.h
-emitting: tests/c/macro-body-unknown-construct.bi (6 declarations)
+emitting: tests/c/macro-body-unknown-construct.bi (1 declaration, 5 TODOs)

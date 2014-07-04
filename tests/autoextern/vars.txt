@@ -8,4 +8,4 @@
       tests/autoextern/vars.h
 [5/5] __FB_DOS__
       tests/autoextern/vars.h
-emitting: tests/autoextern/vars.bi (2 declarations)
+emitting: tests/autoextern/vars.bi (2 declarations, 0 TODOs)

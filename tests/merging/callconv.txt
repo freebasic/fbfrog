@@ -18,4 +18,4 @@
         tests/merging/callconv.h
 [10/10] __FB_DOS__.VER=2
         tests/merging/callconv.h
-emitting: tests/merging/callconv.bi (4 declarations)
+emitting: tests/merging/callconv.bi (4 declarations, 0 TODOs)

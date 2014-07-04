@@ -8,4 +8,4 @@
       tests/c/function-body-not-on-first-declarator.h
 [5/5] __FB_DOS__
       tests/c/function-body-not-on-first-declarator.h
-emitting: tests/c/function-body-not-on-first-declarator.bi (1 declaration)
+emitting: tests/c/function-body-not-on-first-declarator.bi (0 declarations, 1 TODO)

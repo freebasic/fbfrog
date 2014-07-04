@@ -8,4 +8,4 @@
       tests/lex/escaped-eol.h
 [5/5] __FB_DOS__
       tests/lex/escaped-eol.h
-emitting: tests/lex/escaped-eol.bi (6 declarations)
+emitting: tests/lex/escaped-eol.bi (6 declarations, 0 TODOs)

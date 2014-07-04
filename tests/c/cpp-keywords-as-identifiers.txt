@@ -8,4 +8,4 @@
       tests/c/cpp-keywords-as-identifiers.h
 [5/5] __FB_DOS__
       tests/c/cpp-keywords-as-identifiers.h
-emitting: tests/c/cpp-keywords-as-identifiers.bi (60 declarations)
+emitting: tests/c/cpp-keywords-as-identifiers.bi (60 declarations, 0 TODOs)

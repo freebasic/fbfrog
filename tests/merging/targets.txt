@@ -8,4 +8,4 @@
       tests/merging/targets.h
 [5/5] __FB_DOS__
       tests/merging/targets.h
-emitting: tests/merging/targets.bi (12 declarations)
+emitting: tests/merging/targets.bi (12 declarations, 0 TODOs)

@@ -8,4 +8,4 @@
       tests/c/basetype/signed-struct.h
 [5/5] __FB_DOS__
       tests/c/basetype/signed-struct.h
-emitting: tests/c/basetype/signed-struct.bi (1 declaration)
+emitting: tests/c/basetype/signed-struct.bi (0 declarations, 1 TODO)

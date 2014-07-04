@@ -8,4 +8,4 @@
       tests/name-conflicts/renames-should-not-trigger-renames.h
 [5/5] __FB_DOS__
       tests/name-conflicts/renames-should-not-trigger-renames.h
-emitting: tests/name-conflicts/renames-should-not-trigger-renames.bi (2 declarations)
+emitting: tests/name-conflicts/renames-should-not-trigger-renames.bi (2 declarations, 0 TODOs)

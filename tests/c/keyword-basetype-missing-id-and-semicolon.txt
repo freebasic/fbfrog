@@ -8,4 +8,4 @@
       tests/c/keyword-basetype-missing-id-and-semicolon.h
 [5/5] __FB_DOS__
       tests/c/keyword-basetype-missing-id-and-semicolon.h
-emitting: tests/c/keyword-basetype-missing-id-and-semicolon.bi (1 declaration)
+emitting: tests/c/keyword-basetype-missing-id-and-semicolon.bi (0 declarations, 1 TODO)

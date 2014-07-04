@@ -8,4 +8,4 @@
       tests/c/id-basetype-missing-id.h
 [5/5] __FB_DOS__
       tests/c/id-basetype-missing-id.h
-emitting: tests/c/id-basetype-missing-id.bi (1 declaration)
+emitting: tests/c/id-basetype-missing-id.bi (0 declarations, 1 TODO)

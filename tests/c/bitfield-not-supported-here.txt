@@ -8,4 +8,4 @@
       tests/c/bitfield-not-supported-here.h
 [5/5] __FB_DOS__
       tests/c/bitfield-not-supported-here.h
-emitting: tests/c/bitfield-not-supported-here.bi (1 declaration)
+emitting: tests/c/bitfield-not-supported-here.bi (0 declarations, 1 TODO)

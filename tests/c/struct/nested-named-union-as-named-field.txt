@@ -8,4 +8,4 @@
       tests/c/struct/nested-named-union-as-named-field.h
 [5/5] __FB_DOS__
       tests/c/struct/nested-named-union-as-named-field.h
-emitting: tests/c/struct/nested-named-union-as-named-field.bi (2 declarations)
+emitting: tests/c/struct/nested-named-union-as-named-field.bi (2 declarations, 0 TODOs)

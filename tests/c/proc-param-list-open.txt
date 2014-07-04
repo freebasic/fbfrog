@@ -8,4 +8,4 @@
       tests/c/proc-param-list-open.h
 [5/5] __FB_DOS__
       tests/c/proc-param-list-open.h
-emitting: tests/c/proc-param-list-open.bi (1 declaration)
+emitting: tests/c/proc-param-list-open.bi (0 declarations, 1 TODO)

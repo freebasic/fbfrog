@@ -8,4 +8,4 @@
       tests/cpp/expand/merge/from-macro-arg.h
 [5/5] __FB_DOS__
       tests/cpp/expand/merge/from-macro-arg.h
-emitting: tests/cpp/expand/merge/from-macro-arg.bi (2 declarations)
+emitting: tests/cpp/expand/merge/from-macro-arg.bi (1 declaration, 1 TODO)

@@ -8,4 +8,4 @@
       tests/c/mixed.h
 [5/5] __FB_DOS__
       tests/c/mixed.h
-emitting: tests/c/mixed.bi (5 declarations)
+emitting: tests/c/mixed.bi (5 declarations, 0 TODOs)

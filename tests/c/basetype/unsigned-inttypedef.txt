@@ -8,4 +8,4 @@
       tests/c/basetype/unsigned-inttypedef.h
 [5/5] __FB_DOS__
       tests/c/basetype/unsigned-inttypedef.h
-emitting: tests/c/basetype/unsigned-inttypedef.bi (2 declarations)
+emitting: tests/c/basetype/unsigned-inttypedef.bi (1 declaration, 1 TODO)

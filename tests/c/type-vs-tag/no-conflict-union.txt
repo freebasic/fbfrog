@@ -8,4 +8,4 @@
       tests/c/type-vs-tag/no-conflict-union.h
 [5/5] __FB_DOS__
       tests/c/type-vs-tag/no-conflict-union.h
-emitting: tests/c/type-vs-tag/no-conflict-union.bi (4 declarations)
+emitting: tests/c/type-vs-tag/no-conflict-union.bi (4 declarations, 0 TODOs)

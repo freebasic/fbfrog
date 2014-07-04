@@ -8,4 +8,4 @@
       tests/c/struct/typedef-enum.h
 [5/5] __FB_DOS__
       tests/c/struct/typedef-enum.h
-emitting: tests/c/struct/typedef-enum.bi (9 declarations)
+emitting: tests/c/struct/typedef-enum.bi (9 declarations, 0 TODOs)

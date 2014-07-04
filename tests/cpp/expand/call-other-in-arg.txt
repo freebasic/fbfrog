@@ -8,4 +8,4 @@
       tests/cpp/expand/call-other-in-arg.h
 [5/5] __FB_DOS__
       tests/cpp/expand/call-other-in-arg.h
-emitting: tests/cpp/expand/call-other-in-arg.bi (2 declarations)
+emitting: tests/cpp/expand/call-other-in-arg.bi (2 declarations, 0 TODOs)

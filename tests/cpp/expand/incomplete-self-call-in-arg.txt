@@ -8,4 +8,4 @@
       tests/cpp/expand/incomplete-self-call-in-arg.h
 [5/5] __FB_DOS__
       tests/cpp/expand/incomplete-self-call-in-arg.h
-emitting: tests/cpp/expand/incomplete-self-call-in-arg.bi (1 declaration)
+emitting: tests/cpp/expand/incomplete-self-call-in-arg.bi (1 declaration, 0 TODOs)

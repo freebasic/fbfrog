@@ -8,4 +8,4 @@
       tests/c/decl-basetype-pasted-missing-id.h
 [5/5] __FB_DOS__
       tests/c/decl-basetype-pasted-missing-id.h
-emitting: tests/c/decl-basetype-pasted-missing-id.bi (3 declarations)
+emitting: tests/c/decl-basetype-pasted-missing-id.bi (2 declarations, 1 TODO)

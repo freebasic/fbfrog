@@ -18,4 +18,4 @@
       tests/cpp/include/nested-nomerge.h
       tests/cpp/include/nested-nomerge-1.h
       tests/cpp/include/nested-nomerge-1-1.h
-emitting: tests/cpp/include/nested-nomerge.bi (2 declarations)
+emitting: tests/cpp/include/nested-nomerge.bi (2 declarations, 0 TODOs)

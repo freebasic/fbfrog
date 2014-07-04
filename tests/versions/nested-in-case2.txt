@@ -38,4 +38,4 @@
         tests/versions/nested-in-case2.h
 [20/20] __FB_DOS__.C
         tests/versions/nested-in-case2.h
-emitting: tests/versions/nested-in-case2.bi (3 declarations)
+emitting: tests/versions/nested-in-case2.bi (3 declarations, 0 TODOs)

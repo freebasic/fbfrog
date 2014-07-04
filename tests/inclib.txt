@@ -18,4 +18,4 @@
         tests/inclib.h
 [10/10] __FB_DOS__.VER=2
         tests/inclib.h
-emitting: tests/inclib.bi (3 declarations)
+emitting: tests/inclib.bi (3 declarations, 0 TODOs)

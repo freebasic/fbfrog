@@ -1462,7 +1462,8 @@ function astCountDecls( byval code as ASTNODE ptr ) as integer
 		select case( i->class )
 		case ASTCLASS_DIVIDER, ASTCLASS_PPINCLUDE, ASTCLASS_PPENDIF, _
 		     ASTCLASS_EXTERNBLOCKBEGIN, ASTCLASS_EXTERNBLOCKEND, _
-		     ASTCLASS_INCLIB, ASTCLASS_PRAGMAONCE
+		     ASTCLASS_INCLIB, ASTCLASS_PRAGMAONCE, _
+		     ASTCLASS_UNKNOWN
 
 		case ASTCLASS_PPIF, ASTCLASS_PPELSEIF, ASTCLASS_PPELSE
 			count += astCountDecls( i )
@@ -1476,5 +1477,20 @@ function astCountDecls( byval code as ASTNODE ptr ) as integer
 		i = i->next
 	wend
 
+	function = count
+end function
+
+function astCountUnknowns( byval code as ASTNODE ptr ) as integer
+	var count = 0
+	var i = code->head
+	while( i )
+		select case( i->class )
+		case ASTCLASS_UNKNOWN
+			count += 1
+		case ASTCLASS_PPIF, ASTCLASS_PPELSEIF, ASTCLASS_PPELSE
+			count += astCountUnknowns( i )
+		end select
+		i = i->next
+	wend
 	function = count
 end function

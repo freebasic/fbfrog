@@ -888,11 +888,11 @@ private function hMakeProgressString( byval position as integer, byval total as 
 	function = "[" + sposition + "/" + stotal + "]"
 end function
 
-private function hMakeDeclCountMessage( byval declcount as integer ) as string
-	if( declcount = 1 ) then
-		function = "1 declaration"
+private function hMakeCountMessage( byval count as integer, byref noun as string ) as string
+	if( count = 1 ) then
+		function = "1 " + noun
 	else
-		function = declcount & " declarations"
+		function = count & " " + noun + "s"
 	end if
 end function
 
@@ -991,7 +991,9 @@ end sub
 	elseif( pathIsDir( frog.outname ) ) then
 		frog.outname = pathAddDiv( frog.outname ) + pathStrip( frog.defaultoutname )
 	end if
-	print "emitting: " + frog.outname + " (" + hMakeDeclCountMessage( astCountDecls( final ) ) + ")"
+	print "emitting: " + frog.outname + " (" + _
+		hMakeCountMessage(    astCountDecls( final ), "declaration" ) + ", " + _
+		hMakeCountMessage( astCountUnknowns( final ), "TODO"        ) + ")"
 	emitFile( frog.outname, final )
 
 	astDelete( final )

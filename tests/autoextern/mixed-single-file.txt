@@ -8,4 +8,4 @@
       tests/autoextern/mixed-single-file.h
 [5/5] __FB_DOS__
       tests/autoextern/mixed-single-file.h
-emitting: tests/autoextern/mixed-single-file.bi (11 declarations)
+emitting: tests/autoextern/mixed-single-file.bi (11 declarations, 0 TODOs)

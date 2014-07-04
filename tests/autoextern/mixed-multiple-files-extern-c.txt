@@ -13,4 +13,4 @@
 [5/5] __FB_DOS__
       tests/autoextern/mixed-multiple-files-extern-c.h
       tests/autoextern/mixed-multiple-files-extern-windows.h
-emitting: tests/autoextern/mixed-multiple-files-extern-c.bi (26 declarations)
+emitting: tests/autoextern/mixed-multiple-files-extern-c.bi (26 declarations, 0 TODOs)

@@ -8,4 +8,4 @@
       tests/c/struct/nested-unnamed-union-as-unnamed-field.h
 [5/5] __FB_DOS__
       tests/c/struct/nested-unnamed-union-as-unnamed-field.h
-emitting: tests/c/struct/nested-unnamed-union-as-unnamed-field.bi (1 declaration)
+emitting: tests/c/struct/nested-unnamed-union-as-unnamed-field.bi (1 declaration, 0 TODOs)

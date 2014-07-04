@@ -8,4 +8,4 @@
       tests/define2constant.h
 [5/5] __FB_DOS__
       tests/define2constant.h
-emitting: tests/define2constant.bi (8 declarations)
+emitting: tests/define2constant.bi (8 declarations, 0 TODOs)

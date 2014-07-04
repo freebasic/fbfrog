@@ -28,4 +28,4 @@
         tests/versions/empty-if-block.h
 [15/15] __FB_DOS__.(not A).VER=2
         tests/versions/empty-if-block.h
-emitting: tests/versions/empty-if-block.bi (2 declarations)
+emitting: tests/versions/empty-if-block.bi (2 declarations, 0 TODOs)

@@ -13,4 +13,4 @@
 [5/5] __FB_DOS__
       tests/cpp/include/simple-nomerge.h
       tests/cpp/include/simple-nomerge-1.h
-emitting: tests/cpp/include/simple-nomerge.bi (2 declarations)
+emitting: tests/cpp/include/simple-nomerge.bi (2 declarations, 0 TODOs)

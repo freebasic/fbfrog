@@ -8,4 +8,4 @@
       tests/c/structbody-basetype.h
 [5/5] __FB_DOS__
       tests/c/structbody-basetype.h
-emitting: tests/c/structbody-basetype.bi (26 declarations)
+emitting: tests/c/structbody-basetype.bi (26 declarations, 0 TODOs)

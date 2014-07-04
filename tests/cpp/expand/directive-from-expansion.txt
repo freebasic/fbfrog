@@ -8,4 +8,4 @@
       tests/cpp/expand/directive-from-expansion.h
 [5/5] __FB_DOS__
       tests/cpp/expand/directive-from-expansion.h
-emitting: tests/cpp/expand/directive-from-expansion.bi (1 declaration)
+emitting: tests/cpp/expand/directive-from-expansion.bi (0 declarations, 1 TODO)
