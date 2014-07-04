@@ -8,5 +8,5 @@ tests/cpp/if/elif-after-else.h(4): #elif after #else
     5: #endif
     6: 
 context as seen by fbfrog:
-    [ppelseif]
+    [ppelseif] [begin] 0 [end]
     ^~~~~~~~~~

@@ -433,7 +433,7 @@ sub tkCopy( byval x as integer, byval first as integer, byval last as integer )
 
 		src = tkAccess( first )
 		var dst = tkAccess( x )
-		dst->flags          = src->flags
+		dst->flags          = src->flags and (not TKFLAG_REMOVE)
 		dst->ast            = astClone( src->ast )
 		dst->location       = src->location
 		dst->expansionlevel = src->expansionlevel
@@ -811,7 +811,7 @@ function tkToCText( byval first as integer, byval last as integer ) as string
 			var add_space = ((tkGetFlags( i ) and TKFLAG_BEHINDSPACE) <> 0)
 			add_space or= (tkGet( i - 1 ) >= TK_ID) and (tkGet( i ) >= TK_ID)
 			if( add_space ) then
-				s += " "
+				if( right( s, 1 ) <> " " ) then s += " "
 			end if
 		end if
 
@@ -823,25 +823,24 @@ function tkToCText( byval first as integer, byval last as integer ) as string
 			s += "#define"
 
 			var n = tkGetAst( i )
-			if( n ) then
-				assert( n->class = ASTCLASS_PPDEFINE )
-				s += " " + *n->text
+			assert( n->class = ASTCLASS_PPDEFINE )
+			s += " " + *n->text
 
-				if( n->paramcount >= 0 ) then
-					s += "("
-					var param = n->head
-					while( param )
-						s += *param->text
-						param = param->next
-						if( param ) then
-							s += ", "
-						end if
-					wend
-					s += ")"
-				end if
+			if( n->paramcount >= 0 ) then
+				s += "("
+				var param = n->head
+				while( param )
+					s += *param->text
+					param = param->next
+					if( param ) then
+						s += ", "
+					end if
+				wend
+				s += ")"
 			end if
+			s += " "
 
-		case TK_BEGIN    : s += " "
+		case TK_BEGIN
 		case TK_END      : s += !"\n"
 		case TK_DECNUM   : s += *text
 		case TK_HEXNUM   : s += "0x" + *text
@@ -870,69 +869,58 @@ function hSkipToTK_END( byval x as integer ) as integer
 	function = x
 end function
 
-function hFindConstructEnd( byval x as integer ) as integer
-	var begin = x
+function hSkipConstruct( byval x as integer ) as integer
+	select case as const( tkGet( x ) )
+	case TK_EOF
+		return x
+
+	case TK_SEMI, TK_DIVIDER, TK_PPINCLUDE, TK_PPUNDEF, _
+	     TK_PPELSE, TK_PPENDIF, TK_PPERROR, TK_PPWARNING
+		return x + 1
+
+	case TK_PPDEFINE, TK_PPIF, TK_PPELSEIF
+		if( tkGet( x + 1 ) = TK_BEGIN ) then
+			x = hSkipToTK_END( x + 1 )
+		end if
+		return x + 1
+	end select
 
 	do
-		select case( tkGet( x ) )
+		x += 1
+
+		select case as const( tkGet( x ) )
 		case TK_SEMI
 			x += 1
 			exit do
 
-		case TK_EOF, _
-		     TK_BEGIN, TK_END, _
-		     TK_DIVIDER, _
-		     TK_PPINCLUDE, TK_PPUNDEF, _
-		     TK_PPIF, TK_PPELSEIF, TK_PPELSE, TK_PPENDIF, _
-		     TK_PPERROR, TK_PPWARNING
-			exit do
-
-		case TK_PPDEFINE, TK_PPIF
-			if( tkGet( x + 1 ) = TK_BEGIN ) then
-				x = hSkipToTK_END( x + 1 )
-			end if
+		case TK_EOF, TK_DIVIDER, TK_PPINCLUDE, TK_PPDEFINE, TK_PPUNDEF, _
+		     TK_PPIF, TK_PPELSEIF, TK_PPELSE, TK_PPENDIF, TK_PPERROR, TK_PPWARNING
 			exit do
 
 		case TK_LPAREN, TK_LBRACKET, TK_LBRACE
-			var y = hFindClosingParen( x )
-			if( y = x ) then
-				x += 1
-				exit do
-			end if
-			x = y
-
-		case else
-			x += 1
+			x = hFindClosingParen( x )
 		end select
 	loop
-
-	if( x = begin ) then
-		x += 1
-	end if
 
 	function = x
 end function
 
-private function hFindConstructBegin( byval x as integer ) as integer
+private sub hFindConstructBoundaries( byval x as integer, byref first as integer, byref last as integer )
 	'' Start at BOF and find the construct that contains x (easier than
 	'' parsing backwards!?)
 	var y = 0
-
 	while( tkGet( y ) <> TK_EOF )
 		var begin = y
-
-		y = hFindConstructEnd( y )
+		y = hSkipConstruct( y )
 		if( (begin <= x) and (x < y) ) then
-			select case( tkGet( begin ) )
-			case TK_BEGIN
-				begin += 1
-			end select
-			return begin
+			first = begin
+			last = y - 1
+			exit sub
 		end if
 	wend
-
-	function = 0
-end function
+	first = 0
+	last = tkGetCount( ) - 1
+end sub
 
 private function hReportConstructTokens _
 	( _
@@ -988,8 +976,11 @@ function tkReport( byval x as integer, byval message as zstring ptr ) as string
 		x = tkGetCount( )-1
 	end if
 
-	var first = hFindConstructBegin( x )
-	var last = hFindConstructEnd( x ) - 1
+	dim as integer first, last
+	hFindConstructBoundaries( x, first, last )
+
+	if( tkGet( x ) = TK_END   ) then x -= 1
+	if( tkGet( x ) = TK_BEGIN ) then x -= 1
 
 	dim s as string
 

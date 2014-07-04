@@ -7,5 +7,5 @@ tests/cpp/expand/merge/nonoctdigits.h(2): ## merge operator cannot merge '0' and
     3: enum E {
     4:  A = m
 context as seen by fbfrog:
-    enum E { [eol] A = m [begin] 0 ## 8
+    enum E { [eol] A = m [begin] 0 ## 8 [end] [eol] } ;
                                    ^~

@@ -746,10 +746,6 @@ private function cDefine( ) as ASTNODE ptr
 	astAddComment( t, tkCollectComments( x, x ) )
 	x += 1
 
-	'' Temporarily insert the macro body tokens from AST back into the
-	'' tk buffer, allowing them to be parsed by cExpression() here.
-	hInsertMacroBody( x, t )
-
 	assert( tkGet( x ) = TK_BEGIN )
 	var bodybegin = x
 	x += 1
@@ -773,8 +769,7 @@ private function cDefine( ) as ASTNODE ptr
 	assert( tkGet( x ) = TK_END )
 	x += 1
 
-	assert( t->expr->class = ASTCLASS_MACROBODY )
-	astDelete( t->expr )
+	assert( t->expr = NULL )
 	t->expr = expr
 	function = t
 end function
@@ -1682,7 +1677,7 @@ private function cBody( byval body as integer ) as ASTNODE ptr
 
 			'' Skip current construct and preserve its tokens in
 			'' an UNKNOWN node
-			x = hFindConstructEnd( begin )
+			x = hSkipConstruct( begin )
 			t = astNew( ASTCLASS_UNKNOWN, tkToCText( begin, x - 1 ) )
 			astSetComment( t, errmsg )
 

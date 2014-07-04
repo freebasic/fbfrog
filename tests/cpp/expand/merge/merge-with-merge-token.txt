@@ -8,5 +8,5 @@ tests/cpp/expand/merge/merge-with-merge-token.h(3): ## merge operator cannot mer
     4: m
     5: 
 context as seen by fbfrog:
-    a ## ## b
-      ^~
+    m [begin] a ## ## b [end] [eol]
+                ^~

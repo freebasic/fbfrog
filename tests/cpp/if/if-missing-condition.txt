@@ -1,11 +1,11 @@
 [1/5] __FB_WIN32__.__FB_64BIT__
       tests/cpp/if/if-missing-condition.h
-tests/cpp/if/if-missing-condition.h(2): missing #if condition
+tests/cpp/if/if-missing-condition.h(2): missing number literal or '(...)' (atom expression)
     1: // @fail
     2: #if
-          ^
+       ^
     3: #endif
     4: 
 context as seen by fbfrog:
-    [eol] # endif [eol]
-    ^~~~~
+    [ppif] [begin] [end]
+    ^~~~~~

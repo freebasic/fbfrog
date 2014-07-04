@@ -57,7 +57,6 @@ dim shared as zstring ptr astnodename(0 to ...) => _
 	@"externend"  , _
 	_
 	_ '' Expression atoms etc.
-	@"macrobody" , _
 	@"macroparam", _
 	@"tk"        , _
 	@"consti"    , _

@@ -24,13 +24,10 @@
 '' For any directives found, it merges the tokens into single TK_PP* tokens,
 '' to make further parsing easier.
 ''
-'' #define bodies are loaded into ASTs which is attached to the TK_PPDEFINE
-'' token, and temporarily re-inserted into the tk buffer when it needs to be
-'' parsed by macro expansion code or later the C parser.
-''
-'' #if expressions are not yet parsed though, but only enclosed in TK_BEGIN and
-'' TK_END tokens, so they can later be macro-expanded and then parsed by
-'' cppExpression().
+'' #define bodies and #if expressions are not yet parsed, but only enclosed in
+'' TK_BEGIN and TK_END tokens. #define bodies are needed for macro expansion and
+'' also later for the C parser. #if expressions are macro-expanded later before
+'' being parsed and evaluated.
 ''
 '' cppMain() goes through the token buffer much like a C preprocessor would do,
 '' keeping track of #defines and #undefs, doing macro expansion, evaluating #if
@@ -117,14 +114,11 @@ function hFindClosingParen( byval x as integer ) as integer
 
 	dim as integer closing
 	select case( opening )
-	case TK_LBRACE
-		closing = TK_RBRACE
-	case TK_LBRACKET
-		closing = TK_RBRACKET
-	case TK_LPAREN
-		closing = TK_RPAREN
+	case TK_LBRACE   : closing = TK_RBRACE
+	case TK_LBRACKET : closing = TK_RBRACKET
+	case TK_LPAREN   : closing = TK_RPAREN
 	case else
-		return x
+		assert( FALSE )
 	end select
 
 	do
@@ -138,19 +132,14 @@ function hFindClosingParen( byval x as integer ) as integer
 			if( level = 0 ) then
 				exit do
 			end if
-
 			level -= 1
 
-		case TK_EOF
+		case TK_BEGIN
+			x = hSkipToTK_END( x )
+
+		case TK_END, TK_EOF
 			x -= 1
 			exit do
-
-		case TK_END, _
-		     TK_PPINCLUDE, TK_PPDEFINE, TK_PPIF, TK_PPELSEIF, TK_PPELSE, _
-		     TK_PPENDIF, TK_PPUNDEF, TK_PPERROR, TK_PPWARNING, TK_DIVIDER
-			x = tkSkipCommentEol( x, -1 )
-			exit do
-
 		end select
 	loop
 
@@ -191,8 +180,6 @@ function hSkipStatement( byval x as integer ) as integer
 
 			exit do
 
-		case TK_LPAREN, TK_LBRACKET, TK_LBRACE
-			x = hFindClosingParen( x )
 		end select
 
 		x = tkSkipCommentEol( x )
@@ -682,6 +669,22 @@ private sub hMacroParamList( byref x as integer, byval macro as ASTNODE ptr )
 	end if
 end sub
 
+private sub hEncloseTokensUntilEol( byref x as integer )
+	tkInsert( x, TK_BEGIN )
+	x += 1
+
+	do
+		select case( tkGet( x ) )
+		case TK_EOL, TK_EOF
+			exit do
+		end select
+		x += 1
+	loop
+
+	tkInsert( x, TK_END )
+	x += 1
+end sub
+
 private function cppDirective( byval x as integer ) as integer
 	var begin = x
 
@@ -704,23 +707,12 @@ private function cppDirective( byval x as integer ) as integer
 
 		hMacroParamList( x, macro )
 
-		'' Load body tokens into AST
-		assert( macro->expr = NULL )
-		macro->expr = astNew( ASTCLASS_MACROBODY )
-		do
-			select case( tkGet( x ) )
-			case TK_EOL, TK_EOF
-				exit do
-			end select
-
-			astAppend( macro->expr, astNewTK( x ) )
-
-			x += 1
-		loop
-
 		tkFold( begin, x - 1, TK_PPDEFINE )
 		tkSetAst( begin, macro )
 		x = begin + 1
+
+		'' Enclose body tokens in TK_BEGIN/END
+		hEncloseTokensUntilEol( x )
 
 	case KW_INCLUDE
 		x += 1
@@ -736,21 +728,7 @@ private function cppDirective( byval x as integer ) as integer
 		x = begin + 1
 
 		'' Enclose #if condition expression tokens in TK_BEGIN/END
-		tkInsert( x, TK_BEGIN )
-		x += 1
-		var exprbegin = x
-		do
-			select case( tkGet( x ) )
-			case TK_EOL, TK_EOF
-				exit do
-			end select
-			x += 1
-		loop
-		if( x = exprbegin ) then
-			tkOopsExpected( x, "#if condition" )
-		end if
-		tkInsert( x, TK_END )
-		x += 1
+		hEncloseTokensUntilEol( x )
 
 	case KW_IFDEF, KW_IFNDEF
 		x += 1
@@ -881,7 +859,8 @@ namespace eval
 	'' Lists of known macros etc. Initial symbols can be added before
 	'' cppMain(), then it will use and adjust the lists while parsing.
 
-	'' Lookup table of #define token positions
+	'' Lookup table of known #define token positions (or -1 if known but
+	'' undefined)
 	dim shared macros		as THASH
 
 	dim shared noexpands		as THASH
@@ -950,25 +929,26 @@ private function hShouldExpandSym( byval id as zstring ptr ) as integer
 	function = (hashLookup( @eval.noexpands, id, hashHash( id ) )->s = NULL)
 end function
 
-private function hCheckForMacroCall( byval x as integer ) as ASTNODE ptr
+private function hCheckForMacroCall( byval x as integer ) as integer
 	assert( tkGet( x ) = TK_ID )
 	var id = tkGetText( x )
 
 	'' Is this id a macro?
-	var xdefine = hLookupMacro( id )
-	if( xdefine < 0 ) then
-		exit function
+	var xmacro = hLookupMacro( id )
+	if( xmacro < 0 ) then
+		return -1
 	end if
 
 	'' Only expand if not marked otherwise
-	var macro = tkGetAst( xdefine )
+	assert( tkGet( xmacro ) = TK_PPDEFINE )
+	var macro = tkGetAst( xmacro )
 	if( (not hShouldExpandSym( id )) or _
 	    (tkGetFlags( x ) and TKFLAG_NOEXPAND) or _
 	    (macro->attrib and ASTATTRIB_POISONED) ) then
-		exit function
+		return -1
 	end if
 
-	function = macro
+	function = xmacro
 end function
 
 const MAXARGS = 128
@@ -1282,26 +1262,13 @@ private sub hTryMergeTokens _
 
 end sub
 
-sub hInsertMacroBody( byval x as integer, byval macro as ASTNODE ptr )
-	tkInsert( x, TK_BEGIN )
-	x += 1
-
-	var macrobody = macro->expr
-	if( macrobody ) then
-		assert( macrobody->class = ASTCLASS_MACROBODY )
-		var tk = macrobody->head
-		while( tk )
-			assert( tk->class = ASTCLASS_TK )
-
-			tkInsert( x, tk->tk, tk->text )
-			tkSetLocation( x, @tk->location )
-			x += 1
-
-			tk = tk->next
-		wend
-	end if
-
-	tkInsert( x, TK_END )
+'' Copy a #define body into some other place, still enclosed in TK_BEGIN/TK_END
+private sub hCopyMacroBody( byval x as integer, byval xmacro as integer )
+	assert( tkGet( xmacro ) = TK_PPDEFINE )
+	var xmacrobegin = xmacro + 1
+	var xmacroend = hSkipToTK_END( xmacrobegin )
+	assert( x > xmacroend )
+	tkCopy( x, xmacrobegin, xmacroend )
 end sub
 
 '' DEFINED ['('] Identifier [')']
@@ -1424,6 +1391,7 @@ end function
 private function hInsertMacroExpansion _
 	( _
 		byval expansionbegin as integer, _
+		byval xmacro as integer, _
 		byval macro as ASTNODE ptr, _
 		byval argbegin as integer ptr, _
 		byval argend as integer ptr, _
@@ -1439,7 +1407,7 @@ private function hInsertMacroExpansion _
 	'' the expansion through all the insertions/deletions done here.
 	'' Instead, if we need to know the end of the expansion, we can just
 	'' look for the TK_END.
-	hInsertMacroBody( expansionbegin, macro )
+	hCopyMacroBody( expansionbegin, xmacro )
 
 	'' Solve #stringify operators (higher priority than ##, and no macro
 	'' expansion done for the arg)
@@ -1651,6 +1619,7 @@ end function
 
 private sub hExpandMacro _
 	( _
+		byval xmacro as integer, _
 		byval macro as ASTNODE ptr, _
 		byval callbegin as integer, _
 		byval callend as integer, _
@@ -1663,7 +1632,7 @@ private sub hExpandMacro _
 	'' Insert the macro body behind the call (this way the positions
 	'' stored in argbegin()/argend() stay valid)
 	var expansionbegin = callend + 1
-	var expansionend = hInsertMacroExpansion( expansionbegin, macro, argbegin, argend, argcount, inside_ifexpr )
+	var expansionend = hInsertMacroExpansion( expansionbegin, xmacro, macro, argbegin, argend, argcount, inside_ifexpr )
 
 	'' Set expansion level on the expansion tokens:
 	'' = minlevel from macro call tokens + 1
@@ -1692,14 +1661,14 @@ private sub hExpandMacro _
 
 			if( tkGet( x ) = TK_ID ) then
 				'' Known macro, and it's the same as this one?
-				var calledmacro = hCheckForMacroCall( x )
-				if( (calledmacro <> NULL) and (calledmacro = macro) ) then
+				var xcalledmacro = hCheckForMacroCall( x )
+				if( xcalledmacro = xmacro ) then
 					'' Can the macro call be parsed successfully,
 					'' and is it fully within the expansion?
 					dim as integer argbegin(0 to MAXARGS-1)
 					dim as integer argend(0 to MAXARGS-1)
 					dim as integer argcount
-					var callend = hParseMacroCall( x, calledmacro, @argbegin(0), @argend(0), argcount )
+					var callend = hParseMacroCall( x, tkGetAst( xcalledmacro ), @argbegin(0), @argend(0), argcount )
 					if( (callend >= 0) and (callend <= expansionend) ) then
 						tkAddFlags( x, TKFLAG_NOEXPAND )
 					end if
@@ -1717,10 +1686,13 @@ end sub
 private sub hMaybeExpandMacro( byref x as integer, byval inside_ifexpr as integer )
 	var begin = x
 
-	var macro = hCheckForMacroCall( x )
-	if( macro = NULL ) then
+	var xmacro = hCheckForMacroCall( x )
+	if( xmacro < 0 ) then
 		exit sub
 	end if
+
+	assert( tkGet( xmacro ) = TK_PPDEFINE )
+	var macro = tkGetAst( xmacro )
 
 	dim as integer argbegin(0 to MAXARGS-1)
 	dim as integer argend(0 to MAXARGS-1)
@@ -1734,7 +1706,7 @@ private sub hMaybeExpandMacro( byref x as integer, byval inside_ifexpr as intege
 		exit sub
 	end if
 
-	hExpandMacro( macro, callbegin, callend, @argbegin(0), @argend(0), argcount, inside_ifexpr )
+	hExpandMacro( xmacro, macro, callbegin, callend, @argbegin(0), @argend(0), argcount, inside_ifexpr )
 
 	'' The macro call was replaced with the body, the token at the TK_ID's
 	'' position must be re-parsed.
@@ -1897,6 +1869,11 @@ private sub hSkipIfAndSetRemove( byref x as integer )
 	end if
 	tkSetRemove( x, last )
 	x = last
+end sub
+
+private sub hSetRemoveOnMacro( byval x as integer )
+	assert( tkGet( x ) = TK_PPDEFINE )
+	tkSetRemove( x, hSkipToTK_END( x + 1 ) )
 end sub
 
 ''
@@ -2187,19 +2164,19 @@ sub cppMain( byval whitespace as integer, byval nomerge as integer )
 
 		case TK_PPDEFINE
 			if( skiplevel <> MAXPPSTACK ) then
-				tkSetRemove( x )
+				hSetRemoveOnMacro( x )
 			else
 				var macro = tkGetAst( x )
 
 				'' Check for previous #define
-				var xprevdefine = hLookupMacro( macro->text )
-				if( xprevdefine >= 0 ) then
+				var xprevmacro = hLookupMacro( macro->text )
+				if( xprevmacro >= 0 ) then
 					if( frog.verbose ) then
-						hMaybeReportConflictingDefine( macro, tkGetAst( xprevdefine ) )
+						hMaybeReportConflictingDefine( macro, tkGetAst( xprevmacro ) )
 					end if
 
 					'' Don't preserve previous #define
-					tkSetRemove( xprevdefine )
+					hSetRemoveOnMacro( xprevmacro )
 				end if
 
 				'' Register/overwrite as known defined symbol
@@ -2207,9 +2184,12 @@ sub cppMain( byval whitespace as integer, byval nomerge as integer )
 
 				'' Don't preserve the #define if the symbol was registed for removal
 				if( hLookupRemoveSym( macro->text ) ) then
-					tkSetRemove( x )
+					hSetRemoveOnMacro( x )
 				end if
 			end if
+
+			'' Skip over TK_BEGIN/TK_END macro body
+			x = hSkipToTK_END( x + 1 ) - 1
 
 		case TK_PPUNDEF
 			if( skiplevel <> MAXPPSTACK ) then
@@ -2218,11 +2198,11 @@ sub cppMain( byval whitespace as integer, byval nomerge as integer )
 				var id = tkGetText( x )
 
 				'' If #undeffing an existing #define, don't preserve it
-				var xdefine = hLookupMacro( id )
-				if( xdefine >= 0 ) then
-					assert( tkGet( xdefine ) = TK_PPDEFINE )
-					assert( *tkGetAst( xdefine )->text = *id )
-					tkSetRemove( xdefine )
+				var xmacro = hLookupMacro( id )
+				if( xmacro >= 0 ) then
+					assert( tkGet( xmacro ) = TK_PPDEFINE )
+					assert( *tkGetAst( xmacro )->text = *id )
+					hSetRemoveOnMacro( xmacro )
 				end if
 
 				'' Register/overwrite as known undefined symbol

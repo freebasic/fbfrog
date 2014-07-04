@@ -472,7 +472,7 @@ declare function hMakePrettyCTokenText( byval id as integer, byval text as zstri
 declare function tkMakePrettyCTokenText( byval x as integer ) as string
 declare function tkToCText( byval first as integer, byval last as integer ) as string
 declare function hSkipToTK_END( byval x as integer ) as integer
-declare function hFindConstructEnd( byval x as integer ) as integer
+declare function hSkipConstruct( byval x as integer ) as integer
 declare function tkReport( byval x as integer, byval message as zstring ptr ) as string
 declare sub tkOops( byval x as integer, byval message as zstring ptr )
 declare function tkMakeExpectedMessage( byval x as integer, byval message as zstring ptr ) as string
@@ -587,7 +587,6 @@ enum
 	ASTCLASS_EXTERNBLOCKEND
 
 	'' Expression atoms etc.
-	ASTCLASS_MACROBODY
 	ASTCLASS_MACROPARAM
 	ASTCLASS_TK
 	ASTCLASS_CONSTI
@@ -701,7 +700,6 @@ type ASTNODE_
 	location	as TKLOCATION
 
 	'' PARAM: initializer
-	'' PPDEFINE: MACROBODY
 	'' VERBLOCK: version expression
 	'' IIF: condition expression
 	expr		as ASTNODE ptr
@@ -894,7 +892,6 @@ declare function hFindClosingParen( byval x as integer ) as integer
 declare function hSkipStatement( byval x as integer ) as integer
 declare function hNumberLiteral( byval x as integer ) as ASTNODE ptr
 extern as integer cprecedence(ASTCLASS_CLOGOR to ASTCLASS_IIF)
-declare sub hInsertMacroBody( byval x as integer, byval macro as ASTNODE ptr )
 declare sub cppInit( )
 declare sub cppNoExpandSym( byval id as zstring ptr )
 declare sub cppRemoveSym( byval id as zstring ptr )

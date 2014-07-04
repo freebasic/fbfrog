@@ -755,7 +755,7 @@ private sub hApplyRemoveMatchOptions( byval options as ASTNODE ptr )
 	var x = 0
 	while( tkGet( x ) <> TK_EOF )
 		var begin = x
-		x = hFindConstructEnd( x )
+		x = hSkipConstruct( x )
 
 		if( hConstructMatchesAnyPattern( options, begin, x - 1 ) ) then
 			tkRemove( begin, x - 1 )

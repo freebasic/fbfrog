@@ -7,5 +7,5 @@ tests/cpp/expand/merge/missing-rhs.h(2): ## merge operator at end of macro body,
     3: m(0)
     4: 
 context as seen by fbfrog:
-    0 ##
-      ^~
+    m ( 0 ) [begin] 0 ## [end] [eol]
+                      ^~

@@ -11,15 +11,8 @@ extern "C"
 ''    2: 
 ''    3: void ok(void);
 '' context as seen by fbfrog:
-''    e [void], tk behindspace [id "f"], tk [(], tk [void])) [begin] void f ( void
-''                                                                   ^~~~
-
-'' TODO: unrecognized construct:
-''
-'' ---------------------------------------------------------------------------
-'' expected a data type starting a declaration
-''    [end]
-''    ^~~~~
+''    #define "m" [begin] void f ( void [end]
+''                        ^~~~
 
 declare sub ok()
 
@@ -34,15 +27,8 @@ declare sub ok()
 ''    6: #define B() void f(
 ''    7: #define C(a) void f(
 '' context as seen by fbfrog:
-''    dy(tk behindspace [void], tk behindspace [id "f"], tk [(])) [begin] void f (
-''                                                                        ^~~~
-
-'' TODO: unrecognized construct:
-''
-'' ---------------------------------------------------------------------------
-'' expected a data type starting a declaration
-''    [end]
-''    ^~~~~
+''    #define "A" [begin] void f ( [end]
+''                        ^~~~
 
 '' TODO: unrecognized construct:
 '' #define B() void f(
@@ -55,15 +41,8 @@ declare sub ok()
 ''    7: #define C(a) void f(
 ''    8: #define D(a, b, c) void f(
 '' context as seen by fbfrog:
-''    dy(tk behindspace [void], tk behindspace [id "f"], tk [(])) [begin] void f (
-''                                                                        ^~~~
-
-'' TODO: unrecognized construct:
-''
-'' ---------------------------------------------------------------------------
-'' expected a data type starting a declaration
-''    [end]
-''    ^~~~~
+''    #define "B" [begin] void f ( [end]
+''                        ^~~~
 
 '' TODO: unrecognized construct:
 '' #define C(a) void f(
@@ -76,15 +55,8 @@ declare sub ok()
 ''    8: #define D(a, b, c) void f(
 ''    9: 
 '' context as seen by fbfrog:
-''    e [void], tk behindspace [id "f"], tk [(]), macroparam "a") [begin] void f (
-''                                                                        ^~~~
-
-'' TODO: unrecognized construct:
-''
-'' ---------------------------------------------------------------------------
-'' expected a data type starting a declaration
-''    [end]
-''    ^~~~~
+''    #define "C"(macroparam "a") [begin] void f ( [end]
+''                                        ^~~~
 
 '' TODO: unrecognized construct:
 '' #define D(a, b, c) void f(
@@ -96,14 +68,7 @@ declare sub ok()
 ''                          ^~~~
 ''    9: 
 '' context as seen by fbfrog:
-''    ], tk [(]), macroparam "a", macroparam "b", macroparam "c") [begin] void f (
-''                                                                        ^~~~
-
-'' TODO: unrecognized construct:
-''
-'' ---------------------------------------------------------------------------
-'' expected a data type starting a declaration
-''    [end]
-''    ^~~~~
+''    e "D"(macroparam "a", macroparam "b", macroparam "c") [begin] void f ( [end]
+''                                                                  ^~~~
 
 end extern
