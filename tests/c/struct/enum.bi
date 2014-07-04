@@ -1,6 +1,7 @@
 #pragma once
 
-enum E1
+type E1 as long
+enum
 end enum
 
 enum
@@ -13,7 +14,8 @@ enum
 	G2
 end enum
 
-enum E3
+type E3 as long
+enum
 	A3
 	B3
 	C3
@@ -24,17 +26,20 @@ enum
 	B4
 end enum
 
-enum E5
+type E5 as long
+enum
 	A5
 	B5
 end enum
 
-enum E6
+type E6 as long
+enum
 	A6
 	B6
 end enum
 
-enum E7
+type E7 as long
+enum
 	A7
 	B7
 end enum

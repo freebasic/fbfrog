@@ -8,7 +8,8 @@ type UDT as UDT_
 
 type MYINT as long
 
-enum E
+type E as long
+enum
 	A = A
 	A = A
 	A = cast(any, 0)

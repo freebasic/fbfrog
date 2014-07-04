@@ -1,10 +1,12 @@
 #pragma once
 
-enum E
+type E as long
+enum
 	A
 end enum
 
-enum E
+type E as long
+enum
 	A = 1 + 2
 	B
 end enum

@@ -1,6 +1,7 @@
 #pragma once
 
-enum B
+type B as long
+enum
 	FOO
 end enum
 

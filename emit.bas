@@ -472,6 +472,10 @@ private function emitAst _
 		emitStmt( "#error " + emitAst( n->expr ) )
 
 	case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
+		if( (n->class = ASTCLASS_ENUM) and (n->text <> NULL) ) then
+			emitStmt( "type " + *n->text + " as long" )
+		end if
+
 		dim as string compoundkeyword
 		select case( n->class )
 		case ASTCLASS_UNION
@@ -483,7 +487,7 @@ private function emitAst _
 		end select
 
 		s += compoundkeyword
-		if( n->text ) then
+		if( (n->class <> ASTCLASS_ENUM) and (n->text <> NULL) ) then
 			s += " " + *n->text
 		end if
 		if( n->attrib and ASTATTRIB_PACKED ) then

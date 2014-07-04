@@ -140,13 +140,6 @@ To do:
   - speed: String comparisons (also as part of AST walking)
   - memory usage: hAstLCS() matrix; also string/AST node/token buffer allocations
 
-- 64bit support & enums: must be emitted as Long because they're always 32bit under GCC
-    a) On all enum bodies, do "enum Foo as long : ... : end enum" (must be added to FB first)
-    b) Do "type Foo as long" and make enum body anonymous (enums consts aren't type checked anyways)
-    c) Do "const EnumConst1 as long" for every enum const; don't emit the enum type at all,
-       do "long" in place of every "enum Foo" type. (would have to calculate enumconst value
-       if no initializer given)
-
 - #if expression evaluation:
   - Support unsigned values
   - Don't crash on (INT_MIN / -1) or (INT_MIN % -1)

@@ -52,13 +52,15 @@ end union
 
 declare function f8() as UDT8
 
-enum __freebasic_dummyid_4
+type __freebasic_dummyid_4 as long
+enum
 	A = 0
 end enum
 
 declare function f9() as __freebasic_dummyid_4
 
-enum UDT10
+type UDT10 as long
+enum
 	B = 0
 end enum
 
