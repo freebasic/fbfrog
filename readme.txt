@@ -104,10 +104,8 @@ Running the tests:
 
 To do:
 
-- support defined() in #define bodies (C expression parser)
 - support macro expansion for C/CPP keywords, not just TK_ID
 - support -o - to write to stdout, or just -stdout, or similar
-
 
 - Add support for parsing function bodies: if/else blocks, for/while/do/while
   loops, local vars, assignments, goto, break, return, switch, labels including 'case'.

@@ -475,6 +475,31 @@ private function cExpression _
 				a = astNew( ASTCLASS_SIZEOF, cExpression( cprecedence(ASTCLASS_SIZEOF), macro ) )
 			end if
 
+		'' DEFINED ['('] Identifier [')']
+		case KW_DEFINED
+			x += 1
+
+			'' '('
+			var have_parens = cMatch( TK_LPAREN )
+
+			'' Identifier
+			dim as string id
+			if( tkGet( x ) = TK_ID ) then
+				id = *tkGetText( x )
+			else
+				cError( "expected identifier" + tkButFound( x ) )
+				id = hMakeDummyId( )
+			end if
+			a = astNewID( id )
+			x += 1
+
+			if( have_parens ) then
+				'' ')'
+				cExpectMatch( TK_RPAREN, "to finish defined(...) expression" )
+			end if
+
+			a = astNew( ASTCLASS_CDEFINED, a )
+
 		case else
 			cError( "expected expression" + tkButFound( x ) )
 			a = astNewCONSTI( 0, TYPE_INTEGER )

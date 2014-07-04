@@ -490,3 +490,6 @@ enum E {
 // C UOP nested inside children list
 #define A48 { !a, !a }
 #define A49 { f( !a ); }
+
+#define A50 defined(FOO)
+#define A51(a) defined(a)

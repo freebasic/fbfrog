@@ -451,3 +451,6 @@ const A42 = cast(MYINT, 0)
 		f(-(a = 0))
 	end scope
 #endmacro
+
+#define A50 defined(FOO)
+#define A51(a) defined(a)

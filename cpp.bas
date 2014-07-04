@@ -499,7 +499,7 @@ private function cppExpression _
 			a = astTakeLoc( astNewID( tkGetText( x ) ), x )
 			x += 1
 
-		'' DEFINED '(' Identifier ')'
+		'' DEFINED ['('] Identifier [')']
 		case KW_DEFINED
 			var definedx = x
 			x += 1
