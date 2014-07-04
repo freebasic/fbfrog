@@ -108,13 +108,6 @@ To do:
 - support macro expansion for C/CPP keywords, not just TK_ID
 - support -o - to write to stdout, or just -stdout, or similar
 
-* Emit unparsable constructs as TODOs instead of showing errors. Even though it
-  goes against fbfrog's main ideas, it's needed to compensate for fbfrog being
-  incomplete. And certain #defines will always be unparsable, so this is always
-  needed.
-    * It's a good reason for having a custom C parser too
-    * Don't try to parse constructs partially for now - error recovery could
-      easily produce worse results than not having it.
 
 - Add support for parsing function bodies: if/else blocks, for/while/do/while
   loops, local vars, assignments, goto, break, return, switch, labels including 'case'.

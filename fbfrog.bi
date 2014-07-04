@@ -393,7 +393,6 @@ enum
 	OPT_REMOVEDEFINE
 	OPT_RENAMETYPEDEF
 	OPT_RENAMETAG
-	OPT_REMOVEMATCH
 
 	TK__COUNT
 end enum
@@ -559,7 +558,6 @@ enum
 	ASTCLASS_REMOVEDEFINE
 	ASTCLASS_RENAMETYPEDEF
 	ASTCLASS_RENAMETAG
-	ASTCLASS_REMOVEMATCH
 	ASTCLASS_INCLIB
 	ASTCLASS_PRAGMAONCE
 
@@ -588,7 +586,6 @@ enum
 
 	'' Expression atoms etc.
 	ASTCLASS_MACROPARAM
-	ASTCLASS_TK
 	ASTCLASS_CONSTI
 	ASTCLASS_CONSTF
 	ASTCLASS_ID
@@ -678,7 +675,6 @@ const ASTATTRIB_DONTEMIT      = 1 shl 14
 const ASTATTRIB_ONCE          = 1 shl 15  '' Marks #includes as "#include once"
 const ASTATTRIB_PACKED        = 1 shl 16  '' __attribute__((packed))
 const ASTATTRIB_VARIADIC      = 1 shl 17  '' PPDEFINE/MACROPARAM: variadic macros
-const ASTATTRIB_BEHINDSPACE   = 1 shl 18  '' TK
 
 '' When changing, adjust astClone(), astIsEqual(), astDump*()
 type ASTNODE_
@@ -708,7 +704,6 @@ type ASTNODE_
 		vali		as longint  '' CONSTI
 		valf		as double   '' CONSTF
 
-		tk		as integer  '' TK: TK_*
 		paramcount	as integer  '' PPDEFINE: -1 = #define m, 0 = #define m(), 1 = #define m(a), ...
 	end union
 
@@ -747,8 +742,6 @@ declare function astGroupContainsAllChildrenOf( byval l as ASTNODE ptr, byval r 
 declare function astUngroupOne( byval group as ASTNODE ptr ) as ASTNODE ptr
 declare function astNewCONSTI( byval i as longint, byval dtype as integer ) as ASTNODE ptr
 declare function astNewCONSTF( byval f as double, byval dtype as integer ) as ASTNODE ptr
-declare function astNewTK( byval x as integer ) as ASTNODE ptr
-declare function astTKMatchesPattern( byval tk as ASTNODE ptr, byval x as integer ) as integer
 declare function astTakeLoc( byval n as ASTNODE ptr, byval x as integer ) as ASTNODE ptr
 declare sub astDelete( byval n as ASTNODE ptr )
 declare sub astInsert _

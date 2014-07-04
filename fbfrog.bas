@@ -44,7 +44,6 @@ private sub hPrintHelpAndExit( )
 	print "  -removedefine <id>       Don't preserve a certain #define"
 	print "  -renametypedef <oldid> <newid>  Rename a typedef"
 	print "  -renametag <oldid> <newid>      Rename a struct/union/enum"
-	print "  -removematch ""<C token(s)>""   Drop constructs containing the given C token(s)."
 	print "version script logic:"
 	print "  -declaredefines (<symbol>)+ [-unchecked]  Exclusive #defines"
 	print "  -declareversions <symbol> (<number>)+     Version numbers"
@@ -453,27 +452,6 @@ private sub hParseArgs( byref x as integer )
 		case OPT_RENAMETYPEDEF : hParseOptionWithId( x, ASTCLASS_RENAMETYPEDEF, TRUE  )
 		case OPT_RENAMETAG     : hParseOptionWithId( x, ASTCLASS_RENAMETAG    , TRUE  )
 
-		case OPT_REMOVEMATCH
-			x += 1
-
-			'' <C tokens>
-			if( (tkGet( x ) <> TK_ID) and (tkGet( x ) <> TK_STRING) ) then
-				tkOopsExpected( x, "C tokens" )
-			end if
-
-			'' Lex the C tokens into the tk buffer, load them into AST, and remove them again
-			var cbegin = x + 1
-			var cend = lexLoadC( cbegin, _
-				sourcebufferFromZstring( "-removematch", tkGetText( x ), tkGetLocation( x ) ), _
-				FALSE ) - 1
-			var n = astNew( ASTCLASS_REMOVEMATCH )
-			for i as integer = cbegin to cend
-				astAppend( n, astNewTK( i ) )
-			next
-			tkRemove( cbegin, cend )
-			astAppend( frog.script, n )
-			x += 1
-
 		case else
 			dim as zstring ptr text = tkGetText( x )
 			if( (text = NULL) orelse ((*text)[0] = CH_MINUS) ) then
@@ -690,80 +668,6 @@ private sub frogEvaluateScript _
 	frogAddVersion( conditions, options )
 end sub
 
-private function hPatternMatchesHere _
-	( _
-		byval n as ASTNODE ptr, _
-		byval x as integer, _
-		byval last as integer _
-	) as integer
-
-	var tk = n->head
-	while( (tk <> NULL) and (x <= last) )
-		assert( tk->class = ASTCLASS_TK )
-
-		if( astTKMatchesPattern( tk, x ) = FALSE ) then
-			exit function
-		end if
-
-		tk = tk->next
-		x += 1
-	wend
-
-	function = TRUE
-end function
-
-private function hConstructMatchesPattern _
-	( _
-		byval n as ASTNODE ptr, _
-		byval first as integer, _
-		byval last as integer _
-	) as integer
-
-	assert( n->class = ASTCLASS_REMOVEMATCH )
-
-	'' Check whether the pattern exists in the construct:
-	'' For each token in the construct, check whether the pattern starts
-	'' there and if so whether it continues...
-	for x as integer = first to last
-		if( hPatternMatchesHere( n, x, last ) ) then
-			return TRUE
-		end if
-	next
-
-end function
-
-private function hConstructMatchesAnyPattern _
-	( _
-		byval options as ASTNODE ptr, _
-		byval first as integer, _
-		byval last as integer _
-	) as integer
-
-	var i = options->head
-	while( i )
-		if( i->class = ASTCLASS_REMOVEMATCH ) then
-			if( hConstructMatchesPattern( i, first, last ) ) then
-				return TRUE
-			end if
-		end if
-		i = i->next
-	wend
-
-end function
-
-private sub hApplyRemoveMatchOptions( byval options as ASTNODE ptr )
-	var x = 0
-	while( tkGet( x ) <> TK_EOF )
-		var begin = x
-		x = hSkipConstruct( x )
-
-		if( hConstructMatchesAnyPattern( options, begin, x - 1 ) ) then
-			tkRemove( begin, x - 1 )
-			x = begin
-		end if
-	wend
-end sub
-
 private sub hApplyRenameTypedefOption _
 	( _
 		byval n as ASTNODE ptr, _
@@ -923,8 +827,6 @@ private function frogReadAPI( byval options as ASTNODE ptr ) as ASTNODE ptr
 
 	tkRemoveEOLs( )
 	tkTurnCPPTokensIntoCIds( )
-
-	hApplyRemoveMatchOptions( options )
 
 	'' Parse C constructs
 	var ast = cFile( )

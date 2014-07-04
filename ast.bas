@@ -29,7 +29,6 @@ dim shared as zstring ptr astnodename(0 to ...) => _
 	@"removedefine" , _
 	@"renametypedef", _
 	@"renametag"    , _
-	@"removematch"  , _
 	@"inclib"       , _
 	@"pragmaonce"   , _
 	_
@@ -58,7 +57,6 @@ dim shared as zstring ptr astnodename(0 to ...) => _
 	_
 	_ '' Expression atoms etc.
 	@"macroparam", _
-	@"tk"        , _
 	@"consti"    , _
 	@"constf"    , _
 	@"id"        , _
@@ -239,29 +237,6 @@ function astNewCONSTF( byval f as double, byval dtype as integer ) as ASTNODE pt
 	n->dtype = dtype
 	n->valf = f
 	function = n
-end function
-
-function astNewTK( byval x as integer ) as ASTNODE ptr
-	var n = astTakeLoc( astNew( ASTCLASS_TK, tkGetText( x ) ), x )
-	n->tk = tkGet( x )
-	if( tkGetFlags( x ) and TKFLAG_BEHINDSPACE ) then
-		n->attrib or= ASTATTRIB_BEHINDSPACE
-	end if
-	function = n
-end function
-
-function astTKMatchesPattern( byval tk as ASTNODE ptr, byval x as integer ) as integer
-	assert( tk->class = ASTCLASS_TK )
-
-	if( tk->tk <> tkGet( x ) ) then exit function
-
-	var text = tkGetText( x )
-	if( (tk->text <> NULL) <> (text <> NULL) ) then exit function
-	if( text ) then
-		if( *tk->text <> *text ) then exit function
-	end if
-
-	function = TRUE
 end function
 
 function astTakeLoc( byval n as ASTNODE ptr, byval x as integer ) as ASTNODE ptr
@@ -484,7 +459,6 @@ function astCloneNode( byval n as ASTNODE ptr ) as ASTNODE ptr
 	select case( n->class )
 	case ASTCLASS_CONSTI   : c->vali = n->vali
 	case ASTCLASS_CONSTF   : c->valf = n->valf
-	case ASTCLASS_TK       : c->tk = n->tk
 	case ASTCLASS_PPDEFINE : c->paramcount = n->paramcount
 	end select
 
@@ -579,9 +553,6 @@ function astIsEqual _
 	case ASTCLASS_CONSTF
 		const EPSILON_DBL as double = 2.2204460492503131e-016
 		if( abs( a->valf - b->valf ) >= EPSILON_DBL ) then exit function
-
-	case ASTCLASS_TK
-		if( a->tk <> b->tk ) then exit function
 
 	case ASTCLASS_PPDEFINE
 		if( a->paramcount <> b->paramcount ) then exit function
@@ -702,15 +673,12 @@ function astDumpOne( byval n as ASTNODE ptr ) as string
 	checkAttrib( ONCE )
 	checkAttrib( PACKED )
 	checkAttrib( VARIADIC )
-	checkAttrib( BEHINDSPACE )
 
-	if( n->class <> ASTCLASS_TK ) then
-		if( n->text ) then
-			s += " """ + strMakePrintable( *n->text ) + """"
-		end if
-		if( n->alias ) then
-			s += " alias """ + strMakePrintable( *n->alias ) + """"
-		end if
+	if( n->text ) then
+		s += " """ + strMakePrintable( *n->text ) + """"
+	end if
+	if( n->alias ) then
+		s += " alias """ + strMakePrintable( *n->alias ) + """"
 	end if
 
 	select case( n->class )
@@ -724,8 +692,6 @@ function astDumpOne( byval n as ASTNODE ptr ) as string
 		end if
 	case ASTCLASS_CONSTF
 		s += " " + str( n->valf )
-	case ASTCLASS_TK
-		s += " " + tkDumpBasic( n->tk, n->text )
 	end select
 
 	if( n->dtype <> TYPE_NONE ) then

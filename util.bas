@@ -128,9 +128,8 @@ function sourcebufferFromZstring _
 
 	'' Note: caching zstring source buffers
 	'' - They don't have a globally unique identifier
-	'' - The string data itself isn't unique either (e.g. there may be
-	''   two -removematch options with the same pattern), so comparing
-	''   that alone would give false positives
+	'' - The string data itself isn't unique either, so comparing that alone
+	''   could give false positives
 	'' - However, if 2 options have the same pattern then they'll have the
 	''   same lexing errors etc. and only the 1st one ever matters. So it
 	''   doesn't make a difference if we alias the 2nd one to the 1st.

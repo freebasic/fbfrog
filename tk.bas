@@ -167,8 +167,7 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	(@"-noexpand"     ), _
 	(@"-removedefine" ), _
 	(@"-renametypedef"), _
-	(@"-renametag"    ), _
-	(@"-removematch"  )  _
+	(@"-renametag"    )  _
 }
 
 #assert ubound( tk_info ) = TK__COUNT - 1
@@ -785,7 +784,7 @@ function hMakePrettyCTokenText( byval id as integer, byval text as zstring ptr )
 	case TK_WCHAR     : function = "L'" + hMakePrettyCStrLit( *text ) + "'"
 	case TK_EXCL to TK_TILDE : function = *tk_info(id).text
 	case TK_ID               : function = *text
-	case KW__C_FIRST to KW__C_LAST, OPT_NOMERGE to OPT_REMOVEMATCH
+	case KW__C_FIRST to KW__C_LAST, OPT_NOMERGE to OPT_RENAMETAG
 		function = *tk_info(id).text
 	case TK_ARGSFILE  : function = "@" + *text
 	case else
@@ -962,15 +961,9 @@ private function hReportConstructTokens _
 		!"\n" + hErrorMarker( INDENT + offset, xlength )
 end function
 
-''
 '' Report a message about some token that is part of some construct.
 '' Besides showing the message, this should also show the code where the error
 '' was encountered.
-''
-'' It's important that one way or another, we show the exact tokens present in
-'' the tk buffer, i.e. the exact tokens as seen by the C parser, this is needed
-'' for using -removematch and for improving fbfrog's C parser.
-''
 function tkReport( byval x as integer, byval message as zstring ptr ) as string
 	if( x >= tkGetCount( ) ) then
 		x = tkGetCount( )-1

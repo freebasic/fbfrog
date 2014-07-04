@@ -1,4 +1,0 @@
--removematch(1): string/char literal left open
-<command line>(1): from here:
-    1: ts/removematch/cmdline-string-literal-left-open.h -removematch 'abc "123'
-                                                                      ^~~~~~~~~~
