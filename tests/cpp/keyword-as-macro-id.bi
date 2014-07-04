@@ -2,7 +2,7 @@
 
 extern "C"
 
-extern i as zstring
+extern i as byte
 extern i as long
 
 declare sub f()

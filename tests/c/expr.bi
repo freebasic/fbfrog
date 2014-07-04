@@ -13,7 +13,7 @@ enum
 	A = A
 	A = A
 	A = cast(any, 0)
-	A = cast(zstring, 0)
+	A = cbyte(0)
 	A = cast(single, 0)
 	A = cast(double, 0)
 	A = clng(0)
@@ -398,7 +398,7 @@ end enum
 #define A05(x) (((("a" + #x) + "b") + #x) + "c")
 
 const A06 = cast(any, 0)
-const A07 = cast(zstring, 0)
+const A07 = cbyte(0)
 const A08 = cast(single, 0)
 const A09 = cast(double, 0)
 const A10 = clng(0)

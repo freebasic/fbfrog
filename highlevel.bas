@@ -479,6 +479,33 @@ sub astFixArrayParams( byval n as ASTNODE ptr )
 	wend
 end sub
 
+''
+'' Convert "zstring" to "byte" if it's neither an array nor a pointer.
+'' (the C parser uses "zstring" for plain "char", while for "[un]signed char"
+'' it will already use "[u]byte")
+''
+'' If it's a single "char" then it's most likely meant to be a byte. And FB
+'' doesn't allow "zstring" on its own anyways (it has to be a pointer or
+'' fixed-length string).
+''
+sub astTurnPlainZstringIntoByte( byval n as ASTNODE ptr )
+	'' Zstring and neither array nor pointer?
+	if( (typeGetDtAndPtr( n->dtype ) = TYPE_ZSTRING) and (n->array = NULL) ) then
+		'' Turn zstring into byte, but preserve CONSTs
+		n->dtype = typeGetConst( n->dtype ) or TYPE_BYTE
+	end if
+
+	if( n->subtype ) then astTurnPlainZstringIntoByte( n->subtype )
+	if( n->array   ) then astTurnPlainZstringIntoByte( n->array )
+	if( n->expr    ) then astTurnPlainZstringIntoByte( n->expr )
+
+	var i = n->head
+	while( i )
+		astTurnPlainZstringIntoByte( i )
+		i = i->next
+	wend
+end sub
+
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 '' Unscoping of nested declarations:
 ''
