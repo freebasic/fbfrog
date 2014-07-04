@@ -99,8 +99,8 @@ dim shared separator1 as long
 #endmacro
 #macro D3(x)
 	scope
-		f1(x + 1)
-		f2(x + 2)
-		f3(x + 3)
+		f1((x) + 1)
+		f2((x) + 2)
+		f3((x) + 3)
 	end scope
 #endmacro

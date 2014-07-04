@@ -112,7 +112,6 @@ To do:
 - char array should be translated to zstring * N:
     static char s[10] = "hello";
     dim shared s as zstring * 10 => "hello"
-- parentheses around macro params should be preserved (can use a flag on the AST node)
 - Emit list of renamed symbols at top of header
 - support -o - to write to stdout, or just -stdout, or similar
 

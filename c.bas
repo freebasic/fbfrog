@@ -382,6 +382,12 @@ private function cExpression _
 
 				'' ')'
 				cExpectMatch( TK_RPAREN, "to close '(...)' parenthesized expression" )
+
+				if( a->class = ASTCLASS_ID ) then
+					if( hIdentifierIsMacroParam( macro, a->text ) ) then
+						a->attrib or= ASTATTRIB_PARENTHESIZEDMACROPARAM
+					end if
+				end if
 			end if
 
 		case TK_OCTNUM, TK_DECNUM, TK_HEXNUM, TK_DECFLOAT

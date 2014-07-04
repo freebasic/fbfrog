@@ -627,7 +627,16 @@ private function emitAst _
 	case ASTCLASS_CONSTF
 		s += str( n->valf )
 
-	case ASTCLASS_ID, ASTCLASS_TAGID
+	case ASTCLASS_ID
+		if( n->attrib and ASTATTRIB_PARENTHESIZEDMACROPARAM ) then
+			s += "("
+		end if
+		s += *n->text
+		if( n->attrib and ASTATTRIB_PARENTHESIZEDMACROPARAM ) then
+			s += ")"
+		end if
+
+	case ASTCLASS_TAGID
 		s += *n->text
 
 	case ASTCLASS_TEXT

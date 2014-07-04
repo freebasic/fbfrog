@@ -676,6 +676,7 @@ const ASTATTRIB_DONTEMIT      = 1 shl 14
 const ASTATTRIB_ONCE          = 1 shl 15  '' Marks #includes as "#include once"
 const ASTATTRIB_PACKED        = 1 shl 16  '' __attribute__((packed))
 const ASTATTRIB_VARIADIC      = 1 shl 17  '' PPDEFINE/MACROPARAM: variadic macros
+const ASTATTRIB_PARENTHESIZEDMACROPARAM = 1 shl 18
 
 '' When changing, adjust astClone(), astIsEqual(), astDump*()
 type ASTNODE_
