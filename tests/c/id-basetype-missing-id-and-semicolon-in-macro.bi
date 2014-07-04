@@ -10,7 +10,7 @@ dim shared b as long
 '' TODO: unrecognized construct:
 '' c
 '' ---------------------------------------------------------------------------
-'' expected identifier for the symbol declared in this declaration
+'' expected identifier for the symbol declared in this declaration but found '[eof]'
 ''    c
 ''    ^
 '' tests/c/id-basetype-missing-id-and-semicolon-in-macro.h(2): construct found here

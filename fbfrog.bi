@@ -474,6 +474,7 @@ declare function hSkipToTK_END( byval x as integer ) as integer
 declare function hSkipConstruct( byval x as integer ) as integer
 declare function tkReport( byval x as integer, byval message as zstring ptr ) as string
 declare sub tkOops( byval x as integer, byval message as zstring ptr )
+declare function tkButFound( byval x as integer ) as string
 declare function tkMakeExpectedMessage( byval x as integer, byval message as zstring ptr ) as string
 declare sub tkOopsExpected( byval x as integer, byval message as zstring ptr )
 declare sub tkExpect( byval x as integer, byval tk as integer, byval message as zstring ptr )

@@ -306,7 +306,7 @@ private function hScopeBlockOrInitializer( byval macro as ASTNODE ptr ) as ASTNO
 				a->class = ASTCLASS_STRUCTINIT
 
 			case else
-				cError( "expected ',' (expression separator in struct initializer), or ';' (end of statement in scope block), or '}' (end of block)" )
+				cError( "expected ',' (expression separator in struct initializer), or ';' (end of statement in scope block), or '}' (end of block)" + tkButFound( x ) )
 			end select
 		end select
 	wend
@@ -439,7 +439,7 @@ private function cExpression _
 						astAppend( a, astNewID( tkGetText( x ) ) )
 						x += 1
 					else
-						cError( "expected identifier as operand of '##' PP merge operator" )
+						cError( "expected identifier as operand of '##' PP merge operator" + tkButFound( x ) )
 					end if
 
 					'' '##'?
@@ -476,7 +476,7 @@ private function cExpression _
 			end if
 
 		case else
-			cError( "expected an atomic expression" )
+			cError( "expected expression" + tkButFound( x ) )
 			a = astNewCONSTI( 0, TYPE_INTEGER )
 		end select
 	end if
@@ -592,7 +592,7 @@ private sub cGccAttribute( byref gccattribs as integer )
 		x += 1
 
 	case else
-		cError( "unknown attribute" )
+		cError( "unknown attribute '" + *tkGetText( x ) + "'" )
 	end select
 end sub
 
@@ -654,7 +654,7 @@ private function cEnumConst( ) as ASTNODE ptr
 	if( tkGet( x ) = TK_ID ) then
 		astSetText( t, tkGetText( x ) )
 	else
-		cError( "expected identifier for an enum constant" )
+		cError( "expected identifier for an enum constant" + tkButFound( x ) )
 	end if
 	x += 1
 
@@ -672,7 +672,7 @@ private function cEnumConst( ) as ASTNODE ptr
 	case TK_RBRACE
 
 	case else
-		cError( "expected ',' or '}' behind enum constant" )
+		cError( "expected ',' or '}' behind enum constant" + tkButFound( x ) )
 	end select
 
 	function = t
@@ -720,7 +720,7 @@ private function cStruct( ) as ASTNODE ptr
 		cGccAttributeList( struct->attrib )
 	else
 		if( struct->text = NULL ) then
-			cError( "expected '{' or tag name behind " + astDumpPrettyDecl( struct ) )
+			cError( "expected '{' or tag name behind " + astDumpPrettyDecl( struct ) + tkButFound( x ) )
 			astSetText( struct, hMakeDummyId( ) )
 		end if
 
@@ -969,14 +969,18 @@ private sub cBaseType _
 			dtype = TYPE_LONG
 		else
 			'' No modifiers and no explicit "int" either
+			var message = "expected a data type "
 			select case( decl )
 			case DECL_CASTTYPE
-				cError( "expected a data type in this '(...)' type cast" )
+				message += "in this '(...)' type cast"
 			case DECL_SIZEOFTYPE
-				cError( "expected a data type as operand in this 'sizeof(...)'" )
+				message += "as operand in this 'sizeof(...)'"
+			case DECL_PARAM
+				message += "starting a parameter declaration"
 			case else
-				cError( "expected a data type starting a declaration" )
+				message += "starting a declaration"
 			end select
+			cError( message + tkButFound( x ) )
 		end if
 	end select
 
@@ -1262,7 +1266,7 @@ private function cDeclarator _
 				x += 1
 			else
 				if( decl <> DECL_PARAM ) then
-					cError( "expected identifier for the symbol declared in this declaration" )
+					cError( "expected identifier for the symbol declared in this declaration" + tkButFound( x ) )
 					id = hMakeDummyId( )
 				end if
 			end if

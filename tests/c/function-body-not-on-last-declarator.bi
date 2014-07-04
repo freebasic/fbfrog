@@ -8,7 +8,7 @@ end sub
 '' TODO: unrecognized construct:
 '' , *b;
 '' ---------------------------------------------------------------------------
-'' tests/c/function-body-not-on-last-declarator.h(1): expected a data type starting a declaration
+'' tests/c/function-body-not-on-last-declarator.h(1): expected a data type starting a declaration but found ','
 ''    1: void a(void) { ; }, *b;
 ''                         ^
 ''    2: 

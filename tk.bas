@@ -1008,13 +1008,16 @@ sub tkOops( byval x as integer, byval message as zstring ptr )
 	end 1
 end sub
 
+function tkButFound( byval x as integer ) as string
+	function = " but found '" + hMakePrettyCTokenText( tkGet( x ), tkGetText( x ) ) + "'"
+end function
+
 function tkMakeExpectedMessage( byval x as integer, byval something as zstring ptr ) as string
 	select case( tkGet( x ) )
 	case TK_EOL, TK_EOF, TK_DIVIDER, TK_END
 		function = "missing " + *something
 	case else
-		function = "expected " + *something + " but found '" + _
-			hMakePrettyCTokenText( tkGet( x ), tkGetText( x ) ) + "'"
+		function = "expected " + *something + tkButFound( x )
 	end select
 end function
 

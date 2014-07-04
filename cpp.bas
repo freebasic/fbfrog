@@ -525,7 +525,7 @@ private function cppExpression _
 			a = astTakeLoc( astNew( ASTCLASS_CDEFINED, a ), definedx )
 
 		case else
-			tkOopsExpected( x, "number literal or '(...)' (atom expression)" )
+			tkOopsExpected( x, "expression" )
 		end select
 	end if
 
