@@ -115,6 +115,7 @@ end sub
 private sub hNewLine( )
 	lex.bol = lex.i
 	lex.location.linenum += 1
+	lex.location.source->lines = lex.location.linenum + 1
 end sub
 
 private sub hReadLineComment( )
@@ -812,6 +813,7 @@ function lexLoadC _
 	lex.x = x
 	lex.location.source = source
 	lex.location.linenum = 0
+	lex.location.source->lines = 1
 	lex.keep_comments = keep_comments
 	lex.i = source->buffer
 	lex.bol = lex.i
@@ -820,8 +822,6 @@ function lexLoadC _
 	while( lex.i[0] )
 		lexNext( )
 	wend
-
-	source->lines = lex.location.linenum + 1
 
 	if( frog.verbose ) then
 		print "lex: " + *source->name + ", " & (source->size - 1) & " bytes, " & _
@@ -926,6 +926,7 @@ function lexLoadArgs( byval x as integer, byval source as SOURCEBUFFER ptr ) as 
 	lex.x = x
 	lex.location.source = source
 	lex.location.linenum = 0
+	lex.location.source->lines = 1
 	lex.keep_comments = FALSE
 	lex.i = source->buffer
 	lex.bol = lex.i
@@ -967,8 +968,6 @@ function lexLoadArgs( byval x as integer, byval source as SOURCEBUFFER ptr ) as 
 
 		end select
 	loop
-
-	source->lines = lex.location.linenum + 1
 
 	function = lex.x
 end function

@@ -1,3 +1,6 @@
 [1/5] __FB_WIN32__.__FB_64BIT__
       tests/lex/stray-byte.h
 tests/lex/stray-byte.h(2): stray &hE2 byte
+    1: // @fail
+    2: â
+       ^

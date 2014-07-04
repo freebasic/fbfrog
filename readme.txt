@@ -104,6 +104,18 @@ Running the tests:
 
 To do:
 
+- #if expression evaluation:
+  - Support unsigned values
+  - Don't crash on (INT_MIN / -1) or (INT_MIN % -1)
+- Should astOpsC2FB() insert clng() at various places to ensure that C int
+  expressions produce 32bit values even in 64bit FB?
+- simple "char" type (no signed/unsigned, no pointer, no array) should be translated
+  to BYTE instead of ZSTRING
+- char array should be translated to zstring * N:
+    static char s[10] = "hello";
+    dim shared s as zstring * 10 => "hello"
+- parentheses around macro params should be preserved (can use a flag on the AST node)
+- Emit list of renamed symbols at top of header
 - support -o - to write to stdout, or just -stdout, or similar
 
 - Add support for parsing function bodies: if/else blocks, for/while/do/while
@@ -116,8 +128,6 @@ To do:
         if (a = 1) ...          =>    a = 1 : if a then ...
         if (a = 1 && b = 2) ... =>    a = 1 : if a then : b = 2 : if b then ... : end if
     ?: and &&/|| operands containing assignments must be expanded to real if blocks.
-
-- Since we always generate Extern blocks, we never need case-preserving ALIASes
 
 - Turn -nomerge into -insert <absolute-file-name-pattern>
   By default: Don't insert #includes
@@ -137,44 +147,12 @@ To do:
   - speed: AST walking, especially astReplaceSubtypes()
       - Could be fixed by using a type map - then astReplaceSubtypes() would only
         need to update an entry in the type map instead of walking the whole AST
+        => API-specific symbol table, backed by global read-only string table
   - speed: String comparisons (also as part of AST walking)
+        => should become symbol table entry comparisons
   - memory usage: hAstLCS() matrix; also string/AST node/token buffer allocations
-
-- #if expression evaluation:
-  - Support unsigned values
-  - Don't crash on (INT_MIN / -1) or (INT_MIN % -1)
-
-- Should astOpsC2FB() insert clng() at various places to ensure that C int
-  expressions produce 32bit values even in 64bit FB?
-
-- char array should be translated to zstring * N:
-    static char s[10] = "hello";
-    dim shared s as zstring * 10 => "hello"
-- macro params named after keywords?
-- parentheses around macro params should be preserved (can use a flag on the AST node)
-- Emit list of renamed symbols at top of header
-- Add -booldefine to mark a macro as "returns a bool", so the C #define parser
-  can set is_bool_context=TRUE when folding
-- Lexer doesn't show error code context
-- Better error reporting: Single error token location isn't enough - especially
-  if it's EOF or part of the next construct, while the error is about the
-  previous one. Need to report entire constructs (token range), or for
-  expressions visualize operand(s) & operator, etc.
-    - Let caller determine construct boundaries? They're different for
-      cmdline/cpp/c anyways. -> pass in construct token range
-    - E.g. C usually wants to complain about construct, but CPP usually about
-      macro body or directive etc.
-    - pass in additional token ranges: unexpected token + what was expected,
-      operator, operands
-    - Show suggestions how to fix errors, e.g. if #define body couldn't be parsed,
-      suggest using -removedefine to exclude the #define from the binding...
-- Comments given to a TK_ID that is a macro call and will be expanded should
-  be given to first non-whitespace token from the expansion, for example:
-        // foo
-        CALLCONV void f(void);
-- comments behind #define bodies should go to the #define not the body tokens
-- Add tk array implementation, and compare performance, on headers with lots
-  of macro expansion.
+  - Add tk array implementation, and compare performance, on headers with lots
+    of macro expansion.
 
 - Write fbc wrapper that would allow using fbfrog as fbc pre-processor:
   Search for

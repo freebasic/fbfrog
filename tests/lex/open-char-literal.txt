@@ -1,3 +1,6 @@
 [1/5] __FB_WIN32__.__FB_64BIT__
       tests/lex/open-char-literal.h
 tests/lex/open-char-literal.h(2): string/char literal left open
+    1: // @fail
+    2: 'x
+         ^
