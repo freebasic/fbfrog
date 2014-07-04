@@ -2074,7 +2074,6 @@ sub cppMain( byval whitespace as integer, byval nomerge as integer )
 
 					'' Insert this so we can go back end delete all the #included tokens easily
 					tkInsert( x, TK_BEGININCLUDE )
-					tkSetRemove( x )
 					x += 1
 
 					'' Insert an EOL, so cppIdentifyDirectives() can identify BOL
@@ -2087,7 +2086,6 @@ sub cppMain( byval whitespace as integer, byval nomerge as integer )
 					'' so we can detect the included EOF and pop the #include context from
 					'' the ppstack.
 					tkInsert( x, TK_ENDINCLUDE )
-					tkSetRemove( x )
 					hLoadFile( x, location, incfile, whitespace )
 
 					'' Start parsing the #included content
