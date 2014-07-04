@@ -104,7 +104,6 @@ Running the tests:
 
 To do:
 
-- support macro expansion for C/CPP keywords, not just TK_ID
 - support -o - to write to stdout, or just -stdout, or similar
 
 - Add support for parsing function bodies: if/else blocks, for/while/do/while

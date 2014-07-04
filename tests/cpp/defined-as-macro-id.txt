@@ -1,0 +1,10 @@
+[1/5] __FB_WIN32__.__FB_64BIT__
+      tests/cpp/defined-as-macro-id.h
+tests/cpp/defined-as-macro-id.h(2): 'defined' cannot be used as macro name
+    1: // @fail
+    2: #define defined
+               ^~~~~~~
+    3: 
+context as seen by fbfrog:
+    [eol] [eol] # define defined [eol]
+                         ^~~~~~~

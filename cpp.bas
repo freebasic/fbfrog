@@ -512,8 +512,10 @@ private function cppExpression _
 			end if
 
 			'' Identifier
-			tkExpect( x, TK_ID, "as operand of DEFINED" )
-			a = astTakeLoc( astNewID( tkGetText( x ) ), x )
+			if( tkGet( x ) < TK_ID ) then
+				tkExpect( x, TK_ID, "as operand of DEFINED" )
+			end if
+			a = astTakeLoc( astNewID( tkGetIdOrKw( x ) ), x )
 			x += 1
 
 			if( have_parens ) then
@@ -605,8 +607,8 @@ private function hMacroParam _
 	) as integer
 
 	dim id as zstring ptr
-	if( tkGet( x ) = TK_ID ) then
-		id = tkGetText( x )
+	if( tkGet( x ) >= TK_ID ) then
+		id = tkGetIdOrKw( x )
 		x += 1
 	end if
 
@@ -617,7 +619,6 @@ private function hMacroParam _
 	if( tkGet( x ) = TK_ELLIPSIS ) then
 		x += 1
 		maybevariadic = ASTATTRIB_VARIADIC
-
 		if( id = NULL ) then
 			''    #define m(a, ...)
 			'' must become
@@ -702,6 +703,8 @@ private function cppDirective( byval x as integer ) as integer
 		'' Identifier? (keywords should be allowed to, so anything >= TK_ID)
 		if( tkGet( x ) < TK_ID ) then
 			tkExpect( x, TK_ID, "behind #define" )
+		elseif( tkGet( x ) = KW_DEFINED ) then
+			tkOops( x, "'defined' cannot be used as macro name" )
 		end if
 		var macro = astNewPPDEFINE( tkGetIdOrKw( x ) )
 
@@ -733,11 +736,13 @@ private function cppDirective( byval x as integer ) as integer
 	case KW_IFDEF, KW_IFNDEF
 		x += 1
 
-		'' Identifier?
-		tkExpect( x, TK_ID, iif( tk = KW_IFNDEF, @"behind #ifndef", @"behind #ifdef" ) )
+		'' Identifier
+		if( tkGet( x ) < TK_ID ) then
+			tkExpect( x, TK_ID, iif( tk = KW_IFNDEF, @"behind #ifndef", @"behind #ifdef" ) )
+		end if
 
 		'' Build up "[!]defined id" expression
-		var expr = astTakeLoc( astNewID( tkGetText( x ) ), x )
+		var expr = astTakeLoc( astNewID( tkGetIdOrKw( x ) ), x )
 		expr = astTakeLoc( astNew( ASTCLASS_CDEFINED, expr ), x - 1 )
 		expr->location.column += 2  '' ifdef -> def, ifndef -> ndef
 		expr->location.length = 3
@@ -759,10 +764,12 @@ private function cppDirective( byval x as integer ) as integer
 	case KW_UNDEF
 		x += 1
 
-		'' Identifier?
-		tkExpect( x, TK_ID, "behind #undef" )
+		'' Identifier
+		if( tkGet( x ) < TK_ID ) then
+			tkExpect( x, TK_ID, "behind #undef" )
+		end if
 
-		tkFold( begin, x, TK_PPUNDEF, tkGetText( x ) )
+		tkFold( begin, x, TK_PPUNDEF, tkGetIdOrKw( x ) )
 		x = begin + 1
 
 	case KW_PRAGMA
@@ -930,8 +937,8 @@ private function hShouldExpandSym( byval id as zstring ptr ) as integer
 end function
 
 private function hCheckForMacroCall( byval x as integer ) as integer
-	assert( tkGet( x ) = TK_ID )
-	var id = tkGetText( x )
+	assert( tkGet( x ) >= TK_ID )
+	var id = tkGetIdOrKw( x )
 
 	'' Is this id a macro?
 	var xmacro = hLookupMacro( id )
@@ -1056,7 +1063,7 @@ private function hParseMacroCall _
 	var begin = x
 
 	'' ID
-	assert( tkGet( x ) = TK_ID )
+	assert( tkGet( x ) >= TK_ID )
 	x += 1
 
 	argcount = -1
@@ -1284,7 +1291,7 @@ private sub hSkipDefinedUop( byref x as integer )
 	end if
 
 	'' Identifier? (not doing any expansion here)
-	if( tkGet( x ) = TK_ID ) then
+	if( tkGet( x ) >= TK_ID ) then
 		x += 1
 	end if
 
@@ -1316,7 +1323,7 @@ private function hExpandUntilTK_END _
 				x -= 1
 			end if
 
-		case TK_ID
+		case is >= TK_ID
 			hMaybeExpandMacro( x, inside_ifexpr )
 		end select
 
@@ -1417,9 +1424,9 @@ private function hInsertMacroExpansion _
 		'' '#param'?
 		if( tkGet( x ) = TK_HASH ) then
 			'' Followed by identifier?
-			if( tkGet( x + 1 ) = TK_ID ) then
+			if( tkGet( x + 1 ) >= TK_ID ) then
 				'' Is it a macro parameter?
-				var arg = astLookupMacroParam( macro, tkGetText( x + 1 ) )
+				var arg = astLookupMacroParam( macro, tkGetIdOrKw( x + 1 ) )
 				if( arg >= 0 ) then
 					'' Remove #param, and insert stringify result instead
 					tkFold( x, x + 1, TK_STRING, hStringify( arg, argbegin, argend, argcount ) )
@@ -1453,10 +1460,10 @@ private function hInsertMacroExpansion _
 	while( tkGet( x ) <> TK_END )
 
 		'' Macro parameter?
-		if( tkGet( x ) = TK_ID ) then
-			var arg = astLookupMacroParam( macro, tkGetText( x ) )
+		if( tkGet( x ) >= TK_ID ) then
+			var arg = astLookupMacroParam( macro, tkGetIdOrKw( x ) )
 			if( arg >= 0 ) then
-				'' TK_ID
+				'' >= TK_ID
 				tkRemove( x, x )
 
 				'' TK_ARGBEGIN
@@ -1659,7 +1666,7 @@ private sub hExpandMacro _
 		var x = expansionbegin
 		while( x <= expansionend )
 
-			if( tkGet( x ) = TK_ID ) then
+			if( tkGet( x ) >= TK_ID ) then
 				'' Known macro, and it's the same as this one?
 				var xcalledmacro = hCheckForMacroCall( x )
 				if( xcalledmacro = xmacro ) then
@@ -2229,7 +2236,7 @@ sub cppMain( byval whitespace as integer, byval nomerge as integer )
 				print tkReport( x, "#warning" )
 			end if
 
-		case TK_ID
+		case is >= TK_ID
 			if( skiplevel <> MAXPPSTACK ) then
 				tkSetRemove( x )
 			else
