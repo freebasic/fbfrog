@@ -487,10 +487,10 @@ function tkGetText( byval x as integer ) as zstring ptr
 	function = tkAccess( x )->text
 end function
 
-function tkGetIdOrKw( byval x as integer ) as zstring ptr
+function tkSpellId( byval x as integer ) as zstring ptr
 	var p = tkAccess( x )
 	assert( p->id >= TK_ID )
-	if( p->text ) then
+	if( p->id = TK_ID ) then
 		function = p->text
 	else
 		function = tk_info(p->id).text

@@ -515,7 +515,7 @@ private function cppExpression _
 			if( tkGet( x ) < TK_ID ) then
 				tkExpect( x, TK_ID, "as operand of DEFINED" )
 			end if
-			a = astTakeLoc( astNewID( tkGetIdOrKw( x ) ), x )
+			a = astTakeLoc( astNewID( tkSpellId( x ) ), x )
 			x += 1
 
 			if( have_parens ) then
@@ -608,7 +608,7 @@ private function hMacroParam _
 
 	dim id as zstring ptr
 	if( tkGet( x ) >= TK_ID ) then
-		id = tkGetIdOrKw( x )
+		id = tkSpellId( x )
 		x += 1
 	end if
 
@@ -706,7 +706,7 @@ private function cppDirective( byval x as integer ) as integer
 		elseif( tkGet( x ) = KW_DEFINED ) then
 			tkOops( x, "'defined' cannot be used as macro name" )
 		end if
-		var macro = astNewPPDEFINE( tkGetIdOrKw( x ) )
+		var macro = astNewPPDEFINE( tkSpellId( x ) )
 
 		hMacroParamList( x, macro )
 
@@ -742,7 +742,7 @@ private function cppDirective( byval x as integer ) as integer
 		end if
 
 		'' Build up "[!]defined id" expression
-		var expr = astTakeLoc( astNewID( tkGetIdOrKw( x ) ), x )
+		var expr = astTakeLoc( astNewID( tkSpellId( x ) ), x )
 		expr = astTakeLoc( astNew( ASTCLASS_CDEFINED, expr ), x - 1 )
 		expr->location.column += 2  '' ifdef -> def, ifndef -> ndef
 		expr->location.length = 3
@@ -769,7 +769,7 @@ private function cppDirective( byval x as integer ) as integer
 			tkExpect( x, TK_ID, "behind #undef" )
 		end if
 
-		tkFold( begin, x, TK_PPUNDEF, tkGetIdOrKw( x ) )
+		tkFold( begin, x, TK_PPUNDEF, tkSpellId( x ) )
 		x = begin + 1
 
 	case KW_PRAGMA
@@ -938,7 +938,7 @@ end function
 
 private function hCheckForMacroCall( byval x as integer ) as integer
 	assert( tkGet( x ) >= TK_ID )
-	var id = tkGetIdOrKw( x )
+	var id = tkSpellId( x )
 
 	'' Is this id a macro?
 	var xmacro = hLookupMacro( id )
@@ -1145,7 +1145,7 @@ private sub hTryMergeTokens _
 		select case( tkGet( r ) )
 		'' id ## id -> id/keyword
 		case is >= TK_ID
-			mergetext = *tkGetIdOrKw( l ) + *tkGetIdOrKw( r )
+			mergetext = *tkSpellId( l ) + *tkSpellId( r )
 			mergetk = lexIdentifyCKeyword( mergetext )
 			'' If it's a KW_*, no need to store the text
 			if( mergetk <> TK_ID ) then
@@ -1155,28 +1155,28 @@ private sub hTryMergeTokens _
 		'' id ## decnum -> id
 		case TK_DECNUM
 			mergetk = TK_ID
-			mergetext = *tkGetIdOrKw( l ) + *tkGetText( r )
+			mergetext = *tkSpellId( l ) + *tkGetText( r )
 
 		'' id ## hexnum -> id
 		case TK_HEXNUM
 			mergetk = TK_ID
-			mergetext = *tkGetIdOrKw( l ) + "0x" + *tkGetText( r )
+			mergetext = *tkSpellId( l ) + "0x" + *tkGetText( r )
 
 		'' id ## octnum -> id
 		case TK_OCTNUM
 			mergetk = TK_ID
-			mergetext = *tkGetIdOrKw( l ) + "0" + *tkGetText( r )
+			mergetext = *tkSpellId( l ) + "0" + *tkGetText( r )
 
 		'' L ## "string" -> L"wstring"
 		case TK_STRING
-			if( *tkGetIdOrKw( l ) = "L" ) then
+			if( *tkSpellId( l ) = "L" ) then
 				mergetk = TK_WSTRING
 				mergetext = *tkGetText( r )
 			end if
 
 		'' L ## 'c' -> L'w'
 		case TK_CHAR
-			if( *tkGetIdOrKw( l ) = "L" ) then
+			if( *tkSpellId( l ) = "L" ) then
 				mergetk = TK_WCHAR
 				mergetext = *tkGetText( r )
 			end if
@@ -1187,7 +1187,7 @@ private sub hTryMergeTokens _
 		'' decnum ## id -> hexnum (0##xFF)
 		case is >= TK_ID
 			var ltext = *tkGetText( l )
-			var rtext = *tkGetIdOrKw( r )
+			var rtext = *tkSpellId( r )
 			'' lhs must be '0', rhs must start with 'x'
 			if( (ltext = "0") and (left( rtext, 1 ) = "x") ) then
 				'' Rest of rhs must be only hex digits, or empty
@@ -1230,7 +1230,7 @@ private sub hTryMergeTokens _
 		select case( tkGet( r ) )
 		'' hexnum ## id -> hexnum (0xAA##BB)
 		case is >= TK_ID
-			var rtext = tkGetIdOrKw( r )
+			var rtext = tkSpellId( r )
 			if( strContainsNonHexDigits( rtext ) = FALSE ) then
 				mergetk = TK_HEXNUM
 				mergetext = *tkGetText( l ) + *rtext
@@ -1426,7 +1426,7 @@ private function hInsertMacroExpansion _
 			'' Followed by identifier?
 			if( tkGet( x + 1 ) >= TK_ID ) then
 				'' Is it a macro parameter?
-				var arg = astLookupMacroParam( macro, tkGetIdOrKw( x + 1 ) )
+				var arg = astLookupMacroParam( macro, tkSpellId( x + 1 ) )
 				if( arg >= 0 ) then
 					'' Remove #param, and insert stringify result instead
 					tkFold( x, x + 1, TK_STRING, hStringify( arg, argbegin, argend, argcount ) )
@@ -1461,7 +1461,7 @@ private function hInsertMacroExpansion _
 
 		'' Macro parameter?
 		if( tkGet( x ) >= TK_ID ) then
-			var arg = astLookupMacroParam( macro, tkGetIdOrKw( x ) )
+			var arg = astLookupMacroParam( macro, tkSpellId( x ) )
 			if( arg >= 0 ) then
 				'' >= TK_ID
 				tkRemove( x, x )

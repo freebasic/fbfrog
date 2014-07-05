@@ -427,7 +427,7 @@ declare sub tkFold _
 	)
 declare function tkGet( byval x as integer ) as integer
 declare function tkGetText( byval x as integer ) as zstring ptr
-declare function tkGetIdOrKw( byval x as integer ) as zstring ptr
+declare function tkSpellId( byval x as integer ) as zstring ptr
 declare function tkGetAst( byval x as integer ) as ASTNODE ptr
 declare sub tkSetAst( byval x as integer, byval ast as ASTNODE ptr )
 declare sub tkSetLocation( byval x as integer, byval location as TKLOCATION ptr )

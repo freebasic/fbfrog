@@ -232,7 +232,7 @@ private function hIsDataType _
 	     KW_SIGNED, KW_UNSIGNED, KW_CONST, KW_SHORT, KW_LONG, _
 	     KW_ENUM, KW_STRUCT, KW_UNION, _
 	     KW_VOID, KW_CHAR, KW_FLOAT, KW_DOUBLE, KW_INT
-		is_type = not hIdentifierIsMacroParam( macro, tkGetIdOrKw( y ) )
+		is_type = not hIdentifierIsMacroParam( macro, tkSpellId( y ) )
 	case TK_ID
 		var id = tkGetText( y )
 		if( (hIdentifyCommonTypedef( id ) <> TYPE_NONE) or _
