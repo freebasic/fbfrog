@@ -496,7 +496,7 @@ private function cppExpression _
 			''    #if defined A && B == 123
 			'' If A isn't defined then B doesn't need to be
 			'' evaluated and no warning should be shown.
-			a = astTakeLoc( astNewID( tkGetText( x ) ), x )
+			a = astTakeLoc( astNewID( tkSpellId( x ) ), x )
 			x += 1
 
 		'' DEFINED ['('] Identifier [')']
@@ -778,7 +778,7 @@ private function cppDirective( byval x as integer ) as integer
 		select case( tkGet( x ) )
 		case TK_ID
 			'' #pragma message("...")
-			select case( *tkGetText( x ) )
+			select case( *tkSpellId( x ) )
 			case "message"
 				x += 1
 
@@ -1112,7 +1112,7 @@ private function hStringify _
 		end if
 
 		select case as const( tkGet( i ) )
-		case TK_ID       : s += *tkGetText( i )
+		case TK_ID       : s += *tkSpellId( i )
 		case TK_DECNUM   : s += *tkGetText( i )
 		case TK_HEXNUM   : s += "0x" + *tkGetText( i )
 		case TK_OCTNUM   : s += "0" + *tkGetText( i )

@@ -234,7 +234,7 @@ private function hIsDataType _
 	     KW_VOID, KW_CHAR, KW_FLOAT, KW_DOUBLE, KW_INT
 		is_type = not hIdentifierIsMacroParam( macro, tkSpellId( y ) )
 	case TK_ID
-		var id = tkGetText( y )
+		var id = tkSpellId( y )
 		if( (hIdentifyCommonTypedef( id ) <> TYPE_NONE) or _
 		    hIsTypedef( id ) ) then
 			is_type = not hIdentifierIsMacroParam( macro, id )
@@ -409,7 +409,7 @@ private function cExpression _
 
 		'' Identifier ['(' [CallArguments] ')']
 		case TK_ID
-			a = astNewID( tkGetText( x ) )
+			a = astNewID( tkSpellId( x ) )
 			x += 1
 
 			select case( tkGet( x ) )
@@ -442,7 +442,7 @@ private function cExpression _
 				do
 					'' Identifier?
 					if( tkGet( x ) = TK_ID ) then
-						astAppend( a, astNewID( tkGetText( x ) ) )
+						astAppend( a, astNewID( tkSpellId( x ) ) )
 						x += 1
 					else
 						cError( "expected identifier as operand of '##' PP merge operator" + tkButFound( x ) )
@@ -491,7 +491,7 @@ private function cExpression _
 			'' Identifier
 			dim as string id
 			if( tkGet( x ) = TK_ID ) then
-				id = *tkGetText( x )
+				id = *tkSpellId( x )
 			else
 				cError( "expected identifier" + tkButFound( x ) )
 				id = hMakeDummyId( )
@@ -604,7 +604,7 @@ private sub cGccAttribute( byref gccattribs as integer )
 		exit sub
 	end if
 
-	select case( *tkGetText( x ) )
+	select case( *tkSpellId( x ) )
 	case "warn_unused_result", "__warn_unused_result__", _
 	     "noreturn", "__noreturn__", _
 	     "malloc", "__malloc__", _
@@ -623,7 +623,7 @@ private sub cGccAttribute( byref gccattribs as integer )
 		x += 1
 
 	case else
-		cError( "unknown attribute '" + *tkGetText( x ) + "'" )
+		cError( "unknown attribute '" + *tkSpellId( x ) + "'" )
 	end select
 end sub
 
@@ -683,7 +683,7 @@ private function cEnumConst( ) as ASTNODE ptr
 
 	'' Identifier
 	if( tkGet( x ) = TK_ID ) then
-		astSetText( t, tkGetText( x ) )
+		astSetText( t, tkSpellId( x ) )
 	else
 		cError( "expected identifier for an enum constant" + tkButFound( x ) )
 	end if
@@ -732,7 +732,7 @@ private function cStruct( ) as ASTNODE ptr
 
 	'' [Identifier]
 	if( tkGet( x ) = TK_ID ) then
-		astSetText( struct, tkGetText( x ) )
+		astSetText( struct, tkSpellId( x ) )
 		x += 1
 	end if
 
@@ -941,7 +941,7 @@ private sub cBaseType _
 				end if
 
 				'' Treat the id as the type
-				var id = tkGetText( x )
+				var id = tkSpellId( x )
 				dtype = hIdentifyCommonTypedef( id )
 				if( dtype = TYPE_NONE ) then
 					dtype = TYPE_UDT
@@ -1293,7 +1293,7 @@ private function cDeclarator _
 		case DECL_CASTTYPE, DECL_SIZEOFTYPE
 		case else
 			if( tkGet( x ) = TK_ID ) then
-				id = *tkGetText( x )
+				id = *tkSpellId( x )
 				x += 1
 			else
 				if( decl <> DECL_PARAM ) then
