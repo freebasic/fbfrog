@@ -510,6 +510,29 @@ sub astTurnPlainZstringIntoByte( byval n as ASTNODE ptr )
 	wend
 end sub
 
+sub astTurnZstringArrayIntoFixedLengthZstring( byval n as ASTNODE ptr )
+	if( (typeGetDtAndPtr( n->dtype ) = TYPE_ZSTRING) and (n->array <> NULL) ) then
+		'' Use the last (inner-most) array dimension as the fixed-length string size
+		var d = n->array->tail
+		assert( d->class = ASTCLASS_DIMENSION )
+		assert( d->expr )
+		n->subtype = astClone( d->expr )
+		astRemove( n->array, d )
+
+		'' If no dimensions left, remove the array type entirely
+		if( n->array->head = NULL ) then
+			astDelete( n->array )
+			n->array = NULL
+		end if
+	end if
+
+	var i = n->head
+	while( i )
+		astTurnZstringArrayIntoFixedLengthZstring( i )
+		i = i->next
+	wend
+end sub
+
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 '' Unscoping of nested declarations:
 ''

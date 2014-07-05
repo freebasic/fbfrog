@@ -109,9 +109,6 @@ To do:
   - Don't crash on (INT_MIN / -1) or (INT_MIN % -1)
 - Should astOpsC2FB() insert clng() at various places to ensure that C int
   expressions produce 32bit values even in 64bit FB?
-- char array should be translated to zstring * N:
-    static char s[10] = "hello";
-    dim shared s as zstring * 10 => "hello"
 - Emit list of renamed symbols at top of header
 - support -o - to write to stdout, or just -stdout, or similar
 

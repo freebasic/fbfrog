@@ -1339,23 +1339,13 @@ private function cDeclarator _
 			'' '['
 			x += 1
 
-			dim as ASTNODE ptr d
+			var d = astNew( ASTCLASS_DIMENSION )
 
-			'' Just '[]', and it's a parameter? (empty dimensions only
-			'' allowed on parameters)
-			if( (tkGet( x ) = TK_RBRACKET) and (decl = DECL_PARAM) ) then
-				d = astNew( ASTCLASS_DIMENSION )
-			else
-				d = cExpression( 0, NULL )
-
-				'' Add new DIMENSION to the ARRAY:
-				'' lbound = 0, ubound = elements - 1
-				d = astNew( ASTCLASS_DIMENSION, _
-						astNewCONSTI( 0, TYPE_LONG ), _
-						astNew( ASTCLASS_SUB, _
-							d, _
-							astNewCONSTI( 1, TYPE_LONG ) ) )
+			'' Just '[]' (empty dimension) is allowed for parameters
+			if( (tkGet( x ) <> TK_RBRACKET) or (decl <> DECL_PARAM) ) then
+				d->expr = cExpression( 0, NULL )
 			end if
+
 			astAppend( node->array, d )
 
 			'' ']'

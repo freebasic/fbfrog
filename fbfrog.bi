@@ -700,6 +700,7 @@ type ASTNODE_
 	'' PARAM: initializer
 	'' VERBLOCK: version expression
 	'' IIF: condition expression
+	'' DIMENSION: elements expression
 	expr		as ASTNODE ptr
 
 	union
@@ -828,6 +829,7 @@ declare sub astSolveOutArrayTypedefs( byval n as ASTNODE ptr, byval ast as ASTNO
 declare sub astSolveOutProcTypedefs( byval n as ASTNODE ptr, byval ast as ASTNODE ptr )
 declare sub astFixArrayParams( byval n as ASTNODE ptr )
 declare sub astTurnPlainZstringIntoByte( byval n as ASTNODE ptr )
+declare sub astTurnZstringArrayIntoFixedLengthZstring( byval n as ASTNODE ptr )
 declare sub astUnscopeDeclsNestedInStructs( byval n as ASTNODE ptr )
 declare sub astNameAnonUdtsAfterFirstAliasTypedef( byval n as ASTNODE ptr )
 declare sub astAddForwardDeclsForUndeclaredTagIds( byval ast as ASTNODE ptr )

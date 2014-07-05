@@ -7,32 +7,37 @@ extern "C"
 extern i as byte
 extern p as zstring ptr
 extern p as zstring ptr
-extern array(0 to 10 - 1) as zstring
+extern array as zstring * 10
+extern array(0 to 10 - 1) as zstring * 20
 declare sub f(byval i as byte)
 declare sub f(byval p as zstring ptr)
 declare sub f(byval array as zstring ptr)
 type UDT
 	i as byte
 	p as zstring ptr
-	array(0 to 10 - 1) as zstring
+	array as zstring * 10
+	array(0 to 10 - 1) as zstring * 20
 end type
 
 extern i as const byte
 extern p as const zstring ptr
 extern p as const zstring ptr
-extern array(0 to 10 - 1) as const zstring
+extern array as const zstring * 10
+extern array(0 to 10 - 1) as const zstring * 20
 declare sub f(byval i as const byte)
 declare sub f(byval p as const zstring ptr)
 declare sub f(byval array as const zstring ptr)
 type UDT
 	i as const byte
 	p as const zstring ptr
-	array(0 to 10 - 1) as const zstring
+	array as const zstring * 10
+	array(0 to 10 - 1) as const zstring * 20
 end type
 
 extern i as byte
 extern p as byte ptr
 extern array(0 to 10 - 1) as byte
+extern array(0 to 10 - 1, 0 to 20 - 1) as byte
 declare sub f(byval i as byte)
 declare sub f(byval p as byte ptr)
 declare sub f(byval array as byte ptr)
@@ -40,11 +45,13 @@ type UDT
 	i as byte
 	p as byte ptr
 	array(0 to 10 - 1) as byte
+	array(0 to 10 - 1, 0 to 20 - 1) as byte
 end type
 
 extern i as const byte
 extern p as const byte ptr
 extern array(0 to 10 - 1) as const byte
+extern array(0 to 10 - 1, 0 to 20 - 1) as const byte
 declare sub f(byval i as const byte)
 declare sub f(byval p as const byte ptr)
 declare sub f(byval array as const byte ptr)
@@ -52,11 +59,13 @@ type UDT
 	i as const byte
 	p as const byte ptr
 	array(0 to 10 - 1) as const byte
+	array(0 to 10 - 1, 0 to 20 - 1) as const byte
 end type
 
 extern i as ubyte
 extern p as ubyte ptr
 extern array(0 to 10 - 1) as ubyte
+extern array(0 to 10 - 1, 0 to 20 - 1) as ubyte
 declare sub f(byval i as ubyte)
 declare sub f(byval p as ubyte ptr)
 declare sub f(byval array as ubyte ptr)
@@ -64,11 +73,13 @@ type UDT
 	i as ubyte
 	p as ubyte ptr
 	array(0 to 10 - 1) as ubyte
+	array(0 to 10 - 1, 0 to 20 - 1) as ubyte
 end type
 
 extern i as const ubyte
 extern p as const ubyte ptr
 extern array(0 to 10 - 1) as const ubyte
+extern array(0 to 10 - 1, 0 to 20 - 1) as const ubyte
 declare sub f(byval i as const ubyte)
 declare sub f(byval p as const ubyte ptr)
 declare sub f(byval array as const ubyte ptr)
@@ -76,6 +87,7 @@ type UDT
 	i as const ubyte
 	p as const ubyte ptr
 	array(0 to 10 - 1) as const ubyte
+	array(0 to 10 - 1, 0 to 20 - 1) as const ubyte
 end type
 const A = cptr(sub(byval as const ubyte), 1)
 

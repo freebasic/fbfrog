@@ -8,4 +8,4 @@
       tests/c/basetype/char.h
 [5/5] __FB_DOS__
       tests/c/basetype/char.h
-emitting: tests/c/basetype/char.bi (45 declarations, 0 TODOs)
+emitting: tests/c/basetype/char.bi (51 declarations, 0 TODOs)

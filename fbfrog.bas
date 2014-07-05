@@ -843,6 +843,7 @@ private function frogReadAPI( byval options as ASTNODE ptr ) as ASTNODE ptr
 	astSolveOutProcTypedefs( ast, ast )
 	astFixArrayParams( ast )
 	astTurnPlainZstringIntoByte( ast )
+	astTurnZstringArrayIntoFixedLengthZstring( ast )
 	astUnscopeDeclsNestedInStructs( ast )
 	astMakeNestedUnnamedStructsFbCompatible( ast )
 	if( frog.noconstants = FALSE ) then astTurnDefinesIntoConstants( ast )

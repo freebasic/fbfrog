@@ -89,6 +89,9 @@ function emitType overload _
 			s += emitAst( subtype )
 		case else
 			s += *datatypenames(dt)
+			if( (dt = TYPE_ZSTRING) and (subtype <> NULL) ) then
+				s += " * " + emitAst( subtype )
+			end if
 		end select
 
 		if( add_typeof ) then
@@ -98,7 +101,6 @@ function emitType overload _
 		'' Ignore most-inner PTR on function pointers -- in FB it's already
 		'' implied by writing AS SUB|FUNCTION( ... ).
 		if( dt = TYPE_PROC ) then
-			'assert( ptrcount > 0 )
 			if( ptrcount >= 1 ) then
 				ptrcount -= 1
 			end if
@@ -794,8 +796,8 @@ private function emitAst _
 		s = "{" + hSeparatedList( n, ", ", FALSE ) + "}"
 
 	case ASTCLASS_DIMENSION
-		if( n->head ) then
-			s += emitAst( n->head ) + " to " + emitAst( n->tail )
+		if( n->expr ) then
+			s += "0 to " + emitAst( n->expr, TRUE ) + " - 1"
 		else
 			s += "0 to ..."
 		end if
