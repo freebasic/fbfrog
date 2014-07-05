@@ -797,7 +797,11 @@ private function emitAst _
 
 	case ASTCLASS_DIMENSION
 		if( n->expr ) then
-			s += "0 to " + emitAst( n->expr, TRUE ) + " - 1"
+			if( n->expr->class = ASTCLASS_CONSTI ) then
+				s += "0 to " & (n->expr->vali - 1)
+			else
+				s += "0 to " + emitAst( n->expr, TRUE ) + " - 1"
+			end if
 		else
 			s += "0 to ..."
 		end if

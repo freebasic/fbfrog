@@ -10,8 +10,8 @@ enum
 	XOR_ = 1 + OR_
 end enum
 
-extern     array1(0 to 1 - 1) as long
-dim shared array1(0 to 1 - 1) as long
+extern     array1(0 to 0) as long
+dim shared array1(0 to 0) as long
 
 #define A1 INT_(1)
 
