@@ -1093,44 +1093,6 @@ private function hParseMacroCall _
 	function = x - 1
 end function
 
-private function hStringify _
-	( _
-		byval arg as integer, _
-		byval argbegin as integer ptr, _
-		byval argend as integer ptr, _
-		byval argcount as integer _
-	) as string
-
-	'' Turn this macro argument's tokens into a string and
-	'' insert it as string literal
-	dim as string s
-
-	assert( (arg >= 0) and (arg < argcount) )
-	for i as integer = argbegin[arg] to argend[arg]
-		if( tkGetFlags( i ) and TKFLAG_BEHINDSPACE ) then
-			s += " "
-		end if
-
-		select case as const( tkGet( i ) )
-		case TK_ID       : s += *tkSpellId( i )
-		case TK_DECNUM   : s += *tkGetText( i )
-		case TK_HEXNUM   : s += "0x" + *tkGetText( i )
-		case TK_OCTNUM   : s += "0" + *tkGetText( i )
-		case TK_DECFLOAT : s += *tkGetText( i )
-		case TK_STRING   : s += """" + *tkGetText( i ) + """"
-		case TK_CHAR     : s += "'" + *tkGetText( i ) + "'"
-		case TK_WSTRING  : s += "L""" + *tkGetText( i ) + """"
-		case TK_WCHAR    : s += "L'" + *tkGetText( i ) + "'"
-		case TK_EXCL to TK_TILDE, KW__C_FIRST to KW__C_LAST
-			s += *tkInfoText( tkGet( i ) )
-		case else
-			tkOops( i, "can't #stringify this token" )
-		end select
-	next
-
-	function = s
-end function
-
 private sub hTryMergeTokens _
 	( _
 		byval l as integer, _
@@ -1429,7 +1391,8 @@ private function hInsertMacroExpansion _
 				var arg = astLookupMacroParam( macro, tkSpellId( x + 1 ) )
 				if( arg >= 0 ) then
 					'' Remove #param, and insert stringify result instead
-					tkFold( x, x + 1, TK_STRING, hStringify( arg, argbegin, argend, argcount ) )
+					assert( (arg >= 0) and (arg < argcount) )
+					tkFold( x, x + 1, TK_STRING, tkSpell( argbegin[arg], argend[arg] ) )
 				end if
 			end if
 		end if
@@ -1567,7 +1530,7 @@ private function hInsertMacroExpansion _
 						tkOops( x, "## merge operator at end of macro body, missing operand to merge with" )
 					end if
 
-					tkOops( x, "## merge operator cannot merge '" + tkMakePrettyCTokenText( x - 1 ) + "' and '" + tkMakePrettyCTokenText( x + 1 ) + "'" )
+					tkOops( x, "## merge operator cannot merge '" + tkSpell( x - 1 ) + "' and '" + tkSpell( x + 1 ) + "'" )
 				end if
 
 				tkFold( x - 1, x + 1, mergetk, mergetext )

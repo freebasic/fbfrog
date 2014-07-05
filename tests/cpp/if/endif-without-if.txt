@@ -6,5 +6,5 @@ tests/cpp/if/endif-without-if.h(2): #endif without #if
        ^
     3: 
 context as seen by fbfrog:
-    #endif
-    ^~~~~~
+    [ppendif]
+    ^~~~~~~~~

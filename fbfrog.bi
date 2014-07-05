@@ -405,7 +405,6 @@ declare function tkInfoPretty( byval tk as integer ) as string
 
 declare sub tkInit( )
 declare sub tkEnd( )
-declare function tkDumpBasic( byval id as integer, byval text as zstring ptr ) as string
 declare function hDumpComment( byval comment as zstring ptr ) as string
 declare function tkDumpOne( byval x as integer ) as string
 declare sub tkDump( )
@@ -467,9 +466,8 @@ declare sub tkRemoveAllOf( byval id as integer, byval text as zstring ptr )
 declare sub tkApplyRemoves( )
 declare sub tkRemoveEOLs( )
 declare sub tkTurnCPPTokensIntoCIds( )
-declare function hMakePrettyCTokenText( byval id as integer, byval text as zstring ptr ) as string
-declare function tkMakePrettyCTokenText( byval x as integer ) as string
-declare function tkToCText( byval first as integer, byval last as integer ) as string
+declare function tkSpell overload( byval x as integer ) as string
+declare function tkSpell overload( byval first as integer, byval last as integer ) as string
 declare function hSkipToTK_END( byval x as integer ) as integer
 declare function hSkipConstruct( byval x as integer ) as integer
 declare function tkReport( byval x as integer, byval message as zstring ptr ) as string

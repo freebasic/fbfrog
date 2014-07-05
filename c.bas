@@ -793,7 +793,7 @@ private function cDefine( ) as ASTNODE ptr
 		if( tkGet( x ) <> TK_END ) then
 			var errorbegin = x
 			x = hSkipToTK_END( bodybegin )
-			cError( "only the beginning of the #define body could be parsed as expression, but not the rest: '" + tkToCText( errorbegin, x - 1 ) + "'" )
+			cError( "only the beginning of the #define body could be parsed as expression, but not the rest: '" + tkSpell( errorbegin, x - 1 ) + "'" )
 		end if
 	end if
 
@@ -1703,7 +1703,7 @@ private function cBody( byval body as integer ) as ASTNODE ptr
 			'' Skip current construct and preserve its tokens in
 			'' an UNKNOWN node
 			x = hSkipConstruct( begin )
-			t = astNew( ASTCLASS_UNKNOWN, tkToCText( begin, x - 1 ) )
+			t = astNew( ASTCLASS_UNKNOWN, tkSpell( begin, x - 1 ) )
 			astSetComment( t, errmsg )
 
 			errmsg = ""

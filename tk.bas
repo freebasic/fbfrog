@@ -213,7 +213,7 @@ type ONETOKEN
 	'' rest: NULL
 	text		as zstring ptr
 
-	'' TK_PP* high level tokens
+	'' TK_PPDEFINE
 	ast		as ASTNODE ptr
 
 	location	as TKLOCATION   '' where this token was found
@@ -261,7 +261,7 @@ sub tkEnd( )
 	deallocate( tk.p )
 end sub
 
-function tkDumpBasic( byval id as integer, byval text as zstring ptr ) as string
+private function tkDumpBasic( byval id as integer, byval text as zstring ptr ) as string
 	var s = "["
 	if( tk_info(id).debug ) then
 		s += *tk_info(id).debug
@@ -734,7 +734,7 @@ end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-private function hMakePrettyCStrLit( byval text as zstring ptr ) as string
+private function hSpellStrLit( byval text as zstring ptr ) as string
 	dim s as string
 
 	do
@@ -770,42 +770,58 @@ private function hMakePrettyCStrLit( byval text as zstring ptr ) as string
 	function = s
 end function
 
-function hMakePrettyCTokenText( byval id as integer, byval text as zstring ptr ) as string
+function tkSpell overload( byval x as integer ) as string
+	dim as string s
+
+	var id = tkGet( x )
+	var text = tkGetText( x )
+	var flags = tkGetFlags( x )
+
 	select case as const( id )
-	case TK_PPMERGE   : function = "##"
-	case TK_PPENDIF   : function = "#endif"
-	case TK_DECNUM    : function = *text
-	case TK_HEXNUM    : function = "0x" + *text
-	case TK_OCTNUM    : function = "0" + *text
-	case TK_DECFLOAT  : function = *text
-	case TK_STRING    : function = """" + hMakePrettyCStrLit( *text ) + """"
-	case TK_CHAR      : function = "'" + hMakePrettyCStrLit( *text ) + "'"
-	case TK_WSTRING   : function = "L""" + hMakePrettyCStrLit( *text ) + """"
-	case TK_WCHAR     : function = "L'" + hMakePrettyCStrLit( *text ) + "'"
-	case TK_EXCL to TK_TILDE : function = *tk_info(id).text
-	case TK_ID               : function = *text
-	case KW__C_FIRST to KW__C_LAST, OPT_NOMERGE to OPT_RENAMETAG
-		function = *tk_info(id).text
-	case TK_ARGSFILE  : function = "@" + *text
+	case TK_PPDEFINE
+		var n = tkGetAst( x )
+		assert( n->class = ASTCLASS_PPDEFINE )
+		s = "#define " + *n->text
+		if( n->paramcount >= 0 ) then
+			s += "("
+			var param = n->head
+			while( param )
+				s += *param->text
+				param = param->next
+				if( param ) then
+					s += ", "
+				end if
+			wend
+			s += ")"
+		end if
+		s += " "
+
+	case TK_PPMERGE  : s = "##"
+	case TK_DECNUM   : s = *text
+	case TK_HEXNUM   : s = "0x" + *text
+	case TK_OCTNUM   : s = "0" + *text
+	case TK_DECFLOAT : s = *text
+	case TK_STRING   : s = """"  + hSpellStrLit( *text ) + """"
+	case TK_CHAR     : s = "'"   + hSpellStrLit( *text ) + "'"
+	case TK_WSTRING  : s = "L""" + hSpellStrLit( *text ) + """"
+	case TK_WCHAR    : s = "L'"  + hSpellStrLit( *text ) + "'"
+	case TK_ID       : s = *text
+	case TK_ARGSFILE : s = "@" + *text
+
+	case TK_EXCL to TK_TILDE, KW__C_FIRST to KW__C_LAST, OPT_NOMERGE to OPT_RENAMETAG
+		s = *tk_info(id).text
+
 	case else
-		function = tkDumpBasic( id, text )
+		s = tkDumpBasic( id, text )
 	end select
+
+	function = s
 end function
 
-function tkMakePrettyCTokenText( byval x as integer ) as string
-	var t = tkGetAst( x )
-	if( t ) then
-		function = astDumpInline( t )
-	else
-		function = hMakePrettyCTokenText( tkGet( x ), tkGetText( x ) )
-	end if
-end function
-
-function tkToCText( byval first as integer, byval last as integer ) as string
+function tkSpell overload( byval first as integer, byval last as integer ) as string
 	dim as string s
 
 	for i as integer = first to last
-
 		if( i > first ) then
 			var add_space = ((tkGetFlags( i ) and TKFLAG_BEHINDSPACE) <> 0)
 			add_space or= (tkGet( i - 1 ) >= TK_ID) and (tkGet( i ) >= TK_ID)
@@ -814,46 +830,12 @@ function tkToCText( byval first as integer, byval last as integer ) as string
 			end if
 		end if
 
-		var id = tkGet( i )
-		var text = tkGetText( i )
-
-		select case as const( id )
-		case TK_PPDEFINE
-			s += "#define"
-
-			var n = tkGetAst( i )
-			assert( n->class = ASTCLASS_PPDEFINE )
-			s += " " + *n->text
-
-			if( n->paramcount >= 0 ) then
-				s += "("
-				var param = n->head
-				while( param )
-					s += *param->text
-					param = param->next
-					if( param ) then
-						s += ", "
-					end if
-				wend
-				s += ")"
-			end if
-			s += " "
-
+		select case( tkGet( i ) )
 		case TK_BEGIN
-		case TK_END      : s += !"\n"
-		case TK_DECNUM   : s += *text
-		case TK_HEXNUM   : s += "0x" + *text
-		case TK_OCTNUM   : s += "0" + *text
-		case TK_DECFLOAT : s += *text
-		case TK_STRING   : s += """" + hMakePrettyCStrLit( *text ) + """"
-		case TK_CHAR     : s += "'" + hMakePrettyCStrLit( *text ) + "'"
-		case TK_WSTRING  : s += "L""" + hMakePrettyCStrLit( *text ) + """"
-		case TK_WCHAR    : s += "L'" + hMakePrettyCStrLit( *text ) + "'"
-		case TK_ID       : s += *text
-		case TK_EXCL to TK_TILDE, KW__C_FIRST to KW__C_LAST
-			s += *tk_info(id).text
+		case TK_END
+			s += !"\n"
 		case else
-			s += tkDumpBasic( id, text )
+			s += tkSpell( i )
 		end select
 	next
 
@@ -940,14 +922,14 @@ private function hReportConstructTokens _
 			continue for
 		end if
 
-		if( len( text ) > 0 ) then
+		if( (len( text ) > 0) and (right( text, 1 ) <> " ") ) then
 			text += " "
 		end if
 
 		if( i = x ) then
 			xcolumn = len( text )
 		end if
-		text += tkMakePrettyCTokenText( i )
+		text += tkSpell( i )
 		if( i = x ) then
 			xlength = len( text ) - xcolumn
 		end if
@@ -1009,7 +991,7 @@ sub tkOops( byval x as integer, byval message as zstring ptr )
 end sub
 
 function tkButFound( byval x as integer ) as string
-	function = " but found '" + hMakePrettyCTokenText( tkGet( x ), tkGetText( x ) ) + "'"
+	function = " but found '" + tkSpell( x ) + "'"
 end function
 
 function tkMakeExpectedMessage( byval x as integer, byval something as zstring ptr ) as string
