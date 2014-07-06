@@ -1093,144 +1093,6 @@ private function hParseMacroCall _
 	function = x - 1
 end function
 
-private sub hTryMergeTokens _
-	( _
-		byval l as integer, _
-		byval r as integer, _
-		byref mergetk as integer, _
-		byref mergetext as string _
-	)
-
-	'' Try to merge the two tokens
-	select case( tkGet( l ) )
-	case is >= TK_ID
-		select case( tkGet( r ) )
-		'' id ## id -> id/keyword
-		case is >= TK_ID
-			mergetext = *tkSpellId( l ) + *tkSpellId( r )
-			mergetk = lexIdentifyCKeyword( mergetext )
-			'' If it's a KW_*, no need to store the text
-			if( mergetk <> TK_ID ) then
-				mergetext = ""
-			end if
-
-		'' id ## decnum -> id
-		case TK_DECNUM
-			mergetk = TK_ID
-			mergetext = *tkSpellId( l ) + *tkGetText( r )
-
-		'' id ## hexnum -> id
-		case TK_HEXNUM
-			mergetk = TK_ID
-			mergetext = *tkSpellId( l ) + "0x" + *tkGetText( r )
-
-		'' id ## octnum -> id
-		case TK_OCTNUM
-			mergetk = TK_ID
-			mergetext = *tkSpellId( l ) + "0" + *tkGetText( r )
-
-		'' L ## "string" -> L"wstring"
-		case TK_STRING
-			if( *tkSpellId( l ) = "L" ) then
-				mergetk = TK_WSTRING
-				mergetext = *tkGetText( r )
-			end if
-
-		'' L ## 'c' -> L'w'
-		case TK_CHAR
-			if( *tkSpellId( l ) = "L" ) then
-				mergetk = TK_WCHAR
-				mergetext = *tkGetText( r )
-			end if
-		end select
-
-	case TK_DECNUM
-		select case( tkGet( r ) )
-		'' decnum ## id -> hexnum (0##xFF)
-		case is >= TK_ID
-			var ltext = *tkGetText( l )
-			var rtext = *tkSpellId( r )
-			'' lhs must be '0', rhs must start with 'x'
-			if( (ltext = "0") and (left( rtext, 1 ) = "x") ) then
-				'' Rest of rhs must be only hex digits, or empty
-				var hexdigits = right( rtext, len( rtext ) - 1 )
-				if( strContainsNonHexDigits( hexdigits ) = FALSE ) then
-					mergetk = TK_HEXNUM
-					mergetext = hexdigits
-				end if
-			end if
-
-		'' decnum ## decnum -> octnum (0##1), decnum (1##2)
-		case TK_DECNUM
-			var ltext = *tkGetText( l )
-			var rtext = *tkGetText( r )
-			if( ltext = "0" ) then
-				if( strContainsNonOctDigits( rtext ) = FALSE ) then
-					mergetk = TK_OCTNUM
-					mergetext = rtext
-				end if
-			else
-				mergetk = TK_DECNUM
-				mergetext = ltext + rtext
-			end if
-
-		'' decnum ## octnum -> octnum (0##01), decnum (1##01)
-		case TK_OCTNUM
-			var ltext = *tkGetText( l )
-			var rtext = *tkGetText( r )
-			if( ltext = "0" ) then
-				mergetk = TK_OCTNUM
-				mergetext = rtext
-			else
-				mergetk = TK_DECNUM
-				mergetext = ltext + "0" + rtext
-			end if
-
-		end select
-
-	case TK_HEXNUM
-		select case( tkGet( r ) )
-		'' hexnum ## id -> hexnum (0xAA##BB)
-		case is >= TK_ID
-			var rtext = tkSpellId( r )
-			if( strContainsNonHexDigits( rtext ) = FALSE ) then
-				mergetk = TK_HEXNUM
-				mergetext = *tkGetText( l ) + *rtext
-			end if
-
-		'' hexnum ## decnum -> hexnum (0xFF##123)
-		case TK_DECNUM
-			mergetk = TK_HEXNUM
-			mergetext = *tkGetText( l ) + *tkGetText( r )
-
-		'' hexnum ## octnum -> hexnum (0xFF##01)
-		case TK_OCTNUM
-			mergetk = TK_HEXNUM
-			mergetext = *tkGetText( l ) + "0" + *tkGetText( r )
-
-		end select
-
-	case TK_OCTNUM
-		select case( tkGet( r ) )
-		'' octnum ## decnum -> octnum (01##2)
-		case TK_DECNUM
-			var rtext = tkGetText( r )
-			if( strContainsNonOctDigits( rtext ) = FALSE ) then
-				mergetk = TK_OCTNUM
-				mergetext = *tkGetText( l ) + *rtext
-			end if
-
-		'' octnum ## octnum -> octnum (01##01)
-		case TK_OCTNUM
-			mergetk = TK_OCTNUM
-			mergetext = *tkGetText( l ) + "0" + *tkGetText( r )
-
-		end select
-
-	end select
-
-end sub
-
 '' Copy a #define body into some other place, still enclosed in TK_BEGIN/TK_END
 private sub hCopyMacroBody( byval x as integer, byval xmacro as integer )
 	assert( tkGet( xmacro ) = TK_PPDEFINE )
@@ -1508,34 +1370,46 @@ private function hInsertMacroExpansion _
 				end if
 			end if
 
+			assert( tkGet( x ) = TK_PPMERGE )
+			var l = x - 1
+			var r = x + 1
+
 			'' If one operand was an empty arg, then no merging needs to be done,
 			'' the other operand can just be preserved as-is; or in case both were
 			'' empty, the ## just disappears.
 
 			'' Non-empty on both sides?
-			assert( tkGet( x ) = TK_PPMERGE )
-			if( (tkGet( x - 1 ) <> TK_ARGEND) and _
-			    (tkGet( x + 1 ) <> TK_ARGBEGIN) ) then
-				dim as integer mergetk = -1
-				dim as string mergetext
+			if( (tkGet( l ) <> TK_ARGEND) and (tkGet( r ) <> TK_ARGBEGIN) ) then
+				if( tkGet( l ) = TK_BEGIN ) then
+					tkOops( x, "## merge operator at beginning of macro body, missing operand to merge with" )
+				end if
+				if( tkGet( r ) = TK_END ) then
+					tkOops( x, "## merge operator at end of macro body, missing operand to merge with" )
+				end if
 
-				hTryMergeTokens( x - 1, x + 1, mergetk, mergetext )
+				'' Combine the original text representation of both tokens
+				var mergetext = tkSpell( l ) + tkSpell( r )
 
-				if( mergetk < 0 ) then
-					if( tkGet( x - 1 ) = TK_BEGIN ) then
-						tkOops( x, "## merge operator at beginning of macro body, missing operand to merge with" )
-					end if
+				'' and try to lex them
+				var y = tkGetCount( )
+				lexLoadC( y, sourcebufferFromZstring( "## merge operation", mergetext, tkGetLocation( x ) ), FALSE )
 
-					if( tkGet( x + 1 ) = TK_END ) then
-						tkOops( x, "## merge operator at end of macro body, missing operand to merge with" )
-					end if
-
+				'' That should have produced only 1 token. If it produced more, then the merge failed.
+				assert( tkGetCount( ) >= (y + 1) )
+				if( tkGetCount( ) > (y + 1) ) then
+					tkRemove( y, tkGetCount( ) - 1 )
 					tkOops( x, "## merge operator cannot merge '" + tkSpell( x - 1 ) + "' and '" + tkSpell( x + 1 ) + "'" )
 				end if
 
-				tkFold( x - 1, x + 1, mergetk, mergetext )
-				x -= 1
-				assert( tkGet( x ) = mergetk )
+				'' Remove the 3 (l ## r) tokens and insert the merged token in place of l
+				tkRemove( l, r )
+				y -= 3
+				x = l
+
+				tkCopy( x, y, y )
+				y += 1
+
+				tkRemove( y, y )
 			else
 				'' Just remove the '##'
 				tkRemove( x, x )
