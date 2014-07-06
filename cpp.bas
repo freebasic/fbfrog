@@ -2159,7 +2159,7 @@ sub cppMain( byval whitespace as integer, byval nomerge as integer )
 			end if
 
 			'' Skip over TK_BEGIN/TK_END macro body
-			x = hSkipToTK_END( x + 1 ) - 1
+			x = hSkipToTK_END( x + 1 )
 
 		case TK_PPUNDEF
 			if( skiplevel <> MAXPPSTACK ) then
