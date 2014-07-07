@@ -30,11 +30,8 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	(NULL, @"comment" ), _
 	(NULL, @"begininclude"), _
 	(NULL, @"endinclude"), _
-	(NULL, @"decnum"  ), _ '' Number literals
-	(NULL, @"hexnum"  ), _
-	(NULL, @"octnum"  ), _
-	(NULL, @"decfloat"), _
-	(NULL, @"string"  ), _ '' String literals
+	(NULL, @"number"  ), _ '' Number/string literals
+	(NULL, @"string"  ), _
 	(NULL, @"char"    ), _
 	(NULL, @"wstring" ), _
 	(NULL, @"wchar"   ), _
@@ -289,9 +286,17 @@ function tkDumpOne( byval x as integer ) as string
 	var p = tkAccess( x )
 	var s = str( x ) + " " + tkDumpBasic( p->id, p->text )
 
-	if( tkGetFlags( x ) and TKFLAG_BEHINDSPACE ) then s += " behindspace"
-	if( tkGetFlags( x ) and TKFLAG_NOEXPAND    ) then s += " noexpand"
-	if( tkGetFlags( x ) and TKFLAG_REMOVE      ) then s += " remove"
+	#macro checkFlag( a )
+		if( tkGetFlags( x ) and TKFLAG_##a ) then s += " " + lcase( #a, 1 )
+	#endmacro
+	checkFlag( BEHINDSPACE )
+	checkFlag( NOEXPAND )
+	checkFlag( REMOVE )
+	checkFlag( D )
+	checkFlag( F )
+	checkFlag( U )
+	checkFlag( L )
+	checkFlag( LL )
 
 	s += hDumpComment( p->comment )
 
@@ -796,11 +801,30 @@ function tkSpell overload( byval x as integer ) as string
 		end if
 		s += " "
 
+	case TK_NUMBER
+		if( flags and TKFLAG_HEX ) then
+			s += "0x"
+		elseif( flags and TKFLAG_OCT ) then
+			s += "0"
+		end if
+		s += *text
+
+		if( flags and TKFLAG_F ) then
+			s += "f"
+		elseif( flags and TKFLAG_D ) then
+			s += "d"
+		else
+			if( flags and TKFLAG_U ) then
+				s += "u"
+			end if
+			if( flags and TKFLAG_L ) then
+				s += "l"
+			elseif( flags and TKFLAG_LL ) then
+				s += "ll"
+			end if
+		end if
+
 	case TK_PPMERGE  : s = "##"
-	case TK_DECNUM   : s = *text
-	case TK_HEXNUM   : s = "0x" + *text
-	case TK_OCTNUM   : s = "0" + *text
-	case TK_DECFLOAT : s = *text
 	case TK_STRING   : s = """"  + hSpellStrLit( *text ) + """"
 	case TK_CHAR     : s = "'"   + hSpellStrLit( *text ) + "'"
 	case TK_WSTRING  : s = "L""" + hSpellStrLit( *text ) + """"

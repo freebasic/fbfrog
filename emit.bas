@@ -618,12 +618,33 @@ private function emitAst _
 		end if
 
 	case ASTCLASS_CONSTI
+		dim as string suffix
+		dim as integer need_rparen
+
+		select case( typeGetDtAndPtr( n->dtype ) )
+		case TYPE_CLONG
+			s += "cast(clong, "
+			need_rparen = TRUE
+		case TYPE_CULONG
+			s += "cast(culong, "
+			need_rparen = TRUE
+		case TYPE_LONGINT
+			suffix = "ll"
+		case TYPE_ULONGINT
+			suffix = "ull"
+		end select
+
 		if( n->attrib and ASTATTRIB_OCT ) then
 			s += "&o" + oct( n->vali )
 		elseif( n->attrib and ASTATTRIB_HEX ) then
 			s += "&h" + hex( n->vali )
 		else
 			s += str( n->vali )
+		end if
+
+		s += suffix
+		if( need_rparen ) then
+			s += ")"
 		end if
 
 	case ASTCLASS_CONSTF

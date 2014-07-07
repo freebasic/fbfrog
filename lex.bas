@@ -76,16 +76,17 @@ private sub lexOops( byref message as string )
 	oopsLocation( @lex.location, message )
 end sub
 
-private sub hSetLocation( )
+private sub hSetLocation( byval flags as integer = 0 )
 	lex.location.length = (lex.i - lex.bol) - lex.location.column
 	tkSetLocation( lex.x, @lex.location )
 	if( lex.behindspace ) then
-		tkAddFlags( lex.x, TKFLAG_BEHINDSPACE )
+		flags or= TKFLAG_BEHINDSPACE
 	end if
+	tkAddFlags( lex.x, flags )
 	lex.x += 1
 end sub
 
-private sub hAddTextToken( byval tk as integer, byval begin as ubyte ptr )
+private sub hAddTextToken( byval tk as integer, byval begin as ubyte ptr, byval flags as integer = 0 )
 	'' Insert a null terminator temporarily
 	var old = lex.i[0]
 	lex.i[0] = 0
@@ -101,7 +102,7 @@ private sub hAddTextToken( byval tk as integer, byval begin as ubyte ptr )
 	end if
 
 	tkInsert( lex.x, tk, begin )
-	hSetLocation( )
+	hSetLocation( flags )
 
 	lex.i[0] = old
 end sub
@@ -244,31 +245,24 @@ end sub
 private sub hReadNumber( )
 	'' Number literal parsing starting at '0'-'9' or '.'
 	'' These are covered:
-	''    123
-	''    .123       (float)
-	''    123.123    (float)
+	''    123        (decimal)
+	''    .123       (decimal float)
+	''    123.123    (decimal float)
 	''    0xAABBCCDD (hexadecimal)
 	''    010        (octal)
 	'' There also is some simple float exponent and type suffix parsing.
-	'' TODO: hex floats?
-	''
-	'' In case of oct/hex literals only the important part of the number
-	'' literals is stored into the token, so it can easily be translated
-	'' to FB, for example:
-	''    0xAABBCCDD -> TK_HEXLIT, AABBCCDD -> &hAABBCCDD
-	''    010        -> TK_OCTLIT, 10       -> &o10
 
 	var numbase = 10
-	var id = TK_DECNUM
+	var flags = 0
 	if( lex.i[0] = CH_0 ) then '' 0
 		if( lex.i[1] = CH_L_X ) then '' 0x
 			lex.i += 2
 			numbase = 16
-			id = TK_HEXNUM
+			flags or= TKFLAG_HEX
 		elseif( (lex.i[1] >= CH_0) and (lex.i[1] <= CH_9) ) then
 			lex.i += 1
 			numbase = 8
-			id = TK_OCTNUM
+			flags or= TKFLAG_OCT
 		end if
 	end if
 
@@ -329,20 +323,25 @@ private sub hReadNumber( )
 
 	'' Type suffixes
 	if( found_dot ) then
-		if( id <> TK_DECNUM ) then
+		if( flags and (TKFLAG_HEX or TKFLAG_OCT) ) then
 			lexOops( "non-decimal floats not supported" )
 		end if
-		id = TK_DECFLOAT
 
 		select case( lex.i[0] )
-		case CH_F, CH_L_F, _    '' 'F' | 'f'
-		     CH_D, CH_L_D       '' 'D' | 'd'
+		case CH_F, CH_L_F    '' 'F' | 'f'
 			lex.i += 1
+			flags or= TKFLAG_F
+		case CH_D, CH_L_D    '' 'D' | 'd'
+			lex.i += 1
+			flags or= TKFLAG_D
+		case else
+			flags or= TKFLAG_D
 		end select
 	else
 		select case( lex.i[0] )
 		case CH_U, CH_L_U       '' 'U' | 'u'
 			lex.i += 1
+			flags or= TKFLAG_U
 		end select
 
 		select case( lex.i[0] )
@@ -351,11 +350,14 @@ private sub hReadNumber( )
 			select case( lex.i[0] )
 			case CH_L, CH_L_L       '' 'L' | 'l'
 				lex.i += 1
+				flags or= TKFLAG_LL
+			case else
+				flags or= TKFLAG_L
 			end select
 		end select
 	end if
 
-	hAddTextToken( id, begin )
+	hAddTextToken( TK_NUMBER, begin, flags )
 end sub
 
 private function hReadEscapeSequence( ) as ulongint

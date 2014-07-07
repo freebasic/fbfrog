@@ -1,5 +1,7 @@
 #pragma once
 
+#include once "crt/long.bi"
+
 extern "C"
 
 '' @fbfrog -whitespace -nonamefixup
@@ -23,10 +25,10 @@ const A16 = 1.123
 const A17 = 10
 const A18 = 10
 const A19 = 1
-const A20 = 1
-const A21 = 1
-const A22 = 1
-const A23 = 1
+const A20 = cast(clong, 1)
+const A21 = cast(culong, 1)
+const A22 = 1ll
+const A23 = 1ull
 
 #define B1 "foo"
 #define B2 wstr("foo")

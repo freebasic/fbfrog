@@ -376,24 +376,48 @@ end sub
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 '' #if expression parser used by cppMain()
 
-function hNumberLiteral( byval x as integer ) as ASTNODE ptr
-	dim as ASTNODE ptr n
+function hNumberLiteral( byval x as integer, byval is_cpp as integer ) as ASTNODE ptr
+	assert( tkGet( x ) = TK_NUMBER )
+	var tkflags = tkGetFlags( x )
+	var text = *tkGetText( x )
 
-	select case( tkGet( x ) )
-	case TK_DECNUM
-		n = astNewCONSTI( vallng( *tkGetText( x ) ), TYPE_LONGINT )
-	case TK_HEXNUM
-		n = astNewCONSTI( vallng( "&h" + *tkGetText( x ) ), TYPE_LONGINT )
-		n->attrib or= ASTATTRIB_HEX
-	case TK_OCTNUM
-		n = astNewCONSTI( vallng( "&o" + *tkGetText( x ) ), TYPE_LONGINT )
-		n->attrib or= ASTATTRIB_OCT
-	case TK_DECFLOAT
-		n = astNewCONSTF( val( *tkGetText( x ) ), TYPE_DOUBLE )
-	case else
-		assert( FALSE )
-	end select
+	if( tkflags and (TKFLAG_D or TKFLAG_F) ) then
+		return astNewCONSTF( val( text ), _
+			iif( tkflags and TKFLAG_F, TYPE_SINGLE, TYPE_DOUBLE ) )
+	end if
 
+	var astattrib = 0
+	if( tkflags and TKFLAG_HEX ) then
+		text = "&h" + text
+		astattrib or= ASTATTRIB_HEX
+	elseif( tkflags and TKFLAG_OCT ) then
+		text = "&o" + text
+		astattrib or= ASTATTRIB_OCT
+	end if
+
+	dim as longint v
+	if( tkflags and TKFLAG_U ) then
+		v = valulng( text )
+	else
+		v = vallng( text )
+	end if
+
+	dim as integer dtype
+
+	'' In CPP expressions, number literals are treated as 64bit signed or
+	'' unsigned, no matter what dtype
+	if( is_cpp ) then
+		dtype = iif( tkflags and TKFLAG_U, TYPE_ULONGINT, TYPE_LONGINT )
+	elseif( tkflags and TKFLAG_L ) then
+		dtype = iif( tkflags and TKFLAG_U, TYPE_CULONG, TYPE_CLONG )
+	elseif( tkflags and TKFLAG_LL ) then
+		dtype = iif( tkflags and TKFLAG_U, TYPE_ULONGINT, TYPE_LONGINT )
+	else
+		dtype = iif( tkflags and TKFLAG_U, TYPE_ULONG, TYPE_LONG )
+	end if
+
+	var n = astNewCONSTI( v, dtype )
+	n->attrib or= astattrib
 	function = n
 end function
 
@@ -481,8 +505,8 @@ private function cppExpression _
 			x += 1
 
 		'' Number literals
-		case TK_OCTNUM, TK_DECNUM, TK_HEXNUM, TK_DECFLOAT
-			a = astTakeLoc( hNumberLiteral( x ), x )
+		case TK_NUMBER
+			a = astTakeLoc( hNumberLiteral( x, TRUE ), x )
 			x += 1
 
 		'' Identifier
@@ -1578,6 +1602,70 @@ private function hParseIfCondition( byval x as integer ) as ASTNODE ptr
 end function
 
 ''
+'' Pre-calculate the result data types of UOPs/BOPs in a CPP expression
+''
+'' For the ?: operator, the result dtype depends on the l/r operands but at the
+'' same time only one of them must be evaluated. Thus it makes sense to handle
+'' this in 2 separate steps.
+''
+'' This isn't a problem with &&/||, the relational BOPs and the unary ! because
+'' they always produce a signed int.
+''
+private sub cppEvalResultDtypes( byval n as ASTNODE ptr )
+	select case( n->class )
+	case ASTCLASS_CONSTI
+		assert( (n->dtype = TYPE_LONGINT) or (n->dtype = TYPE_ULONGINT) )
+
+	case ASTCLASS_CLOGNOT
+		cppEvalResultDtypes( n->head )
+
+		'' ! operator always produces a signed int
+		n->dtype = TYPE_LONGINT
+
+	case ASTCLASS_NOT, ASTCLASS_NEGATE, ASTCLASS_UNARYPLUS
+		cppEvalResultDtypes( n->head )
+		n->dtype = n->head->dtype
+
+	case ASTCLASS_OR, ASTCLASS_XOR, ASTCLASS_AND, _
+	     ASTCLASS_SHL, ASTCLASS_SHR, _
+	     ASTCLASS_ADD, ASTCLASS_SUB, _
+	     ASTCLASS_MUL, ASTCLASS_DIV, ASTCLASS_MOD, _
+	     ASTCLASS_IIF
+		if( n->class = ASTCLASS_IIF ) then
+			cppEvalResultDtypes( n->expr )
+		end if
+		cppEvalResultDtypes( n->head )
+		cppEvalResultDtypes( n->tail )
+
+		'' If one operand is unsigned, the result is too.
+		if( (n->head->dtype = TYPE_ULONGINT) or _
+		    (n->tail->dtype = TYPE_ULONGINT) ) then
+			n->dtype = TYPE_ULONGINT
+		else
+			n->dtype = TYPE_LONGINT
+		end if
+
+	case ASTCLASS_CEQ, ASTCLASS_CNE, _
+	     ASTCLASS_CLT, ASTCLASS_CLE, _
+	     ASTCLASS_CGT, ASTCLASS_CGE, _
+	     ASTCLASS_CLOGOR, ASTCLASS_CLOGAND
+		cppEvalResultDtypes( n->head )
+		cppEvalResultDtypes( n->tail )
+
+		'' Relational BOPs and &&/|| always produce a signed int
+		n->dtype = TYPE_LONGINT
+
+	case ASTCLASS_ID, ASTCLASS_CDEFINED
+		'' Unexpanded identifier -> literal 0
+		'' defined()  ->  1|0
+		n->dtype = TYPE_LONGINT
+
+	case else
+		astOops( n, "couldn't evaluate #if condition" )
+	end select
+end sub
+
+''
 '' Evaluation of CPP #if condition expressions
 ''
 '' - directly evaluating instead of doing complex node folding, because that's
@@ -1589,18 +1677,19 @@ end function
 ''
 '' - taking care to produce C's 1|0 boolean values, instead of FB's -1|0
 ''
-private function cppEval( byval n as ASTNODE ptr ) as longint
-	if( n = NULL ) then exit function
-
+private sub cppEval( byref v as ASTNODE, byval n as ASTNODE ptr )
 	select case( n->class )
-	case ASTCLASS_CONSTI  : function = n->vali
+	case ASTCLASS_CONSTI
+		assert( (n->dtype = TYPE_LONGINT) or (n->dtype = TYPE_ULONGINT) )
+		v.vali = n->vali
 
-	case ASTCLASS_CLOGNOT   : function =   -(cppEval( n->head ) = 0)
-	case ASTCLASS_NOT       : function = not cppEval( n->head )
-	case ASTCLASS_NEGATE    : function =   - cppEval( n->head )
-	case ASTCLASS_UNARYPLUS : function =     cppEval( n->head )
-	case ASTCLASS_CLOGOR    : function =   -(cppEval( n->head ) orelse  cppEval( n->tail ))
-	case ASTCLASS_CLOGAND   : function =   -(cppEval( n->head ) andalso cppEval( n->tail ))
+	case ASTCLASS_CLOGNOT, ASTCLASS_NOT, ASTCLASS_NEGATE, ASTCLASS_UNARYPLUS
+		cppEval( v, n->head )
+		select case( n->class )
+		case ASTCLASS_CLOGNOT : v.vali =   -(v.vali = 0)
+		case ASTCLASS_NOT     : v.vali = not v.vali
+		case ASTCLASS_NEGATE  : v.vali =   - v.vali
+		end select
 
 	case ASTCLASS_OR, ASTCLASS_XOR, ASTCLASS_AND, _
 	     ASTCLASS_CEQ, ASTCLASS_CNE, _
@@ -1609,38 +1698,85 @@ private function cppEval( byval n as ASTNODE ptr ) as longint
 	     ASTCLASS_SHL, ASTCLASS_SHR, _
 	     ASTCLASS_ADD, ASTCLASS_SUB, _
 	     ASTCLASS_MUL, ASTCLASS_DIV, ASTCLASS_MOD
-		var l = cppEval( n->head )
-		var r = cppEval( n->tail )
+		dim as ASTNODE r
+		cppEval( v, n->head )
+		cppEval( r, n->tail )
 
 		select case( n->class )
 		case ASTCLASS_DIV, ASTCLASS_MOD
-			if( r = 0 ) then
+			if( r.vali = 0 ) then
 				astOops( n, "division by zero" )
 			end if
 		end select
 
-		select case( n->class )
-		case ASTCLASS_OR  : function =   l or  r
-		case ASTCLASS_XOR : function =   l xor r
-		case ASTCLASS_AND : function =   l and r
-		case ASTCLASS_CEQ : function = -(l =   r)
-		case ASTCLASS_CNE : function = -(l <>  r)
-		case ASTCLASS_CLT : function = -(l <   r)
-		case ASTCLASS_CLE : function = -(l <=  r)
-		case ASTCLASS_CGT : function = -(l >   r)
-		case ASTCLASS_CGE : function = -(l >=  r)
-		case ASTCLASS_SHL : function =   l shl r
-		case ASTCLASS_SHR : function =   l shr r
-		case ASTCLASS_ADD : function =   l +   r
-		case ASTCLASS_SUB : function =   l -   r
-		case ASTCLASS_MUL : function =   l *   r
-		case ASTCLASS_DIV : function =   l \   r
-		case ASTCLASS_MOD : function =   l mod r
-		case else         : assert( FALSE )
-		end select
+		'' If one operand is unsigned, promote both operands to unsigned
+		if( (v.dtype = TYPE_ULONGINT) or (r.dtype = TYPE_ULONGINT) ) then
+			select case( n->class )
+			case ASTCLASS_OR  : v.vali =   cunsg( v.vali ) or  cunsg( r.vali )
+			case ASTCLASS_XOR : v.vali =   cunsg( v.vali ) xor cunsg( r.vali )
+			case ASTCLASS_AND : v.vali =   cunsg( v.vali ) and cunsg( r.vali )
+			case ASTCLASS_CEQ : v.vali = -(cunsg( v.vali ) =   cunsg( r.vali ))
+			case ASTCLASS_CNE : v.vali = -(cunsg( v.vali ) <>  cunsg( r.vali ))
+			case ASTCLASS_CLT : v.vali = -(cunsg( v.vali ) <   cunsg( r.vali ))
+			case ASTCLASS_CLE : v.vali = -(cunsg( v.vali ) <=  cunsg( r.vali ))
+			case ASTCLASS_CGT : v.vali = -(cunsg( v.vali ) >   cunsg( r.vali ))
+			case ASTCLASS_CGE : v.vali = -(cunsg( v.vali ) >=  cunsg( r.vali ))
+			case ASTCLASS_SHL : v.vali =   cunsg( v.vali ) shl cunsg( r.vali )
+			case ASTCLASS_SHR : v.vali =   cunsg( v.vali ) shr cunsg( r.vali )
+			case ASTCLASS_ADD : v.vali =   cunsg( v.vali ) +   cunsg( r.vali )
+			case ASTCLASS_SUB : v.vali =   cunsg( v.vali ) -   cunsg( r.vali )
+			case ASTCLASS_MUL : v.vali =   cunsg( v.vali ) *   cunsg( r.vali )
+			case ASTCLASS_DIV : v.vali =   cunsg( v.vali ) \   cunsg( r.vali )
+			case ASTCLASS_MOD : v.vali =   cunsg( v.vali ) mod cunsg( r.vali )
+			case else         : assert( FALSE )
+			end select
+		else
+			select case( n->class )
+			case ASTCLASS_OR  : v.vali =   v.vali or  r.vali
+			case ASTCLASS_XOR : v.vali =   v.vali xor r.vali
+			case ASTCLASS_AND : v.vali =   v.vali and r.vali
+			case ASTCLASS_CEQ : v.vali = -(v.vali =   r.vali)
+			case ASTCLASS_CNE : v.vali = -(v.vali <>  r.vali)
+			case ASTCLASS_CLT : v.vali = -(v.vali <   r.vali)
+			case ASTCLASS_CLE : v.vali = -(v.vali <=  r.vali)
+			case ASTCLASS_CGT : v.vali = -(v.vali >   r.vali)
+			case ASTCLASS_CGE : v.vali = -(v.vali >=  r.vali)
+			case ASTCLASS_SHL : v.vali =   v.vali shl r.vali
+			case ASTCLASS_SHR : v.vali =   v.vali shr r.vali
+			case ASTCLASS_ADD : v.vali =   v.vali +   r.vali
+			case ASTCLASS_SUB : v.vali =   v.vali -   r.vali
+			case ASTCLASS_MUL : v.vali =   v.vali *   r.vali
+			case ASTCLASS_DIV : v.vali =   v.vali \   r.vali
+			case ASTCLASS_MOD : v.vali =   v.vali mod r.vali
+			case else         : assert( FALSE )
+			end select
+		end if
+
+	case ASTCLASS_CLOGOR
+		cppEval( v, n->head )
+		if( v.vali ) then
+			v.vali = 1
+		else
+			cppEval( v, n->tail )
+			v.vali = iif( v.vali, 1, 0 )
+		end if
+
+	case ASTCLASS_CLOGAND
+		cppEval( v, n->head )
+		if( v.vali ) then
+			cppEval( v, n->tail )
+			v.vali = iif( v.vali, 1, 0 )
+		else
+			v.vali = 0
+		end if
 
 	case ASTCLASS_IIF
-		function = iif( cppEval( n->expr ), cppEval( n->head ), cppEval( n->tail ) )
+		cppEval( v, n->expr )
+		if( v.vali ) then
+			cppEval( v, n->head )
+		else
+			cppEval( v, n->tail )
+		end if
 
 	case ASTCLASS_ID
 		'' Unexpanded identifier, assume it's a literal 0, like a CPP
@@ -1653,7 +1789,7 @@ private function cppEval( byval n as ASTNODE ptr ) as longint
 		hRegisterMacro( n->text, -1 )
 
 		'' id  ->  0
-		function = 0
+		v.vali = 0
 
 	case ASTCLASS_CDEFINED
 		assert( n->head->class = ASTCLASS_ID )
@@ -1672,12 +1808,14 @@ private function cppEval( byval n as ASTNODE ptr ) as longint
 		end if
 
 		'' defined()  ->  1|0
-		function = -hIsMacroCurrentlyDefined( id )
+		v.vali = -hIsMacroCurrentlyDefined( id )
 
 	case else
 		astOops( n, "couldn't evaluate #if condition" )
 	end select
-end function
+
+	v.dtype = n->dtype
+end sub
 
 private function hEvalIfCondition( byval x as integer ) as integer
 	assert( (tkGet( x ) = TK_PPIF) or (tkGet( x ) = TK_PPELSEIF) )
@@ -1699,7 +1837,10 @@ private function hEvalIfCondition( byval x as integer ) as integer
 	end if
 
 	'' Evaluate the condition
-	function = (cppEval( t ) <> 0)
+	cppEvalResultDtypes( t )
+	dim v as ASTNODE
+	cppEval( v, t )
+	function = (v.vali <> 0)
 end function
 
 private function hLookupRemoveSym( byval id as zstring ptr ) as integer

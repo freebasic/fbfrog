@@ -1,5 +1,7 @@
 #pragma once
 
+#include once "crt/long.bi"
+
 '' @ignore
 
 dim shared included as long
@@ -49,10 +51,10 @@ const A15 = 1.123
 const A16 = 10
 const A17 = 10
 const A18 = 1
-const A19 = 1
-const A20 = 1
-const A21 = 1
-const A22 = 1
+const A19 = cast(clong, 1)
+const A20 = cast(culong, 1)
+const A21 = 1ll
+const A22 = 1ull
 const B01 = 1 + 1
 const B02 = 1
 #define C1

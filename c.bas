@@ -390,8 +390,8 @@ private function cExpression _
 				end if
 			end if
 
-		case TK_OCTNUM, TK_DECNUM, TK_HEXNUM, TK_DECFLOAT
-			a = hNumberLiteral( x )
+		case TK_NUMBER
+			a = hNumberLiteral( x, FALSE )
 			x += 1
 
 		case TK_STRING, TK_WSTRING, TK_HASH

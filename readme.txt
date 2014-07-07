@@ -104,11 +104,6 @@ Running the tests:
 
 To do:
 
-- #if expression evaluation:
-  - Support unsigned values
-  - Don't crash on (INT_MIN / -1) or (INT_MIN % -1)
-- Should astOpsC2FB() insert clng() at various places to ensure that C int
-  expressions produce 32bit values even in 64bit FB?
 - Emit list of renamed symbols at top of header
 - support -o - to write to stdout, or just -stdout, or similar
 
@@ -142,6 +137,10 @@ To do:
       - Could be fixed by using a type map - then astReplaceSubtypes() would only
         need to update an entry in the type map instead of walking the whole AST
         => API-specific symbol table, backed by global read-only string table
+      - Things like astFixArrayParams() and astTurnPlainZstringIntoByte() are
+        very similar and can either be combined into 1 walking function
+      - and if not too ugly it can be handled during emitting instead of an extra
+        walking function
   - speed: String comparisons (also as part of AST walking)
         => should become symbol table entry comparisons
   - memory usage: hAstLCS() matrix; also string/AST node/token buffer allocations

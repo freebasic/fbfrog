@@ -223,6 +223,13 @@ declare function hFileExists( byref file as string ) as integer
 const TKFLAG_BEHINDSPACE	= 1 shl 0  '' was preceded by spaces?
 const TKFLAG_NOEXPAND		= 1 shl 1  '' may be macro-expanded? (cpp)
 const TKFLAG_REMOVE		= 1 shl 2
+const TKFLAG_D			= 1 shl 3
+const TKFLAG_F			= 1 shl 4
+const TKFLAG_U			= 1 shl 5
+const TKFLAG_L			= 1 shl 6
+const TKFLAG_LL			= 1 shl 7
+const TKFLAG_HEX		= 1 shl 8
+const TKFLAG_OCT		= 1 shl 9
 
 enum
 	TK_EOF
@@ -247,10 +254,7 @@ enum
 	TK_ENDINCLUDE
 
 	'' Number/string literals
-	TK_DECNUM
-	TK_HEXNUM
-	TK_OCTNUM
-	TK_DECFLOAT
+	TK_NUMBER
 	TK_STRING
 	TK_CHAR
 	TK_WSTRING
@@ -887,7 +891,7 @@ declare sub emitFile( byref filename as string, byval ast as ASTNODE ptr )
 
 declare function hFindClosingParen( byval x as integer ) as integer
 declare function hSkipStatement( byval x as integer ) as integer
-declare function hNumberLiteral( byval x as integer ) as ASTNODE ptr
+declare function hNumberLiteral( byval x as integer, byval is_cpp as integer ) as ASTNODE ptr
 extern as integer cprecedence(ASTCLASS_CLOGOR to ASTCLASS_IIF)
 declare sub cppInit( )
 declare sub cppNoExpandSym( byval id as zstring ptr )
