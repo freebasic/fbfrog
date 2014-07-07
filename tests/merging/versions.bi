@@ -11,6 +11,9 @@
 	#error "'VER' is #defined to an unsupported value; expected one of: 1, 2, 3"
 #endif
 
+'' The following symbols have been renamed:
+''     variable common_ alias "common"
+
 dim shared common_ as long
 
 #if VER = 1

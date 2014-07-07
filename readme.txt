@@ -104,8 +104,11 @@ Running the tests:
 
 To do:
 
-- Emit list of renamed symbols at top of header
 - support -o - to write to stdout, or just -stdout, or similar
+- Add pattern-based -nomerge option
+- If an #include was found but not inserted, then the #include statement should
+  be preserved (but renamed .h -> .bi)
+- #includes that can't be found should just be removed, e.g. system headers
 
 - Add support for parsing function bodies: if/else blocks, for/while/do/while
   loops, local vars, assignments, goto, break, return, switch, labels including 'case'.
@@ -117,20 +120,6 @@ To do:
         if (a = 1) ...          =>    a = 1 : if a then ...
         if (a = 1 && b = 2) ... =>    a = 1 : if a then : b = 2 : if b then ... : end if
     ?: and &&/|| operands containing assignments must be expanded to real if blocks.
-
-- Turn -nomerge into -insert <absolute-file-name-pattern>
-  By default: Don't insert #includes
-  Can use -insert '*' to insert all #includes that can be found,
-  or -insert '*/gtk/*' to insert only certain ones, etc.
-    - Seems nicest to match against the absolute path but with common prefix
-      removed already. #include messages should use the stripped filename, and
-      show whether the #include will be inserted or not - that will help the
-      user to tell what the pattern being matched against, and whether it
-      matched or not.
-- If an #include was found but not inserted, then the #include statement should
-  be preserved (but renamed .h -> .bi)
-- #includes that can't be found should just be removed, e.g. system headers
-- fbfrog should automatically add the proper crt/* #include if needed
 
 - Performance issues:
   - speed: AST walking, especially astReplaceSubtypes()

@@ -14,6 +14,7 @@ dim shared as zstring ptr astnodename(0 to ...) => _
 	@"divider"   , _
 	@"scopeblock", _
 	@"unknown"   , _
+	@"renamelist", _
 	_
 	_ '' Script helper nodes
 	@"declaredefines", _

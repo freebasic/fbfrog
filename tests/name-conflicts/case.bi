@@ -2,6 +2,23 @@
 
 extern "C"
 
+'' The following symbols have been renamed:
+''     inside struct Foo:
+''         field FiElD_ alias "FiElD"
+''         field field__ alias "field"
+''     procedure toaster1_ alias "toaster1"()
+''     procedure toASTER1__ alias "toASTER1"()
+''     #define Aaa_ alias "Aaa"
+''     #define aaa__ alias "aaa"
+''     constant Bbb_ alias "Bbb"
+''     constant bbb__ alias "bbb"
+''     typedef MyInt_ alias "MyInt"
+''     typedef myint__ alias "myint"
+''     typedef Myint___ alias "Myint"
+''     constant ENUMCONST1_ alias "ENUMCONST1"
+''     typedef FOO_ alias "FOO"
+''     #define SAILINGBOAT_ alias "SAILINGBOAT"
+
 declare sub Toaster1()
 declare sub toaster1_ alias "toaster1"()
 declare sub toASTER1__ alias "toASTER1"()

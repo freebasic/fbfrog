@@ -1077,7 +1077,8 @@ end sub
 declare sub hFixIdsInScope _
 	( _
 		byval defines as THASH ptr, _
-		byval code as ASTNODE ptr _
+		byval code as ASTNODE ptr, _
+		byval renamelist as ASTNODE ptr _
 	)
 
 private sub hWalkAndCheckIds _
@@ -1085,7 +1086,8 @@ private sub hWalkAndCheckIds _
 		byval defines as THASH ptr, _
 		byval types as THASH ptr, _
 		byval globals as THASH ptr, _
-		byval n as ASTNODE ptr _
+		byval n as ASTNODE ptr, _
+		byval renamelist as ASTNODE ptr _
 	)
 
 	var i = n->head
@@ -1095,7 +1097,10 @@ private sub hWalkAndCheckIds _
 			if( i->subtype->class = ASTCLASS_PROC ) then
 				'' Process procptr subtype parameters recursively (nested scope),
 				'' with the #defines found so far.
-				hFixIdsInScope( defines, i->subtype )
+				'' Don't build a renamelist here, because for parameters it's useless anyways.
+				var nestedrenamelist = astNew( ASTCLASS_RENAMELIST )
+				hFixIdsInScope( defines, i->subtype, nestedrenamelist )
+				astDelete( nestedrenamelist )
 			end if
 		end if
 
@@ -1113,7 +1118,10 @@ private sub hWalkAndCheckIds _
 
 			'' Process parameters recursively (nested scope),
 			'' with the #defines found so far.
-			hFixIdsInScope( defines, i )
+			'' Don't build a renamelist here, because for parameters it's useless anyways.
+			var nestedrenamelist = astNew( ASTCLASS_RENAMELIST )
+			hFixIdsInScope( defines, i, nestedrenamelist )
+			astDelete( nestedrenamelist )
 
 		case ASTCLASS_VAR, ASTCLASS_CONST, ASTCLASS_FIELD
 			hCheckId( @fbkeywordhash, i, FALSE )
@@ -1137,11 +1145,17 @@ private sub hWalkAndCheckIds _
 
 				'' Process fields recursively (nested scope),
 				'' with the #defines found so far.
-				hFixIdsInScope( defines, i )
+				var nestedrenamelist = astNew( ASTCLASS_RENAMELIST, "inside " + astDumpPrettyDecl( i ) + ":" )
+				hFixIdsInScope( defines, i, nestedrenamelist )
+				if( nestedrenamelist->head ) then
+					astPrepend( renamelist, nestedrenamelist )
+				else
+					astDelete( nestedrenamelist )
+				end if
 			else
 				'' Anonymous struct/union: Process the fields
 				'' recursively, they belong to this scope too.
-				hWalkAndCheckIds( defines, types, globals, i )
+				hWalkAndCheckIds( defines, types, globals, i, renamelist )
 			end if
 
 		case ASTCLASS_TYPEDEF
@@ -1161,7 +1175,7 @@ private sub hWalkAndCheckIds _
 			'' Check enum's constants: They belong to this scope
 			'' too, regardless of whether the enum is named or
 			'' anonymous.
-			hWalkAndCheckIds( defines, types, globals, i )
+			hWalkAndCheckIds( defines, types, globals, i, renamelist )
 
 		end select
 
@@ -1234,7 +1248,8 @@ private sub hRenameSymbol _
 		byval types as THASH ptr, _
 		byval globals as THASH ptr, _
 		byval n as ASTNODE ptr, _
-		byval code as ASTNODE ptr _
+		byval code as ASTNODE ptr, _
+		byval renamelist as ASTNODE ptr _
 	)
 
 	dim as string newid, hashid
@@ -1293,8 +1308,6 @@ private sub hRenameSymbol _
 		assert( FALSE )
 	end select
 
-	var origdump = astDumpPrettyDecl( n )
-
 	'' Update the symbol and add it to the hash table
 	astRenameSymbol( n, newid )
 	select case( n->class )
@@ -1309,11 +1322,18 @@ private sub hRenameSymbol _
 		assert( FALSE )
 	end select
 
-	if( frog.verbose ) then
-		print "renaming " + origdump + " to " + astDumpPrettyDecl( n )
-	end if
+	astAppend( renamelist, astNewTEXT( astDumpPrettyDecl( n ) ) )
 
 end sub
+
+private function hIsScopelessBlock( byval n as ASTNODE ptr ) as integer
+	select case( n->class )
+	case ASTCLASS_ENUM
+		function = TRUE
+	case ASTCLASS_STRUCT, ASTCLASS_UNION
+		function = (n->text = NULL)
+	end select
+end function
 
 private sub hWalkAndRenameSymbols _
 	( _
@@ -1321,14 +1341,15 @@ private sub hWalkAndRenameSymbols _
 		byval types as THASH ptr, _
 		byval globals as THASH ptr, _
 		byval n as ASTNODE ptr, _
-		byval code as ASTNODE ptr _
+		byval code as ASTNODE ptr, _
+		byval renamelist as ASTNODE ptr _
 	)
 
 	var i = n->head
 	while( i )
 
 		if( i->attrib and ASTATTRIB_NEEDRENAME ) then
-			hRenameSymbol( defines, types, globals, i, code )
+			hRenameSymbol( defines, types, globals, i, code, renamelist )
 		end if
 
 		''
@@ -1340,14 +1361,9 @@ private sub hWalkAndRenameSymbols _
 		'' ignored here though: They're treated as separate scopes and
 		'' are supposed to be handled by their hFixIdsInScope() calls.
 		''
-		select case( i->class )
-		case ASTCLASS_ENUM
-			hWalkAndRenameSymbols( defines, types, globals, i, code )
-		case ASTCLASS_STRUCT, ASTCLASS_UNION
-			if( i->text = NULL ) then
-				hWalkAndRenameSymbols( defines, types, globals, i, code )
-			end if
-		end select
+		if( hIsScopelessBlock( i ) ) then
+			hWalkAndRenameSymbols( defines, types, globals, i, code, renamelist )
+		end if
 
 		i = i->next
 	wend
@@ -1357,7 +1373,8 @@ end sub
 private sub hFixIdsInScope _
 	( _
 		byval defines as THASH ptr, _
-		byval code as ASTNODE ptr _
+		byval code as ASTNODE ptr, _
+		byval renamelist as ASTNODE ptr _
 	)
 
 	'' Scope-specific namespaces for types and vars/procs/consts/fields/params
@@ -1367,12 +1384,13 @@ private sub hFixIdsInScope _
 
 	'' 1. Walk through symbols top-down, much like a C compiler, and mark
 	''    those that need renaming with ASTATTRIB_NEEDRENAME.
-	hWalkAndCheckIds( defines, @types, @globals, code )
+	hWalkAndCheckIds( defines, @types, @globals, code, renamelist )
 
 	'' 2. Rename all marked symbols. Now that all symbols are known, we can
 	''    generate new names for the symbols that need renaming without
 	''    introducing more conflicts.
-	hWalkAndRenameSymbols( defines, @types, @globals, code, code )
+
+	hWalkAndRenameSymbols( defines, @types, @globals, code, code, renamelist )
 
 	hashEnd( @globals )
 	hashEnd( @types )
@@ -1385,7 +1403,13 @@ sub astFixIds( byval code as ASTNODE ptr )
 	dim as THASH defines
 	hashInit( @defines, 10, TRUE )
 
-	hFixIdsInScope( @defines, code )
+	var renamelist = astNew( ASTCLASS_RENAMELIST, "The following symbols have been renamed:" )
+	hFixIdsInScope( @defines, code, renamelist )
+	if( renamelist->head ) then
+		astPrepend( code, renamelist )
+	else
+		astDelete( renamelist )
+	end if
 
 	hashEnd( @defines )
 end sub
@@ -1488,7 +1512,9 @@ sub astAutoAddDividers( byval code as ASTNODE ptr )
 	while( i )
 		var nxt = hSkipDontEmits( i->next )
 
-		astAutoAddDividers( i )
+		if( i->class <> ASTCLASS_RENAMELIST ) then
+			astAutoAddDividers( i )
+		end if
 
 		if( nxt ) then
 			if( hShouldSeparate( i, nxt ) ) then
@@ -1517,7 +1543,7 @@ function astCountDecls( byval code as ASTNODE ptr ) as integer
 		case ASTCLASS_DIVIDER, ASTCLASS_PPINCLUDE, ASTCLASS_PPENDIF, _
 		     ASTCLASS_EXTERNBLOCKBEGIN, ASTCLASS_EXTERNBLOCKEND, _
 		     ASTCLASS_INCLIB, ASTCLASS_PRAGMAONCE, _
-		     ASTCLASS_UNKNOWN
+		     ASTCLASS_UNKNOWN, ASTCLASS_RENAMELIST
 
 		case ASTCLASS_PPIF, ASTCLASS_PPELSEIF, ASTCLASS_PPELSE
 			count += astCountDecls( i )

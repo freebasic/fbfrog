@@ -2,6 +2,14 @@
 
 extern "C"
 
+'' The following symbols have been renamed:
+''     #define I3_ alias "I3"
+''     #define I4_ alias "I4"
+''     constant I5_ alias "I5"
+''     constant I6_ alias "I6"
+''     constant I7_ alias "I7"
+''     constant I8_ alias "I8"
+
 #define I1() 1
 
 declare sub fi1(byval i1_ as long)

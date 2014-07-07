@@ -2,6 +2,21 @@
 
 extern "C"
 
+'' The following symbols have been renamed:
+''     variable i1_ alias "i1"
+''     variable i2_ alias "i2"
+''     procedure f1_ alias "f1"()
+''     procedure f2_ alias "f2"()
+''     procedure f3_ alias "f3"()
+''     procedure f4_ alias "f4"()
+''     procedure f5_ alias "f5"()
+''     procedure f6_ alias "f6"()
+''     procedure f7_ alias "f7"()
+''     procedure f8_ alias "f8"()
+''     procedure f9_ alias "f9"()
+''     variable i3_ alias "i3"
+''     variable i4_ alias "i4"
+
 extern i1 as long
 extern i2 as long
 

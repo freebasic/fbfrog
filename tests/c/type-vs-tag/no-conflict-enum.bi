@@ -1,5 +1,8 @@
 #pragma once
 
+'' The following symbols have been renamed:
+''     typedef a_ alias "a"
+
 type A as long
 enum
 	FOO

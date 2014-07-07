@@ -1,5 +1,8 @@
 #pragma once
 
+'' The following symbols have been renamed:
+''     struct A_ alias "A"
+
 type a
 	f as long
 end type

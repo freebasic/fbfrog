@@ -123,7 +123,7 @@ function emitType overload( byval n as ASTNODE ptr ) as string
 end function
 
 namespace emit
-	dim shared as integer indent, fo, comment
+	dim shared as integer indent, fo, comment, indentincomment
 end namespace
 
 private sub emitLine( byref ln as string )
@@ -143,6 +143,7 @@ private sub emitLine( byref ln as string )
 			if( ln[0] <> CH_SPACE ) then
 				s += " "
 			end if
+			s += space( 4 * emit.indentincomment )
 		end if
 	end if
 
@@ -394,6 +395,24 @@ private function emitAst _
 		emitLines( n->text )
 		emitLine( string( 75, "-" ) )
 		emitLines( n->comment )
+		emit.comment -= 1
+
+	case ASTCLASS_RENAMELIST
+		emit.comment += 1
+		emitLine( *n->text )
+
+		emit.indentincomment += 1
+		var i = n->head
+		while( i )
+			s = emitAst( i )
+			if( len( s ) > 0 ) then
+				emitLine( s )
+			end if
+			i = i->next
+		wend
+		s = ""
+		emit.indentincomment -= 1
+
 		emit.comment -= 1
 
 	case ASTCLASS_INCLIB

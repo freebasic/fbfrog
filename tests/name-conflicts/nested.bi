@@ -2,6 +2,17 @@
 
 extern "C"
 
+'' The following symbols have been renamed:
+''     inside struct UDT1:
+''         field FOO_ alias "FOO"
+''         field Foo__ alias "Foo"
+''         field fOO___ alias "fOO"
+''         field as_ alias "as"
+''         field IF_ alias "IF"
+''         field PTR_ alias "PTR"
+''         field PTR__ alias "PTR"
+''     #define GLOBALDEFINE1_ alias "GLOBALDEFINE1"
+
 #define GLOBALDEFINE1_() 1
 
 const GLOBALCONSTANT1 = 1

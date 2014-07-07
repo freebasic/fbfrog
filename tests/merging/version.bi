@@ -9,6 +9,9 @@
 	#error "'VER' is #defined to an unsupported value; expected one of: 1"
 #endif
 
+'' The following symbols have been renamed:
+''     variable common_ alias "common"
+
 dim shared common_ as long
 dim shared v1 as long
 
