@@ -247,6 +247,10 @@ end function
 ''      12:        print foo
 ''
 function hReport( byval location as TKLOCATION ptr, byval message as zstring ptr ) as string
+	if( location->source = NULL ) then
+		return *message
+	end if
+
 	var s = *location->source->name + "(" & (location->linenum + 1) & "): " + *message
 
 	'' Show the error line and some extra lines above and below it,

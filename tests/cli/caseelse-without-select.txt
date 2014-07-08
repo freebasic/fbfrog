@@ -2,5 +2,5 @@
     1: ./fbfrog tests/cli/caseelse-without-select.h -caseelse -endselect
                                                     ^~~~~~~~~
 context as seen by fbfrog:
-    fine _X86_ -endif "tests/cli/caseelse-without-select.h" -caseelse -endselect
+    T__ -endif -endif "tests/cli/caseelse-without-select.h" -caseelse -endselect
                                                             ^~~~~~~~~

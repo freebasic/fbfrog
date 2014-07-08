@@ -2,5 +2,5 @@
     1: ./fbfrog tests/removedefine-missing-arg.h -removedefine -m
                                                                ^~
 context as seen by fbfrog:
-    _ -define _X86_ -endif "tests/removedefine-missing-arg.h" -removedefine "-m"
+    _64BIT__ -endif -endif "tests/removedefine-missing-arg.h" -removedefine "-m"
                                                                             ^~~~

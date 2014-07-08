@@ -2,5 +2,5 @@
     1: ./fbfrog tests/cli/select-version-number.h -select VER -case -endselect
                                                                     ^~~~~~~~~~
 context as seen by fbfrog:
-    X86_ -endif "tests/cli/select-version-number.h" -select VER -case -endselect
+    ndif -endif "tests/cli/select-version-number.h" -select VER -case -endselect
                                                                       ^~~~~~~~~~

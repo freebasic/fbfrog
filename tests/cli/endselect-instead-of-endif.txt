@@ -2,5 +2,5 @@
     1: ./fbfrog tests/cli/endselect-instead-of-endif.h -ifdef A -else -endselect
                                                                       ^~~~~~~~~~
 context as seen by fbfrog:
-    6_ -endif "tests/cli/endselect-instead-of-endif.h" -ifdef A -else -endselect
+    if -endif "tests/cli/endselect-instead-of-endif.h" -ifdef A -else -endselect
                                                                       ^~~~~~~~~~

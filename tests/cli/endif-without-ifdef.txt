@@ -2,5 +2,5 @@
     1: ./fbfrog tests/cli/endif-without-ifdef.h -endif
                                                 ^~~~~~
 context as seen by fbfrog:
-    define __X86__ -define _X86_ -endif "tests/cli/endif-without-ifdef.h" -endif
+    fine __FBFROG_64BIT__ -endif -endif "tests/cli/endif-without-ifdef.h" -endif
                                                                           ^~~~~~

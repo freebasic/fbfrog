@@ -2,5 +2,5 @@
     1: ./fbfrog tests/cli/else-behind-else.h -ifdef A -else -else -endif
                                                             ^~~~~
 context as seen by fbfrog:
-    fine _X86_ -endif "tests/cli/else-behind-else.h" -ifdef A -else -else -endif
+    T__ -endif -endif "tests/cli/else-behind-else.h" -ifdef A -else -else -endif
                                                                     ^~~~~

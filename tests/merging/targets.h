@@ -1,19 +1,19 @@
 // @fbfrog -select -case __FB_DOS__ -define DOS -case __FB_LINUX__ -define LINUX -case __FB_WIN32__ -define WIN32 -endselect
 
-static int doslinuxwin32;
+static int vardoslinuxwin32;
 
 #ifdef DOS
-	static int dos;
+	static int vardos;
 	struct UDTdos {
 		int fielddos;
 	};
 #elif defined LINUX
-	static int linux;
+	static int varlinux;
 	struct UDTlinux {
 		int fieldlinux;
 	};
 #elif defined WIN32
-	static int win32;
+	static int varwin32;
 	struct UDTwin32 {
 		int fieldwin32;
 	};
@@ -22,7 +22,7 @@ static int doslinuxwin32;
 #endif
 
 #if defined DOS || defined LINUX
-	static int doslinux;
+	static int vardoslinux;
 
 	struct UDTdoslinux1 {
 		int fielddoslinux;

@@ -2,5 +2,5 @@
     1: ./fbfrog tests/cli/missing-endselect.h -select -case a
                                                       ^~~~~
 context as seen by fbfrog:
-    __X86__ -define _X86_ -endif "tests/cli/missing-endselect.h" -select -case a
+    FBFROG_64BIT__ -endif -endif "tests/cli/missing-endselect.h" -select -case a
                                                                          ^~~~~

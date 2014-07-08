@@ -695,6 +695,8 @@ private sub hMacroParamList( byref x as integer, byval macro as ASTNODE ptr )
 end sub
 
 private sub hEncloseTokensUntilEol( byref x as integer )
+	var head = x - 1
+
 	tkInsert( x, TK_BEGIN )
 	x += 1
 
@@ -708,6 +710,12 @@ private sub hEncloseTokensUntilEol( byref x as integer )
 
 	tkInsert( x, TK_END )
 	x += 1
+
+	'' If the head token has TKFLAG_REMOVE, apply it to the TK_BEGIN/END
+	'' aswell
+	if( tkGetFlags( head ) and TKFLAG_REMOVE ) then
+		tkSetRemove( head + 1, x - 1 )
+	end if
 end sub
 
 private function cppDirective( byval x as integer ) as integer

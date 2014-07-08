@@ -2,5 +2,5 @@
     1: ./fbfrog tests/cli/missing-endif.h -ifdef A
                                           ^~~~~~
 context as seen by fbfrog:
-    86 -define __X86__ -define _X86_ -endif "tests/cli/missing-endif.h" -ifdef A
+     -define __FBFROG_64BIT__ -endif -endif "tests/cli/missing-endif.h" -ifdef A
                                                                         ^~~~~~

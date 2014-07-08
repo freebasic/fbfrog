@@ -15,14 +15,9 @@ namespace frog
 	dim shared as string prefix
 end namespace
 
-private sub frogAddVersion( byval verand as ASTNODE ptr, byval options as ASTNODE ptr )
-	assert( astIsVERAND( verand ) )
-	var i = frog.versioncount
-	frog.versioncount += 1
-	frog.versions = reallocate( frog.versions, frog.versioncount * sizeof( FROGVERSION ) )
-	frog.versions[i].verand = verand
-	frog.versions[i].options = options
-end sub
+private function hFindResource( byref filename as string ) as string
+	function = hExepath( ) + filename
+end function
 
 private sub hPrintHelpAndExit( )
 	print "fbfrog 1.0 (" + __DATE_ISO__ + "), FreeBASIC *.bi binding generator"
@@ -504,6 +499,15 @@ private function hSkipToEndOfBlock( byval i as ASTNODE ptr ) as ASTNODE ptr
 	function = i
 end function
 
+private sub frogAddVersion( byval verand as ASTNODE ptr, byval options as ASTNODE ptr )
+	assert( astIsVERAND( verand ) )
+	var i = frog.versioncount
+	frog.versioncount += 1
+	frog.versions = reallocate( frog.versions, frog.versioncount * sizeof( FROGVERSION ) )
+	frog.versions[i].verand = verand
+	frog.versions[i].options = options
+end sub
+
 ''
 '' The script is a linear list of the command line options, for example:
 '' (each line is a sibling AST node)
@@ -793,6 +797,15 @@ private function frogReadAPI( byval options as ASTNODE ptr ) as ASTNODE ptr
 		wend
 	end scope
 
+	'' Insert the code from builtin.h
+	'' * behind command line pre-#defines so that builtin.h can use them
+	'' * marked for removal so the code won't be preserved
+	scope
+		var x = tkGetCount( )
+		lexLoadC( x, sourcebufferFromFile( hFindResource( "builtin.h" ), NULL ), FALSE )
+		tkSetRemove( x, tkGetCount( ) - 1 )
+	end scope
+
 	''
 	'' Add toplevel file(s) behind current tokens (could be pre-#defines etc.)
 	''
@@ -919,7 +932,7 @@ end sub
 			hTurnArgsIntoString( __FB_ARGC__, __FB_ARGV__ ), NULL ) )
 
 	'' Add the implicit @builtin.fbfrog
-	tkInsert( 1, TK_ARGSFILE, hExePath( ) + "builtin.fbfrog" )
+	tkInsert( 1, TK_ARGSFILE, hFindResource( "builtin.fbfrog" ) )
 	tkSetLocation( 1, tkGetLocation( 0 ) )
 
 	'' Load content of @files too

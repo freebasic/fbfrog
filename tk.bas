@@ -473,10 +473,17 @@ sub tkFold _
 	var lastloc  = tkGetLocation( lastin1stline )
 	location.length = lastloc->column + lastloc->length - location.column
 
+	'' Preserve TKFLAG_REMOVE
+	var flags = 0
+	for i as integer = first to last
+		flags or= tkGetFlags( i ) and TKFLAG_REMOVE
+	next
+
 	'' Must insert first, because the "text" pointer may reference one of
 	'' the tokens that will be removed.
 	tkInsert( first, id, text )
 	tkSetLocation( first, @location )
+	tkAddFlags( first, flags )
 	first += 1
 	last += 1
 
