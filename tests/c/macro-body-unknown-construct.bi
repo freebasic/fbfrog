@@ -11,8 +11,8 @@ extern "C"
 ''    2: 
 ''    3: void ok(void);
 '' context as seen by fbfrog:
-''    #define m [begin] void f ( void [end]
-''                      ^~~~
+''    # define m void f ( void 
+''               ^~~~
 
 declare sub ok()
 
@@ -27,8 +27,8 @@ declare sub ok()
 ''    6: #define B() void f(
 ''    7: #define C(a) void f(
 '' context as seen by fbfrog:
-''    #define A [begin] void f ( [end]
-''                      ^~~~
+''    # define A void f ( 
+''               ^~~~
 
 '' TODO: unrecognized construct:
 '' #define B() void f(
@@ -41,8 +41,8 @@ declare sub ok()
 ''    7: #define C(a) void f(
 ''    8: #define D(a, b, c) void f(
 '' context as seen by fbfrog:
-''    #define B() [begin] void f ( [end]
-''                        ^~~~
+''    # define B ( ) void f ( 
+''                   ^~~~
 
 '' TODO: unrecognized construct:
 '' #define C(a) void f(
@@ -55,8 +55,8 @@ declare sub ok()
 ''    8: #define D(a, b, c) void f(
 ''    9: 
 '' context as seen by fbfrog:
-''    #define C(a) [begin] void f ( [end]
-''                         ^~~~
+''    # define C ( a ) void f ( 
+''                     ^~~~
 
 '' TODO: unrecognized construct:
 '' #define D(a, b, c) void f(
@@ -68,7 +68,7 @@ declare sub ok()
 ''                          ^~~~
 ''    9: 
 '' context as seen by fbfrog:
-''    #define D(a, b, c) [begin] void f ( [end]
-''                               ^~~~
+''    # define D ( a , b , c ) void f ( 
+''                             ^~~~
 
 end extern

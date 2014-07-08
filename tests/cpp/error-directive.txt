@@ -3,8 +3,8 @@
 tests/cpp/error-directive.h(2): #error
     1: // @fail
     2: #error "Something"
-       ^
+        ^~~~~
     3: 
 context as seen by fbfrog:
-    [pperror "Something"]
-    ^~~~~~~~~~~~~~~~~~~~~
+    # error "Something" 
+      ^~~~~

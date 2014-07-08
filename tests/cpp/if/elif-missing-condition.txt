@@ -4,9 +4,9 @@ tests/cpp/if/elif-missing-condition.h(3): missing expression
     1: // @fail
     2: #ifdef A
     3: #elif
-       ^
+            ^
     4: #endif
     5: 
 context as seen by fbfrog:
-    [ppelseif] [begin] [end]
-    ^~~~~~~~~~
+    # elif 
+           ^

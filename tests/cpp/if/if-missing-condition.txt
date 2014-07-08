@@ -3,9 +3,9 @@
 tests/cpp/if/if-missing-condition.h(2): missing expression
     1: // @fail
     2: #if
-       ^
+          ^
     3: #endif
     4: 
 context as seen by fbfrog:
-    [ppif] [begin] [end]
-    ^~~~~~
+    # if 
+         ^

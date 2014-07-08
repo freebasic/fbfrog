@@ -3,8 +3,8 @@
 tests/cpp/if/endif-without-if.h(2): #endif without #if
     1: // @fail
     2: #endif
-       ^
+        ^~~~~
     3: 
 context as seen by fbfrog:
-    [ppendif]
-    ^~~~~~~~~
+    # endif 
+      ^~~~~

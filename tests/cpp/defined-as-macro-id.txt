@@ -6,5 +6,5 @@ tests/cpp/defined-as-macro-id.h(2): 'defined' cannot be used as macro name
                ^~~~~~~
     3: 
 context as seen by fbfrog:
-    [eol] [eol] # define defined [eol]
-                         ^~~~~~~
+    # define defined 
+             ^~~~~~~

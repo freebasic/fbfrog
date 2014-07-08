@@ -111,7 +111,7 @@ declare sub f()  '' Some escaped newlines
 '' multi-line\
 '' comment 
 
-#define Z1 "abcdef"
+#define Z1 "abcdef"  '' escaped newline in string literal
 #define Z2 "abcdef"
 #define Z3 ""
 #define Z4 ""

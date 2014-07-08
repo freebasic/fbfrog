@@ -85,3 +85,5 @@ static int separator1;
 #define D1 { f( 123 ); }
 #define D2(x) { f( x ); }
 #define D3(x) { f1( (x) + 1 ); f2( (x) + 2 ); f3( (x) + 3 ); }
+
+#warning "Example warning"

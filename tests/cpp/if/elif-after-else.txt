@@ -4,9 +4,9 @@ tests/cpp/if/elif-after-else.h(4): #elif after #else
     2: #if 0
     3: #else
     4: #elif 0
-       ^
+        ^~~~
     5: #endif
     6: 
 context as seen by fbfrog:
-    [ppelseif] [begin] 0 [end]
-    ^~~~~~~~~~
+    # elif 0 
+      ^~~~

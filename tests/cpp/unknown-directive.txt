@@ -6,5 +6,5 @@ tests/cpp/unknown-directive.h(2): unknown PP directive
         ^~~
     3: 
 context as seen by fbfrog:
-    [eol] [eol] # foo [eol]
-                  ^~~
+    # foo 
+      ^~~

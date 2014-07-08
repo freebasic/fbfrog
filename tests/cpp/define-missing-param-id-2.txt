@@ -1,0 +1,10 @@
+[1/5] __FB_WIN32__.__FB_64BIT__
+      tests/cpp/define-missing-param-id-2.h
+tests/cpp/define-missing-param-id-2.h(2): expected macro parameter (identifier or '...') but found ')'
+    1: // @fail
+    2: #define m(a,)
+                   ^
+    3: 
+context as seen by fbfrog:
+    # define m ( a , ) 
+                     ^

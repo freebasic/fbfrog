@@ -2,11 +2,11 @@
       tests/cpp/if/elseif.h
 tests/cpp/if/elseif.h(4): unknown PP directive
     2: /* CPP only accepts #elif, not #elseif */
-    3: #if 0
-    4: #elseif 0
+    3: #if 1
+    4: #elseif 1
         ^~~~~~
     5: #else
     6: #endif
 context as seen by fbfrog:
-    # elseif 0 [eol] # else [eol] # endif [eol]
+    # elseif 1 
       ^~~~~~

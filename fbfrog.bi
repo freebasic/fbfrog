@@ -234,15 +234,6 @@ const TKFLAG_OCT		= 1 shl 9
 enum
 	TK_EOF
 	TK_DIVIDER
-	TK_PPINCLUDE
-	TK_PPDEFINE
-	TK_PPIF
-	TK_PPELSEIF
-	TK_PPELSE
-	TK_PPENDIF
-	TK_PPUNDEF
-	TK_PPERROR
-	TK_PPWARNING
 	TK_BEGIN
 	TK_END
 	TK_PPMERGE
@@ -421,18 +412,9 @@ declare sub tkInsert _
 	)
 declare sub tkRemove( byval first as integer, byval last as integer )
 declare sub tkCopy( byval x as integer, byval first as integer, byval last as integer )
-declare sub tkFold _
-	( _
-		byval first as integer, _
-		byval last as integer, _
-		byval id as integer, _
-		byval text as zstring ptr = NULL _
-	)
 declare function tkGet( byval x as integer ) as integer
 declare function tkGetText( byval x as integer ) as zstring ptr
 declare function tkSpellId( byval x as integer ) as zstring ptr
-declare function tkGetAst( byval x as integer ) as ASTNODE ptr
-declare sub tkSetAst( byval x as integer, byval ast as ASTNODE ptr )
 declare sub tkSetLocation( byval x as integer, byval location as TKLOCATION ptr )
 declare function tkGetLocation( byval x as integer ) as TKLOCATION ptr
 declare sub tkSetExpansionLevel( byval first as integer, byval last as integer, byval expansionlevel as integer )
@@ -466,13 +448,10 @@ declare function tkCollectComments _
 		byval first as integer, _
 		byval last as integer _
 	) as string
-declare sub tkRemoveAllOf( byval id as integer, byval text as zstring ptr )
 declare sub tkApplyRemoves( )
-declare sub tkRemoveEOLs( )
 declare sub tkTurnCPPTokensIntoCIds( )
 declare function tkSpell overload( byval x as integer ) as string
 declare function tkSpell overload( byval first as integer, byval last as integer ) as string
-declare function hSkipToTK_END( byval x as integer ) as integer
 declare function hSkipConstruct( byval x as integer ) as integer
 declare function tkReport( byval x as integer, byval message as zstring ptr ) as string
 declare sub tkOops( byval x as integer, byval message as zstring ptr )
@@ -891,13 +870,14 @@ declare function emitType overload( byval n as ASTNODE ptr ) as string
 declare sub emitFile( byref filename as string, byval ast as ASTNODE ptr )
 
 declare function hFindClosingParen( byval x as integer ) as integer
-declare function hSkipStatement( byval x as integer ) as integer
+declare function hSkipToEol( byval x as integer ) as integer
 declare function hNumberLiteral( byval x as integer, byval is_cpp as integer ) as ASTNODE ptr
 extern as integer cprecedence(ASTCLASS_CLOGOR to ASTCLASS_IIF)
+declare function hDefineHead( byref x as integer ) as ASTNODE ptr
 declare sub cppInit( )
 declare sub cppNoExpandSym( byval id as zstring ptr )
 declare sub cppRemoveSym( byval id as zstring ptr )
-declare sub cppMain( byval whitespace as integer, byval nomerge as integer )
+declare sub cppMain( )
 declare function cFile( ) as ASTNODE ptr
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -908,7 +888,7 @@ type FROGVERSION
 end type
 
 namespace frog
-	extern as integer verbose
+	extern as integer verbose, nomerge, whitespace
 	extern incdirs as ASTNODE ptr
 
 	extern as ASTNODE ptr script

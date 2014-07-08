@@ -4,9 +4,9 @@ tests/cpp/if/duplicate-else.h(4): #else after #else
     2: #if 0
     3: #else
     4: #else
-       ^
+        ^~~~
     5: #endif
     6: 
 context as seen by fbfrog:
-    [ppelse]
-    ^~~~~~~~
+    # else 
+      ^~~~

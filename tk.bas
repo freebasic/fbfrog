@@ -12,15 +12,6 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 { _
 	(NULL, @"eof"     ), _
 	(NULL, @"divider" ), _
-	(NULL, @"ppinclude"), _
-	(NULL, @"ppdefine"), _
-	(NULL, @"ppif"    ), _
-	(NULL, @"ppelseif"), _
-	(NULL, @"ppelse"  ), _
-	(NULL, @"ppendif" ), _
-	(NULL, @"ppundef" ), _
-	(NULL, @"pperror" ), _
-	(NULL, @"ppwarning"), _
 	(NULL, @"begin"   ), _
 	(NULL, @"end"     ), _
 	(NULL, @"ppmerge" ), _
@@ -210,9 +201,6 @@ type ONETOKEN
 	'' rest: NULL
 	text		as zstring ptr
 
-	'' TK_PPDEFINE
-	ast		as ASTNODE ptr
-
 	location	as TKLOCATION   '' where this token was found
 	expansionlevel	as integer      '' toplevel = 0, nested tokens from macro expansion >= 1
 	comment		as zstring ptr
@@ -299,10 +287,6 @@ function tkDumpOne( byval x as integer ) as string
 	checkFlag( LL )
 
 	s += hDumpComment( p->comment )
-
-	if( tkGetAst( x ) ) then
-		s += " ast=" & astDumpInline( tkGetAst( x ) )
-	end if
 
 	#if 0
 		s += " " + hDumpLocation( @p->location )
@@ -395,7 +379,6 @@ sub tkRemove( byval first as integer, byval last as integer )
 	for i as integer = first to last
 		var p = tkAccess( i )
 		deallocate( p->text )
-		astDelete( p->ast )
 		deallocate( p->comment )
 	next
 
@@ -438,7 +421,6 @@ sub tkCopy( byval x as integer, byval first as integer, byval last as integer )
 		src = tkAccess( first )
 		var dst = tkAccess( x )
 		dst->flags          = src->flags and (not TKFLAG_REMOVE)
-		dst->ast            = astClone( src->ast )
 		dst->location       = src->location
 		dst->expansionlevel = src->expansionlevel
 		dst->comment        = strDuplicate( src->comment )
@@ -446,49 +428,6 @@ sub tkCopy( byval x as integer, byval first as integer, byval last as integer )
 		x += 1
 		first += 1
 	loop while( first <= last )
-end sub
-
-'' Combine first..last tokens into a single new one
-sub tkFold _
-	( _
-		byval first as integer, _
-		byval last as integer, _
-		byval id as integer, _
-		byval text as zstring ptr _
-	)
-
-	var lastin1stline = first
-	for i as integer = first+2 to last
-		select case( tkGet( i ) )
-		case TK_EOL, TK_DIVIDER, TK_PPINCLUDE, TK_PPDEFINE, TK_PPIF, _
-		     TK_PPELSEIF, TK_PPELSE, TK_PPENDIF, TK_PPUNDEF, TK_PPERROR, TK_PPWARNING
-			lastin1stline = i - 1
-			exit for
-		end select
-	next
-
-	'' Sum up all the token lengths and space in between, resulting in one
-	'' big combined token; unless it spans across multiple lines.
-	var location = *tkGetLocation( first )
-	var lastloc  = tkGetLocation( lastin1stline )
-	location.length = lastloc->column + lastloc->length - location.column
-
-	'' Preserve TKFLAG_REMOVE
-	var flags = 0
-	for i as integer = first to last
-		flags or= tkGetFlags( i ) and TKFLAG_REMOVE
-	next
-
-	'' Must insert first, because the "text" pointer may reference one of
-	'' the tokens that will be removed.
-	tkInsert( first, id, text )
-	tkSetLocation( first, @location )
-	tkAddFlags( first, flags )
-	first += 1
-	last += 1
-
-	tkRemove( first, last )
-
 end sub
 
 function tkGet( byval x as integer ) as integer
@@ -508,16 +447,6 @@ function tkSpellId( byval x as integer ) as zstring ptr
 		function = tk_info(p->id).text
 	end if
 end function
-
-function tkGetAst( byval x as integer ) as ASTNODE ptr
-	function = tkAccess( x )->ast
-end function
-
-sub tkSetAst( byval x as integer, byval ast as ASTNODE ptr )
-	var p = tkAccess( x )
-	astDelete( p->ast )
-	p->ast = ast
-end sub
 
 sub tkSetLocation( byval x as integer, byval location as TKLOCATION ptr )
 	var p = tkAccess( x )
@@ -692,21 +621,6 @@ function tkCollectComments _
 	function = s
 end function
 
-sub tkRemoveAllOf( byval id as integer, byval text as zstring ptr )
-	for x as integer = 0 to tkGetCount( )-1
-		if( tkGet( x ) = id ) then
-			var match = TRUE
-			if( text ) then
-				match = (*tkGetText( x ) = *text)
-			end if
-			if( match ) then
-				tkRemove( x, x )
-				x -= 1
-			end if
-		end if
-	next
-end sub
-
 sub tkApplyRemoves( )
 	var x = 0
 	while( tkGet( x ) <> TK_EOF )
@@ -716,20 +630,6 @@ sub tkApplyRemoves( )
 		end if
 		x += 1
 	wend
-end sub
-
-sub tkRemoveEOLs( )
-	var x = 0
-	do
-		select case( tkGet( x ) )
-		case TK_EOF
-			exit do
-		case TK_EOL
-			tkRemove( x, x )
-			x -= 1
-		end select
-		x += 1
-	loop
 end sub
 
 sub tkTurnCPPTokensIntoCIds( )
@@ -790,23 +690,8 @@ function tkSpell overload( byval x as integer ) as string
 	var flags = tkGetFlags( x )
 
 	select case as const( id )
-	case TK_PPDEFINE
-		var n = tkGetAst( x )
-		assert( n->class = ASTCLASS_PPDEFINE )
-		s = "#define " + *n->text
-		if( n->paramcount >= 0 ) then
-			s += "("
-			var param = n->head
-			while( param )
-				s += *param->text
-				param = param->next
-				if( param ) then
-					s += ", "
-				end if
-			wend
-			s += ")"
-		end if
-		s += " "
+	case TK_EOL
+		s += !"\n"
 
 	case TK_NUMBER
 		if( flags and TKFLAG_HEX ) then
@@ -853,6 +738,11 @@ function tkSpell overload( byval first as integer, byval last as integer ) as st
 	dim as string s
 
 	for i as integer = first to last
+		if( tkGet( i ) = TK_EOL ) then
+			assert( i = last )
+			exit for
+		end if
+
 		if( i > first ) then
 			var add_space = ((tkGetFlags( i ) and TKFLAG_BEHINDSPACE) <> 0)
 			add_space or= (tkGet( i - 1 ) >= TK_ID) and (tkGet( i ) >= TK_ID)
@@ -861,23 +751,44 @@ function tkSpell overload( byval first as integer, byval last as integer ) as st
 			end if
 		end if
 
-		select case( tkGet( i ) )
-		case TK_BEGIN
-		case TK_END
-			s += !"\n"
-		case else
-			s += tkSpell( i )
-		end select
+		s += tkSpell( i )
 	next
 
 	function = s
 end function
 
-function hSkipToTK_END( byval x as integer ) as integer
-	assert( tkGet( x ) = TK_BEGIN )
+function hFindClosingParen( byval x as integer ) as integer
+	var opening = tkGet( x )
+	var level = 0
+
+	dim as integer closing
+	select case( opening )
+	case TK_LBRACE   : closing = TK_RBRACE
+	case TK_LBRACKET : closing = TK_RBRACKET
+	case TK_LPAREN   : closing = TK_RPAREN
+	case else
+		assert( FALSE )
+	end select
+
 	do
-		x += 1
-	loop while( tkGet( x ) <> TK_END )
+		x = tkSkipCommentEol( x )
+
+		select case( tkGet( x ) )
+		case opening
+			level += 1
+
+		case closing
+			if( level = 0 ) then
+				exit do
+			end if
+			level -= 1
+
+		case TK_EOF
+			x -= 1
+			exit do
+		end select
+	loop
+
 	function = x
 end function
 
@@ -886,15 +797,13 @@ function hSkipConstruct( byval x as integer ) as integer
 	case TK_EOF
 		return x
 
-	case TK_SEMI, TK_DIVIDER, TK_PPINCLUDE, TK_PPUNDEF, _
-	     TK_PPELSE, TK_PPENDIF, TK_PPERROR, TK_PPWARNING
+	case TK_SEMI, TK_DIVIDER
 		return x + 1
 
-	case TK_PPDEFINE, TK_PPIF, TK_PPELSEIF
-		if( tkGet( x + 1 ) = TK_BEGIN ) then
-			x = hSkipToTK_END( x + 1 )
+	case TK_HASH
+		if( tkGetExpansionLevel( x ) = 0 ) then
+			return hSkipToEol( x ) + 1
 		end if
-		return x + 1
 	end select
 
 	do
@@ -905,9 +814,13 @@ function hSkipConstruct( byval x as integer ) as integer
 			x += 1
 			exit do
 
-		case TK_EOF, TK_DIVIDER, TK_PPINCLUDE, TK_PPDEFINE, TK_PPUNDEF, _
-		     TK_PPIF, TK_PPELSEIF, TK_PPELSE, TK_PPENDIF, TK_PPERROR, TK_PPWARNING
+		case TK_EOF, TK_DIVIDER
 			exit do
+
+		case TK_HASH
+			if( tkGetExpansionLevel( x ) = 0 ) then
+				exit do
+			end if
 
 		case TK_LPAREN, TK_LBRACKET, TK_LBRACE
 			x = hFindClosingParen( x )
@@ -949,10 +862,6 @@ private function hReportConstructTokens _
 
 	dim text as string
 	for i as integer = first to last
-		if( tkGet( i ) = TK_EOF ) then
-			continue for
-		end if
-
 		if( (len( text ) > 0) and (right( text, 1 ) <> " ") ) then
 			text += " "
 		end if
@@ -960,7 +869,13 @@ private function hReportConstructTokens _
 		if( i = x ) then
 			xcolumn = len( text )
 		end if
-		text += tkSpell( i )
+
+		select case( tkGet( i ) )
+		case TK_EOL, TK_EOF
+		case else
+			text += tkSpell( i )
+		end select
+
 		if( i = x ) then
 			xlength = len( text ) - xcolumn
 		end if

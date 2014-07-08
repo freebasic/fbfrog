@@ -1,4 +1,6 @@
 ''
+'' C pre-processor
+''
 '' Token buffer preprocessing
 '' --------------------------
 ''
@@ -20,18 +22,31 @@
 '' CPP directive parsing, #if evaluation, macro expansion
 '' ------------------------------------------------------
 ''
-'' cppIdentifyDirectives() parses the input tokens, looking for CPP directives.
-'' For any directives found, it merges the tokens into single TK_PP* tokens,
-'' to make further parsing easier.
-''
-'' #define bodies and #if expressions are not yet parsed, but only enclosed in
-'' TK_BEGIN and TK_END tokens. #define bodies are needed for macro expansion and
-'' also later for the C parser. #if expressions are macro-expanded later before
-'' being parsed and evaluated.
-''
 '' cppMain() goes through the token buffer much like a C preprocessor would do,
-'' keeping track of #defines and #undefs, doing macro expansion, evaluating #if
-'' blocks, and expanding #includes.
+'' parsing CPP directives keeping track of #defines and #undefs, doing macro
+'' expansion, evaluating #if blocks, and expanding #includes.
+''
+'' All tokens that shouldn't be preserved for the C parser later are marked via
+'' tkSetRemove() (for tkApplyRemoves() later). This affects most directives and
+'' all tokens skipped in #if 0 blocks. As a special case, #defines and
+'' unexpanded #includes are not deleted, but preserved for the C parser, because
+'' we want to parse them there too.
+''
+'' Since directives are not deleted from the token buffer immediately, we can
+'' leave #define bodies in place, and copy the tokens from there whenever they
+'' are needed for a macro expansion. Otherwise it would be necessary to load the
+'' tokens into some AST.
+''
+'' In various places (especially during macro expansion), we're temporarily
+'' inserting helper tokens such as TK_ARGBEGIN/TK_ARGEND to enclose a range of
+'' tokens. Then, instead of having to keep track of token indices which change
+'' on every insertion/deletion, we just have to watch out for those specific
+'' helper tokens to detect begin/end of the range.
+''
+'' Tokens inserted due to #include expansion are enclosed in TK_BEGININCLUDE and
+'' TK_ENDINCLUDE. This allows detecting #include EOF for the #if/#include stack,
+'' and enables the -nomerge option, where none of the #included tokens will be
+'' preserved (not just directives).
 ''
 '' cppNoExpandSym() can be used to disable macro expansion for certain symbols.
 '' This should be pretty rare though; usually in headers where function
@@ -48,42 +63,13 @@
 
 declare sub hMaybeExpandMacro( byref x as integer, byval inside_ifexpr as integer )
 
-private function hMatch( byref x as integer, byval tk as integer ) as integer
-	if( tkGet( x ) = tk ) then
-		x += 1
-		function = TRUE
-	end if
-end function
-
-private function hIsBeforeEol _
-	( _
-		byval x as integer, _
-		byval delta as integer _
-	) as integer
-
-	function = TRUE
-
+private function hIsBeforeEol( byval x as integer, byval delta as integer ) as integer
 	'' Can we reach EOL before hitting any non-space token?
-	do
-		x += delta
-
-		select case( tkGet( x ) )
-		case TK_COMMENT
-
-		case TK_EOL, TK_EOF
-			exit do
-
-		case TK_PPINCLUDE, TK_PPDEFINE, TK_PPIF, TK_PPELSEIF, TK_PPELSE, _
-		     TK_PPENDIF, TK_PPUNDEF, TK_PPERROR, TK_PPWARNING, TK_DIVIDER
-			'' High-level tokens count as separate lines
-			exit do
-
-		case else
-			function = FALSE
-			exit do
-		end select
-	loop
-
+	x = tkSkipComment( x, delta )
+	select case( tkGet( x ) )
+	case TK_EOL, TK_EOF
+		function = TRUE
+	end select
 end function
 
 private sub hAccumComment( byval x as integer, byval comment as zstring ptr )
@@ -108,45 +94,7 @@ private sub hAccumTkComment( byval x as integer, byval comment as integer )
 	hAccumComment( x, tkGetText( comment ) )
 end sub
 
-function hFindClosingParen( byval x as integer ) as integer
-	var opening = tkGet( x )
-	var level = 0
-
-	dim as integer closing
-	select case( opening )
-	case TK_LBRACE   : closing = TK_RBRACE
-	case TK_LBRACKET : closing = TK_RBRACKET
-	case TK_LPAREN   : closing = TK_RPAREN
-	case else
-		assert( FALSE )
-	end select
-
-	do
-		x = tkSkipCommentEol( x )
-
-		select case( tkGet( x ) )
-		case opening
-			level += 1
-
-		case closing
-			if( level = 0 ) then
-				exit do
-			end if
-			level -= 1
-
-		case TK_BEGIN
-			x = hSkipToTK_END( x )
-
-		case TK_END, TK_EOF
-			x -= 1
-			exit do
-		end select
-	loop
-
-	function = x
-end function
-
-function hSkipStatement( byval x as integer ) as integer
+private function hSkipStatement( byval x as integer ) as integer
 	var begin = x
 
 	do
@@ -164,20 +112,8 @@ function hSkipStatement( byval x as integer ) as integer
 		case TK_HASH
 			if( x <= begin ) then
 				'' Otherwise, skip the whole PP directive -- until EOL
-				do
-					x = tkSkipComment( x )
-
-					select case( tkGet( x ) )
-					case TK_EOF
-						exit do
-					case TK_EOL
-						'' Skip to next non-space token behind the EOL
-						x = tkSkipCommentEol( x )
-						exit do
-					end select
-				loop
+				x = tkSkipCommentEol( hSkipToEol( x ) )
 			end if
-
 			exit do
 
 		end select
@@ -325,7 +261,8 @@ private sub cppDividers( byval first as integer )
 			var blockcomment = tkCollectComments( x - 1, x - 1 )
 
 			var comment = tkCollectComments( begin, x - 2 )
-			tkFold( begin, x - 1, TK_DIVIDER, blockcomment )
+			tkRemove( begin, x - 1 )
+			tkInsert( begin, TK_DIVIDER, blockcomment )
 			tkSetComment( begin, comment )
 			x = begin
 		else
@@ -374,8 +311,15 @@ private sub cppDividers( byval first as integer )
 end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-'' #if expression parser used by cppMain()
 
+function hSkipToEol( byval x as integer ) as integer
+	while( (tkGet( x ) <> TK_EOL) and (tkGet( x ) <> TK_EOF) )
+		x += 1
+	wend
+	function = x
+end function
+
+'' Build a CONSTI/CONSTF ASTNODE for the given TK_NUMBER token
 function hNumberLiteral( byval x as integer, byval is_cpp as integer ) as ASTNODE ptr
 	assert( tkGet( x ) = TK_NUMBER )
 	var tkflags = tkGetFlags( x )
@@ -406,12 +350,10 @@ function hNumberLiteral( byval x as integer, byval is_cpp as integer ) as ASTNOD
 
 	'' In CPP expressions, number literals are treated as 64bit signed or
 	'' unsigned, no matter what dtype
-	if( is_cpp ) then
+	if( is_cpp or ((tkflags and TKFLAG_LL) <> 0) ) then
 		dtype = iif( tkflags and TKFLAG_U, TYPE_ULONGINT, TYPE_LONGINT )
 	elseif( tkflags and TKFLAG_L ) then
 		dtype = iif( tkflags and TKFLAG_U, TYPE_CULONG, TYPE_CLONG )
-	elseif( tkflags and TKFLAG_LL ) then
-		dtype = iif( tkflags and TKFLAG_U, TYPE_ULONGINT, TYPE_LONGINT )
 	else
 		dtype = iif( tkflags and TKFLAG_U, TYPE_ULONG, TYPE_LONG )
 	end if
@@ -420,6 +362,256 @@ function hNumberLiteral( byval x as integer, byval is_cpp as integer ) as ASTNOD
 	n->attrib or= astattrib
 	function = n
 end function
+
+'' MacroParameter =
+''      Identifier         (named parameter)
+''    | Identifier '...'   (named + variadic)
+''    | '...'              (variadic, using __VA_ARGS__)
+'' ('...' can only appear on the last parameter)
+private sub hMacroParam( byref x as integer, byval macro as ASTNODE ptr )
+	'' Identifier?
+	dim id as zstring ptr
+	if( tkGet( x ) >= TK_ID ) then
+		id = tkSpellId( x )
+		x += 1
+	end if
+
+	'' Shouldn't have seen a '...' yet
+	assert( (macro->attrib and ASTATTRIB_VARIADIC) = 0 )
+	var maybevariadic = 0
+
+	'' '...'?
+	if( tkGet( x ) = TK_ELLIPSIS ) then
+		x += 1
+		maybevariadic = ASTATTRIB_VARIADIC
+		if( id = NULL ) then
+			''    #define m(a, ...)
+			'' must become
+			''    #define m(a, __VA_ARGS__...)
+			'' in FB, because in FB, the '...' parameter of variadic macros must always have a name,
+			'' and using __VA_ARGS__ for that is the easiest solution, because then we don't need to
+			'' go replacing that in the macro body.
+			id = @"__VA_ARGS__"
+		end if
+	elseif( id = NULL ) then
+		tkOopsExpected( x, "macro parameter (identifier or '...')" )
+	end if
+
+	var param = astNew( ASTCLASS_MACROPARAM, id )
+	param->attrib or= maybevariadic
+	astAppend( macro, param )
+	macro->attrib or= maybevariadic
+	macro->paramcount += 1
+end sub
+
+'' <no whitespace> '(' MacroParameters ')'
+private sub hMacroParamList( byref x as integer, byval macro as ASTNODE ptr )
+	assert( macro->paramcount = -1 )
+
+	'' '(' directly behind #define identifier, no spaces in between?
+	if( (tkGet( x ) = TK_LPAREN) and _
+	    ((tkGetFlags( x ) and TKFLAG_BEHINDSPACE) = 0) ) then
+		x += 1
+
+		macro->paramcount = 0
+
+		'' Not just '()'?
+		if( tkGet( x ) <> TK_RPAREN ) then
+			'' MacroParam (',' MacroParam)*
+			do
+				hMacroParam( x, macro )
+
+				'' ','?
+				if( tkGet( x ) <> TK_COMMA ) then
+					exit do
+				end if
+				x += 1
+			loop
+		end if
+
+		'' ')'?
+		tkExpect( x, TK_RPAREN, "to close the parameter list in this macro declaration" )
+		x += 1
+	end if
+end sub
+
+function hDefineHead( byref x as integer ) as ASTNODE ptr
+	'' Identifier? (keywords should be allowed to, so anything >= TK_ID)
+	select case( tkGet( x ) )
+	case is < TK_ID
+		tkExpect( x, TK_ID, "behind #define" )
+	case KW_DEFINED
+		tkOops( x, "'defined' cannot be used as macro name" )
+	end select
+	var macro = astNewPPDEFINE( tkSpellId( x ) )
+	x += 1
+
+	hMacroParamList( x, macro )
+
+	function = macro
+end function
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+type DEFINEINFO
+	xdefine	as integer  '' 1st token of the #define directive (the '#')
+	xbody	as integer  '' 1st token of the #define body
+	xeol	as integer  '' eol/eof token behind the #define body
+
+	'' PPDEFINE node with information about the macro's parameters etc.
+	macro	as ASTNODE ptr
+end type
+
+private function definfoNew( ) as DEFINEINFO ptr
+	function = callocate( sizeof( DEFINEINFO ) )
+end function
+
+private sub definfoDelete( byval definfo as DEFINEINFO ptr )
+	if( definfo ) then
+		astDelete( definfo->macro )
+		deallocate( definfo )
+	end if
+end sub
+
+private sub definfoSetRemove( byval definfo as DEFINEINFO ptr )
+	tkSetRemove( definfo->xdefine, definfo->xeol )
+end sub
+
+'' Copy a #define body into some other place
+private sub definfoCopyBody( byval definfo as DEFINEINFO ptr, byval x as integer )
+	assert( x > definfo->xeol )
+	tkCopy( x, definfo->xbody, definfo->xeol - 1 )
+end sub
+
+enum
+	'' If stack states:
+	'' 0 = file context (fresh toplevel/#include file, no #if yet)
+	STACK_IF = 1  '' #if context, fresh
+	STACK_TRUE    '' #if context, saw #if/#elseif TRUE (and thus, further #elseif TRUE's must be skipped)
+	STACK_ELSE    '' #if context, saw #else (and no further #elseif/#else can be allowed)
+end enum
+
+const MAXSTACK = 128
+
+namespace cpp
+	dim shared as integer x  '' Current token index
+
+	'' #if/file context stack
+	'' * starts out with only the toplevel file context
+	'' * #if blocks and #include contexts are put on this stack
+	'' * an #endif found in an #include won't be able to close an #if from
+	''   the parent file, since the #include stack node is in the way, and
+	''   must be popped first.
+	dim shared stack(0 to MAXSTACK-1) as integer
+	dim shared as integer level  '' Current top of stack
+
+	'' Stack level which caused #if 0 skipping
+	'' * Allows us to continue parsing #ifs/#endifs even while skipping an
+	''   #if 0 block, and this way, to determine which #endif ends skipping
+	dim shared as integer skiplevel
+
+	'' Lookup table of macros known to be either defined or undefined.
+	''   defined <=> data = a DEFINEINFO object
+	'' undefined <=> data = NULL
+	'' Even though unregistered symbols are implicitly undefined,
+	'' registering them is useful to show the "assuming undefined" warning
+	'' (and to only show it once).
+	dim shared macros		as THASH
+
+	dim shared noexpands		as THASH
+	dim shared removes		as THASH
+end namespace
+
+sub cppInit( )
+	cpp.x = 0
+
+	'' Toplevel file context
+	cpp.stack(0) = 0
+	cpp.level = 0
+
+	'' No skipping yet
+	cpp.skiplevel = MAXSTACK
+
+	hashInit( @cpp.macros, 4, TRUE )
+	hashInit( @cpp.noexpands, 4, TRUE )
+	hashInit( @cpp.removes, 4, TRUE )
+end sub
+
+private sub cppEnd( )
+	'' If anything is left on the stack at EOF, it can only be #ifs
+	'' (#includes should be popped due to TK_ENDINCLUDE's already)
+	if( cpp.level > 0 ) then
+		assert( cpp.stack(cpp.level) >= STACK_IF )
+		tkOops( cpp.x, "missing #endif" )
+	end if
+
+	scope
+		for i as integer = 0 to cpp.macros.room - 1
+			definfoDelete( cpp.macros.items[i].data )
+		next
+		hashEnd( @cpp.macros )
+	end scope
+	hashEnd( @cpp.noexpands )
+	hashEnd( @cpp.removes )
+end sub
+
+#define cppSkipping( ) (cpp.skiplevel <> MAXSTACK)
+
+sub cppNoExpandSym( byval id as zstring ptr )
+	hashAddOverwrite( @cpp.noexpands, id, NULL )
+end sub
+
+sub cppRemoveSym( byval id as zstring ptr )
+	hashAddOverwrite( @cpp.removes, id, NULL )
+end sub
+
+private function cppLookupMacro( byval id as zstring ptr ) as DEFINEINFO ptr
+	var item = hashLookup( @cpp.macros, id, hashHash( id ) )
+	if( item->s ) then
+		function = item->data
+	else
+		function = NULL
+	end if
+end function
+
+private function cppIsKnownSymbol( byval id as zstring ptr ) as integer
+	function = (hashLookup( @cpp.macros, id, hashHash( id ) )->s <> NULL)
+end function
+
+private function cppIsMacroCurrentlyDefined( byval id as zstring ptr ) as integer
+	function = (cppLookupMacro( id ) <> NULL)
+end function
+
+'' Add/overwrite a known macro definition (or register it as known undefined)
+private sub cppAddMacro( byval id as zstring ptr, byval definfo as DEFINEINFO ptr )
+	var hash = hashHash( id )
+	var item = hashLookup( @cpp.macros, id, hash )
+	if( item->s ) then
+		definfoDelete( item->data )
+		item->data = definfo
+	else
+		hashAdd( @cpp.macros, item, hash, id, definfo )
+	end if
+end sub
+
+private sub cppAddKnownUndefined( byval id as zstring ptr )
+	cppAddMacro( id, NULL )
+end sub
+
+private function cppShouldExpandSym( byval id as zstring ptr ) as integer
+	function = (hashLookup( @cpp.noexpands, id, hashHash( id ) )->s = NULL)
+end function
+
+private function cppShouldRemoveSym( byval id as zstring ptr ) as integer
+	function = (hashLookup( @cpp.removes, id, hashHash( id ) )->s <> NULL)
+end function
+
+private sub cppEol( )
+	if( tkGet( cpp.x ) <> TK_EOL ) then
+		tkOopsExpected( cpp.x, "end-of-line behind CPP directive" )
+	end if
+	cpp.x += 1
+end sub
 
 '' C operator precedence, starting at 1, higher value = higher precedence
 dim shared as integer cprecedence(ASTCLASS_CLOGOR to ASTCLASS_IIF) = _
@@ -469,15 +661,10 @@ dim shared as integer cprecedence(ASTCLASS_CLOGOR to ASTCLASS_IIF) = _
 }
 
 '' C PP expression parser based on precedence climbing
-private function cppExpression _
-	( _
-		byref x as integer, _
-		byval level as integer = 0 _
-	) as ASTNODE ptr
-
+private function cppExpression( byval level as integer = 0 ) as ASTNODE ptr
 	'' Unary prefix operators
 	var op = -1
-	select case( tkGet( x ) )
+	select case( tkGet( cpp.x ) )
 	case TK_EXCL  : op = ASTCLASS_CLOGNOT   '' !
 	case TK_TILDE : op = ASTCLASS_NOT       '' ~
 	case TK_MINUS : op = ASTCLASS_NEGATE    '' -
@@ -486,28 +673,28 @@ private function cppExpression _
 
 	dim as ASTNODE ptr a
 	if( op >= 0 ) then
-		var uopx = x
-		x += 1
-		a = astTakeLoc( astNew( op, cppExpression( x, cprecedence(op) ) ), uopx )
+		var uopx = cpp.x
+		cpp.x += 1
+		a = astTakeLoc( astNew( op, cppExpression( cprecedence(op) ) ), uopx )
 	else
 		'' Atoms
-		select case( tkGet( x ) )
+		select case( tkGet( cpp.x ) )
 		'' '(' Expression ')'
 		case TK_LPAREN
 			'' '('
-			x += 1
+			cpp.x += 1
 
 			'' Expression
-			a = cppExpression( x )
+			a = cppExpression( )
 
 			'' ')'
-			tkExpect( x, TK_RPAREN, "for '(...)' parenthesized expression" )
-			x += 1
+			tkExpect( cpp.x, TK_RPAREN, "for '(...)' parenthesized expression" )
+			cpp.x += 1
 
 		'' Number literals
 		case TK_NUMBER
-			a = astTakeLoc( hNumberLiteral( x, TRUE ), x )
-			x += 1
+			a = astTakeLoc( hNumberLiteral( cpp.x, TRUE ), cpp.x )
+			cpp.x += 1
 
 		'' Identifier
 		case TK_ID
@@ -520,44 +707,44 @@ private function cppExpression _
 			''    #if defined A && B == 123
 			'' If A isn't defined then B doesn't need to be
 			'' evaluated and no warning should be shown.
-			a = astTakeLoc( astNewID( tkSpellId( x ) ), x )
-			x += 1
+			a = astTakeLoc( astNewID( tkSpellId( cpp.x ) ), cpp.x )
+			cpp.x += 1
 
 		'' DEFINED ['('] Identifier [')']
 		case KW_DEFINED
-			var definedx = x
-			x += 1
+			var definedx = cpp.x
+			cpp.x += 1
 
 			'' '('
 			var have_parens = FALSE
-			if( tkGet( x ) = TK_LPAREN ) then
+			if( tkGet( cpp.x ) = TK_LPAREN ) then
 				have_parens = TRUE
-				x += 1
+				cpp.x += 1
 			end if
 
 			'' Identifier
-			if( tkGet( x ) < TK_ID ) then
-				tkExpect( x, TK_ID, "as operand of DEFINED" )
+			if( tkGet( cpp.x ) < TK_ID ) then
+				tkExpect( cpp.x, TK_ID, "as operand of DEFINED" )
 			end if
-			a = astTakeLoc( astNewID( tkSpellId( x ) ), x )
-			x += 1
+			a = astTakeLoc( astNewID( tkSpellId( cpp.x ) ), cpp.x )
+			cpp.x += 1
 
 			if( have_parens ) then
 				'' ')'
-				tkExpect( x, TK_RPAREN, "for DEFINED(...)" )
-				x += 1
+				tkExpect( cpp.x, TK_RPAREN, "for DEFINED(...)" )
+				cpp.x += 1
 			end if
 
 			a = astTakeLoc( astNew( ASTCLASS_CDEFINED, a ), definedx )
 
 		case else
-			tkOopsExpected( x, "expression" )
+			tkOopsExpected( cpp.x, "expression" )
 		end select
 	end if
 
 	'' Infix operators
 	do
-		select case as const( tkGet( x ) )
+		select case as const( tkGet( cpp.x ) )
 		case TK_QUEST    : op = ASTCLASS_IIF     '' ? (a ? b : c)
 		case TK_PIPEPIPE : op = ASTCLASS_CLOGOR  '' ||
 		case TK_AMPAMP   : op = ASTCLASS_CLOGAND '' &&
@@ -593,19 +780,19 @@ private function cppExpression _
 		end if
 
 		'' operator
-		var bopx = x
-		x += 1
+		var bopx = cpp.x
+		cpp.x += 1
 
 		'' rhs
-		var b = cppExpression( x, oplevel )
+		var b = cppExpression( oplevel )
 
 		'' Handle ?: special case
 		if( op = ASTCLASS_IIF ) then
 			'' ':'?
-			tkExpect( x, TK_COLON, "for a?b:c iif operator" )
-			x += 1
+			tkExpect( cpp.x, TK_COLON, "for a?b:c iif operator" )
+			cpp.x += 1
 
-			var c = cppExpression( x, oplevel )
+			var c = cppExpression( oplevel )
 
 			a = astNewIIF( a, b, c )
 		else
@@ -617,377 +804,24 @@ private function cppExpression _
 	function = a
 end function
 
-''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-
-'' MacroParameter =
-''      Identifier         (named parameter)
-''    | Identifier '...'   (named + variadic)
-''    | '...'              (variadic, using __VA_ARGS__)
-'' ('...' can only appear on the last parameter)
-private function hMacroParam _
-	( _
-		byref x as integer, _
-		byval macro as ASTNODE ptr _
-	) as integer
-
-	dim id as zstring ptr
-	if( tkGet( x ) >= TK_ID ) then
-		id = tkSpellId( x )
-		x += 1
-	end if
-
-	'' Shouldn't have seen a '...' yet
-	assert( (macro->attrib and ASTATTRIB_VARIADIC) = 0 )
-	var maybevariadic = 0
-
-	if( tkGet( x ) = TK_ELLIPSIS ) then
-		x += 1
-		maybevariadic = ASTATTRIB_VARIADIC
-		if( id = NULL ) then
-			''    #define m(a, ...)
-			'' must become
-			''    #define m(a, __VA_ARGS__...)
-			'' in FB, because in FB, the '...' parameter of variadic macros must always have a name,
-			'' and using __VA_ARGS__ for that is the easiest solution, because then we don't need to
-			'' go replacing that in the macro body.
-			id = @"__VA_ARGS__"
-		end if
-	elseif( id = NULL ) then
-		'' No identifier and no '...'
-		exit function
-	end if
-
-	var param = astNew( ASTCLASS_MACROPARAM, id )
-	param->attrib or= maybevariadic
-	astAppend( macro, param )
-	macro->attrib or= maybevariadic
-	macro->paramcount += 1
-	function = TRUE
-end function
-
-'' Identifier <no whitespace> '(' MacroParameters ')'
-private sub hMacroParamList( byref x as integer, byval macro as ASTNODE ptr )
-	assert( tkGet( x ) >= TK_ID )
-	assert( macro->paramcount = -1 )
-	x += 1
-
-	'' '(' following directly behind the macro id, no spaces in between?
-	if( (tkGet( x ) = TK_LPAREN) and _
-	    ((tkGetFlags( x ) and TKFLAG_BEHINDSPACE) = 0) ) then
-		'' '('
-		x += 1
-		macro->paramcount = 0
-
-		'' List of macro parameters =
-		''    MacroParam (',' MacroParam)*
-		do
-			if( hMacroParam( x, macro ) = FALSE ) then
-				exit do
-			end if
-
-			'' ','?
-		loop while( hMatch( x, TK_COMMA ) )
-
-		'' ')'?
-		tkExpect( x, TK_RPAREN, "to close the parameter list in this macro declaration" )
-		x += 1
-	end if
-end sub
-
-private sub hEncloseTokensUntilEol( byref x as integer )
-	var head = x - 1
-
-	tkInsert( x, TK_BEGIN )
-	x += 1
-
-	do
-		select case( tkGet( x ) )
-		case TK_EOL, TK_EOF
-			exit do
-		end select
-		x += 1
-	loop
-
-	tkInsert( x, TK_END )
-	x += 1
-
-	'' If the head token has TKFLAG_REMOVE, apply it to the TK_BEGIN/END
-	'' aswell
-	if( tkGetFlags( head ) and TKFLAG_REMOVE ) then
-		tkSetRemove( head + 1, x - 1 )
-	end if
-end sub
-
-private function cppDirective( byval x as integer ) as integer
-	var begin = x
-
-	'' '#'
-	assert( tkGet( x ) = TK_HASH )
-	x += 1
-
-	var tk = tkGet( x )
-
-	select case( tk )
-	'' DEFINE Identifier ['(' ParameterList ')'] Body Eol
-	case KW_DEFINE
-		x += 1
-
-		'' Identifier? (keywords should be allowed to, so anything >= TK_ID)
-		if( tkGet( x ) < TK_ID ) then
-			tkExpect( x, TK_ID, "behind #define" )
-		elseif( tkGet( x ) = KW_DEFINED ) then
-			tkOops( x, "'defined' cannot be used as macro name" )
-		end if
-		var macro = astNewPPDEFINE( tkSpellId( x ) )
-
-		hMacroParamList( x, macro )
-
-		tkFold( begin, x - 1, TK_PPDEFINE )
-		tkSetAst( begin, macro )
-		x = begin + 1
-
-		'' Enclose body tokens in TK_BEGIN/END
-		hEncloseTokensUntilEol( x )
-
-	case KW_INCLUDE
-		x += 1
-
-		'' "filename"
-		tkExpect( x, TK_STRING, "containing the #include file name" )
-
-		tkFold( begin, x, TK_PPINCLUDE, tkGetText( x ) )
-		x = begin + 1
-
-	case KW_IF, KW_ELIF
-		tkFold( begin, x, iif( tk = KW_IF, TK_PPIF, TK_PPELSEIF ) )
-		x = begin + 1
-
-		'' Enclose #if condition expression tokens in TK_BEGIN/END
-		hEncloseTokensUntilEol( x )
-
-	case KW_IFDEF, KW_IFNDEF
-		x += 1
-
-		'' Identifier
-		if( tkGet( x ) < TK_ID ) then
-			tkExpect( x, TK_ID, iif( tk = KW_IFNDEF, @"behind #ifndef", @"behind #ifdef" ) )
-		end if
-
-		'' Build up "[!]defined id" expression
-		var expr = astTakeLoc( astNewID( tkSpellId( x ) ), x )
-		expr = astTakeLoc( astNew( ASTCLASS_CDEFINED, expr ), x - 1 )
-		expr->location.column += 2  '' ifdef -> def, ifndef -> ndef
-		expr->location.length = 3
-		if( tk = KW_IFNDEF ) then
-			expr->location.column += 1  '' ndef -> def
-			expr = astTakeLoc( astNew( ASTCLASS_CLOGNOT, expr ), x - 1 )
-			expr->location.column += 2  '' ifndef -> n
-			expr->location.length = 1
-		end if
-
-		tkFold( begin, x, TK_PPIF )
-		tkSetAst( begin, expr )
-		x = begin + 1
-
-	case KW_ELSE, KW_ENDIF
-		tkFold( begin, x, iif( tk = KW_ELSE, TK_PPELSE, TK_PPENDIF ) )
-		x = begin + 1
-
-	case KW_UNDEF
-		x += 1
-
-		'' Identifier
-		if( tkGet( x ) < TK_ID ) then
-			tkExpect( x, TK_ID, "behind #undef" )
-		end if
-
-		tkFold( begin, x, TK_PPUNDEF, tkSpellId( x ) )
-		x = begin + 1
-
-	case KW_PRAGMA
-		x += 1
-
-		select case( tkGet( x ) )
-		case TK_ID
-			'' #pragma message("...")
-			select case( *tkSpellId( x ) )
-			case "message"
-				x += 1
-
-				tkExpect( x, TK_LPAREN, "for #pragma message" )
-				x += 1
-
-				tkExpect( x, TK_STRING, "for #pragma message" )
-				x += 1
-
-				tkExpect( x, TK_RPAREN, "for #pragma message" )
-
-				tkRemove( begin, x )
-				x = begin
-
-			case else
-				tkOops( x, "unknown #pragma" )
-			end select
-		case else
-			tkOops( x, "unknown #pragma" )
-		end select
-
-	'' #error|#warning ...Tokens until EOL...
-	case KW_ERROR, KW_WARNING
-		x += 1
-
-		while( tkGet( x ) <> TK_EOL )
-			x += 1
-		wend
-		x -= 1
-
-		tkFold( begin, x, iif( tk = KW_ERROR, TK_PPERROR, TK_PPWARNING ), tkGetText( x ) )
-		x = begin + 1
-
-	case TK_EOL
-		'' '#' followed by EOL (accepted by gcc/clang too)
-		tkRemove( begin, x - 1 )
-		x = begin
-
-	case else
-		tkOops( x, "unknown PP directive" )
-	end select
-
-	'' EOL?
-	select case( tkGet( x ) )
-	case TK_EOL
-		tkRemove( x, x )
-
-	case TK_EOF
-
-	case else
-		tkOopsExpected( x, "EOL behind PP directive" )
-	end select
-
-	function = x
-end function
-
-private sub cppIdentifyDirectives( byval first as integer )
-	var x = first
-	do
-		select case( tkGet( x ) )
-		case TK_EOF
-			exit do
-
-		'' '#'
-		case TK_HASH
-			'' At BOL?
-			select case( tkGet( tkSkipComment( x, -1 ) ) )
-			case TK_EOL, TK_EOF, TK_END, TK_DIVIDER, _
-			     TK_PPINCLUDE, TK_PPDEFINE, TK_PPIF, TK_PPELSEIF, _
-			     TK_PPELSE, TK_PPENDIF, TK_PPUNDEF, TK_PPERROR, TK_PPWARNING
-				x = cppDirective( x )
-			case else
-				x += 1
-			end select
-
-		case else
-			x += 1
-		end select
-	loop
-end sub
-
-''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-
-namespace eval
-	'' Lists of known macros etc. Initial symbols can be added before
-	'' cppMain(), then it will use and adjust the lists while parsing.
-
-	'' Lookup table of known #define token positions (or -1 if known but
-	'' undefined)
-	dim shared macros		as THASH
-
-	dim shared noexpands		as THASH
-	dim shared removes		as THASH
-end namespace
-
-sub cppInit( )
-	hashInit( @eval.macros, 4, TRUE )
-	hashInit( @eval.noexpands, 4, TRUE )
-	hashInit( @eval.removes, 4, TRUE )
-end sub
-
-private sub cppEnd( )
-	hashEnd( @eval.macros )
-	hashEnd( @eval.noexpands )
-	hashEnd( @eval.removes )
-end sub
-
-sub cppNoExpandSym( byval id as zstring ptr )
-	hashAddOverwrite( @eval.noexpands, id, NULL )
-end sub
-
-sub cppRemoveSym( byval id as zstring ptr )
-	hashAddOverwrite( @eval.removes, id, NULL )
-end sub
-
-private function hLookupMacro( byval id as zstring ptr ) as integer
-	var item = hashLookup( @eval.macros, id, hashHash( id ) )
-	if( item->s ) then
-		function = cint( item->data )
-	else
-		function = -1
-	end if
-end function
-
-private function hIsKnownSymbol( byval id as zstring ptr ) as integer
-	function = (hashLookup( @eval.macros, id, hashHash( id ) )->s <> NULL)
-end function
-
-private function hIsMacroCurrentlyDefined( byval id as zstring ptr ) as integer
-	function = (hLookupMacro( id ) >= 0)
-end function
-
-private sub hRegisterMacro( byval id as zstring ptr, byval x as integer )
-	assert( iif( x >= 0, tkGet( x ) = TK_PPDEFINE, TRUE ) )
-	hashAddOverwrite( @eval.macros, id, cptr( any ptr, x ) )
-end sub
-
-private sub hMaybeReportConflictingDefine( byval a as ASTNODE ptr, byval b as ASTNODE ptr )
-	if( astIsEqual( a, b ) ) then
-		exit sub
-	end if
-
-	'' Existing #define wasn't reported yet?
-	if( (b->attrib and ASTATTRIB_REPORTED) = 0 ) then
-		astReport( b, "conflicting #define for '" + *a->text + "', first one:", FALSE )
-		b->attrib or= ASTATTRIB_REPORTED
-	end if
-
-	assert( (a->attrib and ASTATTRIB_REPORTED) = 0 )
-	astReport( a, "conflicting #define for '" + *a->text + "', new one:", FALSE )
-	a->attrib or= ASTATTRIB_REPORTED
-end sub
-
-private function hShouldExpandSym( byval id as zstring ptr ) as integer
-	function = (hashLookup( @eval.noexpands, id, hashHash( id ) )->s = NULL)
-end function
-
-private function hCheckForMacroCall( byval x as integer ) as integer
+private function hCheckForMacroCall( byval x as integer ) as DEFINEINFO ptr
 	assert( tkGet( x ) >= TK_ID )
 	var id = tkSpellId( x )
 
 	'' Is this id a macro?
-	var xmacro = hLookupMacro( id )
-	if( xmacro < 0 ) then
-		return -1
+	var definfo = cppLookupMacro( id )
+	if( definfo = NULL ) then
+		return NULL
 	end if
 
 	'' Only expand if not marked otherwise
-	assert( tkGet( xmacro ) = TK_PPDEFINE )
-	var macro = tkGetAst( xmacro )
-	if( (not hShouldExpandSym( id )) or _
+	if( (not cppShouldExpandSym( id )) or _
 	    (tkGetFlags( x ) and TKFLAG_NOEXPAND) or _
-	    (macro->attrib and ASTATTRIB_POISONED) ) then
-		return -1
+	    (definfo->macro->attrib and ASTATTRIB_POISONED) ) then
+		return NULL
 	end if
 
-	function = xmacro
+	function = definfo
 end function
 
 const MAXARGS = 128
@@ -1057,7 +891,11 @@ private sub hParseMacroCallArgs _
 		argcount += 1
 
 		'' ','?
-	loop while( hMatch( x, TK_COMMA ) )
+		if( tkGet( x ) <> TK_COMMA ) then
+			exit do
+		end if
+		x += 1
+	loop
 
 	'' It's ok to omit the arg(s) for the variadic parameter of a variadic macro.
 	if( is_variadic and (not reached_lastarg) ) then
@@ -1125,15 +963,6 @@ private function hParseMacroCall _
 	function = x - 1
 end function
 
-'' Copy a #define body into some other place, still enclosed in TK_BEGIN/TK_END
-private sub hCopyMacroBody( byval x as integer, byval xmacro as integer )
-	assert( tkGet( xmacro ) = TK_PPDEFINE )
-	var xmacrobegin = xmacro + 1
-	var xmacroend = hSkipToTK_END( xmacrobegin )
-	assert( x > xmacroend )
-	tkCopy( x, xmacrobegin, xmacroend )
-end sub
-
 '' DEFINED ['('] Identifier [')']
 private sub hSkipDefinedUop( byref x as integer )
 	assert( tkGet( x ) = KW_DEFINED )
@@ -1159,11 +988,28 @@ private sub hSkipDefinedUop( byref x as integer )
 	end if
 end sub
 
-private function hExpandUntilTK_END _
+private sub hWrapInTkBeginEnd( byval first as integer, byval last as integer )
+	assert( first <= last )
+	tkInsert( first, TK_BEGIN )
+	last += 1
+	tkInsert( last + 1, TK_END )
+end sub
+
+private sub hUnwrapTkBeginEnd( byval first as integer, byval last as integer )
+	assert( tkGet( first ) = TK_BEGIN )
+	assert( tkGet( last ) = TK_END )
+	tkRemove( first, first )
+	last -= 1
+	tkRemove( last, last )
+end sub
+
+private function hExpandInTkBeginEnd _
 	( _
 		byval x as integer, _
 		byval inside_ifexpr as integer _
 	) as integer
+
+	assert( tkGet( x ) = TK_BEGIN )
 
 	do
 		select case( tkGet( x ) )
@@ -1196,29 +1042,25 @@ private function hExpandInRange _
 		byval inside_ifexpr as integer _
 	) as integer
 
-	if( last < first ) then
+	'' Do nothing if range is empty - happens when expanding in a macro
+	'' expansion but the expansion is empty, or when expanding in an #if
+	'' condition but it's missing.
+	if( first > last ) then
 		return last
 	end if
 
 	'' Insert TK_BEGIN/TK_END around the argument's tokens, to prevent the
 	'' macro call parsing functions from reading out-of-bounds.
-	tkInsert( first, TK_BEGIN )
-	last += 1
-	last += 1
-	tkInsert( last, TK_END )
-	assert( tkGet( first ) = TK_BEGIN )
+	hWrapInTkBeginEnd( first, last )
+	last += 2
 	assert( tkGet( last ) = TK_END )
 
 	'' Expand anything in the range
-	last = hExpandUntilTK_END( first + 1, inside_ifexpr )
+	last = hExpandInTkBeginEnd( first, inside_ifexpr )
 
 	'' Remove TK_BEGIN/TK_END again
-	assert( tkGet( first ) = TK_BEGIN )
-	assert( tkGet( last ) = TK_END )
-	tkRemove( first, first )
-	last -= 1
-	tkRemove( last, last )
-	last -= 1
+	hUnwrapTkBeginEnd( first, last )
+	last -= 2
 
 	function = last
 end function
@@ -1254,8 +1096,7 @@ end function
 private function hInsertMacroExpansion _
 	( _
 		byval expansionbegin as integer, _
-		byval xmacro as integer, _
-		byval macro as ASTNODE ptr, _
+		byval definfo as DEFINEINFO ptr, _
 		byval argbegin as integer ptr, _
 		byval argend as integer ptr, _
 		byval argcount as integer, _
@@ -1270,7 +1111,9 @@ private function hInsertMacroExpansion _
 	'' the expansion through all the insertions/deletions done here.
 	'' Instead, if we need to know the end of the expansion, we can just
 	'' look for the TK_END.
-	hCopyMacroBody( expansionbegin, xmacro )
+	tkInsert( expansionbegin, TK_END )
+	definfoCopyBody( definfo, expansionbegin )
+	tkInsert( expansionbegin, TK_BEGIN )
 
 	'' Solve #stringify operators (higher priority than ##, and no macro
 	'' expansion done for the arg)
@@ -1282,11 +1125,12 @@ private function hInsertMacroExpansion _
 			'' Followed by identifier?
 			if( tkGet( x + 1 ) >= TK_ID ) then
 				'' Is it a macro parameter?
-				var arg = astLookupMacroParam( macro, tkSpellId( x + 1 ) )
+				var arg = astLookupMacroParam( definfo->macro, tkSpellId( x + 1 ) )
 				if( arg >= 0 ) then
 					'' Remove #param, and insert stringify result instead
 					assert( (arg >= 0) and (arg < argcount) )
-					tkFold( x, x + 1, TK_STRING, tkSpell( argbegin[arg], argend[arg] ) )
+					tkRemove( x, x + 1 )
+					tkInsert( x, TK_STRING, tkSpell( argbegin[arg], argend[arg] ) )
 				end if
 			end if
 		end if
@@ -1301,7 +1145,10 @@ private function hInsertMacroExpansion _
 
 		'' '##'?
 		if( tkGet( x ) = TK_HASHHASH ) then
-			tkFold( x, x, TK_PPMERGE )
+			tkInsert( x, TK_PPMERGE )
+			var y = x + 1
+			tkSetLocation( x, tkGetLocation( y ) )
+			tkRemove( y, y )
 		end if
 
 		x += 1
@@ -1318,7 +1165,7 @@ private function hInsertMacroExpansion _
 
 		'' Macro parameter?
 		if( tkGet( x ) >= TK_ID ) then
-			var arg = astLookupMacroParam( macro, tkSpellId( x ) )
+			var arg = astLookupMacroParam( definfo->macro, tkSpellId( x ) )
 			if( arg >= 0 ) then
 				'' >= TK_ID
 				tkRemove( x, x )
@@ -1495,8 +1342,7 @@ end function
 
 private sub hExpandMacro _
 	( _
-		byval xmacro as integer, _
-		byval macro as ASTNODE ptr, _
+		byval definfo as DEFINEINFO ptr, _
 		byval callbegin as integer, _
 		byval callend as integer, _
 		byval argbegin as integer ptr, _
@@ -1508,7 +1354,7 @@ private sub hExpandMacro _
 	'' Insert the macro body behind the call (this way the positions
 	'' stored in argbegin()/argend() stay valid)
 	var expansionbegin = callend + 1
-	var expansionend = hInsertMacroExpansion( expansionbegin, xmacro, macro, argbegin, argend, argcount, inside_ifexpr )
+	var expansionend = hInsertMacroExpansion( expansionbegin, definfo, argbegin, argend, argcount, inside_ifexpr )
 
 	'' Set expansion level on the expansion tokens:
 	'' = minlevel from macro call tokens + 1
@@ -1525,9 +1371,9 @@ private sub hExpandMacro _
 	'' - Incomplete recursive calls need to be marked with NOEXPAND so they
 	''   won't be expanded later when they become complete by taking into
 	''   account tokens following behind the expansion.
-	macro->attrib or= ASTATTRIB_POISONED
+	definfo->macro->attrib or= ASTATTRIB_POISONED
 	expansionend = hExpandInRange( expansionbegin, expansionend, inside_ifexpr )
-	macro->attrib and= not ASTATTRIB_POISONED
+	definfo->macro->attrib and= not ASTATTRIB_POISONED
 
 	'' Disable future expansion of recursive macro calls to this macro
 	'' (those that weren't expanded due to the "poisoning")
@@ -1537,14 +1383,14 @@ private sub hExpandMacro _
 
 			if( tkGet( x ) >= TK_ID ) then
 				'' Known macro, and it's the same as this one?
-				var xcalledmacro = hCheckForMacroCall( x )
-				if( xcalledmacro = xmacro ) then
+				var calldefinfo = hCheckForMacroCall( x )
+				if( calldefinfo = definfo ) then
 					'' Can the macro call be parsed successfully,
 					'' and is it fully within the expansion?
 					dim as integer argbegin(0 to MAXARGS-1)
 					dim as integer argend(0 to MAXARGS-1)
 					dim as integer argcount
-					var callend = hParseMacroCall( x, tkGetAst( xcalledmacro ), @argbegin(0), @argend(0), argcount )
+					var callend = hParseMacroCall( x, definfo->macro, @argbegin(0), @argend(0), argcount )
 					if( (callend >= 0) and (callend <= expansionend) ) then
 						tkAddFlags( x, TKFLAG_NOEXPAND )
 					end if
@@ -1562,13 +1408,10 @@ end sub
 private sub hMaybeExpandMacro( byref x as integer, byval inside_ifexpr as integer )
 	var begin = x
 
-	var xmacro = hCheckForMacroCall( x )
-	if( xmacro < 0 ) then
+	var definfo = hCheckForMacroCall( x )
+	if( definfo = NULL ) then
 		exit sub
 	end if
-
-	assert( tkGet( xmacro ) = TK_PPDEFINE )
-	var macro = tkGetAst( xmacro )
 
 	dim as integer argbegin(0 to MAXARGS-1)
 	dim as integer argend(0 to MAXARGS-1)
@@ -1577,37 +1420,17 @@ private sub hMaybeExpandMacro( byref x as integer, byval inside_ifexpr as intege
 	'' Try to parse the macro call (can fail in case of function-like macro
 	'' without argument list)
 	var callbegin = x
-	var callend = hParseMacroCall( callbegin, macro, @argbegin(0), @argend(0), argcount )
+	var callend = hParseMacroCall( callbegin, definfo->macro, @argbegin(0), @argend(0), argcount )
 	if( callend < 0 ) then
 		exit sub
 	end if
 
-	hExpandMacro( xmacro, macro, callbegin, callend, @argbegin(0), @argend(0), argcount, inside_ifexpr )
+	hExpandMacro( definfo, callbegin, callend, @argbegin(0), @argend(0), argcount, inside_ifexpr )
 
 	'' The macro call was replaced with the body, the token at the TK_ID's
 	'' position must be re-parsed.
 	x -= 1
 end sub
-
-private function hParseIfCondition( byval x as integer ) as ASTNODE ptr
-	'' BEGIN
-	assert( tkGet( x ) = TK_BEGIN )
-	var begin = x
-	x += 1
-
-	'' Try parsing an expression
-	function = cppExpression( x )
-
-	'' TK_END not reached after cppExpression()?
-	if( tkGet( x ) <> TK_END ) then
-		'' Then either no expression could be parsed at all,
-		'' or it was followed by "junk" tokens...
-		tkOops( begin - 1, "couldn't parse #if condition expression" )
-	end if
-
-	'' END
-	assert( tkGet( x ) = TK_END )
-end function
 
 ''
 '' Pre-calculate the result data types of UOPs/BOPs in a CPP expression
@@ -1794,7 +1617,7 @@ private sub cppEval( byref v as ASTNODE, byval n as ASTNODE ptr )
 
 		'' And register as known undefined (it wasn't expanded so it
 		'' must be undefined), so the warning won't be shown again.
-		hRegisterMacro( n->text, -1 )
+		cppAddKnownUndefined( n->text )
 
 		'' id  ->  0
 		v.vali = 0
@@ -1803,7 +1626,7 @@ private sub cppEval( byref v as ASTNODE, byval n as ASTNODE ptr )
 		assert( n->head->class = ASTCLASS_ID )
 		var id = n->head->text
 
-		if( hIsKnownSymbol( id ) = FALSE ) then
+		if( cppIsKnownSymbol( id ) = FALSE ) then
 			'' Unknown symbol, assume it's undefined
 			if( frog.verbose ) then
 				astReport( n->head, "assuming symbol '" + *n->head->text + "' is undefined" )
@@ -1812,11 +1635,11 @@ private sub cppEval( byref v as ASTNODE, byval n as ASTNODE ptr )
 			'' Register as known undefined
 			'' This also prevents the above warning from being shown
 			'' multiple times for a single symbol.
-			hRegisterMacro( n->head->text, -1 )
+			cppAddKnownUndefined( n->head->text )
 		end if
 
 		'' defined()  ->  1|0
-		v.vali = -hIsMacroCurrentlyDefined( id )
+		v.vali = -cppIsMacroCurrentlyDefined( id )
 
 	case else
 		astOops( n, "couldn't evaluate #if condition" )
@@ -1825,94 +1648,170 @@ private sub cppEval( byref v as ASTNODE, byval n as ASTNODE ptr )
 	v.dtype = n->dtype
 end sub
 
-private function hEvalIfCondition( byval x as integer ) as integer
-	assert( (tkGet( x ) = TK_PPIF) or (tkGet( x ) = TK_PPELSEIF) )
-	var xif = x
-	var t = tkGetAst( x )
-
-	'' No #if expression yet?
-	if( t = NULL ) then
-		x += 1
-
-		'' Expand macros in the #if condition expression, before parsing
-		'' it, but don't expand the "id" in "defined id".
-		assert( tkGet( x ) = TK_BEGIN )
-		hExpandUntilTK_END( x + 1, TRUE )
-
-		t = hParseIfCondition( x )
-
-		x = xif
-	end if
-
-	'' Evaluate the condition
-	cppEvalResultDtypes( t )
+'' Evaluates a CPP expression to true/false
+private function cppEvalIfExpr( byval expr as ASTNODE ptr ) as integer
+	cppEvalResultDtypes( expr )
 	dim v as ASTNODE
-	cppEval( v, t )
+	cppEval( v, expr )
 	function = (v.vali <> 0)
 end function
 
-private function hLookupRemoveSym( byval id as zstring ptr ) as integer
-	function = (hashLookup( @eval.removes, id, hashHash( id ) )->s <> NULL)
+private sub cppPush( byval stackid as integer )
+	cpp.level += 1
+	if( cpp.level >= MAXSTACK ) then
+		tkOops( cpp.x, "#if/#include stack too small, MAXSTACK=" & MAXSTACK )
+	end if
+	cpp.stack(cpp.level) = stackid
+end sub
+
+private sub cppPop( )
+	cpp.level -= 1
+end sub
+
+private sub cppApplyIf( byval expr as ASTNODE ptr )
+	if( cppEvalIfExpr( expr ) ) then
+		'' #if TRUE, don't skip
+		cpp.stack(cpp.level) = STACK_TRUE
+	else
+		'' #if FALSE, start skipping
+		cpp.skiplevel = cpp.level
+	end if
+end sub
+
+private function cppIfExpr( ) as ASTNODE ptr
+	'' Expand macros in the #if condition before parsing it
+	'' * but don't expand operands of the "defined" operator
+	'' * we allow "defined" operators to be produced by
+	''   macro expansion, like gcc
+	hExpandInRange( cpp.x, hSkipToEol( cpp.x ) - 1, TRUE )
+
+	'' Try parsing an expression
+	function = cppExpression( )
 end function
 
-private sub hSkipIfAndSetRemove( byref x as integer )
-	var last = x
-	if( tkGet( x + 1 ) = TK_BEGIN ) then
-		last = hSkipToTK_END( x + 1 )
+private sub cppIf( )
+	cppPush( STACK_IF )
+	cpp.x += 1
+
+	if( cppSkipping( ) ) then
+		exit sub
 	end if
-	tkSetRemove( x, last )
-	x = last
+
+	'' Condition expression
+	cppApplyIf( cppIfExpr( ) )
+
+	cppEol( )
 end sub
 
-private sub hSetRemoveOnMacro( byval x as integer )
-	assert( tkGet( x ) = TK_PPDEFINE )
-	tkSetRemove( x, hSkipToTK_END( x + 1 ) )
+private sub cppIfdef( byval directivekw as integer )
+	cppPush( STACK_IF )
+	cpp.x += 1
+
+	if( cppSkipping( ) ) then
+		exit sub
+	end if
+
+	'' Identifier
+	if( tkGet( cpp.x ) < TK_ID ) then
+		tkExpect( cpp.x, TK_ID, "behind " + tkInfoPretty( directivekw ) )
+	end if
+	var expr = astNewID( tkSpellId( cpp.x ) )
+	cpp.x += 1
+
+	'' [!]defined id
+	expr = astNew( ASTCLASS_CDEFINED, expr )
+	if( directivekw = KW_IFNDEF ) then
+		expr = astNew( ASTCLASS_CLOGNOT, expr )
+	end if
+	cppApplyIf( expr )
+
+	cppEol( )
 end sub
 
-''
-'' #if/file context stack
-''
-'' The stack starts out with only the toplevel file context.
-'' Both #if blocks and #include contexts are put on the same stack, so that an
-'' #endif found in an #include won't be able to close an #if from the parent
-'' file, since the #include stack node is in the way, and must be popped first.
-''
-enum
-	'' States:
-	'' 0 = file context
-	PPSTACK_IF = 1  '' #if context, fresh
-	PPSTACK_TRUE    '' #if context, saw #if/#elseif TRUE (and thus, further #elseif TRUE's must be skipped)
-	PPSTACK_ELSE    '' #if context, saw #else (and no further #elseif/#else can be allowed)
-end enum
+private sub cppElseIf( )
+	'' Verify #elif usage even if skipping
+	select case( cpp.stack(cpp.level) )
+	case is < STACK_IF
+		tkOops( cpp.x, "#elif without #if" )
+	case STACK_ELSE
+		tkOops( cpp.x, "#elif after #else" )
+	end select
+	cpp.x += 1
 
-const MAXPPSTACK = 128
-dim shared ppstack(0 to MAXPPSTACK-1) as integer
+	'' Evaluate condition in case it matters:
+	''    a) not yet skipping,
+	''    b) skipping due to a previous #if/#elif FALSE
+	if( (cpp.skiplevel = MAXSTACK) or (cpp.skiplevel = cpp.level) ) then
+		'' But not if there already was an #if/#elif TRUE on this level
+		'' (then this #elif isn't reached)
+		if( cpp.stack(cpp.level) = STACK_TRUE ) then
+			'' Start/continue skipping
+			cpp.skiplevel = cpp.level
+		else
+			'' Condition expression
+			if( cppEvalIfExpr( cppIfExpr( ) ) ) then
+				'' #elif TRUE, don't skip
+				cpp.stack(cpp.level) = STACK_TRUE
+				cpp.skiplevel = MAXSTACK
+			else
+				'' #elif FALSE, start/continue skipping
+				cpp.skiplevel = cpp.level
+			end if
 
-private sub hCheckStackLevel( byval x as integer, byval level as integer )
-	if( level >= MAXPPSTACK ) then
-		tkOops( x, "#if/#include stack too small, MAXPPSTACK=" & MAXPPSTACK )
+			cppEol( )
+		end if
 	end if
 end sub
 
-private sub hPreprocessTokens( byval x as integer, byval whitespace as integer )
-	if( whitespace ) then
-		cppComments( x )
-		cppDividers( x )
+private sub cppElse( )
+	'' Verify #else usage even if skipping
+	select case( cpp.stack(cpp.level) )
+	case is < STACK_IF
+		tkOops( cpp.x, "#else without #if" )
+	case STACK_ELSE
+		tkOops( cpp.x, "#else after #else" )
+	end select
+	cpp.x += 1
+
+	cppEol( )
+
+	'' Check whether to skip this #else or not, if
+	''    a) not yet skipping,
+	''    b) skipping due to a previous #if/#elif FALSE
+	if( (cpp.skiplevel = MAXSTACK) or (cpp.skiplevel = cpp.level) ) then
+		if( cpp.stack(cpp.level) = STACK_TRUE ) then
+			'' Previous #if/#elseif TRUE, skip #else
+			cpp.skiplevel = cpp.level
+		else
+			'' Previous #if/#elseif FALSE, don't skip #else
+			cpp.skiplevel = MAXSTACK
+		end if
 	end if
-	cppIdentifyDirectives( x )
+
+	cpp.stack(cpp.level) = STACK_ELSE
 end sub
 
-private sub hLoadFile _
-	( _
-		byval x as integer, _
-		byval includeloc as TKLOCATION ptr, _
-		byval filename as zstring ptr, _
-		byval whitespace as integer _
-	)
+private sub cppEndIf( )
+	if( cpp.stack(cpp.level) < STACK_IF ) then
+		tkOops( cpp.x, "#endif without #if" )
+	end if
+	cpp.x += 1
 
-	lexLoadC( x, sourcebufferFromFile( filename, includeloc ), whitespace )
-	hPreprocessTokens( x, whitespace )
+	cppEol( )
 
+	'' If skipping due to current level, then stop skipping.
+	if( cpp.skiplevel = cpp.level ) then
+		cpp.skiplevel = MAXSTACK
+	end if
+
+	cppPop( )
+end sub
+
+private sub cppWhitespace( )
+	if( frog.whitespace ) then
+		cppComments( cpp.x )
+		cppDividers( cpp.x )
+	end if
 end sub
 
 '' Search for #included files in one of the parent directories of the context
@@ -1960,11 +1859,10 @@ private function hSearchHeaderFile _
 end function
 
 private function hFindBeginInclude( byval x as integer ) as integer
+	assert( tkGet( x ) = TK_ENDINCLUDE )
 	var level = 0
-
 	do
 		x -= 1
-
 		select case( tkGet( x ) )
 		case TK_BEGININCLUDE
 			if( level = 0 ) then
@@ -1975,274 +1873,331 @@ private function hFindBeginInclude( byval x as integer ) as integer
 			level += 1
 		end select
 	loop
-
 	function = x
 end function
 
-sub cppMain( byval whitespace as integer, byval nomerge as integer )
-	'' Identify pre-#define directives, if any
-	hPreprocessTokens( 0, whitespace )
+private sub cppInclude( byval begin as integer )
+	cpp.x += 1
 
-	var x = 0
-	var skiplevel = MAXPPSTACK
-	var level = 0
-	ppstack(0) = 0
-	do
-		select case( tkGet( x ) )
-		case TK_EOF
-			'' If anything is left on the stack at EOF, it can only be #ifs
-			'' (#includes should be popped due to TK_ENDINCLUDE's already)
-			if( level > 0 ) then
-				assert( ppstack(level) >= PPSTACK_IF )
-				tkOops( x, "missing #endif" )
-			end if
-			exit do
+	assert( cppSkipping( ) = FALSE )
 
-		case TK_ENDINCLUDE
-			assert( skiplevel = MAXPPSTACK )
-			assert( level > 0 )
-			if( ppstack(level) >= PPSTACK_IF ) then
-				tkOops( x - 1, "missing #endif in #included file" )
-			end if
-			level -= 1
+	'' "filename"
+	tkExpect( cpp.x, TK_STRING, "containing the #include file name" )
+	var location = tkGetLocation( cpp.x )
+	dim as string contextfile
+	if( location->source ) then
+		contextfile = *location->source->name
+	end if
+	var inctext = *tkGetText( cpp.x )
+	cpp.x += 1
 
-			var begin = hFindBeginInclude( x )
+	cppEol( )
 
-			if( nomerge ) then
-				'' #include expansion wasn't requested, so mark all the #included tokens for removal.
-				'' (i.e. all #defines/#undefs were seen, but the code won't be preserved)
-				tkSetRemove( begin, x )
-			else
-				'' Remove just the TK_BEGININCLUDE/TK_ENDINCLUDE, keep the #included tokens.
-				tkSetRemove( begin )
-				tkSetRemove( x )
-			end if
+	var incfile = hSearchHeaderFile( contextfile, inctext )
+	if( len( incfile ) = 0 ) then
+		frogPrint( inctext + " (not found)" )
+		exit sub
+	end if
+	frogPrint( incfile )
 
-		case TK_PPINCLUDE
-			if( skiplevel <> MAXPPSTACK ) then
-				tkSetRemove( x )
-			else
-				var location = tkGetLocation( x )
-				dim as string contextfile
-				if( location->source ) then
-					contextfile = *location->source->name
-				end if
-				var inctext = *tkGetText( x )
-				var incfile = hSearchHeaderFile( contextfile, inctext )
+	cppPush( 0 )
 
-				if( len( incfile ) > 0 ) then
-					frogPrint( incfile )
+	tkSetRemove( begin, cpp.x - 1 )
 
-					level += 1
-					hCheckStackLevel( x, level )
-					ppstack(level) = 0
+	'' Insert this helper token so we can identify the start of #included
+	'' tokens later
+	tkInsert( cpp.x, TK_BEGININCLUDE )
+	cpp.x += 1
 
-					'' Remove the #include token
-					assert( tkGet( x ) = TK_PPINCLUDE )
-					tkSetRemove( x )
-					x += 1
+	'' Insert EOLs behind TK_BEGININCLUDE/TK_ENDINCLUDE, so we can can
+	'' identify BOL behind them.
+	tkInsert( cpp.x, TK_EOL )
+	tkSetRemove( cpp.x )
+	cpp.x += 1
 
-					'' Insert this so we can go back end delete all the #included tokens easily
-					tkInsert( x, TK_BEGININCLUDE )
-					x += 1
+	'' Load the included file's tokens and put a TK_ENDINCLUDE behind it,
+	'' so we can detect the included EOF and pop the #include context from
+	'' the cpp.stack.
+	tkInsert( cpp.x, TK_EOL )
+	tkSetRemove( cpp.x )
+	tkInsert( cpp.x, TK_ENDINCLUDE )
+	lexLoadC( cpp.x, sourcebufferFromFile( incfile, location ), frog.whitespace )
+	cppWhitespace( )
 
-					'' Insert an EOL, so cppIdentifyDirectives() can identify BOL
-					'' when parsing the #included tokens, to be able to detect CPP
-					'' directives at the beginning of the #included tokens.
-					tkInsert( x, TK_EOL )
-					x += 1
+	'' Start parsing the #included content
+	'' (starting behind the EOL inserted above)
+	assert( tkGet( cpp.x - 1 ) = TK_EOL )
+end sub
 
-					'' Load the included file's tokens and put a TK_ENDINCLUDE behind it,
-					'' so we can detect the included EOF and pop the #include context from
-					'' the ppstack.
-					tkInsert( x, TK_ENDINCLUDE )
-					hLoadFile( x, location, incfile, whitespace )
+private sub cppEndInclude( )
+	assert( cpp.skiplevel = MAXSTACK )
+	assert( cpp.level > 0 )
+	if( cpp.stack(cpp.level) >= STACK_IF ) then
+		tkOops( cpp.x - 1, "missing #endif in #included file" )
+	end if
+	cppPop( )
 
-					'' Start parsing the #included content
-					'' (starting behind the EOL inserted above)
-					x -= 1
-					assert( tkGet( x ) = TK_EOL )
-				else
-					frogPrint( inctext + " (not found)" )
-				end if
-			end if
+	var begin = hFindBeginInclude( cpp.x )
 
-		case TK_PPIF
-			level += 1
-			hCheckStackLevel( x, level )
-			ppstack(level) = PPSTACK_IF
+	assert( tkGet( begin ) = TK_BEGININCLUDE )
+	assert( tkGet( cpp.x ) = TK_ENDINCLUDE )
 
-			'' Not skipping? Then evaluate
-			if( skiplevel = MAXPPSTACK ) then
-				if( hEvalIfCondition( x ) ) then
-					'' #if TRUE, don't skip
-					ppstack(level) = PPSTACK_TRUE
-				else
-					'' #if FALSE, start skipping
-					skiplevel = level
-				end if
-			end if
+	if( frog.nomerge ) then
+		'' #include expansion wasn't requested, so mark all the #included tokens for removal.
+		'' (i.e. all #defines/#undefs were seen, but the code won't be preserved)
+		tkSetRemove( begin, cpp.x )
+	else
+		'' Remove just the TK_BEGININCLUDE/TK_ENDINCLUDE, keep the #included tokens.
+		tkSetRemove( begin )
+		tkSetRemove( cpp.x )
+	end if
 
-			hSkipIfAndSetRemove( x )
+	cpp.x += 1
+end sub
 
-		case TK_PPELSEIF
-			if( ppstack(level) < PPSTACK_IF ) then
-				tkOops( x, "#elif without #if" )
-			end if
+private sub hMaybeReportConflictingDefine( byval a as ASTNODE ptr, byval b as ASTNODE ptr )
+	if( astIsEqual( a, b ) ) then
+		exit sub
+	end if
 
-			if( ppstack(level) = PPSTACK_ELSE ) then
-				tkOops( x, "#elif after #else" )
-			end if
+	'' Existing #define wasn't reported yet?
+	if( (b->attrib and ASTATTRIB_REPORTED) = 0 ) then
+		astReport( b, "conflicting #define for '" + *a->text + "', first one:", FALSE )
+		b->attrib or= ASTATTRIB_REPORTED
+	end if
 
-			'' Not skipping, or skipping due to previous #if/#elseif FALSE?
-			'' Then evaluate the #elseif to check whether to continue skipping or not
-			if( (skiplevel = MAXPPSTACK) or (skiplevel = level) ) then
-				'' If there was a previous #if/#elseif TRUE on this level,
-				'' then this #elseif must be skipped no matter what its condition is.
-				if( ppstack(level) = PPSTACK_TRUE ) then
-					'' Start/continue skipping
-					skiplevel = level
-				else
-					if( hEvalIfCondition( x ) ) then
-						'' #elseif TRUE, don't skip
-						ppstack(level) = PPSTACK_TRUE
-						skiplevel = MAXPPSTACK
-					else
-						'' #elseif FALSE, start/continue skipping
-						skiplevel = level
-					end if
-				end if
-			end if
+	assert( (a->attrib and ASTATTRIB_REPORTED) = 0 )
+	astReport( a, "conflicting #define for '" + *a->text + "', new one:", FALSE )
+	a->attrib or= ASTATTRIB_REPORTED
+end sub
 
-			hSkipIfAndSetRemove( x )
+'' DEFINE Identifier ['(' ParameterList ')'] Body Eol
+private sub cppDefine( byval begin as integer, byref setremove as integer )
+	cpp.x += 1
 
-		case TK_PPELSE
-			if( ppstack(level) < PPSTACK_IF ) then
-				tkOops( x, "#else without #if" )
-			end if
+	assert( cppSkipping( ) = FALSE )
 
-			if( ppstack(level) = PPSTACK_ELSE ) then
-				tkOops( x, "#else after #else" )
-			end if
+	'' Identifier ['(' ParameterList ')']
+	var macro = hDefineHead( cpp.x )
 
-			'' Not skipping, or skipping due to previous #if/#elseif FALSE?
-			'' Then check whether to skip this #else block or not.
-			if( (skiplevel = MAXPPSTACK) or (skiplevel = level) ) then
-				if( ppstack(level) = PPSTACK_TRUE ) then
-					'' Previous #if/#elseif TRUE, skip #else
-					skiplevel = level
-				else
-					'' Previous #if/#elseif FALSE, don't skip #else
-					skiplevel = MAXPPSTACK
-				end if
-			end if
+	'' Body
+	var xbody = cpp.x
+	cpp.x = hSkipToEol( cpp.x )
 
-			ppstack(level) = PPSTACK_ELSE
+	'' Eol
+	var xeol = cpp.x
+	assert( tkGet( xeol ) = TK_EOL )
+	cpp.x += 1
 
-			tkSetRemove( x )
+	'' Check for previous #define
+	var prevdef = cppLookupMacro( macro->text )
+	if( prevdef ) then
+		if( frog.verbose ) then
+			hMaybeReportConflictingDefine( macro, prevdef->macro )
+		end if
 
-		case TK_PPENDIF
-			if( ppstack(level) < PPSTACK_IF ) then
-				tkOops( x, "#endif without #if" )
-			end if
+		'' Don't preserve previous #define
+		definfoSetRemove( prevdef )
+	end if
 
-			'' If skipping due to current level, then stop skipping.
-			if( skiplevel = level ) then
-				skiplevel = MAXPPSTACK
-			end if
+	'' Register as known defined symbol
+	var definfo = definfoNew( )
+	definfo->xdefine = begin
+	definfo->xbody = xbody
+	definfo->xeol = xeol
+	definfo->macro = macro
+	cppAddMacro( macro->text, definfo )
 
-			tkSetRemove( x )
+	'' Normally, we preserve #define directives (unlike the other CPP directives),
+	'' thus no generic tkSetRemove() here. Unless the symbol was registed for removal.
+	setremove = cppShouldRemoveSym( macro->text )
+end sub
 
-			level -= 1
+private sub cppUndef( )
+	cpp.x += 1
 
-		case TK_PPDEFINE
-			if( skiplevel <> MAXPPSTACK ) then
-				hSetRemoveOnMacro( x )
-			else
-				var macro = tkGetAst( x )
+	assert( cppSkipping( ) = FALSE )
 
-				'' Check for previous #define
-				var xprevmacro = hLookupMacro( macro->text )
-				if( xprevmacro >= 0 ) then
-					if( frog.verbose ) then
-						hMaybeReportConflictingDefine( macro, tkGetAst( xprevmacro ) )
-					end if
+	'' Identifier
+	if( tkGet( cpp.x ) < TK_ID ) then
+		tkExpect( cpp.x, TK_ID, "behind #undef" )
+	end if
+	var id = tkSpellId( cpp.x )
+	cpp.x += 1
 
-					'' Don't preserve previous #define
-					hSetRemoveOnMacro( xprevmacro )
-				end if
+	'' If #undeffing an existing #define, don't preserve it
+	var prevdef = cppLookupMacro( id )
+	if( prevdef ) then
+		definfoSetRemove( prevdef )
+	end if
 
-				'' Register/overwrite as known defined symbol
-				hRegisterMacro( macro->text, x )
+	'' Register/overwrite as known undefined symbol
+	cppAddKnownUndefined( id )
 
-				'' Don't preserve the #define if the symbol was registed for removal
-				if( hLookupRemoveSym( macro->text ) ) then
-					hSetRemoveOnMacro( x )
-				end if
-			end if
+	cppEol( )
+end sub
 
-			'' Skip over TK_BEGIN/TK_END macro body
-			x = hSkipToTK_END( x + 1 )
+private sub cppPragma( )
+	cpp.x += 1
 
-		case TK_PPUNDEF
-			if( skiplevel <> MAXPPSTACK ) then
-				tkSetRemove( x )
-			else
-				var id = tkGetText( x )
+	assert( cppSkipping( ) = FALSE )
 
-				'' If #undeffing an existing #define, don't preserve it
-				var xmacro = hLookupMacro( id )
-				if( xmacro >= 0 ) then
-					assert( tkGet( xmacro ) = TK_PPDEFINE )
-					assert( *tkGetAst( xmacro )->text = *id )
-					hSetRemoveOnMacro( xmacro )
-				end if
+	if( tkGet( cpp.x ) < TK_ID ) then
+		tkOops( cpp.x, "unknown #pragma" )
+	end if
 
-				'' Register/overwrite as known undefined symbol
-				hRegisterMacro( id, -1 )
+	select case( *tkSpellId( cpp.x ) )
+	'' #pragma message("...")
+	case "message"
+		cpp.x += 1
 
-				'' Don't preserve #undefs
-				tkSetRemove( x )
-			end if
+		var whatfor = @"for #pragma message(""..."")"
 
-		case TK_PPERROR
-			if( skiplevel <> MAXPPSTACK ) then
-				tkSetRemove( x )
-			else
-				'' Not using the #error's text as error message,
-				'' otherwise it would be mistaken for being generated by fbfrog.
-				tkOops( x, "#error" )
-			end if
+		'' '('
+		tkExpect( cpp.x, TK_LPAREN, whatfor )
+		cpp.x += 1
 
-		case TK_PPWARNING
-			if( skiplevel <> MAXPPSTACK ) then
-				tkSetRemove( x )
-			else
-				'' ditto
-				print tkReport( x, "#warning" )
-			end if
+		'' "..."
+		tkExpect( cpp.x, TK_STRING, whatfor )
+		cpp.x += 1
 
-		case is >= TK_ID
-			if( skiplevel <> MAXPPSTACK ) then
-				tkSetRemove( x )
-			else
-				hMaybeExpandMacro( x, FALSE )
-			end if
+		'' ')'
+		tkExpect( cpp.x, TK_RPAREN, whatfor )
+		cpp.x += 1
+
+	case else
+		tkOops( cpp.x, "unknown #pragma" )
+	end select
+
+	cppEol( )
+end sub
+
+private sub cppDirective( )
+	'' '#'
+	var begin = cpp.x
+	assert( tkGet( cpp.x ) = TK_HASH )
+	cpp.x += 1
+
+	var directivekw = tkGet( cpp.x )
+
+	'' When skipping, only #if/#elif/#else/#endif directives are handled,
+	'' anything else (even invalid directives) must be ignored.
+	if( cppSkipping( ) ) then
+		select case( directivekw )
+		case KW_IF, KW_IFDEF, KW_IFNDEF, KW_ELIF, KW_ELSE, KW_ENDIF
 
 		case else
-			'' Remove tokens if skipping
-			if( skiplevel <> MAXPPSTACK ) then
-				tkSetRemove( x )
-			end if
+			tkSetRemove( begin, cpp.x )
+			cpp.x += 1
+			exit sub
 		end select
+	end if
 
-		x += 1
-	loop
+	var setremove = TRUE
 
-	'' 2nd pass that actually removes directives/tokens marked for removal
-	'' (doing this in separate steps allows error reports during the 1st
-	'' pass to still view the complete input)
-	tkApplyRemoves( )
+	select case( directivekw )
+	case KW_IF
+		cppIf( )
 
+	case KW_IFDEF, KW_IFNDEF
+		cppIfdef( directivekw )
+
+	case KW_ELIF
+		cppElseIf( )
+
+	case KW_ELSE
+		cppElse( )
+
+	case KW_ENDIF
+		cppEndIf( )
+
+	case KW_INCLUDE
+		cppInclude( begin )
+		setremove = FALSE
+
+	case KW_DEFINE
+		cppDefine( begin, setremove )
+
+	case KW_UNDEF
+		cppUndef( )
+
+	case KW_PRAGMA
+		cppPragma( )
+
+	case KW_ERROR
+		'' Not using the #error's text as error message,
+		'' otherwise it would be mistaken for being generated by fbfrog.
+		tkOops( cpp.x, "#error" )
+
+	case KW_WARNING
+		cpp.x += 1
+		'' ditto
+		print tkReport( cpp.x, "#warning" )
+		cpp.x = hSkipToEol( cpp.x ) + 1
+
+	case TK_EOL
+		'' '#' followed by EOL (accepted by gcc/clang too)
+		cpp.x += 1
+
+	case else
+		tkOops( cpp.x, "unknown PP directive" )
+	end select
+
+	if( setremove ) then
+		tkSetRemove( begin, cpp.x - 1 )
+	end if
+end sub
+
+private function hIsAtBOL( byval x as integer ) as integer
+	select case( tkGet( x - 1 ) )
+	case TK_EOL, TK_EOF, TK_DIVIDER
+		function = TRUE
+	end select
+end function
+
+private sub cppNext( )
+	select case( tkGet( cpp.x ) )
+	case TK_ENDINCLUDE
+		cppEndInclude( )
+		exit sub
+
+	'' '#'
+	case TK_HASH
+		'' Parse directive if at BOL and the '#' token isn't the result of a macro expansion
+		'' We do this for every "toplevel" '#', before ever doing macro expansion behind it,
+		'' so it should be safe to assume that if the '#' isn't coming from a macro expansion,
+		'' the rest isn't either.
+		if( hIsAtBOL( cpp.x ) and (tkGetExpansionLevel( cpp.x ) = 0) ) then
+			cppDirective( )
+			exit sub
+		end if
+
+	'' Identifier/keyword? Check whether it needs to be macro-expanded
+	case is >= TK_ID
+		if( cppSkipping( ) = FALSE ) then
+			hMaybeExpandMacro( cpp.x, FALSE )
+			cpp.x += 1
+			exit sub
+		end if
+
+	'' Remove standalone EOLs, so the C parser doesn't have to handle them
+	case TK_EOL
+		tkSetRemove( cpp.x )
+		cpp.x += 1
+		exit sub
+	end select
+
+	'' Some token that doesn't matter to the CPP
+	if( cppSkipping( ) ) then
+		tkSetRemove( cpp.x )
+	end if
+	cpp.x += 1
+end sub
+
+sub cppMain( )
+	cppWhitespace( )
+	while( tkGet( cpp.x ) <> TK_EOF )
+		cppNext( )
+	wend
 	cppEnd( )
 end sub

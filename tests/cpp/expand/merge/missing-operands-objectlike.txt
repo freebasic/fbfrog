@@ -7,5 +7,5 @@ tests/cpp/expand/merge/missing-operands-objectlike.h(2): ## merge operator at be
     3: m
     4: 
 context as seen by fbfrog:
-    m [begin] ## [end] [eol]
+    m [begin] ## [end] 
               ^~

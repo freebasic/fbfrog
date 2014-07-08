@@ -779,8 +779,6 @@ private function frogReadAPI( byval options as ASTNODE ptr ) as ASTNODE ptr
 			case ASTCLASS_PPDEFINE
 				dim as string prettyname, s
 
-				cppRemoveSym( i->text )
-
 				prettyname = "pre-#define"
 				s = "#define " + *i->text
 				if( i->expr ) then
@@ -789,7 +787,9 @@ private function frogReadAPI( byval options as ASTNODE ptr ) as ASTNODE ptr
 				end if
 				s += !"\n"
 
-				lexLoadC( tkGetCount( ), sourcebufferFromZstring( prettyname, s, @i->location ), FALSE )
+				var x = tkGetCount( )
+				lexLoadC( x, sourcebufferFromZstring( prettyname, s, @i->location ), FALSE )
+				tkSetRemove( x, tkGetCount( ) - 1 )
 
 			end select
 
@@ -819,7 +819,9 @@ private function frogReadAPI( byval options as ASTNODE ptr ) as ASTNODE ptr
 
 			if( tkGetCount( ) > 0 ) then
 				'' Extra EOL to separate from previous tokens
-				tkInsert( tkGetCount( ), TK_EOL )
+				var x = tkGetCount( )
+				tkInsert( x, TK_EOL )
+				tkSetRemove( x )
 			end if
 
 			frogPrint( *i->text )
@@ -828,7 +830,9 @@ private function frogReadAPI( byval options as ASTNODE ptr ) as ASTNODE ptr
 			if( tkGetCount( ) > 0 ) then
 				'' Add EOL at EOF, if missing
 				if( tkGet( tkGetCount( ) - 1 ) <> TK_EOL ) then
-					tkInsert( tkGetCount( ), TK_EOL )
+					var x = tkGetCount( )
+					tkInsert( x, TK_EOL )
+					tkSetRemove( x )
 				end if
 			end if
 
@@ -836,9 +840,16 @@ private function frogReadAPI( byval options as ASTNODE ptr ) as ASTNODE ptr
 		wend
 	end scope
 
-	cppMain( frog.whitespace, frog.nomerge )
+	cppMain( )
 
-	tkRemoveEOLs( )
+	'' Remove directives/tokens marked for removal by cppMain(). Doing this
+	'' as a separate step allows
+	'' * error reports during cppMain() to view the complete input
+	'' * cppMain() to reference #define directives based on token position
+	''   (to retrieve the bodies for macro expansion) as opposed to having
+	''   to load them into AST
+	tkApplyRemoves( )
+
 	tkTurnCPPTokensIntoCIds( )
 
 	'' Parse C constructs

@@ -773,43 +773,49 @@ end function
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 private function cDefine( ) as ASTNODE ptr
-	var t = astClone( tkGetAst( x ) )
-	astAddComment( t, tkCollectComments( x, x ) )
 	x += 1
 
-	assert( tkGet( x ) = TK_BEGIN )
-	var bodybegin = x
-	x += 1
+	'' Identifier ['(' ParameterList ')']
+	var macro = hDefineHead( x )
 
-	dim as ASTNODE ptr expr
+	'' Body
+	var xbody = x
+	assert( macro->expr = NULL )
 
-	'' Macro body empty?
-	if( tkGet( x ) = TK_END ) then
-		expr = NULL
-	else
-		expr = cExpression( 0, t )
+	'' Non-empty?
+	if( tkGet( x ) <> TK_EOL ) then
+		'' Try to parse it as expression
+		macro->expr = cExpression( 0, macro )
 
-		'' Must have reached the TK_END
-		if( tkGet( x ) <> TK_END ) then
-			var errorbegin = x
-			x = hSkipToTK_END( bodybegin )
-			cError( "only the beginning of the #define body could be parsed as expression, but not the rest: '" + tkSpell( errorbegin, x - 1 ) + "'" )
+		'' Didn't reach EOL? Then the beginning of the macro body could
+		'' be parsed as expression, but not the rest.
+		if( tkGet( x ) <> TK_EOL ) then
+			cError( "failed to parse full #define body as expression" )
+			x = hSkipToEol( x )
 		end if
 	end if
 
-	assert( tkGet( x ) = TK_END )
+	'' Eol
+	assert( tkGet( x ) = TK_EOL )
 	x += 1
 
-	assert( t->expr = NULL )
-	t->expr = expr
-	function = t
+	function = macro
 end function
 
-private function cOtherPPToken( byval astclass as integer ) as ASTNODE ptr
-	var t = astNew( astclass, tkGetText( x ) )
-	astAddComment( t, tkCollectComments( x, x ) )
+private function cInclude( ) as ASTNODE ptr
 	x += 1
-	function = t
+
+	var ppinclude = astNew( ASTCLASS_PPINCLUDE )
+
+	'' "..."
+	assert( tkGet( x ) = TK_STRING )
+	astSetText( ppinclude, tkGetText( x ) )
+	x += 1
+
+	assert( tkGet( x ) = TK_EOL )
+	x += 1
+
+	function = ppinclude
 end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -1638,14 +1644,36 @@ private function cScope( ) as ASTNODE ptr
 end function
 
 private function cConstruct( byval body as integer ) as ASTNODE ptr
-	select case( tkGet( x ) )
-	case TK_PPDEFINE
-		return cDefine( )
-	case TK_PPINCLUDE
-		return cOtherPPToken( ASTCLASS_PPINCLUDE )
-	case TK_DIVIDER
-		return cOtherPPToken( ASTCLASS_DIVIDER )
-	end select
+	'' '#'?
+	if( (tkGet( x ) = TK_HASH) and (tkGetExpansionLevel( x ) = 0) ) then
+		var begin = x
+		x += 1
+
+		dim directive as ASTNODE ptr
+		if( tkGet( x ) = TK_ID ) then
+			select case( *tkSpellId( x ) )
+			case "define"
+				directive = cDefine( )
+			case "include"
+				directive = cInclude( )
+			end select
+		end if
+
+		if( directive = NULL ) then
+			cError( "unknown CPP directive" )
+			directive = astNew( ASTCLASS_PPDEFINE )
+		end if
+
+		astAddComment( directive, tkCollectComments( begin, x - 1 ) )
+		return directive
+	end if
+
+	if( tkGet( x ) = TK_DIVIDER ) then
+		var t = astNew( ASTCLASS_DIVIDER, tkGetText( x ) )
+		astAddComment( t, tkCollectComments( x, x ) )
+		x += 1
+		return t
+	end if
 
 	if( body = BODY_ENUM ) then
 		return cEnumConst( )

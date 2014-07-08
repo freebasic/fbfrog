@@ -446,7 +446,7 @@ const A42 = cast(MYINT, 0)
 #define A46 (1)
 #define A47 (1)
 
-#define A48 (-(a = 0), -(a = 0))
+#define A48 (-(a = 0), -(a = 0))  '' C UOP nested inside children list
 #macro A49
 	scope
 		f(-(a = 0))

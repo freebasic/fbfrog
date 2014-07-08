@@ -4,8 +4,8 @@
 tests/cpp/if/endif-missing.h(2): missing #endif in #included file
     1: // @fail
     2: #if 1
-           ^
+            ^
     3: 
 context as seen by fbfrog:
-    [ppif] [begin] 1 [end]
-                   ^
+    # if 1 
+           ^
