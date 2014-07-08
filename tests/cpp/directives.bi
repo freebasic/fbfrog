@@ -98,8 +98,6 @@ const B02 = 1
 
 #define no_parameters_here a
 
-dim shared separator1 as long
-
 #macro D1
 	scope
 		f(123)

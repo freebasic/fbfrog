@@ -80,7 +80,7 @@
 #define no_parameters_here (a)
 
 #pragma message("test")
-static int separator1;
+#pragma GCC system_header
 
 #define D1 { f( 123 ); }
 #define D2(x) { f( x ); }

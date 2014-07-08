@@ -93,4 +93,4 @@ tests/cpp/directives.h(89): #warning
 context as seen by fbfrog:
     # warning "Example warning" 
               ^~~~~~~~~~~~~~~~~
-emitting: tests/cpp/directives.bi (66 declarations, 0 TODOs)
+emitting: tests/cpp/directives.bi (65 declarations, 0 TODOs)

@@ -2037,16 +2037,8 @@ private sub cppUndef( )
 	cppEol( )
 end sub
 
-private sub cppPragma( )
-	cpp.x += 1
-
-	assert( cppSkipping( ) = FALSE )
-
-	if( tkGet( cpp.x ) < TK_ID ) then
-		tkOops( cpp.x, "unknown #pragma" )
-	end if
-
-	select case( *tkSpellId( cpp.x ) )
+private function cppPragma( ) as integer
+	select case( tkSpell( cpp.x ) )
 	'' #pragma message("...")
 	case "message"
 		cpp.x += 1
@@ -2065,12 +2057,24 @@ private sub cppPragma( )
 		tkExpect( cpp.x, TK_RPAREN, whatfor )
 		cpp.x += 1
 
+	case "GCC"
+		cpp.x += 1
+
+		select case( tkSpell( cpp.x ) )
+		case "system_header"
+			cpp.x += 1
+
+		case else
+			exit function
+		end select
+
 	case else
-		tkOops( cpp.x, "unknown #pragma" )
+		exit function
 	end select
 
 	cppEol( )
-end sub
+	function = TRUE
+end function
 
 private sub cppDirective( )
 	'' '#'
@@ -2122,7 +2126,10 @@ private sub cppDirective( )
 		cppUndef( )
 
 	case KW_PRAGMA
-		cppPragma( )
+		cpp.x += 1
+		if( cppPragma( ) = FALSE ) then
+			tkOops( cpp.x, "unknown #pragma" )
+		end if
 
 	case KW_ERROR
 		'' Not using the #error's text as error message,
