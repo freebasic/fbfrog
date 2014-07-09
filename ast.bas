@@ -708,43 +708,6 @@ function astDumpOne( byval n as ASTNODE ptr ) as string
 	function = s
 end function
 
-function astDumpInline( byval n as ASTNODE ptr ) as string
-	var s = astDumpOne( n )
-	var args = 0
-
-	#macro more( arg )
-		if( args = 0 ) then
-			s += "("
-		else
-			s += ", "
-		end if
-		s += arg
-		args += 1
-	#endmacro
-
-	if( n->subtype ) then
-		more( "subtype=" + astDumpInline( n->subtype ) )
-	end if
-	if( n->array ) then
-		more( "array=" + astDumpInline( n->array ) )
-	end if
-	if( n->expr ) then
-		more( "expr=" + astDumpInline( n->expr ) )
-	end if
-
-	var child = n->head
-	while( child )
-		more( astDumpInline( child ) )
-		child = child->next
-	wend
-
-	if( args > 0 ) then
-		s += ")"
-	end if
-
-	function = s
-end function
-
 private sub hPrintIndentation( byval nestlevel as integer )
 	for i as integer = 2 to nestlevel
 		print "   ";

@@ -112,7 +112,7 @@ function astDumpPrettyVersion( byval n as ASTNODE ptr ) as string
 		s = "(not " + astDumpPrettyVersion( n->head ) + ")"
 
 	case else
-		s = astDumpInline( n )
+		assert( FALSE )
 	end select
 
 	function = s

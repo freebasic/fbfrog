@@ -785,7 +785,6 @@ declare function astCountDecls( byval code as ASTNODE ptr ) as integer
 declare function astCountUnknowns( byval code as ASTNODE ptr ) as integer
 declare function astDumpPrettyDecl( byval n as ASTNODE ptr ) as string
 declare function astDumpOne( byval n as ASTNODE ptr ) as string
-declare function astDumpInline( byval n as ASTNODE ptr ) as string
 declare sub astDump _
 	( _
 		byval n as ASTNODE ptr, _
