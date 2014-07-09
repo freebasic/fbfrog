@@ -1955,11 +1955,7 @@ private sub cppEndInclude( )
 	cpp.x += 1
 end sub
 
-private sub hMaybeReportConflictingDefine( byval a as ASTNODE ptr, byval b as ASTNODE ptr )
-	if( astIsEqual( a, b ) ) then
-		exit sub
-	end if
-
+private sub hReportConflictingDefine( byval a as ASTNODE ptr, byval b as ASTNODE ptr )
 	'' Existing #define wasn't reported yet?
 	if( (b->attrib and ASTATTRIB_REPORTED) = 0 ) then
 		astReport( b, "conflicting #define for '" + *a->text + "', first one:", FALSE )
@@ -1992,8 +1988,8 @@ private sub cppDefine( byval begin as integer, byref setremove as integer )
 	'' Check for previous #define
 	var prevdef = cppLookupMacro( macro->text )
 	if( prevdef ) then
-		if( frog.verbose ) then
-			hMaybeReportConflictingDefine( macro, prevdef->macro )
+		if( astIsEqual( macro, prevdef->macro ) = FALSE ) then
+			hReportConflictingDefine( macro, prevdef->macro )
 		end if
 
 		'' Don't preserve previous #define
