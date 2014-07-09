@@ -1715,7 +1715,7 @@ private sub cppIfdef( byval directivekw as integer )
 	if( tkGet( cpp.x ) < TK_ID ) then
 		tkExpect( cpp.x, TK_ID, "behind " + tkInfoPretty( directivekw ) )
 	end if
-	var expr = astNewID( tkSpellId( cpp.x ) )
+	var expr = astTakeLoc( astNewID( tkSpellId( cpp.x ) ), cpp.x )
 	cpp.x += 1
 
 	'' [!]defined id

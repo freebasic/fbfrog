@@ -1,0 +1,294 @@
+[1/5] __FB_WIN32__.__FB_64BIT__
+lex: pre-#define, 25 bytes, 2 lines, 4 tokens
+lex: pre-#define, 25 bytes, 2 lines, 4 tokens
+lex: /home/daniel/fbfrog/builtin.h, 9340 bytes, 317 lines, 1633 tokens
+      tests/cpp/assuming-undefined.h
+lex: tests/cpp/assuming-undefined.h, 186 bytes, 23 lines, 72 tokens
+/home/daniel/fbfrog/builtin.h(9): assuming symbol '__FBFROG_LINUX__' is undefined
+     7: #define __GNUC_PATCHLEVEL__ 1111111
+     8: 
+     9: #ifdef __FBFROG_LINUX__
+               ^~~~~~~~~~~~~~~~
+    10:  #define unix 1
+    11:  #define __unix 1
+/home/daniel/fbfrog/builtin.h(167): assuming symbol '__FBFROG_DOS__' is undefined
+    165:  #define __UINTPTR_MAX__ __UINT32_MAX__
+    166: #endif
+    167: #ifdef __FBFROG_DOS__
+                ^~~~~~~~~~~~~~
+    168:  #define __SIZEOF_WCHAR_T__ 2
+    169:  #define __WCHAR_TYPE__ __UINT16_TYPE__
+tests/cpp/assuming-undefined.h(3): assuming symbol 'A' is undefined
+    1: // @fbfrog -v
+    2: 
+    3: #ifdef A
+              ^
+    4: #endif
+    5: 
+tests/cpp/assuming-undefined.h(6): assuming symbol 'B' is undefined
+    4: #endif
+    5: 
+    6: #ifndef B
+               ^
+    7: #endif
+    8: 
+tests/cpp/assuming-undefined.h(9): assuming symbol 'C' is undefined
+     7: #endif
+     8: 
+     9: #if defined C
+                    ^
+    10: #endif
+    11: 
+tests/cpp/assuming-undefined.h(12): assuming symbol 'D' is undefined
+    10: #endif
+    11: 
+    12: #if !defined D
+                     ^
+    13: #endif
+    14: 
+tests/cpp/assuming-undefined.h(21): assuming symbol 'G' is undefined
+    19: #endif
+    20: 
+    21: #if 1 ? defined G : defined H
+                        ^
+    22: #endif
+    23: 
+[2/5] __FB_WIN32__.(not __FB_64BIT__)
+lex: pre-#define, 25 bytes, 2 lines, 4 tokens
+lex: /home/daniel/fbfrog/builtin.h, 9340 bytes, 317 lines, 1633 tokens
+      tests/cpp/assuming-undefined.h
+lex: tests/cpp/assuming-undefined.h, 186 bytes, 23 lines, 72 tokens
+/home/daniel/fbfrog/builtin.h(9): assuming symbol '__FBFROG_LINUX__' is undefined
+     7: #define __GNUC_PATCHLEVEL__ 1111111
+     8: 
+     9: #ifdef __FBFROG_LINUX__
+               ^~~~~~~~~~~~~~~~
+    10:  #define unix 1
+    11:  #define __unix 1
+/home/daniel/fbfrog/builtin.h(28): assuming symbol '__FBFROG_64BIT__' is undefined
+    26:  #define __WINNT 1
+    27:  #define __WINNT__ 1
+    28:  #ifdef __FBFROG_64BIT__
+                ^~~~~~~~~~~~~~~~
+    29:   #define __MINGW64__ 1
+    30:   #define WIN64 1
+/home/daniel/fbfrog/builtin.h(167): assuming symbol '__FBFROG_DOS__' is undefined
+    165:  #define __UINTPTR_MAX__ __UINT32_MAX__
+    166: #endif
+    167: #ifdef __FBFROG_DOS__
+                ^~~~~~~~~~~~~~
+    168:  #define __SIZEOF_WCHAR_T__ 2
+    169:  #define __WCHAR_TYPE__ __UINT16_TYPE__
+tests/cpp/assuming-undefined.h(3): assuming symbol 'A' is undefined
+    1: // @fbfrog -v
+    2: 
+    3: #ifdef A
+              ^
+    4: #endif
+    5: 
+tests/cpp/assuming-undefined.h(6): assuming symbol 'B' is undefined
+    4: #endif
+    5: 
+    6: #ifndef B
+               ^
+    7: #endif
+    8: 
+tests/cpp/assuming-undefined.h(9): assuming symbol 'C' is undefined
+     7: #endif
+     8: 
+     9: #if defined C
+                    ^
+    10: #endif
+    11: 
+tests/cpp/assuming-undefined.h(12): assuming symbol 'D' is undefined
+    10: #endif
+    11: 
+    12: #if !defined D
+                     ^
+    13: #endif
+    14: 
+tests/cpp/assuming-undefined.h(21): assuming symbol 'G' is undefined
+    19: #endif
+    20: 
+    21: #if 1 ? defined G : defined H
+                        ^
+    22: #endif
+    23: 
+[3/5] __FB_LINUX__.__FB_64BIT__
+lex: pre-#define, 25 bytes, 2 lines, 4 tokens
+lex: pre-#define, 25 bytes, 2 lines, 4 tokens
+lex: /home/daniel/fbfrog/builtin.h, 9340 bytes, 317 lines, 1633 tokens
+      tests/cpp/assuming-undefined.h
+lex: tests/cpp/assuming-undefined.h, 186 bytes, 23 lines, 72 tokens
+/home/daniel/fbfrog/builtin.h(167): assuming symbol '__FBFROG_DOS__' is undefined
+    165:  #define __UINTPTR_MAX__ __UINT32_MAX__
+    166: #endif
+    167: #ifdef __FBFROG_DOS__
+                ^~~~~~~~~~~~~~
+    168:  #define __SIZEOF_WCHAR_T__ 2
+    169:  #define __WCHAR_TYPE__ __UINT16_TYPE__
+/home/daniel/fbfrog/builtin.h(176): assuming symbol '__FBFROG_WIN32__' is undefined
+    174:  #define __WINT_MIN__ (-__WINT_MAX__ - 1)
+    175:  #define __WINT_MAX__ __INT32_MAX__
+    176: #elif defined __FBFROG_WIN32__
+                       ^~~~~~~~~~~~~~~~
+    177:  #define __SIZEOF_WCHAR_T__ 2
+    178:  #define __WCHAR_TYPE__ __UINT16_TYPE__
+tests/cpp/assuming-undefined.h(3): assuming symbol 'A' is undefined
+    1: // @fbfrog -v
+    2: 
+    3: #ifdef A
+              ^
+    4: #endif
+    5: 
+tests/cpp/assuming-undefined.h(6): assuming symbol 'B' is undefined
+    4: #endif
+    5: 
+    6: #ifndef B
+               ^
+    7: #endif
+    8: 
+tests/cpp/assuming-undefined.h(9): assuming symbol 'C' is undefined
+     7: #endif
+     8: 
+     9: #if defined C
+                    ^
+    10: #endif
+    11: 
+tests/cpp/assuming-undefined.h(12): assuming symbol 'D' is undefined
+    10: #endif
+    11: 
+    12: #if !defined D
+                     ^
+    13: #endif
+    14: 
+tests/cpp/assuming-undefined.h(21): assuming symbol 'G' is undefined
+    19: #endif
+    20: 
+    21: #if 1 ? defined G : defined H
+                        ^
+    22: #endif
+    23: 
+[4/5] __FB_LINUX__.(not __FB_64BIT__)
+lex: pre-#define, 25 bytes, 2 lines, 4 tokens
+lex: /home/daniel/fbfrog/builtin.h, 9340 bytes, 317 lines, 1633 tokens
+      tests/cpp/assuming-undefined.h
+lex: tests/cpp/assuming-undefined.h, 186 bytes, 23 lines, 72 tokens
+/home/daniel/fbfrog/builtin.h(47): assuming symbol '__FBFROG_64BIT__' is undefined
+    45: #endif
+    46: 
+    47: #ifdef __FBFROG_64BIT__
+               ^~~~~~~~~~~~~~~~
+    48:  #define __x86_64 1
+    49:  #define __x86_64__ 1
+/home/daniel/fbfrog/builtin.h(167): assuming symbol '__FBFROG_DOS__' is undefined
+    165:  #define __UINTPTR_MAX__ __UINT32_MAX__
+    166: #endif
+    167: #ifdef __FBFROG_DOS__
+                ^~~~~~~~~~~~~~
+    168:  #define __SIZEOF_WCHAR_T__ 2
+    169:  #define __WCHAR_TYPE__ __UINT16_TYPE__
+/home/daniel/fbfrog/builtin.h(176): assuming symbol '__FBFROG_WIN32__' is undefined
+    174:  #define __WINT_MIN__ (-__WINT_MAX__ - 1)
+    175:  #define __WINT_MAX__ __INT32_MAX__
+    176: #elif defined __FBFROG_WIN32__
+                       ^~~~~~~~~~~~~~~~
+    177:  #define __SIZEOF_WCHAR_T__ 2
+    178:  #define __WCHAR_TYPE__ __UINT16_TYPE__
+tests/cpp/assuming-undefined.h(3): assuming symbol 'A' is undefined
+    1: // @fbfrog -v
+    2: 
+    3: #ifdef A
+              ^
+    4: #endif
+    5: 
+tests/cpp/assuming-undefined.h(6): assuming symbol 'B' is undefined
+    4: #endif
+    5: 
+    6: #ifndef B
+               ^
+    7: #endif
+    8: 
+tests/cpp/assuming-undefined.h(9): assuming symbol 'C' is undefined
+     7: #endif
+     8: 
+     9: #if defined C
+                    ^
+    10: #endif
+    11: 
+tests/cpp/assuming-undefined.h(12): assuming symbol 'D' is undefined
+    10: #endif
+    11: 
+    12: #if !defined D
+                     ^
+    13: #endif
+    14: 
+tests/cpp/assuming-undefined.h(21): assuming symbol 'G' is undefined
+    19: #endif
+    20: 
+    21: #if 1 ? defined G : defined H
+                        ^
+    22: #endif
+    23: 
+[5/5] __FB_DOS__
+lex: pre-#define, 23 bytes, 2 lines, 4 tokens
+lex: /home/daniel/fbfrog/builtin.h, 9340 bytes, 317 lines, 1633 tokens
+      tests/cpp/assuming-undefined.h
+lex: tests/cpp/assuming-undefined.h, 186 bytes, 23 lines, 72 tokens
+/home/daniel/fbfrog/builtin.h(9): assuming symbol '__FBFROG_LINUX__' is undefined
+     7: #define __GNUC_PATCHLEVEL__ 1111111
+     8: 
+     9: #ifdef __FBFROG_LINUX__
+               ^~~~~~~~~~~~~~~~
+    10:  #define unix 1
+    11:  #define __unix 1
+/home/daniel/fbfrog/builtin.h(18): assuming symbol '__FBFROG_WIN32__' is undefined
+    16:  #define __gnu_linux__ 1
+    17:  #define __ELF__ 1
+    18: #elif defined __FBFROG_WIN32__
+                      ^~~~~~~~~~~~~~~~
+    19:  #define __MINGW32__ 1
+    20:  #define __MSVCRT__ 1
+/home/daniel/fbfrog/builtin.h(47): assuming symbol '__FBFROG_64BIT__' is undefined
+    45: #endif
+    46: 
+    47: #ifdef __FBFROG_64BIT__
+               ^~~~~~~~~~~~~~~~
+    48:  #define __x86_64 1
+    49:  #define __x86_64__ 1
+tests/cpp/assuming-undefined.h(3): assuming symbol 'A' is undefined
+    1: // @fbfrog -v
+    2: 
+    3: #ifdef A
+              ^
+    4: #endif
+    5: 
+tests/cpp/assuming-undefined.h(6): assuming symbol 'B' is undefined
+    4: #endif
+    5: 
+    6: #ifndef B
+               ^
+    7: #endif
+    8: 
+tests/cpp/assuming-undefined.h(9): assuming symbol 'C' is undefined
+     7: #endif
+     8: 
+     9: #if defined C
+                    ^
+    10: #endif
+    11: 
+tests/cpp/assuming-undefined.h(12): assuming symbol 'D' is undefined
+    10: #endif
+    11: 
+    12: #if !defined D
+                     ^
+    13: #endif
+    14: 
+tests/cpp/assuming-undefined.h(21): assuming symbol 'G' is undefined
+    19: #endif
+    20: 
+    21: #if 1 ? defined G : defined H
+                        ^
+    22: #endif
+    23: 
+emitting: tests/cpp/assuming-undefined.bi (0 declarations, 0 TODOs)
