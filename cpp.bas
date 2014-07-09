@@ -673,9 +673,8 @@ private function cppExpression( byval level as integer = 0 ) as ASTNODE ptr
 
 	dim as ASTNODE ptr a
 	if( op >= 0 ) then
-		var uopx = cpp.x
 		cpp.x += 1
-		a = astTakeLoc( astNew( op, cppExpression( cprecedence(op) ) ), uopx )
+		a = astNew( op, cppExpression( cprecedence(op) ) )
 	else
 		'' Atoms
 		select case( tkGet( cpp.x ) )
@@ -712,7 +711,6 @@ private function cppExpression( byval level as integer = 0 ) as ASTNODE ptr
 
 		'' DEFINED ['('] Identifier [')']
 		case KW_DEFINED
-			var definedx = cpp.x
 			cpp.x += 1
 
 			'' '('
@@ -735,7 +733,7 @@ private function cppExpression( byval level as integer = 0 ) as ASTNODE ptr
 				cpp.x += 1
 			end if
 
-			a = astTakeLoc( astNew( ASTCLASS_CDEFINED, a ), definedx )
+			a = astNew( ASTCLASS_CDEFINED, a )
 
 		case else
 			tkOopsExpected( cpp.x, "expression" )
