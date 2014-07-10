@@ -10,43 +10,53 @@ private function astOpsC2FB _
 
 	if( n = NULL ) then exit function
 
-	var expr_is_bool_context = FALSE
-	var l_is_bool_context = FALSE
-	var r_is_bool_context = FALSE
-
 	select case( n->class )
-	'' ! operand is treated as bool
-	case ASTCLASS_CLOGNOT
-		l_is_bool_context = TRUE
+	case ASTCLASS_CLOGNOT, ASTCLASS_CLOGOR, ASTCLASS_CLOGAND, _
+	     ASTCLASS_CEQ, ASTCLASS_CNE, ASTCLASS_IIF
+		var expr_is_bool_context = FALSE
+		var l_is_bool_context = FALSE
+		var r_is_bool_context = FALSE
 
-	'' andalso/orelse operands are always treated as bools
-	case ASTCLASS_CLOGOR, ASTCLASS_CLOGAND
-		l_is_bool_context = TRUE
-		r_is_bool_context = TRUE
+		select case( n->class )
+		'' ! operand is treated as bool
+		case ASTCLASS_CLOGNOT
+			l_is_bool_context = TRUE
 
-	'' BOP operands may sometimes be in bool context:
-	''    x = 0
-	''    x <> 0
-	'' (not x = -1 and x <> -1 because if checks check against 0 and <> 0,
-	'' not 0 and -1)
-	case ASTCLASS_CEQ, ASTCLASS_CNE
-		if( astIsCONSTI( n->tail ) ) then
-			l_is_bool_context = (n->tail->vali = 0)
+		'' andalso/orelse operands are always treated as bools
+		case ASTCLASS_CLOGOR, ASTCLASS_CLOGAND
+			l_is_bool_context = TRUE
+			r_is_bool_context = TRUE
+
+		'' BOP operands may sometimes be in bool context:
+		''    x = 0
+		''    x <> 0
+		'' (not x = -1 and x <> -1 because if checks check against 0 and <> 0,
+		'' not 0 and -1)
+		case ASTCLASS_CEQ, ASTCLASS_CNE
+			if( astIsCONSTI( n->tail ) ) then
+				l_is_bool_context = (n->tail->vali = 0)
+			end if
+
+		'' iif() condition always is treated as bool
+		case ASTCLASS_IIF
+			expr_is_bool_context = TRUE
+		end select
+
+		n->expr = astOpsC2FB( n->expr, expr_is_bool_context )
+		if( n->head ) then
+			astReplace( n, n->head, astOpsC2FB( astClone( n->head ), l_is_bool_context ) )
+			if( n->head <> n->tail ) then
+				assert( n->head->next = n->tail )
+				astReplace( n, n->tail, astOpsC2FB( astClone( n->tail ), r_is_bool_context ) )
+			end if
 		end if
 
-	'' iif() condition always is treated as bool
-	case ASTCLASS_IIF
-		expr_is_bool_context = TRUE
+	case else
+		var i = n->head
+		while( i )
+			i = astReplace( n, i, astOpsC2FB( astClone( i ), FALSE ) )
+		wend
 	end select
-
-	n->expr = astOpsC2FB( n->expr, expr_is_bool_context )
-	if( n->head ) then
-		astReplace( n, n->head, astOpsC2FB( astClone( n->head ), l_is_bool_context ) )
-		if( n->head <> n->tail ) then
-			assert( n->head->next = n->tail )
-			astReplace( n, n->tail, astOpsC2FB( astClone( n->tail ), r_is_bool_context ) )
-		end if
-	end if
 
 	select case( n->class )
 	case ASTCLASS_CLOGNOT, ASTCLASS_CDEFINED, _
@@ -81,55 +91,19 @@ private function astOpsC2FB _
 	function = n
 end function
 
-private function hIsFoldableExpr( byval n as ASTNODE ptr ) as integer
-	function = ((n->class >= ASTCLASS_CLOGOR) and _
-	            (n->class <= ASTCLASS_IIF)) or _
-	           (n->class = ASTCLASS_DIMENSION)
-end function
-
-private function hCleanExpr _
-	( _
-		byval n as ASTNODE ptr, _
-		byval is_bool_context as integer _
-	) as ASTNODE ptr
-
-	if( n ) then
-		if( hIsFoldableExpr( n ) ) then
-			function = astOpsC2FB( n, is_bool_context )
-		else
-			astCleanUpExpressions( n )
-			function = n
-		end if
-	end if
-
-end function
-
-'' C expressions should be converted to FB, and folded (this generates pretty
-'' FB expressions while still preserving the values/behaviour of the original
-'' C expression)
 sub astCleanUpExpressions( byval n as ASTNODE ptr )
 	var is_bool_context = (n->class = ASTCLASS_PPDEFINE)  '' bold assumption
 
-	n->expr = hCleanExpr( n->expr, is_bool_context )
-	n->array = hCleanExpr( n->array, FALSE )
-	n->subtype = hCleanExpr( n->subtype, FALSE )
-	n->bits = hCleanExpr( n->bits, FALSE )
+	n->expr = astOpsC2FB( n->expr, is_bool_context )
+	n->array = astOpsC2FB( n->array, FALSE )
+	n->subtype = astOpsC2FB( n->subtype, FALSE )
+	n->bits = astOpsC2FB( n->bits, FALSE )
 
-	'' Node that uses the children list to hold expressions?
-	select case( n->class )
-	case ASTCLASS_SCOPEBLOCK, ASTCLASS_ARRAY, _
-	     ASTCLASS_PPMERGE, ASTCLASS_CALL, ASTCLASS_STRUCTINIT, ASTCLASS_ARRAYINIT
-		var i = n->head
-		while( i )
-			i = astReplace( n, i, hCleanExpr( astClone( i ), FALSE ) )
-		wend
-	case else
-		var i = n->head
-		while( i )
-			astCleanUpExpressions( i )
-			i = i->next
-		wend
-	end select
+	var i = n->head
+	while( i )
+		astCleanUpExpressions( i )
+		i = i->next
+	wend
 end sub
 
 '' For arrays with struct initializer, turn that into an array initializer
@@ -1046,27 +1020,6 @@ private sub hCheckId _
 	var item = hashLookup( h, id, hash )
 	if( item->s ) then
 		dim as ASTNODE ptr first = item->data
-
-		if( frog.verbose ) then
-			print "name conflict: " + astDumpPrettyDecl( n ) + ", " + _
-				iif( first, astDumpPrettyDecl( first ), "FB keyword" )
-		end if
-
-#if 0
-		if( first ) then
-			if( hIsTypedefOrStruct( first ) and hIsTypedefOrStruct( n ) ) then
-				'' Exact same id, even same capitalization?
-				if( *first->text = *n->text ) then
-					print "error: Suspicious name conflict between " + _
-						astDumpPrettyDecl( first ) + " and " + _
-						astDumpPrettyDecl( n )
-					print "Please use -renametypedef or -renametag to fix this."
-					end 1
-				end if
-			end if
-		end if
-#endif
-
 		hDecideWhichSymbolToRename( first, n )->attrib or= ASTATTRIB_NEEDRENAME
 	elseif( add_here ) then
 		hashAdd( h, item, hash, id, n )
