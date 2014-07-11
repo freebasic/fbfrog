@@ -327,4 +327,6 @@ type D6 field = 1
 end type
 declare function FD6() as D6
 
+type myint64 as longint
+
 end extern

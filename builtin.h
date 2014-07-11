@@ -291,6 +291,7 @@
 #define _stdcall __attribute__((__stdcall__))
 #define __thiscall __attribute__((__thiscall__))
 #define _thiscall __attribute__((__thiscall__))
+#define __extension__
 
 #define CHAR_BIT 8
 #define CHAR_MIN SCHAR_MIN

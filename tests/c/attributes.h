@@ -222,3 +222,5 @@ typedef struct C6 { short a; int b; } __attribute__((packed, stdcall))          
         struct D4 { short a; int b; }                         __attribute__((stdcall)) FD4(void);
         struct D5 { short a; int b; } __attribute__((packed)) __attribute__((stdcall)) FD5(void);
         struct D6 { short a; int b; } __attribute__((packed, stdcall))                 FD6(void);
+
+__extension__ typedef signed long long myint64;
