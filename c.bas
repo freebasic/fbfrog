@@ -630,6 +630,9 @@ end sub
 private sub cGccAttributeList( byref gccattribs as integer )
 	while( parseok )
 		select case( tkGet( x ) )
+		case KW_VOLATILE
+			x += 1
+
 		'' __cdecl
 		case KW___CDECL
 			hCdeclAttribute( gccattribs )

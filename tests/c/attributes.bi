@@ -329,4 +329,6 @@ declare function FD6() as D6
 
 type myint64 as longint
 
+extern a as const long ptr
+
 end extern
