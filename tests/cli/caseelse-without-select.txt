@@ -1,6 +1,3 @@
 <command line>(1): -caseelse without -select
     1: ./fbfrog tests/cli/caseelse-without-select.h -caseelse -endselect
                                                     ^~~~~~~~~
-context as seen by fbfrog:
-    T__ -endif -endif "tests/cli/caseelse-without-select.h" -caseelse -endselect
-                                                            ^~~~~~~~~

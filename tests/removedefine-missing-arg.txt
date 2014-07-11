@@ -1,6 +1,3 @@
 <command line>(1): expected identifier (valid symbol name) but found '"-m"'
     1: ./fbfrog tests/removedefine-missing-arg.h -removedefine -m
                                                                ^~
-context as seen by fbfrog:
-    _64BIT__ -endif -endif "tests/removedefine-missing-arg.h" -removedefine "-m"
-                                                                            ^~~~

@@ -1,6 +1,3 @@
 <command line>(1): missing -endif for this
     1: ./fbfrog tests/cli/missing-endif.h -ifdef A
                                           ^~~~~~
-context as seen by fbfrog:
-     -define __FBFROG_64BIT__ -endif -endif "tests/cli/missing-endif.h" -ifdef A
-                                                                        ^~~~~~

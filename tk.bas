@@ -215,12 +215,19 @@ type TKBUFFER
 
 	'' Static EOF token for out-of-bounds accesses
 	eof		as ONETOKEN
+
+	report_context	as integer
 end type
 
 dim shared as TKBUFFER tk
 
 sub tkInit( )
 	clear( tk, 0, sizeof( tk ) )
+	tk.report_context = TRUE
+end sub
+
+sub tkDontReportContext( )
+	tk.report_context = FALSE
 end sub
 
 private function tkAccess( byval x as integer ) as ONETOKEN ptr
@@ -922,7 +929,9 @@ function tkReport( byval x as integer, byval message as zstring ptr ) as string
 	else
 		if( tkGetLocation( x )->source ) then
 			s = hReport( tkGetLocation( x ), message )
-			s += !"\n" + hReportConstructTokens( x, first, last, "context as seen by fbfrog:" )
+			if( tk.report_context ) then
+				s += !"\n" + hReportConstructTokens( x, first, last, "context as seen by fbfrog:" )
+			end if
 		else
 			s = hReportConstructTokens( x, first, last, message )
 		end if

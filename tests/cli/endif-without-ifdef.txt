@@ -1,6 +1,3 @@
 <command line>(1): -endif without -ifdef
     1: ./fbfrog tests/cli/endif-without-ifdef.h -endif
                                                 ^~~~~~
-context as seen by fbfrog:
-    fine __FBFROG_64BIT__ -endif -endif "tests/cli/endif-without-ifdef.h" -endif
-                                                                          ^~~~~~

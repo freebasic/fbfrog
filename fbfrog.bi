@@ -399,6 +399,7 @@ declare function tkInfoPretty( byval tk as integer ) as string
 #define TRACE( x ) print __FUNCTION__ + "(" + str( __LINE__ ) + "): " + tkDumpOne( x )
 
 declare sub tkInit( )
+declare sub tkDontReportContext( )
 declare sub tkEnd( )
 declare function hDumpComment( byval comment as zstring ptr ) as string
 declare function tkDumpOne( byval x as integer ) as string

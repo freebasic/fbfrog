@@ -937,6 +937,7 @@ end sub
 	lexInit( )
 
 	tkInit( )
+	tkDontReportContext( )
 
 	'' Load all command line arguments into the tk buffer
 	lexLoadArgs( 0, sourcebufferFromZstring( "<command line>", _
