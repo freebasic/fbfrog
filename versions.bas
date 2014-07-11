@@ -342,6 +342,19 @@ end sub
 '' b 1 0 2 0         b     2
 '' c 0 0 0 3         c       3
 ''
+'' To avoid a huge memory allocation, we don't allocate the whole matrix
+'' but only 2 rows, which is really all the LCS algorithm needs.
+''
+'' For example, given 2 ASTs with 10k declarations each (that can happen
+'' easily with huge libraries), allocating the whole matrix would mean:
+''    4 bytes * 10k * 10k = 381 MiB
+'' while with 2 rows it's only:
+''    4 bytes * 10k * 2 = 78 KiB
+''
+'' And using 4 bytes to hold each length is overkill too - it's surely enough
+'' to use 2 bytes and put a limit of max. 65535 declarations per API. Even the
+'' whole GTK+/GLib/ATK/Cairo/Pango/etc API results in only ~20k declarations...
+''
 private sub hAstLCS _
 	( _
 		byval larray as DECLNODE ptr, _
@@ -359,35 +372,53 @@ private sub hAstLCS _
 
 	var llen = llast - lfirst + 1
 	var rlen = rlast - rfirst + 1
-	var maxlen = 0, maxleni = 0, maxlenj = 0
 
-	dim as integer ptr matrix = callocate( sizeof( integer ) * llen * rlen )
+	'' Currently using USHORTs to store the lengths of common sequences of
+	'' declarations. It should be enough...
+	if( (llen > &hFFFF) or (rlen > &hFFFF) ) then
+		oops( "hAstLCS(): soft-limited to 65535 declarations per " + _
+			"API, but here we have " & llen & " and " & rlen )
+	end if
 
-	for i as integer = 0 to llen-1
-		for j as integer = 0 to rlen-1
-			var newval = 0
-			if( astIsEqual( larray[lfirst+i].n, rarray[rfirst+j].n, equaloptions ) ) then
-				if( (i = 0) or (j = 0) ) then
-					newval = 1
+	dim as integer maxlen, maxlenl, maxlenr
+
+	'' previousrow = row for l-1 (NULL for l = 0)
+	''  currentrow = row for l
+	dim as ushort ptr currentrow, previousrow
+
+	for l as integer = 0 to llen-1
+		currentrow = callocate( sizeof( ushort ) * rlen )
+
+		for r as integer = 0 to rlen-1
+			var length = 0
+
+			if( astIsEqual( larray[lfirst+l].n, rarray[rfirst+r].n, equaloptions ) ) then
+				if( (l = 0) or (r = 0) ) then
+					length = 1
 				else
-					newval = matrix[(i-1)+((j-1)*llen)] + 1
+					length = previousrow[r-1] + 1
 				end if
 			end if
-			if( maxlen < newval ) then
-				maxlen = newval
-				maxleni = i
-				maxlenj = j
+
+			if( maxlen < length ) then
+				maxlen = length
+				maxlenl = l
+				maxlenr = r
 			end if
-			matrix[i+(j*llen)] = newval
+
+			currentrow[r] = length
 		next
+
+		deallocate( previousrow )
+		previousrow = currentrow
 	next
 
-	deallocate( matrix )
+	deallocate( previousrow )
 
-	llcsfirst = lfirst + maxleni - maxlen + 1
-	rlcsfirst = rfirst + maxlenj - maxlen + 1
-	llcslast = llcsfirst + maxlen - 1
-	rlcslast = rlcsfirst + maxlen - 1
+	llcslast = lfirst + maxlenl
+	rlcslast = rfirst + maxlenr
+	llcsfirst = llcslast - maxlen + 1
+	rlcsfirst = rlcslast - maxlen + 1
 end sub
 
 private function hMergeStructsManually _
