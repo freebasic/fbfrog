@@ -461,24 +461,12 @@ private function hMergeStructsManually _
 	var afields = astCloneChildren( astruct )
 	var bfields = astCloneChildren( bstruct )
 
-	#if 0
-		print "afields:"
-		astDump( afields, 1 )
-		print "bfields:"
-		astDump( bfields, 1 )
-	#endif
-
 	'' Merge both set of fields
 	var fields = astMergeVerblocks( afields, bfields )
 
 	'' Create a result struct with the new set of fields
 	var cstruct = astCloneNode( astruct )
 	astAppend( cstruct, fields )
-
-	#if 0
-		print "cstruct:"
-		astDump( cstruct, 1 )
-	#endif
 
 	function = cstruct
 end function
@@ -496,25 +484,16 @@ private sub hAstMerge _
 	)
 
 	static reclevel as integer
-	#if 0
-		#define DEBUG( x ) print string( reclevel + 1, " " ) & x
-	#else
-		#define DEBUG( x )
-	#endif
-
-	DEBUG( "hAstMerge( reclevel=" & reclevel & ", a=" & afirst & ".." & alast & ", b=" & bfirst & ".." & blast & " )" )
 
 	'' No longest common substring possible?
 	if( afirst > alast ) then
 		'' Add bfirst..blast to result
-		DEBUG( "no LCS possible due to a, adding b as-is" )
 		for i as integer = bfirst to blast
 			hAddDecl( c, barray, i )
 		next
 		exit sub
 	elseif( bfirst > blast ) then
 		'' Add afirst..alast to result
-		DEBUG( "no LCS possible due to b, adding a as-is" )
 		for i as integer = afirst to alast
 			hAddDecl( c, aarray, i )
 		next
@@ -522,18 +501,15 @@ private sub hAstMerge _
 	end if
 
 	'' Find longest common substring
-	DEBUG( "searching LCS..." )
 	dim as integer alcsfirst, alcslast, blcsfirst, blcslast
 	hAstLCS( aarray, afirst, alast, alcsfirst, alcslast, _
 	         barray, bfirst, blast, blcsfirst, blcslast, _
 	         ASTEQ_IGNOREHIDDENCALLCONV or ASTEQ_IGNOREFIELDS or ASTEQ_IGNOREDUMMYIDSTRUCTS )
-	DEBUG( "LCS: a=" & alcsfirst & ".." & alcslast & ", b=" & blcsfirst & ".." & blcslast )
 
 	'' No LCS found?
 	if( alcsfirst > alcslast ) then
 		'' Add a first, then b. This order makes the most sense: keeping
 		'' the old declarations at the top, add new ones to the bottom.
-		DEBUG( "no LCS found, adding both as-is" )
 		for i as integer = afirst to alast
 			hAddDecl( c, aarray, i )
 		next
@@ -546,27 +522,23 @@ private sub hAstMerge _
 	'' Do both sides have decls before the LCS?
 	if( (alcsfirst > afirst) and (blcsfirst > bfirst) ) then
 		'' Do LCS on that recursively
-		DEBUG( "both sides have decls before LCS, recursing" )
 		reclevel += 1
 		hAstMerge( c, aarray, afirst, alcsfirst - 1, _
 		              barray, bfirst, blcsfirst - 1, btablecount )
 		reclevel -= 1
 	elseif( alcsfirst > afirst ) then
 		'' Only a has decls before the LCS; copy them into result first
-		DEBUG( "only a has decls before LCS" )
 		for i as integer = afirst to alcsfirst - 1
 			hAddDecl( c, aarray, i )
 		next
 	elseif( blcsfirst > bfirst ) then
 		'' Only b has decls before the LCS; copy them into result first
-		DEBUG( "only b has decls before LCS" )
 		for i as integer = bfirst to blcsfirst - 1
 			hAddDecl( c, barray, i )
 		next
 	end if
 
 	'' Add LCS
-	DEBUG( "adding LCS" )
 	assert( (alcslast - alcsfirst + 1) = (blcslast - blcsfirst + 1) )
 	for i as integer = 0 to (alcslast - alcsfirst + 1)-1
 		'' The LCS may include merged structs/unions/enums that were put
@@ -619,19 +591,16 @@ private sub hAstMerge _
 	'' Do both sides have decls behind the LCS?
 	if( (alcslast < alast) and (blcslast < blast) ) then
 		'' Do LCS on that recursively
-		DEBUG( "both sides have decls behind LCS, recursing" )
 		reclevel += 1
 		hAstMerge( c, aarray, alcslast + 1, alast, barray, blcslast + 1, blast, btablecount )
 		reclevel -= 1
 	elseif( alcslast < alast ) then
 		'' Only a has decls behind the LCS
-		DEBUG( "only a has decls behind LCS" )
 		for i as integer = alcslast + 1 to alast
 			hAddDecl( c, aarray, i )
 		next
 	elseif( blcslast < blast ) then
 		'' Only b has decls behind the LCS
-		DEBUG( "only b has decls behind LCS" )
 		for i as integer = blcslast + 1 to blast
 			hAddDecl( c, barray, i )
 		next
@@ -649,13 +618,6 @@ function astMergeVerblocks _
 	a = astNewGROUP( a )
 	b = astNewGROUP( b )
 
-	#if 0
-		print "a:"
-		astDump( a, 1 )
-		print "b:"
-		astDump( b, 1 )
-	#endif
-
 	'' Create a lookup table for each side, so the LCS algorithm can do
 	'' index-based lookups in O(1) instead of having to cycle through the
 	'' whole list of preceding nodes everytime which was terribly slow.
@@ -670,11 +632,6 @@ function astMergeVerblocks _
 
 	decltableEnd( @btable )
 	decltableEnd( @atable )
-
-	#if 0
-		print "c:"
-		astDump( c, 1 )
-	#endif
 
 	function = c
 end function
