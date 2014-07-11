@@ -12,6 +12,9 @@ __attribute__((__malloc__)) void f(void);
 __attribute__((deprecated))     void f(void);
 __attribute__((__deprecated__)) void f(void);
 
+__attribute__((deprecated("message")))     void f(void);
+__attribute__((__deprecated__("message"))) void f(void);
+
 __cdecl                    void f(void);
 __attribute__((cdecl))     void f(void);
 __attribute__((__cdecl__)) void f(void);

@@ -607,10 +607,22 @@ private sub cGccAttribute( byref gccattribs as integer )
 	select case( *tkSpellId( x ) )
 	case "warn_unused_result", "__warn_unused_result__", _
 	     "noreturn", "__noreturn__", _
-	     "malloc", "__malloc__", _
-	     "deprecated", "__deprecated__"
+	     "malloc", "__malloc__"
 		'' Ignore, not interesting for FB bindings
 		x += 1
+
+	case "deprecated", "__deprecated__"
+		x += 1
+
+		'' optional message:
+		'' ['(' StringLiteral ')']
+		if( tkGet( x ) = TK_LPAREN ) then
+			x += 1
+
+			cExpectMatch( TK_STRING, "message for deprecated attribute" )
+
+			cExpectMatch( TK_RPAREN, "behind deprecated message" )
+		end if
 
 	case "cdecl", "__cdecl__"
 		hCdeclAttribute( gccattribs )
