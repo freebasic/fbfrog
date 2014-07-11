@@ -1881,12 +1881,16 @@ private sub cppInclude( byval begin as integer )
 
 	'' "filename"
 	tkExpect( cpp.x, TK_STRING, "containing the #include file name" )
-	var location = tkGetLocation( cpp.x )
+
+	'' Save the location for later, across the insertions/deletions below
+	var location = *tkGetLocation( cpp.x )
+
 	dim as string contextfile
-	if( location->source ) then
-		contextfile = *location->source->name
+	if( location.source ) then
+		contextfile = *location.source->name
 	end if
 	var inctext = *tkGetText( cpp.x )
+
 	cpp.x += 1
 
 	cppEol( )
@@ -1919,7 +1923,7 @@ private sub cppInclude( byval begin as integer )
 	tkInsert( cpp.x, TK_EOL )
 	tkSetRemove( cpp.x )
 	tkInsert( cpp.x, TK_ENDINCLUDE )
-	lexLoadC( cpp.x, sourcebufferFromFile( incfile, location ), frog.whitespace )
+	lexLoadC( cpp.x, sourcebufferFromFile( incfile, @location ), frog.whitespace )
 	cppWhitespace( )
 
 	'' Start parsing the #included content

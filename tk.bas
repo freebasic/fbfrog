@@ -1,4 +1,12 @@
+''
 '' Token buffer (implemented as a gap buffer), accessor functions
+''
+'' The array of tokens can be accessed via an index through the accessor
+'' functions.
+''
+'' Careful: Some functions such as tkGetLocation() return a pointer that points
+'' into the token buffer - it's only valid until the next insertion/deletion.
+''
 
 #include once "fbfrog.bi"
 #include once "crt.bi"
