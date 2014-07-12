@@ -411,8 +411,8 @@ end function
 '' this chain would cause the following entries to become unreachable/lost,
 '' as the free item in the middle would appear as the end of the chain now.
 
-function hashHash( byval s as zstring ptr ) as uinteger
-	dim as uinteger hash = 5381
+function hashHash( byval s as zstring ptr ) as ulong
+	dim as long hash = 5381
 	while( (*s)[0] )
 		hash = (*s)[0] + (hash shl 5) - hash
 		s += 1
@@ -420,8 +420,8 @@ function hashHash( byval s as zstring ptr ) as uinteger
 	function = hash
 end function
 
-private function hashHash2( byval s as zstring ptr ) as uinteger
-	dim as uinteger hash = 0
+private function hashHash2( byval s as zstring ptr ) as ulong
+	dim as ulong hash = 0
 	while( (*s)[0] )
 		hash = (*s)[0] + (hash shl 6) + (hash shl 16) - hash
 		s += 1
@@ -460,7 +460,7 @@ function hashLookup _
 	( _
 		byval h as THASH ptr, _
 		byval s as zstring ptr, _
-		byval hash as uinteger _
+		byval hash as ulong _
 	) as THASHITEM ptr
 
 	'' Enlarge the hash map when >= 75% is used up, for better lookup
@@ -533,7 +533,7 @@ function hashContains _
 	( _
 		byval h as THASH ptr, _
 		byval s as zstring ptr, _
-		byval hash as uinteger _
+		byval hash as ulong _
 	) as integer
 	function = (hashLookup( h, s, hash )->s <> NULL)
 end function
@@ -542,7 +542,7 @@ sub hashAdd _
 	( _
 		byval h as THASH ptr, _
 		byval item as THASHITEM ptr, _
-		byval hash as uinteger, _
+		byval hash as ulong, _
 		byval s as zstring ptr, _
 		byval dat as any ptr _
 	)

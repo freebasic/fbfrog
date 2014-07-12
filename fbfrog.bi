@@ -133,7 +133,7 @@ declare function strIsValidSymbolId( byval s as zstring ptr ) as integer
 '' which associate a string to some user data.
 type THASHITEM
 	s	as zstring ptr
-	hash	as uinteger  '' hash value for quick comparison
+	hash	as ulong     '' hash value for quick comparison
 	data	as any ptr   '' user data
 end type
 
@@ -153,24 +153,24 @@ type THASH
 	duplicate_strings	as integer
 end type
 
-declare function hashHash( byval s as zstring ptr ) as uinteger
+declare function hashHash( byval s as zstring ptr ) as ulong
 declare function hashLookup _
 	( _
 		byval h as THASH ptr, _
 		byval s as zstring ptr, _
-		byval hash as uinteger _
+		byval hash as ulong _
 	) as THASHITEM ptr
 declare function hashContains _
 	( _
 		byval h as THASH ptr, _
 		byval s as zstring ptr, _
-		byval hash as uinteger _
+		byval hash as ulong _
 	) as integer
 declare sub hashAdd _
 	( _
 		byval h as THASH ptr, _
 		byval item as THASHITEM ptr, _
-		byval hash as uinteger, _
+		byval hash as ulong, _
 		byval s as zstring ptr, _
 		byval dat as any ptr _
 	)
