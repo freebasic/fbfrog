@@ -15,6 +15,13 @@ __attribute__((__deprecated__)) void f(void);
 __attribute__((deprecated("message")))     void f(void);
 __attribute__((__deprecated__("message"))) void f(void);
 
+void *malloc(size_t) __attribute__((  alloc_size  (1)));
+void *malloc(size_t) __attribute__((__alloc_size__(1)));
+void *calloc(size_t, size_t) __attribute__((  alloc_size  (1, 2)));
+void *calloc(size_t, size_t) __attribute__((__alloc_size__(1, 2)));
+void *realloc(void *, size_t) __attribute__((  alloc_size  (2)));
+void *realloc(void *, size_t) __attribute__((__alloc_size__(2)));
+
 __cdecl                    void f(void);
 __attribute__((cdecl))     void f(void);
 __attribute__((__cdecl__)) void f(void);
