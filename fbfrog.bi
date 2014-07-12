@@ -5,8 +5,6 @@ const TRUE = -1
 declare function min( byval a as integer, byval b as integer ) as integer
 declare function max( byval a as integer, byval b as integer ) as integer
 
-type ASTNODE as ASTNODE_
-
 enum
 	CH_BELL      = &h07  '' \a
 	CH_BACKSPACE = &h08  '' \b
@@ -662,7 +660,7 @@ const ASTATTRIB_VARIADIC      = 1 shl 17  '' PPDEFINE/MACROPARAM: variadic macro
 const ASTATTRIB_PARENTHESIZEDMACROPARAM = 1 shl 18
 
 '' When changing, adjust astClone(), astIsEqual(), astDump*()
-type ASTNODE_
+type ASTNODE
 	class		as integer  '' ASTCLASS_*
 	attrib		as integer  '' ASTATTRIB_*
 
