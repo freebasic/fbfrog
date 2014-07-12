@@ -521,16 +521,13 @@ function astIsEqual _
 	if( (a->text <> NULL) <> (b->text <> NULL) ) then exit function
 	if( a->text ) then
 		var a_is_dummy = FALSE
-		if( options and ASTEQ_IGNOREDUMMYIDSTRUCTS ) then
-			select case( a->class )
-			case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
-				'' If both sides have place holder ids, treat them as equal,
-				'' without comparing the dummy ids any further.
-				a_is_dummy = strStartsWith( *a->text, DUMMYID_PREFIX )
+		if( options and ASTEQ_IGNOREDUMMYID ) then
+			'' If both sides have place holder ids, treat them as equal,
+			'' without comparing the dummy ids any further.
+			a_is_dummy = ((a->attrib and ASTATTRIB_DUMMYID) <> 0)
 
-				'' If not both sides are dummy ids though, then they can't be equal anyways.
-				if( a_is_dummy <> strStartsWith( *b->text, DUMMYID_PREFIX ) ) then exit function
-			end select
+			'' If not both sides are dummy ids though, then they can't be equal anyways.
+			if( a_is_dummy <> ((b->attrib and ASTATTRIB_DUMMYID) <> 0) ) then exit function
 		end if
 		if( a_is_dummy = FALSE ) then
 			if( *a->text <> *b->text ) then exit function
@@ -674,6 +671,7 @@ function astDumpOne( byval n as ASTNODE ptr ) as string
 	checkAttrib( ONCE )
 	checkAttrib( PACKED )
 	checkAttrib( VARIADIC )
+	checkAttrib( DUMMYID )
 
 	if( n->text ) then
 		s += " """ + strMakePrintable( *n->text ) + """"

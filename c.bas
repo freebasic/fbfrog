@@ -116,7 +116,7 @@ end sub
 '' shouldn't share the same id.
 private function hMakeDummyId( ) as string
 	static n as integer
-	function = DUMMYID_PREFIX & n
+	function = "__freebasic_dummyid_" & n
 	n += 1
 end function
 
@@ -1558,20 +1558,24 @@ private function cDeclaration _
 	var result = astNewGROUP( )
 
 	'' Special case for struct/union/enum bodies used as basedtype:
-	'' Make the struct/union/enum body a separate declaration (as needed
-	'' by FB) and make the basedtype reference it by name.
+	'' Turn the struct/union/enum body into a separate declaration (as
+	'' needed by FB) and make the basedtype reference it by name.
 	if( typeGetDtAndPtr( dtype ) = TYPE_UDT ) then
 		select case( subtype->class )
 		case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
+			var struct = subtype
+
 			'' Make up an id for anonymous structs, for use as the base type
 			'' of following declarators. If it turns out to be unnecessary,
 			'' we can still solve it out later.
-			if( subtype->text = NULL ) then
-				astSetText( subtype, hMakeDummyId( ) )
+			if( struct->text = NULL ) then
+				astSetText( struct, hMakeDummyId( ) )
+				struct->attrib or= ASTATTRIB_DUMMYID
 			end if
 
-			astAppend( result, subtype )
-			subtype = astNew( ASTCLASS_TAGID, subtype->text )
+			astAppend( result, struct )
+			subtype = astNew( ASTCLASS_TAGID, struct->text )
+			subtype->attrib or= struct->attrib and ASTATTRIB_DUMMYID
 		end select
 	end if
 

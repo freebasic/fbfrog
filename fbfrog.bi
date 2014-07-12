@@ -122,7 +122,6 @@ declare function strReplace _
 		byref b as string _
 	) as string
 declare function strMakePrintable( byref a as string ) as string
-declare function strStartsWith( byref s as string, byref lookfor as string ) as integer
 declare function strContainsNonHexDigits( byval s as zstring ptr ) as integer
 declare function strContainsNonOctDigits( byval s as zstring ptr ) as integer
 declare function strIsValidSymbolId( byval s as zstring ptr ) as integer
@@ -461,8 +460,6 @@ declare sub tkExpect( byval x as integer, byval tk as integer, byval message as 
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-const DUMMYID_PREFIX = "__freebasic_dummyid_"
-
 enum
 	TYPE_NONE = 0
 	TYPE_ANY
@@ -658,6 +655,7 @@ const ASTATTRIB_ONCE          = 1 shl 15  '' Marks #includes as "#include once"
 const ASTATTRIB_PACKED        = 1 shl 16  '' __attribute__((packed))
 const ASTATTRIB_VARIADIC      = 1 shl 17  '' PPDEFINE/MACROPARAM: variadic macros
 const ASTATTRIB_PARENTHESIZEDMACROPARAM = 1 shl 18
+const ASTATTRIB_DUMMYID       = 1 shl 19
 
 '' When changing, adjust astClone(), astIsEqual(), astDump*()
 type ASTNODE
@@ -760,7 +758,7 @@ declare function astClone( byval n as ASTNODE ptr ) as ASTNODE ptr
 
 const ASTEQ_IGNOREHIDDENCALLCONV	= 1 shl 0
 const ASTEQ_IGNOREFIELDS		= 1 shl 1
-const ASTEQ_IGNOREDUMMYIDSTRUCTS	= 1 shl 3
+const ASTEQ_IGNOREDUMMYID		= 1 shl 2
 
 declare function astIsEqual _
 	( _

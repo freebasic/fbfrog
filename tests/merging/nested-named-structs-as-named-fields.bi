@@ -25,10 +25,9 @@ type __freebasic_dummyid_1
 end type
 
 type UDT
+	a as __freebasic_dummyid_0
+
 	#if VER = 1
-		a as __freebasic_dummyid_0
 		b as __freebasic_dummyid_1
-	#else
-		a as __freebasic_dummyid_1
 	#endif
 end type

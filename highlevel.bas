@@ -593,11 +593,11 @@ end sub
 '' For example:
 ''    typedef struct { ... } A, B, C;
 '' is parsed into:
-''    struct __fbfrog_anon1
+''    struct dummyid
 ''        ...
-''    typedef A as __fbfrog_anon1
-''    typedef B as __fbfrog_anon1
-''    typedef C as __fbfrog_anon1
+''    typedef A as dummyid
+''    typedef B as dummyid
+''    typedef C as dummyid
 '' and should now be changed to:
 ''    struct A
 ''        ...
@@ -607,9 +607,9 @@ end sub
 '' Not all cases can be solved out, for example:
 ''    typedef struct { ... } *A;
 '' is parsed into:
-''    struct __fbfrog_anon1
+''    struct dummyid
 ''        ...
-''    typedef A as __fbfrog_anon1 ptr
+''    typedef A as dummyid ptr
 '' i.e. the typedef is a pointer to the anon struct, not an alias for it.
 ''
 private sub hTryNameAnonUdtAfterFirstAliasTypedef _
@@ -661,8 +661,10 @@ private sub hTryNameAnonUdtAfterFirstAliasTypedef _
 	wend
 
 	'' Rename the anon UDT to the alias typedef's id, now that its old
-	'' __fbfrog_anon* isn't need for comparison above anymore
+	'' dummyid isn't needed for comparison above anymore
 	astSetText( anon, aliastypedef->text )
+	assert( anon->attrib and ASTATTRIB_DUMMYID )
+	anon->attrib and= not ASTATTRIB_DUMMYID
 
 	astRemove( parent, aliastypedef )
 end sub
@@ -674,7 +676,7 @@ sub astNameAnonUdtsAfterFirstAliasTypedef( byval n as ASTNODE ptr )
 		'' Anon UDT?
 		select case( i->class )
 		case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
-			if( strStartsWith( *i->text, DUMMYID_PREFIX ) ) then
+			if( i->attrib and ASTATTRIB_DUMMYID ) then
 				hTryNameAnonUdtAfterFirstAliasTypedef( n, i )
 			end if
 		end select

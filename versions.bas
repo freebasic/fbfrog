@@ -504,7 +504,7 @@ private sub hAstMerge _
 	dim as integer alcsfirst, alcslast, blcsfirst, blcslast
 	hAstLCS( aarray, afirst, alast, alcsfirst, alcslast, _
 	         barray, bfirst, blast, blcsfirst, blcslast, _
-	         ASTEQ_IGNOREHIDDENCALLCONV or ASTEQ_IGNOREFIELDS or ASTEQ_IGNOREDUMMYIDSTRUCTS )
+	         ASTEQ_IGNOREHIDDENCALLCONV or ASTEQ_IGNOREFIELDS or ASTEQ_IGNOREDUMMYID )
 
 	'' No LCS found?
 	if( alcsfirst > alcslast ) then
@@ -564,23 +564,22 @@ private sub hAstMerge _
 			'' Add struct to result tree, under both a's and b's version numbers
 			hVerblockAppend( c, astClone( averor ), astClone( bveror ), cstruct )
 
-			if( astruct->text ) then
-				if( strStartsWith( *astruct->text, DUMMYID_PREFIX ) ) then
-					assert( *astruct->text <> *bstruct->text )
-					assert( strStartsWith( *bstruct->text, DUMMYID_PREFIX ) )
-					assert( *cstruct->text = *astruct->text )
+			if( astruct->attrib and ASTATTRIB_DUMMYID ) then
+				assert( *astruct->text <> *bstruct->text )
+				assert( bstruct->attrib and ASTATTRIB_DUMMYID )
+				assert( *cstruct->text = *astruct->text )
+				assert( cstruct->attrib and ASTATTRIB_DUMMYID )
 
-					'' Two structs with dummy ids, being merged together.
-					'' hMergeStructsManually() will have re-use a's id as id
-					'' for the merged struct, and now we need to manually update
-					'' all uses of b's id to now use a's id too so they'll be merged
-					'' successfully (assuming merging walks through declarations in order
-					'' like a single-pass compiler).
+				'' Two structs with dummy ids, being merged together.
+				'' hMergeStructsManually() will have re-use a's id as id
+				'' for the merged struct, and now we need to manually update
+				'' all uses of b's id to now use a's id too so they'll be merged
+				'' successfully (assuming merging walks through declarations in order
+				'' like a single-pass compiler).
 
-					for bi as integer = blcsfirst+i+1 to btablecount-1
-						astReplaceSubtypes( barray[bi].n, ASTCLASS_TAGID, bstruct->text, ASTCLASS_TAGID, cstruct->text )
-					next
-				end if
+				for bi as integer = blcsfirst+i+1 to btablecount-1
+					astReplaceSubtypes( barray[bi].n, ASTCLASS_TAGID, bstruct->text, ASTCLASS_TAGID, cstruct->text )
+				next
 			end if
 
 		case else

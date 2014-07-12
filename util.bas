@@ -326,10 +326,6 @@ function strMakePrintable( byref a as string ) as string
 	function = b
 end function
 
-function strStartsWith( byref s as string, byref lookfor as string ) as integer
-	function = (left( s, len( lookfor ) ) = lookfor)
-end function
-
 function strContainsNonHexDigits( byval s as zstring ptr ) as integer
 	dim as ubyte ptr p = s
 
