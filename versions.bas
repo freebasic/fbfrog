@@ -22,6 +22,7 @@
 
 type DECLNODE
 	n	as ASTNODE ptr  '' The declaration at that index
+	hash	as ulong        '' Precalculated hash value for the declaration
 	veror	as ASTNODE ptr  '' Points to the VEROR expression of the declaration's parent VERBLOCK
 end type
 
@@ -30,6 +31,16 @@ type DECLTABLE
 	count	as integer
 	room	as integer
 end type
+
+'' ASTNODE class and identifier are the 2 main points to quickly distinguish two declarations.
+'' Care must be taken for dummyids though, because they're ignored by hAstLCS (ASTEQ_IGNOREDUMMYID).
+private function decltableHash( byval n as ASTNODE ptr ) as ulong
+	dim as ulong hash = n->class
+	if( (n->text <> NULL) and ((n->attrib and ASTATTRIB_DUMMYID) = 0) ) then
+		hash or= hashHash( n->text ) shl 8
+	end if
+	function = hash
+end function
 
 private sub decltableAdd _
 	( _
@@ -47,6 +58,7 @@ private sub decltableAdd _
 
 	with( table->array[table->count] )
 		.n = n
+		.hash = decltableHash( n )
 		.veror = veror
 	end with
 
@@ -366,8 +378,7 @@ private sub hAstLCS _
 		byval rfirst as integer, _
 		byval rlast as integer, _
 		byref rlcsfirst as integer, _
-		byref rlcslast as integer, _
-		byval equaloptions as integer _
+		byref rlcslast as integer _
 	)
 
 	var llen = llast - lfirst + 1
@@ -392,11 +403,16 @@ private sub hAstLCS _
 		for r as integer = 0 to rlen-1
 			var length = 0
 
-			if( astIsEqual( larray[lfirst+l].n, rarray[rfirst+r].n, equaloptions ) ) then
-				if( (l = 0) or (r = 0) ) then
-					length = 1
-				else
-					length = previousrow[r-1] + 1
+			var ldecl = @larray[lfirst+l]
+			var rdecl = @rarray[rfirst+r]
+
+			if( ldecl->hash = rdecl->hash ) then
+				if( astIsEqual( ldecl->n, rdecl->n, ASTEQ_IGNOREHIDDENCALLCONV or ASTEQ_IGNOREFIELDS or ASTEQ_IGNOREDUMMYID ) ) then
+					if( (l = 0) or (r = 0) ) then
+						length = 1
+					else
+						length = previousrow[r-1] + 1
+					end if
 				end if
 			end if
 
@@ -503,8 +519,7 @@ private sub hAstMerge _
 	'' Find longest common substring
 	dim as integer alcsfirst, alcslast, blcsfirst, blcslast
 	hAstLCS( aarray, afirst, alast, alcsfirst, alcslast, _
-	         barray, bfirst, blast, blcsfirst, blcslast, _
-	         ASTEQ_IGNOREHIDDENCALLCONV or ASTEQ_IGNOREFIELDS or ASTEQ_IGNOREDUMMYID )
+	         barray, bfirst, blast, blcsfirst, blcslast )
 
 	'' No LCS found?
 	if( alcsfirst > alcslast ) then
@@ -625,6 +640,37 @@ function astMergeVerblocks _
 
 	decltableInit( @atable, a )
 	decltableInit( @btable, b )
+
+	''
+	'' Precalculate hashes for A's and B's declarations. hAstLCS() can then
+	'' quickly detect declarations that are different and avoid the slow
+	'' astIsEqual() in such cases.
+	''
+	'' Using the hashes is worth it, because the LCS algorithm checks all
+	'' the combinations of A's and B's declarations, i.e. an AxB matrix.
+	'' Even if A and B are completely equal (and AxB is an identity matrix)
+	'' there will be at most min(len(A), len(B)) true comparisons that need
+	'' to be verified via astIsEqual(), while the vast majority of false
+	'' comparisons can be quickly ignored due to the hash mismatch.
+	''
+
+	''
+	'' Precalculating astIsEqual() results for every entry of the AxB matrix
+	'' would probably not be worth it though, because it does not reduce the
+	'' amount of astIsEqual() calls.
+	''
+	'' The only case where it could be an advantage to cache the
+	'' astIsEqual() results would be if A and B differ a lot and the LCS
+	'' algorithm ends up being run multiple times recursively to merge the
+	'' sections above/below an LCS. In that case the same declarations will
+	'' be compared multiple times and the caching would speed that up.
+	''
+	'' However, in practice A and B are usually very similar/almost equal,
+	'' thus the LCS will typically be very big, and there won't be many
+	'' subsections to merge recursively... and it would have a noticable
+	'' memory cost even if compressed into bits: Assuming 20k x 20k
+	'' declarations, that would be 400 million bitflags, ~48 MiB.
+	''
 
 	hAstMerge( c, atable.array, 0, atable.count - 1, _
 	              btable.array, 0, btable.count - 1, btable.count )
