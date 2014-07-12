@@ -620,32 +620,31 @@ private sub cGccAttribute( byref gccattribs as integer )
 		exit sub
 	end if
 
-	select case( *tkSpellId( x ) )
-	case "warn_unused_result", "__warn_unused_result__", _
-	     "noreturn", "__noreturn__", _
-	     "malloc", "__malloc__"
-		'' Ignore, not interesting for FB bindings
+	var attr = *tkSpellId( x )
+
+	'' Each attribute can be given as foo or __foo__ -- normalize to foo.
+	if( (left( attr, 2 ) = "__") and (right( attr, 2 ) = "__") ) then
+		attr = mid( attr, 3, len( attr ) - 4 )
+	end if
+
+	'' Most attributes aren't interesting for FB bindings and should be ignored,
+	'' the main exception being the x86 calling conventions.
+	select case( attr )
+	case "alloc_size", "const", "deprecated", "format", "malloc", "noreturn", _
+	     "pure", "warn_unused_result"
 		x += 1
 
-	case "alloc_size", "__alloc_size__"
-		x += 1
-
-		'' '(' arg (',' arg)* ')'
+		'' Some of these attributes accept further arguments which we
+		'' can just ignore.
 		hSkipToRparen( )
 
-	case "deprecated", "__deprecated__"
-		x += 1
-
-		'' optional message: ['(' StringLiteral ')']
-		hSkipToRparen( )
-
-	case "cdecl", "__cdecl__"
+	case "cdecl"
 		hCdeclAttribute( gccattribs )
 
-	case "stdcall", "__stdcall__"
+	case "stdcall"
 		hStdcallAttribute( gccattribs )
 
-	case "packed", "__packed__"
+	case "packed"
 		gccattribs or= ASTATTRIB_PACKED
 		x += 1
 

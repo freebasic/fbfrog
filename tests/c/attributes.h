@@ -22,6 +22,15 @@ void *calloc(size_t, size_t) __attribute__((__alloc_size__(1, 2)));
 void *realloc(void *, size_t) __attribute__((  alloc_size  (2)));
 void *realloc(void *, size_t) __attribute__((__alloc_size__(2)));
 
+void f(void) __attribute__((  const  ));
+void f(void) __attribute__((__const__));
+
+void f(void) __attribute__((  pure  ));
+void f(void) __attribute__((__pure__));
+
+void printf(char *, ...) __attribute__((  format  (  printf  , 1, 2)));
+void printf(char *, ...) __attribute__((__format__(__printf__, 1, 2)));
+
 __cdecl                    void f(void);
 __attribute__((cdecl))     void f(void);
 __attribute__((__cdecl__)) void f(void);

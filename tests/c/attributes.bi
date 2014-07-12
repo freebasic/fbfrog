@@ -28,6 +28,15 @@ declare function realloc(byval as any ptr, byval as uinteger) as any ptr
 
 declare sub f()
 declare sub f()
+
+declare sub f()
+declare sub f()
+
+declare sub printf(byval as zstring ptr, ...)
+declare sub printf(byval as zstring ptr, ...)
+
+declare sub f()
+declare sub f()
 declare sub f()
 
 declare sub f stdcall()
