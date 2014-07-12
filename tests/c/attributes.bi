@@ -37,6 +37,21 @@ declare sub printf(byval as zstring ptr, ...)
 
 declare sub f()
 declare sub f()
+
+declare sub f()
+declare sub f()
+
+type int_may_alias as long
+type int_may_alias as long
+
+declare sub f()
+declare sub f()
+declare sub f()
+declare sub f()
+declare sub f()
+
+declare sub f()
+declare sub f()
 declare sub f()
 
 declare sub f stdcall()

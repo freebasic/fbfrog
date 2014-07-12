@@ -31,6 +31,21 @@ void f(void) __attribute__((__pure__));
 void printf(char *, ...) __attribute__((  format  (  printf  , 1, 2)));
 void printf(char *, ...) __attribute__((__format__(__printf__, 1, 2)));
 
+void f(void) __attribute__((  sentinel  ));
+void f(void) __attribute__((__sentinel__));
+
+void f(void) __attribute__((  unused  ));
+void f(void) __attribute__((__unused__));
+
+typedef int __attribute__((  may_alias  )) int_may_alias;
+typedef int __attribute__((__may_alias__)) int_may_alias;
+
+void f(void) __attribute__((  visibility  ("default")));
+void f(void) __attribute__((__visibility__("default")));
+void f(void) __attribute__((__visibility__("hidden")));
+void f(void) __attribute__((__visibility__("internal")));
+void f(void) __attribute__((__visibility__("protected")));
+
 __cdecl                    void f(void);
 __attribute__((cdecl))     void f(void);
 __attribute__((__cdecl__)) void f(void);
