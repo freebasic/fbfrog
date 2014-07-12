@@ -1,11 +1,8 @@
 [1/5] __FB_WIN32__.__FB_64BIT__
       tests/lex/counts-lines-for-escaped-eols.h
 tests/lex/counts-lines-for-escaped-eols.h(9): expected ')' to close the parameter list in this macro declaration but found 'error'
-     7: \
-     8: 
-     9: #define m(provoke error and check the line number in the produced messag
-                          ^~~~~
-    10: 
+    #define m(provoke error and check the line number in the produced message
+                      ^~~~~
 context as seen by fbfrog:
     # define m ( provoke error and check the line number in the produced message
                          ^~~~~

@@ -1,11 +1,8 @@
 [1/5] __FB_WIN32__.__FB_64BIT__
       tests/cpp/expand/merge/missing-operands-functionlike.h
 tests/cpp/expand/merge/missing-operands-functionlike.h(2): ## merge operator at beginning of macro body, missing operand to merge with
-    1: // @fail @fbfrog -removedefine m
-    2: #define m(x) ##
-                    ^~
-    3: m(0)
-    4: 
+    #define m(x) ##
+                 ^~
 context as seen by fbfrog:
     m ( 0 ) [begin] ## [end] 
                     ^~

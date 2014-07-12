@@ -6,10 +6,8 @@ type myint as long
 '' static unsigned myint i;
 '' ---------------------------------------------------------------------------
 '' tests/c/basetype/unsigned-inttypedef.h(2): expected ';' to finish this declaration but found 'i'
-''    1: typedef int myint;
-''    2: static unsigned myint i;
-''                             ^
-''    3: 
+''     static unsigned myint i;
+''                           ^
 '' context as seen by fbfrog:
-''    static unsigned myint i ;
-''                          ^
+''     static unsigned myint i ;
+''                           ^

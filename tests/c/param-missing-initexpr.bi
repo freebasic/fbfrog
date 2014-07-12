@@ -4,9 +4,8 @@
 '' void f(int i =);
 '' ---------------------------------------------------------------------------
 '' tests/c/param-missing-initexpr.h(1): expected expression but found ')'
-''    1: void f(int i =);
-''                     ^
-''    2: 
+''     void f(int i =);
+''                   ^
 '' context as seen by fbfrog:
-''    void f ( int i = ) ;
-''                     ^
+''     void f ( int i = ) ;
+''                      ^

@@ -1,11 +1,8 @@
 [1/5] __FB_WIN32__.__FB_64BIT__
       tests/cpp/expand/merge/missing-rhs.h
 tests/cpp/expand/merge/missing-rhs.h(2): ## merge operator at end of macro body, missing operand to merge with
-    1: // @fail @fbfrog -removedefine m
-    2: #define m(x) x##
-                     ^~
-    3: m(0)
-    4: 
+    #define m(x) x##
+                  ^~
 context as seen by fbfrog:
     m ( 0 ) [begin] 0 ## [end] 
                       ^~

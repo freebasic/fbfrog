@@ -1,10 +1,8 @@
 [1/5] __FB_WIN32__.__FB_64BIT__
       tests/cpp/error-directive.h
 tests/cpp/error-directive.h(2): #error
-    1: // @fail
-    2: #error "Something"
-        ^~~~~
-    3: 
+    #error "Something"
+     ^~~~~
 context as seen by fbfrog:
     # error "Something" 
       ^~~~~

@@ -4,9 +4,8 @@
 '' static long signed char *p;
 '' ---------------------------------------------------------------------------
 '' tests/c/basetype/long-signed-char.h(1): SHORT|LONG modifiers used with CHAR type
-''    1: static long signed char *p;
-''                               ^
-''    2: 
+''     static long signed char *p;
+''                             ^
 '' context as seen by fbfrog:
-''    static long signed char * p ;
-''                            ^
+''     static long signed char * p ;
+''                             ^

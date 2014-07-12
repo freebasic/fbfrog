@@ -11,13 +11,10 @@ dim shared b as long
 '' c;
 '' ---------------------------------------------------------------------------
 '' expected identifier for the symbol declared in this declaration but found ';'
-''    c ;
-''      ^
+''     c ;
+''       ^
 '' tests/c/id-basetype-missing-id-in-macro.h(2): construct found here
-''    1: // @fbfrog -removedefine m
-''    2: #define m int a; int b; c;
-''                               ^
-''    3: m
-''    4: 
+''     #define m int a; int b; c;
+''                             ^
 
 end extern

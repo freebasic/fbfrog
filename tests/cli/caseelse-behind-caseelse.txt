@@ -1,3 +1,3 @@
 <command line>(1): -caseelse behind -caseelse
-    1: caseelse-behind-caseelse.h -select -case A -caseelse -caseelse -endselect
+    li/caseelse-behind-caseelse.h -select -case A -caseelse -caseelse -endselect
                                                             ^~~~~~~~~

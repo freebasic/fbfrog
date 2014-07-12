@@ -1,11 +1,8 @@
 [1/5] __FB_WIN32__.__FB_64BIT__
       tests/cpp/expand/merge/nonhexdigits.h
 tests/cpp/expand/merge/nonhexdigits.h(2): ## merge operator cannot merge '0x' and 'G'
-    1: // @fail @fbfrog -removedefine m
-    2: #define m 0x ## G
-                    ^~
-    3: enum E {
-    4:  A = m
+    #define m 0x ## G
+                 ^~
 context as seen by fbfrog:
     enum E { A = m [begin] 0x ## G [end] } ;
                               ^~

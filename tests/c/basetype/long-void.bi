@@ -4,9 +4,8 @@
 '' static long void *p;
 '' ---------------------------------------------------------------------------
 '' tests/c/basetype/long-void.h(1): SIGNED|UNSIGNED|SHORT|LONG modifiers used with void/float/double/typedef/UDT
-''    1: static long void *p;
-''                        ^
-''    2: 
+''     static long void *p;
+''                      ^
 '' context as seen by fbfrog:
-''    static long void * p ;
-''                     ^
+''     static long void * p ;
+''                      ^

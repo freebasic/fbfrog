@@ -9,11 +9,10 @@ end sub
 '' , *b;
 '' ---------------------------------------------------------------------------
 '' tests/c/function-body-not-on-last-declarator.h(1): expected a data type starting a declaration but found ','
-''    1: void a(void) { ; }, *b;
-''                         ^
-''    2: 
+''     void a(void) { ; }, *b;
+''                       ^
 '' context as seen by fbfrog:
-''    void a ( void ) { ; } , * b ;
-''                          ^
+''     void a ( void ) { ; } , * b ;
+''                           ^
 
 end extern

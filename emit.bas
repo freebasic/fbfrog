@@ -123,7 +123,7 @@ function emitType overload( byval n as ASTNODE ptr ) as string
 end function
 
 namespace emit
-	dim shared as integer indent, fo, comment, indentincomment
+	dim shared as integer indent, fo, comment, commentspaces
 end namespace
 
 private sub emitLine( byref ln as string )
@@ -138,12 +138,8 @@ private sub emitLine( byref ln as string )
 
 	if( emit.comment > 0 ) then
 		s += "''"
-		'' Prepend a space if none is there yet and the line isn't empty
 		if( len( ln ) > 0 ) then
-			if( ln[0] <> CH_SPACE ) then
-				s += " "
-			end if
-			s += space( 4 * emit.indentincomment )
+			s += space( emit.commentspaces )
 		end if
 	end if
 
@@ -391,17 +387,21 @@ private function emitAst _
 
 	case ASTCLASS_UNKNOWN
 		emit.comment += 1
+		emit.commentspaces += 1
 		emitLine( "TODO: unrecognized construct:" )
 		emitLines( n->text )
 		emitLine( string( 75, "-" ) )
 		emitLines( n->comment )
+		emit.commentspaces -= 1
 		emit.comment -= 1
 
 	case ASTCLASS_RENAMELIST
 		emit.comment += 1
+
+		emit.commentspaces += 1
 		emitLine( *n->text )
 
-		emit.indentincomment += 1
+		emit.commentspaces += 4
 		var i = n->head
 		while( i )
 			s = emitAst( i )
@@ -411,8 +411,8 @@ private function emitAst _
 			i = i->next
 		wend
 		s = ""
-		emit.indentincomment -= 1
 
+		emit.commentspaces -= 5
 		emit.comment -= 1
 
 	case ASTCLASS_INCLIB

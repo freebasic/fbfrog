@@ -1,11 +1,8 @@
 [1/5] __FB_WIN32__.__FB_64BIT__
       tests/cpp/if/elif-without-if.h
 tests/cpp/if/elif-without-if.h(2): #elif without #if
-    1: // @fail
-    2: #elif 0
-        ^~~~
-    3: #endif
-    4: 
+    #elif 0
+     ^~~~
 context as seen by fbfrog:
     # elif 0 
       ^~~~

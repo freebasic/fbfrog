@@ -1,12 +1,8 @@
 [1/5] __FB_WIN32__.__FB_64BIT__
       tests/cpp/expand/merge/merge-with-merge-token.h
 tests/cpp/expand/merge/merge-with-merge-token.h(3): ## merge operator cannot merge 'a' and '##'
-    1: // @fail @fbfrog -removedefine m
-    2: // undefined behaviour
-    3: #define m a ## ## b
-                   ^~
-    4: m
-    5: 
+    #define m a ## ## b
+                ^~
 context as seen by fbfrog:
     m [begin] a ## ## b [end] 
                 ^~

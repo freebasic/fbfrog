@@ -1,12 +1,8 @@
 [1/5] __FB_WIN32__.__FB_64BIT__
       tests/cpp/if/elif-after-else.h
 tests/cpp/if/elif-after-else.h(4): #elif after #else
-    2: #if 0
-    3: #else
-    4: #elif 0
-        ^~~~
-    5: #endif
-    6: 
+    #elif 0
+     ^~~~
 context as seen by fbfrog:
     # elif 0 
       ^~~~

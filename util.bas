@@ -209,15 +209,6 @@ sub hCalcErrorLine _
 
 end sub
 
-private function hLineNumberPrefix( byval linenum as integer ) as string
-	function = str( linenum + 1 ) + ": "
-end function
-
-private function hRightAlignedLineNumber( byval maxwidth as integer, byval linenum as integer ) as string
-	var slinenum = hLineNumberPrefix( linenum )
-	function = space( maxwidth - len( slinenum ) ) + slinenum
-end function
-
 function hErrorMarker( byval indent as integer, byval length as integer ) as string
 	function = space( indent ) + "^" + string( length - 1, "~" )
 end function
@@ -240,46 +231,26 @@ end function
 '' Builds an error message string like this:
 ''
 ''    filename.bas(10): duplicate definition of 'foo'
-''       9:    do
-''      10:        dim foo as integer
-''                     ^~~
-''      11:        foo = 123
-''      12:        print foo
+''        dim foo as integer
+''            ^~~
 ''
 function hReport( byval location as TKLOCATION ptr, byval message as zstring ptr ) as string
 	if( location->source = NULL ) then
 		return *message
 	end if
 
+	'' filename(1-based linenumber): message
 	var s = *location->source->name + "(" & (location->linenum + 1) & "): " + *message
 
-	'' Show the error line and some extra lines above and below it,
-	'' for more context, with line numbers prefixed to them.
-	const CONTEXTLINES = 2
-	var firstline = max( location->linenum - CONTEXTLINES, 0 )
-	var lastline  = min( location->linenum + CONTEXTLINES, location->source->lines - 1 )
-
-	'' Indentation and line numbers reduce the width available for the error line
+	'' A line of source code, trimmed to fit into the width limit
 	const INDENT = 4
 	const MAXWIDTH = 80 - INDENT
-	var wlinenum = len( hLineNumberPrefix( lastline ) )  '' width of biggest line number
-	var wsource = MAXWIDTH - wlinenum          '' available witdh for error line source code
+	dim markeroffset as integer
+	s += !"\n" + space( INDENT )
+	s += hTrimmedSourceLine( location, location->linenum, MAXWIDTH, markeroffset )
 
-	for linenum as integer = firstline to lastline
-		s += !"\n" + space( INDENT )
-
-		'' Right-align line numbers, in case we're going from 9 (1 char) to 10 (2 chars) or similar
-		s += hRightAlignedLineNumber( wlinenum, linenum )
-
-		'' A line of source code, trimmed to fit into the width limit
-		dim markeroffset as integer
-		s += hTrimmedSourceLine( location, linenum, wsource, markeroffset )
-
-		'' Error marker below the erroneous line
-		if( linenum = location->linenum ) then
-			s += !"\n" + hErrorMarker( INDENT + wlinenum + markeroffset, location->length )
-		end if
-	next
+	'' Error marker below the erroneous line
+	s += !"\n" + hErrorMarker( INDENT + markeroffset, location->length )
 
 	if( (not location->source->is_file) and (location->source->location.source <> NULL) ) then
 		s += !"\n" + hReport( @location->source->location, "from here:" )

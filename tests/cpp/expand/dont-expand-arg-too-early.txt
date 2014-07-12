@@ -1,11 +1,8 @@
 [1/5] __FB_WIN32__.__FB_64BIT__
       tests/cpp/expand/dont-expand-arg-too-early.h
 tests/cpp/expand/dont-expand-arg-too-early.h(7): not enough arguments for 'm' macro call: 1 given, 2 needed
-    5: // "comma" shouldn't be expanded before parsing the arg list, there's onl
-    6: // arg given here, but 2 required.
-    7: m(1 comma 2)
-                  ^
-    8: 
+    m(1 comma 2)
+               ^
 context as seen by fbfrog:
     m ( 1 comma 2 ) 
                   ^

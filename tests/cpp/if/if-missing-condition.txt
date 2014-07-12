@@ -1,11 +1,8 @@
 [1/5] __FB_WIN32__.__FB_64BIT__
       tests/cpp/if/if-missing-condition.h
 tests/cpp/if/if-missing-condition.h(2): missing expression
-    1: // @fail
-    2: #if
-          ^
-    3: #endif
-    4: 
+    #if
+       ^
 context as seen by fbfrog:
     # if 
          ^

@@ -9,11 +9,8 @@
       tests/cpp/directives-1.h
       tests/cpp/directives-1.h
 tests/cpp/directives.h(89): #warning
-    87: #define D3(x) { f1( (x) + 1 ); f2( (x) + 2 ); f3( (x) + 3 ); }
-    88: 
-    89: #warning "Example warning"
-                 ^~~~~~~~~~~~~~~~~
-    90: 
+    #warning "Example warning"
+             ^~~~~~~~~~~~~~~~~
 context as seen by fbfrog:
     # warning "Example warning" 
               ^~~~~~~~~~~~~~~~~
@@ -28,11 +25,8 @@ context as seen by fbfrog:
       tests/cpp/directives-1.h
       tests/cpp/directives-1.h
 tests/cpp/directives.h(89): #warning
-    87: #define D3(x) { f1( (x) + 1 ); f2( (x) + 2 ); f3( (x) + 3 ); }
-    88: 
-    89: #warning "Example warning"
-                 ^~~~~~~~~~~~~~~~~
-    90: 
+    #warning "Example warning"
+             ^~~~~~~~~~~~~~~~~
 context as seen by fbfrog:
     # warning "Example warning" 
               ^~~~~~~~~~~~~~~~~
@@ -47,11 +41,8 @@ context as seen by fbfrog:
       tests/cpp/directives-1.h
       tests/cpp/directives-1.h
 tests/cpp/directives.h(89): #warning
-    87: #define D3(x) { f1( (x) + 1 ); f2( (x) + 2 ); f3( (x) + 3 ); }
-    88: 
-    89: #warning "Example warning"
-                 ^~~~~~~~~~~~~~~~~
-    90: 
+    #warning "Example warning"
+             ^~~~~~~~~~~~~~~~~
 context as seen by fbfrog:
     # warning "Example warning" 
               ^~~~~~~~~~~~~~~~~
@@ -66,11 +57,8 @@ context as seen by fbfrog:
       tests/cpp/directives-1.h
       tests/cpp/directives-1.h
 tests/cpp/directives.h(89): #warning
-    87: #define D3(x) { f1( (x) + 1 ); f2( (x) + 2 ); f3( (x) + 3 ); }
-    88: 
-    89: #warning "Example warning"
-                 ^~~~~~~~~~~~~~~~~
-    90: 
+    #warning "Example warning"
+             ^~~~~~~~~~~~~~~~~
 context as seen by fbfrog:
     # warning "Example warning" 
               ^~~~~~~~~~~~~~~~~
@@ -85,11 +73,8 @@ context as seen by fbfrog:
       tests/cpp/directives-1.h
       tests/cpp/directives-1.h
 tests/cpp/directives.h(89): #warning
-    87: #define D3(x) { f1( (x) + 1 ); f2( (x) + 2 ); f3( (x) + 3 ); }
-    88: 
-    89: #warning "Example warning"
-                 ^~~~~~~~~~~~~~~~~
-    90: 
+    #warning "Example warning"
+             ^~~~~~~~~~~~~~~~~
 context as seen by fbfrog:
     # warning "Example warning" 
               ^~~~~~~~~~~~~~~~~

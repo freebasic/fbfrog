@@ -3,10 +3,10 @@
 extern "C"
 
 '' The following symbols have been renamed:
-''     inside struct Width:
-''         field as_ alias "as"
-''         field type_ alias "type"
-''         field __ alias "_"
+''      inside struct Width:
+''          field as_ alias "as"
+''          field type_ alias "type"
+''          field __ alias "_"
 ''     variable ABS_ alias "ABS"
 ''     variable ABSTRACT_ alias "ABSTRACT"
 ''     variable ACCESS_ alias "ACCESS"

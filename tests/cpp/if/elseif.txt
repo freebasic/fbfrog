@@ -1,12 +1,8 @@
 [1/5] __FB_WIN32__.__FB_64BIT__
       tests/cpp/if/elseif.h
 tests/cpp/if/elseif.h(4): unknown PP directive
-    2: /* CPP only accepts #elif, not #elseif */
-    3: #if 1
-    4: #elseif 1
-        ^~~~~~
-    5: #else
-    6: #endif
+    #elseif 1
+     ^~~~~~
 context as seen by fbfrog:
     # elseif 1 
       ^~~~~~

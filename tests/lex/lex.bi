@@ -99,17 +99,17 @@ const A23 = 1ull
 declare sub f()  '' Some escaped newlines 
 
 '' single-line \
-'' comment \
-'' across \
-'' multiple \
-'' lines
+''comment \
+''across \
+''multiple \
+''lines
 '' escaped
 ''
-'' \
-'' newlines
-'' inside\
-'' multi-line\
-'' comment 
+''\
+''newlines
+''inside\
+''multi-line\
+''comment 
 
 #define Z1 "abcdef"  '' escaped newline in string literal
 #define Z2 "abcdef"

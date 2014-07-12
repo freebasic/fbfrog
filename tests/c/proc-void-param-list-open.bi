@@ -4,9 +4,8 @@
 '' void f(void
 '' ---------------------------------------------------------------------------
 '' tests/c/proc-void-param-list-open.h(1): missing ')' to close parameter list in function declaration
-''    1: void f(void
-''              ^~~~
-''    2: 
+''     void f(void
+''            ^~~~
 '' context as seen by fbfrog:
-''    void f ( void
-''             ^~~~
+''     void f ( void
+''              ^~~~

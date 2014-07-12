@@ -3,9 +3,9 @@
 extern "C"
 
 '' The following symbols have been renamed:
-''     inside struct Foo:
-''         field FiElD_ alias "FiElD"
-''         field field__ alias "field"
+''      inside struct Foo:
+''          field FiElD_ alias "FiElD"
+''          field field__ alias "field"
 ''     procedure toaster1_ alias "toaster1"()
 ''     procedure toASTER1__ alias "toASTER1"()
 ''     #define Aaa_ alias "Aaa"
