@@ -493,3 +493,7 @@ enum E {
 
 #define A50 defined(FOO)
 #define A51(a) defined(a)
+
+#define A52(T) ((T*)malloc(sizeof(T)))
+#define A53 ((MYINT*)malloc(sizeof(MYINT)))
+#define A54 ((const unsigned int ***)malloc(123))

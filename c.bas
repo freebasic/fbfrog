@@ -360,11 +360,15 @@ private function cExpression _
 
 			'' Find the ')' and check the token behind it, in some cases
 			'' we can tell that it probably isn't a cast.
-			var y = hFindClosingParen( x - 1 ) + 1
-			select case( tkGet( y ) )
-			case TK_RPAREN, TK_EOF, TK_END
+			var closingparen = hFindClosingParen( x - 1 )
+			select case( tkGet( closingparen + 1 ) )
+			case TK_RPAREN, TK_EOF, TK_EOL
 				is_cast = FALSE
 			end select
+
+			'' Something of the form '(id*)' or just in general a
+			'' '*' in front of the closing ')'? It most likely is a pointer cast.
+			is_cast or= (tkGet( closingparen - 1 ) = TK_STAR)
 
 			if( is_cast ) then
 				'' DataType ')'
