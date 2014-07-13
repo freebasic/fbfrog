@@ -2,6 +2,14 @@
 '' C parsing
 ''
 '' cFile() parses the content of the tk buffer and returns the resulting AST.
+'' We have ...
+''  * A recursive declaration parser that can handle multiple declarations in
+''    the same statement and nested declarations such as function pointers
+''    returning function pointers etc.
+''  * An expression parser used for variable/parameter initializers, enum
+''    constants, #define bodies.
+''  * A data type parser: base types in declarations including struct/union/enum
+''    with or without body, type casts, sizeof().
 ''
 '' The parser is able to recover from parsing errors, such that it can continue
 '' parsing the next construct if parsing the current one failed. The bad

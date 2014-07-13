@@ -1,4 +1,44 @@
+''
 '' Main module, command line interface
+''
+'' This is how fbfrog works:
+'' 1. CLI
+''   * command line arguments/options from fbfrog's command line or @files are
+''     parsed into the tk buffer using lexLoadArgs()
+''   * content of builtin.fbfrog is inserted at the beginning
+''   * the tk buffer is then parsed by hParseArgs(): global options are handled,
+''     script options are turned into an AST and their syntax is verified
+''   * frogEvaluateScript(): the script AST is evaluated (by following each code
+''     path), producing the list of individual APIs we want to parse, and the
+''     command line options for each one
+'' 2. API parsing: For each API, ...
+''   * we start with an empty tk buffer, CPP is initialized
+''   * predefines for that API are inserted into the tk buffer using lexLoadC()
+''   * CPP is told about -removedefine options etc.
+''   * content of builtin.h and the *.h input files for that API are loaded into
+''     the tk buffer using lexLoadC()
+''   * CPP runs and preprocesses the content of the tk buffer (cppMain()):
+''     directive parsing, macro expansion, #if evaluation
+''   * C parser parses the preprocessed constructs in the tk buffer (cFile()),
+''     produces a self-contained AST
+''   * Various steps of AST modifications to make the AST FB-friendly
+''     (e.g. fixing identifier conflicts, or solving out redundant typedefs)
+'' 3. AST merging:
+''   * Explaining VERBLOCKs: VERBLOCK nodes basically are like #if conditionals.
+''     They are used to partition the nodes (API declarations) in an AST into
+''     API-specific sections. The declarations in the VERBLOCK can belong to one
+''     or more APIs. Whichever API(s) the VERBLOCK "covers" is determined by its
+''     condition expression(s).
+''   * The AST of each API is wrapped in a VERBLOCK node representing that API
+''   * All the APIs' ASTs are merged into one final AST, by merging two at a
+''     time (astMergeVerblocks()), by recursively finding the longest common
+''     substring (LCS). So it basically is a diff'ing algorithm. The final AST
+''     will be a sequence of VERBLOCKs (or only one if all APIs were equal).
+''   * Finally, the VERBLOCKs are turned into real #if blocks, and their
+''     condition expressions are optimized, eliminating common subexpressions
+''     and redundant checks (astProcessVerblocks()).
+'' 4. Emitting the final AST as FB code (emitFile())
+''
 
 #include once "fbfrog.bi"
 
