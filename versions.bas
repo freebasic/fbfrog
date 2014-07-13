@@ -395,11 +395,11 @@ private sub hAstLCS _
 
 	'' previousrow = row for l-1 (NULL for l = 0)
 	''  currentrow = row for l
-	dim as ushort ptr currentrow, previousrow
+	var rowsize = sizeof( ushort ) * rlen
+	dim as ushort ptr  currentrow = callocate( rowsize )
+	dim as ushort ptr previousrow = callocate( rowsize )
 
 	for l as integer = 0 to llen-1
-		currentrow = callocate( sizeof( ushort ) * rlen )
-
 		for r as integer = 0 to rlen-1
 			var length = 0
 
@@ -424,11 +424,10 @@ private sub hAstLCS _
 
 			currentrow[r] = length
 		next
-
-		deallocate( previousrow )
-		previousrow = currentrow
+		swap currentrow, previousrow
 	next
 
+	deallocate( currentrow )
 	deallocate( previousrow )
 
 	llcslast = lfirst + maxlenl
