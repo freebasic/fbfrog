@@ -226,7 +226,7 @@ end sub
 '' then they can be emitted without explicit callconv, as the Extern blocks will
 '' take care of that and remap the callconv as needed. In this case, the merged
 '' node shouldn't have any callconv flag at all, but only ASTATTRIB_HIDECALLCONV.
-'' hAstLCS() must be given the proper option flags for astIsEqual() to allow this.
+'' hAstLCS() must use the proper option flags for astIsEqual() to allow this.
 ''
 '' If merging two procdecls and only one side has ASTATTRIB_HIDECALLCONV, then they
 '' must have the same callconv, otherwise the hAstLCS()'s astIsEqual() wouldn't

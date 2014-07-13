@@ -498,36 +498,31 @@ function astIsEqual _
 
 	if( a->class <> b->class ) then exit function
 
-	var check_callconv = FALSE
+	var aattrib = a->attrib
+	var battrib = b->attrib
+
 	if( options and ASTEQ_IGNOREHIDDENCALLCONV ) then
-		'' Only check the callconv if not hidden on both sides
-		var ahidden = ((a->attrib and ASTATTRIB_HIDECALLCONV) <> 0)
-		var bhidden = ((b->attrib and ASTATTRIB_HIDECALLCONV) <> 0)
-		check_callconv = (ahidden <> bhidden)
-	end if
-
-	if( check_callconv ) then
-		if( (a->attrib and ASTATTRIB_CDECL) <> _
-		    (b->attrib and ASTATTRIB_CDECL) ) then
-			exit function
-		end if
-
-		if( (a->attrib and ASTATTRIB_STDCALL) <> _
-		    (b->attrib and ASTATTRIB_STDCALL) ) then
-			exit function
+		'' If callconv is hidden on both sides, then ignore it
+		if( (aattrib and ASTATTRIB_HIDECALLCONV) and (battrib and ASTATTRIB_HIDECALLCONV) ) then
+			aattrib and= not (ASTATTRIB_CDECL or ASTATTRIB_STDCALL)
+			battrib and= not (ASTATTRIB_CDECL or ASTATTRIB_STDCALL)
 		end if
 	end if
+
+	'' Some attributes can always be ignored because they don't cause declarations to really be different
+	aattrib and= not (ASTATTRIB_OCT or ASTATTRIB_HEX or ASTATTRIB_REPORTED or ASTATTRIB_NEEDRENAME)
+	battrib and= not (ASTATTRIB_OCT or ASTATTRIB_HEX or ASTATTRIB_REPORTED or ASTATTRIB_NEEDRENAME)
+
+	if( aattrib <> battrib ) then exit function
 
 	if( (a->text <> NULL) <> (b->text <> NULL) ) then exit function
 	if( a->text ) then
 		var a_is_dummy = FALSE
 		if( options and ASTEQ_IGNOREDUMMYID ) then
-			'' If both sides have place holder ids, treat them as equal,
+			'' If both sides have dummyids, treat them as equal,
 			'' without comparing the dummy ids any further.
-			a_is_dummy = ((a->attrib and ASTATTRIB_DUMMYID) <> 0)
-
-			'' If not both sides are dummy ids though, then they can't be equal anyways.
-			if( a_is_dummy <> ((b->attrib and ASTATTRIB_DUMMYID) <> 0) ) then exit function
+			a_is_dummy = ((aattrib and ASTATTRIB_DUMMYID) <> 0)
+			assert( (aattrib and ASTATTRIB_DUMMYID) = (battrib and ASTATTRIB_DUMMYID) )
 		end if
 		if( a_is_dummy = FALSE ) then
 			if( *a->text <> *b->text ) then exit function
