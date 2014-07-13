@@ -2035,12 +2035,11 @@ private sub cppUndef( )
 	cppEol( )
 end sub
 
-private function cppPragma( ) as integer
+private function cppPragma( byref setremove as integer ) as integer
 	select case( tkSpell( cpp.x ) )
 	'' #pragma message("...")
 	case "message"
 		cpp.x += 1
-
 		var whatfor = @"for #pragma message(""..."")"
 
 		'' '('
@@ -2065,6 +2064,27 @@ private function cppPragma( ) as integer
 		case else
 			exit function
 		end select
+
+	'' #pragma pack([Number])
+	case "pack"
+		cpp.x += 1
+		var whatfor = @"#pragma pack(N)"
+
+		'' '('
+		tkExpect( cpp.x, TK_LPAREN, whatfor )
+		cpp.x += 1
+
+		'' Number?
+		if( tkGet( cpp.x ) = TK_NUMBER ) then
+			cpp.x += 1
+		end if
+
+		'' ')'
+		tkExpect( cpp.x, TK_RPAREN, whatfor )
+		cpp.x += 1
+
+		'' Preserve the #pragma pack for the C parser
+		setremove = FALSE
 
 	case else
 		exit function
@@ -2125,7 +2145,7 @@ private sub cppDirective( )
 
 	case KW_PRAGMA
 		cpp.x += 1
-		if( cppPragma( ) = FALSE ) then
+		if( cppPragma( setremove ) = FALSE ) then
 			tkOops( cpp.x, "unknown #pragma" )
 		end if
 

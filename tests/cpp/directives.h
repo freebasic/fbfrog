@@ -81,6 +81,8 @@
 
 #pragma message("test")
 #pragma GCC system_header
+#pragma pack(1)
+#pragma pack()
 
 #define D1 { f( 123 ); }
 #define D2(x) { f( x ); }

@@ -80,6 +80,7 @@ declare function cScope( ) as ASTNODE ptr
 declare function cConstruct( byval body as integer ) as ASTNODE ptr
 declare function cBody( byval body as integer ) as ASTNODE ptr
 
+dim shared as integer pragmapack1_active
 dim shared as integer x, parseok
 dim shared as string errmsg
 dim shared typedefs as THASH
@@ -765,6 +766,13 @@ private function cStruct( ) as ASTNODE ptr
 
 	var struct = astNew( astclass )
 
+	'' If #pragma pack(1) was active at the point of the declaration, add
+	'' the packed attribute to the struct.
+	'' (simple "hack" to implement #pragma pack(1))
+	if( pragmapack1_active ) then
+		struct->attrib or= ASTATTRIB_PACKED
+	end if
+
 	'' __attribute__((...))
 	cGccAttributeList( struct->attrib )
 
@@ -854,6 +862,50 @@ private function cInclude( ) as ASTNODE ptr
 	x += 1
 
 	function = ppinclude
+end function
+
+private function cPragmaPack1( ) as ASTNODE ptr
+	x += 1
+
+	'' pack
+	assert( tkGet( x ) = TK_ID )
+	assert( tkSpell( x ) = "pack" )
+	x += 1
+
+	'' '('
+	assert( tkGet( x ) = TK_LPAREN )
+	x += 1
+
+	'' Number?
+	if( tkGet( x ) = TK_NUMBER ) then
+		'' Currently only supporting '1' which we can easily convert to packed/FIELD=1.
+		'' Other alignments can probably not be translated to FB, at least not easily,
+		'' because FIELD=N never increases the alignment, only decreases it.
+		var n = hNumberLiteral( x, FALSE )
+		if( n->class <> ASTCLASS_CONSTI ) then
+			exit function
+		end if
+		if( n->vali <> 1 ) then
+			exit function
+		end if
+
+		'' As with gcc, #pragma pack(1) simply enables packing, while
+		'' #pragma pack() disables it. No nesting, no stack...
+		pragmapack1_active = TRUE
+		x += 1
+	else
+		pragmapack1_active = FALSE
+	end if
+
+	'' ')'
+	assert( tkGet( x ) = TK_RPAREN )
+	x += 1
+
+	assert( tkGet( x ) = TK_EOL )
+	x += 1
+
+	'' Don't preserve the directive
+	function = astNewGROUP( )
 end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -1698,6 +1750,8 @@ private function cConstruct( byval body as integer ) as ASTNODE ptr
 				directive = cDefine( )
 			case "include"
 				directive = cInclude( )
+			case "pragma"
+				directive = cPragmaPack1( )
 			end select
 		end if
 
@@ -1788,6 +1842,7 @@ end function
 
 function cFile( ) as ASTNODE ptr
 	hashInit( @typedefs, 4, TRUE )
+	pragmapack1_active = FALSE
 	x = 0
 	parseok = TRUE
 	function = cBody( BODY_TOPLEVEL )
