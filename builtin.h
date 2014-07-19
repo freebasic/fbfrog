@@ -6,6 +6,8 @@
 #define __GNUC_MINOR__ 1111111
 #define __GNUC_PATCHLEVEL__ 1111111
 
+#define __GNUC_PREREQ(maj, min) ((__GNUC__ << 16) + __GNUC_MINOR__ >= ((maj) << 16) + (min))
+
 #ifdef __FBFROG_LINUX__
 	#define unix 1
 	#define __unix 1
