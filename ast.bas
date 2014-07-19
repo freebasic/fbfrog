@@ -478,6 +478,13 @@ function astClone( byval n as ASTNODE ptr ) as ASTNODE ptr
 	function = c
 end function
 
+function astIsMergableBlock( byval n as ASTNODE ptr ) as integer
+	select case( n->class )
+	case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM, ASTCLASS_RENAMELIST
+		function = TRUE
+	end select
+end function
+
 '' Check whether two ASTs represent equal declarations, i.e. most fields must be
 '' equal, but some things may be different as long as it would still result in
 '' compatible C/FB code.
@@ -550,14 +557,15 @@ function astIsEqual _
 	case ASTCLASS_PPDEFINE
 		if( a->paramcount <> b->paramcount ) then exit function
 
-	case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
-		if( options and ASTEQ_IGNOREFIELDS ) then
-			return TRUE
-		end if
-
 	case ASTCLASS_VEROR, ASTCLASS_VERAND
 		return astGroupsContainEqualChildren( a, b )
 	end select
+
+	if( options and ASTEQ_IGNOREMERGABLEBLOCKBODIES ) then
+		if( astIsMergableBlock( a ) ) then
+			return TRUE
+		end if
+	end if
 
 	'' Children
 	a = a->head

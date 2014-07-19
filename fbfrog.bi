@@ -696,6 +696,10 @@ type ASTNODE
 	prev		as ASTNODE ptr
 end type
 
+const ASTEQ_IGNOREHIDDENCALLCONV	= 1 shl 0
+const ASTEQ_IGNOREMERGABLEBLOCKBODIES	= 1 shl 1
+const ASTEQ_IGNOREDUMMYID		= 1 shl 2
+
 #define astNewID( id ) astNew( ASTCLASS_ID, id )
 #define astNewTEXT( text ) astNew( ASTCLASS_TEXT, text )
 #define astIsCONSTI( n ) ((n)->class = ASTCLASS_CONSTI)
@@ -755,11 +759,7 @@ declare sub astSetComment( byval n as ASTNODE ptr, byval comment as zstring ptr 
 declare sub astAddComment( byval n as ASTNODE ptr, byval comment as zstring ptr )
 declare function astCloneNode( byval n as ASTNODE ptr ) as ASTNODE ptr
 declare function astClone( byval n as ASTNODE ptr ) as ASTNODE ptr
-
-const ASTEQ_IGNOREHIDDENCALLCONV	= 1 shl 0
-const ASTEQ_IGNOREFIELDS		= 1 shl 1
-const ASTEQ_IGNOREDUMMYID		= 1 shl 2
-
+declare function astIsMergableBlock( byval n as ASTNODE ptr ) as integer
 declare function astIsEqual _
 	( _
 		byval a as ASTNODE ptr, _

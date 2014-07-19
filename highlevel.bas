@@ -999,15 +999,6 @@ private function hDecideWhichSymbolToRename _
 	function = other
 end function
 
-#if 0
-private function hIsTypedefOrStruct( byval n as ASTNODE ptr ) as integer
-	select case( n->class )
-	case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM, ASTCLASS_TYPEDEF
-		function = TRUE
-	end select
-end function
-#endif
-
 private sub hCheckId _
 	( _
 		byval h as THASH ptr, _

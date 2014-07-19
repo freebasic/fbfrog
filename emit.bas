@@ -123,7 +123,7 @@ function emitType overload( byval n as ASTNODE ptr ) as string
 end function
 
 namespace emit
-	dim shared as integer indent, fo, comment, commentspaces
+	dim shared as integer fo, indent, comment, commentspaces
 end namespace
 
 private sub emitLine( byref ln as string )
@@ -131,9 +131,7 @@ private sub emitLine( byref ln as string )
 
 	'' Only add indentation if the line will contain more than that
 	if( (len( ln ) > 0) or (emit.comment > 0) ) then
-		for i as integer = 1 to emit.indent
-			s += !"\t"
-		next
+		s += string( emit.indent, !"\t" )
 	end if
 
 	if( emit.comment > 0 ) then
@@ -287,7 +285,12 @@ private function hParamList( byval n as ASTNODE ptr ) as string
 end function
 
 private sub hEmitIndentedChildren( byval n as ASTNODE ptr )
-	emit.indent += 1
+	if( emit.comment > 0 ) then
+		emit.commentspaces += 4
+	else
+		emit.indent += 1
+	end if
+
 	var i = n->head
 	while( i )
 		var s = emitAst( i )
@@ -296,7 +299,12 @@ private sub hEmitIndentedChildren( byval n as ASTNODE ptr )
 		end if
 		i = i->next
 	wend
-	emit.indent -= 1
+
+	if( emit.comment > 0 ) then
+		emit.commentspaces -= 4
+	else
+		emit.indent -= 1
+	end if
 end sub
 
 private function hParens( byref s as string, byval need_parens as integer ) as string
@@ -516,15 +524,9 @@ private function emitAst _
 		end if
 		emitStmt( s, n->comment )
 		s = ""
-		emit.indent += 1
 
-		var i = n->head
-		while( i )
-			emitAst( i )
-			i = i->next
-		wend
+		hEmitIndentedChildren( n )
 
-		emit.indent -= 1
 		emitStmt( "end " + compoundkeyword )
 
 	case ASTCLASS_TYPEDEF
@@ -878,6 +880,9 @@ end function
 
 sub emitFile( byref filename as string, byval ast as ASTNODE ptr )
 	emit.indent = 0
+	emit.comment = 0
+	emit.commentspaces = 0
+
 	emit.fo = freefile( )
 	if( open( filename, for output, as #emit.fo ) ) then
 		oops( "could not open output file: '" + filename + "'" )

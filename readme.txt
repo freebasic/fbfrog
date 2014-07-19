@@ -219,9 +219,6 @@ To do:
       got included in the binding, which files weren't found, what file names
       could be used for the pattern-based -nomerge option, etc.
     * support -o - to write to stdout
-- Instead of RENAMELISTs, how about just emitting "'' RENAMED: foo => bar" notes
-    * because the RENAMELISTs can become very long
-    * If keeping RENAMELISTs, then merging must support them nicely
 - Add pattern-based -nomerge option, or default to not preserving #included code
   use a -include <pattern>
 - How to handle unknown constructs? Must be manually fixed - i.e. removing or

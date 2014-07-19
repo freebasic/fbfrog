@@ -169,12 +169,11 @@ private sub hWrapStructFieldsInVerblocks( byval veror as ASTNODE ptr, byval code
 		i = i->next
 	wend
 
-	select case( code->class )
-	case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
+	if( astIsMergableBlock( code ) ) then
 		var newfields = astNewVERBLOCK( astClone( veror ), astCloneChildren( code ) )
 		astRemoveChildren( code )
 		astAppend( code, newfields )
-	end select
+	end if
 end sub
 
 function astWrapFileInVerblock( byval veror as ASTNODE ptr, byval code as ASTNODE ptr ) as ASTNODE ptr
@@ -292,24 +291,99 @@ private sub hAddMergedDecl _
 		byval aarray as DECLNODE ptr, _
 		byval ai as integer, _
 		byval barray as DECLNODE ptr, _
-		byval bi as integer _
+		byval bi as integer, _
+		byval btablecount as integer _
 	)
 
-	var adecl = aarray[ai].n
-	var bdecl = barray[bi].n
+	var adecl  = aarray[ai].n
+	var bdecl  = barray[bi].n
+	var averor = aarray[ai].veror
+	var bveror = barray[bi].veror
 
-	'' "Merge" a and b by cloning a. They've compared equal in astIsEqual()
-	'' so this works. Below we only need to cover a few additional cases
-	'' where astIsEqual() is more permissive than a true equality check,
-	'' which allows merging of a/b even if they're slightly different.
-	'' This currently affects the calling convention only.
-	'' In such cases, just cloning a isn't enough and some actual merging
-	'' work is needed.
-	var mdecl = astClone( adecl )
+	assert( adecl->class = bdecl->class )
 
-	hFindCommonCallConvsOnMergedDecl( mdecl, adecl, bdecl )
+	''
+	'' The LCS may include merged blocks (structs/unions/enums/renamelists) that were put
+	'' into the LCS despite having different children (fields/enumconsts/etc.) on both sides.
+	''
+	'' They should be merged recursively now, so the block itself can be common,
+	'' while the children may be version dependant.
+	''
+	'' (This relies on blocks to be allowed to match in the hAstLCS() call,
+	'' even if they have different children)
+	''
+	dim mdecl as ASTNODE ptr
+	if( astIsMergableBlock( adecl ) ) then
 
-	hVerblockAppend( c, astClone( aarray[ai].veror ), astClone( barray[bi].veror ), mdecl )
+		''
+		'' For example:
+		''
+		''     verblock 1                   verblock 2
+		''         struct FOO                   struct FOO
+		''             field a as integer           field a as integer
+		''             field b as integer           field c as integer
+		''
+		'' should become:
+		''
+		''     version 1, 2
+		''         struct FOO
+		''             version 1, 2
+		''                 field a as integer
+		''             version 1
+		''                 field b as integer
+		''             version 2
+		''                 field c as integer
+		''
+		'' instead of:
+		''
+		''     version 1
+		''         struct FOO
+		''             field a as integer
+		''             field b as integer
+		''     version 2
+		''         struct FOO
+		''             field a as integer
+		''             field c as integer
+		''
+
+		var achildren = astCloneChildren( adecl )
+		var bchildren = astCloneChildren( bdecl )
+
+		'' Merge both set of children
+		var mchildren = astMergeVerblocks( achildren, bchildren )
+
+		'' Create a result block with the new set of children
+		mdecl = astCloneNode( adecl )
+		astAppend( mdecl, mchildren )
+
+		'' If two structs with dummy ids were merged together, the result will
+		'' a's id, and now we need to manually update all references to b's id
+		'' following later in the code over to use a's id, so they'll be merged
+		'' successfully (assuming merging walks through declarations in order
+		'' like a single-pass compiler).
+		select case( mdecl->class )
+		case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
+			if( mdecl->attrib and ASTATTRIB_DUMMYID ) then
+				assert( *mdecl->text = *adecl->text )
+				assert( *mdecl->text <> *bdecl->text )
+				for i as integer = bi+1 to btablecount-1
+					astReplaceSubtypes( barray[i].n, ASTCLASS_TAGID, bdecl->text, ASTCLASS_TAGID, mdecl->text )
+				next
+			end if
+		end select
+	else
+		'' "Merge" a and b by cloning a. They've compared equal in astIsEqual() so this works.
+		'' Below we only need to cover a few additional cases where astIsEqual() is more permissive
+		'' than a true equality check: it allows merging of a/b even if they're slightly different.
+		'' This currently affects the calling convention only. In such cases, just cloning a isn't
+		'' enough and some actual merging work is needed.
+		mdecl = astClone( adecl )
+
+		hFindCommonCallConvsOnMergedDecl( mdecl, adecl, bdecl )
+	end if
+
+	'' Add struct to result tree, under both a's and b's version numbers
+	hVerblockAppend( c, astClone( averor ), astClone( bveror ), mdecl )
 
 end sub
 
@@ -407,7 +481,7 @@ private sub hAstLCS _
 			var rdecl = @rarray[rfirst+r]
 
 			if( ldecl->hash = rdecl->hash ) then
-				if( astIsEqual( ldecl->n, rdecl->n, ASTEQ_IGNOREHIDDENCALLCONV or ASTEQ_IGNOREFIELDS or ASTEQ_IGNOREDUMMYID ) ) then
+				if( astIsEqual( ldecl->n, rdecl->n, ASTEQ_IGNOREHIDDENCALLCONV or ASTEQ_IGNOREMERGABLEBLOCKBODIES or ASTEQ_IGNOREDUMMYID ) ) then
 					if( (l = 0) or (r = 0) ) then
 						length = 1
 					else
@@ -435,56 +509,6 @@ private sub hAstLCS _
 	llcsfirst = llcslast - maxlen + 1
 	rlcsfirst = rlcslast - maxlen + 1
 end sub
-
-private function hMergeStructsManually _
-	( _
-		byval astruct as ASTNODE ptr, _
-		byval bstruct as ASTNODE ptr _
-	) as ASTNODE ptr
-
-	''
-	'' For example:
-	''
-	''     verblock 1                   verblock 2
-	''         struct FOO                   struct FOO
-	''             field a as integer           field a as integer
-	''             field b as integer           field c as integer
-	''
-	'' should become:
-	''
-	''     version 1, 2
-	''         struct FOO
-	''             version 1, 2
-	''                 field a as integer
-	''             version 1
-	''                 field b as integer
-	''             version 2
-	''                 field c as integer
-	''
-	'' instead of:
-	''
-	''     version 1
-	''         struct FOO
-	''             field a as integer
-	''             field b as integer
-	''     version 2
-	''         struct FOO
-	''             field a as integer
-	''             field c as integer
-	''
-
-	var afields = astCloneChildren( astruct )
-	var bfields = astCloneChildren( bstruct )
-
-	'' Merge both set of fields
-	var fields = astMergeVerblocks( afields, bfields )
-
-	'' Create a result struct with the new set of fields
-	var cstruct = astCloneNode( astruct )
-	astAppend( cstruct, fields )
-
-	function = cstruct
-end function
 
 private sub hAstMerge _
 	( _
@@ -555,50 +579,7 @@ private sub hAstMerge _
 	'' Add LCS
 	assert( (alcslast - alcsfirst + 1) = (blcslast - blcsfirst + 1) )
 	for i as integer = 0 to (alcslast - alcsfirst + 1)-1
-		'' The LCS may include merged structs/unions/enums that were put
-		'' into the LCS despite having different fields on both sides.
-		''
-		'' They should be merged recursively now, so the struct/union/enum itself
-		'' can be common, while the fields/enumconsts may be version dependant.
-		''
-		'' (relying on structs/unions/enums to be allowed to match in the
-		'' hAstLCS() call, even if they have different fields/enumconsts)
-		var astruct = aarray[alcsfirst+i].n
-		select case( astruct->class )
-		case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
-			var averor  = aarray[alcsfirst+i].veror
-			var bstruct = barray[blcsfirst+i].n
-			var bveror  = barray[blcsfirst+i].veror
-			assert( (bstruct->class = ASTCLASS_STRUCT) or _
-			        (bstruct->class = ASTCLASS_UNION) or _
-			        (bstruct->class = ASTCLASS_ENUM) )
-
-			var cstruct = hMergeStructsManually( astruct, bstruct )
-
-			'' Add struct to result tree, under both a's and b's version numbers
-			hVerblockAppend( c, astClone( averor ), astClone( bveror ), cstruct )
-
-			if( astruct->attrib and ASTATTRIB_DUMMYID ) then
-				assert( *astruct->text <> *bstruct->text )
-				assert( bstruct->attrib and ASTATTRIB_DUMMYID )
-				assert( *cstruct->text = *astruct->text )
-				assert( cstruct->attrib and ASTATTRIB_DUMMYID )
-
-				'' Two structs with dummy ids, being merged together.
-				'' hMergeStructsManually() will have re-use a's id as id
-				'' for the merged struct, and now we need to manually update
-				'' all uses of b's id to now use a's id too so they'll be merged
-				'' successfully (assuming merging walks through declarations in order
-				'' like a single-pass compiler).
-
-				for bi as integer = blcsfirst+i+1 to btablecount-1
-					astReplaceSubtypes( barray[bi].n, ASTCLASS_TAGID, bstruct->text, ASTCLASS_TAGID, cstruct->text )
-				next
-			end if
-
-		case else
-			hAddMergedDecl( c, aarray, alcsfirst + i, barray, blcsfirst + i )
-		end select
+		hAddMergedDecl( c, aarray, alcsfirst + i, barray, blcsfirst + i, btablecount )
 	next
 
 	'' Do both sides have decls behind the LCS?
