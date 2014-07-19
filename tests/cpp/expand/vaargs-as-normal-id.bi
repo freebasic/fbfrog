@@ -1,9 +1,9 @@
 #pragma once
 
-extern "C"
-
 '' The following symbols have been renamed:
 ''     procedure __VA_ARGS___ alias "__VA_ARGS__"()
+
+extern "C"
 
 #define m1 __VA_ARGS___
 #define m2(x) x##__VA_ARGS___

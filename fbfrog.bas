@@ -917,8 +917,9 @@ private function frogReadAPI( byval options as ASTNODE ptr ) as ASTNODE ptr
 	astNameAnonUdtsAfterFirstAliasTypedef( ast )
 	astAddForwardDeclsForUndeclaredTagIds( ast )
 
-	if( frog.nonamefixup = FALSE ) then astFixIds( ast )
 	astAutoExtern( ast, frog.windowsms, frog.whitespace )
+
+	if( frog.nonamefixup = FALSE ) then astFixIds( ast )
 
 	assert( ast->class = ASTCLASS_GROUP )
 

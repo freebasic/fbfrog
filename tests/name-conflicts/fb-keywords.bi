@@ -1,7 +1,5 @@
 #pragma once
 
-extern "C"
-
 '' The following symbols have been renamed:
 ''      inside struct Width:
 ''          field __ alias "_"
@@ -420,6 +418,8 @@ extern "C"
 ''     variable WINDOWTITLE__ alias "WINDOWTITLE"
 ''     struct Width_ alias "Width"
 ''     typedef type_ alias "type"
+
+extern "C"
 
 dim shared ABS_ as long
 dim shared ABSTRACT_ as long

@@ -1,7 +1,5 @@
 #pragma once
 
-extern "C"
-
 '' The following symbols have been renamed:
 ''     #define I3_ alias "I3"
 ''     #define I4_ alias "I4"
@@ -9,6 +7,8 @@ extern "C"
 ''     constant I6_ alias "I6"
 ''     constant I7_ alias "I7"
 ''     constant I8_ alias "I8"
+
+extern "C"
 
 #define I1() 1
 

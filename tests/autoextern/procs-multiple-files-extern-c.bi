@@ -1,7 +1,5 @@
 #pragma once
 
-extern "C"
-
 '' The following symbols have been renamed:
 ''     procedure f1_ alias "f1"()
 ''     procedure f2_ alias "f2"()
@@ -12,6 +10,8 @@ extern "C"
 ''     procedure f7_ alias "f7"()
 ''     procedure f8_ alias "f8"()
 ''     procedure f9_ alias "f9"()
+
+extern "C"
 
 declare sub f1()
 declare sub f2()

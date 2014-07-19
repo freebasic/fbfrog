@@ -10,8 +10,6 @@
 	#error "'VER' is #defined to an unsupported value; expected one of: 1, 2"
 #endif
 
-extern "C"
-
 '' The following symbols have been renamed:
 ''     procedure string_ alias "string"()
 ''     #if VER = 1
@@ -19,6 +17,8 @@ extern "C"
 ''     #else
 ''         procedure integer_ alias "integer"()
 ''     #endif
+
+extern "C"
 
 declare sub string_ alias "string"()
 

@@ -1,7 +1,5 @@
 #pragma once
 
-extern "C"
-
 '' The following symbols have been renamed:
 ''     variable i1_ alias "i1"
 ''     variable i2_ alias "i2"
@@ -16,6 +14,8 @@ extern "C"
 ''     procedure f9_ alias "f9"()
 ''     variable i3_ alias "i3"
 ''     variable i4_ alias "i4"
+
+extern "C"
 
 extern i1 as long
 extern i2 as long

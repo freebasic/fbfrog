@@ -1,7 +1,5 @@
 #pragma once
 
-extern "C"
-
 '' The following symbols have been renamed:
 ''      inside struct UDT1:
 ''          field FOO_ alias "FOO"
@@ -9,6 +7,8 @@ extern "C"
 ''          field fOO___ alias "fOO"
 ''          field PTR_ alias "PTR"
 ''     #define GLOBALDEFINE1_ alias "GLOBALDEFINE1"
+
+extern "C"
 
 #define GLOBALDEFINE1_() 1
 

@@ -1,7 +1,5 @@
 #pragma once
 
-extern "C"
-
 '' The following symbols have been renamed:
 ''      inside struct Foo:
 ''          field field_ alias "field"
@@ -17,6 +15,8 @@ extern "C"
 ''     constant ENUMCONST1_ alias "ENUMCONST1"
 ''     typedef FOO_ alias "FOO"
 ''     #define SAILINGBOAT_ alias "SAILINGBOAT"
+
+extern "C"
 
 declare sub Toaster1()
 declare sub toaster1_ alias "toaster1"()
