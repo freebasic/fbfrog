@@ -1,8 +1,8 @@
 #pragma once
 
 '' The following symbols have been renamed:
-''      inside struct Width:
-''          field __ alias "_"
+''     inside struct Width:
+''         field __ alias "_"
 ''     variable ABS_ alias "ABS"
 ''     variable ABSTRACT_ alias "ABSTRACT"
 ''     variable ACCESS_ alias "ACCESS"

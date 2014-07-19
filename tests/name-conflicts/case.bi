@@ -1,8 +1,8 @@
 #pragma once
 
 '' The following symbols have been renamed:
-''      inside struct Foo:
-''          field field_ alias "field"
+''     inside struct Foo:
+''         field field_ alias "field"
 ''     procedure toaster1_ alias "toaster1"()
 ''     procedure toASTER1__ alias "toASTER1"()
 ''     #define Aaa_ alias "Aaa"

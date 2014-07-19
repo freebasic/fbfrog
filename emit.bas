@@ -404,24 +404,21 @@ private function emitAst _
 		emit.comment -= 1
 
 	case ASTCLASS_RENAMELIST
-		emit.comment += 1
+		var added_indent = FALSE
+		if( emit.comment = 0 ) then
+			added_indent = TRUE
+			emit.comment += 1
+			emit.commentspaces += 1
+		end if
 
-		emit.commentspaces += 1
 		emitLine( *n->text )
 
-		emit.commentspaces += 4
-		var i = n->head
-		while( i )
-			s = emitAst( i )
-			if( len( s ) > 0 ) then
-				emitLine( s )
-			end if
-			i = i->next
-		wend
-		s = ""
+		hEmitIndentedChildren( n )
 
-		emit.commentspaces -= 5
-		emit.comment -= 1
+		if( added_indent ) then
+			emit.commentspaces -= 1
+			emit.comment -= 1
+		end if
 
 	case ASTCLASS_INCLIB
 		emitStmt( "#inclib """ + *n->text + """", n->comment )
