@@ -229,6 +229,7 @@ To do:
   be preserved (but renamed .h -> .bi)
 - #includes that can't be found should just be removed, e.g. system headers
 - probably should move #includes to the top, out of the extern block
+- Support #include_next? Requires standard include search paths...
 
 - Continue support for parsing function bodies: if/else blocks, for/while/do/while
   loops, local vars, assignments, goto, break, return, switch, labels including 'case'.
