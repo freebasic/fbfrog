@@ -1078,10 +1078,23 @@ private sub hWalkAndCheckIds _
 			hFixIdsInScope( defines, i, nestedrenamelist )
 			astDelete( nestedrenamelist )
 
-		case ASTCLASS_VAR, ASTCLASS_CONST, ASTCLASS_FIELD
+		case ASTCLASS_VAR, ASTCLASS_CONST
 			hCheckId( @fbkeywordhash, i, FALSE )
 			hCheckId( defines, i, FALSE )
 			hCheckId( globals, i, TRUE )
+
+		case ASTCLASS_FIELD
+			hCheckId( defines, i, FALSE )
+			hCheckId( globals, i, TRUE )
+
+			'' Fields can be named after FB keywords, but not '_'
+			'' Since we're not checking the keyword hash table here,
+			' we must check for '_' manually.
+			if( i->text[0] = asc( "_" ) ) then
+				if( i->text[1] = 0 ) then
+					hDecideWhichSymbolToRename( NULL, i )->attrib or= ASTATTRIB_NEEDRENAME
+				end if
+			end if
 
 		case ASTCLASS_PARAM
 			'' Don't check anonymous params

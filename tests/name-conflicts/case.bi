@@ -4,8 +4,7 @@ extern "C"
 
 '' The following symbols have been renamed:
 ''      inside struct Foo:
-''          field FiElD_ alias "FiElD"
-''          field field__ alias "field"
+''          field field_ alias "field"
 ''     procedure toaster1_ alias "toaster1"()
 ''     procedure toASTER1__ alias "toASTER1"()
 ''     #define Aaa_ alias "Aaa"
@@ -42,8 +41,8 @@ enum
 end enum
 
 type Foo
-	FiElD_ as long
-	field__ as long
+	FiElD as long
+	field_ as long
 end type
 
 type FOO_ as Foo

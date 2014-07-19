@@ -4,8 +4,6 @@ extern "C"
 
 '' The following symbols have been renamed:
 ''      inside struct Width:
-''          field as_ alias "as"
-''          field type_ alias "type"
 ''          field __ alias "_"
 ''     variable ABS_ alias "ABS"
 ''     variable ABSTRACT_ alias "ABSTRACT"
@@ -846,8 +844,22 @@ dim shared WINDOW__ as long
 extern WINDOWTITLE__ alias "WINDOWTITLE" as long
 
 type Width_
-	as_ as long
-	type_ as long
+	as long as
+	as long Static
+	as long dim
+	as long redim
+	as long declare
+	as long end
+	as long type
+	as long Union
+	as long Enum
+	as long Const
+	as long rem
+	as long Public
+	as long Private
+	as long Protected
+	inT as long
+	If as long
 	FLOAT as long
 	__ as long
 end type

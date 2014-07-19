@@ -211,7 +211,6 @@ unnecessary?
 
 To do:
 
-- name fixup: distinguish FB core & quirk keywords, to prevent unnecessary renames for fields
 - Change console output, it's too much if there are more than 10 #includes...
     * ideally no output at all
     * especially: no progress indicator, because the tool should be fast enough

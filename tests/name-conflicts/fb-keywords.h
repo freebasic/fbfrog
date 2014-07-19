@@ -420,8 +420,30 @@ static int WINDOW;
 extern int WINDOWTITLE;
 
 struct Width {
+	// Field names that could cause problems in FB because they're keywords
+	// that are special at the beginning of statements inside FB
+	// type ... end type blocks
 	int as;
+	int Static;
+	int dim;
+	int redim;
+	int declare;
+
+	int end;
 	int type;
+	int Union;
+	int Enum;
+	int Const;
+
+	int rem;
+
+	int Public;
+	int Private;
+	int Protected;
+
+	// Some others
+	int inT;
+	int If;
 	int FLOAT;
 	int _;
 };

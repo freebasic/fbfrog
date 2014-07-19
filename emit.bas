@@ -556,7 +556,26 @@ private function emitAst _
 		end if
 
 	case ASTCLASS_FIELD
-		emitStmt( hIdAndArray( n, FALSE ) + " as " + emitType( n ), n->comment )
+		'' Fields can be named after keywords, but we have to do
+		''     as type foo
+		'' instead of
+		''     foo as type
+		'' if foo has special meaning at the beginning of a statement in
+		'' a TYPE block.
+		var use_multdecl = FALSE
+
+		select case( lcase( *n->text, 1 ) )
+		case "as", "static", "dim", "redim", "const", "declare", _
+		     "end", "type", "union", "enum", "rem", _
+		     "public", "private", "protected"
+			use_multdecl = TRUE
+		end select
+
+		if( use_multdecl ) then
+			emitStmt( "as " + emitType( n ) + " " + hIdAndArray( n, FALSE ), n->comment )
+		else
+			emitStmt( hIdAndArray( n, FALSE ) + " as " + emitType( n ), n->comment )
+		end if
 
 	case ASTCLASS_PROC
 		assert( n->array = NULL )
