@@ -535,6 +535,7 @@ private function emitAst _
 			s = "const "
 		end if
 		emitStmt( s + *n->text + hInitializer( n ), n->comment )
+		s = ""
 
 	case ASTCLASS_VAR
 		if( n->attrib and ASTATTRIB_LOCAL ) then
