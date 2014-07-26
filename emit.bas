@@ -518,6 +518,8 @@ private function emitAst _
 		end if
 		if( n->attrib and ASTATTRIB_PACKED ) then
 			s += " field = 1"
+		elseif( n->maxalign > 0 ) then
+			s += " field = " & n->maxalign
 		end if
 		emitStmt( s, n->comment )
 		s = ""

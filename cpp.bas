@@ -2065,23 +2065,16 @@ private function cppPragma( byref setremove as integer ) as integer
 			exit function
 		end select
 
-	'' #pragma pack([Number])
+	'' #pragma pack(N)
+	'' #pragma pack()
+	'' #pragma pack(push, N)
+	'' #pragma pack(pop)
 	case "pack"
 		cpp.x += 1
-		var whatfor = @"#pragma pack(N)"
 
-		'' '('
-		tkExpect( cpp.x, TK_LPAREN, whatfor )
-		cpp.x += 1
-
-		'' Number?
-		if( tkGet( cpp.x ) = TK_NUMBER ) then
-			cpp.x += 1
-		end if
-
-		'' ')'
-		tkExpect( cpp.x, TK_RPAREN, whatfor )
-		cpp.x += 1
+		'' Just skip to EOL and let the C parser worry about checking
+		'' the syntax
+		cpp.x = hSkipToEol( cpp.x )
 
 		'' Preserve the #pragma pack for the C parser
 		setremove = FALSE

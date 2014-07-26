@@ -680,6 +680,7 @@ type ASTNODE
 	'' VERBLOCK: version expression
 	'' IIF: condition expression
 	'' DIMENSION: elements expression
+	'' PPDEFINE: macro body expression
 	expr		as ASTNODE ptr
 
 	union
@@ -687,6 +688,8 @@ type ASTNODE
 		valf		as double   '' CONSTF
 
 		paramcount	as integer  '' PPDEFINE: -1 = #define m, 0 = #define m(), 1 = #define m(a), ...
+
+		maxalign	as integer  '' STRUCT/UNION: FIELD=N/#pragma pack(N)
 	end union
 
 	'' Linked list of child nodes, operands/fields/parameters/...

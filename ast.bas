@@ -461,6 +461,7 @@ function astCloneNode( byval n as ASTNODE ptr ) as ASTNODE ptr
 	case ASTCLASS_CONSTI   : c->vali = n->vali
 	case ASTCLASS_CONSTF   : c->valf = n->valf
 	case ASTCLASS_PPDEFINE : c->paramcount = n->paramcount
+	case ASTCLASS_STRUCT, ASTCLASS_UNION : c->maxalign = n->maxalign
 	end select
 
 	function = c
@@ -556,6 +557,9 @@ function astIsEqual _
 
 	case ASTCLASS_PPDEFINE
 		if( a->paramcount <> b->paramcount ) then exit function
+
+	case ASTCLASS_STRUCT, ASTCLASS_UNION
+		if( a->maxalign <> b->maxalign ) then exit function
 
 	case ASTCLASS_VEROR, ASTCLASS_VERAND
 		return astGroupsContainEqualChildren( a, b )

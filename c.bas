@@ -80,10 +80,18 @@ declare function cScope( ) as ASTNODE ptr
 declare function cConstruct( byval body as integer ) as ASTNODE ptr
 declare function cBody( byval body as integer ) as ASTNODE ptr
 
-dim shared as integer pragmapack1_active
+namespace pragmapack
+	const MAXLEVEL = 128
+	dim shared stack(0 to MAXLEVEL-1) as integer
+	dim shared level as integer
+end namespace
 dim shared as integer x, parseok
 dim shared as string errmsg
 dim shared typedefs as THASH
+
+private sub hPragmaPackReset( )
+	pragmapack.stack(pragmapack.level) = 0
+end sub
 
 private sub hAddTypedef( byval id as zstring ptr )
 	if( frog.verbose ) then
@@ -766,12 +774,10 @@ private function cStruct( ) as ASTNODE ptr
 
 	var struct = astNew( astclass )
 
-	'' If #pragma pack(1) was active at the point of the declaration, add
-	'' the packed attribute to the struct.
-	'' (simple "hack" to implement #pragma pack(1))
-	if( pragmapack1_active ) then
-		struct->attrib or= ASTATTRIB_PACKED
-	end if
+	select case( astclass )
+	case ASTCLASS_STRUCT, ASTCLASS_UNION
+		struct->maxalign = pragmapack.stack(pragmapack.level)
+	end select
 
 	'' __attribute__((...))
 	cGccAttributeList( struct->attrib )
@@ -864,7 +870,17 @@ private function cInclude( ) as ASTNODE ptr
 	function = ppinclude
 end function
 
-private function cPragmaPack1( ) as ASTNODE ptr
+private function cPragmaPackNumber( ) as integer
+	var n = hNumberLiteral( x, FALSE )
+	if( n->class <> ASTCLASS_CONSTI ) then
+		exit function
+	end if
+	pragmapack.stack(pragmapack.level) = n->vali
+	x += 1
+	function = TRUE
+end function
+
+private function cPragmaPack( ) as ASTNODE ptr
 	x += 1
 
 	'' pack
@@ -873,33 +889,60 @@ private function cPragmaPack1( ) as ASTNODE ptr
 	x += 1
 
 	'' '('
-	assert( tkGet( x ) = TK_LPAREN )
-	x += 1
+	cExpectMatch( TK_LPAREN, "as in '#pragma pack(...)'" )
 
-	'' Number?
-	if( tkGet( x ) = TK_NUMBER ) then
-		'' Currently only supporting '1' which we can easily convert to packed/FIELD=1.
-		'' Other alignments can probably not be translated to FB, at least not easily,
-		'' because FIELD=N never increases the alignment, only decreases it.
-		var n = hNumberLiteral( x, FALSE )
-		if( n->class <> ASTCLASS_CONSTI ) then
-			exit function
-		end if
-		if( n->vali <> 1 ) then
+	select case( tkGet( x ) )
+	'' #pragma pack(N): Set max alignment for current top of stack
+	case TK_NUMBER
+		if( cPragmaPackNumber( ) = FALSE ) then
 			exit function
 		end if
 
-		'' As with gcc, #pragma pack(1) simply enables packing, while
-		'' #pragma pack() disables it. No nesting, no stack...
-		pragmapack1_active = TRUE
-		x += 1
-	else
-		pragmapack1_active = FALSE
-	end if
+	'' #pragma pack(push, N)
+	'' #pragma pack(pop)
+	case TK_ID
+		select case( *tkSpellId( x ) )
+		case "push"
+			pragmapack.level += 1
+			if( pragmapack.level >= pragmapack.MAXLEVEL ) then
+				oops( "#pragma pack stack too small" )
+			end if
+			hPragmaPackReset( )
+			x += 1
+
+			'' ','
+			cExpectMatch( TK_COMMA, "behind 'push'" )
+
+			'' 'N'
+			if( tkGet( x ) <> TK_NUMBER ) then
+				exit function
+			end if
+			if( cPragmaPackNumber( ) = FALSE ) then
+				exit function
+			end if
+
+		case "pop"
+			if( pragmapack.level > 0 ) then
+				pragmapack.level -= 1
+			else
+				cError( "#pragma pack(pop) without previous push" )
+			end if
+			x += 1
+
+		case else
+			exit function
+		end select
+
+	'' #pragma pack(): Reset top of stack to default
+	case TK_RPAREN
+		hPragmaPackReset( )
+
+	case else
+		exit function
+	end select
 
 	'' ')'
-	assert( tkGet( x ) = TK_RPAREN )
-	x += 1
+	cExpectMatch( TK_RPAREN, "as in '#pragma pack(...)'" )
 
 	assert( tkGet( x ) = TK_EOL )
 	x += 1
@@ -1751,7 +1794,7 @@ private function cConstruct( byval body as integer ) as ASTNODE ptr
 			case "include"
 				directive = cInclude( )
 			case "pragma"
-				directive = cPragmaPack1( )
+				directive = cPragmaPack( )
 			end select
 		end if
 
@@ -1842,9 +1885,15 @@ end function
 
 function cFile( ) as ASTNODE ptr
 	hashInit( @typedefs, 4, TRUE )
-	pragmapack1_active = FALSE
+
+	'' Initially no packing
+	pragmapack.level = 0
+	hPragmaPackReset( )
+
 	x = 0
 	parseok = TRUE
+
 	function = cBody( BODY_TOPLEVEL )
+
 	hashEnd( @typedefs )
 end function
