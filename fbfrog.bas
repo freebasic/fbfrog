@@ -921,6 +921,8 @@ private function frogReadAPI( byval options as ASTNODE ptr ) as ASTNODE ptr
 
 	if( frog.nonamefixup = FALSE ) then astFixIds( ast )
 
+	astRemoveDummyDecls( ast )
+
 	assert( ast->class = ASTCLASS_GROUP )
 
 	'' Add #include "crt/long.bi" to the binding, if it uses CLONG

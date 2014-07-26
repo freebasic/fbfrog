@@ -804,7 +804,7 @@ sub astAddForwardDeclsForUndeclaredTagIds( byval ast as ASTNODE ptr )
 				astPrepend( ast, typedef )
 
 				var dummydecl = astNew( ASTCLASS_STRUCT, forwardid )
-				dummydecl->attrib or= ASTATTRIB_DONTEMIT
+				dummydecl->attrib or= ASTATTRIB_DUMMYDECL
 				astPrepend( ast, dummydecl )
 
 			'' or it was found below the first use?
@@ -824,6 +824,22 @@ sub astAddForwardDeclsForUndeclaredTagIds( byval ast as ASTNODE ptr )
 	next
 
 	hashEnd( @hashtb )
+end sub
+
+'' After astFixIds, solve out the dummy declarations added by astAddForwardDeclsForUndeclaredTagIds(),
+'' to avoid them getting in the way of AST merging. Since they shouldn't be emitted anyways,
+'' there's no point keeping them around.
+sub astRemoveDummyDecls( byval code as ASTNODE ptr )
+	var i = code->head
+	while( i )
+		astRemoveDummyDecls( i )
+
+		var nxt = i->next
+		if( i->attrib and ASTATTRIB_DUMMYDECL ) then
+			astRemove( code, i )
+		end if
+		i = nxt
+	wend
 end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -1450,16 +1466,6 @@ private function hShouldSeparate _
 	           hIsCompound( a ) or hIsCompound( b )
 end function
 
-private function hSkipDontEmits( byval n as ASTNODE ptr ) as ASTNODE ptr
-	while( n )
-		if( (n->attrib and ASTATTRIB_DONTEMIT) = 0 ) then
-			exit while
-		end if
-		n = n->next
-	wend
-	function = n
-end function
-
 ''
 '' Insert DIVIDERs between statements of different kind, e.g. all #defines in
 '' a row shouldn't be divided, but a #define should be divided from a typedef.
@@ -1467,9 +1473,9 @@ end function
 '' compounds and normally span multiple lines themselves.
 ''
 sub astAutoAddDividers( byval code as ASTNODE ptr )
-	var i = hSkipDontEmits( code->head )
+	var i = code->head
 	while( i )
-		var nxt = hSkipDontEmits( i->next )
+		var nxt = i->next
 
 		if( i->class <> ASTCLASS_RENAMELIST ) then
 			astAutoAddDividers( i )
@@ -1508,9 +1514,7 @@ function astCountDecls( byval code as ASTNODE ptr ) as integer
 			count += astCountDecls( i )
 
 		case else
-			if( (i->attrib and ASTATTRIB_DONTEMIT) = 0 ) then
-				count += 1
-			end if
+			count += 1
 		end select
 
 		i = i->next

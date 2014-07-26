@@ -338,10 +338,6 @@ private function emitAst _
 		exit function
 	end if
 
-	if( n->attrib and ASTATTRIB_DONTEMIT ) then
-		exit function
-	end if
-
 	select case as const( n->class )
 	case ASTCLASS_GROUP
 		var i = n->head
