@@ -227,6 +227,7 @@ const TKFLAG_L			= 1 shl 6
 const TKFLAG_LL			= 1 shl 7
 const TKFLAG_HEX		= 1 shl 8
 const TKFLAG_OCT		= 1 shl 9
+const TKFLAG_FLOAT		= 1 shl 10
 
 enum
 	TK_EOF

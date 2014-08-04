@@ -325,7 +325,7 @@ function hNumberLiteral( byval x as integer, byval is_cpp as integer ) as ASTNOD
 	var tkflags = tkGetFlags( x )
 	var text = *tkGetText( x )
 
-	if( tkflags and (TKFLAG_D or TKFLAG_F) ) then
+	if( tkflags and TKFLAG_FLOAT ) then
 		return astNewCONSTF( val( text ), _
 			iif( tkflags and TKFLAG_F, TYPE_SINGLE, TYPE_DOUBLE ) )
 	end if

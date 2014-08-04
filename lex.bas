@@ -326,6 +326,7 @@ private sub hReadNumber( )
 		if( flags and (TKFLAG_HEX or TKFLAG_OCT) ) then
 			lexOops( "non-decimal floats not supported" )
 		end if
+		flags or= TKFLAG_FLOAT
 
 		select case( lex.i[0] )
 		case CH_F, CH_L_F    '' 'F' | 'f'
@@ -333,8 +334,6 @@ private sub hReadNumber( )
 			flags or= TKFLAG_F
 		case CH_D, CH_L_D    '' 'D' | 'd'
 			lex.i += 1
-			flags or= TKFLAG_D
-		case else
 			flags or= TKFLAG_D
 		end select
 	else
