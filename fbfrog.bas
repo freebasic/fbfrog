@@ -551,7 +551,7 @@ end sub
 ''
 '' The script is a linear list of the command line options, for example:
 '' (each line is a sibling AST node)
-''    selectversion __LIBFOO_VERSION
+''    select __LIBFOO_VERSION
 ''    case 1
 ''    #define VERSION 1
 ''    case 2
