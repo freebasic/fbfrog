@@ -684,7 +684,27 @@ private function emitAst _
 		end if
 
 	case ASTCLASS_CONSTF
-		s += str( n->valf )
+		s = str( n->valf )
+
+		''
+		'' Float type suffixes:
+		''
+		'' FB defaults to DOUBLE as long as there is a fractional part,
+		'' so no type suffix is needed for that, as in C.
+		''
+		'' Without a fractional part a suffix would be more useful,
+		'' turning the literal into a float instead of integer,
+		'' but that probably does not make much of a difference,
+		'' since FB will do the conversion silently anyways.
+		''
+		'' The f suffix should be added for SINGLEs though, to ensure
+		'' it's using the intended precision.
+		''
+		if( typeGetDtAndPtr( n->dtype ) = TYPE_SINGLE ) then
+			s += "f"
+		elseif( instr( s, "." ) = 0 ) then
+			s += "d"
+		end if
 
 	case ASTCLASS_ID
 		if( n->attrib and ASTATTRIB_PARENTHESIZEDMACROPARAM ) then
