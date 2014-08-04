@@ -29,23 +29,5 @@ const float2 = 1
 const float3 = 1
 const float4 = 0.1
 const float5 = 1
-
-'' TODO: unrecognized construct:
-'' #define float6 1f
-'' ---------------------------------------------------------------------------
-'' tests/c/number-literals.h(32): failed to parse full #define body as expression
-''     #define float6 1f
-''                     ^
-'' context as seen by fbfrog:
-''     # define float6 1 f 
-''                       ^
-
-'' TODO: unrecognized construct:
-'' #define float7 1d
-'' ---------------------------------------------------------------------------
-'' tests/c/number-literals.h(33): failed to parse full #define body as expression
-''     #define float7 1d
-''                     ^
-'' context as seen by fbfrog:
-''     # define float7 1 d 
-''                       ^
+const float6 = 1
+const float7 = 1

@@ -267,16 +267,15 @@ private sub hReadNumber( )
 	end if
 
 	var begin = lex.i
-	var found_dot = FALSE
 	do
 		dim as integer digit = lex.i[0]
 
 		if( digit = CH_DOT ) then
 			'' Only one dot allowed
-			if( found_dot ) then
+			if( flags and TKFLAG_FLOAT ) then
 				exit do
 			end if
-			found_dot = TRUE
+			flags or= TKFLAG_FLOAT
 		else
 			select case as const( digit )
 			case CH_A to CH_F
@@ -318,8 +317,13 @@ private sub hReadNumber( )
 		wend
 
 		'' The exponent makes this a float too
-		found_dot = TRUE
+		flags or= TKFLAG_FLOAT
 	end select
+
+	if( ((flags and TKFLAG_FLOAT) <> 0) and _
+	    ((flags and (TKFLAG_HEX or TKFLAG_OCT)) <> 0) ) then
+		lexOops( "non-decimal floats not supported" )
+	end if
 
 	'' Copy the number literal's body into the text buffer; we want to
 	'' parse the type suffixes without making them part of the token text.
@@ -333,21 +337,15 @@ private sub hReadNumber( )
 	lex.text[length] = 0  '' null-terminator
 
 	'' Type suffixes
-	if( found_dot ) then
-		if( flags and (TKFLAG_HEX or TKFLAG_OCT) ) then
-			lexOops( "non-decimal floats not supported" )
-		end if
-		flags or= TKFLAG_FLOAT
-
-		select case( lex.i[0] )
-		case CH_F, CH_L_F    '' 'F' | 'f'
-			lex.i += 1
-			flags or= TKFLAG_F
-		case CH_D, CH_L_D    '' 'D' | 'd'
-			lex.i += 1
-			flags or= TKFLAG_D
-		end select
-	else
+	select case( lex.i[0] )
+	case CH_F, CH_L_F    '' 'F' | 'f'
+		lex.i += 1
+		flags or= TKFLAG_F or TKFLAG_FLOAT
+	case CH_D, CH_L_D    '' 'D' | 'd'
+		lex.i += 1
+		flags or= TKFLAG_D or TKFLAG_FLOAT
+	end select
+	if( (flags and TKFLAG_FLOAT) = 0 ) then
 		select case( lex.i[0] )
 		case CH_U, CH_L_U       '' 'U' | 'u'
 			lex.i += 1

@@ -8,4 +8,4 @@
       tests/c/number-literals.h
 [5/5] __FB_DOS__
       tests/c/number-literals.h
-emitting: tests/c/number-literals.bi (27 declarations, 2 TODOs)
+emitting: tests/c/number-literals.bi (29 declarations, 0 TODOs)
