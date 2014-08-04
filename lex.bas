@@ -86,7 +86,7 @@ private sub hSetLocation( byval flags as integer = 0 )
 	lex.x += 1
 end sub
 
-private sub hAddTextToken( byval tk as integer, byval begin as ubyte ptr, byval flags as integer = 0 )
+private sub hAddTextToken( byval tk as integer, byval begin as ubyte ptr )
 	'' Insert a null terminator temporarily
 	var old = lex.i[0]
 	lex.i[0] = 0
@@ -102,7 +102,7 @@ private sub hAddTextToken( byval tk as integer, byval begin as ubyte ptr, byval 
 	end if
 
 	tkInsert( lex.x, tk, begin )
-	hSetLocation( flags )
+	hSetLocation( )
 
 	lex.i[0] = old
 end sub
@@ -321,6 +321,17 @@ private sub hReadNumber( )
 		found_dot = TRUE
 	end select
 
+	'' Copy the number literal's body into the text buffer; we want to
+	'' parse the type suffixes without making them part of the token text.
+	dim as integer length = cuint( lex.i ) - cuint( begin )
+	if( length > MAXTEXTLEN ) then
+		lexOops( "number literal too long, MAXTEXTLEN=" & MAXTEXTLEN )
+	end if
+	for j as integer = 0 to length - 1
+		lex.text[j] = begin[j]
+	next
+	lex.text[length] = 0  '' null-terminator
+
 	'' Type suffixes
 	if( found_dot ) then
 		if( flags and (TKFLAG_HEX or TKFLAG_OCT) ) then
@@ -356,7 +367,8 @@ private sub hReadNumber( )
 		end select
 	end if
 
-	hAddTextToken( TK_NUMBER, begin, flags )
+	tkInsert( lex.x, TK_NUMBER, lex.text )
+	hSetLocation( flags )
 end sub
 
 private function hReadEscapeSequence( ) as ulongint
