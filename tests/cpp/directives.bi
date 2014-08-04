@@ -34,31 +34,31 @@ dim shared included as long
 
 dim shared included as long
 
-const A01 = 0
-const A02 = 1
-const A03 = 11
-const A04 = &o1
-const A05 = &o123
-const A06 = &h0
-const A07 = &h0
-const A08 = &h1
-const A09 = &hFF
-const A10 = 1d
-const A11 = 1f
-const A12 = 1d
-const A13 = 0.1
-const A14 = 0d
-const A15 = 1.123
-const A16 = 10d
-const A17 = 10d
-const A18 = 1
-const A19 = cast(clong, 1)
-const A20 = cast(culong, 1)
-const A21 = 1ll
-const A22 = 1ull
+#define A01 0
+#define A02 1
+#define A03 11
+#define A04 &o1
+#define A05 &o123
+#define A06 &h0
+#define A07 &h0
+#define A08 &h1
+#define A09 &hFF
+#define A10 1d
+#define A11 1f
+#define A12 1d
+#define A13 0.1
+#define A14 0d
+#define A15 1.123
+#define A16 10d
+#define A17 10d
+#define A18 1
+#define A19 cast(clong, 1)
+#define A20 cast(culong, 1)
+#define A21 1ll
+#define A22 1ull
 
-const B01 = 1 + 1
-const B02 = 1
+#define B01 (1 + 1)
+#define B02 1
 
 #define C1  '' no space following
 

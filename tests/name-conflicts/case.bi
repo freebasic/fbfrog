@@ -7,8 +7,8 @@
 ''     procedure toASTER1__ alias "toASTER1"()
 ''     #define Aaa_ alias "Aaa"
 ''     #define aaa__ alias "aaa"
-''     constant Bbb_ alias "Bbb"
-''     constant bbb__ alias "bbb"
+''     #define Bbb_ alias "Bbb"
+''     #define bbb__ alias "bbb"
 ''     typedef MyInt_ alias "MyInt"
 ''     typedef myint__ alias "myint"
 ''     typedef Myint___ alias "Myint"
@@ -25,10 +25,9 @@ declare sub toASTER1__ alias "toASTER1"()
 #define AAA() 1
 #define Aaa_() 2
 #define aaa__() 3
-
-const BBB = 1
-const Bbb_ = 2
-const bbb__ = 3
+#define BBB 1
+#define Bbb_ 2
+#define bbb__ 3
 
 type myInt as long
 type MyInt_ as long

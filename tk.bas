@@ -142,7 +142,7 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	(@"-nomerge"      ), _
 	(@"-whitespace"   ), _
 	(@"-windowsms"    ), _
-	(@"-noconstants"  ), _
+	(@"-constants"    ), _
 	(@"-nonamefixup"  ), _
 	(@"-v"            ), _
 	(@"-incdir"       ), _

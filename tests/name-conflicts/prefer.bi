@@ -5,8 +5,8 @@
 ''     #define I4_ alias "I4"
 ''     constant I5_ alias "I5"
 ''     constant I6_ alias "I6"
-''     constant I7_ alias "I7"
-''     constant I8_ alias "I8"
+''     #define I7_ alias "I7"
+''     #define I8_ alias "I8"
 
 extern "C"
 
@@ -34,11 +34,11 @@ enum
 	I6_
 end enum
 
-const I7_ = 1
+#define I7_ 1
 
 declare sub i7()
 declare sub i8()
 
-const I8_ = 1
+#define I8_ 1
 
 end extern

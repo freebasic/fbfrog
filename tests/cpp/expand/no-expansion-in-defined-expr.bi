@@ -6,7 +6,7 @@ extern "C"
 '' "defined m1" shouldn't be expanded to "defined 123", because no
 '' expansion should be done for "defined id" expressions. "defined <number>" is
 
-const m1 = 123  '' good for the test case because it would trigger a syntax error.
+#define m1 123  '' good for the test case because it would trigger a syntax error.
 
 extern yes as long
 extern separator1 as long

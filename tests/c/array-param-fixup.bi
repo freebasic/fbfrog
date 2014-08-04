@@ -13,6 +13,6 @@ type UDT
 	p as sub(byval i as long ptr)
 end type
 
-const A = cptr(sub(byval i as long ptr), 0)
+#define A cptr(sub(byval i as long ptr), 0)
 
 end extern

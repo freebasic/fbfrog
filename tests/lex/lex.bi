@@ -6,29 +6,29 @@ extern "C"
 
 '' @fbfrog -whitespace -nonamefixup
 
-const A01 = 0
-const A02 = 1
-const A03 = 11
-const A04 = &o0
-const A05 = &o1
-const A06 = &o123
-const A07 = &h0
-const A08 = &h0
-const A09 = &h1
-const A10 = &hFF
-const A11 = 1d
-const A12 = 1f
-const A13 = 1d
-const A14 = 0.1
-const A15 = 0d
-const A16 = 1.123
-const A17 = 10d
-const A18 = 10d
-const A19 = 1
-const A20 = cast(clong, 1)
-const A21 = cast(culong, 1)
-const A22 = 1ll
-const A23 = 1ull
+#define A01 0
+#define A02 1
+#define A03 11
+#define A04 &o0
+#define A05 &o1
+#define A06 &o123
+#define A07 &h0
+#define A08 &h0
+#define A09 &h1
+#define A10 &hFF
+#define A11 1d
+#define A12 1f
+#define A13 1d
+#define A14 0.1
+#define A15 0d
+#define A16 1.123
+#define A17 10d
+#define A18 10d
+#define A19 1
+#define A20 cast(clong, 1)
+#define A21 cast(culong, 1)
+#define A22 1ll
+#define A23 1ull
 
 #define B1 "foo"
 #define B2 wstr("foo")

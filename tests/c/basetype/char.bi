@@ -89,6 +89,6 @@ type UDT
 	array(0 to 9) as const ubyte
 	array(0 to 9, 0 to 19) as const ubyte
 end type
-const A = cptr(sub(byval as const ubyte), 1)
+#define A cptr(sub(byval as const ubyte), 1)
 
 end extern

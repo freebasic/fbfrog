@@ -43,7 +43,7 @@
 #include once "fbfrog.bi"
 
 namespace frog
-	dim shared as integer verbose, nomerge, whitespace, windowsms, noconstants, nonamefixup
+	dim shared as integer verbose, nomerge, whitespace, windowsms, constants, nonamefixup
 	dim shared as ASTNODE ptr incdirs
 	dim shared as string outname, defaultoutname
 
@@ -67,7 +67,7 @@ private sub hPrintHelpAndExit( )
 	print "  -nomerge         Don't preserve code from #includes"
 	print "  -whitespace      Try to preserve comments and empty lines"
 	print "  -windowsms       Use Extern ""Windows-MS"" instead of Extern ""Windows"""
-	print "  -noconstants     Don't try to turn #defines into constants"
+	print "  -constants       Try to turn #defines into constants"
 	print "  -nonamefixup     Don't fix symbol identifier conflicts"
 	print "  -incdir <path>   Add #include search directory"
 	print "  -o <path/file>   Set output .bi file name, or just the output directory"
@@ -362,12 +362,12 @@ private sub hParseArgs( byref x as integer )
 		case TK_EOF
 			exit do
 
-		case OPT_NOMERGE     : frog.nomerge      = TRUE : x += 1
-		case OPT_WHITESPACE  : frog.whitespace   = TRUE : x += 1
-		case OPT_WINDOWSMS   : frog.windowsms    = TRUE : x += 1
-		case OPT_NOCONSTANTS : frog.noconstants  = TRUE : x += 1
-		case OPT_NONAMEFIXUP : frog.nonamefixup  = TRUE : x += 1
-		case OPT_V           : frog.verbose      = TRUE : x += 1
+		case OPT_NOMERGE     : frog.nomerge     = TRUE : x += 1
+		case OPT_WHITESPACE  : frog.whitespace  = TRUE : x += 1
+		case OPT_WINDOWSMS   : frog.windowsms   = TRUE : x += 1
+		case OPT_CONSTANTS   : frog.constants   = TRUE : x += 1
+		case OPT_NONAMEFIXUP : frog.nonamefixup = TRUE : x += 1
+		case OPT_V           : frog.verbose     = TRUE : x += 1
 
 		case OPT_INCDIR
 			x += 1
@@ -910,7 +910,7 @@ private function frogReadAPI( byval options as ASTNODE ptr ) as ASTNODE ptr
 	astTurnZstringArrayIntoFixedLengthZstring( ast )
 	astUnscopeDeclsNestedInStructs( ast )
 	astMakeNestedUnnamedStructsFbCompatible( ast )
-	if( frog.noconstants = FALSE ) then astTurnDefinesIntoConstants( ast )
+	if( frog.constants ) then astTurnDefinesIntoConstants( ast )
 
 	hApplyRenameTypedefOptions( options, ast )
 	astRemoveRedundantTypedefs( ast, ast )

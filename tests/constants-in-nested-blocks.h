@@ -1,3 +1,5 @@
+// @fbfrog -constants
+
 #ifdef __LP64__
 	#define MY_WORD_SIZE 64
 #else

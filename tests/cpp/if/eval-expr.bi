@@ -4,5 +4,4 @@
 ''     #define DEFINED_ alias "DEFINED"
 
 #define DEFINED_
-
-const DEFINED123 = 123
+#define DEFINED123 123

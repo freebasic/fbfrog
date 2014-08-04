@@ -411,8 +411,8 @@
 ''     #define integer__ alias "integer"
 ''     constant string__ alias "string"
 ''     procedure open__ alias "open"()
-''     constant INT__ alias "INT"
-''     constant Int___ alias "Int"
+''     #define INT__ alias "INT"
+''     #define Int___ alias "Int"
 ''     variable BASE__ alias "BASE"
 ''     variable WINDOW__ alias "WINDOW"
 ''     variable WINDOWTITLE__ alias "WINDOWTITLE"
@@ -835,8 +835,8 @@ end enum
 
 declare sub open__ alias "open"()
 
-const INT__ = 1
-const Int___ = 2
+#define INT__ 1
+#define Int___ 2
 
 extern     BASE__ alias "BASE" as long
 dim shared BASE__ as long
