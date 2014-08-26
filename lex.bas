@@ -844,6 +844,7 @@ end function
 
 private sub hReadArg( byval tk as integer )
 	var j = 0
+	var begin = lex.i
 
 	do
 		select case( lex.i[0] )
@@ -910,9 +911,12 @@ private sub hReadArg( byval tk as integer )
 	select case( tk )
 	case TK_MINUS
 		tk = hLookupKeyword( @lex.frogoptions, text, TK_STRING )
-		if( tk <> TK_STRING ) then
-			text = NULL
+		if( tk = TK_STRING ) then
+			lex.location.column = begin - lex.bol
+			lex.location.length = lex.i - begin
+			oopsLocation( @lex.location, "unknown command line option '" + *text + "'" )
 		end if
+		text = NULL
 	case TK_STRING
 		if( strIsValidSymbolId( text ) ) then
 			tk = TK_ID

@@ -488,14 +488,8 @@ private sub hParseArgs( byref x as integer )
 		case OPT_RENAMETAG     : hParseOptionWithId( x, ASTCLASS_RENAMETAG    , TRUE  )
 
 		case else
-			dim as zstring ptr text = tkGetText( x )
-			if( (text = NULL) orelse ((*text)[0] = CH_MINUS) ) then
-				print tkReport( x, "unknown command line option '" + *text + "'" )
-				hPrintHelpAndExit( )
-			end if
-
 			'' *.fbfrog file given (without @)? Treat as @file too
-			var filename = *text
+			var filename = *tkGetText( x )
 			if( pathExtOnly( filename ) = "fbfrog" ) then
 				hLoadArgsFile( x + 1, filename, tkGetLocation( x ) )
 				tkRemove( x, x )
