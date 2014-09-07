@@ -1510,7 +1510,8 @@ function astCountDecls( byval code as ASTNODE ptr ) as integer
 		     ASTCLASS_INCLIB, ASTCLASS_PRAGMAONCE, _
 		     ASTCLASS_UNKNOWN, ASTCLASS_RENAMELIST
 
-		case ASTCLASS_PPIF, ASTCLASS_PPELSEIF, ASTCLASS_PPELSE
+		case ASTCLASS_PPIF, ASTCLASS_PPELSEIF, ASTCLASS_PPELSE, _
+		     ASTCLASS_GROUP
 			count += astCountDecls( i )
 
 		case else
@@ -1530,8 +1531,14 @@ function astCountUnknowns( byval code as ASTNODE ptr ) as integer
 		select case( i->class )
 		case ASTCLASS_UNKNOWN
 			count += 1
-		case ASTCLASS_PPIF, ASTCLASS_PPELSEIF, ASTCLASS_PPELSE
+		case ASTCLASS_PPIF, ASTCLASS_PPELSEIF, ASTCLASS_PPELSE, _
+		     ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM, _
+		     ASTCLASS_GROUP
 			count += astCountUnknowns( i )
+		case ASTCLASS_PROC
+			if( i->expr ) then
+				count += astCountUnknowns( i->expr )
+			end if
 		end select
 		i = i->next
 	wend

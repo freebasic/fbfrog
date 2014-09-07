@@ -682,6 +682,7 @@ type ASTNODE
 	'' IIF: condition expression
 	'' DIMENSION: elements expression
 	'' PPDEFINE: macro body expression
+	'' PROC: procedure body, if any
 	expr		as ASTNODE ptr
 
 	union
