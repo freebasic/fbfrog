@@ -693,24 +693,42 @@ end sub
 ''    a) it's used above the declaration
 ''    b) it's used without being declared at all
 ''
+'' Declaration = struct/union/enum compound
+'' Used = Used as data type somewhere
+''
+'' In such cases we need to add a typedef which will do the forward declaration,
+'' because FB does not allow "implicit" forward references.
+''
+'' As a special case, if the first use is in a typedef, then we don't need to
+'' add an extra typedef for it. The existing typedef will already declare the
+'' forward reference.
+''
+'' We don't ever need to add forward declarations for "unused" tag ids - the
+'' ones that only appear in declarations.
+''
 
-const STATE_DECLARED		= 1 shl 0
-const STATE_USED_ABOVE_DECL	= 1 shl 1
-const STATE_USED		= 1 shl 2
+const STATE_DECLARED			= 1 shl 0
+const STATE_USED_ABOVE_DECL		= 1 shl 1
+const STATE_USED			= 1 shl 2
+const STATE_USED_FIRST_IN_TYPEDEF	= 1 shl 3
 
 private function hUsedButNotDeclared( byval state as integer ) as integer
 	function = ((state and (STATE_DECLARED or STATE_USED)) = STATE_USED)
 end function
 
+'' Record a tag id into the hashtb
 private sub hOnTagId _
 	( _
 		byval hashtb as THASH ptr, _
 		byval id as zstring ptr, _
-		byval addstate as integer _
+		byval addstate as integer, _
+		byval is_in_typedef as integer _
 	)
 
 	var hash = hashHash( id )
 	var item = hashLookup( hashtb, id, hash )
+
+	'' Already exists?
 	if( item->s ) then
 		var state = cint( item->data )
 
@@ -726,21 +744,34 @@ private sub hOnTagId _
 
 		item->data = cptr( any ptr, state )
 	else
+		'' New tag id.
+
+		'' Recording a use (not a declaration) as first appearance?
+		if( addstate = STATE_USED ) then
+			if( is_in_typedef ) then
+				addstate or= STATE_USED_FIRST_IN_TYPEDEF
+			end if
+		end if
+
 		hashAdd( hashtb, item, hash, id, cptr( any ptr, addstate ) )
 	end if
+
 end sub
 
+'' Walk through the code from top to bottom and record tag ids and corresponding
+'' state into the hashtb.
 private sub hCollectTagIds( byval n as ASTNODE ptr, byval hashtb as THASH ptr )
 	select case( n->class )
 	case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
+		'' Not anonymous?
 		if( n->text ) then
-			hOnTagId( hashtb, n->text, STATE_DECLARED )
+			hOnTagId( hashtb, n->text, STATE_DECLARED, FALSE )
 		end if
 	end select
 
 	if( n->subtype ) then
 		if( n->subtype->class = ASTCLASS_TAGID ) then
-			hOnTagId( hashtb, n->subtype->text, STATE_USED )
+			hOnTagId( hashtb, n->subtype->text, STATE_USED, (n->class = ASTCLASS_TYPEDEF) )
 		else
 			hCollectTagIds( n->subtype, hashtb )
 		end if
@@ -780,46 +811,63 @@ private sub hRenameTagDecls _
 
 end sub
 
+private sub hConsiderTagId _
+	( _
+		byval ast as ASTNODE ptr, _
+		byval tagid as zstring ptr, _
+		byval state as integer _
+	)
+
+	'' Tag id used before its declaration?
+	if( state and STATE_USED_ABOVE_DECL ) then
+		'' First use is in a typedef (and declaration follows later)?
+		if( state and STATE_USED_FIRST_IN_TYPEDEF ) then
+			'' Nothing to do - the typedef already declares the forward reference.
+			'' Since the declaration exists, astFixIds() will fix name conflicts
+			'' based on that.
+		else
+			'' Rename the struct and add a forward declaration for it using the old id.
+			'' astFixIds() will take care of fixing name conflicts involving the new
+			'' struct id, if any.
+			var forwardid = *tagid + "_"
+
+			var typedef = astNew( ASTCLASS_TYPEDEF, tagid )
+			astSetType( typedef, TYPE_UDT, astNewID( forwardid ) )
+			astPrepend( ast, typedef )
+
+			hRenameTagDecls( ast, tagid, forwardid )
+		end if
+
+	'' Tag id used only (and no declaration exists)?
+	elseif( hUsedButNotDeclared( state ) ) then
+		'' Add a forward typedef for this id and a dummy declaration
+		'' for the forward id, so that astFixIds() will take care of fixing
+		'' name conflicts involving the forward id, if any. The dummy
+		'' declaration won't be emitted though.
+		var forwardid = *tagid + "_"
+
+		var typedef = astNew( ASTCLASS_TYPEDEF, tagid )
+		astSetType( typedef, TYPE_UDT, astNewID( forwardid ) )
+		astPrepend( ast, typedef )
+
+		var dummydecl = astNew( ASTCLASS_STRUCT, forwardid )
+		dummydecl->attrib or= ASTATTRIB_DUMMYDECL
+		astPrepend( ast, dummydecl )
+	end if
+
+end sub
+
 sub astAddForwardDeclsForUndeclaredTagIds( byval ast as ASTNODE ptr )
 	dim hashtb as THASH
 	hashInit( @hashtb, 4, FALSE )
 
 	hCollectTagIds( ast, @hashtb )
 
-	'' For each undeclared tag id...
+	'' For each tag id...
 	for i as integer = 0 to hashtb.room-1
 		var item = hashtb.items + i
 		if( item->s ) then
-			'' No declaration seen by hCollectTagIds() for this one?
-			var state = cint( item->data )
-			if( hUsedButNotDeclared( state ) ) then
-				'' Add a forward typedef for this id and a dummy declaration
-				'' for the forward id, so that astFixIds() will take care of fixing
-				'' name conflicts involving the forward id, if any. The dummy
-				'' declaration won't be emitted though.
-				var forwardid = *item->s + "_"
-
-				var typedef = astNew( ASTCLASS_TYPEDEF, item->s )
-				astSetType( typedef, TYPE_UDT, astNewID( forwardid ) )
-				astPrepend( ast, typedef )
-
-				var dummydecl = astNew( ASTCLASS_STRUCT, forwardid )
-				dummydecl->attrib or= ASTATTRIB_DUMMYDECL
-				astPrepend( ast, dummydecl )
-
-			'' or it was found below the first use?
-			elseif( state and STATE_USED_ABOVE_DECL ) then
-				'' Rename the struct and add a forward declaration for it using the
-				'' old id. astFixIds() will take care of fixing name conflicts involving
-				'' the new struct id, if any.
-				var forwardid = *item->s + "_"
-
-				var typedef = astNew( ASTCLASS_TYPEDEF, item->s )
-				astSetType( typedef, TYPE_UDT, astNewID( forwardid ) )
-				astPrepend( ast, typedef )
-
-				hRenameTagDecls( ast, item->s, forwardid )
-			end if
+			hConsiderTagId( ast, item->s, cint( item->data ) )
 		end if
 	next
 
