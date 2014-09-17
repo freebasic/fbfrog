@@ -60,6 +60,7 @@
 ''
 
 #include once "fbfrog.bi"
+#include once "crt.bi"
 
 declare sub hMaybeExpandMacro( byref x as integer, byval inside_ifexpr as integer )
 
@@ -473,6 +474,15 @@ private sub definfoDelete( byval definfo as DEFINEINFO ptr )
 	end if
 end sub
 
+private function definfoClone( byval a as DEFINEINFO ptr ) as DEFINEINFO ptr
+	var b = definfoNew( )
+	b->xdefine = a->xdefine
+	b->xbody   = a->xbody
+	b->xeol    = a->xeol
+	b->macro   = astClone( a->macro )
+	function = b
+end function
+
 private sub definfoSetRemove( byval definfo as DEFINEINFO ptr )
 	tkSetRemove( definfo->xdefine, definfo->xeol )
 end sub
@@ -481,6 +491,19 @@ end sub
 private sub definfoCopyBody( byval definfo as DEFINEINFO ptr, byval x as integer )
 	assert( x > definfo->xeol )
 	tkCopy( x, definfo->xbody, definfo->xeol - 1 )
+end sub
+
+type SAVEDMACRO
+	id		as zstring ptr		'' Macro's name
+
+	'' A DEFINEINFO object if the macro was defined when being saved,
+	'' or NULL if it was undefined.
+	definfo		as DEFINEINFO ptr
+end type
+
+private sub savedmacroDtor( byval macro as SAVEDMACRO ptr )
+	deallocate( macro->id )
+	definfoDelete( macro->definfo )
 end sub
 
 enum
@@ -518,6 +541,24 @@ namespace cpp
 	'' (and to only show it once).
 	dim shared macros		as THASH
 
+	'' Array of macros saved by #pragma push_macro, for use by #pragma
+	'' pop_macro later.
+	''  * push_macro saves the macro's current state - whether it's defined
+	''    or not, and if it's defined, it's body/value.
+	''  * push_macro even saves duplicate copies of the macro state: two
+	''    equal push_macro's directly following each other create two stack
+	''    entries, not one.
+	''  * pop_macro restores the macro to the last saved state, overwriting
+	''    the current value, #defining the macro again if it was #undef'ed
+	''    in the meantime, or even #undef'ing it.
+	''  * pop_macro does nothing if the stack for that macro is empty.
+	'' Macros are appended to the array in the order they are saved. Popping
+	'' a macro requires searching the array backwards for an entry for the
+	'' given macro name. A hash table could be used instead, but that does
+	'' not seem to be worth it.
+	dim shared savedmacros		as SAVEDMACRO ptr
+	dim shared savedmacrocount	as integer
+
 	dim shared noexpands		as THASH
 	dim shared removes		as THASH
 end namespace
@@ -533,6 +574,8 @@ sub cppInit( )
 	cpp.skiplevel = MAXSTACK
 
 	hashInit( @cpp.macros, 4, TRUE )
+	cpp.savedmacros = NULL
+	cpp.savedmacrocount = 0
 	hashInit( @cpp.noexpands, 4, TRUE )
 	hashInit( @cpp.removes, 4, TRUE )
 end sub
@@ -550,6 +593,12 @@ private sub cppEnd( )
 			definfoDelete( cpp.macros.items[i].data )
 		next
 		hashEnd( @cpp.macros )
+	end scope
+	scope
+		for i as integer = 0 to cpp.savedmacrocount - 1
+			savedmacroDtor( @cpp.savedmacros[i] )
+		next
+		deallocate( cpp.savedmacros )
 	end scope
 	hashEnd( @cpp.noexpands )
 	hashEnd( @cpp.removes )
@@ -605,6 +654,98 @@ end function
 private function cppShouldRemoveSym( byval id as zstring ptr ) as integer
 	function = (hashLookup( @cpp.removes, id, hashHash( id ) )->s <> NULL)
 end function
+
+private sub hSetRemoveOnCurrentDefine( byval id as zstring ptr )
+	var definfo = cppLookupMacro( id )
+	if( definfo ) then
+		definfoSetRemove( definfo )
+	end if
+end sub
+
+private sub cppDefineMacro( byval id as zstring ptr, byval definfo as DEFINEINFO ptr )
+	'' If overwriting an existing #define, don't preserve it
+	hSetRemoveOnCurrentDefine( id )
+
+	'' Register/overwrite as known defined symbol
+	cppAddMacro( id, definfo )
+end sub
+
+private sub cppUndefMacro( byval id as zstring ptr )
+	'' If #undeffing an existing #define, don't preserve it
+	hSetRemoveOnCurrentDefine( id )
+
+	'' Register/overwrite as known undefined symbol
+	cppAddKnownUndefined( id )
+end sub
+
+'' Append a new entry to the array of saved macros
+private sub cppAppendSavedMacro( byval id as zstring ptr, byval definfo as DEFINEINFO ptr )
+	cpp.savedmacrocount += 1
+	cpp.savedmacros = reallocate( cpp.savedmacros, _
+			cpp.savedmacrocount * sizeof( SAVEDMACRO ) )
+	with( cpp.savedmacros[cpp.savedmacrocount-1] )
+		.id = strDuplicate( id )
+		.definfo = definfo
+	end with
+end sub
+
+private sub cppRemoveSavedMacro( byval i as integer )
+	assert( (i >= 0) and (i < cpp.savedmacrocount) )
+
+	var p = cpp.savedmacros + i
+	savedmacroDtor( p )
+	cpp.savedmacrocount -= 1
+
+	'' Remove array element from the middle of the array: move all elements
+	'' behind it to the front, by 1 slot, to close the gap.
+	var tail = cpp.savedmacrocount - i
+	if( tail > 0 ) then
+		memmove( p, p + 1, tail * sizeof( SAVEDMACRO ) )
+	end if
+end sub
+
+private function cppLookupSavedMacro( byval id as zstring ptr ) as integer
+	for i as integer = cpp.savedmacrocount - 1 to 0 step -1
+		if( *cpp.savedmacros[i].id = *id ) then
+			return i
+		end if
+	next
+	function = -1
+end function
+
+private sub cppSaveMacro( byval id as zstring ptr )
+	'' Check the macro's current state.
+	'' If it's defined, we need to duplicate the DEFINEINFO object;
+	'' otherwise, if it's undefined, we use NULL.
+	var definfo = cppLookupMacro( id )
+	if( definfo ) then
+		definfo = definfoClone( definfo )
+	end if
+
+	cppAppendSavedMacro( id, definfo )
+end sub
+
+private sub cppRestoreMacro( byval id as zstring ptr )
+	'' Search for the last saved macro for this id
+	var i = cppLookupSavedMacro( id )
+	if( i < 0 ) then
+		exit sub
+	end if
+
+	'' Restore the macro state
+	var savedmacro = @cpp.savedmacros[i]
+	if( savedmacro->definfo ) then
+		'' It was defined when saved, (re)-#define the macro
+		cppDefineMacro( id, savedmacro->definfo )
+		savedmacro->definfo = NULL
+	else
+		'' It was undefined when saved, #undef the macro
+		cppUndefMacro( id )
+	end if
+
+	'' Remove the entry from the saved macros stack
+	cppRemoveSavedMacro( i )
+end sub
 
 private sub cppEol( )
 	if( tkGet( cpp.x ) <> TK_EOL ) then
@@ -1987,24 +2128,21 @@ private sub cppDefine( byval begin as integer, byref setremove as integer )
 	assert( tkGet( xeol ) = TK_EOL )
 	cpp.x += 1
 
-	'' Check for previous #define
+	'' Report conflicting #defines
 	var prevdef = cppLookupMacro( macro->text )
 	if( prevdef ) then
 		if( astIsEqual( macro, prevdef->macro ) = FALSE ) then
 			hReportConflictingDefine( macro, prevdef->macro )
 		end if
-
-		'' Don't preserve previous #define
-		definfoSetRemove( prevdef )
 	end if
 
-	'' Register as known defined symbol
 	var definfo = definfoNew( )
 	definfo->xdefine = begin
 	definfo->xbody = xbody
 	definfo->xeol = xeol
 	definfo->macro = macro
-	cppAddMacro( macro->text, definfo )
+
+	cppDefineMacro( macro->text, definfo )
 
 	'' Normally, we preserve #define directives (unlike the other CPP directives),
 	'' thus no generic tkSetRemove() here. Unless the symbol was registed for removal.
@@ -2023,16 +2161,36 @@ private sub cppUndef( )
 	var id = tkSpellId( cpp.x )
 	cpp.x += 1
 
-	'' If #undeffing an existing #define, don't preserve it
-	var prevdef = cppLookupMacro( id )
-	if( prevdef ) then
-		definfoSetRemove( prevdef )
-	end if
-
-	'' Register/overwrite as known undefined symbol
-	cppAddKnownUndefined( id )
+	cppUndefMacro( id )
 
 	cppEol( )
+end sub
+
+private sub cppPragmaPushPopMacro( byval is_push as integer )
+	cpp.x += 1
+
+	var whatfor = iif( is_push, _
+		@"for #pragma push_macro(""..."")", _
+		@"for #pragma pop_macro(""..."")" )
+
+	'' '('
+	tkExpect( cpp.x, TK_LPAREN, whatfor )
+	cpp.x += 1
+
+	'' "..."
+	tkExpect( cpp.x, TK_STRING, whatfor )
+	var id = *tkGetText( cpp.x )
+	cpp.x += 1
+
+	'' ')'
+	tkExpect( cpp.x, TK_RPAREN, whatfor )
+	cpp.x += 1
+
+	if( is_push ) then
+		cppSaveMacro( id )
+	else
+		cppRestoreMacro( id )
+	end if
 end sub
 
 private function cppPragma( byref setremove as integer ) as integer
@@ -2078,6 +2236,12 @@ private function cppPragma( byref setremove as integer ) as integer
 
 		'' Preserve the #pragma pack for the C parser
 		setremove = FALSE
+
+	case "push_macro"
+		cppPragmaPushPopMacro( TRUE )
+
+	case "pop_macro"
+		cppPragmaPushPopMacro( FALSE )
 
 	case else
 		exit function
