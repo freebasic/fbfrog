@@ -8,4 +8,4 @@
       tests/c/typedef/typedef-proc.h
 [5/5] __FB_DOS__
       tests/c/typedef/typedef-proc.h
-emitting: tests/c/typedef/typedef-proc.bi (22 declarations, 0 TODOs)
+emitting: tests/c/typedef/typedef-proc.bi (24 declarations, 0 TODOs)

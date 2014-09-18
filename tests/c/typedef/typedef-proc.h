@@ -25,6 +25,8 @@ static T1 **p2;
 static T1 ***p3;
 typedef T1 *p4;
 void p5(T1 *param);
+static void (*p6)(T1 *param);
+void p7(void (*param)(T1 *innerparam));
 
 // CONSTs should be preserved when expanding
 static T1 * const c1;

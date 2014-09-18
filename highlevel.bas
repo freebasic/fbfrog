@@ -473,12 +473,10 @@ private sub hSolveOutProcTypedefSubtypes _
 					oops( "can't solve out " + astDumpPrettyDecl( typedef ) + " in " + astDumpPrettyDecl( n ) )
 				end if
 			end if
-		else
-			hSolveOutProcTypedefSubtypes( n->subtype, typedef )
 		end if
 	end if
 
-	'if( n->subtype ) then hSolveOutProcTypedefSubtypes( n->subtype, typedef )
+	if( n->subtype ) then hSolveOutProcTypedefSubtypes( n->subtype, typedef )
 	if( n->array ) then hSolveOutProcTypedefSubtypes( n->array, typedef )
 	if( n->expr  ) then hSolveOutProcTypedefSubtypes( n->expr , typedef )
 
