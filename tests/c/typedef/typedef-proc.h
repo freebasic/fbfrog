@@ -31,6 +31,8 @@ T1 *p8(void);
 static T1 *(*p9)(void);
 void p10(T1 *(*param)(void));
 typedef T1 *(*p11)(void);
+#define p12(x) ((T1*)x)
+#define p13 sizeof(T1*)
 
 // CONSTs should be preserved when expanding
 static T1 * const c1;

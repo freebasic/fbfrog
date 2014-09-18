@@ -32,6 +32,9 @@ declare sub p10(byval param as function() as function(byval i as long) as long)
 
 type p11 as function() as function(byval i as long) as long
 
+#define p12(x) cptr(function cdecl(byval i as long) as long, x)
+#define p13 sizeof(function cdecl(byval i as long) as long)
+
 dim shared c1 as const function(byval i as long) as long
 dim shared c2 as typeof(function(byval i as long) as long) const ptr
 dim shared c3 as typeof(const function(byval i as long) as long) ptr

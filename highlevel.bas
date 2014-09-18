@@ -443,18 +443,18 @@ private function hSolveOutProcTypedefSubtype( byval n as ASTNODE ptr, byval type
 	case ASTCLASS_TYPEDEF
 		hExpandProcTypedef( n, typedef )
 
-	'' We can expand into parameters or function results, if its a pointer.
+	'' In other places (parameters, function results, casts, sizeof()) we
+	'' can expand the function type (only) if the context is a pointer.
+	'' It will then become a function pointer.
+	''
 	'' Having a plain function type as parameter or function result doesn't
 	'' make sense though.
-	case ASTCLASS_PROC, ASTCLASS_PARAM
+	case else
 		if( typeGetPtrCount( n->dtype ) = 0 ) then
 			exit function
 		end if
 
 		hExpandProcTypedef( n, typedef )
-
-	case else
-		exit function
 	end select
 
 	function = TRUE
