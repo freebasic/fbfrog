@@ -1,41 +1,11 @@
 [1/5] __FB_WIN32__.__FB_64BIT__
       tests/cpp/push-pop-macro/simple.h
-tests/cpp/push-pop-macro/simple.h(1): conflicting #define for 'A', first one:
-    #define A 1
-            ^
-tests/cpp/push-pop-macro/simple.h(5): conflicting #define for 'A', new one:
-    #define A 2
-            ^
 [2/5] __FB_WIN32__.(not __FB_64BIT__)
       tests/cpp/push-pop-macro/simple.h
-tests/cpp/push-pop-macro/simple.h(1): conflicting #define for 'A', first one:
-    #define A 1
-            ^
-tests/cpp/push-pop-macro/simple.h(5): conflicting #define for 'A', new one:
-    #define A 2
-            ^
 [3/5] __FB_LINUX__.__FB_64BIT__
       tests/cpp/push-pop-macro/simple.h
-tests/cpp/push-pop-macro/simple.h(1): conflicting #define for 'A', first one:
-    #define A 1
-            ^
-tests/cpp/push-pop-macro/simple.h(5): conflicting #define for 'A', new one:
-    #define A 2
-            ^
 [4/5] __FB_LINUX__.(not __FB_64BIT__)
       tests/cpp/push-pop-macro/simple.h
-tests/cpp/push-pop-macro/simple.h(1): conflicting #define for 'A', first one:
-    #define A 1
-            ^
-tests/cpp/push-pop-macro/simple.h(5): conflicting #define for 'A', new one:
-    #define A 2
-            ^
 [5/5] __FB_DOS__
       tests/cpp/push-pop-macro/simple.h
-tests/cpp/push-pop-macro/simple.h(1): conflicting #define for 'A', first one:
-    #define A 1
-            ^
-tests/cpp/push-pop-macro/simple.h(5): conflicting #define for 'A', new one:
-    #define A 2
-            ^
 emitting: tests/cpp/push-pop-macro/simple.bi (3 declarations, 0 TODOs)

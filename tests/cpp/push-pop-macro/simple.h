@@ -2,6 +2,7 @@
 static int x = A;
 
 #pragma push_macro("A")
+#undef A
 #define A 2
 static int y = A;
 

@@ -14,9 +14,9 @@ struct UDT {
 	char array[10];
 	char array[10][20];
 };
-#define A (char)1
-#define A (char (*)(void))1
-#define A (void (*)(char))1
+#define A1 (char)1
+#define A2 (char (*)(void))1
+#define A3 (void (*)(char))1
 
 extern const char i;
 extern const char *p;
@@ -32,9 +32,9 @@ struct UDT {
 	const char array[10];
 	const char array[10][20];
 };
-#define A (const char)1
-#define A (const char (*)(void))1
-#define A (void (*)(const char))1
+#define A4 (const char)1
+#define A5 (const char (*)(void))1
+#define A6 (void (*)(const char))1
 
 extern signed char i;
 extern signed char *p;
@@ -49,9 +49,9 @@ struct UDT {
 	signed char array[10];
 	signed char array[10][20];
 };
-#define A (signed char)1
-#define A (signed char (*)(void))1
-#define A (void (*)(signed char))1
+#define A7 (signed char)1
+#define A8 (signed char (*)(void))1
+#define A9 (void (*)(signed char))1
 
 extern const signed char i;
 extern const signed char *p;
@@ -66,9 +66,9 @@ struct UDT {
 	const signed char array[10];
 	const signed char array[10][20];
 };
-#define A (const signed char)1
-#define A (const signed char (*)(void))1
-#define A (void (*)(const signed char))1
+#define A10 (const signed char)1
+#define A11 (const signed char (*)(void))1
+#define A12 (void (*)(const signed char))1
 
 extern unsigned char i;
 extern unsigned char *p;
@@ -83,9 +83,9 @@ struct UDT {
 	unsigned char array[10];
 	unsigned char array[10][20];
 };
-#define A (unsigned char)1
-#define A (unsigned char (*)(void))1
-#define A (void (*)(unsigned char))1
+#define A13 (unsigned char)1
+#define A14 (unsigned char (*)(void))1
+#define A15 (void (*)(unsigned char))1
 
 extern const unsigned char i;
 extern const unsigned char *p;
@@ -100,6 +100,6 @@ struct UDT {
 	const unsigned char array[10];
 	const unsigned char array[10][20];
 };
-#define A (const unsigned char)1
-#define A (const unsigned char (*)(void))1
-#define A (void (*)(const unsigned char))1
+#define A16 (const unsigned char)1
+#define A17 (const unsigned char (*)(void))1
+#define A18 (void (*)(const unsigned char))1

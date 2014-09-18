@@ -4,6 +4,7 @@
 
 // Temporarily redefined without parameter
 // (not even with different body, just without the parameter!)
+#undef A
 #define A
 A static int x; // A without arguments should be expanded now
 

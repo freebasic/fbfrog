@@ -28,10 +28,8 @@ declare sub ok()
 declare sub ok()
 
 #define __attribute__
-#define __cdecl
 #define __restrict
 #define __restrict__
-#define __stdcall
 #define auto
 #define break
 #define case

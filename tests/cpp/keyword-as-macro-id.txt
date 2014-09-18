@@ -1,71 +1,11 @@
 [1/5] __FB_WIN32__.__FB_64BIT__
       tests/cpp/keyword-as-macro-id.h
-/home/daniel/fbfrog/builtin.h(287): conflicting #define for '__cdecl', first one:
-    #define __cdecl __attribute__((__cdecl__))
-            ^~~~~~~
-tests/cpp/keyword-as-macro-id.h(132): conflicting #define for '__cdecl', new one:
-    #define __cdecl
-            ^~~~~~~
-/home/daniel/fbfrog/builtin.h(292): conflicting #define for '__stdcall', first one:
-    #define __stdcall __attribute__((__stdcall__))
-            ^~~~~~~~~
-tests/cpp/keyword-as-macro-id.h(135): conflicting #define for '__stdcall', new one:
-    #define __stdcall
-            ^~~~~~~~~
 [2/5] __FB_WIN32__.(not __FB_64BIT__)
       tests/cpp/keyword-as-macro-id.h
-/home/daniel/fbfrog/builtin.h(287): conflicting #define for '__cdecl', first one:
-    #define __cdecl __attribute__((__cdecl__))
-            ^~~~~~~
-tests/cpp/keyword-as-macro-id.h(132): conflicting #define for '__cdecl', new one:
-    #define __cdecl
-            ^~~~~~~
-/home/daniel/fbfrog/builtin.h(292): conflicting #define for '__stdcall', first one:
-    #define __stdcall __attribute__((__stdcall__))
-            ^~~~~~~~~
-tests/cpp/keyword-as-macro-id.h(135): conflicting #define for '__stdcall', new one:
-    #define __stdcall
-            ^~~~~~~~~
 [3/5] __FB_LINUX__.__FB_64BIT__
       tests/cpp/keyword-as-macro-id.h
-/home/daniel/fbfrog/builtin.h(287): conflicting #define for '__cdecl', first one:
-    #define __cdecl __attribute__((__cdecl__))
-            ^~~~~~~
-tests/cpp/keyword-as-macro-id.h(132): conflicting #define for '__cdecl', new one:
-    #define __cdecl
-            ^~~~~~~
-/home/daniel/fbfrog/builtin.h(292): conflicting #define for '__stdcall', first one:
-    #define __stdcall __attribute__((__stdcall__))
-            ^~~~~~~~~
-tests/cpp/keyword-as-macro-id.h(135): conflicting #define for '__stdcall', new one:
-    #define __stdcall
-            ^~~~~~~~~
 [4/5] __FB_LINUX__.(not __FB_64BIT__)
       tests/cpp/keyword-as-macro-id.h
-/home/daniel/fbfrog/builtin.h(287): conflicting #define for '__cdecl', first one:
-    #define __cdecl __attribute__((__cdecl__))
-            ^~~~~~~
-tests/cpp/keyword-as-macro-id.h(132): conflicting #define for '__cdecl', new one:
-    #define __cdecl
-            ^~~~~~~
-/home/daniel/fbfrog/builtin.h(292): conflicting #define for '__stdcall', first one:
-    #define __stdcall __attribute__((__stdcall__))
-            ^~~~~~~~~
-tests/cpp/keyword-as-macro-id.h(135): conflicting #define for '__stdcall', new one:
-    #define __stdcall
-            ^~~~~~~~~
 [5/5] __FB_DOS__
       tests/cpp/keyword-as-macro-id.h
-/home/daniel/fbfrog/builtin.h(287): conflicting #define for '__cdecl', first one:
-    #define __cdecl __attribute__((__cdecl__))
-            ^~~~~~~
-tests/cpp/keyword-as-macro-id.h(132): conflicting #define for '__cdecl', new one:
-    #define __cdecl
-            ^~~~~~~
-/home/daniel/fbfrog/builtin.h(292): conflicting #define for '__stdcall', first one:
-    #define __stdcall __attribute__((__stdcall__))
-            ^~~~~~~~~
-tests/cpp/keyword-as-macro-id.h(135): conflicting #define for '__stdcall', new one:
-    #define __stdcall
-            ^~~~~~~~~
-emitting: tests/cpp/keyword-as-macro-id.bi (72 declarations, 0 TODOs)
+emitting: tests/cpp/keyword-as-macro-id.bi (70 declarations, 0 TODOs)

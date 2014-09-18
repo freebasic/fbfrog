@@ -1,18 +1,16 @@
-// @fbfrog -select -case __FB_DOS__ -define DOS -case __FB_LINUX__ -define LINUX -case __FB_WIN32__ -define WIN32 -endselect
-
 static int vardoslinuxwin32;
 
-#ifdef DOS
+#ifdef DJGPP
 	static int vardos;
 	struct UDTdos {
 		int fielddos;
 	};
-#elif defined LINUX
+#elif defined __linux__
 	static int varlinux;
 	struct UDTlinux {
 		int fieldlinux;
 	};
-#elif defined WIN32
+#elif defined _WIN32
 	static int varwin32;
 	struct UDTwin32 {
 		int fieldwin32;
@@ -21,7 +19,7 @@ static int vardoslinuxwin32;
 	#error "invalid target"
 #endif
 
-#if defined DOS || defined LINUX
+#if defined DJGPP || defined __linux__
 	static int vardoslinux;
 
 	struct UDTdoslinux1 {
@@ -29,7 +27,7 @@ static int vardoslinuxwin32;
 	};
 
 	struct UDTdoslinux2 {
-		#ifdef DOS
+		#ifdef DJGPP
 			int fielddos;
 		#else
 			int fieldlinux;
@@ -42,11 +40,11 @@ struct UDTdoslinuxwin32 {
 };
 
 struct UDTfielddoslinuxwin32 {
-	#ifdef DOS
+	#ifdef DJGPP
 		int fielddos;
-	#elif defined LINUX
+	#elif defined __linux__
 		int fieldlinux;
-	#elif defined WIN32
+	#elif defined _WIN32
 		int fieldwin32;
 	#endif
 };

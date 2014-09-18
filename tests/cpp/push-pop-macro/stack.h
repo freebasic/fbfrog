@@ -2,10 +2,12 @@
 static int a_1 = A;
 
 #pragma push_macro("A")
+#undef A
 #define A 2
 static int b_2 = A;
 
 #pragma push_macro("A")
+#undef A
 #define A 3
 static int c_3 = A;
 

@@ -18,6 +18,9 @@ type UDT
 	array as zstring * 10
 	array(0 to 9) as zstring * 20
 end type
+#define A1 cbyte(1)
+#define A2 cptr(function() as byte, 1)
+#define A3 cptr(sub(byval as byte), 1)
 
 extern i as const byte
 extern p as const zstring ptr
@@ -33,6 +36,9 @@ type UDT
 	array as const zstring * 10
 	array(0 to 9) as const zstring * 20
 end type
+#define A4 cast(const byte, 1)
+#define A5 cptr(function() as const byte, 1)
+#define A6 cptr(sub(byval as const byte), 1)
 
 extern i as byte
 extern p as byte ptr
@@ -47,6 +53,9 @@ type UDT
 	array(0 to 9) as byte
 	array(0 to 9, 0 to 19) as byte
 end type
+#define A7 cbyte(1)
+#define A8 cptr(function() as byte, 1)
+#define A9 cptr(sub(byval as byte), 1)
 
 extern i as const byte
 extern p as const byte ptr
@@ -61,6 +70,9 @@ type UDT
 	array(0 to 9) as const byte
 	array(0 to 9, 0 to 19) as const byte
 end type
+#define A10 cast(const byte, 1)
+#define A11 cptr(function() as const byte, 1)
+#define A12 cptr(sub(byval as const byte), 1)
 
 extern i as ubyte
 extern p as ubyte ptr
@@ -75,6 +87,9 @@ type UDT
 	array(0 to 9) as ubyte
 	array(0 to 9, 0 to 19) as ubyte
 end type
+#define A13 cubyte(1)
+#define A14 cptr(function() as ubyte, 1)
+#define A15 cptr(sub(byval as ubyte), 1)
 
 extern i as const ubyte
 extern p as const ubyte ptr
@@ -89,6 +104,8 @@ type UDT
 	array(0 to 9) as const ubyte
 	array(0 to 9, 0 to 19) as const ubyte
 end type
-#define A cptr(sub(byval as const ubyte), 1)
+#define A16 cast(const ubyte, 1)
+#define A17 cptr(function() as const ubyte, 1)
+#define A18 cptr(sub(byval as const ubyte), 1)
 
 end extern

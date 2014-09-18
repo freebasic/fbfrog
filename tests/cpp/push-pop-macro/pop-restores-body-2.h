@@ -3,6 +3,7 @@
 #pragma push_macro("A")
 
 // Temporarily redefined with empty body
+#undef A
 #define A
 A static int x;
 
