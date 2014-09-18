@@ -443,10 +443,10 @@ private function hSolveOutProcTypedefSubtype( byval n as ASTNODE ptr, byval type
 	case ASTCLASS_TYPEDEF
 		hExpandProcTypedef( n, typedef )
 
-	'' We can expand function typedefs into a parameter too, if the
-	'' parameter is a pointer to the function type. Having a plain function
-	'' type as parameter doesn't make sense though.
-	case ASTCLASS_PARAM
+	'' We can expand into parameters or function results, if its a pointer.
+	'' Having a plain function type as parameter or function result doesn't
+	'' make sense though.
+	case ASTCLASS_PROC, ASTCLASS_PARAM
 		if( typeGetPtrCount( n->dtype ) = 0 ) then
 			exit function
 		end if
