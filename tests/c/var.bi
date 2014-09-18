@@ -99,156 +99,156 @@ extern p as const sub()
 extern p as const sub()
 
 dim shared __procptrptr_nested_declarator as long
-extern p as typeof( sub() ) ptr
-extern p as typeof( sub() ) ptr
-extern p as typeof( sub() ) ptr
-extern p as typeof( sub() ) ptr
-extern p as typeof( sub() ) ptr
-extern p as typeof( sub() ) ptr
-extern p as typeof( sub() ) ptr
-extern p as typeof( sub() ) ptr
-extern p as typeof( sub() ) ptr
-extern p as typeof( sub() ) ptr
-extern p as typeof( sub() ) ptr
-extern p as typeof( sub() ) ptr
-extern p as typeof( sub() ) ptr
-extern p as typeof( sub() ) ptr
-extern p as typeof( sub() ) ptr
-extern p as typeof( sub() ) ptr
-extern p as typeof( sub() ) ptr
-extern p as typeof( sub() ) ptr
-extern p as typeof( sub() ) ptr
-extern p as typeof( sub() ) ptr
-extern p as typeof( sub() ) ptr
-extern p as typeof( sub() ) ptr
-extern p as typeof( sub() ) ptr
-extern p as typeof( sub() ) ptr
-extern p as typeof( sub() ) ptr
-extern p as typeof( sub() ) ptr
-extern p as typeof( sub() ) ptr
-extern p as typeof( sub() ) ptr
-extern p as typeof( sub() ) ptr
-extern p as typeof( sub() ) ptr
-extern p as typeof( sub() ) ptr
-extern p as typeof( sub() ) ptr
-extern p as typeof( sub() ) ptr
-extern p as typeof( sub() ) ptr
-extern p as typeof( sub() ) ptr
-extern p as typeof( sub() ) ptr
+extern p as typeof(sub()) ptr
+extern p as typeof(sub()) ptr
+extern p as typeof(sub()) ptr
+extern p as typeof(sub()) ptr
+extern p as typeof(sub()) ptr
+extern p as typeof(sub()) ptr
+extern p as typeof(sub()) ptr
+extern p as typeof(sub()) ptr
+extern p as typeof(sub()) ptr
+extern p as typeof(sub()) ptr
+extern p as typeof(sub()) ptr
+extern p as typeof(sub()) ptr
+extern p as typeof(sub()) ptr
+extern p as typeof(sub()) ptr
+extern p as typeof(sub()) ptr
+extern p as typeof(sub()) ptr
+extern p as typeof(sub()) ptr
+extern p as typeof(sub()) ptr
+extern p as typeof(sub()) ptr
+extern p as typeof(sub()) ptr
+extern p as typeof(sub()) ptr
+extern p as typeof(sub()) ptr
+extern p as typeof(sub()) ptr
+extern p as typeof(sub()) ptr
+extern p as typeof(sub()) ptr
+extern p as typeof(sub()) ptr
+extern p as typeof(sub()) ptr
+extern p as typeof(sub()) ptr
+extern p as typeof(sub()) ptr
+extern p as typeof(sub()) ptr
+extern p as typeof(sub()) ptr
+extern p as typeof(sub()) ptr
+extern p as typeof(sub()) ptr
+extern p as typeof(sub()) ptr
+extern p as typeof(sub()) ptr
+extern p as typeof(sub()) ptr
 
 dim shared __procptrptr_nested_declarator_consts_1 as long
-extern p as typeof( sub() ) const ptr
-extern p as typeof( sub() ) const ptr
-extern p as typeof( sub() ) const ptr
-extern p as typeof( sub() ) const ptr
-extern p as typeof( sub() ) const ptr
-extern p as typeof( sub() ) const ptr
-extern p as typeof( sub() ) const ptr
-extern p as typeof( sub() ) const ptr
-extern p as typeof( sub() ) const ptr
-extern p as typeof( sub() ) const ptr
-extern p as typeof( sub() ) const ptr
-extern p as typeof( sub() ) const ptr
-extern p as typeof( sub() ) const ptr
-extern p as typeof( sub() ) const ptr
-extern p as typeof( sub() ) const ptr
-extern p as typeof( sub() ) const ptr
-extern p as typeof( sub() ) const ptr
-extern p as typeof( sub() ) const ptr
-extern p as typeof( sub() ) const ptr
-extern p as typeof( sub() ) const ptr
-extern p as typeof( sub() ) const ptr
-extern p as typeof( sub() ) const ptr
-extern p as typeof( sub() ) const ptr
-extern p as typeof( sub() ) const ptr
-extern p as typeof( sub() ) const ptr
-extern p as typeof( sub() ) const ptr
-extern p as typeof( sub() ) const ptr
-extern p as typeof( sub() ) const ptr
-extern p as typeof( sub() ) const ptr
-extern p as typeof( sub() ) const ptr
-extern p as typeof( sub() ) const ptr
-extern p as typeof( sub() ) const ptr
-extern p as typeof( sub() ) const ptr
-extern p as typeof( sub() ) const ptr
-extern p as typeof( sub() ) const ptr
-extern p as typeof( sub() ) const ptr
+extern p as typeof(sub()) const ptr
+extern p as typeof(sub()) const ptr
+extern p as typeof(sub()) const ptr
+extern p as typeof(sub()) const ptr
+extern p as typeof(sub()) const ptr
+extern p as typeof(sub()) const ptr
+extern p as typeof(sub()) const ptr
+extern p as typeof(sub()) const ptr
+extern p as typeof(sub()) const ptr
+extern p as typeof(sub()) const ptr
+extern p as typeof(sub()) const ptr
+extern p as typeof(sub()) const ptr
+extern p as typeof(sub()) const ptr
+extern p as typeof(sub()) const ptr
+extern p as typeof(sub()) const ptr
+extern p as typeof(sub()) const ptr
+extern p as typeof(sub()) const ptr
+extern p as typeof(sub()) const ptr
+extern p as typeof(sub()) const ptr
+extern p as typeof(sub()) const ptr
+extern p as typeof(sub()) const ptr
+extern p as typeof(sub()) const ptr
+extern p as typeof(sub()) const ptr
+extern p as typeof(sub()) const ptr
+extern p as typeof(sub()) const ptr
+extern p as typeof(sub()) const ptr
+extern p as typeof(sub()) const ptr
+extern p as typeof(sub()) const ptr
+extern p as typeof(sub()) const ptr
+extern p as typeof(sub()) const ptr
+extern p as typeof(sub()) const ptr
+extern p as typeof(sub()) const ptr
+extern p as typeof(sub()) const ptr
+extern p as typeof(sub()) const ptr
+extern p as typeof(sub()) const ptr
+extern p as typeof(sub()) const ptr
 
 dim shared __procptrptr_nested_declarator_consts_2 as long
-extern p as typeof( const sub() ) ptr
-extern p as typeof( const sub() ) ptr
-extern p as typeof( const sub() ) ptr
-extern p as typeof( const sub() ) ptr
-extern p as typeof( const sub() ) ptr
-extern p as typeof( const sub() ) ptr
-extern p as typeof( const sub() ) ptr
-extern p as typeof( const sub() ) ptr
-extern p as typeof( const sub() ) ptr
-extern p as typeof( const sub() ) ptr
-extern p as typeof( const sub() ) ptr
-extern p as typeof( const sub() ) ptr
-extern p as typeof( const sub() ) ptr
-extern p as typeof( const sub() ) ptr
-extern p as typeof( const sub() ) ptr
-extern p as typeof( const sub() ) ptr
-extern p as typeof( const sub() ) ptr
-extern p as typeof( const sub() ) ptr
-extern p as typeof( const sub() ) ptr
-extern p as typeof( const sub() ) ptr
-extern p as typeof( const sub() ) ptr
-extern p as typeof( const sub() ) ptr
-extern p as typeof( const sub() ) ptr
-extern p as typeof( const sub() ) ptr
-extern p as typeof( const sub() ) ptr
-extern p as typeof( const sub() ) ptr
-extern p as typeof( const sub() ) ptr
-extern p as typeof( const sub() ) ptr
-extern p as typeof( const sub() ) ptr
-extern p as typeof( const sub() ) ptr
-extern p as typeof( const sub() ) ptr
-extern p as typeof( const sub() ) ptr
-extern p as typeof( const sub() ) ptr
-extern p as typeof( const sub() ) ptr
-extern p as typeof( const sub() ) ptr
-extern p as typeof( const sub() ) ptr
+extern p as typeof(const sub()) ptr
+extern p as typeof(const sub()) ptr
+extern p as typeof(const sub()) ptr
+extern p as typeof(const sub()) ptr
+extern p as typeof(const sub()) ptr
+extern p as typeof(const sub()) ptr
+extern p as typeof(const sub()) ptr
+extern p as typeof(const sub()) ptr
+extern p as typeof(const sub()) ptr
+extern p as typeof(const sub()) ptr
+extern p as typeof(const sub()) ptr
+extern p as typeof(const sub()) ptr
+extern p as typeof(const sub()) ptr
+extern p as typeof(const sub()) ptr
+extern p as typeof(const sub()) ptr
+extern p as typeof(const sub()) ptr
+extern p as typeof(const sub()) ptr
+extern p as typeof(const sub()) ptr
+extern p as typeof(const sub()) ptr
+extern p as typeof(const sub()) ptr
+extern p as typeof(const sub()) ptr
+extern p as typeof(const sub()) ptr
+extern p as typeof(const sub()) ptr
+extern p as typeof(const sub()) ptr
+extern p as typeof(const sub()) ptr
+extern p as typeof(const sub()) ptr
+extern p as typeof(const sub()) ptr
+extern p as typeof(const sub()) ptr
+extern p as typeof(const sub()) ptr
+extern p as typeof(const sub()) ptr
+extern p as typeof(const sub()) ptr
+extern p as typeof(const sub()) ptr
+extern p as typeof(const sub()) ptr
+extern p as typeof(const sub()) ptr
+extern p as typeof(const sub()) ptr
+extern p as typeof(const sub()) ptr
 
 dim shared __procptrptr_nested_declarator_consts_3 as long
-extern p as typeof( const sub() ) const ptr
-extern p as typeof( const sub() ) const ptr
-extern p as typeof( const sub() ) const ptr
-extern p as typeof( const sub() ) const ptr
-extern p as typeof( const sub() ) const ptr
-extern p as typeof( const sub() ) const ptr
-extern p as typeof( const sub() ) const ptr
-extern p as typeof( const sub() ) const ptr
-extern p as typeof( const sub() ) const ptr
-extern p as typeof( const sub() ) const ptr
-extern p as typeof( const sub() ) const ptr
-extern p as typeof( const sub() ) const ptr
-extern p as typeof( const sub() ) const ptr
-extern p as typeof( const sub() ) const ptr
-extern p as typeof( const sub() ) const ptr
-extern p as typeof( const sub() ) const ptr
-extern p as typeof( const sub() ) const ptr
-extern p as typeof( const sub() ) const ptr
-extern p as typeof( const sub() ) const ptr
-extern p as typeof( const sub() ) const ptr
-extern p as typeof( const sub() ) const ptr
-extern p as typeof( const sub() ) const ptr
-extern p as typeof( const sub() ) const ptr
-extern p as typeof( const sub() ) const ptr
-extern p as typeof( const sub() ) const ptr
-extern p as typeof( const sub() ) const ptr
-extern p as typeof( const sub() ) const ptr
-extern p as typeof( const sub() ) const ptr
-extern p as typeof( const sub() ) const ptr
-extern p as typeof( const sub() ) const ptr
-extern p as typeof( const sub() ) const ptr
-extern p as typeof( const sub() ) const ptr
-extern p as typeof( const sub() ) const ptr
-extern p as typeof( const sub() ) const ptr
-extern p as typeof( const sub() ) const ptr
-extern p as typeof( const sub() ) const ptr
+extern p as typeof(const sub()) const ptr
+extern p as typeof(const sub()) const ptr
+extern p as typeof(const sub()) const ptr
+extern p as typeof(const sub()) const ptr
+extern p as typeof(const sub()) const ptr
+extern p as typeof(const sub()) const ptr
+extern p as typeof(const sub()) const ptr
+extern p as typeof(const sub()) const ptr
+extern p as typeof(const sub()) const ptr
+extern p as typeof(const sub()) const ptr
+extern p as typeof(const sub()) const ptr
+extern p as typeof(const sub()) const ptr
+extern p as typeof(const sub()) const ptr
+extern p as typeof(const sub()) const ptr
+extern p as typeof(const sub()) const ptr
+extern p as typeof(const sub()) const ptr
+extern p as typeof(const sub()) const ptr
+extern p as typeof(const sub()) const ptr
+extern p as typeof(const sub()) const ptr
+extern p as typeof(const sub()) const ptr
+extern p as typeof(const sub()) const ptr
+extern p as typeof(const sub()) const ptr
+extern p as typeof(const sub()) const ptr
+extern p as typeof(const sub()) const ptr
+extern p as typeof(const sub()) const ptr
+extern p as typeof(const sub()) const ptr
+extern p as typeof(const sub()) const ptr
+extern p as typeof(const sub()) const ptr
+extern p as typeof(const sub()) const ptr
+extern p as typeof(const sub()) const ptr
+extern p as typeof(const sub()) const ptr
+extern p as typeof(const sub()) const ptr
+extern p as typeof(const sub()) const ptr
+extern p as typeof(const sub()) const ptr
+extern p as typeof(const sub()) const ptr
+extern p as typeof(const sub()) const ptr
 
 sub f1()
 	dim a as long

@@ -66,7 +66,7 @@ function emitType overload _
 		'' (alternatively a typedef could be used)
 		var add_typeof = (dt = TYPE_PROC) and (ptrcount >= 2)
 		if( add_typeof ) then
-			s += "typeof( "
+			s += "typeof("
 		end if
 
 		select case( dt )
@@ -95,7 +95,7 @@ function emitType overload _
 		end select
 
 		if( add_typeof ) then
-			s += " )"
+			s += ")"
 		end if
 
 		'' Ignore most-inner PTR on function pointers -- in FB it's already

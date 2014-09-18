@@ -14,15 +14,15 @@ declare function f4(byval i as long) as long
 declare function x4(byval i as long) as long
 
 dim shared p1 as function(byval i as long) as long
-dim shared p2 as typeof( function(byval i as long) as long ) ptr
-dim shared p3 as typeof( function(byval i as long) as long ) ptr ptr
+dim shared p2 as typeof(function(byval i as long) as long) ptr
+dim shared p3 as typeof(function(byval i as long) as long) ptr ptr
 
 type p4 as function(byval i as long) as long
 
 dim shared c1 as const function(byval i as long) as long
-dim shared c2 as typeof( function(byval i as long) as long ) const ptr
-dim shared c3 as typeof( const function(byval i as long) as long ) ptr
-dim shared c4 as typeof( const function(byval i as long) as long ) const ptr
+dim shared c2 as typeof(function(byval i as long) as long) const ptr
+dim shared c3 as typeof(const function(byval i as long) as long) ptr
+dim shared c4 as typeof(const function(byval i as long) as long) const ptr
 
 declare function qualified1(byval i as long) as long
 
