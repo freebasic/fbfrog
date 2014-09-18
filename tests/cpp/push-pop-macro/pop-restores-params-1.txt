@@ -1,31 +1,41 @@
 [1/5] __FB_WIN32__.__FB_64BIT__
       tests/cpp/push-pop-macro/pop-restores-params-1.h
-conflicting #define for 'A', first one:
-#define A
-conflicting #define for 'A', new one:
-#define A
+tests/cpp/push-pop-macro/pop-restores-params-1.h(1): conflicting #define for 'A', first one:
+    #define A
+            ^
+tests/cpp/push-pop-macro/pop-restores-params-1.h(7): conflicting #define for 'A', new one:
+    #define A(x)
+            ^
 [2/5] __FB_WIN32__.(not __FB_64BIT__)
       tests/cpp/push-pop-macro/pop-restores-params-1.h
-conflicting #define for 'A', first one:
-#define A
-conflicting #define for 'A', new one:
-#define A
+tests/cpp/push-pop-macro/pop-restores-params-1.h(1): conflicting #define for 'A', first one:
+    #define A
+            ^
+tests/cpp/push-pop-macro/pop-restores-params-1.h(7): conflicting #define for 'A', new one:
+    #define A(x)
+            ^
 [3/5] __FB_LINUX__.__FB_64BIT__
       tests/cpp/push-pop-macro/pop-restores-params-1.h
-conflicting #define for 'A', first one:
-#define A
-conflicting #define for 'A', new one:
-#define A
+tests/cpp/push-pop-macro/pop-restores-params-1.h(1): conflicting #define for 'A', first one:
+    #define A
+            ^
+tests/cpp/push-pop-macro/pop-restores-params-1.h(7): conflicting #define for 'A', new one:
+    #define A(x)
+            ^
 [4/5] __FB_LINUX__.(not __FB_64BIT__)
       tests/cpp/push-pop-macro/pop-restores-params-1.h
-conflicting #define for 'A', first one:
-#define A
-conflicting #define for 'A', new one:
-#define A
+tests/cpp/push-pop-macro/pop-restores-params-1.h(1): conflicting #define for 'A', first one:
+    #define A
+            ^
+tests/cpp/push-pop-macro/pop-restores-params-1.h(7): conflicting #define for 'A', new one:
+    #define A(x)
+            ^
 [5/5] __FB_DOS__
       tests/cpp/push-pop-macro/pop-restores-params-1.h
-conflicting #define for 'A', first one:
-#define A
-conflicting #define for 'A', new one:
-#define A
+tests/cpp/push-pop-macro/pop-restores-params-1.h(1): conflicting #define for 'A', first one:
+    #define A
+            ^
+tests/cpp/push-pop-macro/pop-restores-params-1.h(7): conflicting #define for 'A', new one:
+    #define A(x)
+            ^
 emitting: tests/cpp/push-pop-macro/pop-restores-params-1.bi (2 declarations, 0 TODOs)

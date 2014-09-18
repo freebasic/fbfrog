@@ -444,7 +444,7 @@ function hDefineHead( byref x as integer ) as ASTNODE ptr
 	case KW_DEFINED
 		tkOops( x, "'defined' cannot be used as macro name" )
 	end select
-	var macro = astNewPPDEFINE( tkSpellId( x ) )
+	var macro = astTakeLoc( astNewPPDEFINE( tkSpellId( x ) ), x )
 	x += 1
 
 	hMacroParamList( x, macro )
@@ -492,6 +492,21 @@ private sub definfoCopyBody( byval definfo as DEFINEINFO ptr, byval x as integer
 	assert( x > definfo->xeol )
 	tkCopy( x, definfo->xbody, definfo->xeol - 1 )
 end sub
+
+'' Compare two #defines and determine whether they are equal
+private function definfoDefinesAreEqual( byval a as DEFINEINFO ptr, byval b as DEFINEINFO ptr ) as integer
+	'' Check name and parameters
+	if( astIsEqual( a->macro, b->macro ) = FALSE ) then
+		exit function
+	end if
+
+	'' Check body
+	if( tkSpell( a->xbody, a->xeol ) <> tkSpell( b->xbody, b->xeol ) ) then
+		exit function
+	end if
+
+	function = TRUE
+end function
 
 type SAVEDMACRO
 	id		as zstring ptr		'' Macro's name
@@ -2128,19 +2143,19 @@ private sub cppDefine( byval begin as integer, byref setremove as integer )
 	assert( tkGet( xeol ) = TK_EOL )
 	cpp.x += 1
 
-	'' Report conflicting #defines
-	var prevdef = cppLookupMacro( macro->text )
-	if( prevdef ) then
-		if( astIsEqual( macro, prevdef->macro ) = FALSE ) then
-			hReportConflictingDefine( macro, prevdef->macro )
-		end if
-	end if
-
 	var definfo = definfoNew( )
 	definfo->xdefine = begin
 	definfo->xbody = xbody
 	definfo->xeol = xeol
 	definfo->macro = macro
+
+	'' Report conflicting #defines
+	var prevdef = cppLookupMacro( macro->text )
+	if( prevdef ) then
+		if( definfoDefinesAreEqual( prevdef, definfo ) = FALSE ) then
+			hReportConflictingDefine( macro, prevdef->macro )
+		end if
+	end if
 
 	cppDefineMacro( macro->text, definfo )
 
