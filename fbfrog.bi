@@ -513,6 +513,8 @@ const TYPEMAX_PTR = 8
 	 ((dt and TYPEMASK_CONST) shl count))
 #define typeGetConst( dt ) ((dt) and TYPEMASK_CONST)
 
+declare function typeUnsetBaseConst( byval dtype as integer ) as integer
+
 enum
 	'' Internal helper nodes
 	ASTCLASS_GROUP = 0

@@ -368,32 +368,71 @@ sub astSolveOutArrayTypedefs( byval n as ASTNODE ptr, byval ast as ASTNODE ptr )
 	wend
 end sub
 
+private sub hExpandProcTypedef( byval n as ASTNODE ptr, byval typedef as ASTNODE ptr )
+	'' variable/field/typedef declarations such as
+	''    a *p1;
+	'' become function pointers:
+	''    int (*p1)(int);
+	''
+	'' This should preserve CONSTs:
+	''    a * const p1;
+	'' becomes:
+	''    int (* const p1)(int);
+	'' But as above, cv-qualifiers on the function type
+	'' don't make sense and should be ignored, e.g.:
+	''    a const * p1;
+
+	assert( typeGetDtAndPtr( typedef->dtype ) = TYPE_PROC )
+	astSetType( n, typeUnsetBaseConst( typeSetDt( n->dtype, TYPE_PROC ) ), typedef->subtype )
+end sub
+
 private sub hSolveOutProcTypedefSubtype( byval n as ASTNODE ptr, byval typedef as ASTNODE ptr )
 	'' Given a function typedef such as
 	''    typedef int (a)(int);
+	assert( typeGetDtAndPtr( typedef->dtype ) = TYPE_PROC )
+
+	'' We want to update the given declaration which uses this typedef.
+	assert( typeGetDt( n->dtype ) = TYPE_UDT )
 
 	select case( n->class )
-	'' variable/field declarations such as
-	''    a f1;
-	'' must be turned into procedure declarations (solving out the typedef):
-	''    int (f1)(int);
 	case ASTCLASS_VAR, ASTCLASS_FIELD
-		assert( typeGetDtAndPtr( typedef->dtype ) = TYPE_PROC )
-		var proc = typedef->subtype
-		assert( proc->class = ASTCLASS_PROC )
+		'' The var/field uses the typedef as data type, either plain,
+		'' or as pointer to it. In the former case, the var/field itself
+		'' becomes the function. In case it's just a pointer, it becomes
+		'' a function pointer.
 
-		'' Copy function result type
-		astSetType( n, proc->dtype, proc->subtype )
+		if( typeGetPtrCount( n->dtype ) = 0 ) then
+			var proc = typedef->subtype
+			assert( proc->class = ASTCLASS_PROC )
 
-		'' Copy over the parameters
-		assert( n->head = NULL )
-		astAppend( n, astCloneChildren( proc ) )
+			'' variable/field declarations such as
+			''    a f1;
+			'' must be turned into procedure declarations (solving out the typedef):
+			''    int (f1)(int);
+			''
+			'' If there's a CONST on the function type, e.g.:
+			''    typedef int (T)(int);
+			''    T const f;
+			'' it will be overwritten and lost, i.e. we ignore it.
+			'' According to gcc -pedantic, "ISO C forbids qualified
+			'' function types", and it seems like the C++ standard
+			'' requires cv-qualifiers to be ignored in such cases.
 
-		'' Copy attributes (especially calling convention)
-		n->attrib or= proc->attrib
+			'' Function result type
+			astSetType( n, proc->dtype, proc->subtype )
 
-		'' Turn into a procedure
-		n->class = ASTCLASS_PROC
+			'' Parameters
+			assert( n->head = NULL )
+			astAppend( n, astCloneChildren( proc ) )
+
+			'' Attributes, e.g. calling convention
+			n->attrib or= proc->attrib
+
+			'' Turn into a procedure
+			n->class = ASTCLASS_PROC
+		else
+			hExpandProcTypedef( n, typedef )
+		end if
 
 	'' It's also possible that the typedef is used as type in another
 	'' typedef:
@@ -402,7 +441,7 @@ private sub hSolveOutProcTypedefSubtype( byval n as ASTNODE ptr, byval typedef a
 	''    typedef int (b)(int);
 	'' and then later solve out 'b' in the same way everywhere it's used.
 	case ASTCLASS_TYPEDEF
-		astSetType( n, typedef->dtype, typedef->subtype )
+		hExpandProcTypedef( n, typedef )
 
 	case else
 		oops( "can't solve out " + astDumpPrettyDecl( typedef ) + " in " + astDumpPrettyDecl( n ) )
@@ -415,7 +454,7 @@ private sub hSolveOutProcTypedefSubtypes _
 		byval typedef as ASTNODE ptr _
 	)
 
-	if( typeGetDtAndPtr( n->dtype ) = TYPE_UDT ) then
+	if( typeGetDt( n->dtype ) = TYPE_UDT ) then
 		if( n->subtype->class = ASTCLASS_ID ) then
 			if( *n->subtype->text = *typedef->text ) then
 				hSolveOutProcTypedefSubtype( n, typedef )
@@ -425,6 +464,7 @@ private sub hSolveOutProcTypedefSubtypes _
 		end if
 	end if
 
+	'if( n->subtype ) then hSolveOutProcTypedefSubtypes( n->subtype, typedef )
 	if( n->array ) then hSolveOutProcTypedefSubtypes( n->array, typedef )
 	if( n->expr  ) then hSolveOutProcTypedefSubtypes( n->expr , typedef )
 

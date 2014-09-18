@@ -2,6 +2,10 @@
 
 #include once "fbfrog.bi"
 
+function typeUnsetBaseConst( byval dtype as integer ) as integer
+	function = dtype and (not (1 shl (TYPEPOS_CONST + typeGetPtrCount( dtype ))))
+end function
+
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 dim shared as zstring ptr astnodename(0 to ...) => _

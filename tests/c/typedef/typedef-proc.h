@@ -18,3 +18,20 @@ void x3(int a, short b, float c, double);
 typedef T1 T4;
 T4 f4;
 int x4(int i);
+
+// Should expand into pointers too (it becomes a function pointer)
+static T1 *p1;
+static T1 **p2;
+static T1 ***p3;
+typedef T1 *p4;
+
+// CONSTs should be preserved when expanding
+static T1 * const c1;
+static T1 * * const c2;
+static T1 * const * c3;
+static T1 * const * const c4;
+
+// cv-qualifiers on function types should be ignored
+T1 const qualified1;
+static T1 const *qualified2;
+static T1 const * const qualified3;
