@@ -19,6 +19,8 @@ dim shared p3 as typeof(function(byval i as long) as long) ptr ptr
 
 type p4 as function(byval i as long) as long
 
+declare sub p5(byval param as function(byval i as long) as long)
+
 dim shared c1 as const function(byval i as long) as long
 dim shared c2 as typeof(function(byval i as long) as long) const ptr
 dim shared c3 as typeof(const function(byval i as long) as long) ptr

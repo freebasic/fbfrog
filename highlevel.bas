@@ -386,7 +386,7 @@ private sub hExpandProcTypedef( byval n as ASTNODE ptr, byval typedef as ASTNODE
 	astSetType( n, typeUnsetBaseConst( typeSetDt( n->dtype, TYPE_PROC ) ), typedef->subtype )
 end sub
 
-private sub hSolveOutProcTypedefSubtype( byval n as ASTNODE ptr, byval typedef as ASTNODE ptr )
+private function hSolveOutProcTypedefSubtype( byval n as ASTNODE ptr, byval typedef as ASTNODE ptr ) as integer
 	'' Given a function typedef such as
 	''    typedef int (a)(int);
 	assert( typeGetDtAndPtr( typedef->dtype ) = TYPE_PROC )
@@ -443,10 +443,22 @@ private sub hSolveOutProcTypedefSubtype( byval n as ASTNODE ptr, byval typedef a
 	case ASTCLASS_TYPEDEF
 		hExpandProcTypedef( n, typedef )
 
+	'' We can expand function typedefs into a parameter too, if the
+	'' parameter is a pointer to the function type. Having a plain function
+	'' type as parameter doesn't make sense though.
+	case ASTCLASS_PARAM
+		if( typeGetPtrCount( n->dtype ) = 0 ) then
+			exit function
+		end if
+
+		hExpandProcTypedef( n, typedef )
+
 	case else
-		oops( "can't solve out " + astDumpPrettyDecl( typedef ) + " in " + astDumpPrettyDecl( n ) )
+		exit function
 	end select
-end sub
+
+	function = TRUE
+end function
 
 private sub hSolveOutProcTypedefSubtypes _
 	( _
@@ -457,7 +469,9 @@ private sub hSolveOutProcTypedefSubtypes _
 	if( typeGetDt( n->dtype ) = TYPE_UDT ) then
 		if( n->subtype->class = ASTCLASS_ID ) then
 			if( *n->subtype->text = *typedef->text ) then
-				hSolveOutProcTypedefSubtype( n, typedef )
+				if( hSolveOutProcTypedefSubtype( n, typedef ) = FALSE ) then
+					oops( "can't solve out " + astDumpPrettyDecl( typedef ) + " in " + astDumpPrettyDecl( n ) )
+				end if
 			end if
 		else
 			hSolveOutProcTypedefSubtypes( n->subtype, typedef )
