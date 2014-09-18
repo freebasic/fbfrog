@@ -13,3 +13,8 @@ __attribute__((stdcall)) void x2(void);
 typedef void T3(int a, short b, float c, double);
 T3 f3;
 void x3(int a, short b, float c, double);
+
+// Typedefs should be processed recursively
+typedef T1 T4;
+T4 f4;
+int x4(int i);

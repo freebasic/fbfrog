@@ -10,5 +10,7 @@ declare sub f2 stdcall()
 declare sub x2 stdcall()
 declare sub f3(byval a as long, byval b as short, byval c as single, byval as double)
 declare sub x3(byval a as long, byval b as short, byval c as single, byval as double)
+declare function f4(byval i as long) as long
+declare function x4(byval i as long) as long
 
 end extern

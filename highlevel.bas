@@ -368,6 +368,47 @@ sub astSolveOutArrayTypedefs( byval n as ASTNODE ptr, byval ast as ASTNODE ptr )
 	wend
 end sub
 
+private sub hSolveOutProcTypedefSubtype( byval n as ASTNODE ptr, byval typedef as ASTNODE ptr )
+	'' Given a function typedef such as
+	''    typedef int (a)(int);
+
+	select case( n->class )
+	'' variable/field declarations such as
+	''    a f1;
+	'' must be turned into procedure declarations (solving out the typedef):
+	''    int (f1)(int);
+	case ASTCLASS_VAR, ASTCLASS_FIELD
+		assert( typeGetDtAndPtr( typedef->dtype ) = TYPE_PROC )
+		var proc = typedef->subtype
+		assert( proc->class = ASTCLASS_PROC )
+
+		'' Copy function result type
+		astSetType( n, proc->dtype, proc->subtype )
+
+		'' Copy over the parameters
+		assert( n->head = NULL )
+		astAppend( n, astCloneChildren( proc ) )
+
+		'' Copy attributes (especially calling convention)
+		n->attrib or= proc->attrib
+
+		'' Turn into a procedure
+		n->class = ASTCLASS_PROC
+
+	'' It's also possible that the typedef is used as type in another
+	'' typedef:
+	''    typedef a b;
+	'' In this case we want to expand 'a' in the 'b' typedef:
+	''    typedef int (b)(int);
+	'' and then later solve out 'b' in the same way everywhere it's used.
+	case ASTCLASS_TYPEDEF
+		astSetType( n, typedef->dtype, typedef->subtype )
+
+	case else
+		oops( "can't solve out " + astDumpPrettyDecl( typedef ) + " in " + astDumpPrettyDecl( n ) )
+	end select
+end sub
+
 private sub hSolveOutProcTypedefSubtypes _
 	( _
 		byval n as ASTNODE ptr, _
@@ -377,27 +418,7 @@ private sub hSolveOutProcTypedefSubtypes _
 	if( typeGetDtAndPtr( n->dtype ) = TYPE_UDT ) then
 		if( n->subtype->class = ASTCLASS_ID ) then
 			if( *n->subtype->text = *typedef->text ) then
-				select case( n->class )
-				case ASTCLASS_VAR, ASTCLASS_FIELD
-					assert( typeGetDtAndPtr( typedef->dtype ) = TYPE_PROC )
-					var proc = typedef->subtype
-					assert( proc->class = ASTCLASS_PROC )
-
-					'' Copy function result type
-					astSetType( n, proc->dtype, proc->subtype )
-
-					'' Copy over the parameters
-					assert( n->head = NULL )
-					astAppend( n, astCloneChildren( proc ) )
-
-					'' Copy attributes (especially calling convention)
-					n->attrib or= proc->attrib
-
-					'' Turn into a procedure
-					n->class = ASTCLASS_PROC
-				case else
-					oops( "can't solve out " + astDumpPrettyDecl( typedef ) + " in " + astDumpPrettyDecl( n ) )
-				end select
+				hSolveOutProcTypedefSubtype( n, typedef )
 			end if
 		else
 			hSolveOutProcTypedefSubtypes( n->subtype, typedef )
