@@ -881,8 +881,6 @@ private function cPragmaPackNumber( ) as integer
 end function
 
 private function cPragmaPack( ) as ASTNODE ptr
-	x += 1
-
 	'' pack
 	assert( tkGet( x ) = TK_ID )
 	assert( tkSpell( x ) = "pack" )
@@ -949,6 +947,63 @@ private function cPragmaPack( ) as ASTNODE ptr
 
 	'' Don't preserve the directive
 	function = astNewGROUP( )
+end function
+
+'' #pragma comment(lib, "...")
+function cPragmaComment( ) as ASTNODE ptr
+	'' comment
+	assert( tkGet( x ) = TK_ID )
+	assert( tkSpell( x ) = "comment" )
+	x += 1
+
+	'' '('
+	assert( tkGet( x ) = TK_LPAREN )
+	x += 1
+
+	'' lib
+	assert( tkGet( x ) = TK_ID )
+	assert( tkSpell( x ) = "lib" )
+	x += 1
+
+	'' ','
+	assert( tkGet( x ) = TK_COMMA )
+	x += 1
+
+	'' "<library-file-name>"
+	assert( tkGet( x ) = TK_STRING )
+	var libname = *tkGetText( x )
+	x += 1
+
+	'' ')'
+	assert( tkGet( x ) = TK_RPAREN )
+	x += 1
+
+	assert( tkGet( x ) = TK_EOL )
+	x += 1
+
+	''
+	'' Turn the #pragma comment(lib, "...") into #inclib "..."
+	''
+	'' It seems to be common to specify the library's full file name in the
+	'' #pragma directive, i.e. "foo.lib". In FB it must be #inclib "foo"
+	'' though, no extension or lib prefix. Thus, we need to do some
+	'' conversion.
+	''
+	'' Besides "foo.lib", we also handle "libfoo.a" here which is another
+	'' common library file name format. Anything else should probably be
+	'' passed through as-is though.
+	''
+
+	'' Remove .lib suffix
+	if( right( libname, 4 ) = ".lib" ) then
+		libname = left( libname, len( libname ) - 4 )
+	'' Remove lib prefix and .a suffix
+	elseif( (left( libname, 3 ) = "lib") and (right( libname, 2 ) = ".a") ) then
+		libname = right( libname, len( libname ) - 3 )
+		libname = left( libname, len( libname ) - 2 )
+	end if
+
+	function = astNew( ASTCLASS_INCLIB, libname )
 end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -1794,7 +1849,14 @@ private function cConstruct( byval body as integer ) as ASTNODE ptr
 			case "include"
 				directive = cInclude( )
 			case "pragma"
-				directive = cPragmaPack( )
+				x += 1
+
+				select case( tkSpell( x ) )
+				case "pack"
+					directive = cPragmaPack( )
+				case "comment"
+					directive = cPragmaComment( )
+				end select
 			end select
 		end if
 

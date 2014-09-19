@@ -53,6 +53,7 @@ What's this?
    * Named enum => type enumname as long + anonymous enum
      (C enums/ints stay 32bit on 64bit, so in FB we have to use the always-32bit
      LONG type instead of the default ENUM/INTEGER type)
+   * #pragma comment(lib, "foo.lib"|"libfoo.a") => #inclib "foo"
 
   fbfrog has its own C pre-processor (CPP) and C parser capable of parsing most
   declarations. The C declarations (and also #defines if simple enough) are

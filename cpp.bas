@@ -2227,6 +2227,38 @@ private function cppPragma( byref setremove as integer ) as integer
 		tkExpect( cpp.x, TK_RPAREN, whatfor )
 		cpp.x += 1
 
+	'' MSVC:
+	'' #pragma comment(lib, "<library file name>")
+	case "comment"
+		cpp.x += 1
+
+		'' '('
+		tkExpect( cpp.x, TK_LPAREN, "for #pragma comment(...)" )
+		cpp.x += 1
+
+		select case( tkSpell( cpp.x ) )
+		case "lib"
+			cpp.x += 1
+
+			'' ','
+			tkExpect( cpp.x, TK_COMMA, "for #pragma comment(lib, ""..."")" )
+			cpp.x += 1
+
+			'' "..."
+			tkExpect( cpp.x, TK_STRING, "for #pragma comment(lib, ""..."")" )
+			cpp.x += 1
+
+			'' Preserve the #pragma comment(lib, "...") for the C parser
+			setremove = FALSE
+
+		case else
+			exit function
+		end select
+
+		'' ')'
+		tkExpect( cpp.x, TK_RPAREN, "for #pragma comment(...)" )
+		cpp.x += 1
+
 	case "GCC"
 		cpp.x += 1
 
