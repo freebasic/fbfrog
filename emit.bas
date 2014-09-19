@@ -321,8 +321,18 @@ private function hInitializer( byval n as ASTNODE ptr ) as string
 end function
 
 private sub emitVarDecl( byref prefix as string, byval n as ASTNODE ptr, byval is_extern as integer, byval comment as zstring ptr )
-	var s = prefix + hIdAndArray( n, is_extern ) + " as " + emitType( n )
+	var s = prefix
+
+	if( is_extern ) then
+		if( ((n->attrib and ASTATTRIB_EXTERN) <> 0) and _
+		    ((n->attrib and ASTATTRIB_DLLIMPORT) <> 0) ) then
+			s += "import "
+		end if
+	end if
+
+	s += hIdAndArray( n, is_extern ) + " as " + emitType( n )
 	if( is_extern = FALSE ) then s += hInitializer( n )
+
 	emitStmt( s, comment )
 end sub
 

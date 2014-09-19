@@ -683,6 +683,7 @@ function astDumpOne( byval n as ASTNODE ptr ) as string
 	checkAttrib( PACKED )
 	checkAttrib( VARIADIC )
 	checkAttrib( DUMMYID )
+	checkAttrib( DLLIMPORT )
 
 	if( n->text ) then
 		s += " """ + strMakePrintable( *n->text ) + """"

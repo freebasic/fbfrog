@@ -55,6 +55,11 @@ __attribute__((stdcall))     void f(void);
 __attribute__((__stdcall__)) void f(void);
 
 
+__attribute__((  dllimport  )) void f(void);
+__attribute__((__dllimport__)) void f(void);
+extern __attribute__((  dllimport  )) int i;
+extern __attribute__((__dllimport__)) int i;
+
 static int before_base_type;
 __attribute__((stdcall)) void f(void);
 

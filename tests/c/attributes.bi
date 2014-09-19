@@ -58,6 +58,11 @@ declare sub f stdcall()
 declare sub f stdcall()
 declare sub f stdcall()
 
+declare sub f()
+declare sub f()
+extern import i as long
+extern import i as long
+
 dim shared before_base_type as long
 declare sub f stdcall()
 

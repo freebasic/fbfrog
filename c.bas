@@ -666,6 +666,10 @@ private sub cGccAttribute( byref gccattribs as integer )
 		gccattribs or= ASTATTRIB_PACKED
 		x += 1
 
+	case "dllimport"
+		gccattribs or= ASTATTRIB_DLLIMPORT
+		x += 1
+
 	case else
 		cError( "unknown attribute '" + *tkSpellId( x ) + "'" )
 	end select

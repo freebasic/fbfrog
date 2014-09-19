@@ -659,6 +659,7 @@ const ASTATTRIB_PACKED        = 1 shl 16  '' __attribute__((packed))
 const ASTATTRIB_VARIADIC      = 1 shl 17  '' PPDEFINE/MACROPARAM: variadic macros
 const ASTATTRIB_PARENTHESIZEDMACROPARAM = 1 shl 18
 const ASTATTRIB_DUMMYID       = 1 shl 19
+const ASTATTRIB_DLLIMPORT     = 1 shl 20
 
 '' When changing, adjust astClone(), astIsEqual(), astDump*()
 type ASTNODE
