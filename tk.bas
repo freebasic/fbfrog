@@ -803,6 +803,13 @@ function hFindClosingParen( byval x as integer ) as integer
 			end if
 			level -= 1
 
+		'' Stop at # (CPP directives)
+		case TK_HASH
+			if( tkGetExpansionLevel( x ) = 0 ) then
+				x -= 1
+				exit do
+			end if
+
 		case TK_EOF
 			x -= 1
 			exit do

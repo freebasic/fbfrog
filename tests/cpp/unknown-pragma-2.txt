@@ -1,5 +1,8 @@
 [1/5] __FB_WIN32__.__FB_64BIT__
       tests/cpp/unknown-pragma-2.h
-unknown #pragma
-    extern "C" { # define M 123 static int i = 123 ; # pragma ? ? ? } 
-                                                              ^
+tests/cpp/unknown-pragma-2.h(8): unknown #pragma
+    #pragma ???
+            ^
+context as seen by fbfrog:
+    # pragma ? ? ? 
+             ^
