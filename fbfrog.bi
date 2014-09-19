@@ -401,7 +401,8 @@ declare sub tkDontReportContext( )
 declare sub tkEnd( )
 declare function hDumpComment( byval comment as zstring ptr ) as string
 declare function tkDumpOne( byval x as integer ) as string
-declare sub tkDump( )
+declare sub tkDump overload( byval first as integer, byval last as integer )
+declare sub tkDump overload( )
 declare function tkGetCount( ) as integer
 declare sub tkInsert _
 	( _

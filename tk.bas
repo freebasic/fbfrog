@@ -315,10 +315,14 @@ function tkDumpOne( byval x as integer ) as string
 	function = s
 end function
 
-sub tkDump( )
-	for i as integer = 0 to tk.size - 1
+sub tkDump overload( byval first as integer, byval last as integer )
+	for i as integer = first to last
 		print tkDumpOne( i )
 	next
+end sub
+
+sub tkDump overload( )
+	tkDump( 0, tk.size - 1 )
 end sub
 
 private sub hMoveTo( byval x as integer )
