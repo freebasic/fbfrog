@@ -1,0 +1,1 @@
+// @fbfrog -define A ''

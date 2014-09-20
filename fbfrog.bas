@@ -114,6 +114,9 @@ private function hTurnArgsIntoString( byval argc as integer, byval argv as zstri
 		elseif( instr( arg, any !""" \t\f\r\n\v" ) > 0 ) then
 			'' Enclose in '...', so no escaping is needed.
 			arg = "'" + arg + "'"
+		'' Empty? Represent it as ""
+		elseif( len( arg ) = 0 ) then
+			arg = """"""
 		end if
 
 		if( len( s ) > 0 ) then
