@@ -744,7 +744,7 @@ function tkSpell overload( byval x as integer ) as string
 	case TK_ID       : s = *text
 	case TK_ARGSFILE : s = "@" + *text
 
-	case TK_EXCL to TK_TILDE, KW__C_FIRST to KW__C_LAST, OPT_NOMERGE to OPT_RENAMETAG
+	case TK_EXCL to TK_TILDE, KW__C_FIRST to KW__C_LAST, OPT__FIRST to OPT__LAST
 		s = *tk_info(id).text
 
 	case else

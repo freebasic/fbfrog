@@ -43,7 +43,7 @@ end sub
 
 sub lexInit( )
 	hInitKeywords( @lex.ckeywords, KW__C_FIRST, KW__C_LAST )
-	hInitKeywords( @lex.frogoptions, OPT_NOMERGE, OPT_RENAMETAG )
+	hInitKeywords( @lex.frogoptions, OPT__FIRST, OPT__LAST )
 end sub
 
 private function hLookupKeyword _
