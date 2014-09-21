@@ -219,7 +219,6 @@ unnecessary?
 
 To do:
 
-* strContainsNonOctDigits and strContainsNonHexDigits are unused
 * -keyword foo option to allow fixing inter-header name conflicts manually
 * Dummy ids must be context-specific to avoid causing inter-header name conflicts.
 * Automatically detect #include guards and remove the left over #defines

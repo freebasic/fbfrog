@@ -122,8 +122,6 @@ declare function strReplace _
 		byref b as string _
 	) as string
 declare function strMakePrintable( byref a as string ) as string
-declare function strContainsNonHexDigits( byval s as zstring ptr ) as integer
-declare function strContainsNonOctDigits( byval s as zstring ptr ) as integer
 declare function strIsValidSymbolId( byval s as zstring ptr ) as integer
 declare function strMatch( byref s as string, byref pattern as string ) as integer
 
