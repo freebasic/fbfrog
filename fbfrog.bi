@@ -125,6 +125,7 @@ declare function strMakePrintable( byref a as string ) as string
 declare function strContainsNonHexDigits( byval s as zstring ptr ) as integer
 declare function strContainsNonOctDigits( byval s as zstring ptr ) as integer
 declare function strIsValidSymbolId( byval s as zstring ptr ) as integer
+declare function strMatch( byref s as string, byref pattern as string ) as integer
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
@@ -362,7 +363,8 @@ enum
 
 	TK_ARGSFILE
 	OPT__FIRST
-	OPT_NOMERGE = OPT__FIRST
+	OPT_FILTEROUT = OPT__FIRST
+	OPT_FILTERIN
 	OPT_WHITESPACE
 	OPT_WINDOWSMS
 	OPT_CONSTANTS
@@ -543,6 +545,8 @@ enum
 	ASTCLASS_REMOVEDEFINE
 	ASTCLASS_RENAMETYPEDEF
 	ASTCLASS_RENAMETAG
+	ASTCLASS_FILTEROUT
+	ASTCLASS_FILTERIN
 	ASTCLASS_INCLIB
 	ASTCLASS_PRAGMAONCE
 
@@ -885,6 +889,7 @@ declare function hDefineHead( byref x as integer ) as ASTNODE ptr
 declare sub cppInit( )
 declare sub cppNoExpandSym( byval id as zstring ptr )
 declare sub cppRemoveSym( byval id as zstring ptr )
+declare sub cppAddFilter( byval filter as ASTNODE ptr )
 declare sub cppMain( )
 declare function cFile( ) as ASTNODE ptr
 
@@ -896,7 +901,7 @@ type FROGVERSION
 end type
 
 namespace frog
-	extern as integer verbose, nomerge, whitespace
+	extern as integer verbose, whitespace
 	extern incdirs as ASTNODE ptr
 
 	extern as ASTNODE ptr script

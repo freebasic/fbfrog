@@ -1,0 +1,31 @@
+[1/5] __FB_WIN32__.__FB_64BIT__
+      tests/cpp/filter/matching/main-8.h
+      tests/cpp/filter/matching/aaa.h
+      tests/cpp/filter/matching/aab.h
+      tests/cpp/filter/matching/abb.h
+      tests/cpp/filter/matching/bbb.h
+[2/5] __FB_WIN32__.(not __FB_64BIT__)
+      tests/cpp/filter/matching/main-8.h
+      tests/cpp/filter/matching/aaa.h
+      tests/cpp/filter/matching/aab.h
+      tests/cpp/filter/matching/abb.h
+      tests/cpp/filter/matching/bbb.h
+[3/5] __FB_LINUX__.__FB_64BIT__
+      tests/cpp/filter/matching/main-8.h
+      tests/cpp/filter/matching/aaa.h
+      tests/cpp/filter/matching/aab.h
+      tests/cpp/filter/matching/abb.h
+      tests/cpp/filter/matching/bbb.h
+[4/5] __FB_LINUX__.(not __FB_64BIT__)
+      tests/cpp/filter/matching/main-8.h
+      tests/cpp/filter/matching/aaa.h
+      tests/cpp/filter/matching/aab.h
+      tests/cpp/filter/matching/abb.h
+      tests/cpp/filter/matching/bbb.h
+[5/5] __FB_DOS__
+      tests/cpp/filter/matching/main-8.h
+      tests/cpp/filter/matching/aaa.h
+      tests/cpp/filter/matching/aab.h
+      tests/cpp/filter/matching/abb.h
+      tests/cpp/filter/matching/bbb.h
+emitting: tests/cpp/filter/matching/main-8.bi (4 declarations, 0 TODOs)

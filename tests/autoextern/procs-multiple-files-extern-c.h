@@ -1,4 +1,4 @@
-// @fbfrog <dir>procs-multiple-files-extern-windows.h -nomerge
+// @fbfrog <dir>procs-multiple-files-extern-windows.h -filterout '*'
 
 void f1(void);
 void f2(void);

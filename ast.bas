@@ -34,6 +34,8 @@ dim shared as zstring ptr astnodename(0 to ...) => _
 	@"removedefine" , _
 	@"renametypedef", _
 	@"renametag"    , _
+	@"filterout"    , _
+	@"filterin"     , _
 	@"inclib"       , _
 	@"pragmaonce"   , _
 	_

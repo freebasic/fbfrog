@@ -1,4 +1,4 @@
-// @fbfrog <dir>mixed-multiple-files-extern-windows.h -nomerge
+// @fbfrog <dir>mixed-multiple-files-extern-windows.h -filterout '*'
 
 extern int i1;
 extern int i2;

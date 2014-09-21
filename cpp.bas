@@ -45,8 +45,14 @@
 ''
 '' Tokens inserted due to #include expansion are enclosed in TK_BEGININCLUDE and
 '' TK_ENDINCLUDE. This allows detecting #include EOF for the #if/#include stack,
-'' and enables the -nomerge option, where none of the #included tokens will be
-'' preserved (not just directives).
+'' and allows us to remove #included tokens as wanted for the -filterout and
+'' -filterin options. This way we can #include the file temporarily to get to
+'' see #defines and #undefs etc., but can still exclude it before it reaches
+'' the C parser. We cannot do tkSetRemove() on all the #included tokens
+'' immediately after inserting them though, because we may do macro expansion
+'' which may result in new tokens. Thus we have to do the tkSetRemove() later
+'' when reaching the TK_ENDINCLUDE (cppEndInclude()), when the #included tokens
+'' don't change anymore.
 ''
 '' cppNoExpandSym() can be used to disable macro expansion for certain symbols.
 '' This should be pretty rare though; usually in headers where function
@@ -576,6 +582,10 @@ namespace cpp
 
 	dim shared noexpands		as THASH
 	dim shared removes		as THASH
+
+	'' #include exclude/include filters: GROUP of FILTEROUT/FILTERIN nodes,
+	'' in the order they should be applied.
+	dim shared filters		as ASTNODE ptr
 end namespace
 
 sub cppInit( )
@@ -593,6 +603,7 @@ sub cppInit( )
 	cpp.savedmacrocount = 0
 	hashInit( @cpp.noexpands, 4, TRUE )
 	hashInit( @cpp.removes, 4, TRUE )
+	cpp.filters = astNewGROUP( )
 end sub
 
 private sub cppEnd( )
@@ -617,6 +628,7 @@ private sub cppEnd( )
 	end scope
 	hashEnd( @cpp.noexpands )
 	hashEnd( @cpp.removes )
+	astDelete( cpp.filters )
 end sub
 
 #define cppSkipping( ) (cpp.skiplevel <> MAXSTACK)
@@ -628,6 +640,31 @@ end sub
 sub cppRemoveSym( byval id as zstring ptr )
 	hashAddOverwrite( @cpp.removes, id, NULL )
 end sub
+
+sub cppAddFilter( byval filter as ASTNODE ptr )
+	astAppend( cpp.filters, astClone( filter ) )
+end sub
+
+private function cppKeepIncludeContent( byref includefilename as string ) as integer
+	var keep = TRUE
+
+	var i = cpp.filters->head
+	while( i )
+
+		'' Apply filter if it would make a difference. No need to check
+		'' FILTEROUT if already excluding the file; no need to check
+		'' FILTERIN if already including it.
+		if( keep = (i->class = ASTCLASS_FILTEROUT) ) then
+			if( strMatch( includefilename, *i->text ) ) then
+				keep = not keep
+			end if
+		end if
+
+		i = i->next
+	wend
+
+	function = keep
+end function
 
 private function cppLookupMacro( byval id as zstring ptr ) as DEFINEINFO ptr
 	var item = hashLookup( @cpp.macros, id, hashHash( id ) )
@@ -2056,15 +2093,28 @@ private sub cppInclude( byval begin as integer )
 		frogPrint( inctext + " (not found)" )
 		exit sub
 	end if
-	frogPrint( incfile )
 
+	var keep = cppKeepIncludeContent( incfile )
+	if( keep ) then
+		frogPrint( incfile )
+	else
+		frogPrint( incfile + " (filtered out)" )
+	end if
+
+	'' Push the #include file context
 	cppPush( 0 )
 
+	'' Mark #include directive for removal
 	tkSetRemove( begin, cpp.x - 1 )
 
 	'' Insert this helper token so we can identify the start of #included
-	'' tokens later
+	'' tokens later in cppEndInclude().
 	tkInsert( cpp.x, TK_BEGININCLUDE )
+	'' Mark the TK_BEGININCLUDE for removal if the include content should be
+	'' filtered out by cppEndInclude().
+	if( keep = FALSE ) then
+		tkSetRemove( cpp.x )
+	end if
 	cpp.x += 1
 
 	'' Insert EOLs behind TK_BEGININCLUDE/TK_ENDINCLUDE, so we can can
@@ -2084,6 +2134,7 @@ private sub cppInclude( byval begin as integer )
 
 	'' Start parsing the #included content
 	'' (starting behind the EOL inserted above)
+	assert( tkGet( cpp.x - 2 ) = TK_BEGININCLUDE )
 	assert( tkGet( cpp.x - 1 ) = TK_EOL )
 end sub
 
@@ -2100,12 +2151,13 @@ private sub cppEndInclude( )
 	assert( tkGet( begin ) = TK_BEGININCLUDE )
 	assert( tkGet( cpp.x ) = TK_ENDINCLUDE )
 
-	if( frog.nomerge ) then
-		'' #include expansion wasn't requested, so mark all the #included tokens for removal.
-		'' (i.e. all #defines/#undefs were seen, but the code won't be preserved)
+	'' Should the include content be removed?
+	if( tkGetFlags( begin ) and TKFLAG_REMOVE ) then
+		'' Mark all the #included tokens for removal, now that we've preprocessed them.
+		'' (we've seen #defines, #undefs, and did macro expansion)
 		tkSetRemove( begin, cpp.x )
 	else
-		'' Remove just the TK_BEGININCLUDE/TK_ENDINCLUDE, keep the #included tokens.
+		'' Remove just the TK_BEGININCLUDE/TK_ENDINCLUDE, keep the preprocessed #included tokens.
 		tkSetRemove( begin )
 		tkSetRemove( cpp.x )
 	end if

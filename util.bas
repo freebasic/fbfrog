@@ -395,6 +395,33 @@ function strIsValidSymbolId( byval s as zstring ptr ) as integer
 	function = TRUE
 end function
 
+'' Recursive string matching, with ? and * wildcards, seems to work ok
+'' (based on post from stackoverflow)
+function strMatch( byref s as string, byref pattern as string ) as integer
+	'' Always match?
+	if( pattern = "*" ) then return TRUE
+
+	'' Same? (safe even if the string contains wildcard chars itself)
+	if( s = pattern ) then return TRUE
+
+	'' String <> pattern. String empty?
+	if( len( s ) = 0 ) then return FALSE
+
+	select case( left( pattern, 1 ) )
+	case "*"
+		'' Either the rest of the pattern must match right here,
+		'' or the pattern must match somewhere later in the string.
+		return strMatch( s, right( pattern, len( pattern ) - 1 ) ) orelse _
+		       strMatch( right( s, len( s ) - 1 ), pattern )
+
+	case "?", left( s, 1 )
+		'' Current char matches; now check the rest.
+		return strMatch( right( s, len( s ) - 1 ), right( pattern, len( pattern ) - 1 ) )
+	end select
+
+	function = FALSE
+end function
+
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 '' Generic hash table (open addressing/closed hashing), based on GCC's libcpp's
 '' hash table.

@@ -139,7 +139,8 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	(@"while"   ), _
 	_
 	(NULL, @"argsfile"), _
-	(@"-nomerge"      ), _
+	(@"-filterout"    ), _
+	(@"-filterin"     ), _
 	(@"-whitespace"   ), _
 	(@"-windowsms"    ), _
 	(@"-constants"    ), _
@@ -421,6 +422,9 @@ sub tkRemove( byval first as integer, byval last as integer )
 end sub
 
 '' Copy tokens first..last and insert them in front of x
+'' without preserving TKFLAG_REMOVE. The CPP marks #define bodies for removal
+'' and still wants to copy the body tokens when expanding the macro, and these
+'' expanded tokens shouldn't have TKFLAG_REMOVE automatically.
 sub tkCopy( byval x as integer, byval first as integer, byval last as integer )
 	if( first < 0 ) then first = 0
 	if( last >= tk.size ) then last = tk.size - 1

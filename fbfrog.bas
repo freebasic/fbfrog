@@ -43,7 +43,7 @@
 #include once "fbfrog.bi"
 
 namespace frog
-	dim shared as integer verbose, nomerge, whitespace, windowsms, constants, nonamefixup
+	dim shared as integer verbose, whitespace, windowsms, constants, nonamefixup
 	dim shared as ASTNODE ptr incdirs
 	dim shared as string outname, defaultoutname
 
@@ -64,7 +64,6 @@ private sub hPrintHelpAndExit( )
 	print "usage: fbfrog *.h [options]"
 	print "global options:"
 	print "  @<file>          Read more command line arguments from a file"
-	print "  -nomerge         Don't preserve code from #includes"
 	print "  -whitespace      Try to preserve comments and empty lines"
 	print "  -windowsms       Use Extern ""Windows-MS"" instead of Extern ""Windows"""
 	print "  -constants       Try to turn #defines into constants"
@@ -73,6 +72,8 @@ private sub hPrintHelpAndExit( )
 	print "  -o <path/file>   Set output .bi file name, or just the output directory"
 	print "  -v               Show verbose/debugging info"
 	print "version-specific commands:"
+	print "  -filterout <filename-pattern>  Don't preserve code from matching #includes"
+	print "  -filterin <filename-pattern>   Undo effects of -filterout for matching #includes"
 	print "  -inclib <name>           Add an #inclib ""<name>"" statement"
 	print "  -define <id> [<body>]    Add pre-#define"
 	print "  -noexpand <id>           Disable expansion of certain #define"
@@ -333,6 +334,23 @@ private sub hParseIfDefCompound( byref x as integer )
 	loop
 end sub
 
+private sub hParseOptionWithString _
+	( _
+		byref x as integer, _
+		byval astclass as integer, _
+		byval argdescription as zstring ptr _
+	)
+
+	x += 1
+
+	if( hIsStringOrId( x ) = FALSE ) then
+		tkOopsExpected( x, argdescription )
+	end if
+	astAppend( frog.script, astNew( astclass, tkGetText( x ) ) )
+	x += 1
+
+end sub
+
 private sub hParseOptionWithId _
 	( _
 		byref x as integer, _
@@ -365,7 +383,6 @@ private sub hParseArgs( byref x as integer )
 		case TK_EOF
 			exit do
 
-		case OPT_NOMERGE     : frog.nomerge     = TRUE : x += 1
 		case OPT_WHITESPACE  : frog.whitespace  = TRUE : x += 1
 		case OPT_WINDOWSMS   : frog.windowsms   = TRUE : x += 1
 		case OPT_CONSTANTS   : frog.constants   = TRUE : x += 1
@@ -459,15 +476,17 @@ private sub hParseArgs( byref x as integer )
 			end if
 			exit do
 
+		'' -filterout <filename-pattern>
+		case OPT_FILTEROUT
+			hParseOptionWithString( x, ASTCLASS_FILTEROUT, "<filename-pattern> argument" )
+
+		'' -filterin <filename-pattern>
+		case OPT_FILTERIN
+			hParseOptionWithString( x, ASTCLASS_FILTERIN, "<filename-pattern> argument" )
+
 		'' -inclib <name>
 		case OPT_INCLIB
-			x += 1
-
-			if( hIsStringOrId( x ) = FALSE ) then
-				tkOopsExpected( x, "<name> argument" )
-			end if
-			astAppend( frog.script, astNew( ASTCLASS_INCLIB, tkGetText( x ) ) )
-			x += 1
+			hParseOptionWithString( x, ASTCLASS_INCLIB, "<name> argument" )
 
 		'' -define <id> [<body>]
 		case OPT_DEFINE
@@ -827,6 +846,9 @@ private function frogReadAPI( byval options as ASTNODE ptr ) as ASTNODE ptr
 				var x = tkGetCount( )
 				lexLoadC( x, sourcebufferFromZstring( prettyname, s, @i->location ), FALSE )
 				tkSetRemove( x, tkGetCount( ) - 1 )
+
+			case ASTCLASS_FILTEROUT, ASTCLASS_FILTERIN
+				cppAddFilter( i )
 
 			end select
 

@@ -100,6 +100,12 @@ Usage:
   intended to be #included together shouldn't be passed to fbfrog together, but
   in separate invocations.
 
+  Use the -filterout|-filterin <filename-pattern> options to include/exclude the
+  content of matching #included header files. For example:
+    fbfrog gtk.h -filterout '*glib*' -filterout '*gdk*'
+  will generate a binding with declarations from gtk.h and all files that it
+  #includes, except for those with "glib" or "gdk" in their name.
+
   With a little bit of luck it will be able to generate a *.bi file immediately;
   if not, there may be a parsing error reported, or a "TODO: unknown contruct"
   embedded in the *.bi file. This can be caused by various things, for example:
@@ -208,30 +214,62 @@ unnecessary?
      enough to specify the API/ABI for accessing external libraries.
   4. Users may expect to be able to interact with the #included .h file directly
      by using FB #define statements etc., but that wouldn't be possible unless
-     we had a FB-to-C translator too.
+     we had an FB-to-C translator too.
 
 
 To do:
 
-- Change console output, it's too much if there are more than 10 #includes...
+* strContainsNonOctDigits and strContainsNonHexDigits are unused
+* -keyword foo option to allow fixing inter-header name conflicts manually
+* Dummy ids must be context-specific to avoid causing inter-header name conflicts.
+* Automatically detect #include guards and remove the left over #defines
+* Automatically strip __attribute__ #defines, they're always useless for FB
+* Ignore __attribute__((aligned(N))) (show a warning?). FB doesn't have it, and
+  often it's just used for "better" performance anyways, not really needed.
+* Handling of #includes: If found but not inserted, then the #include statement
+  should be preserved but renamed .h -> .bi. If not found, just remove it.
+  Move #includes to the top (out of the extern block)?
+* Beautify comments, e.g. for /**/ comments, remove the * at the start of each
+  line if each line starts with that, etc.
+
+* Simplify command line parsing
+  * string-based arg parsing, instead of tk/lex
+  * Support -DFOO=1 and -I<path> options like gcc and for pkg-config,
+    the -define <id> [<body>] syntax is confusing
+* Remove "precise" error reporting and TKLOCATIONs? It seems nice but is it really needed?
+  fbfrog expects the input code to be correct, so it does not need the same error handling
+  as a compiler. Errors occur only because of
+   a) unexpanded macros
+   b) missing features in the fbfrog parser
+  for these cases it's essentially enough to show tk buffer content.
+* Change console output, it's too much if there are more than 10 #includes...
     * ideally no output at all
     * especially: no progress indicator, because the tool should be fast enough
       to make it unnecessary, and it's not bound by disk or network anyways.
     * However, information about #included file names is important, to see what
       got included in the binding, which files weren't found, what file names
-      could be used for the pattern-based -nomerge option, etc.
+      could be used for the pattern-based -exclude/-include options, etc.
     * support -o - to write to stdout
-- Add pattern-based -nomerge option, or default to not preserving #included code
-  use a -include <pattern>
-- How to handle unknown constructs? Must be manually fixed - i.e. removing or
-  replacing with nice FB code. How to automate that?
-     => -removedefine
-     => -setdefinebody <symbol> "<FB body text>"?
-- If an #include was found but not inserted, then the #include statement should
-  be preserved (but renamed .h -> .bi)
-- #includes that can't be found should just be removed, e.g. system headers
-- probably should move #includes to the top, out of the extern block
-- Support #include_next? Requires standard include search paths...
+    * Emit the file names into the output file like renamelists with merging etc.
+       This way we can avoid the massive output and can see which files are version-specific, etc.
+    * Hide #includes if they don't result in new tokens (but show with -v)
+* Can't renamelists be generated based on ALIAS'es later, separate from astFixIds?
+* Generally: Everything should do error recovery, even the CPP
+  e.g. unknown pragmas should be reported and then ignored.
+* Performance issues: AST walking (especially the symbol renaming) & identifier comparisons
+  Could be fixed by using a symbol table, so ASTNODEs would reference symbols
+  instead of storing identifiers. Then the renaming functions would simply
+  rename the symbol instead of having to walk the entire AST replacing
+  occurrences of the identifier, and identifier comparisons become pointer
+  comparisons instead of string comparisons.
+  Things like astFixArrayParams() and astTurnPlainZstringIntoByte() are very
+  similar and can either be combined into 1 walking function and if not too ugly
+  it can be handled during emitting instead of an extra walking function.
+	* It would already help to build symbol tables temporarily, like decltables,
+	  similar to the hashtbs already used currently...
+	* fbfrog should be a single-pass compiler, if possible...
+	* CPP's whitespace preprocessing is also very inefficient, perhaps we
+	  should just not bother preserving comments...
 
 - Continue support for parsing function bodies: if/else blocks, for/while/do/while
   loops, local vars, assignments, goto, break, return, switch, labels including 'case'.
@@ -243,13 +281,3 @@ To do:
         if (a = 1) ...          =>    a = 1 : if a then ...
         if (a = 1 && b = 2) ... =>    a = 1 : if a then : b = 2 : if b then ... : end if
     ?: and &&/|| operands containing assignments must be expanded to real if blocks.
-
-* Performance issues: AST walking (especially the symbol renaming) & identifier comparisons
-  Could be fixed by using a symbol table, so ASTNODEs would reference symbols
-  instead of storing identifiers. Then the renaming functions would simply
-  rename the symbol instead of having to walk the entire AST replacing
-  occurrences of the identifier, and identifier comparisons become pointer
-  comparisons instead of string comparisons.
-  Things like astFixArrayParams() and astTurnPlainZstringIntoByte() are very
-  similar and can either be combined into 1 walking function and if not too ugly
-  it can be handled during emitting instead of an extra walking function.
