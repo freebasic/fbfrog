@@ -481,7 +481,7 @@ private sub hAstLCS _
 			var rdecl = @rarray[rfirst+r]
 
 			if( ldecl->hash = rdecl->hash ) then
-				if( astIsEqual( ldecl->n, rdecl->n, ASTEQ_IGNOREHIDDENCALLCONV or ASTEQ_IGNOREMERGABLEBLOCKBODIES or ASTEQ_IGNOREDUMMYID ) ) then
+				if( astIsEqual( ldecl->n, rdecl->n, TRUE ) ) then
 					if( (l = 0) or (r = 0) ) then
 						length = 1
 					else

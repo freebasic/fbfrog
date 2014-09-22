@@ -710,10 +710,6 @@ type ASTNODE
 	prev		as ASTNODE ptr
 end type
 
-const ASTEQ_IGNOREHIDDENCALLCONV	= 1 shl 0
-const ASTEQ_IGNOREMERGABLEBLOCKBODIES	= 1 shl 1
-const ASTEQ_IGNOREDUMMYID		= 1 shl 2
-
 #define astNewID( id ) astNew( ASTCLASS_ID, id )
 #define astNewTEXT( text ) astNew( ASTCLASS_TEXT, text )
 #define astIsCONSTI( n ) ((n)->class = ASTCLASS_CONSTI)
@@ -778,7 +774,7 @@ declare function astIsEqual _
 	( _
 		byval a as ASTNODE ptr, _
 		byval b as ASTNODE ptr, _
-		byval options as integer = 0 _
+		byval is_merge as integer = FALSE _
 	) as integer
 declare sub astReport _
 	( _

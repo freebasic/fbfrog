@@ -268,6 +268,9 @@ To do:
 	* fbfrog should be a single-pass compiler, if possible...
 	* CPP's whitespace preprocessing is also very inefficient, perhaps we
 	  should just not bother preserving comments...
+	* tkGet()/tkAccess() are the bottlenecks of CPP/C parser. Should really
+	  compare performance with tk=array instead of tk=gapbuffer, and optimize
+	  tkGet/tkAccess for gap buffer.
 
 - Continue support for parsing function bodies: if/else blocks, for/while/do/while
   loops, local vars, assignments, goto, break, return, switch, labels including 'case'.

@@ -502,7 +502,7 @@ function astIsEqual _
 	( _
 		byval a as ASTNODE ptr, _
 		byval b as ASTNODE ptr, _
-		byval options as integer _
+		byval is_merge as integer _
 	) as integer
 
 	'' If one is NULL, both must be NULL
@@ -515,11 +515,17 @@ function astIsEqual _
 	var aattrib = a->attrib
 	var battrib = b->attrib
 
-	if( options and ASTEQ_IGNOREHIDDENCALLCONV ) then
+	if( is_merge ) then
 		'' If callconv is hidden on both sides, then ignore it
 		if( (aattrib and ASTATTRIB_HIDECALLCONV) and (battrib and ASTATTRIB_HIDECALLCONV) ) then
 			aattrib and= not (ASTATTRIB_CDECL or ASTATTRIB_STDCALL)
 			battrib and= not (ASTATTRIB_CDECL or ASTATTRIB_STDCALL)
+		end if
+
+		'' Ignore DLLIMPORT on procedures for now, as we're not emitting it anyways
+		if( a->class = ASTCLASS_PROC ) then
+			aattrib and= not ASTATTRIB_DLLIMPORT
+			battrib and= not ASTATTRIB_DLLIMPORT
 		end if
 	end if
 
@@ -532,7 +538,7 @@ function astIsEqual _
 	if( (a->text <> NULL) <> (b->text <> NULL) ) then exit function
 	if( a->text ) then
 		var a_is_dummy = FALSE
-		if( options and ASTEQ_IGNOREDUMMYID ) then
+		if( is_merge ) then
 			'' If both sides have dummyids, treat them as equal,
 			'' without comparing the dummy ids any further.
 			a_is_dummy = ((aattrib and ASTATTRIB_DUMMYID) <> 0)
@@ -547,11 +553,11 @@ function astIsEqual _
 	if( a->alias ) then if( *a->alias <> *b->alias ) then exit function
 
 	if( a->dtype <> b->dtype ) then exit function
-	if( astIsEqual( a->subtype, b->subtype, options ) = FALSE ) then exit function
-	if( astIsEqual( a->array, b->array, options ) = FALSE ) then exit function
-	if( astIsEqual( a->bits, b->bits, options ) = FALSE ) then exit function
+	if( astIsEqual( a->subtype, b->subtype, is_merge ) = FALSE ) then exit function
+	if( astIsEqual( a->array, b->array, is_merge ) = FALSE ) then exit function
+	if( astIsEqual( a->bits, b->bits, is_merge ) = FALSE ) then exit function
 
-	if( astIsEqual( a->expr, b->expr, options ) = FALSE ) then exit function
+	if( astIsEqual( a->expr, b->expr, is_merge ) = FALSE ) then exit function
 
 	select case( a->class )
 	case ASTCLASS_CONSTI
@@ -571,7 +577,7 @@ function astIsEqual _
 		return astGroupsContainEqualChildren( a, b )
 	end select
 
-	if( options and ASTEQ_IGNOREMERGABLEBLOCKBODIES ) then
+	if( is_merge ) then
 		if( astIsMergableBlock( a ) ) then
 			return TRUE
 		end if
@@ -581,7 +587,7 @@ function astIsEqual _
 	a = a->head
 	b = b->head
 	while( (a <> NULL) and (b <> NULL) )
-		if( astIsEqual( a, b, options ) = FALSE ) then
+		if( astIsEqual( a, b, is_merge ) = FALSE ) then
 			exit function
 		end if
 		a = a->next
