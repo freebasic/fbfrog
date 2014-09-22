@@ -121,6 +121,7 @@ declare function strReplace _
 		byref a as string, _
 		byref b as string _
 	) as string
+declare function strReplaceNonIdChars( byref orig as string, byval replacement as integer ) as string
 declare function strMakePrintable( byref a as string ) as string
 declare function strIsValidSymbolId( byval s as zstring ptr ) as integer
 declare function strMatch( byref s as string, byref pattern as string ) as integer

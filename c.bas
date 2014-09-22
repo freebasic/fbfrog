@@ -127,14 +127,30 @@ private sub cExpectMatch( byval tk as integer, byval message as zstring ptr )
 	end if
 end sub
 
+''
 '' Generate place-holder names for unnamed structs/unions/enums when needed.
 '' The id should be unique, no name conflicts should be introduced due to this,
 '' and multiple structs within one parsing pass or from separate parsing passes
 '' shouldn't share the same id.
+''
+'' We should take care that dummyid's are specific to the current binding, in
+'' order to avoid multiple bindings using the same dummyid, because they would
+'' conflict if the bindings are used together.
+''
 private function hMakeDummyId( ) as string
 	static n as integer
-	function = "__freebasic_dummyid_" & n
+
+	var dummyid = "__dummyid_" & n
 	n += 1
+
+	var location = tkGetLocation( x )
+	if( location->source ) then
+		var filename = *location->source->name
+		filename = strReplaceNonIdChars( pathStripExt( filename ), CH_UNDERSCORE )
+		dummyid += "_" + filename
+	end if
+
+	function = dummyid
 end function
 
 private function hIdentifyCommonTypedef( byval id as zstring ptr ) as integer

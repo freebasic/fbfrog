@@ -220,7 +220,6 @@ unnecessary?
 To do:
 
 * -keyword foo option to allow fixing inter-header name conflicts manually
-* Dummy ids must be context-specific to avoid causing inter-header name conflicts.
 * Automatically detect #include guards and remove the left over #defines
 * Automatically strip __attribute__ #defines, they're always useless for FB
 * Ignore __attribute__((aligned(N))) (show a warning?). FB doesn't have it, and

@@ -310,6 +310,25 @@ function strReplace _
 	function = result
 end function
 
+function strReplaceNonIdChars( byref orig as string, byval replacement as integer ) as string
+	var s = orig
+
+	for i as integer = 0 to len( s ) - 1
+		dim as integer ch = s[i]
+
+		select case as const( ch )
+		case CH_A to CH_Z, CH_L_A to CH_L_Z, CH_UNDERSCORE, CH_0 to CH_9
+
+		case else
+			ch = replacement
+		end select
+
+		s[i] = ch
+	next
+
+	function = s
+end function
+
 function strMakePrintable( byref a as string ) as string
 	dim b as string
 

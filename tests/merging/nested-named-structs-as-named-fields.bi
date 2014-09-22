@@ -11,12 +11,12 @@
 #endif
 
 #if VER = 1
-	type __freebasic_dummyid_0
+	type __dummyid_0_tests_merging_nested_named_structs_as_named_fields
 		v1_a as long
 	end type
 #endif
 
-type __freebasic_dummyid_1
+type __dummyid_1_tests_merging_nested_named_structs_as_named_fields
 	#if VER = 1
 		v1_b as long
 	#else
@@ -25,9 +25,9 @@ type __freebasic_dummyid_1
 end type
 
 type UDT
-	a as __freebasic_dummyid_0
+	a as __dummyid_0_tests_merging_nested_named_structs_as_named_fields
 
 	#if VER = 1
-		b as __freebasic_dummyid_1
+		b as __dummyid_1_tests_merging_nested_named_structs_as_named_fields
 	#endif
 end type
