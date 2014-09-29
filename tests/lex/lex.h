@@ -23,6 +23,14 @@
 #define A21 1ul
 #define A22 1ll
 #define A23 1ull
+#define A24 09.0
+#define A25 09e1
+#define A26 09e+1
+#define A27 09e-1
+#define A28 09E1
+#define A29 09E+1
+#define A30 09E-1
+#define A31 0x88
 
 #define B1 "foo"
 #define B2 L"foo"

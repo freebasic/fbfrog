@@ -66,14 +66,21 @@ function lexIdentifyCKeyword( byval id as zstring ptr ) as integer
 	function = hLookupKeyword( @lex.ckeywords, id, TK_ID )
 end function
 
+sub lexGetLocation( byval location as TKLOCATION ptr )
+	*location = lex.location
+	location->column = lex.i - lex.bol
+	location->length = 1
+end sub
+
 private sub hResetColumn( )
 	lex.location.column = lex.i - lex.bol
 	lex.location.length = 1
 end sub
 
 private sub lexOops( byref message as string )
-	hResetColumn( )
-	oopsLocation( @lex.location, message )
+	dim location as TKLOCATION
+	lexGetLocation( @location )
+	oopsLocation( @location, message )
 end sub
 
 private sub hSetLocation( byval flags as integer = 0 )
@@ -250,52 +257,57 @@ private sub hReadNumber( )
 	''    123.123    (decimal float)
 	''    0xAABBCCDD (hexadecimal)
 	''    010        (octal)
+	''    010.0      (decimal float, not octal float)
 	'' There also is some simple float exponent and type suffix parsing.
+	'' We have to parse the number literal (but without type suffix) first
+	'' before we can decide whether it's an integer or float. This decides
+	'' whether a leading zero indicates octal or not.
 
-	var numbase = 10
 	var flags = 0
 	if( lex.i[0] = CH_0 ) then '' 0
 		if( lex.i[1] = CH_L_X ) then '' 0x
 			lex.i += 2
-			numbase = 16
 			flags or= TKFLAG_HEX
 		elseif( (lex.i[1] >= CH_0) and (lex.i[1] <= CH_9) ) then
 			lex.i += 1
-			numbase = 8
 			flags or= TKFLAG_OCT
 		end if
 	end if
 
 	var begin = lex.i
+	var have_nonoct_digit = FALSE
+	dim as TKLOCATION nonoct_digit_location
 	do
 		dim as integer digit = lex.i[0]
 
-		if( digit = CH_DOT ) then
+		select case as const( digit )
+		case CH_0 to CH_7
+			'' These digits are allowed in all number literals
+
+		case CH_8, CH_9
+			'' These digits are allowed in dec/hex literals, but not
+			'' oct literals, but we don't know which it is yet.
+			if( have_nonoct_digit = FALSE ) then
+				lexGetLocation( @nonoct_digit_location )
+				have_nonoct_digit = TRUE
+			end if
+
+		case CH_A to CH_F, CH_L_A to CH_L_F
+			'' These digits can only appear in hex literals
+			if( (flags and TKFLAG_HEX) = 0 ) then
+				exit do
+			end if
+
+		case CH_DOT
 			'' Only one dot allowed
 			if( flags and TKFLAG_FLOAT ) then
 				exit do
 			end if
 			flags or= TKFLAG_FLOAT
-		else
-			select case as const( digit )
-			case CH_A to CH_F
-				digit -= (CH_A - 10)
 
-			case CH_L_A to CH_L_F
-				digit -= (CH_L_A - 10)
-
-			case CH_0 to CH_9
-				digit -= CH_0
-
-			case else
-				exit do
-			end select
-
-			'' Do not allow A-F in decimal numbers, etc.
-			if( digit >= numbase ) then
-				exit do
-			end if
-		end if
+		case else
+			exit do
+		end select
 
 		lex.i += 1
 	loop
@@ -320,9 +332,16 @@ private sub hReadNumber( )
 		flags or= TKFLAG_FLOAT
 	end select
 
-	if( ((flags and TKFLAG_FLOAT) <> 0) and _
-	    ((flags and (TKFLAG_HEX or TKFLAG_OCT)) <> 0) ) then
-		lexOops( "non-decimal floats not supported" )
+	if( flags and TKFLAG_FLOAT ) then
+		'' Leading zeroes on floats don't make it octal (only integers)
+		flags and= not TKFLAG_OCT
+		if( flags and TKFLAG_HEX ) then
+			lexOops( "TODO: hex-floats not yet supported" )
+		end if
+	end if
+
+	if( have_nonoct_digit and ((flags and TKFLAG_OCT) <> 0) ) then
+		oopsLocation( @nonoct_digit_location, "invalid digit in octal number literal" )
 	end if
 
 	'' Copy the number literal's body into the text buffer; we want to

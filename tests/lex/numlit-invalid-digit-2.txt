@@ -1,0 +1,5 @@
+[1/5] __FB_WIN32__.__FB_64BIT__
+      tests/lex/numlit-invalid-digit-2.h
+tests/lex/numlit-invalid-digit-2.h(2): invalid digit in octal number literal
+    static int i = 09f;
+                    ^

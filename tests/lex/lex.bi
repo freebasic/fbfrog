@@ -29,6 +29,14 @@ extern "C"
 #define A21 cast(culong, 1)
 #define A22 1ll
 #define A23 1ull
+#define A24 9d
+#define A25 90d
+#define A26 90d
+#define A27 0.9
+#define A28 90d
+#define A29 90d
+#define A30 0.9
+#define A31 &h88
 
 #define B1 "foo"
 #define B2 wstr("foo")
