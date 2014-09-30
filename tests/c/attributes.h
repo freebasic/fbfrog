@@ -46,11 +46,15 @@ void f(void) __attribute__((__visibility__("hidden")));
 void f(void) __attribute__((__visibility__("internal")));
 void f(void) __attribute__((__visibility__("protected")));
 
+#ifdef _WIN32
 __cdecl                    void f(void);
+#endif
 __attribute__((cdecl))     void f(void);
 __attribute__((__cdecl__)) void f(void);
 
+#ifdef _WIN32
 __stdcall                    void f(void);
+#endif
 __attribute__((stdcall))     void f(void);
 __attribute__((__stdcall__)) void f(void);
 

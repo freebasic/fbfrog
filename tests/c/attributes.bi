@@ -52,9 +52,13 @@ declare sub f()
 
 declare sub f()
 declare sub f()
-declare sub f()
+#ifdef __FB_WIN32__
+	declare sub f()
+#endif
 
-declare sub f stdcall()
+#ifdef __FB_WIN32__
+	declare sub f stdcall()
+#endif
 declare sub f stdcall()
 declare sub f stdcall()
 

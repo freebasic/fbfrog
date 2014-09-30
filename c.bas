@@ -261,7 +261,7 @@ private function hIsDataType _
 	var is_type = FALSE
 
 	select case( tkGet( y ) )
-	case KW___CDECL, KW___STDCALL, KW___ATTRIBUTE__, _
+	case KW___ATTRIBUTE__, _
 	     KW_SIGNED, KW_UNSIGNED, KW_CONST, KW_SHORT, KW_LONG, _
 	     KW_ENUM, KW_STRUCT, KW_UNION, _
 	     KW_VOID, KW_CHAR, KW_FLOAT, KW_DOUBLE, KW_INT
@@ -620,22 +620,6 @@ end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-private sub hCdeclAttribute( byref gccattribs as integer )
-	if( gccattribs and ASTATTRIB_STDCALL ) then
-		cError( "cdecl attribute specified together with stdcall" )
-	end if
-	gccattribs or= ASTATTRIB_CDECL
-	x += 1
-end sub
-
-private sub hStdcallAttribute( byref gccattribs as integer )
-	if( gccattribs and ASTATTRIB_CDECL ) then
-		cError( "stdcall attribute specified together with cdecl" )
-	end if
-	gccattribs or= ASTATTRIB_STDCALL
-	x += 1
-end sub
-
 private sub hSkipToRparen( )
 	do
 		select case( tkGet( x ) )
@@ -674,10 +658,18 @@ private sub cGccAttribute( byref gccattribs as integer )
 		hSkipToRparen( )
 
 	case "cdecl"
-		hCdeclAttribute( gccattribs )
+		if( gccattribs and ASTATTRIB_STDCALL ) then
+			cError( "cdecl attribute specified together with stdcall" )
+		end if
+		gccattribs or= ASTATTRIB_CDECL
+		x += 1
 
 	case "stdcall"
-		hStdcallAttribute( gccattribs )
+		if( gccattribs and ASTATTRIB_CDECL ) then
+			cError( "stdcall attribute specified together with cdecl" )
+		end if
+		gccattribs or= ASTATTRIB_STDCALL
+		x += 1
 
 	case "packed"
 		gccattribs or= ASTATTRIB_PACKED
@@ -697,14 +689,6 @@ private sub cGccAttributeList( byref gccattribs as integer )
 		select case( tkGet( x ) )
 		case KW_VOLATILE
 			x += 1
-
-		'' __cdecl
-		case KW___CDECL
-			hCdeclAttribute( gccattribs )
-
-		'' __stdcall
-		case KW___STDCALL
-			hStdcallAttribute( gccattribs )
 
 		'' __attribute__((...)):
 		'' __ATTRIBUTE__ '((' Attribute (',' Attribute)* '))'

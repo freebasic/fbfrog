@@ -19,8 +19,7 @@ enum E {
 	A = (enum E)0,
 	A = (struct UDT)0,
 	A = (union UDT)0,
-	A = (__stdcall void (*)(void))0,
-	A = (__cdecl void (*)(void))0,
+	A = (__attribute__((cdecl)) void (*)(void))0,
 	A = (__attribute__((stdcall)) void (*)(void))0,
 	A = (void *)0,
 	A = (int *)0,
@@ -456,8 +455,8 @@ enum E {
 #define A16 (enum E)0
 #define A17 (struct UDT)0
 #define A18 (union UDT)0
-#define A19 (__stdcall void (*)(void))0
-#define A20 (__cdecl void (*)(void))0
+#define A19
+#define A20 (__attribute__((cdecl)) void (*)(void))0
 #define A21 (__attribute__((stdcall)) void (*)(void))0
 #define A22 (void *)0
 #define A23 (int *)0

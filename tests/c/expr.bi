@@ -25,7 +25,6 @@ enum
 	A = cast(E, 0)
 	A = cast(UDT, 0)
 	A = cast(UDT, 0)
-	A = cptr(sub stdcall(), 0)
 	A = cptr(sub cdecl(), 0)
 	A = cptr(sub stdcall(), 0)
 	A = cptr(any ptr, 0)
@@ -410,7 +409,7 @@ end enum
 #define A16 cast(E, 0)
 #define A17 cast(UDT, 0)
 #define A18 cast(UDT, 0)
-#define A19 cptr(sub stdcall(), 0)
+#define A19
 #define A20 cptr(sub cdecl(), 0)
 #define A21 cptr(sub stdcall(), 0)
 #define A22 cptr(any ptr, 0)

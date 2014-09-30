@@ -88,10 +88,8 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	(@"~"  ), _
 	(NULL, @"id" ), _ '' TK_ID
 	(@"__attribute__"), _ '' C keywords
-	(@"__cdecl"      ), _
 	(@"__restrict"   ), _
 	(@"__restrict__" ), _
-	(@"__stdcall"    ), _
 	(@"auto"    ), _
 	(@"break"   ), _
 	(@"case"    ), _
