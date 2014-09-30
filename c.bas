@@ -624,7 +624,7 @@ private sub hSkipToRparen( )
 	do
 		select case( tkGet( x ) )
 		case TK_LPAREN, TK_LBRACKET, TK_LBRACE
-			x = hFindClosingParen( x )
+			x = hFindClosingParen( x, FALSE )
 		case TK_RPAREN, TK_EOF
 			exit do
 		end select

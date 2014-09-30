@@ -869,7 +869,7 @@ declare function emitType overload _
 declare function emitType overload( byval n as ASTNODE ptr ) as string
 declare sub emitFile( byref filename as string, byval ast as ASTNODE ptr )
 
-declare function hFindClosingParen( byval x as integer ) as integer
+declare function hFindClosingParen( byval x as integer, byval stop_at_cppdirective as integer = TRUE ) as integer
 declare function hSkipToEol( byval x as integer ) as integer
 declare function hNumberLiteral( byval x as integer, byval is_cpp as integer ) as ASTNODE ptr
 extern as integer cprecedence(ASTCLASS_CLOGOR to ASTCLASS_IIF)

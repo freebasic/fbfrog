@@ -779,7 +779,7 @@ function tkSpell overload( byval first as integer, byval last as integer ) as st
 	function = s
 end function
 
-function hFindClosingParen( byval x as integer ) as integer
+function hFindClosingParen( byval x as integer, byval stop_at_cppdirective as integer ) as integer
 	var opening = tkGet( x )
 	var level = 0
 
@@ -807,9 +807,11 @@ function hFindClosingParen( byval x as integer ) as integer
 
 		'' Stop at # (CPP directives)
 		case TK_HASH
-			if( tkGetExpansionLevel( x ) = 0 ) then
-				x -= 1
-				exit do
+			if( stop_at_cppdirective ) then
+				if( tkGetExpansionLevel( x ) = 0 ) then
+					x -= 1
+					exit do
+				end if
 			end if
 
 		case TK_EOF

@@ -75,6 +75,8 @@ static int attribute_defines;
 	#define CALLCONV __attribute__((cdecl))
 #endif
 
+#define DEPRECATED(replacement) __attribute__((deprecated("Use " #replacement " instead")))
+
 static int before_base_type;
 __attribute__((stdcall)) void f(void);
 
