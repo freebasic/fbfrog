@@ -55,7 +55,6 @@
 	#define __k8__ 1
 	#define _M_X64
 	#define _M_AMD64
-	#define __WORDSIZE 64
 	#ifdef __FBFROG_LINUX__
 		#define __LP64__ 1
 		#define _LP64 1
@@ -82,7 +81,6 @@
 	#define _M_IX86
 	#define _X86_
 	#define __X86__
-	#define __WORDSIZE 32
 	#define __code_model_32__ 1
 #endif
 
@@ -295,26 +293,3 @@
 #endif
 
 #define __extension__
-
-#define CHAR_BIT 8
-#define CHAR_MIN SCHAR_MIN
-#define CHAR_MAX SCHAR_MAX
-#define SCHAR_MIN (-128)
-#define SCHAR_MAX 127
-#define UCHAR_MAX 255
-#define SHRT_MIN (-32768)
-#define SHRT_MAX 32767
-#define USHRT_MAX 65535
-#define INT_MIN (-INT_MAX - 1)
-#define INT_MAX __INT_MAX__
-#define UINT_MAX __UINT32_MAX__
-#define LONG_MIN (-LONG_MAX - 1)
-#define LONG_MAX __LONG_MAX__
-#if defined __FBFROG_LINUX__ && defined __FBFROG_64BIT__
-	#define ULONG_MAX __UINT64_MAX__
-#else
-	#define ULONG_MAX __UINT32_MAX__
-#endif
-#define LLONG_MIN (-LLONG_MAX - 1)
-#define LLONG_MAX __INT64_MAX__
-#define ULLONG_MAX __UINT64_MAX__
