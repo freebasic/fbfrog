@@ -58,11 +58,20 @@ __stdcall                    void f(void);
 __attribute__((stdcall))     void f(void);
 __attribute__((__stdcall__)) void f(void);
 
-
 __attribute__((  dllimport  )) void f(void);
 __attribute__((__dllimport__)) void f(void);
 extern __attribute__((  dllimport  )) int i;
 extern __attribute__((__dllimport__)) int i;
+
+// #defines containing only __attribute__'s should just be stripped automatically,
+// as they're useless for FB
+static int attribute_defines;
+#define PACK __attribute__((packed))
+#ifdef _WIN32
+	#define CALLCONV __attribute__((stdcall))
+#else
+	#define CALLCONV __attribute__((cdecl))
+#endif
 
 static int before_base_type;
 __attribute__((stdcall)) void f(void);

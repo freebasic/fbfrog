@@ -67,6 +67,11 @@ declare sub f()
 extern import i as long
 extern import i as long
 
+'' #defines containing only __attribute__'s should just be stripped automatically,
+
+'' as they're useless for FB
+dim shared attribute_defines as long
+
 dim shared before_base_type as long
 declare sub f stdcall()
 

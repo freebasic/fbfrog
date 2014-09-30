@@ -841,8 +841,16 @@ private function cDefine( ) as ASTNODE ptr
 
 	'' Non-empty?
 	if( tkGet( x ) <> TK_EOL ) then
-		'' Try to parse it as expression
-		macro->expr = cExpression( 0, macro )
+		'' __attribute__?
+		if( tkGet( x ) = KW___ATTRIBUTE__ ) then
+			'' Don't preserve #define if it just contains an __attribute__
+			cGccAttributeList( 0 )
+			astDelete( macro )
+			macro = astNewGROUP( )
+		else
+			'' Try to parse it as expression
+			macro->expr = cExpression( 0, macro )
+		end if
 
 		'' Didn't reach EOL? Then the beginning of the macro body could
 		'' be parsed as expression, but not the rest.

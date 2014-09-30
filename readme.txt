@@ -221,7 +221,6 @@ To do:
 
 * -keyword foo option to allow fixing inter-header name conflicts manually
 * Automatically detect #include guards and remove the left over #defines
-* Automatically strip __attribute__ #defines, they're always useless for FB
 * Ignore __attribute__((aligned(N))) (show a warning?). FB doesn't have it, and
   often it's just used for "better" performance anyways, not really needed.
 * Handling of #includes: If found but not inserted, then the #include statement
