@@ -12,30 +12,30 @@ extern "C"
 #define A04 &o0
 #define A05 &o1
 #define A06 &o123
-#define A07 &h0
+#define A07 &h
 #define A08 &h0
 #define A09 &h1
 #define A10 &hFF
-#define A11 1d
-#define A12 1f
-#define A13 1d
+#define A11 1.0
+#define A12 1.0f
+#define A13 1.0
 #define A14 0.1
-#define A15 0d
+#define A15 0.0
 #define A16 1.123
-#define A17 10d
-#define A18 10d
+#define A17 1e+1d
+#define A18 1.0e+1
 #define A19 1
 #define A20 cast(clong, 1)
 #define A21 cast(culong, 1)
 #define A22 1ll
 #define A23 1ull
-#define A24 9d
-#define A25 90d
-#define A26 90d
-#define A27 0.9
-#define A28 90d
-#define A29 90d
-#define A30 0.9
+#define A24 9.0
+#define A25 9e1d
+#define A26 9e+1d
+#define A27 9e-1d
+#define A28 9E1d
+#define A29 9E+1d
+#define A30 9E-1d
 #define A31 &h88
 
 #define B1 "foo"

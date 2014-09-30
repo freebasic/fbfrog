@@ -34,7 +34,7 @@ private function astOpsC2FB _
 		'' not 0 and -1)
 		case ASTCLASS_CEQ, ASTCLASS_CNE
 			if( astIsCONSTI( n->tail ) ) then
-				l_is_bool_context = (n->tail->vali = 0)
+				l_is_bool_context = (astEvalConstiAsInt64( n->tail ) = 0)
 			end if
 
 		'' iif() condition always is treated as bool
@@ -69,7 +69,9 @@ private function astOpsC2FB _
 		case ASTCLASS_CLOGNOT
 			'' Turn C's "!x" into FB's "x = 0"
 			n->class = ASTCLASS_EQ
-			astAppend( n, astNewCONSTI( 0, TYPE_LONG ) )
+			var zero = astNew( ASTCLASS_CONSTI, "0" )
+			astSetType( zero, TYPE_LONG, NULL )
+			astAppend( n, zero )
 		case ASTCLASS_CDEFINED : n->class = ASTCLASS_DEFINED
 		case ASTCLASS_CLOGOR   : n->class = ASTCLASS_ORELSE
 		case ASTCLASS_CLOGAND  : n->class = ASTCLASS_ANDALSO

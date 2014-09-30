@@ -663,9 +663,9 @@ private function emitAst _
 			s += "..."
 		end if
 
-	case ASTCLASS_CONSTI
+	case ASTCLASS_CONSTI, ASTCLASS_CONSTF
 		dim as string suffix
-		dim as integer need_rparen
+		var need_rparen = FALSE
 
 		select case( typeGetDtAndPtr( n->dtype ) )
 		case TYPE_CLONG
@@ -678,23 +678,6 @@ private function emitAst _
 			suffix = "ll"
 		case TYPE_ULONGINT
 			suffix = "ull"
-		end select
-
-		if( n->attrib and ASTATTRIB_OCT ) then
-			s += "&o" + oct( n->vali )
-		elseif( n->attrib and ASTATTRIB_HEX ) then
-			s += "&h" + hex( n->vali )
-		else
-			s += str( n->vali )
-		end if
-
-		s += suffix
-		if( need_rparen ) then
-			s += ")"
-		end if
-
-	case ASTCLASS_CONSTF
-		s = str( n->valf )
 
 		''
 		'' Float type suffixes:
@@ -710,10 +693,24 @@ private function emitAst _
 		'' The f suffix should be added for SINGLEs though, to ensure
 		'' it's using the intended precision.
 		''
-		if( typeGetDtAndPtr( n->dtype ) = TYPE_SINGLE ) then
-			s += "f"
-		elseif( instr( s, "." ) = 0 ) then
-			s += "d"
+		case TYPE_SINGLE
+			suffix = "f"
+		case TYPE_DOUBLE
+			if( instr( *n->text, "." ) = 0 ) then
+				suffix = "d"
+			end if
+		end select
+
+		if( n->attrib and ASTATTRIB_OCT ) then
+			s += "&o"
+		elseif( n->attrib and ASTATTRIB_HEX ) then
+			s += "&h"
+		end if
+		s += *n->text
+		s += suffix
+
+		if( need_rparen ) then
+			s += ")"
 		end if
 
 	case ASTCLASS_ID
@@ -885,7 +882,7 @@ private function emitAst _
 	case ASTCLASS_DIMENSION
 		if( n->expr ) then
 			if( n->expr->class = ASTCLASS_CONSTI ) then
-				s += "0 to " & (n->expr->vali - 1)
+				s += "0 to " & (astEvalConstiAsInt64( n->expr ) - 1)
 			else
 				s += "0 to " + emitAst( n->expr, TRUE ) + " - 1"
 			end if

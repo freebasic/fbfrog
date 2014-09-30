@@ -24,10 +24,10 @@
 #define hex4 &h1
 #define hex5 cast(culong, &h1)
 #define hex6 &h1ull
-#define float1 1d
-#define float2 1d
-#define float3 1f
-#define float4 0.1
-#define float5 1d
+#define float1 1.0
+#define float2 1.0
+#define float3 1.0f
+#define float4 .1
+#define float5 1.
 #define float6 1f
 #define float7 1d

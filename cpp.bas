@@ -326,47 +326,38 @@ function hSkipToEol( byval x as integer ) as integer
 	function = x
 end function
 
-'' Build a CONSTI/CONSTF ASTNODE for the given TK_NUMBER token
+''
+'' Build a CONSTI/CONSTF ASTNODE for the given TK_NUMBER token.
+''
+'' As a special case, in CPP expressions, number literals are always treated as
+'' 64bit signed or unsigned, no matter what dtype was given as suffix and
+'' ignoring the "int" default.
+''
 function hNumberLiteral( byval x as integer, byval is_cpp as integer ) as ASTNODE ptr
 	assert( tkGet( x ) = TK_NUMBER )
 	var tkflags = tkGetFlags( x )
-	var text = *tkGetText( x )
+	var n = astNew( ASTCLASS_CONSTI, tkGetText( x ) )
 
 	if( tkflags and TKFLAG_FLOAT ) then
-		return astNewCONSTF( val( text ), _
-			iif( tkflags and TKFLAG_F, TYPE_SINGLE, TYPE_DOUBLE ) )
+		n->class = ASTCLASS_CONSTF
+		n->dtype = iif( tkflags and TKFLAG_F, TYPE_SINGLE, TYPE_DOUBLE )
+		return n
 	end if
 
-	var astattrib = 0
-	if( tkflags and TKFLAG_HEX ) then
-		text = "&h" + text
-		astattrib or= ASTATTRIB_HEX
-	elseif( tkflags and TKFLAG_OCT ) then
-		text = "&o" + text
-		astattrib or= ASTATTRIB_OCT
-	end if
-
-	dim as longint v
-	if( tkflags and TKFLAG_U ) then
-		v = valulng( text )
-	else
-		v = vallng( text )
-	end if
-
-	dim as integer dtype
-
-	'' In CPP expressions, number literals are treated as 64bit signed or
-	'' unsigned, no matter what dtype
 	if( is_cpp or ((tkflags and TKFLAG_LL) <> 0) ) then
-		dtype = iif( tkflags and TKFLAG_U, TYPE_ULONGINT, TYPE_LONGINT )
+		n->dtype = iif( tkflags and TKFLAG_U, TYPE_ULONGINT, TYPE_LONGINT )
 	elseif( tkflags and TKFLAG_L ) then
-		dtype = iif( tkflags and TKFLAG_U, TYPE_CULONG, TYPE_CLONG )
+		n->dtype = iif( tkflags and TKFLAG_U, TYPE_CULONG, TYPE_CLONG )
 	else
-		dtype = iif( tkflags and TKFLAG_U, TYPE_ULONG, TYPE_LONG )
+		n->dtype = iif( tkflags and TKFLAG_U, TYPE_ULONG, TYPE_LONG )
 	end if
 
-	var n = astNewCONSTI( v, dtype )
-	n->attrib or= astattrib
+	if( tkflags and TKFLAG_HEX ) then
+		n->attrib or= ASTATTRIB_HEX
+	elseif( tkflags and TKFLAG_OCT ) then
+		n->attrib or= ASTATTRIB_OCT
+	end if
+
 	function = n
 end function
 
@@ -1687,6 +1678,11 @@ private sub cppEvalResultDtypes( byval n as ASTNODE ptr )
 	end select
 end sub
 
+type CPPVALUE
+	vali as longint
+	dtype as integer
+end type
+
 ''
 '' Evaluation of CPP #if condition expressions
 ''
@@ -1699,11 +1695,11 @@ end sub
 ''
 '' - taking care to produce C's 1|0 boolean values, instead of FB's -1|0
 ''
-private sub cppEval( byref v as ASTNODE, byval n as ASTNODE ptr )
+private sub cppEval( byref v as CPPVALUE, byval n as ASTNODE ptr )
 	select case( n->class )
 	case ASTCLASS_CONSTI
 		assert( (n->dtype = TYPE_LONGINT) or (n->dtype = TYPE_ULONGINT) )
-		v.vali = n->vali
+		v.vali = astEvalConstiAsInt64( n )
 
 	case ASTCLASS_CLOGNOT, ASTCLASS_NOT, ASTCLASS_NEGATE, ASTCLASS_UNARYPLUS
 		cppEval( v, n->head )
@@ -1720,7 +1716,7 @@ private sub cppEval( byref v as ASTNODE, byval n as ASTNODE ptr )
 	     ASTCLASS_SHL, ASTCLASS_SHR, _
 	     ASTCLASS_ADD, ASTCLASS_SUB, _
 	     ASTCLASS_MUL, ASTCLASS_DIV, ASTCLASS_MOD
-		dim as ASTNODE r
+		dim as CPPVALUE r
 		cppEval( v, n->head )
 		cppEval( r, n->tail )
 
@@ -1842,7 +1838,7 @@ end sub
 '' Evaluates a CPP expression to true/false
 private function cppEvalIfExpr( byval expr as ASTNODE ptr ) as integer
 	cppEvalResultDtypes( expr )
-	dim v as ASTNODE
+	dim v as CPPVALUE
 	cppEval( v, expr )
 	function = (v.vali <> 0)
 end function

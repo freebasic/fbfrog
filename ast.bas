@@ -232,20 +232,6 @@ function astUngroupOne( byval group as ASTNODE ptr ) as ASTNODE ptr
 	astDelete( group )
 end function
 
-function astNewCONSTI( byval i as longint, byval dtype as integer ) as ASTNODE ptr
-	var n = astNew( ASTCLASS_CONSTI )
-	n->dtype = dtype
-	n->vali = i
-	function = n
-end function
-
-function astNewCONSTF( byval f as double, byval dtype as integer ) as ASTNODE ptr
-	var n = astNew( ASTCLASS_CONSTF )
-	n->dtype = dtype
-	n->valf = f
-	function = n
-end function
-
 function astTakeLoc( byval n as ASTNODE ptr, byval x as integer ) as ASTNODE ptr
 	n->location = *tkGetLocation( x )
 	function = n
@@ -464,8 +450,6 @@ function astCloneNode( byval n as ASTNODE ptr ) as ASTNODE ptr
 	c->expr        = astClone( n->expr )
 
 	select case( n->class )
-	case ASTCLASS_CONSTI   : c->vali = n->vali
-	case ASTCLASS_CONSTF   : c->valf = n->valf
 	case ASTCLASS_PPDEFINE : c->paramcount = n->paramcount
 	case ASTCLASS_STRUCT, ASTCLASS_UNION : c->maxalign = n->maxalign
 	end select
@@ -560,13 +544,6 @@ function astIsEqual _
 	if( astIsEqual( a->expr, b->expr, is_merge ) = FALSE ) then exit function
 
 	select case( a->class )
-	case ASTCLASS_CONSTI
-		if( a->vali <> b->vali ) then exit function
-
-	case ASTCLASS_CONSTF
-		const EPSILON_DBL as double = 2.2204460492503131e-016
-		if( abs( a->valf - b->valf ) >= EPSILON_DBL ) then exit function
-
 	case ASTCLASS_PPDEFINE
 		if( a->paramcount <> b->paramcount ) then exit function
 
@@ -623,6 +600,17 @@ sub astOops _
 	astReport( n, message, more_context )
 	end 1
 end sub
+
+function astEvalConstiAsInt64( byval n as ASTNODE ptr ) as longint
+	assert( astIsCONSTI( n ) )
+	var text = *n->text
+	if( n->attrib and ASTATTRIB_HEX ) then
+		text = "&h" + text
+	elseif( n->attrib and ASTATTRIB_OCT ) then
+		text = "&o" + text
+	end if
+	function = vallng( text )
+end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 '' AST dumping for pretty output and debugging
@@ -699,19 +687,6 @@ function astDumpOne( byval n as ASTNODE ptr ) as string
 	if( n->alias ) then
 		s += " alias """ + strMakePrintable( *n->alias ) + """"
 	end if
-
-	select case( n->class )
-	case ASTCLASS_CONSTI
-		if( n->attrib and ASTATTRIB_OCT ) then
-			s += " &o" + oct( n->vali )
-		elseif( n->attrib and ASTATTRIB_HEX ) then
-			s += " &h" + hex( n->vali )
-		else
-			s += " " + str( n->vali )
-		end if
-	case ASTCLASS_CONSTF
-		s += " " + str( n->valf )
-	end select
 
 	if( n->dtype <> TYPE_NONE ) then
 		s += " as " + emitType( n->dtype, NULL, TRUE )

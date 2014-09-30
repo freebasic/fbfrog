@@ -215,8 +215,8 @@ end enum
 dim shared __000_123 as long
 type E as long
 enum
-	A = &o123
-	A = &o123
+	A = &o00123
+	A = &o00123
 end enum
 
 ''------------------------------------------------------------------------------
@@ -224,8 +224,8 @@ end enum
 dim shared __param_0 as long
 type E as long
 enum
-	A = &o0
-	A = &o0
+	A = &o0000
+	A = &o0000
 	B = 10
 	B = 10
 	C = 1230
@@ -239,16 +239,16 @@ end enum
 dim shared __param_00 as long
 type E as long
 enum
-	A = &o0
-	A = &o0
+	A = &o00000
+	A = &o00000
 	B = 100
 	B = 100
 	C = 12300
 	C = 12300
 	D = arg00
 	D = arg00
-	E = &h0
-	E = &h0
+	E = &h00
+	E = &h00
 end enum
 
 dim shared __param_123 as long
@@ -286,10 +286,10 @@ type E as long
 enum
 	A = argaa
 	A = argaa
-	B = &hAA
-	B = &hAA
-	C = &hAAAA
-	C = &hAAAA
+	B = &haa
+	B = &haa
+	C = &hAAaa
+	C = &hAAaa
 	D = aa
 	D = aa
 end enum
@@ -299,8 +299,8 @@ type E as long
 enum
 	A = arg0x
 	A = arg0x
-	B = &h0
-	B = &h0
+	B = &h
+	B = &h
 end enum
 
 ''------------------------------------------------------------------------------
@@ -308,8 +308,8 @@ end enum
 dim shared __0_param as long
 type E as long
 enum
-	A = &o0
-	A = &o0
+	A = &o0000
+	A = &o0000
 	B = &o1
 	B = &o1
 	C = &o123

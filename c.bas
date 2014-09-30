@@ -545,7 +545,8 @@ private function cExpression _
 
 		case else
 			cError( "expected expression" + tkButFound( x ) )
-			a = astNewCONSTI( 0, TYPE_INTEGER )
+			a = astNew( ASTCLASS_CONSTI, "0" )
+			astSetType( a, TYPE_INTEGER, NULL )
 		end select
 	end if
 
@@ -895,7 +896,7 @@ private function cPragmaPackNumber( ) as integer
 	if( n->class <> ASTCLASS_CONSTI ) then
 		exit function
 	end if
-	pragmapack.stack(pragmapack.level) = n->vali
+	pragmapack.stack(pragmapack.level) = astEvalConstiAsInt64( n )
 	x += 1
 	function = TRUE
 end function

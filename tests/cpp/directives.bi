@@ -39,18 +39,18 @@ dim shared included as long
 #define A03 11
 #define A04 &o1
 #define A05 &o123
-#define A06 &h0
+#define A06 &h
 #define A07 &h0
 #define A08 &h1
 #define A09 &hFF
-#define A10 1d
-#define A11 1f
-#define A12 1d
+#define A10 1.0
+#define A11 1.0f
+#define A12 1.0
 #define A13 0.1
-#define A14 0d
+#define A14 0.0
 #define A15 1.123
-#define A16 10d
-#define A17 10d
+#define A16 1e+1d
+#define A17 1.0e+1
 #define A18 1
 #define A19 cast(clong, 1)
 #define A20 cast(culong, 1)
