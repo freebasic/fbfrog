@@ -282,17 +282,18 @@
 #ifdef __FBFROG_WIN32__
 	#define _INTEGRAL_MAX_BITS 64
 	#define _REENTRANT 1
+
+	#define __cdecl __attribute__((__cdecl__))
+	#define _cdecl __attribute__((__cdecl__))
+	#define __declspec(x) __attribute__((x))
+	#define __fastcall __attribute__((__fastcall__))
+	#define _fastcall __attribute__((__fastcall__))
+	#define __stdcall __attribute__((__stdcall__))
+	#define _stdcall __attribute__((__stdcall__))
+	#define __thiscall __attribute__((__thiscall__))
+	#define _thiscall __attribute__((__thiscall__))
 #endif
 
-#define __cdecl __attribute__((__cdecl__))
-#define _cdecl __attribute__((__cdecl__))
-#define __declspec(x) __attribute__((x))
-#define __fastcall __attribute__((__fastcall__))
-#define _fastcall __attribute__((__fastcall__))
-#define __stdcall __attribute__((__stdcall__))
-#define _stdcall __attribute__((__stdcall__))
-#define __thiscall __attribute__((__thiscall__))
-#define _thiscall __attribute__((__thiscall__))
 #define __extension__
 
 #define CHAR_BIT 8

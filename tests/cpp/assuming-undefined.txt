@@ -1,7 +1,7 @@
 [1/5] __FB_WIN32__.__FB_64BIT__
 lex: pre-#define, 25 bytes, 2 lines, 4 tokens
 lex: pre-#define, 25 bytes, 2 lines, 4 tokens
-lex: /home/daniel/fbfrog/builtin.h, 9456 bytes, 320 lines, 1668 tokens
+lex: /home/daniel/fbfrog/builtin.h, 9466 bytes, 321 lines, 1669 tokens
       tests/cpp/assuming-undefined.h
 lex: tests/cpp/assuming-undefined.h, 186 bytes, 23 lines, 72 tokens
 /home/daniel/fbfrog/builtin.h(11): assuming symbol '__FBFROG_LINUX__' is undefined
@@ -27,7 +27,7 @@ tests/cpp/assuming-undefined.h(21): assuming symbol 'G' is undefined
                     ^
 [2/5] __FB_WIN32__.(not __FB_64BIT__)
 lex: pre-#define, 25 bytes, 2 lines, 4 tokens
-lex: /home/daniel/fbfrog/builtin.h, 9456 bytes, 320 lines, 1668 tokens
+lex: /home/daniel/fbfrog/builtin.h, 9466 bytes, 321 lines, 1669 tokens
       tests/cpp/assuming-undefined.h
 lex: tests/cpp/assuming-undefined.h, 186 bytes, 23 lines, 72 tokens
 /home/daniel/fbfrog/builtin.h(11): assuming symbol '__FBFROG_LINUX__' is undefined
@@ -57,7 +57,7 @@ tests/cpp/assuming-undefined.h(21): assuming symbol 'G' is undefined
 [3/5] __FB_LINUX__.__FB_64BIT__
 lex: pre-#define, 25 bytes, 2 lines, 4 tokens
 lex: pre-#define, 25 bytes, 2 lines, 4 tokens
-lex: /home/daniel/fbfrog/builtin.h, 9456 bytes, 320 lines, 1668 tokens
+lex: /home/daniel/fbfrog/builtin.h, 9466 bytes, 321 lines, 1669 tokens
       tests/cpp/assuming-undefined.h
 lex: tests/cpp/assuming-undefined.h, 186 bytes, 23 lines, 72 tokens
 /home/daniel/fbfrog/builtin.h(169): assuming symbol '__FBFROG_DOS__' is undefined
@@ -83,7 +83,7 @@ tests/cpp/assuming-undefined.h(21): assuming symbol 'G' is undefined
                     ^
 [4/5] __FB_LINUX__.(not __FB_64BIT__)
 lex: pre-#define, 25 bytes, 2 lines, 4 tokens
-lex: /home/daniel/fbfrog/builtin.h, 9456 bytes, 320 lines, 1668 tokens
+lex: /home/daniel/fbfrog/builtin.h, 9466 bytes, 321 lines, 1669 tokens
       tests/cpp/assuming-undefined.h
 lex: tests/cpp/assuming-undefined.h, 186 bytes, 23 lines, 72 tokens
 /home/daniel/fbfrog/builtin.h(49): assuming symbol '__FBFROG_64BIT__' is undefined
@@ -112,7 +112,7 @@ tests/cpp/assuming-undefined.h(21): assuming symbol 'G' is undefined
                     ^
 [5/5] __FB_DOS__
 lex: pre-#define, 23 bytes, 2 lines, 4 tokens
-lex: /home/daniel/fbfrog/builtin.h, 9456 bytes, 320 lines, 1668 tokens
+lex: /home/daniel/fbfrog/builtin.h, 9466 bytes, 321 lines, 1669 tokens
       tests/cpp/assuming-undefined.h
 lex: tests/cpp/assuming-undefined.h, 186 bytes, 23 lines, 72 tokens
 /home/daniel/fbfrog/builtin.h(11): assuming symbol '__FBFROG_LINUX__' is undefined
