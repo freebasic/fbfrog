@@ -63,6 +63,8 @@ __attribute__((__dllimport__)) void f(void);
 extern __attribute__((  dllimport  )) int i;
 extern __attribute__((__dllimport__)) int i;
 
+__attribute__((no_instrument_function)) void f(void);
+
 // #defines containing only __attribute__'s should just be stripped automatically,
 // as they're useless for FB
 static int attribute_defines;

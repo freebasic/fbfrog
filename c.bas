@@ -648,9 +648,21 @@ private sub cGccAttribute( byref gccattribs as integer )
 	'' Most attributes aren't interesting for FB bindings and should be ignored,
 	'' the main exception being the x86 calling conventions.
 	select case( attr )
-	case "alloc_size", "const", "deprecated", "format", "format_arg", _
-	     "malloc", "may_alias", "noreturn", "pure", "sentinel", _
-	     "unused", "visibility", "warn_unused_result"
+	case "alloc_size", _
+	     "const", _
+	     "deprecated", _
+	     "format", _
+	     "format_arg", _
+	     "malloc", _
+	     "may_alias", _
+	     "no_instrument_function", _
+	     "noreturn", _
+	     "pure", _
+	     "sentinel", _
+	     "unused", _
+	     "visibility", _
+	     "warn_unused_result"
+
 		x += 1
 
 		'' Some of these attributes accept further arguments which we

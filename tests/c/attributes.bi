@@ -67,6 +67,8 @@ declare sub f()
 extern import i as long
 extern import i as long
 
+declare sub f()
+
 '' #defines containing only __attribute__'s should just be stripped automatically,
 
 '' as they're useless for FB
