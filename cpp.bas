@@ -2449,6 +2449,38 @@ private sub cppNext( )
 			exit sub
 		end if
 
+	'' _Pragma("...")
+	case KW__PRAGMA
+		if( cppSkipping( ) = FALSE ) then
+			var begin = cpp.x
+			cpp.x += 1
+
+			'' '('
+			tkExpect( cpp.x, TK_LPAREN, "behind _Pragma" )
+			cpp.x += 1
+
+			'' StringLiteral
+			tkExpect( cpp.x, TK_STRING, "inside _Pragma()" )
+			var text = *tkGetText( cpp.x )
+			cpp.x += 1
+
+			'' ')'
+			tkExpect( cpp.x, TK_RPAREN, "to close _Pragma" )
+			cpp.x += 1
+
+			'' Insert #pragma corresponding to the _Pragma(),
+			'' while ensuring to have EOL in front of and behind it,
+			'' mark the _Pragma() for removal, then we can parse the
+			'' #pragma as usual.
+			tkSetRemove( begin, cpp.x - 1 )
+			var pragma = !"\n#pragma " + text
+			if( tkGet( cpp.x ) <> TK_EOL ) then
+				pragma += !"\n"
+			end if
+			lexLoadC( cpp.x, sourcebufferFromZstring( "_Pragma(" + text + ")", pragma, tkGetLocation( begin ) ), FALSE )
+			exit sub
+		end if
+
 	'' Identifier/keyword? Check whether it needs to be macro-expanded
 	case is >= TK_ID
 		if( cppSkipping( ) = FALSE ) then

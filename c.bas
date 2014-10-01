@@ -853,21 +853,43 @@ private function cDefine( ) as ASTNODE ptr
 
 	'' Non-empty?
 	if( tkGet( x ) <> TK_EOL ) then
-		'' __attribute__?
-		if( tkGet( x ) = KW___ATTRIBUTE__ ) then
+		select case( tkGet( x ) )
+
+		'' Don't preserve #define if it just contains _Pragma's
+		'' _Pragma("...")
+		case KW__PRAGMA
+			do
+				'' _Pragma
+				x += 1
+
+				'' '('
+				if( tkGet( x ) <> TK_LPAREN ) then exit do
+				x += 1
+
+				'' Skip to ')' - we don't care whether there is
+				'' a string literal or something like a #macroparam or similar...
+				hSkipToRparen( )
+				x += 1
+			loop while( tkGet( x ) = KW__PRAGMA )
+
+			astDelete( macro )
+			macro = astNewGROUP( )
+
+		case KW___ATTRIBUTE__
 			'' Don't preserve #define if it just contains an __attribute__
 			cGccAttributeList( 0 )
 			astDelete( macro )
 			macro = astNewGROUP( )
-		else
+
+		case else
 			'' Try to parse it as expression
 			macro->expr = cExpression( 0, macro )
-		end if
+		end select
 
 		'' Didn't reach EOL? Then the beginning of the macro body could
 		'' be parsed as expression, but not the rest.
 		if( tkGet( x ) <> TK_EOL ) then
-			cError( "failed to parse full #define body as expression" )
+			cError( "failed to parse full #define body" )
 			x = hSkipToEol( x )
 		end if
 	end if
