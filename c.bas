@@ -1194,6 +1194,7 @@ private sub cBaseType _
 			case KW_DOUBLE : dtype = TYPE_DOUBLE
 			case KW_CHAR   : dtype = TYPE_ZSTRING
 			case KW_INT    : dtype = TYPE_LONG
+			case KW__BOOL  : dtype = TYPE_BYTE
 
 			case else
 				exit while

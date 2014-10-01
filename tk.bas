@@ -90,6 +90,7 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	(@"__attribute__"), _ '' C keywords
 	(@"__restrict"   ), _
 	(@"__restrict__" ), _
+	(@"_Bool"   ), _
 	(@"_Pragma" ), _
 	(@"auto"    ), _
 	(@"break"   ), _

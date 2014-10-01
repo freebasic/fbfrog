@@ -61,6 +61,8 @@ static ptrdiff_t a;
 static wchar_t a;
 static wchar_t *a;
 
+static _Bool a;
+
 static A a;
 static enum A a;
 static union A a;
