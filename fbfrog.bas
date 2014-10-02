@@ -912,7 +912,9 @@ private function frogReadAPI( byval options as ASTNODE ptr ) as ASTNODE ptr
 	tkTurnCPPTokensIntoCIds( )
 
 	'' Parse C constructs
+	cInit( )
 	var ast = cFile( )
+	cEnd( )
 
 	tkEnd( )
 

@@ -881,6 +881,8 @@ declare sub cppNoExpandSym( byval id as zstring ptr )
 declare sub cppRemoveSym( byval id as zstring ptr )
 declare sub cppAddFilter( byval filter as ASTNODE ptr )
 declare sub cppMain( )
+declare sub cInit( )
+declare sub cEnd( )
 declare function cFile( ) as ASTNODE ptr
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
