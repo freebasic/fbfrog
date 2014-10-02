@@ -662,8 +662,10 @@ sub tkTurnCPPTokensIntoCIds( )
 		select case( tk )
 		case KW_DEFINE, KW_DEFINED, KW_INCLUDE, KW_ELIF, KW_IFDEF, KW_IFNDEF, _
 		     KW_ENDIF, KW_UNDEF, KW_PRAGMA, KW_ERROR, KW_WARNING
-			tkRemove( x, x )
-			tkInsert( x, TK_ID, tkInfoText( tk ) )
+			'' Turn the KW_* into a TK_ID, but preserve the flags/macro expansion level/etc.
+			var p = tkAccess( x )
+			p->id = TK_ID
+			p->text = strDuplicate( tkInfoText( tk ) )
 		end select
 	next
 end sub
