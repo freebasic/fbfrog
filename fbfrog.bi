@@ -228,6 +228,7 @@ const TKFLAG_LL			= 1 shl 7
 const TKFLAG_HEX		= 1 shl 8
 const TKFLAG_OCT		= 1 shl 9
 const TKFLAG_FLOAT		= 1 shl 10
+const TKFLAG_REMOVEINCLUDE	= 1 shl 11  '' TK_BEGININCLUDE only: Whether the included tokens should be preserved or not
 
 enum
 	TK_EOF
@@ -883,6 +884,7 @@ declare sub cppAddFilter( byval filter as ASTNODE ptr )
 declare sub cppMain( )
 declare sub cInit( )
 declare sub cEnd( )
+declare sub cPreParse( )
 declare function cFile( ) as ASTNODE ptr
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''

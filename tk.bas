@@ -302,6 +302,7 @@ function tkDumpOne( byval x as integer ) as string
 	checkFlag( L )
 	checkFlag( LL )
 	checkFlag( FLOAT )
+	checkFlag( REMOVEINCLUDE )
 
 	s += hDumpComment( p->comment )
 

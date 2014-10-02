@@ -47,12 +47,16 @@
 '' TK_ENDINCLUDE. This allows detecting #include EOF for the #if/#include stack,
 '' and allows us to remove #included tokens as wanted for the -filterout and
 '' -filterin options. This way we can #include the file temporarily to get to
-'' see #defines and #undefs etc., but can still exclude it before it reaches
-'' the C parser. We cannot do tkSetRemove() on all the #included tokens
-'' immediately after inserting them though, because we may do macro expansion
-'' which may result in new tokens. Thus we have to do the tkSetRemove() later
-'' when reaching the TK_ENDINCLUDE (cppEndInclude()), when the #included tokens
-'' don't change anymore.
+'' see #defines/#undefs etc. during cppMain() and typedefs during cPreParse(),
+'' but can still exclude it before it reaches the main C parser (cFile()).
+'' We cannot do tkSetRemove() on all the #included tokens immediately after
+'' inserting them, because
+''  * we may do macro expansion which may result in new tokens which wouldn't
+''    automatically be marked for removal too. We'd have to do the tkSetRemove()
+''    later when reaching the TK_ENDINCLUDE, when the #included tokens don't
+''    change anymore.
+''  * we want to preserve typedefs for cPreParse(), so removing the tokens from
+''    excluded headers must be delayed until cPreParse() anyways.
 ''
 '' cppNoExpandSym() can be used to disable macro expansion for certain symbols.
 '' This should be pretty rare though; usually in headers where function
@@ -2045,24 +2049,6 @@ private function hSearchHeaderFile _
 	function = ""
 end function
 
-private function hFindBeginInclude( byval x as integer ) as integer
-	assert( tkGet( x ) = TK_ENDINCLUDE )
-	var level = 0
-	do
-		x -= 1
-		select case( tkGet( x ) )
-		case TK_BEGININCLUDE
-			if( level = 0 ) then
-				exit do
-			end if
-			level -= 1
-		case TK_ENDINCLUDE
-			level += 1
-		end select
-	loop
-	function = x
-end function
-
 private sub cppInclude( byval begin as integer )
 	cpp.x += 1
 
@@ -2104,12 +2090,12 @@ private sub cppInclude( byval begin as integer )
 	tkSetRemove( begin, cpp.x - 1 )
 
 	'' Insert this helper token so we can identify the start of #included
-	'' tokens later in cppEndInclude().
+	'' tokens later during cPreParse().
 	tkInsert( cpp.x, TK_BEGININCLUDE )
-	'' Mark the TK_BEGININCLUDE for removal if the include content should be
-	'' filtered out by cppEndInclude().
+	'' Mark the TK_BEGININCLUDE with TKFLAG_REMOVEINCLUDE if the include
+	'' content should be filtered out by cPreParse().
 	if( keep = FALSE ) then
-		tkSetRemove( cpp.x )
+		tkAddFlags( cpp.x, TKFLAG_REMOVEINCLUDE )
 	end if
 	cpp.x += 1
 
@@ -2141,23 +2127,6 @@ private sub cppEndInclude( )
 		tkOops( cpp.x - 1, "missing #endif in #included file" )
 	end if
 	cppPop( )
-
-	var begin = hFindBeginInclude( cpp.x )
-
-	assert( tkGet( begin ) = TK_BEGININCLUDE )
-	assert( tkGet( cpp.x ) = TK_ENDINCLUDE )
-
-	'' Should the include content be removed?
-	if( tkGetFlags( begin ) and TKFLAG_REMOVE ) then
-		'' Mark all the #included tokens for removal, now that we've preprocessed them.
-		'' (we've seen #defines, #undefs, and did macro expansion)
-		tkSetRemove( begin, cpp.x )
-	else
-		'' Remove just the TK_BEGININCLUDE/TK_ENDINCLUDE, keep the preprocessed #included tokens.
-		tkSetRemove( begin )
-		tkSetRemove( cpp.x )
-	end if
-
 	cpp.x += 1
 end sub
 

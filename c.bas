@@ -102,6 +102,7 @@ sub cInit( )
 
 	c.x = 0
 	c.parseok = TRUE
+	c.errmsg = ""
 	c.parentdefine = NULL
 end sub
 
@@ -2011,6 +2012,77 @@ private function cBody( byval body as integer ) as ASTNODE ptr
 	function = group
 end function
 
+private function hFindBeginInclude( byval x as integer ) as integer
+	assert( tkGet( x ) = TK_ENDINCLUDE )
+	var level = 0
+	do
+		x -= 1
+		select case( tkGet( x ) )
+		case TK_BEGININCLUDE
+			if( level = 0 ) then
+				exit do
+			end if
+			level -= 1
+		case TK_ENDINCLUDE
+			level += 1
+		end select
+	loop
+	function = x
+end function
+
+private sub cEndInclude( )
+	var begin = hFindBeginInclude( c.x )
+
+	assert( tkGet( begin ) = TK_BEGININCLUDE )
+	assert( tkGet( c.x ) = TK_ENDINCLUDE )
+
+	'' Should the include content be removed?
+	if( tkGetFlags( begin ) and TKFLAG_REMOVEINCLUDE ) then
+		'' Mark all the #included tokens for removal, now that we've preprocessed them.
+		'' (we've seen #defines, #undefs, and did macro expansion)
+		tkRemove( begin, c.x )
+		c.x = begin
+	else
+		'' Remove just the TK_BEGININCLUDE/TK_ENDINCLUDE, keep the preprocessed #included tokens.
+		tkRemove( begin, begin )
+		c.x -= 1
+		tkRemove( c.x, c.x )
+	end if
+end sub
+
+sub cPreParse( )
+	c.x = 0
+	do
+		var begin = c.x
+
+		select case( tkGet( c.x ) )
+		case TK_EOF
+			exit do
+
+		case TK_BEGININCLUDE
+			'' Handle TK_BEGININCLUDE manually if it occurs outside hSkipConstruct(),
+			'' otherwise the next hSkipConstruct() would skip over it and the first
+			'' construct behind it.
+			c.x += 1
+
+		case TK_ENDINCLUDE
+			cEndInclude( )
+
+		case KW_TYPEDEF
+			var t = cTypedef( )
+			if( c.parseok = FALSE ) then
+				c.x = hSkipConstruct( begin )
+				c.parseok = TRUE
+				c.errmsg = ""
+			end if
+			astDelete( t )
+		case else
+			c.x = hSkipConstruct( begin )
+		end select
+	loop
+end sub
+
 function cFile( ) as ASTNODE ptr
+	c.x = 0
 	function = cBody( BODY_TOPLEVEL )
 end function

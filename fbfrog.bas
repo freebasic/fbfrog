@@ -901,8 +901,8 @@ private function frogReadAPI( byval options as ASTNODE ptr ) as ASTNODE ptr
 
 	cppMain( )
 
-	'' Remove directives/tokens marked for removal by cppMain(). Doing this
-	'' as a separate step allows
+	'' Remove CPP directives and EOLs (tokens marked for removal by
+	'' cppMain()). Doing this as a separate step allows
 	'' * error reports during cppMain() to view the complete input
 	'' * cppMain() to reference #define directives based on token position
 	''   (to retrieve the bodies for macro expansion) as opposed to having
@@ -911,9 +911,21 @@ private function frogReadAPI( byval options as ASTNODE ptr ) as ASTNODE ptr
 
 	tkTurnCPPTokensIntoCIds( )
 
-	'' Parse C constructs
 	cInit( )
+
+	'' C pre-parsing pass:
+	'' * It collects typedefs which will improve cFile()'s type cast
+	''   disambiguation inside #define bodies where typedefs can be used
+	''   before being declared.
+	'' * Removes tokens from #included headers which shouldn't be preserved,
+	''   i.e. if they were filtered out. This is not done via
+	''   cppMain()/tkApplyRemoves() already, so that cPreParse() gets to
+	''   see all typedefs, even those from excluded headers.
+	cPreParse( )
+
+	'' Parse C constructs
 	var ast = cFile( )
+
 	cEnd( )
 
 	tkEnd( )
