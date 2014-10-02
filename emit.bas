@@ -619,7 +619,7 @@ private function emitAst _
 			s += " as " + emitType( n )
 		end if
 
-		'' Statement?
+		'' Is this a procedure declaration/statement (and not a procptr subtype)?
 		if( n->text ) then
 			emitStmt( s, n->comment )
 			s = ""

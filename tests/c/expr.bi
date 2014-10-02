@@ -382,12 +382,6 @@ enum
 	A = iif(a, b, iif(c, d, e))
 	A = iif(a, b, iif(c, d, e))
 	A = iif(iif(a, b, c), d, e)
-	A = (1, 2, 3)
-	A = ()
-	A = (1)
-	A = (1)
-	A = (-(a = 0))
-	A = f(-(a = 0))
 end enum
 
 #define A01(x) ("a" + "b")
@@ -458,3 +452,9 @@ end enum
 #define A52(T) cptr(T ptr, malloc(sizeof((T))))
 #define A53 cptr(MYINT ptr, malloc(sizeof(MYINT)))
 #define A54 cptr(const ulong ptr ptr ptr, malloc(123))
+
+#macro A55
+	scope
+		dim a(0 to 9) as long = (1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
+	end scope
+#endmacro

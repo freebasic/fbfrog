@@ -425,15 +425,6 @@ enum E {
 	A =  a ? b :  c  ? d : e,
 	A =  a ? b : (c  ? d : e),
 	A = (a ? b :  c) ? d : e,
-
-	A = { 1, 2, 3 },
-	A = { },
-	A = { 1 },
-	A = { 1, },
-
-	// C UOP nested inside children list
-	A = { !a },
-	A = f( !a ),
 };
 
 #define A01(x) "a" "b"
@@ -485,7 +476,6 @@ enum E {
 #define A45 { }
 #define A46 { 1 }
 #define A47 { 1, }
-
 // C UOP nested inside children list
 #define A48 { !a, !a }
 #define A49 { f( !a ); }
@@ -496,3 +486,5 @@ enum E {
 #define A52(T) ((T*)malloc(sizeof(T)))
 #define A53 ((MYINT*)malloc(sizeof(MYINT)))
 #define A54 ((const unsigned int ***)malloc(123))
+
+#define A55 { int a[10] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }; }

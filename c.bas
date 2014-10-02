@@ -66,6 +66,7 @@ enum
 end enum
 
 declare function cExpression( byval level as integer ) as ASTNODE ptr
+declare function cExpressionOrInitializer( ) as ASTNODE ptr
 declare function cDeclaration _
 	( _
 		byval decl as integer, _
@@ -288,63 +289,6 @@ private function hDataTypeInParens( byval decl as integer ) as ASTNODE ptr
 			@"to close 'sizeof (...)'" ) )
 end function
 
-'' Scope block: '{' (Expression ';')* '}'
-'' Initializer: '{' Expression (',' Expression)* '}'
-private function hScopeBlockOrInitializer( ) as ASTNODE ptr
-	var a = astNewGROUP( )
-	x += 1
-
-	'' '}'?
-	while( (tkGet( x ) <> TK_RBRACE) and parseok )
-		astAppend( a, cExpression( 0 ) )
-
-		select case( a->class )
-		case ASTCLASS_STRUCTINIT
-			'' '}'?
-			if( tkGet( x ) = TK_RBRACE ) then exit while
-
-			'' ','
-			cExpectMatch( TK_COMMA, "(expression separator in struct initializer)" )
-
-		case ASTCLASS_SCOPEBLOCK
-			'' ';'
-			cExpectMatch( TK_SEMI, "(end of statement in scope block)" )
-
-		case else
-			'' ',' -> it's a struct initializer
-			'' ';' -> it's a scope block
-			'' '}' -> end
-			select case( tkGet( x ) )
-			case TK_COMMA
-				a->class = ASTCLASS_STRUCTINIT
-				x += 1
-
-			case TK_SEMI
-				a->class = ASTCLASS_SCOPEBLOCK
-				x += 1
-
-			case TK_RBRACE
-				a->class = ASTCLASS_STRUCTINIT
-
-			case else
-				cError( "expected ',' (expression separator in struct initializer), or ';' (end of statement in scope block), or '}' (end of block)" + tkButFound( x ) )
-			end select
-		end select
-	wend
-
-	'' If no ',' or ';' was found and we don't know whether it's a struct
-	'' initializer or a scope block, make an assumption...
-	if( a->class = ASTCLASS_GROUP ) then
-		a->class = ASTCLASS_STRUCTINIT
-	end if
-
-	cExpectMatch( TK_RBRACE, iif( a->class = ASTCLASS_STRUCTINIT, _
-		@"to close struct initializer", _
-		@"to close scope block" ) )
-
-	function = a
-end function
-
 '' C expression parser based on precedence climbing
 private function cExpression( byval level as integer ) as ASTNODE ptr
 	'' Unary prefix operators
@@ -473,11 +417,6 @@ private function cExpression( byval level as integer ) as ASTNODE ptr
 
 			end select
 
-		'' Scope block: '{' (Expression ';')* '}'
-		'' Initializer: '{' Expression (',' Expression)* '}'
-		case TK_LBRACE
-			a = hScopeBlockOrInitializer( )
-
 		'' SIZEOF Expression
 		'' SIZEOF '(' DataType ')'
 		case KW_SIZEOF
@@ -598,6 +537,37 @@ private function cExpression( byval level as integer ) as ASTNODE ptr
 	wend
 
 	function = a
+end function
+
+'' Initializer:
+'' '{' ExpressionOrInitializer (',' ExpressionOrInitializer)* [','] '}'
+private function cInitializer( ) as ASTNODE ptr
+	'' '{'
+	assert( tkGet( x ) = TK_LBRACE )
+	x += 1
+
+	var a = astNew( ASTCLASS_STRUCTINIT )
+
+	do
+		'' '}'?
+		if( tkGet( x ) = TK_RBRACE ) then exit do
+
+		astAppend( a, cExpressionOrInitializer( ) )
+
+		'' ','
+	loop while( cMatch( TK_COMMA ) and parseok )
+
+	cExpectMatch( TK_RBRACE, "to close struct initializer" )
+
+	function = a
+end function
+
+private function cExpressionOrInitializer( ) as ASTNODE ptr
+	if( tkGet( x ) = TK_LBRACE ) then
+		function = cInitializer( )
+	else
+		function = cExpression( 0 )
+	end if
 end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -823,6 +793,87 @@ end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
+''
+'' Determine whether a sequence of tokens starting with '{' is a scope block or
+'' an array/struct initializer.
+''
+'' If there is a ';' behind the first "element" then it surely is a scope block.
+'' If there's a ',' instead, then it probably is an initializer. An empty '{}'
+'' is treated as initializer.
+'
+private function hLooksLikeScopeBlock( byval x as integer ) as integer
+	'' '{'
+	assert( tkGet( x ) = TK_LBRACE )
+
+	do
+		x += 1
+
+		select case( tkGet( x ) )
+		case TK_SEMI
+			return TRUE
+
+		case TK_EOF, TK_COMMA, TK_RBRACE
+			exit do
+
+		case TK_LPAREN, TK_LBRACKET, TK_LBRACE
+			x = hFindClosingParen( x, FALSE )
+		end select
+	loop
+
+	function = FALSE
+end function
+
+private sub cDefineBody( byval macro as ASTNODE ptr, byref keep_define as integer )
+	parentdefine = macro
+
+	select case( tkGet( x ) )
+
+	'' Don't preserve #define if it just contains _Pragma's
+	'' _Pragma("...")
+	case KW__PRAGMA
+		do
+			'' _Pragma
+			x += 1
+
+			'' '('
+			if( tkGet( x ) <> TK_LPAREN ) then exit do
+			x += 1
+
+			'' Skip to ')' - we don't care whether there is
+			'' a string literal or something like a #macroparam or similar...
+			hSkipToRparen( )
+			x += 1
+		loop while( tkGet( x ) = KW__PRAGMA )
+
+		keep_define = FALSE
+
+	case KW___ATTRIBUTE__
+		'' Don't preserve #define if it just contains an __attribute__
+		cGccAttributeList( 0 )
+		keep_define = FALSE
+
+	'' '{'
+	case TK_LBRACE
+		if( hLooksLikeScopeBlock( x ) ) then
+			macro->expr = astNew( ASTCLASS_SCOPEBLOCK, cScope( ) )
+		else
+			macro->expr = cInitializer( )
+		end if
+
+	case else
+		macro->expr = cExpression( 0 )
+	end select
+
+	'' Didn't reach EOL? Then the beginning of the macro body could
+	'' be parsed as expression, but not the rest.
+	if( tkGet( x ) <> TK_EOL ) then
+		cError( "failed to parse full #define body" )
+		x = hSkipToEol( x )
+	end if
+
+	parentdefine = NULL
+end sub
+
 private function cDefine( ) as ASTNODE ptr
 	x += 1
 
@@ -835,49 +886,14 @@ private function cDefine( ) as ASTNODE ptr
 
 	'' Non-empty?
 	if( tkGet( x ) <> TK_EOL ) then
-		parentdefine = macro
+		var keep_define = TRUE
+		cDefineBody( macro, keep_define )
 
-		select case( tkGet( x ) )
-
-		'' Don't preserve #define if it just contains _Pragma's
-		'' _Pragma("...")
-		case KW__PRAGMA
-			do
-				'' _Pragma
-				x += 1
-
-				'' '('
-				if( tkGet( x ) <> TK_LPAREN ) then exit do
-				x += 1
-
-				'' Skip to ')' - we don't care whether there is
-				'' a string literal or something like a #macroparam or similar...
-				hSkipToRparen( )
-				x += 1
-			loop while( tkGet( x ) = KW__PRAGMA )
-
+		'' Silently ignore the #define?
+		if( keep_define = FALSE ) then
 			astDelete( macro )
 			macro = astNewGROUP( )
-
-		case KW___ATTRIBUTE__
-			'' Don't preserve #define if it just contains an __attribute__
-			cGccAttributeList( 0 )
-			astDelete( macro )
-			macro = astNewGROUP( )
-
-		case else
-			'' Try to parse it as expression
-			macro->expr = cExpression( 0 )
-		end select
-
-		'' Didn't reach EOL? Then the beginning of the macro body could
-		'' be parsed as expression, but not the rest.
-		if( tkGet( x ) <> TK_EOL ) then
-			cError( "failed to parse full #define body" )
-			x = hSkipToEol( x )
 		end if
-
-		parentdefine = NULL
 	end if
 
 	'' Eol
@@ -1656,7 +1672,7 @@ private function cDeclarator _
 		'' ['=' Initializer]
 		if( cMatch( TK_EQ ) ) then
 			assert( t->expr = NULL )
-			t->expr = cExpression( 0 )
+			t->expr = cExpressionOrInitializer( )
 		end if
 	end if
 
@@ -1858,6 +1874,9 @@ private function cExpressionStatement( ) as ASTNODE ptr
 end function
 
 '' '{ ... }' statement block
+'' Using cBody() to allow the constructs in this scope block to be parsed
+'' separately. If we can't parse one of them, then only that one will become an
+'' unknown construct. The rest of the scope can potentially be parsed fine.
 private function cScope( ) as ASTNODE ptr
 	'' '{'
 	assert( tkGet( x ) = TK_LBRACE )

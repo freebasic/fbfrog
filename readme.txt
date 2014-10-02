@@ -219,6 +219,11 @@ unnecessary?
 
 To do:
 
+* <-typedef foo> option to forward-declare typedefs, improving the C parser's
+  cast detection.
+* typedefs from excluded headers should still be used to improve cast detection
+* #define bodies should be parsed in a 2nd pass after all typedefs were seen
+
 * -keyword foo option to allow fixing inter-header name conflicts manually
 * Automatically detect #include guards and remove the left over #defines
 * Ignore __attribute__((aligned(N))) (show a warning?). FB doesn't have it, and
@@ -228,6 +233,7 @@ To do:
   Move #includes to the top (out of the extern block)?
 * Beautify comments, e.g. for /**/ comments, remove the * at the start of each
   line if each line starts with that, etc.
+* Support dimension-less arrays with initializers: int a[] = {1, 2};
 
 * Simplify command line parsing
   * string-based arg parsing, instead of tk/lex
