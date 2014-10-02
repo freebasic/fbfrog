@@ -488,3 +488,4 @@ enum E {
 #define A54 ((const unsigned int ***)malloc(123))
 
 #define A55 { int a[10] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }; }
+#define A56 { int a, b; }

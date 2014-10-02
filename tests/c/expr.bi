@@ -458,3 +458,9 @@ end enum
 		dim a(0 to 9) as long = (1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
 	end scope
 #endmacro
+#macro A56
+	scope
+		dim a as long
+		dim b as long
+	end scope
+#endmacro

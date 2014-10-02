@@ -799,8 +799,10 @@ end function
 ''
 '' If there is a ';' behind the first "element" then it surely is a scope block.
 '' If there's a ',' instead, then it probably is an initializer. An empty '{}'
-'' is treated as initializer.
-'
+'' is treated as initializer. We can't just stop at the first ',' though. In
+'' order to support "{ int a, b; }", we have to scan the whole '{...}' block
+'' for ';'s.
+''
 private function hLooksLikeScopeBlock( byval x as integer ) as integer
 	'' '{'
 	assert( tkGet( x ) = TK_LBRACE )
@@ -812,7 +814,7 @@ private function hLooksLikeScopeBlock( byval x as integer ) as integer
 		case TK_SEMI
 			return TRUE
 
-		case TK_EOF, TK_COMMA, TK_RBRACE
+		case TK_EOF, TK_RBRACE
 			exit do
 
 		case TK_LPAREN, TK_LBRACKET, TK_LBRACE
