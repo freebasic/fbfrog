@@ -1,8 +1,11 @@
 ''
 '' This helper program searches the tests/ directory for *.h files, and runs
-'' fbfrog on each one. Each test will either produce a .bi (for .h files that
-'' are expected to not cause any errors) or a .txt file containing fbfrog's
-'' console output (for .h files that are expected to cause errors).
+'' fbfrog on each one. Test cases which are intended to PASS will produce a .bi
+'' file and a .txt file containing fbfrog's console output. Test cases which are
+'' intended to FAIL only produce the .txt file.
+''
+'' This way we have the .h, the resulting .bi (if any), and any console output
+'' including error messages captured and can easily detect changes via Git.
 ''
 '' The first line of each .h file is checked for the following strings:
 ''
@@ -10,8 +13,8 @@
 ''                 Any occurences of "<dir>" are replaced with the .h file's
 ''                 parent directory's path.
 ''
-''  @fail        Used to mark error (expected-failure) tests. (may be used
-''               in front of @fbfrog)
+''  @fail        Used to mark error (expected-failure) tests. This can be used
+''               in front of @fbfrog: @fail @fbfrog ...
 ''
 ''  @ignore      Skip this .h file completely, allowing it to be #included
 ''               into others etc. without being seen as test cases itself.
