@@ -387,6 +387,7 @@ enum
 	OPT_DEFINE
 	OPT_NOEXPAND
 	OPT_REMOVEDEFINE
+	OPT_TYPEDEFHINT
 	OPT_RENAMETYPEDEF
 	OPT_RENAMETAG
 	OPT__LAST = OPT_RENAMETAG
@@ -543,6 +544,7 @@ enum
 	ASTCLASS_DIR
 	ASTCLASS_NOEXPAND
 	ASTCLASS_REMOVEDEFINE
+	ASTCLASS_TYPEDEFHINT
 	ASTCLASS_RENAMETYPEDEF
 	ASTCLASS_RENAMETAG
 	ASTCLASS_FILTEROUT
@@ -884,6 +886,7 @@ declare sub cppAddFilter( byval filter as ASTNODE ptr )
 declare sub cppMain( )
 declare sub cInit( )
 declare sub cEnd( )
+declare sub cAddTypedef( byval id as zstring ptr )
 declare sub cPreParse( )
 declare function cFile( ) as ASTNODE ptr
 

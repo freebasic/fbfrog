@@ -163,6 +163,7 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	(@"-define"       ), _
 	(@"-noexpand"     ), _
 	(@"-removedefine" ), _
+	(@"-typedefhint"  ), _
 	(@"-renametypedef"), _
 	(@"-renametag"    )  _
 }

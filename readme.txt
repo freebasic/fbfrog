@@ -219,9 +219,6 @@ unnecessary?
 
 To do:
 
-* <-typedef foo> option to forward-declare typedefs, improving the C parser's
-  cast detection.
-
 * -keyword foo option to allow fixing inter-header name conflicts manually
 * Automatically detect #include guards and remove the left over #defines
 * Ignore __attribute__((aligned(N))) (show a warning?). FB doesn't have it, and

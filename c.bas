@@ -110,7 +110,7 @@ sub cEnd( )
 	hashEnd( @c.typedefs )
 end sub
 
-private sub cAddTypedef( byval id as zstring ptr )
+sub cAddTypedef( byval id as zstring ptr )
 	hashAddOverwrite( @c.typedefs, id, NULL )
 end sub
 
@@ -2076,6 +2076,7 @@ sub cPreParse( )
 				c.errmsg = ""
 			end if
 			astDelete( t )
+
 		case else
 			c.x = hSkipConstruct( begin )
 		end select
