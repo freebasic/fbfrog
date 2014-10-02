@@ -65,11 +65,7 @@ enum
 	BODY_ENUM
 end enum
 
-declare function cExpression _
-	( _
-		byval level as integer, _
-		byval macro as ASTNODE ptr _
-	) as ASTNODE ptr
+declare function cExpression( byval level as integer ) as ASTNODE ptr
 declare function cDeclaration _
 	( _
 		byval decl as integer, _
@@ -87,6 +83,7 @@ namespace pragmapack
 end namespace
 dim shared as integer x, parseok
 dim shared as string errmsg
+dim shared parentdefine as ASTNODE ptr
 dim shared typedefs as THASH
 
 private sub hPragmaPackReset( )
@@ -214,13 +211,9 @@ private function hStringLiteralSequence( ) as ASTNODE ptr
 	function = a
 end function
 
-private function hIdentifierIsMacroParam _
-	( _
-		byval macro as ASTNODE ptr, _
-		byval id as zstring ptr _
-	) as integer
-	if( macro ) then
-		function = (astLookupMacroParam( macro, id ) >= 0)
+private function hIdentifierIsMacroParam( byval id as zstring ptr ) as integer
+	if( parentdefine ) then
+		function = (astLookupMacroParam( parentdefine, id ) >= 0)
 	else
 		function = FALSE
 	end if
@@ -252,12 +245,7 @@ end function
 '' make the same mistake, but it doesn't show any warning. That would be crazy
 '' to do for every re-#definable keyword...
 ''
-private function hIsDataType _
-	( _
-		byval y as integer, _
-		byval macro as ASTNODE ptr _
-	) as integer
-
+private function hIsDataType( byval y as integer ) as integer
 	var is_type = FALSE
 
 	select case( tkGet( y ) )
@@ -265,12 +253,12 @@ private function hIsDataType _
 	     KW_SIGNED, KW_UNSIGNED, KW_CONST, KW_SHORT, KW_LONG, _
 	     KW_ENUM, KW_STRUCT, KW_UNION, _
 	     KW_VOID, KW_CHAR, KW_FLOAT, KW_DOUBLE, KW_INT
-		is_type = not hIdentifierIsMacroParam( macro, tkSpellId( y ) )
+		is_type = not hIdentifierIsMacroParam( tkSpellId( y ) )
 	case TK_ID
 		var id = tkSpellId( y )
 		if( (hIdentifyCommonTypedef( id ) <> TYPE_NONE) or _
 		    hIsTypedef( id ) ) then
-			is_type = not hIdentifierIsMacroParam( macro, id )
+			is_type = not hIdentifierIsMacroParam( id )
 		end if
 	end select
 
@@ -302,13 +290,13 @@ end function
 
 '' Scope block: '{' (Expression ';')* '}'
 '' Initializer: '{' Expression (',' Expression)* '}'
-private function hScopeBlockOrInitializer( byval macro as ASTNODE ptr ) as ASTNODE ptr
+private function hScopeBlockOrInitializer( ) as ASTNODE ptr
 	var a = astNewGROUP( )
 	x += 1
 
 	'' '}'?
 	while( (tkGet( x ) <> TK_RBRACE) and parseok )
-		astAppend( a, cExpression( 0, macro ) )
+		astAppend( a, cExpression( 0 ) )
 
 		select case( a->class )
 		case ASTCLASS_STRUCTINIT
@@ -358,12 +346,7 @@ private function hScopeBlockOrInitializer( byval macro as ASTNODE ptr ) as ASTNO
 end function
 
 '' C expression parser based on precedence climbing
-private function cExpression _
-	( _
-		byval level as integer, _
-		byval macro as ASTNODE ptr _
-	) as ASTNODE ptr
-
+private function cExpression( byval level as integer ) as ASTNODE ptr
 	'' Unary prefix operators
 	var op = -1
 	select case( tkGet( x ) )
@@ -378,7 +361,7 @@ private function cExpression _
 	dim as ASTNODE ptr a
 	if( op >= 0 ) then
 		x += 1
-		a = astNew( op, cExpression( cprecedence(op), macro ) )
+		a = astNew( op, cExpression( cprecedence(op) ) )
 	else
 		'' Atoms
 		select case( tkGet( x ) )
@@ -389,7 +372,7 @@ private function cExpression _
 			'' '('
 			x += 1
 
-			var is_cast = hIsDataType( x, macro )
+			var is_cast = hIsDataType( x )
 
 			'' Find the ')' and check the token behind it, in some cases
 			'' we can tell that it probably isn't a cast.
@@ -408,20 +391,20 @@ private function cExpression _
 				var t = hDataTypeInParens( DECL_CASTTYPE )
 
 				'' Expression
-				a = astNew( ASTCLASS_CAST, cExpression( 0, macro ) )
+				a = astNew( ASTCLASS_CAST, cExpression( 0 ) )
 
 				assert( t->class = ASTCLASS_TYPE )
 				astSetType( a, t->dtype, astClone( t->subtype ) )
 				astDelete( t )
 			else
 				'' Expression
-				a = cExpression( 0, macro )
+				a = cExpression( 0 )
 
 				'' ')'
 				cExpectMatch( TK_RPAREN, "to close '(...)' parenthesized expression" )
 
 				if( a->class = ASTCLASS_ID ) then
-					if( hIdentifierIsMacroParam( macro, a->text ) ) then
+					if( hIdentifierIsMacroParam( a->text ) ) then
 						a->attrib or= ASTATTRIB_PARENTHESIZEDMACROPARAM
 					end if
 				end if
@@ -459,7 +442,7 @@ private function cExpression _
 				if( tkGet( x ) <> TK_RPAREN ) then
 					'' Expression (',' Expression)*
 					do
-						astAppend( a, cExpression( 0, macro ) )
+						astAppend( a, cExpression( 0 ) )
 
 						'' ','?
 					loop while( cMatch( TK_COMMA ) and parseok )
@@ -493,7 +476,7 @@ private function cExpression _
 		'' Scope block: '{' (Expression ';')* '}'
 		'' Initializer: '{' Expression (',' Expression)* '}'
 		case TK_LBRACE
-			a = hScopeBlockOrInitializer( macro )
+			a = hScopeBlockOrInitializer( )
 
 		'' SIZEOF Expression
 		'' SIZEOF '(' DataType ')'
@@ -501,8 +484,7 @@ private function cExpression _
 			x += 1
 
 			'' ('(' DataType)?
-			if( (tkGet( x ) = TK_LPAREN) andalso _
-			    hIsDataType( x + 1, macro ) ) then
+			if( (tkGet( x ) = TK_LPAREN) andalso hIsDataType( x + 1 ) ) then
 				'' '('
 				x += 1
 
@@ -515,7 +497,7 @@ private function cExpression _
 				astSetType( a, t->dtype, astClone( t->subtype ) )
 				astDelete( t )
 			else
-				a = astNew( ASTCLASS_SIZEOF, cExpression( cprecedence(ASTCLASS_SIZEOF), macro ) )
+				a = astNew( ASTCLASS_SIZEOF, cExpression( cprecedence(ASTCLASS_SIZEOF) ) )
 			end if
 
 		'' DEFINED ['('] Identifier [')']
@@ -594,14 +576,14 @@ private function cExpression _
 		x += 1
 
 		'' rhs
-		var b = cExpression( oplevel, macro )
+		var b = cExpression( oplevel )
 
 		'' Handle ?: special case
 		if( op = ASTCLASS_IIF ) then
 			'' ':'
 			cExpectMatch( TK_COLON, "for a?b:c iif operator" )
 
-			var c = cExpression( oplevel, macro )
+			var c = cExpression( oplevel )
 
 			a = astNewIIF( a, b, c )
 		else
@@ -756,7 +738,7 @@ private function cEnumConst( ) as ASTNODE ptr
 	'' '='?
 	if( cMatch( TK_EQ ) ) then
 		'' Expression
-		t->expr = cExpression( 0, NULL )
+		t->expr = cExpression( 0 )
 	end if
 
 	'' (',' | '}')
@@ -853,6 +835,8 @@ private function cDefine( ) as ASTNODE ptr
 
 	'' Non-empty?
 	if( tkGet( x ) <> TK_EOL ) then
+		parentdefine = macro
+
 		select case( tkGet( x ) )
 
 		'' Don't preserve #define if it just contains _Pragma's
@@ -883,7 +867,7 @@ private function cDefine( ) as ASTNODE ptr
 
 		case else
 			'' Try to parse it as expression
-			macro->expr = cExpression( 0, macro )
+			macro->expr = cExpression( 0 )
 		end select
 
 		'' Didn't reach EOL? Then the beginning of the macro body could
@@ -892,6 +876,8 @@ private function cDefine( ) as ASTNODE ptr
 			cError( "failed to parse full #define body" )
 			x = hSkipToEol( x )
 		end if
+
+		parentdefine = NULL
 	end if
 
 	'' Eol
@@ -1585,7 +1571,7 @@ private function cDeclarator _
 
 			'' Just '[]' (empty dimension) is allowed for parameters
 			if( (tkGet( x ) <> TK_RBRACKET) or (decl <> DECL_PARAM) ) then
-				d->expr = cExpression( 0, NULL )
+				d->expr = cExpression( 0 )
 			end if
 
 			astAppend( node->array, d )
@@ -1603,7 +1589,7 @@ private function cDeclarator _
 		end if
 		x += 1
 
-		node->bits = cExpression( 0, NULL )
+		node->bits = cExpression( 0 )
 
 	'' '(' ParamList ')'
 	case TK_LPAREN
@@ -1670,7 +1656,7 @@ private function cDeclarator _
 		'' ['=' Initializer]
 		if( cMatch( TK_EQ ) ) then
 			assert( t->expr = NULL )
-			t->expr = cExpression( 0, NULL )
+			t->expr = cExpression( 0 )
 		end if
 	end if
 
@@ -1865,7 +1851,7 @@ end function
 
 '' Expression statement: Assignments, function calls, i++, etc.
 private function cExpressionStatement( ) as ASTNODE ptr
-	function = cExpression( 0, NULL )
+	function = cExpression( 0 )
 
 	'' ';'?
 	cExpectMatch( TK_SEMI, "(end of expression statement)" )
@@ -1946,7 +1932,7 @@ private function cConstruct( byval body as integer ) as ASTNODE ptr
 		'' Disambiguate: local declaration vs. expression
 		'' If it starts with a data type, __attribute__, or 'static',
 		'' then it must be a declaration.
-		if( hIsDataType( x, NULL ) or (tkGet( x ) = KW_STATIC) ) then
+		if( hIsDataType( x ) or (tkGet( x ) = KW_STATIC) ) then
 			function = cVarOrProcDecl( TRUE )
 		else
 			function = cExpressionStatement( )
@@ -2002,6 +1988,7 @@ function cFile( ) as ASTNODE ptr
 
 	x = 0
 	parseok = TRUE
+	parentdefine = NULL
 
 	function = cBody( BODY_TOPLEVEL )
 
