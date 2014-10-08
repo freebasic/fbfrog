@@ -158,7 +158,7 @@ Using the -declare*/-select/-ifdef options:
 
     -declaredefines <symbol1> <symbol2> <symbol3>
         Useful to allow selectin an API by #defining a certain symbol. This is
-        used in builtin.fbfrog to allow selecting an OS-specific API based on
+        used in default.fbfrog to allow selecting an OS-specific API based on
         the __FB_DOS__/__FB_LINUX__/__FB_WIN32__ #defines, but it could be used
         for other things aswell. This will produce #if blocks such as #ifdef
         <symbol1>. The symbols are assumed to be #defined exclusively - only one
@@ -166,7 +166,7 @@ Using the -declare*/-select/-ifdef options:
 
     -declarebool <symbol>
         Useful to allow API selection based on whether a certain symbol is
-        defined or not. This is used for __FB_64BIT__ in builtin.fbfrog, but
+        defined or not. This is used for __FB_64BIT__ in default.fbfrog, but
         could also be used to support distinguishing between UNICODE and ANSI
         versions of a binding (-declarebool UNICODE -> #ifdef UNICODE) or
         the shared library/DLL version and the static library version, etc.
@@ -182,7 +182,7 @@ Using the -declare*/-select/-ifdef options:
   You can use the -select/-ifdef logic options to create different "code paths"
   where some options will only be used for some APIs (instead of applying to
   all APIs). This also works with -declare* options, allowing you to build
-  even complex API condition trees. An example from builtin.fbfrog:
+  even complex API condition trees. An example from default.fbfrog:
       -declaredefines __FB_WIN32__ __FB_LINUX__ __FB_DOS__
       -ifdef __FB_DOS__
       -else

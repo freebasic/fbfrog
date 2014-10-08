@@ -7,7 +7,7 @@
 ''     parsed into the tk buffer using lexLoadArgs()
 ''   * the tk buffer is then parsed by hParseArgs(): global options are handled,
 ''     script options are turned into an AST and their syntax is verified
-''   * the script from builtin.fbfrog is implicitly prepended unless
+''   * the script from default.fbfrog is implicitly prepended unless
 ''     -nodefaultscript was used
 ''   * frogEvaluateScript(): the script AST is evaluated (by following each code
 ''     path), producing the list of individual APIs we want to parse, and the
@@ -1048,12 +1048,12 @@ end sub
 	tkEnd( )
 
 	if( frog.nodefaultscript = FALSE ) then
-		'' Parse builtin.fbfrog and prepend the options from it to the
+		'' Parse default.fbfrog and prepend the options from it to the
 		'' script from the command line.
 		var userscript = frog.script
 		frog.script = astNewGROUP( )
 		tkInit( )
-		hLoadArgsFile( 0, hFindResource( "builtin.fbfrog" ), NULL )
+		hLoadArgsFile( 0, hFindResource( "default.fbfrog" ), NULL )
 		hParseArgs( 0 )
 		tkEnd( )
 		astAppend( frog.script, userscript )
