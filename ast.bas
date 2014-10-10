@@ -515,8 +515,10 @@ function astIsEqual _
 	end if
 
 	'' Some attributes can always be ignored because they don't cause declarations to really be different
-	aattrib and= not (ASTATTRIB_OCT or ASTATTRIB_HEX or ASTATTRIB_REPORTED or ASTATTRIB_NEEDRENAME)
-	battrib and= not (ASTATTRIB_OCT or ASTATTRIB_HEX or ASTATTRIB_REPORTED or ASTATTRIB_NEEDRENAME)
+	'' OCT/HEX attributes mustn't be ignored because otherwise number literals with the same digits but
+	'' a different base could incorrectly compare equal.
+	aattrib and= not (ASTATTRIB_REPORTED or ASTATTRIB_NEEDRENAME)
+	battrib and= not (ASTATTRIB_REPORTED or ASTATTRIB_NEEDRENAME)
 
 	if( aattrib <> battrib ) then exit function
 
