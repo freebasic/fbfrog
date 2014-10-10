@@ -261,8 +261,8 @@
 #define __UINT_LEAST64_MAX__ __UINT64_MAX__
 
 #define __INT8_C(c) c
-#define __INT32_C(c) c
 #define __INT16_C(c) c
+#define __INT32_C(c) c
 #define __INT64_C(c) c ## LL
 #define __INTMAX_C(c) c ## LL
 #define __UINT8_C(c) c

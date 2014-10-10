@@ -56,8 +56,32 @@ namespace frog
 	dim shared as string prefix
 end namespace
 
+'' Find a *.fbfrog or *.h file in fbfrog's include/ dir, its "library" of
+'' premade collections of pre-#defines etc. useful when creating bindings.
 private function hFindResource( byref filename as string ) as string
-	function = hExepath( ) + filename
+	'' 1. Absolute path? Use as-is
+	if( pathIsAbsolute( filename ) ) then return filename
+
+	'' 2. Current directory?
+	if( hFileExists( filename ) ) then return filename
+
+	'' 3. <exepath>/include/fbfrog/?
+	const INCLUDEDIR = "include" + PATHDIV + "fbfrog" + PATHDIV
+	var dir1 = hExepath( ) + INCLUDEDIR
+	var found = dir1 + filename
+	if( hFileExists( found ) ) then return found
+
+	'' 4. <exepath>/../include/fbfrog/?
+	var dir2 = hExepath( ) + ".." + PATHDIV + INCLUDEDIR
+	found = dir2 + filename
+	if( hFileExists( found ) ) then return found
+
+	print "error: could not find '" + filename + "'"
+	print "search dirs:"
+	print "  <curdir> (" + curdir( ) + ")"
+	print "  <exepath>/include/fbfrog (" + dir1 + ")"
+	print "  <exepath>/../include/fbfrog (" + dir2 + ")"
+	end 1
 end function
 
 private sub hPrintHelpAndExit( )
@@ -145,6 +169,8 @@ private sub hLoadArgsFile _
 	if( filecount > MAX_FILES ) then
 		tkOops( x, "suspiciously many @file expansions, recursion? (limit=" & MAX_FILES & ")" )
 	end if
+
+	filename = hFindResource( filename )
 
 	'' Load the file content at the specified position
 	lexLoadArgs( x, sourcebufferFromFile( filename, location ) )
