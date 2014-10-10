@@ -16,7 +16,7 @@
 ''   * we start with an empty tk buffer, CPP is initialized
 ''   * predefines for that API are inserted into the tk buffer using lexLoadC()
 ''   * CPP is told about -removedefine options etc.
-''   * content of builtin.h and the *.h input files for that API are loaded into
+''   * content of default.h and the *.h input files for that API are loaded into
 ''     the tk buffer using lexLoadC()
 ''   * CPP runs and preprocesses the content of the tk buffer (cppMain()):
 ''     directive parsing, macro expansion, #if evaluation
@@ -861,12 +861,12 @@ private function frogReadAPI( byval options as ASTNODE ptr ) as ASTNODE ptr
 		wend
 	end scope
 
-	'' Insert the code from builtin.h
-	'' * behind command line pre-#defines so that builtin.h can use them
+	'' Insert the code from default.h
+	'' * behind command line pre-#defines so that default.h can use them
 	'' * marked for removal so the code won't be preserved
 	scope
 		var x = tkGetCount( )
-		lexLoadC( x, sourcebufferFromFile( hFindResource( "builtin.h" ), NULL ), FALSE )
+		lexLoadC( x, sourcebufferFromFile( hFindResource( "default.h" ), NULL ), FALSE )
 		tkSetRemove( x, tkGetCount( ) - 1 )
 	end scope
 
