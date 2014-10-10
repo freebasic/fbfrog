@@ -507,6 +507,12 @@ function astIsEqual _
 			battrib and= not (ASTATTRIB_CDECL or ASTATTRIB_STDCALL)
 		end if
 
+		'' Other than that, we should ignore ASTATTRIB_HIDECALLCONV itself,
+		'' allowing hFindCommonCallConvsOnMergedDecl() to handle cases where
+		'' both sides have the same callconv but different hiding status.
+		aattrib and= not ASTATTRIB_HIDECALLCONV
+		battrib and= not ASTATTRIB_HIDECALLCONV
+
 		'' Ignore DLLIMPORT on procedures for now, as we're not emitting it anyways
 		if( a->class = ASTCLASS_PROC ) then
 			aattrib and= not ASTATTRIB_DLLIMPORT
