@@ -1,7 +1,4 @@
-fbfrog
-fbfrog.exe
-*.o
-tarballs/*
-presets/*/
-tests/run
-tests/run.exe
+/fbfrog
+/fbfrog.exe
+/tests/run
+/tests/run.exe
