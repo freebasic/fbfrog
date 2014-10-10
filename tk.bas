@@ -139,6 +139,7 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	(@"while"   ), _
 	_
 	(NULL, @"argsfile"), _
+	(@"-nodefaultscript"), _
 	(@"-filterout"    ), _
 	(@"-filterin"     ), _
 	(@"-whitespace"   ), _

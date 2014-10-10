@@ -1,0 +1,1 @@
+// @fbfrog -nodefaultscript -declarebool FOO

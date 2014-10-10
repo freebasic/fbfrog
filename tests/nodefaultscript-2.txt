@@ -1,0 +1,5 @@
+[1/2] FOO
+      tests/nodefaultscript-2.h
+[2/2] (not FOO)
+      tests/nodefaultscript-2.h
+emitting: tests/nodefaultscript-2.bi (0 declarations, 0 TODOs)

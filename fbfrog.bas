@@ -5,9 +5,10 @@
 '' 1. CLI
 ''   * command line arguments/options from fbfrog's command line or @files are
 ''     parsed into the tk buffer using lexLoadArgs()
-''   * content of builtin.fbfrog is inserted at the beginning
 ''   * the tk buffer is then parsed by hParseArgs(): global options are handled,
 ''     script options are turned into an AST and their syntax is verified
+''   * the script from builtin.fbfrog is implicitly prepended unless
+''     -nodefaultscript was used
 ''   * frogEvaluateScript(): the script AST is evaluated (by following each code
 ''     path), producing the list of individual APIs we want to parse, and the
 ''     command line options for each one
@@ -43,7 +44,7 @@
 #include once "fbfrog.bi"
 
 namespace frog
-	dim shared as integer verbose, whitespace, windowsms, constants, nonamefixup
+	dim shared as integer verbose, whitespace, windowsms, constants, nonamefixup, nodefaultscript
 	dim shared as ASTNODE ptr incdirs
 	dim shared as string outname, defaultoutname
 
@@ -64,6 +65,7 @@ private sub hPrintHelpAndExit( )
 	print "usage: fbfrog *.h [options]"
 	print "global options:"
 	print "  @<file>          Read more command line arguments from a file"
+	print "  -nodefaultscript Don't use builtin.fbfrog implicitly"
 	print "  -whitespace      Try to preserve comments and empty lines"
 	print "  -windowsms       Use Extern ""Windows-MS"" instead of Extern ""Windows"""
 	print "  -constants       Try to turn #defines into constants"
@@ -384,6 +386,7 @@ private sub hParseArgs( byref x as integer )
 		case TK_EOF
 			exit do
 
+		case OPT_NODEFAULTSCRIPT : frog.nodefaultscript = TRUE : x += 1
 		case OPT_WHITESPACE  : frog.whitespace  = TRUE : x += 1
 		case OPT_WINDOWSMS   : frog.windowsms   = TRUE : x += 1
 		case OPT_CONSTANTS   : frog.constants   = TRUE : x += 1
@@ -1032,10 +1035,6 @@ end sub
 	lexLoadArgs( 0, sourcebufferFromZstring( "<command line>", _
 			hTurnArgsIntoString( __FB_ARGC__, __FB_ARGV__ ), NULL ) )
 
-	'' Add the implicit @builtin.fbfrog
-	tkInsert( 1, TK_ARGSFILE, hFindResource( "builtin.fbfrog" ) )
-	tkSetLocation( 1, tkGetLocation( 0 ) )
-
 	'' Load content of @files too
 	hExpandArgsFiles( )
 
@@ -1047,6 +1046,18 @@ end sub
 	hParseArgs( 1 )
 
 	tkEnd( )
+
+	if( frog.nodefaultscript = FALSE ) then
+		'' Parse builtin.fbfrog and prepend the options from it to the
+		'' script from the command line.
+		var userscript = frog.script
+		frog.script = astNewGROUP( )
+		tkInit( )
+		hLoadArgsFile( 0, hFindResource( "builtin.fbfrog" ), NULL )
+		hParseArgs( 0 )
+		tkEnd( )
+		astAppend( frog.script, userscript )
+	end if
 
 	'' Parse the version-specific options ("script"), following each
 	'' possible code path, and determine how many and which versions there
