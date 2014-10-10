@@ -1,7 +1,7 @@
 #pragma once
 
 '' The following symbols have been renamed:
-''     struct UDT_ alias "UDT"
+''     struct UDT => UDT_
 
 type udt as UDT_
 

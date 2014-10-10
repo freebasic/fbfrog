@@ -11,11 +11,11 @@
 #endif
 
 '' The following symbols have been renamed:
-''     procedure string_ alias "string"()
+''     procedure string => string_
 ''     #if VER = 1
-''         procedure single_ alias "single"()
+''         procedure single => single_
 ''     #else
-''         procedure integer_ alias "integer"()
+''         procedure integer => integer_
 ''     #endif
 
 extern "C"

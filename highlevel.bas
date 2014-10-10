@@ -1350,13 +1350,14 @@ private sub hRenameSymbol _
 		byval renamelist as ASTNODE ptr _
 	)
 
-	dim as string newid, hashid
+	dim as string oldid, newid, hashid
 
 	'' Build a new name by appending _ underscores, as long as needed to
 	'' find an identifier that's not yet used in the namespace corresponding
 	'' to the symbol. (otherwise renaming could cause more conflicts)
 	assert( n->text )
-	newid = *n->text
+	oldid = *n->text
+	newid = oldid
 
 	dim as integer exists
 	do
@@ -1420,7 +1421,12 @@ private sub hRenameSymbol _
 		assert( FALSE )
 	end select
 
-	astAppend( renamelist, astNewTEXT( astDumpPrettyDecl( n ) ) )
+	'' Build the textual entry for the name list, for example:
+	''    define FOO => FOO_
+	'' making it clear which symbol was renamed, and how.
+	var text = astDumpPrettyClass( n->class ) + " " + oldid
+	text += " => " + newid
+	astAppend( renamelist, astNewTEXT( text ) )
 
 end sub
 
@@ -1487,7 +1493,6 @@ private sub hFixIdsInScope _
 	'' 2. Rename all marked symbols. Now that all symbols are known, we can
 	''    generate new names for the symbols that need renaming without
 	''    introducing more conflicts.
-
 	hWalkAndRenameSymbols( defines, @types, @globals, code, code, renamelist )
 
 	hashEnd( @globals )

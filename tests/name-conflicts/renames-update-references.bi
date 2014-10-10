@@ -1,11 +1,11 @@
 #pragma once
 
 '' The following symbols have been renamed:
-''     #define INT_ alias "INT"
-''     constant AND_ alias "AND"
-''     constant OR_ alias "OR"
-''     constant XOR_ alias "XOR"
-''     struct DOUBLE_ alias "DOUBLE"
+''     #define INT => INT_
+''     constant AND => AND_
+''     constant OR => OR_
+''     constant XOR => XOR_
+''     struct DOUBLE => DOUBLE_
 
 extern "C"
 

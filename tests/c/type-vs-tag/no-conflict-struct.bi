@@ -1,7 +1,7 @@
 #pragma once
 
 '' The following symbols have been renamed:
-''     typedef a_ alias "a"
+''     typedef a => a_
 
 type A
 	d as double

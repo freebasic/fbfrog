@@ -1,8 +1,8 @@
 #pragma once
 
 '' The following symbols have been renamed:
-''     variable x1_ alias "x1"
-''     variable x2_ alias "x2"
+''     variable x1 => x1_
+''     variable x2 => x2_
 
 type myint as long
 type UDT2 as long

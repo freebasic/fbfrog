@@ -2,19 +2,19 @@
 
 '' The following symbols have been renamed:
 ''     inside struct Foo:
-''         field field_ alias "field"
-''     procedure toaster1_ alias "toaster1"()
-''     procedure toASTER1__ alias "toASTER1"()
-''     #define Aaa_ alias "Aaa"
-''     #define aaa__ alias "aaa"
-''     #define Bbb_ alias "Bbb"
-''     #define bbb__ alias "bbb"
-''     typedef MyInt_ alias "MyInt"
-''     typedef myint__ alias "myint"
-''     typedef Myint___ alias "Myint"
-''     constant ENUMCONST1_ alias "ENUMCONST1"
-''     typedef FOO_ alias "FOO"
-''     #define SAILINGBOAT_ alias "SAILINGBOAT"
+''         field field => field_
+''     procedure toaster1 => toaster1_
+''     procedure toASTER1 => toASTER1__
+''     #define Aaa => Aaa_
+''     #define aaa => aaa__
+''     #define Bbb => Bbb_
+''     #define bbb => bbb__
+''     typedef MyInt => MyInt_
+''     typedef myint => myint__
+''     typedef Myint => Myint___
+''     constant ENUMCONST1 => ENUMCONST1_
+''     typedef FOO => FOO_
+''     #define SAILINGBOAT => SAILINGBOAT_
 
 extern "C"
 

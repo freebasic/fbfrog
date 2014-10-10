@@ -616,6 +616,15 @@ end function
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 '' AST dumping for pretty output and debugging
 
+function astDumpPrettyClass( byval astclass as integer ) as string
+	select case( astclass )
+	case ASTCLASS_CONST : function = "constant"
+	case ASTCLASS_VAR   : function = "variable"
+	case ASTCLASS_PROC  : function = "procedure"
+	case else           : function = *astnodename(astclass)
+	end select
+end function
+
 function astDumpPrettyDecl( byval n as ASTNODE ptr ) as string
 	dim as string s
 
@@ -623,12 +632,7 @@ function astDumpPrettyDecl( byval n as ASTNODE ptr ) as string
 		s += "anonymous "
 	end if
 
-	select case( n->class )
-	case ASTCLASS_CONST : s += "constant"
-	case ASTCLASS_VAR   : s += "variable"
-	case ASTCLASS_PROC  : s += "procedure"
-	case else           : s += *astnodename(n->class)
-	end select
+	s += astDumpPrettyClass( n->class )
 
 	if( n->text ) then
 		s += " " + strMakePrintable( *n->text )

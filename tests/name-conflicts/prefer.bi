@@ -1,12 +1,12 @@
 #pragma once
 
 '' The following symbols have been renamed:
-''     #define I3_ alias "I3"
-''     #define I4_ alias "I4"
-''     constant I5_ alias "I5"
-''     constant I6_ alias "I6"
-''     #define I7_ alias "I7"
-''     #define I8_ alias "I8"
+''     #define I3 => I3_
+''     #define I4 => I4_
+''     constant I5 => I5_
+''     constant I6 => I6_
+''     #define I7 => I7_
+''     #define I8 => I8_
 
 extern "C"
 

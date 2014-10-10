@@ -789,6 +789,7 @@ declare sub astOops _
 declare function astEvalConstiAsInt64( byval n as ASTNODE ptr ) as longint
 declare function astCountDecls( byval code as ASTNODE ptr ) as integer
 declare function astCountUnknowns( byval code as ASTNODE ptr ) as integer
+declare function astDumpPrettyClass( byval astclass as integer ) as string
 declare function astDumpPrettyDecl( byval n as ASTNODE ptr ) as string
 declare function astDumpOne( byval n as ASTNODE ptr ) as string
 declare sub astDump _

@@ -1,7 +1,7 @@
 #pragma once
 
 '' The following symbols have been renamed:
-''     procedure open__ alias "open"()
+''     procedure open => open__
 
 extern "C"
 

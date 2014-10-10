@@ -10,7 +10,7 @@
 #endif
 
 '' The following symbols have been renamed:
-''     variable common_ alias "common"
+''     variable common => common_
 
 dim shared common_ as long
 dim shared v1 as long

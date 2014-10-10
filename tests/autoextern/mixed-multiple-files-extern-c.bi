@@ -1,19 +1,19 @@
 #pragma once
 
 '' The following symbols have been renamed:
-''     variable i1_ alias "i1"
-''     variable i2_ alias "i2"
-''     procedure f1_ alias "f1"()
-''     procedure f2_ alias "f2"()
-''     procedure f3_ alias "f3"()
-''     procedure f4_ alias "f4"()
-''     procedure f5_ alias "f5"()
-''     procedure f6_ alias "f6"()
-''     procedure f7_ alias "f7"()
-''     procedure f8_ alias "f8"()
-''     procedure f9_ alias "f9"()
-''     variable i3_ alias "i3"
-''     variable i4_ alias "i4"
+''     variable i1 => i1_
+''     variable i2 => i2_
+''     procedure f1 => f1_
+''     procedure f2 => f2_
+''     procedure f3 => f3_
+''     procedure f4 => f4_
+''     procedure f5 => f5_
+''     procedure f6 => f6_
+''     procedure f7 => f7_
+''     procedure f8 => f8_
+''     procedure f9 => f9_
+''     variable i3 => i3_
+''     variable i4 => i4_
 
 extern "C"
 

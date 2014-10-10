@@ -1,15 +1,15 @@
 #pragma once
 
 '' The following symbols have been renamed:
-''     procedure f1_ alias "f1"()
-''     procedure f2_ alias "f2"()
-''     procedure f3_ alias "f3"()
-''     procedure f4_ alias "f4"()
-''     procedure f5_ alias "f5"()
-''     procedure f6_ alias "f6"()
-''     procedure f7_ alias "f7"()
-''     procedure f8_ alias "f8"()
-''     procedure f9_ alias "f9"()
+''     procedure f1 => f1_
+''     procedure f2 => f2_
+''     procedure f3 => f3_
+''     procedure f4 => f4_
+''     procedure f5 => f5_
+''     procedure f6 => f6_
+''     procedure f7 => f7_
+''     procedure f8 => f8_
+''     procedure f9 => f9_
 
 extern "C"
 

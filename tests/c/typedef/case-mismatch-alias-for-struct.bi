@@ -1,7 +1,7 @@
 #pragma once
 
 '' The following symbols have been renamed:
-''     typedef udt_ alias "udt"
+''     typedef udt => udt_
 
 type UDT
 	a as long

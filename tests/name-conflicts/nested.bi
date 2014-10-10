@@ -2,12 +2,12 @@
 
 '' The following symbols have been renamed:
 ''     inside struct UDT1:
-''         field FOO_ alias "FOO"
-''         field Foo__ alias "Foo"
-''         field fOO___ alias "fOO"
-''         field PTR_ alias "PTR"
-''     #define GLOBALDEFINE1_ alias "GLOBALDEFINE1"
-''     #define GLOBALCONSTANT1_ alias "GLOBALCONSTANT1"
+''         field FOO => FOO_
+''         field Foo => Foo__
+''         field fOO => fOO___
+''         field PTR => PTR_
+''     #define GLOBALDEFINE1 => GLOBALDEFINE1_
+''     #define GLOBALCONSTANT1 => GLOBALCONSTANT1_
 
 extern "C"
 
