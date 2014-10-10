@@ -622,9 +622,9 @@ function astMergeVerblocks _
 	decltableInit( @btable, b )
 
 	''
-	'' Precalculate hashes for A's and B's declarations. hAstLCS() can then
-	'' quickly detect declarations that are different and avoid the slow
-	'' astIsEqual() in such cases.
+	'' decltableInit() precalculates hashes for A's and B's declarations.
+	'' hAstLCS() can then quickly detect declarations that are different and
+	'' avoid the slow astIsEqual() in such cases.
 	''
 	'' Using the hashes is worth it, because the LCS algorithm checks all
 	'' the combinations of A's and B's declarations, i.e. an AxB matrix.
@@ -632,8 +632,6 @@ function astMergeVerblocks _
 	'' there will be at most min(len(A), len(B)) true comparisons that need
 	'' to be verified via astIsEqual(), while the vast majority of false
 	'' comparisons can be quickly ignored due to the hash mismatch.
-	''
-
 	''
 	'' Precalculating astIsEqual() results for every entry of the AxB matrix
 	'' would probably not be worth it though, because it does not reduce the
