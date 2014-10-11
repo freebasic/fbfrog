@@ -33,7 +33,10 @@ type DECLTABLE
 end type
 
 '' ASTNODE class and identifier are the 2 main points to quickly distinguish two declarations.
-'' Care must be taken for dummyids though, because they're ignored by hAstLCS (ASTEQ_IGNOREDUMMYID).
+'' Care must be taken though; some things shouldn't be calculated into the hash because
+'' hAstLCS() and e.g. hFindCommonCallConvsOnMergedDecl() do custom handling for them:
+''  * dummyids
+''  * callconv/ASTATTRIB_HIDECALLCONV flags
 private function decltableHash( byval n as ASTNODE ptr ) as ulong
 	dim as ulong hash = n->class
 	if( (n->text <> NULL) and ((n->attrib and ASTATTRIB_DUMMYID) = 0) ) then
@@ -216,22 +219,31 @@ private sub hAddDecl _
 end sub
 
 ''
+'' Merge two procdecls which differ only in their callconv and
+'' ASTATTRIB_HIDECALLCONV flags. This will only be reached if astIsEqual()
+'' returned TRUE, but in hAstLCS()'s astIsEqual()
+''      wouldn't have treated them as equal.
 '' See also hTurnCallConvIntoExternBlock():
+'' ASTATTRIB_HIDECALLCONV means that the callconv is covered by the surrounding
+'' Extern block, in which case the callconv does not need to be emitted
+'' explicitly.
 ''
-'' Procdecls with callconv covered by the Extern block are given the
-'' ASTATTRIB_HIDECALLCONV flag.
+'' Cases that reach this function:
 ''
-'' If we're merging two procdecls here, and they both have ASTATTRIB_HIDECALLCONV,
-'' then they can be emitted without explicit callconv, as the Extern blocks will
-'' take care of that and remap the callconv as needed. In this case, the merged
-'' node shouldn't have any callconv flag at all, but only ASTATTRIB_HIDECALLCONV.
-'' hAstLCS() must use the proper option flags for astIsEqual() to allow this.
+'' a) Different callconv, but both have ASTATTRIB_HIDECALLCONV.
+''    * can be emitted without explicit callconv, as the Extern blocks will
+''      take care of that and remap the callconv as needed.
+''    * The merged node shouldn't have any callconv flag at all,
+''      but only ASTATTRIB_HIDECALLCONV.
 ''
-'' If merging two procdecls and only one side has ASTATTRIB_HIDECALLCONV, then they
-'' must have the same callconv, otherwise the hAstLCS()'s astIsEqual() wouldn't
-'' have treated them as equal. In this case the callconv must be preserved on the
-'' merged node, so it will be emitted explicitly, since the Extern blocks don't
-'' cover it. ASTATTRIB_HIDECALLCONV shouldn't be preserved in this case.
+'' b) Same callconv, but only one side has ASTATTRIB_HIDECALLCONV.
+''    * callconv must be preserved on the merged node, so it will be emitted
+''      explicitly, since the Extern blocks only cover it on one side, not both.
+''    * ASTATTRIB_HIDECALLCONV shouldn't be preserved in this case.
+''
+'' c) Same callconv and ASTATTRIB_HIDECALLCONV on both sides
+''    * trivial to merge - both callconv and ASTATTRIB_HIDECALLCONV should be
+''      preserved.
 ''
 '' The same applies to procptr subtypes, and to be able to handle them, this
 '' function is recursive.
@@ -249,14 +261,33 @@ private sub hFindCommonCallConvsOnMergedDecl _
 	if( mdecl->class = ASTCLASS_PROC ) then
 		if( ((adecl->attrib and ASTATTRIB_HIDECALLCONV) <> 0) and _
 		    ((bdecl->attrib and ASTATTRIB_HIDECALLCONV) <> 0) ) then
-			mdecl->attrib and= not (ASTATTRIB_CDECL or ASTATTRIB_STDCALL)
+			'' ASTATTRIB_HIDECALLCONV on both sides.
+			if( (adecl->attrib and (ASTATTRIB_CDECL or ASTATTRIB_STDCALL)) = _
+			    (bdecl->attrib and (ASTATTRIB_CDECL or ASTATTRIB_STDCALL)) ) then
+				'' Same callconv, trivial merge.
+				assert( (mdecl->attrib and (ASTATTRIB_CDECL or ASTATTRIB_STDCALL)) = _
+					(adecl->attrib and (ASTATTRIB_CDECL or ASTATTRIB_STDCALL)) )
+				assert( (mdecl->attrib and (ASTATTRIB_CDECL or ASTATTRIB_STDCALL)) = _
+					(bdecl->attrib and (ASTATTRIB_CDECL or ASTATTRIB_STDCALL)) )
+			else
+				'' Different callconv; but at least both sides have ASTATTRIB_HIDECALLCONV,
+				'' so we can forget about the callconvs and let the EXTERN blocks cover it.
+				mdecl->attrib and= not (ASTATTRIB_CDECL or ASTATTRIB_STDCALL)
+			end if
 			assert( mdecl->attrib and ASTATTRIB_HIDECALLCONV ) '' was preserved by astClone() already
-		elseif( ((adecl->attrib and ASTATTRIB_HIDECALLCONV) <> 0) or _
-			((bdecl->attrib and ASTATTRIB_HIDECALLCONV) <> 0) ) then
+		else
 			assert( (adecl->attrib and (ASTATTRIB_CDECL or ASTATTRIB_STDCALL)) = _
 				(bdecl->attrib and (ASTATTRIB_CDECL or ASTATTRIB_STDCALL)) )
-			mdecl->attrib and= not ASTATTRIB_HIDECALLCONV
-			assert( (mdecl->attrib and (ASTATTRIB_CDECL or ASTATTRIB_STDCALL)) <> 0 ) '' ditto
+
+			if( ((adecl->attrib and ASTATTRIB_HIDECALLCONV) <> 0) or _
+			    ((bdecl->attrib and ASTATTRIB_HIDECALLCONV) <> 0) ) then
+				'' Same callconv, but ASTATTRIB_HIDECALLCONV only on one side.
+				'' We can merge them, but the callconv can't be hidden.
+				mdecl->attrib and= not ASTATTRIB_HIDECALLCONV
+				assert( (mdecl->attrib and (ASTATTRIB_CDECL or ASTATTRIB_STDCALL)) <> 0 ) '' ditto
+			''else
+				'' Same callconv and no ASTATTRIB_HIDECALLCONV, trivial merge.
+			end if
 		end if
 	end if
 
