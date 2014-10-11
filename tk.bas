@@ -225,6 +225,8 @@ type TKBUFFER
 	gap		as integer  '' Gap length
 	size		as integer  '' Front + back
 
+	newgapsize	as integer  '' Size to use for new gap when increasing the buffer size
+
 	'' Static EOF token for out-of-bounds accesses
 	eof		as ONETOKEN
 
@@ -235,6 +237,7 @@ dim shared as TKBUFFER tk
 
 sub tkInit( )
 	clear( tk, 0, sizeof( tk ) )
+	tk.newgapsize = 1 shl 12
 	tk.report_context = TRUE
 end sub
 
@@ -364,7 +367,6 @@ sub tkInsert _
 		byval text as zstring ptr _
 	)
 
-	const NEWGAP = 512
 	dim as ONETOKEN ptr p = any
 
 	'' Move gap in front of the position
@@ -374,13 +376,14 @@ sub tkInsert _
 	if( tk.gap = 0 ) then
 		'' Reallocate the buffer, then move the back block to the
 		'' end of the new buffer, so that the gap in the middle grows.
-		tk.p = reallocate( tk.p, (tk.size + NEWGAP) * sizeof( ONETOKEN ) )
+		tk.newgapsize shl= 1
+		tk.p = reallocate( tk.p, (tk.size + tk.newgapsize) * sizeof( ONETOKEN ) )
 		p = tk.p + tk.front
 		if( tk.size > tk.front ) then
-			memmove( p + NEWGAP, p + tk.gap, _
+			memmove( p + tk.newgapsize, p + tk.gap, _
 			         (tk.size - tk.front) * sizeof( ONETOKEN ) )
 		end if
-		tk.gap = NEWGAP
+		tk.gap = tk.newgapsize
 	else
 		p = tk.p + tk.front
 	end if
