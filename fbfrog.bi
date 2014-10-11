@@ -210,8 +210,10 @@ declare function pathOnly( byref path as string ) as string
 declare function pathStrip( byref path as string ) as string
 declare function pathAddDiv( byref path as string ) as string
 declare function pathIsAbsolute( byref s as string ) as integer
+declare function pathMakeAbsolute( byref path as string ) as string
 declare function hExepath( ) as string
 declare function pathIsDir( byref s as string ) as integer
+declare function pathNormalize( byref path as string ) as string
 declare function hReadableDirExists( byref path as string ) as integer
 declare function hFileExists( byref file as string ) as integer
 

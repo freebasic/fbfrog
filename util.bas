@@ -657,7 +657,7 @@ private function hFindExtBegin( byref path as string ) as integer
 		case asc( "." )
 			return i
 #if defined( __FB_WIN32__ ) or defined( __FB_DOS__ )
-		case asc( "\" ), asc( "/" )
+		case asc( $"\" ), asc( "/" )
 #else
 		case asc( "/" )
 #endif
@@ -680,7 +680,7 @@ private function hFindFileName( byref path as string ) as integer
 	for i as integer = len( path )-1 to 0 step -1
 		select case( path[i] )
 #if defined( __FB_WIN32__ ) or defined( __FB_DOS__ )
-		case asc( "\" ), asc( "/" )
+		case asc( $"\" ), asc( "/" )
 #else
 		case asc( "/" )
 #endif
@@ -707,10 +707,10 @@ function pathAddDiv( byref path as string ) as string
 	if( length > 0 ) then
 #if defined( __FB_WIN32__ ) or defined( __FB_DOS__ )
 		select case( s[length-1] )
-		case asc( "\" ), asc( "/" )
+		case asc( $"\" ), asc( "/" )
 
 		case else
-			s += "\"
+			s += $"\"
 		end select
 #else
 		if( s[length-1] <> asc( "/" ) ) then
@@ -728,7 +728,7 @@ private function pathGetRootLength( byref s as string ) as integer
 		'' x:\...
 		if( s[1] = asc( ":" ) ) then
 			select case( s[2] )
-			case asc( "/" ), asc( "\" )
+			case asc( "/" ), asc( $"\" )
 				return 3
 			end select
 		end if
@@ -737,8 +737,8 @@ private function pathGetRootLength( byref s as string ) as integer
 	'' UNC paths
 	if( len( s ) >= 2 ) then
 		'' \\...
-		if( s[0] = asc( "\" ) ) then
-			if( s[1] = asc( "\" ) ) then
+		if( s[0] = asc( $"\" ) ) then
+			if( s[1] = asc( $"\" ) ) then
 				return 2
 			end if
 		end if
@@ -758,6 +758,15 @@ function pathIsAbsolute( byref s as string ) as integer
 	function = (pathGetRootLength( s ) > 0)
 end function
 
+'' Turns a relative path into an absolute path
+function pathMakeAbsolute( byref path as string ) as string
+	if( pathIsAbsolute( path ) ) then
+		function = path
+	else
+		function = pathAddDiv( curdir( ) ) + path
+	end if
+end function
+
 function hExepath( ) as string
 	function = pathAddDiv( exepath( ) )
 end function
@@ -767,7 +776,7 @@ private function pathEndsWithDiv( byref s as string ) as integer
 	if( length > 0 ) then
 #if defined( __FB_WIN32__ ) or defined( __FB_DOS__ )
 		select case( s[length-1] )
-		case asc( "\" ), asc( "/" )
+		case asc( $"\" ), asc( "/" )
 			function = TRUE
 		end select
 #else
@@ -778,6 +787,123 @@ end function
 
 function pathIsDir( byref s as string ) as integer
 	function = hReadableDirExists( s ) or pathEndsWithDiv( s )
+end function
+
+'' Component stack for the path solver
+namespace solver
+	dim shared p as integer ptr
+	dim shared as integer room, top
+end namespace
+
+private sub solverInit( )
+	solver.p = NULL
+	solver.room = 0
+	solver.top = -1
+end sub
+
+private sub solverEnd( )
+	deallocate( solver.p )
+end sub
+
+private sub solverPush( byval w as integer )
+	solver.top += 1
+	if( solver.top >= solver.room ) then
+		solver.room += 128
+		solver.p = reallocate( solver.p, sizeof( integer ) * solver.room )
+	end if
+	solver.p[solver.top] = w
+end sub
+
+private function solverPop( ) as integer
+	if( solver.top > 0 ) then
+		solver.top -= 1
+	end if
+	function = solver.p[solver.top]
+end function
+
+'' Resolves .'s and ..'s in the path,
+'' normalizes path separators to the host standard.
+function pathNormalize( byref path as string ) as string
+	var rootlen = pathGetRootLength( path )
+	if( rootlen = 0 ) then
+		return path
+	end if
+
+	'' r: read position, w: write position
+	'' r reads ahead, while w slowly writes out the result.
+	'' First r and w stay together, but as soon as r finds a .., w is set
+	'' back a bit, right in front of the path component it wrote last, so
+	'' that the component is dropped (it will be overwritten by following
+	'' components).
+	'' The stack is needed to be able to skip back over multiple components
+	'' in succession, for example in 'aa/bb/../..'.
+
+	'' r and w start out behind the root path (/ or C:\ etc.) so that it's
+	'' not touched. The begin of the first component after the root path
+	'' must be on the stack to be able to skip back to it (although the
+	'' begin of the root path itself, 0, is not on the stack, so it can't
+	'' be removed with a '..').
+	solverInit( )
+	solverPush( rootlen )
+
+	var s = path
+	var dots = 0 '' Number of .'s in the current component
+	var chars = 0 '' Number of chars in the current component
+	var w = rootlen
+
+	for r as integer = rootlen to len( s ) - 1
+		select case( s[r] )
+#if defined( __FB_WIN32__ ) or defined( __FB_DOS__ )
+		case asc( $"\" ), asc( "/" )
+#else
+		case asc( "/" )
+#endif
+			'' Component closed: check whether it was /./ or /../
+			select case( dots )
+			case 1    '' /./
+				'' Ignore: don't write this /, and remove the .
+				w -= 1
+
+			case 2    '' /../
+				'' Go back to the begin of the component this
+				'' '..' refers to
+				w = solverPop( )
+
+			case else
+				if( chars = 0 ) then
+					'' // (Ignore: don't write this /)
+				else
+					'' Write this /. For Win32/DOS this also normalizes / to \.
+					s[w] = asc( PATHDIV )
+					'' New component starts behind this /
+					w += 1
+					'' Remember this begin position so
+					'' w can be reset to it during '..'.
+					solverPush( w )
+				end if
+
+			end select
+
+			dots = 0
+			chars = 0
+
+		case asc( "." )
+			dots += 1
+			chars += 1
+			s[w] = s[r]
+			w += 1
+
+		case else
+			dots = 0
+			chars += 1
+			s[w] = s[r]
+			w += 1
+
+		end select
+	next
+
+	solverEnd( )
+	function = left( s, w )
 end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
