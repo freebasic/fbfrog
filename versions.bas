@@ -259,32 +259,36 @@ private sub hFindCommonCallConvsOnMergedDecl _
 	assert( adecl->class = bdecl->class )
 
 	if( mdecl->class = ASTCLASS_PROC ) then
-		if( ((adecl->attrib and ASTATTRIB_HIDECALLCONV) <> 0) and _
-		    ((bdecl->attrib and ASTATTRIB_HIDECALLCONV) <> 0) ) then
+
+		var ahide = ((adecl->attrib and ASTATTRIB_HIDECALLCONV) <> 0)
+		var bhide = ((bdecl->attrib and ASTATTRIB_HIDECALLCONV) <> 0)
+		var acallconv = (adecl->attrib and (ASTATTRIB_CDECL or ASTATTRIB_STDCALL))
+		var bcallconv = (bdecl->attrib and (ASTATTRIB_CDECL or ASTATTRIB_STDCALL))
+		#if __FB_DEBUG__
+			var mhide = ((mdecl->attrib and ASTATTRIB_HIDECALLCONV) <> 0)
+			var mcallconv = (mdecl->attrib and (ASTATTRIB_CDECL or ASTATTRIB_STDCALL))
+		#endif
+
+		if( ahide and bhide ) then
 			'' ASTATTRIB_HIDECALLCONV on both sides.
-			if( (adecl->attrib and (ASTATTRIB_CDECL or ASTATTRIB_STDCALL)) = _
-			    (bdecl->attrib and (ASTATTRIB_CDECL or ASTATTRIB_STDCALL)) ) then
+			if( acallconv = bcallconv ) then
 				'' Same callconv, trivial merge.
-				assert( (mdecl->attrib and (ASTATTRIB_CDECL or ASTATTRIB_STDCALL)) = _
-					(adecl->attrib and (ASTATTRIB_CDECL or ASTATTRIB_STDCALL)) )
-				assert( (mdecl->attrib and (ASTATTRIB_CDECL or ASTATTRIB_STDCALL)) = _
-					(bdecl->attrib and (ASTATTRIB_CDECL or ASTATTRIB_STDCALL)) )
+				assert( mcallconv = acallconv )
+				assert( mcallconv = bcallconv )
 			else
 				'' Different callconv; but at least both sides have ASTATTRIB_HIDECALLCONV,
 				'' so we can forget about the callconvs and let the EXTERN blocks cover it.
 				mdecl->attrib and= not (ASTATTRIB_CDECL or ASTATTRIB_STDCALL)
 			end if
-			assert( mdecl->attrib and ASTATTRIB_HIDECALLCONV ) '' was preserved by astClone() already
+			assert( mhide ) '' was preserved by astClone() already
 		else
-			assert( (adecl->attrib and (ASTATTRIB_CDECL or ASTATTRIB_STDCALL)) = _
-				(bdecl->attrib and (ASTATTRIB_CDECL or ASTATTRIB_STDCALL)) )
+			assert( acallconv = bcallconv )
 
-			if( ((adecl->attrib and ASTATTRIB_HIDECALLCONV) <> 0) or _
-			    ((bdecl->attrib and ASTATTRIB_HIDECALLCONV) <> 0) ) then
+			if( ahide or bhide ) then
 				'' Same callconv, but ASTATTRIB_HIDECALLCONV only on one side.
 				'' We can merge them, but the callconv can't be hidden.
 				mdecl->attrib and= not ASTATTRIB_HIDECALLCONV
-				assert( (mdecl->attrib and (ASTATTRIB_CDECL or ASTATTRIB_STDCALL)) <> 0 ) '' ditto
+				assert( mcallconv <> 0 ) '' ditto
 			''else
 				'' Same callconv and no ASTATTRIB_HIDECALLCONV, trivial merge.
 			end if
