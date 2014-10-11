@@ -105,6 +105,7 @@ private sub hPrintHelpAndExit( )
 	print "  -noexpand <id>           Disable expansion of certain #define"
 	print "  -removedefine <id>       Don't preserve a certain #define"
 	print "  -typedefhint <id>        Mark <id> as typedef, to help parsing of type casts"
+	print "  -reservedid <id>         Rename symbols conflicting with this <id>"
 	print "  -renametypedef <oldid> <newid>  Rename a typedef"
 	print "  -renametag <oldid> <newid>      Rename a struct/union/enum"
 	print "version script logic:"
@@ -537,6 +538,7 @@ private sub hParseArgs( byref x as integer )
 		case OPT_NOEXPAND      : hParseOptionWithId( x, ASTCLASS_NOEXPAND     , FALSE )
 		case OPT_REMOVEDEFINE  : hParseOptionWithId( x, ASTCLASS_REMOVEDEFINE , FALSE )
 		case OPT_TYPEDEFHINT   : hParseOptionWithId( x, ASTCLASS_TYPEDEFHINT  , FALSE )
+		case OPT_RESERVEDID    : hParseOptionWithId( x, ASTCLASS_RESERVEDID   , FALSE )
 		case OPT_RENAMETYPEDEF : hParseOptionWithId( x, ASTCLASS_RENAMETYPEDEF, TRUE  )
 		case OPT_RENAMETAG     : hParseOptionWithId( x, ASTCLASS_RENAMETAG    , TRUE  )
 
@@ -994,7 +996,19 @@ private function frogReadAPI( byval options as ASTNODE ptr ) as ASTNODE ptr
 
 	astAutoExtern( ast, frog.windowsms, frog.whitespace )
 
-	if( frog.nonamefixup = FALSE ) then astFixIds( ast )
+	if( frog.nonamefixup = FALSE ) then
+		astFixIdsInit( )
+		scope
+			var i = options->head
+			while( i )
+				if( i->class = ASTCLASS_RESERVEDID ) then
+					astFixIdsAddReservedId( i->text )
+				end if
+				i = i->next
+			wend
+		end scope
+		astFixIds( ast )
+	end if
 
 	astRemoveDummyDecls( ast )
 

@@ -389,6 +389,7 @@ enum
 	OPT_NOEXPAND
 	OPT_REMOVEDEFINE
 	OPT_TYPEDEFHINT
+	OPT_RESERVEDID
 	OPT_RENAMETYPEDEF
 	OPT_RENAMETAG
 	OPT__LAST = OPT_RENAMETAG
@@ -546,6 +547,7 @@ enum
 	ASTCLASS_NOEXPAND
 	ASTCLASS_REMOVEDEFINE
 	ASTCLASS_TYPEDEFHINT
+	ASTCLASS_RESERVEDID
 	ASTCLASS_RENAMETYPEDEF
 	ASTCLASS_RENAMETAG
 	ASTCLASS_FILTEROUT
@@ -833,6 +835,8 @@ declare sub astReplaceSubtypes _
 		byval newclass as integer, _
 		byval newid as zstring ptr _
 	)
+declare sub astFixIdsInit( )
+declare sub astFixIdsAddReservedId( byval id as zstring ptr )
 declare sub astFixIds( byval code as ASTNODE ptr )
 declare function astUsesDtype( byval n as ASTNODE ptr, byval dtype as integer ) as integer
 declare sub astMergeDIVIDERs( byval n as ASTNODE ptr )

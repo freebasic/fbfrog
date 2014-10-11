@@ -1120,7 +1120,7 @@ private function hDecideWhichSymbolToRename _
 		byval other as ASTNODE ptr _
 	) as ASTNODE ptr
 
-	'' Conflicting with FB keyword?
+	'' Conflicting with FB keyword or id given via astFixIdsAddReservedId()?
 	if( first = NULL ) then
 		return other
 	end if
@@ -1161,14 +1161,14 @@ end sub
 
 declare sub hFixIdsInScope _
 	( _
-		byval defines as THASH ptr, _
+		byval reservedids as THASH ptr, _
 		byval code as ASTNODE ptr, _
 		byval renamelist as ASTNODE ptr _
 	)
 
 private sub hWalkAndCheckIds _
 	( _
-		byval defines as THASH ptr, _
+		byval reservedids as THASH ptr, _
 		byval types as THASH ptr, _
 		byval globals as THASH ptr, _
 		byval n as ASTNODE ptr, _
@@ -1184,7 +1184,7 @@ private sub hWalkAndCheckIds _
 				'' with the #defines found so far.
 				'' Don't build a renamelist here, because for parameters it's useless anyways.
 				var nestedrenamelist = astNew( ASTCLASS_RENAMELIST )
-				hFixIdsInScope( defines, i->subtype, nestedrenamelist )
+				hFixIdsInScope( reservedids, i->subtype, nestedrenamelist )
 				astDelete( nestedrenamelist )
 			end if
 		end if
@@ -1192,29 +1192,29 @@ private sub hWalkAndCheckIds _
 		select case( i->class )
 		case ASTCLASS_PPDEFINE
 			hCheckId( @fbkeywordhash, i, FALSE )
-			hCheckId( defines, i, TRUE )
+			hCheckId( reservedids, i, TRUE )
 			hCheckId( types, i, FALSE )
 			hCheckId( globals, i, FALSE )
 
 		case ASTCLASS_PROC
 			hCheckId( @fbkeywordhash, i, FALSE )
-			hCheckId( defines, i, FALSE )
+			hCheckId( reservedids, i, FALSE )
 			hCheckId( globals, i, TRUE )
 
 			'' Process parameters recursively (nested scope),
 			'' with the #defines found so far.
 			'' Don't build a renamelist here, because for parameters it's useless anyways.
 			var nestedrenamelist = astNew( ASTCLASS_RENAMELIST )
-			hFixIdsInScope( defines, i, nestedrenamelist )
+			hFixIdsInScope( reservedids, i, nestedrenamelist )
 			astDelete( nestedrenamelist )
 
 		case ASTCLASS_VAR, ASTCLASS_CONST
 			hCheckId( @fbkeywordhash, i, FALSE )
-			hCheckId( defines, i, FALSE )
+			hCheckId( reservedids, i, FALSE )
 			hCheckId( globals, i, TRUE )
 
 		case ASTCLASS_FIELD
-			hCheckId( defines, i, FALSE )
+			hCheckId( reservedids, i, FALSE )
 			hCheckId( globals, i, TRUE )
 
 			'' Fields can be named after FB keywords, but not '_'
@@ -1230,7 +1230,7 @@ private sub hWalkAndCheckIds _
 			'' Don't check anonymous params
 			if( i->text ) then
 				hCheckId( @fbkeywordhash, i, FALSE )
-				hCheckId( defines, i, FALSE )
+				hCheckId( reservedids, i, FALSE )
 				hCheckId( globals, i, TRUE )
 			end if
 
@@ -1238,13 +1238,13 @@ private sub hWalkAndCheckIds _
 			'' Not anonymous?
 			if( i->text ) then
 				hCheckId( @fbkeywordhash, i, FALSE )
-				hCheckId( defines, i, FALSE )
+				hCheckId( reservedids, i, FALSE )
 				hCheckId( types, i, TRUE )
 
 				'' Process fields recursively (nested scope),
 				'' with the #defines found so far.
 				var nestedrenamelist = astNew( ASTCLASS_RENAMELIST, "inside " + astDumpPrettyDecl( i ) + ":" )
-				hFixIdsInScope( defines, i, nestedrenamelist )
+				hFixIdsInScope( reservedids, i, nestedrenamelist )
 				if( nestedrenamelist->head ) then
 					astPrepend( renamelist, nestedrenamelist )
 				else
@@ -1253,12 +1253,12 @@ private sub hWalkAndCheckIds _
 			else
 				'' Anonymous struct/union: Process the fields
 				'' recursively, they belong to this scope too.
-				hWalkAndCheckIds( defines, types, globals, i, renamelist )
+				hWalkAndCheckIds( reservedids, types, globals, i, renamelist )
 			end if
 
 		case ASTCLASS_TYPEDEF
 			hCheckId( @fbkeywordhash, i, FALSE )
-			hCheckId( defines, i, FALSE )
+			hCheckId( reservedids, i, FALSE )
 			hCheckId( types, i, TRUE )
 
 		case ASTCLASS_ENUM
@@ -1266,14 +1266,14 @@ private sub hWalkAndCheckIds _
 			'' belongs to the type namespace.
 			if( i->text ) then
 				hCheckId( @fbkeywordhash, i, FALSE )
-				hCheckId( defines, i, FALSE )
+				hCheckId( reservedids, i, FALSE )
 				hCheckId( types, i, TRUE )
 			end if
 
 			'' Check enum's constants: They belong to this scope
 			'' too, regardless of whether the enum is named or
 			'' anonymous.
-			hWalkAndCheckIds( defines, types, globals, i, renamelist )
+			hWalkAndCheckIds( reservedids, types, globals, i, renamelist )
 
 		end select
 
@@ -1342,7 +1342,7 @@ end sub
 
 private sub hRenameSymbol _
 	( _
-		byval defines as THASH ptr, _
+		byval reservedids as THASH ptr, _
 		byval types as THASH ptr, _
 		byval globals as THASH ptr, _
 		byval n as ASTNODE ptr, _
@@ -1370,19 +1370,19 @@ private sub hRenameSymbol _
 
 		select case( n->class )
 		case ASTCLASS_PPDEFINE
-			exists or= hashContains( defines , hashid, hash )
-			exists or= hashContains( types   , hashid, hash )
-			exists or= hashContains( globals , hashid, hash )
+			exists or= hashContains( reservedids, hashid, hash )
+			exists or= hashContains( types      , hashid, hash )
+			exists or= hashContains( globals    , hashid, hash )
 
 		case ASTCLASS_PROC, ASTCLASS_PARAM, _
 		     ASTCLASS_VAR, ASTCLASS_CONST, ASTCLASS_FIELD
-			exists or= hashContains( defines , hashid, hash )
-			exists or= hashContains( globals , hashid, hash )
+			exists or= hashContains( reservedids, hashid, hash )
+			exists or= hashContains( globals    , hashid, hash )
 
 		case ASTCLASS_STRUCT, ASTCLASS_UNION, _
 		     ASTCLASS_TYPEDEF, ASTCLASS_ENUM
-			exists or= hashContains( defines , hashid, hash )
-			exists or= hashContains( types   , hashid, hash )
+			exists or= hashContains( reservedids, hashid, hash )
+			exists or= hashContains( types      , hashid, hash )
 
 		case else
 			assert( FALSE )
@@ -1411,7 +1411,7 @@ private sub hRenameSymbol _
 	astRenameSymbol( n, newid )
 	select case( n->class )
 	case ASTCLASS_PPDEFINE
-		hashAddOverwrite( defines, hashid, n )
+		hashAddOverwrite( reservedids, hashid, n )
 	case ASTCLASS_PROC, ASTCLASS_PARAM, _
 	     ASTCLASS_VAR, ASTCLASS_CONST, ASTCLASS_FIELD
 		hashAddOverwrite( globals, hashid, n )
@@ -1441,7 +1441,7 @@ end function
 
 private sub hWalkAndRenameSymbols _
 	( _
-		byval defines as THASH ptr, _
+		byval reservedids as THASH ptr, _
 		byval types as THASH ptr, _
 		byval globals as THASH ptr, _
 		byval n as ASTNODE ptr, _
@@ -1453,7 +1453,7 @@ private sub hWalkAndRenameSymbols _
 	while( i )
 
 		if( i->attrib and ASTATTRIB_NEEDRENAME ) then
-			hRenameSymbol( defines, types, globals, i, code, renamelist )
+			hRenameSymbol( reservedids, types, globals, i, code, renamelist )
 		end if
 
 		''
@@ -1466,7 +1466,7 @@ private sub hWalkAndRenameSymbols _
 		'' are supposed to be handled by their hFixIdsInScope() calls.
 		''
 		if( hIsScopelessBlock( i ) ) then
-			hWalkAndRenameSymbols( defines, types, globals, i, code, renamelist )
+			hWalkAndRenameSymbols( reservedids, types, globals, i, code, renamelist )
 		end if
 
 		i = i->next
@@ -1476,45 +1476,55 @@ end sub
 
 private sub hFixIdsInScope _
 	( _
-		byval defines as THASH ptr, _
+		byval reservedids as THASH ptr, _
 		byval code as ASTNODE ptr, _
 		byval renamelist as ASTNODE ptr _
 	)
 
 	'' Scope-specific namespaces for types and vars/procs/consts/fields/params
 	dim as THASH types, globals
-	hashInit( @types, 10, TRUE )
-	hashInit( @globals, 10, TRUE )
+	hashInit( @types, 2, TRUE )
+	hashInit( @globals, 2, TRUE )
 
 	'' 1. Walk through symbols top-down, much like a C compiler, and mark
 	''    those that need renaming with ASTATTRIB_NEEDRENAME.
-	hWalkAndCheckIds( defines, @types, @globals, code, renamelist )
+	hWalkAndCheckIds( reservedids, @types, @globals, code, renamelist )
 
 	'' 2. Rename all marked symbols. Now that all symbols are known, we can
 	''    generate new names for the symbols that need renaming without
 	''    introducing more conflicts.
-	hWalkAndRenameSymbols( defines, @types, @globals, code, code, renamelist )
+	hWalkAndRenameSymbols( reservedids, @types, @globals, code, code, renamelist )
 
 	hashEnd( @globals )
 	hashEnd( @types )
 
 end sub
 
-sub astFixIds( byval code as ASTNODE ptr )
-	'' Just one #define namespace, re-used also for nested scopes like
-	'' struct bodies/parameter lists.
-	dim as THASH defines
-	hashInit( @defines, 10, TRUE )
+'' Namespace for the "globally" reserved identifiers, i.e. #defines and anything
+'' given via the -reservedid command line option.
+'' This doesn't include FB keywords, or global procedures/variables, because
+'' those are not globally reserved identifiers: for example, they can be reused
+'' by fields.
+dim shared reservedids as THASH
 
+sub astFixIdsInit( )
+	hashInit( @reservedids, 2, TRUE )
+end sub
+
+sub astFixIdsAddReservedId( byval id as zstring ptr )
+	'' Ucase'ing like hCheckId() to make the check case-insensitive
+	hashAddOverwrite( @reservedids, ucase( *id, 1 ), NULL )
+end sub
+
+sub astFixIds( byval code as ASTNODE ptr )
 	var renamelist = astNew( ASTCLASS_RENAMELIST, "The following symbols have been renamed:" )
-	hFixIdsInScope( @defines, code, renamelist )
+	hFixIdsInScope( @reservedids, code, renamelist )
 	if( renamelist->head ) then
 		astPrepend( code, renamelist )
 	else
 		astDelete( renamelist )
 	end if
-
-	hashEnd( @defines )
+	hashEnd( @reservedids )
 end sub
 
 function astUsesDtype( byval n as ASTNODE ptr, byval dtype as integer ) as integer
