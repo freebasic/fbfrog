@@ -1,0 +1,12 @@
+-nodefaultscript
+
+-define __FBFROG_WIN32__
+-declarebool __FB_64BIT__
+-ifdef __FB_64BIT__
+	-define __FBFROG_64BIT__
+-endif
+
+-declarebool UNICODE
+-ifdef UNICODE
+	-define UNICODE
+-endif
