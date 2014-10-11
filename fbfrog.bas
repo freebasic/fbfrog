@@ -80,7 +80,7 @@ private function hFindResource( byref filename as string ) as string
 	print "search dirs:"
 	print "  <curdir> (" + curdir( ) + ")"
 	print "  <exepath>/include/fbfrog (" + dir1 + ")"
-	print "  <exepath>/../include/fbfrog (" + dir2 + ")"
+	print "  <exepath>/../include/fbfrog (" + pathNormalize( dir2 ) + ")"
 	end 1
 end function
 
