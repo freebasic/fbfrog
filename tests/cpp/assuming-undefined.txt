@@ -4,10 +4,10 @@ lex: pre-#define, 25 bytes, 2 lines, 4 tokens
 lex: /home/daniel/fbfrog/include/fbfrog/default.h, 8811 bytes, 296 lines, 1528 tokens
       tests/cpp/assuming-undefined.h
 lex: tests/cpp/assuming-undefined.h, 186 bytes, 23 lines, 72 tokens
-/home/daniel/fbfrog/include/fbfrog/default.h(11): assuming symbol '__FBFROG_LINUX__' is undefined
+include/fbfrog/default.h(11): assuming symbol '__FBFROG_LINUX__' is undefined
     #ifdef __FBFROG_LINUX__
            ^~~~~~~~~~~~~~~~
-/home/daniel/fbfrog/include/fbfrog/default.h(167): assuming symbol '__FBFROG_DOS__' is undefined
+include/fbfrog/default.h(167): assuming symbol '__FBFROG_DOS__' is undefined
     #ifdef __FBFROG_DOS__
            ^~~~~~~~~~~~~~
 tests/cpp/assuming-undefined.h(3): assuming symbol 'A' is undefined
@@ -30,13 +30,13 @@ lex: pre-#define, 25 bytes, 2 lines, 4 tokens
 lex: /home/daniel/fbfrog/include/fbfrog/default.h, 8811 bytes, 296 lines, 1528 tokens
       tests/cpp/assuming-undefined.h
 lex: tests/cpp/assuming-undefined.h, 186 bytes, 23 lines, 72 tokens
-/home/daniel/fbfrog/include/fbfrog/default.h(11): assuming symbol '__FBFROG_LINUX__' is undefined
+include/fbfrog/default.h(11): assuming symbol '__FBFROG_LINUX__' is undefined
     #ifdef __FBFROG_LINUX__
            ^~~~~~~~~~~~~~~~
-/home/daniel/fbfrog/include/fbfrog/default.h(30): assuming symbol '__FBFROG_64BIT__' is undefined
+include/fbfrog/default.h(30): assuming symbol '__FBFROG_64BIT__' is undefined
      #ifdef __FBFROG_64BIT__
             ^~~~~~~~~~~~~~~~
-/home/daniel/fbfrog/include/fbfrog/default.h(167): assuming symbol '__FBFROG_DOS__' is undefined
+include/fbfrog/default.h(167): assuming symbol '__FBFROG_DOS__' is undefined
     #ifdef __FBFROG_DOS__
            ^~~~~~~~~~~~~~
 tests/cpp/assuming-undefined.h(3): assuming symbol 'A' is undefined
@@ -60,10 +60,10 @@ lex: pre-#define, 25 bytes, 2 lines, 4 tokens
 lex: /home/daniel/fbfrog/include/fbfrog/default.h, 8811 bytes, 296 lines, 1528 tokens
       tests/cpp/assuming-undefined.h
 lex: tests/cpp/assuming-undefined.h, 186 bytes, 23 lines, 72 tokens
-/home/daniel/fbfrog/include/fbfrog/default.h(167): assuming symbol '__FBFROG_DOS__' is undefined
+include/fbfrog/default.h(167): assuming symbol '__FBFROG_DOS__' is undefined
     #ifdef __FBFROG_DOS__
            ^~~~~~~~~~~~~~
-/home/daniel/fbfrog/include/fbfrog/default.h(176): assuming symbol '__FBFROG_WIN32__' is undefined
+include/fbfrog/default.h(176): assuming symbol '__FBFROG_WIN32__' is undefined
     #elif defined __FBFROG_WIN32__
                   ^~~~~~~~~~~~~~~~
 tests/cpp/assuming-undefined.h(3): assuming symbol 'A' is undefined
@@ -86,13 +86,13 @@ lex: pre-#define, 25 bytes, 2 lines, 4 tokens
 lex: /home/daniel/fbfrog/include/fbfrog/default.h, 8811 bytes, 296 lines, 1528 tokens
       tests/cpp/assuming-undefined.h
 lex: tests/cpp/assuming-undefined.h, 186 bytes, 23 lines, 72 tokens
-/home/daniel/fbfrog/include/fbfrog/default.h(49): assuming symbol '__FBFROG_64BIT__' is undefined
+include/fbfrog/default.h(49): assuming symbol '__FBFROG_64BIT__' is undefined
     #ifdef __FBFROG_64BIT__
            ^~~~~~~~~~~~~~~~
-/home/daniel/fbfrog/include/fbfrog/default.h(167): assuming symbol '__FBFROG_DOS__' is undefined
+include/fbfrog/default.h(167): assuming symbol '__FBFROG_DOS__' is undefined
     #ifdef __FBFROG_DOS__
            ^~~~~~~~~~~~~~
-/home/daniel/fbfrog/include/fbfrog/default.h(176): assuming symbol '__FBFROG_WIN32__' is undefined
+include/fbfrog/default.h(176): assuming symbol '__FBFROG_WIN32__' is undefined
     #elif defined __FBFROG_WIN32__
                   ^~~~~~~~~~~~~~~~
 tests/cpp/assuming-undefined.h(3): assuming symbol 'A' is undefined
@@ -115,13 +115,13 @@ lex: pre-#define, 23 bytes, 2 lines, 4 tokens
 lex: /home/daniel/fbfrog/include/fbfrog/default.h, 8811 bytes, 296 lines, 1528 tokens
       tests/cpp/assuming-undefined.h
 lex: tests/cpp/assuming-undefined.h, 186 bytes, 23 lines, 72 tokens
-/home/daniel/fbfrog/include/fbfrog/default.h(11): assuming symbol '__FBFROG_LINUX__' is undefined
+include/fbfrog/default.h(11): assuming symbol '__FBFROG_LINUX__' is undefined
     #ifdef __FBFROG_LINUX__
            ^~~~~~~~~~~~~~~~
-/home/daniel/fbfrog/include/fbfrog/default.h(20): assuming symbol '__FBFROG_WIN32__' is undefined
+include/fbfrog/default.h(20): assuming symbol '__FBFROG_WIN32__' is undefined
     #elif defined __FBFROG_WIN32__
                   ^~~~~~~~~~~~~~~~
-/home/daniel/fbfrog/include/fbfrog/default.h(49): assuming symbol '__FBFROG_64BIT__' is undefined
+include/fbfrog/default.h(49): assuming symbol '__FBFROG_64BIT__' is undefined
     #ifdef __FBFROG_64BIT__
            ^~~~~~~~~~~~~~~~
 tests/cpp/assuming-undefined.h(3): assuming symbol 'A' is undefined

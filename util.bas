@@ -239,8 +239,12 @@ function hReport( byval location as TKLOCATION ptr, byval message as zstring ptr
 		return *message
 	end if
 
-	'' filename(1-based linenumber): message
-	var s = *location->source->name + "(" & (location->linenum + 1) & "): " + *message
+	'' Show filename relative to curdir(), that's usually nicer for the user
+	var filename = pathStripCurdir( *location->source->name )
+
+	'' Location info:
+	''    filename(123): message
+	var s = filename + "(" & (location->linenum + 1) & "): " + *message
 
 	'' A line of source code, trimmed to fit into the width limit
 	const INDENT = 4
@@ -763,12 +767,25 @@ function pathMakeAbsolute( byref path as string ) as string
 	if( pathIsAbsolute( path ) ) then
 		function = path
 	else
-		function = pathAddDiv( curdir( ) ) + path
+		function = hCurdir( ) + path
 	end if
 end function
 
 function hExepath( ) as string
 	function = pathAddDiv( exepath( ) )
+end function
+
+function hCurdir( ) as string
+	function = pathAddDiv( curdir( ) )
+end function
+
+function pathStripCurdir( byref path as string ) as string
+	var pwd = hCurdir( )
+	if( left( path, len( pwd ) ) = pwd ) then
+		function = right( path, len( path ) - len( pwd ) )
+	else
+		function = path
+	end if
 end function
 
 private function pathEndsWithDiv( byref s as string ) as integer

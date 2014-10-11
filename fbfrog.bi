@@ -212,6 +212,8 @@ declare function pathAddDiv( byref path as string ) as string
 declare function pathIsAbsolute( byref s as string ) as integer
 declare function pathMakeAbsolute( byref path as string ) as string
 declare function hExepath( ) as string
+declare function hCurdir( ) as string
+declare function pathStripCurdir( byref path as string ) as string
 declare function pathIsDir( byref s as string ) as integer
 declare function pathNormalize( byref path as string ) as string
 declare function hReadableDirExists( byref path as string ) as integer

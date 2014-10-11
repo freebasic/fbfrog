@@ -2032,6 +2032,7 @@ private function hSearchHeaderFile _
 		return incfile
 	end if
 
+	'' 3. In any of the include search directories
 	var i = frog.incdirs->head
 	while( i )
 
@@ -2076,12 +2077,23 @@ private sub cppInclude( byval begin as integer )
 		exit sub
 	end if
 
-	var keep = cppKeepIncludeContent( incfile )
-	if( keep ) then
-		frogPrint( incfile )
-	else
-		frogPrint( incfile + " (filtered out)" )
+	'' Get the normalized representation of the path, for use in hash tables
+	'' etc. Otherwise foo.h from the root dir and ../foo.h from a subdir
+	'' would be seen as different files.
+	incfile = pathNormalize( pathMakeAbsolute( incfile ) )
+
+	'' For display and -filterin/-filterout matching we use the version
+	'' relative to curdir() though.
+	var prettyfile = pathStripCurdir( incfile )
+	var message = prettyfile
+
+	'' Check -filterin/-filterout
+	var keep = cppKeepIncludeContent( prettyfile )
+
+	if( keep = FALSE ) then
+		message += " (filtered out)"
 	end if
+	frogPrint( message )
 
 	'' Push the #include file context
 	cppPush( 0 )
