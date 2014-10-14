@@ -100,7 +100,7 @@ private sub hPrintHelpAndExit( )
 	print "  -v               Show verbose/debugging info"
 	print "version-specific commands:"
 	print "  -filterout <filename-pattern>  Don't preserve code from matching #includes"
-	print "  -filterin <filename-pattern>   Undo effects of -filterout for matching #includes"
+	print "  -filterin <filename-pattern>   Undo -filterout for matching #includes"
 	print "  -inclib <name>           Add an #inclib ""<name>"" statement"
 	print "  -define <id> [<body>]    Add pre-#define"
 	print "  -noexpand <id>           Disable expansion of certain #define"
