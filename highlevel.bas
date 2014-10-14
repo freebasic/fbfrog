@@ -886,6 +886,14 @@ private sub hRenameTagDecls _
 
 end sub
 
+private function hAddForwardTypedef( byval tagid as zstring ptr, byval ast as ASTNODE ptr ) as string
+	var forwardid = *tagid + "_"
+	var typedef = astNew( ASTCLASS_TYPEDEF, tagid )
+	astSetType( typedef, TYPE_UDT, astNewID( forwardid ) )
+	astPrepend( ast, typedef )
+	function = forwardid
+end function
+
 private sub hConsiderTagId _
 	( _
 		byval ast as ASTNODE ptr, _
@@ -904,13 +912,7 @@ private sub hConsiderTagId _
 			'' Rename the struct and add a forward declaration for it using the old id.
 			'' astFixIds() will take care of fixing name conflicts involving the new
 			'' struct id, if any.
-			var forwardid = *tagid + "_"
-
-			var typedef = astNew( ASTCLASS_TYPEDEF, tagid )
-			astSetType( typedef, TYPE_UDT, astNewID( forwardid ) )
-			astPrepend( ast, typedef )
-
-			hRenameTagDecls( ast, tagid, forwardid )
+			hRenameTagDecls( ast, tagid, hAddForwardTypedef( tagid, ast ) )
 		end if
 
 	'' Tag id used only (and no declaration exists)?
@@ -919,11 +921,7 @@ private sub hConsiderTagId _
 		'' for the forward id, so that astFixIds() will take care of fixing
 		'' name conflicts involving the forward id, if any. The dummy
 		'' declaration won't be emitted though.
-		var forwardid = *tagid + "_"
-
-		var typedef = astNew( ASTCLASS_TYPEDEF, tagid )
-		astSetType( typedef, TYPE_UDT, astNewID( forwardid ) )
-		astPrepend( ast, typedef )
+		var forwardid = hAddForwardTypedef( tagid, ast )
 
 		var dummydecl = astNew( ASTCLASS_STRUCT, forwardid )
 		dummydecl->attrib or= ASTATTRIB_DUMMYDECL
