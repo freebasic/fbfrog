@@ -890,8 +890,8 @@ private function emitAst _
 			s += "0 to ..."
 		end if
 
-	case ASTCLASS_SIZEOFTYPE
-		s = "sizeof(" + emitType( n ) + ")"
+	case ASTCLASS_TYPE
+		s = emitType( n )
 
 	case else
 		astDump( n )

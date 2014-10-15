@@ -126,8 +126,7 @@ dim shared as zstring ptr astnodename(0 to ...) => _
 	@"call"      , _
 	@"structinit", _
 	@"arrayinit" , _
-	@"dimension" , _
-	@"sizeoftype" _
+	@"dimension"   _
 }
 
 #assert ubound( astnodename ) = ASTCLASS__COUNT - 1

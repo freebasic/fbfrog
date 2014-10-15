@@ -41,6 +41,7 @@ enum
 	DECL_TYPEDEF
 	DECL_CASTTYPE
 	DECL_SIZEOFTYPE
+	DECL_TYPE  '' plain data types (no related operator/symbol), which can appear in #define bodies
 	DECL__COUNT
 end enum
 
@@ -55,7 +56,8 @@ dim shared as integer decl_to_astclass(0 to DECL__COUNT-1) = _
 	ASTCLASS_PARAM  , _ '' DECL_PARAM
 	ASTCLASS_TYPEDEF, _ '' DECL_TYPEDEF
 	ASTCLASS_TYPE   , _ '' DECL_CASTTYPE
-	ASTCLASS_TYPE     _ '' DECL_SIZEOFTYPE
+	ASTCLASS_TYPE   , _ '' DECL_SIZEOFTYPE
+	ASTCLASS_TYPE     _ '' DECL_TYPE
 }
 
 enum
@@ -282,9 +284,7 @@ private function hIsDataType( byval y as integer ) as integer
 	function = is_type
 end function
 
-'' Parse cast expression for '(DataType) foo', or sizeof operand for
-'' 'sizeof (DataType)'.
-private function cDataTypeInParens( byval decl as integer ) as ASTNODE ptr
+private function cDataType( byval decl as integer ) as ASTNODE ptr
 	''
 	'' Using cDeclaration() to parse:
 	''
@@ -298,6 +298,12 @@ private function cDataTypeInParens( byval decl as integer ) as ASTNODE ptr
 	'' should be 1 child only though, extract it.
 	''
 	function = astUngroupOne( cDeclaration( decl, 0, "" ) )
+end function
+
+'' Parse the data type in parentheses for cast expressions (<(DataType) foo>),
+'' or the operand of sizeof (<sizeof (DataType)>).
+private function cDataTypeInParens( byval decl as integer ) as ASTNODE ptr
+	function = cDataType( decl )
 
 	'' ')'
 	cExpectMatch( TK_RPAREN, iif( decl = DECL_CASTTYPE, _
@@ -444,16 +450,11 @@ private function cExpression( byval level as integer ) as ASTNODE ptr
 				c.x += 1
 
 				'' DataType ')'
-				var t = cDataTypeInParens( DECL_SIZEOFTYPE )
-
-				a = astNew( ASTCLASS_SIZEOFTYPE )
-
-				assert( t->class = ASTCLASS_TYPE )
-				astSetType( a, t->dtype, astClone( t->subtype ) )
-				astDelete( t )
+				a = cDataTypeInParens( DECL_SIZEOFTYPE )
 			else
-				a = astNew( ASTCLASS_SIZEOF, cExpression( cprecedence(ASTCLASS_SIZEOF) ) )
+				a = cExpression( cprecedence(ASTCLASS_SIZEOF) )
 			end if
+			a = astNew( ASTCLASS_SIZEOF, a )
 
 		'' DEFINED ['('] Identifier [')']
 		case KW_DEFINED
@@ -838,11 +839,9 @@ private function hLooksLikeScopeBlock( byval x as integer ) as integer
 	function = FALSE
 end function
 
-private sub cDefineBody( byval macro as ASTNODE ptr, byref keep_define as integer )
-	c.parentdefine = macro
-
+'' Return value: whether to keep the #define
+private function cDefineBody( byval macro as ASTNODE ptr ) as integer
 	select case( tkGet( c.x ) )
-
 	'' Don't preserve #define if it just contains _Pragma's
 	'' _Pragma("...")
 	case KW__PRAGMA
@@ -860,12 +859,12 @@ private sub cDefineBody( byval macro as ASTNODE ptr, byref keep_define as intege
 			c.x += 1
 		loop while( tkGet( c.x ) = KW__PRAGMA )
 
-		keep_define = FALSE
+		exit function
 
 	case KW___ATTRIBUTE__
 		'' Don't preserve #define if it just contains an __attribute__
 		cGccAttributeList( 0 )
-		keep_define = FALSE
+		exit function
 
 	'' '{'
 	case TK_LBRACE
@@ -874,20 +873,26 @@ private sub cDefineBody( byval macro as ASTNODE ptr, byref keep_define as intege
 		else
 			macro->expr = cInitializer( )
 		end if
+		return TRUE
 
-	case else
-		macro->expr = cExpression( 0 )
+	'' Just a 'const'? It's common to have a #define for the const keyword
+	'' in C headers...
+	case KW_CONST
+		if( tkGet( c.x + 1 ) = TK_EOL ) then
+			'' const
+			c.x += 1
+			exit function
+		end if
 	end select
 
-	'' Didn't reach EOL? Then the beginning of the macro body could
-	'' be parsed as expression, but not the rest.
-	if( tkGet( c.x ) <> TK_EOL ) then
-		cError( "failed to parse full #define body" )
-		c.x = hSkipToEol( c.x )
+	if( hIsDataType( c.x ) ) then
+		macro->expr = cDataType( DECL_TYPE )
+		return TRUE
 	end if
 
-	c.parentdefine = NULL
-end sub
+	macro->expr = cExpression( 0 )
+	function = TRUE
+end function
 
 private function cDefine( ) as ASTNODE ptr
 	c.x += 1
@@ -900,8 +905,18 @@ private function cDefine( ) as ASTNODE ptr
 
 	'' Non-empty?
 	if( tkGet( c.x ) <> TK_EOL ) then
-		var keep_define = TRUE
-		cDefineBody( macro, keep_define )
+		c.parentdefine = macro
+
+		var keep_define = cDefineBody( macro )
+
+		'' Didn't reach EOL? Then the beginning of the macro body could
+		'' be parsed as expression, but not the rest.
+		if( tkGet( c.x ) <> TK_EOL ) then
+			cError( "failed to parse full #define body" )
+			c.x = hSkipToEol( c.x )
+		end if
+
+		c.parentdefine = NULL
 
 		'' Silently ignore the #define?
 		if( keep_define = FALSE ) then
@@ -1267,6 +1282,8 @@ private sub cBaseType _
 				message += "in this '(...)' type cast"
 			case DECL_SIZEOFTYPE
 				message += "as operand in this 'sizeof(...)'"
+			case DECL_TYPE
+				message += "here"
 			case DECL_PARAM
 				message += "starting a parameter declaration"
 			case else
@@ -1551,7 +1568,7 @@ private function cDeclarator _
 		'' in fact for types there mustn't be an id.
 		dim as string id
 		select case( decl )
-		case DECL_CASTTYPE, DECL_SIZEOFTYPE
+		case DECL_CASTTYPE, DECL_SIZEOFTYPE, DECL_TYPE
 		case else
 			if( tkGet( c.x ) = TK_ID ) then
 				id = *tkSpellId( c.x )
@@ -1588,7 +1605,7 @@ private function cDeclarator _
 		'' Can't allow arrays on everything - currently, it's only
 		'' handled for vars/fields/params/typedefs
 		select case( decl )
-		case DECL_CASTTYPE, DECL_SIZEOFTYPE
+		case DECL_CASTTYPE, DECL_SIZEOFTYPE, DECL_TYPE
 			cError( "TODO: arrays not supported here yet" )
 		end select
 
@@ -1825,7 +1842,7 @@ private function cDeclaration _
 		'' Parameters/types can't have commas and more identifiers,
 		'' and don't need with ';' either.
 		select case( decl )
-		case DECL_PARAM, DECL_CASTTYPE, DECL_SIZEOFTYPE
+		case DECL_PARAM, DECL_CASTTYPE, DECL_SIZEOFTYPE, DECL_TYPE
 			require_semi = FALSE
 			exit do
 		end select
