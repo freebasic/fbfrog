@@ -89,7 +89,7 @@ private sub hSetLocation( byval flags as integer = 0 )
 	if( lex.behindspace ) then
 		flags or= TKFLAG_BEHINDSPACE
 	end if
-	tkAddFlags( lex.x, flags )
+	tkAddFlags( lex.x, lex.x, flags )
 	lex.x += 1
 end sub
 

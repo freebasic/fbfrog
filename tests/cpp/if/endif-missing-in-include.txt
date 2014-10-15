@@ -1,7 +1,7 @@
 [1/5] __FB_WIN32__.__FB_64BIT__
       tests/cpp/if/endif-missing-in-include.h
       tests/cpp/if/endif-missing.h
-tests/cpp/if/endif-missing.h(2): missing #endif in #included file
+tests/cpp/if/endif-missing.h(2): missing #endif
     #if 1
          ^
 context as seen by fbfrog:

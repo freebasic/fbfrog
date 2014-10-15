@@ -160,6 +160,7 @@ private function cMakeDummyId( ) as string
 	var location = tkGetLocation( c.x )
 	if( location->source ) then
 		var filename = *location->source->name
+		filename = pathStripCurdir( filename )
 		filename = strReplaceNonIdChars( pathStripExt( filename ), CH_UNDERSCORE )
 		dummyid += "_" + filename
 	end if

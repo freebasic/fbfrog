@@ -1578,7 +1578,7 @@ private sub hExpandMacro _
 					dim as integer argcount
 					var callend = hParseMacroCall( x, definfo->macro, @argbegin(0), @argend(0), argcount )
 					if( (callend >= 0) and (callend <= expansionend) ) then
-						tkAddFlags( x, TKFLAG_NOEXPAND )
+						tkAddFlags( x, x, TKFLAG_NOEXPAND )
 					end if
 				end if
 			end if
@@ -2061,6 +2061,10 @@ private sub cppInclude( byval begin as integer )
 	'' Save the location for later, across the insertions/deletions below
 	var location = *tkGetLocation( cpp.x )
 
+	'' Internal #include for a root file? Don't apply -filterin/-filterout,
+	'' don't do #include file search...
+	var is_rootfile = ((tkGetFlags( cpp.x ) and TKFLAG_ROOTFILE) <> 0)
+
 	dim as string contextfile
 	if( location.source ) then
 		contextfile = *location.source->name
@@ -2071,10 +2075,15 @@ private sub cppInclude( byval begin as integer )
 
 	cppEol( )
 
-	var incfile = hSearchHeaderFile( contextfile, inctext )
-	if( len( incfile ) = 0 ) then
-		frogPrint( inctext + " (not found)" )
-		exit sub
+	dim incfile as string
+	if( is_rootfile ) then
+		incfile = inctext
+	else
+		incfile = hSearchHeaderFile( contextfile, inctext )
+		if( len( incfile ) = 0 ) then
+			frogPrint( inctext + " (not found)" )
+			exit sub
+		end if
 	end if
 
 	'' Get the normalized representation of the path, for use in hash tables
@@ -2088,8 +2097,7 @@ private sub cppInclude( byval begin as integer )
 	var message = prettyfile
 
 	'' Check -filterin/-filterout
-	var keep = cppKeepIncludeContent( prettyfile )
-
+	var keep = is_rootfile orelse cppKeepIncludeContent( prettyfile )
 	if( keep = FALSE ) then
 		message += " (filtered out)"
 	end if
@@ -2107,7 +2115,7 @@ private sub cppInclude( byval begin as integer )
 	'' Mark the TK_BEGININCLUDE with TKFLAG_REMOVEINCLUDE if the include
 	'' content should be filtered out by cPreParse().
 	if( keep = FALSE ) then
-		tkAddFlags( cpp.x, TKFLAG_REMOVEINCLUDE )
+		tkAddFlags( cpp.x, cpp.x, TKFLAG_REMOVEINCLUDE )
 	end if
 	cpp.x += 1
 
@@ -2136,7 +2144,7 @@ private sub cppEndInclude( )
 	assert( cpp.skiplevel = MAXSTACK )
 	assert( cpp.level > 0 )
 	if( cpp.stack(cpp.level) >= STACK_IF ) then
-		tkOops( cpp.x - 1, "missing #endif in #included file" )
+		tkOops( cpp.x - 1, "missing #endif" )
 	end if
 	cppPop( )
 	cpp.x += 1

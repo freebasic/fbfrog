@@ -16,10 +16,11 @@
 ''   * we start with an empty tk buffer, CPP is initialized
 ''   * predefines for that API are inserted into the tk buffer using lexLoadC()
 ''   * CPP is told about -removedefine options etc.
-''   * content of default.h and the *.h input files for that API are loaded into
-''     the tk buffer using lexLoadC()
+''   * content of default.h is loaded into the tk buffer using lexLoadC()
+''   * Artificial #include statements for the *.h input files (root files) for
+''     that API are inserted into the tk buffer using lexLoadC()
 ''   * CPP runs and preprocesses the content of the tk buffer (cppMain()):
-''     directive parsing, macro expansion, #if evaluation
+''     directive parsing, macro expansion, #if evaluation, #include handling
 ''   * C parser parses the preprocessed constructs in the tk buffer (cFile()),
 ''     produces a self-contained AST
 ''   * Various steps of AST modifications to make the AST FB-friendly
@@ -899,7 +900,11 @@ private function frogReadAPI( byval options as ASTNODE ptr ) as ASTNODE ptr
 	end scope
 
 	''
-	'' Add toplevel file(s) behind current tokens (could be pre-#defines etc.)
+	'' Add #includes for the toplevel file(s) behind current tokens, but
+	'' marked with TKFLAG_ROOTFILE to let the CPP know that no #include
+	'' search should be done, don't filter them out, etc. This way we can
+	'' re-use the #include handling code to load the toplevel files.
+	'' (especially interesting for include guard optimization)
 	''
 	'' Note: pre-#defines should appear before tokens from root files, such
 	'' that the order of -define vs *.h command line arguments doesn't
@@ -908,26 +913,10 @@ private function frogReadAPI( byval options as ASTNODE ptr ) as ASTNODE ptr
 	scope
 		var i = rootfiles->head
 		while( i )
-
-			if( tkGetCount( ) > 0 ) then
-				'' Extra EOL to separate from previous tokens
-				var x = tkGetCount( )
-				tkInsert( x, TK_EOL )
-				tkSetRemove( x )
-			end if
-
-			frogPrint( *i->text )
-			lexLoadC( tkGetCount( ), sourcebufferFromFile( i->text, @i->location ), frog.whitespace )
-
-			if( tkGetCount( ) > 0 ) then
-				'' Add EOL at EOF, if missing
-				if( tkGet( tkGetCount( ) - 1 ) <> TK_EOL ) then
-					var x = tkGetCount( )
-					tkInsert( x, TK_EOL )
-					tkSetRemove( x )
-				end if
-			end if
-
+			var code = "#include """ + *i->text + """" + !"\n"
+			var x = tkGetCount( )
+			lexLoadC( x, sourcebufferFromZstring( code, code, @i->location ), FALSE )
+			tkAddFlags( x, tkGetCount( ) - 1, TKFLAG_REMOVE or TKFLAG_ROOTFILE )
 			i = i->next
 		wend
 	end scope

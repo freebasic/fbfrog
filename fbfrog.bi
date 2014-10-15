@@ -233,6 +233,7 @@ const TKFLAG_HEX		= 1 shl 8
 const TKFLAG_OCT		= 1 shl 9
 const TKFLAG_FLOAT		= 1 shl 10
 const TKFLAG_REMOVEINCLUDE	= 1 shl 11  '' TK_BEGININCLUDE only: Whether the included tokens should be preserved or not
+const TKFLAG_ROOTFILE		= 1 shl 12  '' Used to mark the internal #include statements which pull in the toplevel files
 
 enum
 	TK_EOF
@@ -432,7 +433,7 @@ declare sub tkSetExpansionLevel( byval first as integer, byval last as integer, 
 declare function tkGetExpansionLevel( byval x as integer ) as integer
 declare function tkFindTokenWithMinExpansionLevel( byval first as integer, byval last as integer ) as integer
 declare function tkGetMaxExpansionLevel( byval first as integer, byval last as integer ) as integer
-declare sub tkAddFlags( byval x as integer, byval flags as integer )
+declare sub tkAddFlags( byval first as integer, byval last as integer, byval flags as integer )
 declare sub tkSetRemove overload( byval x as integer )
 declare sub tkSetRemove overload( byval first as integer, byval last as integer )
 declare function tkGetFlags( byval x as integer ) as integer

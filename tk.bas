@@ -309,6 +309,7 @@ function tkDumpOne( byval x as integer ) as string
 	checkFlag( LL )
 	checkFlag( FLOAT )
 	checkFlag( REMOVEINCLUDE )
+	checkFlag( ROOTFILE )
 
 	s += hDumpComment( p->comment )
 
@@ -531,21 +532,21 @@ function tkGetMaxExpansionLevel( byval first as integer, byval last as integer )
 	function = maxlevel
 end function
 
-sub tkAddFlags( byval x as integer, byval flags as integer )
-	var p = tkAccess( x )
-	if( p->id <> TK_EOF ) then
-		p->flags or= flags
-	end if
+sub tkAddFlags( byval first as integer, byval last as integer, byval flags as integer )
+	for x as integer = first to last
+		var p = tkAccess( x )
+		if( p->id <> TK_EOF ) then
+			p->flags or= flags
+		end if
+	next
 end sub
 
 sub tkSetRemove overload( byval x as integer )
-	tkAddFlags( x, TKFLAG_REMOVE )
+	tkAddFlags( x, x, TKFLAG_REMOVE )
 end sub
 
 sub tkSetRemove overload( byval first as integer, byval last as integer )
-	for x as integer = first to last
-		tkSetRemove( x )
-	next
+	tkAddFlags( first, last, TKFLAG_REMOVE )
 end sub
 
 function tkGetFlags( byval x as integer ) as integer
@@ -825,7 +826,7 @@ function hFindClosingParen( byval x as integer, byval stop_at_cppdirective as in
 				end if
 			end if
 
-		case TK_EOF
+		case TK_EOF, TK_BEGININCLUDE, TK_ENDINCLUDE
 			x -= 1
 			exit do
 		end select
@@ -839,7 +840,7 @@ function hSkipConstruct( byval x as integer ) as integer
 	case TK_EOF
 		return x
 
-	case TK_SEMI, TK_DIVIDER
+	case TK_SEMI, TK_DIVIDER, TK_BEGININCLUDE, TK_ENDINCLUDE
 		return x + 1
 
 	case TK_HASH
@@ -856,7 +857,7 @@ function hSkipConstruct( byval x as integer ) as integer
 			x += 1
 			exit do
 
-		case TK_EOF, TK_DIVIDER
+		case TK_EOF, TK_DIVIDER, TK_BEGININCLUDE, TK_ENDINCLUDE
 			exit do
 
 		case TK_HASH
@@ -866,6 +867,7 @@ function hSkipConstruct( byval x as integer ) as integer
 
 		case TK_LPAREN, TK_LBRACKET, TK_LBRACE
 			x = hFindClosingParen( x )
+
 		end select
 	loop
 
