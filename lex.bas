@@ -854,7 +854,7 @@ function lexLoadC _
 	wend
 
 	if( frog.verbose ) then
-		print "lex: " + *source->name + ", " & (source->size - 1) & " bytes, " & _
+		print "lex: " + pathStripCurdir( *source->name ) + ", " & (source->size - 1) & " bytes, " & _
 			source->lines & " lines, " & lex.x - x & " tokens"
 	end if
 
