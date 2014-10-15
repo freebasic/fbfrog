@@ -524,10 +524,10 @@ end sub
 
 enum
 	'' If stack states:
-	'' 0 = file context (fresh toplevel/#include file, no #if yet)
-	STACK_IF = 1  '' #if context, fresh
-	STACK_TRUE    '' #if context, saw #if/#elseif TRUE (and thus, further #elseif TRUE's must be skipped)
-	STACK_ELSE    '' #if context, saw #else (and no further #elseif/#else can be allowed)
+	STATE_FILE = 0  '' file context (fresh toplevel/#include file, no #if yet)
+	STATE_IF        '' #if context, fresh
+	STATE_TRUE      '' #if context, saw #if/#elseif TRUE (and thus, further #elseif TRUE's must be skipped)
+	STATE_ELSE      '' #if context, saw #else (and no further #elseif/#else can be allowed)
 end enum
 
 const MAXSTACK = 128
@@ -535,13 +535,17 @@ const MAXSTACK = 128
 namespace cpp
 	dim shared as integer x  '' Current token index
 
+	type STACKNODE
+		state		as integer  '' STATE_*
+	end type
+
 	'' #if/file context stack
 	'' * starts out with only the toplevel file context
 	'' * #if blocks and #include contexts are put on this stack
 	'' * an #endif found in an #include won't be able to close an #if from
 	''   the parent file, since the #include stack node is in the way, and
 	''   must be popped first.
-	dim shared stack(0 to MAXSTACK-1) as integer
+	dim shared stack(0 to MAXSTACK-1) as STACKNODE
 	dim shared as integer level  '' Current top of stack
 
 	'' Stack level which caused #if 0 skipping
@@ -587,7 +591,7 @@ sub cppInit( )
 	cpp.x = 0
 
 	'' Toplevel file context
-	cpp.stack(0) = 0
+	cpp.stack(0).state = STATE_FILE
 	cpp.level = 0
 
 	'' No skipping yet
@@ -605,7 +609,7 @@ private sub cppEnd( )
 	'' If anything is left on the stack at EOF, it can only be #ifs
 	'' (#includes should be popped due to TK_ENDINCLUDE's already)
 	if( cpp.level > 0 ) then
-		assert( cpp.stack(cpp.level) >= STACK_IF )
+		assert( cpp.stack(cpp.level).state >= STATE_IF )
 		tkOops( cpp.x, "missing #endif" )
 	end if
 
@@ -1847,12 +1851,14 @@ private function cppEvalIfExpr( byval expr as ASTNODE ptr ) as integer
 	function = (v.vali <> 0)
 end function
 
-private sub cppPush( byval stackid as integer )
+private sub cppPush( byval state as integer )
 	cpp.level += 1
 	if( cpp.level >= MAXSTACK ) then
 		tkOops( cpp.x, "#if/#include stack too small, MAXSTACK=" & MAXSTACK )
 	end if
-	cpp.stack(cpp.level) = stackid
+	with( cpp.stack(cpp.level) )
+		.state = state
+	end with
 end sub
 
 private sub cppPop( )
@@ -1862,7 +1868,7 @@ end sub
 private sub cppApplyIf( byval expr as ASTNODE ptr )
 	if( cppEvalIfExpr( expr ) ) then
 		'' #if TRUE, don't skip
-		cpp.stack(cpp.level) = STACK_TRUE
+		cpp.stack(cpp.level).state = STATE_TRUE
 	else
 		'' #if FALSE, start skipping
 		cpp.skiplevel = cpp.level
@@ -1881,7 +1887,7 @@ private function cppIfExpr( ) as ASTNODE ptr
 end function
 
 private sub cppIf( )
-	cppPush( STACK_IF )
+	cppPush( STATE_IF )
 	cpp.x += 1
 
 	if( cppSkipping( ) ) then
@@ -1895,7 +1901,7 @@ private sub cppIf( )
 end sub
 
 private sub cppIfdef( byval directivekw as integer )
-	cppPush( STACK_IF )
+	cppPush( STATE_IF )
 	cpp.x += 1
 
 	if( cppSkipping( ) ) then
@@ -1921,10 +1927,10 @@ end sub
 
 private sub cppElseIf( )
 	'' Verify #elif usage even if skipping
-	select case( cpp.stack(cpp.level) )
-	case is < STACK_IF
+	select case( cpp.stack(cpp.level).state )
+	case is < STATE_IF
 		tkOops( cpp.x, "#elif without #if" )
-	case STACK_ELSE
+	case STATE_ELSE
 		tkOops( cpp.x, "#elif after #else" )
 	end select
 	cpp.x += 1
@@ -1935,14 +1941,14 @@ private sub cppElseIf( )
 	if( (cpp.skiplevel = MAXSTACK) or (cpp.skiplevel = cpp.level) ) then
 		'' But not if there already was an #if/#elif TRUE on this level
 		'' (then this #elif isn't reached)
-		if( cpp.stack(cpp.level) = STACK_TRUE ) then
+		if( cpp.stack(cpp.level).state = STATE_TRUE ) then
 			'' Start/continue skipping
 			cpp.skiplevel = cpp.level
 		else
 			'' Condition expression
 			if( cppEvalIfExpr( cppIfExpr( ) ) ) then
 				'' #elif TRUE, don't skip
-				cpp.stack(cpp.level) = STACK_TRUE
+				cpp.stack(cpp.level).state = STATE_TRUE
 				cpp.skiplevel = MAXSTACK
 			else
 				'' #elif FALSE, start/continue skipping
@@ -1956,10 +1962,10 @@ end sub
 
 private sub cppElse( )
 	'' Verify #else usage even if skipping
-	select case( cpp.stack(cpp.level) )
-	case is < STACK_IF
+	select case( cpp.stack(cpp.level).state )
+	case is < STATE_IF
 		tkOops( cpp.x, "#else without #if" )
-	case STACK_ELSE
+	case STATE_ELSE
 		tkOops( cpp.x, "#else after #else" )
 	end select
 	cpp.x += 1
@@ -1970,7 +1976,7 @@ private sub cppElse( )
 	''    a) not yet skipping,
 	''    b) skipping due to a previous #if/#elif FALSE
 	if( (cpp.skiplevel = MAXSTACK) or (cpp.skiplevel = cpp.level) ) then
-		if( cpp.stack(cpp.level) = STACK_TRUE ) then
+		if( cpp.stack(cpp.level).state = STATE_TRUE ) then
 			'' Previous #if/#elseif TRUE, skip #else
 			cpp.skiplevel = cpp.level
 		else
@@ -1979,11 +1985,11 @@ private sub cppElse( )
 		end if
 	end if
 
-	cpp.stack(cpp.level) = STACK_ELSE
+	cpp.stack(cpp.level).state = STATE_ELSE
 end sub
 
 private sub cppEndIf( )
-	if( cpp.stack(cpp.level) < STACK_IF ) then
+	if( cpp.stack(cpp.level).state < STATE_IF ) then
 		tkOops( cpp.x, "#endif without #if" )
 	end if
 	cpp.x += 1
@@ -2104,7 +2110,7 @@ private sub cppInclude( byval begin as integer )
 	frogPrint( message )
 
 	'' Push the #include file context
-	cppPush( 0 )
+	cppPush( STATE_FILE )
 
 	'' Mark #include directive for removal
 	tkSetRemove( begin, cpp.x - 1 )
@@ -2143,7 +2149,7 @@ end sub
 private sub cppEndInclude( )
 	assert( cpp.skiplevel = MAXSTACK )
 	assert( cpp.level > 0 )
-	if( cpp.stack(cpp.level) >= STACK_IF ) then
+	if( cpp.stack(cpp.level).state >= STATE_IF ) then
 		tkOops( cpp.x - 1, "missing #endif" )
 	end if
 	cppPop( )
