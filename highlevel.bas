@@ -791,9 +791,11 @@ private function hUsedButNotDeclared( byval state as integer ) as integer
 	function = ((state and (STATE_DECLARED or STATE_USED)) = STATE_USED)
 end function
 
-'' Record a tag id into the hashtb
+'' Record a tag id into the list and hashtb, if it doesn't exist yet,
+'' and update used/declared state
 private sub hOnTagId _
 	( _
+		byval list as ASTNODE ptr, _
 		byval hashtb as THASH ptr, _
 		byval id as zstring ptr, _
 		byval addstate as integer, _
@@ -829,35 +831,37 @@ private sub hOnTagId _
 		end if
 
 		hashAdd( hashtb, item, hash, id, cptr( any ptr, addstate ) )
+
+		astAppend( list, astNewID( id ) )
 	end if
 
 end sub
 
 '' Walk through the code from top to bottom and record tag ids and corresponding
-'' state into the hashtb.
-private sub hCollectTagIds( byval n as ASTNODE ptr, byval hashtb as THASH ptr )
+'' state into the list and hashtb.
+private sub hCollectTagIds( byval n as ASTNODE ptr, byval list as ASTNODE ptr, byval hashtb as THASH ptr )
 	select case( n->class )
 	case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
 		'' Not anonymous?
 		if( n->text ) then
-			hOnTagId( hashtb, n->text, STATE_DECLARED, FALSE )
+			hOnTagId( list, hashtb, n->text, STATE_DECLARED, FALSE )
 		end if
 	end select
 
 	if( n->subtype ) then
 		if( n->subtype->class = ASTCLASS_TAGID ) then
-			hOnTagId( hashtb, n->subtype->text, STATE_USED, (n->class = ASTCLASS_TYPEDEF) )
+			hOnTagId( list, hashtb, n->subtype->text, STATE_USED, (n->class = ASTCLASS_TYPEDEF) )
 		else
-			hCollectTagIds( n->subtype, hashtb )
+			hCollectTagIds( n->subtype, list, hashtb )
 		end if
 	end if
 
-	if( n->array ) then hCollectTagIds( n->array, hashtb )
-	if( n->expr  ) then hCollectTagIds( n->expr , hashtb )
+	if( n->array ) then hCollectTagIds( n->array, list, hashtb )
+	if( n->expr  ) then hCollectTagIds( n->expr , list, hashtb )
 
 	var i = n->head
 	while( i )
-		hCollectTagIds( i, hashtb )
+		hCollectTagIds( i, list, hashtb )
 		i = i->next
 	wend
 end sub
@@ -886,16 +890,17 @@ private sub hRenameTagDecls _
 
 end sub
 
-private function hAddForwardTypedef( byval tagid as zstring ptr, byval ast as ASTNODE ptr ) as string
+private function hAddForwardTypedef( byval decllist as ASTNODE ptr, byval tagid as zstring ptr ) as string
 	var forwardid = *tagid + "_"
 	var typedef = astNew( ASTCLASS_TYPEDEF, tagid )
 	astSetType( typedef, TYPE_UDT, astNewID( forwardid ) )
-	astPrepend( ast, typedef )
+	astAppend( decllist, typedef )
 	function = forwardid
 end function
 
 private sub hConsiderTagId _
 	( _
+		byval decllist as ASTNODE ptr, _
 		byval ast as ASTNODE ptr, _
 		byval tagid as zstring ptr, _
 		byval state as integer _
@@ -912,7 +917,7 @@ private sub hConsiderTagId _
 			'' Rename the struct and add a forward declaration for it using the old id.
 			'' astFixIds() will take care of fixing name conflicts involving the new
 			'' struct id, if any.
-			hRenameTagDecls( ast, tagid, hAddForwardTypedef( tagid, ast ) )
+			hRenameTagDecls( ast, tagid, hAddForwardTypedef( decllist, tagid ) )
 		end if
 
 	'' Tag id used only (and no declaration exists)?
@@ -921,11 +926,11 @@ private sub hConsiderTagId _
 		'' for the forward id, so that astFixIds() will take care of fixing
 		'' name conflicts involving the forward id, if any. The dummy
 		'' declaration won't be emitted though.
-		var forwardid = hAddForwardTypedef( tagid, ast )
+		var forwardid = hAddForwardTypedef( decllist, tagid )
 
 		var dummydecl = astNew( ASTCLASS_STRUCT, forwardid )
 		dummydecl->attrib or= ASTATTRIB_DUMMYDECL
-		astPrepend( ast, dummydecl )
+		astAppend( decllist, dummydecl )
 	end if
 
 end sub
@@ -933,17 +938,29 @@ end sub
 sub astAddForwardDeclsForUndeclaredTagIds( byval ast as ASTNODE ptr )
 	dim hashtb as THASH
 	hashInit( @hashtb, 4, FALSE )
+	var tagidlist = astNewGROUP( )
 
-	hCollectTagIds( ast, @hashtb )
+	hCollectTagIds( ast, tagidlist, @hashtb )
 
-	'' For each tag id...
-	for i as integer = 0 to hashtb.room-1
-		var item = hashtb.items + i
-		if( item->s ) then
-			hConsiderTagId( ast, item->s, cint( item->data ) )
-		end if
-	next
+	'' For each tag id: Create a forward declaration, if needed, and adjust
+	'' the AST, if needed.
+	var decllist = astNewGROUP( )
+	var tagid = tagidlist->head
+	while( tagid )
 
+		var id = tagid->text
+		var item = hashLookup( @hashtb, id, hashHash( id ) )
+		assert( item->s )
+		hConsiderTagId( decllist, ast, id, cint( item->data ) )
+
+		tagid = tagid->next
+	wend
+
+	'' Insert the forward declarations at the top of the AST, in the same
+	'' order they were found.
+	astPrepend( ast, decllist )
+
+	astDelete( tagidlist )
 	hashEnd( @hashtb )
 end sub
 
