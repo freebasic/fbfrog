@@ -1875,14 +1875,20 @@ private sub cppEval( byref v as CPPVALUE, byval n as ASTNODE ptr )
 
 		if( cppIsKnownSymbol( id ) = FALSE ) then
 			'' Unknown symbol, assume it's undefined
+
+			'' Show a warning if it seems to be useful; i.e. if it's
+			'' not a reserved symbol, but one intended to be defined
+			'' by the user.
 			if( frog.verbose ) then
-				astReport( n->head, "assuming symbol '" + *n->head->text + "' is undefined" )
+				if( strIsReservedIdInC( id ) = FALSE ) then
+					astReport( n->head, "assuming symbol '" + *id + "' is undefined" )
+				end if
 			end if
 
 			'' Register as known undefined
 			'' This also prevents the above warning from being shown
 			'' multiple times for a single symbol.
-			cppAddKnownUndefined( n->head->text )
+			cppAddKnownUndefined( id )
 		end if
 
 		'' defined()  ->  1|0

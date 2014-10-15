@@ -376,6 +376,18 @@ function strIsValidSymbolId( byval s as zstring ptr ) as integer
 	function = TRUE
 end function
 
+'' Does an identifier start with __ (double underscore) or _U (single underscore
+'' and upper-case letter)?
+function strIsReservedIdInC( byval id as zstring ptr ) as integer
+	if( (*id)[0] = CH_UNDERSCORE ) then
+		var ch2 = (*id)[1]
+		if( (ch2 = CH_UNDERSCORE) or _
+		    ((ch2 >= CH_A) and (ch2 <= CH_Z)) ) then
+			return TRUE
+		end if
+	end if
+end function
+
 '' Recursive string matching, with ? and * wildcards, seems to work ok
 '' (based on post from stackoverflow)
 function strMatch( byref s as string, byref pattern as string ) as integer
