@@ -823,35 +823,29 @@ function pathIsDir( byref s as string ) as integer
 end function
 
 '' Component stack for the path solver
+const MAXSOLVERSTACK = 128
 namespace solver
-	dim shared p as integer ptr
-	dim shared as integer room, top
+	dim shared stack(0 to MAXSOLVERSTACK-1) as integer
+	dim shared as integer top
 end namespace
 
 private sub solverInit( )
-	solver.p = NULL
-	solver.room = 0
 	solver.top = -1
-end sub
-
-private sub solverEnd( )
-	deallocate( solver.p )
 end sub
 
 private sub solverPush( byval w as integer )
 	solver.top += 1
-	if( solver.top >= solver.room ) then
-		solver.room += 128
-		solver.p = reallocate( solver.p, sizeof( integer ) * solver.room )
+	if( solver.top >= MAXSOLVERSTACK ) then
+		oops( "path solver stack too small, MAXSOLVERSTACK=" & MAXSOLVERSTACK )
 	end if
-	solver.p[solver.top] = w
+	solver.stack(solver.top) = w
 end sub
 
 private function solverPop( ) as integer
 	if( solver.top > 0 ) then
 		solver.top -= 1
 	end if
-	function = solver.p[solver.top]
+	function = solver.stack(solver.top)
 end function
 
 '' Resolves .'s and ..'s in the path,
@@ -935,7 +929,6 @@ function pathNormalize( byref path as string ) as string
 		end select
 	next
 
-	solverEnd( )
 	function = left( s, w )
 end function
 

@@ -219,6 +219,16 @@ unnecessary?
 
 To do:
 
+* Renames can cause other renames to become unnecessary. Here we'll do an
+  unnecessary rename:
+	#define A 1
+	struct UDT { int a; };
+	enum { a = 1 };
+  The field causes the #define to be renamed, so the enumconst doesn't have to
+  be renamed anymore. This only happens because of the inter-namespace rename
+  (due to the field/#define conflict) and because enumcontants are preferred
+  over #defines when renaming.
+
 * Automatically detect #include guards and remove the left over #defines
 * Ignore __attribute__((aligned(N))) (show a warning?). FB doesn't have it, and
   often it's just used for "better" performance anyways, not really needed.
