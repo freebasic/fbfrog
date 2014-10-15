@@ -1,9 +1,4 @@
 [1/5] __FB_WIN32__.__FB_64BIT__
-lex: pre-#define, 25 bytes, 2 lines, 4 tokens
-lex: pre-#define, 25 bytes, 2 lines, 4 tokens
-lex: include/fbfrog/default.h, 8811 bytes, 296 lines, 1528 tokens
-lex: #include "tests/cpp/assuming-undefined.h"
-, 42 bytes, 2 lines, 4 tokens
 include/fbfrog/default.h(11): assuming symbol '__FBFROG_LINUX__' is undefined
     #ifdef __FBFROG_LINUX__
            ^~~~~~~~~~~~~~~~
@@ -11,7 +6,6 @@ include/fbfrog/default.h(167): assuming symbol '__FBFROG_DOS__' is undefined
     #ifdef __FBFROG_DOS__
            ^~~~~~~~~~~~~~
       tests/cpp/assuming-undefined.h
-lex: tests/cpp/assuming-undefined.h, 186 bytes, 23 lines, 72 tokens
 tests/cpp/assuming-undefined.h(3): assuming symbol 'A' is undefined
     #ifdef A
            ^
@@ -28,10 +22,6 @@ tests/cpp/assuming-undefined.h(21): assuming symbol 'G' is undefined
     #if 1 ? defined G : defined H
                     ^
 [2/5] __FB_WIN32__.(not __FB_64BIT__)
-lex: pre-#define, 25 bytes, 2 lines, 4 tokens
-lex: include/fbfrog/default.h, 8811 bytes, 296 lines, 1528 tokens
-lex: #include "tests/cpp/assuming-undefined.h"
-, 42 bytes, 2 lines, 4 tokens
 include/fbfrog/default.h(11): assuming symbol '__FBFROG_LINUX__' is undefined
     #ifdef __FBFROG_LINUX__
            ^~~~~~~~~~~~~~~~
@@ -42,7 +32,6 @@ include/fbfrog/default.h(167): assuming symbol '__FBFROG_DOS__' is undefined
     #ifdef __FBFROG_DOS__
            ^~~~~~~~~~~~~~
       tests/cpp/assuming-undefined.h
-lex: tests/cpp/assuming-undefined.h, 186 bytes, 23 lines, 72 tokens
 tests/cpp/assuming-undefined.h(3): assuming symbol 'A' is undefined
     #ifdef A
            ^
@@ -59,11 +48,6 @@ tests/cpp/assuming-undefined.h(21): assuming symbol 'G' is undefined
     #if 1 ? defined G : defined H
                     ^
 [3/5] __FB_LINUX__.__FB_64BIT__
-lex: pre-#define, 25 bytes, 2 lines, 4 tokens
-lex: pre-#define, 25 bytes, 2 lines, 4 tokens
-lex: include/fbfrog/default.h, 8811 bytes, 296 lines, 1528 tokens
-lex: #include "tests/cpp/assuming-undefined.h"
-, 42 bytes, 2 lines, 4 tokens
 include/fbfrog/default.h(167): assuming symbol '__FBFROG_DOS__' is undefined
     #ifdef __FBFROG_DOS__
            ^~~~~~~~~~~~~~
@@ -71,7 +55,6 @@ include/fbfrog/default.h(176): assuming symbol '__FBFROG_WIN32__' is undefined
     #elif defined __FBFROG_WIN32__
                   ^~~~~~~~~~~~~~~~
       tests/cpp/assuming-undefined.h
-lex: tests/cpp/assuming-undefined.h, 186 bytes, 23 lines, 72 tokens
 tests/cpp/assuming-undefined.h(3): assuming symbol 'A' is undefined
     #ifdef A
            ^
@@ -88,10 +71,6 @@ tests/cpp/assuming-undefined.h(21): assuming symbol 'G' is undefined
     #if 1 ? defined G : defined H
                     ^
 [4/5] __FB_LINUX__.(not __FB_64BIT__)
-lex: pre-#define, 25 bytes, 2 lines, 4 tokens
-lex: include/fbfrog/default.h, 8811 bytes, 296 lines, 1528 tokens
-lex: #include "tests/cpp/assuming-undefined.h"
-, 42 bytes, 2 lines, 4 tokens
 include/fbfrog/default.h(49): assuming symbol '__FBFROG_64BIT__' is undefined
     #ifdef __FBFROG_64BIT__
            ^~~~~~~~~~~~~~~~
@@ -102,7 +81,6 @@ include/fbfrog/default.h(176): assuming symbol '__FBFROG_WIN32__' is undefined
     #elif defined __FBFROG_WIN32__
                   ^~~~~~~~~~~~~~~~
       tests/cpp/assuming-undefined.h
-lex: tests/cpp/assuming-undefined.h, 186 bytes, 23 lines, 72 tokens
 tests/cpp/assuming-undefined.h(3): assuming symbol 'A' is undefined
     #ifdef A
            ^
@@ -119,10 +97,6 @@ tests/cpp/assuming-undefined.h(21): assuming symbol 'G' is undefined
     #if 1 ? defined G : defined H
                     ^
 [5/5] __FB_DOS__
-lex: pre-#define, 23 bytes, 2 lines, 4 tokens
-lex: include/fbfrog/default.h, 8811 bytes, 296 lines, 1528 tokens
-lex: #include "tests/cpp/assuming-undefined.h"
-, 42 bytes, 2 lines, 4 tokens
 include/fbfrog/default.h(11): assuming symbol '__FBFROG_LINUX__' is undefined
     #ifdef __FBFROG_LINUX__
            ^~~~~~~~~~~~~~~~
@@ -133,7 +107,6 @@ include/fbfrog/default.h(49): assuming symbol '__FBFROG_64BIT__' is undefined
     #ifdef __FBFROG_64BIT__
            ^~~~~~~~~~~~~~~~
       tests/cpp/assuming-undefined.h
-lex: tests/cpp/assuming-undefined.h, 186 bytes, 23 lines, 72 tokens
 tests/cpp/assuming-undefined.h(3): assuming symbol 'A' is undefined
     #ifdef A
            ^
