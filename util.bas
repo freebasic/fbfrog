@@ -414,6 +414,10 @@ end function
 '' the chain -- that's where duplicates are inserted. Removing an entry from
 '' this chain would cause the following entries to become unreachable/lost,
 '' as the free item in the middle would appear as the end of the chain now.
+''
+'' If the hash table owns the strings then hashAdd() will duplicate them and
+'' then never change them again until hashEnd() which frees them.
+''
 
 function hashHash( byval s as zstring ptr ) as ulong
 	dim as long hash = 5381

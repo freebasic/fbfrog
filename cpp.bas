@@ -537,6 +537,7 @@ namespace cpp
 
 	type STACKNODE
 		state		as integer  '' STATE_*
+		knownfile	as integer  '' Index into cpp.files array, if it's an #include context, or -1
 	end type
 
 	'' #if/file context stack
@@ -585,13 +586,28 @@ namespace cpp
 	'' #include exclude/include filters: GROUP of FILTEROUT/FILTERIN nodes,
 	'' in the order they should be applied.
 	dim shared filters		as ASTNODE ptr
+
+	type KNOWNFILE
+		incfile as zstring ptr  '' Normalized file name
+		'' Include guard symbol, if this file has a pure include guard,
+		'' otherwise NULL
+		guardid as zstring ptr
+	end type
+
+	'' Information about known files
+	dim shared files as KNOWNFILE ptr
+	dim shared filecount as integer
+	dim shared filetb as THASH  '' data = index into files array
 end namespace
 
 sub cppInit( )
 	cpp.x = 0
 
 	'' Toplevel file context
-	cpp.stack(0).state = STATE_FILE
+	with( cpp.stack(0) )
+		.state = STATE_FILE
+		.knownfile = -1
+	end with
 	cpp.level = 0
 
 	'' No skipping yet
@@ -603,6 +619,9 @@ sub cppInit( )
 	hashInit( @cpp.noexpands, 4, TRUE )
 	hashInit( @cpp.removes, 4, TRUE )
 	cpp.filters = astNewGROUP( )
+	cpp.files = NULL
+	cpp.filecount = 0
+	hashInit( @cpp.filetb, 4, FALSE )
 end sub
 
 private sub cppEnd( )
@@ -628,6 +647,14 @@ private sub cppEnd( )
 	hashEnd( @cpp.noexpands )
 	hashEnd( @cpp.removes )
 	astDelete( cpp.filters )
+	hashEnd( @cpp.filetb )
+	scope
+		for i as integer = 0 to cpp.filecount - 1
+			deallocate( cpp.files[i].incfile )
+			deallocate( cpp.files[i].guardid )
+		next
+		deallocate( cpp.files )
+	end scope
 end sub
 
 #define cppSkipping( ) (cpp.skiplevel <> MAXSTACK)
@@ -797,6 +824,31 @@ private sub cppRestoreMacro( byval id as zstring ptr )
 	'' Remove the entry from the saved macros stack
 	cppRemoveSavedMacro( i )
 end sub
+
+private function cppAppendKnownFile( byval incfile as zstring ptr, byval guardid as zstring ptr ) as integer
+	incfile = strDuplicate( incfile )
+	guardid = strDuplicate( guardid )
+
+	var i = cpp.filecount
+	cpp.filecount += 1
+	cpp.files = reallocate( cpp.files, cpp.filecount * sizeof( *cpp.files ) )
+	with( cpp.files[i] )
+		.incfile = incfile
+		.guardid = guardid
+	end with
+
+	hashAddOverwrite( @cpp.filetb, incfile, cptr( any ptr, i ) )
+	function = i
+end function
+
+private function cppLookupKnownFile( byval incfile as zstring ptr ) as integer
+	var item = hashLookup( @cpp.filetb, incfile, hashHash( incfile ) )
+	if( item->s ) then
+		function = cint( item->data )
+	else
+		function = -1
+	end if
+end function
 
 private sub cppEol( )
 	if( tkGet( cpp.x ) <> TK_EOL ) then
@@ -1858,6 +1910,7 @@ private sub cppPush( byval state as integer )
 	end if
 	with( cpp.stack(cpp.level) )
 		.state = state
+		.knownfile = -1
 	end with
 end sub
 
@@ -1925,6 +1978,19 @@ private sub cppIfdef( byval directivekw as integer )
 	cppEol( )
 end sub
 
+'' Forget the guardid (if any) for the current file context (if any).
+private sub cppDisableIncludeGuardOptimization( )
+	if( cpp.level >= 1 ) then
+		with( cpp.stack(cpp.level-1) )
+			if( .knownfile >= 0 ) then
+				assert( .state = STATE_FILE )
+				deallocate( cpp.files[.knownfile].guardid )
+				cpp.files[.knownfile].guardid = NULL
+			end if
+		end with
+	end if
+end sub
+
 private sub cppElseIf( )
 	'' Verify #elif usage even if skipping
 	select case( cpp.stack(cpp.level).state )
@@ -1934,6 +2000,8 @@ private sub cppElseIf( )
 		tkOops( cpp.x, "#elif after #else" )
 	end select
 	cpp.x += 1
+
+	cppDisableIncludeGuardOptimization( )
 
 	'' Evaluate condition in case it matters:
 	''    a) not yet skipping,
@@ -1969,6 +2037,8 @@ private sub cppElse( )
 		tkOops( cpp.x, "#else after #else" )
 	end select
 	cpp.x += 1
+
+	cppDisableIncludeGuardOptimization( )
 
 	cppEol( )
 
@@ -2056,6 +2126,43 @@ private function hSearchHeaderFile _
 	function = ""
 end function
 
+private function hDetectIncludeGuard( byval first as integer, byval last as integer ) as zstring ptr
+	assert( tkGet( first - 2 ) = TK_BEGININCLUDE )
+	assert( tkGet( first - 1 ) = TK_EOL )
+	assert( tkGet(  last + 1 ) = TK_ENDINCLUDE )
+
+	var x = tkSkipCommentEol( first - 1 )
+
+	'' Does it have the following at the beginning?
+	''    #ifndef ID <EOL> #define ID ...
+	if( tkGet( x ) <> TK_HASH ) then exit function
+	x = tkSkipComment( x )
+	if( tkGet( x ) <> KW_IFNDEF ) then exit function
+	x = tkSkipComment( x )
+	if( tkGet( x ) <> TK_ID ) then exit function
+	var id1 = tkGetText( x )
+	x = tkSkipComment( x )
+	if( tkGet( x ) <> TK_EOL ) then exit function
+	x = tkSkipComment( x )
+	if( tkGet( x ) <> TK_HASH ) then exit function
+	x = tkSkipComment( x )
+	if( tkGet( x ) <> KW_DEFINE ) then exit function
+	x = tkSkipComment( x )
+	if( tkGet( x ) <> TK_ID ) then exit function
+	var id2 = tkGetText( x )
+	if( *id1 <> *id2 ) then exit function
+
+	'' and an <EOL>#endif at the end?
+	x = tkSkipCommentEol( last + 1, -1 )
+	if( tkGet( x ) <> KW_ENDIF ) then exit function
+	x = tkSkipComment( x, -1 )
+	if( tkGet( x ) <> TK_HASH ) then exit function
+	x = tkSkipComment( x, -1 )
+	if( tkGet( x ) <> TK_EOL ) then exit function
+
+	function = id1
+end function
+
 private sub cppInclude( byval begin as integer )
 	cpp.x += 1
 
@@ -2125,25 +2232,71 @@ private sub cppInclude( byval begin as integer )
 	end if
 	cpp.x += 1
 
-	'' Insert EOLs behind TK_BEGININCLUDE/TK_ENDINCLUDE, so we can can
-	'' identify BOL behind them.
+	'' Insert EOL behind TK_BEGININCLUDE so we can can detect BOL there
 	tkInsert( cpp.x, TK_EOL )
 	tkSetRemove( cpp.x )
 	cpp.x += 1
 
-	'' Load the included file's tokens and put a TK_ENDINCLUDE behind it,
-	'' so we can detect the included EOF and pop the #include context from
-	'' the cpp.stack.
-	tkInsert( cpp.x, TK_EOL )
-	tkSetRemove( cpp.x )
-	tkInsert( cpp.x, TK_ENDINCLUDE )
-	lexLoadC( cpp.x, sourcebufferFromFile( incfile, @location ), frog.whitespace )
-	cppWhitespace( )
+	'' Before loading the include file content, do the #include guard optimization.
+	'' If this file had an #include guard last time we saw it, and the guard symbol
+	'' is now defined, then we don't need to bother loading (lex + tkInsert()...)
+	'' the file at all now.
+	var load_include_file = TRUE
+	'' Is the file known already?
+	var knownfile = cppLookupKnownFile( incfile )
+	if( knownfile >= 0 ) then
+		'' Did it have an #include guard?
+		var guardid = cpp.files[knownfile].guardid
+		if( guardid ) then
+			'' Only load the file if the guard symbol isn't defined (anymore) now.
+			load_include_file = not cppIsMacroCurrentlyDefined( guardid )
+		end if
+	end if
+
+	var y = cpp.x
+	if( load_include_file ) then
+		'' Read the include file and insert its tokens
+		y = lexLoadC( y, sourcebufferFromFile( incfile, @location ), frog.whitespace )
+	end if
+
+	'' Put TK_ENDINCLUDE behind the #include file content, so we can detect
+	'' the included EOF and pop the #include context from the cpp.stack.
+	tkInsert( y, TK_ENDINCLUDE )
+	y += 1
+
+	'' Insert EOL behind the TK_ENDINCLUDE so we can detect BOL there
+	tkInsert( y, TK_EOL )
+	tkSetRemove( y )
+	y += 1
 
 	'' Start parsing the #included content
 	'' (starting behind the EOL inserted above)
 	assert( tkGet( cpp.x - 2 ) = TK_BEGININCLUDE )
 	assert( tkGet( cpp.x - 1 ) = TK_EOL )
+	assert( y <= tkGetCount( ) )
+	assert( tkGet( y - 2 ) = TK_ENDINCLUDE )
+
+	'' #include file not yet known?
+	if( knownfile < 0 ) then
+		'' Prepare for the include guard optimization: We have to check
+		'' whether this include has ...
+		''  * an include guard, #ifndef FOO + #define FOO + #endif
+		''  * no tokens outside the include guard
+		''  * no #elif/#else in that if block
+		'' Check the first two points now:
+		var guardid = hDetectIncludeGuard( cpp.x, y - 3 )
+
+		'' Make the #include file known, with the guardid (if any),
+		'' for the time being. Track it in the cpp.stack, so if we find
+		'' an #elif/#else later, we can mark the include guard
+		'' optimization as impossible by setting the guardid to NULL.
+		'' (see cppDisableIncludeGuardOptimization())
+		cpp.stack(cpp.level).knownfile = cppAppendKnownFile( incfile, guardid )
+	end if
+
+	if( load_include_file ) then
+		cppWhitespace( )
+	end if
 end sub
 
 private sub cppEndInclude( )
