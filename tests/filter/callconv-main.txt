@@ -1,0 +1,16 @@
+[1/5] __FB_WIN32__.__FB_64BIT__
+      tests/filter/callconv-main.h
+      tests/filter/callconv.h (filtered out)
+[2/5] __FB_WIN32__.(not __FB_64BIT__)
+      tests/filter/callconv-main.h
+      tests/filter/callconv.h (filtered out)
+[3/5] __FB_LINUX__.__FB_64BIT__
+      tests/filter/callconv-main.h
+      tests/filter/callconv.h (filtered out)
+[4/5] __FB_LINUX__.(not __FB_64BIT__)
+      tests/filter/callconv-main.h
+      tests/filter/callconv.h (filtered out)
+[5/5] __FB_DOS__
+      tests/filter/callconv-main.h
+      tests/filter/callconv.h (filtered out)
+emitting: tests/filter/callconv-main.bi (1 declaration, 0 TODOs)
