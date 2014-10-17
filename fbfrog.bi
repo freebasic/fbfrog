@@ -775,7 +775,7 @@ declare sub astSetComment( byval n as ASTNODE ptr, byval comment as zstring ptr 
 declare sub astAddComment( byval n as ASTNODE ptr, byval comment as zstring ptr )
 declare function astCloneNode( byval n as ASTNODE ptr ) as ASTNODE ptr
 declare function astClone( byval n as ASTNODE ptr ) as ASTNODE ptr
-declare sub astSetAttribOnToplevelNodes( byval n as ASTNODE ptr, byval attrib as integer )
+declare sub astSetAttribOnAll( byval n as ASTNODE ptr, byval attrib as integer )
 declare function astIsMergableBlock( byval n as ASTNODE ptr ) as integer
 declare function astIsEqual _
 	( _

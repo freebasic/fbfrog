@@ -1439,6 +1439,12 @@ private sub hRenameSymbol _
 		assert( FALSE )
 	end select
 
+	'' Don't produce renamelist entries for declarations that are being
+	'' filtered out
+	if( n->attrib and ASTATTRIB_FILTEROUT ) then
+		exit sub
+	end if
+
 	'' Build the textual entry for the name list, for example:
 	''    define FOO => FOO_
 	'' making it clear which symbol was renamed, and how.

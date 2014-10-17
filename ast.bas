@@ -470,16 +470,19 @@ function astClone( byval n as ASTNODE ptr ) as ASTNODE ptr
 	function = c
 end function
 
-sub astSetAttribOnToplevelNodes( byval n as ASTNODE ptr, byval attrib as integer )
-	if( n->class = ASTCLASS_GROUP ) then
-		var i = n->head
-		while( i )
-			i->attrib or= attrib
-			i = i->next
-		wend
-	else
-		n->attrib or= attrib
-	end if
+sub astSetAttribOnAll( byval n as ASTNODE ptr, byval attrib as integer )
+	n->attrib or= attrib
+
+	if( n->subtype ) then astSetAttribOnAll( n->subtype, attrib )
+	if( n->array   ) then astSetAttribOnAll( n->array, attrib )
+	if( n->bits    ) then astSetAttribOnAll( n->bits, attrib )
+	if( n->expr    ) then astSetAttribOnAll( n->expr, attrib )
+
+	var i = n->head
+	while( i )
+		astSetAttribOnAll( i, attrib )
+		i = i->next
+	wend
 end sub
 
 function astIsMergableBlock( byval n as ASTNODE ptr ) as integer

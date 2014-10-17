@@ -2014,7 +2014,7 @@ private function cBody( byval body as integer ) as ASTNODE ptr
 		if( c.parseok ) then
 			if( t ) then
 				if( tkGetFlags( begin ) and TKFLAG_FILTEROUT ) then
-					astSetAttribOnToplevelNodes( t, ASTATTRIB_FILTEROUT )
+					astSetAttribOnAll( t, ASTATTRIB_FILTEROUT )
 				end if
 			end if
 		else
