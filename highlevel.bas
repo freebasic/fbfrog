@@ -185,7 +185,9 @@ private function astCountCallConv _
 
 	if( n->class = ASTCLASS_PROC ) then
 		if( n->attrib and callconv ) then
-			count += 1
+			if( (n->attrib and ASTATTRIB_FILTEROUT) = 0 ) then
+				count += 1
+			end if
 		end if
 	end if
 

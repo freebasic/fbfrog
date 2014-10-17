@@ -1,7 +1,7 @@
 #pragma once
 
-extern "C"
+extern "Windows"
 
-declare sub f4 stdcall()
+declare sub f4()
 
 end extern
