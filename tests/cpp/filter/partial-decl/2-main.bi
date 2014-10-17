@@ -2,6 +2,6 @@
 
 extern "C"
 
-declare sub f()
+declare sub f(byval myparam as long)
 
 end extern

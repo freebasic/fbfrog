@@ -1,3 +1,6 @@
 #pragma once
 
-dim shared i as UINTEGER
+'' The following symbols have been renamed:
+''     typedef UINTEGER => UINTEGER_
+
+dim shared i as UINTEGER_

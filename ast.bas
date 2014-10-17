@@ -470,6 +470,18 @@ function astClone( byval n as ASTNODE ptr ) as ASTNODE ptr
 	function = c
 end function
 
+sub astSetAttribOnToplevelNodes( byval n as ASTNODE ptr, byval attrib as integer )
+	if( n->class = ASTCLASS_GROUP ) then
+		var i = n->head
+		while( i )
+			i->attrib or= attrib
+			i = i->next
+		wend
+	else
+		n->attrib or= attrib
+	end if
+end sub
+
 function astIsMergableBlock( byval n as ASTNODE ptr ) as integer
 	select case( n->class )
 	case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM, ASTCLASS_RENAMELIST
@@ -693,6 +705,7 @@ function astDumpOne( byval n as ASTNODE ptr ) as string
 	checkAttrib( VARIADIC )
 	checkAttrib( DUMMYID )
 	checkAttrib( DLLIMPORT )
+	checkAttrib( FILTEROUT )
 
 	if( n->text ) then
 		s += " """ + strMakePrintable( *n->text ) + """"

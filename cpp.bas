@@ -45,18 +45,15 @@
 ''
 '' Tokens inserted due to #include expansion are enclosed in TK_BEGININCLUDE and
 '' TK_ENDINCLUDE. This allows detecting #include EOF for the #if/#include stack,
-'' and allows us to remove #included tokens as wanted for the -filterout and
-'' -filterin options. This way we can #include the file temporarily to get to
-'' see #defines/#undefs etc. during cppMain() and typedefs during cPreParse(),
-'' but can still exclude it before it reaches the main C parser (cFile()).
-'' We cannot do tkSetRemove() on all the #included tokens immediately after
-'' inserting them, because
-''  * we may do macro expansion which may result in new tokens which wouldn't
-''    automatically be marked for removal too. We'd have to do the tkSetRemove()
-''    later when reaching the TK_ENDINCLUDE, when the #included tokens don't
-''    change anymore.
-''  * we want to preserve typedefs for cPreParse(), so removing the tokens from
-''    excluded headers must be delayed until cPreParse() anyways.
+'' and allows the C parser to identify include boundaries later. If the include
+'' file should be filtered out (according to -filterout/-filterin options), the
+'' TK_BEGININCLUDE will be marked with TKFLAG_FILTEROUT. This in turn allows
+'' cPreParse() to mark all tokens between TK_BEGININCUDE/TK_ENDINCLUDE with
+'' TKFLAG_FILTEROUT, which lets the C parser know which constructs should be
+'' marked with ASTATTRIB_FILTEROUT. The include tokens can only be marked this
+'' way once the CPP is finished, because macro expansion may result in new
+'' tokens being inserted which wouldn't automatically have the TKFLAG_FILTEROUT
+'' flag too.
 ''
 '' cppNoExpandSym() can be used to disable macro expansion for certain symbols.
 '' This should be pretty rare though; usually in headers where function
@@ -2231,10 +2228,8 @@ private sub cppInclude( byval begin as integer )
 	'' Insert this helper token so we can identify the start of #included
 	'' tokens later during cPreParse().
 	tkInsert( cpp.x, TK_BEGININCLUDE )
-	'' Mark the TK_BEGININCLUDE with TKFLAG_REMOVEINCLUDE if the include
-	'' content should be filtered out by cPreParse().
 	if( keep = FALSE ) then
-		tkAddFlags( cpp.x, cpp.x, TKFLAG_REMOVEINCLUDE )
+		tkAddFlags( cpp.x, cpp.x, TKFLAG_FILTEROUT )
 	end if
 	cpp.x += 1
 

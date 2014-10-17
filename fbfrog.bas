@@ -20,11 +20,16 @@
 ''   * Artificial #include statements for the *.h input files (root files) for
 ''     that API are inserted into the tk buffer using lexLoadC()
 ''   * CPP runs and preprocesses the content of the tk buffer (cppMain()):
-''     directive parsing, macro expansion, #if evaluation, #include handling
+''     directive parsing, macro expansion, #if evaluation, #include handling.
+''     All #includes are expanded (as long as the included file was found),
+''     those that are supposed to be filtered out due to -filterout/-filterin
+''     are marked accordingly
+''   * cPreParse() to identify typedefs before the main C parsing pass
 ''   * C parser parses the preprocessed constructs in the tk buffer (cFile()),
 ''     produces a self-contained AST
 ''   * Various steps of AST modifications to make the AST FB-friendly
 ''     (e.g. fixing identifier conflicts, or solving out redundant typedefs)
+''   * Constucts marked due to -filterout are dropped
 '' 3. AST merging:
 ''   * Explaining VERBLOCKs: VERBLOCK nodes basically are like #if conditionals.
 ''     They are used to partition the nodes (API declarations) in an AST into
@@ -946,14 +951,7 @@ private function frogReadAPI( byval options as ASTNODE ptr ) as ASTNODE ptr
 		wend
 	end scope
 
-	'' C pre-parsing pass:
-	'' * It collects typedefs which will improve cFile()'s type cast
-	''   disambiguation inside #define bodies where typedefs can be used
-	''   before being declared.
-	'' * Removes tokens from #included headers which shouldn't be preserved,
-	''   i.e. if they were filtered out. This is not done via
-	''   cppMain()/tkApplyRemoves() already, so that cPreParse() gets to
-	''   see all typedefs, even those from excluded headers.
+	'' C pre-parsing pass
 	cPreParse( )
 
 	'' Parse C constructs
@@ -1000,6 +998,7 @@ private function frogReadAPI( byval options as ASTNODE ptr ) as ASTNODE ptr
 	end if
 
 	astRemoveDummyDecls( ast )
+	astFilterOut( ast )
 
 	assert( ast->class = ASTCLASS_GROUP )
 

@@ -980,6 +980,25 @@ sub astRemoveDummyDecls( byval code as ASTNODE ptr )
 	wend
 end sub
 
+''
+'' Remove all declarations marked with ASTATTRIB_FILTEROUT.
+''
+'' We should only ever filter out whole declarations, never remove parts of a
+'' declaration (e.g. some fields from a struct). It's possible that some parts
+'' came from an #included file which should be filtered out, but doing that
+'' would break the code.
+''
+sub astFilterOut( byval code as ASTNODE ptr )
+	var i = code->head
+	while( i )
+		var nxt = i->next
+		if( i->attrib and ASTATTRIB_FILTEROUT ) then
+			astRemove( code, i )
+		end if
+		i = nxt
+	wend
+end sub
+
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 ''

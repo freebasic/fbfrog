@@ -233,7 +233,7 @@ const TKFLAG_LL			= 1 shl 7
 const TKFLAG_HEX		= 1 shl 8
 const TKFLAG_OCT		= 1 shl 9
 const TKFLAG_FLOAT		= 1 shl 10
-const TKFLAG_REMOVEINCLUDE	= 1 shl 11  '' TK_BEGININCLUDE only: Whether the included tokens should be preserved or not
+const TKFLAG_FILTEROUT		= 1 shl 11  '' Used to mark tokens from include files which should be filtered out
 const TKFLAG_ROOTFILE		= 1 shl 12  '' Used to mark the internal #include statements which pull in the toplevel files
 
 enum
@@ -677,6 +677,7 @@ const ASTATTRIB_VARIADIC      = 1 shl 17  '' PPDEFINE/MACROPARAM: variadic macro
 const ASTATTRIB_PARENTHESIZEDMACROPARAM = 1 shl 18
 const ASTATTRIB_DUMMYID       = 1 shl 19
 const ASTATTRIB_DLLIMPORT     = 1 shl 20
+const ASTATTRIB_FILTEROUT     = 1 shl 21
 
 '' When changing, adjust astClone(), astIsEqual(), astDump*()
 type ASTNODE
@@ -774,6 +775,7 @@ declare sub astSetComment( byval n as ASTNODE ptr, byval comment as zstring ptr 
 declare sub astAddComment( byval n as ASTNODE ptr, byval comment as zstring ptr )
 declare function astCloneNode( byval n as ASTNODE ptr ) as ASTNODE ptr
 declare function astClone( byval n as ASTNODE ptr ) as ASTNODE ptr
+declare sub astSetAttribOnToplevelNodes( byval n as ASTNODE ptr, byval attrib as integer )
 declare function astIsMergableBlock( byval n as ASTNODE ptr ) as integer
 declare function astIsEqual _
 	( _
@@ -829,6 +831,7 @@ declare sub astUnscopeDeclsNestedInStructs( byval n as ASTNODE ptr )
 declare sub astNameAnonUdtsAfterFirstAliasTypedef( byval n as ASTNODE ptr )
 declare sub astAddForwardDeclsForUndeclaredTagIds( byval ast as ASTNODE ptr )
 declare sub astRemoveDummyDecls( byval code as ASTNODE ptr )
+declare sub astFilterOut( byval code as ASTNODE ptr )
 declare sub astMakeNestedUnnamedStructsFbCompatible( byval n as ASTNODE ptr )
 declare sub astRemoveRedundantTypedefs( byval n as ASTNODE ptr, byval ast as ASTNODE ptr )
 declare sub astTurnDefinesIntoConstants( byval code as ASTNODE ptr )

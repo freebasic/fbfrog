@@ -13,4 +13,4 @@
 [5/5] __FB_DOS__
       tests/cpp/filter/does-not-prevent-renames/2-main.h
       tests/cpp/filter/does-not-prevent-renames/2-include.h (filtered out)
-emitting: tests/cpp/filter/does-not-prevent-renames/2-main.bi (2 declarations, 0 TODOs)
+emitting: tests/cpp/filter/does-not-prevent-renames/2-main.bi (1 declaration, 0 TODOs)

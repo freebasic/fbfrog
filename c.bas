@@ -2011,7 +2011,13 @@ private function cBody( byval body as integer ) as ASTNODE ptr
 		var begin = c.x
 		var t = cConstruct( body )
 
-		if( c.parseok = FALSE ) then
+		if( c.parseok ) then
+			if( t ) then
+				if( tkGetFlags( begin ) and TKFLAG_FILTEROUT ) then
+					astSetAttribOnToplevelNodes( t, ASTATTRIB_FILTEROUT )
+				end if
+			end if
+		else
 			astDelete( t )
 
 			'' Skip current construct and preserve its tokens in
@@ -2054,20 +2060,23 @@ private sub cEndInclude( )
 	assert( tkGet( begin ) = TK_BEGININCLUDE )
 	assert( tkGet( c.x ) = TK_ENDINCLUDE )
 
-	'' Should the include content be removed?
-	if( tkGetFlags( begin ) and TKFLAG_REMOVEINCLUDE ) then
-		'' Mark all the #included tokens for removal, now that we've preprocessed them.
-		'' (we've seen #defines, #undefs, and did macro expansion)
-		tkRemove( begin, c.x )
-		c.x = begin
-	else
-		'' Remove just the TK_BEGININCLUDE/TK_ENDINCLUDE, keep the preprocessed #included tokens.
-		tkRemove( begin, begin )
-		c.x -= 1
-		tkRemove( c.x, c.x )
+	'' If the include content should be filtered out, mark all the included
+	'' tokens, so the main C parser can then mark the AST constructs
+	'' accordingly.
+	if( tkGetFlags( begin ) and TKFLAG_FILTEROUT ) then
+		tkAddFlags( begin + 1, c.x - 1, TKFLAG_FILTEROUT )
 	end if
+
+	'' Remove the TK_BEGININCLUDE/TK_ENDINCLUDE, so they won't get in the
+	'' way of C parsing (in case declarations cross #include/file boundaries).
+	tkRemove( begin, begin )
+	c.x -= 1
+	tkRemove( c.x, c.x )
 end sub
 
+'' C pre-parsing pass:
+'' This parses typedefs in order to improve cFile()'s type cast disambiguation
+'' inside #define bodies where typedefs can be used before being declared.
 sub cPreParse( )
 	c.x = 0
 	do
@@ -2076,12 +2085,6 @@ sub cPreParse( )
 		select case( tkGet( c.x ) )
 		case TK_EOF
 			exit do
-
-		case TK_BEGININCLUDE
-			'' Handle TK_BEGININCLUDE manually if it occurs outside hSkipConstruct(),
-			'' otherwise the next hSkipConstruct() would skip over it and the first
-			'' construct behind it.
-			c.x += 1
 
 		case TK_ENDINCLUDE
 			cEndInclude( )
