@@ -929,7 +929,7 @@ private sub hConsiderTagId _
 		var forwardid = hAddForwardTypedef( decllist, tagid )
 
 		var dummydecl = astNew( ASTCLASS_STRUCT, forwardid )
-		dummydecl->attrib or= ASTATTRIB_DUMMYDECL
+		dummydecl->attrib or= ASTATTRIB_FILTEROUT
 		astAppend( decllist, dummydecl )
 	end if
 
@@ -962,22 +962,6 @@ sub astAddForwardDeclsForUndeclaredTagIds( byval ast as ASTNODE ptr )
 
 	astDelete( tagidlist )
 	hashEnd( @hashtb )
-end sub
-
-'' After astFixIds, solve out the dummy declarations added by astAddForwardDeclsForUndeclaredTagIds(),
-'' to avoid them getting in the way of AST merging. Since they shouldn't be emitted anyways,
-'' there's no point keeping them around.
-sub astRemoveDummyDecls( byval code as ASTNODE ptr )
-	var i = code->head
-	while( i )
-		astRemoveDummyDecls( i )
-
-		var nxt = i->next
-		if( i->attrib and ASTATTRIB_DUMMYDECL ) then
-			astRemove( code, i )
-		end if
-		i = nxt
-	wend
 end sub
 
 ''

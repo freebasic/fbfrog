@@ -997,7 +997,6 @@ private function frogReadAPI( byval options as ASTNODE ptr ) as ASTNODE ptr
 		astFixIds( ast )
 	end if
 
-	astRemoveDummyDecls( ast )
 	astFilterOut( ast )
 
 	assert( ast->class = ASTCLASS_GROUP )

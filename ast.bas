@@ -699,7 +699,6 @@ function astDumpOne( byval n as ASTNODE ptr ) as string
 	checkAttrib( ENUMCONST )
 	checkAttrib( NEEDRENAME )
 	checkAttrib( POISONED )
-	checkAttrib( DUMMYDECL )
 	checkAttrib( ONCE )
 	checkAttrib( PACKED )
 	checkAttrib( VARIADIC )

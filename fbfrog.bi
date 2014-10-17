@@ -670,7 +670,7 @@ const ASTATTRIB_REPORTED      = 1 shl 10 '' Used to mark #defines about which th
 const ASTATTRIB_ENUMCONST     = 1 shl 11  '' CONSTI
 const ASTATTRIB_NEEDRENAME    = 1 shl 12
 const ASTATTRIB_POISONED      = 1 shl 13
-const ASTATTRIB_DUMMYDECL     = 1 shl 14
+                            ''= 1 shl 14
 const ASTATTRIB_ONCE          = 1 shl 15  '' Marks #includes as "#include once"
 const ASTATTRIB_PACKED        = 1 shl 16  '' __attribute__((packed))
 const ASTATTRIB_VARIADIC      = 1 shl 17  '' PPDEFINE/MACROPARAM: variadic macros
@@ -830,7 +830,6 @@ declare sub astTurnZstringArrayIntoFixedLengthZstring( byval n as ASTNODE ptr )
 declare sub astUnscopeDeclsNestedInStructs( byval n as ASTNODE ptr )
 declare sub astNameAnonUdtsAfterFirstAliasTypedef( byval n as ASTNODE ptr )
 declare sub astAddForwardDeclsForUndeclaredTagIds( byval ast as ASTNODE ptr )
-declare sub astRemoveDummyDecls( byval code as ASTNODE ptr )
 declare sub astFilterOut( byval code as ASTNODE ptr )
 declare sub astMakeNestedUnnamedStructsFbCompatible( byval n as ASTNODE ptr )
 declare sub astRemoveRedundantTypedefs( byval n as ASTNODE ptr, byval ast as ASTNODE ptr )
