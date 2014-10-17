@@ -1,9 +1,9 @@
 #pragma once
 
 '' The following symbols have been renamed:
-''     inside struct UDT2:
-''         field _ => __
 ''     inside struct UDT1:
+''         field _ => __
+''     inside struct UDT2:
 ''         field _ => __
 
 type UDT1

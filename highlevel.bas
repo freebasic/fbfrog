@@ -1266,7 +1266,7 @@ private sub hWalkAndCheckIds _
 				var nestedrenamelist = astNew( ASTCLASS_RENAMELIST, "inside " + astDumpPrettyDecl( i ) + ":" )
 				hFixIdsInScope( reservedids, i, nestedrenamelist )
 				if( nestedrenamelist->head ) then
-					astPrepend( renamelist, nestedrenamelist )
+					astAppend( renamelist, nestedrenamelist )
 				else
 					astDelete( nestedrenamelist )
 				end if
