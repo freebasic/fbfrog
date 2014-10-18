@@ -38,6 +38,8 @@ extern "C"
 #define A30 9E-1
 #define A31 &h88
 #define A32 &hFF
+#define A33 cast(culong, 1)
+#define A34 1ull
 
 #define B1 "foo"
 #define B2 wstr("foo")

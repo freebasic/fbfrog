@@ -460,13 +460,21 @@ function hNumberLiteral( byval x as integer, byval is_cpp as integer ) as ASTNOD
 	if( is_float ) then
 		n->class = ASTCLASS_CONSTF
 	else
-		'' Integer type suffixes
-		var is_unsigned = FALSE
+		'' Integer type suffixes:
+		''  l
+		''  ll
+		''  ul
+		''  ull
+		''  lu
+		''  llu
+		var have_u = FALSE
+		var have_l = FALSE
+		var have_ll = FALSE
 
 		select case( p[0] )
 		case CH_U, CH_L_U       '' 'U' | 'u'
 			p += 1
-			is_unsigned = TRUE
+			have_u = TRUE
 		end select
 
 		select case( p[0] )
@@ -475,18 +483,30 @@ function hNumberLiteral( byval x as integer, byval is_cpp as integer ) as ASTNOD
 			select case( p[0] )
 			case CH_L, CH_L_L       '' 'LL' | 'll'
 				p += 1
-				n->dtype = iif( is_unsigned, TYPE_ULONGINT, TYPE_LONGINT )
+				have_ll = TRUE
 			case else
-				n->dtype = iif( is_unsigned, TYPE_CULONG, TYPE_CLONG )
+				have_l = TRUE
 			end select
 		end select
 
+		if( have_u = FALSE ) then
+			select case( p[0] )
+			case CH_U, CH_L_U       '' 'U' | 'u'
+				p += 1
+				have_u = TRUE
+			end select
+		end if
+
 		'' In CPP mode, all integer literals are 64bit, the 'l' suffix is ignored
 		if( is_cpp ) then
-			n->dtype = iif( is_unsigned, TYPE_ULONGINT, TYPE_LONGINT )
+			n->dtype = iif( have_u, TYPE_ULONGINT, TYPE_LONGINT )
 		'' In C mode, integer literals default to 'int', and suffixes are respected
-		elseif( n->dtype = TYPE_NONE ) then
-			n->dtype = iif( is_unsigned, TYPE_ULONG, TYPE_LONG )
+		elseif( have_ll ) then
+			n->dtype = iif( have_u, TYPE_ULONGINT, TYPE_LONGINT )
+		elseif( have_l ) then
+			n->dtype = iif( have_u, TYPE_CULONG, TYPE_CLONG )
+		else
+			n->dtype = iif( have_u, TYPE_ULONG, TYPE_LONG )
 		end if
 
 		select case( numbase )
