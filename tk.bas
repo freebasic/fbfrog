@@ -302,12 +302,6 @@ function tkDumpOne( byval x as integer ) as string
 	checkFlag( BEHINDSPACE )
 	checkFlag( NOEXPAND )
 	checkFlag( REMOVE )
-	checkFlag( D )
-	checkFlag( F )
-	checkFlag( U )
-	checkFlag( L )
-	checkFlag( LL )
-	checkFlag( FLOAT )
 	checkFlag( FILTEROUT )
 	checkFlag( ROOTFILE )
 
@@ -724,37 +718,13 @@ function tkSpell overload( byval x as integer ) as string
 	var flags = tkGetFlags( x )
 
 	select case as const( id )
-	case TK_EOL
-		s += !"\n"
-
-	case TK_NUMBER
-		if( flags and TKFLAG_HEX ) then
-			s += "0x"
-		elseif( flags and TKFLAG_OCT ) then
-			s += "0"
-		end if
-		s += *text
-
-		if( flags and TKFLAG_F ) then
-			s += "f"
-		elseif( flags and TKFLAG_D ) then
-			s += "d"
-		else
-			if( flags and TKFLAG_U ) then
-				s += "u"
-			end if
-			if( flags and TKFLAG_L ) then
-				s += "l"
-			elseif( flags and TKFLAG_LL ) then
-				s += "ll"
-			end if
-		end if
-
+	case TK_EOL      : s = !"\n"
 	case TK_PPMERGE  : s = "##"
 	case TK_STRING   : s = """"  + hSpellStrLit( *text ) + """"
 	case TK_CHAR     : s = "'"   + hSpellStrLit( *text ) + "'"
 	case TK_WSTRING  : s = "L""" + hSpellStrLit( *text ) + """"
 	case TK_WCHAR    : s = "L'"  + hSpellStrLit( *text ) + "'"
+	case TK_NUMBER   : s = *text
 	case TK_ID       : s = *text
 	case TK_ARGSFILE : s = "@" + *text
 

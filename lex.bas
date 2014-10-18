@@ -225,11 +225,10 @@ private sub hReadComment( )
 	end if
 end sub
 
+'' Identifier/keyword lexing: sequences of A-Za-z0-9_
+'' Starting out at A-Za-z_
+'' Resulting in a TK_ID or KW_* if it's a keyword.
 private sub hReadId( )
-	'' Identifier/keyword parsing: sequences of a-z, A-Z, 0-9, _
-	'' The current char is one of those already. The whole identifier
-	'' will be stored into a TK_ID, or if it's a keyword the proper KW_*
-	'' is used instead of TK_ID and the text is not stored.
 	var begin = lex.i
 
 	do
@@ -249,143 +248,36 @@ private sub hReadId( )
 	hAddTextToken( TK_ID, begin )
 end sub
 
+'' Number literal lexing: sequences of A-Za-z0-9_. and +- if preceded by eE.
+'' Here in the lexer we don't validate the syntax. Tokens such as '08' or
+'' '123foobar' are allowed here even though they're invalid number literals,
+'' because they can be used with the ## operator. The syntax checks are done
+'' later in hNumberLiteral() when the parsers encounter a TK_NUMBER.
 private sub hReadNumber( )
-	'' Number literal parsing starting at '0'-'9' or '.'
-	'' These are covered:
-	''    123        (decimal)
-	''    .123       (decimal float)
-	''    123.123    (decimal float)
-	''    0xAABBCCDD (hexadecimal)
-	''    010        (octal)
-	''    010.0      (decimal float, not octal float)
-	'' There also is some simple float exponent and type suffix parsing.
-	'' We have to parse the number literal (but without type suffix) first
-	'' before we can decide whether it's an integer or float. This decides
-	'' whether a leading zero indicates octal or not.
-
-	var flags = 0
-	if( lex.i[0] = CH_0 ) then '' 0
-		if( lex.i[1] = CH_L_X ) then '' 0x
-			lex.i += 2
-			flags or= TKFLAG_HEX
-		elseif( (lex.i[1] >= CH_0) and (lex.i[1] <= CH_9) ) then
-			lex.i += 1
-			flags or= TKFLAG_OCT
-		end if
-	end if
-
 	var begin = lex.i
-	var have_nonoct_digit = FALSE
-	dim as TKLOCATION nonoct_digit_location
+
 	do
-		dim as integer digit = lex.i[0]
+		lex.i += 1
 
-		select case as const( digit )
-		case CH_0 to CH_7
-			'' These digits are allowed in all number literals
+		select case as const( lex.i[0] )
+		case CH_A to CH_Z, CH_L_A to CH_L_Z, CH_0 to CH_9, CH_UNDERSCORE, CH_DOT
 
-		case CH_8, CH_9
-			'' These digits are allowed in dec/hex literals, but not
-			'' oct literals, but we don't know which it is yet.
-			if( have_nonoct_digit = FALSE ) then
-				lexGetLocation( @nonoct_digit_location )
-				have_nonoct_digit = TRUE
-			end if
-
-		case CH_A to CH_F, CH_L_A to CH_L_F
-			'' These digits can only appear in hex literals
-			if( (flags and TKFLAG_HEX) = 0 ) then
+		'' +|- is only allowed if preceded by e|E (in other cases, +|-
+		'' starts a new token separate from the number literal)
+		case CH_PLUS, CH_MINUS
+			assert( begin < lex.i )
+			select case( lex.i[-1] )
+			case CH_E, CH_L_E
+			case else
 				exit do
-			end if
-
-		case CH_DOT
-			'' Only one dot allowed
-			if( flags and TKFLAG_FLOAT ) then
-				exit do
-			end if
-			flags or= TKFLAG_FLOAT
+			end select
 
 		case else
 			exit do
 		end select
-
-		lex.i += 1
 	loop
 
-	'' Exponent? (can be used even without fractional part, e.g. '1e1')
-	select case( lex.i[0] )
-	case CH_E, CH_L_E   '' 'E', 'e'
-		lex.i += 1
-
-		'' ['+' | '-']
-		select case( lex.i[0] )
-		case CH_PLUS, CH_MINUS
-			lex.i += 1
-		end select
-
-		'' ['0'-'9']*
-		while( (lex.i[0] >= CH_0) and (lex.i[0] <= CH_9) )
-			lex.i += 1
-		wend
-
-		'' The exponent makes this a float too
-		flags or= TKFLAG_FLOAT
-	end select
-
-	if( flags and TKFLAG_FLOAT ) then
-		'' Leading zeroes on floats don't make it octal (only integers)
-		flags and= not TKFLAG_OCT
-		if( flags and TKFLAG_HEX ) then
-			lexOops( "TODO: hex-floats not yet supported" )
-		end if
-	end if
-
-	if( have_nonoct_digit and ((flags and TKFLAG_OCT) <> 0) ) then
-		oopsLocation( @nonoct_digit_location, "invalid digit in octal number literal" )
-	end if
-
-	'' Copy the number literal's body into the text buffer; we want to
-	'' parse the type suffixes without making them part of the token text.
-	dim as integer length = cuint( lex.i ) - cuint( begin )
-	if( length > MAXTEXTLEN ) then
-		lexOops( "number literal too long, MAXTEXTLEN=" & MAXTEXTLEN )
-	end if
-	for j as integer = 0 to length - 1
-		lex.text[j] = begin[j]
-	next
-	lex.text[length] = 0  '' null-terminator
-
-	'' Type suffixes
-	select case( lex.i[0] )
-	case CH_F, CH_L_F    '' 'F' | 'f'
-		lex.i += 1
-		flags or= TKFLAG_F or TKFLAG_FLOAT
-	case CH_D, CH_L_D    '' 'D' | 'd'
-		lex.i += 1
-		flags or= TKFLAG_D or TKFLAG_FLOAT
-	end select
-	if( (flags and TKFLAG_FLOAT) = 0 ) then
-		select case( lex.i[0] )
-		case CH_U, CH_L_U       '' 'U' | 'u'
-			lex.i += 1
-			flags or= TKFLAG_U
-		end select
-
-		select case( lex.i[0] )
-		case CH_L, CH_L_L       '' 'L' | 'l'
-			lex.i += 1
-			select case( lex.i[0] )
-			case CH_L, CH_L_L       '' 'L' | 'l'
-				lex.i += 1
-				flags or= TKFLAG_LL
-			case else
-				flags or= TKFLAG_L
-			end select
-		end select
-	end if
-
-	tkInsert( lex.x, TK_NUMBER, lex.text )
-	hSetLocation( flags )
+	hAddTextToken( TK_NUMBER, begin )
 end sub
 
 private function hReadEscapeSequence( ) as ulongint

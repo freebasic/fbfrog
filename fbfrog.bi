@@ -225,16 +225,8 @@ declare function hFileExists( byref file as string ) as integer
 const TKFLAG_BEHINDSPACE	= 1 shl 0  '' was preceded by spaces?
 const TKFLAG_NOEXPAND		= 1 shl 1  '' may be macro-expanded? (cpp)
 const TKFLAG_REMOVE		= 1 shl 2
-const TKFLAG_D			= 1 shl 3
-const TKFLAG_F			= 1 shl 4
-const TKFLAG_U			= 1 shl 5
-const TKFLAG_L			= 1 shl 6
-const TKFLAG_LL			= 1 shl 7
-const TKFLAG_HEX		= 1 shl 8
-const TKFLAG_OCT		= 1 shl 9
-const TKFLAG_FLOAT		= 1 shl 10
-const TKFLAG_FILTEROUT		= 1 shl 11  '' Used to mark tokens from include files which should be filtered out
-const TKFLAG_ROOTFILE		= 1 shl 12  '' Used to mark the internal #include statements which pull in the toplevel files
+const TKFLAG_FILTEROUT		= 1 shl 3  '' Used to mark tokens from include files which should be filtered out
+const TKFLAG_ROOTFILE		= 1 shl 4  '' Used to mark the internal #include statements which pull in the toplevel files
 
 enum
 	TK_EOF

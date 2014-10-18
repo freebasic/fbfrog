@@ -328,35 +328,176 @@ function hSkipToEol( byval x as integer ) as integer
 end function
 
 ''
-'' Build a CONSTI/CONSTF ASTNODE for the given TK_NUMBER token.
+'' Check whether the number literal token (TK_NUMBER) is a valid number literal,
+'' and build a CONSTI/CONSTF ASTNODE representing its value (the literal saved
+'' as-is in textual form, without type suffixes) and data type.
 ''
 '' As a special case, in CPP expressions, number literals are always treated as
 '' 64bit signed or unsigned, no matter what dtype was given as suffix and
 '' ignoring the "int" default.
 ''
+'' These are covered:
+''    123        (decimal)
+''    .123       (decimal float)
+''    123.123    (decimal float)
+''    0xAABBCCDD (hexadecimal)
+''    010        (octal)
+''    010.0      (decimal float, not octal float)
+'' There also is some simple float exponent and type suffix parsing.
+''
+'' We have to parse the number literal (but without type suffix) first before we
+'' can decide whether it's an integer or float. This decides whether a leading
+'' zero indicates octal or not.
+''
 function hNumberLiteral( byval x as integer, byval is_cpp as integer ) as ASTNODE ptr
 	assert( tkGet( x ) = TK_NUMBER )
-	var tkflags = tkGetFlags( x )
-	var n = astNew( ASTCLASS_CONSTI, tkGetText( x ) )
+	dim as ubyte ptr raw = tkGetText( x )
+	var p = raw
 
-	if( tkflags and TKFLAG_FLOAT ) then
+	const TKFLAG_D			= 1 shl 3
+	const TKFLAG_F			= 1 shl 4
+	const TKFLAG_U			= 1 shl 5
+	const TKFLAG_L			= 1 shl 6
+	const TKFLAG_LL			= 1 shl 7
+	const TKFLAG_HEX		= 1 shl 8
+	const TKFLAG_OCT		= 1 shl 9
+	const TKFLAG_FLOAT		= 1 shl 10
+
+	var numbase = 10
+	var is_float = FALSE
+	var have_nonoct_digit = FALSE
+
+	'' 0 or 0x prefix?
+	if( p[0] = CH_0 ) then '' 0
+		if( p[1] = CH_L_X ) then '' 0x
+			p += 2
+			numbase = 16
+		elseif( (p[1] >= CH_0) and (p[1] <= CH_9) ) then
+			p += 1
+			numbase = 8
+		end if
+	end if
+
+	'' Body (integer part + fractional part, if any)
+	var begin = p
+	do
+		select case as const( p[0] )
+		case CH_0 to CH_7
+			'' These digits are allowed in all number literals
+
+		case CH_8, CH_9
+			'' These digits are allowed in dec/hex literals, but not
+			'' oct literals, but we don't know which it is yet.
+			have_nonoct_digit = TRUE
+
+		case CH_A to CH_F, CH_L_A to CH_L_F
+			'' These digits can only appear in hex literals
+			if( numbase <> 16 ) then
+				exit do
+			end if
+
+		case CH_DOT
+			'' Only one dot allowed
+			if( is_float ) then exit do
+			is_float = TRUE
+
+		case else
+			exit do
+		end select
+
+		p += 1
+	loop
+
+	'' Exponent? (can be used even without fractional part, e.g. '1e1')
+	select case( p[0] )
+	case CH_E, CH_L_E   '' 'E', 'e'
+		is_float = TRUE
+		p += 1
+
+		'' ['+' | '-']
+		select case( p[0] )
+		case CH_PLUS, CH_MINUS
+			p += 1
+		end select
+
+		'' ['0'-'9']*
+		while( (p[0] >= CH_0) and (p[0] <= CH_9) )
+			p += 1
+		wend
+	end select
+
+	if( is_float ) then
+		if( numbase = 16 ) then
+			tkOops( x, "TODO: hex-floats not yet supported" )
+		end if
+		'' Override octal in case there was a leading zero. There are no
+		'' octal floats.
+		numbase = 10
+	end if
+
+	if( have_nonoct_digit and (numbase = 8) ) then
+		tkOops( x, "invalid digit in octal number literal" )
+	end if
+
+	'' Save the number literal body (we don't want to include type suffixes here)
+	var old = p[0]
+	p[0] = 0  '' temporary null terminator
+	var n = astNew( ASTCLASS_CONSTI, cptr( zstring ptr, begin ) )
+	p[0] = old
+
+	'' Float type suffixes
+	select case( p[0] )
+	case CH_F, CH_L_F    '' 'F' | 'f'
+		p += 1
+		is_float = TRUE
+		n->dtype = TYPE_SINGLE
+	case CH_D, CH_L_D    '' 'D' | 'd'
+		p += 1
+		is_float = TRUE
+		n->dtype = TYPE_DOUBLE
+	end select
+
+	if( is_float ) then
 		n->class = ASTCLASS_CONSTF
-		n->dtype = iif( tkflags and TKFLAG_F, TYPE_SINGLE, TYPE_DOUBLE )
-		return n
-	end if
-
-	if( is_cpp or ((tkflags and TKFLAG_LL) <> 0) ) then
-		n->dtype = iif( tkflags and TKFLAG_U, TYPE_ULONGINT, TYPE_LONGINT )
-	elseif( tkflags and TKFLAG_L ) then
-		n->dtype = iif( tkflags and TKFLAG_U, TYPE_CULONG, TYPE_CLONG )
 	else
-		n->dtype = iif( tkflags and TKFLAG_U, TYPE_ULONG, TYPE_LONG )
+		'' Integer type suffixes
+		var is_unsigned = FALSE
+
+		select case( p[0] )
+		case CH_U, CH_L_U       '' 'U' | 'u'
+			p += 1
+			is_unsigned = TRUE
+		end select
+
+		select case( p[0] )
+		case CH_L, CH_L_L       '' 'L' | 'l'
+			p += 1
+			select case( p[0] )
+			case CH_L, CH_L_L       '' 'LL' | 'll'
+				p += 1
+				n->dtype = iif( is_unsigned, TYPE_ULONGINT, TYPE_LONGINT )
+			case else
+				n->dtype = iif( is_unsigned, TYPE_CULONG, TYPE_CLONG )
+			end select
+		end select
+
+		'' In CPP mode, all integer literals are 64bit, the 'l' suffix is ignored
+		if( is_cpp ) then
+			n->dtype = iif( is_unsigned, TYPE_ULONGINT, TYPE_LONGINT )
+		'' In C mode, integer literals default to 'int', and suffixes are respected
+		elseif( n->dtype = TYPE_NONE ) then
+			n->dtype = iif( is_unsigned, TYPE_ULONG, TYPE_LONG )
+		end if
+
+		select case( numbase )
+		case 16 : n->attrib or= ASTATTRIB_HEX
+		case  8 : n->attrib or= ASTATTRIB_OCT
+		end select
 	end if
 
-	if( tkflags and TKFLAG_HEX ) then
-		n->attrib or= ASTATTRIB_HEX
-	elseif( tkflags and TKFLAG_OCT ) then
-		n->attrib or= ASTATTRIB_OCT
+	'' Show error if we didn't reach the end of the number literal
+	if( p[0] <> 0 ) then
+		tkOops( x, "invalid suffix on number literal: '" + *cptr( zstring ptr, p ) + "'" )
 	end if
 
 	function = n

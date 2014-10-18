@@ -2,4 +2,7 @@
       tests/lex/numlit-invalid-digit-1.h
 tests/lex/numlit-invalid-digit-1.h(2): invalid digit in octal number literal
     static int i = 09;
-                    ^
+                   ^~
+context as seen by fbfrog:
+    static int i = 09 ;
+                   ^~

@@ -1,8 +1,14 @@
 [1/5] __FB_WIN32__.__FB_64BIT__
       tests/cpp/expand/merge/nonoctdigits.h
-## merge operation(1): invalid digit in octal number literal
+invalid digit in octal number literal
+    enum E { A = 08 } ;
+                 ^~
+tests/cpp/expand/merge/nonoctdigits.h(3): construct found here
+    enum E {
+    ^~~~
+## merge operation(1): token found here
     08
-     ^
+    ^~
 tests/cpp/expand/merge/nonoctdigits.h(2): from here:
     #define m 0 ## 8
                 ^~

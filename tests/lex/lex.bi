@@ -22,7 +22,7 @@ extern "C"
 #define A14 0.1
 #define A15 0.0
 #define A16 1.123
-#define A17 1e+1d
+#define A17 1e+1
 #define A18 1.0e+1
 #define A19 1
 #define A20 cast(clong, 1)
@@ -30,12 +30,12 @@ extern "C"
 #define A22 1ll
 #define A23 1ull
 #define A24 9.0
-#define A25 9e1d
-#define A26 9e+1d
-#define A27 9e-1d
-#define A28 9E1d
-#define A29 9E+1d
-#define A30 9E-1d
+#define A25 9e1
+#define A26 9e+1
+#define A27 9e-1
+#define A28 9E1
+#define A29 9E+1
+#define A30 9E-1
 #define A31 &h88
 
 #define B1 "foo"
