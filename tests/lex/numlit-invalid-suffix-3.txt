@@ -1,8 +1,0 @@
-[1/5] __FB_WIN32__.__FB_64BIT__
-      tests/lex/numlit-invalid-suffix-3.h
-tests/lex/numlit-invalid-suffix-3.h(2): invalid suffix on number literal: 'u'
-    static int i = 1uu;
-                   ^~~
-context as seen by fbfrog:
-    static int i = 1uu ;
-                   ^~~

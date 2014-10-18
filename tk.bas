@@ -827,7 +827,8 @@ function hSkipConstruct( byval x as integer ) as integer
 			x += 1
 			exit do
 
-		case TK_EOF, TK_DIVIDER, TK_BEGININCLUDE, TK_ENDINCLUDE
+		case TK_EOF, TK_DIVIDER, TK_BEGININCLUDE, TK_ENDINCLUDE, _
+		     TK_RBRACE
 			exit do
 
 		case TK_HASH

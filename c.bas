@@ -311,6 +311,18 @@ private function cDataTypeInParens( byval decl as integer ) as ASTNODE ptr
 			@"to close 'sizeof (...)'" ) )
 end function
 
+private function cNumberLiteral( ) as ASTNODE ptr
+	dim errmsg as string
+	var n = hNumberLiteral( c.x, FALSE, errmsg )
+	if( n = NULL ) then
+		cError( errmsg )
+		n = astNew( ASTCLASS_CONSTI, "0" )
+		astSetType( n, TYPE_LONG, NULL )
+	end if
+	c.x += 1
+	function = n
+end function
+
 '' C expression parser based on precedence climbing
 private function cExpression( byval level as integer ) as ASTNODE ptr
 	'' Unary prefix operators
@@ -377,8 +389,7 @@ private function cExpression( byval level as integer ) as ASTNODE ptr
 			end if
 
 		case TK_NUMBER
-			a = hNumberLiteral( c.x, FALSE )
-			c.x += 1
+			a = cNumberLiteral( )
 
 		case TK_STRING, TK_WSTRING, TK_HASH
 			a = cStringLiteralSequence( )
@@ -951,12 +962,11 @@ private function cInclude( ) as ASTNODE ptr
 end function
 
 private function cPragmaPackNumber( ) as integer
-	var n = hNumberLiteral( c.x, FALSE )
+	var n = cNumberLiteral( )
 	if( n->class <> ASTCLASS_CONSTI ) then
 		exit function
 	end if
 	c.pragmapack.stack(c.pragmapack.level) = astEvalConstiAsInt64( n )
-	c.x += 1
 	function = TRUE
 end function
 

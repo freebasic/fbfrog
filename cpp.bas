@@ -349,7 +349,7 @@ end function
 '' can decide whether it's an integer or float. This decides whether a leading
 '' zero indicates octal or not.
 ''
-function hNumberLiteral( byval x as integer, byval is_cpp as integer ) as ASTNODE ptr
+function hNumberLiteral( byval x as integer, byval is_cpp as integer, byref errmsg as string ) as ASTNODE ptr
 	assert( tkGet( x ) = TK_NUMBER )
 	dim as ubyte ptr p = tkGetText( x )
 
@@ -418,7 +418,8 @@ function hNumberLiteral( byval x as integer, byval is_cpp as integer ) as ASTNOD
 
 	if( is_float ) then
 		if( numbase = 16 ) then
-			tkOops( x, "TODO: hex-floats not yet supported" )
+			errmsg = "TODO: hex-floats not yet supported"
+			exit function
 		end if
 		'' Override octal in case there was a leading zero. There are no
 		'' octal floats.
@@ -426,7 +427,8 @@ function hNumberLiteral( byval x as integer, byval is_cpp as integer ) as ASTNOD
 	end if
 
 	if( have_nonoct_digit and (numbase = 8) ) then
-		tkOops( x, "invalid digit in octal number literal" )
+		errmsg = "invalid digit in octal number literal"
+		exit function
 	end if
 
 	'' Save the number literal body (we don't want to include type suffixes here)
@@ -513,7 +515,9 @@ function hNumberLiteral( byval x as integer, byval is_cpp as integer ) as ASTNOD
 
 	'' Show error if we didn't reach the end of the number literal
 	if( p[0] <> 0 ) then
-		tkOops( x, "invalid suffix on number literal: '" + *cptr( zstring ptr, p ) + "'" )
+		errmsg = "invalid suffix on number literal: '" + *cptr( zstring ptr, p ) + "'"
+		astDelete( n )
+		exit function
 	end if
 
 	function = n
@@ -1090,7 +1094,12 @@ private function cppExpression( byval level as integer = 0 ) as ASTNODE ptr
 
 		'' Number literals
 		case TK_NUMBER
-			a = astTakeLoc( hNumberLiteral( cpp.x, TRUE ), cpp.x )
+			dim errmsg as string
+			a = hNumberLiteral( cpp.x, TRUE, errmsg )
+			if( a = NULL ) then
+				tkOops( cpp.x, errmsg )
+			end if
+			a = astTakeLoc( a, cpp.x )
 			cpp.x += 1
 
 		'' Identifier
