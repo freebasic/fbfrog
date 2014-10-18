@@ -351,17 +351,7 @@ end function
 ''
 function hNumberLiteral( byval x as integer, byval is_cpp as integer ) as ASTNODE ptr
 	assert( tkGet( x ) = TK_NUMBER )
-	dim as ubyte ptr raw = tkGetText( x )
-	var p = raw
-
-	const TKFLAG_D			= 1 shl 3
-	const TKFLAG_F			= 1 shl 4
-	const TKFLAG_U			= 1 shl 5
-	const TKFLAG_L			= 1 shl 6
-	const TKFLAG_LL			= 1 shl 7
-	const TKFLAG_HEX		= 1 shl 8
-	const TKFLAG_OCT		= 1 shl 9
-	const TKFLAG_FLOAT		= 1 shl 10
+	dim as ubyte ptr p = tkGetText( x )
 
 	var numbase = 10
 	var is_float = FALSE
