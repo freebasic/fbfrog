@@ -967,6 +967,7 @@ private function cPragmaPackNumber( ) as integer
 		exit function
 	end if
 	c.pragmapack.stack(c.pragmapack.level) = astEvalConstiAsInt64( n )
+	astDelete( n )
 	function = TRUE
 end function
 
