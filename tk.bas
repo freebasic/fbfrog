@@ -526,6 +526,13 @@ function tkGetMaxExpansionLevel( byval first as integer, byval last as integer )
 	function = maxlevel
 end function
 
+sub tkSetFlags( byval x as integer, byval flags as integer )
+	var p = tkAccess( x )
+	if( p->id <> TK_EOF ) then
+		p->flags = flags
+	end if
+end sub
+
 sub tkAddFlags( byval first as integer, byval last as integer, byval flags as integer )
 	for x as integer = first to last
 		var p = tkAccess( x )

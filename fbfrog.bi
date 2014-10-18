@@ -426,6 +426,7 @@ declare sub tkSetExpansionLevel( byval first as integer, byval last as integer, 
 declare function tkGetExpansionLevel( byval x as integer ) as integer
 declare function tkFindTokenWithMinExpansionLevel( byval first as integer, byval last as integer ) as integer
 declare function tkGetMaxExpansionLevel( byval first as integer, byval last as integer ) as integer
+declare sub tkSetFlags( byval x as integer, byval flags as integer )
 declare sub tkAddFlags( byval first as integer, byval last as integer, byval flags as integer )
 declare sub tkSetRemove overload( byval x as integer )
 declare sub tkSetRemove overload( byval first as integer, byval last as integer )

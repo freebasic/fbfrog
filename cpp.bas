@@ -1470,6 +1470,11 @@ private function hExpandInRange _
 	function = last
 end function
 
+'' Set or unset the BEHINDSPACE flag of a token
+private sub hOverrideBehindspace( byval x as integer, byval flag as integer )
+	tkSetFlags( x, (tkGetFlags( x ) and (not TKFLAG_BEHINDSPACE)) or flag )
+end sub
+
 ''
 '' - Macro arguments must be inserted in place of macro parameters, and fully
 ''   macro-expanded, but only self-contained without help from tokens outside
@@ -1500,6 +1505,7 @@ end function
 ''
 private function hInsertMacroExpansion _
 	( _
+		byval callbehindspace as integer, _
 		byval expansionbegin as integer, _
 		byval definfo as DEFINEINFO ptr, _
 		byval argbegin as integer ptr, _
@@ -1520,6 +1526,10 @@ private function hInsertMacroExpansion _
 	definfoCopyBody( definfo, expansionbegin )
 	tkInsert( expansionbegin, TK_BEGIN )
 
+	'' Update the BEHINDSPACE status of the first token in the expansion to
+	'' be the same as that of the macro name which we're expanding
+	hOverrideBehindspace( expansionbegin + 1, callbehindspace )
+
 	'' Solve #stringify operators (higher priority than ##, and no macro
 	'' expansion done for the arg)
 	var x = expansionbegin + 1
@@ -1533,9 +1543,12 @@ private function hInsertMacroExpansion _
 				var arg = astLookupMacroParam( definfo->macro, tkSpellId( x + 1 ) )
 				if( arg >= 0 ) then
 					'' Remove #param, and insert stringify result instead
+					'' but preserve BEHINDSPACE status.
 					assert( (arg >= 0) and (arg < argcount) )
+					var behindspace = tkGetFlags( x ) and TKFLAG_BEHINDSPACE
 					tkRemove( x, x + 1 )
 					tkInsert( x, TK_STRING, tkSpell( argbegin[arg], argend[arg] ) )
+					hOverrideBehindspace( x, behindspace )
 				end if
 			end if
 		end if
@@ -1564,7 +1577,7 @@ private function hInsertMacroExpansion _
 	''   merging with other tokens outside the arg),
 	'' - we know the arg's boundaries for macro-expanding it later. (must be
 	''   done after merging, because only the unmerged tokens of an arg
-	''   shall be macro-expanded)
+	''   shall be macro-expanded, and not the ones involved in merging)
 	x = expansionbegin + 1
 	while( tkGet( x ) <> TK_END )
 
@@ -1573,6 +1586,7 @@ private function hInsertMacroExpansion _
 			var arg = astLookupMacroParam( definfo->macro, tkSpellId( x ) )
 			if( arg >= 0 ) then
 				'' >= TK_ID
+				var behindspace = tkGetFlags( x ) and TKFLAG_BEHINDSPACE
 				tkRemove( x, x )
 
 				'' TK_ARGBEGIN
@@ -1581,6 +1595,7 @@ private function hInsertMacroExpansion _
 
 				'' arg's tokens
 				tkCopy( x, argbegin[arg], argend[arg] )
+				hOverrideBehindspace( x, behindspace )
 				x += argend[arg] - argbegin[arg] + 1
 
 				'' TK_ARGEND
@@ -1671,8 +1686,14 @@ private function hInsertMacroExpansion _
 					tkOops( x, "## merge operator at end of macro body, missing operand to merge with" )
 				end if
 
-				'' Combine the original text representation of both tokens
-				var mergetext = tkSpell( l ) + tkSpell( r )
+				'' Combine the original text representation of both tokens,
+				'' and prepend a space if the lhs was BEHINDSPACE, such that
+				'' the merged token will also be BEHINDSPACE.
+				dim mergetext as string
+				if( tkGetFlags( l ) and TKFLAG_BEHINDSPACE ) then
+					mergetext += " "
+				end if
+				mergetext += tkSpell( l ) + tkSpell( r )
 
 				'' and try to lex them
 				var y = tkGetCount( )
@@ -1759,7 +1780,9 @@ private sub hExpandMacro _
 	'' Insert the macro body behind the call (this way the positions
 	'' stored in argbegin()/argend() stay valid)
 	var expansionbegin = callend + 1
-	var expansionend = hInsertMacroExpansion( expansionbegin, definfo, argbegin, argend, argcount, inside_ifexpr )
+	var expansionend = hInsertMacroExpansion( _
+			tkGetFlags( callbegin ) and TKFLAG_BEHINDSPACE, _
+			expansionbegin, definfo, argbegin, argend, argcount, inside_ifexpr )
 
 	'' Set expansion level on the expansion tokens:
 	'' = minlevel from macro call tokens + 1
