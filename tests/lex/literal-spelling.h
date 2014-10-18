@@ -14,6 +14,14 @@ static char dec5[10] = stringify(1ul);
 static char dec6[10] = stringify(1ull);
 static char dec7[10] = stringify(1lu);
 static char dec8[10] = stringify(1llu);
+static char dec10[10] = stringify(1i8);
+static char dec12[10] = stringify(1i16);
+static char dec13[10] = stringify(1i32);
+static char dec14[10] = stringify(1i64);
+static char dec15[10] = stringify(1ui8);
+static char dec16[10] = stringify(1ui16);
+static char dec17[10] = stringify(1ui32);
+static char dec18[10] = stringify(1ui64);
 
 static char oct1[10] = stringify(01);
 static char oct2[10] = stringify(01l);

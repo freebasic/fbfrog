@@ -40,6 +40,14 @@ extern "C"
 #define A32 &hFF
 #define A33 cast(culong, 1)
 #define A34 1ull
+#define A35 1
+#define A36 1
+#define A37 1
+#define A38 1ll
+#define A39 1
+#define A40 1
+#define A41 1
+#define A42 1ull
 
 #define B1 "foo"
 #define B2 wstr("foo")

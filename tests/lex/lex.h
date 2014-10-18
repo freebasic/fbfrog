@@ -34,6 +34,14 @@
 #define A32 0XFF
 #define A33 1lu
 #define A34 1llu
+#define A35 1i8
+#define A36 1i16
+#define A37 1i32
+#define A38 1i64
+#define A39 1ui8
+#define A40 1ui16
+#define A41 1ui32
+#define A42 1ui64
 
 #define B1 "foo"
 #define B2 L"foo"

@@ -1,0 +1,8 @@
+[1/5] __FB_WIN32__.__FB_64BIT__
+      tests/lex/numlit-invalid-suffix-8.h
+tests/lex/numlit-invalid-suffix-8.h(2): invalid suffix on number literal: 'i31'
+    static int i = 1i31;
+                   ^~~~
+context as seen by fbfrog:
+    static int i = 1i31 ;
+                   ^~~~

@@ -461,41 +461,47 @@ function hNumberLiteral( byval x as integer, byval is_cpp as integer ) as ASTNOD
 		n->class = ASTCLASS_CONSTF
 	else
 		'' Integer type suffixes:
-		''  l
-		''  ll
-		''  ul
-		''  ull
-		''  lu
-		''  llu
+		''  l, ll, ul, ull, lu, llu
+		'' MSVC-specific ones:
+		''  [u]i{8|16|32|64}
+		'' All letters can also be upper-case.
 		var have_u = FALSE
 		var have_l = FALSE
 		var have_ll = FALSE
 
 		select case( p[0] )
-		case CH_U, CH_L_U       '' 'U' | 'u'
+		case CH_U, CH_L_U       '' u
 			p += 1
 			have_u = TRUE
 		end select
 
 		select case( p[0] )
-		case CH_L, CH_L_L       '' 'L' | 'l'
+		case CH_L, CH_L_L       '' l, [u]l
 			p += 1
 			select case( p[0] )
-			case CH_L, CH_L_L       '' 'LL' | 'll'
+			case CH_L, CH_L_L       '' l, [u]ll
 				p += 1
 				have_ll = TRUE
 			case else
 				have_l = TRUE
 			end select
-		end select
 
-		if( have_u = FALSE ) then
-			select case( p[0] )
-			case CH_U, CH_L_U       '' 'U' | 'u'
-				p += 1
-				have_u = TRUE
+			if( have_u = FALSE ) then
+				select case( p[0] )
+				case CH_U, CH_L_U       '' u, llu
+					p += 1
+					have_u = TRUE
+				end select
+			end if
+
+		case CH_I, CH_L_I       '' i, [u]i
+			select case( p[1] )
+			case CH_8 : p += 2 '' i8
+			case CH_1 : if( p[2] = CH_6 ) then : p += 3 : end if  '' i16
+			case CH_3 : if( p[2] = CH_2 ) then : p += 3 : end if  '' i32
+			case CH_6 : if( p[2] = CH_4 ) then : p += 3 : have_ll = TRUE : end if  '' i64
 			end select
-		end if
+		end select
 
 		'' In CPP mode, all integer literals are 64bit, the 'l' suffix is ignored
 		if( is_cpp ) then

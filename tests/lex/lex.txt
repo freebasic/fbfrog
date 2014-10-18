@@ -8,4 +8,4 @@
       tests/lex/lex.h
 [5/5] __FB_DOS__
       tests/lex/lex.h
-emitting: tests/lex/lex.bi (96 declarations, 0 TODOs)
+emitting: tests/lex/lex.bi (104 declarations, 0 TODOs)
