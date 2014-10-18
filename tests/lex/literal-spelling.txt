@@ -8,4 +8,4 @@
       tests/lex/literal-spelling.h
 [5/5] __FB_DOS__
       tests/lex/literal-spelling.h
-emitting: tests/lex/literal-spelling.bi (30 declarations, 0 TODOs)
+emitting: tests/lex/literal-spelling.bi (31 declarations, 0 TODOs)

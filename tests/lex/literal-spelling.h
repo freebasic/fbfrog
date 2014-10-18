@@ -4,6 +4,7 @@ static char a1[10] = stringify(0);
 static char a2[10] = stringify(00);
 static char a3[10] = stringify(0x0);
 static char a4[10] = stringify(123);
+static char a5[10] = stringify(0X0);
 
 static char dec1[10] = stringify(1);
 static char dec2[10] = stringify(1l);

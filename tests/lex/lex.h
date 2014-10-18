@@ -31,6 +31,7 @@
 #define A29 09E+1
 #define A30 09E-1
 #define A31 0x88
+#define A32 0XFF
 
 #define B1 "foo"
 #define B2 L"foo"

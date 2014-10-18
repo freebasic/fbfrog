@@ -37,6 +37,7 @@ extern "C"
 #define A29 9E+1
 #define A30 9E-1
 #define A31 &h88
+#define A32 &hFF
 
 #define B1 "foo"
 #define B2 wstr("foo")

@@ -369,7 +369,7 @@ function hNumberLiteral( byval x as integer, byval is_cpp as integer ) as ASTNOD
 
 	'' 0 or 0x prefix?
 	if( p[0] = CH_0 ) then '' 0
-		if( p[1] = CH_L_X ) then '' 0x
+		if( (p[1] = CH_L_X) or (p[1] = CH_X) ) then '' 0x or 0X
 			p += 2
 			numbase = 16
 		elseif( (p[1] >= CH_0) and (p[1] <= CH_9) ) then
