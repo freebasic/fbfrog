@@ -224,12 +224,14 @@ end function
 '' Does the AST contain any declarations that need to be emitted with a
 '' case-preserving ALIAS?
 private function astHaveDeclsNeedingCaseAlias( byval n as ASTNODE ptr ) as integer
-	select case( n->class )
-	case ASTCLASS_VAR
-		return ((n->attrib and (ASTATTRIB_LOCAL or ASTATTRIB_STATIC)) = 0)
-	case ASTCLASS_PROC
-		return TRUE
-	end select
+	if( (n->attrib and ASTATTRIB_FILTEROUT) = 0 ) then
+		select case( n->class )
+		case ASTCLASS_VAR
+			return ((n->attrib and (ASTATTRIB_LOCAL or ASTATTRIB_STATIC)) = 0)
+		case ASTCLASS_PROC
+			return TRUE
+		end select
+	end if
 
 	var i = n->head
 	while( i )
