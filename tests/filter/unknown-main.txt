@@ -13,4 +13,4 @@
 [5/5] __FB_DOS__
       tests/filter/unknown-main.h
       tests/filter/unknown.h (filtered out)
-emitting: tests/filter/unknown-main.bi (0 declarations, 1 TODO)
+emitting: tests/filter/unknown-main.bi (0 declarations, 0 TODOs)

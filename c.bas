@@ -2022,13 +2022,7 @@ private function cBody( byval body as integer ) as ASTNODE ptr
 		var begin = c.x
 		var t = cConstruct( body )
 
-		if( c.parseok ) then
-			if( t ) then
-				if( tkGetFlags( begin ) and TKFLAG_FILTEROUT ) then
-					astSetAttribOnAll( t, ASTATTRIB_FILTEROUT )
-				end if
-			end if
-		else
+		if( c.parseok = FALSE ) then
 			astDelete( t )
 
 			'' Skip current construct and preserve its tokens in
@@ -2039,6 +2033,12 @@ private function cBody( byval body as integer ) as ASTNODE ptr
 
 			c.errmsg = ""
 			c.parseok = TRUE
+		end if
+
+		if( t ) then
+			if( tkGetFlags( begin ) and TKFLAG_FILTEROUT ) then
+				astSetAttribOnAll( t, ASTATTRIB_FILTEROUT )
+			end if
 		end if
 
 		astAppend( group, t )
