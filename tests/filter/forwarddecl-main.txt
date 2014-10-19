@@ -13,4 +13,4 @@
 [5/5] __FB_DOS__
       tests/filter/forwarddecl-main.h
       tests/filter/forwarddecl.h (filtered out)
-emitting: tests/filter/forwarddecl-main.bi (1 declaration, 0 TODOs)
+emitting: tests/filter/forwarddecl-main.bi (0 declarations, 0 TODOs)

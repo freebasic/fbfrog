@@ -432,7 +432,7 @@ private function hSolveOutProcTypedefSubtype( byval n as ASTNODE ptr, byval type
 			astAppend( n, astCloneChildren( proc ) )
 
 			'' Attributes, e.g. calling convention
-			n->attrib or= proc->attrib
+			n->attrib or= proc->attrib and (not ASTATTRIB_FILTEROUT)
 
 			'' Turn into a procedure
 			n->class = ASTCLASS_PROC
@@ -790,6 +790,7 @@ const STATE_DECLARED			= 1 shl 0
 const STATE_USED_ABOVE_DECL		= 1 shl 1
 const STATE_USED			= 1 shl 2
 const STATE_USED_FIRST_IN_TYPEDEF	= 1 shl 3
+const STATE_FILTEROUT			= 1 shl 4
 
 private function hUsedButNotDeclared( byval state as integer ) as integer
 	function = ((state and (STATE_DECLARED or STATE_USED)) = STATE_USED)
@@ -803,7 +804,8 @@ private sub hOnTagId _
 		byval hashtb as THASH ptr, _
 		byval id as zstring ptr, _
 		byval addstate as integer, _
-		byval is_in_typedef as integer _
+		byval is_in_typedef as integer, _
+		byval has_filterout as integer _
 	)
 
 	var hash = hashHash( id )
@@ -834,6 +836,10 @@ private sub hOnTagId _
 			end if
 		end if
 
+		if( has_filterout ) then
+			addstate or= STATE_FILTEROUT
+		end if
+
 		hashAdd( hashtb, item, hash, id, cptr( any ptr, addstate ) )
 
 		astAppend( list, astNewID( id ) )
@@ -848,13 +854,13 @@ private sub hCollectTagIds( byval n as ASTNODE ptr, byval list as ASTNODE ptr, b
 	case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
 		'' Not anonymous?
 		if( n->text ) then
-			hOnTagId( list, hashtb, n->text, STATE_DECLARED, FALSE )
+			hOnTagId( list, hashtb, n->text, STATE_DECLARED, FALSE, ((n->attrib and ASTATTRIB_FILTEROUT) <> 0) )
 		end if
 	end select
 
 	if( n->subtype ) then
 		if( n->subtype->class = ASTCLASS_TAGID ) then
-			hOnTagId( list, hashtb, n->subtype->text, STATE_USED, (n->class = ASTCLASS_TYPEDEF) )
+			hOnTagId( list, hashtb, n->subtype->text, STATE_USED, (n->class = ASTCLASS_TYPEDEF), ((n->attrib and ASTATTRIB_FILTEROUT) <> 0) )
 		else
 			hCollectTagIds( n->subtype, list, hashtb )
 		end if
@@ -894,10 +900,13 @@ private sub hRenameTagDecls _
 
 end sub
 
-private function hAddForwardTypedef( byval decllist as ASTNODE ptr, byval tagid as zstring ptr ) as string
+private function hAddForwardTypedef( byval decllist as ASTNODE ptr, byval tagid as zstring ptr, byval add_filterout as integer ) as string
 	var forwardid = *tagid + "_"
 	var typedef = astNew( ASTCLASS_TYPEDEF, tagid )
 	astSetType( typedef, TYPE_UDT, astNewID( forwardid ) )
+	if( add_filterout ) then
+		astSetAttribOnAll( typedef, ASTATTRIB_FILTEROUT )
+	end if
 	astAppend( decllist, typedef )
 	function = forwardid
 end function
@@ -921,7 +930,7 @@ private sub hConsiderTagId _
 			'' Rename the struct and add a forward declaration for it using the old id.
 			'' astFixIds() will take care of fixing name conflicts involving the new
 			'' struct id, if any.
-			hRenameTagDecls( ast, tagid, hAddForwardTypedef( decllist, tagid ) )
+			hRenameTagDecls( ast, tagid, hAddForwardTypedef( decllist, tagid, ((state and STATE_FILTEROUT) <> 0) ) )
 		end if
 
 	'' Tag id used only (and no declaration exists)?
@@ -930,7 +939,7 @@ private sub hConsiderTagId _
 		'' for the forward id, so that astFixIds() will take care of fixing
 		'' name conflicts involving the forward id, if any. The dummy
 		'' declaration won't be emitted though.
-		var forwardid = hAddForwardTypedef( decllist, tagid )
+		var forwardid = hAddForwardTypedef( decllist, tagid, ((state and STATE_FILTEROUT) <> 0) )
 
 		var dummydecl = astNew( ASTCLASS_STRUCT, forwardid )
 		dummydecl->attrib or= ASTATTRIB_FILTEROUT
@@ -1027,7 +1036,11 @@ sub astMakeNestedUnnamedStructsFbCompatible( byval n as ASTNODE ptr )
 					assert( i->class = ASTCLASS_UNION )
 					newastclass = ASTCLASS_STRUCT
 				end if
-				nxt = astReplace( n, i, astNew( newastclass, astClone( i ) ) )
+				var newstruct = astNew( newastclass, astClone( i ) )
+				if( i->attrib and ASTATTRIB_FILTEROUT ) then
+					newstruct->attrib or= ASTATTRIB_FILTEROUT
+				end if
+				nxt = astReplace( n, i, newstruct )
 			end if
 		end select
 
