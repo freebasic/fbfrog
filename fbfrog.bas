@@ -95,7 +95,7 @@ private sub hPrintHelpAndExit( )
 	print "usage: fbfrog *.h [options]"
 	print "global options:"
 	print "  @<file>          Read more command line arguments from a file"
-	print "  -nodefaultscript Don't use builtin.fbfrog implicitly"
+	print "  -nodefaultscript Don't use default.fbfrog implicitly"
 	print "  -whitespace      Try to preserve comments and empty lines"
 	print "  -windowsms       Use Extern ""Windows-MS"" instead of Extern ""Windows"""
 	print "  -constants       Try to turn #defines into constants"
