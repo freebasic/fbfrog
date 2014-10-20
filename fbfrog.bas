@@ -91,7 +91,7 @@ private function hFindResource( byref filename as string ) as string
 end function
 
 private sub hPrintHelpAndExit( )
-	print "fbfrog 1.2 (" + __DATE_ISO__ + "), FreeBASIC *.bi binding generator"
+	print "fbfrog 1.3 (" + __DATE_ISO__ + "), FreeBASIC *.bi binding generator"
 	print "usage: fbfrog *.h [options]"
 	print "global options:"
 	print "  @<file>          Read more command line arguments from a file"
