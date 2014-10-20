@@ -162,6 +162,7 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	(@"-endif"        ), _
 	(@"-inclib"       ), _
 	(@"-define"       ), _
+	(@"-include"      ), _
 	(@"-noexpand"     ), _
 	(@"-removedefine" ), _
 	(@"-typedefhint"  ), _

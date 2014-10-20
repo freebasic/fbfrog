@@ -108,6 +108,7 @@ private sub hPrintHelpAndExit( )
 	print "  -filterin <filename-pattern>   Undo -filterout for matching #includes"
 	print "  -inclib <name>           Add an #inclib ""<name>"" statement"
 	print "  -define <id> [<body>]    Add pre-#define"
+	print "  -include <file>          Add pre-#include"
 	print "  -noexpand <id>           Disable expansion of certain #define"
 	print "  -removedefine <id>       Don't preserve a certain #define"
 	print "  -typedefhint <id>        Mark <id> as typedef, to help parsing of type casts"
@@ -541,6 +542,10 @@ private sub hParseArgs( byref x as integer )
 				x += 1
 			end if
 
+		'' -include <file>
+		case OPT_INCLUDE
+			hParseOptionWithString( x, ASTCLASS_PREINCLUDE, "<file> argument" )
+
 		case OPT_NOEXPAND      : hParseOptionWithId( x, ASTCLASS_NOEXPAND     , FALSE )
 		case OPT_REMOVEDEFINE  : hParseOptionWithId( x, ASTCLASS_REMOVEDEFINE , FALSE )
 		case OPT_TYPEDEFHINT   : hParseOptionWithId( x, ASTCLASS_TYPEDEFHINT  , FALSE )
@@ -895,21 +900,31 @@ private function frogReadAPI( byval options as ASTNODE ptr ) as ASTNODE ptr
 		wend
 	end scope
 
-	'' Insert the code from default.h
+	'' Insert the code from default.h and other pre-#includes (if any)
 	'' * behind command line pre-#defines so that default.h can use them
 	'' * marked for removal so the code won't be preserved
 	scope
-		var x = tkGetCount( )
-		lexLoadC( x, sourcebufferFromFile( hFindResource( "default.h" ), NULL ), FALSE )
-		tkSetRemove( x, tkGetCount( ) - 1 )
+		var i = options->head
+		while( i )
+			if( i->class = ASTCLASS_PREINCLUDE ) then
+				var filename = *i->text
+				filename = hFindResource( filename )
+				var x = tkGetCount( )
+				lexLoadC( x, sourcebufferFromFile( filename, NULL ), FALSE )
+				tkSetRemove( x, tkGetCount( ) - 1 )
+			end if
+			i = i->next
+		wend
 	end scope
 
 	''
-	'' Add #includes for the toplevel file(s) behind current tokens, but
-	'' marked with TKFLAG_ROOTFILE to let the CPP know that no #include
-	'' search should be done, don't filter them out, etc. This way we can
-	'' re-use the #include handling code to load the toplevel files.
-	'' (especially interesting for include guard optimization)
+	'' Add #include statements for the toplevel file(s) behind current
+	'' tokens, but marked with TKFLAG_ROOTFILE to let the CPP know that no
+	'' #include search should be done, and that they shouldn't be affected
+	'' by -filterout etc.
+	''
+	'' This way we can re-use the #include handling code to load the
+	'' toplevel files. (especially interesting for include guard optimization)
 	''
 	'' Note: pre-#defines should appear before tokens from root files, such
 	'' that the order of -define vs *.h command line arguments doesn't
@@ -1073,6 +1088,9 @@ end sub
 	hParseArgs( 1 )
 
 	tkEnd( )
+
+	'' Add the implicit default.h pre-#include
+	astPrepend( frog.script, astNew( ASTCLASS_PREINCLUDE, "default.h" ) )
 
 	if( frog.nodefaultscript = FALSE ) then
 		'' Parse default.fbfrog and prepend the options from it to the

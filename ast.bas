@@ -39,6 +39,7 @@ dim shared as zstring ptr astnodename(0 to ...) => _
 	@"filterout"    , _
 	@"filterin"     , _
 	@"inclib"       , _
+	@"include"      , _
 	@"pragmaonce"   , _
 	_
 	_ '' Preprocessor directives
