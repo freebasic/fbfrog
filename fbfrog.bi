@@ -441,6 +441,9 @@ declare sub tkApplyRemoves( )
 declare sub tkTurnCPPTokensIntoCIds( )
 declare function tkSpell overload( byval x as integer ) as string
 declare function tkSpell overload( byval first as integer, byval last as integer ) as string
+declare function hFindClosingParen( byval x as integer, byval stop_at_cppdirective as integer = TRUE ) as integer
+declare function tkIsEolOrEof( byval x as integer ) as integer
+declare function hSkipToEol( byval x as integer ) as integer
 declare function hSkipConstruct( byval x as integer ) as integer
 declare function tkReport( byval x as integer, byval message as zstring ptr ) as string
 declare sub tkOops( byval x as integer, byval message as zstring ptr )
@@ -849,8 +852,6 @@ declare function emitType overload _
 declare function emitType overload( byval n as ASTNODE ptr ) as string
 declare sub emitFile( byref filename as string, byval ast as ASTNODE ptr )
 
-declare function hFindClosingParen( byval x as integer, byval stop_at_cppdirective as integer = TRUE ) as integer
-declare function hSkipToEol( byval x as integer ) as integer
 declare function hNumberLiteral( byval x as integer, byval is_cpp as integer, byref errmsg as string ) as ASTNODE ptr
 extern as integer cprecedence(ASTCLASS_CLOGOR to ASTCLASS_IIF)
 declare function hDefineHead( byref x as integer ) as ASTNODE ptr

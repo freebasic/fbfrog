@@ -60,13 +60,6 @@
 
 declare sub hMaybeExpandMacro( byref x as integer, byval inside_ifexpr as integer )
 
-function hSkipToEol( byval x as integer ) as integer
-	while( (tkGet( x ) <> TK_EOL) and (tkGet( x ) <> TK_EOF) )
-		x += 1
-	wend
-	function = x
-end function
-
 ''
 '' Check whether the number literal token (TK_NUMBER) is a valid number literal,
 '' and build a CONSTI/CONSTF ASTNODE representing its value (the literal saved
@@ -2582,13 +2575,6 @@ private sub cppDirective( )
 	end if
 end sub
 
-private function hIsAtBOL( byval x as integer ) as integer
-	select case( tkGet( x - 1 ) )
-	case TK_EOL, TK_EOF
-		function = TRUE
-	end select
-end function
-
 private sub cppNext( )
 	select case( tkGet( cpp.x ) )
 	case TK_ENDINCLUDE
@@ -2601,7 +2587,7 @@ private sub cppNext( )
 		'' We do this for every "toplevel" '#', before ever doing macro expansion behind it,
 		'' so it should be safe to assume that if the '#' isn't coming from a macro expansion,
 		'' the rest isn't either.
-		if( hIsAtBOL( cpp.x ) and (tkGetExpansionLevel( cpp.x ) = 0) ) then
+		if( tkIsEolOrEof( cpp.x - 1 ) and (tkGetExpansionLevel( cpp.x ) = 0) ) then
 			cppDirective( )
 			exit sub
 		end if

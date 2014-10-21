@@ -576,11 +576,10 @@ private sub lexNext( )
 			'' If it's an #include, parse <...> as string literal
 			if( tkGet( lex.x - 1 ) = KW_INCLUDE ) then
 				if( tkGet( lex.x - 2 ) = TK_HASH ) then
-					select case( tkGet( lex.x - 3 ) )
-					case TK_EOL, TK_EOF
+					if( tkIsEolOrEof( lex.x - 3 ) ) then
 						hReadString( )
-						exit select, select
-					end select
+						exit select
+					end if
 				end if
 			end if
 

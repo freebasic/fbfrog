@@ -713,6 +713,18 @@ function hFindClosingParen( byval x as integer, byval stop_at_cppdirective as in
 	function = x
 end function
 
+function tkIsEolOrEof( byval x as integer ) as integer
+	var tk = tkGet( x )
+	function = (tk = TK_EOL) or (tk = TK_EOF)
+end function
+
+function hSkipToEol( byval x as integer ) as integer
+	while( tkIsEolOrEof( x ) = FALSE )
+		x += 1
+	wend
+	function = x
+end function
+
 function hSkipConstruct( byval x as integer ) as integer
 	select case as const( tkGet( x ) )
 	case TK_EOF
@@ -792,11 +804,9 @@ private function hReportConstructTokens _
 			xcolumn = len( text )
 		end if
 
-		select case( tkGet( i ) )
-		case TK_EOL, TK_EOF
-		case else
+		if( tkIsEolOrEof( i ) = FALSE ) then
 			text += tkSpell( i )
-		end select
+		end if
 
 		if( i = x ) then
 			xlength = len( text ) - xcolumn
