@@ -8,4 +8,4 @@
       tests/lex/token-text-is-not-a-keyword.h
 [5/5] __FB_DOS__
       tests/lex/token-text-is-not-a-keyword.h
-emitting: tests/lex/token-text-is-not-a-keyword.bi (2 declarations, 0 TODOs)
+emitting: tests/lex/token-text-is-not-a-keyword.bi (1 declaration, 0 TODOs)

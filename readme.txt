@@ -232,8 +232,6 @@ To do:
 * Automatically detect #include guards and remove the left over #defines
 * Ignore __attribute__((aligned(N))) (show a warning?). FB doesn't have it, and
   often it's just used for "better" performance anyways, not really needed.
-* Beautify comments, e.g. for /**/ comments, remove the * at the start of each
-  line if each line starts with that, etc.
 * Support dimension-less arrays with initializers: int a[] = {1, 2};
 
 * Simplify command line parsing
@@ -272,8 +270,6 @@ To do:
 	* It would already help to build symbol tables temporarily, like decltables,
 	  similar to the hashtbs already used currently...
 	* fbfrog should be a single-pass compiler, if possible...
-	* CPP's whitespace preprocessing is also very inefficient, perhaps we
-	  should just not bother preserving comments...
 	* tkGet()/tkAccess() are the bottlenecks of CPP/C parser. Should really
 	  compare performance with tk=array instead of tk=gapbuffer, and optimize
 	  tkGet/tkAccess for gap buffer.

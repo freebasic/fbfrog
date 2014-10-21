@@ -195,39 +195,6 @@ private sub emitLines( byval lines as zstring ptr )
 	loop
 end sub
 
-private function hIsMultiLineComment( byval comment as zstring ptr ) as integer
-	do
-		select case( (*comment)[0] )
-		case 0 : exit do
-		case CH_LF, CH_CR : return TRUE
-		end select
-		comment += 1
-	loop
-	function = FALSE
-end function
-
-private sub emitStmt( byref stmt as string, byval comment as zstring ptr = NULL )
-	assert( len( stmt ) > 0 )
-	if( comment ) then
-		if( hIsMultiLineComment( comment ) ) then
-			'' Emit multi-line comment above the statement
-			emit.comment += 1
-			emitLines( comment )
-			emit.comment -= 1
-		else
-			'' Emit single-line comment behind the statement (not below)
-			stmt += "  ''"
-
-			'' Prepend a space if none is there yet
-			if( (*comment)[0] <> CH_SPACE ) then
-				stmt += " "
-			end if
-			stmt += *comment
-		end if
-	end if
-	emitLine( stmt )
-end sub
-
 private function hEmitAlias( byval n as ASTNODE ptr ) as string
 	if( n->alias ) then
 		function = " alias """ + *n->alias + """"
@@ -295,7 +262,7 @@ private sub hEmitIndentedChildren( byval n as ASTNODE ptr )
 	while( i )
 		var s = emitAst( i )
 		if( len( s ) > 0 ) then
-			emitStmt( s )
+			emitLine( s )
 		end if
 		i = i->next
 	wend
@@ -320,7 +287,7 @@ private function hInitializer( byval n as ASTNODE ptr ) as string
 	end if
 end function
 
-private sub emitVarDecl( byref prefix as string, byval n as ASTNODE ptr, byval is_extern as integer, byval comment as zstring ptr )
+private sub emitVarDecl( byref prefix as string, byval n as ASTNODE ptr, byval is_extern as integer )
 	var s = prefix
 
 	if( is_extern ) then
@@ -333,7 +300,7 @@ private sub emitVarDecl( byref prefix as string, byval n as ASTNODE ptr, byval i
 	s += hIdAndArray( n, is_extern ) + " as " + emitType( n )
 	if( is_extern = FALSE ) then s += hInitializer( n )
 
-	emitStmt( s, comment )
+	emitLine( s )
 end sub
 
 private function emitAst _
@@ -357,26 +324,8 @@ private function emitAst _
 		wend
 
 	case ASTCLASS_DIVIDER
-		if( (n->prev <> NULL) and _
-		    ((n->next <> NULL) or _
-		     (n->comment <> NULL) or _
-		     (n->text <> NULL)) ) then
+		if( (n->prev <> NULL) and (n->next <> NULL) ) then
 			emitLine( "" )
-		end if
-
-		if( n->comment ) then
-			emit.comment += 1
-			emitLines( n->comment )
-			emit.comment -= 1
-			if( n->next ) then
-				emitLine( "" )
-			end if
-		end if
-
-		if( n->text ) then
-			emit.comment += 1
-			emitLines( n->text )
-			emit.comment -= 1
 		end if
 
 	case ASTCLASS_VEROR, ASTCLASS_VERAND
@@ -395,17 +344,18 @@ private function emitAst _
 		s = hParens( s, need_parens )
 
 	case ASTCLASS_SCOPEBLOCK
-		emitStmt( "scope" )
+		emitLine( "scope" )
 		hEmitIndentedChildren( n )
-		emitStmt( "end scope" )
+		emitLine( "end scope" )
 
 	case ASTCLASS_UNKNOWN
+		assert( n->expr->class = ASTCLASS_TEXT )
 		emit.comment += 1
 		emit.commentspaces += 1
 		emitLine( "TODO: unrecognized construct:" )
-		emitLines( n->text )
+		emitLines( n->expr->text )
 		emitLine( string( 75, "-" ) )
-		emitLines( n->comment )
+		emitLines( n->text )
 		emit.commentspaces -= 1
 		emit.comment -= 1
 
@@ -427,16 +377,13 @@ private function emitAst _
 		end if
 
 	case ASTCLASS_INCLIB
-		emitStmt( "#inclib """ + *n->text + """", n->comment )
+		emitLine( "#inclib """ + *n->text + """" )
 
 	case ASTCLASS_PRAGMAONCE
-		emitStmt( "#pragma once", n->comment )
+		emitLine( "#pragma once" )
 
 	case ASTCLASS_PPINCLUDE
-		s = "#include once "
-		s += """" + *n->text + """"
-		emitStmt( s, n->comment )
-		s = ""
+		emitLine( "#include once """ + *n->text + """" )
 
 	case ASTCLASS_PPDEFINE
 		if( n->expr andalso (n->expr->class = ASTCLASS_SCOPEBLOCK) ) then
@@ -444,14 +391,14 @@ private function emitAst _
 			if( n->head ) then
 				s += hParamList( n )
 			end if
-			emitStmt( s, n->comment )
+			emitLine( s )
 			s = ""
 
 			emit.indent += 1
 			emitAst( n->expr )
 			emit.indent -= 1
 
-			emitStmt( "#endmacro" )
+			emitLine( "#endmacro" )
 		else
 			s += "#define " + *n->text
 			if( n->paramcount >= 0 ) then
@@ -462,7 +409,7 @@ private function emitAst _
 				s += " " + emitAst( n->expr, TRUE )
 			end if
 
-			emitStmt( s, n->comment )
+			emitLine( s )
 			s = ""
 		end if
 
@@ -481,38 +428,35 @@ private function emitAst _
 		if( len( s ) = 0 ) then
 			s = "#if " + emitAst( n->expr )
 		end if
-		emitStmt( s )
+		emitLine( s )
 		s = ""
 
 		hEmitIndentedChildren( n )
 
 	case ASTCLASS_PPELSEIF
-		emitStmt( "#elseif " + emitAst( n->expr ) )
+		emitLine( "#elseif " + emitAst( n->expr ) )
 		hEmitIndentedChildren( n )
 
 	case ASTCLASS_PPELSE
-		emitStmt( "#else" )
+		emitLine( "#else" )
 		hEmitIndentedChildren( n )
 
 	case ASTCLASS_PPENDIF
-		emitStmt( "#endif" )
+		emitLine( "#endif" )
 
 	case ASTCLASS_PPERROR
-		emitStmt( "#error " + emitAst( n->expr ) )
+		emitLine( "#error " + emitAst( n->expr ) )
 
 	case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
 		if( (n->class = ASTCLASS_ENUM) and (n->text <> NULL) ) then
-			emitStmt( "type " + *n->text + " as long" )
+			emitLine( "type " + *n->text + " as long" )
 		end if
 
 		dim as string compoundkeyword
 		select case( n->class )
-		case ASTCLASS_UNION
-			compoundkeyword = "union"
-		case ASTCLASS_ENUM
-			compoundkeyword = "enum"
-		case else
-			compoundkeyword = "type"
+		case ASTCLASS_UNION : compoundkeyword = "union"
+		case ASTCLASS_ENUM  : compoundkeyword = "enum"
+		case else           : compoundkeyword = "type"
 		end select
 
 		s += compoundkeyword
@@ -524,39 +468,39 @@ private function emitAst _
 		elseif( n->maxalign > 0 ) then
 			s += " field = " & n->maxalign
 		end if
-		emitStmt( s, n->comment )
+		emitLine( s )
 		s = ""
 
 		hEmitIndentedChildren( n )
 
-		emitStmt( "end " + compoundkeyword )
+		emitLine( "end " + compoundkeyword )
 
 	case ASTCLASS_TYPEDEF
 		assert( n->array = NULL )
-		emitStmt( "type " + *n->text + " as " + emitType( n ), n->comment )
+		emitLine( "type " + *n->text + " as " + emitType( n ) )
 
 	case ASTCLASS_CONST
 		if( (n->attrib and ASTATTRIB_ENUMCONST) = 0 ) then
 			s = "const "
 		end if
-		emitStmt( s + *n->text + hInitializer( n ), n->comment )
+		emitLine( s + *n->text + hInitializer( n ) )
 		s = ""
 
 	case ASTCLASS_VAR
 		if( n->attrib and ASTATTRIB_LOCAL ) then
 			if( n->attrib and ASTATTRIB_STATIC ) then
-				emitVarDecl( "static ", n, FALSE, n->comment )
+				emitVarDecl( "static ", n, FALSE )
 			else
-				emitVarDecl( "dim ", n, FALSE, n->comment )
+				emitVarDecl( "dim ", n, FALSE )
 			end if
 		else
 			if( n->attrib and ASTATTRIB_EXTERN ) then
-				emitVarDecl( "extern ", n, TRUE, n->comment )
+				emitVarDecl( "extern ", n, TRUE )
 			elseif( n->attrib and ASTATTRIB_STATIC ) then
-				emitVarDecl( "dim shared ", n, FALSE, n->comment )
+				emitVarDecl( "dim shared ", n, FALSE )
 			else
-				emitVarDecl( "extern     ", n, TRUE, n->comment )
-				emitVarDecl( "dim shared ", n, FALSE, NULL )
+				emitVarDecl( "extern     ", n, TRUE )
+				emitVarDecl( "dim shared ", n, FALSE )
 			end if
 		end if
 
@@ -577,9 +521,9 @@ private function emitAst _
 		end select
 
 		if( use_multdecl ) then
-			emitStmt( "as " + emitType( n ) + " " + hIdAndArray( n, FALSE ), n->comment )
+			emitLine( "as " + emitType( n ) + " " + hIdAndArray( n, FALSE ) )
 		else
-			emitStmt( hIdAndArray( n, FALSE ) + " as " + emitType( n ), n->comment )
+			emitLine( hIdAndArray( n, FALSE ) + " as " + emitType( n ) )
 		end if
 
 	case ASTCLASS_PROC
@@ -618,14 +562,14 @@ private function emitAst _
 
 		'' Is this a procedure declaration/statement (and not a procptr subtype)?
 		if( n->text ) then
-			emitStmt( s, n->comment )
+			emitLine( s )
 			s = ""
 
 			'' Body
 			if( n->expr ) then
 				assert( n->expr->class = ASTCLASS_GROUP )
 				hEmitIndentedChildren( n->expr )
-				emitStmt( "end " + compound, n->comment )
+				emitLine( "end " + compound )
 			end if
 		end if
 
@@ -649,10 +593,10 @@ private function emitAst _
 		s += hParamList( n )
 
 	case ASTCLASS_EXTERNBLOCKBEGIN
-		emitStmt( "extern """ + *n->text + """" )
+		emitLine( "extern """ + *n->text + """" )
 
 	case ASTCLASS_EXTERNBLOCKEND
-		emitStmt( "end extern" )
+		emitLine( "end extern" )
 
 	case ASTCLASS_MACROPARAM
 		s += *n->text

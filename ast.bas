@@ -402,27 +402,6 @@ sub astSetType _
 
 end sub
 
-sub astSetComment( byval n as ASTNODE ptr, byval comment as zstring ptr )
-	deallocate( n->comment )
-	n->comment = strDuplicate( comment )
-end sub
-
-sub astAddComment( byval n as ASTNODE ptr, byval comment as zstring ptr )
-	dim as string s
-
-	if( len( *comment ) = 0 ) then
-		exit sub
-	end if
-
-	if( n->comment ) then
-		s = *n->comment + !"\n"
-	end if
-
-	s += *comment
-
-	astSetComment( n, s )
-end sub
-
 '' astClone() but without children
 function astCloneNode( byval n as ASTNODE ptr ) as ASTNODE ptr
 	if( n = NULL ) then
@@ -433,7 +412,6 @@ function astCloneNode( byval n as ASTNODE ptr ) as ASTNODE ptr
 	c->attrib      = n->attrib
 
 	c->text        = strDuplicate( n->text )
-	c->comment     = strDuplicate( n->comment )
 	c->alias       = strDuplicate( n->alias )
 
 	c->dtype       = n->dtype
@@ -713,8 +691,6 @@ function astDumpOne( byval n as ASTNODE ptr ) as string
 	if( n->dtype <> TYPE_NONE ) then
 		s += " as " + emitType( n->dtype, NULL, TRUE )
 	end if
-
-	s += hDumpComment( n->comment )
 
 	#if 0
 		s += " " + hDumpLocation( @n->location )

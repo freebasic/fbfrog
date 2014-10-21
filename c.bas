@@ -69,12 +69,7 @@ end enum
 
 declare function cExpression( byval level as integer ) as ASTNODE ptr
 declare function cExpressionOrInitializer( ) as ASTNODE ptr
-declare function cDeclaration _
-	( _
-		byval decl as integer, _
-		byval gccattribs as integer, _
-		byref comment as string _
-	) as ASTNODE ptr
+declare function cDeclaration( byval decl as integer, byval gccattribs as integer ) as ASTNODE ptr
 declare function cScope( ) as ASTNODE ptr
 declare function cConstruct( byval body as integer ) as ASTNODE ptr
 declare function cBody( byval body as integer ) as ASTNODE ptr
@@ -297,7 +292,7 @@ private function cDataType( byval decl as integer ) as ASTNODE ptr
 	'' cDeclaration() will have built up a GROUP, for DECL_CASTTYPE there
 	'' should be 1 child only though, extract it.
 	''
-	function = astUngroupOne( cDeclaration( decl, 0, "" ) )
+	function = astUngroupOne( cDeclaration( decl, 0 ) )
 end function
 
 '' Parse the data type in parentheses for cast expressions (<(DataType) foo>),
@@ -810,10 +805,8 @@ end function
 
 private function cTypedef( ) as ASTNODE ptr
 	'' TYPEDEF
-	var comment = tkCollectComments( c.x, c.x )
 	c.x += 1
-
-	function = cDeclaration( DECL_TYPEDEF, 0, comment )
+	function = cDeclaration( DECL_TYPEDEF, 0 )
 end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -1322,10 +1315,9 @@ private function cParamDeclList( ) as ASTNODE ptr
 		'' '...'?
 		if( tkGet( c.x ) = TK_ELLIPSIS ) then
 			t = astNew( ASTCLASS_PARAM )
-			astAddComment( t, tkCollectComments( c.x, c.x ) )
 			c.x += 1
 		else
-			t = cDeclaration( DECL_PARAM, 0, "" )
+			t = cDeclaration( DECL_PARAM, 0 )
 		end if
 
 		astAppend( group, t )
@@ -1750,20 +1742,11 @@ end function
 ''
 '' Declaration = GccAttributeList BaseType Declarator (',' Declarator)* [';']
 ''
-private function cDeclaration _
-	( _
-		byval decl as integer, _
-		byval gccattribs as integer, _
-		byref comment as string _
-	) as ASTNODE ptr
-
-	var begin = c.x
-
+private function cDeclaration( byval decl as integer, byval gccattribs as integer ) as ASTNODE ptr
 	'' BaseType
 	dim as integer dtype
 	dim as ASTNODE ptr subtype
 	cBaseType( dtype, subtype, gccattribs, decl )
-	comment += tkCollectComments( begin, c.x - 1 )
 
 	'' Special case for standalone struct/union/enum declarations (no CONST bits):
 	if( dtype = TYPE_UDT ) then
@@ -1818,19 +1801,9 @@ private function cDeclaration _
 	var declarator_count = 0
 	do
 		declarator_count += 1
-		begin = c.x
+		var begin = c.x
 
 		astAppend( result, cDeclarator( 0, decl, dtype, subtype, gccattribs, NULL, 0, 0 ) )
-		var t = result->tail
-
-		'' The first declaration takes the comments from the base type
-		if( len( comment ) > 0 ) then
-			astAddComment( t, comment )
-			comment = ""
-		end if
-
-		'' Every declaration takes the comments on its declarator tokens
-		astAddComment( t, tkCollectComments( begin, c.x - 1 ) )
 
 		'' Parameters/types can't have commas and more identifiers,
 		'' and don't need with ';' either.
@@ -1841,12 +1814,13 @@ private function cDeclaration _
 		end select
 
 		'' '{', procedure body?
-		if( (t->class = ASTCLASS_PROC) and (tkGet( c.x ) = TK_LBRACE) ) then
+		var proc = result->tail
+		if( (proc->class = ASTCLASS_PROC) and (tkGet( c.x ) = TK_LBRACE) ) then
 			'' A procedure with body must be the first and only
 			'' declarator in the declaration.
 			if( declarator_count = 1 ) then
-				assert( t->expr = NULL )
-				t->expr = cScope( )
+				assert( proc->expr = NULL )
+				proc->expr = cScope( )
 				require_semi = FALSE
 				exit do
 			end if
@@ -1867,8 +1841,6 @@ end function
 '' Variable/procedure declarations
 ''    GccAttributeList [EXTERN|STATIC] Declaration
 private function cVarOrProcDecl( byval is_local as integer ) as ASTNODE ptr
-	var begin = c.x
-
 	'' __ATTRIBUTE__((...))
 	var gccattribs = 0
 	cGccAttributeList( gccattribs )
@@ -1884,10 +1856,8 @@ private function cVarOrProcDecl( byval is_local as integer ) as ASTNODE ptr
 		c.x += 1
 	end select
 
-	var comment = tkCollectComments( begin, c.x - 1 )
-
 	'' Declaration
-	function = cDeclaration( decl, gccattribs, comment )
+	function = cDeclaration( decl, gccattribs )
 end function
 
 '' Expression statement: Assignments, function calls, i++, etc.
@@ -1941,15 +1911,7 @@ private function cConstruct( byval body as integer ) as ASTNODE ptr
 			directive = astNew( ASTCLASS_PPDEFINE )
 		end if
 
-		astAddComment( directive, tkCollectComments( begin, c.x - 1 ) )
 		return directive
-	end if
-
-	if( tkGet( c.x ) = TK_DIVIDER ) then
-		var t = astNew( ASTCLASS_DIVIDER, tkGetText( c.x ) )
-		astAddComment( t, tkCollectComments( c.x, c.x ) )
-		c.x += 1
-		return t
 	end if
 
 	if( body = BODY_ENUM ) then
@@ -1968,7 +1930,7 @@ private function cConstruct( byval body as integer ) as ASTNODE ptr
 	select case( body )
 	case BODY_STRUCT
 		'' Field declaration
-		function = cDeclaration( DECL_FIELD, 0, "" )
+		function = cDeclaration( DECL_FIELD, 0 )
 
 	case BODY_SCOPE
 		'' Disambiguate: local declaration vs. expression
@@ -2008,8 +1970,8 @@ private function cBody( byval body as integer ) as ASTNODE ptr
 			'' Skip current construct and preserve its tokens in
 			'' an UNKNOWN node
 			c.x = hSkipConstruct( begin )
-			t = astNew( ASTCLASS_UNKNOWN, tkSpell( begin, c.x - 1 ) )
-			astSetComment( t, c.errmsg )
+			t = astNew( ASTCLASS_UNKNOWN, c.errmsg )
+			t->expr = astNewTEXT( tkSpell( begin, c.x - 1 ) )
 
 			c.errmsg = ""
 			c.parseok = TRUE

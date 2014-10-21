@@ -1,4 +1,4 @@
-// @fbfrog -whitespace -nonamefixup
+// @fbfrog -nonamefixup
 
 #define A01 0
 #define A02 1

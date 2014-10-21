@@ -19,14 +19,12 @@ end type
 dim shared as TOKENINFO tk_info(0 to ...) = _
 { _
 	(NULL, @"eof"     ), _
-	(NULL, @"divider" ), _
 	(NULL, @"begin"   ), _
 	(NULL, @"end"     ), _
 	(NULL, @"ppmerge" ), _
 	(NULL, @"argbegin"), _
 	(NULL, @"argend"  ), _
 	(NULL, @"eol"     ), _
-	(NULL, @"comment" ), _
 	(NULL, @"begininclude"), _
 	(NULL, @"endinclude"), _
 	(NULL, @"number"  ), _ '' Number/string literals
@@ -142,7 +140,6 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	(@"-nodefaultscript"), _
 	(@"-filterout"    ), _
 	(@"-filterin"     ), _
-	(@"-whitespace"   ), _
 	(@"-windowsms"    ), _
 	(@"-constants"    ), _
 	(@"-nonamefixup"  ), _
@@ -216,7 +213,6 @@ type ONETOKEN
 
 	location	as TKLOCATION   '' where this token was found
 	expansionlevel	as integer      '' toplevel = 0, nested tokens from macro expansion >= 1
-	comment		as zstring ptr
 end type
 
 type TKBUFFER
@@ -283,16 +279,6 @@ private function tkDumpBasic( byval id as integer, byval text as zstring ptr ) a
 	function = s
 end function
 
-function hDumpComment( byval comment as zstring ptr ) as string
-	if( comment ) then
-		var scomment = strMakePrintable( *comment )
-		if( len( scomment ) > 40 ) then
-			scomment = left( scomment, 40 ) + "..."
-		end if
-		function = " comment=""" + scomment + """"
-	end if
-end function
-
 function tkDumpOne( byval x as integer ) as string
 	var p = tkAccess( x )
 	var s = str( x ) + " " + tkDumpBasic( p->id, p->text )
@@ -305,8 +291,6 @@ function tkDumpOne( byval x as integer ) as string
 	checkFlag( REMOVE )
 	checkFlag( FILTEROUT )
 	checkFlag( ROOTFILE )
-
-	s += hDumpComment( p->comment )
 
 	#if 0
 		s += " " + hDumpLocation( @p->location )
@@ -403,7 +387,6 @@ sub tkRemove( byval first as integer, byval last as integer )
 	for i as integer = first to last
 		var p = tkAccess( i )
 		deallocate( p->text )
-		deallocate( p->comment )
 	next
 
 	var delta = last - first + 1
@@ -450,7 +433,6 @@ sub tkCopy( byval x as integer, byval first as integer, byval last as integer )
 		dst->flags          = src->flags and (not TKFLAG_REMOVE)
 		dst->location       = src->location
 		dst->expansionlevel = src->expansionlevel
-		dst->comment        = strDuplicate( src->comment )
 
 		x += 1
 		first += 1
@@ -555,19 +537,6 @@ function tkGetFlags( byval x as integer ) as integer
 	function = tkAccess( x )->flags
 end function
 
-sub tkSetComment( byval x as integer, byval comment as zstring ptr )
-	dim as ONETOKEN ptr p = any
-	p = tkAccess( x )
-	if( p->id <> TK_EOF ) then
-		deallocate( p->comment )
-		p->comment = strDuplicate( comment )
-	end if
-end sub
-
-function tkGetComment( byval x as integer ) as zstring ptr
-	function = tkAccess( x )->comment
-end function
-
 function tkCount _
 	( _
 		byval tk as integer, _
@@ -584,75 +553,6 @@ function tkCount _
 	next
 
 	function = count
-end function
-
-function tkSkipComment _
-	( _
-		byval x as integer, _
-		byval delta as integer _
-	) as integer
-
-	do
-		x += delta
-
-		select case( tkGet( x ) )
-		case TK_COMMENT
-
-		case else
-			exit do
-		end select
-	loop
-
-	function = x
-end function
-
-function tkSkipCommentEol _
-	( _
-		byval x as integer, _
-		byval delta as integer _
-	) as integer
-
-	do
-		x += delta
-
-		select case( tkGet( x ) )
-		case TK_COMMENT, TK_EOL
-
-		case else
-			exit do
-		end select
-	loop
-
-	function = x
-end function
-
-function tkCollectComments _
-	( _
-		byval first as integer, _
-		byval last as integer _
-	) as string
-
-	dim as string s
-	dim as zstring ptr text = any
-
-	'' Collect all comment text from a range of tokens and merge it into
-	'' one string, which can be used
-	for i as integer = first to last
-		if( tkGet( i ) = TK_COMMENT ) then
-			text = tkGetText( i )
-		else
-			text = tkGetComment( i )
-		end if
-
-		if( text ) then
-			if( len( s ) > 0 ) then
-				s += !"\n"
-			end if
-			s += *text
-		end if
-	next
-
-	function = s
 end function
 
 sub tkApplyRemoves( )
@@ -783,7 +683,7 @@ function hFindClosingParen( byval x as integer, byval stop_at_cppdirective as in
 	end select
 
 	do
-		x = tkSkipCommentEol( x )
+		x += 1
 
 		select case( tkGet( x ) )
 		case opening
@@ -818,7 +718,7 @@ function hSkipConstruct( byval x as integer ) as integer
 	case TK_EOF
 		return x
 
-	case TK_SEMI, TK_DIVIDER, TK_BEGININCLUDE, TK_ENDINCLUDE
+	case TK_SEMI, TK_BEGININCLUDE, TK_ENDINCLUDE
 		return x + 1
 
 	case TK_HASH
@@ -835,8 +735,7 @@ function hSkipConstruct( byval x as integer ) as integer
 			x += 1
 			exit do
 
-		case TK_EOF, TK_DIVIDER, TK_BEGININCLUDE, TK_ENDINCLUDE, _
-		     TK_RBRACE
+		case TK_EOF, TK_BEGININCLUDE, TK_ENDINCLUDE, TK_RBRACE
 			exit do
 
 		case TK_HASH
@@ -967,7 +866,7 @@ end function
 
 function tkMakeExpectedMessage( byval x as integer, byval something as zstring ptr ) as string
 	select case( tkGet( x ) )
-	case TK_EOL, TK_EOF, TK_DIVIDER, TK_END
+	case TK_EOL, TK_EOF, TK_END
 		function = "missing " + *something
 	case else
 		function = "expected " + *something + tkButFound( x )

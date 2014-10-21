@@ -4,8 +4,6 @@
 
 extern "C"
 
-'' @fbfrog -whitespace -nonamefixup
-
 #define A01 0
 #define A02 1
 #define A03 11
@@ -48,14 +46,12 @@ extern "C"
 #define A40 1
 #define A41 1
 #define A42 1ull
-
 #define B1 "foo"
 #define B2 wstr("foo")
 #define B3 !"foo\n"
 #define B4 """foo"""
 #define B5 asc("a")
 #define B6 asc(wstr("a"))
-
 #define C01 """"
 #define C02 "'"
 #define C03 "'"
@@ -80,7 +76,6 @@ extern "C"
 #define C22 asc(!"\r")
 #define C23 asc(!"\t")
 #define C24 asc(!"\v")
-
 #define D1 !"\0"
 #define D2 !"\0"
 #define D3 !"\0"
@@ -88,23 +83,19 @@ extern "C"
 #define D5 !"\1"
 #define D6 !"\1"
 #define D7 !"\0001"
-
 #define E1 !"\0a"
 #define E2 !"\0a"
 #define E3 !"\0a"
 #define E4 !"\0g"
 #define E5 !"\0g"
 #define E6 !"\0g"
-
 #define F1 !"\1"
 #define F2 !"\t"
 #define F3 "I"
 #define F4 "I1"
-
 #define G1 !"\0010"
 #define G2 !"\0270"
 #define G3 !"\2550"
-
 #define H1 "a@b"
 #define H2 "1@2"
 #define H3 !"\0"
@@ -113,24 +104,9 @@ extern "C"
 #define H6 !"\170"
 #define H7 !"a\0g"
 
-'' Even stray form feed characters
+declare sub f()
 
-declare sub f()  '' Some escaped newlines 
-
-'' single-line \
-''comment \
-''across \
-''multiple \
-''lines
-'' escaped
-''
-''\
-''newlines
-''inside\
-''multi-line\
-''comment 
-
-#define Z1 "abcdef"  '' escaped newline in string literal
+#define Z1 "abcdef"
 #define Z2 "abcdef"
 #define Z3 ""
 #define Z4 ""

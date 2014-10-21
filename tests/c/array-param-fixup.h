@@ -1,4 +1,4 @@
-// @fbfrog -whitespace -nonamefixup
+// @fbfrog -nonamefixup
 
 void f(int i[]);
 extern void (*p)(int i[]);

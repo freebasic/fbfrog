@@ -1,4 +1,4 @@
-// @fbfrog -whitespace -nonamefixup -removedefine m
+// @fbfrog -nonamefixup -removedefine m
 
 #define m(a) a
 m(void f(void));

@@ -1,4 +1,4 @@
-// @fbfrog -whitespace -nonamefixup -removedefine m2
+// @fbfrog -nonamefixup -removedefine m2
 
 #define m3 foo
 

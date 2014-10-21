@@ -1,4 +1,4 @@
-// @fbfrog -whitespace -nonamefixup
+// @fbfrog -nonamefixup
 
 static int __simple;
 void f(int a);

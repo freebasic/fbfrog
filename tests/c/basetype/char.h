@@ -1,4 +1,4 @@
-// @fbfrog -whitespace -nonamefixup
+// @fbfrog -nonamefixup
 
 extern char i;
 extern char *p;

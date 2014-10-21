@@ -1,4 +1,4 @@
-// @fbfrog -whitespace -nonamefixup -removedefine m1
+// @fbfrog -nonamefixup -removedefine m1
 
 static int id_id;
 #define m1 void id##id(void);

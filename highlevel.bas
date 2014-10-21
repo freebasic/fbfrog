@@ -278,8 +278,7 @@ private sub astWrapInExternBlock _
 	( _
 		byval ast as ASTNODE ptr, _
 		byval externcallconv as integer, _
-		byval use_stdcallms as integer, _
-		byval whitespace as integer _
+		byval use_stdcallms as integer _
 	)
 
 	var externblock = @"C"
@@ -299,29 +298,16 @@ private sub astWrapInExternBlock _
 	astHideCaseAlias( ast )
 
 	assert( ast->class = ASTCLASS_GROUP )
-	if( whitespace ) then
-		astPrepend( ast, astNew( ASTCLASS_DIVIDER ) )
-	end if
 	astPrepend( ast, astNew( ASTCLASS_EXTERNBLOCKBEGIN, externblock ) )
-	if( whitespace ) then
-		astAppend( ast, astNew( ASTCLASS_DIVIDER ) )
-	end if
 	astAppend( ast, astNew( ASTCLASS_EXTERNBLOCKEND ) )
 
 end sub
 
-sub astAutoExtern _
-	( _
-		byval ast as ASTNODE ptr, _
-		byval use_stdcallms as integer, _
-		byval whitespace as integer _
-	)
-
+sub astAutoExtern( byval ast as ASTNODE ptr, byval use_stdcallms as integer )
 	var maincallconv = astFindMainCallConv( ast )
 	if( (maincallconv >= 0) or astHaveDeclsNeedingCaseAlias( ast ) ) then
-		astWrapInExternBlock( ast, maincallconv, use_stdcallms, whitespace )
+		astWrapInExternBlock( ast, maincallconv, use_stdcallms )
 	end if
-
 end sub
 
 private sub hSolveOutArrayTypedefSubtypes _

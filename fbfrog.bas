@@ -55,7 +55,7 @@
 #include once "fbfrog.bi"
 
 namespace frog
-	dim shared as integer verbose, whitespace, windowsms, constants, nonamefixup, nodefaultscript
+	dim shared as integer verbose, windowsms, constants, nonamefixup, nodefaultscript
 	dim shared as ASTNODE ptr incdirs
 	dim shared as string outname, defaultoutname
 
@@ -101,7 +101,6 @@ private sub hPrintHelpAndExit( )
 	print "global options:"
 	print "  @<file>          Read more command line arguments from a file"
 	print "  -nodefaultscript Don't use default.fbfrog implicitly"
-	print "  -whitespace      Try to preserve comments and empty lines"
 	print "  -windowsms       Use Extern ""Windows-MS"" instead of Extern ""Windows"""
 	print "  -constants       Try to turn #defines into constants"
 	print "  -nonamefixup     Don't fix symbol identifier conflicts"
@@ -409,7 +408,8 @@ private sub hParseOptionWithId _
 
 	if( require_2nd_id ) then
 		hExpectId( x )
-		astSetComment( frog.script->tail, tkGetText( x ) )
+		'' renametypedef/renametag: ASTNODE.alias will hold the old id, ASTNODE.text the new one
+		astRenameSymbol( frog.script->tail, tkGetText( x ) )
 		x += 1
 	end if
 
@@ -426,7 +426,6 @@ private sub hParseArgs( byref x as integer )
 			exit do
 
 		case OPT_NODEFAULTSCRIPT : frog.nodefaultscript = TRUE : x += 1
-		case OPT_WHITESPACE  : frog.whitespace  = TRUE : x += 1
 		case OPT_WINDOWSMS   : frog.windowsms   = TRUE : x += 1
 		case OPT_CONSTANTS   : frog.constants   = TRUE : x += 1
 		case OPT_NONAMEFIXUP : frog.nonamefixup = TRUE : x += 1
@@ -785,9 +784,9 @@ private sub hApplyRenameTypedefOption _
 	)
 
 	if( n->class = ASTCLASS_TYPEDEF ) then
-		if( *n->text = *renametypedef->text ) then
-			astReplaceSubtypes( ast, ASTCLASS_ID, renametypedef->text, ASTCLASS_ID, renametypedef->comment )
-			astSetText( n, renametypedef->comment )
+		if( *n->text = *renametypedef->alias ) then
+			astReplaceSubtypes( ast, ASTCLASS_ID, renametypedef->alias, ASTCLASS_ID, renametypedef->text )
+			astSetText( n, renametypedef->text )
 		end if
 	end if
 
@@ -808,9 +807,9 @@ private sub hApplyRenameTagOption _
 
 	select case( n->class )
 	case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
-		if( *n->text = *renametag->text ) then
-			astReplaceSubtypes( ast, ASTCLASS_TAGID, renametag->text, ASTCLASS_TAGID, renametag->comment )
-			astSetText( n, renametag->comment )
+		if( *n->text = *renametag->alias ) then
+			astReplaceSubtypes( ast, ASTCLASS_TAGID, renametag->alias, ASTCLASS_TAGID, renametag->text )
+			astSetText( n, renametag->text )
 		end if
 	end select
 
@@ -893,7 +892,7 @@ private function frogReadAPI( byval options as ASTNODE ptr ) as ASTNODE ptr
 				s += !"\n"
 
 				var x = tkGetCount( )
-				lexLoadC( x, sourcebufferFromZstring( prettyname, s, @i->location ), FALSE )
+				lexLoadC( x, sourcebufferFromZstring( prettyname, s, @i->location ) )
 				tkSetRemove( x, tkGetCount( ) - 1 )
 
 			case ASTCLASS_FILTEROUT, ASTCLASS_FILTERIN
@@ -915,7 +914,7 @@ private function frogReadAPI( byval options as ASTNODE ptr ) as ASTNODE ptr
 				var filename = *i->text
 				filename = hFindResource( filename )
 				var x = tkGetCount( )
-				lexLoadC( x, sourcebufferFromFile( filename, NULL ), FALSE )
+				lexLoadC( x, sourcebufferFromFile( filename, NULL ) )
 				tkSetRemove( x, tkGetCount( ) - 1 )
 			end if
 			i = i->next
@@ -940,7 +939,7 @@ private function frogReadAPI( byval options as ASTNODE ptr ) as ASTNODE ptr
 		while( i )
 			var code = "#include """ + *i->text + """" + !"\n"
 			var x = tkGetCount( )
-			lexLoadC( x, sourcebufferFromZstring( code, code, @i->location ), FALSE )
+			lexLoadC( x, sourcebufferFromZstring( code, code, @i->location ) )
 			tkAddFlags( x, tkGetCount( ) - 1, TKFLAG_REMOVE or TKFLAG_ROOTFILE )
 			i = i->next
 		wend
@@ -1006,7 +1005,7 @@ private function frogReadAPI( byval options as ASTNODE ptr ) as ASTNODE ptr
 	astNameAnonUdtsAfterFirstAliasTypedef( ast )
 	astAddForwardDeclsForUndeclaredTagIds( ast )
 
-	astAutoExtern( ast, frog.windowsms, frog.whitespace )
+	astAutoExtern( ast, frog.windowsms )
 
 	if( frog.nonamefixup = FALSE ) then
 		astFixIdsInit( )
@@ -1163,10 +1162,7 @@ end sub
 		astPrependMaybeWithDivider( final, astNew( ASTCLASS_PRAGMAONCE ) )
 	end if
 
-	'' Do auto-formatting if not preserving whitespace
-	if( frog.whitespace = FALSE ) then
-		astAutoAddDividers( final )
-	end if
+	astAutoAddDividers( final )
 
 	'' Write out the .bi file
 	if( len( (frog.defaultoutname) ) = 0 ) then

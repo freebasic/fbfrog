@@ -13,7 +13,6 @@ type LEXSTUFF
 	x		as integer
 	location	as TKLOCATION
 	behindspace	as integer
-	keep_comments	as integer    '' Whether to ignore comments or produce TK_COMMENTs
 
 	ckeywords	as THASH
 	frogoptions	as THASH
@@ -126,17 +125,15 @@ private sub hNewLine( )
 	lex.location.source->lines = lex.location.linenum + 1
 end sub
 
-private sub hReadLineComment( )
+private sub hSkipLineComment( )
 	'' Line comments:
 	''    'abcd
 	''    //abcd
-	'' The whole comment body except for the ' or // is put into the
-	'' TK_COMMENT. The EOL behind the comment remains a separate token.
+	'' The EOL behind the comment is not skipped; it's a (separate) token.
 	'' In C mode the comment may contain escaped newlines ('\' [Spaces] EOL)
 	'' which means the comment continues on the next line.
 
 	lex.i += 2
-	var begin = lex.i
 	var escaped = FALSE
 
 	do
@@ -176,16 +173,11 @@ private sub hReadLineComment( )
 			lex.i += 1
 		end select
 	loop
-
-	if( lex.keep_comments ) then
-		hAddTextToken( TK_COMMENT, begin )
-	end if
 end sub
 
-private sub hReadComment( )
+private sub hSkipComment( )
 	var quote = lex.i[1]  '' '*' from either '/*' or '*/'
 	lex.i += 2
-	var begin = lex.i
 
 	var saw_end = FALSE
 	do
@@ -215,10 +207,6 @@ private sub hReadComment( )
 			lex.i += 1
 		end select
 	loop
-
-	if( lex.keep_comments ) then
-		hAddTextToken( TK_COMMENT, begin )
-	end if
 
 	if( saw_end ) then
 		lex.i += 2
@@ -472,7 +460,7 @@ private sub lexNext( )
 		hNewLine( )
 
 	case CH_FORMFEED
-		hReadBytes( TK_DIVIDER, 1 )
+		lex.i += 1
 
 	case CH_EXCL		'' !
 		if( lex.i[1] = CH_EQ ) then	'' !=
@@ -568,9 +556,9 @@ private sub lexNext( )
 		case CH_EQ	'' /=
 			hReadBytes( TK_SLASHEQ, 2 )
 		case CH_SLASH	'' //
-			hReadLineComment( )
+			hSkipLineComment( )
 		case CH_STAR	'' /*
-			hReadComment( )
+			hSkipComment( )
 		case else
 			hReadBytes( TK_SLASH, 1 )
 		end select
@@ -598,13 +586,9 @@ private sub lexNext( )
 			hReadBytes( TK_LTGT, 2 )
 		case else
 			'' If it's an #include, parse <...> as string literal
-			var y = lex.x
-			y = tkSkipComment( y, -1 )
-			if( tkGet( y ) = KW_INCLUDE ) then
-				y = tkSkipComment( y, -1 )
-				if( tkGet( y ) = TK_HASH ) then
-					y = tkSkipComment( y, -1 )
-					select case( tkGet( y ) )
+			if( tkGet( lex.x - 1 ) = KW_INCLUDE ) then
+				if( tkGet( lex.x - 2 ) = TK_HASH ) then
+					select case( tkGet( lex.x - 3 ) )
 					case TK_EOL, TK_EOF
 						hReadString( )
 						exit select, select
@@ -725,18 +709,11 @@ end sub
 ''
 '' C lexer entry point
 ''
-function lexLoadC _
-	( _
-		byval x as integer, _
-		byval source as SOURCEBUFFER ptr, _
-		byval keep_comments as integer _
-	) as integer
-
+function lexLoadC( byval x as integer, byval source as SOURCEBUFFER ptr ) as integer
 	lex.x = x
 	lex.location.source = source
 	lex.location.linenum = 0
 	lex.location.source->lines = 1
-	lex.keep_comments = keep_comments
 	lex.i = source->buffer
 	lex.bol = lex.i
 
@@ -848,7 +825,6 @@ function lexLoadArgs( byval x as integer, byval source as SOURCEBUFFER ptr ) as 
 	lex.location.source = source
 	lex.location.linenum = 0
 	lex.location.source->lines = 1
-	lex.keep_comments = FALSE
 	lex.i = source->buffer
 	lex.bol = lex.i
 	lex.behindspace = TRUE

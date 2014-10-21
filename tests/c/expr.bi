@@ -3,9 +3,6 @@
 #include once "crt/long.bi"
 
 type UDT as UDT_
-
-'' @fbfrog -whitespace -nonamefixup
-
 type MYINT as long
 
 type E as long
@@ -389,7 +386,6 @@ end enum
 #define A03(x) ("a" + "b")
 #define A04(x) (("a" + #x) + "b")
 #define A05(x) (((("a" + #x) + "b") + #x) + "c")
-
 #define A06 cast(any, 0)
 #define A07 cbyte(0)
 #define A08 cast(single, 0)
@@ -427,7 +423,6 @@ end enum
 #define A40 clng(0)
 #define A41 clngint(0)
 #define A42 cast(MYINT, 0)
-
 #macro A43
 	scope
 		a(0)
@@ -438,21 +433,17 @@ end enum
 #define A45 ()
 #define A46 (1)
 #define A47 (1)
-
-#define A48 (-(a = 0), -(a = 0))  '' C UOP nested inside children list
+#define A48 (-(a = 0), -(a = 0))
 #macro A49
 	scope
 		f(-(a = 0))
 	end scope
 #endmacro
-
 #define A50 defined(FOO)
 #define A51(a) defined(a)
-
 #define A52(T) cptr(T ptr, malloc(sizeof((T))))
 #define A53 cptr(MYINT ptr, malloc(sizeof(MYINT)))
 #define A54 cptr(const ulong ptr ptr ptr, malloc(123))
-
 #macro A55
 	scope
 		dim a(0 to 9) as long = (1, 2, 3, 4, 5, 6, 7, 8, 9, 10)

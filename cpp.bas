@@ -1,26 +1,6 @@
 ''
-'' C pre-processor
-''
-'' Token buffer preprocessing
-'' --------------------------
-''
-'' cppComments() assigns comments from TK_COMMENTs (if any exist even, depending
-'' on whether lexLoadC() was asked to preserve them or not) to other,
-'' non-whitespace, tokens. It tries to be smart and effectively assign comments
-'' to corresponding high-level constructs. For example, if a comment is found
-'' at the end of a non-empty line, it will be given to the last non-whitespace
-'' token in that line. This way, the C parser later won't be disturbed by any
-'' TK_COMMENTs and can easily collect assigned comments from the tokens of
-'' high-level constructs.
-''
-'' cppDividers() merges empty lines (i.e. multiple TK_EOLs) into TK_DIVIDERs,
-'' for nicer output formatting later. It can be nice to preserve the
-'' block/section/paragraph layout of the input, and still trim down unnecessary
-'' newlines.
-''
-''
-'' CPP directive parsing, #if evaluation, macro expansion
-'' ------------------------------------------------------
+'' C pre-processor: CPP directive parsing, #if evaluation, macro expansion,
+'' #include handling
 ''
 '' cppMain() goes through the token buffer much like a C preprocessor would do,
 '' parsing CPP directives keeping track of #defines and #undefs, doing macro
@@ -79,255 +59,6 @@
 #include once "crt.bi"
 
 declare sub hMaybeExpandMacro( byref x as integer, byval inside_ifexpr as integer )
-
-private function hIsBeforeEol( byval x as integer, byval delta as integer ) as integer
-	'' Can we reach EOL before hitting any non-space token?
-	x = tkSkipComment( x, delta )
-	select case( tkGet( x ) )
-	case TK_EOL, TK_EOF
-		function = TRUE
-	end select
-end function
-
-private sub hAccumComment( byval x as integer, byval comment as zstring ptr )
-	if( len( *comment ) = 0 ) then
-		exit sub
-	end if
-
-	dim as string text
-	var s = tkGetComment( x )
-	if( s ) then
-		text = *s + !"\n"
-	end if
-
-	text += *comment
-
-	tkSetComment( x, text )
-end sub
-
-private sub hAccumTkComment( byval x as integer, byval comment as integer )
-	assert( tkGet( comment ) = TK_COMMENT )
-	assert( tkGet( x ) <> TK_EOF )
-	hAccumComment( x, tkGetText( comment ) )
-end sub
-
-private function hSkipStatement( byval x as integer ) as integer
-	var begin = x
-
-	do
-		select case( tkGet( x ) )
-		case TK_EOF
-			exit do
-
-		'' ';' (statement separator)
-		case TK_SEMI
-			x = tkSkipCommentEol( x )
-			exit do
-
-		'' '#' usually starts PP directives, so that'd be the beginning
-		'' of a new statement, unless we're skipping that '#' itself.
-		case TK_HASH
-			if( x <= begin ) then
-				'' Otherwise, skip the whole PP directive -- until EOL
-				x = tkSkipCommentEol( hSkipToEol( x ) )
-			end if
-			exit do
-
-		end select
-
-		x = tkSkipCommentEol( x )
-	loop
-
-	assert( iif( tkGet( begin ) <> TK_EOF, x > begin, TRUE ) )
-	function = x
-end function
-
-private function cppComment( byval x as integer ) as integer
-	''
-	'' int A; //FOO    -> assign FOO to ';', so it can be
-	''                    picked up by the A vardecl
-	''
-	''  /*FOO*/ int A; -> assign FOO to 'int', ditto
-	''
-	'' //FOO           -> assign FOO to EOL, so it can be
-	'' <empty line>       picked up by a TK_DIVIDER
-	''
-	'' //FOO           -> assign FOO to EOL, ditto
-	'' int A;
-	'' <empty line>
-	''
-	'' //FOO           -> comment belongs to both A and B,
-	'' int A;             assign to EOL for a TK_DIVIDER
-	'' int B;
-	''
-	'' int /*FOO*/ A;  -> assign FOO to 'int'
-	''
-	'' int             -> assign FOO to EOL
-	'' //FOO
-	'' A;
-
-	var at_bol = hIsBeforeEol( x, -1 )
-	var at_eol = hIsBeforeEol( x,  1 )
-
-	var xnext = tkSkipComment( x )
-	var xprev = tkSkipComment( x, -1 )
-
-	if( at_bol and at_eol ) then
-		var xnextnonspace = tkSkipCommentEol( x )
-		var xnextstmt = hSkipStatement( x )
-
-		'' Comment above empty line (ie. above two EOLs or EOL & EOF)?
-		if( (tkCount( TK_EOL, x + 1, xnextnonspace ) >= 2) or _
-		    ((tkGet(                xnext   ) = TK_EOL) and _
-		     (tkGet( tkSkipComment( xnext ) ) = TK_EOF)) ) then
-			hAccumTkComment( xnext, x )
-
-		'' Comment above multiple consecutive statements? (not separated by empty lines)
-		elseif( (xnextstmt < hSkipStatement( xnextstmt )) and _
-		        (tkCount( TK_EOL, tkSkipCommentEol( xnextstmt, -1 ) + 1, xnextstmt - 1 ) < 2) ) then
-			hAccumTkComment( xnext, x )
-
-		'' Comment(s) is/are the only token(s) in the file?
-		elseif( (tkGet( xprev ) = TK_EOF) and (tkGet( xnext ) = TK_EOF) ) then
-			'' Insert a TK_EOL to hold the comment
-			tkInsert( x, TK_EOL )
-			x += 1
-			hAccumTkComment( x - 1, x )
-
-		'' Comment at EOF?
-		elseif( tkGet( xnext ) = TK_EOF ) then
-			hAccumTkComment( xprev, x )
-
-		'' Comment above single statement
-		else
-			hAccumTkComment( xnextnonspace, x )
-		end if
-
-	elseif( at_bol ) then
-		hAccumTkComment( xnext, x )
-
-	elseif( at_eol ) then
-		'' If behind a ',' (parameter/declarator list) or ';',
-		'' assign to token before that, making it easier to handle in
-		'' the parser, because it only has to collect tokens from the
-		'' core of a declaration, not the separator tokens like ',' or
-		'' ';' which are typically handled by separate functions.
-		select case( tkGet( xprev ) )
-		case TK_COMMA, TK_SEMI
-			'' Unless that ',' or ';' is the only token in this line
-			'' (which should be rare though in practice)
-			var xprevprev = tkSkipComment( xprev, -1 )
-			select case( xprevprev )
-			case TK_EOL, TK_EOF
-
-			case else
-				xprev = xprevprev
-			end select
-		end select
-
-		hAccumTkComment( xprev, x )
-
-	else
-		hAccumTkComment( xnext, x )
-	end if
-
-	tkRemove( x, x )
-	x -= 1
-
-	function = x
-end function
-
-private sub cppComments( byval first as integer )
-	var x = first
-	while( tkGet( x ) <> TK_EOF )
-		if( tkGet( x ) = TK_COMMENT ) then
-			x = cppComment( x )
-		end if
-		x += 1
-	wend
-end sub
-
-''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-
-private sub cppDividers( byval first as integer )
-	var x = first
-	while( tkGet( x ) <> TK_EOF )
-		var begin = x
-
-		'' Count empty lines in a row
-		var lines = 0
-		while( tkGet( x ) = TK_EOL )
-			lines += 1
-			x += 1
-		wend
-
-		if( lines >= 1 ) then
-			'' Merge empty lines into TK_DIVIDER, assuming we're starting at BOL.
-			''
-			''  ...code...
-			''
-			''  //foo
-			''
-			''  //bar
-			''  ...code...
-			''
-			'' "foo" is the comment associated with TK_DIVIDER, "bar" the one
-			'' associated with the following block of code, stored as TK_DIVIDER's
-			'' text.
-
-			var blockcomment = tkCollectComments( x - 1, x - 1 )
-
-			var comment = tkCollectComments( begin, x - 2 )
-			tkRemove( begin, x - 1 )
-			tkInsert( begin, TK_DIVIDER, blockcomment )
-			tkSetComment( begin, comment )
-			x = begin
-		else
-			'' Skip to next BOL
-			x = begin
-			do
-				select case( tkGet( x ) )
-				case TK_EOF
-					exit do
-				case TK_EOL
-					x += 1
-					exit do
-				end select
-				x += 1
-			loop
-		end if
-	wend
-
-	'' And remove DIVIDERs again inside statements, otherwise the C parser
-	'' will choke on them...
-	x = first
-	while( tkGet( x ) <> TK_EOF )
-		var y = hSkipStatement( x ) - 1
-
-		'' But don't touch DIVIDERs at begin/end of statement, only
-		'' remove those in the middle, if any
-		while( (x < y) and (tkGet( x ) = TK_DIVIDER) )
-			x += 1
-		wend
-
-		while( (x < y) and (tkGet( y ) = TK_DIVIDER) )
-			y -= 1
-		wend
-
-		while( x < y )
-			if( tkGet( x ) = TK_DIVIDER ) then
-				tkRemove( x, x )
-				x -= 1
-				y -= 1
-			end if
-			x += 1
-		wend
-
-		x = tkSkipCommentEol( x )
-	wend
-end sub
-
-''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 function hSkipToEol( byval x as integer ) as integer
 	while( (tkGet( x ) <> TK_EOL) and (tkGet( x ) <> TK_EOF) )
@@ -1767,7 +1498,7 @@ private function hInsertMacroExpansion _
 
 				'' and try to lex them
 				var y = tkGetCount( )
-				lexLoadC( y, sourcebufferFromZstring( "## merge operation", mergetext, tkGetLocation( x ) ), FALSE )
+				lexLoadC( y, sourcebufferFromZstring( "## merge operation", mergetext, tkGetLocation( x ) ) )
 
 				'' That should have produced only 1 token. If it produced more, then the merge failed.
 				assert( tkGetCount( ) >= (y + 1) )
@@ -2343,13 +2074,6 @@ private sub cppEndIf( )
 	cppPop( )
 end sub
 
-private sub cppWhitespace( )
-	if( frog.whitespace ) then
-		cppComments( cpp.x )
-		cppDividers( cpp.x )
-	end if
-end sub
-
 '' Search for #included files in one of the parent directories of the context
 '' file. Usually the #include will refer to a file in the same directory or in
 '' a sub-directory at the same level or some levels up.
@@ -2395,38 +2119,45 @@ private function hSearchHeaderFile _
 	function = ""
 end function
 
+private function hSkipEols( byval x as integer, byval delta as integer ) as integer
+	while( tkGet( x ) = TK_EOL )
+		x += delta
+	wend
+	function = x
+end function
+
 private function hDetectIncludeGuard( byval first as integer, byval last as integer ) as zstring ptr
 	assert( tkGet( first - 2 ) = TK_BEGININCLUDE )
 	assert( tkGet( first - 1 ) = TK_EOL )
 	assert( tkGet(  last + 1 ) = TK_ENDINCLUDE )
 
-	var x = tkSkipCommentEol( first - 1 )
+	var x = hSkipEols( first, 1 )
 
 	'' Does it have the following at the beginning?
 	''    #ifndef ID <EOL> #define ID ...
 	if( tkGet( x ) <> TK_HASH ) then exit function
-	x = tkSkipComment( x )
+	x += 1
 	if( tkGet( x ) <> KW_IFNDEF ) then exit function
-	x = tkSkipComment( x )
+	x += 1
 	if( tkGet( x ) <> TK_ID ) then exit function
 	var id1 = tkGetText( x )
-	x = tkSkipComment( x )
+	x += 1
 	if( tkGet( x ) <> TK_EOL ) then exit function
-	x = tkSkipComment( x )
+	x += 1
 	if( tkGet( x ) <> TK_HASH ) then exit function
-	x = tkSkipComment( x )
+	x += 1
 	if( tkGet( x ) <> KW_DEFINE ) then exit function
-	x = tkSkipComment( x )
+	x += 1
 	if( tkGet( x ) <> TK_ID ) then exit function
 	var id2 = tkGetText( x )
 	if( *id1 <> *id2 ) then exit function
 
 	'' and an <EOL>#endif at the end?
-	x = tkSkipCommentEol( last + 1, -1 )
+	x = hSkipEols( last, -1 )
 	if( tkGet( x ) <> KW_ENDIF ) then exit function
-	x = tkSkipComment( x, -1 )
+	x -= 1
 	if( tkGet( x ) <> TK_HASH ) then exit function
-	x = tkSkipComment( x, -1 )
+	x -= 1
 	if( tkGet( x ) <> TK_EOL ) then exit function
 
 	function = id1
@@ -2535,7 +2266,7 @@ private sub cppInclude( byval begin as integer )
 	var y = cpp.x
 	if( load_include_file ) then
 		'' Read the include file and insert its tokens
-		y = lexLoadC( y, sourcebufferFromFile( incfile, @location ), frog.whitespace )
+		y = lexLoadC( y, sourcebufferFromFile( incfile, @location ) )
 	end if
 
 	'' Put TK_ENDINCLUDE behind the #include file content, so we can detect
@@ -2571,10 +2302,6 @@ private sub cppInclude( byval begin as integer )
 		'' optimization as impossible by setting the guardid to NULL.
 		'' (see cppDisableIncludeGuardOptimization())
 		cpp.stack(cpp.level).knownfile = cppAppendKnownFile( incfile, guardid )
-	end if
-
-	if( load_include_file ) then
-		cppWhitespace( )
 	end if
 end sub
 
@@ -2857,7 +2584,7 @@ end sub
 
 private function hIsAtBOL( byval x as integer ) as integer
 	select case( tkGet( x - 1 ) )
-	case TK_EOL, TK_EOF, TK_DIVIDER
+	case TK_EOL, TK_EOF
 		function = TRUE
 	end select
 end function
@@ -2907,7 +2634,7 @@ private sub cppNext( )
 			if( tkGet( cpp.x ) <> TK_EOL ) then
 				pragma += !"\n"
 			end if
-			lexLoadC( cpp.x, sourcebufferFromZstring( "_Pragma(" + text + ")", pragma, tkGetLocation( begin ) ), FALSE )
+			lexLoadC( cpp.x, sourcebufferFromZstring( "_Pragma(" + text + ")", pragma, tkGetLocation( begin ) ) )
 			exit sub
 		end if
 
@@ -2934,7 +2661,6 @@ private sub cppNext( )
 end sub
 
 sub cppMain( )
-	cppWhitespace( )
 	while( tkGet( cpp.x ) <> TK_EOF )
 		cppNext( )
 	wend

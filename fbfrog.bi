@@ -233,14 +233,12 @@ const TKFLAG_ROOTFILE		= 1 shl 4  '' Used to mark the internal #include statemen
 
 enum
 	TK_EOF
-	TK_DIVIDER
 	TK_BEGIN
 	TK_END
 	TK_PPMERGE
 	TK_ARGBEGIN
 	TK_ARGEND
 	TK_EOL
-	TK_COMMENT
 	TK_BEGININCLUDE
 	TK_ENDINCLUDE
 
@@ -367,7 +365,6 @@ enum
 	OPT_NODEFAULTSCRIPT = OPT__FIRST
 	OPT_FILTEROUT
 	OPT_FILTERIN
-	OPT_WHITESPACE
 	OPT_WINDOWSMS
 	OPT_CONSTANTS
 	OPT_NONAMEFIXUP
@@ -408,7 +405,6 @@ declare function tkInfoPretty( byval tk as integer ) as string
 declare sub tkInit( )
 declare sub tkDontReportContext( )
 declare sub tkEnd( )
-declare function hDumpComment( byval comment as zstring ptr ) as string
 declare function tkDumpOne( byval x as integer ) as string
 declare sub tkDump overload( byval first as integer, byval last as integer )
 declare sub tkDump overload( )
@@ -435,29 +431,12 @@ declare sub tkAddFlags( byval first as integer, byval last as integer, byval fla
 declare sub tkSetRemove overload( byval x as integer )
 declare sub tkSetRemove overload( byval first as integer, byval last as integer )
 declare function tkGetFlags( byval x as integer ) as integer
-declare sub tkSetComment( byval x as integer, byval comment as zstring ptr )
-declare function tkGetComment( byval x as integer ) as zstring ptr
 declare function tkCount _
 	( _
 		byval tk as integer, _
 		byval first as integer, _
 		byval last as integer _
 	) as integer
-declare function tkSkipComment _
-	( _
-		byval x as integer, _
-		byval delta as integer = 1 _
-	) as integer
-declare function tkSkipCommentEol _
-	( _
-		byval x as integer, _
-		byval delta as integer = 1 _
-	) as integer
-declare function tkCollectComments _
-	( _
-		byval first as integer, _
-		byval last as integer _
-	) as string
 declare sub tkApplyRemoves( )
 declare sub tkTurnCPPTokensIntoCIds( )
 declare function tkSpell overload( byval x as integer ) as string
@@ -684,7 +663,6 @@ type ASTNODE
 
 	'' Identifiers/string literals, or NULL
 	text		as zstring ptr
-	comment		as zstring ptr
 	alias		as zstring ptr  '' Original identifier, if symbol was renamed
 
 	'' Data type (vars, fields, params, function results, expressions)
@@ -768,8 +746,6 @@ declare sub astSetType _
 		byval dtype as integer, _
 		byval subtype as ASTNODE ptr _
 	)
-declare sub astSetComment( byval n as ASTNODE ptr, byval comment as zstring ptr )
-declare sub astAddComment( byval n as ASTNODE ptr, byval comment as zstring ptr )
 declare function astCloneNode( byval n as ASTNODE ptr ) as ASTNODE ptr
 declare function astClone( byval n as ASTNODE ptr ) as ASTNODE ptr
 declare sub astSetAttribOnAll( byval n as ASTNODE ptr, byval attrib as integer )
@@ -813,12 +789,7 @@ declare function astLookupMacroParam _
 		byval id as zstring ptr _
 	) as integer
 declare sub astMakeProcsDefaultToCdecl( byval n as ASTNODE ptr )
-declare sub astAutoExtern _
-	( _
-		byval ast as ASTNODE ptr, _
-		byval use_stdcallms as integer, _
-		byval whitespace as integer _
-	)
+declare sub astAutoExtern( byval ast as ASTNODE ptr, byval use_stdcallms as integer )
 declare sub astSolveOutArrayTypedefs( byval n as ASTNODE ptr, byval ast as ASTNODE ptr )
 declare sub astSolveOutProcTypedefs( byval n as ASTNODE ptr, byval ast as ASTNODE ptr )
 declare sub astFixArrayParams( byval n as ASTNODE ptr )
@@ -862,12 +833,7 @@ declare sub astProcessVerblocks( byval code as ASTNODE ptr )
 
 declare sub lexInit( )
 declare function lexIdentifyCKeyword( byval id as zstring ptr ) as integer
-declare function lexLoadC _
-	( _
-		byval x as integer, _
-		byval source as SOURCEBUFFER ptr, _
-		byval keep_comments as integer _
-	) as integer
+declare function lexLoadC( byval x as integer, byval source as SOURCEBUFFER ptr ) as integer
 declare function lexLoadArgs( byval x as integer, byval source as SOURCEBUFFER ptr ) as integer
 declare function lexPeekLine _
 	( _
@@ -912,7 +878,7 @@ type FROGVERSION
 end type
 
 namespace frog
-	extern as integer verbose, whitespace
+	extern as integer verbose
 	extern incdirs as ASTNODE ptr
 
 	extern as ASTNODE ptr script
