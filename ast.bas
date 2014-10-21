@@ -699,12 +699,6 @@ function astDumpOne( byval n as ASTNODE ptr ) as string
 	function = s
 end function
 
-private sub hPrintIndentation( byval nestlevel as integer )
-	for i as integer = 2 to nestlevel
-		print "   ";
-	next
-end sub
-
 sub astDump _
 	( _
 		byval n as ASTNODE ptr, _
@@ -714,12 +708,14 @@ sub astDump _
 
 	nestlevel += 1
 
+	var s = space( (nestlevel - 1) * 3 )
+
 	if( n ) then
-		hPrintIndentation( nestlevel )
 		if( len( prefix ) > 0 ) then
-			print prefix + ": ";
+			s += prefix + ": "
 		end if
-		print astDumpOne( n )
+		s += astDumpOne( n )
+		print s
 
 		#macro dumpField( field )
 			if( n->field ) then
@@ -737,8 +733,8 @@ sub astDump _
 			child = child->next
 		wend
 	else
-		hPrintIndentation( nestlevel )
-		print "<NULL>"
+		s += "<NULL>"
+		print s
 	end if
 
 	nestlevel -= 1
