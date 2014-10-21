@@ -61,10 +61,6 @@ private function hLookupKeyword _
 	end if
 end function
 
-function lexIdentifyCKeyword( byval id as zstring ptr ) as integer
-	function = hLookupKeyword( @lex.ckeywords, id, TK_ID )
-end function
-
 sub lexGetLocation( byval location as TKLOCATION ptr )
 	*location = lex.location
 	location->column = lex.i - lex.bol
@@ -101,7 +97,7 @@ private sub hAddTextToken( byval tk as integer, byval begin as ubyte ptr )
 		'' If it's a C keyword, insert the corresponding KW_* (without
 		'' storing any string data). Otherwise, if it's a random symbol,
 		'' just insert a TK_ID and store the string data on it.
-		tk = lexIdentifyCKeyword( begin )
+		tk = hLookupKeyword( @lex.ckeywords, begin, TK_ID )
 		if( tk <> TK_ID ) then
 			begin = NULL
 		end if
