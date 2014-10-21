@@ -947,18 +947,14 @@ private function cInclude( ) as ASTNODE ptr
 	'' #include
 	c.x += 1
 
-	var ppinclude = astNew( ASTCLASS_PPINCLUDE )
-
 	'' "..."
 	assert( tkGet( c.x ) = TK_STRING )
-	astSetText( ppinclude, tkGetText( c.x ) )
+	function = astNew( ASTCLASS_PPINCLUDE, tkGetText( c.x ) )
 	c.x += 1
 
 	'' Eol
 	assert( tkGet( c.x ) = TK_EOL )
 	c.x += 1
-
-	function = ppinclude
 end function
 
 private function cPragmaPackNumber( ) as integer
