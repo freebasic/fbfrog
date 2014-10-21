@@ -21,15 +21,20 @@
 ''     that API are inserted into the tk buffer using lexLoadC()
 ''   * CPP runs and preprocesses the content of the tk buffer (cppMain()):
 ''     directive parsing, macro expansion, #if evaluation, #include handling.
-''     All #includes are expanded (as long as the included file was found),
-''     those that are supposed to be filtered out due to -filterout/-filterin
-''     are marked accordingly
+''     #includes statements are expanded internally so that fbfrog gets to see
+''     as much of the API as possible, which improves accuracy of things like
+''     typedef detection and symbol renaming. The tokens from include files
+''     affected by -filterout are marked for removal. Filenames of #include
+''     statements from toplevel files are recorded, if they weren't found or
+''     their code will be filtered out.
 ''   * cPreParse() to identify typedefs before the main C parsing pass
 ''   * C parser parses the preprocessed constructs in the tk buffer (cFile()),
 ''     produces a self-contained AST
 ''   * Various steps of AST modifications to make the AST FB-friendly
 ''     (e.g. fixing identifier conflicts, or solving out redundant typedefs)
 ''   * Constucts marked due to -filterout are dropped
+''   * Direct #include statements recorded by the CPP are reinserted at the top
+''     of the bindings
 '' 3. AST merging:
 ''   * Explaining VERBLOCKs: VERBLOCK nodes basically are like #if conditionals.
 ''     They are used to partition the nodes (API declarations) in an AST into
@@ -943,6 +948,11 @@ private function frogReadAPI( byval options as ASTNODE ptr ) as ASTNODE ptr
 
 	cppMain( )
 
+	'' Grab the direct #include file names collected by the CPP
+	var directincludes = cppTakeDirectIncludes( )
+
+	cppEnd( )
+
 	'' Remove CPP directives and EOLs (tokens marked for removal by
 	'' cppMain()). Doing this as a separate step allows
 	'' * error reports during cppMain() to view the complete input
@@ -1016,13 +1026,16 @@ private function frogReadAPI( byval options as ASTNODE ptr ) as ASTNODE ptr
 
 	assert( ast->class = ASTCLASS_GROUP )
 
-	'' Add #include "crt/long.bi" to the binding, if it uses CLONG
+	'' Add "crt/long[double].bi" as direct #includes if the binding uses CLONG[DOUBLE]
 	if( astUsesDtype( ast, TYPE_CLONGDOUBLE ) ) then
-		astPrependMaybeWithDivider( ast, astNewIncludeOnce( "crt/longdouble.bi" ) )
+		astPrepend( directincludes, astNew( ASTCLASS_PPINCLUDE, "crt/longdouble.bi" ) )
 	end if
 	if( astUsesDtype( ast, TYPE_CLONG ) or astUsesDtype( ast, TYPE_CULONG ) ) then
-		astPrependMaybeWithDivider( ast, astNewIncludeOnce( "crt/long.bi" ) )
+		astPrepend( directincludes, astNew( ASTCLASS_PPINCLUDE, "crt/long.bi" ) )
 	end if
+
+	'' Prepend the direct #includes (if any), outside the EXTERN block
+	astPrependMaybeWithDivider( ast, directincludes )
 
 	'' Prepend #inclibs
 	scope

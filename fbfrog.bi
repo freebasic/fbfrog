@@ -666,7 +666,7 @@ const ASTATTRIB_ENUMCONST     = 1 shl 11  '' CONSTI
 const ASTATTRIB_NEEDRENAME    = 1 shl 12
 const ASTATTRIB_POISONED      = 1 shl 13
                             ''= 1 shl 14
-const ASTATTRIB_ONCE          = 1 shl 15  '' Marks #includes as "#include once"
+                            ''= 1 shl 15
 const ASTATTRIB_PACKED        = 1 shl 16  '' __attribute__((packed))
 const ASTATTRIB_VARIADIC      = 1 shl 17  '' PPDEFINE/MACROPARAM: variadic macros
 const ASTATTRIB_PARENTHESIZEDMACROPARAM = 1 shl 18
@@ -723,7 +723,6 @@ end type
 declare function astNew overload( byval class_ as integer ) as ASTNODE ptr
 declare function astNew overload( byval class_ as integer, byval text as zstring ptr ) as ASTNODE ptr
 declare function astNew overload( byval class_ as integer, byval c1 as ASTNODE ptr, byval c2 as ASTNODE ptr = NULL ) as ASTNODE ptr
-declare function astNewIncludeOnce( byval filename as zstring ptr ) as ASTNODE ptr
 declare function astNewPPDEFINE( byval id as zstring ptr ) as ASTNODE ptr
 declare function astNewIIF _
 	( _
@@ -887,11 +886,15 @@ declare function hSkipToEol( byval x as integer ) as integer
 declare function hNumberLiteral( byval x as integer, byval is_cpp as integer, byref errmsg as string ) as ASTNODE ptr
 extern as integer cprecedence(ASTCLASS_CLOGOR to ASTCLASS_IIF)
 declare function hDefineHead( byref x as integer ) as ASTNODE ptr
+
 declare sub cppInit( )
+declare sub cppEnd( )
 declare sub cppNoExpandSym( byval id as zstring ptr )
 declare sub cppRemoveSym( byval id as zstring ptr )
 declare sub cppAddFilter( byval filter as ASTNODE ptr )
+declare function cppTakeDirectIncludes( ) as ASTNODE ptr
 declare sub cppMain( )
+
 declare sub cInit( )
 declare sub cEnd( )
 declare sub cAddTypedef( byval id as zstring ptr )

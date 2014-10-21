@@ -943,20 +943,6 @@ private function cDefine( ) as ASTNODE ptr
 	function = macro
 end function
 
-private function cInclude( ) as ASTNODE ptr
-	'' #include
-	c.x += 1
-
-	'' "..."
-	assert( tkGet( c.x ) = TK_STRING )
-	function = astNew( ASTCLASS_PPINCLUDE, tkGetText( c.x ) )
-	c.x += 1
-
-	'' Eol
-	assert( tkGet( c.x ) = TK_EOL )
-	c.x += 1
-end function
-
 private function cPragmaPackNumber( ) as integer
 	var n = cNumberLiteral( )
 	if( n->class <> ASTCLASS_CONSTI ) then
@@ -1938,8 +1924,6 @@ private function cConstruct( byval body as integer ) as ASTNODE ptr
 			select case( *tkSpellId( c.x ) )
 			case "define"
 				directive = cDefine( )
-			case "include"
-				directive = cInclude( )
 			case "pragma"
 				c.x += 1
 
@@ -2048,11 +2032,13 @@ private function hFindBeginInclude( byval x as integer ) as integer
 	var level = 0
 	do
 		x -= 1
+		assert( tkGet( x ) <> TK_EOF )
 		select case( tkGet( x ) )
 		case TK_BEGININCLUDE
 			if( level = 0 ) then
 				exit do
 			end if
+			assert( level > 0 )
 			level -= 1
 		case TK_ENDINCLUDE
 			level += 1

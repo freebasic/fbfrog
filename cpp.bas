@@ -55,6 +55,15 @@
 '' tokens being inserted which wouldn't automatically have the TKFLAG_FILTEROUT
 '' flag too.
 ''
+'' #include statements themselves are not preserved as-is, but the filenames of
+'' unexpanded direct #includes are recorded, so that frogReadAPI() can re-add
+'' them to the top of the binding. "Unexpanded" here means #includes which were
+'' either not found, or found but their content will be filtered out due to
+'' -filterout. #includes which were found and are not going to be filtered out
+'' will just be expanded in place. Generally, the point is that any #include
+'' statements that won't be expanded in the final binding should be preserved
+'' in the final binding, because they'll probably be needed.
+''
 '' cppNoExpandSym() can be used to disable macro expansion for certain symbols.
 '' This should be pretty rare though; usually in headers where function
 '' declarations etc. are obfuscated by macros, they're going to need to be
@@ -712,6 +721,13 @@ namespace cpp
 	''   #if 0 block, and this way, to determine which #endif ends skipping
 	dim shared as integer skiplevel
 
+	'' Current #include nesting level, so we can easily determine whether
+	'' we're in a root file or not.
+	''    0  = real toplevel with the #include statements for the root files
+	''    1  = the root files
+	''    2+ = included files
+	dim shared as integer includelevel
+
 	'' Lookup table of macros known to be either defined or undefined.
 	''   defined <=> data = a DEFINEINFO object
 	'' undefined <=> data = NULL
@@ -756,6 +772,11 @@ namespace cpp
 	dim shared files as KNOWNFILE ptr
 	dim shared filecount as integer
 	dim shared filetb as THASH  '' data = index into files array
+
+	'' The unique file names from all toplevel #include statements,
+	'' in the order in which they appeared.
+	dim shared directincludes as ASTNODE ptr
+	dim shared directincludetb as THASH
 end namespace
 
 sub cppInit( )
@@ -771,24 +792,32 @@ sub cppInit( )
 	'' No skipping yet
 	cpp.skiplevel = MAXSTACK
 
+	cpp.includelevel = 0
+
 	hashInit( @cpp.macros, 4, TRUE )
 	cpp.savedmacros = NULL
 	cpp.savedmacrocount = 0
 	hashInit( @cpp.noexpands, 4, TRUE )
 	hashInit( @cpp.removes, 4, TRUE )
 	cpp.filters = astNewGROUP( )
+
 	cpp.files = NULL
 	cpp.filecount = 0
 	hashInit( @cpp.filetb, 4, FALSE )
+
+	cpp.directincludes = astNewGROUP( )
+	hashInit( @cpp.directincludetb, 4, FALSE )
 end sub
 
-private sub cppEnd( )
+sub cppEnd( )
 	'' If anything is left on the stack at EOF, it can only be #ifs
 	'' (#includes should be popped due to TK_ENDINCLUDE's already)
 	if( cpp.level > 0 ) then
 		assert( cpp.stack(cpp.level).state >= STATE_IF )
 		tkOops( cpp.x, "missing #endif" )
 	end if
+
+	assert( cpp.includelevel = 0 )
 
 	scope
 		for i as integer = 0 to cpp.macros.room - 1
@@ -805,6 +834,7 @@ private sub cppEnd( )
 	hashEnd( @cpp.noexpands )
 	hashEnd( @cpp.removes )
 	astDelete( cpp.filters )
+
 	hashEnd( @cpp.filetb )
 	scope
 		for i as integer = 0 to cpp.filecount - 1
@@ -813,9 +843,13 @@ private sub cppEnd( )
 		next
 		deallocate( cpp.files )
 	end scope
+
+	''astDelete( cpp.directincludes )  '' currently unnecessary, due to cppTakeDirectIncludes()
+	hashEnd( @cpp.directincludetb )
 end sub
 
 #define cppSkipping( ) (cpp.skiplevel <> MAXSTACK)
+#define cppAtToplevel( ) (cpp.includelevel <= 1)
 
 sub cppNoExpandSym( byval id as zstring ptr )
 	hashAddOverwrite( @cpp.noexpands, id, NULL )
@@ -1006,6 +1040,25 @@ private function cppLookupKnownFile( byval incfile as zstring ptr ) as integer
 	else
 		function = -1
 	end if
+end function
+
+private sub cppAddDirectInclude( byref inctext as string )
+	var hash = hashHash( inctext )
+	var item = hashLookup( @cpp.directincludetb, inctext, hash )
+	if( item->s ) then
+		'' Already exists; ignore.
+		'' We don't want duplicate #include statements.
+		exit sub
+	end if
+
+	astAppend( cpp.directincludes, astNew( ASTCLASS_PPINCLUDE, inctext ) )
+
+	hashAdd( @cpp.directincludetb, item, hash, cpp.directincludes->tail->text, NULL )
+end sub
+
+function cppTakeDirectIncludes( ) as ASTNODE ptr
+	function = cpp.directincludes
+	cpp.directincludes = NULL
 end function
 
 private sub cppEol( )
@@ -2104,9 +2157,16 @@ private sub cppPush( byval state as integer )
 		.state = state
 		.knownfile = -1
 	end with
+
+	if( state = STATE_FILE ) then
+		cpp.includelevel += 1
+	end if
 end sub
 
 private sub cppPop( )
+	if( cpp.stack(cpp.level).state = STATE_FILE ) then
+		cpp.includelevel -= 1
+	end if
 	cpp.level -= 1
 end sub
 
@@ -2380,6 +2440,9 @@ private sub cppInclude( byval begin as integer )
 
 	cppEol( )
 
+	'' Mark #include directive for removal
+	tkSetRemove( begin, cpp.x - 1 )
+
 	dim incfile as string
 	if( is_rootfile ) then
 		incfile = inctext
@@ -2387,6 +2450,12 @@ private sub cppInclude( byval begin as integer )
 		incfile = hSearchHeaderFile( contextfile, inctext )
 		if( len( incfile ) = 0 ) then
 			frogPrint( inctext + " (not found)" )
+
+			'' Add it as direct #include too, since it couldn't be expanded
+			if( cppAtToplevel( ) ) then
+				cppAddDirectInclude( inctext )
+			end if
+
 			exit sub
 		end if
 	end if
@@ -2408,11 +2477,14 @@ private sub cppInclude( byval begin as integer )
 	end if
 	frogPrint( message )
 
+	'' Add it as direct #include if its content will be filtered out
+	'' (i.e. if it won't be expanded)
+	if( (not keep) and cppAtToplevel( ) ) then
+		cppAddDirectInclude( inctext )
+	end if
+
 	'' Push the #include file context
 	cppPush( STATE_FILE )
-
-	'' Mark #include directive for removal
-	tkSetRemove( begin, cpp.x - 1 )
 
 	'' Insert this helper token so we can identify the start of #included
 	'' tokens later during cPreParse().
@@ -2725,6 +2797,9 @@ private sub cppDirective( )
 
 	case KW_INCLUDE
 		cppInclude( begin )
+		'' cppInclude() already marks the #include statement for removal.
+		'' We can't do that here because then the TK_BEGININCLUDE would
+		'' be marked too.
 		setremove = FALSE
 
 	case KW_DEFINE
@@ -2846,5 +2921,4 @@ sub cppMain( )
 	while( tkGet( cpp.x ) <> TK_EOF )
 		cppNext( )
 	wend
-	cppEnd( )
 end sub

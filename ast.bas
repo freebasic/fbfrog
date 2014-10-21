@@ -151,12 +151,6 @@ function astNew overload( byval class_ as integer, byval c1 as ASTNODE ptr, byva
 	function = n
 end function
 
-function astNewIncludeOnce( byval filename as zstring ptr ) as ASTNODE ptr
-	var n = astNew( ASTCLASS_PPINCLUDE, filename )
-	n->attrib or= ASTATTRIB_ONCE
-	function = n
-end function
-
 function astNewPPDEFINE( byval id as zstring ptr ) as ASTNODE ptr
 	var n = astNew( ASTCLASS_PPDEFINE, id )
 	n->paramcount = -1
@@ -703,7 +697,6 @@ function astDumpOne( byval n as ASTNODE ptr ) as string
 	checkAttrib( ENUMCONST )
 	checkAttrib( NEEDRENAME )
 	checkAttrib( POISONED )
-	checkAttrib( ONCE )
 	checkAttrib( PACKED )
 	checkAttrib( VARIADIC )
 	checkAttrib( DUMMYID )

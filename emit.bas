@@ -433,10 +433,7 @@ private function emitAst _
 		emitStmt( "#pragma once", n->comment )
 
 	case ASTCLASS_PPINCLUDE
-		s = "#include "
-		if( n->attrib and ASTATTRIB_ONCE ) then
-			s += "once "
-		end if
+		s = "#include once "
 		s += """" + *n->text + """"
 		emitStmt( s, n->comment )
 		s = ""
