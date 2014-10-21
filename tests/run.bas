@@ -180,10 +180,17 @@ sub hTest( byref hfile as string )
 	'' ./fbfrog *.h <extraoptions> > txtfile 2>&1
 	var ln = fbfrog + " " + hfile + " " + extraoptions
 	var result = shell( ln + " > " + txtfile + " 2>&1" )
-	if( result = -1 ) then
+	select case( result )
+	case -1
 		print "command not found: '" + ln + "'"
 		end 1
-	end if
+
+	case 0, 1
+
+	case else
+		print "fbfrog (or the shell) terminated with unusual error code " & result
+		end 1
+	end select
 
 	dim as string message, suffix
 	if( is_failure_test ) then
