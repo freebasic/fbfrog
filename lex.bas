@@ -177,7 +177,6 @@ private sub hSkipComment( )
 	'' /*
 	lex.i += 2
 
-	var saw_end = FALSE
 	do
 		select case( lex.i[0] )
 		case 0
@@ -185,7 +184,6 @@ private sub hSkipComment( )
 
 		case CH_STAR		'' *
 			if( lex.i[1] = CH_SLASH ) then	'' */
-				saw_end = TRUE
 				exit do
 			end if
 			lex.i += 1
@@ -206,9 +204,8 @@ private sub hSkipComment( )
 		end select
 	loop
 
-	if( saw_end ) then
-		lex.i += 2
-	end if
+	'' */
+	lex.i += 2
 end sub
 
 '' Identifier/keyword lexing: sequences of A-Za-z0-9_
@@ -353,12 +350,10 @@ private sub hReadString( )
 	end select
 
 	lex.i += 1
-	var saw_end = FALSE
 	var j = 0  '' current write position in text buffer
 	do
 		select case( lex.i[0] )
 		case quotechar
-			saw_end = TRUE
 			exit do
 
 		case CH_LF, CH_CR, 0
@@ -423,9 +418,8 @@ private sub hReadString( )
 		end if
 	loop
 
-	if( saw_end ) then
-		lex.i += 1
-	end if
+	'' closing quote
+	lex.i += 1
 
 	'' null-terminator
 	lex.text[j] = 0
