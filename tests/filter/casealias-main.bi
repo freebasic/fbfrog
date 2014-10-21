@@ -1,3 +1,3 @@
 #pragma once
 
-#include once "casealias.h"
+#include once "casealias.bi"

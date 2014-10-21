@@ -232,8 +232,6 @@ To do:
 * Automatically detect #include guards and remove the left over #defines
 * Ignore __attribute__((aligned(N))) (show a warning?). FB doesn't have it, and
   often it's just used for "better" performance anyways, not really needed.
-* Handling of #includes: If found but not inserted, then the #include statement
-  should be preserved but renamed .h -> .bi. If not found, just remove it.
 * Beautify comments, e.g. for /**/ comments, remove the * at the start of each
   line if each line starts with that, etc.
 * Support dimension-less arrays with initializers: int a[] = {1, 2};

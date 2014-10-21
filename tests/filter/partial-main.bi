@@ -1,7 +1,7 @@
 #pragma once
 
-#include once "partial-field.h"
-#include once "partial-param.h"
+#include once "partial-field.bi"
+#include once "partial-param.bi"
 
 extern "C"
 

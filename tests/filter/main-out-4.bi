@@ -1,5 +1,5 @@
 #pragma once
 
-#include once "1.h"
-#include once "2.h"
-#include once "3.h"
+#include once "1.bi"
+#include once "2.bi"
+#include once "3.bi"

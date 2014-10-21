@@ -1,6 +1,6 @@
 #pragma once
 
-#include once "callconv.h"
+#include once "callconv.bi"
 
 extern "Windows"
 

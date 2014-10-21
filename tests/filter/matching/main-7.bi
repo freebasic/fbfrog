@@ -1,6 +1,6 @@
 #pragma once
 
-#include once "aaa.h"
-#include once "aab.h"
-#include once "abb.h"
-#include once "bbb.h"
+#include once "aaa.bi"
+#include once "aab.bi"
+#include once "abb.bi"
+#include once "bbb.bi"

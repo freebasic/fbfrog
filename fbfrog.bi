@@ -197,6 +197,9 @@ declare sub hashDump( byval h as THASH ptr )
 extern fbkeywordhash as THASH
 declare sub fbkeywordsInit( )
 
+extern fbcrtheaderhash as THASH
+declare sub fbcrtheadersInit( )
+
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 #if defined( __FB_WIN32__ ) or defined( __FB_DOS__ )

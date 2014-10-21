@@ -1,3 +1,3 @@
 #pragma once
 
-#include once "forwarddecl.h"
+#include once "forwarddecl.bi"

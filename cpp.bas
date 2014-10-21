@@ -1042,16 +1042,33 @@ private function cppLookupKnownFile( byval incfile as zstring ptr ) as integer
 	end if
 end function
 
+'' Remap .h name to a .bi name. If it's a known system header, we can even remap
+'' it to the corresponding FB header (in some cases it's not as simple as
+'' replacing .h by .bi).
+private sub hTranslateHeaderFileName( byref filename as string )
+	filename = pathStripExt( filename )
+
+	'' Is it one of the CRT headers? Remap it to crt/*.bi
+	if( hashContains( @fbcrtheaderhash, filename, hashHash( filename ) ) ) then
+		filename = "crt/" + filename
+	end if
+
+	filename += ".bi"
+end sub
+
 private sub cppAddDirectInclude( byref inctext as string )
-	var hash = hashHash( inctext )
-	var item = hashLookup( @cpp.directincludetb, inctext, hash )
+	var filename = inctext
+	hTranslateHeaderFileName( filename )
+
+	var hash = hashHash( filename )
+	var item = hashLookup( @cpp.directincludetb, filename, hash )
 	if( item->s ) then
 		'' Already exists; ignore.
 		'' We don't want duplicate #include statements.
 		exit sub
 	end if
 
-	astAppend( cpp.directincludes, astNew( ASTCLASS_PPINCLUDE, inctext ) )
+	astAppend( cpp.directincludes, astNew( ASTCLASS_PPINCLUDE, filename ) )
 
 	hashAdd( @cpp.directincludetb, item, hash, cpp.directincludes->tail->text, NULL )
 end sub

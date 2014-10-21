@@ -1,6 +1,6 @@
 #pragma once
 
-#include once "include1.h"
+#include once "include1.bi"
 
 dim shared a as long
 dim shared include2 as long

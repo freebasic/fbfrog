@@ -1355,6 +1355,25 @@ end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
+'' *.h CRT headers for which FB has corresponding crt/*.bi versions
+dim shared fbcrtheaders(0 to ...) as zstring ptr = _
+{ _
+	@"assert", @"ctype", @"errno", @"float", @"limits", @"locale", _
+	@"math", @"setjmp", @"signal", @"stdarg", @"stddef", @"stdio", _
+	@"stdlib", @"string", @"time" _
+}
+
+dim shared fbcrtheaderhash as THASH
+
+sub fbcrtheadersInit( )
+	hashInit( @fbcrtheaderhash, 5, TRUE )
+	for i as integer = lbound( fbcrtheaders ) to ubound( fbcrtheaders )
+		hashAddOverwrite( @fbcrtheaderhash, fbcrtheaders(i), NULL )
+	next
+end sub
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
 function hReadableDirExists( byref path as string ) as integer
 	var fixed = path
 	if( right( fixed, len( PATHDIV ) ) = PATHDIV ) then

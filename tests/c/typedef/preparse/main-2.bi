@@ -1,6 +1,6 @@
 #pragma once
 
-#include once "b.h"
+#include once "b.bi"
 
 #define X1 cast(A, 0)
 #define X2 cast(B, 0)

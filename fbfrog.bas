@@ -1081,6 +1081,7 @@ end sub
 
 	sourcebuffersInit( )
 	fbkeywordsInit( )
+	fbcrtheadersInit( )
 	lexInit( )
 
 	tkInit( )
