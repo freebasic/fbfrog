@@ -125,14 +125,11 @@ private sub hNewLine( )
 	lex.location.source->lines = lex.location.linenum + 1
 end sub
 
+'' // C++ comment
+'' The EOL behind the comment is not skipped; it's a (separate) token.
+'' The comment may contain escaped newlines ('\' [Spaces] EOL)
+'' which means the comment continues on the next line.
 private sub hSkipLineComment( )
-	'' Line comments:
-	''    'abcd
-	''    //abcd
-	'' The EOL behind the comment is not skipped; it's a (separate) token.
-	'' In C mode the comment may contain escaped newlines ('\' [Spaces] EOL)
-	'' which means the comment continues on the next line.
-
 	lex.i += 2
 	var escaped = FALSE
 
@@ -175,8 +172,9 @@ private sub hSkipLineComment( )
 	loop
 end sub
 
+'' /* C comment */
 private sub hSkipComment( )
-	var quote = lex.i[1]  '' '*' from either '/*' or '*/'
+	'' /*
 	lex.i += 2
 
 	var saw_end = FALSE
@@ -185,8 +183,8 @@ private sub hSkipComment( )
 		case 0
 			lexOops( "comment left open" )
 
-		case quote		'' ' or *
-			if( lex.i[1] = CH_SLASH ) then	'' '/ or */
+		case CH_STAR		'' *
+			if( lex.i[1] = CH_SLASH ) then	'' */
 				saw_end = TRUE
 				exit do
 			end if
@@ -335,8 +333,8 @@ private sub hReadString( )
 	''    L"foo"
 	'' The string content is stored into the token, but not the quotes.
 	'' Escape sequences are expanded except for \\ and \0.
-	'' In C mode, string literals may contain escaped EOLs and continue
-	'' on the next line.
+	'' String literals may contain escaped EOLs and continue on the next
+	'' line.
 
 	var id = TK_STRING
 	var is_wchar = FALSE
