@@ -2215,13 +2215,35 @@ private sub cppInclude( byval begin as integer )
 	var keep = is_rootfile orelse cppKeepIncludeContent( prettyfile )
 	if( keep = FALSE ) then
 		message += " (filtered out)"
+
+		'' Add it as direct #include if its content will be filtered out
+		'' (i.e. if it won't be expanded)
+		if( cppAtToplevel( ) ) then
+			cppAddDirectInclude( inctext )
+		end if
 	end if
 	frogPrint( message )
 
-	'' Add it as direct #include if its content will be filtered out
-	'' (i.e. if it won't be expanded)
-	if( (not keep) and cppAtToplevel( ) ) then
-		cppAddDirectInclude( inctext )
+	'' Before loading the include file content, do the #include guard optimization.
+	'' If this file had an #include guard last time we saw it, and the guard symbol
+	'' is now defined, then we don't need to bother loading (lex + tkInsert()...)
+	'' the file at all now.
+	var load_include_file = TRUE
+
+	'' Is the file known already?
+	var knownfile = cppLookupKnownFile( incfile )
+	if( knownfile >= 0 ) then
+		'' Did it have an #include guard?
+		var guardid = cpp.files[knownfile].guardid
+		if( guardid ) then
+			'' Only load the file if the guard symbol isn't defined (anymore) now.
+			load_include_file = not cppIsMacroCurrentlyDefined( guardid )
+		end if
+	end if
+
+	if( load_include_file = FALSE ) then
+		'' Skipping header due to include guard
+		exit sub
 	end if
 
 	'' Push the #include file context
@@ -2240,27 +2262,8 @@ private sub cppInclude( byval begin as integer )
 	tkSetRemove( cpp.x )
 	cpp.x += 1
 
-	'' Before loading the include file content, do the #include guard optimization.
-	'' If this file had an #include guard last time we saw it, and the guard symbol
-	'' is now defined, then we don't need to bother loading (lex + tkInsert()...)
-	'' the file at all now.
-	var load_include_file = TRUE
-	'' Is the file known already?
-	var knownfile = cppLookupKnownFile( incfile )
-	if( knownfile >= 0 ) then
-		'' Did it have an #include guard?
-		var guardid = cpp.files[knownfile].guardid
-		if( guardid ) then
-			'' Only load the file if the guard symbol isn't defined (anymore) now.
-			load_include_file = not cppIsMacroCurrentlyDefined( guardid )
-		end if
-	end if
-
-	var y = cpp.x
-	if( load_include_file ) then
-		'' Read the include file and insert its tokens
-		y = lexLoadC( y, sourcebufferFromFile( incfile, @location ) )
-	end if
+	'' Read the include file and insert its tokens
+	var y = lexLoadC( cpp.x, sourcebufferFromFile( incfile, @location ) )
 
 	'' Put TK_ENDINCLUDE behind the #include file content, so we can detect
 	'' the included EOF and pop the #include context from the cpp.stack.
