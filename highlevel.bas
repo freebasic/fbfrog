@@ -471,7 +471,7 @@ sub hHandlePlainCharAfterArrayStatusIsKnown( byval n as ASTNODE ptr )
 	end if
 end sub
 
-''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+''
 '' Unscoping of nested declarations:
 ''
 '' For example nested named structs or constants/#defines nested in structs need
@@ -507,8 +507,10 @@ end sub
 '' Since such nested structs aren't even scoped/namespaced in the parent in C,
 '' we don't even have to worry about identifier conflicts.
 ''
-
-private function hExtractNestedStructsForUnscoping( byval struct as ASTNODE ptr ) as ASTNODE ptr
+function astUnscopeDeclsNestedInStructs( byval struct as ASTNODE ptr ) as ASTNODE ptr
+	assert( (struct->class = ASTCLASS_STRUCT) or _
+	        (struct->class = ASTCLASS_UNION) or _
+	        (struct->class = ASTCLASS_ENUM) )
 	var result = astNewGROUP( )
 
 	var i = struct->head
@@ -518,7 +520,7 @@ private function hExtractNestedStructsForUnscoping( byval struct as ASTNODE ptr 
 		select case( i->class )
 		case ASTCLASS_STRUCT, ASTCLASS_UNION
 			if( i->text ) then
-				astAppend( result, astClone( i ) )
+				astAppend( result, astUnscopeDeclsNestedInStructs( astClone( i ) ) )
 				astRemove( struct, i )
 			end if
 		case ASTCLASS_PPDEFINE
@@ -529,24 +531,9 @@ private function hExtractNestedStructsForUnscoping( byval struct as ASTNODE ptr 
 		i = nxt
 	wend
 
+	astAppend( result, struct )
 	function = result
 end function
-
-sub astUnscopeDeclsNestedInStructs( byval n as ASTNODE ptr )
-	var struct = n->head
-	while( struct )
-
-		'' Recursively
-		astUnscopeDeclsNestedInStructs( struct )
-
-		select case( struct->class )
-		case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
-			astInsert( n, hExtractNestedStructsForUnscoping( struct ), struct )
-		end select
-
-		struct = struct->next
-	wend
-end sub
 
 ''
 '' Look for TYPEDEFs that have the given anon UDT as subtype. The first

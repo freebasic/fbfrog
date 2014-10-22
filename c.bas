@@ -1778,7 +1778,7 @@ private function cDeclaration( byval decl as integer, byval gccattribs as intege
 		case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
 			'' ';'?
 			if( cMatch( TK_SEMI ) ) then
-				return subtype
+				return astUnscopeDeclsNestedInStructs( subtype )
 			end if
 
 		'' Useless tag declaration?
@@ -1811,9 +1811,10 @@ private function cDeclaration( byval decl as integer, byval gccattribs as intege
 				struct->attrib or= ASTATTRIB_DUMMYID
 			end if
 
-			astAppend( result, struct )
 			subtype = astNew( ASTCLASS_TAGID, struct->text )
 			subtype->attrib or= struct->attrib and ASTATTRIB_DUMMYID
+
+			astAppend( result, astUnscopeDeclsNestedInStructs( struct ) )
 		end select
 	end if
 

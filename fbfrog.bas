@@ -990,7 +990,6 @@ private function frogReadAPI( byval options as ASTNODE ptr ) as ASTNODE ptr
 	''
 	astSolveOutArrayTypedefs( ast, ast )
 	astSolveOutProcTypedefs( ast, ast )
-	astUnscopeDeclsNestedInStructs( ast )
 	astMakeNestedUnnamedStructsFbCompatible( ast )
 	if( frog.constants ) then astTurnDefinesIntoConstants( ast )
 
