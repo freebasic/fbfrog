@@ -2,12 +2,7 @@
 
 #include once "fbfrog.bi"
 
-private function astOpsC2FB _
-	( _
-		byval n as ASTNODE ptr, _
-		byval is_bool_context as integer _
-	) as ASTNODE ptr
-
+function astOpsC2FB( byval n as ASTNODE ptr, byval is_bool_context as integer ) as ASTNODE ptr
 	if( n = NULL ) then exit function
 
 	select case( n->class )
@@ -92,21 +87,6 @@ private function astOpsC2FB _
 
 	function = n
 end function
-
-sub astCleanUpExpressions( byval n as ASTNODE ptr )
-	var is_bool_context = (n->class = ASTCLASS_PPDEFINE)  '' bold assumption
-
-	n->expr = astOpsC2FB( n->expr, is_bool_context )
-	n->array = astOpsC2FB( n->array, FALSE )
-	n->subtype = astOpsC2FB( n->subtype, FALSE )
-	n->bits = astOpsC2FB( n->bits, FALSE )
-
-	var i = n->head
-	while( i )
-		astCleanUpExpressions( i )
-		i = i->next
-	wend
-end sub
 
 function astLookupMacroParam _
 	( _

@@ -784,7 +784,7 @@ declare sub astDump _
 		byref prefix as string = "" _
 	)
 
-declare sub astCleanUpExpressions( byval code as ASTNODE ptr )
+declare function astOpsC2FB( byval n as ASTNODE ptr, byval is_bool_context as integer ) as ASTNODE ptr
 declare function astLookupMacroParam _
 	( _
 		byval macro as ASTNODE ptr, _

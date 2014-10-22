@@ -67,7 +67,7 @@ enum
 	BODY_ENUM
 end enum
 
-declare function cExpression( byval level as integer ) as ASTNODE ptr
+declare function cExpression( byval is_bool_context as integer = FALSE ) as ASTNODE ptr
 declare function cExpressionOrInitializer( ) as ASTNODE ptr
 declare function cDeclaration( byval decl as integer, byval gccattribs as integer ) as ASTNODE ptr
 declare function cScope( ) as ASTNODE ptr
@@ -319,7 +319,7 @@ private function cNumberLiteral( ) as ASTNODE ptr
 end function
 
 '' C expression parser based on precedence climbing
-private function cExpression( byval level as integer ) as ASTNODE ptr
+private function hExpression( byval level as integer ) as ASTNODE ptr
 	'' Unary prefix operators
 	var op = -1
 	select case( tkGet( c.x ) )
@@ -334,7 +334,7 @@ private function cExpression( byval level as integer ) as ASTNODE ptr
 	dim as ASTNODE ptr a
 	if( op >= 0 ) then
 		c.x += 1
-		a = astNew( op, cExpression( cprecedence(op) ) )
+		a = astNew( op, hExpression( cprecedence(op) ) )
 	else
 		'' Atoms
 		select case( tkGet( c.x ) )
@@ -364,14 +364,14 @@ private function cExpression( byval level as integer ) as ASTNODE ptr
 				var t = cDataTypeInParens( DECL_CASTTYPE )
 
 				'' Expression
-				a = astNew( ASTCLASS_CAST, cExpression( 0 ) )
+				a = astNew( ASTCLASS_CAST, cExpression( ) )
 
 				assert( t->class = ASTCLASS_TYPE )
 				astSetType( a, t->dtype, astClone( t->subtype ) )
 				astDelete( t )
 			else
 				'' Expression
-				a = cExpression( 0 )
+				a = hExpression( 0 )
 
 				'' ')'
 				cExpectMatch( TK_RPAREN, "to close '(...)' parenthesized expression" )
@@ -414,7 +414,7 @@ private function cExpression( byval level as integer ) as ASTNODE ptr
 				if( tkGet( c.x ) <> TK_RPAREN ) then
 					'' Expression (',' Expression)*
 					do
-						astAppend( a, cExpression( 0 ) )
+						astAppend( a, cExpression( ) )
 
 						'' ','?
 					loop while( cMatch( TK_COMMA ) and c.parseok )
@@ -458,7 +458,7 @@ private function cExpression( byval level as integer ) as ASTNODE ptr
 				'' DataType ')'
 				a = cDataTypeInParens( DECL_SIZEOFTYPE )
 			else
-				a = cExpression( cprecedence(ASTCLASS_SIZEOF) )
+				a = hExpression( cprecedence(ASTCLASS_SIZEOF) )
 			end if
 			a = astNew( ASTCLASS_SIZEOF, a )
 
@@ -538,14 +538,14 @@ private function cExpression( byval level as integer ) as ASTNODE ptr
 		c.x += 1
 
 		'' rhs
-		var b = cExpression( oplevel )
+		var b = hExpression( oplevel )
 
 		'' Handle ?: special case
 		if( op = ASTCLASS_IIF ) then
 			'' ':'
 			cExpectMatch( TK_COLON, "for a?b:c iif operator" )
 
-			a = astNewIIF( a, b, cExpression( oplevel ) )
+			a = astNewIIF( a, b, hExpression( oplevel ) )
 		else
 			'' Handle [] special case
 			if( op = ASTCLASS_INDEX ) then
@@ -558,6 +558,10 @@ private function cExpression( byval level as integer ) as ASTNODE ptr
 	wend
 
 	function = a
+end function
+
+private function cExpression( byval is_bool_context as integer ) as ASTNODE ptr
+	function = astOpsC2FB( hExpression( 0 ), is_bool_context )
 end function
 
 '' Initializer:
@@ -588,7 +592,7 @@ private function cExpressionOrInitializer( ) as ASTNODE ptr
 	if( tkGet( c.x ) = TK_LBRACE ) then
 		function = cInitializer( )
 	else
-		function = cExpression( 0 )
+		function = cExpression( )
 	end if
 end function
 
@@ -709,7 +713,7 @@ private function cEnumConst( ) as ASTNODE ptr
 	'' '='?
 	if( cMatch( TK_EQ ) ) then
 		'' Expression
-		t->expr = cExpression( 0 )
+		t->expr = cExpression( )
 	end if
 
 	'' (',' | '}')
@@ -875,7 +879,7 @@ private function cDefineBody( byval macro as ASTNODE ptr ) as integer
 		return TRUE
 	end if
 
-	macro->expr = cExpression( 0 )
+	macro->expr = cExpression( TRUE ) '' is_bool_context=TRUE, that's a bold assumption
 	function = TRUE
 end function
 
@@ -1614,7 +1618,7 @@ private function cDeclarator _
 
 			'' Just '[]' (empty dimension) is allowed for parameters
 			if( (tkGet( c.x ) <> TK_RBRACKET) or (decl <> DECL_PARAM) ) then
-				d->expr = cExpression( 0 )
+				d->expr = cExpression( )
 			end if
 
 			astAppend( node->array, d )
@@ -1632,7 +1636,7 @@ private function cDeclarator _
 		end if
 		c.x += 1
 
-		node->bits = cExpression( 0 )
+		node->bits = cExpression( )
 
 	'' '(' ParamList ')'
 	case TK_LPAREN
@@ -1878,7 +1882,7 @@ end function
 
 '' Expression statement: Assignments, function calls, i++, etc.
 private function cExpressionStatement( ) as ASTNODE ptr
-	function = cExpression( 0 )
+	function = cExpression( )
 
 	'' ';'?
 	cExpectMatch( TK_SEMI, "(end of expression statement)" )
