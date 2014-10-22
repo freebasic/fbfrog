@@ -443,25 +443,16 @@ sub astSolveOutProcTypedefs( byval n as ASTNODE ptr, byval ast as ASTNODE ptr )
 	wend
 end sub
 
-''
-'' Convert "zstring" to "byte" if it's neither an array nor a pointer.
-'' (cBaseType() uses "zstring" for plain "char", while for "[un]signed char" it
-'' will already use "[u]byte")
-''
-'' If it's a single "char" then it's most likely meant to be a byte. And FB
-'' doesn't allow "zstring" on its own anyways (it has to be a pointer or
-'' fixed-length string).
-''
+'' Handle declarations with plain char/zstring data type (not pointers).
+'' If it's a char array, then it's probably supposed to be a string.
+'' If it's just a char, then it's probably supposed to be a byte.
 sub hHandlePlainCharAfterArrayStatusIsKnown( byval n as ASTNODE ptr )
-	'' Zstring and neither array nor pointer?
-	if( (typeGetDtAndPtr( n->dtype ) = TYPE_ZSTRING) and (n->array = NULL) ) then
-		'' Turn zstring into byte, but preserve CONSTs
-		n->dtype = typeGetConst( n->dtype ) or TYPE_BYTE
+	'' No plain char?
+	if( typeGetDtAndPtr( n->dtype ) <> TYPE_ZSTRING ) then
+		exit sub
 	end if
-end sub
 
-sub astTurnZstringArrayIntoFixedLengthZstring( byval n as ASTNODE ptr )
-	if( (typeGetDtAndPtr( n->dtype ) = TYPE_ZSTRING) and (n->array <> NULL) ) then
+	if( n->array ) then
 		'' Use the last (inner-most) array dimension as the fixed-length string size
 		var d = n->array->tail
 		assert( d->class = ASTCLASS_DIMENSION )
@@ -474,13 +465,10 @@ sub astTurnZstringArrayIntoFixedLengthZstring( byval n as ASTNODE ptr )
 			astDelete( n->array )
 			n->array = NULL
 		end if
+	else
+		'' Turn zstring into byte, but preserve CONSTs
+		n->dtype = typeGetConst( n->dtype ) or TYPE_BYTE
 	end if
-
-	var i = n->head
-	while( i )
-		astTurnZstringArrayIntoFixedLengthZstring( i )
-		i = i->next
-	wend
 end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
