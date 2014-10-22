@@ -192,19 +192,6 @@ private sub astHideCallConv( byval n as ASTNODE ptr, byval callconv as integer )
 	wend
 end sub
 
-private sub astHideCaseAlias( byval n as ASTNODE ptr )
-	'' The case-preserving ALIAS only needs to be hidden on toplevel
-	'' declarations for which it would otherwise be emitted. No need to
-	'' recurse into procptr subtypes, or expressions...
-	n->attrib or= ASTATTRIB_HIDECASEALIAS
-
-	var i = n->head
-	while( i )
-		astHideCaseAlias( i )
-		i = i->next
-	wend
-end sub
-
 private sub astWrapInExternBlock _
 	( _
 		byval ast as ASTNODE ptr, _
@@ -224,9 +211,6 @@ private sub astWrapInExternBlock _
 	'' Remove the calling convention from all procdecls, the Extern block
 	'' will take over
 	astHideCallConv( ast, externcallconv )
-
-	'' Same for case-preserving ALIAS
-	astHideCaseAlias( ast )
 
 	assert( ast->class = ASTCLASS_GROUP )
 	astPrepend( ast, astNew( ASTCLASS_EXTERNBLOCKBEGIN, externblock ) )
