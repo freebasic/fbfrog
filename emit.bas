@@ -10,7 +10,8 @@
 declare function emitAst _
 	( _
 		byval n as ASTNODE ptr, _
-		byval need_parens as integer = FALSE _
+		byval need_parens as integer = FALSE, _
+		byval parentclass as integer = -1 _
 	) as string
 
 function emitType overload _
@@ -251,7 +252,7 @@ private function hParamList( byval n as ASTNODE ptr ) as string
 	function = "(" + hSeparatedList( n, ", ", FALSE ) + ")"
 end function
 
-private sub hEmitIndentedChildren( byval n as ASTNODE ptr )
+private sub hEmitIndentedChildren( byval n as ASTNODE ptr, byval parentclass as integer = -1 )
 	if( emit.comment > 0 ) then
 		emit.commentspaces += 4
 	else
@@ -260,7 +261,7 @@ private sub hEmitIndentedChildren( byval n as ASTNODE ptr )
 
 	var i = n->head
 	while( i )
-		var s = emitAst( i )
+		var s = emitAst( i, , parentclass )
 		if( len( s ) > 0 ) then
 			emitLine( s )
 		end if
@@ -306,7 +307,8 @@ end sub
 private function emitAst _
 	( _
 		byval n as ASTNODE ptr, _
-		byval need_parens as integer _
+		byval need_parens as integer, _
+		byval parentclass as integer _
 	) as string
 
 	dim as string s
@@ -452,14 +454,25 @@ private function emitAst _
 			emitLine( "type " + *n->text + " as long" )
 		end if
 
-		dim as string compoundkeyword
+		'' If it's a struct inside a struct, or union inside union,
+		'' insert a union/struct in between respectively, to make it
+		'' FB-compatible. FB only allows alternating types/unions when
+		'' nesting.
+		var opposite = iif( n->class = ASTCLASS_STRUCT, "union", "type" )
+		if( n->class = parentclass ) then
+			assert( parentclass <> ASTCLASS_ENUM )
+			emitLine( opposite )
+			emit.indent += 1
+		end if
+
+		dim as string compound
 		select case( n->class )
-		case ASTCLASS_UNION : compoundkeyword = "union"
-		case ASTCLASS_ENUM  : compoundkeyword = "enum"
-		case else           : compoundkeyword = "type"
+		case ASTCLASS_UNION : compound = "union"
+		case ASTCLASS_ENUM  : compound = "enum"
+		case else           : compound = "type"
 		end select
 
-		s += compoundkeyword
+		s += compound
 		if( (n->class <> ASTCLASS_ENUM) and (n->text <> NULL) ) then
 			s += " " + *n->text
 		end if
@@ -471,9 +484,14 @@ private function emitAst _
 		emitLine( s )
 		s = ""
 
-		hEmitIndentedChildren( n )
+		hEmitIndentedChildren( n, n->class )
 
-		emitLine( "end " + compoundkeyword )
+		emitLine( "end " + compound )
+
+		if( n->class = parentclass ) then
+			emit.indent -= 1
+			emitLine( "end " + opposite )
+		end if
 
 	case ASTCLASS_TYPEDEF
 		assert( n->array = NULL )

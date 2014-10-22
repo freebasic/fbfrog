@@ -1770,6 +1770,8 @@ private function cDeclaration( byval decl as integer, byval gccattribs as intege
 	dim as ASTNODE ptr subtype
 	cBaseType( dtype, subtype, gccattribs, decl )
 
+	var result = astNewGROUP( )
+
 	'' Special case for standalone struct/union/enum declarations (no CONST bits):
 	if( dtype = TYPE_UDT ) then
 		'' Tag declaration with body?
@@ -1778,7 +1780,9 @@ private function cDeclaration( byval decl as integer, byval gccattribs as intege
 		case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
 			'' ';'?
 			if( cMatch( TK_SEMI ) ) then
-				return astUnscopeDeclsNestedInStructs( subtype )
+				astUnscopeDeclsNestedInStruct( result, subtype )
+				astAppend( result, subtype )
+				return result
 			end if
 
 		'' Useless tag declaration?
@@ -1788,12 +1792,10 @@ private function cDeclaration( byval decl as integer, byval gccattribs as intege
 			if( cMatch( TK_SEMI ) ) then
 				'' Ignore & treat as no-op
 				astDelete( subtype )
-				return astNewGROUP( )
+				return result
 			end if
 		end select
 	end if
-
-	var result = astNewGROUP( )
 
 	'' Special case for struct/union/enum bodies used as basedtype:
 	'' Turn the struct/union/enum body into a separate declaration (as
@@ -1814,7 +1816,8 @@ private function cDeclaration( byval decl as integer, byval gccattribs as intege
 			subtype = astNew( ASTCLASS_TAGID, struct->text )
 			subtype->attrib or= struct->attrib and ASTATTRIB_DUMMYID
 
-			astAppend( result, astUnscopeDeclsNestedInStructs( struct ) )
+			astUnscopeDeclsNestedInStruct( result, struct )
+			astAppend( result, struct )
 		end select
 	end if
 

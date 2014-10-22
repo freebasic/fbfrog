@@ -507,11 +507,13 @@ end sub
 '' Since such nested structs aren't even scoped/namespaced in the parent in C,
 '' we don't even have to worry about identifier conflicts.
 ''
-function astUnscopeDeclsNestedInStructs( byval struct as ASTNODE ptr ) as ASTNODE ptr
+'' Enums can be nested inside struct/unions like this, but enums cannot contain
+'' other compound blocks.
+''
+sub astUnscopeDeclsNestedInStruct( byval result as ASTNODE ptr, byval struct as ASTNODE ptr )
 	assert( (struct->class = ASTCLASS_STRUCT) or _
 	        (struct->class = ASTCLASS_UNION) or _
 	        (struct->class = ASTCLASS_ENUM) )
-	var result = astNewGROUP( )
 
 	var i = struct->head
 	while( i )
@@ -520,7 +522,7 @@ function astUnscopeDeclsNestedInStructs( byval struct as ASTNODE ptr ) as ASTNOD
 		select case( i->class )
 		case ASTCLASS_STRUCT, ASTCLASS_UNION
 			if( i->text ) then
-				astAppend( result, astUnscopeDeclsNestedInStructs( astClone( i ) ) )
+				astAppend( result, astClone( i ) )
 				astRemove( struct, i )
 			end if
 		case ASTCLASS_PPDEFINE
@@ -530,10 +532,7 @@ function astUnscopeDeclsNestedInStructs( byval struct as ASTNODE ptr ) as ASTNOD
 
 		i = nxt
 	wend
-
-	astAppend( result, struct )
-	function = result
-end function
+end sub
 
 ''
 '' Look for TYPEDEFs that have the given anon UDT as subtype. The first
@@ -869,56 +868,6 @@ sub astFilterOut( byval code as ASTNODE ptr )
 end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-
-''
-'' C allows unnamed structs to be nested directly in other structs, and nested
-'' unnamed unions directly in unions, but FB only allows unnamed structs nested
-'' inside unions, and unnamed unions inside structs. Thus we need to insert the
-'' missing union/struct in between in such cases:
-''
-''    struct
-''        struct
-''            field
-''
-'' must be converted to:
-''
-''    struct
-''        union
-''            struct
-''                field
-''
-'' Nested unnamed structs can make a difference for field layout/alignment so it
-'' shouldn't be removed. And unions of course shouldn't be removed either
-'' because they clearly affect field layout.
-''
-sub astMakeNestedUnnamedStructsFbCompatible( byval n as ASTNODE ptr )
-	var i = n->head
-	while( i )
-		var nxt = i->next
-
-		astMakeNestedUnnamedStructsFbCompatible( i )
-
-		select case( n->class )
-		case ASTCLASS_STRUCT, ASTCLASS_UNION
-			if( i->class = n->class ) then
-				dim as integer newastclass
-				if( i->class = ASTCLASS_STRUCT ) then
-					newastclass = ASTCLASS_UNION
-				else
-					assert( i->class = ASTCLASS_UNION )
-					newastclass = ASTCLASS_STRUCT
-				end if
-				var newstruct = astNew( newastclass, astClone( i ) )
-				if( i->attrib and ASTATTRIB_FILTEROUT ) then
-					newstruct->attrib or= ASTATTRIB_FILTEROUT
-				end if
-				nxt = astReplace( n, i, newstruct )
-			end if
-		end select
-
-		i = nxt
-	wend
-end sub
 
 '' Removes typedefs of the form "typedef struct T T;" which aren't needed in FB.
 sub astRemoveRedundantTypedefs( byval n as ASTNODE ptr, byval ast as ASTNODE ptr )

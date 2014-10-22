@@ -795,11 +795,10 @@ declare sub hHandleArrayParam( byval n as ASTNODE ptr )
 declare sub astSolveOutArrayTypedefs( byval n as ASTNODE ptr, byval ast as ASTNODE ptr )
 declare sub astSolveOutProcTypedefs( byval n as ASTNODE ptr, byval ast as ASTNODE ptr )
 declare sub hHandlePlainCharAfterArrayStatusIsKnown( byval n as ASTNODE ptr )
-declare function astUnscopeDeclsNestedInStructs( byval struct as ASTNODE ptr ) as ASTNODE ptr
+declare sub astUnscopeDeclsNestedInStruct( byval result as ASTNODE ptr, byval struct as ASTNODE ptr )
 declare sub astNameAnonUdtsAfterFirstAliasTypedef( byval n as ASTNODE ptr )
 declare sub astAddForwardDeclsForUndeclaredTagIds( byval ast as ASTNODE ptr )
 declare sub astFilterOut( byval code as ASTNODE ptr )
-declare sub astMakeNestedUnnamedStructsFbCompatible( byval n as ASTNODE ptr )
 declare sub astRemoveRedundantTypedefs( byval n as ASTNODE ptr, byval ast as ASTNODE ptr )
 declare sub astTurnDefinesIntoConstants( byval code as ASTNODE ptr )
 declare sub astReplaceSubtypes _
