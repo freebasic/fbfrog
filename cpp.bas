@@ -2222,7 +2222,6 @@ private sub cppInclude( byval begin as integer )
 			cppAddDirectInclude( inctext )
 		end if
 	end if
-	frogPrint( message )
 
 	'' Before loading the include file content, do the #include guard optimization.
 	'' If this file had an #include guard last time we saw it, and the guard symbol
@@ -2245,6 +2244,8 @@ private sub cppInclude( byval begin as integer )
 		'' Skipping header due to include guard
 		exit sub
 	end if
+
+	frogPrint( message )
 
 	'' Push the #include file context
 	cppPush( STATE_FILE )
