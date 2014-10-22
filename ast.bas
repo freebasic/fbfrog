@@ -56,7 +56,7 @@ dim shared as zstring ptr astnodename(0 to ...) => _
 	@"union"      , _
 	@"enum"       , _
 	@"typedef"    , _
-	@"const"      , _
+	@"enumconst"  , _
 	@"var"        , _
 	@"field"      , _
 	@"proc"       , _
@@ -614,7 +614,7 @@ end function
 
 function astDumpPrettyClass( byval astclass as integer ) as string
 	select case( astclass )
-	case ASTCLASS_CONST : function = "constant"
+	case ASTCLASS_ENUMCONST : function = "enum constant"
 	case ASTCLASS_VAR   : function = "variable"
 	case ASTCLASS_PROC  : function = "procedure"
 	case else           : function = *astnodename(astclass)
@@ -672,7 +672,6 @@ function astDumpOne( byval n as ASTNODE ptr ) as string
 	checkAttrib( HIDECASEALIAS )
 	checkAttrib( UNCHECKED )
 	checkAttrib( REPORTED )
-	checkAttrib( ENUMCONST )
 	checkAttrib( NEEDRENAME )
 	checkAttrib( POISONED )
 	checkAttrib( PACKED )

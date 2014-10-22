@@ -366,7 +366,6 @@ enum
 	OPT_FILTEROUT
 	OPT_FILTERIN
 	OPT_WINDOWSMS
-	OPT_CONSTANTS
 	OPT_NONAMEFIXUP
 	OPT_V
 	OPT_INCDIR
@@ -555,7 +554,7 @@ enum
 	ASTCLASS_UNION
 	ASTCLASS_ENUM
 	ASTCLASS_TYPEDEF
-	ASTCLASS_CONST
+	ASTCLASS_ENUMCONST
 	ASTCLASS_VAR
 	ASTCLASS_FIELD
 	ASTCLASS_PROC
@@ -647,7 +646,7 @@ const ASTATTRIB_HIDECALLCONV  = 1 shl 7  '' Whether the calling convention is co
 const ASTATTRIB_HIDECASEALIAS = 1 shl 8  '' same for the case-preserving ALIAS
 const ASTATTRIB_UNCHECKED     = 1 shl 9
 const ASTATTRIB_REPORTED      = 1 shl 10 '' Used to mark #defines about which the CPP has already complained, so it can avoid duplicate error messages
-const ASTATTRIB_ENUMCONST     = 1 shl 11  '' CONSTI
+                            ''= 1 shl 11
 const ASTATTRIB_NEEDRENAME    = 1 shl 12
 const ASTATTRIB_POISONED      = 1 shl 13
                             ''= 1 shl 14
@@ -800,7 +799,6 @@ declare sub astNameAnonUdtsAfterFirstAliasTypedef( byval n as ASTNODE ptr )
 declare sub astAddForwardDeclsForUndeclaredTagIds( byval ast as ASTNODE ptr )
 declare sub astFilterOut( byval code as ASTNODE ptr )
 declare sub astRemoveRedundantTypedefs( byval n as ASTNODE ptr, byval ast as ASTNODE ptr )
-declare sub astTurnDefinesIntoConstants( byval code as ASTNODE ptr )
 declare sub astReplaceSubtypes _
 	( _
 		byval n as ASTNODE ptr, _

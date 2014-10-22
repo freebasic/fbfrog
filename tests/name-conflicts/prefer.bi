@@ -3,8 +3,8 @@
 '' The following symbols have been renamed:
 ''     #define I3 => I3_
 ''     #define I4 => I4_
-''     constant I5 => I5_
-''     constant I6 => I6_
+''     enum constant I5 => I5_
+''     enum constant I6 => I6_
 ''     #define I7 => I7_
 ''     #define I8 => I8_
 

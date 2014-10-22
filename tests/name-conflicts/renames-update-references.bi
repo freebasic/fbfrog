@@ -2,9 +2,9 @@
 
 '' The following symbols have been renamed:
 ''     #define INT => INT_
-''     constant AND => AND_
-''     constant OR => OR_
-''     constant XOR => XOR_
+''     enum constant AND => AND_
+''     enum constant OR => OR_
+''     enum constant XOR => XOR_
 ''     struct DOUBLE => DOUBLE_
 
 extern "C"

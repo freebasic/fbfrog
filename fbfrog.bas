@@ -55,7 +55,7 @@
 #include once "fbfrog.bi"
 
 namespace frog
-	dim shared as integer verbose, windowsms, constants, nonamefixup, nodefaultscript
+	dim shared as integer verbose, windowsms, nonamefixup, nodefaultscript
 	dim shared as ASTNODE ptr incdirs
 	dim shared as string outname, defaultoutname
 
@@ -102,7 +102,6 @@ private sub hPrintHelpAndExit( )
 	print "  @<file>          Read more command line arguments from a file"
 	print "  -nodefaultscript Don't use default.fbfrog implicitly"
 	print "  -windowsms       Use Extern ""Windows-MS"" instead of Extern ""Windows"""
-	print "  -constants       Try to turn #defines into constants"
 	print "  -nonamefixup     Don't fix symbol identifier conflicts"
 	print "  -incdir <path>   Add #include search directory"
 	print "  -o <path/file>   Set output .bi file name, or just the output directory"
@@ -427,7 +426,6 @@ private sub hParseArgs( byref x as integer )
 
 		case OPT_NODEFAULTSCRIPT : frog.nodefaultscript = TRUE : x += 1
 		case OPT_WINDOWSMS   : frog.windowsms   = TRUE : x += 1
-		case OPT_CONSTANTS   : frog.constants   = TRUE : x += 1
 		case OPT_NONAMEFIXUP : frog.nonamefixup = TRUE : x += 1
 		case OPT_V           : frog.verbose     = TRUE : x += 1
 
@@ -990,7 +988,6 @@ private function frogReadAPI( byval options as ASTNODE ptr ) as ASTNODE ptr
 	''
 	astSolveOutArrayTypedefs( ast, ast )
 	astSolveOutProcTypedefs( ast, ast )
-	if( frog.constants ) then astTurnDefinesIntoConstants( ast )
 
 	hApplyRenameTypedefOptions( options, ast )
 	astRemoveRedundantTypedefs( ast, ast )

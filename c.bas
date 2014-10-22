@@ -699,8 +699,7 @@ end sub
 
 '' Enum constant: Identifier ['=' Expression] (',' | '}')
 private function cEnumConst( ) as ASTNODE ptr
-	var t = astNew( ASTCLASS_CONST )
-	t->attrib or= ASTATTRIB_ENUMCONST
+	var t = astNew( ASTCLASS_ENUMCONST )
 
 	'' Identifier
 	if( tkGet( c.x ) = TK_ID ) then

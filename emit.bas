@@ -497,12 +497,8 @@ private function emitAst _
 		assert( n->array = NULL )
 		emitLine( "type " + *n->text + " as " + emitType( n ) )
 
-	case ASTCLASS_CONST
-		if( (n->attrib and ASTATTRIB_ENUMCONST) = 0 ) then
-			s = "const "
-		end if
-		emitLine( s + *n->text + hInitializer( n ) )
-		s = ""
+	case ASTCLASS_ENUMCONST
+		emitLine( *n->text + hInitializer( n ) )
 
 	case ASTCLASS_VAR
 		if( n->attrib and ASTATTRIB_LOCAL ) then

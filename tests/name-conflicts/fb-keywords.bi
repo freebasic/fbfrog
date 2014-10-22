@@ -409,7 +409,7 @@
 ''     variable __PATH__ => __PATH___
 ''     variable __TIME__ => __TIME___
 ''     #define integer => integer__
-''     constant string => string__
+''     enum constant string => string__
 ''     procedure open => open__
 ''     #define INT => INT__
 ''     #define Int => Int___

@@ -894,74 +894,9 @@ sub astRemoveRedundantTypedefs( byval n as ASTNODE ptr, byval ast as ASTNODE ptr
 	wend
 end sub
 
-'' Checks whether an expression is simple enough that it could be used in an
-'' FB constant declaration (const FOO = <...>).
-''
-'' Thus, it shouldn't contain any function calls, addrof/deref operations, or
-'' preprocessor operations, etc., but only a selected set of known-to-be-safe
-'' math operations & co.
-private function hIsSimpleConstantExpression( byval n as ASTNODE ptr ) as integer
-	if( n = NULL ) then return TRUE
-
-	select case( n->class )
-	'' Atoms
-	case ASTCLASS_CONSTI, ASTCLASS_CONSTF
-
-	'' UOPs
-	case ASTCLASS_NOT, ASTCLASS_NEGATE, ASTCLASS_SIZEOF, ASTCLASS_CAST
-		if( hIsSimpleConstantExpression( n->head ) = FALSE ) then exit function
-
-	'' BOPs
-	case ASTCLASS_ORELSE, ASTCLASS_ANDALSO, _
-	     ASTCLASS_OR, ASTCLASS_XOR, ASTCLASS_AND, _
-	     ASTCLASS_EQ, ASTCLASS_NE, _
-	     ASTCLASS_LT, ASTCLASS_LE, _
-	     ASTCLASS_GT, ASTCLASS_GE, _
-	     ASTCLASS_SHL, ASTCLASS_SHR, _
-	     ASTCLASS_ADD, ASTCLASS_SUB, _
-	     ASTCLASS_MUL, ASTCLASS_DIV, ASTCLASS_MOD, _
-	     ASTCLASS_STRCAT
-		if( hIsSimpleConstantExpression( n->head ) = FALSE ) then exit function
-		if( hIsSimpleConstantExpression( n->tail ) = FALSE ) then exit function
-
-	'' IIF
-	case ASTCLASS_IIF
-		if( hIsSimpleConstantExpression( n->expr ) = FALSE ) then exit function
-		if( hIsSimpleConstantExpression( n->head ) = FALSE ) then exit function
-		if( hIsSimpleConstantExpression( n->tail ) = FALSE ) then exit function
-
-	case else
-		exit function
-	end select
-
-	function = TRUE
-end function
-
-'' Turns simple #defines into constants, where it seems possible.
-sub astTurnDefinesIntoConstants( byval code as ASTNODE ptr )
-	var i = code->head
-	while( i )
-
-		if( i->class = ASTCLASS_PPDEFINE ) then
-			'' Object-like macro?
-			if( i->paramcount < 0 ) then
-				'' Has a body?
-				if( i->expr ) then
-					'' Body is a simple expression?
-					if( hIsSimpleConstantExpression( i->expr ) ) then
-						i->class = ASTCLASS_CONST
-					end if
-				end if
-			end if
-		end if
-
-		i = i->next
-	wend
-end sub
-
 private function hPreferRenaming( byval n as ASTNODE ptr ) as integer
 	select case( n->class )
-	case ASTCLASS_PPDEFINE, ASTCLASS_CONST
+	case ASTCLASS_PPDEFINE, ASTCLASS_ENUMCONST
 		function = TRUE
 	end select
 end function
@@ -1064,7 +999,7 @@ private sub hWalkAndCheckIds _
 			hFixIdsInScope( reservedids, i, nestedrenamelist )
 			astDelete( nestedrenamelist )
 
-		case ASTCLASS_VAR, ASTCLASS_CONST
+		case ASTCLASS_VAR, ASTCLASS_ENUMCONST
 			hCheckId( @fbkeywordhash, i, FALSE )
 			hCheckId( reservedids, i, FALSE )
 			hCheckId( globals, i, TRUE )
@@ -1231,7 +1166,7 @@ private sub hRenameSymbol _
 			exists or= hashContains( globals    , hashid, hash )
 
 		case ASTCLASS_PROC, ASTCLASS_PARAM, _
-		     ASTCLASS_VAR, ASTCLASS_CONST, ASTCLASS_FIELD
+		     ASTCLASS_VAR, ASTCLASS_ENUMCONST, ASTCLASS_FIELD
 			exists or= hashContains( reservedids, hashid, hash )
 			exists or= hashContains( globals    , hashid, hash )
 
@@ -1253,7 +1188,7 @@ private sub hRenameSymbol _
 	'' just the case-insensitivity and FB keywords that cause problems)
 	select case( n->class )
 	case ASTCLASS_PPDEFINE, ASTCLASS_PROC, ASTCLASS_PARAM, _
-	     ASTCLASS_VAR, ASTCLASS_CONST, ASTCLASS_FIELD
+	     ASTCLASS_VAR, ASTCLASS_ENUMCONST, ASTCLASS_FIELD
 		hReplaceCalls( code, n->text, newid )
 	case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
 		astReplaceSubtypes( code, ASTCLASS_TAGID, n->text, ASTCLASS_TAGID, newid )
@@ -1269,7 +1204,7 @@ private sub hRenameSymbol _
 	case ASTCLASS_PPDEFINE
 		hashAddOverwrite( reservedids, hashid, n )
 	case ASTCLASS_PROC, ASTCLASS_PARAM, _
-	     ASTCLASS_VAR, ASTCLASS_CONST, ASTCLASS_FIELD
+	     ASTCLASS_VAR, ASTCLASS_ENUMCONST, ASTCLASS_FIELD
 		hashAddOverwrite( globals, hashid, n )
 	case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM, ASTCLASS_TYPEDEF
 		hashAddOverwrite( types, hashid, n )

@@ -12,7 +12,7 @@
 ''     typedef MyInt => MyInt_
 ''     typedef myint => myint__
 ''     typedef Myint => Myint___
-''     constant ENUMCONST1 => ENUMCONST1_
+''     enum constant ENUMCONST1 => ENUMCONST1_
 ''     typedef FOO => FOO_
 ''     #define SAILINGBOAT => SAILINGBOAT_
 
