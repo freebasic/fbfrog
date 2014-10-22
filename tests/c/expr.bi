@@ -2,6 +2,8 @@
 
 #include once "crt/long.bi"
 
+extern "C"
+
 type UDT as UDT_
 type MYINT as long
 
@@ -23,7 +25,7 @@ enum
 	A = cast(UDT, 0)
 	A = cast(UDT, 0)
 	A = cptr(sub(), 0)
-	A = cptr(sub cdecl(), 0)
+	A = cptr(sub(), 0)
 	A = cptr(sub stdcall(), 0)
 	A = cptr(any ptr, 0)
 	A = cptr(long ptr, 0)
@@ -72,7 +74,7 @@ enum
 	A = sizeof(MYINT) * 2
 	A = sizeof(MYINT) shl 1
 	A = sizeof(sub())
-	A = sizeof(sub cdecl())
+	A = sizeof(sub())
 	A = sizeof(sub stdcall())
 	A = -(a = 0)
 	A = not a
@@ -403,7 +405,7 @@ end enum
 #define A17 cast(UDT, 0)
 #define A18 cast(UDT, 0)
 #define A19 cptr(sub(), 0)
-#define A20 cptr(sub cdecl(), 0)
+#define A20 cptr(sub(), 0)
 #define A21 cptr(sub stdcall(), 0)
 #define A22 cptr(any ptr, 0)
 #define A23 cptr(long ptr, 0)
@@ -459,3 +461,5 @@ end enum
 	end scope
 #endmacro
 #define A57
+
+end extern

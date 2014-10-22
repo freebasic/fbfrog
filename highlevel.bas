@@ -163,15 +163,14 @@ sub astMakeProcsDefaultToCdecl( byval n as ASTNODE ptr )
 		end if
 	end if
 
-	'' Don't forget the procptr subtypes
-	if( typeGetDt( n->dtype ) = TYPE_PROC ) then
-		astMakeProcsDefaultToCdecl( n->subtype )
-	end if
+	if( n->subtype ) then astMakeProcsDefaultToCdecl( n->subtype )
+	if( n->array   ) then astMakeProcsDefaultToCdecl( n->array   )
+	if( n->expr    ) then astMakeProcsDefaultToCdecl( n->expr    )
 
-	var child = n->head
-	while( child )
-		astMakeProcsDefaultToCdecl( child )
-		child = child->next
+	var i = n->head
+	while( i )
+		astMakeProcsDefaultToCdecl( i )
+		i = i->next
 	wend
 end sub
 
@@ -191,15 +190,14 @@ private function astCountCallConv _
 		end if
 	end if
 
-	'' Don't forget the procptr subtypes
-	if( typeGetDt( n->dtype ) = TYPE_PROC ) then
-		count += astCountCallConv( n->subtype, callconv )
-	end if
+	if( n->subtype ) then count += astCountCallConv( n->subtype, callconv )
+	if( n->array   ) then count += astCountCallConv( n->array  , callconv )
+	if( n->expr    ) then count += astCountCallConv( n->expr   , callconv )
 
-	var child = n->head
-	while( child )
-		count += astCountCallConv( child, callconv )
-		child = child->next
+	var i = n->head
+	while( i )
+		count += astCountCallConv( i, callconv )
+		i = i->next
 	wend
 
 	function = count
@@ -249,15 +247,14 @@ private sub astHideCallConv( byval n as ASTNODE ptr, byval callconv as integer )
 		end if
 	end if
 
-	'' Don't forget the procptr subtypes
-	if( typeGetDt( n->dtype ) = TYPE_PROC ) then
-		astHideCallConv( n->subtype, callconv )
-	end if
+	if( n->subtype ) then astHideCallConv( n->subtype, callconv )
+	if( n->array   ) then astHideCallConv( n->array  , callconv )
+	if( n->expr    ) then astHideCallConv( n->expr   , callconv )
 
-	var child = n->head
-	while( child )
-		astHideCallConv( child, callconv )
-		child = child->next
+	var i = n->head
+	while( i )
+		astHideCallConv( i, callconv )
+		i = i->next
 	wend
 end sub
 
@@ -267,10 +264,10 @@ private sub astHideCaseAlias( byval n as ASTNODE ptr )
 	'' recurse into procptr subtypes, or expressions...
 	n->attrib or= ASTATTRIB_HIDECASEALIAS
 
-	var child = n->head
-	while( child )
-		astHideCaseAlias( child )
-		child = child->next
+	var i = n->head
+	while( i )
+		astHideCaseAlias( i )
+		i = i->next
 	wend
 end sub
 
