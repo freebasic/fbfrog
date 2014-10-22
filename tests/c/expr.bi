@@ -22,6 +22,7 @@ enum
 	A = cast(E, 0)
 	A = cast(UDT, 0)
 	A = cast(UDT, 0)
+	A = cptr(sub(), 0)
 	A = cptr(sub cdecl(), 0)
 	A = cptr(sub stdcall(), 0)
 	A = cptr(any ptr, 0)
@@ -70,6 +71,8 @@ enum
 	A = sizeof(MYINT)
 	A = sizeof(MYINT) * 2
 	A = sizeof(MYINT) shl 1
+	A = sizeof(sub())
+	A = sizeof(sub cdecl())
 	A = sizeof(sub stdcall())
 	A = -(a = 0)
 	A = not a
@@ -399,7 +402,7 @@ end enum
 #define A16 cast(E, 0)
 #define A17 cast(UDT, 0)
 #define A18 cast(UDT, 0)
-#define A19
+#define A19 cptr(sub(), 0)
 #define A20 cptr(sub cdecl(), 0)
 #define A21 cptr(sub stdcall(), 0)
 #define A22 cptr(any ptr, 0)
@@ -455,3 +458,4 @@ end enum
 		dim b as long
 	end scope
 #endmacro
+#define A57

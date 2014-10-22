@@ -19,6 +19,7 @@ enum E {
 	A = (enum E)0,
 	A = (struct UDT)0,
 	A = (union UDT)0,
+	A = (void (*)(void))0,
 	A = (__attribute__((cdecl)) void (*)(void))0,
 	A = (__attribute__((stdcall)) void (*)(void))0,
 	A = (void *)0,
@@ -69,6 +70,8 @@ enum E {
 	A = sizeof (MYINT),
 	A = sizeof (MYINT) * 2,
 	A = sizeof (MYINT) << 1,
+	A = sizeof (void (*)(void)),
+	A = sizeof (__attribute__((cdecl)) void (*)(void)),
 	A = sizeof (__attribute__((stdcall)) void (*)(void)),
 
 	A = !a,
@@ -446,7 +449,7 @@ enum E {
 #define A16 (enum E)0
 #define A17 (struct UDT)0
 #define A18 (union UDT)0
-#define A19
+#define A19 (void (*)(void))0
 #define A20 (__attribute__((cdecl)) void (*)(void))0
 #define A21 (__attribute__((stdcall)) void (*)(void))0
 #define A22 (void *)0
@@ -489,3 +492,5 @@ enum E {
 
 #define A55 { int a[10] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }; }
 #define A56 { int a, b; }
+
+#define A57
