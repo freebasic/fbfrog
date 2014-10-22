@@ -1,5 +1,7 @@
 #pragma once
 
+extern "C"
+
 '' TODO: unrecognized construct:
 '' void f(int i;
 '' ---------------------------------------------------------------------------
@@ -9,3 +11,5 @@
 '' context as seen by fbfrog:
 ''     void f ( int i ;
 ''                    ^
+
+end extern

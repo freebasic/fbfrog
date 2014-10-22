@@ -1,5 +1,7 @@
 #pragma once
 
+extern "C"
+
 '' TODO: unrecognized construct:
 '' int a
 '' ---------------------------------------------------------------------------
@@ -9,3 +11,5 @@
 '' context as seen by fbfrog:
 ''     int a
 ''         ^
+
+end extern

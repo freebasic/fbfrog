@@ -1324,12 +1324,13 @@ end function
 private function hNewProc( byval dtype as integer, byval subtype as ASTNODE ptr ) as ASTNODE ptr
 	var n = astNew( ASTCLASS_PROC )
 	astSetType( n, dtype, subtype )
+	api.need_externblock = TRUE
 	function = n
 end function
 
 '' Assign the default cdecl callconv to PROC node(s) of a single declarator,
 '' if they don't have an explicit callconv yet.
-private sub hDefaultToCdecl( byval n as ASTNODE ptr )
+private sub hDefaultToCdecl( byval n as ASTNODE ptr, byval filterout as integer )
 	if( n->class = ASTCLASS_PROC ) then
 		const BOTHCALLCONVS = ASTATTRIB_CDECL or ASTATTRIB_STDCALL
 
@@ -1342,11 +1343,23 @@ private sub hDefaultToCdecl( byval n as ASTNODE ptr )
 		elseif( (n->attrib and BOTHCALLCONVS) = BOTHCALLCONVS ) then
 			cError( "cdecl/stdcall attributes specified together" )
 		end if
+
+		if( filterout = FALSE ) then
+			if( n->attrib and ASTATTRIB_CDECL ) then
+				api.cdecls += 1
+			elseif( n->attrib and ASTATTRIB_STDCALL ) then
+				api.stdcalls += 1
+			end if
+		end if
 	end if
 
 	'' Visit procptr subtypes
-	if( n->subtype ) then hDefaultToCdecl( n->subtype )
+	if( n->subtype ) then hDefaultToCdecl( n->subtype, filterout )
 end sub
+
+private function hFilterOutConstruct( ) as integer
+	function = ((tkGetFlags( c.x - 1 ) and TKFLAG_FILTEROUT) <> 0)
+end function
 
 ''
 '' Declarator =
@@ -1581,6 +1594,13 @@ private function cDeclarator _
 		select case( decl )
 		case DECL_EXTERNVAR
 			t->attrib or= ASTATTRIB_EXTERN
+			if( hFilterOutConstruct( ) = FALSE ) then
+				api.need_externblock = TRUE
+			end if
+		case DECL_GLOBALVAR
+			if( hFilterOutConstruct( ) = FALSE ) then
+				api.need_externblock = TRUE
+			end if
 		case DECL_GLOBALSTATICVAR
 			t->attrib or= ASTATTRIB_STATIC
 		case DECL_LOCALVAR
@@ -1678,6 +1698,7 @@ private function cDeclarator _
 			select case( t->class )
 			case ASTCLASS_VAR, ASTCLASS_FIELD
 				t->class = ASTCLASS_PROC
+				api.need_externblock = TRUE
 			end select
 		end if
 
@@ -1826,12 +1847,10 @@ private function cDeclaration( byval decl as integer, byval gccattribs as intege
 	var declarator_count = 0
 	do
 		declarator_count += 1
-		var begin = c.x
-
 		astAppend( result, cDeclarator( 0, decl, dtype, subtype, gccattribs, NULL, 0, 0 ) )
 		var t = result->tail
 
-		hDefaultToCdecl( t )
+		hDefaultToCdecl( t, hFilterOutConstruct( ) )
 
 		'' Parameters/types can't have commas and more identifiers,
 		'' and don't need with ';' either.

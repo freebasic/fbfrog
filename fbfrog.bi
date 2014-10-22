@@ -789,7 +789,7 @@ declare function astLookupMacroParam _
 		byval macro as ASTNODE ptr, _
 		byval id as zstring ptr _
 	) as integer
-declare sub astAutoExtern( byval ast as ASTNODE ptr, byval use_stdcallms as integer )
+declare sub astWrapInExternBlock( byval ast as ASTNODE ptr, byval callconv as integer )
 declare sub hHandleArrayParam( byval n as ASTNODE ptr )
 declare sub astSolveOutArrayTypedefs( byval n as ASTNODE ptr, byval ast as ASTNODE ptr )
 declare sub astSolveOutProcTypedefs( byval n as ASTNODE ptr, byval ast as ASTNODE ptr )
@@ -871,7 +871,7 @@ type FROGVERSION
 end type
 
 namespace frog
-	extern as integer verbose
+	extern as integer verbose, windowsms
 	extern incdirs as ASTNODE ptr
 
 	extern as ASTNODE ptr script
@@ -879,6 +879,10 @@ namespace frog
 
 	extern as FROGVERSION ptr versions
 	extern as integer versioncount
+end namespace
+
+namespace api
+	extern as integer cdecls, stdcalls, need_externblock
 end namespace
 
 declare sub frogPrint( byref s as string )

@@ -67,6 +67,10 @@ namespace frog
 	dim shared as string prefix
 end namespace
 
+namespace api
+	dim shared as integer cdecls, stdcalls, need_externblock
+end namespace
+
 '' Find a *.fbfrog or *.h file in fbfrog's include/ dir, its "library" of
 '' premade collections of pre-#defines etc. useful when creating bindings.
 private function hFindResource( byref filename as string ) as string
@@ -974,9 +978,15 @@ private function frogReadAPI( byval options as ASTNODE ptr ) as ASTNODE ptr
 	end scope
 
 	'' C pre-parsing pass
+	api.cdecls = 0
+	api.stdcalls = 0
+	api.need_externblock = FALSE
 	cPreParse( )
 
 	'' Parse C constructs
+	api.cdecls = 0
+	api.stdcalls = 0
+	api.need_externblock = FALSE
 	var ast = cFile( )
 
 	cEnd( )
@@ -994,7 +1004,13 @@ private function frogReadAPI( byval options as ASTNODE ptr ) as ASTNODE ptr
 	astNameAnonUdtsAfterFirstAliasTypedef( ast )
 	astAddForwardDeclsForUndeclaredTagIds( ast )
 
-	astAutoExtern( ast, frog.windowsms )
+	if( api.need_externblock ) then
+		'' Add an Extern block, ensuring to preserve the case of global
+		'' vars and procedures, and covering the most-used calling convention.
+		astWrapInExternBlock( ast, _
+			iif( api.stdcalls > api.cdecls, _
+				ASTATTRIB_STDCALL, ASTATTRIB_CDECL ) )
+	end if
 
 	if( frog.nonamefixup = FALSE ) then
 		astFixIdsInit( )

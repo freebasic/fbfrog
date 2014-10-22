@@ -197,7 +197,7 @@ private sub emitLines( byval lines as zstring ptr )
 end sub
 
 '' Symbols can have an explicit alias set due to symbol renaming.
-'' Normally though we rely on astAutoExtern() to add the Extern block,
+'' Normally though we rely on astWrapInExternBlock() to add the Extern block,
 '' which makes it unnecessary to worry about emitting case-preserving aliases.
 private function hEmitAlias( byval n as ASTNODE ptr ) as string
 	if( n->alias ) then

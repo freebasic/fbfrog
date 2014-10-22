@@ -113,67 +113,6 @@ function astLookupMacroParam _
 	function = -1
 end function
 
-private function astCountCallConv( byval n as ASTNODE ptr, byval callconv as integer ) as integer
-	var count = 0
-
-	if( n->class = ASTCLASS_PROC ) then
-		if( n->attrib and callconv ) then
-			if( (n->attrib and ASTATTRIB_FILTEROUT) = 0 ) then
-				count += 1
-			end if
-		end if
-	end if
-
-	if( n->subtype ) then count += astCountCallConv( n->subtype, callconv )
-	if( n->array   ) then count += astCountCallConv( n->array  , callconv )
-	if( n->expr    ) then count += astCountCallConv( n->expr   , callconv )
-
-	var i = n->head
-	while( i )
-		count += astCountCallConv( i, callconv )
-		i = i->next
-	wend
-
-	function = count
-end function
-
-private function astFindMainCallConv( byval ast as ASTNODE ptr ) as integer
-	var   cdeclcount = astCountCallConv( ast, ASTATTRIB_CDECL   )
-	var stdcallcount = astCountCallConv( ast, ASTATTRIB_STDCALL )
-	if( (cdeclcount = 0) and (stdcallcount = 0) ) then
-		'' No procedures/function pointers at all, so no need for an
-		'' Extern block to cover a calling convention
-		function = -1
-	elseif( stdcallcount > cdeclcount ) then
-		'' Stdcall dominates
-		function = ASTATTRIB_STDCALL
-	else
-		'' Cdecl dominates, or equal to amount of Stdcalls
-		function = ASTATTRIB_CDECL
-	end if
-end function
-
-'' Does the AST contain any declarations that need to be emitted with a
-'' case-preserving ALIAS?
-private function astHaveDeclsNeedingCaseAlias( byval n as ASTNODE ptr ) as integer
-	if( (n->attrib and ASTATTRIB_FILTEROUT) = 0 ) then
-		select case( n->class )
-		case ASTCLASS_VAR
-			return ((n->attrib and (ASTATTRIB_LOCAL or ASTATTRIB_STATIC)) = 0)
-		case ASTCLASS_PROC
-			return TRUE
-		end select
-	end if
-
-	var i = n->head
-	while( i )
-		if( astHaveDeclsNeedingCaseAlias( i ) ) then
-			return TRUE
-		end if
-		i = i->next
-	wend
-end function
-
 private sub astHideCallConv( byval n as ASTNODE ptr, byval callconv as integer )
 	if( n->class = ASTCLASS_PROC ) then
 		if( n->attrib and callconv ) then
@@ -192,16 +131,10 @@ private sub astHideCallConv( byval n as ASTNODE ptr, byval callconv as integer )
 	wend
 end sub
 
-private sub astWrapInExternBlock _
-	( _
-		byval ast as ASTNODE ptr, _
-		byval externcallconv as integer, _
-		byval use_stdcallms as integer _
-	)
-
+sub astWrapInExternBlock( byval ast as ASTNODE ptr, byval callconv as integer )
 	var externblock = @"C"
-	if( externcallconv = ASTATTRIB_STDCALL ) then
-		if( use_stdcallms ) then
+	if( callconv = ASTATTRIB_STDCALL ) then
+		if( frog.windowsms ) then
 			externblock = @"Windows-MS"
 		else
 			externblock = @"Windows"
@@ -210,19 +143,11 @@ private sub astWrapInExternBlock _
 
 	'' Remove the calling convention from all procdecls, the Extern block
 	'' will take over
-	astHideCallConv( ast, externcallconv )
+	astHideCallConv( ast, callconv )
 
 	assert( ast->class = ASTCLASS_GROUP )
 	astPrepend( ast, astNew( ASTCLASS_EXTERNBLOCKBEGIN, externblock ) )
 	astAppend( ast, astNew( ASTCLASS_EXTERNBLOCKEND ) )
-
-end sub
-
-sub astAutoExtern( byval ast as ASTNODE ptr, byval use_stdcallms as integer )
-	var maincallconv = astFindMainCallConv( ast )
-	if( (maincallconv >= 0) or astHaveDeclsNeedingCaseAlias( ast ) ) then
-		astWrapInExternBlock( ast, maincallconv, use_stdcallms )
-	end if
 end sub
 
 '' C array parameter? It's really just a pointer (the array is passed byref).
