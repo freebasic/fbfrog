@@ -988,7 +988,6 @@ private function frogReadAPI( byval options as ASTNODE ptr ) as ASTNODE ptr
 	''
 	'' Work on the AST
 	''
-	astTurnStructInitIntoArrayInit( ast )
 	astCleanUpExpressions( ast )
 	astSolveOutArrayTypedefs( ast, ast )
 	astSolveOutProcTypedefs( ast, ast )

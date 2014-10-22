@@ -578,7 +578,7 @@ private function cInitializer( ) as ASTNODE ptr
 		'' ','
 	loop while( cMatch( TK_COMMA ) and c.parseok )
 
-	cExpectMatch( TK_RBRACE, "to close struct initializer" )
+	cExpectMatch( TK_RBRACE, "to close initializer" )
 
 	function = a
 end function
@@ -1698,6 +1698,14 @@ private function cDeclarator _
 		if( cMatch( TK_EQ ) ) then
 			assert( t->expr = NULL )
 			t->expr = cExpressionOrInitializer( )
+
+			'' If it's an array, then it must be an array initializer (or a string literal),
+			'' not a struct initializer
+			if( t->array ) then
+				if( t->expr->class = ASTCLASS_STRUCTINIT ) then
+					t->expr->class = ASTCLASS_ARRAYINIT
+				end if
+			end if
 		end if
 	end if
 

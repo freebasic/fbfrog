@@ -785,7 +785,6 @@ declare sub astDump _
 	)
 
 declare sub astCleanUpExpressions( byval code as ASTNODE ptr )
-declare sub astTurnStructInitIntoArrayInit( byval n as ASTNODE ptr )
 declare function astLookupMacroParam _
 	( _
 		byval macro as ASTNODE ptr, _

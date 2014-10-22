@@ -108,28 +108,6 @@ sub astCleanUpExpressions( byval n as ASTNODE ptr )
 	wend
 end sub
 
-'' For arrays with struct initializer, turn that into an array initializer
-'' (in such cases the initializer parser couldn't do the disambiguation)
-sub astTurnStructInitIntoArrayInit( byval n as ASTNODE ptr )
-	if( n->class = ASTCLASS_VAR ) then
-		if( (n->expr <> NULL) and (n->array <> NULL) ) then
-			if( n->expr->class = ASTCLASS_STRUCTINIT ) then
-				n->expr->class = ASTCLASS_ARRAYINIT
-			end if
-		end if
-	end if
-
-	if( n->subtype ) then astTurnStructInitIntoArrayInit( n->subtype )
-	if( n->array   ) then astTurnStructInitIntoArrayInit( n->array   )
-	if( n->expr    ) then astTurnStructInitIntoArrayInit( n->expr    )
-
-	var i = n->head
-	while( i )
-		astTurnStructInitIntoArrayInit( i )
-		i = i->next
-	wend
-end sub
-
 function astLookupMacroParam _
 	( _
 		byval macro as ASTNODE ptr, _
