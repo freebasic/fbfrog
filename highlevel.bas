@@ -1340,24 +1340,6 @@ function astUsesDtype( byval n as ASTNODE ptr, byval dtype as integer ) as integ
 	function = FALSE
 end function
 
-sub astMergeDIVIDERs( byval n as ASTNODE ptr )
-	assert( n->class = ASTCLASS_GROUP )
-
-	var child = n->head
-	while( child )
-		var nxt = child->next
-
-		if( nxt ) then
-			if( (child->class = ASTCLASS_DIVIDER) and _
-			    (  nxt->class = ASTCLASS_DIVIDER) ) then
-				astRemove( n, child )
-			end if
-		end if
-
-		child = nxt
-	wend
-end sub
-
 private function hIsPpIfBegin( byval n as ASTNODE ptr ) as integer
 	select case( n->class )
 	case ASTCLASS_PPIF, ASTCLASS_PPELSEIF, ASTCLASS_PPELSE

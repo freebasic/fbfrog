@@ -1036,8 +1036,6 @@ private function frogReadAPI( byval options as ASTNODE ptr ) as ASTNODE ptr
 		wend
 	end scope
 
-	astMergeDIVIDERs( ast )
-
 	astDelete( options )
 	astDelete( rootfiles )
 	function = ast

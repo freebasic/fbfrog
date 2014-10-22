@@ -811,7 +811,6 @@ declare sub astFixIdsInit( )
 declare sub astFixIdsAddReservedId( byval id as zstring ptr )
 declare sub astFixIds( byval code as ASTNODE ptr )
 declare function astUsesDtype( byval n as ASTNODE ptr, byval dtype as integer ) as integer
-declare sub astMergeDIVIDERs( byval n as ASTNODE ptr )
 declare sub astAutoAddDividers( byval code as ASTNODE ptr )
 declare sub astPrependMaybeWithDivider( byval group as ASTNODE ptr, byval n as ASTNODE ptr )
 
