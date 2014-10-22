@@ -1695,6 +1695,8 @@ private function cDeclarator _
 		cExpectMatch( TK_RPAREN, "to close parameter list in function declaration" )
 	end select
 
+	hHandlePlainCharAfterArrayStatusIsKnown( iif( t = node, t, node ) )
+
 	'' __ATTRIBUTE__((...))
 	var endgccattribs = 0
 	cGccAttributeList( endgccattribs )

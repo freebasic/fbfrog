@@ -794,7 +794,7 @@ declare sub astAutoExtern( byval ast as ASTNODE ptr, byval use_stdcallms as inte
 declare sub hHandleArrayParam( byval n as ASTNODE ptr )
 declare sub astSolveOutArrayTypedefs( byval n as ASTNODE ptr, byval ast as ASTNODE ptr )
 declare sub astSolveOutProcTypedefs( byval n as ASTNODE ptr, byval ast as ASTNODE ptr )
-declare sub astTurnPlainZstringIntoByte( byval n as ASTNODE ptr )
+declare sub hHandlePlainCharAfterArrayStatusIsKnown( byval n as ASTNODE ptr )
 declare sub astTurnZstringArrayIntoFixedLengthZstring( byval n as ASTNODE ptr )
 declare sub astUnscopeDeclsNestedInStructs( byval n as ASTNODE ptr )
 declare sub astNameAnonUdtsAfterFirstAliasTypedef( byval n as ASTNODE ptr )
