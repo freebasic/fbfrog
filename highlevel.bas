@@ -111,17 +111,21 @@ end sub
 '' For arrays with struct initializer, turn that into an array initializer
 '' (in such cases the initializer parser couldn't do the disambiguation)
 sub astTurnStructInitIntoArrayInit( byval n as ASTNODE ptr )
-	var i = n->head
-	while( i )
-
-		if( i->class = ASTCLASS_VAR ) then
-			if( (i->expr <> NULL) and (i->array <> NULL) ) then
-				if( i->expr->class = ASTCLASS_STRUCTINIT ) then
-					i->expr->class = ASTCLASS_ARRAYINIT
-				end if
+	if( n->class = ASTCLASS_VAR ) then
+		if( (n->expr <> NULL) and (n->array <> NULL) ) then
+			if( n->expr->class = ASTCLASS_STRUCTINIT ) then
+				n->expr->class = ASTCLASS_ARRAYINIT
 			end if
 		end if
+	end if
 
+	if( n->subtype ) then astTurnStructInitIntoArrayInit( n->subtype )
+	if( n->array   ) then astTurnStructInitIntoArrayInit( n->array   )
+	if( n->expr    ) then astTurnStructInitIntoArrayInit( n->expr    )
+
+	var i = n->head
+	while( i )
+		astTurnStructInitIntoArrayInit( i )
 		i = i->next
 	wend
 end sub

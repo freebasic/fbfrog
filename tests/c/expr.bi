@@ -451,7 +451,7 @@ end enum
 #define A54 cptr(const ulong ptr ptr ptr, malloc(123))
 #macro A55
 	scope
-		dim a(0 to 9) as long = (1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
+		dim a(0 to 9) as long = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
 	end scope
 #endmacro
 #macro A56
