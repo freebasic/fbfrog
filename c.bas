@@ -1629,6 +1629,8 @@ private function cDeclarator _
 			'' '['? (next dimension)
 		loop while( (tkGet( c.x ) = TK_LBRACKET) and c.parseok )
 
+		hHandleArrayParam( node )
+
 	'' ':' <bits>
 	case TK_COLON
 		if( decl <> DECL_FIELD ) then

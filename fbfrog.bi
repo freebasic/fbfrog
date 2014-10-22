@@ -791,9 +791,9 @@ declare function astLookupMacroParam _
 		byval id as zstring ptr _
 	) as integer
 declare sub astAutoExtern( byval ast as ASTNODE ptr, byval use_stdcallms as integer )
+declare sub hHandleArrayParam( byval n as ASTNODE ptr )
 declare sub astSolveOutArrayTypedefs( byval n as ASTNODE ptr, byval ast as ASTNODE ptr )
 declare sub astSolveOutProcTypedefs( byval n as ASTNODE ptr, byval ast as ASTNODE ptr )
-declare sub astFixArrayParams( byval n as ASTNODE ptr )
 declare sub astTurnPlainZstringIntoByte( byval n as ASTNODE ptr )
 declare sub astTurnZstringArrayIntoFixedLengthZstring( byval n as ASTNODE ptr )
 declare sub astUnscopeDeclsNestedInStructs( byval n as ASTNODE ptr )

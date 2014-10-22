@@ -241,6 +241,18 @@ sub astAutoExtern( byval ast as ASTNODE ptr, byval use_stdcallms as integer )
 	end if
 end sub
 
+'' C array parameter? It's really just a pointer (the array is passed byref).
+'' FB doesn't support C array parameters like that, so turn them into pointers:
+''    int a[5]  ->  byval a as long ptr
+sub hHandleArrayParam( byval n as ASTNODE ptr )
+	assert( n->array )
+	if( n->class = ASTCLASS_PARAM ) then
+		astDelete( n->array )
+		n->array = NULL
+		n->dtype = typeAddrOf( n->dtype )
+	end if
+end sub
+
 private sub hSolveOutArrayTypedefSubtypes _
 	( _
 		byval n as ASTNODE ptr, _
@@ -255,6 +267,7 @@ private sub hSolveOutArrayTypedefSubtypes _
 					n->array = astNew( ASTCLASS_ARRAY )
 				end if
 				astAppend( n->array, astCloneChildren( typedef->array ) )
+				hHandleArrayParam( n )
 			end if
 		else
 			hSolveOutArrayTypedefSubtypes( n->subtype, typedef )
@@ -426,30 +439,6 @@ sub astSolveOutProcTypedefs( byval n as ASTNODE ptr, byval ast as ASTNODE ptr )
 		end if
 
 		i = nxt
-	wend
-end sub
-
-sub astFixArrayParams( byval n as ASTNODE ptr )
-	if( n->class = ASTCLASS_PARAM ) then
-		'' C array parameters are really just pointers (i.e. the array
-		'' is passed byref), and FB doesn't support array parameters
-		'' like that, so turn them into pointers:
-		''    int a[5]  ->  byval a as long ptr
-		if( n->array ) then
-			astDelete( n->array )
-			n->array = NULL
-			n->dtype = typeAddrOf( n->dtype )
-		end if
-	end if
-
-	if( n->subtype ) then astFixArrayParams( n->subtype )
-	if( n->array   ) then astFixArrayParams( n->array )
-	if( n->expr    ) then astFixArrayParams( n->expr )
-
-	var i = n->head
-	while( i )
-		astFixArrayParams( i )
-		i = i->next
 	wend
 end sub
 

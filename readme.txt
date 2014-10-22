@@ -264,9 +264,6 @@ To do:
   rename the symbol instead of having to walk the entire AST replacing
   occurrences of the identifier, and identifier comparisons become pointer
   comparisons instead of string comparisons.
-  Things like astFixArrayParams() and astTurnPlainZstringIntoByte() are very
-  similar and can either be combined into 1 walking function and if not too ugly
-  it can be handled during emitting instead of an extra walking function.
 	* It would already help to build symbol tables temporarily, like decltables,
 	  similar to the hashtbs already used currently...
 	* fbfrog should be a single-pass compiler, if possible...
