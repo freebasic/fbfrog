@@ -791,7 +791,6 @@ declare function astLookupMacroParam _
 		byval macro as ASTNODE ptr, _
 		byval id as zstring ptr _
 	) as integer
-declare sub astMakeProcsDefaultToCdecl( byval n as ASTNODE ptr )
 declare sub astAutoExtern( byval ast as ASTNODE ptr, byval use_stdcallms as integer )
 declare sub astSolveOutArrayTypedefs( byval n as ASTNODE ptr, byval ast as ASTNODE ptr )
 declare sub astSolveOutProcTypedefs( byval n as ASTNODE ptr, byval ast as ASTNODE ptr )

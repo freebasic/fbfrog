@@ -151,35 +151,7 @@ function astLookupMacroParam _
 	function = -1
 end function
 
-'' This isn't done by the C parser already because it has to handle calling
-'' convention attributes amongst others, and using a default would require it
-'' to remove the default if it will add another one, etc. Doing it here
-'' afterwards just is easier because all that's needed is to fill the gaps.
-sub astMakeProcsDefaultToCdecl( byval n as ASTNODE ptr )
-	if( n->class = ASTCLASS_PROC ) then
-		'' No calling convention specified yet?
-		if( (n->attrib and (ASTATTRIB_CDECL or ASTATTRIB_STDCALL)) = 0 ) then
-			n->attrib or= ASTATTRIB_CDECL
-		end if
-	end if
-
-	if( n->subtype ) then astMakeProcsDefaultToCdecl( n->subtype )
-	if( n->array   ) then astMakeProcsDefaultToCdecl( n->array   )
-	if( n->expr    ) then astMakeProcsDefaultToCdecl( n->expr    )
-
-	var i = n->head
-	while( i )
-		astMakeProcsDefaultToCdecl( i )
-		i = i->next
-	wend
-end sub
-
-private function astCountCallConv _
-	( _
-		byval n as ASTNODE ptr, _
-		byval callconv as integer _
-	) as integer
-
+private function astCountCallConv( byval n as ASTNODE ptr, byval callconv as integer ) as integer
 	var count = 0
 
 	if( n->class = ASTCLASS_PROC ) then

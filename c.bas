@@ -636,35 +636,16 @@ private sub cGccAttribute( byref gccattribs as integer )
 	     "unused", _
 	     "visibility", _
 	     "warn_unused_result"
-
 		c.x += 1
 
 		'' Some of these attributes accept further arguments which we
 		'' can just ignore.
 		cSkipToRparen( )
 
-	case "cdecl"
-		if( gccattribs and ASTATTRIB_STDCALL ) then
-			cError( "cdecl attribute specified together with stdcall" )
-		end if
-		gccattribs or= ASTATTRIB_CDECL
-		c.x += 1
-
-	case "stdcall"
-		if( gccattribs and ASTATTRIB_CDECL ) then
-			cError( "stdcall attribute specified together with cdecl" )
-		end if
-		gccattribs or= ASTATTRIB_STDCALL
-		c.x += 1
-
-	case "packed"
-		gccattribs or= ASTATTRIB_PACKED
-		c.x += 1
-
-	case "dllimport"
-		gccattribs or= ASTATTRIB_DLLIMPORT
-		c.x += 1
-
+	case "cdecl"     : gccattribs or= ASTATTRIB_CDECL     : c.x += 1
+	case "stdcall"   : gccattribs or= ASTATTRIB_STDCALL   : c.x += 1
+	case "packed"    : gccattribs or= ASTATTRIB_PACKED    : c.x += 1
+	case "dllimport" : gccattribs or= ASTATTRIB_DLLIMPORT : c.x += 1
 	case else
 		cError( "unknown attribute '" + *tkSpellId( c.x ) + "'" )
 	end select
@@ -1337,6 +1318,33 @@ private function hCanHaveInitializer( byval n as ASTNODE ptr ) as integer
 	end select
 end function
 
+private function hNewProc( byval dtype as integer, byval subtype as ASTNODE ptr ) as ASTNODE ptr
+	var n = astNew( ASTCLASS_PROC )
+	astSetType( n, dtype, subtype )
+	function = n
+end function
+
+'' Assign the default cdecl callconv to PROC node(s) of a single declarator,
+'' if they don't have an explicit callconv yet.
+private sub hDefaultToCdecl( byval n as ASTNODE ptr )
+	if( n->class = ASTCLASS_PROC ) then
+		const BOTHCALLCONVS = ASTATTRIB_CDECL or ASTATTRIB_STDCALL
+
+		'' Default to cdecl, if there's no explicit callconv attribute yet
+		if( (n->attrib and BOTHCALLCONVS) = 0 ) then
+			n->attrib or= ASTATTRIB_CDECL
+
+		'' And show an error if conflicting attributes were given
+		'' (perhaps we just made a mistake assigning them - better safe...)
+		elseif( (n->attrib and BOTHCALLCONVS) = BOTHCALLCONVS ) then
+			cError( "cdecl/stdcall attributes specified together" )
+		end if
+	end if
+
+	'' Visit procptr subtypes
+	if( n->subtype ) then hDefaultToCdecl( n->subtype )
+end sub
+
 ''
 '' Declarator =
 ''    GccAttributeList
@@ -1643,8 +1651,7 @@ private function cDeclarator _
 			'' will hold the parameters etc. found at this level.
 
 			'' New PROC node for the function pointer's subtype
-			node = astNew( ASTCLASS_PROC )
-			astSetType( node, dtype, basesubtype )
+			node = hNewProc( dtype, basesubtype )
 
 			'' Turn the object into a function pointer
 			astDelete( innernode->subtype )
@@ -1656,8 +1663,7 @@ private function cDeclarator _
 		'' Typedefs with parameters aren't turned into procs, but must
 		'' be given a PROC subtype, similar to procptrs.
 		elseif( t->class = ASTCLASS_TYPEDEF ) then
-			node = astNew( ASTCLASS_PROC )
-			astSetType( node, dtype, basesubtype )
+			node = hNewProc( dtype, basesubtype )
 
 			astDelete( t->subtype )
 			t->dtype = TYPE_PROC
@@ -1804,6 +1810,9 @@ private function cDeclaration( byval decl as integer, byval gccattribs as intege
 		var begin = c.x
 
 		astAppend( result, cDeclarator( 0, decl, dtype, subtype, gccattribs, NULL, 0, 0 ) )
+		var t = result->tail
+
+		hDefaultToCdecl( t )
 
 		'' Parameters/types can't have commas and more identifiers,
 		'' and don't need with ';' either.
@@ -1814,13 +1823,12 @@ private function cDeclaration( byval decl as integer, byval gccattribs as intege
 		end select
 
 		'' '{', procedure body?
-		var proc = result->tail
-		if( (proc->class = ASTCLASS_PROC) and (tkGet( c.x ) = TK_LBRACE) ) then
+		if( (t->class = ASTCLASS_PROC) and (tkGet( c.x ) = TK_LBRACE) ) then
 			'' A procedure with body must be the first and only
 			'' declarator in the declaration.
 			if( declarator_count = 1 ) then
-				assert( proc->expr = NULL )
-				proc->expr = cScope( )
+				assert( t->expr = NULL )
+				t->expr = cScope( )
 				require_semi = FALSE
 				exit do
 			end if
