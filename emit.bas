@@ -317,7 +317,8 @@ private function emitAst _
 	case ASTCLASS_GROUP
 		var i = n->head
 		while( i )
-			emitAst( i )
+			s = emitAst( i )
+			s = ""
 			i = i->next
 		wend
 
@@ -393,7 +394,8 @@ private function emitAst _
 			s = ""
 
 			emit.indent += 1
-			emitAst( n->expr )
+			s = emitAst( n->expr )
+			s = ""
 			emit.indent -= 1
 
 			emitLine( "#endmacro" )
