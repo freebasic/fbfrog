@@ -1359,8 +1359,8 @@ end sub
 dim shared fbcrtheaders(0 to ...) as zstring ptr = _
 { _
 	@"assert", @"ctype", @"errno", @"float", @"limits", @"locale", _
-	@"math", @"setjmp", @"signal", @"stdarg", @"stddef", @"stdio", _
-	@"stdlib", @"string", @"time" _
+	@"math", @"setjmp", @"signal", @"stdarg", @"stddef", @"stdint", _
+	@"stdio", @"stdlib", @"string", @"time" _
 }
 
 dim shared fbcrtheaderhash as THASH

@@ -11,6 +11,7 @@
 #include once "crt/signal.bi"
 #include once "crt/stdarg.bi"
 #include once "crt/stddef.bi"
+#include once "crt/stdint.bi"
 #include once "crt/stdio.bi"
 #include once "crt/stdlib.bi"
 #include once "crt/string.bi"
