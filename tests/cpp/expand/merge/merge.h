@@ -55,13 +55,13 @@ m1(a,b,c)
 #undef m1
 
 static int merge_affects_only_first_or_last_token_of_an_arg;
-#define m1(param) typedef struct left_##param;
+#define m1(param) static struct left_##param;
 m1(UDT A)
 #undef m1
-#define m1(param) typedef struct param##_right;
+#define m1(param) static struct param##_right;
 m1(UDT A)
 #undef m1
-#define m1(param) typedef struct left_##param##_right;
+#define m1(param) static struct left_##param##_right;
 m1(UDT A)
 #undef m1
 
