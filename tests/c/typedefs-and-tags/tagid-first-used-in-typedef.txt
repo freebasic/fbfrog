@@ -8,4 +8,4 @@
       tests/c/typedefs-and-tags/tagid-first-used-in-typedef.h
 [5/5] __FB_DOS__
       tests/c/typedefs-and-tags/tagid-first-used-in-typedef.h
-emitting: tests/c/typedefs-and-tags/tagid-first-used-in-typedef.bi (2 declarations, 0 TODOs)
+emitting: tests/c/typedefs-and-tags/tagid-first-used-in-typedef.bi (3 declarations, 0 TODOs)

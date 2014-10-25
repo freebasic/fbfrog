@@ -9,6 +9,7 @@ type B_
 	a as A ptr
 end type
 
-declare sub f(byval as A ptr)
+declare sub f1(byval as A ptr)
+declare sub f2(byval as B ptr)
 
 end extern

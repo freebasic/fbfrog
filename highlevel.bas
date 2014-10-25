@@ -546,21 +546,25 @@ end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 ''
-'' Collect information about the declared/used state of struct/union/enum tag
-'' ids, such that in the end we have a list of tag ids, and we can tell for
-'' which ones a forward declaration must be emitted at the top:
+'' In C, any use of "struct|union|enum id" can "declare" a new tag id, no matter
+'' whether it's a <struct id { ... }> block or a <typedef struct id foo> typedef
+'' or used in some other declaration like <void f(struct id *)>. This makes it
+'' very easy to have forward references.
+''
+'' In FB, forward references can only be introduced by an explicit typedef.
+''
+'' Thus, if the API uses any tag id without properly declaring it first via a
+'' <struct|union|enum id { ... }> block, we have to insert a typedef to
+'' explicitly declare the forward reference.
+''
+'' To do this, we collect information about the declared/used state of
+'' struct/union/enum tag ids, such that in the end we have a list of tag ids,
+'' and we can tell for which ones forward declarations are needed:
 ''    a) it's used above the declaration
 ''    b) it's used without being declared at all
 ''
 '' Declaration = struct/union/enum compound
 '' Used = Used as data type somewhere
-''
-'' In such cases we need to add a typedef which will do the forward declaration,
-'' because FB does not allow "implicit" forward references.
-''
-'' As a special case, if the first use is in a typedef, then we don't need to
-'' add an extra typedef for it. The existing typedef will already declare the
-'' forward reference.
 ''
 '' We don't ever need to add forward declarations for "unused" tag ids - the
 '' ones that only appear in declarations.
@@ -569,8 +573,7 @@ end sub
 const STATE_DECLARED			= 1 shl 0
 const STATE_USED_ABOVE_DECL		= 1 shl 1
 const STATE_USED			= 1 shl 2
-const STATE_USED_FIRST_IN_TYPEDEF	= 1 shl 3
-const STATE_FILTEROUT			= 1 shl 4
+const STATE_FILTEROUT			= 1 shl 3
 
 private function hUsedButNotDeclared( byval state as integer ) as integer
 	function = ((state and (STATE_DECLARED or STATE_USED)) = STATE_USED)
@@ -584,7 +587,6 @@ private sub hOnTagId _
 		byval hashtb as THASH ptr, _
 		byval id as zstring ptr, _
 		byval addstate as integer, _
-		byval is_in_typedef as integer, _
 		byval has_filterout as integer _
 	)
 
@@ -609,13 +611,6 @@ private sub hOnTagId _
 	else
 		'' New tag id.
 
-		'' Recording a use (not a declaration) as first appearance?
-		if( addstate = STATE_USED ) then
-			if( is_in_typedef ) then
-				addstate or= STATE_USED_FIRST_IN_TYPEDEF
-			end if
-		end if
-
 		if( has_filterout ) then
 			addstate or= STATE_FILTEROUT
 		end if
@@ -634,13 +629,13 @@ private sub hCollectTagIds( byval n as ASTNODE ptr, byval list as ASTNODE ptr, b
 	case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
 		'' Not anonymous?
 		if( n->text ) then
-			hOnTagId( list, hashtb, n->text, STATE_DECLARED, FALSE, ((n->attrib and ASTATTRIB_FILTEROUT) <> 0) )
+			hOnTagId( list, hashtb, n->text, STATE_DECLARED, ((n->attrib and ASTATTRIB_FILTEROUT) <> 0) )
 		end if
 	end select
 
 	if( n->subtype ) then
 		if( n->subtype->class = ASTCLASS_TAGID ) then
-			hOnTagId( list, hashtb, n->subtype->text, STATE_USED, (n->class = ASTCLASS_TYPEDEF), ((n->attrib and ASTATTRIB_FILTEROUT) <> 0) )
+			hOnTagId( list, hashtb, n->subtype->text, STATE_USED, ((n->attrib and ASTATTRIB_FILTEROUT) <> 0) )
 		else
 			hCollectTagIds( n->subtype, list, hashtb )
 		end if
@@ -701,17 +696,10 @@ private sub hConsiderTagId _
 
 	'' Tag id used before its declaration?
 	if( state and STATE_USED_ABOVE_DECL ) then
-		'' First use is in a typedef (and declaration follows later)?
-		if( state and STATE_USED_FIRST_IN_TYPEDEF ) then
-			'' Nothing to do - the typedef already declares the forward reference.
-			'' Since the declaration exists, astFixIds() will fix name conflicts
-			'' based on that.
-		else
-			'' Rename the struct and add a forward declaration for it using the old id.
-			'' astFixIds() will take care of fixing name conflicts involving the new
-			'' struct id, if any.
-			hRenameTagDecls( ast, tagid, hAddForwardTypedef( decllist, tagid, ((state and STATE_FILTEROUT) <> 0) ) )
-		end if
+		'' Rename the struct and add a forward declaration for it using the old id.
+		'' astFixIds() will take care of fixing name conflicts involving the new
+		'' struct id, if any.
+		hRenameTagDecls( ast, tagid, hAddForwardTypedef( decllist, tagid, ((state and STATE_FILTEROUT) <> 0) ) )
 
 	'' Tag id used only (and no declaration exists)?
 	elseif( hUsedButNotDeclared( state ) ) then

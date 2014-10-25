@@ -217,6 +217,11 @@ unnecessary?
 
 To do:
 
+* Currently tag ids are preserved as type names, but often this is unnecessary.
+  If we find an alias typedef for a tag id (no matter whether it's an exact
+  alias or a different id alias) then the tag id should be solved out. All uses
+  should be changed to use the typedef.
+
 * Renames can cause other renames to become unnecessary. Here we'll do an
   unnecessary rename:
 	#define A 1
