@@ -1,4 +1,4 @@
-// @fbfrog -filterout '*' -filterin 'tests?cpp?filter?matching?*bb*'
+// @fbfrog -filterout '*' -filterin 'tests?filter?matching?*bb*'
 
 #include "aaa.h"
 #include "aab.h"
