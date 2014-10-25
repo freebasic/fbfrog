@@ -445,12 +445,11 @@ namespace cpp
 	''   #if 0 block, and this way, to determine which #endif ends skipping
 	dim shared as integer skiplevel
 
-	'' Current #include nesting level, so we can easily determine whether
-	'' we're in a root file or not.
-	''    0  = real toplevel with the #include statements for the root files
-	''    1  = the root files
-	''    2+ = included files
-	dim shared as integer includelevel
+	'' Whether we're currently in an include file (directly or indirectly)
+	'' which will be filtered out.
+	''    0  = no
+	''    1+ = yes
+	dim shared as integer filteroutlevel
 
 	'' Lookup table of macros known to be either defined or undefined.
 	''   defined <=> data = a DEFINEINFO object
@@ -487,9 +486,11 @@ namespace cpp
 
 	type KNOWNFILE
 		incfile as zstring ptr  '' Normalized file name
+		filterout as integer
+		checked_guard as integer
 		'' Include guard symbol, if this file has a pure include guard,
 		'' otherwise NULL
-		guardid as zstring ptr
+		guard as zstring ptr
 	end type
 
 	'' Information about known files
@@ -512,11 +513,8 @@ sub cppInit( )
 		.knownfile = -1
 	end with
 	cpp.level = 0
-
-	'' No skipping yet
-	cpp.skiplevel = MAXSTACK
-
-	cpp.includelevel = 0
+	cpp.skiplevel = MAXSTACK  '' No skipping yet
+	cpp.filteroutlevel = 0
 
 	hashInit( @cpp.macros, 4, TRUE )
 	cpp.savedmacros = NULL
@@ -541,7 +539,7 @@ sub cppEnd( )
 		tkOops( cpp.x, "missing #endif" )
 	end if
 
-	assert( cpp.includelevel = 0 )
+	assert( cpp.filteroutlevel = 0 )
 
 	scope
 		for i as integer = 0 to cpp.macros.room - 1
@@ -562,8 +560,10 @@ sub cppEnd( )
 	hashEnd( @cpp.filetb )
 	scope
 		for i as integer = 0 to cpp.filecount - 1
-			deallocate( cpp.files[i].incfile )
-			deallocate( cpp.files[i].guardid )
+			with( cpp.files[i] )
+				deallocate( .incfile )
+				deallocate( .guard )
+			end with
 		next
 		deallocate( cpp.files )
 	end scope
@@ -573,7 +573,7 @@ sub cppEnd( )
 end sub
 
 #define cppSkipping( ) (cpp.skiplevel <> MAXSTACK)
-#define cppAtToplevel( ) (cpp.includelevel <= 1)
+#define cppWillBeFilteredOut( ) (cpp.filteroutlevel >= 1)
 
 sub cppNoExpandSym( byval id as zstring ptr )
 	hashAddOverwrite( @cpp.noexpands, id, NULL )
@@ -741,30 +741,55 @@ private sub cppRestoreMacro( byval id as zstring ptr )
 	cppRemoveSavedMacro( i )
 end sub
 
-private function cppAppendKnownFile( byval incfile as zstring ptr, byval guardid as zstring ptr ) as integer
+private function cppLookupOrAppendKnownFile _
+	( _
+		byval incfile as zstring ptr, _
+		byval is_rootfile as integer, _
+		byref prettyfile as string _
+	) as integer
+
+	var hash = hashHash( incfile )
+	var item = hashLookup( @cpp.filetb, incfile, hash )
+	if( item->s ) then
+		return cint( item->data )
+	end if
+
 	incfile = strDuplicate( incfile )
-	guardid = strDuplicate( guardid )
 
 	var i = cpp.filecount
 	cpp.filecount += 1
 	cpp.files = reallocate( cpp.files, cpp.filecount * sizeof( *cpp.files ) )
+
+	clear( cpp.files[i], 0, sizeof( *cpp.files ) )
 	with( cpp.files[i] )
 		.incfile = incfile
-		.guardid = guardid
+
+		'' Check -filterout/-filterin
+		.filterout = (not is_rootfile) andalso (not cppKeepIncludeContent( prettyfile ))
 	end with
 
-	hashAddOverwrite( @cpp.filetb, incfile, cptr( any ptr, i ) )
+	hashAdd( @cpp.filetb, item, hash, incfile, cptr( any ptr, i ) )
 	function = i
 end function
 
-private function cppLookupKnownFile( byval incfile as zstring ptr ) as integer
-	var item = hashLookup( @cpp.filetb, incfile, hashHash( incfile ) )
-	if( item->s ) then
-		function = cint( item->data )
-	else
-		function = -1
-	end if
-end function
+private sub cppKnownFileSetGuard( byval i as integer, byval guard as zstring ptr )
+	assert( (i >= 0) and (i < cpp.filecount) )
+	with( cpp.files[i] )
+		assert( .checked_guard = FALSE )
+		assert( .guard = NULL )
+		.checked_guard = TRUE
+		.guard = strDuplicate( guard )
+	end with
+end sub
+
+private sub cppKnownFileDropGuard( byval i as integer )
+	with( cpp.files[i] )
+		if( .guard ) then
+			deallocate( .guard )
+			.guard = NULL
+		end if
+	end with
+end sub
 
 '' Remap .h name to a .bi name. If it's a known system header, we can even remap
 '' it to the corresponding FB header (in some cases it's not as simple as
@@ -1889,24 +1914,32 @@ private function cppEvalIfExpr( byval expr as ASTNODE ptr ) as integer
 	function = (v.vali <> 0)
 end function
 
-private sub cppPush( byval state as integer )
+private sub cppPush( byval state as integer, byval knownfile as integer = -1 )
+	assert( iif( knownfile >= 0, state = STATE_FILE, TRUE ) )
+
 	cpp.level += 1
 	if( cpp.level >= MAXSTACK ) then
 		tkOops( cpp.x, "#if/#include stack too small, MAXSTACK=" & MAXSTACK )
 	end if
+
 	with( cpp.stack(cpp.level) )
 		.state = state
-		.knownfile = -1
+		.knownfile = knownfile
 	end with
 
-	if( state = STATE_FILE ) then
-		cpp.includelevel += 1
+	if( knownfile >= 0 ) then
+		if( cpp.files[knownfile].filterout ) then
+			cpp.filteroutlevel += 1
+		end if
 	end if
 end sub
 
 private sub cppPop( )
-	if( cpp.stack(cpp.level).state = STATE_FILE ) then
-		cpp.includelevel -= 1
+	var knownfile = cpp.stack(cpp.level).knownfile
+	if( knownfile >= 0 ) then
+		if( cpp.files[knownfile].filterout ) then
+			cpp.filteroutlevel -= 1
+		end if
 	end if
 	cpp.level -= 1
 end sub
@@ -1971,14 +2004,12 @@ private sub cppIfdef( byval directivekw as integer )
 	cppEol( )
 end sub
 
-'' Forget the guardid (if any) for the current file context (if any).
+'' Forget the guard (if any) for the current file context (if any).
 private sub cppDisableIncludeGuardOptimization( )
 	if( cpp.level >= 1 ) then
 		with( cpp.stack(cpp.level-1) )
 			if( .knownfile >= 0 ) then
-				assert( .state = STATE_FILE )
-				deallocate( cpp.files[.knownfile].guardid )
-				cpp.files[.knownfile].guardid = NULL
+				cppKnownFileDropGuard( .knownfile )
 			end if
 		end with
 	end if
@@ -2192,8 +2223,10 @@ private sub cppInclude( byval begin as integer )
 		if( len( incfile ) = 0 ) then
 			frogPrint( inctext + " (not found)" )
 
-			'' Add it as direct #include too, since it couldn't be expanded
-			if( cppAtToplevel( ) ) then
+			'' This #include statement couldn't be expanded, so we
+			'' have to preserve it into the final binding, if it
+			'' won't be filtered out itself.
+			if( cppWillBeFilteredOut( ) = FALSE ) then
 				cppAddDirectInclude( inctext )
 			end if
 
@@ -2211,49 +2244,43 @@ private sub cppInclude( byval begin as integer )
 	var prettyfile = pathStripCurdir( incfile )
 	var message = prettyfile
 
-	'' Check -filterin/-filterout
-	var keep = is_rootfile orelse cppKeepIncludeContent( prettyfile )
-	if( keep = FALSE ) then
+	var knownfile = cppLookupOrAppendKnownFile( incfile, is_rootfile, prettyfile )
+	with( cpp.files[knownfile] )
+
+		'' Before loading the include file content, do the #include guard optimization.
+		'' If this file had an #include guard last time we saw it, and the guard symbol
+		'' is now defined, then we don't need to bother loading (lex + tkInsert()...)
+		'' the file at all now.
+		if( .checked_guard and (.guard <> NULL) ) then
+			'' Only load the file if the guard symbol isn't defined (anymore) now.
+			if( cppIsMacroCurrentlyDefined( .guard ) ) then
+				'' Skipping header due to include guard
+				exit sub
+			end if
+		end if
+	end with
+
+	var filterout = cpp.files[knownfile].filterout
+	if( filterout ) then
 		message += " (filtered out)"
 
-		'' Add it as direct #include if its content will be filtered out
-		'' (i.e. if it won't be expanded)
-		if( cppAtToplevel( ) ) then
+		'' We're expanding this #include statement, but the include content
+		'' will be filtered out, so we have to keep the #include statement
+		'' for the final binding, if it itself won't be filtered out.
+		if( cppWillBeFilteredOut( ) = FALSE ) then
 			cppAddDirectInclude( inctext )
 		end if
-	end if
-
-	'' Before loading the include file content, do the #include guard optimization.
-	'' If this file had an #include guard last time we saw it, and the guard symbol
-	'' is now defined, then we don't need to bother loading (lex + tkInsert()...)
-	'' the file at all now.
-	var load_include_file = TRUE
-
-	'' Is the file known already?
-	var knownfile = cppLookupKnownFile( incfile )
-	if( knownfile >= 0 ) then
-		'' Did it have an #include guard?
-		var guardid = cpp.files[knownfile].guardid
-		if( guardid ) then
-			'' Only load the file if the guard symbol isn't defined (anymore) now.
-			load_include_file = not cppIsMacroCurrentlyDefined( guardid )
-		end if
-	end if
-
-	if( load_include_file = FALSE ) then
-		'' Skipping header due to include guard
-		exit sub
 	end if
 
 	frogPrint( message )
 
 	'' Push the #include file context
-	cppPush( STATE_FILE )
+	cppPush( STATE_FILE, knownfile )
 
 	'' Insert this helper token so we can identify the start of #included
 	'' tokens later during cPreParse().
 	tkInsert( cpp.x, TK_BEGININCLUDE )
-	if( keep = FALSE ) then
+	if( filterout ) then
 		tkAddFlags( cpp.x, cpp.x, TKFLAG_FILTEROUT )
 	end if
 	cpp.x += 1
@@ -2283,22 +2310,21 @@ private sub cppInclude( byval begin as integer )
 	assert( y <= tkGetCount( ) )
 	assert( tkGet( y - 2 ) = TK_ENDINCLUDE )
 
-	'' #include file not yet known?
-	if( knownfile < 0 ) then
+	if( cpp.files[knownfile].checked_guard = FALSE ) then
 		'' Prepare for the include guard optimization: We have to check
 		'' whether this include has ...
 		''  * an include guard, #ifndef FOO + #define FOO + #endif
 		''  * no tokens outside the include guard
 		''  * no #elif/#else in that if block
 		'' Check the first two points now:
-		var guardid = hDetectIncludeGuard( cpp.x, y - 3 )
+		var guard = hDetectIncludeGuard( cpp.x, y - 3 )
 
-		'' Make the #include file known, with the guardid (if any),
-		'' for the time being. Track it in the cpp.stack, so if we find
-		'' an #elif/#else later, we can mark the include guard
-		'' optimization as impossible by setting the guardid to NULL.
+		'' Store the guard (if any) for the file for the time being.
+		'' We're tracking it in the cpp.stack, so if we find an
+		'' #elif/#else later, we can mark the include guard optimization
+		'' as impossible by setting the guard to NULL.
 		'' (see cppDisableIncludeGuardOptimization())
-		cpp.stack(cpp.level).knownfile = cppAppendKnownFile( incfile, guardid )
+		cppKnownFileSetGuard( knownfile, guard )
 	end if
 end sub
 
