@@ -200,6 +200,7 @@ private sub hVerblockAppend _
 	if( verblock andalso astIsVERBLOCK( verblock ) ) then
 		if( astIsEqual( n->tail->expr, veror ) ) then
 			astAppend( n->tail, child )
+			astDelete( veror )
 			exit sub
 		end if
 	end if
