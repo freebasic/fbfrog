@@ -702,7 +702,7 @@ private sub frogEvaluateScript _
 					astClone( options ) )
 			loop
 
-			astAppend( frog.completeverors, astClone( completeveror ) )
+			astAppend( frog.completeverors, completeveror )
 
 		case ASTCLASS_DECLAREBOOL
 			var symbol = i->text
