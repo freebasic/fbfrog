@@ -1321,10 +1321,12 @@ private function hCanHaveInitializer( byval n as ASTNODE ptr ) as integer
 	end select
 end function
 
-private function hNewProc( byval dtype as integer, byval subtype as ASTNODE ptr ) as ASTNODE ptr
+private function hNewProc( byval dtype as integer, byval subtype as ASTNODE ptr, byval filterout as integer ) as ASTNODE ptr
 	var n = astNew( ASTCLASS_PROC )
 	astSetType( n, dtype, subtype )
-	api.need_externblock = TRUE
+	if( filterout = FALSE ) then
+		api.need_externblock = TRUE
+	end if
 	function = n
 end function
 
@@ -1356,10 +1358,6 @@ private sub hDefaultToCdecl( byval n as ASTNODE ptr, byval filterout as integer 
 	'' Visit procptr subtypes
 	if( n->subtype ) then hDefaultToCdecl( n->subtype, filterout )
 end sub
-
-private function hFilterOutConstruct( ) as integer
-	function = ((tkGetFlags( c.x - 1 ) and TKFLAG_FILTEROUT) <> 0)
-end function
 
 ''
 '' Declarator =
@@ -1512,7 +1510,8 @@ private function cDeclarator _
 		byval basegccattribs as integer, _
 		byref node as ASTNODE ptr, _
 		byref procptrdtype as integer, _
-		byref gccattribs as integer _
+		byref gccattribs as integer, _
+		byval filterout as integer _
 	) as ASTNODE ptr
 
 	var dtype = outerdtype
@@ -1567,7 +1566,7 @@ private function cDeclarator _
 
 	'' '('?
 	if( cMatch( TK_LPAREN ) ) then
-		t = cDeclarator( nestlevel + 1, decl, dtype, basesubtype, 0, innernode, innerprocptrdtype, innergccattribs )
+		t = cDeclarator( nestlevel + 1, decl, dtype, basesubtype, 0, innernode, innerprocptrdtype, innergccattribs, filterout )
 
 		'' ')'
 		cExpectMatch( TK_RPAREN, "for '(...)' parenthesized declarator" )
@@ -1594,11 +1593,11 @@ private function cDeclarator _
 		select case( decl )
 		case DECL_EXTERNVAR
 			t->attrib or= ASTATTRIB_EXTERN
-			if( hFilterOutConstruct( ) = FALSE ) then
+			if( filterout = FALSE ) then
 				api.need_externblock = TRUE
 			end if
 		case DECL_GLOBALVAR
-			if( hFilterOutConstruct( ) = FALSE ) then
+			if( filterout = FALSE ) then
 				api.need_externblock = TRUE
 			end if
 		case DECL_GLOBALSTATICVAR
@@ -1676,7 +1675,7 @@ private function cDeclarator _
 			'' will hold the parameters etc. found at this level.
 
 			'' New PROC node for the function pointer's subtype
-			node = hNewProc( dtype, basesubtype )
+			node = hNewProc( dtype, basesubtype, filterout )
 
 			'' Turn the object into a function pointer
 			astDelete( innernode->subtype )
@@ -1688,7 +1687,7 @@ private function cDeclarator _
 		'' Typedefs with parameters aren't turned into procs, but must
 		'' be given a PROC subtype, similar to procptrs.
 		elseif( t->class = ASTCLASS_TYPEDEF ) then
-			node = hNewProc( dtype, basesubtype )
+			node = hNewProc( dtype, basesubtype, filterout )
 
 			astDelete( t->subtype )
 			t->dtype = TYPE_PROC
@@ -1698,7 +1697,9 @@ private function cDeclarator _
 			select case( t->class )
 			case ASTCLASS_VAR, ASTCLASS_FIELD
 				t->class = ASTCLASS_PROC
-				api.need_externblock = TRUE
+				if( filterout = FALSE ) then
+					api.need_externblock = TRUE
+				end if
 			end select
 		end if
 
@@ -1785,6 +1786,8 @@ end function
 '' Declaration = GccAttributeList BaseType Declarator (',' Declarator)* [';']
 ''
 private function cDeclaration( byval decl as integer, byval gccattribs as integer ) as ASTNODE ptr
+	var filterout = ((tkGetFlags( c.x ) and TKFLAG_FILTEROUT) <> 0)
+
 	'' BaseType
 	dim as integer dtype
 	dim as ASTNODE ptr subtype
@@ -1847,10 +1850,10 @@ private function cDeclaration( byval decl as integer, byval gccattribs as intege
 	var declarator_count = 0
 	do
 		declarator_count += 1
-		astAppend( result, cDeclarator( 0, decl, dtype, subtype, gccattribs, NULL, 0, 0 ) )
+		astAppend( result, cDeclarator( 0, decl, dtype, subtype, gccattribs, NULL, 0, 0, filterout ) )
 		var t = result->tail
 
-		hDefaultToCdecl( t, hFilterOutConstruct( ) )
+		hDefaultToCdecl( t, filterout )
 
 		'' Parameters/types can't have commas and more identifiers,
 		'' and don't need with ';' either.
