@@ -1141,18 +1141,20 @@ end sub
 	'' there is a small delay at each version.
 	dim as ASTNODE ptr final
 	for i as integer = 0 to frog.versioncount - 1
-		var verand = astClone( frog.versions[i].verand )
-		print hMakeProgressString( i + 1, frog.versioncount ) + " " + astDumpPrettyVersion( verand )
+		var v = frog.versions + i
 
-		var ast = frogReadAPI( frog.versions[i].options )
+		print hMakeProgressString( i + 1, frog.versioncount ) + " " + astDumpPrettyVersion( v->verand )
+		var ast = frogReadAPI( v->options )
+		v->options = NULL
 
-		ast = astWrapFileInVerblock( astNewVEROR( astClone( verand ) ), ast )
+		ast = astWrapFileInVerblock( astNewVEROR( astClone( v->verand ) ), ast )
 		if( final = NULL ) then
 			final = astNewGROUP( ast )
 		else
 			final = astMergeVerblocks( final, ast )
 		end if
-		frog.fullveror = astNewVEROR( frog.fullveror, verand )
+		frog.fullveror = astNewVEROR( frog.fullveror, v->verand )
+		v->verand = NULL
 	next
 
 	'' Turn VERBLOCKs into #ifs etc.
