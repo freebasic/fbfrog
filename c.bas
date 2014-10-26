@@ -1697,6 +1697,7 @@ private function cDeclarator _
 			select case( t->class )
 			case ASTCLASS_VAR, ASTCLASS_FIELD
 				t->class = ASTCLASS_PROC
+				t->attrib and= not ASTATTRIB_EXTERN
 				if( filterout = FALSE ) then
 					api.need_externblock = TRUE
 				end if
