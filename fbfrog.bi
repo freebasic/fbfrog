@@ -221,7 +221,6 @@ declare function pathStripCurdir( byref path as string ) as string
 declare function pathIsDir( byref s as string ) as integer
 declare function pathNormalize( byref path as string ) as string
 declare function hReadableDirExists( byref path as string ) as integer
-declare function hFileExists( byref file as string ) as integer
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 

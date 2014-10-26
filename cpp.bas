@@ -57,6 +57,7 @@
 
 #include once "fbfrog.bi"
 #include once "crt.bi"
+#include once "file.bi"
 
 declare sub hMaybeExpandMacro( byref x as integer, byval inside_ifexpr as integer )
 
@@ -2121,7 +2122,7 @@ private function hSearchHeaderFile _
 	if( frog.verbose ) then
 		frogPrint( "trying: " + incfile )
 	end if
-	if( hFileExists( incfile ) ) then
+	if( fileexists( incfile ) ) then
 		return incfile
 	end if
 
@@ -2133,7 +2134,7 @@ private function hSearchHeaderFile _
 		if( frog.verbose ) then
 			frogPrint( "trying: " + incfile )
 		end if
-		if( hFileExists( incfile ) ) then
+		if( fileexists( incfile ) ) then
 			return incfile
 		end if
 

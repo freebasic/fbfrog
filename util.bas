@@ -1381,7 +1381,3 @@ function hReadableDirExists( byref path as string ) as integer
 	end if
 	function = (len( dir( fixed, fbDirectory or fbReadOnly or fbHidden ) ) > 0)
 end function
-
-function hFileExists( byref path as string ) as integer
-	function = (dir( path, fbNormal ) <> "")
-end function

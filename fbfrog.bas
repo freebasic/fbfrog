@@ -53,6 +53,7 @@
 ''
 
 #include once "fbfrog.bi"
+#include once "file.bi"
 
 namespace frog
 	dim shared as integer verbose, windowsms, nonamefixup, nodefaultscript
@@ -78,18 +79,18 @@ private function hFindResource( byref filename as string ) as string
 	if( pathIsAbsolute( filename ) ) then return filename
 
 	'' 2. Current directory?
-	if( hFileExists( filename ) ) then return filename
+	if( fileexists( filename ) ) then return filename
 
 	'' 3. <exepath>/include/fbfrog/?
 	const INCLUDEDIR = "include" + PATHDIV + "fbfrog" + PATHDIV
 	var dir1 = hExepath( ) + INCLUDEDIR
 	var found = dir1 + filename
-	if( hFileExists( found ) ) then return found
+	if( fileexists( found ) ) then return found
 
 	'' 4. <exepath>/../include/fbfrog/?
 	var dir2 = hExepath( ) + ".." + PATHDIV + INCLUDEDIR
 	found = dir2 + filename
-	if( hFileExists( found ) ) then return found
+	if( fileexists( found ) ) then return found
 
 	print "error: could not find '" + filename + "'"
 	print "search dirs:"
