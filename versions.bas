@@ -686,6 +686,9 @@ function astMergeVerblocks _
 	decltableEnd( @btable )
 	decltableEnd( @atable )
 
+	astDelete( a )
+	astDelete( b )
+
 	function = c
 end function
 
