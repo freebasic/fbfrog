@@ -557,7 +557,6 @@ private sub hAstMerge _
 		byval btablecount as integer _
 	)
 
-	static reclevel as integer
 
 	'' No longest common substring possible?
 	if( afirst > alast ) then
@@ -595,10 +594,8 @@ private sub hAstMerge _
 	'' Do both sides have decls before the LCS?
 	if( (alcsfirst > afirst) and (blcsfirst > bfirst) ) then
 		'' Do LCS on that recursively
-		reclevel += 1
 		hAstMerge( c, aarray, afirst, alcsfirst - 1, _
 		              barray, bfirst, blcsfirst - 1, btablecount )
-		reclevel -= 1
 	elseif( alcsfirst > afirst ) then
 		'' Only a has decls before the LCS; copy them into result first
 		for i as integer = afirst to alcsfirst - 1
@@ -620,9 +617,7 @@ private sub hAstMerge _
 	'' Do both sides have decls behind the LCS?
 	if( (alcslast < alast) and (blcslast < blast) ) then
 		'' Do LCS on that recursively
-		reclevel += 1
 		hAstMerge( c, aarray, alcslast + 1, alast, barray, blcslast + 1, blast, btablecount )
-		reclevel -= 1
 	elseif( alcslast < alast ) then
 		'' Only a has decls behind the LCS
 		for i as integer = alcslast + 1 to alast
