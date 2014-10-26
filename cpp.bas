@@ -2194,6 +2194,9 @@ private sub cppInclude( byval begin as integer )
 
 	assert( cppSkipping( ) = FALSE )
 
+	'' Expand macros behind the #include (but still in the same line)
+	hExpandInRange( cpp.x, hSkipToEol( cpp.x ) - 1, FALSE )
+
 	'' "filename"
 	tkExpect( cpp.x, TK_STRING, "containing the #include file name" )
 
