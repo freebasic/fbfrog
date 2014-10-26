@@ -1912,6 +1912,7 @@ private function cppEvalIfExpr( byval expr as ASTNODE ptr ) as integer
 	cppEvalResultDtypes( expr )
 	dim v as CPPVALUE
 	cppEval( v, expr )
+	astDelete( expr )
 	function = (v.vali <> 0)
 end function
 
