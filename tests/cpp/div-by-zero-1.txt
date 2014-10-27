@@ -2,4 +2,7 @@
       tests/cpp/div-by-zero-1.h
 tests/cpp/div-by-zero-1.h(2): division by zero
     #if 1 / 0
-          ^
+             ^
+context as seen by fbfrog:
+    # if 1 / 0 
+               ^

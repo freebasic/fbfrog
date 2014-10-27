@@ -835,6 +835,25 @@ private sub cppEol( )
 	cpp.x += 1
 end sub
 
+private sub hCheckForUnknownSymbol( byval id as zstring ptr )
+	if( cppIsKnownSymbol( id ) = FALSE ) then
+		'' Unknown symbol; we're going to assume that it's undefined
+
+		'' Show a warning if it seems to be useful; i.e. if it's not a reserved symbol,
+		'' but one intended to be defined by the user.
+		if( frog.verbose ) then
+			if( strIsReservedIdInC( id ) = FALSE ) then
+				print tkReport( cpp.x, "assuming symbol '" + *id + "' is undefined" )
+			end if
+		end if
+
+		'' Register as known undefined
+		'' This also prevents the above warning from being shown
+		'' multiple times for a single symbol.
+		cppAddKnownUndefined( id )
+	end if
+end sub
+
 '' C operator precedence, starting at 1, higher value = higher precedence
 dim shared as integer cprecedence(ASTCLASS_CLOGOR to ASTCLASS_IIF) = _
 { _
@@ -882,93 +901,171 @@ dim shared as integer cprecedence(ASTCLASS_CLOGOR to ASTCLASS_IIF) = _
 	 1  _ '' ASTCLASS_IIF
 }
 
-'' C PP expression parser based on precedence climbing
-private function cppExpression( byval level as integer = 0 ) as ASTNODE ptr
+type CPPVALUE
+	vali as longint
+	dtype as integer
+end type
+
+
+''
+'' CPP expression parser and evaluator
+''
+'' - The expression parsing is based on a "precedence climbing" algorithm
+''
+'' - Operations are evaluated as intmax_t or uintmax_t, i.e. 64bit signed or
+''   unsigned, as in gcc/clang
+''
+'' - For most unary/binary operations we need to check the operand in order to
+''   determine the result dtype (signed -> unsigned promotion rules can affect
+''   the result). Others (e.g. the logical and relational ones) always return
+''   a signed int regardless of the operands' dtypes.
+''
+'' - &&, || and ?: operands must only be evaluated when actually reached, such
+''   that we can ignore division by zero if it occurs on an irrelevant code
+''   path. (same goes for our "assuming undefined" warnings though - they should
+''   only be shown if it affects the outcome of the expression)
+''
+'' - The ?: ternary conditional operator is a special case: one of its operands
+''   mustn't be evaluated, but we still need to determine its dtype to determine
+''   the result dtype of the ?: operation. Because of this we have to
+''   differentiate between "evaluation" and "dtype determination" modes.
+''
+'' - Taking care to produce C's 1|0 boolean values, instead of FB's -1|0
+''
+'' a =  -a
+'' a =  a + b
+'' a =  a ? b : c
+''
+'' a = operand for UOPs, lhs operand for BOPs, result value to return
+'' b = rhs operand for BOPs
+'' c = 3rd operand for ?: conditional
+''
+private sub cppExpression _
+	( _
+		byref a as CPPVALUE, _
+		byval dtype_only as integer, _
+		byval level as integer = 0 _
+	)
+
 	'' Unary prefix operators
-	var op = -1
 	select case( tkGet( cpp.x ) )
-	case TK_EXCL  : op = ASTCLASS_CLOGNOT   '' !
-	case TK_TILDE : op = ASTCLASS_NOT       '' ~
-	case TK_MINUS : op = ASTCLASS_NEGATE    '' -
-	case TK_PLUS  : op = ASTCLASS_UNARYPLUS '' +
-	end select
-
-	dim as ASTNODE ptr a
-	if( op >= 0 ) then
+	case TK_EXCL  '' !
 		cpp.x += 1
-		a = astNew( op, cppExpression( cprecedence(op) ) )
-	else
-		'' Atoms
-		select case( tkGet( cpp.x ) )
-		'' '(' Expression ')'
-		case TK_LPAREN
-			'' '('
-			cpp.x += 1
 
-			'' Expression
-			a = cppExpression( )
+		'' operand
+		cppExpression( a, dtype_only, cprecedence(ASTCLASS_CLOGNOT) )
 
-			'' ')'
-			tkExpect( cpp.x, TK_RPAREN, "for '(...)' parenthesized expression" )
-			cpp.x += 1
+		a.vali = -(a.vali = 0)
+		a.dtype = TYPE_LONGINT  '' ! operator always produces a signed int
 
-		'' Number literals
-		case TK_NUMBER
-			dim errmsg as string
-			a = hNumberLiteral( cpp.x, TRUE, errmsg )
-			if( a = NULL ) then
-				tkOops( cpp.x, errmsg )
+	case TK_TILDE  '' ~
+		cpp.x += 1
+
+		'' operand
+		cppExpression( a, dtype_only, cprecedence(ASTCLASS_NOT) )
+
+		a.vali = not a.vali
+
+	case TK_MINUS  '' -
+		cpp.x += 1
+
+		'' operand
+		cppExpression( a, dtype_only, cprecedence(ASTCLASS_NEGATE) )
+
+		a.vali = -a.vali
+
+	case TK_PLUS  '' +
+		cpp.x += 1
+
+		'' operand
+		cppExpression( a, dtype_only, cprecedence(ASTCLASS_UNARYPLUS) )
+
+	'' Atoms
+	case TK_LPAREN  '' '(' Expression ')'
+		'' '('
+		cpp.x += 1
+
+		'' Expression
+		cppExpression( a, dtype_only )
+
+		'' ')'
+		tkExpect( cpp.x, TK_RPAREN, "for '(...)' parenthesized expression" )
+		cpp.x += 1
+
+	case TK_NUMBER  '' Number literal
+		dim errmsg as string
+		var n = hNumberLiteral( cpp.x, TRUE, errmsg )
+		if( n = NULL ) then
+			tkOops( cpp.x, errmsg )
+		end if
+		if( n->class = ASTCLASS_CONSTF ) then
+			tkOops( cpp.x, "float literal in CPP expression" )
+		end if
+
+		assert( (n->dtype = TYPE_LONGINT) or (n->dtype = TYPE_ULONGINT) )
+		a.vali = astEvalConstiAsInt64( n )
+		a.dtype = n->dtype
+
+		astDelete( n )
+
+		cpp.x += 1
+
+	'' Unexpanded identifier: treated as a literal 0
+	case TK_ID
+		if( dtype_only = FALSE ) then
+			var id = tkSpellId( cpp.x )
+
+			if( frog.verbose ) then
+				print tkReport( cpp.x, "treating unexpanded identifier '" + *id + "' as literal zero" )
 			end if
-			a = astTakeLoc( a, cpp.x )
+
+			'' And register as known undefined (it wasn't expanded so it
+			'' must be undefined), so the warning won't be shown again.
+			cppAddKnownUndefined( id )
+
+		end if
+		a.vali = 0
+		a.dtype = TYPE_LONGINT
+
+		cpp.x += 1
+
+	'' DEFINED ['('] Identifier [')']
+	case KW_DEFINED
+		cpp.x += 1
+
+		'' '('
+		var have_parens = FALSE
+		if( tkGet( cpp.x ) = TK_LPAREN ) then
+			have_parens = TRUE
 			cpp.x += 1
+		end if
 
 		'' Identifier
-		case TK_ID
-			'' Accepting identifiers as atoms, so that they can
-			'' later be replaced with literal zeros (unexpanded
-			'' identifiers in #if conditions are treated as literal
-			'' zero in C) if they need to be evaluated, perhaps with
-			'' a warning, and otherwise be ignored (depends on NOP
-			'' folding). For example:
-			''    #if defined A && B == 123
-			'' If A isn't defined then B doesn't need to be
-			'' evaluated and no warning should be shown.
-			a = astTakeLoc( astNewID( tkSpellId( cpp.x ) ), cpp.x )
+		if( tkGet( cpp.x ) < TK_ID ) then
+			tkExpect( cpp.x, TK_ID, "as operand of DEFINED" )
+		end if
+		if( dtype_only = FALSE ) then
+			var id = tkSpellId( cpp.x )
+			hCheckForUnknownSymbol( id )
+			'' defined()  ->  1|0
+			a.vali = -cppIsMacroCurrentlyDefined( id )
+		end if
+		a.dtype = TYPE_LONGINT
+		cpp.x += 1
+
+		if( have_parens ) then
+			'' ')'
+			tkExpect( cpp.x, TK_RPAREN, "for DEFINED(...)" )
 			cpp.x += 1
+		end if
 
-		'' DEFINED ['('] Identifier [')']
-		case KW_DEFINED
-			cpp.x += 1
-
-			'' '('
-			var have_parens = FALSE
-			if( tkGet( cpp.x ) = TK_LPAREN ) then
-				have_parens = TRUE
-				cpp.x += 1
-			end if
-
-			'' Identifier
-			if( tkGet( cpp.x ) < TK_ID ) then
-				tkExpect( cpp.x, TK_ID, "as operand of DEFINED" )
-			end if
-			a = astTakeLoc( astNewID( tkSpellId( cpp.x ) ), cpp.x )
-			cpp.x += 1
-
-			if( have_parens ) then
-				'' ')'
-				tkExpect( cpp.x, TK_RPAREN, "for DEFINED(...)" )
-				cpp.x += 1
-			end if
-
-			a = astNew( ASTCLASS_CDEFINED, a )
-
-		case else
-			tkOopsExpected( cpp.x, "expression" )
-		end select
-	end if
+	case else
+		tkOopsExpected( cpp.x, "expression" )
+	end select
 
 	'' Infix operators
 	do
+		dim op as integer
 		select case as const( tkGet( cpp.x ) )
 		case TK_QUEST    : op = ASTCLASS_IIF     '' ? (a ? b : c)
 		case TK_PIPEPIPE : op = ASTCLASS_CLOGOR  '' ||
@@ -1005,29 +1102,108 @@ private function cppExpression( byval level as integer = 0 ) as ASTNODE ptr
 		end if
 
 		'' operator
-		var bopx = cpp.x
 		cpp.x += 1
 
-		'' rhs
-		var b = cppExpression( oplevel )
+		dim b as CPPVALUE
 
-		'' Handle ?: special case
-		if( op = ASTCLASS_IIF ) then
+		select case( op )
+		case ASTCLASS_CLOGOR  '' ||
+			'' Parse rhs (don't evaluate if lhs was true)
+			cppExpression( b, dtype_only or (a.vali <> 0), oplevel )
+			a.vali = iif( a.vali, 1, iif( b.vali, 1, 0 ) )
+			a.dtype = TYPE_LONGINT  '' || always produces a signed int
+
+		case ASTCLASS_CLOGAND  '' &&
+			'' Parse rhs (don't evaluate if lhs was false)
+			cppExpression( b, dtype_only or (a.vali = 0), oplevel )
+			a.vali = iif( a.vali, iif( b.vali, 1, 0 ), 0 )
+			a.dtype = TYPE_LONGINT  '' && always produces a signed int
+
+		case ASTCLASS_IIF
+			'' Parse 2nd operand (don't evaluate if condition = false)
+			cppExpression( b, dtype_only or (a.vali = 0), oplevel )
+
 			'' ':'?
 			tkExpect( cpp.x, TK_COLON, "for a?b:c iif operator" )
 			cpp.x += 1
 
-			var c = cppExpression( oplevel )
+			'' Parse 3rd operand (don't evaluate if condition = true)
+			dim c as CPPVALUE
+			cppExpression( c, dtype_only or (a.vali <> 0), oplevel )
 
-			a = astNewIIF( a, b, c )
-		else
-			a = astNew( op, a, b )
-		end if
-		astTakeLoc( a, bopx )
+			a.vali = iif( a.vali, b.vali, c.vali )
+			a.dtype = max( b.dtype, c.dtype )
+
+		case else
+			'' Parse rhs
+			cppExpression( b, dtype_only, oplevel )
+
+			'' If one operand is unsigned, promote both operands to unsigned.
+			'' This also takes care of the result type, except for relational BOPs,
+			'' which are handled below.
+			a.dtype = max( a.dtype, b.dtype )
+
+			if( dtype_only = FALSE ) then
+				select case( op )
+				case ASTCLASS_DIV, ASTCLASS_MOD
+					if( b.vali = 0 ) then
+						tkOops( cpp.x, "division by zero" )
+					end if
+				end select
+
+				if( a.dtype = TYPE_ULONGINT ) then
+					select case as const( op )
+					case ASTCLASS_OR  : a.vali =   cunsg( a.vali ) or  cunsg( b.vali )
+					case ASTCLASS_XOR : a.vali =   cunsg( a.vali ) xor cunsg( b.vali )
+					case ASTCLASS_AND : a.vali =   cunsg( a.vali ) and cunsg( b.vali )
+					case ASTCLASS_CEQ : a.vali = -(cunsg( a.vali ) =   cunsg( b.vali ))
+					case ASTCLASS_CNE : a.vali = -(cunsg( a.vali ) <>  cunsg( b.vali ))
+					case ASTCLASS_CLT : a.vali = -(cunsg( a.vali ) <   cunsg( b.vali ))
+					case ASTCLASS_CLE : a.vali = -(cunsg( a.vali ) <=  cunsg( b.vali ))
+					case ASTCLASS_CGT : a.vali = -(cunsg( a.vali ) >   cunsg( b.vali ))
+					case ASTCLASS_CGE : a.vali = -(cunsg( a.vali ) >=  cunsg( b.vali ))
+					case ASTCLASS_SHL : a.vali =   cunsg( a.vali ) shl cunsg( b.vali )
+					case ASTCLASS_SHR : a.vali =   cunsg( a.vali ) shr cunsg( b.vali )
+					case ASTCLASS_ADD : a.vali =   cunsg( a.vali ) +   cunsg( b.vali )
+					case ASTCLASS_SUB : a.vali =   cunsg( a.vali ) -   cunsg( b.vali )
+					case ASTCLASS_MUL : a.vali =   cunsg( a.vali ) *   cunsg( b.vali )
+					case ASTCLASS_DIV : a.vali =   cunsg( a.vali ) \   cunsg( b.vali )
+					case ASTCLASS_MOD : a.vali =   cunsg( a.vali ) mod cunsg( b.vali )
+					case else         : assert( FALSE )
+					end select
+				else
+					select case as const( op )
+					case ASTCLASS_OR  : a.vali =   a.vali or  b.vali
+					case ASTCLASS_XOR : a.vali =   a.vali xor b.vali
+					case ASTCLASS_AND : a.vali =   a.vali and b.vali
+					case ASTCLASS_CEQ : a.vali = -(a.vali =   b.vali)
+					case ASTCLASS_CNE : a.vali = -(a.vali <>  b.vali)
+					case ASTCLASS_CLT : a.vali = -(a.vali <   b.vali)
+					case ASTCLASS_CLE : a.vali = -(a.vali <=  b.vali)
+					case ASTCLASS_CGT : a.vali = -(a.vali >   b.vali)
+					case ASTCLASS_CGE : a.vali = -(a.vali >=  b.vali)
+					case ASTCLASS_SHL : a.vali =   a.vali shl b.vali
+					case ASTCLASS_SHR : a.vali =   a.vali shr b.vali
+					case ASTCLASS_ADD : a.vali =   a.vali +   b.vali
+					case ASTCLASS_SUB : a.vali =   a.vali -   b.vali
+					case ASTCLASS_MUL : a.vali =   a.vali *   b.vali
+					case ASTCLASS_DIV : a.vali =   a.vali \   b.vali
+					case ASTCLASS_MOD : a.vali =   a.vali mod b.vali
+					case else         : assert( FALSE )
+					end select
+				end if
+			end if
+
+			'' Relational BOPs always produce a signed int
+			select case( op )
+			case ASTCLASS_CEQ, ASTCLASS_CNE, _
+			     ASTCLASS_CLT, ASTCLASS_CLE, _
+			     ASTCLASS_CGT, ASTCLASS_CGE
+				a.dtype = TYPE_LONGINT
+			end select
+		end select
 	loop
-
-	function = a
-end function
+end sub
 
 private function hCheckForMacroCall( byval x as integer ) as DEFINEINFO ptr
 	assert( tkGet( x ) >= TK_ID )
@@ -1680,242 +1856,6 @@ private sub hMaybeExpandMacro( byref x as integer, byval inside_ifexpr as intege
 	x -= 1
 end sub
 
-''
-'' Pre-calculate the result data types of UOPs/BOPs in a CPP expression
-''
-'' For the ?: operator, the result dtype depends on the l/r operands but at the
-'' same time only one of them must be evaluated. Thus it makes sense to handle
-'' this in 2 separate steps.
-''
-'' This isn't a problem with &&/||, the relational BOPs and the unary ! because
-'' they always produce a signed int.
-''
-private sub cppEvalResultDtypes( byval n as ASTNODE ptr )
-	select case( n->class )
-	case ASTCLASS_CONSTI
-		assert( (n->dtype = TYPE_LONGINT) or (n->dtype = TYPE_ULONGINT) )
-
-	case ASTCLASS_CLOGNOT
-		cppEvalResultDtypes( n->head )
-
-		'' ! operator always produces a signed int
-		n->dtype = TYPE_LONGINT
-
-	case ASTCLASS_NOT, ASTCLASS_NEGATE, ASTCLASS_UNARYPLUS
-		cppEvalResultDtypes( n->head )
-		n->dtype = n->head->dtype
-
-	case ASTCLASS_OR, ASTCLASS_XOR, ASTCLASS_AND, _
-	     ASTCLASS_SHL, ASTCLASS_SHR, _
-	     ASTCLASS_ADD, ASTCLASS_SUB, _
-	     ASTCLASS_MUL, ASTCLASS_DIV, ASTCLASS_MOD, _
-	     ASTCLASS_IIF
-		if( n->class = ASTCLASS_IIF ) then
-			cppEvalResultDtypes( n->expr )
-		end if
-		cppEvalResultDtypes( n->head )
-		cppEvalResultDtypes( n->tail )
-
-		'' If one operand is unsigned, the result is too.
-		if( (n->head->dtype = TYPE_ULONGINT) or _
-		    (n->tail->dtype = TYPE_ULONGINT) ) then
-			n->dtype = TYPE_ULONGINT
-		else
-			n->dtype = TYPE_LONGINT
-		end if
-
-	case ASTCLASS_CEQ, ASTCLASS_CNE, _
-	     ASTCLASS_CLT, ASTCLASS_CLE, _
-	     ASTCLASS_CGT, ASTCLASS_CGE, _
-	     ASTCLASS_CLOGOR, ASTCLASS_CLOGAND
-		cppEvalResultDtypes( n->head )
-		cppEvalResultDtypes( n->tail )
-
-		'' Relational BOPs and &&/|| always produce a signed int
-		n->dtype = TYPE_LONGINT
-
-	case ASTCLASS_ID, ASTCLASS_CDEFINED
-		'' Unexpanded identifier -> literal 0
-		'' defined()  ->  1|0
-		n->dtype = TYPE_LONGINT
-
-	case else
-		astOops( n, "couldn't evaluate #if condition" )
-	end select
-end sub
-
-type CPPVALUE
-	vali as longint
-	dtype as integer
-end type
-
-''
-'' Evaluation of CPP #if condition expressions
-''
-'' - directly evaluating instead of doing complex node folding, because that's
-''   all that's needed - #if expressions always need to be evaluated anyways.
-''
-'' - only evaluating &&, || and ?: operands when they're actually reached. This
-''    - prevents "assuming undefined" warnings about the unreached code
-''    - allows division by zero to be ignored if it doesn't need to be evaluated
-''
-'' - taking care to produce C's 1|0 boolean values, instead of FB's -1|0
-''
-private sub cppEval( byref v as CPPVALUE, byval n as ASTNODE ptr )
-	select case( n->class )
-	case ASTCLASS_CONSTI
-		assert( (n->dtype = TYPE_LONGINT) or (n->dtype = TYPE_ULONGINT) )
-		v.vali = astEvalConstiAsInt64( n )
-
-	case ASTCLASS_CLOGNOT, ASTCLASS_NOT, ASTCLASS_NEGATE, ASTCLASS_UNARYPLUS
-		cppEval( v, n->head )
-		select case( n->class )
-		case ASTCLASS_CLOGNOT : v.vali =   -(v.vali = 0)
-		case ASTCLASS_NOT     : v.vali = not v.vali
-		case ASTCLASS_NEGATE  : v.vali =   - v.vali
-		end select
-
-	case ASTCLASS_OR, ASTCLASS_XOR, ASTCLASS_AND, _
-	     ASTCLASS_CEQ, ASTCLASS_CNE, _
-	     ASTCLASS_CLT, ASTCLASS_CLE, _
-	     ASTCLASS_CGT, ASTCLASS_CGE, _
-	     ASTCLASS_SHL, ASTCLASS_SHR, _
-	     ASTCLASS_ADD, ASTCLASS_SUB, _
-	     ASTCLASS_MUL, ASTCLASS_DIV, ASTCLASS_MOD
-		dim as CPPVALUE r
-		cppEval( v, n->head )
-		cppEval( r, n->tail )
-
-		select case( n->class )
-		case ASTCLASS_DIV, ASTCLASS_MOD
-			if( r.vali = 0 ) then
-				astOops( n, "division by zero" )
-			end if
-		end select
-
-		'' If one operand is unsigned, promote both operands to unsigned
-		if( (v.dtype = TYPE_ULONGINT) or (r.dtype = TYPE_ULONGINT) ) then
-			select case( n->class )
-			case ASTCLASS_OR  : v.vali =   cunsg( v.vali ) or  cunsg( r.vali )
-			case ASTCLASS_XOR : v.vali =   cunsg( v.vali ) xor cunsg( r.vali )
-			case ASTCLASS_AND : v.vali =   cunsg( v.vali ) and cunsg( r.vali )
-			case ASTCLASS_CEQ : v.vali = -(cunsg( v.vali ) =   cunsg( r.vali ))
-			case ASTCLASS_CNE : v.vali = -(cunsg( v.vali ) <>  cunsg( r.vali ))
-			case ASTCLASS_CLT : v.vali = -(cunsg( v.vali ) <   cunsg( r.vali ))
-			case ASTCLASS_CLE : v.vali = -(cunsg( v.vali ) <=  cunsg( r.vali ))
-			case ASTCLASS_CGT : v.vali = -(cunsg( v.vali ) >   cunsg( r.vali ))
-			case ASTCLASS_CGE : v.vali = -(cunsg( v.vali ) >=  cunsg( r.vali ))
-			case ASTCLASS_SHL : v.vali =   cunsg( v.vali ) shl cunsg( r.vali )
-			case ASTCLASS_SHR : v.vali =   cunsg( v.vali ) shr cunsg( r.vali )
-			case ASTCLASS_ADD : v.vali =   cunsg( v.vali ) +   cunsg( r.vali )
-			case ASTCLASS_SUB : v.vali =   cunsg( v.vali ) -   cunsg( r.vali )
-			case ASTCLASS_MUL : v.vali =   cunsg( v.vali ) *   cunsg( r.vali )
-			case ASTCLASS_DIV : v.vali =   cunsg( v.vali ) \   cunsg( r.vali )
-			case ASTCLASS_MOD : v.vali =   cunsg( v.vali ) mod cunsg( r.vali )
-			case else         : assert( FALSE )
-			end select
-		else
-			select case( n->class )
-			case ASTCLASS_OR  : v.vali =   v.vali or  r.vali
-			case ASTCLASS_XOR : v.vali =   v.vali xor r.vali
-			case ASTCLASS_AND : v.vali =   v.vali and r.vali
-			case ASTCLASS_CEQ : v.vali = -(v.vali =   r.vali)
-			case ASTCLASS_CNE : v.vali = -(v.vali <>  r.vali)
-			case ASTCLASS_CLT : v.vali = -(v.vali <   r.vali)
-			case ASTCLASS_CLE : v.vali = -(v.vali <=  r.vali)
-			case ASTCLASS_CGT : v.vali = -(v.vali >   r.vali)
-			case ASTCLASS_CGE : v.vali = -(v.vali >=  r.vali)
-			case ASTCLASS_SHL : v.vali =   v.vali shl r.vali
-			case ASTCLASS_SHR : v.vali =   v.vali shr r.vali
-			case ASTCLASS_ADD : v.vali =   v.vali +   r.vali
-			case ASTCLASS_SUB : v.vali =   v.vali -   r.vali
-			case ASTCLASS_MUL : v.vali =   v.vali *   r.vali
-			case ASTCLASS_DIV : v.vali =   v.vali \   r.vali
-			case ASTCLASS_MOD : v.vali =   v.vali mod r.vali
-			case else         : assert( FALSE )
-			end select
-		end if
-
-	case ASTCLASS_CLOGOR
-		cppEval( v, n->head )
-		if( v.vali ) then
-			v.vali = 1
-		else
-			cppEval( v, n->tail )
-			v.vali = iif( v.vali, 1, 0 )
-		end if
-
-	case ASTCLASS_CLOGAND
-		cppEval( v, n->head )
-		if( v.vali ) then
-			cppEval( v, n->tail )
-			v.vali = iif( v.vali, 1, 0 )
-		else
-			v.vali = 0
-		end if
-
-	case ASTCLASS_IIF
-		cppEval( v, n->expr )
-		if( v.vali ) then
-			cppEval( v, n->head )
-		else
-			cppEval( v, n->tail )
-		end if
-
-	case ASTCLASS_ID
-		'' Unexpanded identifier, assume it's a literal 0, like a CPP
-		if( frog.verbose ) then
-			astReport( n, "treating unexpanded identifier '" + *n->text + "' as literal zero" )
-		end if
-
-		'' And register as known undefined (it wasn't expanded so it
-		'' must be undefined), so the warning won't be shown again.
-		cppAddKnownUndefined( n->text )
-
-		'' id  ->  0
-		v.vali = 0
-
-	case ASTCLASS_CDEFINED
-		assert( n->head->class = ASTCLASS_ID )
-		var id = n->head->text
-
-		if( cppIsKnownSymbol( id ) = FALSE ) then
-			'' Unknown symbol, assume it's undefined
-
-			'' Show a warning if it seems to be useful; i.e. if it's
-			'' not a reserved symbol, but one intended to be defined
-			'' by the user.
-			if( frog.verbose ) then
-				if( strIsReservedIdInC( id ) = FALSE ) then
-					astReport( n->head, "assuming symbol '" + *id + "' is undefined" )
-				end if
-			end if
-
-			'' Register as known undefined
-			'' This also prevents the above warning from being shown
-			'' multiple times for a single symbol.
-			cppAddKnownUndefined( id )
-		end if
-
-		'' defined()  ->  1|0
-		v.vali = -cppIsMacroCurrentlyDefined( id )
-
-	case else
-		astOops( n, "couldn't evaluate #if condition" )
-	end select
-
-	v.dtype = n->dtype
-end sub
-
-'' Evaluates a CPP expression to true/false
-private function cppEvalIfExpr( byval expr as ASTNODE ptr ) as integer
-	cppEvalResultDtypes( expr )
-	dim v as CPPVALUE
-	cppEval( v, expr )
-	astDelete( expr )
-	function = (v.vali <> 0)
-end function
-
 private sub cppPush( byval state as integer, byval knownfile as integer = -1 )
 	assert( iif( knownfile >= 0, state = STATE_FILE, TRUE ) )
 
@@ -1946,25 +1886,28 @@ private sub cppPop( )
 	cpp.level -= 1
 end sub
 
-private sub cppApplyIf( byval expr as ASTNODE ptr )
-	if( cppEvalIfExpr( expr ) ) then
+private sub cppApplyIf( byval condition as integer )
+	if( condition ) then
 		'' #if TRUE, don't skip
 		cpp.stack(cpp.level).state = STATE_TRUE
+		cpp.skiplevel = MAXSTACK  '' needed for #elif, in case we were skipping previously
 	else
-		'' #if FALSE, start skipping
+		'' #if FALSE, start skipping (or in case of #elif, possibly continue)
 		cpp.skiplevel = cpp.level
 	end if
 end sub
 
-private function cppIfExpr( ) as ASTNODE ptr
+private function cppIfExpr( ) as integer
 	'' Expand macros in the #if condition before parsing it
 	'' * but don't expand operands of the "defined" operator
 	'' * we allow "defined" operators to be produced by
 	''   macro expansion, like gcc
 	hExpandInRange( cpp.x, hSkipToEol( cpp.x ) - 1, TRUE )
 
-	'' Try parsing an expression
-	function = cppExpression( )
+	'' Try to parse and evaluate an expression
+	dim value as CPPVALUE
+	cppExpression( value, FALSE )
+	function = (value.vali <> 0)
 end function
 
 private sub cppIf( )
@@ -1993,15 +1936,15 @@ private sub cppIfdef( byval directivekw as integer )
 	if( tkGet( cpp.x ) < TK_ID ) then
 		tkExpect( cpp.x, TK_ID, "behind " + tkInfoPretty( directivekw ) )
 	end if
-	var expr = astTakeLoc( astNewID( tkSpellId( cpp.x ) ), cpp.x )
+	var id = tkSpellId( cpp.x )
+	hCheckForUnknownSymbol( id )
 	cpp.x += 1
 
-	'' [!]defined id
-	expr = astNew( ASTCLASS_CDEFINED, expr )
+	var condition = cppIsMacroCurrentlyDefined( id )
 	if( directivekw = KW_IFNDEF ) then
-		expr = astNew( ASTCLASS_CLOGNOT, expr )
+		condition = not condition
 	end if
-	cppApplyIf( expr )
+	cppApplyIf( condition )
 
 	cppEol( )
 end sub
@@ -2040,15 +1983,7 @@ private sub cppElseIf( )
 			cpp.skiplevel = cpp.level
 		else
 			'' Condition expression
-			if( cppEvalIfExpr( cppIfExpr( ) ) ) then
-				'' #elif TRUE, don't skip
-				cpp.stack(cpp.level).state = STATE_TRUE
-				cpp.skiplevel = MAXSTACK
-			else
-				'' #elif FALSE, start/continue skipping
-				cpp.skiplevel = cpp.level
-			end if
-
+			cppApplyIf( cppIfExpr( ) )
 			cppEol( )
 		end if
 	end if

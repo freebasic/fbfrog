@@ -3,99 +3,189 @@
 tests/cpp/assuming-undefined.h(3): assuming symbol 'A' is undefined
     #ifdef A
            ^
+context as seen by fbfrog:
+    # ifdef A 
+            ^
 tests/cpp/assuming-undefined.h(6): assuming symbol 'B' is undefined
     #ifndef B
             ^
+context as seen by fbfrog:
+    # ifndef B 
+             ^
 tests/cpp/assuming-undefined.h(9): assuming symbol 'C' is undefined
     #if defined C
                 ^
+context as seen by fbfrog:
+    # if defined C 
+                 ^
 tests/cpp/assuming-undefined.h(12): assuming symbol 'D' is undefined
     #if !defined D
                  ^
+context as seen by fbfrog:
+    # if ! defined D 
+                   ^
 tests/cpp/assuming-undefined.h(21): assuming symbol 'G' is undefined
     #if 1 ? defined G : defined H
                     ^
+context as seen by fbfrog:
+    # if 1 ? defined G : defined H 
+                     ^
 tests/cpp/assuming-undefined.h(30): assuming symbol '_reported' is undefined
     #ifdef _reported
            ^~~~~~~~~
+context as seen by fbfrog:
+    # ifdef _reported 
+            ^~~~~~~~~
 [2/5] __FB_WIN32__.(not __FB_64BIT__)
       tests/cpp/assuming-undefined.h
 tests/cpp/assuming-undefined.h(3): assuming symbol 'A' is undefined
     #ifdef A
            ^
+context as seen by fbfrog:
+    # ifdef A 
+            ^
 tests/cpp/assuming-undefined.h(6): assuming symbol 'B' is undefined
     #ifndef B
             ^
+context as seen by fbfrog:
+    # ifndef B 
+             ^
 tests/cpp/assuming-undefined.h(9): assuming symbol 'C' is undefined
     #if defined C
                 ^
+context as seen by fbfrog:
+    # if defined C 
+                 ^
 tests/cpp/assuming-undefined.h(12): assuming symbol 'D' is undefined
     #if !defined D
                  ^
+context as seen by fbfrog:
+    # if ! defined D 
+                   ^
 tests/cpp/assuming-undefined.h(21): assuming symbol 'G' is undefined
     #if 1 ? defined G : defined H
                     ^
+context as seen by fbfrog:
+    # if 1 ? defined G : defined H 
+                     ^
 tests/cpp/assuming-undefined.h(30): assuming symbol '_reported' is undefined
     #ifdef _reported
            ^~~~~~~~~
+context as seen by fbfrog:
+    # ifdef _reported 
+            ^~~~~~~~~
 [3/5] __FB_LINUX__.__FB_64BIT__
       tests/cpp/assuming-undefined.h
 tests/cpp/assuming-undefined.h(3): assuming symbol 'A' is undefined
     #ifdef A
            ^
+context as seen by fbfrog:
+    # ifdef A 
+            ^
 tests/cpp/assuming-undefined.h(6): assuming symbol 'B' is undefined
     #ifndef B
             ^
+context as seen by fbfrog:
+    # ifndef B 
+             ^
 tests/cpp/assuming-undefined.h(9): assuming symbol 'C' is undefined
     #if defined C
                 ^
+context as seen by fbfrog:
+    # if defined C 
+                 ^
 tests/cpp/assuming-undefined.h(12): assuming symbol 'D' is undefined
     #if !defined D
                  ^
+context as seen by fbfrog:
+    # if ! defined D 
+                   ^
 tests/cpp/assuming-undefined.h(21): assuming symbol 'G' is undefined
     #if 1 ? defined G : defined H
                     ^
+context as seen by fbfrog:
+    # if 1 ? defined G : defined H 
+                     ^
 tests/cpp/assuming-undefined.h(30): assuming symbol '_reported' is undefined
     #ifdef _reported
            ^~~~~~~~~
+context as seen by fbfrog:
+    # ifdef _reported 
+            ^~~~~~~~~
 [4/5] __FB_LINUX__.(not __FB_64BIT__)
       tests/cpp/assuming-undefined.h
 tests/cpp/assuming-undefined.h(3): assuming symbol 'A' is undefined
     #ifdef A
            ^
+context as seen by fbfrog:
+    # ifdef A 
+            ^
 tests/cpp/assuming-undefined.h(6): assuming symbol 'B' is undefined
     #ifndef B
             ^
+context as seen by fbfrog:
+    # ifndef B 
+             ^
 tests/cpp/assuming-undefined.h(9): assuming symbol 'C' is undefined
     #if defined C
                 ^
+context as seen by fbfrog:
+    # if defined C 
+                 ^
 tests/cpp/assuming-undefined.h(12): assuming symbol 'D' is undefined
     #if !defined D
                  ^
+context as seen by fbfrog:
+    # if ! defined D 
+                   ^
 tests/cpp/assuming-undefined.h(21): assuming symbol 'G' is undefined
     #if 1 ? defined G : defined H
                     ^
+context as seen by fbfrog:
+    # if 1 ? defined G : defined H 
+                     ^
 tests/cpp/assuming-undefined.h(30): assuming symbol '_reported' is undefined
     #ifdef _reported
            ^~~~~~~~~
+context as seen by fbfrog:
+    # ifdef _reported 
+            ^~~~~~~~~
 [5/5] __FB_DOS__
       tests/cpp/assuming-undefined.h
 tests/cpp/assuming-undefined.h(3): assuming symbol 'A' is undefined
     #ifdef A
            ^
+context as seen by fbfrog:
+    # ifdef A 
+            ^
 tests/cpp/assuming-undefined.h(6): assuming symbol 'B' is undefined
     #ifndef B
             ^
+context as seen by fbfrog:
+    # ifndef B 
+             ^
 tests/cpp/assuming-undefined.h(9): assuming symbol 'C' is undefined
     #if defined C
                 ^
+context as seen by fbfrog:
+    # if defined C 
+                 ^
 tests/cpp/assuming-undefined.h(12): assuming symbol 'D' is undefined
     #if !defined D
                  ^
+context as seen by fbfrog:
+    # if ! defined D 
+                   ^
 tests/cpp/assuming-undefined.h(21): assuming symbol 'G' is undefined
     #if 1 ? defined G : defined H
                     ^
+context as seen by fbfrog:
+    # if 1 ? defined G : defined H 
+                     ^
 tests/cpp/assuming-undefined.h(30): assuming symbol '_reported' is undefined
     #ifdef _reported
            ^~~~~~~~~
+context as seen by fbfrog:
+    # ifdef _reported 
+            ^~~~~~~~~
 emitting: tests/cpp/assuming-undefined.bi (0 declarations, 0 TODOs)

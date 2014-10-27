@@ -1,5 +1,8 @@
 [1/5] __FB_WIN32__.__FB_64BIT__
       tests/cpp/if/float.h
-tests/cpp/if/float.h(3): couldn't evaluate #if condition
+tests/cpp/if/float.h(3): float literal in CPP expression
     #if 1.0 == 2.0
         ^~~
+context as seen by fbfrog:
+    # if 1.0 == 2.0 
+         ^~~
