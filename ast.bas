@@ -465,12 +465,18 @@ function astIsMergableBlock( byval n as ASTNODE ptr ) as integer
 	end select
 end function
 
-'' Check whether two ASTs represent equal declarations, i.e. most fields must be
-'' equal, but some things may be different as long as it would still result in
-'' compatible C/FB code.
-'' For example, two procedures must have the same kind of parameters, but it
-'' doesn't matter whether two CONSTI expressions both originally were
-'' oct/hex/dec, as long as they're the same value.
+''
+'' Check whether two ASTs are "equal".
+''
+'' For the purposes of merging, the rules are somewhat relaxed: two procedure
+'' declarations with different calling conventions can be treated as equal if
+'' they're both covered by an Extern block, because then we won't emit the
+'' calling convention explicitly anyways, and the declarations look exactly the
+'' same.
+''
+'' For VEROR and VERAND nodes the order of children does not matter; we treat
+'' them as equal either way.
+''
 function astIsEqual _
 	( _
 		byval a as ASTNODE ptr, _
