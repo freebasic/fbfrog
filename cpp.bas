@@ -843,7 +843,7 @@ private sub hCheckForUnknownSymbol( byval id as zstring ptr )
 		'' but one intended to be defined by the user.
 		if( frog.verbose ) then
 			if( strIsReservedIdInC( id ) = FALSE ) then
-				print tkReport( cpp.x, "assuming symbol '" + *id + "' is undefined" )
+				frogPrint( "treating as undefined: " + *id )
 			end if
 		end if
 
@@ -1013,16 +1013,7 @@ private sub cppExpression _
 	'' Unexpanded identifier: treated as a literal 0
 	case TK_ID
 		if( dtype_only = FALSE ) then
-			var id = tkSpellId( cpp.x )
-
-			if( frog.verbose ) then
-				print tkReport( cpp.x, "treating unexpanded identifier '" + *id + "' as literal zero" )
-			end if
-
-			'' And register as known undefined (it wasn't expanded so it
-			'' must be undefined), so the warning won't be shown again.
-			cppAddKnownUndefined( id )
-
+			hCheckForUnknownSymbol( tkSpellId( cpp.x ) )
 		end if
 		a.vali = 0
 		a.dtype = TYPE_LONGINT

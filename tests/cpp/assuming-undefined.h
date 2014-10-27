@@ -1,5 +1,8 @@
 // @fbfrog -v
 
+#if unexpanded
+#endif
+
 #ifdef A
 #endif
 
