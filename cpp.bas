@@ -2269,18 +2269,6 @@ private sub cppEndInclude( )
 	cpp.x += 1
 end sub
 
-private sub hReportConflictingDefine( byval a as ASTNODE ptr, byval b as ASTNODE ptr )
-	'' Existing #define wasn't reported yet?
-	if( (b->attrib and ASTATTRIB_REPORTED) = 0 ) then
-		astReport( b, "conflicting #define for '" + *a->text + "', first one:", FALSE )
-		b->attrib or= ASTATTRIB_REPORTED
-	end if
-
-	assert( (a->attrib and ASTATTRIB_REPORTED) = 0 )
-	astReport( a, "conflicting #define for '" + *a->text + "', new one:", FALSE )
-	a->attrib or= ASTATTRIB_REPORTED
-end sub
-
 '' DEFINE Identifier ['(' ParameterList ')'] Body Eol
 private sub cppDefine( byval begin as integer, byref setremove as integer )
 	cpp.x += 1
@@ -2309,7 +2297,7 @@ private sub cppDefine( byval begin as integer, byref setremove as integer )
 	var prevdef = cppLookupMacro( macro->text )
 	if( prevdef ) then
 		if( definfoDefinesAreEqual( prevdef, definfo ) = FALSE ) then
-			hReportConflictingDefine( macro, prevdef->macro )
+			frogPrint( "conflicting #define " + *macro->text )
 		end if
 	end if
 

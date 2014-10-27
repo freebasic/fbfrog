@@ -511,8 +511,8 @@ function astIsEqual _
 	'' Some attributes can always be ignored because they don't cause declarations to really be different
 	'' OCT/HEX attributes mustn't be ignored because otherwise number literals with the same digits but
 	'' a different base could incorrectly compare equal.
-	aattrib and= not (ASTATTRIB_REPORTED or ASTATTRIB_NEEDRENAME)
-	battrib and= not (ASTATTRIB_REPORTED or ASTATTRIB_NEEDRENAME)
+	aattrib and= not ASTATTRIB_NEEDRENAME
+	battrib and= not ASTATTRIB_NEEDRENAME
 
 	if( aattrib <> battrib ) then exit function
 
@@ -670,7 +670,6 @@ function astDumpOne( byval n as ASTNODE ptr ) as string
 	checkAttrib( STDCALL )
 	checkAttrib( HIDECALLCONV )
 	checkAttrib( UNCHECKED )
-	checkAttrib( REPORTED )
 	checkAttrib( NEEDRENAME )
 	checkAttrib( POISONED )
 	checkAttrib( PACKED )
