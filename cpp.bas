@@ -337,7 +337,7 @@ function hDefineHead( byref x as integer ) as ASTNODE ptr
 	case KW_DEFINED
 		tkOops( x, "'defined' cannot be used as macro name" )
 	end select
-	var macro = astTakeLoc( astNewPPDEFINE( tkSpellId( x ) ), x )
+	var macro = astNewPPDEFINE( tkSpellId( x ) )
 	x += 1
 
 	hMacroParamList( x, macro )

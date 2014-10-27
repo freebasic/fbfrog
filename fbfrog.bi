@@ -672,9 +672,6 @@ type ASTNODE
 	array		as ASTNODE ptr '' ARRAY holding DIMENSIONs, or NULL
 	bits		as ASTNODE ptr '' bitfields only
 
-	'' Source location where this declaration/statement was found
-	location	as TKLOCATION
-
 	'' PARAM: initializer
 	'' VERBLOCK: version expression
 	'' IIF: condition expression
@@ -720,7 +717,6 @@ declare function astGroupContains( byval group as ASTNODE ptr, byval lookfor as 
 declare function astGroupContainsAnyChildrenOf( byval l as ASTNODE ptr, byval r as ASTNODE ptr ) as integer
 declare function astGroupContainsAllChildrenOf( byval l as ASTNODE ptr, byval r as ASTNODE ptr ) as integer
 declare function astUngroupOne( byval group as ASTNODE ptr ) as ASTNODE ptr
-declare function astTakeLoc( byval n as ASTNODE ptr, byval x as integer ) as ASTNODE ptr
 declare sub astDelete( byval n as ASTNODE ptr )
 declare sub astInsert _
 	( _

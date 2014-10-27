@@ -228,11 +228,6 @@ function astUngroupOne( byval group as ASTNODE ptr ) as ASTNODE ptr
 	astDelete( group )
 end function
 
-function astTakeLoc( byval n as ASTNODE ptr, byval x as integer ) as ASTNODE ptr
-	n->location = *tkGetLocation( x )
-	function = n
-end function
-
 sub astDelete( byval n as ASTNODE ptr )
 	if( n = NULL ) then
 		exit sub
@@ -419,8 +414,6 @@ function astCloneNode( byval n as ASTNODE ptr ) as ASTNODE ptr
 	c->array       = astClone( n->array )
 	c->bits        = astClone( n->bits )
 
-	c->location    = n->location
-
 	c->expr        = astClone( n->expr )
 
 	select case( n->class )
@@ -585,12 +578,8 @@ sub astReport _
 		byval more_context as integer _
 	)
 
-	if( n->location.source ) then
-		print hReport( @n->location, message )
-	else
-		print *message
-		print astDumpPrettyDecl( n )
-	end if
+	print *message
+	print astDumpPrettyDecl( n )
 
 end sub
 
@@ -694,10 +683,6 @@ function astDumpOne( byval n as ASTNODE ptr ) as string
 	if( n->dtype <> TYPE_NONE ) then
 		s += " as " + emitType( n->dtype, NULL, TRUE )
 	end if
-
-	#if 0
-		s += " " + hDumpLocation( @n->location )
-	#endif
 
 	function = s
 end function

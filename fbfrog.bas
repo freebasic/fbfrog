@@ -571,7 +571,7 @@ private sub hParseArgs( byref x as integer )
 				hExpandArgsFiles( )
 			else
 				'' Input file/directory
-				astAppend( frog.script, astTakeLoc( astNewTEXT( hPathRelativeToArgsFile( x ) ), x ) )
+				astAppend( frog.script, astNewTEXT( hPathRelativeToArgsFile( x ) ) )
 				x += 1
 			end if
 		end select
@@ -895,7 +895,7 @@ private function frogReadAPI( byval options as ASTNODE ptr ) as ASTNODE ptr
 				s += !"\n"
 
 				var x = tkGetCount( )
-				lexLoadC( x, sourcebufferFromZstring( prettyname, s, @i->location ) )
+				lexLoadC( x, sourcebufferFromZstring( prettyname, s, NULL ) )
 				tkSetRemove( x, tkGetCount( ) - 1 )
 
 			case ASTCLASS_FILTEROUT, ASTCLASS_FILTERIN
@@ -942,7 +942,7 @@ private function frogReadAPI( byval options as ASTNODE ptr ) as ASTNODE ptr
 		while( i )
 			var code = "#include """ + *i->text + """" + !"\n"
 			var x = tkGetCount( )
-			lexLoadC( x, sourcebufferFromZstring( code, code, @i->location ) )
+			lexLoadC( x, sourcebufferFromZstring( code, code, NULL ) )
 			tkAddFlags( x, tkGetCount( ) - 1, TKFLAG_REMOVE or TKFLAG_ROOTFILE )
 			i = i->next
 		wend
