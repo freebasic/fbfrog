@@ -1,11 +1,281 @@
 [1/5] __FB_WIN32__.__FB_64BIT__
       tests/lex/numlit-invalid-suffix.h
+tests/lex/numlit-invalid-suffix.h(2): invalid suffix on number literal: 'a'
+    static int i1 = 1a;
+                    ^~
+context as seen by fbfrog:
+    static int i1 = 1a ;
+                    ^~
+tests/lex/numlit-invalid-suffix.h(3): invalid suffix on number literal: 'z'
+    static int i2 = 1z;
+                    ^~
+context as seen by fbfrog:
+    static int i2 = 1z ;
+                    ^~
+tests/lex/numlit-invalid-suffix.h(4): invalid suffix on number literal: 'u'
+    static int i3 = 1uu;
+                    ^~~
+context as seen by fbfrog:
+    static int i3 = 1uu ;
+                    ^~~
+tests/lex/numlit-invalid-suffix.h(5): invalid suffix on number literal: 'u'
+    static int i4 = 1ullu;
+                    ^~~~~
+context as seen by fbfrog:
+    static int i4 = 1ullu ;
+                    ^~~~~
+tests/lex/numlit-invalid-suffix.h(6): invalid suffix on number literal: 'l'
+    static int i5 = 1lll;
+                    ^~~~
+context as seen by fbfrog:
+    static int i5 = 1lll ;
+                    ^~~~
+tests/lex/numlit-invalid-suffix.h(7): invalid suffix on number literal: 'e+2'
+    static int i6 = 1e+1e+2;
+                    ^~~~~~~
+context as seen by fbfrog:
+    static int i6 = 1e+1e+2 ;
+                    ^~~~~~~
+tests/lex/numlit-invalid-suffix.h(8): invalid suffix on number literal: 'f'
+    static int i7 = 1uf;
+                    ^~~
+context as seen by fbfrog:
+    static int i7 = 1uf ;
+                    ^~~
+tests/lex/numlit-invalid-suffix.h(9): invalid suffix on number literal: 'i31'
+    static int i8 = 1i31;
+                    ^~~~
+context as seen by fbfrog:
+    static int i8 = 1i31 ;
+                    ^~~~
+tests/lex/numlit-invalid-suffix.h(10): invalid suffix on number literal: 'u'
+    static int i9 = 1i64u;
+                    ^~~~~
+context as seen by fbfrog:
+    static int i9 = 1i64u ;
+                    ^~~~~
 [2/5] __FB_WIN32__.(not __FB_64BIT__)
       tests/lex/numlit-invalid-suffix.h
+tests/lex/numlit-invalid-suffix.h(2): invalid suffix on number literal: 'a'
+    static int i1 = 1a;
+                    ^~
+context as seen by fbfrog:
+    static int i1 = 1a ;
+                    ^~
+tests/lex/numlit-invalid-suffix.h(3): invalid suffix on number literal: 'z'
+    static int i2 = 1z;
+                    ^~
+context as seen by fbfrog:
+    static int i2 = 1z ;
+                    ^~
+tests/lex/numlit-invalid-suffix.h(4): invalid suffix on number literal: 'u'
+    static int i3 = 1uu;
+                    ^~~
+context as seen by fbfrog:
+    static int i3 = 1uu ;
+                    ^~~
+tests/lex/numlit-invalid-suffix.h(5): invalid suffix on number literal: 'u'
+    static int i4 = 1ullu;
+                    ^~~~~
+context as seen by fbfrog:
+    static int i4 = 1ullu ;
+                    ^~~~~
+tests/lex/numlit-invalid-suffix.h(6): invalid suffix on number literal: 'l'
+    static int i5 = 1lll;
+                    ^~~~
+context as seen by fbfrog:
+    static int i5 = 1lll ;
+                    ^~~~
+tests/lex/numlit-invalid-suffix.h(7): invalid suffix on number literal: 'e+2'
+    static int i6 = 1e+1e+2;
+                    ^~~~~~~
+context as seen by fbfrog:
+    static int i6 = 1e+1e+2 ;
+                    ^~~~~~~
+tests/lex/numlit-invalid-suffix.h(8): invalid suffix on number literal: 'f'
+    static int i7 = 1uf;
+                    ^~~
+context as seen by fbfrog:
+    static int i7 = 1uf ;
+                    ^~~
+tests/lex/numlit-invalid-suffix.h(9): invalid suffix on number literal: 'i31'
+    static int i8 = 1i31;
+                    ^~~~
+context as seen by fbfrog:
+    static int i8 = 1i31 ;
+                    ^~~~
+tests/lex/numlit-invalid-suffix.h(10): invalid suffix on number literal: 'u'
+    static int i9 = 1i64u;
+                    ^~~~~
+context as seen by fbfrog:
+    static int i9 = 1i64u ;
+                    ^~~~~
 [3/5] __FB_LINUX__.__FB_64BIT__
       tests/lex/numlit-invalid-suffix.h
+tests/lex/numlit-invalid-suffix.h(2): invalid suffix on number literal: 'a'
+    static int i1 = 1a;
+                    ^~
+context as seen by fbfrog:
+    static int i1 = 1a ;
+                    ^~
+tests/lex/numlit-invalid-suffix.h(3): invalid suffix on number literal: 'z'
+    static int i2 = 1z;
+                    ^~
+context as seen by fbfrog:
+    static int i2 = 1z ;
+                    ^~
+tests/lex/numlit-invalid-suffix.h(4): invalid suffix on number literal: 'u'
+    static int i3 = 1uu;
+                    ^~~
+context as seen by fbfrog:
+    static int i3 = 1uu ;
+                    ^~~
+tests/lex/numlit-invalid-suffix.h(5): invalid suffix on number literal: 'u'
+    static int i4 = 1ullu;
+                    ^~~~~
+context as seen by fbfrog:
+    static int i4 = 1ullu ;
+                    ^~~~~
+tests/lex/numlit-invalid-suffix.h(6): invalid suffix on number literal: 'l'
+    static int i5 = 1lll;
+                    ^~~~
+context as seen by fbfrog:
+    static int i5 = 1lll ;
+                    ^~~~
+tests/lex/numlit-invalid-suffix.h(7): invalid suffix on number literal: 'e+2'
+    static int i6 = 1e+1e+2;
+                    ^~~~~~~
+context as seen by fbfrog:
+    static int i6 = 1e+1e+2 ;
+                    ^~~~~~~
+tests/lex/numlit-invalid-suffix.h(8): invalid suffix on number literal: 'f'
+    static int i7 = 1uf;
+                    ^~~
+context as seen by fbfrog:
+    static int i7 = 1uf ;
+                    ^~~
+tests/lex/numlit-invalid-suffix.h(9): invalid suffix on number literal: 'i31'
+    static int i8 = 1i31;
+                    ^~~~
+context as seen by fbfrog:
+    static int i8 = 1i31 ;
+                    ^~~~
+tests/lex/numlit-invalid-suffix.h(10): invalid suffix on number literal: 'u'
+    static int i9 = 1i64u;
+                    ^~~~~
+context as seen by fbfrog:
+    static int i9 = 1i64u ;
+                    ^~~~~
 [4/5] __FB_LINUX__.(not __FB_64BIT__)
       tests/lex/numlit-invalid-suffix.h
+tests/lex/numlit-invalid-suffix.h(2): invalid suffix on number literal: 'a'
+    static int i1 = 1a;
+                    ^~
+context as seen by fbfrog:
+    static int i1 = 1a ;
+                    ^~
+tests/lex/numlit-invalid-suffix.h(3): invalid suffix on number literal: 'z'
+    static int i2 = 1z;
+                    ^~
+context as seen by fbfrog:
+    static int i2 = 1z ;
+                    ^~
+tests/lex/numlit-invalid-suffix.h(4): invalid suffix on number literal: 'u'
+    static int i3 = 1uu;
+                    ^~~
+context as seen by fbfrog:
+    static int i3 = 1uu ;
+                    ^~~
+tests/lex/numlit-invalid-suffix.h(5): invalid suffix on number literal: 'u'
+    static int i4 = 1ullu;
+                    ^~~~~
+context as seen by fbfrog:
+    static int i4 = 1ullu ;
+                    ^~~~~
+tests/lex/numlit-invalid-suffix.h(6): invalid suffix on number literal: 'l'
+    static int i5 = 1lll;
+                    ^~~~
+context as seen by fbfrog:
+    static int i5 = 1lll ;
+                    ^~~~
+tests/lex/numlit-invalid-suffix.h(7): invalid suffix on number literal: 'e+2'
+    static int i6 = 1e+1e+2;
+                    ^~~~~~~
+context as seen by fbfrog:
+    static int i6 = 1e+1e+2 ;
+                    ^~~~~~~
+tests/lex/numlit-invalid-suffix.h(8): invalid suffix on number literal: 'f'
+    static int i7 = 1uf;
+                    ^~~
+context as seen by fbfrog:
+    static int i7 = 1uf ;
+                    ^~~
+tests/lex/numlit-invalid-suffix.h(9): invalid suffix on number literal: 'i31'
+    static int i8 = 1i31;
+                    ^~~~
+context as seen by fbfrog:
+    static int i8 = 1i31 ;
+                    ^~~~
+tests/lex/numlit-invalid-suffix.h(10): invalid suffix on number literal: 'u'
+    static int i9 = 1i64u;
+                    ^~~~~
+context as seen by fbfrog:
+    static int i9 = 1i64u ;
+                    ^~~~~
 [5/5] __FB_DOS__
       tests/lex/numlit-invalid-suffix.h
+tests/lex/numlit-invalid-suffix.h(2): invalid suffix on number literal: 'a'
+    static int i1 = 1a;
+                    ^~
+context as seen by fbfrog:
+    static int i1 = 1a ;
+                    ^~
+tests/lex/numlit-invalid-suffix.h(3): invalid suffix on number literal: 'z'
+    static int i2 = 1z;
+                    ^~
+context as seen by fbfrog:
+    static int i2 = 1z ;
+                    ^~
+tests/lex/numlit-invalid-suffix.h(4): invalid suffix on number literal: 'u'
+    static int i3 = 1uu;
+                    ^~~
+context as seen by fbfrog:
+    static int i3 = 1uu ;
+                    ^~~
+tests/lex/numlit-invalid-suffix.h(5): invalid suffix on number literal: 'u'
+    static int i4 = 1ullu;
+                    ^~~~~
+context as seen by fbfrog:
+    static int i4 = 1ullu ;
+                    ^~~~~
+tests/lex/numlit-invalid-suffix.h(6): invalid suffix on number literal: 'l'
+    static int i5 = 1lll;
+                    ^~~~
+context as seen by fbfrog:
+    static int i5 = 1lll ;
+                    ^~~~
+tests/lex/numlit-invalid-suffix.h(7): invalid suffix on number literal: 'e+2'
+    static int i6 = 1e+1e+2;
+                    ^~~~~~~
+context as seen by fbfrog:
+    static int i6 = 1e+1e+2 ;
+                    ^~~~~~~
+tests/lex/numlit-invalid-suffix.h(8): invalid suffix on number literal: 'f'
+    static int i7 = 1uf;
+                    ^~~
+context as seen by fbfrog:
+    static int i7 = 1uf ;
+                    ^~~
+tests/lex/numlit-invalid-suffix.h(9): invalid suffix on number literal: 'i31'
+    static int i8 = 1i31;
+                    ^~~~
+context as seen by fbfrog:
+    static int i8 = 1i31 ;
+                    ^~~~
+tests/lex/numlit-invalid-suffix.h(10): invalid suffix on number literal: 'u'
+    static int i9 = 1i64u;
+                    ^~~~~
+context as seen by fbfrog:
+    static int i9 = 1i64u ;
+                    ^~~~~
 emitting: tests/lex/numlit-invalid-suffix.bi (0 declarations, 9 TODOs)

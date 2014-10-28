@@ -1,3 +1,5 @@
+// @fbfrog -v
+
 #define m void f(void
 
 void ok(void);

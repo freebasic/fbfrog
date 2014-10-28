@@ -1,11 +1,41 @@
 [1/5] __FB_WIN32__.__FB_64BIT__
       tests/c/proc-param-list-open.h
+tests/c/proc-param-list-open.h(2): expected a data type starting a parameter declaration but found '[eof]'
+    void f(
+          ^
+context as seen by fbfrog:
+    void f (
+           ^
 [2/5] __FB_WIN32__.(not __FB_64BIT__)
       tests/c/proc-param-list-open.h
+tests/c/proc-param-list-open.h(2): expected a data type starting a parameter declaration but found '[eof]'
+    void f(
+          ^
+context as seen by fbfrog:
+    void f (
+           ^
 [3/5] __FB_LINUX__.__FB_64BIT__
       tests/c/proc-param-list-open.h
+tests/c/proc-param-list-open.h(2): expected a data type starting a parameter declaration but found '[eof]'
+    void f(
+          ^
+context as seen by fbfrog:
+    void f (
+           ^
 [4/5] __FB_LINUX__.(not __FB_64BIT__)
       tests/c/proc-param-list-open.h
+tests/c/proc-param-list-open.h(2): expected a data type starting a parameter declaration but found '[eof]'
+    void f(
+          ^
+context as seen by fbfrog:
+    void f (
+           ^
 [5/5] __FB_DOS__
       tests/c/proc-param-list-open.h
+tests/c/proc-param-list-open.h(2): expected a data type starting a parameter declaration but found '[eof]'
+    void f(
+          ^
+context as seen by fbfrog:
+    void f (
+           ^
 emitting: tests/c/proc-param-list-open.bi (0 declarations, 1 TODO)

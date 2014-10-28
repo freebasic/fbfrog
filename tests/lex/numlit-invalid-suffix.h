@@ -1,3 +1,4 @@
+// @fbfrog -v
 static int i1 = 1a;
 static int i2 = 1z;
 static int i3 = 1uu;

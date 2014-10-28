@@ -1,11 +1,41 @@
 [1/5] __FB_WIN32__.__FB_64BIT__
       tests/c/keyword-basetype-missing-id.h
+tests/c/keyword-basetype-missing-id.h(2): expected identifier for the symbol declared in this declaration but found ';'
+    int;
+       ^
+context as seen by fbfrog:
+    int ;
+        ^
 [2/5] __FB_WIN32__.(not __FB_64BIT__)
       tests/c/keyword-basetype-missing-id.h
+tests/c/keyword-basetype-missing-id.h(2): expected identifier for the symbol declared in this declaration but found ';'
+    int;
+       ^
+context as seen by fbfrog:
+    int ;
+        ^
 [3/5] __FB_LINUX__.__FB_64BIT__
       tests/c/keyword-basetype-missing-id.h
+tests/c/keyword-basetype-missing-id.h(2): expected identifier for the symbol declared in this declaration but found ';'
+    int;
+       ^
+context as seen by fbfrog:
+    int ;
+        ^
 [4/5] __FB_LINUX__.(not __FB_64BIT__)
       tests/c/keyword-basetype-missing-id.h
+tests/c/keyword-basetype-missing-id.h(2): expected identifier for the symbol declared in this declaration but found ';'
+    int;
+       ^
+context as seen by fbfrog:
+    int ;
+        ^
 [5/5] __FB_DOS__
       tests/c/keyword-basetype-missing-id.h
+tests/c/keyword-basetype-missing-id.h(2): expected identifier for the symbol declared in this declaration but found ';'
+    int;
+       ^
+context as seen by fbfrog:
+    int ;
+        ^
 emitting: tests/c/keyword-basetype-missing-id.bi (0 declarations, 1 TODO)

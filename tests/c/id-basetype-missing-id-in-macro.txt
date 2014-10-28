@@ -1,11 +1,41 @@
 [1/5] __FB_WIN32__.__FB_64BIT__
       tests/c/id-basetype-missing-id-in-macro.h
+expected identifier for the symbol declared in this declaration but found ';'
+    c ;
+      ^
+tests/c/id-basetype-missing-id-in-macro.h(2): construct found here
+    #define m int a; int b; c;
+                            ^
 [2/5] __FB_WIN32__.(not __FB_64BIT__)
       tests/c/id-basetype-missing-id-in-macro.h
+expected identifier for the symbol declared in this declaration but found ';'
+    c ;
+      ^
+tests/c/id-basetype-missing-id-in-macro.h(2): construct found here
+    #define m int a; int b; c;
+                            ^
 [3/5] __FB_LINUX__.__FB_64BIT__
       tests/c/id-basetype-missing-id-in-macro.h
+expected identifier for the symbol declared in this declaration but found ';'
+    c ;
+      ^
+tests/c/id-basetype-missing-id-in-macro.h(2): construct found here
+    #define m int a; int b; c;
+                            ^
 [4/5] __FB_LINUX__.(not __FB_64BIT__)
       tests/c/id-basetype-missing-id-in-macro.h
+expected identifier for the symbol declared in this declaration but found ';'
+    c ;
+      ^
+tests/c/id-basetype-missing-id-in-macro.h(2): construct found here
+    #define m int a; int b; c;
+                            ^
 [5/5] __FB_DOS__
       tests/c/id-basetype-missing-id-in-macro.h
+expected identifier for the symbol declared in this declaration but found ';'
+    c ;
+      ^
+tests/c/id-basetype-missing-id-in-macro.h(2): construct found here
+    #define m int a; int b; c;
+                            ^
 emitting: tests/c/id-basetype-missing-id-in-macro.bi (2 declarations, 1 TODO)

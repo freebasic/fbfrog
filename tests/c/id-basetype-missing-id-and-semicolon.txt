@@ -1,11 +1,41 @@
 [1/5] __FB_WIN32__.__FB_64BIT__
       tests/c/id-basetype-missing-id-and-semicolon.h
+tests/c/id-basetype-missing-id-and-semicolon.h(2): expected identifier for the symbol declared in this declaration but found '[eof]'
+    a
+    ^
+context as seen by fbfrog:
+    a
+    ^
 [2/5] __FB_WIN32__.(not __FB_64BIT__)
       tests/c/id-basetype-missing-id-and-semicolon.h
+tests/c/id-basetype-missing-id-and-semicolon.h(2): expected identifier for the symbol declared in this declaration but found '[eof]'
+    a
+    ^
+context as seen by fbfrog:
+    a
+    ^
 [3/5] __FB_LINUX__.__FB_64BIT__
       tests/c/id-basetype-missing-id-and-semicolon.h
+tests/c/id-basetype-missing-id-and-semicolon.h(2): expected identifier for the symbol declared in this declaration but found '[eof]'
+    a
+    ^
+context as seen by fbfrog:
+    a
+    ^
 [4/5] __FB_LINUX__.(not __FB_64BIT__)
       tests/c/id-basetype-missing-id-and-semicolon.h
+tests/c/id-basetype-missing-id-and-semicolon.h(2): expected identifier for the symbol declared in this declaration but found '[eof]'
+    a
+    ^
+context as seen by fbfrog:
+    a
+    ^
 [5/5] __FB_DOS__
       tests/c/id-basetype-missing-id-and-semicolon.h
+tests/c/id-basetype-missing-id-and-semicolon.h(2): expected identifier for the symbol declared in this declaration but found '[eof]'
+    a
+    ^
+context as seen by fbfrog:
+    a
+    ^
 emitting: tests/c/id-basetype-missing-id-and-semicolon.bi (0 declarations, 1 TODO)

@@ -348,13 +348,9 @@ private function emitAst _
 		emitLine( "end scope" )
 
 	case ASTCLASS_UNKNOWN
-		assert( n->expr->class = ASTCLASS_TEXT )
 		emit.comment += 1
 		emit.commentspaces += 1
-		emitLine( "TODO: unrecognized construct:" )
-		emitLines( n->expr->text )
-		emitLine( string( 75, "-" ) )
-		emitLines( n->text )
+		emitLines( "TODO: " + *n->text )
 		emit.commentspaces -= 1
 		emit.comment -= 1
 

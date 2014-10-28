@@ -1,11 +1,101 @@
 [1/5] __FB_WIN32__.__FB_64BIT__
       tests/lex/numlit-invalid-digit.h
+tests/lex/numlit-invalid-digit.h(2): invalid digit in octal number literal
+    static int i1 = 09;
+                    ^~
+context as seen by fbfrog:
+    static int i1 = 09 ;
+                    ^~
+tests/lex/numlit-invalid-digit.h(3): invalid digit in octal number literal
+    static int i2 = 09f;
+                    ^~~
+context as seen by fbfrog:
+    static int i2 = 09f ;
+                    ^~~
+tests/lex/numlit-invalid-digit.h(4): invalid digit in octal number literal
+    static int i3 = 078;
+                    ^~~
+context as seen by fbfrog:
+    static int i3 = 078 ;
+                    ^~~
 [2/5] __FB_WIN32__.(not __FB_64BIT__)
       tests/lex/numlit-invalid-digit.h
+tests/lex/numlit-invalid-digit.h(2): invalid digit in octal number literal
+    static int i1 = 09;
+                    ^~
+context as seen by fbfrog:
+    static int i1 = 09 ;
+                    ^~
+tests/lex/numlit-invalid-digit.h(3): invalid digit in octal number literal
+    static int i2 = 09f;
+                    ^~~
+context as seen by fbfrog:
+    static int i2 = 09f ;
+                    ^~~
+tests/lex/numlit-invalid-digit.h(4): invalid digit in octal number literal
+    static int i3 = 078;
+                    ^~~
+context as seen by fbfrog:
+    static int i3 = 078 ;
+                    ^~~
 [3/5] __FB_LINUX__.__FB_64BIT__
       tests/lex/numlit-invalid-digit.h
+tests/lex/numlit-invalid-digit.h(2): invalid digit in octal number literal
+    static int i1 = 09;
+                    ^~
+context as seen by fbfrog:
+    static int i1 = 09 ;
+                    ^~
+tests/lex/numlit-invalid-digit.h(3): invalid digit in octal number literal
+    static int i2 = 09f;
+                    ^~~
+context as seen by fbfrog:
+    static int i2 = 09f ;
+                    ^~~
+tests/lex/numlit-invalid-digit.h(4): invalid digit in octal number literal
+    static int i3 = 078;
+                    ^~~
+context as seen by fbfrog:
+    static int i3 = 078 ;
+                    ^~~
 [4/5] __FB_LINUX__.(not __FB_64BIT__)
       tests/lex/numlit-invalid-digit.h
+tests/lex/numlit-invalid-digit.h(2): invalid digit in octal number literal
+    static int i1 = 09;
+                    ^~
+context as seen by fbfrog:
+    static int i1 = 09 ;
+                    ^~
+tests/lex/numlit-invalid-digit.h(3): invalid digit in octal number literal
+    static int i2 = 09f;
+                    ^~~
+context as seen by fbfrog:
+    static int i2 = 09f ;
+                    ^~~
+tests/lex/numlit-invalid-digit.h(4): invalid digit in octal number literal
+    static int i3 = 078;
+                    ^~~
+context as seen by fbfrog:
+    static int i3 = 078 ;
+                    ^~~
 [5/5] __FB_DOS__
       tests/lex/numlit-invalid-digit.h
+tests/lex/numlit-invalid-digit.h(2): invalid digit in octal number literal
+    static int i1 = 09;
+                    ^~
+context as seen by fbfrog:
+    static int i1 = 09 ;
+                    ^~
+tests/lex/numlit-invalid-digit.h(3): invalid digit in octal number literal
+    static int i2 = 09f;
+                    ^~~
+context as seen by fbfrog:
+    static int i2 = 09f ;
+                    ^~~
+tests/lex/numlit-invalid-digit.h(4): invalid digit in octal number literal
+    static int i3 = 078;
+                    ^~~
+context as seen by fbfrog:
+    static int i3 = 078 ;
+                    ^~~
 emitting: tests/lex/numlit-invalid-digit.bi (0 declarations, 3 TODOs)

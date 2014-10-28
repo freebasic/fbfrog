@@ -81,7 +81,6 @@ namespace c
 		dim shared level as integer
 	end namespace
 	dim shared as integer x, parseok
-	dim shared as string errmsg
 	dim shared parentdefine as ASTNODE ptr
 	dim shared typedefs as THASH
 end namespace
@@ -99,7 +98,6 @@ sub cInit( )
 
 	c.x = 0
 	c.parseok = TRUE
-	c.errmsg = ""
 	c.parentdefine = NULL
 end sub
 
@@ -125,7 +123,9 @@ end function
 private sub cError( byval message as zstring ptr )
 	if( c.parseok ) then
 		c.parseok = FALSE
-		c.errmsg = tkReport( c.x, message )
+		if( frog.verbose ) then
+			print tkReport( c.x, message )
+		end if
 	end if
 end sub
 
@@ -134,7 +134,9 @@ private sub cExpectMatch( byval tk as integer, byval message as zstring ptr )
 		c.x += 1
 	elseif( c.parseok ) then
 		c.parseok = FALSE
-		c.errmsg = tkReport( c.x, tkMakeExpectedMessage( c.x, tkInfoPretty( tk ) + " " + *message ) )
+		if( frog.verbose ) then
+			print tkReport( c.x, tkMakeExpectedMessage( c.x, tkInfoPretty( tk ) + " " + *message ) )
+		end if
 	end if
 end sub
 
@@ -2020,10 +2022,8 @@ private function cBody( byval body as integer ) as ASTNODE ptr
 			'' Skip current construct and preserve its tokens in
 			'' an UNKNOWN node
 			c.x = hSkipConstruct( begin )
-			t = astNew( ASTCLASS_UNKNOWN, c.errmsg )
-			t->expr = astNewTEXT( tkSpell( begin, c.x - 1 ) )
+			t = astNew( ASTCLASS_UNKNOWN, tkSpell( begin, c.x - 1 ) )
 
-			c.errmsg = ""
 			c.parseok = TRUE
 		end if
 
@@ -2099,7 +2099,6 @@ sub cPreParse( )
 			if( c.parseok = FALSE ) then
 				c.x = hSkipConstruct( begin )
 				c.parseok = TRUE
-				c.errmsg = ""
 			end if
 			astDelete( t )
 

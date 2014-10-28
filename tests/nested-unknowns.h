@@ -1,3 +1,4 @@
+// @fbfrog -v
 // Unknown constructs nested inside compound blocks
 
 struct A {
