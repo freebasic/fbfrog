@@ -34,9 +34,7 @@ private sub hInitKeywords _
 	hashInit( h, 12 )
 
 	for i as integer = first to last
-		var hash = hashHash( tkInfoText( i ) )
-		var item = hashLookup( h, tkInfoText( i ), hash )
-		hashAdd( h, item, hash, tkInfoText( i ), cast( any ptr, i ) )
+		hashAddOverwrite( h, tkInfoText( i ), cast( any ptr, i ) )
 	next
 end sub
 
