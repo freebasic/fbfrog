@@ -228,7 +228,6 @@ To do:
   (due to the field/#define conflict) and because enumcontants are preferred
   over #defines when renaming.
 
-* Automatically detect #include guards and remove the left over #defines
 * Ignore __attribute__((aligned(N))) (show a warning?). FB doesn't have it, and
   often it's just used for "better" performance anyways, not really needed.
 * Support dimension-less arrays with initializers: int a[] = {1, 2};
