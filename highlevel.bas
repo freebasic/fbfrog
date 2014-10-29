@@ -1253,7 +1253,7 @@ end function
 
 private function hIsCompound( byval n as ASTNODE ptr ) as integer
 	select case( n->class )
-	case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM, ASTCLASS_UNKNOWN
+	case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
 		function = TRUE
 	case ASTCLASS_PROC
 		'' Procedure with body?
