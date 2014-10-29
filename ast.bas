@@ -593,15 +593,19 @@ sub astOops _
 	end 1
 end sub
 
+function hGetFbNumberLiteralPrefix( byval attrib as integer ) as string
+	if( attrib and ASTATTRIB_BIN ) then
+		function = "&b"
+	elseif( attrib and ASTATTRIB_OCT ) then
+		function = "&o"
+	elseif( attrib and ASTATTRIB_HEX ) then
+		function = "&h"
+	end if
+end function
+
 function astEvalConstiAsInt64( byval n as ASTNODE ptr ) as longint
 	assert( astIsCONSTI( n ) )
-	var text = *n->text
-	if( n->attrib and ASTATTRIB_HEX ) then
-		text = "&h" + text
-	elseif( n->attrib and ASTATTRIB_OCT ) then
-		text = "&o" + text
-	end if
-	function = vallng( text )
+	function = vallng( hGetFbNumberLiteralPrefix( n->attrib ) + *n->text )
 end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''

@@ -46,6 +46,11 @@ extern "C"
 #define A40 1
 #define A41 1
 #define A42 1ull
+#define A43 &b
+#define A44 &b0
+#define A45 &b1
+#define A46 &b10100110
+#define A47 &b0
 #define B1 "foo"
 #define B2 wstr("foo")
 #define B3 !"foo\n"

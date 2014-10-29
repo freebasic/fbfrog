@@ -650,13 +650,7 @@ private function emitAst _
 			end if
 		end select
 
-		if( n->attrib and ASTATTRIB_OCT ) then
-			s += "&o"
-		elseif( n->attrib and ASTATTRIB_HEX ) then
-			s += "&h"
-		end if
-		s += *n->text
-		s += suffix
+		s += hGetFbNumberLiteralPrefix( n->attrib ) + *n->text + suffix
 
 		if( need_rparen ) then
 			s += ")"

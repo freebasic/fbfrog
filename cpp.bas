@@ -77,6 +77,9 @@ declare sub hMaybeExpandMacro( byref x as integer, byval inside_ifexpr as intege
 ''    0xAABBCCDD (hexadecimal)
 ''    010        (octal)
 ''    010.0      (decimal float, not octal float)
+''    0b10101    (binary; non-standard but supported by gcc/clang)
+''    0          (we treat this as decimal, even though it's octal,
+''               for prettier FB code: 0 vs &o0)
 '' There also is some simple float exponent and type suffix parsing.
 ''
 '' We have to parse the number literal (but without type suffix) first before we
@@ -91,46 +94,60 @@ function hNumberLiteral( byval x as integer, byval is_cpp as integer, byref errm
 	var is_float = FALSE
 	var have_nonoct_digit = FALSE
 
-	'' 0 or 0x prefix?
+	'' Check for non-decimal prefixes:
+	'' 0, 0x, 0X, 0b, 0B
 	if( p[0] = CH_0 ) then '' 0
-		if( (p[1] = CH_L_X) or (p[1] = CH_X) ) then '' 0x or 0X
+		select case( p[1] )
+		case CH_L_B, CH_B  '' 0b, 0B
+			p += 2
+			numbase = 2
+		case CH_L_X, CH_X  '' 0x, 0X
 			p += 2
 			numbase = 16
-		elseif( (p[1] >= CH_0) and (p[1] <= CH_9) ) then
+		case CH_0 to CH_9
 			p += 1
 			numbase = 8
-		end if
+		end select
 	end if
 
 	'' Body (integer part + fractional part, if any)
 	var begin = p
-	do
-		select case as const( p[0] )
-		case CH_0 to CH_7
-			'' These digits are allowed in all number literals
 
-		case CH_8, CH_9
-			'' These digits are allowed in dec/hex literals, but not
-			'' oct literals, but we don't know which it is yet.
-			have_nonoct_digit = TRUE
+	select case( numbase )
+	case 2
+		while( (p[0] = CH_0) or (p[0] = CH_1) )
+			p += 1
+		wend
 
-		case CH_A to CH_F, CH_L_A to CH_L_F
-			'' These digits can only appear in hex literals
-			if( numbase <> 16 ) then
+	case 16
+		do
+			select case as const( p[0] )
+			case CH_0 to CH_9, CH_A to CH_F, CH_L_A to CH_L_F
+			case else
 				exit do
-			end if
+			end select
+			p += 1
+		loop
 
-		case CH_DOT
-			'' Only one dot allowed
-			if( is_float ) then exit do
-			is_float = TRUE
-
-		case else
-			exit do
-		end select
-
-		p += 1
-	loop
+	case else
+		do
+			select case as const( p[0] )
+			case CH_0 to CH_7
+				'' These digits are allowed in both dec/oct literals
+			case CH_8, CH_9
+				'' These digits are only allowed in dec literals, not
+				'' oct, but we don't know which it is yet.
+				have_nonoct_digit = TRUE
+			case CH_DOT
+				'' Only one dot allowed
+				if( is_float ) then exit do
+				is_float = TRUE
+			case else
+				exit do
+			end select
+			p += 1
+		loop
+	end select
 
 	'' Exponent? (can be used even without fractional part, e.g. '1e1')
 	select case( p[0] )
@@ -150,13 +167,8 @@ function hNumberLiteral( byval x as integer, byval is_cpp as integer, byref errm
 		wend
 	end select
 
-	if( is_float ) then
-		if( numbase = 16 ) then
-			errmsg = "TODO: hex-floats not yet supported"
-			exit function
-		end if
-		'' Override octal in case there was a leading zero. There are no
-		'' octal floats.
+	'' Floats with leading zeroes are decimal, not octal.
+	if( is_float and (numbase = 8) ) then
 		numbase = 10
 	end if
 
@@ -244,6 +256,7 @@ function hNumberLiteral( byval x as integer, byval is_cpp as integer, byref errm
 		select case( numbase )
 		case 16 : n->attrib or= ASTATTRIB_HEX
 		case  8 : n->attrib or= ASTATTRIB_OCT
+		case  2 : n->attrib or= ASTATTRIB_BIN
 		end select
 	end if
 

@@ -637,25 +637,21 @@ end enum
 const ASTATTRIB_LOCAL         = 1 shl 0  '' VAR
 const ASTATTRIB_STATIC        = 1 shl 1  '' VAR
 const ASTATTRIB_EXTERN        = 1 shl 2  '' VAR
-const ASTATTRIB_OCT           = 1 shl 3  '' CONSTI
-const ASTATTRIB_HEX           = 1 shl 4  '' CONSTI
-const ASTATTRIB_CDECL         = 1 shl 5  '' PROC
-const ASTATTRIB_STDCALL       = 1 shl 6  '' PROC
-const ASTATTRIB_HIDECALLCONV  = 1 shl 7  '' Whether the calling convention is covered by an Extern block, in which case it doesn't need to be emitted.
-                            ''= 1 shl 8
+const ASTATTRIB_BIN           = 1 shl 3  '' CONSTI
+const ASTATTRIB_OCT           = 1 shl 4  '' CONSTI
+const ASTATTRIB_HEX           = 1 shl 5  '' CONSTI
+const ASTATTRIB_CDECL         = 1 shl 6  '' PROC
+const ASTATTRIB_STDCALL       = 1 shl 7  '' PROC
+const ASTATTRIB_HIDECALLCONV  = 1 shl 8  '' Whether the calling convention is covered by an Extern block, in which case it doesn't need to be emitted.
 const ASTATTRIB_UNCHECKED     = 1 shl 9
-                            ''= 1 shl 10
-                            ''= 1 shl 11
-const ASTATTRIB_NEEDRENAME    = 1 shl 12
-const ASTATTRIB_POISONED      = 1 shl 13
-                            ''= 1 shl 14
-                            ''= 1 shl 15
-const ASTATTRIB_PACKED        = 1 shl 16  '' __attribute__((packed))
-const ASTATTRIB_VARIADIC      = 1 shl 17  '' PPDEFINE/MACROPARAM: variadic macros
-const ASTATTRIB_PARENTHESIZEDMACROPARAM = 1 shl 18
-const ASTATTRIB_DUMMYID       = 1 shl 19
-const ASTATTRIB_DLLIMPORT     = 1 shl 20
-const ASTATTRIB_FILTEROUT     = 1 shl 21
+const ASTATTRIB_NEEDRENAME    = 1 shl 10
+const ASTATTRIB_POISONED      = 1 shl 11
+const ASTATTRIB_PACKED        = 1 shl 12  '' __attribute__((packed))
+const ASTATTRIB_VARIADIC      = 1 shl 13  '' PPDEFINE/MACROPARAM: variadic macros
+const ASTATTRIB_PARENTHESIZEDMACROPARAM = 1 shl 14
+const ASTATTRIB_DUMMYID       = 1 shl 15
+const ASTATTRIB_DLLIMPORT     = 1 shl 16
+const ASTATTRIB_FILTEROUT     = 1 shl 17
 
 '' When changing, adjust astClone(), astIsEqual(), astDump*()
 type ASTNODE
@@ -765,6 +761,7 @@ declare sub astOops _
 		byval message as zstring ptr, _
 		byval more_context as integer = TRUE _
 	)
+declare function hGetFbNumberLiteralPrefix( byval attrib as integer ) as string
 declare function astEvalConstiAsInt64( byval n as ASTNODE ptr ) as longint
 declare function astCountDecls( byval code as ASTNODE ptr ) as integer
 declare function astCountUnknowns( byval code as ASTNODE ptr ) as integer

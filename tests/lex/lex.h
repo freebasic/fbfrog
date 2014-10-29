@@ -42,6 +42,11 @@
 #define A40 1ui16
 #define A41 1ui32
 #define A42 1ui64
+#define A43 0b
+#define A44 0b0
+#define A45 0b1
+#define A46 0b10100110
+#define A47 0B0
 
 #define B1 "foo"
 #define B2 L"foo"
