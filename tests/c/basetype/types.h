@@ -104,3 +104,12 @@ static int * restrict * p;
 static int * restrict * restrict p;
 static int * const restrict * const p;
 static int * restrict const * const p;
+
+static jmp_buf x;
+static jmp_buf *px;
+static const jmp_buf cx;
+static const jmp_buf *pcx;
+void f(jmp_buf x);
+void f(jmp_buf *px);
+void f(const jmp_buf cx);
+void f(const jmp_buf *pcx);

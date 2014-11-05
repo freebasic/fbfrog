@@ -38,6 +38,7 @@ What's this?
      individual procedures
    * Function/array typedefs (not supported in FB) => solved out
    * Array parameters (not supported in FB) => pointers
+   * jmp_buf parameters => pointers (jmp_buf is a UDT in FB, not an array type)
    * Anonymous structs (not supported in FB) => named after first typedef that
      uses them, or auto-generated name
    * typedef struct FOO FOO; => solved out (FB doesn't have separate types/tags)

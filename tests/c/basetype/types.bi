@@ -3,6 +3,8 @@
 #include once "crt/long.bi"
 #include once "crt/longdouble.bi"
 
+extern "C"
+
 type A as A_
 
 dim shared a as long
@@ -96,3 +98,14 @@ dim shared p as long ptr ptr
 dim shared p as long ptr ptr
 dim shared p as long const ptr const ptr
 dim shared p as long const ptr const ptr
+dim shared x as jmp_buf
+dim shared px as jmp_buf ptr
+dim shared cx as const jmp_buf
+dim shared pcx as const jmp_buf ptr
+
+declare sub f(byval x as jmp_buf ptr)
+declare sub f(byval px as jmp_buf ptr)
+declare sub f(byval cx as const jmp_buf ptr)
+declare sub f(byval pcx as const jmp_buf ptr)
+
+end extern

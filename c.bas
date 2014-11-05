@@ -1361,6 +1361,14 @@ private sub hDefaultToCdecl( byval n as ASTNODE ptr, byval filterout as integer 
 	if( n->subtype ) then hDefaultToCdecl( n->subtype, filterout )
 end sub
 
+private function hIsPlainJmpBuf( byval dtype as integer, byval subtype as ASTNODE ptr ) as integer
+	if( typeGetDtAndPtr( dtype ) = TYPE_UDT ) then
+		if( subtype->class = ASTCLASS_ID ) then
+			function = (*subtype->text = "jmp_buf")
+		end if
+	end if
+end function
+
 ''
 '' Declarator =
 ''    GccAttributeList
@@ -1592,7 +1600,7 @@ private function cDeclarator _
 		end select
 
 		t = astNew( decl_to_astclass(decl), id )
-		select case( decl )
+		select case as const( decl )
 		case DECL_EXTERNVAR
 			t->attrib or= ASTATTRIB_EXTERN
 			if( filterout = FALSE ) then
@@ -1610,6 +1618,13 @@ private function cDeclarator _
 			t->attrib or= ASTATTRIB_LOCAL or ASTATTRIB_STATIC
 		case DECL_TYPEDEF
 			cAddTypedef( id )
+		case DECL_PARAM
+			'' Remap "byval as jmp_buf" to "byval as jmp_buf ptr"
+			'' FB's crt/setjmp.bi defines jmp_buf as an UDT, not as array type as in C.
+			'' All (plain) jmp_buf parameters actually are pointers to a jmp_buf struct.
+			if( hIsPlainJmpBuf( dtype, basesubtype ) ) then
+				dtype = typeAddrOf( dtype )
+			end if
 		end select
 		astSetType( t, dtype, basesubtype )
 	end if
