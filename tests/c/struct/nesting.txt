@@ -8,4 +8,4 @@
       tests/c/struct/nesting.h
 [5/5] __FB_DOS__
       tests/c/struct/nesting.h
-emitting: tests/c/struct/nesting.bi (1 declaration, 0 TODOs)
+emitting: tests/c/struct/nesting.bi (8 declarations, 0 TODOs)

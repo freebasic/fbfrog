@@ -28,4 +28,4 @@
         tests/merging/versions.h
 [15/15] __FB_DOS__.VER=3
         tests/merging/versions.h
-emitting: tests/merging/versions.bi (14 declarations, 0 TODOs)
+emitting: tests/merging/versions.bi (13 declarations, 0 TODOs)

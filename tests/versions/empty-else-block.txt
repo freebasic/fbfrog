@@ -28,4 +28,4 @@
         tests/versions/empty-else-block.h
 [15/15] __FB_DOS__.(not A)
         tests/versions/empty-else-block.h
-emitting: tests/versions/empty-else-block.bi (2 declarations, 0 TODOs)
+emitting: tests/versions/empty-else-block.bi (1 declaration, 0 TODOs)

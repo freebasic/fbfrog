@@ -8,4 +8,4 @@
       tests/c/struct/union-in-union-4.h
 [5/5] __FB_DOS__
       tests/c/struct/union-in-union-4.h
-emitting: tests/c/struct/union-in-union-4.bi (1 declaration, 0 TODOs)
+emitting: tests/c/struct/union-in-union-4.bi (4 declarations, 0 TODOs)

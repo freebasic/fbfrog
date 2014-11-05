@@ -28,4 +28,4 @@
         tests/versions/declareversions.h
 [15/15] __FB_DOS__.VER=3
         tests/versions/declareversions.h
-emitting: tests/versions/declareversions.bi (5 declarations, 0 TODOs)
+emitting: tests/versions/declareversions.bi (4 declarations, 0 TODOs)

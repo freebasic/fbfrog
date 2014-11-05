@@ -28,4 +28,4 @@
         tests/versions/declaredefines.h
 [15/15] __FB_DOS__.C
         tests/versions/declaredefines.h
-emitting: tests/versions/declaredefines.bi (4 declarations, 0 TODOs)
+emitting: tests/versions/declaredefines.bi (3 declarations, 0 TODOs)

@@ -68,4 +68,4 @@ tests/c/statement-expression.h(5): expected expression but found '{'
 context as seen by fbfrog:
     # define A2 { int a [ ( { f ( ) ; } ) ] ; } 
                             ^
-emitting: tests/c/statement-expression.bi (1 declaration, 1 TODO)
+emitting: tests/c/statement-expression.bi (1 declaration, 2 TODOs)

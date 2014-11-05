@@ -1179,9 +1179,10 @@ end sub
 	elseif( pathIsDir( frog.outname ) ) then
 		frog.outname = pathAddDiv( frog.outname ) + pathStrip( frog.defaultoutname )
 	end if
-	print "emitting: " + frog.outname + " (" + _
-		hMakeCountMessage(    astCountDecls( final ), "declaration" ) + ", " + _
-		hMakeCountMessage( astCountUnknowns( final ), "TODO"        ) + ")"
+	print "emitting: " + frog.outname;
 	emitFile( frog.outname, final )
+	print " (" + _
+		hMakeCountMessage( emit.decls, "declaration" ) + ", " + _
+		hMakeCountMessage( emit.todos, "TODO"        ) + ")"
 
 	astDelete( final )

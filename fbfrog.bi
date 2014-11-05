@@ -763,8 +763,6 @@ declare sub astOops _
 	)
 declare function hGetFbNumberLiteralPrefix( byval attrib as integer ) as string
 declare function astEvalConstiAsInt64( byval n as ASTNODE ptr ) as longint
-declare function astCountDecls( byval code as ASTNODE ptr ) as integer
-declare function astCountUnknowns( byval code as ASTNODE ptr ) as integer
 declare function astDumpPrettyClass( byval astclass as integer ) as string
 declare function astDumpPrettyDecl( byval n as ASTNODE ptr ) as string
 declare function astDumpOne( byval n as ASTNODE ptr ) as string
@@ -828,6 +826,9 @@ declare function lexPeekLine _
 		byval targetlinenum as integer _
 	) as string
 
+namespace emit
+	extern as integer decls, todos
+end namespace
 declare function emitType overload _
 	( _
 		byval dtype as integer, _

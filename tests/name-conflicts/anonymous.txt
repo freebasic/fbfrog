@@ -8,4 +8,4 @@
       tests/name-conflicts/anonymous.h
 [5/5] __FB_DOS__
       tests/name-conflicts/anonymous.h
-emitting: tests/name-conflicts/anonymous.bi (4 declarations, 0 TODOs)
+emitting: tests/name-conflicts/anonymous.bi (8 declarations, 0 TODOs)

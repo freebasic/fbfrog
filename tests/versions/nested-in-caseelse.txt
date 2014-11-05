@@ -38,4 +38,4 @@
         tests/versions/nested-in-caseelse.h
 [20/20] __FB_DOS__.C.VER=2
         tests/versions/nested-in-caseelse.h
-emitting: tests/versions/nested-in-caseelse.bi (3 declarations, 0 TODOs)
+emitting: tests/versions/nested-in-caseelse.bi (1 declaration, 0 TODOs)

@@ -18,4 +18,4 @@
         tests/merging/renamelist.h
 [10/10] __FB_DOS__.VER=2
         tests/merging/renamelist.h
-emitting: tests/merging/renamelist.bi (5 declarations, 0 TODOs)
+emitting: tests/merging/renamelist.bi (4 declarations, 0 TODOs)

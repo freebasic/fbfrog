@@ -124,7 +124,7 @@ function emitType overload( byval n as ASTNODE ptr ) as string
 end function
 
 namespace emit
-	dim shared as integer fo, indent, comment, commentspaces
+	dim shared as integer fo, indent, comment, commentspaces, decls, todos
 end namespace
 
 private sub emitLine( byref ln as string )
@@ -353,6 +353,7 @@ private function emitAst _
 		emitLines( "TODO: " + *n->text )
 		emit.commentspaces -= 1
 		emit.comment -= 1
+		emit.todos += 1
 
 	case ASTCLASS_RENAMELIST
 		var added_indent = FALSE
@@ -408,6 +409,7 @@ private function emitAst _
 			emitLine( s )
 			s = ""
 		end if
+		emit.decls += 1
 
 	case ASTCLASS_PPIF
 		select case( n->expr->class )
@@ -487,9 +489,12 @@ private function emitAst _
 			emitLine( "end " + opposite )
 		end if
 
+		emit.decls += 1
+
 	case ASTCLASS_TYPEDEF
 		assert( n->array = NULL )
 		emitLine( "type " + *n->text + " as " + emitType( n ) )
+		emit.decls += 1
 
 	case ASTCLASS_ENUMCONST
 		emitLine( *n->text + hInitializer( n ) )
@@ -511,6 +516,7 @@ private function emitAst _
 				emitVarDecl( "dim shared ", n, FALSE )
 			end if
 		end if
+		emit.decls += 1
 
 	case ASTCLASS_FIELD
 		'' Fields can be named after keywords, but we have to do
@@ -579,6 +585,8 @@ private function emitAst _
 				hEmitIndentedChildren( n->expr )
 				emitLine( "end " + compound )
 			end if
+
+			emit.decls += 1
 		end if
 
 	case ASTCLASS_PARAM
@@ -848,6 +856,8 @@ sub emitFile( byref filename as string, byval ast as ASTNODE ptr )
 	emit.indent = 0
 	emit.comment = 0
 	emit.commentspaces = 0
+	emit.decls = 0
+	emit.todos = 0
 
 	emit.fo = freefile( )
 	if( open( filename, for output, as #emit.fo ) ) then

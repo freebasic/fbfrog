@@ -8,4 +8,4 @@
       tests/nested-defines.h
 [5/5] __FB_DOS__
       tests/nested-defines.h
-emitting: tests/nested-defines.bi (15 declarations, 0 TODOs)
+emitting: tests/nested-defines.bi (16 declarations, 0 TODOs)

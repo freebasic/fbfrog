@@ -8,4 +8,4 @@
       tests/c/var.h
 [5/5] __FB_DOS__
       tests/c/var.h
-emitting: tests/c/var.bi (230 declarations, 0 TODOs)
+emitting: tests/c/var.bi (232 declarations, 0 TODOs)
