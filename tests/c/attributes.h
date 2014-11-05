@@ -77,6 +77,8 @@ static int attribute_defines;
 
 #define DEPRECATED(replacement) __attribute__((deprecated("Use " #replacement " instead")))
 
+typedef struct alignment_ { int i; } alignment __attribute__((aligned(8)));
+
 static int before_base_type;
 __attribute__((stdcall)) void f(void);
 

@@ -629,6 +629,7 @@ private sub cGccAttribute( byref gccattribs as integer )
 	'' the main exception being the x86 calling conventions.
 	select case( attr )
 	case "alloc_size", _
+	     "aligned", _
 	     "const", _
 	     "deprecated", _
 	     "format", _

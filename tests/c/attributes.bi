@@ -56,6 +56,13 @@ extern import i as long
 declare sub f()
 
 dim shared attribute_defines as long
+
+type alignment_
+	i as long
+end type
+
+type alignment as alignment_
+
 dim shared before_base_type as long
 
 declare sub f stdcall()
