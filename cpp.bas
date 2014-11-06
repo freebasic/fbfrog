@@ -494,6 +494,8 @@ namespace cpp
 	dim shared noexpands		as THASH
 	dim shared removes		as THASH
 
+	dim shared incdirs		as ASTNODE ptr
+
 	'' #include exclude/include filters: GROUP of FILTEROUT/FILTERIN nodes,
 	'' in the order they should be applied.
 	dim shared filters		as ASTNODE ptr
@@ -535,6 +537,7 @@ sub cppInit( )
 	cpp.savedmacrocount = 0
 	hashInit( @cpp.noexpands, 4, TRUE )
 	hashInit( @cpp.removes, 4, TRUE )
+	cpp.incdirs = astNewGROUP( )
 	cpp.filters = astNewGROUP( )
 
 	cpp.files = NULL
@@ -569,6 +572,7 @@ sub cppEnd( )
 	end scope
 	hashEnd( @cpp.noexpands )
 	hashEnd( @cpp.removes )
+	astDelete( cpp.incdirs )
 	astDelete( cpp.filters )
 
 	hashEnd( @cpp.filetb )
@@ -595,6 +599,10 @@ end sub
 
 sub cppRemoveSym( byval id as zstring ptr )
 	hashAddOverwrite( @cpp.removes, id, NULL )
+end sub
+
+sub cppAddIncDir( byval incdir as ASTNODE ptr )
+	astAppend( cpp.incdirs, astClone( incdir ) )
 end sub
 
 sub cppAddFilter( byval filter as ASTNODE ptr )
@@ -2067,7 +2075,7 @@ private function hSearchHeaderFile _
 	end if
 
 	'' 3. In any of the include search directories
-	var i = frog.incdirs->head
+	var i = cpp.incdirs->head
 	while( i )
 
 		incfile = pathAddDiv( *i->text ) + inctext

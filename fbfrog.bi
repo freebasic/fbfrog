@@ -533,6 +533,7 @@ enum
 	ASTCLASS_RESERVEDID
 	ASTCLASS_RENAMETYPEDEF
 	ASTCLASS_RENAMETAG
+	ASTCLASS_INCDIR
 	ASTCLASS_FILTEROUT
 	ASTCLASS_FILTERIN
 	ASTCLASS_INCLIB
@@ -846,6 +847,7 @@ declare sub cppInit( )
 declare sub cppEnd( )
 declare sub cppNoExpandSym( byval id as zstring ptr )
 declare sub cppRemoveSym( byval id as zstring ptr )
+declare sub cppAddIncDir( byval incdir as ASTNODE ptr )
 declare sub cppAddFilter( byval filter as ASTNODE ptr )
 declare function cppTakeDirectIncludes( ) as ASTNODE ptr
 declare sub cppMain( )
@@ -865,7 +867,6 @@ end type
 
 namespace frog
 	extern as integer verbose, windowsms
-	extern incdirs as ASTNODE ptr
 
 	extern as ASTNODE ptr script
 	extern as ASTNODE ptr completeverors, fullveror

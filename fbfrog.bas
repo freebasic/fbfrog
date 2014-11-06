@@ -57,7 +57,6 @@
 
 namespace frog
 	dim shared as integer verbose, windowsms, nonamefixup, nodefaultscript
-	dim shared as ASTNODE ptr incdirs
 	dim shared as string outname, defaultoutname
 
 	dim shared as ASTNODE ptr script
@@ -108,10 +107,10 @@ private sub hPrintHelpAndExit( )
 	print "  -nodefaultscript Don't use default.fbfrog implicitly"
 	print "  -windowsms       Use Extern ""Windows-MS"" instead of Extern ""Windows"""
 	print "  -nonamefixup     Don't fix symbol identifier conflicts"
-	print "  -incdir <path>   Add #include search directory"
 	print "  -o <path/file>   Set output .bi file name, or just the output directory"
 	print "  -v               Show verbose/debugging info"
 	print "version-specific commands:"
+	print "  -incdir <path>   Add #include search directory"
 	print "  -filterout <filename-pattern>  Don't preserve code from matching #includes"
 	print "  -filterin <filename-pattern>   Undo -filterout for matching #includes"
 	print "  -inclib <name>           Add an #inclib ""<name>"" statement"
@@ -434,14 +433,6 @@ private sub hParseArgs( byref x as integer )
 		case OPT_NONAMEFIXUP : frog.nonamefixup = TRUE : x += 1
 		case OPT_V           : frog.verbose     = TRUE : x += 1
 
-		case OPT_INCDIR
-			x += 1
-
-			'' <path>
-			hExpectPath( x )
-			astAppend( frog.incdirs, astNewTEXT( hPathRelativeToArgsFile( x ) ) )
-			x += 1
-
 		case OPT_O
 			x += 1
 
@@ -520,6 +511,14 @@ private sub hParseArgs( byref x as integer )
 				end select
 			end if
 			exit do
+
+		case OPT_INCDIR
+			x += 1
+
+			'' <path>
+			hExpectPath( x )
+			astAppend( frog.script, astNew( ASTCLASS_INCDIR, hPathRelativeToArgsFile( x ) ) )
+			x += 1
 
 		'' -filterout <filename-pattern>
 		case OPT_FILTEROUT
@@ -898,6 +897,9 @@ private function frogReadAPI( byval options as ASTNODE ptr ) as ASTNODE ptr
 				lexLoadC( x, sourcebufferFromZstring( prettyname, s, NULL ) )
 				tkSetRemove( x, tkGetCount( ) - 1 )
 
+			case ASTCLASS_INCDIR
+				cppAddIncDir( i )
+
 			case ASTCLASS_FILTEROUT, ASTCLASS_FILTERIN
 				cppAddFilter( i )
 
@@ -1100,7 +1102,6 @@ end sub
 	'' Parse the command line arguments, skipping argv[0]. Global options
 	'' are added to various frog.* fields, version-specific options are
 	'' added to the frog.script list in their original order.
-	frog.incdirs = astNewGROUP( )
 	frog.script = astNewGROUP( )
 	hParseArgs( 1 )
 
