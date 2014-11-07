@@ -122,7 +122,13 @@ private sub astHideCallConv( byval n as ASTNODE ptr, byval callconv as integer )
 
 	if( n->subtype ) then astHideCallConv( n->subtype, callconv )
 	if( n->array   ) then astHideCallConv( n->array  , callconv )
-	if( n->expr    ) then astHideCallConv( n->expr   , callconv )
+
+	'' Don't hide callconvs in macro bodies, otherwise they could end up
+	'' using the wrong callconv if expanded outside the header's Extern
+	'' block.
+	if( n->class <> ASTCLASS_PPDEFINE ) then
+		if( n->expr ) then astHideCallConv( n->expr, callconv )
+	end if
 
 	var i = n->head
 	while( i )

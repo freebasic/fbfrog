@@ -14,6 +14,6 @@ type UDT
 	p as sub(byval i as long ptr)
 end type
 
-#define A cptr(sub(byval i as long ptr), 0)
+#define A cptr(sub cdecl(byval i as long ptr), 0)
 
 end extern

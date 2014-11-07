@@ -8,6 +8,6 @@ extern "C"
 #define MYLONG clong
 #define MYCONSTINT const long
 #define MYINTPTR long ptr
-#define MYPROCPTR sub()
+#define MYPROCPTR sub cdecl()
 
 end extern
