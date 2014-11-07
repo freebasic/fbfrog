@@ -8,4 +8,4 @@
       tests/c/basetype/types.h
 [5/5] __FB_DOS__
       tests/c/basetype/types.h
-emitting: tests/c/basetype/types.bi (100 declarations, 0 TODOs)
+emitting: tests/c/basetype/types.bi (101 declarations, 0 TODOs)

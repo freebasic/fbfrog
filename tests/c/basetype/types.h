@@ -62,6 +62,7 @@ static wchar_t a;
 static wchar_t *a;
 
 static _Bool a;
+static bool a;
 
 static A a;
 static enum A a;
