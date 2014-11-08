@@ -9,6 +9,6 @@ type SCREEN_
 	a as long
 end type
 
-extern x as SCREEN
+extern x as SCREEN_
 
 end extern

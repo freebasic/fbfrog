@@ -479,7 +479,7 @@ end sub
 ''
 private sub hTryNameAnonUdtAfterFirstAliasTypedef _
 	( _
-		byval parent as ASTNODE ptr, _
+		byval ast as ASTNODE ptr, _
 		byval anon as ASTNODE ptr _
 	)
 
@@ -525,24 +525,28 @@ private sub hTryNameAnonUdtAfterFirstAliasTypedef _
 		typedef = typedef->next
 	wend
 
+	'' 3. Turn all references to the typedef id into a tagid, because it's
+	''    now a struct, not a typedef anymore.
+	astReplaceSubtypes( ast, ASTCLASS_ID, aliastypedef->text, ASTCLASS_TAGID, aliastypedef->text )
+
 	'' Rename the anon UDT to the alias typedef's id, now that its old
 	'' dummyid isn't needed for comparison above anymore
 	astSetText( anon, aliastypedef->text )
 	assert( anon->attrib and ASTATTRIB_DUMMYID )
 	anon->attrib and= not ASTATTRIB_DUMMYID
 
-	astRemove( parent, aliastypedef )
+	astRemove( ast, aliastypedef )
 end sub
 
-sub astNameAnonUdtsAfterFirstAliasTypedef( byval n as ASTNODE ptr )
-	var i = n->head
+sub astNameAnonUdtsAfterFirstAliasTypedef( byval ast as ASTNODE ptr )
+	var i = ast->head
 	while( i )
 
 		'' Anon UDT?
 		select case( i->class )
 		case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
 			if( i->attrib and ASTATTRIB_DUMMYID ) then
-				hTryNameAnonUdtAfterFirstAliasTypedef( n, i )
+				hTryNameAnonUdtAfterFirstAliasTypedef( ast, i )
 			end if
 		end select
 
