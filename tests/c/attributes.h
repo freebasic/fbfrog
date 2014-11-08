@@ -63,6 +63,19 @@ __attribute__((__dllimport__)) void f(void);
 extern __attribute__((  dllimport  )) int i;
 extern __attribute__((__dllimport__)) int i;
 
+#ifdef _WIN32
+	// Ok:
+	extern __declspec(dllimport) int i;
+	__declspec(dllimport) extern int i;
+
+	// Implicitly extern:
+	__declspec(dllimport) int i;
+
+	// Doesn't make sense:
+	__declspec(dllimport) static int a;
+	static __declspec(dllimport) int b;
+#endif
+
 __attribute__((no_instrument_function)) void f(void);
 
 // #defines containing only __attribute__'s should just be stripped automatically,

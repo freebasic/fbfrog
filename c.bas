@@ -1874,6 +1874,16 @@ private function cDeclaration( byval decl as integer, byval gccattribs as intege
 
 		hDefaultToCdecl( t, filterout )
 
+		'' dllimport on vars makes the var extern.
+		'' dllimport isn't allowed together with static.
+		if( (t->class = ASTCLASS_VAR) and (t->attrib and ASTATTRIB_DLLIMPORT) ) then
+			if( t->attrib and ASTATTRIB_STATIC ) then
+				cError( "static dllimport" )
+				t->attrib and= not ASTATTRIB_STATIC
+			end if
+			t->attrib or= ASTATTRIB_EXTERN
+		end if
+
 		'' Parameters/types can't have commas and more identifiers,
 		'' and don't need with ';' either.
 		select case( decl )

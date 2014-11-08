@@ -53,6 +53,15 @@ declare sub f()
 extern import i as long
 extern import i as long
 
+#ifdef __FB_WIN32__
+	extern import i as long
+	extern import i as long
+	extern import i as long
+
+	'' TODO: __attribute__((dllimport)) static int a;
+	'' TODO: static __attribute__((dllimport)) int b;
+#endif
+
 declare sub f()
 
 dim shared attribute_defines as long
