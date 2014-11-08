@@ -91,7 +91,6 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	(@"_Bool"   ), _
 	(@"_Pragma" ), _
 	(@"auto"    ), _
-	(@"bool"    ), _
 	(@"break"   ), _
 	(@"case"    ), _
 	(@"char"    ), _
