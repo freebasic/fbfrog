@@ -118,6 +118,7 @@ private sub hPrintHelpAndExit( )
 	print "  -include <file>          Add pre-#include"
 	print "  -noexpand <id>           Disable expansion of certain #define"
 	print "  -removedefine <id>       Don't preserve a certain #define"
+	print "  -removeproc <id>         Don't preserve a certain procedure"
 	print "  -typedefhint <id>        Mark <id> as typedef, to help parsing of type casts"
 	print "  -reservedid <id>         Rename symbols conflicting with this <id>"
 	print "  -renametypedef <oldid> <newid>  Rename a typedef"
@@ -554,6 +555,7 @@ private sub hParseArgs( byref x as integer )
 
 		case OPT_NOEXPAND      : hParseOptionWithId( x, ASTCLASS_NOEXPAND     , FALSE )
 		case OPT_REMOVEDEFINE  : hParseOptionWithId( x, ASTCLASS_REMOVEDEFINE , FALSE )
+		case OPT_REMOVEPROC    : hParseOptionWithId( x, ASTCLASS_REMOVEPROC   , FALSE )
 		case OPT_TYPEDEFHINT   : hParseOptionWithId( x, ASTCLASS_TYPEDEFHINT  , FALSE )
 		case OPT_RESERVEDID    : hParseOptionWithId( x, ASTCLASS_RESERVEDID   , FALSE )
 		case OPT_RENAMETYPEDEF : hParseOptionWithId( x, ASTCLASS_RENAMETYPEDEF, TRUE  )
@@ -778,70 +780,55 @@ private sub frogEvaluateScript _
 	frogAddVersion( conditions, options )
 end sub
 
-private sub hApplyRenameTypedefOption _
-	( _
-		byval n as ASTNODE ptr, _
-		byval ast as ASTNODE ptr, _
-		byval renametypedef as ASTNODE ptr _
-	)
-
-	if( n->class = ASTCLASS_TYPEDEF ) then
-		if( *n->text = *renametypedef->alias ) then
-			astReplaceSubtypes( ast, ASTCLASS_ID, renametypedef->alias, ASTCLASS_ID, renametypedef->text )
-			astSetText( n, renametypedef->text )
-		end if
-	end if
-
+private sub hApplyOptions( byval n as ASTNODE ptr, byval ast as ASTNODE ptr, byval options as ASTNODE ptr )
 	var i = n->head
 	while( i )
-		hApplyRenameTypedefOption( i, ast, renametypedef )
-		i = i->next
-	wend
+		var nxt = i->next
 
-end sub
-
-private sub hApplyRenameTagOption _
-	( _
-		byval n as ASTNODE ptr, _
-		byval ast as ASTNODE ptr, _
-		byval renametag as ASTNODE ptr _
-	)
-
-	select case( n->class )
-	case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
-		if( *n->text = *renametag->alias ) then
-			astReplaceSubtypes( ast, ASTCLASS_TAGID, renametag->alias, ASTCLASS_TAGID, renametag->text )
-			astSetText( n, renametag->text )
-		end if
-	end select
-
-	var i = n->head
-	while( i )
-		hApplyRenameTagOption( i, ast, renametag )
-		i = i->next
-	wend
-
-end sub
-
-private sub hApplyRenameTypedefOptions _
-	( _
-		byval options as ASTNODE ptr, _
-		byval ast as ASTNODE ptr _
-	)
-
-	var i = options->head
-	while( i )
+		hApplyOptions( i, ast, options )
 
 		select case( i->class )
-		case ASTCLASS_RENAMETYPEDEF
-			hApplyRenameTypedefOption( ast, ast, i )
-		case ASTCLASS_RENAMETAG
-			hApplyRenameTagOption( ast, ast, i )
+		case ASTCLASS_TYPEDEF
+			var o = options->head
+			while( o )
+				if( o->class = ASTCLASS_RENAMETYPEDEF ) then
+					if( *i->text = *o->alias ) then
+						astReplaceSubtypes( ast, ASTCLASS_ID, o->alias, ASTCLASS_ID, o->text )
+						astSetText( i, o->text )
+					end if
+				end if
+				o = o->next
+			wend
+		case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
+			var o = options->head
+			while( o )
+				if( o->class = ASTCLASS_RENAMETAG ) then
+					if( *i->text = *o->alias ) then
+						astReplaceSubtypes( ast, ASTCLASS_TAGID, o->alias, ASTCLASS_TAGID, o->text )
+						astSetText( i, o->text )
+					end if
+				end if
+				o = o->next
+			wend
+		case ASTCLASS_PROC
+			var o = options->head
+			while( o )
+				if( o->class = ASTCLASS_REMOVEPROC ) then
+					if( *i->text = *o->text ) then
+						if( i->attrib and ASTATTRIB_STDCALL ) then
+							api.stdcalls -= 1
+						elseif( i->attrib and ASTATTRIB_CDECL ) then
+							api.cdecls -= 1
+						end if
+						astRemove( n, i )
+					end if
+				end if
+				o = o->next
+			wend
 		end select
 
-		i = i->next
+		i = nxt
 	wend
-
 end sub
 
 private function frogReadAPI( byval options as ASTNODE ptr ) as ASTNODE ptr
@@ -999,10 +986,10 @@ private function frogReadAPI( byval options as ASTNODE ptr ) as ASTNODE ptr
 	''
 	'' Work on the AST
 	''
+	hApplyOptions( ast, ast, options )
 	astSolveOutArrayTypedefs( ast, ast )
 	astSolveOutProcTypedefs( ast, ast )
 
-	hApplyRenameTypedefOptions( options, ast )
 	astRemoveRedundantTypedefs( ast, ast )
 	astNameAnonUdtsAfterFirstAliasTypedef( ast )
 	astAddForwardDeclsForUndeclaredTagIds( ast )

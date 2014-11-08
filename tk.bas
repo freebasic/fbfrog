@@ -161,6 +161,7 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	(@"-include"      ), _
 	(@"-noexpand"     ), _
 	(@"-removedefine" ), _
+	(@"-removeproc"   ), _
 	(@"-typedefhint"  ), _
 	(@"-reservedid"   ), _
 	(@"-renametypedef"), _

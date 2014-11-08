@@ -31,6 +31,7 @@ dim shared as zstring ptr astnodename(0 to ...) => _
 	@"file"         , _
 	@"noexpand"     , _
 	@"removedefine" , _
+	@"removeproc"   , _
 	@"typedefhint"  , _
 	@"reservedid"   , _
 	@"renametypedef", _
