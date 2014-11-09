@@ -43,7 +43,8 @@ function emitType overload _
 		@"udt"     , _
 		@"proc"    , _
 		@"zstring" , _
-		@"wstring"   _
+		@"wstring" , _
+		@"wchar_t"   _
 	}
 
 	dim as string s
@@ -73,6 +74,7 @@ function emitType overload _
 		select case( dt )
 		case TYPE_UDT
 			s += emitAst( subtype )
+
 		case TYPE_PROC
 			if( ptrcount >= 1 ) then
 				'' The inner-most PTR on function pointers will be
@@ -88,11 +90,15 @@ function emitType overload _
 				s += "declare "
 			end if
 			s += emitAst( subtype )
-		case else
+
+		case TYPE_ZSTRING, TYPE_WSTRING
 			s += *datatypenames(dt)
-			if( (dt = TYPE_ZSTRING) and (subtype <> NULL) ) then
+			if( subtype ) then
 				s += " * " + emitAst( subtype )
 			end if
+
+		case else
+			s += *datatypenames(dt)
 		end select
 
 		if( add_typeof ) then

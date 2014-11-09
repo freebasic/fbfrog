@@ -1,5 +1,6 @@
 #pragma once
 
+#include once "crt/wchar.bi"
 #include once "crt/long.bi"
 
 extern "C"
@@ -31,7 +32,7 @@ enum
 	A = cptr(long ptr, 0)
 	A = cptr(UDT ptr, 0)
 	A = cptr(UDT ptr, 0)
-	A = cast(wstring, 0)
+	A = cast(wchar_t, 0)
 	A = cuint(0)
 	A = cint(0)
 	A = cint(0)
@@ -411,7 +412,7 @@ end enum
 #define A23 cptr(long ptr, 0)
 #define A24 cptr(UDT ptr, 0)
 #define A25 cptr(UDT ptr, 0)
-#define A26 cast(wstring, 0)
+#define A26 cast(wchar_t, 0)
 #define A27 cuint(0)
 #define A28 cint(0)
 #define A29 cint(0)

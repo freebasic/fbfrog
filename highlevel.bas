@@ -358,14 +358,16 @@ sub astSolveOutProcTypedefs( byval n as ASTNODE ptr, byval ast as ASTNODE ptr )
 	wend
 end sub
 
-'' Handle declarations with plain char/zstring data type (not pointers).
+'' Handle declarations with plain char/zstring or wchar_t/wstring data type,
+'' not pointers though.
 '' If it's a char array, then it's probably supposed to be a string.
 '' If it's just a char, then it's probably supposed to be a byte.
 sub hHandlePlainCharAfterArrayStatusIsKnown( byval n as ASTNODE ptr )
-	'' No plain char?
-	if( typeGetDtAndPtr( n->dtype ) <> TYPE_ZSTRING ) then
+	select case( typeGetDtAndPtr( n->dtype ) )
+	case TYPE_ZSTRING, TYPE_WSTRING
+	case else
 		exit sub
-	end if
+	end select
 
 	if( n->array ) then
 		'' Use the last (inner-most) array dimension as the fixed-length string size
@@ -381,8 +383,13 @@ sub hHandlePlainCharAfterArrayStatusIsKnown( byval n as ASTNODE ptr )
 			n->array = NULL
 		end if
 	else
-		'' Turn zstring into byte, but preserve CONSTs
-		n->dtype = typeGetConst( n->dtype ) or TYPE_BYTE
+		'' Turn zstring/wstring into byte/wchar_t, but preserve CONSTs
+		if( typeGetDtAndPtr( n->dtype ) = TYPE_ZSTRING ) then
+			n->dtype = typeGetConst( n->dtype ) or TYPE_BYTE
+		else
+			api.has_wchar_t = TRUE
+			n->dtype = typeGetConst( n->dtype ) or TYPE_WCHAR_T
+		end if
 	end if
 end sub
 

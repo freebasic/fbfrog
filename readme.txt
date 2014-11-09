@@ -33,6 +33,7 @@ What's this?
   Besides that, fbfrog performs the following "high-level" transformations:
    * C types + size_t/int32_t/... => FB types
    * char => byte, char* => zstring ptr, char[N] => zstring * N
+     (same for wchar_t/wstring)
    * Most used calling convention => Extern block
    * Other calling conventions (if header uses multiple ones) => emitted on
      individual procedures

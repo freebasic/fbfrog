@@ -1,5 +1,7 @@
 #pragma once
 
+#include once "crt/wchar.bi"
+
 extern "C"
 
 type left_UDT as left_UDT_
@@ -348,7 +350,7 @@ end enum
 
 dim shared __L_char as long
 
-declare sub f(byval w as wstring = asc(wstr("a")))
+declare sub f(byval w as wchar_t = asc(wstr("a")))
 
 dim shared __L_string as long
 

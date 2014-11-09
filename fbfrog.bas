@@ -68,7 +68,7 @@ namespace frog
 end namespace
 
 namespace api
-	dim shared as integer cdecls, stdcalls, need_externblock
+	dim shared as integer cdecls, stdcalls, need_externblock, has_wchar_t
 end namespace
 
 '' Find a *.fbfrog or *.h file in fbfrog's include/ dir, its "library" of
@@ -971,12 +971,14 @@ private function frogReadAPI( byval options as ASTNODE ptr ) as ASTNODE ptr
 	api.cdecls = 0
 	api.stdcalls = 0
 	api.need_externblock = FALSE
+	api.has_wchar_t = FALSE
 	cPreParse( )
 
 	'' Parse C constructs
 	api.cdecls = 0
 	api.stdcalls = 0
 	api.need_externblock = FALSE
+	api.has_wchar_t = FALSE
 	var ast = cFile( )
 
 	cEnd( )
@@ -1026,6 +1028,14 @@ private function frogReadAPI( byval options as ASTNODE ptr ) as ASTNODE ptr
 	end if
 	if( astUsesDtype( ast, TYPE_CLONG ) or astUsesDtype( ast, TYPE_CULONG ) ) then
 		astPrepend( directincludes, astNew( ASTCLASS_PPINCLUDE, "crt/long.bi" ) )
+	end if
+	if( api.has_wchar_t ) then
+		var wcharbi = astNew( ASTCLASS_PPINCLUDE, "crt/wchar.bi" )
+		if( astGroupContains( directincludes, wcharbi ) ) then
+			astDelete( wcharbi )
+		else
+			astPrepend( directincludes, wcharbi )
+		end if
 	end if
 
 	'' Prepend the direct #includes (if any), outside the EXTERN block

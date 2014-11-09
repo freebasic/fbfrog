@@ -1,5 +1,6 @@
 #pragma once
 
+#include once "crt/wchar.bi"
 #include once "crt/long.bi"
 #include once "crt/longdouble.bi"
 
@@ -52,7 +53,7 @@ dim shared a as ulongint
 dim shared a as uinteger
 dim shared a as integer
 dim shared a as integer
-dim shared a as wstring
+dim shared a as wchar_t
 dim shared a as wstring ptr
 dim shared a as byte
 dim shared a as A

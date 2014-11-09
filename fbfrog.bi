@@ -475,6 +475,7 @@ enum
 	TYPE_PROC
 	TYPE_ZSTRING
 	TYPE_WSTRING
+	TYPE_WCHAR_T
 	TYPE__COUNT
 end enum
 
@@ -877,7 +878,7 @@ namespace frog
 end namespace
 
 namespace api
-	extern as integer cdecls, stdcalls, need_externblock
+	extern as integer cdecls, stdcalls, need_externblock, has_wchar_t
 end namespace
 
 declare sub frogPrint( byref s as string )
