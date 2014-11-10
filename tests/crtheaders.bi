@@ -17,4 +17,5 @@
 #include once "crt/string.bi"
 #include once "crt/time.bi"
 #include once "crt/sys/types.bi"
+#include once "crt/sys/socket.bi"
 #include once "crt/wchar.bi"
