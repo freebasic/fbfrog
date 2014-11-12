@@ -215,6 +215,21 @@ unnecessary?
 
 To do:
 
+* hTryNameAnonUdtAfterFirstAliasTypedef() and hConsiderTagId() change TAGID
+  subtypes into IDs, this isn't safe if there is a typedef and tagid with the
+  same name.
+
+* Should handle duplicate declarations, e.g. this is ok in C but not FB:
+	void f(void);
+	void f(void);
+
+* Add -split <pattern> option to emit multiple files
+    - need multiple extern blocks
+    - version defines checks must be emitted into each file?
+        - just remove it completely, not useful
+    - forward decls must be file-specific. Ideally they'd just be emitted
+      exactly where needed anyways, not just at the top...
+
 * Currently tag ids are preserved as type names, but often this is unnecessary.
   If we find an alias typedef for a tag id (no matter whether it's an exact
   alias or a different id alias) then the tag id should be solved out. All uses
@@ -238,6 +253,11 @@ To do:
     the -define <id> [<body>] syntax is confusing
   * -select/-if options should already include -declare, it doesn't need to be
     separate ever
+  * shorten -removedefine to -rmdef, etc.
+  * -declareversions (and even -declaredefines) isn't needed much and could be
+    removed. It's better to keep different library versions in separate bindings,
+    and perhaps even targets could be handled differently.
+    Accordingly, hBuildVerificationCode() could be removed.
 * Rework console output, it quickly becomes too much currently. Perhaps the
   #includes should be emitted into the .bi, like renamelists.
 * Can't renamelists be generated based on ALIAS'es later, separate from astFixIds?

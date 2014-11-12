@@ -7,6 +7,6 @@ extern "C"
 
 type RGB__ as RGB_
 
-extern p as RGB ptr
+extern p as RGB__ ptr
 
 end extern

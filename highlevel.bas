@@ -710,12 +710,15 @@ private sub hConsiderTagId _
 		byval state as integer _
 	)
 
+	var turned_into_typedef = FALSE
+
 	'' Tag id used before its declaration?
 	if( state and STATE_USED_ABOVE_DECL ) then
 		'' Rename the struct and add a forward declaration for it using the old id.
 		'' astFixIds() will take care of fixing name conflicts involving the new
 		'' struct id, if any.
 		hRenameTagDecls( ast, tagid, hAddForwardTypedef( decllist, tagid, ((state and STATE_FILTEROUT) <> 0) ) )
+		turned_into_typedef = TRUE
 
 	'' Tag id used only (and no declaration exists)?
 	elseif( hUsedButNotDeclared( state ) ) then
@@ -724,10 +727,17 @@ private sub hConsiderTagId _
 		'' name conflicts involving the forward id, if any. The dummy
 		'' declaration won't be emitted though.
 		var forwardid = hAddForwardTypedef( decllist, tagid, ((state and STATE_FILTEROUT) <> 0) )
+		turned_into_typedef = TRUE
 
 		var dummydecl = astNew( ASTCLASS_STRUCT, forwardid )
 		dummydecl->attrib or= ASTATTRIB_FILTEROUT
 		astAppend( decllist, dummydecl )
+	end if
+
+	'' If we added a typedef for the tagid above, then it's now a typedef,
+	'' no longer a tagid, and all uses must be adjusted accordingly.
+	if( turned_into_typedef ) then
+		astReplaceSubtypes( ast, ASTCLASS_TAGID, tagid, ASTCLASS_ID, tagid )
 	end if
 
 end sub
