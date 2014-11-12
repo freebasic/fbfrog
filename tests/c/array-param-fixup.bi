@@ -21,7 +21,7 @@ type C
 end type
 
 type UDT2
-	p as sub(byval x as const D)
+	p as sub(byval x as C ptr)
 end type
 
 end extern

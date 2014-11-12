@@ -185,13 +185,12 @@ private sub hSolveOutArrayTypedefSubtypes _
 				hHandleArrayParam( n )
 				hHandlePlainCharAfterArrayStatusIsKnown( n )
 			end if
-		else
-			hSolveOutArrayTypedefSubtypes( n->subtype, typedef )
 		end if
 	end if
 
-	if( n->array ) then hSolveOutArrayTypedefSubtypes( n->array, typedef )
-	if( n->expr  ) then hSolveOutArrayTypedefSubtypes( n->expr , typedef )
+	if( n->subtype ) then hSolveOutArrayTypedefSubtypes( n->subtype, typedef )
+	if( n->array   ) then hSolveOutArrayTypedefSubtypes( n->array  , typedef )
+	if( n->expr    ) then hSolveOutArrayTypedefSubtypes( n->expr   , typedef )
 
 	var i = n->head
 	while( i )
