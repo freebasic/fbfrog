@@ -39,3 +39,6 @@ static TABLE2x5 table2x2x5[2];
 
 // 10 blocks, each with 20 blocks of TABLE2x5
 static TABLE2x5 table10x20x2x5[10][20];
+
+extern const T constarray;
+void f2(const T constarrayparam);

@@ -31,5 +31,8 @@ dim shared expectedarray3(0 to 19, 0 to 9) as long
 dim shared table1x2x5(0 to 0, 0 to 1, 0 to 4) as ubyte
 dim shared table2x2x5(0 to 1, 0 to 1, 0 to 4) as ubyte
 dim shared table10x20x2x5(0 to 9, 0 to 19, 0 to 1, 0 to 4) as ubyte
+extern constarray(0 to 9) as long
+
+declare sub f2(byval constarrayparam as long ptr)
 
 end extern
