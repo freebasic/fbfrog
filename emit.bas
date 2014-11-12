@@ -837,18 +837,21 @@ private function emitAst _
 		s = "{" + hSeparatedList( n, ", ", FALSE ) + "}"
 
 	case ASTCLASS_DIMENSION
-		if( n->expr ) then
-			if( n->expr->class = ASTCLASS_CONSTI ) then
-				s += "0 to " & (astEvalConstiAsInt64( n->expr ) - 1)
-			else
-				s += "0 to " + emitAst( n->expr, TRUE ) + " - 1"
-			end if
-		else
-			s += "0 to ..."
-		end if
+		s = "0 to "
+		select case( n->expr->class )
+		case ASTCLASS_ELLIPSIS
+			s += "..."
+		case ASTCLASS_CONSTI
+			s &= astEvalConstiAsInt64( n->expr ) - 1
+		case else
+			s += emitAst( n->expr, TRUE ) + " - 1"
+		end select
 
 	case ASTCLASS_TYPE
 		s = emitType( n )
+
+	case ASTCLASS_ELLIPSIS
+		s = "..."
 
 	case else
 		astDump( n )

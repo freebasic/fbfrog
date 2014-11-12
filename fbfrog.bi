@@ -575,6 +575,7 @@ enum
 	ASTCLASS_STRING
 	ASTCLASS_CHAR
 	ASTCLASS_TYPE
+	ASTCLASS_ELLIPSIS
 
 	'' Expressions
 	'' Generally the AST expressions should represent FB semantics.

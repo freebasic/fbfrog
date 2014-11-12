@@ -1655,8 +1655,10 @@ private function cDeclarator _
 
 			var d = astNew( ASTCLASS_DIMENSION )
 
-			'' Just '[]' (empty dimension) is allowed for parameters
-			if( (tkGet( c.x ) <> TK_RBRACKET) or (decl <> DECL_PARAM) ) then
+			'' Just '[]'?
+			if( tkGet( c.x ) = TK_RBRACKET ) then
+				d->expr = astNew( ASTCLASS_ELLIPSIS )
+			else
 				d->expr = cExpression( )
 			end if
 

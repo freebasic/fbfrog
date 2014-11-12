@@ -39,6 +39,7 @@ What's this?
      individual procedures
    * Function/array typedefs (not supported in FB) => solved out
    * Array parameters (not supported in FB) => pointers
+   * Arrays/strings declared with unknown size => "..." ellipsis
    * jmp_buf parameters => pointers (jmp_buf is a UDT in FB, not an array type)
    * Anonymous structs (not supported in FB) => named after first typedef that
      uses them, or auto-generated name
@@ -244,8 +245,6 @@ To do:
   be renamed anymore. This only happens because of the inter-namespace rename
   (due to the field/#define conflict) and because enumcontants are preferred
   over #defines when renaming.
-
-* Support dimension-less arrays with initializers: int a[] = {1, 2};
 
 * Simplify CLI
   * string-based arg parsing, instead of tk/lex

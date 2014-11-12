@@ -76,6 +76,7 @@ dim shared as zstring ptr astnodename(0 to ...) => _
 	@"string"    , _
 	@"char"      , _
 	@"type"      , _
+	@"ellipsis"  , _
 	_
 	_ '' BOPs
 	@"C ||"   , _
