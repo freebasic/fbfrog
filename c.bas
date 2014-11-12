@@ -664,7 +664,7 @@ end sub
 private sub cGccAttributeList( byref gccattribs as integer )
 	while( c.parseok )
 		select case( tkGet( c.x ) )
-		case KW_VOLATILE
+		case KW_VOLATILE, KW_INLINE, KW___INLINE, KW___INLINE__
 			c.x += 1
 
 		'' __attribute__((...)):

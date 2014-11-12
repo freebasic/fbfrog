@@ -397,4 +397,18 @@ type myint64 as longint
 
 extern a as const long ptr
 
+sub f()
+end sub
+
+sub f()
+end sub
+
+sub f()
+end sub
+
+declare sub f()
+
+sub f()
+end sub
+
 end extern

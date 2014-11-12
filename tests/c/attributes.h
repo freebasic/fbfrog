@@ -297,3 +297,9 @@ typedef struct C6 { short a; int b; } __attribute__((packed, stdcall))          
 __extension__ typedef signed long long myint64;
 
 extern const volatile int *a;
+
+static inline void f(void) { }
+static __inline void f(void) { }
+static __inline__ void f(void) { }
+extern __inline__ void f(void);
+extern __inline__ void f(void) { }

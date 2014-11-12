@@ -308,6 +308,8 @@ enum
 	'' C keywords
 	KW__C_FIRST
 	KW___ATTRIBUTE__ = KW__C_FIRST
+	KW___INLINE
+	KW___INLINE__
 	KW___RESTRICT
 	KW___RESTRICT__
 	KW__BOOL
