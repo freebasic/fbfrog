@@ -177,7 +177,7 @@ private sub hSolveOutArrayTypedefSubtypes _
 	if( typeGetDtAndPtr( n->dtype ) = TYPE_UDT ) then
 		if( n->subtype->class = ASTCLASS_ID ) then
 			if( *n->subtype->text = *typedef->text ) then
-				astSetType( n, typedef->dtype, typedef->subtype )
+				astSetType( n, typeGetConst( n->dtype ) or typedef->dtype, typedef->subtype )
 				if( n->array = NULL ) then
 					n->array = astNew( ASTCLASS_ARRAY )
 				end if
