@@ -169,16 +169,19 @@ end function
 
 private function hIdentifyCommonTypedef( byval id as zstring ptr ) as integer
 	select case( *id )
-	case "size_t"			: function = TYPE_UINTEGER
-	case "ssize_t", "ptrdiff_t"	: function = TYPE_INTEGER
-	case "int8_t", "__int8"		: function = TYPE_BYTE
-	case "uint8_t"			: function = TYPE_UBYTE
 	case "int16_t", "__int16"	: function = TYPE_SHORT
-	case "uint16_t"			: function = TYPE_USHORT
 	case "int32_t", "__int32"	: function = TYPE_LONG
-	case "uint32_t"			: function = TYPE_ULONG
 	case "int64_t", "__int64"	: function = TYPE_LONGINT
+	case "int8_t", "__int8"		: function = TYPE_BYTE
+	case "intptr_t"			: function = TYPE_INTEGER
+	case "ptrdiff_t"		: function = TYPE_INTEGER
+	case "size_t"			: function = TYPE_UINTEGER
+	case "ssize_t"			: function = TYPE_INTEGER
+	case "uint16_t"			: function = TYPE_USHORT
+	case "uint32_t"			: function = TYPE_ULONG
 	case "uint64_t"			: function = TYPE_ULONGINT
+	case "uint8_t"			: function = TYPE_UBYTE
+	case "uintptr_t"		: function = TYPE_UINTEGER
 	case "wchar_t"			: function = TYPE_WSTRING
 	case else			: function = TYPE_NONE
 	end select

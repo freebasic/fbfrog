@@ -57,6 +57,8 @@ static uint64_t a;
 static size_t a;
 static ssize_t a;
 static ptrdiff_t a;
+static intptr_t a;
+static uintptr_t a;
 
 static wchar_t a;
 static wchar_t *a;
