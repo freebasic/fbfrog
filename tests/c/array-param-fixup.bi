@@ -16,4 +16,12 @@ end type
 
 #define A cptr(sub cdecl(byval i as long ptr), 0)
 
+type C
+	i as long
+end type
+
+type UDT2
+	p as sub(byval x as const D)
+end type
+
 end extern

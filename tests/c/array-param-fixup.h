@@ -10,3 +10,9 @@ struct UDT {
 };
 
 #define A (void (*)(int i[]))0
+
+typedef struct C { int i; } C;
+typedef C D[10];
+struct UDT2 {
+	void (*p)(const D x);
+};

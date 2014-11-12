@@ -8,4 +8,4 @@
       tests/c/array-param-fixup.h
 [5/5] __FB_DOS__
       tests/c/array-param-fixup.h
-emitting: tests/c/array-param-fixup.bi (6 declarations, 0 TODOs)
+emitting: tests/c/array-param-fixup.bi (8 declarations, 0 TODOs)
