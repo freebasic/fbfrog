@@ -368,6 +368,7 @@ enum
 	OPT_FILTERIN
 	OPT_WINDOWSMS
 	OPT_NONAMEFIXUP
+	OPT_FIXUNSIZEDARRAYS
 	OPT_V
 	OPT_INCDIR
 	OPT_O
@@ -872,7 +873,7 @@ type FROGVERSION
 end type
 
 namespace frog
-	extern as integer verbose, windowsms
+	extern as integer verbose, windowsms, fixunsizedarrays
 
 	extern as ASTNODE ptr script
 	extern as ASTNODE ptr completeverors, fullveror

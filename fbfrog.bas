@@ -56,7 +56,7 @@
 #include once "file.bi"
 
 namespace frog
-	dim shared as integer verbose, windowsms, nonamefixup, nodefaultscript
+	dim shared as integer verbose, windowsms, nonamefixup, fixunsizedarrays, nodefaultscript
 	dim shared as string outname, defaultoutname
 
 	dim shared as ASTNODE ptr script
@@ -107,6 +107,7 @@ private sub hPrintHelpAndExit( )
 	print "  -nodefaultscript Don't use default.fbfrog implicitly"
 	print "  -windowsms       Use Extern ""Windows-MS"" instead of Extern ""Windows"""
 	print "  -nonamefixup     Don't fix symbol identifier conflicts"
+	print "  -fixunsizedarrays  Wrap [] arrays with a #define"
 	print "  -o <path/file>   Set output .bi file name, or just the output directory"
 	print "  -v               Show verbose/debugging info"
 	print "version-specific commands:"
@@ -429,10 +430,11 @@ private sub hParseArgs( byref x as integer )
 		case TK_EOF
 			exit do
 
-		case OPT_NODEFAULTSCRIPT : frog.nodefaultscript = TRUE : x += 1
-		case OPT_WINDOWSMS   : frog.windowsms   = TRUE : x += 1
-		case OPT_NONAMEFIXUP : frog.nonamefixup = TRUE : x += 1
-		case OPT_V           : frog.verbose     = TRUE : x += 1
+		case OPT_NODEFAULTSCRIPT  : frog.nodefaultscript  = TRUE : x += 1
+		case OPT_WINDOWSMS        : frog.windowsms        = TRUE : x += 1
+		case OPT_NONAMEFIXUP      : frog.nonamefixup      = TRUE : x += 1
+		case OPT_FIXUNSIZEDARRAYS : frog.fixunsizedarrays = TRUE : x += 1
+		case OPT_V                : frog.verbose          = TRUE : x += 1
 
 		case OPT_O
 			x += 1

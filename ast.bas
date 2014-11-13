@@ -382,8 +382,11 @@ sub astSetText( byval n as ASTNODE ptr, byval text as zstring ptr )
 end sub
 
 sub astRenameSymbol( byval n as ASTNODE ptr, byval newid as zstring ptr )
-	assert( n->alias = NULL )
-	n->alias = n->text
+	if( n->alias = NULL ) then
+		n->alias = n->text
+	else
+		deallocate( n->text )
+	end if
 	n->text = strDuplicate( newid )
 end sub
 

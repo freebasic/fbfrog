@@ -144,6 +144,7 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	(@"-filterin"     ), _
 	(@"-windowsms"    ), _
 	(@"-nonamefixup"  ), _
+	(@"-fixunsizedarrays"), _
 	(@"-v"            ), _
 	(@"-incdir"       ), _
 	(@"-o"            ), _
