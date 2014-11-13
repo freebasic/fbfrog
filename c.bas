@@ -1951,6 +1951,19 @@ private function cExpressionStatement( ) as ASTNODE ptr
 	cExpectMatch( TK_SEMI, "(end of expression statement)" )
 end function
 
+'' RETURN Expression ';'
+private function cReturn( ) as ASTNODE ptr
+	'' RETURN
+	assert( tkGet( c.x ) = KW_RETURN )
+	c.x += 1
+
+	'' Expression
+	function = astNew( ASTCLASS_RETURN, cExpression( ) )
+
+	'' ';'
+	cExpectMatch( TK_SEMI, "(end of statement)" )
+end function
+
 '' '{ ... }' statement block
 '' Using cBody() to allow the constructs in this scope block to be parsed
 '' separately. If we can't parse one of them, then only that one will become an
@@ -2019,11 +2032,18 @@ private function cConstruct( byval body as integer ) as ASTNODE ptr
 		'' Disambiguate: local declaration vs. expression
 		'' If it starts with a data type, __attribute__, or 'static',
 		'' then it must be a declaration.
-		if( hIsDataType( c.x ) or (tkGet( c.x ) = KW_STATIC) ) then
+		select case( tkGet( c.x ) )
+		case KW_STATIC
 			function = cVarOrProcDecl( TRUE )
-		else
-			function = cExpressionStatement( )
-		end if
+		case KW_RETURN
+			function = cReturn( )
+		case else
+			if( hIsDataType( c.x ) ) then
+				function = cVarOrProcDecl( TRUE )
+			else
+				function = cExpressionStatement( )
+			end if
+		end select
 
 	case else
 		function = cVarOrProcDecl( FALSE )

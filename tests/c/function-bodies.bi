@@ -10,4 +10,9 @@ sub f2()
 	printf(!"%i\n", 1)
 end sub
 
+function f3(byval i as long) as long
+	return (i shl 3) and &hFF
+	return 0
+end function
+
 end extern

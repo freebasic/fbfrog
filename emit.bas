@@ -620,6 +620,9 @@ private function emitAst _
 	case ASTCLASS_EXTERNBLOCKEND
 		emitLine( "end extern" )
 
+	case ASTCLASS_RETURN
+		emitLine( "return " + emitAst( n->head ) )
+
 	case ASTCLASS_MACROPARAM
 		s += *n->text
 		if( n->attrib and ASTATTRIB_VARIADIC ) then
