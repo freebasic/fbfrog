@@ -116,7 +116,8 @@ private sub hPrintHelpAndExit( )
 	print "  -filterin <filename-pattern>   Undo -filterout for matching #includes"
 	print "  -inclib <name>           Add an #inclib ""<name>"" statement"
 	print "  -define <id> [<body>]    Add pre-#define"
-	print "  -include <file>          Add pre-#include"
+	print "  -include <file>          Add pre-#include (will be filtered out)"
+	print "  -fbfroginclude <file>    Add pre-#include from include/fbfrog/ (will be filtered out)"
 	print "  -noexpand <id>           Disable expansion of certain #define"
 	print "  -removedefine <id>       Don't preserve a certain #define"
 	print "  -removeproc <id>         Don't preserve a certain procedure"
@@ -555,6 +556,10 @@ private sub hParseArgs( byref x as integer )
 		case OPT_INCLUDE
 			hParseOptionWithString( x, ASTCLASS_PREINCLUDE, "<file> argument" )
 
+		'' -fbfroginclude <file>
+		case OPT_FBFROGINCLUDE
+			hParseOptionWithString( x, ASTCLASS_FBFROGPREINCLUDE, "<file> argument" )
+
 		case OPT_NOEXPAND      : hParseOptionWithId( x, ASTCLASS_NOEXPAND     , FALSE )
 		case OPT_REMOVEDEFINE  : hParseOptionWithId( x, ASTCLASS_REMOVEDEFINE , FALSE )
 		case OPT_REMOVEPROC    : hParseOptionWithId( x, ASTCLASS_REMOVEPROC   , FALSE )
@@ -887,10 +892,10 @@ private function frogReadAPI( byval options as ASTNODE ptr ) as ASTNODE ptr
 				tkSetRemove( x, tkGetCount( ) - 1 )
 
 			case ASTCLASS_INCDIR
-				cppAddIncDir( i )
+				cppAddIncDir( astClone( i ) )
 
 			case ASTCLASS_FILTEROUT, ASTCLASS_FILTERIN
-				cppAddFilter( i )
+				cppAddFilter( astClone( i ) )
 
 			end select
 
@@ -898,18 +903,29 @@ private function frogReadAPI( byval options as ASTNODE ptr ) as ASTNODE ptr
 		wend
 	end scope
 
-	'' Insert the code from default.h and other pre-#includes (if any)
+	'' Insert the code from fbfrog pre-#includes (default.h etc.)
 	'' * behind command line pre-#defines so that default.h can use them
 	'' * marked for removal so the code won't be preserved
 	scope
 		var i = options->head
 		while( i )
-			if( i->class = ASTCLASS_PREINCLUDE ) then
-				var filename = *i->text
-				filename = hFindResource( filename )
+			if( i->class = ASTCLASS_FBFROGPREINCLUDE ) then
+				var filename = hFindResource( *i->text )
 				var x = tkGetCount( )
 				lexLoadC( x, sourcebufferFromFile( filename, NULL ) )
 				tkSetRemove( x, tkGetCount( ) - 1 )
+			end if
+			i = i->next
+		wend
+	end scope
+
+	'' Add #includes for pre-#includes
+	scope
+		var i = options->head
+		while( i )
+			if( i->class = ASTCLASS_PREINCLUDE ) then
+				var filename = *i->text
+				cppAppendIncludeDirective( filename, TKFLAG_PREINCLUDE )
 			end if
 			i = i->next
 		wend
@@ -931,10 +947,7 @@ private function frogReadAPI( byval options as ASTNODE ptr ) as ASTNODE ptr
 	scope
 		var i = rootfiles->head
 		while( i )
-			var code = "#include """ + *i->text + """" + !"\n"
-			var x = tkGetCount( )
-			lexLoadC( x, sourcebufferFromZstring( code, code, NULL ) )
-			tkAddFlags( x, tkGetCount( ) - 1, TKFLAG_REMOVE or TKFLAG_ROOTFILE )
+			cppAppendIncludeDirective( *i->text, TKFLAG_ROOTFILE )
 			i = i->next
 		wend
 	end scope
@@ -1107,7 +1120,7 @@ end sub
 	tkEnd( )
 
 	'' Add the implicit default.h pre-#include
-	astPrepend( frog.script, astNew( ASTCLASS_PREINCLUDE, "default.h" ) )
+	astPrepend( frog.script, astNew( ASTCLASS_FBFROGPREINCLUDE, "default.h" ) )
 
 	if( frog.nodefaultscript = FALSE ) then
 		'' Parse default.fbfrog and prepend the options from it to the

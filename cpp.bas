@@ -602,11 +602,18 @@ sub cppRemoveSym( byval id as zstring ptr )
 end sub
 
 sub cppAddIncDir( byval incdir as ASTNODE ptr )
-	astAppend( cpp.incdirs, astClone( incdir ) )
+	astAppend( cpp.incdirs, incdir )
 end sub
 
 sub cppAddFilter( byval filter as ASTNODE ptr )
-	astAppend( cpp.filters, astClone( filter ) )
+	astAppend( cpp.filters, filter )
+end sub
+
+sub cppAppendIncludeDirective( byref filename as string, byval tkflags as integer )
+	var code = "#include """ + filename + """" + !"\n"
+	var x = tkGetCount( )
+	lexLoadC( x, sourcebufferFromZstring( code, code, NULL ) )
+	tkAddFlags( x, tkGetCount( ) - 1, TKFLAG_REMOVE or tkflags )
 end sub
 
 private function cppKeepIncludeContent( byref includefilename as string ) as integer
@@ -2152,7 +2159,9 @@ private sub cppInclude( byval begin as integer )
 
 	'' Internal #include for a root file? Don't apply -filterin/-filterout,
 	'' don't do #include file search...
-	var is_rootfile = ((tkGetFlags( cpp.x ) and TKFLAG_ROOTFILE) <> 0)
+	var includetkflags = tkGetFlags( cpp.x )
+	var is_rootfile = ((includetkflags and TKFLAG_ROOTFILE) <> 0)
+	var is_preinclude = ((includetkflags and TKFLAG_PREINCLUDE) <> 0)
 
 	dim as string contextfile
 	if( location.source ) then
@@ -2178,7 +2187,8 @@ private sub cppInclude( byval begin as integer )
 			'' This #include statement couldn't be expanded, so we
 			'' have to preserve it into the final binding, if it
 			'' won't be filtered out itself.
-			if( cppWillBeFilteredOut( ) = FALSE ) then
+			'' Pre-#includes should never be preserved though.
+			if( (not cppWillBeFilteredOut( )) and (not is_preinclude) ) then
 				cppAddDirectInclude( inctext )
 			end if
 
@@ -2198,7 +2208,6 @@ private sub cppInclude( byval begin as integer )
 
 	var knownfile = cppLookupOrAppendKnownFile( incfile, is_rootfile, prettyfile )
 	with( cpp.files[knownfile] )
-
 		'' Before loading the include file content, do the #include guard optimization.
 		'' If this file had an #include guard last time we saw it, and the guard symbol
 		'' is now defined, then we don't need to bother loading (lex + tkInsert()...)
@@ -2219,7 +2228,8 @@ private sub cppInclude( byval begin as integer )
 		'' We're expanding this #include statement, but the include content
 		'' will be filtered out, so we have to keep the #include statement
 		'' for the final binding, if it itself won't be filtered out.
-		if( cppWillBeFilteredOut( ) = FALSE ) then
+		'' Pre-#includes should never be preserved though.
+		if( (not cppWillBeFilteredOut( )) and (not is_preinclude) ) then
 			cppAddDirectInclude( inctext )
 		end if
 	end if

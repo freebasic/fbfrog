@@ -229,6 +229,7 @@ const TKFLAG_NOEXPAND		= 1 shl 1  '' may be macro-expanded? (cpp)
 const TKFLAG_REMOVE		= 1 shl 2
 const TKFLAG_FILTEROUT		= 1 shl 3  '' Used to mark tokens from include files which should be filtered out
 const TKFLAG_ROOTFILE		= 1 shl 4  '' Used to mark the internal #include statements which pull in the toplevel files
+const TKFLAG_PREINCLUDE		= 1 shl 5
 
 enum
 	TK_EOF
@@ -386,6 +387,7 @@ enum
 	OPT_INCLIB
 	OPT_DEFINE
 	OPT_INCLUDE
+	OPT_FBFROGINCLUDE
 	OPT_NOEXPAND
 	OPT_REMOVEDEFINE
 	OPT_REMOVEPROC
@@ -543,6 +545,7 @@ enum
 	ASTCLASS_FILTERIN
 	ASTCLASS_INCLIB
 	ASTCLASS_PREINCLUDE
+	ASTCLASS_FBFROGPREINCLUDE
 	ASTCLASS_PRAGMAONCE
 
 	'' Preprocessor directives
@@ -856,6 +859,7 @@ declare sub cppNoExpandSym( byval id as zstring ptr )
 declare sub cppRemoveSym( byval id as zstring ptr )
 declare sub cppAddIncDir( byval incdir as ASTNODE ptr )
 declare sub cppAddFilter( byval filter as ASTNODE ptr )
+declare sub cppAppendIncludeDirective( byref filename as string, byval tkflags as integer )
 declare function cppTakeDirectIncludes( ) as ASTNODE ptr
 declare sub cppMain( )
 
@@ -886,4 +890,5 @@ namespace api
 	extern as integer cdecls, stdcalls, need_externblock, has_wchar_t
 end namespace
 
+declare function hFindResource( byref filename as string ) as string
 declare sub frogPrint( byref s as string )

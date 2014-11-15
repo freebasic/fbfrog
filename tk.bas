@@ -162,6 +162,7 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	(@"-inclib"       ), _
 	(@"-define"       ), _
 	(@"-include"      ), _
+	(@"-fbfroginclude"), _
 	(@"-noexpand"     ), _
 	(@"-removedefine" ), _
 	(@"-removeproc"   ), _
@@ -294,6 +295,7 @@ function tkDumpOne( byval x as integer ) as string
 	checkFlag( REMOVE )
 	checkFlag( FILTEROUT )
 	checkFlag( ROOTFILE )
+	checkFlag( PREINCLUDE )
 
 	#if 0
 		s += " " + hDumpLocation( @p->location )
