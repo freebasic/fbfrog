@@ -10,8 +10,8 @@
 '' The first line of each .h file is checked for the following strings:
 ''
 ''  @fbfrog <...>  Extra fbfrog command line options for this test.
-''                 Any occurences of "<dir>" are replaced with the .h file's
-''                 parent directory's path.
+''                 Any occurences of "<dir>" are replaced with the path to the
+''                 directory containing the .h file.
 ''
 ''  @fail        Used to mark error (expected-failure) tests. This can be used
 ''               in front of @fbfrog: @fail @fbfrog ...
