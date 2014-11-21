@@ -494,20 +494,24 @@ private sub hAstLCS _
 	var llen = llast - lfirst + 1
 	var rlen = rlast - rfirst + 1
 
+	const MAXROWLEN = &hFFFF
+
 	'' Currently using USHORTs to store the lengths of common sequences of
 	'' declarations. It should be enough...
-	if( (llen > &hFFFF) or (rlen > &hFFFF) ) then
-		oops( "hAstLCS(): soft-limited to 65535 declarations per " + _
+	if( (llen > MAXROWLEN) or (rlen > MAXROWLEN) ) then
+		oops( "hAstLCS(): soft-limited to " & MAXROWLEN & " declarations per " + _
 			"API, but here we have " & llen & " and " & rlen )
 	end if
+
+	static row1(0 to MAXROWLEN-1) as ushort
+	static row2(0 to MAXROWLEN-1) as ushort
 
 	dim as integer maxlen, maxlenl, maxlenr
 
 	'' previousrow = row for l-1 (NULL for l = 0)
 	''  currentrow = row for l
-	var rowsize = sizeof( ushort ) * rlen
-	dim as ushort ptr  currentrow = callocate( rowsize )
-	dim as ushort ptr previousrow = callocate( rowsize )
+	dim as ushort ptr  currentrow = @row1(0)
+	dim as ushort ptr previousrow = @row2(0)
 
 	for l as integer = 0 to llen-1
 		for r as integer = 0 to rlen-1
@@ -536,9 +540,6 @@ private sub hAstLCS _
 		next
 		swap currentrow, previousrow
 	next
-
-	deallocate( currentrow )
-	deallocate( previousrow )
 
 	llcslast = lfirst + maxlenl
 	rlcslast = rfirst + maxlenr
