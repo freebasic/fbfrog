@@ -101,7 +101,7 @@ end function
 
 private sub hPrintHelpAndExit( )
 	print "fbfrog 1.5 (" + __DATE_ISO__ + "), FreeBASIC *.bi binding generator"
-	print "usage: fbfrog *.h [options]"
+	print "usage: fbfrog foo.h [options]"
 	print "global options:"
 	print "  @<file>          Read more command line arguments from a file"
 	print "  -nodefaultscript Don't use default.fbfrog implicitly"
@@ -578,8 +578,15 @@ private sub hParseArgs( byref x as integer )
 				'' Must expand @files again in case the loaded file contained any
 				hExpandArgsFiles( )
 			else
-				'' Input file/directory
-				astAppend( frog.script, astNewTEXT( hPathRelativeToArgsFile( x ) ) )
+				'' Input file
+				var filename = hPathRelativeToArgsFile( x )
+				astAppend( frog.script, astNewTEXT( filename ) )
+
+				'' The first .h file name seen will be used for the final .bi
+				if( len( (frog.defaultoutname) ) = 0 ) then
+					frog.defaultoutname = pathStripExt( filename ) + ".bi"
+				end if
+
 				x += 1
 			end if
 		end select
@@ -839,25 +846,6 @@ private sub hApplyOptions( byval n as ASTNODE ptr, byval ast as ASTNODE ptr, byv
 end sub
 
 private function frogReadAPI( byval options as ASTNODE ptr ) as ASTNODE ptr
-	var rootfiles = astNewGROUP( )
-	scope
-		var i = options->head
-		while( i )
-			if( i->class = ASTCLASS_TEXT ) then
-				astAppend( rootfiles, astClone( i ) )
-			end if
-			i = i->next
-		wend
-	end scope
-	if( rootfiles->head = NULL ) then
-		oops( "no input files" )
-	end if
-
-	'' The first .h file name seen will be used for the final .bi
-	if( len( (frog.defaultoutname) ) = 0 ) then
-		frog.defaultoutname = pathStripExt( *rootfiles->head->text ) + ".bi"
-	end if
-
 	tkInit( )
 
 	cppInit( )
@@ -945,11 +933,18 @@ private function frogReadAPI( byval options as ASTNODE ptr ) as ASTNODE ptr
 	'' matter.
 	''
 	scope
-		var i = rootfiles->head
+		var count = 0
+		var i = options->head
 		while( i )
-			cppAppendIncludeDirective( *i->text, TKFLAG_ROOTFILE )
+			if( i->class = ASTCLASS_TEXT ) then
+				cppAppendIncludeDirective( *i->text, TKFLAG_ROOTFILE )
+				count += 1
+			end if
 			i = i->next
 		wend
+		if( count = 0 ) then
+			oops( "no input files" )
+		end if
 	end scope
 
 	cppMain( )
@@ -1068,7 +1063,6 @@ private function frogReadAPI( byval options as ASTNODE ptr ) as ASTNODE ptr
 	end scope
 
 	astDelete( options )
-	astDelete( rootfiles )
 	function = ast
 end function
 
