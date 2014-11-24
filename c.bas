@@ -39,9 +39,7 @@ enum
 	DECL_FIELD
 	DECL_PARAM
 	DECL_TYPEDEF
-	DECL_CASTTYPE
-	DECL_SIZEOFTYPE
-	DECL_TYPE  '' plain data types (no related operator/symbol), which can appear in #define bodies
+	DECL_DATATYPE
 	DECL__COUNT
 end enum
 
@@ -55,9 +53,7 @@ dim shared as integer decl_to_astclass(0 to DECL__COUNT-1) = _
 	ASTCLASS_FIELD  , _ '' DECL_FIELD
 	ASTCLASS_PARAM  , _ '' DECL_PARAM
 	ASTCLASS_TYPEDEF, _ '' DECL_TYPEDEF
-	ASTCLASS_TYPE   , _ '' DECL_CASTTYPE
-	ASTCLASS_TYPE   , _ '' DECL_SIZEOFTYPE
-	ASTCLASS_TYPE     _ '' DECL_TYPE
+	ASTCLASS_TYPE     _ '' DECL_DATATYPE
 }
 
 enum
@@ -69,6 +65,7 @@ end enum
 
 declare function cExpression( byval is_bool_context as integer = FALSE ) as ASTNODE ptr
 declare function cExpressionOrInitializer( ) as ASTNODE ptr
+declare function cDataType( ) as ASTNODE ptr
 declare function cDeclaration( byval decl as integer, byval gccattribs as integer ) as ASTNODE ptr
 declare function cScope( ) as ASTNODE ptr
 declare function cConstruct( byval body as integer ) as ASTNODE ptr
@@ -284,33 +281,6 @@ private function hIsDataType( byval y as integer ) as integer
 	function = is_type
 end function
 
-private function cDataType( byval decl as integer ) as ASTNODE ptr
-	''
-	'' Using cDeclaration() to parse:
-	''
-	''    BaseType Declarator
-	''
-	'' Parsing just the base data type isn't enough, because it could be a
-	'' function pointer cast with parameter list etc. We need to do full
-	'' declarator parsing to handle that.
-	''
-	'' cDeclaration() will have built up a GROUP, for DECL_CASTTYPE there
-	'' should be 1 child only though, extract it.
-	''
-	function = astUngroupOne( cDeclaration( decl, 0 ) )
-end function
-
-'' Parse the data type in parentheses for cast expressions (<(DataType) foo>),
-'' or the operand of sizeof (<sizeof (DataType)>).
-private function cDataTypeInParens( byval decl as integer ) as ASTNODE ptr
-	function = cDataType( decl )
-
-	'' ')'
-	cExpectMatch( TK_RPAREN, iif( decl = DECL_CASTTYPE, _
-			@"to close '(...)' type cast", _
-			@"to close 'sizeof (...)'" ) )
-end function
-
 private function cNumberLiteral( ) as ASTNODE ptr
 	dim errmsg as string
 	var n = hNumberLiteral( c.x, FALSE, errmsg )
@@ -365,8 +335,11 @@ private function hExpression( byval level as integer ) as ASTNODE ptr
 			is_cast or= (tkGet( closingparen - 1 ) = TK_STAR)
 
 			if( is_cast ) then
-				'' DataType ')'
-				var t = cDataTypeInParens( DECL_CASTTYPE )
+				'' DataType
+				var t = cDataType( )
+
+				'' ')'
+				cExpectMatch( TK_RPAREN, "behind the data type" )
 
 				'' Expression
 				a = astNew( ASTCLASS_CAST, cExpression( ) )
@@ -460,8 +433,11 @@ private function hExpression( byval level as integer ) as ASTNODE ptr
 				'' '('
 				c.x += 1
 
-				'' DataType ')'
-				a = cDataTypeInParens( DECL_SIZEOFTYPE )
+				'' DataType
+				a = cDataType( )
+
+				'' ')'
+				cExpectMatch( TK_RPAREN, "behind the data type" )
 			else
 				a = hExpression( cprecedence(ASTCLASS_SIZEOF) )
 			end if
@@ -880,7 +856,7 @@ private function cDefineBody( byval macro as ASTNODE ptr ) as integer
 	end select
 
 	if( hIsDataType( c.x ) ) then
-		macro->expr = cDataType( DECL_TYPE )
+		macro->expr = cDataType( )
 		return TRUE
 	end if
 
@@ -1252,18 +1228,13 @@ private sub cBaseType _
 			dtype = TYPE_LONG
 		else
 			'' No modifiers and no explicit "int" either
-			var message = "expected a data type "
+			var message = "expected a data type"
 			select case( decl )
-			case DECL_CASTTYPE
-				message += "in this '(...)' type cast"
-			case DECL_SIZEOFTYPE
-				message += "as operand in this 'sizeof(...)'"
-			case DECL_TYPE
-				message += "here"
+			case DECL_DATATYPE
 			case DECL_PARAM
-				message += "starting a parameter declaration"
+				message += " starting a parameter declaration"
 			case else
-				message += "starting a declaration"
+				message += " starting a declaration"
 			end select
 			cError( message + tkButFound( c.x ) )
 		end if
@@ -1589,9 +1560,7 @@ private function cDeclarator _
 		'' An identifier must exist, except for parameters/types, and
 		'' in fact for types there mustn't be an id.
 		dim as string id
-		select case( decl )
-		case DECL_CASTTYPE, DECL_SIZEOFTYPE, DECL_TYPE
-		case else
+		if( decl <> DECL_DATATYPE ) then
 			if( tkGet( c.x ) = TK_ID ) then
 				id = *tkSpellId( c.x )
 				c.x += 1
@@ -1601,7 +1570,7 @@ private function cDeclarator _
 					id = cMakeDummyId( )
 				end if
 			end if
-		end select
+		end if
 
 		t = astNew( decl_to_astclass(decl), id )
 		select case as const( decl )
@@ -1640,10 +1609,9 @@ private function cDeclarator _
 	case TK_LBRACKET
 		'' Can't allow arrays on everything - currently, it's only
 		'' handled for vars/fields/params/typedefs
-		select case( decl )
-		case DECL_CASTTYPE, DECL_SIZEOFTYPE, DECL_TYPE
+		if( decl = DECL_DATATYPE ) then
 			cError( "TODO: arrays not supported here yet" )
-		end select
+		end if
 
 		assert( node->array = NULL )
 		node->array = astNew( ASTCLASS_ARRAY )
@@ -1792,9 +1760,36 @@ private function cDeclarator _
 		end if
 
 		node->attrib or= innergccattribs
+
+		hDefaultToCdecl( t, filterout )
+
+		'' dllimport on vars makes the var extern.
+		'' dllimport isn't allowed together with static.
+		if( (t->class = ASTCLASS_VAR) and (t->attrib and ASTATTRIB_DLLIMPORT) ) then
+			if( t->attrib and ASTATTRIB_STATIC ) then
+				cError( "static dllimport" )
+				t->attrib and= not ASTATTRIB_STATIC
+			end if
+			t->attrib or= ASTATTRIB_EXTERN
+		end if
 	end if
 
 	function = t
+end function
+
+'' Data type parsing for cast operations and sizeof():
+''    BaseType Declarator
+'' Parsing just the base type isn't enough, because it could be a function
+'' pointer cast with parameter list etc. We need to do full declarator parsing
+'' to handle that.
+private function cDataType( ) as ASTNODE ptr
+	var filterout = ((tkGetFlags( c.x ) and TKFLAG_FILTEROUT) <> 0)
+
+	dim as integer dtype, gccattribs
+	dim as ASTNODE ptr subtype
+	cBaseType( dtype, subtype, gccattribs, DECL_DATATYPE )
+
+	function = cDeclarator( 0, DECL_DATATYPE, dtype, subtype, gccattribs, NULL, 0, 0, filterout )
 end function
 
 ''
@@ -1810,6 +1805,7 @@ end function
 '' Declaration = GccAttributeList BaseType Declarator (',' Declarator)* [';']
 ''
 private function cDeclaration( byval decl as integer, byval gccattribs as integer ) as ASTNODE ptr
+	assert( decl <> DECL_DATATYPE )
 	var filterout = ((tkGetFlags( c.x ) and TKFLAG_FILTEROUT) <> 0)
 
 	'' BaseType
@@ -1877,25 +1873,12 @@ private function cDeclaration( byval decl as integer, byval gccattribs as intege
 		astAppend( result, cDeclarator( 0, decl, dtype, subtype, gccattribs, NULL, 0, 0, filterout ) )
 		var t = result->tail
 
-		hDefaultToCdecl( t, filterout )
-
-		'' dllimport on vars makes the var extern.
-		'' dllimport isn't allowed together with static.
-		if( (t->class = ASTCLASS_VAR) and (t->attrib and ASTATTRIB_DLLIMPORT) ) then
-			if( t->attrib and ASTATTRIB_STATIC ) then
-				cError( "static dllimport" )
-				t->attrib and= not ASTATTRIB_STATIC
-			end if
-			t->attrib or= ASTATTRIB_EXTERN
-		end if
-
-		'' Parameters/types can't have commas and more identifiers,
-		'' and don't need with ';' either.
-		select case( decl )
-		case DECL_PARAM, DECL_CASTTYPE, DECL_SIZEOFTYPE, DECL_TYPE
+		'' Parameters can't have commas and more identifiers,
+		'' and don't need the ';' either.
+		if( decl = DECL_PARAM ) then
 			require_semi = FALSE
 			exit do
-		end select
+		end if
 
 		'' '{', procedure body?
 		if( (t->class = ASTCLASS_PROC) and (tkGet( c.x ) = TK_LBRACE) ) then

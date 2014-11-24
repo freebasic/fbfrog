@@ -224,14 +224,6 @@ private function astGroupsContainEqualChildren( byval l as ASTNODE ptr, byval r 
 	function = astGroupContainsAllChildrenOf( l, r ) and astGroupContainsAllChildrenOf( r, l )
 end function
 
-function astUngroupOne( byval group as ASTNODE ptr ) as ASTNODE ptr
-	assert( group->class = ASTCLASS_GROUP )
-	assert( group->head )
-	assert( group->head = group->tail )
-	function = astClone( group->head )
-	astDelete( group )
-end function
-
 sub astDelete( byval n as ASTNODE ptr )
 	if( n = NULL ) then
 		exit sub
