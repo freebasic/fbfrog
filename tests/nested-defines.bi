@@ -1,9 +1,14 @@
 #pragma once
 
 #define D1
-#define D2
 
 type UDT1
+	a as long
+end type
+
+#define D2
+
+type UDT2
 	a as long
 end type
 
@@ -13,16 +18,6 @@ end type
 #define D6
 #define D7
 
-type UDT2
-	a as long
-end type
-
-#define D8
-#define D9
-#define D10
-#define D11
-#define D12
-
 type UDT3
 	a as long
 
@@ -30,3 +25,9 @@ type UDT3
 		b as long
 	end union
 end type
+
+#define D8
+#define D9
+#define D10
+#define D11
+#define D12

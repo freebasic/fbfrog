@@ -82,6 +82,8 @@ namespace c
 	dim shared typedefs as THASH
 end namespace
 
+#define cIsInsideDefineBody( ) (c.parentdefine <> NULL)
+
 private sub cResetPragmaPack( )
 	c.pragmapack.stack(c.pragmapack.level) = 0
 end sub
@@ -324,7 +326,7 @@ private function hExpression( byval level as integer ) as ASTNODE ptr
 
 			'' Find the ')' and check the token behind it, in some cases
 			'' we can tell that it probably isn't a cast.
-			var closingparen = hFindClosingParen( c.x - 1 )
+			var closingparen = hFindClosingParen( c.x - 1, cIsInsideDefineBody( ), FALSE )
 			select case( tkGet( closingparen + 1 ) )
 			case TK_RPAREN, TK_EOF, TK_EOL
 				is_cast = FALSE
@@ -583,7 +585,7 @@ private sub cSkipToRparen( )
 	do
 		select case( tkGet( c.x ) )
 		case TK_LPAREN, TK_LBRACKET, TK_LBRACE
-			c.x = hFindClosingParen( c.x, FALSE )
+			c.x = hFindClosingParen( c.x, cIsInsideDefineBody( ), TRUE )
 		case TK_RPAREN, TK_EOF
 			exit do
 		end select
@@ -787,7 +789,7 @@ end function
 '' order to support "{ int a, b; }", we have to scan the whole '{...}' block
 '' for ';'s.
 ''
-private function hLooksLikeScopeBlock( byval x as integer ) as integer
+private function hDefineBodyLooksLikeScopeBlock( byval x as integer ) as integer
 	'' '{'
 	assert( tkGet( x ) = TK_LBRACE )
 
@@ -798,11 +800,11 @@ private function hLooksLikeScopeBlock( byval x as integer ) as integer
 		case TK_SEMI
 			return TRUE
 
-		case TK_EOF, TK_RBRACE
+		case TK_EOL, TK_RBRACE
 			exit do
 
 		case TK_LPAREN, TK_LBRACKET, TK_LBRACE
-			x = hFindClosingParen( x, FALSE )
+			x = hFindClosingParen( x, TRUE, TRUE )
 		end select
 	loop
 
@@ -838,7 +840,7 @@ private function cDefineBody( byval macro as ASTNODE ptr ) as integer
 
 	'' '{'
 	case TK_LBRACE
-		if( hLooksLikeScopeBlock( c.x ) ) then
+		if( hDefineBodyLooksLikeScopeBlock( c.x ) ) then
 			macro->expr = astNew( ASTCLASS_SCOPEBLOCK, cScope( ) )
 		else
 			macro->expr = cInitializer( )
@@ -2055,7 +2057,7 @@ private function cBody( byval body as integer ) as ASTNODE ptr
 
 			'' Skip current construct and preserve its tokens in
 			'' an UNKNOWN node
-			c.x = hSkipConstruct( begin )
+			c.x = hSkipConstruct( begin, FALSE )
 			t = astNew( ASTCLASS_UNKNOWN, tkSpell( begin, c.x - 1 ) )
 
 			c.parseok = TRUE
@@ -2131,13 +2133,13 @@ sub cPreParse( )
 		case KW_TYPEDEF
 			var t = cTypedef( )
 			if( c.parseok = FALSE ) then
-				c.x = hSkipConstruct( begin )
+				c.x = hSkipConstruct( begin, FALSE )
 				c.parseok = TRUE
 			end if
 			astDelete( t )
 
 		case else
-			c.x = hSkipConstruct( begin )
+			c.x = hSkipConstruct( begin, FALSE )
 		end select
 	loop
 end sub

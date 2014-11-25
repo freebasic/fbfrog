@@ -395,12 +395,11 @@ end sub
 ''
 '' Unscoping of nested declarations:
 ''
-'' For example nested named structs or constants/#defines nested in structs need
-'' to be moved to the toplevel, out of the parent struct, because FB does not
-'' support this or would scope them inside the parent struct, unlike C.
+'' Nested named structs need to be moved to the toplevel, out of the parent
+'' struct, because FB does not support this or would scope them inside the
+'' parent struct, unlike C.
 ''
 ''        struct UDT1 {
-''            #define M1
 ''            struct UDT2 {
 ''                int a;
 ''            } a;
@@ -410,8 +409,6 @@ end sub
 ''        };
 ''
 '' becomes:
-''
-''        #define M1
 ''
 ''        struct UDT2 {
 ''            int a;
@@ -446,9 +443,6 @@ sub astUnscopeDeclsNestedInStruct( byval result as ASTNODE ptr, byval struct as 
 				astAppend( result, astClone( i ) )
 				astRemove( struct, i )
 			end if
-		case ASTCLASS_PPDEFINE
-			astAppend( result, astClone( i ) )
-			astRemove( struct, i )
 		end select
 
 		i = nxt

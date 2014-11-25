@@ -296,6 +296,7 @@ function tkDumpOne( byval x as integer ) as string
 	checkFlag( FILTEROUT )
 	checkFlag( ROOTFILE )
 	checkFlag( PREINCLUDE )
+	checkFlag( DEFINE )
 
 	#if 0
 		s += " " + hDumpLocation( @p->location )
@@ -413,10 +414,14 @@ sub tkRemove( byval first as integer, byval last as integer )
 end sub
 
 '' Copy tokens first..last and insert them in front of x
-'' without preserving TKFLAG_REMOVE. The CPP marks #define bodies for removal
-'' and still wants to copy the body tokens when expanding the macro, and these
-'' expanded tokens shouldn't have TKFLAG_REMOVE automatically.
-sub tkCopy( byval x as integer, byval first as integer, byval last as integer )
+sub tkCopy _
+	( _
+		byval x as integer, _
+		byval first as integer, _
+		byval last as integer, _
+		byval flagmask as integer _
+	)
+
 	if( first < 0 ) then first = 0
 	if( last >= tk.size ) then last = tk.size - 1
 	if( first > last ) then exit sub
@@ -435,7 +440,7 @@ sub tkCopy( byval x as integer, byval first as integer, byval last as integer )
 
 		src = tkAccess( first )
 		var dst = tkAccess( x )
-		dst->flags          = src->flags and (not TKFLAG_REMOVE)
+		dst->flags          = src->flags and flagmask
 		dst->location       = src->location
 		dst->expansionlevel = src->expansionlevel
 
@@ -674,7 +679,13 @@ function tkSpell overload( byval first as integer, byval last as integer ) as st
 	function = s
 end function
 
-function hFindClosingParen( byval x as integer, byval stop_at_cppdirective as integer ) as integer
+function hFindClosingParen _
+	( _
+		byval x as integer, _
+		byval inside_directive as integer, _
+		byval ignore_directive as integer _
+	) as integer
+
 	var opening = tkGet( x )
 	var level = 0
 
@@ -700,13 +711,19 @@ function hFindClosingParen( byval x as integer, byval stop_at_cppdirective as in
 			end if
 			level -= 1
 
-		'' Stop at # (CPP directives)
+		'' Stop at # (CPP directives)?
 		case TK_HASH
-			if( stop_at_cppdirective ) then
-				if( tkGetExpansionLevel( x ) = 0 ) then
+			if( (tkGetExpansionLevel( x ) = 0) and (not inside_directive) ) then
+				if( ignore_directive = FALSE ) then
 					x -= 1
 					exit do
 				end if
+				x = hSkipToEol( x )
+			end if
+
+		case TK_EOL
+			if( inside_directive ) then
+				exit do
 			end if
 
 		case TK_EOF, TK_BEGININCLUDE, TK_ENDINCLUDE
@@ -730,7 +747,7 @@ function hSkipToEol( byval x as integer ) as integer
 	function = x
 end function
 
-function hSkipConstruct( byval x as integer ) as integer
+function hSkipConstruct( byval x as integer, byval ignore_directives as integer ) as integer
 	select case as const( tkGet( x ) )
 	case TK_EOF
 		return x
@@ -740,7 +757,10 @@ function hSkipConstruct( byval x as integer ) as integer
 
 	case TK_HASH
 		if( tkGetExpansionLevel( x ) = 0 ) then
-			return hSkipToEol( x ) + 1
+			if( ignore_directives = FALSE ) then
+				return hSkipToEol( x ) + 1
+			end if
+			x = hSkipToEol( x )
 		end if
 	end select
 
@@ -757,11 +777,14 @@ function hSkipConstruct( byval x as integer ) as integer
 
 		case TK_HASH
 			if( tkGetExpansionLevel( x ) = 0 ) then
-				exit do
+				if( ignore_directives = FALSE ) then
+					exit do
+				end if
+				x = hSkipToEol( x )
 			end if
 
 		case TK_LPAREN, TK_LBRACKET, TK_LBRACE
-			x = hFindClosingParen( x )
+			x = hFindClosingParen( x, FALSE, ignore_directives )
 
 		end select
 	loop
@@ -775,7 +798,7 @@ private sub hFindConstructBoundaries( byval x as integer, byref first as integer
 	var y = 0
 	while( tkGet( y ) <> TK_EOF )
 		var begin = y
-		y = hSkipConstruct( y )
+		y = hSkipConstruct( y, FALSE )
 		if( (begin <= x) and (x < y) ) then
 			first = begin
 			last = y - 1

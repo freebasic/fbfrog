@@ -393,10 +393,12 @@ private sub definfoSetRemove( byval definfo as DEFINEINFO ptr )
 	tkSetRemove( definfo->xdefine, definfo->xeol )
 end sub
 
+const DEFINEBODY_FLAGMASK = not (TKFLAG_REMOVE or TKFLAG_DEFINE)
+
 '' Copy a #define body into some other place
 private sub definfoCopyBody( byval definfo as DEFINEINFO ptr, byval x as integer )
 	assert( x > definfo->xeol )
-	tkCopy( x, definfo->xbody, definfo->xeol - 1 )
+	tkCopy( x, definfo->xbody, definfo->xeol - 1, DEFINEBODY_FLAGMASK )
 end sub
 
 '' Compare two #defines and determine whether they are equal
@@ -1609,7 +1611,7 @@ private function hInsertMacroExpansion _
 				x += 1
 
 				'' arg's tokens
-				tkCopy( x, argbegin[arg], argend[arg] )
+				tkCopy( x, argbegin[arg], argend[arg], DEFINEBODY_FLAGMASK )
 				hOverrideBehindspace( x, behindspace )
 				x += argend[arg] - argbegin[arg] + 1
 
@@ -1726,7 +1728,7 @@ private function hInsertMacroExpansion _
 				y -= 3
 				x = l
 
-				tkCopy( x, y, y )
+				tkCopy( x, y, y, DEFINEBODY_FLAGMASK )
 				y += 1
 
 				tkRemove( y, y )
@@ -2301,7 +2303,7 @@ private sub cppEndInclude( )
 end sub
 
 '' DEFINE Identifier ['(' ParameterList ')'] Body Eol
-private sub cppDefine( byval begin as integer, byref setremove as integer )
+private sub cppDefine( byval begin as integer, byref flags as integer )
 	cpp.x += 1
 
 	assert( cppSkipping( ) = FALSE )
@@ -2336,7 +2338,10 @@ private sub cppDefine( byval begin as integer, byref setremove as integer )
 
 	'' Normally, we preserve #define directives (unlike the other CPP directives),
 	'' thus no generic tkSetRemove() here. Unless the symbol was registed for removal.
-	setremove = cppShouldRemoveSym( macro->text )
+	if( cppShouldRemoveSym( macro->text ) = FALSE ) then
+		flags and= not TKFLAG_REMOVE
+	end if
+	flags or= TKFLAG_DEFINE
 end sub
 
 private sub cppUndef( )
@@ -2383,7 +2388,7 @@ private sub cppPragmaPushPopMacro( byval is_push as integer )
 	end if
 end sub
 
-private function cppPragma( byref setremove as integer ) as integer
+private function cppPragma( byref flags as integer ) as integer
 	select case( tkSpell( cpp.x ) )
 	'' #pragma message("...")
 	case "message"
@@ -2424,7 +2429,7 @@ private function cppPragma( byref setremove as integer ) as integer
 			cpp.x += 1
 
 			'' Preserve the #pragma comment(lib, "...") for the C parser
-			setremove = FALSE
+			flags = 0
 
 		case else
 			exit function
@@ -2457,7 +2462,7 @@ private function cppPragma( byref setremove as integer ) as integer
 		cpp.x = hSkipToEol( cpp.x )
 
 		'' Preserve the #pragma pack for the C parser
-		setremove = FALSE
+		flags = 0
 
 	case "push_macro"
 		cppPragmaPushPopMacro( TRUE )
@@ -2494,7 +2499,7 @@ private sub cppDirective( )
 		end select
 	end if
 
-	var setremove = TRUE
+	var flags = TKFLAG_REMOVE
 
 	select case( directivekw )
 	case KW_IF
@@ -2517,17 +2522,17 @@ private sub cppDirective( )
 		'' cppInclude() already marks the #include statement for removal.
 		'' We can't do that here because then the TK_BEGININCLUDE would
 		'' be marked too.
-		setremove = FALSE
+		flags = 0
 
 	case KW_DEFINE
-		cppDefine( begin, setremove )
+		cppDefine( begin, flags )
 
 	case KW_UNDEF
 		cppUndef( )
 
 	case KW_PRAGMA
 		cpp.x += 1
-		if( cppPragma( setremove ) = FALSE ) then
+		if( cppPragma( flags ) = FALSE ) then
 			tkOops( cpp.x, "unknown #pragma" )
 		end if
 
@@ -2550,8 +2555,8 @@ private sub cppDirective( )
 		tkOops( cpp.x, "unknown PP directive" )
 	end select
 
-	if( setremove ) then
-		tkSetRemove( begin, cpp.x - 1 )
+	if( flags ) then
+		tkAddFlags( begin, cpp.x - 1, flags )
 	end if
 end sub
 
@@ -2630,4 +2635,52 @@ sub cppMain( )
 	while( tkGet( cpp.x ) <> TK_EOF )
 		cppNext( )
 	wend
+end sub
+
+sub hMoveDefinesOutOfConstructs( )
+	var x = 0
+	do
+		'' Skip #define(s) at begin of construct
+		while( tkGetFlags( x ) and TKFLAG_DEFINE )
+			x += 1
+		wend
+
+		if( tkGet( x ) = TK_EOF ) then
+			exit do
+		end if
+
+		var nxt = hSkipConstruct( x, TRUE )
+
+		'' Exclude #define(s) at end of construct from the construct
+		while( tkGetFlags( nxt - 1 ) and TKFLAG_DEFINE )
+			nxt -= 1
+		wend
+		assert( x < nxt )
+
+		'' Handle #defines inside this construct: Move them to the end
+		'' and exclude them from the construct.
+		var writepos = nxt
+		while( x < nxt )
+			if( tkGetFlags( x ) and TKFLAG_DEFINE ) then
+				'' Collect all #defines in a row
+				var y = x
+				while( tkGetFlags( y + 1 ) and TKFLAG_DEFINE )
+					y += 1
+				wend
+				assert( tkGet( y ) = TK_EOL )
+				assert( y < nxt )
+
+				'' Move from middle to the end (but behind previously moved
+				'' #defines, to preserve their order)
+				tkCopy( writepos, x, y, -1 )
+				tkRemove( x, y )
+
+				'' Update end-of-construct position as we're moving
+				'' #defines out of the current construct
+				nxt -= y - x + 1
+			else
+				x += 1
+			end if
+		wend
+	loop
 end sub

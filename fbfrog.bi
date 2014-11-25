@@ -230,6 +230,7 @@ const TKFLAG_REMOVE		= 1 shl 2
 const TKFLAG_FILTEROUT		= 1 shl 3  '' Used to mark tokens from include files which should be filtered out
 const TKFLAG_ROOTFILE		= 1 shl 4  '' Used to mark the internal #include statements which pull in the toplevel files
 const TKFLAG_PREINCLUDE		= 1 shl 5
+const TKFLAG_DEFINE		= 1 shl 6  '' used to mark #defines for hMoveDefinesOutOfConstructs()
 
 enum
 	TK_EOF
@@ -420,7 +421,13 @@ declare sub tkInsert _
 		byval text as zstring ptr = NULL _
 	)
 declare sub tkRemove( byval first as integer, byval last as integer )
-declare sub tkCopy( byval x as integer, byval first as integer, byval last as integer )
+declare sub tkCopy _
+	( _
+		byval x as integer, _
+		byval first as integer, _
+		byval last as integer, _
+		byval flagmask as integer _
+	)
 declare function tkGet( byval x as integer ) as integer
 declare function tkGetText( byval x as integer ) as zstring ptr
 declare function tkSpellId( byval x as integer ) as zstring ptr
@@ -445,10 +452,15 @@ declare sub tkApplyRemoves( )
 declare sub tkTurnCPPTokensIntoCIds( )
 declare function tkSpell overload( byval x as integer ) as string
 declare function tkSpell overload( byval first as integer, byval last as integer ) as string
-declare function hFindClosingParen( byval x as integer, byval stop_at_cppdirective as integer = TRUE ) as integer
+declare function hFindClosingParen _
+	( _
+		byval x as integer, _
+		byval inside_directive as integer, _
+		byval ignore_directive as integer _
+	) as integer
 declare function tkIsEolOrEof( byval x as integer ) as integer
 declare function hSkipToEol( byval x as integer ) as integer
-declare function hSkipConstruct( byval x as integer ) as integer
+declare function hSkipConstruct( byval x as integer, byval ignore_directives as integer ) as integer
 declare function tkReport( byval x as integer, byval message as zstring ptr ) as string
 declare sub tkOops( byval x as integer, byval message as zstring ptr )
 declare function tkButFound( byval x as integer ) as string
@@ -861,6 +873,7 @@ declare sub cppAddFilter( byval filter as ASTNODE ptr )
 declare sub cppAppendIncludeDirective( byref filename as string, byval tkflags as integer )
 declare function cppTakeDirectIncludes( ) as ASTNODE ptr
 declare sub cppMain( )
+declare sub hMoveDefinesOutOfConstructs( )
 
 declare sub cInit( )
 declare sub cEnd( )

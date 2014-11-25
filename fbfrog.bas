@@ -962,6 +962,8 @@ private function frogReadAPI( byval options as ASTNODE ptr ) as ASTNODE ptr
 	''   to load them into AST
 	tkApplyRemoves( )
 
+	hMoveDefinesOutOfConstructs( )
+
 	tkTurnCPPTokensIntoCIds( )
 
 	cInit( )
