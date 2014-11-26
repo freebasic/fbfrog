@@ -166,26 +166,6 @@ private function cMakeDummyId( ) as string
 	function = dummyid
 end function
 
-private function hIdentifyCommonTypedef( byval id as zstring ptr ) as integer
-	select case( *id )
-	case "int16_t", "__int16"	: function = TYPE_SHORT
-	case "int32_t", "__int32"	: function = TYPE_LONG
-	case "int64_t", "__int64"	: function = TYPE_LONGINT
-	case "int8_t", "__int8"		: function = TYPE_BYTE
-	case "intptr_t"			: function = TYPE_INTEGER
-	case "ptrdiff_t"		: function = TYPE_INTEGER
-	case "size_t"			: function = TYPE_UINTEGER
-	case "ssize_t"			: function = TYPE_INTEGER
-	case "uint16_t"			: function = TYPE_USHORT
-	case "uint32_t"			: function = TYPE_ULONG
-	case "uint64_t"			: function = TYPE_ULONGINT
-	case "uint8_t"			: function = TYPE_UBYTE
-	case "uintptr_t"		: function = TYPE_UINTEGER
-	case "wchar_t"			: function = TYPE_WSTRING
-	case else			: function = TYPE_NONE
-	end select
-end function
-
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 '' ("..." | #id)*
@@ -275,7 +255,7 @@ private function hIsDataType( byval y as integer ) as integer
 		is_type = not cIdentifierIsMacroParam( tkSpellId( y ) )
 	case TK_ID
 		var id = tkSpellId( y )
-		if( (hIdentifyCommonTypedef( id ) <> TYPE_NONE) or cIsTypedef( id ) ) then
+		if( (extradatatypesLookup( id ) <> TYPE_NONE) or cIsTypedef( id ) ) then
 			is_type = not cIdentifierIsMacroParam( id )
 		end if
 	end select
@@ -1171,7 +1151,7 @@ private sub cBaseType _
 
 				'' Treat the id as the type
 				var id = tkSpellId( c.x )
-				dtype = hIdentifyCommonTypedef( id )
+				dtype = extradatatypesLookup( id )
 				if( dtype = TYPE_NONE ) then
 					dtype = TYPE_UDT
 					subtype = astNewID( id )

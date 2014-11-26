@@ -200,6 +200,9 @@ declare sub fbkeywordsInit( )
 extern fbcrtheaderhash as THASH
 declare sub fbcrtheadersInit( )
 
+declare sub extradatatypesInit( )
+declare function extradatatypesLookup( byval id as zstring ptr ) as integer
+
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 #if defined( __FB_WIN32__ ) or defined( __FB_DOS__ )
