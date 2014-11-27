@@ -121,7 +121,7 @@ function astDumpPrettyVersion( byval n as ASTNODE ptr ) as string
 		s = *n->head->text + "=" + *n->tail->text
 
 	case ASTCLASS_DEFINED
-		s = *n->head->text
+		s = *n->text
 
 	case ASTCLASS_NOT
 		s = "(not " + astDumpPrettyVersion( n->head ) + ")"

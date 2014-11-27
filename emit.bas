@@ -421,12 +421,12 @@ private function emitAst _
 		select case( n->expr->class )
 		'' #if defined(id)        ->    #ifdef id
 		case ASTCLASS_DEFINED
-			s = "#ifdef " + emitAst( n->expr->head )
+			s = "#ifdef " + *n->expr->text
 
 		'' #if not defined(id)    ->    #ifndef id
 		case ASTCLASS_NOT
 			if( n->expr->head->class = ASTCLASS_DEFINED ) then
-				s = "#ifndef " + emitAst( n->expr->head->head )
+				s = "#ifndef " + *n->expr->head->text
 			end if
 		end select
 		if( len( s ) = 0 ) then
@@ -810,7 +810,7 @@ private function emitAst _
 	case ASTCLASS_NOT       : s = hParens( "not "     + emitL( n ), need_parens )
 	case ASTCLASS_NEGATE    : s = hParens( "-"        + emitL( n ), need_parens )
 	case ASTCLASS_UNARYPLUS : s = hParens( "+"        + emitL( n ), need_parens )
-	case ASTCLASS_DEFINED   : s =          "defined(" + emitAst( n->head ) + ")"
+	case ASTCLASS_DEFINED   : s =          "defined(" + *n->text + ")"
 	case ASTCLASS_ADDROF    : s = hParens( "@"        + emitL( n ), need_parens )
 	case ASTCLASS_DEREF     : s = hParens( "*"        + emitL( n ), need_parens )
 	case ASTCLASS_STRINGIFY : s =          "#"        + emitAst( n->head )

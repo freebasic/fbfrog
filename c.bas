@@ -440,15 +440,13 @@ private function hExpression( byval level as integer ) as ASTNODE ptr
 				cError( "expected identifier" + tkButFound( c.x ) )
 				id = cMakeDummyId( )
 			end if
-			a = astNewID( id )
+			a = astNew( ASTCLASS_CDEFINED, id )
 			c.x += 1
 
 			if( have_parens ) then
 				'' ')'
 				cExpectMatch( TK_RPAREN, "to finish defined(...) expression" )
 			end if
-
-			a = astNew( ASTCLASS_CDEFINED, a )
 
 		case else
 			cError( "expected expression" + tkButFound( c.x ) )

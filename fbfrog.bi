@@ -716,6 +716,7 @@ end type
 
 #define astNewID( id ) astNew( ASTCLASS_ID, id )
 #define astNewTEXT( text ) astNew( ASTCLASS_TEXT, text )
+#define astNewDEFINED( id ) astNew( ASTCLASS_DEFINED, id )
 #define astIsCONSTI( n ) ((n)->class = ASTCLASS_CONSTI)
 #define astIsVERBLOCK( n ) ((n)->class = ASTCLASS_VERBLOCK)
 #define astIsVERAND( n ) ((n)->class = ASTCLASS_VERAND)
@@ -733,7 +734,6 @@ declare function astNewIIF _
 	) as ASTNODE ptr
 declare function astNewGROUP overload( ) as ASTNODE ptr
 declare function astNewGROUP overload( byval c1 as ASTNODE ptr, byval c2 as ASTNODE ptr = NULL ) as ASTNODE ptr
-declare function astNewDEFINED( byval id as zstring ptr ) as ASTNODE ptr
 declare function astCloneChildren( byval src as ASTNODE ptr ) as ASTNODE ptr
 declare function astGroupContains( byval group as ASTNODE ptr, byval lookfor as ASTNODE ptr ) as integer
 declare function astGroupContainsAnyChildrenOf( byval l as ASTNODE ptr, byval r as ASTNODE ptr ) as integer

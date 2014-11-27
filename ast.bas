@@ -178,10 +178,6 @@ function astNewGROUP overload( byval c1 as ASTNODE ptr, byval c2 as ASTNODE ptr 
 	function = n
 end function
 
-function astNewDEFINED( byval id as zstring ptr ) as ASTNODE ptr
-	function = astNew( ASTCLASS_DEFINED, astNewID( id ) )
-end function
-
 function astCloneChildren( byval src as ASTNODE ptr ) as ASTNODE ptr
 	var n = astNewGROUP( )
 	var i = src->head
