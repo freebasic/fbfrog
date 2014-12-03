@@ -600,15 +600,10 @@ enum
 	ASTCLASS_ELLIPSIS
 
 	'' Expressions
-	'' Generally the AST expressions should represent FB semantics.
-	'' The ASTCLASS_BOP_C* ops are used for easier parsing C expressions,
-	'' however astOpsC2FB() has to be used afterwards to convert them to FB.
 
 	'' BOPs
 	ASTCLASS_CLOGOR
 	ASTCLASS_CLOGAND
-	ASTCLASS_ORELSE
-	ASTCLASS_ANDALSO
 	ASTCLASS_OR
 	ASTCLASS_XOR
 	ASTCLASS_AND
@@ -619,11 +614,6 @@ enum
 	ASTCLASS_CGT
 	ASTCLASS_CGE
 	ASTCLASS_EQ
-	ASTCLASS_NE
-	ASTCLASS_LT
-	ASTCLASS_LE
-	ASTCLASS_GT
-	ASTCLASS_GE
 	ASTCLASS_SHL
 	ASTCLASS_SHR
 	ASTCLASS_ADD
@@ -788,6 +778,7 @@ declare sub astOops _
 	)
 declare function hGetFbNumberLiteralPrefix( byval attrib as integer ) as string
 declare function astEvalConstiAsInt64( byval n as ASTNODE ptr ) as longint
+declare function astIsConst0( byval n as ASTNODE ptr ) as integer
 declare function astDumpPrettyClass( byval astclass as integer ) as string
 declare function astDumpPrettyDecl( byval n as ASTNODE ptr ) as string
 declare function astDumpOne( byval n as ASTNODE ptr ) as string
@@ -798,7 +789,6 @@ declare sub astDump _
 		byref prefix as string = "" _
 	)
 
-declare function astOpsC2FB( byval n as ASTNODE ptr, byval is_bool_context as integer ) as ASTNODE ptr
 declare function astLookupMacroParam _
 	( _
 		byval macro as ASTNODE ptr, _

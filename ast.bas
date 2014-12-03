@@ -83,8 +83,6 @@ dim shared as zstring ptr astnodename(0 to ...) => _
 	_ '' BOPs
 	@"C ||"   , _
 	@"C &&"   , _
-	@"orelse" , _
-	@"andalso", _
 	@"or"     , _
 	@"xor"    , _
 	@"and"    , _
@@ -95,11 +93,6 @@ dim shared as zstring ptr astnodename(0 to ...) => _
 	@"C >"    , _
 	@"C >="   , _
 	@"="      , _
-	@"<>"     , _
-	@"<"      , _
-	@"<="     , _
-	@">"      , _
-	@">="     , _
 	@"shl"    , _
 	@"shr"    , _
 	@"+"      , _
@@ -601,6 +594,12 @@ end function
 function astEvalConstiAsInt64( byval n as ASTNODE ptr ) as longint
 	assert( astIsCONSTI( n ) )
 	function = vallng( hGetFbNumberLiteralPrefix( n->attrib ) + *n->text )
+end function
+
+function astIsConst0( byval n as ASTNODE ptr ) as integer
+	if( astIsCONSTI( n ) ) then
+		function = (astEvalConstiAsInt64( n ) = 0)
+	end if
 end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''

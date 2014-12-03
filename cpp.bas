@@ -889,8 +889,6 @@ dim shared as integer cprecedence(ASTCLASS_CLOGOR to ASTCLASS_IIF) = _
 { _
 	 2, _ '' ASTCLASS_CLOGOR
 	 3, _ '' ASTCLASS_CLOGAND
-	 0, _ '' ASTCLASS_ORELSE (unused)
-	 0, _ '' ASTCLASS_ANDALSO (unused)
 	 4, _ '' ASTCLASS_OR
 	 5, _ '' ASTCLASS_XOR
 	 6, _ '' ASTCLASS_AND
@@ -901,11 +899,6 @@ dim shared as integer cprecedence(ASTCLASS_CLOGOR to ASTCLASS_IIF) = _
 	 8, _ '' ASTCLASS_CGT
 	 8, _ '' ASTCLASS_CGE
 	 0, _ '' ASTCLASS_EQ (unused)
-	 0, _ '' ASTCLASS_NE (unused)
-	 0, _ '' ASTCLASS_LT (unused)
-	 0, _ '' ASTCLASS_LE (unused)
-	 0, _ '' ASTCLASS_GT (unused)
-	 0, _ '' ASTCLASS_GE (unused)
 	 9, _ '' ASTCLASS_SHL
 	 9, _ '' ASTCLASS_SHR
 	10, _ '' ASTCLASS_ADD
@@ -916,7 +909,7 @@ dim shared as integer cprecedence(ASTCLASS_CLOGOR to ASTCLASS_IIF) = _
 	13, _ '' ASTCLASS_INDEX
 	13, _ '' ASTCLASS_MEMBER
 	13, _ '' ASTCLASS_MEMBERDEREF
-	 0, _ '' ASTCLASS_STRCAT
+	 0, _ '' ASTCLASS_STRCAT (unused)
 	12, _ '' ASTCLASS_CLOGNOT
 	12, _ '' ASTCLASS_NOT
 	12, _ '' ASTCLASS_NEGATE

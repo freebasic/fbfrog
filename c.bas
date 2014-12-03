@@ -63,7 +63,7 @@ enum
 	BODY_ENUM
 end enum
 
-declare function cExpression( byval is_bool_context as integer = FALSE ) as ASTNODE ptr
+declare function cExpression( ) as ASTNODE ptr
 declare function cExpressionOrInitializer( ) as ASTNODE ptr
 declare function cDataType( ) as ASTNODE ptr
 declare function cDeclaration( byval decl as integer, byval gccattribs as integer ) as ASTNODE ptr
@@ -521,8 +521,8 @@ private function hExpression( byval level as integer ) as ASTNODE ptr
 	function = a
 end function
 
-private function cExpression( byval is_bool_context as integer ) as ASTNODE ptr
-	function = astOpsC2FB( hExpression( 0 ), is_bool_context )
+private function cExpression( ) as ASTNODE ptr
+	function = hExpression( 0 )
 end function
 
 '' Initializer:
@@ -840,7 +840,7 @@ private function cDefineBody( byval macro as ASTNODE ptr ) as integer
 		return TRUE
 	end if
 
-	macro->expr = cExpression( TRUE ) '' is_bool_context=TRUE, that's a bold assumption
+	macro->expr = cExpression( )
 	function = TRUE
 end function
 
