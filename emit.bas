@@ -4,12 +4,12 @@
 
 #include once "fbfrog.bi"
 
-declare function emitAst _
+declare sub emitCode( byval n as ASTNODE ptr, byval parentclass as integer = -1 )
+declare function emitExpr _
 	( _
 		byval n as ASTNODE ptr, _
 		byval need_parens as integer = FALSE, _
-		byval is_bool_context as integer = FALSE, _
-		byval parentclass as integer = -1 _
+		byval is_bool_context as integer = FALSE _
 	) as string
 
 function emitType overload _
@@ -71,7 +71,7 @@ function emitType overload _
 
 		select case( dt )
 		case TYPE_UDT
-			s += emitAst( subtype )
+			s += emitExpr( subtype )
 
 		case TYPE_PROC
 			if( ptrcount >= 1 ) then
@@ -87,12 +87,12 @@ function emitType overload _
 				'' but a plain proc type.
 				s += "declare "
 			end if
-			s += emitAst( subtype )
+			s += emitExpr( subtype )
 
 		case TYPE_ZSTRING, TYPE_WSTRING
 			s += *datatypenames(dt)
 			if( subtype ) then
-				s += " * " + emitAst( subtype )
+				s += " * " + emitExpr( subtype )
 			end if
 
 		case else
@@ -215,10 +215,10 @@ private function hIdAndArray( byval n as ASTNODE ptr, byval allow_alias as integ
 		s += hEmitAlias( n )
 	end if
 	if( n->array ) then
-		s += emitAst( n->array )
+		s += emitExpr( n->array )
 	end if
 	if( n->bits ) then
-		s += " : " + emitAst( n->bits )
+		s += " : " + emitExpr( n->bits )
 	end if
 	function = s
 end function
@@ -239,7 +239,7 @@ private function hSeparatedList _
 			s += *separator
 		end if
 
-		s += emitAst( i, need_parens )
+		s += emitExpr( i, need_parens )
 
 		count += 1
 		i = i->next
@@ -261,10 +261,7 @@ private sub hEmitIndentedChildren( byval n as ASTNODE ptr, byval parentclass as 
 
 	var i = n->head
 	while( i )
-		var s = emitAst( i, , , parentclass )
-		if( len( s ) > 0 ) then
-			emitLine( s )
-		end if
+		emitCode( i, parentclass )
 		i = i->next
 	wend
 
@@ -277,7 +274,7 @@ end sub
 
 private function hInitializer( byval n as ASTNODE ptr ) as string
 	if( n->expr ) then
-		function = " = " + emitAst( n->expr )
+		function = " = " + emitExpr( n->expr )
 	end if
 end function
 
@@ -297,29 +294,40 @@ private sub emitVarDecl( byref prefix as string, byval n as ASTNODE ptr, byval i
 	emitLine( s )
 end sub
 
-private function emitAst _
-	( _
-		byval n as ASTNODE ptr, _
-		byval need_parens as integer, _
-		byval is_bool_context as integer, _
-		byval parentclass as integer _
-	) as string
+private sub emitProc( byref s as string, byval n as ASTNODE ptr, byval is_expr as integer )
+	assert( n->array = NULL )
 
-	dim as string s
-
-	if( n = NULL ) then
-		exit function
+	'' SUB|FUNCTION [<id>]
+	s += iif( n->dtype = TYPE_ANY, "sub", "function" )
+	if( is_expr = FALSE ) then
+		s += " " + *n->text + hEmitAlias( n )
 	end if
 
-	var add_negation = FALSE
-	var consider_parens = FALSE
+	'' Calling convention not covered by Extern block?
+	if( (n->attrib and ASTATTRIB_HIDECALLCONV) = 0 ) then
+		if( n->attrib and ASTATTRIB_CDECL ) then
+			assert( (n->attrib and ASTATTRIB_STDCALL) = 0 ) '' can't have both
+			s += " cdecl"
+		elseif( n->attrib and ASTATTRIB_STDCALL ) then
+			s += " stdcall"
+		end if
+	end if
 
+	'' '(' Parameters... ')'
+	s += hParamList( n )
+
+	'' Function result type
+	if( n->dtype <> TYPE_ANY ) then
+		s += " as " + emitType( n )
+	end if
+end sub
+
+private sub emitCode( byval n as ASTNODE ptr, byval parentclass as integer )
 	select case as const( n->class )
 	case ASTCLASS_GROUP
 		var i = n->head
 		while( i )
-			s = emitAst( i )
-			s = ""
+			emitCode( i )
 			i = i->next
 		wend
 
@@ -327,21 +335,6 @@ private function emitAst _
 		if( (n->prev <> NULL) and (n->next <> NULL) ) then
 			emitLine( "" )
 		end if
-
-	case ASTCLASS_VEROR, ASTCLASS_VERAND
-		var i = n->head
-		while( i )
-			s += emitAst( i, TRUE )
-			if( i->next ) then
-				if( astIsVEROR( n ) ) then
-					s += " or "
-				else
-					s += " and "
-				end if
-			end if
-			i = i->next
-		wend
-		consider_parens = TRUE
 
 	case ASTCLASS_SCOPEBLOCK
 		emitLine( "scope" )
@@ -384,35 +377,31 @@ private function emitAst _
 
 	case ASTCLASS_PPDEFINE
 		if( n->expr andalso (n->expr->class = ASTCLASS_SCOPEBLOCK) ) then
-			s += "#macro " + *n->text
+			var s = "#macro " + *n->text
 			if( n->head ) then
 				s += hParamList( n )
 			end if
 			emitLine( s )
-			s = ""
 
 			emit.indent += 1
-			s = emitAst( n->expr )
-			s = ""
+			emitCode( n->expr )
 			emit.indent -= 1
 
 			emitLine( "#endmacro" )
 		else
-			s += "#define " + *n->text
+			var s = "#define " + *n->text
 			if( n->paramcount >= 0 ) then
 				s += hParamList( n )
 			end if
-
 			if( n->expr ) then
-				s += " " + emitAst( n->expr, TRUE, TRUE )  '' is_bool_context=TRUE, that's a bold assumption
+				s += " " + emitExpr( n->expr, TRUE, TRUE )  '' is_bool_context=TRUE, that's a bold assumption
 			end if
-
 			emitLine( s )
-			s = ""
 		end if
 		emit.decls += 1
 
 	case ASTCLASS_PPIF
+		dim s as string
 		select case( n->expr->class )
 		'' #if defined(id)        ->    #ifdef id
 		case ASTCLASS_DEFINED
@@ -425,15 +414,14 @@ private function emitAst _
 			end if
 		end select
 		if( len( s ) = 0 ) then
-			s = "#if " + emitAst( n->expr, FALSE, TRUE )
+			s = "#if " + emitExpr( n->expr, FALSE, TRUE )
 		end if
 		emitLine( s )
-		s = ""
 
 		hEmitIndentedChildren( n )
 
 	case ASTCLASS_PPELSEIF
-		emitLine( "#elseif " + emitAst( n->expr, FALSE, TRUE ) )
+		emitLine( "#elseif " + emitExpr( n->expr, FALSE, TRUE ) )
 		hEmitIndentedChildren( n )
 
 	case ASTCLASS_PPELSE
@@ -444,7 +432,7 @@ private function emitAst _
 		emitLine( "#endif" )
 
 	case ASTCLASS_PPERROR
-		emitLine( "#error " + emitAst( n->expr ) )
+		emitLine( "#error " + emitExpr( n->expr ) )
 
 	case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
 		if( (n->class = ASTCLASS_ENUM) and (n->text <> NULL) ) then
@@ -469,7 +457,7 @@ private function emitAst _
 		case else           : compound = "type"
 		end select
 
-		s += compound
+		var s = compound
 		if( (n->class <> ASTCLASS_ENUM) and (n->text <> NULL) ) then
 			s += " " + *n->text
 		end if
@@ -479,7 +467,6 @@ private function emitAst _
 			s += " field = " & n->maxalign
 		end if
 		emitLine( s )
-		s = ""
 
 		hEmitIndentedChildren( n, n->class )
 
@@ -563,53 +550,71 @@ private function emitAst _
 		end if
 
 	case ASTCLASS_PROC
-		assert( n->array = NULL )
-
-		var compound = iif( n->dtype = TYPE_ANY, "sub", "function" )
-
-		'' Declaration and not a procptr subtype or body?
-		if( (n->text <> NULL) and (n->expr = NULL) ) then
+		dim s as string
+		'' Declaration instead of body?
+		if( n->expr = NULL ) then
 			s += "declare "
 		end if
+		emitProc( s, n, FALSE )
+		emitLine( s )
 
-		'' SUB|FUNCTION [<id>]
-		s += compound
-		if( n->text ) then
-			s += " " + *n->text + hEmitAlias( n )
+		'' Body
+		if( n->expr ) then
+			assert( n->expr->class = ASTCLASS_GROUP )
+			hEmitIndentedChildren( n->expr )
+			emitLine( "end " + iif( n->dtype = TYPE_ANY, "sub", "function" ) )
 		end if
 
-		'' Calling convention not covered by Extern block?
-		if( (n->attrib and ASTATTRIB_HIDECALLCONV) = 0 ) then
-			if( n->attrib and ASTATTRIB_CDECL ) then
-				assert( (n->attrib and ASTATTRIB_STDCALL) = 0 ) '' can't have both
-				s += " cdecl"
-			elseif( n->attrib and ASTATTRIB_STDCALL ) then
-				s += " stdcall"
+		emit.decls += 1
+
+	case ASTCLASS_EXTERNBLOCKBEGIN
+		emitLine( "extern """ + *n->text + """" )
+
+	case ASTCLASS_EXTERNBLOCKEND
+		emitLine( "end extern" )
+
+	case ASTCLASS_RETURN
+		emitLine( "return " + emitExpr( n->head ) )
+
+	case else
+		emitLine( emitExpr( n ) )
+	end select
+end sub
+
+private function emitExpr _
+	( _
+		byval n as ASTNODE ptr, _
+		byval need_parens as integer, _
+		byval is_bool_context as integer _
+	) as string
+
+	dim as string s
+
+	if( n = NULL ) then
+		exit function
+	end if
+
+	var add_negation = FALSE
+	var consider_parens = FALSE
+
+	select case as const( n->class )
+	case ASTCLASS_VEROR, ASTCLASS_VERAND
+		var i = n->head
+		while( i )
+			s += emitExpr( i, TRUE )
+			if( i->next ) then
+				if( astIsVEROR( n ) ) then
+					s += " or "
+				else
+					s += " and "
+				end if
 			end if
-		end if
+			i = i->next
+		wend
+		consider_parens = TRUE
 
-		'' '(' Parameters... ')'
-		s += hParamList( n )
-
-		'' Function result type
-		if( n->dtype <> TYPE_ANY ) then
-			s += " as " + emitType( n )
-		end if
-
-		'' Is this a procedure declaration/statement (and not a procptr subtype)?
-		if( n->text ) then
-			emitLine( s )
-			s = ""
-
-			'' Body
-			if( n->expr ) then
-				assert( n->expr->class = ASTCLASS_GROUP )
-				hEmitIndentedChildren( n->expr )
-				emitLine( "end " + compound )
-			end if
-
-			emit.decls += 1
-		end if
+	case ASTCLASS_PROC
+		emitProc( s, n, TRUE )
 
 	case ASTCLASS_PARAM
 		'' should have been solved out by hFixArrayParams()
@@ -629,15 +634,6 @@ private function emitAst _
 
 	case ASTCLASS_ARRAY
 		s += hParamList( n )
-
-	case ASTCLASS_EXTERNBLOCKBEGIN
-		emitLine( "extern """ + *n->text + """" )
-
-	case ASTCLASS_EXTERNBLOCKEND
-		emitLine( "end extern" )
-
-	case ASTCLASS_RETURN
-		emitLine( "return " + emitAst( n->head ) )
 
 	case ASTCLASS_MACROPARAM
 		s += *n->text
@@ -702,7 +698,7 @@ private function emitAst _
 		s += *n->text
 
 	case ASTCLASS_TEXT
-		s += *n->text + emitAst( n->expr )
+		s += *n->text + emitExpr( n->expr )
 
 	case ASTCLASS_STRING, ASTCLASS_CHAR
 		s = """"
@@ -779,37 +775,37 @@ private function emitAst _
 			s = "asc(" + s + ")"
 		end if
 
-	case ASTCLASS_CLOGNOT     : s = emitAst( n->head, TRUE, TRUE                   ) + " = 0"                                                         : add_negation = not is_bool_context : consider_parens = TRUE
-	case ASTCLASS_CLOGOR      : s = emitAst( n->head, TRUE, TRUE                   ) + " orelse "  + emitAst( n->tail, TRUE, TRUE                   ) : add_negation = not is_bool_context : consider_parens = TRUE
-	case ASTCLASS_CLOGAND     : s = emitAst( n->head, TRUE, TRUE                   ) + " andalso " + emitAst( n->tail, TRUE, TRUE                   ) : add_negation = not is_bool_context : consider_parens = TRUE
-	case ASTCLASS_CEQ         : s = emitAst( n->head, TRUE, astIsConst0( n->tail ) ) + " = "       + emitAst( n->tail, TRUE, astIsConst0( n->head ) ) : add_negation = not is_bool_context : consider_parens = TRUE
-	case ASTCLASS_CNE         : s = emitAst( n->head, TRUE, astIsConst0( n->tail ) ) + " <> "      + emitAst( n->tail, TRUE, astIsConst0( n->head ) ) : add_negation = not is_bool_context : consider_parens = TRUE
-	case ASTCLASS_CLT         : s = emitAst( n->head, TRUE                         ) + " < "       + emitAst( n->tail, TRUE                         ) : add_negation = not is_bool_context : consider_parens = TRUE
-	case ASTCLASS_CLE         : s = emitAst( n->head, TRUE                         ) + " <= "      + emitAst( n->tail, TRUE                         ) : add_negation = not is_bool_context : consider_parens = TRUE
-	case ASTCLASS_CGT         : s = emitAst( n->head, TRUE                         ) + " > "       + emitAst( n->tail, TRUE                         ) : add_negation = not is_bool_context : consider_parens = TRUE
-	case ASTCLASS_CGE         : s = emitAst( n->head, TRUE                         ) + " >= "      + emitAst( n->tail, TRUE                         ) : add_negation = not is_bool_context : consider_parens = TRUE
-	case ASTCLASS_OR          : s = emitAst( n->head, TRUE                         ) + " or "      + emitAst( n->tail, TRUE                         ) : consider_parens = TRUE
-	case ASTCLASS_XOR         : s = emitAst( n->head, TRUE                         ) + " xor "     + emitAst( n->tail, TRUE                         ) : consider_parens = TRUE
-	case ASTCLASS_AND         : s = emitAst( n->head, TRUE                         ) + " and "     + emitAst( n->tail, TRUE                         ) : consider_parens = TRUE
-	case ASTCLASS_EQ          : s = emitAst( n->head, TRUE                         ) + " = "       + emitAst( n->tail, TRUE                         ) : consider_parens = TRUE
-	case ASTCLASS_SHL         : s = emitAst( n->head, TRUE                         ) + " shl "     + emitAst( n->tail, TRUE                         ) : consider_parens = TRUE
-	case ASTCLASS_SHR         : s = emitAst( n->head, TRUE                         ) + " shr "     + emitAst( n->tail, TRUE                         ) : consider_parens = TRUE
-	case ASTCLASS_ADD         : s = emitAst( n->head, TRUE                         ) + " + "       + emitAst( n->tail, TRUE                         ) : consider_parens = TRUE
-	case ASTCLASS_SUB         : s = emitAst( n->head, TRUE                         ) + " - "       + emitAst( n->tail, TRUE                         ) : consider_parens = TRUE
-	case ASTCLASS_MUL         : s = emitAst( n->head, TRUE                         ) + " * "       + emitAst( n->tail, TRUE                         ) : consider_parens = TRUE
-	case ASTCLASS_DIV         : s = emitAst( n->head, TRUE                         ) + " / "       + emitAst( n->tail, TRUE                         ) : consider_parens = TRUE
-	case ASTCLASS_MOD         : s = emitAst( n->head, TRUE                         ) + " mod "     + emitAst( n->tail, TRUE                         ) : consider_parens = TRUE
-	case ASTCLASS_INDEX       : s = emitAst( n->head, TRUE                         ) + "["         + emitAst( n->tail, TRUE                         ) + "]"
-	case ASTCLASS_MEMBER      : s = emitAst( n->head, TRUE                         ) + "."         + emitAst( n->tail, TRUE                         )
-	case ASTCLASS_MEMBERDEREF : s = emitAst( n->head, TRUE                         ) + "->"        + emitAst( n->tail, TRUE                         )
-	case ASTCLASS_STRCAT      : s = emitAst( n->head, TRUE                         ) + " + "       + emitAst( n->tail, TRUE                         ) : consider_parens = TRUE
-	case ASTCLASS_NOT       : s = "not "     + emitAst( n->head, TRUE ) : consider_parens = TRUE
-	case ASTCLASS_NEGATE    : s = "-"        + emitAst( n->head, TRUE ) : consider_parens = TRUE
-	case ASTCLASS_UNARYPLUS : s = "+"        + emitAst( n->head, TRUE ) : consider_parens = TRUE
-	case ASTCLASS_ADDROF    : s = "@"        + emitAst( n->head, TRUE ) : consider_parens = TRUE
-	case ASTCLASS_DEREF     : s = "*"        + emitAst( n->head, TRUE ) : consider_parens = TRUE
-	case ASTCLASS_STRINGIFY : s = "#"        + emitAst( n->head )
-	case ASTCLASS_SIZEOF    : s = "sizeof("  + emitAst( n->head ) + ")"
+	case ASTCLASS_CLOGNOT     : s = emitExpr( n->head, TRUE, TRUE                   ) + " = 0"                                                         : add_negation = not is_bool_context : consider_parens = TRUE
+	case ASTCLASS_CLOGOR      : s = emitExpr( n->head, TRUE, TRUE                   ) + " orelse "  + emitExpr( n->tail, TRUE, TRUE                   ) : add_negation = not is_bool_context : consider_parens = TRUE
+	case ASTCLASS_CLOGAND     : s = emitExpr( n->head, TRUE, TRUE                   ) + " andalso " + emitExpr( n->tail, TRUE, TRUE                   ) : add_negation = not is_bool_context : consider_parens = TRUE
+	case ASTCLASS_CEQ         : s = emitExpr( n->head, TRUE, astIsConst0( n->tail ) ) + " = "       + emitExpr( n->tail, TRUE, astIsConst0( n->head ) ) : add_negation = not is_bool_context : consider_parens = TRUE
+	case ASTCLASS_CNE         : s = emitExpr( n->head, TRUE, astIsConst0( n->tail ) ) + " <> "      + emitExpr( n->tail, TRUE, astIsConst0( n->head ) ) : add_negation = not is_bool_context : consider_parens = TRUE
+	case ASTCLASS_CLT         : s = emitExpr( n->head, TRUE                         ) + " < "       + emitExpr( n->tail, TRUE                         ) : add_negation = not is_bool_context : consider_parens = TRUE
+	case ASTCLASS_CLE         : s = emitExpr( n->head, TRUE                         ) + " <= "      + emitExpr( n->tail, TRUE                         ) : add_negation = not is_bool_context : consider_parens = TRUE
+	case ASTCLASS_CGT         : s = emitExpr( n->head, TRUE                         ) + " > "       + emitExpr( n->tail, TRUE                         ) : add_negation = not is_bool_context : consider_parens = TRUE
+	case ASTCLASS_CGE         : s = emitExpr( n->head, TRUE                         ) + " >= "      + emitExpr( n->tail, TRUE                         ) : add_negation = not is_bool_context : consider_parens = TRUE
+	case ASTCLASS_OR          : s = emitExpr( n->head, TRUE                         ) + " or "      + emitExpr( n->tail, TRUE                         ) : consider_parens = TRUE
+	case ASTCLASS_XOR         : s = emitExpr( n->head, TRUE                         ) + " xor "     + emitExpr( n->tail, TRUE                         ) : consider_parens = TRUE
+	case ASTCLASS_AND         : s = emitExpr( n->head, TRUE                         ) + " and "     + emitExpr( n->tail, TRUE                         ) : consider_parens = TRUE
+	case ASTCLASS_EQ          : s = emitExpr( n->head, TRUE                         ) + " = "       + emitExpr( n->tail, TRUE                         ) : consider_parens = TRUE
+	case ASTCLASS_SHL         : s = emitExpr( n->head, TRUE                         ) + " shl "     + emitExpr( n->tail, TRUE                         ) : consider_parens = TRUE
+	case ASTCLASS_SHR         : s = emitExpr( n->head, TRUE                         ) + " shr "     + emitExpr( n->tail, TRUE                         ) : consider_parens = TRUE
+	case ASTCLASS_ADD         : s = emitExpr( n->head, TRUE                         ) + " + "       + emitExpr( n->tail, TRUE                         ) : consider_parens = TRUE
+	case ASTCLASS_SUB         : s = emitExpr( n->head, TRUE                         ) + " - "       + emitExpr( n->tail, TRUE                         ) : consider_parens = TRUE
+	case ASTCLASS_MUL         : s = emitExpr( n->head, TRUE                         ) + " * "       + emitExpr( n->tail, TRUE                         ) : consider_parens = TRUE
+	case ASTCLASS_DIV         : s = emitExpr( n->head, TRUE                         ) + " / "       + emitExpr( n->tail, TRUE                         ) : consider_parens = TRUE
+	case ASTCLASS_MOD         : s = emitExpr( n->head, TRUE                         ) + " mod "     + emitExpr( n->tail, TRUE                         ) : consider_parens = TRUE
+	case ASTCLASS_INDEX       : s = emitExpr( n->head, TRUE                         ) + "["         + emitExpr( n->tail, TRUE                         ) + "]"
+	case ASTCLASS_MEMBER      : s = emitExpr( n->head, TRUE                         ) + "."         + emitExpr( n->tail, TRUE                         )
+	case ASTCLASS_MEMBERDEREF : s = emitExpr( n->head, TRUE                         ) + "->"        + emitExpr( n->tail, TRUE                         )
+	case ASTCLASS_STRCAT      : s = emitExpr( n->head, TRUE                         ) + " + "       + emitExpr( n->tail, TRUE                         ) : consider_parens = TRUE
+	case ASTCLASS_NOT       : s = "not "     + emitExpr( n->head, TRUE ) : consider_parens = TRUE
+	case ASTCLASS_NEGATE    : s = "-"        + emitExpr( n->head, TRUE ) : consider_parens = TRUE
+	case ASTCLASS_UNARYPLUS : s = "+"        + emitExpr( n->head, TRUE ) : consider_parens = TRUE
+	case ASTCLASS_ADDROF    : s = "@"        + emitExpr( n->head, TRUE ) : consider_parens = TRUE
+	case ASTCLASS_DEREF     : s = "*"        + emitExpr( n->head, TRUE ) : consider_parens = TRUE
+	case ASTCLASS_STRINGIFY : s = "#"        + emitExpr( n->head )
+	case ASTCLASS_SIZEOF    : s = "sizeof("  + emitExpr( n->head ) + ")"
 	case ASTCLASS_CDEFINED  : s = "defined(" + *n->text + ")" : add_negation = not is_bool_context
 	case ASTCLASS_DEFINED   : s = "defined(" + *n->text + ")"
 	case ASTCLASS_CAST
@@ -832,16 +828,16 @@ private function emitAst _
 			end if
 			s += emitType( n ) + ", "
 		end select
-		s += emitAst( n->head ) + ")"
+		s += emitExpr( n->head ) + ")"
 
 	case ASTCLASS_IIF
-		s = "iif(" + emitAst( n->expr, FALSE, TRUE ) + ", " + emitAst( n->head ) + ", " + emitAst( n->tail ) + ")"
+		s = "iif(" + emitExpr( n->expr, FALSE, TRUE ) + ", " + emitExpr( n->head ) + ", " + emitExpr( n->tail ) + ")"
 
 	case ASTCLASS_PPMERGE
 		var i = n->head
 		while( i )
 			if( i <> n->head ) then s += "##"
-			s += emitAst( i )
+			s += emitExpr( i )
 			i = i->next
 		wend
 
@@ -862,7 +858,7 @@ private function emitAst _
 		case ASTCLASS_CONSTI
 			s &= astEvalConstiAsInt64( n->expr ) - 1
 		case else
-			s += emitAst( n->expr, TRUE ) + " - 1"
+			s += emitExpr( n->expr, TRUE ) + " - 1"
 		end select
 
 	case ASTCLASS_TYPE
@@ -903,7 +899,7 @@ sub emitFile( byref filename as string, byval ast as ASTNODE ptr )
 		oops( "could not open output file: '" + filename + "'" )
 	end if
 
-	var s = emitAst( ast )
+	emitCode( ast )
 
 	close #emit.fo
 end sub
