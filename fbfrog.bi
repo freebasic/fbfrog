@@ -815,7 +815,6 @@ declare sub astReplaceSubtypes _
 declare sub astFixIdsInit( )
 declare sub astFixIdsAddReservedId( byval id as zstring ptr )
 declare sub astFixIds( byval code as ASTNODE ptr )
-declare function astUsesDtype( byval n as ASTNODE ptr, byval dtype as integer ) as integer
 declare sub astAutoAddDividers( byval code as ASTNODE ptr )
 declare sub astPrependMaybeWithDivider( byval group as ASTNODE ptr, byval n as ASTNODE ptr )
 
@@ -892,7 +891,8 @@ namespace frog
 end namespace
 
 namespace api
-	extern as integer cdecls, stdcalls, need_externblock, has_wchar_t
+	extern as integer cdecls, stdcalls, need_externblock
+	extern as integer uses_clong, uses_clongdouble, uses_wchar_t
 end namespace
 
 declare function hFindResource( byref filename as string ) as string

@@ -68,7 +68,8 @@ namespace frog
 end namespace
 
 namespace api
-	dim shared as integer cdecls, stdcalls, need_externblock, has_wchar_t
+	dim shared as integer cdecls, stdcalls, need_externblock
+	dim shared as integer uses_clong, uses_clongdouble, uses_wchar_t
 end namespace
 
 '' Find a *.fbfrog or *.h file in fbfrog's include/ dir, its "library" of
@@ -983,14 +984,18 @@ private function frogReadAPI( byval options as ASTNODE ptr ) as ASTNODE ptr
 	api.cdecls = 0
 	api.stdcalls = 0
 	api.need_externblock = FALSE
-	api.has_wchar_t = FALSE
+	api.uses_clong = FALSE
+	api.uses_clongdouble = FALSE
+	api.uses_wchar_t = FALSE
 	cPreParse( )
 
 	'' Parse C constructs
 	api.cdecls = 0
 	api.stdcalls = 0
 	api.need_externblock = FALSE
-	api.has_wchar_t = FALSE
+	api.uses_clong = FALSE
+	api.uses_clongdouble = FALSE
+	api.uses_wchar_t = FALSE
 	var ast = cFile( )
 
 	cEnd( )
@@ -1035,13 +1040,13 @@ private function frogReadAPI( byval options as ASTNODE ptr ) as ASTNODE ptr
 	assert( ast->class = ASTCLASS_GROUP )
 
 	'' Add "crt/long[double].bi" as direct #includes if the binding uses CLONG[DOUBLE]
-	if( astUsesDtype( ast, TYPE_CLONGDOUBLE ) ) then
+	if( api.uses_clongdouble ) then
 		astPrepend( directincludes, astNew( ASTCLASS_PPINCLUDE, "crt/longdouble.bi" ) )
 	end if
-	if( astUsesDtype( ast, TYPE_CLONG ) or astUsesDtype( ast, TYPE_CULONG ) ) then
+	if( api.uses_clong ) then
 		astPrepend( directincludes, astNew( ASTCLASS_PPINCLUDE, "crt/long.bi" ) )
 	end if
-	if( api.has_wchar_t ) then
+	if( api.uses_wchar_t ) then
 		var wcharbi = astNew( ASTCLASS_PPINCLUDE, "crt/wchar.bi" )
 		if( astGroupContains( directincludes, wcharbi ) ) then
 			astDelete( wcharbi )

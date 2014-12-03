@@ -300,7 +300,7 @@ sub hHandlePlainCharAfterArrayStatusIsKnown( byval n as ASTNODE ptr )
 		if( typeGetDtAndPtr( n->dtype ) = TYPE_ZSTRING ) then
 			n->dtype = typeGetConst( n->dtype ) or TYPE_BYTE
 		else
-			api.has_wchar_t = TRUE
+			api.uses_wchar_t = TRUE
 			n->dtype = typeGetConst( n->dtype ) or TYPE_WCHAR_T
 		end if
 	end if
@@ -1154,22 +1154,6 @@ sub astFixIds( byval code as ASTNODE ptr )
 	end if
 	hashEnd( @reservedids )
 end sub
-
-function astUsesDtype( byval n as ASTNODE ptr, byval dtype as integer ) as integer
-	if( typeGetDt( n->dtype ) = dtype ) then return TRUE
-
-	if( n->subtype ) then if( astUsesDtype( n->subtype, dtype ) ) then return TRUE
-	if( n->array   ) then if( astUsesDtype( n->array  , dtype ) ) then return TRUE
-	if( n->expr    ) then if( astUsesDtype( n->expr   , dtype ) ) then return TRUE
-
-	var i = n->head
-	while( i )
-		if( astUsesDtype( i, dtype ) ) then return TRUE
-		i = i->next
-	wend
-
-	function = FALSE
-end function
 
 private function hIsPpIfBegin( byval n as ASTNODE ptr ) as integer
 	select case( n->class )

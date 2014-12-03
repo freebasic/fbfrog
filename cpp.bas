@@ -249,6 +249,7 @@ function hNumberLiteral( byval x as integer, byval is_cpp as integer, byref errm
 			n->dtype = iif( have_u, TYPE_ULONGINT, TYPE_LONGINT )
 		elseif( have_l ) then
 			n->dtype = iif( have_u, TYPE_CULONG, TYPE_CLONG )
+			api.uses_clong = TRUE
 		else
 			n->dtype = iif( have_u, TYPE_ULONG, TYPE_LONG )
 		end if

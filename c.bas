@@ -1176,6 +1176,7 @@ private sub cBaseType _
 	case TYPE_DOUBLE
 		if( longmods = 1 ) then
 			dtype = TYPE_CLONGDOUBLE
+			api.uses_clongdouble = TRUE
 		end if
 
 	case TYPE_ZSTRING
@@ -1195,6 +1196,7 @@ private sub cBaseType _
 			dtype = iif( unsignedmods > 0, TYPE_USHORT, TYPE_SHORT )
 		elseif( longmods = 1 ) then
 			dtype = iif( unsignedmods > 0, TYPE_CULONG, TYPE_CLONG )
+			api.uses_clong = TRUE
 		elseif( longmods = 2 ) then
 			dtype = iif( unsignedmods > 0, TYPE_ULONGINT, TYPE_LONGINT )
 		elseif( dtype = TYPE_LONG ) then
