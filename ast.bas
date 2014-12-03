@@ -45,13 +45,13 @@ dim shared as zstring ptr astnodename(0 to ...) => _
 	@"pragmaonce"   , _
 	_
 	_ '' Preprocessor directives
-	@"#include", _
-	@"#define" , _
-	@"#if"     , _
-	@"#elseif" , _
-	@"#else"   , _
-	@"#endif"  , _
-	@"#error"  , _
+	@"ppinclude", _
+	@"ppdefine" , _
+	@"ppif"     , _
+	@"ppelseif" , _
+	@"ppelse"   , _
+	@"ppendif"  , _
+	@"pperror"  , _
 	_
 	_ '' Declarations/statements
 	@"struct"     , _
@@ -81,40 +81,40 @@ dim shared as zstring ptr astnodename(0 to ...) => _
 	@"ellipsis"  , _
 	_
 	_ '' BOPs
-	@"C ||"   , _
-	@"C &&"   , _
+	@"clogor" , _
+	@"clogand", _
 	@"or"     , _
 	@"xor"    , _
 	@"and"    , _
-	@"C ="    , _
-	@"C <>"   , _
-	@"C <"    , _
-	@"C <="   , _
-	@"C >"    , _
-	@"C >="   , _
-	@"="      , _
+	@"ceq"    , _
+	@"cne"    , _
+	@"clt"    , _
+	@"cle"    , _
+	@"cgt"    , _
+	@"cge"    , _
+	@"eq"     , _
 	@"shl"    , _
 	@"shr"    , _
-	@"+"      , _
-	@"-"      , _
-	@"*"      , _
-	@"/"      , _
+	@"add"    , _
+	@"sub"    , _
+	@"mul"    , _
+	@"div"    , _
 	@"mod"    , _
-	@"[]"     , _
-	@"."      , _
-	@"->"     , _
-	@"str +"  , _
+	@"index"  , _
+	@"member" , _
+	@"memberderef", _
+	@"strcat" , _
 	_
 	_ '' UOPs
-	@"C !"        , _
+	@"clognot"    , _
 	@"not"        , _
 	@"negate"     , _
-	@"unary +"    , _
-	@"C defined()", _
-	@"defined()"  , _
-	@"@"          , _
+	@"unaryplus"  , _
+	@"cdefined"   , _
+	@"defined"    , _
+	@"addrof"     , _
 	@"deref"      , _
-	@"#"          , _
+	@"stringify"  , _
 	@"sizeof"     , _
 	@"cast"       , _
 	_
@@ -607,6 +607,7 @@ end function
 
 function astDumpPrettyClass( byval astclass as integer ) as string
 	select case( astclass )
+	case ASTCLASS_PPDEFINE : function = "#define"
 	case ASTCLASS_ENUMCONST : function = "enum constant"
 	case ASTCLASS_VAR   : function = "variable"
 	case ASTCLASS_PROC  : function = "procedure"
