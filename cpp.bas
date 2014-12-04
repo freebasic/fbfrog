@@ -27,13 +27,12 @@
 '' TK_ENDINCLUDE. This allows detecting #include EOF for the #if/#include stack,
 '' and allows the C parser to identify include boundaries later. If the include
 '' file should be filtered out (according to -filterout/-filterin options), the
-'' TK_BEGININCLUDE will be marked with TKFLAG_FILTEROUT. This in turn allows
-'' cPreParse() to mark all tokens between TK_BEGININCUDE/TK_ENDINCLUDE with
-'' TKFLAG_FILTEROUT, which lets the C parser know which constructs should be
-'' marked with ASTATTRIB_FILTEROUT. The include tokens can only be marked this
-'' way once the CPP is finished, because macro expansion may result in new
-'' tokens being inserted which wouldn't automatically have the TKFLAG_FILTEROUT
-'' flag too.
+'' TK_BEGININCLUDE will be marked with TKFLAG_FILTEROUT, so we can mark all the
+'' tokens between TK_BEGININCUDE/TK_ENDINCLUDE with TKFLAG_FILTEROUT, which lets
+'' the C parser know which constructs should be marked with ASTATTRIB_FILTEROUT.
+'' The include tokens can only be marked this way once the TK_ENDINCLUDE is
+'' reached, because macro expansion may result in new tokens being inserted
+'' which wouldn't automatically have the TKFLAG_FILTEROUT flag too.
 ''
 '' #include statements themselves are not preserved as-is, but the filenames of
 '' unexpanded direct #includes are recorded, so that frogReadAPI() can re-add
@@ -446,6 +445,7 @@ namespace cpp
 	type STACKNODE
 		state		as integer  '' STATE_*
 		knownfile	as integer  '' Index into cpp.files array, if it's an #include context, or -1
+		xbegininclude	as integer  '' STATE_FILE: Position of the TK_BEGININCLUDE, so cppEndInclude() doesn't have to search it
 	end type
 
 	'' #if/file context stack
@@ -530,6 +530,7 @@ sub cppInit( )
 	with( cpp.stack(0) )
 		.state = STATE_FILE
 		.knownfile = -1
+		.xbegininclude = -1
 	end with
 	cpp.level = 0
 	cpp.skiplevel = MAXSTACK  '' No skipping yet
@@ -1882,6 +1883,7 @@ private sub cppPush( byval state as integer, byval knownfile as integer = -1 )
 	with( cpp.stack(cpp.level) )
 		.state = state
 		.knownfile = knownfile
+		.xbegininclude = -1
 	end with
 
 	if( knownfile >= 0 ) then
@@ -2267,6 +2269,8 @@ private sub cppInclude( byval begin as integer )
 	assert( tkGet( cpp.x - 1 ) = TK_EOL )
 	assert( y <= tkGetCount( ) )
 	assert( tkGet( y - 2 ) = TK_ENDINCLUDE )
+	assert( cpp.stack(cpp.level).state = STATE_FILE )
+	cpp.stack(cpp.level).xbegininclude = cpp.x - 2
 
 	if( cpp.files[knownfile].checked_guard = FALSE ) then
 		'' Prepare for the include guard optimization: We have to check
@@ -2292,7 +2296,22 @@ private sub cppEndInclude( )
 	if( cpp.stack(cpp.level).state >= STATE_IF ) then
 		tkOops( cpp.x - 1, "missing #endif" )
 	end if
+	var begin = cpp.stack(cpp.level).xbegininclude
 	cppPop( )
+
+	assert( tkGet( begin ) = TK_BEGININCLUDE )
+	assert( tkGet( cpp.x ) = TK_ENDINCLUDE )
+
+	'' If the include content should be filtered out, mark all the included
+	'' tokens accordingly, for the C parser later.
+	if( tkGetFlags( begin ) and TKFLAG_FILTEROUT ) then
+		tkAddFlags( begin + 1, cpp.x - 1, TKFLAG_FILTEROUT )
+	end if
+
+	'' Mark the TK_BEGININCLUDE/TK_ENDINCLUDE for removal, so they won't get in the
+	'' way of C parsing (in case declarations cross #include/file boundaries).
+	tkSetRemove( begin, begin )
+	tkSetRemove( cpp.x, cpp.x )
 	cpp.x += 1
 end sub
 

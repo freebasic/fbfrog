@@ -2055,46 +2055,6 @@ private function cBody( byval body as integer ) as ASTNODE ptr
 	function = group
 end function
 
-private function hFindBeginInclude( byval x as integer ) as integer
-	assert( tkGet( x ) = TK_ENDINCLUDE )
-	var level = 0
-	do
-		x -= 1
-		assert( tkGet( x ) <> TK_EOF )
-		select case( tkGet( x ) )
-		case TK_BEGININCLUDE
-			if( level = 0 ) then
-				exit do
-			end if
-			assert( level > 0 )
-			level -= 1
-		case TK_ENDINCLUDE
-			level += 1
-		end select
-	loop
-	function = x
-end function
-
-private sub cEndInclude( )
-	var begin = hFindBeginInclude( c.x )
-
-	assert( tkGet( begin ) = TK_BEGININCLUDE )
-	assert( tkGet( c.x ) = TK_ENDINCLUDE )
-
-	'' If the include content should be filtered out, mark all the included
-	'' tokens, so the main C parser can then mark the AST constructs
-	'' accordingly.
-	if( tkGetFlags( begin ) and TKFLAG_FILTEROUT ) then
-		tkAddFlags( begin + 1, c.x - 1, TKFLAG_FILTEROUT )
-	end if
-
-	'' Remove the TK_BEGININCLUDE/TK_ENDINCLUDE, so they won't get in the
-	'' way of C parsing (in case declarations cross #include/file boundaries).
-	tkRemove( begin, begin )
-	c.x -= 1
-	tkRemove( c.x, c.x )
-end sub
-
 '' C pre-parsing pass:
 '' This parses typedefs in order to improve cFile()'s type cast disambiguation
 '' inside #define bodies where typedefs can be used before being declared.
@@ -2106,9 +2066,6 @@ sub cPreParse( )
 		select case( tkGet( c.x ) )
 		case TK_EOF
 			exit do
-
-		case TK_ENDINCLUDE
-			cEndInclude( )
 
 		case KW_TYPEDEF
 			var t = cTypedef( )
