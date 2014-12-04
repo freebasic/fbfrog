@@ -2237,8 +2237,7 @@ private sub cppInclude( byval begin as integer )
 	'' Push the #include file context
 	cppPush( STATE_FILE, knownfile )
 
-	'' Insert this helper token so we can identify the start of #included
-	'' tokens later during cPreParse().
+	'' Insert this helper token so we can identify the start of #included tokens later
 	tkInsert( cpp.x, TK_BEGININCLUDE )
 	if( filterout ) then
 		tkAddFlags( cpp.x, cpp.x, TKFLAG_FILTEROUT )

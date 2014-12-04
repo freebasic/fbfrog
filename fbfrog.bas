@@ -27,8 +27,7 @@
 ''     affected by -filterout are marked for removal. Filenames of #include
 ''     statements from toplevel files are recorded, if they weren't found or
 ''     their code will be filtered out.
-''   * cPreParse() to identify typedefs before the main C parsing pass
-''   * C parser parses the preprocessed constructs in the tk buffer (cFile()),
+''   * C parser parses the preprocessed constructs in the tk buffer,
 ''     produces a self-contained AST
 ''   * Various steps of AST modifications to make the AST FB-friendly
 ''     (e.g. fixing identifier conflicts, or solving out redundant typedefs)
@@ -979,15 +978,6 @@ private function frogReadAPI( byval options as ASTNODE ptr ) as ASTNODE ptr
 			i = i->next
 		wend
 	end scope
-
-	'' C pre-parsing pass
-	api.cdecls = 0
-	api.stdcalls = 0
-	api.need_externblock = FALSE
-	api.uses_clong = FALSE
-	api.uses_clongdouble = FALSE
-	api.uses_wchar_t = FALSE
-	cPreParse( )
 
 	'' Parse C constructs
 	api.cdecls = 0

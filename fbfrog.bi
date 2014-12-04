@@ -870,7 +870,6 @@ declare sub hMoveDefinesOutOfConstructs( )
 declare sub cInit( )
 declare sub cEnd( )
 declare sub cAddTypedef( byval id as zstring ptr )
-declare sub cPreParse( )
 declare function cFile( ) as ASTNODE ptr
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''

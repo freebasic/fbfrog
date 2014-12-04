@@ -1,2 +1,0 @@
-// @ignore
-typedef int B;

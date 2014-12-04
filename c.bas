@@ -2055,32 +2055,6 @@ private function cBody( byval body as integer ) as ASTNODE ptr
 	function = group
 end function
 
-'' C pre-parsing pass:
-'' This parses typedefs in order to improve cFile()'s type cast disambiguation
-'' inside #define bodies where typedefs can be used before being declared.
-sub cPreParse( )
-	c.x = 0
-	do
-		var begin = c.x
-
-		select case( tkGet( c.x ) )
-		case TK_EOF
-			exit do
-
-		case KW_TYPEDEF
-			var t = cTypedef( )
-			if( c.parseok = FALSE ) then
-				c.x = hSkipConstruct( begin, FALSE )
-				c.parseok = TRUE
-			end if
-			astDelete( t )
-
-		case else
-			c.x = hSkipConstruct( begin, FALSE )
-		end select
-	loop
-end sub
-
 function cFile( ) as ASTNODE ptr
 	c.x = 0
 	function = cBody( BODY_TOPLEVEL )
