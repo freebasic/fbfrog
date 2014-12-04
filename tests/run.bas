@@ -177,6 +177,9 @@ sub hTest( byref hfile as string )
 	assert( right( hfile, 2 ) = ".h" )
 	var txtfile = left( hfile, len( hfile ) - 2 ) + ".txt"
 
+	var message = iif( is_failure_test, "FAIL", "PASS" ) + " " + hfile
+	print message;
+
 	'' ./fbfrog *.h <extraoptions> > txtfile 2>&1
 	var ln = fbfrog + " " + hfile + " " + extraoptions
 	var result = shell( ln + " > " + txtfile + " 2>&1" )
@@ -192,13 +195,7 @@ sub hTest( byref hfile as string )
 		end 1
 	end select
 
-	dim as string message, suffix
-	if( is_failure_test ) then
-		message = "FAIL"
-	else
-		message = "PASS"
-	end if
-	message += " " + hfile
+	dim as string suffix
 	if( (result <> 0) = is_failure_test ) then
 		suffix = "[ ok ]"
 		stat.oks += 1
@@ -207,9 +204,7 @@ sub hTest( byref hfile as string )
 		stat.fails += 1
 	end if
 
-	message += space( hConsoleWidth( ) - len( message ) - len( suffix ) )
-	message += suffix
-	print message
+	print space( hConsoleWidth( ) - len( message ) - len( suffix ) ) + suffix
 end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
