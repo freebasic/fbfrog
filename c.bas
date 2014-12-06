@@ -80,6 +80,15 @@ namespace c
 	dim shared as integer x, parseok
 	dim shared parentdefine as ASTNODE ptr
 	dim shared typedefs as THASH
+
+	type DEFBODYNODE
+		'' Token positions:
+		xbegin		as integer  '' Begin of the whole #define directive
+		xbodybegin	as integer  '' Begin of the #define's body
+		n		as ASTNODE ptr  '' ASTNODE (assuming it won't be deleted)
+	end type
+	dim shared defbodies as DEFBODYNODE ptr
+	dim shared as integer defbodycount, defbodyroom
 end namespace
 
 #define cIsInsideDefineBody( ) (c.parentdefine <> NULL)
@@ -98,10 +107,32 @@ sub cInit( )
 	c.x = 0
 	c.parseok = TRUE
 	c.parentdefine = NULL
+
+	c.defbodies = NULL
+	c.defbodycount = 0
+	c.defbodyroom = 0
 end sub
 
 sub cEnd( )
 	hashEnd( @c.typedefs )
+	deallocate( c.defbodies )
+end sub
+
+private sub cAddDefBody( byval xbegin as integer, byval xbodybegin as integer, byval n as ASTNODE ptr )
+	if( c.defbodyroom = c.defbodycount ) then
+		if( c.defbodyroom = 0 ) then
+			c.defbodyroom = 512
+		else
+			c.defbodyroom *= 2
+		end if
+		c.defbodies = reallocate( c.defbodies, c.defbodyroom * sizeof( *c.defbodies ) )
+	end if
+	with( c.defbodies[c.defbodycount] )
+		.xbegin = xbegin
+		.xbodybegin = xbodybegin
+		.n = n
+	end with
+	c.defbodycount += 1
 end sub
 
 sub cAddTypedef( byval id as zstring ptr )
@@ -844,7 +875,39 @@ private function cDefineBody( byval macro as ASTNODE ptr ) as integer
 	function = TRUE
 end function
 
+private function hDefBodyContainsIds( byval y as integer ) as integer
+	do
+		select case( tkGet( y ) )
+		case TK_EOL
+			exit do
+		case TK_ID
+			return TRUE
+		end select
+		y += 1
+	loop
+end function
+
+private sub cParseDefBody( byval n as ASTNODE ptr )
+	c.parentdefine = n
+
+	if( cDefineBody( n ) = FALSE ) then
+		'' We can automatically filter out certain #defines (those that
+		'' we know won't ever be needed on the FB side...)
+		n->attrib or= ASTATTRIB_FILTEROUT
+	end if
+
+	'' Didn't reach EOL? Then the beginning of the macro body could
+	'' be parsed as expression, but not the rest.
+	if( tkGet( c.x ) <> TK_EOL ) then
+		cError( "failed to parse full #define body" )
+		c.x = hSkipToEol( c.x )
+	end if
+
+	c.parentdefine = NULL
+end sub
+
 private function cDefine( ) as ASTNODE ptr
+	var begin = c.x - 1
 	c.x += 1
 
 	'' Identifier ['(' ParameterList ')']
@@ -855,23 +918,15 @@ private function cDefine( ) as ASTNODE ptr
 
 	'' Non-empty?
 	if( tkGet( c.x ) <> TK_EOL ) then
-		c.parentdefine = macro
-
-		var keep_define = cDefineBody( macro )
-
-		'' Didn't reach EOL? Then the beginning of the macro body could
-		'' be parsed as expression, but not the rest.
-		if( tkGet( c.x ) <> TK_EOL ) then
-			cError( "failed to parse full #define body" )
+		if( hDefBodyContainsIds( c.x ) ) then
+			'' Delay parsing, until we've parsed all declarations in the input.
+			'' This way we have more knowledge about typedefs etc. which could
+			'' help parsing this #define body.
+			cAddDefBody( begin, c.x, macro )
 			c.x = hSkipToEol( c.x )
-		end if
-
-		c.parentdefine = NULL
-
-		'' Silently ignore the #define?
-		if( keep_define = FALSE ) then
-			astDelete( macro )
-			macro = astNewGROUP( )
+		else
+			'' Probably a simple #define body, parse right now
+			cParseDefBody( macro )
 		end if
 	end if
 
@@ -1947,7 +2002,6 @@ end function
 private function cConstruct( byval body as integer ) as ASTNODE ptr
 	'' '#'?
 	if( (tkGet( c.x ) = TK_HASH) and (tkGetExpansionLevel( c.x ) = 0) ) then
-		var begin = c.x
 		c.x += 1
 
 		dim directive as ASTNODE ptr
@@ -2056,6 +2110,22 @@ private function cBody( byval body as integer ) as ASTNODE ptr
 end function
 
 function cFile( ) as ASTNODE ptr
-	c.x = 0
 	function = cBody( BODY_TOPLEVEL )
+
+	'' Process the #define bodies which weren't parsed yet
+	for i as integer = 0 to c.defbodycount - 1
+		with( c.defbodies[i] )
+
+			'' Parse #define body
+			c.x = .xbodybegin
+			cParseDefBody( .n )
+
+			'' Turn #define into UNKNOWN if parsing failed
+			if( c.parseok = FALSE ) then
+				.n->class = ASTCLASS_UNKNOWN
+				astSetText( .n, tkSpell( .xbegin, hSkipToEol( .xbodybegin ) ) )
+				c.parseok = TRUE
+			end if
+		end with
+	next
 end function
