@@ -29,13 +29,6 @@ dim shared as zstring ptr astnodename(0 to ...) => _
 	@"caseelse"     , _
 	@"endselect"    , _
 	@"file"         , _
-	@"noexpand"     , _
-	@"removedefine" , _
-	@"removeproc"   , _
-	@"typedefhint"  , _
-	@"reservedid"   , _
-	@"renametypedef", _
-	@"renametag"    , _
 	@"incdir"       , _
 	@"filterout"    , _
 	@"filterin"     , _

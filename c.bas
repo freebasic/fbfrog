@@ -79,7 +79,6 @@ namespace c
 	end namespace
 	dim shared as integer x, parseok
 	dim shared parentdefine as ASTNODE ptr
-	dim shared typedefs as THASH
 
 	type DEFBODYNODE
 		'' Token positions:
@@ -98,7 +97,6 @@ private sub cResetPragmaPack( )
 end sub
 
 sub cInit( )
-	hashInit( @c.typedefs, 4, TRUE )
 
 	'' Initially no packing
 	c.pragmapack.level = 0
@@ -114,7 +112,6 @@ sub cInit( )
 end sub
 
 sub cEnd( )
-	hashEnd( @c.typedefs )
 	deallocate( c.defbodies )
 end sub
 
@@ -134,14 +131,6 @@ private sub cAddDefBody( byval xbegin as integer, byval xbodybegin as integer, b
 	end with
 	c.defbodycount += 1
 end sub
-
-sub cAddTypedef( byval id as zstring ptr )
-	hashAddOverwrite( @c.typedefs, id, NULL )
-end sub
-
-private function cIsTypedef( byval id as zstring ptr ) as integer
-	function = (hashLookup( @c.typedefs, id, hashHash( id ) )->s <> NULL)
-end function
 
 private function cMatch( byval tk as integer ) as integer
 	if( tkGet( c.x ) = tk ) then
@@ -167,6 +156,15 @@ private sub cExpectMatch( byval tk as integer, byval message as zstring ptr )
 		if( frog.verbose ) then
 			print tkReport( c.x, tkMakeExpectedMessage( c.x, tkInfoPretty( tk ) + " " + *message ) )
 		end if
+	end if
+end sub
+
+private sub hMaybeRenameSymbol( byval opt as integer, byval n as ASTNODE ptr )
+	var item = hashLookup( @frog.renameopt(opt), n->text, hashHash( n->text ) )
+	if( item->s ) then
+		dim as ASTNODE ptr renameinfo = item->data
+		assert( *n->text = *renameinfo->alias )
+		astRenameSymbol( n, renameinfo->text )
 	end if
 end sub
 
@@ -286,7 +284,8 @@ private function hIsDataType( byval y as integer ) as integer
 		is_type = not cIdentifierIsMacroParam( tkSpellId( y ) )
 	case TK_ID
 		var id = tkSpellId( y )
-		if( (extradatatypesLookup( id ) <> TYPE_NONE) or cIsTypedef( id ) ) then
+		if( (extradatatypesLookup( id ) <> TYPE_NONE) or _
+		    hashContains( @frog.idopt(OPT_TYPEDEFHINT), id, hashHash( id ) ) ) then
 			is_type = not cIdentifierIsMacroParam( id )
 		end if
 	end select
@@ -393,6 +392,7 @@ private function hExpression( byval level as integer ) as ASTNODE ptr
 		'' Identifier ['(' [CallArguments] ')']
 		case TK_ID
 			a = astNewID( tkSpellId( c.x ) )
+			hMaybeRenameSymbol( OPT_RENAMETYPEDEF, a )
 			c.x += 1
 
 			select case( tkGet( c.x ) )
@@ -751,6 +751,7 @@ private function cStruct( ) as ASTNODE ptr
 	'' [Identifier]
 	if( tkGet( c.x ) = TK_ID ) then
 		astSetText( struct, tkSpellId( c.x ) )
+		hMaybeRenameSymbol( OPT_RENAMETAG, struct )
 		c.x += 1
 	end if
 
@@ -1208,6 +1209,7 @@ private sub cBaseType _
 				if( dtype = TYPE_NONE ) then
 					dtype = TYPE_UDT
 					subtype = astNewID( id )
+					hMaybeRenameSymbol( OPT_RENAMETYPEDEF, subtype )
 				end if
 
 			case KW_VOID   : dtype = TYPE_ANY
@@ -1627,7 +1629,7 @@ private function cDeclarator _
 		case DECL_LOCALSTATICVAR
 			t->attrib or= ASTATTRIB_LOCAL or ASTATTRIB_STATIC
 		case DECL_TYPEDEF
-			cAddTypedef( id )
+			hashAddOverwrite( @frog.idopt(OPT_TYPEDEFHINT), id, NULL )
 		case DECL_PARAM
 			'' Remap "byval as jmp_buf" to "byval as jmp_buf ptr"
 			'' FB's crt/setjmp.bi defines jmp_buf as an UDT, not as array type as in C.
@@ -1907,8 +1909,20 @@ private function cDeclaration( byval decl as integer, byval gccattribs as intege
 	var declarator_count = 0
 	do
 		declarator_count += 1
-		astAppend( result, cDeclarator( 0, decl, dtype, subtype, gccattribs, NULL, 0, 0, filterout ) )
-		var t = result->tail
+		var t = cDeclarator( 0, decl, dtype, subtype, gccattribs, NULL, 0, 0, filterout )
+
+		var add_to_ast = TRUE
+
+		select case( t->class )
+		case ASTCLASS_PROC
+			add_to_ast = not hashContains( @frog.idopt(OPT_REMOVEPROC), t->text, hashHash( t->text ) )
+		case ASTCLASS_TYPEDEF
+			hMaybeRenameSymbol( OPT_RENAMETYPEDEF, t )
+		end select
+
+		if( add_to_ast ) then
+			astAppend( result, t )
+		end if
 
 		'' Parameters can't have commas and more identifiers,
 		'' and don't need the ';' either.

@@ -63,6 +63,9 @@ namespace frog
 	dim shared as FROGVERSION ptr versions
 	dim shared as integer versioncount
 
+	dim shared renameopt(OPT_RENAMETYPEDEF to OPT_RENAMETAG) as THASH
+	dim shared idopt(OPT_REMOVEDEFINE to OPT_NOEXPAND) as THASH
+
 	dim shared as string prefix
 end namespace
 
@@ -104,27 +107,27 @@ private sub hPrintHelpAndExit( )
 	print "usage: fbfrog foo.h [options]"
 	print "global options:"
 	print "  @<file>          Read more command line arguments from a file"
+	print "  -o <path/file>   Set output .bi file name, or just the output directory"
+	print "  -v               Show verbose/debugging info"
 	print "  -nodefaultscript Don't use default.fbfrog implicitly"
 	print "  -windowsms       Use Extern ""Windows-MS"" instead of Extern ""Windows"""
 	print "  -syntaxonly      Disable semantic checks, translate based on syntax only"
 	print "  -fixunsizedarrays  Wrap [] arrays with a #define"
-	print "  -o <path/file>   Set output .bi file name, or just the output directory"
-	print "  -v               Show verbose/debugging info"
+	print "  -renametypedef <oldid> <newid>  Rename a typedef"
+	print "  -renametag <oldid> <newid>      Rename a struct/union/enum"
+	print "  -removedefine <id>  Don't preserve a certain #define"
+	print "  -removeproc <id>    Don't preserve a certain procedure"
+	print "  -typedefhint <id>   Mark <id> as typedef, to help parsing of type casts"
+	print "  -reservedid <id>    Rename symbols conflicting with this <id>"
+	print "  -noexpand <id>      Disable expansion of certain #define"
 	print "version-specific commands:"
+	print "  -define <id> [<body>]    Add pre-#define"
+	print "  -include <file>          Add pre-#include (will be filtered out)"
+	print "  -fbfroginclude <file>    Add pre-#include from include/fbfrog/ (will be filtered out)"
 	print "  -incdir <path>   Add #include search directory"
 	print "  -filterout <filename-pattern>  Don't preserve code from matching #includes"
 	print "  -filterin <filename-pattern>   Undo -filterout for matching #includes"
 	print "  -inclib <name>           Add an #inclib ""<name>"" statement"
-	print "  -define <id> [<body>]    Add pre-#define"
-	print "  -include <file>          Add pre-#include (will be filtered out)"
-	print "  -fbfroginclude <file>    Add pre-#include from include/fbfrog/ (will be filtered out)"
-	print "  -noexpand <id>           Disable expansion of certain #define"
-	print "  -removedefine <id>       Don't preserve a certain #define"
-	print "  -removeproc <id>         Don't preserve a certain procedure"
-	print "  -typedefhint <id>        Mark <id> as typedef, to help parsing of type casts"
-	print "  -reservedid <id>         Rename symbols conflicting with this <id>"
-	print "  -renametypedef <oldid> <newid>  Rename a typedef"
-	print "  -renametag <oldid> <newid>      Rename a struct/union/enum"
 	print "version script logic:"
 	print "  -declaredefines (<symbol>)+ [-unchecked]  Exclusive #defines"
 	print "  -declareversions <symbol> (<number>)+     Version numbers"
@@ -398,39 +401,14 @@ private sub hParseOptionWithString _
 
 end sub
 
-private sub hParseOptionWithId _
-	( _
-		byref x as integer, _
-		byval astclass as integer, _
-		byval require_2nd_id as integer _
-	)
-
-	x += 1
-
-	'' <id>
-	hExpectId( x )
-	astAppend( frog.script, astNew( astclass, tkGetText( x ) ) )
-	x += 1
-
-	if( require_2nd_id ) then
-		hExpectId( x )
-		'' renametypedef/renametag: ASTNODE.alias will hold the old id, ASTNODE.text the new one
-		astRenameSymbol( frog.script->tail, tkGetText( x ) )
-		x += 1
-	end if
-
-end sub
-
 private sub hParseArgs( byref x as integer )
 	static nestinglevel as integer
 
 	nestinglevel += 1
 
-	do
-		select case( tkGet( x ) )
-		case TK_EOF
-			exit do
-
+	while( tkGet( x ) <> TK_EOF )
+		var opt = tkGet( x )
+		select case as const( opt )
 		case OPT_NODEFAULTSCRIPT  : frog.nodefaultscript  = TRUE : x += 1
 		case OPT_WINDOWSMS        : frog.windowsms        = TRUE : x += 1
 		case OPT_SYNTAXONLY       : frog.syntaxonly       = TRUE : x += 1
@@ -443,6 +421,29 @@ private sub hParseArgs( byref x as integer )
 			'' <path>
 			hExpectPath( x )
 			frog.outname = hPathRelativeToArgsFile( x )
+			x += 1
+
+		case OPT_RENAMETYPEDEF, OPT_RENAMETAG
+			x += 1
+
+			'' <oldid>
+			hExpectId( x )
+			var n = astNew( ASTCLASS_TEXT, tkSpellId( x ) )
+			x += 1
+
+			'' <newid>
+			hExpectId( x )
+			astRenameSymbol( n, tkSpellId( x ) )
+			x += 1
+
+			hashAddOverwrite( @frog.renameopt(opt), n->alias, n )
+
+		case OPT_REMOVEDEFINE, OPT_REMOVEPROC, OPT_TYPEDEFHINT, OPT_RESERVEDID, OPT_NOEXPAND
+			x += 1
+
+			'' <id>
+			hExpectId( x )
+			hashAddOverwrite( @frog.idopt(opt), tkSpellId( x ), NULL )
 			x += 1
 
 		'' -declaredefines (<symbol>)+
@@ -514,7 +515,7 @@ private sub hParseArgs( byref x as integer )
 				case else          : tkOops( x, "-endif without -ifdef" )
 				end select
 			end if
-			exit do
+			exit while
 
 		case OPT_INCDIR
 			x += 1
@@ -560,14 +561,6 @@ private sub hParseArgs( byref x as integer )
 		case OPT_FBFROGINCLUDE
 			hParseOptionWithString( x, ASTCLASS_FBFROGPREINCLUDE, "<file> argument" )
 
-		case OPT_NOEXPAND      : hParseOptionWithId( x, ASTCLASS_NOEXPAND     , FALSE )
-		case OPT_REMOVEDEFINE  : hParseOptionWithId( x, ASTCLASS_REMOVEDEFINE , FALSE )
-		case OPT_REMOVEPROC    : hParseOptionWithId( x, ASTCLASS_REMOVEPROC   , FALSE )
-		case OPT_TYPEDEFHINT   : hParseOptionWithId( x, ASTCLASS_TYPEDEFHINT  , FALSE )
-		case OPT_RESERVEDID    : hParseOptionWithId( x, ASTCLASS_RESERVEDID   , FALSE )
-		case OPT_RENAMETYPEDEF : hParseOptionWithId( x, ASTCLASS_RENAMETYPEDEF, TRUE  )
-		case OPT_RENAMETAG     : hParseOptionWithId( x, ASTCLASS_RENAMETAG    , TRUE  )
-
 		case else
 			'' *.fbfrog file given (without @)? Treat as @file too
 			var filename = *tkGetText( x )
@@ -590,7 +583,7 @@ private sub hParseArgs( byref x as integer )
 				x += 1
 			end if
 		end select
-	loop
+	wend
 
 	nestinglevel -= 1
 end sub
@@ -794,56 +787,9 @@ private sub frogEvaluateScript _
 	frogAddVersion( conditions, options )
 end sub
 
-private sub hApplyOptions( byval n as ASTNODE ptr, byval ast as ASTNODE ptr, byval options as ASTNODE ptr )
-	var i = n->head
-	while( i )
-		var nxt = i->next
 
-		hApplyOptions( i, ast, options )
 
-		select case( i->class )
-		case ASTCLASS_TYPEDEF
-			var o = options->head
-			while( o )
-				if( o->class = ASTCLASS_RENAMETYPEDEF ) then
-					if( *i->text = *o->alias ) then
-						astReplaceSubtypes( ast, ASTCLASS_ID, o->alias, ASTCLASS_ID, o->text )
-						astSetText( i, o->text )
-					end if
-				end if
-				o = o->next
-			wend
-		case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
-			var o = options->head
-			while( o )
-				if( o->class = ASTCLASS_RENAMETAG ) then
-					if( *i->text = *o->alias ) then
-						astReplaceSubtypes( ast, ASTCLASS_TAGID, o->alias, ASTCLASS_TAGID, o->text )
-						astSetText( i, o->text )
-					end if
-				end if
-				o = o->next
-			wend
-		case ASTCLASS_PROC
-			var o = options->head
-			while( o )
-				if( o->class = ASTCLASS_REMOVEPROC ) then
-					if( *i->text = *o->text ) then
-						if( i->attrib and ASTATTRIB_STDCALL ) then
-							api.stdcalls -= 1
-						elseif( i->attrib and ASTATTRIB_CDECL ) then
-							api.cdecls -= 1
-						end if
-						astRemove( n, i )
-					end if
-				end if
-				o = o->next
-			wend
-		end select
 
-		i = nxt
-	wend
-end sub
 
 private function frogReadAPI( byval options as ASTNODE ptr ) as ASTNODE ptr
 	tkInit( )
@@ -858,12 +804,6 @@ private function frogReadAPI( byval options as ASTNODE ptr ) as ASTNODE ptr
 		while( i )
 
 			select case( i->class )
-			case ASTCLASS_NOEXPAND
-				cppNoExpandSym( i->text )
-
-			case ASTCLASS_REMOVEDEFINE
-				cppRemoveSym( i->text )
-
 			case ASTCLASS_PPDEFINE
 				dim as string prettyname, s
 
@@ -968,17 +908,6 @@ private function frogReadAPI( byval options as ASTNODE ptr ) as ASTNODE ptr
 
 	cInit( )
 
-	'' Tell the C parser about the -typedefhint options
-	scope
-		var i = options->head
-		while( i )
-			if( i->class = ASTCLASS_TYPEDEFHINT ) then
-				cAddTypedef( i->text )
-			end if
-			i = i->next
-		wend
-	end scope
-
 	'' Parse C constructs
 	api.cdecls = 0
 	api.stdcalls = 0
@@ -995,7 +924,6 @@ private function frogReadAPI( byval options as ASTNODE ptr ) as ASTNODE ptr
 	''
 	'' Work on the AST
 	''
-	hApplyOptions( ast, ast, options )
 	astSolveOutArrayTypedefs( ast, ast )
 	astSolveOutProcTypedefs( ast, ast )
 
@@ -1013,15 +941,14 @@ private function frogReadAPI( byval options as ASTNODE ptr ) as ASTNODE ptr
 
 	if( frog.syntaxonly = FALSE ) then
 		astFixIdsInit( )
-		scope
-			var i = options->head
-			while( i )
-				if( i->class = ASTCLASS_RESERVEDID ) then
-					astFixIdsAddReservedId( i->text )
+		with( frog.idopt(OPT_RESERVEDID) )
+			for i as integer = 0 to .room - 1
+				var item = .items + i
+				if( item->s ) then
+					astFixIdsAddReservedId( item->s )
 				end if
-				i = i->next
-			wend
-		end scope
+			next
+		end with
 		astFixIds( ast )
 	end if
 
@@ -1092,6 +1019,13 @@ end sub
 	fbcrtheadersInit( )
 	extradatatypesInit( )
 	lexInit( )
+
+	for i as integer = lbound( frog.renameopt ) to ubound( frog.renameopt )
+		hashInit( @frog.renameopt(i), 3, FALSE )
+	next
+	for i as integer = lbound( frog.idopt ) to ubound( frog.idopt )
+		hashInit( @frog.idopt(i), 3, TRUE )
+	next
 
 	tkInit( )
 	tkDontReportContext( )

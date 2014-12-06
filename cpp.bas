@@ -43,16 +43,6 @@
 '' statements that won't be expanded in the final binding should be preserved
 '' in the final binding, because they'll probably be needed.
 ''
-'' cppNoExpandSym() can be used to disable macro expansion for certain symbols.
-'' This should be pretty rare though; usually in headers where function
-'' declarations etc. are obfuscated by macros, they're going to need to be
-'' expanded.
-''
-'' cppRemoveSym() registers symbols (#defines/#undefs) which should be removed
-'' instead of being preserved in the binding. Doing this on the PP level instead
-'' of later in the AST is useful for #defines whose bodies can't be parsed as
-'' C expressions.
-''
 
 #include once "fbfrog.bi"
 #include once "crt.bi"
@@ -494,9 +484,6 @@ namespace cpp
 	dim shared savedmacros		as SAVEDMACRO ptr
 	dim shared savedmacrocount	as integer
 
-	dim shared noexpands		as THASH
-	dim shared removes		as THASH
-
 	dim shared incdirs		as ASTNODE ptr
 
 	'' #include exclude/include filters: GROUP of FILTEROUT/FILTERIN nodes,
@@ -539,8 +526,6 @@ sub cppInit( )
 	hashInit( @cpp.macros, 4, TRUE )
 	cpp.savedmacros = NULL
 	cpp.savedmacrocount = 0
-	hashInit( @cpp.noexpands, 4, TRUE )
-	hashInit( @cpp.removes, 4, TRUE )
 	cpp.incdirs = astNewGROUP( )
 	cpp.filters = astNewGROUP( )
 
@@ -574,8 +559,6 @@ sub cppEnd( )
 		next
 		deallocate( cpp.savedmacros )
 	end scope
-	hashEnd( @cpp.noexpands )
-	hashEnd( @cpp.removes )
 	astDelete( cpp.incdirs )
 	astDelete( cpp.filters )
 
@@ -596,14 +579,6 @@ end sub
 
 #define cppSkipping( ) (cpp.skiplevel <> MAXSTACK)
 #define cppWillBeFilteredOut( ) (cpp.filteroutlevel >= 1)
-
-sub cppNoExpandSym( byval id as zstring ptr )
-	hashAddOverwrite( @cpp.noexpands, id, NULL )
-end sub
-
-sub cppRemoveSym( byval id as zstring ptr )
-	hashAddOverwrite( @cpp.removes, id, NULL )
-end sub
 
 sub cppAddIncDir( byval incdir as ASTNODE ptr )
 	astAppend( cpp.incdirs, incdir )
@@ -673,14 +648,6 @@ end sub
 private sub cppAddKnownUndefined( byval id as zstring ptr )
 	cppAddMacro( id, NULL )
 end sub
-
-private function cppShouldExpandSym( byval id as zstring ptr ) as integer
-	function = (hashLookup( @cpp.noexpands, id, hashHash( id ) )->s = NULL)
-end function
-
-private function cppShouldRemoveSym( byval id as zstring ptr ) as integer
-	function = (hashLookup( @cpp.removes, id, hashHash( id ) )->s <> NULL)
-end function
 
 private sub hSetRemoveOnCurrentDefine( byval id as zstring ptr )
 	var definfo = cppLookupMacro( id )
@@ -1232,7 +1199,7 @@ private function hCheckForMacroCall( byval x as integer ) as DEFINEINFO ptr
 	end if
 
 	'' Only expand if not marked otherwise
-	if( (not cppShouldExpandSym( id )) or _
+	if( hashContains( @frog.idopt(OPT_NOEXPAND), id, hashHash( id ) ) or _
 	    (tkGetFlags( x ) and TKFLAG_NOEXPAND) or _
 	    (definfo->macro->attrib and ASTATTRIB_POISONED) ) then
 		return NULL
@@ -2350,7 +2317,7 @@ private sub cppDefine( byval begin as integer, byref flags as integer )
 
 	'' Normally, we preserve #define directives (unlike the other CPP directives),
 	'' thus no generic tkSetRemove() here. Unless the symbol was registed for removal.
-	if( cppShouldRemoveSym( macro->text ) = FALSE ) then
+	if( hashContains( @frog.idopt(OPT_REMOVEDEFINE), macro->text, hashHash( macro->text ) ) = FALSE ) then
 		flags and= not TKFLAG_REMOVE
 	end if
 	flags or= TKFLAG_DEFINE

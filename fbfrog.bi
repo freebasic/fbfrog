@@ -368,15 +368,26 @@ enum
 
 	TK_ARGSFILE
 	OPT__FIRST
-	OPT_NODEFAULTSCRIPT = OPT__FIRST
-	OPT_FILTEROUT
-	OPT_FILTERIN
+	OPT_O = OPT__FIRST
+	OPT_V
+	OPT_NODEFAULTSCRIPT
 	OPT_WINDOWSMS
 	OPT_SYNTAXONLY
 	OPT_FIXUNSIZEDARRAYS
-	OPT_V
+	OPT_RENAMETYPEDEF
+	OPT_RENAMETAG
+	OPT_REMOVEDEFINE
+	OPT_REMOVEPROC
+	OPT_TYPEDEFHINT
+	OPT_RESERVEDID
+	OPT_NOEXPAND
+	OPT_DEFINE
+	OPT_INCLUDE
+	OPT_FBFROGINCLUDE
 	OPT_INCDIR
-	OPT_O
+	OPT_FILTEROUT
+	OPT_FILTERIN
+	OPT_INCLIB
 	OPT_DECLAREDEFINES
 	OPT_UNCHECKED
 	OPT_DECLAREVERSIONS
@@ -388,18 +399,7 @@ enum
 	OPT_IFDEF
 	OPT_ELSE
 	OPT_ENDIF
-	OPT_INCLIB
-	OPT_DEFINE
-	OPT_INCLUDE
-	OPT_FBFROGINCLUDE
-	OPT_NOEXPAND
-	OPT_REMOVEDEFINE
-	OPT_REMOVEPROC
-	OPT_TYPEDEFHINT
-	OPT_RESERVEDID
-	OPT_RENAMETYPEDEF
-	OPT_RENAMETAG
-	OPT__LAST = OPT_RENAMETAG
+	OPT__LAST = OPT_ENDIF
 
 	TK__COUNT
 end enum
@@ -548,13 +548,6 @@ enum
 	ASTCLASS_CASEELSE
 	ASTCLASS_ENDSELECT
 	ASTCLASS_FILE
-	ASTCLASS_NOEXPAND
-	ASTCLASS_REMOVEDEFINE
-	ASTCLASS_REMOVEPROC
-	ASTCLASS_TYPEDEFHINT
-	ASTCLASS_RESERVEDID
-	ASTCLASS_RENAMETYPEDEF
-	ASTCLASS_RENAMETAG
 	ASTCLASS_INCDIR
 	ASTCLASS_FILTEROUT
 	ASTCLASS_FILTERIN
@@ -858,8 +851,6 @@ declare function hDefineHead( byref x as integer ) as ASTNODE ptr
 
 declare sub cppInit( )
 declare sub cppEnd( )
-declare sub cppNoExpandSym( byval id as zstring ptr )
-declare sub cppRemoveSym( byval id as zstring ptr )
 declare sub cppAddIncDir( byval incdir as ASTNODE ptr )
 declare sub cppAddFilter( byval filter as ASTNODE ptr )
 declare sub cppAppendIncludeDirective( byref filename as string, byval tkflags as integer )
@@ -869,7 +860,6 @@ declare sub hMoveDefinesOutOfConstructs( )
 
 declare sub cInit( )
 declare sub cEnd( )
-declare sub cAddTypedef( byval id as zstring ptr )
 declare function cFile( ) as ASTNODE ptr
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -887,6 +877,9 @@ namespace frog
 
 	extern as FROGVERSION ptr versions
 	extern as integer versioncount
+
+	extern renameopt(OPT_RENAMETYPEDEF to OPT_RENAMETAG) as THASH
+	extern idopt(OPT_REMOVEDEFINE to OPT_NOEXPAND) as THASH
 end namespace
 
 namespace api
