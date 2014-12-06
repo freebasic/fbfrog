@@ -1,4 +1,4 @@
-// @fbfrog -nonamefixup
+// @fbfrog -syntaxonly
 
 struct UDT {
 	signed int i;

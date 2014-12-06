@@ -1,4 +1,4 @@
-// @fbfrog -nonamefixup
+// @fbfrog -syntaxonly
 
 #if 0
 	extern short no;

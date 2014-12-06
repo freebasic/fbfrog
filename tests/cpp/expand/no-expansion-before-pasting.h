@@ -1,4 +1,4 @@
-// @fbfrog -nonamefixup
+// @fbfrog -syntaxonly
 
 #define m1 x1
 #define m2 x2

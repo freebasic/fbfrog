@@ -1,4 +1,4 @@
-// @fbfrog -nonamefixup
+// @fbfrog -syntaxonly
 // Indirect recursion
 #define m1 m2
 #define m2 m1

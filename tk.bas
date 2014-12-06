@@ -143,7 +143,7 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	(@"-filterout"    ), _
 	(@"-filterin"     ), _
 	(@"-windowsms"    ), _
-	(@"-nonamefixup"  ), _
+	(@"-syntaxonly"   ), _
 	(@"-fixunsizedarrays"), _
 	(@"-v"            ), _
 	(@"-incdir"       ), _

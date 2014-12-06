@@ -1,4 +1,4 @@
-// @fbfrog -nonamefixup -removedefine m1
+// @fbfrog -syntaxonly -removedefine m1
 
 // Self called in arg (ok, unlike recursion)
 #define m1(x) x

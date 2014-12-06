@@ -1,4 +1,4 @@
-// @fbfrog -nonamefixup -removedefine m1 -removedefine m2
+// @fbfrog -syntaxonly -removedefine m1 -removedefine m2
 
 // Other macro called in arg
 #define m1(a) void a(void);

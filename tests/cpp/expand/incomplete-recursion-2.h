@@ -1,4 +1,4 @@
-// @fbfrog -nonamefixup -removedefine m2
+// @fbfrog -syntaxonly -removedefine m2
 
 // Incomplete recursive macro call, not expanded
 #define m1(x) m1

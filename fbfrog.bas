@@ -55,7 +55,7 @@
 #include once "file.bi"
 
 namespace frog
-	dim shared as integer verbose, windowsms, nonamefixup, fixunsizedarrays, nodefaultscript
+	dim shared as integer verbose, windowsms, syntaxonly, fixunsizedarrays, nodefaultscript
 	dim shared as string outname, defaultoutname
 
 	dim shared as ASTNODE ptr script
@@ -106,7 +106,7 @@ private sub hPrintHelpAndExit( )
 	print "  @<file>          Read more command line arguments from a file"
 	print "  -nodefaultscript Don't use default.fbfrog implicitly"
 	print "  -windowsms       Use Extern ""Windows-MS"" instead of Extern ""Windows"""
-	print "  -nonamefixup     Don't fix symbol identifier conflicts"
+	print "  -syntaxonly      Disable semantic checks, translate based on syntax only"
 	print "  -fixunsizedarrays  Wrap [] arrays with a #define"
 	print "  -o <path/file>   Set output .bi file name, or just the output directory"
 	print "  -v               Show verbose/debugging info"
@@ -433,7 +433,7 @@ private sub hParseArgs( byref x as integer )
 
 		case OPT_NODEFAULTSCRIPT  : frog.nodefaultscript  = TRUE : x += 1
 		case OPT_WINDOWSMS        : frog.windowsms        = TRUE : x += 1
-		case OPT_NONAMEFIXUP      : frog.nonamefixup      = TRUE : x += 1
+		case OPT_SYNTAXONLY       : frog.syntaxonly       = TRUE : x += 1
 		case OPT_FIXUNSIZEDARRAYS : frog.fixunsizedarrays = TRUE : x += 1
 		case OPT_V                : frog.verbose          = TRUE : x += 1
 
@@ -1011,7 +1011,7 @@ private function frogReadAPI( byval options as ASTNODE ptr ) as ASTNODE ptr
 				ASTATTRIB_STDCALL, ASTATTRIB_CDECL ) )
 	end if
 
-	if( frog.nonamefixup = FALSE ) then
+	if( frog.syntaxonly = FALSE ) then
 		astFixIdsInit( )
 		scope
 			var i = options->head

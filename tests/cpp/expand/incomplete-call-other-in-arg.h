@@ -1,4 +1,4 @@
-// @fbfrog -nonamefixup -removedefine m1
+// @fbfrog -syntaxonly -removedefine m1
 
 #define m1(x) void x(foo)(void)
 #define m2(x) x

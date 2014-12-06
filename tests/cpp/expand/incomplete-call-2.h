@@ -1,4 +1,4 @@
-// @fbfrog -nonamefixup -removedefine m3
+// @fbfrog -syntaxonly -removedefine m3
 
 #define m1 m2
 #define m2(x) x
