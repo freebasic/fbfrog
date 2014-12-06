@@ -2663,3 +2663,27 @@ sub hMoveDefinesOutOfConstructs( )
 		wend
 	loop
 end sub
+
+sub hOnlyFilterOutWholeConstructs( )
+	var x = 0
+	while( tkGet( x ) <> TK_EOF )
+		var nxt = hSkipConstruct( x, FALSE )
+
+		'' Count occurences of TKFLAG_FILTEROUT in this construct
+		var filterouts = 0
+		for i as integer = x to nxt - 1
+			if( tkGetFlags( i ) and TKFLAG_FILTEROUT ) then
+				filterouts += 1
+			end if
+		next
+
+		'' If only some but not all tokens in the construct are marked
+		'' with TKFLAG_FILTEROUT, then we better forget about that,
+		'' otherwise we could end up deleting a partial construct...
+		if( (filterouts > 0) and (filterouts < (nxt - x)) ) then
+			tkUnsetFilterOut( x, nxt - 1 )
+		end if
+
+		x = nxt
+	wend
+end sub

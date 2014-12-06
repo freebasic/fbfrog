@@ -903,6 +903,7 @@ private function frogReadAPI( byval options as ASTNODE ptr ) as ASTNODE ptr
 	tkApplyRemoves( )
 
 	hMoveDefinesOutOfConstructs( )
+	hOnlyFilterOutWholeConstructs( )
 
 	tkTurnCPPTokensIntoCIds( )
 

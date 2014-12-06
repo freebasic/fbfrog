@@ -445,6 +445,7 @@ declare sub tkAddFlags( byval first as integer, byval last as integer, byval fla
 declare sub tkSetRemove overload( byval x as integer )
 declare sub tkSetRemove overload( byval first as integer, byval last as integer )
 declare function tkGetFlags( byval x as integer ) as integer
+declare sub tkUnsetFilterOut( byval first as integer, byval last as integer )
 declare function tkCount _
 	( _
 		byval tk as integer, _
@@ -857,6 +858,7 @@ declare sub cppAppendIncludeDirective( byref filename as string, byval tkflags a
 declare function cppTakeDirectIncludes( ) as ASTNODE ptr
 declare sub cppMain( )
 declare sub hMoveDefinesOutOfConstructs( )
+declare sub hOnlyFilterOutWholeConstructs( )
 
 declare sub cInit( )
 declare sub cEnd( )

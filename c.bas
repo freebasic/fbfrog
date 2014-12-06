@@ -77,7 +77,7 @@ namespace c
 		dim shared stack(0 to MAXLEVEL-1) as integer
 		dim shared level as integer
 	end namespace
-	dim shared as integer x, parseok
+	dim shared as integer x, parseok, filterout
 	dim shared parentdefine as ASTNODE ptr
 
 	type DEFBODYNODE
@@ -1337,10 +1337,10 @@ private function hCanHaveInitializer( byval n as ASTNODE ptr ) as integer
 	end select
 end function
 
-private function hNewProc( byval dtype as integer, byval subtype as ASTNODE ptr, byval filterout as integer ) as ASTNODE ptr
+private function hNewProc( byval dtype as integer, byval subtype as ASTNODE ptr ) as ASTNODE ptr
 	var n = astNew( ASTCLASS_PROC )
 	astSetType( n, dtype, subtype )
-	if( filterout = FALSE ) then
+	if( c.filterout = FALSE ) then
 		api.need_externblock = TRUE
 	end if
 	function = n
@@ -1348,7 +1348,7 @@ end function
 
 '' Assign the default cdecl callconv to PROC node(s) of a single declarator,
 '' if they don't have an explicit callconv yet.
-private sub hDefaultToCdecl( byval n as ASTNODE ptr, byval filterout as integer )
+private sub hDefaultToCdecl( byval n as ASTNODE ptr )
 	if( n->class = ASTCLASS_PROC ) then
 		const BOTHCALLCONVS = ASTATTRIB_CDECL or ASTATTRIB_STDCALL
 
@@ -1362,7 +1362,7 @@ private sub hDefaultToCdecl( byval n as ASTNODE ptr, byval filterout as integer 
 			cError( "cdecl/stdcall attributes specified together" )
 		end if
 
-		if( filterout = FALSE ) then
+		if( c.filterout = FALSE ) then
 			if( n->attrib and ASTATTRIB_CDECL ) then
 				api.cdecls += 1
 			elseif( n->attrib and ASTATTRIB_STDCALL ) then
@@ -1372,7 +1372,7 @@ private sub hDefaultToCdecl( byval n as ASTNODE ptr, byval filterout as integer 
 	end if
 
 	'' Visit procptr subtypes
-	if( n->subtype ) then hDefaultToCdecl( n->subtype, filterout )
+	if( n->subtype ) then hDefaultToCdecl( n->subtype )
 end sub
 
 private function hIsPlainJmpBuf( byval dtype as integer, byval subtype as ASTNODE ptr ) as integer
@@ -1534,8 +1534,7 @@ private function cDeclarator _
 		byval basegccattribs as integer, _
 		byref node as ASTNODE ptr, _
 		byref procptrdtype as integer, _
-		byref gccattribs as integer, _
-		byval filterout as integer _
+		byref gccattribs as integer _
 	) as ASTNODE ptr
 
 	var dtype = outerdtype
@@ -1590,7 +1589,7 @@ private function cDeclarator _
 
 	'' '('?
 	if( cMatch( TK_LPAREN ) ) then
-		t = cDeclarator( nestlevel + 1, decl, dtype, basesubtype, 0, innernode, innerprocptrdtype, innergccattribs, filterout )
+		t = cDeclarator( nestlevel + 1, decl, dtype, basesubtype, 0, innernode, innerprocptrdtype, innergccattribs )
 
 		'' ')'
 		cExpectMatch( TK_RPAREN, "for '(...)' parenthesized declarator" )
@@ -1615,11 +1614,11 @@ private function cDeclarator _
 		select case as const( decl )
 		case DECL_EXTERNVAR
 			t->attrib or= ASTATTRIB_EXTERN
-			if( filterout = FALSE ) then
+			if( c.filterout = FALSE ) then
 				api.need_externblock = TRUE
 			end if
 		case DECL_GLOBALVAR
-			if( filterout = FALSE ) then
+			if( c.filterout = FALSE ) then
 				api.need_externblock = TRUE
 			end if
 		case DECL_GLOBALSTATICVAR
@@ -1705,7 +1704,7 @@ private function cDeclarator _
 			'' will hold the parameters etc. found at this level.
 
 			'' New PROC node for the function pointer's subtype
-			node = hNewProc( dtype, basesubtype, filterout )
+			node = hNewProc( dtype, basesubtype )
 
 			'' Turn the object into a function pointer
 			astDelete( innernode->subtype )
@@ -1717,7 +1716,7 @@ private function cDeclarator _
 		'' Typedefs with parameters aren't turned into procs, but must
 		'' be given a PROC subtype, similar to procptrs.
 		elseif( t->class = ASTCLASS_TYPEDEF ) then
-			node = hNewProc( dtype, basesubtype, filterout )
+			node = hNewProc( dtype, basesubtype )
 
 			astDelete( t->subtype )
 			t->dtype = TYPE_PROC
@@ -1728,7 +1727,7 @@ private function cDeclarator _
 			case ASTCLASS_VAR, ASTCLASS_FIELD
 				t->class = ASTCLASS_PROC
 				t->attrib and= not ASTATTRIB_EXTERN
-				if( filterout = FALSE ) then
+				if( c.filterout = FALSE ) then
 					api.need_externblock = TRUE
 				end if
 			end select
@@ -1800,7 +1799,7 @@ private function cDeclarator _
 
 		node->attrib or= innergccattribs
 
-		hDefaultToCdecl( t, filterout )
+		hDefaultToCdecl( t )
 
 		'' dllimport on vars makes the var extern.
 		'' dllimport isn't allowed together with static.
@@ -1822,13 +1821,10 @@ end function
 '' pointer cast with parameter list etc. We need to do full declarator parsing
 '' to handle that.
 private function cDataType( ) as ASTNODE ptr
-	var filterout = ((tkGetFlags( c.x ) and TKFLAG_FILTEROUT) <> 0)
-
 	dim as integer dtype, gccattribs
 	dim as ASTNODE ptr subtype
 	cBaseType( dtype, subtype, gccattribs, DECL_DATATYPE )
-
-	function = cDeclarator( 0, DECL_DATATYPE, dtype, subtype, gccattribs, NULL, 0, 0, filterout )
+	function = cDeclarator( 0, DECL_DATATYPE, dtype, subtype, gccattribs, NULL, 0, 0 )
 end function
 
 ''
@@ -1845,7 +1841,6 @@ end function
 ''
 private function cDeclaration( byval decl as integer, byval gccattribs as integer ) as ASTNODE ptr
 	assert( decl <> DECL_DATATYPE )
-	var filterout = ((tkGetFlags( c.x ) and TKFLAG_FILTEROUT) <> 0)
 
 	'' BaseType
 	dim as integer dtype
@@ -1909,7 +1904,7 @@ private function cDeclaration( byval decl as integer, byval gccattribs as intege
 	var declarator_count = 0
 	do
 		declarator_count += 1
-		var t = cDeclarator( 0, decl, dtype, subtype, gccattribs, NULL, 0, 0, filterout )
+		var t = cDeclarator( 0, decl, dtype, subtype, gccattribs, NULL, 0, 0 )
 
 		var add_to_ast = TRUE
 
@@ -2097,6 +2092,9 @@ private function cBody( byval body as integer ) as ASTNODE ptr
 			end if
 		end select
 
+		if( body = BODY_TOPLEVEL ) then
+			c.filterout = ((tkGetFlags( c.x ) and TKFLAG_FILTEROUT) <> 0)
+		end if
 		var begin = c.x
 		var t = cConstruct( body )
 
@@ -2112,7 +2110,7 @@ private function cBody( byval body as integer ) as ASTNODE ptr
 		end if
 
 		if( t ) then
-			if( tkGetFlags( begin ) and TKFLAG_FILTEROUT ) then
+			if( c.filterout ) then
 				astSetAttribOnAll( t, ASTATTRIB_FILTEROUT )
 			end if
 		end if

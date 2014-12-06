@@ -547,6 +547,12 @@ function tkGetFlags( byval x as integer ) as integer
 	function = tkAccess( x )->flags
 end function
 
+sub tkUnsetFilterOut( byval first as integer, byval last as integer )
+	for i as integer = first to last
+		tkAccess( i )->flags and= not TKFLAG_FILTEROUT
+	next
+end sub
+
 function tkCount _
 	( _
 		byval tk as integer, _
