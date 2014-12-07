@@ -81,6 +81,12 @@
 
 #pragma message("test")
 #pragma GCC system_header
+#pragma GCC push_options
+#pragma GCC pop_options
+#pragma GCC reset_options
+#pragma GCC optimize("O0")
+#pragma GCC target("foo")
+#pragma GCC system_header
 #pragma pack(1)
 #pragma pack()
 
