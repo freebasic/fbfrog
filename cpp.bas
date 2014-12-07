@@ -1914,6 +1914,13 @@ private sub cppApplyIf( byval condition as integer )
 	end if
 end sub
 
+private function hSkipEols( byval x as integer ) as integer
+	while( tkGet( x ) = TK_EOL )
+		x += 1
+	wend
+	function = x
+end function
+
 private function cppIfExpr( ) as integer
 	'' Expand macros in the #if condition before parsing it
 	'' * but don't expand operands of the "defined" operator
@@ -1966,16 +1973,24 @@ private sub cppIfdef( byval directivekw as integer )
 	cppEol( )
 end sub
 
-'' Forget the guard (if any) for the current file context (if any).
+'' Forget the guard (if any) for the current file context
 private sub cppDisableIncludeGuardOptimization( )
-	if( cpp.level >= 1 ) then
-		with( cpp.stack(cpp.level-1) )
-			if( .knownfile >= 0 ) then
-				cppKnownFileDropGuard( .knownfile )
-			end if
-		end with
+	assert( cpp.level >= 1 )
+	assert( cpp.stack(cpp.level-1).state = STATE_FILE )
+	var knownfile = cpp.stack(cpp.level-1).knownfile
+	if( knownfile >= 0 ) then
+		cppKnownFileDropGuard( knownfile )
 	end if
 end sub
+
+'' Check whether we're inside the first nesting level inside a file
+'' (for example, an #include guard)
+private function cppInsideFileLevelBlock( ) as integer
+	assert( cpp.stack(cpp.level).state <> STATE_FILE )
+	if( cpp.level >= 1 ) then
+		function = (cpp.stack(cpp.level-1).state = STATE_FILE)
+	end if
+end function
 
 private sub cppElseIf( )
 	'' Verify #elif usage even if skipping
@@ -1987,7 +2002,9 @@ private sub cppElseIf( )
 	end select
 	cpp.x += 1
 
-	cppDisableIncludeGuardOptimization( )
+	if( cppInsideFileLevelBlock( ) ) then
+		cppDisableIncludeGuardOptimization( )
+	end if
 
 	'' Evaluate condition in case it matters:
 	''    a) not yet skipping,
@@ -2016,7 +2033,9 @@ private sub cppElse( )
 	end select
 	cpp.x += 1
 
-	cppDisableIncludeGuardOptimization( )
+	if( cppInsideFileLevelBlock( ) ) then
+		cppDisableIncludeGuardOptimization( )
+	end if
 
 	cppEol( )
 
@@ -2043,6 +2062,15 @@ private sub cppEndIf( )
 	cpp.x += 1
 
 	cppEol( )
+
+	if( cppInsideFileLevelBlock( ) ) then
+		'' If we don't reach the #include EOF directly after the #endif,
+		'' then this can't be an #include guard
+		if( tkGet( hSkipEols( cpp.x ) ) <> TK_ENDINCLUDE ) then
+			assert( tkGet( hSkipEols( cpp.x ) ) <> TK_EOF )
+			cppDisableIncludeGuardOptimization( )
+		end if
+	end if
 
 	'' If skipping due to current level, then stop skipping.
 	if( cpp.skiplevel = cpp.level ) then
@@ -2097,22 +2125,14 @@ private function hSearchHeaderFile _
 	function = ""
 end function
 
-private function hSkipEols( byval x as integer, byval delta as integer ) as integer
-	while( tkGet( x ) = TK_EOL )
-		x += delta
-	wend
-	function = x
-end function
-
-private function hDetectIncludeGuard( byval first as integer, byval last as integer ) as zstring ptr
+'' Check for the typical #include guard header:
+''    #ifndef ID <EOL> #define ID ...
+private function hDetectIncludeGuardBegin( byval first as integer ) as zstring ptr
 	assert( tkGet( first - 2 ) = TK_BEGININCLUDE )
 	assert( tkGet( first - 1 ) = TK_EOL )
-	assert( tkGet(  last + 1 ) = TK_ENDINCLUDE )
 
-	var x = hSkipEols( first, 1 )
+	var x = hSkipEols( first )
 
-	'' Does it have the following at the beginning?
-	''    #ifndef ID <EOL> #define ID ...
 	if( tkGet( x ) <> TK_HASH ) then exit function
 	x += 1
 	if( tkGet( x ) <> KW_IFNDEF ) then exit function
@@ -2129,14 +2149,6 @@ private function hDetectIncludeGuard( byval first as integer, byval last as inte
 	if( tkGet( x ) <> TK_ID ) then exit function
 	var id2 = tkGetText( x )
 	if( *id1 <> *id2 ) then exit function
-
-	'' and an <EOL>#endif at the end?
-	x = hSkipEols( last, -1 )
-	if( tkGet( x ) <> KW_ENDIF ) then exit function
-	x -= 1
-	if( tkGet( x ) <> TK_HASH ) then exit function
-	x -= 1
-	if( tkGet( x ) <> TK_EOL ) then exit function
 
 	function = id1
 end function
@@ -2272,18 +2284,18 @@ private sub cppInclude( byval begin as integer )
 	cpp.stack(cpp.level).xbegininclude = cpp.x - 2
 
 	if( cpp.files[knownfile].checked_guard = FALSE ) then
-		'' Prepare for the include guard optimization: We have to check
-		'' whether this include has ...
-		''  * an include guard, #ifndef FOO + #define FOO + #endif
-		''  * no tokens outside the include guard
-		''  * no #elif/#else in that if block
-		'' Check the first two points now:
-		var guard = hDetectIncludeGuard( cpp.x, y - 3 )
+		'' Prepare for the include guard optimization:
+		''  * Does the #include begin with the typical #include guard header?
+		''     #ifndef FOO
+		''     #define FOO
+		var guard = hDetectIncludeGuardBegin( cpp.x )
 
 		'' Store the guard (if any) for the file for the time being.
-		'' We're tracking it in the cpp.stack, so if we find an
-		'' #elif/#else later, we can mark the include guard optimization
-		'' as impossible by setting the guard to NULL.
+		'' We're tracking it in the cpp.stack, so if we find
+		''  * that there is an #elif/#else,
+		''  * or that we don't reach #include EOF after the #endif,
+		'' then we can mark the include guard optimization as impossible
+		'' by setting the guard to NULL.
 		'' (see cppDisableIncludeGuardOptimization())
 		cppKnownFileSetGuard( knownfile, guard )
 	end if
