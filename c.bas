@@ -465,7 +465,7 @@ end function
 
 private function cNumberLiteral( ) as ASTNODE ptr
 	dim errmsg as string
-	var n = hNumberLiteral( c.x, FALSE, errmsg )
+	var n = hNumberLiteral( c.x, FALSE, errmsg, c.filterout )
 	if( n = NULL ) then
 		cError( errmsg )
 		n = astNew( ASTCLASS_CONSTI, "0" )
@@ -1673,7 +1673,9 @@ private sub cBaseType _
 	case TYPE_DOUBLE
 		if( longmods = 1 ) then
 			dtype = TYPE_CLONGDOUBLE
-			api->uses_clongdouble = TRUE
+			if( c.filterout = FALSE ) then
+				api->uses_clongdouble = TRUE
+			end if
 		end if
 
 	case TYPE_ZSTRING
@@ -1693,7 +1695,9 @@ private sub cBaseType _
 			dtype = iif( unsignedmods > 0, TYPE_USHORT, TYPE_SHORT )
 		elseif( longmods = 1 ) then
 			dtype = iif( unsignedmods > 0, TYPE_CULONG, TYPE_CLONG )
-			api->uses_clong = TRUE
+			if( c.filterout = FALSE ) then
+				api->uses_clong = TRUE
+			end if
 		elseif( longmods = 2 ) then
 			dtype = iif( unsignedmods > 0, TYPE_ULONGINT, TYPE_LONGINT )
 		elseif( dtype = TYPE_LONG ) then

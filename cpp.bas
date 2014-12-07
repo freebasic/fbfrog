@@ -75,7 +75,14 @@ declare sub hMaybeExpandMacro( byref x as integer, byval inside_ifexpr as intege
 '' can decide whether it's an integer or float. This decides whether a leading
 '' zero indicates octal or not.
 ''
-function hNumberLiteral( byval x as integer, byval is_cpp as integer, byref errmsg as string ) as ASTNODE ptr
+function hNumberLiteral _
+	( _
+		byval x as integer, _
+		byval is_cpp as integer, _
+		byref errmsg as string, _
+		byval filterout as integer _
+	) as ASTNODE ptr
+
 	assert( tkGet( x ) = TK_NUMBER )
 	dim as ubyte ptr p = tkGetText( x )
 
@@ -238,7 +245,9 @@ function hNumberLiteral( byval x as integer, byval is_cpp as integer, byref errm
 			n->dtype = iif( have_u, TYPE_ULONGINT, TYPE_LONGINT )
 		elseif( have_l ) then
 			n->dtype = iif( have_u, TYPE_CULONG, TYPE_CLONG )
-			api->uses_clong = TRUE
+			if( filterout = FALSE ) then
+				api->uses_clong = TRUE
+			end if
 		else
 			n->dtype = iif( have_u, TYPE_ULONG, TYPE_LONG )
 		end if
@@ -977,7 +986,7 @@ private sub cppExpression _
 
 	case TK_NUMBER  '' Number literal
 		dim errmsg as string
-		var n = hNumberLiteral( cpp.x, TRUE, errmsg )
+		var n = hNumberLiteral( cpp.x, TRUE, errmsg, TRUE )
 		if( n = NULL ) then
 			tkOops( cpp.x, errmsg )
 		end if

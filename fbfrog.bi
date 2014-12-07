@@ -836,7 +836,13 @@ declare function emitType overload _
 declare function emitType overload( byval n as ASTNODE ptr ) as string
 declare sub emitFile( byref filename as string, byval ast as ASTNODE ptr )
 
-declare function hNumberLiteral( byval x as integer, byval is_cpp as integer, byref errmsg as string ) as ASTNODE ptr
+declare function hNumberLiteral _
+	( _
+		byval x as integer, _
+		byval is_cpp as integer, _
+		byref errmsg as string, _
+		byval filterout as integer _
+	) as ASTNODE ptr
 extern as integer cprecedence(ASTCLASS_CLOGOR to ASTCLASS_IIF)
 declare function hDefineHead( byref x as integer ) as ASTNODE ptr
 
