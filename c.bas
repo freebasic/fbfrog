@@ -33,7 +33,7 @@ declare function cExpression( ) as ASTNODE ptr
 declare function cExpressionOrInitializer( ) as ASTNODE ptr
 declare function cDataType( ) as ASTNODE ptr
 declare sub cDeclaration( byval astclass as integer, byval gccattribs as integer )
-declare function cScope( ) as ASTNODE ptr
+declare function cScope( byval proc as ASTNODE ptr ) as ASTNODE ptr
 declare sub cConstruct( )
 declare sub cBody( )
 
@@ -1261,7 +1261,7 @@ private function cDefineBody( byval macro as ASTNODE ptr ) as integer
 	'' '{'
 	case TK_LBRACE
 		if( hDefineBodyLooksLikeScopeBlock( c.x ) ) then
-			macro->expr = cScope( )
+			macro->expr = cScope( NULL )
 		else
 			macro->expr = cInitializer( )
 		end if
@@ -2598,7 +2598,7 @@ private sub cDeclaration( byval astclass as integer, byval gccattribs as integer
 				if( n->expr ) then
 					cOops( "function body redefinition for " + astDumpPrettyDecl( n ) )
 				end if
-				n->expr = cScope( )
+				n->expr = cScope( n )
 				require_semi = FALSE
 				exit do
 			end if
@@ -2664,14 +2664,26 @@ end sub
 '' Using cBody() to allow the constructs in this scope block to be parsed
 '' separately. If we can't parse one of them, then only that one will become an
 '' unknown construct. The rest of the scope can potentially be parsed fine.
-private function cScope( ) as ASTNODE ptr
+private function cScope( byval proc as ASTNODE ptr ) as ASTNODE ptr
 	'' '{'
 	assert( tkGet( c.x ) = TK_LBRACE )
 	c.x += 1
 
 	var t = astNew( ASTCLASS_SCOPEBLOCK )
 	cPush( t, TRUE, TRUE )
+
+	'' If parsing a proc body, add the parameters to the scope too,
+	'' so they can be looked up
+	if( proc ) then
+		var param = proc->head
+		while( param )
+			cAddSymbol( param )
+			param = param->next
+		wend
+	end if
+
 	cBody( )
+
 	cPop( )
 
 	'' '}'
