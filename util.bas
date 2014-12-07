@@ -549,6 +549,13 @@ function hashLookup _
 	function = item
 end function
 
+function hashLookupDataOrNull( byval h as THASH ptr, byval id as zstring ptr ) as any ptr
+	var item = hashLookup( h, id, hashHash( id ) )
+	if( item->s ) then
+		function = item->data
+	end if
+end function
+
 function hashContains _
 	( _
 		byval h as THASH ptr, _

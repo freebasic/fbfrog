@@ -1,7 +1,6 @@
 #pragma once
 
-type B as B_
 type A as B
 
-type B_
+type B
 end type

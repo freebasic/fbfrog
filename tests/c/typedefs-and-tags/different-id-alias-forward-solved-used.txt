@@ -8,4 +8,4 @@
       tests/c/typedefs-and-tags/different-id-alias-forward-solved-used.h
 [5/5] __FB_DOS__
       tests/c/typedefs-and-tags/different-id-alias-forward-solved-used.h
-emitting: tests/c/typedefs-and-tags/different-id-alias-forward-solved-used.bi (4 declarations, 0 TODOs)
+emitting: tests/c/typedefs-and-tags/different-id-alias-forward-solved-used.bi (3 declarations, 0 TODOs)

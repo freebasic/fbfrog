@@ -2,29 +2,29 @@
 
 extern "C"
 
-type __dummyid_0_tests_c_struct_struct_body_followed_by_field_declarators
+type __UDT_a
 	a as long
 end type
 
-type __dummyid_1_tests_c_struct_struct_body_followed_by_field_declarators
+type __UDT_b
 	a as long
 end type
 
-type __dummyid_2_tests_c_struct_struct_body_followed_by_field_declarators
+type __UDT_0
 	a as long
 end type
 
-type __dummyid_3_tests_c_struct_struct_body_followed_by_field_declarators
+type __UDT_1
 	a as long
 end type
 
 type UDT
-	a as __dummyid_0_tests_c_struct_struct_body_followed_by_field_declarators
-	b as __dummyid_1_tests_c_struct_struct_body_followed_by_field_declarators
-	c as __dummyid_1_tests_c_struct_struct_body_followed_by_field_declarators
-	d as __dummyid_1_tests_c_struct_struct_body_followed_by_field_declarators
-	e as __dummyid_2_tests_c_struct_struct_body_followed_by_field_declarators ptr
-	f as function() as __dummyid_3_tests_c_struct_struct_body_followed_by_field_declarators
+	a as __UDT_a
+	b as __UDT_b
+	c as __UDT_b
+	d as __UDT_b
+	e as __UDT_0 ptr
+	f as function() as __UDT_1
 end type
 
 end extern

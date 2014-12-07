@@ -1,7 +1,7 @@
 ''
 '' C parsing
 ''
-'' cFile() parses the content of the tk buffer and returns the resulting AST.
+'' This parses the content of the tk buffer and builds an AST.
 '' We have ...
 ''  * A recursive declaration parser that can handle multiple declarations in
 ''    the same statement and nested declarations such as function pointers
@@ -13,8 +13,7 @@
 ''
 '' The parser is able to recover from parsing errors, such that it can continue
 '' parsing the next construct if parsing the current one failed. The bad
-'' constructs are preserved in the AST in form of a list of tokens, together
-'' with the first error message generated when parsing it.
+'' constructs are preserved in the AST in form of ASTCLASS_UNKNOWN nodes.
 ''
 '' Even though the parser can handle a lot, it's still incomplete, and it will
 '' never be able to handle all possible #define bodies, so the error recovery
@@ -30,53 +29,78 @@
 
 #include once "fbfrog.bi"
 
-enum
-	DECL_EXTERNVAR = 0
-	DECL_GLOBALVAR
-	DECL_GLOBALSTATICVAR
-	DECL_LOCALVAR
-	DECL_LOCALSTATICVAR
-	DECL_FIELD
-	DECL_PARAM
-	DECL_TYPEDEF
-	DECL_DATATYPE
-	DECL__COUNT
-end enum
-
-dim shared as integer decl_to_astclass(0 to DECL__COUNT-1) = _
-{ _
-	ASTCLASS_VAR    , _ '' DECL_EXTERNVAR
-	ASTCLASS_VAR    , _ '' DECL_GLOBALVAR
-	ASTCLASS_VAR    , _ '' DECL_GLOBALSTATICVAR
-	ASTCLASS_VAR    , _ '' DECL_LOCALVAR
-	ASTCLASS_VAR    , _ '' DECL_LOCALSTATICVAR
-	ASTCLASS_FIELD  , _ '' DECL_FIELD
-	ASTCLASS_PARAM  , _ '' DECL_PARAM
-	ASTCLASS_TYPEDEF, _ '' DECL_TYPEDEF
-	ASTCLASS_TYPE     _ '' DECL_DATATYPE
-}
-
-enum
-	BODY_TOPLEVEL = 0
-	BODY_SCOPE
-	BODY_STRUCT
-	BODY_ENUM
-end enum
-
 declare function cExpression( ) as ASTNODE ptr
 declare function cExpressionOrInitializer( ) as ASTNODE ptr
 declare function cDataType( ) as ASTNODE ptr
-declare function cDeclaration( byval decl as integer, byval gccattribs as integer ) as ASTNODE ptr
+declare sub cDeclaration( byval astclass as integer, byval gccattribs as integer )
 declare function cScope( ) as ASTNODE ptr
-declare function cConstruct( byval body as integer ) as ASTNODE ptr
-declare function cBody( byval body as integer ) as ASTNODE ptr
+declare sub cConstruct( )
+declare sub cBody( )
+
+const BLOCKSTACKLEN = 16
 
 namespace c
+	'' We track the C namespaces so we can detect duplicate declarations
+	'' (e.g. redundant procedure declarations are allowed in C), and the
+	'' FB namespaces in order to detect symbol id conflicts.
+	''
+	'' block stack:
+	''  The toplevel context and any '{...}' block is pushed here. Holds a
+	''  pointer to the context AST node, so we know where to add the nodes
+	''  for new declarations.
+	''
+	'' namespace stack:
+	''  Any blocks holding "ordinary identifiers", i.e. vars/procs/typedefs/
+	''  enumconsts at toplevel, params inside procs, fields inside structs.
+	''  This is separate from the block stack because not all '{...}' blocks
+	''  start new namespaces (i.e. enums and anonymous nested structs).
+	''
+	'' scope stack:
+	''  Every scope is a namespace, but struct/union bodies are only
+	''  namespaces and not scopes.
+	''
+	'' This distinction between namespace & scope is only made to avoid
+	'' scoping new tags inside the '{...}' bodies of other tags. Namespaces
+	'' only capture names, but not tags.
+
+	type BLOCKNODE
+		context as ASTNODE ptr
+		start_namespace as integer
+		start_scope as integer
+	end type
+
+	type NAMESPACENODE
+		owner as ASTNODE ptr
+
+		dummyidcounter as integer
+
+		'' C "ordinary identifier" namespace (typedefs/vars/procs/fields/...)
+		cnames as THASH
+	end type
+
+	type SCOPENODE
+		owner as ASTNODE ptr
+
+		'' C tag namespace
+		ctags as THASH
+	end type
+
+	dim shared blocks(0 to BLOCKSTACKLEN-1) as BLOCKNODE
+	dim shared namespaces(0 to BLOCKSTACKLEN-1) as NAMESPACENODE
+	dim shared scopes(0 to BLOCKSTACKLEN-1) as SCOPENODE
+	dim shared as integer blocklevel, namespacelevel, scopelevel
+
+	'' Global hash table for #defines since they're not scoped
+	dim shared cdefines  as THASH
+
+	'' #pragma pack stack
 	namespace pragmapack
 		const MAXLEVEL = 128
 		dim shared stack(0 to MAXLEVEL-1) as integer
 		dim shared level as integer
 	end namespace
+
+	'' x = index of current token
 	dim shared as integer x, parseok, filterout
 	dim shared parentdefine as ASTNODE ptr
 
@@ -90,13 +114,223 @@ namespace c
 	dim shared as integer defbodycount, defbodyroom
 end namespace
 
-#define cIsInsideDefineBody( ) (c.parentdefine <> NULL)
+private function cMatch( byval tk as integer ) as integer
+	if( tkGet( c.x ) = tk ) then
+		c.x += 1
+		function = TRUE
+	end if
+end function
+
+private sub cError( byval message as zstring ptr )
+	if( c.parseok ) then
+		c.parseok = FALSE
+		if( frog.verbose ) then
+			print tkReport( c.x, message )
+		end if
+	end if
+end sub
+
+private sub cOops( byval message as zstring ptr )
+	print tkReport( c.x, message )
+	end 1
+end sub
+
+private sub cExpectMatch( byval tk as integer, byval message as zstring ptr )
+	if( tkGet( c.x ) = tk ) then
+		c.x += 1
+	elseif( c.parseok ) then
+		c.parseok = FALSE
+		if( frog.verbose ) then
+			print tkReport( c.x, tkMakeExpectedMessage( c.x, tkInfoPretty( tk ) + " " + *message ) )
+		end if
+	end if
+end sub
 
 private sub cResetPragmaPack( )
 	c.pragmapack.stack(c.pragmapack.level) = 0
 end sub
 
+private sub cPush( byval context as ASTNODE ptr, byval start_namespace as integer, byval start_scope as integer )
+	c.blocklevel += 1
+	if( c.blocklevel >= BLOCKSTACKLEN ) then
+		cOops( "too much nesting, internal stack too small" )
+	end if
+	with( c.blocks(c.blocklevel) )
+		.context = context
+		.start_namespace = start_namespace
+		.start_scope = start_scope
+	end with
+
+	if( start_namespace ) then
+		c.namespacelevel += 1
+		with( c.namespaces(c.namespacelevel) )
+			.owner = context
+			.dummyidcounter = 0
+			hashInit( @.cnames, iif( c.blocklevel = 0, 13, 5 ), FALSE )
+		end with
+	end if
+
+	if( start_scope ) then
+		c.scopelevel += 1
+		with( c.scopes(c.scopelevel) )
+			.owner = context
+			hashInit( @.ctags, iif( c.blocklevel = 0, 7, 3 ), FALSE )
+		end with
+	end if
+end sub
+
+private sub cPop( )
+	'' Pop scope if one was started at this block level
+	if( c.blocks(c.blocklevel).start_scope ) then
+		with( c.scopes(c.scopelevel) )
+			hashEnd( @.ctags )
+		end with
+		c.scopelevel -= 1
+	end if
+
+	'' Same for namespace
+	if( c.blocks(c.blocklevel).start_namespace ) then
+		with( c.namespaces(c.namespacelevel) )
+			hashEnd( @.cnames )
+		end with
+		c.namespacelevel -= 1
+	end if
+
+	c.blocklevel -= 1
+end sub
+
+private function hSolveTypedefOutIfWanted( byval n as ASTNODE ptr ) as ASTNODE ptr
+	if( n ) then
+		if( n->class = ASTCLASS_TYPEDEF ) then
+			if( n->attrib and ASTATTRIB_SOLVEOUT ) then
+				'' Currently the "solve typedef out" functionality is only used
+				'' for typedefs which alias structs
+				assert( n->dtype = TYPE_UDT )
+				assert( (n->subtype->class = ASTCLASS_STRUCT) or _
+					(n->subtype->class = ASTCLASS_UNION) or _
+					(n->subtype->class = ASTCLASS_ENUM) )
+				n = n->subtype
+			end if
+		end if
+	end if
+	function = n
+end function
+
+private function cLocalNameLookup( byval id as zstring ptr ) as ASTNODE ptr
+	function = hashLookupDataOrNull( @c.namespaces(c.namespacelevel).cnames, id )
+end function
+
+private function cFullNameLookup( byval id as zstring ptr ) as ASTNODE ptr
+	for i as integer = c.namespacelevel to 0 step -1
+		dim as ASTNODE ptr n = hashLookupDataOrNull( @c.namespaces(i).cnames, id )
+		if( n ) then
+			return n
+		end if
+	next
+end function
+
+private function cLocalTagLookup( byval id as zstring ptr ) as ASTNODE ptr
+	function = hashLookupDataOrNull( @c.scopes(c.scopelevel).ctags, id )
+end function
+
+private function cFullTagLookup( byval id as zstring ptr ) as ASTNODE ptr
+	for i as integer = c.scopelevel to 0 step -1
+		dim as ASTNODE ptr n = hashLookupDataOrNull( @c.scopes(i).ctags, id )
+		if( n ) then
+			return n
+		end if
+	next
+end function
+
+private function cDefineLookup( byval id as zstring ptr ) as ASTNODE ptr
+	function = hashLookupDataOrNull( @c.cdefines, id )
+end function
+
+private sub cAppendNode( byval n as ASTNODE ptr )
+	if( c.parseok ) then
+		astAppend( c.blocks(c.blocklevel).context, n )
+	end if
+end sub
+
+private sub hMaybeOverrideSymbolId( byval opt as integer, byval n as ASTNODE ptr )
+	dim as ASTNODE ptr renameinfo = hashLookupDataOrNull( @frog.renameopt(opt), n->text )
+	if( renameinfo ) then
+		assert( *n->text = *renameinfo->alias )
+		astSetText( n, renameinfo->text )
+	end if
+end sub
+
+private sub cAddSymbol( byval n as ASTNODE ptr )
+	'' Add the symbol to the proper C namespace
+	dim chashtb as THASH ptr
+	select case( n->class )
+	case ASTCLASS_PPDEFINE
+		chashtb = @c.cdefines
+	case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
+		chashtb = @c.scopes(c.scopelevel).ctags
+	case else
+		chashtb = @c.namespaces(c.namespacelevel).cnames
+	end select
+	hashAddOverwrite( chashtb, n->text, n )
+
+	'' Override the symbol's original id if a rename was requested on the command line
+	'' We do this after adding it to the hashtb under its original name, because then
+	'' we'll still be able to lookup references to the old name, and they will automatically
+	'' reference the symbol with its new name.
+	select case( n->class )
+	case ASTCLASS_TYPEDEF
+		hMaybeOverrideSymbolId( OPT_RENAMETYPEDEF, n )
+	case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
+		hMaybeOverrideSymbolId( OPT_RENAMETAG, n )
+	end select
+end sub
+
+private sub cAddToplevelSymbol( byval n as ASTNODE ptr )
+	var old_blocklevel = c.blocklevel
+	var old_namespacelevel = c.namespacelevel
+	var old_scopelevel = c.scopelevel
+
+	c.blocklevel = 0
+	c.namespacelevel = 0
+	c.scopelevel = 0
+
+	cAddSymbol( n )
+
+	c.blocklevel = old_blocklevel
+	c.namespacelevel = old_namespacelevel
+	c.scopelevel = old_scopelevel
+end sub
+
+private function cIsTypedef( byval id as zstring ptr ) as integer
+	'' 1. Check C parser's symbol table
+	var n = cFullNameLookup( id )
+	if( n ) then
+		'' Known symbol; we can tell whether it's a typedef or not
+		return (n->class = ASTCLASS_TYPEDEF)
+	end if
+
+	'' 2. Check -typedefhint options
+	function = hashContains( @frog.idopt(OPT_TYPEDEFHINT), id, hashHash( id ) )
+end function
+
+private function cIdentifierIsMacroParam( byval id as zstring ptr ) as integer
+	if( c.parentdefine ) then
+		function = (astLookupMacroParam( c.parentdefine, id ) >= 0)
+	else
+		function = FALSE
+	end if
+end function
+
 sub cInit( )
+	'' AST root node
+	api->ast = astNew( ASTCLASS_GROUP )
+
+	'' Init toplevel scope
+	c.blocklevel = -1
+	c.namespacelevel = -1
+	c.scopelevel = -1
+	cPush( api->ast, TRUE, TRUE )
+	hashInit( @c.cdefines, 8, FALSE )
 
 	'' Initially no packing
 	c.pragmapack.level = 0
@@ -112,6 +346,14 @@ sub cInit( )
 end sub
 
 sub cEnd( )
+	'' Cleanup toplevel scope
+	cPop( )
+	assert( c.blocklevel = -1 )
+	assert( c.namespacelevel = -1 )
+	assert( c.scopelevel = -1 )
+
+	hashEnd( @c.cdefines )
+
 	deallocate( c.defbodies )
 end sub
 
@@ -131,69 +373,6 @@ private sub cAddDefBody( byval xbegin as integer, byval xbodybegin as integer, b
 	end with
 	c.defbodycount += 1
 end sub
-
-private function cMatch( byval tk as integer ) as integer
-	if( tkGet( c.x ) = tk ) then
-		c.x += 1
-		function = TRUE
-	end if
-end function
-
-private sub cError( byval message as zstring ptr )
-	if( c.parseok ) then
-		c.parseok = FALSE
-		if( frog.verbose ) then
-			print tkReport( c.x, message )
-		end if
-	end if
-end sub
-
-private sub cExpectMatch( byval tk as integer, byval message as zstring ptr )
-	if( tkGet( c.x ) = tk ) then
-		c.x += 1
-	elseif( c.parseok ) then
-		c.parseok = FALSE
-		if( frog.verbose ) then
-			print tkReport( c.x, tkMakeExpectedMessage( c.x, tkInfoPretty( tk ) + " " + *message ) )
-		end if
-	end if
-end sub
-
-private sub hMaybeRenameSymbol( byval opt as integer, byval n as ASTNODE ptr )
-	var item = hashLookup( @frog.renameopt(opt), n->text, hashHash( n->text ) )
-	if( item->s ) then
-		dim as ASTNODE ptr renameinfo = item->data
-		assert( *n->text = *renameinfo->alias )
-		astRenameSymbol( n, renameinfo->text )
-	end if
-end sub
-
-''
-'' Generate place-holder names for unnamed structs/unions/enums when needed.
-'' The id should be unique, no name conflicts should be introduced due to this,
-'' and multiple structs within one parsing pass or from separate parsing passes
-'' shouldn't share the same id.
-''
-'' We should take care that dummyid's are specific to the current binding, in
-'' order to avoid multiple bindings using the same dummyid, because they would
-'' conflict if the bindings are used together.
-''
-private function cMakeDummyId( ) as string
-	static n as integer
-
-	var dummyid = "__dummyid_" & n
-	n += 1
-
-	var location = tkGetLocation( c.x )
-	if( location->source ) then
-		var filename = *location->source->name
-		filename = pathStripCurdir( filename )
-		filename = strReplaceNonIdChars( pathStripExt( filename ), CH_UNDERSCORE )
-		dummyid += "_" + filename
-	end if
-
-	function = dummyid
-end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
@@ -221,7 +400,7 @@ private function cStringLiteralSequence( ) as ASTNODE ptr
 			end if
 			c.x += 1
 
-			s = astNew( ASTCLASS_STRINGIFY, astNewID( tkGetText( c.x ) ) )
+			s = astNew( ASTCLASS_STRINGIFY, astNewTEXT( tkGetText( c.x ) ) )
 
 		case else
 			exit while
@@ -237,14 +416,6 @@ private function cStringLiteralSequence( ) as ASTNODE ptr
 	wend
 
 	function = a
-end function
-
-private function cIdentifierIsMacroParam( byval id as zstring ptr ) as integer
-	if( c.parentdefine ) then
-		function = (astLookupMacroParam( c.parentdefine, id ) >= 0)
-	else
-		function = FALSE
-	end if
 end function
 
 ''
@@ -284,8 +455,7 @@ private function hIsDataType( byval y as integer ) as integer
 		is_type = not cIdentifierIsMacroParam( tkSpellId( y ) )
 	case TK_ID
 		var id = tkSpellId( y )
-		if( (extradatatypesLookup( id ) <> TYPE_NONE) or _
-		    hashContains( @frog.idopt(OPT_TYPEDEFHINT), id, hashHash( id ) ) ) then
+		if( (extradatatypesLookup( id ) <> TYPE_NONE) or cIsTypedef( id ) ) then
 			is_type = not cIdentifierIsMacroParam( id )
 		end if
 	end select
@@ -302,6 +472,28 @@ private function cNumberLiteral( ) as ASTNODE ptr
 		astSetType( n, TYPE_LONG, NULL )
 	end if
 	c.x += 1
+	function = n
+end function
+
+private function hLookupOrAddName( byval id as zstring ptr ) as ASTNODE ptr
+	'' Known typedef/proc/var?
+	var n = hSolveTypedefOutIfWanted( cFullNameLookup( id ) )
+	if( n ) then return n
+
+	'' #define?
+	n = cDefineLookup( id )
+	if( n ) then return n
+
+	'' Macro param (if inside #define body)?
+	if( c.parentdefine ) then
+		if( astLookupMacroParam( c.parentdefine, id, n ) >= 0 ) then
+			return n
+		end if
+	end if
+
+	'' Add as unknown id
+	n = astNewTEXT( id )
+	cAddSymbol( n )
 	function = n
 end function
 
@@ -336,7 +528,7 @@ private function hExpression( byval level as integer ) as ASTNODE ptr
 
 			'' Find the ')' and check the token behind it, in some cases
 			'' we can tell that it probably isn't a cast.
-			var closingparen = hFindClosingParen( c.x - 1, cIsInsideDefineBody( ), FALSE )
+			var closingparen = hFindClosingParen( c.x - 1, (c.parentdefine <> NULL), FALSE )
 			select case( tkGet( closingparen + 1 ) )
 			case TK_RPAREN, TK_EOF, TK_EOL
 				is_cast = FALSE
@@ -354,11 +546,12 @@ private function hExpression( byval level as integer ) as ASTNODE ptr
 				cExpectMatch( TK_RPAREN, "behind the data type" )
 
 				'' Expression
-				a = astNew( ASTCLASS_CAST, cExpression( ) )
+				a = cExpression( )
 
-				assert( t->class = ASTCLASS_TYPE )
-				astSetType( a, t->dtype, astClone( t->subtype ) )
-				astDelete( t )
+				assert( t->class = ASTCLASS_DATATYPE )
+				t->class = ASTCLASS_CAST
+				astAppend( t, a )
+				a = t
 			else
 				'' Expression
 				a = hExpression( 0 )
@@ -366,8 +559,8 @@ private function hExpression( byval level as integer ) as ASTNODE ptr
 				'' ')'
 				cExpectMatch( TK_RPAREN, "to close '(...)' parenthesized expression" )
 
-				if( a->class = ASTCLASS_ID ) then
-					if( cIdentifierIsMacroParam( a->text ) ) then
+				if( a->class = ASTCLASS_SYM ) then
+					if( a->expr->class = ASTCLASS_MACROPARAM ) then
 						a->attrib or= ASTATTRIB_PARENTHESIZEDMACROPARAM
 					end if
 				end if
@@ -391,14 +584,15 @@ private function hExpression( byval level as integer ) as ASTNODE ptr
 
 		'' Identifier ['(' [CallArguments] ')']
 		case TK_ID
-			a = astNewID( tkSpellId( c.x ) )
-			hMaybeRenameSymbol( OPT_RENAMETYPEDEF, a )
+			a = astNewSYM( hLookupOrAddName( tkSpellId( c.x ) ) )
 			c.x += 1
 
 			select case( tkGet( c.x ) )
 			'' '('?
 			case TK_LPAREN
-				a->class = ASTCLASS_CALL
+				var callnode = astNew( ASTCLASS_CALL )
+				callnode->expr = a
+				a = callnode
 				c.x += 1
 
 				'' [CallArguments]
@@ -425,7 +619,7 @@ private function hExpression( byval level as integer ) as ASTNODE ptr
 				do
 					'' Identifier?
 					if( tkGet( c.x ) = TK_ID ) then
-						astAppend( a, astNewID( tkSpellId( c.x ) ) )
+						astAppend( a, astNewSYM( hLookupOrAddName( tkSpellId( c.x ) ) ) )
 						c.x += 1
 					else
 						cError( "expected identifier as operand of '##' PP merge operator" + tkButFound( c.x ) )
@@ -469,9 +663,14 @@ private function hExpression( byval level as integer ) as ASTNODE ptr
 				id = *tkSpellId( c.x )
 			else
 				cError( "expected identifier" + tkButFound( c.x ) )
-				id = cMakeDummyId( )
+				id = "<error-recovery>"
 			end if
-			a = astNew( ASTCLASS_CDEFINED, id )
+			a = cDefineLookup( id )
+			if( a = NULL ) then
+				a = astNewTEXT( id )
+				cAddSymbol( a )
+			end if
+			a = astNew( ASTCLASS_CDEFINED, astNewSYM( a ) )
 			c.x += 1
 
 			if( have_parens ) then
@@ -594,7 +793,7 @@ private sub cSkipToRparen( )
 	do
 		select case( tkGet( c.x ) )
 		case TK_LPAREN, TK_LBRACKET, TK_LBRACE
-			c.x = hFindClosingParen( c.x, cIsInsideDefineBody( ), TRUE )
+			c.x = hFindClosingParen( c.x, (c.parentdefine <> NULL), TRUE )
 		case TK_RPAREN, TK_EOF
 			exit do
 		end select
@@ -691,21 +890,26 @@ end sub
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 '' Enum constant: Identifier ['=' Expression] (',' | '}')
-private function cEnumConst( ) as ASTNODE ptr
-	var t = astNew( ASTCLASS_ENUMCONST )
-
+private sub cEnumConst( )
 	'' Identifier
-	if( tkGet( c.x ) = TK_ID ) then
-		astSetText( t, tkSpellId( c.x ) )
-	else
+	if( tkGet( c.x ) <> TK_ID ) then
 		cError( "expected identifier for an enum constant" + tkButFound( c.x ) )
+		exit sub
+	end if
+	var n = astNew( ASTCLASS_ENUMCONST, tkSpellId( c.x ) )
+	dim existing as ASTNODE ptr
+	if( frog.syntaxonly = FALSE ) then
+		existing = cLocalNameLookup( n->text )
+		if( existing ) then
+			cOops( astDumpPrettyDecl( n ) + " redefined" )
+		end if
 	end if
 	c.x += 1
 
 	'' '='?
 	if( cMatch( TK_EQ ) ) then
 		'' Expression
-		t->expr = cExpression( )
+		n->expr = cExpression( )
 	end if
 
 	'' (',' | '}')
@@ -719,12 +923,92 @@ private function cEnumConst( ) as ASTNODE ptr
 		cError( "expected ',' or '}' behind enum constant" + tkButFound( c.x ) )
 	end select
 
-	function = t
+	if( c.parseok ) then
+		if( existing = NULL ) then
+			cAddSymbol( n )
+		end if
+		cAppendNode( n )
+	end if
+end sub
+
+'' Decide whether an anonymous struct/union/enum body is "standalone",
+'' or "inline" as part of a declaration.
+private function hIsStandaloneTagBody( byval y as integer, byref followingid as string ) as integer
+	'' '{'
+	assert( tkGet( y ) = TK_LBRACE )
+
+	'' '}'?
+	y = hFindClosingParen( y, (c.parentdefine <> NULL), TRUE )
+	if( tkGet( y ) <> TK_RBRACE ) then
+		exit function
+	end if
+	y += 1
+
+	'' __attribute__(...)?
+	if( (tkGet( y ) = KW___ATTRIBUTE__) and (tkGet( y + 1 ) = TK_LPAREN) ) then
+		y += 1
+		y = hFindClosingParen( y, (c.parentdefine <> NULL), TRUE )
+	end if
+
+	'' ';'? If there is a ';' directly behind the struct body, then it's
+	'' not a declaration, but just the struct. If there's a declarator,
+	'' then it's a declaration.
+	select case( tkGet( y ) )
+	case TK_SEMI
+		return TRUE
+	case TK_ID
+		followingid = *tkSpellId( y )
+	end select
+
+	function = FALSE
+end function
+
+'' Generate an id for an unnamed tag declared "inline" as part of another declaration
+'' For example:
+''    struct A {
+''        struct {
+''            int i;
+''        } x;
+''    };
+'' becomes:
+''    type __A_x
+''        i as long
+''    end type
+''    type A
+''        x as __A_x
+''    end type
+private function hGenerateTagId( byref followingid as string ) as string
+	var id = "_"
+
+	'' Make it context-specific (this way we can hopefully avoid conflicts
+	'' between different bindings, and still get nice merging behaviour),
+	'' by prefixing all the parent "namespaces"
+	for i as integer = 1 to c.namespacelevel
+		var owner = c.namespaces(i).owner
+		assert( owner->text )
+		if( (owner->attrib and ASTATTRIB_GENERATEDID) = 0 ) then
+			id += "_" + *owner->text
+		end if
+	next
+
+	'' Also include the name (if known) of the field/var/proc/... whose
+	'' declaration contained this tag definition.
+	if( len( followingid ) > 0 ) then
+		id += "_" + followingid
+	else
+		'' Use a context-specific counter
+		with( c.namespaces(c.namespacelevel) )
+			id += "_" & .dummyidcounter
+			.dummyidcounter += 1
+		end with
+	end if
+
+	function = id
 end function
 
 '' {STRUCT|UNION|ENUM} [Identifier] '{' StructBody|EnumBody '}'
 '' {STRUCT|UNION|ENUM} Identifier
-private function cStruct( ) as ASTNODE ptr
+private function cTag( ) as ASTNODE ptr
 	'' {STRUCT|UNION|ENUM}
 	dim as integer astclass
 	select case( tkGet( c.x ) )
@@ -738,54 +1022,164 @@ private function cStruct( ) as ASTNODE ptr
 	end select
 	c.x += 1
 
-	var struct = astNew( astclass )
-
-	select case( astclass )
-	case ASTCLASS_STRUCT, ASTCLASS_UNION
-		struct->maxalign = c.pragmapack.stack(c.pragmapack.level)
-	end select
-
 	'' __attribute__((...))
-	cGccAttributeList( struct->attrib )
+	dim gccattrib as integer
+	cGccAttributeList( gccattrib )
 
 	'' [Identifier]
+	dim tagid as zstring ptr
 	if( tkGet( c.x ) = TK_ID ) then
-		astSetText( struct, tkSpellId( c.x ) )
-		hMaybeRenameSymbol( OPT_RENAMETAG, struct )
+		tagid = tkSpellId( c.x )
 		c.x += 1
 	end if
 
 	'' '{'?
-	if( tkGet( c.x ) = TK_LBRACE ) then
-		c.x += 1
+	var is_body = (tkGet( c.x ) = TK_LBRACE)
 
-		astAppend( struct, _
-			cBody( iif( astclass = ASTCLASS_ENUM, _
-				BODY_ENUM, BODY_STRUCT ) ) )
-
-		'' '}'
-		cExpectMatch( TK_RBRACE, "to close " + astDumpPrettyDecl( struct ) + " block" )
-
-		'' __attribute__((...))
-		cGccAttributeList( struct->attrib )
-	else
-		if( struct->text = NULL ) then
-			cError( "expected '{' or tag name behind " + astDumpPrettyDecl( struct ) + tkButFound( c.x ) )
-			astSetText( struct, cMakeDummyId( ) )
-		end if
-
-		'' It's just a tag name, not a body
-		struct->class = ASTCLASS_TAGID
+	'' Non-body tag references can't be anonymous
+	if( (not is_body) and (tagid = NULL) ) then
+		cError( "expected '{' or tag name" + tkButFound( c.x ) )
+		tagid = @"<error-recovery>"
 	end if
 
-	function = struct
+	''
+	'' Named tag bodies go to the current scope, potentially overriding bodies from parent scopes.
+	'' Duplicates in the same scope aren't allowed.
+	''
+	'' Non-body tags on the other hand reference the "nearest" tag body, from the same scope,
+	'' or from a parent scope. If there is no body, all references with the same name point to
+	'' the same toplevel node (until a body is defined; from then on all further references
+	'' within that scope will reference the body there).
+	''
+	dim tag as ASTNODE ptr
+	if( tagid <> NULL ) then
+		if( is_body ) then
+			if( frog.syntaxonly = FALSE ) then
+				tag = cLocalTagLookup( tagid )
+			end if
+		else
+			tag = cFullTagLookup( tagid )
+		end if
+		if( tag ) then
+			if( (tag->class <> astclass) and (not frog.syntaxonly) ) then
+				cOops( astDumpPrettyDecl( tag ) + " redeclared as different kind of tag" )
+			end if
+		end if
+	end if
+
+	if( tag = NULL ) then
+		tag = astNew( astclass, tagid )
+		if( c.filterout ) then
+			tag->attrib or= ASTATTRIB_FILTEROUT
+		end if
+		if( is_body ) then
+			'' Add new non-anonymous tags to current scope
+			if( tag->text ) then
+				cAddSymbol( tag )
+			end if
+		else
+			'' Add new non-body tags to toplevel scope
+			cAddToplevelSymbol( tag )
+		end if
+	end if
+
+	if( (tag->text <> NULL) and (not c.filterout) ) then
+		apiAddTag( tag )
+	end if
+
+	tag->attrib or= gccattrib
+
+	if( is_body ) then
+		if( tag->attrib and ASTATTRIB_BODYDEFINED ) then
+			cOops( astDumpPrettyDecl( tag ) + " body redefined" )
+		end if
+		tag->attrib or= ASTATTRIB_BODYDEFINED
+
+		select case( astclass )
+		case ASTCLASS_STRUCT, ASTCLASS_UNION
+			tag->maxalign = c.pragmapack.stack(c.pragmapack.level)
+		end select
+
+		var is_nested_struct = FALSE
+
+		'' Anonymous?
+		if( tag->text = NULL ) then
+			dim followingid as string
+			if( hIsStandaloneTagBody( c.x, followingid ) ) then
+				'' Anonymous standalone tag body
+				'' struct/union:
+				''    it's an anonymous nested struct/union (assuming we're inside another struct/union)
+				''    which can be anonymous & nested in FB too.
+				'' enum:
+				''    it's just an anonymous enum
+				is_nested_struct = (astclass <> ASTCLASS_ENUM)
+			else
+				'' Anonymous "inline" tag body (part of a declaration)
+				'' We must give it an a id, because FB doesn't have "inline" UDTs/enums.
+				'' (it's not an anonymous nested struct/union or anonymous enum)
+				astSetText( tag, hGenerateTagId( followingid ) )
+				tag->attrib or= ASTATTRIB_GENERATEDID
+			end if
+		end if
+
+		'' '{'
+		c.x += 1
+
+		if( c.parseok and (not c.filterout) ) then
+			if( is_nested_struct ) then
+				'' anonymous nested struct/union:
+				'' Add to current block as-is, inside the parent struct/union.
+				astAppend( c.blocks(c.blocklevel).context, tag )
+			else
+				'' enum, normal struct/union:
+				'' Add to the current scope, as opposed to the current block.
+				'' FB doesn't allow UDTs to be declared inside others.
+				'' Inside another struct?
+				var scopeowner = c.scopes(c.scopelevel).owner
+				var namespaceowner = c.namespaces(c.namespacelevel).owner
+				if( namespaceowner <> scopeowner ) then
+					'' The parent struct must already be added to the current scope.
+					'' All new structs from inside a struct must be added in front of it,
+					'' because it could reference them.
+					var i = scopeowner->tail
+					while( i <> namespaceowner )
+						i = i->prev
+					wend
+					astInsert( scopeowner, tag, i )
+				else
+					astAppend( scopeowner, tag )
+				end if
+			end if
+		end if
+
+		'' normal struct/union:
+		''    Open new namespace for capturing the fields.
+		'' enum, anonymous nested struct/union:
+		''    No new namespace; symbols are added to the parent's namespace
+		'' No new scope in either case, because we don't want to capture tags
+		'' inside this tag's body.
+		cPush( tag, (astclass <> ASTCLASS_ENUM) and (not is_nested_struct), FALSE )
+
+		'' Parse struct/union/enum body
+		cBody( )
+
+		cPop( )
+
+		'' '}'
+		cExpectMatch( TK_RBRACE, "to close " + astDumpPrettyDecl( tag ) + " block" )
+
+		'' __attribute__((...))
+		cGccAttributeList( tag->attrib )
+	end if
+
+	function = tag
 end function
 
-private function cTypedef( ) as ASTNODE ptr
+private sub cTypedef( )
 	'' TYPEDEF
 	c.x += 1
-	function = cDeclaration( DECL_TYPEDEF, 0 )
-end function
+	cDeclaration( ASTCLASS_TYPEDEF, 0 )
+end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
@@ -851,7 +1245,7 @@ private function cDefineBody( byval macro as ASTNODE ptr ) as integer
 	'' '{'
 	case TK_LBRACE
 		if( hDefineBodyLooksLikeScopeBlock( c.x ) ) then
-			macro->expr = astNew( ASTCLASS_SCOPEBLOCK, cScope( ) )
+			macro->expr = cScope( )
 		else
 			macro->expr = cInitializer( )
 		end if
@@ -890,6 +1284,7 @@ end function
 
 private sub cParseDefBody( byval n as ASTNODE ptr )
 	c.parentdefine = n
+	cPush( n, TRUE, TRUE )
 
 	if( cDefineBody( n ) = FALSE ) then
 		'' We can automatically filter out certain #defines (those that
@@ -904,20 +1299,32 @@ private sub cParseDefBody( byval n as ASTNODE ptr )
 		c.x = hSkipToEol( c.x )
 	end if
 
+	cPop( )
 	c.parentdefine = NULL
 end sub
 
-private function cDefine( ) as ASTNODE ptr
+private sub cDefine( )
 	var begin = c.x - 1
 	c.x += 1
 
 	'' Identifier ['(' ParameterList ')']
 	var macro = hDefineHead( c.x )
 
-	'' Body
-	assert( macro->expr = NULL )
+	var existing = cDefineLookup( macro->text )
+	if( existing ) then
+		'' There can already be a TEXT node (undeclared id) in case it was used in a #define body
+		'' before being declared. If so, we want to turn the TEXT into a proper declaration.
+		assert( existing->class = ASTCLASS_TEXT )
+		astCopy( existing, macro )
+		macro = existing
+	end if
+	if( c.filterout ) then
+		macro->attrib or= ASTATTRIB_FILTEROUT
+	end if
+	cAddSymbol( macro )
 
-	'' Non-empty?
+	'' Body?
+	assert( macro->expr = NULL )
 	if( tkGet( c.x ) <> TK_EOL ) then
 		if( hDefBodyContainsIds( c.x ) ) then
 			'' Delay parsing, until we've parsed all declarations in the input.
@@ -935,8 +1342,10 @@ private function cDefine( ) as ASTNODE ptr
 	assert( tkGet( c.x ) = TK_EOL )
 	c.x += 1
 
-	function = macro
-end function
+	if( c.parseok ) then
+		cAppendNode( macro )
+	end if
+end sub
 
 private function cPragmaPackNumber( ) as integer
 	var n = cNumberLiteral( )
@@ -944,11 +1353,10 @@ private function cPragmaPackNumber( ) as integer
 		exit function
 	end if
 	c.pragmapack.stack(c.pragmapack.level) = astEvalConstiAsInt64( n )
-	astDelete( n )
 	function = TRUE
 end function
 
-private function cPragmaPack( ) as ASTNODE ptr
+private function cPragmaPack( ) as integer
 	'' pack
 	assert( tkGet( c.x ) = TK_ID )
 	assert( tkSpell( c.x ) = "pack" )
@@ -1014,12 +1422,11 @@ private function cPragmaPack( ) as ASTNODE ptr
 	assert( tkGet( c.x ) = TK_EOL )
 	c.x += 1
 
-	'' Don't preserve the directive
-	function = astNewGROUP( )
+	function = TRUE
 end function
 
 '' #pragma comment(lib, "...")
-function cPragmaComment( ) as ASTNODE ptr
+private sub cPragmaComment( )
 	'' comment
 	assert( tkGet( c.x ) = TK_ID )
 	assert( tkSpell( c.x ) = "comment" )
@@ -1072,8 +1479,8 @@ function cPragmaComment( ) as ASTNODE ptr
 		libname = left( libname, len( libname ) - 2 )
 	end if
 
-	function = astNew( ASTCLASS_INCLIB, libname )
-end function
+	cAppendNode( astNew( ASTCLASS_INCLIB, libname ) )
+end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
@@ -1112,7 +1519,7 @@ private sub cBaseType _
 		byref dtype as integer, _
 		byref subtype as ASTNODE ptr, _
 		byref gccattribs as integer, _
-		byval decl as integer _
+		byval astclass as integer _
 	)
 
 	dtype = TYPE_NONE
@@ -1175,7 +1582,7 @@ private sub cBaseType _
 			select case( tkGet( c.x ) )
 			case KW_ENUM, KW_STRUCT, KW_UNION
 				dtype = TYPE_UDT
-				subtype = cStruct( )
+				subtype = cTag( )
 				c.x -= 1
 
 			case TK_ID
@@ -1208,8 +1615,20 @@ private sub cBaseType _
 				dtype = extradatatypesLookup( id )
 				if( dtype = TYPE_NONE ) then
 					dtype = TYPE_UDT
-					subtype = astNewID( id )
-					hMaybeRenameSymbol( OPT_RENAMETYPEDEF, subtype )
+					subtype = cFullNameLookup( id )
+					if( subtype ) then
+						select case( subtype->class )
+						case ASTCLASS_TYPEDEF, ASTCLASS_TEXT
+							'' It can be an existing typedef, or an unknown id
+						case else
+							cOops( "expected data type" + tkButFound( c.x ) )
+						end select
+						subtype = hSolveTypedefOutIfWanted( subtype )
+					else
+						'' Unknown identifier; assume it's a typedef
+						subtype = astNewTEXT( id )
+						cAddSymbol( subtype )
+					end if
 				end if
 
 			case KW_VOID   : dtype = TYPE_ANY
@@ -1233,7 +1652,7 @@ private sub cBaseType _
 	case TYPE_DOUBLE
 		if( longmods = 1 ) then
 			dtype = TYPE_CLONGDOUBLE
-			api.uses_clongdouble = TRUE
+			api->uses_clongdouble = TRUE
 		end if
 
 	case TYPE_ZSTRING
@@ -1253,7 +1672,7 @@ private sub cBaseType _
 			dtype = iif( unsignedmods > 0, TYPE_USHORT, TYPE_SHORT )
 		elseif( longmods = 1 ) then
 			dtype = iif( unsignedmods > 0, TYPE_CULONG, TYPE_CLONG )
-			api.uses_clong = TRUE
+			api->uses_clong = TRUE
 		elseif( longmods = 2 ) then
 			dtype = iif( unsignedmods > 0, TYPE_ULONGINT, TYPE_LONGINT )
 		elseif( dtype = TYPE_LONG ) then
@@ -1267,15 +1686,7 @@ private sub cBaseType _
 			dtype = TYPE_LONG
 		else
 			'' No modifiers and no explicit "int" either
-			var message = "expected a data type"
-			select case( decl )
-			case DECL_DATATYPE
-			case DECL_PARAM
-				message += " starting a parameter declaration"
-			case else
-				message += " starting a declaration"
-			end select
-			cError( message + tkButFound( c.x ) )
+			cError( "expected a data type" + tkButFound( c.x ) )
 		end if
 	end select
 
@@ -1306,27 +1717,19 @@ end sub
 
 '' ParamDeclList = ParamDecl (',' ParamDecl)*
 '' ParamDecl = '...' | Declaration{Param}
-private function cParamDeclList( ) as ASTNODE ptr
-	var group = astNewGROUP( )
-
+private sub cParamDeclList( )
 	do
-		dim as ASTNODE ptr t
-
 		'' '...'?
 		if( tkGet( c.x ) = TK_ELLIPSIS ) then
-			t = astNew( ASTCLASS_PARAM )
+			cAppendNode( astNew( ASTCLASS_PARAM ) )
 			c.x += 1
 		else
-			t = cDeclaration( DECL_PARAM, 0 )
+			cDeclaration( ASTCLASS_PARAM, 0 )
 		end if
-
-		astAppend( group, t )
 
 		'' ','?
 	loop while( cMatch( TK_COMMA ) and c.parseok )
-
-	function = group
-end function
+end sub
 
 private function hCanHaveInitializer( byval n as ASTNODE ptr ) as integer
 	select case( n->class )
@@ -1337,51 +1740,228 @@ private function hCanHaveInitializer( byval n as ASTNODE ptr ) as integer
 	end select
 end function
 
-private function hNewProc( byval dtype as integer, byval subtype as ASTNODE ptr ) as ASTNODE ptr
-	var n = astNew( ASTCLASS_PROC )
-	astSetType( n, dtype, subtype )
-	if( c.filterout = FALSE ) then
-		api.need_externblock = TRUE
-	end if
-	function = n
-end function
+private sub hTypedefExpansionFailed( byval n as ASTNODE ptr )
+	cError( "can't solve out " + astDumpPrettyDecl( n->subtype ) + " in " + astDumpPrettyDecl( n ) )
+end sub
 
-'' Assign the default cdecl callconv to PROC node(s) of a single declarator,
-'' if they don't have an explicit callconv yet.
-private sub hDefaultToCdecl( byval n as ASTNODE ptr )
-	if( n->class = ASTCLASS_PROC ) then
-		const BOTHCALLCONVS = ASTATTRIB_CDECL or ASTATTRIB_STDCALL
+private sub hExpandArrayTypedef( byval n as ASTNODE ptr )
+	'' Array types can only be solved out if it's not a pointer (FB doesn't support pointers to arrays)
+	if( typeGetPtrCount( n->dtype ) > 0 ) then
+		hTypedefExpansionFailed( n )
+		exit sub
+	end if
+
+	var typedef = n->subtype
+	astSetType( n, typeGetConst( n->dtype ) or typedef->dtype, typedef->subtype )
+	if( n->array = NULL ) then
+		n->array = astNew( ASTCLASS_ARRAY )
+	end if
+	astAppend( n->array, astCloneChildren( typedef->array ) )
+end sub
+
+''
+'' Expand the function typedef used in the given declaration.
+''
+'' For example, given a declaration using a function typedef like this one:
+''    typedef int (F)(int);
+''
+'' we want to expand the typedef into the declaration:
+''    F f;             =>    int f1(int);            (what looked like a var really is a proc)
+''    F *p;            =>    int (*p)(int);          (procptr var)
+''    void f(F *p);    =>    void f(int (*p)(int));  (procptr param)
+''    typedef F G;     =>    typedef int (G)(int);   (and then later we process G too)
+''
+'' because FB doesn't support function typedefs.
+''
+'' If there's a CONST on the function type, e.g.:
+''    typedef int (T)(int);
+''    T const f;
+'' it will be overwritten and lost, i.e. we ignore it. According to
+'' gcc -pedantic, "ISO C forbids qualified function types", and it seems like
+'' the C++ standard requires cv-qualifiers to be ignored in such cases.
+''
+'' When expanding into a pointer, some of the existing CONSTs there need to be
+'' preserved though:
+''    a * const p1;
+'' becomes:
+''    int (* const p1)(int);
+'' But as above, cv-qualifiers on the function type don't make sense and should
+'' be ignored, e.g. in case of:
+''    a const * p1;
+''
+private sub hExpandProcTypedef( byval n as ASTNODE ptr )
+	var typedef = n->subtype
+
+	select case( n->class )
+	case ASTCLASS_VAR, ASTCLASS_FIELD
+		'' Not a pointer?
+		if( typeGetPtrCount( n->dtype ) = 0 ) then
+			'' This is ok for vars/fields; they just become procedures themselves.
+			'' (although with fields that can only really happen in C++ code)
+			var proc = typedef->subtype
+			assert( proc->class = ASTCLASS_PROC )
+
+			'' Copy over the function result type (overwriting any previous cv-qualifiers),
+			'' parameters, and callconv attributes
+			n->class = ASTCLASS_PROC
+			n->dtype = proc->dtype
+			n->subtype = proc->subtype
+			assert( n->head = NULL )
+			astAppend( n, astCloneChildren( proc ) )
+			n->attrib or= proc->attrib and (not ASTATTRIB_FILTEROUT)
+
+			exit sub
+		end if
+
+		'' var/field; it's a pointer to the function type; ok
+
+	case ASTCLASS_TYPEDEF
+		'' Expanding typedef in another typedef; always ok
+
+	case else
+		'' Anywhere else (params, function results, casts, sizeof):
+		'' must be a pointer to the function type, or we can't expand the typedef
+		if( typeGetPtrCount( n->dtype ) = 0 ) then
+			hTypedefExpansionFailed( n )
+			exit sub
+		end if
+	end select
+
+	'' Insert the typedef's type, overwriting the use of the typedef
+	assert( typeGetDtAndPtr( typedef->dtype ) = TYPE_PROC )
+	n->dtype = typeUnsetBaseConst( typeSetDt( n->dtype, TYPE_PROC ) )
+	n->subtype = typedef->subtype
+	'' The PROC subtype must be duplicated if inside a #define body so it
+	'' can be given unique callconv treatment by astHideCallConv().
+	if( c.parentdefine ) then
+		n->subtype = astClone( n->subtype )
+	end if
+end sub
+
+private sub hPostprocessDeclarator( byval n as ASTNODE ptr )
+	if( typeGetDt( n->dtype ) = TYPE_UDT ) then
+		select case( n->subtype->class )
+		case ASTCLASS_TYPEDEF
+			''
+			'' Solve out array & function typedefs
+			''
+			'' Array/function typedefs are not supported in FB. If this declaration
+			'' uses such a type as its data type, we can solve out the typedef and
+			'' turn the declaration itself into an array or procedure, respectively.
+			''
+			'' Since typedefs are also processed this way here, we can be sure that
+			'' typedefs themselves are already fully expanded when reaching another
+			'' declaration using one of these typedefs. Thus, expanding a typedef
+			'' doesn't cause a need for further expansions.
+			''
+			if( n->subtype->array ) then
+				hExpandArrayTypedef( n )
+			elseif( typeGetDtAndPtr( n->subtype->dtype ) = TYPE_PROC ) then
+				hExpandProcTypedef( n )
+			end if
+
+		case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
+			var tag = n->subtype
+
+			''
+			'' Detect usage of declared but undefined tags
+			''
+			'' Tags may be used before being defined. FB does not support implicit forward
+			'' references like that; instead, forward references can only be introduced by
+			'' explicit typedefs. And even then, only the name used in the forward-declaration
+			'' and not the forward-reference itself can be used (until the forward-reference
+			'' is "resolved"), except in other typedefs (which can be forward declarations
+			'' using the same forward-reference).
+			''
+			'' Thus, we may need to add a forward reference for a tag if it's used before being defined.
+			'' However, we don't want to do that if such usage occurs only as part of typedefs, because
+			'' then it's ok for FB. It's best to avoid unnecessary forward declarations.
+			''
+			'' Undefined?
+			if( ((tag->attrib and ASTATTRIB_BODYDEFINED) = 0) and (n->class <> ASTCLASS_TYPEDEF) ) then
+				tag->attrib or= ASTATTRIB_USEBEFOREDEF
+			end if
+		end select
+	end if
+
+	select case( n->class )
+	case ASTCLASS_PARAM
+		'' Remap "byval as jmp_buf" to "byval as jmp_buf ptr"
+		'' jmp_buf is defined as array type in C, and arrays are passed byref in C.
+		'' Since FB's crt/setjmp.bi defines jmp_buf as a simple UDT, we have to handle
+		'' the "byref" part manually. Strictly speaking fbfrog should produce "byref as jmp_buf",
+		'' but traditionally FB's headers always used a "byval as jmp_buf ptr"...
+		if( typeGetDtAndPtr( n->dtype ) = TYPE_UDT ) then
+			if( *n->subtype->text = "jmp_buf" ) then
+				n->dtype = typeAddrOf( n->dtype )
+			end if
+		end if
+
+		'' C array parameter? It's really just a pointer (the array is passed byref).
+		'' FB doesn't support C array parameters like that, so turn them into pointers:
+		''    int a[5]  ->  byval a as long ptr
+		if( n->array ) then
+			n->array = NULL
+			n->dtype = typeAddrOf( n->dtype )
+		end if
+
+	case ASTCLASS_PROC
+		'' Ignore extern on procedures, not needed explicitly
+		n->attrib and= not ASTATTRIB_EXTERN
 
 		'' Default to cdecl, if there's no explicit callconv attribute yet
-		if( (n->attrib and BOTHCALLCONVS) = 0 ) then
+		if( (n->attrib and ASTATTRIB__CALLCONV) = 0 ) then
 			n->attrib or= ASTATTRIB_CDECL
 
 		'' And show an error if conflicting attributes were given
 		'' (perhaps we just made a mistake assigning them - better safe...)
-		elseif( (n->attrib and BOTHCALLCONVS) = BOTHCALLCONVS ) then
+		elseif( (n->attrib and ASTATTRIB__CALLCONV) = ASTATTRIB__CALLCONV ) then
 			cError( "cdecl/stdcall attributes specified together" )
 		end if
 
 		if( c.filterout = FALSE ) then
 			if( n->attrib and ASTATTRIB_CDECL ) then
-				api.cdecls += 1
+				api->cdecls += 1
 			elseif( n->attrib and ASTATTRIB_STDCALL ) then
-				api.stdcalls += 1
+				api->stdcalls += 1
 			end if
 		end if
-	end if
+	end select
+
+	'' Handle declarations with plain char/zstring or wchar_t/wstring data type,
+	'' not pointers though.
+	'' If it's a char array, then it's probably supposed to be a string.
+	'' If it's just a char, then it's probably supposed to be a byte.
+	select case( typeGetDtAndPtr( n->dtype ) )
+	case TYPE_ZSTRING, TYPE_WSTRING
+		if( n->array ) then
+			'' Use the last (inner-most) array dimension as the fixed-length string size
+			var d = n->array->tail
+			assert( d->class = ASTCLASS_DIMENSION )
+			assert( d->expr )
+			n->subtype = astClone( d->expr )
+			astRemove( n->array, d )
+
+			'' If no dimensions left, remove the array type entirely
+			if( n->array->head = NULL ) then
+				n->array = NULL
+			end if
+		else
+			'' Turn zstring/wstring into byte/wchar_t, but preserve CONSTs
+			if( typeGetDtAndPtr( n->dtype ) = TYPE_ZSTRING ) then
+				n->dtype = typeGetConst( n->dtype ) or TYPE_BYTE
+			else
+				api->uses_wchar_t = TRUE
+				n->dtype = typeGetConst( n->dtype ) or TYPE_WCHAR_T
+			end if
+		end if
+	end select
 
 	'' Visit procptr subtypes
-	if( n->subtype ) then hDefaultToCdecl( n->subtype )
-end sub
-
-private function hIsPlainJmpBuf( byval dtype as integer, byval subtype as ASTNODE ptr ) as integer
-	if( typeGetDtAndPtr( dtype ) = TYPE_UDT ) then
-		if( subtype->class = ASTCLASS_ID ) then
-			function = (*subtype->text = "jmp_buf")
-		end if
+	if( typeGetDt( n->dtype ) = TYPE_PROC ) then
+		hPostprocessDeclarator( n->subtype )
 	end if
-end function
+end sub
 
 ''
 '' Declarator =
@@ -1389,7 +1969,6 @@ end function
 ''    ('*' [CONST|GccAttributeList])*
 ''    { [Identifier] | '(' Declarator ')' }
 ''    { '(' ParamList ')' | ('[' ArrayElements ']')* }
-''    [ '=' Initializer ]
 ''    GccAttributeList
 ''
 '' This needs to parse things like:
@@ -1528,7 +2107,7 @@ end function
 private function cDeclarator _
 	( _
 		byval nestlevel as integer, _
-		byval decl as integer, _
+		byval astclass as integer, _
 		byval outerdtype as integer, _
 		byval basesubtype as ASTNODE ptr, _
 		byval basegccattribs as integer, _
@@ -1589,7 +2168,7 @@ private function cDeclarator _
 
 	'' '('?
 	if( cMatch( TK_LPAREN ) ) then
-		t = cDeclarator( nestlevel + 1, decl, dtype, basesubtype, 0, innernode, innerprocptrdtype, innergccattribs )
+		t = cDeclarator( nestlevel + 1, astclass, dtype, basesubtype, 0, innernode, innerprocptrdtype, innergccattribs )
 
 		'' ')'
 		cExpectMatch( TK_RPAREN, "for '(...)' parenthesized declarator" )
@@ -1598,45 +2177,19 @@ private function cDeclarator _
 		'' An identifier must exist, except for parameters/types, and
 		'' in fact for types there mustn't be an id.
 		dim as string id
-		if( decl <> DECL_DATATYPE ) then
+		if( astclass <> ASTCLASS_DATATYPE ) then
 			if( tkGet( c.x ) = TK_ID ) then
 				id = *tkSpellId( c.x )
 				c.x += 1
 			else
-				if( decl <> DECL_PARAM ) then
+				if( astclass <> ASTCLASS_PARAM ) then
 					cError( "expected identifier for the symbol declared in this declaration" + tkButFound( c.x ) )
-					id = cMakeDummyId( )
+					id = "<error-recovery>"
 				end if
 			end if
 		end if
 
-		t = astNew( decl_to_astclass(decl), id )
-		select case as const( decl )
-		case DECL_EXTERNVAR
-			t->attrib or= ASTATTRIB_EXTERN
-			if( c.filterout = FALSE ) then
-				api.need_externblock = TRUE
-			end if
-		case DECL_GLOBALVAR
-			if( c.filterout = FALSE ) then
-				api.need_externblock = TRUE
-			end if
-		case DECL_GLOBALSTATICVAR
-			t->attrib or= ASTATTRIB_STATIC
-		case DECL_LOCALVAR
-			t->attrib or= ASTATTRIB_LOCAL
-		case DECL_LOCALSTATICVAR
-			t->attrib or= ASTATTRIB_LOCAL or ASTATTRIB_STATIC
-		case DECL_TYPEDEF
-			hashAddOverwrite( @frog.idopt(OPT_TYPEDEFHINT), id, NULL )
-		case DECL_PARAM
-			'' Remap "byval as jmp_buf" to "byval as jmp_buf ptr"
-			'' FB's crt/setjmp.bi defines jmp_buf as an UDT, not as array type as in C.
-			'' All (plain) jmp_buf parameters actually are pointers to a jmp_buf struct.
-			if( hIsPlainJmpBuf( dtype, basesubtype ) ) then
-				dtype = typeAddrOf( dtype )
-			end if
-		end select
+		t = astNew( astclass, id )
 		astSetType( t, dtype, basesubtype )
 	end if
 
@@ -1647,7 +2200,7 @@ private function cDeclarator _
 	case TK_LBRACKET
 		'' Can't allow arrays on everything - currently, it's only
 		'' handled for vars/fields/params/typedefs
-		if( decl = DECL_DATATYPE ) then
+		if( node->class = ASTCLASS_DATATYPE ) then
 			cError( "TODO: arrays not supported here yet" )
 		end if
 
@@ -1676,11 +2229,9 @@ private function cDeclarator _
 			'' '['? (next dimension)
 		loop while( (tkGet( c.x ) = TK_LBRACKET) and c.parseok )
 
-		hHandleArrayParam( node )
-
 	'' ':' <bits>
 	case TK_COLON
-		if( decl <> DECL_FIELD ) then
+		if( node->class <> ASTCLASS_FIELD ) then
 			cError( "bitfields not supported here" )
 		end if
 		c.x += 1
@@ -1704,31 +2255,35 @@ private function cDeclarator _
 			'' will hold the parameters etc. found at this level.
 
 			'' New PROC node for the function pointer's subtype
-			node = hNewProc( dtype, basesubtype )
+			node = astNew( ASTCLASS_PROC )
+			astSetType( node, dtype, basesubtype )
+			if( c.filterout = FALSE ) then
+				api->need_externblock = TRUE
+			end if
 
 			'' Turn the object into a function pointer
-			astDelete( innernode->subtype )
 			innernode->dtype = innerprocptrdtype
 			innernode->subtype = node
 
 			innerprocptrdtype = TYPE_PROC
-
-		'' Typedefs with parameters aren't turned into procs, but must
-		'' be given a PROC subtype, similar to procptrs.
-		elseif( t->class = ASTCLASS_TYPEDEF ) then
-			node = hNewProc( dtype, basesubtype )
-
-			astDelete( t->subtype )
-			t->dtype = TYPE_PROC
-			t->subtype = node
 		else
-			'' A plain symbol, not a pointer, becomes a function
 			select case( t->class )
+			'' Typedefs with parameters aren't turned into procs, but must
+			'' be given a PROC subtype, similar to procptrs.
+			case ASTCLASS_TYPEDEF
+				node = astNew( ASTCLASS_PROC )
+				astSetType( node, dtype, basesubtype )
+				if( c.filterout = FALSE ) then
+					api->need_externblock = TRUE
+				end if
+				t->dtype = TYPE_PROC
+				t->subtype = node
+
+			'' A plain symbol, not a pointer, becomes a function
 			case ASTCLASS_VAR, ASTCLASS_FIELD
 				t->class = ASTCLASS_PROC
-				t->attrib and= not ASTATTRIB_EXTERN
 				if( c.filterout = FALSE ) then
-					api.need_externblock = TRUE
+					api->need_externblock = TRUE
 				end if
 			end select
 		end if
@@ -1739,34 +2294,19 @@ private function cDeclarator _
 			c.x += 1
 		'' Not just '()'?
 		elseif( tkGet( c.x ) <> TK_RPAREN ) then
-			astAppend( node, cParamDeclList( ) )
+			assert( node->class = ASTCLASS_PROC )
+			cPush( node, TRUE, TRUE )
+			cParamDeclList( )
+			cPop( )
 		end if
 
 		'' ')'
 		cExpectMatch( TK_RPAREN, "to close parameter list in function declaration" )
 	end select
 
-	hHandlePlainCharAfterArrayStatusIsKnown( iif( t = node, t, node ) )
-
 	'' __ATTRIBUTE__((...))
 	var endgccattribs = 0
 	cGccAttributeList( endgccattribs )
-
-	if( hCanHaveInitializer( t ) ) then
-		'' ['=' Initializer]
-		if( cMatch( TK_EQ ) ) then
-			assert( t->expr = NULL )
-			t->expr = cExpressionOrInitializer( )
-
-			'' If it's an array, then it must be an array initializer (or a string literal),
-			'' not a struct initializer
-			if( t->array ) then
-				if( t->expr->class = ASTCLASS_STRUCTINIT ) then
-					t->expr->class = ASTCLASS_ARRAYINIT
-				end if
-			end if
-		end if
-	end if
 
 	if( nestlevel > 0 ) then
 		'' __attribute__'s from this level should always be passed up
@@ -1784,32 +2324,31 @@ private function cDeclarator _
 	else
 		'' At toplevel nothing can be passed up, everything must be assigned.
 		'' __attribute__'s from the base type go to the toplevel symbol
-		'' that's being declared, for example a function, except if it's
-		'' a function pointer variable, then the __attribute__'s go to
-		'' the procptr subtype, not the variable.
+		'' that's being declared. If it's a function pointer, then callconv
+		'' attributes go to the proc subtype, not the procptr var.
 
 		basegccattribs or= gccattribs or endgccattribs
 
 		if( (typeGetDt( t->dtype ) = TYPE_PROC) and (t->class <> ASTCLASS_PROC) ) then
 			assert( t->subtype->class = ASTCLASS_PROC )
-			t->subtype->attrib or= basegccattribs
+			t->subtype->attrib or= basegccattribs and ASTATTRIB__CALLCONV
+			t->attrib or= basegccattribs and (not ASTATTRIB__CALLCONV)
 		else
 			t->attrib or= basegccattribs
 		end if
 
 		node->attrib or= innergccattribs
 
-		hDefaultToCdecl( t )
-
-		'' dllimport on vars makes the var extern.
-		'' dllimport isn't allowed together with static.
-		if( (t->class = ASTCLASS_VAR) and (t->attrib and ASTATTRIB_DLLIMPORT) ) then
+		'' dllimport implies extern, and isn't allowed together with static
+		if( t->attrib and ASTATTRIB_DLLIMPORT ) then
 			if( t->attrib and ASTATTRIB_STATIC ) then
 				cError( "static dllimport" )
 				t->attrib and= not ASTATTRIB_STATIC
 			end if
 			t->attrib or= ASTATTRIB_EXTERN
 		end if
+
+		hPostprocessDeclarator( t )
 	end if
 
 	function = t
@@ -1823,8 +2362,8 @@ end function
 private function cDataType( ) as ASTNODE ptr
 	dim as integer dtype, gccattribs
 	dim as ASTNODE ptr subtype
-	cBaseType( dtype, subtype, gccattribs, DECL_DATATYPE )
-	function = cDeclarator( 0, DECL_DATATYPE, dtype, subtype, gccattribs, NULL, 0, 0 )
+	cBaseType( dtype, subtype, gccattribs, ASTCLASS_DATATYPE )
+	function = cDeclarator( 0, ASTCLASS_DATATYPE, dtype, subtype, gccattribs, NULL, 0, 0 )
 end function
 
 ''
@@ -1839,62 +2378,24 @@ end function
 ''
 '' Declaration = GccAttributeList BaseType Declarator (',' Declarator)* [';']
 ''
-private function cDeclaration( byval decl as integer, byval gccattribs as integer ) as ASTNODE ptr
-	assert( decl <> DECL_DATATYPE )
-
+private sub cDeclaration( byval astclass as integer, byval gccattribs as integer )
 	'' BaseType
 	dim as integer dtype
 	dim as ASTNODE ptr subtype
-	cBaseType( dtype, subtype, gccattribs, decl )
+	cBaseType( dtype, subtype, gccattribs, astclass )
 
-	var result = astNewGROUP( )
-
-	'' Special case for standalone struct/union/enum declarations (no CONST bits):
-	if( dtype = TYPE_UDT ) then
+	'' Special case for standalone struct/union/enum declarations:
+	if( typeGetDtAndPtr( dtype ) = TYPE_UDT ) then
 		'' Tag declaration with body?
 		''    STRUCT|UNION|ENUM Identifier '{' ... '}' ';'
-		select case( subtype->class )
-		case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
-			'' ';'?
-			if( cMatch( TK_SEMI ) ) then
-				astUnscopeDeclsNestedInStruct( result, subtype )
-				astAppend( result, subtype )
-				return result
-			end if
-
 		'' Useless tag declaration?
 		''    STRUCT|UNION|ENUM Identifier ';'
-		case ASTCLASS_TAGID
-			'' ';'?
-			if( cMatch( TK_SEMI ) ) then
-				'' Ignore & treat as no-op
-				astDelete( subtype )
-				return result
-			end if
-		end select
-	end if
-
-	'' Special case for struct/union/enum bodies used as basedtype:
-	'' Turn the struct/union/enum body into a separate declaration (as
-	'' needed by FB) and make the basedtype reference it by name.
-	if( typeGetDtAndPtr( dtype ) = TYPE_UDT ) then
 		select case( subtype->class )
 		case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
-			var struct = subtype
-
-			'' Make up an id for anonymous structs, for use as the base type
-			'' of following declarators. If it turns out to be unnecessary,
-			'' we can still solve it out later.
-			if( struct->text = NULL ) then
-				astSetText( struct, cMakeDummyId( ) )
-				struct->attrib or= ASTATTRIB_DUMMYID
+			'' ';'?
+			if( cMatch( TK_SEMI ) ) then
+				exit sub
 			end if
-
-			subtype = astNew( ASTCLASS_TAGID, struct->text )
-			subtype->attrib or= struct->attrib and ASTATTRIB_DUMMYID
-
-			astUnscopeDeclsNestedInStruct( result, struct )
-			astAppend( result, struct )
 		end select
 	end if
 
@@ -1904,35 +2405,175 @@ private function cDeclaration( byval decl as integer, byval gccattribs as intege
 	var declarator_count = 0
 	do
 		declarator_count += 1
-		var t = cDeclarator( 0, decl, dtype, subtype, gccattribs, NULL, 0, 0 )
+		var n = cDeclarator( 0, astclass, dtype, subtype, gccattribs, NULL, 0, 0 )
 
+		if( c.filterout ) then
+			n->attrib or= ASTATTRIB_FILTEROUT
+		end if
+
+		'' filterout vs add_to_ast:
+		'' Declarations that are going to be filtered out must still be added to the AST for
+		'' symbol renaming (astFixIds()) which will be done after C parsing. This way the
+		'' renaming produces the same result no matter whether some files are being filtered
+		'' out or not.
+		'' add_to_ast on the other hand is for C declarations which we're going to
+		'' solve out right here as if they never existed (e.g. because they can't
+		'' be translated to FB).
+		var add_to_namespace = TRUE
 		var add_to_ast = TRUE
 
-		select case( t->class )
+		select case( n->class )
 		case ASTCLASS_PROC
-			add_to_ast = not hashContains( @frog.idopt(OPT_REMOVEPROC), t->text, hashHash( t->text ) )
+			if( c.filterout = FALSE ) then
+				api->need_externblock = TRUE
+			end if
+
+			'' Should this procedure be removed?
+			if( hashContains( @frog.idopt(OPT_REMOVEPROC), n->text, hashHash( n->text ) ) ) then
+				add_to_namespace = FALSE
+				add_to_ast = FALSE
+			end if
+
+		case ASTCLASS_VAR
+			if( c.filterout = FALSE ) then
+				api->need_externblock or= ((n->attrib and ASTATTRIB_EXTERN) <> 0)
+				api->need_externblock or= ((n->attrib and ASTATTRIB_STATIC) = 0)
+			end if
+
 		case ASTCLASS_TYPEDEF
-			hMaybeRenameSymbol( OPT_RENAMETYPEDEF, t )
+			'' Don't preserve array/function typedefs
+			add_to_ast and= (n->array = NULL)
+			add_to_ast and= (typeGetDtAndPtr( n->dtype ) <> TYPE_PROC)
+
+			'' Is this typedef just an alias for a struct tag id?
+			if( typeGetDtAndPtr( n->dtype ) = TYPE_UDT ) then
+				select case( n->subtype->class )
+				case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
+					'' Was it an unnamed struct (which was given a generated id in cTag())?
+					if( n->subtype->attrib and ASTATTRIB_GENERATEDID ) then
+						'' They should be in the same scope/namespace,
+						'' since it's an unnamed struct, that must have been
+						'' defined within the typedef declaration... (being unnamed,
+						'' it couldn't possibly be looked up from a parent scope)
+						''
+						'' This means we have something like:
+						''    typedef struct { ... } A;
+						'' bad translation:
+						''    type generatedid
+						''        ...
+						''    end type
+						''    type A as generatedid
+						'' good translation (typedef dropped):
+						''    type A
+						''        ...
+						''    end type
+						add_to_ast = FALSE
+
+						'' Rename the struct to the same id as the typedef
+						astSetText( n->subtype, n->text )
+						n->subtype->attrib and= not ASTATTRIB_GENERATEDID
+
+						'' Re-add to scope under the new id (we don't remove the hashtb entry under the old id,
+						'' but that's ok, the id string and ASTNODE pointers both stay valid, and it's just the
+						'' generatedid anyways which will never be looked up...)
+						cAddSymbol( n->subtype )
+
+						'' We still have to track the typedef symbol to be able to
+						'' look it up when it's used in the code. But whenever that
+						'' happens, we can solve the typedef out, i.e. reference its
+						'' subtype instead of itself.
+						n->attrib or= ASTATTRIB_SOLVEOUT
+
+					'' Filter out "redundant" typedefs, for example:
+					''    typedef struct T T;
+					elseif( *n->text = *n->subtype->text ) then
+						add_to_ast = FALSE
+
+						'' ditto
+						n->attrib or= ASTATTRIB_SOLVEOUT
+					end if
+				end select
+			end if
 		end select
 
-		if( add_to_ast ) then
-			astAppend( result, t )
+		if( c.parseok ) then
+			if( n->text ) then
+				var existing = cLocalNameLookup( n->text )
+				if( existing ) then
+					'' Declared symbol already exists, so this most likely is a redeclaration.
+					'' Otherwise it would be invalid C.
+					if( frog.syntaxonly = FALSE ) then
+						if( existing->class = n->class ) then
+							select case( n->class )
+							case ASTCLASS_PARAM, ASTCLASS_FIELD
+								'' These can't be redeclared even if the signatures match
+								cOops( "duplicate definition: " + astDumpPrettyDecl( n ) )
+							end select
+						end if
+
+						if( existing->class = ASTCLASS_TEXT ) then
+							'' There can already be a TEXT node (undeclared id) in case it was used in a #define body
+							'' before being declared. If so, we want to turn the TEXT into a proper declaration.
+							astCopy( existing, n )
+						else
+							'' We don't check that the signatures are really the same, because that's quite some work
+							'' and most likely never useful/needed. For example, doing the check requires resolving typedefs
+							'' to their real type, but we may not be able to do that due to incomplete input.
+							'' Also, sometimes declarations really aren't exactly the same, but are accepted by the C compiler;
+							'' e.g. one has some __attribute__ and the other doesn't.
+							add_to_ast = FALSE
+						end if
+						n = existing
+					end if
+					add_to_namespace = FALSE
+				end if
+			else
+				'' Anonymous parameter
+				add_to_namespace = FALSE
+			end if
+
+			if( add_to_namespace ) then
+				cAddSymbol( n )
+			end if
+		end if
+
+		if( hCanHaveInitializer( n ) ) then
+			'' ['=' Initializer]
+			if( cMatch( TK_EQ ) ) then
+				assert( n->expr = NULL )
+				n->expr = cExpressionOrInitializer( )
+
+				'' If it's an array, then it must be an array initializer (or a string literal),
+				'' not a struct initializer
+				if( n->array ) then
+					if( n->expr->class = ASTCLASS_STRUCTINIT ) then
+						n->expr->class = ASTCLASS_ARRAYINIT
+					end if
+				end if
+			end if
+		end if
+
+		if( c.parseok and add_to_ast ) then
+			cAppendNode( n )
 		end if
 
 		'' Parameters can't have commas and more identifiers,
 		'' and don't need the ';' either.
-		if( decl = DECL_PARAM ) then
+		if( n->class = ASTCLASS_PARAM ) then
 			require_semi = FALSE
 			exit do
 		end if
 
 		'' '{', procedure body?
-		if( (t->class = ASTCLASS_PROC) and (tkGet( c.x ) = TK_LBRACE) ) then
+		if( (n->class = ASTCLASS_PROC) and (tkGet( c.x ) = TK_LBRACE) ) then
 			'' A procedure with body must be the first and only
 			'' declarator in the declaration.
 			if( declarator_count = 1 ) then
-				assert( t->expr = NULL )
-				t->expr = cScope( )
+				'' Mustn't have a body yet
+				if( n->expr ) then
+					cOops( "function body redefinition for " + astDumpPrettyDecl( n ) )
+				end if
+				n->expr = cScope( )
 				require_semi = FALSE
 				exit do
 			end if
@@ -1945,53 +2586,54 @@ private function cDeclaration( byval decl as integer, byval gccattribs as intege
 		'' ';'
 		cExpectMatch( TK_SEMI, "to finish this declaration" )
 	end if
-
-	astDelete( subtype )
-	function = result
-end function
+end sub
 
 '' Variable/procedure declarations
 ''    GccAttributeList [EXTERN|STATIC] Declaration
-private function cVarOrProcDecl( byval is_local as integer ) as ASTNODE ptr
+private sub cVarOrProcDecl( byval is_local as integer )
 	'' __ATTRIBUTE__((...))
 	var gccattribs = 0
 	cGccAttributeList( gccattribs )
 
 	'' [EXTERN|STATIC]
-	var decl = iif( is_local, DECL_LOCALVAR, DECL_GLOBALVAR )
 	select case( tkGet( c.x ) )
 	case KW_EXTERN
-		decl = DECL_EXTERNVAR
+		gccattribs or= ASTATTRIB_EXTERN
 		c.x += 1
 	case KW_STATIC
-		decl = iif( is_local, DECL_LOCALSTATICVAR, DECL_GLOBALSTATICVAR )
+		gccattribs or= ASTATTRIB_STATIC
 		c.x += 1
 	end select
 
-	'' Declaration
-	function = cDeclaration( decl, gccattribs )
-end function
+	if( c.namespacelevel > 0 ) then
+		gccattribs or= ASTATTRIB_LOCAL
+	end if
+
+	'' Declaration. Assume that it's a variable for now; the declarator
+	'' parser may turn it into a procedure if it has parameters.
+	cDeclaration( ASTCLASS_VAR, gccattribs )
+end sub
 
 '' Expression statement: Assignments, function calls, i++, etc.
-private function cExpressionStatement( ) as ASTNODE ptr
-	function = cExpression( )
+private sub cExpressionStatement( )
+	cAppendNode( cExpression( ) )
 
 	'' ';'?
 	cExpectMatch( TK_SEMI, "(end of expression statement)" )
-end function
+end sub
 
 '' RETURN Expression ';'
-private function cReturn( ) as ASTNODE ptr
+private sub cReturn( )
 	'' RETURN
 	assert( tkGet( c.x ) = KW_RETURN )
 	c.x += 1
 
 	'' Expression
-	function = astNew( ASTCLASS_RETURN, cExpression( ) )
+	cAppendNode( astNew( ASTCLASS_RETURN, cExpression( ) ) )
 
 	'' ';'
 	cExpectMatch( TK_SEMI, "(end of statement)" )
-end function
+end sub
 
 '' '{ ... }' statement block
 '' Using cBody() to allow the constructs in this scope block to be parsed
@@ -2002,127 +2644,131 @@ private function cScope( ) as ASTNODE ptr
 	assert( tkGet( c.x ) = TK_LBRACE )
 	c.x += 1
 
-	function = cBody( BODY_SCOPE )
+	var t = astNew( ASTCLASS_SCOPEBLOCK )
+	cPush( t, TRUE, TRUE )
+	cBody( )
+	cPop( )
 
 	'' '}'
 	cExpectMatch( TK_RBRACE, "to close compound statement" )
+
+	function = t
 end function
 
-private function cConstruct( byval body as integer ) as ASTNODE ptr
+private sub cConstruct( )
 	'' '#'?
 	if( (tkGet( c.x ) = TK_HASH) and (tkGetExpansionLevel( c.x ) = 0) ) then
 		c.x += 1
 
-		dim directive as ASTNODE ptr
+		var ok = FALSE
+
 		if( tkGet( c.x ) = TK_ID ) then
 			select case( *tkSpellId( c.x ) )
 			case "define"
-				directive = cDefine( )
+				cDefine( )
+				ok = TRUE
 			case "pragma"
 				c.x += 1
 
 				select case( tkSpell( c.x ) )
 				case "pack"
-					directive = cPragmaPack( )
+					ok = cPragmaPack( )
 				case "comment"
-					directive = cPragmaComment( )
+					cPragmaComment( )
+					ok = TRUE
 				end select
 			end select
 		end if
 
-		if( directive = NULL ) then
+		if( ok = FALSE ) then
 			cError( "unknown CPP directive" )
-			directive = astNew( ASTCLASS_PPDEFINE )
 		end if
 
-		return directive
+		exit sub
 	end if
 
-	if( body = BODY_ENUM ) then
-		return cEnumConst( )
+	if( c.blocks(c.blocklevel).context->class = ASTCLASS_ENUM ) then
+		cEnumConst( )
+		exit sub
 	end if
 
 	select case( tkGet( c.x ) )
 	case KW_TYPEDEF
-		return cTypedef( )
+		cTypedef( )
+		exit sub
 	case TK_SEMI
 		'' Ignore standalone ';'
 		c.x += 1
-		return astNewGROUP( )
+		exit sub
 	end select
 
-	select case( body )
-	case BODY_STRUCT
+	select case( c.blocks(c.blocklevel).context->class )
+	case ASTCLASS_STRUCT, ASTCLASS_UNION
 		'' Field declaration
-		function = cDeclaration( DECL_FIELD, 0 )
+		cDeclaration( ASTCLASS_FIELD, 0 )
 
-	case BODY_SCOPE
+	case ASTCLASS_SCOPEBLOCK
 		'' Disambiguate: local declaration vs. expression
 		'' If it starts with a data type, __attribute__, or 'static',
 		'' then it must be a declaration.
 		select case( tkGet( c.x ) )
 		case KW_STATIC
-			function = cVarOrProcDecl( TRUE )
+			cVarOrProcDecl( TRUE )
 		case KW_RETURN
-			function = cReturn( )
+			cReturn( )
 		case else
 			if( hIsDataType( c.x ) ) then
-				function = cVarOrProcDecl( TRUE )
+				cVarOrProcDecl( TRUE )
 			else
-				function = cExpressionStatement( )
+				cExpressionStatement( )
 			end if
 		end select
 
 	case else
-		function = cVarOrProcDecl( FALSE )
+		cVarOrProcDecl( FALSE )
 	end select
-end function
+end sub
 
-private function cBody( byval body as integer ) as ASTNODE ptr
-	var group = astNewGROUP( )
-
-	do
-		select case( tkGet( c.x ) )
-		case TK_EOF
-			exit do
-		'' '}'
-		case TK_RBRACE
-			if( body <> BODY_TOPLEVEL ) then
-				exit do
+private sub cBody( )
+	while( tkGet( c.x ) <> TK_EOF )
+		if( c.blocklevel > 0 ) then
+			'' '}'
+			if( tkGet( c.x ) = TK_RBRACE ) then
+				exit while
 			end if
-		end select
-
-		if( body = BODY_TOPLEVEL ) then
+		else
 			c.filterout = ((tkGetFlags( c.x ) and TKFLAG_FILTEROUT) <> 0)
 		end if
+
 		var begin = c.x
-		var t = cConstruct( body )
+		var beginblocklevel = c.blocklevel
+
+		cConstruct( )
 
 		if( c.parseok = FALSE ) then
-			astDelete( t )
+			c.parseok = TRUE
 
 			'' Skip current construct and preserve its tokens in
 			'' an UNKNOWN node
 			c.x = hSkipConstruct( begin, FALSE )
-			t = astNew( ASTCLASS_UNKNOWN, tkSpell( begin, c.x - 1 ) )
-
-			c.parseok = TRUE
-		end if
-
-		if( t ) then
+			var n = astNew( ASTCLASS_UNKNOWN, tkSpell( begin, c.x - 1 ) )
 			if( c.filterout ) then
-				astSetAttribOnAll( t, ASTATTRIB_FILTEROUT )
+				n->attrib or= ASTATTRIB_FILTEROUT
 			end if
+			cAppendNode( n )
+
+			'' Close scopes that were left open due to the parsing error
+			while( c.blocklevel > beginblocklevel )
+				cPop( )
+			wend
 		end if
 
-		astAppend( group, t )
-	loop
+		assert( c.blocklevel = beginblocklevel )
+	wend
+end sub
 
-	function = group
-end function
-
-function cFile( ) as ASTNODE ptr
-	function = cBody( BODY_TOPLEVEL )
+sub cMain( )
+	cBody( )
 
 	'' Process the #define bodies which weren't parsed yet
 	for i as integer = 0 to c.defbodycount - 1
@@ -2140,4 +2786,4 @@ function cFile( ) as ASTNODE ptr
 			end if
 		end with
 	next
-end function
+end sub

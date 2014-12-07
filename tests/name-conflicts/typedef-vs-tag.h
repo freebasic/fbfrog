@@ -12,6 +12,6 @@ struct UDT3 {
 };
 
 static UDT x1;
-static UDT2 x1;
-static struct UDT x2;
-static struct UDT3 x2;
+static UDT2 x2;
+static struct UDT x3;
+static struct UDT3 x4;

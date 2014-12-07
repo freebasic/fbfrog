@@ -38,4 +38,4 @@ tests/c/basetype/long-struct.h(2): SIGNED|UNSIGNED|SHORT|LONG modifiers used wit
 context as seen by fbfrog:
     static long struct UDT i ;
                            ^
-emitting: tests/c/basetype/long-struct.bi (0 declarations, 1 TODO)
+emitting: tests/c/basetype/long-struct.bi (1 declaration, 1 TODO)

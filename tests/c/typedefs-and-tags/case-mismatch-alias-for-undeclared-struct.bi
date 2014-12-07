@@ -1,7 +1,6 @@
 #pragma once
 
 '' The following symbols have been renamed:
-''     typedef a => a__
+''     typedef a => a_
 
-type A as A_
-type a__ as A
+type a_ as A

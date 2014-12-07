@@ -55,6 +55,7 @@ What's this?
      (C enums/ints stay 32bit on 64bit, so in FB we have to use the always-32bit
      LONG type instead of the default ENUM/INTEGER type)
    * #pragma comment(lib, "foo.lib"|"libfoo.a") => #inclib "foo"
+   * Redeclarations of functions, typedefs, etc. are eliminated
 
   Declarations which cannot be processed automatically (yet) will be embedded
   into the *.bi file in form of a "TODO" comment, for example:
@@ -216,25 +217,12 @@ unnecessary?
 
 To do:
 
-* hTryNameAnonUdtAfterFirstAliasTypedef() and hConsiderTagId() change TAGID
-  subtypes into IDs, this isn't safe if there is a typedef and tagid with the
-  same name.
-
-* Should handle duplicate declarations, e.g. this is ok in C but not FB:
-	void f(void);
-	void f(void);
-
 * Add -split <pattern> option to emit multiple files
     - need multiple extern blocks
     - version defines checks must be emitted into each file?
         - just remove it completely, not useful
     - forward decls must be file-specific. Ideally they'd just be emitted
       exactly where needed anyways, not just at the top...
-
-* Currently tag ids are preserved as type names, but often this is unnecessary.
-  If we find an alias typedef for a tag id (no matter whether it's an exact
-  alias or a different id alias) then the tag id should be solved out. All uses
-  should be changed to use the typedef.
 
 * Renames can cause other renames to become unnecessary. Here we'll do an
   unnecessary rename:
@@ -259,8 +247,6 @@ To do:
     Accordingly, hBuildVerificationCode() could be removed.
 * Rework console output, it quickly becomes too much currently. Perhaps the
   #includes should be emitted into the .bi, like renamelists.
-* Can't renamelists be generated based on ALIAS'es later, separate from astFixIds?
-* Add proper symbol table to speed up symbol renaming & identifier comparisons
 * Optimize tk access, at least for the C parser which shouldn't need insert/delete
   anymore. Test performance with array instead of gap buffer. Ideally everything
   would work with the current line only, not the entire input file.

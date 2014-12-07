@@ -1,16 +1,16 @@
 #pragma once
 
-type __dummyid_0_tests_c_struct_nested_unnamed_struct_as_named_field_3
+type __UDT_a
 end type
 
-type __dummyid_1_tests_c_struct_nested_unnamed_struct_as_named_field_3
+type __UDT_b
 	union
-		a as __dummyid_0_tests_c_struct_nested_unnamed_struct_as_named_field_3
+		a as __UDT_a
 	end union
 end type
 
 type UDT
 	union
-		b as __dummyid_1_tests_c_struct_nested_unnamed_struct_as_named_field_3
+		b as __UDT_b
 	end union
 end type

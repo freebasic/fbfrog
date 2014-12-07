@@ -1,10 +1,9 @@
 #pragma once
 
 '' The following symbols have been renamed:
-''     typedef udt => udt__
+''     struct UDT => UDT_
 
-type UDT as UDT_
-type udt__ as UDT
+type udt as UDT_
 
 type UDT_
 	a as long

@@ -16,6 +16,7 @@ enum
 end enum
 
 sub f()
+	x
 	'' TODO: x=;
 end sub
 

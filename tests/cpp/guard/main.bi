@@ -1,9 +1,5 @@
 #pragma once
 
-'' The following symbols have been renamed:
-''     procedure outside_c => outside_c_
-''     procedure outside_d => outside_d_
-
 extern "C"
 
 #define HAD_A
@@ -18,13 +14,11 @@ declare sub outside_c()
 #define HAD_C
 
 declare sub inside_c()
-declare sub outside_c_ alias "outside_c"()
 
 #define HAD_D
 
 declare sub inside_d()
 declare sub outside_d()
-declare sub outside_d_ alias "outside_d"()
 
 #define HAD_E
 

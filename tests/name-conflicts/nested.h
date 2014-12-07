@@ -26,7 +26,7 @@ struct UDT1 {
 	int IF;
 
 	int (*PTR)(int INT);
-	int (*PTR)(int (*PTR)(int INT));
+	int (*CONST)(int (*PTR)(int INT));
 };
 
 void f1(
@@ -44,7 +44,7 @@ void f1(
 	int IF,
 
 	int (*PTR)(int INT),
-	int (*PTR)(int (*PTR)(int INT))
+	int (*CONST)(int (*PTR)(int INT))
 );
 
 #define GLOBALDEFINE2() 1

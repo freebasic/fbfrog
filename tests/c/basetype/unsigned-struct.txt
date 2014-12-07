@@ -38,4 +38,4 @@ tests/c/basetype/unsigned-struct.h(2): SIGNED|UNSIGNED|SHORT|LONG modifiers used
 context as seen by fbfrog:
     static unsigned struct UDT i ;
                                ^
-emitting: tests/c/basetype/unsigned-struct.bi (0 declarations, 1 TODO)
+emitting: tests/c/basetype/unsigned-struct.bi (1 declaration, 1 TODO)

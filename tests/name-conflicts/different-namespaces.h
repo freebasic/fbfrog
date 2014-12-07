@@ -1,4 +1,6 @@
-typedef int FOO;
+struct FOO {
+	int FOO;
+};
 
 void FOO(void);
 

@@ -238,7 +238,7 @@ function hNumberLiteral( byval x as integer, byval is_cpp as integer, byref errm
 			n->dtype = iif( have_u, TYPE_ULONGINT, TYPE_LONGINT )
 		elseif( have_l ) then
 			n->dtype = iif( have_u, TYPE_CULONG, TYPE_CLONG )
-			api.uses_clong = TRUE
+			api->uses_clong = TRUE
 		else
 			n->dtype = iif( have_u, TYPE_ULONG, TYPE_LONG )
 		end if
@@ -253,7 +253,6 @@ function hNumberLiteral( byval x as integer, byval is_cpp as integer, byref errm
 	'' Show error if we didn't reach the end of the number literal
 	if( p[0] <> 0 ) then
 		errmsg = "invalid suffix on number literal: '" + *cptr( zstring ptr, p ) + "'"
-		astDelete( n )
 		exit function
 	end if
 
@@ -363,12 +362,7 @@ private function definfoNew( ) as DEFINEINFO ptr
 	function = callocate( sizeof( DEFINEINFO ) )
 end function
 
-private sub definfoDelete( byval definfo as DEFINEINFO ptr )
-	if( definfo ) then
-		astDelete( definfo->macro )
-		deallocate( definfo )
-	end if
-end sub
+#define definfoDelete( definfo ) deallocate( definfo )
 
 private function definfoClone( byval a as DEFINEINFO ptr ) as DEFINEINFO ptr
 	var b = definfoNew( )
@@ -559,8 +553,6 @@ sub cppEnd( )
 		next
 		deallocate( cpp.savedmacros )
 	end scope
-	astDelete( cpp.incdirs )
-	astDelete( cpp.filters )
 
 	hashEnd( @cpp.filetb )
 	scope
@@ -573,7 +565,6 @@ sub cppEnd( )
 		deallocate( cpp.files )
 	end scope
 
-	''astDelete( cpp.directincludes )  '' currently unnecessary, due to cppTakeDirectIncludes()
 	hashEnd( @cpp.directincludetb )
 end sub
 
@@ -997,8 +988,6 @@ private sub cppExpression _
 		assert( (n->dtype = TYPE_LONGINT) or (n->dtype = TYPE_ULONGINT) )
 		a.vali = astEvalConstiAsInt64( n )
 		a.dtype = n->dtype
-
-		astDelete( n )
 
 		cpp.x += 1
 

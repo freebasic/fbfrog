@@ -2,12 +2,11 @@
 
 extern "C"
 
-type B as B_
 type A as B
 
 declare sub f1(byval as A ptr)
 
-type B_
+type B
 	a as A ptr
 end type
 

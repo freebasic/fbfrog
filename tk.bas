@@ -298,9 +298,7 @@ function tkDumpOne( byval x as integer ) as string
 	checkFlag( PREINCLUDE )
 	checkFlag( DEFINE )
 
-	#if 0
-		s += " " + hDumpLocation( @p->location )
-	#endif
+	's += " " + hDumpLocation( @p->location )
 
 	if( p->expansionlevel <> 0 ) then
 		s += " expansionlevel=" & p->expansionlevel

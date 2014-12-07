@@ -1,8 +1,7 @@
 #pragma once
 
-type _A as _A_
 type A as _A
 
-type _A_
+type _A
 	i as long
 end type

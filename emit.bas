@@ -71,7 +71,9 @@ function emitType overload _
 
 		select case( dt )
 		case TYPE_UDT
-			s += emitExpr( subtype )
+			assert( subtype->class <> ASTCLASS_SYM )
+			assert( subtype->text )
+			s += *subtype->text
 
 		case TYPE_PROC
 			if( ptrcount >= 1 ) then
@@ -405,12 +407,12 @@ private sub emitCode( byval n as ASTNODE ptr, byval parentclass as integer )
 		select case( n->expr->class )
 		'' #if defined(id)        ->    #ifdef id
 		case ASTCLASS_DEFINED
-			s = "#ifdef " + *n->expr->text
+			s = "#ifdef " + *n->expr->head->text
 
 		'' #if not defined(id)    ->    #ifndef id
 		case ASTCLASS_NOT
 			if( n->expr->head->class = ASTCLASS_DEFINED ) then
-				s = "#ifndef " + *n->expr->head->text
+				s = "#ifndef " + *n->expr->head->head->text
 			end if
 		end select
 		if( len( s ) = 0 ) then
@@ -504,7 +506,6 @@ private sub emitCode( byval n as ASTNODE ptr, byval parentclass as integer )
 				var tempid = "__" + id
 				emitLine( "#define " + id + "(i) ((@" + tempid + ")[i])" )
 				astRenameSymbol( n, tempid )
-				astDelete( n->array )
 				n->array = NULL
 			end if
 		end if
@@ -560,7 +561,7 @@ private sub emitCode( byval n as ASTNODE ptr, byval parentclass as integer )
 
 		'' Body
 		if( n->expr ) then
-			assert( n->expr->class = ASTCLASS_GROUP )
+			assert( n->expr->class = ASTCLASS_SCOPEBLOCK )
 			hEmitIndentedChildren( n->expr )
 			emitLine( "end " + iif( n->dtype = TYPE_ANY, "sub", "function" ) )
 		end if
@@ -635,6 +636,15 @@ private function emitExpr _
 	case ASTCLASS_ARRAY
 		s += hParamList( n )
 
+	case ASTCLASS_SYM
+		if( n->attrib and ASTATTRIB_PARENTHESIZEDMACROPARAM ) then
+			s += "("
+		end if
+		s += *n->expr->text
+		if( n->attrib and ASTATTRIB_PARENTHESIZEDMACROPARAM ) then
+			s += ")"
+		end if
+
 	case ASTCLASS_MACROPARAM
 		s += *n->text
 		if( n->attrib and ASTATTRIB_VARIADIC ) then
@@ -685,20 +695,8 @@ private function emitExpr _
 			s += ")"
 		end if
 
-	case ASTCLASS_ID
-		if( n->attrib and ASTATTRIB_PARENTHESIZEDMACROPARAM ) then
-			s += "("
-		end if
-		s += *n->text
-		if( n->attrib and ASTATTRIB_PARENTHESIZEDMACROPARAM ) then
-			s += ")"
-		end if
-
-	case ASTCLASS_TAGID
-		s += *n->text
-
 	case ASTCLASS_TEXT
-		s += *n->text + emitExpr( n->expr )
+		s += *n->text
 
 	case ASTCLASS_STRING, ASTCLASS_CHAR
 		s = """"
@@ -806,8 +804,8 @@ private function emitExpr _
 	case ASTCLASS_DEREF     : s = "*"        + emitExpr( n->head, TRUE ) : consider_parens = TRUE
 	case ASTCLASS_STRINGIFY : s = "#"        + emitExpr( n->head )
 	case ASTCLASS_SIZEOF    : s = "sizeof("  + emitExpr( n->head ) + ")"
-	case ASTCLASS_CDEFINED  : s = "defined(" + *n->text + ")" : add_negation = not is_bool_context
-	case ASTCLASS_DEFINED   : s = "defined(" + *n->text + ")"
+	case ASTCLASS_CDEFINED  : s = "defined(" + emitExpr( n->head ) + ")" : add_negation = not is_bool_context
+	case ASTCLASS_DEFINED   : s = "defined(" + emitExpr( n->head ) + ")"
 	case ASTCLASS_CAST
 		select case( n->dtype )
 		case TYPE_BYTE     : s =    "cbyte("
@@ -842,7 +840,8 @@ private function emitExpr _
 		wend
 
 	case ASTCLASS_CALL
-		s = *n->text + hParamList( n )
+		assert( n->expr->class = ASTCLASS_SYM )
+		s = emitExpr( n->expr ) + hParamList( n )
 
 	case ASTCLASS_STRUCTINIT
 		s = hParamList( n )
@@ -861,7 +860,7 @@ private function emitExpr _
 			s += emitExpr( n->expr, TRUE ) + " - 1"
 		end select
 
-	case ASTCLASS_TYPE
+	case ASTCLASS_DATATYPE
 		s = emitType( n )
 
 	case ASTCLASS_ELLIPSIS

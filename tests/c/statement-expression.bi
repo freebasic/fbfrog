@@ -1,5 +1,7 @@
 #pragma once
 
+extern "C"
+
 '' TODO: #define A1 ({ int i = foo(0); i; })
 
 #macro A2
@@ -7,3 +9,5 @@
 		'' TODO: int a[({ f(); })];
 	end scope
 #endmacro
+
+end extern

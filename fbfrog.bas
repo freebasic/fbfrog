@@ -60,8 +60,10 @@ namespace frog
 
 	dim shared as ASTNODE ptr script
 	dim shared as ASTNODE ptr completeverors, fullveror
-	dim shared as FROGVERSION ptr versions
-	dim shared as integer versioncount
+	dim shared as FROGAPI ptr apis
+	dim shared as integer apicount
+
+	dim shared as THASH renametypedefs, renametags, removeprocs, typedefhints
 
 	dim shared renameopt(OPT_RENAMETYPEDEF to OPT_RENAMETAG) as THASH
 	dim shared idopt(OPT_REMOVEDEFINE to OPT_NOEXPAND) as THASH
@@ -69,10 +71,7 @@ namespace frog
 	dim shared as string prefix
 end namespace
 
-namespace api
-	dim shared as integer cdecls, stdcalls, need_externblock
-	dim shared as integer uses_clong, uses_clongdouble, uses_wchar_t
-end namespace
+dim shared api as FROGAPI ptr
 
 '' Find a *.fbfrog or *.h file in fbfrog's include/ dir, its "library" of
 '' premade collections of pre-#defines etc. useful when creating bindings.
@@ -309,13 +308,13 @@ private sub hParseSelectCompound( byref x as integer )
 				end if
 
 				'' <symbol> = <versionnumber>
-				condition = astNew( ASTCLASS_EQ, astNewID( selectsymbol ), astNewTEXT( tkGetText( x ) ) )
+				condition = astNew( ASTCLASS_EQ, astNewTEXT( selectsymbol ), astNewTEXT( tkGetText( x ) ) )
 			else
 				'' <symbol>
 				hExpectId( x )
 
 				'' defined(<symbol>)
-				condition = astNewDEFINED( tkGetText( x ) )
+				condition = astNew( ASTCLASS_DEFINED, astNewTEXT( tkGetText( x ) ) )
 			end if
 			var n = astNew( ASTCLASS_CASE )
 			n->expr = condition
@@ -352,7 +351,7 @@ private sub hParseIfDefCompound( byref x as integer )
 	astAppend( frog.script, astNew( ASTCLASS_SELECT ) )
 	scope
 		var n = astNew( ASTCLASS_CASE )
-		n->expr = astNewDEFINED( tkGetText( x ) )
+		n->expr = astNew( ASTCLASS_DEFINED, astNewTEXT( tkGetText( x ) ) )
 		astAppend( frog.script, n )
 	end scope
 	x += 1
@@ -614,13 +613,27 @@ private function hSkipToEndOfBlock( byval i as ASTNODE ptr ) as ASTNODE ptr
 	function = i
 end function
 
-private sub frogAddVersion( byval verand as ASTNODE ptr, byval options as ASTNODE ptr )
+private sub frogAddApi( byval verand as ASTNODE ptr, byval options as ASTNODE ptr )
 	assert( astIsVERAND( verand ) )
-	var i = frog.versioncount
-	frog.versioncount += 1
-	frog.versions = reallocate( frog.versions, frog.versioncount * sizeof( FROGVERSION ) )
-	frog.versions[i].verand = verand
-	frog.versions[i].options = options
+	var i = frog.apicount
+	frog.apicount += 1
+	frog.apis = reallocate( frog.apis, frog.apicount * sizeof( *frog.apis ) )
+	clear( frog.apis[i], 0, sizeof( (frog.apis[i]) ) )
+	with( frog.apis[i] )
+		.verand = verand
+		.options = options
+		hashInit( @.taghash, 4, FALSE )
+	end with
+end sub
+
+sub apiAddTag( byval tag as ASTNODE ptr )
+	if( hashContains( @api->taghash, tag->text, hashHash( tag->text ) ) ) then
+		exit sub
+	end if
+	api->tagcount += 1
+	api->tags = reallocate( api->tags, api->tagcount * sizeof( *api->tags ) )
+	api->tags[api->tagcount-1] = tag
+	hashAddOverwrite( @api->taghash, tag->text, NULL )
 end sub
 
 ''
@@ -690,10 +703,10 @@ private sub frogEvaluateScript _
 				dim as ASTNODE ptr condition
 				if( decl->class = ASTCLASS_DECLAREDEFINES ) then
 					'' defined(<symbol>)
-					condition = astNewDEFINED( k->text )
+					condition = astNew( ASTCLASS_DEFINED, astNewTEXT( k->text ) )
 				else
 					'' <symbol> = <versionnumber>
-					condition = astNew( ASTCLASS_EQ, astNewID( decl->text ), astClone( k ) )
+					condition = astNew( ASTCLASS_EQ, astNewTEXT( decl->text ), astClone( k ) )
 				end if
 				astAppend( completeveror, astClone( condition ) )
 
@@ -720,7 +733,7 @@ private sub frogEvaluateScript _
 
 			'' Branch for the true code path
 			'' defined(<symbol>)
-			var condition = astNewDEFINED( symbol )
+			var condition = astNew( ASTCLASS_DEFINED, astNewTEXT( symbol ) )
 			astAppend( completeveror, astClone( condition ) )
 			frogEvaluateScript( i, _
 				astNewGROUP( astClone( conditions ), astClone( condition ) ), _
@@ -784,14 +797,55 @@ private sub frogEvaluateScript _
 
 	assert( conditions->class = ASTCLASS_GROUP )
 	conditions->class = ASTCLASS_VERAND
-	frogAddVersion( conditions, options )
+	frogAddApi( conditions, options )
 end sub
 
+''
+'' Add a forward reference for the given tag, and update all references to the
+'' tag to point to the new forward typedef.
+''
+'' We can do this fairly easily by turning the tag node itself into the forward
+'' typedef. This way all references will stay valid and will automatically point
+'' to the forward decl. It can then be moved to the top of the code.
+''
+'' In case the tag node represented a tag body in the code, we can insert a new
+'' node in the tag's old place. Then the new node will represent the tag body.
+'' (since the old tag node is busy being the forward typedef)
+''
+'' For completeness' sake, we need to create a new tag node anyways, to
+'' represent the forward reference (the dtype/subtype of the forward decl),
+'' if there is no tag body.
+''
+private function hAddFwdDecl( byval parent as ASTNODE ptr, byval oldtag as ASTNODE ptr ) as ASTNODE ptr
+	var newtag = astCloneNode( oldtag )
+	astMoveChildren( newtag, oldtag )
 
+	'' New name for the forward reference
+	astSetText( newtag, *newtag->text + "_" )
 
+	'' If there's a body, insert it in front of the old node
+	if( oldtag->attrib and ASTATTRIB_BODYDEFINED ) then
+		astInsert( parent, newtag, oldtag )
 
+		'' Unlink old node
+		astRemove( parent, oldtag )
+	end if
 
-private function frogReadAPI( byval options as ASTNODE ptr ) as ASTNODE ptr
+	'' Add the old node to the top
+	astPrepend( parent, oldtag )
+
+	'' Turn it into the wanted forward typedef
+	oldtag->class = ASTCLASS_TYPEDEF
+	oldtag->dtype = TYPE_UDT
+	oldtag->subtype = newtag
+	function = newtag
+end function
+
+private sub frogReadApi( )
+	''
+	'' 1. Preprocessing
+	''
+
 	tkInit( )
 
 	cppInit( )
@@ -800,7 +854,7 @@ private function frogReadAPI( byval options as ASTNODE ptr ) as ASTNODE ptr
 		'' Pre-#defines are simply inserted at the top of the token
 		'' buffer, so that cppMain() parses them like any other #define.
 
-		var i = options->head
+		var i = api->options->head
 		while( i )
 
 			select case( i->class )
@@ -835,7 +889,7 @@ private function frogReadAPI( byval options as ASTNODE ptr ) as ASTNODE ptr
 	'' * behind command line pre-#defines so that default.h can use them
 	'' * marked for removal so the code won't be preserved
 	scope
-		var i = options->head
+		var i = api->options->head
 		while( i )
 			if( i->class = ASTCLASS_FBFROGPREINCLUDE ) then
 				var filename = hFindResource( *i->text )
@@ -849,7 +903,7 @@ private function frogReadAPI( byval options as ASTNODE ptr ) as ASTNODE ptr
 
 	'' Add #includes for pre-#includes
 	scope
-		var i = options->head
+		var i = api->options->head
 		while( i )
 			if( i->class = ASTCLASS_PREINCLUDE ) then
 				var filename = *i->text
@@ -874,7 +928,7 @@ private function frogReadAPI( byval options as ASTNODE ptr ) as ASTNODE ptr
 	''
 	scope
 		var count = 0
-		var i = options->head
+		var i = api->options->head
 		while( i )
 			if( i->class = ASTCLASS_TEXT ) then
 				cppAppendIncludeDirective( *i->text, TKFLAG_ROOTFILE )
@@ -907,36 +961,32 @@ private function frogReadAPI( byval options as ASTNODE ptr ) as ASTNODE ptr
 
 	tkTurnCPPTokensIntoCIds( )
 
+	''
+	'' C parsing
+	''
 	cInit( )
-
-	'' Parse C constructs
-	api.cdecls = 0
-	api.stdcalls = 0
-	api.need_externblock = FALSE
-	api.uses_clong = FALSE
-	api.uses_clongdouble = FALSE
-	api.uses_wchar_t = FALSE
-	var ast = cFile( )
-
+	cMain( )
 	cEnd( )
 
 	tkEnd( )
 
 	''
-	'' Work on the AST
+	'' Finalize the AST for this API
 	''
-	astSolveOutArrayTypedefs( ast, ast )
-	astSolveOutProcTypedefs( ast, ast )
 
-	astRemoveRedundantTypedefs( ast, ast )
-	astNameAnonUdtsAfterFirstAliasTypedef( ast )
-	astAddForwardDeclsForUndeclaredTagIds( ast )
+	'' Add a forward decl for any tags that were used before being defined
+	for i as integer = 0 to api->tagcount - 1
+		var tag = api->tags[i]
+		if( tag->attrib and ASTATTRIB_USEBEFOREDEF ) then
+			api->tags[i] = hAddFwdDecl( api->ast, tag )
+		end if
+	next
 
-	if( api.need_externblock ) then
+	if( api->need_externblock ) then
 		'' Add an Extern block, ensuring to preserve the case of global
 		'' vars and procedures, and covering the most-used calling convention.
-		astWrapInExternBlock( ast, _
-			iif( api.stdcalls > api.cdecls, _
+		astWrapInExternBlock( api->ast, _
+			iif( api->stdcalls > api->cdecls, _
 				ASTATTRIB_STDCALL, ASTATTRIB_CDECL ) )
 	end if
 
@@ -950,46 +1000,41 @@ private function frogReadAPI( byval options as ASTNODE ptr ) as ASTNODE ptr
 				end if
 			next
 		end with
-		astFixIds( ast )
+		astFixIds( api->ast )
 	end if
 
-	astFilterOut( ast )
-
-	assert( ast->class = ASTCLASS_GROUP )
+	astFilterOut( api->ast )
 
 	'' Add "crt/long[double].bi" as direct #includes if the binding uses CLONG[DOUBLE]
-	if( api.uses_clongdouble ) then
+	if( api->uses_clongdouble ) then
 		astPrepend( directincludes, astNew( ASTCLASS_PPINCLUDE, "crt/longdouble.bi" ) )
 	end if
-	if( api.uses_clong ) then
+	if( api->uses_clong ) then
 		astPrepend( directincludes, astNew( ASTCLASS_PPINCLUDE, "crt/long.bi" ) )
 	end if
-	if( api.uses_wchar_t ) then
+	if( api->uses_wchar_t ) then
 		var wcharbi = astNew( ASTCLASS_PPINCLUDE, "crt/wchar.bi" )
-		if( astGroupContains( directincludes, wcharbi ) ) then
-			astDelete( wcharbi )
-		else
+		if( astGroupContains( directincludes, wcharbi ) = FALSE ) then
 			astPrepend( directincludes, wcharbi )
 		end if
 	end if
 
 	'' Prepend the direct #includes (if any), outside the EXTERN block
-	astPrependMaybeWithDivider( ast, directincludes )
+	astPrependMaybeWithDivider( api->ast, directincludes )
 
 	'' Prepend #inclibs
 	scope
-		var i = options->tail
+		var i = api->options->tail
 		while( i )
 			if( i->class = ASTCLASS_INCLIB ) then
-				astPrependMaybeWithDivider( ast, astClone( i ) )
+				astPrependMaybeWithDivider( api->ast, astClone( i ) )
 			end if
 			i = i->prev
 		wend
 	end scope
 
-	astDelete( options )
-	function = ast
-end function
+	api->options = NULL
+end sub
 
 private function hMakeProgressString( byval position as integer, byval total as integer ) as string
 	var sposition = str( position ), stotal = str( total )
@@ -1066,9 +1111,9 @@ end sub
 	'' are.
 	frog.completeverors = astNewGROUP( )
 	frogEvaluateScript( frog.script->head, astNewGROUP( ), astNewGROUP( ) )
-	assert( frog.versioncount > 0 )
+	assert( frog.apicount > 0 )
 
-	frog.prefix = space( (len( str( frog.versioncount ) ) * 2) + 4 )
+	frog.prefix = space( (len( str( frog.apicount ) ) * 2) + 4 )
 
 	'' For each version, parse the input into an AST, using the options for
 	'' that version, and then merge the AST with the previous one, so that
@@ -1080,22 +1125,22 @@ end sub
 	'' parsing that version. Instead of one single big delay at the end,
 	'' there is a small delay at each version.
 	dim as ASTNODE ptr final
-	for i as integer = 0 to frog.versioncount - 1
-		var v = frog.versions + i
+	for i as integer = 0 to frog.apicount - 1
+		api = frog.apis + i
 
-		print hMakeProgressString( i + 1, frog.versioncount ) + " " + astDumpPrettyVersion( v->verand )
-		var ast = frogReadAPI( v->options )
-		v->options = NULL
+		print hMakeProgressString( i + 1, frog.apicount ) + " " + astDumpPrettyVersion( api->verand )
+		frogReadApi( )
 
-		ast = astWrapFileInVerblock( astNewVEROR( astClone( v->verand ) ), ast )
+		api->ast = astWrapFileInVerblock( astNewVEROR( astClone( api->verand ) ), api->ast )
 		if( final = NULL ) then
-			final = astNewGROUP( ast )
+			final = astNewGROUP( api->ast )
 		else
-			final = astMergeVerblocks( final, ast )
+			final = astMergeVerblocks( final, api->ast )
 		end if
-		frog.fullveror = astNewVEROR( frog.fullveror, v->verand )
-		v->verand = NULL
+		frog.fullveror = astNewVEROR( frog.fullveror, api->verand )
+		api->verand = NULL
 	next
+	api = NULL
 
 	'' Turn VERBLOCKs into #ifs etc.
 	astProcessVerblocks( final )
@@ -1124,5 +1169,3 @@ end sub
 	print " (" + _
 		hMakeCountMessage( emit.decls, "declaration" ) + ", " + _
 		hMakeCountMessage( emit.todos, "TODO"        ) + ")"
-
-	astDelete( final )

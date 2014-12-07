@@ -8,4 +8,4 @@
       tests/c/typedefs-and-tags/case-mismatch-alias-for-undeclared-struct.h
 [5/5] __FB_DOS__
       tests/c/typedefs-and-tags/case-mismatch-alias-for-undeclared-struct.h
-emitting: tests/c/typedefs-and-tags/case-mismatch-alias-for-undeclared-struct.bi (2 declarations, 0 TODOs)
+emitting: tests/c/typedefs-and-tags/case-mismatch-alias-for-undeclared-struct.bi (1 declaration, 0 TODOs)
