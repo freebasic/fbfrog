@@ -406,27 +406,32 @@ private sub hFixIdsInScope _
 
 	'' 1. Walk through symbols top-down, much like a C compiler, and mark
 	''    those that need renaming with ASTATTRIB_NEEDRENAME.
-	for i as integer = 0 to api->tagcount - 1
-		var n = api->tags[i]
-		if( (n->attrib and ASTATTRIB_BODYDEFINED) = 0 ) then
-			hCheckId( @fbkeywordhash, n, FALSE )
-			hCheckId( reservedids, n, FALSE )
-			hCheckId( @types, n, TRUE )
-		end if
-	next
+	'' If at toplevel, process the tags
+	if( code = api->ast ) then
+		for i as integer = 0 to api->tagcount - 1
+			var n = api->tags[i]
+			if( (n->attrib and ASTATTRIB_BODYDEFINED) = 0 ) then
+				hCheckId( @fbkeywordhash, n, FALSE )
+				hCheckId( reservedids, n, FALSE )
+				hCheckId( @types, n, TRUE )
+			end if
+		next
+	end if
 	hWalkAndCheckIds( reservedids, @types, @globals, code, renamelist )
 
 	'' 2. Rename all marked symbols. Now that all symbols are known, we can
 	''    generate new names for the symbols that need renaming without
 	''    introducing more conflicts.
-	for i as integer = 0 to api->tagcount - 1
-		var n = api->tags[i]
-		if( (n->attrib and ASTATTRIB_BODYDEFINED) = 0 ) then
-			if( n->attrib and ASTATTRIB_NEEDRENAME ) then
-				hRenameSymbol( reservedids, @types, @globals, n, renamelist )
+	if( code = api->ast ) then
+		for i as integer = 0 to api->tagcount - 1
+			var n = api->tags[i]
+			if( (n->attrib and ASTATTRIB_BODYDEFINED) = 0 ) then
+				if( n->attrib and ASTATTRIB_NEEDRENAME ) then
+					hRenameSymbol( reservedids, @types, @globals, n, renamelist )
+				end if
 			end if
-		end if
-	next
+		next
+	end if
 	hWalkAndRenameSymbols( reservedids, @types, @globals, code, renamelist )
 
 	hashEnd( @globals )

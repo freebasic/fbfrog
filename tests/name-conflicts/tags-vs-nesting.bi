@@ -1,16 +1,10 @@
 #pragma once
 
 '' The following symbols have been renamed:
-''     inside struct UDT1:
-''         struct screen => screen_
-''     inside struct UDT2:
-''         struct screen_ => screen__
-''     inside struct UDT3:
-''         struct screen__ => screen___
-''     struct screen___ => screen____
-''     typedef SCREEN => SCREEN_
+''     struct screen => screen_
+''     typedef SCREEN => SCREEN__
 
-type SCREEN_ as screen____
+type SCREEN__ as screen_
 
 type UDT1
 	i as long
