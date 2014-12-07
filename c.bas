@@ -2766,6 +2766,10 @@ private sub cConstruct( )
 	end select
 end sub
 
+private sub cUpdateFilterOut( )
+	c.filterout = ((tkGetFlags( c.x ) and TKFLAG_FILTEROUT) <> 0)
+end sub
+
 private sub cBody( )
 	while( tkGet( c.x ) <> TK_EOF )
 		if( c.blocklevel > 0 ) then
@@ -2774,7 +2778,7 @@ private sub cBody( )
 				exit while
 			end if
 		else
-			c.filterout = ((tkGetFlags( c.x ) and TKFLAG_FILTEROUT) <> 0)
+			cUpdateFilterOut( )
 		end if
 
 		var begin = c.x
@@ -2814,6 +2818,7 @@ sub cMain( )
 
 			'' Parse #define body
 			c.x = .xbodybegin
+			cUpdateFilterOut( )
 			cParseDefBody( .n )
 
 			'' Replace the #define with an UNKNOWN if parsing failed
