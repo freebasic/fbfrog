@@ -413,9 +413,9 @@
 ''     procedure open => open__
 ''     #define INT => INT__
 ''     #define Int => Int___
-''     variable BASE => BASE__
-''     variable WINDOW => WINDOW__
-''     variable WINDOWTITLE => WINDOWTITLE__
+''     variable base => base__
+''     variable window => window__
+''     variable windowtitle => windowtitle__
 ''     struct Width => Width_
 ''     typedef type => type_
 
@@ -838,10 +838,10 @@ declare sub open__ alias "open"()
 #define INT__ 1
 #define Int___ 2
 
-extern     BASE__ alias "BASE" as long
-dim shared BASE__ as long
-dim shared WINDOW__ as long
-extern WINDOWTITLE__ alias "WINDOWTITLE" as long
+extern     base__ alias "base" as long
+dim shared base__ as long
+dim shared window__ as long
+extern windowtitle__ alias "windowtitle" as long
 
 type Width_
 	as long as

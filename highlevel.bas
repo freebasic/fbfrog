@@ -5,7 +5,8 @@
 function astLookupMacroParam _
 	( _
 		byval macro as ASTNODE ptr, _
-		byval id as zstring ptr _
+		byval id as zstring ptr, _
+		byref macroparam as ASTNODE ptr _
 	) as integer
 
 	var index = 0
@@ -17,6 +18,7 @@ function astLookupMacroParam _
 
 		assert( param->class = ASTCLASS_MACROPARAM )
 		if( *param->text = *id ) then
+			macroparam = param
 			return index
 		end if
 
@@ -34,15 +36,22 @@ private sub astHideCallConv( byval n as ASTNODE ptr, byval callconv as integer )
 		end if
 	end if
 
-	if( n->subtype ) then astHideCallConv( n->subtype, callconv )
-	if( n->array   ) then astHideCallConv( n->array  , callconv )
-
-	'' Don't hide callconvs in macro bodies, otherwise they could end up
-	'' using the wrong callconv if expanded outside the header's Extern
-	'' block.
-	if( n->class <> ASTCLASS_PPDEFINE ) then
-		if( n->expr ) then astHideCallConv( n->expr, callconv )
+	if( typeGetDt( n->dtype ) = TYPE_PROC ) then
+		astHideCallConv( n->subtype, callconv )
 	end if
+	if( n->array ) then astHideCallConv( n->array, callconv )
+
+	select case( n->class )
+	case ASTCLASS_PPDEFINE
+		'' Don't hide callconvs in macro bodies, otherwise they could
+		'' end up using the wrong callconv if expanded outside the
+		'' header's Extern block.
+	case ASTCLASS_SYM
+		'' Don't visit the nodes behind symbol references,
+		'' that could cause infinite recursion
+	case else
+		if( n->expr ) then astHideCallConv( n->expr, callconv )
+	end select
 
 	var i = n->head
 	while( i )
@@ -70,615 +79,6 @@ sub astWrapInExternBlock( byval ast as ASTNODE ptr, byval callconv as integer )
 	astAppend( ast, astNew( ASTCLASS_EXTERNBLOCKEND ) )
 end sub
 
-'' C array parameter? It's really just a pointer (the array is passed byref).
-'' FB doesn't support C array parameters like that, so turn them into pointers:
-''    int a[5]  ->  byval a as long ptr
-sub hHandleArrayParam( byval n as ASTNODE ptr )
-	assert( n->array )
-	if( n->class = ASTCLASS_PARAM ) then
-		astDelete( n->array )
-		n->array = NULL
-		n->dtype = typeAddrOf( n->dtype )
-	end if
-end sub
-
-private sub hSolveOutArrayTypedefSubtypes _
-	( _
-		byval n as ASTNODE ptr, _
-		byval typedef as ASTNODE ptr _
-	)
-
-	if( typeGetDtAndPtr( n->dtype ) = TYPE_UDT ) then
-		if( n->subtype->class = ASTCLASS_ID ) then
-			if( *n->subtype->text = *typedef->text ) then
-				astSetType( n, typeGetConst( n->dtype ) or typedef->dtype, typedef->subtype )
-				if( n->array = NULL ) then
-					n->array = astNew( ASTCLASS_ARRAY )
-				end if
-				astAppend( n->array, astCloneChildren( typedef->array ) )
-				hHandleArrayParam( n )
-				hHandlePlainCharAfterArrayStatusIsKnown( n )
-			end if
-		end if
-	end if
-
-	if( n->subtype ) then hSolveOutArrayTypedefSubtypes( n->subtype, typedef )
-	if( n->array   ) then hSolveOutArrayTypedefSubtypes( n->array  , typedef )
-	if( n->expr    ) then hSolveOutArrayTypedefSubtypes( n->expr   , typedef )
-
-	var i = n->head
-	while( i )
-		hSolveOutArrayTypedefSubtypes( i, typedef )
-		i = i->next
-	wend
-
-end sub
-
-'' For each array typedef, remove it and update all uses
-sub astSolveOutArrayTypedefs( byval n as ASTNODE ptr, byval ast as ASTNODE ptr )
-	var i = n->head
-	while( i )
-		var nxt = i->next
-
-		astSolveOutArrayTypedefs( i, ast )
-
-		if( i->class = ASTCLASS_TYPEDEF ) then
-			if( i->array ) then
-				hSolveOutArrayTypedefSubtypes( ast, i )
-				astRemove( n, i )
-			end if
-		end if
-
-		i = nxt
-	wend
-end sub
-
-private sub hExpandProcTypedef( byval n as ASTNODE ptr, byval typedef as ASTNODE ptr )
-	'' variable/field/typedef declarations such as
-	''    a *p1;
-	'' become function pointers:
-	''    int (*p1)(int);
-	''
-	'' This should preserve CONSTs:
-	''    a * const p1;
-	'' becomes:
-	''    int (* const p1)(int);
-	'' But as above, cv-qualifiers on the function type
-	'' don't make sense and should be ignored, e.g.:
-	''    a const * p1;
-
-	assert( typeGetDtAndPtr( typedef->dtype ) = TYPE_PROC )
-	astSetType( n, typeUnsetBaseConst( typeSetDt( n->dtype, TYPE_PROC ) ), typedef->subtype )
-end sub
-
-private function hSolveOutProcTypedefSubtype( byval n as ASTNODE ptr, byval typedef as ASTNODE ptr ) as integer
-	'' Given a function typedef such as
-	''    typedef int (a)(int);
-	assert( typeGetDtAndPtr( typedef->dtype ) = TYPE_PROC )
-
-	'' We want to update the given declaration which uses this typedef.
-	assert( typeGetDt( n->dtype ) = TYPE_UDT )
-
-	select case( n->class )
-	case ASTCLASS_VAR, ASTCLASS_FIELD
-		'' The var/field uses the typedef as data type, either plain,
-		'' or as pointer to it. In the former case, the var/field itself
-		'' becomes the function. In case it's just a pointer, it becomes
-		'' a function pointer.
-
-		if( typeGetPtrCount( n->dtype ) = 0 ) then
-			var proc = typedef->subtype
-			assert( proc->class = ASTCLASS_PROC )
-
-			'' variable/field declarations such as
-			''    a f1;
-			'' must be turned into procedure declarations (solving out the typedef):
-			''    int (f1)(int);
-			''
-			'' If there's a CONST on the function type, e.g.:
-			''    typedef int (T)(int);
-			''    T const f;
-			'' it will be overwritten and lost, i.e. we ignore it.
-			'' According to gcc -pedantic, "ISO C forbids qualified
-			'' function types", and it seems like the C++ standard
-			'' requires cv-qualifiers to be ignored in such cases.
-
-			'' Function result type
-			astSetType( n, proc->dtype, proc->subtype )
-
-			'' Parameters
-			assert( n->head = NULL )
-			astAppend( n, astCloneChildren( proc ) )
-
-			'' Attributes, e.g. calling convention
-			n->attrib or= proc->attrib and (not ASTATTRIB_FILTEROUT)
-
-			'' Turn into a procedure
-			n->class = ASTCLASS_PROC
-		else
-			hExpandProcTypedef( n, typedef )
-		end if
-
-	'' It's also possible that the typedef is used as type in another
-	'' typedef:
-	''    typedef a b;
-	'' In this case we want to expand 'a' in the 'b' typedef:
-	''    typedef int (b)(int);
-	'' and then later solve out 'b' in the same way everywhere it's used.
-	case ASTCLASS_TYPEDEF
-		hExpandProcTypedef( n, typedef )
-
-	'' In other places (parameters, function results, casts, sizeof()) we
-	'' can expand the function type (only) if the context is a pointer.
-	'' It will then become a function pointer.
-	''
-	'' Having a plain function type as parameter or function result doesn't
-	'' make sense though.
-	case else
-		if( typeGetPtrCount( n->dtype ) = 0 ) then
-			exit function
-		end if
-
-		hExpandProcTypedef( n, typedef )
-	end select
-
-	function = TRUE
-end function
-
-private sub hSolveOutProcTypedefSubtypes _
-	( _
-		byval n as ASTNODE ptr, _
-		byval typedef as ASTNODE ptr _
-	)
-
-	if( typeGetDt( n->dtype ) = TYPE_UDT ) then
-		if( n->subtype->class = ASTCLASS_ID ) then
-			if( *n->subtype->text = *typedef->text ) then
-				if( hSolveOutProcTypedefSubtype( n, typedef ) = FALSE ) then
-					oops( "can't solve out " + astDumpPrettyDecl( typedef ) + " in " + astDumpPrettyDecl( n ) )
-				end if
-			end if
-		end if
-	end if
-
-	if( n->subtype ) then hSolveOutProcTypedefSubtypes( n->subtype, typedef )
-	if( n->array ) then hSolveOutProcTypedefSubtypes( n->array, typedef )
-	if( n->expr  ) then hSolveOutProcTypedefSubtypes( n->expr , typedef )
-
-	var i = n->head
-	while( i )
-		hSolveOutProcTypedefSubtypes( i, typedef )
-		i = i->next
-	wend
-
-end sub
-
-sub astSolveOutProcTypedefs( byval n as ASTNODE ptr, byval ast as ASTNODE ptr )
-	var i = n->head
-	while( i )
-		var nxt = i->next
-
-		astSolveOutProcTypedefs( i, ast )
-
-		if( i->class = ASTCLASS_TYPEDEF ) then
-			if( typeGetDtAndPtr( i->dtype ) = TYPE_PROC ) then
-				hSolveOutProcTypedefSubtypes( ast, i )
-				astRemove( n, i )
-			end if
-		end if
-
-		i = nxt
-	wend
-end sub
-
-'' Handle declarations with plain char/zstring or wchar_t/wstring data type,
-'' not pointers though.
-'' If it's a char array, then it's probably supposed to be a string.
-'' If it's just a char, then it's probably supposed to be a byte.
-sub hHandlePlainCharAfterArrayStatusIsKnown( byval n as ASTNODE ptr )
-	select case( typeGetDtAndPtr( n->dtype ) )
-	case TYPE_ZSTRING, TYPE_WSTRING
-	case else
-		exit sub
-	end select
-
-	if( n->array ) then
-		'' Use the last (inner-most) array dimension as the fixed-length string size
-		var d = n->array->tail
-		assert( d->class = ASTCLASS_DIMENSION )
-		assert( d->expr )
-		n->subtype = astClone( d->expr )
-		astRemove( n->array, d )
-
-		'' If no dimensions left, remove the array type entirely
-		if( n->array->head = NULL ) then
-			astDelete( n->array )
-			n->array = NULL
-		end if
-	else
-		'' Turn zstring/wstring into byte/wchar_t, but preserve CONSTs
-		if( typeGetDtAndPtr( n->dtype ) = TYPE_ZSTRING ) then
-			n->dtype = typeGetConst( n->dtype ) or TYPE_BYTE
-		else
-			api.uses_wchar_t = TRUE
-			n->dtype = typeGetConst( n->dtype ) or TYPE_WCHAR_T
-		end if
-	end if
-end sub
-
-''
-'' Unscoping of nested declarations:
-''
-'' Nested named structs need to be moved to the toplevel, out of the parent
-'' struct, because FB does not support this or would scope them inside the
-'' parent struct, unlike C.
-''
-''        struct UDT1 {
-''            struct UDT2 {
-''                int a;
-''            } a;
-''            struct UDT3 {
-''                int a;
-''            };
-''        };
-''
-'' becomes:
-''
-''        struct UDT2 {
-''            int a;
-''        };
-''
-''        struct UDT3 {
-''            int a;
-''        };
-''
-''        struct UDT1 {
-''            struct UDT2 a;
-''        };
-''
-'' Since such nested structs aren't even scoped/namespaced in the parent in C,
-'' we don't even have to worry about identifier conflicts.
-''
-'' Enums can be nested inside struct/unions like this, but enums cannot contain
-'' other compound blocks.
-''
-sub astUnscopeDeclsNestedInStruct( byval result as ASTNODE ptr, byval struct as ASTNODE ptr )
-	assert( (struct->class = ASTCLASS_STRUCT) or _
-	        (struct->class = ASTCLASS_UNION) or _
-	        (struct->class = ASTCLASS_ENUM) )
-
-	var i = struct->head
-	while( i )
-		var nxt = i->next
-
-		select case( i->class )
-		case ASTCLASS_STRUCT, ASTCLASS_UNION
-			if( i->text ) then
-				astAppend( result, astClone( i ) )
-				astRemove( struct, i )
-			end if
-		end select
-
-		i = nxt
-	wend
-end sub
-
-''
-'' Look for TYPEDEFs that have the given anon UDT as subtype. The first
-'' TYPEDEF's id can become the anon UDT's id, and then that TYPEDEF can be
-'' removed. All other TYPEDEFs need to be changed over from the old anon
-'' subtype to the new id subtype.
-''
-'' For example:
-''    typedef struct { ... } A, B, C;
-'' is parsed into:
-''    struct dummyid
-''        ...
-''    typedef A as dummyid
-''    typedef B as dummyid
-''    typedef C as dummyid
-'' and should now be changed to:
-''    struct A
-''        ...
-''    typedef B as A
-''    typedef C as A
-''
-'' Not all cases can be solved out, for example:
-''    typedef struct { ... } *A;
-'' is parsed into:
-''    struct dummyid
-''        ...
-''    typedef A as dummyid ptr
-'' i.e. the typedef is a pointer to the anon struct, not an alias for it.
-''
-private sub hTryNameAnonUdtAfterFirstAliasTypedef _
-	( _
-		byval ast as ASTNODE ptr, _
-		byval anon as ASTNODE ptr _
-	)
-
-	'' (Assuming that the parser will only insert typedefs using the anon id
-	'' behind the anon UDT node, not in front of it...)
-
-	'' 1. Find alias typedef
-	dim as ASTNODE ptr aliastypedef
-	var typedef = anon->next
-	while( typedef )
-		if( typedef->class <> ASTCLASS_TYPEDEF ) then
-			exit while
-		end if
-
-		'' Must be a plain alias, can't be a pointer or non-UDT
-		if( typeGetDtAndPtr( typedef->dtype ) = TYPE_UDT ) then
-			if( typedef->subtype->class = ASTCLASS_TAGID ) then
-				if( *typedef->subtype->text = *anon->text ) then
-					aliastypedef = typedef
-					exit while
-				end if
-			end if
-		end if
-
-		typedef = typedef->next
-	wend
-
-	'' Can't be solved out?
-	if( aliastypedef = NULL ) then
-		exit sub
-	end if
-
-	'' 2. Go through all typedefs behind the anon, and replace the subtypes
-	'' (or perhaps the subtype's subtype, in case it's a procptr typedef)
-	typedef = anon->next
-	while( typedef )
-		if( typedef->class <> ASTCLASS_TYPEDEF ) then
-			exit while
-		end if
-
-		astReplaceSubtypes( typedef, ASTCLASS_TAGID, anon->text, ASTCLASS_ID, aliastypedef->text )
-
-		typedef = typedef->next
-	wend
-
-	'' 3. Turn all references to the typedef id into a tagid, because it's
-	''    now a struct, not a typedef anymore.
-	astReplaceSubtypes( ast, ASTCLASS_ID, aliastypedef->text, ASTCLASS_TAGID, aliastypedef->text )
-
-	'' Rename the anon UDT to the alias typedef's id, now that its old
-	'' dummyid isn't needed for comparison above anymore
-	astSetText( anon, aliastypedef->text )
-	assert( anon->attrib and ASTATTRIB_DUMMYID )
-	anon->attrib and= not ASTATTRIB_DUMMYID
-
-	astRemove( ast, aliastypedef )
-end sub
-
-sub astNameAnonUdtsAfterFirstAliasTypedef( byval ast as ASTNODE ptr )
-	var i = ast->head
-	while( i )
-
-		'' Anon UDT?
-		select case( i->class )
-		case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
-			if( i->attrib and ASTATTRIB_DUMMYID ) then
-				hTryNameAnonUdtAfterFirstAliasTypedef( ast, i )
-			end if
-		end select
-
-		i = i->next
-	wend
-end sub
-
-''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-''
-'' In C, any use of "struct|union|enum id" can "declare" a new tag id, no matter
-'' whether it's a <struct id { ... }> block or a <typedef struct id foo> typedef
-'' or used in some other declaration like <void f(struct id *)>. This makes it
-'' very easy to have forward references.
-''
-'' In FB, forward references can only be introduced by an explicit typedef.
-''
-'' Thus, if the API uses any tag id without properly declaring it first via a
-'' <struct|union|enum id { ... }> block, we have to insert a typedef to
-'' explicitly declare the forward reference.
-''
-'' To do this, we collect information about the declared/used state of
-'' struct/union/enum tag ids, such that in the end we have a list of tag ids,
-'' and we can tell for which ones forward declarations are needed:
-''    a) it's used above the declaration
-''    b) it's used without being declared at all
-''
-'' Declaration = struct/union/enum compound
-'' Used = Used as data type somewhere
-''
-'' We don't ever need to add forward declarations for "unused" tag ids - the
-'' ones that only appear in declarations.
-''
-
-const STATE_DECLARED			= 1 shl 0
-const STATE_USED_ABOVE_DECL		= 1 shl 1
-const STATE_USED			= 1 shl 2
-const STATE_FILTEROUT			= 1 shl 3
-
-private function hUsedButNotDeclared( byval state as integer ) as integer
-	function = ((state and (STATE_DECLARED or STATE_USED)) = STATE_USED)
-end function
-
-'' Record a tag id into the list and hashtb, if it doesn't exist yet,
-'' and update used/declared state
-private sub hOnTagId _
-	( _
-		byval list as ASTNODE ptr, _
-		byval hashtb as THASH ptr, _
-		byval id as zstring ptr, _
-		byval addstate as integer, _
-		byval has_filterout as integer _
-	)
-
-	var hash = hashHash( id )
-	var item = hashLookup( hashtb, id, hash )
-
-	'' Already exists?
-	if( item->s ) then
-		var state = cint( item->data )
-
-		'' Adding a declaration?
-		if( addstate = STATE_DECLARED ) then
-			'' Already used, but not declared yet?
-			if( hUsedButNotDeclared( state ) ) then
-				state or= STATE_USED_ABOVE_DECL
-			end if
-		end if
-
-		state or= addstate
-
-		item->data = cptr( any ptr, state )
-	else
-		'' New tag id.
-
-		if( has_filterout ) then
-			addstate or= STATE_FILTEROUT
-		end if
-
-		hashAdd( hashtb, item, hash, id, cptr( any ptr, addstate ) )
-
-		astAppend( list, astNewID( id ) )
-	end if
-
-end sub
-
-'' Walk through the code from top to bottom and record tag ids and corresponding
-'' state into the list and hashtb.
-private sub hCollectTagIds( byval n as ASTNODE ptr, byval list as ASTNODE ptr, byval hashtb as THASH ptr )
-	select case( n->class )
-	case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
-		'' Not anonymous?
-		if( n->text ) then
-			hOnTagId( list, hashtb, n->text, STATE_DECLARED, ((n->attrib and ASTATTRIB_FILTEROUT) <> 0) )
-		end if
-	end select
-
-	if( n->subtype ) then
-		if( n->subtype->class = ASTCLASS_TAGID ) then
-			hOnTagId( list, hashtb, n->subtype->text, STATE_USED, ((n->attrib and ASTATTRIB_FILTEROUT) <> 0) )
-		else
-			hCollectTagIds( n->subtype, list, hashtb )
-		end if
-	end if
-
-	if( n->array ) then hCollectTagIds( n->array, list, hashtb )
-	if( n->expr  ) then hCollectTagIds( n->expr , list, hashtb )
-
-	var i = n->head
-	while( i )
-		hCollectTagIds( i, list, hashtb )
-		i = i->next
-	wend
-end sub
-
-private sub hRenameTagDecls _
-	( _
-		byval n as ASTNODE ptr, _
-		byval oldid as zstring ptr, _
-		byval newid as zstring ptr _
-	)
-
-	select case( n->class )
-	case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
-		if( n->text ) then
-			if( *n->text = *oldid ) then
-				astSetText( n, newid )
-			end if
-		end if
-	end select
-
-	var i = n->head
-	while( i )
-		hRenameTagDecls( i, oldid, newid )
-		i = i->next
-	wend
-
-end sub
-
-private function hAddForwardTypedef( byval decllist as ASTNODE ptr, byval tagid as zstring ptr, byval add_filterout as integer ) as string
-	var forwardid = *tagid + "_"
-	var typedef = astNew( ASTCLASS_TYPEDEF, tagid )
-	astSetType( typedef, TYPE_UDT, astNewID( forwardid ) )
-	if( add_filterout ) then
-		astSetAttribOnAll( typedef, ASTATTRIB_FILTEROUT )
-	end if
-	astAppend( decllist, typedef )
-	function = forwardid
-end function
-
-private sub hConsiderTagId _
-	( _
-		byval decllist as ASTNODE ptr, _
-		byval ast as ASTNODE ptr, _
-		byval tagid as zstring ptr, _
-		byval state as integer _
-	)
-
-	var turned_into_typedef = FALSE
-
-	'' Tag id used before its declaration?
-	if( state and STATE_USED_ABOVE_DECL ) then
-		'' Rename the struct and add a forward declaration for it using the old id.
-		'' astFixIds() will take care of fixing name conflicts involving the new
-		'' struct id, if any.
-		hRenameTagDecls( ast, tagid, hAddForwardTypedef( decllist, tagid, ((state and STATE_FILTEROUT) <> 0) ) )
-		turned_into_typedef = TRUE
-
-	'' Tag id used only (and no declaration exists)?
-	elseif( hUsedButNotDeclared( state ) ) then
-		'' Add a forward typedef for this id and a dummy declaration
-		'' for the forward id, so that astFixIds() will take care of fixing
-		'' name conflicts involving the forward id, if any. The dummy
-		'' declaration won't be emitted though.
-		var forwardid = hAddForwardTypedef( decllist, tagid, ((state and STATE_FILTEROUT) <> 0) )
-		turned_into_typedef = TRUE
-
-		var dummydecl = astNew( ASTCLASS_STRUCT, forwardid )
-		dummydecl->attrib or= ASTATTRIB_FILTEROUT
-		astAppend( decllist, dummydecl )
-	end if
-
-	'' If we added a typedef for the tagid above, then it's now a typedef,
-	'' no longer a tagid, and all uses must be adjusted accordingly.
-	if( turned_into_typedef ) then
-		astReplaceSubtypes( ast, ASTCLASS_TAGID, tagid, ASTCLASS_ID, tagid )
-	end if
-
-end sub
-
-sub astAddForwardDeclsForUndeclaredTagIds( byval ast as ASTNODE ptr )
-	dim hashtb as THASH
-	hashInit( @hashtb, 4, FALSE )
-	var tagidlist = astNewGROUP( )
-
-	hCollectTagIds( ast, tagidlist, @hashtb )
-
-	'' For each tag id: Create a forward declaration, if needed, and adjust
-	'' the AST, if needed.
-	var decllist = astNewGROUP( )
-	var tagid = tagidlist->head
-	while( tagid )
-
-		var id = tagid->text
-		var item = hashLookup( @hashtb, id, hashHash( id ) )
-		assert( item->s )
-		hConsiderTagId( decllist, ast, id, cint( item->data ) )
-
-		tagid = tagid->next
-	wend
-
-	'' Insert the forward declarations at the top of the AST, in the same
-	'' order they were found.
-	astPrepend( ast, decllist )
-
-	astDelete( tagidlist )
-	hashEnd( @hashtb )
-end sub
-
 ''
 '' Remove all declarations marked with ASTATTRIB_FILTEROUT.
 ''
@@ -694,33 +94,6 @@ sub astFilterOut( byval code as ASTNODE ptr )
 		if( i->attrib and ASTATTRIB_FILTEROUT ) then
 			astRemove( code, i )
 		end if
-		i = nxt
-	wend
-end sub
-
-''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-
-'' Removes typedefs of the form "typedef struct T T;" which aren't needed in FB.
-sub astRemoveRedundantTypedefs( byval n as ASTNODE ptr, byval ast as ASTNODE ptr )
-	var i = n->head
-	while( i )
-		var nxt = i->next
-
-		astRemoveRedundantTypedefs( i, ast )
-
-		if( i->class = ASTCLASS_TYPEDEF ) then
-			if( typeGetDtAndPtr( i->dtype ) = TYPE_UDT ) then
-				if( i->subtype->class = ASTCLASS_TAGID ) then
-					var typedef = *i->text
-					var struct = *i->subtype->text
-					if( typedef = struct ) then
-						astReplaceSubtypes( ast, ASTCLASS_ID, typedef, ASTCLASS_TAGID, struct )
-						astRemove( n, i )
-					end if
-				end if
-			end if
-		end if
-
 		i = nxt
 	wend
 end sub
@@ -807,7 +180,6 @@ private sub hWalkAndCheckIds _
 				'' Don't build a renamelist here, because for parameters it's useless anyways.
 				var nestedrenamelist = astNew( ASTCLASS_RENAMELIST )
 				hFixIdsInScope( reservedids, i->subtype, nestedrenamelist )
-				astDelete( nestedrenamelist )
 			end if
 		end if
 
@@ -828,7 +200,6 @@ private sub hWalkAndCheckIds _
 			'' Don't build a renamelist here, because for parameters it's useless anyways.
 			var nestedrenamelist = astNew( ASTCLASS_RENAMELIST )
 			hFixIdsInScope( reservedids, i, nestedrenamelist )
-			astDelete( nestedrenamelist )
 
 		case ASTCLASS_VAR, ASTCLASS_ENUMCONST
 			hCheckId( @fbkeywordhash, i, FALSE )
@@ -869,8 +240,6 @@ private sub hWalkAndCheckIds _
 				hFixIdsInScope( reservedids, i, nestedrenamelist )
 				if( nestedrenamelist->head ) then
 					astAppend( renamelist, nestedrenamelist )
-				else
-					astDelete( nestedrenamelist )
 				end if
 			else
 				'' Anonymous struct/union: Process the fields
@@ -903,72 +272,12 @@ private sub hWalkAndCheckIds _
 	wend
 end sub
 
-private sub hReplaceCalls _
-	( _
-		byval n as ASTNODE ptr, _
-		byval oldid as zstring ptr, _
-		byval newid as zstring ptr _
-	)
-
-	if( n = NULL ) then exit sub
-
-	select case( n->class )
-	case ASTCLASS_CALL, ASTCLASS_ID
-		if( *n->text = *oldid ) then
-			astSetText( n, newid )
-		end if
-	end select
-
-	if( n->subtype ) then hReplaceCalls( n->subtype, oldid, newid )
-	if( n->array   ) then hReplaceCalls( n->array  , oldid, newid )
-	if( n->expr    ) then hReplaceCalls( n->expr   , oldid, newid )
-
-	var i = n->head
-	while( i )
-		hReplaceCalls( i, oldid, newid )
-		i = i->next
-	wend
-
-end sub
-
-sub astReplaceSubtypes _
-	( _
-		byval n as ASTNODE ptr, _
-		byval oldclass as integer, _
-		byval oldid as zstring ptr, _
-		byval newclass as integer, _
-		byval newid as zstring ptr _
-	)
-
-	if( n->subtype ) then
-		if( n->subtype->class = oldclass ) then
-			if( *n->subtype->text = *oldid ) then
-				astSetText( n->subtype, newid )
-				n->subtype->class = newclass
-			end if
-		else
-			astReplaceSubtypes( n->subtype, oldclass, oldid, newclass, newid )
-		end if
-	end if
-
-	if( n->array ) then astReplaceSubtypes( n->array, oldclass, oldid, newclass, newid )
-	if( n->expr  ) then astReplaceSubtypes( n->expr , oldclass, oldid, newclass, newid )
-
-	var i = n->head
-	while( i )
-		astReplaceSubtypes( i, oldclass, oldid, newclass, newid )
-		i = i->next
-	wend
-
-end sub
-
 private sub hRenameSymbol _
 	( _
 		byval reservedids as THASH ptr, _
 		byval types as THASH ptr, _
 		byval globals as THASH ptr, _
 		byval n as ASTNODE ptr, _
-		byval code as ASTNODE ptr, _
 		byval renamelist as ASTNODE ptr _
 	)
 
@@ -1010,24 +319,6 @@ private sub hRenameSymbol _
 			assert( FALSE )
 		end select
 	loop while( exists )
-
-	'' Adjust all nodes using the original symbol name to use the new one
-	'' Renaming a procedure? Should update all CALL expressions.
-	'' Renaming a type? Should update all references to it.
-	'' (chances are this is the right thing to do, because headers won't
-	'' usually contain duplicates amongst types/globals internally; it's
-	'' just the case-insensitivity and FB keywords that cause problems)
-	select case( n->class )
-	case ASTCLASS_PPDEFINE, ASTCLASS_PROC, ASTCLASS_PARAM, _
-	     ASTCLASS_VAR, ASTCLASS_ENUMCONST, ASTCLASS_FIELD
-		hReplaceCalls( code, n->text, newid )
-	case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
-		astReplaceSubtypes( code, ASTCLASS_TAGID, n->text, ASTCLASS_TAGID, newid )
-	case ASTCLASS_TYPEDEF
-		astReplaceSubtypes( code, ASTCLASS_ID, n->text, ASTCLASS_ID, newid )
-	case else
-		assert( FALSE )
-	end select
 
 	'' Update the symbol and add it to the hash table
 	astRenameSymbol( n, newid )
@@ -1073,7 +364,6 @@ private sub hWalkAndRenameSymbols _
 		byval types as THASH ptr, _
 		byval globals as THASH ptr, _
 		byval n as ASTNODE ptr, _
-		byval code as ASTNODE ptr, _
 		byval renamelist as ASTNODE ptr _
 	)
 
@@ -1081,7 +371,7 @@ private sub hWalkAndRenameSymbols _
 	while( i )
 
 		if( i->attrib and ASTATTRIB_NEEDRENAME ) then
-			hRenameSymbol( reservedids, types, globals, i, code, renamelist )
+			hRenameSymbol( reservedids, types, globals, i, renamelist )
 		end if
 
 		''
@@ -1094,7 +384,7 @@ private sub hWalkAndRenameSymbols _
 		'' are supposed to be handled by their hFixIdsInScope() calls.
 		''
 		if( hIsScopelessBlock( i ) ) then
-			hWalkAndRenameSymbols( reservedids, types, globals, i, code, renamelist )
+			hWalkAndRenameSymbols( reservedids, types, globals, i, renamelist )
 		end if
 
 		i = i->next
@@ -1116,12 +406,28 @@ private sub hFixIdsInScope _
 
 	'' 1. Walk through symbols top-down, much like a C compiler, and mark
 	''    those that need renaming with ASTATTRIB_NEEDRENAME.
+	for i as integer = 0 to api->tagcount - 1
+		var n = api->tags[i]
+		if( (n->attrib and ASTATTRIB_BODYDEFINED) = 0 ) then
+			hCheckId( @fbkeywordhash, n, FALSE )
+			hCheckId( reservedids, n, FALSE )
+			hCheckId( @types, n, TRUE )
+		end if
+	next
 	hWalkAndCheckIds( reservedids, @types, @globals, code, renamelist )
 
 	'' 2. Rename all marked symbols. Now that all symbols are known, we can
 	''    generate new names for the symbols that need renaming without
 	''    introducing more conflicts.
-	hWalkAndRenameSymbols( reservedids, @types, @globals, code, code, renamelist )
+	for i as integer = 0 to api->tagcount - 1
+		var n = api->tags[i]
+		if( (n->attrib and ASTATTRIB_BODYDEFINED) = 0 ) then
+			if( n->attrib and ASTATTRIB_NEEDRENAME ) then
+				hRenameSymbol( reservedids, @types, @globals, n, renamelist )
+			end if
+		end if
+	next
+	hWalkAndRenameSymbols( reservedids, @types, @globals, code, renamelist )
 
 	hashEnd( @globals )
 	hashEnd( @types )
@@ -1149,8 +455,6 @@ sub astFixIds( byval code as ASTNODE ptr )
 	hFixIdsInScope( @reservedids, code, renamelist )
 	if( renamelist->head ) then
 		astPrepend( code, renamelist )
-	else
-		astDelete( renamelist )
 	end if
 	hashEnd( @reservedids )
 end sub

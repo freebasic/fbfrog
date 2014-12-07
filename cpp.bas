@@ -43,16 +43,6 @@
 '' statements that won't be expanded in the final binding should be preserved
 '' in the final binding, because they'll probably be needed.
 ''
-'' cppNoExpandSym() can be used to disable macro expansion for certain symbols.
-'' This should be pretty rare though; usually in headers where function
-'' declarations etc. are obfuscated by macros, they're going to need to be
-'' expanded.
-''
-'' cppRemoveSym() registers symbols (#defines/#undefs) which should be removed
-'' instead of being preserved in the binding. Doing this on the PP level instead
-'' of later in the AST is useful for #defines whose bodies can't be parsed as
-'' C expressions.
-''
 
 #include once "fbfrog.bi"
 #include once "crt.bi"
@@ -248,7 +238,7 @@ function hNumberLiteral( byval x as integer, byval is_cpp as integer, byref errm
 			n->dtype = iif( have_u, TYPE_ULONGINT, TYPE_LONGINT )
 		elseif( have_l ) then
 			n->dtype = iif( have_u, TYPE_CULONG, TYPE_CLONG )
-			api.uses_clong = TRUE
+			api->uses_clong = TRUE
 		else
 			n->dtype = iif( have_u, TYPE_ULONG, TYPE_LONG )
 		end if
@@ -263,7 +253,6 @@ function hNumberLiteral( byval x as integer, byval is_cpp as integer, byref errm
 	'' Show error if we didn't reach the end of the number literal
 	if( p[0] <> 0 ) then
 		errmsg = "invalid suffix on number literal: '" + *cptr( zstring ptr, p ) + "'"
-		astDelete( n )
 		exit function
 	end if
 
@@ -373,12 +362,7 @@ private function definfoNew( ) as DEFINEINFO ptr
 	function = callocate( sizeof( DEFINEINFO ) )
 end function
 
-private sub definfoDelete( byval definfo as DEFINEINFO ptr )
-	if( definfo ) then
-		astDelete( definfo->macro )
-		deallocate( definfo )
-	end if
-end sub
+#define definfoDelete( definfo ) deallocate( definfo )
 
 private function definfoClone( byval a as DEFINEINFO ptr ) as DEFINEINFO ptr
 	var b = definfoNew( )
@@ -494,9 +478,6 @@ namespace cpp
 	dim shared savedmacros		as SAVEDMACRO ptr
 	dim shared savedmacrocount	as integer
 
-	dim shared noexpands		as THASH
-	dim shared removes		as THASH
-
 	dim shared incdirs		as ASTNODE ptr
 
 	'' #include exclude/include filters: GROUP of FILTEROUT/FILTERIN nodes,
@@ -539,8 +520,6 @@ sub cppInit( )
 	hashInit( @cpp.macros, 4, TRUE )
 	cpp.savedmacros = NULL
 	cpp.savedmacrocount = 0
-	hashInit( @cpp.noexpands, 4, TRUE )
-	hashInit( @cpp.removes, 4, TRUE )
 	cpp.incdirs = astNewGROUP( )
 	cpp.filters = astNewGROUP( )
 
@@ -574,10 +553,6 @@ sub cppEnd( )
 		next
 		deallocate( cpp.savedmacros )
 	end scope
-	hashEnd( @cpp.noexpands )
-	hashEnd( @cpp.removes )
-	astDelete( cpp.incdirs )
-	astDelete( cpp.filters )
 
 	hashEnd( @cpp.filetb )
 	scope
@@ -590,20 +565,11 @@ sub cppEnd( )
 		deallocate( cpp.files )
 	end scope
 
-	''astDelete( cpp.directincludes )  '' currently unnecessary, due to cppTakeDirectIncludes()
 	hashEnd( @cpp.directincludetb )
 end sub
 
 #define cppSkipping( ) (cpp.skiplevel <> MAXSTACK)
 #define cppWillBeFilteredOut( ) (cpp.filteroutlevel >= 1)
-
-sub cppNoExpandSym( byval id as zstring ptr )
-	hashAddOverwrite( @cpp.noexpands, id, NULL )
-end sub
-
-sub cppRemoveSym( byval id as zstring ptr )
-	hashAddOverwrite( @cpp.removes, id, NULL )
-end sub
 
 sub cppAddIncDir( byval incdir as ASTNODE ptr )
 	astAppend( cpp.incdirs, incdir )
@@ -673,14 +639,6 @@ end sub
 private sub cppAddKnownUndefined( byval id as zstring ptr )
 	cppAddMacro( id, NULL )
 end sub
-
-private function cppShouldExpandSym( byval id as zstring ptr ) as integer
-	function = (hashLookup( @cpp.noexpands, id, hashHash( id ) )->s = NULL)
-end function
-
-private function cppShouldRemoveSym( byval id as zstring ptr ) as integer
-	function = (hashLookup( @cpp.removes, id, hashHash( id ) )->s <> NULL)
-end function
 
 private sub hSetRemoveOnCurrentDefine( byval id as zstring ptr )
 	var definfo = cppLookupMacro( id )
@@ -1031,8 +989,6 @@ private sub cppExpression _
 		a.vali = astEvalConstiAsInt64( n )
 		a.dtype = n->dtype
 
-		astDelete( n )
-
 		cpp.x += 1
 
 	'' Unexpanded identifier: treated as a literal 0
@@ -1232,7 +1188,7 @@ private function hCheckForMacroCall( byval x as integer ) as DEFINEINFO ptr
 	end if
 
 	'' Only expand if not marked otherwise
-	if( (not cppShouldExpandSym( id )) or _
+	if( hashContains( @frog.idopt(OPT_NOEXPAND), id, hashHash( id ) ) or _
 	    (tkGetFlags( x ) and TKFLAG_NOEXPAND) or _
 	    (definfo->macro->attrib and ASTATTRIB_POISONED) ) then
 		return NULL
@@ -2362,7 +2318,7 @@ private sub cppDefine( byval begin as integer, byref flags as integer )
 
 	'' Normally, we preserve #define directives (unlike the other CPP directives),
 	'' thus no generic tkSetRemove() here. Unless the symbol was registed for removal.
-	if( cppShouldRemoveSym( macro->text ) = FALSE ) then
+	if( hashContains( @frog.idopt(OPT_REMOVEDEFINE), macro->text, hashHash( macro->text ) ) = FALSE ) then
 		flags and= not TKFLAG_REMOVE
 	end if
 	flags or= TKFLAG_DEFINE
@@ -2708,4 +2664,28 @@ sub hMoveDefinesOutOfConstructs( )
 			end if
 		wend
 	loop
+end sub
+
+sub hOnlyFilterOutWholeConstructs( )
+	var x = 0
+	while( tkGet( x ) <> TK_EOF )
+		var nxt = hSkipConstruct( x, FALSE )
+
+		'' Count occurences of TKFLAG_FILTEROUT in this construct
+		var filterouts = 0
+		for i as integer = x to nxt - 1
+			if( tkGetFlags( i ) and TKFLAG_FILTEROUT ) then
+				filterouts += 1
+			end if
+		next
+
+		'' If only some but not all tokens in the construct are marked
+		'' with TKFLAG_FILTEROUT, then we better forget about that,
+		'' otherwise we could end up deleting a partial construct...
+		if( (filterouts > 0) and (filterouts < (nxt - x)) ) then
+			tkUnsetFilterOut( x, nxt - 1 )
+		end if
+
+		x = nxt
+	wend
 end sub

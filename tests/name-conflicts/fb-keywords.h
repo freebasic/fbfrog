@@ -415,9 +415,9 @@ void open(void);
 #define INT 1
 #define Int 2
 
-int BASE;
-static int WINDOW;
-extern int WINDOWTITLE;
+int base;
+static int window;
+extern int windowtitle;
 
 struct Width {
 	// Field names that could cause problems in FB because they're keywords

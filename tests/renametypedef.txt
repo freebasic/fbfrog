@@ -8,4 +8,4 @@
       tests/renametypedef.h
 [5/5] __FB_DOS__
       tests/renametypedef.h
-emitting: tests/renametypedef.bi (6 declarations, 0 TODOs)
+emitting: tests/renametypedef.bi (12 declarations, 0 TODOs)

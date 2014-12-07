@@ -160,6 +160,7 @@ declare function hashLookup _
 		byval s as zstring ptr, _
 		byval hash as ulong _
 	) as THASHITEM ptr
+declare function hashLookupDataOrNull( byval h as THASH ptr, byval id as zstring ptr ) as any ptr
 declare function hashContains _
 	( _
 		byval h as THASH ptr, _
@@ -368,15 +369,26 @@ enum
 
 	TK_ARGSFILE
 	OPT__FIRST
-	OPT_NODEFAULTSCRIPT = OPT__FIRST
-	OPT_FILTEROUT
-	OPT_FILTERIN
+	OPT_O = OPT__FIRST
+	OPT_V
+	OPT_NODEFAULTSCRIPT
 	OPT_WINDOWSMS
 	OPT_SYNTAXONLY
 	OPT_FIXUNSIZEDARRAYS
-	OPT_V
+	OPT_RENAMETYPEDEF
+	OPT_RENAMETAG
+	OPT_REMOVEDEFINE
+	OPT_REMOVEPROC
+	OPT_TYPEDEFHINT
+	OPT_RESERVEDID
+	OPT_NOEXPAND
+	OPT_DEFINE
+	OPT_INCLUDE
+	OPT_FBFROGINCLUDE
 	OPT_INCDIR
-	OPT_O
+	OPT_FILTEROUT
+	OPT_FILTERIN
+	OPT_INCLIB
 	OPT_DECLAREDEFINES
 	OPT_UNCHECKED
 	OPT_DECLAREVERSIONS
@@ -388,18 +400,7 @@ enum
 	OPT_IFDEF
 	OPT_ELSE
 	OPT_ENDIF
-	OPT_INCLIB
-	OPT_DEFINE
-	OPT_INCLUDE
-	OPT_FBFROGINCLUDE
-	OPT_NOEXPAND
-	OPT_REMOVEDEFINE
-	OPT_REMOVEPROC
-	OPT_TYPEDEFHINT
-	OPT_RESERVEDID
-	OPT_RENAMETYPEDEF
-	OPT_RENAMETAG
-	OPT__LAST = OPT_RENAMETAG
+	OPT__LAST = OPT_ENDIF
 
 	TK__COUNT
 end enum
@@ -445,6 +446,7 @@ declare sub tkAddFlags( byval first as integer, byval last as integer, byval fla
 declare sub tkSetRemove overload( byval x as integer )
 declare sub tkSetRemove overload( byval first as integer, byval last as integer )
 declare function tkGetFlags( byval x as integer ) as integer
+declare sub tkUnsetFilterOut( byval first as integer, byval last as integer )
 declare function tkCount _
 	( _
 		byval tk as integer, _
@@ -548,13 +550,6 @@ enum
 	ASTCLASS_CASEELSE
 	ASTCLASS_ENDSELECT
 	ASTCLASS_FILE
-	ASTCLASS_NOEXPAND
-	ASTCLASS_REMOVEDEFINE
-	ASTCLASS_REMOVEPROC
-	ASTCLASS_TYPEDEFHINT
-	ASTCLASS_RESERVEDID
-	ASTCLASS_RENAMETYPEDEF
-	ASTCLASS_RENAMETAG
 	ASTCLASS_INCDIR
 	ASTCLASS_FILTEROUT
 	ASTCLASS_FILTERIN
@@ -588,15 +583,14 @@ enum
 	ASTCLASS_RETURN
 
 	'' Expression atoms etc.
+	ASTCLASS_SYM
 	ASTCLASS_MACROPARAM
 	ASTCLASS_CONSTI
 	ASTCLASS_CONSTF
-	ASTCLASS_ID
-	ASTCLASS_TAGID
 	ASTCLASS_TEXT
 	ASTCLASS_STRING
 	ASTCLASS_CHAR
-	ASTCLASS_TYPE
+	ASTCLASS_DATATYPE
 	ASTCLASS_ELLIPSIS
 
 	'' Expressions
@@ -665,11 +659,15 @@ const ASTATTRIB_POISONED      = 1 shl 11
 const ASTATTRIB_PACKED        = 1 shl 12  '' __attribute__((packed))
 const ASTATTRIB_VARIADIC      = 1 shl 13  '' PPDEFINE/MACROPARAM: variadic macros
 const ASTATTRIB_PARENTHESIZEDMACROPARAM = 1 shl 14
-const ASTATTRIB_DUMMYID       = 1 shl 15
+const ASTATTRIB_GENERATEDID   = 1 shl 15
 const ASTATTRIB_DLLIMPORT     = 1 shl 16
 const ASTATTRIB_FILTEROUT     = 1 shl 17
+const ASTATTRIB_SOLVEOUT      = 1 shl 18  '' typedefs: Solve this typedef out whereever it's used
+const ASTATTRIB_BODYDEFINED   = 1 shl 19  '' tags: a body for this tag was found
+const ASTATTRIB_USEBEFOREDEF  = 1 shl 21  '' tags: used before definition (forward-referenced)
 
-'' When changing, adjust astClone(), astIsEqual(), astDump*()
+const ASTATTRIB__CALLCONV = ASTATTRIB_CDECL or ASTATTRIB_STDCALL
+
 type ASTNODE
 	class		as integer  '' ASTCLASS_*
 	attrib		as integer  '' ASTATTRIB_*
@@ -684,12 +682,7 @@ type ASTNODE
 	array		as ASTNODE ptr '' ARRAY holding DIMENSIONs, or NULL
 	bits		as ASTNODE ptr '' bitfields only
 
-	'' PARAM: initializer
-	'' VERBLOCK: version expression
-	'' IIF: condition expression
-	'' DIMENSION: elements expression
-	'' PPDEFINE: macro body expression
-	'' PROC: procedure body, if any
+	'' Initializers, condition expressions, macro/procedure bodies, ...
 	expr		as ASTNODE ptr
 
 	union
@@ -704,9 +697,7 @@ type ASTNODE
 	prev		as ASTNODE ptr
 end type
 
-#define astNewID( id ) astNew( ASTCLASS_ID, id )
 #define astNewTEXT( text ) astNew( ASTCLASS_TEXT, text )
-#define astNewDEFINED( id ) astNew( ASTCLASS_DEFINED, id )
 #define astIsCONSTI( n ) ((n)->class = ASTCLASS_CONSTI)
 #define astIsVERBLOCK( n ) ((n)->class = ASTCLASS_VERBLOCK)
 #define astIsVERAND( n ) ((n)->class = ASTCLASS_VERAND)
@@ -724,11 +715,12 @@ declare function astNewIIF _
 	) as ASTNODE ptr
 declare function astNewGROUP overload( ) as ASTNODE ptr
 declare function astNewGROUP overload( byval c1 as ASTNODE ptr, byval c2 as ASTNODE ptr = NULL ) as ASTNODE ptr
+declare function astNewSYM( byval sym as ASTNODE ptr ) as ASTNODE ptr
+declare sub astMoveChildren( byval d as ASTNODE ptr, byval s as ASTNODE ptr )
 declare function astCloneChildren( byval src as ASTNODE ptr ) as ASTNODE ptr
 declare function astGroupContains( byval group as ASTNODE ptr, byval lookfor as ASTNODE ptr ) as integer
 declare function astGroupContainsAnyChildrenOf( byval l as ASTNODE ptr, byval r as ASTNODE ptr ) as integer
 declare function astGroupContainsAllChildrenOf( byval l as ASTNODE ptr, byval r as ASTNODE ptr ) as integer
-declare sub astDelete( byval n as ASTNODE ptr )
 declare sub astInsert _
 	( _
 		byval parent as ASTNODE ptr, _
@@ -754,15 +746,20 @@ declare sub astSetType _
 		byval dtype as integer, _
 		byval subtype as ASTNODE ptr _
 	)
+declare sub astCopy( byval d as ASTNODE ptr, byval s as ASTNODE ptr )
 declare function astCloneNode( byval n as ASTNODE ptr ) as ASTNODE ptr
 declare function astClone( byval n as ASTNODE ptr ) as ASTNODE ptr
-declare sub astSetAttribOnAll( byval n as ASTNODE ptr, byval attrib as integer )
 declare function astIsMergableBlock( byval n as ASTNODE ptr ) as integer
+enum
+	ASTISEQUAL_NORMAL
+	ASTISEQUAL_MERGE
+	ASTISEQUAL_SIGNATURE
+end enum
 declare function astIsEqual _
 	( _
 		byval a as ASTNODE ptr, _
 		byval b as ASTNODE ptr, _
-		byval is_merge as integer = FALSE _
+		byval mode as integer = ASTISEQUAL_NORMAL _
 	) as integer
 declare sub astReport _
 	( _
@@ -792,26 +789,11 @@ declare sub astDump _
 declare function astLookupMacroParam _
 	( _
 		byval macro as ASTNODE ptr, _
-		byval id as zstring ptr _
+		byval id as zstring ptr, _
+		byref macroparam as ASTNODE ptr = NULL _
 	) as integer
 declare sub astWrapInExternBlock( byval ast as ASTNODE ptr, byval callconv as integer )
-declare sub hHandleArrayParam( byval n as ASTNODE ptr )
-declare sub astSolveOutArrayTypedefs( byval n as ASTNODE ptr, byval ast as ASTNODE ptr )
-declare sub astSolveOutProcTypedefs( byval n as ASTNODE ptr, byval ast as ASTNODE ptr )
-declare sub hHandlePlainCharAfterArrayStatusIsKnown( byval n as ASTNODE ptr )
-declare sub astUnscopeDeclsNestedInStruct( byval result as ASTNODE ptr, byval struct as ASTNODE ptr )
-declare sub astNameAnonUdtsAfterFirstAliasTypedef( byval ast as ASTNODE ptr )
-declare sub astAddForwardDeclsForUndeclaredTagIds( byval ast as ASTNODE ptr )
 declare sub astFilterOut( byval code as ASTNODE ptr )
-declare sub astRemoveRedundantTypedefs( byval n as ASTNODE ptr, byval ast as ASTNODE ptr )
-declare sub astReplaceSubtypes _
-	( _
-		byval n as ASTNODE ptr, _
-		byval oldclass as integer, _
-		byval oldid as zstring ptr, _
-		byval newclass as integer, _
-		byval newid as zstring ptr _
-	)
 declare sub astFixIdsInit( )
 declare sub astFixIdsAddReservedId( byval id as zstring ptr )
 declare sub astFixIds( byval code as ASTNODE ptr )
@@ -858,41 +840,51 @@ declare function hDefineHead( byref x as integer ) as ASTNODE ptr
 
 declare sub cppInit( )
 declare sub cppEnd( )
-declare sub cppNoExpandSym( byval id as zstring ptr )
-declare sub cppRemoveSym( byval id as zstring ptr )
 declare sub cppAddIncDir( byval incdir as ASTNODE ptr )
 declare sub cppAddFilter( byval filter as ASTNODE ptr )
 declare sub cppAppendIncludeDirective( byref filename as string, byval tkflags as integer )
 declare function cppTakeDirectIncludes( ) as ASTNODE ptr
 declare sub cppMain( )
 declare sub hMoveDefinesOutOfConstructs( )
+declare sub hOnlyFilterOutWholeConstructs( )
 
 declare sub cInit( )
 declare sub cEnd( )
-declare sub cAddTypedef( byval id as zstring ptr )
-declare function cFile( ) as ASTNODE ptr
+declare sub cMain( )
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-type FROGVERSION
+type FROGAPI
 	verand		as ASTNODE ptr
 	options		as ASTNODE ptr
+
+	as integer cdecls, stdcalls, need_externblock
+	as integer uses_clong, uses_clongdouble, uses_wchar_t
+
+	ast		as ASTNODE ptr
+	renamelist	as ASTNODE ptr
+
+	'' Tags that were used before being defined (those for which we have to add forward decls)
+	tags		as ASTNODE ptr ptr
+	tagcount	as integer
+	taghash		as THASH
 end type
 
 namespace frog
-	extern as integer verbose, windowsms, fixunsizedarrays
+	extern as integer verbose, windowsms, syntaxonly, fixunsizedarrays
 
 	extern as ASTNODE ptr script
 	extern as ASTNODE ptr completeverors, fullveror
 
-	extern as FROGVERSION ptr versions
-	extern as integer versioncount
+	extern as FROGAPI ptr apis
+	extern as integer apicount
+
+	extern renameopt(OPT_RENAMETYPEDEF to OPT_RENAMETAG) as THASH
+	extern idopt(OPT_REMOVEDEFINE to OPT_NOEXPAND) as THASH
 end namespace
 
-namespace api
-	extern as integer cdecls, stdcalls, need_externblock
-	extern as integer uses_clong, uses_clongdouble, uses_wchar_t
-end namespace
+extern api as FROGAPI ptr
 
 declare function hFindResource( byref filename as string ) as string
 declare sub frogPrint( byref s as string )
+declare sub apiAddTag( byval tag as ASTNODE ptr )

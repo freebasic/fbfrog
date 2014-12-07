@@ -2,7 +2,9 @@
 
 extern "C"
 
-type FOO as long
+type FOO
+	FOO as long
+end type
 
 declare sub FOO()
 declare sub f(byval FOO as long)

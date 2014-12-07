@@ -33,13 +33,11 @@ type DECLTABLE
 end type
 
 '' ASTNODE class and identifier are the 2 main points to quickly distinguish two declarations.
-'' Care must be taken though; some things shouldn't be calculated into the hash because
-'' hAstLCS() and e.g. hFindCommonCallConvsOnMergedDecl() do custom handling for them:
-''  * dummyids
-''  * callconv/ASTATTRIB_HIDECALLCONV flags
+'' Care must be taken though; callconv/ASTATTRIB_HIDECALLCONV flags shouldn't be calculated into
+'' the hash though because hAstLCS() and hFindCommonCallConvsOnMergedDecl() do custom handling for them...
 private function decltableHash( byval n as ASTNODE ptr ) as ulong
 	dim as ulong hash = n->class
-	if( (n->text <> NULL) and ((n->attrib and ASTATTRIB_DUMMYID) = 0) ) then
+	if( n->text ) then
 		hash or= hashHash( n->text ) shl 8
 	end if
 	function = hash
@@ -121,7 +119,7 @@ function astDumpPrettyVersion( byval n as ASTNODE ptr ) as string
 		s = *n->head->text + "=" + *n->tail->text
 
 	case ASTCLASS_DEFINED
-		s = *n->text
+		s = *n->head->text
 
 	case ASTCLASS_NOT
 		s = "(not " + astDumpPrettyVersion( n->head ) + ")"
@@ -200,7 +198,6 @@ private sub hVerblockAppend _
 	if( verblock andalso astIsVERBLOCK( verblock ) ) then
 		if( astIsEqual( n->tail->expr, veror ) ) then
 			astAppend( n->tail, child )
-			astDelete( veror )
 			exit sub
 		end if
 	end if
@@ -391,22 +388,6 @@ private sub hAddMergedDecl _
 		'' Create a result block with the new set of children
 		mdecl = astCloneNode( adecl )
 		astAppend( mdecl, mchildren )
-
-		'' If two structs with dummy ids were merged together, the result will
-		'' a's id, and now we need to manually update all references to b's id
-		'' following later in the code over to use a's id, so they'll be merged
-		'' successfully (assuming merging walks through declarations in order
-		'' like a single-pass compiler).
-		select case( mdecl->class )
-		case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
-			if( mdecl->attrib and ASTATTRIB_DUMMYID ) then
-				assert( *mdecl->text = *adecl->text )
-				assert( *mdecl->text <> *bdecl->text )
-				for i as integer = bi+1 to btablecount-1
-					astReplaceSubtypes( barray[i].n, ASTCLASS_TAGID, bdecl->text, ASTCLASS_TAGID, mdecl->text )
-				next
-			end if
-		end select
 	else
 		'' "Merge" a and b by cloning a. They've compared equal in astIsEqual() so this works.
 		'' Below we only need to cover a few additional cases where astIsEqual() is more permissive
@@ -521,7 +502,7 @@ private sub hAstLCS _
 			var rdecl = @rarray[rfirst+r]
 
 			if( ldecl->hash = rdecl->hash ) then
-				if( astIsEqual( ldecl->n, rdecl->n, TRUE ) ) then
+				if( astIsEqual( ldecl->n, rdecl->n, ASTISEQUAL_MERGE ) ) then
 					if( (l = 0) or (r = 0) ) then
 						length = 1
 					else
@@ -688,9 +669,6 @@ function astMergeVerblocks _
 	decltableEnd( @btable )
 	decltableEnd( @atable )
 
-	astDelete( a )
-	astDelete( b )
-
 	function = c
 end function
 
@@ -810,15 +788,12 @@ private sub hTurnVerblocksIntoPpIfs( byval code as ASTNODE ptr )
 				if( i <> last ) then
 					assert( last->class = ASTCLASS_PPELSEIF )
 					last->class = ASTCLASS_PPELSE
-					astDelete( last->expr )
 					last->expr = NULL
 				end if
 			end if
 
 			'' Insert #endif
 			astInsert( code, astNew( ASTCLASS_PPENDIF ), j )
-
-			astDelete( collected )
 		end if
 
 		i = i->next
@@ -923,9 +898,7 @@ private function hSimplify( byval n as ASTNODE ptr, byref changed as integer ) a
 	'' Single child, or none at all? Solve out the VEROR/VERAND.
 	if( n->head = n->tail ) then
 		changed = TRUE
-		function = astClone( n->head )
-		astDelete( n )
-		exit function
+		return astClone( n->head )
 	end if
 
 	if( astIsVEROR( n ) = FALSE ) then
@@ -935,7 +908,6 @@ private function hSimplify( byval n as ASTNODE ptr, byref changed as integer ) a
 	'' Solve out "complete" VERORs - VERORs that cover all possible choices
 	if( astGroupContains( frog.completeverors, n ) ) then
 		changed = TRUE
-		astDelete( n )
 		return NULL
 	end if
 
@@ -1098,7 +1070,7 @@ private sub hBuildDefaultVersionSelection( byval code as ASTNODE ptr, byval decl
 	ppdefine->expr = astClone( decl->tail )
 
 	var ppif = astNew( ASTCLASS_PPIF )
-	ppif->expr = astNew( ASTCLASS_NOT, astNewDEFINED( decl->text ) )
+	ppif->expr = astNew( ASTCLASS_NOT, astNew( ASTCLASS_DEFINED, astNewTEXT( decl->text ) ) )
 	astAppend( ppif, ppdefine )
 
 	astAppend( code, ppif )
@@ -1114,10 +1086,10 @@ private sub hVerifyDefinesOrVersions( byval code as ASTNODE ptr, byval decl as A
 			var ppif = astNew( ppifclass )
 			if( decl->class = ASTCLASS_DECLAREDEFINES ) then
 				'' defined(<symbol>)
-				ppif->expr = astNewDEFINED( k->text )
+				ppif->expr = astNew( ASTCLASS_DEFINED, astNewTEXT( k->text ) )
 			else
 				'' <symbol> = <versionnumber>
-				ppif->expr = astNew( ASTCLASS_EQ, astNewID( decl->text ), astClone( k ) )
+				ppif->expr = astNew( ASTCLASS_EQ, astNewTEXT( decl->text ), astClone( k ) )
 			end if
 			astAppend( code, ppif )
 			ppifclass = ASTCLASS_PPELSEIF

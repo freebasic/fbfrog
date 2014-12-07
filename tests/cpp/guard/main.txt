@@ -158,4 +158,4 @@ tests/cpp/guard/g.h(10): #warning
 context as seen by fbfrog:
     # warning g . h : inside # ifndef HAD_G_2 block 
               ^
-emitting: tests/cpp/guard/main.bi (20 declarations, 0 TODOs)
+emitting: tests/cpp/guard/main.bi (18 declarations, 0 TODOs)

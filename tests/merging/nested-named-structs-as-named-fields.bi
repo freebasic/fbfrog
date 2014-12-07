@@ -10,7 +10,7 @@
 	#error "'VER' is #defined to an unsupported value; expected one of: 1, 2"
 #endif
 
-type __dummyid_0_tests_merging_nested_named_structs_as_named_fields
+type __UDT_a
 	#if VER = 1
 		v1_a as long
 	#else
@@ -19,15 +19,15 @@ type __dummyid_0_tests_merging_nested_named_structs_as_named_fields
 end type
 
 #if VER = 1
-	type __dummyid_1_tests_merging_nested_named_structs_as_named_fields
+	type __UDT_b
 		v1_b as long
 	end type
 #endif
 
 type UDT
-	a as __dummyid_0_tests_merging_nested_named_structs_as_named_fields
+	a as __UDT_a
 
 	#if VER = 1
-		b as __dummyid_1_tests_merging_nested_named_structs_as_named_fields
+		b as __UDT_b
 	#endif
 end type

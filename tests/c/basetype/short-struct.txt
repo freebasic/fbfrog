@@ -38,4 +38,4 @@ tests/c/basetype/short-struct.h(2): SIGNED|UNSIGNED|SHORT|LONG modifiers used wi
 context as seen by fbfrog:
     static short struct UDT i ;
                             ^
-emitting: tests/c/basetype/short-struct.bi (0 declarations, 1 TODO)
+emitting: tests/c/basetype/short-struct.bi (1 declaration, 1 TODO)

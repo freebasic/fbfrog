@@ -8,4 +8,4 @@
       tests/c/struct/nested-named-struct.h
 [5/5] __FB_DOS__
       tests/c/struct/nested-named-struct.h
-emitting: tests/c/struct/nested-named-struct.bi (2 declarations, 0 TODOs)
+emitting: tests/c/struct/nested-named-struct.bi (4 declarations, 0 TODOs)

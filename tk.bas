@@ -139,15 +139,26 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	(@"while"   ), _
 	_
 	(NULL, @"argsfile"), _
+	(@"-o"            ), _
+	(@"-v"            ), _
 	(@"-nodefaultscript"), _
-	(@"-filterout"    ), _
-	(@"-filterin"     ), _
 	(@"-windowsms"    ), _
 	(@"-syntaxonly"   ), _
 	(@"-fixunsizedarrays"), _
-	(@"-v"            ), _
+	(@"-renametypedef"), _
+	(@"-renametag"    ), _
+	(@"-removedefine" ), _
+	(@"-removeproc"   ), _
+	(@"-typedefhint"  ), _
+	(@"-reservedid"   ), _
+	(@"-noexpand"     ), _
+	(@"-define"       ), _
+	(@"-include"      ), _
+	(@"-fbfroginclude"), _
 	(@"-incdir"       ), _
-	(@"-o"            ), _
+	(@"-filterout"    ), _
+	(@"-filterin"     ), _
+	(@"-inclib"       ), _
 	(@"-declaredefines"), _
 	(@"-unchecked"    ), _
 	(@"-declareversions"), _
@@ -158,18 +169,7 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	(@"-endselect"    ), _
 	(@"-ifdef"        ), _
 	(@"-else"         ), _
-	(@"-endif"        ), _
-	(@"-inclib"       ), _
-	(@"-define"       ), _
-	(@"-include"      ), _
-	(@"-fbfroginclude"), _
-	(@"-noexpand"     ), _
-	(@"-removedefine" ), _
-	(@"-removeproc"   ), _
-	(@"-typedefhint"  ), _
-	(@"-reservedid"   ), _
-	(@"-renametypedef"), _
-	(@"-renametag"    )  _
+	(@"-endif"        )  _
 }
 
 #assert ubound( tk_info ) = TK__COUNT - 1
@@ -298,9 +298,7 @@ function tkDumpOne( byval x as integer ) as string
 	checkFlag( PREINCLUDE )
 	checkFlag( DEFINE )
 
-	#if 0
-		s += " " + hDumpLocation( @p->location )
-	#endif
+	's += " " + hDumpLocation( @p->location )
 
 	if( p->expansionlevel <> 0 ) then
 		s += " expansionlevel=" & p->expansionlevel
@@ -546,6 +544,12 @@ end sub
 function tkGetFlags( byval x as integer ) as integer
 	function = tkAccess( x )->flags
 end function
+
+sub tkUnsetFilterOut( byval first as integer, byval last as integer )
+	for i as integer = first to last
+		tkAccess( i )->flags and= not TKFLAG_FILTEROUT
+	next
+end sub
 
 function tkCount _
 	( _

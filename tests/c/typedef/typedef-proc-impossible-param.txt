@@ -1,3 +1,41 @@
 [1/5] __FB_WIN32__.__FB_64BIT__
       tests/c/typedef/typedef-proc-impossible-param.h
-oops, can't solve out typedef T in param param
+tests/c/typedef/typedef-proc-impossible-param.h(3): can't solve out typedef T in param param
+    void f(T param);
+                  ^
+context as seen by fbfrog:
+    void f ( T param ) ;
+                     ^
+[2/5] __FB_WIN32__.(not __FB_64BIT__)
+      tests/c/typedef/typedef-proc-impossible-param.h
+tests/c/typedef/typedef-proc-impossible-param.h(3): can't solve out typedef T in param param
+    void f(T param);
+                  ^
+context as seen by fbfrog:
+    void f ( T param ) ;
+                     ^
+[3/5] __FB_LINUX__.__FB_64BIT__
+      tests/c/typedef/typedef-proc-impossible-param.h
+tests/c/typedef/typedef-proc-impossible-param.h(3): can't solve out typedef T in param param
+    void f(T param);
+                  ^
+context as seen by fbfrog:
+    void f ( T param ) ;
+                     ^
+[4/5] __FB_LINUX__.(not __FB_64BIT__)
+      tests/c/typedef/typedef-proc-impossible-param.h
+tests/c/typedef/typedef-proc-impossible-param.h(3): can't solve out typedef T in param param
+    void f(T param);
+                  ^
+context as seen by fbfrog:
+    void f ( T param ) ;
+                     ^
+[5/5] __FB_DOS__
+      tests/c/typedef/typedef-proc-impossible-param.h
+tests/c/typedef/typedef-proc-impossible-param.h(3): can't solve out typedef T in param param
+    void f(T param);
+                  ^
+context as seen by fbfrog:
+    void f ( T param ) ;
+                     ^
+emitting: tests/c/typedef/typedef-proc-impossible-param.bi (0 declarations, 1 TODO)
