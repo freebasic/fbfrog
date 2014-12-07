@@ -2803,6 +2803,7 @@ sub cMain( )
 			'' Replace the #define with an UNKNOWN if parsing failed
 			if( c.parseok = FALSE ) then
 				var unknown = astNewUNKNOWN( .xbegin, hSkipToEol( .xbodybegin ) )
+				unknown->attrib or= .n->attrib and ASTATTRIB_FILTEROUT
 				astInsert( api->ast, unknown, .n )
 				astRemove( api->ast, .n )
 				c.parseok = TRUE
