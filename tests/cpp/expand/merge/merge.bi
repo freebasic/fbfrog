@@ -4,8 +4,8 @@
 
 extern "C"
 
-type UDT as UDT_
 type left_UDT as left_UDT_
+type UDT as UDT_
 
 dim shared id_id as long
 

@@ -975,7 +975,9 @@ private sub frogReadApi( )
 	''
 
 	'' Add a forward decl for any tags that were used before being defined
-	for i as integer = 0 to api->tagcount - 1
+	'' (looping backwards because the forward decls will be prepended; this
+	'' way they'll end up in the proper order)
+	for i as integer = api->tagcount - 1 to 0 step -1
 		var tag = api->tags[i]
 		if( ((tag->attrib and ASTATTRIB_USEBEFOREDEF) <> 0) and _
 		    ((tag->attrib and ASTATTRIB_FIRSTUSEFILTEREDOUT) = 0) ) then
