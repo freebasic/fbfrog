@@ -447,7 +447,7 @@ end enum
 #endmacro
 #define A50 defined(FOO)
 #define A51(a) defined(a)
-#define A52(T) cptr(T ptr, malloc(sizeof(T)))
+#define A52(T) cptr(T ptr, malloc(sizeof((T))))
 #define A53 cptr(MYINT ptr, malloc(sizeof(MYINT)))
 #define A54 cptr(const ulong ptr ptr ptr, malloc(123))
 #macro A55

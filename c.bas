@@ -476,19 +476,27 @@ private function cNumberLiteral( ) as ASTNODE ptr
 end function
 
 private function hLookupOrAddName( byval id as zstring ptr ) as ASTNODE ptr
-	'' Known typedef/proc/var?
-	var n = hSolveTypedefOutIfWanted( cFullNameLookup( id ) )
-	if( n ) then return n
+	dim n as ASTNODE ptr
 
-	'' #define?
-	n = cDefineLookup( id )
-	if( n ) then return n
-
-	'' Macro param (if inside #define body)?
 	if( c.parentdefine ) then
+		'' Macro param? (inside macro body only)
 		if( astLookupMacroParam( c.parentdefine, id, n ) >= 0 ) then
 			return n
 		end if
+	else
+		'' #define?
+		'' Macros come before procs/vars, before they're expanded first,
+		'' except if inside a macro body, because macros can't be recursive.
+		n = cDefineLookup( id )
+		if( n ) then
+			return n
+		end if
+	end if
+
+	'' Known typedef/proc/var?
+	n = hSolveTypedefOutIfWanted( cFullNameLookup( id ) )
+	if( n ) then
+		return n
 	end if
 
 	'' Add as unknown id

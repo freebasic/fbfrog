@@ -20,7 +20,7 @@ end enum
 extern     array1(0 to 0) as long
 dim shared array1(0 to 0) as long
 
-#define A1 INT_(1)
+#define A1 INT(1)
 
 type DOUBLE_
 	a as DOUBLE_ ptr
