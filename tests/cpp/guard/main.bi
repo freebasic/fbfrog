@@ -36,4 +36,6 @@ declare sub inside_e_2()
 declare sub inside_f_1()
 declare sub inside_f_2()
 
+#define HAD_G_1
+
 end extern

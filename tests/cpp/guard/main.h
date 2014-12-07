@@ -165,3 +165,11 @@
 
 #include "f.h"
 #include "f.h"
+
+// g.h has two successive #ifndef blocks, so there's no #include guard.
+#include "g.h"
+// Even if we leave the symbol for the first #ifndef check defined, the file
+// must still be #included again. (at least if we #undef the symbol for the
+// second #ifndef check)
+#undef HAD_G_2
+#include "g.h"
