@@ -484,7 +484,13 @@ function astIsEqual _
 	end if
 
 	if( a->dtype <> b->dtype ) then exit function
-	if( astIsEqual( a->subtype, b->subtype, mode ) = FALSE ) then exit function
+	if( (mode = ASTISEQUAL_MERGE) and (typeGetDt( a->dtype ) = TYPE_UDT) ) then
+		assert( a->subtype->text )
+		assert( b->subtype->text )
+		if( *a->subtype->text <> *b->subtype->text ) then exit function
+	else
+		if( astIsEqual( a->subtype, b->subtype, mode ) = FALSE ) then exit function
+	end if
 	if( astIsEqual( a->array, b->array, mode ) = FALSE ) then exit function
 	if( astIsEqual( a->bits, b->bits, mode ) = FALSE ) then exit function
 
