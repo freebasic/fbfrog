@@ -1069,21 +1069,22 @@ private function cTag( ) as ASTNODE ptr
 
 	if( tag = NULL ) then
 		tag = astNew( astclass, tagid )
-		if( c.filterout ) then
-			tag->attrib or= ASTATTRIB_FILTEROUT
-		end if
 		if( is_body ) then
 			'' Add new non-anonymous tags to current scope
 			if( tag->text ) then
 				cAddSymbol( tag )
 			end if
 		else
+			if( c.filterout ) then
+				tag->attrib or= ASTATTRIB_FIRSTUSEFILTEREDOUT
+			end if
+
 			'' Add new non-body tags to toplevel scope
 			cAddToplevelSymbol( tag )
 		end if
 	end if
 
-	if( (tag->text <> NULL) and (not c.filterout) ) then
+	if( tag->text ) then
 		apiAddTag( tag )
 	end if
 
@@ -1094,6 +1095,10 @@ private function cTag( ) as ASTNODE ptr
 			cOops( astDumpPrettyDecl( tag ) + " body redefined" )
 		end if
 		tag->attrib or= ASTATTRIB_BODYDEFINED
+
+		if( c.filterout ) then
+			tag->attrib or= ASTATTRIB_FILTEROUT
+		end if
 
 		select case( astclass )
 		case ASTCLASS_STRUCT, ASTCLASS_UNION
@@ -1125,7 +1130,7 @@ private function cTag( ) as ASTNODE ptr
 		'' '{'
 		c.x += 1
 
-		if( c.parseok and (not c.filterout) ) then
+		if( c.parseok ) then
 			if( is_nested_struct ) then
 				'' anonymous nested struct/union:
 				'' Add to current block as-is, inside the parent struct/union.

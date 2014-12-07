@@ -638,6 +638,7 @@ function astDumpOne( byval n as ASTNODE ptr ) as string
 	checkAttrib( FILTEROUT )
 	checkAttrib( BODYDEFINED )
 	checkAttrib( USEBEFOREDEF )
+	checkAttrib( FIRSTUSEFILTEREDOUT )
 
 	if( n->text ) then
 		s += " """ + strMakePrintable( *n->text ) + """"
