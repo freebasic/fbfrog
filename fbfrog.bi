@@ -699,6 +699,7 @@ type ASTNODE
 end type
 
 #define astNewTEXT( text ) astNew( ASTCLASS_TEXT, text )
+#define astNewUNKNOWN( first, last ) astNew( ASTCLASS_UNKNOWN, tkSpell( first, last ) )
 #define astIsCONSTI( n ) ((n)->class = ASTCLASS_CONSTI)
 #define astIsVERBLOCK( n ) ((n)->class = ASTCLASS_VERBLOCK)
 #define astIsVERAND( n ) ((n)->class = ASTCLASS_VERAND)

@@ -2766,7 +2766,7 @@ private sub cBody( )
 			'' Skip current construct and preserve its tokens in
 			'' an UNKNOWN node
 			c.x = hSkipConstruct( begin, FALSE )
-			var n = astNew( ASTCLASS_UNKNOWN, tkSpell( begin, c.x - 1 ) )
+			var n = astNewUNKNOWN( begin, c.x - 1 )
 			if( c.filterout ) then
 				n->attrib or= ASTATTRIB_FILTEROUT
 			end if
@@ -2796,7 +2796,7 @@ sub cMain( )
 
 			'' Replace the #define with an UNKNOWN if parsing failed
 			if( c.parseok = FALSE ) then
-				var unknown = astNew( ASTCLASS_UNKNOWN, tkSpell( .xbegin, hSkipToEol( .xbodybegin ) ) )
+				var unknown = astNewUNKNOWN( .xbegin, hSkipToEol( .xbodybegin ) )
 				astInsert( api->ast, unknown, .n )
 				astRemove( api->ast, .n )
 				c.parseok = TRUE
