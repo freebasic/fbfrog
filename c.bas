@@ -483,12 +483,15 @@ private function hLookupOrAddName( byval id as zstring ptr ) as ASTNODE ptr
 		if( astLookupMacroParam( c.parentdefine, id, n ) >= 0 ) then
 			return n
 		end if
-	else
-		'' #define?
-		'' Macros come before procs/vars, before they're expanded first,
-		'' except if inside a macro body, because macros can't be recursive.
-		n = cDefineLookup( id )
-		if( n ) then
+	end if
+
+	'' #define?
+	'' Macros come before procs/vars, before they're expanded first,
+	'' except that macros can't be recursive, so inside a macro's
+	'' body we can't lookup that macro itself.
+	n = cDefineLookup( id )
+	if( n ) then
+		if( c.parentdefine <> n ) then
 			return n
 		end if
 	end if
@@ -1336,6 +1339,9 @@ private sub cDefine( )
 	if( c.filterout ) then
 		macro->attrib or= ASTATTRIB_FILTEROUT
 	end if
+
+	'' Add before trying to parse the body, because if that will be delayed,
+	'' then it would be added before the body is parsed anyways.
 	cAddSymbol( macro )
 
 	'' Body?
