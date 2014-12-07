@@ -108,7 +108,7 @@ namespace c
 		'' Token positions:
 		xbegin		as integer  '' Begin of the whole #define directive
 		xbodybegin	as integer  '' Begin of the #define's body
-		n		as ASTNODE ptr  '' ASTNODE (assuming it won't be deleted)
+		n		as ASTNODE ptr  '' #define node
 	end type
 	dim shared defbodies as DEFBODYNODE ptr
 	dim shared as integer defbodycount, defbodyroom
@@ -1317,6 +1317,8 @@ private sub cParseDefBody( byval n as ASTNODE ptr )
 end sub
 
 private sub cDefine( )
+	assert( c.blocklevel = 0 )
+
 	var begin = c.x - 1
 	c.x += 1
 
@@ -2784,6 +2786,7 @@ sub cMain( )
 	cBody( )
 
 	'' Process the #define bodies which weren't parsed yet
+	assert( c.blocklevel = 0 )
 	for i as integer = 0 to c.defbodycount - 1
 		with( c.defbodies[i] )
 
@@ -2791,10 +2794,11 @@ sub cMain( )
 			c.x = .xbodybegin
 			cParseDefBody( .n )
 
-			'' Turn #define into UNKNOWN if parsing failed
+			'' Replace the #define with an UNKNOWN if parsing failed
 			if( c.parseok = FALSE ) then
-				.n->class = ASTCLASS_UNKNOWN
-				astSetText( .n, tkSpell( .xbegin, hSkipToEol( .xbodybegin ) ) )
+				var unknown = astNew( ASTCLASS_UNKNOWN, tkSpell( .xbegin, hSkipToEol( .xbodybegin ) ) )
+				astInsert( api->ast, unknown, .n )
+				astRemove( api->ast, .n )
 				c.parseok = TRUE
 			end if
 		end with
