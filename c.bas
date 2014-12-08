@@ -1646,7 +1646,7 @@ private sub cBaseType _
 						case ASTCLASS_TYPEDEF, ASTCLASS_TEXT
 							'' It can be an existing typedef, or an unknown id
 						case else
-							cOops( "expected data type" + tkButFound( c.x ) )
+							cOops( "expected data type" + tkButFound( c.x ) + ", which I think refers to " + astDumpPrettyDecl( subtype ) + ". If that should be a data type, then some input is missing (or some macros weren't expanded)." )
 						end select
 						subtype = hSolveTypedefOutIfWanted( subtype )
 					else
