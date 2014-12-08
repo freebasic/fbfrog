@@ -1500,7 +1500,11 @@ private sub cPragmaComment( )
 		libname = left( libname, len( libname ) - 2 )
 	end if
 
-	cAppendNode( astNew( ASTCLASS_INCLIB, libname ) )
+	var n = astNew( ASTCLASS_INCLIB, libname )
+	if( c.filterout ) then
+		n->attrib or= ASTATTRIB_FILTEROUT
+	end if
+	cAppendNode( n )
 end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
