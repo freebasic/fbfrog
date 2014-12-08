@@ -2645,7 +2645,10 @@ end sub
 
 '' Expression statement: Assignments, function calls, i++, etc.
 private sub cExpressionStatement( )
-	cAppendNode( cExpression( ) )
+	var expr = cExpression( )
+	if( c.parseok ) then
+		cAppendNode( expr )
+	end if
 
 	'' ';'?
 	cExpectMatch( TK_SEMI, "(end of expression statement)" )
@@ -2658,7 +2661,10 @@ private sub cReturn( )
 	c.x += 1
 
 	'' Expression
-	cAppendNode( astNew( ASTCLASS_RETURN, cExpression( ) ) )
+	var expr = cExpression( )
+	if( c.parseok ) then
+		cAppendNode( astNew( ASTCLASS_RETURN, expr ) )
+	end if
 
 	'' ';'
 	cExpectMatch( TK_SEMI, "(end of statement)" )
