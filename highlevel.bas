@@ -427,7 +427,13 @@ private sub hFixIdsInScope _
 			var n = api->tags[i]
 			if( (n->attrib and ASTATTRIB_BODYDEFINED) = 0 ) then
 				if( n->attrib and ASTATTRIB_NEEDRENAME ) then
-					hRenameSymbol( reservedids, @types, @globals, n, renamelist )
+					'' Only add undefined tags to renamelist if the first use
+					'' wasn't filtered out
+					var tagrenamelist = renamelist
+					if( n->attrib and ASTATTRIB_FIRSTUSEFILTEREDOUT ) then
+						tagrenamelist = astNew( ASTCLASS_RENAMELIST )
+					end if
+					hRenameSymbol( reservedids, @types, @globals, n, tagrenamelist )
 				end if
 			end if
 		next
