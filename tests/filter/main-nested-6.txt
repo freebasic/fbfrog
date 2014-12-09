@@ -33,4 +33,4 @@
       tests/filter/1.h
       tests/filter/includenotfound.h
       does-not-exist.h (not found)
-emitting: tests/filter/main-nested-6.bi (4 declarations, 0 TODOs)
+emitting: tests/filter/main-nested-6.bi (5 declarations, 0 TODOs)

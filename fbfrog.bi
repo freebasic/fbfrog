@@ -244,7 +244,6 @@ enum
 	TK_ARGBEGIN
 	TK_ARGEND
 	TK_EOL
-	TK_BEGININCLUDE
 	TK_ENDINCLUDE
 
 	'' Number/string literals

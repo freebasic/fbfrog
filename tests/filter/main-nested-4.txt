@@ -28,4 +28,4 @@
       tests/filter/1.h
       tests/filter/include2.h (filtered out)
       tests/filter/2.h
-emitting: tests/filter/main-nested-4.bi (2 declarations, 0 TODOs)
+emitting: tests/filter/main-nested-4.bi (4 declarations, 0 TODOs)

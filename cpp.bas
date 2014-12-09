@@ -23,16 +23,16 @@
 '' on every insertion/deletion, we just have to watch out for those specific
 '' helper tokens to detect begin/end of the range.
 ''
-'' Tokens inserted due to #include expansion are enclosed in TK_BEGININCLUDE and
-'' TK_ENDINCLUDE. This allows detecting #include EOF for the #if/#include stack,
-'' and allows the C parser to identify include boundaries later. If the include
-'' file should be filtered out (according to -filterout/-filterin options), the
-'' TK_BEGININCLUDE will be marked with TKFLAG_FILTEROUT, so we can mark all the
-'' tokens between TK_BEGININCUDE/TK_ENDINCLUDE with TKFLAG_FILTEROUT, which lets
-'' the C parser know which constructs should be marked with ASTATTRIB_FILTEROUT.
-'' The include tokens can only be marked this way once the TK_ENDINCLUDE is
-'' reached, because macro expansion may result in new tokens being inserted
-'' which wouldn't automatically have the TKFLAG_FILTEROUT flag too.
+'' We insert TK_ENDINCLUDE behind tokens inserted due to #include expansion.
+'' This allows detecting #include EOF for the #if/#include stack. The CPP stack
+'' tracks the filterout status (according to -filterout/-filterin options),
+'' which decides whether tokens at the current level should be marked with
+'' TKFLAG_FILTEROUT or not. This lets the C parser know which constructs should
+'' be marked with ASTATTRIB_FILTEROUT.
+''
+'' The included tokens can not be marked this way immediately, because macro
+'' expansion may result in new tokens being inserted which wouldn't
+'' automatically have the TKFLAG_FILTEROUT flag too.
 ''
 '' #include statements themselves are not preserved as-is, but the filenames of
 '' unexpanded direct #includes are recorded, so that frogReadAPI() can re-add
@@ -438,7 +438,7 @@ namespace cpp
 	type STACKNODE
 		state		as integer  '' STATE_*
 		knownfile	as integer  '' Index into cpp.files array, if it's an #include context, or -1
-		xbegininclude	as integer  '' STATE_FILE: Position of the TK_BEGININCLUDE, so cppEndInclude() doesn't have to search it
+		filterout	as integer
 	end type
 
 	'' #if/file context stack
@@ -454,12 +454,6 @@ namespace cpp
 	'' * Allows us to continue parsing #ifs/#endifs even while skipping an
 	''   #if 0 block, and this way, to determine which #endif ends skipping
 	dim shared as integer skiplevel
-
-	'' Whether we're currently in an include file (directly or indirectly)
-	'' which will be filtered out.
-	''    0  = no
-	''    1+ = yes
-	dim shared as integer filteroutlevel
 
 	'' Lookup table of macros known to be either defined or undefined.
 	''   defined <=> data = a DEFINEINFO object
@@ -520,11 +514,10 @@ sub cppInit( )
 	with( cpp.stack(0) )
 		.state = STATE_FILE
 		.knownfile = -1
-		.xbegininclude = -1
+		.filterout = -1
 	end with
 	cpp.level = 0
 	cpp.skiplevel = MAXSTACK  '' No skipping yet
-	cpp.filteroutlevel = 0
 
 	hashInit( @cpp.macros, 4, TRUE )
 	cpp.savedmacros = NULL
@@ -547,8 +540,6 @@ sub cppEnd( )
 		assert( cpp.stack(cpp.level).state >= STATE_IF )
 		tkOops( cpp.x, "missing #endif" )
 	end if
-
-	assert( cpp.filteroutlevel = 0 )
 
 	scope
 		for i as integer = 0 to cpp.macros.room - 1
@@ -578,7 +569,7 @@ sub cppEnd( )
 end sub
 
 #define cppSkipping( ) (cpp.skiplevel <> MAXSTACK)
-#define cppWillBeFilteredOut( ) (cpp.filteroutlevel >= 1)
+#define cppWillBeFilteredOut( ) cpp.stack(cpp.level).filterout
 
 sub cppAddIncDir( byval incdir as ASTNODE ptr )
 	astAppend( cpp.incdirs, incdir )
@@ -1840,6 +1831,28 @@ end sub
 private sub cppPush( byval state as integer, byval knownfile as integer = -1 )
 	assert( iif( knownfile >= 0, state = STATE_FILE, TRUE ) )
 
+	'' Set filterout=TRUE for the next level, if it's a file that will be
+	'' filtered out, or if we're inside a file that's being filtered out.
+	'' Filtering out a file only means filtering out constructs directly
+	'' from that file. #included content is not filtered out automatically.
+	var filterout = FALSE
+	if( knownfile >= 0 ) then
+		filterout = cpp.files[knownfile].filterout
+	else
+		var i = cpp.level
+		while( i >= 0 )
+			with( cpp.stack(i) )
+				if( .state = STATE_FILE ) then
+					if( .knownfile >= 0 ) then
+						filterout = .filterout
+					end if
+					exit while
+				end if
+			end with
+			i -= 1
+		wend
+	end if
+
 	cpp.level += 1
 	if( cpp.level >= MAXSTACK ) then
 		tkOops( cpp.x, "#if/#include stack too small, MAXSTACK=" & MAXSTACK )
@@ -1848,23 +1861,11 @@ private sub cppPush( byval state as integer, byval knownfile as integer = -1 )
 	with( cpp.stack(cpp.level) )
 		.state = state
 		.knownfile = knownfile
-		.xbegininclude = -1
+		.filterout = filterout
 	end with
-
-	if( knownfile >= 0 ) then
-		if( cpp.files[knownfile].filterout ) then
-			cpp.filteroutlevel += 1
-		end if
-	end if
 end sub
 
 private sub cppPop( )
-	var knownfile = cpp.stack(cpp.level).knownfile
-	if( knownfile >= 0 ) then
-		if( cpp.files[knownfile].filterout ) then
-			cpp.filteroutlevel -= 1
-		end if
-	end if
 	cpp.level -= 1
 end sub
 
@@ -2093,7 +2094,6 @@ end function
 '' Check for the typical #include guard header:
 ''    #ifndef ID <EOL> #define ID ...
 private function hDetectIncludeGuardBegin( byval first as integer ) as zstring ptr
-	assert( tkGet( first - 2 ) = TK_BEGININCLUDE )
 	assert( tkGet( first - 1 ) = TK_EOL )
 
 	var x = hSkipEols( first )
@@ -2147,9 +2147,6 @@ private sub cppInclude( byval begin as integer )
 	cpp.x += 1
 
 	cppEol( )
-
-	'' Mark #include directive for removal
-	tkSetRemove( begin, cpp.x - 1 )
 
 	dim incfile as string
 	if( is_rootfile ) then
@@ -2214,18 +2211,6 @@ private sub cppInclude( byval begin as integer )
 	'' Push the #include file context
 	cppPush( STATE_FILE, knownfile )
 
-	'' Insert this helper token so we can identify the start of #included tokens later
-	tkInsert( cpp.x, TK_BEGININCLUDE )
-	if( filterout ) then
-		tkAddFlags( cpp.x, cpp.x, TKFLAG_FILTEROUT )
-	end if
-	cpp.x += 1
-
-	'' Insert EOL behind TK_BEGININCLUDE so we can can detect BOL there
-	tkInsert( cpp.x, TK_EOL )
-	tkSetRemove( cpp.x )
-	cpp.x += 1
-
 	'' Read the include file and insert its tokens
 	var y = lexLoadC( cpp.x, sourcebufferFromFile( incfile, @location ) )
 
@@ -2240,13 +2225,9 @@ private sub cppInclude( byval begin as integer )
 	y += 1
 
 	'' Start parsing the #included content
-	'' (starting behind the EOL inserted above)
-	assert( tkGet( cpp.x - 2 ) = TK_BEGININCLUDE )
 	assert( tkGet( cpp.x - 1 ) = TK_EOL )
 	assert( y <= tkGetCount( ) )
 	assert( tkGet( y - 2 ) = TK_ENDINCLUDE )
-	assert( cpp.stack(cpp.level).state = STATE_FILE )
-	cpp.stack(cpp.level).xbegininclude = cpp.x - 2
 
 	if( cpp.files[knownfile].checked_guard = FALSE ) then
 		'' Prepare for the include guard optimization:
@@ -2272,21 +2253,10 @@ private sub cppEndInclude( )
 	if( cpp.stack(cpp.level).state >= STATE_IF ) then
 		tkOops( cpp.x - 1, "missing #endif" )
 	end if
-	var begin = cpp.stack(cpp.level).xbegininclude
 	cppPop( )
 
-	assert( tkGet( begin ) = TK_BEGININCLUDE )
-	assert( tkGet( cpp.x ) = TK_ENDINCLUDE )
-
-	'' If the include content should be filtered out, mark all the included
-	'' tokens accordingly, for the C parser later.
-	if( tkGetFlags( begin ) and TKFLAG_FILTEROUT ) then
-		tkAddFlags( begin + 1, cpp.x - 1, TKFLAG_FILTEROUT )
-	end if
-
-	'' Mark the TK_BEGININCLUDE/TK_ENDINCLUDE for removal, so they won't get in the
-	'' way of C parsing (in case declarations cross #include/file boundaries).
-	tkSetRemove( begin, begin )
+	'' Mark the TK_ENDINCLUDE for removal, so they won't get in the way of
+	'' C parsing (in case declarations cross #include/file boundaries).
 	tkSetRemove( cpp.x, cpp.x )
 	cpp.x += 1
 end sub
@@ -2509,10 +2479,6 @@ private sub cppDirective( )
 
 	case KW_INCLUDE
 		cppInclude( begin )
-		'' cppInclude() already marks the #include statement for removal.
-		'' We can't do that here because then the TK_BEGININCLUDE would
-		'' be marked too.
-		flags = 0
 
 	case KW_DEFINE
 		cppDefine( begin, flags )
@@ -2544,6 +2510,10 @@ private sub cppDirective( )
 	case else
 		tkOops( cpp.x, "unknown PP directive" )
 	end select
+
+	if( ((flags and TKFLAG_REMOVE) = 0) and cppWillBeFilteredOut( ) ) then
+		flags or= TKFLAG_FILTEROUT
+	end if
 
 	if( flags ) then
 		tkAddFlags( begin, cpp.x - 1, flags )
@@ -2602,6 +2572,9 @@ private sub cppNext( )
 	'' Identifier/keyword? Check whether it needs to be macro-expanded
 	case is >= TK_ID
 		if( cppSkipping( ) = FALSE ) then
+			if( cppWillBeFilteredOut( ) ) then
+				tkAddFlags( cpp.x, cpp.x, TKFLAG_FILTEROUT )
+			end if
 			hMaybeExpandMacro( cpp.x, FALSE )
 			cpp.x += 1
 			exit sub
@@ -2617,6 +2590,8 @@ private sub cppNext( )
 	'' Some token that doesn't matter to the CPP
 	if( cppSkipping( ) ) then
 		tkSetRemove( cpp.x )
+	elseif( cppWillBeFilteredOut( ) ) then
+		tkAddFlags( cpp.x, cpp.x, TKFLAG_FILTEROUT )
 	end if
 	cpp.x += 1
 end sub

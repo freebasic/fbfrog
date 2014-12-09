@@ -25,7 +25,6 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	(NULL, @"argbegin"), _
 	(NULL, @"argend"  ), _
 	(NULL, @"eol"     ), _
-	(NULL, @"begininclude"), _
 	(NULL, @"endinclude"), _
 	(NULL, @"number"  ), _ '' Number/string literals
 	(NULL, @"string"  ), _
@@ -730,7 +729,7 @@ function hFindClosingParen _
 				exit do
 			end if
 
-		case TK_EOF, TK_BEGININCLUDE, TK_ENDINCLUDE
+		case TK_EOF, TK_ENDINCLUDE
 			x -= 1
 			exit do
 		end select
@@ -756,7 +755,7 @@ function hSkipConstruct( byval x as integer, byval ignore_directives as integer 
 	case TK_EOF
 		return x
 
-	case TK_SEMI, TK_BEGININCLUDE, TK_ENDINCLUDE
+	case TK_SEMI, TK_ENDINCLUDE
 		return x + 1
 
 	case TK_HASH
@@ -776,7 +775,7 @@ function hSkipConstruct( byval x as integer, byval ignore_directives as integer 
 			x += 1
 			exit do
 
-		case TK_EOF, TK_BEGININCLUDE, TK_ENDINCLUDE, TK_RBRACE
+		case TK_EOF, TK_ENDINCLUDE, TK_RBRACE
 			exit do
 
 		case TK_HASH
