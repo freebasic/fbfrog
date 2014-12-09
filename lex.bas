@@ -4,7 +4,7 @@
 
 #include once "fbfrog.bi"
 
-const MAXTEXTLEN = 2048
+const MAXTEXTLEN = 1 shl 12
 
 type LEXSTUFF
 	i		as ubyte ptr  '' Current char, will always be <= limit
