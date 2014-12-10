@@ -494,6 +494,7 @@ namespace cpp
 		'' Include guard symbol, if this file has a pure include guard,
 		'' otherwise NULL
 		guard as zstring ptr
+		pragmaonce as integer  '' Whether #pragma once was found in this file
 	end type
 
 	'' Information about known files
@@ -1828,6 +1829,16 @@ private sub hMaybeExpandMacro( byref x as integer, byval inside_ifexpr as intege
 	x -= 1
 end sub
 
+private function cppGetFileContext( ) as cpp.STACKNODE ptr
+	for i as integer = cpp.level to 0 step -1
+		var ctx = @cpp.stack(i)
+		if( ctx->state = STATE_FILE ) then
+			return ctx
+		end if
+	next
+	assert( FALSE )
+end function
+
 private sub cppPush( byval state as integer, byval knownfile as integer = -1 )
 	assert( iif( knownfile >= 0, state = STATE_FILE, TRUE ) )
 
@@ -1839,18 +1850,10 @@ private sub cppPush( byval state as integer, byval knownfile as integer = -1 )
 	if( knownfile >= 0 ) then
 		filterout = cpp.files[knownfile].filterout
 	else
-		var i = cpp.level
-		while( i >= 0 )
-			with( cpp.stack(i) )
-				if( .state = STATE_FILE ) then
-					if( .knownfile >= 0 ) then
-						filterout = .filterout
-					end if
-					exit while
-				end if
-			end with
-			i -= 1
-		wend
+		var file = cppGetFileContext( )
+		if( file->knownfile >= 0 ) then
+			filterout = file->filterout
+		end if
 	end if
 
 	cpp.level += 1
@@ -2180,10 +2183,13 @@ private sub cppInclude( byval begin as integer )
 
 	var knownfile = cppLookupOrAppendKnownFile( incfile, is_rootfile, prettyfile )
 	with( cpp.files[knownfile] )
-		'' Before loading the include file content, do the #include guard optimization.
-		'' If this file had an #include guard last time we saw it, and the guard symbol
-		'' is now defined, then we don't need to bother loading (lex + tkInsert()...)
-		'' the file at all now.
+		'' Did we find a #pragma once in this file previously?
+		if( .pragmaonce ) then
+			'' Don't #include it again ever
+			exit sub
+		end if
+
+		'' Did we find an #include guard in this file previously?
 		if( .checked_guard and (.guard <> NULL) ) then
 			'' Only load the file if the guard symbol isn't defined (anymore) now.
 			if( cppIsMacroCurrentlyDefined( .guard ) ) then
@@ -2349,6 +2355,15 @@ end sub
 
 private function cppPragma( byref flags as integer ) as integer
 	select case( tkSpell( cpp.x ) )
+	'' #pragma once
+	case "once"
+		cpp.x += 1
+
+		var knownfile = cppGetFileContext( )->knownfile
+		if( knownfile >= 0 ) then
+			cpp.files[knownfile].pragmaonce = TRUE
+		end if
+
 	'' #pragma message("...")
 	case "message"
 		cpp.x += 1
