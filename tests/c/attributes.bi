@@ -411,4 +411,10 @@ declare sub f()
 sub f()
 end sub
 
+sub f()
+end sub
+
+sub f()
+end sub
+
 end extern

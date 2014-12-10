@@ -830,10 +830,12 @@ private sub cGccAttribute( byref gccattribs as integer )
 	select case( attr )
 	case "alloc_size", _
 	     "aligned", _
+	     "always_inline", _
 	     "const", _
 	     "deprecated", _
 	     "format", _
 	     "format_arg", _
+	     "gnu_inline", _
 	     "malloc", _
 	     "may_alias", _
 	     "no_instrument_function", _
