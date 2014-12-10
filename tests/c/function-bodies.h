@@ -10,3 +10,8 @@ int f3(int i) {
 	return i << 3 & 0xFF;
 	return 0;
 }
+
+// Anonymous parameter + body
+int f(int) {
+	return 0;
+};

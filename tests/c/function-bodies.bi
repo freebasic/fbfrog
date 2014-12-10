@@ -15,4 +15,8 @@ function f3(byval i as long) as long
 	return 0
 end function
 
+function f(byval as long) as long
+	return 0
+end function
+
 end extern

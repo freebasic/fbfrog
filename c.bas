@@ -2687,7 +2687,10 @@ private function cScope( byval proc as ASTNODE ptr ) as ASTNODE ptr
 	if( proc ) then
 		var param = proc->head
 		while( param )
-			cAddSymbol( param )
+			'' Not an anonymous parameter?
+			if( param->text ) then
+				cAddSymbol( param )
+			end if
 			param = param->next
 		wend
 	end if
