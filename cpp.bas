@@ -2220,6 +2220,15 @@ private sub cppInclude( byval begin as integer )
 	'' Read the include file and insert its tokens
 	var y = lexLoadC( cpp.x, sourcebufferFromFile( incfile, @location ) )
 
+	'' If tokens were inserted, ensure there is an EOL at the end
+	if( cpp.x < y ) then
+		if( tkGet( y - 1 ) <> TK_EOL ) then
+			tkInsert( y, TK_EOL )
+			tkSetRemove( y )
+			y += 1
+		end if
+	end if
+
 	'' Put TK_ENDINCLUDE behind the #include file content, so we can detect
 	'' the included EOF and pop the #include context from the cpp.stack.
 	tkInsert( y, TK_ENDINCLUDE )
