@@ -1980,7 +1980,9 @@ private sub hPostprocessDeclarator( byval n as ASTNODE ptr )
 			if( typeGetDtAndPtr( n->dtype ) = TYPE_ZSTRING ) then
 				n->dtype = typeGetConst( n->dtype ) or TYPE_BYTE
 			else
-				api->uses_wchar_t = TRUE
+				if( c.filterout = FALSE ) then
+					api->uses_wchar_t = TRUE
+				end if
 				n->dtype = typeGetConst( n->dtype ) or TYPE_WCHAR_T
 			end if
 		end if
