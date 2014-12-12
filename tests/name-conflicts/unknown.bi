@@ -4,5 +4,5 @@
 ''     #define line => line_
 ''     #define circle => circle_
 
-'' TODO: #define line ??????
-'' TODO: #define circle id??
+#define line_ '' TODO: ??????
+#define circle_ '' TODO: id??

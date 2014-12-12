@@ -1,3 +1,3 @@
 #pragma once
 
-'' TODO: #define A 123uf
+#define A '' TODO: 123uf

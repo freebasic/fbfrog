@@ -1532,6 +1532,8 @@ private sub cParseDefBody( byval n as ASTNODE ptr, byref add_to_ast as integer )
 	c.parentdefine = n
 	cPush( n, TRUE, TRUE )
 
+	'' Body
+	var bodybegin = c.x
 	add_to_ast and= cDefineBody( n )
 
 	'' Didn't reach EOL? Then the beginning of the macro body could
@@ -1539,6 +1541,12 @@ private sub cParseDefBody( byval n as ASTNODE ptr, byref add_to_ast as integer )
 	if( tkGet( c.x ) <> TK_EOL ) then
 		cError( "failed to parse full #define body" )
 		c.x = hSkipToEol( c.x )
+	end if
+
+	'' Turn the #define's body into an UNKNOWN if parsing failed
+	if( c.parseok = FALSE ) then
+		n->expr = astNewUNKNOWN( bodybegin, c.x )
+		c.parseok = TRUE
 	end if
 
 	cPop( )
@@ -1588,7 +1596,7 @@ private sub cDefine( )
 	assert( tkGet( c.x ) = TK_EOL )
 	c.x += 1
 
-	if( c.parseok and add_to_ast ) then
+	if( add_to_ast ) then
 		cAppendNode( macro )
 	end if
 end sub
@@ -3046,22 +3054,13 @@ sub cMain( )
 	assert( c.blocklevel = 0 )
 	for i as integer = 0 to c.defbodycount - 1
 		with( c.defbodies[i] )
+			c.parseok = TRUE
 			c.x = .xbodybegin
 			cUpdateFilterOut( )
 
 			'' Parse #define body
 			var add_to_ast = TRUE
 			cParseDefBody( .n, add_to_ast )
-
-			'' Replace the #define with an UNKNOWN if parsing failed
-			if( c.parseok = FALSE ) then
-				if( c.filterout = FALSE ) then
-					var unknown = astNewUNKNOWN( .xbegin, hSkipToEol( .xbodybegin ) )
-					astInsert( api->ast, unknown, .n )
-				end if
-				add_to_ast = FALSE
-				c.parseok = TRUE
-			end if
 
 			if( (not add_to_ast) and (not c.filterout) ) then
 				astRemove( api->ast, .n )

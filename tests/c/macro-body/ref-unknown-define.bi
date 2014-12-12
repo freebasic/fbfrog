@@ -1,5 +1,4 @@
 #pragma once
 
-'' TODO: #define A(x) x+
-
+#define A(x) '' TODO: x+
 #define B(x) A(x)

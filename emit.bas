@@ -396,7 +396,13 @@ private sub emitCode( byval n as ASTNODE ptr, byval parentclass as integer )
 				s += hParamList( n )
 			end if
 			if( n->expr ) then
-				s += " " + emitExpr( n->expr, TRUE, TRUE )  '' is_bool_context=TRUE, that's a bold assumption
+				if( n->expr->class = ASTCLASS_UNKNOWN ) then
+					s += " '' TODO: " + *n->expr->text
+					emit.todos += 1
+					emit.decls -= 1
+				else
+					s += " " + emitExpr( n->expr, TRUE, TRUE )  '' is_bool_context=TRUE, that's a bold assumption
+				end if
 			end if
 			emitLine( s )
 		end if
