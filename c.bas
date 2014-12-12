@@ -76,6 +76,13 @@ namespace c
 
 		'' C "ordinary identifier" namespace (typedefs/vars/procs/fields/...)
 		cnames as THASH
+
+		'' FB namespaces
+		fbnames as THASH
+		fbtypes as THASH
+
+		'' Nodes for the renamelist, from this level, to be propagated upwards
+		renamelist as ASTNODE ptr
 	end type
 
 	type SCOPENODE
@@ -91,7 +98,8 @@ namespace c
 	dim shared as integer blocklevel, namespacelevel, scopelevel
 
 	'' Global hash table for #defines since they're not scoped
-	dim shared cdefines  as THASH
+	dim shared cdefines  as THASH  '' Original C #define identifiers
+	dim shared fbdefines as THASH  '' Ucase'd #defines, and reserved ids from cAddReservedId()
 
 	'' #pragma pack stack
 	namespace pragmapack
@@ -150,6 +158,21 @@ private sub cResetPragmaPack( )
 	c.pragmapack.stack(c.pragmapack.level) = 0
 end sub
 
+private sub cAddRenameListEntry( byval entry as ASTNODE ptr )
+	with( c.namespaces(c.namespacelevel) )
+		if( .renamelist = NULL ) then
+			dim title as string
+			if( c.namespacelevel = 0 ) then
+				title = "The following symbols have been renamed:"
+			else
+				title = "inside " + astDumpPrettyDecl( .owner ) + ":"
+			end if
+			.renamelist = astNew( ASTCLASS_RENAMELIST, title )
+		end if
+		astAppend( .renamelist, entry )
+	end with
+end sub
+
 private sub cPush( byval context as ASTNODE ptr, byval start_namespace as integer, byval start_scope as integer )
 	c.blocklevel += 1
 	if( c.blocklevel >= BLOCKSTACKLEN ) then
@@ -161,12 +184,18 @@ private sub cPush( byval context as ASTNODE ptr, byval start_namespace as intege
 		.start_scope = start_scope
 	end with
 
+	var namehashtbsize = iif( c.blocklevel = 0, 13, 5 )
+	var typehashtbsize = iif( c.blocklevel = 0,  7, 3 )
+
 	if( start_namespace ) then
 		c.namespacelevel += 1
 		with( c.namespaces(c.namespacelevel) )
 			.owner = context
 			.dummyidcounter = 0
-			hashInit( @.cnames, iif( c.blocklevel = 0, 13, 5 ), FALSE )
+			hashInit( @.cnames , namehashtbsize, FALSE )
+			hashInit( @.fbnames, namehashtbsize, TRUE )
+			hashInit( @.fbtypes, typehashtbsize, TRUE )
+			.renamelist = NULL
 		end with
 	end if
 
@@ -174,12 +203,14 @@ private sub cPush( byval context as ASTNODE ptr, byval start_namespace as intege
 		c.scopelevel += 1
 		with( c.scopes(c.scopelevel) )
 			.owner = context
-			hashInit( @.ctags, iif( c.blocklevel = 0, 7, 3 ), FALSE )
+			hashInit( @.ctags, typehashtbsize, FALSE )
 		end with
 	end if
 end sub
 
 private sub cPop( )
+	dim nestedrenamelist as ASTNODE ptr
+
 	'' Pop scope if one was started at this block level
 	if( c.blocks(c.blocklevel).start_scope ) then
 		with( c.scopes(c.scopelevel) )
@@ -191,12 +222,26 @@ private sub cPop( )
 	'' Same for namespace
 	if( c.blocks(c.blocklevel).start_namespace ) then
 		with( c.namespaces(c.namespacelevel) )
-			hashEnd( @.cnames )
+			hashEnd( @.cnames  )
+			hashEnd( @.fbnames )
+			hashEnd( @.fbtypes )
+			nestedrenamelist = .renamelist
 		end with
 		c.namespacelevel -= 1
 	end if
 
 	c.blocklevel -= 1
+
+	'' Propagate renamelist upwards, if any
+	if( nestedrenamelist ) then
+		if( c.namespacelevel >= 0 ) then
+			'' Add renamelist from the nested scope to the parent
+			cAddRenameListEntry( nestedrenamelist )
+		else
+			'' Popping the toplevel scope; store the final renamelist
+			api->renamelist = nestedrenamelist
+		end if
+	end if
 end sub
 
 private function hSolveTypedefOutIfWanted( byval n as ASTNODE ptr ) as ASTNODE ptr
@@ -260,7 +305,136 @@ private sub hMaybeOverrideSymbolId( byval opt as integer, byval n as ASTNODE ptr
 	end if
 end sub
 
-private sub cAddSymbol( byval n as ASTNODE ptr )
+private function hHaveConflict _
+	( _
+		byval n as ASTNODE ptr, _
+		byref ucaseid as string, _
+		byval ucaseidhash as ulong, _
+		byref existing as ASTNODE ptr _
+	) as integer
+
+	dim item as THASHITEM ptr
+
+	#macro hCheck( hashtb )
+		item = hashLookup( hashtb, ucaseid, ucaseidhash )
+		if( item->s ) then
+			existing = item->data  '' NULL in case of FB keyword, non-NULL for other symbols
+			return TRUE
+		end if
+	#endmacro
+
+	select case( n->class )
+	case ASTCLASS_PPDEFINE
+		hCheck( @fbkeywordhash )
+		hCheck( @c.fbdefines )
+		hCheck( @c.namespaces(0).fbtypes )
+		hCheck( @c.namespaces(0).fbnames )
+
+	case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM, ASTCLASS_TYPEDEF
+		hCheck( @fbkeywordhash )
+		hCheck( @c.fbdefines )
+		hCheck( @c.namespaces(c.namespacelevel).fbtypes )
+
+	case ASTCLASS_FIELD
+		hCheck( @c.fbdefines )
+		hCheck( @c.namespaces(c.namespacelevel).fbnames )
+
+		'' Fields can be named after FB keywords, except for '_'
+		'' Since we're not checking the keyword hash table here,
+		'' we must check for '_' manually.
+		if( ucaseid = "_" ) then
+			return TRUE
+		end if
+
+	case else
+		'' proc/var/enumconst/param
+		hCheck( @fbkeywordhash )
+		hCheck( @c.fbdefines )
+		hCheck( @c.namespaces(c.namespacelevel).fbnames )
+	end select
+
+	function = FALSE
+end function
+
+private function hPreferRenaming( byval n as ASTNODE ptr ) as integer
+	select case( n->class )
+	case ASTCLASS_PPDEFINE
+		function = (c.namespacelevel = 0)
+	case ASTCLASS_ENUMCONST
+		function = TRUE
+	end select
+end function
+
+'' Decide which symbol to rename: the existing one, or the new one.
+private function hShouldRenameExistingSymbol( byval existing as ASTNODE ptr, byval n as ASTNODE ptr ) as integer
+	'' Conflicting with FB keyword?
+	if( existing = NULL ) then return FALSE
+
+	'' If conflicting with an existing symbol that was already renamed,
+	'' then we just rename the existing one again. We don't want renames
+	'' to cause more renames.
+	if( existing->attrib and ASTATTRIB_RENAMED ) then return TRUE
+
+	'' Parameters are the easiest to rename because renaming them doesn't
+	'' make a difference (in prototypes)
+	if(        n->class = ASTCLASS_PARAM ) then return FALSE
+	if( existing->class = ASTCLASS_PARAM ) then return TRUE
+
+	'' Prefer renaming #defines/constants over others
+	if( hPreferRenaming( n        ) ) then return FALSE
+	if( hPreferRenaming( existing ) ) then return TRUE
+
+	'' Fallback to renaming the symbol that appeared later
+	function = FALSE
+end function
+
+'' Rename a symbol by appending _ underscores to its id, as long as needed to
+'' find an id that's not yet used in the namespace. (otherwise renaming could
+'' cause more conflicts)
+private sub hRenameSymbol _
+	( _
+		byval n as ASTNODE ptr, _
+		byref ucaseid as string, _
+		byref ucaseidhash as ulong, _
+		byval other as ASTNODE ptr _
+	)
+
+	assert( n->text )
+	var newid = *n->text
+
+	do
+		newid += "_"
+		ucaseid = ucase( newid, 1 )
+		ucaseidhash = hashHash( ucaseid )
+	loop while( hHaveConflict( n, ucaseid, ucaseidhash, NULL ) )
+
+	'' Add renamelist entry
+	''  * unless this declaration should be filtered out
+	''  * unless one was added already
+	''  * unless it's a parameter, because those aren't interesting
+	if( ((n->attrib and (ASTATTRIB_FILTEROUT or ASTATTRIB_RENAMED)) = 0) and _
+	    (n->class <> ASTCLASS_PARAM) ) then
+		var renamelistentry = astNew( ASTCLASS_RENAMELISTENTRY )
+		renamelistentry->expr = astNewSYM( n )
+		cAddRenameListEntry( renamelistentry )
+	end if
+
+	astRenameSymbol( n, newid )
+	n->attrib or= ASTATTRIB_RENAMED
+end sub
+
+private function hGetFbHashTb( byval n as ASTNODE ptr ) as THASH ptr
+	select case( n->class )
+	case ASTCLASS_PPDEFINE
+		function = @c.fbdefines
+	case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM, ASTCLASS_TYPEDEF
+		function = @c.namespaces(c.namespacelevel).fbtypes
+	case else
+		function = @c.namespaces(c.namespacelevel).fbnames
+	end select
+end function
+
+private sub cAddCHashTbEntry( byval n as ASTNODE ptr )
 	'' Add the symbol to the proper C namespace
 	dim chashtb as THASH ptr
 	select case( n->class )
@@ -271,7 +445,14 @@ private sub cAddSymbol( byval n as ASTNODE ptr )
 	case else
 		chashtb = @c.namespaces(c.namespacelevel).cnames
 	end select
-	hashAddOverwrite( chashtb, n->text, n )
+
+	'' If it was renamed already, add it as the old name (because that's
+	'' what we have to be able to look up when parsing the C code)
+	hashAddOverwrite( chashtb, astGetOrigId( n ), n )
+end sub
+
+private sub cAddSymbol( byval n as ASTNODE ptr )
+	cAddCHashTbEntry( n )
 
 	'' Override the symbol's original id if a rename was requested on the command line
 	'' We do this after adding it to the hashtb under its original name, because then
@@ -283,6 +464,50 @@ private sub cAddSymbol( byval n as ASTNODE ptr )
 	case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
 		hMaybeOverrideSymbolId( OPT_RENAMETAG, n )
 	end select
+
+	if( c.filterout ) then
+		n->attrib or= ASTATTRIB_FILTEROUT
+	end if
+
+	if( frog.syntaxonly or _
+	    ((n->attrib and ASTATTRIB_SOLVEOUT) <> 0) or _
+	    (n->class = ASTCLASS_TEXT) ) then
+		'' No auto-renaming for this
+		exit sub
+	end if
+
+	'' Check whether this symbol conflicts with an existing one (from FB's
+	'' point of view) and rename one of them if needed.
+	dim as ASTNODE ptr existing, torename, other
+	var ucaseid = ucase( *n->text, 1 )
+	var ucaseidhash = hashHash( ucaseid )
+	if( hHaveConflict( n, ucaseid, ucaseidhash, existing ) ) then
+		if( hShouldRenameExistingSymbol( existing, n ) ) then
+			torename = existing
+			other = n
+		else
+			torename = n
+			other = existing
+		end if
+
+		dim as string torenameucaseid
+		dim as ulong torenameucaseidhash
+		hRenameSymbol( torename, torenameucaseid, torenameucaseidhash, other )
+
+		'' Renamed existing symbol instead of this one?
+		if( torename = existing ) then
+			'' Re-add the existing symbol to its namespace under its new name
+			hashAddOverwrite( hGetFbHashTb( torename ), torenameucaseid, torename )
+		else
+			ucaseid = torenameucaseid
+			ucaseidhash = torenameucaseidhash
+		end if
+	end if
+
+	'' Add the symbol to the proper FB namespace
+	'' (may need to overwrite existing symbol if that got renamed instead of
+	'' this one)
+	hashAddOverwrite( hGetFbHashTb( n ), ucaseid, n )
 end sub
 
 private sub cAddToplevelSymbol( byval n as ASTNODE ptr )
@@ -331,6 +556,7 @@ sub cInit( )
 	c.scopelevel = -1
 	cPush( api->ast, TRUE, TRUE )
 	hashInit( @c.cdefines, 8, FALSE )
+	hashInit( @c.fbdefines, 8, TRUE )
 
 	'' Initially no packing
 	c.pragmapack.level = 0
@@ -353,8 +579,14 @@ sub cEnd( )
 	assert( c.scopelevel = -1 )
 
 	hashEnd( @c.cdefines )
+	hashEnd( @c.fbdefines )
 
 	deallocate( c.defbodies )
+end sub
+
+sub cAddReservedId( byval id as zstring ptr )
+	'' ucase it as done by cAddSymbol()'s id conflict checking
+	hashAddOverwrite( @c.fbdefines, ucase( *id, 1 ), NULL )
 end sub
 
 private sub cAddDefBody( byval xbegin as integer, byval xbodybegin as integer, byval n as ASTNODE ptr )
@@ -1065,7 +1297,7 @@ private function cTag( ) as ASTNODE ptr
 	'' within that scope will reference the body there).
 	''
 	dim tag as ASTNODE ptr
-	if( tagid <> NULL ) then
+	if( tagid ) then
 		if( is_body ) then
 			if( frog.syntaxonly = FALSE ) then
 				tag = cLocalTagLookup( tagid )
@@ -1109,10 +1341,6 @@ private function cTag( ) as ASTNODE ptr
 		end if
 		tag->attrib or= ASTATTRIB_BODYDEFINED
 
-		if( c.filterout ) then
-			tag->attrib or= ASTATTRIB_FILTEROUT
-		end if
-
 		select case( astclass )
 		case ASTCLASS_STRUCT, ASTCLASS_UNION
 			tag->maxalign = c.pragmapack.stack(c.pragmapack.level)
@@ -1143,7 +1371,7 @@ private function cTag( ) as ASTNODE ptr
 		'' '{'
 		c.x += 1
 
-		if( c.parseok ) then
+		if( c.parseok and (not c.filterout) ) then
 			if( is_nested_struct ) then
 				'' anonymous nested struct/union:
 				'' Add to current block as-is, inside the parent struct/union.
@@ -1300,15 +1528,11 @@ private function hDefBodyContainsIds( byval y as integer ) as integer
 	loop
 end function
 
-private sub cParseDefBody( byval n as ASTNODE ptr )
+private sub cParseDefBody( byval n as ASTNODE ptr, byref add_to_ast as integer )
 	c.parentdefine = n
 	cPush( n, TRUE, TRUE )
 
-	if( cDefineBody( n ) = FALSE ) then
-		'' We can automatically filter out certain #defines (those that
-		'' we know won't ever be needed on the FB side...)
-		n->attrib or= ASTATTRIB_FILTEROUT
-	end if
+	add_to_ast and= cDefineBody( n )
 
 	'' Didn't reach EOL? Then the beginning of the macro body could
 	'' be parsed as expression, but not the rest.
@@ -1338,13 +1562,12 @@ private sub cDefine( )
 		astCopy( existing, macro )
 		macro = existing
 	end if
-	if( c.filterout ) then
-		macro->attrib or= ASTATTRIB_FILTEROUT
-	end if
 
 	'' Add before trying to parse the body, because if that will be delayed,
 	'' then it would be added before the body is parsed anyways.
 	cAddSymbol( macro )
+
+	var add_to_ast = not c.filterout
 
 	'' Body?
 	assert( macro->expr = NULL )
@@ -1357,7 +1580,7 @@ private sub cDefine( )
 			c.x = hSkipToEol( c.x )
 		else
 			'' Probably a simple #define body, parse right now
-			cParseDefBody( macro )
+			cParseDefBody( macro, add_to_ast )
 		end if
 	end if
 
@@ -1365,7 +1588,7 @@ private sub cDefine( )
 	assert( tkGet( c.x ) = TK_EOL )
 	c.x += 1
 
-	if( c.parseok ) then
+	if( c.parseok and add_to_ast ) then
 		cAppendNode( macro )
 	end if
 end sub
@@ -1502,11 +1725,9 @@ private sub cPragmaComment( )
 		libname = left( libname, len( libname ) - 2 )
 	end if
 
-	var n = astNew( ASTCLASS_INCLIB, libname )
-	if( c.filterout ) then
-		n->attrib or= ASTATTRIB_FILTEROUT
+	if( c.filterout = FALSE ) then
+		cAppendNode( astNew( ASTCLASS_INCLIB, libname ) )
 	end if
-	cAppendNode( n )
 end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -2440,10 +2661,6 @@ private sub cDeclaration( byval astclass as integer, byval gccattribs as integer
 		declarator_count += 1
 		var n = cDeclarator( 0, astclass, dtype, subtype, gccattribs, NULL, 0, 0 )
 
-		if( c.filterout ) then
-			n->attrib or= ASTATTRIB_FILTEROUT
-		end if
-
 		'' filterout vs add_to_ast:
 		'' Declarations that are going to be filtered out must still be added to the AST for
 		'' symbol renaming (astFixIds()) which will be done after C parsing. This way the
@@ -2453,7 +2670,7 @@ private sub cDeclaration( byval astclass as integer, byval gccattribs as integer
 		'' solve out right here as if they never existed (e.g. because they can't
 		'' be translated to FB).
 		var add_to_namespace = TRUE
-		var add_to_ast = TRUE
+		var add_to_ast = not c.filterout
 
 		select case( n->class )
 		case ASTCLASS_PROC
@@ -2519,7 +2736,7 @@ private sub cDeclaration( byval astclass as integer, byval gccattribs as integer
 
 					'' Filter out "redundant" typedefs, for example:
 					''    typedef struct T T;
-					elseif( *n->text = *n->subtype->text ) then
+					elseif( *astGetOrigId( n ) = *astGetOrigId( n->subtype ) ) then
 						add_to_ast = FALSE
 
 						'' ditto
@@ -2693,7 +2910,7 @@ private function cScope( byval proc as ASTNODE ptr ) as ASTNODE ptr
 		while( param )
 			'' Not an anonymous parameter?
 			if( param->text ) then
-				cAddSymbol( param )
+				cAddCHashTbEntry( param )
 			end if
 			param = param->next
 		wend
@@ -2809,12 +3026,9 @@ private sub cBody( )
 			'' Skip current construct and preserve its tokens in
 			'' an UNKNOWN node
 			c.x = hSkipConstruct( begin, FALSE )
-			var n = astNewUNKNOWN( begin, c.x - 1 )
-			if( c.filterout ) then
-				n->attrib or= ASTATTRIB_FILTEROUT
+			if( c.filterout = FALSE ) then
+				cAppendNode( astNewUNKNOWN( begin, c.x - 1 ) )
 			end if
-			cAppendNode( n )
-
 			'' Close scopes that were left open due to the parsing error
 			while( c.blocklevel > beginblocklevel )
 				cPop( )
@@ -2832,19 +3046,25 @@ sub cMain( )
 	assert( c.blocklevel = 0 )
 	for i as integer = 0 to c.defbodycount - 1
 		with( c.defbodies[i] )
-
-			'' Parse #define body
 			c.x = .xbodybegin
 			cUpdateFilterOut( )
-			cParseDefBody( .n )
+
+			'' Parse #define body
+			var add_to_ast = TRUE
+			cParseDefBody( .n, add_to_ast )
 
 			'' Replace the #define with an UNKNOWN if parsing failed
 			if( c.parseok = FALSE ) then
-				var unknown = astNewUNKNOWN( .xbegin, hSkipToEol( .xbodybegin ) )
-				unknown->attrib or= .n->attrib and ASTATTRIB_FILTEROUT
-				astInsert( api->ast, unknown, .n )
-				astRemove( api->ast, .n )
+				if( c.filterout = FALSE ) then
+					var unknown = astNewUNKNOWN( .xbegin, hSkipToEol( .xbodybegin ) )
+					astInsert( api->ast, unknown, .n )
+				end if
+				add_to_ast = FALSE
 				c.parseok = TRUE
+			end if
+
+			if( (not add_to_ast) and (not c.filterout) ) then
+				astRemove( api->ast, .n )
 			end if
 		end with
 	next

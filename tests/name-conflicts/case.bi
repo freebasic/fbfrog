@@ -1,8 +1,6 @@
 #pragma once
 
 '' The following symbols have been renamed:
-''     inside struct Foo:
-''         field field => field_
 ''     procedure toaster1 => toaster1_
 ''     procedure toASTER1 => toASTER1__
 ''     #define Aaa => Aaa_
@@ -13,6 +11,8 @@
 ''     typedef myint => myint__
 ''     typedef Myint => Myint___
 ''     enum constant ENUMCONST1 => ENUMCONST1_
+''     inside struct Foo:
+''         field field => field_
 ''     typedef FOO => FOO_
 ''     #define SAILINGBOAT => SAILINGBOAT_
 

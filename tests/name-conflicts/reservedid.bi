@@ -1,10 +1,10 @@
 #pragma once
 
 '' The following symbols have been renamed:
-''     inside struct UDT:
-''         field foo => foo_
 ''     #define A => A_
 ''     procedure f1 => f1_
+''     inside struct UDT:
+''         field foo => foo_
 
 extern "C"
 

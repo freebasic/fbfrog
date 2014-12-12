@@ -71,6 +71,7 @@ dim shared as zstring ptr astnodename(0 to ...) => _
 	@"char"      , _
 	@"datatype"  , _
 	@"ellipsis"  , _
+	@"renamelistentry", _
 	_
 	_ '' BOPs
 	@"clogor" , _
@@ -357,6 +358,10 @@ sub astRenameSymbol( byval n as ASTNODE ptr, byval newid as zstring ptr )
 	end if
 	n->text = strDuplicate( newid )
 end sub
+
+function astGetOrigId( byval n as ASTNODE ptr ) as zstring ptr
+	function = iif( n->alias, n->alias, n->text )
+end function
 
 sub astSetType _
 	( _

@@ -28,7 +28,7 @@
 '' tracks the filterout status (according to -filterout/-filterin options),
 '' which decides whether tokens at the current level should be marked with
 '' TKFLAG_FILTEROUT or not. This lets the C parser know which constructs should
-'' be marked with ASTATTRIB_FILTEROUT.
+'' be filtered out.
 ''
 '' The included tokens can not be marked this way immediately, because macro
 '' expansion may result in new tokens being inserted which wouldn't

@@ -866,6 +866,13 @@ private function emitExpr _
 	case ASTCLASS_ELLIPSIS
 		s = "..."
 
+	case ASTCLASS_RENAMELISTENTRY
+		'' A renamelist entry looks something like this:
+		''    define FOO => FOO_
+		assert( n->expr->class = ASTCLASS_SYM )
+		var sym = n->expr->expr
+		s = astDumpPrettyClass( sym->class ) + " " + *sym->alias + " => " + *sym->text
+
 	case else
 		astDump( n )
 		assert( FALSE )

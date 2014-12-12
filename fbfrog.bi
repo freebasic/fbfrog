@@ -591,6 +591,7 @@ enum
 	ASTCLASS_CHAR
 	ASTCLASS_DATATYPE
 	ASTCLASS_ELLIPSIS
+	ASTCLASS_RENAMELISTENTRY
 
 	'' Expressions
 
@@ -663,8 +664,9 @@ const ASTATTRIB_DLLIMPORT     = 1 shl 16
 const ASTATTRIB_FILTEROUT     = 1 shl 17
 const ASTATTRIB_SOLVEOUT      = 1 shl 18  '' typedefs: Solve this typedef out whereever it's used
 const ASTATTRIB_BODYDEFINED   = 1 shl 19  '' tags: a body for this tag was found
-const ASTATTRIB_USEBEFOREDEF  = 1 shl 21  '' tags: used before definition (forward-referenced)
-const ASTATTRIB_FIRSTUSEFILTEREDOUT = 1 shl 22
+const ASTATTRIB_USEBEFOREDEF  = 1 shl 20  '' tags: used before definition (forward-referenced)
+const ASTATTRIB_FIRSTUSEFILTEREDOUT = 1 shl 21
+const ASTATTRIB_RENAMED       = 1 shl 22
 
 const ASTATTRIB__CALLCONV = ASTATTRIB_CDECL or ASTATTRIB_STDCALL
 
@@ -741,6 +743,7 @@ declare function astReplace _
 	) as ASTNODE ptr
 declare sub astSetText( byval n as ASTNODE ptr, byval text as zstring ptr )
 declare sub astRenameSymbol( byval n as ASTNODE ptr, byval newid as zstring ptr )
+declare function astGetOrigId( byval n as ASTNODE ptr ) as zstring ptr
 declare sub astSetType _
 	( _
 		byval n as ASTNODE ptr, _
@@ -794,10 +797,6 @@ declare function astLookupMacroParam _
 		byref macroparam as ASTNODE ptr = NULL _
 	) as integer
 declare sub astWrapInExternBlock( byval ast as ASTNODE ptr, byval callconv as integer )
-declare sub astFilterOut( byval code as ASTNODE ptr )
-declare sub astFixIdsInit( )
-declare sub astFixIdsAddReservedId( byval id as zstring ptr )
-declare sub astFixIds( byval code as ASTNODE ptr )
 declare sub astAutoAddDividers( byval code as ASTNODE ptr )
 declare sub astPrependMaybeWithDivider( byval group as ASTNODE ptr, byval n as ASTNODE ptr )
 
@@ -858,6 +857,7 @@ declare sub hOnlyFilterOutWholeConstructs( )
 declare sub cInit( )
 declare sub cEnd( )
 declare sub cMain( )
+declare sub cAddReservedId( byval id as zstring ptr )
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 

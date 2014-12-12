@@ -1,12 +1,12 @@
 #pragma once
 
 '' The following symbols have been renamed:
-''     typedef RGB => RGB__
+''     typedef RGB => RGB_
 
 extern "C"
 
-type RGB__ as RGB_
+type RGB_ as RGB__
 
-extern p as RGB__ ptr
+extern p as RGB_ ptr
 
 end extern

@@ -2,16 +2,16 @@
 
 '' The following symbols have been renamed:
 ''     inside struct UDT1:
+''         field globaldefine1 => globaldefine1_
+''         field globalconstant1 => globalconstant1_
 ''         field FOO => FOO_
 ''         field Foo => Foo__
 ''         field fOO => fOO___
-''     #define GLOBALDEFINE1 => GLOBALDEFINE1_
-''     #define GLOBALCONSTANT1 => GLOBALCONSTANT1_
 
 extern "C"
 
-#define GLOBALDEFINE1_() 1
-#define GLOBALCONSTANT1_ 1
+#define GLOBALDEFINE1() 1
+#define GLOBALCONSTANT1 1
 
 declare sub globalproc()
 
@@ -19,9 +19,9 @@ type globaltype as long
 type p as function(byval as_ as long) as long
 
 type UDT1
-	globaldefine1 as long
+	globaldefine1_ as long
 	globaldefine2 as long
-	globalconstant1 as long
+	globalconstant1_ as long
 	globalconstant2 as long
 	globalproc as long
 	globaltype as long

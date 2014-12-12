@@ -965,6 +965,14 @@ private sub frogReadApi( )
 	'' C parsing
 	''
 	cInit( )
+	with( frog.idopt(OPT_RESERVEDID) )
+		for i as integer = 0 to .room - 1
+			var item = .items + i
+			if( item->s ) then
+				cAddReservedId( item->s )
+			end if
+		next
+	end with
 	cMain( )
 	cEnd( )
 
@@ -993,20 +1001,9 @@ private sub frogReadApi( )
 				ASTATTRIB_STDCALL, ASTATTRIB_CDECL ) )
 	end if
 
-	if( frog.syntaxonly = FALSE ) then
-		astFixIdsInit( )
-		with( frog.idopt(OPT_RESERVEDID) )
-			for i as integer = 0 to .room - 1
-				var item = .items + i
-				if( item->s ) then
-					astFixIdsAddReservedId( item->s )
-				end if
-			next
-		end with
-		astFixIds( api->ast )
+	if( api->renamelist ) then
+		astPrepend( api->ast, api->renamelist )
 	end if
-
-	astFilterOut( api->ast )
 
 	'' Add "crt/long[double].bi" as direct #includes if the binding uses CLONG[DOUBLE]
 	if( api->uses_clongdouble ) then

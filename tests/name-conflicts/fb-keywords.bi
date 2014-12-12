@@ -1,8 +1,6 @@
 #pragma once
 
 '' The following symbols have been renamed:
-''     inside struct Width:
-''         field _ => __
 ''     variable ABS => ABS_
 ''     variable ABSTRACT => ABSTRACT_
 ''     variable ACCESS => ACCESS_
@@ -417,6 +415,8 @@
 ''     variable window => window__
 ''     variable windowtitle => windowtitle__
 ''     struct Width => Width_
+''     inside struct Width_ alias "Width":
+''         field _ => __
 ''     typedef type => type_
 
 extern "C"
