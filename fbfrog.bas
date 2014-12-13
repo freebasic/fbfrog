@@ -55,7 +55,7 @@
 #include once "file.bi"
 
 namespace frog
-	dim shared as integer verbose, windowsms, syntaxonly, fixunsizedarrays, nodefaultscript
+	dim shared as integer verbose, windowsms, clong32, syntaxonly, fixunsizedarrays, nodefaultscript
 	dim shared as string outname, defaultoutname
 
 	dim shared as ASTNODE ptr script
@@ -110,6 +110,7 @@ private sub hPrintHelpAndExit( )
 	print "  -v               Show verbose/debugging info"
 	print "  -nodefaultscript Don't use default.fbfrog implicitly"
 	print "  -windowsms       Use Extern ""Windows-MS"" instead of Extern ""Windows"""
+	print "  -clong32         Translate C long as 32bit LONG, instead of CLONG"
 	print "  -syntaxonly      Disable semantic checks, translate based on syntax only"
 	print "  -fixunsizedarrays  Wrap [] arrays with a #define"
 	print "  -renametypedef <oldid> <newid>  Rename a typedef"
@@ -411,6 +412,7 @@ private sub hParseArgs( byref x as integer )
 		select case as const( opt )
 		case OPT_NODEFAULTSCRIPT  : frog.nodefaultscript  = TRUE : x += 1
 		case OPT_WINDOWSMS        : frog.windowsms        = TRUE : x += 1
+		case OPT_CLONG32          : frog.clong32          = TRUE : x += 1
 		case OPT_SYNTAXONLY       : frog.syntaxonly       = TRUE : x += 1
 		case OPT_FIXUNSIZEDARRAYS : frog.fixunsizedarrays = TRUE : x += 1
 		case OPT_V                : frog.verbose          = TRUE : x += 1
