@@ -118,6 +118,7 @@ private sub hPrintHelpAndExit( )
 	print "  -removeproc <id>    Don't preserve a certain procedure"
 	print "  -typedefhint <id>   Mark <id> as typedef, to help parsing of type casts"
 	print "  -reservedid <id>    Rename symbols conflicting with this <id>"
+	print "  -nofbkeyword <id>   Forget that <id> is an FB keyword (affects symbol renaming)"
 	print "  -noexpand <id>      Disable expansion of certain #define"
 	print "version-specific commands:"
 	print "  -define <id> [<body>]    Add pre-#define"
@@ -443,6 +444,14 @@ private sub hParseArgs( byref x as integer )
 			'' <id>
 			hExpectId( x )
 			hashAddOverwrite( @frog.idopt(opt), tkSpellId( x ), NULL )
+			x += 1
+
+		case OPT_NOFBKEYWORD
+			x += 1
+
+			'' <id>
+			hExpectId( x )
+			hashAddOverwrite( @frog.idopt(OPT_NOFBKEYWORD), ucase( *tkSpellId( x ), 1 ), NULL )
 			x += 1
 
 		'' -declaredefines (<symbol>)+
@@ -1061,7 +1070,6 @@ end sub
 	end if
 
 	sourcebuffersInit( )
-	fbkeywordsInit( )
 	fbcrtheadersInit( )
 	extradatatypesInit( )
 	lexInit( )
@@ -1114,6 +1122,8 @@ end sub
 	assert( frog.apicount > 0 )
 
 	frog.prefix = space( (len( str( frog.apicount ) ) * 2) + 4 )
+
+	fbkeywordsInit( )
 
 	'' For each version, parse the input into an AST, using the options for
 	'' that version, and then merge the AST with the previous one, so that

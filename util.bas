@@ -1355,8 +1355,13 @@ dim shared fbkeywordhash as THASH
 
 sub fbkeywordsInit( )
 	hashInit( @fbkeywordhash, 10, TRUE )
+
+	'' Add all FB keywords except those given with -nofbkeyword
 	for i as integer = lbound( fbkeywords ) to ubound( fbkeywords )
-		hashAddOverwrite( @fbkeywordhash, fbkeywords(i), NULL )
+		var id = fbkeywords(i)
+		if( hashContains( @frog.idopt(OPT_NOFBKEYWORD), id, hashHash( id ) ) = FALSE ) then
+			hashAddOverwrite( @fbkeywordhash, id, NULL )
+		end if
 	next
 end sub
 
