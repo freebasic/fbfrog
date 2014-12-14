@@ -417,4 +417,6 @@ end sub
 sub f()
 end sub
 
+extern p as sub stdcall(byval p as sub stdcall())
+
 end extern

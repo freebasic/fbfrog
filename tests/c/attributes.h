@@ -305,3 +305,5 @@ extern __inline__ void f(void);
 extern __inline__ void f(void) { }
 __attribute__((gnu_inline)) void f(void) { }
 __attribute__((always_inline)) void f(void) { }
+
+extern void (__attribute__((stdcall)) *p)(    void (__attribute__((stdcall)) *p)(void)    );

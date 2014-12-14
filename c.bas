@@ -680,8 +680,7 @@ private function hIsDataType( byval y as integer ) as integer
 	var is_type = FALSE
 
 	select case( tkGet( y ) )
-	case KW___ATTRIBUTE__, _
-	     KW_SIGNED, KW_UNSIGNED, KW_CONST, KW_SHORT, KW_LONG, _
+	case KW_SIGNED, KW_UNSIGNED, KW_CONST, KW_SHORT, KW_LONG, _
 	     KW_ENUM, KW_STRUCT, KW_UNION, _
 	     KW_VOID, KW_CHAR, KW_FLOAT, KW_DOUBLE, KW_INT
 		is_type = not cIdentifierIsMacroParam( tkSpellId( y ) )
@@ -693,6 +692,15 @@ private function hIsDataType( byval y as integer ) as integer
 	end select
 
 	function = is_type
+end function
+
+private function hIsDataTypeOrAttribute( byval y as integer ) as integer
+	select case( tkGet( y ) )
+	case KW___ATTRIBUTE__
+		function = not cIdentifierIsMacroParam( tkSpellId( y ) )
+	case else
+		function = hIsDataType( y )
+	end select
 end function
 
 private function cNumberLiteral( ) as ASTNODE ptr
@@ -767,7 +775,7 @@ private function hExpression( byval level as integer ) as ASTNODE ptr
 			'' '('
 			c.x += 1
 
-			var is_cast = hIsDataType( c.x )
+			var is_cast = hIsDataTypeOrAttribute( c.x )
 
 			'' Find the ')' and check the token behind it, in some cases
 			'' we can tell that it probably isn't a cast.
@@ -879,7 +887,7 @@ private function hExpression( byval level as integer ) as ASTNODE ptr
 			c.x += 1
 
 			'' ('(' DataType)?
-			if( (tkGet( c.x ) = TK_LPAREN) andalso hIsDataType( c.x + 1 ) ) then
+			if( (tkGet( c.x ) = TK_LPAREN) andalso hIsDataTypeOrAttribute( c.x + 1 ) ) then
 				'' '('
 				c.x += 1
 
@@ -1507,7 +1515,7 @@ private function cDefineBody( byval macro as ASTNODE ptr ) as integer
 		end if
 	end select
 
-	if( hIsDataType( c.x ) ) then
+	if( hIsDataTypeOrAttribute( c.x ) ) then
 		macro->expr = cDataType( )
 		return TRUE
 	end if
@@ -3037,7 +3045,7 @@ private sub cConstruct( )
 		case KW_RETURN
 			cReturn( )
 		case else
-			if( hIsDataType( c.x ) ) then
+			if( hIsDataTypeOrAttribute( c.x ) ) then
 				cVarOrProcDecl( TRUE )
 			else
 				cExpressionStatement( )
