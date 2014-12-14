@@ -3145,19 +3145,37 @@ private sub cUpdateFilterOut( )
 	c.filterout = ((tkGetFlags( c.x ) and TKFLAG_FILTEROUT) <> 0)
 end sub
 
+private sub cPopRemainingScopes( byval blocklevel0 as integer )
+	'' Close scopes that were left open due to the parsing error
+	while( c.blocklevel > blocklevel0 )
+		cPop( )
+	wend
+end sub
+
 private sub cBody( )
-	while( tkGet( c.x ) <> TK_EOF )
-		if( c.blocklevel > 0 ) then
-			'' '}'
-			if( tkGet( c.x ) = TK_RBRACE ) then
-				exit while
+	do
+		select case( tkGet( c.x ) )
+		case TK_EOF
+			exit do
+
+		'' End of #define body
+		case TK_EOL
+			assert( c.parentdefine )
+			exit do
+
+		'' '}' (end of block)
+		case TK_RBRACE
+			if( c.blocklevel > 0 ) then
+				exit do
 			end if
-		else
+		end select
+
+		if( c.blocklevel = 0 ) then
 			cUpdateFilterOut( )
 		end if
 
 		var begin = c.x
-		var beginblocklevel = c.blocklevel
+		var blocklevel0 = c.blocklevel
 
 		cConstruct( )
 
@@ -3170,23 +3188,20 @@ private sub cBody( )
 			if( c.filterout = FALSE ) then
 				cAppendNode( astNewUNKNOWN( begin, c.x - 1 ) )
 			end if
-			'' Close scopes that were left open due to the parsing error
-			while( c.blocklevel > beginblocklevel )
-				cPop( )
-			wend
+			cPopRemainingScopes( blocklevel0 )
 		end if
 
-		assert( c.blocklevel = beginblocklevel )
-	wend
+		assert( c.blocklevel = blocklevel0 )
+	loop
 end sub
 
 sub cMain( )
 	cBody( )
 
 	'' Process the #define bodies which weren't parsed yet
-	assert( c.blocklevel = 0 )
 	for i as integer = 0 to c.defbodycount - 1
 		with( c.defbodies[i] )
+			assert( c.blocklevel = 0 )
 			c.parseok = TRUE
 			c.x = .xbodybegin
 			cUpdateFilterOut( )
@@ -3194,6 +3209,8 @@ sub cMain( )
 			'' Parse #define body
 			var add_to_ast = TRUE
 			cParseDefBody( .n, add_to_ast )
+
+			cPopRemainingScopes( 0 )
 
 			if( (not add_to_ast) and (not c.filterout) ) then
 				astRemove( api->ast, .n )
