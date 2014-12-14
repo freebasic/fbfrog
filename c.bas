@@ -120,6 +120,12 @@ namespace c
 	end type
 	dim shared defbodies as DEFBODYNODE ptr
 	dim shared as integer defbodycount, defbodyroom
+
+	'' Tags from the toplevel scope that were used before being defined
+	'' (those for which we have to add forward decls)
+	dim shared tags as ASTNODE ptr ptr
+	dim shared tagcount as integer
+	dim shared taghash as THASH
 end namespace
 
 private function cMatch( byval tk as integer ) as integer
@@ -526,6 +532,16 @@ private sub cAddToplevelSymbol( byval n as ASTNODE ptr )
 	c.scopelevel = old_scopelevel
 end sub
 
+private sub cAddTag( byval tag as ASTNODE ptr )
+	if( hashContains( @c.taghash, tag->text, hashHash( tag->text ) ) ) then
+		exit sub
+	end if
+	c.tagcount += 1
+	c.tags = reallocate( c.tags, c.tagcount * sizeof( *c.tags ) )
+	c.tags[c.tagcount-1] = tag
+	hashAddOverwrite( @c.taghash, tag->text, NULL )
+end sub
+
 private function cIsTypedef( byval id as zstring ptr ) as integer
 	'' 1. Check C parser's symbol table
 	var n = cFullNameLookup( id )
@@ -569,9 +585,64 @@ sub cInit( )
 	c.defbodies = NULL
 	c.defbodycount = 0
 	c.defbodyroom = 0
+
+	c.tags = NULL
+	c.tagcount = 0
+	hashInit( @c.taghash, 4, FALSE )
+end sub
+
+''
+'' Add a forward reference for the given tag, and update all references to the
+'' tag to point to the new forward typedef.
+''
+'' We can do this fairly easily by turning the tag node itself into the forward
+'' typedef. This way all references will stay valid and will automatically point
+'' to the forward decl. It can then be moved to the top of the code.
+''
+'' In case the tag node represented a tag body in the code, we can insert a new
+'' node in the tag's old place. Then the new node will represent the tag body.
+'' (since the old tag node is busy being the forward typedef)
+''
+'' For completeness' sake, we need to create a new tag node anyways, to
+'' represent the forward reference (the dtype/subtype of the forward decl),
+'' if there is no tag body.
+''
+private sub hAddFwdDecl( byval parent as ASTNODE ptr, byval oldtag as ASTNODE ptr )
+	var newtag = astCloneNode( oldtag )
+	astMoveChildren( newtag, oldtag )
+
+	'' New name for the forward reference
+	astSetText( newtag, *newtag->text + "_" )
+
+	'' If there's a body, insert it in front of the old node
+	if( oldtag->attrib and ASTATTRIB_BODYDEFINED ) then
+		astInsert( parent, newtag, oldtag )
+
+		'' Unlink old node
+		astRemove( parent, oldtag )
+	end if
+
+	'' Add the old node to the top
+	astPrepend( parent, oldtag )
+
+	'' Turn it into the wanted forward typedef
+	oldtag->class = ASTCLASS_TYPEDEF
+	oldtag->dtype = TYPE_UDT
+	oldtag->subtype = newtag
 end sub
 
 sub cEnd( )
+	'' Add a forward decl for any tags that were used before being defined
+	'' (looping backwards because the forward decls will be prepended; this
+	'' way they'll end up in the proper order)
+	for i as integer = c.tagcount - 1 to 0 step -1
+		var tag = c.tags[i]
+		if( ((tag->attrib and ASTATTRIB_USEBEFOREDEF) <> 0) and _
+		    ((tag->attrib and ASTATTRIB_DONTADDFWDREF) = 0) ) then
+			hAddFwdDecl( api->ast, tag )
+		end if
+	next
+
 	'' Cleanup toplevel scope
 	cPop( )
 	assert( c.blocklevel = -1 )
@@ -582,6 +653,9 @@ sub cEnd( )
 	hashEnd( @c.fbdefines )
 
 	deallocate( c.defbodies )
+
+	deallocate( c.tags )
+	hashEnd( @c.taghash )
 end sub
 
 sub cAddReservedId( byval id as zstring ptr )
@@ -1329,16 +1403,19 @@ private function cTag( ) as ASTNODE ptr
 			end if
 		else
 			if( c.filterout ) then
-				tag->attrib or= ASTATTRIB_FIRSTUSEFILTEREDOUT
+				'' Filtering out the first use of a tag, so don't add
+				'' the forward reference (if any) here. A forward reference
+				'' should be added in the file containing the first use.
+				tag->attrib or= ASTATTRIB_DONTADDFWDREF
 			end if
 
 			'' Add new non-body tags to toplevel scope
 			cAddToplevelSymbol( tag )
-		end if
-	end if
 
-	if( tag->text ) then
-		apiAddTag( tag )
+			if( tag->text ) then
+				cAddTag( tag )
+			end if
+		end if
 	end if
 
 	tag->attrib or= gccattrib
@@ -1350,7 +1427,10 @@ private function cTag( ) as ASTNODE ptr
 		tag->attrib or= ASTATTRIB_BODYDEFINED
 
 		if( c.filterout ) then
-			tag->attrib or= ASTATTRIB_BODYFILTEREDOUT
+			'' If filtering out a body, the filtered-out code will
+			'' be #included at the top (i.e. the code will be re-ordered),
+			'' so no forward reference is needed anymore...
+			tag->attrib or= ASTATTRIB_DONTADDFWDREF
 		end if
 
 		select case( astclass )

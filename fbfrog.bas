@@ -633,18 +633,7 @@ private sub frogAddApi( byval verand as ASTNODE ptr, byval options as ASTNODE pt
 	with( frog.apis[i] )
 		.verand = verand
 		.options = options
-		hashInit( @.taghash, 4, FALSE )
 	end with
-end sub
-
-sub apiAddTag( byval tag as ASTNODE ptr )
-	if( hashContains( @api->taghash, tag->text, hashHash( tag->text ) ) ) then
-		exit sub
-	end if
-	api->tagcount += 1
-	api->tags = reallocate( api->tags, api->tagcount * sizeof( *api->tags ) )
-	api->tags[api->tagcount-1] = tag
-	hashAddOverwrite( @api->taghash, tag->text, NULL )
 end sub
 
 ''
@@ -811,47 +800,6 @@ private sub frogEvaluateScript _
 	frogAddApi( conditions, options )
 end sub
 
-''
-'' Add a forward reference for the given tag, and update all references to the
-'' tag to point to the new forward typedef.
-''
-'' We can do this fairly easily by turning the tag node itself into the forward
-'' typedef. This way all references will stay valid and will automatically point
-'' to the forward decl. It can then be moved to the top of the code.
-''
-'' In case the tag node represented a tag body in the code, we can insert a new
-'' node in the tag's old place. Then the new node will represent the tag body.
-'' (since the old tag node is busy being the forward typedef)
-''
-'' For completeness' sake, we need to create a new tag node anyways, to
-'' represent the forward reference (the dtype/subtype of the forward decl),
-'' if there is no tag body.
-''
-private function hAddFwdDecl( byval parent as ASTNODE ptr, byval oldtag as ASTNODE ptr ) as ASTNODE ptr
-	var newtag = astCloneNode( oldtag )
-	astMoveChildren( newtag, oldtag )
-
-	'' New name for the forward reference
-	astSetText( newtag, *newtag->text + "_" )
-
-	'' If there's a body, insert it in front of the old node
-	if( oldtag->attrib and ASTATTRIB_BODYDEFINED ) then
-		astInsert( parent, newtag, oldtag )
-
-		'' Unlink old node
-		astRemove( parent, oldtag )
-	end if
-
-	'' Add the old node to the top
-	astPrepend( parent, oldtag )
-
-	'' Turn it into the wanted forward typedef
-	oldtag->class = ASTCLASS_TYPEDEF
-	oldtag->dtype = TYPE_UDT
-	oldtag->subtype = newtag
-	function = newtag
-end function
-
 private sub frogReadApi( )
 	''
 	'' 1. Preprocessing
@@ -992,18 +940,6 @@ private sub frogReadApi( )
 	''
 	'' Finalize the AST for this API
 	''
-
-	'' Add a forward decl for any tags that were used before being defined
-	'' (looping backwards because the forward decls will be prepended; this
-	'' way they'll end up in the proper order)
-	for i as integer = api->tagcount - 1 to 0 step -1
-		var tag = api->tags[i]
-		if( ((tag->attrib and ASTATTRIB_USEBEFOREDEF) <> 0) and _
-		    ((tag->attrib and ASTATTRIB_FIRSTUSEFILTEREDOUT) = 0) and _
-		    ((tag->attrib and ASTATTRIB_BODYFILTEREDOUT) = 0) ) then
-			api->tags[i] = hAddFwdDecl( api->ast, tag )
-		end if
-	next
 
 	if( api->need_externblock ) then
 		'' Add an Extern block, ensuring to preserve the case of global

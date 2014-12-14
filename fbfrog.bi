@@ -656,7 +656,7 @@ const ASTATTRIB_CDECL         = 1 shl 6  '' PROC
 const ASTATTRIB_STDCALL       = 1 shl 7  '' PROC
 const ASTATTRIB_HIDECALLCONV  = 1 shl 8  '' Whether the calling convention is covered by an Extern block, in which case it doesn't need to be emitted.
 const ASTATTRIB_UNCHECKED     = 1 shl 9
-const ASTATTRIB_NEEDRENAME    = 1 shl 10
+                            ''= 1 shl 10
 const ASTATTRIB_POISONED      = 1 shl 11
 const ASTATTRIB_PACKED        = 1 shl 12  '' __attribute__((packed))
 const ASTATTRIB_VARIADIC      = 1 shl 13  '' PPDEFINE/MACROPARAM: variadic macros
@@ -667,9 +667,8 @@ const ASTATTRIB_FILTEROUT     = 1 shl 17
 const ASTATTRIB_SOLVEOUT      = 1 shl 18  '' typedefs: Solve this typedef out whereever it's used
 const ASTATTRIB_BODYDEFINED   = 1 shl 19  '' tags: a body for this tag was found
 const ASTATTRIB_USEBEFOREDEF  = 1 shl 20  '' tags: used before definition (forward-referenced)
-const ASTATTRIB_FIRSTUSEFILTEREDOUT = 1 shl 21
+const ASTATTRIB_DONTADDFWDREF = 1 shl 21
 const ASTATTRIB_RENAMED       = 1 shl 22
-const ASTATTRIB_BODYFILTEREDOUT = 1 shl 23
 
 const ASTATTRIB__CALLCONV = ASTATTRIB_CDECL or ASTATTRIB_STDCALL
 
@@ -873,11 +872,6 @@ type FROGAPI
 
 	ast		as ASTNODE ptr
 	renamelist	as ASTNODE ptr
-
-	'' Tags that were used before being defined (those for which we have to add forward decls)
-	tags		as ASTNODE ptr ptr
-	tagcount	as integer
-	taghash		as THASH
 end type
 
 namespace frog
@@ -897,4 +891,3 @@ extern api as FROGAPI ptr
 
 declare function hFindResource( byref filename as string ) as string
 declare sub frogPrint( byref s as string )
-declare sub apiAddTag( byval tag as ASTNODE ptr )

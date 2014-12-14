@@ -469,11 +469,9 @@ function astIsEqual _
 		end if
 	end if
 
-	'' Some attributes can always be ignored because they don't cause declarations to really be different
-	'' OCT/HEX attributes mustn't be ignored because otherwise number literals with the same digits but
+	'' Some attributes could perhaps always be ignored because they don't cause declarations to really be different.
+	'' However, OCT/HEX attributes mustn't be ignored because otherwise number literals with the same digits but
 	'' a different base could incorrectly compare equal.
-	aattrib and= not ASTATTRIB_NEEDRENAME
-	battrib and= not ASTATTRIB_NEEDRENAME
 
 	if( aattrib <> battrib ) then exit function
 
@@ -639,7 +637,6 @@ function astDumpOne( byval n as ASTNODE ptr ) as string
 	checkAttrib( STDCALL )
 	checkAttrib( HIDECALLCONV )
 	checkAttrib( UNCHECKED )
-	checkAttrib( NEEDRENAME )
 	checkAttrib( POISONED )
 	checkAttrib( PACKED )
 	checkAttrib( VARIADIC )
@@ -649,7 +646,8 @@ function astDumpOne( byval n as ASTNODE ptr ) as string
 	checkAttrib( FILTEROUT )
 	checkAttrib( BODYDEFINED )
 	checkAttrib( USEBEFOREDEF )
-	checkAttrib( FIRSTUSEFILTEREDOUT )
+	checkAttrib( DONTADDFWDREF )
+	checkAttrib( RENAMED )
 
 	if( n->text ) then
 		s += " """ + strMakePrintable( *n->text ) + """"
