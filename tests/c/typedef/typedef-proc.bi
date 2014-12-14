@@ -45,4 +45,6 @@ declare function qualified1(byval i as long) as long
 dim shared qualified2 as function(byval i as long) as long
 dim shared qualified3 as const function(byval i as long) as long
 
+declare sub f5(byval p as function(byval i as long) as long)
+
 end extern

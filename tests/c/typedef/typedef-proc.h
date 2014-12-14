@@ -44,3 +44,6 @@ static T1 * const * const c4;
 T1 const qualified1;
 static T1 const *qualified2;
 static T1 const * const qualified3;
+
+// Expansion into parameter (implicitly becomes a function pointer)
+void f5(T1 p);

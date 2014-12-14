@@ -624,7 +624,7 @@ private function emitExpr _
 		emitProc( s, n, TRUE )
 
 	case ASTCLASS_PARAM
-		'' should have been solved out by hFixArrayParams()
+		'' should have been solved out by hExpandArrayTypedef()
 		assert( n->array = NULL )
 
 		'' vararg?

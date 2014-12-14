@@ -33,9 +33,7 @@ void f(int ((a)), int (b));
 void f(int *(a), int *(*((*b))), int (*c));
 
 static int __anonymous_nested_id;
-void f(int ());
-void f(int (()), int ());
-void f(int *(), int *(*((*))), int (*));
+void f(int *(*((*))), int (*));
 
 static int __no_params;
 void f();
@@ -49,3 +47,12 @@ void f(void (* )(void (* )(void)));
 
 static int __vararg;
 void f(int a, ...);
+
+static int __functions;
+void f( void () );
+void f( void (()) );
+void f( void ((())) );
+void f( void (void) );
+void f( void ((void)) );
+void f( void (((void))) );
+void f( void f(void) );

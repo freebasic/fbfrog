@@ -2081,8 +2081,10 @@ private sub hExpandProcTypedef( byval n as ASTNODE ptr )
 
 		'' var/field; it's a pointer to the function type; ok
 
-	case ASTCLASS_TYPEDEF
+	case ASTCLASS_TYPEDEF, ASTCLASS_PARAM
 		'' Expanding typedef in another typedef; always ok
+		'' Expanding into param, also ok (it becomes a function pointer;
+		'' handled later in hPostprocessDeclarator())
 
 	case else
 		'' Anywhere else (params, function results, casts, sizeof):
@@ -2152,16 +2154,22 @@ private sub hPostprocessDeclarator( byval n as ASTNODE ptr )
 
 	select case( n->class )
 	case ASTCLASS_PARAM
+		select case( typeGetDtAndPtr( n->dtype ) )
 		'' Remap "byval as jmp_buf" to "byval as jmp_buf ptr"
 		'' jmp_buf is defined as array type in C, and arrays are passed byref in C.
 		'' Since FB's crt/setjmp.bi defines jmp_buf as a simple UDT, we have to handle
 		'' the "byref" part manually. Strictly speaking fbfrog should produce "byref as jmp_buf",
 		'' but traditionally FB's headers always used a "byval as jmp_buf ptr"...
-		if( typeGetDtAndPtr( n->dtype ) = TYPE_UDT ) then
+		case TYPE_UDT
 			if( *n->subtype->text = "jmp_buf" ) then
 				n->dtype = typeAddrOf( n->dtype )
 			end if
-		end if
+
+		'' Function type? It's really just a function pointer
+		case TYPE_PROC
+			n->dtype = typeAddrOf( n->dtype )
+
+		end select
 
 		'' C array parameter? It's really just a pointer (the array is passed byref).
 		'' FB doesn't support C array parameters like that, so turn them into pointers:
@@ -2243,7 +2251,7 @@ end sub
 ''    i            for example, as part of: int i;
 ''    i[10]        array: int i[10];
 ''    <nothing>    anonymous parameter: int f(int);
-''    ()           extra parentheses on anonymous parameter: int f(int ());
+''    ()           empty parameter list for anonymous parameter: int f(int ());
 ''    ***p         int ***p;
 ''    (*p)(void)   function pointer: void (*p)(void);
 ''    (((i)))      extra parentheses around identifier: int (((i)));
@@ -2431,11 +2439,32 @@ private function cDeclarator _
 		wend
 	wend
 
-	''    '(' Declarator ')'    |    [Identifier]
 	dim as ASTNODE ptr t, innernode
 
-	'' '('?
-	if( cMatch( TK_LPAREN ) ) then
+	''    '(' Declarator ')'    |    [Identifier]
+
+	'' Special case for parameters:
+	'' * They can be anonymous, and thus a '(' can indicate either a
+	''   parenthesized identifier or a parameter list. It depends on the
+	''   token behind the '(' - if it's a data type or a ')' then it's a
+	''   parameter list.
+	'' * If it's a parameter list, it can be parenthesized, even multiple
+	''   times. This isn't possible with "normal" function declarations...
+	var paramlistnesting = 0
+	if( astclass = ASTCLASS_PARAM ) then
+		var y = c.x
+		while( tkGet( y ) = TK_LPAREN )
+			y += 1
+		wend
+		if( hIsDataType( y ) or (tkGet( y ) = TK_RPAREN) ) then
+			paramlistnesting = y - c.x
+		end if
+	end if
+
+	'' '(' for declarator?
+	if( (tkGet( c.x ) = TK_LPAREN) and (paramlistnesting = 0) ) then
+		c.x += 1
+
 		t = cDeclarator( nestlevel + 1, astclass, dtype, basesubtype, 0, innernode, innerprocptrdtype, innergccattribs )
 
 		'' ')'
@@ -2508,7 +2537,10 @@ private function cDeclarator _
 
 	'' '(' ParamList ')'
 	case TK_LPAREN
-		c.x += 1
+		if( paramlistnesting = 0 ) then
+			paramlistnesting = 1
+		end if
+		c.x += paramlistnesting
 
 		'' Parameters turn a vardecl/fielddecl into a procdecl,
 		'' unless they're for a procptr type.
@@ -2536,9 +2568,16 @@ private function cDeclarator _
 			innerprocptrdtype = TYPE_PROC
 		else
 			select case( t->class )
-			'' Typedefs with parameters aren't turned into procs, but must
-			'' be given a PROC subtype, similar to procptrs.
-			case ASTCLASS_TYPEDEF
+			'' A plain symbol, not a pointer, becomes a function
+			case ASTCLASS_VAR, ASTCLASS_FIELD
+				t->class = ASTCLASS_PROC
+				if( c.filterout = FALSE ) then
+					api->need_externblock = TRUE
+				end if
+
+			'' Anything else though (typedefs, params, type casts...)
+			'' with params isn't turned into a proc, but just has function type.
+			case else
 				node = astNew( ASTCLASS_PROC )
 				astSetType( node, dtype, basesubtype )
 				if( c.filterout = FALSE ) then
@@ -2546,13 +2585,6 @@ private function cDeclarator _
 				end if
 				t->dtype = TYPE_PROC
 				t->subtype = node
-
-			'' A plain symbol, not a pointer, becomes a function
-			case ASTCLASS_VAR, ASTCLASS_FIELD
-				t->class = ASTCLASS_PROC
-				if( c.filterout = FALSE ) then
-					api->need_externblock = TRUE
-				end if
 			end select
 		end if
 
@@ -2569,7 +2601,10 @@ private function cDeclarator _
 		end if
 
 		'' ')'
-		cExpectMatch( TK_RPAREN, "to close parameter list in function declaration" )
+		while( paramlistnesting > 0 )
+			cExpectMatch( TK_RPAREN, "to close parameter list in function declaration" )
+			paramlistnesting -= 1
+		wend
 	end select
 
 	'' __ATTRIBUTE__((...))

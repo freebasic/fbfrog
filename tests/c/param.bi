@@ -41,9 +41,7 @@ declare sub f(byval a as long ptr, byval b as long ptr ptr ptr, byval c as long 
 
 dim shared __anonymous_nested_id as long
 
-declare sub f(byval as long)
-declare sub f(byval as long, byval as long)
-declare sub f(byval as long ptr, byval as long ptr ptr ptr, byval as long ptr)
+declare sub f(byval as long ptr ptr ptr, byval as long ptr)
 
 dim shared __no_params as long
 
@@ -60,5 +58,15 @@ declare sub f(byval as sub(byval as sub()))
 dim shared __vararg as long
 
 declare sub f(byval a as long, ...)
+
+dim shared __functions as long
+
+declare sub f(byval as sub())
+declare sub f(byval as sub())
+declare sub f(byval as sub())
+declare sub f(byval as sub())
+declare sub f(byval as sub())
+declare sub f(byval as sub())
+declare sub f(byval f as sub())
 
 end extern
