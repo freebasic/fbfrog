@@ -669,6 +669,7 @@ const ASTATTRIB_BODYDEFINED   = 1 shl 19  '' tags: a body for this tag was found
 const ASTATTRIB_USEBEFOREDEF  = 1 shl 20  '' tags: used before definition (forward-referenced)
 const ASTATTRIB_FIRSTUSEFILTEREDOUT = 1 shl 21
 const ASTATTRIB_RENAMED       = 1 shl 22
+const ASTATTRIB_BODYFILTEREDOUT = 1 shl 23
 
 const ASTATTRIB__CALLCONV = ASTATTRIB_CDECL or ASTATTRIB_STDCALL
 

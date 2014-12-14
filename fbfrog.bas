@@ -999,7 +999,8 @@ private sub frogReadApi( )
 	for i as integer = api->tagcount - 1 to 0 step -1
 		var tag = api->tags[i]
 		if( ((tag->attrib and ASTATTRIB_USEBEFOREDEF) <> 0) and _
-		    ((tag->attrib and ASTATTRIB_FIRSTUSEFILTEREDOUT) = 0) ) then
+		    ((tag->attrib and ASTATTRIB_FIRSTUSEFILTEREDOUT) = 0) and _
+		    ((tag->attrib and ASTATTRIB_BODYFILTEREDOUT) = 0) ) then
 			api->tags[i] = hAddFwdDecl( api->ast, tag )
 		end if
 	next

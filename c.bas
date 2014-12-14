@@ -1349,6 +1349,10 @@ private function cTag( ) as ASTNODE ptr
 		end if
 		tag->attrib or= ASTATTRIB_BODYDEFINED
 
+		if( c.filterout ) then
+			tag->attrib or= ASTATTRIB_BODYFILTEREDOUT
+		end if
+
 		select case( astclass )
 		case ASTCLASS_STRUCT, ASTCLASS_UNION
 			tag->maxalign = c.pragmapack.stack(c.pragmapack.level)
