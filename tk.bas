@@ -777,7 +777,11 @@ function hSkipConstruct( byval x as integer, byval ignore_directives as integer 
 			x += 1
 			exit do
 
-		case TK_EOF, TK_ENDINCLUDE, TK_RBRACE
+		case TK_EOF, TK_ENDINCLUDE, TK_RBRACE, TK_EOL
+			'' '}': Apparently we didn't see the '{' of this '{...}' block (otherwise we would
+			'' have skipped the whole block already), thus we're inside the block and this construct
+			'' is a nested one. Thus the '}' indicates the end of the construct, and is not part of it.
+			'' EOL: The same, just for #define bodies.
 			exit do
 
 		case TK_HASH
@@ -788,7 +792,18 @@ function hSkipConstruct( byval x as integer, byval ignore_directives as integer 
 				x = hSkipToEol( x )
 			end if
 
-		case TK_LPAREN, TK_LBRACKET, TK_LBRACE
+		case TK_LBRACE
+			var probably_is_function_body = (tkGet( x - 1 ) = TK_RPAREN)
+
+			x = hFindClosingParen( x, FALSE, ignore_directives )
+
+			'' Stop after function bodies
+			if( probably_is_function_body and (tkGet( x ) = TK_RBRACE) ) then
+				x += 1
+				exit do
+			end if
+
+		case TK_LPAREN, TK_LBRACKET
 			x = hFindClosingParen( x, FALSE, ignore_directives )
 
 		end select

@@ -4,5 +4,5 @@ tests/cpp/expand/merge/missing-operands-objectlike.h(2): ## merge operator at be
     #define m ##
               ^~
 context as seen by fbfrog:
-    m [begin] ## [end] 
+    m [begin] ## [end]
               ^~

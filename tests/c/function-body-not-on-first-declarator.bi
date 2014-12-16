@@ -7,6 +7,6 @@ dim shared a as any ptr
 
 declare sub b()
 
-'' TODO: void *a, b(void) { ; };
+'' TODO: void *a, b(void) { ; }
 
 end extern

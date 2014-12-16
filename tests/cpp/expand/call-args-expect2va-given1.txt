@@ -4,5 +4,5 @@ tests/cpp/expand/call-args-expect2va-given1.h(3): not enough arguments for 'm' m
     m(a)
        ^
 context as seen by fbfrog:
-    m ( a ) 
+    m ( a )
           ^

@@ -4,5 +4,5 @@ tests/cpp/expand/dont-expand-arg-too-early.h(7): not enough arguments for 'm' ma
     m(1 comma 2)
                ^
 context as seen by fbfrog:
-    m ( 1 comma 2 ) 
+    m ( 1 comma 2 )
                   ^

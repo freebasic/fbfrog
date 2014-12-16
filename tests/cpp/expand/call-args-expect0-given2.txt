@@ -4,5 +4,5 @@ tests/cpp/expand/call-args-expect0-given2.h(3): expected ')' to close macro call
     m1(a, b)
        ^
 context as seen by fbfrog:
-    m1 ( a , b ) 
+    m1 ( a , b )
          ^

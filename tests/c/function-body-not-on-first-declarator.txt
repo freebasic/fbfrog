@@ -4,7 +4,7 @@ tests/c/function-body-not-on-first-declarator.h(2): expected ';' to finish this 
     void *a, b(void) { ; };
                      ^
 context as seen by fbfrog:
-    void * a , b ( void ) { ; } ;
+    void * a , b ( void ) { ; }
                           ^
 [2/5] __FB_WIN32__.(not __FB_64BIT__)
       tests/c/function-body-not-on-first-declarator.h
@@ -12,7 +12,7 @@ tests/c/function-body-not-on-first-declarator.h(2): expected ';' to finish this 
     void *a, b(void) { ; };
                      ^
 context as seen by fbfrog:
-    void * a , b ( void ) { ; } ;
+    void * a , b ( void ) { ; }
                           ^
 [3/5] __FB_LINUX__.__FB_64BIT__
       tests/c/function-body-not-on-first-declarator.h
@@ -20,7 +20,7 @@ tests/c/function-body-not-on-first-declarator.h(2): expected ';' to finish this 
     void *a, b(void) { ; };
                      ^
 context as seen by fbfrog:
-    void * a , b ( void ) { ; } ;
+    void * a , b ( void ) { ; }
                           ^
 [4/5] __FB_LINUX__.(not __FB_64BIT__)
       tests/c/function-body-not-on-first-declarator.h
@@ -28,7 +28,7 @@ tests/c/function-body-not-on-first-declarator.h(2): expected ';' to finish this 
     void *a, b(void) { ; };
                      ^
 context as seen by fbfrog:
-    void * a , b ( void ) { ; } ;
+    void * a , b ( void ) { ; }
                           ^
 [5/5] __FB_DOS__
       tests/c/function-body-not-on-first-declarator.h
@@ -36,6 +36,6 @@ tests/c/function-body-not-on-first-declarator.h(2): expected ';' to finish this 
     void *a, b(void) { ; };
                      ^
 context as seen by fbfrog:
-    void * a , b ( void ) { ; } ;
+    void * a , b ( void ) { ; }
                           ^
 emitting: tests/c/function-body-not-on-first-declarator.bi (2 declarations, 1 TODO)

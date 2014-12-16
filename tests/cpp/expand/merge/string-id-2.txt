@@ -4,5 +4,5 @@ tests/cpp/expand/merge/string-id-2.h(2): ## merge operator cannot merge '"a"' an
     #define m "a" ## b
                   ^~
 context as seen by fbfrog:
-    m [begin] "a" ## b [end] 
+    m [begin] "a" ## b [end]
                   ^~

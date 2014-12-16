@@ -4,5 +4,5 @@ tests/cpp/expand/call-args-expect1-given2.h(3): too many arguments for 'm' macro
     m(a, b)
           ^
 context as seen by fbfrog:
-    m ( a , b ) 
+    m ( a , b )
               ^
