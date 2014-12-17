@@ -825,6 +825,8 @@ private function emitExpr _
 		case TYPE_UINTEGER : s =    "cuint("
 		case TYPE_LONGINT  : s =  "clngint("
 		case TYPE_ULONGINT : s = "culngint("
+		case TYPE_SINGLE   : s =     "csng("
+		case TYPE_DOUBLE   : s =     "cdbl("
 		case else
 			if( typeGetPtrCount( n->dtype ) > 0 ) then
 				s = "cptr("
