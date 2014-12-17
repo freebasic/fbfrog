@@ -2980,7 +2980,16 @@ private sub cDeclaration( byval astclass as integer, byval gccattribs as integer
 				if( n->expr ) then
 					cOops( "function body redefinition for " + astDumpPrettyDecl( n ) )
 				end if
+
+				var originalparseok = c.parseok
+
 				n->expr = cScope( n )
+
+				if( frog.nofunctionbodies ) then
+					c.parseok = originalparseok
+					n->expr = NULL
+				end if
+
 				require_semi = FALSE
 				exit do
 			end if

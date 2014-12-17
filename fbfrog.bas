@@ -55,7 +55,7 @@
 #include once "file.bi"
 
 namespace frog
-	dim shared as integer verbose, windowsms, clong32, syntaxonly, fixunsizedarrays, nodefaultscript
+	dim shared as integer verbose, windowsms, clong32, syntaxonly, fixunsizedarrays, nodefaultscript, nofunctionbodies
 	dim shared as string outname, defaultoutname
 
 	dim shared as ASTNODE ptr script
@@ -113,6 +113,7 @@ private sub hPrintHelpAndExit( )
 	print "  -clong32         Translate C long as 32bit LONG, instead of CLONG"
 	print "  -syntaxonly      Disable semantic checks, translate based on syntax only"
 	print "  -fixunsizedarrays  Wrap [] arrays with a #define"
+	print "  -nofunctionbodies  Don't preserve function bodies"
 	print "  -renametypedef <oldid> <newid>  Rename a typedef"
 	print "  -renametag <oldid> <newid>      Rename a struct/union/enum"
 	print "  -removedefine <id>  Don't preserve a certain #define"
@@ -415,6 +416,7 @@ private sub hParseArgs( byref x as integer )
 		case OPT_CLONG32          : frog.clong32          = TRUE : x += 1
 		case OPT_SYNTAXONLY       : frog.syntaxonly       = TRUE : x += 1
 		case OPT_FIXUNSIZEDARRAYS : frog.fixunsizedarrays = TRUE : x += 1
+		case OPT_NOFUNCTIONBODIES : frog.nofunctionbodies = TRUE : x += 1
 		case OPT_V                : frog.verbose          = TRUE : x += 1
 
 		case OPT_O

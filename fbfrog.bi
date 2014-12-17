@@ -375,6 +375,7 @@ enum
 	OPT_CLONG32
 	OPT_SYNTAXONLY
 	OPT_FIXUNSIZEDARRAYS
+	OPT_NOFUNCTIONBODIES
 	OPT_RENAMETYPEDEF
 	OPT_RENAMETAG
 	OPT_REMOVEDEFINE
@@ -875,7 +876,7 @@ type FROGAPI
 end type
 
 namespace frog
-	extern as integer verbose, windowsms, clong32, syntaxonly, fixunsizedarrays
+	extern as integer verbose, windowsms, clong32, syntaxonly, fixunsizedarrays, nofunctionbodies
 
 	extern as ASTNODE ptr script
 	extern as ASTNODE ptr completeverors, fullveror
