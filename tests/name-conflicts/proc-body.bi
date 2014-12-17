@@ -5,7 +5,7 @@
 
 extern "C"
 
-sub screen_ alias "screen"(byval color_ as long)
+private sub screen_ alias "screen"(byval color_ as long)
 	screen_(color_)
 end sub
 

@@ -558,8 +558,9 @@ private sub emitCode( byval n as ASTNODE ptr, byval parentclass as integer )
 
 	case ASTCLASS_PROC
 		dim s as string
-		'' Declaration instead of body?
-		if( n->expr = NULL ) then
+		if( n->expr ) then
+			s += "private "  '' procedure bodies in headers should really be private
+		else
 			s += "declare "
 		end if
 		emitProc( s, n, FALSE )

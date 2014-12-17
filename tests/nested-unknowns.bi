@@ -15,7 +15,7 @@ enum
 	'' TODO: x;
 end enum
 
-sub f()
+private sub f()
 	x
 	'' TODO: x=;
 end sub

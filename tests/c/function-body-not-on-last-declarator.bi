@@ -2,7 +2,7 @@
 
 extern "C"
 
-sub a()
+private sub a()
 end sub
 
 '' TODO: , *b;

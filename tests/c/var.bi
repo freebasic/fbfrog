@@ -235,7 +235,7 @@ extern p as typeof(const sub()) const ptr
 extern p as typeof(const sub()) const ptr
 extern p as typeof(const sub()) const ptr
 
-sub f1()
+private sub f1()
 	dim a as long
 	static b as long
 end sub
