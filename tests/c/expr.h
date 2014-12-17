@@ -494,3 +494,6 @@ enum E {
 #define A56 { int a, b; }
 
 #define A57
+
+// Testing cast operator precedence
+#define MAKE_RGB(r,g,b) ((int)(((signed char)(r)|((unsigned short)((signed char)(g))<<8))|(((unsigned int)(signed char)(b))<<16)))

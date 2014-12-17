@@ -881,7 +881,7 @@ dim shared as integer cprecedence(ASTCLASS_CLOGOR to ASTCLASS_IIF) = _
 	12, _ '' ASTCLASS_DEREF
 	 0, _ '' ASTCLASS_STRINGIFY (unused)
 	12, _ '' ASTCLASS_SIZEOF
-	 0, _ '' ASTCLASS_CAST (unused)
+	12, _ '' ASTCLASS_CAST
 	 1  _ '' ASTCLASS_IIF
 }
 

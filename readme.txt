@@ -217,6 +217,12 @@ unnecessary?
 
 To do:
 
+* Separate FB keyword tables for types/#defines/functions/keywords
+  e.g.: we can have an imageinfo type, because FB's imageinfo is only a function.
+  we can't have a field called rgb, because that's a #define (fields normally can be
+  named after most keywords).
+    * this is also a good chance to speed up the keyword check in ASTCLASS_FIELD emitting
+
 * Add -split <pattern> option to emit multiple files
     - need multiple extern blocks
     - version defines checks must be emitted into each file?

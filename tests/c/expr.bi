@@ -462,5 +462,6 @@ end enum
 	end scope
 #endmacro
 #define A57
+#define MAKE_RGB(r, g, b) clng((cbyte((r)) or (cushort(cbyte((g))) shl 8)) or (culng(cbyte((b))) shl 16))
 
 end extern

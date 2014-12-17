@@ -888,7 +888,7 @@ private function hExpression( byval level as integer ) as ASTNODE ptr
 				cExpectMatch( TK_RPAREN, "behind the data type" )
 
 				'' Expression
-				a = cExpression( )
+				a = hExpression( cprecedence(ASTCLASS_CAST) )
 
 				assert( t->class = ASTCLASS_DATATYPE )
 				t->class = ASTCLASS_CAST
