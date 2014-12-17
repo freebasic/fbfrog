@@ -1,0 +1,11 @@
+[1/5] __FB_WIN32__.__FB_64BIT__
+      tests/c/struct/nested-inside-scopeblock.h
+[2/5] __FB_WIN32__.(not __FB_64BIT__)
+      tests/c/struct/nested-inside-scopeblock.h
+[3/5] __FB_LINUX__.__FB_64BIT__
+      tests/c/struct/nested-inside-scopeblock.h
+[4/5] __FB_LINUX__.(not __FB_64BIT__)
+      tests/c/struct/nested-inside-scopeblock.h
+[5/5] __FB_DOS__
+      tests/c/struct/nested-inside-scopeblock.h
+emitting: tests/c/struct/nested-inside-scopeblock.bi (6 declarations, 0 TODOs)

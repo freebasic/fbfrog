@@ -1329,8 +1329,7 @@ private function hGenerateTagId( byref followingid as string ) as string
 	'' by prefixing all the parent "namespaces"
 	for i as integer = 1 to c.namespacelevel
 		var owner = c.namespaces(i).owner
-		assert( owner->text )
-		if( (owner->attrib and ASTATTRIB_GENERATEDID) = 0 ) then
+		if( (owner->text <> NULL) and ((owner->attrib and ASTATTRIB_GENERATEDID) = 0) ) then
 			id += "_" + *owner->text
 		end if
 	next
