@@ -19,4 +19,9 @@ extern x4 as B1
 extern x5 as a2
 extern x6 as B2
 
+type byte as byte
+type T2 as long
+
+declare sub T2()
+
 end extern

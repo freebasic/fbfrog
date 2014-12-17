@@ -637,6 +637,7 @@ function astDumpOne( byval n as ASTNODE ptr ) as string
 	checkAttrib( STDCALL )
 	checkAttrib( HIDECALLCONV )
 	checkAttrib( UNCHECKED )
+	checkAttrib( NAMEOVERRIDDEN )
 	checkAttrib( POISONED )
 	checkAttrib( PACKED )
 	checkAttrib( VARIADIC )

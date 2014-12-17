@@ -308,6 +308,7 @@ private sub hMaybeOverrideSymbolId( byval opt as integer, byval n as ASTNODE ptr
 	if( renameinfo ) then
 		assert( *n->text = *renameinfo->alias )
 		astSetText( n, renameinfo->text )
+		n->attrib or= ASTATTRIB_NAMEOVERRIDDEN
 	end if
 end sub
 
@@ -488,7 +489,23 @@ private sub cAddSymbol( byval n as ASTNODE ptr )
 	var ucaseid = ucase( *n->text, 1 )
 	var ucaseidhash = hashHash( ucaseid )
 	if( hHaveConflict( n, ucaseid, ucaseidhash, existing ) ) then
-		if( hShouldRenameExistingSymbol( existing, n ) ) then
+		var rename_existing = hShouldRenameExistingSymbol( existing, n )
+
+		if( ((n->attrib and ASTATTRIB_NAMEOVERRIDDEN) <> 0) and (not rename_existing) ) then
+			'' Don't change id given by the user - the user is always right.
+			'' Rename the existing symbol instead, if possible.
+			'' If both symbols were renamed by the user (or the existing one is a keyword,
+			'' which we can't rename anyways), and they conflict - do nothing.
+			if( existing = NULL ) then
+				exit sub
+			end if
+			if( existing->attrib and ASTATTRIB_NAMEOVERRIDDEN ) then
+				exit sub
+			end if
+			rename_existing = TRUE
+		end if
+
+		if( rename_existing ) then
 			torename = existing
 			other = n
 		else
