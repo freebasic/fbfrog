@@ -20,7 +20,7 @@ type A5_field4 field = 4
 	i as long
 end type
 
-type A6_field8 field = 8
+type A6_field8
 	i as long
 end type
 

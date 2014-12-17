@@ -1451,7 +1451,15 @@ private function cTag( ) as ASTNODE ptr
 
 		select case( astclass )
 		case ASTCLASS_STRUCT, ASTCLASS_UNION
-			tag->maxalign = c.pragmapack.stack(c.pragmapack.level)
+			var maxalign = c.pragmapack.stack(c.pragmapack.level)
+
+			'' Preserve alignment if needed so we can emit FIELD = N,
+			'' but not if N >= 8, because FB has no alignment > 8,
+			'' so FIELD >= 8 is useless. Omitting it improves merging
+			'' for some bindings.
+			if( (maxalign > 0) and (maxalign < 8) ) then
+				tag->maxalign = maxalign
+			end if
 		end select
 
 		var is_nested_struct = FALSE
