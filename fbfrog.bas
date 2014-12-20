@@ -121,6 +121,7 @@ private sub hPrintHelpAndExit( )
 	print "  -typedefhint <id>   Mark <id> as typedef, to help parsing of type casts"
 	print "  -reservedid <id>    Rename symbols conflicting with this <id>"
 	print "  -nofbkeyword <id>   Forget that <id> is an FB keyword (affects symbol renaming)"
+	print "  -dontrenamefield <id>  Don't rename fields called <id> even if there is a conflict"
 	print "  -noexpand <id>      Disable expansion of certain #define"
 	print "version-specific commands:"
 	print "  -define <id> [<body>]    Add pre-#define"
@@ -442,7 +443,7 @@ private sub hParseArgs( byref x as integer )
 
 			hashAddOverwrite( @frog.renameopt(opt), n->alias, n )
 
-		case OPT_REMOVEDEFINE, OPT_REMOVEPROC, OPT_TYPEDEFHINT, OPT_RESERVEDID, OPT_NOEXPAND
+		case OPT_REMOVEDEFINE, OPT_REMOVEPROC, OPT_TYPEDEFHINT, OPT_RESERVEDID, OPT_NOEXPAND, OPT_DONTRENAMEFIELD
 			x += 1
 
 			'' <id>

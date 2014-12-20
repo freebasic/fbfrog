@@ -483,6 +483,13 @@ private sub cAddSymbol( byval n as ASTNODE ptr )
 		exit sub
 	end if
 
+	'' Check for -dontrenamefield <id>
+	if( n->class = ASTCLASS_FIELD ) then
+		if( hashContains( @frog.idopt(OPT_DONTRENAMEFIELD), n->text, hashHash( n->text ) ) ) then
+			exit sub
+		end if
+	end if
+
 	'' Check whether this symbol conflicts with an existing one (from FB's
 	'' point of view) and rename one of them if needed.
 	dim as ASTNODE ptr existing, torename, other

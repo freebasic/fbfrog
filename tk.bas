@@ -153,6 +153,7 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	(@"-typedefhint"  ), _
 	(@"-reservedid"   ), _
 	(@"-nofbkeyword"    ), _
+	(@"-dontrenamefield"), _
 	(@"-noexpand"     ), _
 	(@"-define"       ), _
 	(@"-include"      ), _
