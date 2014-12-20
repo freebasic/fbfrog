@@ -18,4 +18,4 @@
         tests/merging/simple.h
 [10/10] __FB_DOS__.VER=2
         tests/merging/simple.h
-emitting: tests/merging/simple.bi (4 declarations, 0 TODOs)
+emitting: tests/merging/simple.bi (3 declarations, 0 TODOs)

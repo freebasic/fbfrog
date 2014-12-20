@@ -18,4 +18,4 @@
         tests/merging/nested-named-structs-as-named-fields.h
 [10/10] __FB_DOS__.VER=2
         tests/merging/nested-named-structs-as-named-fields.h
-emitting: tests/merging/nested-named-structs-as-named-fields.bi (4 declarations, 0 TODOs)
+emitting: tests/merging/nested-named-structs-as-named-fields.bi (3 declarations, 0 TODOs)

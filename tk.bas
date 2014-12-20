@@ -163,7 +163,6 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	(@"-filterin"     ), _
 	(@"-inclib"       ), _
 	(@"-declaredefines"), _
-	(@"-unchecked"    ), _
 	(@"-declareversions"), _
 	(@"-declarebool"  ), _
 	(@"-select"       ), _

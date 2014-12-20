@@ -8,4 +8,4 @@
       tests/versions/nested-in-unreached-if-block.h
 [5/5] __FB_DOS__
       tests/versions/nested-in-unreached-if-block.h
-emitting: tests/versions/nested-in-unreached-if-block.bi (1 declaration, 0 TODOs)
+emitting: tests/versions/nested-in-unreached-if-block.bi (0 declarations, 0 TODOs)

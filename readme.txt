@@ -250,7 +250,6 @@ To do:
   * -declareversions (and even -declaredefines) isn't needed much and could be
     removed. It's better to keep different library versions in separate bindings,
     and perhaps even targets could be handled differently.
-    Accordingly, hBuildVerificationCode() could be removed.
 * Rework console output, it quickly becomes too much currently. Perhaps the
   #includes should be emitted into the .bi, like renamelists.
 * Optimize tk access, at least for the C parser which shouldn't need insert/delete

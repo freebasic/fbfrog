@@ -1,15 +1,5 @@
 #pragma once
 
-#ifndef VER
-	#define VER 2
-#endif
-
-#if VER = 1
-#elseif VER = 2
-#else
-	#error "'VER' is #defined to an unsupported value; expected one of: 1, 2"
-#endif
-
 type __UDT_a
 	#if VER = 1
 		v1_a as long

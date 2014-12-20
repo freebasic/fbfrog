@@ -1,4 +1,4 @@
--declaredefines __FB_WIN32__ __FB_LINUX__ __FB_DOS__ -unchecked
+-declaredefines __FB_WIN32__ __FB_LINUX__ __FB_DOS__
 
 -select
 -case __FB_WIN32__ -define __FBFROG_WIN32__

@@ -393,7 +393,6 @@ enum
 	OPT_FILTERIN
 	OPT_INCLIB
 	OPT_DECLAREDEFINES
-	OPT_UNCHECKED
 	OPT_DECLAREVERSIONS
 	OPT_DECLAREBOOL
 	OPT_SELECT
@@ -657,7 +656,7 @@ const ASTATTRIB_HEX           = 1 shl 5  '' CONSTI
 const ASTATTRIB_CDECL         = 1 shl 6  '' PROC
 const ASTATTRIB_STDCALL       = 1 shl 7  '' PROC
 const ASTATTRIB_HIDECALLCONV  = 1 shl 8  '' Whether the calling convention is covered by an Extern block, in which case it doesn't need to be emitted.
-const ASTATTRIB_UNCHECKED     = 1 shl 9
+                            ''= 1 shl 9
 const ASTATTRIB_NAMEOVERRIDDEN = 1 shl 10
 const ASTATTRIB_POISONED      = 1 shl 11
 const ASTATTRIB_PACKED        = 1 shl 12  '' __attribute__((packed))

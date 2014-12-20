@@ -1,14 +1,5 @@
 #pragma once
 
-#ifndef VER
-	#define VER 1
-#endif
-
-#if VER = 1
-#else
-	#error "'VER' is #defined to an unsupported value; expected one of: 1"
-#endif
-
 '' The following symbols have been renamed:
 ''     variable common => common_
 

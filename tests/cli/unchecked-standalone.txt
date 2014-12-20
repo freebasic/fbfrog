@@ -1,3 +1,0 @@
-<command line>(1): -unchecked without preceding -declaredefines
-    ./fbfrog tests/cli/unchecked-standalone.h -unchecked
-                                              ^~~~~~~~~~

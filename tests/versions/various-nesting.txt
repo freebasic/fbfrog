@@ -366,4 +366,4 @@
           tests/versions/various-nesting.h
 [184/184] __FB_DOS__.VER=3.(not DEPRECATED_V3)
           tests/versions/various-nesting.h
-emitting: tests/versions/various-nesting.bi (2 declarations, 0 TODOs)
+emitting: tests/versions/various-nesting.bi (0 declarations, 0 TODOs)

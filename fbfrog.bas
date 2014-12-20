@@ -132,7 +132,7 @@ private sub hPrintHelpAndExit( )
 	print "  -filterin <filename-pattern>   Undo -filterout for matching #included files"
 	print "  -inclib <name>           Add an #inclib ""<name>"" statement"
 	print "version script logic:"
-	print "  -declaredefines (<symbol>)+ [-unchecked]  Exclusive #defines"
+	print "  -declaredefines (<symbol>)+               Exclusive #defines"
 	print "  -declareversions <symbol> (<number>)+     Version numbers"
 	print "  -declarebool <symbol>                     Single on/off #define"
 	print "  -select          (-case <symbol> ...)+ [-caseelse ...] -endselect"
@@ -471,17 +471,7 @@ private sub hParseArgs( byref x as integer )
 				x += 1
 			loop while( tkGet( x ) = TK_ID )
 
-			'' [-unchecked]
-			if( tkGet( x ) = OPT_UNCHECKED ) then
-				x += 1
-				n->attrib or= ASTATTRIB_UNCHECKED
-			end if
-
 			astAppend( frog.script, n )
-
-		'' -unchecked
-		case OPT_UNCHECKED
-			tkOops( x, "-unchecked without preceding -declaredefines" )
 
 		'' -declareversions <symbol> (<string>)+
 		case OPT_DECLAREVERSIONS
