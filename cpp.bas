@@ -2183,6 +2183,16 @@ private sub cppInclude( byval begin as integer )
 
 	var knownfile = cppLookupOrAppendKnownFile( incfile, is_rootfile, prettyfile )
 	with( cpp.files[knownfile] )
+		if( .filterout ) then
+			'' We're expanding this #include statement, but the include content
+			'' will be filtered out, so we have to keep the #include statement
+			'' for the final binding, if it itself won't be filtered out.
+			'' Pre-#includes should never be preserved though.
+			if( (not cppWillBeFilteredOut( )) and (not is_preinclude) ) then
+				cppAddDirectInclude( inctext )
+			end if
+		end if
+
 		'' Did we find a #pragma once in this file previously?
 		if( .pragmaonce ) then
 			'' Don't #include it again ever
@@ -2197,20 +2207,11 @@ private sub cppInclude( byval begin as integer )
 				exit sub
 			end if
 		end if
-	end with
 
-	var filterout = cpp.files[knownfile].filterout
-	if( filterout ) then
-		message += " (filtered out)"
-
-		'' We're expanding this #include statement, but the include content
-		'' will be filtered out, so we have to keep the #include statement
-		'' for the final binding, if it itself won't be filtered out.
-		'' Pre-#includes should never be preserved though.
-		if( (not cppWillBeFilteredOut( )) and (not is_preinclude) ) then
-			cppAddDirectInclude( inctext )
+		if( .filterout ) then
+			message += " (filtered out)"
 		end if
-	end if
+	end with
 
 	frogPrint( message )
 
