@@ -8,3 +8,7 @@
 
 #define CreateWindowEx __MINGW_NAME_AW(CreateWindowEx)
 #define SendMessage __MINGW_NAME_AW(SendMessage)
+
+#define CONST1A 1
+#define CONST1W 2
+#define CONST1 __MINGW_NAME_AW(CONST1)

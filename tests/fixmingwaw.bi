@@ -9,3 +9,12 @@
 	#define CreateWindowEx CreateWindowExA
 	#define SendMessage SendMessageA
 #endif
+
+#define CONST1A 1
+#define CONST1W 2
+
+#ifdef UNICODE
+	#define CONST1 CONST1W
+#else
+	#define CONST1 CONST1A
+#endif

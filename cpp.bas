@@ -48,7 +48,7 @@
 #include once "crt.bi"
 #include once "file.bi"
 
-declare sub hMaybeExpandMacro( byref x as integer, byval inside_ifexpr as integer )
+declare sub hMaybeExpandMacro( byref x as integer, byval inside_ifexpr as integer, byval expand_recursively as integer )
 
 ''
 '' Check whether the number literal token (TK_NUMBER) is a valid number literal,
@@ -1400,7 +1400,7 @@ private function hExpandInTkBeginEnd _
 			end if
 
 		case is >= TK_ID
-			hMaybeExpandMacro( x, inside_ifexpr )
+			hMaybeExpandMacro( x, inside_ifexpr, TRUE )
 		end select
 
 		x += 1
@@ -1743,7 +1743,8 @@ private sub hExpandMacro _
 		byval argbegin as integer ptr, _
 		byval argend as integer ptr, _
 		byval argcount as integer, _
-		byval inside_ifexpr as integer _
+		byval inside_ifexpr as integer, _
+		byval expand_recursively as integer _
 	)
 
 	'' Insert the macro body behind the call (this way the positions
@@ -1761,16 +1762,18 @@ private sub hExpandMacro _
 			tkFindTokenWithMinExpansionLevel( callbegin, callend ) _
 		) + 1 )
 
-	'' Recursively do macro expansion in the expansion
-	'' - Marking the current macro as poisoned, so it won't be expanded
-	''   again within the expansion, preventing expansion of complete
-	''   recursive calls.
-	'' - Incomplete recursive calls need to be marked with NOEXPAND so they
-	''   won't be expanded later when they become complete by taking into
-	''   account tokens following behind the expansion.
-	definfo->macro->attrib or= ASTATTRIB_POISONED
-	expansionend = hExpandInRange( expansionbegin, expansionend, inside_ifexpr )
-	definfo->macro->attrib and= not ASTATTRIB_POISONED
+	if( expand_recursively ) then
+		'' Recursively do macro expansion in the expansion
+		'' - Marking the current macro as poisoned, so it won't be expanded
+		''   again within the expansion, preventing expansion of complete
+		''   recursive calls.
+		'' - Incomplete recursive calls need to be marked with NOEXPAND so they
+		''   won't be expanded later when they become complete by taking into
+		''   account tokens following behind the expansion.
+		definfo->macro->attrib or= ASTATTRIB_POISONED
+		expansionend = hExpandInRange( expansionbegin, expansionend, inside_ifexpr )
+		definfo->macro->attrib and= not ASTATTRIB_POISONED
+	end if
 
 	'' Disable future expansion of recursive macro calls to this macro
 	'' (those that weren't expanded due to the "poisoning")
@@ -1802,7 +1805,7 @@ private sub hExpandMacro _
 	tkRemove( callbegin, callend )
 end sub
 
-private sub hMaybeExpandMacro( byref x as integer, byval inside_ifexpr as integer )
+private sub hMaybeExpandMacro( byref x as integer, byval inside_ifexpr as integer, byval expand_recursively as integer )
 	var begin = x
 
 	var definfo = hCheckForMacroCall( x )
@@ -1822,7 +1825,7 @@ private sub hMaybeExpandMacro( byref x as integer, byval inside_ifexpr as intege
 		exit sub
 	end if
 
-	hExpandMacro( definfo, callbegin, callend, @argbegin(0), @argend(0), argcount, inside_ifexpr )
+	hExpandMacro( definfo, callbegin, callend, @argbegin(0), @argend(0), argcount, inside_ifexpr, expand_recursively )
 
 	'' The macro call was replaced with the body, the token at the TK_ID's
 	'' position must be re-parsed.
@@ -2288,18 +2291,18 @@ private sub cppDefine( byval begin as integer, byref flags as integer )
 
 	'' Body
 	var xbody = cpp.x
-	var xeol = hSkipToEol( cpp.x )
-
 	if( frog.fixmingwaw ) then
 		'' Expand __MINGW_NAME_AW() inside this #define body
-		if( tkGet( xbody ) = TK_ID ) then
-			if( *tkSpellId( xbody ) = "__MINGW_NAME_AW" ) then
-				xeol = hExpandInRange( xbody, xeol, FALSE )
+		if( tkGet( cpp.x ) = TK_ID ) then
+			if( *tkSpellId( cpp.x ) = "__MINGW_NAME_AW" ) then
+				'' Expand just this one macro call, nothing else
+				hMaybeExpandMacro( cpp.x, FALSE, FALSE )
 			end if
 		end if
 	end if
 
 	'' Eol
+	var xeol = hSkipToEol( xbody )
 	assert( tkGet( xeol ) = TK_EOL )
 	cpp.x = xeol + 1
 
@@ -2596,7 +2599,7 @@ private sub cppNext( )
 			if( cppWillBeFilteredOut( ) ) then
 				tkAddFlags( cpp.x, cpp.x, TKFLAG_FILTEROUT )
 			end if
-			hMaybeExpandMacro( cpp.x, FALSE )
+			hMaybeExpandMacro( cpp.x, FALSE, TRUE )
 			cpp.x += 1
 			exit sub
 		end if
