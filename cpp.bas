@@ -2292,11 +2292,15 @@ private sub cppDefine( byval begin as integer, byref flags as integer )
 	'' Body
 	var xbody = cpp.x
 	if( frog.fixmingwaw ) then
-		'' Expand __MINGW_NAME_AW() inside this #define body
+		'' Expand __MINGW_NAME_AW() & co inside this #define body
 		if( tkGet( cpp.x ) = TK_ID ) then
-			if( *tkSpellId( cpp.x ) = "__MINGW_NAME_AW" ) then
-				'' Expand just this one macro call, nothing else
-				hMaybeExpandMacro( cpp.x, FALSE, FALSE )
+			var id = tkSpellId( cpp.x )
+			if( id[0] = asc( "_" ) ) then
+				select case( *id )
+				case "__MINGW_NAME_AW", "__MINGW_NAME_AW_EXT", "__MINGW_NAME_UAW", "__MINGW_NAME_UAW_EXT"
+					'' Expand just this one macro call, nothing else
+					hMaybeExpandMacro( cpp.x, FALSE, FALSE )
+				end select
 			end if
 		end if
 	end if
