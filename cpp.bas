@@ -2376,20 +2376,8 @@ private function cppPragma( byref flags as integer ) as integer
 
 	'' #pragma message("...")
 	case "message"
-		cpp.x += 1
-		var whatfor = @"for #pragma message(""..."")"
-
-		'' '('
-		tkExpect( cpp.x, TK_LPAREN, whatfor )
-		cpp.x += 1
-
-		'' "..."
-		tkExpect( cpp.x, TK_STRING, whatfor )
-		cpp.x += 1
-
-		'' ')'
-		tkExpect( cpp.x, TK_RPAREN, whatfor )
-		cpp.x += 1
+		'' Ignore
+		cpp.x = hSkipToEol( cpp.x )
 
 	'' MSVC:
 	'' #pragma comment(lib, "<library file name>")

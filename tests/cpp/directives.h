@@ -79,7 +79,10 @@
 
 #define no_parameters_here (a)
 
+#define stringify(s) #s
+
 #pragma message("test")
+#pragma message("a" "b" "c" stringify(this))
 #pragma GCC system_header
 #pragma GCC push_options
 #pragma GCC pop_options

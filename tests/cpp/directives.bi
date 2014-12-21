@@ -65,6 +65,7 @@ dim shared included as long
 #define m24(a, b, __VA_ARGS__...) f(a, b, __VA_ARGS__)
 #define m25(a, b, args...) f(a, b, args)
 #define no_parameters_here a
+#define stringify(s) #s
 #macro D1
 	scope
 		f(123)

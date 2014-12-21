@@ -8,7 +8,7 @@
       tests/cpp/directives-1.h
       tests/cpp/directives-1.h
       tests/cpp/directives-1.h
-tests/cpp/directives.h(97): #warning
+tests/cpp/directives.h(100): #warning
     #warning "Example warning"
              ^~~~~~~~~~~~~~~~~
 context as seen by fbfrog:
@@ -24,7 +24,7 @@ context as seen by fbfrog:
       tests/cpp/directives-1.h
       tests/cpp/directives-1.h
       tests/cpp/directives-1.h
-tests/cpp/directives.h(97): #warning
+tests/cpp/directives.h(100): #warning
     #warning "Example warning"
              ^~~~~~~~~~~~~~~~~
 context as seen by fbfrog:
@@ -40,7 +40,7 @@ context as seen by fbfrog:
       tests/cpp/directives-1.h
       tests/cpp/directives-1.h
       tests/cpp/directives-1.h
-tests/cpp/directives.h(97): #warning
+tests/cpp/directives.h(100): #warning
     #warning "Example warning"
              ^~~~~~~~~~~~~~~~~
 context as seen by fbfrog:
@@ -56,7 +56,7 @@ context as seen by fbfrog:
       tests/cpp/directives-1.h
       tests/cpp/directives-1.h
       tests/cpp/directives-1.h
-tests/cpp/directives.h(97): #warning
+tests/cpp/directives.h(100): #warning
     #warning "Example warning"
              ^~~~~~~~~~~~~~~~~
 context as seen by fbfrog:
@@ -72,10 +72,10 @@ context as seen by fbfrog:
       tests/cpp/directives-1.h
       tests/cpp/directives-1.h
       tests/cpp/directives-1.h
-tests/cpp/directives.h(97): #warning
+tests/cpp/directives.h(100): #warning
     #warning "Example warning"
              ^~~~~~~~~~~~~~~~~
 context as seen by fbfrog:
     # warning "Example warning" 
               ^~~~~~~~~~~~~~~~~
-emitting: tests/cpp/directives.bi (65 declarations, 0 TODOs)
+emitting: tests/cpp/directives.bi (66 declarations, 0 TODOs)
