@@ -145,6 +145,7 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	(@"-clong32"      ), _
 	(@"-syntaxonly"   ), _
 	(@"-fixunsizedarrays"), _
+	(@"-fixmingwaw"   ), _
 	(@"-nofunctionbodies"), _
 	(@"-renametypedef"), _
 	(@"-renametag"    ), _

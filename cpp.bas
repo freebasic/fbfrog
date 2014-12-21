@@ -2288,12 +2288,20 @@ private sub cppDefine( byval begin as integer, byref flags as integer )
 
 	'' Body
 	var xbody = cpp.x
-	cpp.x = hSkipToEol( cpp.x )
+	var xeol = hSkipToEol( cpp.x )
+
+	if( frog.fixmingwaw ) then
+		'' Expand __MINGW_NAME_AW() inside this #define body
+		if( tkGet( xbody ) = TK_ID ) then
+			if( *tkSpellId( xbody ) = "__MINGW_NAME_AW" ) then
+				xeol = hExpandInRange( xbody, xeol, FALSE )
+			end if
+		end if
+	end if
 
 	'' Eol
-	var xeol = cpp.x
 	assert( tkGet( xeol ) = TK_EOL )
-	cpp.x += 1
+	cpp.x = xeol + 1
 
 	var definfo = definfoNew( )
 	definfo->xdefine = begin
