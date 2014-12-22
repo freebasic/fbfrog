@@ -609,12 +609,7 @@ private function cppKeepIncludeContent( byref includefilename as string ) as int
 end function
 
 private function cppLookupMacro( byval id as zstring ptr ) as DEFINEINFO ptr
-	var item = hashLookup( @cpp.macros, id, hashHash( id ) )
-	if( item->s ) then
-		function = item->data
-	else
-		function = NULL
-	end if
+	function = hashLookupDataOrNull( @cpp.macros, id )
 end function
 
 private function cppIsKnownSymbol( byval id as zstring ptr ) as integer
