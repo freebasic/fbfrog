@@ -432,6 +432,12 @@ end enum
 
 const MAXSTACK = 128
 
+enum
+	'' unknown = 0
+	GUARDSTATE_CHECKING = 1
+	GUARDSTATE_KNOWN
+end enum
+
 namespace cpp
 	dim shared as integer x  '' Current token index
 
@@ -490,10 +496,8 @@ namespace cpp
 	type KNOWNFILE
 		incfile as zstring ptr  '' Normalized file name
 		filterout as integer
-		checked_guard as integer
-		'' Include guard symbol, if this file has a pure include guard,
-		'' otherwise NULL
-		guard as zstring ptr
+		guardstate	as integer
+		guard		as zstring ptr  '' #include guard symbol, if any
 		pragmaonce as integer  '' Whether #pragma once was found in this file
 	end type
 
@@ -758,25 +762,6 @@ private function cppLookupOrAppendKnownFile _
 	hashAdd( @cpp.filetb, item, hash, incfile, cptr( any ptr, i ) )
 	function = i
 end function
-
-private sub cppKnownFileSetGuard( byval i as integer, byval guard as zstring ptr )
-	assert( (i >= 0) and (i < cpp.filecount) )
-	with( cpp.files[i] )
-		assert( .checked_guard = FALSE )
-		assert( .guard = NULL )
-		.checked_guard = TRUE
-		.guard = strDuplicate( guard )
-	end with
-end sub
-
-private sub cppKnownFileDropGuard( byval i as integer )
-	with( cpp.files[i] )
-		if( .guard ) then
-			deallocate( .guard )
-			.guard = NULL
-		end if
-	end with
-end sub
 
 '' Remap .h name to a .bi name. If it's a known system header, we can even remap
 '' it to the corresponding FB header (in some cases it's not as simple as
@@ -1867,6 +1852,12 @@ private sub cppPush( byval state as integer, byval knownfile as integer = -1 )
 end sub
 
 private sub cppPop( )
+	'' Finished parsing a file?
+	with( cpp.stack(cpp.level) )
+		if( (.state = STATE_FILE) and (.knownfile >= 0) ) then
+			cpp.files[.knownfile].guardstate = GUARDSTATE_KNOWN
+		end if
+	end with
 	cpp.level -= 1
 end sub
 
@@ -1941,12 +1932,20 @@ private sub cppIfdef( byval directivekw as integer )
 end sub
 
 '' Forget the guard (if any) for the current file context
+'' It's possible that we're in a recursive #include, but it doesn't matter,
+'' we'll just try to disable it's #include guard optimization multiple times.
 private sub cppDisableIncludeGuardOptimization( )
 	assert( cpp.level >= 1 )
 	assert( cpp.stack(cpp.level-1).state = STATE_FILE )
 	var knownfile = cpp.stack(cpp.level-1).knownfile
 	if( knownfile >= 0 ) then
-		cppKnownFileDropGuard( knownfile )
+		with( cpp.files[knownfile] )
+			if( .guard ) then
+				assert( .guardstate = GUARDSTATE_CHECKING )
+				deallocate( .guard )
+				.guard = NULL
+			end if
+		end with
 	end if
 end sub
 
@@ -2198,7 +2197,7 @@ private sub cppInclude( byval begin as integer )
 		end if
 
 		'' Did we find an #include guard in this file previously?
-		if( .checked_guard and (.guard <> NULL) ) then
+		if( (.guardstate = GUARDSTATE_KNOWN) and (.guard <> NULL) ) then
 			'' Only load the file if the guard symbol isn't defined (anymore) now.
 			if( cppIsMacroCurrentlyDefined( .guard ) ) then
 				'' Skipping header due to include guard
@@ -2243,22 +2242,30 @@ private sub cppInclude( byval begin as integer )
 	assert( y <= tkGetCount( ) )
 	assert( tkGet( y - 2 ) = TK_ENDINCLUDE )
 
-	if( cpp.files[knownfile].checked_guard = FALSE ) then
-		'' Prepare for the include guard optimization:
-		''  * Does the #include begin with the typical #include guard header?
-		''     #ifndef FOO
-		''     #define FOO
-		var guard = hDetectIncludeGuardBegin( cpp.x )
-
-		'' Store the guard (if any) for the file for the time being.
-		'' We're tracking it in the cpp.stack, so if we find
-		''  * that there is an #elif/#else,
-		''  * or that we don't reach #include EOF after the #endif,
-		'' then we can mark the include guard optimization as impossible
-		'' by setting the guard to NULL.
-		'' (see cppDisableIncludeGuardOptimization())
-		cppKnownFileSetGuard( knownfile, guard )
-	end if
+	''
+	'' Prepare for the include guard optimization
+	''
+	'' If we didn't check this file for an #include guard yet, and we're
+	'' not currently checking already (recursive #includes), then we can
+	'' check during this #include context.
+	''
+	'' Does the #include begin with the typical #include guard header?
+	''     #ifndef FOO
+	''     #define FOO
+	''
+	'' We'll store the guard id (if any) for now. If we later find that
+	'' there is an #elif/#else, or that we don't reach #include EOF after
+	'' the "guard" #endif, then we can mark the include guard optimization
+	'' as impossible by setting the guard to NULL.
+	'' (see cppDisableIncludeGuardOptimization())
+	''
+	with( cpp.files[knownfile] )
+		if( .guardstate = 0 ) then
+			.guardstate = GUARDSTATE_CHECKING
+			assert( .guard = NULL )
+			.guard = strDuplicate( hDetectIncludeGuardBegin( cpp.x ) )
+		end if
+	end with
 end sub
 
 private sub cppEndInclude( )
