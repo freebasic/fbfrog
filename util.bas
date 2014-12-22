@@ -459,7 +459,6 @@ private sub hGrowTable( byval h as THASH ptr )
 	var old = h->items
 	var oldroom = h->room
 
-	h->resizes += 1
 	h->room shl= 1
 	hAllocTable( h )
 
@@ -491,8 +490,6 @@ function hashLookup _
 		hGrowTable( h )
 	end if
 
-	h->lookups += 1
-
 	dim as uinteger roommask = h->room - 1
 
 	'' First probe
@@ -501,7 +498,6 @@ function hashLookup _
 
 	'' Found unused item with first probe?
 	if( item->s = NULL ) then
-		h->perfects += 1
 		return item
 	end if
 
@@ -522,13 +518,6 @@ function hashLookup _
 	var stepsize = (hashHash2( s ) and roommask) or 1
 
 	do
-#if 0
-		'' Collisions happen when both hashes are equal mod table size
-		print "** COLLISION at " + hex( i ) + ": " + *s + _
-			" with existing " + *item->s
-#endif
-		h->collisions += 1
-
 		i = (i + stepsize) and roommask
 		item = h->items + i
 
@@ -625,10 +614,6 @@ sub hashInit _
 
 	h->count = 0
 	h->room = 1 shl exponent
-	h->resizes = 0
-	h->lookups = 0
-	h->perfects = 0
-	h->collisions = 0
 	h->duplicate_strings = duplicate_strings
 	hAllocTable( h )
 
@@ -649,16 +634,6 @@ sub hashEnd( byval h as THASH ptr )
 end sub
 
 #if __FB_DEBUG__
-sub hashStats( byval h as THASH ptr, byref prefix as string )
-	print using "  " + prefix + " hash: " + _
-		"&/& hits (&%), &/& used (&%), & resizes"; _
-		h->perfects; h->lookups; _
-		cint( (100 / h->lookups) * h->perfects ); _
-		h->count; h->room; _
-		cint( (100 / h->room) * h->count ); _
-		h->resizes
-end sub
-
 sub hashDump( byval h as THASH ptr )
 	print "hash: " & h->count & "/" & h->room & " slots used"
 	for i as integer = 0 to h->room-1

@@ -141,10 +141,6 @@ type THASH
 	items		as THASHITEM ptr
 	count		as integer  '' number of used items
 	room		as integer  '' number of allocated items
-	resizes		as integer  '' number of table reallocs/size increases
-	lookups		as integer  '' lookup counter
-	perfects	as integer  '' lookups successful after first probe
-	collisions	as integer  '' sum of collisions during all lookups
 
 	'' Whether this hash table should strDuplicate() when storing strings
 	'' and free them on hashEnd(). If FALSE, the caller is responsible for
@@ -189,7 +185,6 @@ declare sub hashInit _
 	)
 declare sub hashEnd( byval h as THASH ptr )
 #if __FB_DEBUG__
-declare sub hashStats( byval h as THASH ptr, byref prefix as string )
 declare sub hashDump( byval h as THASH ptr )
 #endif
 
