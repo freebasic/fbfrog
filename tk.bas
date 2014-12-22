@@ -13,24 +13,23 @@
 
 type TOKENINFO
 	text		as zstring ptr
-	debug		as zstring ptr
 end type
 
 dim shared as TOKENINFO tk_info(0 to ...) = _
 { _
-	(NULL, @"eof"     ), _
-	(NULL, @"begin"   ), _
-	(NULL, @"end"     ), _
-	(NULL, @"ppmerge" ), _
-	(NULL, @"argbegin"), _
-	(NULL, @"argend"  ), _
-	(NULL, @"eol"     ), _
-	(NULL, @"endinclude"), _
-	(NULL, @"number"  ), _ '' Number/string literals
-	(NULL, @"string"  ), _
-	(NULL, @"char"    ), _
-	(NULL, @"wstring" ), _
-	(NULL, @"wchar"   ), _
+	(@"TK_EOF"     ), _
+	(@"TK_BEGIN"   ), _
+	(@"TK_END"     ), _
+	(@"TK_PPMERGE" ), _
+	(@"TK_ARGBEGIN"), _
+	(@"TK_ARGEND"  ), _
+	(@"TK_EOL"     ), _
+	(@"TK_ENDINCLUDE"), _
+	(@"TK_NUMBER"  ), _ '' Number/string literals
+	(@"TK_STRING"  ), _
+	(@"TK_CHAR"    ), _
+	(@"TK_WSTRING" ), _
+	(@"TK_WCHAR"   ), _
 	(@"!"  ), _ '' Main tokens
 	(@"!=" ), _
 	(@"#"  ), _
@@ -83,7 +82,7 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	(@"||" ), _
 	(@"}"  ), _
 	(@"~"  ), _
-	(NULL, @"id" ), _ '' TK_ID
+	(@"TK_ID" ), _ '' TK_ID
 	(@"__attribute__"), _ '' C keywords
 	(@"__inline"     ), _
 	(@"__inline__"   ), _
@@ -137,7 +136,7 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	(@"warning" ), _
 	(@"while"   ), _
 	_
-	(NULL, @"argsfile"), _
+	(@"TK_ARGSFILE"), _
 	(@"-o"            ), _
 	(@"-v"            ), _
 	(@"-nodefaultscript"), _
@@ -188,11 +187,7 @@ function tkInfoPretty( byval id as integer ) as string
 	case TK_ID     : function = "identifier"
 	case TK_STRING : function = """..."" string literal"
 	case else
-		if( tk_info(id).debug ) then
-			function = *tk_info(id).debug
-		else
-			function = "'" + *tk_info(id).text + "'"
-		end if
+		function = "'" + *tk_info(id).text + "'"
 	end select
 end function
 
@@ -274,11 +269,7 @@ end sub
 
 private function tkDumpBasic( byval id as integer, byval text as zstring ptr ) as string
 	var s = "["
-	if( tk_info(id).debug ) then
-		s += *tk_info(id).debug
-	else
-		s += *tk_info(id).text
-	end if
+	s += *tk_info(id).text
 	if( text ) then
 		s += " """ + strMakePrintable( *text ) + """"
 	end if

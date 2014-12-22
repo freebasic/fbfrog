@@ -4,5 +4,5 @@ tests/cpp/expand/merge/missing-rhs.h(2): ## merge operator at end of macro body,
     #define m(x) x##
                   ^~
 context as seen by fbfrog:
-    m ( 0 ) [begin] 0 ## [end]
-                      ^~
+    m ( 0 ) [TK_BEGIN] 0 ## [TK_END]
+                         ^~

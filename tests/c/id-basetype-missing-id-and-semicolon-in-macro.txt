@@ -1,6 +1,6 @@
 [1/5] __FB_WIN32__.__FB_64BIT__
       tests/c/id-basetype-missing-id-and-semicolon-in-macro.h
-expected identifier for the symbol declared in this declaration but found '[eof]'
+expected identifier for the symbol declared in this declaration but found '[TK_EOF]'
     c
     ^
 tests/c/id-basetype-missing-id-and-semicolon-in-macro.h(2): construct found here
@@ -8,7 +8,7 @@ tests/c/id-basetype-missing-id-and-semicolon-in-macro.h(2): construct found here
                             ^
 [2/5] __FB_WIN32__.(not __FB_64BIT__)
       tests/c/id-basetype-missing-id-and-semicolon-in-macro.h
-expected identifier for the symbol declared in this declaration but found '[eof]'
+expected identifier for the symbol declared in this declaration but found '[TK_EOF]'
     c
     ^
 tests/c/id-basetype-missing-id-and-semicolon-in-macro.h(2): construct found here
@@ -16,7 +16,7 @@ tests/c/id-basetype-missing-id-and-semicolon-in-macro.h(2): construct found here
                             ^
 [3/5] __FB_LINUX__.__FB_64BIT__
       tests/c/id-basetype-missing-id-and-semicolon-in-macro.h
-expected identifier for the symbol declared in this declaration but found '[eof]'
+expected identifier for the symbol declared in this declaration but found '[TK_EOF]'
     c
     ^
 tests/c/id-basetype-missing-id-and-semicolon-in-macro.h(2): construct found here
@@ -24,7 +24,7 @@ tests/c/id-basetype-missing-id-and-semicolon-in-macro.h(2): construct found here
                             ^
 [4/5] __FB_LINUX__.(not __FB_64BIT__)
       tests/c/id-basetype-missing-id-and-semicolon-in-macro.h
-expected identifier for the symbol declared in this declaration but found '[eof]'
+expected identifier for the symbol declared in this declaration but found '[TK_EOF]'
     c
     ^
 tests/c/id-basetype-missing-id-and-semicolon-in-macro.h(2): construct found here
@@ -32,7 +32,7 @@ tests/c/id-basetype-missing-id-and-semicolon-in-macro.h(2): construct found here
                             ^
 [5/5] __FB_DOS__
       tests/c/id-basetype-missing-id-and-semicolon-in-macro.h
-expected identifier for the symbol declared in this declaration but found '[eof]'
+expected identifier for the symbol declared in this declaration but found '[TK_EOF]'
     c
     ^
 tests/c/id-basetype-missing-id-and-semicolon-in-macro.h(2): construct found here

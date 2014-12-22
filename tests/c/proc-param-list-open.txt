@@ -1,6 +1,6 @@
 [1/5] __FB_WIN32__.__FB_64BIT__
       tests/c/proc-param-list-open.h
-tests/c/proc-param-list-open.h(2): expected a data type but found '[eof]'
+tests/c/proc-param-list-open.h(2): expected a data type but found '[TK_EOF]'
     void f(
           ^
 context as seen by fbfrog:
@@ -8,7 +8,7 @@ context as seen by fbfrog:
            ^
 [2/5] __FB_WIN32__.(not __FB_64BIT__)
       tests/c/proc-param-list-open.h
-tests/c/proc-param-list-open.h(2): expected a data type but found '[eof]'
+tests/c/proc-param-list-open.h(2): expected a data type but found '[TK_EOF]'
     void f(
           ^
 context as seen by fbfrog:
@@ -16,7 +16,7 @@ context as seen by fbfrog:
            ^
 [3/5] __FB_LINUX__.__FB_64BIT__
       tests/c/proc-param-list-open.h
-tests/c/proc-param-list-open.h(2): expected a data type but found '[eof]'
+tests/c/proc-param-list-open.h(2): expected a data type but found '[TK_EOF]'
     void f(
           ^
 context as seen by fbfrog:
@@ -24,7 +24,7 @@ context as seen by fbfrog:
            ^
 [4/5] __FB_LINUX__.(not __FB_64BIT__)
       tests/c/proc-param-list-open.h
-tests/c/proc-param-list-open.h(2): expected a data type but found '[eof]'
+tests/c/proc-param-list-open.h(2): expected a data type but found '[TK_EOF]'
     void f(
           ^
 context as seen by fbfrog:
@@ -32,7 +32,7 @@ context as seen by fbfrog:
            ^
 [5/5] __FB_DOS__
       tests/c/proc-param-list-open.h
-tests/c/proc-param-list-open.h(2): expected a data type but found '[eof]'
+tests/c/proc-param-list-open.h(2): expected a data type but found '[TK_EOF]'
     void f(
           ^
 context as seen by fbfrog:
