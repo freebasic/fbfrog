@@ -161,7 +161,6 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	(@"-incdir"       ), _
 	(@"-filterout"    ), _
 	(@"-filterin"     ), _
-	(@"-inclib"       ), _
 	(@"-declaredefines"), _
 	(@"-declareversions"), _
 	(@"-declarebool"  ), _

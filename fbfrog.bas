@@ -131,7 +131,6 @@ private sub hPrintHelpAndExit( )
 	print "  -incdir <path>   Add #include search directory"
 	print "  -filterout <filename-pattern>  Don't preserve code from matching #included files"
 	print "  -filterin <filename-pattern>   Undo -filterout for matching #included files"
-	print "  -inclib <name>           Add an #inclib ""<name>"" statement"
 	print "version script logic:"
 	print "  -declaredefines (<symbol>)+               Exclusive #defines"
 	print "  -declareversions <symbol> (<number>)+     Version numbers"
@@ -537,10 +536,6 @@ private sub hParseArgs( byref x as integer )
 		'' -filterin <filename-pattern>
 		case OPT_FILTERIN
 			hParseOptionWithString( x, ASTCLASS_FILTERIN, "<filename-pattern> argument" )
-
-		'' -inclib <name>
-		case OPT_INCLIB
-			hParseOptionWithString( x, ASTCLASS_INCLIB, "<name> argument" )
 
 		'' -define <id> [<body>]
 		case OPT_DEFINE
@@ -964,17 +959,6 @@ private sub frogReadApi( )
 
 	'' Prepend the direct #includes (if any), outside the EXTERN block
 	astPrependMaybeWithDivider( api->ast, directincludes )
-
-	'' Prepend #inclibs
-	scope
-		var i = api->options->tail
-		while( i )
-			if( i->class = ASTCLASS_INCLIB ) then
-				astPrependMaybeWithDivider( api->ast, astClone( i ) )
-			end if
-			i = i->prev
-		wend
-	end scope
 
 	api->options = NULL
 end sub
