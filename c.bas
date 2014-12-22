@@ -2247,8 +2247,16 @@ private sub hPostprocessDeclarator( byval n as ASTNODE ptr )
 			''
 			if( n->subtype->array ) then
 				hExpandArrayTypedef( n )
-			elseif( typeGetDtAndPtr( n->subtype->dtype ) = TYPE_PROC ) then
-				hExpandProcTypedef( n )
+			else
+				var typedefdtype = n->subtype->dtype
+				select case( typeGetDtAndPtr( typedefdtype ) )
+				case TYPE_PROC
+					hExpandProcTypedef( n )
+				case TYPE_ZSTRING, TYPE_WSTRING
+					n->dtype = typeMultAddrOf( typedefdtype, typeGetPtrCount( n->dtype ) ) _
+							or typeGetConst( n->dtype )
+					n->subtype = NULL
+				end select
 			end if
 
 		case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
@@ -2325,10 +2333,19 @@ private sub hPostprocessDeclarator( byval n as ASTNODE ptr )
 		end if
 	end select
 
-	'' Handle declarations with plain char/zstring or wchar_t/wstring data type,
-	'' not pointers though.
-	'' If it's a char array, then it's probably supposed to be a string.
-	'' If it's just a char, then it's probably supposed to be a byte.
+	''
+	'' Handle declarations with plain char/zstring or wchar_t/wstring data type.
+	''
+	'' If it's a char pointer or array, then it's probably supposed to be a string,
+	'' and we can leave it as-is (zstring/wstring). If it's just a char, then it's
+	'' probably supposed to be a byte (or wchar_t) though.
+	''
+	'' FB doesn't allow "foo as zstring" - it must be a pointer or fixed-length string,
+	'' except in typedefs. Typedefs are a special case - char/wchar_t means byte/wchar_t
+	'' or zstring/wstring depending on where they're used. Because of this we expand
+	'' these typedefs like array/proc typedefs. To allow this expansion to work,
+	'' we keep the zstring/wstring type on the typedefs.
+	''
 	select case( typeGetDtAndPtr( n->dtype ) )
 	case TYPE_ZSTRING, TYPE_WSTRING
 		if( n->array ) then
@@ -2343,7 +2360,7 @@ private sub hPostprocessDeclarator( byval n as ASTNODE ptr )
 			if( n->array->head = NULL ) then
 				n->array = NULL
 			end if
-		else
+		elseif( n->class <> ASTCLASS_TYPEDEF ) then
 			'' Turn zstring/wstring into byte/wchar_t, but preserve CONSTs
 			if( typeGetDtAndPtr( n->dtype ) = TYPE_ZSTRING ) then
 				n->dtype = typeGetConst( n->dtype ) or TYPE_BYTE
@@ -2865,10 +2882,12 @@ private sub cDeclaration( byval astclass as integer, byval gccattribs as integer
 		case ASTCLASS_TYPEDEF
 			'' Don't preserve array/function typedefs
 			add_to_ast and= (n->array = NULL)
-			add_to_ast and= (typeGetDtAndPtr( n->dtype ) <> TYPE_PROC)
+			select case( typeGetDtAndPtr( n->dtype ) )
+			case TYPE_PROC
+				add_to_ast = FALSE
 
 			'' Is this typedef just an alias for a struct tag id?
-			if( typeGetDtAndPtr( n->dtype ) = TYPE_UDT ) then
+			case TYPE_UDT
 				select case( n->subtype->class )
 				case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
 					'' Was it an unnamed struct (which was given a generated id in cTag())?
@@ -2915,7 +2934,7 @@ private sub cDeclaration( byval astclass as integer, byval gccattribs as integer
 						n->attrib or= ASTATTRIB_SOLVEOUT
 					end if
 				end select
-			end if
+			end select
 		end select
 
 		if( c.parseok ) then

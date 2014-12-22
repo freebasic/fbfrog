@@ -223,6 +223,9 @@ To do:
   named after most keywords).
     * this is also a good chance to speed up the keyword check in ASTCLASS_FIELD emitting
 
+* In FB, fields can't be named after operators (and/or/shl/shr... new/delete ...),
+  not even with multdecl syntax
+
 * Add -split <pattern> option to emit multiple files
     - need multiple extern blocks
     - version defines checks must be emitted into each file?
