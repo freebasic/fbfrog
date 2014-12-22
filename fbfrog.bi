@@ -748,12 +748,6 @@ declare function astReplace _
 declare sub astSetText( byval n as ASTNODE ptr, byval text as zstring ptr )
 declare sub astRenameSymbol( byval n as ASTNODE ptr, byval newid as zstring ptr )
 declare function astGetOrigId( byval n as ASTNODE ptr ) as zstring ptr
-declare sub astSetType _
-	( _
-		byval n as ASTNODE ptr, _
-		byval dtype as integer, _
-		byval subtype as ASTNODE ptr _
-	)
 declare sub astCopy( byval d as ASTNODE ptr, byval s as ASTNODE ptr )
 declare function astCloneNode( byval n as ASTNODE ptr ) as ASTNODE ptr
 declare function astClone( byval n as ASTNODE ptr ) as ASTNODE ptr

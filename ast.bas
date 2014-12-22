@@ -363,18 +363,6 @@ function astGetOrigId( byval n as ASTNODE ptr ) as zstring ptr
 	function = iif( n->alias, n->alias, n->text )
 end function
 
-sub astSetType _
-	( _
-		byval n as ASTNODE ptr, _
-		byval dtype as integer, _
-		byval subtype as ASTNODE ptr _
-	)
-
-	n->dtype = dtype
-	n->subtype = subtype
-
-end sub
-
 private sub astCopyNode( byval d as ASTNODE ptr, byval s as ASTNODE ptr )
 	d->class   = s->class
 	d->attrib  = s->attrib

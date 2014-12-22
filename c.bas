@@ -716,11 +716,11 @@ private function cStringLiteralSequence( ) as ASTNODE ptr
 		select case( tkGet( c.x ) )
 		case TK_STRING
 			s = astNew( ASTCLASS_STRING, tkGetText( c.x ) )
-			astSetType( s, TYPE_ZSTRING, NULL )
+			s->dtype = TYPE_ZSTRING
 
 		case TK_WSTRING
 			s = astNew( ASTCLASS_STRING, tkGetText( c.x ) )
-			astSetType( s, TYPE_WSTRING, NULL )
+			s->dtype = TYPE_WSTRING
 
 		'' '#' stringify operator
 		case TK_HASH
@@ -807,7 +807,7 @@ private function cNumberLiteral( ) as ASTNODE ptr
 	if( n = NULL ) then
 		cError( errmsg )
 		n = astNew( ASTCLASS_CONSTI, "0" )
-		astSetType( n, TYPE_LONG, NULL )
+		n->dtype = TYPE_LONG
 	end if
 	c.x += 1
 	function = n
@@ -923,12 +923,12 @@ private function hExpression( byval level as integer ) as ASTNODE ptr
 
 		case TK_CHAR
 			a = astNew( ASTCLASS_CHAR, tkGetText( c.x ) )
-			astSetType( a, TYPE_ZSTRING, NULL )
+			a->dtype = TYPE_ZSTRING
 			c.x += 1
 
 		case TK_WCHAR
 			a = astNew( ASTCLASS_CHAR, tkGetText( c.x ) )
-			astSetType( a, TYPE_WSTRING, NULL )
+			a->dtype = TYPE_WSTRING
 			c.x += 1
 
 		'' Identifier ['(' [CallArguments] ')']
@@ -1030,7 +1030,7 @@ private function hExpression( byval level as integer ) as ASTNODE ptr
 		case else
 			cError( "expected expression" + tkButFound( c.x ) )
 			a = astNew( ASTCLASS_CONSTI, "0" )
-			astSetType( a, TYPE_INTEGER, NULL )
+			a->dtype = TYPE_INTEGER
 		end select
 	end if
 
@@ -2141,7 +2141,8 @@ private sub hExpandArrayTypedef( byval n as ASTNODE ptr )
 	end if
 
 	var typedef = n->subtype
-	astSetType( n, typeGetConst( n->dtype ) or typedef->dtype, typedef->subtype )
+	n->dtype = typeGetConst( n->dtype ) or typedef->dtype
+	n->subtype = typedef->subtype
 	if( n->array = NULL ) then
 		n->array = astNew( ASTCLASS_ARRAY )
 	end if
@@ -2627,7 +2628,8 @@ private function cDeclarator _
 		end if
 
 		t = astNew( astclass, id )
-		astSetType( t, dtype, basesubtype )
+		t->dtype = dtype
+		t->subtype = basesubtype
 	end if
 
 	node = t
@@ -2696,7 +2698,8 @@ private function cDeclarator _
 
 			'' New PROC node for the function pointer's subtype
 			node = astNew( ASTCLASS_PROC )
-			astSetType( node, dtype, basesubtype )
+			node->dtype = dtype
+			node->subtype = basesubtype
 			if( c.filterout = FALSE ) then
 				api->need_externblock = TRUE
 			end if
@@ -2719,7 +2722,8 @@ private function cDeclarator _
 			'' with params isn't turned into a proc, but just has function type.
 			case else
 				node = astNew( ASTCLASS_PROC )
-				astSetType( node, dtype, basesubtype )
+				node->dtype = dtype
+				node->subtype = basesubtype
 				if( c.filterout = FALSE ) then
 					api->need_externblock = TRUE
 				end if
