@@ -48,7 +48,7 @@
 #include once "crt.bi"
 #include once "file.bi"
 
-declare sub hMaybeExpandMacro( byref x as integer, byval inside_ifexpr as integer, byval expand_recursively as integer )
+declare function hMaybeExpandMacro( byval x as integer, byval inside_ifexpr as integer, byval expand_recursively as integer ) as integer
 
 ''
 '' Check whether the number literal token (TK_NUMBER) is a valid number literal,
@@ -1380,7 +1380,10 @@ private function hExpandInTkBeginEnd _
 			end if
 
 		case is >= TK_ID
-			hMaybeExpandMacro( x, inside_ifexpr, TRUE )
+			if( hMaybeExpandMacro( x, inside_ifexpr, TRUE ) ) then
+				'' TK_ID replaced by macro body - reparse
+				x -= 1
+			end if
 		end select
 
 		x += 1
@@ -1785,12 +1788,10 @@ private sub hExpandMacro _
 	tkRemove( callbegin, callend )
 end sub
 
-private sub hMaybeExpandMacro( byref x as integer, byval inside_ifexpr as integer, byval expand_recursively as integer )
-	var begin = x
-
+private function hMaybeExpandMacro( byval x as integer, byval inside_ifexpr as integer, byval expand_recursively as integer ) as integer
 	var definfo = hCheckForMacroCall( x )
 	if( definfo = NULL ) then
-		exit sub
+		exit function
 	end if
 
 	dim as integer argbegin(0 to MAXARGS-1)
@@ -1802,15 +1803,12 @@ private sub hMaybeExpandMacro( byref x as integer, byval inside_ifexpr as intege
 	var callbegin = x
 	var callend = hParseMacroCall( callbegin, definfo->macro, @argbegin(0), @argend(0), argcount )
 	if( callend < 0 ) then
-		exit sub
+		exit function
 	end if
 
 	hExpandMacro( definfo, callbegin, callend, @argbegin(0), @argend(0), argcount, inside_ifexpr, expand_recursively )
-
-	'' The macro call was replaced with the body, the token at the TK_ID's
-	'' position must be re-parsed.
-	x -= 1
-end sub
+	function = TRUE
+end function
 
 private function cppGetFileContext( ) as cpp.STACKNODE ptr
 	for i as integer = cpp.level to 0 step -1
@@ -2605,8 +2603,10 @@ private sub cppNext( )
 			if( cppWillBeFilteredOut( ) ) then
 				tkAddFlags( cpp.x, cpp.x, TKFLAG_FILTEROUT )
 			end if
-			hMaybeExpandMacro( cpp.x, FALSE, TRUE )
-			cpp.x += 1
+			if( hMaybeExpandMacro( cpp.x, FALSE, TRUE ) = FALSE ) then
+				'' TK_ID not expanded - skip it (otherwise, we have to reparse it)
+				cpp.x += 1
+			end if
 			exit sub
 		end if
 
