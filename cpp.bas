@@ -2292,17 +2292,35 @@ private sub cppDefine( byval begin as integer, byref flags as integer )
 	'' Body
 	var xbody = cpp.x
 	if( frog.fixmingwaw ) then
-		'' Expand __MINGW_NAME_AW() & co inside this #define body
-		if( tkGet( cpp.x ) = TK_ID ) then
+		'' Expand __MINGW_NAME_AW() & co inside this #define body,
+		'' but only those few selected macros, and only at the beginning
+		'' of the macro body (it seems like that's good enough to handle
+		'' all the affected #defines in the MinGW-w64 headers).
+		'' This has to be done in a loop because e.g. WINELIB_NAME_AW
+		'' may expand to __MINGW_NAME_AW.
+		while( tkGet( cpp.x ) = TK_ID )
 			var id = tkSpellId( cpp.x )
-			if( id[0] = asc( "_" ) ) then
-				select case( *id )
-				case "__MINGW_NAME_AW", "__MINGW_NAME_AW_EXT", "__MINGW_NAME_UAW", "__MINGW_NAME_UAW_EXT"
-					'' Expand just this one macro call, nothing else
-					hMaybeExpandMacro( cpp.x, FALSE, FALSE )
-				end select
+
+			select case( (*id)[0] )
+			case asc( "_" ), asc( "W" )
+			case else
+				exit while
+			end select
+
+			select case( *id )
+			case "__MINGW_NAME_AW", _
+			     "__MINGW_NAME_AW_EXT", _
+			     "__MINGW_NAME_UAW", _
+			     "__MINGW_NAME_UAW_EXT", _
+			     "WINELIB_NAME_AW"
+			case else
+				exit while
+			end select
+
+			if( hMaybeExpandMacro( cpp.x, FALSE, FALSE ) = FALSE ) then
+				exit while
 			end if
-		end if
+		wend
 	end if
 
 	'' Eol

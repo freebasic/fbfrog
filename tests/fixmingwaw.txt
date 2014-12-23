@@ -18,4 +18,4 @@
         tests/fixmingwaw.h
 [10/10] __FB_DOS__.(not UNICODE)
         tests/fixmingwaw.h
-emitting: tests/fixmingwaw.bi (22 declarations, 0 TODOs)
+emitting: tests/fixmingwaw.bi (25 declarations, 0 TODOs)
