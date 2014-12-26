@@ -42,3 +42,7 @@ static TABLE2x5 table10x20x2x5[10][20];
 
 extern const T constarray;
 void f2(const T constarrayparam);
+
+// pointer to array
+void f3(T *p);
+void f4(T const *p);

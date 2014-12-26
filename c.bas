@@ -2134,13 +2134,22 @@ private sub hTypedefExpansionFailed( byval n as ASTNODE ptr )
 end sub
 
 private sub hExpandArrayTypedef( byval n as ASTNODE ptr )
-	'' Array types can only be solved out if it's not a pointer (FB doesn't support pointers to arrays)
+	var typedef = n->subtype
+
+	'' Pointer to array?
 	if( typeGetPtrCount( n->dtype ) > 0 ) then
-		hTypedefExpansionFailed( n )
+		'' FB doesn't support pointers to arrays either, but we can drop the array type,
+		'' such that the pointer only points to "single array element". That's pretty much
+		'' the best translation we can do here, and better than nothing...
+		n->dtype = typeExpand( n->dtype, typedef->dtype )
+		if( n->dtype = TYPE_NONE ) then
+			hTypedefExpansionFailed( n )
+		end if
+		n->subtype = typedef->subtype
 		exit sub
 	end if
 
-	var typedef = n->subtype
+	'' Expand the array typedef
 	n->dtype = typeGetConst( n->dtype ) or typedef->dtype
 	n->subtype = typedef->subtype
 	if( n->array = NULL ) then
@@ -2254,8 +2263,8 @@ private sub hPostprocessDeclarator( byval n as ASTNODE ptr )
 				case TYPE_PROC
 					hExpandProcTypedef( n )
 				case TYPE_ZSTRING, TYPE_WSTRING
-					n->dtype = typeMultAddrOf( typedefdtype, typeGetPtrCount( n->dtype ) ) _
-							or typeGetConst( n->dtype )
+					n->dtype = typeExpand( n->dtype, typedefdtype )
+					assert( n->dtype <> TYPE_NONE )
 					n->subtype = NULL
 				end select
 			end if
@@ -2763,8 +2772,7 @@ private function cDeclarator _
 		'' weren't used up on this level
 		if( innerprocptrdtype <> TYPE_PROC ) then
 			gccattribs or= innergccattribs
-			procptrdtype = typeMultAddrOf( procptrdtype, typeGetPtrCount( innerprocptrdtype ) ) or _
-								typeGetConst( innerprocptrdtype )
+			procptrdtype = typeExpand( innerprocptrdtype, procptrdtype )
 		else
 			node->attrib or= innergccattribs
 		end if

@@ -8,4 +8,4 @@
       tests/c/typedef/typedef-array.h
 [5/5] __FB_DOS__
       tests/c/typedef/typedef-array.h
-emitting: tests/c/typedef/typedef-array.bi (15 declarations, 0 TODOs)
+emitting: tests/c/typedef/typedef-array.bi (17 declarations, 0 TODOs)

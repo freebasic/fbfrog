@@ -2,6 +2,17 @@
 
 #include once "fbfrog.bi"
 
+'' Merge/expand dtype b into dtype a, overwriting a's base dtype, but preserving its ptrs/consts
+'' This is useful for expanding typedefs into the context of another dtype.
+function typeExpand( byval a as integer, byval b as integer ) as integer
+	var acount = typeGetPtrCount( a )
+	var bcount = typeGetPtrCount( b )
+	if( acount + bcount > TYPEMAX_PTR ) then
+		return TYPE_NONE
+	end if
+	function = typeMultAddrOf( b, acount ) or typeGetConst( a )
+end function
+
 function typeUnsetBaseConst( byval dtype as integer ) as integer
 	function = dtype and (not (1 shl (TYPEPOS_CONST + typeGetPtrCount( dtype ))))
 end function

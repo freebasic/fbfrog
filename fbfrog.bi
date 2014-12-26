@@ -525,6 +525,7 @@ const TYPEMAX_PTR = 8
 	 ((dt and TYPEMASK_CONST) shl count))
 #define typeGetConst( dt ) ((dt) and TYPEMASK_CONST)
 
+declare function typeExpand( byval a as integer, byval b as integer ) as integer
 declare function typeUnsetBaseConst( byval dtype as integer ) as integer
 
 enum

@@ -34,5 +34,7 @@ dim shared table10x20x2x5(0 to 9, 0 to 19, 0 to 1, 0 to 4) as ubyte
 extern constarray(0 to 9) as const long
 
 declare sub f2(byval constarrayparam as const long ptr)
+declare sub f3(byval p as long ptr)
+declare sub f4(byval p as const long ptr)
 
 end extern
