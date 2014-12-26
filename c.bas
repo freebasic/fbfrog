@@ -2317,7 +2317,11 @@ private sub hPostprocessDeclarator( byval n as ASTNODE ptr )
 		''    int a[5]  ->  byval a as long ptr
 		if( n->array ) then
 			n->array = NULL
-			n->dtype = typeAddrOf( n->dtype )
+			if( typeGetPtrCount( n->dtype ) = TYPEMAX_PTR ) then
+				cError( "too many pointers" )
+			else
+				n->dtype = typeAddrOf( n->dtype )
+			end if
 		end if
 
 	case ASTCLASS_PROC
@@ -2565,6 +2569,12 @@ private function cDeclarator _
 
 	'' Pointers: ('*')*
 	while( cMatch( TK_STAR ) and c.parseok )
+		if( (typeGetPtrCount( procptrdtype ) = TYPEMAX_PTR) or _
+		    (typeGetPtrCount( dtype        ) = TYPEMAX_PTR) ) then
+			cError( "too many pointers" )
+			exit while
+		end if
+
 		procptrdtype = typeAddrOf( procptrdtype )
 		dtype = typeAddrOf( dtype )
 
@@ -2773,6 +2783,9 @@ private function cDeclarator _
 		if( innerprocptrdtype <> TYPE_PROC ) then
 			gccattribs or= innergccattribs
 			procptrdtype = typeExpand( innerprocptrdtype, procptrdtype )
+			if( procptrdtype = TYPE_NONE ) then
+				cError( "too many pointers" )
+			end if
 		else
 			node->attrib or= innergccattribs
 		end if
