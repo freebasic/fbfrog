@@ -13,7 +13,6 @@
 ''     enum constant ENUMCONST1 => ENUMCONST1_
 ''     inside struct Foo:
 ''         field field => field_
-''     typedef FOO => FOO_
 ''     #define SAILINGBOAT => SAILINGBOAT_
 
 extern "C"
@@ -43,8 +42,6 @@ type Foo
 	FiElD as long
 	field_ as long
 end type
-
-type FOO_ as Foo
 
 #define SAILINGBOAT_(x) sailingBoat(x + 9000)
 

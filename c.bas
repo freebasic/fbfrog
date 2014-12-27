@@ -2950,9 +2950,10 @@ private sub cDeclaration( byval astclass as integer, byval gccattribs as integer
 						'' subtype instead of itself.
 						n->attrib or= ASTATTRIB_SOLVEOUT
 
-					'' Filter out "redundant" typedefs, for example:
-					''    typedef struct T T;
-					elseif( *astGetOrigId( n ) = *astGetOrigId( n->subtype ) ) then
+					'' Filter out "redundant" typedefs: exact aliases, case aliases
+					''    typedef struct A A;
+					''    typedef struct b B;
+					elseif( ucase( *astGetOrigId( n ), 1 ) = ucase( *astGetOrigId( n->subtype ), 1 ) ) then
 						add_to_ast = FALSE
 
 						'' ditto

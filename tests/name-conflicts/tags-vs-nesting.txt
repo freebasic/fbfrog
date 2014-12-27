@@ -8,4 +8,4 @@
       tests/name-conflicts/tags-vs-nesting.h
 [5/5] __FB_DOS__
       tests/name-conflicts/tags-vs-nesting.h
-emitting: tests/name-conflicts/tags-vs-nesting.bi (4 declarations, 0 TODOs)
+emitting: tests/name-conflicts/tags-vs-nesting.bi (3 declarations, 0 TODOs)
