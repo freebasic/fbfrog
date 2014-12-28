@@ -1,3 +1,11 @@
 [1/5] __FB_WIN32__.__FB_64BIT__
       tests/c/typedefs-and-tags/case-alias-const.h
-c.bas(259): assertion failed at HSOLVETYPEDEFOUTIFWANTED: n->dtype =TYPE_UDT
+[2/5] __FB_WIN32__.(not __FB_64BIT__)
+      tests/c/typedefs-and-tags/case-alias-const.h
+[3/5] __FB_LINUX__.__FB_64BIT__
+      tests/c/typedefs-and-tags/case-alias-const.h
+[4/5] __FB_LINUX__.(not __FB_64BIT__)
+      tests/c/typedefs-and-tags/case-alias-const.h
+[5/5] __FB_DOS__
+      tests/c/typedefs-and-tags/case-alias-const.h
+emitting: tests/c/typedefs-and-tags/case-alias-const.bi (3 declarations, 0 TODOs)

@@ -257,6 +257,7 @@ private function hSolveTypedefOutIfWanted( byval n as ASTNODE ptr ) as ASTNODE p
 				'' Currently the "solve typedef out" functionality is only used
 				'' for typedefs which alias structs
 				assert( n->dtype = TYPE_UDT )
+				assert( n->array = NULL )
 				assert( (n->subtype->class = ASTCLASS_STRUCT) or _
 					(n->subtype->class = ASTCLASS_UNION) or _
 					(n->subtype->class = ASTCLASS_ENUM) )
@@ -2907,12 +2908,10 @@ private sub cDeclaration( byval astclass as integer, byval gccattribs as integer
 		case ASTCLASS_TYPEDEF
 			'' Don't preserve array/function typedefs
 			add_to_ast and= (n->array = NULL)
-			select case( typeGetDtAndPtr( n->dtype ) )
-			case TYPE_PROC
-				add_to_ast = FALSE
+			add_to_ast and= (typeGetDtAndPtr( n->dtype ) <> TYPE_PROC)
 
-			'' Is this typedef just an alias for a struct tag id?
-			case TYPE_UDT
+			'' Is this typedef just an alias for a struct tag id, no pointers/CONSTs/array?
+			if( (n->dtype = TYPE_UDT) and (n->array = NULL) ) then
 				select case( n->subtype->class )
 				case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
 					'' Was it an unnamed struct (which was given a generated id in cTag())?
@@ -2960,7 +2959,7 @@ private sub cDeclaration( byval astclass as integer, byval gccattribs as integer
 						n->attrib or= ASTATTRIB_SOLVEOUT
 					end if
 				end select
-			end select
+			end if
 		end select
 
 		if( c.parseok ) then

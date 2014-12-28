@@ -5,9 +5,11 @@
 
 extern "C"
 
-type a
+type A
 end type
 
-extern array(0 to 9) as a
+type A_ as const A
+
+extern constvar as A_
 
 end extern

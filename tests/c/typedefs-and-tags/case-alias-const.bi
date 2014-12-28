@@ -8,6 +8,8 @@ extern "C"
 type a
 end type
 
-extern array(0 to 9) as a
+type A_ as const a
+
+extern constvar as A_
 
 end extern
