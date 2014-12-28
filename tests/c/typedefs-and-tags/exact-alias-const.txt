@@ -1,0 +1,3 @@
+[1/5] __FB_WIN32__.__FB_64BIT__
+      tests/c/typedefs-and-tags/exact-alias-const.h
+c.bas(259): assertion failed at HSOLVETYPEDEFOUTIFWANTED: n->dtype =TYPE_UDT
