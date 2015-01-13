@@ -1,13 +1,10 @@
 #pragma once
 
-'' The following symbols have been renamed:
-''     struct A => A_
-
 type a
 	f as long
 end type
 
-type A_
+type A
 	f as long
 end type
 

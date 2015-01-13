@@ -1,9 +1,6 @@
 #pragma once
 
-'' The following symbols have been renamed:
-''     variable common => common_
-
-dim shared common_ as long
+dim shared common as long
 
 #if VER = 1
 	dim shared v1 as long

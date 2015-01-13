@@ -29,7 +29,6 @@ dim shared as zstring ptr astnodename(0 to ...) => _
 	@"divider"   , _
 	@"scopeblock", _
 	@"unknown"   , _
-	@"renamelist", _
 	_
 	_ '' Script helper nodes
 	@"declaredefines", _
@@ -82,7 +81,6 @@ dim shared as zstring ptr astnodename(0 to ...) => _
 	@"char"      , _
 	@"datatype"  , _
 	@"ellipsis"  , _
-	@"renamelistentry", _
 	_
 	_ '' BOPs
 	@"clogor" , _
@@ -416,7 +414,7 @@ end function
 
 function astIsMergableBlock( byval n as ASTNODE ptr ) as integer
 	select case( n->class )
-	case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM, ASTCLASS_RENAMELIST
+	case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
 		function = TRUE
 	end select
 end function
@@ -635,18 +633,15 @@ function astDumpOne( byval n as ASTNODE ptr ) as string
 	checkAttrib( CDECL )
 	checkAttrib( STDCALL )
 	checkAttrib( HIDECALLCONV )
-	checkAttrib( NAMEOVERRIDDEN )
 	checkAttrib( POISONED )
 	checkAttrib( PACKED )
 	checkAttrib( VARIADIC )
 	checkAttrib( PARENTHESIZEDMACROPARAM )
 	checkAttrib( GENERATEDID )
 	checkAttrib( DLLIMPORT )
-	checkAttrib( FILTEROUT )
 	checkAttrib( BODYDEFINED )
 	checkAttrib( USEBEFOREDEF )
 	checkAttrib( DONTADDFWDREF )
-	checkAttrib( RENAMED )
 
 	if( n->text ) then
 		s += " """ + strMakePrintable( *n->text ) + """"

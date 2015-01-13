@@ -133,9 +133,7 @@ sub astAutoAddDividers( byval code as ASTNODE ptr )
 	while( i )
 		var nxt = i->next
 
-		if( i->class <> ASTCLASS_RENAMELIST ) then
-			astAutoAddDividers( i )
-		end if
+		astAutoAddDividers( i )
 
 		if( nxt ) then
 			if( hShouldSeparate( i, nxt ) ) then

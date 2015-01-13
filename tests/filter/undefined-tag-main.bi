@@ -4,7 +4,7 @@
 
 extern "C"
 
-extern pcolor as color_ ptr
-extern pscreen2 as screen_ ptr
+extern pcolor as color ptr
+extern pscreen2 as screen ptr
 
 end extern

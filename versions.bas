@@ -336,7 +336,7 @@ private sub hAddMergedDecl _
 	assert( adecl->class = bdecl->class )
 
 	''
-	'' The LCS may include merged blocks (structs/unions/enums/renamelists) that were put
+	'' The LCS may include merged blocks (structs/unions/enums) that were put
 	'' into the LCS despite having different children (fields/enumconsts/etc.) on both sides.
 	''
 	'' They should be merged recursively now, so the block itself can be common,

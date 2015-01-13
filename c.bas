@@ -76,13 +76,6 @@ namespace c
 
 		'' C "ordinary identifier" namespace (typedefs/vars/procs/fields/...)
 		cnames as THASH
-
-		'' FB namespaces
-		fbnames as THASH
-		fbtypes as THASH
-
-		'' Nodes for the renamelist, from this level, to be propagated upwards
-		renamelist as ASTNODE ptr
 	end type
 
 	type SCOPENODE
@@ -98,8 +91,7 @@ namespace c
 	dim shared as integer blocklevel, namespacelevel, scopelevel
 
 	'' Global hash table for #defines since they're not scoped
-	dim shared cdefines  as THASH  '' Original C #define identifiers
-	dim shared fbdefines as THASH  '' Ucase'd #defines, and reserved ids from cAddReservedId()
+	dim shared cdefines  as THASH
 
 	'' #pragma pack stack
 	namespace pragmapack
@@ -164,21 +156,6 @@ private sub cResetPragmaPack( )
 	c.pragmapack.stack(c.pragmapack.level) = 0
 end sub
 
-private sub cAddRenameListEntry( byval entry as ASTNODE ptr )
-	with( c.namespaces(c.namespacelevel) )
-		if( .renamelist = NULL ) then
-			dim title as string
-			if( c.namespacelevel = 0 ) then
-				title = "The following symbols have been renamed:"
-			else
-				title = "inside " + astDumpPrettyDecl( .owner ) + ":"
-			end if
-			.renamelist = astNew( ASTCLASS_RENAMELIST, title )
-		end if
-		astAppend( .renamelist, entry )
-	end with
-end sub
-
 private sub cPush( byval context as ASTNODE ptr, byval start_namespace as integer, byval start_scope as integer )
 	c.blocklevel += 1
 	if( c.blocklevel >= BLOCKSTACKLEN ) then
@@ -190,18 +167,12 @@ private sub cPush( byval context as ASTNODE ptr, byval start_namespace as intege
 		.start_scope = start_scope
 	end with
 
-	var namehashtbsize = iif( c.blocklevel = 0, 13, 5 )
-	var typehashtbsize = iif( c.blocklevel = 0,  7, 3 )
-
 	if( start_namespace ) then
 		c.namespacelevel += 1
 		with( c.namespaces(c.namespacelevel) )
 			.owner = context
 			.dummyidcounter = 0
-			hashInit( @.cnames , namehashtbsize, FALSE )
-			hashInit( @.fbnames, namehashtbsize, TRUE )
-			hashInit( @.fbtypes, typehashtbsize, TRUE )
-			.renamelist = NULL
+			hashInit( @.cnames, iif( c.blocklevel = 0, 13, 5 ), FALSE )
 		end with
 	end if
 
@@ -209,14 +180,12 @@ private sub cPush( byval context as ASTNODE ptr, byval start_namespace as intege
 		c.scopelevel += 1
 		with( c.scopes(c.scopelevel) )
 			.owner = context
-			hashInit( @.ctags, typehashtbsize, FALSE )
+			hashInit( @.ctags, iif( c.blocklevel = 0, 7, 3 ), FALSE )
 		end with
 	end if
 end sub
 
 private sub cPop( )
-	dim nestedrenamelist as ASTNODE ptr
-
 	'' Pop scope if one was started at this block level
 	if( c.blocks(c.blocklevel).start_scope ) then
 		with( c.scopes(c.scopelevel) )
@@ -228,26 +197,12 @@ private sub cPop( )
 	'' Same for namespace
 	if( c.blocks(c.blocklevel).start_namespace ) then
 		with( c.namespaces(c.namespacelevel) )
-			hashEnd( @.cnames  )
-			hashEnd( @.fbnames )
-			hashEnd( @.fbtypes )
-			nestedrenamelist = .renamelist
+			hashEnd( @.cnames )
 		end with
 		c.namespacelevel -= 1
 	end if
 
 	c.blocklevel -= 1
-
-	'' Propagate renamelist upwards, if any
-	if( nestedrenamelist ) then
-		if( c.namespacelevel >= 0 ) then
-			'' Add renamelist from the nested scope to the parent
-			cAddRenameListEntry( nestedrenamelist )
-		else
-			'' Popping the toplevel scope; store the final renamelist
-			api->renamelist = nestedrenamelist
-		end if
-	end if
 end sub
 
 private function hSolveTypedefOutIfWanted( byval n as ASTNODE ptr ) as ASTNODE ptr
@@ -309,138 +264,8 @@ private sub hMaybeOverrideSymbolId( byval opt as integer, byval n as ASTNODE ptr
 	if( renameinfo ) then
 		assert( *n->text = *renameinfo->alias )
 		astSetText( n, renameinfo->text )
-		n->attrib or= ASTATTRIB_NAMEOVERRIDDEN
 	end if
 end sub
-
-private function hHaveConflict _
-	( _
-		byval n as ASTNODE ptr, _
-		byref ucaseid as string, _
-		byval ucaseidhash as ulong, _
-		byref existing as ASTNODE ptr _
-	) as integer
-
-	dim item as THASHITEM ptr
-
-	#macro hCheck( hashtb )
-		item = hashLookup( hashtb, ucaseid, ucaseidhash )
-		if( item->s ) then
-			existing = item->data  '' NULL in case of FB keyword, non-NULL for other symbols
-			return TRUE
-		end if
-	#endmacro
-
-	select case( n->class )
-	case ASTCLASS_PPDEFINE
-		hCheck( @fbkeywordhash )
-		hCheck( @c.fbdefines )
-		hCheck( @c.namespaces(0).fbtypes )
-		hCheck( @c.namespaces(0).fbnames )
-
-	case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM, ASTCLASS_TYPEDEF
-		hCheck( @fbkeywordhash )
-		hCheck( @c.fbdefines )
-		hCheck( @c.namespaces(c.namespacelevel).fbtypes )
-
-	case ASTCLASS_FIELD
-		hCheck( @c.fbdefines )
-		hCheck( @c.namespaces(c.namespacelevel).fbnames )
-
-		'' Fields can be named after FB keywords, except for '_'
-		'' Since we're not checking the keyword hash table here,
-		'' we must check for '_' manually.
-		if( ucaseid = "_" ) then
-			return TRUE
-		end if
-
-	case else
-		'' proc/var/enumconst/param
-		hCheck( @fbkeywordhash )
-		hCheck( @c.fbdefines )
-		hCheck( @c.namespaces(c.namespacelevel).fbnames )
-	end select
-
-	function = FALSE
-end function
-
-private function hPreferRenaming( byval n as ASTNODE ptr ) as integer
-	select case( n->class )
-	case ASTCLASS_PPDEFINE
-		function = (c.namespacelevel = 0)
-	case ASTCLASS_ENUMCONST
-		function = TRUE
-	end select
-end function
-
-'' Decide which symbol to rename: the existing one, or the new one.
-private function hShouldRenameExistingSymbol( byval existing as ASTNODE ptr, byval n as ASTNODE ptr ) as integer
-	'' Conflicting with FB keyword?
-	if( existing = NULL ) then return FALSE
-
-	'' If conflicting with an existing symbol that was already renamed,
-	'' then we just rename the existing one again. We don't want renames
-	'' to cause more renames.
-	if( existing->attrib and ASTATTRIB_RENAMED ) then return TRUE
-
-	'' Parameters are the easiest to rename because renaming them doesn't
-	'' make a difference (in prototypes)
-	if(        n->class = ASTCLASS_PARAM ) then return FALSE
-	if( existing->class = ASTCLASS_PARAM ) then return TRUE
-
-	'' Prefer renaming #defines/constants over others
-	if( hPreferRenaming( n        ) ) then return FALSE
-	if( hPreferRenaming( existing ) ) then return TRUE
-
-	'' Fallback to renaming the symbol that appeared later
-	function = FALSE
-end function
-
-'' Rename a symbol by appending _ underscores to its id, as long as needed to
-'' find an id that's not yet used in the namespace. (otherwise renaming could
-'' cause more conflicts)
-private sub hRenameSymbol _
-	( _
-		byval n as ASTNODE ptr, _
-		byref ucaseid as string, _
-		byref ucaseidhash as ulong, _
-		byval other as ASTNODE ptr _
-	)
-
-	assert( n->text )
-	var newid = *n->text
-
-	do
-		newid += "_"
-		ucaseid = ucase( newid, 1 )
-		ucaseidhash = hashHash( ucaseid )
-	loop while( hHaveConflict( n, ucaseid, ucaseidhash, NULL ) )
-
-	'' Add renamelist entry
-	''  * unless this declaration should be filtered out
-	''  * unless one was added already
-	''  * unless it's a parameter, because those aren't interesting
-	if( ((n->attrib and (ASTATTRIB_FILTEROUT or ASTATTRIB_RENAMED)) = 0) and _
-	    (n->class <> ASTCLASS_PARAM) ) then
-		var renamelistentry = astNew( ASTCLASS_RENAMELISTENTRY )
-		renamelistentry->expr = astNewSYM( n )
-		cAddRenameListEntry( renamelistentry )
-	end if
-
-	astRenameSymbol( n, newid )
-	n->attrib or= ASTATTRIB_RENAMED
-end sub
-
-private function hGetFbHashTb( byval n as ASTNODE ptr ) as THASH ptr
-	select case( n->class )
-	case ASTCLASS_PPDEFINE
-		function = @c.fbdefines
-	case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM, ASTCLASS_TYPEDEF
-		function = @c.namespaces(c.namespacelevel).fbtypes
-	case else
-		function = @c.namespaces(c.namespacelevel).fbnames
-	end select
-end function
 
 private sub cAddCHashTbEntry( byval n as ASTNODE ptr )
 	'' Add the symbol to the proper C namespace
@@ -472,73 +297,6 @@ private sub cAddSymbol( byval n as ASTNODE ptr )
 	case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
 		hMaybeOverrideSymbolId( OPT_RENAMETAG, n )
 	end select
-
-	if( c.filterout ) then
-		n->attrib or= ASTATTRIB_FILTEROUT
-	end if
-
-	if( frog.syntaxonly or _
-	    ((n->attrib and ASTATTRIB_SOLVEOUT) <> 0) or _
-	    (n->class = ASTCLASS_TEXT) ) then
-		'' No auto-renaming for this
-		exit sub
-	end if
-
-	'' Check for -dontrenamefield <id>
-	if( n->class = ASTCLASS_FIELD ) then
-		if( hashContains( @frog.idopt(OPT_DONTRENAMEFIELD), n->text, hashHash( n->text ) ) ) then
-			exit sub
-		end if
-	end if
-
-	'' Check whether this symbol conflicts with an existing one (from FB's
-	'' point of view) and rename one of them if needed.
-	dim as ASTNODE ptr existing, torename, other
-	var ucaseid = ucase( *n->text, 1 )
-	var ucaseidhash = hashHash( ucaseid )
-	if( hHaveConflict( n, ucaseid, ucaseidhash, existing ) ) then
-		var rename_existing = hShouldRenameExistingSymbol( existing, n )
-
-		if( ((n->attrib and ASTATTRIB_NAMEOVERRIDDEN) <> 0) and (not rename_existing) ) then
-			'' Don't change id given by the user - the user is always right.
-			'' Rename the existing symbol instead, if possible.
-			'' If both symbols were renamed by the user (or the existing one is a keyword,
-			'' which we can't rename anyways), and they conflict - do nothing.
-			if( existing = NULL ) then
-				exit sub
-			end if
-			if( existing->attrib and ASTATTRIB_NAMEOVERRIDDEN ) then
-				exit sub
-			end if
-			rename_existing = TRUE
-		end if
-
-		if( rename_existing ) then
-			torename = existing
-			other = n
-		else
-			torename = n
-			other = existing
-		end if
-
-		dim as string torenameucaseid
-		dim as ulong torenameucaseidhash
-		hRenameSymbol( torename, torenameucaseid, torenameucaseidhash, other )
-
-		'' Renamed existing symbol instead of this one?
-		if( torename = existing ) then
-			'' Re-add the existing symbol to its namespace under its new name
-			hashAddOverwrite( hGetFbHashTb( torename ), torenameucaseid, torename )
-		else
-			ucaseid = torenameucaseid
-			ucaseidhash = torenameucaseidhash
-		end if
-	end if
-
-	'' Add the symbol to the proper FB namespace
-	'' (may need to overwrite existing symbol if that got renamed instead of
-	'' this one)
-	hashAddOverwrite( hGetFbHashTb( n ), ucaseid, n )
 end sub
 
 private sub cAddToplevelSymbol( byval n as ASTNODE ptr )
@@ -597,7 +355,6 @@ sub cInit( )
 	c.scopelevel = -1
 	cPush( api->ast, TRUE, TRUE )
 	hashInit( @c.cdefines, 8, FALSE )
-	hashInit( @c.fbdefines, 8, TRUE )
 
 	'' Initially no packing
 	c.pragmapack.level = 0
@@ -675,17 +432,11 @@ sub cEnd( )
 	assert( c.scopelevel = -1 )
 
 	hashEnd( @c.cdefines )
-	hashEnd( @c.fbdefines )
 
 	deallocate( c.defbodies )
 
 	deallocate( c.tags )
 	hashEnd( @c.taghash )
-end sub
-
-sub cAddReservedId( byval id as zstring ptr )
-	'' ucase it as done by cAddSymbol()'s id conflict checking
-	hashAddOverwrite( @c.fbdefines, ucase( *id, 1 ), NULL )
 end sub
 
 private sub cAddDefBody( byval xbegin as integer, byval xbodybegin as integer, byval n as ASTNODE ptr )
@@ -2208,7 +1959,7 @@ private sub hExpandProcTypedef( byval n as ASTNODE ptr )
 			n->subtype = proc->subtype
 			assert( n->head = NULL )
 			astAppend( n, astCloneChildren( proc ) )
-			n->attrib or= proc->attrib and (not ASTATTRIB_FILTEROUT)
+			n->attrib or= proc->attrib
 
 			exit sub
 		end if

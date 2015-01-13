@@ -120,9 +120,6 @@ private sub hPrintHelpAndExit( )
 	print "  -removedefine <id>  Don't preserve a certain #define"
 	print "  -removeproc <id>    Don't preserve a certain procedure"
 	print "  -typedefhint <id>   Mark <id> as typedef, to help parsing of type casts"
-	print "  -reservedid <id>    Rename symbols conflicting with this <id>"
-	print "  -nofbkeyword <id>   Forget that <id> is an FB keyword (affects symbol renaming)"
-	print "  -dontrenamefield <id>  Don't rename fields called <id> even if there is a conflict"
 	print "  -noexpand <id>      Disable expansion of certain #define"
 	print "version-specific commands:"
 	print "  -define <id> [<body>]    Add pre-#define"
@@ -444,20 +441,12 @@ private sub hParseArgs( byref x as integer )
 
 			hashAddOverwrite( @frog.renameopt(opt), n->alias, n )
 
-		case OPT_REMOVEDEFINE, OPT_REMOVEPROC, OPT_TYPEDEFHINT, OPT_RESERVEDID, OPT_NOEXPAND, OPT_DONTRENAMEFIELD
+		case OPT_REMOVEDEFINE, OPT_REMOVEPROC, OPT_TYPEDEFHINT, OPT_NOEXPAND
 			x += 1
 
 			'' <id>
 			hExpectId( x )
 			hashAddOverwrite( @frog.idopt(opt), tkSpellId( x ), NULL )
-			x += 1
-
-		case OPT_NOFBKEYWORD
-			x += 1
-
-			'' <id>
-			hExpectId( x )
-			hashAddOverwrite( @frog.idopt(OPT_NOFBKEYWORD), ucase( *tkSpellId( x ), 1 ), NULL )
 			x += 1
 
 		'' -declaredefines (<symbol>)+
@@ -914,14 +903,6 @@ private sub frogReadApi( )
 	'' C parsing
 	''
 	cInit( )
-	with( frog.idopt(OPT_RESERVEDID) )
-		for i as integer = 0 to .room - 1
-			var item = .items + i
-			if( item->s ) then
-				cAddReservedId( item->s )
-			end if
-		next
-	end with
 	cMain( )
 	cEnd( )
 
@@ -937,10 +918,6 @@ private sub frogReadApi( )
 		astWrapInExternBlock( api->ast, _
 			iif( api->stdcalls > api->cdecls, _
 				ASTATTRIB_STDCALL, ASTATTRIB_CDECL ) )
-	end if
-
-	if( api->renamelist ) then
-		astPrepend( api->ast, api->renamelist )
 	end if
 
 	'' Add "crt/long[double].bi" as direct #includes if the binding uses CLONG[DOUBLE]
@@ -1040,8 +1017,6 @@ end sub
 	assert( frog.apicount > 0 )
 
 	frog.prefix = space( (len( str( frog.apicount ) ) * 2) + 4 )
-
-	fbkeywordsInit( )
 
 	'' For each version, parse the input into an AST, using the options for
 	'' that version, and then merge the AST with the previous one, so that

@@ -1,15 +1,12 @@
 #pragma once
 
-'' The following symbols have been renamed:
-''     typedef A => A_
-
 extern "C"
 
 type A
 end type
 
-type A_ as const A
+type A as const A
 
-extern constvar as A_
+extern constvar as A
 
 end extern

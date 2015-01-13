@@ -47,10 +47,6 @@ What's this?
    * #defines nested inside struct bodies => moved to toplevel (helps when
      converting #defines to constants, because FB scopes those inside UDTs)
    * #define m(a, ...) __VA_ARGS__ => #define m(a, __VA_ARGS__...) __VA_ARGS__
-   * Symbol name conflicts with FB keywords or each-other, for example due to
-     FB's case insensitivity, => automatically renamed by appending _
-     underscores to the less important symbol
-   * Renamed variables/procedures => ALIAS "<original-name>" will be emitted
    * Named enum => type enumname as long + anonymous enum
      (C enums/ints stay 32bit on 64bit, so in FB we have to use the always-32bit
      LONG type instead of the default ENUM/INTEGER type)
@@ -233,16 +229,6 @@ To do:
     - forward decls must be file-specific. Ideally they'd just be emitted
       exactly where needed anyways, not just at the top...
 
-* Renames can cause other renames to become unnecessary. Here we'll do an
-  unnecessary rename:
-	#define A 1
-	struct UDT { int a; };
-	enum { a = 1 };
-  The field causes the #define to be renamed, so the enumconst doesn't have to
-  be renamed anymore. This only happens because of the inter-namespace rename
-  (due to the field/#define conflict) and because enumcontants are preferred
-  over #defines when renaming.
-
 * Simplify CLI
   * string-based arg parsing, instead of tk/lex
   * Support -DFOO=1 and -I<path> options like gcc and for pkg-config,
@@ -254,7 +240,7 @@ To do:
     removed. It's better to keep different library versions in separate bindings,
     and perhaps even targets could be handled differently.
 * Rework console output, it quickly becomes too much currently. Perhaps the
-  #includes should be emitted into the .bi, like renamelists.
+  #includes should be emitted into the .bi
 * Optimize tk access, at least for the C parser which shouldn't need insert/delete
   anymore. Test performance with array instead of gap buffer. Ideally everything
   would work with the current line only, not the entire input file.

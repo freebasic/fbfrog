@@ -1,9 +1,5 @@
 #pragma once
 
-'' The following symbols have been renamed:
-''     inside #define M1:
-''         enum constant A => A_
-
 extern "C"
 
 #define m '' TODO: void f(void

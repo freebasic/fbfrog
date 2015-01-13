@@ -190,9 +190,6 @@ declare sub hashDump( byval h as THASH ptr )
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-extern fbkeywordhash as THASH
-declare sub fbkeywordsInit( )
-
 extern fbcrtheaderhash as THASH
 declare sub fbcrtheadersInit( )
 
@@ -377,9 +374,6 @@ enum
 	OPT_REMOVEDEFINE
 	OPT_REMOVEPROC
 	OPT_TYPEDEFHINT
-	OPT_RESERVEDID
-	OPT_NOFBKEYWORD
-	OPT_DONTRENAMEFIELD
 	OPT_NOEXPAND
 	OPT_DEFINE
 	OPT_INCLUDE
@@ -537,7 +531,6 @@ enum
 	ASTCLASS_DIVIDER
 	ASTCLASS_SCOPEBLOCK
 	ASTCLASS_UNKNOWN
-	ASTCLASS_RENAMELIST
 
 	'' Script helper nodes
 	ASTCLASS_DECLAREDEFINES
@@ -590,7 +583,6 @@ enum
 	ASTCLASS_CHAR
 	ASTCLASS_DATATYPE
 	ASTCLASS_ELLIPSIS
-	ASTCLASS_RENAMELISTENTRY
 
 	'' Expressions
 
@@ -653,19 +645,18 @@ const ASTATTRIB_CDECL         = 1 shl 6  '' PROC
 const ASTATTRIB_STDCALL       = 1 shl 7  '' PROC
 const ASTATTRIB_HIDECALLCONV  = 1 shl 8  '' Whether the calling convention is covered by an Extern block, in which case it doesn't need to be emitted.
                             ''= 1 shl 9
-const ASTATTRIB_NAMEOVERRIDDEN = 1 shl 10
+                            ''= 1 shl 10
 const ASTATTRIB_POISONED      = 1 shl 11
 const ASTATTRIB_PACKED        = 1 shl 12  '' __attribute__((packed))
 const ASTATTRIB_VARIADIC      = 1 shl 13  '' PPDEFINE/MACROPARAM: variadic macros
 const ASTATTRIB_PARENTHESIZEDMACROPARAM = 1 shl 14
 const ASTATTRIB_GENERATEDID   = 1 shl 15
 const ASTATTRIB_DLLIMPORT     = 1 shl 16
-const ASTATTRIB_FILTEROUT     = 1 shl 17
+                            ''= 1 shl 17
 const ASTATTRIB_SOLVEOUT      = 1 shl 18  '' typedefs: Solve this typedef out whereever it's used
 const ASTATTRIB_BODYDEFINED   = 1 shl 19  '' tags: a body for this tag was found
 const ASTATTRIB_USEBEFOREDEF  = 1 shl 20  '' tags: used before definition (forward-referenced)
 const ASTATTRIB_DONTADDFWDREF = 1 shl 21
-const ASTATTRIB_RENAMED       = 1 shl 22
 
 const ASTATTRIB__CALLCONV = ASTATTRIB_CDECL or ASTATTRIB_STDCALL
 
@@ -850,7 +841,6 @@ declare sub hOnlyFilterOutWholeConstructs( )
 declare sub cInit( )
 declare sub cEnd( )
 declare sub cMain( )
-declare sub cAddReservedId( byval id as zstring ptr )
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
@@ -862,7 +852,6 @@ type FROGAPI
 	as integer uses_clong, uses_clongdouble, uses_wchar_t
 
 	ast		as ASTNODE ptr
-	renamelist	as ASTNODE ptr
 end type
 
 namespace frog
