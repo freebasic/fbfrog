@@ -575,6 +575,33 @@ function astIsConst0( byval n as ASTNODE ptr ) as integer
 	end if
 end function
 
+function astLookupMacroParam _
+	( _
+		byval macro as ASTNODE ptr, _
+		byval id as zstring ptr, _
+		byref macroparam as ASTNODE ptr _
+	) as integer
+
+	var index = 0
+
+	assert( macro->class = ASTCLASS_PPDEFINE )
+
+	var param = macro->head
+	while( param )
+
+		assert( param->class = ASTCLASS_MACROPARAM )
+		if( *param->text = *id ) then
+			macroparam = param
+			return index
+		end if
+
+		index += 1
+		param = param->next
+	wend
+
+	function = -1
+end function
+
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 '' AST dumping for pretty output and debugging
 

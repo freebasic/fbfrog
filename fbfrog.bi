@@ -764,6 +764,12 @@ declare sub astOops _
 declare function hGetFbNumberLiteralPrefix( byval attrib as integer ) as string
 declare function astEvalConstiAsInt64( byval n as ASTNODE ptr ) as longint
 declare function astIsConst0( byval n as ASTNODE ptr ) as integer
+declare function astLookupMacroParam _
+	( _
+		byval macro as ASTNODE ptr, _
+		byval id as zstring ptr, _
+		byref macroparam as ASTNODE ptr = NULL _
+	) as integer
 declare function astDumpPrettyClass( byval astclass as integer ) as string
 declare function astDumpPrettyDecl( byval n as ASTNODE ptr ) as string
 declare function astDumpOne( byval n as ASTNODE ptr ) as string
@@ -773,16 +779,6 @@ declare sub astDump _
 		byval nestlevel as integer = 0, _
 		byref prefix as string = "" _
 	)
-
-declare function astLookupMacroParam _
-	( _
-		byval macro as ASTNODE ptr, _
-		byval id as zstring ptr, _
-		byref macroparam as ASTNODE ptr = NULL _
-	) as integer
-declare sub astWrapInExternBlock( byval ast as ASTNODE ptr, byval callconv as integer )
-declare sub astAutoAddDividers( byval code as ASTNODE ptr )
-declare sub astPrependMaybeWithDivider( byval group as ASTNODE ptr, byval n as ASTNODE ptr )
 
 declare function astDumpPrettyVersion( byval n as ASTNODE ptr ) as string
 declare function astNewVERAND( byval a as ASTNODE ptr = NULL, byval b as ASTNODE ptr = NULL ) as ASTNODE ptr
