@@ -1244,33 +1244,6 @@ private function cTag( ) as ASTNODE ptr
 		'' '{'
 		c.x += 1
 
-		if( c.parseok and (not c.filterout) ) then
-			if( is_nested_struct ) then
-				'' anonymous nested struct/union:
-				'' Add to current block as-is, inside the parent struct/union.
-				astAppend( c.blocks(c.blocklevel).context, tag )
-			else
-				'' enum, normal struct/union:
-				'' Add to the current scope, as opposed to the current block.
-				'' FB doesn't allow UDTs to be declared inside others.
-				'' Inside another struct?
-				var scopeowner = c.scopes(c.scopelevel).owner
-				var namespaceowner = c.namespaces(c.namespacelevel).owner
-				if( namespaceowner <> scopeowner ) then
-					'' The parent struct must already be added to the current scope.
-					'' All new structs from inside a struct must be added in front of it,
-					'' because it could reference them.
-					var i = scopeowner->tail
-					while( i <> namespaceowner )
-						i = i->prev
-					wend
-					astInsert( scopeowner, tag, i )
-				else
-					astAppend( scopeowner, tag )
-				end if
-			end if
-		end if
-
 		'' normal struct/union:
 		''    Open new namespace for capturing the fields.
 		'' enum, anonymous nested struct/union:
@@ -1289,6 +1262,23 @@ private function cTag( ) as ASTNODE ptr
 
 		'' __attribute__((...))
 		cGccAttributeList( tag->attrib )
+
+		'' Add to AST after parsing the body (doing it in this order makes
+		'' it easier to move nested declarations outside of the body)
+		if( c.parseok and (not c.filterout) ) then
+			if( is_nested_struct ) then
+				'' anonymous nested struct/union:
+				'' Add to current block as-is, inside the parent struct/union.
+				astAppend( c.blocks(c.blocklevel).context, tag )
+			else
+				'' enum, normal struct/union:
+				'' Add to the current scope, as opposed to the current block.
+				'' FB doesn't allow UDTs to be declared inside others.
+				'' The parent struct (if any) shouldn't be added to the scope yet,
+				'' because we didn't finish parsing its body yet.
+				astAppend( c.scopes(c.scopelevel).owner, tag )
+			end if
+		end if
 	end if
 
 	function = tag
