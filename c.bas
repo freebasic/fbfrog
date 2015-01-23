@@ -1185,11 +1185,9 @@ private function cTag( ) as ASTNODE ptr
 			end if
 
 			'' Add new non-body tags to toplevel scope
+			assert( tag->text )
 			cAddToplevelSymbol( tag )
-
-			if( tag->text ) then
-				cAddTag( tag )
-			end if
+			cAddTag( tag )
 		end if
 	end if
 
