@@ -2676,11 +2676,6 @@ private sub cDeclaration( byval astclass as integer, byval gccattribs as integer
 						astSetText( n->subtype, n->text )
 						n->subtype->attrib and= not ASTATTRIB_GENERATEDID
 
-						'' Re-add to scope under the new id (we don't remove the hashtb entry under the old id,
-						'' but that's ok, the id string and ASTNODE pointers both stay valid, and it's just the
-						'' generatedid anyways which will never be looked up...)
-						cAddSymbol( n->subtype )
-
 						'' We still have to track the typedef symbol to be able to
 						'' look it up when it's used in the code. But whenever that
 						'' happens, we can solve the typedef out, i.e. reference its
