@@ -278,8 +278,9 @@ private sub cAddCHashTbEntry( byval n as ASTNODE ptr )
 		chashtb = @c.namespaces(c.namespacelevel).cnames
 	end select
 
-	'' If it was renamed already, add it as the old name (because that's
-	'' what we have to be able to look up when parsing the C code)
+	'' If it was renamed already, add it as the old name, because that's
+	'' what we have to be able to look up when parsing the C code. This can
+	'' happen when re-adding parameters to the procedure scope.
 	hashAddOverwrite( chashtb, astGetOrigId( n ), n )
 end sub
 
