@@ -41,8 +41,7 @@ const BLOCKSTACKLEN = 16
 
 namespace c
 	'' We track the C namespaces so we can detect duplicate declarations
-	'' (e.g. redundant procedure declarations are allowed in C), and the
-	'' FB namespaces in order to detect symbol id conflicts.
+	'' (e.g. redundant procedure declarations are allowed in C).
 	''
 	'' block stack:
 	''  The toplevel context and any '{...}' block is pushed here. Holds a
