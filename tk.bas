@@ -822,8 +822,7 @@ private function hReportConstructTokens _
 	( _
 		byval x as integer, _
 		byval first as integer, _
-		byval last as integer, _
-		byval message as zstring ptr _
+		byval last as integer _
 	) as string
 
 	const INDENT = 4
@@ -853,7 +852,7 @@ private function hReportConstructTokens _
 	dim offset as integer
 	hCalcErrorLine( xcolumn, MAXWIDTH, text, offset )
 
-	function = *message + _
+	function = _
 		!"\n" + space( INDENT ) + text + _
 		!"\n" + hErrorMarker( INDENT + offset, xlength )
 end function
@@ -875,9 +874,16 @@ function tkReport( byval x as integer, byval message as zstring ptr ) as string
 	dim s as string
 
 	'' Any macro expansion in this construct?
-	if( tkGetMaxExpansionLevel( first, last ) > 0 ) then
-		s = hReportConstructTokens( x, first, last, message )
+	var maxexpansion = tkGetMaxExpansionLevel( first, last )
+	if( maxexpansion > 0 ) then
+		s = *message
+	else
+		s = hReportLocationAndMessage( tkGetLocation( x ), message )
+	end if
 
+	s += hReportConstructTokens( x, first, last )
+
+	if( maxexpansion > 0 ) then
 		var toplevelx = tkFindTokenWithMinExpansionLevel( first, last )
 		if( tkGetLocation( toplevelx )->source ) then
 			s += !"\n" + hReport( tkGetLocation( toplevelx ), "construct found here" )
@@ -887,15 +893,6 @@ function tkReport( byval x as integer, byval message as zstring ptr ) as string
 			if( tkGetLocation( x )->source ) then
 				s += !"\n" + hReport( tkGetLocation( x ), "token found here" )
 			end if
-		end if
-	else
-		if( tkGetLocation( x )->source ) then
-			s = hReport( tkGetLocation( x ), message )
-			if( tk.report_context ) then
-				s += !"\n" + hReportConstructTokens( x, first, last, "context as seen by fbfrog:" )
-			end if
-		else
-			s = hReportConstructTokens( x, first, last, message )
 		end if
 	end if
 

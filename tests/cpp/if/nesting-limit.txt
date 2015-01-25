@@ -1,8 +1,5 @@
 [1/5] __FB_WIN32__.__FB_64BIT__
       tests/cpp/if/nesting-limit.h
 tests/cpp/if/nesting-limit.h(128): #if/#include stack too small, MAXSTACK=128
-    #if 1
-     ^~
-context as seen by fbfrog:
     # if 1 
       ^~

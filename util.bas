@@ -227,14 +227,7 @@ private function hTrimmedSourceLine _
 	function = ln
 end function
 
-''
-'' Builds an error message string like this:
-''
-''    filename.bas(10): duplicate definition of 'foo'
-''        dim foo as integer
-''            ^~~
-''
-function hReport( byval location as TKLOCATION ptr, byval message as zstring ptr ) as string
+function hReportLocationAndMessage( byval location as TKLOCATION ptr, byval message as zstring ptr ) as string
 	if( location->source = NULL ) then
 		return *message
 	end if
@@ -244,7 +237,21 @@ function hReport( byval location as TKLOCATION ptr, byval message as zstring ptr
 
 	'' Location info:
 	''    filename(123): message
-	var s = filename + "(" & (location->linenum + 1) & "): " + *message
+	function = filename + "(" & (location->linenum + 1) & "): " + *message
+end function
+
+''
+'' Builds an error message string like this:
+''
+''    filename.bas(10): duplicate definition of 'foo'
+''        dim foo as integer
+''            ^~~
+''
+function hReport( byval location as TKLOCATION ptr, byval message as zstring ptr ) as string
+	var s = hReportLocationAndMessage( location, message )
+	if( location->source = NULL ) then
+		return s
+	end if
 
 	'' A line of source code, trimmed to fit into the width limit
 	const INDENT = 4

@@ -1,8 +1,5 @@
 [1/5] __FB_WIN32__.__FB_64BIT__
       tests/cpp/expand/call-args-expect0-given1.h
 tests/cpp/expand/call-args-expect0-given1.h(3): expected ')' to close macro call argument list but found 'a'
-    m1(a)
-       ^
-context as seen by fbfrog:
     m1 ( a )
          ^

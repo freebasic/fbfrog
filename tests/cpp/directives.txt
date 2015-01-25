@@ -9,9 +9,6 @@
       tests/cpp/directives-1.h
       tests/cpp/directives-1.h
 tests/cpp/directives.h(100): #warning
-    #warning "Example warning"
-             ^~~~~~~~~~~~~~~~~
-context as seen by fbfrog:
     # warning "Example warning" 
               ^~~~~~~~~~~~~~~~~
 [2/5] __FB_WIN32__.(not __FB_64BIT__)
@@ -25,9 +22,6 @@ context as seen by fbfrog:
       tests/cpp/directives-1.h
       tests/cpp/directives-1.h
 tests/cpp/directives.h(100): #warning
-    #warning "Example warning"
-             ^~~~~~~~~~~~~~~~~
-context as seen by fbfrog:
     # warning "Example warning" 
               ^~~~~~~~~~~~~~~~~
 [3/5] __FB_LINUX__.__FB_64BIT__
@@ -41,9 +35,6 @@ context as seen by fbfrog:
       tests/cpp/directives-1.h
       tests/cpp/directives-1.h
 tests/cpp/directives.h(100): #warning
-    #warning "Example warning"
-             ^~~~~~~~~~~~~~~~~
-context as seen by fbfrog:
     # warning "Example warning" 
               ^~~~~~~~~~~~~~~~~
 [4/5] __FB_LINUX__.(not __FB_64BIT__)
@@ -57,9 +48,6 @@ context as seen by fbfrog:
       tests/cpp/directives-1.h
       tests/cpp/directives-1.h
 tests/cpp/directives.h(100): #warning
-    #warning "Example warning"
-             ^~~~~~~~~~~~~~~~~
-context as seen by fbfrog:
     # warning "Example warning" 
               ^~~~~~~~~~~~~~~~~
 [5/5] __FB_DOS__
@@ -73,9 +61,6 @@ context as seen by fbfrog:
       tests/cpp/directives-1.h
       tests/cpp/directives-1.h
 tests/cpp/directives.h(100): #warning
-    #warning "Example warning"
-             ^~~~~~~~~~~~~~~~~
-context as seen by fbfrog:
     # warning "Example warning" 
               ^~~~~~~~~~~~~~~~~
 emitting: tests/cpp/directives.bi (66 declarations, 0 TODOs)

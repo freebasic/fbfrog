@@ -1,8 +1,5 @@
 [1/5] __FB_WIN32__.__FB_64BIT__
       tests/cpp/if/elif-missing-condition.h
 tests/cpp/if/elif-missing-condition.h(3): missing expression
-    #elif
-         ^
-context as seen by fbfrog:
     # elif 
            ^

@@ -112,6 +112,7 @@ declare sub hCalcErrorLine _
 		byref offset as integer _
 	)
 declare function hErrorMarker( byval indent as integer, byval length as integer ) as string
+declare function hReportLocationAndMessage( byval location as TKLOCATION ptr, byval message as zstring ptr ) as string
 declare function hReport( byval location as TKLOCATION ptr, byval message as zstring ptr ) as string
 declare sub oopsLocation( byval location as TKLOCATION ptr, byval message as zstring ptr )
 declare function strDuplicate( byval s as zstring ptr ) as zstring ptr

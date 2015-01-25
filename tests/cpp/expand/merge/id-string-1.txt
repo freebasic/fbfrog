@@ -1,8 +1,5 @@
 [1/5] __FB_WIN32__.__FB_64BIT__
       tests/cpp/expand/merge/id-string-1.h
 tests/cpp/expand/merge/id-string-1.h(2): ## merge operator cannot merge 'a' and '"b"'
-    #define m(l, r) l ## #r
-                      ^~
-context as seen by fbfrog:
     m ( a , b ) [TK_BEGIN] a ## "b" [TK_END]
                              ^~

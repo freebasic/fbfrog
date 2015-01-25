@@ -1,8 +1,5 @@
 [1/5] __FB_WIN32__.__FB_64BIT__
       tests/cpp/expand/call-args-expect2va-given1.h
 tests/cpp/expand/call-args-expect2va-given1.h(3): not enough arguments for 'm' macro call: 2 given, 3 needed
-    m(a)
-       ^
-context as seen by fbfrog:
     m ( a )
           ^

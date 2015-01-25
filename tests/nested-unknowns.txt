@@ -1,131 +1,71 @@
 [1/5] __FB_WIN32__.__FB_64BIT__
       tests/nested-unknowns.h
 tests/nested-unknowns.h(5): expected identifier for the symbol declared in this declaration but found ';'
-     x;
-      ^
-context as seen by fbfrog:
     struct A { x ; } ;
                  ^
 tests/nested-unknowns.h(9): expected identifier for the symbol declared in this declaration but found ';'
-     x;
-      ^
-context as seen by fbfrog:
     union B { x ; } ;
                 ^
 tests/nested-unknowns.h(13): expected ',' or '}' behind enum constant but found ';'
-     x;
-      ^
-context as seen by fbfrog:
     enum C { x ; } ;
                ^
 tests/nested-unknowns.h(17): expected ';' (end of expression statement) but found '='
-     x=;
-      ^
-context as seen by fbfrog:
     void f ( void ) { x = ; }
                         ^
 [2/5] __FB_WIN32__.(not __FB_64BIT__)
       tests/nested-unknowns.h
 tests/nested-unknowns.h(5): expected identifier for the symbol declared in this declaration but found ';'
-     x;
-      ^
-context as seen by fbfrog:
     struct A { x ; } ;
                  ^
 tests/nested-unknowns.h(9): expected identifier for the symbol declared in this declaration but found ';'
-     x;
-      ^
-context as seen by fbfrog:
     union B { x ; } ;
                 ^
 tests/nested-unknowns.h(13): expected ',' or '}' behind enum constant but found ';'
-     x;
-      ^
-context as seen by fbfrog:
     enum C { x ; } ;
                ^
 tests/nested-unknowns.h(17): expected ';' (end of expression statement) but found '='
-     x=;
-      ^
-context as seen by fbfrog:
     void f ( void ) { x = ; }
                         ^
 [3/5] __FB_LINUX__.__FB_64BIT__
       tests/nested-unknowns.h
 tests/nested-unknowns.h(5): expected identifier for the symbol declared in this declaration but found ';'
-     x;
-      ^
-context as seen by fbfrog:
     struct A { x ; } ;
                  ^
 tests/nested-unknowns.h(9): expected identifier for the symbol declared in this declaration but found ';'
-     x;
-      ^
-context as seen by fbfrog:
     union B { x ; } ;
                 ^
 tests/nested-unknowns.h(13): expected ',' or '}' behind enum constant but found ';'
-     x;
-      ^
-context as seen by fbfrog:
     enum C { x ; } ;
                ^
 tests/nested-unknowns.h(17): expected ';' (end of expression statement) but found '='
-     x=;
-      ^
-context as seen by fbfrog:
     void f ( void ) { x = ; }
                         ^
 [4/5] __FB_LINUX__.(not __FB_64BIT__)
       tests/nested-unknowns.h
 tests/nested-unknowns.h(5): expected identifier for the symbol declared in this declaration but found ';'
-     x;
-      ^
-context as seen by fbfrog:
     struct A { x ; } ;
                  ^
 tests/nested-unknowns.h(9): expected identifier for the symbol declared in this declaration but found ';'
-     x;
-      ^
-context as seen by fbfrog:
     union B { x ; } ;
                 ^
 tests/nested-unknowns.h(13): expected ',' or '}' behind enum constant but found ';'
-     x;
-      ^
-context as seen by fbfrog:
     enum C { x ; } ;
                ^
 tests/nested-unknowns.h(17): expected ';' (end of expression statement) but found '='
-     x=;
-      ^
-context as seen by fbfrog:
     void f ( void ) { x = ; }
                         ^
 [5/5] __FB_DOS__
       tests/nested-unknowns.h
 tests/nested-unknowns.h(5): expected identifier for the symbol declared in this declaration but found ';'
-     x;
-      ^
-context as seen by fbfrog:
     struct A { x ; } ;
                  ^
 tests/nested-unknowns.h(9): expected identifier for the symbol declared in this declaration but found ';'
-     x;
-      ^
-context as seen by fbfrog:
     union B { x ; } ;
                 ^
 tests/nested-unknowns.h(13): expected ',' or '}' behind enum constant but found ';'
-     x;
-      ^
-context as seen by fbfrog:
     enum C { x ; } ;
                ^
 tests/nested-unknowns.h(17): expected ';' (end of expression statement) but found '='
-     x=;
-      ^
-context as seen by fbfrog:
     void f ( void ) { x = ; }
                         ^
 emitting: tests/nested-unknowns.bi (4 declarations, 4 TODOs)

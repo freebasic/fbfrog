@@ -12,22 +12,13 @@
       tests/cpp/guard/f.h
       tests/cpp/guard/g.h
 tests/cpp/guard/g.h(5): #warning
-    #warning g.h: inside #ifndef HAD_G_1 block
-             ^
-context as seen by fbfrog:
     # warning g . h : inside # ifndef HAD_G_1 block 
               ^
 tests/cpp/guard/g.h(10): #warning
-    #warning g.h: inside #ifndef HAD_G_2 block
-             ^
-context as seen by fbfrog:
     # warning g . h : inside # ifndef HAD_G_2 block 
               ^
       tests/cpp/guard/g.h
 tests/cpp/guard/g.h(10): #warning
-    #warning g.h: inside #ifndef HAD_G_2 block
-             ^
-context as seen by fbfrog:
     # warning g . h : inside # ifndef HAD_G_2 block 
               ^
 [2/5] __FB_WIN32__.(not __FB_64BIT__)
@@ -44,22 +35,13 @@ context as seen by fbfrog:
       tests/cpp/guard/f.h
       tests/cpp/guard/g.h
 tests/cpp/guard/g.h(5): #warning
-    #warning g.h: inside #ifndef HAD_G_1 block
-             ^
-context as seen by fbfrog:
     # warning g . h : inside # ifndef HAD_G_1 block 
               ^
 tests/cpp/guard/g.h(10): #warning
-    #warning g.h: inside #ifndef HAD_G_2 block
-             ^
-context as seen by fbfrog:
     # warning g . h : inside # ifndef HAD_G_2 block 
               ^
       tests/cpp/guard/g.h
 tests/cpp/guard/g.h(10): #warning
-    #warning g.h: inside #ifndef HAD_G_2 block
-             ^
-context as seen by fbfrog:
     # warning g . h : inside # ifndef HAD_G_2 block 
               ^
 [3/5] __FB_LINUX__.__FB_64BIT__
@@ -76,22 +58,13 @@ context as seen by fbfrog:
       tests/cpp/guard/f.h
       tests/cpp/guard/g.h
 tests/cpp/guard/g.h(5): #warning
-    #warning g.h: inside #ifndef HAD_G_1 block
-             ^
-context as seen by fbfrog:
     # warning g . h : inside # ifndef HAD_G_1 block 
               ^
 tests/cpp/guard/g.h(10): #warning
-    #warning g.h: inside #ifndef HAD_G_2 block
-             ^
-context as seen by fbfrog:
     # warning g . h : inside # ifndef HAD_G_2 block 
               ^
       tests/cpp/guard/g.h
 tests/cpp/guard/g.h(10): #warning
-    #warning g.h: inside #ifndef HAD_G_2 block
-             ^
-context as seen by fbfrog:
     # warning g . h : inside # ifndef HAD_G_2 block 
               ^
 [4/5] __FB_LINUX__.(not __FB_64BIT__)
@@ -108,22 +81,13 @@ context as seen by fbfrog:
       tests/cpp/guard/f.h
       tests/cpp/guard/g.h
 tests/cpp/guard/g.h(5): #warning
-    #warning g.h: inside #ifndef HAD_G_1 block
-             ^
-context as seen by fbfrog:
     # warning g . h : inside # ifndef HAD_G_1 block 
               ^
 tests/cpp/guard/g.h(10): #warning
-    #warning g.h: inside #ifndef HAD_G_2 block
-             ^
-context as seen by fbfrog:
     # warning g . h : inside # ifndef HAD_G_2 block 
               ^
       tests/cpp/guard/g.h
 tests/cpp/guard/g.h(10): #warning
-    #warning g.h: inside #ifndef HAD_G_2 block
-             ^
-context as seen by fbfrog:
     # warning g . h : inside # ifndef HAD_G_2 block 
               ^
 [5/5] __FB_DOS__
@@ -140,22 +104,13 @@ context as seen by fbfrog:
       tests/cpp/guard/f.h
       tests/cpp/guard/g.h
 tests/cpp/guard/g.h(5): #warning
-    #warning g.h: inside #ifndef HAD_G_1 block
-             ^
-context as seen by fbfrog:
     # warning g . h : inside # ifndef HAD_G_1 block 
               ^
 tests/cpp/guard/g.h(10): #warning
-    #warning g.h: inside #ifndef HAD_G_2 block
-             ^
-context as seen by fbfrog:
     # warning g . h : inside # ifndef HAD_G_2 block 
               ^
       tests/cpp/guard/g.h
 tests/cpp/guard/g.h(10): #warning
-    #warning g.h: inside #ifndef HAD_G_2 block
-             ^
-context as seen by fbfrog:
     # warning g . h : inside # ifndef HAD_G_2 block 
               ^
 emitting: tests/cpp/guard/main.bi (18 declarations, 0 TODOs)

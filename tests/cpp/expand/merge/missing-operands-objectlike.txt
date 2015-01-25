@@ -1,8 +1,5 @@
 [1/5] __FB_WIN32__.__FB_64BIT__
       tests/cpp/expand/merge/missing-operands-objectlike.h
 tests/cpp/expand/merge/missing-operands-objectlike.h(2): ## merge operator at beginning of macro body, missing operand to merge with
-    #define m ##
-              ^~
-context as seen by fbfrog:
     m [TK_BEGIN] ## [TK_END]
                  ^~

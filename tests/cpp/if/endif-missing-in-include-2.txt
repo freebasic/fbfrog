@@ -2,8 +2,5 @@
       tests/cpp/if/endif-missing-in-include-2.h
       tests/cpp/if/endif-missing.h
 tests/cpp/if/endif-missing.h(2): missing #endif
-    #if 1
-         ^
-context as seen by fbfrog:
     # if 1 
            ^

@@ -1,71 +1,41 @@
 [1/5] __FB_WIN32__.__FB_64BIT__
       tests/c/statement-expression.h
 tests/c/statement-expression.h(3): expected expression but found '{'
-    #define A1 ({ int i = foo(0); i; })
-                ^
-context as seen by fbfrog:
     # define A1 ( { int i = foo ( 0 ) ; i ; } ) 
                   ^
 tests/c/statement-expression.h(5): expected expression but found '{'
-    #define A2 { int a[({ f(); })]; }
-                        ^
-context as seen by fbfrog:
     # define A2 { int a [ ( { f ( ) ; } ) ] ; } 
                             ^
 [2/5] __FB_WIN32__.(not __FB_64BIT__)
       tests/c/statement-expression.h
 tests/c/statement-expression.h(3): expected expression but found '{'
-    #define A1 ({ int i = foo(0); i; })
-                ^
-context as seen by fbfrog:
     # define A1 ( { int i = foo ( 0 ) ; i ; } ) 
                   ^
 tests/c/statement-expression.h(5): expected expression but found '{'
-    #define A2 { int a[({ f(); })]; }
-                        ^
-context as seen by fbfrog:
     # define A2 { int a [ ( { f ( ) ; } ) ] ; } 
                             ^
 [3/5] __FB_LINUX__.__FB_64BIT__
       tests/c/statement-expression.h
 tests/c/statement-expression.h(3): expected expression but found '{'
-    #define A1 ({ int i = foo(0); i; })
-                ^
-context as seen by fbfrog:
     # define A1 ( { int i = foo ( 0 ) ; i ; } ) 
                   ^
 tests/c/statement-expression.h(5): expected expression but found '{'
-    #define A2 { int a[({ f(); })]; }
-                        ^
-context as seen by fbfrog:
     # define A2 { int a [ ( { f ( ) ; } ) ] ; } 
                             ^
 [4/5] __FB_LINUX__.(not __FB_64BIT__)
       tests/c/statement-expression.h
 tests/c/statement-expression.h(3): expected expression but found '{'
-    #define A1 ({ int i = foo(0); i; })
-                ^
-context as seen by fbfrog:
     # define A1 ( { int i = foo ( 0 ) ; i ; } ) 
                   ^
 tests/c/statement-expression.h(5): expected expression but found '{'
-    #define A2 { int a[({ f(); })]; }
-                        ^
-context as seen by fbfrog:
     # define A2 { int a [ ( { f ( ) ; } ) ] ; } 
                             ^
 [5/5] __FB_DOS__
       tests/c/statement-expression.h
 tests/c/statement-expression.h(3): expected expression but found '{'
-    #define A1 ({ int i = foo(0); i; })
-                ^
-context as seen by fbfrog:
     # define A1 ( { int i = foo ( 0 ) ; i ; } ) 
                   ^
 tests/c/statement-expression.h(5): expected expression but found '{'
-    #define A2 { int a[({ f(); })]; }
-                        ^
-context as seen by fbfrog:
     # define A2 { int a [ ( { f ( ) ; } ) ] ; } 
                             ^
 emitting: tests/c/statement-expression.bi (1 declaration, 2 TODOs)

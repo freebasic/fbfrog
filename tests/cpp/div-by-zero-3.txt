@@ -1,8 +1,5 @@
 [1/5] __FB_WIN32__.__FB_64BIT__
       tests/cpp/div-by-zero-3.h
 tests/cpp/div-by-zero-3.h(2): division by zero
-    #if  1 /  (1  %  1)
-                       ^
-context as seen by fbfrog:
     # if 1 / ( 1 % 1 ) 
                        ^

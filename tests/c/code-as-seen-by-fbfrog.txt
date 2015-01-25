@@ -1,41 +1,26 @@
 [1/5] __FB_WIN32__.__FB_64BIT__
       tests/c/code-as-seen-by-fbfrog.h
 tests/c/code-as-seen-by-fbfrog.h(8): expected ')' to close parameter list in function declaration but found ';'
-    int i; /* invalid code */
-         ^
-context as seen by fbfrog:
     void f ( int i ;
                    ^
 [2/5] __FB_WIN32__.(not __FB_64BIT__)
       tests/c/code-as-seen-by-fbfrog.h
 tests/c/code-as-seen-by-fbfrog.h(8): expected ')' to close parameter list in function declaration but found ';'
-    int i; /* invalid code */
-         ^
-context as seen by fbfrog:
     void f ( int i ;
                    ^
 [3/5] __FB_LINUX__.__FB_64BIT__
       tests/c/code-as-seen-by-fbfrog.h
 tests/c/code-as-seen-by-fbfrog.h(8): expected ')' to close parameter list in function declaration but found ';'
-    int i; /* invalid code */
-         ^
-context as seen by fbfrog:
     void f ( int i ;
                    ^
 [4/5] __FB_LINUX__.(not __FB_64BIT__)
       tests/c/code-as-seen-by-fbfrog.h
 tests/c/code-as-seen-by-fbfrog.h(8): expected ')' to close parameter list in function declaration but found ';'
-    int i; /* invalid code */
-         ^
-context as seen by fbfrog:
     void f ( int i ;
                    ^
 [5/5] __FB_DOS__
       tests/c/code-as-seen-by-fbfrog.h
 tests/c/code-as-seen-by-fbfrog.h(8): expected ')' to close parameter list in function declaration but found ';'
-    int i; /* invalid code */
-         ^
-context as seen by fbfrog:
     void f ( int i ;
                    ^
 emitting: tests/c/code-as-seen-by-fbfrog.bi (0 declarations, 1 TODO)
