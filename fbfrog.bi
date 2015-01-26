@@ -793,11 +793,6 @@ declare sub astProcessVerblocks( byval code as ASTNODE ptr )
 declare sub lexInit( )
 declare function lexLoadC( byval x as integer, byval source as SOURCEBUFFER ptr ) as integer
 declare function lexLoadArgs( byval x as integer, byval source as SOURCEBUFFER ptr ) as integer
-declare function lexPeekLine _
-	( _
-		byval source as SOURCEBUFFER ptr, _
-		byval targetlinenum as integer _
-	) as string
 
 namespace emit
 	extern as integer decls, todos
