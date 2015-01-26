@@ -223,8 +223,6 @@ type TKBUFFER
 
 	'' Static EOF token for out-of-bounds accesses
 	eof		as ONETOKEN
-
-	report_context	as integer
 end type
 
 dim shared as TKBUFFER tk
@@ -232,11 +230,6 @@ dim shared as TKBUFFER tk
 sub tkInit( )
 	clear( tk, 0, sizeof( tk ) )
 	tk.newgapsize = 1 shl 12
-	tk.report_context = TRUE
-end sub
-
-sub tkDontReportContext( )
-	tk.report_context = FALSE
 end sub
 
 private function tkAccess( byval x as integer ) as ONETOKEN ptr

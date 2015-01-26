@@ -404,7 +404,6 @@ declare function tkInfoPretty( byval tk as integer ) as string
 #define tkIsOriginal( x ) ((tkGetFlags( x ) and TKFLAG_EXPANSION) = 0)
 
 declare sub tkInit( )
-declare sub tkDontReportContext( )
 declare sub tkEnd( )
 declare function tkDumpOne( byval x as integer ) as string
 declare sub tkDump overload( byval first as integer, byval last as integer )
