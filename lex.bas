@@ -8,8 +8,6 @@ const MAXTEXTLEN = 1 shl 12
 
 type LEXSTUFF
 	i		as ubyte ptr  '' Current char, will always be <= limit
-	bol		as ubyte ptr  '' Last begin-of-line
-
 	x		as integer
 	location	as TKLOCATION
 	behindspace	as integer
@@ -59,25 +57,11 @@ private function hLookupKeyword _
 	end if
 end function
 
-sub lexGetLocation( byval location as TKLOCATION ptr )
-	*location = lex.location
-	location->column = lex.i - lex.bol
-	location->length = 1
-end sub
-
-private sub hResetColumn( )
-	lex.location.column = lex.i - lex.bol
-	lex.location.length = 1
-end sub
-
 private sub lexOops( byref message as string )
-	dim location as TKLOCATION
-	lexGetLocation( @location )
-	oopsLocation( @location, message )
+	oopsLocation( @lex.location, message )
 end sub
 
 private sub hSetLocation( byval flags as integer = 0 )
-	lex.location.length = (lex.i - lex.bol) - lex.location.column
 	tkSetLocation( lex.x, @lex.location )
 	if( lex.behindspace ) then
 		flags or= TKFLAG_BEHINDSPACE
@@ -114,7 +98,6 @@ private sub hReadBytes( byval tk as integer, byval length as integer )
 end sub
 
 private sub hNewLine( )
-	lex.bol = lex.i
 	lex.location.linenum += 1
 	lex.location.source->lines = lex.location.linenum + 1
 end sub
@@ -430,8 +413,6 @@ private sub lexNext( )
 		lex.behindspace = TRUE
 	wend
 
-	hResetColumn( )
-
 	'' Identify the next token
 	select case as const( lex.i[0] )
 	case CH_CR
@@ -700,7 +681,6 @@ function lexLoadC( byval x as integer, byval source as SOURCEBUFFER ptr ) as int
 	lex.location.linenum = 0
 	lex.location.source->lines = 1
 	lex.i = source->buffer
-	lex.bol = lex.i
 
 	'' Tokenize and insert into tk buffer
 	while( lex.i[0] )
@@ -780,8 +760,6 @@ private sub hReadArg( byval tk as integer )
 	case TK_MINUS
 		tk = hLookupKeyword( @lex.frogoptions, text, TK_STRING )
 		if( tk = TK_STRING ) then
-			lex.location.column = begin - lex.bol
-			lex.location.length = lex.i - begin
 			oopsLocation( @lex.location, "unknown command line option '" + *text + "'" )
 		end if
 		text = NULL
@@ -811,12 +789,9 @@ function lexLoadArgs( byval x as integer, byval source as SOURCEBUFFER ptr ) as 
 	lex.location.linenum = 0
 	lex.location.source->lines = 1
 	lex.i = source->buffer
-	lex.bol = lex.i
 	lex.behindspace = TRUE
 
 	do
-		hResetColumn( )
-
 		select case( lex.i[0] )
 		case 0
 			exit do

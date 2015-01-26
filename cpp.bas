@@ -1737,13 +1737,8 @@ private sub hExpandMacro _
 			tkGetFlags( callbegin ) and TKFLAG_BEHINDSPACE, _
 			expansionbegin, definfo, argbegin, argend, argcount, inside_ifexpr )
 
-	'' Set expansion level on the expansion tokens:
-	'' = minlevel from macro call tokens + 1
-	'' before doing nested macro expansion in the expansion tokens.
-	tkSetExpansionLevel( expansionbegin, expansionend, _
-		tkGetExpansionLevel( _
-			tkFindTokenWithMinExpansionLevel( callbegin, callend ) _
-		) + 1 )
+	'' Mark expansion tokens
+	tkAddFlags( expansionbegin, expansionend, TKFLAG_EXPANSION )
 
 	if( expand_recursively ) then
 		'' Recursively do macro expansion in the expansion
@@ -1780,6 +1775,16 @@ private sub hExpandMacro _
 				end if
 			end if
 
+			x += 1
+		wend
+	end scope
+
+	'' Update locations on the expansion tokens to point to the macro call,
+	'' instead of the #define body etc.
+	scope
+		var x = expansionbegin
+		while( x <= expansionend )
+			tkSetLocation( x, tkGetLocation( callbegin ) )
 			x += 1
 		wend
 	end scope
@@ -2578,7 +2583,7 @@ private sub cppNext( )
 		'' We do this for every "toplevel" '#', before ever doing macro expansion behind it,
 		'' so it should be safe to assume that if the '#' isn't coming from a macro expansion,
 		'' the rest isn't either.
-		if( tkIsEolOrEof( cpp.x - 1 ) and (tkGetExpansionLevel( cpp.x ) = 0) ) then
+		if( tkIsEolOrEof( cpp.x - 1 ) and tkIsOriginal( cpp.x ) ) then
 			cppDirective( )
 			exit sub
 		end if

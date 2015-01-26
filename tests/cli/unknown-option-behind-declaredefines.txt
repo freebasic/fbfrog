@@ -1,3 +1,1 @@
 <command line>(1): unknown command line option '-foo'
-    og tests/cli/unknown-option-behind-declaredefines.h -declaredefines A B -foo
-                                                                            ^~~~

@@ -2887,7 +2887,7 @@ end function
 
 private sub cConstruct( )
 	'' '#'?
-	if( (tkGet( c.x ) = TK_HASH) and (tkGetExpansionLevel( c.x ) = 0) ) then
+	if( (tkGet( c.x ) = TK_HASH) and tkIsOriginal( c.x ) ) then
 		c.x += 1
 
 		var ok = FALSE

@@ -1,41 +1,26 @@
 [1/5] __FB_WIN32__.__FB_64BIT__
       tests/cpp/expand/directive-from-expansion.h
-expected a data type but found '#'
+tests/cpp/expand/directive-from-expansion.h(5): expected a data type but found '#'
     # define foo
     ^
-tests/cpp/expand/directive-from-expansion.h(4): construct found here
-    #define m #define foo
-              ^
 [2/5] __FB_WIN32__.(not __FB_64BIT__)
       tests/cpp/expand/directive-from-expansion.h
-expected a data type but found '#'
+tests/cpp/expand/directive-from-expansion.h(5): expected a data type but found '#'
     # define foo
     ^
-tests/cpp/expand/directive-from-expansion.h(4): construct found here
-    #define m #define foo
-              ^
 [3/5] __FB_LINUX__.__FB_64BIT__
       tests/cpp/expand/directive-from-expansion.h
-expected a data type but found '#'
+tests/cpp/expand/directive-from-expansion.h(5): expected a data type but found '#'
     # define foo
     ^
-tests/cpp/expand/directive-from-expansion.h(4): construct found here
-    #define m #define foo
-              ^
 [4/5] __FB_LINUX__.(not __FB_64BIT__)
       tests/cpp/expand/directive-from-expansion.h
-expected a data type but found '#'
+tests/cpp/expand/directive-from-expansion.h(5): expected a data type but found '#'
     # define foo
     ^
-tests/cpp/expand/directive-from-expansion.h(4): construct found here
-    #define m #define foo
-              ^
 [5/5] __FB_DOS__
       tests/cpp/expand/directive-from-expansion.h
-expected a data type but found '#'
+tests/cpp/expand/directive-from-expansion.h(5): expected a data type but found '#'
     # define foo
     ^
-tests/cpp/expand/directive-from-expansion.h(4): construct found here
-    #define m #define foo
-              ^
 emitting: tests/cpp/expand/directive-from-expansion.bi (0 declarations, 1 TODO)

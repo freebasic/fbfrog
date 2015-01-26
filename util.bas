@@ -157,8 +157,6 @@ function hDumpLocation( byval location as TKLOCATION ptr ) as string
 		var s = "location("
 		s += hDumpSourceBuffer( location->source ) & ", "
 		s += "line " & location->linenum + 1 & ", "
-		s += "column " & location->column + 1 & ", "
-		s += "length " & location->length
 		s += ")"
 		function = s
 	else
@@ -213,20 +211,6 @@ function hErrorMarker( byval indent as integer, byval length as integer ) as str
 	function = space( indent ) + "^" + string( length - 1, "~" )
 end function
 
-private function hTrimmedSourceLine _
-	( _
-		byval location as TKLOCATION ptr, _
-		byval linenum as integer, _
-		byval maxwidth as integer, _
-		byref adjustedcolumn as integer _
-	) as string
-
-	var ln = lexPeekLine( location->source, linenum )
-	hCalcErrorLine( location->column, maxwidth, ln, adjustedcolumn )
-
-	function = ln
-end function
-
 function hReportLocationAndMessage( byval location as TKLOCATION ptr, byval message as zstring ptr ) as string
 	if( location->source = NULL ) then
 		return *message
@@ -240,31 +224,16 @@ function hReportLocationAndMessage( byval location as TKLOCATION ptr, byval mess
 	function = filename + "(" & (location->linenum + 1) & "): " + *message
 end function
 
-''
 '' Builds an error message string like this:
-''
 ''    filename.bas(10): duplicate definition of 'foo'
-''        dim foo as integer
-''            ^~~
-''
 function hReport( byval location as TKLOCATION ptr, byval message as zstring ptr ) as string
 	var s = hReportLocationAndMessage( location, message )
 	if( location->source = NULL ) then
 		return s
 	end if
 
-	'' A line of source code, trimmed to fit into the width limit
-	const INDENT = 4
-	const MAXWIDTH = 80 - INDENT
-	dim markeroffset as integer
-	s += !"\n" + space( INDENT )
-	s += hTrimmedSourceLine( location, location->linenum, MAXWIDTH, markeroffset )
-
-	'' Error marker below the erroneous line
-	s += !"\n" + hErrorMarker( INDENT + markeroffset, location->length )
-
 	if( (not location->source->is_file) and (location->source->location.source <> NULL) ) then
-		s += !"\n" + hReport( @location->source->location, "from here:" )
+		s += !"\n" + hReport( @location->source->location, "from here" )
 	end if
 
 	function = s

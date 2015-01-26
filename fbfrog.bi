@@ -73,10 +73,7 @@ type TKLOCATION
 	'' Supposed to point to permanent memory, whoever fills the structure
 	'' 1st must ensure that
 	source		as SOURCEBUFFER ptr
-
 	linenum		as integer  '' 0-based, but displayed 1-based in error messages
-	column		as integer  '' ditto
-	length		as integer
 end type
 
 type SOURCEBUFFER_
@@ -228,6 +225,7 @@ const TKFLAG_FILTEROUT		= 1 shl 3  '' Used to mark tokens from include files whi
 const TKFLAG_ROOTFILE		= 1 shl 4  '' Used to mark the internal #include statements which pull in the toplevel files
 const TKFLAG_PREINCLUDE		= 1 shl 5
 const TKFLAG_DEFINE		= 1 shl 6  '' used to mark #defines for hMoveDefinesOutOfConstructs()
+const TKFLAG_EXPANSION		= 1 shl 7  '' comes from macro?
 
 enum
 	TK_EOF
@@ -403,6 +401,9 @@ declare function tkInfoPretty( byval tk as integer ) as string
 '' Debugging helper, for example: TRACE( x ), "decl begin"
 #define TRACE( x ) print __FUNCTION__ + "(" + str( __LINE__ ) + "): " + tkDumpOne( x )
 
+'' original = not from a macro
+#define tkIsOriginal( x ) ((tkGetFlags( x ) and TKFLAG_EXPANSION) = 0)
+
 declare sub tkInit( )
 declare sub tkDontReportContext( )
 declare sub tkEnd( )
@@ -429,10 +430,6 @@ declare function tkGetText( byval x as integer ) as zstring ptr
 declare function tkSpellId( byval x as integer ) as zstring ptr
 declare sub tkSetLocation( byval x as integer, byval location as TKLOCATION ptr )
 declare function tkGetLocation( byval x as integer ) as TKLOCATION ptr
-declare sub tkSetExpansionLevel( byval first as integer, byval last as integer, byval expansionlevel as integer )
-declare function tkGetExpansionLevel( byval x as integer ) as integer
-declare function tkFindTokenWithMinExpansionLevel( byval first as integer, byval last as integer ) as integer
-declare function tkGetMaxExpansionLevel( byval first as integer, byval last as integer ) as integer
 declare sub tkSetFlags( byval x as integer, byval flags as integer )
 declare sub tkAddFlags( byval first as integer, byval last as integer, byval flags as integer )
 declare sub tkSetRemove overload( byval x as integer )

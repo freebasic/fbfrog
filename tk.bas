@@ -210,7 +210,6 @@ type ONETOKEN
 	text		as zstring ptr
 
 	location	as TKLOCATION   '' where this token was found
-	expansionlevel	as integer      '' toplevel = 0, nested tokens from macro expansion >= 1
 end type
 
 type TKBUFFER
@@ -287,12 +286,9 @@ function tkDumpOne( byval x as integer ) as string
 	checkFlag( ROOTFILE )
 	checkFlag( PREINCLUDE )
 	checkFlag( DEFINE )
+	checkFlag( EXPANSION )
 
 	's += " " + hDumpLocation( @p->location )
-
-	if( p->expansionlevel <> 0 ) then
-		s += " expansionlevel=" & p->expansionlevel
-	end if
 
 	function = s
 end function
@@ -430,7 +426,6 @@ sub tkCopy _
 		var dst = tkAccess( x )
 		dst->flags          = src->flags and flagmask
 		dst->location       = src->location
-		dst->expansionlevel = src->expansionlevel
 
 		x += 1
 		first += 1
@@ -464,47 +459,6 @@ end sub
 
 function tkGetLocation( byval x as integer ) as TKLOCATION ptr
 	function = @(tkAccess( x )->location)
-end function
-
-sub tkSetExpansionLevel( byval first as integer, byval last as integer, byval expansionlevel as integer )
-	for i as integer = first to last
-		var p = tkAccess( i )
-		if( p->id <> TK_EOF ) then
-			p->expansionlevel = expansionlevel
-		end if
-	next
-end sub
-
-function tkGetExpansionLevel( byval x as integer ) as integer
-	function = tkAccess( x )->expansionlevel
-end function
-
-function tkFindTokenWithMinExpansionLevel( byval first as integer, byval last as integer ) as integer
-	var minlevel = &h7FFFFFFF
-	var x = first
-
-	for i as integer = first to last
-		var level = tkGetExpansionLevel( i )
-		if( minlevel > level ) then
-			minlevel = level
-			x = i
-		end if
-	next
-
-	function = x
-end function
-
-function tkGetMaxExpansionLevel( byval first as integer, byval last as integer ) as integer
-	var maxlevel = 0
-
-	for i as integer = first to last
-		var level = tkGetExpansionLevel( i )
-		if( maxlevel < level ) then
-			maxlevel = level
-		end if
-	next
-
-	function = maxlevel
 end function
 
 sub tkSetFlags( byval x as integer, byval flags as integer )
@@ -707,7 +661,7 @@ function hFindClosingParen _
 
 		'' Stop at # (CPP directives)?
 		case TK_HASH
-			if( (tkGetExpansionLevel( x ) = 0) and (not inside_directive) ) then
+			if( tkIsOriginal( x ) and (not inside_directive) ) then
 				if( ignore_directive = FALSE ) then
 					x -= 1
 					exit do
@@ -750,7 +704,7 @@ function hSkipConstruct( byval x as integer, byval ignore_directives as integer 
 		return x + 1
 
 	case TK_HASH
-		if( tkGetExpansionLevel( x ) = 0 ) then
+		if( tkIsOriginal( x ) ) then
 			if( ignore_directives = FALSE ) then
 				return hSkipToEol( x ) + 1
 			end if
@@ -774,7 +728,7 @@ function hSkipConstruct( byval x as integer, byval ignore_directives as integer 
 			exit do
 
 		case TK_HASH
-			if( tkGetExpansionLevel( x ) = 0 ) then
+			if( tkIsOriginal( x ) ) then
 				if( ignore_directives = FALSE ) then
 					exit do
 				end if
@@ -871,32 +825,8 @@ function tkReport( byval x as integer, byval message as zstring ptr ) as string
 	if( tkGet( x ) = TK_END   ) then x -= 1
 	if( tkGet( x ) = TK_BEGIN ) then x -= 1
 
-	dim s as string
-
-	'' Any macro expansion in this construct?
-	var maxexpansion = tkGetMaxExpansionLevel( first, last )
-	if( maxexpansion > 0 ) then
-		s = *message
-	else
-		s = hReportLocationAndMessage( tkGetLocation( x ), message )
-	end if
-
-	s += hReportConstructTokens( x, first, last )
-
-	if( maxexpansion > 0 ) then
-		var toplevelx = tkFindTokenWithMinExpansionLevel( first, last )
-		if( tkGetLocation( toplevelx )->source ) then
-			s += !"\n" + hReport( tkGetLocation( toplevelx ), "construct found here" )
-		end if
-
-		if( tkGetExpansionLevel( toplevelx ) <> tkGetExpansionLevel( x ) ) then
-			if( tkGetLocation( x )->source ) then
-				s += !"\n" + hReport( tkGetLocation( x ), "token found here" )
-			end if
-		end if
-	end if
-
-	function = s
+	function = hReportLocationAndMessage( tkGetLocation( x ), message ) + _
+	           hReportConstructTokens( x, first, last )
 end function
 
 sub tkOops( byval x as integer, byval message as zstring ptr )
