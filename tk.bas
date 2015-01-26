@@ -825,7 +825,7 @@ function tkReport( byval x as integer, byval message as zstring ptr ) as string
 	if( tkGet( x ) = TK_END   ) then x -= 1
 	if( tkGet( x ) = TK_BEGIN ) then x -= 1
 
-	function = hReportLocationAndMessage( tkGetLocation( x ), message ) + _
+	function = hReport( tkGetLocation( x ), message ) + _
 	           hReportConstructTokens( x, first, last )
 end function
 

@@ -211,7 +211,9 @@ function hErrorMarker( byval indent as integer, byval length as integer ) as str
 	function = space( indent ) + "^" + string( length - 1, "~" )
 end function
 
-function hReportLocationAndMessage( byval location as TKLOCATION ptr, byval message as zstring ptr ) as string
+'' Builds an error message string like this:
+''    filename.bas(10): duplicate definition of 'foo'
+function hReport( byval location as TKLOCATION ptr, byval message as zstring ptr ) as string
 	if( location->source = NULL ) then
 		return *message
 	end if
@@ -222,17 +224,6 @@ function hReportLocationAndMessage( byval location as TKLOCATION ptr, byval mess
 	'' Location info:
 	''    filename(123): message
 	function = filename + "(" & (location->linenum + 1) & "): " + *message
-end function
-
-'' Builds an error message string like this:
-''    filename.bas(10): duplicate definition of 'foo'
-function hReport( byval location as TKLOCATION ptr, byval message as zstring ptr ) as string
-	var s = hReportLocationAndMessage( location, message )
-	if( location->source = NULL ) then
-		return s
-	end if
-
-	function = s
 end function
 
 sub oopsLocation( byval location as TKLOCATION ptr, byval message as zstring ptr )
