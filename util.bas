@@ -232,10 +232,6 @@ function hReport( byval location as TKLOCATION ptr, byval message as zstring ptr
 		return s
 	end if
 
-	if( (not location->source->is_file) and (location->source->location.source <> NULL) ) then
-		s += !"\n" + hReport( @location->source->location, "from here" )
-	end if
-
 	function = s
 end function
 
