@@ -324,8 +324,7 @@ private sub hAddMergedDecl _
 		byval aarray as DECLNODE ptr, _
 		byval ai as integer, _
 		byval barray as DECLNODE ptr, _
-		byval bi as integer, _
-		byval btablecount as integer _
+		byval bi as integer _
 	)
 
 	var adecl  = aarray[ai].n
@@ -536,8 +535,7 @@ private sub hAstMerge _
 		byval alast as integer, _
 		byval barray as DECLNODE ptr, _
 		byval bfirst as integer, _
-		byval blast as integer, _
-		byval btablecount as integer _
+		byval blast as integer _
 	)
 
 
@@ -578,7 +576,7 @@ private sub hAstMerge _
 	if( (alcsfirst > afirst) and (blcsfirst > bfirst) ) then
 		'' Do LCS on that recursively
 		hAstMerge( c, aarray, afirst, alcsfirst - 1, _
-		              barray, bfirst, blcsfirst - 1, btablecount )
+		              barray, bfirst, blcsfirst - 1 )
 	elseif( alcsfirst > afirst ) then
 		'' Only a has decls before the LCS; copy them into result first
 		for i as integer = afirst to alcsfirst - 1
@@ -594,13 +592,13 @@ private sub hAstMerge _
 	'' Add LCS
 	assert( (alcslast - alcsfirst + 1) = (blcslast - blcsfirst + 1) )
 	for i as integer = 0 to (alcslast - alcsfirst + 1)-1
-		hAddMergedDecl( c, aarray, alcsfirst + i, barray, blcsfirst + i, btablecount )
+		hAddMergedDecl( c, aarray, alcsfirst + i, barray, blcsfirst + i )
 	next
 
 	'' Do both sides have decls behind the LCS?
 	if( (alcslast < alast) and (blcslast < blast) ) then
 		'' Do LCS on that recursively
-		hAstMerge( c, aarray, alcslast + 1, alast, barray, blcslast + 1, blast, btablecount )
+		hAstMerge( c, aarray, alcslast + 1, alast, barray, blcslast + 1, blast )
 	elseif( alcslast < alast ) then
 		'' Only a has decls behind the LCS
 		for i as integer = alcslast + 1 to alast
@@ -664,7 +662,7 @@ function astMergeVerblocks _
 	''
 
 	hAstMerge( c, atable.array, 0, atable.count - 1, _
-	              btable.array, 0, btable.count - 1, btable.count )
+	              btable.array, 0, btable.count - 1 )
 
 	decltableEnd( @btable )
 	decltableEnd( @atable )
