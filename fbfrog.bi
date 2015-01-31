@@ -745,18 +745,6 @@ declare function astIsEqual _
 		byval b as ASTNODE ptr, _
 		byval mode as integer = ASTISEQUAL_NORMAL _
 	) as integer
-declare sub astReport _
-	( _
-		byval n as ASTNODE ptr, _
-		byval message as zstring ptr, _
-		byval more_context as integer = TRUE _
-	)
-declare sub astOops _
-	( _
-		byval n as ASTNODE ptr, _
-		byval message as zstring ptr, _
-		byval more_context as integer = TRUE _
-	)
 declare function hGetFbNumberLiteralPrefix( byval attrib as integer ) as string
 declare function astEvalConstiAsInt64( byval n as ASTNODE ptr ) as longint
 declare function astIsConst0( byval n as ASTNODE ptr ) as integer

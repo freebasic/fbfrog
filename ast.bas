@@ -532,28 +532,6 @@ function astIsEqual _
 	function = ((a = NULL) and (b = NULL))
 end function
 
-sub astReport _
-	( _
-		byval n as ASTNODE ptr, _
-		byval message as zstring ptr, _
-		byval more_context as integer _
-	)
-
-	print *message
-	print astDumpPrettyDecl( n )
-
-end sub
-
-sub astOops _
-	( _
-		byval n as ASTNODE ptr, _
-		byval message as zstring ptr, _
-		byval more_context as integer _
-	)
-	astReport( n, message, more_context )
-	end 1
-end sub
-
 function hGetFbNumberLiteralPrefix( byval attrib as integer ) as string
 	if( attrib and ASTATTRIB_BIN ) then
 		function = "&b"
