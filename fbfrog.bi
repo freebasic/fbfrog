@@ -737,7 +737,6 @@ declare function astIsMergableBlock( byval n as ASTNODE ptr ) as integer
 enum
 	ASTISEQUAL_NORMAL
 	ASTISEQUAL_MERGE
-	ASTISEQUAL_SIGNATURE
 end enum
 declare function astIsEqual _
 	( _

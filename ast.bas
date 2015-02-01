@@ -472,16 +472,11 @@ function astIsEqual _
 
 	if( aattrib <> battrib ) then exit function
 
-	'' When comparing procedure signatures, parameter names don't matter
-	if( (mode <> ASTISEQUAL_SIGNATURE) or (a->class <> ASTCLASS_PARAM) ) then
-		if( (a->text <> NULL) <> (b->text <> NULL) ) then exit function
-		if( a->text ) then
-			if( *a->text <> *b->text ) then exit function
-		end if
+	if( (a->text <> NULL) <> (b->text <> NULL) ) then exit function
+	if( a->text ) then if( *a->text <> *b->text ) then exit function
 
-		if( (a->alias <> NULL) <> (b->alias <> NULL) ) then exit function
-		if( a->alias ) then if( *a->alias <> *b->alias ) then exit function
-	end if
+	if( (a->alias <> NULL) <> (b->alias <> NULL) ) then exit function
+	if( a->alias ) then if( *a->alias <> *b->alias ) then exit function
 
 	if( a->dtype <> b->dtype ) then exit function
 	if( (mode = ASTISEQUAL_MERGE) and (typeGetDt( a->dtype ) = TYPE_UDT) ) then
