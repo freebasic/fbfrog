@@ -435,7 +435,7 @@ function astIsEqual _
 	( _
 		byval a as ASTNODE ptr, _
 		byval b as ASTNODE ptr, _
-		byval mode as integer _
+		byval is_merge as integer _
 	) as integer
 
 	if( a = b ) then return TRUE
@@ -446,7 +446,7 @@ function astIsEqual _
 	var aattrib = a->attrib
 	var battrib = b->attrib
 
-	if( mode = ASTISEQUAL_MERGE ) then
+	if( is_merge ) then
 		'' If callconv is hidden on both sides, then ignore it
 		if( (aattrib and ASTATTRIB_HIDECALLCONV) and (battrib and ASTATTRIB_HIDECALLCONV) ) then
 			aattrib and= not (ASTATTRIB_CDECL or ASTATTRIB_STDCALL)
@@ -479,20 +479,20 @@ function astIsEqual _
 	if( a->alias ) then if( *a->alias <> *b->alias ) then exit function
 
 	if( a->dtype <> b->dtype ) then exit function
-	if( (mode = ASTISEQUAL_MERGE) and (typeGetDt( a->dtype ) = TYPE_UDT) ) then
+	if( is_merge and (typeGetDt( a->dtype ) = TYPE_UDT) ) then
 		assert( a->subtype->text )
 		assert( b->subtype->text )
 		if( *a->subtype->text <> *b->subtype->text ) then exit function
 	else
-		if( astIsEqual( a->subtype, b->subtype, mode ) = FALSE ) then exit function
+		if( astIsEqual( a->subtype, b->subtype, is_merge ) = FALSE ) then exit function
 	end if
-	if( astIsEqual( a->array, b->array, mode ) = FALSE ) then exit function
-	if( astIsEqual( a->bits, b->bits, mode ) = FALSE ) then exit function
+	if( astIsEqual( a->array, b->array, is_merge ) = FALSE ) then exit function
+	if( astIsEqual( a->bits, b->bits, is_merge ) = FALSE ) then exit function
 
 	if( a->class = ASTCLASS_SYM ) then
 		if( *a->expr->text <> *b->expr->text ) then exit function
 	else
-		if( astIsEqual( a->expr, b->expr, mode ) = FALSE ) then exit function
+		if( astIsEqual( a->expr, b->expr, is_merge ) = FALSE ) then exit function
 	end if
 
 	select case( a->class )
@@ -506,7 +506,7 @@ function astIsEqual _
 		return astGroupsContainEqualChildren( a, b )
 	end select
 
-	if( mode = ASTISEQUAL_MERGE ) then
+	if( is_merge ) then
 		if( astIsMergableBlock( a ) ) then
 			return TRUE
 		end if
@@ -516,7 +516,7 @@ function astIsEqual _
 	a = a->head
 	b = b->head
 	while( (a <> NULL) and (b <> NULL) )
-		if( astIsEqual( a, b, mode ) = FALSE ) then
+		if( astIsEqual( a, b, is_merge ) = FALSE ) then
 			exit function
 		end if
 		a = a->next

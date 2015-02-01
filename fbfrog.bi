@@ -734,15 +734,11 @@ declare sub astCopy( byval d as ASTNODE ptr, byval s as ASTNODE ptr )
 declare function astCloneNode( byval n as ASTNODE ptr ) as ASTNODE ptr
 declare function astClone( byval n as ASTNODE ptr ) as ASTNODE ptr
 declare function astIsMergableBlock( byval n as ASTNODE ptr ) as integer
-enum
-	ASTISEQUAL_NORMAL
-	ASTISEQUAL_MERGE
-end enum
 declare function astIsEqual _
 	( _
 		byval a as ASTNODE ptr, _
 		byval b as ASTNODE ptr, _
-		byval mode as integer = ASTISEQUAL_NORMAL _
+		byval is_merge as integer = FALSE _
 	) as integer
 declare function hGetFbNumberLiteralPrefix( byval attrib as integer ) as string
 declare function astEvalConstiAsInt64( byval n as ASTNODE ptr ) as longint
