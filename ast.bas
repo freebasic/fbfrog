@@ -66,6 +66,7 @@ dim shared as zstring ptr astnodename(0 to ...) => _
 	@"field"      , _
 	@"proc"       , _
 	@"param"      , _
+	@"macroparam" , _
 	@"array"      , _
 	@"externbegin", _
 	@"externend"  , _
@@ -73,7 +74,6 @@ dim shared as zstring ptr astnodename(0 to ...) => _
 	_
 	_ '' Expression atoms etc.
 	@"sym"       , _
-	@"macroparam", _
 	@"consti"    , _
 	@"constf"    , _
 	@"text"      , _
