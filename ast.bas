@@ -640,7 +640,6 @@ function astDumpOne( byval n as ASTNODE ptr ) as string
 	checkAttrib( GENERATEDID )
 	checkAttrib( DLLIMPORT )
 	checkAttrib( BODYDEFINED )
-	checkAttrib( USEBEFOREDEF )
 	checkAttrib( DONTADDFWDREF )
 
 	if( n->text ) then

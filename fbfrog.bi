@@ -651,7 +651,7 @@ const ASTATTRIB_DLLIMPORT     = 1 shl 16
                             ''= 1 shl 17
 const ASTATTRIB_SOLVEOUT      = 1 shl 18  '' typedefs: Solve this typedef out whereever it's used
 const ASTATTRIB_BODYDEFINED   = 1 shl 19  '' tags: a body for this tag was found
-const ASTATTRIB_USEBEFOREDEF  = 1 shl 20  '' tags: used before definition (forward-referenced)
+                            ''= 1 shl 20
 const ASTATTRIB_DONTADDFWDREF = 1 shl 21
 
 const ASTATTRIB__CALLCONV = ASTATTRIB_CDECL or ASTATTRIB_STDCALL

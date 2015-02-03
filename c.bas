@@ -419,8 +419,7 @@ sub cEnd( )
 	'' way they'll end up in the proper order)
 	for i as integer = c.tagcount - 1 to 0 step -1
 		var tag = c.tags[i]
-		if( ((tag->attrib and ASTATTRIB_USEBEFOREDEF) <> 0) and _
-		    ((tag->attrib and ASTATTRIB_DONTADDFWDREF) = 0) ) then
+		if( (tag->attrib and ASTATTRIB_DONTADDFWDREF) = 0 ) then
 			hAddFwdDecl( api->ast, tag )
 		end if
 	next
@@ -1187,7 +1186,6 @@ private function cTag( ) as ASTNODE ptr
 			'' Add new non-body tags to toplevel scope
 			assert( tag->text )
 			cAddToplevelSymbol( tag )
-			cAddTag( tag )
 		end if
 	end if
 
@@ -2028,7 +2026,7 @@ private sub hPostprocessDeclarator( byval n as ASTNODE ptr )
 			''
 			'' Undefined?
 			if( ((tag->attrib and ASTATTRIB_BODYDEFINED) = 0) and (n->class <> ASTCLASS_TYPEDEF) ) then
-				tag->attrib or= ASTATTRIB_USEBEFOREDEF
+				cAddTag( tag )
 			end if
 		end select
 	end if
