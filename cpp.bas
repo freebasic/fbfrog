@@ -2138,30 +2138,25 @@ private sub cppInclude( byval begin as integer )
 
 	'' "filename"
 	tkExpect( cpp.x, TK_STRING, "containing the #include file name" )
-
-	'' Save the location for later, across the insertions/deletions below
 	var location = *tkGetLocation( cpp.x )
-
-	'' Internal #include for a root file? Don't apply -filterin/-filterout,
-	'' don't do #include file search...
 	var includetkflags = tkGetFlags( cpp.x )
 	var is_rootfile = ((includetkflags and TKFLAG_ROOTFILE) <> 0)
 	var is_preinclude = ((includetkflags and TKFLAG_PREINCLUDE) <> 0)
-
-	dim as string contextfile
-	if( location.source ) then
-		contextfile = *location.source->name
-	end if
 	var inctext = *tkGetText( cpp.x )
-
 	cpp.x += 1
 
 	cppEol( )
 
 	dim incfile as string
 	if( is_rootfile ) then
+		'' No #include file search for internal #includes
 		incfile = inctext
 	else
+		dim contextfile as string
+		if( location.source ) then
+			contextfile = *location.source->name
+		end if
+
 		incfile = hSearchHeaderFile( contextfile, inctext )
 		if( len( incfile ) = 0 ) then
 			frogPrint( inctext + " (not found)" )
