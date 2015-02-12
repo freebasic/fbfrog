@@ -63,8 +63,6 @@ namespace frog
 	dim shared as FROGAPI ptr apis
 	dim shared as integer apicount
 
-	dim shared as THASH renametypedefs, renametags, removeprocs, typedefhints
-
 	dim shared renameopt(OPT_RENAMETYPEDEF to OPT_RENAMETAG) as THASH
 	dim shared idopt(OPT_REMOVEDEFINE to OPT_NOEXPAND) as THASH
 
