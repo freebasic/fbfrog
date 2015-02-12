@@ -488,24 +488,6 @@ sub tkUnsetFilterOut( byval first as integer, byval last as integer )
 	next
 end sub
 
-function tkCount _
-	( _
-		byval tk as integer, _
-		byval first as integer, _
-		byval last as integer _
-	) as integer
-
-	var count = 0
-
-	for i as integer = first to last
-		if( tkGet( i ) = tk ) then
-			count += 1
-		end if
-	next
-
-	function = count
-end function
-
 sub tkApplyRemoves( )
 	var x = 0
 	while( tkGet( x ) <> TK_EOF )

@@ -433,12 +433,6 @@ declare sub tkSetRemove overload( byval x as integer )
 declare sub tkSetRemove overload( byval first as integer, byval last as integer )
 declare function tkGetFlags( byval x as integer ) as integer
 declare sub tkUnsetFilterOut( byval first as integer, byval last as integer )
-declare function tkCount _
-	( _
-		byval tk as integer, _
-		byval first as integer, _
-		byval last as integer _
-	) as integer
 declare sub tkApplyRemoves( )
 declare sub tkTurnCPPTokensIntoCIds( )
 declare function tkSpell overload( byval x as integer ) as string
