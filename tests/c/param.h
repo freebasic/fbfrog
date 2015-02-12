@@ -1,5 +1,3 @@
-// @fbfrog -syntaxonly
-
 static int __simple;
 void f(int a);
 void f(int a, int b);

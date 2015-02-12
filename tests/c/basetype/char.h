@@ -1,5 +1,3 @@
-// @fbfrog -syntaxonly
-
 extern char i;
 extern char *p;
 extern char *p;

@@ -13,4 +13,4 @@
 [5/5] __FB_DOS__
       tests/c/macro-body/main-1.h
       tests/c/macro-body/b.h
-emitting: tests/c/macro-body/main-1.bi (4 declarations, 0 TODOs)
+emitting: tests/c/macro-body/main-1.bi (6 declarations, 0 TODOs)

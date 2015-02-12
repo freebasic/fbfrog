@@ -1,5 +1,3 @@
-// @fbfrog -syntaxonly
-
 struct UDT {
 	signed int i;
 	unsigned long long int j;

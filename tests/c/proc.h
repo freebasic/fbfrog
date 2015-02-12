@@ -1,5 +1,3 @@
-// @fbfrog -syntaxonly
-
 static int __storage_spec_on_procs;
 static void f(void);
 extern void f(void);

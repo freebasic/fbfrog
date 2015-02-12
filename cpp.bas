@@ -79,8 +79,7 @@ function hNumberLiteral _
 	( _
 		byval x as integer, _
 		byval is_cpp as integer, _
-		byref errmsg as string, _
-		byval filterout as integer _
+		byref errmsg as string _
 	) as ASTNODE ptr
 
 	assert( tkGet( x ) = TK_NUMBER )
@@ -245,9 +244,6 @@ function hNumberLiteral _
 			n->dtype = iif( have_u, TYPE_ULONGINT, TYPE_LONGINT )
 		elseif( have_l ) then
 			n->dtype = iif( have_u, TYPE_CULONG, TYPE_CLONG )
-			if( filterout = FALSE ) then
-				api->uses_clong = TRUE
-			end if
 		else
 			n->dtype = iif( have_u, TYPE_ULONG, TYPE_LONG )
 		end if
@@ -262,6 +258,7 @@ function hNumberLiteral _
 	'' Show error if we didn't reach the end of the number literal
 	if( p[0] <> 0 ) then
 		errmsg = "invalid suffix on number literal: '" + *cptr( zstring ptr, p ) + "'"
+		astDelete( n )
 		exit function
 	end if
 
@@ -371,7 +368,12 @@ private function definfoNew( ) as DEFINEINFO ptr
 	function = callocate( sizeof( DEFINEINFO ) )
 end function
 
-#define definfoDelete( definfo ) deallocate( definfo )
+private sub definfoDelete( byval definfo as DEFINEINFO ptr )
+	if( definfo ) then
+		astDelete( definfo->macro )
+		deallocate( definfo )
+	end if
+end sub
 
 private function definfoClone( byval a as DEFINEINFO ptr ) as DEFINEINFO ptr
 	var b = definfoNew( )
@@ -558,6 +560,8 @@ sub cppEnd( )
 		next
 		deallocate( cpp.savedmacros )
 	end scope
+	astDelete( cpp.incdirs )
+	astDelete( cpp.filters )
 
 	hashEnd( @cpp.filetb )
 	scope
@@ -570,6 +574,7 @@ sub cppEnd( )
 		deallocate( cpp.files )
 	end scope
 
+	''astDelete( cpp.directincludes )  '' currently unnecessary, due to cppTakeDirectIncludes()
 	hashEnd( @cpp.directincludetb )
 end sub
 
@@ -958,7 +963,7 @@ private sub cppExpression _
 
 	case TK_NUMBER  '' Number literal
 		dim errmsg as string
-		var n = hNumberLiteral( cpp.x, TRUE, errmsg, TRUE )
+		var n = hNumberLiteral( cpp.x, TRUE, errmsg )
 		if( n = NULL ) then
 			tkOops( cpp.x, errmsg )
 		end if
@@ -969,6 +974,8 @@ private sub cppExpression _
 		assert( (n->dtype = TYPE_LONGINT) or (n->dtype = TYPE_ULONGINT) )
 		a.vali = astEvalConstiAsInt64( n )
 		a.dtype = n->dtype
+
+		astDelete( n )
 
 		cpp.x += 1
 

@@ -363,7 +363,6 @@ enum
 	OPT_NODEFAULTSCRIPT
 	OPT_WINDOWSMS
 	OPT_CLONG32
-	OPT_SYNTAXONLY
 	OPT_FIXUNSIZEDARRAYS
 	OPT_FIXMINGWAW
 	OPT_NOFUNCTIONBODIES
@@ -559,6 +558,7 @@ enum
 	ASTCLASS_UNION
 	ASTCLASS_ENUM
 	ASTCLASS_TYPEDEF
+	ASTCLASS_FORWARDDECL
 	ASTCLASS_ENUMCONST
 	ASTCLASS_VAR
 	ASTCLASS_FIELD
@@ -571,7 +571,6 @@ enum
 	ASTCLASS_RETURN
 
 	'' Expression atoms etc.
-	ASTCLASS_SYM
 	ASTCLASS_CONSTI
 	ASTCLASS_CONSTF
 	ASTCLASS_TEXT
@@ -640,22 +639,20 @@ const ASTATTRIB_HEX           = 1 shl 5  '' CONSTI
 const ASTATTRIB_CDECL         = 1 shl 6  '' PROC
 const ASTATTRIB_STDCALL       = 1 shl 7  '' PROC
 const ASTATTRIB_HIDECALLCONV  = 1 shl 8  '' Whether the calling convention is covered by an Extern block, in which case it doesn't need to be emitted.
-                            ''= 1 shl 9
-                            ''= 1 shl 10
-const ASTATTRIB_POISONED      = 1 shl 11
-const ASTATTRIB_PACKED        = 1 shl 12  '' __attribute__((packed))
-const ASTATTRIB_VARIADIC      = 1 shl 13  '' PPDEFINE/MACROPARAM: variadic macros
-const ASTATTRIB_PARENTHESIZEDMACROPARAM = 1 shl 14
-const ASTATTRIB_GENERATEDID   = 1 shl 15
-const ASTATTRIB_DLLIMPORT     = 1 shl 16
-                            ''= 1 shl 17
-const ASTATTRIB_SOLVEOUT      = 1 shl 18  '' typedefs: Solve this typedef out whereever it's used
-const ASTATTRIB_BODYDEFINED   = 1 shl 19  '' tags: a body for this tag was found
-                            ''= 1 shl 20
-const ASTATTRIB_DONTADDFWDREF = 1 shl 21
+const ASTATTRIB_POISONED      = 1 shl 9
+const ASTATTRIB_PACKED        = 1 shl 10  '' __attribute__((packed))
+const ASTATTRIB_VARIADIC      = 1 shl 11  '' PPDEFINE/MACROPARAM: variadic macros
+const ASTATTRIB_PARENTHESIZEDMACROPARAM = 1 shl 12
+const ASTATTRIB_TAGID         = 1 shl 13
+const ASTATTRIB_GENERATEDID   = 1 shl 14
+const ASTATTRIB_DLLIMPORT     = 1 shl 15
+const ASTATTRIB_FILTEROUT     = 1 shl 16
+const ASTATTRIB_FORWARDDECLARED = 1 shl 17
 
 const ASTATTRIB__CALLCONV = ASTATTRIB_CDECL or ASTATTRIB_STDCALL
 
+'' When changing, adjust astClone(), astIsEqual(), astDump*()
+'' TODO: pack
 type ASTNODE
 	class		as integer  '' ASTCLASS_*
 	attrib		as integer  '' ASTATTRIB_*
@@ -668,7 +665,7 @@ type ASTNODE
 	dtype		as integer
 	subtype		as ASTNODE ptr
 	array		as ASTNODE ptr '' ARRAY holding DIMENSIONs, or NULL
-	bits		as ASTNODE ptr '' bitfields only
+	bits		as ASTNODE ptr '' bitfields only. TODO: change to simple number, FB doesn't support expressions as bitfield size anyways
 
 	'' Initializers, condition expressions, macro/procedure bodies, ...
 	expr		as ASTNODE ptr
@@ -685,12 +682,18 @@ type ASTNODE
 	prev		as ASTNODE ptr
 end type
 
+'' result = boolean = whether to visit this node's children
+'' (can be used to skip #define bodies, etc.)
+type ASTVISITCALLBACK as function( byval as ASTNODE ptr ) as integer
+
 #define astNewTEXT( text ) astNew( ASTCLASS_TEXT, text )
 #define astNewUNKNOWN( first, last ) astNew( ASTCLASS_UNKNOWN, tkSpell( first, last ) )
+#define astNewDEFINED( id ) astNew( ASTCLASS_DEFINED, id )
 #define astIsCONSTI( n ) ((n)->class = ASTCLASS_CONSTI)
 #define astIsVERBLOCK( n ) ((n)->class = ASTCLASS_VERBLOCK)
 #define astIsVERAND( n ) ((n)->class = ASTCLASS_VERAND)
 #define astIsVEROR( n )  ((n)->class = ASTCLASS_VEROR)
+#define astIsTEXT( n ) ((n)->class = ASTCLASS_TEXT)
 
 declare function astNew overload( byval class_ as integer ) as ASTNODE ptr
 declare function astNew overload( byval class_ as integer, byval text as zstring ptr ) as ASTNODE ptr
@@ -704,15 +707,15 @@ declare function astNewIIF _
 	) as ASTNODE ptr
 declare function astNewGROUP overload( ) as ASTNODE ptr
 declare function astNewGROUP overload( byval c1 as ASTNODE ptr, byval c2 as ASTNODE ptr = NULL ) as ASTNODE ptr
-declare function astNewSYM( byval sym as ASTNODE ptr ) as ASTNODE ptr
-declare sub astMoveChildren( byval d as ASTNODE ptr, byval s as ASTNODE ptr )
 declare function astCloneChildren( byval src as ASTNODE ptr ) as ASTNODE ptr
 declare function astGroupContains( byval group as ASTNODE ptr, byval lookfor as ASTNODE ptr ) as integer
 declare function astGroupContainsAnyChildrenOf( byval l as ASTNODE ptr, byval r as ASTNODE ptr ) as integer
 declare function astGroupContainsAllChildrenOf( byval l as ASTNODE ptr, byval r as ASTNODE ptr ) as integer
+declare sub astDelete( byval n as ASTNODE ptr )
 declare sub astInsert( byval parent as ASTNODE ptr, byval n as ASTNODE ptr, byval ref as ASTNODE ptr )
 declare sub astPrepend( byval parent as ASTNODE ptr, byval n as ASTNODE ptr )
 declare sub astAppend( byval parent as ASTNODE ptr, byval n as ASTNODE ptr )
+declare sub astUnlink( byval parent as ASTNODE ptr, byval n as ASTNODE ptr )
 declare function astRemove( byval parent as ASTNODE ptr, byval a as ASTNODE ptr ) as ASTNODE ptr
 declare sub astRemoveChildren( byval parent as ASTNODE ptr )
 declare function astReplace _
@@ -724,7 +727,12 @@ declare function astReplace _
 declare sub astSetText( byval n as ASTNODE ptr, byval text as zstring ptr )
 declare sub astRenameSymbol( byval n as ASTNODE ptr, byval newid as zstring ptr )
 declare function astGetOrigId( byval n as ASTNODE ptr ) as zstring ptr
-declare sub astCopy( byval d as ASTNODE ptr, byval s as ASTNODE ptr )
+declare sub astSetType _
+	( _
+		byval n as ASTNODE ptr, _
+		byval dtype as integer, _
+		byval subtype as ASTNODE ptr _
+	)
 declare function astCloneNode( byval n as ASTNODE ptr ) as ASTNODE ptr
 declare function astClone( byval n as ASTNODE ptr ) as ASTNODE ptr
 declare function astIsMergableBlock( byval n as ASTNODE ptr ) as integer
@@ -737,12 +745,8 @@ declare function astIsEqual _
 declare function hGetFbNumberLiteralPrefix( byval attrib as integer ) as string
 declare function astEvalConstiAsInt64( byval n as ASTNODE ptr ) as longint
 declare function astIsConst0( byval n as ASTNODE ptr ) as integer
-declare function astLookupMacroParam _
-	( _
-		byval macro as ASTNODE ptr, _
-		byval id as zstring ptr, _
-		byref macroparam as ASTNODE ptr = NULL _
-	) as integer
+declare function astLookupMacroParam( byval macro as ASTNODE ptr, byval id as zstring ptr ) as integer
+declare sub astVisit( byval n as ASTNODE ptr, byval callback as ASTVISITCALLBACK )
 declare function astDumpPrettyClass( byval astclass as integer ) as string
 declare function astDumpPrettyDecl( byval n as ASTNODE ptr ) as string
 declare function astDumpOne( byval n as ASTNODE ptr ) as string
@@ -752,6 +756,11 @@ declare sub astDump _
 		byval nestlevel as integer = 0, _
 		byref prefix as string = "" _
 	)
+
+declare sub astWrapInExternBlock( byval ast as ASTNODE ptr, byval callconv as integer )
+declare function astUsesDtype( byval n as ASTNODE ptr, byval dtype as integer ) as integer
+declare sub astAutoAddDividers( byval code as ASTNODE ptr )
+declare sub astPrependMaybeWithDivider( byval group as ASTNODE ptr, byval n as ASTNODE ptr )
 
 declare function astDumpPrettyVersion( byval n as ASTNODE ptr ) as string
 declare function astNewVERAND( byval a as ASTNODE ptr = NULL, byval b as ASTNODE ptr = NULL ) as ASTNODE ptr
@@ -786,8 +795,7 @@ declare function hNumberLiteral _
 	( _
 		byval x as integer, _
 		byval is_cpp as integer, _
-		byref errmsg as string, _
-		byval filterout as integer _
+		byref errmsg as string _
 	) as ASTNODE ptr
 extern as integer cprecedence(ASTCLASS_CLOGOR to ASTCLASS_IIF)
 declare function hDefineHead( byref x as integer ) as ASTNODE ptr
@@ -804,34 +812,29 @@ declare sub hOnlyFilterOutWholeConstructs( )
 
 declare sub cInit( )
 declare sub cEnd( )
-declare sub cMain( )
+declare function cMain( ) as ASTNODE ptr
+
+declare sub highlevelWork( byval ast as ASTNODE ptr, byval directincludes as ASTNODE ptr )
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 type FROGAPI
 	verand		as ASTNODE ptr
 	options		as ASTNODE ptr
-
-	as integer cdecls, stdcalls, need_externblock
-	as integer uses_clong, uses_clongdouble, uses_wchar_t
-
 	ast		as ASTNODE ptr
 end type
 
 namespace frog
-	extern as integer verbose, windowsms, clong32, syntaxonly, fixunsizedarrays, fixmingwaw, nofunctionbodies
+	extern as integer verbose, windowsms, clong32, fixunsizedarrays, fixmingwaw, nofunctionbodies
 
 	extern as ASTNODE ptr script
 	extern as ASTNODE ptr completeverors, fullveror
-
 	extern as FROGAPI ptr apis
 	extern as integer apicount
 
 	extern renameopt(OPT_RENAMETYPEDEF to OPT_RENAMETAG) as THASH
 	extern idopt(OPT_REMOVEDEFINE to OPT_NOEXPAND) as THASH
 end namespace
-
-extern api as FROGAPI ptr
 
 declare function hFindResource( byref filename as string ) as string
 declare sub frogPrint( byref s as string )

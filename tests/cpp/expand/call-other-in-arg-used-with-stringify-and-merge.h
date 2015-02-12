@@ -1,4 +1,4 @@
-// @fbfrog -syntaxonly -removedefine m1 -removedefine m2
+// @fbfrog -removedefine m1 -removedefine m2
 
 // Other macro called in arg, arg sometimes used with # and ##
 #define m1(a) \

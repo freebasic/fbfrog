@@ -1,5 +1,3 @@
-// @fbfrog -syntaxonly
-
 static   signed a;
 static unsigned a;
 

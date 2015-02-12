@@ -14,10 +14,12 @@ declare sub outside_c()
 #define HAD_C
 
 declare sub inside_c()
+declare sub outside_c()
 
 #define HAD_D
 
 declare sub inside_d()
+declare sub outside_d()
 declare sub outside_d()
 
 #define HAD_E

@@ -1,5 +1,3 @@
-// @fbfrog -syntaxonly
-
 #if 0
 	#if 0
 		extern short no;

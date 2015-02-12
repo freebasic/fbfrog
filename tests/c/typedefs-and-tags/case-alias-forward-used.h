@@ -4,8 +4,8 @@ void f(a *);
 
 /*
 
-type A as A_
+type a as a_
 
-declare sub f(byval as A ptr)
+declare sub f(byval as a ptr)
 
 */

@@ -1,4 +1,4 @@
-// @fbfrog -syntaxonly -removedefine B_is_defined
+// @fbfrog -removedefine B_is_defined
 
 // "defined m1" shouldn't be expanded to "defined 123", because no
 // expansion should be done for "defined id" expressions. "defined <number>" is

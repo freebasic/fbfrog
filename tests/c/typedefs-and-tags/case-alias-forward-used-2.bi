@@ -2,9 +2,7 @@
 
 extern "C"
 
-type A as A_
-
-declare sub f1(byval as A ptr)
-declare sub f2(byval as A ptr)
+declare sub f1(byval as a ptr)
+declare sub f2(byval as a ptr)
 
 end extern

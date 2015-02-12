@@ -1,4 +1,4 @@
-// @fbfrog -syntaxonly -removedefine m
+// @fbfrog -removedefine m
 
 #define m(a) a
 m(void f(void));

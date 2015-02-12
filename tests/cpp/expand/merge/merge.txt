@@ -8,4 +8,4 @@
       tests/cpp/expand/merge/merge.h
 [5/5] __FB_DOS__
       tests/cpp/expand/merge/merge.h
-emitting: tests/cpp/expand/merge/merge.bi (101 declarations, 0 TODOs)
+emitting: tests/cpp/expand/merge/merge.bi (99 declarations, 0 TODOs)

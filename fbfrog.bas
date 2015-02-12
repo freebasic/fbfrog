@@ -55,7 +55,7 @@
 #include once "file.bi"
 
 namespace frog
-	dim shared as integer verbose, windowsms, clong32, syntaxonly, fixunsizedarrays, fixmingwaw, nodefaultscript, nofunctionbodies
+	dim shared as integer verbose, windowsms, clong32, fixunsizedarrays, fixmingwaw, nodefaultscript, nofunctionbodies
 	dim shared as string outname, defaultoutname
 
 	dim shared as ASTNODE ptr script
@@ -68,8 +68,6 @@ namespace frog
 
 	dim shared as string prefix
 end namespace
-
-dim shared api as FROGAPI ptr
 
 '' Find a *.fbfrog or *.h file in fbfrog's include/ dir, its "library" of
 '' premade collections of pre-#defines etc. useful when creating bindings.
@@ -109,7 +107,6 @@ private sub hPrintHelpAndExit( )
 	print "  -nodefaultscript Don't use default.fbfrog implicitly"
 	print "  -windowsms       Use Extern ""Windows-MS"" instead of Extern ""Windows"""
 	print "  -clong32         Translate C long as 32bit LONG, instead of CLONG"
-	print "  -syntaxonly      Disable semantic checks, translate based on syntax only"
 	print "  -fixunsizedarrays  Wrap [] arrays with a #define"
 	print "  -fixmingwaw      Expand __MINGW_NAME_AW() inside macros"
 	print "  -nofunctionbodies  Don't preserve function bodies"
@@ -313,7 +310,7 @@ private sub hParseSelectCompound( byref x as integer )
 				hExpectId( x )
 
 				'' defined(<symbol>)
-				condition = astNew( ASTCLASS_DEFINED, astNewTEXT( tkGetText( x ) ) )
+				condition = astNewDEFINED( tkGetText( x ) )
 			end if
 			var n = astNew( ASTCLASS_CASE )
 			n->expr = condition
@@ -350,7 +347,7 @@ private sub hParseIfDefCompound( byref x as integer )
 	astAppend( frog.script, astNew( ASTCLASS_SELECT ) )
 	scope
 		var n = astNew( ASTCLASS_CASE )
-		n->expr = astNew( ASTCLASS_DEFINED, astNewTEXT( tkGetText( x ) ) )
+		n->expr = astNewDEFINED( tkGetText( x ) )
 		astAppend( frog.script, n )
 	end scope
 	x += 1
@@ -410,7 +407,6 @@ private sub hParseArgs( byref x as integer )
 		case OPT_NODEFAULTSCRIPT  : frog.nodefaultscript  = TRUE : x += 1
 		case OPT_WINDOWSMS        : frog.windowsms        = TRUE : x += 1
 		case OPT_CLONG32          : frog.clong32          = TRUE : x += 1
-		case OPT_SYNTAXONLY       : frog.syntaxonly       = TRUE : x += 1
 		case OPT_FIXUNSIZEDARRAYS : frog.fixunsizedarrays = TRUE : x += 1
 		case OPT_FIXMINGWAW       : frog.fixmingwaw       = TRUE : x += 1
 		case OPT_NOFUNCTIONBODIES : frog.nofunctionbodies = TRUE : x += 1
@@ -429,7 +425,7 @@ private sub hParseArgs( byref x as integer )
 
 			'' <oldid>
 			hExpectId( x )
-			var n = astNew( ASTCLASS_TEXT, tkSpellId( x ) )
+			var n = astNewTEXT( tkSpellId( x ) )
 			x += 1
 
 			'' <newid>
@@ -680,7 +676,7 @@ private sub frogEvaluateScript _
 				dim as ASTNODE ptr condition
 				if( decl->class = ASTCLASS_DECLAREDEFINES ) then
 					'' defined(<symbol>)
-					condition = astNew( ASTCLASS_DEFINED, astNewTEXT( k->text ) )
+					condition = astNewDEFINED( k->text )
 				else
 					'' <symbol> = <versionnumber>
 					condition = astNew( ASTCLASS_EQ, astNewTEXT( decl->text ), astClone( k ) )
@@ -710,7 +706,7 @@ private sub frogEvaluateScript _
 
 			'' Branch for the true code path
 			'' defined(<symbol>)
-			var condition = astNew( ASTCLASS_DEFINED, astNewTEXT( symbol ) )
+			var condition = astNewDEFINED( symbol )
 			astAppend( completeveror, astClone( condition ) )
 			frogEvaluateScript( i, _
 				astNewGROUP( astClone( conditions ), astClone( condition ) ), _
@@ -777,143 +773,17 @@ private sub frogEvaluateScript _
 	frogAddApi( conditions, options )
 end sub
 
-private sub astHideCallConv( byval n as ASTNODE ptr, byval callconv as integer )
-	if( n->class = ASTCLASS_PROC ) then
-		if( n->attrib and callconv ) then
-			n->attrib or= ASTATTRIB_HIDECALLCONV
-		end if
-	end if
-
-	if( typeGetDt( n->dtype ) = TYPE_PROC ) then
-		astHideCallConv( n->subtype, callconv )
-	end if
-	if( n->array ) then astHideCallConv( n->array, callconv )
-
-	select case( n->class )
-	case ASTCLASS_PPDEFINE
-		'' Don't hide callconvs in macro bodies, otherwise they could
-		'' end up using the wrong callconv if expanded outside the
-		'' header's Extern block.
-	case ASTCLASS_SYM
-		'' Don't visit the nodes behind symbol references,
-		'' that could cause infinite recursion
-	case else
-		if( n->expr ) then astHideCallConv( n->expr, callconv )
-	end select
-
-	var i = n->head
-	while( i )
-		astHideCallConv( i, callconv )
-		i = i->next
-	wend
-end sub
-
-private sub hWrapInExternBlock( byval ast as ASTNODE ptr, byval callconv as integer )
-	var externblock = @"C"
-	if( callconv = ASTATTRIB_STDCALL ) then
-		if( frog.windowsms ) then
-			externblock = @"Windows-MS"
-		else
-			externblock = @"Windows"
-		end if
-	end if
-
-	'' Remove the calling convention from all procdecls, the Extern block
-	'' will take over
-	astHideCallConv( ast, callconv )
-
-	assert( ast->class = ASTCLASS_GROUP )
-	astPrepend( ast, astNew( ASTCLASS_EXTERNBLOCKBEGIN, externblock ) )
-	astAppend( ast, astNew( ASTCLASS_EXTERNBLOCKEND ) )
-end sub
-
-private function hIsPpIfBegin( byval n as ASTNODE ptr ) as integer
-	select case( n->class )
-	case ASTCLASS_PPIF, ASTCLASS_PPELSEIF, ASTCLASS_PPELSE
-		function = TRUE
-	end select
-end function
-
-private function hIsPpIfEnd( byval n as ASTNODE ptr ) as integer
-	select case( n->class )
-	case ASTCLASS_PPELSEIF, ASTCLASS_PPELSE, ASTCLASS_PPENDIF
-		function = TRUE
-	end select
-end function
-
-private function hIsCompound( byval n as ASTNODE ptr ) as integer
-	select case( n->class )
-	case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
-		function = TRUE
-	case ASTCLASS_PROC
-		'' Procedure with body?
-		function = (n->expr <> NULL)
-	end select
-end function
-
-private function hShouldSeparate _
-	( _
-		byval a as ASTNODE ptr, _
-		byval b as ASTNODE ptr _
-	) as integer
-
-	if( (a->class = ASTCLASS_DIVIDER) or _
-	    (b->class = ASTCLASS_DIVIDER) ) then
-		exit function
-	end if
-
-	if( hIsPpIfBegin( a ) and hIsPpIfEnd( b ) ) then
-		exit function
-	end if
-
-	function = (a->class <> b->class) or _
-	           hIsCompound( a ) or hIsCompound( b )
-end function
-
-''
-'' Insert DIVIDERs between statements of different kind, e.g. all #defines in
-'' a row shouldn't be divided, but a #define should be divided from a typedef.
-'' Structs/unions/enums should always be separated by a divider because they're
-'' compounds and normally span multiple lines themselves.
-''
-private sub hAutoAddDividers( byval code as ASTNODE ptr )
-	var i = code->head
-	while( i )
-		var nxt = i->next
-
-		hAutoAddDividers( i )
-
-		if( nxt ) then
-			if( hShouldSeparate( i, nxt ) ) then
-				astInsert( code, astNew( ASTCLASS_DIVIDER ), nxt )
-			end if
-		end if
-
-		i = nxt
-	wend
-end sub
-
-private sub astPrependMaybeWithDivider( byval group as ASTNODE ptr, byval n as ASTNODE ptr )
-	if( group->head andalso hShouldSeparate( n, group->head ) ) then
-		astPrepend( group, astNew( ASTCLASS_DIVIDER ) )
-	end if
-	astPrepend( group, n )
-end sub
-
-private sub frogReadApi( )
-	''
-	'' 1. Preprocessing
-	''
-
+private function frogReadApi( byval options as ASTNODE ptr ) as ASTNODE ptr
 	tkInit( )
 
+	'' C preprocessing
 	cppInit( )
 
 	scope
 		'' Pre-#defines are simply inserted at the top of the token
 		'' buffer, so that cppMain() parses them like any other #define.
 
-		var i = api->options->head
+		var i = options->head
 		while( i )
 
 			select case( i->class )
@@ -923,7 +793,7 @@ private sub frogReadApi( )
 				prettyname = "pre-#define"
 				s = "#define " + *i->text
 				if( i->expr ) then
-					assert( i->expr->class = ASTCLASS_TEXT )
+					assert( astIsTEXT( i->expr ) )
 					s += " " + *i->expr->text
 				end if
 				s += !"\n"
@@ -948,7 +818,7 @@ private sub frogReadApi( )
 	'' * behind command line pre-#defines so that default.h can use them
 	'' * marked for removal so the code won't be preserved
 	scope
-		var i = api->options->head
+		var i = options->head
 		while( i )
 			if( i->class = ASTCLASS_FBFROGPREINCLUDE ) then
 				var filename = hFindResource( *i->text )
@@ -962,7 +832,7 @@ private sub frogReadApi( )
 
 	'' Add #includes for pre-#includes
 	scope
-		var i = api->options->head
+		var i = options->head
 		while( i )
 			if( i->class = ASTCLASS_PREINCLUDE ) then
 				var filename = *i->text
@@ -987,9 +857,9 @@ private sub frogReadApi( )
 	''
 	scope
 		var count = 0
-		var i = api->options->head
+		var i = options->head
 		while( i )
-			if( i->class = ASTCLASS_TEXT ) then
+			if( astIsTEXT( i ) ) then
 				cppAppendIncludeDirective( *i->text, TKFLAG_ROOTFILE )
 				count += 1
 			end if
@@ -1020,46 +890,18 @@ private sub frogReadApi( )
 
 	tkTurnCPPTokensIntoCIds( )
 
-	''
 	'' C parsing
-	''
 	cInit( )
-	cMain( )
+	var ast = cMain( )
 	cEnd( )
 
 	tkEnd( )
 
-	''
-	'' Finalize the AST for this API
-	''
+	'' Adjust AST for FB
+	highlevelWork( ast, directincludes )
 
-	if( api->need_externblock ) then
-		'' Add an Extern block, ensuring to preserve the case of global
-		'' vars and procedures, and covering the most-used calling convention.
-		hWrapInExternBlock( api->ast, _
-			iif( api->stdcalls > api->cdecls, _
-				ASTATTRIB_STDCALL, ASTATTRIB_CDECL ) )
-	end if
-
-	'' Add "crt/long[double].bi" as direct #includes if the binding uses CLONG[DOUBLE]
-	if( api->uses_clongdouble ) then
-		astPrepend( directincludes, astNew( ASTCLASS_PPINCLUDE, "crt/longdouble.bi" ) )
-	end if
-	if( api->uses_clong ) then
-		astPrepend( directincludes, astNew( ASTCLASS_PPINCLUDE, "crt/long.bi" ) )
-	end if
-	if( api->uses_wchar_t ) then
-		var wcharbi = astNew( ASTCLASS_PPINCLUDE, "crt/wchar.bi" )
-		if( astGroupContains( directincludes, wcharbi ) = FALSE ) then
-			astPrepend( directincludes, wcharbi )
-		end if
-	end if
-
-	'' Prepend the direct #includes (if any), outside the EXTERN block
-	astPrependMaybeWithDivider( api->ast, directincludes )
-
-	api->options = NULL
-end sub
+	function = ast
+end function
 
 private function hMakeProgressString( byval position as integer, byval total as integer ) as string
 	var sposition = str( position ), stotal = str( total )
@@ -1149,21 +991,20 @@ end sub
 	'' there is a small delay at each version.
 	dim as ASTNODE ptr final
 	for i as integer = 0 to frog.apicount - 1
-		api = frog.apis + i
+		var api = frog.apis + i
 
 		print hMakeProgressString( i + 1, frog.apicount ) + " " + astDumpPrettyVersion( api->verand )
-		frogReadApi( )
+		var ast = frogReadApi( api->options )
 
-		api->ast = astWrapFileInVerblock( astNewVEROR( astClone( api->verand ) ), api->ast )
+		ast = astWrapFileInVerblock( astNewVEROR( astClone( api->verand ) ), ast )
 		if( final = NULL ) then
-			final = astNewGROUP( api->ast )
+			final = astNewGROUP( ast )
 		else
-			final = astMergeVerblocks( final, api->ast )
+			final = astMergeVerblocks( final, ast )
 		end if
 		frog.fullveror = astNewVEROR( frog.fullveror, api->verand )
 		api->verand = NULL
 	next
-	api = NULL
 
 	'' Turn VERBLOCKs into #ifs etc.
 	astProcessVerblocks( final )
@@ -1176,7 +1017,7 @@ end sub
 		astPrependMaybeWithDivider( final, astNew( ASTCLASS_PRAGMAONCE ) )
 	end if
 
-	hAutoAddDividers( final )
+	astAutoAddDividers( final )
 
 	'' Write out the .bi file
 	if( len( (frog.defaultoutname) ) = 0 ) then

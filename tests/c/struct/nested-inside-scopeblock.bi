@@ -3,21 +3,21 @@
 extern "C"
 
 private sub scopeblock1()
-	type __UDT_inner
+	type UDT_inner
 		i as long
 	end type
 	type UDT
-		inner as __UDT_inner
+		inner as UDT_inner
 	end type
 end sub
 
 #macro scopeblock2
 	scope
-		type __scopeblock2_UDT_inner
+		type UDT_inner
 			i as long
 		end type
 		type UDT
-			inner as __scopeblock2_UDT_inner
+			inner as UDT_inner
 		end type
 	end scope
 #endmacro

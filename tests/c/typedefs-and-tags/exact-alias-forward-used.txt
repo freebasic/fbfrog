@@ -8,4 +8,4 @@
       tests/c/typedefs-and-tags/exact-alias-forward-used.h
 [5/5] __FB_DOS__
       tests/c/typedefs-and-tags/exact-alias-forward-used.h
-emitting: tests/c/typedefs-and-tags/exact-alias-forward-used.bi (2 declarations, 0 TODOs)
+emitting: tests/c/typedefs-and-tags/exact-alias-forward-used.bi (1 declaration, 0 TODOs)

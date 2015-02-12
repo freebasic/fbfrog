@@ -1,5 +1,3 @@
-// @fbfrog -syntaxonly
-
 typedef int MYINT;
 
 enum E {

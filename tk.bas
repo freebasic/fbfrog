@@ -142,7 +142,6 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	(@"-nodefaultscript"), _
 	(@"-windowsms"    ), _
 	(@"-clong32"      ), _
-	(@"-syntaxonly"   ), _
 	(@"-fixunsizedarrays"), _
 	(@"-fixmingwaw"   ), _
 	(@"-nofunctionbodies"), _
@@ -189,6 +188,7 @@ end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
+'' TODO: pack
 type ONETOKEN
 	id		as integer  '' TK_*
 	flags		as integer  '' TKFLAG_*

@@ -1,5 +1,3 @@
-// @fbfrog -syntaxonly
-
 static int define;
 static int defined;
 static int include;

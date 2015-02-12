@@ -1,5 +1,3 @@
-// @fbfrog -syntaxonly
-
 extern wchar_t i;
 extern wchar_t *p;
 extern wchar_t *p;

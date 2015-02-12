@@ -1,5 +1,5 @@
 #pragma once
 
-type UDT
+type udt
 	a as long
 end type

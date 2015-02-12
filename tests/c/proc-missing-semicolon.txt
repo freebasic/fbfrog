@@ -23,4 +23,4 @@ tests/c/proc-missing-semicolon.h(2): missing ';' to finish this declaration
 tests/c/proc-missing-semicolon.h(2): missing ';' to finish this declaration
     void f ( void )
                   ^
-emitting: tests/c/proc-missing-semicolon.bi (1 declaration, 1 TODO)
+emitting: tests/c/proc-missing-semicolon.bi (0 declarations, 1 TODO)

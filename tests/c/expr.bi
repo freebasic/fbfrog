@@ -5,7 +5,6 @@
 
 extern "C"
 
-type UDT as UDT_
 type MYINT as long
 
 type E as long

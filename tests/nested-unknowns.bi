@@ -16,7 +16,6 @@ enum
 end enum
 
 private sub f()
-	x
 	'' TODO: x=;
 end sub
 

@@ -16,13 +16,4 @@ extern a6 as long ptr ptr ptr ptr ptr ptr ptr ptr
 '' TODO: extern int ****(*****a7);
 '' TODO: extern int *****(****a8);
 
-extern a9(0 to 9) as long ptr ptr ptr ptr ptr ptr ptr ptr
-
-'' TODO: extern T1 *a10;
-'' TODO: void a11(T1);
-
-declare sub a12(byval as long ptr ptr ptr ptr ptr ptr ptr ptr)
-
-'' TODO: void a13(int ********[10]);
-
 end extern

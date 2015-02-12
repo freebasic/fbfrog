@@ -23,4 +23,4 @@ tests/c/basetype/signed-struct.h(2): SIGNED|UNSIGNED|SHORT|LONG modifiers used w
 tests/c/basetype/signed-struct.h(2): SIGNED|UNSIGNED|SHORT|LONG modifiers used with void/float/double/typedef/UDT
     static signed struct UDT i ;
                              ^
-emitting: tests/c/basetype/signed-struct.bi (1 declaration, 1 TODO)
+emitting: tests/c/basetype/signed-struct.bi (0 declarations, 1 TODO)

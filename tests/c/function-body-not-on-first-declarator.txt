@@ -23,4 +23,4 @@ tests/c/function-body-not-on-first-declarator.h(2): expected ';' to finish this 
 tests/c/function-body-not-on-first-declarator.h(2): expected ';' to finish this declaration but found '{'
     void * a , b ( void ) { ; }
                           ^
-emitting: tests/c/function-body-not-on-first-declarator.bi (2 declarations, 1 TODO)
+emitting: tests/c/function-body-not-on-first-declarator.bi (0 declarations, 1 TODO)

@@ -1,5 +1,3 @@
-// @fbfrog -syntaxonly
-
 enum E {
 #if 1
 	A

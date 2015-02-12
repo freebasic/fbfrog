@@ -1,16 +1,16 @@
 #pragma once
 
-type __UDT_a
+type UDT_b_a
 end type
 
-type __UDT_b
+type UDT_b
 	union
-		a as __UDT_a
+		a as UDT_b_a
 	end union
 end type
 
 type UDT
 	union
-		b as __UDT_b
+		b as UDT_b
 	end union
 end type

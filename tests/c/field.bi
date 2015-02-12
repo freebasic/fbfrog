@@ -2,8 +2,6 @@
 
 extern "C"
 
-type T as T_
-
 type UDT
 	i as long
 	j as ulongint

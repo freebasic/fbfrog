@@ -1,5 +1,3 @@
-// @fbfrog -syntaxonly
-
 __attribute__((warn_unused_result))     void f(void);
 __attribute__((__warn_unused_result__)) void f(void);
 

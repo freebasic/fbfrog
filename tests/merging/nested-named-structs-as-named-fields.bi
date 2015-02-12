@@ -1,6 +1,6 @@
 #pragma once
 
-type __UDT_a
+type UDT_a
 	#if VER = 1
 		v1_a as long
 	#else
@@ -9,15 +9,15 @@ type __UDT_a
 end type
 
 #if VER = 1
-	type __UDT_b
+	type UDT_b
 		v1_b as long
 	end type
 #endif
 
 type UDT
-	a as __UDT_a
+	a as UDT_a
 
 	#if VER = 1
-		b as __UDT_b
+		b as UDT_b
 	#endif
 end type

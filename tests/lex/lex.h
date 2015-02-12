@@ -1,5 +1,3 @@
-// @fbfrog -syntaxonly
-
 #define A01 0
 #define A02 1
 #define A03 11

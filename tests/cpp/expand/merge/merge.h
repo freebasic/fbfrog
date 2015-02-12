@@ -1,4 +1,4 @@
-// @fbfrog -syntaxonly -removedefine m1
+// @fbfrog -removedefine m1
 
 static int id_id;
 #define m1 void id##id(void);

@@ -119,7 +119,7 @@ function astDumpPrettyVersion( byval n as ASTNODE ptr ) as string
 		s = *n->head->text + "=" + *n->tail->text
 
 	case ASTCLASS_DEFINED
-		s = *n->head->text
+		s = *n->text
 
 	case ASTCLASS_NOT
 		s = "(not " + astDumpPrettyVersion( n->head ) + ")"
@@ -198,6 +198,7 @@ private sub hVerblockAppend _
 	if( verblock andalso astIsVERBLOCK( verblock ) ) then
 		if( astIsEqual( n->tail->expr, veror ) ) then
 			astAppend( n->tail, child )
+			astDelete( veror )
 			exit sub
 		end if
 	end if
@@ -667,6 +668,9 @@ function astMergeVerblocks _
 	decltableEnd( @btable )
 	decltableEnd( @atable )
 
+	astDelete( a )
+	astDelete( b )
+
 	function = c
 end function
 
@@ -786,12 +790,15 @@ private sub hTurnVerblocksIntoPpIfs( byval code as ASTNODE ptr )
 				if( i <> last ) then
 					assert( last->class = ASTCLASS_PPELSEIF )
 					last->class = ASTCLASS_PPELSE
+					astDelete( last->expr )
 					last->expr = NULL
 				end if
 			end if
 
 			'' Insert #endif
 			astInsert( code, astNew( ASTCLASS_PPENDIF ), j )
+
+			astDelete( collected )
 		end if
 
 		i = i->next
@@ -896,7 +903,9 @@ private function hSimplify( byval n as ASTNODE ptr, byref changed as integer ) a
 	'' Single child, or none at all? Solve out the VEROR/VERAND.
 	if( n->head = n->tail ) then
 		changed = TRUE
-		return astClone( n->head )
+		function = astClone( n->head )
+		astDelete( n )
+		exit function
 	end if
 
 	if( astIsVEROR( n ) = FALSE ) then
@@ -906,6 +915,7 @@ private function hSimplify( byval n as ASTNODE ptr, byref changed as integer ) a
 	'' Solve out "complete" VERORs - VERORs that cover all possible choices
 	if( astGroupContains( frog.completeverors, n ) ) then
 		changed = TRUE
+		astDelete( n )
 		return NULL
 	end if
 

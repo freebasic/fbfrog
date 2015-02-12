@@ -8,4 +8,4 @@
       tests/c/dupdef.h
 [5/5] __FB_DOS__
       tests/c/dupdef.h
-emitting: tests/c/dupdef.bi (3 declarations, 0 TODOs)
+emitting: tests/c/dupdef.bi (6 declarations, 0 TODOs)

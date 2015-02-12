@@ -8,7 +8,7 @@
       tests/cpp/directives-1.h
       tests/cpp/directives-1.h
       tests/cpp/directives-1.h
-tests/cpp/directives.h(100): #warning
+tests/cpp/directives.h(98): #warning
     # warning "Example warning" 
               ^~~~~~~~~~~~~~~~~
 [2/5] __FB_WIN32__.(not __FB_64BIT__)
@@ -21,7 +21,7 @@ tests/cpp/directives.h(100): #warning
       tests/cpp/directives-1.h
       tests/cpp/directives-1.h
       tests/cpp/directives-1.h
-tests/cpp/directives.h(100): #warning
+tests/cpp/directives.h(98): #warning
     # warning "Example warning" 
               ^~~~~~~~~~~~~~~~~
 [3/5] __FB_LINUX__.__FB_64BIT__
@@ -34,7 +34,7 @@ tests/cpp/directives.h(100): #warning
       tests/cpp/directives-1.h
       tests/cpp/directives-1.h
       tests/cpp/directives-1.h
-tests/cpp/directives.h(100): #warning
+tests/cpp/directives.h(98): #warning
     # warning "Example warning" 
               ^~~~~~~~~~~~~~~~~
 [4/5] __FB_LINUX__.(not __FB_64BIT__)
@@ -47,7 +47,7 @@ tests/cpp/directives.h(100): #warning
       tests/cpp/directives-1.h
       tests/cpp/directives-1.h
       tests/cpp/directives-1.h
-tests/cpp/directives.h(100): #warning
+tests/cpp/directives.h(98): #warning
     # warning "Example warning" 
               ^~~~~~~~~~~~~~~~~
 [5/5] __FB_DOS__
@@ -60,7 +60,7 @@ tests/cpp/directives.h(100): #warning
       tests/cpp/directives-1.h
       tests/cpp/directives-1.h
       tests/cpp/directives-1.h
-tests/cpp/directives.h(100): #warning
+tests/cpp/directives.h(98): #warning
     # warning "Example warning" 
               ^~~~~~~~~~~~~~~~~
 emitting: tests/cpp/directives.bi (66 declarations, 0 TODOs)

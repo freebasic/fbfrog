@@ -1,5 +1,3 @@
-// @fbfrog -syntaxonly
-
 #include "directives-1.h"
 #include <directives-1.h>
 	#include "directives-1.h"

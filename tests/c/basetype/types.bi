@@ -6,8 +6,6 @@
 
 extern "C"
 
-type A as A_
-
 dim shared a as long
 dim shared a as ulong
 dim shared a as byte

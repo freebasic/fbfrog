@@ -1,5 +1,3 @@
-// @fbfrog -syntaxonly
-
 void f(int i[]);
 extern void (*p)(int i[]);
 void f(void (*p)(int i[]));

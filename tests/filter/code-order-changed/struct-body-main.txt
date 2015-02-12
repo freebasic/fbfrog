@@ -13,4 +13,4 @@
 [5/5] __FB_DOS__
       tests/filter/code-order-changed/struct-body-main.h
       tests/filter/code-order-changed/struct-body.h (filtered out)
-emitting: tests/filter/code-order-changed/struct-body-main.bi (1 declaration, 0 TODOs)
+emitting: tests/filter/code-order-changed/struct-body-main.bi (2 declarations, 0 TODOs)

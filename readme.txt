@@ -1,6 +1,6 @@
 
   fbfrog -- FreeBASIC binding generator
-  Copyright (C) 2011 - 2014  Daniel C. Klauer <daniel.c.klauer[at]web.de>
+  Copyright (C) 2011 - 2015  Daniel C. Klauer <daniel.c.klauer[at]web.de>
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -51,7 +51,6 @@ What's this?
      (C enums/ints stay 32bit on 64bit, so in FB we have to use the always-32bit
      LONG type instead of the default ENUM/INTEGER type)
    * #pragma comment(lib, "foo.lib"|"libfoo.a") => #inclib "foo"
-   * Redeclarations of functions, typedefs, etc. are eliminated
 
   Declarations which cannot be processed automatically (yet) will be embedded
   into the *.bi file in form of a "TODO" comment, for example:
@@ -212,15 +211,6 @@ unnecessary?
 
 
 To do:
-
-* Separate FB keyword tables for types/#defines/functions/keywords
-  e.g.: we can have an imageinfo type, because FB's imageinfo is only a function.
-  we can't have a field called rgb, because that's a #define (fields normally can be
-  named after most keywords).
-    * this is also a good chance to speed up the keyword check in ASTCLASS_FIELD emitting
-
-* In FB, fields can't be named after operators (and/or/shl/shr... new/delete ...),
-  not even with multdecl syntax
 
 * Add -split <pattern> option to emit multiple files
     - need multiple extern blocks

@@ -1,4 +1,4 @@
-// @fbfrog -syntaxonly -removedefine m
+// @fbfrog -removedefine m
 
 #define m void\
 f\
