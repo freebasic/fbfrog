@@ -710,13 +710,7 @@ declare function astCloneChildren( byval src as ASTNODE ptr ) as ASTNODE ptr
 declare function astGroupContains( byval group as ASTNODE ptr, byval lookfor as ASTNODE ptr ) as integer
 declare function astGroupContainsAnyChildrenOf( byval l as ASTNODE ptr, byval r as ASTNODE ptr ) as integer
 declare function astGroupContainsAllChildrenOf( byval l as ASTNODE ptr, byval r as ASTNODE ptr ) as integer
-declare sub astInsert _
-	( _
-		byval parent as ASTNODE ptr, _
-		byval n as ASTNODE ptr, _
-		byval ref as ASTNODE ptr, _
-		byval unique as integer = FALSE _
-	)
+declare sub astInsert( byval parent as ASTNODE ptr, byval n as ASTNODE ptr, byval ref as ASTNODE ptr )
 declare sub astPrepend( byval parent as ASTNODE ptr, byval n as ASTNODE ptr )
 declare sub astAppend( byval parent as ASTNODE ptr, byval n as ASTNODE ptr )
 declare function astRemove( byval parent as ASTNODE ptr, byval a as ASTNODE ptr ) as ASTNODE ptr

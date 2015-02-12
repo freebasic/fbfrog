@@ -251,14 +251,7 @@ private function astIsChildOf _
 end function
 #endif
 
-sub astInsert _
-	( _
-		byval parent as ASTNODE ptr, _
-		byval n as ASTNODE ptr, _
-		byval ref as ASTNODE ptr, _
-		byval unique as integer = FALSE _
-	)
-
+sub astInsert( byval parent as ASTNODE ptr, byval n as ASTNODE ptr, byval ref as ASTNODE ptr )
 	if( n = NULL ) then exit sub
 
 	assert( astIsChildOf( parent, n ) = FALSE )
@@ -268,22 +261,11 @@ sub astInsert _
 	case ASTCLASS_GROUP
 		var i = n->head
 		while( i )
-			astInsert( parent, astClone( i ), ref, unique )
+			astInsert( parent, astClone( i ), ref )
 			i = i->next
 		wend
 		exit sub
 	end select
-
-	'' If requested, don't insert if it already exists in the list
-	if( unique ) then
-		var i = parent->head
-		while( i )
-			if( astIsEqual( i, n ) ) then
-				exit sub
-			end if
-			i = i->next
-		wend
-	end if
 
 	if( ref ) then
 		assert( astIsChildOf( parent, ref ) )
@@ -305,7 +287,6 @@ sub astInsert _
 		n->next = NULL
 		parent->tail = n
 	end if
-
 end sub
 
 sub astPrepend( byval parent as ASTNODE ptr, byval n as ASTNODE ptr )
