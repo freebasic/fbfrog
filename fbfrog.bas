@@ -518,6 +518,16 @@ private sub hParseArgs( byref x as integer )
 
 			frogAddBi( filename, pattern )
 
+		'' -dontemit <filename-pattern>
+		case OPT_DONTEMIT
+			x += 1
+
+			if( hIsStringOrId( x ) = FALSE ) then
+				tkOopsExpected( x, "<filename-pattern> argument" )
+			end if
+			frogAddPattern( *tkGetText( x ), -1 )
+			x += 1
+
 		'' -declaredefines (<symbol>)+
 		case OPT_DECLAREDEFINES
 			x += 1
