@@ -1,2 +1,0 @@
-// @ignore
-#define Test asd

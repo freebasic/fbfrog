@@ -220,10 +220,10 @@ declare function hReadableDirExists( byref path as string ) as integer
 const TKFLAG_BEHINDSPACE	= 1 shl 0  '' was preceded by spaces?
 const TKFLAG_NOEXPAND		= 1 shl 1  '' may be macro-expanded? (cpp)
 const TKFLAG_REMOVE		= 1 shl 2
-const TKFLAG_FILTEROUT		= 1 shl 3  '' Used to mark tokens from include files which should be filtered out
+				''= 1 shl 3
 const TKFLAG_ROOTFILE		= 1 shl 4  '' Used to mark the internal #include statements which pull in the toplevel files
 const TKFLAG_PREINCLUDE		= 1 shl 5
-const TKFLAG_DEFINE		= 1 shl 6  '' used to mark #defines for hMoveDefinesOutOfConstructs()
+const TKFLAG_DIRECTIVE		= 1 shl 6  '' used to mark #defines/#includes for hMoveDirectivesOutOfConstructs()
 const TKFLAG_EXPANSION		= 1 shl 7  '' comes from macro?
 
 enum
@@ -376,8 +376,7 @@ enum
 	OPT_INCLUDE
 	OPT_FBFROGINCLUDE
 	OPT_INCDIR
-	OPT_FILTEROUT
-	OPT_FILTERIN
+	OPT_EMIT
 	OPT_DECLAREDEFINES
 	OPT_DECLAREVERSIONS
 	OPT_DECLAREBOOL
@@ -432,7 +431,6 @@ declare sub tkAddFlags( byval first as integer, byval last as integer, byval fla
 declare sub tkSetRemove overload( byval x as integer )
 declare sub tkSetRemove overload( byval first as integer, byval last as integer )
 declare function tkGetFlags( byval x as integer ) as integer
-declare sub tkUnsetFilterOut( byval first as integer, byval last as integer )
 declare sub tkApplyRemoves( )
 declare sub tkTurnCPPTokensIntoCIds( )
 declare function tkSpell overload( byval x as integer ) as string
@@ -531,8 +529,6 @@ enum
 	ASTCLASS_ENDSELECT
 	ASTCLASS_FILE
 	ASTCLASS_INCDIR
-	ASTCLASS_FILTEROUT
-	ASTCLASS_FILTERIN
 	ASTCLASS_INCLIB
 	ASTCLASS_PREINCLUDE
 	ASTCLASS_FBFROGPREINCLUDE
@@ -640,7 +636,7 @@ const ASTATTRIB_PARENTHESIZEDMACROPARAM = 1 shl 12
 const ASTATTRIB_TAGID         = 1 shl 13
 const ASTATTRIB_GENERATEDID   = 1 shl 14
 const ASTATTRIB_DLLIMPORT     = 1 shl 15
-const ASTATTRIB_FILTEROUT     = 1 shl 16
+                            ''= 1 shl 16
 const ASTATTRIB_FORWARDDECLARED = 1 shl 17
 
 const ASTATTRIB__CALLCONV = ASTATTRIB_CDECL or ASTATTRIB_STDCALL
@@ -663,6 +659,8 @@ type ASTNODE
 
 	'' Initializers, condition expressions, macro/procedure bodies, ...
 	expr		as ASTNODE ptr
+
+	location	as TKLOCATION
 
 	union
 		paramcount	as integer  '' PPDEFINE: -1 = #define m, 0 = #define m(), 1 = #define m(a), ...
@@ -765,6 +763,7 @@ declare function astMergeVerblocks _
 		byval a as ASTNODE ptr, _
 		byval b as ASTNODE ptr _
 	) as ASTNODE ptr
+declare sub astMergeNext( byval veror as ASTNODE ptr, byref final as ASTNODE ptr, byref incoming as ASTNODE ptr )
 declare sub astProcessVerblocks( byval code as ASTNODE ptr )
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -797,18 +796,16 @@ declare function hDefineHead( byref x as integer ) as ASTNODE ptr
 declare sub cppInit( )
 declare sub cppEnd( )
 declare sub cppAddIncDir( byval incdir as ASTNODE ptr )
-declare sub cppAddFilter( byval filter as ASTNODE ptr )
 declare sub cppAppendIncludeDirective( byref filename as string, byval tkflags as integer )
-declare function cppTakeDirectIncludes( ) as ASTNODE ptr
 declare sub cppMain( )
-declare sub hMoveDefinesOutOfConstructs( )
-declare sub hOnlyFilterOutWholeConstructs( )
+declare sub hMoveDirectivesOutOfConstructs( )
 
 declare sub cInit( )
 declare sub cEnd( )
 declare function cMain( ) as ASTNODE ptr
 
-declare sub highlevelWork( byval ast as ASTNODE ptr, byval directincludes as ASTNODE ptr )
+declare sub hlGlobal( byval ast as ASTNODE ptr )
+declare sub hlFile( byval ast as ASTNODE ptr )
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
@@ -830,5 +827,5 @@ namespace frog
 	extern idopt(OPT_REMOVEDEFINE to OPT_NOEXPAND) as THASH
 end namespace
 
-declare function hFindResource( byref filename as string ) as string
+declare function frogLookupBi( byref hfile as string ) as integer
 declare sub frogPrint( byref s as string )

@@ -1,6 +1,5 @@
 ''
-'' C pre-processor: CPP directive parsing, #if evaluation, macro expansion,
-'' #include handling
+'' C pre-processor
 ''
 '' cppMain() goes through the token buffer much like a C preprocessor would do,
 '' parsing CPP directives keeping track of #defines and #undefs, doing macro
@@ -24,24 +23,15 @@
 '' helper tokens to detect begin/end of the range.
 ''
 '' We insert TK_ENDINCLUDE behind tokens inserted due to #include expansion.
-'' This allows detecting #include EOF for the #if/#include stack. The CPP stack
-'' tracks the filterout status (according to -filterout/-filterin options),
-'' which decides whether tokens at the current level should be marked with
-'' TKFLAG_FILTEROUT or not. This lets the C parser know which constructs should
-'' be filtered out.
+'' This allows detecting #include EOF for the #if/#include stack.
 ''
-'' The included tokens can not be marked this way immediately, because macro
-'' expansion may result in new tokens being inserted which wouldn't
-'' automatically have the TKFLAG_FILTEROUT flag too.
-''
-'' #include statements themselves are not preserved as-is, but the filenames of
-'' unexpanded direct #includes are recorded, so that frogReadAPI() can re-add
-'' them to the top of the binding. "Unexpanded" here means #includes which were
-'' either not found, or found but their content will be filtered out due to
-'' -filterout. #includes which were found and are not going to be filtered out
-'' will just be expanded in place. Generally, the point is that any #include
-'' statements that won't be expanded in the final binding should be preserved
-'' in the final binding, because they'll probably be needed.
+'' #includes statements are preserved as-is and the #included content is
+'' inserted behind them (if the file could be found). The point is to let the
+'' CPP and C parser see as much code as possible, making the translation as
+'' accurate as possible, but also to preserve the #include statements. Later it
+'' will all be taken apart and distributed into .bi files as specified by the
+'' -emit options, and the #include statements will be removed then, if the
+'' #include content will be kept instead.
 ''
 
 #include once "fbfrog.bi"
@@ -388,7 +378,7 @@ private sub definfoSetRemove( byval definfo as DEFINEINFO ptr )
 	tkSetRemove( definfo->xdefine, definfo->xeol )
 end sub
 
-const DEFINEBODY_FLAGMASK = not (TKFLAG_REMOVE or TKFLAG_DEFINE)
+const DEFINEBODY_FLAGMASK = not (TKFLAG_REMOVE or TKFLAG_DIRECTIVE)
 
 '' Copy a #define body into some other place
 private sub definfoCopyBody( byval definfo as DEFINEINFO ptr, byval x as integer )
@@ -446,7 +436,6 @@ namespace cpp
 	type STACKNODE
 		state		as integer  '' STATE_*
 		knownfile	as integer  '' Index into cpp.files array, if it's an #include context, or -1
-		filterout	as integer
 	end type
 
 	'' #if/file context stack
@@ -491,13 +480,8 @@ namespace cpp
 
 	dim shared incdirs		as ASTNODE ptr
 
-	'' #include exclude/include filters: GROUP of FILTEROUT/FILTERIN nodes,
-	'' in the order they should be applied.
-	dim shared filters		as ASTNODE ptr
-
 	type KNOWNFILE
 		incfile as zstring ptr  '' Normalized file name
-		filterout as integer
 		guardstate	as integer
 		guard		as zstring ptr  '' #include guard symbol, if any
 		pragmaonce as integer  '' Whether #pragma once was found in this file
@@ -507,11 +491,6 @@ namespace cpp
 	dim shared files as KNOWNFILE ptr
 	dim shared filecount as integer
 	dim shared filetb as THASH  '' data = index into files array
-
-	'' The unique file names from all toplevel #include statements,
-	'' in the order in which they appeared.
-	dim shared directincludes as ASTNODE ptr
-	dim shared directincludetb as THASH
 end namespace
 
 sub cppInit( )
@@ -521,7 +500,6 @@ sub cppInit( )
 	with( cpp.stack(0) )
 		.state = STATE_FILE
 		.knownfile = -1
-		.filterout = -1
 	end with
 	cpp.level = 0
 	cpp.skiplevel = MAXSTACK  '' No skipping yet
@@ -530,14 +508,10 @@ sub cppInit( )
 	cpp.savedmacros = NULL
 	cpp.savedmacrocount = 0
 	cpp.incdirs = astNewGROUP( )
-	cpp.filters = astNewGROUP( )
 
 	cpp.files = NULL
 	cpp.filecount = 0
 	hashInit( @cpp.filetb, 4, FALSE )
-
-	cpp.directincludes = astNewGROUP( )
-	hashInit( @cpp.directincludetb, 4, FALSE )
 end sub
 
 sub cppEnd( )
@@ -561,7 +535,6 @@ sub cppEnd( )
 		deallocate( cpp.savedmacros )
 	end scope
 	astDelete( cpp.incdirs )
-	astDelete( cpp.filters )
 
 	hashEnd( @cpp.filetb )
 	scope
@@ -573,20 +546,12 @@ sub cppEnd( )
 		next
 		deallocate( cpp.files )
 	end scope
-
-	''astDelete( cpp.directincludes )  '' currently unnecessary, due to cppTakeDirectIncludes()
-	hashEnd( @cpp.directincludetb )
 end sub
 
 #define cppSkipping( ) (cpp.skiplevel <> MAXSTACK)
-#define cppWillBeFilteredOut( ) cpp.stack(cpp.level).filterout
 
 sub cppAddIncDir( byval incdir as ASTNODE ptr )
 	astAppend( cpp.incdirs, incdir )
-end sub
-
-sub cppAddFilter( byval filter as ASTNODE ptr )
-	astAppend( cpp.filters, filter )
 end sub
 
 sub cppAppendIncludeDirective( byref filename as string, byval tkflags as integer )
@@ -595,27 +560,6 @@ sub cppAppendIncludeDirective( byref filename as string, byval tkflags as intege
 	lexLoadC( x, sourcebufferFromZstring( code, code, NULL ) )
 	tkAddFlags( x, tkGetCount( ) - 1, TKFLAG_REMOVE or tkflags )
 end sub
-
-private function cppKeepIncludeContent( byref includefilename as string ) as integer
-	var keep = TRUE
-
-	var i = cpp.filters->head
-	while( i )
-
-		'' Apply filter if it would make a difference. No need to check
-		'' FILTEROUT if already excluding the file; no need to check
-		'' FILTERIN if already including it.
-		if( keep = (i->class = ASTCLASS_FILTEROUT) ) then
-			if( strMatch( includefilename, *i->text ) ) then
-				keep = not keep
-			end if
-		end if
-
-		i = i->next
-	wend
-
-	function = keep
-end function
 
 private function cppLookupMacro( byval id as zstring ptr ) as DEFINEINFO ptr
 	function = hashLookupDataOrNull( @cpp.macros, id )
@@ -740,7 +684,6 @@ end sub
 private function cppLookupOrAppendKnownFile _
 	( _
 		byval incfile as zstring ptr, _
-		byval is_rootfile as integer, _
 		byref prettyfile as string _
 	) as integer
 
@@ -759,49 +702,10 @@ private function cppLookupOrAppendKnownFile _
 	clear( cpp.files[i], 0, sizeof( *cpp.files ) )
 	with( cpp.files[i] )
 		.incfile = incfile
-
-		'' Check -filterout/-filterin
-		.filterout = (not is_rootfile) andalso (not cppKeepIncludeContent( prettyfile ))
 	end with
 
 	hashAdd( @cpp.filetb, item, hash, incfile, cptr( any ptr, i ) )
 	function = i
-end function
-
-'' Remap .h name to a .bi name. If it's a known system header, we can even remap
-'' it to the corresponding FB header (in some cases it's not as simple as
-'' replacing .h by .bi).
-private sub hTranslateHeaderFileName( byref filename as string )
-	filename = pathStripExt( filename )
-
-	'' Is it one of the CRT headers? Remap it to crt/*.bi
-	if( hashContains( @fbcrtheaderhash, filename, hashHash( filename ) ) ) then
-		filename = "crt/" + filename
-	end if
-
-	filename += ".bi"
-end sub
-
-private sub cppAddDirectInclude( byref inctext as string )
-	var filename = inctext
-	hTranslateHeaderFileName( filename )
-
-	var hash = hashHash( filename )
-	var item = hashLookup( @cpp.directincludetb, filename, hash )
-	if( item->s ) then
-		'' Already exists; ignore.
-		'' We don't want duplicate #include statements.
-		exit sub
-	end if
-
-	astAppend( cpp.directincludes, astNew( ASTCLASS_PPINCLUDE, filename ) )
-
-	hashAdd( @cpp.directincludetb, item, hash, cpp.directincludes->tail->text, NULL )
-end sub
-
-function cppTakeDirectIncludes( ) as ASTNODE ptr
-	function = cpp.directincludes
-	cpp.directincludes = NULL
 end function
 
 private sub cppEol( )
@@ -874,7 +778,6 @@ type CPPVALUE
 	vali as longint
 	dtype as integer
 end type
-
 
 ''
 '' CPP expression parser and evaluator
@@ -1835,20 +1738,6 @@ end function
 private sub cppPush( byval state as integer, byval knownfile as integer = -1 )
 	assert( iif( knownfile >= 0, state = STATE_FILE, TRUE ) )
 
-	'' Set filterout=TRUE for the next level, if it's a file that will be
-	'' filtered out, or if we're inside a file that's being filtered out.
-	'' Filtering out a file only means filtering out constructs directly
-	'' from that file. #included content is not filtered out automatically.
-	var filterout = FALSE
-	if( knownfile >= 0 ) then
-		filterout = cpp.files[knownfile].filterout
-	else
-		var file = cppGetFileContext( )
-		if( file->knownfile >= 0 ) then
-			filterout = file->filterout
-		end if
-	end if
-
 	cpp.level += 1
 	if( cpp.level >= MAXSTACK ) then
 		tkOops( cpp.x, "#if/#include stack too small, MAXSTACK=" & MAXSTACK )
@@ -1857,7 +1746,6 @@ private sub cppPush( byval state as integer, byval knownfile as integer = -1 )
 	with( cpp.stack(cpp.level) )
 		.state = state
 		.knownfile = knownfile
-		.filterout = filterout
 	end with
 end sub
 
@@ -2128,7 +2016,7 @@ private function hDetectIncludeGuardBegin( byval first as integer ) as zstring p
 	function = id1
 end function
 
-private sub cppInclude( byval begin as integer )
+private sub cppInclude( byval begin as integer, byref flags as integer )
 	cpp.x += 1
 
 	assert( cppSkipping( ) = FALSE )
@@ -2140,18 +2028,17 @@ private sub cppInclude( byval begin as integer )
 	tkExpect( cpp.x, TK_STRING, "containing the #include file name" )
 	var location = *tkGetLocation( cpp.x )
 	var includetkflags = tkGetFlags( cpp.x )
-	var is_rootfile = ((includetkflags and TKFLAG_ROOTFILE) <> 0)
-	var is_preinclude = ((includetkflags and TKFLAG_PREINCLUDE) <> 0)
 	var inctext = *tkGetText( cpp.x )
 	cpp.x += 1
 
 	cppEol( )
 
 	dim incfile as string
-	if( is_rootfile ) then
+	if( includetkflags and TKFLAG_ROOTFILE ) then
 		'' No #include file search for internal #includes
 		incfile = inctext
 	else
+		'' #include file search
 		dim contextfile as string
 		if( location.source ) then
 			contextfile = *location.source->name
@@ -2159,14 +2046,12 @@ private sub cppInclude( byval begin as integer )
 
 		incfile = hSearchHeaderFile( contextfile, inctext )
 		if( len( incfile ) = 0 ) then
+			'' #include not found
 			frogPrint( inctext + " (not found)" )
 
-			'' This #include statement couldn't be expanded, so we
-			'' have to preserve it into the final binding, if it
-			'' won't be filtered out itself.
-			'' Pre-#includes should never be preserved though.
-			if( (not cppWillBeFilteredOut( )) and (not is_preinclude) ) then
-				cppAddDirectInclude( inctext )
+			'' Preserve non-internal #includes that weren't found
+			if( (includetkflags and (TKFLAG_PREINCLUDE or TKFLAG_ROOTFILE)) = 0 ) then
+				flags and= not TKFLAG_REMOVE
 			end if
 
 			exit sub
@@ -2178,23 +2063,34 @@ private sub cppInclude( byval begin as integer )
 	'' would be seen as different files.
 	incfile = pathNormalize( pathMakeAbsolute( incfile ) )
 
-	'' For display and -filterin/-filterout matching we use the version
-	'' relative to curdir() though.
+	'' * Don't preserve internal #includes,
+	'' * don't preserve #includes if we will emit the #included content
+	''   into the same .bi file as the #include directive itself.
+	''
+	'' We do this check here instead of later when distributing declarations
+	'' into .bi files, because #include tokens/ASTNODEs don't carry enough
+	'' information about the #included file. Knowing the #include "filename"
+	'' isn't enough, because it may be a relative path such as "../foo.h".
+	''
+	'' Not internal?
+	if( (includetkflags and (TKFLAG_PREINCLUDE or TKFLAG_ROOTFILE)) = 0 ) then
+		assert( location.source->is_file )
+		var includedfile = *location.source->name
+		var directivebi = frogLookupBi( includedfile )
+		var contentbi = frogLookupBi( incfile )
+		'' Not emitted into same .bi as #included content?
+		if( directivebi <> contentbi ) then
+			'' Then preserve it
+			flags and= not TKFLAG_REMOVE
+		end if
+	end if
+
+	'' For display we make the filename relative to curdir()
 	var prettyfile = pathStripCurdir( incfile )
 	var message = prettyfile
 
-	var knownfile = cppLookupOrAppendKnownFile( incfile, is_rootfile, prettyfile )
+	var knownfile = cppLookupOrAppendKnownFile( incfile, prettyfile )
 	with( cpp.files[knownfile] )
-		if( .filterout ) then
-			'' We're expanding this #include statement, but the include content
-			'' will be filtered out, so we have to keep the #include statement
-			'' for the final binding, if it itself won't be filtered out.
-			'' Pre-#includes should never be preserved though.
-			if( (not cppWillBeFilteredOut( )) and (not is_preinclude) ) then
-				cppAddDirectInclude( inctext )
-			end if
-		end if
-
 		'' Did we find a #pragma once in this file previously?
 		if( .pragmaonce ) then
 			'' Don't #include it again ever
@@ -2208,10 +2104,6 @@ private sub cppInclude( byval begin as integer )
 				'' Skipping header due to include guard
 				exit sub
 			end if
-		end if
-
-		if( .filterout ) then
-			message += " (filtered out)"
 		end if
 	end with
 
@@ -2356,7 +2248,6 @@ private sub cppDefine( byval begin as integer, byref flags as integer )
 	if( hashContains( @frog.idopt(OPT_REMOVEDEFINE), macro->text, hashHash( macro->text ) ) = FALSE ) then
 		flags and= not TKFLAG_REMOVE
 	end if
-	flags or= TKFLAG_DEFINE
 end sub
 
 private sub cppUndef( )
@@ -2531,10 +2422,12 @@ private sub cppDirective( )
 		cppEndIf( )
 
 	case KW_INCLUDE
-		cppInclude( begin )
+		cppInclude( begin, flags )
+		flags or= TKFLAG_DIRECTIVE
 
 	case KW_DEFINE
 		cppDefine( begin, flags )
+		flags or= TKFLAG_DIRECTIVE
 
 	case KW_UNDEF
 		cppUndef( )
@@ -2563,10 +2456,6 @@ private sub cppDirective( )
 	case else
 		tkOops( cpp.x, "unknown PP directive" )
 	end select
-
-	if( ((flags and TKFLAG_REMOVE) = 0) and cppWillBeFilteredOut( ) ) then
-		flags or= TKFLAG_FILTEROUT
-	end if
 
 	if( flags ) then
 		tkAddFlags( begin, cpp.x - 1, flags )
@@ -2625,9 +2514,6 @@ private sub cppNext( )
 	'' Identifier/keyword? Check whether it needs to be macro-expanded
 	case is >= TK_ID
 		if( cppSkipping( ) = FALSE ) then
-			if( cppWillBeFilteredOut( ) ) then
-				tkAddFlags( cpp.x, cpp.x, TKFLAG_FILTEROUT )
-			end if
 			if( hMaybeExpandMacro( cpp.x, FALSE, TRUE ) = FALSE ) then
 				'' TK_ID not expanded - skip it (otherwise, we have to reparse it)
 				cpp.x += 1
@@ -2645,8 +2531,6 @@ private sub cppNext( )
 	'' Some token that doesn't matter to the CPP
 	if( cppSkipping( ) ) then
 		tkSetRemove( cpp.x )
-	elseif( cppWillBeFilteredOut( ) ) then
-		tkAddFlags( cpp.x, cpp.x, TKFLAG_FILTEROUT )
 	end if
 	cpp.x += 1
 end sub
@@ -2657,11 +2541,14 @@ sub cppMain( )
 	wend
 end sub
 
-sub hMoveDefinesOutOfConstructs( )
+'' Move CPP directives (the ones preserved for C parsing - #defines and
+'' #includes) out of C declarations, so the C parser can treat them as toplevel
+'' declarations/statements too.
+sub hMoveDirectivesOutOfConstructs( )
 	var x = 0
 	do
-		'' Skip #define(s) at begin of construct
-		while( tkGetFlags( x ) and TKFLAG_DEFINE )
+		'' Skip any directives at begin of construct
+		while( tkGetFlags( x ) and TKFLAG_DIRECTIVE )
 			x += 1
 		wend
 
@@ -2671,60 +2558,36 @@ sub hMoveDefinesOutOfConstructs( )
 
 		var nxt = hSkipConstruct( x, TRUE )
 
-		'' Exclude #define(s) at end of construct from the construct
-		while( tkGetFlags( nxt - 1 ) and TKFLAG_DEFINE )
+		'' Exclude directives at end of construct from the construct
+		while( tkGetFlags( nxt - 1 ) and TKFLAG_DIRECTIVE )
 			nxt -= 1
 		wend
 		assert( x < nxt )
 
-		'' Handle #defines inside this construct: Move them to the end
+		'' Handle directives inside this construct: Move them to the end
 		'' and exclude them from the construct.
 		var writepos = nxt
 		while( x < nxt )
-			if( tkGetFlags( x ) and TKFLAG_DEFINE ) then
-				'' Collect all #defines in a row
+			if( tkGetFlags( x ) and TKFLAG_DIRECTIVE ) then
+				'' Collect all directives in a row
 				var y = x
-				while( tkGetFlags( y + 1 ) and TKFLAG_DEFINE )
+				while( tkGetFlags( y + 1 ) and TKFLAG_DIRECTIVE )
 					y += 1
 				wend
 				assert( tkGet( y ) = TK_EOL )
 				assert( y < nxt )
 
 				'' Move from middle to the end (but behind previously moved
-				'' #defines, to preserve their order)
+				'' directives, to preserve their order)
 				tkCopy( writepos, x, y, -1 )
 				tkRemove( x, y )
 
 				'' Update end-of-construct position as we're moving
-				'' #defines out of the current construct
+				'' directives out of the current construct
 				nxt -= y - x + 1
 			else
 				x += 1
 			end if
 		wend
 	loop
-end sub
-
-sub hOnlyFilterOutWholeConstructs( )
-	var x = 0
-	while( tkGet( x ) <> TK_EOF )
-		var nxt = hSkipConstruct( x, FALSE )
-
-		'' Count occurences of TKFLAG_FILTEROUT in this construct
-		var filterouts = 0
-		for i as integer = x to nxt - 1
-			if( tkGetFlags( i ) and TKFLAG_FILTEROUT ) then
-				filterouts += 1
-			end if
-		next
-
-		'' If only some but not all tokens in the construct are marked
-		'' with TKFLAG_FILTEROUT, then we better forget about that,
-		'' otherwise we could end up deleting a partial construct...
-		if( (filterouts > 0) and (filterouts < (nxt - x)) ) then
-			tkUnsetFilterOut( x, nxt - 1 )
-		end if
-
-		x = nxt
-	wend
 end sub

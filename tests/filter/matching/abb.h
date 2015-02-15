@@ -1,3 +1,0 @@
-// @ignore
-
-static int abb;

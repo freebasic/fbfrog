@@ -1,3 +1,0 @@
-// @ignore
-
-void f(void);

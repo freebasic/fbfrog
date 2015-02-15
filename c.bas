@@ -943,6 +943,19 @@ private function cDefine( ) as ASTNODE ptr
 	function = macro
 end function
 
+private function cInclude( ) as ASTNODE ptr
+	c.x += 1
+
+	'' "filename"
+	assert( tkGet( c.x ) = TK_STRING )
+	function = astNew( ASTCLASS_PPINCLUDE, tkGetText( c.x ) )
+	c.x += 1
+
+	'' Eol
+	assert( tkGet( c.x ) = TK_EOL )
+	c.x += 1
+end function
+
 private function cPragmaPackNumber( ) as integer
 	var n = cNumberLiteral( )
 	if( n->class <> ASTCLASS_CONSTI ) then
@@ -2065,6 +2078,8 @@ private function cConstruct( byval bodyastclass as integer ) as ASTNODE ptr
 			select case( *tkSpellId( c.x ) )
 			case "define"
 				directive = cDefine( )
+			case "include"
+				directive = cInclude( )
 			case "pragma"
 				c.x += 1
 
@@ -2125,11 +2140,6 @@ private function cConstruct( byval bodyastclass as integer ) as ASTNODE ptr
 	end select
 end function
 
-private function hSetFilterOut( byval n as ASTNODE ptr ) as integer
-	n->attrib or= ASTATTRIB_FILTEROUT
-	function = TRUE
-end function
-
 private function cBody( byval bodyastclass as integer ) as ASTNODE ptr
 	var result = astNewGROUP( )
 
@@ -2150,8 +2160,6 @@ private function cBody( byval bodyastclass as integer ) as ASTNODE ptr
 			end if
 		end select
 
-		var set_filterout = (bodyastclass < 0) andalso ((tkGetFlags( c.x ) and TKFLAG_FILTEROUT) <> 0)
-
 		var begin = c.x
 		var t = cConstruct( bodyastclass )
 
@@ -2165,8 +2173,18 @@ private function cBody( byval bodyastclass as integer ) as ASTNODE ptr
 			t = astNewUNKNOWN( begin, c.x - 1 )
 		end if
 
-		if( set_filterout ) then
-			astVisit( t, @hSetFilterOut )
+		'' If at toplevel, assign source location to toplevel ASTNODEs
+		if( bodyastclass < 0 ) then
+			var location = tkGetLocation( begin )
+			if( t->class = ASTCLASS_GROUP ) then
+				var i = t->head
+				while( i )
+					i->location = *location
+					i = i->next
+				wend
+			else
+				t->location = *location
+			end if
 		end if
 
 		astAppend( result, t )
@@ -2185,15 +2203,10 @@ function cMain( ) as ASTNODE ptr
 			c.x = .xbodybegin
 
 			'' Parse #define body
-			var filterout = ((tkGetFlags( c.x ) and TKFLAG_FILTEROUT) <> 0)
 			var add_to_ast = TRUE
 			cParseDefBody( .n, add_to_ast )
 
-			if( add_to_ast ) then
-				if( filterout ) then
-					astVisit( .n, @hSetFilterOut )
-				end if
-			else
+			if( add_to_ast = FALSE ) then
 				astRemove( t, .n )
 			end if
 		end with

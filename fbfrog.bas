@@ -2,57 +2,52 @@
 '' Main module, command line interface
 ''
 '' This is how fbfrog works:
-'' 1. CLI
-''   * command line arguments/options from fbfrog's command line or @files are
-''     parsed into the tk buffer using lexLoadArgs()
-''   * the tk buffer is then parsed by hParseArgs(): global options are handled,
-''     script options are turned into an AST and their syntax is verified
-''   * the script from default.fbfrog is implicitly prepended unless
-''     -nodefaultscript was used
-''   * frogEvaluateScript(): the script AST is evaluated (by following each code
-''     path), producing the list of individual APIs we want to parse, and the
-''     command line options for each one
-'' 2. API parsing: For each API, ...
-''   * we start with an empty tk buffer, CPP is initialized
-''   * predefines for that API are inserted into the tk buffer using lexLoadC()
-''   * CPP is told about -removedefine options etc.
-''   * content of default.h is loaded into the tk buffer using lexLoadC()
-''   * Artificial #include statements for the *.h input files (root files) for
-''     that API are inserted into the tk buffer using lexLoadC()
-''   * CPP runs and preprocesses the content of the tk buffer (cppMain()):
-''     directive parsing, macro expansion, #if evaluation, #include handling.
-''     #includes statements are expanded internally so that fbfrog gets to see
-''     as much of the API as possible, which improves accuracy of things like
-''     typedef detection and symbol renaming. The tokens from include files
-''     affected by -filterout are marked for removal. Filenames of #include
-''     statements from toplevel files are recorded, if they weren't found or
-''     their code will be filtered out.
-''   * C parser parses the preprocessed constructs in the tk buffer,
-''     produces a self-contained AST
-''   * Various steps of AST modifications to make the AST FB-friendly
-''     (e.g. fixing identifier conflicts, or solving out redundant typedefs)
-''   * Constucts marked due to -filterout are dropped
-''   * Direct #include statements recorded by the CPP are reinserted at the top
-''     of the bindings
-'' 3. AST merging:
-''   * Explaining VERBLOCKs: VERBLOCK nodes basically are like #if conditionals.
-''     They are used to partition the nodes (API declarations) in an AST into
-''     API-specific sections. The declarations in the VERBLOCK can belong to one
-''     or more APIs. Whichever API(s) the VERBLOCK "covers" is determined by its
-''     condition expression(s).
-''   * The AST of each API is wrapped in a VERBLOCK node representing that API
-''   * All the APIs' ASTs are merged into one final AST, by merging two at a
-''     time (astMergeVerblocks()), by recursively finding the longest common
-''     substring (LCS). So it basically is a diff'ing algorithm. The final AST
-''     will be a sequence of VERBLOCKs (or only one if all APIs were equal).
-''   * Finally, the VERBLOCKs are turned into real #if blocks, and their
-''     condition expressions are optimized, eliminating common subexpressions
-''     and redundant checks (astProcessVerblocks()).
-'' 4. Emitting the final AST as FB code (emitFile())
+''
+'' 1. Read command line. Evaluate -declare*, -if, -select options. Determine the
+''    list of APIs to parse. Collect input files and options for each API.
+''
+''    Often APIs just means compilation targets:
+''        dos, linux-x86, linux-x86_64, win32, win64
+''    but it can be more than that. For example, fbfrog can be told about
+''    conditional #defines used in the input header, to make them available in
+''    the .bi output (e.g. Allegro's ALLEGRO_STATICLINK), and fbfrog can even be
+''    given separate input headers for each API. That's useful to create a
+''    multi-version .bi binding, where you can specify a #define to select the
+''    desired API version (e.g. for GTK2 or GTK3).
+''
+'' 2. For each API, parse the .h input files (C lexer, C preprocessor, C parser)
+''    into an AST. Do highlevel transformations on that AST to adjust it to FB,
+''    e.g. fix up array parameters, or solve out redundant typedefs.
+''
+''    The CPP expands as many #includes and macros as it can, so that fbfrog
+''    gets to see as much information about the API as possible. The CPP uses
+''    API-specific pre-#defines: each API has a certain compilation target.
+''
+'' 3. Split up the API-specific ASTs into .bi files according to -emit options.
+''    Each .bi file ends up with its parts of all the APIs. Do .bi-file-specific
+''    highlevel transformations on the individual parts (e.g. add Extern blocks).
+''
+'' 4. For each .bi file, merge the API-specific trees into one, adding #if
+''    checks where needed (e.g. to enclose target-specific code). Then emit the
+''    .bi file.
 ''
 
 #include once "fbfrog.bi"
 #include once "file.bi"
+
+type BIFILE
+	filename	as zstring ptr
+
+	'' Used to hold the .bi file-specific tree for the current API, after
+	'' that API was parsed and its big AST was split up. Reset to NULL after
+	'' being merged into "final".
+	incoming	as ASTNODE ptr
+
+	'' Holds/accumulates the merged AST for this .bi file, containing all
+	'' APIs. The "incoming" trees are merged into this one after another
+	'' until all APIs were processed.
+	final		as ASTNODE ptr
+end type
 
 namespace frog
 	dim shared as integer verbose, windowsms, clong32, fixunsizedarrays, fixmingwaw, nodefaultscript, nofunctionbodies
@@ -63,11 +58,74 @@ namespace frog
 	dim shared as FROGAPI ptr apis
 	dim shared as integer apicount
 
+	'' *.bi output file names from the -emit options
+	dim shared as BIFILE ptr bis
+	dim shared as integer bicount
+	dim shared as THASH ucasebihash
+
+	'' *.h file name patterns from the -emit options, associated to the
+	'' corresponding bis array index
+	type HPATTERN
+		pattern as string
+		bi as integer
+	end type
+	dim shared as HPATTERN ptr patterns
+	dim shared as integer patterncount
+
 	dim shared renameopt(OPT_RENAMETYPEDEF to OPT_RENAMETAG) as THASH
 	dim shared idopt(OPT_REMOVEDEFINE to OPT_NOEXPAND) as THASH
 
 	dim shared as string prefix
 end namespace
+
+private sub frogAddPattern( byref pattern as string, byval bi as integer )
+	var i = frog.patterncount
+	frog.patterncount += 1
+	frog.patterns = reallocate( frog.patterns, frog.patterncount * sizeof( *frog.patterns ) )
+	clear( frog.patterns[i], 0, sizeof( *frog.patterns ) )
+	with( frog.patterns[i] )
+		.pattern = pattern
+		.bi = bi
+	end with
+end sub
+
+private sub frogAddBi( byref filename as string, byref pattern as string )
+	dim bi as integer
+
+	'' Put bi files into a hashtb, so that multiple -emit options with the
+	'' same filename will be redirected to the same bi file. This check
+	'' should be case-insensitive, because of Windows' file system...
+	var ucasefilename = ucase( filename, 1 )
+	var ucasehash = hashHash( ucasefilename )
+	var item = hashLookup( @frog.ucasebihash, ucasefilename, ucasehash )
+	if( item->s ) then
+		'' Already exists
+		bi = cint( item->data )
+	else
+		'' Add new bi file
+		bi = frog.bicount
+		frog.bicount += 1
+		frog.bis = reallocate( frog.bis, frog.bicount * sizeof( *frog.bis ) )
+		clear( frog.bis[bi], 0, sizeof( *frog.bis ) )
+		with( frog.bis[bi] )
+			.filename = strDuplicate( filename )
+		end with
+		hashAdd( @frog.ucasebihash, item, ucasehash, ucasefilename, cptr( any ptr, bi ) )
+	end if
+
+	frogAddPattern( pattern, bi )
+end sub
+
+function frogLookupBi( byref hfile as string ) as integer
+	for pattern as integer = 0 to frog.patterncount - 1
+		with( frog.patterns[pattern] )
+			if( strMatch( hfile, .pattern ) ) then
+				return .bi
+			end if
+		end with
+	next
+	function = -1
+end function
 
 '' Find a *.fbfrog or *.h file in fbfrog's include/ dir, its "library" of
 '' premade collections of pre-#defines etc. useful when creating bindings.
@@ -116,13 +174,12 @@ private sub hPrintHelpAndExit( )
 	print "  -removeproc <id>    Don't preserve a certain procedure"
 	print "  -typedefhint <id>   Mark <id> as typedef, to help parsing of type casts"
 	print "  -noexpand <id>      Disable expansion of certain #define"
+	print "  -emit '*.h' foo.bi  Emit code from matching .h into specified .bi"
 	print "version-specific commands:"
 	print "  -define <id> [<body>]    Add pre-#define"
-	print "  -include <file>          Add pre-#include (will be filtered out)"
-	print "  -fbfroginclude <file>    Add pre-#include from include/fbfrog/ (will be filtered out)"
+	print "  -include <file>          Add pre-#include"
+	print "  -fbfroginclude <file>    Add pre-#include from include/fbfrog/"
 	print "  -incdir <path>   Add #include search directory"
-	print "  -filterout <filename-pattern>  Don't preserve code from matching #included files"
-	print "  -filterin <filename-pattern>   Undo -filterout for matching #included files"
 	print "version script logic:"
 	print "  -declaredefines (<symbol>)+               Exclusive #defines"
 	print "  -declareversions <symbol> (<number>)+     Version numbers"
@@ -443,6 +500,24 @@ private sub hParseArgs( byref x as integer )
 			hashAddOverwrite( @frog.idopt(opt), tkSpellId( x ), NULL )
 			x += 1
 
+		'' -emit <filename-pattern> <file>
+		case OPT_EMIT
+			x += 1
+
+			if( hIsStringOrId( x ) = FALSE ) then
+				tkOopsExpected( x, "<filename-pattern> argument" )
+			end if
+			var pattern = *tkGetText( x )
+			x += 1
+
+			if( hIsStringOrId( x ) = FALSE ) then
+				tkOopsExpected( x, "<file> argument" )
+			end if
+			var filename = *tkGetText( x )
+			x += 1
+
+			frogAddBi( filename, pattern )
+
 		'' -declaredefines (<symbol>)+
 		case OPT_DECLAREDEFINES
 			x += 1
@@ -512,14 +587,6 @@ private sub hParseArgs( byref x as integer )
 			astAppend( frog.script, astNew( ASTCLASS_INCDIR, hPathRelativeToArgsFile( x ) ) )
 			x += 1
 
-		'' -filterout <filename-pattern>
-		case OPT_FILTEROUT
-			hParseOptionWithString( x, ASTCLASS_FILTEROUT, "<filename-pattern> argument" )
-
-		'' -filterin <filename-pattern>
-		case OPT_FILTERIN
-			hParseOptionWithString( x, ASTCLASS_FILTERIN, "<filename-pattern> argument" )
-
 		'' -define <id> [<body>]
 		case OPT_DEFINE
 			x += 1
@@ -558,7 +625,8 @@ private sub hParseArgs( byref x as integer )
 				var filename = hPathRelativeToArgsFile( x )
 				astAppend( frog.script, astNewTEXT( filename ) )
 
-				'' The first .h file name seen will be used for the final .bi
+				'' The first .h file name seen will be used as default name for the ouput .bi,
+				'' in case no explicit .bi file names are given via -emit or -o
 				if( len( (frog.defaultoutname) ) = 0 ) then
 					frog.defaultoutname = pathStripExt( filename ) + ".bi"
 				end if
@@ -773,7 +841,7 @@ private sub frogEvaluateScript _
 	frogAddApi( conditions, options )
 end sub
 
-private function frogReadApi( byval options as ASTNODE ptr ) as ASTNODE ptr
+private function frogParse( byval options as ASTNODE ptr ) as ASTNODE ptr
 	tkInit( )
 
 	'' C preprocessing
@@ -804,9 +872,6 @@ private function frogReadApi( byval options as ASTNODE ptr ) as ASTNODE ptr
 
 			case ASTCLASS_INCDIR
 				cppAddIncDir( astClone( i ) )
-
-			case ASTCLASS_FILTEROUT, ASTCLASS_FILTERIN
-				cppAddFilter( astClone( i ) )
 
 			end select
 
@@ -845,8 +910,7 @@ private function frogReadApi( byval options as ASTNODE ptr ) as ASTNODE ptr
 	''
 	'' Add #include statements for the toplevel file(s) behind current
 	'' tokens, but marked with TKFLAG_ROOTFILE to let the CPP know that no
-	'' #include search should be done, and that they shouldn't be affected
-	'' by -filterout etc.
+	'' #include search should be done.
 	''
 	'' This way we can re-use the #include handling code to load the
 	'' toplevel files. (especially interesting for include guard optimization)
@@ -872,9 +936,6 @@ private function frogReadApi( byval options as ASTNODE ptr ) as ASTNODE ptr
 
 	cppMain( )
 
-	'' Grab the direct #include file names collected by the CPP
-	var directincludes = cppTakeDirectIncludes( )
-
 	cppEnd( )
 
 	'' Remove CPP directives and EOLs (tokens marked for removal by
@@ -885,8 +946,7 @@ private function frogReadApi( byval options as ASTNODE ptr ) as ASTNODE ptr
 	''   to load them into AST
 	tkApplyRemoves( )
 
-	hMoveDefinesOutOfConstructs( )
-	hOnlyFilterOutWholeConstructs( )
+	hMoveDirectivesOutOfConstructs( )
 
 	tkTurnCPPTokensIntoCIds( )
 
@@ -896,9 +956,6 @@ private function frogReadApi( byval options as ASTNODE ptr ) as ASTNODE ptr
 	cEnd( )
 
 	tkEnd( )
-
-	'' Adjust AST for FB
-	highlevelWork( ast, directincludes )
 
 	function = ast
 end function
@@ -932,6 +989,7 @@ end sub
 	extradatatypesInit( )
 	lexInit( )
 
+	hashInit( @frog.ucasebihash, 6, TRUE )
 	for i as integer = lbound( frog.renameopt ) to ubound( frog.renameopt )
 		hashInit( @frog.renameopt(i), 3, FALSE )
 	next
@@ -980,6 +1038,20 @@ end sub
 
 	frog.prefix = space( (len( str( frog.apicount ) ) * 2) + 4 )
 
+	'' If no output .bi files were given via -emit options on the command line,
+	'' we default to emitting one output .bi, much like: -emit '*' default.bi
+	if( frog.bicount = 0 ) then
+		if( len( (frog.defaultoutname) ) = 0 ) then
+			frog.defaultoutname = "unknown.bi"
+		end if
+		if( len( (frog.outname) ) = 0 ) then
+			frog.outname = frog.defaultoutname
+		elseif( pathIsDir( frog.outname ) ) then
+			frog.outname = pathAddDiv( frog.outname ) + pathStrip( frog.defaultoutname )
+		end if
+		frogAddBi( frog.outname, "*" )
+	end if
+
 	'' For each version, parse the input into an AST, using the options for
 	'' that version, and then merge the AST with the previous one, so that
 	'' finally we get a single AST representing all versions.
@@ -990,46 +1062,90 @@ end sub
 	'' parsing that version. Instead of one single big delay at the end,
 	'' there is a small delay at each version.
 	dim as ASTNODE ptr final
-	for i as integer = 0 to frog.apicount - 1
-		var api = frog.apis + i
+	for api as integer = 0 to frog.apicount - 1
+		print hMakeProgressString( api + 1, frog.apicount ) + " " + astDumpPrettyVersion( frog.apis[api].verand )
 
-		print hMakeProgressString( i + 1, frog.apicount ) + " " + astDumpPrettyVersion( api->verand )
-		var ast = frogReadApi( api->options )
+		'' Parse code for this API into an AST
+		var ast = frogParse( frog.apis[api].options )
 
-		ast = astWrapFileInVerblock( astNewVEROR( astClone( api->verand ) ), ast )
-		if( final = NULL ) then
-			final = astNewGROUP( ast )
-		else
-			final = astMergeVerblocks( final, ast )
-		end if
-		frog.fullveror = astNewVEROR( frog.fullveror, api->verand )
-		api->verand = NULL
+		hlGlobal( ast )
+
+		'' Prepare "incoming" trees
+		for bi as integer = 0 to frog.bicount - 1
+			assert( frog.bis[bi].incoming = NULL )
+			frog.bis[bi].incoming = astNewGROUP( )
+		next
+
+		'' Split the big tree into separate "incoming" trees on each .bi file
+		scope
+			dim bi as integer
+			dim prevsource as SOURCEBUFFER ptr
+
+			var i = ast->head
+			while( i )
+				var nxt = i->next
+
+				assert( i->location.source )
+				assert( i->location.source->is_file )
+
+				'' Find out into which .bi file this declaration should be put.
+				'' If this declaration has the same source as the previous one,
+				'' then re-use the previously calculated .bi file, instead of
+				'' redoing the lookup. Otherwise, do the lookup and cache the result.
+				if( prevsource <> i->location.source ) then
+					bi = frogLookupBi( *i->location.source->name )
+					prevsource = i->location.source
+				end if
+
+				if( bi >= 0 ) then
+					'' Add the declaration to the "incoming" AST for that .bi file
+					astUnlink( ast, i )
+					astAppend( frog.bis[bi].incoming, i )
+				end if
+
+				i = nxt
+			wend
+		end scope
+
+		'' Forget the remaining AST. Anything that wasn't moved into the
+		'' .bi files won't be emitted.
+		astDelete( ast )
+
+		for bi as integer = 0 to frog.bicount - 1
+			with( frog.bis[bi] )
+				'' Do file-specific AST work (e.g. add Extern block)
+				hlFile( .incoming )
+
+				'' Merge the "incoming" tree into the "final" tree
+				astMergeNext( astNewVEROR( astClone( frog.apis[api].verand ) ), .final, .incoming )
+			end with
+		next
+
+		frog.fullveror = astNewVEROR( frog.fullveror, frog.apis[api].verand )
+		frog.apis[api].verand = NULL
 	next
 
-	'' Turn VERBLOCKs into #ifs etc.
-	astProcessVerblocks( final )
+	for bi as integer = 0 to frog.bicount - 1
+		with( frog.bis[bi] )
+			'' Turn VERBLOCKs into #ifs etc.
+			astProcessVerblocks( .final )
 
-	'' Prepend #pragma once
-	'' It's always needed, except if the binding is empty: C headers
-	'' typically have #include guards, but we don't preserve those.
-	assert( final->class = ASTCLASS_GROUP )
-	if( final->head ) then
-		astPrependMaybeWithDivider( final, astNew( ASTCLASS_PRAGMAONCE ) )
-	end if
+			'' Prepend #pragma once
+			'' It's always needed, except if the binding is empty: C headers
+			'' typically have #include guards, but we don't preserve those.
+			assert( .final->class = ASTCLASS_GROUP )
+			if( .final->head ) then
+				astPrependMaybeWithDivider( .final, astNew( ASTCLASS_PRAGMAONCE ) )
+			end if
 
-	astAutoAddDividers( final )
+			astAutoAddDividers( .final )
 
-	'' Write out the .bi file
-	if( len( (frog.defaultoutname) ) = 0 ) then
-		frog.defaultoutname = "unknown.bi"
-	end if
-	if( len( (frog.outname) ) = 0 ) then
-		frog.outname = frog.defaultoutname
-	elseif( pathIsDir( frog.outname ) ) then
-		frog.outname = pathAddDiv( frog.outname ) + pathStrip( frog.defaultoutname )
-	end if
-	print "emitting: " + frog.outname;
-	emitFile( frog.outname, final )
-	print " (" + _
-		hMakeCountMessage( emit.decls, "declaration" ) + ", " + _
-		hMakeCountMessage( emit.todos, "TODO"        ) + ")"
+			'' Write out the .bi file.
+			var bifilename = *.filename
+			print "emitting: " + bifilename;
+			emitFile( bifilename, .final )
+			print " (" + _
+				hMakeCountMessage( emit.decls, "declaration" ) + ", " + _
+				hMakeCountMessage( emit.todos, "TODO"        ) + ")"
+		end with
+	next

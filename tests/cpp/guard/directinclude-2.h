@@ -1,3 +1,0 @@
-// @ignore
-
-#pragma once

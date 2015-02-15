@@ -1,0 +1,16 @@
+[1/5] __FB_WIN32__.__FB_64BIT__
+      tests/preinclude-1.h
+      tests/preinclude-main.h
+[2/5] __FB_WIN32__.(not __FB_64BIT__)
+      tests/preinclude-1.h
+      tests/preinclude-main.h
+[3/5] __FB_LINUX__.__FB_64BIT__
+      tests/preinclude-1.h
+      tests/preinclude-main.h
+[4/5] __FB_LINUX__.(not __FB_64BIT__)
+      tests/preinclude-1.h
+      tests/preinclude-main.h
+[5/5] __FB_DOS__
+      tests/preinclude-1.h
+      tests/preinclude-main.h
+emitting: tests/preinclude-main.bi (3 declarations, 0 TODOs)

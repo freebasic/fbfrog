@@ -40,8 +40,6 @@ dim shared as zstring ptr astnodename(0 to ...) => _
 	@"endselect"    , _
 	@"file"         , _
 	@"incdir"       , _
-	@"filterout"    , _
-	@"filterin"     , _
 	@"inclib"       , _
 	@"preinclude"   , _
 	@"fbfrogpreinclude", _
@@ -407,6 +405,7 @@ function astCloneNode( byval n as ASTNODE ptr ) as ASTNODE ptr
 	c->array       = astClone( n->array )
 	c->bits        = astClone( n->bits )
 	c->expr        = astClone( n->expr )
+	c->location    = n->location
 	select case( n->class )
 	case ASTCLASS_PPDEFINE : c->paramcount = n->paramcount
 	case ASTCLASS_STRUCT, ASTCLASS_UNION : c->maxalign = n->maxalign
@@ -499,6 +498,13 @@ function astIsEqual _
 	if( astIsEqual( a->bits, b->bits, is_merge ) = FALSE ) then exit function
 
 	if( astIsEqual( a->expr, b->expr, is_merge ) = FALSE ) then exit function
+
+	'' Only check location if not merging: for merging, the source location doesn't matter.
+	'' We only use it before the merging step.
+	if( is_merge = FALSE ) then
+		if( a->location.source  <> b->location.source  ) then exit function
+		if( a->location.linenum <> b->location.linenum ) then exit function
+	end if
 
 	select case( a->class )
 	case ASTCLASS_PPDEFINE
@@ -659,7 +665,6 @@ function astDumpOne( byval n as ASTNODE ptr ) as string
 	checkAttrib( TAGID )
 	checkAttrib( GENERATEDID )
 	checkAttrib( DLLIMPORT )
-	checkAttrib( FILTEROUT )
 	checkAttrib( FORWARDDECLARED )
 
 	if( n->text ) then

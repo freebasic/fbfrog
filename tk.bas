@@ -155,8 +155,7 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	(@"-include"      ), _
 	(@"-fbfroginclude"), _
 	(@"-incdir"       ), _
-	(@"-filterout"    ), _
-	(@"-filterin"     ), _
+	(@"-emit"         ), _
 	(@"-declaredefines"), _
 	(@"-declareversions"), _
 	(@"-declarebool"  ), _
@@ -275,10 +274,9 @@ function tkDumpOne( byval x as integer ) as string
 	checkFlag( BEHINDSPACE )
 	checkFlag( NOEXPAND )
 	checkFlag( REMOVE )
-	checkFlag( FILTEROUT )
 	checkFlag( ROOTFILE )
 	checkFlag( PREINCLUDE )
-	checkFlag( DEFINE )
+	checkFlag( DIRECTIVE )
 	checkFlag( EXPANSION )
 
 	's += " " + hDumpLocation( @p->location )
@@ -481,12 +479,6 @@ end sub
 function tkGetFlags( byval x as integer ) as integer
 	function = tkAccess( x )->flags
 end function
-
-sub tkUnsetFilterOut( byval first as integer, byval last as integer )
-	for i as integer = first to last
-		tkAccess( i )->flags and= not TKFLAG_FILTEROUT
-	next
-end sub
 
 sub tkApplyRemoves( )
 	var x = 0

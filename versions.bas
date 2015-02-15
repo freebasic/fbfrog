@@ -674,6 +674,16 @@ function astMergeVerblocks _
 	function = c
 end function
 
+sub astMergeNext( byval veror as ASTNODE ptr, byref final as ASTNODE ptr, byref incoming as ASTNODE ptr )
+	incoming = astWrapFileInVerblock( veror, incoming )
+	if( final = NULL ) then
+		final = astNewGROUP( incoming )
+	else
+		final = astMergeVerblocks( final, incoming )
+	end if
+	incoming = NULL
+end sub
+
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 ''

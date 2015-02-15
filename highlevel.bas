@@ -16,10 +16,11 @@ namespace hl
 		id		as zstring ptr  '' Type name
 		definition	as ASTNODE ptr
 		forwarduse	as integer
-		first_used_filtered_out as integer
+		firstuse	as ASTNODE ptr
 	end type
 	dim shared types as TYPENODE ptr
 	dim shared as integer typecount, typeroom
+	dim shared as ASTNODE ptr currentdecl
 
 	'' Used by Extern block addition pass
 	dim shared as integer need_extern, stdcalls, cdecls
@@ -478,7 +479,7 @@ private function hLookupOrAddType( byval id as zstring ptr ) as integer
 			.id = id
 			.definition = NULL
 			.forwarduse = FALSE
-			.first_used_filtered_out = FALSE
+			.firstuse = NULL
 		end with
 		hashAdd( @hl.typehash, item, hash, id, cptr( any ptr, hl.typecount ) )
 		function = hl.typecount
@@ -488,39 +489,25 @@ private function hLookupOrAddType( byval id as zstring ptr ) as integer
 	end if
 end function
 
-private sub hMarkTypeAsDefined( byval n as ASTNODE ptr )
-	var i = hLookupOrAddType( n->text )
-	hl.types[i].definition = n
-end sub
-
-private sub hMaybeMarkTypeAsForwardUsed( byval id as zstring ptr, byval filterout as integer )
-	var i = hLookupOrAddType( id )
-	var typ = hl.types + i
-
-	'' Type not defined yet? First use?
-	if( (typ->definition = NULL) and (not typ->forwarduse) ) then
-		typ->forwarduse = TRUE
-		typ->first_used_filtered_out = filterout
-	end if
-end sub
-
 private function hlCollectForwardUses( byval n as ASTNODE ptr ) as integer
-	'' If this is an UDT definition (tag body or typedef), register the type as "defined"
-	'' (before scanning the struct fields for potential forward-references, so that "recursive"
-	'' references to this UDT aren't seen as forward references)
-	select case( n->class )
-	case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM, ASTCLASS_TYPEDEF
-		'' Named? (enums can be anonymous)
-		if( n->text ) then
-			hMarkTypeAsDefined( n )
-		end if
-	end select
+	if( typeGetDt( n->dtype ) = TYPE_UDT ) then
+		assert( astIsTEXT( n->subtype ) )
 
-	'' Collect forward references from everything except typedefs
-	if( n->class <> ASTCLASS_TYPEDEF ) then
-		if( typeGetDt( n->dtype ) = TYPE_UDT ) then
-			assert( astIsTEXT( n->subtype ) )
-			hMaybeMarkTypeAsForwardUsed( n->subtype->text, ((n->attrib and ASTATTRIB_FILTEROUT) <> 0) )
+		var typeindex = hLookupOrAddType( n->subtype->text )
+		var typ = hl.types + typeindex
+
+		'' Record the first use (even if it's in a typedef), so the
+		'' forward decl (if one is needed) can be inserted above it.
+		if( typ->firstuse = NULL ) then
+			typ->firstuse = hl.currentdecl
+		end if
+
+		'' Collect forward references from everything except typedefs
+		if( n->class <> ASTCLASS_TYPEDEF ) then
+			'' Type not defined yet? First forward use?
+			if( (typ->definition = NULL) and (not typ->forwarduse) ) then
+				typ->forwarduse = TRUE
+			end if
 		end if
 	end if
 
@@ -531,35 +518,46 @@ private function hlCollectForwardUses( byval n as ASTNODE ptr ) as integer
 	function = (n->class <> ASTCLASS_PPDEFINE)
 end function
 
+private sub hlScanForForwardUsedTypes( byval ast as ASTNODE ptr )
+	var i = ast->head
+	while( i )
+
+		'' If this is an UDT definition (tag body or typedef), register the type as "defined"
+		'' (before scanning the struct fields for potential forward-references, so that "recursive"
+		'' references to this UDT aren't seen as forward references)
+		select case( i->class )
+		case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM, ASTCLASS_TYPEDEF
+			'' Named? (enums can be anonymous)
+			if( i->text ) then
+				'' Mark type as defined
+				var typeindex = hLookupOrAddType( i->text )
+				hl.types[typeindex].definition = i
+			end if
+		end select
+
+		hl.currentdecl = i
+		astVisit( i, @hlCollectForwardUses )
+		hl.currentdecl = NULL
+
+		i = i->next
+	wend
+end sub
+
 '' Add forward decls for forward-referenced types that also are defined, so we
 '' can be sure that they're from this binding and not from another header.
-private sub hlAddForwardDecls( byval n as ASTNODE ptr )
+private sub hlAddForwardDecls( byval ast as ASTNODE ptr )
 	for i as integer = hl.typecount - 1 to 0 step -1
 		var typ = hl.types + i
 		if( typ->forwarduse and (typ->definition <> NULL) ) then
 			typ->definition->attrib or= ASTATTRIB_FORWARDDECLARED
-			if( typ->first_used_filtered_out = FALSE ) then
-				astPrepend( n, astNew( ASTCLASS_FORWARDDECL, typ->id ) )
-			end if
+			var fwd = astNew( ASTCLASS_FORWARDDECL, typ->id )
+			fwd->location = typ->firstuse->location
+			astInsert( ast, fwd, typ->firstuse )
 		end if
 	next
 end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-
-'' Remove all declarations marked with ASTATTRIB_FILTEROUT.
-'' We should only ever filter out whole declarations, never remove parts of a
-'' declaration. Hence no recursion here - only visiting the toplevel constructs.
-sub hlFilterOut( byval n as ASTNODE ptr )
-	var i = n->head
-	while( i )
-		var nxt = i->next
-		if( i->attrib and ASTATTRIB_FILTEROUT ) then
-			astRemove( n, i )
-		end if
-		i = nxt
-	wend
-end sub
 
 private function hlCountCallConvs( byval n as ASTNODE ptr ) as integer
 	select case( n->class )
@@ -590,6 +588,61 @@ private function hlHideCallConv( byval n as ASTNODE ptr ) as integer
 	'' header's Extern block.
 	function = (n->class <> ASTCLASS_PPDEFINE)
 end function
+
+'' Remap .h name to a .bi name. If it's a known system header, we can even remap
+'' it to the corresponding FB header (in some cases it's not as simple as
+'' replacing .h by .bi).
+private sub hTranslateHeaderFileName( byref filename as string )
+	filename = pathStripExt( filename )
+
+	'' Is it one of the CRT headers? Remap it to crt/*.bi
+	if( hashContains( @fbcrtheaderhash, filename, hashHash( filename ) ) ) then
+		filename = "crt/" + filename
+	end if
+
+	filename += ".bi"
+end sub
+
+private sub hlHandleIncludes( byval ast as ASTNODE ptr )
+	'' Find node above which new #includes should be inserted. This should
+	'' always be behind existing #includes at the top.
+	var top = ast->head
+	while( top andalso (top->class = ASTCLASS_PPINCLUDE) )
+		top = top->next
+	wend
+
+	'' Start at this "top" node, otherwise we'd run an infinite loop trying
+	'' to move things to the top that already are at the top (because we'd
+	'' be *above* the "top" node, and moving #includes *down* to it, which
+	'' means we'd visit them again and again, since we're cycling from top
+	'' to bottom via the "next" pointers).
+	var i = top
+	while( i )
+		var nxt = i->next
+
+		'' #include?
+		if( i->class = ASTCLASS_PPINCLUDE ) then
+			'' Move to top (outside of Extern block), without changing the order
+			assert( i <> top )
+			astUnlink( ast, i )
+			astInsert( ast, i, top )
+		end if
+
+		i = nxt
+	wend
+
+	'' For each #include at the top, remap *.h => *.bi
+	i = ast->head
+	while( i <> top )
+		'' #include?
+		if( i->class = ASTCLASS_PPINCLUDE ) then
+			var filename = *i->text
+			hTranslateHeaderFileName( filename )
+			astSetText( i, filename )
+		end if
+		i = i->next
+	wend
+end sub
 
 private function hlSearchSpecialDtypes( byval n as ASTNODE ptr ) as integer
 	select case( typeGetDt( n->dtype ) )
@@ -678,14 +731,13 @@ end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-sub highlevelWork( byval ast as ASTNODE ptr, byval directincludes as ASTNODE ptr )
-	hl.need_extern = FALSE
-	hl.stdcalls = 0
-	hl.cdecls = 0
-	hl.mostusedcallconv = 0
-	hl.uses_clong = FALSE
-	hl.uses_clongdouble = FALSE
-
+''
+'' Global (entire AST of an API) highlevel transformations, intended to run 1st
+''
+'' If any declarations are added to the AST here, care must be taken to set the
+'' ASTNODE.location, so they can be assigned to the proper output .bi file.
+''
+sub hlGlobal( byval ast as ASTNODE ptr )
 	'' Apply -removeproc options, if any
 	if( frog.idopt(OPT_REMOVEPROC).count > 0 ) then
 		hlApplyRemoveProcOptions( ast )
@@ -787,13 +839,23 @@ sub highlevelWork( byval ast as ASTNODE ptr, byval directincludes as ASTNODE ptr
 	hl.types = NULL
 	hl.typecount = 0
 	hl.typeroom = 0
-	astVisit( ast, @hlCollectForwardUses )
+	hlScanForForwardUsedTypes( ast )
 	hlAddForwardDecls( ast )
 	hashEnd( @hl.typehash )
 	deallocate( hl.types )
+end sub
 
-	'' Remove declarations marked by filterout
-	hlFilterOut( ast )
+''
+'' .bi-file-specific highlevel transformations, intended to run on the
+'' API-specific ASTs in each output .bi file.
+''
+sub hlFile( byval ast as ASTNODE ptr )
+	hl.need_extern = FALSE
+	hl.stdcalls = 0
+	hl.cdecls = 0
+	hl.mostusedcallconv = 0
+	hl.uses_clong = FALSE
+	hl.uses_clongdouble = FALSE
 
 	'' Add Extern block
 	''  * to preserve identifiers of global variables/procedures
@@ -824,16 +886,17 @@ sub highlevelWork( byval ast as ASTNODE ptr, byval directincludes as ASTNODE ptr
 		astAppend( ast, astNew( ASTCLASS_EXTERNBLOCKEND ) )
 	end if
 
+	'' Move existing #include statements outside the Extern block
+	'' Remap *.h => *.bi
+	hlHandleIncludes( ast )
+
 	'' Add #includes for "crt/long[double].bi" and "crt/wchar.bi" if the
 	'' binding uses the clong[double]/wchar_t types
 	astVisit( ast, @hlSearchSpecialDtypes )
 	if( hl.uses_clongdouble ) then
-		astPrepend( directincludes, astNew( ASTCLASS_PPINCLUDE, "crt/longdouble.bi" ) )
+		astPrependMaybeWithDivider( ast, astNew( ASTCLASS_PPINCLUDE, "crt/longdouble.bi" ) )
 	end if
 	if( hl.uses_clong ) then
-		astPrepend( directincludes, astNew( ASTCLASS_PPINCLUDE, "crt/long.bi" ) )
+		astPrependMaybeWithDivider( ast, astNew( ASTCLASS_PPINCLUDE, "crt/long.bi" ) )
 	end if
-
-	'' Prepend the direct #includes (if any), outside the EXTERN block
-	astPrependMaybeWithDivider( ast, directincludes )
 end sub

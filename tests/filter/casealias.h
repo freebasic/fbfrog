@@ -1,3 +1,0 @@
-// @ignore
-
-extern int i;
