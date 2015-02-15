@@ -1,7 +1,5 @@
 #pragma once
 
-#include once "crt/wchar.bi"
-
 extern "C"
 
 type CHAR as zstring

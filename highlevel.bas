@@ -26,7 +26,7 @@ namespace hl
 	dim shared as integer mostusedcallconv
 
 	'' Used by dtype use determination passes
-	dim shared as integer uses_clong, uses_clongdouble, uses_wchar_t
+	dim shared as integer uses_clong, uses_clongdouble
 end namespace
 
 private sub hlApplyRemoveProcOptions( byval ast as ASTNODE ptr )
@@ -597,8 +597,6 @@ private function hlSearchSpecialDtypes( byval n as ASTNODE ptr ) as integer
 		hl.uses_clong = TRUE
 	case TYPE_CLONGDOUBLE
 		hl.uses_clongdouble = TRUE
-	case TYPE_WCHAR_T
-		hl.uses_wchar_t = TRUE
 	end select
 	function = TRUE
 end function
@@ -687,7 +685,6 @@ sub highlevelWork( byval ast as ASTNODE ptr, byval directincludes as ASTNODE ptr
 	hl.mostusedcallconv = 0
 	hl.uses_clong = FALSE
 	hl.uses_clongdouble = FALSE
-	hl.uses_wchar_t = FALSE
 
 	'' Apply -removeproc options, if any
 	if( frog.idopt(OPT_REMOVEPROC).count > 0 ) then
@@ -835,14 +832,6 @@ sub highlevelWork( byval ast as ASTNODE ptr, byval directincludes as ASTNODE ptr
 	end if
 	if( hl.uses_clong ) then
 		astPrepend( directincludes, astNew( ASTCLASS_PPINCLUDE, "crt/long.bi" ) )
-	end if
-	if( hl.uses_wchar_t ) then
-		var wcharbi = astNew( ASTCLASS_PPINCLUDE, "crt/wchar.bi" )
-		if( astGroupContains( directincludes, wcharbi ) ) then
-			astDelete( wcharbi )
-		else
-			astPrepend( directincludes, wcharbi )
-		end if
 	end if
 
 	'' Prepend the direct #includes (if any), outside the EXTERN block

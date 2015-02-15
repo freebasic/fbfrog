@@ -1,7 +1,5 @@
 #pragma once
 
-#include once "crt/wchar.bi"
-
 extern "C"
 
 dim shared id_id as long
