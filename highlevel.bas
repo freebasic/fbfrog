@@ -65,7 +65,9 @@ private function hlApplyRenameOption( byval n as ASTNODE ptr ) as integer
 
 	select case( n->class )
 	case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
-		hApplyRenameOption( OPT_RENAMETAG, n )
+		if( n->text ) then
+			hApplyRenameOption( OPT_RENAMETAG, n )
+		end if
 	case ASTCLASS_TYPEDEF
 		hApplyRenameOption( OPT_RENAMETYPEDEF, n )
 	end select
