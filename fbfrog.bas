@@ -945,18 +945,13 @@ private function frogParse( byval options as ASTNODE ptr ) as ASTNODE ptr
 	'' matter.
 	''
 	scope
-		var count = 0
 		var i = options->head
 		while( i )
 			if( astIsTEXT( i ) ) then
 				cppAppendIncludeDirective( *i->text, TKFLAG_ROOTFILE )
-				count += 1
 			end if
 			i = i->next
 		wend
-		if( count = 0 ) then
-			oops( "no input files" )
-		end if
 	end scope
 
 	cppMain( )
