@@ -828,5 +828,5 @@ namespace frog
 	extern idopt(OPT_REMOVEDEFINE to OPT_NOEXPAND) as THASH
 end namespace
 
-declare function frogLookupBi( byref hfile as string ) as integer
+declare function frogLookupBi( byval hfile as zstring ptr ) as integer
 declare sub frogPrint( byref s as string )

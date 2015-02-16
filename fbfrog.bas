@@ -62,6 +62,7 @@ namespace frog
 	dim shared as BIFILE ptr bis
 	dim shared as integer bicount
 	dim shared as THASH ucasebihash
+	dim shared as THASH bilookupcache
 
 	'' *.h file name patterns from the -emit options, associated to the
 	'' corresponding bis array index
@@ -116,15 +117,29 @@ private sub frogAddBi( byref filename as string, byref pattern as string )
 	frogAddPattern( pattern, bi )
 end sub
 
-function frogLookupBi( byref hfile as string ) as integer
+function frogLookupBi( byval hfile as zstring ptr ) as integer
+	'' Check whether we've already cached the .bi for this .h file
+	var hfilehash = hashHash( hfile )
+	var item = hashLookup( @frog.bilookupcache, hfile, hfilehash )
+	if( item->s ) then
+		return cint( item->data )
+	end if
+
+	'' Slow lookup
+	var bi = -1
+	var hfilestr = *hfile
 	for pattern as integer = 0 to frog.patterncount - 1
-		with( frog.patterns[pattern] )
-			if( strMatch( hfile, .pattern ) ) then
-				return .bi
-			end if
-		end with
+		if( strMatch( hfilestr, frog.patterns[pattern].pattern ) ) then
+			bi = frog.patterns[pattern].bi
+			exit for
+		end if
 	next
-	function = -1
+
+	'' Cache the lookup results to improve performance
+	'' (the CPP does repeated lookups on each #include, which can add up on certain
+	'' input headers, such as the Windows API headers)
+	hashAdd( @frog.bilookupcache, item, hfilehash, hfile, cptr( any ptr, bi ) )
+	function = bi
 end function
 
 '' Find a *.fbfrog or *.h file in fbfrog's include/ dir, its "library" of
@@ -1000,6 +1015,7 @@ end sub
 	lexInit( )
 
 	hashInit( @frog.ucasebihash, 6, TRUE )
+	hashInit( @frog.bilookupcache, 6, TRUE )
 	for i as integer = lbound( frog.renameopt ) to ubound( frog.renameopt )
 		hashInit( @frog.renameopt(i), 3, FALSE )
 	next
@@ -1103,7 +1119,7 @@ end sub
 				'' then re-use the previously calculated .bi file, instead of
 				'' redoing the lookup. Otherwise, do the lookup and cache the result.
 				if( prevsource <> i->location.source ) then
-					bi = frogLookupBi( *i->location.source->name )
+					bi = frogLookupBi( i->location.source->name )
 					prevsource = i->location.source
 				end if
 
