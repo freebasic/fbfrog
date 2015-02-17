@@ -327,7 +327,7 @@ private function hlRenameJobAdd( byval oldid as zstring ptr, byval newid as zstr
 		'' but not if the newid differs (then it's a separate typedef which has to be
 		'' preserved - we can't rename A => C when already renaming A => B).
 		dim as zstring ptr prevnewid = item->data
-		if( *prevnewid <> *newid ) then
+		if( ucase( *prevnewid, 1 ) <> ucase( *newid, 1 ) ) then
 			return FALSE
 		end if
 

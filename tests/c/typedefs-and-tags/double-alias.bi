@@ -1,6 +1,4 @@
 #pragma once
 
-type a
+type A
 end type
-
-type A as a
