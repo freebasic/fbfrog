@@ -14,4 +14,15 @@ declare sub f()
 
 #define FOO 123
 
+type UDT
+	#inclib "1"
+end type
+
+#inclib "2"
+
+type bar as foo
+
+#define A
+#define B
+
 end extern

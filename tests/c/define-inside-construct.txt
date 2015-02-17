@@ -8,4 +8,4 @@
       tests/c/define-inside-construct.h
 [5/5] __FB_DOS__
       tests/c/define-inside-construct.h
-emitting: tests/c/define-inside-construct.bi (4 declarations, 0 TODOs)
+emitting: tests/c/define-inside-construct.bi (8 declarations, 0 TODOs)
