@@ -2331,7 +2331,7 @@ private function cppPragma( byref flags as integer ) as integer
 			cpp.x += 1
 
 			'' Preserve the #pragma comment(lib, "...") for the C parser
-			flags = 0
+			flags and= not TKFLAG_REMOVE
 
 		case else
 			exit function
@@ -2365,7 +2365,7 @@ private function cppPragma( byref flags as integer ) as integer
 		cpp.x = hSkipToEol( cpp.x )
 
 		'' Preserve the #pragma pack for the C parser
-		flags = 0
+		flags and= not TKFLAG_REMOVE
 
 	case "push_macro"
 		cppPragmaPushPopMacro( TRUE )
@@ -2402,7 +2402,7 @@ private sub cppDirective( )
 		end select
 	end if
 
-	var flags = TKFLAG_REMOVE
+	var flags = TKFLAG_REMOVE or TKFLAG_DIRECTIVE
 
 	select case( directivekw )
 	case KW_IF
@@ -2422,11 +2422,9 @@ private sub cppDirective( )
 
 	case KW_INCLUDE
 		cppInclude( begin, flags )
-		flags or= TKFLAG_DIRECTIVE
 
 	case KW_DEFINE
 		cppDefine( begin, flags )
-		flags or= TKFLAG_DIRECTIVE
 
 	case KW_UNDEF
 		cppUndef( )
