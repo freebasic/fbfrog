@@ -75,6 +75,7 @@ namespace frog
 
 	dim shared renameopt(OPT_RENAMETYPEDEF to OPT_RENAMETAG) as THASH
 	dim shared idopt(OPT_REMOVEDEFINE to OPT_NOEXPAND) as THASH
+	dim shared removeinclude as THASH
 
 	dim shared as string prefix
 end namespace
@@ -513,6 +514,15 @@ private sub hParseArgs( byref x as integer )
 			'' <id>
 			hExpectId( x )
 			hashAddOverwrite( @frog.idopt(opt), tkSpellId( x ), NULL )
+			x += 1
+
+		case OPT_REMOVEINCLUDE
+			x += 1
+
+			if( hIsStringOrId( x ) = FALSE ) then
+				tkOopsExpected( x, "<filename> argument" )
+			end if
+			hashAddOverwrite( @frog.removeinclude, tkGetText( x ), NULL )
 			x += 1
 
 		'' -emit <filename-pattern> <file>
@@ -1017,6 +1027,7 @@ end sub
 	for i as integer = lbound( frog.idopt ) to ubound( frog.idopt )
 		hashInit( @frog.idopt(i), 3, TRUE )
 	next
+	hashInit( @frog.removeinclude, 3, TRUE )
 
 	tkInit( )
 

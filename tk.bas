@@ -151,6 +151,7 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	(@"-removeproc"   ), _
 	(@"-typedefhint"  ), _
 	(@"-noexpand"     ), _
+	(@"-removeinclude"), _
 	(@"-define"       ), _
 	(@"-include"      ), _
 	(@"-fbfroginclude"), _

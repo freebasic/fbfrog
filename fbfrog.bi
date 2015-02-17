@@ -372,6 +372,7 @@ enum
 	OPT_REMOVEPROC
 	OPT_TYPEDEFHINT
 	OPT_NOEXPAND
+	OPT_REMOVEINCLUDE
 	OPT_DEFINE
 	OPT_INCLUDE
 	OPT_FBFROGINCLUDE
@@ -826,6 +827,7 @@ namespace frog
 
 	extern renameopt(OPT_RENAMETYPEDEF to OPT_RENAMETAG) as THASH
 	extern idopt(OPT_REMOVEDEFINE to OPT_NOEXPAND) as THASH
+	extern removeinclude as THASH
 end namespace
 
 declare function frogLookupBi( byval hfile as zstring ptr ) as integer

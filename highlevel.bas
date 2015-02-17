@@ -633,16 +633,23 @@ private sub hlHandleIncludes( byval ast as ASTNODE ptr )
 		i = nxt
 	wend
 
-	'' For each #include at the top, remap *.h => *.bi
+	'' For each #include at the top, apply -removeinclude and remap *.h => *.bi
 	i = ast->head
 	while( i <> top )
+		var nxt = i->next
+
 		'' #include?
 		if( i->class = ASTCLASS_PPINCLUDE ) then
 			var filename = *i->text
-			hTranslateHeaderFileName( filename )
-			astSetText( i, filename )
+			if( hashContains( @frog.removeinclude, filename, hashHash( filename ) ) ) then
+				astRemove( ast, i )
+			else
+				hTranslateHeaderFileName( filename )
+				astSetText( i, filename )
+			end if
 		end if
-		i = i->next
+
+		i = nxt
 	wend
 end sub
 
@@ -890,6 +897,7 @@ sub hlFile( byval ast as ASTNODE ptr )
 
 	'' Move existing #include statements outside the Extern block
 	'' Remap *.h => *.bi
+	'' Apply -removeinclude
 	hlHandleIncludes( ast )
 
 	'' Add #includes for "crt/long[double].bi" and "crt/wchar.bi" if the
