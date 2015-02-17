@@ -651,6 +651,30 @@ private sub hlHandleIncludes( byval ast as ASTNODE ptr )
 
 		i = nxt
 	wend
+
+	'' Remove duplicate #includes
+	dim includes as THASH
+	hashInit( @includes, 6, TRUE )
+
+	i = ast->head
+	while( i <> top )
+		var nxt = i->next
+
+		'' #include?
+		if( i->class = ASTCLASS_PPINCLUDE ) then
+			var hash = hashHash( i->text )
+			var item = hashLookup( @includes, i->text, hash )
+			if( item->s ) then
+				astRemove( ast, i )
+			else
+				hashAdd( @includes, item, hash, i->text, NULL )
+			end if
+		end if
+
+		i = nxt
+	wend
+
+	hashEnd( @includes )
 end sub
 
 private function hlSearchSpecialDtypes( byval n as ASTNODE ptr ) as integer
