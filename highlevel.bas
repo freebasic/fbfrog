@@ -30,6 +30,98 @@ namespace hl
 	dim shared as integer uses_clong, uses_clongdouble
 end namespace
 
+private function astOpsC2FB( byval n as ASTNODE ptr, byval is_bool_context as integer ) as ASTNODE ptr
+	if( n = NULL ) then exit function
+
+	select case( n->class )
+	case ASTCLASS_CLOGNOT, ASTCLASS_CLOGOR, ASTCLASS_CLOGAND, _
+	     ASTCLASS_CEQ, ASTCLASS_CNE, ASTCLASS_IIF
+		var expr_is_bool_context = FALSE
+		var l_is_bool_context = FALSE
+		var r_is_bool_context = FALSE
+
+		select case( n->class )
+		'' ! operand is treated as bool
+		case ASTCLASS_CLOGNOT
+			l_is_bool_context = TRUE
+
+		'' andalso/orelse operands are always treated as bools
+		case ASTCLASS_CLOGOR, ASTCLASS_CLOGAND
+			l_is_bool_context = TRUE
+			r_is_bool_context = TRUE
+
+		'' BOP operands may sometimes be in bool context:
+		''    x = 0
+		''    x <> 0
+		'' (not x = -1 and x <> -1 because if checks check against 0 and <> 0,
+		'' not 0 and -1)
+		case ASTCLASS_CEQ, ASTCLASS_CNE
+			if( astIsCONSTI( n->tail ) ) then
+				l_is_bool_context = (astEvalConstiAsInt64( n->tail ) = 0)
+			end if
+
+		'' iif() condition always is treated as bool
+		case ASTCLASS_IIF
+			expr_is_bool_context = TRUE
+		end select
+
+		n->expr = astOpsC2FB( n->expr, expr_is_bool_context )
+		if( n->head ) then
+			astReplace( n, n->head, astOpsC2FB( astClone( n->head ), l_is_bool_context ) )
+			if( n->head <> n->tail ) then
+				assert( n->head->next = n->tail )
+				astReplace( n, n->tail, astOpsC2FB( astClone( n->tail ), r_is_bool_context ) )
+			end if
+		end if
+
+	case else
+		var i = n->head
+		while( i )
+			i = astReplace( n, i, astOpsC2FB( astClone( i ), FALSE ) )
+		wend
+	end select
+
+	select case( n->class )
+	case ASTCLASS_CLOGNOT, ASTCLASS_CDEFINED, _
+	     ASTCLASS_CLOGOR, ASTCLASS_CLOGAND, _
+	     ASTCLASS_CEQ, ASTCLASS_CNE, _
+	     ASTCLASS_CLT, ASTCLASS_CLE, _
+	     ASTCLASS_CGT, ASTCLASS_CGE
+
+		select case( n->class )
+		case ASTCLASS_CLOGNOT
+			'' Turn C's "!x" into FB's "x = 0"
+			n->class = ASTCLASS_EQ
+			var zero = astNew( ASTCLASS_CONSTI, "0" )
+			astSetType( zero, TYPE_LONG, NULL )
+			astAppend( n, zero )
+		case ASTCLASS_CDEFINED : n->class = ASTCLASS_DEFINED
+		case ASTCLASS_CLOGOR   : n->class = ASTCLASS_LOGOR
+		case ASTCLASS_CLOGAND  : n->class = ASTCLASS_LOGAND
+		case ASTCLASS_CEQ      : n->class = ASTCLASS_EQ
+		case ASTCLASS_CNE      : n->class = ASTCLASS_NE
+		case ASTCLASS_CLT      : n->class = ASTCLASS_LT
+		case ASTCLASS_CLE      : n->class = ASTCLASS_LE
+		case ASTCLASS_CGT      : n->class = ASTCLASS_GT
+		case ASTCLASS_CGE      : n->class = ASTCLASS_GE
+		case else              : assert( FALSE )
+		end select
+
+		'' Turn -1|0 into 1|0 if the value may be used in math calculations etc.
+		if( is_bool_context = FALSE ) then
+			n = astNew( ASTCLASS_NEGATE, n )
+		end if
+	end select
+
+	function = n
+end function
+
+private function hlFixExpressions( byval n as ASTNODE ptr ) as integer
+	'' TODO: shouldn't assume is_bool_context=TRUE for #define bodies
+	n->expr = astOpsC2FB( n->expr, (n->class = ASTCLASS_PPDEFINE) )
+	function = TRUE
+end function
+
 private sub hlApplyRemoveProcOptions( byval ast as ASTNODE ptr )
 	var i = ast->head
 	while( i )
@@ -771,6 +863,8 @@ end sub
 '' ASTNODE.location, so they can be assigned to the proper output .bi file.
 ''
 sub hlGlobal( byval ast as ASTNODE ptr )
+	astVisit( ast, @hlFixExpressions )
+
 	'' Apply -removeproc options, if any
 	if( frog.idopt(OPT_REMOVEPROC).count > 0 ) then
 		hlApplyRemoveProcOptions( ast )

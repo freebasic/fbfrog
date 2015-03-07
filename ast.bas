@@ -83,6 +83,8 @@ dim shared as zstring ptr astnodename(0 to ...) => _
 	_ '' BOPs
 	@"clogor" , _
 	@"clogand", _
+	@"logor" , _
+	@"logand", _
 	@"or"     , _
 	@"xor"    , _
 	@"and"    , _
@@ -93,6 +95,11 @@ dim shared as zstring ptr astnodename(0 to ...) => _
 	@"cgt"    , _
 	@"cge"    , _
 	@"eq"     , _
+	@"ne"     , _
+	@"lt"     , _
+	@"le"     , _
+	@"gt"     , _
+	@"ge"     , _
 	@"shl"    , _
 	@"shr"    , _
 	@"add"    , _

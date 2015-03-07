@@ -5,12 +5,7 @@
 #include once "fbfrog.bi"
 
 declare sub emitCode( byval n as ASTNODE ptr, byval parentclass as integer = -1 )
-declare function emitExpr _
-	( _
-		byval n as ASTNODE ptr, _
-		byval need_parens as integer = FALSE, _
-		byval is_bool_context as integer = FALSE _
-	) as string
+declare function emitExpr( byval n as ASTNODE ptr, byval need_parens as integer = FALSE ) as string
 
 function emitType overload _
 	( _
@@ -383,7 +378,7 @@ private sub emitCode( byval n as ASTNODE ptr, byval parentclass as integer )
 					emit.todos += 1
 					emit.decls -= 1
 				else
-					s += " " + emitExpr( n->expr, TRUE, TRUE )  '' is_bool_context=TRUE, that's a bold assumption
+					s += " " + emitExpr( n->expr, TRUE )
 				end if
 			end if
 			emitLine( s )
@@ -404,14 +399,14 @@ private sub emitCode( byval n as ASTNODE ptr, byval parentclass as integer )
 			end if
 		end select
 		if( len( s ) = 0 ) then
-			s = "#if " + emitExpr( n->expr, FALSE, TRUE )
+			s = "#if " + emitExpr( n->expr, FALSE )
 		end if
 		emitLine( s )
 
 		hEmitIndentedChildren( n )
 
 	case ASTCLASS_PPELSEIF
-		emitLine( "#elseif " + emitExpr( n->expr, FALSE, TRUE ) )
+		emitLine( "#elseif " + emitExpr( n->expr, FALSE ) )
 		hEmitIndentedChildren( n )
 
 	case ASTCLASS_PPELSE
@@ -584,20 +579,13 @@ private sub emitCode( byval n as ASTNODE ptr, byval parentclass as integer )
 	end select
 end sub
 
-private function emitExpr _
-	( _
-		byval n as ASTNODE ptr, _
-		byval need_parens as integer, _
-		byval is_bool_context as integer _
-	) as string
-
+private function emitExpr( byval n as ASTNODE ptr, byval need_parens as integer ) as string
 	dim as string s
 
 	if( n = NULL ) then
 		exit function
 	end if
 
-	var add_negation = FALSE
 	var consider_parens = FALSE
 
 	select case as const( n->class )
@@ -773,30 +761,28 @@ private function emitExpr _
 			s = "asc(" + s + ")"
 		end if
 
-	case ASTCLASS_CLOGNOT     : s = emitExpr( n->head, TRUE, TRUE                   ) + " = 0"                                                         : add_negation = not is_bool_context : consider_parens = TRUE
-	case ASTCLASS_CLOGOR      : s = emitExpr( n->head, TRUE, TRUE                   ) + " orelse "  + emitExpr( n->tail, TRUE, TRUE                   ) : add_negation = not is_bool_context : consider_parens = TRUE
-	case ASTCLASS_CLOGAND     : s = emitExpr( n->head, TRUE, TRUE                   ) + " andalso " + emitExpr( n->tail, TRUE, TRUE                   ) : add_negation = not is_bool_context : consider_parens = TRUE
-	case ASTCLASS_CEQ         : s = emitExpr( n->head, TRUE, astIsConst0( n->tail ) ) + " = "       + emitExpr( n->tail, TRUE, astIsConst0( n->head ) ) : add_negation = not is_bool_context : consider_parens = TRUE
-	case ASTCLASS_CNE         : s = emitExpr( n->head, TRUE, astIsConst0( n->tail ) ) + " <> "      + emitExpr( n->tail, TRUE, astIsConst0( n->head ) ) : add_negation = not is_bool_context : consider_parens = TRUE
-	case ASTCLASS_CLT         : s = emitExpr( n->head, TRUE                         ) + " < "       + emitExpr( n->tail, TRUE                         ) : add_negation = not is_bool_context : consider_parens = TRUE
-	case ASTCLASS_CLE         : s = emitExpr( n->head, TRUE                         ) + " <= "      + emitExpr( n->tail, TRUE                         ) : add_negation = not is_bool_context : consider_parens = TRUE
-	case ASTCLASS_CGT         : s = emitExpr( n->head, TRUE                         ) + " > "       + emitExpr( n->tail, TRUE                         ) : add_negation = not is_bool_context : consider_parens = TRUE
-	case ASTCLASS_CGE         : s = emitExpr( n->head, TRUE                         ) + " >= "      + emitExpr( n->tail, TRUE                         ) : add_negation = not is_bool_context : consider_parens = TRUE
-	case ASTCLASS_OR          : s = emitExpr( n->head, TRUE                         ) + " or "      + emitExpr( n->tail, TRUE                         ) : consider_parens = TRUE
-	case ASTCLASS_XOR         : s = emitExpr( n->head, TRUE                         ) + " xor "     + emitExpr( n->tail, TRUE                         ) : consider_parens = TRUE
-	case ASTCLASS_AND         : s = emitExpr( n->head, TRUE                         ) + " and "     + emitExpr( n->tail, TRUE                         ) : consider_parens = TRUE
-	case ASTCLASS_EQ          : s = emitExpr( n->head, TRUE                         ) + " = "       + emitExpr( n->tail, TRUE                         ) : consider_parens = TRUE
-	case ASTCLASS_SHL         : s = emitExpr( n->head, TRUE                         ) + " shl "     + emitExpr( n->tail, TRUE                         ) : consider_parens = TRUE
-	case ASTCLASS_SHR         : s = emitExpr( n->head, TRUE                         ) + " shr "     + emitExpr( n->tail, TRUE                         ) : consider_parens = TRUE
-	case ASTCLASS_ADD         : s = emitExpr( n->head, TRUE                         ) + " + "       + emitExpr( n->tail, TRUE                         ) : consider_parens = TRUE
-	case ASTCLASS_SUB         : s = emitExpr( n->head, TRUE                         ) + " - "       + emitExpr( n->tail, TRUE                         ) : consider_parens = TRUE
-	case ASTCLASS_MUL         : s = emitExpr( n->head, TRUE                         ) + " * "       + emitExpr( n->tail, TRUE                         ) : consider_parens = TRUE
-	case ASTCLASS_DIV         : s = emitExpr( n->head, TRUE                         ) + " / "       + emitExpr( n->tail, TRUE                         ) : consider_parens = TRUE
-	case ASTCLASS_MOD         : s = emitExpr( n->head, TRUE                         ) + " mod "     + emitExpr( n->tail, TRUE                         ) : consider_parens = TRUE
-	case ASTCLASS_INDEX       : s = emitExpr( n->head, TRUE                         ) + "["         + emitExpr( n->tail, TRUE                         ) + "]"
-	case ASTCLASS_MEMBER      : s = emitExpr( n->head, TRUE                         ) + "."         + emitExpr( n->tail, TRUE                         )
-	case ASTCLASS_MEMBERDEREF : s = emitExpr( n->head, TRUE                         ) + "->"        + emitExpr( n->tail, TRUE                         )
-	case ASTCLASS_STRCAT      : s = emitExpr( n->head, TRUE                         ) + " + "       + emitExpr( n->tail, TRUE                         ) : consider_parens = TRUE
+	case ASTCLASS_LOGOR       : s = emitExpr( n->head, TRUE ) + " orelse "  + emitExpr( n->tail, TRUE ) : consider_parens = TRUE
+	case ASTCLASS_LOGAND      : s = emitExpr( n->head, TRUE ) + " andalso " + emitExpr( n->tail, TRUE ) : consider_parens = TRUE
+	case ASTCLASS_OR          : s = emitExpr( n->head, TRUE ) + " or "      + emitExpr( n->tail, TRUE ) : consider_parens = TRUE
+	case ASTCLASS_XOR         : s = emitExpr( n->head, TRUE ) + " xor "     + emitExpr( n->tail, TRUE ) : consider_parens = TRUE
+	case ASTCLASS_AND         : s = emitExpr( n->head, TRUE ) + " and "     + emitExpr( n->tail, TRUE ) : consider_parens = TRUE
+	case ASTCLASS_EQ          : s = emitExpr( n->head, TRUE ) + " = "       + emitExpr( n->tail, TRUE ) : consider_parens = TRUE
+	case ASTCLASS_NE          : s = emitExpr( n->head, TRUE ) + " <> "      + emitExpr( n->tail, TRUE ) : consider_parens = TRUE
+	case ASTCLASS_LT          : s = emitExpr( n->head, TRUE ) + " < "       + emitExpr( n->tail, TRUE ) : consider_parens = TRUE
+	case ASTCLASS_LE          : s = emitExpr( n->head, TRUE ) + " <= "      + emitExpr( n->tail, TRUE ) : consider_parens = TRUE
+	case ASTCLASS_GT          : s = emitExpr( n->head, TRUE ) + " > "       + emitExpr( n->tail, TRUE ) : consider_parens = TRUE
+	case ASTCLASS_GE          : s = emitExpr( n->head, TRUE ) + " >= "      + emitExpr( n->tail, TRUE ) : consider_parens = TRUE
+	case ASTCLASS_SHL         : s = emitExpr( n->head, TRUE ) + " shl "     + emitExpr( n->tail, TRUE ) : consider_parens = TRUE
+	case ASTCLASS_SHR         : s = emitExpr( n->head, TRUE ) + " shr "     + emitExpr( n->tail, TRUE ) : consider_parens = TRUE
+	case ASTCLASS_ADD         : s = emitExpr( n->head, TRUE ) + " + "       + emitExpr( n->tail, TRUE ) : consider_parens = TRUE
+	case ASTCLASS_SUB         : s = emitExpr( n->head, TRUE ) + " - "       + emitExpr( n->tail, TRUE ) : consider_parens = TRUE
+	case ASTCLASS_MUL         : s = emitExpr( n->head, TRUE ) + " * "       + emitExpr( n->tail, TRUE ) : consider_parens = TRUE
+	case ASTCLASS_DIV         : s = emitExpr( n->head, TRUE ) + " / "       + emitExpr( n->tail, TRUE ) : consider_parens = TRUE
+	case ASTCLASS_MOD         : s = emitExpr( n->head, TRUE ) + " mod "     + emitExpr( n->tail, TRUE ) : consider_parens = TRUE
+	case ASTCLASS_INDEX       : s = emitExpr( n->head, TRUE ) + "["         + emitExpr( n->tail, TRUE ) + "]"
+	case ASTCLASS_MEMBER      : s = emitExpr( n->head, TRUE ) + "."         + emitExpr( n->tail, TRUE )
+	case ASTCLASS_MEMBERDEREF : s = emitExpr( n->head, TRUE ) + "->"        + emitExpr( n->tail, TRUE )
+	case ASTCLASS_STRCAT      : s = emitExpr( n->head, TRUE ) + " + "       + emitExpr( n->tail, TRUE ) : consider_parens = TRUE
 	case ASTCLASS_NOT       : s = "not "     + emitExpr( n->head, TRUE ) : consider_parens = TRUE
 	case ASTCLASS_NEGATE    : s = "-"        + emitExpr( n->head, TRUE ) : consider_parens = TRUE
 	case ASTCLASS_UNARYPLUS : s = "+"        + emitExpr( n->head, TRUE ) : consider_parens = TRUE
@@ -804,7 +790,7 @@ private function emitExpr _
 	case ASTCLASS_DEREF     : s = "*"        + emitExpr( n->head, TRUE ) : consider_parens = TRUE
 	case ASTCLASS_STRINGIFY : s = "#"        + emitExpr( n->head )
 	case ASTCLASS_SIZEOF    : s = "sizeof("  + emitExpr( n->head ) + ")"
-	case ASTCLASS_CDEFINED  : s = "defined(" + *n->text + ")" : add_negation = not is_bool_context
+	case ASTCLASS_CDEFINED  : s = "defined(" + *n->text + ")"
 	case ASTCLASS_DEFINED   : s = "defined(" + *n->text + ")"
 	case ASTCLASS_CAST
 		select case( n->dtype )
@@ -831,7 +817,7 @@ private function emitExpr _
 		s += emitExpr( n->head ) + ")"
 
 	case ASTCLASS_IIF
-		s = "iif(" + emitExpr( n->expr, FALSE, TRUE ) + ", " + emitExpr( n->head ) + ", " + emitExpr( n->tail ) + ")"
+		s = "iif(" + emitExpr( n->expr, FALSE ) + ", " + emitExpr( n->head ) + ", " + emitExpr( n->tail ) + ")"
 
 	case ASTCLASS_PPMERGE
 		var i = n->head
@@ -871,14 +857,6 @@ private function emitExpr _
 		astDump( n )
 		assert( FALSE )
 	end select
-
-	if( add_negation ) then
-		if( consider_parens ) then
-			s = "(" + s + ")"
-		end if
-		s = "-" + s
-		consider_parens = TRUE
-	end if
 
 	if( consider_parens and need_parens ) then
 		s = "(" + s + ")"
