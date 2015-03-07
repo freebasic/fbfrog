@@ -751,8 +751,6 @@ declare sub astDump _
 		byref prefix as string = "" _
 	)
 
-declare sub astWrapInExternBlock( byval ast as ASTNODE ptr, byval callconv as integer )
-declare function astUsesDtype( byval n as ASTNODE ptr, byval dtype as integer ) as integer
 declare sub astAutoAddDividers( byval code as ASTNODE ptr )
 declare sub astPrependMaybeWithDivider( byval group as ASTNODE ptr, byval n as ASTNODE ptr )
 
