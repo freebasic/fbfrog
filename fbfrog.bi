@@ -457,27 +457,27 @@ declare sub tkExpect( byval x as integer, byval tk as integer, byval message as 
 
 enum
 	TYPE_NONE = 0
-	TYPE_ANY
-	TYPE_BYTE
-	TYPE_UBYTE
-	TYPE_SHORT
-	TYPE_USHORT
-	TYPE_LONG
-	TYPE_ULONG
-	TYPE_CLONG
-	TYPE_CULONG
-	TYPE_INTEGER
-	TYPE_UINTEGER
-	TYPE_LONGINT
-	TYPE_ULONGINT
-	TYPE_SINGLE
+	TYPE_ANY          '' C void
+	TYPE_BYTE         '' int8
+	TYPE_UBYTE        '' uint8
+	TYPE_SHORT        '' int16
+	TYPE_USHORT       '' uint16
+	TYPE_LONG         '' int32
+	TYPE_ULONG        '' uint32
+	TYPE_CLONG        '' C long, size varies, see FB crt/long.bi
+	TYPE_CULONG       '' C unsigned long
+	TYPE_INTEGER      '' FB integer = C ssize_t etc., size varies
+	TYPE_UINTEGER     '' FB uinteger = C size_t
+	TYPE_LONGINT      '' int64
+	TYPE_ULONGINT     '' uint64
+	TYPE_SINGLE       '' C float
 	TYPE_DOUBLE
-	TYPE_CLONGDOUBLE
-	TYPE_UDT
-	TYPE_PROC
-	TYPE_ZSTRING
-	TYPE_WSTRING
-	TYPE_WCHAR_T
+	TYPE_CLONGDOUBLE  '' C long double, size varies, see FB crt/longdouble.bi
+	TYPE_UDT          '' any other type names (typedefs/structs/enums)
+	TYPE_PROC         '' function type
+	TYPE_ZSTRING      '' C char pointers/arrays, if not turned into TYPE_BYTE
+	TYPE_WSTRING      '' C wchar_t pointers/arrays, if not turned into TYPE_WCHAR_T
+	TYPE_WCHAR_T      '' Single wchar
 	TYPE__COUNT
 end enum
 
