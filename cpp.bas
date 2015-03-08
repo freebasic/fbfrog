@@ -182,6 +182,10 @@ function hNumberLiteral _
 
 	if( is_float ) then
 		n->class = ASTCLASS_CONSTF
+		'' No float type suffix? Then default to double.
+		if( n->dtype = TYPE_NONE ) then
+			n->dtype = TYPE_DOUBLE
+		end if
 	else
 		'' Integer type suffixes:
 		''  l, ll, ul, ull, lu, llu

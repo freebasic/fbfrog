@@ -26,7 +26,7 @@ dim shared included as long
 #define A13 0.1
 #define A14 0.0
 #define A15 1.123
-#define A16 1e+1
+#define A16 1e+1d
 #define A17 1.0e+1
 #define A18 1
 #define A19 cast(clong, 1)
