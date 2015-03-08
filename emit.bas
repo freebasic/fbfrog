@@ -648,24 +648,16 @@ private function emitExpr( byval n as ASTNODE ptr, byval need_parens as integer 
 		case TYPE_ULONGINT
 			suffix = "ull"
 
-		''
-		'' Float type suffixes:
-		''
-		'' FB defaults to DOUBLE as long as there is a fractional part,
-		'' so no type suffix is needed for that, as in C.
-		''
-		'' Without a fractional part a suffix would be more useful,
-		'' turning the literal into a float instead of integer,
-		'' but that probably does not make much of a difference,
-		'' since FB will do the conversion silently anyways.
-		''
-		'' The f suffix should be added for SINGLEs though, to ensure
-		'' it's using the intended precision.
-		''
 		case TYPE_SINGLE
+			'' Always add suffix on SINGLEs, to ensure it's using
+			'' the intended precision.
 			suffix = "f"
 		case TYPE_DOUBLE
-			if( instr( *n->text, "." ) = 0 ) then
+			'' FB defaults to DOUBLE as long as there is a fractional part
+			'' or exponent, so no type suffix is needed for that, as in C.
+			if( (instr( *n->text, "." ) = 0) andalso _
+			    (instr( *n->text, "e" ) = 0) andalso _
+			    (instr( *n->text, "E" ) = 0) ) then
 				suffix = "d"
 			end if
 		end select
