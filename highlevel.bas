@@ -215,12 +215,9 @@ private sub hlCalculateCTypes( byval n as ASTNODE ptr )
 end sub
 
 private function astOpsC2FB( byval n as ASTNODE ptr, byval is_bool_context as integer ) as ASTNODE ptr
-	if( n = NULL ) then exit function
-
 	select case( n->class )
 	case ASTCLASS_CLOGNOT, ASTCLASS_CLOGOR, ASTCLASS_CLOGAND, _
 	     ASTCLASS_CEQ, ASTCLASS_CNE, ASTCLASS_IIF
-		var expr_is_bool_context = FALSE
 		var l_is_bool_context = FALSE
 		var r_is_bool_context = FALSE
 
@@ -246,16 +243,13 @@ private function astOpsC2FB( byval n as ASTNODE ptr, byval is_bool_context as in
 
 		'' iif() condition always is treated as bool
 		case ASTCLASS_IIF
-			expr_is_bool_context = TRUE
+			n->expr = astOpsC2FB( n->expr, TRUE )
 		end select
 
-		n->expr = astOpsC2FB( n->expr, expr_is_bool_context )
-		if( n->head ) then
-			astReplace( n, n->head, astOpsC2FB( astClone( n->head ), l_is_bool_context ) )
-			if( n->head <> n->tail ) then
-				assert( n->head->next = n->tail )
-				astReplace( n, n->tail, astOpsC2FB( astClone( n->tail ), r_is_bool_context ) )
-			end if
+		astReplace( n, n->head, astOpsC2FB( astClone( n->head ), l_is_bool_context ) )
+		if( n->head <> n->tail ) then
+			assert( n->head->next = n->tail )
+			astReplace( n, n->tail, astOpsC2FB( astClone( n->tail ), r_is_bool_context ) )
 		end if
 
 	case else
