@@ -61,9 +61,11 @@ private function typeCBop( byval astclass as integer, byval a as integer, byval 
 
 	'' Math/bitwise operations: depends on operands
 
-	'' Pointer arithmetic: preserves the pointer type
-	if( (typeGetPtrCount( a ) > 0) ) then return a
-	if( (typeGetPtrCount( b ) > 0) ) then return b
+	'' Pointer arithmetic: don't bother tracking, doesn't seem necessary yet
+	'' (preserving the ptr type would require preserving the subtype too)
+	if( (typeGetPtrCount( a ) > 0) or (typeGetPtrCount( b ) > 0) ) then
+		return TYPE_NONE
+	end if
 
 	if( (not typeIsNumeric( a )) or (not typeIsNumeric( b )) ) then
 		return TYPE_NONE
