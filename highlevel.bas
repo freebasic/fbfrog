@@ -30,6 +30,190 @@ namespace hl
 	dim shared as integer uses_clong, uses_clongdouble
 end namespace
 
+private function typeIsNumeric( byval dtype as integer ) as integer
+	select case( dtype )
+	case TYPE_BYTE, TYPE_UBYTE, TYPE_SHORT, TYPE_USHORT, _
+	     TYPE_LONG, TYPE_ULONG, TYPE_CLONG, TYPE_CULONG, _
+	     TYPE_INTEGER, TYPE_UINTEGER, TYPE_LONGINT, TYPE_ULONGINT, _
+	     TYPE_SINGLE, TYPE_DOUBLE
+		function = TRUE
+	end select
+end function
+
+'' Determine C UOP/BOP result dtype based on the operands' dtypes
+private function typeCBop( byval astclass as integer, byval a as integer, byval b as integer ) as integer
+	'' Logic/relational operations: result always is a 32bit int
+	select case( astclass )
+	case ASTCLASS_CLOGOR, ASTCLASS_CLOGAND, _
+	     ASTCLASS_CEQ, ASTCLASS_CNE, ASTCLASS_CLT, _
+	     ASTCLASS_CLE, ASTCLASS_CGT, ASTCLASS_CGE, _
+	     ASTCLASS_CLOGNOT, ASTCLASS_CDEFINED
+		return TYPE_LONG
+
+	'' sizeof() always returns size_t
+	case ASTCLASS_SIZEOF
+		return TYPE_UINTEGER
+
+	'' Bitshifts: Ignore the rhs type
+	case ASTCLASS_SHL, ASTCLASS_SHR
+		b = a
+	end select
+
+	'' Math/bitwise operations: depends on operands
+
+	'' Pointer arithmetic: preserves the pointer type
+	if( (typeGetPtrCount( a ) > 0) ) then return a
+	if( (typeGetPtrCount( b ) > 0) ) then return b
+
+	if( (not typeIsNumeric( a )) or (not typeIsNumeric( b )) ) then
+		return TYPE_NONE
+	end if
+
+	'' Floats have precedence over integers
+	if( (a = TYPE_DOUBLE) or (b = TYPE_DOUBLE) ) then return TYPE_DOUBLE
+	if( (a = TYPE_SINGLE) or (b = TYPE_SINGLE) ) then return TYPE_SINGLE
+
+	'' Promote byte/short to int32 (this always happens, both on 32bit and 64bit)
+	if( a < TYPE_LONG ) then a = TYPE_LONG
+	if( b < TYPE_LONG ) then b = TYPE_LONG
+
+	if( a = b ) then return a
+
+	#macro hCheckBop( aa, bb, result )
+		if( ((a = aa) and (b = bb)) or _
+		    ((a = bb) and (b = aa)) ) then
+			return result
+		end if
+	#endmacro
+
+	'' If the operation involves a 64bit operand, then it's 64bit,
+	'' otherwise it's only 32bit (this happens regardless of the
+	'' pointer size).
+	''
+	'' This is easy with fixed-size types like int and long long,
+	'' because we can immediately tell whether the operation is
+	'' 32bit or 64bit. But we have to take care for types such as
+	'' size_t which depend on the pointer size.
+	''
+	'' Example 1:
+	''    ssize_t   + long long => ?         (source)
+	''    int       + long long => long long (32bit)
+	''    long long + long long => long long (64bit)
+	'' Easy: since the rhs is always >= ssize_t, we can just use the
+	'' rhs as the operation's result type.
+	''
+	'' Example 2:
+	''    ssize_t   + int => ?         (source)
+	''    int       + int => int       (32bit)
+	''    long long + int => long long (64bit)
+	'' Easy: we can just ssize_t as the result type.
+	''
+	'' Example 3:
+	''    size_t + int64 => ?      (source)
+	''    uint32 + int64 => int64  (32bit)
+	''    uint64 + int64 => uint64 (64bit)
+	'' Impossible: we know that the result will always be 64bit,
+	'' but it can be either signed or unsigned.
+	''
+
+	'' unsigned long long (= ulongint = uint64) is >= all other
+	'' types, so it's always safe to use
+	hCheckBop( TYPE_ULONGINT, TYPE_LONGINT , TYPE_ULONGINT )
+	hCheckBop( TYPE_ULONGINT, TYPE_UINTEGER, TYPE_ULONGINT )
+	hCheckBop( TYPE_ULONGINT, TYPE_INTEGER , TYPE_ULONGINT )
+	hCheckBop( TYPE_ULONGINT, TYPE_CULONG  , TYPE_ULONGINT )
+	hCheckBop( TYPE_ULONGINT, TYPE_CLONG   , TYPE_ULONGINT )
+	hCheckBop( TYPE_ULONGINT, TYPE_ULONG   , TYPE_ULONGINT )
+	hCheckBop( TYPE_ULONGINT, TYPE_LONG    , TYPE_ULONGINT )
+
+	'' long long (= longint = int64) is < uint64 types, but >=
+	'' anything else
+	hCheckBop( TYPE_LONGINT, TYPE_INTEGER, TYPE_LONGINT )
+	hCheckBop( TYPE_LONGINT, TYPE_CLONG  , TYPE_LONGINT )
+	hCheckBop( TYPE_LONGINT, TYPE_ULONG  , TYPE_LONGINT )
+	hCheckBop( TYPE_LONGINT, TYPE_LONG   , TYPE_LONGINT )
+
+	'' size_t (= uinteger) is < [u]int64 (because of 32bit
+	'' platforms), but >= anything else. In particular, we can be
+	'' sure that it's > ssize_t and >= [unsigned] long.
+	hCheckBop( TYPE_UINTEGER, TYPE_INTEGER, TYPE_UINTEGER )
+	hCheckBop( TYPE_UINTEGER, TYPE_CULONG , TYPE_UINTEGER )
+	hCheckBop( TYPE_UINTEGER, TYPE_CLONG  , TYPE_UINTEGER )
+	hCheckBop( TYPE_UINTEGER, TYPE_ULONG  , TYPE_UINTEGER )
+	hCheckBop( TYPE_UINTEGER, TYPE_LONG   , TYPE_UINTEGER )
+
+	'' ssize_t (integer) is < [u]int64 (because of 32bit platforms)
+	'' and < [unsigned] long (because of linux-x86_64), but >=
+	'' anything else.
+	hCheckBop( TYPE_INTEGER, TYPE_CLONG , TYPE_INTEGER )
+	hCheckBop( TYPE_INTEGER, TYPE_LONG  , TYPE_INTEGER )
+
+	'' unsigned long (culong) is always at least uint32, but it's
+	'' different from size_t due to win64.
+	hCheckBop( TYPE_CULONG, TYPE_ULONG, TYPE_CULONG )
+	hCheckBop( TYPE_CULONG, TYPE_CLONG, TYPE_CULONG )
+	hCheckBop( TYPE_CULONG, TYPE_LONG , TYPE_CULONG )
+
+	'' long (clong) is always at least int32, but it's different
+	'' from ssize_t due to win64.
+	hCheckBop( TYPE_CLONG, TYPE_LONG, TYPE_CLONG )
+
+	'' unsigned int (ulong) > int (long)
+	hCheckBop( TYPE_ULONG, TYPE_LONG, TYPE_ULONG )
+
+	function = TYPE_NONE
+end function
+
+private function hIsIifBopUop( byval astclass as integer ) as integer
+	'' IIF, BOPs, UOPs
+	select case as const( astclass )
+	case ASTCLASS_IIF, _
+	     ASTCLASS_CLOGOR, ASTCLASS_CLOGAND, _
+	     ASTCLASS_CEQ, ASTCLASS_CNE, ASTCLASS_CLT, _
+	     ASTCLASS_CLE, ASTCLASS_CGT, ASTCLASS_CGE, _
+	     ASTCLASS_OR, ASTCLASS_XOR, ASTCLASS_AND, _
+	     ASTCLASS_SHL, ASTCLASS_SHR, _
+	     ASTCLASS_ADD, ASTCLASS_SUB, _
+	     ASTCLASS_MUL, ASTCLASS_DIV, ASTCLASS_MOD, _
+	     ASTCLASS_CLOGNOT, ASTCLASS_NOT, _
+	     ASTCLASS_NEGATE, ASTCLASS_UNARYPLUS, _
+	     ASTCLASS_CDEFINED, ASTCLASS_SIZEOF
+		function = TRUE
+	end select
+end function
+
+private sub hlCalculateCTypes( byval n as ASTNODE ptr )
+	'' No types should be set yet, except for type casts and atoms
+	#if __FB_DEBUG__
+		select case( n->class )
+		case ASTCLASS_CAST, ASTCLASS_DATATYPE, _
+		     ASTCLASS_CONSTI, ASTCLASS_CONSTF, _
+		     ASTCLASS_STRING, ASTCLASS_CHAR
+			assert( n->dtype <> TYPE_NONE )
+		case else
+			if( hIsIifBopUop( n->class ) ) then
+				assert( n->dtype = TYPE_NONE )
+			end if
+		end select
+	#endif
+
+	scope
+		var i = n->head
+		while( i )
+			hlCalculateCTypes( i )
+			i = i->next
+		wend
+	end scope
+
+	if( hIsIifBopUop( n->class ) ) then
+		'' IIF and BOPs will have two operands (ldtype/rdtype will be different),
+		'' UOPs will have one operand (i.e. ldtype/rdtype will be the same)
+		var ldtype = n->head->dtype
+		var rdtype = n->tail->dtype
+		n->dtype = typeCBop( n->class, ldtype, rdtype )
+	end if
+end sub
+
 private function astOpsC2FB( byval n as ASTNODE ptr, byval is_bool_context as integer ) as ASTNODE ptr
 	if( n = NULL ) then exit function
 
@@ -117,8 +301,12 @@ private function astOpsC2FB( byval n as ASTNODE ptr, byval is_bool_context as in
 end function
 
 private function hlFixExpressions( byval n as ASTNODE ptr ) as integer
-	'' TODO: shouldn't assume is_bool_context=TRUE for #define bodies
-	n->expr = astOpsC2FB( n->expr, (n->class = ASTCLASS_PPDEFINE) )
+	if( n->expr ) then
+		hlCalculateCTypes( n->expr )
+
+		'' TODO: shouldn't assume is_bool_context=TRUE for #define bodies
+		n->expr = astOpsC2FB( n->expr, (n->class = ASTCLASS_PPDEFINE) )
+	end if
 	function = TRUE
 end function
 
