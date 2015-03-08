@@ -495,3 +495,7 @@ enum E {
 
 // Testing cast operator precedence
 #define MAKE_RGB(r,g,b) ((int)(((signed char)(r)|((unsigned short)((signed char)(g))<<8))|(((unsigned int)(signed char)(b))<<16)))
+
+// A culng() cast needs to be added around this BOP, to ensure the result is
+// truncated to 32bit in FB 64bit
+#define A58 (0u - 100u)
