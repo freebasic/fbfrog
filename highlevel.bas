@@ -214,6 +214,10 @@ private sub hlCalculateCTypes( byval n as ASTNODE ptr )
 	end if
 end sub
 
+private function hIsUlongCast( byval n as ASTNODE ptr ) as integer
+	function = n andalso (n->class = ASTCLASS_CAST) andalso (n->dtype = TYPE_ULONG)
+end function
+
 ''
 '' Wrap all 32bit unsigned int IIFs/BOPs/UOPs in culng()/clng() casts, in order
 '' to make sure the result is truncated to 32bit properly in FB even on 64bit,
@@ -228,14 +232,15 @@ end sub
 '' In order to make sure we always get &hFFFFFF9Cu in FB, we have to truncate
 '' the operation's result to 32bit explicitly.
 ''
-private function hlAddMathCasts( byval n as ASTNODE ptr ) as ASTNODE ptr
+private function hlAddMathCasts( byval parent as ASTNODE ptr, byval n as ASTNODE ptr ) as ASTNODE ptr
 	var i = n->head
 	while( i )
-		i = astReplace( n, i, hlAddMathCasts( astClone( i ) ) )
+		i = astReplace( n, i, hlAddMathCasts( n, astClone( i ) ) )
 	wend
 
 	if( hIsIifBopUop( n->class ) ) then
-		if( n->dtype = TYPE_ULONG ) then
+		'' Wrap uint32 operation in a cast, unless there already is a cast
+		if( (n->dtype = TYPE_ULONG) and (not hIsUlongCast( parent )) ) then
 			n = astNew( ASTCLASS_CAST, n )
 			n->dtype = TYPE_ULONG
 		end if
@@ -328,7 +333,7 @@ private function hlFixExpressions( byval n as ASTNODE ptr ) as integer
 	if( n->expr ) then
 		hlCalculateCTypes( n->expr )
 
-		n->expr = hlAddMathCasts( n->expr )
+		n->expr = hlAddMathCasts( NULL, n->expr )
 
 		'' TODO: shouldn't assume is_bool_context=TRUE for #define bodies
 		n->expr = astOpsC2FB( n->expr, (n->class = ASTCLASS_PPDEFINE) )

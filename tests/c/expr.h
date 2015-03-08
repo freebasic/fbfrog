@@ -499,3 +499,7 @@ enum E {
 // A culng() cast needs to be added around this BOP, to ensure the result is
 // truncated to 32bit in FB 64bit
 #define A58 (0u - 100u)
+
+// Similar situation here - but the cast is already there, and we shouldn't add
+// another one.
+#define A59 ((unsigned int)(0u - 100u))
