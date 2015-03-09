@@ -647,7 +647,8 @@ private function emitExpr( byval n as ASTNODE ptr, byval need_parens as integer 
 			suffix = "ll"
 		case TYPE_ULONGINT
 			suffix = "ull"
-
+		case TYPE_ULONG, TYPE_UINTEGER
+			suffix = "u"
 		case TYPE_SINGLE
 			'' Always add suffix on SINGLEs, to ensure it's using
 			'' the intended precision.
