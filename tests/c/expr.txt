@@ -8,4 +8,4 @@
       tests/c/expr.h
 [5/5] __FB_DOS__
       tests/c/expr.h
-emitting: tests/c/expr.bi (82 declarations, 0 TODOs)
+emitting: tests/c/expr.bi (85 declarations, 0 TODOs)

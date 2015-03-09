@@ -259,6 +259,7 @@ private function hlAddMathCasts( byval parent as ASTNODE ptr, byval n as ASTNODE
 
 	if( hIsIifBopUop( n->class ) ) then
 		'' Wrap uint32 operation in a cast, unless there already is a cast
+		'' TODO: don't add cast if n is a cast
 		if( (n->dtype = TYPE_ULONG) and (not hIsUlongCast( parent )) ) then
 			n = astNew( ASTCLASS_CAST, n )
 			n->dtype = TYPE_ULONG
@@ -348,6 +349,20 @@ private function astOpsC2FB( byval n as ASTNODE ptr, byval is_bool_context as in
 	function = n
 end function
 
+private sub hlRemoveExpressionTypes( byval n as ASTNODE ptr )
+	var i = n->head
+	while( i )
+		hlRemoveExpressionTypes( i )
+		i = i->next
+	wend
+
+	if( n->class <> ASTCLASS_CAST ) then
+		if( hIsIifBopUop( n->class ) or (n->class = ASTCLASS_TEXT) ) then
+			astSetType( n, TYPE_NONE, NULL )
+		end if
+	end if
+end sub
+
 private function hlFixExpressions( byval n as ASTNODE ptr ) as integer
 	if( n->expr ) then
 		hlCalculateCTypes( n->expr )
@@ -356,6 +371,11 @@ private function hlFixExpressions( byval n as ASTNODE ptr ) as integer
 
 		'' TODO: shouldn't assume is_bool_context=TRUE for #define bodies
 		n->expr = astOpsC2FB( n->expr, (n->class = ASTCLASS_PPDEFINE) )
+
+		'' Forget about types again, for better merging (on one side
+		'' an identifier may have unknown type, on the other side it
+		'' could be known - but they should still be merged)
+		hlRemoveExpressionTypes( n->expr )
 	end if
 
 	'' Collect #defines/enumconsts so we can do lookups and determine the

@@ -482,4 +482,12 @@ end enum
 #define A82 culng(clng(undefined) - 1)
 #define A83 (clng(undefined) - 1)
 
+#ifdef __FB_WIN32__
+	#define A84 undefined
+#else
+	#define A84 (-1)
+#endif
+
+#define A85 A84
+
 end extern

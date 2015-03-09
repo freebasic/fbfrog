@@ -524,3 +524,9 @@ enum E {
 #define A81 ((unsigned int)undefined - 1)
 #define A82 ((int)undefined - 1u)
 #define A83 ((int)undefined - 1)
+#ifdef _WIN32
+	#define A84 undefined
+#else
+	#define A84 (-1)
+#endif
+#define A85 A84
