@@ -3,6 +3,8 @@
 #include once "fbfrog.bi"
 
 namespace hl
+	dim shared symbols as THASH
+
 	'' Used by both typedef expansion and forward declaration addition passes
 	'' hlExpandSpecialTypedefs: data = typedef ASTNODE, needs freeing
 	'' hlCollectForwardUses/hlAddForwardDecls: data = hl.types array index
@@ -29,6 +31,19 @@ namespace hl
 	'' Used by dtype use determination passes
 	dim shared as integer uses_clong, uses_clongdouble
 end namespace
+
+private function hlLookupSymbolType( byval id as zstring ptr ) as integer
+	function = cint( hashLookupDataOrNull( @hl.symbols, id ) )
+end function
+
+private sub hlCollectSymbol( byval id as zstring ptr, byval dtype as integer )
+	select case( dtype )
+	case TYPE_UDT, TYPE_PROC
+		'' Don't bother tracking complex types - not worth it yet
+		dtype = TYPE_NONE
+	end select
+	hashAddOverwrite( @hl.symbols, id, cptr( any ptr, dtype ) )
+end sub
 
 private function typeIsNumeric( byval dtype as integer ) as integer
 	select case( dtype )
@@ -213,6 +228,8 @@ private sub hlCalculateCTypes( byval n as ASTNODE ptr )
 		var ldtype = n->head->dtype
 		var rdtype = n->tail->dtype
 		n->dtype = typeCBop( n->class, ldtype, rdtype )
+	elseif( n->class = ASTCLASS_TEXT ) then
+		n->dtype = hlLookupSymbolType( n->text )
 	end if
 end sub
 
@@ -340,6 +357,22 @@ private function hlFixExpressions( byval n as ASTNODE ptr ) as integer
 		'' TODO: shouldn't assume is_bool_context=TRUE for #define bodies
 		n->expr = astOpsC2FB( n->expr, (n->class = ASTCLASS_PPDEFINE) )
 	end if
+
+	'' Collect #defines/enumconsts so we can do lookups and determine the
+	'' type behind such identifiers used in expressions
+	select case( n->class )
+	case ASTCLASS_PPDEFINE
+		var body = n->expr
+		if( body andalso (body->class <> ASTCLASS_SCOPEBLOCK) ) then
+			var dtype = body->dtype
+			if( dtype <> TYPE_NONE ) then
+				hlCollectSymbol( n->text, dtype )
+			end if
+		end if
+	case ASTCLASS_ENUMCONST
+		hlCollectSymbol( n->text, TYPE_LONG )
+	end select
+
 	function = TRUE
 end function
 
@@ -1084,7 +1117,9 @@ end sub
 '' ASTNODE.location, so they can be assigned to the proper output .bi file.
 ''
 sub hlGlobal( byval ast as ASTNODE ptr )
+	hashInit( @hl.symbols, 10, TRUE )
 	astVisit( ast, @hlFixExpressions )
+	hashEnd( @hl.symbols )
 
 	'' Apply -removeproc options, if any
 	if( frog.idopt(OPT_REMOVEPROC).count > 0 ) then

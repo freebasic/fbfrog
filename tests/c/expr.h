@@ -426,6 +426,8 @@ enum E {
 	A =  a ? b :  c  ? d : e,
 	A =  a ? b : (c  ? d : e),
 	A = (a ? b :  c) ? d : e,
+
+	ENUMCONST1 = 0,
 };
 
 #define A01(x) "a" "b"
@@ -499,7 +501,26 @@ enum E {
 // A culng() cast needs to be added around this BOP, to ensure the result is
 // truncated to 32bit in FB 64bit
 #define A58 (0u - 100u)
+#define A59 (0u - 100)
+#define A60 (0 - 100)
+#define A61 (0 - 100u)
 
 // Similar situation here - but the cast is already there, and we shouldn't add
 // another one.
-#define A59 ((unsigned int)(0u - 100u))
+#define A62 ((unsigned int)(0u - 100u))
+
+// Expression type depending on the type of an existing symbol
+#define A70 (A58 - 1u)
+#define A71 (A58 - 1)
+#define A72 ((unsigned int) A58 - 1u)
+#define A73 ((unsigned int) A58 - 1)
+#define A74 (ENUMCONST1 - 1u)
+#define A75 (ENUMCONST1 - 1)
+#define A76 ((unsigned int)ENUMCONST1 - 1u)
+#define A77 ((unsigned int)ENUMCONST1 - 1)
+#define A78 (undefined - 1u)
+#define A79 (undefined - 1)
+#define A80 ((unsigned int)undefined - 1u)
+#define A81 ((unsigned int)undefined - 1)
+#define A82 ((int)undefined - 1u)
+#define A83 ((int)undefined - 1)

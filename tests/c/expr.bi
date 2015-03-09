@@ -383,6 +383,7 @@ enum
 	A = iif(a, b, iif(c, d, e))
 	A = iif(a, b, iif(c, d, e))
 	A = iif(iif(a, b, c), d, e)
+	ENUMCONST1 = 0
 end enum
 
 #define A01(x) ("a" + "b")
@@ -463,5 +464,22 @@ end enum
 #define MAKE_RGB(r, g, b) clng(culng((cbyte((r)) or (cushort(cbyte((g))) shl 8)) or culng(culng(cbyte((b))) shl 16)))
 #define A58 culng(0 - 100)
 #define A59 culng(0 - 100)
+#define A60 (0 - 100)
+#define A61 culng(0 - 100)
+#define A62 culng(0 - 100)
+#define A70 culng(A58 - 1)
+#define A71 culng(A58 - 1)
+#define A72 culng(culng(A58) - 1)
+#define A73 culng(culng(A58) - 1)
+#define A74 culng(ENUMCONST1 - 1)
+#define A75 (ENUMCONST1 - 1)
+#define A76 culng(culng(ENUMCONST1) - 1)
+#define A77 culng(culng(ENUMCONST1) - 1)
+#define A78 (undefined - 1)
+#define A79 (undefined - 1)
+#define A80 culng(culng(undefined) - 1)
+#define A81 culng(culng(undefined) - 1)
+#define A82 culng(clng(undefined) - 1)
+#define A83 (clng(undefined) - 1)
 
 end extern
