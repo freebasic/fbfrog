@@ -925,6 +925,29 @@ private sub hlAddForwardDecls( byval ast as ASTNODE ptr )
 	next
 end sub
 
+private function typeInvolvesUdt( byval dtype as integer, byval subtype as ASTNODE ptr ) as integer
+	select case( typeGetDt( dtype ) )
+	case TYPE_UDT
+		return TRUE
+
+	'' Function [pointer] type?
+	case TYPE_PROC
+		assert( subtype->class = ASTCLASS_PROC )
+
+		'' Check function result
+		if( typeInvolvesUdt( subtype->dtype, subtype->subtype ) ) then return TRUE
+
+		'' Check parameters
+		var param = subtype->head
+		while( param )
+			if( typeInvolvesUdt( param->dtype, param->subtype ) ) then return TRUE
+			param = param->next
+		wend
+	end select
+
+	function = FALSE
+end function
+
 ''
 '' Checks whether an expression is simple enough that it could be used in an
 '' FB constant declaration (const FOO = <...>).
@@ -947,6 +970,13 @@ private function hIsSimpleConstantExpression( byval n as ASTNODE ptr ) as intege
 
 	'' UOPs
 	case ASTCLASS_NOT, ASTCLASS_NEGATE
+		if( hIsSimpleConstantExpression( n->head ) = FALSE ) then exit function
+
+	'' Casts: only if the type doesn't involve a UDT (we would have to be
+	'' sure that the UDT is declared above this constant to allow casts
+	'' involving UDTs, but currently we don't track that)
+	case ASTCLASS_CAST
+		if( typeInvolvesUdt( n->dtype, n->subtype ) ) then exit function
 		if( hIsSimpleConstantExpression( n->head ) = FALSE ) then exit function
 
 	'' BOPs

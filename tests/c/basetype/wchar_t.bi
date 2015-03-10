@@ -19,9 +19,9 @@ type UDT
 	array(0 to 9) as wstring * 20
 end type
 
-#define A1 cast(wchar_t, 1)
-#define A2 cptr(function cdecl() as wchar_t, 1)
-#define A3 cptr(sub cdecl(byval as wchar_t), 1)
+const A1 = cast(wchar_t, 1)
+const A2 = cptr(function() as wchar_t, 1)
+const A3 = cptr(sub(byval as wchar_t), 1)
 
 extern i as const wchar_t
 extern p as const wstring ptr
@@ -40,8 +40,8 @@ type UDT
 	array(0 to 9) as const wstring * 20
 end type
 
-#define A4 cast(const wchar_t, 1)
-#define A5 cptr(function cdecl() as const wchar_t, 1)
-#define A6 cptr(sub cdecl(byval as const wchar_t), 1)
+const A4 = cast(const wchar_t, 1)
+const A5 = cptr(function() as const wchar_t, 1)
+const A6 = cptr(sub(byval as const wchar_t), 1)
 
 end extern

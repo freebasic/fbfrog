@@ -22,3 +22,9 @@ void cool2(int);
 #define C2 cool2(1)
 
 #define D1 sizeof(int)
+#define D2 sizeof(struct UDT1)
+
+#define D3 ((int)0)
+#define D4 ((struct UDT1 *)0)
+#define D5 ((struct UDT1 *(*)(void))0)
+#define D6 ((void (*)(struct UDT1 *))0)

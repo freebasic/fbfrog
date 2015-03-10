@@ -14,7 +14,7 @@ type UDT
 	p as sub(byval i as long ptr)
 end type
 
-#define A cptr(sub cdecl(byval i as long ptr), 0)
+const A = cptr(sub(byval i as long ptr), 0)
 
 type C
 	i as long
