@@ -1,3 +1,3 @@
 #pragma once
 
-#define A 1
+const A = 1

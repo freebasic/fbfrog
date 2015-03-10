@@ -389,7 +389,7 @@ private function hlFixExpressions( byval n as ASTNODE ptr ) as integer
 				hlCollectSymbol( n->text, dtype )
 			end if
 		end if
-	case ASTCLASS_ENUMCONST
+	case ASTCLASS_CONST
 		hlCollectSymbol( n->text, TYPE_LONG )
 	end select
 
@@ -925,6 +925,77 @@ private sub hlAddForwardDecls( byval ast as ASTNODE ptr )
 	next
 end sub
 
+''
+'' Checks whether an expression is simple enough that it could be used in an
+'' FB constant declaration (const FOO = <...>).
+''
+'' Thus, it shouldn't contain any function calls, addrof/deref operations, or
+'' preprocessor operations, etc., but only a selected set of known-to-be-safe
+'' math operations & co.
+''
+'' TODO: allow more here:
+''  * references to other constants
+''  * string literals
+''  * "sizeof(datatype)", but not "datatype"
+''  * cast(A, ...) if type A is declared above (#defines don't need to
+''    care, but constants declarations do...)
+''
+private function hIsSimpleConstantExpression( byval n as ASTNODE ptr ) as integer
+	select case( n->class )
+	'' Atoms
+	case ASTCLASS_CONSTI, ASTCLASS_CONSTF
+
+	'' UOPs
+	case ASTCLASS_NOT, ASTCLASS_NEGATE
+		if( hIsSimpleConstantExpression( n->head ) = FALSE ) then exit function
+
+	'' BOPs
+	case ASTCLASS_LOGOR, ASTCLASS_LOGAND, _
+	     ASTCLASS_OR, ASTCLASS_XOR, ASTCLASS_AND, _
+	     ASTCLASS_EQ, ASTCLASS_NE, _
+	     ASTCLASS_LT, ASTCLASS_LE, _
+	     ASTCLASS_GT, ASTCLASS_GE, _
+	     ASTCLASS_SHL, ASTCLASS_SHR, _
+	     ASTCLASS_ADD, ASTCLASS_SUB, _
+	     ASTCLASS_MUL, ASTCLASS_DIV, ASTCLASS_MOD
+		if( hIsSimpleConstantExpression( n->head ) = FALSE ) then exit function
+		if( hIsSimpleConstantExpression( n->tail ) = FALSE ) then exit function
+
+	'' IIF
+	case ASTCLASS_IIF
+		if( hIsSimpleConstantExpression( n->expr ) = FALSE ) then exit function
+		if( hIsSimpleConstantExpression( n->head ) = FALSE ) then exit function
+		if( hIsSimpleConstantExpression( n->tail ) = FALSE ) then exit function
+
+	case else
+		exit function
+	end select
+
+	function = TRUE
+end function
+
+'' Turns simple #defines into constants
+private sub hlTurnDefinesIntoProperDeclarations( byval ast as ASTNODE ptr )
+	var i = ast->head
+	while( i )
+
+		if( i->class = ASTCLASS_PPDEFINE ) then
+			'' Object-like macro?
+			if( i->paramcount < 0 ) then
+				'' Has a body?
+				if( i->expr ) then
+					'' Body is a simple expression?
+					if( hIsSimpleConstantExpression( i->expr ) ) then
+						i->class = ASTCLASS_CONST
+					end if
+				end if
+			end if
+		end if
+
+		i = i->next
+	wend
+end sub
+
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 private function hlCountCallConvs( byval n as ASTNODE ptr ) as integer
@@ -1246,6 +1317,8 @@ sub hlGlobal( byval ast as ASTNODE ptr )
 	hlAddForwardDecls( ast )
 	hashEnd( @hl.typehash )
 	deallocate( hl.types )
+
+	hlTurnDefinesIntoProperDeclarations( ast )
 end sub
 
 ''

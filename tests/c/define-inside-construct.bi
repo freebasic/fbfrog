@@ -8,11 +8,11 @@ enum
 	A2 = 2
 end enum
 
-#define A3 3
+const A3 = 3
 
 declare sub f()
 
-#define FOO 123
+const FOO = 123
 
 type UDT
 end type

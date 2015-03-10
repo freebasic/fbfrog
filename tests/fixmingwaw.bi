@@ -30,8 +30,8 @@
 	#define Function4 Function4A
 #endif
 
-#define CONST1A 1
-#define CONST1W 2
+const CONST1A = 1
+const CONST1W = 2
 
 #ifdef UNICODE
 	#define CONST1 CONST1W

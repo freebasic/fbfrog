@@ -481,8 +481,13 @@ private sub emitCode( byval n as ASTNODE ptr, byval parentclass as integer )
 		emitLine( "type " + *n->text + " as " + *n->text + "_" )
 		emit.decls += 1
 
-	case ASTCLASS_ENUMCONST
-		emitLine( *n->text + hInitializer( n ) )
+	case ASTCLASS_CONST
+		dim s as string
+		if( (n->attrib and ASTATTRIB_ENUMCONST) = 0 ) then
+			s = "const "
+			emit.decls += 1
+		end if
+		emitLine( s + *n->text + hInitializer( n ) )
 
 	case ASTCLASS_VAR
 		if( frog.fixunsizedarrays and (n->array <> NULL) ) then

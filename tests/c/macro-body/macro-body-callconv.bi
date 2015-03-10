@@ -1,3 +1,3 @@
 #pragma once
 
-#define A cptr(sub cdecl(), 0)
+#define A cptr(sub cdecl(), getFunctionPtr())

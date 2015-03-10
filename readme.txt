@@ -44,6 +44,7 @@ What's this?
    * Anonymous structs (not supported in FB) => named after first typedef that
      uses them, or auto-generated name
    * typedef struct FOO FOO; => solved out (FB doesn't have separate types/tags)
+   * #defines with simple constant expression in their bodies => FB constants
    * #defines nested inside struct bodies => moved to toplevel (helps when
      converting #defines to constants, because FB scopes those inside UDTs)
    * #define m(a, ...) __VA_ARGS__ => #define m(a, __VA_ARGS__...) __VA_ARGS__

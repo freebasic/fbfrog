@@ -685,7 +685,8 @@ private function cEnumConst( ) as ASTNODE ptr
 		cError( "expected identifier for an enum constant" + tkButFound( c.x ) )
 		exit function
 	end if
-	var enumconst = astNew( ASTCLASS_ENUMCONST, tkSpellId( c.x ) )
+	var enumconst = astNew( ASTCLASS_CONST, tkSpellId( c.x ) )
+	enumconst->attrib or= ASTATTRIB_ENUMCONST
 	c.x += 1
 
 	'' '='?

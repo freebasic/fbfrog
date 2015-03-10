@@ -11,6 +11,7 @@ declare sub ok()
 #define C(a) '' TODO: void f(
 #define D(a, b, c) '' TODO: void f(
 #define M1 '' TODO: enum { A,
-#define M2 0
+
+const M2 = 0
 
 end extern

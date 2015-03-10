@@ -1,4 +1,5 @@
 #pragma once
 
 #define DEFINED
-#define DEFINED123 123
+
+const DEFINED123 = 123

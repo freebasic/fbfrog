@@ -60,7 +60,7 @@ dim shared as zstring ptr astnodename(0 to ...) => _
 	@"enum"       , _
 	@"typedef"    , _
 	@"forwarddecl", _
-	@"enumconst"  , _
+	@"const"      , _
 	@"var"        , _
 	@"field"      , _
 	@"proc"       , _
@@ -609,7 +609,7 @@ end sub
 function astDumpPrettyClass( byval astclass as integer ) as string
 	select case( astclass )
 	case ASTCLASS_PPDEFINE : function = "#define"
-	case ASTCLASS_ENUMCONST : function = "enum constant"
+	case ASTCLASS_CONST : function = "constant"
 	case ASTCLASS_VAR   : function = "variable"
 	case ASTCLASS_PROC  : function = "procedure"
 	case else           : function = *astnodename(astclass)
@@ -673,6 +673,7 @@ function astDumpOne( byval n as ASTNODE ptr ) as string
 	checkAttrib( GENERATEDID )
 	checkAttrib( DLLIMPORT )
 	checkAttrib( FORWARDDECLARED )
+	checkAttrib( ENUMCONST )
 
 	if( n->text ) then
 		s += " """ + strMakePrintable( *n->text ) + """"

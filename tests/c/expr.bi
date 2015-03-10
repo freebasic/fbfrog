@@ -464,7 +464,9 @@ end enum
 #define MAKE_RGB(r, g, b) clng(culng((cbyte((r)) or (cushort(cbyte((g))) shl 8)) or culng(culng(cbyte((b))) shl 16)))
 #define A58 culng(0u - 100u)
 #define A59 culng(0u - 100)
-#define A60 (0 - 100)
+
+const A60 = 0 - 100
+
 #define A61 culng(0 - 100u)
 #define A62 culng(0u - 100u)
 #define A70 culng(A58 - 1u)
@@ -485,7 +487,7 @@ end enum
 #ifdef __FB_WIN32__
 	#define A84 undefined
 #else
-	#define A84 (-1)
+	const A84 = -1
 #endif
 
 #define A85 A84

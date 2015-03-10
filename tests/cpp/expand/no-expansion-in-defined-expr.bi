@@ -2,7 +2,7 @@
 
 extern "C"
 
-#define m1 123
+const m1 = 123
 
 extern yes as long
 extern separator1 as long

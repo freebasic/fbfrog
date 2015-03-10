@@ -1,0 +1,11 @@
+[1/5] __FB_WIN32__.__FB_64BIT__
+      tests/define2constant.h
+[2/5] __FB_WIN32__.(not __FB_64BIT__)
+      tests/define2constant.h
+[3/5] __FB_LINUX__.__FB_64BIT__
+      tests/define2constant.h
+[4/5] __FB_LINUX__.(not __FB_64BIT__)
+      tests/define2constant.h
+[5/5] __FB_DOS__
+      tests/define2constant.h
+emitting: tests/define2constant.bi (17 declarations, 0 TODOs)

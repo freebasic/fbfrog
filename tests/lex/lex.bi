@@ -4,53 +4,54 @@
 
 extern "C"
 
-#define A01 0
-#define A02 1
-#define A03 11
-#define A04 &o0
-#define A05 &o1
-#define A06 &o123
-#define A07 &h
-#define A08 &h0
-#define A09 &h1
-#define A10 &hFF
-#define A11 1.0
-#define A12 1.0f
-#define A13 1.0
-#define A14 0.1
-#define A15 0.0
-#define A16 1.123
-#define A17 1e+1
-#define A18 1.0e+1
-#define A19 1u
-#define A20 cast(clong, 1)
-#define A21 cast(culong, 1)
-#define A22 1ll
-#define A23 1ull
-#define A24 9.0
-#define A25 9e1
-#define A26 9e+1
-#define A27 9e-1
-#define A28 9E1
-#define A29 9E+1
-#define A30 9E-1
-#define A31 &h88
-#define A32 &hFF
-#define A33 cast(culong, 1)
-#define A34 1ull
-#define A35 1
-#define A36 1
-#define A37 1
-#define A38 1ll
-#define A39 1u
-#define A40 1u
-#define A41 1u
-#define A42 1ull
-#define A43 &b
-#define A44 &b0
-#define A45 &b1
-#define A46 &b10100110
-#define A47 &b0
+const A01 = 0
+const A02 = 1
+const A03 = 11
+const A04 = &o0
+const A05 = &o1
+const A06 = &o123
+const A07 = &h
+const A08 = &h0
+const A09 = &h1
+const A10 = &hFF
+const A11 = 1.0
+const A12 = 1.0f
+const A13 = 1.0
+const A14 = 0.1
+const A15 = 0.0
+const A16 = 1.123
+const A17 = 1e+1
+const A18 = 1.0e+1
+const A19 = 1u
+const A20 = cast(clong, 1)
+const A21 = cast(culong, 1)
+const A22 = 1ll
+const A23 = 1ull
+const A24 = 9.0
+const A25 = 9e1
+const A26 = 9e+1
+const A27 = 9e-1
+const A28 = 9E1
+const A29 = 9E+1
+const A30 = 9E-1
+const A31 = &h88
+const A32 = &hFF
+const A33 = cast(culong, 1)
+const A34 = 1ull
+const A35 = 1
+const A36 = 1
+const A37 = 1
+const A38 = 1ll
+const A39 = 1u
+const A40 = 1u
+const A41 = 1u
+const A42 = 1ull
+const A43 = &b
+const A44 = &b0
+const A45 = &b1
+const A46 = &b10100110
+const A47 = &b0
+
 #define B1 "foo"
 #define B2 wstr("foo")
 #define B3 !"foo\n"
