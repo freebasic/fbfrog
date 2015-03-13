@@ -143,6 +143,7 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	(@"-windowsms"    ), _
 	(@"-clong32"      ), _
 	(@"-fixunsizedarrays"), _
+	(@"-disableconstants"), _
 	(@"-fixmingwaw"   ), _
 	(@"-nofunctionbodies"), _
 	(@"-renametypedef"), _

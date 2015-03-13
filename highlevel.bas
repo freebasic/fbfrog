@@ -1348,7 +1348,9 @@ sub hlGlobal( byval ast as ASTNODE ptr )
 	hashEnd( @hl.typehash )
 	deallocate( hl.types )
 
-	hlTurnDefinesIntoProperDeclarations( ast )
+	if( frog.disableconstants = FALSE ) then
+		hlTurnDefinesIntoProperDeclarations( ast )
+	end if
 end sub
 
 ''
