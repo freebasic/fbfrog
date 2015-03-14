@@ -23,21 +23,10 @@ sub sourcebuffersInit( )
 end sub
 
 function hDumpSourceBuffer( byval file as SOURCEBUFFER ptr ) as string
-	var s = *file->name + "("
-
+	var s = *file->name
 	if( file->is_file ) then
-		s += "is a file"
+		s += "(file)"
 	end if
-
-	if( file->buffer ) then
-		var realsize = file->size - 1  '' minus the extra null terminator
-		s += ", " & realsize & " byte"
-		if( realsize <> 1 ) then s += "s"
-		s += " loaded"
-	end if
-
-	s += ")"
-
 	function = s
 end function
 
@@ -73,12 +62,11 @@ private sub hLoadFile( byval source as SOURCEBUFFER ptr )
 	'' without bound checks, and don't need to give special treatment
 	'' to empty files.
 	dim as integer sizetoload = filesize
-	source->size = sizetoload + 1
-	source->buffer = callocate( source->size )
+	source->buffer = callocate( sizetoload + 1 )
 
 	if( sizetoload > 0 ) then
 		var sizeloaded = 0
-		var result = get( #f, , *source->buffer, sizetoload, sizeloaded )
+		var result = get( #f, , *cptr( ubyte ptr, source->buffer ), sizetoload, sizeloaded )
 		if( result or (sizeloaded <> sizetoload) ) then
 			oopsLocation( @source->location, "file I/O failed" )
 		end if
@@ -138,7 +126,6 @@ function sourcebufferFromZstring _
 
 	var source = sourcebufferNew( prettyname, location )
 	source->buffer = strDuplicate( s )
-	source->size = len( *s ) + 1
 
 	function = source
 end function

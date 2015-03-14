@@ -80,12 +80,10 @@ type SOURCEBUFFER_
 	is_file		as integer    '' whether name is a file path
 	name		as zstring ptr
 	location	as TKLOCATION
-	buffer		as ubyte ptr  '' file content, null-terminated
-	size		as integer    '' allocated buffer size
+	buffer		as zstring ptr  '' file content, null-terminated (embedded nulls are disallowed)
 end type
 
 declare sub sourcebuffersInit( )
-declare function hDumpSourceBuffer( byval source as SOURCEBUFFER ptr ) as string
 declare function sourcebufferAdd( byval filename as zstring ptr ) as SOURCEBUFFER ptr
 declare function sourcebufferFromFile _
 	( _
