@@ -26,18 +26,16 @@ function hDumpSourceBuffer( byval file as SOURCEBUFFER ptr ) as string
 	var s = *file->name + "("
 
 	if( file->is_file ) then
-		s += "is a file, "
+		s += "is a file"
 	end if
 
 	if( file->buffer ) then
 		var realsize = file->size - 1  '' minus the extra null terminator
-		s += realsize & " byte"
+		s += ", " & realsize & " byte"
 		if( realsize <> 1 ) then s += "s"
-		s += " loaded, "
+		s += " loaded"
 	end if
 
-	s += file->lines & " line"
-	if( file->lines <> 1 ) then s += "s"
 	s += ")"
 
 	function = s

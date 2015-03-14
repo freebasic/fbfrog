@@ -82,7 +82,6 @@ type SOURCEBUFFER_
 	location	as TKLOCATION
 	buffer		as ubyte ptr  '' file content, null-terminated
 	size		as integer    '' allocated buffer size
-	lines		as integer    '' number of lines counted during lexing
 end type
 
 declare sub sourcebuffersInit( )

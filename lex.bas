@@ -99,7 +99,6 @@ end sub
 
 private sub hNewLine( )
 	lex.location.linenum += 1
-	lex.location.source->lines = lex.location.linenum + 1
 end sub
 
 '' // C++ comment
@@ -679,7 +678,6 @@ function lexLoadC( byval x as integer, byval source as SOURCEBUFFER ptr ) as int
 	lex.x = x
 	lex.location.source = source
 	lex.location.linenum = 0
-	lex.location.source->lines = 1
 	lex.i = source->buffer
 
 	'' Tokenize and insert into tk buffer
@@ -787,7 +785,6 @@ function lexLoadArgs( byval x as integer, byval source as SOURCEBUFFER ptr ) as 
 	lex.x = x
 	lex.location.source = source
 	lex.location.linenum = 0
-	lex.location.source->lines = 1
 	lex.i = source->buffer
 	lex.behindspace = TRUE
 
