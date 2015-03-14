@@ -9,7 +9,7 @@ const MAXTEXTLEN = 1 shl 12
 type LEXSTUFF
 	i		as ubyte ptr  '' Current char, will always be <= limit
 	x		as integer
-	location	as TKLOCATION
+	location	as TkLocation
 	behindspace	as integer
 
 	ckeywords	as THASH
@@ -58,11 +58,11 @@ private function hLookupKeyword _
 end function
 
 private sub lexOops( byref message as string )
-	oopsLocation( @lex.location, message )
+	oopsLocation( lex.location, message )
 end sub
 
 private sub hSetLocation( byval flags as integer = 0 )
-	tkSetLocation( lex.x, @lex.location )
+	tkSetLocation( lex.x, lex.location )
 	if( lex.behindspace ) then
 		flags or= TKFLAG_BEHINDSPACE
 	end if
@@ -758,7 +758,7 @@ private sub hReadArg( byval tk as integer )
 	case TK_MINUS
 		tk = hLookupKeyword( @lex.frogoptions, text, TK_STRING )
 		if( tk = TK_STRING ) then
-			oopsLocation( @lex.location, "unknown command line option '" + *text + "'" )
+			oopsLocation( lex.location, "unknown command line option '" + *text + "'" )
 		end if
 		text = NULL
 	case TK_STRING

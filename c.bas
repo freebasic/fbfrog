@@ -2180,11 +2180,11 @@ private function cBody( byval bodyastclass as integer ) as ASTNODE ptr
 			if( t->class = ASTCLASS_GROUP ) then
 				var i = t->head
 				while( i )
-					i->location = *location
+					i->location = location
 					i = i->next
 				wend
 			else
-				t->location = *location
+				t->location = location
 			end if
 		end if
 

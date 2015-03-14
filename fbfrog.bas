@@ -250,7 +250,7 @@ private sub hLoadArgsFile _
 	( _
 		byval x as integer, _
 		byref filename as string, _
-		byval location as TKLOCATION ptr _
+		byval location as TkLocation _
 	)
 
 	const MAX_FILES = 1024  '' Arbitrary limit to detect recursion
@@ -287,8 +287,8 @@ private sub hExpandArgsFiles( )
 			'' If the @file argument comes from an @file,
 			'' open it relative to the parent @file's dir.
 			var location = tkGetLocation( x )
-			if( location->source->is_file ) then
-				filename = pathAddDiv( pathOnly( *location->source->name ) ) + filename
+			if( location.source->is_file ) then
+				filename = pathAddDiv( pathOnly( *location.source->name ) ) + filename
 			end if
 
 			'' Load the file content behind the @file token
@@ -328,8 +328,8 @@ private function hPathRelativeToArgsFile( byval x as integer ) as string
 	'' @file, open it relative to the @file's dir.
 	if( pathIsAbsolute( path ) = FALSE ) then
 		var location = tkGetLocation( x )
-		if( location->source->is_file ) then
-			path = pathAddDiv( pathOnly( *location->source->name ) ) + path
+		if( location.source->is_file ) then
+			path = pathAddDiv( pathOnly( *location.source->name ) ) + path
 		end if
 	end if
 
@@ -904,7 +904,7 @@ private function frogParse( byval options as ASTNODE ptr ) as ASTNODE ptr
 				s += !"\n"
 
 				var x = tkGetCount( )
-				lexLoadC( x, sourcebufferFromZstring( prettyname, s, NULL ) )
+				lexLoadC( x, sourcebufferFromZstring( prettyname, s ) )
 				tkSetRemove( x, tkGetCount( ) - 1 )
 
 			case ASTCLASS_INCDIR
@@ -925,7 +925,7 @@ private function frogParse( byval options as ASTNODE ptr ) as ASTNODE ptr
 			if( i->class = ASTCLASS_FBFROGPREINCLUDE ) then
 				var filename = hFindResource( *i->text )
 				var x = tkGetCount( )
-				lexLoadC( x, sourcebufferFromFile( filename, NULL ) )
+				lexLoadC( x, sourcebufferFromFile( filename ) )
 				tkSetRemove( x, tkGetCount( ) - 1 )
 			end if
 			i = i->next
@@ -1035,7 +1035,7 @@ end sub
 
 	'' Load all command line arguments into the tk buffer
 	lexLoadArgs( 0, sourcebufferFromZstring( "<command line>", _
-			hTurnArgsIntoString( __FB_ARGC__, __FB_ARGV__ ), NULL ) )
+			hTurnArgsIntoString( __FB_ARGC__, __FB_ARGV__ ) ) )
 
 	'' Load content of @files too
 	hExpandArgsFiles( )
@@ -1057,7 +1057,7 @@ end sub
 		var userscript = frog.script
 		frog.script = astNewGROUP( )
 		tkInit( )
-		hLoadArgsFile( 0, hFindResource( "default.fbfrog" ), NULL )
+		hLoadArgsFile( 0, hFindResource( "default.fbfrog" ), type( NULL, 0 ) )
 		hParseArgs( 0 )
 		tkEnd( )
 		astAppend( frog.script, userscript )

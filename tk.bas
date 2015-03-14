@@ -211,7 +211,7 @@ type ONETOKEN
 	'' rest: NULL
 	text		as zstring ptr
 
-	location	as TKLOCATION   '' where this token was found
+	location	as TkLocation   '' where this token was found
 end type
 
 type TKBUFFER
@@ -444,15 +444,15 @@ function tkSpellId( byval x as integer ) as zstring ptr
 	end if
 end function
 
-sub tkSetLocation( byval x as integer, byval location as TKLOCATION ptr )
+sub tkSetLocation( byval x as integer, byval location as TkLocation )
 	var p = tkAccess( x )
 	if( p->id <> TK_EOF ) then
-		p->location = *location
+		p->location = location
 	end if
 end sub
 
-function tkGetLocation( byval x as integer ) as TKLOCATION ptr
-	function = @(tkAccess( x )->location)
+function tkGetLocation( byval x as integer ) as TkLocation
+	function = tkAccess( x )->location
 end function
 
 sub tkSetFlags( byval x as integer, byval flags as integer )

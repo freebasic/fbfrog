@@ -561,7 +561,7 @@ end sub
 sub cppAppendIncludeDirective( byref filename as string, byval tkflags as integer )
 	var code = "#include """ + filename + """" + !"\n"
 	var x = tkGetCount( )
-	lexLoadC( x, sourcebufferFromZstring( code, code, NULL ) )
+	lexLoadC( x, sourcebufferFromZstring( code, code ) )
 	tkAddFlags( x, tkGetCount( ) - 1, TKFLAG_REMOVE or tkflags )
 end sub
 
@@ -2037,7 +2037,7 @@ private sub cppInclude( byval begin as integer, byref flags as integer )
 
 	'' "filename"
 	tkExpect( cpp.x, TK_STRING, "containing the #include file name" )
-	var location = *tkGetLocation( cpp.x )
+	var location = tkGetLocation( cpp.x )
 	var includetkflags = tkGetFlags( cpp.x )
 	var inctext = *tkGetText( cpp.x )
 	cpp.x += 1
@@ -2123,7 +2123,7 @@ private sub cppInclude( byval begin as integer, byref flags as integer )
 	cppPush( STATE_FILE, knownfile )
 
 	'' Read the include file and insert its tokens
-	var y = lexLoadC( cpp.x, sourcebufferFromFile( incfile, @location ) )
+	var y = lexLoadC( cpp.x, sourcebufferFromFile( incfile, location ) )
 
 	'' If tokens were inserted, ensure there is an EOL at the end
 	if( cpp.x < y ) then

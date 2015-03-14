@@ -33,15 +33,13 @@ end function
 function sourcebufferNew _
 	( _
 		byval name_ as zstring ptr, _
-		byval location as TKLOCATION ptr _
+		byval location as TkLocation _
 	) as SOURCEBUFFER ptr
 
 	dim as SOURCEBUFFER ptr source = callocate( sizeof( SOURCEBUFFER ) )
 
 	source->name = strDuplicate( name_ )
-	if( location ) then
-		source->location = *location
-	end if
+	source->location = location
 
 	function = source
 end function
@@ -50,12 +48,12 @@ private sub hLoadFile( byval source as SOURCEBUFFER ptr )
 	'' Read in the whole file content
 	var f = freefile( )
 	if( open( *source->name, for binary, access read, as #f ) ) then
-		oopsLocation( @source->location, "could not open file: '" + *source->name + "'" )
+		oopsLocation( source->location, "could not open file: '" + *source->name + "'" )
 	end if
 
 	dim as ulongint filesize = lof( f )
 	if( filesize > &h40000000 ) then
-		oopsLocation( @source->location, "a header file bigger than 1 GiB? no way..." )
+		oopsLocation( source->location, "a header file bigger than 1 GiB? no way..." )
 	end if
 
 	'' An extra 0 byte at the end of the buffer so we can look ahead
@@ -68,7 +66,7 @@ private sub hLoadFile( byval source as SOURCEBUFFER ptr )
 		var sizeloaded = 0
 		var result = get( #f, , *cptr( ubyte ptr, source->buffer ), sizetoload, sizeloaded )
 		if( result or (sizeloaded <> sizetoload) ) then
-			oopsLocation( @source->location, "file I/O failed" )
+			oopsLocation( source->location, "file I/O failed" )
 		end if
 	end if
 
@@ -78,7 +76,7 @@ private sub hLoadFile( byval source as SOURCEBUFFER ptr )
 	'' can't allow embedded nulls, and null also indicates EOF to the lexer.
 	for i as integer = 0 to sizetoload-1
 		if( source->buffer[i] = 0 ) then
-			oopsLocation( @source->location, "file '" + *source->name + "' has embedded nulls, please fix that first!" )
+			oopsLocation( source->location, "file '" + *source->name + "' has embedded nulls, please fix that first!" )
 		end if
 	next
 end sub
@@ -86,7 +84,7 @@ end sub
 function sourcebufferFromFile _
 	( _
 		byval filename as zstring ptr, _
-		byval location as TKLOCATION ptr _
+		byval location as TkLocation _
 	) as SOURCEBUFFER ptr
 
 	'' Caching files based on the file name
@@ -109,7 +107,7 @@ function sourcebufferFromZstring _
 	( _
 		byval prettyname as zstring ptr, _
 		byval s as zstring ptr, _
-		byval location as TKLOCATION ptr _
+		byval location as TkLocation _
 	) as SOURCEBUFFER ptr
 
 	'' Note: caching zstring source buffers
@@ -137,11 +135,11 @@ sub oops( byval message as zstring ptr )
 	end 1
 end sub
 
-function hDumpLocation( byval location as TKLOCATION ptr ) as string
-	if( location->source ) then
+function hDumpLocation( byval location as TkLocation ) as string
+	if( location.source ) then
 		var s = "location("
-		s += hDumpSourceBuffer( location->source ) & ", "
-		s += "line " & location->linenum & ", "
+		s += hDumpSourceBuffer( location.source ) & ", "
+		s += "line " & location.linenum & ", "
 		s += ")"
 		function = s
 	else
@@ -198,20 +196,20 @@ end function
 
 '' Builds an error message string like this:
 ''    filename.bas(10): duplicate definition of 'foo'
-function hReport( byval location as TKLOCATION ptr, byval message as zstring ptr ) as string
-	if( location->source = NULL ) then
+function hReport( byval location as TkLocation, byval message as zstring ptr ) as string
+	if( location.source = NULL ) then
 		return *message
 	end if
 
 	'' Show filename relative to curdir(), that's usually nicer for the user
-	var filename = pathStripCurdir( *location->source->name )
+	var filename = pathStripCurdir( *location.source->name )
 
 	'' Location info:
 	''    filename(123): message
-	function = filename + "(" & location->linenum & "): " + *message
+	function = filename + "(" & location.linenum & "): " + *message
 end function
 
-sub oopsLocation( byval location as TKLOCATION ptr, byval message as zstring ptr )
+sub oopsLocation( byval location as TkLocation, byval message as zstring ptr )
 	print hReport( location, message )
 	end 1
 end sub

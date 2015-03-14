@@ -69,7 +69,7 @@ end enum
 
 type SOURCEBUFFER as SOURCEBUFFER_
 
-type TKLOCATION
+type TkLocation
 	'' Supposed to point to permanent memory, whoever fills the structure
 	'' 1st must ensure that
 	source		as SOURCEBUFFER ptr
@@ -79,7 +79,7 @@ end type
 type SOURCEBUFFER_
 	is_file		as integer    '' whether name is a file path
 	name		as zstring ptr
-	location	as TKLOCATION
+	location	as TkLocation
 	buffer		as zstring ptr  '' file content, null-terminated (embedded nulls are disallowed)
 end type
 
@@ -88,16 +88,16 @@ declare function sourcebufferAdd( byval filename as zstring ptr ) as SOURCEBUFFE
 declare function sourcebufferFromFile _
 	( _
 		byval filename as zstring ptr, _
-		byval location as TKLOCATION ptr _
+		byval location as TkLocation = type( NULL, 0 ) _
 	) as SOURCEBUFFER ptr
 declare function sourcebufferFromZstring _
 	( _
 		byval filename as zstring ptr, _
 		byval s as zstring ptr, _
-		byval location as TKLOCATION ptr _
+		byval location as TkLocation = type( NULL, 0 ) _
 	) as SOURCEBUFFER ptr
 declare sub oops( byval message as zstring ptr )
-declare function hDumpLocation( byval location as TKLOCATION ptr ) as string
+declare function hDumpLocation( byval location as TkLocation ) as string
 declare sub hCalcErrorLine _
 	( _
 		byval column as integer, _
@@ -106,8 +106,8 @@ declare sub hCalcErrorLine _
 		byref offset as integer _
 	)
 declare function hErrorMarker( byval indent as integer, byval length as integer ) as string
-declare function hReport( byval location as TKLOCATION ptr, byval message as zstring ptr ) as string
-declare sub oopsLocation( byval location as TKLOCATION ptr, byval message as zstring ptr )
+declare function hReport( byval location as TkLocation, byval message as zstring ptr ) as string
+declare sub oopsLocation( byval location as TkLocation, byval message as zstring ptr )
 declare function strDuplicate( byval s as zstring ptr ) as zstring ptr
 declare function strReplace _
 	( _
@@ -424,8 +424,8 @@ declare sub tkCopy _
 declare function tkGet( byval x as integer ) as integer
 declare function tkGetText( byval x as integer ) as zstring ptr
 declare function tkSpellId( byval x as integer ) as zstring ptr
-declare sub tkSetLocation( byval x as integer, byval location as TKLOCATION ptr )
-declare function tkGetLocation( byval x as integer ) as TKLOCATION ptr
+declare sub tkSetLocation( byval x as integer, byval location as TkLocation )
+declare function tkGetLocation( byval x as integer ) as TkLocation
 declare sub tkSetFlags( byval x as integer, byval flags as integer )
 declare sub tkAddFlags( byval first as integer, byval last as integer, byval flags as integer )
 declare sub tkSetRemove overload( byval x as integer )
