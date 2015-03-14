@@ -263,7 +263,8 @@ private sub hLoadArgsFile _
 	filename = hFindResource( filename )
 
 	'' Load the file content at the specified position
-	lexLoadArgs( x, sourcebufferFromFile( filename, location ) )
+	var file = filebuffersAdd( filename, location )
+	lexLoadArgs( x, file->buffer, file->source )
 	filecount += 1
 
 end sub
@@ -904,7 +905,7 @@ private function frogParse( byval options as ASTNODE ptr ) as ASTNODE ptr
 				s += !"\n"
 
 				var x = tkGetCount( )
-				lexLoadC( x, sourcebufferFromZstring( prettyname, s ) )
+				lexLoadC( x, s, sourceinfoForZstring( prettyname ) )
 				tkSetRemove( x, tkGetCount( ) - 1 )
 
 			case ASTCLASS_INCDIR
@@ -925,7 +926,8 @@ private function frogParse( byval options as ASTNODE ptr ) as ASTNODE ptr
 			if( i->class = ASTCLASS_FBFROGPREINCLUDE ) then
 				var filename = hFindResource( *i->text )
 				var x = tkGetCount( )
-				lexLoadC( x, sourcebufferFromFile( filename ) )
+				var file = filebuffersAdd( filename, type( NULL, 0 ) )
+				lexLoadC( x, file->buffer, file->source )
 				tkSetRemove( x, tkGetCount( ) - 1 )
 			end if
 			i = i->next
@@ -1016,7 +1018,7 @@ end sub
 		hPrintHelpAndExit( )
 	end if
 
-	sourcebuffersInit( )
+	filebuffersInit( )
 	fbcrtheadersInit( )
 	extradatatypesInit( )
 	lexInit( )
@@ -1034,8 +1036,8 @@ end sub
 	tkInit( )
 
 	'' Load all command line arguments into the tk buffer
-	lexLoadArgs( 0, sourcebufferFromZstring( "<command line>", _
-			hTurnArgsIntoString( __FB_ARGC__, __FB_ARGV__ ) ) )
+	lexLoadArgs( 0, hTurnArgsIntoString( __FB_ARGC__, __FB_ARGV__ ), _
+		sourceinfoForZstring( "<command line>" ) )
 
 	'' Load content of @files too
 	hExpandArgsFiles( )
@@ -1113,7 +1115,7 @@ end sub
 		'' Split the big tree into separate "incoming" trees on each .bi file
 		scope
 			dim bi as integer
-			dim prevsource as SOURCEBUFFER ptr
+			dim prevsource as SourceInfo ptr
 
 			var i = ast->head
 			while( i )

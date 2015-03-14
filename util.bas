@@ -14,33 +14,15 @@ end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-namespace sourcebuffers
-	dim shared hash as THASH
-end namespace
-
-sub sourcebuffersInit( )
-	hashInit( @sourcebuffers.hash, 8, FALSE )
-end sub
-
-function hDumpSourceBuffer( byval file as SOURCEBUFFER ptr ) as string
-	var s = *file->name
-	if( file->is_file ) then
-		s += "(file)"
-	end if
-	function = s
+function sourceinfoForZstring( byval prettyname as zstring ptr ) byref as SourceInfo
+	function = *new SourceInfo( strDuplicate( prettyname ), FALSE )
 end function
 
-private function sourcebufferNew( byval name_ as zstring ptr ) as SOURCEBUFFER ptr
-	dim as SOURCEBUFFER ptr source = callocate( sizeof( SOURCEBUFFER ) )
-	source->name = strDuplicate( name_ )
-	function = source
-end function
-
-private sub hLoadFile( byval source as SOURCEBUFFER ptr, byval location as TkLocation )
+sub FileBuffer.load( byval location as TkLocation )
 	'' Read in the whole file content
 	var f = freefile( )
-	if( open( *source->name, for binary, access read, as #f ) ) then
-		oopsLocation( location, "could not open file: '" + *source->name + "'" )
+	if( open( *source.name, for binary, access read, as #f ) ) then
+		oopsLocation( location, "could not open file: '" + *source.name + "'" )
 	end if
 
 	dim as ulongint filesize = lof( f )
@@ -52,11 +34,11 @@ private sub hLoadFile( byval source as SOURCEBUFFER ptr, byval location as TkLoc
 	'' without bound checks, and don't need to give special treatment
 	'' to empty files.
 	dim as integer sizetoload = filesize
-	source->buffer = callocate( sizetoload + 1 )
+	buffer = callocate( sizetoload + 1 )
 
 	if( sizetoload > 0 ) then
 		var sizeloaded = 0
-		var result = get( #f, , *cptr( ubyte ptr, source->buffer ), sizetoload, sizeloaded )
+		var result = get( #f, , *cptr( ubyte ptr, buffer ), sizetoload, sizeloaded )
 		if( result or (sizeloaded <> sizetoload) ) then
 			oopsLocation( location, "file I/O failed" )
 		end if
@@ -67,56 +49,35 @@ private sub hLoadFile( byval source as SOURCEBUFFER ptr, byval location as TkLoc
 	'' Currently tokens store text as null-terminated strings, so they
 	'' can't allow embedded nulls, and null also indicates EOF to the lexer.
 	for i as integer = 0 to sizetoload-1
-		if( source->buffer[i] = 0 ) then
-			oopsLocation( location, "file '" + *source->name + "' has embedded nulls, please fix that first!" )
+		if( buffer[i] = 0 ) then
+			oopsLocation( location, "file '" + *source.name + "' has embedded nulls, please fix that first!" )
 		end if
 	next
 end sub
 
-function sourcebufferFromFile _
-	( _
-		byval filename as zstring ptr, _
-		byval location as TkLocation _
-	) as SOURCEBUFFER ptr
+namespace filebuffers
+	dim shared hashtb as THASH
+end namespace
 
-	'' Caching files based on the file name
+sub filebuffersInit( )
+	hashInit( @filebuffers.hashtb, 8, FALSE )
+end sub
+
+function filebuffersAdd( byval filename as zstring ptr, byval location as TkLocation ) as FileBuffer ptr
+	'' Cache file buffers based on the file name
 	var hash = hashHash( filename )
-	var item = hashLookup( @sourcebuffers.hash, filename, hash )
+	var item = hashLookup( @filebuffers.hashtb, filename, hash )
 
-	'' Doesn't exist yet?
+	'' Not yet loaded?
 	if( item->s = NULL ) then
-		var source = sourcebufferNew( filename )
-		source->is_file = TRUE
-		hLoadFile( source, location )
-
-		hashAdd( @sourcebuffers.hash, item, hash, source->name, source )
+		var file = new FileBuffer
+		file->source.name = strDuplicate( filename )
+		file->source.is_file = TRUE
+		file->load( location )
+		hashAdd( @filebuffers.hashtb, item, hash, file->source.name, file )
 	end if
 
 	function = item->data
-end function
-
-function sourcebufferFromZstring _
-	( _
-		byval prettyname as zstring ptr, _
-		byval s as zstring ptr _
-	) as SOURCEBUFFER ptr
-
-	'' Note: caching zstring source buffers
-	'' - They don't have a globally unique identifier
-	'' - The string data itself isn't unique either, so comparing that alone
-	''   could give false positives
-	'' - However, if 2 options have the same pattern then they'll have the
-	''   same lexing errors etc. and only the 1st one ever matters. So it
-	''   doesn't make a difference if we alias the 2nd one to the 1st.
-	'' - But that's only true as long as they're the same option. Otherwise
-	''   we may accidentially alias "-a x" and "-b x". The "prettyname"
-	''   could be used to verify this here, but then we'd have to check both
-	''   prettyname and string data.
-
-	var source = sourcebufferNew( prettyname )
-	source->buffer = strDuplicate( s )
-
-	function = source
 end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -128,13 +89,7 @@ end sub
 
 function hDumpLocation( byval location as TkLocation ) as string
 	if( location.source ) then
-		var s = "location("
-		s += hDumpSourceBuffer( location.source ) & ", "
-		s += "line " & location.linenum & ", "
-		s += ")"
-		function = s
-	else
-		function = "(no location info)"
+		function = *location.source->name + "(" & location.linenum & ")"
 	end if
 end function
 

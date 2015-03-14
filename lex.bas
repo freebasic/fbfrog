@@ -674,11 +674,11 @@ end sub
 ''
 '' C lexer entry point
 ''
-function lexLoadC( byval x as integer, byval source as SOURCEBUFFER ptr ) as integer
+function lexLoadC( byval x as integer, byval code as zstring ptr, byref source as SourceInfo ) as integer
 	lex.x = x
-	lex.location.source = source
+	lex.location.source = @source
 	lex.location.linenum = 1
-	lex.i = source->buffer
+	lex.i = code
 
 	'' Tokenize and insert into tk buffer
 	while( lex.i[0] )
@@ -781,11 +781,11 @@ end sub
 ''   * "..." or '...' can be used in arguments to include whitespace
 ''   * "..." allows \" and \\ escape sequences
 ''
-function lexLoadArgs( byval x as integer, byval source as SOURCEBUFFER ptr ) as integer
+function lexLoadArgs( byval x as integer, byval args as zstring ptr, byref source as SourceInfo ) as integer
 	lex.x = x
-	lex.location.source = source
+	lex.location.source = @source
 	lex.location.linenum = 1
-	lex.i = source->buffer
+	lex.i = args
 	lex.behindspace = TRUE
 
 	do

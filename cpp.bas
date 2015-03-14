@@ -561,7 +561,7 @@ end sub
 sub cppAppendIncludeDirective( byref filename as string, byval tkflags as integer )
 	var code = "#include """ + filename + """" + !"\n"
 	var x = tkGetCount( )
-	lexLoadC( x, sourcebufferFromZstring( code, code ) )
+	lexLoadC( x, code, sourceinfoForZstring( code ) )
 	tkAddFlags( x, tkGetCount( ) - 1, TKFLAG_REMOVE or tkflags )
 end sub
 
@@ -1570,7 +1570,7 @@ private function hInsertMacroExpansion _
 
 				'' and try to lex them
 				var y = tkGetCount( )
-				lexLoadC( y, sourcebufferFromZstring( "## merge operation", mergetext ) )
+				lexLoadC( y, mergetext, sourceinfoForZstring( "## merge operation" ) )
 
 				'' That should have produced only 1 token. If it produced more, then the merge failed.
 				assert( tkGetCount( ) >= (y + 1) )
@@ -2123,7 +2123,8 @@ private sub cppInclude( byval begin as integer, byref flags as integer )
 	cppPush( STATE_FILE, knownfile )
 
 	'' Read the include file and insert its tokens
-	var y = lexLoadC( cpp.x, sourcebufferFromFile( incfile, location ) )
+	var file = filebuffersAdd( incfile, location )
+	var y = lexLoadC( cpp.x, file->buffer, file->source )
 
 	'' If tokens were inserted, ensure there is an EOL at the end
 	if( cpp.x < y ) then
@@ -2515,7 +2516,7 @@ private sub cppNext( )
 			if( tkGet( cpp.x ) <> TK_EOL ) then
 				pragma += !"\n"
 			end if
-			lexLoadC( cpp.x, sourcebufferFromZstring( "_Pragma(" + text + ")", pragma ) )
+			lexLoadC( cpp.x, pragma, sourceinfoForZstring( "_Pragma(" + text + ")" ) )
 			exit sub
 		end if
 

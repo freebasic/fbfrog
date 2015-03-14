@@ -67,33 +67,27 @@ enum
 	CH_DEL
 end enum
 
-type SOURCEBUFFER as SOURCEBUFFER_
+type SourceInfo
+	name as zstring ptr
+	is_file as integer '' whether name is a file path
+end type
+
+declare function sourceinfoForZstring( byval prettyname as zstring ptr ) byref as SourceInfo
 
 type TkLocation
-	'' Supposed to point to permanent memory, whoever fills the structure
-	'' 1st must ensure that
-	source		as SOURCEBUFFER ptr
-	linenum		as integer
+	source as SourceInfo ptr
+	linenum as integer
 end type
 
-type SOURCEBUFFER_
-	is_file		as integer    '' whether name is a file path
-	name		as zstring ptr
-	buffer		as zstring ptr  '' file content, null-terminated (embedded nulls are disallowed)
+type FileBuffer
+	buffer as zstring ptr '' file content, null-terminated (embedded nulls are disallowed)
+	source as SourceInfo
+	declare sub load( byval location as TkLocation )
 end type
 
-declare sub sourcebuffersInit( )
-declare function sourcebufferAdd( byval filename as zstring ptr ) as SOURCEBUFFER ptr
-declare function sourcebufferFromFile _
-	( _
-		byval filename as zstring ptr, _
-		byval location as TkLocation = type( NULL, 0 ) _
-	) as SOURCEBUFFER ptr
-declare function sourcebufferFromZstring _
-	( _
-		byval filename as zstring ptr, _
-		byval s as zstring ptr _
-	) as SOURCEBUFFER ptr
+declare sub filebuffersInit( )
+declare function filebuffersAdd( byval filename as zstring ptr, byval location as TkLocation ) as FileBuffer ptr
+
 declare sub oops( byval message as zstring ptr )
 declare function hDumpLocation( byval location as TkLocation ) as string
 declare sub hCalcErrorLine _
@@ -772,8 +766,8 @@ declare sub astProcessVerblocks( byval code as ASTNODE ptr )
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 declare sub lexInit( )
-declare function lexLoadC( byval x as integer, byval source as SOURCEBUFFER ptr ) as integer
-declare function lexLoadArgs( byval x as integer, byval source as SOURCEBUFFER ptr ) as integer
+declare function lexLoadC( byval x as integer, byval code as zstring ptr, byref source as SourceInfo ) as integer
+declare function lexLoadArgs( byval x as integer, byval args as zstring ptr, byref source as SourceInfo ) as integer
 
 namespace emit
 	extern as integer decls, todos
