@@ -677,7 +677,7 @@ end sub
 function lexLoadC( byval x as integer, byval source as SOURCEBUFFER ptr ) as integer
 	lex.x = x
 	lex.location.source = source
-	lex.location.linenum = 0
+	lex.location.linenum = 1
 	lex.i = source->buffer
 
 	'' Tokenize and insert into tk buffer
@@ -784,7 +784,7 @@ end sub
 function lexLoadArgs( byval x as integer, byval source as SOURCEBUFFER ptr ) as integer
 	lex.x = x
 	lex.location.source = source
-	lex.location.linenum = 0
+	lex.location.linenum = 1
 	lex.i = source->buffer
 	lex.behindspace = TRUE
 

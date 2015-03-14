@@ -73,7 +73,7 @@ type TKLOCATION
 	'' Supposed to point to permanent memory, whoever fills the structure
 	'' 1st must ensure that
 	source		as SOURCEBUFFER ptr
-	linenum		as integer  '' 0-based, but displayed 1-based in error messages
+	linenum		as integer
 end type
 
 type SOURCEBUFFER_

@@ -141,7 +141,7 @@ function hDumpLocation( byval location as TKLOCATION ptr ) as string
 	if( location->source ) then
 		var s = "location("
 		s += hDumpSourceBuffer( location->source ) & ", "
-		s += "line " & location->linenum + 1 & ", "
+		s += "line " & location->linenum & ", "
 		s += ")"
 		function = s
 	else
@@ -208,7 +208,7 @@ function hReport( byval location as TKLOCATION ptr, byval message as zstring ptr
 
 	'' Location info:
 	''    filename(123): message
-	function = filename + "(" & (location->linenum + 1) & "): " + *message
+	function = filename + "(" & location->linenum & "): " + *message
 end function
 
 sub oopsLocation( byval location as TKLOCATION ptr, byval message as zstring ptr )
