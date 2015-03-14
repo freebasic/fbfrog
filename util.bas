@@ -142,17 +142,14 @@ end function
 
 '' Builds an error message string like this:
 ''    filename.bas(10): duplicate definition of 'foo'
+'' The filename is shown relative to curdir() if possible, that's usually nicer
+'' for the user.
 function hReport( byval location as TkLocation, byval message as zstring ptr ) as string
-	if( location.source = NULL ) then
-		return *message
+	if( location.source ) then
+		function = pathStripCurdir( *location.source->name ) + "(" & location.linenum & "): " + *message
+	else
+		function = *message
 	end if
-
-	'' Show filename relative to curdir(), that's usually nicer for the user
-	var filename = pathStripCurdir( *location.source->name )
-
-	'' Location info:
-	''    filename(123): message
-	function = filename + "(" & location.linenum & "): " + *message
 end function
 
 sub oopsLocation( byval location as TkLocation, byval message as zstring ptr )
