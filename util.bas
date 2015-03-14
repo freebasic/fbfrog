@@ -30,30 +30,22 @@ function hDumpSourceBuffer( byval file as SOURCEBUFFER ptr ) as string
 	function = s
 end function
 
-function sourcebufferNew _
-	( _
-		byval name_ as zstring ptr, _
-		byval location as TkLocation _
-	) as SOURCEBUFFER ptr
-
+private function sourcebufferNew( byval name_ as zstring ptr ) as SOURCEBUFFER ptr
 	dim as SOURCEBUFFER ptr source = callocate( sizeof( SOURCEBUFFER ) )
-
 	source->name = strDuplicate( name_ )
-	source->location = location
-
 	function = source
 end function
 
-private sub hLoadFile( byval source as SOURCEBUFFER ptr )
+private sub hLoadFile( byval source as SOURCEBUFFER ptr, byval location as TkLocation )
 	'' Read in the whole file content
 	var f = freefile( )
 	if( open( *source->name, for binary, access read, as #f ) ) then
-		oopsLocation( source->location, "could not open file: '" + *source->name + "'" )
+		oopsLocation( location, "could not open file: '" + *source->name + "'" )
 	end if
 
 	dim as ulongint filesize = lof( f )
 	if( filesize > &h40000000 ) then
-		oopsLocation( source->location, "a header file bigger than 1 GiB? no way..." )
+		oopsLocation( location, "a header file bigger than 1 GiB? no way..." )
 	end if
 
 	'' An extra 0 byte at the end of the buffer so we can look ahead
@@ -66,7 +58,7 @@ private sub hLoadFile( byval source as SOURCEBUFFER ptr )
 		var sizeloaded = 0
 		var result = get( #f, , *cptr( ubyte ptr, source->buffer ), sizetoload, sizeloaded )
 		if( result or (sizeloaded <> sizetoload) ) then
-			oopsLocation( source->location, "file I/O failed" )
+			oopsLocation( location, "file I/O failed" )
 		end if
 	end if
 
@@ -76,7 +68,7 @@ private sub hLoadFile( byval source as SOURCEBUFFER ptr )
 	'' can't allow embedded nulls, and null also indicates EOF to the lexer.
 	for i as integer = 0 to sizetoload-1
 		if( source->buffer[i] = 0 ) then
-			oopsLocation( source->location, "file '" + *source->name + "' has embedded nulls, please fix that first!" )
+			oopsLocation( location, "file '" + *source->name + "' has embedded nulls, please fix that first!" )
 		end if
 	next
 end sub
@@ -93,9 +85,9 @@ function sourcebufferFromFile _
 
 	'' Doesn't exist yet?
 	if( item->s = NULL ) then
-		var source = sourcebufferNew( filename, location )
+		var source = sourcebufferNew( filename )
 		source->is_file = TRUE
-		hLoadFile( source )
+		hLoadFile( source, location )
 
 		hashAdd( @sourcebuffers.hash, item, hash, source->name, source )
 	end if
@@ -106,8 +98,7 @@ end function
 function sourcebufferFromZstring _
 	( _
 		byval prettyname as zstring ptr, _
-		byval s as zstring ptr, _
-		byval location as TkLocation _
+		byval s as zstring ptr _
 	) as SOURCEBUFFER ptr
 
 	'' Note: caching zstring source buffers
@@ -122,7 +113,7 @@ function sourcebufferFromZstring _
 	''   could be used to verify this here, but then we'd have to check both
 	''   prettyname and string data.
 
-	var source = sourcebufferNew( prettyname, location )
+	var source = sourcebufferNew( prettyname )
 	source->buffer = strDuplicate( s )
 
 	function = source

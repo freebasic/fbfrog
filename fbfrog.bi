@@ -79,7 +79,6 @@ end type
 type SOURCEBUFFER_
 	is_file		as integer    '' whether name is a file path
 	name		as zstring ptr
-	location	as TkLocation
 	buffer		as zstring ptr  '' file content, null-terminated (embedded nulls are disallowed)
 end type
 
@@ -93,8 +92,7 @@ declare function sourcebufferFromFile _
 declare function sourcebufferFromZstring _
 	( _
 		byval filename as zstring ptr, _
-		byval s as zstring ptr, _
-		byval location as TkLocation = type( NULL, 0 ) _
+		byval s as zstring ptr _
 	) as SOURCEBUFFER ptr
 declare sub oops( byval message as zstring ptr )
 declare function hDumpLocation( byval location as TkLocation ) as string

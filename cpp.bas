@@ -1570,7 +1570,7 @@ private function hInsertMacroExpansion _
 
 				'' and try to lex them
 				var y = tkGetCount( )
-				lexLoadC( y, sourcebufferFromZstring( "## merge operation", mergetext, tkGetLocation( x ) ) )
+				lexLoadC( y, sourcebufferFromZstring( "## merge operation", mergetext ) )
 
 				'' That should have produced only 1 token. If it produced more, then the merge failed.
 				assert( tkGetCount( ) >= (y + 1) )
@@ -2515,7 +2515,7 @@ private sub cppNext( )
 			if( tkGet( cpp.x ) <> TK_EOL ) then
 				pragma += !"\n"
 			end if
-			lexLoadC( cpp.x, sourcebufferFromZstring( "_Pragma(" + text + ")", pragma, tkGetLocation( begin ) ) )
+			lexLoadC( cpp.x, sourcebufferFromZstring( "_Pragma(" + text + ")", pragma ) )
 			exit sub
 		end if
 
