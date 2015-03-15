@@ -270,7 +270,6 @@ end type
 
 constructor ReplacementsParser( byref filename as string )
 	this.filename = filename
-	linenum = 1
 	f = freefile( )
 	if( open( filename, for input, as #f ) <> 0 ) then
 		oops( "couldn't open file '" + filename + "'" )
@@ -288,8 +287,8 @@ sub ReplacementsParser.nextLine( )
 			exit do
 		end if
 
+		linenum += 1
 		line input #f, ln
-		reachedeof = eof( f )
 
 		'' Neither empty line, nor a comment?
 		if( len( ln ) > 0 ) then
@@ -298,7 +297,7 @@ sub ReplacementsParser.nextLine( )
 			end if
 		end if
 
-		linenum += 1
+		reachedeof = eof( f )
 	loop
 end sub
 
@@ -320,17 +319,19 @@ function ReplacementsParser.getTextBehindKeyword( byref keyword as string ) as s
 end function
 
 sub ReplacementsParser.parse( )
+	nextLine( )
+
 	while( reachedeof = FALSE )
 		'' Read convert/to line pair
 
 		'' 'convert:'
 		const ConvertKeyword = "convert:"
-		nextLine( )
 		var ctokens = getTextBehindKeyword( ConvertKeyword )
+		nextLine( )
 
 		'' 'to:'
-		nextLine( )
 		var fbcode = getTextBehindKeyword( "to:" )
+		nextLine( )
 
 		'' Multi-line FB code?
 		if( len( fbcode ) = 0 ) then
@@ -339,28 +340,28 @@ sub ReplacementsParser.parse( )
 			''  * the first line must have some indentation
 			''  * all lines of an FB code block must have at least the same indentation
 			''    as the first line
-			nextLine( )
 			var trimmedln = hLTrim( ln )
+			fbcode += trimmedln
 			var indentation = left( ln, len( ln ) - len( trimmedln ) )
 			assert( indentation + trimmedln = ln )
 			if( len( indentation ) = 0 ) then
 				parseOops( "missing indentation of FB code block below 'to:' line" )
 			end if
+			nextLine( )
 
-			while( reachedeof = FALSE )
+			do
 				'' Treat following lines as part of the FB code block,
 				'' until the next "convert:" line is found (if any).
-				nextLine( )
 				if( strStartsWith( ln, ConvertKeyword ) ) then
-					exit while
+					exit do
 				end if
 
 				if( left( ln, len( indentation ) ) <> indentation ) then
 					parseOops( "indentation here doesn't match the first line of this FB code block" )
 				end if
-
-				fbcode += right( ln, len( ln ) - len( trimmedln ) )
-			wend
+				fbcode += right( ln, len( ln ) - len( indentation ) )
+				nextLine( )
+			loop until( reachedeof )
 		end if
 
 		var replacement = astNewTEXT( ctokens )
