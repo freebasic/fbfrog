@@ -159,6 +159,18 @@ end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
+function hTrim( byref s as string ) as string
+	function = trim( s, any !" \t" )
+end function
+
+function hLTrim( byref s as string ) as string
+	function = ltrim( s, any !" \t" )
+end function
+
+function strStartsWith( byref s as string, byref lookfor as string ) as integer
+	function = left( s, len( lookfor ) ) = lookfor
+end function
+
 function strDuplicate( byval s as zstring ptr ) as zstring ptr
 	dim as zstring ptr p = any
 	if( s ) then

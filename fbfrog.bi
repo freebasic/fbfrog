@@ -100,6 +100,9 @@ declare sub hCalcErrorLine _
 declare function hErrorMarker( byval indent as integer, byval length as integer ) as string
 declare function hReport( byval location as TkLocation, byval message as zstring ptr ) as string
 declare sub oopsLocation( byval location as TkLocation, byval message as zstring ptr )
+declare function hTrim( byref s as string ) as string
+declare function hLTrim( byref s as string ) as string
+declare function strStartsWith( byref s as string, byref lookfor as string ) as integer
 declare function strDuplicate( byval s as zstring ptr ) as zstring ptr
 declare function strReplace _
 	( _
@@ -356,6 +359,7 @@ enum
 	OPT_DISABLECONSTANTS
 	OPT_FIXMINGWAW
 	OPT_NOFUNCTIONBODIES
+	OPT_REPLACEMENTS
 	OPT_RENAMETYPEDEF
 	OPT_RENAMETAG
 	OPT_REMOVEDEFINE
