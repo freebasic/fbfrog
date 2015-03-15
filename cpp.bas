@@ -2600,3 +2600,47 @@ sub hMoveDirectivesOutOfConstructs( )
 		wend
 	loop
 end sub
+
+sub hApplyReplacements( )
+	var x = 0
+	while( tkGet( x ) <> TK_EOF )
+		var nxt = hSkipConstruct( x, FALSE )
+
+		'' Do tkSpell() on the construct and compare that string against the
+		'' C code pattern given in each replacement.
+		'' For CPP directives, exclude the EOL from the tkSpell(), because the
+		'' C code patterns don't include the \n either.
+		var last = nxt - 1
+		assert( x <= last )
+		if( ((tkGetFlags( x ) and TKFLAG_DIRECTIVE) <> 0) and (tkGet( last ) = TK_EOL) ) then
+			last -= 1
+		end if
+
+		'' TODO: Speed up; tkSpell()'ing everything and comparing against every
+		'' pattern individually is probably bad for performance.
+		var construct = tkSpell( x, last )
+		scope
+			var i = frog.replacements->head
+			while( i )
+
+				'' Does it match this replacement's pattern?
+				if( construct = *i->alias ) then
+					'' Remove the construct and insert TK_FBCODE instead.
+					'' The TK_FBCODE must have a source location so we can
+					'' check which .h file it belongs to later: giving it
+					'' the location of the construct's first token.
+					var location = tkGetLocation( x )
+					tkRemove( x, nxt - 1 )
+					tkInsert( x, TK_FBCODE, i->text )
+					tkSetLocation( x, location )
+					nxt = x + 1
+					exit while
+				end if
+
+				i = i->next
+			wend
+		end scope
+
+		x = nxt
+	wend
+end sub

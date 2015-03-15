@@ -345,6 +345,10 @@ private sub emitCode( byval n as ASTNODE ptr, byval parentclass as integer )
 		emit.comment -= 1
 		emit.todos += 1
 
+	case ASTCLASS_FBCODE
+		emitLines( n->text )
+		emit.decls += 1
+
 	case ASTCLASS_INCLIB
 		emitLine( "#inclib """ + *n->text + """" )
 

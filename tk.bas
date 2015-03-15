@@ -25,6 +25,7 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	(@"TK_ARGEND"  ), _
 	(@"TK_EOL"     ), _
 	(@"TK_ENDINCLUDE"), _
+	(@"TK_FBCODE"  ), _
 	(@"TK_NUMBER"  ), _ '' Number/string literals
 	(@"TK_STRING"  ), _
 	(@"TK_CHAR"    ), _
@@ -671,7 +672,7 @@ function hSkipConstruct( byval x as integer, byval ignore_directives as integer 
 	case TK_EOF
 		return x
 
-	case TK_SEMI, TK_ENDINCLUDE
+	case TK_SEMI, TK_ENDINCLUDE, TK_FBCODE
 		return x + 1
 
 	case TK_HASH
@@ -691,7 +692,7 @@ function hSkipConstruct( byval x as integer, byval ignore_directives as integer 
 			x += 1
 			exit do
 
-		case TK_EOF, TK_ENDINCLUDE, TK_RBRACE, TK_EOL
+		case TK_EOF, TK_ENDINCLUDE, TK_RBRACE, TK_EOL, TK_FBCODE
 			'' '}': Apparently we didn't see the '{' of this '{...}' block (otherwise we would
 			'' have skipped the whole block already), thus we're inside the block and this construct
 			'' is a nested one. Thus the '}' indicates the end of the construct, and is not part of it.

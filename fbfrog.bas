@@ -1158,7 +1158,7 @@ private function frogParse( byval options as ASTNODE ptr ) as ASTNODE ptr
 	tkTurnCPPTokensIntoCIds( )
 
 	if( frog.replacements->head ) then
-		hApplyReplacements( frog.replacements )
+		hApplyReplacements( )
 	end if
 
 	'' C parsing

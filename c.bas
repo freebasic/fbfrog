@@ -2069,6 +2069,12 @@ private function cScope( byval proc as ASTNODE ptr ) as ASTNODE ptr
 end function
 
 private function cConstruct( byval bodyastclass as integer ) as ASTNODE ptr
+	if( tkGet( c.x ) = TK_FBCODE ) then
+		var n = astNew( ASTCLASS_FBCODE, tkGetText( c.x ) )
+		c.x += 1
+		return n
+	end if
+
 	'' TODO: only parse #defines at toplevel, not inside structs etc.
 	'' '#'?
 	if( (tkGet( c.x ) = TK_HASH) and tkIsOriginal( c.x ) ) then

@@ -1,0 +1,2 @@
+tests/replacements/4.replacements(5): error: expected 'convert:' line, but found something else:
+    to:

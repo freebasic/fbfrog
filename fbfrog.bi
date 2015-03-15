@@ -227,6 +227,7 @@ enum
 	TK_ARGEND
 	TK_EOL
 	TK_ENDINCLUDE
+	TK_FBCODE
 
 	'' Number/string literals
 	TK_NUMBER
@@ -514,6 +515,7 @@ enum
 	ASTCLASS_DIVIDER
 	ASTCLASS_SCOPEBLOCK
 	ASTCLASS_UNKNOWN
+	ASTCLASS_FBCODE
 
 	'' Script helper nodes
 	ASTCLASS_DECLAREDEFINES
@@ -801,6 +803,7 @@ declare sub cppAddIncDir( byval incdir as ASTNODE ptr )
 declare sub cppAppendIncludeDirective( byref filename as string, byval tkflags as integer )
 declare sub cppMain( )
 declare sub hMoveDirectivesOutOfConstructs( )
+declare sub hApplyReplacements( )
 
 declare sub cInit( )
 declare sub cEnd( )
@@ -828,6 +831,8 @@ namespace frog
 	extern renameopt(OPT_RENAMETYPEDEF to OPT_RENAMETAG) as THASH
 	extern idopt(OPT_REMOVEDEFINE to OPT_NOEXPAND) as THASH
 	extern removeinclude as THASH
+
+	extern as ASTNODE ptr replacements
 end namespace
 
 declare function frogLookupBi( byval hfile as zstring ptr ) as integer
