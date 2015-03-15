@@ -359,7 +359,7 @@ sub ReplacementsParser.parse( )
 				if( left( ln, len( indentation ) ) <> indentation ) then
 					parseOops( "indentation here doesn't match the first line of this FB code block" )
 				end if
-				fbcode += right( ln, len( ln ) - len( indentation ) )
+				fbcode += !"\n" + right( ln, len( ln ) - len( indentation ) )
 				nextLine( )
 			loop until( reachedeof )
 		end if

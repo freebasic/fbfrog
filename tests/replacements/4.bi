@@ -10,7 +10,10 @@ replaced B
 
 const C = 3
 
-private sub f()	doSomething()end sub
-#define replacedD _    foo + bar
+private sub f()
+	doSomething()
+end sub
+#define replacedD _
+    foo + bar
 
 end extern
