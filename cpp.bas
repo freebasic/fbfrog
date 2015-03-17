@@ -2086,8 +2086,8 @@ private sub cppInclude( byval begin as integer, byref flags as integer )
 	'' Not internal?
 	if( (includetkflags and (TKFLAG_PREINCLUDE or TKFLAG_ROOTFILE)) = 0 ) then
 		assert( location.source->is_file )
-		var directivebi = frogLookupBi( location.source->name )
-		var contentbi = frogLookupBi( incfile )
+		var directivebi = frogLookupBiFromH( location.source->name )
+		var contentbi = frogLookupBiFromH( incfile )
 		'' Not emitted into same .bi as #included content?
 		if( directivebi <> contentbi ) then
 			'' Then preserve it

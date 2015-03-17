@@ -38,6 +38,9 @@
 type BIFILE
 	filename	as zstring ptr
 
+	'' #inclibs to be added to this .bi
+	inclibs		as ASTNODE ptr
+
 	'' Used to hold the .bi file-specific tree for the current API, after
 	'' that API was parsed and its big AST was split up. Reset to NULL after
 	'' being merged into "final".
@@ -93,6 +96,17 @@ private sub frogAddPattern( byref pattern as string, byval bi as integer )
 	end with
 end sub
 
+private function frogLookupBiFromBi( byref filename as string ) as integer
+	var ucasefilename = ucase( filename, 1 )
+	var ucasehash = hashHash( ucasefilename )
+	var item = hashLookup( @frog.ucasebihash, ucasefilename, ucasehash )
+	if( item->s ) then
+		function = cint( item->data )
+	else
+		function = -1
+	end if
+end function
+
 private sub frogAddBi( byref filename as string, byref pattern as string )
 	dim bi as integer
 
@@ -120,7 +134,7 @@ private sub frogAddBi( byref filename as string, byref pattern as string )
 	frogAddPattern( pattern, bi )
 end sub
 
-function frogLookupBi( byval hfile as zstring ptr ) as integer
+function frogLookupBiFromH( byval hfile as zstring ptr ) as integer
 	'' Check whether we've already cached the .bi for this .h file
 	var hfilehash = hashHash( hfile )
 	var item = hashLookup( @frog.bilookupcache, hfile, hfilehash )
@@ -185,7 +199,7 @@ private sub hPrintHelpAndExit( )
 	print "  -clong32         Translate C long as 32bit LONG, instead of CLONG"
 	print "  -fixunsizedarrays  Wrap [] arrays with a #define"
 	print "  -disableconstants  Don't turn #defines into constants"
-	print "  -fixmingwaw      Expand __MINGW_NAME_AW() inside macros"
+	print "  -fixmingwaw        Expand __MINGW_NAME_AW() inside macros"
 	print "  -nofunctionbodies  Don't preserve function bodies"
 	print "  -replacements <file>  Load patterns for search/replace"
 	print "  -renametypedef <oldid> <newid>  Rename a typedef"
@@ -196,10 +210,13 @@ private sub hPrintHelpAndExit( )
 	print "  -noexpand <id>      Disable expansion of certain #define"
 	print "  -emit '*.h' foo.bi  Emit code from matching .h into specified .bi"
 	print "version-specific commands:"
-	print "  -define <id> [<body>]    Add pre-#define"
-	print "  -include <file>          Add pre-#include"
-	print "  -fbfroginclude <file>    Add pre-#include from include/fbfrog/"
-	print "  -incdir <path>   Add #include search directory"
+	print "  C pre-processing:"
+	print "    -define <id> [<body>]    Add pre-#define"
+	print "    -include <file>          Add pre-#include"
+	print "    -fbfroginclude <file>    Add pre-#include from include/fbfrog/"
+	print "    -incdir <path>           Add search directory for .h #includes"
+	print "  binding generation:"
+	print "    -inclib <name> [<destination .bi file>]   Add #inclib ""<name>"""
 	print "version script logic:"
 	print "  -declaredefines (<symbol>)+               Exclusive #defines"
 	print "  -declareversions <symbol> (<number>)+     Version numbers"
@@ -791,14 +808,6 @@ private sub hParseArgs( byref x as integer )
 			end if
 			exit while
 
-		case OPT_INCDIR
-			x += 1
-
-			'' <path>
-			hExpectPath( x )
-			astAppend( frog.script, astNew( ASTCLASS_INCDIR, hPathRelativeToArgsFile( x ) ) )
-			x += 1
-
 		'' -define <id> [<body>]
 		case OPT_DEFINE
 			x += 1
@@ -822,6 +831,24 @@ private sub hParseArgs( byref x as integer )
 		'' -fbfroginclude <file>
 		case OPT_FBFROGINCLUDE
 			hParseOptionWithString( x, ASTCLASS_FBFROGPREINCLUDE, "<file> argument" )
+
+		case OPT_INCDIR
+			x += 1
+
+			'' <path>
+			hExpectPath( x )
+			astAppend( frog.script, astNew( ASTCLASS_INCDIR, hPathRelativeToArgsFile( x ) ) )
+			x += 1
+
+		'' -inclib <name> [<destination .bi file>]
+		case OPT_INCLIB
+			hParseOptionWithString( x, ASTCLASS_INCLIB, "<name> argument" )
+
+			'' [<destination .bi file>]
+			if( hIsStringOrId( x ) ) then
+				frog.script->tail->alias = strDuplicate( tkGetText( x ) )
+				x += 1
+			end if
 
 		case else
 			'' *.fbfrog file given (without @)? Treat as @file too
@@ -1280,8 +1307,36 @@ end sub
 	for api as integer = 0 to frog.apicount - 1
 		print hMakeProgressString( api + 1, frog.apicount ) + " " + astDumpPrettyVersion( frog.apis[api].verand )
 
+		var options = frog.apis[api].options
+
+		'' Distribute -inclib options for this API to invidiual .bi files
+		scope
+			var i = options->head
+			while( i )
+
+				if( i->class = ASTCLASS_INCLIB ) then
+					dim bi as integer
+					if( i->alias ) then
+						bi = frogLookupBiFromBi( *i->alias )
+					else
+						'' No destination .bi file given for this -inclib; add it to the first .bi.
+						'' This allows the simple use case where there's just one output .bi,
+						'' and it's not necessary to specify a destination .bi for each -inclib.
+						bi = 0
+					end if
+
+					with( frog.bis[bi] )
+						if( .inclibs = NULL ) then .inclibs = astNewGROUP( )
+						astAppend( .inclibs, astNew( ASTCLASS_INCLIB, i->text ) )
+					end with
+				end if
+
+				i = i->next
+			wend
+		end scope
+
 		'' Parse code for this API into an AST
-		var ast = frogParse( frog.apis[api].options )
+		var ast = frogParse( options )
 
 		hlGlobal( ast )
 
@@ -1308,7 +1363,7 @@ end sub
 				'' then re-use the previously calculated .bi file, instead of
 				'' redoing the lookup. Otherwise, do the lookup and cache the result.
 				if( prevsource <> i->location.source ) then
-					bi = frogLookupBi( i->location.source->name )
+					bi = frogLookupBiFromH( i->location.source->name )
 					prevsource = i->location.source
 				end if
 
@@ -1329,7 +1384,8 @@ end sub
 		for bi as integer = 0 to frog.bicount - 1
 			with( frog.bis[bi] )
 				'' Do file-specific AST work (e.g. add Extern block)
-				hlFile( .incoming )
+				hlFile( .incoming, .inclibs )
+				.inclibs = NULL
 
 				'' Merge the "incoming" tree into the "final" tree
 				astMergeNext( astNewVEROR( astClone( frog.apis[api].verand ) ), .final, .incoming )

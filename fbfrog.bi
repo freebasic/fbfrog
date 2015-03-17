@@ -372,6 +372,7 @@ enum
 	OPT_INCLUDE
 	OPT_FBFROGINCLUDE
 	OPT_INCDIR
+	OPT_INCLIB
 	OPT_EMIT
 	OPT_DONTEMIT
 	OPT_DECLAREDEFINES
@@ -810,7 +811,7 @@ declare sub cEnd( )
 declare function cMain( ) as ASTNODE ptr
 
 declare sub hlGlobal( byval ast as ASTNODE ptr )
-declare sub hlFile( byval ast as ASTNODE ptr )
+declare sub hlFile( byval ast as ASTNODE ptr, byval inclibs as ASTNODE ptr )
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
@@ -835,5 +836,5 @@ namespace frog
 	extern as ASTNODE ptr replacements
 end namespace
 
-declare function frogLookupBi( byval hfile as zstring ptr ) as integer
+declare function frogLookupBiFromH( byval hfile as zstring ptr ) as integer
 declare sub frogPrint( byref s as string )
