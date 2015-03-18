@@ -411,15 +411,18 @@ private sub hlApplyRemoveProcOptions( byval ast as ASTNODE ptr )
 	wend
 end sub
 
-private sub hApplyRenameOption( byval opt as integer, byval n as ASTNODE ptr )
+private function hApplyRenameOption( byval opt as integer, byval n as ASTNODE ptr ) as integer
 	dim as ASTNODE ptr renameinfo = hashLookupDataOrNull( @frog.renameopt(opt), n->text )
 	if( renameinfo ) then
 		assert( *n->text = *renameinfo->alias )
 		astSetText( n, renameinfo->text )
+		function = TRUE
 	end if
-end sub
+end function
 
 private function hlApplyRenameOption( byval n as ASTNODE ptr ) as integer
+	static inside_macro as integer
+
 	if( typeGetDt( n->dtype ) = TYPE_UDT ) then
 		assert( astIsTEXT( n->subtype ) )
 		if( n->subtype->attrib and ASTATTRIB_TAGID ) then
@@ -434,12 +437,40 @@ private function hlApplyRenameOption( byval n as ASTNODE ptr ) as integer
 		if( n->text ) then
 			hApplyRenameOption( OPT_RENAMETAG, n )
 		end if
+
 	case ASTCLASS_TYPEDEF
 		hApplyRenameOption( OPT_RENAMETYPEDEF, n )
+
 	case ASTCLASS_PPDEFINE
 		hApplyRenameOption( OPT_RENAMEDEFINE, n )
+
+		if( frog.renameopt(OPT_RENAMEMACROPARAM).count > 0 ) then
+			var param = n->head
+			var renamed_param_here = FALSE
+			while( param )
+				assert( param->class = ASTCLASS_MACROPARAM )
+				renamed_param_here or= hApplyRenameOption( OPT_RENAMEMACROPARAM, param )
+				param = param->next
+			wend
+
+			'' Visit body to update references to renamed parameters,
+			'' but only if this #define actually has a parameter that was renamed,
+			'' otherwise we'd incorrectly rename references to something else that
+			'' happened to have the same name but isn't a parameter of this #define.
+			if( renamed_param_here and (n->expr <> NULL) ) then
+				assert( inside_macro = FALSE )
+				inside_macro = TRUE
+				astVisit( n->expr, @hlApplyRenameOption )
+				inside_macro = FALSE
+			end if
+		end if
+
 	case ASTCLASS_TEXT
 		hApplyRenameOption( OPT_RENAMEDEFINE, n )
+		if( inside_macro ) then
+			hApplyRenameOption( OPT_RENAMEMACROPARAM, n )
+		end if
+
 	end select
 
 	function = TRUE
@@ -1252,9 +1283,7 @@ sub hlGlobal( byval ast as ASTNODE ptr )
 	end if
 
 	'' Apply -renametag/-renametypedef options, if any
-	if( (frog.renameopt(OPT_RENAMETYPEDEF).count + _
-	     frog.renameopt(OPT_RENAMETAG).count + _
-	     frog.renameopt(OPT_RENAMEDEFINE).count) > 0 ) then
+	if( frog.have_renames ) then
 		astVisit( ast, @hlApplyRenameOption )
 	end if
 

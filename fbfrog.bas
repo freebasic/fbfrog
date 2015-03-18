@@ -76,7 +76,8 @@ namespace frog
 	dim shared as HPATTERN ptr patterns
 	dim shared as integer patterncount
 
-	dim shared renameopt(OPT_RENAMETYPEDEF to OPT_RENAMEDEFINE) as THASH
+	dim shared have_renames as integer
+	dim shared renameopt(OPT_RENAMETYPEDEF to OPT_RENAMEMACROPARAM) as THASH
 	dim shared idopt(OPT_REMOVEDEFINE to OPT_NOEXPAND) as THASH
 	dim shared removeinclude as THASH
 
@@ -213,9 +214,9 @@ private sub hPrintHelpAndExit( )
 	print "  -fixmingwaw        Expand __MINGW_NAME_AW() inside macros"
 	print "  -nofunctionbodies  Don't preserve function bodies"
 	print "  -replacements <file>  Load patterns for search/replace"
-	print "  -renametypedef <oldid> <newid>  Rename a typedef"
-	print "  -renametag <oldid> <newid>      Rename a struct/union/enum"
-	print "  -renamedefine <oldid> <newid>   Rename a #define"
+	print "  rename options (-rename* <oldid> <newid>):"
+	print "    -renametypedef, -renametag (struct/union/enum),"
+	print "    -renamedefine, -renamemacroparam"
 	print "  -removedefine <id>  Don't preserve a certain #define"
 	print "  -removeproc <id>    Don't preserve a certain procedure"
 	print "  -typedefhint <id>   Mark <id> as typedef, to help parsing of type casts"
@@ -697,7 +698,7 @@ private sub hParseArgs( byref x as integer )
 			end scope
 			x += 1
 
-		case OPT_RENAMETYPEDEF, OPT_RENAMETAG, OPT_RENAMEDEFINE
+		case OPT_RENAMETYPEDEF, OPT_RENAMETAG, OPT_RENAMEDEFINE, OPT_RENAMEMACROPARAM
 			x += 1
 
 			'' <oldid>
@@ -711,6 +712,7 @@ private sub hParseArgs( byref x as integer )
 			x += 1
 
 			hashAddOverwrite( @frog.renameopt(opt), n->alias, n )
+			frog.have_renames = TRUE
 
 		case OPT_REMOVEDEFINE, OPT_REMOVEPROC, OPT_TYPEDEFHINT, OPT_NOEXPAND
 			x += 1

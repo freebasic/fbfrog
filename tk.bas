@@ -151,6 +151,7 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	(@"-renametypedef"), _
 	(@"-renametag"    ), _
 	(@"-renamedefine" ), _
+	(@"-renamemacroparam"), _
 	(@"-removedefine" ), _
 	(@"-removeproc"   ), _
 	(@"-typedefhint"  ), _
