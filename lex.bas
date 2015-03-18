@@ -780,6 +780,7 @@ end sub
 ''   * any non-white-space sequence is an argument
 ''   * "..." or '...' can be used in arguments to include whitespace
 ''   * "..." allows \" and \\ escape sequences
+''   * #comments
 ''
 function lexLoadArgs( byval x as integer, byval args as zstring ptr, byref source as SourceInfo ) as integer
 	lex.x = x
@@ -806,6 +807,12 @@ function lexLoadArgs( byval x as integer, byval args as zstring ptr, byref sourc
 		case CH_LF
 			lex.i += 1
 			hNewLine( )
+
+		'' #comments
+		case CH_HASH
+			do
+				lex.i += 1
+			loop until( (lex.i[0] = CH_CR) or (lex.i[0] = CH_LF) )
 
 		'' -option
 		case CH_MINUS
