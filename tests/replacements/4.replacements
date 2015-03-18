@@ -1,19 +1,19 @@
 # testing various replacements file syntax
 
-convert: #define A 1
-to: replaced A
+convert c: #define A 1
+to fb: replaced A
 
-convert: #define B 2
-to:
+convert c: #define B 2
+to fb:
 	replaced B
 
-convert: void f(void);
-to:
+convert c: void f(void);
+to fb:
 	private sub f()
 		doSomething()
 	end sub
 
-convert: #define D 3
-to:
+convert c: #define D 3
+to fb:
     #define replacedD _
         foo + bar

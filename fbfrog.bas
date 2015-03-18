@@ -161,13 +161,15 @@ function frogLookupBiFromH(byval hfile as zstring ptr) as integer
 	function = bi
 end function
 
-private sub frogAddReplacement(byval ctokens as zstring ptr, byval fbcode as zstring ptr)
+private sub frogAddReplacement(byval fromcode as zstring ptr, byval tocode as zstring ptr, byval tofb as integer)
 	var i = frog.replacementcount
 	frog.replacementcount += 1
 	frog.replacements = reallocate(frog.replacements, frog.replacementcount * sizeof(*frog.replacements))
+	clear(frog.replacements[i], 0, sizeof(*frog.replacements))
 	with frog.replacements[i]
-		.ctokens = strDuplicate(ctokens)
-		.fbcode = strDuplicate(fbcode)
+		.fromcode = strDuplicate(fromcode)
+		.tocode = strDuplicate(tocode)
+		.tofb = tofb
 	end with
 end sub
 
@@ -245,57 +247,41 @@ end sub
 '' Read "replacement" files
 ''
 '' Format for one replacement entry:
-''    convert: <C tokens>
-''    to: <FB code>
+''    convert c: <C code>
+''    to c: <C code>
+'' or:
+''    convert c: <C code>
+''    to fb: <FB code>
 ''
-'' but multi-line is also possible:
-''    convert: <C tokens>
-''    to:
-''        <multi-line FB code>
+'' Code can be given either in a single line behind the keywords, or in a
+'' multi-line block below the keyword:
+''    <keyword>:
+''        <multi-line code>
 ''
 '' # for comments
 ''
-'' Smart indentation handling for multi-line FB code snippets: The indentation
-'' in the first line specifies the indentation in the replacements file. Any
+'' Smart indentation handling for multi-line code snippets: The indentation in
+'' the first line specifies the indentation in the replacements file. Any
 '' additional whitespace is preserved as-is as part of the code snippets.
-'' (not needed for C tokens because the lexing drops whitespace anyways)
+'' (doesn't matter for the C code though because they'll be lexed, which drops
+'' whitespace anyways)
 ''
-'' The idea is that the C parser checks whether constructs matches one of the
-'' given sequences of C tokens, and if so, inserts the corresponding FB code
-'' into the AST, instead of trying to parse the C code. This is useful to fix up
-'' code that can't be parsed successfully, or otherwise wouldn't result in a
-'' useful translation.
+'' TODO: auto-generate empty replacement files: add a "convert:" line for all
+'' TODOs, leave the "to:" empty
 ''
-'' For example:
-''
-''    # Array size retrieval via sizeof() in C, must be done via ubound/lbound in FB
-''    convert:  #define luaL_newlibtable(L, l) lua_createtable(L, 0, (sizeof((l)) / sizeof((l)[0])) - 1)
-''    to:       #define luaL_newlibtable(L, l_) lua_createtable(L, 0, (ubound(l_) - lbound(l_) + 1) - 1)
-''
-''    # comma operator doesn't exist in FB, the code must be split into multiple statements in FB
-''    convert:
-''        #define luaL_newlib(L, l) (luaL_newlibtable(L,l), luaL_setfuncs(L,l,0))
-''    to:
-''        #macro luaL_newlib(L, l_)
-''            scope
-''                luaL_newlibtable(L, l_)
-''                luaL_setfuncs(L, l_, 0)
-''            end scope
-''        #endmacro
-''
-'' TODO:
-''  * Also allow inserting C tokens, so we can let the C parser do the rest?
-''  * auto-generate empty replacement files: add a "convert:" line for all
-''    TODOs, leave the "to:" empty
 type ReplacementsParser
 	as integer f, linenum, reachedeof
 	as string filename, ln
+
+	const ConvertKeyword = "convert c:"
+	const ToCKeyword = "to c:"
+	const ToFbKeyword = "to fb:"
+
 	declare constructor(byref filename as string)
 	declare destructor()
 	declare sub nextLine()
 	declare sub parseOops(byref message as string)
-	declare sub expectLineToStartWith(byref keyword as string)
-	declare function getTextBehindKeyword(byref keyword as string) as string
+	declare function parseCode(byref keyword as string) as string
 	declare sub parse()
 end type
 
@@ -338,15 +324,43 @@ sub ReplacementsParser.parseOops(byref message as string)
 	end 1
 end sub
 
-sub ReplacementsParser.expectLineToStartWith(byref keyword as string)
-	if strStartsWith(ln, keyword) = FALSE then
-		parseOops("expected '" + keyword + "' line, but found something else")
+function ReplacementsParser.parseCode(byref keyword as string) as string
+	'' Any code behind the keyword?
+	var code = hTrim(right(ln, len(ln) - len(keyword)))
+	nextLine()
+	if len(code) > 0 then
+		return code
 	end if
-end sub
 
-function ReplacementsParser.getTextBehindKeyword(byref keyword as string) as string
-	expectLineToStartWith(keyword)
-	function = hTrim(right(ln, len(ln) - len(keyword)))
+	'' Any indentation in the first line of the FB code block is treated as part
+	'' of the replacements file, not the FB code block.
+	''  * the first line must have some indentation
+	''  * all lines of an FB code block must have at least the same indentation
+	''    as the first line
+	var trimmedln = hLTrim(ln)
+	code += trimmedln
+	var indentation = left(ln, len(ln) - len(trimmedln))
+	assert(indentation + trimmedln = ln)
+	if len(indentation) = 0 then
+		parseOops("missing indentation in code block")
+	end if
+	nextLine()
+
+	do
+		'' Treat following lines as part of the FB code block,
+		'' until the next "convert:" line is found (if any).
+		if strStartsWith(ln, ConvertKeyword) then
+			exit do
+		end if
+
+		if left(ln, len(indentation)) <> indentation then
+			parseOops("indentation here doesn't match the first line of this code block")
+		end if
+		code += !"\n" + right(ln, len(ln) - len(indentation))
+		nextLine()
+	loop until reachedeof
+
+	function = code
 end function
 
 sub ReplacementsParser.parse()
@@ -355,47 +369,25 @@ sub ReplacementsParser.parse()
 	while reachedeof = FALSE
 		'' Read convert/to line pair
 
-		'' 'convert:'
-		const ConvertKeyword = "convert:"
-		var ctokens = getTextBehindKeyword(ConvertKeyword)
-		nextLine()
+		'' "convert" line
+		if strStartsWith(ln, ConvertKeyword) = FALSE then
+			parseOops("expected '" + ConvertKeyword + "' line, but found something else")
+		end if
+		var fromcode = parseCode(ConvertKeyword)
 
-		'' 'to:'
-		var fbcode = getTextBehindKeyword("to:")
-		nextLine()
-
-		'' Multi-line FB code?
-		if len(fbcode) = 0 then
-			'' Any indentation in the first line of the FB code block is treated as part
-			'' of the replacements file, not the FB code block.
-			''  * the first line must have some indentation
-			''  * all lines of an FB code block must have at least the same indentation
-			''    as the first line
-			var trimmedln = hLTrim(ln)
-			fbcode += trimmedln
-			var indentation = left(ln, len(ln) - len(trimmedln))
-			assert(indentation + trimmedln = ln)
-			if len(indentation) = 0 then
-				parseOops("missing indentation of FB code block below 'to:' line")
-			end if
-			nextLine()
-
-			do
-				'' Treat following lines as part of the FB code block,
-				'' until the next "convert:" line is found (if any).
-				if strStartsWith(ln, ConvertKeyword) then
-					exit do
-				end if
-
-				if left(ln, len(indentation)) <> indentation then
-					parseOops("indentation here doesn't match the first line of this FB code block")
-				end if
-				fbcode += !"\n" + right(ln, len(ln) - len(indentation))
-				nextLine()
-			loop until reachedeof
+		'' "to" line
+		dim tocode as string
+		dim tofb as integer
+		if strStartsWith(ln, ToCKeyword) then
+			tocode = parseCode(ToCKeyword)
+		elseif strStartsWith(ln, ToFbKeyword) then
+			tocode = parseCode(ToFbKeyword)
+			tofb = TRUE
+		else
+			parseOops("expected line to start with '" + ToCKeyword + "' or '" + ToFbKeyword + "', but found something else")
 		end if
 
-		frogAddReplacement(ctokens, fbcode)
+		frogAddReplacement(fromcode, tocode, tofb)
 	wend
 end sub
 

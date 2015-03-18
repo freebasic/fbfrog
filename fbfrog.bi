@@ -827,8 +827,8 @@ type FROGAPI
 end type
 
 type CodeReplacement
-	ctokens as zstring ptr
-	fbcode as zstring ptr
+	as zstring ptr fromcode, tocode
+	tofb as integer
 	patternlen as integer '' used temporarily by hApplyReplacements()
 end type
 

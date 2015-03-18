@@ -2611,7 +2611,7 @@ sub hApplyReplacements()
 	var x = 0
 	for i as integer = 0 to frog.replacementcount - 1
 		var begin = x
-		x = lexLoadC(x, frog.replacements[i].ctokens, sourceinfoForZstring("C token pattern from replacements file"))
+		x = lexLoadC(x, frog.replacements[i].fromcode, sourceinfoForZstring("C code pattern from replacements file"))
 		frog.replacements[i].patternlen = x - begin
 	next
 	var xmainbegin = x
@@ -2642,15 +2642,49 @@ sub hApplyReplacements()
 			'' Does the construct match this replacement pattern?
 			if constructlen = replacement->patternlen then
 				if tkCTokenRangesAreEqual(x, patternbegin, constructlen) then
-					'' Remove the construct and insert TK_FBCODE instead.
-					'' The TK_FBCODE must have a source location so we can
-					'' check which .h file it belongs to later: giving it
-					'' the location of the construct's first token.
+					'' Remove the construct
 					var location = tkGetLocation(x)
 					tkRemove(x, nxt - 1)
-					tkInsert(x, TK_FBCODE, replacement->fbcode)
-					tkSetLocation(x, location)
-					nxt = x + 1
+
+					'' The token(s) we insert must have a source location so we can
+					'' check which .h file it belongs to later: giving it
+					'' the location of the construct's first token.
+
+					if replacement->tofb then
+						'' Insert TK_FBCODE instead
+						tkInsert(x, TK_FBCODE, replacement->tocode)
+						tkSetLocation(x, location)
+						nxt = x + 1
+					else
+						'' Insert C tokens instead
+						nxt = lexLoadC(x, replacement->tocode, sourceinfoForZstring("C code from replacements file"))
+
+						'' Remove EOLs, as done by the CPP
+						scope
+							var i = x
+							while i < nxt
+
+								if tkGet(i) = TK_EOL then
+									tkRemove(i, i)
+									i -= 1
+									nxt -= 1
+								end if
+
+								i += 1
+							wend
+						end scope
+
+						'' If it looks like we inserted a #directive, add an EOL at the end
+						if tkGet(x) = TK_HASH then
+							tkInsert(nxt, TK_EOL)
+							nxt += 1
+						end if
+
+						for i as integer = x to nxt - 1
+							tkSetLocation(i, location)
+						next
+					end if
+
 					exit for
 				end if
 			end if

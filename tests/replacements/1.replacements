@@ -1,2 +1,2 @@
-convert: #define A 1
-to: replaced A
+convert c: #define A 1
+to fb: replaced A

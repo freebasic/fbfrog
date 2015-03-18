@@ -1,0 +1,5 @@
+convert c: #define A 1
+to c: int A(void);
+
+convert c: static const int B = 2;
+to c: #define B 2
