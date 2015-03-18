@@ -1338,7 +1338,7 @@ sub hlGlobal(byval ast as ASTNODE ptr)
 		hlApplyRemoveProcOptions(ast)
 	end if
 
-	'' Apply -renametag/-renametypedef options, if any
+	'' Apply -rename* options, if any
 	if frog.have_renames then
 		astVisit(ast, @hlApplyRenameOption)
 	end if
