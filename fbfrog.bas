@@ -80,7 +80,8 @@ namespace frog
 	dim shared idopt(OPT_REMOVEDEFINE to OPT_NOEXPAND) as THASH
 	dim shared removeinclude as THASH
 
-	dim shared as ASTNODE ptr replacements
+	dim shared as CodeReplacement ptr replacements
+	dim shared as integer replacementcount
 
 	dim shared as string prefix
 end namespace
@@ -158,6 +159,16 @@ function frogLookupBiFromH( byval hfile as zstring ptr ) as integer
 	hashAdd( @frog.bilookupcache, item, hfilehash, hfile, cptr( any ptr, bi ) )
 	function = bi
 end function
+
+private sub frogAddReplacement( byval ctokens as zstring ptr, byval fbcode as zstring ptr )
+	var i = frog.replacementcount
+	frog.replacementcount += 1
+	frog.replacements = reallocate( frog.replacements, frog.replacementcount * sizeof( *frog.replacements ) )
+	with( frog.replacements[i] )
+		.ctokens = strDuplicate( ctokens )
+		.fbcode = strDuplicate( fbcode )
+	end with
+end sub
 
 '' Find a *.fbfrog or *.h file in fbfrog's include/ dir, its "library" of
 '' premade collections of pre-#defines etc. useful when creating bindings.
@@ -381,9 +392,7 @@ sub ReplacementsParser.parse( )
 			loop until( reachedeof )
 		end if
 
-		var replacement = astNewTEXT( ctokens )
-		astRenameSymbol( replacement, fbcode )
-		astAppend( frog.replacements, replacement )
+		frogAddReplacement( ctokens, fbcode )
 	wend
 end sub
 
@@ -1183,11 +1192,11 @@ private function frogParse( byval options as ASTNODE ptr ) as ASTNODE ptr
 
 	hMoveDirectivesOutOfConstructs( )
 
-	tkTurnCPPTokensIntoCIds( )
-
-	if( frog.replacements->head ) then
+	if( frog.replacementcount > 0 ) then
 		hApplyReplacements( )
 	end if
+
+	tkTurnCPPTokensIntoCIds( )
 
 	'' C parsing
 	cInit( )
@@ -1237,7 +1246,6 @@ end sub
 		hashInit( @frog.idopt(i), 3, TRUE )
 	next
 	hashInit( @frog.removeinclude, 3, TRUE )
-	frog.replacements = astNewGROUP( )
 
 	tkInit( )
 

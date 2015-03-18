@@ -511,6 +511,24 @@ sub tkTurnCPPTokensIntoCIds( )
 	next
 end sub
 
+function tkCTokenRangesAreEqual( byval a as integer, byval b as integer, byval length as integer ) as integer
+	while( length > 0 )
+		var pa = tkAccess( a )
+		var pb = tkAccess( b )
+
+		if( pa->id <> pb->id ) then exit function
+		if( (pa->text <> NULL) <> (pb->text <> NULL) ) then exit function
+		if( pa->text ) then
+			if( *pa->text <> *pb->text ) then exit function
+		end if
+
+		a += 1
+		b += 1
+		length -= 1
+	wend
+	function = TRUE
+end function
+
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 private function hSpellStrLit( byval text as zstring ptr ) as string

@@ -2602,45 +2602,66 @@ sub hMoveDirectivesOutOfConstructs( )
 end sub
 
 sub hApplyReplacements( )
+	'' Lex all the C token "patterns", so we can use tkCTokenRangesAreEqual()
+	'' Insert them at the front of the tk buffer, because
+	''  * they have to go *somewhere*
+	''  * then we can easily skip them when searching through the main tokens,
+	''    without having to worry about confusing them with real constructs...
+	''  * then inserting/removing tokens from the main part won't affect our
+	''    offsets into the pattern part
 	var x = 0
+	for i as integer = 0 to frog.replacementcount - 1
+		var begin = x
+		x = lexLoadC( x, frog.replacements[i].ctokens, sourceinfoForZstring( "C token pattern from replacements file" ) )
+		frog.replacements[i].patternlen = x - begin
+	next
+	var xmainbegin = x
+
+	'' Search & replace
+	x = xmainbegin
 	while( tkGet( x ) <> TK_EOF )
 		var nxt = hSkipConstruct( x, FALSE )
 
-		'' Do tkSpell() on the construct and compare that string against the
-		'' C code pattern given in each replacement.
-		'' For CPP directives, exclude the EOL from the tkSpell(), because the
-		'' C code patterns don't include the \n either.
+		'' Compare the construct's tokens against tokens of the C code
+		'' pattern given in the replacements file.
+		''  * comparing based on tokens, so whitespace doesn't matter
+
+		'' For CPP directives, exclude the EOL from the comparison,
+		'' because the C code patterns don't include the \n either.
 		var last = nxt - 1
 		assert( x <= last )
 		if( ((tkGetFlags( x ) and TKFLAG_DIRECTIVE) <> 0) and (tkGet( last ) = TK_EOL) ) then
 			last -= 1
 		end if
 
-		'' TODO: Speed up; tkSpell()'ing everything and comparing against every
-		'' pattern individually is probably bad for performance.
-		var construct = tkSpell( x, last )
-		scope
-			var i = frog.replacements->head
-			while( i )
+		var constructlen = last - x + 1
+		var patternbegin = 0
 
-				'' Does it match this replacement's pattern?
-				if( construct = *i->alias ) then
+		for i as integer = 0 to frog.replacementcount - 1
+			var replacement = frog.replacements + i
+
+			'' Does the construct match this replacement pattern?
+			if( constructlen = replacement->patternlen ) then
+				if( tkCTokenRangesAreEqual( x, patternbegin, constructlen ) ) then
 					'' Remove the construct and insert TK_FBCODE instead.
 					'' The TK_FBCODE must have a source location so we can
 					'' check which .h file it belongs to later: giving it
 					'' the location of the construct's first token.
 					var location = tkGetLocation( x )
 					tkRemove( x, nxt - 1 )
-					tkInsert( x, TK_FBCODE, i->text )
+					tkInsert( x, TK_FBCODE, replacement->fbcode )
 					tkSetLocation( x, location )
 					nxt = x + 1
-					exit while
+					exit for
 				end if
+			end if
 
-				i = i->next
-			wend
-		end scope
+			patternbegin += replacement->patternlen
+		next
 
 		x = nxt
 	wend
+
+	'' Remove patterns from the end of the tk buffer again
+	tkRemove( 0, xmainbegin - 1 )
 end sub

@@ -431,6 +431,7 @@ declare sub tkSetRemove overload( byval first as integer, byval last as integer 
 declare function tkGetFlags( byval x as integer ) as integer
 declare sub tkApplyRemoves( )
 declare sub tkTurnCPPTokensIntoCIds( )
+declare function tkCTokenRangesAreEqual( byval a as integer, byval b as integer, byval length as integer ) as integer
 declare function tkSpell overload( byval x as integer ) as string
 declare function tkSpell overload( byval first as integer, byval last as integer ) as string
 declare function hFindClosingParen _
@@ -821,6 +822,12 @@ type FROGAPI
 	ast		as ASTNODE ptr
 end type
 
+type CodeReplacement
+	ctokens as zstring ptr
+	fbcode as zstring ptr
+	patternlen as integer '' used temporarily by hApplyReplacements()
+end type
+
 namespace frog
 	extern as integer verbose, windowsms, clong32, fixunsizedarrays, disableconstants, fixmingwaw, nofunctionbodies
 
@@ -833,7 +840,8 @@ namespace frog
 	extern idopt(OPT_REMOVEDEFINE to OPT_NOEXPAND) as THASH
 	extern removeinclude as THASH
 
-	extern as ASTNODE ptr replacements
+	extern as CodeReplacement ptr replacements
+	extern as integer replacementcount
 end namespace
 
 declare function frogLookupBiFromH( byval hfile as zstring ptr ) as integer
