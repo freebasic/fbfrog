@@ -701,6 +701,7 @@ private sub hFixCharWchar(byval n as ASTNODE ptr)
 
 		'' If no dimensions left, remove the array type entirely
 		if n->array->head = NULL then
+			astDelete(n->array)
 			n->array = NULL
 		end if
 
