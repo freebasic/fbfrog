@@ -435,6 +435,9 @@ enum E {
 #define A03(x) "a""b"
 #define A04(x) "a" #x "b"
 #define A05(x) "a"#x"b"#x"c"
+#define A01_1 a b c
+#define A01_2 a "b" c
+#define A01_3 "a" b "c"
 
 #define A06 (void)0
 #define A07 (char)0

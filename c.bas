@@ -179,12 +179,15 @@ end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-'' ("..." | #id)*
+'' ("..." | [#]id)*
 private function cStringLiteralSequence() as ASTNODE ptr
 	var strcat = astNew(ASTCLASS_STRCAT)
 
 	while c.parseok
 		select case tkGet(c.x)
+		case TK_ID
+			astAppend(strcat, astNewTEXT(tkSpellId(c.x)))
+
 		case TK_STRING
 			var s = astNew(ASTCLASS_STRING, tkGetText(c.x))
 			s->dtype = TYPE_ZSTRING
@@ -365,10 +368,11 @@ private function hExpression(byval level as integer) as ASTNODE ptr
 			a->dtype = TYPE_WCHAR_T
 			c.x += 1
 
-		'' Identifier
-		'' Identifier ()
-		'' Identifier (CallArguments)
-		'' Identifier ## Identifier ## ...
+		'' Id
+		'' Id ()
+		'' Id (CallArgs)
+		'' Id ## Id ## ...
+		'' Id ("String"|Id)*
 		case TK_ID
 			select case tkGet(c.x + 1)
 			'' '('?
@@ -407,6 +411,9 @@ private function hExpression(byval level as integer) as ASTNODE ptr
 
 					'' '##'?
 				loop while cMatch(TK_HASHHASH) and c.parseok
+
+			case TK_ID, TK_STRING, TK_WSTRING, TK_HASH
+				a = cStringLiteralSequence()
 
 			case else
 				a = astNewTEXT(tkSpellId(c.x))
