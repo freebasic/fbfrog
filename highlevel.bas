@@ -946,13 +946,27 @@ private sub hlScanForForwardUsedTypes( byval ast as ASTNODE ptr )
 	wend
 end sub
 
-'' Add forward decls for forward-referenced types that also are defined, so we
-'' can be sure that they're from this binding and not from another header.
+private function hShouldAddForwardDeclForType( byref typ as hl.TYPENODE ) as integer
+	'' Only if actually forward-referenced (as far as we can tell)
+	if( typ.forwarduse ) then
+		if( typ.definition ) then
+			'' Defined in this binding, ok (most likely correct)
+			function = TRUE
+		else
+			'' Not defined here; only if -addforwarddecl was given
+			function = hashContains( @frog.idopt(OPT_ADDFORWARDDECL), typ.id, hashHash( typ.id ) )
+		end if
+	end if
+end function
+
+'' Add forward decls for forward-referenced types
 private sub hlAddForwardDecls( byval ast as ASTNODE ptr )
 	for i as integer = hl.typecount - 1 to 0 step -1
 		var typ = hl.types + i
-		if( typ->forwarduse and (typ->definition <> NULL) ) then
-			typ->definition->attrib or= ASTATTRIB_FORWARDDECLARED
+		if( hShouldAddForwardDeclForType( *typ ) ) then
+			if( typ->definition ) then
+				typ->definition->attrib or= ASTATTRIB_FORWARDDECLARED
+			end if
 			var fwd = astNew( ASTCLASS_FORWARDDECL, typ->id )
 			fwd->location = typ->firstuse->location
 			astInsert( ast, fwd, typ->firstuse )
@@ -1369,10 +1383,11 @@ sub hlGlobal( byval ast as ASTNODE ptr )
 	''
 	'' In order to avoid adding false-positive forward decls for types like
 	'' FILE/jmp_buf/time_t and tags such as "struct tm", we only add forward
-	'' decls if we also have the corresponding definition in the AST. While
-	'' we may miss some needed forward decls this way, having to add those
-	'' to the binding manually seems better than maintaining a list of types
-	'' and tags for which fbfrog should never ever add forward decls.
+	'' decls if we also have the corresponding definition in the AST. This
+	'' can be overridden with -addforwarddecl.
+	'' Presumably doing things this way is more convenient than the opposite
+	'' solution: auto-adding forward decls for everything and maintaining
+	'' lists for types/tags for which forward decls should *not* be added.
 	''
 	hashInit( @hl.typehash, 8, FALSE )
 	hl.types = NULL

@@ -155,6 +155,7 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	(@"-removedefine" ), _
 	(@"-removeproc"   ), _
 	(@"-typedefhint"  ), _
+	(@"-addforwarddecl"), _
 	(@"-noexpand"     ), _
 	(@"-removeinclude"), _
 	(@"-define"       ), _
