@@ -76,8 +76,6 @@ namespace c
 	end namespace
 
 	type DEFBODYNODE
-		'' Token positions:
-		xbegin		as integer  '' Begin of the whole #define directive
 		xbodybegin	as integer  '' Begin of the #define's body
 		n		as ASTNODE ptr  '' #define node
 	end type
@@ -163,7 +161,7 @@ end sub
 
 #define cAddTypedef( id ) hashAddOverwrite( @c.typedefs, id, NULL )
 
-private sub cAddDefBody( byval xbegin as integer, byval xbodybegin as integer, byval n as ASTNODE ptr )
+private sub cAddDefBody( byval xbodybegin as integer, byval n as ASTNODE ptr )
 	if( c.defbodyroom = c.defbodycount ) then
 		if( c.defbodyroom = 0 ) then
 			c.defbodyroom = 512
@@ -173,7 +171,6 @@ private sub cAddDefBody( byval xbegin as integer, byval xbodybegin as integer, b
 		c.defbodies = reallocate( c.defbodies, c.defbodyroom * sizeof( *c.defbodies ) )
 	end if
 	with( c.defbodies[c.defbodycount] )
-		.xbegin = xbegin
 		.xbodybegin = xbodybegin
 		.n = n
 	end with
@@ -911,7 +908,6 @@ private sub cParseDefBody( byval n as ASTNODE ptr, byref add_to_ast as integer )
 end sub
 
 private function cDefine( ) as ASTNODE ptr
-	var begin = c.x - 1
 	c.x += 1
 
 	'' Identifier ['(' ParameterList ')']
@@ -925,7 +921,7 @@ private function cDefine( ) as ASTNODE ptr
 			'' Delay parsing, until we've parsed all declarations in the input.
 			'' This way we have more knowledge about typedefs etc. which could
 			'' help parsing this #define body.
-			cAddDefBody( begin, c.x, macro )
+			cAddDefBody( c.x, macro )
 			c.x = hSkipToEol( c.x )
 		else
 			'' Probably a simple #define body, parse right now
