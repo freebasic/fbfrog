@@ -438,6 +438,8 @@ private function hlApplyRenameOption( byval n as ASTNODE ptr ) as integer
 		hApplyRenameOption( OPT_RENAMETYPEDEF, n )
 	case ASTCLASS_PPDEFINE
 		hApplyRenameOption( OPT_RENAMEDEFINE, n )
+	case ASTCLASS_TEXT
+		hApplyRenameOption( OPT_RENAMEDEFINE, n )
 	end select
 
 	function = TRUE
