@@ -415,7 +415,7 @@ private function hApplyRenameOption( byval opt as integer, byval n as ASTNODE pt
 	dim as ASTNODE ptr renameinfo = hashLookupDataOrNull( @frog.renameopt(opt), n->text )
 	if( renameinfo ) then
 		assert( *n->text = *renameinfo->alias )
-		astSetText( n, renameinfo->text )
+		astRenameSymbol( n, renameinfo->text )
 		function = TRUE
 	end if
 end function
