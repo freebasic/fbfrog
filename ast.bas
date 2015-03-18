@@ -4,17 +4,17 @@
 
 '' Merge/expand dtype b into dtype a, overwriting a's base dtype, but preserving its ptrs/consts
 '' This is useful for expanding typedefs into the context of another dtype.
-function typeExpand( byval a as integer, byval b as integer ) as integer
-	var acount = typeGetPtrCount( a )
-	var bcount = typeGetPtrCount( b )
-	if( acount + bcount > TYPEMAX_PTR ) then
+function typeExpand(byval a as integer, byval b as integer) as integer
+	var acount = typeGetPtrCount(a)
+	var bcount = typeGetPtrCount(b)
+	if acount + bcount > TYPEMAX_PTR then
 		return TYPE_NONE
 	end if
-	function = typeMultAddrOf( b, acount ) or typeGetConst( a )
+	function = typeMultAddrOf(b, acount) or typeGetConst(a)
 end function
 
-function typeUnsetBaseConst( byval dtype as integer ) as integer
-	function = dtype and (not (1 shl (TYPEPOS_CONST + typeGetPtrCount( dtype ))))
+function typeUnsetBaseConst(byval dtype as integer) as integer
+	function = dtype and (not (1 shl (TYPEPOS_CONST + typeGetPtrCount(dtype))))
 end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -136,64 +136,64 @@ dim shared as zstring ptr astnodename(0 to ...) => _
 	@"dimension"   _
 }
 
-#assert ubound( astnodename ) = ASTCLASS__COUNT - 1
+#assert ubound(astnodename) = ASTCLASS__COUNT - 1
 
-function astNew overload( byval class_ as integer ) as ASTNODE ptr
-	dim as ASTNODE ptr n = callocate( sizeof( ASTNODE ) )
+function astNew overload(byval class_ as integer) as ASTNODE ptr
+	dim as ASTNODE ptr n = callocate(sizeof(ASTNODE))
 	n->class = class_
 	function = n
 end function
 
-function astNew overload( byval class_ as integer, byval text as zstring ptr ) as ASTNODE ptr
-	var n = astNew( class_ )
-	n->text = strDuplicate( text )
+function astNew overload(byval class_ as integer, byval text as zstring ptr) as ASTNODE ptr
+	var n = astNew(class_)
+	n->text = strDuplicate(text)
 	function = n
 end function
 
-function astNew overload( byval class_ as integer, byval c1 as ASTNODE ptr, byval c2 as ASTNODE ptr ) as ASTNODE ptr
-	var n = astNew( class_ )
-	astAppend( n, c1 )
-	astAppend( n, c2 )
+function astNew overload(byval class_ as integer, byval c1 as ASTNODE ptr, byval c2 as ASTNODE ptr) as ASTNODE ptr
+	var n = astNew(class_)
+	astAppend(n, c1)
+	astAppend(n, c2)
 	function = n
 end function
 
-function astNewPPDEFINE( byval id as zstring ptr ) as ASTNODE ptr
-	var n = astNew( ASTCLASS_PPDEFINE, id )
+function astNewPPDEFINE(byval id as zstring ptr) as ASTNODE ptr
+	var n = astNew(ASTCLASS_PPDEFINE, id)
 	n->paramcount = -1
 	function = n
 end function
 
-function astNewIIF( byval cond as ASTNODE ptr, byval l as ASTNODE ptr, byval r as ASTNODE ptr ) as ASTNODE ptr
-	var n = astNew( ASTCLASS_IIF, l, r )
+function astNewIIF(byval cond as ASTNODE ptr, byval l as ASTNODE ptr, byval r as ASTNODE ptr) as ASTNODE ptr
+	var n = astNew(ASTCLASS_IIF, l, r)
 	n->expr = cond
 	function = n
 end function
 
-function astNewGROUP overload( ) as ASTNODE ptr
-	function = astNew( ASTCLASS_GROUP )
+function astNewGROUP overload() as ASTNODE ptr
+	function = astNew(ASTCLASS_GROUP)
 end function
 
-function astNewGROUP overload( byval c1 as ASTNODE ptr, byval c2 as ASTNODE ptr ) as ASTNODE ptr
-	var n = astNewGROUP( )
-	astAppend( n, c1 )
-	astAppend( n, c2 )
+function astNewGROUP overload(byval c1 as ASTNODE ptr, byval c2 as ASTNODE ptr) as ASTNODE ptr
+	var n = astNewGROUP()
+	astAppend(n, c1)
+	astAppend(n, c2)
 	function = n
 end function
 
-function astCloneChildren( byval src as ASTNODE ptr ) as ASTNODE ptr
-	var n = astNewGROUP( )
+function astCloneChildren(byval src as ASTNODE ptr) as ASTNODE ptr
+	var n = astNewGROUP()
 	var i = src->head
-	while( i )
-		astAppend( n, astClone( i ) )
+	while i
+		astAppend(n, astClone(i))
 		i = i->next
 	wend
 	function = n
 end function
 
-function astGroupContains( byval group as ASTNODE ptr, byval lookfor as ASTNODE ptr ) as integer
+function astGroupContains(byval group as ASTNODE ptr, byval lookfor as ASTNODE ptr) as integer
 	var i = group->head
-	while( i )
-		if( astIsEqual( i, lookfor ) ) then
+	while i
+		if astIsEqual(i, lookfor) then
 			return TRUE
 		end if
 		i = i->next
@@ -201,45 +201,45 @@ function astGroupContains( byval group as ASTNODE ptr, byval lookfor as ASTNODE 
 	function = FALSE
 end function
 
-function astGroupContainsAnyChildrenOf( byval l as ASTNODE ptr, byval r as ASTNODE ptr ) as integer
+function astGroupContainsAnyChildrenOf(byval l as ASTNODE ptr, byval r as ASTNODE ptr) as integer
 	var i = r->head
-	while( i )
-		if( astGroupContains( l, i ) ) then return TRUE
+	while i
+		if astGroupContains(l, i) then return TRUE
 		i = i->next
 	wend
 end function
 
-function astGroupContainsAllChildrenOf( byval l as ASTNODE ptr, byval r as ASTNODE ptr ) as integer
+function astGroupContainsAllChildrenOf(byval l as ASTNODE ptr, byval r as ASTNODE ptr) as integer
 	var i = r->head
-	while( i )
-		if( astGroupContains( l, i ) = FALSE ) then exit function
+	while i
+		if astGroupContains(l, i) = FALSE then exit function
 		i = i->next
 	wend
 	function = TRUE
 end function
 
-private function astGroupsContainEqualChildren( byval l as ASTNODE ptr, byval r as ASTNODE ptr ) as integer
-	function = astGroupContainsAllChildrenOf( l, r ) and astGroupContainsAllChildrenOf( r, l )
+private function astGroupsContainEqualChildren(byval l as ASTNODE ptr, byval r as ASTNODE ptr) as integer
+	function = astGroupContainsAllChildrenOf(l, r) and astGroupContainsAllChildrenOf(r, l)
 end function
 
-sub astDelete( byval n as ASTNODE ptr )
-	if( n = NULL ) then exit sub
+sub astDelete(byval n as ASTNODE ptr)
+	if n = NULL then exit sub
 
-	deallocate( n->text )
-	deallocate( n->alias )
-	astDelete( n->subtype )
-	astDelete( n->array )
-	astDelete( n->bits )
-	astDelete( n->expr )
+	deallocate(n->text)
+	deallocate(n->alias)
+	astDelete(n->subtype)
+	astDelete(n->array)
+	astDelete(n->bits)
+	astDelete(n->expr)
 
 	var i = n->head
-	while( i )
+	while i
 		var nxt = i->next
-		astDelete( i )
+		astDelete(i)
 		i = nxt
 	wend
 
-	deallocate( n )
+	deallocate(n)
 end sub
 
 #if __FB_DEBUG__
@@ -250,8 +250,8 @@ private function astIsChildOf _
 	) as integer
 
 	var child = parent->head
-	while( child )
-		if( child = lookfor ) then
+	while child
+		if child = lookfor then
 			return TRUE
 		end if
 		child = child->next
@@ -262,35 +262,35 @@ end function
 #endif
 
 '' Insert in front of ref, or append if ref = NULL
-sub astInsert( byval parent as ASTNODE ptr, byval n as ASTNODE ptr, byval ref as ASTNODE ptr )
-	if( n = NULL ) then exit sub
+sub astInsert(byval parent as ASTNODE ptr, byval n as ASTNODE ptr, byval ref as ASTNODE ptr)
+	if n = NULL then exit sub
 
-	assert( astIsChildOf( parent, n ) = FALSE )
-	assert( iif( ref, astIsChildOf( parent, ref ), TRUE ) )
+	assert(astIsChildOf(parent, n) = FALSE)
+	assert(iif(ref, astIsChildOf(parent, ref), TRUE))
 
 	'' If it's a GROUP, insert its children, and delete the GROUP itself
-	if( n->class = ASTCLASS_GROUP ) then
-		if( n->head ) then
+	if n->class = ASTCLASS_GROUP then
+		if n->head then
 			'' Relink the GROUP's children, so they're added without being reallocated
-			if( ref ) then
-				if( ref->prev ) then
+			if ref then
+				if ref->prev then
 					ref->prev->next = n->head
 					n->head->prev = ref->prev
 				else
 					parent->head = n->head
-					assert( n->head->prev = NULL )
+					assert(n->head->prev = NULL)
 				end if
 				n->tail->next = ref
 				ref->prev = n->tail
 			else
-				if( parent->tail ) then
+				if parent->tail then
 					parent->tail->next = n->head
 					n->head->prev = parent->tail
 				else
 					parent->head = n->head
-					assert( n->head->prev = NULL )
+					assert(n->head->prev = NULL)
 				end if
-				assert( n->tail->next = NULL )
+				assert(n->tail->next = NULL)
 				parent->tail = n->tail
 			end if
 
@@ -298,55 +298,55 @@ sub astInsert( byval parent as ASTNODE ptr, byval n as ASTNODE ptr, byval ref as
 			n->tail = NULL
 		end if
 
-		astDelete( n )
+		astDelete(n)
 		exit sub
 	end if
 
-	if( ref ) then
-		if( ref->prev ) then
+	if ref then
+		if ref->prev then
 			ref->prev->next = n
 			n->prev = ref->prev
 		else
 			parent->head = n
-			assert( n->prev = NULL )
+			assert(n->prev = NULL)
 		end if
 		n->next = ref
 		ref->prev = n
 	else
-		if( parent->tail ) then
+		if parent->tail then
 			parent->tail->next = n
 			n->prev = parent->tail
 		else
 			parent->head = n
-			assert( n->prev = NULL )
+			assert(n->prev = NULL)
 		end if
-		assert( n->next = NULL )
+		assert(n->next = NULL)
 		parent->tail = n
 	end if
 end sub
 
-sub astPrepend( byval parent as ASTNODE ptr, byval n as ASTNODE ptr )
-	astInsert( parent, n, parent->head )
+sub astPrepend(byval parent as ASTNODE ptr, byval n as ASTNODE ptr)
+	astInsert(parent, n, parent->head)
 end sub
 
-sub astAppend( byval parent as ASTNODE ptr, byval n as ASTNODE ptr )
-	astInsert( parent, n, NULL )
+sub astAppend(byval parent as ASTNODE ptr, byval n as ASTNODE ptr)
+	astInsert(parent, n, NULL)
 end sub
 
-sub astUnlink( byval parent as ASTNODE ptr, byval n as ASTNODE ptr )
-	assert( astIsChildOf( parent, n ) )
+sub astUnlink(byval parent as ASTNODE ptr, byval n as ASTNODE ptr)
+	assert(astIsChildOf(parent, n))
 
-	if( n->prev ) then
+	if n->prev then
 		n->prev->next = n->next
 	else
-		assert( parent->head = n )
+		assert(parent->head = n)
 		parent->head = n->next
 	end if
 
-	if( n->next ) then
+	if n->next then
 		n->next->prev = n->prev
 	else
-		assert( parent->tail = n )
+		assert(parent->tail = n)
 		parent->tail = n->prev
 	end if
 
@@ -354,15 +354,15 @@ sub astUnlink( byval parent as ASTNODE ptr, byval n as ASTNODE ptr )
 	n->next = NULL
 end sub
 
-function astRemove( byval parent as ASTNODE ptr, byval n as ASTNODE ptr ) as ASTNODE ptr
+function astRemove(byval parent as ASTNODE ptr, byval n as ASTNODE ptr) as ASTNODE ptr
 	function = n->next
-	astUnlink( parent, n )
-	astDelete( n )
+	astUnlink(parent, n)
+	astDelete(n)
 end function
 
-sub astRemoveChildren( byval parent as ASTNODE ptr )
-	while( parent->head )
-		astRemove( parent, parent->head )
+sub astRemoveChildren(byval parent as ASTNODE ptr)
+	while parent->head
+		astRemove(parent, parent->head)
 	wend
 end sub
 
@@ -372,58 +372,58 @@ function astReplace _
 		byval old as ASTNODE ptr, _
 		byval n as ASTNODE ptr _
 	) as ASTNODE ptr
-	assert( old )
-	astInsert( parent, n, old )
-	function = astRemove( parent, old )
+	assert(old)
+	astInsert(parent, n, old)
+	function = astRemove(parent, old)
 end function
 
-sub astSetText( byval n as ASTNODE ptr, byval text as zstring ptr )
-	deallocate( n->text )
-	n->text = strDuplicate( text )
+sub astSetText(byval n as ASTNODE ptr, byval text as zstring ptr)
+	deallocate(n->text)
+	n->text = strDuplicate(text)
 end sub
 
-sub astRenameSymbol( byval n as ASTNODE ptr, byval newid as zstring ptr )
-	if( n->alias = NULL ) then
+sub astRenameSymbol(byval n as ASTNODE ptr, byval newid as zstring ptr)
+	if n->alias = NULL then
 		n->alias = n->text
 	else
-		deallocate( n->text )
+		deallocate(n->text)
 	end if
-	n->text = strDuplicate( newid )
+	n->text = strDuplicate(newid)
 end sub
 
-function astGetOrigId( byval n as ASTNODE ptr ) as zstring ptr
-	function = iif( n->alias, n->alias, n->text )
+function astGetOrigId(byval n as ASTNODE ptr) as zstring ptr
+	function = iif(n->alias, n->alias, n->text)
 end function
 
-sub astSetType( byval n as ASTNODE ptr, byval dtype as integer, byval subtype as ASTNODE ptr )
-	astDelete( n->subtype )
+sub astSetType(byval n as ASTNODE ptr, byval dtype as integer, byval subtype as ASTNODE ptr)
+	astDelete(n->subtype)
 	n->dtype = dtype
-	n->subtype = astClone( subtype )
+	n->subtype = astClone(subtype)
 end sub
 
 '' Checks whether an ARRAY node represents 1 dimension and (0 to ...), i.e. []
-function astIsUnsizedArray( byval array as ASTNODE ptr ) as integer
-	if( array = NULL ) then exit function
-	assert( array->class = ASTCLASS_ARRAY )
-	assert( array->head->class = ASTCLASS_DIMENSION )
+function astIsUnsizedArray(byval array as ASTNODE ptr) as integer
+	if array = NULL then exit function
+	assert(array->class = ASTCLASS_ARRAY)
+	assert(array->head->class = ASTCLASS_DIMENSION)
 	function = (array->head = array->tail) and (array->head->expr->class = ASTCLASS_ELLIPSIS)
 end function
 
 '' astClone() but without children
-function astCloneNode( byval n as ASTNODE ptr ) as ASTNODE ptr
-	if( n = NULL ) then return NULL
+function astCloneNode(byval n as ASTNODE ptr) as ASTNODE ptr
+	if n = NULL then return NULL
 
-	var c = astNew( n->class )
+	var c = astNew(n->class)
 	c->attrib      = n->attrib
-	c->text        = strDuplicate( n->text )
-	c->alias       = strDuplicate( n->alias )
+	c->text        = strDuplicate(n->text)
+	c->alias       = strDuplicate(n->alias)
 	c->dtype       = n->dtype
-	c->subtype     = astClone( n->subtype )
-	c->array       = astClone( n->array )
-	c->bits        = astClone( n->bits )
-	c->expr        = astClone( n->expr )
+	c->subtype     = astClone(n->subtype)
+	c->array       = astClone(n->array)
+	c->bits        = astClone(n->bits)
+	c->expr        = astClone(n->expr)
 	c->location    = n->location
-	select case( n->class )
+	select case n->class
 	case ASTCLASS_PPDEFINE : c->paramcount = n->paramcount
 	case ASTCLASS_STRUCT, ASTCLASS_UNION : c->maxalign = n->maxalign
 	end select
@@ -431,20 +431,20 @@ function astCloneNode( byval n as ASTNODE ptr ) as ASTNODE ptr
 	function = c
 end function
 
-function astClone( byval n as ASTNODE ptr ) as ASTNODE ptr
-	var c = astCloneNode( n )
-	if( c ) then
+function astClone(byval n as ASTNODE ptr) as ASTNODE ptr
+	var c = astCloneNode(n)
+	if c then
 		var i = n->head
-		while( i )
-			astAppend( c, astClone( i ) )
+		while i
+			astAppend(c, astClone(i))
 			i = i->next
 		wend
 	end if
 	function = c
 end function
 
-function astIsMergableBlock( byval n as ASTNODE ptr ) as integer
-	select case( n->class )
+function astIsMergableBlock(byval n as ASTNODE ptr) as integer
+	select case n->class
 	case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
 		function = TRUE
 	end select
@@ -469,17 +469,17 @@ function astIsEqual _
 		byval is_merge as integer _
 	) as integer
 
-	if( a = b ) then return TRUE
-	if( (a = NULL) or (b = NULL) ) then exit function
+	if a = b then return TRUE
+	if (a = NULL) or (b = NULL) then exit function
 
-	if( a->class <> b->class ) then exit function
+	if a->class <> b->class then exit function
 
 	var aattrib = a->attrib
 	var battrib = b->attrib
 
-	if( is_merge ) then
+	if is_merge then
 		'' If callconv is hidden on both sides, then ignore it
-		if( (aattrib and ASTATTRIB_HIDECALLCONV) and (battrib and ASTATTRIB_HIDECALLCONV) ) then
+		if (aattrib and ASTATTRIB_HIDECALLCONV) and (battrib and ASTATTRIB_HIDECALLCONV) then
 			aattrib and= not (ASTATTRIB_CDECL or ASTATTRIB_STDCALL)
 			battrib and= not (ASTATTRIB_CDECL or ASTATTRIB_STDCALL)
 		end if
@@ -491,7 +491,7 @@ function astIsEqual _
 		battrib and= not ASTATTRIB_HIDECALLCONV
 
 		'' Ignore DLLIMPORT on procedures for now, as we're not emitting it anyways
-		if( a->class = ASTCLASS_PROC ) then
+		if a->class = ASTCLASS_PROC then
 			aattrib and= not ASTATTRIB_DLLIMPORT
 			battrib and= not ASTATTRIB_DLLIMPORT
 		end if
@@ -501,41 +501,41 @@ function astIsEqual _
 	'' However, OCT/HEX attributes mustn't be ignored because otherwise number literals with the same digits but
 	'' a different base could incorrectly compare equal.
 
-	if( aattrib <> battrib ) then exit function
+	if aattrib <> battrib then exit function
 
-	if( (a->text <> NULL) <> (b->text <> NULL) ) then exit function
-	if( a->text ) then if( *a->text <> *b->text ) then exit function
+	if (a->text <> NULL) <> (b->text <> NULL) then exit function
+	if a->text then if *a->text <> *b->text then exit function
 
-	if( (a->alias <> NULL) <> (b->alias <> NULL) ) then exit function
-	if( a->alias ) then if( *a->alias <> *b->alias ) then exit function
+	if (a->alias <> NULL) <> (b->alias <> NULL) then exit function
+	if a->alias then if *a->alias <> *b->alias then exit function
 
-	if( a->dtype <> b->dtype ) then exit function
-	if( astIsEqual( a->subtype, b->subtype, is_merge ) = FALSE ) then exit function
-	if( astIsEqual( a->array, b->array, is_merge ) = FALSE ) then exit function
-	if( astIsEqual( a->bits, b->bits, is_merge ) = FALSE ) then exit function
+	if a->dtype <> b->dtype then exit function
+	if astIsEqual(a->subtype, b->subtype, is_merge) = FALSE then exit function
+	if astIsEqual(a->array, b->array, is_merge) = FALSE then exit function
+	if astIsEqual(a->bits, b->bits, is_merge) = FALSE then exit function
 
-	if( astIsEqual( a->expr, b->expr, is_merge ) = FALSE ) then exit function
+	if astIsEqual(a->expr, b->expr, is_merge) = FALSE then exit function
 
 	'' Only check location if not merging: for merging, the source location doesn't matter.
 	'' We only use it before the merging step.
-	if( is_merge = FALSE ) then
-		if( a->location.source  <> b->location.source  ) then exit function
-		if( a->location.linenum <> b->location.linenum ) then exit function
+	if is_merge = FALSE then
+		if a->location.source  <> b->location.source  then exit function
+		if a->location.linenum <> b->location.linenum then exit function
 	end if
 
-	select case( a->class )
+	select case a->class
 	case ASTCLASS_PPDEFINE
-		if( a->paramcount <> b->paramcount ) then exit function
+		if a->paramcount <> b->paramcount then exit function
 
 	case ASTCLASS_STRUCT, ASTCLASS_UNION
-		if( a->maxalign <> b->maxalign ) then exit function
+		if a->maxalign <> b->maxalign then exit function
 
 	case ASTCLASS_VEROR, ASTCLASS_VERAND
-		return astGroupsContainEqualChildren( a, b )
+		return astGroupsContainEqualChildren(a, b)
 	end select
 
-	if( is_merge ) then
-		if( astIsMergableBlock( a ) ) then
+	if is_merge then
+		if astIsMergableBlock(a) then
 			return TRUE
 		end if
 	end if
@@ -543,8 +543,8 @@ function astIsEqual _
 	'' Children
 	a = a->head
 	b = b->head
-	while( (a <> NULL) and (b <> NULL) )
-		if( astIsEqual( a, b, is_merge ) = FALSE ) then
+	while (a <> NULL) and (b <> NULL)
+		if astIsEqual(a, b, is_merge) = FALSE then
 			exit function
 		end if
 		a = a->next
@@ -555,37 +555,37 @@ function astIsEqual _
 	function = ((a = NULL) and (b = NULL))
 end function
 
-function hGetFbNumberLiteralPrefix( byval attrib as integer ) as string
-	if( attrib and ASTATTRIB_BIN ) then
+function hGetFbNumberLiteralPrefix(byval attrib as integer) as string
+	if attrib and ASTATTRIB_BIN then
 		function = "&b"
-	elseif( attrib and ASTATTRIB_OCT ) then
+	elseif attrib and ASTATTRIB_OCT then
 		function = "&o"
-	elseif( attrib and ASTATTRIB_HEX ) then
+	elseif attrib and ASTATTRIB_HEX then
 		function = "&h"
 	end if
 end function
 
-function astEvalConstiAsInt64( byval n as ASTNODE ptr ) as longint
-	assert( astIsCONSTI( n ) )
-	function = vallng( hGetFbNumberLiteralPrefix( n->attrib ) + *n->text )
+function astEvalConstiAsInt64(byval n as ASTNODE ptr) as longint
+	assert(astIsCONSTI(n))
+	function = vallng(hGetFbNumberLiteralPrefix(n->attrib) + *n->text)
 end function
 
-function astIsConst0( byval n as ASTNODE ptr ) as integer
-	if( astIsCONSTI( n ) ) then
-		function = (astEvalConstiAsInt64( n ) = 0)
+function astIsConst0(byval n as ASTNODE ptr) as integer
+	if astIsCONSTI(n) then
+		function = (astEvalConstiAsInt64(n) = 0)
 	end if
 end function
 
-function astLookupMacroParam( byval macro as ASTNODE ptr, byval id as zstring ptr ) as integer
+function astLookupMacroParam(byval macro as ASTNODE ptr, byval id as zstring ptr) as integer
 	var index = 0
 
-	assert( macro->class = ASTCLASS_PPDEFINE )
+	assert(macro->class = ASTCLASS_PPDEFINE)
 
 	var param = macro->head
-	while( param )
+	while param
 
-		assert( param->class = ASTCLASS_MACROPARAM )
-		if( *param->text = *id ) then
+		assert(param->class = ASTCLASS_MACROPARAM)
+		if *param->text = *id then
 			return index
 		end if
 
@@ -596,19 +596,19 @@ function astLookupMacroParam( byval macro as ASTNODE ptr, byval id as zstring pt
 	function = -1
 end function
 
-sub astVisit( byval n as ASTNODE ptr, byval callback as ASTVISITCALLBACK )
-	if( callback( n ) = FALSE ) then
+sub astVisit(byval n as ASTNODE ptr, byval callback as ASTVISITCALLBACK)
+	if callback(n) = FALSE then
 		exit sub
 	end if
 
-	if( n->subtype ) then astVisit( n->subtype, callback )
-	if( n->array   ) then astVisit( n->array  , callback )
-	if( n->bits    ) then astVisit( n->bits   , callback )
-	if( n->expr    ) then astVisit( n->expr   , callback )
+	if n->subtype then astVisit(n->subtype, callback)
+	if n->array   then astVisit(n->array  , callback)
+	if n->bits    then astVisit(n->bits   , callback)
+	if n->expr    then astVisit(n->expr   , callback)
 
 	var i = n->head
-	while( i )
-		astVisit( i, callback )
+	while i
+		astVisit(i, callback)
 		i = i->next
 	wend
 end sub
@@ -616,8 +616,8 @@ end sub
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 '' AST dumping for pretty output and debugging
 
-function astDumpPrettyClass( byval astclass as integer ) as string
-	select case( astclass )
+function astDumpPrettyClass(byval astclass as integer) as string
+	select case astclass
 	case ASTCLASS_PPDEFINE : function = "#define"
 	case ASTCLASS_CONST : function = "constant"
 	case ASTCLASS_VAR   : function = "variable"
@@ -626,74 +626,74 @@ function astDumpPrettyClass( byval astclass as integer ) as string
 	end select
 end function
 
-function astDumpPrettyDecl( byval n as ASTNODE ptr ) as string
+function astDumpPrettyDecl(byval n as ASTNODE ptr) as string
 	dim as string s
 
-	if( n->text = NULL ) then
+	if n->text = NULL then
 		s += "anonymous "
 	end if
 
-	s += astDumpPrettyClass( n->class )
+	s += astDumpPrettyClass(n->class)
 
-	if( n->text ) then
-		s += " " + strMakePrintable( *n->text )
+	if n->text then
+		s += " " + strMakePrintable(*n->text)
 	end if
 
-	if( n->alias ) then
-		s += " alias """ + strMakePrintable( *n->alias ) + """"
+	if n->alias then
+		s += " alias """ + strMakePrintable(*n->alias) + """"
 	end if
 
-	if( n->class = ASTCLASS_PROC ) then
+	if n->class = ASTCLASS_PROC then
 		s += "()"
 	end if
 
 	function = s
 end function
 
-function astDumpOne( byval n as ASTNODE ptr ) as string
+function astDumpOne(byval n as ASTNODE ptr) as string
 	dim as string s
 
-	if( n = NULL ) then
+	if n = NULL then
 		return "<NULL>"
 	end if
 
-	's += "[" & hex( n ) & "] "
-	if( (n->class >= 0) and (n->class < ASTCLASS__COUNT) ) then
+	's += "[" & hex(n) & "] "
+	if (n->class >= 0) and (n->class < ASTCLASS__COUNT) then
 		s += *astnodename(n->class)
 	else
 		s += "invalid astclass " & n->class
 	end if
 
-	#macro checkAttrib( a )
-		if( n->attrib and ASTATTRIB_##a ) then s += " " + lcase( #a, 1 )
+	#macro checkAttrib(a)
+		if n->attrib and ASTATTRIB_##a then s += " " + lcase(#a, 1)
 	#endmacro
-	checkAttrib( LOCAL )
-	checkAttrib( STATIC )
-	checkAttrib( EXTERN )
-	checkAttrib( OCT )
-	checkAttrib( HEX )
-	checkAttrib( CDECL )
-	checkAttrib( STDCALL )
-	checkAttrib( HIDECALLCONV )
-	checkAttrib( POISONED )
-	checkAttrib( PACKED )
-	checkAttrib( VARIADIC )
-	checkAttrib( PARENTHESIZEDMACROPARAM )
-	checkAttrib( TAGID )
-	checkAttrib( GENERATEDID )
-	checkAttrib( DLLIMPORT )
-	checkAttrib( FORWARDDECLARED )
-	checkAttrib( ENUMCONST )
+	checkAttrib(LOCAL)
+	checkAttrib(STATIC)
+	checkAttrib(EXTERN)
+	checkAttrib(OCT)
+	checkAttrib(HEX)
+	checkAttrib(CDECL)
+	checkAttrib(STDCALL)
+	checkAttrib(HIDECALLCONV)
+	checkAttrib(POISONED)
+	checkAttrib(PACKED)
+	checkAttrib(VARIADIC)
+	checkAttrib(PARENTHESIZEDMACROPARAM)
+	checkAttrib(TAGID)
+	checkAttrib(GENERATEDID)
+	checkAttrib(DLLIMPORT)
+	checkAttrib(FORWARDDECLARED)
+	checkAttrib(ENUMCONST)
 
-	if( n->text ) then
-		s += " """ + strMakePrintable( *n->text ) + """"
+	if n->text then
+		s += " """ + strMakePrintable(*n->text) + """"
 	end if
-	if( n->alias ) then
-		s += " alias """ + strMakePrintable( *n->alias ) + """"
+	if n->alias then
+		s += " alias """ + strMakePrintable(*n->alias) + """"
 	end if
 
-	if( n->dtype <> TYPE_NONE ) then
-		s += " as " + emitType( n->dtype, NULL, TRUE )
+	if n->dtype <> TYPE_NONE then
+		s += " as " + emitType(n->dtype, NULL, TRUE)
 	end if
 
 	function = s
@@ -706,29 +706,29 @@ sub astDump _
 		byref prefix as string _
 	)
 
-	if( n = NULL ) then
+	if n = NULL then
 		print "<NULL>"
 		exit sub
 	end if
 
 	nestlevel += 1
 
-	var s = space( (nestlevel - 1) * 3 )
-	if( len( prefix ) > 0 ) then
+	var s = space((nestlevel - 1) * 3)
+	if len(prefix) > 0 then
 		s += prefix + ": "
 	end if
-	s += astDumpOne( n )
+	s += astDumpOne(n)
 	print s
 
-	#define dumpField( field ) if( n->field ) then astDump( n->field, nestlevel, #field )
-	dumpField( subtype )
-	dumpField( array )
-	dumpField( bits )
-	dumpField( expr )
+	#define dumpField(field) if n->field then astDump(n->field, nestlevel, #field)
+	dumpField(subtype)
+	dumpField(array)
+	dumpField(bits)
+	dumpField(expr)
 
 	var child = n->head
-	while( child )
-		astDump( child, nestlevel )
+	while child
+		astDump(child, nestlevel)
 		child = child->next
 	wend
 

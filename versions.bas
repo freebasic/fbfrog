@@ -10,9 +10,9 @@
 ''    eliminate duplicate checks. For example, for a VERBLOCK that covers all
 ''    possible APIs, we don't need to generate any #if at all since its
 ''    condition would always be true. And in case we have a check like this:
-''        #if (__FB_WIN32__ and __FB_64BIT__) or (__FB_LINUX__ and __FB_64BIT__)
+''        #if ( __FB_WIN32__ and __FB_64BIT__) or ( __FB_LINUX__ and __FB_64BIT__)
 ''    that can be simplified to:
-''        #if __FB_64BIT__ and (__FB_WIN32__ or __FB_LINUX__)
+''        #if __FB_64BIT__ and ( __FB_WIN32__ or __FB_LINUX__)
 ''    etc.
 ''
 
@@ -35,10 +35,10 @@ end type
 '' ASTNODE class and identifier are the 2 main points to quickly distinguish two declarations.
 '' Care must be taken though; callconv/ASTATTRIB_HIDECALLCONV flags shouldn't be calculated into
 '' the hash though because hAstLCS() and hFindCommonCallConvsOnMergedDecl() do custom handling for them...
-private function decltableHash( byval n as ASTNODE ptr ) as ulong
+private function decltableHash(byval n as ASTNODE ptr) as ulong
 	dim as ulong hash = n->class
-	if( n->text ) then
-		hash or= hashHash( n->text ) shl 8
+	if n->text then
+		hash or= hashHash(n->text) shl 8
 	end if
 	function = hash
 end function
@@ -50,16 +50,16 @@ private sub decltableAdd _
 		byval veror as ASTNODE ptr _
 	)
 
-	assert( astIsVEROR( veror ) )
+	assert(astIsVEROR(veror))
 
-	if( table->count = table->room ) then
+	if table->count = table->room then
 		table->room += 256
-		table->array = reallocate( table->array, table->room * sizeof( DECLNODE ) )
+		table->array = reallocate(table->array, table->room * sizeof(DECLNODE))
 	end if
 
-	with( table->array[table->count] )
+	with table->array[table->count]
 		.n = n
-		.hash = decltableHash( n )
+		.hash = decltableHash(n)
 		.veror = veror
 	end with
 
@@ -79,15 +79,15 @@ private sub decltableInit _
 
 	'' Add each declaration node from the AST to the table
 	'' For each VERBLOCK...
-	assert( code->class = ASTCLASS_GROUP )
+	assert(code->class = ASTCLASS_GROUP)
 	var verblock = code->head
-	while( verblock )
-		assert( astIsVERBLOCK( verblock ) )
+	while verblock
+		assert(astIsVERBLOCK(verblock))
 
 		'' For each declaration in that VERBLOCK...
 		var decl = verblock->head
-		while( decl )
-			decltableAdd( table, decl, verblock->expr )
+		while decl
+			decltableAdd(table, decl, verblock->expr)
 			decl = decl->next
 		wend
 
@@ -95,22 +95,22 @@ private sub decltableInit _
 	wend
 end sub
 
-private sub decltableEnd( byval table as DECLTABLE ptr )
-	deallocate( table->array )
+private sub decltableEnd(byval table as DECLTABLE ptr)
+	deallocate(table->array)
 end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-function astDumpPrettyVersion( byval n as ASTNODE ptr ) as string
+function astDumpPrettyVersion(byval n as ASTNODE ptr) as string
 	dim s as string
 
-	select case( n->class )
+	select case n->class
 	case ASTCLASS_VERAND
 		var i = n->head
-		while( i )
-			s += astDumpPrettyVersion( i )
+		while i
+			s += astDumpPrettyVersion(i)
 			i = i->next
-			if( i ) then
+			if i then
 				s += "."
 			end if
 		wend
@@ -122,10 +122,10 @@ function astDumpPrettyVersion( byval n as ASTNODE ptr ) as string
 		s = *n->text
 
 	case ASTCLASS_NOT
-		s = "(not " + astDumpPrettyVersion( n->head ) + ")"
+		s = "(not " + astDumpPrettyVersion(n->head) + ")"
 
 	case else
-		assert( FALSE )
+		assert(FALSE)
 	end select
 
 	function = s
@@ -138,23 +138,23 @@ private function astNewGroupLike _
 		byval b as ASTNODE ptr _
 	) as ASTNODE ptr
 
-	if( a andalso (a->class = astclass) ) then a->class = ASTCLASS_GROUP
-	if( b andalso (b->class = astclass) ) then b->class = ASTCLASS_GROUP
+	if a andalso (a->class = astclass) then a->class = ASTCLASS_GROUP
+	if b andalso (b->class = astclass) then b->class = ASTCLASS_GROUP
 
-	function = astNew( astclass, astNewGROUP( a, b ) )
+	function = astNew(astclass, astNewGROUP(a, b))
 end function
 
-function astNewVERAND( byval a as ASTNODE ptr, byval b as ASTNODE ptr ) as ASTNODE ptr
-	function = astNewGroupLike( ASTCLASS_VERAND, a, b )
+function astNewVERAND(byval a as ASTNODE ptr, byval b as ASTNODE ptr) as ASTNODE ptr
+	function = astNewGroupLike(ASTCLASS_VERAND, a, b)
 end function
 
-function astNewVEROR( byval a as ASTNODE ptr, byval b as ASTNODE ptr ) as ASTNODE ptr
-	function = astNewGroupLike( ASTCLASS_VEROR, a, b )
+function astNewVEROR(byval a as ASTNODE ptr, byval b as ASTNODE ptr) as ASTNODE ptr
+	function = astNewGroupLike(ASTCLASS_VEROR, a, b)
 end function
 
-private function astNewVERBLOCK( byval veror as ASTNODE ptr, byval children as ASTNODE ptr ) as ASTNODE ptr
-	assert( astIsVEROR( veror ) )
-	var n = astNew( ASTCLASS_VERBLOCK, children )
+private function astNewVERBLOCK(byval veror as ASTNODE ptr, byval children as ASTNODE ptr) as ASTNODE ptr
+	assert(astIsVEROR(veror))
+	var n = astNew(ASTCLASS_VERBLOCK, children)
 	n->expr = veror
 	function = n
 end function
@@ -163,23 +163,23 @@ end function
 '' should be aswell, so hMergeStructsManually() doesn't have to handle both
 '' cases of "fresh still unwrapped fields" and "already wrapped from previous
 '' merge", but only the latter.
-private sub hWrapStructFieldsInVerblocks( byval veror as ASTNODE ptr, byval code as ASTNODE ptr )
+private sub hWrapStructFieldsInVerblocks(byval veror as ASTNODE ptr, byval code as ASTNODE ptr)
 	var i = code->head
-	while( i )
-		hWrapStructFieldsInVerblocks( veror, i )
+	while i
+		hWrapStructFieldsInVerblocks(veror, i)
 		i = i->next
 	wend
 
-	if( astIsMergableBlock( code ) ) then
-		var newfields = astNewVERBLOCK( astClone( veror ), astCloneChildren( code ) )
-		astRemoveChildren( code )
-		astAppend( code, newfields )
+	if astIsMergableBlock(code) then
+		var newfields = astNewVERBLOCK(astClone(veror), astCloneChildren(code))
+		astRemoveChildren(code)
+		astAppend(code, newfields)
 	end if
 end sub
 
-function astWrapFileInVerblock( byval veror as ASTNODE ptr, byval code as ASTNODE ptr ) as ASTNODE ptr
-	hWrapStructFieldsInVerblocks( veror, code )
-	function = astNewVERBLOCK( veror, code )
+function astWrapFileInVerblock(byval veror as ASTNODE ptr, byval code as ASTNODE ptr) as ASTNODE ptr
+	hWrapStructFieldsInVerblocks(veror, code)
+	function = astNewVERBLOCK(veror, code)
 end function
 
 private sub hVerblockAppend _
@@ -190,20 +190,20 @@ private sub hVerblockAppend _
 		byval child as ASTNODE ptr _
 	)
 
-	var veror = astNewVEROR( veror1, veror2 )
+	var veror = astNewVEROR(veror1, veror2)
 
 	'' If the tree's last VERBLOCK covers the same versions, then just add
 	'' the new children nodes to that instead of opening a new VERBLOCK.
 	var verblock = n->tail
-	if( verblock andalso astIsVERBLOCK( verblock ) ) then
-		if( astIsEqual( n->tail->expr, veror ) ) then
-			astAppend( n->tail, child )
-			astDelete( veror )
+	if verblock andalso astIsVERBLOCK(verblock) then
+		if astIsEqual(n->tail->expr, veror) then
+			astAppend(n->tail, child)
+			astDelete(veror)
 			exit sub
 		end if
 	end if
 
-	astAppend( n, astNewVERBLOCK( veror, child ) )
+	astAppend(n, astNewVERBLOCK(veror, child))
 end sub
 
 private sub hAddDecl _
@@ -213,7 +213,7 @@ private sub hAddDecl _
 		byval i as integer _
 	)
 
-	hVerblockAppend( c, astClone( array[i].veror ), NULL, astClone( array[i].n ) )
+	hVerblockAppend(c, astClone(array[i].veror), NULL, astClone(array[i].n))
 
 end sub
 
@@ -254,10 +254,10 @@ private sub hFindCommonCallConvsOnMergedDecl _
 		byval bdecl as ASTNODE ptr _
 	)
 
-	assert( mdecl->class = adecl->class )
-	assert( adecl->class = bdecl->class )
+	assert(mdecl->class = adecl->class)
+	assert(adecl->class = bdecl->class)
 
-	if( mdecl->class = ASTCLASS_PROC ) then
+	if mdecl->class = ASTCLASS_PROC then
 
 		var ahide = ((adecl->attrib and ASTATTRIB_HIDECALLCONV) <> 0)
 		var bhide = ((bdecl->attrib and ASTATTRIB_HIDECALLCONV) <> 0)
@@ -268,26 +268,26 @@ private sub hFindCommonCallConvsOnMergedDecl _
 			var mcallconv = (mdecl->attrib and (ASTATTRIB_CDECL or ASTATTRIB_STDCALL))
 		#endif
 
-		if( ahide and bhide ) then
+		if ahide and bhide then
 			'' ASTATTRIB_HIDECALLCONV on both sides.
-			if( acallconv = bcallconv ) then
+			if acallconv = bcallconv then
 				'' Same callconv, trivial merge.
-				assert( mcallconv = acallconv )
-				assert( mcallconv = bcallconv )
+				assert(mcallconv = acallconv)
+				assert(mcallconv = bcallconv)
 			else
 				'' Different callconv; but at least both sides have ASTATTRIB_HIDECALLCONV,
 				'' so we can forget about the callconvs and let the EXTERN blocks cover it.
 				mdecl->attrib and= not (ASTATTRIB_CDECL or ASTATTRIB_STDCALL)
 			end if
-			assert( mhide ) '' was preserved by astClone() already
+			assert(mhide) '' was preserved by astClone() already
 		else
-			assert( acallconv = bcallconv )
+			assert(acallconv = bcallconv)
 
-			if( ahide or bhide ) then
+			if ahide or bhide then
 				'' Same callconv, but ASTATTRIB_HIDECALLCONV only on one side.
 				'' We can merge them, but the callconv can't be hidden.
 				mdecl->attrib and= not ASTATTRIB_HIDECALLCONV
-				assert( mcallconv <> 0 ) '' ditto
+				assert(mcallconv <> 0) '' ditto
 			''else
 				'' Same callconv and no ASTATTRIB_HIDECALLCONV, trivial merge.
 			end if
@@ -295,28 +295,28 @@ private sub hFindCommonCallConvsOnMergedDecl _
 	end if
 
 	'' Don't forget the procptr subtypes
-	if( typeGetDt( mdecl->dtype ) = TYPE_PROC ) then
-		assert( typeGetDt( adecl->dtype ) = TYPE_PROC )
-		assert( typeGetDt( bdecl->dtype ) = TYPE_PROC )
-		hFindCommonCallConvsOnMergedDecl( mdecl->subtype, adecl->subtype, bdecl->subtype )
+	if typeGetDt(mdecl->dtype) = TYPE_PROC then
+		assert(typeGetDt(adecl->dtype) = TYPE_PROC)
+		assert(typeGetDt(bdecl->dtype) = TYPE_PROC)
+		hFindCommonCallConvsOnMergedDecl(mdecl->subtype, adecl->subtype, bdecl->subtype)
 	end if
 
 	var mchild = mdecl->head
 	var achild = adecl->head
 	var bchild = bdecl->head
-	while( mchild )
-		assert( achild )
-		assert( bchild )
+	while mchild
+		assert(achild)
+		assert(bchild)
 
-		hFindCommonCallConvsOnMergedDecl( mchild, achild, bchild )
+		hFindCommonCallConvsOnMergedDecl(mchild, achild, bchild)
 
 		mchild = mchild->next
 		achild = achild->next
 		bchild = bchild->next
 	wend
-	assert( mchild = NULL )
-	assert( achild = NULL )
-	assert( bchild = NULL )
+	assert(mchild = NULL)
+	assert(achild = NULL)
+	assert(bchild = NULL)
 end sub
 
 private sub hAddMergedDecl _
@@ -333,7 +333,7 @@ private sub hAddMergedDecl _
 	var averor = aarray[ai].veror
 	var bveror = barray[bi].veror
 
-	assert( adecl->class = bdecl->class )
+	assert(adecl->class = bdecl->class)
 
 	''
 	'' The LCS may include merged blocks (structs/unions/enums) that were put
@@ -346,7 +346,7 @@ private sub hAddMergedDecl _
 	'' even if they have different children)
 	''
 	dim mdecl as ASTNODE ptr
-	if( astIsMergableBlock( adecl ) ) then
+	if astIsMergableBlock(adecl) then
 
 		''
 		'' For example:
@@ -379,28 +379,28 @@ private sub hAddMergedDecl _
 		''             field c as integer
 		''
 
-		var achildren = astCloneChildren( adecl )
-		var bchildren = astCloneChildren( bdecl )
+		var achildren = astCloneChildren(adecl)
+		var bchildren = astCloneChildren(bdecl)
 
 		'' Merge both set of children
-		var mchildren = astMergeVerblocks( achildren, bchildren )
+		var mchildren = astMergeVerblocks(achildren, bchildren)
 
 		'' Create a result block with the new set of children
-		mdecl = astCloneNode( adecl )
-		astAppend( mdecl, mchildren )
+		mdecl = astCloneNode(adecl)
+		astAppend(mdecl, mchildren)
 	else
 		'' "Merge" a and b by cloning a. They've compared equal in astIsEqual() so this works.
 		'' Below we only need to cover a few additional cases where astIsEqual() is more permissive
 		'' than a true equality check: it allows merging of a/b even if they're slightly different.
 		'' This currently affects the calling convention only. In such cases, just cloning a isn't
 		'' enough and some actual merging work is needed.
-		mdecl = astClone( adecl )
+		mdecl = astClone(adecl)
 
-		hFindCommonCallConvsOnMergedDecl( mdecl, adecl, bdecl )
+		hFindCommonCallConvsOnMergedDecl(mdecl, adecl, bdecl)
 	end if
 
 	'' Add struct to result tree, under both a's and b's version numbers
-	hVerblockAppend( c, astClone( averor ), astClone( bveror ), mdecl )
+	hVerblockAppend(c, astClone(averor), astClone(bveror), mdecl)
 
 end sub
 
@@ -408,7 +408,7 @@ end sub
 '' Determine the longest common substring, by building an l x r matrix:
 ''
 '' if l[i] = r[j] then
-''     if( i-1 or j-1 would be out-of-bounds ) then
+''     if i-1 or j-1 would be out-of-bounds then
 ''         matrix[i][j] = 1
 ''     else
 ''         matrix[i][j] = matrix[i-1][j-1] + 1
@@ -479,9 +479,9 @@ private sub hAstLCS _
 
 	'' Currently using USHORTs to store the lengths of common sequences of
 	'' declarations. It should be enough...
-	if( (llen > MAXROWLEN) or (rlen > MAXROWLEN) ) then
-		oops( "hAstLCS(): soft-limited to " & MAXROWLEN & " declarations per " + _
-			"API, but here we have " & llen & " and " & rlen )
+	if (llen > MAXROWLEN) or (rlen > MAXROWLEN) then
+		oops("hAstLCS(): soft-limited to " & MAXROWLEN & " declarations per " + _
+			"API, but here we have " & llen & " and " & rlen)
 	end if
 
 	static row1(0 to MAXROWLEN-1) as ushort
@@ -501,9 +501,9 @@ private sub hAstLCS _
 			var ldecl = @larray[lfirst+l]
 			var rdecl = @rarray[rfirst+r]
 
-			if( ldecl->hash = rdecl->hash ) then
-				if( astIsEqual( ldecl->n, rdecl->n, TRUE ) ) then
-					if( (l = 0) or (r = 0) ) then
+			if ldecl->hash = rdecl->hash then
+				if astIsEqual(ldecl->n, rdecl->n, TRUE) then
+					if (l = 0) or (r = 0) then
 						length = 1
 					else
 						length = previousrow[r-1] + 1
@@ -511,7 +511,7 @@ private sub hAstLCS _
 				end if
 			end if
 
-			if( maxlen < length ) then
+			if maxlen < length then
 				maxlen = length
 				maxlenl = l
 				maxlenr = r
@@ -541,74 +541,74 @@ private sub hAstMerge _
 
 
 	'' No longest common substring possible?
-	if( afirst > alast ) then
+	if afirst > alast then
 		'' Add bfirst..blast to result
 		for i as integer = bfirst to blast
-			hAddDecl( c, barray, i )
+			hAddDecl(c, barray, i)
 		next
 		exit sub
-	elseif( bfirst > blast ) then
+	elseif bfirst > blast then
 		'' Add afirst..alast to result
 		for i as integer = afirst to alast
-			hAddDecl( c, aarray, i )
+			hAddDecl(c, aarray, i)
 		next
 		exit sub
 	end if
 
 	'' Find longest common substring
 	dim as integer alcsfirst, alcslast, blcsfirst, blcslast
-	hAstLCS( aarray, afirst, alast, alcsfirst, alcslast, _
-	         barray, bfirst, blast, blcsfirst, blcslast )
+	hAstLCS(aarray, afirst, alast, alcsfirst, alcslast, _
+	         barray, bfirst, blast, blcsfirst, blcslast)
 
 	'' No LCS found?
-	if( alcsfirst > alcslast ) then
+	if alcsfirst > alcslast then
 		'' Add a first, then b. This order makes the most sense: keeping
 		'' the old declarations at the top, add new ones to the bottom.
 		for i as integer = afirst to alast
-			hAddDecl( c, aarray, i )
+			hAddDecl(c, aarray, i)
 		next
 		for i as integer = bfirst to blast
-			hAddDecl( c, barray, i )
+			hAddDecl(c, barray, i)
 		next
 		exit sub
 	end if
 
 	'' Do both sides have decls before the LCS?
-	if( (alcsfirst > afirst) and (blcsfirst > bfirst) ) then
+	if (alcsfirst > afirst) and (blcsfirst > bfirst) then
 		'' Do LCS on that recursively
-		hAstMerge( c, aarray, afirst, alcsfirst - 1, _
-		              barray, bfirst, blcsfirst - 1 )
-	elseif( alcsfirst > afirst ) then
+		hAstMerge(c, aarray, afirst, alcsfirst - 1, _
+		              barray, bfirst, blcsfirst - 1)
+	elseif alcsfirst > afirst then
 		'' Only a has decls before the LCS; copy them into result first
 		for i as integer = afirst to alcsfirst - 1
-			hAddDecl( c, aarray, i )
+			hAddDecl(c, aarray, i)
 		next
-	elseif( blcsfirst > bfirst ) then
+	elseif blcsfirst > bfirst then
 		'' Only b has decls before the LCS; copy them into result first
 		for i as integer = bfirst to blcsfirst - 1
-			hAddDecl( c, barray, i )
+			hAddDecl(c, barray, i)
 		next
 	end if
 
 	'' Add LCS
-	assert( (alcslast - alcsfirst + 1) = (blcslast - blcsfirst + 1) )
+	assert((alcslast - alcsfirst + 1) = (blcslast - blcsfirst + 1))
 	for i as integer = 0 to (alcslast - alcsfirst + 1)-1
-		hAddMergedDecl( c, aarray, alcsfirst + i, barray, blcsfirst + i )
+		hAddMergedDecl(c, aarray, alcsfirst + i, barray, blcsfirst + i)
 	next
 
 	'' Do both sides have decls behind the LCS?
-	if( (alcslast < alast) and (blcslast < blast) ) then
+	if (alcslast < alast) and (blcslast < blast) then
 		'' Do LCS on that recursively
-		hAstMerge( c, aarray, alcslast + 1, alast, barray, blcslast + 1, blast )
-	elseif( alcslast < alast ) then
+		hAstMerge(c, aarray, alcslast + 1, alast, barray, blcslast + 1, blast)
+	elseif alcslast < alast then
 		'' Only a has decls behind the LCS
 		for i as integer = alcslast + 1 to alast
-			hAddDecl( c, aarray, i )
+			hAddDecl(c, aarray, i)
 		next
-	elseif( blcslast < blast ) then
+	elseif blcslast < blast then
 		'' Only b has decls behind the LCS
 		for i as integer = blcslast + 1 to blast
-			hAddDecl( c, barray, i )
+			hAddDecl(c, barray, i)
 		next
 	end if
 
@@ -620,9 +620,9 @@ function astMergeVerblocks _
 		byval b as ASTNODE ptr _
 	) as ASTNODE ptr
 
-	var c = astNewGROUP( )
-	a = astNewGROUP( a )
-	b = astNewGROUP( b )
+	var c = astNewGROUP()
+	a = astNewGROUP(a)
+	b = astNewGROUP(b)
 
 	'' Create a lookup table for each side, so the LCS algorithm can do
 	'' index-based lookups in O(1) instead of having to cycle through the
@@ -630,8 +630,8 @@ function astMergeVerblocks _
 	dim atable as DECLTABLE
 	dim btable as DECLTABLE
 
-	decltableInit( @atable, a )
-	decltableInit( @btable, b )
+	decltableInit(@atable, a)
+	decltableInit(@btable, b)
 
 	''
 	'' decltableInit() precalculates hashes for A's and B's declarations.
@@ -662,24 +662,24 @@ function astMergeVerblocks _
 	'' declarations, that would be 400 million bitflags, ~48 MiB.
 	''
 
-	hAstMerge( c, atable.array, 0, atable.count - 1, _
-	              btable.array, 0, btable.count - 1 )
+	hAstMerge(c, atable.array, 0, atable.count - 1, _
+	              btable.array, 0, btable.count - 1)
 
-	decltableEnd( @btable )
-	decltableEnd( @atable )
+	decltableEnd(@btable)
+	decltableEnd(@atable)
 
-	astDelete( a )
-	astDelete( b )
+	astDelete(a)
+	astDelete(b)
 
 	function = c
 end function
 
-sub astMergeNext( byval veror as ASTNODE ptr, byref final as ASTNODE ptr, byref incoming as ASTNODE ptr )
-	incoming = astWrapFileInVerblock( veror, incoming )
-	if( final = NULL ) then
-		final = astNewGROUP( incoming )
+sub astMergeNext(byval veror as ASTNODE ptr, byref final as ASTNODE ptr, byref incoming as ASTNODE ptr)
+	incoming = astWrapFileInVerblock(veror, incoming)
+	if final = NULL then
+		final = astNewGROUP(incoming)
 	else
-		final = astMergeVerblocks( final, incoming )
+		final = astMergeVerblocks(final, incoming)
 	end if
 	incoming = NULL
 end sub
@@ -708,26 +708,26 @@ end sub
 '' Similar to that, verblocks at the toplevel can be solved out, if they cover
 '' all possible versions. (think of them as being nested in a global verblock)
 ''
-private sub hSolveOutRedundantVerblocks( byval code as ASTNODE ptr, byval parentveror as ASTNODE ptr )
-	assert( astIsVEROR( parentveror ) )
+private sub hSolveOutRedundantVerblocks(byval code as ASTNODE ptr, byval parentveror as ASTNODE ptr)
+	assert(astIsVEROR(parentveror))
 
 	var i = code->head
-	while( i )
+	while i
 		var nxt = i->next
 
-		if( i->class = ASTCLASS_VERBLOCK ) then
-			hSolveOutRedundantVerblocks( i, i->expr )
+		if i->class = ASTCLASS_VERBLOCK then
+			hSolveOutRedundantVerblocks(i, i->expr)
 
 			'' Has a parent?
-			if( parentveror ) then
+			if parentveror then
 				'' Nested verblock covers at least the parent's versions?
-				if( astGroupContainsAllChildrenOf( i->expr, parentveror ) ) then
+				if astGroupContainsAllChildrenOf(i->expr, parentveror) then
 					'' Remove this verblock, preserve only its children
-					astReplace( code, i, astCloneChildren( i ) )
+					astReplace(code, i, astCloneChildren(i))
 				end if
 			end if
 		else
-			hSolveOutRedundantVerblocks( i, parentveror )
+			hSolveOutRedundantVerblocks(i, parentveror)
 		end if
 
 		i = nxt
@@ -765,14 +765,14 @@ end sub
 ''         <...>
 ''     #endif
 ''
-private sub hTurnVerblocksIntoPpIfs( byval code as ASTNODE ptr )
+private sub hTurnVerblocksIntoPpIfs(byval code as ASTNODE ptr)
 	var i = code->head
-	while( i )
+	while i
 
 		'' Process verblocks nested inside structs etc.
-		hTurnVerblocksIntoPpIfs( i )
+		hTurnVerblocksIntoPpIfs(i)
 
-		if( astIsVERBLOCK( i ) ) then
+		if astIsVERBLOCK(i) then
 			'' Turn the 1st verblock into an #if
 			i->class = ASTCLASS_PPIF
 
@@ -780,12 +780,12 @@ private sub hTurnVerblocksIntoPpIfs( byval code as ASTNODE ptr )
 			'' (as long as no duplicates would be added to the list of collected versions)
 			'' and turn them into #elseif's while at it.
 			var j = i->next
-			var collected = astClone( i->expr )
-			assert( astIsVEROR( collected ) )
-			while( j andalso astIsVERBLOCK( j ) andalso _
-			       (not astGroupContainsAnyChildrenOf( collected, j->expr )) )
+			var collected = astClone(i->expr)
+			assert(astIsVEROR(collected))
+			while j andalso astIsVERBLOCK(j) andalso _
+			       (not astGroupContainsAnyChildrenOf(collected, j->expr))
 				j->class = ASTCLASS_PPELSEIF
-				collected = astNewVEROR( collected, astClone( j->expr ) )
+				collected = astNewVEROR(collected, astClone(j->expr))
 				j = j->next
 			wend
 
@@ -794,21 +794,21 @@ private sub hTurnVerblocksIntoPpIfs( byval code as ASTNODE ptr )
 			'' If the collected verblocks cover all versions, then only the first #if check
 			'' and any intermediate #elseif checks are needed, but the last check can be turned
 			'' into a simple #else.
-			if( astIsEqual( collected, frog.fullveror ) ) then
-				var last = iif( j, j->prev, code->tail )
+			if astIsEqual(collected, frog.fullveror) then
+				var last = iif(j, j->prev, code->tail)
 				'' But only if we've got more than 1 verblock
-				if( i <> last ) then
-					assert( last->class = ASTCLASS_PPELSEIF )
+				if i <> last then
+					assert(last->class = ASTCLASS_PPELSEIF)
 					last->class = ASTCLASS_PPELSE
-					astDelete( last->expr )
+					astDelete(last->expr)
 					last->expr = NULL
 				end if
 			end if
 
 			'' Insert #endif
-			astInsert( code, astNew( ASTCLASS_PPENDIF ), j )
+			astInsert(code, astNew(ASTCLASS_PPENDIF), j)
 
-			astDelete( collected )
+			astDelete(collected)
 		end if
 
 		i = i->next
@@ -825,10 +825,10 @@ namespace condcounter
 	dim shared condcount as integer
 end namespace
 
-private sub condcounterCount( byval cond as ASTNODE ptr )
+private sub condcounterCount(byval cond as ASTNODE ptr)
 	'' If this condition is already known, increase the count.
 	for i as integer = 0 to condcounter.condcount - 1
-		if( astIsEqual( condcounter.conds[i].cond, cond ) ) then
+		if astIsEqual(condcounter.conds[i].cond, cond) then
 			condcounter.conds[i].count += 1
 			exit sub
 		end if
@@ -837,95 +837,95 @@ private sub condcounterCount( byval cond as ASTNODE ptr )
 	'' Otherwise, register it as new.
 	var i = condcounter.condcount
 	condcounter.condcount += 1
-	condcounter.conds = reallocate( condcounter.conds, _
-			condcounter.condcount * sizeof( CONDINFO ) )
+	condcounter.conds = reallocate(condcounter.conds, _
+			condcounter.condcount * sizeof(CONDINFO))
 	condcounter.conds[i].cond = cond
 	condcounter.conds[i].count = 1
 end sub
 
-private sub condcounterEnd( )
-	deallocate( condcounter.conds )
+private sub condcounterEnd()
+	deallocate(condcounter.conds)
 	condcounter.conds = NULL
 	condcounter.condcount = 0
 end sub
 
-private function condcounterFindMostCommon( ) as ASTNODE ptr
-	if( condcounter.condcount = 0 ) then
+private function condcounterFindMostCommon() as ASTNODE ptr
+	if condcounter.condcount = 0 then
 		return NULL
 	end if
 
 	var maxcount = 0
 	var imaxcount = -1
 	for i as integer = 0 to condcounter.condcount - 1
-		if( maxcount < condcounter.conds[i].count ) then
+		if maxcount < condcounter.conds[i].count then
 			maxcount = condcounter.conds[i].count
 			imaxcount = i
 		end if
 	next
-	assert( (imaxcount >= 0) and (imaxcount < condcounter.condcount) )
+	assert((imaxcount >= 0) and (imaxcount < condcounter.condcount))
 
 	'' No point extracting a condition that only appeared once
-	if( condcounter.conds[imaxcount].count < 2 ) then
+	if condcounter.conds[imaxcount].count < 2 then
 		return NULL
 	end if
 
 	function = condcounter.conds[imaxcount].cond
 end function
 
-private function hDetermineMostCommonCondition( byval veror as ASTNODE ptr ) as ASTNODE ptr
-	assert( astIsVEROR( veror ) )
+private function hDetermineMostCommonCondition(byval veror as ASTNODE ptr) as ASTNODE ptr
+	assert(astIsVEROR(veror))
 
 	'' Build list of all conditions and count them. The one with the max
 	'' count is the most common.
 
 	var verand = veror->head
-	while( verand )
-		if( astIsVERAND( verand ) ) then
+	while verand
+		if astIsVERAND(verand) then
 			var cond = verand->head
-			while( cond )
-				condcounterCount( cond )
+			while cond
+				condcounterCount(cond)
 				cond = cond->next
 			wend
 		end if
 		verand = verand->next
 	wend
 
-	function = condcounterFindMostCommon( )
+	function = condcounterFindMostCommon()
 
-	condcounterEnd( )
+	condcounterEnd()
 end function
 
-private function hIsCondition( byval n as ASTNODE ptr ) as integer
-	function = (not astIsVEROR( n )) and (not astIsVERAND( n ))
+private function hIsCondition(byval n as ASTNODE ptr) as integer
+	function = (not astIsVEROR(n)) and (not astIsVERAND(n))
 end function
 
-private function hSimplify( byval n as ASTNODE ptr, byref changed as integer ) as ASTNODE ptr
-	if( n = NULL ) then return NULL
-	if( hIsCondition( n ) ) then return n
+private function hSimplify(byval n as ASTNODE ptr, byref changed as integer) as ASTNODE ptr
+	if n = NULL then return NULL
+	if hIsCondition(n) then return n
 
 	scope
 		var i = n->head
-		while( i )
-			i = astReplace( n, i, hSimplify( astClone( i ), changed ) )
+		while i
+			i = astReplace(n, i, hSimplify(astClone(i), changed))
 		wend
 	end scope
 
 	'' Single child, or none at all? Solve out the VEROR/VERAND.
-	if( n->head = n->tail ) then
+	if n->head = n->tail then
 		changed = TRUE
-		function = astClone( n->head )
-		astDelete( n )
+		function = astClone(n->head)
+		astDelete(n)
 		exit function
 	end if
 
-	if( astIsVEROR( n ) = FALSE ) then
+	if astIsVEROR(n) = FALSE then
 		return n
 	end if
 
 	'' Solve out "complete" VERORs - VERORs that cover all possible choices
-	if( astGroupContains( frog.completeverors, n ) ) then
+	if astGroupContains(frog.completeverors, n) then
 		changed = TRUE
-		astDelete( n )
+		astDelete(n)
 		return NULL
 	end if
 
@@ -950,23 +950,23 @@ private function hSimplify( byval n as ASTNODE ptr, byref changed as integer ) a
 	'' it manually. I.e., it produced the best and most expected results.
 	''
 
-	var mostcommoncond = hDetermineMostCommonCondition( n )
-	if( mostcommoncond = NULL ) then
+	var mostcommoncond = hDetermineMostCommonCondition(n)
+	if mostcommoncond = NULL then
 		return n
 	end if
-	mostcommoncond = astClone( mostcommoncond )
+	mostcommoncond = astClone(mostcommoncond)
 
-	var extracted = astNew( ASTCLASS_VEROR )
+	var extracted = astNew(ASTCLASS_VEROR)
 
 	'' Extract VERANDs that contain the most common condition
 	scope
 		var verand = n->head
-		while( verand )
+		while verand
 			var verandnext = verand->next
-			if( astIsVERAND( verand ) ) then
-				if( astGroupContains( verand, mostcommoncond ) ) then
-					astAppend( extracted, astClone( verand ) )
-					astRemove( n, verand )
+			if astIsVERAND(verand) then
+				if astGroupContains(verand, mostcommoncond) then
+					astAppend(extracted, astClone(verand))
+					astRemove(n, verand)
 				end if
 			end if
 			verand = verandnext
@@ -976,23 +976,23 @@ private function hSimplify( byval n as ASTNODE ptr, byref changed as integer ) a
 	'' Remove the most common condition from the extracted VERANDs
 	scope
 		var verand = extracted->head
-		while( verand )
+		while verand
 			var verandnext = verand->next
 
 			'' Remove common condition from this VERAND
 			var cond = verand->head
-			while( cond )
+			while cond
 				var condnext = cond->next
-				if( astIsEqual( cond, mostcommoncond ) ) then
-					astRemove( verand, cond )
+				if astIsEqual(cond, mostcommoncond) then
+					astRemove(verand, cond)
 				end if
 				cond = condnext
 			wend
 
 			'' If this VERAND now only contains 1 condition,
 			'' solve out the VERAND
-			if( verand->head = verand->tail ) then
-				astReplace( extracted, verand, astClone( verand->head ) )
+			if verand->head = verand->tail then
+				astReplace(extracted, verand, astClone(verand->head))
 			end if
 
 			verand = verandnext
@@ -1000,47 +1000,47 @@ private function hSimplify( byval n as ASTNODE ptr, byref changed as integer ) a
 	end scope
 
 	'' Add the common condition on top of the extracted VERANDs
-	extracted = astNewVERAND( mostcommoncond, extracted )
+	extracted = astNewVERAND(mostcommoncond, extracted)
 
 	'' And re-add that to the original VEROR
-	astAppend( n, extracted )
+	astAppend(n, extracted)
 	changed = TRUE
 
 	function = n
 end function
 
-private function hSimplifyVersionExpr( byval n as ASTNODE ptr ) as ASTNODE ptr
+private function hSimplifyVersionExpr(byval n as ASTNODE ptr) as ASTNODE ptr
 	dim as integer changed
 	do
 		changed = FALSE
-		n = hSimplify( n, changed )
-	loop while( changed )
+		n = hSimplify(n, changed)
+	loop while changed
 	function = n
 end function
 
-private sub hSimplifyVersionExpressions( byval code as ASTNODE ptr )
+private sub hSimplifyVersionExpressions(byval code as ASTNODE ptr)
 	var i = code->head
-	while( i )
+	while i
 		var inext = i->next
 
 		'' Handle #if checks nested inside structs
-		hSimplifyVersionExpressions( i )
+		hSimplifyVersionExpressions(i)
 
-		select case( i->class )
+		select case(i->class)
 		case ASTCLASS_PPIF, ASTCLASS_PPELSEIF
-			i->expr = hSimplifyVersionExpr( i->expr )
+			i->expr = hSimplifyVersionExpr(i->expr)
 
 			'' If we were able to solve it out completely that means
 			'' the check was always true -- thus, we can remove this
 			'' #if check and insert the body in its place.
-			if( i->expr = NULL ) then
-				astReplace( code, i, astCloneChildren( i ) )
+			if i->expr = NULL then
+				astReplace(code, i, astCloneChildren(i))
 
 				'' If the next node is an #endif, remove that too.
 				'' If it's an #elseif, turn that into an #if.
-				select case( inext->class )
+				select case(inext->class)
 				case ASTCLASS_PPENDIF
-					inext = astRemove( code, inext )
+					inext = astRemove(code, inext)
 				case ASTCLASS_PPELSEIF
 					inext->class = ASTCLASS_PPIF
 				end select
@@ -1053,18 +1053,18 @@ end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-sub astProcessVerblocks( byval code as ASTNODE ptr )
-	assert( code->class = ASTCLASS_GROUP )
+sub astProcessVerblocks(byval code as ASTNODE ptr)
+	assert(code->class = ASTCLASS_GROUP)
 
 	'' These 2 rely on version expressions not being simplified yet:
 	'' It's much easier to check which versions are covered by a certain
 	'' VERBLOCK if the VERBLOCK's version expression is just a VEROR of all
 	'' VERANDs (each VERAND representing one version), as opposed to a
 	'' simplified but arbitrary tree of VERORs/VERANDs.
-	hSolveOutRedundantVerblocks( code, frog.fullveror )
-	hTurnVerblocksIntoPpIfs( code )
+	hSolveOutRedundantVerblocks(code, frog.fullveror)
+	hTurnVerblocksIntoPpIfs(code)
 
 	'' Beautification: Apply some trivial refactoring to the version
 	'' conditions, to eliminate duplicate checks where possible.
-	hSimplifyVersionExpressions( code )
+	hSimplifyVersionExpressions(code)
 end sub
