@@ -1,5 +1,11 @@
 #pragma once
 
+'' The following symbols have been renamed:
+''     struct A1 => B1
+''     struct A2 => B2
+''     struct A3 => B3
+''     struct A4 => B4
+
 type a
 	f as long
 end type

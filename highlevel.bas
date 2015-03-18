@@ -1203,6 +1203,26 @@ private function hlSearchSpecialDtypes( byval n as ASTNODE ptr ) as integer
 	function = TRUE
 end function
 
+private function hlBuildRenameList( byval n as ASTNODE ptr ) as ASTNODE ptr
+	var list = astNewGROUP( )
+
+	var i = n->head
+	while( i )
+
+		if( (i->text <> NULL) and (i->alias <> NULL) ) then
+			astAppend( list, astNewTEXT( _
+				astDumpPrettyClass( i->class ) + " " + *i->alias + " => " + *i->text ) )
+		end if
+
+		'' TODO: recurse into struct/union/enum if renaming fields/enumconsts...
+		''astAppend( list, hlBuildRenameList( i ) )
+
+		i = i->next
+	wend
+
+	function = list
+end function
+
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 private function hIsPpIfBegin( byval n as ASTNODE ptr ) as integer
@@ -1442,6 +1462,20 @@ sub hlFile( byval ast as ASTNODE ptr, byval inclibs as ASTNODE ptr )
 		assert( ast->class = ASTCLASS_GROUP )
 		astPrepend( ast, astNew( ASTCLASS_EXTERNBLOCKBEGIN, externblock ) )
 		astAppend( ast, astNew( ASTCLASS_EXTERNBLOCKEND ) )
+	end if
+
+	'' If any symbols from this file were renamed, add a rename list at the top
+	'' TODO: add it above #inclibs/#includes even
+	if( frog.have_renames ) then
+		var entries = hlBuildRenameList( ast )
+		if( entries->head ) then
+			var renamelist = astNew( ASTCLASS_RENAMELIST, "The following symbols have been renamed:" )
+			astAppend( renamelist, entries )
+			astPrepend( ast, astNew( ASTCLASS_DIVIDER ) )
+			astPrepend( ast, renamelist )
+		else
+			astDelete( entries )
+		end if
 	end if
 
 	'' Move existing #include statements outside the Extern block

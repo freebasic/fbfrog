@@ -1,5 +1,11 @@
 #pragma once
 
+'' The following symbols have been renamed:
+''     typedef A1 => B1
+''     typedef A2 => B2
+''     typedef byt => byte
+''     typedef T1 => T2
+
 extern "C"
 
 type a as long

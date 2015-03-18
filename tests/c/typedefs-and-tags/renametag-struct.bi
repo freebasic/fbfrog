@@ -1,5 +1,8 @@
 #pragma once
 
+'' The following symbols have been renamed:
+''     struct A => B
+
 type B
 	d as double
 end type

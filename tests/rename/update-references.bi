@@ -1,5 +1,10 @@
 #pragma once
 
+'' The following symbols have been renamed:
+''     struct A1 => A2
+''     typedef B1 => B2
+''     constant C1 => C2
+
 extern "C"
 
 type A2

@@ -1,5 +1,8 @@
 #pragma once
 
+'' The following symbols have been renamed:
+''     typedef A => myint
+
 type A
 	d as double
 end type

@@ -349,6 +349,20 @@ private sub emitCode( byval n as ASTNODE ptr, byval parentclass as integer )
 		emitLines( n->text )
 		emit.decls += 1
 
+	case ASTCLASS_RENAMELIST
+		var added_indent = FALSE
+		if( emit.comment = 0 ) then
+			added_indent = TRUE
+			emit.comment += 1
+			emit.commentspaces += 1
+		end if
+		emitLine( *n->text )
+		hEmitIndentedChildren( n )
+		if( added_indent ) then
+			emit.commentspaces -= 1
+			emit.comment -= 1
+		end if
+
 	case ASTCLASS_INCLIB
 		emitLine( "#inclib """ + *n->text + """" )
 
