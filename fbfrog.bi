@@ -363,6 +363,7 @@ enum
 	OPT_REPLACEMENTS
 	OPT_RENAMETYPEDEF
 	OPT_RENAMETAG
+	OPT_RENAMEDEFINE
 	OPT_REMOVEDEFINE
 	OPT_REMOVEPROC
 	OPT_TYPEDEFHINT
@@ -836,7 +837,7 @@ namespace frog
 	extern as FROGAPI ptr apis
 	extern as integer apicount
 
-	extern renameopt(OPT_RENAMETYPEDEF to OPT_RENAMETAG) as THASH
+	extern renameopt(OPT_RENAMETYPEDEF to OPT_RENAMEDEFINE) as THASH
 	extern idopt(OPT_REMOVEDEFINE to OPT_NOEXPAND) as THASH
 	extern removeinclude as THASH
 

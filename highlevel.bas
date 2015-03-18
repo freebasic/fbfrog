@@ -436,6 +436,8 @@ private function hlApplyRenameOption( byval n as ASTNODE ptr ) as integer
 		end if
 	case ASTCLASS_TYPEDEF
 		hApplyRenameOption( OPT_RENAMETYPEDEF, n )
+	case ASTCLASS_PPDEFINE
+		hApplyRenameOption( OPT_RENAMEDEFINE, n )
 	end select
 
 	function = TRUE
@@ -1248,7 +1250,9 @@ sub hlGlobal( byval ast as ASTNODE ptr )
 	end if
 
 	'' Apply -renametag/-renametypedef options, if any
-	if( (frog.renameopt(OPT_RENAMETAG).count + frog.renameopt(OPT_RENAMETYPEDEF).count) > 0 ) then
+	if( (frog.renameopt(OPT_RENAMETYPEDEF).count + _
+	     frog.renameopt(OPT_RENAMETAG).count + _
+	     frog.renameopt(OPT_RENAMEDEFINE).count) > 0 ) then
 		astVisit( ast, @hlApplyRenameOption )
 	end if
 

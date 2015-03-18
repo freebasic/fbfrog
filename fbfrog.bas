@@ -76,7 +76,7 @@ namespace frog
 	dim shared as HPATTERN ptr patterns
 	dim shared as integer patterncount
 
-	dim shared renameopt(OPT_RENAMETYPEDEF to OPT_RENAMETAG) as THASH
+	dim shared renameopt(OPT_RENAMETYPEDEF to OPT_RENAMEDEFINE) as THASH
 	dim shared idopt(OPT_REMOVEDEFINE to OPT_NOEXPAND) as THASH
 	dim shared removeinclude as THASH
 
@@ -215,6 +215,7 @@ private sub hPrintHelpAndExit( )
 	print "  -replacements <file>  Load patterns for search/replace"
 	print "  -renametypedef <oldid> <newid>  Rename a typedef"
 	print "  -renametag <oldid> <newid>      Rename a struct/union/enum"
+	print "  -renamedefine <oldid> <newid>   Rename a #define"
 	print "  -removedefine <id>  Don't preserve a certain #define"
 	print "  -removeproc <id>    Don't preserve a certain procedure"
 	print "  -typedefhint <id>   Mark <id> as typedef, to help parsing of type casts"
@@ -696,7 +697,7 @@ private sub hParseArgs( byref x as integer )
 			end scope
 			x += 1
 
-		case OPT_RENAMETYPEDEF, OPT_RENAMETAG
+		case OPT_RENAMETYPEDEF, OPT_RENAMETAG, OPT_RENAMEDEFINE
 			x += 1
 
 			'' <oldid>
