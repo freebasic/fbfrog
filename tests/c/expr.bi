@@ -386,11 +386,11 @@ enum
 	ENUMCONST1 = 0
 end enum
 
-#define A01(x) ("a" + "b")
-#define A02(x) ((("a" + "b") + "c") + "d")
-#define A03(x) ("a" + "b")
-#define A04(x) (("a" + #x) + "b")
-#define A05(x) (((("a" + #x) + "b") + #x) + "c")
+#define A01(x) "a" "b"
+#define A02(x) "a" "b" "c" "d"
+#define A03(x) "a" "b"
+#define A04(x) "a" #x "b"
+#define A05(x) "a" #x "b" #x "c"
 
 const A06 = cast(any, 0)
 const A07 = cbyte(0)

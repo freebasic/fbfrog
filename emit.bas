@@ -598,6 +598,17 @@ private sub emitCode(byval n as ASTNODE ptr, byval parentclass as integer)
 	end select
 end sub
 
+private function hEmitOperands(byval n as ASTNODE ptr, byref separator as string) as string
+	dim s as string
+	var i = n->head
+	while i
+		if i <> n->head then s += separator
+		s += emitExpr(i)
+		i = i->next
+	wend
+	function = s
+end function
+
 private function emitExpr(byval n as ASTNODE ptr, byval need_parens as integer) as string
 	dim as string s
 
@@ -794,7 +805,6 @@ private function emitExpr(byval n as ASTNODE ptr, byval need_parens as integer) 
 	case ASTCLASS_INDEX       : s = emitExpr(n->head, TRUE) + "["         + emitExpr(n->tail, TRUE) + "]"
 	case ASTCLASS_MEMBER      : s = emitExpr(n->head, TRUE) + "."         + emitExpr(n->tail, TRUE)
 	case ASTCLASS_MEMBERDEREF : s = emitExpr(n->head, TRUE) + "->"        + emitExpr(n->tail, TRUE)
-	case ASTCLASS_STRCAT      : s = emitExpr(n->head, TRUE) + " + "       + emitExpr(n->tail, TRUE) : consider_parens = TRUE
 	case ASTCLASS_NOT       : s = "not "     + emitExpr(n->head, TRUE) : consider_parens = TRUE
 	case ASTCLASS_NEGATE    : s = "-"        + emitExpr(n->head, TRUE) : consider_parens = TRUE
 	case ASTCLASS_UNARYPLUS : s = "+"        + emitExpr(n->head, TRUE) : consider_parens = TRUE
@@ -831,13 +841,11 @@ private function emitExpr(byval n as ASTNODE ptr, byval need_parens as integer) 
 	case ASTCLASS_IIF
 		s = "iif(" + emitExpr(n->expr, FALSE) + ", " + emitExpr(n->head) + ", " + emitExpr(n->tail) + ")"
 
+	case ASTCLASS_STRCAT
+		s = hEmitOperands(n, " ")
+
 	case ASTCLASS_PPMERGE
-		var i = n->head
-		while i
-			if i <> n->head then s += "##"
-			s += emitExpr(i)
-			i = i->next
-		wend
+		s = hEmitOperands(n, "##")
 
 	case ASTCLASS_CALL
 		s = *n->text + hParamList(n)

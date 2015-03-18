@@ -181,19 +181,19 @@ end sub
 
 '' ("..." | #id)*
 private function cStringLiteralSequence() as ASTNODE ptr
-	dim as ASTNODE ptr a
+	var strcat = astNew(ASTCLASS_STRCAT)
 
 	while c.parseok
-		dim as ASTNODE ptr s
-
 		select case tkGet(c.x)
 		case TK_STRING
-			s = astNew(ASTCLASS_STRING, tkGetText(c.x))
+			var s = astNew(ASTCLASS_STRING, tkGetText(c.x))
 			s->dtype = TYPE_ZSTRING
+			astAppend(strcat, s)
 
 		case TK_WSTRING
-			s = astNew(ASTCLASS_STRING, tkGetText(c.x))
+			var s = astNew(ASTCLASS_STRING, tkGetText(c.x))
 			s->dtype = TYPE_WSTRING
+			astAppend(strcat, s)
 
 		'' '#' stringify operator
 		case TK_HASH
@@ -203,22 +203,16 @@ private function cStringLiteralSequence() as ASTNODE ptr
 			end if
 			c.x += 1
 
-			s = astNew(ASTCLASS_STRINGIFY, astNewTEXT(tkGetText(c.x)))
+			astAppend(strcat, astNew(ASTCLASS_STRINGIFY, astNewTEXT(tkGetText(c.x))))
 
 		case else
 			exit while
 		end select
 
-		if a = NULL then
-			a = s
-		else
-			a = astNew(ASTCLASS_STRCAT, a, s)
-		end if
-
 		c.x += 1
 	wend
 
-	function = a
+	function = strcat
 end function
 
 ''
