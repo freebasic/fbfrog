@@ -671,6 +671,47 @@ private function hlFixSpecialParameters(byval n as ASTNODE ptr) as integer
 	function = TRUE
 end function
 
+private sub hTurnStringIntoByte(byval n as ASTNODE ptr)
+	'' Turn zstring/wstring into byte/wchar_t, but preserve CONSTs
+	if typeGetDtAndPtr(n->dtype) = TYPE_ZSTRING then
+		n->dtype = typeGetConst(n->dtype) or TYPE_BYTE
+	else
+		n->dtype = typeGetConst(n->dtype) or TYPE_WCHAR_T
+	end if
+end sub
+
+private sub hFixCharWchar(byval n as ASTNODE ptr)
+	'' Affected by -nostring?
+	if n->text then
+		if hashContains(@frog.idopt(OPT_NOSTRING), n->text, hashHash(n->text)) then
+			hTurnStringIntoByte(n)
+			exit sub
+		end if
+	end if
+
+	'' zstring + array? => fix-len zstring
+	if n->array then
+		'' Use the last (inner-most) array dimension as the fixed-length string size
+		var d = n->array->tail
+		assert(d->class = ASTCLASS_DIMENSION)
+		assert(d->expr)
+		assert(n->subtype = NULL)
+		n->subtype = astClone(d->expr)
+		astRemove(n->array, d)
+
+		'' If no dimensions left, remove the array type entirely
+		if n->array->head = NULL then
+			n->array = NULL
+		end if
+
+		exit sub
+	end if
+
+	if n->class <> ASTCLASS_TYPEDEF then
+		hTurnStringIntoByte(n)
+	end if
+end sub
+
 ''
 '' Handle declarations with plain zstring/wstring type (originally char/wchar_t).
 ''
@@ -688,27 +729,7 @@ private function hlFixCharWchar(byval n as ASTNODE ptr) as integer
 	if n->class <> ASTCLASS_STRING then
 		select case typeGetDtAndPtr(n->dtype)
 		case TYPE_ZSTRING, TYPE_WSTRING
-			if n->array then
-				'' Use the last (inner-most) array dimension as the fixed-length string size
-				var d = n->array->tail
-				assert(d->class = ASTCLASS_DIMENSION)
-				assert(d->expr)
-				assert(n->subtype = NULL)
-				n->subtype = astClone(d->expr)
-				astRemove(n->array, d)
-
-				'' If no dimensions left, remove the array type entirely
-				if n->array->head = NULL then
-					n->array = NULL
-				end if
-			elseif n->class <> ASTCLASS_TYPEDEF then
-				'' Turn zstring/wstring into byte/wchar_t, but preserve CONSTs
-				if typeGetDtAndPtr(n->dtype) = TYPE_ZSTRING then
-					n->dtype = typeGetConst(n->dtype) or TYPE_BYTE
-				else
-					n->dtype = typeGetConst(n->dtype) or TYPE_WCHAR_T
-				end if
-			end if
+			hFixCharWchar(n)
 		end select
 	end if
 	function = TRUE

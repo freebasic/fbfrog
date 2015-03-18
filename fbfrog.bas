@@ -223,6 +223,7 @@ private sub hPrintHelpAndExit()
 	print "  -removeproc <id>    Don't preserve a certain procedure"
 	print "  -typedefhint <id>   Mark <id> as typedef, to help parsing of type casts"
 	print "  -addforwarddecl <id>  Force a forward declaration to be added for the given type"
+	print "  -nostring <id>      Prevent a symbol from being turned into a zstring"
 	print "  -noexpand <id>      Disable expansion of certain #define"
 	print "  -emit '*.h' foo.bi  Emit code from matching .h into specified .bi"
 	print "version-specific commands:"
@@ -707,7 +708,7 @@ private sub hParseArgs(byref x as integer)
 			hashAddOverwrite(@frog.renameopt(opt), n->alias, n)
 			frog.have_renames = TRUE
 
-		case OPT_REMOVEDEFINE, OPT_REMOVEPROC, OPT_TYPEDEFHINT, OPT_ADDFORWARDDECL, OPT_NOEXPAND
+		case OPT_REMOVEDEFINE, OPT_REMOVEPROC, OPT_TYPEDEFHINT, OPT_ADDFORWARDDECL, OPT_NOSTRING, OPT_NOEXPAND
 			x += 1
 
 			'' <id>
