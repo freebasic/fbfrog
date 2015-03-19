@@ -411,6 +411,24 @@ private sub hlApplyRemoveProcOptions(byval ast as ASTNODE ptr)
 	wend
 end sub
 
+private function hlSetArraySizes(byval n as ASTNODE ptr) as integer
+	if (n->text <> NULL) and (n->array <> NULL) then
+		'' 1 dimension?
+		if n->array->head = n->array->tail then
+			var dimension = n->array->head
+			assert(dimension->class = ASTCLASS_DIMENSION)
+			if dimension->expr->class = ASTCLASS_ELLIPSIS then
+				dim size as zstring ptr = hashLookupDataOrNull(@frog.setarraysizeoptions, n->text)
+				if size then
+					astDelete(dimension->expr)
+					dimension->expr = astNewTEXT(size)
+				end if
+			end if
+		end if
+	end if
+	function = TRUE
+end function
+
 private function hApplyRenameOption(byval opt as integer, byval n as ASTNODE ptr) as integer
 	dim as ASTNODE ptr renameinfo = hashLookupDataOrNull(@frog.renameopt(opt), n->text)
 	if renameinfo then
@@ -1337,6 +1355,8 @@ sub hlGlobal(byval ast as ASTNODE ptr)
 	if frog.idopt(OPT_REMOVEPROC).count > 0 then
 		hlApplyRemoveProcOptions(ast)
 	end if
+
+	astVisit(ast, @hlSetArraySizes)
 
 	'' Apply -rename* options, if any
 	if frog.have_renames then

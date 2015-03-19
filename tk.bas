@@ -159,6 +159,7 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	(@"-nostring"     ), _
 	(@"-noexpand"     ), _
 	(@"-removeinclude"), _
+	(@"-setarraysize" ), _
 	(@"-define"       ), _
 	(@"-include"      ), _
 	(@"-fbfroginclude"), _

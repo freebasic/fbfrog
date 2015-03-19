@@ -80,6 +80,7 @@ namespace frog
 	dim shared renameopt(OPT_RENAMETYPEDEF to OPT_RENAMEMACROPARAM) as THASH
 	dim shared idopt(OPT_REMOVEDEFINE to OPT_NOEXPAND) as THASH
 	dim shared removeinclude as THASH
+	dim shared setarraysizeoptions as THASH
 
 	dim shared as CodeReplacement ptr replacements
 	dim shared as integer replacementcount
@@ -225,6 +226,8 @@ private sub hPrintHelpAndExit()
 	print "  -addforwarddecl <id>  Force a forward declaration to be added for the given type"
 	print "  -nostring <id>      Prevent a symbol from being turned into a zstring"
 	print "  -noexpand <id>      Disable expansion of certain #define"
+	print "  -removeinclude <filename>  Remove matching #include directives"
+	print "  -setarraysize <id> <size>  Set size of an [] array"
 	print "  -emit '*.h' foo.bi  Emit code from matching .h into specified .bi"
 	print "version-specific commands:"
 	print "  C pre-processing:"
@@ -724,6 +727,24 @@ private sub hParseArgs(byref x as integer)
 			end if
 			hashAddOverwrite(@frog.removeinclude, tkGetText(x), NULL)
 			x += 1
+
+		'' -setarraysize <id> <size>
+		case OPT_SETARRAYSIZE
+			x += 1
+
+			'' <id>
+			hExpectId(x)
+			var id = tkGetText(x)
+			x += 1
+
+			'' <size>
+			if hIsStringOrId(x) = FALSE then
+				tkOopsExpected(x, "<size> argument")
+			end if
+			var size = tkGetText(x)
+			x += 1
+
+			hashAddOverwrite(@frog.setarraysizeoptions, id, strDuplicate(size))
 
 		'' -emit <filename-pattern> <file>
 		case OPT_EMIT
@@ -1243,6 +1264,7 @@ end sub
 		hashInit(@frog.idopt(i), 3, TRUE)
 	next
 	hashInit(@frog.removeinclude, 3, TRUE)
+	hashInit(@frog.setarraysizeoptions, 3, TRUE)
 
 	tkInit()
 

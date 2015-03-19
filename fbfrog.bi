@@ -372,6 +372,7 @@ enum
 	OPT_NOSTRING
 	OPT_NOEXPAND
 	OPT_REMOVEINCLUDE
+	OPT_SETARRAYSIZE
 	OPT_DEFINE
 	OPT_INCLUDE
 	OPT_FBFROGINCLUDE
@@ -845,6 +846,7 @@ namespace frog
 	extern renameopt(OPT_RENAMETYPEDEF to OPT_RENAMEMACROPARAM) as THASH
 	extern idopt(OPT_REMOVEDEFINE to OPT_NOEXPAND) as THASH
 	extern removeinclude as THASH
+	extern setarraysizeoptions as THASH
 
 	extern as CodeReplacement ptr replacements
 	extern as integer replacementcount
