@@ -383,13 +383,18 @@ sub astSetText(byval n as ASTNODE ptr, byval text as zstring ptr)
 	n->text = strDuplicate(text)
 end sub
 
-sub astRenameSymbol(byval n as ASTNODE ptr, byval newid as zstring ptr)
+sub astRenameSymbol(byval n as ASTNODE ptr, byval newid as zstring ptr, byval add_to_renamelist as integer)
 	if n->alias = NULL then
 		n->alias = n->text
 	else
 		deallocate(n->text)
 	end if
 	n->text = strDuplicate(newid)
+	if add_to_renamelist then
+		n->attrib and= not ASTATTRIB_NORENAMELIST
+	else
+		n->attrib or= ASTATTRIB_NORENAMELIST
+	end if
 end sub
 
 function astGetOrigId(byval n as ASTNODE ptr) as zstring ptr

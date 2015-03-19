@@ -1047,7 +1047,7 @@ private sub hlAddForwardDecls(byval ast as ASTNODE ptr)
 		var typ = hl.types + i
 		if hShouldAddForwardDeclForType(*typ) then
 			if typ->definition then
-				astRenameSymbol(typ->definition, *typ->definition->text + "_")
+				astRenameSymbol(typ->definition, *typ->definition->text + "_", FALSE)
 			end if
 			var fwd = astNew(ASTCLASS_FORWARDDECL, typ->id)
 			fwd->location = typ->firstuse->location
@@ -1155,8 +1155,7 @@ private sub hFixUnsizedArray(byval ast as ASTNODE ptr, byval n as ASTNODE ptr)
 		def->location = n->location
 		astInsert(ast, def, n)
 
-		astRenameSymbol(n, tempid)
-		n->attrib or= ASTATTRIB_NORENAMELIST
+		astRenameSymbol(n, tempid, FALSE)
 		astDelete(n->array)
 		n->array = NULL
 
@@ -1174,8 +1173,7 @@ private sub hFixUnsizedArray(byval ast as ASTNODE ptr, byval n as ASTNODE ptr)
 			def->location = n->location
 			astInsert(ast, def, n->next)
 
-			astRenameSymbol(n, tempid)
-			n->attrib or= ASTATTRIB_NORENAMELIST
+			astRenameSymbol(n, tempid, FALSE)
 			hTurnStringIntoByte(n)
 		end if
 	end select
