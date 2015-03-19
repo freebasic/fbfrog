@@ -411,6 +411,28 @@ private sub hlApplyRemoveProcOptions(byval ast as ASTNODE ptr)
 	wend
 end sub
 
+private sub hlApplyMoveOption(byval ast as ASTNODE ptr, byref search as string, byref ref as string)
+	dim as ASTNODE ptr decltomove, refdecl
+
+	var i = ast->head
+	while i
+		if i->text then
+			select case *i->text
+			case search
+				decltomove = i
+			case ref
+				refdecl = i
+			end select
+		end if
+		i = i->next
+	wend
+
+	if (decltomove <> NULL) and (refdecl <> NULL) then
+		astUnlink(ast, decltomove)
+		astInsert(ast, decltomove, refdecl)
+	end if
+end sub
+
 private function hlSetArraySizes(byval n as ASTNODE ptr) as integer
 	if (n->text <> NULL) and (n->array <> NULL) then
 		'' 1 dimension?
@@ -1438,6 +1460,14 @@ sub hlGlobal(byval ast as ASTNODE ptr)
 	'' Apply -removeproc options, if any
 	if frog.idopt(OPT_REMOVEPROC).count > 0 then
 		hlApplyRemoveProcOptions(ast)
+	end if
+
+	if frog.moveaboveoptions then
+		var i = frog.moveaboveoptions->head
+		while i
+			hlApplyMoveOption(ast, *i->text, *i->alias)
+			i = i->next
+		wend
 	end if
 
 	astVisit(ast, @hlSetArraySizes)

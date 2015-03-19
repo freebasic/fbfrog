@@ -82,6 +82,7 @@ namespace frog
 	dim shared idopt(OPT_REMOVEDEFINE to OPT_NOEXPAND) as THASH
 	dim shared removeinclude as THASH
 	dim shared setarraysizeoptions as THASH
+	dim shared moveaboveoptions as ASTNODE ptr
 
 	dim shared as CodeReplacement ptr replacements
 	dim shared as integer replacementcount
@@ -229,6 +230,7 @@ private sub hPrintHelpAndExit()
 	print "  -noexpand <id>      Disable expansion of certain #define"
 	print "  -removeinclude <filename>  Remove matching #include directives"
 	print "  -setarraysize <id> <size>  Set size of an [] array"
+	print "  -moveabove <id> <ref>  Move declaration of <id> above declaration of <ref>"
 	print "  -emit '*.h' foo.bi  Emit code from matching .h into specified .bi"
 	print "version-specific commands:"
 	print "  C pre-processing:"
@@ -754,6 +756,27 @@ private sub hParseArgs(byref x as integer)
 			x += 1
 
 			hashAddOverwrite(@frog.setarraysizeoptions, id, strDuplicate(size))
+
+		'' -moveabove <id> <ref>
+		case OPT_MOVEABOVE
+			x += 1
+
+			'' <id>
+			hExpectId(x)
+			var id = tkGetText(x)
+			x += 1
+
+			'' <ref>
+			if hIsStringOrId(x) = FALSE then
+				tkOopsExpected(x, "<ref> argument")
+			end if
+			var ref = tkGetText(x)
+			x += 1
+
+			if frog.moveaboveoptions = NULL then frog.moveaboveoptions = astNewGROUP()
+			var n = astNewTEXT(id)
+			n->alias = strDuplicate(ref)
+			astAppend(frog.moveaboveoptions, n)
 
 		'' -emit <filename-pattern> <file>
 		case OPT_EMIT

@@ -373,6 +373,7 @@ enum
 	OPT_NOEXPAND
 	OPT_REMOVEINCLUDE
 	OPT_SETARRAYSIZE
+	OPT_MOVEABOVE
 	OPT_DEFINE
 	OPT_INCLUDE
 	OPT_FBFROGINCLUDE
@@ -849,6 +850,7 @@ namespace frog
 	extern idopt(OPT_REMOVEDEFINE to OPT_NOEXPAND) as THASH
 	extern removeinclude as THASH
 	extern setarraysizeoptions as THASH
+	extern moveaboveoptions as ASTNODE ptr
 
 	extern as CodeReplacement ptr replacements
 	extern as integer replacementcount
