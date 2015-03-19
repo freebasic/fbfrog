@@ -465,11 +465,7 @@ private sub emitCode(byval n as ASTNODE ptr, byval parentclass as integer)
 
 		var s = compound
 		if (n->class <> ASTCLASS_ENUM) and (n->text <> NULL) then
-			s += " "
-			s += *n->text
-			if n->attrib and ASTATTRIB_FORWARDDECLARED then
-				s += "_"
-			end if
+			s += " " + *n->text
 		end if
 		if n->attrib and ASTATTRIB_PACKED then
 			s += " field = 1"
@@ -491,11 +487,7 @@ private sub emitCode(byval n as ASTNODE ptr, byval parentclass as integer)
 
 	case ASTCLASS_TYPEDEF
 		assert(n->array = NULL)
-		var id = *n->text
-		if n->attrib and ASTATTRIB_FORWARDDECLARED then
-			id += "_"
-		end if
-		emitLine("type " + id + " as " + emitType(n))
+		emitLine("type " + *n->text + " as " + emitType(n))
 		emit.decls += 1
 
 	case ASTCLASS_FORWARDDECL

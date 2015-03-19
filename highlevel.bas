@@ -1047,7 +1047,7 @@ private sub hlAddForwardDecls(byval ast as ASTNODE ptr)
 		var typ = hl.types + i
 		if hShouldAddForwardDeclForType(*typ) then
 			if typ->definition then
-				typ->definition->attrib or= ASTATTRIB_FORWARDDECLARED
+				astRenameSymbol(typ->definition, *typ->definition->text + "_")
 			end if
 			var fwd = astNew(ASTCLASS_FORWARDDECL, typ->id)
 			fwd->location = typ->firstuse->location
