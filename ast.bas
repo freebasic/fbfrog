@@ -401,14 +401,6 @@ sub astSetType(byval n as ASTNODE ptr, byval dtype as integer, byval subtype as 
 	n->subtype = astClone(subtype)
 end sub
 
-'' Checks whether an ARRAY node represents 1 dimension and (0 to ...), i.e. []
-function astIsUnsizedArray(byval array as ASTNODE ptr) as integer
-	if array = NULL then exit function
-	assert(array->class = ASTCLASS_ARRAY)
-	assert(array->head->class = ASTCLASS_DIMENSION)
-	function = (array->head = array->tail) and (array->head->expr->class = ASTCLASS_ELLIPSIS)
-end function
-
 '' astClone() but without children
 function astCloneNode(byval n as ASTNODE ptr) as ASTNODE ptr
 	if n = NULL then return NULL

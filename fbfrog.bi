@@ -738,7 +738,6 @@ declare sub astSetType _
 		byval dtype as integer, _
 		byval subtype as ASTNODE ptr _
 	)
-declare function astIsUnsizedArray( byval array as ASTNODE ptr ) as integer
 declare function astCloneNode( byval n as ASTNODE ptr ) as ASTNODE ptr
 declare function astClone( byval n as ASTNODE ptr ) as ASTNODE ptr
 declare function astIsMergableBlock( byval n as ASTNODE ptr ) as integer

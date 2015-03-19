@@ -696,6 +696,11 @@ private sub hTurnStringIntoByte(byval n as ASTNODE ptr)
 	else
 		n->dtype = typeGetConst(n->dtype) or TYPE_WCHAR_T
 	end if
+	if n->subtype then
+		'' in case it was a fix-len string
+		astDelete(n->subtype)
+		n->subtype = NULL
+	end if
 end sub
 
 private sub hFixCharWchar(byval n as ASTNODE ptr)
@@ -1093,37 +1098,77 @@ private function hIsSimpleConstantExpression(byval n as ASTNODE ptr) as integer
 	function = TRUE
 end function
 
+private function hIsUnsizedArray(byval n as ASTNODE ptr) as integer
+	if n->array then
+		assert(n->array->class = ASTCLASS_ARRAY)
+		assert(n->array->head->class = ASTCLASS_DIMENSION)
+		function = (n->array->head = n->array->tail) and (n->array->head->expr->class = ASTCLASS_ELLIPSIS)
+	end if
+end function
+
+private sub hFixUnsizedArray(byval ast as ASTNODE ptr, byval n as ASTNODE ptr)
+	if hIsUnsizedArray(n) then
+		var id = *n->text
+		var tempid = "__" + id
+
+		var def = astNewPPDEFINE(id)
+		def->paramcount = 1
+		astAppend(def, astNew(ASTCLASS_MACROPARAM, "i"))
+		def->expr = astNewTEXT("((@" + tempid + ")[i])")
+		def->location = n->location
+		astInsert(ast, def, n)
+
+		astRenameSymbol(n, tempid)
+		astDelete(n->array)
+		n->array = NULL
+
+		exit sub
+	end if
+
+	select case typeGetDtAndPtr(n->dtype)
+	case TYPE_ZSTRING, TYPE_WSTRING
+		if n->subtype andalso (n->subtype->class = ASTCLASS_ELLIPSIS) then
+			var id = *n->text
+			var tempid = "__" + id
+
+			var def = astNewPPDEFINE(id)
+			def->expr = astNewTEXT("(*cptr(" + emitType(typeAddrOf(n->dtype), NULL) + ", @" + tempid + "))")
+			def->location = n->location
+			astInsert(ast, def, n->next)
+
+			astRenameSymbol(n, tempid)
+			hTurnStringIntoByte(n)
+		end if
+	end select
+end sub
+
 ''
 '' Search for arrays with unspecified size (can happen at least with extern vars)
+'' and wrap them so they can be indexed arbitrarily as in C.
 ''     extern dtype array[];
+'' =>
 ''     extern array(0 to ...) as dtype
-''
-'' Work-around for FB:
+'' =>
 ''     #define array(i) ((@__array)[i])
 ''     extern __array alias "array" as dtype
 ''
-'' This way the binding's users can index the array arbitrarily, as they could in C.
+'' This also affects fix-len strings (which are arrays in C):
+''     extern char s[];
+'' =>
+''     extern s as zstring * ...
+'' =>
+''     extern __s alias "s" as ubyte;
+''     #define s (*cptr(zstring ptr, @__s))
+''
+'' There's no need to worry about multi-dimensional arrays (or string arrays),
+'' because nested dimensions mustn't have unspecified size in C anyways.
 ''
 private sub hlFixUnsizedArrays(byval ast as ASTNODE ptr)
 	var i = ast->head
 	while i
 
 		if i->class = ASTCLASS_VAR then
-			if astIsUnsizedArray(i->array) then
-				var id = *i->text
-				var tempid = "__" + id
-
-				var def = astNewPPDEFINE(id)
-				def->paramcount = 1
-				astAppend(def, astNew(ASTCLASS_MACROPARAM, "i"))
-				def->expr = astNewTEXT("((@" + tempid + ")[i])")
-				def->location = i->location
-				astInsert(ast, def, i)
-
-				astRenameSymbol(i, tempid)
-				astDelete(i->array)
-				i->array = NULL
-			end if
+			hFixUnsizedArray(ast, i)
 		end if
 
 		i = i->next

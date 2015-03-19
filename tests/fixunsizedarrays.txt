@@ -8,4 +8,4 @@
       tests/fixunsizedarrays.h
 [5/5] __FB_DOS__
       tests/fixunsizedarrays.h
-emitting: tests/fixunsizedarrays.bi (8 declarations, 0 TODOs)
+emitting: tests/fixunsizedarrays.bi (16 declarations, 0 TODOs)
