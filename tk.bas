@@ -165,6 +165,7 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	(@"-fbfroginclude"), _
 	(@"-incdir"       ), _
 	(@"-inclib"       ), _
+	(@"-undef"        ), _
 	(@"-emit"         ), _
 	(@"-dontemit"     ), _
 	(@"-declaredefines"), _

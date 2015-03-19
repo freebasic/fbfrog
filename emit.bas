@@ -366,6 +366,9 @@ private sub emitCode(byval n as ASTNODE ptr, byval parentclass as integer)
 	case ASTCLASS_INCLIB
 		emitLine("#inclib """ + *n->text + """")
 
+	case ASTCLASS_UNDEF
+		emitLine("#undef " + *n->text)
+
 	case ASTCLASS_PRAGMAONCE
 		emitLine("#pragma once")
 

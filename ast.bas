@@ -43,6 +43,7 @@ dim shared as zstring ptr astnodename(0 to ...) => _
 	@"file"         , _
 	@"incdir"       , _
 	@"inclib"       , _
+	@"undef"        , _
 	@"preinclude"   , _
 	@"fbfrogpreinclude", _
 	@"pragmaonce"   , _

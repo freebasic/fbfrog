@@ -1557,7 +1557,7 @@ end sub
 '' .bi-file-specific highlevel transformations, intended to run on the
 '' API-specific ASTs in each output .bi file.
 ''
-sub hlFile(byval ast as ASTNODE ptr, byval inclibs as ASTNODE ptr)
+sub hlFile(byval ast as ASTNODE ptr, byval inclibs as ASTNODE ptr, byval undefs as ASTNODE ptr)
 	hl.need_extern = FALSE
 	hl.stdcalls = 0
 	hl.cdecls = 0
@@ -1623,8 +1623,11 @@ sub hlFile(byval ast as ASTNODE ptr, byval inclibs as ASTNODE ptr)
 		astPrependMaybeWithDivider(ast, astNew(ASTCLASS_PPINCLUDE, "crt/long.bi"))
 	end if
 
+	'' Prepend #inclibs/#undefs
+	if undefs then
+		astPrependMaybeWithDivider(ast, undefs)
+	end if
 	if inclibs then
-		'' Prepend #inclibs
 		astPrependMaybeWithDivider(ast, inclibs)
 	end if
 end sub
