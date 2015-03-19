@@ -154,6 +154,7 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	(@"-renamemacroparam"), _
 	(@"-removedefine" ), _
 	(@"-removeproc"   ), _
+	(@"-dropprocbody" ), _
 	(@"-typedefhint"  ), _
 	(@"-addforwarddecl"), _
 	(@"-nostring"     ), _

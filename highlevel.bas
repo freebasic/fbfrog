@@ -411,6 +411,21 @@ private sub hlApplyRemoveProcOptions(byval ast as ASTNODE ptr)
 	wend
 end sub
 
+private sub hlApplyDropProcBodyOptions(byval ast as ASTNODE ptr)
+	var i = ast->head
+	while i
+
+		if (i->class = ASTCLASS_PROC) and (i->expr <> NULL) then
+			if hashContains(@frog.idopt(OPT_DROPPROCBODY), i->text, hashHash(i->text)) then
+				astDelete(i->expr)
+				i->expr = NULL
+			end if
+		end if
+
+		i = i->next
+	wend
+end sub
+
 private sub hlApplyMoveOption(byval ast as ASTNODE ptr, byref search as string, byref ref as string)
 	dim as ASTNODE ptr decltomove, refdecl
 
@@ -1457,9 +1472,12 @@ sub hlGlobal(byval ast as ASTNODE ptr)
 	astVisit(ast, @hlFixExpressions)
 	hashEnd(@hl.symbols)
 
-	'' Apply -removeproc options, if any
 	if frog.idopt(OPT_REMOVEPROC).count > 0 then
 		hlApplyRemoveProcOptions(ast)
+	end if
+
+	if frog.idopt(OPT_DROPPROCBODY).count > 0 then
+		hlApplyDropProcBodyOptions(ast)
 	end if
 
 	if frog.moveaboveoptions then
