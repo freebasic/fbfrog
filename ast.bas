@@ -438,7 +438,7 @@ end function
 
 function astIsMergableBlock(byval n as ASTNODE ptr) as integer
 	select case n->class
-	case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
+	case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM, ASTCLASS_RENAMELIST
 		function = TRUE
 	end select
 end function
