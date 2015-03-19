@@ -961,12 +961,12 @@ private function hLookupOrAddType(byval id as zstring ptr) as integer
 			hl.types = reallocate(hl.types, hl.typeroom * sizeof(*hl.types))
 		end if
 		with hl.types[hl.typecount]
-			.id = id
+			.id = strDuplicate(id)
 			.definition = NULL
 			.forwarduse = FALSE
 			.firstuse = NULL
+			hashAdd(@hl.typehash, item, hash, .id, cptr(any ptr, hl.typecount))
 		end with
-		hashAdd(@hl.typehash, item, hash, id, cptr(any ptr, hl.typecount))
 		function = hl.typecount
 		hl.typecount += 1
 	else
@@ -1586,13 +1586,16 @@ sub hlGlobal(byval ast as ASTNODE ptr)
 	'' lists for types/tags for which forward decls should *not* be added.
 	''
 	hashInit(@hl.typehash, 8, FALSE)
-	hl.types = NULL
-	hl.typecount = 0
-	hl.typeroom = 0
 	hlScanForForwardUsedTypes(ast)
 	hlAddForwardDecls(ast)
 	hashEnd(@hl.typehash)
+	for i as integer = 0 to hl.typecount - 1
+		deallocate(hl.types[i].id)
+	next
 	deallocate(hl.types)
+	hl.types = NULL
+	hl.typecount = 0
+	hl.typeroom = 0
 
 	if frog.fixunsizedarrays then
 		hlFixUnsizedArrays(ast)
