@@ -676,6 +676,7 @@ function astDumpOne(byval n as ASTNODE ptr) as string
 	checkAttrib(DLLIMPORT)
 	checkAttrib(ENUMCONST)
 	checkAttrib(FORWARDDECLARED)
+	checkAttrib(NORENAMELIST)
 
 	if n->text then
 		s += " """ + strMakePrintable(*n->text) + """"

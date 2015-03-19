@@ -1119,6 +1119,7 @@ private sub hFixUnsizedArray(byval ast as ASTNODE ptr, byval n as ASTNODE ptr)
 		astInsert(ast, def, n)
 
 		astRenameSymbol(n, tempid)
+		n->attrib or= ASTATTRIB_NORENAMELIST
 		astDelete(n->array)
 		n->array = NULL
 
@@ -1137,6 +1138,7 @@ private sub hFixUnsizedArray(byval ast as ASTNODE ptr, byval n as ASTNODE ptr)
 			astInsert(ast, def, n->next)
 
 			astRenameSymbol(n, tempid)
+			n->attrib or= ASTATTRIB_NORENAMELIST
 			hTurnStringIntoByte(n)
 		end if
 	end select
@@ -1331,7 +1333,7 @@ private function hlBuildRenameList(byval n as ASTNODE ptr) as ASTNODE ptr
 	var i = n->head
 	while i
 
-		if (i->text <> NULL) and (i->alias <> NULL) then
+		if (i->text <> NULL) and (i->alias <> NULL) and ((i->attrib and ASTATTRIB_NORENAMELIST) = 0) then
 			astAppend(list, astNewTEXT( _
 				astDumpPrettyClass(i->class) + " " + *i->alias + " => " + *i->text))
 		end if

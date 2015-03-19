@@ -2,8 +2,6 @@
 
 '' The following symbols have been renamed:
 ''     typedef A1 => A2
-''     variable array1 => __array1
-''     variable string1 => __string1
 
 extern "C"
 
