@@ -1043,7 +1043,7 @@ end function
 
 '' Add forward decls for forward-referenced types
 private sub hlAddForwardDecls(byval ast as ASTNODE ptr)
-	for i as integer = hl.typecount - 1 to 0 step -1
+	for i as integer = 0 to hl.typecount - 1
 		var typ = hl.types + i
 		if hShouldAddForwardDeclForType(*typ) then
 			if typ->definition then
