@@ -353,9 +353,8 @@ function ReplacementsParser.parseCode(byref keyword as string) as string
 	nextLine()
 
 	do
-		'' Treat following lines as part of the FB code block,
-		'' until the next "convert:" line is found (if any).
-		if strStartsWith(ln, ConvertKeyword) then
+		'' Treat all following indented lines as part of the code block
+		if (len(ln) = 0) orelse ((ln[0] <> CH_SPACE) and (ln[0] <> CH_TAB)) then
 			exit do
 		end if
 

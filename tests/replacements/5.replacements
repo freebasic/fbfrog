@@ -3,3 +3,8 @@ to c: int A(void);
 
 convert c: static const int B = 2;
 to c: #define B 2
+
+convert c:
+	static const int C = \
+		3;
+to c: #define C 3

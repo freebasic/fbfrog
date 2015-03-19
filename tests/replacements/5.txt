@@ -8,4 +8,4 @@
       tests/replacements/5.h
 [5/5] __FB_DOS__
       tests/replacements/5.h
-emitting: tests/replacements/5.bi (2 declarations, 0 TODOs)
+emitting: tests/replacements/5.bi (3 declarations, 0 TODOs)
