@@ -1093,6 +1093,43 @@ private function hIsSimpleConstantExpression(byval n as ASTNODE ptr) as integer
 	function = TRUE
 end function
 
+''
+'' Search for arrays with unspecified size (can happen at least with extern vars)
+''     extern dtype array[];
+''     extern array(0 to ...) as dtype
+''
+'' Work-around for FB:
+''     #define array(i) ((@__array)[i])
+''     extern __array alias "array" as dtype
+''
+'' This way the binding's users can index the array arbitrarily, as they could in C.
+''
+private sub hlFixUnsizedArrays(byval ast as ASTNODE ptr)
+	var i = ast->head
+	while i
+
+		if i->class = ASTCLASS_VAR then
+			if astIsUnsizedArray(i->array) then
+				var id = *i->text
+				var tempid = "__" + id
+
+				var def = astNewPPDEFINE(id)
+				def->paramcount = 1
+				astAppend(def, astNew(ASTCLASS_MACROPARAM, "i"))
+				def->expr = astNewTEXT("((@" + tempid + ")[i])")
+				def->location = i->location
+				astInsert(ast, def, i)
+
+				astRenameSymbol(i, tempid)
+				astDelete(i->array)
+				i->array = NULL
+			end if
+		end if
+
+		i = i->next
+	wend
+end sub
+
 '' Turns simple #defines into constants
 private sub hlTurnDefinesIntoProperDeclarations(byval ast as ASTNODE ptr)
 	var i = ast->head
@@ -1459,6 +1496,10 @@ sub hlGlobal(byval ast as ASTNODE ptr)
 	hlAddForwardDecls(ast)
 	hashEnd(@hl.typehash)
 	deallocate(hl.types)
+
+	if frog.fixunsizedarrays then
+		hlFixUnsizedArrays(ast)
+	end if
 
 	if frog.disableconstants = FALSE then
 		hlTurnDefinesIntoProperDeclarations(ast)

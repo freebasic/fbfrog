@@ -508,23 +508,6 @@ private sub emitCode(byval n as ASTNODE ptr, byval parentclass as integer)
 		emitLine(s + *n->text + hInitializer(n))
 
 	case ASTCLASS_VAR
-		if astIsUnsizedArray(n->array) and frog.fixunsizedarrays then
-			'' It's an array declaration but the array size isn't specified. In practice, this can
-			'' can happen at least with externs.
-			''     extern dtype array[];
-			''     extern array(0 to ...) as dtype
-			'' FB doesn't allow arrays with unspecified size like this, so we use this work-around:
-			''     #define array(i) ((@__array)[i])
-			''     extern __array alias "array" as dtype
-			'' This way the binding's users can index the array arbitrarily, as they could in C.
-			var id = *n->text
-			var tempid = "__" + id
-			emitLine("#define " + id + "(i) ((@" + tempid + ")[i])")
-			astRenameSymbol(n, tempid)
-			astDelete(n->array)
-			n->array = NULL
-		end if
-
 		if n->attrib and ASTATTRIB_LOCAL then
 			if n->attrib and ASTATTRIB_STATIC then
 				emitVarDecl("static ", n, FALSE)
