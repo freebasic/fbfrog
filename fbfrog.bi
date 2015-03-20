@@ -360,6 +360,7 @@ enum
 	OPT_DISABLECONSTANTS
 	OPT_FIXMINGWAW
 	OPT_NOFUNCTIONBODIES
+	OPT_DROPMACROBODYSCOPES
 	OPT_REPLACEMENTS
 	OPT_RENAMETYPEDEF
 	OPT_RENAMETAG
@@ -846,7 +847,7 @@ type CodeReplacement
 end type
 
 namespace frog
-	extern as integer verbose, windowsms, clong32, fixunsizedarrays, disableconstants, fixmingwaw, nofunctionbodies
+	extern as integer verbose, windowsms, clong32, fixunsizedarrays, disableconstants, fixmingwaw, nofunctionbodies, dropmacrobodyscopes
 
 	extern as ASTNODE ptr script
 	extern as ASTNODE ptr completeverors, fullveror

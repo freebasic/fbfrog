@@ -147,6 +147,7 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	(@"-disableconstants"), _
 	(@"-fixmingwaw"   ), _
 	(@"-nofunctionbodies"), _
+	(@"-dropmacrobodyscopes"), _
 	(@"-replacements" ), _
 	(@"-renametypedef"), _
 	(@"-renametag"    ), _

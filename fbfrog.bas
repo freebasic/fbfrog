@@ -53,7 +53,7 @@ type BIFILE
 end type
 
 namespace frog
-	dim shared as integer verbose, windowsms, clong32, fixunsizedarrays, disableconstants, fixmingwaw, nodefaultscript, nofunctionbodies
+	dim shared as integer verbose, windowsms, clong32, fixunsizedarrays, disableconstants, fixmingwaw, nodefaultscript, nofunctionbodies, dropmacrobodyscopes
 	dim shared as string outname, defaultoutname
 
 	dim shared as ASTNODE ptr script
@@ -217,6 +217,7 @@ private sub hPrintHelpAndExit()
 	print "  -disableconstants  Don't turn #defines into constants"
 	print "  -fixmingwaw        Expand __MINGW_NAME_AW() inside macros"
 	print "  -nofunctionbodies  Don't preserve function bodies"
+	print "  -dropmacrobodyscopes  Drop scope blocks with only 1 statement in macro bodies"
 	print "  -replacements <file>  Load patterns for search/replace"
 	print "  rename options (-rename* <oldid> <newid>):"
 	print "    -renametypedef, -renametag (struct/union/enum),"
@@ -688,6 +689,7 @@ private sub hParseArgs(byref x as integer)
 		case OPT_DISABLECONSTANTS : frog.disableconstants = TRUE : x += 1
 		case OPT_FIXMINGWAW       : frog.fixmingwaw       = TRUE : x += 1
 		case OPT_NOFUNCTIONBODIES : frog.nofunctionbodies = TRUE : x += 1
+		case OPT_DROPMACROBODYSCOPES : frog.dropmacrobodyscopes = TRUE : x += 1
 		case OPT_V                : frog.verbose          = TRUE : x += 1
 
 		case OPT_O

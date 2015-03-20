@@ -1244,6 +1244,26 @@ private sub hlTurnDefinesIntoProperDeclarations(byval ast as ASTNODE ptr)
 	wend
 end sub
 
+private sub hlDropMacroBodyScopes(byval ast as ASTNODE ptr)
+	var i = ast->head
+	while i
+
+		if (i->class = ASTCLASS_PPDEFINE) andalso _
+		   i->expr andalso (i->expr->class = ASTCLASS_SCOPEBLOCK) then
+			if i->expr->head = NULL then
+				astDelete(i->expr)
+				i->expr = NULL
+			elseif i->expr->head = i->expr->tail then
+				var stmt = astClone(i->expr->head)
+				astDelete(i->expr)
+				i->expr = stmt
+			end if
+		end if
+
+		i = i->next
+	wend
+end sub
+
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 private function hlCountCallConvs(byval n as ASTNODE ptr) as integer
@@ -1613,6 +1633,10 @@ sub hlGlobal(byval ast as ASTNODE ptr)
 
 	if frog.disableconstants = FALSE then
 		hlTurnDefinesIntoProperDeclarations(ast)
+	end if
+
+	if frog.dropmacrobodyscopes then
+		hlDropMacroBodyScopes(ast)
 	end if
 
 	'' Apply -moveabove options after renaming and removing, because then
