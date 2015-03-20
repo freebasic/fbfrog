@@ -490,10 +490,6 @@ private sub emitCode(byval n as ASTNODE ptr, byval parentclass as integer)
 		emitLine("type " + *n->text + " as " + emitType(n))
 		emit.decls += 1
 
-	case ASTCLASS_FORWARDDECL
-		emitLine("type " + *n->text + " as " + *n->text + "_")
-		emit.decls += 1
-
 	case ASTCLASS_CONST
 		dim s as string
 		if (n->attrib and ASTATTRIB_ENUMCONST) = 0 then

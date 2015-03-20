@@ -62,7 +62,6 @@ dim shared as zstring ptr astnodename(0 to ...) => _
 	@"union"      , _
 	@"enum"       , _
 	@"typedef"    , _
-	@"forwarddecl", _
 	@"const"      , _
 	@"var"        , _
 	@"field"      , _

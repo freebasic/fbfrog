@@ -1046,10 +1046,14 @@ private sub hlAddForwardDecls(byval ast as ASTNODE ptr)
 	for i as integer = 0 to hl.typecount - 1
 		var typ = hl.types + i
 		if hShouldAddForwardDeclForType(*typ) then
+			var fwdid = *typ->id + "_"
 			if typ->definition then
-				astRenameSymbol(typ->definition, *typ->definition->text + "_", FALSE)
+				assert(*typ->id = *typ->definition->text)
+				astRenameSymbol(typ->definition, fwdid, FALSE)
 			end if
-			var fwd = astNew(ASTCLASS_FORWARDDECL, typ->id)
+			var fwd = astNew(ASTCLASS_TYPEDEF, typ->id)
+			fwd->dtype = TYPE_UDT
+			fwd->subtype = astNewTEXT(fwdid)
 			fwd->location = typ->firstuse->location
 			astInsert(ast, fwd, typ->firstuse)
 		end if
