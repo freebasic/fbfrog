@@ -396,13 +396,13 @@ private function hlFixExpressions(byval n as ASTNODE ptr) as integer
 	function = TRUE
 end function
 
-private sub hlApplyRemoveProcOptions(byval ast as ASTNODE ptr)
+private sub hlApplyRemoveOption(byval ast as ASTNODE ptr, byval astclass as integer, byval opt as integer)
 	var i = ast->head
 	while i
 		var nxt = i->next
 
-		if i->class = ASTCLASS_PROC then
-			if hashContains(@frog.idopt(OPT_REMOVEPROC), i->text, hashHash(i->text)) then
+		if i->class = astclass then
+			if hashContains(@frog.idopt(opt), i->text, hashHash(i->text)) then
 				astRemove(ast, i)
 			end if
 		end if
@@ -1483,7 +1483,11 @@ sub hlGlobal(byval ast as ASTNODE ptr)
 	hashEnd(@hl.symbols)
 
 	if frog.idopt(OPT_REMOVEPROC).count > 0 then
-		hlApplyRemoveProcOptions(ast)
+		hlApplyRemoveOption(ast, ASTCLASS_PROC, OPT_REMOVEPROC)
+	end if
+
+	if frog.idopt(OPT_REMOVEVAR).count > 0 then
+		hlApplyRemoveOption(ast, ASTCLASS_VAR, OPT_REMOVEVAR)
 	end if
 
 	if frog.idopt(OPT_DROPPROCBODY).count > 0 then
