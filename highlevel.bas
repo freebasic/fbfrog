@@ -1500,14 +1500,6 @@ sub hlGlobal(byval ast as ASTNODE ptr)
 		hlApplyDropProcBodyOptions(ast)
 	end if
 
-	if frog.moveaboveoptions then
-		var i = frog.moveaboveoptions->head
-		while i
-			hlApplyMoveOption(ast, *i->text, *i->alias)
-			i = i->next
-		wend
-	end if
-
 	astVisit(ast, @hlSetArraySizes)
 
 	'' Apply -rename* options, if any
@@ -1621,6 +1613,20 @@ sub hlGlobal(byval ast as ASTNODE ptr)
 
 	if frog.disableconstants = FALSE then
 		hlTurnDefinesIntoProperDeclarations(ast)
+	end if
+
+	'' Apply -moveabove options after renaming and removing, because then
+	'' the movement is less depended on the .h content, and more on the
+	'' .bi content, which is what matters. E.g., it's probably easier to
+	'' move a declaration based on its name in the .bi file, rather than
+	'' going through the .h file and find the original name there (thinking
+	'' about tag names which are solved out in favour of typedefs, etc).
+	if frog.moveaboveoptions then
+		var i = frog.moveaboveoptions->head
+		while i
+			hlApplyMoveOption(ast, *i->text, *i->alias)
+			i = i->next
+		wend
 	end if
 end sub
 
