@@ -558,7 +558,7 @@ private function hFindExtBegin(byref path as string) as integer
 		select case path[i]
 		case asc(".")
 			return i
-#if defined( __FB_WIN32__) or defined( __FB_DOS__)
+#if defined(__FB_WIN32__) or defined(__FB_DOS__)
 		case asc($"\"), asc("/")
 #else
 		case asc("/")
@@ -581,7 +581,7 @@ end function
 private function hFindFileName(byref path as string) as integer
 	for i as integer = len(path)-1 to 0 step -1
 		select case path[i]
-#if defined( __FB_WIN32__) or defined( __FB_DOS__)
+#if defined(__FB_WIN32__) or defined(__FB_DOS__)
 		case asc($"\"), asc("/")
 #else
 		case asc("/")
@@ -607,7 +607,7 @@ function pathAddDiv(byref path as string) as string
 	length = len(s)
 
 	if length > 0 then
-#if defined( __FB_WIN32__) or defined( __FB_DOS__)
+#if defined(__FB_WIN32__) or defined(__FB_DOS__)
 		select case s[length-1]
 		case asc($"\"), asc("/")
 
@@ -625,7 +625,7 @@ function pathAddDiv(byref path as string) as string
 end function
 
 private function pathGetRootLength(byref s as string) as integer
-#if defined( __FB_WIN32__) or defined( __FB_DOS__)
+#if defined(__FB_WIN32__) or defined(__FB_DOS__)
 	if len(s) >= 3 then
 		'' x:\...
 		if s[1] = asc(":") then
@@ -689,7 +689,7 @@ end function
 private function pathEndsWithDiv(byref s as string) as integer
 	var length = len(s)
 	if length > 0 then
-#if defined( __FB_WIN32__) or defined( __FB_DOS__)
+#if defined(__FB_WIN32__) or defined(__FB_DOS__)
 		select case s[length-1]
 		case asc($"\"), asc("/")
 			function = TRUE
@@ -762,7 +762,7 @@ function pathNormalize(byref path as string) as string
 
 	for r as integer = rootlen to len(s) - 1
 		select case s[r]
-#if defined( __FB_WIN32__) or defined( __FB_DOS__)
+#if defined(__FB_WIN32__) or defined(__FB_DOS__)
 		case asc($"\"), asc("/")
 #else
 		case asc("/")

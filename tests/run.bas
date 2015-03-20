@@ -79,7 +79,7 @@ function strReplace _
 	function = result
 end function
 
-#if defined( __FB_WIN32__) or defined( __FB_DOS__)
+#if defined(__FB_WIN32__) or defined(__FB_DOS__)
 	const PATHDIV = $"\"
 #else
 	const PATHDIV = "/"
@@ -90,7 +90,7 @@ function pathAddDiv(byref path as string) as string
 	var length = len(s)
 
 	if length > 0 then
-#if defined( __FB_WIN32__) or defined( __FB_DOS__)
+#if defined(__FB_WIN32__) or defined(__FB_DOS__)
 		select case s[length-1]
 		case asc("\"), asc("/")
 
@@ -110,7 +110,7 @@ end function
 private function hFindFileName(byref path as string) as integer
 	for i as integer = len(path)-1 to 0 step -1
 		select case path[i]
-#if defined( __FB_WIN32__) or defined( __FB_DOS__)
+#if defined(__FB_WIN32__) or defined(__FB_DOS__)
 		case asc("\"), asc("/")
 #else
 		case asc("/")

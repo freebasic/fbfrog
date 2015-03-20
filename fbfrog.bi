@@ -2,8 +2,8 @@ const NULL = 0
 const FALSE = 0
 const TRUE = -1
 
-declare function min( byval a as integer, byval b as integer ) as integer
-declare function max( byval a as integer, byval b as integer ) as integer
+declare function min(byval a as integer, byval b as integer) as integer
+declare function max(byval a as integer, byval b as integer) as integer
 
 enum
 	CH_BELL      = &h07  '' \a
@@ -72,7 +72,7 @@ type SourceInfo
 	is_file as integer '' whether name is a file path
 end type
 
-declare function sourceinfoForZstring( byval prettyname as zstring ptr ) byref as SourceInfo
+declare function sourceinfoForZstring(byval prettyname as zstring ptr) byref as SourceInfo
 
 type TkLocation
 	source as SourceInfo ptr
@@ -82,14 +82,14 @@ end type
 type FileBuffer
 	buffer as zstring ptr '' file content, null-terminated (embedded nulls are disallowed)
 	source as SourceInfo
-	declare sub load( byval location as TkLocation )
+	declare sub load(byval location as TkLocation)
 end type
 
-declare sub filebuffersInit( )
-declare function filebuffersAdd( byval filename as zstring ptr, byval location as TkLocation ) as FileBuffer ptr
+declare sub filebuffersInit()
+declare function filebuffersAdd(byval filename as zstring ptr, byval location as TkLocation) as FileBuffer ptr
 
-declare sub oops( byval message as zstring ptr )
-declare function hDumpLocation( byval location as TkLocation ) as string
+declare sub oops(byval message as zstring ptr)
+declare function hDumpLocation(byval location as TkLocation) as string
 declare sub hCalcErrorLine _
 	( _
 		byval column as integer, _
@@ -97,24 +97,24 @@ declare sub hCalcErrorLine _
 		byref s as string, _
 		byref offset as integer _
 	)
-declare function hErrorMarker( byval indent as integer, byval length as integer ) as string
-declare function hReport( byval location as TkLocation, byval message as zstring ptr ) as string
-declare sub oopsLocation( byval location as TkLocation, byval message as zstring ptr )
-declare function hTrim( byref s as string ) as string
-declare function hLTrim( byref s as string ) as string
-declare function strStartsWith( byref s as string, byref lookfor as string ) as integer
-declare function strDuplicate( byval s as zstring ptr ) as zstring ptr
+declare function hErrorMarker(byval indent as integer, byval length as integer) as string
+declare function hReport(byval location as TkLocation, byval message as zstring ptr) as string
+declare sub oopsLocation(byval location as TkLocation, byval message as zstring ptr)
+declare function hTrim(byref s as string) as string
+declare function hLTrim(byref s as string) as string
+declare function strStartsWith(byref s as string, byref lookfor as string) as integer
+declare function strDuplicate(byval s as zstring ptr) as zstring ptr
 declare function strReplace _
 	( _
 		byref text as string, _
 		byref a as string, _
 		byref b as string _
 	) as string
-declare function strReplaceNonIdChars( byref orig as string, byval replacement as integer ) as string
-declare function strMakePrintable( byref a as string ) as string
-declare function strIsValidSymbolId( byval s as zstring ptr ) as integer
-declare function strIsReservedIdInC( byval id as zstring ptr ) as integer
-declare function strMatch( byref s as string, byref pattern as string ) as integer
+declare function strReplaceNonIdChars(byref orig as string, byval replacement as integer) as string
+declare function strMakePrintable(byref a as string) as string
+declare function strIsValidSymbolId(byval s as zstring ptr) as integer
+declare function strIsReservedIdInC(byval id as zstring ptr) as integer
+declare function strMatch(byref s as string, byref pattern as string) as integer
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
@@ -138,14 +138,14 @@ type THASH
 	duplicate_strings	as integer
 end type
 
-declare function hashHash( byval s as zstring ptr ) as ulong
+declare function hashHash(byval s as zstring ptr) as ulong
 declare function hashLookup _
 	( _
 		byval h as THASH ptr, _
 		byval s as zstring ptr, _
 		byval hash as ulong _
 	) as THASHITEM ptr
-declare function hashLookupDataOrNull( byval h as THASH ptr, byval id as zstring ptr ) as any ptr
+declare function hashLookupDataOrNull(byval h as THASH ptr, byval id as zstring ptr) as any ptr
 declare function hashContains _
 	( _
 		byval h as THASH ptr, _
@@ -172,40 +172,40 @@ declare sub hashInit _
 		byval exponent as integer, _
 		byval duplicate_strings as integer = FALSE _
 	)
-declare sub hashEnd( byval h as THASH ptr )
+declare sub hashEnd(byval h as THASH ptr)
 #if __FB_DEBUG__
-declare sub hashDump( byval h as THASH ptr )
+declare sub hashDump(byval h as THASH ptr)
 #endif
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 extern fbcrtheaderhash as THASH
-declare sub fbcrtheadersInit( )
+declare sub fbcrtheadersInit()
 
-declare sub extradatatypesInit( )
-declare function extradatatypesLookup( byval id as zstring ptr ) as integer
+declare sub extradatatypesInit()
+declare function extradatatypesLookup(byval id as zstring ptr) as integer
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-#if defined( __FB_WIN32__ ) or defined( __FB_DOS__ )
+#if defined(__FB_WIN32__) or defined(__FB_DOS__)
 	const PATHDIV = $"\"
 #else
 	const PATHDIV = "/"
 #endif
 
-declare function pathStripExt( byref path as string ) as string
-declare function pathExtOnly( byref path as string ) as string
-declare function pathOnly( byref path as string ) as string
-declare function pathStrip( byref path as string ) as string
-declare function pathAddDiv( byref path as string ) as string
-declare function pathIsAbsolute( byref s as string ) as integer
-declare function pathMakeAbsolute( byref path as string ) as string
-declare function hExepath( ) as string
-declare function hCurdir( ) as string
-declare function pathStripCurdir( byref path as string ) as string
-declare function pathIsDir( byref s as string ) as integer
-declare function pathNormalize( byref path as string ) as string
-declare function hReadableDirExists( byref path as string ) as integer
+declare function pathStripExt(byref path as string) as string
+declare function pathExtOnly(byref path as string) as string
+declare function pathOnly(byref path as string) as string
+declare function pathStrip(byref path as string) as string
+declare function pathAddDiv(byref path as string) as string
+declare function pathIsAbsolute(byref s as string) as integer
+declare function pathMakeAbsolute(byref path as string) as string
+declare function hExepath() as string
+declare function hCurdir() as string
+declare function pathStripCurdir(byref path as string) as string
+declare function pathIsDir(byref s as string) as integer
+declare function pathNormalize(byref path as string) as string
+declare function hReadableDirExists(byref path as string) as integer
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
@@ -398,28 +398,28 @@ enum
 	TK__COUNT
 end enum
 
-declare function tkInfoText( byval id as integer ) as zstring ptr
-declare function tkInfoPretty( byval tk as integer ) as string
+declare function tkInfoText(byval id as integer) as zstring ptr
+declare function tkInfoPretty(byval tk as integer) as string
 
-'' Debugging helper, for example: TRACE( x ), "decl begin"
-#define TRACE( x ) print __FUNCTION__ + "(" + str( __LINE__ ) + "): " + tkDumpOne( x )
+'' Debugging helper, for example: TRACE(x), "decl begin"
+#define TRACE(x) print __FUNCTION__ + "(" + str(__LINE__) + "): " + tkDumpOne(x)
 
 '' original = not from a macro
-#define tkIsOriginal( x ) ((tkGetFlags( x ) and TKFLAG_EXPANSION) = 0)
+#define tkIsOriginal(x) ((tkGetFlags(x) and TKFLAG_EXPANSION) = 0)
 
-declare sub tkInit( )
-declare sub tkEnd( )
-declare function tkDumpOne( byval x as integer ) as string
-declare sub tkDump overload( byval first as integer, byval last as integer )
-declare sub tkDump overload( )
-declare function tkGetCount( ) as integer
+declare sub tkInit()
+declare sub tkEnd()
+declare function tkDumpOne(byval x as integer) as string
+declare sub tkDump overload(byval first as integer, byval last as integer)
+declare sub tkDump overload()
+declare function tkGetCount() as integer
 declare sub tkInsert _
 	( _
 		byval x as integer, _
 		byval id as integer, _
 		byval text as zstring ptr = NULL _
 	)
-declare sub tkRemove( byval first as integer, byval last as integer )
+declare sub tkRemove(byval first as integer, byval last as integer)
 declare sub tkCopy _
 	( _
 		byval x as integer, _
@@ -427,36 +427,36 @@ declare sub tkCopy _
 		byval last as integer, _
 		byval flagmask as integer _
 	)
-declare function tkGet( byval x as integer ) as integer
-declare function tkGetText( byval x as integer ) as zstring ptr
-declare function tkSpellId( byval x as integer ) as zstring ptr
-declare sub tkSetLocation( byval x as integer, byval location as TkLocation )
-declare function tkGetLocation( byval x as integer ) as TkLocation
-declare sub tkSetFlags( byval x as integer, byval flags as integer )
-declare sub tkAddFlags( byval first as integer, byval last as integer, byval flags as integer )
-declare sub tkSetRemove overload( byval x as integer )
-declare sub tkSetRemove overload( byval first as integer, byval last as integer )
-declare function tkGetFlags( byval x as integer ) as integer
-declare sub tkApplyRemoves( )
-declare sub tkTurnCPPTokensIntoCIds( )
-declare function tkCTokenRangesAreEqual( byval a as integer, byval b as integer, byval length as integer ) as integer
-declare function tkSpell overload( byval x as integer ) as string
-declare function tkSpell overload( byval first as integer, byval last as integer ) as string
+declare function tkGet(byval x as integer) as integer
+declare function tkGetText(byval x as integer) as zstring ptr
+declare function tkSpellId(byval x as integer) as zstring ptr
+declare sub tkSetLocation(byval x as integer, byval location as TkLocation)
+declare function tkGetLocation(byval x as integer) as TkLocation
+declare sub tkSetFlags(byval x as integer, byval flags as integer)
+declare sub tkAddFlags(byval first as integer, byval last as integer, byval flags as integer)
+declare sub tkSetRemove overload(byval x as integer)
+declare sub tkSetRemove overload(byval first as integer, byval last as integer)
+declare function tkGetFlags(byval x as integer) as integer
+declare sub tkApplyRemoves()
+declare sub tkTurnCPPTokensIntoCIds()
+declare function tkCTokenRangesAreEqual(byval a as integer, byval b as integer, byval length as integer) as integer
+declare function tkSpell overload(byval x as integer) as string
+declare function tkSpell overload(byval first as integer, byval last as integer) as string
 declare function hFindClosingParen _
 	( _
 		byval x as integer, _
 		byval inside_directive as integer, _
 		byval ignore_directive as integer _
 	) as integer
-declare function tkIsEolOrEof( byval x as integer ) as integer
-declare function hSkipToEol( byval x as integer ) as integer
-declare function hSkipConstruct( byval x as integer, byval ignore_directives as integer ) as integer
-declare function tkReport( byval x as integer, byval message as zstring ptr ) as string
-declare sub tkOops( byval x as integer, byval message as zstring ptr )
-declare function tkButFound( byval x as integer ) as string
-declare function tkMakeExpectedMessage( byval x as integer, byval message as zstring ptr ) as string
-declare sub tkOopsExpected( byval x as integer, byval message as zstring ptr )
-declare sub tkExpect( byval x as integer, byval tk as integer, byval message as zstring ptr )
+declare function tkIsEolOrEof(byval x as integer) as integer
+declare function hSkipToEol(byval x as integer) as integer
+declare function hSkipConstruct(byval x as integer, byval ignore_directives as integer) as integer
+declare function tkReport(byval x as integer, byval message as zstring ptr) as string
+declare sub tkOops(byval x as integer, byval message as zstring ptr)
+declare function tkButFound(byval x as integer) as string
+declare function tkMakeExpectedMessage(byval x as integer, byval message as zstring ptr) as string
+declare sub tkOopsExpected(byval x as integer, byval message as zstring ptr)
+declare sub tkExpect(byval x as integer, byval tk as integer, byval message as zstring ptr)
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
@@ -497,24 +497,24 @@ const TYPEPOS_CONST  = TYPEPOS_REF + 1
 
 const TYPEMAX_PTR = 8
 
-#define typeSetDt( dtype, dt ) ((dtype and (not TYPEMASK_DT)) or (dt and TYPEMASK_DT))
-#define typeSetIsConst( dt ) ((dt) or (1 shl TYPEPOS_CONST))
-#define typeIsConstAt( dt, at ) (((dt) and (1 shl (TYPEPOS_CONST + (at)))) <> 0)
-#define typeGetDt( dt ) ((dt) and TYPEMASK_DT)
-#define typeGetDtAndPtr( dt ) ((dt) and (TYPEMASK_DT or TYPEMASK_PTR))
-#define typeGetPtrCount( dt ) (((dt) and TYPEMASK_PTR) shr TYPEPOS_PTR)
-#define typeAddrOf( dt ) _
+#define typeSetDt(dtype, dt) ((dtype and (not TYPEMASK_DT)) or (dt and TYPEMASK_DT))
+#define typeSetIsConst(dt) ((dt) or (1 shl TYPEPOS_CONST))
+#define typeIsConstAt(dt, at) (((dt) and (1 shl (TYPEPOS_CONST + (at)))) <> 0)
+#define typeGetDt(dt) ((dt) and TYPEMASK_DT)
+#define typeGetDtAndPtr(dt) ((dt) and (TYPEMASK_DT or TYPEMASK_PTR))
+#define typeGetPtrCount(dt) (((dt) and TYPEMASK_PTR) shr TYPEPOS_PTR)
+#define typeAddrOf(dt) _
 	(((dt) and TYPEMASK_DT) or _
 	 (((dt) and TYPEMASK_PTR) + (1 shl TYPEPOS_PTR)) or _
 	 (((dt) and TYPEMASK_CONST) shl 1))
-#define typeMultAddrOf( dt, count ) _
+#define typeMultAddrOf(dt, count) _
 	((dt and TYPEMASK_DT) or _
 	 ((dt and TYPEMASK_PTR) + (count shl TYPEPOS_PTR)) or _
 	 ((dt and TYPEMASK_CONST) shl count))
-#define typeGetConst( dt ) ((dt) and TYPEMASK_CONST)
+#define typeGetConst(dt) ((dt) and TYPEMASK_CONST)
 
-declare function typeExpand( byval a as integer, byval b as integer ) as integer
-declare function typeUnsetBaseConst( byval dtype as integer ) as integer
+declare function typeExpand(byval a as integer, byval b as integer) as integer
+declare function typeUnsetBaseConst(byval dtype as integer) as integer
 
 enum
 	'' Internal helper nodes
@@ -693,72 +693,72 @@ end type
 
 '' result = boolean = whether to visit this node's children
 '' (can be used to skip #define bodies, etc.)
-type ASTVISITCALLBACK as function( byval as ASTNODE ptr ) as integer
+type ASTVISITCALLBACK as function(byval as ASTNODE ptr) as integer
 
-#define astNewTEXT( text ) astNew( ASTCLASS_TEXT, text )
-#define astNewUNKNOWN( first, last ) astNew( ASTCLASS_UNKNOWN, tkSpell( first, last ) )
-#define astNewDEFINED( id ) astNew( ASTCLASS_DEFINED, id )
-#define astIsCONSTI( n ) ((n)->class = ASTCLASS_CONSTI)
-#define astIsVERBLOCK( n ) ((n)->class = ASTCLASS_VERBLOCK)
-#define astIsVERAND( n ) ((n)->class = ASTCLASS_VERAND)
-#define astIsVEROR( n )  ((n)->class = ASTCLASS_VEROR)
-#define astIsTEXT( n ) ((n)->class = ASTCLASS_TEXT)
+#define astNewTEXT(text) astNew(ASTCLASS_TEXT, text)
+#define astNewUNKNOWN(first, last) astNew(ASTCLASS_UNKNOWN, tkSpell(first, last))
+#define astNewDEFINED(id) astNew(ASTCLASS_DEFINED, id)
+#define astIsCONSTI(n) ((n)->class = ASTCLASS_CONSTI)
+#define astIsVERBLOCK(n) ((n)->class = ASTCLASS_VERBLOCK)
+#define astIsVERAND(n) ((n)->class = ASTCLASS_VERAND)
+#define astIsVEROR(n)  ((n)->class = ASTCLASS_VEROR)
+#define astIsTEXT(n) ((n)->class = ASTCLASS_TEXT)
 
-declare function astNew overload( byval class_ as integer ) as ASTNODE ptr
-declare function astNew overload( byval class_ as integer, byval text as zstring ptr ) as ASTNODE ptr
-declare function astNew overload( byval class_ as integer, byval c1 as ASTNODE ptr, byval c2 as ASTNODE ptr = NULL ) as ASTNODE ptr
-declare function astNewPPDEFINE( byval id as zstring ptr ) as ASTNODE ptr
+declare function astNew overload(byval class_ as integer) as ASTNODE ptr
+declare function astNew overload(byval class_ as integer, byval text as zstring ptr) as ASTNODE ptr
+declare function astNew overload(byval class_ as integer, byval c1 as ASTNODE ptr, byval c2 as ASTNODE ptr = NULL) as ASTNODE ptr
+declare function astNewPPDEFINE(byval id as zstring ptr) as ASTNODE ptr
 declare function astNewIIF _
 	( _
 		byval cond as ASTNODE ptr, _
 		byval l as ASTNODE ptr, _
 		byval r as ASTNODE ptr _
 	) as ASTNODE ptr
-declare function astNewGROUP overload( ) as ASTNODE ptr
-declare function astNewGROUP overload( byval c1 as ASTNODE ptr, byval c2 as ASTNODE ptr = NULL ) as ASTNODE ptr
-declare function astCloneChildren( byval src as ASTNODE ptr ) as ASTNODE ptr
-declare function astGroupContains( byval group as ASTNODE ptr, byval lookfor as ASTNODE ptr ) as integer
-declare function astGroupContainsAnyChildrenOf( byval l as ASTNODE ptr, byval r as ASTNODE ptr ) as integer
-declare function astGroupContainsAllChildrenOf( byval l as ASTNODE ptr, byval r as ASTNODE ptr ) as integer
-declare sub astDelete( byval n as ASTNODE ptr )
-declare sub astInsert( byval parent as ASTNODE ptr, byval n as ASTNODE ptr, byval ref as ASTNODE ptr )
-declare sub astPrepend( byval parent as ASTNODE ptr, byval n as ASTNODE ptr )
-declare sub astAppend( byval parent as ASTNODE ptr, byval n as ASTNODE ptr )
-declare sub astUnlink( byval parent as ASTNODE ptr, byval n as ASTNODE ptr )
-declare function astRemove( byval parent as ASTNODE ptr, byval a as ASTNODE ptr ) as ASTNODE ptr
-declare sub astRemoveChildren( byval parent as ASTNODE ptr )
+declare function astNewGROUP overload() as ASTNODE ptr
+declare function astNewGROUP overload(byval c1 as ASTNODE ptr, byval c2 as ASTNODE ptr = NULL) as ASTNODE ptr
+declare function astCloneChildren(byval src as ASTNODE ptr) as ASTNODE ptr
+declare function astGroupContains(byval group as ASTNODE ptr, byval lookfor as ASTNODE ptr) as integer
+declare function astGroupContainsAnyChildrenOf(byval l as ASTNODE ptr, byval r as ASTNODE ptr) as integer
+declare function astGroupContainsAllChildrenOf(byval l as ASTNODE ptr, byval r as ASTNODE ptr) as integer
+declare sub astDelete(byval n as ASTNODE ptr)
+declare sub astInsert(byval parent as ASTNODE ptr, byval n as ASTNODE ptr, byval ref as ASTNODE ptr)
+declare sub astPrepend(byval parent as ASTNODE ptr, byval n as ASTNODE ptr)
+declare sub astAppend(byval parent as ASTNODE ptr, byval n as ASTNODE ptr)
+declare sub astUnlink(byval parent as ASTNODE ptr, byval n as ASTNODE ptr)
+declare function astRemove(byval parent as ASTNODE ptr, byval a as ASTNODE ptr) as ASTNODE ptr
+declare sub astRemoveChildren(byval parent as ASTNODE ptr)
 declare function astReplace _
 	( _
 		byval parent as ASTNODE ptr, _
 		byval old as ASTNODE ptr, _
 		byval n as ASTNODE ptr _
 	) as ASTNODE ptr
-declare sub astSetText( byval n as ASTNODE ptr, byval text as zstring ptr )
+declare sub astSetText(byval n as ASTNODE ptr, byval text as zstring ptr)
 declare sub astRenameSymbol(byval n as ASTNODE ptr, byval newid as zstring ptr, byval add_to_renamelist as integer = TRUE)
-declare function astGetOrigId( byval n as ASTNODE ptr ) as zstring ptr
+declare function astGetOrigId(byval n as ASTNODE ptr) as zstring ptr
 declare sub astSetType _
 	( _
 		byval n as ASTNODE ptr, _
 		byval dtype as integer, _
 		byval subtype as ASTNODE ptr _
 	)
-declare function astCloneNode( byval n as ASTNODE ptr ) as ASTNODE ptr
-declare function astClone( byval n as ASTNODE ptr ) as ASTNODE ptr
-declare function astIsMergableBlock( byval n as ASTNODE ptr ) as integer
+declare function astCloneNode(byval n as ASTNODE ptr) as ASTNODE ptr
+declare function astClone(byval n as ASTNODE ptr) as ASTNODE ptr
+declare function astIsMergableBlock(byval n as ASTNODE ptr) as integer
 declare function astIsEqual _
 	( _
 		byval a as ASTNODE ptr, _
 		byval b as ASTNODE ptr, _
 		byval is_merge as integer = FALSE _
 	) as integer
-declare function hGetFbNumberLiteralPrefix( byval attrib as integer ) as string
-declare function astEvalConstiAsInt64( byval n as ASTNODE ptr ) as longint
-declare function astIsConst0( byval n as ASTNODE ptr ) as integer
-declare function astLookupMacroParam( byval macro as ASTNODE ptr, byval id as zstring ptr ) as integer
-declare sub astVisit( byval n as ASTNODE ptr, byval callback as ASTVISITCALLBACK )
-declare function astDumpPrettyClass( byval astclass as integer ) as string
-declare function astDumpPrettyDecl( byval n as ASTNODE ptr ) as string
-declare function astDumpOne( byval n as ASTNODE ptr ) as string
+declare function hGetFbNumberLiteralPrefix(byval attrib as integer) as string
+declare function astEvalConstiAsInt64(byval n as ASTNODE ptr) as longint
+declare function astIsConst0(byval n as ASTNODE ptr) as integer
+declare function astLookupMacroParam(byval macro as ASTNODE ptr, byval id as zstring ptr) as integer
+declare sub astVisit(byval n as ASTNODE ptr, byval callback as ASTVISITCALLBACK)
+declare function astDumpPrettyClass(byval astclass as integer) as string
+declare function astDumpPrettyDecl(byval n as ASTNODE ptr) as string
+declare function astDumpOne(byval n as ASTNODE ptr) as string
 declare sub astDump _
 	( _
 		byval n as ASTNODE ptr, _
@@ -766,26 +766,26 @@ declare sub astDump _
 		byref prefix as string = "" _
 	)
 
-declare sub astAutoAddDividers( byval code as ASTNODE ptr )
-declare sub astPrependMaybeWithDivider( byval group as ASTNODE ptr, byval n as ASTNODE ptr )
+declare sub astAutoAddDividers(byval code as ASTNODE ptr)
+declare sub astPrependMaybeWithDivider(byval group as ASTNODE ptr, byval n as ASTNODE ptr)
 
-declare function astDumpPrettyVersion( byval n as ASTNODE ptr ) as string
-declare function astNewVERAND( byval a as ASTNODE ptr = NULL, byval b as ASTNODE ptr = NULL ) as ASTNODE ptr
-declare function astNewVEROR( byval a as ASTNODE ptr = NULL, byval b as ASTNODE ptr = NULL ) as ASTNODE ptr
-declare function astWrapFileInVerblock( byval veror as ASTNODE ptr, byval code as ASTNODE ptr ) as ASTNODE ptr
+declare function astDumpPrettyVersion(byval n as ASTNODE ptr) as string
+declare function astNewVERAND(byval a as ASTNODE ptr = NULL, byval b as ASTNODE ptr = NULL) as ASTNODE ptr
+declare function astNewVEROR(byval a as ASTNODE ptr = NULL, byval b as ASTNODE ptr = NULL) as ASTNODE ptr
+declare function astWrapFileInVerblock(byval veror as ASTNODE ptr, byval code as ASTNODE ptr) as ASTNODE ptr
 declare function astMergeVerblocks _
 	( _
 		byval a as ASTNODE ptr, _
 		byval b as ASTNODE ptr _
 	) as ASTNODE ptr
-declare sub astMergeNext( byval veror as ASTNODE ptr, byref final as ASTNODE ptr, byref incoming as ASTNODE ptr )
-declare sub astProcessVerblocks( byval code as ASTNODE ptr )
+declare sub astMergeNext(byval veror as ASTNODE ptr, byref final as ASTNODE ptr, byref incoming as ASTNODE ptr)
+declare sub astProcessVerblocks(byval code as ASTNODE ptr)
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-declare sub lexInit( )
-declare function lexLoadC( byval x as integer, byval code as zstring ptr, byref source as SourceInfo ) as integer
-declare function lexLoadArgs( byval x as integer, byval args as zstring ptr, byref source as SourceInfo ) as integer
+declare sub lexInit()
+declare function lexLoadC(byval x as integer, byval code as zstring ptr, byref source as SourceInfo) as integer
+declare function lexLoadArgs(byval x as integer, byval args as zstring ptr, byref source as SourceInfo) as integer
 
 namespace emit
 	extern as integer decls, todos
@@ -796,8 +796,8 @@ declare function emitType overload _
 		byval subtype as ASTNODE ptr, _
 		byval debugdump as integer = FALSE _
 	) as string
-declare function emitType overload( byval n as ASTNODE ptr ) as string
-declare sub emitFile( byref filename as string, byval ast as ASTNODE ptr )
+declare function emitType overload(byval n as ASTNODE ptr) as string
+declare sub emitFile(byref filename as string, byval ast as ASTNODE ptr)
 
 declare function hNumberLiteral _
 	( _
@@ -806,22 +806,22 @@ declare function hNumberLiteral _
 		byref errmsg as string _
 	) as ASTNODE ptr
 extern as integer cprecedence(ASTCLASS_CLOGOR to ASTCLASS_IIF)
-declare function hDefineHead( byref x as integer ) as ASTNODE ptr
+declare function hDefineHead(byref x as integer) as ASTNODE ptr
 
-declare sub cppInit( )
-declare sub cppEnd( )
-declare sub cppAddIncDir( byval incdir as ASTNODE ptr )
-declare sub cppAppendIncludeDirective( byref filename as string, byval tkflags as integer )
-declare sub cppMain( )
-declare sub hMoveDirectivesOutOfConstructs( )
-declare sub hApplyReplacements( )
+declare sub cppInit()
+declare sub cppEnd()
+declare sub cppAddIncDir(byval incdir as ASTNODE ptr)
+declare sub cppAppendIncludeDirective(byref filename as string, byval tkflags as integer)
+declare sub cppMain()
+declare sub hMoveDirectivesOutOfConstructs()
+declare sub hApplyReplacements()
 
-declare sub cInit( )
-declare sub cEnd( )
-declare function cMain( ) as ASTNODE ptr
+declare sub cInit()
+declare sub cEnd()
+declare function cMain() as ASTNODE ptr
 
-declare sub hlGlobal( byval ast as ASTNODE ptr )
-declare sub hlFile( byval ast as ASTNODE ptr, byval inclibs as ASTNODE ptr, byval undefs as ASTNODE ptr )
+declare sub hlGlobal(byval ast as ASTNODE ptr)
+declare sub hlFile(byval ast as ASTNODE ptr, byval inclibs as ASTNODE ptr, byval undefs as ASTNODE ptr)
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
@@ -856,5 +856,5 @@ namespace frog
 	extern as integer replacementcount
 end namespace
 
-declare function frogLookupBiFromH( byval hfile as zstring ptr ) as integer
-declare sub frogPrint( byref s as string )
+declare function frogLookupBiFromH(byval hfile as zstring ptr) as integer
+declare sub frogPrint(byref s as string)

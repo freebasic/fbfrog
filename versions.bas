@@ -10,9 +10,9 @@
 ''    eliminate duplicate checks. For example, for a VERBLOCK that covers all
 ''    possible APIs, we don't need to generate any #if at all since its
 ''    condition would always be true. And in case we have a check like this:
-''        #if ( __FB_WIN32__ and __FB_64BIT__) or ( __FB_LINUX__ and __FB_64BIT__)
+''        #if (__FB_WIN32__ and __FB_64BIT__) or (__FB_LINUX__ and __FB_64BIT__)
 ''    that can be simplified to:
-''        #if __FB_64BIT__ and ( __FB_WIN32__ or __FB_LINUX__)
+''        #if __FB_64BIT__ and (__FB_WIN32__ or __FB_LINUX__)
 ''    etc.
 ''
 

@@ -1406,11 +1406,11 @@ end sub
 ''
 ''         int (*f)(int a);
 '' depth 0:    ^  ^^^^^^^^
-''    innerprocptrdtype = typeAddrOf(TYPE_PROC)      (passed up from depth 1)
+''    innerprocptrdtype = typeAddrOf(TYPE_PROC)        (passed up from depth 1)
 ''    procptrdtype      = TYPE_PROC                    (unused)
-''    innernode = VAR(f as int ptr)                  (passed up from depth 1)
-''    node      = PROC(function(a as int) as int)  (new function pointer subtype)
-''    t = VAR(f as function(a as int) as int)      (adjusted AST: f turned into function pointer)
+''    innernode = VAR(f as int ptr)                    (passed up from depth 1)
+''    node      = PROC(function(a as int) as int)      (new function pointer subtype)
+''    t = VAR(f as function(a as int) as int)          (adjusted AST: f turned into function pointer)
 ''
 '' Example 2:
 ''
@@ -1420,21 +1420,21 @@ end sub
 ''    procptrdtype      = typeAddrOf(TYPE_PROC)
 ''    innernode = NULL
 ''    node      = NULL
-''    t = VAR(f as int ptr ptr)    (f as int ptr ptr for now, in case it's just "int (*(*f));")
+''    t = VAR(f as int ptr ptr)      (f as int ptr ptr for now, in case it's just "int (*(*f));")
 ''
 ''         int (*(*f)(int a))(int b);
 '' depth 1:     ^^  ^^^^^^^^
-''    innerprocptrdtype = typeAddrOf(TYPE_PROC)      (passed up from depth 2)
+''    innerprocptrdtype = typeAddrOf(TYPE_PROC)        (passed up from depth 2)
 ''    procptrdtype      = typeAddrOf(TYPE_PROC)
-''    innernode = VAR(f as int ptr ptr)              (passed up from depth 2)
+''    innernode = VAR(f as int ptr ptr)                (passed up from depth 2)
 ''    node      = PROC(function(a as int) as int ptr)  (new function pointer subtype,
 ''                                                     result = int ptr for now, in case it's
 ''                                                     just "int (*(*f)(int a));")
-''    t = VAR(f as function(a as int) as int ptr)  (adjusted AST: f turned into function pointer)
+''    t = VAR(f as function(a as int) as int ptr)      (adjusted AST: f turned into function pointer)
 ''
 ''         int (*(*f)(int a))(int b);
 '' depth 0:    ^            ^^^^^^^^
-''    innerprocptrdtype = typeAddrOf(TYPE_PROC)          (passed up from depth 1)
+''    innerprocptrdtype = typeAddrOf(TYPE_PROC)        (passed up from depth 1)
 ''    procptrdtype      = TYPE_PROC (unused)
 ''    innernode = PROC(function(a as int) as int ptr)  (passed up from depth 1)
 ''    node      = PROC(function(b as int) as int)      (new function pointer subtype)
@@ -1449,7 +1449,7 @@ end sub
 '' These are all the same:
 ''    __attribute__((stdcall)) void (*p)(int a);
 ''    void (*p)(int a) __attribute__((stdcall));
-''    void ( __attribute__((stdcall)) *p)(int a);
+''    void (__attribute__((stdcall)) *p)(int a);
 ''    void (* __attribute__((stdcall)) p)(int a);
 ''    extern p as sub stdcall(byval a as long)
 '' i.e. the stdcall attribute goes to the procptr subtype, no matter whether
@@ -1462,11 +1462,11 @@ end sub
 ''    declare function f stdcall(byval a as long) as sub cdecl(byval b as long)
 ''
 '' Here the stdcall goes to the proc's result procptr subtype, not the proc itself:
-''    void ( __attribute__((stdcall)) *f(int a))(int b);
+''    void (__attribute__((stdcall)) *f(int a))(int b);
 ''    declare function f cdecl(byval a as long) as sub stdcall(byval b as long)
 ''
 '' This proc returns a pointer to the above one:
-''    void ( __attribute__((stdcall)) *(*f(int a))(int b))(int c);
+''    void (__attribute__((stdcall)) *(*f(int a))(int b))(int c);
 ''                                      ^^^^^^^^
 ''                                    ^^        ^^^^^^^^
 ''          ^^^^^^^^^^^^^^^^^^^^^^^^^^                  ^^^^^^^^
@@ -1482,7 +1482,7 @@ end sub
 ''            sub        cdecl  (byval c as long)
 ''
 '' Here the stdcall still goes to the proc's result type:
-''    void (*( __attribute__((stdcall)) *f(int a))(int b))(int c);
+''    void (*(__attribute__((stdcall)) *f(int a))(int b))(int c);
 ''    declare function f cdecl  (byval a as long) as _
 ''            function   stdcall(byval b as long) as _
 ''            sub        cdecl  (byval c as long)
@@ -1498,17 +1498,17 @@ end sub
 ''    declare function f stdcall(byval a as long) as sub cdecl(byval b as long)
 ''
 ''    extern __attribute__((stdcall)) void (*(*p)(int a))(int b) = f;  // ptr to it
-''    extern void (*( __attribute__((stdcall)) *p)(int a))(int b) = f;  // same thing, apparently
+''    extern void (*(__attribute__((stdcall)) *p)(int a))(int b) = f;  // same thing, apparently
 ''    extern p as function stdcall(byval a as long) as sub cdecl(byval b as long)
 ''
 '' I.e. we see again that for procptr vars, the attributes from toplevel and
 '' inner-most declarators have the same effect - they go to the procptr subtype
 '' in both cases.
 ''
-''    void ( __attribute__((stdcall)) *f(int a))(int b);         // different proc
+''    void (__attribute__((stdcall)) *f(int a))(int b);         // different proc
 ''    declare function f cdecl(byval a as long) as sub stdcall(byval b as long)
 ''
-''    extern void ( __attribute__((stdcall)) *(*p)(int a))(int b) = f;  // ptr to it
+''    extern void (__attribute__((stdcall)) *(*p)(int a))(int b) = f;  // ptr to it
 ''    extern p as function cdecl(byval a as long) as sub stdcall(byval b as long)
 ''
 '' Here the stdcall is in the middle declarator and goes to the proc type
@@ -1541,7 +1541,7 @@ private function cDeclarator _
 	''
 	'' But this is still here, to handle __attribute__'s appearing in
 	'' nested declarators:
-	''    int ( __attribute__((stdcall)) f1)(void);
+	''    int (__attribute__((stdcall)) f1)(void);
 	'' or at the front of follow-up declarators in a declaration:
 	''    int f1(void), __attribute__((stdcall)) f2(void);
 	''

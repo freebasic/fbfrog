@@ -1302,7 +1302,7 @@ end sub
 	tkInit()
 
 	'' Load all command line arguments into the tk buffer
-	lexLoadArgs(0, hTurnArgsIntoString( __FB_ARGC__, __FB_ARGV__), _
+	lexLoadArgs(0, hTurnArgsIntoString(__FB_ARGC__, __FB_ARGV__), _
 		sourceinfoForZstring("<command line>"))
 
 	'' Load content of @files too
