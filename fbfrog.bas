@@ -1155,6 +1155,9 @@ private sub hDistributeBiSpecificOptions(byval options as ASTNODE ptr)
 			dim bi as integer
 			if i->alias then
 				bi = frogLookupBiFromBi(*i->alias)
+				if bi < 0 then
+					oops("couldn't find destination .bi '" + *i->alias + "', which was specified to hold " + astDumpOne(i))
+				end if
 			else
 				'' No destination .bi file given for this -inclib/-undef option;
 				'' add it to the first .bi.
@@ -1163,6 +1166,7 @@ private sub hDistributeBiSpecificOptions(byval options as ASTNODE ptr)
 				bi = 0
 			end if
 
+			assert((bi >= 0) and (bi < frog.bicount))
 			with frog.bis[bi]
 				select case i->class
 				case ASTCLASS_INCLIB
