@@ -10,7 +10,7 @@ namespace hl
 	'' hlCollectForwardUses/hlAddForwardDecls: data = hl.types array index
 	dim shared typehash as THASH
 
-	'' data = new name, needs freeing
+	'' data = TEXT ASTNODE holding the new id/alias
 	dim shared renamejobs as THASH
 
 	'' Used by forward declaration addition pass
@@ -806,23 +806,31 @@ private sub hlRenameJobsBegin()
 	hashInit(@hl.renamejobs, 6, TRUE)
 end sub
 
-private function hlRenameJobAdd(byval oldid as zstring ptr, byval newid as zstring ptr) as integer
-	newid = strDuplicate(newid)
-
+private function hlRenameJobAdd(byval oldid as zstring ptr, byval newname as ASTNODE ptr) as integer
 	var hash = hashHash(oldid)
 	var item = hashLookup(@hl.renamejobs, oldid, hash)
 	if item->s then
 		'' Allow overwriting duplicate typedefs (if both oldid/newid are the same),
 		'' but not if the newid differs (then it's a separate typedef which has to be
 		'' preserved - we can't rename A => C when already renaming A => B).
-		dim as zstring ptr prevnewid = item->data
-		if ucase(*prevnewid, 1) <> ucase(*newid, 1) then
+		dim as ASTNODE ptr prevnewid = item->data
+		if ucase(*prevnewid->text, 1) <> ucase(*newname->text, 1) then
 			return FALSE
 		end if
+	end if
 
+	'' When renaming, we don't just override the id, but also copy the alias
+	'' and related flags. This way, if an UDT is given a renamed typedef's
+	'' name, the UDT will become "renamed" too, and thus the type will
+	'' continue to appear in renamelists.
+	var newid = astNewTEXT(newname->text)
+	newid->alias = strDuplicate(newname->alias)
+	newid->attrib = newname->attrib and ASTATTRIB_NORENAMELIST
+
+	if item->s then
 		'' Free existing newid if there already is a renamejob for this oldid,
 		'' then the new newid can be stored
-		deallocate(item->data)
+		astDelete(item->data)
 		item->data = newid
 	else
 		hashAdd(@hl.renamejobs, item, hash, oldid, newid)
@@ -833,12 +841,21 @@ end function
 
 private sub hMaybeApplyRenameJob(byval n as ASTNODE ptr)
 	'' Is there a renamejob for this oldid?
-	dim as zstring ptr newid = hashLookupDataOrNull(@hl.renamejobs, n->text)
+	dim as ASTNODE ptr newid = hashLookupDataOrNull(@hl.renamejobs, n->text)
 	if newid then
 		'' Change the id if needed
-		if *n->text <> *newid then
-			astSetText(n, newid)
+		if *n->text <> *newid->text then
+			astSetText(n, newid->text)
 		end if
+
+		'' Change alias too
+		if newid->alias then
+			deallocate(n->alias)
+			n->alias = strDuplicate(newid->alias)
+		end if
+
+		n->attrib or= newid->attrib and ASTATTRIB_NORENAMELIST
+
 		'' Remove attributes even if id strictly speaking doesn't change
 		n->attrib and= not (ASTATTRIB_TAGID or ASTATTRIB_GENERATEDID)
 	end if
@@ -869,7 +886,7 @@ private sub hlRenameJobsEnd(byval ast as ASTNODE ptr)
 		for i as integer = 0 to hl.renamejobs.room - 1
 			var item = hl.renamejobs.items + i
 			if item->s then
-				deallocate(item->data)
+				astDelete(item->data)
 			end if
 		next
 	end scope
@@ -886,9 +903,7 @@ private sub hlSolveOutTagIds(byval n as ASTNODE ptr)
 				assert(astIsTEXT(i->subtype))
 				'if i->subtype->attrib and ASTATTRIB_TAGID then
 				if i->subtype->attrib and ASTATTRIB_GENERATEDID then
-					var newid = i->text
-					var oldid = i->subtype->text
-					if hlRenameJobAdd(oldid, newid) then
+					if hlRenameJobAdd(i->subtype->text, i) then
 						astRemove(n, i)
 					end if
 				end if
@@ -912,10 +927,8 @@ private sub hlRemoveSameIdTypedefs(byval n as ASTNODE ptr)
 		if i->class = ASTCLASS_TYPEDEF then
 			if i->dtype = TYPE_UDT then
 				assert(astIsTEXT(i->subtype))
-				var newid = i->text
-				var oldid = i->subtype->text
-				if ucase(*oldid, 1) = ucase(*newid, 1) then
-					if hlRenameJobAdd(oldid, newid) then
+				if ucase(*i->subtype->text, 1) = ucase(*i->text, 1) then
+					if hlRenameJobAdd(i->subtype->text, i) then
 						astRemove(n, i)
 					end if
 				end if

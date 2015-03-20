@@ -8,4 +8,4 @@
       tests/rename/typedef.h
 [5/5] __FB_DOS__
       tests/rename/typedef.h
-emitting: tests/rename/typedef.bi (15 declarations, 0 TODOs)
+emitting: tests/rename/typedef.bi (16 declarations, 0 TODOs)

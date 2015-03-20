@@ -5,6 +5,7 @@
 ''     typedef A2 => B2
 ''     typedef byt => byte
 ''     typedef T1 => T2
+''     struct A3 => B3
 
 extern "C"
 
@@ -26,5 +27,9 @@ type byte as byte
 type T2 as long
 
 declare sub T2()
+
+type B3
+	i as long
+end type
 
 end extern
