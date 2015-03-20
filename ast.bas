@@ -44,6 +44,7 @@ dim shared as zstring ptr astnodename(0 to ...) => _
 	@"incdir"       , _
 	@"inclib"       , _
 	@"undef"        , _
+	@"addinclude"   , _
 	@"preinclude"   , _
 	@"fbfrogpreinclude", _
 	@"pragmaonce"   , _
@@ -179,6 +180,11 @@ function astNewGROUP overload(byval c1 as ASTNODE ptr, byval c2 as ASTNODE ptr) 
 	astAppend(n, c2)
 	function = n
 end function
+
+sub astBuildGroupAndAppend(byref group as ASTNODE ptr, byval n as ASTNODE ptr)
+	if group = NULL then group = astNewGROUP()
+	astAppend(group, n)
+end sub
 
 function astCloneChildren(byval src as ASTNODE ptr) as ASTNODE ptr
 	var n = astNewGROUP()

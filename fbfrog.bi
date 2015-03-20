@@ -381,6 +381,7 @@ enum
 	OPT_INCDIR
 	OPT_INCLIB
 	OPT_UNDEF
+	OPT_ADDINCLUDE
 	OPT_EMIT
 	OPT_DONTEMIT
 	OPT_DECLAREDEFINES
@@ -540,6 +541,7 @@ enum
 	ASTCLASS_INCDIR
 	ASTCLASS_INCLIB
 	ASTCLASS_UNDEF
+	ASTCLASS_ADDINCLUDE
 	ASTCLASS_PREINCLUDE
 	ASTCLASS_FBFROGPREINCLUDE
 	ASTCLASS_PRAGMAONCE
@@ -715,6 +717,7 @@ declare function astNewIIF _
 	) as ASTNODE ptr
 declare function astNewGROUP overload() as ASTNODE ptr
 declare function astNewGROUP overload(byval c1 as ASTNODE ptr, byval c2 as ASTNODE ptr = NULL) as ASTNODE ptr
+declare sub astBuildGroupAndAppend(byref group as ASTNODE ptr, byval n as ASTNODE ptr)
 declare function astCloneChildren(byval src as ASTNODE ptr) as ASTNODE ptr
 declare function astGroupContains(byval group as ASTNODE ptr, byval lookfor as ASTNODE ptr) as integer
 declare function astGroupContainsAnyChildrenOf(byval l as ASTNODE ptr, byval r as ASTNODE ptr) as integer
@@ -819,8 +822,12 @@ declare sub cInit()
 declare sub cEnd()
 declare function cMain() as ASTNODE ptr
 
+type BiSpecificOptions
+	as ASTNODE ptr inclibs, undefs, addincludes
+end type
+
 declare sub hlGlobal(byval ast as ASTNODE ptr)
-declare sub hlFile(byval ast as ASTNODE ptr, byval inclibs as ASTNODE ptr, byval undefs as ASTNODE ptr)
+declare sub hlFile(byval ast as ASTNODE ptr, byref bioptions as BiSpecificOptions)
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 

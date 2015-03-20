@@ -1284,7 +1284,7 @@ private sub hTranslateHeaderFileName(byref filename as string)
 	filename += ".bi"
 end sub
 
-private sub hlHandleIncludes(byval ast as ASTNODE ptr)
+private sub hlHandleIncludes(byval ast as ASTNODE ptr, byref bioptions as BiSpecificOptions)
 	'' Find node above which new #includes should be inserted. This should
 	'' always be behind existing #includes at the top.
 	var top = ast->head
@@ -1311,6 +1311,12 @@ private sub hlHandleIncludes(byval ast as ASTNODE ptr)
 
 		i = nxt
 	wend
+
+	'' Add #includes from -addinclude options
+	if bioptions.addincludes then
+		astInsert(ast, bioptions.addincludes, top)
+		bioptions.addincludes = NULL
+	end if
 
 	'' For each #include at the top, apply -removeinclude and remap *.h => *.bi
 	i = ast->head
@@ -1612,7 +1618,7 @@ end sub
 '' .bi-file-specific highlevel transformations, intended to run on the
 '' API-specific ASTs in each output .bi file.
 ''
-sub hlFile(byval ast as ASTNODE ptr, byval inclibs as ASTNODE ptr, byval undefs as ASTNODE ptr)
+sub hlFile(byval ast as ASTNODE ptr, byref bioptions as BiSpecificOptions)
 	hl.need_extern = FALSE
 	hl.stdcalls = 0
 	hl.cdecls = 0
@@ -1666,7 +1672,8 @@ sub hlFile(byval ast as ASTNODE ptr, byval inclibs as ASTNODE ptr, byval undefs 
 	'' Move existing #include statements outside the Extern block
 	'' Remap *.h => *.bi
 	'' Apply -removeinclude
-	hlHandleIncludes(ast)
+	'' Remove duplicates
+	hlHandleIncludes(ast, bioptions)
 
 	'' Add #includes for "crt/long[double].bi" and "crt/wchar.bi" if the
 	'' binding uses the clong[double]/wchar_t types
@@ -1679,10 +1686,12 @@ sub hlFile(byval ast as ASTNODE ptr, byval inclibs as ASTNODE ptr, byval undefs 
 	end if
 
 	'' Prepend #inclibs/#undefs
-	if undefs then
-		astPrependMaybeWithDivider(ast, undefs)
+	if bioptions.undefs then
+		astPrependMaybeWithDivider(ast, bioptions.undefs)
+		bioptions.undefs = NULL
 	end if
-	if inclibs then
-		astPrependMaybeWithDivider(ast, inclibs)
+	if bioptions.inclibs then
+		astPrependMaybeWithDivider(ast, bioptions.inclibs)
+		bioptions.inclibs = NULL
 	end if
 end sub

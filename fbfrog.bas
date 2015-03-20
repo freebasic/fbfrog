@@ -38,9 +38,8 @@
 type BIFILE
 	filename	as zstring ptr
 
-	'' #inclibs/#undefs to be added to this .bi
-	inclibs		as ASTNODE ptr
-	undefs		as ASTNODE ptr
+	'' command line options specific to this .bi (e.g. -inclib) from the current API
+	options as BiSpecificOptions
 
 	'' Used to hold the .bi file-specific tree for the current API, after
 	'' that API was parsed and its big AST was split up. Reset to NULL after
@@ -242,6 +241,7 @@ private sub hPrintHelpAndExit()
 	print "  binding generation:"
 	print "    -inclib <name> [<destination .bi file>]  Add #inclib ""<name>"""
 	print "    -undef  <id>   [<destination .bi file>]  Add #undef <id>"
+	print "    -addinclude <.bi file> [<destination .bi file>]  Add #include <.bi file>"
 	print "version script logic:"
 	print "  -declaredefines (<symbol>)+               Exclusive #defines"
 	print "  -declareversions <symbol> (<number>)+     Version numbers"
@@ -910,6 +910,11 @@ private sub hParseArgs(byref x as integer)
 			hParseOptionWithString(x, ASTCLASS_UNDEF, "<id> argument")
 			hParseDestinationBiFile(x)
 
+		'' -addinclude <.bi file> [<destination .bi file>]
+		case OPT_ADDINCLUDE
+			hParseOptionWithString(x, ASTCLASS_ADDINCLUDE, "<.bi file> argument")
+			hParseDestinationBiFile(x)
+
 		case else
 			'' *.fbfrog file given (without @)? Treat as @file too
 			var filename = *tkGetText(x)
@@ -1138,6 +1143,40 @@ private sub frogEvaluateScript _
 	assert(conditions->class = ASTCLASS_GROUP)
 	conditions->class = ASTCLASS_VERAND
 	frogAddApi(conditions, options)
+end sub
+
+private sub hDistributeBiSpecificOptions(byval options as ASTNODE ptr)
+	var i = options->head
+	while i
+
+		'' .bi-specific option?
+		select case i->class
+		case ASTCLASS_INCLIB, ASTCLASS_UNDEF, ASTCLASS_ADDINCLUDE
+			dim bi as integer
+			if i->alias then
+				bi = frogLookupBiFromBi(*i->alias)
+			else
+				'' No destination .bi file given for this -inclib/-undef option;
+				'' add it to the first .bi.
+				'' This allows the simple use case where there's just one output .bi,
+				'' and it's not necessary to specify a destination .bi for each option.
+				bi = 0
+			end if
+
+			with frog.bis[bi]
+				select case i->class
+				case ASTCLASS_INCLIB
+					astBuildGroupAndAppend(.options.inclibs, astNew(ASTCLASS_INCLIB, i->text))
+				case ASTCLASS_UNDEF
+					astBuildGroupAndAppend(.options.undefs, astNew(ASTCLASS_UNDEF, i->text))
+				case ASTCLASS_ADDINCLUDE
+					astBuildGroupAndAppend(.options.addincludes, astNew(ASTCLASS_PPINCLUDE, i->text))
+				end select
+			end with
+		end select
+
+		i = i->next
+	wend
 end sub
 
 private function frogParse(byval options as ASTNODE ptr) as ASTNODE ptr
@@ -1369,39 +1408,8 @@ end sub
 
 		var options = frog.apis[api].options
 
-		'' Distribute -inclib/-undef options for this API to invidiual .bi files
-		scope
-			var i = options->head
-			while i
-
-				select case i->class
-				case ASTCLASS_INCLIB, ASTCLASS_UNDEF
-					dim bi as integer
-					if i->alias then
-						bi = frogLookupBiFromBi(*i->alias)
-					else
-						'' No destination .bi file given for this -inclib/-undef option;
-						'' add it to the first .bi.
-						'' This allows the simple use case where there's just one output .bi,
-						'' and it's not necessary to specify a destination .bi for each option.
-						bi = 0
-					end if
-
-					with frog.bis[bi]
-						select case i->class
-						case ASTCLASS_INCLIB
-							if .inclibs = NULL then .inclibs = astNewGROUP()
-							astAppend(.inclibs, astNew(ASTCLASS_INCLIB, i->text))
-						case ASTCLASS_UNDEF
-							if .undefs = NULL then .undefs = astNewGROUP()
-							astAppend(.undefs, astNew(ASTCLASS_UNDEF, i->text))
-						end select
-					end with
-				end select
-
-				i = i->next
-			wend
-		end scope
+		'' Distribute .bi-file-specific options for this API to invidiual .bi files
+		hDistributeBiSpecificOptions(options)
 
 		'' Parse code for this API into an AST
 		var ast = frogParse(options)
@@ -1452,12 +1460,15 @@ end sub
 		for bi as integer = 0 to frog.bicount - 1
 			with frog.bis[bi]
 				'' Do file-specific AST work (e.g. add Extern block)
-				hlFile(.incoming, .inclibs, .undefs)
-				.inclibs = NULL
-				.undefs = NULL
+				hlFile(.incoming, .options)
 
 				'' Merge the "incoming" tree into the "final" tree
 				astMergeNext(astNewVEROR(astClone(frog.apis[api].verand)), .final, .incoming)
+
+				assert(.incoming = NULL)
+				assert(.options.inclibs = NULL)
+				assert(.options.undefs = NULL)
+				assert(.options.addincludes = NULL)
 			end with
 		next
 
