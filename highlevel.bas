@@ -494,7 +494,9 @@ private function hlApplyRenameOption(byval n as ASTNODE ptr) as integer
 		end if
 
 	case ASTCLASS_PROC
-		hApplyRenameOption(OPT_RENAMEPROC, n)
+		if n->text then
+			hApplyRenameOption(OPT_RENAMEPROC, n)
+		end if
 
 	case ASTCLASS_TYPEDEF
 		hApplyRenameOption(OPT_RENAMETYPEDEF, n)
