@@ -8,4 +8,4 @@
       tests/rename/update-references.h
 [5/5] __FB_DOS__
       tests/rename/update-references.h
-emitting: tests/rename/update-references.bi (8 declarations, 0 TODOs)
+emitting: tests/rename/update-references.bi (12 declarations, 0 TODOs)

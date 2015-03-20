@@ -493,6 +493,9 @@ private function hlApplyRenameOption(byval n as ASTNODE ptr) as integer
 			hApplyRenameOption(OPT_RENAMETAG, n)
 		end if
 
+	case ASTCLASS_PROC
+		hApplyRenameOption(OPT_RENAMEPROC, n)
+
 	case ASTCLASS_TYPEDEF
 		hApplyRenameOption(OPT_RENAMETYPEDEF, n)
 
@@ -520,7 +523,8 @@ private function hlApplyRenameOption(byval n as ASTNODE ptr) as integer
 			end if
 		end if
 
-	case ASTCLASS_TEXT
+	case ASTCLASS_TEXT, ASTCLASS_CALL
+		hApplyRenameOption(OPT_RENAMEPROC, n)
 		hApplyRenameOption(OPT_RENAMEDEFINE, n)
 		if inside_macro then
 			hApplyRenameOption(OPT_RENAMEMACROPARAM, n)

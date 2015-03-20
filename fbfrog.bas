@@ -220,6 +220,7 @@ private sub hPrintHelpAndExit()
 	print "  -replacements <file>  Load patterns for search/replace"
 	print "  rename options (-rename* <oldid> <newid>):"
 	print "    -renametypedef, -renametag (struct/union/enum),"
+	print "    -renameproc (procedures)"
 	print "    -renamedefine, -renamemacroparam"
 	print "  -removedefine <id>  Don't preserve a certain #define"
 	print "  -removeproc <id>    Don't preserve a certain procedure"
@@ -708,7 +709,7 @@ private sub hParseArgs(byref x as integer)
 			end scope
 			x += 1
 
-		case OPT_RENAMETYPEDEF, OPT_RENAMETAG, OPT_RENAMEDEFINE, OPT_RENAMEMACROPARAM
+		case OPT_RENAMETYPEDEF, OPT_RENAMETAG, OPT_RENAMEPROC, OPT_RENAMEDEFINE, OPT_RENAMEMACROPARAM
 			x += 1
 
 			'' <oldid>
