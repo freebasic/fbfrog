@@ -1277,6 +1277,22 @@ private sub hlDropMacroBodyScopes(byval ast as ASTNODE ptr)
 	wend
 end sub
 
+private sub hlAddUndefsAboveDecls(byval ast as ASTNODE ptr)
+	var i = ast->head
+	while i
+
+		if i->text then
+			if hashContains(@frog.idopt(OPT_UNDEFBEFOREDECL), i->text, hashHash(i->text)) then
+				var undef = astNew(ASTCLASS_UNDEF, i->text)
+				undef->location = i->location
+				astInsert(ast, undef, i)
+			end if
+		end if
+
+		i = i->next
+	wend
+end sub
+
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 private function hlCountCallConvs(byval n as ASTNODE ptr) as integer
@@ -1664,6 +1680,10 @@ sub hlGlobal(byval ast as ASTNODE ptr)
 			hlApplyMoveOption(ast, *i->text, *i->alias)
 			i = i->next
 		wend
+	end if
+
+	if frog.idopt(OPT_UNDEFBEFOREDECL).count > 0 then
+		hlAddUndefsAboveDecls(ast)
 	end if
 end sub
 

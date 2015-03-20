@@ -160,6 +160,7 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	(@"-dropprocbody" ), _
 	(@"-typedefhint"  ), _
 	(@"-addforwarddecl"), _
+	(@"-undefbeforedecl"), _
 	(@"-nostring"     ), _
 	(@"-noexpand"     ), _
 	(@"-removeinclude"), _

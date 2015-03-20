@@ -229,6 +229,7 @@ private sub hPrintHelpAndExit()
 	print "  -dropprocbody <id>  Don't preserve a certain procedure's body"
 	print "  -typedefhint <id>   Mark <id> as typedef, to help parsing of type casts"
 	print "  -addforwarddecl <id>  Force a forward declaration to be added for the given type"
+	print "  -undefbeforedecl <id>  Insert an #undef above a declaration"
 	print "  -nostring <id>      Prevent a symbol from being turned into a zstring"
 	print "  -noexpand <id>      Disable expansion of certain #define"
 	print "  -removeinclude <filename>  Remove matching #include directives"
@@ -727,7 +728,8 @@ private sub hParseArgs(byref x as integer)
 			hashAddOverwrite(@frog.renameopt(opt), n->alias, n)
 			frog.have_renames = TRUE
 
-		case OPT_REMOVEDEFINE, OPT_REMOVEPROC, OPT_REMOVEVAR, OPT_DROPPROCBODY, OPT_TYPEDEFHINT, OPT_ADDFORWARDDECL, OPT_NOSTRING, OPT_NOEXPAND
+		case OPT_REMOVEDEFINE, OPT_REMOVEPROC, OPT_REMOVEVAR, OPT_DROPPROCBODY, _
+		     OPT_TYPEDEFHINT, OPT_ADDFORWARDDECL, OPT_UNDEFBEFOREDECL, OPT_NOSTRING, OPT_NOEXPAND
 			x += 1
 
 			'' <id>
