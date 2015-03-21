@@ -138,9 +138,30 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	(@"while"   ), _
 	_
 	(@"TK_ARGSFILE"), _
+	_
 	(@"-o"            ), _
+	(@"-emit"         ), _
+	(@"-dontemit"     ), _
+	(@"-i"            ), _
 	(@"-v"            ), _
 	(@"-nodefaultscript"), _
+	_
+	(@"-declaredefines"), _
+	(@"-declareversions"), _
+	(@"-declarebool"  ), _
+	(@"-select"       ), _
+	(@"-case"         ), _
+	(@"-caseelse"     ), _
+	(@"-endselect"    ), _
+	(@"-ifdef"        ), _
+	(@"-else"         ), _
+	(@"-endif"        ), _
+	_
+	(@"-define"       ), _
+	(@"-include"      ), _
+	(@"-fbfroginclude"), _
+	(@"-incdir"       ), _
+	_
 	(@"-windowsms"    ), _
 	(@"-clong32"      ), _
 	(@"-fixunsizedarrays"), _
@@ -166,25 +187,9 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	(@"-removeinclude"), _
 	(@"-setarraysize" ), _
 	(@"-moveabove"    ), _
-	(@"-define"       ), _
-	(@"-include"      ), _
-	(@"-fbfroginclude"), _
-	(@"-incdir"       ), _
 	(@"-inclib"       ), _
 	(@"-undef"        ), _
-	(@"-addinclude"   ), _
-	(@"-emit"         ), _
-	(@"-dontemit"     ), _
-	(@"-declaredefines"), _
-	(@"-declareversions"), _
-	(@"-declarebool"  ), _
-	(@"-select"       ), _
-	(@"-case"         ), _
-	(@"-caseelse"     ), _
-	(@"-endselect"    ), _
-	(@"-ifdef"        ), _
-	(@"-else"         ), _
-	(@"-endif"        )  _
+	(@"-addinclude"   )  _
 }
 
 #assert ubound(tk_info) = TK__COUNT - 1

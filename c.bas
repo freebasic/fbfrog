@@ -63,6 +63,7 @@ declare function cConstruct(byval bodyastclass as integer) as ASTNODE ptr
 declare function cBody(byval bodyastclass as integer) as ASTNODE ptr
 
 namespace c
+	dim shared api as ApiInfo ptr
 	dim shared as integer x, parseok, tempids
 	dim shared parentdefine as ASTNODE ptr
 
@@ -126,7 +127,7 @@ private function cIsTypedef(byval id as zstring ptr) as integer
 	end if
 
 	'' 2. Check -typedefhint options
-	function = hashContains(@frog.idopt(OPT_TYPEDEFHINT), id, hashHash(id))
+	function = hashContains(@c.api->idopt(OPT_TYPEDEFHINT), id, hashHash(id))
 end function
 
 private function cIdentifierIsMacroParam(byval id as zstring ptr) as integer
@@ -137,7 +138,8 @@ private function cIdentifierIsMacroParam(byval id as zstring ptr) as integer
 	end if
 end function
 
-sub cInit()
+sub cInit(byref api as ApiInfo)
+	c.api = @api
 	c.x = 0
 	c.parseok = TRUE
 	c.parentdefine = NULL
@@ -1268,7 +1270,7 @@ private sub cBaseType _
 		if shortmods = 1 then
 			dtype = iif(unsignedmods > 0, TYPE_USHORT, TYPE_SHORT)
 		elseif longmods = 1 then
-			if frog.clong32 then
+			if c.api->clong32 then
 				'' C long => LONG (ok on Windows where C long is always 32bit)
 				dtype = iif(unsignedmods > 0, TYPE_ULONG, TYPE_LONG)
 			else
@@ -1981,7 +1983,7 @@ private function cDeclaration(byval astclass as integer, byval gccattribs as int
 				assert(n->expr = NULL)
 				n->expr = cScope(n)
 
-				if frog.nofunctionbodies then
+				if c.api->nofunctionbodies then
 					c.parseok = originalparseok
 					n->expr = NULL
 				end if

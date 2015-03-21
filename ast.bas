@@ -40,14 +40,9 @@ dim shared as zstring ptr astnodename(0 to ...) => _
 	@"case"         , _
 	@"caseelse"     , _
 	@"endselect"    , _
-	@"incdir"       , _
-	@"inclib"       , _
-	@"undef"        , _
-	@"addinclude"   , _
-	@"preinclude"   , _
-	@"fbfrogpreinclude", _
+	@"option"       , _
 	_
-	_ '' Preprocessor directives
+	_ '' Declarations/statements
 	@"ppinclude", _
 	@"ppdefine" , _
 	@"ppif"     , _
@@ -55,23 +50,23 @@ dim shared as zstring ptr astnodename(0 to ...) => _
 	@"ppelse"   , _
 	@"ppendif"  , _
 	@"pperror"  , _
-	_
-	_ '' Declarations/statements
-	@"struct"     , _
-	@"union"      , _
-	@"enum"       , _
-	@"typedef"    , _
-	@"const"      , _
-	@"var"        , _
-	@"field"      , _
-	@"proc"       , _
-	@"param"      , _
+	@"pragmaonce", _
+	@"inclib"   , _
+	@"undef"    , _
+	@"struct"   , _
+	@"union"    , _
+	@"enum"     , _
+	@"typedef"  , _
+	@"const"    , _
+	@"var"      , _
+	@"field"    , _
+	@"proc"     , _
+	@"param"    , _
 	@"macroparam" , _
 	@"array"      , _
 	@"externbegin", _
 	@"externend"  , _
 	@"return"     , _
-	@"pragmaonce" , _
 	_
 	_ '' Expression atoms etc.
 	@"consti"    , _
@@ -184,6 +179,13 @@ sub astBuildGroupAndAppend(byref group as ASTNODE ptr, byval n as ASTNODE ptr)
 	if group = NULL then group = astNewGROUP()
 	astAppend(group, n)
 end sub
+
+function astNewOPTION(byval opt as integer, byval text1 as zstring ptr, byval text2 as zstring ptr) as ASTNODE ptr
+	var n = astNew(ASTCLASS_OPTION, text1)
+	astSetAlias(n, text2)
+	n->opt = opt
+	function = n
+end function
 
 function astCloneChildren(byval src as ASTNODE ptr) as ASTNODE ptr
 	var n = astNewGROUP()
@@ -429,6 +431,7 @@ function astCloneNode(byval n as ASTNODE ptr) as ASTNODE ptr
 	select case n->class
 	case ASTCLASS_PPDEFINE : c->paramcount = n->paramcount
 	case ASTCLASS_STRUCT, ASTCLASS_UNION : c->maxalign = n->maxalign
+	case ASTCLASS_OPTION : c->opt = n->opt
 	end select
 
 	function = c
@@ -532,6 +535,9 @@ function astIsEqual _
 
 	case ASTCLASS_STRUCT, ASTCLASS_UNION
 		if a->maxalign <> b->maxalign then exit function
+
+	case ASTCLASS_OPTION
+		if a->opt <> b->opt then exit function
 
 	case ASTCLASS_VEROR, ASTCLASS_VERAND
 		return astGroupsContainEqualChildren(a, b)
@@ -687,6 +693,10 @@ function astDumpOne(byval n as ASTNODE ptr) as string
 	checkAttrib(DLLIMPORT)
 	checkAttrib(ENUMCONST)
 	checkAttrib(NORENAMELIST)
+
+	if n->class = ASTCLASS_OPTION then
+		s += " " + *tkInfoText(n->opt)
+	end if
 
 	if n->text then
 		s += " """ + strMakePrintable(*n->text) + """"

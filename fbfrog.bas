@@ -39,7 +39,7 @@ type BIFILE
 	filename	as zstring ptr
 
 	'' command line options specific to this .bi (e.g. -inclib) from the current API
-	options as BiSpecificOptions
+	options as ApiSpecificBiOptions
 
 	'' Used to hold the .bi file-specific tree for the current API, after
 	'' that API was parsed and its big AST was split up. Reset to NULL after
@@ -53,12 +53,12 @@ type BIFILE
 end type
 
 namespace frog
-	dim shared as integer verbose, windowsms, clong32, fixunsizedarrays, disableconstants, fixmingwaw, nodefaultscript, nofunctionbodies, dropmacrobodyscopes
-	dim shared as string outname, defaultoutname
+	dim shared as integer verbose, nodefaultscript
+	dim shared as string outname, defaultoutname, prefix
 
 	dim shared as ASTNODE ptr script
 	dim shared as ASTNODE ptr completeverors, fullveror
-	dim shared as FROGAPI ptr apis
+	dim shared as ApiInfo ptr apis
 	dim shared as integer apicount
 
 	'' *.bi output file names from the -emit options
@@ -75,18 +75,6 @@ namespace frog
 	end type
 	dim shared as HPATTERN ptr patterns
 	dim shared as integer patterncount
-
-	dim shared have_renames as integer
-	dim shared renameopt(OPT_RENAMETYPEDEF to OPT_RENAMEMACROPARAM) as THASH
-	dim shared idopt(OPT_REMOVEDEFINE to OPT_NOEXPAND) as THASH
-	dim shared removeinclude as THASH
-	dim shared setarraysizeoptions as THASH
-	dim shared moveaboveoptions as ASTNODE ptr
-
-	dim shared as CodeReplacement ptr replacements
-	dim shared as integer replacementcount
-
-	dim shared as string prefix
 end namespace
 
 private sub frogAddPattern(byref pattern as string, byval bi as integer)
@@ -163,18 +151,6 @@ function frogLookupBiFromH(byval hfile as zstring ptr) as integer
 	function = bi
 end function
 
-private sub frogAddReplacement(byval fromcode as zstring ptr, byval tocode as zstring ptr, byval tofb as integer)
-	var i = frog.replacementcount
-	frog.replacementcount += 1
-	frog.replacements = reallocate(frog.replacements, frog.replacementcount * sizeof(*frog.replacements))
-	clear(frog.replacements[i], 0, sizeof(*frog.replacements))
-	with frog.replacements[i]
-		.fromcode = strDuplicate(fromcode)
-		.tocode = strDuplicate(tocode)
-		.tofb = tofb
-	end with
-end sub
-
 '' Find a *.fbfrog or *.h file in fbfrog's include/ dir, its "library" of
 '' premade collections of pre-#defines etc. useful when creating bindings.
 private function hFindResource(byref filename as string) as string
@@ -207,10 +183,25 @@ private sub hPrintHelpAndExit()
 	print "fbfrog 1.7 (" + __DATE_ISO__ + "), FreeBASIC *.bi binding generator"
 	print "usage: fbfrog foo.h [options]"
 	print "global options:"
-	print "  @<file>          Read more command line arguments from a file"
-	print "  -o <path/file>   Set output .bi file name, or just the output directory"
-	print "  -v               Show verbose/debugging info"
-	print "  -nodefaultscript Don't use default.fbfrog implicitly"
+	print "  @<file> | <*.fbfrog>  Read more command line arguments from a file"
+	print "  -o <path/file>        Set output .bi file name, or just the output directory"
+	print "  -emit '*.h' foo.bi    Emit code from matching .h into specified .bi"
+	print "  -dontemit '*.h'       Drop code from matching .h files"
+	print "  -v                    Show verbose/debugging info"
+	print "  -nodefaultscript      Don't use default.fbfrog implicitly"
+	print "API script logic:"
+	print "  -declaredefines (<symbol>)+               Exclusive #defines"
+	print "  -declareversions <symbol> (<number>)+     Version numbers"
+	print "  -declarebool <symbol>                     Single on/off #define"
+	print "  -select          (-case <symbol> ...)+ [-caseelse ...] -endselect"
+	print "  -select <symbol> (-case <number> ...)+ [-caseelse ...] -endselect"
+	print "  -ifdef <symbol> ... [-else ...] -endif"
+	print "CPP (options are API-specific):"
+	print "  -define <id> [<body>]    Add pre-#define"
+	print "  -include <file>          Add pre-#include"
+	print "  -fbfroginclude <file>    Add pre-#include from include/fbfrog/"
+	print "  -incdir <path>           Add search directory for .h #includes"
+	print "binding generation (options are API-specific):"
 	print "  -windowsms       Use Extern ""Windows-MS"" instead of Extern ""Windows"""
 	print "  -clong32         Translate C long as 32bit LONG, instead of CLONG"
 	print "  -fixunsizedarrays  Wrap [] arrays with a #define"
@@ -219,13 +210,12 @@ private sub hPrintHelpAndExit()
 	print "  -nofunctionbodies  Don't preserve function bodies"
 	print "  -dropmacrobodyscopes  Drop scope blocks with only 1 statement in macro bodies"
 	print "  -replacements <file>  Load patterns for search/replace"
-	print "  rename options (-rename* <oldid> <newid>):"
+	print "  options for renaming symbols (-rename* <oldid> <newid>):"
 	print "    -renametypedef, -renametag (struct/union/enum),"
 	print "    -renameproc (procedures)"
 	print "    -renamedefine, -renamemacroparam"
-	print "  -removedefine <id>  Don't preserve a certain #define"
-	print "  -removeproc <id>    Don't preserve a certain procedure"
-	print "  -removevar <id>     Don't preserve a certain variable"
+	print "  options for removing declarations (-remove* <id>):"
+	print "    -removedefine, -removeproc, -removevar"
 	print "  -dropprocbody <id>  Don't preserve a certain procedure's body"
 	print "  -typedefhint <id>   Mark <id> as typedef, to help parsing of type casts"
 	print "  -addforwarddecl <id>  Force a forward declaration to be added for the given type"
@@ -235,25 +225,9 @@ private sub hPrintHelpAndExit()
 	print "  -removeinclude <filename>  Remove matching #include directives"
 	print "  -setarraysize <id> <size>  Set size of an [] array"
 	print "  -moveabove <id> <ref>  Move declaration of <id> above declaration of <ref>"
-	print "  -emit '*.h' foo.bi  Emit code from matching .h into specified .bi"
-	print "  -dontemit '*.h'     Drop code from matching .h files"
-	print "version-specific commands:"
-	print "  C pre-processing:"
-	print "    -define <id> [<body>]    Add pre-#define"
-	print "    -include <file>          Add pre-#include"
-	print "    -fbfroginclude <file>    Add pre-#include from include/fbfrog/"
-	print "    -incdir <path>           Add search directory for .h #includes"
-	print "  binding generation:"
-	print "    -inclib <name> [<destination .bi file>]  Add #inclib ""<name>"""
-	print "    -undef  <id>   [<destination .bi file>]  Add #undef <id>"
-	print "    -addinclude <.bi file> [<destination .bi file>]  Add #include <.bi file>"
-	print "version script logic:"
-	print "  -declaredefines (<symbol>)+               Exclusive #defines"
-	print "  -declareversions <symbol> (<number>)+     Version numbers"
-	print "  -declarebool <symbol>                     Single on/off #define"
-	print "  -select          (-case <symbol> ...)+ [-caseelse ...] -endselect"
-	print "  -select <symbol> (-case <number> ...)+ [-caseelse ...] -endselect"
-	print "  -ifdef <symbol> ... [-else ...] -endif"
+	print "  -inclib <name> [<destination .bi file>]  Add #inclib ""<name>"""
+	print "  -undef  <id>   [<destination .bi file>]  Add #undef <id>"
+	print "  -addinclude <.bi file> [<destination .bi file>]  Add #include <.bi file>"
 	end 1
 end sub
 
@@ -296,7 +270,7 @@ type ReplacementsParser
 	declare sub nextLine()
 	declare sub parseOops(byref message as string)
 	declare function parseCode(byref keyword as string) as string
-	declare sub parse()
+	declare sub parse(byref api as ApiInfo)
 end type
 
 constructor ReplacementsParser(byref filename as string)
@@ -376,7 +350,7 @@ function ReplacementsParser.parseCode(byref keyword as string) as string
 	function = code
 end function
 
-sub ReplacementsParser.parse()
+sub ReplacementsParser.parse(byref api as ApiInfo)
 	nextLine()
 
 	while reachedeof = FALSE
@@ -400,7 +374,120 @@ sub ReplacementsParser.parse()
 			parseOops("expected line to start with '" + ToCKeyword + "' or '" + ToFbKeyword + "', but found something else")
 		end if
 
-		frogAddReplacement(fromcode, tocode, tofb)
+		api.addReplacement(fromcode, tocode, tofb)
+	wend
+end sub
+
+constructor ApiInfo()
+	for i as integer = lbound(renameopt) to ubound(renameopt)
+		hashInit(@renameopt(i), 3, FALSE)
+	next
+	for i as integer = lbound(idopt) to ubound(idopt)
+		hashInit(@idopt(i), 3, FALSE)
+	next
+	hashInit(@removeinclude, 3, FALSE)
+	hashInit(@setarraysizeoptions, 3, FALSE)
+end constructor
+
+destructor ApiInfo()
+	for i as integer = lbound(renameopt) to ubound(renameopt)
+		hashEnd(@renameopt(i))
+	next
+	for i as integer = lbound(idopt) to ubound(idopt)
+		hashEnd(@idopt(i))
+	next
+	hashEnd(@removeinclude)
+	hashEnd(@setarraysizeoptions)
+
+	for i as integer = 0 to replacementcount - 1
+		deallocate(replacements[i].fromcode)
+		deallocate(replacements[i].tocode)
+	next
+	deallocate(replacements)
+end destructor
+
+sub ApiInfo.addReplacement(byval fromcode as zstring ptr, byval tocode as zstring ptr, byval tofb as integer)
+	var i = replacementcount
+	replacementcount += 1
+	replacements = reallocate(replacements, replacementcount * sizeof(*replacements))
+	clear(replacements[i], 0, sizeof(*replacements))
+	with replacements[i]
+		.fromcode = strDuplicate(fromcode)
+		.tocode = strDuplicate(tocode)
+		.tofb = tofb
+	end with
+end sub
+
+sub ApiInfo.loadOption(byval opt as integer, byval param1 as zstring ptr, byval param2 as zstring ptr)
+	select case as const opt
+	case OPT_WINDOWSMS        : windowsms        = TRUE
+	case OPT_CLONG32          : clong32          = TRUE
+	case OPT_FIXUNSIZEDARRAYS : fixunsizedarrays = TRUE
+	case OPT_DISABLECONSTANTS : disableconstants = TRUE
+	case OPT_FIXMINGWAW       : fixmingwaw       = TRUE
+	case OPT_NOFUNCTIONBODIES : nofunctionbodies = TRUE
+	case OPT_DROPMACROBODYSCOPES : dropmacrobodyscopes = TRUE
+
+	case OPT_RENAMETYPEDEF, OPT_RENAMETAG, OPT_RENAMEPROC, _
+	     OPT_RENAMEDEFINE, OPT_RENAMEMACROPARAM
+		hashAddOverwrite(@renameopt(opt), param1, param2)
+		have_renames = TRUE
+
+	case OPT_REMOVEDEFINE, OPT_REMOVEPROC, OPT_REMOVEVAR, OPT_DROPPROCBODY, _
+	     OPT_TYPEDEFHINT, OPT_ADDFORWARDDECL, OPT_UNDEFBEFOREDECL, OPT_NOSTRING, OPT_NOEXPAND
+		hashAddOverwrite(@idopt(opt), param1, NULL)
+
+	case OPT_REMOVEINCLUDE
+		hashAddOverwrite(@removeinclude, param1, NULL)
+
+	case OPT_SETARRAYSIZE
+		hashAddOverwrite(@setarraysizeoptions, param1, param2)
+
+	case OPT_MOVEABOVE
+		var n = astNewTEXT(param1)
+		astSetAlias(n, param2)
+		astBuildGroupAndAppend(moveaboveoptions, n)
+
+	case OPT_REPLACEMENTS
+		dim parser as ReplacementsParser = ReplacementsParser(*param1)
+		parser.parse(this)
+
+	'' Distribute .bi-file-specific options for this API to invidiual .bi files
+	case OPT_INCLIB, OPT_UNDEF, OPT_ADDINCLUDE
+		dim bi as integer
+		if param2 then
+			bi = frogLookupBiFromBi(*param2)
+			if bi < 0 then
+				oops("couldn't find destination .bi '" + *param2 + "', for '" + *tkInfoText(opt) + " " + *param1 + "'")
+			end if
+		else
+			'' No destination .bi file given for this -inclib/-undef option;
+			'' add it to the first .bi.
+			'' This allows the simple use case where there's just one output .bi,
+			'' and it's not necessary to specify a destination .bi for each option.
+			bi = 0
+		end if
+
+		assert((bi >= 0) and (bi < frog.bicount))
+		with frog.bis[bi]
+			select case opt
+			case OPT_INCLIB
+				astBuildGroupAndAppend(.options.inclibs, astNew(ASTCLASS_INCLIB, param1))
+			case OPT_UNDEF
+				astBuildGroupAndAppend(.options.undefs, astNew(ASTCLASS_UNDEF, param1))
+			case OPT_ADDINCLUDE
+				astBuildGroupAndAppend(.options.addincludes, astNew(ASTCLASS_PPINCLUDE, param1))
+			end select
+		end with
+	end select
+end sub
+
+sub ApiInfo.loadOptions()
+	var i = script->head
+	while i
+		assert(i->class = ASTCLASS_OPTION)
+		loadOption(i->opt, i->text, i->alias)
+		i = i->next
 	wend
 end sub
 
@@ -649,19 +736,31 @@ private sub hParseIfDefCompound(byref x as integer)
 	loop
 end sub
 
-private sub hParseOptionWithString(byref x as integer, byval astclass as integer, byval paramdescription as zstring ptr)
-	x += 1
-	hExpectStringOrId(x, paramdescription)
-	astAppend(frog.script, astNew(astclass, tkGetText(x)))
-	x += 1
-end sub
-
 private sub hParseDestinationBiFile(byref x as integer)
 	'' [<destination .bi file>]
 	if hIsStringOrId(x) then
+		assert(frog.script->tail->class = ASTCLASS_OPTION)
 		astSetAlias(frog.script->tail, tkGetText(x))
 		x += 1
 	end if
+end sub
+
+private sub hParseParam(byref x as integer, byref description as zstring)
+	hExpectStringOrId(x, description)
+	x += 1
+end sub
+
+private sub hParseOption1Param(byref x as integer, byval opt as integer, byref param1 as zstring)
+	x += 1
+	hParseParam(x, param1 + " parameter for " + tkInfoPretty(opt))
+	astAppend(frog.script, astNewOPTION(opt, tkGetText(x - 1)))
+end sub
+
+private sub hParseOption2Params(byref x as integer, byval opt as integer, byref param1 as zstring, byref param2 as zstring)
+	x += 1
+	hParseParam(x, param1)
+	hParseParam(x, param2)
+	astAppend(frog.script, astNewOPTION(opt, tkGetText(x - 2), tkGetText(x - 1)))
 end sub
 
 private sub hParseArgs(byref x as integer)
@@ -673,100 +772,13 @@ private sub hParseArgs(byref x as integer)
 		var opt = tkGet(x)
 		select case as const opt
 		case OPT_NODEFAULTSCRIPT  : frog.nodefaultscript  = TRUE : x += 1
-		case OPT_WINDOWSMS        : frog.windowsms        = TRUE : x += 1
-		case OPT_CLONG32          : frog.clong32          = TRUE : x += 1
-		case OPT_FIXUNSIZEDARRAYS : frog.fixunsizedarrays = TRUE : x += 1
-		case OPT_DISABLECONSTANTS : frog.disableconstants = TRUE : x += 1
-		case OPT_FIXMINGWAW       : frog.fixmingwaw       = TRUE : x += 1
-		case OPT_NOFUNCTIONBODIES : frog.nofunctionbodies = TRUE : x += 1
-		case OPT_DROPMACROBODYSCOPES : frog.dropmacrobodyscopes = TRUE : x += 1
 		case OPT_V                : frog.verbose          = TRUE : x += 1
 
 		case OPT_O
 			x += 1
-
-			'' <path>
-			hExpectStringOrId(x, "<path>")
+			hExpectStringOrId(x, "<path/file>")
 			frog.outname = hPathRelativeToArgsFile(x)
 			x += 1
-
-		case OPT_REPLACEMENTS
-			x += 1
-
-			'' <file>
-			hExpectStringOrId(x, "<file>")
-			scope
-				dim parser as ReplacementsParser = ReplacementsParser(*tkGetText(x))
-				parser.parse()
-			end scope
-			x += 1
-
-		case OPT_RENAMETYPEDEF, OPT_RENAMETAG, OPT_RENAMEPROC, OPT_RENAMEDEFINE, OPT_RENAMEMACROPARAM
-			x += 1
-
-			'' <oldid>
-			hExpectId(x)
-			var n = astNewTEXT(tkSpellId(x))
-			x += 1
-
-			'' <newid>
-			hExpectId(x)
-			astRenameSymbol(n, tkSpellId(x))
-			x += 1
-
-			hashAddOverwrite(@frog.renameopt(opt), n->alias, n)
-			frog.have_renames = TRUE
-
-		case OPT_REMOVEDEFINE, OPT_REMOVEPROC, OPT_REMOVEVAR, OPT_DROPPROCBODY, _
-		     OPT_TYPEDEFHINT, OPT_ADDFORWARDDECL, OPT_UNDEFBEFOREDECL, OPT_NOSTRING, OPT_NOEXPAND
-			x += 1
-
-			'' <id>
-			hExpectId(x)
-			hashAddOverwrite(@frog.idopt(opt), tkSpellId(x), NULL)
-			x += 1
-
-		case OPT_REMOVEINCLUDE
-			x += 1
-
-			hExpectStringOrId(x, "<filename> argument")
-			hashAddOverwrite(@frog.removeinclude, tkGetText(x), NULL)
-			x += 1
-
-		'' -setarraysize <id> <size>
-		case OPT_SETARRAYSIZE
-			x += 1
-
-			'' <id>
-			hExpectId(x)
-			var id = tkGetText(x)
-			x += 1
-
-			'' <size>
-			hExpectStringOrId(x, "<size> argument")
-			var size = tkGetText(x)
-			x += 1
-
-			hashAddOverwrite(@frog.setarraysizeoptions, id, strDuplicate(size))
-
-		'' -moveabove <id> <ref>
-		case OPT_MOVEABOVE
-			x += 1
-
-			'' <id>
-			hExpectId(x)
-			var id = tkGetText(x)
-			x += 1
-
-			'' <ref>
-			hExpectStringOrId(x, "<ref> argument")
-			var ref = tkGetText(x)
-			x += 1
-
-			if frog.moveaboveoptions = NULL then frog.moveaboveoptions = astNewGROUP()
-			var n = astNewTEXT(id)
-			astSetAlias(n, ref)
-			astAppend(frog.moveaboveoptions, n)
 
 		'' -emit <filename-pattern> <file>
 		case OPT_EMIT
@@ -855,47 +867,64 @@ private sub hParseArgs(byref x as integer)
 		case OPT_DEFINE
 			x += 1
 
-			'' <id>
 			hExpectId(x)
-			'' Produce an object-like #define
-			astAppend(frog.script, astNewPPDEFINE(tkGetText(x)))
+			var id = tkGetText(x)
 			x += 1
 
-			'' [<body>]
+			dim body as zstring ptr
 			if hIsStringOrId(x) then
-				frog.script->tail->expr = astNewTEXT(tkGetText(x))
+				body = tkGetText(x)
 				x += 1
 			end if
 
-		'' -include <file>
-		case OPT_INCLUDE
-			hParseOptionWithString(x, ASTCLASS_PREINCLUDE, "<file> argument")
+			astAppend(frog.script, astNewOPTION(opt, id, body))
 
-		'' -fbfroginclude <file>
+		case OPT_INCLUDE
+			hParseOption1Param(x, opt, "<file>")
+
 		case OPT_FBFROGINCLUDE
-			hParseOptionWithString(x, ASTCLASS_FBFROGPREINCLUDE, "<file> argument")
+			hParseOption1Param(x, opt, "<file>")
 
 		case OPT_INCDIR
 			x += 1
-
-			'' <path>
 			hExpectStringOrId(x, "<path>")
-			astAppend(frog.script, astNew(ASTCLASS_INCDIR, hPathRelativeToArgsFile(x)))
+			astAppend(frog.script, astNewOPTION(opt, hPathRelativeToArgsFile(x)))
 			x += 1
 
-		'' -inclib <name> [<destination .bi file>]
+		case OPT_WINDOWSMS, OPT_CLONG32, OPT_FIXUNSIZEDARRAYS, OPT_DISABLECONSTANTS, _
+		     OPT_FIXMINGWAW, OPT_NOFUNCTIONBODIES, OPT_DROPMACROBODYSCOPES
+			x += 1
+			astAppend(frog.script, astNewOPTION(opt))
+
+		case OPT_RENAMETYPEDEF, OPT_RENAMETAG, OPT_RENAMEPROC, OPT_RENAMEDEFINE, OPT_RENAMEMACROPARAM
+			hParseOption2Params(x, opt, "<oldid>", "<newid>")
+
+		case OPT_REMOVEDEFINE, OPT_REMOVEPROC, OPT_REMOVEVAR, OPT_DROPPROCBODY, _
+		     OPT_TYPEDEFHINT, OPT_ADDFORWARDDECL, OPT_UNDEFBEFOREDECL, OPT_NOSTRING, OPT_NOEXPAND
+			hParseOption1Param(x, opt, "<id>")
+
+		case OPT_REMOVEINCLUDE
+			hParseOption1Param(x, opt, "<filename>")
+
+		case OPT_SETARRAYSIZE
+			hParseOption2Params(x, opt, "<id>", "<size>")
+
+		case OPT_MOVEABOVE
+			hParseOption2Params(x, opt, "<id>", "<ref>")
+
+		case OPT_REPLACEMENTS
+			hParseOption1Param(x, opt, "<file> argument")
+
 		case OPT_INCLIB
-			hParseOptionWithString(x, ASTCLASS_INCLIB, "<name> argument")
+			hParseOption1Param(x, opt, "<name> argument")
 			hParseDestinationBiFile(x)
 
-		'' -undef <id> [<destination .bi file>]
 		case OPT_UNDEF
-			hParseOptionWithString(x, ASTCLASS_UNDEF, "<id> argument")
+			hParseOption1Param(x, opt, "<id> argument")
 			hParseDestinationBiFile(x)
 
-		'' -addinclude <.bi file> [<destination .bi file>]
 		case OPT_ADDINCLUDE
-			hParseOptionWithString(x, ASTCLASS_ADDINCLUDE, "<.bi file> argument")
+			hParseOption1Param(x, opt, "<.bi file> argument")
 			hParseDestinationBiFile(x)
 
 		case else
@@ -910,7 +939,7 @@ private sub hParseArgs(byref x as integer)
 			else
 				'' Input file
 				var filename = hPathRelativeToArgsFile(x)
-				astAppend(frog.script, astNewTEXT(filename))
+				astAppend(frog.script, astNewOPTION(OPT_I, filename))
 
 				'' The first .h file name seen will be used as default name for the ouput .bi,
 				'' in case no explicit .bi file names are given via -emit or -o
@@ -952,15 +981,15 @@ private function hSkipToEndOfBlock(byval i as ASTNODE ptr) as ASTNODE ptr
 	function = i
 end function
 
-private sub frogAddApi(byval verand as ASTNODE ptr, byval options as ASTNODE ptr)
+private sub frogAddApi(byval verand as ASTNODE ptr, byval script as ASTNODE ptr)
 	assert(astIsVERAND(verand))
 	var i = frog.apicount
 	frog.apicount += 1
 	frog.apis = reallocate(frog.apis, frog.apicount * sizeof(*frog.apis))
-	clear(frog.apis[i], 0, sizeof((frog.apis[i])))
 	with frog.apis[i]
+		.constructor()
 		.verand = verand
-		.options = options
+		.script = script
 	end with
 end sub
 
@@ -1128,75 +1157,34 @@ private sub frogEvaluateScript _
 	frogAddApi(conditions, options)
 end sub
 
-private sub hDistributeBiSpecificOptions(byval options as ASTNODE ptr)
-	var i = options->head
-	while i
-
-		'' .bi-specific option?
-		select case i->class
-		case ASTCLASS_INCLIB, ASTCLASS_UNDEF, ASTCLASS_ADDINCLUDE
-			dim bi as integer
-			if i->alias then
-				bi = frogLookupBiFromBi(*i->alias)
-				if bi < 0 then
-					oops("couldn't find destination .bi '" + *i->alias + "', which was specified to hold " + astDumpOne(i))
-				end if
-			else
-				'' No destination .bi file given for this -inclib/-undef option;
-				'' add it to the first .bi.
-				'' This allows the simple use case where there's just one output .bi,
-				'' and it's not necessary to specify a destination .bi for each option.
-				bi = 0
-			end if
-
-			assert((bi >= 0) and (bi < frog.bicount))
-			with frog.bis[bi]
-				select case i->class
-				case ASTCLASS_INCLIB
-					astBuildGroupAndAppend(.options.inclibs, astNew(ASTCLASS_INCLIB, i->text))
-				case ASTCLASS_UNDEF
-					astBuildGroupAndAppend(.options.undefs, astNew(ASTCLASS_UNDEF, i->text))
-				case ASTCLASS_ADDINCLUDE
-					astBuildGroupAndAppend(.options.addincludes, astNew(ASTCLASS_PPINCLUDE, i->text))
-				end select
-			end with
-		end select
-
-		i = i->next
-	wend
-end sub
-
-private function frogParse(byval options as ASTNODE ptr) as ASTNODE ptr
+private function frogParse(byref api as ApiInfo) as ASTNODE ptr
 	tkInit()
 
 	'' C preprocessing
-	cppInit()
+	cppInit(api)
 
 	scope
 		'' Pre-#defines are simply inserted at the top of the token
 		'' buffer, so that cppMain() parses them like any other #define.
 
-		var i = options->head
+		var i = api.script->head
 		while i
 
-			select case i->class
-			case ASTCLASS_PPDEFINE
-				dim as string prettyname, s
-
-				prettyname = "pre-#define"
-				s = "#define " + *i->text
-				if i->expr then
-					assert(astIsTEXT(i->expr))
-					s += " " + *i->expr->text
+			assert(i->class = ASTCLASS_OPTION)
+			select case i->opt
+			case OPT_DEFINE
+				var s = "#define " + *i->text
+				if i->alias then
+					s += " " + *i->alias
 				end if
 				s += !"\n"
 
 				var x = tkGetCount()
-				lexLoadC(x, s, sourceinfoForZstring(prettyname))
+				lexLoadC(x, s, sourceinfoForZstring("pre-#define"))
 				tkSetRemove(x, tkGetCount() - 1)
 
-			case ASTCLASS_INCDIR
-				cppAddIncDir(astClone(i))
+			case OPT_INCDIR
+				cppAddIncDir(i->text)
 
 			end select
 
@@ -1208,9 +1196,10 @@ private function frogParse(byval options as ASTNODE ptr) as ASTNODE ptr
 	'' * behind command line pre-#defines so that default.h can use them
 	'' * marked for removal so the code won't be preserved
 	scope
-		var i = options->head
+		var i = api.script->head
 		while i
-			if i->class = ASTCLASS_FBFROGPREINCLUDE then
+			assert(i->class = ASTCLASS_OPTION)
+			if i->opt = OPT_FBFROGINCLUDE then
 				var filename = hFindResource(*i->text)
 				var x = tkGetCount()
 				var file = filebuffersAdd(filename, type(NULL, 0))
@@ -1223,11 +1212,11 @@ private function frogParse(byval options as ASTNODE ptr) as ASTNODE ptr
 
 	'' Add #includes for pre-#includes
 	scope
-		var i = options->head
+		var i = api.script->head
 		while i
-			if i->class = ASTCLASS_PREINCLUDE then
-				var filename = *i->text
-				cppAppendIncludeDirective(filename, TKFLAG_PREINCLUDE)
+			assert(i->class = ASTCLASS_OPTION)
+			if i->opt = OPT_INCLUDE then
+				cppAppendIncludeDirective(i->text, TKFLAG_PREINCLUDE)
 			end if
 			i = i->next
 		wend
@@ -1246,10 +1235,11 @@ private function frogParse(byval options as ASTNODE ptr) as ASTNODE ptr
 	'' matter.
 	''
 	scope
-		var i = options->head
+		var i = api.script->head
 		while i
-			if astIsTEXT(i) then
-				cppAppendIncludeDirective(*i->text, TKFLAG_ROOTFILE)
+			assert(i->class = ASTCLASS_OPTION)
+			if i->opt = OPT_I then
+				cppAppendIncludeDirective(i->text, TKFLAG_ROOTFILE)
 			end if
 			i = i->next
 		wend
@@ -1269,18 +1259,20 @@ private function frogParse(byval options as ASTNODE ptr) as ASTNODE ptr
 
 	hMoveDirectivesOutOfConstructs()
 
-	if frog.replacementcount > 0 then
+	if api.replacementcount > 0 then
 		hApplyReplacements()
 	end if
 
 	tkTurnCPPTokensIntoCIds()
 
 	'' C parsing
-	cInit()
+	cInit(api)
 	var ast = cMain()
 	cEnd()
 
 	tkEnd()
+
+	hlGlobal(ast, api)
 
 	function = ast
 end function
@@ -1316,14 +1308,6 @@ end sub
 
 	hashInit(@frog.ucasebihash, 6, TRUE)
 	hashInit(@frog.bilookupcache, 6, TRUE)
-	for i as integer = lbound(frog.renameopt) to ubound(frog.renameopt)
-		hashInit(@frog.renameopt(i), 3, FALSE)
-	next
-	for i as integer = lbound(frog.idopt) to ubound(frog.idopt)
-		hashInit(@frog.idopt(i), 3, TRUE)
-	next
-	hashInit(@frog.removeinclude, 3, TRUE)
-	hashInit(@frog.setarraysizeoptions, 3, TRUE)
 
 	tkInit()
 
@@ -1343,7 +1327,7 @@ end sub
 	tkEnd()
 
 	'' Add the implicit default.h pre-#include
-	astPrepend(frog.script, astNew(ASTCLASS_FBFROGPREINCLUDE, "default.h"))
+	astPrepend(frog.script, astNewOPTION(OPT_FBFROGINCLUDE, "default.h"))
 
 	if frog.nodefaultscript = FALSE then
 		'' Parse default.fbfrog and prepend the options from it to the
@@ -1393,15 +1377,12 @@ end sub
 	for api as integer = 0 to frog.apicount - 1
 		print hMakeProgressString(api + 1, frog.apicount) + " " + astDumpPrettyVersion(frog.apis[api].verand)
 
-		var options = frog.apis[api].options
-
-		'' Distribute .bi-file-specific options for this API to invidiual .bi files
-		hDistributeBiSpecificOptions(options)
+		'' Prepare the API options for the following cpp/c/highlevel steps (load them into hash tables etc.)
+		'' This writes into frog.bis to fill each .bi's ApiSpecificBiOptions.
+		frog.apis[api].loadOptions()
 
 		'' Parse code for this API into an AST
-		var ast = frogParse(options)
-
-		hlGlobal(ast)
+		var ast = frogParse(frog.apis[api])
 
 		'' Prepare "incoming" trees
 		for bi as integer = 0 to frog.bicount - 1
@@ -1447,7 +1428,7 @@ end sub
 		for bi as integer = 0 to frog.bicount - 1
 			with frog.bis[bi]
 				'' Do file-specific AST work (e.g. add Extern block)
-				hlFile(.incoming, .options)
+				hlFile(.incoming, frog.apis[api], .options)
 
 				'' Merge the "incoming" tree into the "final" tree
 				astMergeNext(astNewVEROR(astClone(frog.apis[api].verand)), .final, .incoming)

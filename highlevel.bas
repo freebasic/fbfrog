@@ -3,6 +3,7 @@
 #include once "fbfrog.bi"
 
 namespace hl
+	dim shared api as ApiInfo ptr
 	dim shared symbols as THASH
 
 	'' Used by both typedef expansion and forward declaration addition passes
@@ -402,7 +403,7 @@ private sub hlApplyRemoveOption(byval ast as ASTNODE ptr, byval astclass as inte
 		var nxt = i->next
 
 		if i->class = astclass then
-			if hashContains(@frog.idopt(opt), i->text, hashHash(i->text)) then
+			if hashContains(@hl.api->idopt(opt), i->text, hashHash(i->text)) then
 				astRemove(ast, i)
 			end if
 		end if
@@ -416,7 +417,7 @@ private sub hlApplyDropProcBodyOptions(byval ast as ASTNODE ptr)
 	while i
 
 		if (i->class = ASTCLASS_PROC) and (i->expr <> NULL) then
-			if hashContains(@frog.idopt(OPT_DROPPROCBODY), i->text, hashHash(i->text)) then
+			if hashContains(@hl.api->idopt(OPT_DROPPROCBODY), i->text, hashHash(i->text)) then
 				astDelete(i->expr)
 				i->expr = NULL
 			end if
@@ -455,7 +456,7 @@ private function hlSetArraySizes(byval n as ASTNODE ptr) as integer
 			var dimension = n->array->head
 			assert(dimension->class = ASTCLASS_DIMENSION)
 			if dimension->expr->class = ASTCLASS_ELLIPSIS then
-				dim size as zstring ptr = hashLookupDataOrNull(@frog.setarraysizeoptions, n->text)
+				dim size as zstring ptr = hashLookupDataOrNull(@hl.api->setarraysizeoptions, n->text)
 				if size then
 					astDelete(dimension->expr)
 					dimension->expr = astNewTEXT(size)
@@ -467,10 +468,9 @@ private function hlSetArraySizes(byval n as ASTNODE ptr) as integer
 end function
 
 private function hApplyRenameOption(byval opt as integer, byval n as ASTNODE ptr) as integer
-	dim as ASTNODE ptr renameinfo = hashLookupDataOrNull(@frog.renameopt(opt), n->text)
-	if renameinfo then
-		assert(*n->text = *renameinfo->alias)
-		astRenameSymbol(n, renameinfo->text)
+	dim as zstring ptr newid = hashLookupDataOrNull(@hl.api->renameopt(opt), n->text)
+	if newid then
+		astRenameSymbol(n, newid)
 		function = TRUE
 	end if
 end function
@@ -504,7 +504,7 @@ private function hlApplyRenameOption(byval n as ASTNODE ptr) as integer
 	case ASTCLASS_PPDEFINE
 		hApplyRenameOption(OPT_RENAMEDEFINE, n)
 
-		if frog.renameopt(OPT_RENAMEMACROPARAM).count > 0 then
+		if hl.api->renameopt(OPT_RENAMEMACROPARAM).count > 0 then
 			var param = n->head
 			var renamed_param_here = FALSE
 			while param
@@ -749,7 +749,7 @@ end sub
 private sub hFixCharWchar(byval n as ASTNODE ptr)
 	'' Affected by -nostring?
 	if n->text then
-		if hashContains(@frog.idopt(OPT_NOSTRING), n->text, hashHash(n->text)) then
+		if hashContains(@hl.api->idopt(OPT_NOSTRING), n->text, hashHash(n->text)) then
 			hTurnStringIntoByte(n)
 			exit sub
 		end if
@@ -1054,7 +1054,7 @@ private function hShouldAddForwardDeclForType(byref typ as hl.TYPENODE) as integ
 			function = TRUE
 		else
 			'' Not defined here; only if -addforwarddecl was given
-			function = hashContains(@frog.idopt(OPT_ADDFORWARDDECL), typ.id, hashHash(typ.id))
+			function = hashContains(@hl.api->idopt(OPT_ADDFORWARDDECL), typ.id, hashHash(typ.id))
 		end if
 	end if
 end function
@@ -1281,7 +1281,7 @@ private sub hlAddUndefsAboveDecls(byval ast as ASTNODE ptr)
 	while i
 
 		if i->text then
-			if hashContains(@frog.idopt(OPT_UNDEFBEFOREDECL), i->text, hashHash(i->text)) then
+			if hashContains(@hl.api->idopt(OPT_UNDEFBEFOREDECL), i->text, hashHash(i->text)) then
 				var undef = astNew(ASTCLASS_UNDEF, i->text)
 				undef->location = i->location
 				astInsert(ast, undef, i)
@@ -1338,7 +1338,7 @@ private sub hTranslateHeaderFileName(byref filename as string)
 	filename += ".bi"
 end sub
 
-private sub hlHandleIncludes(byval ast as ASTNODE ptr, byref bioptions as BiSpecificOptions)
+private sub hlHandleIncludes(byval ast as ASTNODE ptr, byref bioptions as ApiSpecificBiOptions)
 	'' Find node above which new #includes should be inserted. This should
 	'' always be behind existing #includes at the top.
 	var top = ast->head
@@ -1380,7 +1380,7 @@ private sub hlHandleIncludes(byval ast as ASTNODE ptr, byref bioptions as BiSpec
 		'' #include?
 		if i->class = ASTCLASS_PPINCLUDE then
 			var filename = *i->text
-			if hashContains(@frog.removeinclude, filename, hashHash(filename)) then
+			if hashContains(@hl.api->removeinclude, filename, hashHash(filename)) then
 				astRemove(ast, i)
 			else
 				hTranslateHeaderFileName(filename)
@@ -1531,27 +1531,29 @@ end sub
 '' If any declarations are added to the AST here, care must be taken to set the
 '' ASTNODE.location, so they can be assigned to the proper output .bi file.
 ''
-sub hlGlobal(byval ast as ASTNODE ptr)
+sub hlGlobal(byval ast as ASTNODE ptr, byref api as ApiInfo)
+	hl.api = @api
+
 	hashInit(@hl.symbols, 10, TRUE)
 	astVisit(ast, @hlFixExpressions)
 	hashEnd(@hl.symbols)
 
-	if frog.idopt(OPT_REMOVEPROC).count > 0 then
+	if api.idopt(OPT_REMOVEPROC).count > 0 then
 		hlApplyRemoveOption(ast, ASTCLASS_PROC, OPT_REMOVEPROC)
 	end if
 
-	if frog.idopt(OPT_REMOVEVAR).count > 0 then
+	if api.idopt(OPT_REMOVEVAR).count > 0 then
 		hlApplyRemoveOption(ast, ASTCLASS_VAR, OPT_REMOVEVAR)
 	end if
 
-	if frog.idopt(OPT_DROPPROCBODY).count > 0 then
+	if api.idopt(OPT_DROPPROCBODY).count > 0 then
 		hlApplyDropProcBodyOptions(ast)
 	end if
 
 	astVisit(ast, @hlSetArraySizes)
 
 	'' Apply -rename* options, if any
-	if frog.have_renames then
+	if api.have_renames then
 		astVisit(ast, @hlApplyRenameOption)
 	end if
 
@@ -1655,15 +1657,15 @@ sub hlGlobal(byval ast as ASTNODE ptr)
 	hl.typecount = 0
 	hl.typeroom = 0
 
-	if frog.fixunsizedarrays then
+	if api.fixunsizedarrays then
 		hlFixUnsizedArrays(ast)
 	end if
 
-	if frog.disableconstants = FALSE then
+	if api.disableconstants = FALSE then
 		hlTurnDefinesIntoProperDeclarations(ast)
 	end if
 
-	if frog.dropmacrobodyscopes then
+	if api.dropmacrobodyscopes then
 		hlDropMacroBodyScopes(ast)
 	end if
 
@@ -1673,15 +1675,15 @@ sub hlGlobal(byval ast as ASTNODE ptr)
 	'' move a declaration based on its name in the .bi file, rather than
 	'' going through the .h file and find the original name there (thinking
 	'' about tag names which are solved out in favour of typedefs, etc).
-	if frog.moveaboveoptions then
-		var i = frog.moveaboveoptions->head
+	if api.moveaboveoptions then
+		var i = api.moveaboveoptions->head
 		while i
 			hlApplyMoveOption(ast, *i->text, *i->alias)
 			i = i->next
 		wend
 	end if
 
-	if frog.idopt(OPT_UNDEFBEFOREDECL).count > 0 then
+	if api.idopt(OPT_UNDEFBEFOREDECL).count > 0 then
 		hlAddUndefsAboveDecls(ast)
 	end if
 end sub
@@ -1690,7 +1692,8 @@ end sub
 '' .bi-file-specific highlevel transformations, intended to run on the
 '' API-specific ASTs in each output .bi file.
 ''
-sub hlFile(byval ast as ASTNODE ptr, byref bioptions as BiSpecificOptions)
+sub hlFile(byval ast as ASTNODE ptr, byref api as ApiInfo, byref bioptions as ApiSpecificBiOptions)
+	hl.api = @api
 	hl.need_extern = FALSE
 	hl.stdcalls = 0
 	hl.cdecls = 0
@@ -1715,7 +1718,7 @@ sub hlFile(byval ast as ASTNODE ptr, byref bioptions as BiSpecificOptions)
 
 		var externblock = @"C"
 		if hl.mostusedcallconv = ASTATTRIB_STDCALL then
-			if frog.windowsms then
+			if api.windowsms then
 				externblock = @"Windows-MS"
 			else
 				externblock = @"Windows"
@@ -1729,7 +1732,7 @@ sub hlFile(byval ast as ASTNODE ptr, byref bioptions as BiSpecificOptions)
 
 	'' If any symbols from this file were renamed, add a rename list at the top
 	'' TODO: add it above #inclibs/#includes even
-	if frog.have_renames then
+	if api.have_renames then
 		var entries = hlBuildRenameList(ast)
 		if entries->head then
 			var renamelist = astNew(ASTCLASS_RENAMELIST, "The following symbols have been renamed:")

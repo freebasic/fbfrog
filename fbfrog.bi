@@ -351,9 +351,30 @@ enum
 
 	TK_ARGSFILE
 	OPT__FIRST
+
 	OPT_O = OPT__FIRST
+	OPT_EMIT
+	OPT_DONTEMIT
+	OPT_I
 	OPT_V
 	OPT_NODEFAULTSCRIPT
+
+	OPT_DECLAREDEFINES
+	OPT_DECLAREVERSIONS
+	OPT_DECLAREBOOL
+	OPT_SELECT
+	OPT_CASE
+	OPT_CASEELSE
+	OPT_ENDSELECT
+	OPT_IFDEF
+	OPT_ELSE
+	OPT_ENDIF
+
+	OPT_DEFINE
+	OPT_INCLUDE
+	OPT_FBFROGINCLUDE
+	OPT_INCDIR
+
 	OPT_WINDOWSMS
 	OPT_CLONG32
 	OPT_FIXUNSIZEDARRAYS
@@ -379,26 +400,11 @@ enum
 	OPT_REMOVEINCLUDE
 	OPT_SETARRAYSIZE
 	OPT_MOVEABOVE
-	OPT_DEFINE
-	OPT_INCLUDE
-	OPT_FBFROGINCLUDE
-	OPT_INCDIR
 	OPT_INCLIB
 	OPT_UNDEF
 	OPT_ADDINCLUDE
-	OPT_EMIT
-	OPT_DONTEMIT
-	OPT_DECLAREDEFINES
-	OPT_DECLAREVERSIONS
-	OPT_DECLAREBOOL
-	OPT_SELECT
-	OPT_CASE
-	OPT_CASEELSE
-	OPT_ENDSELECT
-	OPT_IFDEF
-	OPT_ELSE
-	OPT_ENDIF
-	OPT__LAST = OPT_ENDIF
+
+	OPT__LAST = OPT_ADDINCLUDE
 
 	TK__COUNT
 end enum
@@ -541,14 +547,9 @@ enum
 	ASTCLASS_CASE
 	ASTCLASS_CASEELSE
 	ASTCLASS_ENDSELECT
-	ASTCLASS_INCDIR
-	ASTCLASS_INCLIB
-	ASTCLASS_UNDEF
-	ASTCLASS_ADDINCLUDE
-	ASTCLASS_PREINCLUDE
-	ASTCLASS_FBFROGPREINCLUDE
+	ASTCLASS_OPTION
 
-	'' Preprocessor directives
+	'' Declarations/statements
 	ASTCLASS_PPINCLUDE
 	ASTCLASS_PPDEFINE
 	ASTCLASS_PPIF
@@ -556,8 +557,9 @@ enum
 	ASTCLASS_PPELSE
 	ASTCLASS_PPENDIF
 	ASTCLASS_PPERROR
-
-	'' Declarations/statements
+	ASTCLASS_PRAGMAONCE
+	ASTCLASS_INCLIB
+	ASTCLASS_UNDEF
 	ASTCLASS_STRUCT
 	ASTCLASS_UNION
 	ASTCLASS_ENUM
@@ -572,7 +574,6 @@ enum
 	ASTCLASS_EXTERNBLOCKBEGIN
 	ASTCLASS_EXTERNBLOCKEND
 	ASTCLASS_RETURN
-	ASTCLASS_PRAGMAONCE
 
 	'' Expression atoms etc.
 	ASTCLASS_CONSTI
@@ -686,6 +687,7 @@ type ASTNODE
 	union
 		paramcount	as integer  '' PPDEFINE: -1 = #define m, 0 = #define m(), 1 = #define m(a), ...
 		maxalign	as integer  '' STRUCT/UNION: FIELD=N/#pragma pack(N)
+		opt		as integer  '' OPTION: OPT_*
 	end union
 
 	'' Linked list of child nodes, operands/fields/parameters/...
@@ -721,6 +723,7 @@ declare function astNewIIF _
 declare function astNewGROUP overload() as ASTNODE ptr
 declare function astNewGROUP overload(byval c1 as ASTNODE ptr, byval c2 as ASTNODE ptr = NULL) as ASTNODE ptr
 declare sub astBuildGroupAndAppend(byref group as ASTNODE ptr, byval n as ASTNODE ptr)
+declare function astNewOPTION(byval opt as integer, byval text1 as zstring ptr = NULL, byval text2 as zstring ptr = NULL) as ASTNODE ptr
 declare function astCloneChildren(byval src as ASTNODE ptr) as ASTNODE ptr
 declare function astGroupContains(byval group as ASTNODE ptr, byval lookfor as ASTNODE ptr) as integer
 declare function astGroupContainsAnyChildrenOf(byval l as ASTNODE ptr, byval r as ASTNODE ptr) as integer
@@ -788,6 +791,38 @@ declare sub astProcessVerblocks(byval code as ASTNODE ptr)
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
+type CodeReplacement
+	as zstring ptr fromcode, tocode
+	tofb as integer
+	patternlen as integer '' used temporarily by hApplyReplacements()
+end type
+
+type ApiInfo
+	verand as ASTNODE ptr
+	script as ASTNODE ptr
+
+	as integer windowsms, clong32, fixunsizedarrays, disableconstants
+	as integer fixmingwaw, nofunctionbodies, dropmacrobodyscopes
+
+	have_renames as integer
+	renameopt(OPT_RENAMETYPEDEF to OPT_RENAMEMACROPARAM) as THASH
+	idopt(OPT_REMOVEDEFINE to OPT_NOEXPAND) as THASH
+	removeinclude as THASH
+	setarraysizeoptions as THASH
+	moveaboveoptions as ASTNODE ptr
+
+	replacements as CodeReplacement ptr
+	replacementcount as integer
+
+	declare constructor()
+	declare destructor()
+	declare sub addReplacement(byval fromcode as zstring ptr, byval tocode as zstring ptr, byval tofb as integer)
+	declare sub loadOption(byval opt as integer, byval param1 as zstring ptr, byval param2 as zstring ptr)
+	declare sub loadOptions()
+end type
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
 declare sub lexInit()
 declare function lexLoadC(byval x as integer, byval code as zstring ptr, byref source as SourceInfo) as integer
 declare function lexLoadArgs(byval x as integer, byval args as zstring ptr, byref source as SourceInfo) as integer
@@ -813,56 +848,31 @@ declare function hNumberLiteral _
 extern as integer cprecedence(ASTCLASS_CLOGOR to ASTCLASS_IIF)
 declare function hDefineHead(byref x as integer) as ASTNODE ptr
 
-declare sub cppInit()
+declare sub cppInit(byref api as ApiInfo)
 declare sub cppEnd()
-declare sub cppAddIncDir(byval incdir as ASTNODE ptr)
-declare sub cppAppendIncludeDirective(byref filename as string, byval tkflags as integer)
+declare sub cppAddIncDir(byval incdir as zstring ptr)
+declare sub cppAppendIncludeDirective(byval filename as zstring ptr, byval tkflags as integer)
 declare sub cppMain()
 declare sub hMoveDirectivesOutOfConstructs()
 declare sub hApplyReplacements()
 
-declare sub cInit()
+declare sub cInit(byref api as ApiInfo)
 declare sub cEnd()
 declare function cMain() as ASTNODE ptr
 
-type BiSpecificOptions
+type ApiSpecificBiOptions
 	as ASTNODE ptr inclibs, undefs, addincludes
 end type
 
-declare sub hlGlobal(byval ast as ASTNODE ptr)
-declare sub hlFile(byval ast as ASTNODE ptr, byref bioptions as BiSpecificOptions)
+declare sub hlGlobal(byval ast as ASTNODE ptr, byref api as ApiInfo)
+declare sub hlFile(byval ast as ASTNODE ptr, byref api as ApiInfo, byref bioptions as ApiSpecificBiOptions)
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-type FROGAPI
-	verand		as ASTNODE ptr
-	options		as ASTNODE ptr
-	ast		as ASTNODE ptr
-end type
-
-type CodeReplacement
-	as zstring ptr fromcode, tocode
-	tofb as integer
-	patternlen as integer '' used temporarily by hApplyReplacements()
-end type
-
 namespace frog
-	extern as integer verbose, windowsms, clong32, fixunsizedarrays, disableconstants, fixmingwaw, nofunctionbodies, dropmacrobodyscopes
-
+	extern as integer verbose
 	extern as ASTNODE ptr script
 	extern as ASTNODE ptr completeverors, fullveror
-	extern as FROGAPI ptr apis
-	extern as integer apicount
-
-	extern have_renames as integer
-	extern renameopt(OPT_RENAMETYPEDEF to OPT_RENAMEMACROPARAM) as THASH
-	extern idopt(OPT_REMOVEDEFINE to OPT_NOEXPAND) as THASH
-	extern removeinclude as THASH
-	extern setarraysizeoptions as THASH
-	extern moveaboveoptions as ASTNODE ptr
-
-	extern as CodeReplacement ptr replacements
-	extern as integer replacementcount
 end namespace
 
 declare function frogLookupBiFromH(byval hfile as zstring ptr) as integer

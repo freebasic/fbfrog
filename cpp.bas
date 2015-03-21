@@ -434,6 +434,7 @@ enum
 end enum
 
 namespace cpp
+	dim shared api as ApiInfo ptr
 	dim shared as integer x  '' Current token index
 
 	type STACKNODE
@@ -496,7 +497,8 @@ namespace cpp
 	dim shared filetb as THASH  '' data = index into files array
 end namespace
 
-sub cppInit()
+sub cppInit(byref api as ApiInfo)
+	cpp.api = @api
 	cpp.x = 0
 
 	'' Toplevel file context
@@ -553,12 +555,12 @@ end sub
 
 #define cppSkipping() (cpp.skiplevel <> MAXSTACK)
 
-sub cppAddIncDir(byval incdir as ASTNODE ptr)
-	astAppend(cpp.incdirs, incdir)
+sub cppAddIncDir(byval incdir as zstring ptr)
+	astAppend(cpp.incdirs, astNewTEXT(incdir))
 end sub
 
-sub cppAppendIncludeDirective(byref filename as string, byval tkflags as integer)
-	var code = "#include """ + filename + """" + !"\n"
+sub cppAppendIncludeDirective(byval filename as zstring ptr, byval tkflags as integer)
+	var code = "#include """ + *filename + """" + !"\n"
 	var x = tkGetCount()
 	lexLoadC(x, code, sourceinfoForZstring(code))
 	tkAddFlags(x, tkGetCount() - 1, TKFLAG_REMOVE or tkflags)
@@ -1089,7 +1091,7 @@ private function hCheckForMacroCall(byval x as integer) as DEFINEINFO ptr
 	end if
 
 	'' Only expand if not marked otherwise
-	if hashContains(@frog.idopt(OPT_NOEXPAND), id, hashHash(id)) or _
+	if hashContains(@cpp.api->idopt(OPT_NOEXPAND), id, hashHash(id)) or _
 	    (tkGetFlags(x) and TKFLAG_NOEXPAND) or _
 	    (definfo->macro->attrib and ASTATTRIB_POISONED) then
 		return NULL
@@ -2200,7 +2202,7 @@ private sub cppDefine(byval begin as integer, byref flags as integer)
 
 	'' Body
 	var xbody = cpp.x
-	if frog.fixmingwaw then
+	if cpp.api->fixmingwaw then
 		'' Expand __MINGW_NAME_AW() & co inside this #define body,
 		'' but only those few selected macros, and only at the beginning
 		'' of the macro body (it seems like that's good enough to handle
@@ -2255,7 +2257,7 @@ private sub cppDefine(byval begin as integer, byref flags as integer)
 
 	'' Normally, we preserve #define directives (unlike the other CPP directives),
 	'' thus no generic tkSetRemove() here. Unless the symbol was registed for removal.
-	if hashContains(@frog.idopt(OPT_REMOVEDEFINE), macro->text, hashHash(macro->text)) = FALSE then
+	if hashContains(@cpp.api->idopt(OPT_REMOVEDEFINE), macro->text, hashHash(macro->text)) = FALSE then
 		flags and= not TKFLAG_REMOVE
 	end if
 end sub
@@ -2609,10 +2611,10 @@ sub hApplyReplacements()
 	''  * then inserting/removing tokens from the main part won't affect our
 	''    offsets into the pattern part
 	var x = 0
-	for i as integer = 0 to frog.replacementcount - 1
+	for i as integer = 0 to cpp.api->replacementcount - 1
 		var begin = x
-		x = lexLoadC(x, frog.replacements[i].fromcode, sourceinfoForZstring("C code pattern from replacements file"))
-		frog.replacements[i].patternlen = x - begin
+		x = lexLoadC(x, cpp.api->replacements[i].fromcode, sourceinfoForZstring("C code pattern from replacements file"))
+		cpp.api->replacements[i].patternlen = x - begin
 	next
 	var xmainbegin = x
 
@@ -2636,8 +2638,8 @@ sub hApplyReplacements()
 		var constructlen = last - x + 1
 		var patternbegin = 0
 
-		for i as integer = 0 to frog.replacementcount - 1
-			var replacement = frog.replacements + i
+		for i as integer = 0 to cpp.api->replacementcount - 1
+			var replacement = cpp.api->replacements + i
 
 			'' Does the construct match this replacement pattern?
 			if constructlen = replacement->patternlen then
