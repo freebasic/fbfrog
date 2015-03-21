@@ -512,9 +512,9 @@ private function hIsStringOrId(byval x as integer) as integer
 	function = (tkGet(x) = TK_STRING) or (tkGet(x) = TK_ID)
 end function
 
-private sub hExpectPath(byval x as integer)
+private sub hExpectStringOrId(byval x as integer, byval paramdescription as zstring ptr)
 	if hIsStringOrId(x) = FALSE then
-		tkOopsExpected(x, "<path> argument")
+		tkOopsExpected(x, paramdescription)
 	end if
 end sub
 
@@ -570,9 +570,7 @@ private sub hParseSelectCompound(byref x as integer)
 			dim as ASTNODE ptr condition
 			if selectsymbol then
 				'' <version number>
-				if hIsStringOrId(x) = FALSE then
-					tkOopsExpected(x, @"<version number> argument")
-				end if
+				hExpectStringOrId(x, "<version number> argument")
 
 				'' <symbol> = <versionnumber>
 				condition = astNew(ASTCLASS_EQ, astNewTEXT(selectsymbol), astNewTEXT(tkGetText(x)))
@@ -650,21 +648,11 @@ private sub hParseIfDefCompound(byref x as integer)
 	loop
 end sub
 
-private sub hParseOptionWithString _
-	( _
-		byref x as integer, _
-		byval astclass as integer, _
-		byval argdescription as zstring ptr _
-	)
-
+private sub hParseOptionWithString(byref x as integer, byval astclass as integer, byval paramdescription as zstring ptr)
 	x += 1
-
-	if hIsStringOrId(x) = FALSE then
-		tkOopsExpected(x, argdescription)
-	end if
+	hExpectStringOrId(x, paramdescription)
 	astAppend(frog.script, astNew(astclass, tkGetText(x)))
 	x += 1
-
 end sub
 
 private sub hParseDestinationBiFile(byref x as integer)
@@ -697,7 +685,7 @@ private sub hParseArgs(byref x as integer)
 			x += 1
 
 			'' <path>
-			hExpectPath(x)
+			hExpectStringOrId(x, "<path>")
 			frog.outname = hPathRelativeToArgsFile(x)
 			x += 1
 
@@ -705,7 +693,7 @@ private sub hParseArgs(byref x as integer)
 			x += 1
 
 			'' <file>
-			hExpectPath(x)
+			hExpectStringOrId(x, "<file>")
 			scope
 				dim parser as ReplacementsParser = ReplacementsParser(*tkGetText(x))
 				parser.parse()
@@ -740,9 +728,7 @@ private sub hParseArgs(byref x as integer)
 		case OPT_REMOVEINCLUDE
 			x += 1
 
-			if hIsStringOrId(x) = FALSE then
-				tkOopsExpected(x, "<filename> argument")
-			end if
+			hExpectStringOrId(x, "<filename> argument")
 			hashAddOverwrite(@frog.removeinclude, tkGetText(x), NULL)
 			x += 1
 
@@ -756,9 +742,7 @@ private sub hParseArgs(byref x as integer)
 			x += 1
 
 			'' <size>
-			if hIsStringOrId(x) = FALSE then
-				tkOopsExpected(x, "<size> argument")
-			end if
+			hExpectStringOrId(x, "<size> argument")
 			var size = tkGetText(x)
 			x += 1
 
@@ -774,9 +758,7 @@ private sub hParseArgs(byref x as integer)
 			x += 1
 
 			'' <ref>
-			if hIsStringOrId(x) = FALSE then
-				tkOopsExpected(x, "<ref> argument")
-			end if
+			hExpectStringOrId(x, "<ref> argument")
 			var ref = tkGetText(x)
 			x += 1
 
@@ -789,15 +771,11 @@ private sub hParseArgs(byref x as integer)
 		case OPT_EMIT
 			x += 1
 
-			if hIsStringOrId(x) = FALSE then
-				tkOopsExpected(x, "<filename-pattern> argument")
-			end if
+			hExpectStringOrId(x, "<filename-pattern> argument")
 			var pattern = *tkGetText(x)
 			x += 1
 
-			if hIsStringOrId(x) = FALSE then
-				tkOopsExpected(x, "<file> argument")
-			end if
+			hExpectStringOrId(x, "<file> argument")
 			var filename = *tkGetText(x)
 			x += 1
 
@@ -807,9 +785,7 @@ private sub hParseArgs(byref x as integer)
 		case OPT_DONTEMIT
 			x += 1
 
-			if hIsStringOrId(x) = FALSE then
-				tkOopsExpected(x, "<filename-pattern> argument")
-			end if
+			hExpectStringOrId(x, "<filename-pattern> argument")
 			frogAddPattern(*tkGetText(x), -1)
 			x += 1
 
@@ -902,7 +878,7 @@ private sub hParseArgs(byref x as integer)
 			x += 1
 
 			'' <path>
-			hExpectPath(x)
+			hExpectStringOrId(x, "<path>")
 			astAppend(frog.script, astNew(ASTCLASS_INCDIR, hPathRelativeToArgsFile(x)))
 			x += 1
 
