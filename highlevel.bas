@@ -824,7 +824,7 @@ private function hlRenameJobAdd(byval oldid as zstring ptr, byval newname as AST
 	'' name, the UDT will become "renamed" too, and thus the type will
 	'' continue to appear in renamelists.
 	var newid = astNewTEXT(newname->text)
-	newid->alias = strDuplicate(newname->alias)
+	astSetAlias(newid, newname->alias)
 	newid->attrib = newname->attrib and ASTATTRIB_NORENAMELIST
 
 	if item->s then
@@ -850,8 +850,7 @@ private sub hMaybeApplyRenameJob(byval n as ASTNODE ptr)
 
 		'' Change alias too
 		if newid->alias then
-			deallocate(n->alias)
-			n->alias = strDuplicate(newid->alias)
+			astSetAlias(n, newid->alias)
 		end if
 
 		n->attrib or= newid->attrib and ASTATTRIB_NORENAMELIST

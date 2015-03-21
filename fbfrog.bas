@@ -670,7 +670,7 @@ end sub
 private sub hParseDestinationBiFile(byref x as integer)
 	'' [<destination .bi file>]
 	if hIsStringOrId(x) then
-		frog.script->tail->alias = strDuplicate(tkGetText(x))
+		astSetAlias(frog.script->tail, tkGetText(x))
 		x += 1
 	end if
 end sub
@@ -782,7 +782,7 @@ private sub hParseArgs(byref x as integer)
 
 			if frog.moveaboveoptions = NULL then frog.moveaboveoptions = astNewGROUP()
 			var n = astNewTEXT(id)
-			n->alias = strDuplicate(ref)
+			astSetAlias(n, ref)
 			astAppend(frog.moveaboveoptions, n)
 
 		'' -emit <filename-pattern> <file>

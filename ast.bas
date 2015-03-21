@@ -387,6 +387,11 @@ sub astSetText(byval n as ASTNODE ptr, byval text as zstring ptr)
 	n->text = strDuplicate(text)
 end sub
 
+sub astSetAlias(byval n as ASTNODE ptr, byval alias_ as zstring ptr)
+	deallocate(n->alias)
+	n->alias = strDuplicate(alias_)
+end sub
+
 sub astRenameSymbol(byval n as ASTNODE ptr, byval newid as zstring ptr, byval add_to_renamelist as integer)
 	if n->alias = NULL then
 		n->alias = n->text
