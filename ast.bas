@@ -40,7 +40,6 @@ dim shared as zstring ptr astnodename(0 to ...) => _
 	@"case"         , _
 	@"caseelse"     , _
 	@"endselect"    , _
-	@"file"         , _
 	@"incdir"       , _
 	@"inclib"       , _
 	@"undef"        , _
