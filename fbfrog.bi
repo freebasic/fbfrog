@@ -741,7 +741,6 @@ declare function astReplace _
 declare sub astSetText(byval n as ASTNODE ptr, byval text as zstring ptr)
 declare sub astSetAlias(byval n as ASTNODE ptr, byval alias_ as zstring ptr)
 declare sub astRenameSymbol(byval n as ASTNODE ptr, byval newid as zstring ptr, byval add_to_renamelist as integer = TRUE)
-declare function astGetOrigId(byval n as ASTNODE ptr) as zstring ptr
 declare sub astSetType _
 	( _
 		byval n as ASTNODE ptr, _

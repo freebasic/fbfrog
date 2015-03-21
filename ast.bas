@@ -406,10 +406,6 @@ sub astRenameSymbol(byval n as ASTNODE ptr, byval newid as zstring ptr, byval ad
 	end if
 end sub
 
-function astGetOrigId(byval n as ASTNODE ptr) as zstring ptr
-	function = iif(n->alias, n->alias, n->text)
-end function
-
 sub astSetType(byval n as ASTNODE ptr, byval dtype as integer, byval subtype as ASTNODE ptr)
 	astDelete(n->subtype)
 	n->dtype = dtype
