@@ -46,7 +46,6 @@ dim shared as zstring ptr astnodename(0 to ...) => _
 	@"addinclude"   , _
 	@"preinclude"   , _
 	@"fbfrogpreinclude", _
-	@"pragmaonce"   , _
 	_
 	_ '' Preprocessor directives
 	@"ppinclude", _
@@ -72,6 +71,7 @@ dim shared as zstring ptr astnodename(0 to ...) => _
 	@"externbegin", _
 	@"externend"  , _
 	@"return"     , _
+	@"pragmaonce" , _
 	_
 	_ '' Expression atoms etc.
 	@"consti"    , _
