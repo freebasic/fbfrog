@@ -9,5 +9,4 @@ type UDT
 end type
 
 type myint as long
-
 dim shared privatei as long

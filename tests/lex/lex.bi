@@ -51,7 +51,6 @@ const A44 = &b0
 const A45 = &b1
 const A46 = &b10100110
 const A47 = &b0
-
 #define B1 "foo"
 #define B2 wstr("foo")
 #define B3 !"foo\n"
@@ -109,9 +108,7 @@ const A47 = &b0
 #define H5 !"\255"
 #define H6 !"\170"
 #define H7 !"a\0g"
-
 declare sub f()
-
 #define Z1 "abcdef"
 #define Z2 "abcdef"
 #define Z3 ""

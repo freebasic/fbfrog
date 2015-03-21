@@ -11,7 +11,6 @@ declare sub f6()
 declare sub f7()
 declare sub f8()
 declare sub f9()
-
 extern i1 as long
 extern i2 as long
 

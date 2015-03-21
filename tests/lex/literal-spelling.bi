@@ -1,7 +1,6 @@
 #pragma once
 
 #define stringify(s) #s
-
 dim shared a1 as zstring * 10 = "0"
 dim shared a2 as zstring * 10 = "00"
 dim shared a3 as zstring * 10 = "0x0"

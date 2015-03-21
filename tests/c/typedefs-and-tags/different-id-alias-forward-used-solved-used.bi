@@ -3,7 +3,6 @@
 extern "C"
 
 type A as B
-
 declare sub f1(byval as A ptr)
 
 type B

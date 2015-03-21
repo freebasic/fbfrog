@@ -3,13 +3,9 @@
 extern "C"
 
 replaced A
-
 extern i as long
-
 replaced B
-
 const C = 3
-
 private sub f()
 	doSomething()
 end sub

@@ -35,7 +35,6 @@ const A21 = 1ll
 const A22 = 1ull
 const B01 = 1 + 1
 const B02 = 1
-
 #define C1
 #define C2
 #define C3 foo

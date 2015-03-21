@@ -7,7 +7,6 @@ type AAA
 end type
 
 dim shared p as AAA ptr
-
 declare sub f(byval p as AAA ptr)
 
 type BBB

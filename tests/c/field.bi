@@ -26,10 +26,8 @@ type UDT
 	a as T ptr ptr ptr ptr
 	a as T
 	p as function(byval as long ptr) as long ptr
-
 	declare function f(byval as long, byval as long) as long
 	declare sub proc()
-
 	a as long
 	b as long
 	c as long
@@ -68,10 +66,8 @@ type UDT
 	c as long
 	d as function(byval a as long) as long
 	a as function(byval as long) as long ptr ptr
-
 	declare sub f(byval a as sub())
 	declare sub f(byval as sub())
-
 	a as sub(byval a as sub())
 	p as function(byval as function(byval as long ptr ptr ptr) as long ptr ptr ptr) as long ptr ptr ptr
 end type

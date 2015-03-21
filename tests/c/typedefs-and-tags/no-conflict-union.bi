@@ -5,6 +5,5 @@ union A
 end union
 
 type a as long
-
 dim shared x1 as A
 dim shared x2 as a

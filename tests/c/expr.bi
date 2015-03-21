@@ -394,7 +394,6 @@ end enum
 #define A01_1 a b c
 #define A01_2 a "b" c
 #define A01_3 "a" b "c"
-
 const A06 = cast(any, 0)
 const A07 = cbyte(0)
 const A08 = csng(0)
@@ -405,20 +404,16 @@ const A12 = culng(0)
 const A13 = cast(const long, 0)
 const A14 = cshort(0)
 const A15 = cast(clong, 0)
-
 #define A16 cast(E, 0)
 #define A17 cast(UDT, 0)
 #define A18 cast(UDT, 0)
-
 const A19 = cptr(sub(), 0)
 const A20 = cptr(sub(), 0)
 const A21 = cptr(sub stdcall(), 0)
 const A22 = cptr(any ptr, 0)
 const A23 = cptr(long ptr, 0)
-
 #define A24 cptr(UDT ptr, 0)
 #define A25 cptr(UDT ptr, 0)
-
 const A26 = cast(wchar_t, 0)
 const A27 = cuint(0)
 const A28 = cint(0)
@@ -435,7 +430,6 @@ const A38 = cbyte(0)
 const A39 = cshort(0)
 const A40 = clng(0)
 const A41 = clngint(0)
-
 #define A42 cast(MYINT, 0)
 #macro A43
 	scope
@@ -471,13 +465,11 @@ const A41 = clngint(0)
 #endmacro
 #define A57
 #define MAKE_RGB(r, g, b) clng(culng((cbyte((r)) or (cushort(cbyte((g))) shl 8)) or culng(culng(cbyte((b))) shl 16)))
-
 const A58 = culng(0u - 100u)
 const A59 = culng(0u - 100)
 const A60 = 0 - 100
 const A61 = culng(0 - 100u)
 const A62 = culng(0u - 100u)
-
 #define A70 culng(A58 - 1u)
 #define A71 culng(A58 - 1)
 #define A72 culng(culng(A58) - 1u)

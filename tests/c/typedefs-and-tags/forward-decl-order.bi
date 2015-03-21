@@ -12,7 +12,6 @@ end type
 
 type C as C_
 type D as D_
-
 declare sub f(byval cc as C ptr, byval dd as D ptr)
 
 type A_

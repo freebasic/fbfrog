@@ -9,7 +9,6 @@
 #endif
 
 type T1 as sub cdecl()
-
 declare sub f1()
 declare sub f2()
 

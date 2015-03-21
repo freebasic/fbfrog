@@ -6,7 +6,6 @@
 extern "C"
 
 declare sub A2 alias "A1"()
-
 extern p as sub()
 
 end extern

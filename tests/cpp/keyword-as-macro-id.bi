@@ -4,7 +4,6 @@ extern "C"
 
 extern i as byte
 extern i as long
-
 declare sub f()
 declare sub ok()
 declare sub ok()

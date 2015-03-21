@@ -1455,13 +1455,16 @@ private function hIsPPElseOrEnd(byval n as ASTNODE ptr) as integer
 	end select
 end function
 
+private function hIsProcBody(byval n as ASTNODE ptr) as integer
+	function = (n->class = ASTCLASS_PROC) and (n->expr <> NULL)
+end function
+
 private function hIsCompound(byval n as ASTNODE ptr) as integer
 	select case n->class
 	case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
 		function = TRUE
-	case ASTCLASS_PROC
-		'' Procedure with body?
-		function = (n->expr <> NULL)
+	case else
+		function = hIsProcBody(n)
 	end select
 end function
 
@@ -1473,6 +1476,43 @@ private function hIsStandaloneStatement(byval n as ASTNODE ptr) as integer
 	case else
 		function = hIsCompound(n)
 	end select
+end function
+
+'' #inclibs/#includes should stand out, so don't group them with other kinds of statements
+private function hCanBePartOfDeviation(byval astclass as integer) as integer
+	function = (astclass <> ASTCLASS_INCLIB) and (astclass <> ASTCLASS_PPINCLUDE)
+end function
+
+private function hAreSimilar(byval a as integer, byval b as integer) as integer
+	if a = b then return TRUE
+
+	if (not hCanBePartOfDeviation(a)) or _
+	   (not hCanBePartOfDeviation(b)) then return FALSE
+
+	'' FBCODE is probably ok
+	if (a = ASTCLASS_FBCODE) or (b = ASTCLASS_FBCODE) then return TRUE
+
+	'' Treat #defines/constants as equal, because they're often the same thing anyways
+	'' (and then the formatting is the same no matter whether -disableconstants was used)
+	#define check(x, y) if ((a = x) and (b = y)) or ((a = y) and (b = x)) then return TRUE
+	check(ASTCLASS_PPDEFINE, ASTCLASS_CONST)
+
+	function = FALSE
+end function
+
+private function hCanBePartOfBlock(byval n as ASTNODE ptr) as integer
+	function = (not hIsStandaloneStatement(n)) and (n->class <> ASTCLASS_PPIF)
+end function
+
+private function hSkipBlock(byval i as ASTNODE ptr, byref length as integer) as ASTNODE ptr
+	var astclass = i->class
+	length = 0
+	do
+		if hCanBePartOfBlock(i) = FALSE then exit do
+		length += 1
+		i = i->next
+	loop while i andalso hAreSimilar(astclass, i->class)
+	function = i
 end function
 
 private function hSkipStatementsInARow(byval i as ASTNODE ptr) as ASTNODE ptr
@@ -1487,11 +1527,40 @@ private function hSkipStatementsInARow(byval i as ASTNODE ptr) as ASTNODE ptr
 	end if
 
 	'' Anything else (single-line declarations): collect all in a row as
-	'' long as it's the same kind.
-	var astclass = i->class
+	'' long as it's the same kind. However, small deviations are allowed,
+	'' if it's just a few declarations in the middle of a bigger block.
+
+	const BIGTHRESHOLD = 3
+	var dominantastclass = -1
 	do
-		i = i->next
-	loop while i andalso ((i->class = astclass) and (not hIsCompound(i)))
+		var length = 0
+		var nxt = hSkipBlock(i, length)
+
+		'' Next statement can't be in a block?
+		if length = 0 then exit do
+
+		'' Block dominant due to its size?
+		if length >= BIGTHRESHOLD then
+			'' First?
+			if dominantastclass = -1 then
+				dominantastclass = i->class
+			'' Others must have a similar astclass
+			elseif hAreSimilar(dominantastclass, i->class) = FALSE then
+				exit do
+			end if
+		else
+			'' Deviation
+			'' Block dominant due to not being allowed to be in a deviation?
+			if hCanBePartOfDeviation(i->class) = FALSE then
+				if dominantastclass <> -1 then exit do
+				dominantastclass = i->class
+			end if
+		end if
+
+		'' Skip the block
+		i = nxt
+	loop while i '' EOF?
+
 	function = i
 end function
 
@@ -1516,9 +1585,11 @@ sub astAutoAddDividers(byval ast as ASTNODE ptr)
 	scope
 		var i = ast->head
 		while i
-			if i->class <> ASTCLASS_RENAMELIST then
+			select case i->class
+			case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM, _
+			     ASTCLASS_PPIF, ASTCLASS_PPELSEIF, ASTCLASS_PPELSE
 				astAutoAddDividers(i)
-			end if
+			end select
 			i = i->next
 		wend
 	end scope

@@ -25,7 +25,6 @@ end union
 
 declare sub f1(byval param as long ptr)
 declare sub expectedf2(byval param as long ptr)
-
 dim shared array3(0 to 19, 0 to 9) as long
 dim shared expectedarray3(0 to 19, 0 to 9) as long
 dim shared table1x2x5(0 to 0, 0 to 1, 0 to 4) as ubyte
