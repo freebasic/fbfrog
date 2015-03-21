@@ -236,6 +236,7 @@ private sub hPrintHelpAndExit()
 	print "  -setarraysize <id> <size>  Set size of an [] array"
 	print "  -moveabove <id> <ref>  Move declaration of <id> above declaration of <ref>"
 	print "  -emit '*.h' foo.bi  Emit code from matching .h into specified .bi"
+	print "  -dontemit '*.h'     Drop code from matching .h files"
 	print "version-specific commands:"
 	print "  C pre-processing:"
 	print "    -define <id> [<body>]    Add pre-#define"
