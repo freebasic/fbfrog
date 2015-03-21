@@ -1454,7 +1454,7 @@ end sub
 			'' typically have #include guards, but we don't preserve those.
 			assert(.final->class = ASTCLASS_GROUP)
 			if .final->head then
-				astPrependMaybeWithDivider(.final, astNew(ASTCLASS_PRAGMAONCE))
+				astPrepend(.final, astNew(ASTCLASS_PRAGMAONCE))
 			end if
 
 			astAutoAddDividers(.final)

@@ -1448,14 +1448,7 @@ end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-private function hIsPpIfBegin(byval n as ASTNODE ptr) as integer
-	select case n->class
-	case ASTCLASS_PPIF, ASTCLASS_PPELSEIF, ASTCLASS_PPELSE
-		function = TRUE
-	end select
-end function
-
-private function hIsPpIfEnd(byval n as ASTNODE ptr) as integer
+private function hIsPPElseOrEnd(byval n as ASTNODE ptr) as integer
 	select case n->class
 	case ASTCLASS_PPELSEIF, ASTCLASS_PPELSE, ASTCLASS_PPENDIF
 		function = TRUE
@@ -1472,55 +1465,79 @@ private function hIsCompound(byval n as ASTNODE ptr) as integer
 	end select
 end function
 
-private function hShouldSeparate _
-	( _
-		byval a as ASTNODE ptr, _
-		byval b as ASTNODE ptr _
-	) as integer
+private function hIsStandaloneStatement(byval n as ASTNODE ptr) as integer
+	select case n->class
+	case ASTCLASS_PRAGMAONCE, ASTCLASS_RENAMELIST, _
+	     ASTCLASS_EXTERNBLOCKBEGIN, ASTCLASS_EXTERNBLOCKEND
+		function = TRUE
+	case else
+		function = hIsCompound(n)
+	end select
+end function
 
-	if (a->class = ASTCLASS_DIVIDER) or _
-	   (b->class = ASTCLASS_DIVIDER) then
-		exit function
+private function hSkipStatementsInARow(byval i as ASTNODE ptr) as ASTNODE ptr
+	if hIsStandaloneStatement(i) then return i->next
+
+	'' All parts of one #if block
+	if i->class = ASTCLASS_PPIF then
+		do
+			i = i->next
+		loop while i andalso hIsPPElseOrEnd(i)
+		return i
 	end if
 
-	if hIsPpIfBegin(a) and hIsPpIfEnd(b) then
-		exit function
-	end if
-
-	function = (a->class <> b->class) or _
-	           hIsCompound(a) or hIsCompound(b)
+	'' Anything else (single-line declarations): collect all in a row as
+	'' long as it's the same kind.
+	var astclass = i->class
+	do
+		i = i->next
+	loop while i andalso ((i->class = astclass) and (not hIsCompound(i)))
+	function = i
 end function
 
 ''
-'' Insert DIVIDERs between statements of different kind, e.g. all #defines in
-'' a row shouldn't be divided, but a #define should be divided from a typedef.
-'' Structs/unions/enums should always be separated by a divider because they're
-'' compounds and normally span multiple lines themselves.
+'' Insert DIVIDERs (empty lines) between certain statements: i.e. some kind of
+'' "pretty" auto-formatting, more or less.
 ''
-sub astAutoAddDividers(byval code as ASTNODE ptr)
-	var i = code->head
-	while i
-		var nxt = i->next
-
-		if i->class <> ASTCLASS_RENAMELIST then
-			astAutoAddDividers(i)
-		end if
-
-		if nxt then
-			if hShouldSeparate(i, nxt) then
-				astInsert(code, astNew(ASTCLASS_DIVIDER), nxt)
+''  * multiple similar single-line statements (e.g. a list of #defines or
+''    functions) shouldn't be separated by empty lines
+''
+''  * lists of different kinds of symbols (e.g. #defines vs. functions) may be
+''    separated by empty lines, but even that can be "wrong", e.g. if the
+''    #defines are function wrappers.
+''
+''  * compound blocks (UDTs, function bodies, #if blocks) should be separated by
+''    empty lines
+''
+''  * #pragma once/extern/end extern should be separated from the context
+''
+sub astAutoAddDividers(byval ast as ASTNODE ptr)
+	'' Recurse where needed
+	scope
+		var i = ast->head
+		while i
+			if i->class <> ASTCLASS_RENAMELIST then
+				astAutoAddDividers(i)
 			end if
-		end if
+			i = i->next
+		wend
+	end scope
 
-		i = nxt
-	wend
-end sub
+	'' Insert dividers at this level
+	var i = ast->head
+	if i then
+		do
+			'' New block starting here; skip over it
+			i = hSkipStatementsInARow(i)
 
-sub astPrependMaybeWithDivider(byval group as ASTNODE ptr, byval n as ASTNODE ptr)
-	if group->head andalso hShouldSeparate(n, group->head) then
-		astPrepend(group, astNew(ASTCLASS_DIVIDER))
+			'' EOF? (not adding a divider there)
+			if i = NULL then exit do
+
+			'' Insert divider behind the block, to separate it from the next
+			'' block. The divider isn't treated as part of a block.
+			astInsert(ast, astNew(ASTCLASS_DIVIDER), i)
+		loop
 	end if
-	astPrepend(group, n)
 end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -1737,7 +1754,6 @@ sub hlFile(byval ast as ASTNODE ptr, byref api as ApiInfo, byref bioptions as Ap
 		if entries->head then
 			var renamelist = astNew(ASTCLASS_RENAMELIST, "The following symbols have been renamed:")
 			astAppend(renamelist, entries)
-			astPrepend(ast, astNew(ASTCLASS_DIVIDER))
 			astPrepend(ast, renamelist)
 		else
 			astDelete(entries)
@@ -1754,19 +1770,19 @@ sub hlFile(byval ast as ASTNODE ptr, byref api as ApiInfo, byref bioptions as Ap
 	'' binding uses the clong[double]/wchar_t types
 	astVisit(ast, @hlSearchSpecialDtypes)
 	if hl.uses_clongdouble then
-		astPrependMaybeWithDivider(ast, astNew(ASTCLASS_PPINCLUDE, "crt/longdouble.bi"))
+		astPrepend(ast, astNew(ASTCLASS_PPINCLUDE, "crt/longdouble.bi"))
 	end if
 	if hl.uses_clong then
-		astPrependMaybeWithDivider(ast, astNew(ASTCLASS_PPINCLUDE, "crt/long.bi"))
+		astPrepend(ast, astNew(ASTCLASS_PPINCLUDE, "crt/long.bi"))
 	end if
 
 	'' Prepend #inclibs/#undefs
 	if bioptions.undefs then
-		astPrependMaybeWithDivider(ast, bioptions.undefs)
+		astPrepend(ast, bioptions.undefs)
 		bioptions.undefs = NULL
 	end if
 	if bioptions.inclibs then
-		astPrependMaybeWithDivider(ast, bioptions.inclibs)
+		astPrepend(ast, bioptions.inclibs)
 		bioptions.inclibs = NULL
 	end if
 end sub

@@ -775,7 +775,6 @@ declare sub astDump _
 	)
 
 declare sub astAutoAddDividers(byval code as ASTNODE ptr)
-declare sub astPrependMaybeWithDivider(byval group as ASTNODE ptr, byval n as ASTNODE ptr)
 
 declare function astDumpPrettyVersion(byval n as ASTNODE ptr) as string
 declare function astNewVERAND(byval a as ASTNODE ptr = NULL, byval b as ASTNODE ptr = NULL) as ASTNODE ptr
