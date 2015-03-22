@@ -1457,7 +1457,7 @@ end sub
 				astPrepend(.final, astNew(ASTCLASS_PRAGMAONCE))
 			end if
 
-			astAutoAddDividers(.final)
+			hlAutoAddDividers(.final)
 
 			'' Write out the .bi file.
 			var bifilename = *.filename

@@ -1580,7 +1580,7 @@ end function
 ''
 ''  * #pragma once/extern/end extern should be separated from the context
 ''
-sub astAutoAddDividers(byval ast as ASTNODE ptr)
+sub hlAutoAddDividers(byval ast as ASTNODE ptr)
 	'' Recurse where needed
 	scope
 		var i = ast->head
@@ -1588,7 +1588,7 @@ sub astAutoAddDividers(byval ast as ASTNODE ptr)
 			select case i->class
 			case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM, _
 			     ASTCLASS_PPIF, ASTCLASS_PPELSEIF, ASTCLASS_PPELSE
-				astAutoAddDividers(i)
+				hlAutoAddDividers(i)
 			end select
 			i = i->next
 		wend

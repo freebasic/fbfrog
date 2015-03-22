@@ -774,8 +774,6 @@ declare sub astDump _
 		byref prefix as string = "" _
 	)
 
-declare sub astAutoAddDividers(byval code as ASTNODE ptr)
-
 declare function astDumpPrettyVersion(byval n as ASTNODE ptr) as string
 declare function astNewVERAND(byval a as ASTNODE ptr = NULL, byval b as ASTNODE ptr = NULL) as ASTNODE ptr
 declare function astNewVEROR(byval a as ASTNODE ptr = NULL, byval b as ASTNODE ptr = NULL) as ASTNODE ptr
@@ -860,6 +858,7 @@ type ApiSpecificBiOptions
 	as ASTNODE ptr inclibs, undefs, addincludes
 end type
 
+declare sub hlAutoAddDividers(byval ast as ASTNODE ptr)
 declare sub hlGlobal(byval ast as ASTNODE ptr, byref api as ApiInfo)
 declare sub hlFile(byval ast as ASTNODE ptr, byref api as ApiInfo, byref bioptions as ApiSpecificBiOptions)
 declare function hlCountDecls(byval ast as ASTNODE ptr) as integer
