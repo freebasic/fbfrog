@@ -17,6 +17,7 @@ end type
 
 #inclib "1"
 #inclib "2"
+
 #define A
 #define B
 type bar as foo

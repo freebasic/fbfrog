@@ -1455,39 +1455,8 @@ private function hIsPPElseOrEnd(byval n as ASTNODE ptr) as integer
 	end select
 end function
 
-private function hIsProcBody(byval n as ASTNODE ptr) as integer
-	function = (n->class = ASTCLASS_PROC) and (n->expr <> NULL)
-end function
-
-private function hIsCompound(byval n as ASTNODE ptr) as integer
-	select case n->class
-	case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
-		function = TRUE
-	case else
-		function = hIsProcBody(n)
-	end select
-end function
-
-private function hIsStandaloneStatement(byval n as ASTNODE ptr) as integer
-	select case n->class
-	case ASTCLASS_PRAGMAONCE, ASTCLASS_RENAMELIST, _
-	     ASTCLASS_EXTERNBLOCKBEGIN, ASTCLASS_EXTERNBLOCKEND
-		function = TRUE
-	case else
-		function = hIsCompound(n)
-	end select
-end function
-
-'' #inclibs/#includes should stand out, so don't group them with other kinds of statements
-private function hCanBePartOfDeviation(byval astclass as integer) as integer
-	function = (astclass <> ASTCLASS_INCLIB) and (astclass <> ASTCLASS_PPINCLUDE)
-end function
-
 private function hAreSimilar(byval a as integer, byval b as integer) as integer
 	if a = b then return TRUE
-
-	if (not hCanBePartOfDeviation(a)) or _
-	   (not hCanBePartOfDeviation(b)) then return FALSE
 
 	'' FBCODE is probably ok
 	if (a = ASTCLASS_FBCODE) or (b = ASTCLASS_FBCODE) then return TRUE
@@ -1500,60 +1469,73 @@ private function hAreSimilar(byval a as integer, byval b as integer) as integer
 	function = FALSE
 end function
 
-private function hCanBePartOfBlock(byval n as ASTNODE ptr) as integer
-	function = (not hIsStandaloneStatement(n)) and (n->class <> ASTCLASS_PPIF)
-end function
-
-private function hSkipBlock(byval i as ASTNODE ptr, byref length as integer) as ASTNODE ptr
-	var astclass = i->class
-	length = 0
-	do
-		if hCanBePartOfBlock(i) = FALSE then exit do
-		length += 1
-		i = i->next
-	loop while i andalso hAreSimilar(astclass, i->class)
-	function = i
-end function
-
 private function hSkipStatementsInARow(byval i as ASTNODE ptr) as ASTNODE ptr
-	if hIsStandaloneStatement(i) then return i->next
-
+	select case i->class
 	'' All parts of one #if block
-	if i->class = ASTCLASS_PPIF then
+	case ASTCLASS_PPIF
 		do
 			i = i->next
 		loop while i andalso hIsPPElseOrEnd(i)
 		return i
-	end if
+
+	case ASTCLASS_PPINCLUDE, ASTCLASS_INCLIB
+		var astclass = i->class
+		do
+			i = i->next
+		loop while i andalso (i->class = astclass)
+		return i
+
+	case ASTCLASS_PRAGMAONCE, ASTCLASS_RENAMELIST, _
+	     ASTCLASS_EXTERNBLOCKBEGIN, ASTCLASS_EXTERNBLOCKEND, _
+	     ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
+		return i->next
+
+	'' Procedure body?
+	case ASTCLASS_PROC
+		if i->expr then
+			return i->next
+		end if
+	end select
 
 	'' Anything else (single-line declarations): collect all in a row as
 	'' long as it's the same kind. However, small deviations are allowed,
 	'' if it's just a few declarations in the middle of a bigger block.
-
 	const BIGTHRESHOLD = 3
-	var dominantastclass = -1
+	var dominantclass = -1
 	do
+		var blockclass = i->class
 		var length = 0
-		var nxt = hSkipBlock(i, length)
+		var nxt = i
+		do
+			select case nxt->class
+			case ASTCLASS_PPIF, ASTCLASS_INCLIB, ASTCLASS_PPINCLUDE, _
+			     ASTCLASS_PRAGMAONCE, ASTCLASS_RENAMELIST, _
+			     ASTCLASS_EXTERNBLOCKBEGIN, ASTCLASS_EXTERNBLOCKEND, _
+			     ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
+				exit do
+			case ASTCLASS_PROC
+				if nxt->expr then
+					exit do
+				end if
+			end select
+
+			length += 1
+			nxt = nxt->next
+		loop while nxt andalso hAreSimilar(blockclass, nxt->class)
 
 		'' Next statement can't be in a block?
-		if length = 0 then exit do
+		if length = 0 then
+			exit do
+		end if
 
 		'' Block dominant due to its size?
 		if length >= BIGTHRESHOLD then
 			'' First?
-			if dominantastclass = -1 then
-				dominantastclass = i->class
+			if dominantclass = -1 then
+				dominantclass = i->class
 			'' Others must have a similar astclass
-			elseif hAreSimilar(dominantastclass, i->class) = FALSE then
+			elseif hAreSimilar(dominantclass, i->class) = FALSE then
 				exit do
-			end if
-		else
-			'' Deviation
-			'' Block dominant due to not being allowed to be in a deviation?
-			if hCanBePartOfDeviation(i->class) = FALSE then
-				if dominantastclass <> -1 then exit do
-				dominantastclass = i->class
 			end if
 		end if
 
