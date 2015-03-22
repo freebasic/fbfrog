@@ -1857,3 +1857,61 @@ sub hlFile(byval ast as ASTNODE ptr, byref api as ApiInfo, byref bioptions as Ap
 		bioptions.inclibs = NULL
 	end if
 end sub
+
+function hlCountDecls(byval ast as ASTNODE ptr) as integer
+	var n = 0
+
+	var i = ast->head
+	while i
+		select case i->class
+		case ASTCLASS_DIVIDER, ASTCLASS_PPINCLUDE, ASTCLASS_PPENDIF, _
+		     ASTCLASS_EXTERNBLOCKBEGIN, ASTCLASS_EXTERNBLOCKEND, _
+		     ASTCLASS_INCLIB, ASTCLASS_PRAGMAONCE, _
+		     ASTCLASS_UNKNOWN, ASTCLASS_RENAMELIST
+
+		case ASTCLASS_PPIF, ASTCLASS_PPELSEIF, ASTCLASS_PPELSE
+			n += hlCountDecls(i)
+
+		case ASTCLASS_PPDEFINE
+			if (i->expr = NULL) orelse (i->expr->class <> ASTCLASS_UNKNOWN) then
+				n += 1
+			end if
+
+		case else
+			n += 1
+		end select
+
+		i = i->next
+	wend
+
+	function = n
+end function
+
+function hlCountTodos(byval ast as ASTNODE ptr) as integer
+	var n = 0
+
+	var i = ast->head
+	while i
+		select case i->class
+		case ASTCLASS_UNKNOWN
+			n += 1
+
+		case ASTCLASS_PPIF, ASTCLASS_PPELSEIF, ASTCLASS_PPELSE, _
+		     ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
+			n += hlCountTodos(i)
+
+		case ASTCLASS_PROC, ASTCLASS_PPDEFINE
+			if i->expr then
+				if i->expr->class = ASTCLASS_UNKNOWN then
+					n += 1
+				else
+					n += hlCountTodos(i->expr)
+				end if
+			end if
+		end select
+
+		i = i->next
+	wend
+
+	function = n
+end function

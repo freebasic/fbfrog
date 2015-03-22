@@ -1461,10 +1461,9 @@ end sub
 
 			'' Write out the .bi file.
 			var bifilename = *.filename
-			print "emitting: " + bifilename;
+			print "emitting: " + bifilename + " (" + _
+				hMakeCountMessage(hlCountDecls(.final), "declaration") + ", " + _
+				hMakeCountMessage(hlCountTodos(.final), "TODO"       ) + ")"
 			emitFile(bifilename, .final)
-			print " (" + _
-				hMakeCountMessage(emit.decls, "declaration") + ", " + _
-				hMakeCountMessage(emit.todos, "TODO"       ) + ")"
 		end with
 	next

@@ -8,4 +8,4 @@
       tests/c/struct/nested-inside-scopeblock.h
 [5/5] __FB_DOS__
       tests/c/struct/nested-inside-scopeblock.h
-emitting: tests/c/struct/nested-inside-scopeblock.bi (6 declarations, 0 TODOs)
+emitting: tests/c/struct/nested-inside-scopeblock.bi (2 declarations, 0 TODOs)

@@ -8,4 +8,4 @@
       tests/undefbeforedecl.h
 [5/5] __FB_DOS__
       tests/undefbeforedecl.h
-emitting: tests/undefbeforedecl.bi (1 declaration, 0 TODOs)
+emitting: tests/undefbeforedecl.bi (2 declarations, 0 TODOs)

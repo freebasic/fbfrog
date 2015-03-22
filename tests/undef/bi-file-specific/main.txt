@@ -18,6 +18,6 @@
       tests/undef/bi-file-specific/main.h
       tests/undef/bi-file-specific/1.h
       tests/undef/bi-file-specific/2.h
-emitting: tests/undef/bi-file-specific/main.bi (1 declaration, 0 TODOs)
-emitting: tests/undef/bi-file-specific/1.bi (1 declaration, 0 TODOs)
-emitting: tests/undef/bi-file-specific/2.bi (1 declaration, 0 TODOs)
+emitting: tests/undef/bi-file-specific/main.bi (2 declarations, 0 TODOs)
+emitting: tests/undef/bi-file-specific/1.bi (2 declarations, 0 TODOs)
+emitting: tests/undef/bi-file-specific/2.bi (2 declarations, 0 TODOs)

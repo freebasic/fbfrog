@@ -8,4 +8,4 @@
       tests/undef/simple.h
 [5/5] __FB_DOS__
       tests/undef/simple.h
-emitting: tests/undef/simple.bi (1 declaration, 0 TODOs)
+emitting: tests/undef/simple.bi (2 declarations, 0 TODOs)

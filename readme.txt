@@ -218,9 +218,6 @@ Bugs:
 			HWND hwnd;
 		} HWND;
 	};
-* "emitting: ..." line is printed with <PRINT ;>, so error messages appear on
-  same line:
-	emitting: inc/win/commctrl.bioops, could not open output file: 'inc/win/commctrl.bi'
 
 Interesting improvements:
 * fbfrog-fbc-wrapper for compiling .bas files that contain #fbfrog directives

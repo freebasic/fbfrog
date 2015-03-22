@@ -826,9 +826,6 @@ declare sub lexInit()
 declare function lexLoadC(byval x as integer, byval code as zstring ptr, byref source as SourceInfo) as integer
 declare function lexLoadArgs(byval x as integer, byval args as zstring ptr, byref source as SourceInfo) as integer
 
-namespace emit
-	extern as integer decls, todos
-end namespace
 declare function emitType overload _
 	( _
 		byval dtype as integer, _
@@ -865,6 +862,8 @@ end type
 
 declare sub hlGlobal(byval ast as ASTNODE ptr, byref api as ApiInfo)
 declare sub hlFile(byval ast as ASTNODE ptr, byref api as ApiInfo, byref bioptions as ApiSpecificBiOptions)
+declare function hlCountDecls(byval ast as ASTNODE ptr) as integer
+declare function hlCountTodos(byval ast as ASTNODE ptr) as integer
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 

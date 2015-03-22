@@ -8,4 +8,4 @@
       tests/c/function-bodies.h
 [5/5] __FB_DOS__
       tests/c/function-bodies.h
-emitting: tests/c/function-bodies.bi (5 declarations, 0 TODOs)
+emitting: tests/c/function-bodies.bi (4 declarations, 0 TODOs)

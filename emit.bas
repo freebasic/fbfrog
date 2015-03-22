@@ -124,7 +124,7 @@ function emitType overload(byval n as ASTNODE ptr) as string
 end function
 
 namespace emit
-	dim shared as integer fo, indent, comment, commentspaces, decls, todos
+	dim shared as integer fo, indent, comment, commentspaces
 end namespace
 
 private sub emitLine(byref ln as string)
@@ -343,11 +343,9 @@ private sub emitCode(byval n as ASTNODE ptr, byval parentclass as integer)
 		emitLines("TODO: " + *n->text)
 		emit.commentspaces -= 1
 		emit.comment -= 1
-		emit.todos += 1
 
 	case ASTCLASS_FBCODE
 		emitLines(n->text)
-		emit.decls += 1
 
 	case ASTCLASS_RENAMELIST
 		var added_indent = FALSE
@@ -396,15 +394,12 @@ private sub emitCode(byval n as ASTNODE ptr, byval parentclass as integer)
 			if n->expr then
 				if n->expr->class = ASTCLASS_UNKNOWN then
 					s += " '' TODO: " + *n->expr->text
-					emit.todos += 1
-					emit.decls -= 1
 				else
 					s += " " + emitExpr(n->expr, TRUE)
 				end if
 			end if
 			emitLine(s)
 		end if
-		emit.decls += 1
 
 	case ASTCLASS_PPIF
 		dim s as string
@@ -483,18 +478,14 @@ private sub emitCode(byval n as ASTNODE ptr, byval parentclass as integer)
 			emitLine("end " + opposite)
 		end if
 
-		emit.decls += 1
-
 	case ASTCLASS_TYPEDEF
 		assert(n->array = NULL)
 		emitLine("type " + *n->text + " as " + emitType(n))
-		emit.decls += 1
 
 	case ASTCLASS_CONST
 		dim s as string
 		if (n->attrib and ASTATTRIB_ENUMCONST) = 0 then
 			s = "const "
-			emit.decls += 1
 		end if
 		emitLine(s + *n->text + hInitializer(n))
 
@@ -515,7 +506,6 @@ private sub emitCode(byval n as ASTNODE ptr, byval parentclass as integer)
 				emitVarDecl("dim shared ", n, FALSE)
 			end if
 		end if
-		emit.decls += 1
 
 	case ASTCLASS_FIELD
 		'' Fields can be named after keywords, but we have to do
@@ -555,8 +545,6 @@ private sub emitCode(byval n as ASTNODE ptr, byval parentclass as integer)
 			hEmitIndentedChildren(n->expr)
 			emitLine("end " + iif(n->dtype = TYPE_ANY, "sub", "function"))
 		end if
-
-		emit.decls += 1
 
 	case ASTCLASS_EXTERNBLOCKBEGIN
 		emitLine("extern """ + *n->text + """")
@@ -863,8 +851,6 @@ sub emitFile(byref filename as string, byval ast as ASTNODE ptr)
 	emit.indent = 0
 	emit.comment = 0
 	emit.commentspaces = 0
-	emit.decls = 0
-	emit.todos = 0
 
 	emit.fo = freefile()
 	if open(filename, for output, as #emit.fo) then
