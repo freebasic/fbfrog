@@ -209,29 +209,80 @@ unnecessary?
 
 To do:
 
-* Simplify CLI
-  * string-based arg parsing, instead of tk/lex
-  * Support -DFOO=1 and -I<path> options like gcc and for pkg-config,
-    the -define <id> [<body>] syntax is confusing
-  * -select/-if options should already include -declare, it doesn't need to be
-    separate ever
-  * shorten -removedefine to -rmdef, etc.
-  * -declareversions (and even -declaredefines) isn't needed much and could be
-    removed. It's better to keep different library versions in separate bindings,
-    and perhaps even targets could be handled differently.
-* Rework console output, it quickly becomes too much currently. Perhaps the
-  #includes should be emitted into the .bi
-* Optimize tk access, at least for the C parser which shouldn't need insert/delete
-  anymore. Test performance with array instead of gap buffer. Ideally everything
-  would work with the current line only, not the entire input file.
+Bugs:
+* in winapi, there is a case where an auto-generated tagid conflicts
+  with a real typedef, which is errornously renamed. Luckily fbc detects this
+  problem easily (recursive UDT).
+	struct Foo {
+		struct {
+			HWND hwnd;
+		} HWND;
+	};
+* "emitting: ..." line is printed with <PRINT ;>, so error messages appear on
+  same line:
+	emitting: inc/win/commctrl.bioops, could not open output file: 'inc/win/commctrl.bi'
 
-- Continue support for parsing function bodies: if/else blocks, for/while/do/while
-  loops, local vars, assignments, goto, break, return, switch, labels including 'case'.
-  - change hScopeBlockOrInitializer(): depending on context it doesn't need and
-    shouldn't do this disambiguation
-  - Scope block parsing should be the same as parsing function bodies
-  - Identifier fixup inside scopes
-  - How to handle assignments in the middle of expressions or as if/while conditions?
+Interesting improvements:
+* fbfrog-fbc-wrapper for compiling .bas files that contain #fbfrog directives
+  * process #fbfrog directives in the .bas and in each included .bi; must do
+    #include search just like the fbc. Query fbc's incdir via 'fbc -print incdir'
+    and also intercept -i <path> options passed on the fbc command line.
+  * #fbfrog <fbfrog command line options>
+  * invoke fbfrog with these options, but add -nodefaultscript and disallow any
+    -declare* and -select/-if options, such that there will only be one API.
+  * let fbfrog create a temp .bi: -o *.temp.bi, then produce a *.temp.bas which
+    #includes the *.temp.bi instead of having a #fbfrog directive, then invoke
+    fbc to compile it.
+  * check system/gcc incdirs to find *.h files passed in #fbfrog directives
+* -expandindefine option for expanding specifiy macros in define bodies?
+  This could be used to handle the -fixmingwaw stuff, and also things like
+  TEXT() => __TEXT()
+* Change AST:
+  Store fields/procbodies at toplevel wrapped in TYPEBEGIN/TYPEEND/PROCBEGIN/PROCEND,
+  allowing nested LOC to be merged separate from the compound.
+  (interesting for fields if UDT's FIELD=N value changes between targets)
+  Store LOC as array instead of list? save memory, better caching, re-use as
+  decltables for merging. But: highlevel passes require insert/delete...
+* Better documentation, help.markdown/help.html
+* CLI: Switch to -option=param1,param2 format, with space as hard-delimiter?
+  Current [optional parameters] can be confusing. -define A foo.h treats foo.h
+  as -define's 2nd parameter, even across @file boundaries etc.
+  Support -DFOO=1 and -I<path> options like gcc? (could even read pkg-config output then)
+  Remove -select, use -ifdef and a new -ifeq <id> <value> instead?
+  Add unified option for the common -declarebool/-ifdef pattern:
+    -declarebool FOO -ifdef FOO -define FOO 1 -endif
+  Rework console output, it quickly becomes too much. Only show #includes with -v?
+  Show #include tree
+* Hard-code default.fbfrog and default.h, remove include/fbfrog/
+  add a tools/gcc.sh or similar that queries various gcc toolchains and
+  generates a gccpredefs.bi
+* Don't expand macro constants outside CPP expressions, to keep them as array size etc.
+* Solve out tag ids if there is an alias typedef, unless the tag id is used elsewhere
+* Turn alias #defines into proper decls (typedefs, procdecls)
+   1st pass: collect all types/procs
+   2nd pass: find alias #defines and turn them into real decls. For procs, 1.
+   duplicate the PROC node, 2. rename it to get an ALIAS emitted.
+* auto-remove all empty macros? (e.g. include/decl guards)
+* pattern-based -removedefine, e.g. -removedefine '__*'
+* pattern-based renames, e.g. -renamedefine '%' 'FOO_%',
+  or at least --rename-define-add-prefix '*' FOO_  <- add prefix FOO_ to matching defines.
+* Turn ASTCLASS_UNION/ENUM into ASTATTRIB_* and use ASTCLASS_STRUCT (they're similar enough)
+* add jmp_buf to the extradatatypes table, then implement hIsPlainJmpBuf() as hashtb lookup
+* Add global pool of strings (especially identifiers), pass HASHSTR objects instead of
+  zstring ptr's, with precalculated hashes + re-usable read-only strings
+* Remove VEROR/VERAND, and encode covered APIs as bitfields: one bit per API,
+  set to 1 if VERBLOCK covers it, later generate the condition expression based on that.
+* auto-convert C's [] array indexing into FB's (): track which vars/fields are
+  arrays (or pointers) and then compare indexing BOPs against that.
+* Add support for
+    #pragma pack(push, <identifier> [, N])
+    #pragma pack(pop, <identifier>)
+  i.e. pack stack entries can be named. popping by name means popping everything
+  until that node is popped. If not found, nothing is popped.
+  (MinGW-w64 CRT headers use this)
+* Continue support for parsing function bodies: if/else blocks, for/while/do/while
+  loops, local vars, assignments, goto, break, switch, case, labels.
+  Support assignment and comma operators in expressions.
         if (a = 1) ...          =>    a = 1 : if a then ...
         if (a = 1 && b = 2) ... =>    a = 1 : if a then : b = 2 : if b then ... : end if
     ?: and &&/|| operands containing assignments must be expanded to real if blocks.
