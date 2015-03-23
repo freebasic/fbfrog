@@ -18,6 +18,8 @@
 #define TEXT(s) __TEXT(s)
 
 #ifdef UNICODE
+	#define __MINGW_TYPEDEF_AW(type) '' TODO: typedef typeW type;
+	#define __MINGW_TYPEDEF_UAW(type) '' TODO: typedef type_W type;
 	#define CreateWindowEx CreateWindowExW
 	#define SendMessage SendMessageW
 	#define Function1 Function1W123
@@ -25,6 +27,8 @@
 	#define Function3 Function3_W_123
 	#define Function4 Function4W
 #else
+	#define __MINGW_TYPEDEF_AW(type) '' TODO: typedef typeA type;
+	#define __MINGW_TYPEDEF_UAW(type) '' TODO: typedef type_A type;
 	#define CreateWindowEx CreateWindowExA
 	#define SendMessage SendMessageA
 	#define Function1 Function1A123
@@ -44,3 +48,9 @@ const CONST1W = 2
 
 #define STR1 __TEXT("1")
 #define STR2 __TEXT("2")
+
+#ifdef UNICODE
+	type myType as typeW
+#else
+	type myType as typeA
+#endif

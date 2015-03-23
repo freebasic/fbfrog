@@ -15,6 +15,8 @@
 #endif
 #define WINELIB_NAME_AW __MINGW_NAME_AW
 #define TEXT(s) __TEXT(s)
+#define __MINGW_TYPEDEF_AW(type) typedef __MINGW_NAME_AW(type) type;
+#define __MINGW_TYPEDEF_UAW(type) typedef __MINGW_NAME_UAW(type) type;
 
 #define CreateWindowEx __MINGW_NAME_AW(CreateWindowEx)
 #define SendMessage __MINGW_NAME_AW(SendMessage)
@@ -29,3 +31,5 @@
 
 #define STR1 TEXT("1")
 #define STR2 TEXT("2")
+
+__MINGW_TYPEDEF_AW(myType);
