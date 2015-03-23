@@ -1276,6 +1276,27 @@ private sub hlDropMacroBodyScopes(byval ast as ASTNODE ptr)
 	wend
 end sub
 
+'' Remove void casts, e.g.:
+''    #define FOO (void)f()
+'' =>
+''    #define FOO f()
+private sub hlRemoveVoidCasts(byval ast as ASTNODE ptr)
+	var i = ast->head
+	while i
+
+		if (i->class = ASTCLASS_PPDEFINE) andalso _
+		   i->expr andalso _
+		   (i->expr->class = ASTCLASS_CAST) andalso _
+		   (i->expr->dtype = TYPE_ANY) then
+			var expr = astClone(i->expr->head)
+			astDelete(i->expr)
+			i->expr = expr
+		end if
+
+		i = i->next
+	wend
+end sub
+
 private sub hlAddUndefsAboveDecls(byval ast as ASTNODE ptr)
 	var i = ast->head
 	while i
@@ -1738,6 +1759,8 @@ sub hlGlobal(byval ast as ASTNODE ptr, byref api as ApiInfo)
 	if api.dropmacrobodyscopes then
 		hlDropMacroBodyScopes(ast)
 	end if
+
+	hlRemoveVoidCasts(ast)
 
 	'' Apply -moveabove options after renaming and removing, because then
 	'' the movement is less depended on the .h content, and more on the
