@@ -5,14 +5,17 @@
 	#define __MINGW_NAME_AW_EXT(func, ext) func##W##ext
 	#define __MINGW_NAME_UAW(func) func##_W
 	#define __MINGW_NAME_UAW_EXT(func, ext) func##_W_##ext
+	#define __TEXT(s) L##s
 #else
 	#define __MINGW_NAME_AW(s) s##A
 	#define __MINGW_NAME_AW_EXT(func, ext) func##A##ext
 	#define __MINGW_NAME_UAW(func) func##_A
 	#define __MINGW_NAME_UAW_EXT(func, ext) func##_A_##ext
+	#define __TEXT(s) s
 #endif
 
 #define WINELIB_NAME_AW __MINGW_NAME_AW
+#define TEXT(s) __TEXT(s)
 
 #ifdef UNICODE
 	#define CreateWindowEx CreateWindowExW
@@ -38,3 +41,6 @@ const CONST1W = 2
 #else
 	#define CONST1 CONST1A
 #endif
+
+#define STR1 __TEXT("1")
+#define STR2 __TEXT("2")

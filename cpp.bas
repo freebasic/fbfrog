@@ -2202,36 +2202,27 @@ private sub cppDefine(byval begin as integer, byref flags as integer)
 
 	'' Body
 	var xbody = cpp.x
-	if cpp.api->fixmingwaw then
-		'' Expand __MINGW_NAME_AW() & co inside this #define body,
-		'' but only those few selected macros, and only at the beginning
-		'' of the macro body (it seems like that's good enough to handle
-		'' all the affected #defines in the MinGW-w64 headers).
-		'' This has to be done in a loop because e.g. WINELIB_NAME_AW
-		'' may expand to __MINGW_NAME_AW.
-		while tkGet(cpp.x) = TK_ID
-			var id = tkSpellId(cpp.x)
 
-			select case (*id)[0]
-			case asc("_"), asc("W")
-			case else
-				exit while
+	'' If there are any -expandindefine options, look for corresponding
+	'' macros in the #define body, and expand them.
+	if cpp.api->idopt(OPT_EXPANDINDEFINE).count > 0 then
+		do
+			select case tkGet(cpp.x)
+			case TK_EOL
+				exit do
+
+			case is >= TK_ID
+				var id = tkSpellId(cpp.x)
+				if hashContains(@cpp.api->idopt(OPT_EXPANDINDEFINE), id, hashHash(id)) then
+					if hMaybeExpandMacro(cpp.x, FALSE, FALSE) then
+						'' TK_ID expanded; reparse it
+						cpp.x -= 1
+					end if
+				end if
 			end select
 
-			select case *id
-			case "__MINGW_NAME_AW", _
-			     "__MINGW_NAME_AW_EXT", _
-			     "__MINGW_NAME_UAW", _
-			     "__MINGW_NAME_UAW_EXT", _
-			     "WINELIB_NAME_AW"
-			case else
-				exit while
-			end select
-
-			if hMaybeExpandMacro(cpp.x, FALSE, FALSE) = FALSE then
-				exit while
-			end if
-		wend
+			cpp.x += 1
+		loop
 	end if
 
 	'' Eol

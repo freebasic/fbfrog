@@ -166,7 +166,6 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	(@"-clong32"      ), _
 	(@"-fixunsizedarrays"), _
 	(@"-disableconstants"), _
-	(@"-fixmingwaw"   ), _
 	(@"-nofunctionbodies"), _
 	(@"-dropmacrobodyscopes"), _
 	(@"-replacements" ), _
@@ -183,6 +182,7 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	(@"-addforwarddecl"), _
 	(@"-undefbeforedecl"), _
 	(@"-nostring"     ), _
+	(@"-expandindefine"), _
 	(@"-noexpand"     ), _
 	(@"-removeinclude"), _
 	(@"-setarraysize" ), _

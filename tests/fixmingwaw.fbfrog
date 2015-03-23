@@ -1,0 +1,11 @@
+-declarebool UNICODE
+-ifdef UNICODE
+	-define UNICODE 1
+-endif
+
+-expandindefine __MINGW_NAME_AW
+-expandindefine __MINGW_NAME_AW_EXT
+-expandindefine __MINGW_NAME_UAW
+-expandindefine __MINGW_NAME_UAW_EXT
+-expandindefine WINELIB_NAME_AW
+-expandindefine TEXT

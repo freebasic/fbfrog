@@ -379,7 +379,6 @@ enum
 	OPT_CLONG32
 	OPT_FIXUNSIZEDARRAYS
 	OPT_DISABLECONSTANTS
-	OPT_FIXMINGWAW
 	OPT_NOFUNCTIONBODIES
 	OPT_DROPMACROBODYSCOPES
 	OPT_REPLACEMENTS
@@ -396,6 +395,7 @@ enum
 	OPT_ADDFORWARDDECL
 	OPT_UNDEFBEFOREDECL
 	OPT_NOSTRING
+	OPT_EXPANDINDEFINE
 	OPT_NOEXPAND
 	OPT_REMOVEINCLUDE
 	OPT_SETARRAYSIZE
@@ -799,7 +799,7 @@ type ApiInfo
 	script as ASTNODE ptr
 
 	as integer windowsms, clong32, fixunsizedarrays, disableconstants
-	as integer fixmingwaw, nofunctionbodies, dropmacrobodyscopes
+	as integer nofunctionbodies, dropmacrobodyscopes
 
 	have_renames as integer
 	renameopt(OPT_RENAMETYPEDEF to OPT_RENAMEMACROPARAM) as THASH

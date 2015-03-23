@@ -231,9 +231,6 @@ Interesting improvements:
     #includes the *.temp.bi instead of having a #fbfrog directive, then invoke
     fbc to compile it.
   * check system/gcc incdirs to find *.h files passed in #fbfrog directives
-* -expandindefine option for expanding specifiy macros in define bodies?
-  This could be used to handle the -fixmingwaw stuff, and also things like
-  TEXT() => __TEXT()
 * Change AST:
   Store fields/procbodies at toplevel wrapped in TYPEBEGIN/TYPEEND/PROCBEGIN/PROCEND,
   allowing nested LOC to be merged separate from the compound.

@@ -206,7 +206,6 @@ private sub hPrintHelpAndExit()
 	print "  -clong32         Translate C long as 32bit LONG, instead of CLONG"
 	print "  -fixunsizedarrays  Wrap [] arrays with a #define"
 	print "  -disableconstants  Don't turn #defines into constants"
-	print "  -fixmingwaw        Expand __MINGW_NAME_AW() inside macros"
 	print "  -nofunctionbodies  Don't preserve function bodies"
 	print "  -dropmacrobodyscopes  Drop scope blocks with only 1 statement in macro bodies"
 	print "  -replacements <file>  Load patterns for search/replace"
@@ -221,6 +220,7 @@ private sub hPrintHelpAndExit()
 	print "  -addforwarddecl <id>  Force a forward declaration to be added for the given type"
 	print "  -undefbeforedecl <id>  Insert an #undef above a declaration"
 	print "  -nostring <id>      Prevent a symbol from being turned into a zstring"
+	print "  -expandindefine <id>  Expand macro in #define body"
 	print "  -noexpand <id>      Disable expansion of certain #define"
 	print "  -removeinclude <filename>  Remove matching #include directives"
 	print "  -setarraysize <id> <size>  Set size of an [] array"
@@ -424,7 +424,6 @@ sub ApiInfo.loadOption(byval opt as integer, byval param1 as zstring ptr, byval 
 	case OPT_CLONG32          : clong32          = TRUE
 	case OPT_FIXUNSIZEDARRAYS : fixunsizedarrays = TRUE
 	case OPT_DISABLECONSTANTS : disableconstants = TRUE
-	case OPT_FIXMINGWAW       : fixmingwaw       = TRUE
 	case OPT_NOFUNCTIONBODIES : nofunctionbodies = TRUE
 	case OPT_DROPMACROBODYSCOPES : dropmacrobodyscopes = TRUE
 
@@ -434,7 +433,8 @@ sub ApiInfo.loadOption(byval opt as integer, byval param1 as zstring ptr, byval 
 		have_renames = TRUE
 
 	case OPT_REMOVEDEFINE, OPT_REMOVEPROC, OPT_REMOVEVAR, OPT_DROPPROCBODY, _
-	     OPT_TYPEDEFHINT, OPT_ADDFORWARDDECL, OPT_UNDEFBEFOREDECL, OPT_NOSTRING, OPT_NOEXPAND
+	     OPT_TYPEDEFHINT, OPT_ADDFORWARDDECL, OPT_UNDEFBEFOREDECL, _
+	     OPT_NOSTRING, OPT_EXPANDINDEFINE, OPT_NOEXPAND
 		hashAddOverwrite(@idopt(opt), param1, NULL)
 
 	case OPT_REMOVEINCLUDE
@@ -892,7 +892,7 @@ private sub hParseArgs(byref x as integer)
 			x += 1
 
 		case OPT_WINDOWSMS, OPT_CLONG32, OPT_FIXUNSIZEDARRAYS, OPT_DISABLECONSTANTS, _
-		     OPT_FIXMINGWAW, OPT_NOFUNCTIONBODIES, OPT_DROPMACROBODYSCOPES
+		     OPT_NOFUNCTIONBODIES, OPT_DROPMACROBODYSCOPES
 			x += 1
 			astAppend(frog.script, astNewOPTION(opt))
 
@@ -900,7 +900,8 @@ private sub hParseArgs(byref x as integer)
 			hParseOption2Params(x, opt, "<oldid>", "<newid>")
 
 		case OPT_REMOVEDEFINE, OPT_REMOVEPROC, OPT_REMOVEVAR, OPT_DROPPROCBODY, _
-		     OPT_TYPEDEFHINT, OPT_ADDFORWARDDECL, OPT_UNDEFBEFOREDECL, OPT_NOSTRING, OPT_NOEXPAND
+		     OPT_TYPEDEFHINT, OPT_ADDFORWARDDECL, OPT_UNDEFBEFOREDECL, _
+		     OPT_NOSTRING, OPT_EXPANDINDEFINE, OPT_NOEXPAND
 			hParseOption1Param(x, opt, "<id>")
 
 		case OPT_REMOVEINCLUDE
