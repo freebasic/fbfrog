@@ -49,6 +49,10 @@ const CONST1W = 2
 
 #ifdef UNICODE
 	type myType as myTypeW
+	#define LookupAccountName LookupAccountNameW
+	#define LookupAccountNameLocal(n, s, cs, d, cd, u) LookupAccountNameW(NULL, n, s, cs, d, cd, u)
 #else
 	type myType as myTypeA
+	#define LookupAccountName LookupAccountNameA
+	#define LookupAccountNameLocal(n, s, cs, d, cd, u) LookupAccountNameA(NULL, n, s, cs, d, cd, u)
 #endif

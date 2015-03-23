@@ -33,3 +33,6 @@
 #define STR2 TEXT("2")
 
 __MINGW_TYPEDEF_AW(myType);
+
+#define LookupAccountName __MINGW_NAME_AW(LookupAccountName)
+#define LookupAccountNameLocal(n, s, cs, d, cd, u) __MINGW_NAME_AW(LookupAccountName) (NULL, n, s, cs, d, cd, u)

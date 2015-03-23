@@ -2191,6 +2191,44 @@ private sub cppEndInclude()
 	cpp.x += 1
 end sub
 
+private sub hMaybeExpandMacroInDefineBody(byval parentdefine as ASTNODE ptr)
+	var id = tkSpellId(cpp.x)
+
+	'' Only expand if the called macro was given with -expandindefine
+	if hashContains(@cpp.api->idopt(OPT_EXPANDINDEFINE), id, hashHash(id)) = FALSE then
+		exit sub
+	end if
+
+	'' Similar to hMaybeExpandMacro():
+	var definfo = hCheckForMacroCall(cpp.x)
+	if definfo = NULL then
+		exit sub
+	end if
+
+	dim as integer argbegin(0 to MAXARGS-1)
+	dim as integer argend(0 to MAXARGS-1)
+	dim as integer argcount
+	var callbegin = cpp.x
+	var callend = hParseMacroCall(callbegin, definfo->macro, @argbegin(0), @argend(0), argcount)
+	if callend < 0 then
+		exit sub
+	end if
+
+	'' Don't expand if the macrocall involves parameters of the parentdefine
+	for i as integer = callbegin to callend
+		if tkGet(i) >= TK_ID then
+			if astLookupMacroParam(parentdefine, tkSpellId(i)) >= 0 then
+				exit sub
+			end if
+		end if
+	next
+
+	hExpandMacro(definfo, callbegin, callend, @argbegin(0), @argend(0), argcount, FALSE, FALSE)
+
+	'' TK_ID expanded; reparse it
+	cpp.x -= 1
+end sub
+
 '' DEFINE Identifier ['(' ParameterList ')'] Body Eol
 private sub cppDefine(byval begin as integer, byref flags as integer)
 	cpp.x += 1
@@ -2207,28 +2245,26 @@ private sub cppDefine(byval begin as integer, byref flags as integer)
 	'' If there are any -expandindefine options, look for corresponding
 	'' macros in the #define body, and expand them.
 	''
-	'' But only for macros without parameters, otherwise we risk wrong expansion:
+	'' But don't expand macro calls that involve parameters of the #define,
+	'' because then we risk wrong expansion:
 	''    -expandindefine a
 	''    #define a(x) x##1
 	''    #define b(x) a(x)
+	''    #define c(x) x + a(1)
 	'' =>
 	''    #define a(x) x##1
-	''    #define b(x) x1    // wrong, b() is broken now
+	''    #define b(x) x1      // wrong, b() is broken now
+	''    #define c(x) x + 11  // ok: invocation of a() doesn't involve x
 	''
-	if (cpp.api->idopt(OPT_EXPANDINDEFINE).count > 0) and (macro->paramcount <= 0) then
+	if cpp.api->idopt(OPT_EXPANDINDEFINE).count > 0 then
 		do
 			select case tkGet(cpp.x)
 			case TK_EOL
 				exit do
 
 			case is >= TK_ID
-				var id = tkSpellId(cpp.x)
-				if hashContains(@cpp.api->idopt(OPT_EXPANDINDEFINE), id, hashHash(id)) then
-					if hMaybeExpandMacro(cpp.x, FALSE, FALSE) then
-						'' TK_ID expanded; reparse it
-						cpp.x -= 1
-					end if
-				end if
+				hMaybeExpandMacroInDefineBody(macro)
+
 			end select
 
 			cpp.x += 1
