@@ -16,10 +16,10 @@
 
 #define WINELIB_NAME_AW __MINGW_NAME_AW
 #define TEXT(s) __TEXT(s)
+#define __MINGW_TYPEDEF_AW(type) '' TODO: typedef __MINGW_NAME_AW(type) type;
+#define __MINGW_TYPEDEF_UAW(type) '' TODO: typedef __MINGW_NAME_UAW(type) type;
 
 #ifdef UNICODE
-	#define __MINGW_TYPEDEF_AW(type) '' TODO: typedef typeW type;
-	#define __MINGW_TYPEDEF_UAW(type) '' TODO: typedef type_W type;
 	#define CreateWindowEx CreateWindowExW
 	#define SendMessage SendMessageW
 	#define Function1 Function1W123
@@ -27,8 +27,6 @@
 	#define Function3 Function3_W_123
 	#define Function4 Function4W
 #else
-	#define __MINGW_TYPEDEF_AW(type) '' TODO: typedef typeA type;
-	#define __MINGW_TYPEDEF_UAW(type) '' TODO: typedef type_A type;
 	#define CreateWindowEx CreateWindowExA
 	#define SendMessage SendMessageA
 	#define Function1 Function1A123
@@ -50,7 +48,7 @@ const CONST1W = 2
 #define STR2 __TEXT("2")
 
 #ifdef UNICODE
-	type myType as typeW
+	type myType as myTypeW
 #else
-	type myType as typeA
+	type myType as myTypeA
 #endif

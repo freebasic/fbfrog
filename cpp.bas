@@ -2203,9 +2203,19 @@ private sub cppDefine(byval begin as integer, byref flags as integer)
 	'' Body
 	var xbody = cpp.x
 
+	''
 	'' If there are any -expandindefine options, look for corresponding
 	'' macros in the #define body, and expand them.
-	if cpp.api->idopt(OPT_EXPANDINDEFINE).count > 0 then
+	''
+	'' But only for macros without parameters, otherwise we risk wrong expansion:
+	''    -expandindefine a
+	''    #define a(x) x##1
+	''    #define b(x) a(x)
+	'' =>
+	''    #define a(x) x##1
+	''    #define b(x) x1    // wrong, b() is broken now
+	''
+	if (cpp.api->idopt(OPT_EXPANDINDEFINE).count > 0) and (macro->paramcount <= 0) then
 		do
 			select case tkGet(cpp.x)
 			case TK_EOL
