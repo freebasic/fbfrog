@@ -620,7 +620,8 @@ private sub cGccAttribute(byref gccattribs as integer)
 	     "sentinel", _
 	     "unused", _
 	     "visibility", _
-	     "warn_unused_result"
+	     "warn_unused_result", _
+	     "dllexport"  '' used on declarations in some headers (SDL 1.2), looks like gcc ignores it
 		c.x += 1
 
 		'' Some of these attributes accept further arguments which we

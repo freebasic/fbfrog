@@ -56,6 +56,8 @@ extern import i as long
 	extern import i as long
 	'' TODO: __attribute__((dllimport)) static int a;
 	'' TODO: static __attribute__((dllimport)) int b;
+	extern i as long
+	declare sub f()
 #endif
 
 declare sub f()

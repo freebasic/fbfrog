@@ -72,6 +72,11 @@ extern __attribute__((__dllimport__)) int i;
 	// Doesn't make sense:
 	__declspec(dllimport) static int a;
 	static __declspec(dllimport) int b;
+
+	// Doesn't make sense, but exists in real headers (dllexport attribute
+	// should be ignored here):
+	extern __declspec(dllexport) int i;
+	extern __declspec(dllexport) void f(void);
 #endif
 
 __attribute__((no_instrument_function)) void f(void);
