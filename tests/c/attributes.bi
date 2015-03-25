@@ -12,27 +12,15 @@ declare sub f()
 declare sub f()
 declare sub f()
 declare sub f()
-declare sub f()
-declare function malloc(byval as uinteger) as any ptr
 declare function malloc(byval as uinteger) as any ptr
 declare function calloc(byval as uinteger, byval as uinteger) as any ptr
-declare function calloc(byval as uinteger, byval as uinteger) as any ptr
-declare function realloc(byval as any ptr, byval as uinteger) as any ptr
 declare function realloc(byval as any ptr, byval as uinteger) as any ptr
 declare sub f()
 declare sub f()
-declare sub f()
-declare sub f()
-declare sub printf(byval as zstring ptr, ...)
 declare sub printf(byval as zstring ptr, ...)
 declare sub f()
 declare sub f()
-declare sub f()
-declare sub f()
 type int_may_alias as long
-type int_may_alias as long
-declare sub f()
-declare sub f()
 declare sub f()
 declare sub f()
 declare sub f()
@@ -45,10 +33,7 @@ declare sub f()
 #endif
 
 declare sub f stdcall()
-declare sub f stdcall()
 declare sub f()
-declare sub f()
-extern import i as long
 extern import i as long
 
 #ifdef __FB_WIN32__

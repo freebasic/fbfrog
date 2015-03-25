@@ -1,66 +1,42 @@
 __attribute((warn_unused_result))       void f(void);
 __attribute__((warn_unused_result))     void f(void);
 __attribute__((__warn_unused_result__)) void f(void);
+void f(void) __attribute((warn_unused_result));
+void f(void) __attribute__((warn_unused_result));
+void f(void) __attribute__((__warn_unused_result__));
 
-__attribute__((noreturn))     void f(void);
-__attribute__((__noreturn__)) void f(void);
+__attribute__((noreturn)) void f(void);
+__attribute__((malloc)) void f(void);
+__attribute__((deprecated)) void f(void);
+__attribute__((deprecated("message"))) void f(void);
+void *malloc(size_t) __attribute__((alloc_size(1)));
+void *calloc(size_t, size_t) __attribute__((alloc_size(1, 2)));
+void *realloc(void *, size_t) __attribute__((alloc_size(2)));
+void f(void) __attribute__((const));
+void f(void) __attribute__((pure));
+void printf(char *, ...) __attribute__((format(printf, 1, 2)));
+void f(void) __attribute__((sentinel));
+void f(void) __attribute__((unused));
 
-__attribute__((malloc))     void f(void);
-__attribute__((__malloc__)) void f(void);
+typedef int __attribute__((may_alias)) int_may_alias;
 
-__attribute__((deprecated))     void f(void);
-__attribute__((__deprecated__)) void f(void);
-
-__attribute__((deprecated("message")))     void f(void);
-__attribute__((__deprecated__("message"))) void f(void);
-
-void *malloc(size_t) __attribute__((  alloc_size  (1)));
-void *malloc(size_t) __attribute__((__alloc_size__(1)));
-void *calloc(size_t, size_t) __attribute__((  alloc_size  (1, 2)));
-void *calloc(size_t, size_t) __attribute__((__alloc_size__(1, 2)));
-void *realloc(void *, size_t) __attribute__((  alloc_size  (2)));
-void *realloc(void *, size_t) __attribute__((__alloc_size__(2)));
-
-void f(void) __attribute__((  const  ));
-void f(void) __attribute__((__const__));
-
-void f(void) __attribute__((  pure  ));
-void f(void) __attribute__((__pure__));
-
-void printf(char *, ...) __attribute__((  format  (  printf  , 1, 2)));
-void printf(char *, ...) __attribute__((__format__(__printf__, 1, 2)));
-
-void f(void) __attribute__((  sentinel  ));
-void f(void) __attribute__((__sentinel__));
-
-void f(void) __attribute__((  unused  ));
-void f(void) __attribute__((__unused__));
-
-typedef int __attribute__((  may_alias  )) int_may_alias;
-typedef int __attribute__((__may_alias__)) int_may_alias;
-
-void f(void) __attribute__((  visibility  ("default")));
-void f(void) __attribute__((__visibility__("default")));
-void f(void) __attribute__((__visibility__("hidden")));
-void f(void) __attribute__((__visibility__("internal")));
-void f(void) __attribute__((__visibility__("protected")));
+void f(void) __attribute__((visibility("default")));
+void f(void) __attribute__((visibility("hidden")));
+void f(void) __attribute__((visibility("internal")));
+void f(void) __attribute__((visibility("protected")));
 
 #ifdef _WIN32
 __cdecl                    void f(void);
 #endif
 __attribute__((cdecl))     void f(void);
-__attribute__((__cdecl__)) void f(void);
 
 #ifdef _WIN32
 __stdcall                    void f(void);
 #endif
 __attribute__((stdcall))     void f(void);
-__attribute__((__stdcall__)) void f(void);
 
-__attribute__((  dllimport  )) void f(void);
-__attribute__((__dllimport__)) void f(void);
-extern __attribute__((  dllimport  )) int i;
-extern __attribute__((__dllimport__)) int i;
+__attribute__((dllimport)) void f(void);
+extern __attribute__((dllimport)) int i;
 
 #ifdef _WIN32
 	// Ok:
