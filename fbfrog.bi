@@ -387,6 +387,7 @@ enum
 	OPT_RENAMEPROC
 	OPT_RENAMEDEFINE
 	OPT_RENAMEMACROPARAM
+	OPT_RENAME
 	OPT_REMOVEDEFINE
 	OPT_REMOVEPROC
 	OPT_REMOVEVAR
@@ -802,7 +803,7 @@ type ApiInfo
 	as integer nofunctionbodies, dropmacrobodyscopes
 
 	have_renames as integer
-	renameopt(OPT_RENAMETYPEDEF to OPT_RENAMEMACROPARAM) as THASH
+	renameopt(OPT_RENAMETYPEDEF to OPT_RENAME) as THASH
 	idopt(OPT_REMOVEDEFINE to OPT_NOEXPAND) as THASH
 	removeinclude as THASH
 	setarraysizeoptions as THASH

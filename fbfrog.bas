@@ -213,6 +213,7 @@ private sub hPrintHelpAndExit()
 	print "    -renametypedef, -renametag (struct/union/enum),"
 	print "    -renameproc (procedures)"
 	print "    -renamedefine, -renamemacroparam"
+	print "    -rename (any matching symbol)"
 	print "  options for removing declarations (-remove* <id>):"
 	print "    -removedefine, -removeproc, -removevar"
 	print "  -dropprocbody <id>  Don't preserve a certain procedure's body"
@@ -428,7 +429,7 @@ sub ApiInfo.loadOption(byval opt as integer, byval param1 as zstring ptr, byval 
 	case OPT_DROPMACROBODYSCOPES : dropmacrobodyscopes = TRUE
 
 	case OPT_RENAMETYPEDEF, OPT_RENAMETAG, OPT_RENAMEPROC, _
-	     OPT_RENAMEDEFINE, OPT_RENAMEMACROPARAM
+	     OPT_RENAMEDEFINE, OPT_RENAMEMACROPARAM, OPT_RENAME
 		hashAddOverwrite(@renameopt(opt), param1, param2)
 		have_renames = TRUE
 
@@ -896,7 +897,8 @@ private sub hParseArgs(byref x as integer)
 			x += 1
 			astAppend(frog.script, astNewOPTION(opt))
 
-		case OPT_RENAMETYPEDEF, OPT_RENAMETAG, OPT_RENAMEPROC, OPT_RENAMEDEFINE, OPT_RENAMEMACROPARAM
+		case OPT_RENAMETYPEDEF, OPT_RENAMETAG, OPT_RENAMEPROC, OPT_RENAMEDEFINE, _
+		     OPT_RENAMEMACROPARAM, OPT_RENAME
 			hParseOption2Params(x, opt, "<oldid>", "<newid>")
 
 		case OPT_REMOVEDEFINE, OPT_REMOVEPROC, OPT_REMOVEVAR, OPT_DROPPROCBODY, _

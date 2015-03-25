@@ -478,6 +478,10 @@ end function
 private function hlApplyRenameOption(byval n as ASTNODE ptr) as integer
 	static inside_macro as integer
 
+	if n->text then
+		hApplyRenameOption(OPT_RENAME, n)
+	end if
+
 	if typeGetDt(n->dtype) = TYPE_UDT then
 		assert(astIsTEXT(n->subtype))
 		if n->subtype->attrib and ASTATTRIB_TAGID then
