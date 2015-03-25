@@ -61,6 +61,7 @@ extern import i as long
 #endif
 
 declare sub f()
+declare sub f()
 dim shared attribute_defines as long
 
 type alignment_

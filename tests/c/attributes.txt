@@ -8,4 +8,4 @@
       tests/c/attributes.h
 [5/5] __FB_DOS__
       tests/c/attributes.h
-emitting: tests/c/attributes.bi (238 declarations, 2 TODOs)
+emitting: tests/c/attributes.bi (239 declarations, 2 TODOs)

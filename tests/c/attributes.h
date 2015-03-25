@@ -80,6 +80,7 @@ extern __attribute__((__dllimport__)) int i;
 #endif
 
 __attribute__((no_instrument_function)) void f(void);
+void f(void) __attribute__((cold));
 
 // #defines containing only __attribute__'s should just be stripped automatically,
 // as they're useless for FB

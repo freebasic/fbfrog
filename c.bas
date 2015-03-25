@@ -607,6 +607,7 @@ private sub cGccAttribute(byref gccattribs as integer)
 	case "alloc_size", _
 	     "aligned", _
 	     "always_inline", _
+	     "cold", _
 	     "const", _
 	     "deprecated", _
 	     "format", _
