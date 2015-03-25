@@ -266,7 +266,7 @@ end function
 
 private function hIsDataTypeOrAttribute(byval y as integer) as integer
 	select case tkGet(y)
-	case KW___ATTRIBUTE__
+	case KW___ATTRIBUTE, KW___ATTRIBUTE__
 		function = not cIdentifierIsMacroParam(tkSpellId(y))
 	case else
 		function = hIsDataType(y)
@@ -646,7 +646,7 @@ private sub cGccAttributeList(byref gccattribs as integer)
 
 		'' __attribute__((...)):
 		'' __ATTRIBUTE__ '((' Attribute (',' Attribute)* '))'
-		case KW___ATTRIBUTE__
+		case KW___ATTRIBUTE, KW___ATTRIBUTE__
 			c.x += 1
 
 			'' '('?
@@ -844,7 +844,7 @@ private function cDefineBody(byval macro as ASTNODE ptr) as integer
 
 		exit function
 
-	case KW___ATTRIBUTE__
+	case KW___ATTRIBUTE, KW___ATTRIBUTE__
 		'' Don't preserve #define if it just contains an __attribute__
 		cGccAttributeList(0)
 		exit function

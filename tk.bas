@@ -84,7 +84,8 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	(@"}"  ), _
 	(@"~"  ), _
 	(@"TK_ID" ), _ '' TK_ID
-	(@"__attribute__"), _ '' C keywords
+	(@"__attribute"  ), _ '' C keywords
+	(@"__attribute__"), _
 	(@"__inline"     ), _
 	(@"__inline__"   ), _
 	(@"__restrict"   ), _

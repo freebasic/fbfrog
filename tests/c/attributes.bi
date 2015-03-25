@@ -12,6 +12,7 @@ declare sub f()
 declare sub f()
 declare sub f()
 declare sub f()
+declare sub f()
 declare function malloc(byval as uinteger) as any ptr
 declare function malloc(byval as uinteger) as any ptr
 declare function calloc(byval as uinteger, byval as uinteger) as any ptr

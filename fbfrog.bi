@@ -295,7 +295,8 @@ enum
 
 	'' C keywords
 	KW__C_FIRST
-	KW___ATTRIBUTE__ = KW__C_FIRST
+	KW___ATTRIBUTE = KW__C_FIRST
+	KW___ATTRIBUTE__
 	KW___INLINE
 	KW___INLINE__
 	KW___RESTRICT
