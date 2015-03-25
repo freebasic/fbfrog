@@ -293,3 +293,4 @@
 #endif
 
 #define __extension__
+#define register
