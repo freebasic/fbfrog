@@ -533,3 +533,5 @@ enum E {
 	#define A84 (-1)
 #endif
 #define A85 A84
+
+#define A90(x) &(x)->a[(x)->b]

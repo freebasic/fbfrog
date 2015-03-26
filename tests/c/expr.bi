@@ -492,5 +492,6 @@ const A62 = culng(0u - 100u)
 #endif
 
 #define A85 A84
+#define A90(x) (@(x)->a[(x)->b])
 
 end extern

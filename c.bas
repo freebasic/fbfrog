@@ -494,7 +494,7 @@ private function hExpression(byval level as integer) as ASTNODE ptr
 		case TK_STAR     : op = ASTCLASS_MUL     '' *
 		case TK_SLASH    : op = ASTCLASS_DIV     '' /
 		case TK_PERCENT  : op = ASTCLASS_MOD     '' %
-		case TK_LBRACKET : op = ASTCLASS_INDEX   '' [ (a[b])
+		case TK_LBRACKET : op = ASTCLASS_INDEX   '' [ ... ]
 		case TK_DOT      : op = ASTCLASS_MEMBER  '' .
 		case TK_ARROW    : op = ASTCLASS_MEMBERDEREF '' ->
 		case else        : exit while
@@ -507,9 +507,15 @@ private function hExpression(byval level as integer) as ASTNODE ptr
 		if oplevel < level then
 			exit while
 		end if
+
 		'' Left associative?
 		if op <> ASTCLASS_IIF then
 			oplevel += 1
+		end if
+
+		'' For [] we parse until the ], no precedence levels needed
+		if op = ASTCLASS_INDEX then
+			oplevel = 0
 		end if
 
 		'' operator
