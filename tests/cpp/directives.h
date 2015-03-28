@@ -96,3 +96,5 @@
 #define D3(x) { f1( (x) + 1 ); f2( (x) + 2 ); f3( (x) + 3 ); }
 
 #warning "Example warning"
+
+#pragma warning(disable : 123)

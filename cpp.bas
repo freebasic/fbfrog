@@ -2403,6 +2403,10 @@ private function cppPragma(byref flags as integer) as integer
 			exit function
 		end select
 
+	case "warning"
+		'' Ignore
+		cpp.x = hSkipToEol(cpp.x)
+
 	'' #pragma pack(N)
 	'' #pragma pack()
 	'' #pragma pack(push, N)
