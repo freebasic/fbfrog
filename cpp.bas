@@ -2131,7 +2131,6 @@ private sub cppInclude(byval begin as integer, byref flags as integer)
 	if cpp.x < y then
 		if tkGet(y - 1) <> TK_EOL then
 			tkInsert(y, TK_EOL)
-			tkSetRemove(y)
 			y += 1
 		end if
 	end if

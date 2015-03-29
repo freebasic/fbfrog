@@ -885,6 +885,7 @@ end function
 
 private function hDefBodyContainsIds(byval y as integer) as integer
 	do
+		assert(tkGet(y) <> TK_EOF)
 		select case tkGet(y)
 		case TK_EOL
 			exit do
