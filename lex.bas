@@ -549,16 +549,6 @@ private sub lexNext()
 		case CH_GT	'' <>
 			hReadBytes(TK_LTGT, 2)
 		case else
-			'' If it's an #include, parse <...> as string literal
-			if tkGet(lex.x - 1) = KW_INCLUDE then
-				if tkGet(lex.x - 2) = TK_HASH then
-					if tkIsEolOrEof(lex.x - 3) then
-						hReadString()
-						exit select
-					end if
-				end if
-			end if
-
 			hReadBytes(TK_LT, 1)
 		end select
 

@@ -2028,6 +2028,40 @@ private function hDetectIncludeGuardBegin(byval first as integer) as zstring ptr
 	function = id1
 end function
 
+'' "filename" | <filename>
+'' TODO: Don't evaluate escape sequences in "filename"
+'' TODO: Don't evaluate escape sequences/comments in <filename>
+private function cppIncludeFilename() as string
+	select case tkGet(cpp.x)
+	case TK_LT
+		'' <filename>
+
+		'' Skip tokens until the '>'
+		var begin = cpp.x
+		do
+			cpp.x += 1
+			select case tkGet(cpp.x)
+			case TK_GT
+				exit do
+			case TK_EOL, TK_EOF
+				tkOops(cpp.x, "missing '>' to finish #include <...")
+			end select
+		loop
+
+		'' Then spell them to get the filename
+		function = tkSpell(begin + 1, cpp.x - 1)
+		cpp.x += 1
+
+	case TK_STRING
+		'' "filename"
+		function = *tkGetText(cpp.x)
+		cpp.x += 1
+
+	case else
+		tkOopsExpected(cpp.x, """filename"" or <filename> behind #include")
+	end select
+end function
+
 private sub cppInclude(byval begin as integer, byref flags as integer)
 	cpp.x += 1
 
@@ -2036,12 +2070,10 @@ private sub cppInclude(byval begin as integer, byref flags as integer)
 	'' Expand macros behind the #include (but still in the same line)
 	hExpandInRange(cpp.x, hSkipToEol(cpp.x) - 1, FALSE)
 
-	'' "filename"
-	tkExpect(cpp.x, TK_STRING, "containing the #include file name")
+	'' "filename" | <filename>
 	var location = tkGetLocation(cpp.x)
 	var includetkflags = tkGetFlags(cpp.x)
-	var inctext = *tkGetText(cpp.x)
-	cpp.x += 1
+	var inctext = cppIncludeFilename()
 
 	cppEol()
 

@@ -955,14 +955,35 @@ end function
 private function cInclude() as ASTNODE ptr
 	c.x += 1
 
-	'' "filename"
-	assert(tkGet(c.x) = TK_STRING)
-	function = astNew(ASTCLASS_PPINCLUDE, tkGetText(c.x))
-	c.x += 1
+	'' "filename" | <filename>
+	'' TODO: Don't evaluate escape sequences in "filename"
+	'' TODO: Don't evaluate escape sequences/comments in <filename>
+	dim filename as string
+	if tkGet(c.x) = TK_LT then
+		'' <filename>
+
+		'' Skip tokens until the '>'
+		var begin = c.x
+		do
+			c.x += 1
+			assert((tkGet(c.x) <> TK_EOL) and (tkGet(c.x) <> TK_EOF))
+		loop until tkGet(c.x) = TK_GT
+
+		'' Then spell them to get the filename
+		filename = tkSpell(begin + 1, c.x - 1)
+		c.x += 1
+	else
+		'' "filename"
+		assert(tkGet(c.x) = TK_STRING)
+		filename = *tkGetText(c.x)
+		c.x += 1
+	end if
 
 	'' Eol
 	assert(tkGet(c.x) = TK_EOL)
 	c.x += 1
+
+	function = astNew(ASTCLASS_PPINCLUDE, filename)
 end function
 
 private function cPragmaPackNumber() as integer
