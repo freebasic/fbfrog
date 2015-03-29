@@ -2142,7 +2142,6 @@ private sub cppInclude(byval begin as integer, byref flags as integer)
 
 	'' Insert EOL behind the TK_ENDINCLUDE so we can detect BOL there
 	tkInsert(y, TK_EOL)
-	tkSetRemove(y)
 	y += 1
 
 	'' Start parsing the #included content
