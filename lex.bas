@@ -239,92 +239,61 @@ private sub hReadNumber()
 	hAddTextToken(TK_NUMBER, begin)
 end sub
 
-private function hReadEscapeSequence() as ulongint
-	select case lex.i[0]
-	case CH_DQUOTE    : lex.i += 1 : function = CH_DQUOTE     '' \"
-	case CH_QUOTE     : lex.i += 1 : function = CH_QUOTE      '' \'
-	case CH_QUEST     : lex.i += 1 : function = CH_QUEST      '' \?
-	case CH_BACKSLASH : lex.i += 1 : function = CH_BACKSLASH  '' \\
-	case CH_L_A       : lex.i += 1 : function = CH_BELL       '' \a
-	case CH_L_B       : lex.i += 1 : function = CH_BACKSPACE  '' \b
-	case CH_L_F       : lex.i += 1 : function = CH_FORMFEED   '' \f
-	case CH_L_N       : lex.i += 1 : function = CH_LF         '' \n
-	case CH_L_R       : lex.i += 1 : function = CH_CR         '' \r
-	case CH_L_T       : lex.i += 1 : function = CH_TAB        '' \t
-	case CH_L_V       : lex.i += 1 : function = CH_VTAB       '' \v
+'' Look-ahead and check whether the \ is an escaped EOL, and if yes, skip it
+private function hSkipEscapedEol() as integer
+	var i = 0
+	assert(lex.i[0] = CH_BACKSLASH)
+	i += 1
 
-	'' \NNN (octal, max 3 digits)
-	case CH_0 to CH_7
-		dim as uinteger value
-		var length = 0
-		do
-			value = (value shl 3) + (lex.i[0] - asc("0"))
-			length += 1
-			lex.i += 1
-		loop while (lex.i[0] >= CH_0) and (lex.i[0] <= CH_7) and (length < 3)
+	'' Skip space between \ and EOL
+	while (lex.i[i] = CH_TAB) or (lex.i[i] = CH_SPACE)
+		i += 1
+	wend
 
-		function = value
-
-	'' \xNNNN... (hexadecimal, as many digits as possible)
-	case CH_L_X
-		dim as ulongint value
-		var length = 0
-		lex.i += 1
-		do
-			dim as uinteger digit = lex.i[0]
-
-			select case digit
-			case CH_0 to CH_9
-				digit -= CH_0
-			case CH_A to CH_F
-				digit -= (CH_A - 10)
-			case CH_L_A to CH_L_F
-				digit -= (CH_L_A - 10)
-			case else
-				exit do
-			end select
-
-			value = (value shl 4) + digit
-
-			length += 1
-			lex.i += 1
-		loop
-
-		function = value
-
+	select case lex.i[i]
+	case CH_CR
+		i += 1
+		if lex.i[i] = CH_LF then	'' CRLF
+			i += 1
+		end if
+	case CH_LF
+		i += 1
 	case else
-		lexOops("unknown escape sequence")
+		return FALSE
 	end select
+
+	lex.i += i
+	hNewLine()
+	function = TRUE
 end function
 
+'' String/char literal lexing, starting at ", ', or L.
+'' String literals may contain escaped EOLs and continue on the next line.
+'' For correct lexing, some escape sequences have to be handled here too.
+'' The entire string literal is stored into the token as-is, except for escaped
+'' EOLs. The real parsing/evaluation is done later by hStringLiteral().
 private sub hReadString()
-	'' String/char literal parsing, starting at ", ', or L, covering:
-	''    'a'
-	''    L'a'
-	''    "foo"
-	''    L"foo"
-	'' The string content is stored into the token, but not the quotes.
-	'' Escape sequences are expanded except for \\ and \0.
-	'' String literals may contain escaped EOLs and continue on the next
-	'' line.
+	'' Collect the string literal into lex.text.
+	'' We can't just read it from the file buffer because we may solve out
+	'' escaped EOLs.
+	var j = 0  '' current write position in lex.text
 
+	'' L => wstring, else zstring
 	var id = TK_STRING
-
 	if lex.i[0] = CH_L then
-		lex.i += 1
 		id = TK_WSTRING
+		lex.text[j] = CH_L : j += 1
+		lex.i += 1
 	end if
 
+	'' String or char?
 	var quotechar = lex.i[0]
-	select case quotechar
-	case CH_QUOTE
+	if quotechar = CH_QUOTE then
 		id = iif((id = TK_WSTRING), TK_WCHAR, TK_CHAR)
-	case CH_LT
-		quotechar = CH_GT
-	end select
-
+	end if
+	lex.text[j] = quotechar : j += 1
 	lex.i += 1
-	var j = 0  '' current write position in text buffer
+
 	do
 		select case lex.i[0]
 		case quotechar
@@ -334,51 +303,18 @@ private sub hReadString()
 			lexOops("string/char literal left open")
 
 		case CH_BACKSLASH	'' \
-			lex.i += 1
+			if hSkipEscapedEol() = FALSE then
+				'' Store backslash as-is, not resolving escape sequences
+				lex.text[j] = CH_BACKSLASH : j += 1
+				lex.i += 1
 
-			'' Look-ahead and check whether it's an escaped EOL.
-			'' Escaped EOLs are not included in the string literal.
-			var i = 0
-			while (lex.i[i] = CH_TAB) or (lex.i[i] = CH_SPACE)
-				i += 1
-			wend
-
-			var found_eol = FALSE
-			select case lex.i[i]
-			case CH_CR
-				i += 1
-				if lex.i[i] = CH_LF then	'' CRLF
-					i += 1
-				end if
-				found_eol = TRUE
-			case CH_LF
-				i += 1
-				found_eol = TRUE
-			end select
-
-			if found_eol then
-				lex.i += i
-				hNewLine()
-			else
-				var value = hReadEscapeSequence()
-
-				select case value
-				case is > &hFFu
-					lexOops("escape sequence value bigger than " & &hFFu & " (&hFF): " & value & " (&h" & hex(value) & ")")
-
-				'' Encode embedded nulls as "\0", and then also backslashes
-				'' as "\\" to prevent ambiguity with the backslash in "\0".
-				'' This allows the string literal content to still be
-				'' represented as null-terminated string.
-				case 0
+				select case lex.i[0]
+				case CH_BACKSLASH '' \\
 					lex.text[j] = CH_BACKSLASH : j += 1
-					lex.text[j] = CH_0         : j += 1
-				case CH_BACKSLASH
-					lex.text[j] = CH_BACKSLASH : j += 1
-					lex.text[j] = CH_BACKSLASH : j += 1
-
-				case else
-					lex.text[j] = value : j += 1
+					lex.i += 1
+				case quotechar    '' \" or \'
+					lex.text[j] = quotechar : j += 1
+					lex.i += 1
 				end select
 			end if
 
@@ -393,6 +329,7 @@ private sub hReadString()
 	loop
 
 	'' closing quote
+	lex.text[j] = lex.i[0] : j += 1
 	lex.i += 1
 
 	'' null-terminator

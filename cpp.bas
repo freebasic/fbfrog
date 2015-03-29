@@ -259,6 +259,175 @@ function hNumberLiteral _
 	function = n
 end function
 
+private function hReadEscapeSequence(byref p as ubyte ptr, byref errmsg as string) as ulongint
+	select case p[0]
+	case CH_DQUOTE    : p += 1 : function = CH_DQUOTE     '' \"
+	case CH_QUOTE     : p += 1 : function = CH_QUOTE      '' \'
+	case CH_QUEST     : p += 1 : function = CH_QUEST      '' \?
+	case CH_BACKSLASH : p += 1 : function = CH_BACKSLASH  '' \\
+	case CH_L_A       : p += 1 : function = CH_BELL       '' \a
+	case CH_L_B       : p += 1 : function = CH_BACKSPACE  '' \b
+	case CH_L_F       : p += 1 : function = CH_FORMFEED   '' \f
+	case CH_L_N       : p += 1 : function = CH_LF         '' \n
+	case CH_L_R       : p += 1 : function = CH_CR         '' \r
+	case CH_L_T       : p += 1 : function = CH_TAB        '' \t
+	case CH_L_V       : p += 1 : function = CH_VTAB       '' \v
+
+	'' \NNN (octal, max 3 digits)
+	case CH_0 to CH_7
+		dim as uinteger value
+		var length = 0
+		do
+			value = (value shl 3) + (p[0] - asc("0"))
+			length += 1
+			p += 1
+		loop while (p[0] >= CH_0) and (p[0] <= CH_7) and (length < 3)
+
+		function = value
+
+	'' \xNNNN... (hexadecimal, as many digits as possible)
+	case CH_L_X
+		dim as ulongint value
+		var length = 0
+		p += 1
+		do
+			dim as uinteger digit = p[0]
+
+			select case digit
+			case CH_0 to CH_9
+				digit -= CH_0
+			case CH_A to CH_F
+				digit -= (CH_A - 10)
+			case CH_L_A to CH_L_F
+				digit -= (CH_L_A - 10)
+			case else
+				exit do
+			end select
+
+			value = (value shl 4) + digit
+
+			length += 1
+			p += 1
+		loop
+
+		function = value
+
+	case else
+		errmsg = "unknown escape sequence"
+	end select
+end function
+
+'' C string literal parsing
+''   "..."
+''   L"..."
+''   '.'
+''   L'.'
+'' String literals can contain escape sequences
+function hStringLiteral _
+	( _
+		byval x as integer, _
+		byval eval_escapes as integer, _
+		byref errmsg as string _
+	) as ASTNODE ptr
+
+	assert((tkGet(x) = TK_STRING) or (tkGet(x) = TK_WSTRING) or _
+	       (tkGet(x) = TK_CHAR  ) or (tkGet(x) = TK_WCHAR  ))
+	dim as ubyte ptr p = tkGetText(x)
+
+	var dtype = TYPE_ZSTRING
+	if p[0] = CH_L then
+		dtype = TYPE_WSTRING
+		p += 1
+	end if
+
+	var astclass = ASTCLASS_STRING
+	var quotechar = p[0]
+	if quotechar = CH_QUOTE then
+		astclass = ASTCLASS_CHAR
+		dtype = iif(dtype = TYPE_ZSTRING, TYPE_BYTE, TYPE_WCHAR_T)
+	end if
+	p += 1
+
+	'' Evaluate escape sequences and store the string literal's text into a buffer
+	const MAXTEXTLEN = 1 shl 12
+	'' +2 extra room to allow for some "overflowing" to reduce the amount
+	'' of checking needed, +1 for null terminator.
+	static text as zstring * MAXTEXTLEN+2+1 = any
+	var j = 0  '' current write position in text buffer
+
+	do
+		select case p[0]
+		case quotechar
+			exit do
+
+		case 0
+			assert(FALSE)
+
+		case CH_BACKSLASH '' \
+			if eval_escapes then
+				p += 1
+
+				var value = hReadEscapeSequence(p, errmsg)
+				if len(errmsg) > 0 then
+					exit function
+				end if
+
+				select case value
+				case is > &hFFu
+					errmsg = "escape sequence value bigger than " & &hFFu & " (&hFF): " & value & " (&h" & hex(value) & ")"
+					exit function
+
+				'' Encode embedded nulls as "\0", and then also backslashes
+				'' as "\\" to prevent ambiguity with the backslash in "\0".
+				'' This allows the string literal content to still be
+				'' represented as null-terminated string.
+				case 0
+					text[j] = CH_BACKSLASH : j += 1
+					text[j] = CH_0         : j += 1
+				case CH_BACKSLASH
+					text[j] = CH_BACKSLASH : j += 1
+					text[j] = CH_BACKSLASH : j += 1
+
+				case else
+					text[j] = value : j += 1
+				end select
+			else
+				'' Store backslash as-is, not resolving escape sequences
+				text[j] = CH_BACKSLASH : j += 1
+				p += 1
+
+				select case p[0]
+				case CH_BACKSLASH '' \\
+					text[j] = CH_BACKSLASH : j += 1
+					p += 1
+				case quotechar    '' \" or \'
+					text[j] = quotechar : j += 1
+					p += 1
+				end select
+			end if
+
+		case else
+			text[j] = p[0] : j += 1
+			p += 1
+		end select
+
+		if j > MAXTEXTLEN then
+			errmsg = "string literal too long, MAXTEXTLEN=" & MAXTEXTLEN
+			exit function
+		end if
+	loop
+
+	'' closing quote
+	p += 1
+
+	'' null-terminator
+	text[j] = 0
+
+	var n = astNew(astclass, text)
+	n->dtype = dtype
+	function = n
+end function
+
 '' MacroParameter =
 ''      Identifier         (named parameter)
 ''    | Identifier '...'   (named + variadic)
@@ -719,6 +888,17 @@ private sub cppEol()
 	end if
 	cpp.x += 1
 end sub
+
+private function cppStringLiteral(byval eval_escapes as integer) as string
+	dim errmsg as string
+	var s = hStringLiteral(cpp.x, eval_escapes, errmsg)
+	if s = NULL then
+		tkOops(cpp.x, errmsg)
+	end if
+	function = *s->text
+	astDelete(s)
+	cpp.x += 1
+end function
 
 private sub hCheckForUnknownSymbol(byval id as zstring ptr)
 	if cppIsKnownSymbol(id) = FALSE then
@@ -1421,7 +1601,14 @@ private function hInsertMacroExpansion _
 					assert((arg >= 0) and (arg < argcount))
 					var behindspace = tkGetFlags(x) and TKFLAG_BEHINDSPACE
 					tkRemove(x, x + 1)
-					tkInsert(x, TK_STRING, tkSpell(argbegin[arg], argend[arg]))
+
+					'' " must be replaced by \"
+					'' then we can wrap the stringified text in "..." to produce the TK_STRING
+					var s = tkSpell(argbegin[arg], argend[arg])
+					s = strReplace(s, """", $"\""")
+					s = """" + s + """"
+
+					tkInsert(x, TK_STRING, s)
 					hOverrideBehindspace(x, behindspace)
 				end if
 			end if
@@ -2029,7 +2216,7 @@ private function hDetectIncludeGuardBegin(byval first as integer) as zstring ptr
 end function
 
 '' "filename" | <filename>
-'' TODO: Don't evaluate escape sequences in "filename"
+'' Escape sequences in "filename" are not evaluated.
 '' TODO: Don't evaluate escape sequences/comments in <filename>
 private function cppIncludeFilename() as string
 	select case tkGet(cpp.x)
@@ -2054,8 +2241,7 @@ private function cppIncludeFilename() as string
 
 	case TK_STRING
 		'' "filename"
-		function = *tkGetText(cpp.x)
-		cpp.x += 1
+		function = cppStringLiteral(FALSE)
 
 	case else
 		tkOopsExpected(cpp.x, """filename"" or <filename> behind #include")
@@ -2359,8 +2545,7 @@ private sub cppPragmaPushPopMacro(byval is_push as integer)
 
 	'' "..."
 	tkExpect(cpp.x, TK_STRING, whatfor)
-	var id = *tkGetText(cpp.x)
-	cpp.x += 1
+	var id = cppStringLiteral(TRUE)
 
 	'' ')'
 	tkExpect(cpp.x, TK_RPAREN, whatfor)
@@ -2572,8 +2757,7 @@ private sub cppNext()
 
 			'' StringLiteral
 			tkExpect(cpp.x, TK_STRING, "inside _Pragma()")
-			var text = *tkGetText(cpp.x)
-			cpp.x += 1
+			var text = cppStringLiteral(TRUE)
 
 			'' ')'
 			tkExpect(cpp.x, TK_RPAREN, "to close _Pragma")

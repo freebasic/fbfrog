@@ -218,8 +218,11 @@ Bugs:
 			HWND hwnd;
 		} HWND;
 	};
+* <wstr("a") wstr("b")> doesn't work as string literal, + string concat
+  operators have to be inserted
 
 Interesting improvements:
+* preserve #ifs, if it doesn't lead to problems with #defines
 * fbfrog-fbc-wrapper for compiling .bas files that contain #fbfrog directives
   * process #fbfrog directives in the .bas and in each included .bi; must do
     #include search just like the fbc. Query fbc's incdir via 'fbc -print incdir'

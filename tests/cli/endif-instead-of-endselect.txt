@@ -1,3 +1,3 @@
 <command line>(1): expected -case or -endselect but found '-endif'
-    "./fbfrog" "tests/cli/endif-instead-of-endselect.h" -select -case a -endif
-                                                                        ^~~~~~
+    ./fbfrog tests/cli/endif-instead-of-endselect.h -select -case a -endif
+                                                                    ^~~~~~

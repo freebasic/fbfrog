@@ -1,4 +1,3 @@
 #pragma once
 
-#include once "a
-b.bi"
+#include once "a\nb.bi"

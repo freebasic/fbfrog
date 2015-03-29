@@ -181,6 +181,36 @@ end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
+private function cLiteral(byval astclass as integer, byval eval_escapes as integer) as ASTNODE ptr
+	dim errmsg as string
+	dim n as ASTNODE ptr
+
+	if astclass = ASTCLASS_CONSTI then
+		n = hNumberLiteral(c.x, FALSE, errmsg)
+	else
+		n = hStringLiteral(c.x, eval_escapes, errmsg)
+	end if
+
+	if n = NULL then
+		cError(errmsg)
+
+		select case astclass
+		case ASTCLASS_CONSTI
+			n = astNew(ASTCLASS_CONSTI, "0")
+			n->dtype = TYPE_LONG
+		case ASTCLASS_STRING
+			n = astNew(ASTCLASS_STRING, "abc")
+			n->dtype = TYPE_ZSTRING
+		case ASTCLASS_CHAR
+			n = astNew(ASTCLASS_CHAR, "0")
+			n->dtype = TYPE_BYTE
+		end select
+	end if
+
+	c.x += 1
+	function = n
+end function
+
 '' ("..." | [#]id)*
 private function cStringLiteralSequence() as ASTNODE ptr
 	var strcat = astNew(ASTCLASS_STRCAT)
@@ -189,16 +219,10 @@ private function cStringLiteralSequence() as ASTNODE ptr
 		select case tkGet(c.x)
 		case TK_ID
 			astAppend(strcat, astNewTEXT(tkSpellId(c.x)))
+			c.x += 1
 
-		case TK_STRING
-			var s = astNew(ASTCLASS_STRING, tkGetText(c.x))
-			s->dtype = TYPE_ZSTRING
-			astAppend(strcat, s)
-
-		case TK_WSTRING
-			var s = astNew(ASTCLASS_STRING, tkGetText(c.x))
-			s->dtype = TYPE_WSTRING
-			astAppend(strcat, s)
+		case TK_STRING, TK_WSTRING
+			astAppend(strcat, cLiteral(ASTCLASS_STRING, TRUE))
 
 		'' '#' stringify operator
 		case TK_HASH
@@ -209,12 +233,11 @@ private function cStringLiteralSequence() as ASTNODE ptr
 			c.x += 1
 
 			astAppend(strcat, astNew(ASTCLASS_STRINGIFY, astNewTEXT(tkGetText(c.x))))
+			c.x += 1
 
 		case else
 			exit while
 		end select
-
-		c.x += 1
 	wend
 
 	function = strcat
@@ -271,18 +294,6 @@ private function hIsDataTypeOrAttribute(byval y as integer) as integer
 	case else
 		function = hIsDataType(y)
 	end select
-end function
-
-private function cNumberLiteral() as ASTNODE ptr
-	dim errmsg as string
-	var n = hNumberLiteral(c.x, FALSE, errmsg)
-	if n = NULL then
-		cError(errmsg)
-		n = astNew(ASTCLASS_CONSTI, "0")
-		n->dtype = TYPE_LONG
-	end if
-	c.x += 1
-	function = n
 end function
 
 '' C expression parser based on precedence climbing
@@ -355,20 +366,13 @@ private function hExpression(byval level as integer) as ASTNODE ptr
 			end if
 
 		case TK_NUMBER
-			a = cNumberLiteral()
+			a = cLiteral(ASTCLASS_CONSTI, TRUE)
 
 		case TK_STRING, TK_WSTRING, TK_HASH
 			a = cStringLiteralSequence()
 
-		case TK_CHAR
-			a = astNew(ASTCLASS_CHAR, tkGetText(c.x))
-			a->dtype = TYPE_BYTE
-			c.x += 1
-
-		case TK_WCHAR
-			a = astNew(ASTCLASS_CHAR, tkGetText(c.x))
-			a->dtype = TYPE_WCHAR_T
-			c.x += 1
+		case TK_CHAR, TK_WCHAR
+			a = cLiteral(ASTCLASS_CHAR, TRUE)
 
 		'' Id
 		'' Id ()
@@ -975,8 +979,9 @@ private function cInclude() as ASTNODE ptr
 	else
 		'' "filename"
 		assert(tkGet(c.x) = TK_STRING)
-		filename = *tkGetText(c.x)
-		c.x += 1
+		var s = cLiteral(ASTCLASS_STRING, FALSE)
+		filename = *s->text
+		astDelete(s)
 	end if
 
 	'' Eol
@@ -987,7 +992,7 @@ private function cInclude() as ASTNODE ptr
 end function
 
 private function cPragmaPackNumber() as integer
-	var n = cNumberLiteral()
+	var n = cLiteral(ASTCLASS_CONSTI, TRUE)
 	if n->class <> ASTCLASS_CONSTI then
 		exit function
 	end if
@@ -1088,8 +1093,12 @@ function cPragmaComment() as ASTNODE ptr
 
 	'' "<library-file-name>"
 	assert(tkGet(c.x) = TK_STRING)
-	var libname = *tkGetText(c.x)
-	c.x += 1
+	dim libname as string
+	scope
+		var s = cLiteral(ASTCLASS_STRING, TRUE)
+		libname = *s->text
+		astDelete(s)
+	end scope
 
 	'' ')'
 	assert(tkGet(c.x) = TK_RPAREN)

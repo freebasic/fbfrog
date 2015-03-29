@@ -220,9 +220,8 @@ type ONETOKEN
 
 	'' TK_ID: Identifier
 	''
-	'' TK_STRING: String literal's content with escape sequences solved out,
-	'' except for \\ and \0 (so it can still be represented as
-	'' null-terminated string)
+	'' TK_STRING: C string literal as-is, preserving quotes and escape
+	'' sequences solved out, except for escaped EOLs.
 	''
 	'' TK_DECNUM/TK_HEXNUM/TK_OCTNUM: Original token text without octal/hex
 	'' prefixes ('0' or '0x'), this is enough for
@@ -551,42 +550,6 @@ end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-private function hSpellStrLit(byval text as zstring ptr) as string
-	dim s as string
-
-	do
-		select case (*text)[0]
-		case 0
-			exit do
-
-		'' Internal format: can contain \\ and \0 escape sequences to
-		'' encode embedded null chars
-		case CH_BACKSLASH
-			text += 1
-			assert((text[0] = CH_BACKSLASH) or (text[0] = CH_0))
-			s += "\"
-			s += chr((*text)[0])
-
-		case CH_DQUOTE    : s += "\"""
-		case CH_QUOTE     : s += "\'"
-		case CH_QUEST     : s += "\?"
-		case CH_BELL      : s += "\a"
-		case CH_BACKSPACE : s += "\b"
-		case CH_FORMFEED  : s += "\f"
-		case CH_LF        : s += "\n"
-		case CH_CR        : s += "\r"
-		case CH_TAB       : s += "\t"
-		case CH_VTAB      : s += "\v"
-		case is < 32, 127 : s += "\" + oct((*text)[0])
-		case else         : s += chr((*text)[0])
-		end select
-
-		text += 1
-	loop
-
-	function = s
-end function
-
 function tkSpell overload(byval x as integer) as string
 	dim as string s
 
@@ -596,17 +559,11 @@ function tkSpell overload(byval x as integer) as string
 	select case as const id
 	case TK_EOL      : s = !"\n"
 	case TK_PPMERGE  : s = "##"
-	case TK_STRING   : s = """"  + hSpellStrLit(*text) + """"
-	case TK_CHAR     : s = "'"   + hSpellStrLit(*text) + "'"
-	case TK_WSTRING  : s = "L""" + hSpellStrLit(*text) + """"
-	case TK_WCHAR    : s = "L'"  + hSpellStrLit(*text) + "'"
-	case TK_NUMBER   : s = *text
-	case TK_ID       : s = *text
 	case TK_ARGSFILE : s = "@" + *text
-
+	case TK_STRING, TK_CHAR, TK_WSTRING, TK_WCHAR, TK_NUMBER, TK_ID
+		s = *text
 	case TK_EXCL to TK_TILDE, KW__C_FIRST to KW__C_LAST, OPT__FIRST to OPT__LAST
 		s = *tk_info(id).text
-
 	case else
 		s = tkDumpBasic(id, text)
 	end select

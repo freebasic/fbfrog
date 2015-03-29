@@ -841,6 +841,12 @@ declare function hNumberLiteral _
 		byval is_cpp as integer, _
 		byref errmsg as string _
 	) as ASTNODE ptr
+declare function hStringLiteral _
+	( _
+		byval x as integer, _
+		byval eval_escapes as integer, _
+		byref errmsg as string _
+	) as ASTNODE ptr
 extern as integer cprecedence(ASTCLASS_CLOGOR to ASTCLASS_IIF)
 declare function hDefineHead(byref x as integer) as ASTNODE ptr
 
