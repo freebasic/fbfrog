@@ -309,7 +309,6 @@ private sub hReadString()
 	'' line.
 
 	var id = TK_STRING
-	var is_wchar = FALSE
 
 	if lex.i[0] = CH_L then
 		lex.i += 1
