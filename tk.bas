@@ -592,7 +592,6 @@ function tkSpell overload(byval x as integer) as string
 
 	var id = tkGet(x)
 	var text = tkGetText(x)
-	var flags = tkGetFlags(x)
 
 	select case as const id
 	case TK_EOL      : s = !"\n"
