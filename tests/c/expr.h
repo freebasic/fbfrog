@@ -535,3 +535,10 @@ enum E {
 #define A85 A84
 
 #define A90(x) &(x)->a[(x)->b]
+
+#define A100 struct { int i; }
+#define A101 struct UDT { int i; }
+#define A102 sizeof(struct { int i; })
+#define A103 sizeof(struct UDT { int i; })
+#define A104 (struct { int i; })x
+#define A105 (struct UDT { int i; })x

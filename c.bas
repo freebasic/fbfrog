@@ -1841,6 +1841,19 @@ private function cDataType() as ASTNODE ptr
 	dim as integer dtype, gccattribs
 	dim as ASTNODE ptr subtype
 	cBaseType(dtype, subtype, gccattribs, FALSE)
+
+	'' Disallow UDT bodies in type "expressions" - FB doesn't support it,
+	'' and our highlevel passes/code emitter don't expect it.
+	if subtype then
+		select case subtype->class
+		case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
+			cError("UDT in datatype expression; not supported in FB")
+			dtype = TYPE_INTEGER
+			astDelete(subtype)
+			subtype = NULL
+		end select
+	end if
+
 	function = cDeclarator(0, ASTCLASS_DATATYPE, dtype, subtype, gccattribs, NULL, 0, 0)
 end function
 

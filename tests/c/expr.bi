@@ -493,5 +493,11 @@ const A62 = culng(0u - 100u)
 
 #define A85 A84
 #define A90(x) (@(x)->a[(x)->b])
+#define A100 '' TODO: struct { int i; }
+#define A101 '' TODO: struct UDT { int i; }
+#define A102 '' TODO: sizeof(struct { int i; })
+#define A103 '' TODO: sizeof(struct UDT { int i; })
+#define A104 '' TODO: (struct { int i; })x
+#define A105 '' TODO: (struct UDT { int i; })x
 
 end extern
