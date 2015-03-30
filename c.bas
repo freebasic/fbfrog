@@ -627,6 +627,7 @@ private sub cGccAttribute(byref gccattribs as integer)
 	     "may_alias", _
 	     "no_instrument_function", _
 	     "noreturn", _
+	     "nothrow", _
 	     "pure", _
 	     "sentinel", _
 	     "unused", _
