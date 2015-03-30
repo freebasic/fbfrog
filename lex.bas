@@ -591,8 +591,8 @@ private sub lexNext()
 		hReadBytes(TK_TILDE, 1)
 
 	case else
-		lexOops("stray &h" + hex(lex.i[0], 2) + " byte")
-
+		lex.i += 1
+		hAddTextToken(TK_STRAYBYTE, lex.i - 1)
 	end select
 end sub
 

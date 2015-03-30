@@ -220,6 +220,7 @@ const TKFLAG_EXPANSION		= 1 shl 7  '' comes from macro?
 
 enum
 	TK_EOF
+	TK_STRAYBYTE
 	TK_BEGIN
 	TK_END
 	TK_PPMERGE

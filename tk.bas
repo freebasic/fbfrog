@@ -18,6 +18,7 @@ end type
 dim shared as TOKENINFO tk_info(0 to ...) = _
 { _
 	(@"TK_EOF"     ), _
+	(@"TK_STRAYBYTE"), _
 	(@"TK_BEGIN"   ), _
 	(@"TK_END"     ), _
 	(@"TK_PPMERGE" ), _
