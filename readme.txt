@@ -222,6 +222,13 @@ Bugs:
   operators have to be inserted
 
 Interesting improvements:
+* X11 headers have commented out parameter names. It'd be nice if fbfrog could
+  preserve/uncomment them.
+    1. preserve comments
+    2. for unnamed parameters, check if the comment is just an id, and if so
+       use it as the param id.
+* add pass for fixing up string literal casts (useful for gtk3 at least):
+	cast(SomePtrType, "foo")  =>  cast(SomePtrType, @"foo")
 * preserve #ifs, if it doesn't lead to problems with #defines
 * fbfrog-fbc-wrapper for compiling .bas files that contain #fbfrog directives
   * process #fbfrog directives in the .bas and in each included .bi; must do
@@ -263,6 +270,7 @@ Interesting improvements:
 * pattern-based -removedefine, e.g. -removedefine '__*'
 * pattern-based renames, e.g. -renamedefine '%' 'FOO_%',
   or at least --rename-define-add-prefix '*' FOO_  <- add prefix FOO_ to matching defines.
+* -rename <id> which automatically appends an _ underscore
 * Turn ASTCLASS_UNION/ENUM into ASTATTRIB_* and use ASTCLASS_STRUCT (they're similar enough)
 * add jmp_buf to the extradatatypes table, then implement hIsPlainJmpBuf() as hashtb lookup
 * Add global pool of strings (especially identifiers), pass HASHSTR objects instead of
