@@ -1867,11 +1867,7 @@ sub hlFile(byval ast as ASTNODE ptr, byref api as ApiInfo, byref bioptions as Ap
 	end if
 
 	'' Prepend #pragma once
-	'' It's always needed, except if the binding is empty: C headers
-	'' typically have #include guards, but we don't preserve those.
-	if ast->head then
-		astPrepend(ast, astNew(ASTCLASS_PRAGMAONCE))
-	end if
+	astPrepend(ast, astNew(ASTCLASS_PRAGMAONCE))
 
 	if bioptions.titles then
 		astPrepend(ast, bioptions.titles)
