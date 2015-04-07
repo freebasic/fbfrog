@@ -361,6 +361,16 @@ private sub emitCode(byval n as ASTNODE ptr, byval parentclass as integer)
 			emit.comment -= 1
 		end if
 
+	case ASTCLASS_TITLE
+		assert(emit.comment = 0)
+		emit.comment += 1
+		emit.commentspaces += 1
+
+		emitLines(*n->text)
+
+		emit.commentspaces -= 1
+		emit.comment -= 1
+
 	case ASTCLASS_INCLIB
 		emitLine("#inclib """ + *n->text + """")
 

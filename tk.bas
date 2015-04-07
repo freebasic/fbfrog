@@ -192,7 +192,8 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	(@"-moveabove"    ), _
 	(@"-inclib"       ), _
 	(@"-undef"        ), _
-	(@"-addinclude"   )  _
+	(@"-addinclude"   ), _
+	(@"-title"        )  _
 }
 
 #assert ubound(tk_info) = TK__COUNT - 1

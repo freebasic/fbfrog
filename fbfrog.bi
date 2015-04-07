@@ -406,8 +406,9 @@ enum
 	OPT_INCLIB
 	OPT_UNDEF
 	OPT_ADDINCLUDE
+	OPT_TITLE
 
-	OPT__LAST = OPT_ADDINCLUDE
+	OPT__LAST = OPT_TITLE
 
 	TK__COUNT
 end enum
@@ -541,6 +542,7 @@ enum
 	ASTCLASS_UNKNOWN
 	ASTCLASS_FBCODE
 	ASTCLASS_RENAMELIST
+	ASTCLASS_TITLE
 
 	'' Script helper nodes
 	ASTCLASS_DECLAREDEFINES
@@ -864,7 +866,7 @@ declare sub cEnd()
 declare function cMain() as ASTNODE ptr
 
 type ApiSpecificBiOptions
-	as ASTNODE ptr inclibs, undefs, addincludes
+	as ASTNODE ptr inclibs, undefs, addincludes, titles
 end type
 
 declare sub hlAutoAddDividers(byval ast as ASTNODE ptr)

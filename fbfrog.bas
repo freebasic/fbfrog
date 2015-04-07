@@ -229,6 +229,7 @@ private sub hPrintHelpAndExit()
 	print "  -inclib <name> [<destination .bi file>]  Add #inclib ""<name>"""
 	print "  -undef  <id>   [<destination .bi file>]  Add #undef <id>"
 	print "  -addinclude <.bi file> [<destination .bi file>]  Add #include <.bi file>"
+	print "  -title <text> [<destination .bi file>]  Add title text at the top of .bi file(s)"
 	end 1
 end sub
 
@@ -454,7 +455,7 @@ sub ApiInfo.loadOption(byval opt as integer, byval param1 as zstring ptr, byval 
 		parser.parse(this)
 
 	'' Distribute .bi-file-specific options for this API to invidiual .bi files
-	case OPT_INCLIB, OPT_UNDEF, OPT_ADDINCLUDE
+	case OPT_INCLIB, OPT_UNDEF, OPT_ADDINCLUDE, OPT_TITLE
 		dim bi as integer
 		if param2 then
 			bi = frogLookupBiFromBi(*param2)
@@ -478,6 +479,8 @@ sub ApiInfo.loadOption(byval opt as integer, byval param1 as zstring ptr, byval 
 				astBuildGroupAndAppend(.options.undefs, astNew(ASTCLASS_UNDEF, param1))
 			case OPT_ADDINCLUDE
 				astBuildGroupAndAppend(.options.addincludes, astNew(ASTCLASS_PPINCLUDE, param1))
+			case OPT_TITLE
+				astBuildGroupAndAppend(.options.titles, astNew(ASTCLASS_TITLE, param1))
 			end select
 		end with
 	end select
@@ -928,6 +931,10 @@ private sub hParseArgs(byref x as integer)
 
 		case OPT_ADDINCLUDE
 			hParseOption1Param(x, opt, "<.bi file>")
+			hParseDestinationBiFile(x)
+
+		case OPT_TITLE
+			hParseOption1Param(x, opt, "<text>")
 			hParseDestinationBiFile(x)
 
 		case else
@@ -1440,6 +1447,7 @@ end sub
 				assert(.options.inclibs = NULL)
 				assert(.options.undefs = NULL)
 				assert(.options.addincludes = NULL)
+				assert(.options.titles = NULL)
 			end with
 		next
 
@@ -1451,14 +1459,6 @@ end sub
 		with frog.bis[bi]
 			'' Turn VERBLOCKs into #ifs etc.
 			astProcessVerblocks(.final)
-
-			'' Prepend #pragma once
-			'' It's always needed, except if the binding is empty: C headers
-			'' typically have #include guards, but we don't preserve those.
-			assert(.final->class = ASTCLASS_GROUP)
-			if .final->head then
-				astPrepend(.final, astNew(ASTCLASS_PRAGMAONCE))
-			end if
 
 			hlAutoAddDividers(.final)
 

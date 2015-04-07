@@ -1510,7 +1510,7 @@ private function hSkipStatementsInARow(byval i as ASTNODE ptr) as ASTNODE ptr
 		loop while i andalso (i->class = astclass)
 		return i
 
-	case ASTCLASS_PRAGMAONCE, ASTCLASS_RENAMELIST, _
+	case ASTCLASS_PRAGMAONCE, ASTCLASS_RENAMELIST, ASTCLASS_TITLE, _
 	     ASTCLASS_EXTERNBLOCKBEGIN, ASTCLASS_EXTERNBLOCKEND, _
 	     ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
 		return i->next
@@ -1534,7 +1534,7 @@ private function hSkipStatementsInARow(byval i as ASTNODE ptr) as ASTNODE ptr
 		do
 			select case nxt->class
 			case ASTCLASS_PPIF, ASTCLASS_INCLIB, ASTCLASS_PPINCLUDE, _
-			     ASTCLASS_PRAGMAONCE, ASTCLASS_RENAMELIST, _
+			     ASTCLASS_PRAGMAONCE, ASTCLASS_RENAMELIST, ASTCLASS_TITLE, _
 			     ASTCLASS_EXTERNBLOCKBEGIN, ASTCLASS_EXTERNBLOCKEND, _
 			     ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
 				exit do
@@ -1865,6 +1865,18 @@ sub hlFile(byval ast as ASTNODE ptr, byref api as ApiInfo, byref bioptions as Ap
 		astPrepend(ast, bioptions.inclibs)
 		bioptions.inclibs = NULL
 	end if
+
+	'' Prepend #pragma once
+	'' It's always needed, except if the binding is empty: C headers
+	'' typically have #include guards, but we don't preserve those.
+	if ast->head then
+		astPrepend(ast, astNew(ASTCLASS_PRAGMAONCE))
+	end if
+
+	if bioptions.titles then
+		astPrepend(ast, bioptions.titles)
+		bioptions.titles = NULL
+	end if
 end sub
 
 function hlCountDecls(byval ast as ASTNODE ptr) as integer
@@ -1876,7 +1888,7 @@ function hlCountDecls(byval ast as ASTNODE ptr) as integer
 		case ASTCLASS_DIVIDER, ASTCLASS_PPINCLUDE, ASTCLASS_PPENDIF, _
 		     ASTCLASS_EXTERNBLOCKBEGIN, ASTCLASS_EXTERNBLOCKEND, _
 		     ASTCLASS_INCLIB, ASTCLASS_PRAGMAONCE, _
-		     ASTCLASS_UNKNOWN, ASTCLASS_RENAMELIST
+		     ASTCLASS_UNKNOWN, ASTCLASS_RENAMELIST, ASTCLASS_TITLE
 
 		case ASTCLASS_PPIF, ASTCLASS_PPELSEIF, ASTCLASS_PPELSE
 			n += hlCountDecls(i)
