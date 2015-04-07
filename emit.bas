@@ -366,7 +366,7 @@ private sub emitCode(byval n as ASTNODE ptr, byval parentclass as integer)
 		emit.comment += 1
 		emit.commentspaces += 1
 
-		emitLines(*n->text)
+		emitLines("FreeBASIC binding for " + *n->text)
 
 		emit.commentspaces -= 1
 		emit.comment -= 1
