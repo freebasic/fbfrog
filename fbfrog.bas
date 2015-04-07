@@ -916,18 +916,18 @@ private sub hParseArgs(byref x as integer)
 			hParseOption2Params(x, opt, "<id>", "<ref>")
 
 		case OPT_REPLACEMENTS
-			hParseOption1Param(x, opt, "<file> argument")
+			hParseOption1Param(x, opt, "<file>")
 
 		case OPT_INCLIB
-			hParseOption1Param(x, opt, "<name> argument")
+			hParseOption1Param(x, opt, "<name>")
 			hParseDestinationBiFile(x)
 
 		case OPT_UNDEF
-			hParseOption1Param(x, opt, "<id> argument")
+			hParseOption1Param(x, opt, "<id>")
 			hParseDestinationBiFile(x)
 
 		case OPT_ADDINCLUDE
-			hParseOption1Param(x, opt, "<.bi file> argument")
+			hParseOption1Param(x, opt, "<.bi file>")
 			hParseDestinationBiFile(x)
 
 		case else
