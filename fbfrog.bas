@@ -38,6 +38,8 @@
 type BIFILE
 	filename	as zstring ptr
 
+	titles as string
+
 	'' command line options specific to this .bi (e.g. -inclib) from the current API
 	options as ApiSpecificBiOptions
 
@@ -55,6 +57,7 @@ end type
 namespace frog
 	dim shared as integer verbose, nodefaultscript
 	dim shared as string outname, defaultoutname, prefix
+	dim shared as string titles
 
 	dim shared as ASTNODE ptr script
 	dim shared as ASTNODE ptr completeverors, fullveror
@@ -76,6 +79,13 @@ namespace frog
 	dim shared as HPATTERN ptr patterns
 	dim shared as integer patterncount
 end namespace
+
+private sub hAppendTitle(byref titles as string, byref title as string)
+	if len(titles) > 0 then
+		titles += ", "
+	end if
+	titles += title
+end sub
 
 private sub frogAddPattern(byref pattern as string, byval bi as integer)
 	var i = frog.patterncount
@@ -455,7 +465,7 @@ sub ApiInfo.loadOption(byval opt as integer, byval param1 as zstring ptr, byval 
 		parser.parse(this)
 
 	'' Distribute .bi-file-specific options for this API to invidiual .bi files
-	case OPT_INCLIB, OPT_UNDEF, OPT_ADDINCLUDE, OPT_TITLE
+	case OPT_INCLIB, OPT_UNDEF, OPT_ADDINCLUDE
 		dim bi as integer
 		if param2 then
 			bi = frogLookupBiFromBi(*param2)
@@ -479,8 +489,6 @@ sub ApiInfo.loadOption(byval opt as integer, byval param1 as zstring ptr, byval 
 				astBuildGroupAndAppend(.options.undefs, astNew(ASTCLASS_UNDEF, param1))
 			case OPT_ADDINCLUDE
 				astBuildGroupAndAppend(.options.addincludes, astNew(ASTCLASS_PPINCLUDE, param1))
-			case OPT_TITLE
-				astBuildGroupAndAppend(.options.titles, astNew(ASTCLASS_TITLE, param1))
 			end select
 		end with
 	end select
@@ -806,6 +814,28 @@ private sub hParseArgs(byref x as integer)
 			frogAddPattern(*tkGetText(x), -1)
 			x += 1
 
+		'' -title <text> [<destination .bi file>]
+		case OPT_TITLE
+			x += 1
+
+			'' <text>
+			hParseParam(x, "<text> parameter for -title")
+			var title = tkGetText(x - 1)
+
+			'' [<destination .bi file>]
+			if hIsStringOrId(x) then
+				'' .bi-specific -title option
+				var bi = frogLookupBiFromBi(*tkGetText(x))
+				if bi < 0 then
+					tkOops(x, "unknown destination .bi")
+				end if
+				frog.bis[bi].titles += *title
+				x += 1
+			else
+				'' global -title option
+				frog.titles += *title
+			end if
+
 		'' -declaredefines (<symbol>)+
 		case OPT_DECLAREDEFINES
 			x += 1
@@ -931,10 +961,6 @@ private sub hParseArgs(byref x as integer)
 
 		case OPT_ADDINCLUDE
 			hParseOption1Param(x, opt, "<.bi file>")
-			hParseDestinationBiFile(x)
-
-		case OPT_TITLE
-			hParseOption1Param(x, opt, "<text>")
 			hParseDestinationBiFile(x)
 
 		case else
@@ -1447,7 +1473,6 @@ end sub
 				assert(.options.inclibs = NULL)
 				assert(.options.undefs = NULL)
 				assert(.options.addincludes = NULL)
-				assert(.options.titles = NULL)
 			end with
 		next
 
@@ -1459,6 +1484,20 @@ end sub
 		with frog.bis[bi]
 			'' Turn VERBLOCKs into #ifs etc.
 			astProcessVerblocks(.final)
+
+			'' Prepend #pragma once
+			'' It's always needed, except if the binding is empty: C headers
+			'' typically have #include guards, but we don't preserve those.
+			if .final->head then
+				astPrepend(.final, astNew(ASTCLASS_PRAGMAONCE))
+			end if
+
+			if len((frog.titles)) > 0 then
+				hAppendTitle(.titles, frog.titles)
+			end if
+			if len(.titles) > 0 then
+				astPrepend(.final, astNew(ASTCLASS_TITLE, .titles))
+			end if
 
 			hlAutoAddDividers(.final)
 

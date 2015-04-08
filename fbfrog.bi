@@ -360,6 +360,7 @@ enum
 	OPT_I
 	OPT_V
 	OPT_NODEFAULTSCRIPT
+	OPT_TITLE
 
 	OPT_DECLAREDEFINES
 	OPT_DECLAREVERSIONS
@@ -406,9 +407,8 @@ enum
 	OPT_INCLIB
 	OPT_UNDEF
 	OPT_ADDINCLUDE
-	OPT_TITLE
 
-	OPT__LAST = OPT_TITLE
+	OPT__LAST = OPT_ADDINCLUDE
 
 	TK__COUNT
 end enum
@@ -866,7 +866,7 @@ declare sub cEnd()
 declare function cMain() as ASTNODE ptr
 
 type ApiSpecificBiOptions
-	as ASTNODE ptr inclibs, undefs, addincludes, titles
+	as ASTNODE ptr inclibs, undefs, addincludes
 end type
 
 declare sub hlAutoAddDividers(byval ast as ASTNODE ptr)
