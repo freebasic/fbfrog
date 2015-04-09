@@ -197,6 +197,7 @@ private sub hPrintHelpAndExit()
 	print "  -o <path/file>        Set output .bi file name, or just the output directory"
 	print "  -emit '*.h' foo.bi    Emit code from matching .h into specified .bi"
 	print "  -dontemit '*.h'       Drop code from matching .h files"
+	print "  -title <text> [<destination .bi file>]  Add title text at the top of .bi file(s)"
 	print "  -v                    Show verbose/debugging info"
 	print "  -nodefaultscript      Don't use default.fbfrog implicitly"
 	print "API script logic:"
@@ -239,7 +240,6 @@ private sub hPrintHelpAndExit()
 	print "  -inclib <name> [<destination .bi file>]  Add #inclib ""<name>"""
 	print "  -undef  <id>   [<destination .bi file>]  Add #undef <id>"
 	print "  -addinclude <.bi file> [<destination .bi file>]  Add #include <.bi file>"
-	print "  -title <text> [<destination .bi file>]  Add title text at the top of .bi file(s)"
 	end 1
 end sub
 
