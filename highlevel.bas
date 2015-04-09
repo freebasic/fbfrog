@@ -750,6 +750,15 @@ private sub hTurnStringIntoByte(byval n as ASTNODE ptr)
 	end if
 end sub
 
+private sub hTurnByteIntoString(byval n as ASTNODE ptr)
+	'' Turn [u]byte/wchar_t into zstring/wstring, but preserve PTRs + CONSTs
+	if typeGetDt(n->dtype) = TYPE_WCHAR_T then
+		n->dtype = typeSetDt(n->dtype, TYPE_WSTRING)
+	else
+		n->dtype = typeSetDt(n->dtype, TYPE_ZSTRING)
+	end if
+end sub
+
 private sub hFixCharWchar(byval n as ASTNODE ptr)
 	'' Affected by -nostring?
 	if n->text then
@@ -807,6 +816,18 @@ private function hlFixCharWchar(byval n as ASTNODE ptr) as integer
 		select case typeGetDt(n->dtype)
 		case TYPE_ZSTRING, TYPE_WSTRING
 			hFixCharWchar(n)
+
+		case TYPE_BYTE, TYPE_UBYTE, TYPE_WCHAR_T
+			'' Affected by -string?
+			'' TODO: This works with plain "[un]signed char", but not with typedefs, since such typedefs aren't expanded currently.
+			'' It would be nice to have this for typedefs too though because of the GLubyte type in the OpenGL headers. But for that
+			'' we need to have a typedef type tracker/symbol table first.
+			if n->text then
+				if hashContains(@hl.api->idopt(OPT_STRING), n->text, hashHash(n->text)) then
+					'' Turn byte into string (even pointers)
+					hTurnByteIntoString(n)
+				end if
+			end if
 		end select
 	end if
 	function = TRUE

@@ -186,6 +186,7 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	(@"-addforwarddecl"), _
 	(@"-undefbeforedecl"), _
 	(@"-nostring"     ), _
+	(@"-string"       ), _
 	(@"-expandindefine"), _
 	(@"-noexpand"     ), _
 	(@"-removeinclude"), _

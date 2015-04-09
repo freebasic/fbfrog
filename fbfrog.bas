@@ -232,6 +232,7 @@ private sub hPrintHelpAndExit()
 	print "  -addforwarddecl <id>  Force a forward declaration to be added for the given type"
 	print "  -undefbeforedecl <id>  Insert an #undef above a declaration"
 	print "  -nostring <id>      Prevent a symbol from being turned into a zstring"
+	print "  -string <id>        Force a [U]Byte [Ptr] symbol to be turned into a ZString [Ptr]"
 	print "  -expandindefine <id>  Expand macro in #define body"
 	print "  -noexpand <id>      Disable expansion of certain #define"
 	print "  -removeinclude <filename>  Remove matching #include directives"
@@ -446,7 +447,7 @@ sub ApiInfo.loadOption(byval opt as integer, byval param1 as zstring ptr, byval 
 
 	case OPT_REMOVEDEFINE, OPT_REMOVEPROC, OPT_REMOVEVAR, OPT_DROPPROCBODY, _
 	     OPT_TYPEDEFHINT, OPT_ADDFORWARDDECL, OPT_UNDEFBEFOREDECL, _
-	     OPT_NOSTRING, OPT_EXPANDINDEFINE, OPT_NOEXPAND
+	     OPT_NOSTRING, OPT_STRING, OPT_EXPANDINDEFINE, OPT_NOEXPAND
 		hashAddOverwrite(@idopt(opt), param1, NULL)
 
 	case OPT_REMOVEINCLUDE
@@ -936,7 +937,7 @@ private sub hParseArgs(byref x as integer)
 
 		case OPT_REMOVEDEFINE, OPT_REMOVEPROC, OPT_REMOVEVAR, OPT_DROPPROCBODY, _
 		     OPT_TYPEDEFHINT, OPT_ADDFORWARDDECL, OPT_UNDEFBEFOREDECL, _
-		     OPT_NOSTRING, OPT_EXPANDINDEFINE, OPT_NOEXPAND
+		     OPT_NOSTRING, OPT_STRING, OPT_EXPANDINDEFINE, OPT_NOEXPAND
 			hParseOption1Param(x, opt, "<id>")
 
 		case OPT_REMOVEINCLUDE
