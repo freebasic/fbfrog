@@ -10,4 +10,7 @@ type UDT
 	field2(0 to 99) as byte
 end type
 
+extern p1 as zstring ptr
+extern p2 as byte ptr
+
 end extern

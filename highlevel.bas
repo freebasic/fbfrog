@@ -737,14 +737,14 @@ private function hlFixSpecialParameters(byval n as ASTNODE ptr) as integer
 end function
 
 private sub hTurnStringIntoByte(byval n as ASTNODE ptr)
-	'' Turn zstring/wstring into byte/wchar_t, but preserve CONSTs
-	if typeGetDtAndPtr(n->dtype) = TYPE_ZSTRING then
-		n->dtype = typeGetConst(n->dtype) or TYPE_BYTE
+	'' Turn zstring/wstring into byte/wchar_t, but preserve PTRs + CONSTs
+	if typeGetDt(n->dtype) = TYPE_ZSTRING then
+		n->dtype = typeSetDt(n->dtype, TYPE_BYTE)
 	else
-		n->dtype = typeGetConst(n->dtype) or TYPE_WCHAR_T
+		n->dtype = typeSetDt(n->dtype, TYPE_WCHAR_T)
 	end if
 	if n->subtype then
-		'' in case it was a fix-len string
+		'' in case it was a fix-len string (zstring * N), delete the string length expression (N)
 		astDelete(n->subtype)
 		n->subtype = NULL
 	end if
@@ -754,9 +754,15 @@ private sub hFixCharWchar(byval n as ASTNODE ptr)
 	'' Affected by -nostring?
 	if n->text then
 		if hashContains(@hl.api->idopt(OPT_NOSTRING), n->text, hashHash(n->text)) then
+			'' Turn string into byte (even pointers)
 			hTurnStringIntoByte(n)
 			exit sub
 		end if
+	end if
+
+	'' Don't turn string pointers into byte pointers
+	if typeGetPtrCount(n->dtype) <> 0 then
+		exit sub
 	end if
 
 	'' zstring + array? => fix-len zstring
@@ -798,7 +804,7 @@ end sub
 ''
 private function hlFixCharWchar(byval n as ASTNODE ptr) as integer
 	if n->class <> ASTCLASS_STRING then
-		select case typeGetDtAndPtr(n->dtype)
+		select case typeGetDt(n->dtype)
 		case TYPE_ZSTRING, TYPE_WSTRING
 			hFixCharWchar(n)
 		end select

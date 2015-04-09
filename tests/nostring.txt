@@ -8,4 +8,4 @@
       tests/nostring.h
 [5/5] __FB_DOS__
       tests/nostring.h
-emitting: tests/nostring.bi (3 declarations, 0 TODOs)
+emitting: tests/nostring.bi (5 declarations, 0 TODOs)
