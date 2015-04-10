@@ -1402,8 +1402,17 @@ private function hCanHaveInitializer(byval n as ASTNODE ptr) as integer
 	end select
 end function
 
-'' Assign the default cdecl callconv to PROC node(s) of a single declarator,
-'' if they don't have an explicit callconv yet.
+private function hHasVarargParam(byval proc as ASTNODE ptr) as integer
+	var param = proc->head
+	while param
+		if param->dtype = TYPE_NONE then
+			return TRUE
+		end if
+		param = param->next
+	wend
+	function = FALSE
+end function
+
 private sub hPostprocessDeclarator(byval n as ASTNODE ptr)
 	if n->class = ASTCLASS_PROC then
 		'' Ignore extern on procedures, not needed explicitly
@@ -1417,6 +1426,15 @@ private sub hPostprocessDeclarator(byval n as ASTNODE ptr)
 		'' (perhaps we just made a mistake assigning them - better safe...)
 		elseif (n->attrib and ASTATTRIB__CALLCONV) = ASTATTRIB__CALLCONV then
 			cError("cdecl/stdcall attributes specified together")
+		end if
+
+		'' vararg functions are always cdecl though; explicitly specified
+		'' callconvs are ignored
+		if n->attrib and ASTATTRIB_STDCALL then
+			if hHasVarargParam(n) then
+				n->attrib and= not ASTATTRIB__CALLCONV
+				n->attrib or= ASTATTRIB_CDECL
+			end if
 		end if
 	end if
 
