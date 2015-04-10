@@ -1,6 +1,6 @@
 #pragma once
 
-#define A1 '' TODO: ({ int i = foo(0); i; })
+'' TODO: #define A1 ({ int i = foo(0); i; })
 #macro A2
 	scope
 		'' TODO: int a[({ f(); })];

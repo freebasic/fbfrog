@@ -2,13 +2,13 @@
 
 extern "C"
 
-#define m '' TODO: void f(void
+'' TODO: #define m void f(void
 declare sub ok()
-#define A '' TODO: void f(
-#define B() '' TODO: void f(
-#define C(a) '' TODO: void f(
-#define D(a, b, c) '' TODO: void f(
-#define M1 '' TODO: enum { A,
+'' TODO: #define A void f(
+'' TODO: #define B() void f(
+'' TODO: #define C(a) void f(
+'' TODO: #define D(a, b, c) void f(
+'' TODO: #define M1 enum { A,
 const M2 = 0
 
 end extern

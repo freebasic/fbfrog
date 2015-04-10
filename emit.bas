@@ -402,11 +402,7 @@ private sub emitCode(byval n as ASTNODE ptr, byval parentclass as integer)
 				s += hParamList(n)
 			end if
 			if n->expr then
-				if n->expr->class = ASTCLASS_UNKNOWN then
-					s += " '' TODO: " + *n->expr->text
-				else
-					s += " " + emitExpr(n->expr, TRUE)
-				end if
+				s += " " + emitExpr(n->expr, TRUE)
 			end if
 			emitLine(s)
 		end if

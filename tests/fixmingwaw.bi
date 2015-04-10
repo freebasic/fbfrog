@@ -16,8 +16,8 @@
 
 #define WINELIB_NAME_AW __MINGW_NAME_AW
 #define TEXT(s) __TEXT(s)
-#define __MINGW_TYPEDEF_AW(type) '' TODO: typedef __MINGW_NAME_AW(type) type;
-#define __MINGW_TYPEDEF_UAW(type) '' TODO: typedef __MINGW_NAME_UAW(type) type;
+'' TODO: #define __MINGW_TYPEDEF_AW(type) typedef __MINGW_NAME_AW(type) type;
+'' TODO: #define __MINGW_TYPEDEF_UAW(type) typedef __MINGW_NAME_UAW(type) type;
 
 #ifdef UNICODE
 	#define CreateWindowEx CreateWindowExW

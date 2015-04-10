@@ -77,6 +77,7 @@ namespace c
 	end namespace
 
 	type DEFBODYNODE
+		xdefbegin	as integer  '' Begin of the #define
 		xbodybegin	as integer  '' Begin of the #define's body
 		n		as ASTNODE ptr  '' #define node
 	end type
@@ -163,7 +164,7 @@ end sub
 
 #define cAddTypedef(id) hashAddOverwrite(@c.typedefs, id, NULL)
 
-private sub cAddDefBody(byval xbodybegin as integer, byval n as ASTNODE ptr)
+private sub cAddDefBody(byval xdefbegin as integer, byval xbodybegin as integer, byval n as ASTNODE ptr)
 	if c.defbodyroom = c.defbodycount then
 		if c.defbodyroom = 0 then
 			c.defbodyroom = 512
@@ -173,6 +174,7 @@ private sub cAddDefBody(byval xbodybegin as integer, byval n as ASTNODE ptr)
 		c.defbodies = reallocate(c.defbodies, c.defbodyroom * sizeof(*c.defbodies))
 	end if
 	with c.defbodies[c.defbodycount]
+		.xdefbegin = xdefbegin
 		.xbodybegin = xbodybegin
 		.n = n
 	end with
@@ -901,11 +903,10 @@ private function hDefBodyContainsIds(byval y as integer) as integer
 	loop
 end function
 
-private sub cParseDefBody(byval n as ASTNODE ptr, byref add_to_ast as integer)
+private sub cParseDefBody(byval n as ASTNODE ptr, byval xbegin as integer, byref add_to_ast as integer)
 	c.parentdefine = n
 
 	'' Body
-	var bodybegin = c.x
 	add_to_ast and= cDefineBody(n)
 
 	'' Didn't reach EOL? Then the beginning of the macro body could
@@ -915,9 +916,12 @@ private sub cParseDefBody(byval n as ASTNODE ptr, byref add_to_ast as integer)
 		c.x = hSkipToEol(c.x)
 	end if
 
-	'' Turn the #define's body into an UNKNOWN if parsing failed
+	'' If parsing the body failed, turn the PPDEFINE into an UNKNOWN without
+	'' reallocating it (as it may already be linked into the AST).
 	if c.parseok = FALSE then
-		n->expr = astNewUNKNOWN(bodybegin, c.x)
+		n->class = ASTCLASS_UNKNOWN
+		astSetText(n, tkSpell(xbegin, c.x))
+		astRemoveChildren(n)
 		c.parseok = TRUE
 	end if
 
@@ -925,6 +929,8 @@ private sub cParseDefBody(byval n as ASTNODE ptr, byref add_to_ast as integer)
 end sub
 
 private function cDefine() as ASTNODE ptr
+	'' define
+	var defbegin = c.x - 1
 	c.x += 1
 
 	'' Identifier ['(' ParameterList ')']
@@ -938,11 +944,15 @@ private function cDefine() as ASTNODE ptr
 			'' Delay parsing, until we've parsed all declarations in the input.
 			'' This way we have more knowledge about typedefs etc. which could
 			'' help parsing this #define body.
-			cAddDefBody(c.x, macro)
+			cAddDefBody(defbegin, c.x, macro)
 			c.x = hSkipToEol(c.x)
+
+			'' cBody() mustn't delete the PPDEFINE node now that
+			'' we're referencing it from the c.defbodies list
+			assert(c.parseok)
 		else
 			'' Probably a simple #define body, parse right now
-			cParseDefBody(macro, add_to_ast)
+			cParseDefBody(macro, defbegin, add_to_ast)
 		end if
 	end if
 
@@ -2263,7 +2273,7 @@ function cMain() as ASTNODE ptr
 
 			'' Parse #define body
 			var add_to_ast = TRUE
-			cParseDefBody(.n, add_to_ast)
+			cParseDefBody(.n, .xdefbegin, add_to_ast)
 
 			if add_to_ast = FALSE then
 				astRemove(t, .n)

@@ -4,4 +4,4 @@
 #include once "bar.bi"
 
 #define A "foo.h"
-#define B '' TODO: <bar.h>
+'' TODO: #define B <bar.h>
