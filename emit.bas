@@ -848,10 +848,12 @@ private sub emitHeader(byref header as HeaderInfo)
 	emit.commentspaces += 1
 
 	emitLine("FreeBASIC binding for " + header.title)
+	emitLine("")
 	emitLine("based on the C header files:")
 	emit.commentspaces += 2
 	emitLines(header.licensefile->buffer)
 	emit.commentspaces -= 2
+	emitLine("")
 	emitLine("translated to FreeBASIC by:")
 	emit.commentspaces += 2
 	emitLines(header.translatorsfile->buffer)
