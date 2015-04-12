@@ -37,8 +37,7 @@
 
 type BIFILE
 	filename	as zstring ptr
-
-	titles as string
+	header as HeaderInfo
 
 	'' command line options specific to this .bi (e.g. -inclib) from the current API
 	options as ApiSpecificBiOptions
@@ -57,7 +56,7 @@ end type
 namespace frog
 	dim shared as integer verbose, nodefaultscript
 	dim shared as string outname, defaultoutname, prefix
-	dim shared as string titles
+	dim shared header as HeaderInfo  '' global titles etc. - will be added to all generated .bi files
 
 	dim shared as ASTNODE ptr script
 	dim shared as ASTNODE ptr completeverors, fullveror
@@ -79,13 +78,6 @@ namespace frog
 	dim shared as HPATTERN ptr patterns
 	dim shared as integer patterncount
 end namespace
-
-private sub hAppendTitle(byref titles as string, byref title as string)
-	if len(titles) > 0 then
-		titles += ", "
-	end if
-	titles += title
-end sub
 
 private sub frogAddPattern(byref pattern as string, byval bi as integer)
 	var i = frog.patterncount
@@ -197,7 +189,8 @@ private sub hPrintHelpAndExit()
 	print "  -o <path/file>        Set output .bi file name, or just the output directory"
 	print "  -emit '*.h' foo.bi    Emit code from matching .h into specified .bi"
 	print "  -dontemit '*.h'       Drop code from matching .h files"
-	print "  -title <text> [<destination .bi file>]  Add title text at the top of .bi file(s)"
+	print "  -title <package + version> original-license.txt translators.txt [<destination .bi file>]"
+	print "     Add text at the top of .bi file(s): package name + version, copyright, license"
 	print "  -v                    Show verbose/debugging info"
 	print "  -nodefaultscript      Don't use default.fbfrog implicitly"
 	print "API script logic:"
@@ -815,27 +808,40 @@ private sub hParseArgs(byref x as integer)
 			frogAddPattern(*tkGetText(x), -1)
 			x += 1
 
-		'' -title <text> [<destination .bi file>]
+		'' -title
 		case OPT_TITLE
 			x += 1
 
-			'' <text>
+			'' <package + version>
 			hParseParam(x, "<text> parameter for -title")
 			var title = tkGetText(x - 1)
 
+			'' original-license.txt
+			hParseParam(x, "original-license.txt parameter for -title")
+			var licensefile = filebuffersAdd(tkGetText(x - 1), tkGetLocation(x - 1))
+
+			'' translators.txt
+			hParseParam(x, "translators.txt parameter for -title")
+			var translatorsfile = filebuffersAdd(tkGetText(x - 1), tkGetLocation(x - 1))
+
 			'' [<destination .bi file>]
+			dim header as HeaderInfo ptr
 			if hIsStringOrId(x) then
 				'' .bi-specific -title option
 				var bi = frogLookupBiFromBi(*tkGetText(x))
 				if bi < 0 then
 					tkOops(x, "unknown destination .bi")
 				end if
-				frog.bis[bi].titles += *title
+				header = @frog.bis[bi].header
 				x += 1
 			else
 				'' global -title option
-				frog.titles += *title
+				header = @frog.header
 			end if
+
+			header->title = *title
+			header->licensefile = licensefile
+			header->translatorsfile = translatorsfile
 
 		'' -declaredefines (<symbol>)+
 		case OPT_DECLAREDEFINES
@@ -1493,20 +1499,21 @@ end sub
 				astPrepend(.final, astNew(ASTCLASS_PRAGMAONCE))
 			end if
 
-			if len((frog.titles)) > 0 then
-				hAppendTitle(.titles, frog.titles)
-			end if
-			if len(.titles) > 0 then
-				astPrepend(.final, astNew(ASTCLASS_TITLE, .titles))
-			end if
-
 			hlAutoAddDividers(.final)
+
+			'' Use .bi-specific header, if any; fallback to global header, if any
+			dim header as HeaderInfo ptr
+			if len(.header.title) > 0 then
+				header = @.header
+			elseif len((frog.header.title)) > 0 then
+				header = @frog.header
+			end if
 
 			'' Write out the .bi file.
 			var bifilename = *.filename
 			print "emitting: " + bifilename + " (" + _
 				hMakeCountMessage(hlCountDecls(.final), "declaration") + ", " + _
 				hMakeCountMessage(hlCountTodos(.final), "TODO"       ) + ")"
-			emitFile(bifilename, .final)
+			emitFile(bifilename, header, .final)
 		end with
 	next

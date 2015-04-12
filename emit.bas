@@ -361,16 +361,6 @@ private sub emitCode(byval n as ASTNODE ptr, byval parentclass as integer)
 			emit.comment -= 1
 		end if
 
-	case ASTCLASS_TITLE
-		assert(emit.comment = 0)
-		emit.comment += 1
-		emit.commentspaces += 1
-
-		emitLines("FreeBASIC binding for " + *n->text)
-
-		emit.commentspaces -= 1
-		emit.comment -= 1
-
 	case ASTCLASS_INCLIB
 		emitLine("#inclib """ + *n->text + """")
 
@@ -853,7 +843,27 @@ private function emitExpr(byval n as ASTNODE ptr, byval need_parens as integer) 
 	function = s
 end function
 
-sub emitFile(byref filename as string, byval ast as ASTNODE ptr)
+private sub emitHeader(byref header as HeaderInfo)
+	emit.comment += 1
+	emit.commentspaces += 1
+
+	emitLine("FreeBASIC binding for " + header.title)
+	emitLine("based on the C header files:")
+	emit.commentspaces += 2
+	emitLines(header.licensefile->buffer)
+	emit.commentspaces -= 2
+	emitLine("translated to FreeBASIC by:")
+	emit.commentspaces += 2
+	emitLines(header.translatorsfile->buffer)
+	emit.commentspaces -= 2
+
+	emit.commentspaces -= 1
+	emit.comment -= 1
+
+	emitLine("")
+end sub
+
+sub emitFile(byref filename as string, byval header as HeaderInfo ptr, byval ast as ASTNODE ptr)
 	emit.indent = 0
 	emit.comment = 0
 	emit.commentspaces = 0
@@ -861,6 +871,10 @@ sub emitFile(byref filename as string, byval ast as ASTNODE ptr)
 	emit.fo = freefile()
 	if open(filename, for output, as #emit.fo) then
 		oops("could not open output file: '" + filename + "'")
+	end if
+
+	if header then
+		emitHeader(*header)
 	end if
 
 	emitCode(ast)

@@ -826,6 +826,11 @@ end type
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
+type HeaderInfo
+	title as string
+	as FileBuffer ptr licensefile, translatorsfile
+end type
+
 declare sub lexInit()
 declare function lexLoadC(byval x as integer, byval code as zstring ptr, byref source as SourceInfo) as integer
 declare function lexLoadArgs(byval x as integer, byval args as zstring ptr, byref source as SourceInfo) as integer
@@ -837,7 +842,7 @@ declare function emitType overload _
 		byval debugdump as integer = FALSE _
 	) as string
 declare function emitType overload(byval n as ASTNODE ptr) as string
-declare sub emitFile(byref filename as string, byval ast as ASTNODE ptr)
+declare sub emitFile(byref filename as string, byval header as HeaderInfo ptr, byval ast as ASTNODE ptr)
 
 declare function hNumberLiteral _
 	( _
