@@ -1,0 +1,3 @@
+<command line>(1): duplicate -title option
+    a tests/cli/title.h tests/cli/title.h -title b tests/cli/title.h tests/cli/t
+                                          ^~~~~~

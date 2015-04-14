@@ -1,0 +1,3 @@
+<command line>(1): duplicate -title option
+    title.h tests/cli/title-bispecific.bi -title b tests/cli/title.h tests/cli/t
+                                          ^~~~~~

@@ -810,6 +810,7 @@ private sub hParseArgs(byref x as integer)
 
 		'' -title
 		case OPT_TITLE
+			var begin = x
 			x += 1
 
 			'' <package + version>
@@ -839,6 +840,9 @@ private sub hParseArgs(byref x as integer)
 				header = @frog.header
 			end if
 
+			if len(header->title) > 0 then
+				tkOops(begin, "duplicate -title option")
+			end if
 			header->title = *title
 			header->licensefile = licensefile
 			header->translatorsfile = translatorsfile
