@@ -530,30 +530,7 @@ private sub lexNext()
 
 	case CH_BACKSLASH	'' \
 		'' Check for escaped EOLs and solve them out
-		'' '\' [Space] EOL
-
-		var i = 1
-		while (lex.i[i] = CH_TAB) or (lex.i[i] = CH_SPACE)
-			i += 1
-		wend
-
-		var found_eol = FALSE
-		select case lex.i[i]
-		case CH_CR
-			i += 1
-			if lex.i[i] = CH_LF then	'' CRLF
-				i += 1
-			end if
-			found_eol = TRUE
-		case CH_LF
-			i += 1
-			found_eol = TRUE
-		end select
-
-		if found_eol then
-			lex.i += i
-			hNewLine()
-		else
+		if hSkipEscapedEol() = FALSE then
 			hReadBytes(TK_BACKSLASH, 1)
 		end if
 
