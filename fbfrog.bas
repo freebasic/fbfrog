@@ -1351,6 +1351,7 @@ end sub
 	filebuffersInit()
 	fbcrtheadersInit()
 	extradatatypesInit()
+	fbkeywordsInit()
 	lexInit()
 
 	hashInit(@frog.ucasebihash, 6, TRUE)

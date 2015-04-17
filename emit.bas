@@ -318,6 +318,14 @@ private sub emitProc(byref s as string, byval n as ASTNODE ptr, byval is_expr as
 	end if
 end sub
 
+'' Warn about types named after FB quirk keywords, e.g. winapi's INPUT, to avoid
+'' fbc bug #730 (Using quirk keywords as identifier leads to parsing problems later)
+private function hCheckForQuirkKeywordType(byval id as zstring ptr) as string
+	if id andalso (fbkeywordsLookup(id) = FBKW_QUIRK) then
+		function = " '' TODO"
+	end if
+end function
+
 private sub emitCode(byval n as ASTNODE ptr, byval parentclass as integer)
 	select case as const n->class
 	case ASTCLASS_GROUP
@@ -432,8 +440,10 @@ private sub emitCode(byval n as ASTNODE ptr, byval parentclass as integer)
 		emitLine("#error " + emitExpr(n->expr))
 
 	case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
+		var tail = hCheckForQuirkKeywordType(n->text)
+
 		if (n->class = ASTCLASS_ENUM) and (n->text <> NULL) then
-			emitLine("type " + *n->text + " as long")
+			emitLine("type " + *n->text + " as long" + tail)
 		end if
 
 		'' If it's a struct inside a struct, or union inside union,
@@ -463,6 +473,9 @@ private sub emitCode(byval n as ASTNODE ptr, byval parentclass as integer)
 		elseif n->maxalign > 0 then
 			s += " field = " & n->maxalign
 		end if
+		if (n->class <> ASTCLASS_ENUM) and (n->text <> NULL) then
+			s += tail
+		end if
 		emitLine(s)
 
 		hEmitIndentedChildren(n, n->class)
@@ -476,7 +489,7 @@ private sub emitCode(byval n as ASTNODE ptr, byval parentclass as integer)
 
 	case ASTCLASS_TYPEDEF
 		assert(n->array = NULL)
-		emitLine("type " + *n->text + " as " + emitType(n))
+		emitLine("type " + *n->text + " as " + emitType(n) + hCheckForQuirkKeywordType(n->text))
 
 	case ASTCLASS_CONST
 		dim s as string
