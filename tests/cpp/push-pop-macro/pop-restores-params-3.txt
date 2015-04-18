@@ -8,4 +8,4 @@
       tests/cpp/push-pop-macro/pop-restores-params-3.h
 [5/5] __FB_DOS__
       tests/cpp/push-pop-macro/pop-restores-params-3.h
-emitting: tests/cpp/push-pop-macro/pop-restores-params-3.bi (2 declarations, 0 TODOs)
+emitting: tests/cpp/push-pop-macro/pop-restores-params-3.bi (5 declarations, 0 TODOs)

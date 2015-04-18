@@ -13,4 +13,4 @@
 [5/5] __FB_DOS__
       tests/cpp/define-conflicting-duplicate.h
       conflicting #define m
-emitting: tests/cpp/define-conflicting-duplicate.bi (1 declaration, 0 TODOs)
+emitting: tests/cpp/define-conflicting-duplicate.bi (2 declarations, 0 TODOs)

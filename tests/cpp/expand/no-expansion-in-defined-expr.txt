@@ -8,4 +8,4 @@
       tests/cpp/expand/no-expansion-in-defined-expr.h
 [5/5] __FB_DOS__
       tests/cpp/expand/no-expansion-in-defined-expr.h
-emitting: tests/cpp/expand/no-expansion-in-defined-expr.bi (13 declarations, 0 TODOs)
+emitting: tests/cpp/expand/no-expansion-in-defined-expr.bi (19 declarations, 0 TODOs)

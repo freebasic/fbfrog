@@ -8,4 +8,4 @@
       tests/cpp/expand/undeffed-isnt-expanded-anymore.h
 [5/5] __FB_DOS__
       tests/cpp/expand/undeffed-isnt-expanded-anymore.h
-emitting: tests/cpp/expand/undeffed-isnt-expanded-anymore.bi (1 declaration, 0 TODOs)
+emitting: tests/cpp/expand/undeffed-isnt-expanded-anymore.bi (3 declarations, 0 TODOs)

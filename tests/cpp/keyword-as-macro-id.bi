@@ -2,25 +2,43 @@
 
 extern "C"
 
+#define int byte
 extern i as byte
+#undef int
+#define define long
 extern i as long
+#undef define
+'' TODO: #define m1(int, define, defined) int define defined
 declare sub f()
+#undef m1
+#define int
 declare sub ok()
 declare sub ok()
 declare sub ok()
 declare sub ok()
+'' TODO: #define defined_int_1 defined int
+declare sub ok()
+#undef defined_int_1
+'' TODO: #define defined_int_2 defined(int)
+declare sub ok()
+#undef defined_int_2
+#undef int
 declare sub ok()
 declare sub ok()
 declare sub ok()
 declare sub ok()
+'' TODO: #define defined_long_1 defined long
+declare sub ok()
+#undef defined_long_1
+'' TODO: #define defined_long_2 defined(long)
+declare sub ok()
+#undef defined_long_2
+#define define
 declare sub ok()
 declare sub ok()
 declare sub ok()
 declare sub ok()
-declare sub ok()
-declare sub ok()
-declare sub ok()
-declare sub ok()
+#undef define
 declare sub ok()
 declare sub ok()
 declare sub ok()

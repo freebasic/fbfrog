@@ -518,7 +518,6 @@ end function
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 type DEFINEINFO
-	xdefine	as integer  '' 1st token of the #define directive (the '#')
 	xbody	as integer  '' 1st token of the #define body
 	xeol	as integer  '' eol/eof token behind the #define body
 
@@ -539,16 +538,11 @@ end sub
 
 private function definfoClone(byval a as DEFINEINFO ptr) as DEFINEINFO ptr
 	var b = definfoNew()
-	b->xdefine = a->xdefine
 	b->xbody   = a->xbody
 	b->xeol    = a->xeol
 	b->macro   = astClone(a->macro)
 	function = b
 end function
-
-private sub definfoSetRemove(byval definfo as DEFINEINFO ptr)
-	tkSetRemove(definfo->xdefine, definfo->xeol)
-end sub
 
 const DEFINEBODY_FLAGMASK = not (TKFLAG_REMOVE or TKFLAG_DIRECTIVE)
 
@@ -763,29 +757,6 @@ private sub cppAddKnownUndefined(byval id as zstring ptr)
 	cppAddMacro(id, NULL)
 end sub
 
-private sub hSetRemoveOnCurrentDefine(byval id as zstring ptr)
-	var definfo = cppLookupMacro(id)
-	if definfo then
-		definfoSetRemove(definfo)
-	end if
-end sub
-
-private sub cppDefineMacro(byval id as zstring ptr, byval definfo as DEFINEINFO ptr)
-	'' If overwriting an existing #define, don't preserve it
-	hSetRemoveOnCurrentDefine(id)
-
-	'' Register/overwrite as known defined symbol
-	cppAddMacro(id, definfo)
-end sub
-
-private sub cppUndefMacro(byval id as zstring ptr)
-	'' If #undeffing an existing #define, don't preserve it
-	hSetRemoveOnCurrentDefine(id)
-
-	'' Register/overwrite as known undefined symbol
-	cppAddKnownUndefined(id)
-end sub
-
 '' Append a new entry to the array of saved macros
 private sub cppAppendSavedMacro(byval id as zstring ptr, byval definfo as DEFINEINFO ptr)
 	cpp.savedmacrocount += 1
@@ -844,11 +815,11 @@ private sub cppRestoreMacro(byval id as zstring ptr)
 	var savedmacro = @cpp.savedmacros[i]
 	if savedmacro->definfo then
 		'' It was defined when saved, (re)-#define the macro
-		cppDefineMacro(id, savedmacro->definfo)
+		cppAddMacro(id, savedmacro->definfo)
 		savedmacro->definfo = NULL
 	else
 		'' It was undefined when saved, #undef the macro
-		cppUndefMacro(id)
+		cppAddKnownUndefined(id)
 	end if
 
 	'' Remove the entry from the saved macros stack
@@ -2445,8 +2416,12 @@ private sub hMaybeExpandMacroInDefineBody(byval parentdefine as ASTNODE ptr)
 	cpp.x -= 1
 end sub
 
+private function hShouldRemoveDefine(byval id as zstring ptr) as integer
+	function = hashContains(@cpp.api->idopt(OPT_REMOVEDEFINE), id, hashHash(id))
+end function
+
 '' DEFINE Identifier ['(' ParameterList ')'] Body Eol
-private sub cppDefine(byval begin as integer, byref flags as integer)
+private sub cppDefine(byref flags as integer)
 	cpp.x += 1
 
 	assert(cppSkipping() = FALSE)
@@ -2493,7 +2468,6 @@ private sub cppDefine(byval begin as integer, byref flags as integer)
 	cpp.x = xeol + 1
 
 	var definfo = definfoNew()
-	definfo->xdefine = begin
 	definfo->xbody = xbody
 	definfo->xeol = xeol
 	definfo->macro = macro
@@ -2506,16 +2480,16 @@ private sub cppDefine(byval begin as integer, byref flags as integer)
 		end if
 	end if
 
-	cppDefineMacro(macro->text, definfo)
+	cppAddMacro(macro->text, definfo)
 
 	'' Normally, we preserve #define directives (unlike the other CPP directives),
 	'' thus no generic tkSetRemove() here. Unless the symbol was registed for removal.
-	if hashContains(@cpp.api->idopt(OPT_REMOVEDEFINE), macro->text, hashHash(macro->text)) = FALSE then
+	if hShouldRemoveDefine(macro->text) = FALSE then
 		flags and= not TKFLAG_REMOVE
 	end if
 end sub
 
-private sub cppUndef()
+private sub cppUndef(byref flags as integer)
 	cpp.x += 1
 
 	assert(cppSkipping() = FALSE)
@@ -2527,9 +2501,14 @@ private sub cppUndef()
 	var id = tkSpellId(cpp.x)
 	cpp.x += 1
 
-	cppUndefMacro(id)
+	cppAddKnownUndefined(id)
 
 	cppEol()
+
+	'' Ditto
+	if hShouldRemoveDefine(id) = FALSE then
+		flags and= not TKFLAG_REMOVE
+	end if
 end sub
 
 private sub cppPragmaPushPopMacro(byval is_push as integer)
@@ -2693,10 +2672,10 @@ private sub cppDirective()
 		cppInclude(begin, flags)
 
 	case KW_DEFINE
-		cppDefine(begin, flags)
+		cppDefine(flags)
 
 	case KW_UNDEF
-		cppUndef()
+		cppUndef(flags)
 
 	case KW_PRAGMA
 		cpp.x += 1

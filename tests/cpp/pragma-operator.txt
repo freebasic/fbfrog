@@ -8,4 +8,4 @@
       tests/cpp/pragma-operator.h
 [5/5] __FB_DOS__
       tests/cpp/pragma-operator.h
-emitting: tests/cpp/pragma-operator.bi (6 declarations, 0 TODOs)
+emitting: tests/cpp/pragma-operator.bi (9 declarations, 0 TODOs)

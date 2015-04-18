@@ -967,6 +967,20 @@ private function cDefine() as ASTNODE ptr
 	function = macro
 end function
 
+private function cUndef() as ASTNODE ptr
+	'' undef
+	c.x += 1
+
+	'' id
+	assert(tkGet(c.x) >= TK_ID)
+	function = astNew(ASTCLASS_UNDEF, tkSpellId(c.x))
+	c.x += 1
+
+	'' Eol
+	assert(tkGet(c.x) = TK_EOL)
+	c.x += 1
+end function
+
 private function cInclude() as ASTNODE ptr
 	c.x += 1
 
@@ -2165,6 +2179,8 @@ private function cConstruct(byval bodyastclass as integer) as ASTNODE ptr
 			select case *tkSpellId(c.x)
 			case "define"
 				directive = cDefine()
+			case "undef"
+				directive = cUndef()
 			case "include"
 				directive = cInclude()
 			case "pragma"

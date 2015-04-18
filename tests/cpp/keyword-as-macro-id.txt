@@ -8,4 +8,4 @@
       tests/cpp/keyword-as-macro-id.h
 [5/5] __FB_DOS__
       tests/cpp/keyword-as-macro-id.h
-emitting: tests/cpp/keyword-as-macro-id.bi (70 declarations, 0 TODOs)
+emitting: tests/cpp/keyword-as-macro-id.bi (83 declarations, 5 TODOs)
