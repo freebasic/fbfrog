@@ -1,5 +1,6 @@
 // @fbfrog -renamedefine A1 A2 -renamedefine B1 B2 -renamemacroparam x1 x2 -renamedefine E1 E2
 
+#undef A1
 #define A1 1
 
 #define B1 ??? provoke TODO ???

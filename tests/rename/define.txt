@@ -8,4 +8,4 @@
       tests/rename/define.h
 [5/5] __FB_DOS__
       tests/rename/define.h
-emitting: tests/rename/define.bi (5 declarations, 1 TODO)
+emitting: tests/rename/define.bi (6 declarations, 1 TODO)
