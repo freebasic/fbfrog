@@ -1335,7 +1335,7 @@ private sub hlAddUndefsAboveDecls(byval ast as ASTNODE ptr)
 	var i = ast->head
 	while i
 
-		if i->text then
+		if (i->class <> ASTCLASS_UNDEF) and (i->text <> NULL) then
 			if hashContains(@hl.api->idopt(OPT_UNDEFBEFOREDECL), i->text, hashHash(i->text)) then
 				var undef = astNew(ASTCLASS_UNDEF, i->text)
 				undef->location = i->location
