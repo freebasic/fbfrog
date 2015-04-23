@@ -219,7 +219,7 @@ private sub hPrintHelpAndExit()
 	print "    -renamedefine, -renamemacroparam"
 	print "    -rename (any matching symbol)"
 	print "  options for removing declarations (-remove* <id>):"
-	print "    -removedefine, -removeproc, -removevar"
+	print "    -removedefine, -removeproc, -removevar, -remove1st"
 	print "  -dropprocbody <id>  Don't preserve a certain procedure's body"
 	print "  -typedefhint <id>   Mark <id> as typedef, to help parsing of type casts"
 	print "  -addforwarddecl <id>  Force a forward declaration to be added for the given type"
@@ -438,8 +438,8 @@ sub ApiInfo.loadOption(byval opt as integer, byval param1 as zstring ptr, byval 
 		hashAddOverwrite(@renameopt(opt), param1, param2)
 		have_renames = TRUE
 
-	case OPT_REMOVEDEFINE, OPT_REMOVEPROC, OPT_REMOVEVAR, OPT_DROPPROCBODY, _
-	     OPT_TYPEDEFHINT, OPT_ADDFORWARDDECL, OPT_UNDEFBEFOREDECL, _
+	case OPT_REMOVEDEFINE, OPT_REMOVEPROC, OPT_REMOVEVAR, OPT_REMOVE1ST, _
+	     OPT_DROPPROCBODY, OPT_TYPEDEFHINT, OPT_ADDFORWARDDECL, OPT_UNDEFBEFOREDECL, _
 	     OPT_NOSTRING, OPT_STRING, OPT_EXPANDINDEFINE, OPT_NOEXPAND
 		hashAddOverwrite(@idopt(opt), param1, NULL)
 
@@ -945,8 +945,8 @@ private sub hParseArgs(byref x as integer)
 		     OPT_RENAMEMACROPARAM, OPT_RENAME
 			hParseOption2Params(x, opt, "<oldid>", "<newid>")
 
-		case OPT_REMOVEDEFINE, OPT_REMOVEPROC, OPT_REMOVEVAR, OPT_DROPPROCBODY, _
-		     OPT_TYPEDEFHINT, OPT_ADDFORWARDDECL, OPT_UNDEFBEFOREDECL, _
+		case OPT_REMOVEDEFINE, OPT_REMOVEPROC, OPT_REMOVEVAR, OPT_REMOVE1ST, _
+		     OPT_DROPPROCBODY, OPT_TYPEDEFHINT, OPT_ADDFORWARDDECL, OPT_UNDEFBEFOREDECL, _
 		     OPT_NOSTRING, OPT_STRING, OPT_EXPANDINDEFINE, OPT_NOEXPAND
 			hParseOption1Param(x, opt, "<id>")
 

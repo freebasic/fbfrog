@@ -412,6 +412,29 @@ private sub hlApplyRemoveOption(byval ast as ASTNODE ptr, byval astclass as inte
 	wend
 end sub
 
+private sub hlApplyRemove1st(byval ast as ASTNODE ptr)
+	dim removed as THASH
+	hashInit(@removed, 7, TRUE)
+
+	var i = ast->head
+	while i
+		var nxt = i->next
+
+		if i->text then
+			var hash = hashHash(i->text)
+			if hashContains(@hl.api->idopt(OPT_REMOVE1ST), i->text, hash) and _
+			   (not hashContains(@removed, i->text, hash)) then
+				hashAddOverwrite(@removed, i->text, NULL)
+				astRemove(ast, i)
+			end if
+		end if
+
+		i = nxt
+	wend
+
+	hashEnd(@removed)
+end sub
+
 private sub hlApplyDropProcBodyOptions(byval ast as ASTNODE ptr)
 	var i = ast->head
 	while i
@@ -1669,6 +1692,10 @@ sub hlGlobal(byval ast as ASTNODE ptr, byref api as ApiInfo)
 
 	if api.idopt(OPT_REMOVEVAR).count > 0 then
 		hlApplyRemoveOption(ast, ASTCLASS_VAR, OPT_REMOVEVAR)
+	end if
+
+	if api.idopt(OPT_REMOVE1ST).count > 0 then
+		hlApplyRemove1st(ast)
 	end if
 
 	if api.idopt(OPT_DROPPROCBODY).count > 0 then
