@@ -435,6 +435,31 @@ private sub hlApplyRemove1st(byval ast as ASTNODE ptr)
 	hashEnd(@removed)
 end sub
 
+private sub hlApplyRemove2nd(byval ast as ASTNODE ptr)
+	dim found1st as THASH
+	hashInit(@found1st, 7, FALSE)
+
+	var i = ast->head
+	while i
+		var nxt = i->next
+
+		if i->text then
+			var hash = hashHash(i->text)
+			if hashContains(@hl.api->idopt(OPT_REMOVE2ND), i->text, hash) then
+				if hashContains(@found1st, i->text, hash) then
+					astRemove(ast, i)
+				else
+					hashAddOverwrite(@found1st, i->text, NULL)
+				end if
+			end if
+		end if
+
+		i = nxt
+	wend
+
+	hashEnd(@found1st)
+end sub
+
 private sub hlApplyDropProcBodyOptions(byval ast as ASTNODE ptr)
 	var i = ast->head
 	while i
@@ -1696,6 +1721,10 @@ sub hlGlobal(byval ast as ASTNODE ptr, byref api as ApiInfo)
 
 	if api.idopt(OPT_REMOVE1ST).count > 0 then
 		hlApplyRemove1st(ast)
+	end if
+
+	if api.idopt(OPT_REMOVE2ND).count > 0 then
+		hlApplyRemove2nd(ast)
 	end if
 
 	if api.idopt(OPT_DROPPROCBODY).count > 0 then

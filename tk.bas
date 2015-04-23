@@ -182,6 +182,7 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	(@"-removeproc"   ), _
 	(@"-removevar"    ), _
 	(@"-remove1st"    ), _
+	(@"-remove2nd"    ), _
 	(@"-dropprocbody" ), _
 	(@"-typedefhint"  ), _
 	(@"-addforwarddecl"), _
