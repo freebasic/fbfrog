@@ -185,6 +185,7 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	(@"-undefbeforedecl"), _
 	(@"-nostring"     ), _
 	(@"-string"       ), _
+	(@"-convbodytokens"), _
 	(@"-expandindefine"), _
 	(@"-noexpand"     ), _
 	(@"-removeinclude"), _

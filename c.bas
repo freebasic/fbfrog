@@ -835,8 +835,107 @@ private function hDefineBodyLooksLikeScopeBlock(byval x as integer) as integer
 	function = FALSE
 end function
 
+private function cDefineBodyTokenLiteral() as string
+	dim astclass as integer
+
+	select case as const tkGet(c.x)
+	case TK_NUMBER             : astclass = ASTCLASS_CONSTI
+	case TK_STRING, TK_WSTRING : astclass = ASTCLASS_STRING
+	case TK_CHAR, TK_WCHAR     : astclass = ASTCLASS_CHAR
+	case else : assert(FALSE)
+	end select
+
+	var n = cLiteral(astclass, TRUE)
+	function = emitExpr(n)
+	astDelete(n)
+end function
+
+private function cDefineBodyToken() as string
+	select case as const tkGet(c.x)
+	case TK_NUMBER, TK_STRING, TK_WSTRING, TK_CHAR, TK_WCHAR
+		function = cDefineBodyTokenLiteral()
+
+	case TK_EXCLEQ    : function = "<>"      : c.x += 1  '' !=
+	case TK_PERCENT   : function = "mod"     : c.x += 1  '' %
+	case TK_PERCENTEQ : function = "mod="    : c.x += 1  '' %=
+	case TK_AMP       : function = "and"     : c.x += 1  '' &
+	case TK_AMPEQ     : function = "and="    : c.x += 1  '' &=
+	case TK_AMPAMP    : function = "andalso" : c.x += 1  '' &&
+	case TK_LTLT      : function = "shl"     : c.x += 1  '' <<
+	case TK_LTLTEQ    : function = "shl="    : c.x += 1  '' <<=
+	case TK_EQEQ      : function = "="       : c.x += 1  '' ==
+	case TK_GTGT      : function = "shr"     : c.x += 1  '' >>
+	case TK_GTGTEQ    : function = "shr="    : c.x += 1  '' >>=
+	case TK_CIRC      : function = "xor"     : c.x += 1  '' ^
+	case TK_CIRCEQ    : function = "xor="    : c.x += 1  '' ^=
+	case TK_PIPE      : function = "or"      : c.x += 1  '' |
+	case TK_PIPEEQ    : function = "or="     : c.x += 1  '' |=
+	case TK_PIPEPIPE  : function = "orelse"  : c.x += 1  '' ||
+	case TK_TILDE     : function = "not"     : c.x += 1  '' ~
+
+	case else
+		function = tkSpell(c.x)
+		c.x += 1
+	end select
+end function
+
+private function hSeparateBySpace(byval l as integer, byval r as integer) as integer
+	'' Always add space behind a comma
+	if l = TK_COMMA then return TRUE
+
+	'' But not space in front of a comma
+	if r = TK_COMMA then return FALSE
+
+	'' No spaces on the inside of '()' or '[]'
+	if (l = TK_LPAREN) or (r = TK_RPAREN) then return FALSE
+	if (l = TK_LBRACKET) or (r = TK_RBRACKET) then return FALSE
+
+	'' No spaces in front of '(' (function calls)
+	if l = TK_RPAREN then return FALSE
+
+	'' No spaces around ## merge operator
+	if (l = TK_HASHHASH) or (r = TK_HASHHASH) then return FALSE
+
+	'' No space behind # stringify operator
+	if l = TK_HASH then return FALSE
+
+	'' Add space between anything else
+	function = TRUE
+end function
+
+private function cDefineBodyTokens() as string
+	dim s as string
+
+	var begin = c.x
+	while tkGet(c.x) <> TK_EOL
+
+		assert(tkGet(c.x) <> TK_EOF)
+
+		if begin < c.x then
+			if hSeparateBySpace(tkGet(c.x - 1), tkGet(c.x)) then
+				s += " "
+			end if
+		end if
+
+		s += cDefineBodyToken()
+	wend
+
+	function = s
+end function
+
 '' Return value: whether to keep the #define
 private function cDefineBody(byval macro as ASTNODE ptr) as integer
+	'' If -convbodytokens was given for this #define, then don't try to parse the #define body,
+	'' but just convert the tokens individually from C to FB.
+	if hashContains(@c.api->idopt(OPT_CONVBODYTOKENS), macro->text, hashHash(macro->text)) then
+		var body = cDefineBodyTokens()
+		if len(body) > 0 then
+			macro->expr = astNewTEXT(body)
+		end if
+		assert(tkGet(c.x) = TK_EOL)
+		return TRUE
+	end if
+
 	select case tkGet(c.x)
 	'' Don't preserve #define if it just contains _Pragma's
 	'' _Pragma("...")

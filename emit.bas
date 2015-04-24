@@ -5,7 +5,6 @@
 #include once "fbfrog.bi"
 
 declare sub emitCode(byval n as ASTNODE ptr, byval parentclass as integer = -1)
-declare function emitExpr(byval n as ASTNODE ptr, byval need_parens as integer = FALSE) as string
 
 function emitType overload _
 	( _
@@ -580,7 +579,7 @@ private function hEmitOperands(byval n as ASTNODE ptr, byref separator as string
 	function = s
 end function
 
-private function emitExpr(byval n as ASTNODE ptr, byval need_parens as integer) as string
+function emitExpr(byval n as ASTNODE ptr, byval need_parens as integer) as string
 	dim as string s
 
 	if n = NULL then
