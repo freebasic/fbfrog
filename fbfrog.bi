@@ -248,7 +248,7 @@ enum
 	TK_WSTRING
 	TK_WCHAR
 
-	'' C/FB tokens
+	'' C tokens
 	TK_EXCL         '' !
 	TK_EXCLEQ       '' !=
 	TK_HASH         '' #
@@ -280,7 +280,6 @@ enum
 	TK_LTLT         '' <<
 	TK_LTLTEQ       '' <<=
 	TK_LTEQ         '' <=
-	TK_LTGT         '' <>
 	TK_EQ           '' =
 	TK_EQEQ         '' ==
 	TK_GT           '' >
@@ -288,13 +287,10 @@ enum
 	TK_GTGTEQ       '' >>=
 	TK_GTEQ         '' >=
 	TK_QUEST        '' ?
-	TK_AT           '' @
 	TK_LBRACKET     '' [
-	TK_BACKSLASH    '' \
 	TK_RBRACKET     '' ]
 	TK_CIRC         '' ^
 	TK_CIRCEQ       '' ^=
-	TK_UNDERSCORE   '' _
 	TK_LBRACE       '' {
 	TK_PIPE         '' |
 	TK_PIPEEQ       '' |=

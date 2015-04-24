@@ -483,8 +483,6 @@ private sub lexNext()
 			end if
 		case CH_EQ	'' <=
 			hReadBytes(TK_LTEQ, 2)
-		case CH_GT	'' <>
-			hReadBytes(TK_LTGT, 2)
 		case else
 			hReadBytes(TK_LT, 1)
 		end select
@@ -531,7 +529,8 @@ private sub lexNext()
 	case CH_BACKSLASH	'' \
 		'' Check for escaped EOLs and solve them out
 		if hSkipEscapedEol() = FALSE then
-			hReadBytes(TK_BACKSLASH, 1)
+			lex.i += 1
+			hAddTextToken(TK_STRAYBYTE, lex.i - 1)
 		end if
 
 	case CH_RBRACKET	'' ]
