@@ -586,7 +586,7 @@ function tkSpell overload(byval first as integer, byval last as integer) as stri
 			var add_space = ((tkGetFlags(i) and TKFLAG_BEHINDSPACE) <> 0)
 			add_space or= (tkGet(i - 1) >= TK_ID) and (tkGet(i) >= TK_ID)
 			if add_space then
-				if right(s, 1) <> " " then s += " "
+				s += " "
 			end if
 		end if
 
