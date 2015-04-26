@@ -6,10 +6,6 @@ dim shared included as long
 dim shared included as long
 dim shared included as long
 dim shared included as long
-dim shared included as long
-dim shared included as long
-dim shared included as long
-dim shared included as long
 
 const A01 = 0
 const A02 = 1

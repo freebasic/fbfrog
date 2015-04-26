@@ -1,0 +1,31 @@
+[1/5] __FB_WIN32__.__FB_64BIT__
+      tests/cpp/include/system-include/main.h
+      tests/cpp/include/system-include/common.h
+      tests/cpp/include/system-include/sys/common.h
+      tests/cpp/include/system-include/sys/sysonly.h
+      tests/cpp/include/system-include/sys/sysonly.h
+[2/5] __FB_WIN32__.(not __FB_64BIT__)
+      tests/cpp/include/system-include/main.h
+      tests/cpp/include/system-include/common.h
+      tests/cpp/include/system-include/sys/common.h
+      tests/cpp/include/system-include/sys/sysonly.h
+      tests/cpp/include/system-include/sys/sysonly.h
+[3/5] __FB_LINUX__.__FB_64BIT__
+      tests/cpp/include/system-include/main.h
+      tests/cpp/include/system-include/common.h
+      tests/cpp/include/system-include/sys/common.h
+      tests/cpp/include/system-include/sys/sysonly.h
+      tests/cpp/include/system-include/sys/sysonly.h
+[4/5] __FB_LINUX__.(not __FB_64BIT__)
+      tests/cpp/include/system-include/main.h
+      tests/cpp/include/system-include/common.h
+      tests/cpp/include/system-include/sys/common.h
+      tests/cpp/include/system-include/sys/sysonly.h
+      tests/cpp/include/system-include/sys/sysonly.h
+[5/5] __FB_DOS__
+      tests/cpp/include/system-include/main.h
+      tests/cpp/include/system-include/common.h
+      tests/cpp/include/system-include/sys/common.h
+      tests/cpp/include/system-include/sys/sysonly.h
+      tests/cpp/include/system-include/sys/sysonly.h
+emitting: tests/cpp/include/system-include/main.bi (4 declarations, 0 TODOs)

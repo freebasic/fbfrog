@@ -2120,32 +2120,35 @@ end sub
 private function hSearchHeaderFile _
 	( _
 		byref contextfile as string, _
-		byref inctext as string _
+		byref inctext as string, _
+		byval is_system_include as integer _
 	) as string
 
 	if frog.verbose then
 		frogPrint("searching: " + inctext + " (context = " + contextfile + ")")
 	end if
 
-	'' 1. If #including by absolute path, use it as-is
+	'' If #including by absolute path, use it as-is
 	if pathIsAbsolute(inctext) then
 		return inctext
 	end if
 
-	'' 2. Relative to context file
-	var incfile = pathAddDiv(pathOnly(contextfile)) + inctext
-	if frog.verbose then
-		frogPrint("trying: " + incfile)
-	end if
-	if fileexists(incfile) then
-		return incfile
+	'' Relative to context file, unless it was #include <...>
+	if is_system_include = FALSE then
+		var incfile = pathAddDiv(pathOnly(contextfile)) + inctext
+		if frog.verbose then
+			frogPrint("trying: " + incfile)
+		end if
+		if fileexists(incfile) then
+			return incfile
+		end if
 	end if
 
-	'' 3. In any of the include search directories
+	'' In any of the include search directories
 	var i = cpp.incdirs->head
 	while i
 
-		incfile = pathAddDiv(*i->text) + inctext
+		var incfile = pathAddDiv(*i->text) + inctext
 		if frog.verbose then
 			frogPrint("trying: " + incfile)
 		end if
@@ -2189,10 +2192,11 @@ end function
 '' "filename" | <filename>
 '' Escape sequences in "filename" are not evaluated.
 '' TODO: Don't evaluate escape sequences/comments in <filename>
-private function cppIncludeFilename() as string
+private function cppIncludeFilename(byref is_system_include as integer) as string
 	select case tkGet(cpp.x)
 	case TK_LT
 		'' <filename>
+		is_system_include = TRUE
 
 		'' Skip tokens until the '>'
 		var begin = cpp.x
@@ -2230,7 +2234,8 @@ private sub cppInclude(byval begin as integer, byref flags as integer)
 	'' "filename" | <filename>
 	var location = tkGetLocation(cpp.x)
 	var includetkflags = tkGetFlags(cpp.x)
-	var inctext = cppIncludeFilename()
+	var is_system_include = FALSE
+	var inctext = cppIncludeFilename(is_system_include)
 
 	cppEol()
 
@@ -2245,7 +2250,7 @@ private sub cppInclude(byval begin as integer, byref flags as integer)
 			contextfile = *location.source->name
 		end if
 
-		incfile = hSearchHeaderFile(contextfile, inctext)
+		incfile = hSearchHeaderFile(contextfile, inctext, is_system_include)
 		if len(incfile) = 0 then
 			'' #include not found
 			frogPrint(inctext + " (not found)")
