@@ -113,6 +113,7 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	(@"ifdef"   ), _
 	(@"ifndef"  ), _
 	(@"include" ), _
+	(@"include_next"), _
 	(@"inline"  ), _
 	(@"int"     ), _
 	(@"long"    ), _
@@ -522,7 +523,7 @@ sub tkTurnCPPTokensIntoCIds()
 	for x as integer = 0 to tkGetCount()-1
 		var tk = tkGet(x)
 		select case tk
-		case KW_DEFINE, KW_DEFINED, KW_INCLUDE, KW_ELIF, KW_IFDEF, KW_IFNDEF, _
+		case KW_DEFINE, KW_DEFINED, KW_INCLUDE, KW_INCLUDE_NEXT, KW_ELIF, KW_IFDEF, KW_IFNDEF, _
 		     KW_ENDIF, KW_UNDEF, KW_PRAGMA, KW_ERROR, KW_WARNING
 			'' Turn the KW_* into a TK_ID, but preserve the flags/macro expansion level/etc.
 			var p = tkAccess(x)

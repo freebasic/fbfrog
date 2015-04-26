@@ -603,6 +603,11 @@ namespace cpp
 	type STACKNODE
 		state		as integer  '' STATE_*
 		knownfile	as integer  '' Index into cpp.files array, if it's an #include context, or -1
+
+		'' file contexts:
+		'' A node from the incdirs list, representing the incdir where
+		'' this file was found (for #include_next support)
+		incdir		as ASTNODE ptr
 	end type
 
 	'' #if/file context stack
@@ -668,6 +673,7 @@ sub cppInit(byref api as ApiInfo)
 	with cpp.stack(0)
 		.state = STATE_FILE
 		.knownfile = -1
+		.incdir = NULL
 	end with
 	cpp.level = 0
 	cpp.skiplevel = MAXSTACK  '' No skipping yet
@@ -1916,6 +1922,7 @@ private sub cppPush(byval state as integer, byval knownfile as integer = -1)
 	with cpp.stack(cpp.level)
 		.state = state
 		.knownfile = knownfile
+		.incdir = NULL
 	end with
 end sub
 
@@ -2120,8 +2127,10 @@ end sub
 private function hSearchHeaderFile _
 	( _
 		byref contextfile as string, _
+		byval contextincdir as ASTNODE ptr, _
 		byref inctext as string, _
-		byval is_system_include as integer _
+		byval is_system_include as integer, _
+		byref incdir as ASTNODE ptr _
 	) as string
 
 	if frog.verbose then
@@ -2133,8 +2142,8 @@ private function hSearchHeaderFile _
 		return inctext
 	end if
 
-	'' Relative to context file, unless it was #include <...>
-	if is_system_include = FALSE then
+	'' Relative to context file, unless it was #include <...> or #include_next
+	if (contextincdir = NULL) and (not is_system_include) then
 		var incfile = pathAddDiv(pathOnly(contextfile)) + inctext
 		if frog.verbose then
 			frogPrint("trying: " + incfile)
@@ -2144,8 +2153,9 @@ private function hSearchHeaderFile _
 		end if
 	end if
 
-	'' In any of the include search directories
-	var i = cpp.incdirs->head
+	'' In any of the include search directories; #include_next starts with
+	'' the incdir following the one where the parent file was found
+	var i = iif(contextincdir, contextincdir->next, cpp.incdirs->head)
 	while i
 
 		var incfile = pathAddDiv(*i->text) + inctext
@@ -2153,6 +2163,7 @@ private function hSearchHeaderFile _
 			frogPrint("trying: " + incfile)
 		end if
 		if fileexists(incfile) then
+			incdir = i
 			return incfile
 		end if
 
@@ -2223,7 +2234,7 @@ private function cppIncludeFilename(byref is_system_include as integer) as strin
 	end select
 end function
 
-private sub cppInclude(byval begin as integer, byref flags as integer)
+private sub cppInclude(byval begin as integer, byref flags as integer, byval is_include_next as integer)
 	cpp.x += 1
 
 	assert(cppSkipping() = FALSE)
@@ -2240,6 +2251,7 @@ private sub cppInclude(byval begin as integer, byref flags as integer)
 	cppEol()
 
 	dim incfile as string
+	dim incdir as ASTNODE ptr
 	if includetkflags and TKFLAG_ROOTFILE then
 		'' No #include file search for internal #includes
 		incfile = inctext
@@ -2250,7 +2262,12 @@ private sub cppInclude(byval begin as integer, byref flags as integer)
 			contextfile = *location.source->name
 		end if
 
-		incfile = hSearchHeaderFile(contextfile, inctext, is_system_include)
+		dim contextincdir as ASTNODE ptr
+		if is_include_next then
+			contextincdir = cppGetFileContext()->incdir
+		end if
+
+		incfile = hSearchHeaderFile(contextfile, contextincdir, inctext, is_system_include, incdir)
 		if len(incfile) = 0 then
 			'' #include not found
 			frogPrint(inctext + " (not found)")
@@ -2316,6 +2333,7 @@ private sub cppInclude(byval begin as integer, byref flags as integer)
 
 	'' Push the #include file context
 	cppPush(STATE_FILE, knownfile)
+	cpp.stack(cpp.level).incdir = incdir
 
 	'' Read the include file and insert its tokens
 	var file = filebuffersAdd(incfile, location)
@@ -2674,7 +2692,10 @@ private sub cppDirective()
 		cppEndIf()
 
 	case KW_INCLUDE
-		cppInclude(begin, flags)
+		cppInclude(begin, flags, FALSE)
+
+	case KW_INCLUDE_NEXT
+		cppInclude(begin, flags, TRUE)
 
 	case KW_DEFINE
 		cppDefine(flags)
