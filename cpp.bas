@@ -897,50 +897,52 @@ private sub hCheckForUnknownSymbol(byval id as zstring ptr)
 end sub
 
 '' C operator precedence, starting at 1, higher value = higher precedence
+'' TODO: assignments, precedence 2
+'' TODO: comma operator, precedence 1
 dim shared as integer cprecedence(ASTCLASS_CLOGOR to ASTCLASS_IIF) = _
 { _
-	 2, _ '' ASTCLASS_CLOGOR
-	 3, _ '' ASTCLASS_CLOGAND
+	 4, _ '' ASTCLASS_CLOGOR
+	 5, _ '' ASTCLASS_CLOGAND
 	 0, _ '' ASTCLASS_LOGOR (unused)
 	 0, _ '' ASTCLASS_LOGAND (unused)
-	 4, _ '' ASTCLASS_OR
-	 5, _ '' ASTCLASS_XOR
-	 6, _ '' ASTCLASS_AND
-	 7, _ '' ASTCLASS_CEQ
-	 7, _ '' ASTCLASS_CNE
-	 8, _ '' ASTCLASS_CLT
-	 8, _ '' ASTCLASS_CLE
-	 8, _ '' ASTCLASS_CGT
-	 8, _ '' ASTCLASS_CGE
+	 6, _ '' ASTCLASS_OR
+	 7, _ '' ASTCLASS_XOR
+	 8, _ '' ASTCLASS_AND
+	 9, _ '' ASTCLASS_CEQ
+	 9, _ '' ASTCLASS_CNE
+	10, _ '' ASTCLASS_CLT
+	10, _ '' ASTCLASS_CLE
+	10, _ '' ASTCLASS_CGT
+	10, _ '' ASTCLASS_CGE
 	 0, _ '' ASTCLASS_EQ (unused)
 	 0, _ '' ASTCLASS_NE (unused)
 	 0, _ '' ASTCLASS_LT (unused)
 	 0, _ '' ASTCLASS_LE (unused)
 	 0, _ '' ASTCLASS_GT (unused)
 	 0, _ '' ASTCLASS_GE (unused)
-	 9, _ '' ASTCLASS_SHL
-	 9, _ '' ASTCLASS_SHR
-	10, _ '' ASTCLASS_ADD
-	10, _ '' ASTCLASS_SUB
-	11, _ '' ASTCLASS_MUL
-	11, _ '' ASTCLASS_DIV
-	11, _ '' ASTCLASS_MOD
-	13, _ '' ASTCLASS_INDEX
-	13, _ '' ASTCLASS_MEMBER
-	13, _ '' ASTCLASS_MEMBERDEREF
+	11, _ '' ASTCLASS_SHL
+	11, _ '' ASTCLASS_SHR
+	12, _ '' ASTCLASS_ADD
+	12, _ '' ASTCLASS_SUB
+	13, _ '' ASTCLASS_MUL
+	13, _ '' ASTCLASS_DIV
+	13, _ '' ASTCLASS_MOD
+	15, _ '' ASTCLASS_INDEX
+	15, _ '' ASTCLASS_MEMBER
+	15, _ '' ASTCLASS_MEMBERDEREF
 	 0, _ '' ASTCLASS_STRCAT (unused)
-	12, _ '' ASTCLASS_CLOGNOT
-	12, _ '' ASTCLASS_NOT
-	12, _ '' ASTCLASS_NEGATE
-	12, _ '' ASTCLASS_UNARYPLUS
+	14, _ '' ASTCLASS_CLOGNOT
+	14, _ '' ASTCLASS_NOT
+	14, _ '' ASTCLASS_NEGATE
+	14, _ '' ASTCLASS_UNARYPLUS
 	 0, _ '' ASTCLASS_CDEFINED (unused)
 	 0, _ '' ASTCLASS_DEFINED (unused)
-	12, _ '' ASTCLASS_ADDROF
-	12, _ '' ASTCLASS_DEREF
+	14, _ '' ASTCLASS_ADDROF
+	14, _ '' ASTCLASS_DEREF
 	 0, _ '' ASTCLASS_STRINGIFY (unused)
-	12, _ '' ASTCLASS_SIZEOF
-	12, _ '' ASTCLASS_CAST
-	 1  _ '' ASTCLASS_IIF
+	14, _ '' ASTCLASS_SIZEOF
+	14, _ '' ASTCLASS_CAST
+	 3  _ '' ASTCLASS_IIF
 }
 
 type CPPVALUE
