@@ -240,7 +240,7 @@ Interesting improvements:
   * let fbfrog create a temp .bi: -o *.temp.bi, then produce a *.temp.bas which
     #includes the *.temp.bi instead of having a #fbfrog directive, then invoke
     fbc to compile it.
-  * check system/gcc incdirs to find *.h files passed in #fbfrog directives
+  * query system/gcc incdirs and pass them as fbfrog -incdirs
 * Change AST:
   Store fields/procbodies at toplevel wrapped in TYPEBEGIN/TYPEEND/PROCBEGIN/PROCEND,
   allowing nested LOC to be merged separate from the compound.
