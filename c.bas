@@ -1029,6 +1029,12 @@ private sub cParseDefBody(byval n as ASTNODE ptr, byval xbegin as integer, byref
 		c.x = hSkipToEol(c.x)
 	end if
 
+	if n->expr then
+		if astContains(n->expr, ASTCLASS_CASSIGN) then
+			cError("can't translate C assignment operator")
+		end if
+	end if
+
 	'' If parsing the body failed, turn the PPDEFINE into an UNKNOWN without
 	'' reallocating it (as it may already be linked into the AST).
 	if c.parseok = FALSE then

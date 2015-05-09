@@ -9,3 +9,7 @@ private sub f1()
 	'' TODO: a = 1;
 end sub
 
+'' TODO: #define M1(x) x = 1
+'' TODO: #define M2(x) ((x) = 1)
+
+end extern
