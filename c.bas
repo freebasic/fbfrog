@@ -487,6 +487,7 @@ private function hExpression(byval level as integer) as ASTNODE ptr
 		case TK_PIPE     : op = ASTCLASS_OR      '' |
 		case TK_CIRC     : op = ASTCLASS_XOR     '' ^
 		case TK_AMP      : op = ASTCLASS_AND     '' &
+		case TK_EQ       : op = ASTCLASS_CASSIGN '' =
 		case TK_EQEQ     : op = ASTCLASS_CEQ     '' ==
 		case TK_EXCLEQ   : op = ASTCLASS_CNE     '' !=
 		case TK_LT       : op = ASTCLASS_CLT     '' <
@@ -514,10 +515,14 @@ private function hExpression(byval level as integer) as ASTNODE ptr
 			exit while
 		end if
 
-		'' Left associative?
-		if op <> ASTCLASS_IIF then
+		select case op
+		case ASTCLASS_IIF, ASTCLASS_CASSIGN
+			'' Right associative
+
+		case else
+			'' Left associative
 			oplevel += 1
-		end if
+		end select
 
 		'' For [] we parse until the ], no precedence levels needed
 		if op = ASTCLASS_INDEX then
