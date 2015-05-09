@@ -6,10 +6,20 @@ extern "C"
 
 private sub f1()
 	dim a as long
-	'' TODO: a = 1;
+	a = 1
+	'' TODO: a = a = 2;
 end sub
 
-'' TODO: #define M1(x) x = 1
-'' TODO: #define M2(x) ((x) = 1)
+#macro M1(x)
+	scope
+		x = 1
+	end scope
+#endmacro
+#macro M2(x)
+	scope
+		(x) = 1
+	end scope
+#endmacro
+'' TODO: #define M3(x) ((x) = (x) = 1)
 
 end extern

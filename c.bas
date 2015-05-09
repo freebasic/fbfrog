@@ -1016,6 +1016,32 @@ private sub hTurnIntoUNKNOWN(byval n as ASTNODE ptr, byval first as integer, byv
 	astSetType(n, TYPE_NONE, NULL)
 end sub
 
+private sub hHandleToplevelAssign(byval n as ASTNODE ptr)
+	'' C assignment expression is top-most expression?
+	'' Can be translated to FB assignment statement easily.
+	'' (unlike C assignments nested deeper in expressions etc.)
+	if n->class = ASTCLASS_CASSIGN then
+		n->class = ASTCLASS_ASSIGN
+	end if
+end sub
+
+private sub hHandleAssignmentStatement(byval n as ASTNODE ptr)
+	if n->class = ASTCLASS_GROUP then
+		var i = n->head
+		while i
+			hHandleToplevelAssign(i)
+			i = i->next
+		wend
+	else
+		hHandleToplevelAssign(n)
+	end if
+
+	'' Any other assignments?
+	if astContains(n, ASTCLASS_CASSIGN) then
+		cError("can't auto-translate C assignment operator here [yet]")
+	end if
+end sub
+
 private sub cParseDefBody(byval n as ASTNODE ptr, byval xbegin as integer, byref add_to_ast as integer)
 	c.parentdefine = n
 
@@ -1030,8 +1056,12 @@ private sub cParseDefBody(byval n as ASTNODE ptr, byval xbegin as integer, byref
 	end if
 
 	if n->expr then
-		if astContains(n->expr, ASTCLASS_CASSIGN) then
-			cError("can't translate C assignment operator")
+		hHandleAssignmentStatement(n->expr)
+
+		'' If the macro body is an assignment statement, wrap it in a
+		'' scope block, to enforce its use as statement, not expression.
+		if n->expr->class = ASTCLASS_ASSIGN then
+			n->expr = astNew(ASTCLASS_SCOPEBLOCK, n->expr)
 		end if
 	end if
 
@@ -2383,9 +2413,7 @@ private function cBody(byval bodyastclass as integer) as ASTNODE ptr
 		var begin = c.x
 		var t = cConstruct(bodyastclass)
 
-		if astContains(t, ASTCLASS_CASSIGN) then
-			cError("can't translate C assignment operator")
-		end if
+		hHandleAssignmentStatement(t)
 
 		if c.parseok = FALSE then
 			c.parseok = TRUE

@@ -563,6 +563,9 @@ private sub emitCode(byval n as ASTNODE ptr, byval parentclass as integer)
 	case ASTCLASS_RETURN
 		emitLine("return " + emitExpr(n->head))
 
+	case ASTCLASS_ASSIGN
+		emitLine(emitExpr(n->head, TRUE) + " = " + emitExpr(n->tail, FALSE))
+
 	case else
 		emitLine(emitExpr(n))
 	end select
