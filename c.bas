@@ -2377,6 +2377,10 @@ private function cBody(byval bodyastclass as integer) as ASTNODE ptr
 		var begin = c.x
 		var t = cConstruct(bodyastclass)
 
+		if astContains(t, ASTCLASS_CASSIGN) then
+			cError("can't translate C assignment operator")
+		end if
+
 		if c.parseok = FALSE then
 			c.parseok = TRUE
 

@@ -451,6 +451,20 @@ function astClone(byval n as ASTNODE ptr) as ASTNODE ptr
 	function = c
 end function
 
+function astContains(byval n as ASTNODE ptr, byval astclass as integer) as integer
+	if n->class = astclass then return TRUE
+	if n->subtype then if astContains(n->subtype, astclass) then return TRUE
+	if n->array   then if astContains(n->array  , astclass) then return TRUE
+	if n->bits    then if astContains(n->bits   , astclass) then return TRUE
+	if n->expr    then if astContains(n->expr   , astclass) then return TRUE
+	var i = n->head
+	while i
+		if astContains(i, astclass) then return TRUE
+		i = i->next
+	wend
+	function = FALSE
+end function
+
 function astIsMergableBlock(byval n as ASTNODE ptr) as integer
 	select case n->class
 	case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM, ASTCLASS_RENAMELIST

@@ -769,6 +769,7 @@ declare sub astSetType _
 	)
 declare function astCloneNode(byval n as ASTNODE ptr) as ASTNODE ptr
 declare function astClone(byval n as ASTNODE ptr) as ASTNODE ptr
+declare function astContains(byval n as ASTNODE ptr, byval astclass as integer) as integer
 declare function astIsMergableBlock(byval n as ASTNODE ptr) as integer
 declare function astIsEqual _
 	( _
