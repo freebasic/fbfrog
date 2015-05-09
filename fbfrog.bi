@@ -719,7 +719,6 @@ end type
 type ASTVISITCALLBACK as function(byval as ASTNODE ptr) as integer
 
 #define astNewTEXT(text) astNew(ASTCLASS_TEXT, text)
-#define astNewUNKNOWN(first, last) astNew(ASTCLASS_UNKNOWN, tkSpell(first, last))
 #define astNewDEFINED(id) astNew(ASTCLASS_DEFINED, id)
 #define astIsCONSTI(n) ((n)->class = ASTCLASS_CONSTI)
 #define astIsVERBLOCK(n) ((n)->class = ASTCLASS_VERBLOCK)

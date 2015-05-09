@@ -1002,6 +1002,15 @@ private function hDefBodyContainsIds(byval y as integer) as integer
 	loop
 end function
 
+private sub hTurnIntoUNKNOWN(byval n as ASTNODE ptr, byval first as integer, byval last as integer)
+	n->class = ASTCLASS_UNKNOWN
+	astSetText(n, tkSpell(first, last))
+	astRemoveChildren(n)
+	astDelete(n->expr)
+	n->expr = NULL
+	astSetType(n, TYPE_NONE, NULL)
+end sub
+
 private sub cParseDefBody(byval n as ASTNODE ptr, byval xbegin as integer, byref add_to_ast as integer)
 	c.parentdefine = n
 
@@ -1018,9 +1027,7 @@ private sub cParseDefBody(byval n as ASTNODE ptr, byval xbegin as integer, byref
 	'' If parsing the body failed, turn the PPDEFINE into an UNKNOWN without
 	'' reallocating it (as it may already be linked into the AST).
 	if c.parseok = FALSE then
-		n->class = ASTCLASS_UNKNOWN
-		astSetText(n, tkSpell(xbegin, c.x))
-		astRemoveChildren(n)
+		hTurnIntoUNKNOWN(n, xbegin, c.x)
 		c.parseok = TRUE
 	end if
 
@@ -2367,12 +2374,11 @@ private function cBody(byval bodyastclass as integer) as ASTNODE ptr
 
 		if c.parseok = FALSE then
 			c.parseok = TRUE
-			astDelete(t)
 
 			'' Skip current construct and preserve its tokens in
 			'' an UNKNOWN node
 			c.x = hSkipConstruct(begin, FALSE)
-			t = astNewUNKNOWN(begin, c.x - 1)
+			hTurnIntoUNKNOWN(t, begin, c.x - 1)
 		end if
 
 		'' If at toplevel, assign source location to toplevel ASTNODEs
