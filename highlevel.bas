@@ -371,7 +371,12 @@ private function hlFixExpressions(byval n as ASTNODE ptr) as integer
 		n->expr = hlAddMathCasts(NULL, n->expr)
 
 		'' TODO: shouldn't assume is_bool_context=TRUE for #define bodies
-		n->expr = astOpsC2FB(n->expr, (n->class = ASTCLASS_PPDEFINE))
+		var is_bool_context = FALSE
+		select case n->class
+		case ASTCLASS_PPDEFINE, ASTCLASS_IFBLOCK
+			is_bool_context = TRUE
+		end select
+		n->expr = astOpsC2FB(n->expr, is_bool_context)
 
 		'' Forget about types again, for better merging (on one side
 		'' an identifier may have unknown type, on the other side it
