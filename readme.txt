@@ -287,7 +287,6 @@ Interesting improvements:
   (MinGW-w64 CRT headers use this)
 * Continue support for parsing function bodies:
   - emit elseif if possible
-  - solve out explicit scope blocks in if/else blocks
   - loops/break, goto/labels/switch/case
 * Support assignment and comma operators in expressions
         if (a = 1) ...          =>    a = 1 : if a then ...

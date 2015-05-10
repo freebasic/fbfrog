@@ -325,6 +325,16 @@ private function hCheckForQuirkKeywordType(byval id as zstring ptr) as string
 	end if
 end function
 
+private sub emitIfElseSubBlock(byval n as ASTNODE ptr)
+	if n->class = ASTCLASS_SCOPEBLOCK then
+		hEmitIndentedChildren(n)
+	else
+		emit.indent += 1
+		emitCode(n)
+		emit.indent -= 1
+	end if
+end sub
+
 private sub emitCode(byval n as ASTNODE ptr, byval parentclass as integer)
 	select case as const n->class
 	case ASTCLASS_GROUP
@@ -570,17 +580,13 @@ private sub emitCode(byval n as ASTNODE ptr, byval parentclass as integer)
 		emitLine("if " + emitExpr(n->expr) + " then")
 		if n->head then
 			'' if/true block
-			emit.indent += 1
-			emitCode(n->head)
-			emit.indent -= 1
+			emitIfElseSubBlock(n->head)
 
 			'' else/false block, if any
 			if n->head <> n->tail then
 				assert(n->head->next = n->tail)
 				emitLine("else")
-				emit.indent += 1
-				emitCode(n->tail)
-				emit.indent -= 1
+				emitIfElseSubBlock(n->tail)
 			end if
 		end if
 		emitLine("end if")

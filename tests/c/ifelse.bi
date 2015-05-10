@@ -1,5 +1,7 @@
 #pragma once
 
+extern "C"
+
 if 1 then
 	printf("true")
 end if
@@ -11,50 +13,38 @@ else
 end if
 
 if 1 then
-	scope
-		printf("true")
-	end scope
-else
-	scope
-		printf("false")
-	end scope
-end if
-
-if 1 then
-end if
-
-if 1 then
 	printf("true")
-end if
-
-if 1 then
-	printf("true")
-else
-	scope
-		printf("false")
-	end scope
-end if
-
-if 1 then
-	scope
-		printf("true")
-	end scope
 else
 	printf("false")
 end if
 
 if 1 then
-	scope
-		printf("true")
-		printf("true")
-		printf("true")
-	end scope
+end if
+
+if 1 then
+	printf("true")
+end if
+
+if 1 then
+	printf("true")
 else
-	scope
-		printf("false")
-		printf("false")
-		printf("false")
-	end scope
+	printf("false")
+end if
+
+if 1 then
+	printf("true")
+else
+	printf("false")
+end if
+
+if 1 then
+	printf("true")
+	printf("true")
+	printf("true")
+else
+	printf("false")
+	printf("false")
+	printf("false")
 end if
 
 scope
@@ -74,31 +64,55 @@ scope
 end scope
 
 if "1" then
-	scope
+	if "1+.1" then
+		printf("1+.1+")
+	else
+		printf("1+.1-")
+	end if
+
+	if "1+.2" then
+		printf("1+.2+")
+	else
+		printf("1+.2-")
+	end if
+else
+	if "1-.1" then
+		printf("1-.1+")
+	else
+		printf("1-.1-")
+	end if
+
+	if "1-.2" then
+		printf("1-.2+")
+	else
+		printf("1-.2-")
+	end if
+end if
+
+private sub f()
+	if "1" then
 		if "1+.1" then
 			printf("1+.1+")
 		else
 			printf("1+.1-")
 		end if
-
 		if "1+.2" then
 			printf("1+.2+")
 		else
 			printf("1+.2-")
 		end if
-	end scope
-else
-	scope
+	else
 		if "1-.1" then
 			printf("1-.1+")
 		else
 			printf("1-.1-")
 		end if
-
 		if "1-.2" then
 			printf("1-.2+")
 		else
 			printf("1-.2-")
 		end if
-	end scope
-end if
+	end if
+end sub
+
+end extern

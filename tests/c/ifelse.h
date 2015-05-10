@@ -74,3 +74,27 @@ if ("1") {
 	else
 		printf("1-.2-");
 }
+
+void f(void) {
+	if ("1") {
+		if ("1+.1")
+			printf("1+.1+");
+		else
+			printf("1+.1-");
+
+		if ("1+.2")
+			printf("1+.2+");
+		else
+			printf("1+.2-");
+	} else {
+		if ("1-.1")
+			printf("1-.1+");
+		else
+			printf("1-.1-");
+
+		if ("1-.2")
+			printf("1-.2+");
+		else
+			printf("1-.2-");
+	}
+}
