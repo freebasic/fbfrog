@@ -8,4 +8,4 @@
       tests/c/ifelse.h
 [5/5] __FB_DOS__
       tests/c/ifelse.h
-emitting: tests/c/ifelse.bi (11 declarations, 0 TODOs)
+emitting: tests/c/ifelse.bi (12 declarations, 0 TODOs)

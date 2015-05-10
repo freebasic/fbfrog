@@ -115,4 +115,7 @@ private sub f()
 	end if
 end sub
 
+if -(1 = 2) then
+end if
+
 end extern
