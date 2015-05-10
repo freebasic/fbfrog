@@ -69,6 +69,7 @@ dim shared as zstring ptr astnodename(0 to ...) => _
 	@"externend"  , _
 	@"return"     , _
 	@"assign"     , _
+	@"ifblock"    , _
 	_
 	_ '' Expression atoms etc.
 	@"consti"    , _

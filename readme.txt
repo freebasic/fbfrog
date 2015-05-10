@@ -285,9 +285,11 @@ Interesting improvements:
   i.e. pack stack entries can be named. popping by name means popping everything
   until that node is popped. If not found, nothing is popped.
   (MinGW-w64 CRT headers use this)
-* Continue support for parsing function bodies: if/else blocks, for/while/do/while
-  loops, local vars, assignments, goto, break, switch, case, labels.
-  Support assignment and comma operators in expressions.
+* Continue support for parsing function bodies:
+  - emit elseif if possible
+  - solve out explicit scope blocks in if/else blocks
+  - loops/break, goto/labels/switch/case
+* Support assignment and comma operators in expressions
         if (a = 1) ...          =>    a = 1 : if a then ...
         if (a = 1 && b = 2) ... =>    a = 1 : if a then : b = 2 : if b then ... : end if
     ?: and &&/|| operands containing assignments must be expanded to real if blocks.

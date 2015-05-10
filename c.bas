@@ -58,7 +58,7 @@ declare function cExpression(byval allow_toplevel_comma as integer) as ASTNODE p
 declare function cExpressionOrInitializer() as ASTNODE ptr
 declare function cDataType() as ASTNODE ptr
 declare function cDeclaration(byval astclass as integer, byval gccattribs as integer) as ASTNODE ptr
-declare function cScope(byval proc as ASTNODE ptr) as ASTNODE ptr
+declare function cScope() as ASTNODE ptr
 declare function cConstruct(byval bodyastclass as integer) as ASTNODE ptr
 declare function cBody(byval bodyastclass as integer) as ASTNODE ptr
 
@@ -1073,7 +1073,7 @@ private function cDefineBody(byval macro as ASTNODE ptr) as integer
 	'' '{'
 	case TK_LBRACE
 		if hDefineBodyLooksLikeScopeBlock(c.x) then
-			macro->expr = cScope(NULL)
+			macro->expr = cScope()
 		else
 			macro->expr = cInitializer()
 		end if
@@ -2286,7 +2286,7 @@ private function cDeclaration(byval astclass as integer, byval gccattribs as int
 				var originalparseok = c.parseok
 
 				assert(n->expr = NULL)
-				n->expr = cScope(n)
+				n->expr = cScope()
 
 				if c.api->nofunctionbodies then
 					c.parseok = originalparseok
@@ -2361,7 +2361,7 @@ end function
 '' Using cBody() to allow the constructs in this scope block to be parsed
 '' separately. If we can't parse one of them, then only that one will become an
 '' unknown construct. The rest of the scope can potentially be parsed fine.
-private function cScope(byval proc as ASTNODE ptr) as ASTNODE ptr
+private function cScope() as ASTNODE ptr
 	'' '{'
 	assert(tkGet(c.x) = TK_LBRACE)
 	c.x += 1
@@ -2370,6 +2370,33 @@ private function cScope(byval proc as ASTNODE ptr) as ASTNODE ptr
 
 	'' '}'
 	cExpectMatch(TK_RBRACE, "to close compound statement")
+end function
+
+private function cIfBlock() as ASTNODE ptr
+	'' IF
+	assert(tkGet(c.x) = KW_IF)
+	c.x += 1
+
+	'' '('
+	cExpectMatch(TK_LPAREN, "in front of if condition")
+
+	'' condition expression
+	var ifblock = astNew(ASTCLASS_IFBLOCK)
+	ifblock->expr = cExpression(TRUE)
+
+	'' ')'
+	cExpectMatch(TK_RPAREN, "behind if condition")
+
+	'' if/true statement
+	astAppend(ifblock, cConstruct(ASTCLASS_SCOPEBLOCK))
+
+	'' ELSE?
+	if cMatch(KW_ELSE) then
+		'' else/false statement
+		astAppend(ifblock, cConstruct(ASTCLASS_SCOPEBLOCK))
+	end if
+
+	function = ifblock
 end function
 
 private function cConstruct(byval bodyastclass as integer) as ASTNODE ptr
@@ -2424,30 +2451,27 @@ private function cConstruct(byval bodyastclass as integer) as ASTNODE ptr
 		'' Ignore standalone ';'
 		c.x += 1
 		return astNewGROUP()
+	case TK_LBRACE
+		return cScope()
+	case KW_IF
+		return cIfBlock()
+	case KW_RETURN
+		return cReturn()
 	end select
 
 	select case bodyastclass
 	case ASTCLASS_STRUCT, ASTCLASS_UNION
 		'' Field declaration
 		function = cDeclaration(ASTCLASS_FIELD, 0)
-
 	case ASTCLASS_SCOPEBLOCK
 		'' Disambiguate: local declaration vs. expression
 		'' If it starts with a data type, __attribute__, or 'static',
 		'' then it must be a declaration.
-		select case tkGet(c.x)
-		case KW_STATIC
+		if (tkGet(c.x) = KW_STATIC) orelse hIsDataTypeOrAttribute(c.x) then
 			function = cVarOrProcDecl(TRUE)
-		case KW_RETURN
-			function = cReturn()
-		case else
-			if hIsDataTypeOrAttribute(c.x) then
-				function = cVarOrProcDecl(TRUE)
-			else
-				function = cExpressionStatement()
-			end if
-		end select
-
+		else
+			function = cExpressionStatement()
+		end if
 	case else
 		function = cVarOrProcDecl(FALSE)
 	end select

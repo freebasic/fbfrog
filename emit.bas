@@ -566,6 +566,25 @@ private sub emitCode(byval n as ASTNODE ptr, byval parentclass as integer)
 	case ASTCLASS_ASSIGN
 		emitLine(emitExpr(n->head, TRUE) + " = " + emitExpr(n->tail, FALSE))
 
+	case ASTCLASS_IFBLOCK
+		emitLine("if " + emitExpr(n->expr) + " then")
+		if n->head then
+			'' if/true block
+			emit.indent += 1
+			emitCode(n->head)
+			emit.indent -= 1
+
+			'' else/false block, if any
+			if n->head <> n->tail then
+				assert(n->head->next = n->tail)
+				emitLine("else")
+				emit.indent += 1
+				emitCode(n->tail)
+				emit.indent -= 1
+			end if
+		end if
+		emitLine("end if")
+
 	case else
 		emitLine(emitExpr(n))
 	end select
