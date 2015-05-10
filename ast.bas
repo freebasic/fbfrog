@@ -87,6 +87,7 @@ dim shared as zstring ptr astnodename(0 to ...) => _
 	@"or"     , _
 	@"xor"    , _
 	@"and"    , _
+	@"ccomma" , _
 	@"cassign", _
 	@"ceq"    , _
 	@"cne"    , _

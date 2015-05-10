@@ -54,7 +54,7 @@
 
 #include once "fbfrog.bi"
 
-declare function cExpression() as ASTNODE ptr
+declare function cExpression(byval allow_toplevel_comma as integer) as ASTNODE ptr
 declare function cExpressionOrInitializer() as ASTNODE ptr
 declare function cDataType() as ASTNODE ptr
 declare function cDeclaration(byval astclass as integer, byval gccattribs as integer) as ASTNODE ptr
@@ -299,7 +299,13 @@ private function hIsDataTypeOrAttribute(byval y as integer) as integer
 end function
 
 '' C expression parser based on precedence climbing
-private function hExpression(byval level as integer) as ASTNODE ptr
+private function hExpression _
+	( _
+		byval level as integer, _
+		byval parentheses as integer, _
+		byval allow_toplevel_comma as integer _
+	) as ASTNODE ptr
+
 	'' Unary prefix operators
 	var op = -1
 	select case tkGet(c.x)
@@ -314,7 +320,7 @@ private function hExpression(byval level as integer) as ASTNODE ptr
 	dim as ASTNODE ptr a
 	if op >= 0 then
 		c.x += 1
-		a = astNew(op, hExpression(cprecedence(op)))
+		a = astNew(op, hExpression(cprecedence(op), parentheses, allow_toplevel_comma))
 	else
 		'' Atoms
 		select case tkGet(c.x)
@@ -347,7 +353,7 @@ private function hExpression(byval level as integer) as ASTNODE ptr
 				cExpectMatch(TK_RPAREN, "behind the data type")
 
 				'' Expression
-				a = hExpression(cprecedence(ASTCLASS_CAST))
+				a = hExpression(cprecedence(ASTCLASS_CAST), parentheses, allow_toplevel_comma)
 
 				assert(t->class = ASTCLASS_DATATYPE)
 				a = astNew(ASTCLASS_CAST, a)
@@ -355,7 +361,7 @@ private function hExpression(byval level as integer) as ASTNODE ptr
 				astDelete(t)
 			else
 				'' Expression
-				a = hExpression(0)
+				a = hExpression(0, parentheses + 1, allow_toplevel_comma)
 
 				'' ')'
 				cExpectMatch(TK_RPAREN, "to close '(...)' parenthesized expression")
@@ -392,7 +398,7 @@ private function hExpression(byval level as integer) as ASTNODE ptr
 				if tkGet(c.x) <> TK_RPAREN then
 					'' Expression (',' Expression)*
 					do
-						astAppend(a, cExpression())
+						astAppend(a, cExpression(FALSE))
 
 						'' ','?
 					loop while cMatch(TK_COMMA) and c.parseok
@@ -444,7 +450,7 @@ private function hExpression(byval level as integer) as ASTNODE ptr
 				'' ')'
 				cExpectMatch(TK_RPAREN, "behind the data type")
 			else
-				a = hExpression(cprecedence(ASTCLASS_SIZEOF))
+				a = hExpression(cprecedence(ASTCLASS_SIZEOF), parentheses + 1, allow_toplevel_comma)
 			end if
 			a = astNew(ASTCLASS_SIZEOF, a)
 
@@ -504,7 +510,13 @@ private function hExpression(byval level as integer) as ASTNODE ptr
 		case TK_LBRACKET : op = ASTCLASS_INDEX   '' [ ... ]
 		case TK_DOT      : op = ASTCLASS_MEMBER  '' .
 		case TK_ARROW    : op = ASTCLASS_MEMBERDEREF '' ->
-		case else        : exit while
+		case TK_COMMA  '' ,
+			if (parentheses = 0) and (not allow_toplevel_comma) then
+				exit while
+			end if
+			op = ASTCLASS_CCOMMA
+		case else
+			exit while
 		end select
 
 		'' Higher/same level means process now (takes precedence),
@@ -533,14 +545,14 @@ private function hExpression(byval level as integer) as ASTNODE ptr
 		c.x += 1
 
 		'' rhs
-		var b = hExpression(oplevel)
+		var b = hExpression(oplevel, parentheses + iif(op = ASTCLASS_INDEX, 1, 0), allow_toplevel_comma)
 
 		'' Handle ?: special case
 		if op = ASTCLASS_IIF then
 			'' ':'
 			cExpectMatch(TK_COLON, "for a?b:c iif operator")
 
-			a = astNewIIF(a, b, hExpression(oplevel))
+			a = astNewIIF(a, b, hExpression(oplevel, parentheses, allow_toplevel_comma))
 		else
 			'' Handle [] special case
 			if op = ASTCLASS_INDEX then
@@ -555,8 +567,8 @@ private function hExpression(byval level as integer) as ASTNODE ptr
 	function = a
 end function
 
-private function cExpression() as ASTNODE ptr
-	function = hExpression(0)
+private function cExpression(byval allow_toplevel_comma as integer) as ASTNODE ptr
+	function = hExpression(0, 0, allow_toplevel_comma)
 end function
 
 '' Initializer:
@@ -587,7 +599,7 @@ private function cExpressionOrInitializer() as ASTNODE ptr
 	if tkGet(c.x) = TK_LBRACE then
 		function = cInitializer()
 	else
-		function = cExpression()
+		function = cExpression(FALSE)
 	end if
 end function
 
@@ -712,7 +724,7 @@ private function cEnumConst() as ASTNODE ptr
 	'' '='?
 	if cMatch(TK_EQ) then
 		'' Expression
-		enumconst->expr = cExpression()
+		enumconst->expr = cExpression(FALSE)
 	end if
 
 	'' (',' | '}')
@@ -807,6 +819,98 @@ private function cTypedef() as ASTNODE ptr
 end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+private sub hTurnIntoUNKNOWN(byval n as ASTNODE ptr, byval first as integer, byval last as integer)
+	n->class = ASTCLASS_UNKNOWN
+	astSetText(n, tkSpell(first, last))
+	astRemoveChildren(n)
+	astDelete(n->expr)
+	n->expr = NULL
+	astSetType(n, TYPE_NONE, NULL)
+end sub
+
+'' Toplevel comma operators can be translated to a sequence of
+'' statements; the decision about how to handle the return value (if
+'' any) needs to be done manually anyways.
+''
+''    (a, b, c)
+'' =>
+''    scope
+''        a
+''        b
+''        [return?] c
+''    end scope
+''
+private function hUnwrapToplevelCommas(byval n as ASTNODE ptr) as ASTNODE ptr
+	if n->class = ASTCLASS_CCOMMA then
+		var l = n->head
+		var r = n->tail
+		astUnlink(n, l)
+		astUnlink(n, r)
+		astDelete(n)
+		function = astNewGROUP(hUnwrapToplevelCommas(l), hUnwrapToplevelCommas(r))
+	else
+		function = n
+	end if
+end function
+
+private sub hHandleToplevelAssign(byval n as ASTNODE ptr)
+	'' C assignment expression is top-most expression?
+	'' Can be translated to FB assignment statement easily.
+	'' (unlike C assignments nested deeper in expressions etc.)
+	if n->class = ASTCLASS_CASSIGN then
+		n->class = ASTCLASS_ASSIGN
+	end if
+end sub
+
+''
+'' Turn toplevel C comma/assignment expressions into FB statements
+''
+'' If it's inside a macro body, then we wrap it in a scope block, to enforce its
+'' use as statement, not expression. (otherwise, for example, assignments could
+'' be mis-used as comparisons)
+''
+private function hHandleCommasAssigns(byval n as ASTNODE ptr, byval is_macrobody as integer) as ASTNODE ptr
+	''
+	'' Commas
+	''
+	'' first, in case they contain assignments that will become toplevel
+	'' ones after unwrapping...
+	''
+	n = hUnwrapToplevelCommas(n)
+
+	'' Any other commas?
+	if astContains(n, ASTCLASS_CCOMMA) then
+		cError("can't auto-translate C comma operator here [yet]")
+	end if
+
+	''
+	'' Assignments
+	''
+	if n->class = ASTCLASS_GROUP then
+		var i = n->head
+		while i
+			hHandleToplevelAssign(i)
+			i = i->next
+		wend
+	else
+		hHandleToplevelAssign(n)
+	end if
+
+	'' Any other assignments?
+	if astContains(n, ASTCLASS_CASSIGN) then
+		cError("can't auto-translate C assignment operator here [yet]")
+	end if
+
+	if is_macrobody then
+		select case n->class
+		case ASTCLASS_GROUP, ASTCLASS_ASSIGN
+			n = astNew(ASTCLASS_SCOPEBLOCK, n)
+		end select
+	end if
+
+	function = n
+end function
 
 ''
 '' Determine whether a sequence of tokens starting with '{' is a scope block or
@@ -990,7 +1094,7 @@ private function cDefineBody(byval macro as ASTNODE ptr) as integer
 		return TRUE
 	end if
 
-	macro->expr = cExpression()
+	macro->expr = cExpression(TRUE)
 	function = TRUE
 end function
 
@@ -1007,41 +1111,6 @@ private function hDefBodyContainsIds(byval y as integer) as integer
 	loop
 end function
 
-private sub hTurnIntoUNKNOWN(byval n as ASTNODE ptr, byval first as integer, byval last as integer)
-	n->class = ASTCLASS_UNKNOWN
-	astSetText(n, tkSpell(first, last))
-	astRemoveChildren(n)
-	astDelete(n->expr)
-	n->expr = NULL
-	astSetType(n, TYPE_NONE, NULL)
-end sub
-
-private sub hHandleToplevelAssign(byval n as ASTNODE ptr)
-	'' C assignment expression is top-most expression?
-	'' Can be translated to FB assignment statement easily.
-	'' (unlike C assignments nested deeper in expressions etc.)
-	if n->class = ASTCLASS_CASSIGN then
-		n->class = ASTCLASS_ASSIGN
-	end if
-end sub
-
-private sub hHandleAssignmentStatement(byval n as ASTNODE ptr)
-	if n->class = ASTCLASS_GROUP then
-		var i = n->head
-		while i
-			hHandleToplevelAssign(i)
-			i = i->next
-		wend
-	else
-		hHandleToplevelAssign(n)
-	end if
-
-	'' Any other assignments?
-	if astContains(n, ASTCLASS_CASSIGN) then
-		cError("can't auto-translate C assignment operator here [yet]")
-	end if
-end sub
-
 private sub cParseDefBody(byval n as ASTNODE ptr, byval xbegin as integer, byref add_to_ast as integer)
 	c.parentdefine = n
 
@@ -1056,13 +1125,7 @@ private sub cParseDefBody(byval n as ASTNODE ptr, byval xbegin as integer, byref
 	end if
 
 	if n->expr then
-		hHandleAssignmentStatement(n->expr)
-
-		'' If the macro body is an assignment statement, wrap it in a
-		'' scope block, to enforce its use as statement, not expression.
-		if n->expr->class = ASTCLASS_ASSIGN then
-			n->expr = astNew(ASTCLASS_SCOPEBLOCK, n->expr)
-		end if
+		n->expr = hHandleCommasAssigns(n->expr, TRUE)
 	end if
 
 	'' If parsing the body failed, turn the PPDEFINE into an UNKNOWN without
@@ -1886,7 +1949,7 @@ private function cDeclarator _
 			if tkGet(c.x) = TK_RBRACKET then
 				d->expr = astNew(ASTCLASS_ELLIPSIS)
 			else
-				d->expr = cExpression()
+				d->expr = cExpression(TRUE)
 			end if
 
 			astAppend(node->array, d)
@@ -1904,7 +1967,7 @@ private function cDeclarator _
 		end if
 		c.x += 1
 
-		node->bits = cExpression()
+		node->bits = cExpression(FALSE)
 
 	'' '(' ParamList ')'
 	case TK_LPAREN
@@ -2275,7 +2338,7 @@ end function
 
 '' Expression statement: Assignments, function calls, i++, etc.
 private function cExpressionStatement() as ASTNODE ptr
-	function = cExpression()
+	function = cExpression(TRUE)
 
 	'' ';'?
 	cExpectMatch(TK_SEMI, "(end of expression statement)")
@@ -2288,7 +2351,7 @@ private function cReturn() as ASTNODE ptr
 	c.x += 1
 
 	'' Expression
-	function = astNew(ASTCLASS_RETURN, cExpression())
+	function = astNew(ASTCLASS_RETURN, cExpression(TRUE))
 
 	'' ';'
 	cExpectMatch(TK_SEMI, "(end of statement)")
@@ -2413,7 +2476,7 @@ private function cBody(byval bodyastclass as integer) as ASTNODE ptr
 		var begin = c.x
 		var t = cConstruct(bodyastclass)
 
-		hHandleAssignmentStatement(t)
+		t = hHandleCommasAssigns(t, FALSE)
 
 		if c.parseok = FALSE then
 			c.parseok = TRUE

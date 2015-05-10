@@ -897,7 +897,6 @@ private sub hCheckForUnknownSymbol(byval id as zstring ptr)
 end sub
 
 '' C operator precedence, starting at 1, higher value = higher precedence
-'' TODO: comma operator, precedence 1
 dim shared as integer cprecedence(ASTCLASS_CLOGOR to ASTCLASS_IIF) = _
 { _
 	 4, _ '' ASTCLASS_CLOGOR
@@ -907,6 +906,7 @@ dim shared as integer cprecedence(ASTCLASS_CLOGOR to ASTCLASS_IIF) = _
 	 6, _ '' ASTCLASS_OR
 	 7, _ '' ASTCLASS_XOR
 	 8, _ '' ASTCLASS_AND
+	 1, _ '' ASTCLASS_CCOMMA
 	 2, _ '' ASTCLASS_CASSIGN
 	 9, _ '' ASTCLASS_CEQ
 	 9, _ '' ASTCLASS_CNE
