@@ -1554,16 +1554,50 @@ private function hlBuildRenameList(byval n as ASTNODE ptr) as ASTNODE ptr
 	function = list
 end function
 
+private function astHasOnlyChild(byval n as ASTNODE ptr, byval astclass as integer) as integer
+	function = n->head andalso (n->head = n->tail) andalso (n->head->class = astclass)
+end function
+
 private function hlSolveOutIfElsePartScopeBlocks(byval n as ASTNODE ptr) as integer
 	select case n->class
 	case ASTCLASS_IFPART, ASTCLASS_ELSEIFPART, ASTCLASS_ELSEPART
 		'' Contains just a SCOPEBLOCK?
-		if n->head andalso (n->head = n->tail) andalso _
-		   (n->head->class = ASTCLASS_SCOPEBLOCK) then
+		if astHasOnlyChild(n, ASTCLASS_SCOPEBLOCK) then
 			astAppend(n, astCloneChildren(n->head))
 			astRemove(n, n->head)
 		end if
 	end select
+	function = TRUE
+end function
+
+private function hlCreateElseIfs(byval n as ASTNODE ptr) as integer
+	if n->class = ASTCLASS_IFBLOCK then
+		do
+			'' Has an else part?
+			var elsepart = n->tail
+			if (elsepart = NULL) orelse (elsepart->class <> ASTCLASS_ELSEPART) then
+				exit do
+			end if
+
+			'' Contains just an IFBLOCK?
+			if astHasOnlyChild(elsepart, ASTCLASS_IFBLOCK) = FALSE then
+				exit do
+			end if
+
+			var nestedif = elsepart->head
+			assert(nestedif->head->class = ASTCLASS_IFPART)
+
+			'' Copy the if/elseif/else parts from the nested ifblock
+			'' into the parent ifblock, behind the else part
+			astAppend(n, astCloneChildren(nestedif))
+
+			'' Turn the added if part into an elseif
+			assert(elsepart->next->class = ASTCLASS_IFPART)
+			elsepart->next->class = ASTCLASS_ELSEIFPART
+
+			astRemove(n, elsepart)
+		loop
+	end if
 	function = TRUE
 end function
 
@@ -1980,6 +2014,7 @@ sub hlFile(byval ast as ASTNODE ptr, byref api as ApiInfo, byref bioptions as Ap
 	end if
 
 	astVisit(ast, @hlSolveOutIfElsePartScopeBlocks)
+	astVisit(ast, @hlCreateElseIfs)
 end sub
 
 function hlCountDecls(byval ast as ASTNODE ptr) as integer
