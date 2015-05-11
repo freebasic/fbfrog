@@ -73,6 +73,7 @@ dim shared as zstring ptr astnodename(0 to ...) => _
 	@"ifpart"   , _
 	@"elseifpart", _
 	@"elsepart" , _
+	@"dowhile"  , _
 	_
 	_ '' Expression atoms etc.
 	@"consti"    , _

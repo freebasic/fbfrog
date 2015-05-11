@@ -1558,11 +1558,12 @@ private function astHasOnlyChild(byval n as ASTNODE ptr, byval astclass as integ
 	function = n->head andalso (n->head = n->tail) andalso (n->head->class = astclass)
 end function
 
-private function hlSolveOutIfElsePartScopeBlocks(byval n as ASTNODE ptr) as integer
+private function hlSolveOutUnnecessaryScopeBlocks(byval n as ASTNODE ptr) as integer
 	select case n->class
-	case ASTCLASS_IFPART, ASTCLASS_ELSEIFPART, ASTCLASS_ELSEPART
+	case ASTCLASS_IFPART, ASTCLASS_ELSEIFPART, ASTCLASS_ELSEPART, ASTCLASS_DOWHILE
 		'' Contains just a SCOPEBLOCK?
 		if astHasOnlyChild(n, ASTCLASS_SCOPEBLOCK) then
+			'' Move scope block's children in place of the scope block
 			astAppend(n, astCloneChildren(n->head))
 			astRemove(n, n->head)
 		end if
@@ -1643,7 +1644,7 @@ private function hSkipStatementsInARow(byval i as ASTNODE ptr) as ASTNODE ptr
 	case ASTCLASS_PRAGMAONCE, ASTCLASS_RENAMELIST, ASTCLASS_TITLE, _
 	     ASTCLASS_EXTERNBLOCKBEGIN, ASTCLASS_EXTERNBLOCKEND, _
 	     ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM, _
-	     ASTCLASS_IFBLOCK
+	     ASTCLASS_IFBLOCK, ASTCLASS_DOWHILE
 		return i->next
 
 	'' Procedure body?
@@ -1668,7 +1669,7 @@ private function hSkipStatementsInARow(byval i as ASTNODE ptr) as ASTNODE ptr
 			     ASTCLASS_PRAGMAONCE, ASTCLASS_RENAMELIST, ASTCLASS_TITLE, _
 			     ASTCLASS_EXTERNBLOCKBEGIN, ASTCLASS_EXTERNBLOCKEND, _
 			     ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM, _
-			     ASTCLASS_IFBLOCK
+			     ASTCLASS_IFBLOCK, ASTCLASS_DOWHILE
 				exit do
 			case ASTCLASS_PROC
 				if nxt->expr then
@@ -1727,7 +1728,7 @@ sub hlAutoAddDividers(byval ast as ASTNODE ptr)
 			select case i->class
 			case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM, _
 			     ASTCLASS_PPIF, ASTCLASS_PPELSEIF, ASTCLASS_PPELSE, _
-			     ASTCLASS_SCOPEBLOCK
+			     ASTCLASS_SCOPEBLOCK, ASTCLASS_DOWHILE
 				hlAutoAddDividers(i)
 			case ASTCLASS_IFBLOCK
 				var part = i->head
@@ -2013,7 +2014,7 @@ sub hlFile(byval ast as ASTNODE ptr, byref api as ApiInfo, byref bioptions as Ap
 		bioptions.inclibs = NULL
 	end if
 
-	astVisit(ast, @hlSolveOutIfElsePartScopeBlocks)
+	astVisit(ast, @hlSolveOutUnnecessaryScopeBlocks)
 	astVisit(ast, @hlCreateElseIfs)
 end sub
 

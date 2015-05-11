@@ -2402,6 +2402,33 @@ private function cIfBlock() as ASTNODE ptr
 	function = ifblock
 end function
 
+private function cDoWhile() as ASTNODE ptr
+	var dowhile = astNew(ASTCLASS_DOWHILE)
+
+	'' DO
+	assert(tkGet(c.x) = KW_DO)
+	c.x += 1
+
+	'' loop body
+	astAppend(dowhile, cConstruct(ASTCLASS_SCOPEBLOCK))
+
+	'' WHILE
+	cExpectMatch(KW_WHILE, "behind do loop body")
+
+	'' '('
+	cExpectMatch(TK_LPAREN, "in front of loop condition")
+
+	'' loop condition expression
+	dowhile->expr = cExpression(TRUE)
+
+	'' ')'
+	cExpectMatch(TK_RPAREN, "behind loop condition")
+
+	cExpectMatch(TK_SEMI, "behind do/while loop")
+
+	function = dowhile
+end function
+
 private function cConstruct(byval bodyastclass as integer) as ASTNODE ptr
 	if tkGet(c.x) = TK_FBCODE then
 		var n = astNew(ASTCLASS_FBCODE, tkGetText(c.x))
@@ -2458,6 +2485,8 @@ private function cConstruct(byval bodyastclass as integer) as ASTNODE ptr
 		return cScope()
 	case KW_IF
 		return cIfBlock()
+	case KW_DO
+		return cDoWhile()
 	case KW_RETURN
 		return cReturn()
 	end select
