@@ -286,8 +286,11 @@ Interesting improvements:
   until that node is popped. If not found, nothing is popped.
   (MinGW-w64 CRT headers use this)
 * Continue support for parsing function bodies:
-  - emit elseif if possible
-  - loops/break, goto/labels/switch/case
+  - ++ and -- operators
+  - self-assignments
+  - for loops (probably useless without ++/-- and self-assignment support)
+  - continue/break
+  - goto/labels/switch/case
 * Support assignment and comma operators in expressions
         if (a = 1) ...          =>    a = 1 : if a then ...
         if (a = 1 && b = 2) ... =>    a = 1 : if a then : b = 2 : if b then ... : end if
