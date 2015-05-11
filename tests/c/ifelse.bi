@@ -121,4 +121,73 @@ end sub
 if 1 = 2 then
 end if
 
+if 1 then
+	printf("1")
+else
+	if 2 then
+		printf("2")
+	else
+		printf("3")
+	end if
+end if
+
+if 1 then
+	printf("1")
+else
+	if 2 then
+		printf("2")
+	else
+		if 3 then
+			printf("3")
+		else
+			if 4 then
+				printf("4")
+			else
+				printf("5")
+			end if
+		end if
+	end if
+end if
+
+if 1 then
+	printf("1")
+else
+	if 2 then
+		printf("2")
+	end if
+end if
+
+if 1 then
+else
+	if 2 then
+	end if
+end if
+
+if 1 then
+else
+	if 2 then
+	else
+	end if
+end if
+
+if 1 then
+	printf("1")
+else
+	if 2 then
+		printf("2")
+	else
+		printf("3")
+	end if
+end if
+
+if 1 then
+	printf("1")
+else
+	if 2 then
+		printf("2.1")
+	else
+		printf("2.2")
+	end if
+end if
+
 end extern
