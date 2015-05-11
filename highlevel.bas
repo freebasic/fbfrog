@@ -373,7 +373,7 @@ private function hlFixExpressions(byval n as ASTNODE ptr) as integer
 		'' TODO: shouldn't assume is_bool_context=TRUE for #define bodies
 		var is_bool_context = FALSE
 		select case n->class
-		case ASTCLASS_PPDEFINE, ASTCLASS_IFBLOCK
+		case ASTCLASS_PPDEFINE, ASTCLASS_IFPART, ASTCLASS_ELSEIFPART
 			is_bool_context = TRUE
 		end select
 		n->expr = astOpsC2FB(n->expr, is_bool_context)
@@ -1554,6 +1554,19 @@ private function hlBuildRenameList(byval n as ASTNODE ptr) as ASTNODE ptr
 	function = list
 end function
 
+private function hlSolveOutIfElsePartScopeBlocks(byval n as ASTNODE ptr) as integer
+	select case n->class
+	case ASTCLASS_IFPART, ASTCLASS_ELSEIFPART, ASTCLASS_ELSEPART
+		'' Contains just a SCOPEBLOCK?
+		if n->head andalso (n->head = n->tail) andalso _
+		   (n->head->class = ASTCLASS_SCOPEBLOCK) then
+			astAppend(n, astCloneChildren(n->head))
+			astRemove(n, n->head)
+		end if
+	end select
+	function = TRUE
+end function
+
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 private function hIsPPElseOrEnd(byval n as ASTNODE ptr) as integer
@@ -1680,8 +1693,14 @@ sub hlAutoAddDividers(byval ast as ASTNODE ptr)
 			select case i->class
 			case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM, _
 			     ASTCLASS_PPIF, ASTCLASS_PPELSEIF, ASTCLASS_PPELSE, _
-			     ASTCLASS_IFBLOCK, ASTCLASS_SCOPEBLOCK
+			     ASTCLASS_SCOPEBLOCK
 				hlAutoAddDividers(i)
+			case ASTCLASS_IFBLOCK
+				var part = i->head
+				while part
+					hlAutoAddDividers(part)
+					part = part->next
+				wend
 			end select
 			i = i->next
 		wend
@@ -1959,6 +1978,8 @@ sub hlFile(byval ast as ASTNODE ptr, byref api as ApiInfo, byref bioptions as Ap
 		astPrepend(ast, bioptions.inclibs)
 		bioptions.inclibs = NULL
 	end if
+
+	astVisit(ast, @hlSolveOutIfElsePartScopeBlocks)
 end sub
 
 function hlCountDecls(byval ast as ASTNODE ptr) as integer

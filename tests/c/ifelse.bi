@@ -19,10 +19,12 @@ else
 end if
 
 if 1 then
+else
 end if
 
 if 1 then
 	printf("true")
+else
 end if
 
 if 1 then
@@ -56,6 +58,7 @@ scope
 	printf("2")
 
 	if 1 then
+	else
 		printf("false")
 	end if
 

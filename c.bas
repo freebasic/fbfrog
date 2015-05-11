@@ -2373,6 +2373,8 @@ private function cScope() as ASTNODE ptr
 end function
 
 private function cIfBlock() as ASTNODE ptr
+	var ifblock = astNew(ASTCLASS_IFBLOCK)
+
 	'' IF
 	assert(tkGet(c.x) = KW_IF)
 	c.x += 1
@@ -2381,19 +2383,20 @@ private function cIfBlock() as ASTNODE ptr
 	cExpectMatch(TK_LPAREN, "in front of if condition")
 
 	'' condition expression
-	var ifblock = astNew(ASTCLASS_IFBLOCK)
-	ifblock->expr = cExpression(TRUE)
+	var ifpart = astNew(ASTCLASS_IFPART)
+	ifpart->expr = cExpression(TRUE)
 
 	'' ')'
 	cExpectMatch(TK_RPAREN, "behind if condition")
 
 	'' if/true statement
-	astAppend(ifblock, cConstruct(ASTCLASS_SCOPEBLOCK))
+	astAppend(ifpart, cConstruct(ASTCLASS_SCOPEBLOCK))
+	astAppend(ifblock, ifpart)
 
 	'' ELSE?
 	if cMatch(KW_ELSE) then
 		'' else/false statement
-		astAppend(ifblock, cConstruct(ASTCLASS_SCOPEBLOCK))
+		astAppend(ifblock, astNew(ASTCLASS_ELSEPART, cConstruct(ASTCLASS_SCOPEBLOCK)))
 	end if
 
 	function = ifblock
