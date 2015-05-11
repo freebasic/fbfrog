@@ -1558,23 +1558,25 @@ private function astHasOnlyChild(byval n as ASTNODE ptr, byval astclass as integ
 	function = n->head andalso (n->head = n->tail) andalso (n->head->class = astclass)
 end function
 
+'' while (0) ...      =>   scope : ... : end scope
 '' do ... while (0);  =>   scope : ... : end scope
 '' (commonly used construct in C headers)
-private function hlTurnDoWhile0IntoScope(byval n as ASTNODE ptr) as integer
-	if n->class = ASTCLASS_DOWHILE then
+private function hlTurnWhile0IntoScope(byval n as ASTNODE ptr) as integer
+	select case n->class
+	case ASTCLASS_DOWHILE, ASTCLASS_WHILE
 		'' Loop condition is just a 0?
 		if astIsConst0(n->expr) then
 			astDelete(n->expr)
 			n->expr = NULL
 			n->class = ASTCLASS_SCOPEBLOCK
 		end if
-	end if
+	end select
 	function = TRUE
 end function
 
 private function hlSolveOutUnnecessaryScopeBlocks(byval n as ASTNODE ptr) as integer
 	select case n->class
-	case ASTCLASS_SCOPEBLOCK, ASTCLASS_DOWHILE, _
+	case ASTCLASS_SCOPEBLOCK, ASTCLASS_DOWHILE, ASTCLASS_WHILE, _
 	     ASTCLASS_IFPART, ASTCLASS_ELSEIFPART, ASTCLASS_ELSEPART
 		'' Contains just a SCOPEBLOCK?
 		while astHasOnlyChild(n, ASTCLASS_SCOPEBLOCK)
@@ -1659,7 +1661,7 @@ private function hSkipStatementsInARow(byval i as ASTNODE ptr) as ASTNODE ptr
 	case ASTCLASS_PRAGMAONCE, ASTCLASS_RENAMELIST, ASTCLASS_TITLE, _
 	     ASTCLASS_EXTERNBLOCKBEGIN, ASTCLASS_EXTERNBLOCKEND, _
 	     ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM, _
-	     ASTCLASS_IFBLOCK, ASTCLASS_DOWHILE
+	     ASTCLASS_IFBLOCK, ASTCLASS_DOWHILE, ASTCLASS_WHILE
 		return i->next
 
 	'' Procedure body?
@@ -1684,7 +1686,7 @@ private function hSkipStatementsInARow(byval i as ASTNODE ptr) as ASTNODE ptr
 			     ASTCLASS_PRAGMAONCE, ASTCLASS_RENAMELIST, ASTCLASS_TITLE, _
 			     ASTCLASS_EXTERNBLOCKBEGIN, ASTCLASS_EXTERNBLOCKEND, _
 			     ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM, _
-			     ASTCLASS_IFBLOCK, ASTCLASS_DOWHILE
+			     ASTCLASS_IFBLOCK, ASTCLASS_DOWHILE, ASTCLASS_WHILE
 				exit do
 			case ASTCLASS_PROC
 				if nxt->expr then
@@ -1743,7 +1745,7 @@ sub hlAutoAddDividers(byval ast as ASTNODE ptr)
 			select case i->class
 			case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM, _
 			     ASTCLASS_PPIF, ASTCLASS_PPELSEIF, ASTCLASS_PPELSE, _
-			     ASTCLASS_SCOPEBLOCK, ASTCLASS_DOWHILE
+			     ASTCLASS_SCOPEBLOCK, ASTCLASS_DOWHILE, ASTCLASS_WHILE
 				hlAutoAddDividers(i)
 			case ASTCLASS_IFBLOCK
 				var part = i->head
@@ -2029,7 +2031,7 @@ sub hlFile(byval ast as ASTNODE ptr, byref api as ApiInfo, byref bioptions as Ap
 		bioptions.inclibs = NULL
 	end if
 
-	astVisit(ast, @hlTurnDoWhile0IntoScope)
+	astVisit(ast, @hlTurnWhile0IntoScope)
 	astVisit(ast, @hlSolveOutUnnecessaryScopeBlocks)
 	astVisit(ast, @hlCreateElseIfs)
 end sub

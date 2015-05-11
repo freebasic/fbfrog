@@ -2429,6 +2429,28 @@ private function cDoWhile() as ASTNODE ptr
 	function = dowhile
 end function
 
+private function cWhile() as ASTNODE ptr
+	var whileloop = astNew(ASTCLASS_WHILE)
+
+	'' WHILE
+	assert(tkGet(c.x) = KW_WHILE)
+	c.x += 1
+
+	'' '('
+	cExpectMatch(TK_LPAREN, "in front of loop condition")
+
+	'' loop condition expression
+	whileloop->expr = cExpression(TRUE)
+
+	'' ')'
+	cExpectMatch(TK_RPAREN, "behind loop condition")
+
+	'' loop body
+	astAppend(whileloop, cConstruct(ASTCLASS_SCOPEBLOCK))
+
+	function = whileloop
+end function
+
 private function cConstruct(byval bodyastclass as integer) as ASTNODE ptr
 	if tkGet(c.x) = TK_FBCODE then
 		var n = astNew(ASTCLASS_FBCODE, tkGetText(c.x))
@@ -2481,14 +2503,11 @@ private function cConstruct(byval bodyastclass as integer) as ASTNODE ptr
 		'' Ignore standalone ';'
 		c.x += 1
 		return astNewGROUP()
-	case TK_LBRACE
-		return cScope()
-	case KW_IF
-		return cIfBlock()
-	case KW_DO
-		return cDoWhile()
-	case KW_RETURN
-		return cReturn()
+	case TK_LBRACE : return cScope()
+	case KW_IF     : return cIfBlock()
+	case KW_DO     : return cDoWhile()
+	case KW_WHILE  : return cWhile()
+	case KW_RETURN : return cReturn()
 	end select
 
 	select case bodyastclass

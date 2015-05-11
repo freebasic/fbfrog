@@ -594,6 +594,11 @@ private sub emitCode(byval n as ASTNODE ptr, byval parentclass as integer)
 		hEmitIndentedChildren(n)
 		emitLine("loop while " + emitExpr(n->expr))
 
+	case ASTCLASS_WHILE
+		emitLine("while " + emitExpr(n->expr))
+		hEmitIndentedChildren(n)
+		emitLine("wend")
+
 	case else
 		emitLine(emitExpr(n))
 	end select
