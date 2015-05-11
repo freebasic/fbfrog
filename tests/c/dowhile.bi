@@ -14,6 +14,10 @@ do
 	printf("3")
 loop while 1
 
-do
+scope
 	printf("1")
-loop while 0
+end scope
+
+if 1 then
+	printf("1")
+end if

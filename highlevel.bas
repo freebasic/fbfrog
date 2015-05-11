@@ -1558,15 +1558,30 @@ private function astHasOnlyChild(byval n as ASTNODE ptr, byval astclass as integ
 	function = n->head andalso (n->head = n->tail) andalso (n->head->class = astclass)
 end function
 
+'' do ... while (0);  =>   scope : ... : end scope
+'' (commonly used construct in C headers)
+private function hlTurnDoWhile0IntoScope(byval n as ASTNODE ptr) as integer
+	if n->class = ASTCLASS_DOWHILE then
+		'' Loop condition is just a 0?
+		if astIsConst0(n->expr) then
+			astDelete(n->expr)
+			n->expr = NULL
+			n->class = ASTCLASS_SCOPEBLOCK
+		end if
+	end if
+	function = TRUE
+end function
+
 private function hlSolveOutUnnecessaryScopeBlocks(byval n as ASTNODE ptr) as integer
 	select case n->class
-	case ASTCLASS_IFPART, ASTCLASS_ELSEIFPART, ASTCLASS_ELSEPART, ASTCLASS_DOWHILE
+	case ASTCLASS_SCOPEBLOCK, ASTCLASS_DOWHILE, _
+	     ASTCLASS_IFPART, ASTCLASS_ELSEIFPART, ASTCLASS_ELSEPART
 		'' Contains just a SCOPEBLOCK?
-		if astHasOnlyChild(n, ASTCLASS_SCOPEBLOCK) then
+		while astHasOnlyChild(n, ASTCLASS_SCOPEBLOCK)
 			'' Move scope block's children in place of the scope block
 			astAppend(n, astCloneChildren(n->head))
 			astRemove(n, n->head)
-		end if
+		wend
 	end select
 	function = TRUE
 end function
@@ -2014,6 +2029,7 @@ sub hlFile(byval ast as ASTNODE ptr, byref api as ApiInfo, byref bioptions as Ap
 		bioptions.inclibs = NULL
 	end if
 
+	astVisit(ast, @hlTurnDoWhile0IntoScope)
 	astVisit(ast, @hlSolveOutUnnecessaryScopeBlocks)
 	astVisit(ast, @hlCreateElseIfs)
 end sub

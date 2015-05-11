@@ -15,3 +15,9 @@ do {
 do {
 	printf("1");
 } while (0);
+
+if (1) {
+	do {
+		printf("1");
+	} while (0);
+}

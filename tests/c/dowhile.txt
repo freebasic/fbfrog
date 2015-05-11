@@ -8,4 +8,4 @@
       tests/c/dowhile.h
 [5/5] __FB_DOS__
       tests/c/dowhile.h
-emitting: tests/c/dowhile.bi (4 declarations, 0 TODOs)
+emitting: tests/c/dowhile.bi (5 declarations, 0 TODOs)
