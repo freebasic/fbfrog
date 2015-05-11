@@ -148,3 +148,5 @@ if (1) {
 		printf("2.2");
 	}
 }
+
+#define M1 if (1) ; else ;

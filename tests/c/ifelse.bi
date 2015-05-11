@@ -172,4 +172,6 @@ else
 	printf("2.2")
 end if
 
+'' TODO: #define M1 if (1) ; else ;
+
 end extern

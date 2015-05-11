@@ -49,3 +49,8 @@ end scope
 if 1 then
 	printf("1")
 end if
+
+'' TODO: #define M1 do { printf("foo"); } while (0)
+'' TODO: #define M2 do { printf("foo"); } while (1)
+'' TODO: #define M3 while (0) { printf("foo"); }
+'' TODO: #define M4 while (1) { printf("foo"); }

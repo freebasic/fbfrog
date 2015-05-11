@@ -48,3 +48,8 @@ if (1) {
 		printf("1");
 	}
 }
+
+#define M1 do { printf("foo"); } while (0)
+#define M2 do { printf("foo"); } while (1)
+#define M3 while (0) { printf("foo"); }
+#define M4 while (1) { printf("foo"); }
