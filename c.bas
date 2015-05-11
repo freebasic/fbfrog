@@ -59,6 +59,9 @@ declare function cExpressionOrInitializer() as ASTNODE ptr
 declare function cDataType() as ASTNODE ptr
 declare function cDeclaration(byval astclass as integer, byval gccattribs as integer) as ASTNODE ptr
 declare function cScope() as ASTNODE ptr
+declare function cIfBlock() as ASTNODE ptr
+declare function cDoWhile(byval semi_is_optional as integer) as ASTNODE ptr
+declare function cWhile() as ASTNODE ptr
 declare function cConstruct(byval bodyastclass as integer) as ASTNODE ptr
 declare function cBody(byval bodyastclass as integer) as ASTNODE ptr
 
@@ -1087,6 +1090,18 @@ private function cDefineBody(byval macro as ASTNODE ptr) as integer
 			c.x += 1
 			exit function
 		end if
+
+	case KW_IF
+		macro->expr = cIfBlock()
+		return TRUE
+
+	case KW_DO
+		macro->expr = cDoWhile(TRUE)
+		return TRUE
+
+	case KW_WHILE
+		macro->expr = cWhile()
+		return TRUE
 	end select
 
 	if hIsDataTypeOrAttribute(c.x) then
@@ -2402,7 +2417,7 @@ private function cIfBlock() as ASTNODE ptr
 	function = ifblock
 end function
 
-private function cDoWhile() as ASTNODE ptr
+private function cDoWhile(byval semi_is_optional as integer) as ASTNODE ptr
 	var dowhile = astNew(ASTCLASS_DOWHILE)
 
 	'' DO
@@ -2424,7 +2439,11 @@ private function cDoWhile() as ASTNODE ptr
 	'' ')'
 	cExpectMatch(TK_RPAREN, "behind loop condition")
 
-	cExpectMatch(TK_SEMI, "behind do/while loop")
+	if semi_is_optional then
+		cMatch(TK_SEMI)
+	else
+		cExpectMatch(TK_SEMI, "behind do/while loop")
+	end if
 
 	function = dowhile
 end function
@@ -2505,7 +2524,7 @@ private function cConstruct(byval bodyastclass as integer) as ASTNODE ptr
 		return astNewGROUP()
 	case TK_LBRACE : return cScope()
 	case KW_IF     : return cIfBlock()
-	case KW_DO     : return cDoWhile()
+	case KW_DO     : return cDoWhile(FALSE)
 	case KW_WHILE  : return cWhile()
 	case KW_RETURN : return cReturn()
 	end select

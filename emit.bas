@@ -325,6 +325,16 @@ private function hCheckForQuirkKeywordType(byval id as zstring ptr) as string
 	end if
 end function
 
+private function hMacroBodyIsCodeBlock(byval n as ASTNODE ptr) as integer
+	if n->expr then
+		select case n->expr->class
+		case ASTCLASS_SCOPEBLOCK, ASTCLASS_IFBLOCK, ASTCLASS_DOWHILE, _
+		     ASTCLASS_WHILE
+			function = TRUE
+		end select
+	end if
+end function
+
 private sub emitCode(byval n as ASTNODE ptr, byval parentclass as integer)
 	select case as const n->class
 	case ASTCLASS_GROUP
@@ -381,7 +391,7 @@ private sub emitCode(byval n as ASTNODE ptr, byval parentclass as integer)
 		emitLine("#include once """ + *n->text + """")
 
 	case ASTCLASS_PPDEFINE
-		if n->expr andalso (n->expr->class = ASTCLASS_SCOPEBLOCK) then
+		if hMacroBodyIsCodeBlock(n) then
 			var s = "#macro " + *n->text
 			if n->head then
 				s += hParamList(n)
