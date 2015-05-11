@@ -364,24 +364,41 @@ private sub hlRemoveExpressionTypes(byval n as ASTNODE ptr)
 	end if
 end sub
 
+private function hlFixExpression(byval n as ASTNODE ptr, byval is_bool_context as integer) as ASTNODE ptr
+	hlCalculateCTypes(n)
+
+	n = hlAddMathCasts(NULL, n)
+
+	n = astOpsC2FB(n, is_bool_context)
+
+	'' Forget about types again, for better merging (on one side
+	'' an identifier may have unknown type, on the other side it
+	'' could be known - but they should still be merged)
+	hlRemoveExpressionTypes(n)
+
+	function = n
+end function
+
 private function hlFixExpressions(byval n as ASTNODE ptr) as integer
+	''
+	'' TODO: Don't process ASTNODE.expr only, because anything that isn't
+	'' directly or indirectly stored in ASTNODE.expr will be missed.
+	''
+	'' In practice that's currently no problem though, because effectively
+	'' everything (macro bodies, proc bodies, initializers) uses
+	'' ASTNODE.expr. It would only be a problem with code (e.g. scope blocks
+	'' containing assignments or calls) outside any macro/proc body, but
+	'' that's not allowed in C anyways...
+	''
 	if n->expr then
-		hlCalculateCTypes(n->expr)
-
-		n->expr = hlAddMathCasts(NULL, n->expr)
-
 		'' TODO: shouldn't assume is_bool_context=TRUE for #define bodies
 		var is_bool_context = FALSE
 		select case n->class
 		case ASTCLASS_PPDEFINE, ASTCLASS_IFPART, ASTCLASS_ELSEIFPART
 			is_bool_context = TRUE
 		end select
-		n->expr = astOpsC2FB(n->expr, is_bool_context)
 
-		'' Forget about types again, for better merging (on one side
-		'' an identifier may have unknown type, on the other side it
-		'' could be known - but they should still be merged)
-		hlRemoveExpressionTypes(n->expr)
+		n->expr = hlFixExpression(n->expr, is_bool_context)
 	end if
 
 	'' Collect #defines/enumconsts so we can do lookups and determine the
