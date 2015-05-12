@@ -1109,7 +1109,7 @@ private function cDefineBody(byval macro as ASTNODE ptr) as integer
 		return TRUE
 	end if
 
-	macro->expr = cExpression(TRUE)
+	macro->expr = cExpression(FALSE)
 	function = TRUE
 end function
 

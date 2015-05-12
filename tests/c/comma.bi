@@ -26,5 +26,6 @@ end function
 		f(y)
 	end scope
 #endmacro
+'' TODO: #define M3 1, 2, 3
 
 end extern

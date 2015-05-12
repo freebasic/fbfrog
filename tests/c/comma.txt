@@ -8,4 +8,4 @@
       tests/c/comma.h
 [5/5] __FB_DOS__
       tests/c/comma.h
-emitting: tests/c/comma.bi (3 declarations, 2 TODOs)
+emitting: tests/c/comma.bi (3 declarations, 3 TODOs)

@@ -9,3 +9,4 @@ int f(int) {
 
 #define M1 (1, 2)
 #define M2(x, y) (f(x), f(y))
+#define M3 1, 2, 3 // chances are this is intended for an array/struct initializers, not comma operator
