@@ -542,3 +542,7 @@ enum E {
 #define A103 sizeof(struct UDT { int i; })
 #define A104 (struct { int i; })x
 #define A105 (struct UDT { int i; })x
+
+// "a b" is probably a vardecl here, and it shouldn't be misparsed as string
+// literal sequence silently.
+#define A110 { a b; }

@@ -499,5 +499,10 @@ const A62 = culng(0u - 100u)
 '' TODO: #define A103 sizeof(struct UDT { int i; })
 '' TODO: #define A104 (struct { int i; })x
 '' TODO: #define A105 (struct UDT { int i; })x
+#macro A110
+	scope
+		'' TODO: a b;
+	end scope
+#endmacro
 
 end extern

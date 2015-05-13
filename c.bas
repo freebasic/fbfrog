@@ -54,8 +54,8 @@
 
 #include once "fbfrog.bi"
 
-declare function cExpression(byval allow_toplevel_comma as integer) as ASTNODE ptr
-declare function cExpressionOrInitializer() as ASTNODE ptr
+declare function cExpression(byval allow_toplevel_comma as integer, byval allow_idseq as integer) as ASTNODE ptr
+declare function cExpressionOrInitializer(byval allow_idseq as integer) as ASTNODE ptr
 declare function cDataType() as ASTNODE ptr
 declare function cDeclaration(byval astclass as integer, byval gccattribs as integer) as ASTNODE ptr
 declare function cScope() as ASTNODE ptr
@@ -306,7 +306,8 @@ private function hExpression _
 	( _
 		byval level as integer, _
 		byval parentheses as integer, _
-		byval allow_toplevel_comma as integer _
+		byval allow_toplevel_comma as integer, _
+		byval allow_idseq as integer _
 	) as ASTNODE ptr
 
 	'' Unary prefix operators
@@ -323,7 +324,7 @@ private function hExpression _
 	dim as ASTNODE ptr a
 	if op >= 0 then
 		c.x += 1
-		a = astNew(op, hExpression(cprecedence(op), parentheses, allow_toplevel_comma))
+		a = astNew(op, hExpression(cprecedence(op), parentheses, allow_toplevel_comma, allow_idseq))
 	else
 		'' Atoms
 		select case tkGet(c.x)
@@ -356,7 +357,7 @@ private function hExpression _
 				cExpectMatch(TK_RPAREN, "behind the data type")
 
 				'' Expression
-				a = hExpression(cprecedence(ASTCLASS_CAST), parentheses, allow_toplevel_comma)
+				a = hExpression(cprecedence(ASTCLASS_CAST), parentheses, allow_toplevel_comma, allow_idseq)
 
 				assert(t->class = ASTCLASS_DATATYPE)
 				a = astNew(ASTCLASS_CAST, a)
@@ -364,7 +365,7 @@ private function hExpression _
 				astDelete(t)
 			else
 				'' Expression
-				a = hExpression(0, parentheses + 1, allow_toplevel_comma)
+				a = hExpression(0, parentheses + 1, allow_toplevel_comma, allow_idseq)
 
 				'' ')'
 				cExpectMatch(TK_RPAREN, "to close '(...)' parenthesized expression")
@@ -401,7 +402,7 @@ private function hExpression _
 				if tkGet(c.x) <> TK_RPAREN then
 					'' Expression (',' Expression)*
 					do
-						astAppend(a, cExpression(FALSE))
+						astAppend(a, cExpression(FALSE, allow_idseq))
 
 						'' ','?
 					loop while cMatch(TK_COMMA) and c.parseok
@@ -429,7 +430,21 @@ private function hExpression _
 					'' '##'?
 				loop while cMatch(TK_HASHHASH) and c.parseok
 
-			case TK_ID, TK_STRING, TK_WSTRING, TK_HASH
+			case TK_ID
+				'' A B
+				if allow_idseq then
+					'' In a #define body, chances are this is a string literal sequence...
+					a = cStringLiteralSequence()
+				else
+					'' But as a statement, this is more likely to be a vardecl, where we
+					'' didn't recognize the A as typedef yet. This shouldn't be misparsed
+					'' as string literal sequence silently, so we parse A as normal expression
+					'' and let B trigger an error.
+					a = astNewTEXT(tkSpellId(c.x))
+					c.x += 1
+				end if
+
+			case TK_STRING, TK_WSTRING, TK_HASH
 				a = cStringLiteralSequence()
 
 			case else
@@ -453,7 +468,7 @@ private function hExpression _
 				'' ')'
 				cExpectMatch(TK_RPAREN, "behind the data type")
 			else
-				a = hExpression(cprecedence(ASTCLASS_SIZEOF), parentheses + 1, allow_toplevel_comma)
+				a = hExpression(cprecedence(ASTCLASS_SIZEOF), parentheses + 1, allow_toplevel_comma, allow_idseq)
 			end if
 			a = astNew(ASTCLASS_SIZEOF, a)
 
@@ -548,14 +563,14 @@ private function hExpression _
 		c.x += 1
 
 		'' rhs
-		var b = hExpression(oplevel, parentheses + iif(op = ASTCLASS_INDEX, 1, 0), allow_toplevel_comma)
+		var b = hExpression(oplevel, parentheses + iif(op = ASTCLASS_INDEX, 1, 0), allow_toplevel_comma, allow_idseq)
 
 		'' Handle ?: special case
 		if op = ASTCLASS_IIF then
 			'' ':'
 			cExpectMatch(TK_COLON, "for a?b:c iif operator")
 
-			a = astNewIIF(a, b, hExpression(oplevel, parentheses, allow_toplevel_comma))
+			a = astNewIIF(a, b, hExpression(oplevel, parentheses, allow_toplevel_comma, allow_idseq))
 		else
 			'' Handle [] special case
 			if op = ASTCLASS_INDEX then
@@ -570,13 +585,13 @@ private function hExpression _
 	function = a
 end function
 
-private function cExpression(byval allow_toplevel_comma as integer) as ASTNODE ptr
-	function = hExpression(0, 0, allow_toplevel_comma)
+private function cExpression(byval allow_toplevel_comma as integer, byval allow_idseq as integer) as ASTNODE ptr
+	function = hExpression(0, 0, allow_toplevel_comma, allow_idseq)
 end function
 
 '' Initializer:
 '' '{' ExpressionOrInitializer (',' ExpressionOrInitializer)* [','] '}'
-private function cInitializer() as ASTNODE ptr
+private function cInitializer(byval allow_idseq as integer) as ASTNODE ptr
 	'' '{'
 	assert(tkGet(c.x) = TK_LBRACE)
 	c.x += 1
@@ -587,7 +602,7 @@ private function cInitializer() as ASTNODE ptr
 		'' '}'?
 		if tkGet(c.x) = TK_RBRACE then exit do
 
-		astAppend(a, cExpressionOrInitializer())
+		astAppend(a, cExpressionOrInitializer(allow_idseq))
 
 		'' ','
 	loop while cMatch(TK_COMMA) and c.parseok
@@ -597,12 +612,12 @@ private function cInitializer() as ASTNODE ptr
 	function = a
 end function
 
-private function cExpressionOrInitializer() as ASTNODE ptr
+private function cExpressionOrInitializer(byval allow_idseq as integer) as ASTNODE ptr
 	'' '{'?
 	if tkGet(c.x) = TK_LBRACE then
-		function = cInitializer()
+		function = cInitializer(allow_idseq)
 	else
-		function = cExpression(FALSE)
+		function = cExpression(FALSE, allow_idseq)
 	end if
 end function
 
@@ -727,7 +742,7 @@ private function cEnumConst() as ASTNODE ptr
 	'' '='?
 	if cMatch(TK_EQ) then
 		'' Expression
-		enumconst->expr = cExpression(FALSE)
+		enumconst->expr = cExpression(FALSE, FALSE)
 	end if
 
 	'' (',' | '}')
@@ -1078,7 +1093,7 @@ private function cDefineBody(byval macro as ASTNODE ptr) as integer
 		if hDefineBodyLooksLikeScopeBlock(c.x) then
 			macro->expr = cScope()
 		else
-			macro->expr = cInitializer()
+			macro->expr = cInitializer(TRUE)
 		end if
 		return TRUE
 
@@ -1109,7 +1124,7 @@ private function cDefineBody(byval macro as ASTNODE ptr) as integer
 		return TRUE
 	end if
 
-	macro->expr = cExpression(FALSE)
+	macro->expr = cExpression(FALSE, TRUE)
 	function = TRUE
 end function
 
@@ -1964,7 +1979,7 @@ private function cDeclarator _
 			if tkGet(c.x) = TK_RBRACKET then
 				d->expr = astNew(ASTCLASS_ELLIPSIS)
 			else
-				d->expr = cExpression(TRUE)
+				d->expr = cExpression(TRUE, FALSE)
 			end if
 
 			astAppend(node->array, d)
@@ -1982,7 +1997,7 @@ private function cDeclarator _
 		end if
 		c.x += 1
 
-		node->bits = cExpression(FALSE)
+		node->bits = cExpression(FALSE, FALSE)
 
 	'' '(' ParamList ')'
 	case TK_LPAREN
@@ -2274,7 +2289,7 @@ private function cDeclaration(byval astclass as integer, byval gccattribs as int
 			'' ['=' Initializer]
 			if cMatch(TK_EQ) then
 				assert(n->expr = NULL)
-				n->expr = cExpressionOrInitializer()
+				n->expr = cExpressionOrInitializer(FALSE)
 
 				'' If it's an array, then it must be an array initializer (or a string literal),
 				'' not a struct initializer
@@ -2353,7 +2368,7 @@ end function
 
 '' Expression statement: Assignments, function calls, i++, etc.
 private function cExpressionStatement() as ASTNODE ptr
-	function = cExpression(TRUE)
+	function = cExpression(TRUE, FALSE)
 
 	'' ';'?
 	cExpectMatch(TK_SEMI, "(end of expression statement)")
@@ -2366,7 +2381,7 @@ private function cReturn() as ASTNODE ptr
 	c.x += 1
 
 	'' Expression
-	function = astNew(ASTCLASS_RETURN, cExpression(TRUE))
+	function = astNew(ASTCLASS_RETURN, cExpression(TRUE, FALSE))
 
 	'' ';'
 	cExpectMatch(TK_SEMI, "(end of statement)")
@@ -2399,7 +2414,7 @@ private function cIfBlock() as ASTNODE ptr
 
 	'' condition expression
 	var ifpart = astNew(ASTCLASS_IFPART)
-	ifpart->expr = cExpression(TRUE)
+	ifpart->expr = cExpression(TRUE, FALSE)
 
 	'' ')'
 	cExpectMatch(TK_RPAREN, "behind if condition")
@@ -2434,7 +2449,7 @@ private function cDoWhile(byval semi_is_optional as integer) as ASTNODE ptr
 	cExpectMatch(TK_LPAREN, "in front of loop condition")
 
 	'' loop condition expression
-	dowhile->expr = cExpression(TRUE)
+	dowhile->expr = cExpression(TRUE, FALSE)
 
 	'' ')'
 	cExpectMatch(TK_RPAREN, "behind loop condition")
@@ -2459,7 +2474,7 @@ private function cWhile() as ASTNODE ptr
 	cExpectMatch(TK_LPAREN, "in front of loop condition")
 
 	'' loop condition expression
-	whileloop->expr = cExpression(TRUE)
+	whileloop->expr = cExpression(TRUE, FALSE)
 
 	'' ')'
 	cExpectMatch(TK_RPAREN, "behind loop condition")
