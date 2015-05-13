@@ -1141,7 +1141,11 @@ private function cDefineBody(byval macro as ASTNODE ptr) as integer
 	macro->expr = hTryToFixCommasAndAssigns(cExpression(FALSE, TRUE))
 
 	select case macro->expr->class
-	case ASTCLASS_GROUP, ASTCLASS_ASSIGN
+	case ASTCLASS_GROUP, ASTCLASS_ASSIGN, _
+	     ASTCLASS_SELFOR, ASTCLASS_SELFXOR, ASTCLASS_SELFAND, _
+	     ASTCLASS_SELFSHL, ASTCLASS_SELFSHR, _
+	     ASTCLASS_SELFADD, ASTCLASS_SELFSUB, _
+	     ASTCLASS_SELFMUL, ASTCLASS_SELFDIV, ASTCLASS_SELFMOD
 		macro->expr = astNew(ASTCLASS_SCOPEBLOCK, macro->expr)
 	end select
 

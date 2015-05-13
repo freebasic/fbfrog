@@ -66,5 +66,60 @@ scope
 	a /= 1
 	a mod= 1
 end scope
+#macro ASSIGN_01
+	scope
+		a = 1
+	end scope
+#endmacro
+#macro ASSIGN_02
+	scope
+		a or= 1
+	end scope
+#endmacro
+#macro ASSIGN_03
+	scope
+		a xor= 1
+	end scope
+#endmacro
+#macro ASSIGN_04
+	scope
+		a and= 1
+	end scope
+#endmacro
+#macro ASSIGN_05
+	scope
+		a shl= 1
+	end scope
+#endmacro
+#macro ASSIGN_06
+	scope
+		a shr= 1
+	end scope
+#endmacro
+#macro ASSIGN_07
+	scope
+		a += 1
+	end scope
+#endmacro
+#macro ASSIGN_08
+	scope
+		a -= 1
+	end scope
+#endmacro
+#macro ASSIGN_09
+	scope
+		a *= 1
+	end scope
+#endmacro
+#macro ASSIGN_10
+	scope
+		a /= 1
+	end scope
+#endmacro
+#macro ASSIGN_11
+	scope
+		a mod= 1
+	end scope
+#endmacro
 
 end extern
