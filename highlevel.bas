@@ -394,7 +394,8 @@ private function hlFixExpressions(byval n as ASTNODE ptr) as integer
 		'' TODO: shouldn't assume is_bool_context=TRUE for #define bodies
 		var is_bool_context = FALSE
 		select case n->class
-		case ASTCLASS_PPDEFINE, ASTCLASS_IFPART, ASTCLASS_ELSEIFPART
+		case ASTCLASS_PPDEFINE, ASTCLASS_IFPART, ASTCLASS_ELSEIFPART, _
+		     ASTCLASS_DOWHILE, ASTCLASS_WHILE
 			is_bool_context = TRUE
 		end select
 

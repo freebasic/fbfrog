@@ -70,3 +70,9 @@ end if
 		printf("foo")
 	wend
 #endmacro
+
+do
+loop while a = b
+
+while a = b
+wend
