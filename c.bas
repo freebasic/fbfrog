@@ -943,10 +943,18 @@ end function
 private function hDefineBodyLooksLikeScopeBlock(byval x as integer) as integer
 	'' '{'
 	assert(tkGet(x) = TK_LBRACE)
+	x += 1
+
+	'' Any keyword? (then it's likely not an expression, as most C keywords
+	'' are for statements...)
+	select case tkGet(x)
+	case KW_SIZEOF
+		'' sizeof() is an exception: a keyword, but for expressions, not statements
+	case is > TK_ID
+		return TRUE
+	end select
 
 	do
-		x += 1
-
 		select case tkGet(x)
 		case TK_SEMI
 			return TRUE
@@ -957,6 +965,8 @@ private function hDefineBodyLooksLikeScopeBlock(byval x as integer) as integer
 		case TK_LPAREN, TK_LBRACKET, TK_LBRACE
 			x = hFindClosingParen(x, TRUE, TRUE)
 		end select
+
+		x += 1
 	loop
 
 	function = FALSE
