@@ -8,4 +8,4 @@
       tests/c/assign.h
 [5/5] __FB_DOS__
       tests/c/assign.h
-emitting: tests/c/assign.bi (3 declarations, 3 TODOs)
+emitting: tests/c/assign.bi (9 declarations, 3 TODOs)

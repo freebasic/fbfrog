@@ -14,6 +14,16 @@ private function f(byval as long) as long
 	'' TODO: return f(1), f(2);
 end function
 
+if 1 then
+	f(1)
+	f(2)
+end if
+
+if 1 then
+	f(1)
+	f(2)
+end if
+
 #macro M1
 	scope
 		1
@@ -27,5 +37,33 @@ end function
 	end scope
 #endmacro
 '' TODO: #define M3 1, 2, 3
+#macro M4
+	if 1 then
+		f(1)
+		f(2)
+	end if
+#endmacro
+#macro M5
+	if 1 then
+		f(1)
+		f(2)
+	end if
+#endmacro
+#macro M6
+	scope
+		if 1 then
+			f(1)
+			f(2)
+		end if
+	end scope
+#endmacro
+#macro M7
+	scope
+		if 1 then
+			f(1)
+			f(2)
+		end if
+	end scope
+#endmacro
 
 end extern

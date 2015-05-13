@@ -10,6 +10,14 @@ private sub f1()
 	'' TODO: a = a = 2;
 end sub
 
+if 1 then
+	a = 1
+end if
+
+if 1 then
+	a = 1
+end if
+
 #macro M1(x)
 	scope
 		x = 1
@@ -21,5 +29,29 @@ end sub
 	end scope
 #endmacro
 '' TODO: #define M3(x) ((x) = (x) = 1)
+#macro M4
+	if 1 then
+		a = 1
+	end if
+#endmacro
+#macro M5
+	if 1 then
+		a = 1
+	end if
+#endmacro
+#macro M6
+	scope
+		if 1 then
+			a = 1
+		end if
+	end scope
+#endmacro
+#macro M7
+	scope
+		if 1 then
+			a = 1
+		end if
+	end scope
+#endmacro
 
 end extern

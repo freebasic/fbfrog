@@ -11,10 +11,48 @@ private sub f()
 	b = 2
 end sub
 
+if 1 then
+	a = 1
+	b = 2
+end if
+
+if 1 then
+	a = 1
+	b = 2
+end if
+
 #macro M1(x, y)
 	scope
 		(x) = 1
 		(y) = 2
+	end scope
+#endmacro
+#macro M2
+	if 1 then
+		a = 1
+		b = 2
+	end if
+#endmacro
+#macro M3
+	if 1 then
+		a = 1
+		b = 2
+	end if
+#endmacro
+#macro M4
+	scope
+		if 1 then
+			a = 1
+			b = 2
+		end if
+	end scope
+#endmacro
+#macro M5
+	scope
+		if 1 then
+			a = 1
+			b = 2
+		end if
 	end scope
 #endmacro
 

@@ -888,23 +888,12 @@ end sub
 '' use as statement, not expression. (otherwise, for example, assignments could
 '' be mis-used as comparisons)
 ''
-private function hHandleCommasAssigns(byval n as ASTNODE ptr, byval is_macrobody as integer) as ASTNODE ptr
-	''
-	'' Commas
-	''
-	'' first, in case they contain assignments that will become toplevel
-	'' ones after unwrapping...
-	''
+private function hTryToFixCommasAndAssigns(byval n as ASTNODE ptr) as ASTNODE ptr
+	'' Commas (first -- in case they contain assignments that will become
+	'' toplevel ones after unwrapping)
 	n = hUnwrapToplevelCommas(n)
 
-	'' Any other commas?
-	if astContains(n, ASTCLASS_CCOMMA) then
-		cError("can't auto-translate C comma operator here [yet]")
-	end if
-
-	''
 	'' Assignments
-	''
 	if n->class = ASTCLASS_GROUP then
 		var i = n->head
 		while i
@@ -915,20 +904,17 @@ private function hHandleCommasAssigns(byval n as ASTNODE ptr, byval is_macrobody
 		hHandleToplevelAssign(n)
 	end if
 
-	'' Any other assignments?
+	function = n
+end function
+
+private sub hErrorForRemainingCommasOrAssigns(byval n as ASTNODE ptr)
+	if astContains(n, ASTCLASS_CCOMMA) then
+		cError("can't auto-translate C comma operator here [yet]")
+	end if
 	if astContains(n, ASTCLASS_CASSIGN) then
 		cError("can't auto-translate C assignment operator here [yet]")
 	end if
-
-	if is_macrobody then
-		select case n->class
-		case ASTCLASS_GROUP, ASTCLASS_ASSIGN
-			n = astNew(ASTCLASS_SCOPEBLOCK, n)
-		end select
-	end if
-
-	function = n
-end function
+end sub
 
 ''
 '' Determine whether a sequence of tokens starting with '{' is a scope block or
@@ -1134,7 +1120,13 @@ private function cDefineBody(byval macro as ASTNODE ptr) as integer
 		return TRUE
 	end if
 
-	macro->expr = cExpression(FALSE, TRUE)
+	macro->expr = hTryToFixCommasAndAssigns(cExpression(FALSE, TRUE))
+
+	select case macro->expr->class
+	case ASTCLASS_GROUP, ASTCLASS_ASSIGN
+		macro->expr = astNew(ASTCLASS_SCOPEBLOCK, macro->expr)
+	end select
+
 	function = TRUE
 end function
 
@@ -1165,7 +1157,7 @@ private sub cParseDefBody(byval n as ASTNODE ptr, byval xbegin as integer, byref
 	end if
 
 	if n->expr then
-		n->expr = hHandleCommasAssigns(n->expr, TRUE)
+		hErrorForRemainingCommasOrAssigns(n->expr)
 	end if
 
 	'' If parsing the body failed, turn the PPDEFINE into an UNKNOWN without
@@ -2378,7 +2370,7 @@ end function
 
 '' Expression statement: Assignments, function calls, i++, etc.
 private function cExpressionStatement() as ASTNODE ptr
-	function = cExpression(TRUE, FALSE)
+	function = hTryToFixCommasAndAssigns(cExpression(TRUE, FALSE))
 
 	'' ';'?
 	cExpectMatch(TK_SEMI, "(end of expression statement)")
@@ -2595,7 +2587,7 @@ private function cBody(byval bodyastclass as integer) as ASTNODE ptr
 		var begin = c.x
 		var t = cConstruct(bodyastclass)
 
-		t = hHandleCommasAssigns(t, FALSE)
+		hErrorForRemainingCommasOrAssigns(t)
 
 		if c.parseok = FALSE then
 			c.parseok = TRUE

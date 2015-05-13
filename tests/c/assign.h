@@ -6,6 +6,17 @@ void f1(void) {
 	a = a = 2;
 };
 
+if (1)
+	a = 1;
+
+if (1) {
+	a = 1;
+}
+
 #define M1(x) x = 1
 #define M2(x) ((x) = 1)
 #define M3(x) ((x) = (x) = 1)
+#define M4 if (1) a = 1;
+#define M5 if (1) { a = 1; }
+#define M6 { if (1) a = 1; }
+#define M7 { if (1) { a = 1; } }
