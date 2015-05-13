@@ -285,10 +285,11 @@ Interesting improvements:
   i.e. pack stack entries can be named. popping by name means popping everything
   until that node is popped. If not found, nothing is popped.
   (MinGW-w64 CRT headers use this)
+* solve out scope blocks that only contain an if/loop block. This is currently
+  not easy, as macro/proc bodies are expected to be scope blocks...
 * Continue support for parsing function bodies:
   - ++ and -- operators
-  - self-assignments
-  - for loops (probably useless without ++/-- and self-assignment support)
+  - for loops (probably useless without ++/-- support)
   - continue/break
   - goto/labels/switch/case
 * Support assignment and comma operators in expressions
