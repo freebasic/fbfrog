@@ -592,6 +592,16 @@ enum
 	ASTCLASS_EXTERNBLOCKEND
 	ASTCLASS_RETURN
 	ASTCLASS_ASSIGN
+	ASTCLASS_SELFOR
+	ASTCLASS_SELFXOR
+	ASTCLASS_SELFAND
+	ASTCLASS_SELFSHL
+	ASTCLASS_SELFSHR
+	ASTCLASS_SELFADD
+	ASTCLASS_SELFSUB
+	ASTCLASS_SELFMUL
+	ASTCLASS_SELFDIV
+	ASTCLASS_SELFMOD
 	ASTCLASS_IFBLOCK
 	ASTCLASS_IFPART
 	ASTCLASS_ELSEIFPART
@@ -620,6 +630,16 @@ enum
 	ASTCLASS_AND
 	ASTCLASS_CCOMMA
 	ASTCLASS_CASSIGN
+	ASTCLASS_CSELFOR
+	ASTCLASS_CSELFXOR
+	ASTCLASS_CSELFAND
+	ASTCLASS_CSELFSHL
+	ASTCLASS_CSELFSHR
+	ASTCLASS_CSELFADD
+	ASTCLASS_CSELFSUB
+	ASTCLASS_CSELFMUL
+	ASTCLASS_CSELFDIV
+	ASTCLASS_CSELFMOD
 	ASTCLASS_CEQ
 	ASTCLASS_CNE
 	ASTCLASS_CLT
@@ -778,6 +798,7 @@ declare sub astSetType _
 declare function astCloneNode(byval n as ASTNODE ptr) as ASTNODE ptr
 declare function astClone(byval n as ASTNODE ptr) as ASTNODE ptr
 declare function astContains(byval n as ASTNODE ptr, byval astclass as integer) as integer
+declare function astContainsCAssignments(byval n as ASTNODE ptr) as integer
 declare function astIsMergableBlock(byval n as ASTNODE ptr) as integer
 declare function astIsEqual _
 	( _
@@ -865,6 +886,16 @@ declare function emitType overload(byval n as ASTNODE ptr) as string
 declare function emitExpr(byval n as ASTNODE ptr, byval need_parens as integer = FALSE) as string
 declare sub emitFile(byref filename as string, byval header as HeaderInfo ptr, byval ast as ASTNODE ptr)
 
+type COperatorInfo
+	precedence as byte
+	is_right_assoc as byte
+end type
+
+extern copinfo(ASTCLASS_CLOGOR to ASTCLASS_IIF) as COperatorInfo
+
+#define cprecedence(op) copinfo(op).precedence
+#define cOpIsLeftAssoc(op) (not copinfo(op).is_right_assoc)
+
 declare function hNumberLiteral _
 	( _
 		byval x as integer, _
@@ -877,7 +908,6 @@ declare function hStringLiteral _
 		byval eval_escapes as integer, _
 		byref errmsg as string _
 	) as ASTNODE ptr
-extern as integer cprecedence(ASTCLASS_CLOGOR to ASTCLASS_IIF)
 declare function hDefineHead(byref x as integer) as ASTNODE ptr
 
 declare sub cppInit(byref api as ApiInfo)

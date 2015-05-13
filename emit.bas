@@ -335,6 +335,10 @@ private function hMacroBodyIsCodeBlock(byval n as ASTNODE ptr) as integer
 	end if
 end function
 
+private sub emitAssign(byval n as ASTNODE ptr, byval assignop as zstring ptr)
+	emitLine(emitExpr(n->head, TRUE) + " " + *assignop + " " + emitExpr(n->tail, FALSE))
+end sub
+
 private sub emitCode(byval n as ASTNODE ptr, byval parentclass as integer)
 	select case as const n->class
 	case ASTCLASS_GROUP
@@ -573,8 +577,17 @@ private sub emitCode(byval n as ASTNODE ptr, byval parentclass as integer)
 	case ASTCLASS_RETURN
 		emitLine("return " + emitExpr(n->head))
 
-	case ASTCLASS_ASSIGN
-		emitLine(emitExpr(n->head, TRUE) + " = " + emitExpr(n->tail, FALSE))
+	case ASTCLASS_ASSIGN  : emitAssign(n, "=")
+	case ASTCLASS_SELFOR  : emitAssign(n, "or=")
+	case ASTCLASS_SELFXOR : emitAssign(n, "xor=")
+	case ASTCLASS_SELFAND : emitAssign(n, "and=")
+	case ASTCLASS_SELFSHL : emitAssign(n, "shl=")
+	case ASTCLASS_SELFSHR : emitAssign(n, "shr=")
+	case ASTCLASS_SELFADD : emitAssign(n, "+=")
+	case ASTCLASS_SELFSUB : emitAssign(n, "-=")
+	case ASTCLASS_SELFMUL : emitAssign(n, "*=")
+	case ASTCLASS_SELFDIV : emitAssign(n, "/=")
+	case ASTCLASS_SELFMOD : emitAssign(n, "mod=")
 
 	case ASTCLASS_IFBLOCK
 		var i = n->head

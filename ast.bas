@@ -69,6 +69,16 @@ dim shared as zstring ptr astnodename(0 to ...) => _
 	@"externend"  , _
 	@"return"   , _
 	@"assign"   , _
+	@"selfor"   , _
+	@"selfxor"  , _
+	@"selfand"  , _
+	@"selfshl"  , _
+	@"selfshr"  , _
+	@"selfadd"  , _
+	@"selfsub"  , _
+	@"selfmul"  , _
+	@"selfdiv"  , _
+	@"selfmod"  , _
 	@"ifblock"  , _
 	@"ifpart"   , _
 	@"elseifpart", _
@@ -95,6 +105,16 @@ dim shared as zstring ptr astnodename(0 to ...) => _
 	@"and"    , _
 	@"ccomma" , _
 	@"cassign", _
+	@"cselfor", _
+	@"cselfxor", _
+	@"cselfand", _
+	@"cselfshl", _
+	@"cselfshr", _
+	@"cselfadd", _
+	@"cselfsub", _
+	@"cselfmul", _
+	@"cselfdiv", _
+	@"cselfmod", _
 	@"ceq"    , _
 	@"cne"    , _
 	@"clt"    , _
@@ -468,6 +488,27 @@ function astContains(byval n as ASTNODE ptr, byval astclass as integer) as integ
 	var i = n->head
 	while i
 		if astContains(i, astclass) then return TRUE
+		i = i->next
+	wend
+	function = FALSE
+end function
+
+function astContainsCAssignments(byval n as ASTNODE ptr) as integer
+	select case as const n->class
+	case ASTCLASS_CASSIGN, _
+	     ASTCLASS_CSELFOR, ASTCLASS_CSELFXOR, ASTCLASS_CSELFAND, _
+	     ASTCLASS_CSELFSHL, ASTCLASS_CSELFSHR, _
+	     ASTCLASS_CSELFADD, ASTCLASS_CSELFSUB, _
+	     ASTCLASS_CSELFMUL, ASTCLASS_CSELFDIV, ASTCLASS_CSELFMOD
+		return TRUE
+	end select
+	if n->subtype then if astContainsCAssignments(n->subtype) then return TRUE
+	if n->array   then if astContainsCAssignments(n->array  ) then return TRUE
+	if n->bits    then if astContainsCAssignments(n->bits   ) then return TRUE
+	if n->expr    then if astContainsCAssignments(n->expr   ) then return TRUE
+	var i = n->head
+	while i
+		if astContainsCAssignments(i) then return TRUE
 		i = i->next
 	wend
 	function = FALSE

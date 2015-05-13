@@ -896,53 +896,64 @@ private sub hCheckForUnknownSymbol(byval id as zstring ptr)
 	end if
 end sub
 
-'' C operator precedence, starting at 1, higher value = higher precedence
-dim shared as integer cprecedence(ASTCLASS_CLOGOR to ASTCLASS_IIF) = _
+'' 1st field: C operator precedence, starting at 1, higher value = higher precedence
+'' 2nd field: is it right associative? (assignments/iif)
+dim shared copinfo(ASTCLASS_CLOGOR to ASTCLASS_IIF) as COperatorInfo = _
 { _
-	 4, _ '' ASTCLASS_CLOGOR
-	 5, _ '' ASTCLASS_CLOGAND
-	 0, _ '' ASTCLASS_LOGOR (unused)
-	 0, _ '' ASTCLASS_LOGAND (unused)
-	 6, _ '' ASTCLASS_OR
-	 7, _ '' ASTCLASS_XOR
-	 8, _ '' ASTCLASS_AND
-	 1, _ '' ASTCLASS_CCOMMA
-	 2, _ '' ASTCLASS_CASSIGN
-	 9, _ '' ASTCLASS_CEQ
-	 9, _ '' ASTCLASS_CNE
-	10, _ '' ASTCLASS_CLT
-	10, _ '' ASTCLASS_CLE
-	10, _ '' ASTCLASS_CGT
-	10, _ '' ASTCLASS_CGE
-	 0, _ '' ASTCLASS_EQ (unused)
-	 0, _ '' ASTCLASS_NE (unused)
-	 0, _ '' ASTCLASS_LT (unused)
-	 0, _ '' ASTCLASS_LE (unused)
-	 0, _ '' ASTCLASS_GT (unused)
-	 0, _ '' ASTCLASS_GE (unused)
-	11, _ '' ASTCLASS_SHL
-	11, _ '' ASTCLASS_SHR
-	12, _ '' ASTCLASS_ADD
-	12, _ '' ASTCLASS_SUB
-	13, _ '' ASTCLASS_MUL
-	13, _ '' ASTCLASS_DIV
-	13, _ '' ASTCLASS_MOD
-	15, _ '' ASTCLASS_INDEX
-	15, _ '' ASTCLASS_MEMBER
-	15, _ '' ASTCLASS_MEMBERDEREF
-	 0, _ '' ASTCLASS_STRCAT (unused)
-	14, _ '' ASTCLASS_CLOGNOT
-	14, _ '' ASTCLASS_NOT
-	14, _ '' ASTCLASS_NEGATE
-	14, _ '' ASTCLASS_UNARYPLUS
-	 0, _ '' ASTCLASS_CDEFINED (unused)
-	 0, _ '' ASTCLASS_DEFINED (unused)
-	14, _ '' ASTCLASS_ADDROF
-	14, _ '' ASTCLASS_DEREF
-	 0, _ '' ASTCLASS_STRINGIFY (unused)
-	14, _ '' ASTCLASS_SIZEOF
-	14, _ '' ASTCLASS_CAST
-	 3  _ '' ASTCLASS_IIF
+	( 4, FALSE), _ '' ASTCLASS_CLOGOR
+	( 5, FALSE), _ '' ASTCLASS_CLOGAND
+	( 0, FALSE), _ '' ASTCLASS_LOGOR (unused)
+	( 0, FALSE), _ '' ASTCLASS_LOGAND (unused)
+	( 6, FALSE), _ '' ASTCLASS_OR
+	( 7, FALSE), _ '' ASTCLASS_XOR
+	( 8, FALSE), _ '' ASTCLASS_AND
+	( 1, FALSE), _ '' ASTCLASS_CCOMMA
+	( 2, TRUE ), _ '' ASTCLASS_CASSIGN
+	( 2, TRUE ), _ '' ASTCLASS_CSELFOR
+	( 2, TRUE ), _ '' ASTCLASS_CSELFXOR
+	( 2, TRUE ), _ '' ASTCLASS_CSELFAND
+	( 2, TRUE ), _ '' ASTCLASS_CSELFSHL
+	( 2, TRUE ), _ '' ASTCLASS_CSELFSHR
+	( 2, TRUE ), _ '' ASTCLASS_CSELFADD
+	( 2, TRUE ), _ '' ASTCLASS_CSELFSUB
+	( 2, TRUE ), _ '' ASTCLASS_CSELFMUL
+	( 2, TRUE ), _ '' ASTCLASS_CSELFDIV
+	( 2, TRUE ), _ '' ASTCLASS_CSELFMOD
+	( 9, FALSE), _ '' ASTCLASS_CEQ
+	( 9, FALSE), _ '' ASTCLASS_CNE
+	(10, FALSE), _ '' ASTCLASS_CLT
+	(10, FALSE), _ '' ASTCLASS_CLE
+	(10, FALSE), _ '' ASTCLASS_CGT
+	(10, FALSE), _ '' ASTCLASS_CGE
+	( 0, FALSE), _ '' ASTCLASS_EQ (unused)
+	( 0, FALSE), _ '' ASTCLASS_NE (unused)
+	( 0, FALSE), _ '' ASTCLASS_LT (unused)
+	( 0, FALSE), _ '' ASTCLASS_LE (unused)
+	( 0, FALSE), _ '' ASTCLASS_GT (unused)
+	( 0, FALSE), _ '' ASTCLASS_GE (unused)
+	(11, FALSE), _ '' ASTCLASS_SHL
+	(11, FALSE), _ '' ASTCLASS_SHR
+	(12, FALSE), _ '' ASTCLASS_ADD
+	(12, FALSE), _ '' ASTCLASS_SUB
+	(13, FALSE), _ '' ASTCLASS_MUL
+	(13, FALSE), _ '' ASTCLASS_DIV
+	(13, FALSE), _ '' ASTCLASS_MOD
+	(15, FALSE), _ '' ASTCLASS_INDEX
+	(15, FALSE), _ '' ASTCLASS_MEMBER
+	(15, FALSE), _ '' ASTCLASS_MEMBERDEREF
+	( 0, FALSE), _ '' ASTCLASS_STRCAT (unused)
+	(14, FALSE), _ '' ASTCLASS_CLOGNOT
+	(14, FALSE), _ '' ASTCLASS_NOT
+	(14, FALSE), _ '' ASTCLASS_NEGATE
+	(14, FALSE), _ '' ASTCLASS_UNARYPLUS
+	( 0, FALSE), _ '' ASTCLASS_CDEFINED (unused)
+	( 0, FALSE), _ '' ASTCLASS_DEFINED (unused)
+	(14, FALSE), _ '' ASTCLASS_ADDROF
+	(14, FALSE), _ '' ASTCLASS_DEREF
+	( 0, FALSE), _ '' ASTCLASS_STRINGIFY (unused)
+	(14, FALSE), _ '' ASTCLASS_SIZEOF
+	(14, FALSE), _ '' ASTCLASS_CAST
+	( 3, TRUE )  _ '' ASTCLASS_IIF
 }
 
 type CPPVALUE

@@ -53,5 +53,18 @@ end if
 		end if
 	end scope
 #endmacro
+scope
+	a = 1
+	a or= 1
+	a xor= 1
+	a and= 1
+	a shl= 1
+	a shr= 1
+	a += 1
+	a -= 1
+	a *= 1
+	a /= 1
+	a mod= 1
+end scope
 
 end extern

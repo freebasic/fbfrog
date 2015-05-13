@@ -505,28 +505,38 @@ private function hExpression _
 	'' Infix operators
 	while c.parseok
 		select case as const tkGet(c.x)
-		case TK_QUEST    : op = ASTCLASS_IIF     '' ? (a ? b : c)
-		case TK_PIPEPIPE : op = ASTCLASS_CLOGOR  '' ||
-		case TK_AMPAMP   : op = ASTCLASS_CLOGAND '' &&
-		case TK_PIPE     : op = ASTCLASS_OR      '' |
-		case TK_CIRC     : op = ASTCLASS_XOR     '' ^
-		case TK_AMP      : op = ASTCLASS_AND     '' &
-		case TK_EQ       : op = ASTCLASS_CASSIGN '' =
-		case TK_EQEQ     : op = ASTCLASS_CEQ     '' ==
-		case TK_EXCLEQ   : op = ASTCLASS_CNE     '' !=
-		case TK_LT       : op = ASTCLASS_CLT     '' <
-		case TK_LTEQ     : op = ASTCLASS_CLE     '' <=
-		case TK_GT       : op = ASTCLASS_CGT     '' >
-		case TK_GTEQ     : op = ASTCLASS_CGE     '' >=
-		case TK_LTLT     : op = ASTCLASS_SHL     '' <<
-		case TK_GTGT     : op = ASTCLASS_SHR     '' >>
-		case TK_PLUS     : op = ASTCLASS_ADD     '' +
-		case TK_MINUS    : op = ASTCLASS_SUB     '' -
-		case TK_STAR     : op = ASTCLASS_MUL     '' *
-		case TK_SLASH    : op = ASTCLASS_DIV     '' /
-		case TK_PERCENT  : op = ASTCLASS_MOD     '' %
-		case TK_LBRACKET : op = ASTCLASS_INDEX   '' [ ... ]
-		case TK_DOT      : op = ASTCLASS_MEMBER  '' .
+		case TK_QUEST    : op = ASTCLASS_IIF      '' ? (a ? b : c)
+		case TK_PIPEPIPE : op = ASTCLASS_CLOGOR   '' ||
+		case TK_AMPAMP   : op = ASTCLASS_CLOGAND  '' &&
+		case TK_PIPE     : op = ASTCLASS_OR       '' |
+		case TK_PIPEEQ   : op = ASTCLASS_CSELFOR  '' |=
+		case TK_CIRC     : op = ASTCLASS_XOR      '' ^
+		case TK_CIRCEQ   : op = ASTCLASS_CSELFXOR '' ^=
+		case TK_AMP      : op = ASTCLASS_AND      '' &
+		case TK_AMPEQ    : op = ASTCLASS_CSELFAND '' &=
+		case TK_EQ       : op = ASTCLASS_CASSIGN  '' =
+		case TK_EQEQ     : op = ASTCLASS_CEQ      '' ==
+		case TK_EXCLEQ   : op = ASTCLASS_CNE      '' !=
+		case TK_LT       : op = ASTCLASS_CLT      '' <
+		case TK_LTEQ     : op = ASTCLASS_CLE      '' <=
+		case TK_GT       : op = ASTCLASS_CGT      '' >
+		case TK_GTEQ     : op = ASTCLASS_CGE      '' >=
+		case TK_LTLT     : op = ASTCLASS_SHL      '' <<
+		case TK_LTLTEQ   : op = ASTCLASS_CSELFSHL '' <<=
+		case TK_GTGT     : op = ASTCLASS_SHR      '' >>
+		case TK_GTGTEQ   : op = ASTCLASS_CSELFSHR '' >>=
+		case TK_PLUS     : op = ASTCLASS_ADD      '' +
+		case TK_PLUSEQ   : op = ASTCLASS_CSELFADD '' +=
+		case TK_MINUS    : op = ASTCLASS_SUB      '' -
+		case TK_MINUSEQ  : op = ASTCLASS_CSELFSUB '' -=
+		case TK_STAR     : op = ASTCLASS_MUL      '' *
+		case TK_STAREQ   : op = ASTCLASS_CSELFMUL '' *=
+		case TK_SLASH    : op = ASTCLASS_DIV      '' /
+		case TK_SLASHEQ  : op = ASTCLASS_CSELFDIV '' /=
+		case TK_PERCENT  : op = ASTCLASS_MOD      '' %
+		case TK_PERCENTEQ : op = ASTCLASS_CSELFMOD '' %=
+		case TK_LBRACKET : op = ASTCLASS_INDEX    '' [ ... ]
+		case TK_DOT      : op = ASTCLASS_MEMBER   '' .
 		case TK_ARROW    : op = ASTCLASS_MEMBERDEREF '' ->
 		case TK_COMMA  '' ,
 			if (parentheses = 0) and (not allow_toplevel_comma) then
@@ -545,14 +555,9 @@ private function hExpression _
 			exit while
 		end if
 
-		select case op
-		case ASTCLASS_IIF, ASTCLASS_CASSIGN
-			'' Right associative
-
-		case else
-			'' Left associative
+		if cOpIsLeftAssoc(op) then
 			oplevel += 1
-		end select
+		end if
 
 		'' For [] we parse until the ], no precedence levels needed
 		if op = ASTCLASS_INDEX then
@@ -876,9 +881,22 @@ private sub hHandleToplevelAssign(byval n as ASTNODE ptr)
 	'' C assignment expression is top-most expression?
 	'' Can be translated to FB assignment statement easily.
 	'' (unlike C assignments nested deeper in expressions etc.)
-	if n->class = ASTCLASS_CASSIGN then
-		n->class = ASTCLASS_ASSIGN
-	end if
+	#macro remap(id)
+		case ASTCLASS_C##id : n->class = ASTCLASS_##id
+	#endmacro
+	select case n->class
+	remap(ASSIGN)
+	remap(SELFOR)
+	remap(SELFXOR)
+	remap(SELFAND)
+	remap(SELFSHL)
+	remap(SELFSHR)
+	remap(SELFADD)
+	remap(SELFSUB)
+	remap(SELFMUL)
+	remap(SELFDIV)
+	remap(SELFMOD)
+	end select
 end sub
 
 ''
@@ -911,7 +929,7 @@ private sub hErrorForRemainingCommasOrAssigns(byval n as ASTNODE ptr)
 	if astContains(n, ASTCLASS_CCOMMA) then
 		cError("can't auto-translate C comma operator here [yet]")
 	end if
-	if astContains(n, ASTCLASS_CASSIGN) then
+	if astContainsCAssignments(n) then
 		cError("can't auto-translate C assignment operator here [yet]")
 	end if
 end sub
