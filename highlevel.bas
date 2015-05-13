@@ -57,6 +57,7 @@ private function typeIsNumeric(byval dtype as integer) as integer
 end function
 
 '' Determine C UOP/BOP result dtype based on the operands' dtypes
+'' (assignment BOPs are not supported, also see hIsIifBopUop())
 private function typeCBop(byval astclass as integer, byval a as integer, byval b as integer) as integer
 	'' Logic/relational operations: result always is a 32bit int
 	select case astclass
@@ -184,6 +185,9 @@ end function
 
 private function hIsIifBopUop(byval astclass as integer) as integer
 	'' IIF, BOPs, UOPs
+	'' Note: assignment BOPs excluded, we can't easily handle those for the
+	'' purposes of hlAddMathCasts() anyways, as the result type depends on
+	'' the lhs, whose type we can typically not determine...
 	select case as const astclass
 	case ASTCLASS_IIF, _
 	     ASTCLASS_CLOGOR, ASTCLASS_CLOGAND, _
