@@ -1606,7 +1606,29 @@ private function hlSolveOutUnnecessaryScopeBlocks(byval n as ASTNODE ptr) as int
 			astAppend(n, astCloneChildren(n->head))
 			astRemove(n, n->head)
 		wend
+
+	case ASTCLASS_PPDEFINE
+		'' If the macro body is a scope block that contains just one if/loop block,
+		'' then remove the scope block
+		if n->expr andalso (n->expr->class = ASTCLASS_SCOPEBLOCK) then
+			var scopeblock = n->expr
+
+			'' Exactly one statement?
+			if scopeblock->head andalso (scopeblock->head = scopeblock->tail) then
+				'' It's an if/loop?
+				select case scopeblock->head->class
+				case ASTCLASS_IFBLOCK, ASTCLASS_DOWHILE, ASTCLASS_WHILE
+					'' Remove the scope block, and directly use the single
+					'' statement as macro body.
+					var stmt = scopeblock->head
+					astUnlink(scopeblock, stmt)
+					astDelete(n->expr)
+					n->expr = stmt
+				end select
+			end if
+		end if
 	end select
+
 	function = TRUE
 end function
 

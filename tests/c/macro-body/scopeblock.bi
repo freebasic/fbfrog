@@ -1,38 +1,26 @@
 #pragma once
 
 #macro M1
-	scope
-		if 1 then
-		end if
-	end scope
+	if 1 then
+	end if
 #endmacro
 #macro M2
-	scope
-		if 1 then
-		end if
-	end scope
+	if 1 then
+	end if
 #endmacro
 #macro M3
-	scope
-		do
-		loop while 1
-	end scope
+	do
+	loop while 1
 #endmacro
 #macro M4
-	scope
-		do
-		loop while 1
-	end scope
+	do
+	loop while 1
 #endmacro
 #macro M5
-	scope
-		while 1
-		wend
-	end scope
+	while 1
+	wend
 #endmacro
 #macro M6
-	scope
-		while 1
-		wend
-	end scope
+	while 1
+	wend
 #endmacro

@@ -40,18 +40,14 @@ end if
 	end if
 #endmacro
 #macro M6
-	scope
-		if 1 then
-			a = 1
-		end if
-	end scope
+	if 1 then
+		a = 1
+	end if
 #endmacro
 #macro M7
-	scope
-		if 1 then
-			a = 1
-		end if
-	end scope
+	if 1 then
+		a = 1
+	end if
 #endmacro
 scope
 	a = 1

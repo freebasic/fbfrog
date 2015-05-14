@@ -40,20 +40,16 @@ end if
 	end if
 #endmacro
 #macro M4
-	scope
-		if 1 then
-			a = 1
-			b = 2
-		end if
-	end scope
+	if 1 then
+		a = 1
+		b = 2
+	end if
 #endmacro
 #macro M5
-	scope
-		if 1 then
-			a = 1
-			b = 2
-		end if
-	end scope
+	if 1 then
+		a = 1
+		b = 2
+	end if
 #endmacro
 
 end extern
