@@ -575,7 +575,11 @@ private sub emitCode(byval n as ASTNODE ptr, byval parentclass as integer)
 		emitLine("end extern")
 
 	case ASTCLASS_RETURN
-		emitLine("return " + emitExpr(n->head))
+		var ln = "return"
+		if n->head then
+			ln += " " + emitExpr(n->head)
+		end if
+		emitLine(ln)
 
 	case ASTCLASS_ASSIGN  : emitAssign(n, "=")
 	case ASTCLASS_SELFOR  : emitAssign(n, "or=")

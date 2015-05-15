@@ -11,6 +11,10 @@ int f3(int i) {
 	return 0;
 }
 
+void f4(void) {
+	return;
+}
+
 // Anonymous parameter + body
 int f(int) {
 	return 0;

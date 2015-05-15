@@ -15,6 +15,10 @@ private function f3(byval i as long) as long
 	return 0
 end function
 
+private sub f4()
+	return
+end sub
+
 private function f(byval as long) as long
 	return 0
 end function

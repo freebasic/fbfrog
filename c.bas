@@ -2399,17 +2399,23 @@ private function cExpressionStatement() as ASTNODE ptr
 	cExpectMatch(TK_SEMI, "(end of expression statement)")
 end function
 
-'' RETURN Expression ';'
+'' RETURN [Expression] ';'
 private function cReturn() as ASTNODE ptr
 	'' RETURN
 	assert(tkGet(c.x) = KW_RETURN)
 	c.x += 1
 
-	'' Expression
-	function = astNew(ASTCLASS_RETURN, cExpression(TRUE, FALSE))
+	var n = astNew(ASTCLASS_RETURN)
+
+	'' [Expression]
+	if tkGet(c.x) <> TK_SEMI then
+		astAppend(n, cExpression(TRUE, FALSE))
+	end if
 
 	'' ';'
 	cExpectMatch(TK_SEMI, "(end of statement)")
+
+	function = n
 end function
 
 '' '{ ... }' statement block
