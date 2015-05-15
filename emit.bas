@@ -335,6 +335,12 @@ private function hMacroBodyIsCodeBlock(byval n as ASTNODE ptr) as integer
 	end if
 end function
 
+private sub hMacroParamList(byref s as string, byval n as ASTNODE ptr)
+	if n->paramcount >= 0 then
+		s += hParamList(n)
+	end if
+end sub
+
 private sub emitAssign(byval n as ASTNODE ptr, byval assignop as zstring ptr)
 	emitLine(emitExpr(n->head, TRUE) + " " + *assignop + " " + emitExpr(n->tail, FALSE))
 end sub
@@ -397,9 +403,7 @@ private sub emitCode(byval n as ASTNODE ptr, byval parentclass as integer)
 	case ASTCLASS_PPDEFINE
 		if hMacroBodyIsCodeBlock(n) then
 			var s = "#macro " + *n->text
-			if n->head then
-				s += hParamList(n)
-			end if
+			hMacroParamList(s, n)
 			emitLine(s)
 
 			emit.indent += 1
@@ -409,9 +413,7 @@ private sub emitCode(byval n as ASTNODE ptr, byval parentclass as integer)
 			emitLine("#endmacro")
 		else
 			var s = "#define " + *n->text
-			if n->paramcount >= 0 then
-				s += hParamList(n)
-			end if
+			hMacroParamList(s, n)
 			if n->expr then
 				s += " " + emitExpr(n->expr, TRUE)
 			end if
