@@ -546,3 +546,5 @@ enum E {
 // "a b" is probably a vardecl here, and it shouldn't be misparsed as string
 // literal sequence silently.
 #define A110 { a b; }
+
+#define mysizeof(x) sizeof(x)

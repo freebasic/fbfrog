@@ -449,7 +449,7 @@ const A41 = clngint(0)
 #endmacro
 #define A50 defined(FOO)
 #define A51(a) defined(a)
-#define A52(T) cptr(T ptr, malloc(sizeof((T))))
+#define A52(T) cptr(T ptr, malloc(sizeof(T)))
 #define A53 cptr(MYINT ptr, malloc(sizeof(MYINT)))
 #define A54 cptr(const ulong ptr ptr ptr, malloc(123))
 #macro A55
@@ -464,7 +464,7 @@ const A41 = clngint(0)
 	end scope
 #endmacro
 #define A57
-#define MAKE_RGB(r, g, b) clng(culng((cbyte((r)) or (cushort(cbyte((g))) shl 8)) or culng(culng(cbyte((b))) shl 16)))
+#define MAKE_RGB(r, g, b) clng(culng((cbyte(r) or (cushort(cbyte(g)) shl 8)) or culng(culng(cbyte(b)) shl 16)))
 const A58 = culng(0u - 100u)
 const A59 = culng(0u - 100)
 const A60 = 0 - 100
@@ -504,5 +504,6 @@ const A62 = culng(0u - 100u)
 		'' TODO: a b;
 	end scope
 #endmacro
+#define mysizeof(x) sizeof(x)
 
 end extern

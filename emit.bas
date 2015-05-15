@@ -735,13 +735,8 @@ function emitExpr(byval n as ASTNODE ptr, byval need_parens as integer) as strin
 		end if
 
 	case ASTCLASS_TEXT
-		if n->attrib and ASTATTRIB_PARENTHESIZEDMACROPARAM then
-			s += "("
-		end if
-		s += *n->text
-		if n->attrib and ASTATTRIB_PARENTHESIZEDMACROPARAM then
-			s += ")"
-		end if
+		consider_parens = ((n->attrib and ASTATTRIB_PARENTHESIZEDMACROPARAM) <> 0)
+		s = *n->text
 
 	case ASTCLASS_STRING, ASTCLASS_CHAR
 		s = """"
