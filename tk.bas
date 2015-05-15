@@ -520,17 +520,28 @@ sub tkApplyRemoves()
 	wend
 end sub
 
+private function hIsKwThatShouldBecomeId(byval x as integer) as integer
+	select case tkGet(x)
+	case KW_DEFINE, KW_INCLUDE, KW_INCLUDE_NEXT, KW_ELIF, KW_IFDEF, KW_IFNDEF, _
+	     KW_ENDIF, KW_UNDEF, KW_PRAGMA, KW_ERROR, KW_WARNING
+		function = TRUE
+
+	case KW_DEFINED
+		'' Allow "defined" to stay a keyword if inside a macro body.
+		'' This way we can translate macro bodies doing "defined(...)",
+		'' without misinterpreting the defined() as function call.
+		function = (not tkIsDirective(x))
+	end select
+end function
+
 sub tkTurnCPPTokensIntoCIds()
 	for x as integer = 0 to tkGetCount()-1
-		var tk = tkGet(x)
-		select case tk
-		case KW_DEFINE, KW_DEFINED, KW_INCLUDE, KW_INCLUDE_NEXT, KW_ELIF, KW_IFDEF, KW_IFNDEF, _
-		     KW_ENDIF, KW_UNDEF, KW_PRAGMA, KW_ERROR, KW_WARNING
+		if hIsKwThatShouldBecomeId(x) then
 			'' Turn the KW_* into a TK_ID, but preserve the flags/macro expansion level/etc.
 			var p = tkAccess(x)
+			p->text = strDuplicate(tkInfoText(p->id))
 			p->id = TK_ID
-			p->text = strDuplicate(tkInfoText(tk))
-		end select
+		end if
 	next
 end sub
 

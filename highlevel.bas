@@ -57,10 +57,12 @@ private function typeIsNumeric(byval dtype as integer) as integer
 end function
 
 '' Determine C UOP/BOP result dtype based on the operands' dtypes
-'' (assignment BOPs are not supported, also see hIsIifBopUop())
+'' Note: assignment BOPs excluded, we can't easily handle those for the purposes
+'' of hlAddMathCasts() anyways, as the result type depends on the lhs, whose
+'' type we can typically not determine...
 private function typeCBop(byval astclass as integer, byval a as integer, byval b as integer) as integer
 	'' Logic/relational operations: result always is a 32bit int
-	select case astclass
+	select case as const astclass
 	case ASTCLASS_CLOGOR, ASTCLASS_CLOGAND, _
 	     ASTCLASS_CEQ, ASTCLASS_CNE, ASTCLASS_CLT, _
 	     ASTCLASS_CLE, ASTCLASS_CGT, ASTCLASS_CGE, _
@@ -74,9 +76,17 @@ private function typeCBop(byval astclass as integer, byval a as integer, byval b
 	'' Bitshifts: Ignore the rhs type
 	case ASTCLASS_SHL, ASTCLASS_SHR
 		b = a
+
+	case ASTCLASS_IIF, _
+	     ASTCLASS_OR, ASTCLASS_XOR, ASTCLASS_AND, _
+	     ASTCLASS_ADD, ASTCLASS_SUB, ASTCLASS_MUL, ASTCLASS_DIV, ASTCLASS_MOD, _
+	     ASTCLASS_NOT, ASTCLASS_NEGATE, ASTCLASS_UNARYPLUS _
+
+	case else
+		assert(FALSE)
 	end select
 
-	'' Math/bitwise operations: depends on operands
+	'' iif/math/bitwise operations: depends on operands
 
 	'' Pointer arithmetic: don't bother tracking, doesn't seem necessary yet
 	'' (preserving the ptr type would require preserving the subtype too)
@@ -183,39 +193,23 @@ private function typeCBop(byval astclass as integer, byval a as integer, byval b
 	function = TYPE_NONE
 end function
 
-private function hIsIifBopUop(byval astclass as integer) as integer
-	'' IIF, BOPs, UOPs
-	'' Note: assignment BOPs excluded, we can't easily handle those for the
-	'' purposes of hlAddMathCasts() anyways, as the result type depends on
-	'' the lhs, whose type we can typically not determine...
-	select case as const astclass
-	case ASTCLASS_IIF, _
-	     ASTCLASS_CLOGOR, ASTCLASS_CLOGAND, _
-	     ASTCLASS_CEQ, ASTCLASS_CNE, ASTCLASS_CLT, _
-	     ASTCLASS_CLE, ASTCLASS_CGT, ASTCLASS_CGE, _
-	     ASTCLASS_OR, ASTCLASS_XOR, ASTCLASS_AND, _
-	     ASTCLASS_SHL, ASTCLASS_SHR, _
-	     ASTCLASS_ADD, ASTCLASS_SUB, _
-	     ASTCLASS_MUL, ASTCLASS_DIV, ASTCLASS_MOD, _
-	     ASTCLASS_CLOGNOT, ASTCLASS_NOT, _
-	     ASTCLASS_NEGATE, ASTCLASS_UNARYPLUS, _
-	     ASTCLASS_CDEFINED, ASTCLASS_SIZEOF
-		function = TRUE
-	end select
-end function
-
 private sub hlCalculateCTypes(byval n as ASTNODE ptr)
 	'' No types should be set yet, except for type casts and atoms
 	#if __FB_DEBUG__
-		select case n->class
+		select case as const n->class
 		case ASTCLASS_CAST, ASTCLASS_DATATYPE, _
 		     ASTCLASS_CONSTI, ASTCLASS_CONSTF, _
 		     ASTCLASS_STRING, ASTCLASS_CHAR
 			assert(n->dtype <> TYPE_NONE)
-		case else
-			if hIsIifBopUop(n->class) then
-				assert(n->dtype = TYPE_NONE)
-			end if
+
+		case ASTCLASS_IIF, ASTCLASS_CLOGOR, ASTCLASS_CLOGAND, _
+		    ASTCLASS_CEQ, ASTCLASS_CNE, ASTCLASS_CLT, ASTCLASS_CLE, ASTCLASS_CGT, ASTCLASS_CGE, _
+		    ASTCLASS_OR, ASTCLASS_XOR, ASTCLASS_AND, ASTCLASS_SHL, ASTCLASS_SHR, _
+		    ASTCLASS_ADD, ASTCLASS_SUB, ASTCLASS_MUL, ASTCLASS_DIV, ASTCLASS_MOD, _
+		    ASTCLASS_CLOGNOT, ASTCLASS_NOT, ASTCLASS_NEGATE, ASTCLASS_UNARYPLUS, _
+		    ASTCLASS_SIZEOF, ASTCLASS_CDEFINED, ASTCLASS_TEXT
+			assert(n->dtype = TYPE_NONE)
+
 		end select
 	#endif
 
@@ -227,15 +221,25 @@ private sub hlCalculateCTypes(byval n as ASTNODE ptr)
 		wend
 	end scope
 
-	if hIsIifBopUop(n->class) then
+	select case as const n->class
+	case ASTCLASS_TEXT
+		n->dtype = hlLookupSymbolType(n->text)
+
+	case ASTCLASS_CDEFINED
+		n->dtype = TYPE_LONG
+
+	case ASTCLASS_IIF, ASTCLASS_CLOGOR, ASTCLASS_CLOGAND, _
+	     ASTCLASS_CEQ, ASTCLASS_CNE, ASTCLASS_CLT, ASTCLASS_CLE, ASTCLASS_CGT, ASTCLASS_CGE, _
+	     ASTCLASS_OR, ASTCLASS_XOR, ASTCLASS_AND, ASTCLASS_SHL, ASTCLASS_SHR, _
+	     ASTCLASS_ADD, ASTCLASS_SUB, ASTCLASS_MUL, ASTCLASS_DIV, ASTCLASS_MOD, _
+	     ASTCLASS_CLOGNOT, ASTCLASS_NOT, ASTCLASS_NEGATE, ASTCLASS_UNARYPLUS, _
+	     ASTCLASS_SIZEOF
 		'' IIF and BOPs will have two operands (ldtype/rdtype will be different),
 		'' UOPs will have one operand (i.e. ldtype/rdtype will be the same)
 		var ldtype = n->head->dtype
 		var rdtype = n->tail->dtype
 		n->dtype = typeCBop(n->class, ldtype, rdtype)
-	elseif n->class = ASTCLASS_TEXT then
-		n->dtype = hlLookupSymbolType(n->text)
-	end if
+	end select
 end sub
 
 private function hIsUlongCast(byval n as ASTNODE ptr) as integer
@@ -262,14 +266,20 @@ private function hlAddMathCasts(byval parent as ASTNODE ptr, byval n as ASTNODE 
 		i = astReplace(n, i, hlAddMathCasts(n, astClone(i)))
 	wend
 
-	if hIsIifBopUop(n->class) then
+	select case as const n->class
+	case ASTCLASS_IIF, ASTCLASS_CLOGOR, ASTCLASS_CLOGAND, _
+	     ASTCLASS_CEQ, ASTCLASS_CNE, ASTCLASS_CLT, ASTCLASS_CLE, ASTCLASS_CGT, ASTCLASS_CGE, _
+	     ASTCLASS_OR, ASTCLASS_XOR, ASTCLASS_AND, ASTCLASS_SHL, ASTCLASS_SHR, _
+	     ASTCLASS_ADD, ASTCLASS_SUB, ASTCLASS_MUL, ASTCLASS_DIV, ASTCLASS_MOD, _
+	     ASTCLASS_CLOGNOT, ASTCLASS_NOT, ASTCLASS_NEGATE, ASTCLASS_UNARYPLUS, _
+	     ASTCLASS_SIZEOF
 		'' Wrap uint32 operation in a cast, unless there already is a cast
 		'' TODO: don't add cast if n is a cast
 		if (n->dtype = TYPE_ULONG) and (not hIsUlongCast(parent)) then
 			n = astNew(ASTCLASS_CAST, n)
 			n->dtype = TYPE_ULONG
 		end if
-	end if
+	end select
 
 	function = n
 end function
@@ -362,9 +372,20 @@ private sub hlRemoveExpressionTypes(byval n as ASTNODE ptr)
 	wend
 
 	if n->class <> ASTCLASS_CAST then
-		if hIsIifBopUop(n->class) or (n->class = ASTCLASS_TEXT) then
+		select case as const n->class
+		case ASTCLASS_IIF, ASTCLASS_LOGOR, ASTCLASS_LOGAND, _
+		     ASTCLASS_EQ, ASTCLASS_NE, ASTCLASS_LT, ASTCLASS_LE, ASTCLASS_GT, ASTCLASS_GE, _
+		     ASTCLASS_OR, ASTCLASS_XOR, ASTCLASS_AND, ASTCLASS_SHL, ASTCLASS_SHR, _
+		     ASTCLASS_ADD, ASTCLASS_SUB, ASTCLASS_MUL, ASTCLASS_DIV, ASTCLASS_MOD, _
+		     ASTCLASS_NOT, ASTCLASS_NEGATE, ASTCLASS_UNARYPLUS, _
+		     ASTCLASS_SIZEOF, ASTCLASS_DEFINED, ASTCLASS_TEXT
 			astSetType(n, TYPE_NONE, NULL)
-		end if
+
+		case ASTCLASS_CLOGOR, ASTCLASS_CLOGAND, _
+		     ASTCLASS_CEQ, ASTCLASS_CNE, ASTCLASS_CLT, ASTCLASS_CLE, ASTCLASS_CGT, ASTCLASS_CGE, _
+		     ASTCLASS_CLOGNOT, ASTCLASS_CDEFINED
+			assert(FALSE)
+		end select
 	end if
 end sub
 
