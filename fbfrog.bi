@@ -434,6 +434,8 @@ declare function tkInfoPretty(byval tk as integer) as string
 '' original = not from a macro
 #define tkIsOriginal(x) ((tkGetFlags(x) and TKFLAG_EXPANSION) = 0)
 
+#define tkIsDirective(x) ((tkGetFlags(x) and TKFLAG_DIRECTIVE) <> 0)
+
 declare sub tkInit()
 declare sub tkEnd()
 declare function tkDumpOne(byval x as integer) as string

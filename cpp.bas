@@ -2831,7 +2831,7 @@ sub hMoveDirectivesOutOfConstructs()
 	var x = 0
 	do
 		'' Skip any directives at begin of construct
-		while tkGetFlags(x) and TKFLAG_DIRECTIVE
+		while tkIsDirective(x)
 			x += 1
 		wend
 
@@ -2842,7 +2842,7 @@ sub hMoveDirectivesOutOfConstructs()
 		var nxt = hSkipConstruct(x, TRUE)
 
 		'' Exclude directives at end of construct from the construct
-		while tkGetFlags(nxt - 1) and TKFLAG_DIRECTIVE
+		while tkIsDirective(nxt - 1)
 			nxt -= 1
 		wend
 		assert(x < nxt)
@@ -2851,10 +2851,10 @@ sub hMoveDirectivesOutOfConstructs()
 		'' and exclude them from the construct.
 		var writepos = nxt
 		while x < nxt
-			if tkGetFlags(x) and TKFLAG_DIRECTIVE then
+			if tkIsDirective(x) then
 				'' Collect all directives in a row
 				var y = x
-				while tkGetFlags(y + 1) and TKFLAG_DIRECTIVE
+				while tkIsDirective(y + 1)
 					y += 1
 				wend
 				assert(tkGet(y) = TK_EOL)
@@ -2904,7 +2904,7 @@ sub hApplyReplacements()
 		'' because the C code patterns don't include the \n either.
 		var last = nxt - 1
 		assert(x <= last)
-		if ((tkGetFlags(x) and TKFLAG_DIRECTIVE) <> 0) and (tkGet(last) = TK_EOL) then
+		if tkIsDirective(x) and (tkGet(last) = TK_EOL) then
 			last -= 1
 		end if
 
