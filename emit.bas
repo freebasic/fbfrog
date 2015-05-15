@@ -838,7 +838,6 @@ function emitExpr(byval n as ASTNODE ptr, byval need_parens as integer, byval ne
 	case ASTCLASS_DEREF     : s = "*"        + emitExpr(n->head, TRUE) : consider_parens = TRUE
 	case ASTCLASS_STRINGIFY : s = "#"        + emitExpr(n->head)
 	case ASTCLASS_SIZEOF    : s = "sizeof("  + emitExpr(n->head, FALSE, FALSE) + ")"
-	case ASTCLASS_CDEFINED  : s = "defined(" + *n->text + ")"
 	case ASTCLASS_DEFINED   : s = "defined(" + *n->text + ")"
 	case ASTCLASS_CAST
 		var is_comma_list = FALSE
