@@ -150,3 +150,5 @@ if (1) {
 }
 
 #define M1 if (1) ; else ;
+
+if G_LIKELY(a == b) ;

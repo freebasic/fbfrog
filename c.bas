@@ -2433,6 +2433,7 @@ private function cScope() as ASTNODE ptr
 	cExpectMatch(TK_RBRACE, "to close compound statement")
 end function
 
+'' IF '(' Expression ')' Construct [ELSE Construct]
 private function cIfBlock() as ASTNODE ptr
 	var ifblock = astNew(ASTCLASS_IFBLOCK)
 
@@ -2440,15 +2441,15 @@ private function cIfBlock() as ASTNODE ptr
 	assert(tkGet(c.x) = KW_IF)
 	c.x += 1
 
-	'' '('
-	cExpectMatch(TK_LPAREN, "in front of if condition")
+	'' Note: We're not parsing/requiring the '()' parentheses around the if
+	'' condition explicitly here, because some headers (e.g. glib) use
+	'' macros in this place, e.g.:
+	''    if G_LIKELY(...) { ... }
+	'' So it's useful to accept that too without having to expand the macro.
 
 	'' condition expression
 	var ifpart = astNew(ASTCLASS_IFPART)
 	ifpart->expr = cExpression(TRUE, FALSE)
-
-	'' ')'
-	cExpectMatch(TK_RPAREN, "behind if condition")
 
 	'' if/true statement
 	astAppend(ifpart, cConstruct(ASTCLASS_SCOPEBLOCK))
@@ -2463,6 +2464,7 @@ private function cIfBlock() as ASTNODE ptr
 	function = ifblock
 end function
 
+'' DO Construct WHILE '(' Expression ')' [';']
 private function cDoWhile(byval semi_is_optional as integer) as ASTNODE ptr
 	var dowhile = astNew(ASTCLASS_DOWHILE)
 
@@ -2476,14 +2478,10 @@ private function cDoWhile(byval semi_is_optional as integer) as ASTNODE ptr
 	'' WHILE
 	cExpectMatch(KW_WHILE, "behind do loop body")
 
-	'' '('
-	cExpectMatch(TK_LPAREN, "in front of loop condition")
+	'' Note: not explicitly parsing the '()' parentheses here, see cIfBlock()
 
 	'' loop condition expression
 	dowhile->expr = cExpression(TRUE, FALSE)
-
-	'' ')'
-	cExpectMatch(TK_RPAREN, "behind loop condition")
 
 	if semi_is_optional then
 		cMatch(TK_SEMI)
@@ -2494,6 +2492,7 @@ private function cDoWhile(byval semi_is_optional as integer) as ASTNODE ptr
 	function = dowhile
 end function
 
+'' WHILE '(' Expression ')' Construct
 private function cWhile() as ASTNODE ptr
 	var whileloop = astNew(ASTCLASS_WHILE)
 
@@ -2501,14 +2500,10 @@ private function cWhile() as ASTNODE ptr
 	assert(tkGet(c.x) = KW_WHILE)
 	c.x += 1
 
-	'' '('
-	cExpectMatch(TK_LPAREN, "in front of loop condition")
+	'' Note: not explicitly parsing the '()' parentheses here, see cIfBlock()
 
 	'' loop condition expression
 	whileloop->expr = cExpression(TRUE, FALSE)
-
-	'' ')'
-	cExpectMatch(TK_RPAREN, "behind loop condition")
 
 	'' loop body
 	astAppend(whileloop, cConstruct(ASTCLASS_SCOPEBLOCK))

@@ -56,3 +56,6 @@ if (1) {
 
 do ; while (a == b);
 while (a == b);
+
+do ; while G_LIKELY(a == b);
+while G_LIKELY(a == b) ;
