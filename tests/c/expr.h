@@ -547,4 +547,23 @@ enum E {
 // literal sequence silently.
 #define A110 { a b; }
 
-#define mysizeof(x) sizeof(x)
+// Testing the handling of parenthesized macro parameters
+// In general, fbfrog should
+//  - preserve parentheses around macro parameters
+//  - not add unnecessary parentheses
+//  - maybe add parentheses where they were missed/unnecessary in C, but would
+//    be useful in FB
+#define mysizeof1(x) sizeof(x) // fbfrog shouldn't emit extra parentheses around the macro parameter here
+#define mysizeof2(x) sizeof((x)) // but here it probably should
+#define A120a(x) f(x, 1)
+#define A120b(x) f((x), 1)
+#define A121a(x) { 1, x, 3 }
+#define A121b(x) { 1, (x), 3 }
+#define A122a(x) x = 1
+#define A122b(x) (x) = 1
+#define A123a(x) ((int)x)
+#define A123b(x) ((int)(x))
+#define A124a(x) ((void *)x)
+#define A124b(x) ((void *)(x))
+#define A125a(x) (x ? x : x)
+#define A125b(x) ((x) ? (x) : (x))

@@ -499,11 +499,33 @@ const A62 = culng(0u - 100u)
 '' TODO: #define A103 sizeof(struct UDT { int i; })
 '' TODO: #define A104 (struct { int i; })x
 '' TODO: #define A105 (struct UDT { int i; })x
+
 #macro A110
 	scope
 		'' TODO: a b;
 	end scope
 #endmacro
-#define mysizeof(x) sizeof(x)
+#define mysizeof1(x) sizeof(x)
+#define mysizeof2(x) sizeof(x)
+#define A120a(x) f(x, 1)
+#define A120b(x) f((x), 1)
+#define A121a(x) (1, x, 3)
+#define A121b(x) (1, (x), 3)
+#macro A122a(x)
+	scope
+		x = 1
+	end scope
+#endmacro
+#macro A122b(x)
+	scope
+		(x) = 1
+	end scope
+#endmacro
+#define A123a(x) clng(x)
+#define A123b(x) clng(x)
+#define A124a(x) cptr(any ptr, x)
+#define A124b(x) cptr(any ptr, (x))
+#define A125a(x) iif(x, x, x)
+#define A125b(x) iif((x), (x), (x))
 
 end extern

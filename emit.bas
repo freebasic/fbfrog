@@ -218,13 +218,7 @@ private function hIdAndArray(byval n as ASTNODE ptr, byval allow_alias as intege
 	function = s
 end function
 
-private function hSeparatedList _
-	( _
-		byval n as ASTNODE ptr, _
-		byval separator as zstring ptr, _
-		byval need_parens as integer _
-	) as string
-
+private function hSeparatedList(byval n as ASTNODE ptr, byval separator as zstring ptr) as string
 	dim s as string
 
 	var count = 0
@@ -234,7 +228,7 @@ private function hSeparatedList _
 			s += *separator
 		end if
 
-		s += emitExpr(i, need_parens)
+		s += emitExpr(i, FALSE)
 
 		count += 1
 		i = i->next
@@ -244,7 +238,7 @@ private function hSeparatedList _
 end function
 
 private function hParamList(byval n as ASTNODE ptr) as string
-	function = "(" + hSeparatedList(n, ", ", FALSE) + ")"
+	function = "(" + hSeparatedList(n, ", ") + ")"
 end function
 
 private sub hEmitIndentedChildren(byval n as ASTNODE ptr, byval parentclass as integer = -1)
@@ -434,14 +428,14 @@ private sub emitCode(byval n as ASTNODE ptr, byval parentclass as integer)
 			end if
 		end select
 		if len(s) = 0 then
-			s = "#if " + emitExpr(n->expr, FALSE)
+			s = "#if " + emitExpr(n->expr)
 		end if
 		emitLine(s)
 
 		hEmitIndentedChildren(n)
 
 	case ASTCLASS_PPELSEIF
-		emitLine("#elseif " + emitExpr(n->expr, FALSE))
+		emitLine("#elseif " + emitExpr(n->expr))
 		hEmitIndentedChildren(n)
 
 	case ASTCLASS_PPELSE
@@ -644,7 +638,7 @@ private function hEmitOperands(byval n as ASTNODE ptr, byref separator as string
 	function = s
 end function
 
-function emitExpr(byval n as ASTNODE ptr, byval need_parens as integer) as string
+function emitExpr(byval n as ASTNODE ptr, byval need_parens as integer, byval need_macroparam_parens as integer) as string
 	dim as string s
 
 	if n = NULL then
@@ -735,8 +729,10 @@ function emitExpr(byval n as ASTNODE ptr, byval need_parens as integer) as strin
 		end if
 
 	case ASTCLASS_TEXT
-		consider_parens = ((n->attrib and ASTATTRIB_PARENTHESIZEDMACROPARAM) <> 0)
 		s = *n->text
+		if need_macroparam_parens and ((n->attrib and ASTATTRIB_PARENTHESIZEDMACROPARAM) <> 0) then
+			s = "(" + s + ")"
+		end if
 
 	case ASTCLASS_STRING, ASTCLASS_CHAR
 		s = """"
@@ -841,10 +837,11 @@ function emitExpr(byval n as ASTNODE ptr, byval need_parens as integer) as strin
 	case ASTCLASS_ADDROF    : s = "@"        + emitExpr(n->head, TRUE) : consider_parens = TRUE
 	case ASTCLASS_DEREF     : s = "*"        + emitExpr(n->head, TRUE) : consider_parens = TRUE
 	case ASTCLASS_STRINGIFY : s = "#"        + emitExpr(n->head)
-	case ASTCLASS_SIZEOF    : s = "sizeof("  + emitExpr(n->head) + ")"
+	case ASTCLASS_SIZEOF    : s = "sizeof("  + emitExpr(n->head, FALSE, FALSE) + ")"
 	case ASTCLASS_CDEFINED  : s = "defined(" + *n->text + ")"
 	case ASTCLASS_DEFINED   : s = "defined(" + *n->text + ")"
 	case ASTCLASS_CAST
+		var is_comma_list = FALSE
 		select case n->dtype
 		case TYPE_BYTE     : s =    "cbyte("
 		case TYPE_UBYTE    : s =   "cubyte("
@@ -859,6 +856,7 @@ function emitExpr(byval n as ASTNODE ptr, byval need_parens as integer) as strin
 		case TYPE_SINGLE   : s =     "csng("
 		case TYPE_DOUBLE   : s =     "cdbl("
 		case else
+			is_comma_list = TRUE
 			if typeGetPtrCount(n->dtype) > 0 then
 				s = "cptr("
 			else
@@ -866,10 +864,10 @@ function emitExpr(byval n as ASTNODE ptr, byval need_parens as integer) as strin
 			end if
 			s += emitType(n) + ", "
 		end select
-		s += emitExpr(n->head) + ")"
+		s += emitExpr(n->head, FALSE, is_comma_list) + ")"
 
 	case ASTCLASS_IIF
-		s = "iif(" + emitExpr(n->expr, FALSE) + ", " + emitExpr(n->head) + ", " + emitExpr(n->tail) + ")"
+		s = "iif(" + emitExpr(n->expr) + ", " + emitExpr(n->head) + ", " + emitExpr(n->tail) + ")"
 
 	case ASTCLASS_STRCAT
 		s = hEmitOperands(n, " ")
@@ -884,7 +882,7 @@ function emitExpr(byval n as ASTNODE ptr, byval need_parens as integer) as strin
 		s = hParamList(n)
 
 	case ASTCLASS_ARRAYINIT
-		s = "{" + hSeparatedList(n, ", ", FALSE) + "}"
+		s = "{" + hSeparatedList(n, ", ") + "}"
 
 	case ASTCLASS_DIMENSION
 		s = "0 to "
