@@ -1173,6 +1173,7 @@ private sub cParseDefBody(byval n as ASTNODE ptr, byval xbegin as integer, byref
 
 	'' Didn't reach EOL? Then the beginning of the macro body could
 	'' be parsed as expression, but not the rest.
+	assert(tkGet(c.x) <> TK_EOF)
 	if tkGet(c.x) <> TK_EOL then
 		cError("failed to parse full #define body")
 		c.x = hSkipToEol(c.x)
@@ -2518,7 +2519,7 @@ private function cConstruct(byval bodyastclass as integer) as ASTNODE ptr
 
 	'' TODO: only parse #defines at toplevel, not inside structs etc.
 	'' '#'?
-	if (tkGet(c.x) = TK_HASH) and tkIsOriginal(c.x) then
+	if (tkGet(c.x) = TK_HASH) and tkIsStartOfDirective(c.x) then
 		c.x += 1
 
 		dim directive as ASTNODE ptr

@@ -302,6 +302,7 @@ function tkDumpOne(byval x as integer) as string
 	checkFlag(BEHINDSPACE)
 	checkFlag(NOEXPAND)
 	checkFlag(REMOVE)
+	checkFlag(STARTOFDIRECTIVE)
 	checkFlag(ROOTFILE)
 	checkFlag(PREINCLUDE)
 	checkFlag(DIRECTIVE)
@@ -631,7 +632,7 @@ function hFindClosingParen _
 
 		'' Stop at # (CPP directives)?
 		case TK_HASH
-			if tkIsOriginal(x) and (not inside_directive) then
+			if tkIsStartOfDirective(x) and (not inside_directive) then
 				if ignore_directive = FALSE then
 					x -= 1
 					exit do
@@ -674,7 +675,7 @@ function hSkipConstruct(byval x as integer, byval ignore_directives as integer) 
 		return x + 1
 
 	case TK_HASH
-		if tkIsOriginal(x) then
+		if tkIsStartOfDirective(x) then
 			if ignore_directives = FALSE then
 				return hSkipToEol(x) + 1
 			end if
@@ -698,7 +699,7 @@ function hSkipConstruct(byval x as integer, byval ignore_directives as integer) 
 			exit do
 
 		case TK_HASH
-			if tkIsOriginal(x) then
+			if tkIsStartOfDirective(x) then
 				if ignore_directives = FALSE then
 					exit do
 				end if

@@ -2686,6 +2686,9 @@ private sub cppDirective()
 		end select
 	end if
 
+	'' Marking the '#' here already to get better error messages
+	tkAddFlags(begin, begin, TKFLAG_STARTOFDIRECTIVE)
+
 	var flags = TKFLAG_REMOVE or TKFLAG_DIRECTIVE
 
 	select case directivekw
@@ -2949,9 +2952,12 @@ sub hApplyReplacements()
 							wend
 						end scope
 
-						'' If it looks like we inserted a #directive, add an EOL at the end
+						'' If it looks like we inserted a #directive, add an EOL at the end,
+						'' and add the proper tk flags
 						if tkGet(x) = TK_HASH then
+							tkAddFlags(x, x, TKFLAG_STARTOFDIRECTIVE)
 							tkInsert(nxt, TK_EOL)
+							tkAddFlags(x, nxt, TKFLAG_DIRECTIVE)
 							nxt += 1
 						end if
 

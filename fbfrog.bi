@@ -223,7 +223,7 @@ declare function hReadableDirExists(byref path as string) as integer
 const TKFLAG_BEHINDSPACE	= 1 shl 0  '' was preceded by spaces?
 const TKFLAG_NOEXPAND		= 1 shl 1  '' may be macro-expanded? (cpp)
 const TKFLAG_REMOVE		= 1 shl 2
-				''= 1 shl 3
+const TKFLAG_STARTOFDIRECTIVE	= 1 shl 3
 const TKFLAG_ROOTFILE		= 1 shl 4  '' Used to mark the internal #include statements which pull in the toplevel files
 const TKFLAG_PREINCLUDE		= 1 shl 5
 const TKFLAG_DIRECTIVE		= 1 shl 6  '' used to mark #defines/#includes for hMoveDirectivesOutOfConstructs()
@@ -433,8 +433,8 @@ declare function tkInfoPretty(byval tk as integer) as string
 
 '' original = not from a macro
 #define tkIsOriginal(x) ((tkGetFlags(x) and TKFLAG_EXPANSION) = 0)
-
 #define tkIsDirective(x) ((tkGetFlags(x) and TKFLAG_DIRECTIVE) <> 0)
+#define tkIsStartOfDirective(x) ((tkGetFlags(x) and TKFLAG_STARTOFDIRECTIVE) <> 0)
 
 declare sub tkInit()
 declare sub tkEnd()
