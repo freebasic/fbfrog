@@ -548,7 +548,7 @@ end sub
 private function hlSetArraySizes(byval n as ASTNODE ptr) as integer
 	if (n->text <> NULL) and (n->array <> NULL) then
 		'' 1 dimension?
-		if n->array->head = n->array->tail then
+		if astHas1Child(n->array) then
 			var dimension = n->array->head
 			assert(dimension->class = ASTCLASS_DIMENSION)
 			if dimension->expr->class = ASTCLASS_ELLIPSIS then
@@ -1291,7 +1291,7 @@ private function hIsUnsizedArray(byval n as ASTNODE ptr) as integer
 	if n->array then
 		assert(n->array->class = ASTCLASS_ARRAY)
 		assert(n->array->head->class = ASTCLASS_DIMENSION)
-		function = (n->array->head = n->array->tail) and (n->array->head->expr->class = ASTCLASS_ELLIPSIS)
+		function = astHas1Child(n->array) and (n->array->head->expr->class = ASTCLASS_ELLIPSIS)
 	end if
 end function
 
@@ -1395,7 +1395,7 @@ private sub hlDropMacroBodyScopes(byval ast as ASTNODE ptr)
 			if i->expr->head = NULL then
 				astDelete(i->expr)
 				i->expr = NULL
-			elseif i->expr->head = i->expr->tail then
+			elseif astHas1Child(i->expr) then
 				var stmt = astClone(i->expr->head)
 				astDelete(i->expr)
 				i->expr = stmt
@@ -1597,10 +1597,6 @@ private function hlBuildRenameList(byval n as ASTNODE ptr) as ASTNODE ptr
 	function = list
 end function
 
-private function astHasOnlyChild(byval n as ASTNODE ptr, byval astclass as integer) as integer
-	function = n->head andalso (n->head = n->tail) andalso (n->head->class = astclass)
-end function
-
 '' while (0) ...      =>   scope : ... : end scope
 '' do ... while (0);  =>   scope : ... : end scope
 '' (commonly used construct in C headers)
@@ -1635,7 +1631,7 @@ private function hlSolveOutUnnecessaryScopeBlocks(byval n as ASTNODE ptr) as int
 			var scopeblock = n->expr
 
 			'' Exactly one statement?
-			if scopeblock->head andalso (scopeblock->head = scopeblock->tail) then
+			if astHas1Child(scopeblock) then
 				'' It's an if/loop?
 				select case scopeblock->head->class
 				case ASTCLASS_IFBLOCK, ASTCLASS_DOWHILE, ASTCLASS_WHILE

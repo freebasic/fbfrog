@@ -514,6 +514,14 @@ function astContainsCAssignments(byval n as ASTNODE ptr) as integer
 	function = FALSE
 end function
 
+function astHas1Child(byval n as ASTNODE ptr) as integer
+	function = n->head andalso (n->head = n->tail)
+end function
+
+function astHasOnlyChild(byval n as ASTNODE ptr, byval astclass as integer) as integer
+	function = astHas1Child(n) andalso (n->head->class = astclass)
+end function
+
 function astIsMergableBlock(byval n as ASTNODE ptr) as integer
 	select case n->class
 	case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM, ASTCLASS_RENAMELIST
