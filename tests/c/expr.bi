@@ -442,21 +442,13 @@ const A41 = clngint(0)
 #define A46 (1)
 #define A47 (1)
 #define A48 (-(a = 0), -(a = 0))
-#macro A49
-	scope
-		f(-(a = 0))
-	end scope
-#endmacro
+#define A49 scope : f(-(a = 0)) : end scope
 #define A50 defined(FOO)
 #define A51(a) defined(a)
 #define A52(T) cptr(T ptr, malloc(sizeof(T)))
 #define A53 cptr(MYINT ptr, malloc(sizeof(MYINT)))
 #define A54 cptr(const ulong ptr ptr ptr, malloc(123))
-#macro A55
-	scope
-		dim a(0 to 9) as long = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10}
-	end scope
-#endmacro
+#define A55 scope : dim a(0 to 9) as long = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10} : end scope
 #macro A56
 	scope
 		dim a as long
@@ -500,27 +492,15 @@ const A62 = culng(0u - 100u)
 '' TODO: #define A104 (struct { int i; })x
 '' TODO: #define A105 (struct UDT { int i; })x
 
-#macro A110
-	scope
-		'' TODO: a b;
-	end scope
-#endmacro
+#define A110 scope : /' TODO: a b; '/ : end scope
 #define mysizeof1(x) sizeof(x)
 #define mysizeof2(x) sizeof(x)
 #define A120a(x) f(x, 1)
 #define A120b(x) f((x), 1)
 #define A121a(x) (1, x, 3)
 #define A121b(x) (1, (x), 3)
-#macro A122a(x)
-	scope
-		x = 1
-	end scope
-#endmacro
-#macro A122b(x)
-	scope
-		(x) = 1
-	end scope
-#endmacro
+#define A122a(x) scope : x = 1 : end scope
+#define A122b(x) scope : (x) = 1 : end scope
 #define A123a(x) clng(x)
 #define A123b(x) clng(x)
 #define A124a(x) cptr(any ptr, x)

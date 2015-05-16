@@ -1,8 +1,4 @@
 #pragma once
 
 #define a #define foo
-#macro b(expr)
-	scope
-		'' TODO: else #expr
-	end scope
-#endmacro
+#define b(expr) scope : /' TODO: else #expr '/ : end scope

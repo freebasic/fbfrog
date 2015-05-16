@@ -62,16 +62,8 @@ const B02 = 1
 #define m25(a, b, args...) f(a, b, args)
 #define no_parameters_here a
 #define stringify(s) #s
-#macro D1
-	scope
-		f(123)
-	end scope
-#endmacro
-#macro D2(x)
-	scope
-		f(x)
-	end scope
-#endmacro
+#define D1 scope : f(123) : end scope
+#define D2(x) scope : f(x) : end scope
 #macro D3(x)
 	scope
 		f1((x) + 1)

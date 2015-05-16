@@ -21,18 +21,6 @@ const A1 = 1
 		f(2)
 	end scope
 #endmacro
-#macro C1
-	scope
-		a = b
-	end scope
-#endmacro
-#macro C2()
-	scope
-		a = b
-	end scope
-#endmacro
-#macro C3(x)
-	scope
-		a = b
-	end scope
-#endmacro
+#define C1 scope : a = b : end scope
+#define C2() scope : a = b : end scope
+#define C3(x) scope : a = b : end scope

@@ -50,21 +50,13 @@ if 1 then
 	printf("1")
 end if
 
-#macro M1
-	scope
-		printf("foo")
-	end scope
-#endmacro
+#define M1 scope : printf("foo") : end scope
 #macro M2
 	do
 		printf("foo")
 	loop while 1
 #endmacro
-#macro M3
-	scope
-		printf("foo")
-	end scope
-#endmacro
+#define M3 scope : printf("foo") : end scope
 #macro M4
 	while 1
 		printf("foo")

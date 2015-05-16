@@ -123,26 +123,61 @@ function emitType overload(byval n as ASTNODE ptr) as string
 end function
 
 namespace emit
-	dim shared as integer fo, indent, comment, commentspaces
+	dim shared as integer fo, indent, comment, commentspaces, singleline, at_bol
 end namespace
 
 private sub emitLine(byref ln as string)
 	dim s as string
 
-	'' Only add indentation if the line will contain more than that
-	if (len(ln) > 0) or (emit.comment > 0) then
-		s += string(emit.indent, !"\t")
+	if emit.at_bol then
+		'' Only add indentation if the line will contain more than that
+		if (len(ln) > 0) or (emit.comment > 0) then
+			s += string(emit.indent, !"\t")
+		end if
+	else
+		if emit.singleline > 0 then
+			s += " : "
+		end if
 	end if
 
 	if emit.comment > 0 then
-		s += "''"
+		if emit.singleline > 0 then
+			s += "/'"
+		else
+			s += "''"
+		end if
 		if len(ln) > 0 then
 			s += space(emit.commentspaces)
 		end if
 	end if
 
 	s += ln
-	print #emit.fo, s
+
+	if emit.comment > 0 then
+		if emit.singleline > 0 then
+			s += " '/"
+		end if
+	end if
+
+	if emit.singleline > 0 then
+		print #emit.fo, s;
+		emit.at_bol = FALSE
+	else
+		print #emit.fo, s
+		emit.at_bol = TRUE
+	end if
+end sub
+
+private sub emitSingleLineBegin()
+	emit.singleline += 1
+end sub
+
+private sub emitSingleLineEnd()
+	emit.singleline -= 1
+	if emit.singleline = 0 then
+		print #emit.fo, ""
+		emit.at_bol = TRUE
+	end if
 end sub
 
 private sub hFlushLine(byval begin as zstring ptr, byval p as ubyte ptr)
@@ -329,6 +364,11 @@ private function hMacroBodyIsCodeBlock(byval n as ASTNODE ptr) as integer
 	end if
 end function
 
+private function hMacroBodyIsScopeBlockWith1Stmt(byval n as ASTNODE ptr) as integer
+	function = (n->expr->class = ASTCLASS_SCOPEBLOCK) andalso _
+	           astHas1Child(n->expr) andalso (not astIsCodeBlock(n->expr->head))
+end function
+
 private sub hMacroParamList(byref s as string, byval n as ASTNODE ptr)
 	if n->paramcount >= 0 then
 		s += hParamList(n)
@@ -396,15 +436,26 @@ private sub emitCode(byval n as ASTNODE ptr, byval parentclass as integer)
 
 	case ASTCLASS_PPDEFINE
 		if hMacroBodyIsCodeBlock(n) then
-			var s = "#macro " + *n->text
-			hMacroParamList(s, n)
-			emitLine(s)
+			if hMacroBodyIsScopeBlockWith1Stmt(n) then
+				emitSingleLineBegin()
+				var s = "#define " + *n->text
+				hMacroParamList(s, n)
+				s += " scope"
+				emitLine(s)
+				emitCode(n->expr->head)
+				emitLine("end scope")
+				emitSingleLineEnd()
+			else
+				var s = "#macro " + *n->text
+				hMacroParamList(s, n)
+				emitLine(s)
 
-			emit.indent += 1
-			emitCode(n->expr)
-			emit.indent -= 1
+				emit.indent += 1
+				emitCode(n->expr)
+				emit.indent -= 1
 
-			emitLine("#endmacro")
+				emitLine("#endmacro")
+			end if
 		else
 			var s = "#define " + *n->text
 			hMacroParamList(s, n)
@@ -938,6 +989,8 @@ sub emitFile(byref filename as string, byval header as HeaderInfo ptr, byval ast
 	emit.indent = 0
 	emit.comment = 0
 	emit.commentspaces = 0
+	emit.singleline = 0
+	emit.at_bol = TRUE
 
 	emit.fo = freefile()
 	if open(filename, for output, as #emit.fo) then

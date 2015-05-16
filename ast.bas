@@ -522,6 +522,16 @@ function astHasOnlyChild(byval n as ASTNODE ptr, byval astclass as integer) as i
 	function = astHas1Child(n) andalso (n->head->class = astclass)
 end function
 
+function astIsCodeBlock(byval n as ASTNODE ptr) as integer
+	select case n->class
+	case ASTCLASS_SCOPEBLOCK, ASTCLASS_IFBLOCK, ASTCLASS_DOWHILE, _
+	     ASTCLASS_WHILE, ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
+		function = TRUE
+	case ASTCLASS_PROC
+		function = (n->expr <> NULL)
+	end select
+end function
+
 function astIsMergableBlock(byval n as ASTNODE ptr) as integer
 	select case n->class
 	case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM, ASTCLASS_RENAMELIST
