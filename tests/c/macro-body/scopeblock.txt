@@ -8,4 +8,4 @@
       tests/c/macro-body/scopeblock.h
 [5/5] __FB_DOS__
       tests/c/macro-body/scopeblock.h
-emitting: tests/c/macro-body/scopeblock.bi (6 declarations, 0 TODOs)
+emitting: tests/c/macro-body/scopeblock.bi (7 declarations, 0 TODOs)

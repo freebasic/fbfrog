@@ -24,3 +24,10 @@
 	while 1
 	wend
 #endmacro
+#macro A1
+	scope
+		if 1 then
+			f(1)
+		end if
+	end scope
+#endmacro
