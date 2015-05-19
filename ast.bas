@@ -539,6 +539,10 @@ function astIsMergableBlock(byval n as ASTNODE ptr) as integer
 	end select
 end function
 
+function astIsCastTo(byval n as ASTNODE ptr, byval dtype as integer, byval subtype as ASTNODE ptr) as integer
+	function = (n->class = ASTCLASS_CAST) andalso (n->dtype = dtype) andalso astIsEqual(n->subtype, subtype)
+end function
+
 ''
 '' Check whether two ASTs are "equal".
 ''
@@ -776,6 +780,7 @@ function astDumpOne(byval n as ASTNODE ptr) as string
 	checkAttrib(DLLIMPORT)
 	checkAttrib(ENUMCONST)
 	checkAttrib(NORENAMELIST)
+	checkAttrib(USED)
 
 	if n->class = ASTCLASS_OPTION then
 		s += " " + *tkInfoText(n->opt)

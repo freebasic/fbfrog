@@ -11,11 +11,20 @@ int f3(int i) {
 	return 0;
 }
 
+// Just a RETURN
 void f4(void) {
 	return;
 }
 
 // Anonymous parameter + body
 int f(int) {
+	f(0);
 	return 0;
-};
+}
+
+int f(void) { f(); }
+void f(void) { f(); }
+int f(int i) { return i; }
+int f(int i) { return i + i; }
+int f(int a, int b) { return a + b; }
+int f(int a, int b) { return a + b + b; }

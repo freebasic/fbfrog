@@ -1443,6 +1443,129 @@ private sub hlAddUndefsAboveDecls(byval ast as ASTNODE ptr)
 	wend
 end sub
 
+type ParamUsageChecker
+	proc as ASTNODE ptr
+	have_multiple_uses as integer
+	declare constructor(byval proc as ASTNODE ptr)
+	declare function lookupParam(byval id as zstring ptr) as ASTNODE ptr
+	declare sub onSymbolRef(byval id as zstring ptr)
+	declare destructor()
+end type
+
+constructor ParamUsageChecker(byval proc as ASTNODE ptr)
+	this.proc = proc
+end constructor
+
+function ParamUsageChecker.lookupParam(byval id as zstring ptr) as ASTNODE ptr
+	var param = proc->head
+	while param
+		if param->text andalso (*param->text = *id) then
+			return param
+		end if
+		param = param->next
+	wend
+	function = NULL
+end function
+
+sub ParamUsageChecker.onSymbolRef(byval id as zstring ptr)
+	var param = lookupParam(id)
+	if param then
+		if param->attrib and ASTATTRIB_USED then
+			have_multiple_uses = TRUE
+		else
+			param->attrib or= ASTATTRIB_USED
+		end if
+	end if
+end sub
+
+destructor ParamUsageChecker()
+	var param = proc->head
+	while param
+		param->attrib and= not ASTATTRIB_USED
+		param = param->next
+	wend
+end destructor
+
+dim shared paramusage as ParamUsageChecker ptr
+
+private function collectParamUses(byval n as ASTNODE ptr) as integer
+	if astIsTEXT(n) then
+		paramusage->onSymbolRef(n->text)
+	end if
+	function = TRUE
+end function
+
+'' Check whether a proc can be turned into a #define.
+''  - it must only return an expression; no other statements in the body.
+''  - parameters (if any) can be used only once (otherwise they'd be evaluated
+''    multiple times if turned into macro parameters).
+private sub maybeProc2Macro(byval proc as ASTNODE ptr)
+	assert(proc->class = ASTCLASS_PROC)
+
+	var body = proc->expr
+	assert(body->class = ASTCLASS_SCOPEBLOCK)
+
+	'' just a RETURN?
+	if astHasOnlyChild(body, ASTCLASS_RETURN) then
+		var ret = body->head
+
+		'' does it return an expression?
+		if ret->head then
+			'' Check that each parameter is only used once by the expression
+			paramusage = new ParamUsageChecker(proc)
+			astVisit(ret->head, @collectParamUses)
+			var have_multiple_uses = paramusage->have_multiple_uses
+			delete paramusage
+			paramusage = NULL
+
+			if have_multiple_uses = FALSE then
+				'' Turn proc into #define
+				''  - keep parameters
+				''  - cast expression to function's result type if there
+				''    is no cast yet. This may or may not be useful...
+
+				proc->class = ASTCLASS_PPDEFINE
+
+				'' Params: turn into MACROPARAMs, forget dtypes
+				var param = proc->head
+				while param
+					param->class = ASTCLASS_MACROPARAM
+					astSetType(param, TYPE_NONE, NULL)
+					param = param->next
+				wend
+
+				'' Macro body, add cast if there is none yet
+				var expr = astClone(ret->head)
+				if astIsCastTo(expr, proc->dtype, proc->subtype) = FALSE then
+					expr = astNew(ASTCLASS_CAST, expr)
+					astSetType(expr, proc->dtype, proc->subtype)
+				end if
+
+				'' Proc body -> macro body
+				astDelete(proc->expr)
+				proc->expr = expr
+
+				'' Forget function dtype & callconv
+				astSetType(proc, TYPE_NONE, NULL)
+				proc->attrib and= not ASTATTRIB__CALLCONV
+			end if
+		end if
+	end if
+end sub
+
+private sub hlProcs2Macros(byval ast as ASTNODE ptr)
+	var i = ast->head
+	while i
+
+		'' proc with a body?
+		if (i->class = ASTCLASS_PROC) andalso i->expr then
+			maybeProc2Macro(i)
+		end if
+
+		i = i->next
+	wend
+end sub
+
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 private function hlCountCallConvs(byval n as ASTNODE ptr) as integer
@@ -2014,6 +2137,8 @@ sub hlGlobal(byval ast as ASTNODE ptr, byref api as ApiInfo)
 	if api.idopt(OPT_UNDEFBEFOREDECL).count > 0 then
 		hlAddUndefsAboveDecls(ast)
 	end if
+
+	hlProcs2Macros(ast)
 end sub
 
 ''

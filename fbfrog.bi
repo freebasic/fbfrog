@@ -708,6 +708,7 @@ const ASTATTRIB_GENERATEDID   = 1 shl 14
 const ASTATTRIB_DLLIMPORT     = 1 shl 15
 const ASTATTRIB_ENUMCONST     = 1 shl 16
 const ASTATTRIB_NORENAMELIST  = 1 shl 17
+const ASTATTRIB_USED          = 1 shl 18
 
 const ASTATTRIB__CALLCONV = ASTATTRIB_CDECL or ASTATTRIB_STDCALL
 
@@ -805,6 +806,7 @@ declare function astHas1Child(byval n as ASTNODE ptr) as integer
 declare function astHasOnlyChild(byval n as ASTNODE ptr, byval astclass as integer) as integer
 declare function astIsCodeBlock(byval n as ASTNODE ptr) as integer
 declare function astIsMergableBlock(byval n as ASTNODE ptr) as integer
+declare function astIsCastTo(byval n as ASTNODE ptr, byval dtype as integer, byval subtype as ASTNODE ptr) as integer
 declare function astIsEqual _
 	( _
 		byval a as ASTNODE ptr, _

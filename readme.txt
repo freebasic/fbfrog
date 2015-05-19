@@ -210,6 +210,8 @@ unnecessary?
 To do:
 
 Bugs:
+* C parser needs to verify #directives, since they can be inserted by "to c" -replacements,
+  which aren't verified by the CPP
 * in winapi, there is a case where an auto-generated tagid conflicts
   with a real typedef, which is errornously renamed. Luckily fbc detects this
   problem easily (recursive UDT).
