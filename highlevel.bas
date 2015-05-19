@@ -1711,8 +1711,15 @@ private function hlBuildRenameList(byval n as ASTNODE ptr) as ASTNODE ptr
 				astDumpPrettyClass(i->class) + " " + *i->alias + " => " + *i->text))
 		end if
 
-		'' TODO: recurse into struct/union/enum if renaming fields/enumconsts...
+		'' TODO: recurse into struct/union if renaming fields...
 		''astAppend(list, hlBuildRenameList(i))
+
+		if i->class = ASTCLASS_ENUM then
+			'' Handle enumconsts - they're in the same scope as the enum itself anyways,
+			'' so we don't need to worry about making a nested renamelist for the enum.
+			astAppend(list, hlBuildRenameList(i))
+		end if
+
 
 		i = i->next
 	wend

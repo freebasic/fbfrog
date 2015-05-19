@@ -2,6 +2,7 @@
 
 '' The following symbols have been renamed:
 ''     enum E => E_
+''     constant A => A_
 ''     typedef T => T_
 ''     #define B => B_
 ''     procedure f => f_
