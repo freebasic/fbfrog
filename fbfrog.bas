@@ -1397,6 +1397,11 @@ end sub
 	frogEvaluateScript(frog.script->head, astNewGROUP(), astNewGROUP())
 	assert(frog.apicount > 0)
 
+	select case frog.apicount
+	case is > 64
+		oops("too many APIs, max. is 64, sorry")
+	end select
+
 	frog.prefix = space((len(str(frog.apicount)) * 2) + 4)
 
 	'' If no output .bi files were given via -emit options on the command line,

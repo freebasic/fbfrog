@@ -1,7 +1,7 @@
 -ifdef __FB_DOS__
-	-declareversions VER 1 2 3
+	-declareversions VER 1 2
 -else
-	-declareversions VER 1 2 3 4 5
+	-declareversions VER 1 2 3
 -endif
 
 -select VER
@@ -9,16 +9,10 @@
 	-define VER 1
 -case 2
 	-define VER 2
+	-declarebool DEPRECATED_V2
 -case 3
 	-define VER 3
-	-declarebool DEPRECATED_V3
--case 4
-	-define VER 4
-	-declarebool DEPRECATED_V3
--case 5
-	-define VER 5
-	-declarebool DEPRECATED_V3
-	-declarebool DEPRECATED_V5
+	-declarebool DEPRECATED_V2
 -endselect
 
 -ifdef __FB_WIN32__
@@ -37,23 +31,7 @@
 	-endif
 -endif
 
--ifdef __FB_LINUX__
-	-declarebool FOO1
-	-ifdef FOO1
-	-else
-		-declarebool FOO2
-		-ifdef FOO2
-			-declarebool FOO3
-			-ifdef FOO3
-			-else
-				-declarebool FOO4
-			-endif
-		-else
-		-endif
-	-endif
--endif
-
--ifdef DEPRECATED_V3
+-ifdef DEPRECATED_V2
 	-define DROP_OLD_V1_SYMBOLS 1
 	-define DROP_OLD_V2_SYMBOLS 1
 -endif
