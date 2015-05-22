@@ -719,13 +719,10 @@ private sub hSolveOutRedundantVerblocks(byval code as ASTNODE ptr, byval parentv
 		if i->class = ASTCLASS_VERBLOCK then
 			hSolveOutRedundantVerblocks(i, i->expr)
 
-			'' Has a parent?
-			if parentveror then
-				'' Nested verblock covers at least the parent's versions?
-				if astGroupContainsAllChildrenOf(i->expr, parentveror) then
-					'' Remove this verblock, preserve only its children
-					astReplace(code, i, astCloneChildren(i))
-				end if
+			'' Nested verblock covers at least the parent's versions?
+			if astGroupContainsAllChildrenOf(i->expr, parentveror) then
+				'' Remove this verblock, preserve only its children
+				astReplace(code, i, astCloneChildren(i))
 			end if
 		else
 			hSolveOutRedundantVerblocks(i, parentveror)
