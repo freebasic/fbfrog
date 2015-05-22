@@ -213,11 +213,39 @@ To do:
 - The generated #if blocks should be a bit prettier
 - maybe targets can be built-ins? only need to support "all", "nodos", "windowsonly"
 - translation process should use knowledge about the target
+- Remove VEROR/VERAND completely, generate the #if expressions based on the bitmasks
+- LCS is main bottle-neck, can it be optimized?
 
-1. separate verblock condition expression generation from verblock generation
-  Remove VEROR/VERAND, and encode covered APIs as bitfields: one bit per API,
-  set to 1 if VERBLOCK covers it, later generate the condition expression based on that.
-  64bit = 64 APIs, enough for now, biggest currently = 50 (libbfd)
+- consecutive verblocks should be added to a prefix tree, to solve out common
+  API conditions, e.g.:
+
+	#if win32 and static		#if win32
+		...				#if static
+	#endif						...
+	#if win32				#endif
+		...		=>		...
+	#endif					#if static
+	#if win32 and static				...
+		...				#endif
+	#endif				#endif
+
+  and to catch bad merges:
+
+	#if win32			#if win32
+		[win32 1]			[win32 1]
+	#else					[win32 2]
+		[linux]		=>	#else
+	#endif					[linux]
+	#if win32			#endif
+		[win32 2]
+	#endif
+
+- verblocks should be prefix trees from the beginning (making LCS code harder though)
+- perhaps we can use a prefix tree instead of LCS?
+- use pre-calculated SHA1s instead of astIsEqual()
+  - must exclude the callconv and attribs like HIDECALLCONV from the hash though,
+    as they require special handling (different callconv treated equal if both sides hide it)
+  - but only if faster
 
 Bugs:
 * C parser needs to verify #directives, since they can be inserted by "to c" -replacements,

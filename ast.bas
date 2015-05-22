@@ -462,7 +462,8 @@ function astCloneNode(byval n as ASTNODE ptr) as ASTNODE ptr
 	case ASTCLASS_PPDEFINE : c->paramcount = n->paramcount
 	case ASTCLASS_STRUCT, ASTCLASS_UNION : c->maxalign = n->maxalign
 	case ASTCLASS_OPTION : c->opt = n->opt
-	case ASTCLASS_VERBLOCK : c->apis = n->apis
+	case ASTCLASS_VERBLOCK, ASTCLASS_PPIF, ASTCLASS_PPELSEIF
+		c->apis = n->apis
 	end select
 
 	function = c
@@ -627,7 +628,7 @@ function astIsEqual _
 	case ASTCLASS_OPTION
 		if a->opt <> b->opt then exit function
 
-	case ASTCLASS_VERBLOCK
+	case ASTCLASS_VERBLOCK, ASTCLASS_PPIF, ASTCLASS_PPELSEIF
 		if a->apis <> b->apis then exit function
 
 	case ASTCLASS_VEROR, ASTCLASS_VERAND
@@ -789,7 +790,7 @@ function astDumpOne(byval n as ASTNODE ptr) as string
 	select case n->class
 	case ASTCLASS_OPTION
 		s += " " + *tkInfoText(n->opt)
-	case ASTCLASS_VERBLOCK
+	case ASTCLASS_VERBLOCK, ASTCLASS_PPIF, ASTCLASS_PPELSEIF
 		s += " apis=" + bin(n->apis)
 	end select
 

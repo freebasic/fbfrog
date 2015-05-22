@@ -467,6 +467,7 @@ private sub emitCode(byval n as ASTNODE ptr, byval parentclass as integer)
 
 	case ASTCLASS_PPIF
 		dim s as string
+		assert(n->expr)
 		select case n->expr->class
 		'' #if defined(id)        ->    #ifdef id
 		case ASTCLASS_DEFINED

@@ -666,7 +666,11 @@ private sub hTurnVerblockApiMasksIntoVerExprs(byval code as ASTNODE ptr)
 
 		hTurnVerblockApiMasksIntoVerExprs(i)
 
-		if i->class = ASTCLASS_VERBLOCK then
+		'' should be solved out by hTurnVerblocksIntoPpIfs() already
+		assert(i->class <> ASTCLASS_VERBLOCK)
+
+		select case i->class
+		case ASTCLASS_PPIF, ASTCLASS_PPELSEIF
 			'' Build VEROR from the VERBLOCK's apis bitmask
 
 			for api as integer = 0 to frog.apicount - 1
@@ -681,7 +685,7 @@ private sub hTurnVerblockApiMasksIntoVerExprs(byval code as ASTNODE ptr)
 			next
 
 			assert(i->expr <> NULL)
-		end if
+		end select
 
 		i = i->next
 	wend
@@ -777,12 +781,10 @@ private sub hTurnVerblocksIntoPpIfs(byval code as ASTNODE ptr)
 			'' (as long as no duplicates would be added to the list of collected versions)
 			'' and turn them into #elseif's while at it.
 			var j = i->next
-			var collected = astClone(i->expr)
-			assert(astIsVEROR(collected))
-			while j andalso astIsVERBLOCK(j) andalso _
-			       (not astGroupContainsAnyChildrenOf(collected, j->expr))
+			var collected = i->apis
+			while j andalso astIsVERBLOCK(j) andalso ((collected and j->apis) = 0)
 				j->class = ASTCLASS_PPELSEIF
-				collected = astNewVEROR(collected, astClone(j->expr))
+				collected or= j->apis
 				j = j->next
 			wend
 
@@ -791,21 +793,17 @@ private sub hTurnVerblocksIntoPpIfs(byval code as ASTNODE ptr)
 			'' If the collected verblocks cover all versions, then only the first #if check
 			'' and any intermediate #elseif checks are needed, but the last check can be turned
 			'' into a simple #else.
-			if astIsEqual(collected, frog.fullveror) then
+			if collected = frog.fullapis then
 				var last = iif(j, j->prev, code->tail)
 				'' But only if we've got more than 1 verblock
 				if i <> last then
 					assert(last->class = ASTCLASS_PPELSEIF)
 					last->class = ASTCLASS_PPELSE
-					astDelete(last->expr)
-					last->expr = NULL
 				end if
 			end if
 
 			'' Insert #endif
 			astInsert(code, astNew(ASTCLASS_PPENDIF), j)
-
-			astDelete(collected)
 		end if
 
 		i = i->next
@@ -1054,8 +1052,8 @@ sub astProcessVerblocks(byval code as ASTNODE ptr)
 	assert(code->class = ASTCLASS_GROUP)
 
 	hSolveOutRedundantVerblocks(code, frog.fullapis)
-	hTurnVerblockApiMasksIntoVerExprs(code)
 	hTurnVerblocksIntoPpIfs(code)
+	hTurnVerblockApiMasksIntoVerExprs(code)
 
 	'' Beautification: Apply some trivial refactoring to the version
 	'' conditions, to eliminate duplicate checks where possible.
