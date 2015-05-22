@@ -947,6 +947,7 @@ namespace frog
 	extern as ASTNODE ptr completeverors, fullveror
 	extern as ApiInfo ptr apis
 	extern as integer apicount
+	extern as ulongint fullapis
 end namespace
 
 declare function frogLookupBiFromH(byval hfile as zstring ptr) as integer

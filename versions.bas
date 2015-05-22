@@ -709,23 +709,22 @@ end sub
 '' Similar to that, verblocks at the toplevel can be solved out, if they cover
 '' all possible versions. (think of them as being nested in a global verblock)
 ''
-private sub hSolveOutRedundantVerblocks(byval code as ASTNODE ptr, byval parentveror as ASTNODE ptr)
-	assert(astIsVEROR(parentveror))
-
+private sub hSolveOutRedundantVerblocks(byval code as ASTNODE ptr, byval parentapis as ulongint)
 	var i = code->head
 	while i
 		var nxt = i->next
 
 		if i->class = ASTCLASS_VERBLOCK then
-			hSolveOutRedundantVerblocks(i, i->expr)
+			hSolveOutRedundantVerblocks(i, i->apis)
 
+			assert(parentapis <> 0)
 			'' Nested verblock covers at least the parent's versions?
-			if astGroupContainsAllChildrenOf(i->expr, parentveror) then
+			if (i->apis and parentapis) = parentapis then
 				'' Remove this verblock, preserve only its children
 				astReplace(code, i, astCloneChildren(i))
 			end if
 		else
-			hSolveOutRedundantVerblocks(i, parentveror)
+			hSolveOutRedundantVerblocks(i, parentapis)
 		end if
 
 		i = nxt
@@ -1054,14 +1053,8 @@ end sub
 sub astProcessVerblocks(byval code as ASTNODE ptr)
 	assert(code->class = ASTCLASS_GROUP)
 
+	hSolveOutRedundantVerblocks(code, frog.fullapis)
 	hTurnVerblockApiMasksIntoVerExprs(code)
-
-	'' These 2 rely on version expressions not being simplified yet:
-	'' It's much easier to check which versions are covered by a certain
-	'' VERBLOCK if the VERBLOCK's version expression is just a VEROR of all
-	'' VERANDs (each VERAND representing one version), as opposed to a
-	'' simplified but arbitrary tree of VERORs/VERANDs.
-	hSolveOutRedundantVerblocks(code, frog.fullveror)
 	hTurnVerblocksIntoPpIfs(code)
 
 	'' Beautification: Apply some trivial refactoring to the version

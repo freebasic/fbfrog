@@ -62,6 +62,7 @@ namespace frog
 	dim shared as ASTNODE ptr completeverors, fullveror
 	dim shared as ApiInfo ptr apis
 	dim shared as integer apicount
+	dim shared as ulongint fullapis
 
 	'' *.bi output file names from the -emit options
 	dim shared as BIFILE ptr bis
@@ -1400,6 +1401,10 @@ end sub
 	select case frog.apicount
 	case is > 64
 		oops("too many APIs, max. is 64, sorry")
+	case 64
+		frog.fullapis = -1ll
+	case else
+		frog.fullapis = (1ull shl frog.apicount) - 1
 	end select
 
 	frog.prefix = space((len(str(frog.apicount)) * 2) + 4)
