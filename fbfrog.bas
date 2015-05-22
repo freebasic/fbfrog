@@ -1480,7 +1480,7 @@ end sub
 				hlFile(.incoming, frog.apis[api], .options)
 
 				'' Merge the "incoming" tree into the "final" tree
-				astMergeNext(astNewVEROR(astClone(frog.apis[api].verand)), .final, .incoming)
+				astMergeNext(1ull shl api, .final, .incoming)
 
 				assert(.incoming = NULL)
 				assert(.options.inclibs = NULL)
@@ -1489,8 +1489,7 @@ end sub
 			end with
 		next
 
-		frog.fullveror = astNewVEROR(frog.fullveror, frog.apis[api].verand)
-		frog.apis[api].verand = NULL
+		frog.fullveror = astNewVEROR(frog.fullveror, astClone(frog.apis[api].verand))
 	next
 
 	for bi as integer = 0 to frog.bicount - 1

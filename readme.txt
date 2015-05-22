@@ -209,6 +209,16 @@ unnecessary?
 
 To do:
 
+- Need to support all fbc targets (e.g. __FB_ARM__) and should use __FB_UNIX__ if possible
+- The generated #if blocks should be a bit prettier
+- maybe targets can be built-ins? only need to support "all", "nodos", "windowsonly"
+- translation process should use knowledge about the target
+
+1. separate verblock condition expression generation from verblock generation
+  Remove VEROR/VERAND, and encode covered APIs as bitfields: one bit per API,
+  set to 1 if VERBLOCK covers it, later generate the condition expression based on that.
+  64bit = 64 APIs, enough for now, biggest currently = 50 (libbfd)
+
 Bugs:
 * C parser needs to verify #directives, since they can be inserted by "to c" -replacements,
   which aren't verified by the CPP
@@ -222,6 +232,9 @@ Bugs:
 	};
 * <wstr("a") wstr("b")> doesn't work as string literal, + string concat
   operators have to be inserted
+* void casts shouldn't silently be translated to cast(any, ...), as that's not
+  allowed in FB but could easily be missed if it's in a macro body
+  (at least, mark it with a TODO)
 
 Interesting improvements:
 * X11 headers have commented out parameter names. It'd be nice if fbfrog could
@@ -247,8 +260,14 @@ Interesting improvements:
   Store fields/procbodies at toplevel wrapped in TYPEBEGIN/TYPEEND/PROCBEGIN/PROCEND,
   allowing nested LOC to be merged separate from the compound.
   (interesting for fields if UDT's FIELD=N value changes between targets)
-  Store LOC as array instead of list? save memory, better caching, re-use as
-  decltables for merging. But: highlevel passes require insert/delete...
+  Store LOC as array (save memory, better caching, re-use as decltables for merging)
+  (even though highlevel passes require insert/delete, that's not that much since
+  it will be only ~ 20k * sizeof(StmtNode) array elements, and if needed a gap buffer
+  can be used)
+  * use separate ExprNode to hold expressions
+      - 2 kinds of macros: 1. expression macro, 2. code block macro
+* allow translating constructs partially, to make writing replacements easier
+  (the tool can parse more than it can translate to FB)
 * Better documentation, help.markdown/help.html
 * CLI: Switch to -option=param1,param2 format, with space as hard-delimiter?
   Current [optional parameters] can be confusing. -define A foo.h treats foo.h
@@ -277,8 +296,6 @@ Interesting improvements:
 * add jmp_buf to the extradatatypes table, then implement hIsPlainJmpBuf() as hashtb lookup
 * Add global pool of strings (especially identifiers), pass HASHSTR objects instead of
   zstring ptr's, with precalculated hashes + re-usable read-only strings
-* Remove VEROR/VERAND, and encode covered APIs as bitfields: one bit per API,
-  set to 1 if VERBLOCK covers it, later generate the condition expression based on that.
 * auto-convert C's [] array indexing into FB's (): track which vars/fields are
   arrays (or pointers) and then compare indexing BOPs against that.
 * Add support for

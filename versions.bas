@@ -23,7 +23,7 @@
 type DECLNODE
 	n	as ASTNODE ptr  '' The declaration at that index
 	hash	as ulong        '' Precalculated hash value for the declaration
-	veror	as ASTNODE ptr  '' Points to the VEROR expression of the declaration's parent VERBLOCK
+	apis	as ulongint     '' APIs bitmask of the declaration's parent VERBLOCK
 end type
 
 type DECLTABLE
@@ -43,15 +43,7 @@ private function decltableHash(byval n as ASTNODE ptr) as ulong
 	function = hash
 end function
 
-private sub decltableAdd _
-	( _
-		byval table as DECLTABLE ptr, _
-		byval n as ASTNODE ptr, _
-		byval veror as ASTNODE ptr _
-	)
-
-	assert(astIsVEROR(veror))
-
+private sub decltableAdd( byval table as DECLTABLE ptr, byval n as ASTNODE ptr, byval apis as ulongint )
 	if table->count = table->room then
 		table->room += 256
 		table->array = reallocate(table->array, table->room * sizeof(DECLNODE))
@@ -60,19 +52,13 @@ private sub decltableAdd _
 	with table->array[table->count]
 		.n = n
 		.hash = decltableHash(n)
-		.veror = veror
+		.apis = apis
 	end with
 
 	table->count += 1
-
 end sub
 
-private sub decltableInit _
-	( _
-		byval table as DECLTABLE ptr, _
-		byval code as ASTNODE ptr _
-	)
-
+private sub decltableInit( byval table as DECLTABLE ptr, byval code as ASTNODE ptr )
 	table->array = NULL
 	table->count = 0
 	table->room = 0
@@ -87,7 +73,7 @@ private sub decltableInit _
 		'' For each declaration in that VERBLOCK...
 		var decl = verblock->head
 		while decl
-			decltableAdd(table, decl, verblock->expr)
+			decltableAdd(table, decl, verblock->apis)
 			decl = decl->next
 		wend
 
@@ -152,10 +138,9 @@ function astNewVEROR(byval a as ASTNODE ptr, byval b as ASTNODE ptr) as ASTNODE 
 	function = astNewGroupLike(ASTCLASS_VEROR, a, b)
 end function
 
-private function astNewVERBLOCK(byval veror as ASTNODE ptr, byval children as ASTNODE ptr) as ASTNODE ptr
-	assert(astIsVEROR(veror))
+private function astNewVERBLOCK(byval apis as ulongint, byval children as ASTNODE ptr) as ASTNODE ptr
 	var n = astNew(ASTCLASS_VERBLOCK, children)
-	n->expr = veror
+	n->apis = apis
 	function = n
 end function
 
@@ -163,58 +148,47 @@ end function
 '' should be aswell, so hMergeStructsManually() doesn't have to handle both
 '' cases of "fresh still unwrapped fields" and "already wrapped from previous
 '' merge", but only the latter.
-private sub hWrapStructFieldsInVerblocks(byval veror as ASTNODE ptr, byval code as ASTNODE ptr)
+private sub hWrapStructFieldsInVerblocks(byval api as ulongint, byval code as ASTNODE ptr)
 	var i = code->head
 	while i
-		hWrapStructFieldsInVerblocks(veror, i)
+		hWrapStructFieldsInVerblocks(api, i)
 		i = i->next
 	wend
 
 	if astIsMergableBlock(code) then
-		var newfields = astNewVERBLOCK(astClone(veror), astCloneChildren(code))
+		var newfields = astNewVERBLOCK(api, astCloneChildren(code))
 		astRemoveChildren(code)
 		astAppend(code, newfields)
 	end if
 end sub
 
-function astWrapFileInVerblock(byval veror as ASTNODE ptr, byval code as ASTNODE ptr) as ASTNODE ptr
-	hWrapStructFieldsInVerblocks(veror, code)
-	function = astNewVERBLOCK(veror, code)
+private function astWrapFileInVerblock(byval api as ulongint, byval code as ASTNODE ptr) as ASTNODE ptr
+	hWrapStructFieldsInVerblocks(api, code)
+	function = astNewVERBLOCK(api, code)
 end function
 
 private sub hVerblockAppend _
 	( _
 		byval n as ASTNODE ptr, _
-		byval veror1 as ASTNODE ptr, _
-		byval veror2 as ASTNODE ptr, _
+		byval apis as ulongint, _
 		byval child as ASTNODE ptr _
 	)
-
-	var veror = astNewVEROR(veror1, veror2)
 
 	'' If the tree's last VERBLOCK covers the same versions, then just add
 	'' the new children nodes to that instead of opening a new VERBLOCK.
 	var verblock = n->tail
 	if verblock andalso astIsVERBLOCK(verblock) then
-		if astIsEqual(n->tail->expr, veror) then
-			astAppend(n->tail, child)
-			astDelete(veror)
+		if verblock->apis = apis then
+			astAppend(verblock, child)
 			exit sub
 		end if
 	end if
 
-	astAppend(n, astNewVERBLOCK(veror, child))
+	astAppend(n, astNewVERBLOCK(apis, child))
 end sub
 
-private sub hAddDecl _
-	( _
-		byval c as ASTNODE ptr, _
-		byval array as DECLNODE ptr, _
-		byval i as integer _
-	)
-
-	hVerblockAppend(c, astClone(array[i].veror), NULL, astClone(array[i].n))
-
+private sub hAddDecl( byval c as ASTNODE ptr, byval array as DECLNODE ptr, byval i as integer )
+	hVerblockAppend(c, array[i].apis, astClone(array[i].n))
 end sub
 
 ''
@@ -328,10 +302,10 @@ private sub hAddMergedDecl _
 		byval bi as integer _
 	)
 
-	var adecl  = aarray[ai].n
-	var bdecl  = barray[bi].n
-	var averor = aarray[ai].veror
-	var bveror = barray[bi].veror
+	var adecl = aarray[ai].n
+	var bdecl = barray[bi].n
+	var aapis = aarray[ai].apis
+	var bapis = barray[bi].apis
 
 	assert(adecl->class = bdecl->class)
 
@@ -400,7 +374,7 @@ private sub hAddMergedDecl _
 	end if
 
 	'' Add struct to result tree, under both a's and b's version numbers
-	hVerblockAppend(c, astClone(averor), astClone(bveror), mdecl)
+	hVerblockAppend(c, aapis or bapis, mdecl)
 
 end sub
 
@@ -663,7 +637,7 @@ function astMergeVerblocks _
 	''
 
 	hAstMerge(c, atable.array, 0, atable.count - 1, _
-	              btable.array, 0, btable.count - 1)
+	             btable.array, 0, btable.count - 1)
 
 	decltableEnd(@btable)
 	decltableEnd(@atable)
@@ -674,8 +648,8 @@ function astMergeVerblocks _
 	function = c
 end function
 
-sub astMergeNext(byval veror as ASTNODE ptr, byref final as ASTNODE ptr, byref incoming as ASTNODE ptr)
-	incoming = astWrapFileInVerblock(veror, incoming)
+sub astMergeNext(byval api as ulongint, byref final as ASTNODE ptr, byref incoming as ASTNODE ptr)
+	incoming = astWrapFileInVerblock(api, incoming)
 	if final = NULL then
 		final = astNewGROUP(incoming)
 	else
@@ -685,6 +659,33 @@ sub astMergeNext(byval veror as ASTNODE ptr, byref final as ASTNODE ptr, byref i
 end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+private sub hTurnVerblockApiMasksIntoVerExprs(byval code as ASTNODE ptr)
+	var i = code->head
+	while i
+
+		hTurnVerblockApiMasksIntoVerExprs(i)
+
+		if i->class = ASTCLASS_VERBLOCK then
+			'' Build VEROR from the VERBLOCK's apis bitmask
+
+			for api as integer = 0 to frog.apicount - 1
+				if i->apis and (1ull shl api) then
+					var veror = astNewVEROR(astClone(frog.apis[api].verand))
+					if i->expr then
+						i->expr = astNewVEROR(i->expr, veror)
+					else
+						i->expr = veror
+					end if
+				end if
+			next
+
+			assert(i->expr <> NULL)
+		end if
+
+		i = i->next
+	wend
+end sub
 
 ''
 '' Structs/unions/enums can have nested verblocks (to allow fields to be
@@ -1055,6 +1056,8 @@ end sub
 
 sub astProcessVerblocks(byval code as ASTNODE ptr)
 	assert(code->class = ASTCLASS_GROUP)
+
+	hTurnVerblockApiMasksIntoVerExprs(code)
 
 	'' These 2 rely on version expressions not being simplified yet:
 	'' It's much easier to check which versions are covered by a certain

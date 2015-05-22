@@ -737,6 +737,7 @@ type ASTNODE
 		paramcount	as integer  '' PPDEFINE: -1 = #define m, 0 = #define m(), 1 = #define m(a), ...
 		maxalign	as integer  '' STRUCT/UNION: FIELD=N/#pragma pack(N)
 		opt		as integer  '' OPTION: OPT_*
+		apis		as ulongint '' VERBLOCK
 	end union
 
 	'' Linked list of child nodes, operands/fields/parameters/...
@@ -831,13 +832,12 @@ declare sub astDump _
 declare function astDumpPrettyVersion(byval n as ASTNODE ptr) as string
 declare function astNewVERAND(byval a as ASTNODE ptr = NULL, byval b as ASTNODE ptr = NULL) as ASTNODE ptr
 declare function astNewVEROR(byval a as ASTNODE ptr = NULL, byval b as ASTNODE ptr = NULL) as ASTNODE ptr
-declare function astWrapFileInVerblock(byval veror as ASTNODE ptr, byval code as ASTNODE ptr) as ASTNODE ptr
 declare function astMergeVerblocks _
 	( _
 		byval a as ASTNODE ptr, _
 		byval b as ASTNODE ptr _
 	) as ASTNODE ptr
-declare sub astMergeNext(byval veror as ASTNODE ptr, byref final as ASTNODE ptr, byref incoming as ASTNODE ptr)
+declare sub astMergeNext(byval api as ulongint, byref final as ASTNODE ptr, byref incoming as ASTNODE ptr)
 declare sub astProcessVerblocks(byval code as ASTNODE ptr)
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -945,6 +945,8 @@ namespace frog
 	extern as integer verbose
 	extern as ASTNODE ptr script
 	extern as ASTNODE ptr completeverors, fullveror
+	extern as ApiInfo ptr apis
+	extern as integer apicount
 end namespace
 
 declare function frogLookupBiFromH(byval hfile as zstring ptr) as integer
