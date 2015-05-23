@@ -513,7 +513,6 @@ private sub hAstMerge _
 		byval blast as integer _
 	)
 
-
 	'' No longest common substring possible?
 	if afirst > alast then
 		'' Add bfirst..blast to result
@@ -659,37 +658,6 @@ sub astMergeNext(byval api as ulongint, byref final as ASTNODE ptr, byref incomi
 end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-
-private sub hTurnVerblockApiMasksIntoVerExprs(byval code as ASTNODE ptr)
-	var i = code->head
-	while i
-
-		hTurnVerblockApiMasksIntoVerExprs(i)
-
-		'' should be solved out by hTurnVerblocksIntoPpIfs() already
-		assert(i->class <> ASTCLASS_VERBLOCK)
-
-		select case i->class
-		case ASTCLASS_PPIF, ASTCLASS_PPELSEIF
-			'' Build VEROR from the VERBLOCK's apis bitmask
-
-			for api as integer = 0 to frog.apicount - 1
-				if i->apis and (1ull shl api) then
-					var veror = astNewVEROR(astClone(frog.apis[api].verand))
-					if i->expr then
-						i->expr = astNewVEROR(i->expr, veror)
-					else
-						i->expr = veror
-					end if
-				end if
-			next
-
-			assert(i->expr <> NULL)
-		end select
-
-		i = i->next
-	wend
-end sub
 
 ''
 '' Structs/unions/enums can have nested verblocks (to allow fields to be
@@ -1013,16 +981,32 @@ private function hSimplifyVersionExpr(byval n as ASTNODE ptr) as ASTNODE ptr
 	function = n
 end function
 
-private sub hSimplifyVersionExpressions(byval code as ASTNODE ptr)
+private sub hGenVerExprs(byval code as ASTNODE ptr)
 	var i = code->head
 	while i
 		var inext = i->next
 
 		'' Handle #if checks nested inside structs
-		hSimplifyVersionExpressions(i)
+		hGenVerExprs(i)
 
-		select case(i->class)
+		select case i->class
 		case ASTCLASS_PPIF, ASTCLASS_PPELSEIF
+			'' Build VEROR from the VERBLOCK's apis bitmask
+			for api as integer = 0 to frog.apicount - 1
+				if i->apis and (1ull shl api) then
+					var veror = astNewVEROR(astClone(frog.apis[api].verand))
+					if i->expr then
+						i->expr = astNewVEROR(i->expr, veror)
+					else
+						i->expr = veror
+					end if
+				end if
+			next
+
+			assert(i->expr <> NULL)
+
+			'' Beautification: Apply some trivial refactoring to the version
+			'' conditions, to eliminate duplicate checks where possible.
 			i->expr = hSimplifyVersionExpr(i->expr)
 
 			'' If we were able to solve it out completely that means
@@ -1033,7 +1017,7 @@ private sub hSimplifyVersionExpressions(byval code as ASTNODE ptr)
 
 				'' If the next node is an #endif, remove that too.
 				'' If it's an #elseif, turn that into an #if.
-				select case(inext->class)
+				select case inext->class
 				case ASTCLASS_PPENDIF
 					inext = astRemove(code, inext)
 				case ASTCLASS_PPELSEIF
@@ -1050,12 +1034,7 @@ end sub
 
 sub astProcessVerblocks(byval code as ASTNODE ptr)
 	assert(code->class = ASTCLASS_GROUP)
-
 	hSolveOutRedundantVerblocks(code, frog.fullapis)
 	hTurnVerblocksIntoPpIfs(code)
-	hTurnVerblockApiMasksIntoVerExprs(code)
-
-	'' Beautification: Apply some trivial refactoring to the version
-	'' conditions, to eliminate duplicate checks where possible.
-	hSimplifyVersionExpressions(code)
+	hGenVerExprs(code)
 end sub
