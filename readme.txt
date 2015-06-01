@@ -209,44 +209,6 @@ unnecessary?
 
 To do:
 
-- Need to support all fbc targets (e.g. __FB_ARM__) and should use __FB_UNIX__ if possible
-- The generated #if blocks should be a bit prettier
-- maybe targets can be built-ins? only need to support "all", "nodos", "windowsonly"
-- translation process should use knowledge about the target
-- Remove VEROR/VERAND completely, generate the #if expressions based on the bitmasks
-- LCS is main bottle-neck, can it be optimized?
-
-- consecutive verblocks should be added to a prefix tree, to solve out common
-  API conditions, e.g.:
-
-	#if win32 and static		#if win32
-		...				#if static
-	#endif						...
-	#if win32				#endif
-		...		=>		...
-	#endif					#if static
-	#if win32 and static				...
-		...				#endif
-	#endif				#endif
-
-  and to catch bad merges:
-
-	#if win32			#if win32
-		[win32 1]			[win32 1]
-	#else					[win32 2]
-		[linux]		=>	#else
-	#endif					[linux]
-	#if win32			#endif
-		[win32 2]
-	#endif
-
-- verblocks should be prefix trees from the beginning (making LCS code harder though)
-- perhaps we can use a prefix tree instead of LCS?
-- use pre-calculated SHA1s instead of astIsEqual()
-  - must exclude the callconv and attribs like HIDECALLCONV from the hash though,
-    as they require special handling (different callconv treated equal if both sides hide it)
-  - but only if faster
-
 Bugs:
 * C parser needs to verify #directives, since they can be inserted by "to c" -replacements,
   which aren't verified by the CPP
@@ -265,6 +227,33 @@ Bugs:
   (at least, mark it with a TODO)
 
 Interesting improvements:
+* Need to support all fbc targets (e.g. __FB_ARM__) and should use __FB_UNIX__ if possible
+   - maybe targets can be built-ins? only need to support "all", "nodos", "windowsonly"
+   - translation process should use knowledge about the target
+   - Remove VEROR/VERAND completely, generate the #if expressions based on the bitmasks
+* consecutive verblocks should be added to a prefix tree, to solve out common
+  API conditions, e.g.:
+	#if win32 and static		#if win32
+		...				#if static
+	#endif						...
+	#if win32				#endif
+		...		=>		...
+	#endif					#if static
+	#if win32 and static				...
+		...				#endif
+	#endif				#endif
+  and to catch bad merges:
+	#if win32			#if win32
+		[win32 1]			[win32 1]
+	#else					[win32 2]
+		[linux]		=>	#else
+	#endif					[linux]
+	#if win32			#endif
+		[win32 2]
+	#endif
+* LCS is main bottle-neck, can it be optimized?
+* Turn more inline functions into macros: also void functions whose body can
+  just be used as macro'd scope block, and doesn't contain any RETURNs
 * X11 headers have commented out parameter names. It'd be nice if fbfrog could
   preserve/uncomment them.
     1. preserve comments
@@ -272,7 +261,6 @@ Interesting improvements:
        use it as the param id.
 * add pass for fixing up string literal casts (useful for gtk3 at least):
 	cast(SomePtrType, "foo")  =>  cast(SomePtrType, @"foo")
-* preserve #ifs, if it doesn't lead to problems with #defines
 * fbfrog-fbc-wrapper for compiling .bas files that contain #fbfrog directives
   * process #fbfrog directives in the .bas and in each included .bi; must do
     #include search just like the fbc. Query fbc's incdir via 'fbc -print incdir'
@@ -294,18 +282,8 @@ Interesting improvements:
   can be used)
   * use separate ExprNode to hold expressions
       - 2 kinds of macros: 1. expression macro, 2. code block macro
-* allow translating constructs partially, to make writing replacements easier
-  (the tool can parse more than it can translate to FB)
-* Better documentation, help.markdown/help.html
-* CLI: Switch to -option=param1,param2 format, with space as hard-delimiter?
-  Current [optional parameters] can be confusing. -define A foo.h treats foo.h
-  as -define's 2nd parameter, even across @file boundaries etc.
-  Support -DFOO=1 and -I<path> options like gcc? (could even read pkg-config output then)
-  Remove -select, use -ifdef and a new -ifeq <id> <value> instead?
-  Add unified option for the common -declarebool/-ifdef pattern:
-    -declarebool FOO -ifdef FOO -define FOO 1 -endif
-  Rework console output, it quickly becomes too much. Only show #includes with -v?
-  Show #include tree
+* Rework console output, it quickly becomes too much. Only show #includes with -v?
+* Show #include tree
 * Hard-code default.fbfrog and default.h, remove include/fbfrog/
   add a tools/gcc.sh or similar that queries various gcc toolchains and
   generates a gccpredefs.bi
@@ -315,15 +293,10 @@ Interesting improvements:
    1st pass: collect all types/procs
    2nd pass: find alias #defines and turn them into real decls. For procs, 1.
    duplicate the PROC node, 2. rename it to get an ALIAS emitted.
-* auto-remove all empty macros? (e.g. include/decl guards)
 * pattern-based -removedefine, e.g. -removedefine '__*'
 * pattern-based renames, e.g. -renamedefine '%' 'FOO_%',
   or at least --rename-define-add-prefix '*' FOO_  <- add prefix FOO_ to matching defines.
 * -rename <id> which automatically appends an _ underscore
-* Turn ASTCLASS_UNION/ENUM into ASTATTRIB_* and use ASTCLASS_STRUCT (they're similar enough)
-* add jmp_buf to the extradatatypes table, then implement hIsPlainJmpBuf() as hashtb lookup
-* Add global pool of strings (especially identifiers), pass HASHSTR objects instead of
-  zstring ptr's, with precalculated hashes + re-usable read-only strings
 * auto-convert C's [] array indexing into FB's (): track which vars/fields are
   arrays (or pointers) and then compare indexing BOPs against that.
 * Add support for
@@ -337,7 +310,3 @@ Interesting improvements:
   - for loops (probably useless without ++/-- support)
   - continue/break
   - goto/labels/switch/case
-* Support assignment and comma operators in expressions
-        if (a = 1) ...          =>    a = 1 : if a then ...
-        if (a = 1 && b = 2) ... =>    a = 1 : if a then : b = 2 : if b then ... : end if
-    ?: and &&/|| operands containing assignments must be expanded to real if blocks.
