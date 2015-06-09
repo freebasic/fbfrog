@@ -23,7 +23,7 @@
 type DECLNODE
 	n	as ASTNODE ptr  '' The declaration at that index
 	hash	as ulong        '' Precalculated hash value for the declaration
-	apis	as ulongint     '' APIs bitmask of the declaration's parent VERBLOCK
+	apis	as ApiBits      '' APIs bitmask of the declaration's parent VERBLOCK
 end type
 
 type DECLTABLE
@@ -43,7 +43,7 @@ private function decltableHash(byval n as ASTNODE ptr) as ulong
 	function = hash
 end function
 
-private sub decltableAdd( byval table as DECLTABLE ptr, byval n as ASTNODE ptr, byval apis as ulongint )
+private sub decltableAdd(byval table as DECLTABLE ptr, byval n as ASTNODE ptr, byval apis as ApiBits)
 	if table->count = table->room then
 		table->room += 256
 		table->array = reallocate(table->array, table->room * sizeof(DECLNODE))
@@ -58,7 +58,7 @@ private sub decltableAdd( byval table as DECLTABLE ptr, byval n as ASTNODE ptr, 
 	table->count += 1
 end sub
 
-private sub decltableInit( byval table as DECLTABLE ptr, byval code as ASTNODE ptr )
+private sub decltableInit(byval table as DECLTABLE ptr, byval code as ASTNODE ptr)
 	table->array = NULL
 	table->count = 0
 	table->room = 0
@@ -138,7 +138,7 @@ function astNewVEROR(byval a as ASTNODE ptr, byval b as ASTNODE ptr) as ASTNODE 
 	function = astNewGroupLike(ASTCLASS_VEROR, a, b)
 end function
 
-private function astNewVERBLOCK(byval apis as ulongint, byval children as ASTNODE ptr) as ASTNODE ptr
+private function astNewVERBLOCK(byval apis as ApiBits, byval children as ASTNODE ptr) as ASTNODE ptr
 	var n = astNew(ASTCLASS_VERBLOCK, children)
 	n->apis = apis
 	function = n
@@ -148,7 +148,7 @@ end function
 '' should be aswell, so hMergeStructsManually() doesn't have to handle both
 '' cases of "fresh still unwrapped fields" and "already wrapped from previous
 '' merge", but only the latter.
-private sub hWrapStructFieldsInVerblocks(byval api as ulongint, byval code as ASTNODE ptr)
+private sub hWrapStructFieldsInVerblocks(byval api as ApiBits, byval code as ASTNODE ptr)
 	var i = code->head
 	while i
 		hWrapStructFieldsInVerblocks(api, i)
@@ -162,7 +162,7 @@ private sub hWrapStructFieldsInVerblocks(byval api as ulongint, byval code as AS
 	end if
 end sub
 
-private function astWrapFileInVerblock(byval api as ulongint, byval code as ASTNODE ptr) as ASTNODE ptr
+private function astWrapFileInVerblock(byval api as ApiBits, byval code as ASTNODE ptr) as ASTNODE ptr
 	hWrapStructFieldsInVerblocks(api, code)
 	function = astNewVERBLOCK(api, code)
 end function
@@ -170,7 +170,7 @@ end function
 private sub hVerblockAppend _
 	( _
 		byval n as ASTNODE ptr, _
-		byval apis as ulongint, _
+		byval apis as ApiBits, _
 		byval child as ASTNODE ptr _
 	)
 
@@ -178,7 +178,7 @@ private sub hVerblockAppend _
 	'' the new children nodes to that instead of opening a new VERBLOCK.
 	var verblock = n->tail
 	if verblock andalso astIsVERBLOCK(verblock) then
-		if verblock->apis = apis then
+		if verblock->apis.equals(apis) then
 			astAppend(verblock, child)
 			exit sub
 		end if
@@ -187,7 +187,7 @@ private sub hVerblockAppend _
 	astAppend(n, astNewVERBLOCK(apis, child))
 end sub
 
-private sub hAddDecl( byval c as ASTNODE ptr, byval array as DECLNODE ptr, byval i as integer )
+private sub hAddDecl(byval c as ASTNODE ptr, byval array as DECLNODE ptr, byval i as integer)
 	hVerblockAppend(c, array[i].apis, astClone(array[i].n))
 end sub
 
@@ -374,7 +374,10 @@ private sub hAddMergedDecl _
 	end if
 
 	'' Add struct to result tree, under both a's and b's version numbers
-	hVerblockAppend(c, aapis or bapis, mdecl)
+	dim mapis as ApiBits
+	mapis.set(aapis)
+	mapis.set(bapis)
+	hVerblockAppend(c, mapis, mdecl)
 
 end sub
 
@@ -647,7 +650,7 @@ function astMergeVerblocks _
 	function = c
 end function
 
-sub astMergeNext(byval api as ulongint, byref final as ASTNODE ptr, byref incoming as ASTNODE ptr)
+sub astMergeNext(byval api as ApiBits, byref final as ASTNODE ptr, byref incoming as ASTNODE ptr)
 	incoming = astWrapFileInVerblock(api, incoming)
 	if final = NULL then
 		final = astNewGROUP(incoming)
@@ -681,7 +684,7 @@ end sub
 '' Similar to that, verblocks at the toplevel can be solved out, if they cover
 '' all possible versions. (think of them as being nested in a global verblock)
 ''
-private sub hSolveOutRedundantVerblocks(byval code as ASTNODE ptr, byval parentapis as ulongint)
+private sub hSolveOutRedundantVerblocks(byval code as ASTNODE ptr, byval parentapis as ApiBits)
 	var i = code->head
 	while i
 		var nxt = i->next
@@ -689,9 +692,9 @@ private sub hSolveOutRedundantVerblocks(byval code as ASTNODE ptr, byval parenta
 		if i->class = ASTCLASS_VERBLOCK then
 			hSolveOutRedundantVerblocks(i, i->apis)
 
-			assert(parentapis <> 0)
+			assert(parentapis.hasAtLeast1Set())
 			'' Nested verblock covers at least the parent's versions?
-			if (i->apis and parentapis) = parentapis then
+			if i->apis.coversAtLeast(parentapis) then
 				'' Remove this verblock, preserve only its children
 				astReplace(code, i, astCloneChildren(i))
 			end if
@@ -750,9 +753,9 @@ private sub hTurnVerblocksIntoPpIfs(byval code as ASTNODE ptr)
 			'' and turn them into #elseif's while at it.
 			var j = i->next
 			var collected = i->apis
-			while j andalso astIsVERBLOCK(j) andalso ((collected and j->apis) = 0)
+			while j andalso astIsVERBLOCK(j) andalso collected.containsNoneOf(j->apis)
 				j->class = ASTCLASS_PPELSEIF
-				collected or= j->apis
+				collected.set(j->apis)
 				j = j->next
 			wend
 
@@ -761,7 +764,7 @@ private sub hTurnVerblocksIntoPpIfs(byval code as ASTNODE ptr)
 			'' If the collected verblocks cover all versions, then only the first #if check
 			'' and any intermediate #elseif checks are needed, but the last check can be turned
 			'' into a simple #else.
-			if collected = frog.fullapis then
+			if collected.equals(frog.fullapis) then
 				var last = iif(j, j->prev, code->tail)
 				'' But only if we've got more than 1 verblock
 				if i <> last then
@@ -993,7 +996,7 @@ private sub hGenVerExprs(byval code as ASTNODE ptr)
 		case ASTCLASS_PPIF, ASTCLASS_PPELSEIF
 			'' Build VEROR from the VERBLOCK's apis bitmask
 			for api as integer = 0 to frog.apicount - 1
-				if i->apis and (1ull shl api) then
+				if i->apis.isSet(api) then
 					var veror = astNewVEROR(astClone(frog.apis[api].verand))
 					if i->expr then
 						i->expr = astNewVEROR(i->expr, veror)

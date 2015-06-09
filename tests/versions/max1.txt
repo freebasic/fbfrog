@@ -1,0 +1,321 @@
+[  1/160] __FB_WIN32__.__FB_64BIT__.A.B.C.D.E
+          tests/versions/max1.h
+[  2/160] __FB_WIN32__.__FB_64BIT__.A.B.C.D.(not E)
+          tests/versions/max1.h
+[  3/160] __FB_WIN32__.__FB_64BIT__.A.B.C.(not D).E
+          tests/versions/max1.h
+[  4/160] __FB_WIN32__.__FB_64BIT__.A.B.C.(not D).(not E)
+          tests/versions/max1.h
+[  5/160] __FB_WIN32__.__FB_64BIT__.A.B.(not C).D.E
+          tests/versions/max1.h
+[  6/160] __FB_WIN32__.__FB_64BIT__.A.B.(not C).D.(not E)
+          tests/versions/max1.h
+[  7/160] __FB_WIN32__.__FB_64BIT__.A.B.(not C).(not D).E
+          tests/versions/max1.h
+[  8/160] __FB_WIN32__.__FB_64BIT__.A.B.(not C).(not D).(not E)
+          tests/versions/max1.h
+[  9/160] __FB_WIN32__.__FB_64BIT__.A.(not B).C.D.E
+          tests/versions/max1.h
+[ 10/160] __FB_WIN32__.__FB_64BIT__.A.(not B).C.D.(not E)
+          tests/versions/max1.h
+[ 11/160] __FB_WIN32__.__FB_64BIT__.A.(not B).C.(not D).E
+          tests/versions/max1.h
+[ 12/160] __FB_WIN32__.__FB_64BIT__.A.(not B).C.(not D).(not E)
+          tests/versions/max1.h
+[ 13/160] __FB_WIN32__.__FB_64BIT__.A.(not B).(not C).D.E
+          tests/versions/max1.h
+[ 14/160] __FB_WIN32__.__FB_64BIT__.A.(not B).(not C).D.(not E)
+          tests/versions/max1.h
+[ 15/160] __FB_WIN32__.__FB_64BIT__.A.(not B).(not C).(not D).E
+          tests/versions/max1.h
+[ 16/160] __FB_WIN32__.__FB_64BIT__.A.(not B).(not C).(not D).(not E)
+          tests/versions/max1.h
+[ 17/160] __FB_WIN32__.__FB_64BIT__.(not A).B.C.D.E
+          tests/versions/max1.h
+[ 18/160] __FB_WIN32__.__FB_64BIT__.(not A).B.C.D.(not E)
+          tests/versions/max1.h
+[ 19/160] __FB_WIN32__.__FB_64BIT__.(not A).B.C.(not D).E
+          tests/versions/max1.h
+[ 20/160] __FB_WIN32__.__FB_64BIT__.(not A).B.C.(not D).(not E)
+          tests/versions/max1.h
+[ 21/160] __FB_WIN32__.__FB_64BIT__.(not A).B.(not C).D.E
+          tests/versions/max1.h
+[ 22/160] __FB_WIN32__.__FB_64BIT__.(not A).B.(not C).D.(not E)
+          tests/versions/max1.h
+[ 23/160] __FB_WIN32__.__FB_64BIT__.(not A).B.(not C).(not D).E
+          tests/versions/max1.h
+[ 24/160] __FB_WIN32__.__FB_64BIT__.(not A).B.(not C).(not D).(not E)
+          tests/versions/max1.h
+[ 25/160] __FB_WIN32__.__FB_64BIT__.(not A).(not B).C.D.E
+          tests/versions/max1.h
+[ 26/160] __FB_WIN32__.__FB_64BIT__.(not A).(not B).C.D.(not E)
+          tests/versions/max1.h
+[ 27/160] __FB_WIN32__.__FB_64BIT__.(not A).(not B).C.(not D).E
+          tests/versions/max1.h
+[ 28/160] __FB_WIN32__.__FB_64BIT__.(not A).(not B).C.(not D).(not E)
+          tests/versions/max1.h
+[ 29/160] __FB_WIN32__.__FB_64BIT__.(not A).(not B).(not C).D.E
+          tests/versions/max1.h
+[ 30/160] __FB_WIN32__.__FB_64BIT__.(not A).(not B).(not C).D.(not E)
+          tests/versions/max1.h
+[ 31/160] __FB_WIN32__.__FB_64BIT__.(not A).(not B).(not C).(not D).E
+          tests/versions/max1.h
+[ 32/160] __FB_WIN32__.__FB_64BIT__.(not A).(not B).(not C).(not D).(not E)
+          tests/versions/max1.h
+[ 33/160] __FB_WIN32__.(not __FB_64BIT__).A.B.C.D.E
+          tests/versions/max1.h
+[ 34/160] __FB_WIN32__.(not __FB_64BIT__).A.B.C.D.(not E)
+          tests/versions/max1.h
+[ 35/160] __FB_WIN32__.(not __FB_64BIT__).A.B.C.(not D).E
+          tests/versions/max1.h
+[ 36/160] __FB_WIN32__.(not __FB_64BIT__).A.B.C.(not D).(not E)
+          tests/versions/max1.h
+[ 37/160] __FB_WIN32__.(not __FB_64BIT__).A.B.(not C).D.E
+          tests/versions/max1.h
+[ 38/160] __FB_WIN32__.(not __FB_64BIT__).A.B.(not C).D.(not E)
+          tests/versions/max1.h
+[ 39/160] __FB_WIN32__.(not __FB_64BIT__).A.B.(not C).(not D).E
+          tests/versions/max1.h
+[ 40/160] __FB_WIN32__.(not __FB_64BIT__).A.B.(not C).(not D).(not E)
+          tests/versions/max1.h
+[ 41/160] __FB_WIN32__.(not __FB_64BIT__).A.(not B).C.D.E
+          tests/versions/max1.h
+[ 42/160] __FB_WIN32__.(not __FB_64BIT__).A.(not B).C.D.(not E)
+          tests/versions/max1.h
+[ 43/160] __FB_WIN32__.(not __FB_64BIT__).A.(not B).C.(not D).E
+          tests/versions/max1.h
+[ 44/160] __FB_WIN32__.(not __FB_64BIT__).A.(not B).C.(not D).(not E)
+          tests/versions/max1.h
+[ 45/160] __FB_WIN32__.(not __FB_64BIT__).A.(not B).(not C).D.E
+          tests/versions/max1.h
+[ 46/160] __FB_WIN32__.(not __FB_64BIT__).A.(not B).(not C).D.(not E)
+          tests/versions/max1.h
+[ 47/160] __FB_WIN32__.(not __FB_64BIT__).A.(not B).(not C).(not D).E
+          tests/versions/max1.h
+[ 48/160] __FB_WIN32__.(not __FB_64BIT__).A.(not B).(not C).(not D).(not E)
+          tests/versions/max1.h
+[ 49/160] __FB_WIN32__.(not __FB_64BIT__).(not A).B.C.D.E
+          tests/versions/max1.h
+[ 50/160] __FB_WIN32__.(not __FB_64BIT__).(not A).B.C.D.(not E)
+          tests/versions/max1.h
+[ 51/160] __FB_WIN32__.(not __FB_64BIT__).(not A).B.C.(not D).E
+          tests/versions/max1.h
+[ 52/160] __FB_WIN32__.(not __FB_64BIT__).(not A).B.C.(not D).(not E)
+          tests/versions/max1.h
+[ 53/160] __FB_WIN32__.(not __FB_64BIT__).(not A).B.(not C).D.E
+          tests/versions/max1.h
+[ 54/160] __FB_WIN32__.(not __FB_64BIT__).(not A).B.(not C).D.(not E)
+          tests/versions/max1.h
+[ 55/160] __FB_WIN32__.(not __FB_64BIT__).(not A).B.(not C).(not D).E
+          tests/versions/max1.h
+[ 56/160] __FB_WIN32__.(not __FB_64BIT__).(not A).B.(not C).(not D).(not E)
+          tests/versions/max1.h
+[ 57/160] __FB_WIN32__.(not __FB_64BIT__).(not A).(not B).C.D.E
+          tests/versions/max1.h
+[ 58/160] __FB_WIN32__.(not __FB_64BIT__).(not A).(not B).C.D.(not E)
+          tests/versions/max1.h
+[ 59/160] __FB_WIN32__.(not __FB_64BIT__).(not A).(not B).C.(not D).E
+          tests/versions/max1.h
+[ 60/160] __FB_WIN32__.(not __FB_64BIT__).(not A).(not B).C.(not D).(not E)
+          tests/versions/max1.h
+[ 61/160] __FB_WIN32__.(not __FB_64BIT__).(not A).(not B).(not C).D.E
+          tests/versions/max1.h
+[ 62/160] __FB_WIN32__.(not __FB_64BIT__).(not A).(not B).(not C).D.(not E)
+          tests/versions/max1.h
+[ 63/160] __FB_WIN32__.(not __FB_64BIT__).(not A).(not B).(not C).(not D).E
+          tests/versions/max1.h
+[ 64/160] __FB_WIN32__.(not __FB_64BIT__).(not A).(not B).(not C).(not D).(not E)
+          tests/versions/max1.h
+[ 65/160] __FB_LINUX__.__FB_64BIT__.A.B.C.D.E
+          tests/versions/max1.h
+[ 66/160] __FB_LINUX__.__FB_64BIT__.A.B.C.D.(not E)
+          tests/versions/max1.h
+[ 67/160] __FB_LINUX__.__FB_64BIT__.A.B.C.(not D).E
+          tests/versions/max1.h
+[ 68/160] __FB_LINUX__.__FB_64BIT__.A.B.C.(not D).(not E)
+          tests/versions/max1.h
+[ 69/160] __FB_LINUX__.__FB_64BIT__.A.B.(not C).D.E
+          tests/versions/max1.h
+[ 70/160] __FB_LINUX__.__FB_64BIT__.A.B.(not C).D.(not E)
+          tests/versions/max1.h
+[ 71/160] __FB_LINUX__.__FB_64BIT__.A.B.(not C).(not D).E
+          tests/versions/max1.h
+[ 72/160] __FB_LINUX__.__FB_64BIT__.A.B.(not C).(not D).(not E)
+          tests/versions/max1.h
+[ 73/160] __FB_LINUX__.__FB_64BIT__.A.(not B).C.D.E
+          tests/versions/max1.h
+[ 74/160] __FB_LINUX__.__FB_64BIT__.A.(not B).C.D.(not E)
+          tests/versions/max1.h
+[ 75/160] __FB_LINUX__.__FB_64BIT__.A.(not B).C.(not D).E
+          tests/versions/max1.h
+[ 76/160] __FB_LINUX__.__FB_64BIT__.A.(not B).C.(not D).(not E)
+          tests/versions/max1.h
+[ 77/160] __FB_LINUX__.__FB_64BIT__.A.(not B).(not C).D.E
+          tests/versions/max1.h
+[ 78/160] __FB_LINUX__.__FB_64BIT__.A.(not B).(not C).D.(not E)
+          tests/versions/max1.h
+[ 79/160] __FB_LINUX__.__FB_64BIT__.A.(not B).(not C).(not D).E
+          tests/versions/max1.h
+[ 80/160] __FB_LINUX__.__FB_64BIT__.A.(not B).(not C).(not D).(not E)
+          tests/versions/max1.h
+[ 81/160] __FB_LINUX__.__FB_64BIT__.(not A).B.C.D.E
+          tests/versions/max1.h
+[ 82/160] __FB_LINUX__.__FB_64BIT__.(not A).B.C.D.(not E)
+          tests/versions/max1.h
+[ 83/160] __FB_LINUX__.__FB_64BIT__.(not A).B.C.(not D).E
+          tests/versions/max1.h
+[ 84/160] __FB_LINUX__.__FB_64BIT__.(not A).B.C.(not D).(not E)
+          tests/versions/max1.h
+[ 85/160] __FB_LINUX__.__FB_64BIT__.(not A).B.(not C).D.E
+          tests/versions/max1.h
+[ 86/160] __FB_LINUX__.__FB_64BIT__.(not A).B.(not C).D.(not E)
+          tests/versions/max1.h
+[ 87/160] __FB_LINUX__.__FB_64BIT__.(not A).B.(not C).(not D).E
+          tests/versions/max1.h
+[ 88/160] __FB_LINUX__.__FB_64BIT__.(not A).B.(not C).(not D).(not E)
+          tests/versions/max1.h
+[ 89/160] __FB_LINUX__.__FB_64BIT__.(not A).(not B).C.D.E
+          tests/versions/max1.h
+[ 90/160] __FB_LINUX__.__FB_64BIT__.(not A).(not B).C.D.(not E)
+          tests/versions/max1.h
+[ 91/160] __FB_LINUX__.__FB_64BIT__.(not A).(not B).C.(not D).E
+          tests/versions/max1.h
+[ 92/160] __FB_LINUX__.__FB_64BIT__.(not A).(not B).C.(not D).(not E)
+          tests/versions/max1.h
+[ 93/160] __FB_LINUX__.__FB_64BIT__.(not A).(not B).(not C).D.E
+          tests/versions/max1.h
+[ 94/160] __FB_LINUX__.__FB_64BIT__.(not A).(not B).(not C).D.(not E)
+          tests/versions/max1.h
+[ 95/160] __FB_LINUX__.__FB_64BIT__.(not A).(not B).(not C).(not D).E
+          tests/versions/max1.h
+[ 96/160] __FB_LINUX__.__FB_64BIT__.(not A).(not B).(not C).(not D).(not E)
+          tests/versions/max1.h
+[ 97/160] __FB_LINUX__.(not __FB_64BIT__).A.B.C.D.E
+          tests/versions/max1.h
+[ 98/160] __FB_LINUX__.(not __FB_64BIT__).A.B.C.D.(not E)
+          tests/versions/max1.h
+[ 99/160] __FB_LINUX__.(not __FB_64BIT__).A.B.C.(not D).E
+          tests/versions/max1.h
+[100/160] __FB_LINUX__.(not __FB_64BIT__).A.B.C.(not D).(not E)
+          tests/versions/max1.h
+[101/160] __FB_LINUX__.(not __FB_64BIT__).A.B.(not C).D.E
+          tests/versions/max1.h
+[102/160] __FB_LINUX__.(not __FB_64BIT__).A.B.(not C).D.(not E)
+          tests/versions/max1.h
+[103/160] __FB_LINUX__.(not __FB_64BIT__).A.B.(not C).(not D).E
+          tests/versions/max1.h
+[104/160] __FB_LINUX__.(not __FB_64BIT__).A.B.(not C).(not D).(not E)
+          tests/versions/max1.h
+[105/160] __FB_LINUX__.(not __FB_64BIT__).A.(not B).C.D.E
+          tests/versions/max1.h
+[106/160] __FB_LINUX__.(not __FB_64BIT__).A.(not B).C.D.(not E)
+          tests/versions/max1.h
+[107/160] __FB_LINUX__.(not __FB_64BIT__).A.(not B).C.(not D).E
+          tests/versions/max1.h
+[108/160] __FB_LINUX__.(not __FB_64BIT__).A.(not B).C.(not D).(not E)
+          tests/versions/max1.h
+[109/160] __FB_LINUX__.(not __FB_64BIT__).A.(not B).(not C).D.E
+          tests/versions/max1.h
+[110/160] __FB_LINUX__.(not __FB_64BIT__).A.(not B).(not C).D.(not E)
+          tests/versions/max1.h
+[111/160] __FB_LINUX__.(not __FB_64BIT__).A.(not B).(not C).(not D).E
+          tests/versions/max1.h
+[112/160] __FB_LINUX__.(not __FB_64BIT__).A.(not B).(not C).(not D).(not E)
+          tests/versions/max1.h
+[113/160] __FB_LINUX__.(not __FB_64BIT__).(not A).B.C.D.E
+          tests/versions/max1.h
+[114/160] __FB_LINUX__.(not __FB_64BIT__).(not A).B.C.D.(not E)
+          tests/versions/max1.h
+[115/160] __FB_LINUX__.(not __FB_64BIT__).(not A).B.C.(not D).E
+          tests/versions/max1.h
+[116/160] __FB_LINUX__.(not __FB_64BIT__).(not A).B.C.(not D).(not E)
+          tests/versions/max1.h
+[117/160] __FB_LINUX__.(not __FB_64BIT__).(not A).B.(not C).D.E
+          tests/versions/max1.h
+[118/160] __FB_LINUX__.(not __FB_64BIT__).(not A).B.(not C).D.(not E)
+          tests/versions/max1.h
+[119/160] __FB_LINUX__.(not __FB_64BIT__).(not A).B.(not C).(not D).E
+          tests/versions/max1.h
+[120/160] __FB_LINUX__.(not __FB_64BIT__).(not A).B.(not C).(not D).(not E)
+          tests/versions/max1.h
+[121/160] __FB_LINUX__.(not __FB_64BIT__).(not A).(not B).C.D.E
+          tests/versions/max1.h
+[122/160] __FB_LINUX__.(not __FB_64BIT__).(not A).(not B).C.D.(not E)
+          tests/versions/max1.h
+[123/160] __FB_LINUX__.(not __FB_64BIT__).(not A).(not B).C.(not D).E
+          tests/versions/max1.h
+[124/160] __FB_LINUX__.(not __FB_64BIT__).(not A).(not B).C.(not D).(not E)
+          tests/versions/max1.h
+[125/160] __FB_LINUX__.(not __FB_64BIT__).(not A).(not B).(not C).D.E
+          tests/versions/max1.h
+[126/160] __FB_LINUX__.(not __FB_64BIT__).(not A).(not B).(not C).D.(not E)
+          tests/versions/max1.h
+[127/160] __FB_LINUX__.(not __FB_64BIT__).(not A).(not B).(not C).(not D).E
+          tests/versions/max1.h
+[128/160] __FB_LINUX__.(not __FB_64BIT__).(not A).(not B).(not C).(not D).(not E)
+          tests/versions/max1.h
+[129/160] __FB_DOS__.A.B.C.D.E
+          tests/versions/max1.h
+[130/160] __FB_DOS__.A.B.C.D.(not E)
+          tests/versions/max1.h
+[131/160] __FB_DOS__.A.B.C.(not D).E
+          tests/versions/max1.h
+[132/160] __FB_DOS__.A.B.C.(not D).(not E)
+          tests/versions/max1.h
+[133/160] __FB_DOS__.A.B.(not C).D.E
+          tests/versions/max1.h
+[134/160] __FB_DOS__.A.B.(not C).D.(not E)
+          tests/versions/max1.h
+[135/160] __FB_DOS__.A.B.(not C).(not D).E
+          tests/versions/max1.h
+[136/160] __FB_DOS__.A.B.(not C).(not D).(not E)
+          tests/versions/max1.h
+[137/160] __FB_DOS__.A.(not B).C.D.E
+          tests/versions/max1.h
+[138/160] __FB_DOS__.A.(not B).C.D.(not E)
+          tests/versions/max1.h
+[139/160] __FB_DOS__.A.(not B).C.(not D).E
+          tests/versions/max1.h
+[140/160] __FB_DOS__.A.(not B).C.(not D).(not E)
+          tests/versions/max1.h
+[141/160] __FB_DOS__.A.(not B).(not C).D.E
+          tests/versions/max1.h
+[142/160] __FB_DOS__.A.(not B).(not C).D.(not E)
+          tests/versions/max1.h
+[143/160] __FB_DOS__.A.(not B).(not C).(not D).E
+          tests/versions/max1.h
+[144/160] __FB_DOS__.A.(not B).(not C).(not D).(not E)
+          tests/versions/max1.h
+[145/160] __FB_DOS__.(not A).B.C.D.E
+          tests/versions/max1.h
+[146/160] __FB_DOS__.(not A).B.C.D.(not E)
+          tests/versions/max1.h
+[147/160] __FB_DOS__.(not A).B.C.(not D).E
+          tests/versions/max1.h
+[148/160] __FB_DOS__.(not A).B.C.(not D).(not E)
+          tests/versions/max1.h
+[149/160] __FB_DOS__.(not A).B.(not C).D.E
+          tests/versions/max1.h
+[150/160] __FB_DOS__.(not A).B.(not C).D.(not E)
+          tests/versions/max1.h
+[151/160] __FB_DOS__.(not A).B.(not C).(not D).E
+          tests/versions/max1.h
+[152/160] __FB_DOS__.(not A).B.(not C).(not D).(not E)
+          tests/versions/max1.h
+[153/160] __FB_DOS__.(not A).(not B).C.D.E
+          tests/versions/max1.h
+[154/160] __FB_DOS__.(not A).(not B).C.D.(not E)
+          tests/versions/max1.h
+[155/160] __FB_DOS__.(not A).(not B).C.(not D).E
+          tests/versions/max1.h
+[156/160] __FB_DOS__.(not A).(not B).C.(not D).(not E)
+          tests/versions/max1.h
+[157/160] __FB_DOS__.(not A).(not B).(not C).D.E
+          tests/versions/max1.h
+[158/160] __FB_DOS__.(not A).(not B).(not C).D.(not E)
+          tests/versions/max1.h
+[159/160] __FB_DOS__.(not A).(not B).(not C).(not D).E
+          tests/versions/max1.h
+[160/160] __FB_DOS__.(not A).(not B).(not C).(not D).(not E)
+          tests/versions/max1.h
+emitting: tests/versions/max1.bi (0 declarations, 0 TODOs)

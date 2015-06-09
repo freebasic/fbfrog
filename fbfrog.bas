@@ -62,7 +62,7 @@ namespace frog
 	dim shared as ASTNODE ptr completeverors, fullveror
 	dim shared as ApiInfo ptr apis
 	dim shared as integer apicount
-	dim shared as ulongint fullapis
+	dim shared as ApiBits fullapis
 
 	'' *.bi output file names from the -emit options
 	dim shared as BIFILE ptr bis
@@ -1398,14 +1398,13 @@ end sub
 	frogEvaluateScript(frog.script->head, astNewGROUP(), astNewGROUP())
 	assert(frog.apicount > 0)
 
-	select case frog.apicount
-	case is > 64
-		oops("too many APIs, max. is 64, sorry")
-	case 64
-		frog.fullapis = -1ll
-	case else
-		frog.fullapis = (1ull shl frog.apicount) - 1
-	end select
+	if frog.apicount > ApiBits.MaxApis then
+		oops(frog.apicount & " APIs -- that's too many, max. is " & ApiBits.MaxApis & ", sorry")
+	else
+		for i as integer = 0 to frog.apicount - 1
+			frog.fullapis.set(i)
+		next
+	end if
 
 	frog.prefix = space((len(str(frog.apicount)) * 2) + 4)
 
@@ -1490,7 +1489,9 @@ end sub
 				hlFile(.incoming, frog.apis[api], .options)
 
 				'' Merge the "incoming" tree into the "final" tree
-				astMergeNext(1ull shl api, .final, .incoming)
+				dim apibit as ApiBits
+				apibit.set(api)
+				astMergeNext(apibit, .final, .incoming)
 
 				assert(.incoming = NULL)
 				assert(.options.inclibs = NULL)

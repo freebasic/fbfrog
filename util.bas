@@ -1293,3 +1293,75 @@ function hReadableDirExists(byref path as string) as integer
 	end if
 	function = (len(dir(fixed, fbDirectory or fbReadOnly or fbHidden)) > 0)
 end function
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+function ApiBits.calcAccess(byval api as integer, byref element as integer) as ulongint
+	assert(element = 0)
+	while api >= 64
+		element += 1
+		api -= 64
+	wend
+	assert((api >= 0) and (api < 64))
+	assert((element >= 0) and (element < BitsArrayElements))
+	function = 1ull shl api
+end function
+
+'' Set the bit identified by the given index
+sub ApiBits.set(byval api as integer)
+	dim element as integer
+	var bitmask = calcAccess(api, element)
+	bits(element) or= bitmask
+end sub
+
+sub ApiBits.set(byref rhs as ApiBits)
+	for i as integer = 0 to BitsArrayElements - 1
+		bits(i) or= rhs.bits(i)
+	next
+end sub
+
+function ApiBits.isSet(byval api as integer) as integer
+	dim element as integer
+	var bitmask = calcAccess(api, element)
+	function = ((bits(element) and bitmask) <> 0)
+end function
+
+function ApiBits.equals(byref rhs as ApiBits) as integer
+	for i as integer = 0 to BitsArrayElements - 1
+		if bits(i) <> rhs.bits(i) then exit function
+	next
+	function = TRUE
+end function
+
+function ApiBits.coversAtLeast(byref rhs as ApiBits) as integer
+	for i as integer = 0 to BitsArrayElements - 1
+		var rhsbits = rhs.bits(i)
+		if (bits(i) and rhsbits) <> rhsbits then exit function
+	next
+	function = TRUE
+end function
+
+function ApiBits.hasAtLeast1Set() as integer
+	for i as integer = 0 to BitsArrayElements - 1
+		if bits(i) then return TRUE
+	next
+end function
+
+function ApiBits.containsNoneOf(byref rhs as ApiBits) as integer
+	for i as integer = 0 to BitsArrayElements - 1
+		var rhsbits = rhs.bits(i)
+		if (bits(i) and rhsbits) <> 0 then exit function
+	next
+	function = TRUE
+end function
+
+function ApiBits.dump() as string
+	dim s as string
+	for i as integer = BitsArrayElements - 1 to 0 step -1
+		s += bin(bits(1))
+		if i > 0 then
+			s += "|"
+		end if
+	next
+	function = s
+end function

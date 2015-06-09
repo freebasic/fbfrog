@@ -116,6 +116,23 @@ declare function strIsValidSymbolId(byval s as zstring ptr) as integer
 declare function strIsReservedIdInC(byval id as zstring ptr) as integer
 declare function strMatch(byref s as string, byref pattern as string) as integer
 
+type ApiBits
+	const BitsArrayElements = 4
+	const MaxApis = sizeof(ulongint) * BitsArrayElements * 8
+
+	bits(0 to BitsArrayElements-1) as ulongint
+
+	declare function calcAccess(byval api as integer, byref element as integer) as ulongint
+	declare sub set(byval api as integer)
+	declare sub set(byref rhs as ApiBits)
+	declare function isSet(byval api as integer) as integer
+	declare function equals(byref rhs as ApiBits) as integer
+	declare function coversAtLeast(byref rhs as ApiBits) as integer
+	declare function hasAtLeast1Set() as integer
+	declare function containsNoneOf(byref rhs as ApiBits) as integer
+	declare function dump() as string
+end type
+
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 '' The hash table is an array of items,
@@ -737,7 +754,7 @@ type ASTNODE
 		paramcount	as integer  '' PPDEFINE: -1 = #define m, 0 = #define m(), 1 = #define m(a), ...
 		maxalign	as integer  '' STRUCT/UNION: FIELD=N/#pragma pack(N)
 		opt		as integer  '' OPTION: OPT_*
-		apis		as ulongint '' VERBLOCK
+		apis		as ApiBits  '' VERBLOCK
 	end union
 
 	'' Linked list of child nodes, operands/fields/parameters/...
@@ -837,7 +854,7 @@ declare function astMergeVerblocks _
 		byval a as ASTNODE ptr, _
 		byval b as ASTNODE ptr _
 	) as ASTNODE ptr
-declare sub astMergeNext(byval api as ulongint, byref final as ASTNODE ptr, byref incoming as ASTNODE ptr)
+declare sub astMergeNext(byval api as ApiBits, byref final as ASTNODE ptr, byref incoming as ASTNODE ptr)
 declare sub astProcessVerblocks(byval code as ASTNODE ptr)
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -947,7 +964,7 @@ namespace frog
 	extern as ASTNODE ptr completeverors, fullveror
 	extern as ApiInfo ptr apis
 	extern as integer apicount
-	extern as ulongint fullapis
+	extern as ApiBits fullapis
 end namespace
 
 declare function frogLookupBiFromH(byval hfile as zstring ptr) as integer

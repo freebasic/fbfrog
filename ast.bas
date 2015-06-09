@@ -629,7 +629,7 @@ function astIsEqual _
 		if a->opt <> b->opt then exit function
 
 	case ASTCLASS_VERBLOCK, ASTCLASS_PPIF, ASTCLASS_PPELSEIF
-		if a->apis <> b->apis then exit function
+		if a->apis.equals(b->apis) = FALSE then exit function
 
 	case ASTCLASS_VEROR, ASTCLASS_VERAND
 		return astGroupsContainEqualChildren(a, b)
@@ -791,7 +791,7 @@ function astDumpOne(byval n as ASTNODE ptr) as string
 	case ASTCLASS_OPTION
 		s += " " + *tkInfoText(n->opt)
 	case ASTCLASS_VERBLOCK, ASTCLASS_PPIF, ASTCLASS_PPELSEIF
-		s += " apis=" + bin(n->apis)
+		s += " apis=" + n->apis.dump()
 	end select
 
 	if n->text then
