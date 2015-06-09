@@ -1,9 +1,9 @@
 #pragma once
 
-#ifdef __FB_WIN32__
-	extern "Windows"
-#else
+#if defined(__FB_DOS__) or (defined(__FB_LINUX__) or defined(__FB_FREEBSD__) or defined(__FB_OPENBSD__) or defined(__FB_NETBSD__) or defined(__FB_DARWIN__) or defined(__FB_CYGWIN__))
 	extern "C"
+#else
+	extern "Windows"
 #endif
 
 declare sub f1 cdecl()

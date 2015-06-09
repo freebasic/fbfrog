@@ -1,5 +1,5 @@
-[1/5] __FB_WIN32__.__FB_64BIT__
-      tests/cpp/unexpanded-if-cond.h
+[ 1/15] __FB_LINUX__.__FB_64BIT__
+        tests/cpp/unexpanded-if-cond.h
 tests/cpp/unexpanded-if-cond.h(7): expected end-of-line behind CPP directive but found '('
     # if foo ( 1 ) 
              ^

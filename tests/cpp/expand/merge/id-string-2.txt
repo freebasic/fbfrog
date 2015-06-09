@@ -1,5 +1,5 @@
-[1/5] __FB_WIN32__.__FB_64BIT__
-      tests/cpp/expand/merge/id-string-2.h
+[ 1/15] __FB_LINUX__.__FB_64BIT__
+        tests/cpp/expand/merge/id-string-2.h
 tests/cpp/expand/merge/id-string-2.h(2): ## merge operator cannot merge 'a' and '"b"'
     m [TK_BEGIN] a ## "b" [TK_END]
                    ^~

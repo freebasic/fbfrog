@@ -1,20 +1,14 @@
 #pragma once
 
-dim shared vardoslinuxwin32 as long
+dim shared varall as long
 
-#ifdef __FB_WIN32__
-	dim shared varwin32 as long
-
-	type UDTwin32
-		fieldwin32 as long
-	end type
-#elseif defined(__FB_LINUX__)
+#ifdef __FB_LINUX__
 	dim shared varlinux as long
 
 	type UDTlinux
 		fieldlinux as long
 	end type
-#else
+#elseif defined(__FB_DOS__)
 	dim shared vardos as long
 
 	type UDTdos
@@ -36,18 +30,24 @@ dim shared vardoslinuxwin32 as long
 			fielddos as long
 		#endif
 	end type
+#elseif defined(__FB_WIN32__)
+	dim shared varwin32 as long
+
+	type UDTwin32
+		fieldwin32 as long
+	end type
 #endif
 
-type UDTdoslinuxwin32
-	fielddoslinuxwin32 as long
+type UDTall
+	fieldall as long
 end type
 
-type UDTfielddoslinuxwin32
-	#ifdef __FB_WIN32__
-		fieldwin32 as long
-	#elseif defined(__FB_LINUX__)
+type UDTall2
+	#ifdef __FB_LINUX__
 		fieldlinux as long
-	#else
+	#elseif defined(__FB_WIN32__)
+		fieldwin32 as long
+	#elseif defined(__FB_DOS__)
 		fielddos as long
 	#endif
 end type

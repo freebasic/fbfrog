@@ -1,31 +1,91 @@
-[ 1/15] __FB_WIN32__.__FB_64BIT__.VER=1
+[ 1/45] __FB_LINUX__.__FB_64BIT__.VER=1
         tests/versions/declareversions.h
-[ 2/15] __FB_WIN32__.__FB_64BIT__.VER=2
+[ 2/45] __FB_LINUX__.__FB_64BIT__.VER=2
         tests/versions/declareversions.h
-[ 3/15] __FB_WIN32__.__FB_64BIT__.VER=3
+[ 3/45] __FB_LINUX__.__FB_64BIT__.VER=3
         tests/versions/declareversions.h
-[ 4/15] __FB_WIN32__.(not __FB_64BIT__).VER=1
+[ 4/45] __FB_LINUX__.(not __FB_64BIT__).VER=1
         tests/versions/declareversions.h
-[ 5/15] __FB_WIN32__.(not __FB_64BIT__).VER=2
+[ 5/45] __FB_LINUX__.(not __FB_64BIT__).VER=2
         tests/versions/declareversions.h
-[ 6/15] __FB_WIN32__.(not __FB_64BIT__).VER=3
+[ 6/45] __FB_LINUX__.(not __FB_64BIT__).VER=3
         tests/versions/declareversions.h
-[ 7/15] __FB_LINUX__.__FB_64BIT__.VER=1
+[ 7/45] __FB_FREEBSD__.__FB_64BIT__.VER=1
         tests/versions/declareversions.h
-[ 8/15] __FB_LINUX__.__FB_64BIT__.VER=2
+[ 8/45] __FB_FREEBSD__.__FB_64BIT__.VER=2
         tests/versions/declareversions.h
-[ 9/15] __FB_LINUX__.__FB_64BIT__.VER=3
+[ 9/45] __FB_FREEBSD__.__FB_64BIT__.VER=3
         tests/versions/declareversions.h
-[10/15] __FB_LINUX__.(not __FB_64BIT__).VER=1
+[10/45] __FB_FREEBSD__.(not __FB_64BIT__).VER=1
         tests/versions/declareversions.h
-[11/15] __FB_LINUX__.(not __FB_64BIT__).VER=2
+[11/45] __FB_FREEBSD__.(not __FB_64BIT__).VER=2
         tests/versions/declareversions.h
-[12/15] __FB_LINUX__.(not __FB_64BIT__).VER=3
+[12/45] __FB_FREEBSD__.(not __FB_64BIT__).VER=3
         tests/versions/declareversions.h
-[13/15] __FB_DOS__.VER=1
+[13/45] __FB_OPENBSD__.__FB_64BIT__.VER=1
         tests/versions/declareversions.h
-[14/15] __FB_DOS__.VER=2
+[14/45] __FB_OPENBSD__.__FB_64BIT__.VER=2
         tests/versions/declareversions.h
-[15/15] __FB_DOS__.VER=3
+[15/45] __FB_OPENBSD__.__FB_64BIT__.VER=3
+        tests/versions/declareversions.h
+[16/45] __FB_OPENBSD__.(not __FB_64BIT__).VER=1
+        tests/versions/declareversions.h
+[17/45] __FB_OPENBSD__.(not __FB_64BIT__).VER=2
+        tests/versions/declareversions.h
+[18/45] __FB_OPENBSD__.(not __FB_64BIT__).VER=3
+        tests/versions/declareversions.h
+[19/45] __FB_NETBSD__.__FB_64BIT__.VER=1
+        tests/versions/declareversions.h
+[20/45] __FB_NETBSD__.__FB_64BIT__.VER=2
+        tests/versions/declareversions.h
+[21/45] __FB_NETBSD__.__FB_64BIT__.VER=3
+        tests/versions/declareversions.h
+[22/45] __FB_NETBSD__.(not __FB_64BIT__).VER=1
+        tests/versions/declareversions.h
+[23/45] __FB_NETBSD__.(not __FB_64BIT__).VER=2
+        tests/versions/declareversions.h
+[24/45] __FB_NETBSD__.(not __FB_64BIT__).VER=3
+        tests/versions/declareversions.h
+[25/45] __FB_DARWIN__.__FB_64BIT__.VER=1
+        tests/versions/declareversions.h
+[26/45] __FB_DARWIN__.__FB_64BIT__.VER=2
+        tests/versions/declareversions.h
+[27/45] __FB_DARWIN__.__FB_64BIT__.VER=3
+        tests/versions/declareversions.h
+[28/45] __FB_DARWIN__.(not __FB_64BIT__).VER=1
+        tests/versions/declareversions.h
+[29/45] __FB_DARWIN__.(not __FB_64BIT__).VER=2
+        tests/versions/declareversions.h
+[30/45] __FB_DARWIN__.(not __FB_64BIT__).VER=3
+        tests/versions/declareversions.h
+[31/45] __FB_WIN32__.__FB_64BIT__.VER=1
+        tests/versions/declareversions.h
+[32/45] __FB_WIN32__.__FB_64BIT__.VER=2
+        tests/versions/declareversions.h
+[33/45] __FB_WIN32__.__FB_64BIT__.VER=3
+        tests/versions/declareversions.h
+[34/45] __FB_WIN32__.(not __FB_64BIT__).VER=1
+        tests/versions/declareversions.h
+[35/45] __FB_WIN32__.(not __FB_64BIT__).VER=2
+        tests/versions/declareversions.h
+[36/45] __FB_WIN32__.(not __FB_64BIT__).VER=3
+        tests/versions/declareversions.h
+[37/45] __FB_CYGWIN__.__FB_64BIT__.VER=1
+        tests/versions/declareversions.h
+[38/45] __FB_CYGWIN__.__FB_64BIT__.VER=2
+        tests/versions/declareversions.h
+[39/45] __FB_CYGWIN__.__FB_64BIT__.VER=3
+        tests/versions/declareversions.h
+[40/45] __FB_CYGWIN__.(not __FB_64BIT__).VER=1
+        tests/versions/declareversions.h
+[41/45] __FB_CYGWIN__.(not __FB_64BIT__).VER=2
+        tests/versions/declareversions.h
+[42/45] __FB_CYGWIN__.(not __FB_64BIT__).VER=3
+        tests/versions/declareversions.h
+[43/45] __FB_DOS__.VER=1
+        tests/versions/declareversions.h
+[44/45] __FB_DOS__.VER=2
+        tests/versions/declareversions.h
+[45/45] __FB_DOS__.VER=3
         tests/versions/declareversions.h
 emitting: tests/versions/declareversions.bi (3 declarations, 0 TODOs)

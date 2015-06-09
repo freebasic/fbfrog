@@ -1,11 +1,31 @@
-[1/5] __FB_WIN32__.__FB_64BIT__
-      tests/cpp/expand/params-zero.h
-[2/5] __FB_WIN32__.(not __FB_64BIT__)
-      tests/cpp/expand/params-zero.h
-[3/5] __FB_LINUX__.__FB_64BIT__
-      tests/cpp/expand/params-zero.h
-[4/5] __FB_LINUX__.(not __FB_64BIT__)
-      tests/cpp/expand/params-zero.h
-[5/5] __FB_DOS__
-      tests/cpp/expand/params-zero.h
+[ 1/15] __FB_LINUX__.__FB_64BIT__
+        tests/cpp/expand/params-zero.h
+[ 2/15] __FB_LINUX__.(not __FB_64BIT__)
+        tests/cpp/expand/params-zero.h
+[ 3/15] __FB_FREEBSD__.__FB_64BIT__
+        tests/cpp/expand/params-zero.h
+[ 4/15] __FB_FREEBSD__.(not __FB_64BIT__)
+        tests/cpp/expand/params-zero.h
+[ 5/15] __FB_OPENBSD__.__FB_64BIT__
+        tests/cpp/expand/params-zero.h
+[ 6/15] __FB_OPENBSD__.(not __FB_64BIT__)
+        tests/cpp/expand/params-zero.h
+[ 7/15] __FB_NETBSD__.__FB_64BIT__
+        tests/cpp/expand/params-zero.h
+[ 8/15] __FB_NETBSD__.(not __FB_64BIT__)
+        tests/cpp/expand/params-zero.h
+[ 9/15] __FB_DARWIN__.__FB_64BIT__
+        tests/cpp/expand/params-zero.h
+[10/15] __FB_DARWIN__.(not __FB_64BIT__)
+        tests/cpp/expand/params-zero.h
+[11/15] __FB_WIN32__.__FB_64BIT__
+        tests/cpp/expand/params-zero.h
+[12/15] __FB_WIN32__.(not __FB_64BIT__)
+        tests/cpp/expand/params-zero.h
+[13/15] __FB_CYGWIN__.__FB_64BIT__
+        tests/cpp/expand/params-zero.h
+[14/15] __FB_CYGWIN__.(not __FB_64BIT__)
+        tests/cpp/expand/params-zero.h
+[15/15] __FB_DOS__
+        tests/cpp/expand/params-zero.h
 emitting: tests/cpp/expand/params-zero.bi (1 declaration, 0 TODOs)

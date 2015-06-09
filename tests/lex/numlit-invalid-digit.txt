@@ -1,5 +1,5 @@
-[1/5] __FB_WIN32__.__FB_64BIT__
-      tests/lex/numlit-invalid-digit.h
+[ 1/15] __FB_LINUX__.__FB_64BIT__
+        tests/lex/numlit-invalid-digit.h
 tests/lex/numlit-invalid-digit.h(3): invalid suffix on number literal: '2'
     static int bin1 = 0b2 ;
                       ^~~
@@ -30,8 +30,8 @@ tests/lex/numlit-invalid-digit.h(13): invalid suffix on number literal: 'A'
 tests/lex/numlit-invalid-digit.h(15): invalid suffix on number literal: 'G'
     static int hex1 = 0xG ;
                       ^~~
-[2/5] __FB_WIN32__.(not __FB_64BIT__)
-      tests/lex/numlit-invalid-digit.h
+[ 2/15] __FB_LINUX__.(not __FB_64BIT__)
+        tests/lex/numlit-invalid-digit.h
 tests/lex/numlit-invalid-digit.h(3): invalid suffix on number literal: '2'
     static int bin1 = 0b2 ;
                       ^~~
@@ -62,8 +62,8 @@ tests/lex/numlit-invalid-digit.h(13): invalid suffix on number literal: 'A'
 tests/lex/numlit-invalid-digit.h(15): invalid suffix on number literal: 'G'
     static int hex1 = 0xG ;
                       ^~~
-[3/5] __FB_LINUX__.__FB_64BIT__
-      tests/lex/numlit-invalid-digit.h
+[ 3/15] __FB_FREEBSD__.__FB_64BIT__
+        tests/lex/numlit-invalid-digit.h
 tests/lex/numlit-invalid-digit.h(3): invalid suffix on number literal: '2'
     static int bin1 = 0b2 ;
                       ^~~
@@ -94,8 +94,8 @@ tests/lex/numlit-invalid-digit.h(13): invalid suffix on number literal: 'A'
 tests/lex/numlit-invalid-digit.h(15): invalid suffix on number literal: 'G'
     static int hex1 = 0xG ;
                       ^~~
-[4/5] __FB_LINUX__.(not __FB_64BIT__)
-      tests/lex/numlit-invalid-digit.h
+[ 4/15] __FB_FREEBSD__.(not __FB_64BIT__)
+        tests/lex/numlit-invalid-digit.h
 tests/lex/numlit-invalid-digit.h(3): invalid suffix on number literal: '2'
     static int bin1 = 0b2 ;
                       ^~~
@@ -126,8 +126,328 @@ tests/lex/numlit-invalid-digit.h(13): invalid suffix on number literal: 'A'
 tests/lex/numlit-invalid-digit.h(15): invalid suffix on number literal: 'G'
     static int hex1 = 0xG ;
                       ^~~
-[5/5] __FB_DOS__
-      tests/lex/numlit-invalid-digit.h
+[ 5/15] __FB_OPENBSD__.__FB_64BIT__
+        tests/lex/numlit-invalid-digit.h
+tests/lex/numlit-invalid-digit.h(3): invalid suffix on number literal: '2'
+    static int bin1 = 0b2 ;
+                      ^~~
+tests/lex/numlit-invalid-digit.h(4): invalid suffix on number literal: '9'
+    static int bin2 = 0b9 ;
+                      ^~~
+tests/lex/numlit-invalid-digit.h(5): invalid suffix on number literal: 'A'
+    static int bin3 = 0bA ;
+                      ^~~
+tests/lex/numlit-invalid-digit.h(7): invalid digit in octal number literal
+    static int oct1 = 08 ;
+                      ^~
+tests/lex/numlit-invalid-digit.h(8): invalid digit in octal number literal
+    static int oct2 = 09 ;
+                      ^~
+tests/lex/numlit-invalid-digit.h(9): invalid digit in octal number literal
+    static int oct3 = 09f ;
+                      ^~~
+tests/lex/numlit-invalid-digit.h(10): invalid digit in octal number literal
+    static int oct4 = 078 ;
+                      ^~~
+tests/lex/numlit-invalid-digit.h(11): invalid suffix on number literal: 'A'
+    static int oct5 = 0A ;
+                      ^~
+tests/lex/numlit-invalid-digit.h(13): invalid suffix on number literal: 'A'
+    static int dec1 = 1A ;
+                      ^~
+tests/lex/numlit-invalid-digit.h(15): invalid suffix on number literal: 'G'
+    static int hex1 = 0xG ;
+                      ^~~
+[ 6/15] __FB_OPENBSD__.(not __FB_64BIT__)
+        tests/lex/numlit-invalid-digit.h
+tests/lex/numlit-invalid-digit.h(3): invalid suffix on number literal: '2'
+    static int bin1 = 0b2 ;
+                      ^~~
+tests/lex/numlit-invalid-digit.h(4): invalid suffix on number literal: '9'
+    static int bin2 = 0b9 ;
+                      ^~~
+tests/lex/numlit-invalid-digit.h(5): invalid suffix on number literal: 'A'
+    static int bin3 = 0bA ;
+                      ^~~
+tests/lex/numlit-invalid-digit.h(7): invalid digit in octal number literal
+    static int oct1 = 08 ;
+                      ^~
+tests/lex/numlit-invalid-digit.h(8): invalid digit in octal number literal
+    static int oct2 = 09 ;
+                      ^~
+tests/lex/numlit-invalid-digit.h(9): invalid digit in octal number literal
+    static int oct3 = 09f ;
+                      ^~~
+tests/lex/numlit-invalid-digit.h(10): invalid digit in octal number literal
+    static int oct4 = 078 ;
+                      ^~~
+tests/lex/numlit-invalid-digit.h(11): invalid suffix on number literal: 'A'
+    static int oct5 = 0A ;
+                      ^~
+tests/lex/numlit-invalid-digit.h(13): invalid suffix on number literal: 'A'
+    static int dec1 = 1A ;
+                      ^~
+tests/lex/numlit-invalid-digit.h(15): invalid suffix on number literal: 'G'
+    static int hex1 = 0xG ;
+                      ^~~
+[ 7/15] __FB_NETBSD__.__FB_64BIT__
+        tests/lex/numlit-invalid-digit.h
+tests/lex/numlit-invalid-digit.h(3): invalid suffix on number literal: '2'
+    static int bin1 = 0b2 ;
+                      ^~~
+tests/lex/numlit-invalid-digit.h(4): invalid suffix on number literal: '9'
+    static int bin2 = 0b9 ;
+                      ^~~
+tests/lex/numlit-invalid-digit.h(5): invalid suffix on number literal: 'A'
+    static int bin3 = 0bA ;
+                      ^~~
+tests/lex/numlit-invalid-digit.h(7): invalid digit in octal number literal
+    static int oct1 = 08 ;
+                      ^~
+tests/lex/numlit-invalid-digit.h(8): invalid digit in octal number literal
+    static int oct2 = 09 ;
+                      ^~
+tests/lex/numlit-invalid-digit.h(9): invalid digit in octal number literal
+    static int oct3 = 09f ;
+                      ^~~
+tests/lex/numlit-invalid-digit.h(10): invalid digit in octal number literal
+    static int oct4 = 078 ;
+                      ^~~
+tests/lex/numlit-invalid-digit.h(11): invalid suffix on number literal: 'A'
+    static int oct5 = 0A ;
+                      ^~
+tests/lex/numlit-invalid-digit.h(13): invalid suffix on number literal: 'A'
+    static int dec1 = 1A ;
+                      ^~
+tests/lex/numlit-invalid-digit.h(15): invalid suffix on number literal: 'G'
+    static int hex1 = 0xG ;
+                      ^~~
+[ 8/15] __FB_NETBSD__.(not __FB_64BIT__)
+        tests/lex/numlit-invalid-digit.h
+tests/lex/numlit-invalid-digit.h(3): invalid suffix on number literal: '2'
+    static int bin1 = 0b2 ;
+                      ^~~
+tests/lex/numlit-invalid-digit.h(4): invalid suffix on number literal: '9'
+    static int bin2 = 0b9 ;
+                      ^~~
+tests/lex/numlit-invalid-digit.h(5): invalid suffix on number literal: 'A'
+    static int bin3 = 0bA ;
+                      ^~~
+tests/lex/numlit-invalid-digit.h(7): invalid digit in octal number literal
+    static int oct1 = 08 ;
+                      ^~
+tests/lex/numlit-invalid-digit.h(8): invalid digit in octal number literal
+    static int oct2 = 09 ;
+                      ^~
+tests/lex/numlit-invalid-digit.h(9): invalid digit in octal number literal
+    static int oct3 = 09f ;
+                      ^~~
+tests/lex/numlit-invalid-digit.h(10): invalid digit in octal number literal
+    static int oct4 = 078 ;
+                      ^~~
+tests/lex/numlit-invalid-digit.h(11): invalid suffix on number literal: 'A'
+    static int oct5 = 0A ;
+                      ^~
+tests/lex/numlit-invalid-digit.h(13): invalid suffix on number literal: 'A'
+    static int dec1 = 1A ;
+                      ^~
+tests/lex/numlit-invalid-digit.h(15): invalid suffix on number literal: 'G'
+    static int hex1 = 0xG ;
+                      ^~~
+[ 9/15] __FB_DARWIN__.__FB_64BIT__
+        tests/lex/numlit-invalid-digit.h
+tests/lex/numlit-invalid-digit.h(3): invalid suffix on number literal: '2'
+    static int bin1 = 0b2 ;
+                      ^~~
+tests/lex/numlit-invalid-digit.h(4): invalid suffix on number literal: '9'
+    static int bin2 = 0b9 ;
+                      ^~~
+tests/lex/numlit-invalid-digit.h(5): invalid suffix on number literal: 'A'
+    static int bin3 = 0bA ;
+                      ^~~
+tests/lex/numlit-invalid-digit.h(7): invalid digit in octal number literal
+    static int oct1 = 08 ;
+                      ^~
+tests/lex/numlit-invalid-digit.h(8): invalid digit in octal number literal
+    static int oct2 = 09 ;
+                      ^~
+tests/lex/numlit-invalid-digit.h(9): invalid digit in octal number literal
+    static int oct3 = 09f ;
+                      ^~~
+tests/lex/numlit-invalid-digit.h(10): invalid digit in octal number literal
+    static int oct4 = 078 ;
+                      ^~~
+tests/lex/numlit-invalid-digit.h(11): invalid suffix on number literal: 'A'
+    static int oct5 = 0A ;
+                      ^~
+tests/lex/numlit-invalid-digit.h(13): invalid suffix on number literal: 'A'
+    static int dec1 = 1A ;
+                      ^~
+tests/lex/numlit-invalid-digit.h(15): invalid suffix on number literal: 'G'
+    static int hex1 = 0xG ;
+                      ^~~
+[10/15] __FB_DARWIN__.(not __FB_64BIT__)
+        tests/lex/numlit-invalid-digit.h
+tests/lex/numlit-invalid-digit.h(3): invalid suffix on number literal: '2'
+    static int bin1 = 0b2 ;
+                      ^~~
+tests/lex/numlit-invalid-digit.h(4): invalid suffix on number literal: '9'
+    static int bin2 = 0b9 ;
+                      ^~~
+tests/lex/numlit-invalid-digit.h(5): invalid suffix on number literal: 'A'
+    static int bin3 = 0bA ;
+                      ^~~
+tests/lex/numlit-invalid-digit.h(7): invalid digit in octal number literal
+    static int oct1 = 08 ;
+                      ^~
+tests/lex/numlit-invalid-digit.h(8): invalid digit in octal number literal
+    static int oct2 = 09 ;
+                      ^~
+tests/lex/numlit-invalid-digit.h(9): invalid digit in octal number literal
+    static int oct3 = 09f ;
+                      ^~~
+tests/lex/numlit-invalid-digit.h(10): invalid digit in octal number literal
+    static int oct4 = 078 ;
+                      ^~~
+tests/lex/numlit-invalid-digit.h(11): invalid suffix on number literal: 'A'
+    static int oct5 = 0A ;
+                      ^~
+tests/lex/numlit-invalid-digit.h(13): invalid suffix on number literal: 'A'
+    static int dec1 = 1A ;
+                      ^~
+tests/lex/numlit-invalid-digit.h(15): invalid suffix on number literal: 'G'
+    static int hex1 = 0xG ;
+                      ^~~
+[11/15] __FB_WIN32__.__FB_64BIT__
+        tests/lex/numlit-invalid-digit.h
+tests/lex/numlit-invalid-digit.h(3): invalid suffix on number literal: '2'
+    static int bin1 = 0b2 ;
+                      ^~~
+tests/lex/numlit-invalid-digit.h(4): invalid suffix on number literal: '9'
+    static int bin2 = 0b9 ;
+                      ^~~
+tests/lex/numlit-invalid-digit.h(5): invalid suffix on number literal: 'A'
+    static int bin3 = 0bA ;
+                      ^~~
+tests/lex/numlit-invalid-digit.h(7): invalid digit in octal number literal
+    static int oct1 = 08 ;
+                      ^~
+tests/lex/numlit-invalid-digit.h(8): invalid digit in octal number literal
+    static int oct2 = 09 ;
+                      ^~
+tests/lex/numlit-invalid-digit.h(9): invalid digit in octal number literal
+    static int oct3 = 09f ;
+                      ^~~
+tests/lex/numlit-invalid-digit.h(10): invalid digit in octal number literal
+    static int oct4 = 078 ;
+                      ^~~
+tests/lex/numlit-invalid-digit.h(11): invalid suffix on number literal: 'A'
+    static int oct5 = 0A ;
+                      ^~
+tests/lex/numlit-invalid-digit.h(13): invalid suffix on number literal: 'A'
+    static int dec1 = 1A ;
+                      ^~
+tests/lex/numlit-invalid-digit.h(15): invalid suffix on number literal: 'G'
+    static int hex1 = 0xG ;
+                      ^~~
+[12/15] __FB_WIN32__.(not __FB_64BIT__)
+        tests/lex/numlit-invalid-digit.h
+tests/lex/numlit-invalid-digit.h(3): invalid suffix on number literal: '2'
+    static int bin1 = 0b2 ;
+                      ^~~
+tests/lex/numlit-invalid-digit.h(4): invalid suffix on number literal: '9'
+    static int bin2 = 0b9 ;
+                      ^~~
+tests/lex/numlit-invalid-digit.h(5): invalid suffix on number literal: 'A'
+    static int bin3 = 0bA ;
+                      ^~~
+tests/lex/numlit-invalid-digit.h(7): invalid digit in octal number literal
+    static int oct1 = 08 ;
+                      ^~
+tests/lex/numlit-invalid-digit.h(8): invalid digit in octal number literal
+    static int oct2 = 09 ;
+                      ^~
+tests/lex/numlit-invalid-digit.h(9): invalid digit in octal number literal
+    static int oct3 = 09f ;
+                      ^~~
+tests/lex/numlit-invalid-digit.h(10): invalid digit in octal number literal
+    static int oct4 = 078 ;
+                      ^~~
+tests/lex/numlit-invalid-digit.h(11): invalid suffix on number literal: 'A'
+    static int oct5 = 0A ;
+                      ^~
+tests/lex/numlit-invalid-digit.h(13): invalid suffix on number literal: 'A'
+    static int dec1 = 1A ;
+                      ^~
+tests/lex/numlit-invalid-digit.h(15): invalid suffix on number literal: 'G'
+    static int hex1 = 0xG ;
+                      ^~~
+[13/15] __FB_CYGWIN__.__FB_64BIT__
+        tests/lex/numlit-invalid-digit.h
+tests/lex/numlit-invalid-digit.h(3): invalid suffix on number literal: '2'
+    static int bin1 = 0b2 ;
+                      ^~~
+tests/lex/numlit-invalid-digit.h(4): invalid suffix on number literal: '9'
+    static int bin2 = 0b9 ;
+                      ^~~
+tests/lex/numlit-invalid-digit.h(5): invalid suffix on number literal: 'A'
+    static int bin3 = 0bA ;
+                      ^~~
+tests/lex/numlit-invalid-digit.h(7): invalid digit in octal number literal
+    static int oct1 = 08 ;
+                      ^~
+tests/lex/numlit-invalid-digit.h(8): invalid digit in octal number literal
+    static int oct2 = 09 ;
+                      ^~
+tests/lex/numlit-invalid-digit.h(9): invalid digit in octal number literal
+    static int oct3 = 09f ;
+                      ^~~
+tests/lex/numlit-invalid-digit.h(10): invalid digit in octal number literal
+    static int oct4 = 078 ;
+                      ^~~
+tests/lex/numlit-invalid-digit.h(11): invalid suffix on number literal: 'A'
+    static int oct5 = 0A ;
+                      ^~
+tests/lex/numlit-invalid-digit.h(13): invalid suffix on number literal: 'A'
+    static int dec1 = 1A ;
+                      ^~
+tests/lex/numlit-invalid-digit.h(15): invalid suffix on number literal: 'G'
+    static int hex1 = 0xG ;
+                      ^~~
+[14/15] __FB_CYGWIN__.(not __FB_64BIT__)
+        tests/lex/numlit-invalid-digit.h
+tests/lex/numlit-invalid-digit.h(3): invalid suffix on number literal: '2'
+    static int bin1 = 0b2 ;
+                      ^~~
+tests/lex/numlit-invalid-digit.h(4): invalid suffix on number literal: '9'
+    static int bin2 = 0b9 ;
+                      ^~~
+tests/lex/numlit-invalid-digit.h(5): invalid suffix on number literal: 'A'
+    static int bin3 = 0bA ;
+                      ^~~
+tests/lex/numlit-invalid-digit.h(7): invalid digit in octal number literal
+    static int oct1 = 08 ;
+                      ^~
+tests/lex/numlit-invalid-digit.h(8): invalid digit in octal number literal
+    static int oct2 = 09 ;
+                      ^~
+tests/lex/numlit-invalid-digit.h(9): invalid digit in octal number literal
+    static int oct3 = 09f ;
+                      ^~~
+tests/lex/numlit-invalid-digit.h(10): invalid digit in octal number literal
+    static int oct4 = 078 ;
+                      ^~~
+tests/lex/numlit-invalid-digit.h(11): invalid suffix on number literal: 'A'
+    static int oct5 = 0A ;
+                      ^~
+tests/lex/numlit-invalid-digit.h(13): invalid suffix on number literal: 'A'
+    static int dec1 = 1A ;
+                      ^~
+tests/lex/numlit-invalid-digit.h(15): invalid suffix on number literal: 'G'
+    static int hex1 = 0xG ;
+                      ^~~
+[15/15] __FB_DOS__
+        tests/lex/numlit-invalid-digit.h
 tests/lex/numlit-invalid-digit.h(3): invalid suffix on number literal: '2'
     static int bin1 = 0b2 ;
                       ^~~

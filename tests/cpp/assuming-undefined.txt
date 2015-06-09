@@ -1,46 +1,136 @@
-[1/5] __FB_WIN32__.__FB_64BIT__
-      tests/cpp/assuming-undefined.h
-      treating as undefined: unexpanded
-      treating as undefined: A
-      treating as undefined: B
-      treating as undefined: C
-      treating as undefined: D
-      treating as undefined: G
-      treating as undefined: _reported
-[2/5] __FB_WIN32__.(not __FB_64BIT__)
-      tests/cpp/assuming-undefined.h
-      treating as undefined: unexpanded
-      treating as undefined: A
-      treating as undefined: B
-      treating as undefined: C
-      treating as undefined: D
-      treating as undefined: G
-      treating as undefined: _reported
-[3/5] __FB_LINUX__.__FB_64BIT__
-      tests/cpp/assuming-undefined.h
-      treating as undefined: unexpanded
-      treating as undefined: A
-      treating as undefined: B
-      treating as undefined: C
-      treating as undefined: D
-      treating as undefined: G
-      treating as undefined: _reported
-[4/5] __FB_LINUX__.(not __FB_64BIT__)
-      tests/cpp/assuming-undefined.h
-      treating as undefined: unexpanded
-      treating as undefined: A
-      treating as undefined: B
-      treating as undefined: C
-      treating as undefined: D
-      treating as undefined: G
-      treating as undefined: _reported
-[5/5] __FB_DOS__
-      tests/cpp/assuming-undefined.h
-      treating as undefined: unexpanded
-      treating as undefined: A
-      treating as undefined: B
-      treating as undefined: C
-      treating as undefined: D
-      treating as undefined: G
-      treating as undefined: _reported
+[ 1/15] __FB_LINUX__.__FB_64BIT__
+        tests/cpp/assuming-undefined.h
+        treating as undefined: unexpanded
+        treating as undefined: A
+        treating as undefined: B
+        treating as undefined: C
+        treating as undefined: D
+        treating as undefined: G
+        treating as undefined: _reported
+[ 2/15] __FB_LINUX__.(not __FB_64BIT__)
+        tests/cpp/assuming-undefined.h
+        treating as undefined: unexpanded
+        treating as undefined: A
+        treating as undefined: B
+        treating as undefined: C
+        treating as undefined: D
+        treating as undefined: G
+        treating as undefined: _reported
+[ 3/15] __FB_FREEBSD__.__FB_64BIT__
+        tests/cpp/assuming-undefined.h
+        treating as undefined: unexpanded
+        treating as undefined: A
+        treating as undefined: B
+        treating as undefined: C
+        treating as undefined: D
+        treating as undefined: G
+        treating as undefined: _reported
+[ 4/15] __FB_FREEBSD__.(not __FB_64BIT__)
+        tests/cpp/assuming-undefined.h
+        treating as undefined: unexpanded
+        treating as undefined: A
+        treating as undefined: B
+        treating as undefined: C
+        treating as undefined: D
+        treating as undefined: G
+        treating as undefined: _reported
+[ 5/15] __FB_OPENBSD__.__FB_64BIT__
+        tests/cpp/assuming-undefined.h
+        treating as undefined: unexpanded
+        treating as undefined: A
+        treating as undefined: B
+        treating as undefined: C
+        treating as undefined: D
+        treating as undefined: G
+        treating as undefined: _reported
+[ 6/15] __FB_OPENBSD__.(not __FB_64BIT__)
+        tests/cpp/assuming-undefined.h
+        treating as undefined: unexpanded
+        treating as undefined: A
+        treating as undefined: B
+        treating as undefined: C
+        treating as undefined: D
+        treating as undefined: G
+        treating as undefined: _reported
+[ 7/15] __FB_NETBSD__.__FB_64BIT__
+        tests/cpp/assuming-undefined.h
+        treating as undefined: unexpanded
+        treating as undefined: A
+        treating as undefined: B
+        treating as undefined: C
+        treating as undefined: D
+        treating as undefined: G
+        treating as undefined: _reported
+[ 8/15] __FB_NETBSD__.(not __FB_64BIT__)
+        tests/cpp/assuming-undefined.h
+        treating as undefined: unexpanded
+        treating as undefined: A
+        treating as undefined: B
+        treating as undefined: C
+        treating as undefined: D
+        treating as undefined: G
+        treating as undefined: _reported
+[ 9/15] __FB_DARWIN__.__FB_64BIT__
+        tests/cpp/assuming-undefined.h
+        treating as undefined: unexpanded
+        treating as undefined: A
+        treating as undefined: B
+        treating as undefined: C
+        treating as undefined: D
+        treating as undefined: G
+        treating as undefined: _reported
+[10/15] __FB_DARWIN__.(not __FB_64BIT__)
+        tests/cpp/assuming-undefined.h
+        treating as undefined: unexpanded
+        treating as undefined: A
+        treating as undefined: B
+        treating as undefined: C
+        treating as undefined: D
+        treating as undefined: G
+        treating as undefined: _reported
+[11/15] __FB_WIN32__.__FB_64BIT__
+        tests/cpp/assuming-undefined.h
+        treating as undefined: unexpanded
+        treating as undefined: A
+        treating as undefined: B
+        treating as undefined: C
+        treating as undefined: D
+        treating as undefined: G
+        treating as undefined: _reported
+[12/15] __FB_WIN32__.(not __FB_64BIT__)
+        tests/cpp/assuming-undefined.h
+        treating as undefined: unexpanded
+        treating as undefined: A
+        treating as undefined: B
+        treating as undefined: C
+        treating as undefined: D
+        treating as undefined: G
+        treating as undefined: _reported
+[13/15] __FB_CYGWIN__.__FB_64BIT__
+        tests/cpp/assuming-undefined.h
+        treating as undefined: unexpanded
+        treating as undefined: A
+        treating as undefined: B
+        treating as undefined: C
+        treating as undefined: D
+        treating as undefined: G
+        treating as undefined: _reported
+[14/15] __FB_CYGWIN__.(not __FB_64BIT__)
+        tests/cpp/assuming-undefined.h
+        treating as undefined: unexpanded
+        treating as undefined: A
+        treating as undefined: B
+        treating as undefined: C
+        treating as undefined: D
+        treating as undefined: G
+        treating as undefined: _reported
+[15/15] __FB_DOS__
+        tests/cpp/assuming-undefined.h
+        treating as undefined: unexpanded
+        treating as undefined: A
+        treating as undefined: B
+        treating as undefined: C
+        treating as undefined: D
+        treating as undefined: G
+        treating as undefined: _reported
 emitting: tests/cpp/assuming-undefined.bi (0 declarations, 0 TODOs)

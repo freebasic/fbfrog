@@ -1,25 +1,75 @@
-[1/5] __FB_WIN32__.__FB_64BIT__
-      tests/c/bitfield-not-supported-here.h
+[ 1/15] __FB_LINUX__.__FB_64BIT__
+        tests/c/bitfield-not-supported-here.h
 tests/c/bitfield-not-supported-here.h(2): bitfields not supported here
     int i : 1 ;
           ^
-[2/5] __FB_WIN32__.(not __FB_64BIT__)
-      tests/c/bitfield-not-supported-here.h
+[ 2/15] __FB_LINUX__.(not __FB_64BIT__)
+        tests/c/bitfield-not-supported-here.h
 tests/c/bitfield-not-supported-here.h(2): bitfields not supported here
     int i : 1 ;
           ^
-[3/5] __FB_LINUX__.__FB_64BIT__
-      tests/c/bitfield-not-supported-here.h
+[ 3/15] __FB_FREEBSD__.__FB_64BIT__
+        tests/c/bitfield-not-supported-here.h
 tests/c/bitfield-not-supported-here.h(2): bitfields not supported here
     int i : 1 ;
           ^
-[4/5] __FB_LINUX__.(not __FB_64BIT__)
-      tests/c/bitfield-not-supported-here.h
+[ 4/15] __FB_FREEBSD__.(not __FB_64BIT__)
+        tests/c/bitfield-not-supported-here.h
 tests/c/bitfield-not-supported-here.h(2): bitfields not supported here
     int i : 1 ;
           ^
-[5/5] __FB_DOS__
-      tests/c/bitfield-not-supported-here.h
+[ 5/15] __FB_OPENBSD__.__FB_64BIT__
+        tests/c/bitfield-not-supported-here.h
+tests/c/bitfield-not-supported-here.h(2): bitfields not supported here
+    int i : 1 ;
+          ^
+[ 6/15] __FB_OPENBSD__.(not __FB_64BIT__)
+        tests/c/bitfield-not-supported-here.h
+tests/c/bitfield-not-supported-here.h(2): bitfields not supported here
+    int i : 1 ;
+          ^
+[ 7/15] __FB_NETBSD__.__FB_64BIT__
+        tests/c/bitfield-not-supported-here.h
+tests/c/bitfield-not-supported-here.h(2): bitfields not supported here
+    int i : 1 ;
+          ^
+[ 8/15] __FB_NETBSD__.(not __FB_64BIT__)
+        tests/c/bitfield-not-supported-here.h
+tests/c/bitfield-not-supported-here.h(2): bitfields not supported here
+    int i : 1 ;
+          ^
+[ 9/15] __FB_DARWIN__.__FB_64BIT__
+        tests/c/bitfield-not-supported-here.h
+tests/c/bitfield-not-supported-here.h(2): bitfields not supported here
+    int i : 1 ;
+          ^
+[10/15] __FB_DARWIN__.(not __FB_64BIT__)
+        tests/c/bitfield-not-supported-here.h
+tests/c/bitfield-not-supported-here.h(2): bitfields not supported here
+    int i : 1 ;
+          ^
+[11/15] __FB_WIN32__.__FB_64BIT__
+        tests/c/bitfield-not-supported-here.h
+tests/c/bitfield-not-supported-here.h(2): bitfields not supported here
+    int i : 1 ;
+          ^
+[12/15] __FB_WIN32__.(not __FB_64BIT__)
+        tests/c/bitfield-not-supported-here.h
+tests/c/bitfield-not-supported-here.h(2): bitfields not supported here
+    int i : 1 ;
+          ^
+[13/15] __FB_CYGWIN__.__FB_64BIT__
+        tests/c/bitfield-not-supported-here.h
+tests/c/bitfield-not-supported-here.h(2): bitfields not supported here
+    int i : 1 ;
+          ^
+[14/15] __FB_CYGWIN__.(not __FB_64BIT__)
+        tests/c/bitfield-not-supported-here.h
+tests/c/bitfield-not-supported-here.h(2): bitfields not supported here
+    int i : 1 ;
+          ^
+[15/15] __FB_DOS__
+        tests/c/bitfield-not-supported-here.h
 tests/c/bitfield-not-supported-here.h(2): bitfields not supported here
     int i : 1 ;
           ^

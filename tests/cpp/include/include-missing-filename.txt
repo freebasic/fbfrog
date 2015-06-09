@@ -1,5 +1,5 @@
-[1/5] __FB_WIN32__.__FB_64BIT__
-      tests/cpp/include/include-missing-filename.h
+[ 1/15] __FB_LINUX__.__FB_64BIT__
+        tests/cpp/include/include-missing-filename.h
 tests/cpp/include/include-missing-filename.h(2): missing "filename" or <filename> behind #include
     # include 
               ^

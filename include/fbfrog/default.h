@@ -5,18 +5,48 @@
 #define __GNUC__ 4
 #define __GNUC_MINOR__ 1111111
 #define __GNUC_PATCHLEVEL__ 1111111
-
 #define __GNUC_PREREQ(maj, min) ((__GNUC__ << 16) + __GNUC_MINOR__ >= ((maj) << 16) + (min))
+#define __clang__ 1
+#define __clang_major__ 3
+#define __clang_minor__ 1111111
+#define __clang_patchlevel__ 1111111
+#define __clang_version__ "fbfrog"
+#define __llvm__ 1
 
-#ifdef __FBFROG_LINUX__
+// All Unix-likes including Cygwin
+#if defined __FBFROG_LINUX__ || \
+    defined __FBFROG_FREEBSD__ || \
+    defined __FBFROG_OPENBSD__ || \
+    defined __FBFROG_NETBSD__  || \
+    defined __FBFROG_DARWIN__ || \
+    defined __FBFROG_CYGWIN__
 	#define unix 1
 	#define __unix 1
 	#define __unix__ 1
+#endif
+
+#if defined __FBFROG_LINUX__ || \
+    defined __FBFROG_FREEBSD__ || \
+    defined __FBFROG_OPENBSD__ || \
+    defined __FBFROG_NETBSD__
+	#define __ELF__ 1
+#endif
+
+#ifdef __FBFROG_LINUX__
 	#define linux 1
 	#define __linux 1
 	#define __linux__ 1
 	#define __gnu_linux__ 1
-	#define __ELF__ 1
+#elif defined __FBFROG_FREEBSD__
+	#define __FreeBSD__ 10
+	#define __FreeBSD_cc_version 1000001
+#elif defined __FBFROG_OPENBSD__
+	#define __OpenBSD__ 1
+#elif defined __FBFROG_NETBSD__
+	#define __NetBSD__ 1
+#elif defined __FBFROG_DARWIN__
+	#define __APPLE__ 1
+	#define __MACH__ 1
 #elif defined __FBFROG_WIN32__
 	#define __MINGW32__ 1
 	#define __MSVCRT__ 1
@@ -33,6 +63,11 @@
 		#define _WIN64 1
 		#define __WIN64 1
 		#define __WIN64__ 1
+	#endif
+#elif defined __FBFROG_CYGWIN__
+	#define __CYGWIN__ 1
+	#ifndef __FBFROG_64BIT__
+		#define __CYGWIN32__ 1
 	#endif
 #elif defined __FBFROG_DOS__
 	#define DJGPP 2
@@ -55,7 +90,8 @@
 	#define __k8__ 1
 	#define _M_X64
 	#define _M_AMD64
-	#ifdef __FBFROG_LINUX__
+	// 64bit Unix-likes, including Cygwin (!)
+	#ifdef __unix__
 		#define __LP64__ 1
 		#define _LP64 1
 	#endif
@@ -89,11 +125,12 @@
 #define __ORDER_PDP_ENDIAN__ 3412
 #define __BYTE_ORDER__ __ORDER_LITTLE_ENDIAN__
 #define __FLOAT_WORD_ORDER__ __ORDER_LITTLE_ENDIAN__
+#define __LITTLE_ENDIAN__ 1
 
 #define __CHAR_BIT__ 8
 #define __SIZEOF_SHORT__ 2
 #define __SIZEOF_INT__ 4
-#if defined __FBFROG_LINUX__ && defined __FBFROG_64BIT__
+#ifdef __LP64__
 	#define __SIZEOF_LONG__ 8
 #else
 	#define __SIZEOF_LONG__ 4
@@ -140,7 +177,7 @@
 #define __INTMAX_MAX__ __INT64_MAX__
 #define __UINTMAX_TYPE__ __UINT64_TYPE__
 #define __UINTMAX_MAX__ __UINT64_MAX__
-#if defined __FBFROG_LINUX__ && defined __FBFROG_64BIT__
+#if __SIZEOF_LONG__ == 8
 	#define __LONG_MAX__ __INT64_MAX__
 #else
 	#define __LONG_MAX__ __INT32_MAX__
@@ -165,6 +202,7 @@
 	#define __UINTPTR_MAX__ __UINT32_MAX__
 #endif
 #ifdef __FBFROG_DOS__
+	// wchar_t = uint16, wint_t = int32
 	#define __SIZEOF_WCHAR_T__ 2
 	#define __WCHAR_TYPE__ __UINT16_TYPE__
 	#define __WCHAR_MIN__ 0
@@ -173,7 +211,18 @@
 	#define __WINT_TYPE__ __INT32_TYPE__
 	#define __WINT_MIN__ (-__WINT_MAX__ - 1)
 	#define __WINT_MAX__ __INT32_MAX__
+#elif defined __FBFROG_CYGWIN__
+	// wchar_t = uint16, wint_t = uint32
+	#define __SIZEOF_WCHAR_T__ 2
+	#define __WCHAR_TYPE__ __UINT16_TYPE__
+	#define __WCHAR_MIN__ 0
+	#define __WCHAR_MAX__ __UINT16_MAX__
+	#define __SIZEOF_WINT_T__ 4
+	#define __WINT_TYPE__ __UINT32_TYPE__
+	#define __WINT_MIN__ 0u
+	#define __WINT_MAX__ __UINT32_MAX__
 #elif defined __FBFROG_WIN32__
+	// wchar_t = uint16, wint_t = uint16
 	#define __SIZEOF_WCHAR_T__ 2
 	#define __WCHAR_TYPE__ __UINT16_TYPE__
 	#define __WCHAR_MIN__ 0
@@ -182,7 +231,21 @@
 	#define __WINT_TYPE__ __UINT16_TYPE__
 	#define __WINT_MIN__ 0
 	#define __WINT_MAX__ __UINT16_MAX__
-#else
+#elif defined __FBFROG_FREEBSD__ || \
+      defined __FBFROG_OPENBSD__ || \
+      defined __FBFROG_NETBSD__ || \
+      defined __FBFROG_DARWIN__
+	// wchar_t = int32, wint_t = int32
+	#define __SIZEOF_WCHAR_T__ 4
+	#define __WCHAR_TYPE__ __INT32_TYPE__
+	#define __WCHAR_MIN__ (-__WCHAR_MAX__ - 1)
+	#define __WCHAR_MAX__ __INT32_MAX__
+	#define __SIZEOF_WINT_T__ 4
+	#define __WINT_TYPE__ __INT32_TYPE__
+	#define __WINT_MIN__ (-__WINT_MAX__ - 1)
+	#define __WINT_MAX__ __INT32_MAX__
+#elif defined __FBFROG_LINUX__
+	// wchar_t = int32, wint_t = uint32
 	#define __SIZEOF_WCHAR_T__ 4
 	#define __WCHAR_TYPE__ __INT32_TYPE__
 	#define __WCHAR_MIN__ (-__WCHAR_MAX__ - 1)
@@ -204,61 +267,67 @@
 #define __CHAR16_TYPE__ __UINT16_TYPE__
 #define __CHAR32_TYPE__ __UINT32_TYPE__
 
-#define __INT_FAST8_TYPE__ __INT8_TYPE__
-#define __INT_FAST8_MAX__ __INT8_MAX__
-#define __UINT_FAST8_TYPE__ __UINT8_TYPE__
-#define __UINT_FAST8_MAX__ __UINT8_MAX__
-#if defined __FBFROG_LINUX__ && defined __FBFROG_64BIT__
-	#define __INT_FAST16_TYPE__ __INT64_TYPE__
-	#define __INT_FAST16_MAX__ __INT64_MAX__
-	#define __UINT_FAST16_TYPE__ __UINT64_TYPE__
-	#define __UINT_FAST16_MAX__ __UINT64_MAX__
-	#define __INT_FAST32_TYPE__ __INT64_TYPE__
-	#define __INT_FAST32_MAX__ __INT64_MAX__
-	#define __UINT_FAST32_TYPE__ __UINT64_TYPE__
-	#define __UINT_FAST32_MAX__ __UINT64_MAX__
-	#define __INT_FAST64_TYPE__ __INT64_TYPE__
-	#define __INT_FAST64_MAX__ __INT64_MAX__
-	#define __UINT_FAST64_TYPE__ __UINT64_TYPE__
-	#define __UINT_FAST64_MAX__ __UINT64_MAX__
-#else
-	#if defined __FBFROG_DOS__ || defined __FBFROG_WIN32__
-		#define __INT_FAST16_TYPE__ __INT16_TYPE__
-		#define __INT_FAST16_MAX__ __INT16_MAX__
-		#define __UINT_FAST16_TYPE__ __UINT16_TYPE__
-		#define __UINT_FAST16_MAX__ __UINT16_MAX__
+#if defined __FBFROG_LINUX__ || \
+    defined __FBFROG_WIN32__ || \
+    defined __FBFROG_CYGWIN__ || \
+    defined __FBFROG_DOS__
+	#define __INT_FAST8_TYPE__ __INT8_TYPE__
+	#define __INT_FAST8_MAX__ __INT8_MAX__
+	#define __UINT_FAST8_TYPE__ __UINT8_TYPE__
+	#define __UINT_FAST8_MAX__ __UINT8_MAX__
+	#if defined __FBFROG_64BIT__ && \
+	    (defined __FBFROG_LINUX__ || \
+	     defined __FBFROG_CYGWIN__)
+		#define __INT_FAST16_TYPE__ __INT64_TYPE__
+		#define __INT_FAST16_MAX__ __INT64_MAX__
+		#define __UINT_FAST16_TYPE__ __UINT64_TYPE__
+		#define __UINT_FAST16_MAX__ __UINT64_MAX__
+		#define __INT_FAST32_TYPE__ __INT64_TYPE__
+		#define __INT_FAST32_MAX__ __INT64_MAX__
+		#define __UINT_FAST32_TYPE__ __UINT64_TYPE__
+		#define __UINT_FAST32_MAX__ __UINT64_MAX__
+		#define __INT_FAST64_TYPE__ __INT64_TYPE__
+		#define __INT_FAST64_MAX__ __INT64_MAX__
+		#define __UINT_FAST64_TYPE__ __UINT64_TYPE__
+		#define __UINT_FAST64_MAX__ __UINT64_MAX__
 	#else
-		#define __INT_FAST16_TYPE__ int
-		#define __INT_FAST16_MAX__ __INT32_MAX__
-		#define __UINT_FAST16_TYPE__ __UINT32_TYPE__
-		#define __UINT_FAST16_MAX__ __UINT32_MAX__
+		#if defined __FBFROG_DOS__ || defined __FBFROG_WIN32__
+			#define __INT_FAST16_TYPE__ __INT16_TYPE__
+			#define __INT_FAST16_MAX__ __INT16_MAX__
+			#define __UINT_FAST16_TYPE__ __UINT16_TYPE__
+			#define __UINT_FAST16_MAX__ __UINT16_MAX__
+		#else
+			#define __INT_FAST16_TYPE__ int
+			#define __INT_FAST16_MAX__ __INT32_MAX__
+			#define __UINT_FAST16_TYPE__ __UINT32_TYPE__
+			#define __UINT_FAST16_MAX__ __UINT32_MAX__
+		#endif
+		#define __INT_FAST32_TYPE__ int
+		#define __INT_FAST32_MAX__ __INT32_MAX__
+		#define __UINT_FAST32_TYPE__ __UINT32_TYPE__
+		#define __UINT_FAST32_MAX__ __UINT32_MAX__
+		#define __INT_FAST64_TYPE__ __INT64_TYPE__
+		#define __INT_FAST64_MAX__ __INT64_MAX__
+		#define __UINT_FAST64_TYPE__ __UINT64_TYPE__
+		#define __UINT_FAST64_MAX__ __UINT64_MAX__
 	#endif
-	#define __INT_FAST32_TYPE__ int
-	#define __INT_FAST32_MAX__ __INT32_MAX__
-	#define __UINT_FAST32_TYPE__ __UINT32_TYPE__
-	#define __UINT_FAST32_MAX__ __UINT32_MAX__
-	#define __INT_FAST64_TYPE__ __INT64_TYPE__
-	#define __INT_FAST64_MAX__ __INT64_MAX__
-	#define __UINT_FAST64_TYPE__ __UINT64_TYPE__
-	#define __UINT_FAST64_MAX__ __UINT64_MAX__
+	#define __INT_LEAST8_TYPE__ __INT8_TYPE__
+	#define __INT_LEAST8_MAX__ __INT8_MAX__
+	#define __UINT_LEAST8_TYPE__ __UINT8_TYPE__
+	#define __UINT_LEAST8_MAX__ __UINT8_MAX__
+	#define __INT_LEAST16_TYPE__ __INT16_TYPE__
+	#define __INT_LEAST16_MAX__ __INT16_MAX__
+	#define __UINT_LEAST16_TYPE__ __UINT16_TYPE__
+	#define __UINT_LEAST16_MAX__ __UINT16_MAX__
+	#define __INT_LEAST32_TYPE__ int
+	#define __INT_LEAST32_MAX__ __INT32_MAX__
+	#define __UINT_LEAST32_TYPE__ __UINT32_TYPE__
+	#define __UINT_LEAST32_MAX__ __UINT32_MAX__
+	#define __INT_LEAST64_TYPE__ __INT64_TYPE__
+	#define __INT_LEAST64_MAX__ __INT64_MAX__
+	#define __UINT_LEAST64_TYPE__ __UINT64_TYPE__
+	#define __UINT_LEAST64_MAX__ __UINT64_MAX__
 #endif
-
-#define __INT_LEAST8_TYPE__ __INT8_TYPE__
-#define __INT_LEAST8_MAX__ __INT8_MAX__
-#define __UINT_LEAST8_TYPE__ __UINT8_TYPE__
-#define __UINT_LEAST8_MAX__ __UINT8_MAX__
-#define __INT_LEAST16_TYPE__ __INT16_TYPE__
-#define __INT_LEAST16_MAX__ __INT16_MAX__
-#define __UINT_LEAST16_TYPE__ __UINT16_TYPE__
-#define __UINT_LEAST16_MAX__ __UINT16_MAX__
-#define __INT_LEAST32_TYPE__ int
-#define __INT_LEAST32_MAX__ __INT32_MAX__
-#define __UINT_LEAST32_TYPE__ __UINT32_TYPE__
-#define __UINT_LEAST32_MAX__ __UINT32_MAX__
-#define __INT_LEAST64_TYPE__ __INT64_TYPE__
-#define __INT_LEAST64_MAX__ __INT64_MAX__
-#define __UINT_LEAST64_TYPE__ __UINT64_TYPE__
-#define __UINT_LEAST64_MAX__ __UINT64_MAX__
 
 #define __INT8_C(c) c
 #define __INT16_C(c) c
@@ -271,7 +340,9 @@
 #define __UINT64_C(c) c ## ULL
 #define __UINTMAX_C(c) c ## ULL
 
-#if defined __FBFROG_DOS__ || defined __FBFROG_WIN32__
+#if defined __FBFROG_DOS__ || \
+    defined __FBFROG_WIN32__ || \
+    defined __FBFROG_CYGWIN__
 	#define __USER_LABEL_PREFIX__ _
 #else
 	#define __USER_LABEL_PREFIX__
@@ -280,7 +351,9 @@
 #ifdef __FBFROG_WIN32__
 	#define _INTEGRAL_MAX_BITS 64
 	#define _REENTRANT 1
+#endif
 
+#if defined __FBFROG_WIN32__ || defined __FBFROG_CYGWIN__
 	#define __cdecl __attribute__((__cdecl__))
 	#define _cdecl __attribute__((__cdecl__))
 	#define __declspec(x) __attribute__((x))

@@ -1,6 +1,6 @@
 #pragma once
 
-#ifdef UNICODE
+#if defined(UNICODE) and (defined(__FB_DOS__) or (defined(__FB_LINUX__) or defined(__FB_FREEBSD__) or defined(__FB_OPENBSD__) or defined(__FB_NETBSD__) or defined(__FB_DARWIN__) or defined(__FB_WIN32__) or defined(__FB_CYGWIN__)))
 	#define __MINGW_NAME_AW(s) s##W
 	#define __MINGW_NAME_AW_EXT(func, ext) func##W##ext
 	#define __MINGW_NAME_UAW(func) func##_W
@@ -19,7 +19,7 @@
 '' TODO: #define __MINGW_TYPEDEF_AW(type) typedef __MINGW_NAME_AW(type) type;
 '' TODO: #define __MINGW_TYPEDEF_UAW(type) typedef __MINGW_NAME_UAW(type) type;
 
-#ifdef UNICODE
+#if defined(UNICODE) and (defined(__FB_DOS__) or (defined(__FB_LINUX__) or defined(__FB_FREEBSD__) or defined(__FB_OPENBSD__) or defined(__FB_NETBSD__) or defined(__FB_DARWIN__) or defined(__FB_WIN32__) or defined(__FB_CYGWIN__)))
 	#define CreateWindowEx CreateWindowExW
 	#define SendMessage SendMessageW
 	#define Function1 Function1W123
@@ -38,7 +38,7 @@
 const CONST1A = 1
 const CONST1W = 2
 
-#ifdef UNICODE
+#if defined(UNICODE) and (defined(__FB_DOS__) or (defined(__FB_LINUX__) or defined(__FB_FREEBSD__) or defined(__FB_OPENBSD__) or defined(__FB_NETBSD__) or defined(__FB_DARWIN__) or defined(__FB_WIN32__) or defined(__FB_CYGWIN__)))
 	#define CONST1 CONST1W
 #else
 	#define CONST1 CONST1A
@@ -47,7 +47,7 @@ const CONST1W = 2
 #define STR1 __TEXT("1")
 #define STR2 __TEXT("2")
 
-#ifdef UNICODE
+#if defined(UNICODE) and (defined(__FB_DOS__) or (defined(__FB_LINUX__) or defined(__FB_FREEBSD__) or defined(__FB_OPENBSD__) or defined(__FB_NETBSD__) or defined(__FB_DARWIN__) or defined(__FB_WIN32__) or defined(__FB_CYGWIN__)))
 	type myType as myTypeW
 	#define LookupAccountName LookupAccountNameW
 	#define LookupAccountNameLocal(n, s, cs, d, cd, u) LookupAccountNameW(NULL, n, s, cs, d, cd, u)

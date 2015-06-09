@@ -1,25 +1,75 @@
-[1/5] __FB_WIN32__.__FB_64BIT__
-      tests/c/keyword-basetype-missing-id.h
+[ 1/15] __FB_LINUX__.__FB_64BIT__
+        tests/c/keyword-basetype-missing-id.h
 tests/c/keyword-basetype-missing-id.h(2): expected identifier for the symbol declared in this declaration but found ';'
     int ;
         ^
-[2/5] __FB_WIN32__.(not __FB_64BIT__)
-      tests/c/keyword-basetype-missing-id.h
+[ 2/15] __FB_LINUX__.(not __FB_64BIT__)
+        tests/c/keyword-basetype-missing-id.h
 tests/c/keyword-basetype-missing-id.h(2): expected identifier for the symbol declared in this declaration but found ';'
     int ;
         ^
-[3/5] __FB_LINUX__.__FB_64BIT__
-      tests/c/keyword-basetype-missing-id.h
+[ 3/15] __FB_FREEBSD__.__FB_64BIT__
+        tests/c/keyword-basetype-missing-id.h
 tests/c/keyword-basetype-missing-id.h(2): expected identifier for the symbol declared in this declaration but found ';'
     int ;
         ^
-[4/5] __FB_LINUX__.(not __FB_64BIT__)
-      tests/c/keyword-basetype-missing-id.h
+[ 4/15] __FB_FREEBSD__.(not __FB_64BIT__)
+        tests/c/keyword-basetype-missing-id.h
 tests/c/keyword-basetype-missing-id.h(2): expected identifier for the symbol declared in this declaration but found ';'
     int ;
         ^
-[5/5] __FB_DOS__
-      tests/c/keyword-basetype-missing-id.h
+[ 5/15] __FB_OPENBSD__.__FB_64BIT__
+        tests/c/keyword-basetype-missing-id.h
+tests/c/keyword-basetype-missing-id.h(2): expected identifier for the symbol declared in this declaration but found ';'
+    int ;
+        ^
+[ 6/15] __FB_OPENBSD__.(not __FB_64BIT__)
+        tests/c/keyword-basetype-missing-id.h
+tests/c/keyword-basetype-missing-id.h(2): expected identifier for the symbol declared in this declaration but found ';'
+    int ;
+        ^
+[ 7/15] __FB_NETBSD__.__FB_64BIT__
+        tests/c/keyword-basetype-missing-id.h
+tests/c/keyword-basetype-missing-id.h(2): expected identifier for the symbol declared in this declaration but found ';'
+    int ;
+        ^
+[ 8/15] __FB_NETBSD__.(not __FB_64BIT__)
+        tests/c/keyword-basetype-missing-id.h
+tests/c/keyword-basetype-missing-id.h(2): expected identifier for the symbol declared in this declaration but found ';'
+    int ;
+        ^
+[ 9/15] __FB_DARWIN__.__FB_64BIT__
+        tests/c/keyword-basetype-missing-id.h
+tests/c/keyword-basetype-missing-id.h(2): expected identifier for the symbol declared in this declaration but found ';'
+    int ;
+        ^
+[10/15] __FB_DARWIN__.(not __FB_64BIT__)
+        tests/c/keyword-basetype-missing-id.h
+tests/c/keyword-basetype-missing-id.h(2): expected identifier for the symbol declared in this declaration but found ';'
+    int ;
+        ^
+[11/15] __FB_WIN32__.__FB_64BIT__
+        tests/c/keyword-basetype-missing-id.h
+tests/c/keyword-basetype-missing-id.h(2): expected identifier for the symbol declared in this declaration but found ';'
+    int ;
+        ^
+[12/15] __FB_WIN32__.(not __FB_64BIT__)
+        tests/c/keyword-basetype-missing-id.h
+tests/c/keyword-basetype-missing-id.h(2): expected identifier for the symbol declared in this declaration but found ';'
+    int ;
+        ^
+[13/15] __FB_CYGWIN__.__FB_64BIT__
+        tests/c/keyword-basetype-missing-id.h
+tests/c/keyword-basetype-missing-id.h(2): expected identifier for the symbol declared in this declaration but found ';'
+    int ;
+        ^
+[14/15] __FB_CYGWIN__.(not __FB_64BIT__)
+        tests/c/keyword-basetype-missing-id.h
+tests/c/keyword-basetype-missing-id.h(2): expected identifier for the symbol declared in this declaration but found ';'
+    int ;
+        ^
+[15/15] __FB_DOS__
+        tests/c/keyword-basetype-missing-id.h
 tests/c/keyword-basetype-missing-id.h(2): expected identifier for the symbol declared in this declaration but found ';'
     int ;
         ^

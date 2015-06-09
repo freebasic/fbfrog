@@ -1,5 +1,5 @@
-[1/5] __FB_WIN32__.__FB_64BIT__
-      tests/lex/open-include-literal.h
+[ 1/15] __FB_LINUX__.__FB_64BIT__
+        tests/lex/open-include-literal.h
 tests/lex/open-include-literal.h(2): missing '>' to finish #include <...
     # include < foo 
                     ^

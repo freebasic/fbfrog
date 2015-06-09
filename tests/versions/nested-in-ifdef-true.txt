@@ -1,31 +1,91 @@
-[ 1/15] __FB_WIN32__.__FB_64BIT__.A.VER=1
+[ 1/45] __FB_LINUX__.__FB_64BIT__.A.VER=1
         tests/versions/nested-in-ifdef-true.h
-[ 2/15] __FB_WIN32__.__FB_64BIT__.A.VER=2
+[ 2/45] __FB_LINUX__.__FB_64BIT__.A.VER=2
         tests/versions/nested-in-ifdef-true.h
-[ 3/15] __FB_WIN32__.__FB_64BIT__.(not A)
+[ 3/45] __FB_LINUX__.__FB_64BIT__.(not A)
         tests/versions/nested-in-ifdef-true.h
-[ 4/15] __FB_WIN32__.(not __FB_64BIT__).A.VER=1
+[ 4/45] __FB_LINUX__.(not __FB_64BIT__).A.VER=1
         tests/versions/nested-in-ifdef-true.h
-[ 5/15] __FB_WIN32__.(not __FB_64BIT__).A.VER=2
+[ 5/45] __FB_LINUX__.(not __FB_64BIT__).A.VER=2
         tests/versions/nested-in-ifdef-true.h
-[ 6/15] __FB_WIN32__.(not __FB_64BIT__).(not A)
+[ 6/45] __FB_LINUX__.(not __FB_64BIT__).(not A)
         tests/versions/nested-in-ifdef-true.h
-[ 7/15] __FB_LINUX__.__FB_64BIT__.A.VER=1
+[ 7/45] __FB_FREEBSD__.__FB_64BIT__.A.VER=1
         tests/versions/nested-in-ifdef-true.h
-[ 8/15] __FB_LINUX__.__FB_64BIT__.A.VER=2
+[ 8/45] __FB_FREEBSD__.__FB_64BIT__.A.VER=2
         tests/versions/nested-in-ifdef-true.h
-[ 9/15] __FB_LINUX__.__FB_64BIT__.(not A)
+[ 9/45] __FB_FREEBSD__.__FB_64BIT__.(not A)
         tests/versions/nested-in-ifdef-true.h
-[10/15] __FB_LINUX__.(not __FB_64BIT__).A.VER=1
+[10/45] __FB_FREEBSD__.(not __FB_64BIT__).A.VER=1
         tests/versions/nested-in-ifdef-true.h
-[11/15] __FB_LINUX__.(not __FB_64BIT__).A.VER=2
+[11/45] __FB_FREEBSD__.(not __FB_64BIT__).A.VER=2
         tests/versions/nested-in-ifdef-true.h
-[12/15] __FB_LINUX__.(not __FB_64BIT__).(not A)
+[12/45] __FB_FREEBSD__.(not __FB_64BIT__).(not A)
         tests/versions/nested-in-ifdef-true.h
-[13/15] __FB_DOS__.A.VER=1
+[13/45] __FB_OPENBSD__.__FB_64BIT__.A.VER=1
         tests/versions/nested-in-ifdef-true.h
-[14/15] __FB_DOS__.A.VER=2
+[14/45] __FB_OPENBSD__.__FB_64BIT__.A.VER=2
         tests/versions/nested-in-ifdef-true.h
-[15/15] __FB_DOS__.(not A)
+[15/45] __FB_OPENBSD__.__FB_64BIT__.(not A)
+        tests/versions/nested-in-ifdef-true.h
+[16/45] __FB_OPENBSD__.(not __FB_64BIT__).A.VER=1
+        tests/versions/nested-in-ifdef-true.h
+[17/45] __FB_OPENBSD__.(not __FB_64BIT__).A.VER=2
+        tests/versions/nested-in-ifdef-true.h
+[18/45] __FB_OPENBSD__.(not __FB_64BIT__).(not A)
+        tests/versions/nested-in-ifdef-true.h
+[19/45] __FB_NETBSD__.__FB_64BIT__.A.VER=1
+        tests/versions/nested-in-ifdef-true.h
+[20/45] __FB_NETBSD__.__FB_64BIT__.A.VER=2
+        tests/versions/nested-in-ifdef-true.h
+[21/45] __FB_NETBSD__.__FB_64BIT__.(not A)
+        tests/versions/nested-in-ifdef-true.h
+[22/45] __FB_NETBSD__.(not __FB_64BIT__).A.VER=1
+        tests/versions/nested-in-ifdef-true.h
+[23/45] __FB_NETBSD__.(not __FB_64BIT__).A.VER=2
+        tests/versions/nested-in-ifdef-true.h
+[24/45] __FB_NETBSD__.(not __FB_64BIT__).(not A)
+        tests/versions/nested-in-ifdef-true.h
+[25/45] __FB_DARWIN__.__FB_64BIT__.A.VER=1
+        tests/versions/nested-in-ifdef-true.h
+[26/45] __FB_DARWIN__.__FB_64BIT__.A.VER=2
+        tests/versions/nested-in-ifdef-true.h
+[27/45] __FB_DARWIN__.__FB_64BIT__.(not A)
+        tests/versions/nested-in-ifdef-true.h
+[28/45] __FB_DARWIN__.(not __FB_64BIT__).A.VER=1
+        tests/versions/nested-in-ifdef-true.h
+[29/45] __FB_DARWIN__.(not __FB_64BIT__).A.VER=2
+        tests/versions/nested-in-ifdef-true.h
+[30/45] __FB_DARWIN__.(not __FB_64BIT__).(not A)
+        tests/versions/nested-in-ifdef-true.h
+[31/45] __FB_WIN32__.__FB_64BIT__.A.VER=1
+        tests/versions/nested-in-ifdef-true.h
+[32/45] __FB_WIN32__.__FB_64BIT__.A.VER=2
+        tests/versions/nested-in-ifdef-true.h
+[33/45] __FB_WIN32__.__FB_64BIT__.(not A)
+        tests/versions/nested-in-ifdef-true.h
+[34/45] __FB_WIN32__.(not __FB_64BIT__).A.VER=1
+        tests/versions/nested-in-ifdef-true.h
+[35/45] __FB_WIN32__.(not __FB_64BIT__).A.VER=2
+        tests/versions/nested-in-ifdef-true.h
+[36/45] __FB_WIN32__.(not __FB_64BIT__).(not A)
+        tests/versions/nested-in-ifdef-true.h
+[37/45] __FB_CYGWIN__.__FB_64BIT__.A.VER=1
+        tests/versions/nested-in-ifdef-true.h
+[38/45] __FB_CYGWIN__.__FB_64BIT__.A.VER=2
+        tests/versions/nested-in-ifdef-true.h
+[39/45] __FB_CYGWIN__.__FB_64BIT__.(not A)
+        tests/versions/nested-in-ifdef-true.h
+[40/45] __FB_CYGWIN__.(not __FB_64BIT__).A.VER=1
+        tests/versions/nested-in-ifdef-true.h
+[41/45] __FB_CYGWIN__.(not __FB_64BIT__).A.VER=2
+        tests/versions/nested-in-ifdef-true.h
+[42/45] __FB_CYGWIN__.(not __FB_64BIT__).(not A)
+        tests/versions/nested-in-ifdef-true.h
+[43/45] __FB_DOS__.A.VER=1
+        tests/versions/nested-in-ifdef-true.h
+[44/45] __FB_DOS__.A.VER=2
+        tests/versions/nested-in-ifdef-true.h
+[45/45] __FB_DOS__.(not A)
         tests/versions/nested-in-ifdef-true.h
 emitting: tests/versions/nested-in-ifdef-true.bi (0 declarations, 0 TODOs)

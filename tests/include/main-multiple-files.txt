@@ -1,53 +1,153 @@
-[1/5] __FB_WIN32__.__FB_64BIT__
-      tests/include/main-multiple-files.h
-      tests/include/1.h
-      tests/include/include2.h
-      tests/include/2.h
-      tests/include/3.h
-      tests/include/include1.h
-      tests/include/1.h
-      tests/include/includenotfound.h
-      does-not-exist.h (not found)
-[2/5] __FB_WIN32__.(not __FB_64BIT__)
-      tests/include/main-multiple-files.h
-      tests/include/1.h
-      tests/include/include2.h
-      tests/include/2.h
-      tests/include/3.h
-      tests/include/include1.h
-      tests/include/1.h
-      tests/include/includenotfound.h
-      does-not-exist.h (not found)
-[3/5] __FB_LINUX__.__FB_64BIT__
-      tests/include/main-multiple-files.h
-      tests/include/1.h
-      tests/include/include2.h
-      tests/include/2.h
-      tests/include/3.h
-      tests/include/include1.h
-      tests/include/1.h
-      tests/include/includenotfound.h
-      does-not-exist.h (not found)
-[4/5] __FB_LINUX__.(not __FB_64BIT__)
-      tests/include/main-multiple-files.h
-      tests/include/1.h
-      tests/include/include2.h
-      tests/include/2.h
-      tests/include/3.h
-      tests/include/include1.h
-      tests/include/1.h
-      tests/include/includenotfound.h
-      does-not-exist.h (not found)
-[5/5] __FB_DOS__
-      tests/include/main-multiple-files.h
-      tests/include/1.h
-      tests/include/include2.h
-      tests/include/2.h
-      tests/include/3.h
-      tests/include/include1.h
-      tests/include/1.h
-      tests/include/includenotfound.h
-      does-not-exist.h (not found)
+[ 1/15] __FB_LINUX__.__FB_64BIT__
+        tests/include/main-multiple-files.h
+        tests/include/1.h
+        tests/include/include2.h
+        tests/include/2.h
+        tests/include/3.h
+        tests/include/include1.h
+        tests/include/1.h
+        tests/include/includenotfound.h
+        does-not-exist.h (not found)
+[ 2/15] __FB_LINUX__.(not __FB_64BIT__)
+        tests/include/main-multiple-files.h
+        tests/include/1.h
+        tests/include/include2.h
+        tests/include/2.h
+        tests/include/3.h
+        tests/include/include1.h
+        tests/include/1.h
+        tests/include/includenotfound.h
+        does-not-exist.h (not found)
+[ 3/15] __FB_FREEBSD__.__FB_64BIT__
+        tests/include/main-multiple-files.h
+        tests/include/1.h
+        tests/include/include2.h
+        tests/include/2.h
+        tests/include/3.h
+        tests/include/include1.h
+        tests/include/1.h
+        tests/include/includenotfound.h
+        does-not-exist.h (not found)
+[ 4/15] __FB_FREEBSD__.(not __FB_64BIT__)
+        tests/include/main-multiple-files.h
+        tests/include/1.h
+        tests/include/include2.h
+        tests/include/2.h
+        tests/include/3.h
+        tests/include/include1.h
+        tests/include/1.h
+        tests/include/includenotfound.h
+        does-not-exist.h (not found)
+[ 5/15] __FB_OPENBSD__.__FB_64BIT__
+        tests/include/main-multiple-files.h
+        tests/include/1.h
+        tests/include/include2.h
+        tests/include/2.h
+        tests/include/3.h
+        tests/include/include1.h
+        tests/include/1.h
+        tests/include/includenotfound.h
+        does-not-exist.h (not found)
+[ 6/15] __FB_OPENBSD__.(not __FB_64BIT__)
+        tests/include/main-multiple-files.h
+        tests/include/1.h
+        tests/include/include2.h
+        tests/include/2.h
+        tests/include/3.h
+        tests/include/include1.h
+        tests/include/1.h
+        tests/include/includenotfound.h
+        does-not-exist.h (not found)
+[ 7/15] __FB_NETBSD__.__FB_64BIT__
+        tests/include/main-multiple-files.h
+        tests/include/1.h
+        tests/include/include2.h
+        tests/include/2.h
+        tests/include/3.h
+        tests/include/include1.h
+        tests/include/1.h
+        tests/include/includenotfound.h
+        does-not-exist.h (not found)
+[ 8/15] __FB_NETBSD__.(not __FB_64BIT__)
+        tests/include/main-multiple-files.h
+        tests/include/1.h
+        tests/include/include2.h
+        tests/include/2.h
+        tests/include/3.h
+        tests/include/include1.h
+        tests/include/1.h
+        tests/include/includenotfound.h
+        does-not-exist.h (not found)
+[ 9/15] __FB_DARWIN__.__FB_64BIT__
+        tests/include/main-multiple-files.h
+        tests/include/1.h
+        tests/include/include2.h
+        tests/include/2.h
+        tests/include/3.h
+        tests/include/include1.h
+        tests/include/1.h
+        tests/include/includenotfound.h
+        does-not-exist.h (not found)
+[10/15] __FB_DARWIN__.(not __FB_64BIT__)
+        tests/include/main-multiple-files.h
+        tests/include/1.h
+        tests/include/include2.h
+        tests/include/2.h
+        tests/include/3.h
+        tests/include/include1.h
+        tests/include/1.h
+        tests/include/includenotfound.h
+        does-not-exist.h (not found)
+[11/15] __FB_WIN32__.__FB_64BIT__
+        tests/include/main-multiple-files.h
+        tests/include/1.h
+        tests/include/include2.h
+        tests/include/2.h
+        tests/include/3.h
+        tests/include/include1.h
+        tests/include/1.h
+        tests/include/includenotfound.h
+        does-not-exist.h (not found)
+[12/15] __FB_WIN32__.(not __FB_64BIT__)
+        tests/include/main-multiple-files.h
+        tests/include/1.h
+        tests/include/include2.h
+        tests/include/2.h
+        tests/include/3.h
+        tests/include/include1.h
+        tests/include/1.h
+        tests/include/includenotfound.h
+        does-not-exist.h (not found)
+[13/15] __FB_CYGWIN__.__FB_64BIT__
+        tests/include/main-multiple-files.h
+        tests/include/1.h
+        tests/include/include2.h
+        tests/include/2.h
+        tests/include/3.h
+        tests/include/include1.h
+        tests/include/1.h
+        tests/include/includenotfound.h
+        does-not-exist.h (not found)
+[14/15] __FB_CYGWIN__.(not __FB_64BIT__)
+        tests/include/main-multiple-files.h
+        tests/include/1.h
+        tests/include/include2.h
+        tests/include/2.h
+        tests/include/3.h
+        tests/include/include1.h
+        tests/include/1.h
+        tests/include/includenotfound.h
+        does-not-exist.h (not found)
+[15/15] __FB_DOS__
+        tests/include/main-multiple-files.h
+        tests/include/1.h
+        tests/include/include2.h
+        tests/include/2.h
+        tests/include/3.h
+        tests/include/include1.h
+        tests/include/1.h
+        tests/include/includenotfound.h
+        does-not-exist.h (not found)
 emitting: tests/include/main-multiple-files-1.bi (2 declarations, 0 TODOs)
 emitting: tests/include/main-multiple-files-2.bi (1 declaration, 0 TODOs)
 emitting: tests/include/main-multiple-files-3.bi (1 declaration, 0 TODOs)

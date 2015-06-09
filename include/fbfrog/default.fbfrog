@@ -1,9 +1,22 @@
--declaredefines __FB_WIN32__ __FB_LINUX__ __FB_DOS__
+-declaredefines
+	__FB_LINUX__
+	__FB_FREEBSD__
+	__FB_OPENBSD__
+	__FB_NETBSD__
+	__FB_DARWIN__
+	__FB_WIN32__
+	__FB_CYGWIN__
+	__FB_DOS__
 
 -select
--case __FB_WIN32__ -define __FBFROG_WIN32__
--case __FB_LINUX__ -define __FBFROG_LINUX__
--case __FB_DOS__   -define __FBFROG_DOS__
+-case __FB_LINUX__   -define __FBFROG_LINUX__
+-case __FB_FREEBSD__ -define __FBFROG_FREEBSD__
+-case __FB_OPENBSD__ -define __FBFROG_OPENBSD__
+-case __FB_NETBSD__  -define __FBFROG_NETBSD__
+-case __FB_DARWIN__  -define __FBFROG_DARWIN__
+-case __FB_WIN32__   -define __FBFROG_WIN32__
+-case __FB_CYGWIN__  -define __FBFROG_CYGWIN__
+-case __FB_DOS__     -define __FBFROG_DOS__
 -endselect
 
 -ifdef __FB_DOS__

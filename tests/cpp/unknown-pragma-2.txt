@@ -1,5 +1,5 @@
-[1/5] __FB_WIN32__.__FB_64BIT__
-      tests/cpp/unknown-pragma-2.h
+[ 1/15] __FB_LINUX__.__FB_64BIT__
+        tests/cpp/unknown-pragma-2.h
 tests/cpp/unknown-pragma-2.h(8): unknown #pragma
     # pragma ? ? ? 
              ^

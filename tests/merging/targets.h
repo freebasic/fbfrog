@@ -1,4 +1,4 @@
-static int vardoslinuxwin32;
+static int varall;
 
 #ifdef DJGPP
 	static int vardos;
@@ -15,8 +15,6 @@ static int vardoslinuxwin32;
 	struct UDTwin32 {
 		int fieldwin32;
 	};
-#else
-	#error "invalid target"
 #endif
 
 #if defined DJGPP || defined __linux__
@@ -35,11 +33,11 @@ static int vardoslinuxwin32;
 	};
 #endif
 
-struct UDTdoslinuxwin32 {
-	int fielddoslinuxwin32;
+struct UDTall {
+	int fieldall;
 };
 
-struct UDTfielddoslinuxwin32 {
+struct UDTall2 {
 	#ifdef DJGPP
 		int fielddos;
 	#elif defined __linux__

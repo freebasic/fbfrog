@@ -1,5 +1,5 @@
-[1/5] __FB_WIN32__.__FB_64BIT__
-      tests/cpp/expand/merge/merge-with-merge-token.h
+[ 1/15] __FB_LINUX__.__FB_64BIT__
+        tests/cpp/expand/merge/merge-with-merge-token.h
 tests/cpp/expand/merge/merge-with-merge-token.h(3): ## merge operator cannot merge 'a' and '##'
     m [TK_BEGIN] a ## ## b [TK_END]
                    ^~

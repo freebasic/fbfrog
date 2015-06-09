@@ -1,21 +1,61 @@
-[ 1/10] __FB_WIN32__.__FB_64BIT__.A
+[ 1/30] __FB_LINUX__.__FB_64BIT__.A
         tests/versions/declarebool.h
-[ 2/10] __FB_WIN32__.__FB_64BIT__.(not A)
+[ 2/30] __FB_LINUX__.__FB_64BIT__.(not A)
         tests/versions/declarebool.h
-[ 3/10] __FB_WIN32__.(not __FB_64BIT__).A
+[ 3/30] __FB_LINUX__.(not __FB_64BIT__).A
         tests/versions/declarebool.h
-[ 4/10] __FB_WIN32__.(not __FB_64BIT__).(not A)
+[ 4/30] __FB_LINUX__.(not __FB_64BIT__).(not A)
         tests/versions/declarebool.h
-[ 5/10] __FB_LINUX__.__FB_64BIT__.A
+[ 5/30] __FB_FREEBSD__.__FB_64BIT__.A
         tests/versions/declarebool.h
-[ 6/10] __FB_LINUX__.__FB_64BIT__.(not A)
+[ 6/30] __FB_FREEBSD__.__FB_64BIT__.(not A)
         tests/versions/declarebool.h
-[ 7/10] __FB_LINUX__.(not __FB_64BIT__).A
+[ 7/30] __FB_FREEBSD__.(not __FB_64BIT__).A
         tests/versions/declarebool.h
-[ 8/10] __FB_LINUX__.(not __FB_64BIT__).(not A)
+[ 8/30] __FB_FREEBSD__.(not __FB_64BIT__).(not A)
         tests/versions/declarebool.h
-[ 9/10] __FB_DOS__.A
+[ 9/30] __FB_OPENBSD__.__FB_64BIT__.A
         tests/versions/declarebool.h
-[10/10] __FB_DOS__.(not A)
+[10/30] __FB_OPENBSD__.__FB_64BIT__.(not A)
+        tests/versions/declarebool.h
+[11/30] __FB_OPENBSD__.(not __FB_64BIT__).A
+        tests/versions/declarebool.h
+[12/30] __FB_OPENBSD__.(not __FB_64BIT__).(not A)
+        tests/versions/declarebool.h
+[13/30] __FB_NETBSD__.__FB_64BIT__.A
+        tests/versions/declarebool.h
+[14/30] __FB_NETBSD__.__FB_64BIT__.(not A)
+        tests/versions/declarebool.h
+[15/30] __FB_NETBSD__.(not __FB_64BIT__).A
+        tests/versions/declarebool.h
+[16/30] __FB_NETBSD__.(not __FB_64BIT__).(not A)
+        tests/versions/declarebool.h
+[17/30] __FB_DARWIN__.__FB_64BIT__.A
+        tests/versions/declarebool.h
+[18/30] __FB_DARWIN__.__FB_64BIT__.(not A)
+        tests/versions/declarebool.h
+[19/30] __FB_DARWIN__.(not __FB_64BIT__).A
+        tests/versions/declarebool.h
+[20/30] __FB_DARWIN__.(not __FB_64BIT__).(not A)
+        tests/versions/declarebool.h
+[21/30] __FB_WIN32__.__FB_64BIT__.A
+        tests/versions/declarebool.h
+[22/30] __FB_WIN32__.__FB_64BIT__.(not A)
+        tests/versions/declarebool.h
+[23/30] __FB_WIN32__.(not __FB_64BIT__).A
+        tests/versions/declarebool.h
+[24/30] __FB_WIN32__.(not __FB_64BIT__).(not A)
+        tests/versions/declarebool.h
+[25/30] __FB_CYGWIN__.__FB_64BIT__.A
+        tests/versions/declarebool.h
+[26/30] __FB_CYGWIN__.__FB_64BIT__.(not A)
+        tests/versions/declarebool.h
+[27/30] __FB_CYGWIN__.(not __FB_64BIT__).A
+        tests/versions/declarebool.h
+[28/30] __FB_CYGWIN__.(not __FB_64BIT__).(not A)
+        tests/versions/declarebool.h
+[29/30] __FB_DOS__.A
+        tests/versions/declarebool.h
+[30/30] __FB_DOS__.(not A)
         tests/versions/declarebool.h
 emitting: tests/versions/declarebool.bi (2 declarations, 0 TODOs)

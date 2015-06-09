@@ -1,5 +1,5 @@
-[1/5] __FB_WIN32__.__FB_64BIT__
-      tests/cpp/expand/merge/missing-operands-functionlike.h
+[ 1/15] __FB_LINUX__.__FB_64BIT__
+        tests/cpp/expand/merge/missing-operands-functionlike.h
 tests/cpp/expand/merge/missing-operands-functionlike.h(2): ## merge operator at beginning of macro body, missing operand to merge with
     m ( 0 ) [TK_BEGIN] ## [TK_END]
                        ^~

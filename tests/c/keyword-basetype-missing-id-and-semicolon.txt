@@ -1,25 +1,75 @@
-[1/5] __FB_WIN32__.__FB_64BIT__
-      tests/c/keyword-basetype-missing-id-and-semicolon.h
+[ 1/15] __FB_LINUX__.__FB_64BIT__
+        tests/c/keyword-basetype-missing-id-and-semicolon.h
 tests/c/keyword-basetype-missing-id-and-semicolon.h(2): expected identifier for the symbol declared in this declaration but found '[TK_EOF]'
     int
     ^~~
-[2/5] __FB_WIN32__.(not __FB_64BIT__)
-      tests/c/keyword-basetype-missing-id-and-semicolon.h
+[ 2/15] __FB_LINUX__.(not __FB_64BIT__)
+        tests/c/keyword-basetype-missing-id-and-semicolon.h
 tests/c/keyword-basetype-missing-id-and-semicolon.h(2): expected identifier for the symbol declared in this declaration but found '[TK_EOF]'
     int
     ^~~
-[3/5] __FB_LINUX__.__FB_64BIT__
-      tests/c/keyword-basetype-missing-id-and-semicolon.h
+[ 3/15] __FB_FREEBSD__.__FB_64BIT__
+        tests/c/keyword-basetype-missing-id-and-semicolon.h
 tests/c/keyword-basetype-missing-id-and-semicolon.h(2): expected identifier for the symbol declared in this declaration but found '[TK_EOF]'
     int
     ^~~
-[4/5] __FB_LINUX__.(not __FB_64BIT__)
-      tests/c/keyword-basetype-missing-id-and-semicolon.h
+[ 4/15] __FB_FREEBSD__.(not __FB_64BIT__)
+        tests/c/keyword-basetype-missing-id-and-semicolon.h
 tests/c/keyword-basetype-missing-id-and-semicolon.h(2): expected identifier for the symbol declared in this declaration but found '[TK_EOF]'
     int
     ^~~
-[5/5] __FB_DOS__
-      tests/c/keyword-basetype-missing-id-and-semicolon.h
+[ 5/15] __FB_OPENBSD__.__FB_64BIT__
+        tests/c/keyword-basetype-missing-id-and-semicolon.h
+tests/c/keyword-basetype-missing-id-and-semicolon.h(2): expected identifier for the symbol declared in this declaration but found '[TK_EOF]'
+    int
+    ^~~
+[ 6/15] __FB_OPENBSD__.(not __FB_64BIT__)
+        tests/c/keyword-basetype-missing-id-and-semicolon.h
+tests/c/keyword-basetype-missing-id-and-semicolon.h(2): expected identifier for the symbol declared in this declaration but found '[TK_EOF]'
+    int
+    ^~~
+[ 7/15] __FB_NETBSD__.__FB_64BIT__
+        tests/c/keyword-basetype-missing-id-and-semicolon.h
+tests/c/keyword-basetype-missing-id-and-semicolon.h(2): expected identifier for the symbol declared in this declaration but found '[TK_EOF]'
+    int
+    ^~~
+[ 8/15] __FB_NETBSD__.(not __FB_64BIT__)
+        tests/c/keyword-basetype-missing-id-and-semicolon.h
+tests/c/keyword-basetype-missing-id-and-semicolon.h(2): expected identifier for the symbol declared in this declaration but found '[TK_EOF]'
+    int
+    ^~~
+[ 9/15] __FB_DARWIN__.__FB_64BIT__
+        tests/c/keyword-basetype-missing-id-and-semicolon.h
+tests/c/keyword-basetype-missing-id-and-semicolon.h(2): expected identifier for the symbol declared in this declaration but found '[TK_EOF]'
+    int
+    ^~~
+[10/15] __FB_DARWIN__.(not __FB_64BIT__)
+        tests/c/keyword-basetype-missing-id-and-semicolon.h
+tests/c/keyword-basetype-missing-id-and-semicolon.h(2): expected identifier for the symbol declared in this declaration but found '[TK_EOF]'
+    int
+    ^~~
+[11/15] __FB_WIN32__.__FB_64BIT__
+        tests/c/keyword-basetype-missing-id-and-semicolon.h
+tests/c/keyword-basetype-missing-id-and-semicolon.h(2): expected identifier for the symbol declared in this declaration but found '[TK_EOF]'
+    int
+    ^~~
+[12/15] __FB_WIN32__.(not __FB_64BIT__)
+        tests/c/keyword-basetype-missing-id-and-semicolon.h
+tests/c/keyword-basetype-missing-id-and-semicolon.h(2): expected identifier for the symbol declared in this declaration but found '[TK_EOF]'
+    int
+    ^~~
+[13/15] __FB_CYGWIN__.__FB_64BIT__
+        tests/c/keyword-basetype-missing-id-and-semicolon.h
+tests/c/keyword-basetype-missing-id-and-semicolon.h(2): expected identifier for the symbol declared in this declaration but found '[TK_EOF]'
+    int
+    ^~~
+[14/15] __FB_CYGWIN__.(not __FB_64BIT__)
+        tests/c/keyword-basetype-missing-id-and-semicolon.h
+tests/c/keyword-basetype-missing-id-and-semicolon.h(2): expected identifier for the symbol declared in this declaration but found '[TK_EOF]'
+    int
+    ^~~
+[15/15] __FB_DOS__
+        tests/c/keyword-basetype-missing-id-and-semicolon.h
 tests/c/keyword-basetype-missing-id-and-semicolon.h(2): expected identifier for the symbol declared in this declaration but found '[TK_EOF]'
     int
     ^~~

@@ -1,25 +1,75 @@
-[1/5] __FB_WIN32__.__FB_64BIT__
-      tests/c/param-missing-dtypes.h
+[ 1/15] __FB_LINUX__.__FB_64BIT__
+        tests/c/param-missing-dtypes.h
 tests/c/param-missing-dtypes.h(2): expected a data type but found ','
     void f ( , ) ;
              ^
-[2/5] __FB_WIN32__.(not __FB_64BIT__)
-      tests/c/param-missing-dtypes.h
+[ 2/15] __FB_LINUX__.(not __FB_64BIT__)
+        tests/c/param-missing-dtypes.h
 tests/c/param-missing-dtypes.h(2): expected a data type but found ','
     void f ( , ) ;
              ^
-[3/5] __FB_LINUX__.__FB_64BIT__
-      tests/c/param-missing-dtypes.h
+[ 3/15] __FB_FREEBSD__.__FB_64BIT__
+        tests/c/param-missing-dtypes.h
 tests/c/param-missing-dtypes.h(2): expected a data type but found ','
     void f ( , ) ;
              ^
-[4/5] __FB_LINUX__.(not __FB_64BIT__)
-      tests/c/param-missing-dtypes.h
+[ 4/15] __FB_FREEBSD__.(not __FB_64BIT__)
+        tests/c/param-missing-dtypes.h
 tests/c/param-missing-dtypes.h(2): expected a data type but found ','
     void f ( , ) ;
              ^
-[5/5] __FB_DOS__
-      tests/c/param-missing-dtypes.h
+[ 5/15] __FB_OPENBSD__.__FB_64BIT__
+        tests/c/param-missing-dtypes.h
+tests/c/param-missing-dtypes.h(2): expected a data type but found ','
+    void f ( , ) ;
+             ^
+[ 6/15] __FB_OPENBSD__.(not __FB_64BIT__)
+        tests/c/param-missing-dtypes.h
+tests/c/param-missing-dtypes.h(2): expected a data type but found ','
+    void f ( , ) ;
+             ^
+[ 7/15] __FB_NETBSD__.__FB_64BIT__
+        tests/c/param-missing-dtypes.h
+tests/c/param-missing-dtypes.h(2): expected a data type but found ','
+    void f ( , ) ;
+             ^
+[ 8/15] __FB_NETBSD__.(not __FB_64BIT__)
+        tests/c/param-missing-dtypes.h
+tests/c/param-missing-dtypes.h(2): expected a data type but found ','
+    void f ( , ) ;
+             ^
+[ 9/15] __FB_DARWIN__.__FB_64BIT__
+        tests/c/param-missing-dtypes.h
+tests/c/param-missing-dtypes.h(2): expected a data type but found ','
+    void f ( , ) ;
+             ^
+[10/15] __FB_DARWIN__.(not __FB_64BIT__)
+        tests/c/param-missing-dtypes.h
+tests/c/param-missing-dtypes.h(2): expected a data type but found ','
+    void f ( , ) ;
+             ^
+[11/15] __FB_WIN32__.__FB_64BIT__
+        tests/c/param-missing-dtypes.h
+tests/c/param-missing-dtypes.h(2): expected a data type but found ','
+    void f ( , ) ;
+             ^
+[12/15] __FB_WIN32__.(not __FB_64BIT__)
+        tests/c/param-missing-dtypes.h
+tests/c/param-missing-dtypes.h(2): expected a data type but found ','
+    void f ( , ) ;
+             ^
+[13/15] __FB_CYGWIN__.__FB_64BIT__
+        tests/c/param-missing-dtypes.h
+tests/c/param-missing-dtypes.h(2): expected a data type but found ','
+    void f ( , ) ;
+             ^
+[14/15] __FB_CYGWIN__.(not __FB_64BIT__)
+        tests/c/param-missing-dtypes.h
+tests/c/param-missing-dtypes.h(2): expected a data type but found ','
+    void f ( , ) ;
+             ^
+[15/15] __FB_DOS__
+        tests/c/param-missing-dtypes.h
 tests/c/param-missing-dtypes.h(2): expected a data type but found ','
     void f ( , ) ;
              ^
