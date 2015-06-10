@@ -1358,7 +1358,7 @@ end function
 function ApiBits.dump() as string
 	dim s as string
 	for i as integer = BitsArrayElements - 1 to 0 step -1
-		s += bin(bits(1))
+		s += bin(bits(i))
 		if i > 0 then
 			s += "|"
 		end if
