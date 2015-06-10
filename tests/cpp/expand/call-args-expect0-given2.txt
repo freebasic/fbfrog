@@ -1,5 +1,4 @@
 [ 1/15] __FB_LINUX__.__FB_64BIT__
-        tests/cpp/expand/call-args-expect0-given2.h
 tests/cpp/expand/call-args-expect0-given2.h(3): expected ')' to close macro call argument list but found 'a'
     m1 ( a , b )
          ^

@@ -882,11 +882,14 @@ type ApiInfo
 	replacements as CodeReplacement ptr
 	replacementcount as integer
 
+	log as ASTNODE ptr
+
 	declare constructor()
 	declare destructor()
 	declare sub addReplacement(byval fromcode as zstring ptr, byval tocode as zstring ptr, byval tofb as integer)
 	declare sub loadOption(byval opt as integer, byval param1 as zstring ptr, byval param2 as zstring ptr)
 	declare sub loadOptions()
+	declare sub print(byref ln as string)
 end type
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -909,6 +912,7 @@ declare function emitType overload _
 declare function emitType overload(byval n as ASTNODE ptr) as string
 declare function emitExpr(byval n as ASTNODE ptr, byval need_parens as integer = FALSE, byval need_macroparam_parens as integer = TRUE) as string
 declare sub emitFile(byref filename as string, byval header as HeaderInfo ptr, byval ast as ASTNODE ptr)
+declare sub emitStdout(byval ast as ASTNODE ptr, byval indent as integer)
 
 type COperatorInfo
 	precedence as byte
@@ -968,4 +972,3 @@ namespace frog
 end namespace
 
 declare function frogLookupBiFromH(byval hfile as zstring ptr) as integer
-declare sub frogPrint(byref s as string)

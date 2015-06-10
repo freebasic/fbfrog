@@ -1,5 +1,4 @@
 [ 1/15] __FB_LINUX__.__FB_64BIT__
-        tests/cpp/expand/merge/missing-lhs.h
 tests/cpp/expand/merge/missing-lhs.h(2): ## merge operator at beginning of macro body, missing operand to merge with
     m ( 0 ) [TK_BEGIN] ## 0 [TK_END]
                        ^~

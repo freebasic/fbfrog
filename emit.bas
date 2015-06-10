@@ -1006,3 +1006,20 @@ sub emitFile(byref filename as string, byval header as HeaderInfo ptr, byval ast
 
 	close #emit.fo
 end sub
+
+sub emitStdout(byval ast as ASTNODE ptr, byval indent as integer)
+	emit.indent = indent
+	emit.comment = 0
+	emit.commentspaces = 0
+	emit.singleline = 0
+	emit.at_bol = TRUE
+
+	emit.fo = freefile()
+	if open cons(for output, as #emit.fo) then
+		oops("could not open stdout")
+	end if
+
+	emitCode(ast)
+
+	close #emit.fo
+end sub

@@ -1,31 +1,17 @@
 [ 1/15] __FB_LINUX__.__FB_64BIT__
-        tests/c/pragma-pack/initially-off.h
 [ 2/15] __FB_LINUX__.(not __FB_64BIT__)
-        tests/c/pragma-pack/initially-off.h
 [ 3/15] __FB_FREEBSD__.__FB_64BIT__
-        tests/c/pragma-pack/initially-off.h
 [ 4/15] __FB_FREEBSD__.(not __FB_64BIT__)
-        tests/c/pragma-pack/initially-off.h
 [ 5/15] __FB_OPENBSD__.__FB_64BIT__
-        tests/c/pragma-pack/initially-off.h
 [ 6/15] __FB_OPENBSD__.(not __FB_64BIT__)
-        tests/c/pragma-pack/initially-off.h
 [ 7/15] __FB_NETBSD__.__FB_64BIT__
-        tests/c/pragma-pack/initially-off.h
 [ 8/15] __FB_NETBSD__.(not __FB_64BIT__)
-        tests/c/pragma-pack/initially-off.h
 [ 9/15] __FB_DARWIN__.__FB_64BIT__
-        tests/c/pragma-pack/initially-off.h
 [10/15] __FB_DARWIN__.(not __FB_64BIT__)
-        tests/c/pragma-pack/initially-off.h
 [11/15] __FB_WIN32__.__FB_64BIT__
-        tests/c/pragma-pack/initially-off.h
 [12/15] __FB_WIN32__.(not __FB_64BIT__)
-        tests/c/pragma-pack/initially-off.h
 [13/15] __FB_CYGWIN__.__FB_64BIT__
-        tests/c/pragma-pack/initially-off.h
 [14/15] __FB_CYGWIN__.(not __FB_64BIT__)
-        tests/c/pragma-pack/initially-off.h
 [15/15] __FB_DOS__
-        tests/c/pragma-pack/initially-off.h
+	tests/c/pragma-pack/initially-off.h
 emitting: tests/c/pragma-pack/initially-off.bi (1 declaration, 0 TODOs)

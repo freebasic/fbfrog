@@ -1,3 +1,2 @@
 [ 1/15] __FB_LINUX__.__FB_64BIT__
-        tests/lex/open-char-literal.h
 tests/lex/open-char-literal.h(2): string/char literal left open

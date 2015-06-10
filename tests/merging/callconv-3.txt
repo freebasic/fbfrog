@@ -1,9 +1,6 @@
 [1/4] __FB_64BIT__.UNICODE
-      tests/merging/callconv-3.h
 [2/4] __FB_64BIT__.(not UNICODE)
-      tests/merging/callconv-3.h
 [3/4] (not __FB_64BIT__).UNICODE
-      tests/merging/callconv-3.h
 [4/4] (not __FB_64BIT__).(not UNICODE)
-      tests/merging/callconv-3.h
+	tests/merging/callconv-3.h
 emitting: tests/merging/callconv-3.bi (4 declarations, 0 TODOs)

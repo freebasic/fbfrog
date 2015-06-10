@@ -55,7 +55,7 @@ end type
 
 namespace frog
 	dim shared as integer verbose, nodefaultscript
-	dim shared as string outname, defaultoutname, prefix
+	dim shared as string outname, defaultoutname
 	dim shared header as HeaderInfo  '' global titles etc. - will be added to all generated .bi files
 
 	dim shared as ASTNODE ptr script
@@ -63,6 +63,8 @@ namespace frog
 	dim shared as ApiInfo ptr apis
 	dim shared as integer apicount
 	dim shared as ApiBits fullapis
+
+	dim shared as ASTNODE ptr mergedlog
 
 	'' *.bi output file names from the -emit options
 	dim shared as BIFILE ptr bis
@@ -395,6 +397,7 @@ constructor ApiInfo()
 	next
 	hashInit(@removeinclude, 3, FALSE)
 	hashInit(@setarraysizeoptions, 3, FALSE)
+	log = astNewGROUP()
 end constructor
 
 destructor ApiInfo()
@@ -412,6 +415,8 @@ destructor ApiInfo()
 		deallocate(replacements[i].tocode)
 	next
 	deallocate(replacements)
+
+	astDelete(log)
 end destructor
 
 sub ApiInfo.addReplacement(byval fromcode as zstring ptr, byval tocode as zstring ptr, byval tofb as integer)
@@ -497,6 +502,10 @@ sub ApiInfo.loadOptions()
 		loadOption(i->opt, i->text, i->alias)
 		i = i->next
 	wend
+end sub
+
+sub ApiInfo.print(byref ln as string)
+	astAppend(log, astNewTEXT(ln))
 end sub
 
 private function hTurnArgsIntoString(byval argc as integer, byval argv as zstring ptr ptr) as string
@@ -1340,10 +1349,6 @@ private function hMakeCountMessage(byval count as integer, byref noun as string)
 	end if
 end function
 
-sub frogPrint(byref s as string)
-	print frog.prefix + s
-end sub
-
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 	if  __FB_ARGC__ <= 1 then
@@ -1405,8 +1410,6 @@ end sub
 			frog.fullapis.set(i)
 		next
 	end if
-
-	frog.prefix = space((len(str(frog.apicount)) * 2) + 4)
 
 	'' If no output .bi files were given via -emit options on the command line,
 	'' we default to emitting one output .bi, much like: -emit '*' default.bi
@@ -1483,14 +1486,15 @@ end sub
 		'' .bi files won't be emitted.
 		astDelete(ast)
 
+		dim apibit as ApiBits
+		apibit.set(api)
+
 		for bi as integer = 0 to frog.bicount - 1
 			with frog.bis[bi]
 				'' Do file-specific AST work (e.g. add Extern block)
 				hlFile(.incoming, frog.apis[api], .options)
 
 				'' Merge the "incoming" tree into the "final" tree
-				dim apibit as ApiBits
-				apibit.set(api)
 				astMergeNext(apibit, .final, .incoming)
 
 				assert(.incoming = NULL)
@@ -1500,8 +1504,18 @@ end sub
 			end with
 		next
 
+		astMergeNext(apibit, frog.mergedlog, frog.apis[api].log)
+		assert(frog.apis[api].log = NULL)
+
 		frog.fullveror = astNewVEROR(frog.fullveror, astClone(frog.apis[api].verand))
 	next
+
+	'' Print the merged list of #included files
+	'' This should be useful because it allows the user to see which input
+	'' files were used, found, not found, which additional files were
+	'' #included, etc.
+	astProcessVerblocks(frog.mergedlog)
+	emitStdout(frog.mergedlog, 1)
 
 	for bi as integer = 0 to frog.bicount - 1
 		with frog.bis[bi]

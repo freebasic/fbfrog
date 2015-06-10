@@ -1,5 +1,4 @@
 [ 1/15] __FB_LINUX__.__FB_64BIT__
-        tests/cpp/defined-as-macro-id.h
 tests/cpp/defined-as-macro-id.h(2): 'defined' cannot be used as macro name
     # define defined 
              ^~~~~~~

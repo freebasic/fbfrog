@@ -1,5 +1,4 @@
 [ 1/15] __FB_LINUX__.__FB_64BIT__
-        tests/cpp/unknown-pragma.h
 tests/cpp/unknown-pragma.h(2): unknown #pragma
     # pragma foo 
              ^~~

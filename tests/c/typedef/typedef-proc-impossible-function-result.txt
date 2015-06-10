@@ -1,3 +1,2 @@
 [ 1/15] __FB_LINUX__.__FB_64BIT__
-        tests/c/typedef/typedef-proc-impossible-function-result.h
 oops, can't solve out typedef T in procedure f()

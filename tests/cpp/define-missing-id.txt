@@ -1,5 +1,4 @@
 [ 1/15] __FB_LINUX__.__FB_64BIT__
-        tests/cpp/define-missing-id.h
 tests/cpp/define-missing-id.h(2): missing identifier behind #define
     # define 
              ^

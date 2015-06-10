@@ -885,13 +885,14 @@ private sub hCheckForUnknownSymbol(byval id as zstring ptr)
 		'' but one intended to be defined by the user.
 		if frog.verbose then
 			if strIsReservedIdInC(id) = FALSE then
-				frogPrint("treating as undefined: " + *id)
+				print "treating as undefined: " + *id
 			end if
 		end if
 
 		'' Register as known undefined
 		'' This also prevents the above warning from being shown
 		'' multiple times for a single symbol.
+		'' TODO: but only with-in a single CPP run, not globally; this should be fixed
 		cppAddKnownUndefined(id)
 	end if
 end sub
@@ -2147,7 +2148,7 @@ private function hSearchHeaderFile _
 	) as string
 
 	if frog.verbose then
-		frogPrint("searching: " + inctext + " (context = " + contextfile + ")")
+		print "searching: " + inctext + " (context = " + contextfile + ")"
 	end if
 
 	'' If #including by absolute path, use it as-is
@@ -2159,7 +2160,7 @@ private function hSearchHeaderFile _
 	if (contextincdir = NULL) and (not is_system_include) then
 		var incfile = pathAddDiv(pathOnly(contextfile)) + inctext
 		if frog.verbose then
-			frogPrint("trying: " + incfile)
+			print "trying: " + incfile
 		end if
 		if fileexists(incfile) then
 			return incfile
@@ -2173,7 +2174,7 @@ private function hSearchHeaderFile _
 
 		var incfile = pathAddDiv(*i->text) + inctext
 		if frog.verbose then
-			frogPrint("trying: " + incfile)
+			print "trying: " + incfile
 		end if
 		if fileexists(incfile) then
 			incdir = i
@@ -2283,7 +2284,7 @@ private sub cppInclude(byval begin as integer, byref flags as integer, byval is_
 		incfile = hSearchHeaderFile(contextfile, contextincdir, inctext, is_system_include, incdir)
 		if len(incfile) = 0 then
 			'' #include not found
-			frogPrint(inctext + " (not found)")
+			cpp.api->print(inctext + " (not found)")
 
 			'' Preserve non-internal #includes that weren't found
 			if (includetkflags and (TKFLAG_PREINCLUDE or TKFLAG_ROOTFILE)) = 0 then
@@ -2342,7 +2343,7 @@ private sub cppInclude(byval begin as integer, byref flags as integer, byval is_
 		end if
 	end with
 
-	frogPrint(message)
+	cpp.api->print(message)
 
 	'' Push the #include file context
 	cppPush(STATE_FILE, knownfile)
@@ -2512,7 +2513,8 @@ private sub cppDefine(byref flags as integer)
 	var prevdef = cppLookupMacro(macro->text)
 	if prevdef then
 		if definfoDefinesAreEqual(prevdef, definfo) = FALSE then
-			frogPrint("conflicting #define " + *macro->text)
+			'' TODO: should only report once per symbol (per fbfrog run, not cpp run)
+			print "conflicting #define " + *macro->text
 		end if
 	end if
 

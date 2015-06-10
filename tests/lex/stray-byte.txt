@@ -1,31 +1,17 @@
 [ 1/15] __FB_LINUX__.__FB_64BIT__
-        tests/lex/stray-byte.h
 [ 2/15] __FB_LINUX__.(not __FB_64BIT__)
-        tests/lex/stray-byte.h
 [ 3/15] __FB_FREEBSD__.__FB_64BIT__
-        tests/lex/stray-byte.h
 [ 4/15] __FB_FREEBSD__.(not __FB_64BIT__)
-        tests/lex/stray-byte.h
 [ 5/15] __FB_OPENBSD__.__FB_64BIT__
-        tests/lex/stray-byte.h
 [ 6/15] __FB_OPENBSD__.(not __FB_64BIT__)
-        tests/lex/stray-byte.h
 [ 7/15] __FB_NETBSD__.__FB_64BIT__
-        tests/lex/stray-byte.h
 [ 8/15] __FB_NETBSD__.(not __FB_64BIT__)
-        tests/lex/stray-byte.h
 [ 9/15] __FB_DARWIN__.__FB_64BIT__
-        tests/lex/stray-byte.h
 [10/15] __FB_DARWIN__.(not __FB_64BIT__)
-        tests/lex/stray-byte.h
 [11/15] __FB_WIN32__.__FB_64BIT__
-        tests/lex/stray-byte.h
 [12/15] __FB_WIN32__.(not __FB_64BIT__)
-        tests/lex/stray-byte.h
 [13/15] __FB_CYGWIN__.__FB_64BIT__
-        tests/lex/stray-byte.h
 [14/15] __FB_CYGWIN__.(not __FB_64BIT__)
-        tests/lex/stray-byte.h
 [15/15] __FB_DOS__
-        tests/lex/stray-byte.h
+	tests/lex/stray-byte.h
 emitting: tests/lex/stray-byte.bi (0 declarations, 1 TODO)

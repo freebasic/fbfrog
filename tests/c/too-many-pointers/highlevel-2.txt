@@ -1,3 +1,2 @@
 [ 1/15] __FB_LINUX__.__FB_64BIT__
-        tests/c/too-many-pointers/highlevel-2.h
 oops, too many pointers on anonymous param

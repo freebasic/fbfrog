@@ -1,5 +1,4 @@
 [ 1/15] __FB_LINUX__.__FB_64BIT__
-        tests/cpp/div-by-zero-1.h
 tests/cpp/div-by-zero-1.h(2): division by zero
     # if 1 / 0 
                ^

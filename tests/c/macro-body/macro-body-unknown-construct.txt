@@ -1,5 +1,4 @@
 [ 1/15] __FB_LINUX__.__FB_64BIT__
-        tests/c/macro-body/macro-body-unknown-construct.h
 tests/c/macro-body/macro-body-unknown-construct.h(3): failed to parse full #define body
     # define m void f ( void 
                     ^
@@ -19,7 +18,6 @@ tests/c/macro-body/macro-body-unknown-construct.h(13): missing '}' to close anon
     # define M1 enum { A , 
                            ^
 [ 2/15] __FB_LINUX__.(not __FB_64BIT__)
-        tests/c/macro-body/macro-body-unknown-construct.h
 tests/c/macro-body/macro-body-unknown-construct.h(3): failed to parse full #define body
     # define m void f ( void 
                     ^
@@ -39,7 +37,6 @@ tests/c/macro-body/macro-body-unknown-construct.h(13): missing '}' to close anon
     # define M1 enum { A , 
                            ^
 [ 3/15] __FB_FREEBSD__.__FB_64BIT__
-        tests/c/macro-body/macro-body-unknown-construct.h
 tests/c/macro-body/macro-body-unknown-construct.h(3): failed to parse full #define body
     # define m void f ( void 
                     ^
@@ -59,7 +56,6 @@ tests/c/macro-body/macro-body-unknown-construct.h(13): missing '}' to close anon
     # define M1 enum { A , 
                            ^
 [ 4/15] __FB_FREEBSD__.(not __FB_64BIT__)
-        tests/c/macro-body/macro-body-unknown-construct.h
 tests/c/macro-body/macro-body-unknown-construct.h(3): failed to parse full #define body
     # define m void f ( void 
                     ^
@@ -79,7 +75,6 @@ tests/c/macro-body/macro-body-unknown-construct.h(13): missing '}' to close anon
     # define M1 enum { A , 
                            ^
 [ 5/15] __FB_OPENBSD__.__FB_64BIT__
-        tests/c/macro-body/macro-body-unknown-construct.h
 tests/c/macro-body/macro-body-unknown-construct.h(3): failed to parse full #define body
     # define m void f ( void 
                     ^
@@ -99,7 +94,6 @@ tests/c/macro-body/macro-body-unknown-construct.h(13): missing '}' to close anon
     # define M1 enum { A , 
                            ^
 [ 6/15] __FB_OPENBSD__.(not __FB_64BIT__)
-        tests/c/macro-body/macro-body-unknown-construct.h
 tests/c/macro-body/macro-body-unknown-construct.h(3): failed to parse full #define body
     # define m void f ( void 
                     ^
@@ -119,7 +113,6 @@ tests/c/macro-body/macro-body-unknown-construct.h(13): missing '}' to close anon
     # define M1 enum { A , 
                            ^
 [ 7/15] __FB_NETBSD__.__FB_64BIT__
-        tests/c/macro-body/macro-body-unknown-construct.h
 tests/c/macro-body/macro-body-unknown-construct.h(3): failed to parse full #define body
     # define m void f ( void 
                     ^
@@ -139,7 +132,6 @@ tests/c/macro-body/macro-body-unknown-construct.h(13): missing '}' to close anon
     # define M1 enum { A , 
                            ^
 [ 8/15] __FB_NETBSD__.(not __FB_64BIT__)
-        tests/c/macro-body/macro-body-unknown-construct.h
 tests/c/macro-body/macro-body-unknown-construct.h(3): failed to parse full #define body
     # define m void f ( void 
                     ^
@@ -159,7 +151,6 @@ tests/c/macro-body/macro-body-unknown-construct.h(13): missing '}' to close anon
     # define M1 enum { A , 
                            ^
 [ 9/15] __FB_DARWIN__.__FB_64BIT__
-        tests/c/macro-body/macro-body-unknown-construct.h
 tests/c/macro-body/macro-body-unknown-construct.h(3): failed to parse full #define body
     # define m void f ( void 
                     ^
@@ -179,7 +170,6 @@ tests/c/macro-body/macro-body-unknown-construct.h(13): missing '}' to close anon
     # define M1 enum { A , 
                            ^
 [10/15] __FB_DARWIN__.(not __FB_64BIT__)
-        tests/c/macro-body/macro-body-unknown-construct.h
 tests/c/macro-body/macro-body-unknown-construct.h(3): failed to parse full #define body
     # define m void f ( void 
                     ^
@@ -199,7 +189,6 @@ tests/c/macro-body/macro-body-unknown-construct.h(13): missing '}' to close anon
     # define M1 enum { A , 
                            ^
 [11/15] __FB_WIN32__.__FB_64BIT__
-        tests/c/macro-body/macro-body-unknown-construct.h
 tests/c/macro-body/macro-body-unknown-construct.h(3): failed to parse full #define body
     # define m void f ( void 
                     ^
@@ -219,7 +208,6 @@ tests/c/macro-body/macro-body-unknown-construct.h(13): missing '}' to close anon
     # define M1 enum { A , 
                            ^
 [12/15] __FB_WIN32__.(not __FB_64BIT__)
-        tests/c/macro-body/macro-body-unknown-construct.h
 tests/c/macro-body/macro-body-unknown-construct.h(3): failed to parse full #define body
     # define m void f ( void 
                     ^
@@ -239,7 +227,6 @@ tests/c/macro-body/macro-body-unknown-construct.h(13): missing '}' to close anon
     # define M1 enum { A , 
                            ^
 [13/15] __FB_CYGWIN__.__FB_64BIT__
-        tests/c/macro-body/macro-body-unknown-construct.h
 tests/c/macro-body/macro-body-unknown-construct.h(3): failed to parse full #define body
     # define m void f ( void 
                     ^
@@ -259,7 +246,6 @@ tests/c/macro-body/macro-body-unknown-construct.h(13): missing '}' to close anon
     # define M1 enum { A , 
                            ^
 [14/15] __FB_CYGWIN__.(not __FB_64BIT__)
-        tests/c/macro-body/macro-body-unknown-construct.h
 tests/c/macro-body/macro-body-unknown-construct.h(3): failed to parse full #define body
     # define m void f ( void 
                     ^
@@ -279,7 +265,6 @@ tests/c/macro-body/macro-body-unknown-construct.h(13): missing '}' to close anon
     # define M1 enum { A , 
                            ^
 [15/15] __FB_DOS__
-        tests/c/macro-body/macro-body-unknown-construct.h
 tests/c/macro-body/macro-body-unknown-construct.h(3): failed to parse full #define body
     # define m void f ( void 
                     ^
@@ -298,4 +283,5 @@ tests/c/macro-body/macro-body-unknown-construct.h(10): failed to parse full #def
 tests/c/macro-body/macro-body-unknown-construct.h(13): missing '}' to close anonymous enum block
     # define M1 enum { A , 
                            ^
+	tests/c/macro-body/macro-body-unknown-construct.h
 emitting: tests/c/macro-body/macro-body-unknown-construct.bi (2 declarations, 6 TODOs)

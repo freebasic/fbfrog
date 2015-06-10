@@ -1,76 +1,62 @@
 [ 1/15] __FB_LINUX__.__FB_64BIT__
-        tests/c/decl-basetype-pasted-missing-id.h
 tests/c/decl-basetype-pasted-missing-id.h(6): expected identifier for the symbol declared in this declaration but found ';'
     void ;
          ^
 [ 2/15] __FB_LINUX__.(not __FB_64BIT__)
-        tests/c/decl-basetype-pasted-missing-id.h
 tests/c/decl-basetype-pasted-missing-id.h(6): expected identifier for the symbol declared in this declaration but found ';'
     void ;
          ^
 [ 3/15] __FB_FREEBSD__.__FB_64BIT__
-        tests/c/decl-basetype-pasted-missing-id.h
 tests/c/decl-basetype-pasted-missing-id.h(6): expected identifier for the symbol declared in this declaration but found ';'
     void ;
          ^
 [ 4/15] __FB_FREEBSD__.(not __FB_64BIT__)
-        tests/c/decl-basetype-pasted-missing-id.h
 tests/c/decl-basetype-pasted-missing-id.h(6): expected identifier for the symbol declared in this declaration but found ';'
     void ;
          ^
 [ 5/15] __FB_OPENBSD__.__FB_64BIT__
-        tests/c/decl-basetype-pasted-missing-id.h
 tests/c/decl-basetype-pasted-missing-id.h(6): expected identifier for the symbol declared in this declaration but found ';'
     void ;
          ^
 [ 6/15] __FB_OPENBSD__.(not __FB_64BIT__)
-        tests/c/decl-basetype-pasted-missing-id.h
 tests/c/decl-basetype-pasted-missing-id.h(6): expected identifier for the symbol declared in this declaration but found ';'
     void ;
          ^
 [ 7/15] __FB_NETBSD__.__FB_64BIT__
-        tests/c/decl-basetype-pasted-missing-id.h
 tests/c/decl-basetype-pasted-missing-id.h(6): expected identifier for the symbol declared in this declaration but found ';'
     void ;
          ^
 [ 8/15] __FB_NETBSD__.(not __FB_64BIT__)
-        tests/c/decl-basetype-pasted-missing-id.h
 tests/c/decl-basetype-pasted-missing-id.h(6): expected identifier for the symbol declared in this declaration but found ';'
     void ;
          ^
 [ 9/15] __FB_DARWIN__.__FB_64BIT__
-        tests/c/decl-basetype-pasted-missing-id.h
 tests/c/decl-basetype-pasted-missing-id.h(6): expected identifier for the symbol declared in this declaration but found ';'
     void ;
          ^
 [10/15] __FB_DARWIN__.(not __FB_64BIT__)
-        tests/c/decl-basetype-pasted-missing-id.h
 tests/c/decl-basetype-pasted-missing-id.h(6): expected identifier for the symbol declared in this declaration but found ';'
     void ;
          ^
 [11/15] __FB_WIN32__.__FB_64BIT__
-        tests/c/decl-basetype-pasted-missing-id.h
 tests/c/decl-basetype-pasted-missing-id.h(6): expected identifier for the symbol declared in this declaration but found ';'
     void ;
          ^
 [12/15] __FB_WIN32__.(not __FB_64BIT__)
-        tests/c/decl-basetype-pasted-missing-id.h
 tests/c/decl-basetype-pasted-missing-id.h(6): expected identifier for the symbol declared in this declaration but found ';'
     void ;
          ^
 [13/15] __FB_CYGWIN__.__FB_64BIT__
-        tests/c/decl-basetype-pasted-missing-id.h
 tests/c/decl-basetype-pasted-missing-id.h(6): expected identifier for the symbol declared in this declaration but found ';'
     void ;
          ^
 [14/15] __FB_CYGWIN__.(not __FB_64BIT__)
-        tests/c/decl-basetype-pasted-missing-id.h
 tests/c/decl-basetype-pasted-missing-id.h(6): expected identifier for the symbol declared in this declaration but found ';'
     void ;
          ^
 [15/15] __FB_DOS__
-        tests/c/decl-basetype-pasted-missing-id.h
 tests/c/decl-basetype-pasted-missing-id.h(6): expected identifier for the symbol declared in this declaration but found ';'
     void ;
          ^
+	tests/c/decl-basetype-pasted-missing-id.h
 emitting: tests/c/decl-basetype-pasted-missing-id.bi (2 declarations, 1 TODO)

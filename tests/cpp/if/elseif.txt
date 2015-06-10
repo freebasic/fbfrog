@@ -1,5 +1,4 @@
 [ 1/15] __FB_LINUX__.__FB_64BIT__
-        tests/cpp/if/elseif.h
 tests/cpp/if/elseif.h(4): unknown PP directive
     # elseif 1 
       ^~~~~~

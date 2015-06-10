@@ -1,91 +1,47 @@
 [ 1/45] __FB_LINUX__.__FB_64BIT__.A
-        tests/versions/empty-if-block.h
 [ 2/45] __FB_LINUX__.__FB_64BIT__.(not A).VER=1
-        tests/versions/empty-if-block.h
 [ 3/45] __FB_LINUX__.__FB_64BIT__.(not A).VER=2
-        tests/versions/empty-if-block.h
 [ 4/45] __FB_LINUX__.(not __FB_64BIT__).A
-        tests/versions/empty-if-block.h
 [ 5/45] __FB_LINUX__.(not __FB_64BIT__).(not A).VER=1
-        tests/versions/empty-if-block.h
 [ 6/45] __FB_LINUX__.(not __FB_64BIT__).(not A).VER=2
-        tests/versions/empty-if-block.h
 [ 7/45] __FB_FREEBSD__.__FB_64BIT__.A
-        tests/versions/empty-if-block.h
 [ 8/45] __FB_FREEBSD__.__FB_64BIT__.(not A).VER=1
-        tests/versions/empty-if-block.h
 [ 9/45] __FB_FREEBSD__.__FB_64BIT__.(not A).VER=2
-        tests/versions/empty-if-block.h
 [10/45] __FB_FREEBSD__.(not __FB_64BIT__).A
-        tests/versions/empty-if-block.h
 [11/45] __FB_FREEBSD__.(not __FB_64BIT__).(not A).VER=1
-        tests/versions/empty-if-block.h
 [12/45] __FB_FREEBSD__.(not __FB_64BIT__).(not A).VER=2
-        tests/versions/empty-if-block.h
 [13/45] __FB_OPENBSD__.__FB_64BIT__.A
-        tests/versions/empty-if-block.h
 [14/45] __FB_OPENBSD__.__FB_64BIT__.(not A).VER=1
-        tests/versions/empty-if-block.h
 [15/45] __FB_OPENBSD__.__FB_64BIT__.(not A).VER=2
-        tests/versions/empty-if-block.h
 [16/45] __FB_OPENBSD__.(not __FB_64BIT__).A
-        tests/versions/empty-if-block.h
 [17/45] __FB_OPENBSD__.(not __FB_64BIT__).(not A).VER=1
-        tests/versions/empty-if-block.h
 [18/45] __FB_OPENBSD__.(not __FB_64BIT__).(not A).VER=2
-        tests/versions/empty-if-block.h
 [19/45] __FB_NETBSD__.__FB_64BIT__.A
-        tests/versions/empty-if-block.h
 [20/45] __FB_NETBSD__.__FB_64BIT__.(not A).VER=1
-        tests/versions/empty-if-block.h
 [21/45] __FB_NETBSD__.__FB_64BIT__.(not A).VER=2
-        tests/versions/empty-if-block.h
 [22/45] __FB_NETBSD__.(not __FB_64BIT__).A
-        tests/versions/empty-if-block.h
 [23/45] __FB_NETBSD__.(not __FB_64BIT__).(not A).VER=1
-        tests/versions/empty-if-block.h
 [24/45] __FB_NETBSD__.(not __FB_64BIT__).(not A).VER=2
-        tests/versions/empty-if-block.h
 [25/45] __FB_DARWIN__.__FB_64BIT__.A
-        tests/versions/empty-if-block.h
 [26/45] __FB_DARWIN__.__FB_64BIT__.(not A).VER=1
-        tests/versions/empty-if-block.h
 [27/45] __FB_DARWIN__.__FB_64BIT__.(not A).VER=2
-        tests/versions/empty-if-block.h
 [28/45] __FB_DARWIN__.(not __FB_64BIT__).A
-        tests/versions/empty-if-block.h
 [29/45] __FB_DARWIN__.(not __FB_64BIT__).(not A).VER=1
-        tests/versions/empty-if-block.h
 [30/45] __FB_DARWIN__.(not __FB_64BIT__).(not A).VER=2
-        tests/versions/empty-if-block.h
 [31/45] __FB_WIN32__.__FB_64BIT__.A
-        tests/versions/empty-if-block.h
 [32/45] __FB_WIN32__.__FB_64BIT__.(not A).VER=1
-        tests/versions/empty-if-block.h
 [33/45] __FB_WIN32__.__FB_64BIT__.(not A).VER=2
-        tests/versions/empty-if-block.h
 [34/45] __FB_WIN32__.(not __FB_64BIT__).A
-        tests/versions/empty-if-block.h
 [35/45] __FB_WIN32__.(not __FB_64BIT__).(not A).VER=1
-        tests/versions/empty-if-block.h
 [36/45] __FB_WIN32__.(not __FB_64BIT__).(not A).VER=2
-        tests/versions/empty-if-block.h
 [37/45] __FB_CYGWIN__.__FB_64BIT__.A
-        tests/versions/empty-if-block.h
 [38/45] __FB_CYGWIN__.__FB_64BIT__.(not A).VER=1
-        tests/versions/empty-if-block.h
 [39/45] __FB_CYGWIN__.__FB_64BIT__.(not A).VER=2
-        tests/versions/empty-if-block.h
 [40/45] __FB_CYGWIN__.(not __FB_64BIT__).A
-        tests/versions/empty-if-block.h
 [41/45] __FB_CYGWIN__.(not __FB_64BIT__).(not A).VER=1
-        tests/versions/empty-if-block.h
 [42/45] __FB_CYGWIN__.(not __FB_64BIT__).(not A).VER=2
-        tests/versions/empty-if-block.h
 [43/45] __FB_DOS__.A
-        tests/versions/empty-if-block.h
 [44/45] __FB_DOS__.(not A).VER=1
-        tests/versions/empty-if-block.h
 [45/45] __FB_DOS__.(not A).VER=2
-        tests/versions/empty-if-block.h
+	tests/versions/empty-if-block.h
 emitting: tests/versions/empty-if-block.bi (0 declarations, 0 TODOs)

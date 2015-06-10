@@ -282,7 +282,6 @@ Interesting improvements:
   can be used)
   * use separate ExprNode to hold expressions
       - 2 kinds of macros: 1. expression macro, 2. code block macro
-* Rework console output, it quickly becomes too much. Only show #includes with -v?
 * Show #include tree
 * Hard-code default.fbfrog and default.h, remove include/fbfrog/
   add a tools/gcc.sh or similar that queries various gcc toolchains and

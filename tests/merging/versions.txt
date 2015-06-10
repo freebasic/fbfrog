@@ -1,91 +1,47 @@
 [ 1/45] __FB_LINUX__.__FB_64BIT__.VER=1
-        tests/merging/versions.h
 [ 2/45] __FB_LINUX__.__FB_64BIT__.VER=2
-        tests/merging/versions.h
 [ 3/45] __FB_LINUX__.__FB_64BIT__.VER=3
-        tests/merging/versions.h
 [ 4/45] __FB_LINUX__.(not __FB_64BIT__).VER=1
-        tests/merging/versions.h
 [ 5/45] __FB_LINUX__.(not __FB_64BIT__).VER=2
-        tests/merging/versions.h
 [ 6/45] __FB_LINUX__.(not __FB_64BIT__).VER=3
-        tests/merging/versions.h
 [ 7/45] __FB_FREEBSD__.__FB_64BIT__.VER=1
-        tests/merging/versions.h
 [ 8/45] __FB_FREEBSD__.__FB_64BIT__.VER=2
-        tests/merging/versions.h
 [ 9/45] __FB_FREEBSD__.__FB_64BIT__.VER=3
-        tests/merging/versions.h
 [10/45] __FB_FREEBSD__.(not __FB_64BIT__).VER=1
-        tests/merging/versions.h
 [11/45] __FB_FREEBSD__.(not __FB_64BIT__).VER=2
-        tests/merging/versions.h
 [12/45] __FB_FREEBSD__.(not __FB_64BIT__).VER=3
-        tests/merging/versions.h
 [13/45] __FB_OPENBSD__.__FB_64BIT__.VER=1
-        tests/merging/versions.h
 [14/45] __FB_OPENBSD__.__FB_64BIT__.VER=2
-        tests/merging/versions.h
 [15/45] __FB_OPENBSD__.__FB_64BIT__.VER=3
-        tests/merging/versions.h
 [16/45] __FB_OPENBSD__.(not __FB_64BIT__).VER=1
-        tests/merging/versions.h
 [17/45] __FB_OPENBSD__.(not __FB_64BIT__).VER=2
-        tests/merging/versions.h
 [18/45] __FB_OPENBSD__.(not __FB_64BIT__).VER=3
-        tests/merging/versions.h
 [19/45] __FB_NETBSD__.__FB_64BIT__.VER=1
-        tests/merging/versions.h
 [20/45] __FB_NETBSD__.__FB_64BIT__.VER=2
-        tests/merging/versions.h
 [21/45] __FB_NETBSD__.__FB_64BIT__.VER=3
-        tests/merging/versions.h
 [22/45] __FB_NETBSD__.(not __FB_64BIT__).VER=1
-        tests/merging/versions.h
 [23/45] __FB_NETBSD__.(not __FB_64BIT__).VER=2
-        tests/merging/versions.h
 [24/45] __FB_NETBSD__.(not __FB_64BIT__).VER=3
-        tests/merging/versions.h
 [25/45] __FB_DARWIN__.__FB_64BIT__.VER=1
-        tests/merging/versions.h
 [26/45] __FB_DARWIN__.__FB_64BIT__.VER=2
-        tests/merging/versions.h
 [27/45] __FB_DARWIN__.__FB_64BIT__.VER=3
-        tests/merging/versions.h
 [28/45] __FB_DARWIN__.(not __FB_64BIT__).VER=1
-        tests/merging/versions.h
 [29/45] __FB_DARWIN__.(not __FB_64BIT__).VER=2
-        tests/merging/versions.h
 [30/45] __FB_DARWIN__.(not __FB_64BIT__).VER=3
-        tests/merging/versions.h
 [31/45] __FB_WIN32__.__FB_64BIT__.VER=1
-        tests/merging/versions.h
 [32/45] __FB_WIN32__.__FB_64BIT__.VER=2
-        tests/merging/versions.h
 [33/45] __FB_WIN32__.__FB_64BIT__.VER=3
-        tests/merging/versions.h
 [34/45] __FB_WIN32__.(not __FB_64BIT__).VER=1
-        tests/merging/versions.h
 [35/45] __FB_WIN32__.(not __FB_64BIT__).VER=2
-        tests/merging/versions.h
 [36/45] __FB_WIN32__.(not __FB_64BIT__).VER=3
-        tests/merging/versions.h
 [37/45] __FB_CYGWIN__.__FB_64BIT__.VER=1
-        tests/merging/versions.h
 [38/45] __FB_CYGWIN__.__FB_64BIT__.VER=2
-        tests/merging/versions.h
 [39/45] __FB_CYGWIN__.__FB_64BIT__.VER=3
-        tests/merging/versions.h
 [40/45] __FB_CYGWIN__.(not __FB_64BIT__).VER=1
-        tests/merging/versions.h
 [41/45] __FB_CYGWIN__.(not __FB_64BIT__).VER=2
-        tests/merging/versions.h
 [42/45] __FB_CYGWIN__.(not __FB_64BIT__).VER=3
-        tests/merging/versions.h
 [43/45] __FB_DOS__.VER=1
-        tests/merging/versions.h
 [44/45] __FB_DOS__.VER=2
-        tests/merging/versions.h
 [45/45] __FB_DOS__.VER=3
-        tests/merging/versions.h
+	tests/merging/versions.h
 emitting: tests/merging/versions.bi (12 declarations, 0 TODOs)

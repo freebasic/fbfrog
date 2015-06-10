@@ -1,5 +1,4 @@
 [ 1/15] __FB_LINUX__.__FB_64BIT__
-        tests/nested-unknowns.h
 tests/nested-unknowns.h(5): expected identifier for the symbol declared in this declaration but found ';'
     struct A { x ; } ;
                  ^
@@ -13,7 +12,6 @@ tests/nested-unknowns.h(17): expected expression but found ';'
     void f ( void ) { x = ; }
                           ^
 [ 2/15] __FB_LINUX__.(not __FB_64BIT__)
-        tests/nested-unknowns.h
 tests/nested-unknowns.h(5): expected identifier for the symbol declared in this declaration but found ';'
     struct A { x ; } ;
                  ^
@@ -27,7 +25,6 @@ tests/nested-unknowns.h(17): expected expression but found ';'
     void f ( void ) { x = ; }
                           ^
 [ 3/15] __FB_FREEBSD__.__FB_64BIT__
-        tests/nested-unknowns.h
 tests/nested-unknowns.h(5): expected identifier for the symbol declared in this declaration but found ';'
     struct A { x ; } ;
                  ^
@@ -41,7 +38,6 @@ tests/nested-unknowns.h(17): expected expression but found ';'
     void f ( void ) { x = ; }
                           ^
 [ 4/15] __FB_FREEBSD__.(not __FB_64BIT__)
-        tests/nested-unknowns.h
 tests/nested-unknowns.h(5): expected identifier for the symbol declared in this declaration but found ';'
     struct A { x ; } ;
                  ^
@@ -55,7 +51,6 @@ tests/nested-unknowns.h(17): expected expression but found ';'
     void f ( void ) { x = ; }
                           ^
 [ 5/15] __FB_OPENBSD__.__FB_64BIT__
-        tests/nested-unknowns.h
 tests/nested-unknowns.h(5): expected identifier for the symbol declared in this declaration but found ';'
     struct A { x ; } ;
                  ^
@@ -69,7 +64,6 @@ tests/nested-unknowns.h(17): expected expression but found ';'
     void f ( void ) { x = ; }
                           ^
 [ 6/15] __FB_OPENBSD__.(not __FB_64BIT__)
-        tests/nested-unknowns.h
 tests/nested-unknowns.h(5): expected identifier for the symbol declared in this declaration but found ';'
     struct A { x ; } ;
                  ^
@@ -83,7 +77,6 @@ tests/nested-unknowns.h(17): expected expression but found ';'
     void f ( void ) { x = ; }
                           ^
 [ 7/15] __FB_NETBSD__.__FB_64BIT__
-        tests/nested-unknowns.h
 tests/nested-unknowns.h(5): expected identifier for the symbol declared in this declaration but found ';'
     struct A { x ; } ;
                  ^
@@ -97,7 +90,6 @@ tests/nested-unknowns.h(17): expected expression but found ';'
     void f ( void ) { x = ; }
                           ^
 [ 8/15] __FB_NETBSD__.(not __FB_64BIT__)
-        tests/nested-unknowns.h
 tests/nested-unknowns.h(5): expected identifier for the symbol declared in this declaration but found ';'
     struct A { x ; } ;
                  ^
@@ -111,7 +103,6 @@ tests/nested-unknowns.h(17): expected expression but found ';'
     void f ( void ) { x = ; }
                           ^
 [ 9/15] __FB_DARWIN__.__FB_64BIT__
-        tests/nested-unknowns.h
 tests/nested-unknowns.h(5): expected identifier for the symbol declared in this declaration but found ';'
     struct A { x ; } ;
                  ^
@@ -125,7 +116,6 @@ tests/nested-unknowns.h(17): expected expression but found ';'
     void f ( void ) { x = ; }
                           ^
 [10/15] __FB_DARWIN__.(not __FB_64BIT__)
-        tests/nested-unknowns.h
 tests/nested-unknowns.h(5): expected identifier for the symbol declared in this declaration but found ';'
     struct A { x ; } ;
                  ^
@@ -139,7 +129,6 @@ tests/nested-unknowns.h(17): expected expression but found ';'
     void f ( void ) { x = ; }
                           ^
 [11/15] __FB_WIN32__.__FB_64BIT__
-        tests/nested-unknowns.h
 tests/nested-unknowns.h(5): expected identifier for the symbol declared in this declaration but found ';'
     struct A { x ; } ;
                  ^
@@ -153,7 +142,6 @@ tests/nested-unknowns.h(17): expected expression but found ';'
     void f ( void ) { x = ; }
                           ^
 [12/15] __FB_WIN32__.(not __FB_64BIT__)
-        tests/nested-unknowns.h
 tests/nested-unknowns.h(5): expected identifier for the symbol declared in this declaration but found ';'
     struct A { x ; } ;
                  ^
@@ -167,7 +155,6 @@ tests/nested-unknowns.h(17): expected expression but found ';'
     void f ( void ) { x = ; }
                           ^
 [13/15] __FB_CYGWIN__.__FB_64BIT__
-        tests/nested-unknowns.h
 tests/nested-unknowns.h(5): expected identifier for the symbol declared in this declaration but found ';'
     struct A { x ; } ;
                  ^
@@ -181,7 +168,6 @@ tests/nested-unknowns.h(17): expected expression but found ';'
     void f ( void ) { x = ; }
                           ^
 [14/15] __FB_CYGWIN__.(not __FB_64BIT__)
-        tests/nested-unknowns.h
 tests/nested-unknowns.h(5): expected identifier for the symbol declared in this declaration but found ';'
     struct A { x ; } ;
                  ^
@@ -195,7 +181,6 @@ tests/nested-unknowns.h(17): expected expression but found ';'
     void f ( void ) { x = ; }
                           ^
 [15/15] __FB_DOS__
-        tests/nested-unknowns.h
 tests/nested-unknowns.h(5): expected identifier for the symbol declared in this declaration but found ';'
     struct A { x ; } ;
                  ^
@@ -208,4 +193,5 @@ tests/nested-unknowns.h(13): expected ',' or '}' behind enum constant but found 
 tests/nested-unknowns.h(17): expected expression but found ';'
     void f ( void ) { x = ; }
                           ^
+	tests/nested-unknowns.h
 emitting: tests/nested-unknowns.bi (4 declarations, 4 TODOs)
