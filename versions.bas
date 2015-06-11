@@ -872,7 +872,15 @@ private function hSimplify(byval n as ASTNODE ptr, byref changed as integer) as 
 	scope
 		var i = n->head
 		while i
-			i = astReplace(n, i, hSimplify(astClone(i), changed))
+			var newi = hSimplify(astClone(i), changed)
+
+			'' Don't add a VEROR as a child of a VEROR; instead, add
+			'' the VEROR's chidlren to the VEROR's parent. (same for VERANDs)
+			if newi andalso (newi->class = n->class) then
+				newi->class = ASTCLASS_GROUP
+			end if
+
+			i = astReplace(n, i, newi)
 		wend
 	end scope
 
@@ -967,6 +975,9 @@ private function hSimplify(byval n as ASTNODE ptr, byref changed as integer) as 
 
 	'' Add the common condition on top of the extracted VERANDs
 	extracted = astNewVERAND(mostcommoncond, extracted)
+
+	assert(astIsVEROR(n))
+	assert(astIsVERAND(extracted))
 
 	'' And re-add that to the original VEROR
 	astAppend(n, extracted)

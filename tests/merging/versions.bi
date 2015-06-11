@@ -2,13 +2,13 @@
 
 dim shared common as long
 
-#if (VER = 1) and (defined(__FB_DOS__) or (defined(__FB_LINUX__) or defined(__FB_FREEBSD__) or defined(__FB_OPENBSD__) or defined(__FB_NETBSD__) or defined(__FB_DARWIN__) or defined(__FB_WIN32__) or defined(__FB_CYGWIN__)))
+#if VER = 1
 	dim shared v1 as long
 
 	type UDTv1
 		fieldv1 as long
 	end type
-#elseif (VER = 2) and (defined(__FB_DOS__) or (defined(__FB_LINUX__) or defined(__FB_FREEBSD__) or defined(__FB_OPENBSD__) or defined(__FB_NETBSD__) or defined(__FB_DARWIN__) or defined(__FB_WIN32__) or defined(__FB_CYGWIN__)))
+#elseif VER = 2
 	dim shared v2 as long
 
 	type UDTv2
@@ -16,7 +16,7 @@ dim shared common as long
 	end type
 #endif
 
-#if (defined(__FB_DOS__) or (defined(__FB_LINUX__) or defined(__FB_FREEBSD__) or defined(__FB_OPENBSD__) or defined(__FB_NETBSD__) or defined(__FB_DARWIN__) or defined(__FB_WIN32__) or defined(__FB_CYGWIN__))) and ((VER = 1) or (VER = 2))
+#if (VER = 1) or (VER = 2)
 	dim shared v12 as long
 
 	type UDT1v12
@@ -24,9 +24,9 @@ dim shared common as long
 	end type
 
 	type UDT2v12
-		#if (VER = 1) and (defined(__FB_DOS__) or (defined(__FB_LINUX__) or defined(__FB_FREEBSD__) or defined(__FB_OPENBSD__) or defined(__FB_NETBSD__) or defined(__FB_DARWIN__) or defined(__FB_WIN32__) or defined(__FB_CYGWIN__)))
+		#if VER = 1
 			fieldv1 as long
-		#elseif (VER = 2) and (defined(__FB_DOS__) or (defined(__FB_LINUX__) or defined(__FB_FREEBSD__) or defined(__FB_OPENBSD__) or defined(__FB_NETBSD__) or defined(__FB_DARWIN__) or defined(__FB_WIN32__) or defined(__FB_CYGWIN__)))
+		#elseif VER = 2
 			fieldv2 as long
 		#endif
 	end type
@@ -43,9 +43,9 @@ type UDT1v123
 end type
 
 type UDT2v123
-	#if (VER = 1) and (defined(__FB_DOS__) or (defined(__FB_LINUX__) or defined(__FB_FREEBSD__) or defined(__FB_OPENBSD__) or defined(__FB_NETBSD__) or defined(__FB_DARWIN__) or defined(__FB_WIN32__) or defined(__FB_CYGWIN__)))
+	#if VER = 1
 		fieldv1 as long
-	#elseif (VER = 2) and (defined(__FB_DOS__) or (defined(__FB_LINUX__) or defined(__FB_FREEBSD__) or defined(__FB_OPENBSD__) or defined(__FB_NETBSD__) or defined(__FB_DARWIN__) or defined(__FB_WIN32__) or defined(__FB_CYGWIN__)))
+	#elseif VER = 2
 		fieldv2 as long
 	#else
 		fieldv3 as long
