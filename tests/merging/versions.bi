@@ -16,7 +16,13 @@ dim shared common as long
 	end type
 #endif
 
-#if (VER = 1) or (VER = 2)
+#if VER = 3
+	dim shared v3 as long
+
+	type UDTv3
+		fieldv3 as long
+	end type
+#else
 	dim shared v12 as long
 
 	type UDT1v12
@@ -29,12 +35,6 @@ dim shared common as long
 		#elseif VER = 2
 			fieldv2 as long
 		#endif
-	end type
-#else
-	dim shared v3 as long
-
-	type UDTv3
-		fieldv3 as long
 	end type
 #endif
 

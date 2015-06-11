@@ -714,6 +714,24 @@ sub astVisit(byval n as ASTNODE ptr, byval callback as ASTVISITCALLBACK)
 	wend
 end sub
 
+function astCount(byval n as ASTNODE ptr) as integer
+	var count = 1
+
+	if n->subtype then count += astCount(n->subtype)
+	if n->array   then count += astCount(n->array  )
+	if n->bits    then count += astCount(n->bits   )
+	if n->expr    then count += astCount(n->expr   )
+
+	var i = n->head
+	while i
+		count += astCount(i)
+		i = i->next
+	wend
+
+	function = count
+end function
+
+
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 '' AST dumping for pretty output and debugging
 

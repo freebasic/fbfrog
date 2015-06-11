@@ -706,6 +706,14 @@ private sub hSolveOutRedundantVerblocks(byval code as ASTNODE ptr, byval parenta
 	wend
 end sub
 
+declare function hBuildIfConditionFor(byval bits as ApiBits) as ASTNODE ptr
+
+private function hCalcIfConditionWeight(byval bits as ApiBits) as integer
+	var expr = hBuildIfConditionFor(bits)
+	function = astCount(expr)
+	astDelete(expr)
+end function
+
 ''
 '' verblocks must be turned into #if/#endif blocks. Doing that on the AST level
 '' instead of when emitting allows us to generate #elseifs/#elses for adjacent
@@ -770,6 +778,31 @@ private sub hTurnVerblocksIntoPpIfs(byval code as ASTNODE ptr)
 				if i <> last then
 					assert(last->class = ASTCLASS_PPELSEIF)
 					last->class = ASTCLASS_PPELSE
+
+					'' Only 2 verblocks? (i.e. just an #if and an #else)
+					if i->next = last then
+						'' If the #if block's condition expression is bigger than that of
+						'' the #else block, swap the two blocks.
+						''
+						'' This way we can make the #if block easier to read by hiding the
+						'' more complex conditions of the two:
+						''     #if dos or linux or freebsd or darwin
+						''         [dos/unix]
+						''     #else
+						''         [windows]
+						''     #endif
+						'' =>
+						''     #if windows
+						''         [windows]
+						''     #else
+						''         [dos/unix]
+						''     #endif
+						if hCalcIfConditionWeight(i->apis) > hCalcIfConditionWeight(last->apis) then
+							swap i->apis, last->apis
+							swap i->head, last->head
+							swap i->tail, last->tail
+						end if
+					end if
 				end if
 			end if
 
@@ -995,6 +1028,30 @@ private function hSimplifyVersionExpr(byval n as ASTNODE ptr) as ASTNODE ptr
 	function = n
 end function
 
+private function hBuildIfConditionFor(byval bits as ApiBits) as ASTNODE ptr
+	dim expr as ASTNODE ptr
+
+	'' Build VEROR from the VERBLOCK's apis bitmask
+	for api as integer = 0 to frog.apicount - 1
+		if bits.isSet(api) then
+			var veror = astNewVEROR(astClone(frog.apis[api].verand))
+			if expr then
+				expr = astNewVEROR(expr, veror)
+			else
+				expr = veror
+			end if
+		end if
+	next
+
+	assert(expr)
+
+	'' Beautification: Apply some trivial refactoring to the version
+	'' conditions, to eliminate duplicate checks where possible.
+	expr = hSimplifyVersionExpr(expr)
+
+	function = expr
+end function
+
 private sub hGenVerExprs(byval code as ASTNODE ptr)
 	var i = code->head
 	while i
@@ -1005,23 +1062,7 @@ private sub hGenVerExprs(byval code as ASTNODE ptr)
 
 		select case i->class
 		case ASTCLASS_PPIF, ASTCLASS_PPELSEIF
-			'' Build VEROR from the VERBLOCK's apis bitmask
-			for api as integer = 0 to frog.apicount - 1
-				if i->apis.isSet(api) then
-					var veror = astNewVEROR(astClone(frog.apis[api].verand))
-					if i->expr then
-						i->expr = astNewVEROR(i->expr, veror)
-					else
-						i->expr = veror
-					end if
-				end if
-			next
-
-			assert(i->expr <> NULL)
-
-			'' Beautification: Apply some trivial refactoring to the version
-			'' conditions, to eliminate duplicate checks where possible.
-			i->expr = hSimplifyVersionExpr(i->expr)
+			i->expr = hBuildIfConditionFor(i->apis)
 
 			'' If we were able to solve it out completely that means
 			'' the check was always true -- thus, we can remove this

@@ -13,10 +13,5 @@
 [13/15] __FB_CYGWIN__.__FB_64BIT__
 [14/15] __FB_CYGWIN__.(not __FB_64BIT__)
 [15/15] __FB_DOS__
-	tests/versions/includes/main.h
-	#ifdef __FB_WIN32__
-		tests/versions/includes/1.h
-	#else
-		tests/versions/includes/2.h
-	#endif
-emitting: tests/versions/includes/main.bi (0 declarations, 0 TODOs)
+	tests/versions/swapping.h
+emitting: tests/versions/swapping.bi (13 declarations, 0 TODOs)

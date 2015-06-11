@@ -477,10 +477,10 @@ const A62 = culng(0u - 100u)
 #define A82 culng(clng(undefined) - 1u)
 #define A83 (clng(undefined) - 1)
 
-#if defined(__FB_DOS__) or defined(__FB_LINUX__) or defined(__FB_FREEBSD__) or defined(__FB_OPENBSD__) or defined(__FB_NETBSD__) or defined(__FB_DARWIN__) or defined(__FB_CYGWIN__)
-	const A84 = -1
-#else
+#ifdef __FB_WIN32__
 	#define A84 undefined
+#else
+	const A84 = -1
 #endif
 
 #define A85 A84
