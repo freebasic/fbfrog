@@ -708,8 +708,8 @@ enum
 end enum
 
 const ASTATTRIB_LOCAL         = 1 shl 0  '' VAR
-const ASTATTRIB_STATIC        = 1 shl 1  '' VAR
-const ASTATTRIB_EXTERN        = 1 shl 2  '' VAR
+const ASTATTRIB_STATIC        = 1 shl 1  '' VAR, PROC (ignored when merging PROCs)
+const ASTATTRIB_EXTERN        = 1 shl 2  '' VAR, PROC (removed from PROCs by hPostprocessDeclarator())
 const ASTATTRIB_BIN           = 1 shl 3  '' CONSTI
 const ASTATTRIB_OCT           = 1 shl 4  '' CONSTI
 const ASTATTRIB_HEX           = 1 shl 5  '' CONSTI
@@ -722,7 +722,7 @@ const ASTATTRIB_VARIADIC      = 1 shl 11  '' PPDEFINE/MACROPARAM: variadic macro
 const ASTATTRIB_PARENTHESIZEDMACROPARAM = 1 shl 12
 const ASTATTRIB_TAGID         = 1 shl 13
 const ASTATTRIB_GENERATEDID   = 1 shl 14
-const ASTATTRIB_DLLIMPORT     = 1 shl 15
+const ASTATTRIB_DLLIMPORT     = 1 shl 15  '' VAR, PROC (ignored when merging PROCs)
 const ASTATTRIB_ENUMCONST     = 1 shl 16
 const ASTATTRIB_NORENAMELIST  = 1 shl 17
 const ASTATTRIB_USED          = 1 shl 18

@@ -14,4 +14,4 @@
 [14/15] __FB_CYGWIN__.(not __FB_64BIT__)
 [15/15] __FB_DOS__
 	tests/merging/linkage.h
-emitting: tests/merging/linkage.bi (4 declarations, 0 TODOs)
+emitting: tests/merging/linkage.bi (3 declarations, 0 TODOs)

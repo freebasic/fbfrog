@@ -585,10 +585,10 @@ function astIsEqual _
 		aattrib and= not ASTATTRIB_HIDECALLCONV
 		battrib and= not ASTATTRIB_HIDECALLCONV
 
-		'' Ignore DLLIMPORT on procedures for now, as we're not emitting it anyways
+		'' Ignore DLLIMPORT/STATIC on procedures for now, as we're not emitting it anyways
 		if a->class = ASTCLASS_PROC then
-			aattrib and= not ASTATTRIB_DLLIMPORT
-			battrib and= not ASTATTRIB_DLLIMPORT
+			aattrib and= not (ASTATTRIB_DLLIMPORT or ASTATTRIB_STATIC)
+			battrib and= not (ASTATTRIB_DLLIMPORT or ASTATTRIB_STATIC)
 		end if
 	end if
 
