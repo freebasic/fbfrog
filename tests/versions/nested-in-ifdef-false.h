@@ -1,1 +1,1 @@
-// @fbfrog -declarebool A -ifdef A -else -declareversions VER 1 2 -endif
+// @fbfrog -ifdef __FB_WIN32__ -else -declarebool X -endif

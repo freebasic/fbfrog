@@ -58,6 +58,8 @@ namespace frog
 	dim shared as string outname, defaultoutname
 	dim shared header as HeaderInfo  '' global titles etc. - will be added to all generated .bi files
 
+	dim shared as integer have_declaredefines, have_declareversions
+
 	dim shared as ASTNODE ptr script
 	dim shared as ASTNODE ptr completeverors, fullveror
 	dim shared as ApiInfo ptr apis
@@ -197,7 +199,7 @@ private sub hPrintHelpAndExit()
 	print "  -v                    Show verbose/debugging info"
 	print "  -nodefaultscript      Don't use default.fbfrog implicitly"
 	print "API script logic:"
-	print "  -declaredefines (<symbol>)+               Exclusive #defines"
+	print "  -declaredefines (<symbol>)+  Exclusive #defines (used for OS defines by default.fbfrog)"
 	print "  -declareversions <symbol> (<number>)+     Version numbers"
 	print "  -declarebool <symbol>                     Single on/off #define"
 	print "  -select          (-case <symbol> ...)+ [-caseelse ...] -endselect"
@@ -860,6 +862,10 @@ private sub hParseArgs(byref x as integer)
 
 		'' -declaredefines (<symbol>)+
 		case OPT_DECLAREDEFINES
+			if frog.have_declaredefines then
+				tkOops(x, "multiple -declaredefines options, only 1 is allowed")
+			end if
+			frog.have_declaredefines = TRUE
 			x += 1
 
 			'' (<symbol>)+
@@ -874,6 +880,10 @@ private sub hParseArgs(byref x as integer)
 
 		'' -declareversions <symbol> (<string>)+
 		case OPT_DECLAREVERSIONS
+			if frog.have_declareversions then
+				tkOops(x, "multiple -declareversions options, only 1 is allowed")
+			end if
+			frog.have_declareversions = TRUE
 			x += 1
 
 			'' <symbol>

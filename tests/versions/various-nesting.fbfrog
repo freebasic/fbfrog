@@ -1,8 +1,4 @@
--ifdef __FB_DOS__
-	-declareversions VER 1 2
--else
-	-declareversions VER 1 2 3
--endif
+-declareversions VER 1 2 3
 
 -select VER
 -case 1

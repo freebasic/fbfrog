@@ -227,10 +227,11 @@ Bugs:
   (at least, mark it with a TODO)
 
 Interesting improvements:
-* Need to support all fbc targets (e.g. __FB_ARM__) and should use __FB_UNIX__ if possible
-   - maybe targets can be built-ins? only need to support "all", "nodos", "windowsonly"
-   - translation process should use knowledge about the target
-   - Remove VEROR/VERAND completely, generate the #if expressions based on the bitmasks
+* Optimize "V=1 or V=2 or V=3" to "V<=3" for "-declareversions V 1 2 3 4" etc.
+* support __FB_ARM__
+* use __FB_UNIX__ where possible
+* maybe targets can be built-ins? only need to support "all", "nodos", "windowsonly"
+* translation process should use knowledge about the target
 * consecutive verblocks should be added to a prefix tree, to solve out common
   API conditions, e.g.:
 	#if win32 and static		#if win32

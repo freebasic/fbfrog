@@ -1,1 +1,1 @@
-// @fbfrog -declaredefines A B C -select -case A -case B -caseelse -declareversions VER 1 2 -endselect
+// @fbfrog -select -case __FB_WIN32__ -case __FB_DOS__ -caseelse -declarebool X -endselect

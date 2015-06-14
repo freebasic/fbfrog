@@ -1,62 +1,18 @@
-[ 1/60] __FB_LINUX__.__FB_64BIT__.A
-[ 2/60] __FB_LINUX__.__FB_64BIT__.B.VER=1
-[ 3/60] __FB_LINUX__.__FB_64BIT__.B.VER=2
-[ 4/60] __FB_LINUX__.__FB_64BIT__.C
-[ 5/60] __FB_LINUX__.(not __FB_64BIT__).A
-[ 6/60] __FB_LINUX__.(not __FB_64BIT__).B.VER=1
-[ 7/60] __FB_LINUX__.(not __FB_64BIT__).B.VER=2
-[ 8/60] __FB_LINUX__.(not __FB_64BIT__).C
-[ 9/60] __FB_FREEBSD__.__FB_64BIT__.A
-[10/60] __FB_FREEBSD__.__FB_64BIT__.B.VER=1
-[11/60] __FB_FREEBSD__.__FB_64BIT__.B.VER=2
-[12/60] __FB_FREEBSD__.__FB_64BIT__.C
-[13/60] __FB_FREEBSD__.(not __FB_64BIT__).A
-[14/60] __FB_FREEBSD__.(not __FB_64BIT__).B.VER=1
-[15/60] __FB_FREEBSD__.(not __FB_64BIT__).B.VER=2
-[16/60] __FB_FREEBSD__.(not __FB_64BIT__).C
-[17/60] __FB_OPENBSD__.__FB_64BIT__.A
-[18/60] __FB_OPENBSD__.__FB_64BIT__.B.VER=1
-[19/60] __FB_OPENBSD__.__FB_64BIT__.B.VER=2
-[20/60] __FB_OPENBSD__.__FB_64BIT__.C
-[21/60] __FB_OPENBSD__.(not __FB_64BIT__).A
-[22/60] __FB_OPENBSD__.(not __FB_64BIT__).B.VER=1
-[23/60] __FB_OPENBSD__.(not __FB_64BIT__).B.VER=2
-[24/60] __FB_OPENBSD__.(not __FB_64BIT__).C
-[25/60] __FB_NETBSD__.__FB_64BIT__.A
-[26/60] __FB_NETBSD__.__FB_64BIT__.B.VER=1
-[27/60] __FB_NETBSD__.__FB_64BIT__.B.VER=2
-[28/60] __FB_NETBSD__.__FB_64BIT__.C
-[29/60] __FB_NETBSD__.(not __FB_64BIT__).A
-[30/60] __FB_NETBSD__.(not __FB_64BIT__).B.VER=1
-[31/60] __FB_NETBSD__.(not __FB_64BIT__).B.VER=2
-[32/60] __FB_NETBSD__.(not __FB_64BIT__).C
-[33/60] __FB_DARWIN__.__FB_64BIT__.A
-[34/60] __FB_DARWIN__.__FB_64BIT__.B.VER=1
-[35/60] __FB_DARWIN__.__FB_64BIT__.B.VER=2
-[36/60] __FB_DARWIN__.__FB_64BIT__.C
-[37/60] __FB_DARWIN__.(not __FB_64BIT__).A
-[38/60] __FB_DARWIN__.(not __FB_64BIT__).B.VER=1
-[39/60] __FB_DARWIN__.(not __FB_64BIT__).B.VER=2
-[40/60] __FB_DARWIN__.(not __FB_64BIT__).C
-[41/60] __FB_WIN32__.__FB_64BIT__.A
-[42/60] __FB_WIN32__.__FB_64BIT__.B.VER=1
-[43/60] __FB_WIN32__.__FB_64BIT__.B.VER=2
-[44/60] __FB_WIN32__.__FB_64BIT__.C
-[45/60] __FB_WIN32__.(not __FB_64BIT__).A
-[46/60] __FB_WIN32__.(not __FB_64BIT__).B.VER=1
-[47/60] __FB_WIN32__.(not __FB_64BIT__).B.VER=2
-[48/60] __FB_WIN32__.(not __FB_64BIT__).C
-[49/60] __FB_CYGWIN__.__FB_64BIT__.A
-[50/60] __FB_CYGWIN__.__FB_64BIT__.B.VER=1
-[51/60] __FB_CYGWIN__.__FB_64BIT__.B.VER=2
-[52/60] __FB_CYGWIN__.__FB_64BIT__.C
-[53/60] __FB_CYGWIN__.(not __FB_64BIT__).A
-[54/60] __FB_CYGWIN__.(not __FB_64BIT__).B.VER=1
-[55/60] __FB_CYGWIN__.(not __FB_64BIT__).B.VER=2
-[56/60] __FB_CYGWIN__.(not __FB_64BIT__).C
-[57/60] __FB_DOS__.A
-[58/60] __FB_DOS__.B.VER=1
-[59/60] __FB_DOS__.B.VER=2
-[60/60] __FB_DOS__.C
+[ 1/16] __FB_LINUX__.__FB_64BIT__
+[ 2/16] __FB_LINUX__.(not __FB_64BIT__)
+[ 3/16] __FB_FREEBSD__.__FB_64BIT__
+[ 4/16] __FB_FREEBSD__.(not __FB_64BIT__)
+[ 5/16] __FB_OPENBSD__.__FB_64BIT__
+[ 6/16] __FB_OPENBSD__.(not __FB_64BIT__)
+[ 7/16] __FB_NETBSD__.__FB_64BIT__
+[ 8/16] __FB_NETBSD__.(not __FB_64BIT__)
+[ 9/16] __FB_DARWIN__.__FB_64BIT__
+[10/16] __FB_DARWIN__.(not __FB_64BIT__)
+[11/16] __FB_WIN32__.__FB_64BIT__
+[12/16] __FB_WIN32__.(not __FB_64BIT__)
+[13/16] __FB_CYGWIN__.__FB_64BIT__
+[14/16] __FB_CYGWIN__.(not __FB_64BIT__)
+[15/16] __FB_DOS__.X
+[16/16] __FB_DOS__.(not X)
 	tests/versions/nested-in-case2.h
 emitting: tests/versions/nested-in-case2.bi (0 declarations, 0 TODOs)
