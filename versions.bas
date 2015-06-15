@@ -1030,12 +1030,155 @@ private function hSimplify(byval n as ASTNODE ptr, byref changed as integer) as 
 	function = n
 end function
 
+private function hBuildVerBop(byval astclass as integer, byval vernum as integer) as ASTNODE ptr
+	function = astNew(astclass, astNewTEXT(frog.versiondefine), astNewTEXT(frog.vernums(vernum)))
+end function
+
+private sub hMaybeEmitRangeCheck(byval veror as ASTNODE ptr, byref l as integer, byref r as integer)
+	'' No covered range found (yet)?
+	if l < 0 then exit sub
+
+	var l_in_mid = (l > 0)
+	var r_in_mid = (r < ubound(frog.vernums))
+
+	'' Covering only 1 or 2 versions, and it isn't at beginning or end (where one of the checks
+	'' would become a no-op)?
+	var coveredcount = r - l + 1
+	if (coveredcount <= 2) and l_in_mid and r_in_mid then
+		'' A range check isn't worth it, re-add the normal individual checks
+		for i as integer = l to r
+			astAppend(veror, astNewVERNUMCHECK(i))
+		next
+		exit sub
+	end if
+
+	'' Build range check, but omit lbound/ubound checks if possible
+	'' It's possible that this solves out the entire check (if all versions are covered).
+	dim as ASTNODE ptr check, lcheck, rcheck
+
+	if l_in_mid then lcheck = hBuildVerBop(ASTCLASS_GE, l) '' V >= 1
+	if r_in_mid then rcheck = hBuildVerBop(ASTCLASS_LE, r) '' V <= 1
+
+	if (lcheck <> NULL) and (rcheck <> NULL) then
+		check = astNew(ASTCLASS_AND, lcheck, rcheck)
+	elseif lcheck then
+		check = lcheck
+	elseif rcheck then
+		check = rcheck
+	else
+		'' All solved out
+		exit sub
+	end if
+
+	astAppend(veror, check)
+end sub
+
+''
+'' Visit VERORs and fold things like
+''     V=1 or V=2 or V=3
+'' into
+''     V<=3
+''
+'' Here no VERORs/VERANDs are solved out (we leave that to hSimplify()), only
+'' the atomic conditions are touched.
+''
+private sub hFoldNumberChecks(byval n as ASTNODE ptr)
+	scope
+		var i = n->head
+		while i
+			hFoldNumberChecks(i)
+			i = i->next
+		wend
+	end scope
+
+	if astIsVEROR(n) = FALSE then exit sub
+
+	'' 1. Find & remove all VERNUMCHECKs, set a flag for each covered version
+	'' 2. Determine the lbound/ubound of covered versions.
+	''    Insert lbound/ubound checks into the VEROR, or re-add VERNUMCHECKs where
+	''    optimizations weren't possible.
+	''
+	'' No-op checks at the absolute lbound/ubound can be omitted though. No need to check V>=1,
+	'' if 1 is the minimum supported value anyways.
+	''   -declareversions V 1 2 3 4
+	''   V=1 or V=2   =   V>=1 and V<=2   =   V<=2
+	'' This will also solve out the checks completely if all versions are covered.
+	''
+	'' Checking lbound/ubound means two checks (V >= lbound and V <= ubound).
+	'' Thus it's only really worth using if it covers at least 3 versions:
+	''   V=1                 =   V>=1 and V<=1    <- not worth it
+	''   V=1 or V=2          =   V>=1 and V<=2    <- not worth it
+	''   V=1 or V=2 or V=3   =   V>=1 and V<=3    <- but this is useful
+	''
+	'' In practice there can be "holes" in the covered versions, for example versions 1, 2, 3
+	'' and 5 are covered, but not version 4. In cases like that, there can be multiple "chunks"
+	'' with lbound/ubound.
+	''   V=1 or V=2 or V=3 or V=5   =   (V>=1 and V<=3) or V=5
+	''   V=1 or V=2 or V=3 or V=5 or V=6 or V=7   =   (V>=1 and V<=3) or (V>=5 and V<=7)
+
+	dim covered(any) as byte
+	redim covered(0 to ubound(frog.vernums))
+
+	scope
+		var i = n->head
+		while i
+			var nxt = i->next
+
+			if i->class = ASTCLASS_VERNUMCHECK then
+				covered(i->vernum) = TRUE
+				astRemove(n, i)
+			end if
+
+			i = nxt
+		wend
+	end scope
+
+	#if 0
+		print "covered:"
+		for i as integer = 0 to ubound(covered)
+			print "    " & i & " " + frog.vernums(i) + "  " + iif(covered(i), "yes", "no")
+		next
+	#endif
+
+	var l = -1, r = -1
+	for i as integer = 0 to ubound(covered)
+		assert(l <= r)
+		if covered(i) then
+			if l = -1 then
+				l = i
+				r = i
+			else
+				r += 1
+			end if
+		else
+			'' Handle previous chunk, if any
+			hMaybeEmitRangeCheck(n, l, r)
+			l = -1
+			r = -1
+		end if
+	next
+
+	'' Handle last chunk, if any
+	hMaybeEmitRangeCheck(n, l, r)
+end sub
+
 private function hSimplifyVersionExpr(byval n as ASTNODE ptr) as ASTNODE ptr
 	dim as integer changed
+
 	do
 		changed = FALSE
 		n = hSimplify(n, changed)
 	loop while changed
+
+	if ubound(frog.vernums) >= 0 then
+		hFoldNumberChecks(n)
+	end if
+
+	do
+		changed = FALSE
+		n = hSimplify(n, changed)
+	loop while changed
+
 	function = n
 end function
 

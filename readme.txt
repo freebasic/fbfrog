@@ -227,7 +227,6 @@ Bugs:
   (at least, mark it with a TODO)
 
 Interesting improvements:
-* Optimize "V=1 or V=2 or V=3" to "V<=3" for "-declareversions V 1 2 3 4" etc.
 * support __FB_ARM__
 * use __FB_UNIX__ where possible
 * maybe targets can be built-ins? only need to support "all", "nodos", "windowsonly"

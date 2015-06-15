@@ -1,0 +1,13 @@
+-declareversions V 10 20 30 40 50 60 70 80 90
+
+-select V
+-case 10 -define V 10
+-case 20 -define V 20
+-case 30 -define V 30
+-case 40 -define V 40
+-case 50 -define V 50
+-case 60 -define V 60
+-case 70 -define V 70
+-case 80 -define V 80
+-case 90 -define V 90
+-endselect
