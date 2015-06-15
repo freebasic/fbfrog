@@ -568,6 +568,7 @@ enum
 	ASTCLASS_VERBLOCK
 	ASTCLASS_VEROR
 	ASTCLASS_VERAND
+	ASTCLASS_VERNUMCHECK
 	ASTCLASS_DIVIDER
 	ASTCLASS_SCOPEBLOCK
 	ASTCLASS_UNKNOWN
@@ -755,6 +756,7 @@ type ASTNODE
 		maxalign	as integer  '' STRUCT/UNION: FIELD=N/#pragma pack(N)
 		opt		as integer  '' OPTION: OPT_*
 		apis		as ApiBits  '' VERBLOCK
+		vernum		as integer  '' VERNUMCHECK: index into frog.vernums()
 	end union
 
 	'' Linked list of child nodes, operands/fields/parameters/...
@@ -850,6 +852,8 @@ declare sub astDump _
 declare function astDumpPrettyVersion(byval n as ASTNODE ptr) as string
 declare function astNewVERAND(byval a as ASTNODE ptr = NULL, byval b as ASTNODE ptr = NULL) as ASTNODE ptr
 declare function astNewVEROR(byval a as ASTNODE ptr = NULL, byval b as ASTNODE ptr = NULL) as ASTNODE ptr
+declare function astNewVERNUMCHECK(byval vernum as integer) as ASTNODE ptr
+declare function astEmitVerNumCheck(byval n as ASTNODE ptr, byref eqsign as string) as string
 declare function astMergeVerblocks _
 	( _
 		byval a as ASTNODE ptr, _
@@ -970,6 +974,8 @@ namespace frog
 	extern as ApiInfo ptr apis
 	extern as integer apicount
 	extern as ApiBits fullapis
+	extern vernums(any) as string
+	extern versiondefine as string
 end namespace
 
 declare function frogLookupBiFromH(byval hfile as zstring ptr) as integer

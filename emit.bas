@@ -715,6 +715,10 @@ function emitExpr(byval n as ASTNODE ptr, byval need_parens as integer, byval ne
 		wend
 		consider_parens = TRUE
 
+	case ASTCLASS_VERNUMCHECK
+		s = astEmitVerNumCheck(n, " = ")
+		consider_parens = TRUE
+
 	case ASTCLASS_PROC
 		emitProc(s, n, TRUE)
 

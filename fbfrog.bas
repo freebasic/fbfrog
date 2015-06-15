@@ -82,7 +82,24 @@ namespace frog
 	end type
 	dim shared as HPATTERN ptr patterns
 	dim shared as integer patterncount
+
+	dim shared vernums(any) as string
+	dim shared versiondefine as string
 end namespace
+
+private function frogAddVernum(byref vernum as string) as integer
+	var i = ubound(frog.vernums) + 1
+	redim preserve frog.vernums(0 to i)
+	frog.vernums(i) = vernum
+	return i
+end function
+
+private function frogLookupVernum(byref vernum as string) as integer
+	for i as integer = 0 to ubound(frog.vernums)
+		if frog.vernums(i) = vernum then return i
+	next
+	function = -1
+end function
 
 private sub frogAddPattern(byref pattern as string, byval bi as integer)
 	var i = frog.patterncount
@@ -649,9 +666,12 @@ private sub hParseSelectCompound(byref x as integer)
 	x += 1
 
 	'' [<symbol>]
-	dim as zstring ptr selectsymbol
+	var is_vernum = FALSE
 	if tkGet(x) = TK_ID then
-		selectsymbol = tkGetText(x)
+		if *tkSpellId(x) <> frog.versiondefine then
+			tkOops(x, "version define identifier doesn't match the one specified in the -declareversions option; expected '" + frog.versiondefine + "'")
+		end if
+		is_vernum = TRUE
 		x += 1
 	end if
 
@@ -675,12 +695,17 @@ private sub hParseSelectCompound(byref x as integer)
 			x += 1
 
 			dim as ASTNODE ptr condition
-			if selectsymbol then
+			if is_vernum then
 				'' <version number>
 				hExpectStringOrId(x, "<version number> argument")
 
+				var vernum = frogLookupVernum(*tkGetText(x))
+				if vernum < 0 then
+					tkOops(x, "unknown version number; it didn't appear in the previous -declareversions option")
+				end if
+
 				'' <symbol> = <versionnumber>
-				condition = astNew(ASTCLASS_EQ, astNewTEXT(selectsymbol), astNewTEXT(tkGetText(x)))
+				condition = astNewVERNUMCHECK(vernum)
 			else
 				'' <symbol>
 				hExpectId(x)
@@ -888,19 +913,37 @@ private sub hParseArgs(byref x as integer)
 
 			'' <symbol>
 			hExpectId(x)
-			var n = astNew(ASTCLASS_DECLAREVERSIONS, tkGetText(x))
+			frog.versiondefine = *tkGetText(x)
 			x += 1
+
+			'' The version numbers must be given in ascending order,
+			'' allowing us to optimize things like:
+			''      (ID = a) or (ID = b) or (ID = c)
+			'' to:
+			''      ID <= c
 
 			'' (<string>)+
 			if tkGet(x) <> TK_STRING then
 				tkOopsExpected(x, "<version number> argument")
 			end if
+			var xfirst = x
 			do
-				astAppend(n, astNewTEXT(tkGetText(x)))
+				var verstr = *tkGetText(x)
+
+				'' Verify that new version number is >= the previous one (unless this is the first one)
+				if xfirst < x then
+					var prev = *tkGetText(x - 1)
+					if prev >= verstr then
+						tkOops(x, "version '" + prev + "' >= '" + verstr + "', but should be < to maintain order")
+					end if
+				end if
+
+				frogAddVernum(verstr)
+
 				x += 1
 			loop while tkGet(x) = TK_STRING
 
-			astAppend(frog.script, n)
+			astAppend(frog.script, astNew(ASTCLASS_DECLAREVERSIONS))
 
 		'' -declarebool <symbol>
 		case OPT_DECLAREBOOL
@@ -1116,7 +1159,7 @@ private sub frogEvaluateScript _
 	while i
 
 		select case i->class
-		case ASTCLASS_DECLAREDEFINES, ASTCLASS_DECLAREVERSIONS
+		case ASTCLASS_DECLAREDEFINES
 			var decl = i
 			i = i->next
 
@@ -1125,30 +1168,41 @@ private sub frogEvaluateScript _
 			'' Evaluate a separate code path for each #define/version
 			var k = decl->head
 			do
-				dim as ASTNODE ptr condition
-				if decl->class = ASTCLASS_DECLAREDEFINES then
-					'' defined(<symbol>)
-					condition = astNewDEFINED(k->text)
-				else
-					'' <symbol> = <versionnumber>
-					condition = astNew(ASTCLASS_EQ, astNewTEXT(decl->text), astClone(k))
-				end if
+				'' defined(<symbol>)
+				var condition = astNewDEFINED(k->text)
 				astAppend(completeveror, astClone(condition))
 
 				k = k->next
 				if k = NULL then
-					'' This is the last #define/version, so don't branch
+					'' This is the last #define, so don't branch
 					astAppend(conditions, condition)
 					exit do
 				end if
 
-				'' Branch for this #define/version
+				'' Branch for this #define
 				frogEvaluateScript(i, _
 					astNewGROUP(astClone(conditions), condition), _
 					astClone(options))
 			loop
 
 			astAppend(frog.completeverors, completeveror)
+
+		case ASTCLASS_DECLAREVERSIONS
+			i = i->next
+
+			var lastvernum = ubound(frog.vernums)
+
+			'' Evaluate a separate code path for each version,
+			'' branching for every version except the last
+			for vernum as integer = 0 to lastvernum - 1
+				'' <symbol> = <versionnumber>
+				frogEvaluateScript(i, _
+					astNewGROUP(astClone(conditions), astNewVERNUMCHECK(vernum)), _
+					astClone(options))
+			next
+
+			'' Now continue without recursing and evaluate the code path for the last version
+			astAppend(conditions, astNewVERNUMCHECK(lastvernum))
 
 		case ASTCLASS_DECLAREBOOL
 			var symbol = i->text

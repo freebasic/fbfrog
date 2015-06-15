@@ -26,6 +26,7 @@ dim shared as zstring ptr astnodename(0 to ...) => _
 	@"verblock"  , _
 	@"veror"     , _
 	@"verand"    , _
+	@"vernumcheck", _
 	@"divider"   , _
 	@"scopeblock", _
 	@"unknown"   , _
@@ -464,6 +465,8 @@ function astCloneNode(byval n as ASTNODE ptr) as ASTNODE ptr
 	case ASTCLASS_OPTION : c->opt = n->opt
 	case ASTCLASS_VERBLOCK, ASTCLASS_PPIF, ASTCLASS_PPELSEIF
 		c->apis = n->apis
+	case ASTCLASS_VERNUMCHECK
+		c->vernum = n->vernum
 	end select
 
 	function = c
@@ -633,6 +636,9 @@ function astIsEqual _
 
 	case ASTCLASS_VEROR, ASTCLASS_VERAND
 		return astGroupsContainEqualChildren(a, b)
+
+	case ASTCLASS_VERNUMCHECK
+		if a->vernum <> b->vernum then exit function
 	end select
 
 	if is_merge then
@@ -810,6 +816,8 @@ function astDumpOne(byval n as ASTNODE ptr) as string
 		s += " " + *tkInfoText(n->opt)
 	case ASTCLASS_VERBLOCK, ASTCLASS_PPIF, ASTCLASS_PPELSEIF
 		s += " apis=" + n->apis.dump()
+	case ASTCLASS_VERNUMCHECK
+		s += " vernum=" & n->vernum
 	end select
 
 	if n->text then
