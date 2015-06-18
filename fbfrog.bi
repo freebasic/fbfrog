@@ -116,6 +116,26 @@ declare function strIsValidSymbolId(byval s as zstring ptr) as integer
 declare function strIsReservedIdInC(byval id as zstring ptr) as integer
 declare function strMatch(byref s as string, byref pattern as string) as integer
 
+enum
+	OS_LINUX
+	OS_FREEBSD
+	OS_OPENBSD
+	OS_NETBSD
+	OS_DARWIN
+	OS_WINDOWS
+	OS_CYGWIN
+	OS_DOS
+	OS__COUNT
+end enum
+
+enum
+	ARCH_X86
+	ARCH_X86_64
+	'ARCH_ARM
+	'ARCH_AARCH64
+	ARCH__COUNT
+end enum
+
 type ApiBits
 	const BitsArrayElements = 4
 	const MaxApis = sizeof(ulongint) * BitsArrayElements * 8
@@ -384,10 +404,9 @@ enum
 	OPT_DONTEMIT
 	OPT_I
 	OPT_V
-	OPT_NODEFAULTSCRIPT
+	OPT_TARGET
 	OPT_TITLE
 
-	OPT_DECLAREDEFINES
 	OPT_DECLAREVERSIONS
 	OPT_DECLAREBOOL
 	OPT_SELECT
@@ -577,7 +596,6 @@ enum
 	ASTCLASS_TITLE
 
 	'' Script helper nodes
-	ASTCLASS_DECLAREDEFINES
 	ASTCLASS_DECLAREVERSIONS
 	ASTCLASS_DECLAREBOOL
 	ASTCLASS_SELECT
@@ -874,6 +892,7 @@ type ApiInfo
 	verand as ASTNODE ptr
 	script as ASTNODE ptr
 
+	as integer os, arch
 	as integer windowsms, clong32, fixunsizedarrays, disableconstants
 	as integer nofunctionbodies, dropmacrobodyscopes
 

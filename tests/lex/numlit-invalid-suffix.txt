@@ -1,4 +1,4 @@
-[ 1/15] __FB_LINUX__.__FB_64BIT__
+[ 1/15] __FB_LINUX__.(not __FB_64BIT__)
 tests/lex/numlit-invalid-suffix.h(2): invalid suffix on number literal: 'a'
     static int i1 = 1a ;
                     ^~
@@ -26,7 +26,7 @@ tests/lex/numlit-invalid-suffix.h(9): invalid suffix on number literal: 'i31'
 tests/lex/numlit-invalid-suffix.h(10): invalid suffix on number literal: 'u'
     static int i9 = 1i64u ;
                     ^~~~~
-[ 2/15] __FB_LINUX__.(not __FB_64BIT__)
+[ 2/15] __FB_LINUX__.__FB_64BIT__
 tests/lex/numlit-invalid-suffix.h(2): invalid suffix on number literal: 'a'
     static int i1 = 1a ;
                     ^~
@@ -54,7 +54,7 @@ tests/lex/numlit-invalid-suffix.h(9): invalid suffix on number literal: 'i31'
 tests/lex/numlit-invalid-suffix.h(10): invalid suffix on number literal: 'u'
     static int i9 = 1i64u ;
                     ^~~~~
-[ 3/15] __FB_FREEBSD__.__FB_64BIT__
+[ 3/15] __FB_FREEBSD__.(not __FB_64BIT__)
 tests/lex/numlit-invalid-suffix.h(2): invalid suffix on number literal: 'a'
     static int i1 = 1a ;
                     ^~
@@ -82,7 +82,7 @@ tests/lex/numlit-invalid-suffix.h(9): invalid suffix on number literal: 'i31'
 tests/lex/numlit-invalid-suffix.h(10): invalid suffix on number literal: 'u'
     static int i9 = 1i64u ;
                     ^~~~~
-[ 4/15] __FB_FREEBSD__.(not __FB_64BIT__)
+[ 4/15] __FB_FREEBSD__.__FB_64BIT__
 tests/lex/numlit-invalid-suffix.h(2): invalid suffix on number literal: 'a'
     static int i1 = 1a ;
                     ^~
@@ -110,7 +110,7 @@ tests/lex/numlit-invalid-suffix.h(9): invalid suffix on number literal: 'i31'
 tests/lex/numlit-invalid-suffix.h(10): invalid suffix on number literal: 'u'
     static int i9 = 1i64u ;
                     ^~~~~
-[ 5/15] __FB_OPENBSD__.__FB_64BIT__
+[ 5/15] __FB_OPENBSD__.(not __FB_64BIT__)
 tests/lex/numlit-invalid-suffix.h(2): invalid suffix on number literal: 'a'
     static int i1 = 1a ;
                     ^~
@@ -138,7 +138,7 @@ tests/lex/numlit-invalid-suffix.h(9): invalid suffix on number literal: 'i31'
 tests/lex/numlit-invalid-suffix.h(10): invalid suffix on number literal: 'u'
     static int i9 = 1i64u ;
                     ^~~~~
-[ 6/15] __FB_OPENBSD__.(not __FB_64BIT__)
+[ 6/15] __FB_OPENBSD__.__FB_64BIT__
 tests/lex/numlit-invalid-suffix.h(2): invalid suffix on number literal: 'a'
     static int i1 = 1a ;
                     ^~
@@ -166,7 +166,7 @@ tests/lex/numlit-invalid-suffix.h(9): invalid suffix on number literal: 'i31'
 tests/lex/numlit-invalid-suffix.h(10): invalid suffix on number literal: 'u'
     static int i9 = 1i64u ;
                     ^~~~~
-[ 7/15] __FB_NETBSD__.__FB_64BIT__
+[ 7/15] __FB_NETBSD__.(not __FB_64BIT__)
 tests/lex/numlit-invalid-suffix.h(2): invalid suffix on number literal: 'a'
     static int i1 = 1a ;
                     ^~
@@ -194,7 +194,7 @@ tests/lex/numlit-invalid-suffix.h(9): invalid suffix on number literal: 'i31'
 tests/lex/numlit-invalid-suffix.h(10): invalid suffix on number literal: 'u'
     static int i9 = 1i64u ;
                     ^~~~~
-[ 8/15] __FB_NETBSD__.(not __FB_64BIT__)
+[ 8/15] __FB_NETBSD__.__FB_64BIT__
 tests/lex/numlit-invalid-suffix.h(2): invalid suffix on number literal: 'a'
     static int i1 = 1a ;
                     ^~
@@ -222,7 +222,7 @@ tests/lex/numlit-invalid-suffix.h(9): invalid suffix on number literal: 'i31'
 tests/lex/numlit-invalid-suffix.h(10): invalid suffix on number literal: 'u'
     static int i9 = 1i64u ;
                     ^~~~~
-[ 9/15] __FB_DARWIN__.__FB_64BIT__
+[ 9/15] __FB_DARWIN__.(not __FB_64BIT__)
 tests/lex/numlit-invalid-suffix.h(2): invalid suffix on number literal: 'a'
     static int i1 = 1a ;
                     ^~
@@ -250,7 +250,7 @@ tests/lex/numlit-invalid-suffix.h(9): invalid suffix on number literal: 'i31'
 tests/lex/numlit-invalid-suffix.h(10): invalid suffix on number literal: 'u'
     static int i9 = 1i64u ;
                     ^~~~~
-[10/15] __FB_DARWIN__.(not __FB_64BIT__)
+[10/15] __FB_DARWIN__.__FB_64BIT__
 tests/lex/numlit-invalid-suffix.h(2): invalid suffix on number literal: 'a'
     static int i1 = 1a ;
                     ^~
@@ -278,7 +278,7 @@ tests/lex/numlit-invalid-suffix.h(9): invalid suffix on number literal: 'i31'
 tests/lex/numlit-invalid-suffix.h(10): invalid suffix on number literal: 'u'
     static int i9 = 1i64u ;
                     ^~~~~
-[11/15] __FB_WIN32__.__FB_64BIT__
+[11/15] __FB_WIN32__.(not __FB_64BIT__)
 tests/lex/numlit-invalid-suffix.h(2): invalid suffix on number literal: 'a'
     static int i1 = 1a ;
                     ^~
@@ -306,7 +306,7 @@ tests/lex/numlit-invalid-suffix.h(9): invalid suffix on number literal: 'i31'
 tests/lex/numlit-invalid-suffix.h(10): invalid suffix on number literal: 'u'
     static int i9 = 1i64u ;
                     ^~~~~
-[12/15] __FB_WIN32__.(not __FB_64BIT__)
+[12/15] __FB_WIN32__.__FB_64BIT__
 tests/lex/numlit-invalid-suffix.h(2): invalid suffix on number literal: 'a'
     static int i1 = 1a ;
                     ^~
@@ -334,7 +334,7 @@ tests/lex/numlit-invalid-suffix.h(9): invalid suffix on number literal: 'i31'
 tests/lex/numlit-invalid-suffix.h(10): invalid suffix on number literal: 'u'
     static int i9 = 1i64u ;
                     ^~~~~
-[13/15] __FB_CYGWIN__.__FB_64BIT__
+[13/15] __FB_CYGWIN__.(not __FB_64BIT__)
 tests/lex/numlit-invalid-suffix.h(2): invalid suffix on number literal: 'a'
     static int i1 = 1a ;
                     ^~
@@ -362,7 +362,7 @@ tests/lex/numlit-invalid-suffix.h(9): invalid suffix on number literal: 'i31'
 tests/lex/numlit-invalid-suffix.h(10): invalid suffix on number literal: 'u'
     static int i9 = 1i64u ;
                     ^~~~~
-[14/15] __FB_CYGWIN__.(not __FB_64BIT__)
+[14/15] __FB_CYGWIN__.__FB_64BIT__
 tests/lex/numlit-invalid-suffix.h(2): invalid suffix on number literal: 'a'
     static int i1 = 1a ;
                     ^~

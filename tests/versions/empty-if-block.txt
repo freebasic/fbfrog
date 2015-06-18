@@ -1,29 +1,29 @@
-[ 1/28] __FB_LINUX__.__FB_64BIT__.X
-[ 2/28] __FB_LINUX__.__FB_64BIT__.(not X)
-[ 3/28] __FB_LINUX__.(not __FB_64BIT__).X
-[ 4/28] __FB_LINUX__.(not __FB_64BIT__).(not X)
-[ 5/28] __FB_FREEBSD__.__FB_64BIT__.X
-[ 6/28] __FB_FREEBSD__.__FB_64BIT__.(not X)
-[ 7/28] __FB_FREEBSD__.(not __FB_64BIT__).X
-[ 8/28] __FB_FREEBSD__.(not __FB_64BIT__).(not X)
-[ 9/28] __FB_OPENBSD__.__FB_64BIT__.X
-[10/28] __FB_OPENBSD__.__FB_64BIT__.(not X)
-[11/28] __FB_OPENBSD__.(not __FB_64BIT__).X
-[12/28] __FB_OPENBSD__.(not __FB_64BIT__).(not X)
-[13/28] __FB_NETBSD__.__FB_64BIT__.X
-[14/28] __FB_NETBSD__.__FB_64BIT__.(not X)
-[15/28] __FB_NETBSD__.(not __FB_64BIT__).X
-[16/28] __FB_NETBSD__.(not __FB_64BIT__).(not X)
-[17/28] __FB_DARWIN__.__FB_64BIT__.X
-[18/28] __FB_DARWIN__.__FB_64BIT__.(not X)
-[19/28] __FB_DARWIN__.(not __FB_64BIT__).X
-[20/28] __FB_DARWIN__.(not __FB_64BIT__).(not X)
-[21/28] __FB_WIN32__.__FB_64BIT__
-[22/28] __FB_WIN32__.(not __FB_64BIT__)
-[23/28] __FB_CYGWIN__.__FB_64BIT__.X
-[24/28] __FB_CYGWIN__.__FB_64BIT__.(not X)
-[25/28] __FB_CYGWIN__.(not __FB_64BIT__).X
-[26/28] __FB_CYGWIN__.(not __FB_64BIT__).(not X)
+[ 1/28] __FB_LINUX__.(not __FB_64BIT__).X
+[ 2/28] __FB_LINUX__.(not __FB_64BIT__).(not X)
+[ 3/28] __FB_LINUX__.__FB_64BIT__.X
+[ 4/28] __FB_LINUX__.__FB_64BIT__.(not X)
+[ 5/28] __FB_FREEBSD__.(not __FB_64BIT__).X
+[ 6/28] __FB_FREEBSD__.(not __FB_64BIT__).(not X)
+[ 7/28] __FB_FREEBSD__.__FB_64BIT__.X
+[ 8/28] __FB_FREEBSD__.__FB_64BIT__.(not X)
+[ 9/28] __FB_OPENBSD__.(not __FB_64BIT__).X
+[10/28] __FB_OPENBSD__.(not __FB_64BIT__).(not X)
+[11/28] __FB_OPENBSD__.__FB_64BIT__.X
+[12/28] __FB_OPENBSD__.__FB_64BIT__.(not X)
+[13/28] __FB_NETBSD__.(not __FB_64BIT__).X
+[14/28] __FB_NETBSD__.(not __FB_64BIT__).(not X)
+[15/28] __FB_NETBSD__.__FB_64BIT__.X
+[16/28] __FB_NETBSD__.__FB_64BIT__.(not X)
+[17/28] __FB_DARWIN__.(not __FB_64BIT__).X
+[18/28] __FB_DARWIN__.(not __FB_64BIT__).(not X)
+[19/28] __FB_DARWIN__.__FB_64BIT__.X
+[20/28] __FB_DARWIN__.__FB_64BIT__.(not X)
+[21/28] __FB_WIN32__.(not __FB_64BIT__)
+[22/28] __FB_WIN32__.__FB_64BIT__
+[23/28] __FB_CYGWIN__.(not __FB_64BIT__).X
+[24/28] __FB_CYGWIN__.(not __FB_64BIT__).(not X)
+[25/28] __FB_CYGWIN__.__FB_64BIT__.X
+[26/28] __FB_CYGWIN__.__FB_64BIT__.(not X)
 [27/28] __FB_DOS__.X
 [28/28] __FB_DOS__.(not X)
 	tests/versions/empty-if-block.h

@@ -1,3 +1,0 @@
-[1/1] 
-	tests/nodefaultscript-1.h
-emitting: tests/nodefaultscript-1.bi (0 declarations, 0 TODOs)

@@ -54,11 +54,15 @@ type BIFILE
 end type
 
 namespace frog
-	dim shared as integer verbose, nodefaultscript
+	dim shared as integer verbose
 	dim shared as string outname, defaultoutname
 	dim shared header as HeaderInfo  '' global titles etc. - will be added to all generated .bi files
 
-	dim shared as integer have_declaredefines, have_declareversions
+	dim shared as integer have_declareversions
+
+	dim shared os(0 to OS__COUNT-1) as byte
+	dim shared arch(0 to ARCH__COUNT-1) as byte
+	dim shared as integer enabledoscount
 
 	dim shared as ASTNODE ptr script
 	dim shared as ASTNODE ptr completeverors, fullveror
@@ -86,6 +90,19 @@ namespace frog
 	dim shared vernums(any) as string
 	dim shared versiondefine as string
 end namespace
+
+private sub frogSetArchs(byval enabled as integer)
+	for i as integer = 0 to ARCH__COUNT - 1
+		frog.arch(i) = enabled
+	next
+end sub
+
+private sub frogSetTargets(byval enabled as integer)
+	for i as integer = 0 to OS__COUNT - 1
+		frog.os(i) = enabled
+	next
+	frogSetArchs(enabled)
+end sub
 
 private function frogAddVernum(byref vernum as string) as integer
 	var i = ubound(frog.vernums) + 1
@@ -175,6 +192,13 @@ function frogLookupBiFromH(byval hfile as zstring ptr) as integer
 	function = bi
 end function
 
+sub frogEnableAllTargets()
+	
+end sub
+
+sub frogEnableTarget(byref spec as string)
+end sub
+
 '' Find a *.fbfrog or *.h file in fbfrog's include/ dir, its "library" of
 '' premade collections of pre-#defines etc. useful when creating bindings.
 private function hFindResource(byref filename as string) as string
@@ -214,9 +238,8 @@ private sub hPrintHelpAndExit()
 	print "  -title <package + version> original-license.txt translators.txt [<destination .bi file>]"
 	print "     Add text at the top of .bi file(s): package name + version, copyright, license"
 	print "  -v                    Show verbose/debugging info"
-	print "  -nodefaultscript      Don't use default.fbfrog implicitly"
+	print "  -target nodos|windows  Specify OS's/architectures to translate for"
 	print "API script logic:"
-	print "  -declaredefines (<symbol>)+  Exclusive #defines (used for OS defines by default.fbfrog)"
 	print "  -declareversions <symbol> (<number>)+     Version numbers"
 	print "  -declarebool <symbol>                     Single on/off #define"
 	print "  -select          (-case <symbol> ...)+ [-caseelse ...] -endselect"
@@ -815,8 +838,9 @@ private sub hParseArgs(byref x as integer)
 	while tkGet(x) <> TK_EOF
 		var opt = tkGet(x)
 		select case as const opt
-		case OPT_NODEFAULTSCRIPT  : frog.nodefaultscript  = TRUE : x += 1
-		case OPT_V                : frog.verbose          = TRUE : x += 1
+		case OPT_V
+			frog.verbose = TRUE
+			x += 1
 
 		case OPT_O
 			x += 1
@@ -845,6 +869,28 @@ private sub hParseArgs(byref x as integer)
 			hExpectStringOrId(x, "<filename-pattern> argument")
 			frogAddPattern(*tkGetText(x), -1)
 			x += 1
+
+		'' -target (<target>)+
+		case OPT_TARGET
+			frogSetTargets(FALSE)
+			x += 1
+
+			hExpectStringOrId(x, "<target> argument")
+			do
+
+				select case *tkGetText(x)
+				case "nodos"
+					frogSetTargets(TRUE)
+					frog.os(OS_DOS) = FALSE
+				case "windows"
+					frogSetArchs(TRUE)
+					frog.os(OS_WINDOWS) = TRUE
+				case else
+					tkOops(x, "unknown <target> argument, expected: nodos|windows")
+				end select
+
+				x += 1
+			loop while hIsStringOrId(x)
 
 		'' -title
 		case OPT_TITLE
@@ -884,24 +930,6 @@ private sub hParseArgs(byref x as integer)
 			header->title = *title
 			header->licensefile = licensefile
 			header->translatorsfile = translatorsfile
-
-		'' -declaredefines (<symbol>)+
-		case OPT_DECLAREDEFINES
-			if frog.have_declaredefines then
-				tkOops(x, "multiple -declaredefines options, only 1 is allowed")
-			end if
-			frog.have_declaredefines = TRUE
-			x += 1
-
-			'' (<symbol>)+
-			var n = astNew(ASTCLASS_DECLAREDEFINES)
-			hExpectId(x)
-			do
-				astAppend(n, astNewTEXT(tkGetText(x)))
-				x += 1
-			loop while tkGet(x) = TK_ID
-
-			astAppend(frog.script, n)
 
 		'' -declareversions <symbol> (<string>)+
 		case OPT_DECLAREVERSIONS
@@ -1159,34 +1187,6 @@ private sub frogEvaluateScript _
 	while i
 
 		select case i->class
-		case ASTCLASS_DECLAREDEFINES
-			var decl = i
-			i = i->next
-
-			var completeveror = astNew(ASTCLASS_VEROR)
-
-			'' Evaluate a separate code path for each #define/version
-			var k = decl->head
-			do
-				'' defined(<symbol>)
-				var condition = astNewDEFINED(k->text)
-				astAppend(completeveror, astClone(condition))
-
-				k = k->next
-				if k = NULL then
-					'' This is the last #define, so don't branch
-					astAppend(conditions, condition)
-					exit do
-				end if
-
-				'' Branch for this #define
-				frogEvaluateScript(i, _
-					astNewGROUP(astClone(conditions), condition), _
-					astClone(options))
-			loop
-
-			astAppend(frog.completeverors, completeveror)
-
 		case ASTCLASS_DECLAREVERSIONS
 			i = i->next
 
@@ -1277,6 +1277,71 @@ private sub frogEvaluateScript _
 	assert(conditions->class = ASTCLASS_GROUP)
 	conditions->class = ASTCLASS_VERAND
 	frogAddApi(conditions, options)
+end sub
+
+'' OS names for building __FB_*__ and __FBFROG_*__ symbols
+dim shared getFbOsId(0 to OS__COUNT-1) as zstring ptr => { _
+	@"LINUX", @"FREEBSD", @"OPENBSD", @"NETBSD", @"DARWIN", _
+	@"WIN32", @"CYGWIN", @"DOS" _
+}
+
+private function getFbOsDef(byval os as integer) as string
+	function = "__FB_" + *getFbOsId(os) + "__"
+end function
+
+private function getFbfrogOsDef(byval os as integer) as string
+	function = "__FBFROG_" + *getFbOsId(os) + "__"
+end function
+
+private function astNewDEFINEDfb64(byval negate as integer) as ASTNODE ptr
+	var n = astNewDEFINED("__FB_64BIT__")
+	if negate then n = astNew(ASTCLASS_NOT, n)
+	function = n
+end function
+
+private function astNewDEFINEDfbos(byval os as integer) as ASTNODE ptr
+	function = astNewDEFINED(getFbOsDef(os))
+end function
+
+private sub maybeEvalForTarget(byval os as integer, byval arch as integer)
+	if frog.arch(arch) = FALSE then exit sub
+
+	var conditions = astNewGROUP()
+	var options = astNewGROUP()
+
+	'' Build list of #if conditions for this target (will be turned into VERAND later)
+	'' defined(__FB_<os>__) and [not] defined(__FB_64BIT__)
+	'' For DOS, we don't need to check __FB_64BIT__ at all.
+	if frog.enabledoscount > 1 then
+		astAppend(conditions, astNewDEFINEDfbos(os))
+	end if
+	if os <> OS_DOS then
+		astAppend(conditions, astNewDEFINEDfb64(arch <> ARCH_X86_64))
+	end if
+
+	'' Add the CPP #define __FBFROG_*__ for preprocessing of default.h
+	astAppend(options, astNewOPTION(OPT_DEFINE, getFbfrogOsDef(os)))
+	if arch = ARCH_X86_64 then
+		astAppend(options, astNewOPTION(OPT_DEFINE, "__FBFROG_64BIT__"))
+	end if
+
+	frogEvaluateScript(frog.script->head, conditions, options)
+end sub
+
+private sub maybeEvalForOs(byval os as integer)
+	if frog.os(os) = FALSE then exit sub
+
+	select case os
+	case OS_DOS
+		maybeEvalForTarget(os, ARCH_X86)
+	case OS_WINDOWS
+		maybeEvalForTarget(os, ARCH_X86)
+		maybeEvalForTarget(os, ARCH_X86_64)
+	case else
+		for arch as integer = 0 to ARCH__COUNT - 1
+			maybeEvalForTarget(os, arch)
+		next
+	end select
 end sub
 
 private function frogParse(byref api as ApiInfo) as ASTNODE ptr
@@ -1425,6 +1490,7 @@ end function
 	fbkeywordsInit()
 	lexInit()
 
+	frogSetTargets(TRUE)
 	hashInit(@frog.ucasebihash, 6, TRUE)
 	hashInit(@frog.bilookupcache, 6, TRUE)
 
@@ -1448,23 +1514,41 @@ end function
 	'' Add the implicit default.h pre-#include
 	astPrepend(frog.script, astNewOPTION(OPT_FBFROGINCLUDE, "default.h"))
 
-	if frog.nodefaultscript = FALSE then
-		'' Parse default.fbfrog and prepend the options from it to the
-		'' script from the command line.
-		var userscript = frog.script
-		frog.script = astNewGROUP()
-		tkInit()
-		hLoadArgsFile(0, hFindResource("default.fbfrog"), type(NULL, 0))
-		hParseArgs(0)
-		tkEnd()
-		astAppend(frog.script, userscript)
-	end if
-
-	'' Parse the version-specific options ("script"), following each
-	'' possible code path, and determine how many and which versions there
-	'' are.
+	'' Determine the APIs and their individual options
+	'' - The API-specific command line options were stored in the "script",
+	''   this must be evaluated now, following each possible code path.
+	'' - The built-in targets representing the "base" set of APIs are
+	''   hard-coded here in form of loops
+	'' - Any -declare* options in the script trigger recursive evaluation
 	frog.completeverors = astNewGROUP()
-	frogEvaluateScript(frog.script->head, astNewGROUP(), astNewGROUP())
+	frog.enabledoscount = 0
+	for os as integer = 0 to OS__COUNT - 1
+		if frog.os(os) then frog.enabledoscount += 1
+	next
+	scope
+		'' Fill in frog.completeverors for the built-in targets
+
+		if frog.enabledoscount > 1 then
+			'' 1. one VEROR covering all enabled OS conditions
+			var osveror = astNewVEROR()
+			for os as integer = 0 to OS__COUNT - 1
+				if frog.os(os) then
+					astAppend(osveror, astNewDEFINEDfbos(os))
+				end if
+			next
+			astAppend(frog.completeverors, osveror)
+		end if
+
+		'' 2. one VEROR covering the __FB_64BIT__ boolean (defined + not defined)
+		'' This assumes that 32bit + 64bit architectures are always enabled.
+		'' TODO: support cases like 32bit-only?
+		astAppend(frog.completeverors, _
+			astNewVEROR(astNewDEFINEDfb64(FALSE), _
+			            astNewDEFINEDfb64(TRUE)))
+	end scope
+	for os as integer = 0 to OS__COUNT - 1
+		maybeEvalForOs(os)
+	next
 	assert(frog.apicount > 0)
 
 	if frog.apicount > ApiBits.MaxApis then

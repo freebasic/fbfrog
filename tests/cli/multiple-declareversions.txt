@@ -1,3 +1,1 @@
-include/fbfrog/default.fbfrog(1): multiple -declaredefines options, only 1 is allowed
-    -declaredefines __FB_LINUX__ __FB_FREEBSD__ __FB_OPENBSD__ __FB_NETBSD__ __F
-    ^~~~~~~~~~~~~~~
+<command line>(1): unknown command line option '-declaredefines'

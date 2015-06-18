@@ -1,0 +1,16 @@
+[ 1/14] __FB_LINUX__.(not __FB_64BIT__)
+[ 2/14] __FB_LINUX__.__FB_64BIT__
+[ 3/14] __FB_FREEBSD__.(not __FB_64BIT__)
+[ 4/14] __FB_FREEBSD__.__FB_64BIT__
+[ 5/14] __FB_OPENBSD__.(not __FB_64BIT__)
+[ 6/14] __FB_OPENBSD__.__FB_64BIT__
+[ 7/14] __FB_NETBSD__.(not __FB_64BIT__)
+[ 8/14] __FB_NETBSD__.__FB_64BIT__
+[ 9/14] __FB_DARWIN__.(not __FB_64BIT__)
+[10/14] __FB_DARWIN__.__FB_64BIT__
+[11/14] __FB_WIN32__.(not __FB_64BIT__)
+[12/14] __FB_WIN32__.__FB_64BIT__
+[13/14] __FB_CYGWIN__.(not __FB_64BIT__)
+[14/14] __FB_CYGWIN__.__FB_64BIT__
+	tests/versions/target-nodos.h
+emitting: tests/versions/target-nodos.bi (0 declarations, 0 TODOs)

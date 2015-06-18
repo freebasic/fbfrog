@@ -1,3 +1,1 @@
-<command line>(1): multiple -declaredefines options, only 1 is allowed
-     tests/cli/multiple-declaredefines.h -declaredefines A B -declaredefines C D
-                                                             ^~~~~~~~~~~~~~~
+<command line>(1): unknown command line option '-declaredefines'

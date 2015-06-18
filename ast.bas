@@ -35,7 +35,6 @@ dim shared as zstring ptr astnodename(0 to ...) => _
 	@"title"     , _
 	_
 	_ '' Script helper nodes
-	@"declaredefines", _
 	@"declareversions", _
 	@"declarebool"  , _
 	@"select"       , _

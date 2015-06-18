@@ -143,10 +143,9 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	(@"-dontemit"     ), _
 	(@"-i"            ), _
 	(@"-v"            ), _
-	(@"-nodefaultscript"), _
+	(@"-target"       ), _
 	(@"-title"        ), _
 	_
-	(@"-declaredefines"), _
 	(@"-declareversions"), _
 	(@"-declarebool"  ), _
 	(@"-select"       ), _

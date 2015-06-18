@@ -1,31 +1,31 @@
-[ 1/29] __FB_LINUX__.__FB_64BIT__.Y
-[ 2/29] __FB_LINUX__.__FB_64BIT__.(not Y)
-[ 3/29] __FB_LINUX__.(not __FB_64BIT__).Y
-[ 4/29] __FB_LINUX__.(not __FB_64BIT__).(not Y)
-[ 5/29] __FB_FREEBSD__.__FB_64BIT__.Y
-[ 6/29] __FB_FREEBSD__.__FB_64BIT__.(not Y)
-[ 7/29] __FB_FREEBSD__.(not __FB_64BIT__).Y
-[ 8/29] __FB_FREEBSD__.(not __FB_64BIT__).(not Y)
-[ 9/29] __FB_OPENBSD__.__FB_64BIT__.Y
-[10/29] __FB_OPENBSD__.__FB_64BIT__.(not Y)
-[11/29] __FB_OPENBSD__.(not __FB_64BIT__).Y
-[12/29] __FB_OPENBSD__.(not __FB_64BIT__).(not Y)
-[13/29] __FB_NETBSD__.__FB_64BIT__.Y
-[14/29] __FB_NETBSD__.__FB_64BIT__.(not Y)
-[15/29] __FB_NETBSD__.(not __FB_64BIT__).Y
-[16/29] __FB_NETBSD__.(not __FB_64BIT__).(not Y)
-[17/29] __FB_DARWIN__.__FB_64BIT__.Y
-[18/29] __FB_DARWIN__.__FB_64BIT__.(not Y)
-[19/29] __FB_DARWIN__.(not __FB_64BIT__).Y
-[20/29] __FB_DARWIN__.(not __FB_64BIT__).(not Y)
-[21/29] __FB_WIN32__.__FB_64BIT__.X
-[22/29] __FB_WIN32__.__FB_64BIT__.(not X)
-[23/29] __FB_WIN32__.(not __FB_64BIT__).X
-[24/29] __FB_WIN32__.(not __FB_64BIT__).(not X)
-[25/29] __FB_CYGWIN__.__FB_64BIT__.Y
-[26/29] __FB_CYGWIN__.__FB_64BIT__.(not Y)
-[27/29] __FB_CYGWIN__.(not __FB_64BIT__).Y
-[28/29] __FB_CYGWIN__.(not __FB_64BIT__).(not Y)
+[ 1/29] __FB_LINUX__.(not __FB_64BIT__).Y
+[ 2/29] __FB_LINUX__.(not __FB_64BIT__).(not Y)
+[ 3/29] __FB_LINUX__.__FB_64BIT__.Y
+[ 4/29] __FB_LINUX__.__FB_64BIT__.(not Y)
+[ 5/29] __FB_FREEBSD__.(not __FB_64BIT__).Y
+[ 6/29] __FB_FREEBSD__.(not __FB_64BIT__).(not Y)
+[ 7/29] __FB_FREEBSD__.__FB_64BIT__.Y
+[ 8/29] __FB_FREEBSD__.__FB_64BIT__.(not Y)
+[ 9/29] __FB_OPENBSD__.(not __FB_64BIT__).Y
+[10/29] __FB_OPENBSD__.(not __FB_64BIT__).(not Y)
+[11/29] __FB_OPENBSD__.__FB_64BIT__.Y
+[12/29] __FB_OPENBSD__.__FB_64BIT__.(not Y)
+[13/29] __FB_NETBSD__.(not __FB_64BIT__).Y
+[14/29] __FB_NETBSD__.(not __FB_64BIT__).(not Y)
+[15/29] __FB_NETBSD__.__FB_64BIT__.Y
+[16/29] __FB_NETBSD__.__FB_64BIT__.(not Y)
+[17/29] __FB_DARWIN__.(not __FB_64BIT__).Y
+[18/29] __FB_DARWIN__.(not __FB_64BIT__).(not Y)
+[19/29] __FB_DARWIN__.__FB_64BIT__.Y
+[20/29] __FB_DARWIN__.__FB_64BIT__.(not Y)
+[21/29] __FB_WIN32__.(not __FB_64BIT__).X
+[22/29] __FB_WIN32__.(not __FB_64BIT__).(not X)
+[23/29] __FB_WIN32__.__FB_64BIT__.X
+[24/29] __FB_WIN32__.__FB_64BIT__.(not X)
+[25/29] __FB_CYGWIN__.(not __FB_64BIT__).Y
+[26/29] __FB_CYGWIN__.(not __FB_64BIT__).(not Y)
+[27/29] __FB_CYGWIN__.__FB_64BIT__.Y
+[28/29] __FB_CYGWIN__.__FB_64BIT__.(not Y)
 [29/29] __FB_DOS__
 	tests/versions/empty-elseif-block.h
 emitting: tests/versions/empty-elseif-block.bi (0 declarations, 0 TODOs)

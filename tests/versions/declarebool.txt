@@ -1,31 +1,31 @@
-[ 1/30] __FB_LINUX__.__FB_64BIT__.A
-[ 2/30] __FB_LINUX__.__FB_64BIT__.(not A)
-[ 3/30] __FB_LINUX__.(not __FB_64BIT__).A
-[ 4/30] __FB_LINUX__.(not __FB_64BIT__).(not A)
-[ 5/30] __FB_FREEBSD__.__FB_64BIT__.A
-[ 6/30] __FB_FREEBSD__.__FB_64BIT__.(not A)
-[ 7/30] __FB_FREEBSD__.(not __FB_64BIT__).A
-[ 8/30] __FB_FREEBSD__.(not __FB_64BIT__).(not A)
-[ 9/30] __FB_OPENBSD__.__FB_64BIT__.A
-[10/30] __FB_OPENBSD__.__FB_64BIT__.(not A)
-[11/30] __FB_OPENBSD__.(not __FB_64BIT__).A
-[12/30] __FB_OPENBSD__.(not __FB_64BIT__).(not A)
-[13/30] __FB_NETBSD__.__FB_64BIT__.A
-[14/30] __FB_NETBSD__.__FB_64BIT__.(not A)
-[15/30] __FB_NETBSD__.(not __FB_64BIT__).A
-[16/30] __FB_NETBSD__.(not __FB_64BIT__).(not A)
-[17/30] __FB_DARWIN__.__FB_64BIT__.A
-[18/30] __FB_DARWIN__.__FB_64BIT__.(not A)
-[19/30] __FB_DARWIN__.(not __FB_64BIT__).A
-[20/30] __FB_DARWIN__.(not __FB_64BIT__).(not A)
-[21/30] __FB_WIN32__.__FB_64BIT__.A
-[22/30] __FB_WIN32__.__FB_64BIT__.(not A)
-[23/30] __FB_WIN32__.(not __FB_64BIT__).A
-[24/30] __FB_WIN32__.(not __FB_64BIT__).(not A)
-[25/30] __FB_CYGWIN__.__FB_64BIT__.A
-[26/30] __FB_CYGWIN__.__FB_64BIT__.(not A)
-[27/30] __FB_CYGWIN__.(not __FB_64BIT__).A
-[28/30] __FB_CYGWIN__.(not __FB_64BIT__).(not A)
+[ 1/30] __FB_LINUX__.(not __FB_64BIT__).A
+[ 2/30] __FB_LINUX__.(not __FB_64BIT__).(not A)
+[ 3/30] __FB_LINUX__.__FB_64BIT__.A
+[ 4/30] __FB_LINUX__.__FB_64BIT__.(not A)
+[ 5/30] __FB_FREEBSD__.(not __FB_64BIT__).A
+[ 6/30] __FB_FREEBSD__.(not __FB_64BIT__).(not A)
+[ 7/30] __FB_FREEBSD__.__FB_64BIT__.A
+[ 8/30] __FB_FREEBSD__.__FB_64BIT__.(not A)
+[ 9/30] __FB_OPENBSD__.(not __FB_64BIT__).A
+[10/30] __FB_OPENBSD__.(not __FB_64BIT__).(not A)
+[11/30] __FB_OPENBSD__.__FB_64BIT__.A
+[12/30] __FB_OPENBSD__.__FB_64BIT__.(not A)
+[13/30] __FB_NETBSD__.(not __FB_64BIT__).A
+[14/30] __FB_NETBSD__.(not __FB_64BIT__).(not A)
+[15/30] __FB_NETBSD__.__FB_64BIT__.A
+[16/30] __FB_NETBSD__.__FB_64BIT__.(not A)
+[17/30] __FB_DARWIN__.(not __FB_64BIT__).A
+[18/30] __FB_DARWIN__.(not __FB_64BIT__).(not A)
+[19/30] __FB_DARWIN__.__FB_64BIT__.A
+[20/30] __FB_DARWIN__.__FB_64BIT__.(not A)
+[21/30] __FB_WIN32__.(not __FB_64BIT__).A
+[22/30] __FB_WIN32__.(not __FB_64BIT__).(not A)
+[23/30] __FB_WIN32__.__FB_64BIT__.A
+[24/30] __FB_WIN32__.__FB_64BIT__.(not A)
+[25/30] __FB_CYGWIN__.(not __FB_64BIT__).A
+[26/30] __FB_CYGWIN__.(not __FB_64BIT__).(not A)
+[27/30] __FB_CYGWIN__.__FB_64BIT__.A
+[28/30] __FB_CYGWIN__.__FB_64BIT__.(not A)
 [29/30] __FB_DOS__.A
 [30/30] __FB_DOS__.(not A)
 	tests/versions/declarebool.h

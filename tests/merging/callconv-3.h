@@ -1,4 +1,4 @@
-// @fbfrog <dir>callconv-3.fbfrog
+// @fbfrog -target windows -declarebool UNICODE -ifdef UNICODE -define UNICODE -endif
 
 #ifdef __x86_64__
 	#define CALLCONV

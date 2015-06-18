@@ -1,227 +1,227 @@
-[  1/240] __FB_LINUX__.__FB_64BIT__.A.B.C.D
-[  2/240] __FB_LINUX__.__FB_64BIT__.A.B.C.(not D)
-[  3/240] __FB_LINUX__.__FB_64BIT__.A.B.(not C).D
-[  4/240] __FB_LINUX__.__FB_64BIT__.A.B.(not C).(not D)
-[  5/240] __FB_LINUX__.__FB_64BIT__.A.(not B).C.D
-[  6/240] __FB_LINUX__.__FB_64BIT__.A.(not B).C.(not D)
-[  7/240] __FB_LINUX__.__FB_64BIT__.A.(not B).(not C).D
-[  8/240] __FB_LINUX__.__FB_64BIT__.A.(not B).(not C).(not D)
-[  9/240] __FB_LINUX__.__FB_64BIT__.(not A).B.C.D
-[ 10/240] __FB_LINUX__.__FB_64BIT__.(not A).B.C.(not D)
-[ 11/240] __FB_LINUX__.__FB_64BIT__.(not A).B.(not C).D
-[ 12/240] __FB_LINUX__.__FB_64BIT__.(not A).B.(not C).(not D)
-[ 13/240] __FB_LINUX__.__FB_64BIT__.(not A).(not B).C.D
-[ 14/240] __FB_LINUX__.__FB_64BIT__.(not A).(not B).C.(not D)
-[ 15/240] __FB_LINUX__.__FB_64BIT__.(not A).(not B).(not C).D
-[ 16/240] __FB_LINUX__.__FB_64BIT__.(not A).(not B).(not C).(not D)
-[ 17/240] __FB_LINUX__.(not __FB_64BIT__).A.B.C.D
-[ 18/240] __FB_LINUX__.(not __FB_64BIT__).A.B.C.(not D)
-[ 19/240] __FB_LINUX__.(not __FB_64BIT__).A.B.(not C).D
-[ 20/240] __FB_LINUX__.(not __FB_64BIT__).A.B.(not C).(not D)
-[ 21/240] __FB_LINUX__.(not __FB_64BIT__).A.(not B).C.D
-[ 22/240] __FB_LINUX__.(not __FB_64BIT__).A.(not B).C.(not D)
-[ 23/240] __FB_LINUX__.(not __FB_64BIT__).A.(not B).(not C).D
-[ 24/240] __FB_LINUX__.(not __FB_64BIT__).A.(not B).(not C).(not D)
-[ 25/240] __FB_LINUX__.(not __FB_64BIT__).(not A).B.C.D
-[ 26/240] __FB_LINUX__.(not __FB_64BIT__).(not A).B.C.(not D)
-[ 27/240] __FB_LINUX__.(not __FB_64BIT__).(not A).B.(not C).D
-[ 28/240] __FB_LINUX__.(not __FB_64BIT__).(not A).B.(not C).(not D)
-[ 29/240] __FB_LINUX__.(not __FB_64BIT__).(not A).(not B).C.D
-[ 30/240] __FB_LINUX__.(not __FB_64BIT__).(not A).(not B).C.(not D)
-[ 31/240] __FB_LINUX__.(not __FB_64BIT__).(not A).(not B).(not C).D
-[ 32/240] __FB_LINUX__.(not __FB_64BIT__).(not A).(not B).(not C).(not D)
-[ 33/240] __FB_FREEBSD__.__FB_64BIT__.A.B.C.D
-[ 34/240] __FB_FREEBSD__.__FB_64BIT__.A.B.C.(not D)
-[ 35/240] __FB_FREEBSD__.__FB_64BIT__.A.B.(not C).D
-[ 36/240] __FB_FREEBSD__.__FB_64BIT__.A.B.(not C).(not D)
-[ 37/240] __FB_FREEBSD__.__FB_64BIT__.A.(not B).C.D
-[ 38/240] __FB_FREEBSD__.__FB_64BIT__.A.(not B).C.(not D)
-[ 39/240] __FB_FREEBSD__.__FB_64BIT__.A.(not B).(not C).D
-[ 40/240] __FB_FREEBSD__.__FB_64BIT__.A.(not B).(not C).(not D)
-[ 41/240] __FB_FREEBSD__.__FB_64BIT__.(not A).B.C.D
-[ 42/240] __FB_FREEBSD__.__FB_64BIT__.(not A).B.C.(not D)
-[ 43/240] __FB_FREEBSD__.__FB_64BIT__.(not A).B.(not C).D
-[ 44/240] __FB_FREEBSD__.__FB_64BIT__.(not A).B.(not C).(not D)
-[ 45/240] __FB_FREEBSD__.__FB_64BIT__.(not A).(not B).C.D
-[ 46/240] __FB_FREEBSD__.__FB_64BIT__.(not A).(not B).C.(not D)
-[ 47/240] __FB_FREEBSD__.__FB_64BIT__.(not A).(not B).(not C).D
-[ 48/240] __FB_FREEBSD__.__FB_64BIT__.(not A).(not B).(not C).(not D)
-[ 49/240] __FB_FREEBSD__.(not __FB_64BIT__).A.B.C.D
-[ 50/240] __FB_FREEBSD__.(not __FB_64BIT__).A.B.C.(not D)
-[ 51/240] __FB_FREEBSD__.(not __FB_64BIT__).A.B.(not C).D
-[ 52/240] __FB_FREEBSD__.(not __FB_64BIT__).A.B.(not C).(not D)
-[ 53/240] __FB_FREEBSD__.(not __FB_64BIT__).A.(not B).C.D
-[ 54/240] __FB_FREEBSD__.(not __FB_64BIT__).A.(not B).C.(not D)
-[ 55/240] __FB_FREEBSD__.(not __FB_64BIT__).A.(not B).(not C).D
-[ 56/240] __FB_FREEBSD__.(not __FB_64BIT__).A.(not B).(not C).(not D)
-[ 57/240] __FB_FREEBSD__.(not __FB_64BIT__).(not A).B.C.D
-[ 58/240] __FB_FREEBSD__.(not __FB_64BIT__).(not A).B.C.(not D)
-[ 59/240] __FB_FREEBSD__.(not __FB_64BIT__).(not A).B.(not C).D
-[ 60/240] __FB_FREEBSD__.(not __FB_64BIT__).(not A).B.(not C).(not D)
-[ 61/240] __FB_FREEBSD__.(not __FB_64BIT__).(not A).(not B).C.D
-[ 62/240] __FB_FREEBSD__.(not __FB_64BIT__).(not A).(not B).C.(not D)
-[ 63/240] __FB_FREEBSD__.(not __FB_64BIT__).(not A).(not B).(not C).D
-[ 64/240] __FB_FREEBSD__.(not __FB_64BIT__).(not A).(not B).(not C).(not D)
-[ 65/240] __FB_OPENBSD__.__FB_64BIT__.A.B.C.D
-[ 66/240] __FB_OPENBSD__.__FB_64BIT__.A.B.C.(not D)
-[ 67/240] __FB_OPENBSD__.__FB_64BIT__.A.B.(not C).D
-[ 68/240] __FB_OPENBSD__.__FB_64BIT__.A.B.(not C).(not D)
-[ 69/240] __FB_OPENBSD__.__FB_64BIT__.A.(not B).C.D
-[ 70/240] __FB_OPENBSD__.__FB_64BIT__.A.(not B).C.(not D)
-[ 71/240] __FB_OPENBSD__.__FB_64BIT__.A.(not B).(not C).D
-[ 72/240] __FB_OPENBSD__.__FB_64BIT__.A.(not B).(not C).(not D)
-[ 73/240] __FB_OPENBSD__.__FB_64BIT__.(not A).B.C.D
-[ 74/240] __FB_OPENBSD__.__FB_64BIT__.(not A).B.C.(not D)
-[ 75/240] __FB_OPENBSD__.__FB_64BIT__.(not A).B.(not C).D
-[ 76/240] __FB_OPENBSD__.__FB_64BIT__.(not A).B.(not C).(not D)
-[ 77/240] __FB_OPENBSD__.__FB_64BIT__.(not A).(not B).C.D
-[ 78/240] __FB_OPENBSD__.__FB_64BIT__.(not A).(not B).C.(not D)
-[ 79/240] __FB_OPENBSD__.__FB_64BIT__.(not A).(not B).(not C).D
-[ 80/240] __FB_OPENBSD__.__FB_64BIT__.(not A).(not B).(not C).(not D)
-[ 81/240] __FB_OPENBSD__.(not __FB_64BIT__).A.B.C.D
-[ 82/240] __FB_OPENBSD__.(not __FB_64BIT__).A.B.C.(not D)
-[ 83/240] __FB_OPENBSD__.(not __FB_64BIT__).A.B.(not C).D
-[ 84/240] __FB_OPENBSD__.(not __FB_64BIT__).A.B.(not C).(not D)
-[ 85/240] __FB_OPENBSD__.(not __FB_64BIT__).A.(not B).C.D
-[ 86/240] __FB_OPENBSD__.(not __FB_64BIT__).A.(not B).C.(not D)
-[ 87/240] __FB_OPENBSD__.(not __FB_64BIT__).A.(not B).(not C).D
-[ 88/240] __FB_OPENBSD__.(not __FB_64BIT__).A.(not B).(not C).(not D)
-[ 89/240] __FB_OPENBSD__.(not __FB_64BIT__).(not A).B.C.D
-[ 90/240] __FB_OPENBSD__.(not __FB_64BIT__).(not A).B.C.(not D)
-[ 91/240] __FB_OPENBSD__.(not __FB_64BIT__).(not A).B.(not C).D
-[ 92/240] __FB_OPENBSD__.(not __FB_64BIT__).(not A).B.(not C).(not D)
-[ 93/240] __FB_OPENBSD__.(not __FB_64BIT__).(not A).(not B).C.D
-[ 94/240] __FB_OPENBSD__.(not __FB_64BIT__).(not A).(not B).C.(not D)
-[ 95/240] __FB_OPENBSD__.(not __FB_64BIT__).(not A).(not B).(not C).D
-[ 96/240] __FB_OPENBSD__.(not __FB_64BIT__).(not A).(not B).(not C).(not D)
-[ 97/240] __FB_NETBSD__.__FB_64BIT__.A.B.C.D
-[ 98/240] __FB_NETBSD__.__FB_64BIT__.A.B.C.(not D)
-[ 99/240] __FB_NETBSD__.__FB_64BIT__.A.B.(not C).D
-[100/240] __FB_NETBSD__.__FB_64BIT__.A.B.(not C).(not D)
-[101/240] __FB_NETBSD__.__FB_64BIT__.A.(not B).C.D
-[102/240] __FB_NETBSD__.__FB_64BIT__.A.(not B).C.(not D)
-[103/240] __FB_NETBSD__.__FB_64BIT__.A.(not B).(not C).D
-[104/240] __FB_NETBSD__.__FB_64BIT__.A.(not B).(not C).(not D)
-[105/240] __FB_NETBSD__.__FB_64BIT__.(not A).B.C.D
-[106/240] __FB_NETBSD__.__FB_64BIT__.(not A).B.C.(not D)
-[107/240] __FB_NETBSD__.__FB_64BIT__.(not A).B.(not C).D
-[108/240] __FB_NETBSD__.__FB_64BIT__.(not A).B.(not C).(not D)
-[109/240] __FB_NETBSD__.__FB_64BIT__.(not A).(not B).C.D
-[110/240] __FB_NETBSD__.__FB_64BIT__.(not A).(not B).C.(not D)
-[111/240] __FB_NETBSD__.__FB_64BIT__.(not A).(not B).(not C).D
-[112/240] __FB_NETBSD__.__FB_64BIT__.(not A).(not B).(not C).(not D)
-[113/240] __FB_NETBSD__.(not __FB_64BIT__).A.B.C.D
-[114/240] __FB_NETBSD__.(not __FB_64BIT__).A.B.C.(not D)
-[115/240] __FB_NETBSD__.(not __FB_64BIT__).A.B.(not C).D
-[116/240] __FB_NETBSD__.(not __FB_64BIT__).A.B.(not C).(not D)
-[117/240] __FB_NETBSD__.(not __FB_64BIT__).A.(not B).C.D
-[118/240] __FB_NETBSD__.(not __FB_64BIT__).A.(not B).C.(not D)
-[119/240] __FB_NETBSD__.(not __FB_64BIT__).A.(not B).(not C).D
-[120/240] __FB_NETBSD__.(not __FB_64BIT__).A.(not B).(not C).(not D)
-[121/240] __FB_NETBSD__.(not __FB_64BIT__).(not A).B.C.D
-[122/240] __FB_NETBSD__.(not __FB_64BIT__).(not A).B.C.(not D)
-[123/240] __FB_NETBSD__.(not __FB_64BIT__).(not A).B.(not C).D
-[124/240] __FB_NETBSD__.(not __FB_64BIT__).(not A).B.(not C).(not D)
-[125/240] __FB_NETBSD__.(not __FB_64BIT__).(not A).(not B).C.D
-[126/240] __FB_NETBSD__.(not __FB_64BIT__).(not A).(not B).C.(not D)
-[127/240] __FB_NETBSD__.(not __FB_64BIT__).(not A).(not B).(not C).D
-[128/240] __FB_NETBSD__.(not __FB_64BIT__).(not A).(not B).(not C).(not D)
-[129/240] __FB_DARWIN__.__FB_64BIT__.A.B.C.D
-[130/240] __FB_DARWIN__.__FB_64BIT__.A.B.C.(not D)
-[131/240] __FB_DARWIN__.__FB_64BIT__.A.B.(not C).D
-[132/240] __FB_DARWIN__.__FB_64BIT__.A.B.(not C).(not D)
-[133/240] __FB_DARWIN__.__FB_64BIT__.A.(not B).C.D
-[134/240] __FB_DARWIN__.__FB_64BIT__.A.(not B).C.(not D)
-[135/240] __FB_DARWIN__.__FB_64BIT__.A.(not B).(not C).D
-[136/240] __FB_DARWIN__.__FB_64BIT__.A.(not B).(not C).(not D)
-[137/240] __FB_DARWIN__.__FB_64BIT__.(not A).B.C.D
-[138/240] __FB_DARWIN__.__FB_64BIT__.(not A).B.C.(not D)
-[139/240] __FB_DARWIN__.__FB_64BIT__.(not A).B.(not C).D
-[140/240] __FB_DARWIN__.__FB_64BIT__.(not A).B.(not C).(not D)
-[141/240] __FB_DARWIN__.__FB_64BIT__.(not A).(not B).C.D
-[142/240] __FB_DARWIN__.__FB_64BIT__.(not A).(not B).C.(not D)
-[143/240] __FB_DARWIN__.__FB_64BIT__.(not A).(not B).(not C).D
-[144/240] __FB_DARWIN__.__FB_64BIT__.(not A).(not B).(not C).(not D)
-[145/240] __FB_DARWIN__.(not __FB_64BIT__).A.B.C.D
-[146/240] __FB_DARWIN__.(not __FB_64BIT__).A.B.C.(not D)
-[147/240] __FB_DARWIN__.(not __FB_64BIT__).A.B.(not C).D
-[148/240] __FB_DARWIN__.(not __FB_64BIT__).A.B.(not C).(not D)
-[149/240] __FB_DARWIN__.(not __FB_64BIT__).A.(not B).C.D
-[150/240] __FB_DARWIN__.(not __FB_64BIT__).A.(not B).C.(not D)
-[151/240] __FB_DARWIN__.(not __FB_64BIT__).A.(not B).(not C).D
-[152/240] __FB_DARWIN__.(not __FB_64BIT__).A.(not B).(not C).(not D)
-[153/240] __FB_DARWIN__.(not __FB_64BIT__).(not A).B.C.D
-[154/240] __FB_DARWIN__.(not __FB_64BIT__).(not A).B.C.(not D)
-[155/240] __FB_DARWIN__.(not __FB_64BIT__).(not A).B.(not C).D
-[156/240] __FB_DARWIN__.(not __FB_64BIT__).(not A).B.(not C).(not D)
-[157/240] __FB_DARWIN__.(not __FB_64BIT__).(not A).(not B).C.D
-[158/240] __FB_DARWIN__.(not __FB_64BIT__).(not A).(not B).C.(not D)
-[159/240] __FB_DARWIN__.(not __FB_64BIT__).(not A).(not B).(not C).D
-[160/240] __FB_DARWIN__.(not __FB_64BIT__).(not A).(not B).(not C).(not D)
-[161/240] __FB_WIN32__.__FB_64BIT__.A.B.C.D
-[162/240] __FB_WIN32__.__FB_64BIT__.A.B.C.(not D)
-[163/240] __FB_WIN32__.__FB_64BIT__.A.B.(not C).D
-[164/240] __FB_WIN32__.__FB_64BIT__.A.B.(not C).(not D)
-[165/240] __FB_WIN32__.__FB_64BIT__.A.(not B).C.D
-[166/240] __FB_WIN32__.__FB_64BIT__.A.(not B).C.(not D)
-[167/240] __FB_WIN32__.__FB_64BIT__.A.(not B).(not C).D
-[168/240] __FB_WIN32__.__FB_64BIT__.A.(not B).(not C).(not D)
-[169/240] __FB_WIN32__.__FB_64BIT__.(not A).B.C.D
-[170/240] __FB_WIN32__.__FB_64BIT__.(not A).B.C.(not D)
-[171/240] __FB_WIN32__.__FB_64BIT__.(not A).B.(not C).D
-[172/240] __FB_WIN32__.__FB_64BIT__.(not A).B.(not C).(not D)
-[173/240] __FB_WIN32__.__FB_64BIT__.(not A).(not B).C.D
-[174/240] __FB_WIN32__.__FB_64BIT__.(not A).(not B).C.(not D)
-[175/240] __FB_WIN32__.__FB_64BIT__.(not A).(not B).(not C).D
-[176/240] __FB_WIN32__.__FB_64BIT__.(not A).(not B).(not C).(not D)
-[177/240] __FB_WIN32__.(not __FB_64BIT__).A.B.C.D
-[178/240] __FB_WIN32__.(not __FB_64BIT__).A.B.C.(not D)
-[179/240] __FB_WIN32__.(not __FB_64BIT__).A.B.(not C).D
-[180/240] __FB_WIN32__.(not __FB_64BIT__).A.B.(not C).(not D)
-[181/240] __FB_WIN32__.(not __FB_64BIT__).A.(not B).C.D
-[182/240] __FB_WIN32__.(not __FB_64BIT__).A.(not B).C.(not D)
-[183/240] __FB_WIN32__.(not __FB_64BIT__).A.(not B).(not C).D
-[184/240] __FB_WIN32__.(not __FB_64BIT__).A.(not B).(not C).(not D)
-[185/240] __FB_WIN32__.(not __FB_64BIT__).(not A).B.C.D
-[186/240] __FB_WIN32__.(not __FB_64BIT__).(not A).B.C.(not D)
-[187/240] __FB_WIN32__.(not __FB_64BIT__).(not A).B.(not C).D
-[188/240] __FB_WIN32__.(not __FB_64BIT__).(not A).B.(not C).(not D)
-[189/240] __FB_WIN32__.(not __FB_64BIT__).(not A).(not B).C.D
-[190/240] __FB_WIN32__.(not __FB_64BIT__).(not A).(not B).C.(not D)
-[191/240] __FB_WIN32__.(not __FB_64BIT__).(not A).(not B).(not C).D
-[192/240] __FB_WIN32__.(not __FB_64BIT__).(not A).(not B).(not C).(not D)
-[193/240] __FB_CYGWIN__.__FB_64BIT__.A.B.C.D
-[194/240] __FB_CYGWIN__.__FB_64BIT__.A.B.C.(not D)
-[195/240] __FB_CYGWIN__.__FB_64BIT__.A.B.(not C).D
-[196/240] __FB_CYGWIN__.__FB_64BIT__.A.B.(not C).(not D)
-[197/240] __FB_CYGWIN__.__FB_64BIT__.A.(not B).C.D
-[198/240] __FB_CYGWIN__.__FB_64BIT__.A.(not B).C.(not D)
-[199/240] __FB_CYGWIN__.__FB_64BIT__.A.(not B).(not C).D
-[200/240] __FB_CYGWIN__.__FB_64BIT__.A.(not B).(not C).(not D)
-[201/240] __FB_CYGWIN__.__FB_64BIT__.(not A).B.C.D
-[202/240] __FB_CYGWIN__.__FB_64BIT__.(not A).B.C.(not D)
-[203/240] __FB_CYGWIN__.__FB_64BIT__.(not A).B.(not C).D
-[204/240] __FB_CYGWIN__.__FB_64BIT__.(not A).B.(not C).(not D)
-[205/240] __FB_CYGWIN__.__FB_64BIT__.(not A).(not B).C.D
-[206/240] __FB_CYGWIN__.__FB_64BIT__.(not A).(not B).C.(not D)
-[207/240] __FB_CYGWIN__.__FB_64BIT__.(not A).(not B).(not C).D
-[208/240] __FB_CYGWIN__.__FB_64BIT__.(not A).(not B).(not C).(not D)
-[209/240] __FB_CYGWIN__.(not __FB_64BIT__).A.B.C.D
-[210/240] __FB_CYGWIN__.(not __FB_64BIT__).A.B.C.(not D)
-[211/240] __FB_CYGWIN__.(not __FB_64BIT__).A.B.(not C).D
-[212/240] __FB_CYGWIN__.(not __FB_64BIT__).A.B.(not C).(not D)
-[213/240] __FB_CYGWIN__.(not __FB_64BIT__).A.(not B).C.D
-[214/240] __FB_CYGWIN__.(not __FB_64BIT__).A.(not B).C.(not D)
-[215/240] __FB_CYGWIN__.(not __FB_64BIT__).A.(not B).(not C).D
-[216/240] __FB_CYGWIN__.(not __FB_64BIT__).A.(not B).(not C).(not D)
-[217/240] __FB_CYGWIN__.(not __FB_64BIT__).(not A).B.C.D
-[218/240] __FB_CYGWIN__.(not __FB_64BIT__).(not A).B.C.(not D)
-[219/240] __FB_CYGWIN__.(not __FB_64BIT__).(not A).B.(not C).D
-[220/240] __FB_CYGWIN__.(not __FB_64BIT__).(not A).B.(not C).(not D)
-[221/240] __FB_CYGWIN__.(not __FB_64BIT__).(not A).(not B).C.D
-[222/240] __FB_CYGWIN__.(not __FB_64BIT__).(not A).(not B).C.(not D)
-[223/240] __FB_CYGWIN__.(not __FB_64BIT__).(not A).(not B).(not C).D
-[224/240] __FB_CYGWIN__.(not __FB_64BIT__).(not A).(not B).(not C).(not D)
+[  1/240] __FB_LINUX__.(not __FB_64BIT__).A.B.C.D
+[  2/240] __FB_LINUX__.(not __FB_64BIT__).A.B.C.(not D)
+[  3/240] __FB_LINUX__.(not __FB_64BIT__).A.B.(not C).D
+[  4/240] __FB_LINUX__.(not __FB_64BIT__).A.B.(not C).(not D)
+[  5/240] __FB_LINUX__.(not __FB_64BIT__).A.(not B).C.D
+[  6/240] __FB_LINUX__.(not __FB_64BIT__).A.(not B).C.(not D)
+[  7/240] __FB_LINUX__.(not __FB_64BIT__).A.(not B).(not C).D
+[  8/240] __FB_LINUX__.(not __FB_64BIT__).A.(not B).(not C).(not D)
+[  9/240] __FB_LINUX__.(not __FB_64BIT__).(not A).B.C.D
+[ 10/240] __FB_LINUX__.(not __FB_64BIT__).(not A).B.C.(not D)
+[ 11/240] __FB_LINUX__.(not __FB_64BIT__).(not A).B.(not C).D
+[ 12/240] __FB_LINUX__.(not __FB_64BIT__).(not A).B.(not C).(not D)
+[ 13/240] __FB_LINUX__.(not __FB_64BIT__).(not A).(not B).C.D
+[ 14/240] __FB_LINUX__.(not __FB_64BIT__).(not A).(not B).C.(not D)
+[ 15/240] __FB_LINUX__.(not __FB_64BIT__).(not A).(not B).(not C).D
+[ 16/240] __FB_LINUX__.(not __FB_64BIT__).(not A).(not B).(not C).(not D)
+[ 17/240] __FB_LINUX__.__FB_64BIT__.A.B.C.D
+[ 18/240] __FB_LINUX__.__FB_64BIT__.A.B.C.(not D)
+[ 19/240] __FB_LINUX__.__FB_64BIT__.A.B.(not C).D
+[ 20/240] __FB_LINUX__.__FB_64BIT__.A.B.(not C).(not D)
+[ 21/240] __FB_LINUX__.__FB_64BIT__.A.(not B).C.D
+[ 22/240] __FB_LINUX__.__FB_64BIT__.A.(not B).C.(not D)
+[ 23/240] __FB_LINUX__.__FB_64BIT__.A.(not B).(not C).D
+[ 24/240] __FB_LINUX__.__FB_64BIT__.A.(not B).(not C).(not D)
+[ 25/240] __FB_LINUX__.__FB_64BIT__.(not A).B.C.D
+[ 26/240] __FB_LINUX__.__FB_64BIT__.(not A).B.C.(not D)
+[ 27/240] __FB_LINUX__.__FB_64BIT__.(not A).B.(not C).D
+[ 28/240] __FB_LINUX__.__FB_64BIT__.(not A).B.(not C).(not D)
+[ 29/240] __FB_LINUX__.__FB_64BIT__.(not A).(not B).C.D
+[ 30/240] __FB_LINUX__.__FB_64BIT__.(not A).(not B).C.(not D)
+[ 31/240] __FB_LINUX__.__FB_64BIT__.(not A).(not B).(not C).D
+[ 32/240] __FB_LINUX__.__FB_64BIT__.(not A).(not B).(not C).(not D)
+[ 33/240] __FB_FREEBSD__.(not __FB_64BIT__).A.B.C.D
+[ 34/240] __FB_FREEBSD__.(not __FB_64BIT__).A.B.C.(not D)
+[ 35/240] __FB_FREEBSD__.(not __FB_64BIT__).A.B.(not C).D
+[ 36/240] __FB_FREEBSD__.(not __FB_64BIT__).A.B.(not C).(not D)
+[ 37/240] __FB_FREEBSD__.(not __FB_64BIT__).A.(not B).C.D
+[ 38/240] __FB_FREEBSD__.(not __FB_64BIT__).A.(not B).C.(not D)
+[ 39/240] __FB_FREEBSD__.(not __FB_64BIT__).A.(not B).(not C).D
+[ 40/240] __FB_FREEBSD__.(not __FB_64BIT__).A.(not B).(not C).(not D)
+[ 41/240] __FB_FREEBSD__.(not __FB_64BIT__).(not A).B.C.D
+[ 42/240] __FB_FREEBSD__.(not __FB_64BIT__).(not A).B.C.(not D)
+[ 43/240] __FB_FREEBSD__.(not __FB_64BIT__).(not A).B.(not C).D
+[ 44/240] __FB_FREEBSD__.(not __FB_64BIT__).(not A).B.(not C).(not D)
+[ 45/240] __FB_FREEBSD__.(not __FB_64BIT__).(not A).(not B).C.D
+[ 46/240] __FB_FREEBSD__.(not __FB_64BIT__).(not A).(not B).C.(not D)
+[ 47/240] __FB_FREEBSD__.(not __FB_64BIT__).(not A).(not B).(not C).D
+[ 48/240] __FB_FREEBSD__.(not __FB_64BIT__).(not A).(not B).(not C).(not D)
+[ 49/240] __FB_FREEBSD__.__FB_64BIT__.A.B.C.D
+[ 50/240] __FB_FREEBSD__.__FB_64BIT__.A.B.C.(not D)
+[ 51/240] __FB_FREEBSD__.__FB_64BIT__.A.B.(not C).D
+[ 52/240] __FB_FREEBSD__.__FB_64BIT__.A.B.(not C).(not D)
+[ 53/240] __FB_FREEBSD__.__FB_64BIT__.A.(not B).C.D
+[ 54/240] __FB_FREEBSD__.__FB_64BIT__.A.(not B).C.(not D)
+[ 55/240] __FB_FREEBSD__.__FB_64BIT__.A.(not B).(not C).D
+[ 56/240] __FB_FREEBSD__.__FB_64BIT__.A.(not B).(not C).(not D)
+[ 57/240] __FB_FREEBSD__.__FB_64BIT__.(not A).B.C.D
+[ 58/240] __FB_FREEBSD__.__FB_64BIT__.(not A).B.C.(not D)
+[ 59/240] __FB_FREEBSD__.__FB_64BIT__.(not A).B.(not C).D
+[ 60/240] __FB_FREEBSD__.__FB_64BIT__.(not A).B.(not C).(not D)
+[ 61/240] __FB_FREEBSD__.__FB_64BIT__.(not A).(not B).C.D
+[ 62/240] __FB_FREEBSD__.__FB_64BIT__.(not A).(not B).C.(not D)
+[ 63/240] __FB_FREEBSD__.__FB_64BIT__.(not A).(not B).(not C).D
+[ 64/240] __FB_FREEBSD__.__FB_64BIT__.(not A).(not B).(not C).(not D)
+[ 65/240] __FB_OPENBSD__.(not __FB_64BIT__).A.B.C.D
+[ 66/240] __FB_OPENBSD__.(not __FB_64BIT__).A.B.C.(not D)
+[ 67/240] __FB_OPENBSD__.(not __FB_64BIT__).A.B.(not C).D
+[ 68/240] __FB_OPENBSD__.(not __FB_64BIT__).A.B.(not C).(not D)
+[ 69/240] __FB_OPENBSD__.(not __FB_64BIT__).A.(not B).C.D
+[ 70/240] __FB_OPENBSD__.(not __FB_64BIT__).A.(not B).C.(not D)
+[ 71/240] __FB_OPENBSD__.(not __FB_64BIT__).A.(not B).(not C).D
+[ 72/240] __FB_OPENBSD__.(not __FB_64BIT__).A.(not B).(not C).(not D)
+[ 73/240] __FB_OPENBSD__.(not __FB_64BIT__).(not A).B.C.D
+[ 74/240] __FB_OPENBSD__.(not __FB_64BIT__).(not A).B.C.(not D)
+[ 75/240] __FB_OPENBSD__.(not __FB_64BIT__).(not A).B.(not C).D
+[ 76/240] __FB_OPENBSD__.(not __FB_64BIT__).(not A).B.(not C).(not D)
+[ 77/240] __FB_OPENBSD__.(not __FB_64BIT__).(not A).(not B).C.D
+[ 78/240] __FB_OPENBSD__.(not __FB_64BIT__).(not A).(not B).C.(not D)
+[ 79/240] __FB_OPENBSD__.(not __FB_64BIT__).(not A).(not B).(not C).D
+[ 80/240] __FB_OPENBSD__.(not __FB_64BIT__).(not A).(not B).(not C).(not D)
+[ 81/240] __FB_OPENBSD__.__FB_64BIT__.A.B.C.D
+[ 82/240] __FB_OPENBSD__.__FB_64BIT__.A.B.C.(not D)
+[ 83/240] __FB_OPENBSD__.__FB_64BIT__.A.B.(not C).D
+[ 84/240] __FB_OPENBSD__.__FB_64BIT__.A.B.(not C).(not D)
+[ 85/240] __FB_OPENBSD__.__FB_64BIT__.A.(not B).C.D
+[ 86/240] __FB_OPENBSD__.__FB_64BIT__.A.(not B).C.(not D)
+[ 87/240] __FB_OPENBSD__.__FB_64BIT__.A.(not B).(not C).D
+[ 88/240] __FB_OPENBSD__.__FB_64BIT__.A.(not B).(not C).(not D)
+[ 89/240] __FB_OPENBSD__.__FB_64BIT__.(not A).B.C.D
+[ 90/240] __FB_OPENBSD__.__FB_64BIT__.(not A).B.C.(not D)
+[ 91/240] __FB_OPENBSD__.__FB_64BIT__.(not A).B.(not C).D
+[ 92/240] __FB_OPENBSD__.__FB_64BIT__.(not A).B.(not C).(not D)
+[ 93/240] __FB_OPENBSD__.__FB_64BIT__.(not A).(not B).C.D
+[ 94/240] __FB_OPENBSD__.__FB_64BIT__.(not A).(not B).C.(not D)
+[ 95/240] __FB_OPENBSD__.__FB_64BIT__.(not A).(not B).(not C).D
+[ 96/240] __FB_OPENBSD__.__FB_64BIT__.(not A).(not B).(not C).(not D)
+[ 97/240] __FB_NETBSD__.(not __FB_64BIT__).A.B.C.D
+[ 98/240] __FB_NETBSD__.(not __FB_64BIT__).A.B.C.(not D)
+[ 99/240] __FB_NETBSD__.(not __FB_64BIT__).A.B.(not C).D
+[100/240] __FB_NETBSD__.(not __FB_64BIT__).A.B.(not C).(not D)
+[101/240] __FB_NETBSD__.(not __FB_64BIT__).A.(not B).C.D
+[102/240] __FB_NETBSD__.(not __FB_64BIT__).A.(not B).C.(not D)
+[103/240] __FB_NETBSD__.(not __FB_64BIT__).A.(not B).(not C).D
+[104/240] __FB_NETBSD__.(not __FB_64BIT__).A.(not B).(not C).(not D)
+[105/240] __FB_NETBSD__.(not __FB_64BIT__).(not A).B.C.D
+[106/240] __FB_NETBSD__.(not __FB_64BIT__).(not A).B.C.(not D)
+[107/240] __FB_NETBSD__.(not __FB_64BIT__).(not A).B.(not C).D
+[108/240] __FB_NETBSD__.(not __FB_64BIT__).(not A).B.(not C).(not D)
+[109/240] __FB_NETBSD__.(not __FB_64BIT__).(not A).(not B).C.D
+[110/240] __FB_NETBSD__.(not __FB_64BIT__).(not A).(not B).C.(not D)
+[111/240] __FB_NETBSD__.(not __FB_64BIT__).(not A).(not B).(not C).D
+[112/240] __FB_NETBSD__.(not __FB_64BIT__).(not A).(not B).(not C).(not D)
+[113/240] __FB_NETBSD__.__FB_64BIT__.A.B.C.D
+[114/240] __FB_NETBSD__.__FB_64BIT__.A.B.C.(not D)
+[115/240] __FB_NETBSD__.__FB_64BIT__.A.B.(not C).D
+[116/240] __FB_NETBSD__.__FB_64BIT__.A.B.(not C).(not D)
+[117/240] __FB_NETBSD__.__FB_64BIT__.A.(not B).C.D
+[118/240] __FB_NETBSD__.__FB_64BIT__.A.(not B).C.(not D)
+[119/240] __FB_NETBSD__.__FB_64BIT__.A.(not B).(not C).D
+[120/240] __FB_NETBSD__.__FB_64BIT__.A.(not B).(not C).(not D)
+[121/240] __FB_NETBSD__.__FB_64BIT__.(not A).B.C.D
+[122/240] __FB_NETBSD__.__FB_64BIT__.(not A).B.C.(not D)
+[123/240] __FB_NETBSD__.__FB_64BIT__.(not A).B.(not C).D
+[124/240] __FB_NETBSD__.__FB_64BIT__.(not A).B.(not C).(not D)
+[125/240] __FB_NETBSD__.__FB_64BIT__.(not A).(not B).C.D
+[126/240] __FB_NETBSD__.__FB_64BIT__.(not A).(not B).C.(not D)
+[127/240] __FB_NETBSD__.__FB_64BIT__.(not A).(not B).(not C).D
+[128/240] __FB_NETBSD__.__FB_64BIT__.(not A).(not B).(not C).(not D)
+[129/240] __FB_DARWIN__.(not __FB_64BIT__).A.B.C.D
+[130/240] __FB_DARWIN__.(not __FB_64BIT__).A.B.C.(not D)
+[131/240] __FB_DARWIN__.(not __FB_64BIT__).A.B.(not C).D
+[132/240] __FB_DARWIN__.(not __FB_64BIT__).A.B.(not C).(not D)
+[133/240] __FB_DARWIN__.(not __FB_64BIT__).A.(not B).C.D
+[134/240] __FB_DARWIN__.(not __FB_64BIT__).A.(not B).C.(not D)
+[135/240] __FB_DARWIN__.(not __FB_64BIT__).A.(not B).(not C).D
+[136/240] __FB_DARWIN__.(not __FB_64BIT__).A.(not B).(not C).(not D)
+[137/240] __FB_DARWIN__.(not __FB_64BIT__).(not A).B.C.D
+[138/240] __FB_DARWIN__.(not __FB_64BIT__).(not A).B.C.(not D)
+[139/240] __FB_DARWIN__.(not __FB_64BIT__).(not A).B.(not C).D
+[140/240] __FB_DARWIN__.(not __FB_64BIT__).(not A).B.(not C).(not D)
+[141/240] __FB_DARWIN__.(not __FB_64BIT__).(not A).(not B).C.D
+[142/240] __FB_DARWIN__.(not __FB_64BIT__).(not A).(not B).C.(not D)
+[143/240] __FB_DARWIN__.(not __FB_64BIT__).(not A).(not B).(not C).D
+[144/240] __FB_DARWIN__.(not __FB_64BIT__).(not A).(not B).(not C).(not D)
+[145/240] __FB_DARWIN__.__FB_64BIT__.A.B.C.D
+[146/240] __FB_DARWIN__.__FB_64BIT__.A.B.C.(not D)
+[147/240] __FB_DARWIN__.__FB_64BIT__.A.B.(not C).D
+[148/240] __FB_DARWIN__.__FB_64BIT__.A.B.(not C).(not D)
+[149/240] __FB_DARWIN__.__FB_64BIT__.A.(not B).C.D
+[150/240] __FB_DARWIN__.__FB_64BIT__.A.(not B).C.(not D)
+[151/240] __FB_DARWIN__.__FB_64BIT__.A.(not B).(not C).D
+[152/240] __FB_DARWIN__.__FB_64BIT__.A.(not B).(not C).(not D)
+[153/240] __FB_DARWIN__.__FB_64BIT__.(not A).B.C.D
+[154/240] __FB_DARWIN__.__FB_64BIT__.(not A).B.C.(not D)
+[155/240] __FB_DARWIN__.__FB_64BIT__.(not A).B.(not C).D
+[156/240] __FB_DARWIN__.__FB_64BIT__.(not A).B.(not C).(not D)
+[157/240] __FB_DARWIN__.__FB_64BIT__.(not A).(not B).C.D
+[158/240] __FB_DARWIN__.__FB_64BIT__.(not A).(not B).C.(not D)
+[159/240] __FB_DARWIN__.__FB_64BIT__.(not A).(not B).(not C).D
+[160/240] __FB_DARWIN__.__FB_64BIT__.(not A).(not B).(not C).(not D)
+[161/240] __FB_WIN32__.(not __FB_64BIT__).A.B.C.D
+[162/240] __FB_WIN32__.(not __FB_64BIT__).A.B.C.(not D)
+[163/240] __FB_WIN32__.(not __FB_64BIT__).A.B.(not C).D
+[164/240] __FB_WIN32__.(not __FB_64BIT__).A.B.(not C).(not D)
+[165/240] __FB_WIN32__.(not __FB_64BIT__).A.(not B).C.D
+[166/240] __FB_WIN32__.(not __FB_64BIT__).A.(not B).C.(not D)
+[167/240] __FB_WIN32__.(not __FB_64BIT__).A.(not B).(not C).D
+[168/240] __FB_WIN32__.(not __FB_64BIT__).A.(not B).(not C).(not D)
+[169/240] __FB_WIN32__.(not __FB_64BIT__).(not A).B.C.D
+[170/240] __FB_WIN32__.(not __FB_64BIT__).(not A).B.C.(not D)
+[171/240] __FB_WIN32__.(not __FB_64BIT__).(not A).B.(not C).D
+[172/240] __FB_WIN32__.(not __FB_64BIT__).(not A).B.(not C).(not D)
+[173/240] __FB_WIN32__.(not __FB_64BIT__).(not A).(not B).C.D
+[174/240] __FB_WIN32__.(not __FB_64BIT__).(not A).(not B).C.(not D)
+[175/240] __FB_WIN32__.(not __FB_64BIT__).(not A).(not B).(not C).D
+[176/240] __FB_WIN32__.(not __FB_64BIT__).(not A).(not B).(not C).(not D)
+[177/240] __FB_WIN32__.__FB_64BIT__.A.B.C.D
+[178/240] __FB_WIN32__.__FB_64BIT__.A.B.C.(not D)
+[179/240] __FB_WIN32__.__FB_64BIT__.A.B.(not C).D
+[180/240] __FB_WIN32__.__FB_64BIT__.A.B.(not C).(not D)
+[181/240] __FB_WIN32__.__FB_64BIT__.A.(not B).C.D
+[182/240] __FB_WIN32__.__FB_64BIT__.A.(not B).C.(not D)
+[183/240] __FB_WIN32__.__FB_64BIT__.A.(not B).(not C).D
+[184/240] __FB_WIN32__.__FB_64BIT__.A.(not B).(not C).(not D)
+[185/240] __FB_WIN32__.__FB_64BIT__.(not A).B.C.D
+[186/240] __FB_WIN32__.__FB_64BIT__.(not A).B.C.(not D)
+[187/240] __FB_WIN32__.__FB_64BIT__.(not A).B.(not C).D
+[188/240] __FB_WIN32__.__FB_64BIT__.(not A).B.(not C).(not D)
+[189/240] __FB_WIN32__.__FB_64BIT__.(not A).(not B).C.D
+[190/240] __FB_WIN32__.__FB_64BIT__.(not A).(not B).C.(not D)
+[191/240] __FB_WIN32__.__FB_64BIT__.(not A).(not B).(not C).D
+[192/240] __FB_WIN32__.__FB_64BIT__.(not A).(not B).(not C).(not D)
+[193/240] __FB_CYGWIN__.(not __FB_64BIT__).A.B.C.D
+[194/240] __FB_CYGWIN__.(not __FB_64BIT__).A.B.C.(not D)
+[195/240] __FB_CYGWIN__.(not __FB_64BIT__).A.B.(not C).D
+[196/240] __FB_CYGWIN__.(not __FB_64BIT__).A.B.(not C).(not D)
+[197/240] __FB_CYGWIN__.(not __FB_64BIT__).A.(not B).C.D
+[198/240] __FB_CYGWIN__.(not __FB_64BIT__).A.(not B).C.(not D)
+[199/240] __FB_CYGWIN__.(not __FB_64BIT__).A.(not B).(not C).D
+[200/240] __FB_CYGWIN__.(not __FB_64BIT__).A.(not B).(not C).(not D)
+[201/240] __FB_CYGWIN__.(not __FB_64BIT__).(not A).B.C.D
+[202/240] __FB_CYGWIN__.(not __FB_64BIT__).(not A).B.C.(not D)
+[203/240] __FB_CYGWIN__.(not __FB_64BIT__).(not A).B.(not C).D
+[204/240] __FB_CYGWIN__.(not __FB_64BIT__).(not A).B.(not C).(not D)
+[205/240] __FB_CYGWIN__.(not __FB_64BIT__).(not A).(not B).C.D
+[206/240] __FB_CYGWIN__.(not __FB_64BIT__).(not A).(not B).C.(not D)
+[207/240] __FB_CYGWIN__.(not __FB_64BIT__).(not A).(not B).(not C).D
+[208/240] __FB_CYGWIN__.(not __FB_64BIT__).(not A).(not B).(not C).(not D)
+[209/240] __FB_CYGWIN__.__FB_64BIT__.A.B.C.D
+[210/240] __FB_CYGWIN__.__FB_64BIT__.A.B.C.(not D)
+[211/240] __FB_CYGWIN__.__FB_64BIT__.A.B.(not C).D
+[212/240] __FB_CYGWIN__.__FB_64BIT__.A.B.(not C).(not D)
+[213/240] __FB_CYGWIN__.__FB_64BIT__.A.(not B).C.D
+[214/240] __FB_CYGWIN__.__FB_64BIT__.A.(not B).C.(not D)
+[215/240] __FB_CYGWIN__.__FB_64BIT__.A.(not B).(not C).D
+[216/240] __FB_CYGWIN__.__FB_64BIT__.A.(not B).(not C).(not D)
+[217/240] __FB_CYGWIN__.__FB_64BIT__.(not A).B.C.D
+[218/240] __FB_CYGWIN__.__FB_64BIT__.(not A).B.C.(not D)
+[219/240] __FB_CYGWIN__.__FB_64BIT__.(not A).B.(not C).D
+[220/240] __FB_CYGWIN__.__FB_64BIT__.(not A).B.(not C).(not D)
+[221/240] __FB_CYGWIN__.__FB_64BIT__.(not A).(not B).C.D
+[222/240] __FB_CYGWIN__.__FB_64BIT__.(not A).(not B).C.(not D)
+[223/240] __FB_CYGWIN__.__FB_64BIT__.(not A).(not B).(not C).D
+[224/240] __FB_CYGWIN__.__FB_64BIT__.(not A).(not B).(not C).(not D)
 [225/240] __FB_DOS__.A.B.C.D
 [226/240] __FB_DOS__.A.B.C.(not D)
 [227/240] __FB_DOS__.A.B.(not C).D

@@ -66,8 +66,7 @@ What's this?
   supported target (DOS/Linux/Windows, x86/x86_64) and merges all these APIs
   together into the final binding. If you need to override this (for example if
   your .h files don't support DOS and have an #error statement for this case),
-  then use -nodefaultscript and specify the needed targets manually (see
-  include/fbfrog/default.fbfrog for an example).
+  then use -target and specify the needed targets manually.
 
 
 Compiling:
@@ -151,14 +150,6 @@ Using the -declare*/-select/-ifdef options:
         Useful to allow selecting an API by version. This will produce #if
         blocks such as #if <symbol> = <number>.
 
-    -declaredefines <symbol1> <symbol2> <symbol3>
-        Useful to allow selectin an API by #defining a certain symbol. This is
-        used in default.fbfrog to allow selecting an OS-specific API based on
-        the __FB_DOS__/__FB_LINUX__/__FB_WIN32__ #defines, but it could be used
-        for other things aswell. This will produce #if blocks such as #ifdef
-        <symbol1>. The symbols are assumed to be #defined exclusively - only one
-        at a time.
-
     -declarebool <symbol>
         Useful to allow API selection based on whether a certain symbol is
         defined or not. This is used for __FB_64BIT__ in default.fbfrog, but
@@ -229,8 +220,7 @@ Bugs:
 Interesting improvements:
 * support __FB_ARM__
 * use __FB_UNIX__ where possible
-* maybe targets can be built-ins? only need to support "all", "nodos", "windowsonly"
-* translation process should use knowledge about the target
+* store os/arch into ApiInfo so the translation process can easily use knowledge about the target
 * consecutive verblocks should be added to a prefix tree, to solve out common
   API conditions, e.g.:
 	#if win32 and static		#if win32
@@ -266,8 +256,7 @@ Interesting improvements:
     #include search just like the fbc. Query fbc's incdir via 'fbc -print incdir'
     and also intercept -i <path> options passed on the fbc command line.
   * #fbfrog <fbfrog command line options>
-  * invoke fbfrog with these options, but add -nodefaultscript and disallow any
-    -declare* and -select/-if options, such that there will only be one API.
+  * invoke fbfrog with these options, but add -target for 1 target only
   * let fbfrog create a temp .bi: -o *.temp.bi, then produce a *.temp.bas which
     #includes the *.temp.bi instead of having a #fbfrog directive, then invoke
     fbc to compile it.

@@ -1,0 +1,4 @@
+[1/2] (not __FB_64BIT__)
+[2/2] __FB_64BIT__
+	tests/versions/target-windows.h
+emitting: tests/versions/target-windows.bi (0 declarations, 0 TODOs)
