@@ -14,40 +14,40 @@
 #define __llvm__ 1
 
 // All Unix-likes including Cygwin
-#if defined __FBFROG_LINUX__ || \
-    defined __FBFROG_FREEBSD__ || \
-    defined __FBFROG_OPENBSD__ || \
-    defined __FBFROG_NETBSD__  || \
-    defined __FBFROG_DARWIN__ || \
-    defined __FBFROG_CYGWIN__
+#if defined __FB_LINUX__ || \
+    defined __FB_FREEBSD__ || \
+    defined __FB_OPENBSD__ || \
+    defined __FB_NETBSD__  || \
+    defined __FB_DARWIN__ || \
+    defined __FB_CYGWIN__
 	#define unix 1
 	#define __unix 1
 	#define __unix__ 1
 #endif
 
-#if defined __FBFROG_LINUX__ || \
-    defined __FBFROG_FREEBSD__ || \
-    defined __FBFROG_OPENBSD__ || \
-    defined __FBFROG_NETBSD__
+#if defined __FB_LINUX__ || \
+    defined __FB_FREEBSD__ || \
+    defined __FB_OPENBSD__ || \
+    defined __FB_NETBSD__
 	#define __ELF__ 1
 #endif
 
-#ifdef __FBFROG_LINUX__
+#ifdef __FB_LINUX__
 	#define linux 1
 	#define __linux 1
 	#define __linux__ 1
 	#define __gnu_linux__ 1
-#elif defined __FBFROG_FREEBSD__
+#elif defined __FB_FREEBSD__
 	#define __FreeBSD__ 10
 	#define __FreeBSD_cc_version 1000001
-#elif defined __FBFROG_OPENBSD__
+#elif defined __FB_OPENBSD__
 	#define __OpenBSD__ 1
-#elif defined __FBFROG_NETBSD__
+#elif defined __FB_NETBSD__
 	#define __NetBSD__ 1
-#elif defined __FBFROG_DARWIN__
+#elif defined __FB_DARWIN__
 	#define __APPLE__ 1
 	#define __MACH__ 1
-#elif defined __FBFROG_WIN32__
+#elif defined __FB_WIN32__
 	#define __MINGW32__ 1
 	#define __MSVCRT__ 1
 	#define WIN32 1
@@ -57,19 +57,19 @@
 	#define WINNT 1
 	#define __WINNT 1
 	#define __WINNT__ 1
-	#ifdef __FBFROG_64BIT__
+	#ifdef __FB_64BIT__
 		#define __MINGW64__ 1
 		#define WIN64 1
 		#define _WIN64 1
 		#define __WIN64 1
 		#define __WIN64__ 1
 	#endif
-#elif defined __FBFROG_CYGWIN__
+#elif defined __FB_CYGWIN__
 	#define __CYGWIN__ 1
-	#ifndef __FBFROG_64BIT__
+	#ifndef __FB_64BIT__
 		#define __CYGWIN32__ 1
 	#endif
-#elif defined __FBFROG_DOS__
+#elif defined __FB_DOS__
 	#define DJGPP 2
 	#define __DJGPP 2
 	#define __DJGPP__ 2
@@ -81,7 +81,7 @@
 	#define __MSDOS__ 1
 #endif
 
-#ifdef __FBFROG_64BIT__
+#ifdef __FB_64BIT__
 	#define __x86_64 1
 	#define __x86_64__ 1
 	#define __amd64 1
@@ -135,7 +135,7 @@
 #else
 	#define __SIZEOF_LONG__ 4
 #endif
-#ifdef __FBFROG_64BIT__
+#ifdef __FB_64BIT__
 	#define __SIZEOF_LONG_DOUBLE__ 16
 	#define __SIZEOF_POINTER__ 8
 	#define __SIZEOF_PTRDIFF_T__ 8
@@ -182,7 +182,7 @@
 #else
 	#define __LONG_MAX__ __INT32_MAX__
 #endif
-#ifdef __FBFROG_64BIT__
+#ifdef __FB_64BIT__
 	#define __SIZE_TYPE__ __UINT64_TYPE__
 	#define __SIZE_MAX__ __UINT64_MAX__
 	#define __PTRDIFF_TYPE__ __INT64_TYPE__
@@ -201,7 +201,7 @@
 	#define __UINTPTR_TYPE__ __UINT32_TYPE__
 	#define __UINTPTR_MAX__ __UINT32_MAX__
 #endif
-#ifdef __FBFROG_DOS__
+#ifdef __FB_DOS__
 	// wchar_t = uint16, wint_t = int32
 	#define __SIZEOF_WCHAR_T__ 2
 	#define __WCHAR_TYPE__ __UINT16_TYPE__
@@ -211,7 +211,7 @@
 	#define __WINT_TYPE__ __INT32_TYPE__
 	#define __WINT_MIN__ (-__WINT_MAX__ - 1)
 	#define __WINT_MAX__ __INT32_MAX__
-#elif defined __FBFROG_CYGWIN__
+#elif defined __FB_CYGWIN__
 	// wchar_t = uint16, wint_t = uint32
 	#define __SIZEOF_WCHAR_T__ 2
 	#define __WCHAR_TYPE__ __UINT16_TYPE__
@@ -221,7 +221,7 @@
 	#define __WINT_TYPE__ __UINT32_TYPE__
 	#define __WINT_MIN__ 0u
 	#define __WINT_MAX__ __UINT32_MAX__
-#elif defined __FBFROG_WIN32__
+#elif defined __FB_WIN32__
 	// wchar_t = uint16, wint_t = uint16
 	#define __SIZEOF_WCHAR_T__ 2
 	#define __WCHAR_TYPE__ __UINT16_TYPE__
@@ -231,10 +231,10 @@
 	#define __WINT_TYPE__ __UINT16_TYPE__
 	#define __WINT_MIN__ 0
 	#define __WINT_MAX__ __UINT16_MAX__
-#elif defined __FBFROG_FREEBSD__ || \
-      defined __FBFROG_OPENBSD__ || \
-      defined __FBFROG_NETBSD__ || \
-      defined __FBFROG_DARWIN__
+#elif defined __FB_FREEBSD__ || \
+      defined __FB_OPENBSD__ || \
+      defined __FB_NETBSD__ || \
+      defined __FB_DARWIN__
 	// wchar_t = int32, wint_t = int32
 	#define __SIZEOF_WCHAR_T__ 4
 	#define __WCHAR_TYPE__ __INT32_TYPE__
@@ -244,7 +244,7 @@
 	#define __WINT_TYPE__ __INT32_TYPE__
 	#define __WINT_MIN__ (-__WINT_MAX__ - 1)
 	#define __WINT_MAX__ __INT32_MAX__
-#elif defined __FBFROG_LINUX__
+#elif defined __FB_LINUX__
 	// wchar_t = int32, wint_t = uint32
 	#define __SIZEOF_WCHAR_T__ 4
 	#define __WCHAR_TYPE__ __INT32_TYPE__
@@ -267,17 +267,17 @@
 #define __CHAR16_TYPE__ __UINT16_TYPE__
 #define __CHAR32_TYPE__ __UINT32_TYPE__
 
-#if defined __FBFROG_LINUX__ || \
-    defined __FBFROG_WIN32__ || \
-    defined __FBFROG_CYGWIN__ || \
-    defined __FBFROG_DOS__
+#if defined __FB_LINUX__ || \
+    defined __FB_WIN32__ || \
+    defined __FB_CYGWIN__ || \
+    defined __FB_DOS__
 	#define __INT_FAST8_TYPE__ __INT8_TYPE__
 	#define __INT_FAST8_MAX__ __INT8_MAX__
 	#define __UINT_FAST8_TYPE__ __UINT8_TYPE__
 	#define __UINT_FAST8_MAX__ __UINT8_MAX__
-	#if defined __FBFROG_64BIT__ && \
-	    (defined __FBFROG_LINUX__ || \
-	     defined __FBFROG_CYGWIN__)
+	#if defined __FB_64BIT__ && \
+	    (defined __FB_LINUX__ || \
+	     defined __FB_CYGWIN__)
 		#define __INT_FAST16_TYPE__ __INT64_TYPE__
 		#define __INT_FAST16_MAX__ __INT64_MAX__
 		#define __UINT_FAST16_TYPE__ __UINT64_TYPE__
@@ -291,7 +291,7 @@
 		#define __UINT_FAST64_TYPE__ __UINT64_TYPE__
 		#define __UINT_FAST64_MAX__ __UINT64_MAX__
 	#else
-		#if defined __FBFROG_DOS__ || defined __FBFROG_WIN32__
+		#if defined __FB_DOS__ || defined __FB_WIN32__
 			#define __INT_FAST16_TYPE__ __INT16_TYPE__
 			#define __INT_FAST16_MAX__ __INT16_MAX__
 			#define __UINT_FAST16_TYPE__ __UINT16_TYPE__
@@ -340,20 +340,20 @@
 #define __UINT64_C(c) c ## ULL
 #define __UINTMAX_C(c) c ## ULL
 
-#if defined __FBFROG_DOS__ || \
-    defined __FBFROG_WIN32__ || \
-    defined __FBFROG_CYGWIN__
+#if defined __FB_DOS__ || \
+    defined __FB_WIN32__ || \
+    defined __FB_CYGWIN__
 	#define __USER_LABEL_PREFIX__ _
 #else
 	#define __USER_LABEL_PREFIX__
 #endif
 
-#ifdef __FBFROG_WIN32__
+#ifdef __FB_WIN32__
 	#define _INTEGRAL_MAX_BITS 64
 	#define _REENTRANT 1
 #endif
 
-#if defined __FBFROG_WIN32__ || defined __FBFROG_CYGWIN__
+#if defined __FB_WIN32__ || defined __FB_CYGWIN__
 	#define __cdecl __attribute__((__cdecl__))
 	#define _cdecl __attribute__((__cdecl__))
 	#define __declspec(x) __attribute__((x))

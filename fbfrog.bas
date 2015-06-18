@@ -1279,7 +1279,7 @@ private sub frogEvaluateScript _
 	frogAddApi(conditions, options)
 end sub
 
-'' OS names for building __FB_*__ and __FBFROG_*__ symbols
+'' OS names for building __FB_*__ symbols
 dim shared getFbOsId(0 to OS__COUNT-1) as zstring ptr => { _
 	@"LINUX", @"FREEBSD", @"OPENBSD", @"NETBSD", @"DARWIN", _
 	@"WIN32", @"CYGWIN", @"DOS" _
@@ -1287,10 +1287,6 @@ dim shared getFbOsId(0 to OS__COUNT-1) as zstring ptr => { _
 
 private function getFbOsDef(byval os as integer) as string
 	function = "__FB_" + *getFbOsId(os) + "__"
-end function
-
-private function getFbfrogOsDef(byval os as integer) as string
-	function = "__FBFROG_" + *getFbOsId(os) + "__"
 end function
 
 private function astNewDEFINEDfb64(byval negate as integer) as ASTNODE ptr
@@ -1319,10 +1315,10 @@ private sub maybeEvalForTarget(byval os as integer, byval arch as integer)
 		astAppend(conditions, astNewDEFINEDfb64(arch <> ARCH_X86_64))
 	end if
 
-	'' Add the CPP #define __FBFROG_*__ for preprocessing of default.h
-	astAppend(options, astNewOPTION(OPT_DEFINE, getFbfrogOsDef(os)))
+	'' Add the CPP #define __FB_*__ for preprocessing of default.h
+	astAppend(options, astNewOPTION(OPT_DEFINE, getFbOsDef(os)))
 	if arch = ARCH_X86_64 then
-		astAppend(options, astNewOPTION(OPT_DEFINE, "__FBFROG_64BIT__"))
+		astAppend(options, astNewOPTION(OPT_DEFINE, "__FB_64BIT__"))
 	end if
 
 	frogEvaluateScript(frog.script->head, conditions, options)
