@@ -888,11 +888,15 @@ type CodeReplacement
 	patternlen as integer '' used temporarily by hApplyReplacements()
 end type
 
+type TargetInfo
+	as byte os, arch
+end type
+
 type ApiInfo
 	verand as ASTNODE ptr
 	script as ASTNODE ptr
 
-	as integer os, arch
+	target as TargetInfo
 	as integer windowsms, clong32, fixunsizedarrays, disableconstants
 	as integer nofunctionbodies, dropmacrobodyscopes
 

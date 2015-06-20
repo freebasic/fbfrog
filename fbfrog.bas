@@ -1120,7 +1120,7 @@ private function hSkipToEndOfBlock(byval i as ASTNODE ptr) as ASTNODE ptr
 	function = i
 end function
 
-private sub frogAddApi(byval verand as ASTNODE ptr, byval script as ASTNODE ptr)
+private sub frogAddApi(byval verand as ASTNODE ptr, byval script as ASTNODE ptr, byval target as TargetInfo)
 	assert(astIsVERAND(verand))
 	var i = frog.apicount
 	frog.apicount += 1
@@ -1129,6 +1129,7 @@ private sub frogAddApi(byval verand as ASTNODE ptr, byval script as ASTNODE ptr)
 		.constructor()
 		.verand = verand
 		.script = script
+		.target = target
 	end with
 end sub
 
@@ -1180,7 +1181,8 @@ private sub frogEvaluateScript _
 	( _
 		byval start as ASTNODE ptr, _
 		byval conditions as ASTNODE ptr, _
-		byval options as ASTNODE ptr _
+		byval options as ASTNODE ptr, _
+		byval target as TargetInfo _
 	)
 
 	var i = start
@@ -1198,7 +1200,8 @@ private sub frogEvaluateScript _
 				'' <symbol> = <versionnumber>
 				frogEvaluateScript(i, _
 					astNewGROUP(astClone(conditions), astNewVERNUMCHECK(vernum)), _
-					astClone(options))
+					astClone(options), _
+					target)
 			next
 
 			'' Now continue without recursing and evaluate the code path for the last version
@@ -1216,7 +1219,8 @@ private sub frogEvaluateScript _
 			astAppend(completeveror, astClone(condition))
 			frogEvaluateScript(i, _
 				astNewGROUP(astClone(conditions), astClone(condition)), _
-				astClone(options))
+				astClone(options), _
+				target)
 
 			'' And follow the false code path here
 			'' (not defined(<symbol>))
@@ -1276,7 +1280,7 @@ private sub frogEvaluateScript _
 
 	assert(conditions->class = ASTCLASS_GROUP)
 	conditions->class = ASTCLASS_VERAND
-	frogAddApi(conditions, options)
+	frogAddApi(conditions, options, target)
 end sub
 
 type OsInfo
@@ -1349,7 +1353,7 @@ private sub maybeEvalForTarget(byval os as integer, byval arch as integer)
 	if archinfo(arch).is_64bit then astAppend(options, astNewOPTION(OPT_DEFINE, "__FB_64BIT__"))
 	if archinfo(arch).is_arm   then astAppend(options, astNewOPTION(OPT_DEFINE, "__FB_ARM__"  ))
 
-	frogEvaluateScript(frog.script->head, conditions, options)
+	frogEvaluateScript(frog.script->head, conditions, options, type<TargetInfo>(os, arch))
 end sub
 
 private sub maybeEvalForOs(byval os as integer)
