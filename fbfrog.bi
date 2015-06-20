@@ -890,6 +890,7 @@ end type
 
 type TargetInfo
 	as byte os, arch
+	declare function id() as string
 end type
 
 type ApiInfo
