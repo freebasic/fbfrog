@@ -1,17 +1,25 @@
-[ 1/15] __FB_LINUX__.(not __FB_64BIT__)
-[ 2/15] __FB_LINUX__.__FB_64BIT__
-[ 3/15] __FB_FREEBSD__.(not __FB_64BIT__)
-[ 4/15] __FB_FREEBSD__.__FB_64BIT__
-[ 5/15] __FB_OPENBSD__.(not __FB_64BIT__)
-[ 6/15] __FB_OPENBSD__.__FB_64BIT__
-[ 7/15] __FB_NETBSD__.(not __FB_64BIT__)
-[ 8/15] __FB_NETBSD__.__FB_64BIT__
-[ 9/15] __FB_DARWIN__.(not __FB_64BIT__)
-[10/15] __FB_DARWIN__.__FB_64BIT__
-[11/15] __FB_WIN32__.(not __FB_64BIT__)
-[12/15] __FB_WIN32__.__FB_64BIT__
-[13/15] __FB_CYGWIN__.(not __FB_64BIT__)
-[14/15] __FB_CYGWIN__.__FB_64BIT__
-[15/15] __FB_DOS__
+[ 1/23] __FB_LINUX__.(not __FB_64BIT__).(not __FB_ARM__)
+[ 2/23] __FB_LINUX__.__FB_64BIT__.(not __FB_ARM__)
+[ 3/23] __FB_LINUX__.(not __FB_64BIT__).__FB_ARM__
+[ 4/23] __FB_LINUX__.__FB_64BIT__.__FB_ARM__
+[ 5/23] __FB_FREEBSD__.(not __FB_64BIT__).(not __FB_ARM__)
+[ 6/23] __FB_FREEBSD__.__FB_64BIT__.(not __FB_ARM__)
+[ 7/23] __FB_FREEBSD__.(not __FB_64BIT__).__FB_ARM__
+[ 8/23] __FB_FREEBSD__.__FB_64BIT__.__FB_ARM__
+[ 9/23] __FB_OPENBSD__.(not __FB_64BIT__).(not __FB_ARM__)
+[10/23] __FB_OPENBSD__.__FB_64BIT__.(not __FB_ARM__)
+[11/23] __FB_OPENBSD__.(not __FB_64BIT__).__FB_ARM__
+[12/23] __FB_OPENBSD__.__FB_64BIT__.__FB_ARM__
+[13/23] __FB_NETBSD__.(not __FB_64BIT__).(not __FB_ARM__)
+[14/23] __FB_NETBSD__.__FB_64BIT__.(not __FB_ARM__)
+[15/23] __FB_NETBSD__.(not __FB_64BIT__).__FB_ARM__
+[16/23] __FB_NETBSD__.__FB_64BIT__.__FB_ARM__
+[17/23] __FB_DARWIN__.(not __FB_64BIT__)
+[18/23] __FB_DARWIN__.__FB_64BIT__
+[19/23] __FB_WIN32__.(not __FB_64BIT__)
+[20/23] __FB_WIN32__.__FB_64BIT__
+[21/23] __FB_CYGWIN__.(not __FB_64BIT__)
+[22/23] __FB_CYGWIN__.__FB_64BIT__
+[23/23] __FB_DOS__
 	tests/c/typedefs-and-tags/implicit-forward-unsolved.h
 emitting: tests/c/typedefs-and-tags/implicit-forward-unsolved.bi (1 declaration, 0 TODOs)

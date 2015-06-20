@@ -1,60 +1,92 @@
-[ 1/15] __FB_LINUX__.(not __FB_64BIT__)
+[ 1/23] __FB_LINUX__.(not __FB_64BIT__).(not __FB_ARM__)
 tests/cpp/directives.h(94): #warning
     # warning "Example warning" 
               ^~~~~~~~~~~~~~~~~
-[ 2/15] __FB_LINUX__.__FB_64BIT__
+[ 2/23] __FB_LINUX__.__FB_64BIT__.(not __FB_ARM__)
 tests/cpp/directives.h(94): #warning
     # warning "Example warning" 
               ^~~~~~~~~~~~~~~~~
-[ 3/15] __FB_FREEBSD__.(not __FB_64BIT__)
+[ 3/23] __FB_LINUX__.(not __FB_64BIT__).__FB_ARM__
 tests/cpp/directives.h(94): #warning
     # warning "Example warning" 
               ^~~~~~~~~~~~~~~~~
-[ 4/15] __FB_FREEBSD__.__FB_64BIT__
+[ 4/23] __FB_LINUX__.__FB_64BIT__.__FB_ARM__
 tests/cpp/directives.h(94): #warning
     # warning "Example warning" 
               ^~~~~~~~~~~~~~~~~
-[ 5/15] __FB_OPENBSD__.(not __FB_64BIT__)
+[ 5/23] __FB_FREEBSD__.(not __FB_64BIT__).(not __FB_ARM__)
 tests/cpp/directives.h(94): #warning
     # warning "Example warning" 
               ^~~~~~~~~~~~~~~~~
-[ 6/15] __FB_OPENBSD__.__FB_64BIT__
+[ 6/23] __FB_FREEBSD__.__FB_64BIT__.(not __FB_ARM__)
 tests/cpp/directives.h(94): #warning
     # warning "Example warning" 
               ^~~~~~~~~~~~~~~~~
-[ 7/15] __FB_NETBSD__.(not __FB_64BIT__)
+[ 7/23] __FB_FREEBSD__.(not __FB_64BIT__).__FB_ARM__
 tests/cpp/directives.h(94): #warning
     # warning "Example warning" 
               ^~~~~~~~~~~~~~~~~
-[ 8/15] __FB_NETBSD__.__FB_64BIT__
+[ 8/23] __FB_FREEBSD__.__FB_64BIT__.__FB_ARM__
 tests/cpp/directives.h(94): #warning
     # warning "Example warning" 
               ^~~~~~~~~~~~~~~~~
-[ 9/15] __FB_DARWIN__.(not __FB_64BIT__)
+[ 9/23] __FB_OPENBSD__.(not __FB_64BIT__).(not __FB_ARM__)
 tests/cpp/directives.h(94): #warning
     # warning "Example warning" 
               ^~~~~~~~~~~~~~~~~
-[10/15] __FB_DARWIN__.__FB_64BIT__
+[10/23] __FB_OPENBSD__.__FB_64BIT__.(not __FB_ARM__)
 tests/cpp/directives.h(94): #warning
     # warning "Example warning" 
               ^~~~~~~~~~~~~~~~~
-[11/15] __FB_WIN32__.(not __FB_64BIT__)
+[11/23] __FB_OPENBSD__.(not __FB_64BIT__).__FB_ARM__
 tests/cpp/directives.h(94): #warning
     # warning "Example warning" 
               ^~~~~~~~~~~~~~~~~
-[12/15] __FB_WIN32__.__FB_64BIT__
+[12/23] __FB_OPENBSD__.__FB_64BIT__.__FB_ARM__
 tests/cpp/directives.h(94): #warning
     # warning "Example warning" 
               ^~~~~~~~~~~~~~~~~
-[13/15] __FB_CYGWIN__.(not __FB_64BIT__)
+[13/23] __FB_NETBSD__.(not __FB_64BIT__).(not __FB_ARM__)
 tests/cpp/directives.h(94): #warning
     # warning "Example warning" 
               ^~~~~~~~~~~~~~~~~
-[14/15] __FB_CYGWIN__.__FB_64BIT__
+[14/23] __FB_NETBSD__.__FB_64BIT__.(not __FB_ARM__)
 tests/cpp/directives.h(94): #warning
     # warning "Example warning" 
               ^~~~~~~~~~~~~~~~~
-[15/15] __FB_DOS__
+[15/23] __FB_NETBSD__.(not __FB_64BIT__).__FB_ARM__
+tests/cpp/directives.h(94): #warning
+    # warning "Example warning" 
+              ^~~~~~~~~~~~~~~~~
+[16/23] __FB_NETBSD__.__FB_64BIT__.__FB_ARM__
+tests/cpp/directives.h(94): #warning
+    # warning "Example warning" 
+              ^~~~~~~~~~~~~~~~~
+[17/23] __FB_DARWIN__.(not __FB_64BIT__)
+tests/cpp/directives.h(94): #warning
+    # warning "Example warning" 
+              ^~~~~~~~~~~~~~~~~
+[18/23] __FB_DARWIN__.__FB_64BIT__
+tests/cpp/directives.h(94): #warning
+    # warning "Example warning" 
+              ^~~~~~~~~~~~~~~~~
+[19/23] __FB_WIN32__.(not __FB_64BIT__)
+tests/cpp/directives.h(94): #warning
+    # warning "Example warning" 
+              ^~~~~~~~~~~~~~~~~
+[20/23] __FB_WIN32__.__FB_64BIT__
+tests/cpp/directives.h(94): #warning
+    # warning "Example warning" 
+              ^~~~~~~~~~~~~~~~~
+[21/23] __FB_CYGWIN__.(not __FB_64BIT__)
+tests/cpp/directives.h(94): #warning
+    # warning "Example warning" 
+              ^~~~~~~~~~~~~~~~~
+[22/23] __FB_CYGWIN__.__FB_64BIT__
+tests/cpp/directives.h(94): #warning
+    # warning "Example warning" 
+              ^~~~~~~~~~~~~~~~~
+[23/23] __FB_DOS__
 tests/cpp/directives.h(94): #warning
     # warning "Example warning" 
               ^~~~~~~~~~~~~~~~~

@@ -81,7 +81,41 @@
 	#define __MSDOS__ 1
 #endif
 
-#ifdef __FB_64BIT__
+#if defined __FB_ARM__ && defined __FB_64BIT__
+	// arm64
+	#define __aarch64__ 1
+	#define __AARCH64_CMODEL_SMALL__ 1
+	#define __AARCH64EL__ 1
+	#define __ARM_64BIT_STATE 1
+	#define __ARM_ARCH 8
+	#define __ARM_ARCH_8A 1
+	#define __ARM_ARCH_ISA_A64 1
+	#define __ARM_ARCH_PROFILE 65
+#elif defined __FB_ARM__
+	// arm32
+	#define __APCS_32__ 1
+	#define __arm__ 1
+	#define __ARM_32BIT_STATE 1
+	#define __ARM_ARCH 7
+	#define __ARM_ARCH_7A__ 1
+	#define __ARM_ARCH_ISA_ARM 1
+	#define __ARM_ARCH_ISA_THUMB 2
+	#define __ARM_ARCH_PROFILE 65
+	#define __ARM_EABI__ 1
+	#define __ARMEL__ 1
+	#define __ARM_FEATURE_CLZ 1
+	#define __ARM_FEATURE_DSP 1
+	#define __ARM_FEATURE_LDREX 15
+	#define __ARM_FEATURE_QBIT 1
+	#define __ARM_FEATURE_SAT 1
+	#define __ARM_FEATURE_SIMD32 1
+	#define __ARM_FEATURE_UNALIGNED 1
+	#define __ARM_FP 12
+	#define __ARM_NEON_FP 4
+	#define __ARM_PCS_VFP 1
+	#define __ARM_SIZEOF_MINIMAL_ENUM 4
+	#define __ARM_SIZEOF_WCHAR_T 4
+#elif defined __FB_64BIT__
 	#define __x86_64 1
 	#define __x86_64__ 1
 	#define __amd64 1
@@ -141,7 +175,11 @@
 	#define __SIZEOF_PTRDIFF_T__ 8
 	#define __SIZEOF_SIZE_T__ 8
 #else
-	#define __SIZEOF_LONG_DOUBLE__ 12
+	#ifdef __FB_ARM__
+		#define __SIZEOF_LONG_DOUBLE__ 8
+	#else
+		#define __SIZEOF_LONG_DOUBLE__ 12
+	#endif
 	#define __SIZEOF_POINTER__ 4
 	#define __SIZEOF_PTRDIFF_T__ 4
 	#define __SIZEOF_SIZE_T__ 4
@@ -150,7 +188,11 @@
 #define __SIZEOF_INT128__ 16
 #define __SIZEOF_FLOAT__ 4
 #define __SIZEOF_DOUBLE__ 8
-#define __BIGGEST_ALIGNMENT__ 16
+#if defined __FB_ARM__ && !defined __FB_64BIT__
+	#define __BIGGEST_ALIGNMENT__ 8
+#else
+	#define __BIGGEST_ALIGNMENT__ 16
+#endif
 
 #define __INT8_TYPE__ signed char
 #define __INT8_MAX__ 127
@@ -215,7 +257,7 @@
 	// wchar_t = uint16, wint_t = uint32
 	#define __SIZEOF_WCHAR_T__ 2
 	#define __WCHAR_TYPE__ __UINT16_TYPE__
-	#define __WCHAR_MIN__ 0
+	#define __WCHAR_MIN__ 0u
 	#define __WCHAR_MAX__ __UINT16_MAX__
 	#define __SIZEOF_WINT_T__ 4
 	#define __WINT_TYPE__ __UINT32_TYPE__
@@ -231,29 +273,43 @@
 	#define __WINT_TYPE__ __UINT16_TYPE__
 	#define __WINT_MIN__ 0
 	#define __WINT_MAX__ __UINT16_MAX__
-#elif defined __FB_FREEBSD__ || \
-      defined __FB_OPENBSD__ || \
-      defined __FB_NETBSD__ || \
-      defined __FB_DARWIN__
-	// wchar_t = int32, wint_t = int32
-	#define __SIZEOF_WCHAR_T__ 4
-	#define __WCHAR_TYPE__ __INT32_TYPE__
-	#define __WCHAR_MIN__ (-__WCHAR_MAX__ - 1)
-	#define __WCHAR_MAX__ __INT32_MAX__
-	#define __SIZEOF_WINT_T__ 4
-	#define __WINT_TYPE__ __INT32_TYPE__
-	#define __WINT_MIN__ (-__WINT_MAX__ - 1)
-	#define __WINT_MAX__ __INT32_MAX__
-#elif defined __FB_LINUX__
-	// wchar_t = int32, wint_t = uint32
-	#define __SIZEOF_WCHAR_T__ 4
-	#define __WCHAR_TYPE__ __INT32_TYPE__
-	#define __WCHAR_MIN__ (-__WCHAR_MAX__ - 1)
-	#define __WCHAR_MAX__ __INT32_MAX__
-	#define __SIZEOF_WINT_T__ 4
-	#define __WINT_TYPE__ __UINT32_TYPE__
-	#define __WINT_MIN__ 0U
-	#define __WINT_MAX__ __UINT32_MAX__
+#else
+	#ifdef __FB_ARM__
+		// wchar_t = uint32, wint_t = uint32
+		#define __SIZEOF_WCHAR_T__ 4
+		#define __WCHAR_TYPE__ __UINT32_TYPE__
+		#define __WCHAR_MIN__ 0u
+		#define __WCHAR_MAX__ __UINT32_MAX__
+		#define __SIZEOF_WINT_T__ 4
+		#define __WINT_TYPE__ __UINT32_TYPE__
+		#define __WINT_MIN__ 0u
+		#define __WINT_MAX__ __UINT32_MAX__
+	#else
+		#if defined __FB_FREEBSD__ || \
+		    defined __FB_OPENBSD__ || \
+		    defined __FB_NETBSD__ || \
+		    defined __FB_DARWIN__
+			// wchar_t = int32, wint_t = int32
+			#define __SIZEOF_WCHAR_T__ 4
+			#define __WCHAR_TYPE__ __INT32_TYPE__
+			#define __WCHAR_MIN__ (-__WCHAR_MAX__ - 1)
+			#define __WCHAR_MAX__ __INT32_MAX__
+			#define __SIZEOF_WINT_T__ 4
+			#define __WINT_TYPE__ __INT32_TYPE__
+			#define __WINT_MIN__ (-__WINT_MAX__ - 1)
+			#define __WINT_MAX__ __INT32_MAX__
+		#elif defined __FB_LINUX__
+			// wchar_t = int32, wint_t = uint32
+			#define __SIZEOF_WCHAR_T__ 4
+			#define __WCHAR_TYPE__ __INT32_TYPE__
+			#define __WCHAR_MIN__ (-__WCHAR_MAX__ - 1)
+			#define __WCHAR_MAX__ __INT32_MAX__
+			#define __SIZEOF_WINT_T__ 4
+			#define __WINT_TYPE__ __UINT32_TYPE__
+			#define __WINT_MIN__ 0u
+			#define __WINT_MAX__ __UINT32_MAX__
+		#endif
+	#endif
 #endif
 #define __SIG_ATOMIC_TYPE__ __INT32_TYPE__
 #define __SIG_ATOMIC_MIN__ (-__SIG_ATOMIC_MAX__ - 1)

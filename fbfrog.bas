@@ -1279,24 +1279,50 @@ private sub frogEvaluateScript _
 	frogAddApi(conditions, options)
 end sub
 
-'' OS names for building __FB_*__ symbols
-dim shared getFbOsId(0 to OS__COUNT-1) as zstring ptr => { _
-	@"LINUX", @"FREEBSD", @"OPENBSD", @"NETBSD", @"DARWIN", _
-	@"WIN32", @"CYGWIN", @"DOS" _
+type OsInfo
+	fbdefine as zstring ptr
+	as byte has_64bit, has_arm
+end type
+
+dim shared osinfo(0 to OS__COUNT-1) as OsInfo => { _
+	(@"__FB_LINUX__"  ,  TRUE,  TRUE), _
+	(@"__FB_FREEBSD__",  TRUE,  TRUE), _
+	(@"__FB_OPENBSD__",  TRUE,  TRUE), _
+	(@"__FB_NETBSD__" ,  TRUE,  TRUE), _
+	(@"__FB_DARWIN__" ,  TRUE, FALSE), _
+	(@"__FB_WIN32__"  ,  TRUE, FALSE), _
+	(@"__FB_CYGWIN__" ,  TRUE, FALSE), _
+	(@"__FB_DOS__"    , FALSE, FALSE)  _
 }
 
-private function getFbOsDef(byval os as integer) as string
-	function = "__FB_" + *getFbOsId(os) + "__"
-end function
+type ArchInfo
+	fbid as zstring ptr
+	as byte is_64bit, is_arm
+end type
 
-private function astNewDEFINEDfb64(byval negate as integer) as ASTNODE ptr
-	var n = astNewDEFINED("__FB_64BIT__")
+dim shared archinfo(0 to ARCH__COUNT-1) as ArchInfo => { _
+	(@"x86"    , FALSE, FALSE), _
+	(@"x86_64" ,  TRUE, FALSE), _
+	(@"arm"    , FALSE,  TRUE), _
+	(@"aarch64",  TRUE,  TRUE)  _
+}
+
+private function astBuildDEFINED(byval symbol as zstring ptr, byval negate as integer) as ASTNODE ptr
+	var n = astNewDEFINED(symbol)
 	if negate then n = astNew(ASTCLASS_NOT, n)
 	function = n
 end function
 
+private function astNewDEFINEDfb64(byval negate as integer) as ASTNODE ptr
+	function = astBuildDEFINED("__FB_64BIT__", negate)
+end function
+
+private function astNewDEFINEDfbarm(byval negate as integer) as ASTNODE ptr
+	function = astBuildDEFINED("__FB_ARM__", negate)
+end function
+
 private function astNewDEFINEDfbos(byval os as integer) as ASTNODE ptr
-	function = astNewDEFINED(getFbOsDef(os))
+	function = astNewDEFINED(osinfo(os).fbdefine)
 end function
 
 private sub maybeEvalForTarget(byval os as integer, byval arch as integer)
@@ -1311,15 +1337,17 @@ private sub maybeEvalForTarget(byval os as integer, byval arch as integer)
 	if frog.enabledoscount > 1 then
 		astAppend(conditions, astNewDEFINEDfbos(os))
 	end if
-	if os <> OS_DOS then
-		astAppend(conditions, astNewDEFINEDfb64(arch <> ARCH_X86_64))
+	if osinfo(os).has_64bit then
+		astAppend(conditions, astNewDEFINEDfb64(not archinfo(arch).is_64bit))
+	end if
+	if osinfo(os).has_arm then
+		astAppend(conditions, astNewDEFINEDfbarm(not archinfo(arch).is_arm))
 	end if
 
 	'' Add the CPP #define __FB_*__ for preprocessing of default.h
-	astAppend(options, astNewOPTION(OPT_DEFINE, getFbOsDef(os)))
-	if arch = ARCH_X86_64 then
-		astAppend(options, astNewOPTION(OPT_DEFINE, "__FB_64BIT__"))
-	end if
+	astAppend(options, astNewOPTION(OPT_DEFINE, osinfo(os).fbdefine))
+	if archinfo(arch).is_64bit then astAppend(options, astNewOPTION(OPT_DEFINE, "__FB_64BIT__"))
+	if archinfo(arch).is_arm   then astAppend(options, astNewOPTION(OPT_DEFINE, "__FB_ARM__"  ))
 
 	frogEvaluateScript(frog.script->head, conditions, options)
 end sub
@@ -1327,17 +1355,19 @@ end sub
 private sub maybeEvalForOs(byval os as integer)
 	if frog.os(os) = FALSE then exit sub
 
+	maybeEvalForTarget(os, ARCH_X86)
+	if os = OS_DOS then exit sub
+
+	assert(osinfo(os).has_64bit)
+	maybeEvalForTarget(os, ARCH_X86_64)
 	select case os
-	case OS_DOS
-		maybeEvalForTarget(os, ARCH_X86)
-	case OS_WINDOWS
-		maybeEvalForTarget(os, ARCH_X86)
-		maybeEvalForTarget(os, ARCH_X86_64)
-	case else
-		for arch as integer = 0 to ARCH__COUNT - 1
-			maybeEvalForTarget(os, arch)
-		next
+	case OS_WINDOWS, OS_CYGWIN, OS_DARWIN
+		exit sub
 	end select
+
+	assert(osinfo(os).has_arm)
+	maybeEvalForTarget(os, ARCH_ARM)
+	maybeEvalForTarget(os, ARCH_AARCH64)
 end sub
 
 private function frogParse(byref api as ApiInfo) as ASTNODE ptr
@@ -1541,6 +1571,11 @@ end function
 		astAppend(frog.completeverors, _
 			astNewVEROR(astNewDEFINEDfb64(FALSE), _
 			            astNewDEFINEDfb64(TRUE)))
+
+		'' same for __FB_ARM__
+		astAppend(frog.completeverors, _
+			astNewVEROR(astNewDEFINEDfbarm(FALSE), _
+			            astNewDEFINEDfbarm(TRUE)))
 	end scope
 	for os as integer = 0 to OS__COUNT - 1
 		maybeEvalForOs(os)

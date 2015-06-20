@@ -1,60 +1,92 @@
-[ 1/15] __FB_LINUX__.(not __FB_64BIT__)
+[ 1/23] __FB_LINUX__.(not __FB_64BIT__).(not __FB_ARM__)
 tests/c/param-missing-initexpr.h(2): expected expression but found ')'
     void f ( int i = ) ;
                      ^
-[ 2/15] __FB_LINUX__.__FB_64BIT__
+[ 2/23] __FB_LINUX__.__FB_64BIT__.(not __FB_ARM__)
 tests/c/param-missing-initexpr.h(2): expected expression but found ')'
     void f ( int i = ) ;
                      ^
-[ 3/15] __FB_FREEBSD__.(not __FB_64BIT__)
+[ 3/23] __FB_LINUX__.(not __FB_64BIT__).__FB_ARM__
 tests/c/param-missing-initexpr.h(2): expected expression but found ')'
     void f ( int i = ) ;
                      ^
-[ 4/15] __FB_FREEBSD__.__FB_64BIT__
+[ 4/23] __FB_LINUX__.__FB_64BIT__.__FB_ARM__
 tests/c/param-missing-initexpr.h(2): expected expression but found ')'
     void f ( int i = ) ;
                      ^
-[ 5/15] __FB_OPENBSD__.(not __FB_64BIT__)
+[ 5/23] __FB_FREEBSD__.(not __FB_64BIT__).(not __FB_ARM__)
 tests/c/param-missing-initexpr.h(2): expected expression but found ')'
     void f ( int i = ) ;
                      ^
-[ 6/15] __FB_OPENBSD__.__FB_64BIT__
+[ 6/23] __FB_FREEBSD__.__FB_64BIT__.(not __FB_ARM__)
 tests/c/param-missing-initexpr.h(2): expected expression but found ')'
     void f ( int i = ) ;
                      ^
-[ 7/15] __FB_NETBSD__.(not __FB_64BIT__)
+[ 7/23] __FB_FREEBSD__.(not __FB_64BIT__).__FB_ARM__
 tests/c/param-missing-initexpr.h(2): expected expression but found ')'
     void f ( int i = ) ;
                      ^
-[ 8/15] __FB_NETBSD__.__FB_64BIT__
+[ 8/23] __FB_FREEBSD__.__FB_64BIT__.__FB_ARM__
 tests/c/param-missing-initexpr.h(2): expected expression but found ')'
     void f ( int i = ) ;
                      ^
-[ 9/15] __FB_DARWIN__.(not __FB_64BIT__)
+[ 9/23] __FB_OPENBSD__.(not __FB_64BIT__).(not __FB_ARM__)
 tests/c/param-missing-initexpr.h(2): expected expression but found ')'
     void f ( int i = ) ;
                      ^
-[10/15] __FB_DARWIN__.__FB_64BIT__
+[10/23] __FB_OPENBSD__.__FB_64BIT__.(not __FB_ARM__)
 tests/c/param-missing-initexpr.h(2): expected expression but found ')'
     void f ( int i = ) ;
                      ^
-[11/15] __FB_WIN32__.(not __FB_64BIT__)
+[11/23] __FB_OPENBSD__.(not __FB_64BIT__).__FB_ARM__
 tests/c/param-missing-initexpr.h(2): expected expression but found ')'
     void f ( int i = ) ;
                      ^
-[12/15] __FB_WIN32__.__FB_64BIT__
+[12/23] __FB_OPENBSD__.__FB_64BIT__.__FB_ARM__
 tests/c/param-missing-initexpr.h(2): expected expression but found ')'
     void f ( int i = ) ;
                      ^
-[13/15] __FB_CYGWIN__.(not __FB_64BIT__)
+[13/23] __FB_NETBSD__.(not __FB_64BIT__).(not __FB_ARM__)
 tests/c/param-missing-initexpr.h(2): expected expression but found ')'
     void f ( int i = ) ;
                      ^
-[14/15] __FB_CYGWIN__.__FB_64BIT__
+[14/23] __FB_NETBSD__.__FB_64BIT__.(not __FB_ARM__)
 tests/c/param-missing-initexpr.h(2): expected expression but found ')'
     void f ( int i = ) ;
                      ^
-[15/15] __FB_DOS__
+[15/23] __FB_NETBSD__.(not __FB_64BIT__).__FB_ARM__
+tests/c/param-missing-initexpr.h(2): expected expression but found ')'
+    void f ( int i = ) ;
+                     ^
+[16/23] __FB_NETBSD__.__FB_64BIT__.__FB_ARM__
+tests/c/param-missing-initexpr.h(2): expected expression but found ')'
+    void f ( int i = ) ;
+                     ^
+[17/23] __FB_DARWIN__.(not __FB_64BIT__)
+tests/c/param-missing-initexpr.h(2): expected expression but found ')'
+    void f ( int i = ) ;
+                     ^
+[18/23] __FB_DARWIN__.__FB_64BIT__
+tests/c/param-missing-initexpr.h(2): expected expression but found ')'
+    void f ( int i = ) ;
+                     ^
+[19/23] __FB_WIN32__.(not __FB_64BIT__)
+tests/c/param-missing-initexpr.h(2): expected expression but found ')'
+    void f ( int i = ) ;
+                     ^
+[20/23] __FB_WIN32__.__FB_64BIT__
+tests/c/param-missing-initexpr.h(2): expected expression but found ')'
+    void f ( int i = ) ;
+                     ^
+[21/23] __FB_CYGWIN__.(not __FB_64BIT__)
+tests/c/param-missing-initexpr.h(2): expected expression but found ')'
+    void f ( int i = ) ;
+                     ^
+[22/23] __FB_CYGWIN__.__FB_64BIT__
+tests/c/param-missing-initexpr.h(2): expected expression but found ')'
+    void f ( int i = ) ;
+                     ^
+[23/23] __FB_DOS__
 tests/c/param-missing-initexpr.h(2): expected expression but found ')'
     void f ( int i = ) ;
                      ^

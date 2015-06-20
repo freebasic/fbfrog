@@ -18,7 +18,7 @@ extern separator as long
 
 extern separator as long
 
-#if defined(__FB_LINUX__) or defined(__FB_FREEBSD__) or defined(__FB_OPENBSD__) or defined(__FB_NETBSD__) or defined(__FB_DARWIN__) or defined(__FB_CYGWIN__)
+#if defined(__FB_DARWIN__) or defined(__FB_CYGWIN__) or defined(__FB_LINUX__) or defined(__FB_FREEBSD__) or defined(__FB_OPENBSD__) or defined(__FB_NETBSD__)
 	declare sub rest_3()
 #elseif defined(__FB_WIN32__)
 	declare sub win32_3()
@@ -30,7 +30,7 @@ extern separator as long
 
 #if defined(__FB_LINUX__) or defined(__FB_WIN32__) or defined(__FB_CYGWIN__)
 	declare sub linux_win32_cygwin_4()
-#elseif defined(__FB_FREEBSD__) or defined(__FB_OPENBSD__) or defined(__FB_NETBSD__) or defined(__FB_DARWIN__)
+#elseif defined(__FB_DARWIN__) or defined(__FB_FREEBSD__) or defined(__FB_OPENBSD__) or defined(__FB_NETBSD__)
 	declare sub unix_4()
 #else
 	declare sub rest_4()

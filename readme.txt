@@ -218,7 +218,6 @@ Bugs:
   (at least, mark it with a TODO)
 
 Interesting improvements:
-* support __FB_ARM__
 * use __FB_UNIX__ where possible
 * store os/arch into ApiInfo so the translation process can easily use knowledge about the target
 * consecutive verblocks should be added to a prefix tree, to solve out common

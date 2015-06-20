@@ -1,32 +1,48 @@
-[ 1/30] __FB_LINUX__.(not __FB_64BIT__).A
-[ 2/30] __FB_LINUX__.(not __FB_64BIT__).(not A)
-[ 3/30] __FB_LINUX__.__FB_64BIT__.A
-[ 4/30] __FB_LINUX__.__FB_64BIT__.(not A)
-[ 5/30] __FB_FREEBSD__.(not __FB_64BIT__).A
-[ 6/30] __FB_FREEBSD__.(not __FB_64BIT__).(not A)
-[ 7/30] __FB_FREEBSD__.__FB_64BIT__.A
-[ 8/30] __FB_FREEBSD__.__FB_64BIT__.(not A)
-[ 9/30] __FB_OPENBSD__.(not __FB_64BIT__).A
-[10/30] __FB_OPENBSD__.(not __FB_64BIT__).(not A)
-[11/30] __FB_OPENBSD__.__FB_64BIT__.A
-[12/30] __FB_OPENBSD__.__FB_64BIT__.(not A)
-[13/30] __FB_NETBSD__.(not __FB_64BIT__).A
-[14/30] __FB_NETBSD__.(not __FB_64BIT__).(not A)
-[15/30] __FB_NETBSD__.__FB_64BIT__.A
-[16/30] __FB_NETBSD__.__FB_64BIT__.(not A)
-[17/30] __FB_DARWIN__.(not __FB_64BIT__).A
-[18/30] __FB_DARWIN__.(not __FB_64BIT__).(not A)
-[19/30] __FB_DARWIN__.__FB_64BIT__.A
-[20/30] __FB_DARWIN__.__FB_64BIT__.(not A)
-[21/30] __FB_WIN32__.(not __FB_64BIT__).A
-[22/30] __FB_WIN32__.(not __FB_64BIT__).(not A)
-[23/30] __FB_WIN32__.__FB_64BIT__.A
-[24/30] __FB_WIN32__.__FB_64BIT__.(not A)
-[25/30] __FB_CYGWIN__.(not __FB_64BIT__).A
-[26/30] __FB_CYGWIN__.(not __FB_64BIT__).(not A)
-[27/30] __FB_CYGWIN__.__FB_64BIT__.A
-[28/30] __FB_CYGWIN__.__FB_64BIT__.(not A)
-[29/30] __FB_DOS__.A
-[30/30] __FB_DOS__.(not A)
+[ 1/46] __FB_LINUX__.(not __FB_64BIT__).(not __FB_ARM__).A
+[ 2/46] __FB_LINUX__.(not __FB_64BIT__).(not __FB_ARM__).(not A)
+[ 3/46] __FB_LINUX__.__FB_64BIT__.(not __FB_ARM__).A
+[ 4/46] __FB_LINUX__.__FB_64BIT__.(not __FB_ARM__).(not A)
+[ 5/46] __FB_LINUX__.(not __FB_64BIT__).__FB_ARM__.A
+[ 6/46] __FB_LINUX__.(not __FB_64BIT__).__FB_ARM__.(not A)
+[ 7/46] __FB_LINUX__.__FB_64BIT__.__FB_ARM__.A
+[ 8/46] __FB_LINUX__.__FB_64BIT__.__FB_ARM__.(not A)
+[ 9/46] __FB_FREEBSD__.(not __FB_64BIT__).(not __FB_ARM__).A
+[10/46] __FB_FREEBSD__.(not __FB_64BIT__).(not __FB_ARM__).(not A)
+[11/46] __FB_FREEBSD__.__FB_64BIT__.(not __FB_ARM__).A
+[12/46] __FB_FREEBSD__.__FB_64BIT__.(not __FB_ARM__).(not A)
+[13/46] __FB_FREEBSD__.(not __FB_64BIT__).__FB_ARM__.A
+[14/46] __FB_FREEBSD__.(not __FB_64BIT__).__FB_ARM__.(not A)
+[15/46] __FB_FREEBSD__.__FB_64BIT__.__FB_ARM__.A
+[16/46] __FB_FREEBSD__.__FB_64BIT__.__FB_ARM__.(not A)
+[17/46] __FB_OPENBSD__.(not __FB_64BIT__).(not __FB_ARM__).A
+[18/46] __FB_OPENBSD__.(not __FB_64BIT__).(not __FB_ARM__).(not A)
+[19/46] __FB_OPENBSD__.__FB_64BIT__.(not __FB_ARM__).A
+[20/46] __FB_OPENBSD__.__FB_64BIT__.(not __FB_ARM__).(not A)
+[21/46] __FB_OPENBSD__.(not __FB_64BIT__).__FB_ARM__.A
+[22/46] __FB_OPENBSD__.(not __FB_64BIT__).__FB_ARM__.(not A)
+[23/46] __FB_OPENBSD__.__FB_64BIT__.__FB_ARM__.A
+[24/46] __FB_OPENBSD__.__FB_64BIT__.__FB_ARM__.(not A)
+[25/46] __FB_NETBSD__.(not __FB_64BIT__).(not __FB_ARM__).A
+[26/46] __FB_NETBSD__.(not __FB_64BIT__).(not __FB_ARM__).(not A)
+[27/46] __FB_NETBSD__.__FB_64BIT__.(not __FB_ARM__).A
+[28/46] __FB_NETBSD__.__FB_64BIT__.(not __FB_ARM__).(not A)
+[29/46] __FB_NETBSD__.(not __FB_64BIT__).__FB_ARM__.A
+[30/46] __FB_NETBSD__.(not __FB_64BIT__).__FB_ARM__.(not A)
+[31/46] __FB_NETBSD__.__FB_64BIT__.__FB_ARM__.A
+[32/46] __FB_NETBSD__.__FB_64BIT__.__FB_ARM__.(not A)
+[33/46] __FB_DARWIN__.(not __FB_64BIT__).A
+[34/46] __FB_DARWIN__.(not __FB_64BIT__).(not A)
+[35/46] __FB_DARWIN__.__FB_64BIT__.A
+[36/46] __FB_DARWIN__.__FB_64BIT__.(not A)
+[37/46] __FB_WIN32__.(not __FB_64BIT__).A
+[38/46] __FB_WIN32__.(not __FB_64BIT__).(not A)
+[39/46] __FB_WIN32__.__FB_64BIT__.A
+[40/46] __FB_WIN32__.__FB_64BIT__.(not A)
+[41/46] __FB_CYGWIN__.(not __FB_64BIT__).A
+[42/46] __FB_CYGWIN__.(not __FB_64BIT__).(not A)
+[43/46] __FB_CYGWIN__.__FB_64BIT__.A
+[44/46] __FB_CYGWIN__.__FB_64BIT__.(not A)
+[45/46] __FB_DOS__.A
+[46/46] __FB_DOS__.(not A)
 	tests/versions/declarebool.h
 emitting: tests/versions/declarebool.bi (2 declarations, 0 TODOs)

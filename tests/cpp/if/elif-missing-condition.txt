@@ -1,4 +1,4 @@
-[ 1/15] __FB_LINUX__.(not __FB_64BIT__)
+[ 1/23] __FB_LINUX__.(not __FB_64BIT__).(not __FB_ARM__)
 tests/cpp/if/elif-missing-condition.h(3): missing expression
     # elif 
            ^

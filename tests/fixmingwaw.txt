@@ -1,32 +1,48 @@
-[ 1/30] __FB_LINUX__.(not __FB_64BIT__).UNICODE
-[ 2/30] __FB_LINUX__.(not __FB_64BIT__).(not UNICODE)
-[ 3/30] __FB_LINUX__.__FB_64BIT__.UNICODE
-[ 4/30] __FB_LINUX__.__FB_64BIT__.(not UNICODE)
-[ 5/30] __FB_FREEBSD__.(not __FB_64BIT__).UNICODE
-[ 6/30] __FB_FREEBSD__.(not __FB_64BIT__).(not UNICODE)
-[ 7/30] __FB_FREEBSD__.__FB_64BIT__.UNICODE
-[ 8/30] __FB_FREEBSD__.__FB_64BIT__.(not UNICODE)
-[ 9/30] __FB_OPENBSD__.(not __FB_64BIT__).UNICODE
-[10/30] __FB_OPENBSD__.(not __FB_64BIT__).(not UNICODE)
-[11/30] __FB_OPENBSD__.__FB_64BIT__.UNICODE
-[12/30] __FB_OPENBSD__.__FB_64BIT__.(not UNICODE)
-[13/30] __FB_NETBSD__.(not __FB_64BIT__).UNICODE
-[14/30] __FB_NETBSD__.(not __FB_64BIT__).(not UNICODE)
-[15/30] __FB_NETBSD__.__FB_64BIT__.UNICODE
-[16/30] __FB_NETBSD__.__FB_64BIT__.(not UNICODE)
-[17/30] __FB_DARWIN__.(not __FB_64BIT__).UNICODE
-[18/30] __FB_DARWIN__.(not __FB_64BIT__).(not UNICODE)
-[19/30] __FB_DARWIN__.__FB_64BIT__.UNICODE
-[20/30] __FB_DARWIN__.__FB_64BIT__.(not UNICODE)
-[21/30] __FB_WIN32__.(not __FB_64BIT__).UNICODE
-[22/30] __FB_WIN32__.(not __FB_64BIT__).(not UNICODE)
-[23/30] __FB_WIN32__.__FB_64BIT__.UNICODE
-[24/30] __FB_WIN32__.__FB_64BIT__.(not UNICODE)
-[25/30] __FB_CYGWIN__.(not __FB_64BIT__).UNICODE
-[26/30] __FB_CYGWIN__.(not __FB_64BIT__).(not UNICODE)
-[27/30] __FB_CYGWIN__.__FB_64BIT__.UNICODE
-[28/30] __FB_CYGWIN__.__FB_64BIT__.(not UNICODE)
-[29/30] __FB_DOS__.UNICODE
-[30/30] __FB_DOS__.(not UNICODE)
+[ 1/46] __FB_LINUX__.(not __FB_64BIT__).(not __FB_ARM__).UNICODE
+[ 2/46] __FB_LINUX__.(not __FB_64BIT__).(not __FB_ARM__).(not UNICODE)
+[ 3/46] __FB_LINUX__.__FB_64BIT__.(not __FB_ARM__).UNICODE
+[ 4/46] __FB_LINUX__.__FB_64BIT__.(not __FB_ARM__).(not UNICODE)
+[ 5/46] __FB_LINUX__.(not __FB_64BIT__).__FB_ARM__.UNICODE
+[ 6/46] __FB_LINUX__.(not __FB_64BIT__).__FB_ARM__.(not UNICODE)
+[ 7/46] __FB_LINUX__.__FB_64BIT__.__FB_ARM__.UNICODE
+[ 8/46] __FB_LINUX__.__FB_64BIT__.__FB_ARM__.(not UNICODE)
+[ 9/46] __FB_FREEBSD__.(not __FB_64BIT__).(not __FB_ARM__).UNICODE
+[10/46] __FB_FREEBSD__.(not __FB_64BIT__).(not __FB_ARM__).(not UNICODE)
+[11/46] __FB_FREEBSD__.__FB_64BIT__.(not __FB_ARM__).UNICODE
+[12/46] __FB_FREEBSD__.__FB_64BIT__.(not __FB_ARM__).(not UNICODE)
+[13/46] __FB_FREEBSD__.(not __FB_64BIT__).__FB_ARM__.UNICODE
+[14/46] __FB_FREEBSD__.(not __FB_64BIT__).__FB_ARM__.(not UNICODE)
+[15/46] __FB_FREEBSD__.__FB_64BIT__.__FB_ARM__.UNICODE
+[16/46] __FB_FREEBSD__.__FB_64BIT__.__FB_ARM__.(not UNICODE)
+[17/46] __FB_OPENBSD__.(not __FB_64BIT__).(not __FB_ARM__).UNICODE
+[18/46] __FB_OPENBSD__.(not __FB_64BIT__).(not __FB_ARM__).(not UNICODE)
+[19/46] __FB_OPENBSD__.__FB_64BIT__.(not __FB_ARM__).UNICODE
+[20/46] __FB_OPENBSD__.__FB_64BIT__.(not __FB_ARM__).(not UNICODE)
+[21/46] __FB_OPENBSD__.(not __FB_64BIT__).__FB_ARM__.UNICODE
+[22/46] __FB_OPENBSD__.(not __FB_64BIT__).__FB_ARM__.(not UNICODE)
+[23/46] __FB_OPENBSD__.__FB_64BIT__.__FB_ARM__.UNICODE
+[24/46] __FB_OPENBSD__.__FB_64BIT__.__FB_ARM__.(not UNICODE)
+[25/46] __FB_NETBSD__.(not __FB_64BIT__).(not __FB_ARM__).UNICODE
+[26/46] __FB_NETBSD__.(not __FB_64BIT__).(not __FB_ARM__).(not UNICODE)
+[27/46] __FB_NETBSD__.__FB_64BIT__.(not __FB_ARM__).UNICODE
+[28/46] __FB_NETBSD__.__FB_64BIT__.(not __FB_ARM__).(not UNICODE)
+[29/46] __FB_NETBSD__.(not __FB_64BIT__).__FB_ARM__.UNICODE
+[30/46] __FB_NETBSD__.(not __FB_64BIT__).__FB_ARM__.(not UNICODE)
+[31/46] __FB_NETBSD__.__FB_64BIT__.__FB_ARM__.UNICODE
+[32/46] __FB_NETBSD__.__FB_64BIT__.__FB_ARM__.(not UNICODE)
+[33/46] __FB_DARWIN__.(not __FB_64BIT__).UNICODE
+[34/46] __FB_DARWIN__.(not __FB_64BIT__).(not UNICODE)
+[35/46] __FB_DARWIN__.__FB_64BIT__.UNICODE
+[36/46] __FB_DARWIN__.__FB_64BIT__.(not UNICODE)
+[37/46] __FB_WIN32__.(not __FB_64BIT__).UNICODE
+[38/46] __FB_WIN32__.(not __FB_64BIT__).(not UNICODE)
+[39/46] __FB_WIN32__.__FB_64BIT__.UNICODE
+[40/46] __FB_WIN32__.__FB_64BIT__.(not UNICODE)
+[41/46] __FB_CYGWIN__.(not __FB_64BIT__).UNICODE
+[42/46] __FB_CYGWIN__.(not __FB_64BIT__).(not UNICODE)
+[43/46] __FB_CYGWIN__.__FB_64BIT__.UNICODE
+[44/46] __FB_CYGWIN__.__FB_64BIT__.(not UNICODE)
+[45/46] __FB_DOS__.UNICODE
+[46/46] __FB_DOS__.(not UNICODE)
 	tests/fixmingwaw.h
 emitting: tests/fixmingwaw.bi (36 declarations, 2 TODOs)

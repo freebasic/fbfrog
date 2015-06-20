@@ -1,16 +1,24 @@
-[ 1/14] __FB_LINUX__.(not __FB_64BIT__)
-[ 2/14] __FB_LINUX__.__FB_64BIT__
-[ 3/14] __FB_FREEBSD__.(not __FB_64BIT__)
-[ 4/14] __FB_FREEBSD__.__FB_64BIT__
-[ 5/14] __FB_OPENBSD__.(not __FB_64BIT__)
-[ 6/14] __FB_OPENBSD__.__FB_64BIT__
-[ 7/14] __FB_NETBSD__.(not __FB_64BIT__)
-[ 8/14] __FB_NETBSD__.__FB_64BIT__
-[ 9/14] __FB_DARWIN__.(not __FB_64BIT__)
-[10/14] __FB_DARWIN__.__FB_64BIT__
-[11/14] __FB_WIN32__.(not __FB_64BIT__)
-[12/14] __FB_WIN32__.__FB_64BIT__
-[13/14] __FB_CYGWIN__.(not __FB_64BIT__)
-[14/14] __FB_CYGWIN__.__FB_64BIT__
+[ 1/22] __FB_LINUX__.(not __FB_64BIT__).(not __FB_ARM__)
+[ 2/22] __FB_LINUX__.__FB_64BIT__.(not __FB_ARM__)
+[ 3/22] __FB_LINUX__.(not __FB_64BIT__).__FB_ARM__
+[ 4/22] __FB_LINUX__.__FB_64BIT__.__FB_ARM__
+[ 5/22] __FB_FREEBSD__.(not __FB_64BIT__).(not __FB_ARM__)
+[ 6/22] __FB_FREEBSD__.__FB_64BIT__.(not __FB_ARM__)
+[ 7/22] __FB_FREEBSD__.(not __FB_64BIT__).__FB_ARM__
+[ 8/22] __FB_FREEBSD__.__FB_64BIT__.__FB_ARM__
+[ 9/22] __FB_OPENBSD__.(not __FB_64BIT__).(not __FB_ARM__)
+[10/22] __FB_OPENBSD__.__FB_64BIT__.(not __FB_ARM__)
+[11/22] __FB_OPENBSD__.(not __FB_64BIT__).__FB_ARM__
+[12/22] __FB_OPENBSD__.__FB_64BIT__.__FB_ARM__
+[13/22] __FB_NETBSD__.(not __FB_64BIT__).(not __FB_ARM__)
+[14/22] __FB_NETBSD__.__FB_64BIT__.(not __FB_ARM__)
+[15/22] __FB_NETBSD__.(not __FB_64BIT__).__FB_ARM__
+[16/22] __FB_NETBSD__.__FB_64BIT__.__FB_ARM__
+[17/22] __FB_DARWIN__.(not __FB_64BIT__)
+[18/22] __FB_DARWIN__.__FB_64BIT__
+[19/22] __FB_WIN32__.(not __FB_64BIT__)
+[20/22] __FB_WIN32__.__FB_64BIT__
+[21/22] __FB_CYGWIN__.(not __FB_64BIT__)
+[22/22] __FB_CYGWIN__.__FB_64BIT__
 	tests/versions/target-nodos.h
 emitting: tests/versions/target-nodos.bi (0 declarations, 0 TODOs)

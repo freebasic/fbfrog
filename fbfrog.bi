@@ -131,8 +131,8 @@ end enum
 enum
 	ARCH_X86
 	ARCH_X86_64
-	'ARCH_ARM
-	'ARCH_AARCH64
+	ARCH_ARM
+	ARCH_AARCH64
 	ARCH__COUNT
 end enum
 
