@@ -1375,18 +1375,16 @@ private sub maybeEvalForOs(byval os as integer)
 	if frog.os(os) = FALSE then exit sub
 
 	maybeEvalForTarget(os, ARCH_X86)
-	if os = OS_DOS then exit sub
+	if osinfo(os).has_64bit then
+		maybeEvalForTarget(os, ARCH_X86_64)
+	end if
 
-	assert(osinfo(os).has_64bit)
-	maybeEvalForTarget(os, ARCH_X86_64)
-	select case os
-	case OS_WINDOWS, OS_CYGWIN, OS_DARWIN
-		exit sub
-	end select
-
-	assert(osinfo(os).has_arm)
-	maybeEvalForTarget(os, ARCH_ARM)
-	maybeEvalForTarget(os, ARCH_AARCH64)
+	if osinfo(os).has_arm then
+		maybeEvalForTarget(os, ARCH_ARM)
+		if osinfo(os).has_64bit then
+			maybeEvalForTarget(os, ARCH_AARCH64)
+		end if
+	end if
 end sub
 
 private function frogParse(byref api as ApiInfo) as ASTNODE ptr
