@@ -684,19 +684,19 @@ declare sub hParseArgs(byref x as integer)
 
 private sub hParseSelectCompound(byref x as integer)
 	'' -select
-	astAppend(frog.script, astNew(ASTCLASS_SELECT))
 	var xblockbegin = x
 	x += 1
 
 	'' [<symbol>]
-	var is_vernum = FALSE
+	var selectclass = ASTCLASS_SELECTDEFINE
 	if tkGet(x) = TK_ID then
 		if *tkSpellId(x) <> frog.versiondefine then
 			tkOops(x, "version define identifier doesn't match the one specified in the -declareversions option; expected '" + frog.versiondefine + "'")
 		end if
-		is_vernum = TRUE
+		selectclass = ASTCLASS_SELECTVERSION
 		x += 1
 	end if
+	astAppend(frog.script, astNew(selectclass))
 
 	'' -case
 	if tkGet(x) <> OPT_CASE then
@@ -718,7 +718,7 @@ private sub hParseSelectCompound(byref x as integer)
 			x += 1
 
 			dim as ASTNODE ptr condition
-			if is_vernum then
+			if selectclass = ASTCLASS_SELECTVERSION then
 				'' <version number>
 				hExpectStringOrId(x, "<version number> argument")
 
@@ -768,7 +768,7 @@ private sub hParseIfDefCompound(byref x as integer)
 	'' <symbol>
 	hExpectId(x)
 	'' -ifdef <symbol>  =>  -select -case <symbol>
-	astAppend(frog.script, astNew(ASTCLASS_SELECT))
+	astAppend(frog.script, astNew(ASTCLASS_SELECTDEFINE))
 	scope
 		var n = astNew(ASTCLASS_CASE)
 		n->expr = astNewDEFINED(tkGetText(x))
@@ -1099,7 +1099,7 @@ private function hSkipToEndOfBlock(byval i as ASTNODE ptr) as ASTNODE ptr
 
 	do
 		select case i->class
-		case ASTCLASS_SELECT
+		case ASTCLASS_SELECTDEFINE, ASTCLASS_SELECTVERSION
 			level += 1
 
 		case ASTCLASS_CASE, ASTCLASS_CASEELSE
@@ -1230,7 +1230,7 @@ private sub frogEvaluateScript _
 
 			astAppend(frog.completeverors, completeveror)
 
-		case ASTCLASS_SELECT
+		case ASTCLASS_SELECTDEFINE, ASTCLASS_SELECTVERSION
 			var selectnode = i
 			i = i->next
 
