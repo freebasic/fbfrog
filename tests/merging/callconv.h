@@ -1,4 +1,4 @@
-// @fbfrog -removedefine CALLCONV -declareversions VER 1 2 -selectversion VER -case 1 -define A -endselect
+// @fbfrog -removedefine CALLCONV -declareversions VER 1 2 -selectversion -case 1 -define A -endselect
 
 #ifdef A
 	#define CALLCONV __attribute__((stdcall))

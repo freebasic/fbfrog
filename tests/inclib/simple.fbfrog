@@ -1,7 +1,7 @@
 -inclib main
 -declareversions VER 1 2
 
--selectversion VER
+-selectversion
 -case 1 -inclib cool1
 -case 2 -inclib cool-2.0
 -endselect

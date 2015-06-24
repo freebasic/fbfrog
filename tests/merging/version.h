@@ -1,4 +1,4 @@
-// @fbfrog -declareversions VER 1 -selectversion VER -case 1 -define VER 1 -endselect
+// @fbfrog -declareversions VER 1 -selectversion -case 1 -define VER 1 -endselect
 
 static int common;
 

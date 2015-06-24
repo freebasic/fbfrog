@@ -1,6 +1,6 @@
 -declareversions VER 1 2 3
 
--selectversion VER
+-selectversion
 -case 1
 	-define VER 1
 -case 2

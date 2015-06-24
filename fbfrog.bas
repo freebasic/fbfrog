@@ -278,9 +278,9 @@ private sub hPrintHelpAndExit()
 	print "API script logic:"
 	print "  -declareversions <symbol> (<number>)+     Version numbers"
 	print "  -declarebool <symbol>                     Single on/off #define"
-	print "  -selecttarget           (-case <target> ...)+ [-caseelse ...] -endselect"
-	print "  -selectversion <symbol> (-case <number> ...)+ [-caseelse ...] -endselect"
-	print "  -selectdefine           (-case <symbol> ...)+ [-caseelse ...] -endselect"
+	print "  -selecttarget  (-case <target> ...)+ [-caseelse ...] -endselect"
+	print "  -selectversion (-case <number> ...)+ [-caseelse ...] -endselect"
+	print "  -selectdefine  (-case <symbol> ...)+ [-caseelse ...] -endselect"
 	print "  -iftarget <target> ... [-else ...] -endif"
 	print "  -ifdef <symbol> ... [-else ...] -endif"
 	print "CPP (options are API-specific):"
@@ -725,14 +725,6 @@ private sub hParseSelectCompound(byref x as integer, byval selectclass as intege
 	var xblockbegin = x
 	x += 1
 
-	if selectclass = ASTCLASS_SELECTVERSION then
-		'' <symbol>
-		hExpectId(x)
-		if *tkSpellId(x) <> frog.versiondefine then
-			tkOops(x, "version define identifier doesn't match the one specified in the -declareversions option; expected '" + frog.versiondefine + "'")
-		end if
-		x += 1
-	end if
 	astAppend(frog.script, astNew(selectclass))
 
 	'' -case

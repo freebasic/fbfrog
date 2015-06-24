@@ -1,3 +1,0 @@
-<command line>(1): version define identifier doesn't match the one specified in the -declareversions option; expected 'A'
-    -version-define.h -declareversions A 1 2 -selectversion B -case 1 -endselect
-                                                            ^
