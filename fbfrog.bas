@@ -1362,19 +1362,9 @@ private function frogParse(byref api as ApiInfo) as ASTNODE ptr
 			assert(i->class = ASTCLASS_OPTION)
 			select case i->opt
 			case OPT_DEFINE
-				var s = "#define " + *i->text
-				if i->alias then
-					s += " " + *i->alias
-				end if
-				s += !"\n"
-
-				var x = tkGetCount()
-				lexLoadC(x, s, sourceinfoForZstring("pre-#define"))
-				tkSetRemove(x, tkGetCount() - 1)
-
+				cppAddPredefine(i->text, i->alias)
 			case OPT_INCDIR
 				cppAddIncDir(i->text)
-
 			end select
 
 			i = i->next
