@@ -148,10 +148,13 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	_
 	(@"-declareversions"), _
 	(@"-declarebool"  ), _
-	(@"-select"       ), _
+	(@"-selecttarget" ), _
+	(@"-selectversion"), _
+	(@"-selectdefine" ), _
 	(@"-case"         ), _
 	(@"-caseelse"     ), _
 	(@"-endselect"    ), _
+	(@"-iftarget"     ), _
 	(@"-ifdef"        ), _
 	(@"-else"         ), _
 	(@"-endif"        ), _

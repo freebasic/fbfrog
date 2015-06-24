@@ -192,12 +192,48 @@ function frogLookupBiFromH(byval hfile as zstring ptr) as integer
 	function = bi
 end function
 
-sub frogEnableAllTargets()
-	
-end sub
+type OsInfo
+	as zstring ptr id, fbdefine
+	as byte has_64bit, has_arm
+end type
 
-sub frogEnableTarget(byref spec as string)
-end sub
+dim shared osinfo(0 to OS__COUNT-1) as OsInfo => { _
+	(@"linux"  , @"__FB_LINUX__"  ,  TRUE,  TRUE), _
+	(@"freebsd", @"__FB_FREEBSD__",  TRUE,  TRUE), _
+	(@"openbsd", @"__FB_OPENBSD__",  TRUE,  TRUE), _
+	(@"netbsd" , @"__FB_NETBSD__" ,  TRUE,  TRUE), _
+	(@"darwin" , @"__FB_DARWIN__" ,  TRUE, FALSE), _
+	(@"windows", @"__FB_WIN32__"  ,  TRUE, FALSE), _
+	(@"cygwin" , @"__FB_CYGWIN__" ,  TRUE, FALSE), _
+	(@"dos"    , @"__FB_DOS__"    , FALSE, FALSE)  _
+}
+
+type ArchInfo
+	id as zstring ptr
+	as byte is_64bit, is_arm
+end type
+
+dim shared archinfo(0 to ARCH__COUNT-1) as ArchInfo => { _
+	(@"x86"    , FALSE, FALSE), _
+	(@"x86_64" ,  TRUE, FALSE), _
+	(@"arm"    , FALSE,  TRUE), _
+	(@"aarch64",  TRUE,  TRUE)  _
+}
+
+function TargetInfo.id() as string
+	if (os = OS_DOS) and (arch = ARCH_X86) then
+		return "dos"
+	end if
+
+	if os = OS_WINDOWS then
+		select case arch
+		case ARCH_X86 : return "win32"
+		case ARCH_X86_64 : return "win64"
+		end select
+	end if
+
+	return *osinfo(os).id + "-" + *archinfo(arch).id
+end function
 
 '' Find a *.fbfrog or *.h file in fbfrog's include/ dir, its "library" of
 '' premade collections of pre-#defines etc. useful when creating bindings.
@@ -242,8 +278,10 @@ private sub hPrintHelpAndExit()
 	print "API script logic:"
 	print "  -declareversions <symbol> (<number>)+     Version numbers"
 	print "  -declarebool <symbol>                     Single on/off #define"
-	print "  -select          (-case <symbol> ...)+ [-caseelse ...] -endselect"
-	print "  -select <symbol> (-case <number> ...)+ [-caseelse ...] -endselect"
+	print "  -selecttarget           (-case <target> ...)+ [-caseelse ...] -endselect"
+	print "  -selectversion <symbol> (-case <number> ...)+ [-caseelse ...] -endselect"
+	print "  -selectdefine           (-case <symbol> ...)+ [-caseelse ...] -endselect"
+	print "  -iftarget <target> ... [-else ...] -endif"
 	print "  -ifdef <symbol> ... [-else ...] -endif"
 	print "CPP (options are API-specific):"
 	print "  -define <id> [<body>]    Add pre-#define"
@@ -682,18 +720,17 @@ end function
 
 declare sub hParseArgs(byref x as integer)
 
-private sub hParseSelectCompound(byref x as integer)
-	'' -select
+private sub hParseSelectCompound(byref x as integer, byval selectclass as integer)
+	'' -selecttarget|-selectversion|-selectdefine
 	var xblockbegin = x
 	x += 1
 
-	'' [<symbol>]
-	var selectclass = ASTCLASS_SELECTDEFINE
-	if tkGet(x) = TK_ID then
+	if selectclass = ASTCLASS_SELECTVERSION then
+		'' <symbol>
+		hExpectId(x)
 		if *tkSpellId(x) <> frog.versiondefine then
 			tkOops(x, "version define identifier doesn't match the one specified in the -declareversions option; expected '" + frog.versiondefine + "'")
 		end if
-		selectclass = ASTCLASS_SELECTVERSION
 		x += 1
 	end if
 	astAppend(frog.script, astNew(selectclass))
@@ -717,27 +754,15 @@ private sub hParseSelectCompound(byref x as integer)
 			xblockbegin = x
 			x += 1
 
-			dim as ASTNODE ptr condition
 			if selectclass = ASTCLASS_SELECTVERSION then
 				'' <version number>
 				hExpectStringOrId(x, "<version number> argument")
-
-				var vernum = frogLookupVernum(*tkGetText(x))
-				if vernum < 0 then
-					tkOops(x, "unknown version number; it didn't appear in the previous -declareversions option")
-				end if
-
-				'' <symbol> = <versionnumber>
-				condition = astNewVERNUMCHECK(vernum)
 			else
 				'' <symbol>
 				hExpectId(x)
-
-				'' defined(<symbol>)
-				condition = astNewDEFINED(tkGetText(x))
 			end if
-			var n = astNew(ASTCLASS_CASE)
-			n->expr = condition
+			var n = astNew(ASTCLASS_CASE, tkGetText(x))
+			n->location = tkGetLocation(x)
 			astAppend(frog.script, n)
 			x += 1
 
@@ -760,20 +785,27 @@ private sub hParseSelectCompound(byref x as integer)
 	loop
 end sub
 
-private sub hParseIfDefCompound(byref x as integer)
-	'' -ifdef
+private sub hParseIfCompound(byref x as integer)
+	'' -ifdef|-iftarget
 	var xblockbegin = x
+	var is_target = (tkGet(x) = OPT_IFTARGET)
 	x += 1
 
-	'' <symbol>
-	hExpectId(x)
-	'' -ifdef <symbol>  =>  -select -case <symbol>
-	astAppend(frog.script, astNew(ASTCLASS_SELECTDEFINE))
-	scope
-		var n = astNew(ASTCLASS_CASE)
-		n->expr = astNewDEFINED(tkGetText(x))
-		astAppend(frog.script, n)
-	end scope
+	if is_target then
+		'' <target>
+		hExpectStringOrId(x, "<target> argument")
+
+		'' -iftarget <target>  =>  -selecttarget -case <target>
+		astAppend(frog.script, astNew(ASTCLASS_SELECTTARGET))
+		astAppend(frog.script, astNew(ASTCLASS_CASE, tkGetText(x)))
+	else
+		'' <symbol>
+		hExpectId(x)
+
+		'' -ifdef <symbol>  =>  -select -case <symbol>
+		astAppend(frog.script, astNew(ASTCLASS_SELECTDEFINE))
+		astAppend(frog.script, astNew(ASTCLASS_CASE, tkGetText(x)))
+	end if
 	x += 1
 
 	do
@@ -982,11 +1014,12 @@ private sub hParseArgs(byref x as integer)
 			astAppend(frog.script, astNew(ASTCLASS_DECLAREBOOL, tkGetText(x)))
 			x += 1
 
-		case OPT_SELECT
-			hParseSelectCompound(x)
+		case OPT_SELECTTARGET  : hParseSelectCompound(x, ASTCLASS_SELECTTARGET)
+		case OPT_SELECTVERSION : hParseSelectCompound(x, ASTCLASS_SELECTVERSION)
+		case OPT_SELECTDEFINE  : hParseSelectCompound(x, ASTCLASS_SELECTDEFINE)
 
-		case OPT_IFDEF
-			hParseIfDefCompound(x)
+		case OPT_IFTARGET, OPT_IFDEF
+			hParseIfCompound(x)
 
 		case OPT_CASE, OPT_CASEELSE, OPT_ENDSELECT, OPT_ELSE, OPT_ENDIF
 			if nestinglevel <= 1 then
@@ -1099,7 +1132,7 @@ private function hSkipToEndOfBlock(byval i as ASTNODE ptr) as ASTNODE ptr
 
 	do
 		select case i->class
-		case ASTCLASS_SELECTDEFINE, ASTCLASS_SELECTVERSION
+		case ASTCLASS_SELECTTARGET, ASTCLASS_SELECTVERSION, ASTCLASS_SELECTDEFINE
 			level += 1
 
 		case ASTCLASS_CASE, ASTCLASS_CASEELSE
@@ -1132,6 +1165,31 @@ private sub frogAddApi(byval verand as ASTNODE ptr, byval script as ASTNODE ptr,
 		.target = target
 	end with
 end sub
+
+'' Pattern matching for the -selecttarget/-iftarget options
+'' Example patterns:
+''    64bit      =>  matches all 64bit targets
+''    windows    =>  matches all Windows targets
+''    dos        =>  matches dos only
+''    linux-x86  =>  matches linux-x86 only
+private function hTargetPatternMatchesTarget(byref pattern as string, byval target as TargetInfo) as integer
+	var targetos = *osinfo(target.os).id
+	var targetarch = *archinfo(target.arch).id
+
+	select case pattern
+	case "64bit" : return     archinfo(target.arch).is_64bit
+	case "32bit" : return not archinfo(target.arch).is_64bit
+	case "win32" : return (target.os = OS_WINDOWS) and (target.arch = ARCH_X86   )
+	case "win64" : return (target.os = OS_WINDOWS) and (target.arch = ARCH_X86_64)
+	case targetos : return TRUE
+	case targetarch : return TRUE
+	end select
+
+	'' <os>-<arch>?
+	dim as string os, arch
+	strSplit(pattern, "-", os, arch)
+	return (targetos = os) and (targetarch = arch)
+end function
 
 ''
 '' The script is a linear list of the command line options, for example:
@@ -1230,18 +1288,40 @@ private sub frogEvaluateScript _
 
 			astAppend(frog.completeverors, completeveror)
 
-		case ASTCLASS_SELECTDEFINE, ASTCLASS_SELECTVERSION
-			var selectnode = i
+		case ASTCLASS_SELECTTARGET, ASTCLASS_SELECTVERSION, ASTCLASS_SELECTDEFINE
+			var sel = i
 			i = i->next
 
 			do
 				'' -case
 				assert(i->class = ASTCLASS_CASE)
-				var condition = i->expr
+
+				'' Evaluate -case condition
+				dim is_true as integer
+
+				if sel->class = ASTCLASS_SELECTTARGET then
+					is_true = hTargetPatternMatchesTarget(*i->text, target)
+				else
+					dim condition as ASTNODE ptr
+					if sel->class = ASTCLASS_SELECTVERSION then
+						'' <versionnumber>
+						var vernum = frogLookupVernum(*i->text)
+						if vernum < 0 then
+							oopsLocation(i->location, "unknown version number; it didn't appear in the previous -declareversions option")
+						end if
+						condition = astNewVERNUMCHECK(vernum)
+					else
+						'' defined(<symbol>)
+						condition = astNewDEFINED(i->text)
+					end if
+					is_true = astGroupContains(conditions, condition)
+					astDelete(condition)
+				end if
+
 				i = i->next
 
-				'' Evaluate the first -case whose condition is true
-				if astGroupContains(conditions, condition) then
+				'' Evaluate the first -case block whose condition is true
+				if is_true then
 					exit do
 				end if
 
@@ -1282,49 +1362,6 @@ private sub frogEvaluateScript _
 	conditions->class = ASTCLASS_VERAND
 	frogAddApi(conditions, options, target)
 end sub
-
-type OsInfo
-	as zstring ptr id, fbdefine
-	as byte has_64bit, has_arm
-end type
-
-dim shared osinfo(0 to OS__COUNT-1) as OsInfo => { _
-	(@"linux"  , @"__FB_LINUX__"  ,  TRUE,  TRUE), _
-	(@"freebsd", @"__FB_FREEBSD__",  TRUE,  TRUE), _
-	(@"openbsd", @"__FB_OPENBSD__",  TRUE,  TRUE), _
-	(@"netbsd" , @"__FB_NETBSD__" ,  TRUE,  TRUE), _
-	(@"darwin" , @"__FB_DARWIN__" ,  TRUE, FALSE), _
-	(@"windows", @"__FB_WIN32__"  ,  TRUE, FALSE), _
-	(@"cygwin" , @"__FB_CYGWIN__" ,  TRUE, FALSE), _
-	(@"dos"    , @"__FB_DOS__"    , FALSE, FALSE)  _
-}
-
-type ArchInfo
-	id as zstring ptr
-	as byte is_64bit, is_arm
-end type
-
-dim shared archinfo(0 to ARCH__COUNT-1) as ArchInfo => { _
-	(@"x86"    , FALSE, FALSE), _
-	(@"x86_64" ,  TRUE, FALSE), _
-	(@"arm"    , FALSE,  TRUE), _
-	(@"aarch64",  TRUE,  TRUE)  _
-}
-
-function TargetInfo.id() as string
-	if (os = OS_DOS) and (arch = ARCH_X86) then
-		return "dos"
-	end if
-
-	if os = OS_WINDOWS then
-		select case arch
-		case ARCH_X86 : return "win32"
-		case ARCH_X86_64 : return "win64"
-		end select
-	end if
-
-	return *osinfo(os).id + "-" + *archinfo(arch).id
-end function
 
 private function astBuildDEFINED(byval symbol as zstring ptr, byval negate as integer) as ASTNODE ptr
 	var n = astNewDEFINED(symbol)

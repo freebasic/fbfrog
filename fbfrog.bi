@@ -104,6 +104,7 @@ declare function hTrim(byref s as string) as string
 declare function hLTrim(byref s as string) as string
 declare function strStartsWith(byref s as string, byref lookfor as string) as integer
 declare function strDuplicate(byval s as zstring ptr) as zstring ptr
+declare sub strSplit(byref s as string, byref delimiter as string, byref l as string, byref r as string)
 declare function strReplace _
 	( _
 		byref text as string, _
@@ -409,10 +410,13 @@ enum
 
 	OPT_DECLAREVERSIONS
 	OPT_DECLAREBOOL
-	OPT_SELECT
+	OPT_SELECTTARGET
+	OPT_SELECTVERSION
+	OPT_SELECTDEFINE
 	OPT_CASE
 	OPT_CASEELSE
 	OPT_ENDSELECT
+	OPT_IFTARGET
 	OPT_IFDEF
 	OPT_ELSE
 	OPT_ENDIF
@@ -598,7 +602,9 @@ enum
 	'' Script helper nodes
 	ASTCLASS_DECLAREVERSIONS
 	ASTCLASS_DECLAREBOOL
-	ASTCLASS_SELECT
+	ASTCLASS_SELECTTARGET
+	ASTCLASS_SELECTVERSION
+	ASTCLASS_SELECTDEFINE
 	ASTCLASS_CASE
 	ASTCLASS_CASEELSE
 	ASTCLASS_ENDSELECT

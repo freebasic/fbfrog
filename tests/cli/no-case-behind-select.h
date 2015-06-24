@@ -1,1 +1,1 @@
-// @fail @fbfrog -select -define foo -case a -endselect
+// @fail @fbfrog -selectdefine -define foo -case a -endselect

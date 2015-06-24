@@ -218,6 +218,15 @@ Bugs:
   (at least, mark it with a TODO)
 
 Interesting improvements:
+* don't build VERAND conditions at frogEvaluateScript() time, but rather do it
+  later when generating the #if conditions.
+    -ifdef __FB_WIN32__ => -iftarget windows
+    -ifdef __FB_64BIT__ => -iftarget 64bit
+  => ApiInfo has to track TargetInfo, version number for -declareversions, flags for -declarebool
+  frogEvaluateScript() should build ApiInfo objects directly, and duplicate them
+  for recursive invocations. Finally they're copied into fbfrog's global array.
+  ApiInfo.loadOptions() would be done immediately during script evaluation,
+  not separately afterwards.
 * use __FB_UNIX__ where possible
 * store os/arch into ApiInfo so the translation process can easily use knowledge about the target
 * consecutive verblocks should be added to a prefix tree, to solve out common

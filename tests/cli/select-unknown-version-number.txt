@@ -1,3 +1,1 @@
 <command line>(1): unknown version number; it didn't appear in the previous -declareversions option
-    known-version-number.h -declareversions V 1 2 3 -select V -case 4 -endselect
-                                                                    ^

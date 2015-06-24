@@ -1,4 +1,4 @@
-// @fbfrog -declareversions VER 1 2 -select VER -case 1 -define V1 -endselect
+// @fbfrog -declareversions VER 1 2 -selectversion VER -case 1 -define V1 -endselect
 
 struct UDT {
 	#ifdef V1

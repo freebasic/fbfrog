@@ -182,6 +182,17 @@ function strDuplicate(byval s as zstring ptr) as zstring ptr
 	end if
 end function
 
+sub strSplit(byref s as string, byref delimiter as string, byref l as string, byref r as string)
+	var leftlen = instr(s, delimiter) - 1
+	if leftlen > 0 then
+		l = left(s, leftlen)
+		r = right(s, len(s) - leftlen - len(delimiter))
+	else
+		l = s
+		r = ""
+	end if
+end sub
+
 function strReplace _
 	( _
 		byref text as string, _

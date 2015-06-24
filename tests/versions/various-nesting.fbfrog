@@ -1,6 +1,6 @@
 -declareversions VER 1 2 3
 
--select VER
+-selectversion VER
 -case 1
 	-define VER 1
 -case 2
@@ -11,7 +11,7 @@
 	-declarebool DEPRECATED_V2
 -endselect
 
--ifdef __FB_WIN32__
+-iftarget windows
 	-declarebool UNICODE
 	-ifdef UNICODE
 		-define UNICODE
