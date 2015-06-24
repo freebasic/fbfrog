@@ -1,4 +1,4 @@
-[ 1/23] __FB_LINUX__.(not __FB_64BIT__).(not __FB_ARM__)
+[ 1/23] linux-x86
 tests/cpp/expand/call-args-expect2va-given0.h(3): not enough arguments for 'm' macro call: 2 given, 3 needed
     m ( )
         ^

@@ -1,4 +1,4 @@
-[ 1/23] __FB_LINUX__.(not __FB_64BIT__).(not __FB_ARM__)
+[ 1/23] linux-x86
 tests/cpp/div-by-zero-1.h(2): division by zero
     # if 1 / 0 
                ^

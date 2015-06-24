@@ -1186,9 +1186,23 @@ private function hBuildIfConditionFor(byval bits as ApiBits) as ASTNODE ptr
 	dim expr as ASTNODE ptr
 
 	'' Build VEROR from the VERBLOCK's apis bitmask
-	for api as integer = 0 to frog.apicount - 1
-		if bits.isSet(api) then
-			var veror = astNewVEROR(astClone(frog.apis[api].verand))
+	for i as integer = 0 to frog.apicount - 1
+		if bits.isSet(i) then
+			var api = @frog.apis[i]
+			var verand = astClone(api->verand)
+
+			'' Conditions for API's target
+			if osinfo(api->target.os).has_arm then
+				astPrepend(verand, astNewDEFINEDfbarm(not archinfo(api->target.arch).is_arm))
+			end if
+			if osinfo(api->target.os).has_64bit then
+				astPrepend(verand, astNewDEFINEDfb64(not archinfo(api->target.arch).is_64bit))
+			end if
+			if frog.enabledoscount > 1 then
+				astPrepend(verand, astNewDEFINEDfbos(api->target.os))
+			end if
+
+			var veror = astNewVEROR(verand)
 			if expr then
 				expr = astNewVEROR(expr, veror)
 			else

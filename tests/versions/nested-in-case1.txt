@@ -1,27 +1,27 @@
-[ 1/25] __FB_LINUX__.(not __FB_64BIT__).(not __FB_ARM__)
-[ 2/25] __FB_LINUX__.__FB_64BIT__.(not __FB_ARM__)
-[ 3/25] __FB_LINUX__.(not __FB_64BIT__).__FB_ARM__
-[ 4/25] __FB_LINUX__.__FB_64BIT__.__FB_ARM__
-[ 5/25] __FB_FREEBSD__.(not __FB_64BIT__).(not __FB_ARM__)
-[ 6/25] __FB_FREEBSD__.__FB_64BIT__.(not __FB_ARM__)
-[ 7/25] __FB_FREEBSD__.(not __FB_64BIT__).__FB_ARM__
-[ 8/25] __FB_FREEBSD__.__FB_64BIT__.__FB_ARM__
-[ 9/25] __FB_OPENBSD__.(not __FB_64BIT__).(not __FB_ARM__)
-[10/25] __FB_OPENBSD__.__FB_64BIT__.(not __FB_ARM__)
-[11/25] __FB_OPENBSD__.(not __FB_64BIT__).__FB_ARM__
-[12/25] __FB_OPENBSD__.__FB_64BIT__.__FB_ARM__
-[13/25] __FB_NETBSD__.(not __FB_64BIT__).(not __FB_ARM__)
-[14/25] __FB_NETBSD__.__FB_64BIT__.(not __FB_ARM__)
-[15/25] __FB_NETBSD__.(not __FB_64BIT__).__FB_ARM__
-[16/25] __FB_NETBSD__.__FB_64BIT__.__FB_ARM__
-[17/25] __FB_DARWIN__.(not __FB_64BIT__)
-[18/25] __FB_DARWIN__.__FB_64BIT__
-[19/25] __FB_WIN32__.(not __FB_64BIT__).X
-[20/25] __FB_WIN32__.(not __FB_64BIT__).(not X)
-[21/25] __FB_WIN32__.__FB_64BIT__.X
-[22/25] __FB_WIN32__.__FB_64BIT__.(not X)
-[23/25] __FB_CYGWIN__.(not __FB_64BIT__)
-[24/25] __FB_CYGWIN__.__FB_64BIT__
-[25/25] __FB_DOS__
+[ 1/25] linux-x86
+[ 2/25] linux-x86_64
+[ 3/25] linux-arm
+[ 4/25] linux-aarch64
+[ 5/25] freebsd-x86
+[ 6/25] freebsd-x86_64
+[ 7/25] freebsd-arm
+[ 8/25] freebsd-aarch64
+[ 9/25] openbsd-x86
+[10/25] openbsd-x86_64
+[11/25] openbsd-arm
+[12/25] openbsd-aarch64
+[13/25] netbsd-x86
+[14/25] netbsd-x86_64
+[15/25] netbsd-arm
+[16/25] netbsd-aarch64
+[17/25] darwin-x86
+[18/25] darwin-x86_64
+[19/25] win32 X
+[20/25] win32 (not X)
+[21/25] win64 X
+[22/25] win64 (not X)
+[23/25] cygwin-x86
+[24/25] cygwin-x86_64
+[25/25] dos
 	tests/versions/nested-in-case1.h
 emitting: tests/versions/nested-in-case1.bi (0 declarations, 0 TODOs)

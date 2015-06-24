@@ -192,49 +192,6 @@ function frogLookupBiFromH(byval hfile as zstring ptr) as integer
 	function = bi
 end function
 
-type OsInfo
-	as zstring ptr id, fbdefine
-	as byte has_64bit, has_arm
-end type
-
-dim shared osinfo(0 to OS__COUNT-1) as OsInfo => { _
-	(@"linux"  , @"__FB_LINUX__"  ,  TRUE,  TRUE), _
-	(@"freebsd", @"__FB_FREEBSD__",  TRUE,  TRUE), _
-	(@"openbsd", @"__FB_OPENBSD__",  TRUE,  TRUE), _
-	(@"netbsd" , @"__FB_NETBSD__" ,  TRUE,  TRUE), _
-	(@"darwin" , @"__FB_DARWIN__" ,  TRUE, FALSE), _
-	(@"windows", @"__FB_WIN32__"  ,  TRUE, FALSE), _
-	(@"cygwin" , @"__FB_CYGWIN__" ,  TRUE, FALSE), _
-	(@"dos"    , @"__FB_DOS__"    , FALSE, FALSE)  _
-}
-
-type ArchInfo
-	id as zstring ptr
-	as byte is_64bit, is_arm
-end type
-
-dim shared archinfo(0 to ARCH__COUNT-1) as ArchInfo => { _
-	(@"x86"    , FALSE, FALSE), _
-	(@"x86_64" ,  TRUE, FALSE), _
-	(@"arm"    , FALSE,  TRUE), _
-	(@"aarch64",  TRUE,  TRUE)  _
-}
-
-function TargetInfo.id() as string
-	if (os = OS_DOS) and (arch = ARCH_X86) then
-		return "dos"
-	end if
-
-	if os = OS_WINDOWS then
-		select case arch
-		case ARCH_X86 : return "win32"
-		case ARCH_X86_64 : return "win64"
-		end select
-	end if
-
-	return *osinfo(os).id + "-" + *archinfo(arch).id
-end function
-
 '' Find a *.fbfrog or *.h file in fbfrog's include/ dir, its "library" of
 '' premade collections of pre-#defines etc. useful when creating bindings.
 private function hFindResource(byref filename as string) as string
@@ -587,6 +544,15 @@ end sub
 sub ApiInfo.print(byref ln as string)
 	astAppend(log, astNewTEXT(ln))
 end sub
+
+function ApiInfo.prettyId() as string
+	var s = target.id()
+	var extras = astDumpPrettyVersion(verand)
+	if len(extras) > 0 then
+		s += " " + extras
+	end if
+	function = s
+end function
 
 private function hTurnArgsIntoString(byval argc as integer, byval argv as zstring ptr ptr) as string
 	dim s as string
@@ -1355,42 +1321,11 @@ private sub frogEvaluateScript _
 	frogAddApi(conditions, options, target)
 end sub
 
-private function astBuildDEFINED(byval symbol as zstring ptr, byval negate as integer) as ASTNODE ptr
-	var n = astNewDEFINED(symbol)
-	if negate then n = astNew(ASTCLASS_NOT, n)
-	function = n
-end function
-
-private function astNewDEFINEDfb64(byval negate as integer) as ASTNODE ptr
-	function = astBuildDEFINED("__FB_64BIT__", negate)
-end function
-
-private function astNewDEFINEDfbarm(byval negate as integer) as ASTNODE ptr
-	function = astBuildDEFINED("__FB_ARM__", negate)
-end function
-
-private function astNewDEFINEDfbos(byval os as integer) as ASTNODE ptr
-	function = astNewDEFINED(osinfo(os).fbdefine)
-end function
-
 private sub maybeEvalForTarget(byval os as integer, byval arch as integer)
 	if frog.arch(arch) = FALSE then exit sub
 
 	var conditions = astNewGROUP()
 	var options = astNewGROUP()
-
-	'' Build list of #if conditions for this target (will be turned into VERAND later)
-	'' defined(__FB_<os>__) and [not] defined(__FB_64BIT__)
-	'' For DOS, we don't need to check __FB_64BIT__ at all.
-	if frog.enabledoscount > 1 then
-		astAppend(conditions, astNewDEFINEDfbos(os))
-	end if
-	if osinfo(os).has_64bit then
-		astAppend(conditions, astNewDEFINEDfb64(not archinfo(arch).is_64bit))
-	end if
-	if osinfo(os).has_arm then
-		astAppend(conditions, astNewDEFINEDfbarm(not archinfo(arch).is_arm))
-	end if
 
 	'' Add the CPP #define __FB_*__ for preprocessing of default.h
 	astAppend(options, astNewOPTION(OPT_DEFINE, osinfo(os).fbdefine))
@@ -1661,7 +1596,7 @@ end function
 	'' there is a small delay at each version.
 	dim as ASTNODE ptr final
 	for api as integer = 0 to frog.apicount - 1
-		print hMakeProgressString(api + 1, frog.apicount) + " " + astDumpPrettyVersion(frog.apis[api].verand)
+		print hMakeProgressString(api + 1, frog.apicount) + " " + frog.apis[api].prettyId()
 
 		'' Prepare the API options for the following cpp/c/highlevel steps (load them into hash tables etc.)
 		'' This writes into frog.bis to fill each .bi's ApiSpecificBiOptions.

@@ -1,4 +1,4 @@
-[ 1/23] __FB_LINUX__.(not __FB_64BIT__).(not __FB_ARM__)
+[ 1/23] linux-x86
 tests/cpp/guard/g.h(5): #warning
     # warning g . h : inside # ifndef HAD_G_1 block 
               ^
@@ -8,7 +8,7 @@ tests/cpp/guard/g.h(10): #warning
 tests/cpp/guard/g.h(10): #warning
     # warning g . h : inside # ifndef HAD_G_2 block 
               ^
-[ 2/23] __FB_LINUX__.__FB_64BIT__.(not __FB_ARM__)
+[ 2/23] linux-x86_64
 tests/cpp/guard/g.h(5): #warning
     # warning g . h : inside # ifndef HAD_G_1 block 
               ^
@@ -18,7 +18,7 @@ tests/cpp/guard/g.h(10): #warning
 tests/cpp/guard/g.h(10): #warning
     # warning g . h : inside # ifndef HAD_G_2 block 
               ^
-[ 3/23] __FB_LINUX__.(not __FB_64BIT__).__FB_ARM__
+[ 3/23] linux-arm
 tests/cpp/guard/g.h(5): #warning
     # warning g . h : inside # ifndef HAD_G_1 block 
               ^
@@ -28,7 +28,7 @@ tests/cpp/guard/g.h(10): #warning
 tests/cpp/guard/g.h(10): #warning
     # warning g . h : inside # ifndef HAD_G_2 block 
               ^
-[ 4/23] __FB_LINUX__.__FB_64BIT__.__FB_ARM__
+[ 4/23] linux-aarch64
 tests/cpp/guard/g.h(5): #warning
     # warning g . h : inside # ifndef HAD_G_1 block 
               ^
@@ -38,7 +38,7 @@ tests/cpp/guard/g.h(10): #warning
 tests/cpp/guard/g.h(10): #warning
     # warning g . h : inside # ifndef HAD_G_2 block 
               ^
-[ 5/23] __FB_FREEBSD__.(not __FB_64BIT__).(not __FB_ARM__)
+[ 5/23] freebsd-x86
 tests/cpp/guard/g.h(5): #warning
     # warning g . h : inside # ifndef HAD_G_1 block 
               ^
@@ -48,7 +48,7 @@ tests/cpp/guard/g.h(10): #warning
 tests/cpp/guard/g.h(10): #warning
     # warning g . h : inside # ifndef HAD_G_2 block 
               ^
-[ 6/23] __FB_FREEBSD__.__FB_64BIT__.(not __FB_ARM__)
+[ 6/23] freebsd-x86_64
 tests/cpp/guard/g.h(5): #warning
     # warning g . h : inside # ifndef HAD_G_1 block 
               ^
@@ -58,7 +58,7 @@ tests/cpp/guard/g.h(10): #warning
 tests/cpp/guard/g.h(10): #warning
     # warning g . h : inside # ifndef HAD_G_2 block 
               ^
-[ 7/23] __FB_FREEBSD__.(not __FB_64BIT__).__FB_ARM__
+[ 7/23] freebsd-arm
 tests/cpp/guard/g.h(5): #warning
     # warning g . h : inside # ifndef HAD_G_1 block 
               ^
@@ -68,7 +68,7 @@ tests/cpp/guard/g.h(10): #warning
 tests/cpp/guard/g.h(10): #warning
     # warning g . h : inside # ifndef HAD_G_2 block 
               ^
-[ 8/23] __FB_FREEBSD__.__FB_64BIT__.__FB_ARM__
+[ 8/23] freebsd-aarch64
 tests/cpp/guard/g.h(5): #warning
     # warning g . h : inside # ifndef HAD_G_1 block 
               ^
@@ -78,7 +78,7 @@ tests/cpp/guard/g.h(10): #warning
 tests/cpp/guard/g.h(10): #warning
     # warning g . h : inside # ifndef HAD_G_2 block 
               ^
-[ 9/23] __FB_OPENBSD__.(not __FB_64BIT__).(not __FB_ARM__)
+[ 9/23] openbsd-x86
 tests/cpp/guard/g.h(5): #warning
     # warning g . h : inside # ifndef HAD_G_1 block 
               ^
@@ -88,7 +88,7 @@ tests/cpp/guard/g.h(10): #warning
 tests/cpp/guard/g.h(10): #warning
     # warning g . h : inside # ifndef HAD_G_2 block 
               ^
-[10/23] __FB_OPENBSD__.__FB_64BIT__.(not __FB_ARM__)
+[10/23] openbsd-x86_64
 tests/cpp/guard/g.h(5): #warning
     # warning g . h : inside # ifndef HAD_G_1 block 
               ^
@@ -98,7 +98,7 @@ tests/cpp/guard/g.h(10): #warning
 tests/cpp/guard/g.h(10): #warning
     # warning g . h : inside # ifndef HAD_G_2 block 
               ^
-[11/23] __FB_OPENBSD__.(not __FB_64BIT__).__FB_ARM__
+[11/23] openbsd-arm
 tests/cpp/guard/g.h(5): #warning
     # warning g . h : inside # ifndef HAD_G_1 block 
               ^
@@ -108,7 +108,7 @@ tests/cpp/guard/g.h(10): #warning
 tests/cpp/guard/g.h(10): #warning
     # warning g . h : inside # ifndef HAD_G_2 block 
               ^
-[12/23] __FB_OPENBSD__.__FB_64BIT__.__FB_ARM__
+[12/23] openbsd-aarch64
 tests/cpp/guard/g.h(5): #warning
     # warning g . h : inside # ifndef HAD_G_1 block 
               ^
@@ -118,7 +118,7 @@ tests/cpp/guard/g.h(10): #warning
 tests/cpp/guard/g.h(10): #warning
     # warning g . h : inside # ifndef HAD_G_2 block 
               ^
-[13/23] __FB_NETBSD__.(not __FB_64BIT__).(not __FB_ARM__)
+[13/23] netbsd-x86
 tests/cpp/guard/g.h(5): #warning
     # warning g . h : inside # ifndef HAD_G_1 block 
               ^
@@ -128,7 +128,7 @@ tests/cpp/guard/g.h(10): #warning
 tests/cpp/guard/g.h(10): #warning
     # warning g . h : inside # ifndef HAD_G_2 block 
               ^
-[14/23] __FB_NETBSD__.__FB_64BIT__.(not __FB_ARM__)
+[14/23] netbsd-x86_64
 tests/cpp/guard/g.h(5): #warning
     # warning g . h : inside # ifndef HAD_G_1 block 
               ^
@@ -138,7 +138,7 @@ tests/cpp/guard/g.h(10): #warning
 tests/cpp/guard/g.h(10): #warning
     # warning g . h : inside # ifndef HAD_G_2 block 
               ^
-[15/23] __FB_NETBSD__.(not __FB_64BIT__).__FB_ARM__
+[15/23] netbsd-arm
 tests/cpp/guard/g.h(5): #warning
     # warning g . h : inside # ifndef HAD_G_1 block 
               ^
@@ -148,7 +148,7 @@ tests/cpp/guard/g.h(10): #warning
 tests/cpp/guard/g.h(10): #warning
     # warning g . h : inside # ifndef HAD_G_2 block 
               ^
-[16/23] __FB_NETBSD__.__FB_64BIT__.__FB_ARM__
+[16/23] netbsd-aarch64
 tests/cpp/guard/g.h(5): #warning
     # warning g . h : inside # ifndef HAD_G_1 block 
               ^
@@ -158,7 +158,7 @@ tests/cpp/guard/g.h(10): #warning
 tests/cpp/guard/g.h(10): #warning
     # warning g . h : inside # ifndef HAD_G_2 block 
               ^
-[17/23] __FB_DARWIN__.(not __FB_64BIT__)
+[17/23] darwin-x86
 tests/cpp/guard/g.h(5): #warning
     # warning g . h : inside # ifndef HAD_G_1 block 
               ^
@@ -168,7 +168,7 @@ tests/cpp/guard/g.h(10): #warning
 tests/cpp/guard/g.h(10): #warning
     # warning g . h : inside # ifndef HAD_G_2 block 
               ^
-[18/23] __FB_DARWIN__.__FB_64BIT__
+[18/23] darwin-x86_64
 tests/cpp/guard/g.h(5): #warning
     # warning g . h : inside # ifndef HAD_G_1 block 
               ^
@@ -178,7 +178,7 @@ tests/cpp/guard/g.h(10): #warning
 tests/cpp/guard/g.h(10): #warning
     # warning g . h : inside # ifndef HAD_G_2 block 
               ^
-[19/23] __FB_WIN32__.(not __FB_64BIT__)
+[19/23] win32
 tests/cpp/guard/g.h(5): #warning
     # warning g . h : inside # ifndef HAD_G_1 block 
               ^
@@ -188,7 +188,7 @@ tests/cpp/guard/g.h(10): #warning
 tests/cpp/guard/g.h(10): #warning
     # warning g . h : inside # ifndef HAD_G_2 block 
               ^
-[20/23] __FB_WIN32__.__FB_64BIT__
+[20/23] win64
 tests/cpp/guard/g.h(5): #warning
     # warning g . h : inside # ifndef HAD_G_1 block 
               ^
@@ -198,7 +198,7 @@ tests/cpp/guard/g.h(10): #warning
 tests/cpp/guard/g.h(10): #warning
     # warning g . h : inside # ifndef HAD_G_2 block 
               ^
-[21/23] __FB_CYGWIN__.(not __FB_64BIT__)
+[21/23] cygwin-x86
 tests/cpp/guard/g.h(5): #warning
     # warning g . h : inside # ifndef HAD_G_1 block 
               ^
@@ -208,7 +208,7 @@ tests/cpp/guard/g.h(10): #warning
 tests/cpp/guard/g.h(10): #warning
     # warning g . h : inside # ifndef HAD_G_2 block 
               ^
-[22/23] __FB_CYGWIN__.__FB_64BIT__
+[22/23] cygwin-x86_64
 tests/cpp/guard/g.h(5): #warning
     # warning g . h : inside # ifndef HAD_G_1 block 
               ^
@@ -218,7 +218,7 @@ tests/cpp/guard/g.h(10): #warning
 tests/cpp/guard/g.h(10): #warning
     # warning g . h : inside # ifndef HAD_G_2 block 
               ^
-[23/23] __FB_DOS__
+[23/23] dos
 tests/cpp/guard/g.h(5): #warning
     # warning g . h : inside # ifndef HAD_G_1 block 
               ^

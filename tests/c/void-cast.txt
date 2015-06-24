@@ -1,25 +1,25 @@
-[ 1/23] __FB_LINUX__.(not __FB_64BIT__).(not __FB_ARM__)
-[ 2/23] __FB_LINUX__.__FB_64BIT__.(not __FB_ARM__)
-[ 3/23] __FB_LINUX__.(not __FB_64BIT__).__FB_ARM__
-[ 4/23] __FB_LINUX__.__FB_64BIT__.__FB_ARM__
-[ 5/23] __FB_FREEBSD__.(not __FB_64BIT__).(not __FB_ARM__)
-[ 6/23] __FB_FREEBSD__.__FB_64BIT__.(not __FB_ARM__)
-[ 7/23] __FB_FREEBSD__.(not __FB_64BIT__).__FB_ARM__
-[ 8/23] __FB_FREEBSD__.__FB_64BIT__.__FB_ARM__
-[ 9/23] __FB_OPENBSD__.(not __FB_64BIT__).(not __FB_ARM__)
-[10/23] __FB_OPENBSD__.__FB_64BIT__.(not __FB_ARM__)
-[11/23] __FB_OPENBSD__.(not __FB_64BIT__).__FB_ARM__
-[12/23] __FB_OPENBSD__.__FB_64BIT__.__FB_ARM__
-[13/23] __FB_NETBSD__.(not __FB_64BIT__).(not __FB_ARM__)
-[14/23] __FB_NETBSD__.__FB_64BIT__.(not __FB_ARM__)
-[15/23] __FB_NETBSD__.(not __FB_64BIT__).__FB_ARM__
-[16/23] __FB_NETBSD__.__FB_64BIT__.__FB_ARM__
-[17/23] __FB_DARWIN__.(not __FB_64BIT__)
-[18/23] __FB_DARWIN__.__FB_64BIT__
-[19/23] __FB_WIN32__.(not __FB_64BIT__)
-[20/23] __FB_WIN32__.__FB_64BIT__
-[21/23] __FB_CYGWIN__.(not __FB_64BIT__)
-[22/23] __FB_CYGWIN__.__FB_64BIT__
-[23/23] __FB_DOS__
+[ 1/23] linux-x86
+[ 2/23] linux-x86_64
+[ 3/23] linux-arm
+[ 4/23] linux-aarch64
+[ 5/23] freebsd-x86
+[ 6/23] freebsd-x86_64
+[ 7/23] freebsd-arm
+[ 8/23] freebsd-aarch64
+[ 9/23] openbsd-x86
+[10/23] openbsd-x86_64
+[11/23] openbsd-arm
+[12/23] openbsd-aarch64
+[13/23] netbsd-x86
+[14/23] netbsd-x86_64
+[15/23] netbsd-arm
+[16/23] netbsd-aarch64
+[17/23] darwin-x86
+[18/23] darwin-x86_64
+[19/23] win32
+[20/23] win64
+[21/23] cygwin-x86
+[22/23] cygwin-x86_64
+[23/23] dos
 	tests/c/void-cast.h
 emitting: tests/c/void-cast.bi (1 declaration, 0 TODOs)

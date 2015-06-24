@@ -1,92 +1,92 @@
-[ 1/23] __FB_LINUX__.(not __FB_64BIT__).(not __FB_ARM__)
+[ 1/23] linux-x86
 tests/c/missing-semicolon.h(2): missing ';' to finish this declaration
     int a
         ^
-[ 2/23] __FB_LINUX__.__FB_64BIT__.(not __FB_ARM__)
+[ 2/23] linux-x86_64
 tests/c/missing-semicolon.h(2): missing ';' to finish this declaration
     int a
         ^
-[ 3/23] __FB_LINUX__.(not __FB_64BIT__).__FB_ARM__
+[ 3/23] linux-arm
 tests/c/missing-semicolon.h(2): missing ';' to finish this declaration
     int a
         ^
-[ 4/23] __FB_LINUX__.__FB_64BIT__.__FB_ARM__
+[ 4/23] linux-aarch64
 tests/c/missing-semicolon.h(2): missing ';' to finish this declaration
     int a
         ^
-[ 5/23] __FB_FREEBSD__.(not __FB_64BIT__).(not __FB_ARM__)
+[ 5/23] freebsd-x86
 tests/c/missing-semicolon.h(2): missing ';' to finish this declaration
     int a
         ^
-[ 6/23] __FB_FREEBSD__.__FB_64BIT__.(not __FB_ARM__)
+[ 6/23] freebsd-x86_64
 tests/c/missing-semicolon.h(2): missing ';' to finish this declaration
     int a
         ^
-[ 7/23] __FB_FREEBSD__.(not __FB_64BIT__).__FB_ARM__
+[ 7/23] freebsd-arm
 tests/c/missing-semicolon.h(2): missing ';' to finish this declaration
     int a
         ^
-[ 8/23] __FB_FREEBSD__.__FB_64BIT__.__FB_ARM__
+[ 8/23] freebsd-aarch64
 tests/c/missing-semicolon.h(2): missing ';' to finish this declaration
     int a
         ^
-[ 9/23] __FB_OPENBSD__.(not __FB_64BIT__).(not __FB_ARM__)
+[ 9/23] openbsd-x86
 tests/c/missing-semicolon.h(2): missing ';' to finish this declaration
     int a
         ^
-[10/23] __FB_OPENBSD__.__FB_64BIT__.(not __FB_ARM__)
+[10/23] openbsd-x86_64
 tests/c/missing-semicolon.h(2): missing ';' to finish this declaration
     int a
         ^
-[11/23] __FB_OPENBSD__.(not __FB_64BIT__).__FB_ARM__
+[11/23] openbsd-arm
 tests/c/missing-semicolon.h(2): missing ';' to finish this declaration
     int a
         ^
-[12/23] __FB_OPENBSD__.__FB_64BIT__.__FB_ARM__
+[12/23] openbsd-aarch64
 tests/c/missing-semicolon.h(2): missing ';' to finish this declaration
     int a
         ^
-[13/23] __FB_NETBSD__.(not __FB_64BIT__).(not __FB_ARM__)
+[13/23] netbsd-x86
 tests/c/missing-semicolon.h(2): missing ';' to finish this declaration
     int a
         ^
-[14/23] __FB_NETBSD__.__FB_64BIT__.(not __FB_ARM__)
+[14/23] netbsd-x86_64
 tests/c/missing-semicolon.h(2): missing ';' to finish this declaration
     int a
         ^
-[15/23] __FB_NETBSD__.(not __FB_64BIT__).__FB_ARM__
+[15/23] netbsd-arm
 tests/c/missing-semicolon.h(2): missing ';' to finish this declaration
     int a
         ^
-[16/23] __FB_NETBSD__.__FB_64BIT__.__FB_ARM__
+[16/23] netbsd-aarch64
 tests/c/missing-semicolon.h(2): missing ';' to finish this declaration
     int a
         ^
-[17/23] __FB_DARWIN__.(not __FB_64BIT__)
+[17/23] darwin-x86
 tests/c/missing-semicolon.h(2): missing ';' to finish this declaration
     int a
         ^
-[18/23] __FB_DARWIN__.__FB_64BIT__
+[18/23] darwin-x86_64
 tests/c/missing-semicolon.h(2): missing ';' to finish this declaration
     int a
         ^
-[19/23] __FB_WIN32__.(not __FB_64BIT__)
+[19/23] win32
 tests/c/missing-semicolon.h(2): missing ';' to finish this declaration
     int a
         ^
-[20/23] __FB_WIN32__.__FB_64BIT__
+[20/23] win64
 tests/c/missing-semicolon.h(2): missing ';' to finish this declaration
     int a
         ^
-[21/23] __FB_CYGWIN__.(not __FB_64BIT__)
+[21/23] cygwin-x86
 tests/c/missing-semicolon.h(2): missing ';' to finish this declaration
     int a
         ^
-[22/23] __FB_CYGWIN__.__FB_64BIT__
+[22/23] cygwin-x86_64
 tests/c/missing-semicolon.h(2): missing ';' to finish this declaration
     int a
         ^
-[23/23] __FB_DOS__
+[23/23] dos
 tests/c/missing-semicolon.h(2): missing ';' to finish this declaration
     int a
         ^

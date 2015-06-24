@@ -1307,6 +1307,39 @@ end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
+dim shared osinfo(0 to OS__COUNT-1) as OsInfo => { _
+	(@"linux"  , @"__FB_LINUX__"  ,  TRUE,  TRUE), _
+	(@"freebsd", @"__FB_FREEBSD__",  TRUE,  TRUE), _
+	(@"openbsd", @"__FB_OPENBSD__",  TRUE,  TRUE), _
+	(@"netbsd" , @"__FB_NETBSD__" ,  TRUE,  TRUE), _
+	(@"darwin" , @"__FB_DARWIN__" ,  TRUE, FALSE), _
+	(@"windows", @"__FB_WIN32__"  ,  TRUE, FALSE), _
+	(@"cygwin" , @"__FB_CYGWIN__" ,  TRUE, FALSE), _
+	(@"dos"    , @"__FB_DOS__"    , FALSE, FALSE)  _
+}
+
+dim shared archinfo(0 to ARCH__COUNT-1) as ArchInfo => { _
+	(@"x86"    , FALSE, FALSE), _
+	(@"x86_64" ,  TRUE, FALSE), _
+	(@"arm"    , FALSE,  TRUE), _
+	(@"aarch64",  TRUE,  TRUE)  _
+}
+
+function TargetInfo.id() as string
+	if (os = OS_DOS) and (arch = ARCH_X86) then
+		return "dos"
+	end if
+
+	if os = OS_WINDOWS then
+		select case arch
+		case ARCH_X86 : return "win32"
+		case ARCH_X86_64 : return "win64"
+		end select
+	end if
+
+	return *osinfo(os).id + "-" + *archinfo(arch).id
+end function
+
 function ApiBits.calcAccess(byval api as integer, byref element as integer) as ulongint
 	assert(element = 0)
 	while api >= 64

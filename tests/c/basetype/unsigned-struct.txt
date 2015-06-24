@@ -1,92 +1,92 @@
-[ 1/23] __FB_LINUX__.(not __FB_64BIT__).(not __FB_ARM__)
+[ 1/23] linux-x86
 tests/c/basetype/unsigned-struct.h(2): SIGNED|UNSIGNED|SHORT|LONG modifiers used with void/float/double/typedef/UDT
     static unsigned struct UDT i ;
                                ^
-[ 2/23] __FB_LINUX__.__FB_64BIT__.(not __FB_ARM__)
+[ 2/23] linux-x86_64
 tests/c/basetype/unsigned-struct.h(2): SIGNED|UNSIGNED|SHORT|LONG modifiers used with void/float/double/typedef/UDT
     static unsigned struct UDT i ;
                                ^
-[ 3/23] __FB_LINUX__.(not __FB_64BIT__).__FB_ARM__
+[ 3/23] linux-arm
 tests/c/basetype/unsigned-struct.h(2): SIGNED|UNSIGNED|SHORT|LONG modifiers used with void/float/double/typedef/UDT
     static unsigned struct UDT i ;
                                ^
-[ 4/23] __FB_LINUX__.__FB_64BIT__.__FB_ARM__
+[ 4/23] linux-aarch64
 tests/c/basetype/unsigned-struct.h(2): SIGNED|UNSIGNED|SHORT|LONG modifiers used with void/float/double/typedef/UDT
     static unsigned struct UDT i ;
                                ^
-[ 5/23] __FB_FREEBSD__.(not __FB_64BIT__).(not __FB_ARM__)
+[ 5/23] freebsd-x86
 tests/c/basetype/unsigned-struct.h(2): SIGNED|UNSIGNED|SHORT|LONG modifiers used with void/float/double/typedef/UDT
     static unsigned struct UDT i ;
                                ^
-[ 6/23] __FB_FREEBSD__.__FB_64BIT__.(not __FB_ARM__)
+[ 6/23] freebsd-x86_64
 tests/c/basetype/unsigned-struct.h(2): SIGNED|UNSIGNED|SHORT|LONG modifiers used with void/float/double/typedef/UDT
     static unsigned struct UDT i ;
                                ^
-[ 7/23] __FB_FREEBSD__.(not __FB_64BIT__).__FB_ARM__
+[ 7/23] freebsd-arm
 tests/c/basetype/unsigned-struct.h(2): SIGNED|UNSIGNED|SHORT|LONG modifiers used with void/float/double/typedef/UDT
     static unsigned struct UDT i ;
                                ^
-[ 8/23] __FB_FREEBSD__.__FB_64BIT__.__FB_ARM__
+[ 8/23] freebsd-aarch64
 tests/c/basetype/unsigned-struct.h(2): SIGNED|UNSIGNED|SHORT|LONG modifiers used with void/float/double/typedef/UDT
     static unsigned struct UDT i ;
                                ^
-[ 9/23] __FB_OPENBSD__.(not __FB_64BIT__).(not __FB_ARM__)
+[ 9/23] openbsd-x86
 tests/c/basetype/unsigned-struct.h(2): SIGNED|UNSIGNED|SHORT|LONG modifiers used with void/float/double/typedef/UDT
     static unsigned struct UDT i ;
                                ^
-[10/23] __FB_OPENBSD__.__FB_64BIT__.(not __FB_ARM__)
+[10/23] openbsd-x86_64
 tests/c/basetype/unsigned-struct.h(2): SIGNED|UNSIGNED|SHORT|LONG modifiers used with void/float/double/typedef/UDT
     static unsigned struct UDT i ;
                                ^
-[11/23] __FB_OPENBSD__.(not __FB_64BIT__).__FB_ARM__
+[11/23] openbsd-arm
 tests/c/basetype/unsigned-struct.h(2): SIGNED|UNSIGNED|SHORT|LONG modifiers used with void/float/double/typedef/UDT
     static unsigned struct UDT i ;
                                ^
-[12/23] __FB_OPENBSD__.__FB_64BIT__.__FB_ARM__
+[12/23] openbsd-aarch64
 tests/c/basetype/unsigned-struct.h(2): SIGNED|UNSIGNED|SHORT|LONG modifiers used with void/float/double/typedef/UDT
     static unsigned struct UDT i ;
                                ^
-[13/23] __FB_NETBSD__.(not __FB_64BIT__).(not __FB_ARM__)
+[13/23] netbsd-x86
 tests/c/basetype/unsigned-struct.h(2): SIGNED|UNSIGNED|SHORT|LONG modifiers used with void/float/double/typedef/UDT
     static unsigned struct UDT i ;
                                ^
-[14/23] __FB_NETBSD__.__FB_64BIT__.(not __FB_ARM__)
+[14/23] netbsd-x86_64
 tests/c/basetype/unsigned-struct.h(2): SIGNED|UNSIGNED|SHORT|LONG modifiers used with void/float/double/typedef/UDT
     static unsigned struct UDT i ;
                                ^
-[15/23] __FB_NETBSD__.(not __FB_64BIT__).__FB_ARM__
+[15/23] netbsd-arm
 tests/c/basetype/unsigned-struct.h(2): SIGNED|UNSIGNED|SHORT|LONG modifiers used with void/float/double/typedef/UDT
     static unsigned struct UDT i ;
                                ^
-[16/23] __FB_NETBSD__.__FB_64BIT__.__FB_ARM__
+[16/23] netbsd-aarch64
 tests/c/basetype/unsigned-struct.h(2): SIGNED|UNSIGNED|SHORT|LONG modifiers used with void/float/double/typedef/UDT
     static unsigned struct UDT i ;
                                ^
-[17/23] __FB_DARWIN__.(not __FB_64BIT__)
+[17/23] darwin-x86
 tests/c/basetype/unsigned-struct.h(2): SIGNED|UNSIGNED|SHORT|LONG modifiers used with void/float/double/typedef/UDT
     static unsigned struct UDT i ;
                                ^
-[18/23] __FB_DARWIN__.__FB_64BIT__
+[18/23] darwin-x86_64
 tests/c/basetype/unsigned-struct.h(2): SIGNED|UNSIGNED|SHORT|LONG modifiers used with void/float/double/typedef/UDT
     static unsigned struct UDT i ;
                                ^
-[19/23] __FB_WIN32__.(not __FB_64BIT__)
+[19/23] win32
 tests/c/basetype/unsigned-struct.h(2): SIGNED|UNSIGNED|SHORT|LONG modifiers used with void/float/double/typedef/UDT
     static unsigned struct UDT i ;
                                ^
-[20/23] __FB_WIN32__.__FB_64BIT__
+[20/23] win64
 tests/c/basetype/unsigned-struct.h(2): SIGNED|UNSIGNED|SHORT|LONG modifiers used with void/float/double/typedef/UDT
     static unsigned struct UDT i ;
                                ^
-[21/23] __FB_CYGWIN__.(not __FB_64BIT__)
+[21/23] cygwin-x86
 tests/c/basetype/unsigned-struct.h(2): SIGNED|UNSIGNED|SHORT|LONG modifiers used with void/float/double/typedef/UDT
     static unsigned struct UDT i ;
                                ^
-[22/23] __FB_CYGWIN__.__FB_64BIT__
+[22/23] cygwin-x86_64
 tests/c/basetype/unsigned-struct.h(2): SIGNED|UNSIGNED|SHORT|LONG modifiers used with void/float/double/typedef/UDT
     static unsigned struct UDT i ;
                                ^
-[23/23] __FB_DOS__
+[23/23] dos
 tests/c/basetype/unsigned-struct.h(2): SIGNED|UNSIGNED|SHORT|LONG modifiers used with void/float/double/typedef/UDT
     static unsigned struct UDT i ;
                                ^

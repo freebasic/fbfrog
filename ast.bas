@@ -212,6 +212,24 @@ sub astBuildGroupAndAppend(byref group as ASTNODE ptr, byval n as ASTNODE ptr)
 	astAppend(group, n)
 end sub
 
+private function astBuildDEFINED(byval symbol as zstring ptr, byval negate as integer) as ASTNODE ptr
+	var n = astNewDEFINED(symbol)
+	if negate then n = astNew(ASTCLASS_NOT, n)
+	function = n
+end function
+
+function astNewDEFINEDfb64(byval negate as integer) as ASTNODE ptr
+	function = astBuildDEFINED("__FB_64BIT__", negate)
+end function
+
+function astNewDEFINEDfbarm(byval negate as integer) as ASTNODE ptr
+	function = astBuildDEFINED("__FB_ARM__", negate)
+end function
+
+function astNewDEFINEDfbos(byval os as integer) as ASTNODE ptr
+	function = astNewDEFINED(osinfo(os).fbdefine)
+end function
+
 function astNewOPTION(byval opt as integer, byval text1 as zstring ptr, byval text2 as zstring ptr) as ASTNODE ptr
 	var n = astNew(ASTCLASS_OPTION, text1)
 	astSetAlias(n, text2)

@@ -1,4 +1,4 @@
-[ 1/23] __FB_LINUX__.(not __FB_64BIT__).(not __FB_ARM__)
+[ 1/23] linux-x86
 tests/c/macro-body/macro-body-unknown-construct.h(3): failed to parse full #define body
     # define m void f ( void 
                     ^
@@ -17,7 +17,7 @@ tests/c/macro-body/macro-body-unknown-construct.h(10): failed to parse full #def
 tests/c/macro-body/macro-body-unknown-construct.h(13): missing '}' to close anonymous enum block
     # define M1 enum { A , 
                            ^
-[ 2/23] __FB_LINUX__.__FB_64BIT__.(not __FB_ARM__)
+[ 2/23] linux-x86_64
 tests/c/macro-body/macro-body-unknown-construct.h(3): failed to parse full #define body
     # define m void f ( void 
                     ^
@@ -36,7 +36,7 @@ tests/c/macro-body/macro-body-unknown-construct.h(10): failed to parse full #def
 tests/c/macro-body/macro-body-unknown-construct.h(13): missing '}' to close anonymous enum block
     # define M1 enum { A , 
                            ^
-[ 3/23] __FB_LINUX__.(not __FB_64BIT__).__FB_ARM__
+[ 3/23] linux-arm
 tests/c/macro-body/macro-body-unknown-construct.h(3): failed to parse full #define body
     # define m void f ( void 
                     ^
@@ -55,7 +55,7 @@ tests/c/macro-body/macro-body-unknown-construct.h(10): failed to parse full #def
 tests/c/macro-body/macro-body-unknown-construct.h(13): missing '}' to close anonymous enum block
     # define M1 enum { A , 
                            ^
-[ 4/23] __FB_LINUX__.__FB_64BIT__.__FB_ARM__
+[ 4/23] linux-aarch64
 tests/c/macro-body/macro-body-unknown-construct.h(3): failed to parse full #define body
     # define m void f ( void 
                     ^
@@ -74,7 +74,7 @@ tests/c/macro-body/macro-body-unknown-construct.h(10): failed to parse full #def
 tests/c/macro-body/macro-body-unknown-construct.h(13): missing '}' to close anonymous enum block
     # define M1 enum { A , 
                            ^
-[ 5/23] __FB_FREEBSD__.(not __FB_64BIT__).(not __FB_ARM__)
+[ 5/23] freebsd-x86
 tests/c/macro-body/macro-body-unknown-construct.h(3): failed to parse full #define body
     # define m void f ( void 
                     ^
@@ -93,7 +93,7 @@ tests/c/macro-body/macro-body-unknown-construct.h(10): failed to parse full #def
 tests/c/macro-body/macro-body-unknown-construct.h(13): missing '}' to close anonymous enum block
     # define M1 enum { A , 
                            ^
-[ 6/23] __FB_FREEBSD__.__FB_64BIT__.(not __FB_ARM__)
+[ 6/23] freebsd-x86_64
 tests/c/macro-body/macro-body-unknown-construct.h(3): failed to parse full #define body
     # define m void f ( void 
                     ^
@@ -112,7 +112,7 @@ tests/c/macro-body/macro-body-unknown-construct.h(10): failed to parse full #def
 tests/c/macro-body/macro-body-unknown-construct.h(13): missing '}' to close anonymous enum block
     # define M1 enum { A , 
                            ^
-[ 7/23] __FB_FREEBSD__.(not __FB_64BIT__).__FB_ARM__
+[ 7/23] freebsd-arm
 tests/c/macro-body/macro-body-unknown-construct.h(3): failed to parse full #define body
     # define m void f ( void 
                     ^
@@ -131,7 +131,7 @@ tests/c/macro-body/macro-body-unknown-construct.h(10): failed to parse full #def
 tests/c/macro-body/macro-body-unknown-construct.h(13): missing '}' to close anonymous enum block
     # define M1 enum { A , 
                            ^
-[ 8/23] __FB_FREEBSD__.__FB_64BIT__.__FB_ARM__
+[ 8/23] freebsd-aarch64
 tests/c/macro-body/macro-body-unknown-construct.h(3): failed to parse full #define body
     # define m void f ( void 
                     ^
@@ -150,7 +150,7 @@ tests/c/macro-body/macro-body-unknown-construct.h(10): failed to parse full #def
 tests/c/macro-body/macro-body-unknown-construct.h(13): missing '}' to close anonymous enum block
     # define M1 enum { A , 
                            ^
-[ 9/23] __FB_OPENBSD__.(not __FB_64BIT__).(not __FB_ARM__)
+[ 9/23] openbsd-x86
 tests/c/macro-body/macro-body-unknown-construct.h(3): failed to parse full #define body
     # define m void f ( void 
                     ^
@@ -169,7 +169,7 @@ tests/c/macro-body/macro-body-unknown-construct.h(10): failed to parse full #def
 tests/c/macro-body/macro-body-unknown-construct.h(13): missing '}' to close anonymous enum block
     # define M1 enum { A , 
                            ^
-[10/23] __FB_OPENBSD__.__FB_64BIT__.(not __FB_ARM__)
+[10/23] openbsd-x86_64
 tests/c/macro-body/macro-body-unknown-construct.h(3): failed to parse full #define body
     # define m void f ( void 
                     ^
@@ -188,7 +188,7 @@ tests/c/macro-body/macro-body-unknown-construct.h(10): failed to parse full #def
 tests/c/macro-body/macro-body-unknown-construct.h(13): missing '}' to close anonymous enum block
     # define M1 enum { A , 
                            ^
-[11/23] __FB_OPENBSD__.(not __FB_64BIT__).__FB_ARM__
+[11/23] openbsd-arm
 tests/c/macro-body/macro-body-unknown-construct.h(3): failed to parse full #define body
     # define m void f ( void 
                     ^
@@ -207,7 +207,7 @@ tests/c/macro-body/macro-body-unknown-construct.h(10): failed to parse full #def
 tests/c/macro-body/macro-body-unknown-construct.h(13): missing '}' to close anonymous enum block
     # define M1 enum { A , 
                            ^
-[12/23] __FB_OPENBSD__.__FB_64BIT__.__FB_ARM__
+[12/23] openbsd-aarch64
 tests/c/macro-body/macro-body-unknown-construct.h(3): failed to parse full #define body
     # define m void f ( void 
                     ^
@@ -226,7 +226,7 @@ tests/c/macro-body/macro-body-unknown-construct.h(10): failed to parse full #def
 tests/c/macro-body/macro-body-unknown-construct.h(13): missing '}' to close anonymous enum block
     # define M1 enum { A , 
                            ^
-[13/23] __FB_NETBSD__.(not __FB_64BIT__).(not __FB_ARM__)
+[13/23] netbsd-x86
 tests/c/macro-body/macro-body-unknown-construct.h(3): failed to parse full #define body
     # define m void f ( void 
                     ^
@@ -245,7 +245,7 @@ tests/c/macro-body/macro-body-unknown-construct.h(10): failed to parse full #def
 tests/c/macro-body/macro-body-unknown-construct.h(13): missing '}' to close anonymous enum block
     # define M1 enum { A , 
                            ^
-[14/23] __FB_NETBSD__.__FB_64BIT__.(not __FB_ARM__)
+[14/23] netbsd-x86_64
 tests/c/macro-body/macro-body-unknown-construct.h(3): failed to parse full #define body
     # define m void f ( void 
                     ^
@@ -264,7 +264,7 @@ tests/c/macro-body/macro-body-unknown-construct.h(10): failed to parse full #def
 tests/c/macro-body/macro-body-unknown-construct.h(13): missing '}' to close anonymous enum block
     # define M1 enum { A , 
                            ^
-[15/23] __FB_NETBSD__.(not __FB_64BIT__).__FB_ARM__
+[15/23] netbsd-arm
 tests/c/macro-body/macro-body-unknown-construct.h(3): failed to parse full #define body
     # define m void f ( void 
                     ^
@@ -283,7 +283,7 @@ tests/c/macro-body/macro-body-unknown-construct.h(10): failed to parse full #def
 tests/c/macro-body/macro-body-unknown-construct.h(13): missing '}' to close anonymous enum block
     # define M1 enum { A , 
                            ^
-[16/23] __FB_NETBSD__.__FB_64BIT__.__FB_ARM__
+[16/23] netbsd-aarch64
 tests/c/macro-body/macro-body-unknown-construct.h(3): failed to parse full #define body
     # define m void f ( void 
                     ^
@@ -302,7 +302,7 @@ tests/c/macro-body/macro-body-unknown-construct.h(10): failed to parse full #def
 tests/c/macro-body/macro-body-unknown-construct.h(13): missing '}' to close anonymous enum block
     # define M1 enum { A , 
                            ^
-[17/23] __FB_DARWIN__.(not __FB_64BIT__)
+[17/23] darwin-x86
 tests/c/macro-body/macro-body-unknown-construct.h(3): failed to parse full #define body
     # define m void f ( void 
                     ^
@@ -321,7 +321,7 @@ tests/c/macro-body/macro-body-unknown-construct.h(10): failed to parse full #def
 tests/c/macro-body/macro-body-unknown-construct.h(13): missing '}' to close anonymous enum block
     # define M1 enum { A , 
                            ^
-[18/23] __FB_DARWIN__.__FB_64BIT__
+[18/23] darwin-x86_64
 tests/c/macro-body/macro-body-unknown-construct.h(3): failed to parse full #define body
     # define m void f ( void 
                     ^
@@ -340,7 +340,7 @@ tests/c/macro-body/macro-body-unknown-construct.h(10): failed to parse full #def
 tests/c/macro-body/macro-body-unknown-construct.h(13): missing '}' to close anonymous enum block
     # define M1 enum { A , 
                            ^
-[19/23] __FB_WIN32__.(not __FB_64BIT__)
+[19/23] win32
 tests/c/macro-body/macro-body-unknown-construct.h(3): failed to parse full #define body
     # define m void f ( void 
                     ^
@@ -359,7 +359,7 @@ tests/c/macro-body/macro-body-unknown-construct.h(10): failed to parse full #def
 tests/c/macro-body/macro-body-unknown-construct.h(13): missing '}' to close anonymous enum block
     # define M1 enum { A , 
                            ^
-[20/23] __FB_WIN32__.__FB_64BIT__
+[20/23] win64
 tests/c/macro-body/macro-body-unknown-construct.h(3): failed to parse full #define body
     # define m void f ( void 
                     ^
@@ -378,7 +378,7 @@ tests/c/macro-body/macro-body-unknown-construct.h(10): failed to parse full #def
 tests/c/macro-body/macro-body-unknown-construct.h(13): missing '}' to close anonymous enum block
     # define M1 enum { A , 
                            ^
-[21/23] __FB_CYGWIN__.(not __FB_64BIT__)
+[21/23] cygwin-x86
 tests/c/macro-body/macro-body-unknown-construct.h(3): failed to parse full #define body
     # define m void f ( void 
                     ^
@@ -397,7 +397,7 @@ tests/c/macro-body/macro-body-unknown-construct.h(10): failed to parse full #def
 tests/c/macro-body/macro-body-unknown-construct.h(13): missing '}' to close anonymous enum block
     # define M1 enum { A , 
                            ^
-[22/23] __FB_CYGWIN__.__FB_64BIT__
+[22/23] cygwin-x86_64
 tests/c/macro-body/macro-body-unknown-construct.h(3): failed to parse full #define body
     # define m void f ( void 
                     ^
@@ -416,7 +416,7 @@ tests/c/macro-body/macro-body-unknown-construct.h(10): failed to parse full #def
 tests/c/macro-body/macro-body-unknown-construct.h(13): missing '}' to close anonymous enum block
     # define M1 enum { A , 
                            ^
-[23/23] __FB_DOS__
+[23/23] dos
 tests/c/macro-body/macro-body-unknown-construct.h(3): failed to parse full #define body
     # define m void f ( void 
                     ^

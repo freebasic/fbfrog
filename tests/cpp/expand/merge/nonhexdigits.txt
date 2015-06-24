@@ -1,92 +1,92 @@
-[ 1/23] __FB_LINUX__.(not __FB_64BIT__).(not __FB_ARM__)
+[ 1/23] linux-x86
 tests/cpp/expand/merge/nonhexdigits.h(4): invalid suffix on number literal: 'G'
     enum E { A = 0xG } ;
                  ^~~
-[ 2/23] __FB_LINUX__.__FB_64BIT__.(not __FB_ARM__)
+[ 2/23] linux-x86_64
 tests/cpp/expand/merge/nonhexdigits.h(4): invalid suffix on number literal: 'G'
     enum E { A = 0xG } ;
                  ^~~
-[ 3/23] __FB_LINUX__.(not __FB_64BIT__).__FB_ARM__
+[ 3/23] linux-arm
 tests/cpp/expand/merge/nonhexdigits.h(4): invalid suffix on number literal: 'G'
     enum E { A = 0xG } ;
                  ^~~
-[ 4/23] __FB_LINUX__.__FB_64BIT__.__FB_ARM__
+[ 4/23] linux-aarch64
 tests/cpp/expand/merge/nonhexdigits.h(4): invalid suffix on number literal: 'G'
     enum E { A = 0xG } ;
                  ^~~
-[ 5/23] __FB_FREEBSD__.(not __FB_64BIT__).(not __FB_ARM__)
+[ 5/23] freebsd-x86
 tests/cpp/expand/merge/nonhexdigits.h(4): invalid suffix on number literal: 'G'
     enum E { A = 0xG } ;
                  ^~~
-[ 6/23] __FB_FREEBSD__.__FB_64BIT__.(not __FB_ARM__)
+[ 6/23] freebsd-x86_64
 tests/cpp/expand/merge/nonhexdigits.h(4): invalid suffix on number literal: 'G'
     enum E { A = 0xG } ;
                  ^~~
-[ 7/23] __FB_FREEBSD__.(not __FB_64BIT__).__FB_ARM__
+[ 7/23] freebsd-arm
 tests/cpp/expand/merge/nonhexdigits.h(4): invalid suffix on number literal: 'G'
     enum E { A = 0xG } ;
                  ^~~
-[ 8/23] __FB_FREEBSD__.__FB_64BIT__.__FB_ARM__
+[ 8/23] freebsd-aarch64
 tests/cpp/expand/merge/nonhexdigits.h(4): invalid suffix on number literal: 'G'
     enum E { A = 0xG } ;
                  ^~~
-[ 9/23] __FB_OPENBSD__.(not __FB_64BIT__).(not __FB_ARM__)
+[ 9/23] openbsd-x86
 tests/cpp/expand/merge/nonhexdigits.h(4): invalid suffix on number literal: 'G'
     enum E { A = 0xG } ;
                  ^~~
-[10/23] __FB_OPENBSD__.__FB_64BIT__.(not __FB_ARM__)
+[10/23] openbsd-x86_64
 tests/cpp/expand/merge/nonhexdigits.h(4): invalid suffix on number literal: 'G'
     enum E { A = 0xG } ;
                  ^~~
-[11/23] __FB_OPENBSD__.(not __FB_64BIT__).__FB_ARM__
+[11/23] openbsd-arm
 tests/cpp/expand/merge/nonhexdigits.h(4): invalid suffix on number literal: 'G'
     enum E { A = 0xG } ;
                  ^~~
-[12/23] __FB_OPENBSD__.__FB_64BIT__.__FB_ARM__
+[12/23] openbsd-aarch64
 tests/cpp/expand/merge/nonhexdigits.h(4): invalid suffix on number literal: 'G'
     enum E { A = 0xG } ;
                  ^~~
-[13/23] __FB_NETBSD__.(not __FB_64BIT__).(not __FB_ARM__)
+[13/23] netbsd-x86
 tests/cpp/expand/merge/nonhexdigits.h(4): invalid suffix on number literal: 'G'
     enum E { A = 0xG } ;
                  ^~~
-[14/23] __FB_NETBSD__.__FB_64BIT__.(not __FB_ARM__)
+[14/23] netbsd-x86_64
 tests/cpp/expand/merge/nonhexdigits.h(4): invalid suffix on number literal: 'G'
     enum E { A = 0xG } ;
                  ^~~
-[15/23] __FB_NETBSD__.(not __FB_64BIT__).__FB_ARM__
+[15/23] netbsd-arm
 tests/cpp/expand/merge/nonhexdigits.h(4): invalid suffix on number literal: 'G'
     enum E { A = 0xG } ;
                  ^~~
-[16/23] __FB_NETBSD__.__FB_64BIT__.__FB_ARM__
+[16/23] netbsd-aarch64
 tests/cpp/expand/merge/nonhexdigits.h(4): invalid suffix on number literal: 'G'
     enum E { A = 0xG } ;
                  ^~~
-[17/23] __FB_DARWIN__.(not __FB_64BIT__)
+[17/23] darwin-x86
 tests/cpp/expand/merge/nonhexdigits.h(4): invalid suffix on number literal: 'G'
     enum E { A = 0xG } ;
                  ^~~
-[18/23] __FB_DARWIN__.__FB_64BIT__
+[18/23] darwin-x86_64
 tests/cpp/expand/merge/nonhexdigits.h(4): invalid suffix on number literal: 'G'
     enum E { A = 0xG } ;
                  ^~~
-[19/23] __FB_WIN32__.(not __FB_64BIT__)
+[19/23] win32
 tests/cpp/expand/merge/nonhexdigits.h(4): invalid suffix on number literal: 'G'
     enum E { A = 0xG } ;
                  ^~~
-[20/23] __FB_WIN32__.__FB_64BIT__
+[20/23] win64
 tests/cpp/expand/merge/nonhexdigits.h(4): invalid suffix on number literal: 'G'
     enum E { A = 0xG } ;
                  ^~~
-[21/23] __FB_CYGWIN__.(not __FB_64BIT__)
+[21/23] cygwin-x86
 tests/cpp/expand/merge/nonhexdigits.h(4): invalid suffix on number literal: 'G'
     enum E { A = 0xG } ;
                  ^~~
-[22/23] __FB_CYGWIN__.__FB_64BIT__
+[22/23] cygwin-x86_64
 tests/cpp/expand/merge/nonhexdigits.h(4): invalid suffix on number literal: 'G'
     enum E { A = 0xG } ;
                  ^~~
-[23/23] __FB_DOS__
+[23/23] dos
 tests/cpp/expand/merge/nonhexdigits.h(4): invalid suffix on number literal: 'G'
     enum E { A = 0xG } ;
                  ^~~

@@ -1,4 +1,4 @@
-[ 1/23] __FB_LINUX__.(not __FB_64BIT__).(not __FB_ARM__)
+[ 1/23] linux-x86
 treating as undefined: unexpanded
 treating as undefined: A
 treating as undefined: B
@@ -6,7 +6,7 @@ treating as undefined: C
 treating as undefined: D
 treating as undefined: G
 treating as undefined: _reported
-[ 2/23] __FB_LINUX__.__FB_64BIT__.(not __FB_ARM__)
+[ 2/23] linux-x86_64
 treating as undefined: unexpanded
 treating as undefined: A
 treating as undefined: B
@@ -14,7 +14,7 @@ treating as undefined: C
 treating as undefined: D
 treating as undefined: G
 treating as undefined: _reported
-[ 3/23] __FB_LINUX__.(not __FB_64BIT__).__FB_ARM__
+[ 3/23] linux-arm
 treating as undefined: unexpanded
 treating as undefined: A
 treating as undefined: B
@@ -22,7 +22,7 @@ treating as undefined: C
 treating as undefined: D
 treating as undefined: G
 treating as undefined: _reported
-[ 4/23] __FB_LINUX__.__FB_64BIT__.__FB_ARM__
+[ 4/23] linux-aarch64
 treating as undefined: unexpanded
 treating as undefined: A
 treating as undefined: B
@@ -30,7 +30,7 @@ treating as undefined: C
 treating as undefined: D
 treating as undefined: G
 treating as undefined: _reported
-[ 5/23] __FB_FREEBSD__.(not __FB_64BIT__).(not __FB_ARM__)
+[ 5/23] freebsd-x86
 treating as undefined: unexpanded
 treating as undefined: A
 treating as undefined: B
@@ -38,7 +38,7 @@ treating as undefined: C
 treating as undefined: D
 treating as undefined: G
 treating as undefined: _reported
-[ 6/23] __FB_FREEBSD__.__FB_64BIT__.(not __FB_ARM__)
+[ 6/23] freebsd-x86_64
 treating as undefined: unexpanded
 treating as undefined: A
 treating as undefined: B
@@ -46,7 +46,7 @@ treating as undefined: C
 treating as undefined: D
 treating as undefined: G
 treating as undefined: _reported
-[ 7/23] __FB_FREEBSD__.(not __FB_64BIT__).__FB_ARM__
+[ 7/23] freebsd-arm
 treating as undefined: unexpanded
 treating as undefined: A
 treating as undefined: B
@@ -54,7 +54,7 @@ treating as undefined: C
 treating as undefined: D
 treating as undefined: G
 treating as undefined: _reported
-[ 8/23] __FB_FREEBSD__.__FB_64BIT__.__FB_ARM__
+[ 8/23] freebsd-aarch64
 treating as undefined: unexpanded
 treating as undefined: A
 treating as undefined: B
@@ -62,7 +62,7 @@ treating as undefined: C
 treating as undefined: D
 treating as undefined: G
 treating as undefined: _reported
-[ 9/23] __FB_OPENBSD__.(not __FB_64BIT__).(not __FB_ARM__)
+[ 9/23] openbsd-x86
 treating as undefined: unexpanded
 treating as undefined: A
 treating as undefined: B
@@ -70,7 +70,7 @@ treating as undefined: C
 treating as undefined: D
 treating as undefined: G
 treating as undefined: _reported
-[10/23] __FB_OPENBSD__.__FB_64BIT__.(not __FB_ARM__)
+[10/23] openbsd-x86_64
 treating as undefined: unexpanded
 treating as undefined: A
 treating as undefined: B
@@ -78,7 +78,7 @@ treating as undefined: C
 treating as undefined: D
 treating as undefined: G
 treating as undefined: _reported
-[11/23] __FB_OPENBSD__.(not __FB_64BIT__).__FB_ARM__
+[11/23] openbsd-arm
 treating as undefined: unexpanded
 treating as undefined: A
 treating as undefined: B
@@ -86,7 +86,7 @@ treating as undefined: C
 treating as undefined: D
 treating as undefined: G
 treating as undefined: _reported
-[12/23] __FB_OPENBSD__.__FB_64BIT__.__FB_ARM__
+[12/23] openbsd-aarch64
 treating as undefined: unexpanded
 treating as undefined: A
 treating as undefined: B
@@ -94,7 +94,7 @@ treating as undefined: C
 treating as undefined: D
 treating as undefined: G
 treating as undefined: _reported
-[13/23] __FB_NETBSD__.(not __FB_64BIT__).(not __FB_ARM__)
+[13/23] netbsd-x86
 treating as undefined: unexpanded
 treating as undefined: A
 treating as undefined: B
@@ -102,7 +102,7 @@ treating as undefined: C
 treating as undefined: D
 treating as undefined: G
 treating as undefined: _reported
-[14/23] __FB_NETBSD__.__FB_64BIT__.(not __FB_ARM__)
+[14/23] netbsd-x86_64
 treating as undefined: unexpanded
 treating as undefined: A
 treating as undefined: B
@@ -110,7 +110,7 @@ treating as undefined: C
 treating as undefined: D
 treating as undefined: G
 treating as undefined: _reported
-[15/23] __FB_NETBSD__.(not __FB_64BIT__).__FB_ARM__
+[15/23] netbsd-arm
 treating as undefined: unexpanded
 treating as undefined: A
 treating as undefined: B
@@ -118,7 +118,7 @@ treating as undefined: C
 treating as undefined: D
 treating as undefined: G
 treating as undefined: _reported
-[16/23] __FB_NETBSD__.__FB_64BIT__.__FB_ARM__
+[16/23] netbsd-aarch64
 treating as undefined: unexpanded
 treating as undefined: A
 treating as undefined: B
@@ -126,7 +126,7 @@ treating as undefined: C
 treating as undefined: D
 treating as undefined: G
 treating as undefined: _reported
-[17/23] __FB_DARWIN__.(not __FB_64BIT__)
+[17/23] darwin-x86
 treating as undefined: unexpanded
 treating as undefined: A
 treating as undefined: B
@@ -134,7 +134,7 @@ treating as undefined: C
 treating as undefined: D
 treating as undefined: G
 treating as undefined: _reported
-[18/23] __FB_DARWIN__.__FB_64BIT__
+[18/23] darwin-x86_64
 treating as undefined: unexpanded
 treating as undefined: A
 treating as undefined: B
@@ -142,7 +142,7 @@ treating as undefined: C
 treating as undefined: D
 treating as undefined: G
 treating as undefined: _reported
-[19/23] __FB_WIN32__.(not __FB_64BIT__)
+[19/23] win32
 treating as undefined: unexpanded
 treating as undefined: A
 treating as undefined: B
@@ -150,7 +150,7 @@ treating as undefined: C
 treating as undefined: D
 treating as undefined: G
 treating as undefined: _reported
-[20/23] __FB_WIN32__.__FB_64BIT__
+[20/23] win64
 treating as undefined: unexpanded
 treating as undefined: A
 treating as undefined: B
@@ -158,7 +158,7 @@ treating as undefined: C
 treating as undefined: D
 treating as undefined: G
 treating as undefined: _reported
-[21/23] __FB_CYGWIN__.(not __FB_64BIT__)
+[21/23] cygwin-x86
 treating as undefined: unexpanded
 treating as undefined: A
 treating as undefined: B
@@ -166,7 +166,7 @@ treating as undefined: C
 treating as undefined: D
 treating as undefined: G
 treating as undefined: _reported
-[22/23] __FB_CYGWIN__.__FB_64BIT__
+[22/23] cygwin-x86_64
 treating as undefined: unexpanded
 treating as undefined: A
 treating as undefined: B
@@ -174,7 +174,7 @@ treating as undefined: C
 treating as undefined: D
 treating as undefined: G
 treating as undefined: _reported
-[23/23] __FB_DOS__
+[23/23] dos
 treating as undefined: unexpanded
 treating as undefined: A
 treating as undefined: B

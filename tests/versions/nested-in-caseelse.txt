@@ -1,45 +1,45 @@
-[ 1/43] __FB_LINUX__.(not __FB_64BIT__).(not __FB_ARM__).X
-[ 2/43] __FB_LINUX__.(not __FB_64BIT__).(not __FB_ARM__).(not X)
-[ 3/43] __FB_LINUX__.__FB_64BIT__.(not __FB_ARM__).X
-[ 4/43] __FB_LINUX__.__FB_64BIT__.(not __FB_ARM__).(not X)
-[ 5/43] __FB_LINUX__.(not __FB_64BIT__).__FB_ARM__.X
-[ 6/43] __FB_LINUX__.(not __FB_64BIT__).__FB_ARM__.(not X)
-[ 7/43] __FB_LINUX__.__FB_64BIT__.__FB_ARM__.X
-[ 8/43] __FB_LINUX__.__FB_64BIT__.__FB_ARM__.(not X)
-[ 9/43] __FB_FREEBSD__.(not __FB_64BIT__).(not __FB_ARM__).X
-[10/43] __FB_FREEBSD__.(not __FB_64BIT__).(not __FB_ARM__).(not X)
-[11/43] __FB_FREEBSD__.__FB_64BIT__.(not __FB_ARM__).X
-[12/43] __FB_FREEBSD__.__FB_64BIT__.(not __FB_ARM__).(not X)
-[13/43] __FB_FREEBSD__.(not __FB_64BIT__).__FB_ARM__.X
-[14/43] __FB_FREEBSD__.(not __FB_64BIT__).__FB_ARM__.(not X)
-[15/43] __FB_FREEBSD__.__FB_64BIT__.__FB_ARM__.X
-[16/43] __FB_FREEBSD__.__FB_64BIT__.__FB_ARM__.(not X)
-[17/43] __FB_OPENBSD__.(not __FB_64BIT__).(not __FB_ARM__).X
-[18/43] __FB_OPENBSD__.(not __FB_64BIT__).(not __FB_ARM__).(not X)
-[19/43] __FB_OPENBSD__.__FB_64BIT__.(not __FB_ARM__).X
-[20/43] __FB_OPENBSD__.__FB_64BIT__.(not __FB_ARM__).(not X)
-[21/43] __FB_OPENBSD__.(not __FB_64BIT__).__FB_ARM__.X
-[22/43] __FB_OPENBSD__.(not __FB_64BIT__).__FB_ARM__.(not X)
-[23/43] __FB_OPENBSD__.__FB_64BIT__.__FB_ARM__.X
-[24/43] __FB_OPENBSD__.__FB_64BIT__.__FB_ARM__.(not X)
-[25/43] __FB_NETBSD__.(not __FB_64BIT__).(not __FB_ARM__).X
-[26/43] __FB_NETBSD__.(not __FB_64BIT__).(not __FB_ARM__).(not X)
-[27/43] __FB_NETBSD__.__FB_64BIT__.(not __FB_ARM__).X
-[28/43] __FB_NETBSD__.__FB_64BIT__.(not __FB_ARM__).(not X)
-[29/43] __FB_NETBSD__.(not __FB_64BIT__).__FB_ARM__.X
-[30/43] __FB_NETBSD__.(not __FB_64BIT__).__FB_ARM__.(not X)
-[31/43] __FB_NETBSD__.__FB_64BIT__.__FB_ARM__.X
-[32/43] __FB_NETBSD__.__FB_64BIT__.__FB_ARM__.(not X)
-[33/43] __FB_DARWIN__.(not __FB_64BIT__).X
-[34/43] __FB_DARWIN__.(not __FB_64BIT__).(not X)
-[35/43] __FB_DARWIN__.__FB_64BIT__.X
-[36/43] __FB_DARWIN__.__FB_64BIT__.(not X)
-[37/43] __FB_WIN32__.(not __FB_64BIT__)
-[38/43] __FB_WIN32__.__FB_64BIT__
-[39/43] __FB_CYGWIN__.(not __FB_64BIT__).X
-[40/43] __FB_CYGWIN__.(not __FB_64BIT__).(not X)
-[41/43] __FB_CYGWIN__.__FB_64BIT__.X
-[42/43] __FB_CYGWIN__.__FB_64BIT__.(not X)
-[43/43] __FB_DOS__
+[ 1/43] linux-x86 X
+[ 2/43] linux-x86 (not X)
+[ 3/43] linux-x86_64 X
+[ 4/43] linux-x86_64 (not X)
+[ 5/43] linux-arm X
+[ 6/43] linux-arm (not X)
+[ 7/43] linux-aarch64 X
+[ 8/43] linux-aarch64 (not X)
+[ 9/43] freebsd-x86 X
+[10/43] freebsd-x86 (not X)
+[11/43] freebsd-x86_64 X
+[12/43] freebsd-x86_64 (not X)
+[13/43] freebsd-arm X
+[14/43] freebsd-arm (not X)
+[15/43] freebsd-aarch64 X
+[16/43] freebsd-aarch64 (not X)
+[17/43] openbsd-x86 X
+[18/43] openbsd-x86 (not X)
+[19/43] openbsd-x86_64 X
+[20/43] openbsd-x86_64 (not X)
+[21/43] openbsd-arm X
+[22/43] openbsd-arm (not X)
+[23/43] openbsd-aarch64 X
+[24/43] openbsd-aarch64 (not X)
+[25/43] netbsd-x86 X
+[26/43] netbsd-x86 (not X)
+[27/43] netbsd-x86_64 X
+[28/43] netbsd-x86_64 (not X)
+[29/43] netbsd-arm X
+[30/43] netbsd-arm (not X)
+[31/43] netbsd-aarch64 X
+[32/43] netbsd-aarch64 (not X)
+[33/43] darwin-x86 X
+[34/43] darwin-x86 (not X)
+[35/43] darwin-x86_64 X
+[36/43] darwin-x86_64 (not X)
+[37/43] win32
+[38/43] win64
+[39/43] cygwin-x86 X
+[40/43] cygwin-x86 (not X)
+[41/43] cygwin-x86_64 X
+[42/43] cygwin-x86_64 (not X)
+[43/43] dos
 	tests/versions/nested-in-caseelse.h
 emitting: tests/versions/nested-in-caseelse.bi (0 declarations, 0 TODOs)

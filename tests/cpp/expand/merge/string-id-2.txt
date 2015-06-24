@@ -1,4 +1,4 @@
-[ 1/23] __FB_LINUX__.(not __FB_64BIT__).(not __FB_ARM__)
+[ 1/23] linux-x86
 tests/cpp/expand/merge/string-id-2.h(2): ## merge operator cannot merge '"a"' and 'b'
     m [TK_BEGIN] "a" ## b [TK_END]
                      ^~

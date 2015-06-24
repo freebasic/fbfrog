@@ -137,6 +137,24 @@ enum
 	ARCH__COUNT
 end enum
 
+type OsInfo
+	as zstring ptr id, fbdefine
+	as byte has_64bit, has_arm
+end type
+
+type ArchInfo
+	id as zstring ptr
+	as byte is_64bit, is_arm
+end type
+
+extern osinfo(0 to OS__COUNT-1) as OsInfo
+extern archinfo(0 to ARCH__COUNT-1) as ArchInfo
+
+type TargetInfo
+	as byte os, arch
+	declare function id() as string
+end type
+
 type ApiBits
 	const BitsArrayElements = 4
 	const MaxApis = sizeof(ulongint) * BitsArrayElements * 8
@@ -815,6 +833,9 @@ declare function astNewIIF _
 declare function astNewGROUP overload() as ASTNODE ptr
 declare function astNewGROUP overload(byval c1 as ASTNODE ptr, byval c2 as ASTNODE ptr = NULL) as ASTNODE ptr
 declare sub astBuildGroupAndAppend(byref group as ASTNODE ptr, byval n as ASTNODE ptr)
+declare function astNewDEFINEDfb64(byval negate as integer) as ASTNODE ptr
+declare function astNewDEFINEDfbarm(byval negate as integer) as ASTNODE ptr
+declare function astNewDEFINEDfbos(byval os as integer) as ASTNODE ptr
 declare function astNewOPTION(byval opt as integer, byval text1 as zstring ptr = NULL, byval text2 as zstring ptr = NULL) as ASTNODE ptr
 declare function astCloneChildren(byval src as ASTNODE ptr) as ASTNODE ptr
 declare function astGroupContains(byval group as ASTNODE ptr, byval lookfor as ASTNODE ptr) as integer
@@ -894,11 +915,6 @@ type CodeReplacement
 	patternlen as integer '' used temporarily by hApplyReplacements()
 end type
 
-type TargetInfo
-	as byte os, arch
-	declare function id() as string
-end type
-
 type ApiInfo
 	verand as ASTNODE ptr
 	script as ASTNODE ptr
@@ -925,6 +941,7 @@ type ApiInfo
 	declare sub loadOption(byval opt as integer, byval param1 as zstring ptr, byval param2 as zstring ptr)
 	declare sub loadOptions()
 	declare sub print(byref ln as string)
+	declare function prettyId() as string
 end type
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -999,6 +1016,7 @@ declare function hlCountTodos(byval ast as ASTNODE ptr) as integer
 
 namespace frog
 	extern as integer verbose
+	extern as integer enabledoscount
 	extern as ASTNODE ptr script
 	extern as ASTNODE ptr completeverors, fullveror
 	extern as ApiInfo ptr apis

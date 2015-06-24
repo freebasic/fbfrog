@@ -1,4 +1,4 @@
-[ 1/23] __FB_LINUX__.(not __FB_64BIT__).(not __FB_ARM__)
+[ 1/23] linux-x86
 tests/lex/counts-lines-in-line-comment.h(6): expected ')' to close the parameter list in this macro declaration but found 'error'
     # define m ( provoke error and check the line number in the produced message
                          ^~~~~
