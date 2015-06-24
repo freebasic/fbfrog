@@ -992,6 +992,8 @@ declare function hDefineHead(byref x as integer) as ASTNODE ptr
 
 declare sub cppInit(byref api as ApiInfo)
 declare sub cppEnd()
+declare sub cppAddPredefine(byval id as zstring ptr)
+declare sub cppAddTargetPredefines(byval target as TargetInfo)
 declare sub cppAddIncDir(byval incdir as zstring ptr)
 declare sub cppAppendIncludeDirective(byval filename as zstring ptr, byval tkflags as integer)
 declare sub cppMain()

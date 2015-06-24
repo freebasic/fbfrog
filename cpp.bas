@@ -724,6 +724,19 @@ end sub
 
 #define cppSkipping() (cpp.skiplevel <> MAXSTACK)
 
+sub cppAddPredefine(byval id as zstring ptr)
+	var s = "#define " + *id + " 1" + !"\n"
+	var x = tkGetCount()
+	lexLoadC(x, s, sourceinfoForZstring("pre-#define"))
+	tkSetRemove(x, tkGetCount() - 1)
+end sub
+
+sub cppAddTargetPredefines(byval target as TargetInfo)
+	cppAddPredefine(osinfo(target.os).fbdefine)
+	if archinfo(target.arch).is_64bit then cppAddPredefine("__FB_64BIT__")
+	if archinfo(target.arch).is_arm   then cppAddPredefine("__FB_ARM__"  )
+end sub
+
 sub cppAddIncDir(byval incdir as zstring ptr)
 	astAppend(cpp.incdirs, astNewTEXT(incdir))
 end sub

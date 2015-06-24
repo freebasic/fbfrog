@@ -1322,17 +1322,9 @@ private sub frogEvaluateScript _
 end sub
 
 private sub maybeEvalForTarget(byval os as integer, byval arch as integer)
-	if frog.arch(arch) = FALSE then exit sub
-
-	var conditions = astNewGROUP()
-	var options = astNewGROUP()
-
-	'' Add the CPP #define __FB_*__ for preprocessing of default.h
-	astAppend(options, astNewOPTION(OPT_DEFINE, osinfo(os).fbdefine))
-	if archinfo(arch).is_64bit then astAppend(options, astNewOPTION(OPT_DEFINE, "__FB_64BIT__"))
-	if archinfo(arch).is_arm   then astAppend(options, astNewOPTION(OPT_DEFINE, "__FB_ARM__"  ))
-
-	frogEvaluateScript(frog.script->head, conditions, options, type<TargetInfo>(os, arch))
+	if frog.arch(arch) then
+		frogEvaluateScript(frog.script->head, astNewGROUP(), astNewGROUP(), type<TargetInfo>(os, arch))
+	end if
 end sub
 
 private sub maybeEvalForOs(byval os as integer)
@@ -1356,6 +1348,9 @@ private function frogParse(byref api as ApiInfo) as ASTNODE ptr
 
 	'' C preprocessing
 	cppInit(api)
+
+	'' Add fbfrog's CPP pre-#defines for preprocessing of default.h
+	cppAddTargetPredefines(api.target)
 
 	scope
 		'' Pre-#defines are simply inserted at the top of the token
