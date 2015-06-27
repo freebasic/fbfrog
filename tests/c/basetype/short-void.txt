@@ -1,92 +1,115 @@
 [ 1/23] linux-x86
+ tests/c/basetype/short-void.h
 tests/c/basetype/short-void.h(2): SIGNED|UNSIGNED|SHORT|LONG modifiers used with void/float/double/typedef/UDT
     static short void * p ;
                       ^
 [ 2/23] linux-x86_64
+ tests/c/basetype/short-void.h
 tests/c/basetype/short-void.h(2): SIGNED|UNSIGNED|SHORT|LONG modifiers used with void/float/double/typedef/UDT
     static short void * p ;
                       ^
 [ 3/23] linux-arm
+ tests/c/basetype/short-void.h
 tests/c/basetype/short-void.h(2): SIGNED|UNSIGNED|SHORT|LONG modifiers used with void/float/double/typedef/UDT
     static short void * p ;
                       ^
 [ 4/23] linux-aarch64
+ tests/c/basetype/short-void.h
 tests/c/basetype/short-void.h(2): SIGNED|UNSIGNED|SHORT|LONG modifiers used with void/float/double/typedef/UDT
     static short void * p ;
                       ^
 [ 5/23] freebsd-x86
+ tests/c/basetype/short-void.h
 tests/c/basetype/short-void.h(2): SIGNED|UNSIGNED|SHORT|LONG modifiers used with void/float/double/typedef/UDT
     static short void * p ;
                       ^
 [ 6/23] freebsd-x86_64
+ tests/c/basetype/short-void.h
 tests/c/basetype/short-void.h(2): SIGNED|UNSIGNED|SHORT|LONG modifiers used with void/float/double/typedef/UDT
     static short void * p ;
                       ^
 [ 7/23] freebsd-arm
+ tests/c/basetype/short-void.h
 tests/c/basetype/short-void.h(2): SIGNED|UNSIGNED|SHORT|LONG modifiers used with void/float/double/typedef/UDT
     static short void * p ;
                       ^
 [ 8/23] freebsd-aarch64
+ tests/c/basetype/short-void.h
 tests/c/basetype/short-void.h(2): SIGNED|UNSIGNED|SHORT|LONG modifiers used with void/float/double/typedef/UDT
     static short void * p ;
                       ^
 [ 9/23] openbsd-x86
+ tests/c/basetype/short-void.h
 tests/c/basetype/short-void.h(2): SIGNED|UNSIGNED|SHORT|LONG modifiers used with void/float/double/typedef/UDT
     static short void * p ;
                       ^
 [10/23] openbsd-x86_64
+ tests/c/basetype/short-void.h
 tests/c/basetype/short-void.h(2): SIGNED|UNSIGNED|SHORT|LONG modifiers used with void/float/double/typedef/UDT
     static short void * p ;
                       ^
 [11/23] openbsd-arm
+ tests/c/basetype/short-void.h
 tests/c/basetype/short-void.h(2): SIGNED|UNSIGNED|SHORT|LONG modifiers used with void/float/double/typedef/UDT
     static short void * p ;
                       ^
 [12/23] openbsd-aarch64
+ tests/c/basetype/short-void.h
 tests/c/basetype/short-void.h(2): SIGNED|UNSIGNED|SHORT|LONG modifiers used with void/float/double/typedef/UDT
     static short void * p ;
                       ^
 [13/23] netbsd-x86
+ tests/c/basetype/short-void.h
 tests/c/basetype/short-void.h(2): SIGNED|UNSIGNED|SHORT|LONG modifiers used with void/float/double/typedef/UDT
     static short void * p ;
                       ^
 [14/23] netbsd-x86_64
+ tests/c/basetype/short-void.h
 tests/c/basetype/short-void.h(2): SIGNED|UNSIGNED|SHORT|LONG modifiers used with void/float/double/typedef/UDT
     static short void * p ;
                       ^
 [15/23] netbsd-arm
+ tests/c/basetype/short-void.h
 tests/c/basetype/short-void.h(2): SIGNED|UNSIGNED|SHORT|LONG modifiers used with void/float/double/typedef/UDT
     static short void * p ;
                       ^
 [16/23] netbsd-aarch64
+ tests/c/basetype/short-void.h
 tests/c/basetype/short-void.h(2): SIGNED|UNSIGNED|SHORT|LONG modifiers used with void/float/double/typedef/UDT
     static short void * p ;
                       ^
 [17/23] darwin-x86
+ tests/c/basetype/short-void.h
 tests/c/basetype/short-void.h(2): SIGNED|UNSIGNED|SHORT|LONG modifiers used with void/float/double/typedef/UDT
     static short void * p ;
                       ^
 [18/23] darwin-x86_64
+ tests/c/basetype/short-void.h
 tests/c/basetype/short-void.h(2): SIGNED|UNSIGNED|SHORT|LONG modifiers used with void/float/double/typedef/UDT
     static short void * p ;
                       ^
 [19/23] win32
+ tests/c/basetype/short-void.h
 tests/c/basetype/short-void.h(2): SIGNED|UNSIGNED|SHORT|LONG modifiers used with void/float/double/typedef/UDT
     static short void * p ;
                       ^
 [20/23] win64
+ tests/c/basetype/short-void.h
 tests/c/basetype/short-void.h(2): SIGNED|UNSIGNED|SHORT|LONG modifiers used with void/float/double/typedef/UDT
     static short void * p ;
                       ^
 [21/23] cygwin-x86
+ tests/c/basetype/short-void.h
 tests/c/basetype/short-void.h(2): SIGNED|UNSIGNED|SHORT|LONG modifiers used with void/float/double/typedef/UDT
     static short void * p ;
                       ^
 [22/23] cygwin-x86_64
+ tests/c/basetype/short-void.h
 tests/c/basetype/short-void.h(2): SIGNED|UNSIGNED|SHORT|LONG modifiers used with void/float/double/typedef/UDT
     static short void * p ;
                       ^
 [23/23] dos
+ tests/c/basetype/short-void.h
 tests/c/basetype/short-void.h(2): SIGNED|UNSIGNED|SHORT|LONG modifiers used with void/float/double/typedef/UDT
     static short void * p ;
                       ^

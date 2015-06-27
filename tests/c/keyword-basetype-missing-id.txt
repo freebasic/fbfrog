@@ -1,92 +1,115 @@
 [ 1/23] linux-x86
+ tests/c/keyword-basetype-missing-id.h
 tests/c/keyword-basetype-missing-id.h(2): expected identifier for the symbol declared in this declaration but found ';'
     int ;
         ^
 [ 2/23] linux-x86_64
+ tests/c/keyword-basetype-missing-id.h
 tests/c/keyword-basetype-missing-id.h(2): expected identifier for the symbol declared in this declaration but found ';'
     int ;
         ^
 [ 3/23] linux-arm
+ tests/c/keyword-basetype-missing-id.h
 tests/c/keyword-basetype-missing-id.h(2): expected identifier for the symbol declared in this declaration but found ';'
     int ;
         ^
 [ 4/23] linux-aarch64
+ tests/c/keyword-basetype-missing-id.h
 tests/c/keyword-basetype-missing-id.h(2): expected identifier for the symbol declared in this declaration but found ';'
     int ;
         ^
 [ 5/23] freebsd-x86
+ tests/c/keyword-basetype-missing-id.h
 tests/c/keyword-basetype-missing-id.h(2): expected identifier for the symbol declared in this declaration but found ';'
     int ;
         ^
 [ 6/23] freebsd-x86_64
+ tests/c/keyword-basetype-missing-id.h
 tests/c/keyword-basetype-missing-id.h(2): expected identifier for the symbol declared in this declaration but found ';'
     int ;
         ^
 [ 7/23] freebsd-arm
+ tests/c/keyword-basetype-missing-id.h
 tests/c/keyword-basetype-missing-id.h(2): expected identifier for the symbol declared in this declaration but found ';'
     int ;
         ^
 [ 8/23] freebsd-aarch64
+ tests/c/keyword-basetype-missing-id.h
 tests/c/keyword-basetype-missing-id.h(2): expected identifier for the symbol declared in this declaration but found ';'
     int ;
         ^
 [ 9/23] openbsd-x86
+ tests/c/keyword-basetype-missing-id.h
 tests/c/keyword-basetype-missing-id.h(2): expected identifier for the symbol declared in this declaration but found ';'
     int ;
         ^
 [10/23] openbsd-x86_64
+ tests/c/keyword-basetype-missing-id.h
 tests/c/keyword-basetype-missing-id.h(2): expected identifier for the symbol declared in this declaration but found ';'
     int ;
         ^
 [11/23] openbsd-arm
+ tests/c/keyword-basetype-missing-id.h
 tests/c/keyword-basetype-missing-id.h(2): expected identifier for the symbol declared in this declaration but found ';'
     int ;
         ^
 [12/23] openbsd-aarch64
+ tests/c/keyword-basetype-missing-id.h
 tests/c/keyword-basetype-missing-id.h(2): expected identifier for the symbol declared in this declaration but found ';'
     int ;
         ^
 [13/23] netbsd-x86
+ tests/c/keyword-basetype-missing-id.h
 tests/c/keyword-basetype-missing-id.h(2): expected identifier for the symbol declared in this declaration but found ';'
     int ;
         ^
 [14/23] netbsd-x86_64
+ tests/c/keyword-basetype-missing-id.h
 tests/c/keyword-basetype-missing-id.h(2): expected identifier for the symbol declared in this declaration but found ';'
     int ;
         ^
 [15/23] netbsd-arm
+ tests/c/keyword-basetype-missing-id.h
 tests/c/keyword-basetype-missing-id.h(2): expected identifier for the symbol declared in this declaration but found ';'
     int ;
         ^
 [16/23] netbsd-aarch64
+ tests/c/keyword-basetype-missing-id.h
 tests/c/keyword-basetype-missing-id.h(2): expected identifier for the symbol declared in this declaration but found ';'
     int ;
         ^
 [17/23] darwin-x86
+ tests/c/keyword-basetype-missing-id.h
 tests/c/keyword-basetype-missing-id.h(2): expected identifier for the symbol declared in this declaration but found ';'
     int ;
         ^
 [18/23] darwin-x86_64
+ tests/c/keyword-basetype-missing-id.h
 tests/c/keyword-basetype-missing-id.h(2): expected identifier for the symbol declared in this declaration but found ';'
     int ;
         ^
 [19/23] win32
+ tests/c/keyword-basetype-missing-id.h
 tests/c/keyword-basetype-missing-id.h(2): expected identifier for the symbol declared in this declaration but found ';'
     int ;
         ^
 [20/23] win64
+ tests/c/keyword-basetype-missing-id.h
 tests/c/keyword-basetype-missing-id.h(2): expected identifier for the symbol declared in this declaration but found ';'
     int ;
         ^
 [21/23] cygwin-x86
+ tests/c/keyword-basetype-missing-id.h
 tests/c/keyword-basetype-missing-id.h(2): expected identifier for the symbol declared in this declaration but found ';'
     int ;
         ^
 [22/23] cygwin-x86_64
+ tests/c/keyword-basetype-missing-id.h
 tests/c/keyword-basetype-missing-id.h(2): expected identifier for the symbol declared in this declaration but found ';'
     int ;
         ^
 [23/23] dos
+ tests/c/keyword-basetype-missing-id.h
 tests/c/keyword-basetype-missing-id.h(2): expected identifier for the symbol declared in this declaration but found ';'
     int ;
         ^

@@ -1,4 +1,5 @@
 [ 1/23] linux-x86
+ tests/cpp/assuming-undefined.h
 treating as undefined: unexpanded
 treating as undefined: A
 treating as undefined: B
@@ -7,6 +8,7 @@ treating as undefined: D
 treating as undefined: G
 treating as undefined: _reported
 [ 2/23] linux-x86_64
+ tests/cpp/assuming-undefined.h
 treating as undefined: unexpanded
 treating as undefined: A
 treating as undefined: B
@@ -15,6 +17,7 @@ treating as undefined: D
 treating as undefined: G
 treating as undefined: _reported
 [ 3/23] linux-arm
+ tests/cpp/assuming-undefined.h
 treating as undefined: unexpanded
 treating as undefined: A
 treating as undefined: B
@@ -23,6 +26,7 @@ treating as undefined: D
 treating as undefined: G
 treating as undefined: _reported
 [ 4/23] linux-aarch64
+ tests/cpp/assuming-undefined.h
 treating as undefined: unexpanded
 treating as undefined: A
 treating as undefined: B
@@ -31,6 +35,7 @@ treating as undefined: D
 treating as undefined: G
 treating as undefined: _reported
 [ 5/23] freebsd-x86
+ tests/cpp/assuming-undefined.h
 treating as undefined: unexpanded
 treating as undefined: A
 treating as undefined: B
@@ -39,6 +44,7 @@ treating as undefined: D
 treating as undefined: G
 treating as undefined: _reported
 [ 6/23] freebsd-x86_64
+ tests/cpp/assuming-undefined.h
 treating as undefined: unexpanded
 treating as undefined: A
 treating as undefined: B
@@ -47,6 +53,7 @@ treating as undefined: D
 treating as undefined: G
 treating as undefined: _reported
 [ 7/23] freebsd-arm
+ tests/cpp/assuming-undefined.h
 treating as undefined: unexpanded
 treating as undefined: A
 treating as undefined: B
@@ -55,6 +62,7 @@ treating as undefined: D
 treating as undefined: G
 treating as undefined: _reported
 [ 8/23] freebsd-aarch64
+ tests/cpp/assuming-undefined.h
 treating as undefined: unexpanded
 treating as undefined: A
 treating as undefined: B
@@ -63,6 +71,7 @@ treating as undefined: D
 treating as undefined: G
 treating as undefined: _reported
 [ 9/23] openbsd-x86
+ tests/cpp/assuming-undefined.h
 treating as undefined: unexpanded
 treating as undefined: A
 treating as undefined: B
@@ -71,6 +80,7 @@ treating as undefined: D
 treating as undefined: G
 treating as undefined: _reported
 [10/23] openbsd-x86_64
+ tests/cpp/assuming-undefined.h
 treating as undefined: unexpanded
 treating as undefined: A
 treating as undefined: B
@@ -79,6 +89,7 @@ treating as undefined: D
 treating as undefined: G
 treating as undefined: _reported
 [11/23] openbsd-arm
+ tests/cpp/assuming-undefined.h
 treating as undefined: unexpanded
 treating as undefined: A
 treating as undefined: B
@@ -87,6 +98,7 @@ treating as undefined: D
 treating as undefined: G
 treating as undefined: _reported
 [12/23] openbsd-aarch64
+ tests/cpp/assuming-undefined.h
 treating as undefined: unexpanded
 treating as undefined: A
 treating as undefined: B
@@ -95,6 +107,7 @@ treating as undefined: D
 treating as undefined: G
 treating as undefined: _reported
 [13/23] netbsd-x86
+ tests/cpp/assuming-undefined.h
 treating as undefined: unexpanded
 treating as undefined: A
 treating as undefined: B
@@ -103,6 +116,7 @@ treating as undefined: D
 treating as undefined: G
 treating as undefined: _reported
 [14/23] netbsd-x86_64
+ tests/cpp/assuming-undefined.h
 treating as undefined: unexpanded
 treating as undefined: A
 treating as undefined: B
@@ -111,6 +125,7 @@ treating as undefined: D
 treating as undefined: G
 treating as undefined: _reported
 [15/23] netbsd-arm
+ tests/cpp/assuming-undefined.h
 treating as undefined: unexpanded
 treating as undefined: A
 treating as undefined: B
@@ -119,6 +134,7 @@ treating as undefined: D
 treating as undefined: G
 treating as undefined: _reported
 [16/23] netbsd-aarch64
+ tests/cpp/assuming-undefined.h
 treating as undefined: unexpanded
 treating as undefined: A
 treating as undefined: B
@@ -127,6 +143,7 @@ treating as undefined: D
 treating as undefined: G
 treating as undefined: _reported
 [17/23] darwin-x86
+ tests/cpp/assuming-undefined.h
 treating as undefined: unexpanded
 treating as undefined: A
 treating as undefined: B
@@ -135,6 +152,7 @@ treating as undefined: D
 treating as undefined: G
 treating as undefined: _reported
 [18/23] darwin-x86_64
+ tests/cpp/assuming-undefined.h
 treating as undefined: unexpanded
 treating as undefined: A
 treating as undefined: B
@@ -143,6 +161,7 @@ treating as undefined: D
 treating as undefined: G
 treating as undefined: _reported
 [19/23] win32
+ tests/cpp/assuming-undefined.h
 treating as undefined: unexpanded
 treating as undefined: A
 treating as undefined: B
@@ -151,6 +170,7 @@ treating as undefined: D
 treating as undefined: G
 treating as undefined: _reported
 [20/23] win64
+ tests/cpp/assuming-undefined.h
 treating as undefined: unexpanded
 treating as undefined: A
 treating as undefined: B
@@ -159,6 +179,7 @@ treating as undefined: D
 treating as undefined: G
 treating as undefined: _reported
 [21/23] cygwin-x86
+ tests/cpp/assuming-undefined.h
 treating as undefined: unexpanded
 treating as undefined: A
 treating as undefined: B
@@ -167,6 +188,7 @@ treating as undefined: D
 treating as undefined: G
 treating as undefined: _reported
 [22/23] cygwin-x86_64
+ tests/cpp/assuming-undefined.h
 treating as undefined: unexpanded
 treating as undefined: A
 treating as undefined: B
@@ -175,6 +197,7 @@ treating as undefined: D
 treating as undefined: G
 treating as undefined: _reported
 [23/23] dos
+ tests/cpp/assuming-undefined.h
 treating as undefined: unexpanded
 treating as undefined: A
 treating as undefined: B

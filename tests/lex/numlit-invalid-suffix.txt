@@ -1,4 +1,5 @@
 [ 1/23] linux-x86
+ tests/lex/numlit-invalid-suffix.h
 tests/lex/numlit-invalid-suffix.h(2): invalid suffix on number literal: 'a'
     static int i1 = 1a ;
                     ^~
@@ -27,6 +28,7 @@ tests/lex/numlit-invalid-suffix.h(10): invalid suffix on number literal: 'u'
     static int i9 = 1i64u ;
                     ^~~~~
 [ 2/23] linux-x86_64
+ tests/lex/numlit-invalid-suffix.h
 tests/lex/numlit-invalid-suffix.h(2): invalid suffix on number literal: 'a'
     static int i1 = 1a ;
                     ^~
@@ -55,6 +57,7 @@ tests/lex/numlit-invalid-suffix.h(10): invalid suffix on number literal: 'u'
     static int i9 = 1i64u ;
                     ^~~~~
 [ 3/23] linux-arm
+ tests/lex/numlit-invalid-suffix.h
 tests/lex/numlit-invalid-suffix.h(2): invalid suffix on number literal: 'a'
     static int i1 = 1a ;
                     ^~
@@ -83,6 +86,7 @@ tests/lex/numlit-invalid-suffix.h(10): invalid suffix on number literal: 'u'
     static int i9 = 1i64u ;
                     ^~~~~
 [ 4/23] linux-aarch64
+ tests/lex/numlit-invalid-suffix.h
 tests/lex/numlit-invalid-suffix.h(2): invalid suffix on number literal: 'a'
     static int i1 = 1a ;
                     ^~
@@ -111,6 +115,7 @@ tests/lex/numlit-invalid-suffix.h(10): invalid suffix on number literal: 'u'
     static int i9 = 1i64u ;
                     ^~~~~
 [ 5/23] freebsd-x86
+ tests/lex/numlit-invalid-suffix.h
 tests/lex/numlit-invalid-suffix.h(2): invalid suffix on number literal: 'a'
     static int i1 = 1a ;
                     ^~
@@ -139,6 +144,7 @@ tests/lex/numlit-invalid-suffix.h(10): invalid suffix on number literal: 'u'
     static int i9 = 1i64u ;
                     ^~~~~
 [ 6/23] freebsd-x86_64
+ tests/lex/numlit-invalid-suffix.h
 tests/lex/numlit-invalid-suffix.h(2): invalid suffix on number literal: 'a'
     static int i1 = 1a ;
                     ^~
@@ -167,6 +173,7 @@ tests/lex/numlit-invalid-suffix.h(10): invalid suffix on number literal: 'u'
     static int i9 = 1i64u ;
                     ^~~~~
 [ 7/23] freebsd-arm
+ tests/lex/numlit-invalid-suffix.h
 tests/lex/numlit-invalid-suffix.h(2): invalid suffix on number literal: 'a'
     static int i1 = 1a ;
                     ^~
@@ -195,6 +202,7 @@ tests/lex/numlit-invalid-suffix.h(10): invalid suffix on number literal: 'u'
     static int i9 = 1i64u ;
                     ^~~~~
 [ 8/23] freebsd-aarch64
+ tests/lex/numlit-invalid-suffix.h
 tests/lex/numlit-invalid-suffix.h(2): invalid suffix on number literal: 'a'
     static int i1 = 1a ;
                     ^~
@@ -223,6 +231,7 @@ tests/lex/numlit-invalid-suffix.h(10): invalid suffix on number literal: 'u'
     static int i9 = 1i64u ;
                     ^~~~~
 [ 9/23] openbsd-x86
+ tests/lex/numlit-invalid-suffix.h
 tests/lex/numlit-invalid-suffix.h(2): invalid suffix on number literal: 'a'
     static int i1 = 1a ;
                     ^~
@@ -251,6 +260,7 @@ tests/lex/numlit-invalid-suffix.h(10): invalid suffix on number literal: 'u'
     static int i9 = 1i64u ;
                     ^~~~~
 [10/23] openbsd-x86_64
+ tests/lex/numlit-invalid-suffix.h
 tests/lex/numlit-invalid-suffix.h(2): invalid suffix on number literal: 'a'
     static int i1 = 1a ;
                     ^~
@@ -279,6 +289,7 @@ tests/lex/numlit-invalid-suffix.h(10): invalid suffix on number literal: 'u'
     static int i9 = 1i64u ;
                     ^~~~~
 [11/23] openbsd-arm
+ tests/lex/numlit-invalid-suffix.h
 tests/lex/numlit-invalid-suffix.h(2): invalid suffix on number literal: 'a'
     static int i1 = 1a ;
                     ^~
@@ -307,6 +318,7 @@ tests/lex/numlit-invalid-suffix.h(10): invalid suffix on number literal: 'u'
     static int i9 = 1i64u ;
                     ^~~~~
 [12/23] openbsd-aarch64
+ tests/lex/numlit-invalid-suffix.h
 tests/lex/numlit-invalid-suffix.h(2): invalid suffix on number literal: 'a'
     static int i1 = 1a ;
                     ^~
@@ -335,6 +347,7 @@ tests/lex/numlit-invalid-suffix.h(10): invalid suffix on number literal: 'u'
     static int i9 = 1i64u ;
                     ^~~~~
 [13/23] netbsd-x86
+ tests/lex/numlit-invalid-suffix.h
 tests/lex/numlit-invalid-suffix.h(2): invalid suffix on number literal: 'a'
     static int i1 = 1a ;
                     ^~
@@ -363,6 +376,7 @@ tests/lex/numlit-invalid-suffix.h(10): invalid suffix on number literal: 'u'
     static int i9 = 1i64u ;
                     ^~~~~
 [14/23] netbsd-x86_64
+ tests/lex/numlit-invalid-suffix.h
 tests/lex/numlit-invalid-suffix.h(2): invalid suffix on number literal: 'a'
     static int i1 = 1a ;
                     ^~
@@ -391,6 +405,7 @@ tests/lex/numlit-invalid-suffix.h(10): invalid suffix on number literal: 'u'
     static int i9 = 1i64u ;
                     ^~~~~
 [15/23] netbsd-arm
+ tests/lex/numlit-invalid-suffix.h
 tests/lex/numlit-invalid-suffix.h(2): invalid suffix on number literal: 'a'
     static int i1 = 1a ;
                     ^~
@@ -419,6 +434,7 @@ tests/lex/numlit-invalid-suffix.h(10): invalid suffix on number literal: 'u'
     static int i9 = 1i64u ;
                     ^~~~~
 [16/23] netbsd-aarch64
+ tests/lex/numlit-invalid-suffix.h
 tests/lex/numlit-invalid-suffix.h(2): invalid suffix on number literal: 'a'
     static int i1 = 1a ;
                     ^~
@@ -447,6 +463,7 @@ tests/lex/numlit-invalid-suffix.h(10): invalid suffix on number literal: 'u'
     static int i9 = 1i64u ;
                     ^~~~~
 [17/23] darwin-x86
+ tests/lex/numlit-invalid-suffix.h
 tests/lex/numlit-invalid-suffix.h(2): invalid suffix on number literal: 'a'
     static int i1 = 1a ;
                     ^~
@@ -475,6 +492,7 @@ tests/lex/numlit-invalid-suffix.h(10): invalid suffix on number literal: 'u'
     static int i9 = 1i64u ;
                     ^~~~~
 [18/23] darwin-x86_64
+ tests/lex/numlit-invalid-suffix.h
 tests/lex/numlit-invalid-suffix.h(2): invalid suffix on number literal: 'a'
     static int i1 = 1a ;
                     ^~
@@ -503,6 +521,7 @@ tests/lex/numlit-invalid-suffix.h(10): invalid suffix on number literal: 'u'
     static int i9 = 1i64u ;
                     ^~~~~
 [19/23] win32
+ tests/lex/numlit-invalid-suffix.h
 tests/lex/numlit-invalid-suffix.h(2): invalid suffix on number literal: 'a'
     static int i1 = 1a ;
                     ^~
@@ -531,6 +550,7 @@ tests/lex/numlit-invalid-suffix.h(10): invalid suffix on number literal: 'u'
     static int i9 = 1i64u ;
                     ^~~~~
 [20/23] win64
+ tests/lex/numlit-invalid-suffix.h
 tests/lex/numlit-invalid-suffix.h(2): invalid suffix on number literal: 'a'
     static int i1 = 1a ;
                     ^~
@@ -559,6 +579,7 @@ tests/lex/numlit-invalid-suffix.h(10): invalid suffix on number literal: 'u'
     static int i9 = 1i64u ;
                     ^~~~~
 [21/23] cygwin-x86
+ tests/lex/numlit-invalid-suffix.h
 tests/lex/numlit-invalid-suffix.h(2): invalid suffix on number literal: 'a'
     static int i1 = 1a ;
                     ^~
@@ -587,6 +608,7 @@ tests/lex/numlit-invalid-suffix.h(10): invalid suffix on number literal: 'u'
     static int i9 = 1i64u ;
                     ^~~~~
 [22/23] cygwin-x86_64
+ tests/lex/numlit-invalid-suffix.h
 tests/lex/numlit-invalid-suffix.h(2): invalid suffix on number literal: 'a'
     static int i1 = 1a ;
                     ^~
@@ -615,6 +637,7 @@ tests/lex/numlit-invalid-suffix.h(10): invalid suffix on number literal: 'u'
     static int i9 = 1i64u ;
                     ^~~~~
 [23/23] dos
+ tests/lex/numlit-invalid-suffix.h
 tests/lex/numlit-invalid-suffix.h(2): invalid suffix on number literal: 'a'
     static int i1 = 1a ;
                     ^~

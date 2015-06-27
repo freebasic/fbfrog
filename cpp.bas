@@ -624,6 +624,8 @@ namespace cpp
 	''   #if 0 block, and this way, to determine which #endif ends skipping
 	dim shared as integer skiplevel
 
+	dim shared as integer filelevel
+
 	'' Lookup table of macros known to be either defined or undefined.
 	''   defined <=> data = a DEFINEINFO object
 	'' undefined <=> data = NULL
@@ -677,6 +679,7 @@ sub cppInit(byref api as ApiInfo)
 	end with
 	cpp.level = 0
 	cpp.skiplevel = MAXSTACK  '' No skipping yet
+	cpp.filelevel = 0
 
 	hashInit(@cpp.macros, 4, TRUE)
 	cpp.savedmacros = NULL
@@ -1955,13 +1958,20 @@ private sub cppPush(byval state as integer, byval knownfile as integer = -1)
 		.knownfile = knownfile
 		.incdir = NULL
 	end with
+
+	if state = STATE_FILE then
+		cpp.filelevel += 1
+	end if
 end sub
 
 private sub cppPop()
 	'' Finished parsing a file?
 	with cpp.stack(cpp.level)
-		if (.state = STATE_FILE) and (.knownfile >= 0) then
-			cpp.files[.knownfile].guardstate = GUARDSTATE_KNOWN
+		if .state = STATE_FILE then
+			cpp.filelevel -= 1
+			if .knownfile >= 0 then
+				cpp.files[.knownfile].guardstate = GUARDSTATE_KNOWN
+			end if
 		end if
 	end with
 	cpp.level -= 1
@@ -2152,6 +2162,19 @@ private sub cppEndIf()
 	cppPop()
 end sub
 
+private sub maybePrintIncludeTree(byref inctext as string, byref prettyfile as string, byval include_skipped as integer)
+	if frog.verbose then
+		var s = string(cpp.filelevel, ".") + " "
+		if include_skipped then s += "("
+		s += inctext
+		if prettyfile <> inctext then
+			s += " => " + prettyfile
+		end if
+		if include_skipped then s += ")"
+		print s
+	end if
+end sub
+
 '' Search for #included files in one of the parent directories of the context
 '' file. Usually the #include will refer to a file in the same directory or in
 '' a sub-directory at the same level or some levels up.
@@ -2164,10 +2187,6 @@ private function hSearchHeaderFile _
 		byref incdir as ASTNODE ptr _
 	) as string
 
-	if frog.verbose then
-		print "searching: " + inctext + " (context = " + contextfile + ")"
-	end if
-
 	'' If #including by absolute path, use it as-is
 	if pathIsAbsolute(inctext) then
 		return inctext
@@ -2176,12 +2195,10 @@ private function hSearchHeaderFile _
 	'' Relative to context file, unless it was #include <...> or #include_next
 	if (contextincdir = NULL) and (not is_system_include) then
 		var incfile = pathAddDiv(pathOnly(contextfile)) + inctext
-		if frog.verbose then
-			print "trying: " + incfile
-		end if
 		if fileexists(incfile) then
 			return incfile
 		end if
+		maybePrintIncludeTree(inctext, "not found at " + incfile, FALSE)
 	end if
 
 	'' In any of the include search directories; #include_next starts with
@@ -2190,13 +2207,11 @@ private function hSearchHeaderFile _
 	while i
 
 		var incfile = pathAddDiv(*i->text) + inctext
-		if frog.verbose then
-			print "trying: " + incfile
-		end if
 		if fileexists(incfile) then
 			incdir = i
 			return incfile
 		end if
+		maybePrintIncludeTree(inctext, "not found at " + incfile, FALSE)
 
 		i = i->next
 	wend
@@ -2340,13 +2355,13 @@ private sub cppInclude(byval begin as integer, byref flags as integer, byval is_
 
 	'' For display we make the filename relative to curdir()
 	var prettyfile = pathStripCurdir(incfile)
-	var message = prettyfile
 
 	var knownfile = cppLookupOrAppendKnownFile(incfile, prettyfile)
 	with cpp.files[knownfile]
 		'' Did we find a #pragma once in this file previously?
 		if .pragmaonce then
 			'' Don't #include it again ever
+			maybePrintIncludeTree(inctext, prettyfile, TRUE)
 			exit sub
 		end if
 
@@ -2355,12 +2370,14 @@ private sub cppInclude(byval begin as integer, byref flags as integer, byval is_
 			'' Only load the file if the guard symbol isn't defined (anymore) now.
 			if cppIsMacroCurrentlyDefined(.guard) then
 				'' Skipping header due to include guard
+				maybePrintIncludeTree(inctext, prettyfile, TRUE)
 				exit sub
 			end if
 		end if
 	end with
 
-	cpp.api->print(message)
+	maybePrintIncludeTree(inctext, prettyfile, FALSE)
+	cpp.api->print(prettyfile)
 
 	'' Push the #include file context
 	cppPush(STATE_FILE, knownfile)
