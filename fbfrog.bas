@@ -75,8 +75,8 @@ namespace frog
 	'' *.bi output file names from the -emit options
 	dim shared as BIFILE ptr bis
 	dim shared as integer bicount
-	dim shared as THASH ucasebihash
-	dim shared as THASH bilookupcache
+	dim shared as THash ucasebihash = THash(6, TRUE)
+	dim shared as THash bilookupcache = THash(6, TRUE)
 
 	'' *.h file name patterns from the -emit options, associated to the
 	'' corresponding bis array index
@@ -132,7 +132,7 @@ end sub
 private function frogLookupBiFromBi(byref filename as string) as integer
 	var ucasefilename = ucase(filename, 1)
 	var ucasehash = hashHash(ucasefilename)
-	var item = hashLookup(@frog.ucasebihash, ucasefilename, ucasehash)
+	var item = frog.ucasebihash.lookup(ucasefilename, ucasehash)
 	if item->s then
 		function = cint(item->data)
 	else
@@ -148,7 +148,7 @@ private sub frogAddBi(byref filename as string, byref pattern as string)
 	'' should be case-insensitive, because of Windows' file system...
 	var ucasefilename = ucase(filename, 1)
 	var ucasehash = hashHash(ucasefilename)
-	var item = hashLookup(@frog.ucasebihash, ucasefilename, ucasehash)
+	var item = frog.ucasebihash.lookup(ucasefilename, ucasehash)
 	if item->s then
 		'' Already exists
 		bi = cint(item->data)
@@ -161,7 +161,7 @@ private sub frogAddBi(byref filename as string, byref pattern as string)
 		with frog.bis[bi]
 			.filename = strDuplicate(filename)
 		end with
-		hashAdd(@frog.ucasebihash, item, ucasehash, ucasefilename, cptr(any ptr, bi))
+		frog.ucasebihash.add(item, ucasehash, ucasefilename, cptr(any ptr, bi))
 	end if
 
 	frogAddPattern(pattern, bi)
@@ -170,7 +170,7 @@ end sub
 function frogLookupBiFromH(byval hfile as zstring ptr) as integer
 	'' Check whether we've already cached the .bi for this .h file
 	var hfilehash = hashHash(hfile)
-	var item = hashLookup(@frog.bilookupcache, hfile, hfilehash)
+	var item = frog.bilookupcache.lookup(hfile, hfilehash)
 	if item->s then
 		return cint(item->data)
 	end if
@@ -188,7 +188,7 @@ function frogLookupBiFromH(byval hfile as zstring ptr) as integer
 	'' Cache the lookup results to improve performance
 	'' (the CPP does repeated lookups on each #include, which can add up on certain
 	'' input headers, such as the Windows API headers)
-	hashAdd(@frog.bilookupcache, item, hfilehash, hfile, cptr(any ptr, bi))
+	frog.bilookupcache.add(item, hfilehash, hfile, cptr(any ptr, bi))
 	function = bi
 end function
 
@@ -427,32 +427,20 @@ end sub
 
 constructor ApiInfo()
 	for i as integer = lbound(renameopt) to ubound(renameopt)
-		hashInit(@renameopt(i), 3, FALSE)
+		renameopt(i).constructor(3, FALSE)
 	next
 	for i as integer = lbound(idopt) to ubound(idopt)
-		hashInit(@idopt(i), 3, FALSE)
+		idopt(i).constructor(3, FALSE)
 	next
-	hashInit(@removeinclude, 3, FALSE)
-	hashInit(@setarraysizeoptions, 3, FALSE)
 	log = astNewGROUP()
 end constructor
 
 destructor ApiInfo()
-	for i as integer = lbound(renameopt) to ubound(renameopt)
-		hashEnd(@renameopt(i))
-	next
-	for i as integer = lbound(idopt) to ubound(idopt)
-		hashEnd(@idopt(i))
-	next
-	hashEnd(@removeinclude)
-	hashEnd(@setarraysizeoptions)
-
 	for i as integer = 0 to replacementcount - 1
 		deallocate(replacements[i].fromcode)
 		deallocate(replacements[i].tocode)
 	next
 	deallocate(replacements)
-
 	astDelete(log)
 end destructor
 
@@ -479,19 +467,19 @@ sub ApiInfo.loadOption(byval opt as integer, byval param1 as zstring ptr, byval 
 
 	case OPT_RENAMETYPEDEF, OPT_RENAMETAG, OPT_RENAMEPROC, _
 	     OPT_RENAMEDEFINE, OPT_RENAMEMACROPARAM, OPT_RENAME
-		hashAddOverwrite(@renameopt(opt), param1, param2)
+		renameopt(opt).addOverwrite(param1, param2)
 		have_renames = TRUE
 
 	case OPT_REMOVEDEFINE, OPT_REMOVEPROC, OPT_REMOVEVAR, OPT_REMOVE1ST, OPT_REMOVE2ND, _
 	     OPT_DROPPROCBODY, OPT_TYPEDEFHINT, OPT_ADDFORWARDDECL, OPT_UNDEFBEFOREDECL, _
 	     OPT_NOSTRING, OPT_STRING, OPT_CONVBODYTOKENS, OPT_EXPANDINDEFINE, OPT_NOEXPAND
-		hashAddOverwrite(@idopt(opt), param1, NULL)
+		idopt(opt).addOverwrite(param1, NULL)
 
 	case OPT_REMOVEINCLUDE
-		hashAddOverwrite(@removeinclude, param1, NULL)
+		removeinclude.addOverwrite(param1, NULL)
 
 	case OPT_SETARRAYSIZE
-		hashAddOverwrite(@setarraysizeoptions, param1, param2)
+		setarraysizeoptions.addOverwrite(param1, param2)
 
 	case OPT_MOVEABOVE
 		var n = astNewTEXT(param1)
@@ -1476,15 +1464,7 @@ end function
 		hPrintHelpAndExit()
 	end if
 
-	filebuffersInit()
-	fbcrtheadersInit()
-	extradatatypesInit()
-	fbkeywordsInit()
-	lexInit()
-
 	frogSetTargets(TRUE)
-	hashInit(@frog.ucasebihash, 6, TRUE)
-	hashInit(@frog.bilookupcache, 6, TRUE)
 
 	tkInit()
 

@@ -632,7 +632,7 @@ namespace cpp
 	'' Even though unregistered symbols are implicitly undefined,
 	'' registering them is useful to show the "assuming undefined" warning
 	'' (and to only show it once).
-	dim shared macros		as THASH
+	dim shared macros		as THash ptr
 
 	'' Array of macros saved by #pragma push_macro, for use by #pragma
 	'' pop_macro later.
@@ -664,7 +664,7 @@ namespace cpp
 	'' Information about known files
 	dim shared files as KNOWNFILE ptr
 	dim shared filecount as integer
-	dim shared filetb as THASH  '' data = index into files array
+	dim shared filetb as THash ptr  '' data = index into files array
 end namespace
 
 sub cppInit(byref api as ApiInfo)
@@ -681,14 +681,14 @@ sub cppInit(byref api as ApiInfo)
 	cpp.skiplevel = MAXSTACK  '' No skipping yet
 	cpp.filelevel = 0
 
-	hashInit(@cpp.macros, 4, TRUE)
+	cpp.macros = new THash(4, TRUE)
 	cpp.savedmacros = NULL
 	cpp.savedmacrocount = 0
 	cpp.incdirs = astNewGROUP()
 
 	cpp.files = NULL
 	cpp.filecount = 0
-	hashInit(@cpp.filetb, 4, FALSE)
+	cpp.filetb = new THash(4, FALSE)
 end sub
 
 sub cppEnd()
@@ -700,10 +700,10 @@ sub cppEnd()
 	end if
 
 	scope
-		for i as integer = 0 to cpp.macros.room - 1
-			definfoDelete(cpp.macros.items[i].data)
+		for i as integer = 0 to cpp.macros->room - 1
+			definfoDelete(cpp.macros->items[i].data)
 		next
-		hashEnd(@cpp.macros)
+		delete cpp.macros
 	end scope
 	scope
 		for i as integer = 0 to cpp.savedmacrocount - 1
@@ -713,7 +713,7 @@ sub cppEnd()
 	end scope
 	astDelete(cpp.incdirs)
 
-	hashEnd(@cpp.filetb)
+	delete cpp.filetb
 	scope
 		for i as integer = 0 to cpp.filecount - 1
 			with cpp.files[i]
@@ -756,11 +756,11 @@ sub cppAppendIncludeDirective(byval filename as zstring ptr, byval tkflags as in
 end sub
 
 private function cppLookupMacro(byval id as zstring ptr) as DEFINEINFO ptr
-	function = hashLookupDataOrNull(@cpp.macros, id)
+	function = cpp.macros->lookupDataOrNull(id)
 end function
 
 private function cppIsKnownSymbol(byval id as zstring ptr) as integer
-	function = (hashLookup(@cpp.macros, id, hashHash(id))->s <> NULL)
+	function = (cpp.macros->lookup(id, hashHash(id))->s <> NULL)
 end function
 
 private function cppIsMacroCurrentlyDefined(byval id as zstring ptr) as integer
@@ -770,12 +770,12 @@ end function
 '' Add/overwrite a known macro definition (or register it as known undefined)
 private sub cppAddMacro(byval id as zstring ptr, byval definfo as DEFINEINFO ptr)
 	var hash = hashHash(id)
-	var item = hashLookup(@cpp.macros, id, hash)
+	var item = cpp.macros->lookup(id, hash)
 	if item->s then
 		definfoDelete(item->data)
 		item->data = definfo
 	else
-		hashAdd(@cpp.macros, item, hash, id, definfo)
+		cpp.macros->add(item, hash, id, definfo)
 	end if
 end sub
 
@@ -859,7 +859,7 @@ private function cppLookupOrAppendKnownFile _
 	) as integer
 
 	var hash = hashHash(incfile)
-	var item = hashLookup(@cpp.filetb, incfile, hash)
+	var item = cpp.filetb->lookup(incfile, hash)
 	if item->s then
 		return cint(item->data)
 	end if
@@ -875,7 +875,7 @@ private function cppLookupOrAppendKnownFile _
 		.incfile = incfile
 	end with
 
-	hashAdd(@cpp.filetb, item, hash, incfile, cptr(any ptr, i))
+	cpp.filetb->add(item, hash, incfile, cptr(any ptr, i))
 	function = i
 end function
 
@@ -1282,7 +1282,7 @@ private function hCheckForMacroCall(byval x as integer) as DEFINEINFO ptr
 	end if
 
 	'' Only expand if not marked otherwise
-	if hashContains(@cpp.api->idopt(OPT_NOEXPAND), id, hashHash(id)) or _
+	if cpp.api->idopt(OPT_NOEXPAND).contains(id, hashHash(id)) or _
 	    (tkGetFlags(x) and TKFLAG_NOEXPAND) or _
 	    (definfo->macro->attrib and ASTATTRIB_POISONED) then
 		return NULL
@@ -2453,7 +2453,7 @@ private sub hMaybeExpandMacroInDefineBody(byval parentdefine as ASTNODE ptr)
 	var id = tkSpellId(cpp.x)
 
 	'' Only expand if the called macro was given with -expandindefine
-	if hashContains(@cpp.api->idopt(OPT_EXPANDINDEFINE), id, hashHash(id)) = FALSE then
+	if cpp.api->idopt(OPT_EXPANDINDEFINE).contains(id, hashHash(id)) = FALSE then
 		exit sub
 	end if
 
@@ -2488,7 +2488,7 @@ private sub hMaybeExpandMacroInDefineBody(byval parentdefine as ASTNODE ptr)
 end sub
 
 private function hShouldRemoveDefine(byval id as zstring ptr) as integer
-	function = hashContains(@cpp.api->idopt(OPT_REMOVEDEFINE), id, hashHash(id))
+	function = cpp.api->idopt(OPT_REMOVEDEFINE).contains(id, hashHash(id))
 end function
 
 '' DEFINE Identifier ['(' ParameterList ')'] Body Eol

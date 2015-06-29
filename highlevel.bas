@@ -4,15 +4,15 @@
 
 namespace hl
 	dim shared api as ApiInfo ptr
-	dim shared symbols as THASH
+	dim shared symbols as THash ptr
 
 	'' Used by both typedef expansion and forward declaration addition passes
 	'' hlExpandSpecialTypedefs: data = typedef ASTNODE, needs freeing
 	'' hlCollectForwardUses/hlAddForwardDecls: data = hl.types array index
-	dim shared typehash as THASH
+	dim shared typehash as THash ptr
 
 	'' data = TEXT ASTNODE holding the new id/alias
-	dim shared renamejobs as THASH
+	dim shared renamejobs as THash ptr
 
 	'' Used by forward declaration addition pass
 	type TYPENODE
@@ -34,7 +34,7 @@ namespace hl
 end namespace
 
 private function hlLookupSymbolType(byval id as zstring ptr) as integer
-	function = cint(hashLookupDataOrNull(@hl.symbols, id))
+	function = cint(hl.symbols->lookupDataOrNull(id))
 end function
 
 private sub hlCollectSymbol(byval id as zstring ptr, byval dtype as integer)
@@ -43,7 +43,7 @@ private sub hlCollectSymbol(byval id as zstring ptr, byval dtype as integer)
 		'' Don't bother tracking complex types - not worth it yet
 		dtype = TYPE_NONE
 	end select
-	hashAddOverwrite(@hl.symbols, id, cptr(any ptr, dtype))
+	hl.symbols->addOverwrite(id, cptr(any ptr, dtype))
 end sub
 
 private function typeIsNumeric(byval dtype as integer) as integer
@@ -451,7 +451,7 @@ private sub hlApplyRemoveOption(byval ast as ASTNODE ptr, byval astclass as inte
 		var nxt = i->next
 
 		if i->class = astclass then
-			if hashContains(@hl.api->idopt(opt), i->text, hashHash(i->text)) then
+			if hl.api->idopt(opt).contains(i->text, hashHash(i->text)) then
 				astRemove(ast, i)
 			end if
 		end if
@@ -461,51 +461,43 @@ private sub hlApplyRemoveOption(byval ast as ASTNODE ptr, byval astclass as inte
 end sub
 
 private sub hlApplyRemove1st(byval ast as ASTNODE ptr)
-	dim removed as THASH
-	hashInit(@removed, 7, TRUE)
-
+	dim removed as THash = THash(7, TRUE)
 	var i = ast->head
 	while i
 		var nxt = i->next
 
 		if i->text then
 			var hash = hashHash(i->text)
-			if hashContains(@hl.api->idopt(OPT_REMOVE1ST), i->text, hash) and _
-			   (not hashContains(@removed, i->text, hash)) then
-				hashAddOverwrite(@removed, i->text, NULL)
+			if hl.api->idopt(OPT_REMOVE1ST).contains(i->text, hash) and _
+			   (not removed.contains(i->text, hash)) then
+				removed.addOverwrite(i->text, NULL)
 				astRemove(ast, i)
 			end if
 		end if
 
 		i = nxt
 	wend
-
-	hashEnd(@removed)
 end sub
 
 private sub hlApplyRemove2nd(byval ast as ASTNODE ptr)
-	dim found1st as THASH
-	hashInit(@found1st, 7, FALSE)
-
+	dim found1st as THash = THash(7, FALSE)
 	var i = ast->head
 	while i
 		var nxt = i->next
 
 		if i->text then
 			var hash = hashHash(i->text)
-			if hashContains(@hl.api->idopt(OPT_REMOVE2ND), i->text, hash) then
-				if hashContains(@found1st, i->text, hash) then
+			if hl.api->idopt(OPT_REMOVE2ND).contains(i->text, hash) then
+				if found1st.contains(i->text, hash) then
 					astRemove(ast, i)
 				else
-					hashAddOverwrite(@found1st, i->text, NULL)
+					found1st.addOverwrite(i->text, NULL)
 				end if
 			end if
 		end if
 
 		i = nxt
 	wend
-
-	hashEnd(@found1st)
 end sub
 
 private sub hlApplyDropProcBodyOptions(byval ast as ASTNODE ptr)
@@ -513,7 +505,7 @@ private sub hlApplyDropProcBodyOptions(byval ast as ASTNODE ptr)
 	while i
 
 		if (i->class = ASTCLASS_PROC) and (i->expr <> NULL) then
-			if hashContains(@hl.api->idopt(OPT_DROPPROCBODY), i->text, hashHash(i->text)) then
+			if hl.api->idopt(OPT_DROPPROCBODY).contains(i->text, hashHash(i->text)) then
 				astDelete(i->expr)
 				i->expr = NULL
 			end if
@@ -552,7 +544,7 @@ private function hlSetArraySizes(byval n as ASTNODE ptr) as integer
 			var dimension = n->array->head
 			assert(dimension->class = ASTCLASS_DIMENSION)
 			if dimension->expr->class = ASTCLASS_ELLIPSIS then
-				dim size as zstring ptr = hashLookupDataOrNull(@hl.api->setarraysizeoptions, n->text)
+				dim size as zstring ptr = hl.api->setarraysizeoptions.lookupDataOrNull(n->text)
 				if size then
 					astDelete(dimension->expr)
 					dimension->expr = astNewTEXT(size)
@@ -564,7 +556,7 @@ private function hlSetArraySizes(byval n as ASTNODE ptr) as integer
 end function
 
 private function hApplyRenameOption(byval opt as integer, byval n as ASTNODE ptr) as integer
-	dim as zstring ptr newid = hashLookupDataOrNull(@hl.api->renameopt(opt), n->text)
+	dim as zstring ptr newid = hl.api->renameopt(opt).lookupDataOrNull(n->text)
 	if newid then
 		astRenameSymbol(n, newid)
 		function = TRUE
@@ -742,7 +734,7 @@ private sub hlExpandSpecialTypedefs(byval n as ASTNODE ptr)
 	'' Declaration using one of the special typedefs?
 	if typeGetDt(n->dtype) = TYPE_UDT then
 		assert(astIsTEXT(n->subtype))
-		dim as ASTNODE ptr typedef = hashLookupDataOrNull(@hl.typehash, n->subtype->text)
+		dim as ASTNODE ptr typedef = hl.typehash->lookupDataOrNull(n->subtype->text)
 		if typedef then
 			'' Expand the typedef into the declaration.
 			'' Since typedefs are also processed this way here, we can be sure that
@@ -792,7 +784,7 @@ private sub hlExpandSpecialTypedefs(byval n as ASTNODE ptr)
 				end if
 
 				'' TODO: handle duplicate typedefs? (perhaps warn about them?)
-				hashAddOverwrite(@hl.typehash, i->text, i)
+				hl.typehash->addOverwrite(i->text, i)
 			end if
 		end if
 
@@ -861,7 +853,7 @@ end sub
 private sub hFixCharWchar(byval n as ASTNODE ptr)
 	'' Affected by -nostring?
 	if n->text then
-		if hashContains(@hl.api->idopt(OPT_NOSTRING), n->text, hashHash(n->text)) then
+		if hl.api->idopt(OPT_NOSTRING).contains(n->text, hashHash(n->text)) then
 			'' Turn string into byte (even pointers)
 			hTurnStringIntoByte(n)
 			exit sub
@@ -922,7 +914,7 @@ private function hlFixCharWchar(byval n as ASTNODE ptr) as integer
 			'' It would be nice to have this for typedefs too though because of the GLubyte type in the OpenGL headers. But for that
 			'' we need to have a typedef type tracker/symbol table first.
 			if n->text then
-				if hashContains(@hl.api->idopt(OPT_STRING), n->text, hashHash(n->text)) then
+				if hl.api->idopt(OPT_STRING).contains(n->text, hashHash(n->text)) then
 					'' Turn byte into string (even pointers)
 					hTurnByteIntoString(n)
 				end if
@@ -933,12 +925,12 @@ private function hlFixCharWchar(byval n as ASTNODE ptr) as integer
 end function
 
 private sub hlRenameJobsBegin()
-	hashInit(@hl.renamejobs, 6, TRUE)
+	hl.renamejobs = new THash(6, TRUE)
 end sub
 
 private function hlRenameJobAdd(byval oldid as zstring ptr, byval newname as ASTNODE ptr) as integer
 	var hash = hashHash(oldid)
-	var item = hashLookup(@hl.renamejobs, oldid, hash)
+	var item = hl.renamejobs->lookup(oldid, hash)
 	if item->s then
 		'' Allow overwriting duplicate typedefs (if both oldid/newid are the same),
 		'' but not if the newid differs (then it's a separate typedef which has to be
@@ -963,7 +955,7 @@ private function hlRenameJobAdd(byval oldid as zstring ptr, byval newname as AST
 		astDelete(item->data)
 		item->data = newid
 	else
-		hashAdd(@hl.renamejobs, item, hash, oldid, newid)
+		hl.renamejobs->add(item, hash, oldid, newid)
 	end if
 
 	function = TRUE
@@ -971,7 +963,7 @@ end function
 
 private sub hMaybeApplyRenameJob(byval n as ASTNODE ptr)
 	'' Is there a renamejob for this oldid?
-	dim as ASTNODE ptr newid = hashLookupDataOrNull(@hl.renamejobs, n->text)
+	dim as ASTNODE ptr newid = hl.renamejobs->lookupDataOrNull(n->text)
 	if newid then
 		'' Change the id if needed
 		if *n->text <> *newid->text then
@@ -1012,14 +1004,15 @@ private sub hlRenameJobsEnd(byval ast as ASTNODE ptr)
 	astVisit(ast, @hlApplyRenameJobs)
 	scope
 		'' Free the newids
-		for i as integer = 0 to hl.renamejobs.room - 1
-			var item = hl.renamejobs.items + i
+		for i as integer = 0 to hl.renamejobs->room - 1
+			var item = hl.renamejobs->items + i
 			if item->s then
 				astDelete(item->data)
 			end if
 		next
 	end scope
-	hashEnd(@hl.renamejobs)
+	delete hl.renamejobs
+	hl.renamejobs = NULL
 end sub
 
 private sub hlSolveOutTagIds(byval n as ASTNODE ptr)
@@ -1097,7 +1090,7 @@ end sub
 '' Return = index into hl.types array
 private function hLookupOrAddType(byval id as zstring ptr) as integer
 	var hash = hashHash(id)
-	var item = hashLookup(@hl.typehash, id, hash)
+	var item = hl.typehash->lookup(id, hash)
 	if item->s = NULL then
 		'' Append to hl.types array
 		if hl.typeroom = hl.typecount then
@@ -1113,7 +1106,7 @@ private function hLookupOrAddType(byval id as zstring ptr) as integer
 			.definition = NULL
 			.forwarduse = FALSE
 			.firstuse = NULL
-			hashAdd(@hl.typehash, item, hash, .id, cptr(any ptr, hl.typecount))
+			hl.typehash->add(item, hash, .id, cptr(any ptr, hl.typecount))
 		end with
 		function = hl.typecount
 		hl.typecount += 1
@@ -1184,7 +1177,7 @@ private function hShouldAddForwardDeclForType(byref typ as hl.TYPENODE) as integ
 			function = TRUE
 		else
 			'' Not defined here; only if -addforwarddecl was given
-			function = hashContains(@hl.api->idopt(OPT_ADDFORWARDDECL), typ.id, hashHash(typ.id))
+			function = hl.api->idopt(OPT_ADDFORWARDDECL).contains(typ.id, hashHash(typ.id))
 		end if
 	end if
 end function
@@ -1432,7 +1425,7 @@ private sub hlAddUndefsAboveDecls(byval ast as ASTNODE ptr)
 	while i
 
 		if (i->class <> ASTCLASS_UNDEF) and (i->text <> NULL) then
-			if hashContains(@hl.api->idopt(OPT_UNDEFBEFOREDECL), i->text, hashHash(i->text)) then
+			if hl.api->idopt(OPT_UNDEFBEFOREDECL).contains(i->text, hashHash(i->text)) then
 				var undef = astNew(ASTCLASS_UNDEF, i->text)
 				undef->location = i->location
 				astInsert(ast, undef, i)
@@ -1605,7 +1598,7 @@ private sub hTranslateHeaderFileName(byref filename as string)
 	filename = pathStripExt(filename)
 
 	'' Is it one of the CRT headers? Remap it to crt/*.bi
-	if hashContains(@fbcrtheaderhash, filename, hashHash(filename)) then
+	if fbcrtheaderhash.contains(filename, hashHash(filename)) then
 		filename = "crt/" + filename
 	end if
 
@@ -1654,7 +1647,7 @@ private sub hlHandleIncludes(byval ast as ASTNODE ptr, byref bioptions as ApiSpe
 		'' #include?
 		if i->class = ASTCLASS_PPINCLUDE then
 			var filename = *i->text
-			if hashContains(@hl.api->removeinclude, filename, hashHash(filename)) then
+			if hl.api->removeinclude.contains(filename, hashHash(filename)) then
 				astRemove(ast, i)
 			else
 				hTranslateHeaderFileName(filename)
@@ -1666,8 +1659,7 @@ private sub hlHandleIncludes(byval ast as ASTNODE ptr, byref bioptions as ApiSpe
 	wend
 
 	'' Remove duplicate #includes
-	dim includes as THASH
-	hashInit(@includes, 6, TRUE)
+	dim includes as THash = THash(6, TRUE)
 
 	i = ast->head
 	while i <> top
@@ -1676,18 +1668,16 @@ private sub hlHandleIncludes(byval ast as ASTNODE ptr, byref bioptions as ApiSpe
 		'' #include?
 		if i->class = ASTCLASS_PPINCLUDE then
 			var hash = hashHash(i->text)
-			var item = hashLookup(@includes, i->text, hash)
+			var item = includes.lookup(i->text, hash)
 			if item->s then
 				astRemove(ast, i)
 			else
-				hashAdd(@includes, item, hash, i->text, NULL)
+				includes.add(item, hash, i->text, NULL)
 			end if
 		end if
 
 		i = nxt
 	wend
-
-	hashEnd(@includes)
 end sub
 
 private function hlSearchSpecialDtypes(byval n as ASTNODE ptr) as integer
@@ -1982,9 +1972,10 @@ end sub
 sub hlGlobal(byval ast as ASTNODE ptr, byref api as ApiInfo)
 	hl.api = @api
 
-	hashInit(@hl.symbols, 10, TRUE)
+	hl.symbols = new THash(10, TRUE)
 	astVisit(ast, @hlFixExpressions)
-	hashEnd(@hl.symbols)
+	delete hl.symbols
+	hl.symbols = NULL
 
 	if api.idopt(OPT_REMOVEPROC).count > 0 then
 		hlApplyRemoveOption(ast, ASTCLASS_PROC, OPT_REMOVEPROC)
@@ -2020,18 +2011,19 @@ sub hlGlobal(byval ast as ASTNODE ptr, byref api as ApiInfo)
 	''    which is why the typedef needs to be expanded)
 	'' TODO: If possible, turn function typedefs into function pointer
 	'' typedefs instead of solving them out
-	hashInit(@hl.typehash, 8, FALSE)
+	hl.typehash = new THash(8, FALSE)
 	hlExpandSpecialTypedefs(ast)
 	scope
 		'' Free the collected typedefs which were unlinked from the main AST
-		for i as integer = 0 to hl.typehash.room - 1
-			var item = hl.typehash.items + i
+		for i as integer = 0 to hl.typehash->room - 1
+			var item = hl.typehash->items + i
 			if item->s then
 				astDelete(item->data)
 			end if
 		next
 	end scope
-	hashEnd(@hl.typehash)
+	delete hl.typehash
+	hl.typehash = NULL
 
 	'' Fix up parameters with certain special types:
 	''   function => function pointer
@@ -2101,10 +2093,11 @@ sub hlGlobal(byval ast as ASTNODE ptr, byref api as ApiInfo)
 	'' solution: auto-adding forward decls for everything and maintaining
 	'' lists for types/tags for which forward decls should *not* be added.
 	''
-	hashInit(@hl.typehash, 8, FALSE)
+	hl.typehash = new THash(8, FALSE)
 	hlScanForForwardUsedTypes(ast)
 	hlAddForwardDecls(ast)
-	hashEnd(@hl.typehash)
+	delete hl.typehash
+	hl.typehash = NULL
 	for i as integer = 0 to hl.typecount - 1
 		deallocate(hl.types[i].id)
 	next

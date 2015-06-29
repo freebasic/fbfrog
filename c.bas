@@ -70,7 +70,7 @@ namespace c
 	dim shared as integer x, parseok, tempids
 	dim shared parentdefine as ASTNODE ptr
 
-	dim shared typedefs as THASH
+	dim shared typedefs as THash ptr
 
 	'' #pragma pack stack
 	namespace pragmapack
@@ -126,12 +126,12 @@ end sub
 
 private function cIsTypedef(byval id as zstring ptr) as integer
 	'' 1. Check typedefs seen by C parser
-	if hashContains(@c.typedefs, id, hashHash(id)) then
+	if c.typedefs->contains(id, hashHash(id)) then
 		return TRUE
 	end if
 
 	'' 2. Check -typedefhint options
-	function = hashContains(@c.api->idopt(OPT_TYPEDEFHINT), id, hashHash(id))
+	function = c.api->idopt(OPT_TYPEDEFHINT).contains(id, hashHash(id))
 end function
 
 private function cIdentifierIsMacroParam(byval id as zstring ptr) as integer
@@ -149,7 +149,7 @@ sub cInit(byref api as ApiInfo)
 	c.parentdefine = NULL
 	c.tempids = 0
 
-	hashInit(@c.typedefs, 8, FALSE)
+	c.typedefs = new THash(8, FALSE)
 
 	'' Initially no packing
 	c.pragmapack.level = 0
@@ -162,10 +162,10 @@ end sub
 
 sub cEnd()
 	deallocate(c.defbodies)
-	hashEnd(@c.typedefs)
+	delete c.typedefs
 end sub
 
-#define cAddTypedef(id) hashAddOverwrite(@c.typedefs, id, NULL)
+#define cAddTypedef(id) c.typedefs->addOverwrite(id, NULL)
 
 private sub cAddDefBody(byval xdefbegin as integer, byval xbodybegin as integer, byval n as ASTNODE ptr)
 	if c.defbodyroom = c.defbodycount then
@@ -1068,7 +1068,7 @@ end function
 private function cDefineBody(byval macro as ASTNODE ptr) as integer
 	'' If -convbodytokens was given for this #define, then don't try to parse the #define body,
 	'' but just convert the tokens individually from C to FB.
-	if hashContains(@c.api->idopt(OPT_CONVBODYTOKENS), macro->text, hashHash(macro->text)) then
+	if c.api->idopt(OPT_CONVBODYTOKENS).contains(macro->text, hashHash(macro->text)) then
 		var body = cDefineBodyTokens()
 		if len(body) > 0 then
 			macro->expr = astNewTEXT(body)

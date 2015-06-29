@@ -6,49 +6,38 @@
 
 const MAXTEXTLEN = 1 shl 12
 
-type LEXSTUFF
+type LexStuff
 	i		as ubyte ptr  '' Current char, will always be <= limit
 	x		as integer
 	location	as TkLocation
 	behindspace	as integer
 
-	ckeywords	as THASH
-	frogoptions	as THASH
+	ckeywords	as THash = THash(12)
+	frogoptions	as THash = THash(12)
 
 	'' +2 extra room to allow for some "overflowing" to reduce the amount
 	'' of checking needed, +1 for null terminator.
 	text		as zstring * MAXTEXTLEN+2+1
+
+	declare constructor()
+	declare operator let(byref as const LexStuff) '' declared but not implemented
 end type
 
-dim shared as LEXSTUFF lex
+dim shared lex as LexStuff
 
-private sub hInitKeywords _
-	( _
-		byval h as THASH ptr, _
-		byval first as integer, _
-		byval last as integer _
-	)
-
-	hashInit(h, 12)
-
+private sub hInitKeywords(byref h as THash, byval first as integer, byval last as integer)
 	for i as integer = first to last
-		hashAddOverwrite(h, tkInfoText(i), cast(any ptr, i))
+		h.addOverwrite(tkInfoText(i), cast(any ptr, i))
 	next
 end sub
 
-sub lexInit()
-	hInitKeywords(@lex.ckeywords, KW__C_FIRST, KW__C_LAST)
-	hInitKeywords(@lex.frogoptions, OPT__FIRST, OPT__LAST)
-end sub
+constructor LexStuff()
+	hInitKeywords(lex.ckeywords, KW__C_FIRST, KW__C_LAST)
+	hInitKeywords(lex.frogoptions, OPT__FIRST, OPT__LAST)
+end constructor
 
-private function hLookupKeyword _
-	( _
-		byval h as THASH ptr, _
-		byval id as zstring ptr, _
-		byval defaulttk as integer _
-	) as integer
-
-	var item = hashLookup(h, id, hashHash(id))
+private function hLookupKeyword(byref h as THash, byval id as zstring ptr, byval defaulttk as integer) as integer
+	var item = h.lookup(id, hashHash(id))
 	if item->s then
 		'' Return the corresponding KW_* (C keyword) or OPT_* (command line option)
 		function = cint(item->data)
@@ -79,7 +68,7 @@ private sub hAddTextToken(byval tk as integer, byval begin as ubyte ptr)
 		'' If it's a C keyword, insert the corresponding KW_* (without
 		'' storing any string data). Otherwise, if it's a random symbol,
 		'' just insert a TK_ID and store the string data on it.
-		tk = hLookupKeyword(@lex.ckeywords, begin, TK_ID)
+		tk = hLookupKeyword(lex.ckeywords, begin, TK_ID)
 		if tk <> TK_ID then
 			begin = NULL
 		end if
@@ -657,7 +646,7 @@ private sub hReadArg(byval tk as integer)
 
 	select case tk
 	case TK_MINUS
-		tk = hLookupKeyword(@lex.frogoptions, text, TK_STRING)
+		tk = hLookupKeyword(lex.frogoptions, text, TK_STRING)
 		if tk = TK_STRING then
 			oopsLocation(lex.location, "unknown command line option '" + *text + "'")
 		end if

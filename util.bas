@@ -56,17 +56,13 @@ sub FileBuffer.load(byval location as TkLocation)
 end sub
 
 namespace filebuffers
-	dim shared hashtb as THASH
+	dim shared hashtb as THash = Thash(8, FALSE)
 end namespace
-
-sub filebuffersInit()
-	hashInit(@filebuffers.hashtb, 8, FALSE)
-end sub
 
 function filebuffersAdd(byval filename as zstring ptr, byval location as TkLocation) as FileBuffer ptr
 	'' Cache file buffers based on the file name
 	var hash = hashHash(filename)
-	var item = hashLookup(@filebuffers.hashtb, filename, hash)
+	var item = filebuffers.hashtb.lookup(filename, hash)
 
 	'' Not yet loaded?
 	if item->s = NULL then
@@ -74,7 +70,7 @@ function filebuffersAdd(byval filename as zstring ptr, byval location as TkLocat
 		file->source.name = strDuplicate(filename)
 		file->source.is_file = TRUE
 		file->load(location)
-		hashAdd(@filebuffers.hashtb, item, hash, file->source.name, file)
+		filebuffers.hashtb.add(item, hash, file->source.name, file)
 	end if
 
 	function = item->data
@@ -338,8 +334,8 @@ end function
 '' this chain would cause the following entries to become unreachable/lost,
 '' as the free item in the middle would appear as the end of the chain now.
 ''
-'' If the hash table owns the strings then hashAdd() will duplicate them and
-'' then never change them again until hashEnd() which frees them.
+'' If the hash table owns the strings then THash.add() will duplicate them and
+'' then never change them again until THash.destructor() which frees them.
 ''
 
 function hashHash(byval s as zstring ptr) as ulong
@@ -360,52 +356,46 @@ private function hashHash2(byval s as zstring ptr) as ulong
 	function = hash
 end function
 
-private sub hAllocTable(byval h as THASH ptr)
+sub THash.allocTable()
 	'' They must be zeroed, because NULL instead of a string indicates
 	'' unused items
-	h->items = callocate(h->room * sizeof(THASHITEM))
+	items = callocate(room * sizeof(THashItem))
 end sub
 
-private sub hGrowTable(byval h as THASH ptr)
-	var old = h->items
-	var oldroom = h->room
+sub THash.growTable()
+	var olditems = items
+	var oldroom = room
 
-	h->room shl= 1
-	hAllocTable(h)
+	room shl= 1
+	allocTable()
 
 	'' Insert all used items from the old table into the new one.
 	'' This will redistribute everything using the new h->room.
-	for item as THASHITEM ptr = old to (old + (oldroom - 1))
+	for item as THashItem ptr = olditems to (olditems + (oldroom - 1))
 		if item->s then
 			'' Yep, this is recursive, but since the table is
 			'' larger by now, we won't recurse in here again.
-			*hashLookup(h, item->s, item->hash) = *item
+			*lookup(item->s, item->hash) = *item
 		end if
 	next
 
-	deallocate(old)
+	deallocate(olditems)
 end sub
 
-function hashLookup _
-	( _
-		byval h as THASH ptr, _
-		byval s as zstring ptr, _
-		byval hash as ulong _
-	) as THASHITEM ptr
-
+function THash.lookup(byval s as zstring ptr, byval hash as ulong) as THashItem ptr
 	'' Enlarge the hash map when >= 75% is used up, for better lookup
 	'' performance (it's easier to find free items if there are many; i.e.
 	'' less collisions), and besides there always must be free slots,
 	'' otherwise a lookup could end up in an infinite loop.
-	if (h->count * 4) >= (h->room * 3) then
-		hGrowTable(h)
+	if (count * 4) >= (room * 3) then
+		growTable()
 	end if
 
-	dim as uinteger roommask = h->room - 1
+	dim as uinteger roommask = room - 1
 
 	'' First probe
 	var i = hash and roommask
-	var item = h->items + i
+	var item = @items[i]
 
 	'' Found unused item with first probe?
 	if item->s = NULL then
@@ -430,7 +420,7 @@ function hashLookup _
 
 	do
 		i = (i + stepsize) and roommask
-		item = h->items + i
+		item = @items[i]
 
 		'' Found unused item?
 		'' The string is not in the hash, or it would have been found before.
@@ -449,52 +439,31 @@ function hashLookup _
 	function = item
 end function
 
-function hashLookupDataOrNull(byval h as THASH ptr, byval id as zstring ptr) as any ptr
-	var item = hashLookup(h, id, hashHash(id))
+function THash.lookupDataOrNull(byval id as zstring ptr) as any ptr
+	var item = lookup(id, hashHash(id))
 	if item->s then
 		function = item->data
 	end if
 end function
 
-function hashContains _
-	( _
-		byval h as THASH ptr, _
-		byval s as zstring ptr, _
-		byval hash as ulong _
-	) as integer
-	function = (hashLookup(h, s, hash)->s <> NULL)
+function THash.contains(byval s as zstring ptr, byval hash as ulong) as integer
+	function = (lookup(s, hash)->s <> NULL)
 end function
 
-sub hashAdd _
-	( _
-		byval h as THASH ptr, _
-		byval item as THASHITEM ptr, _
-		byval hash as ulong, _
-		byval s as zstring ptr, _
-		byval dat as any ptr _
-	)
-
-	if h->duplicate_strings then
+sub THash.add(byval item as THashItem ptr, byval hash as ulong, byval s as zstring ptr, byval dat as any ptr)
+	if duplicate_strings then
 		s = strDuplicate(s)
 	end if
-
 	item->s = s
 	item->hash = hash
 	item->data = dat
-	h->count += 1
-
+	count += 1
 end sub
 
 '' Add entry, overwriting previous user data stored in that slot
-function hashAddOverwrite _
-	( _
-		byval h as THASH ptr, _
-		byval s as zstring ptr, _
-		byval dat as any ptr _
-	) as THASHITEM ptr
-
+function THash.addOverwrite(byval s as zstring ptr, byval dat as any ptr) as THashItem ptr
 	var hash = hashHash(s)
-	var item = hashLookup(h, s, hash)
+	var item = lookup(s, hash)
 
 	if item->s then
 		'' Already exists
@@ -502,13 +471,13 @@ function hashAddOverwrite _
 		assert(item->hash = hash)
 	else
 		'' New entry
-		if h->duplicate_strings then
+		if duplicate_strings then
 			item->s = strDuplicate(s)
 		else
 			item->s = s
 		end if
 		item->hash = hash
-		h->count += 1
+		count += 1
 	end if
 
 	item->data = dat
@@ -516,39 +485,29 @@ function hashAddOverwrite _
 	function = item
 end function
 
-sub hashInit _
-	( _
-		byval h as THASH ptr, _
-		byval exponent as integer, _
-		byval duplicate_strings as integer _
-	)
+constructor THash(byval exponent as integer, byval duplicate_strings as integer)
+	count = 0
+	room = 1 shl exponent
+	this.duplicate_strings = duplicate_strings
+	allocTable()
+end constructor
 
-	h->count = 0
-	h->room = 1 shl exponent
-	h->duplicate_strings = duplicate_strings
-	hAllocTable(h)
-
-end sub
-
-sub hashEnd(byval h as THASH ptr)
+destructor THash()
 	'' Free each item's string if they were duplicated
-	if h->duplicate_strings then
-		var i = h->items
-		var limit = i + h->room
-		while i < limit
+	if duplicate_strings then
+		for i as THashItem ptr = items to items + (room - 1)
 			deallocate(i->s)
-			i += 1
-		wend
+		next
 	end if
 
-	deallocate(h->items)
-end sub
+	deallocate(items)
+end destructor
 
 #if __FB_DEBUG__
-sub hashDump(byval h as THASH ptr)
-	print "hash: " & h->count & "/" & h->room & " slots used"
-	for i as integer = 0 to h->room-1
-		with h->items[i]
+sub THash.dump()
+	print "hash: " & count & "/" & room & " slots used"
+	for i as integer = 0 to room - 1
+		with items[i]
 			print "    " & i & ": ";
 			if .s then
 				print "hash=" + hex(.hash) + ", s=""" + *.s + """, data=" + hex(.data)
@@ -836,12 +795,11 @@ dim shared fbcrtheaders(0 to ...) as zstring ptr = _
 	@"sys/types", @"sys/socket", @"wchar" _
 }
 
-dim shared fbcrtheaderhash as THASH
+dim shared fbcrtheaderhash as THash = Thash(5, TRUE)
 
-sub fbcrtheadersInit()
-	hashInit(@fbcrtheaderhash, 5, TRUE)
+private sub fbcrtheadersInit() constructor
 	for i as integer = lbound(fbcrtheaders) to ubound(fbcrtheaders)
-		hashAddOverwrite(@fbcrtheaderhash, fbcrtheaders(i), NULL)
+		fbcrtheaderhash.addOverwrite(fbcrtheaders(i), NULL)
 	next
 end sub
 
@@ -874,17 +832,16 @@ dim shared extradatatypes(0 to ...) as DATATYPEINFO => _
 	(@"wchar_t"  , TYPE_WSTRING )  _
 }
 
-dim shared extradatatypehash as THASH
+dim shared extradatatypehash as THash = THash(6, FALSE)
 
-sub extradatatypesInit()
-	hashInit(@extradatatypehash, 6, FALSE)
+private sub extradatatypesInit() constructor
 	for i as integer = 0 to ubound(extradatatypes)
-		hashAddOverwrite(@extradatatypehash, extradatatypes(i).id, cast(any ptr, extradatatypes(i).dtype))
+		extradatatypehash.addOverwrite(extradatatypes(i).id, cast(any ptr, extradatatypes(i).dtype))
 	next
 end sub
 
 function extradatatypesLookup(byval id as zstring ptr) as integer
-	var item = hashLookup(@extradatatypehash, id, hashHash(id))
+	var item = extradatatypehash.lookup(id, hashHash(id))
 	if item->s then
 		function = cint(item->data)
 	else
@@ -1273,21 +1230,20 @@ dim shared fbkeywordsinfo(0 to ...) as FbKeywordInfo => { _
 	(@"UNDEF"   , FBKW_PP)  _
 }
 
-dim shared fbkeywords as THASH
+dim shared fbkeywords as THash = THash(8, FALSE)
 
-sub fbkeywordsInit()
-	hashInit(@fbkeywords, 8, FALSE)
+private sub fbkeywordsInit() constructor
 	for i as integer = 0 to ubound(fbkeywordsinfo)
 		with fbkeywordsinfo(i)
-			assert(hashContains(@fbkeywords, .id, hashHash(.id)) = FALSE)
-			hashAddOverwrite(@fbkeywords, .id, cast(any ptr, .fbkw))
+			assert(fbkeywords.contains(.id, hashHash(.id)) = FALSE)
+			fbkeywords.addOverwrite(.id, cast(any ptr, .fbkw))
 		end with
 	next
 end sub
 
 function fbkeywordsLookup(byval id as zstring ptr) as integer
 	var ucaseid = ucase(*id, 1)
-	var item = hashLookup(@fbkeywords, ucaseid, hashHash(ucaseid))
+	var item = fbkeywords.lookup(ucaseid, hashHash(ucaseid))
 	if item->s then
 		function = cint(item->data)
 	else

@@ -85,7 +85,6 @@ type FileBuffer
 	declare sub load(byval location as TkLocation)
 end type
 
-declare sub filebuffersInit()
 declare function filebuffersAdd(byval filename as zstring ptr, byval location as TkLocation) as FileBuffer ptr
 
 declare sub oops(byval message as zstring ptr)
@@ -176,14 +175,14 @@ end type
 
 '' The hash table is an array of items,
 '' which associate a string to some user data.
-type THASHITEM
+type THashItem
 	s	as zstring ptr
 	hash	as ulong     '' hash value for quick comparison
 	data	as any ptr   '' user data
 end type
 
-type THASH
-	items		as THASHITEM ptr
+type THash
+	items		as THashItem ptr
 	count		as integer  '' number of used items
 	room		as integer  '' number of allocated items
 
@@ -192,53 +191,31 @@ type THASH
 	'' ensuring that strings passed to hashAdd*() stay valid as long as
 	'' hashLookup()'s may be done, i.e. typically until hashEnd().
 	duplicate_strings	as integer
+
+	declare constructor(byval exponent as integer, byval duplicate_strings as integer = FALSE)
+	declare destructor()
+	declare operator let(byref as const THash) '' declared but not implemented
+
+	declare function lookup(byval s as zstring ptr, byval hash as ulong) as THashItem ptr
+	declare function lookupDataOrNull(byval id as zstring ptr) as any ptr
+	declare function contains(byval s as zstring ptr, byval hash as ulong) as integer
+	declare sub add(byval item as THashItem ptr, byval hash as ulong, byval s as zstring ptr, byval dat as any ptr)
+	declare function addOverwrite(byval s as zstring ptr, byval dat as any ptr) as THashItem ptr
+	#if __FB_DEBUG__
+		declare sub dump()
+	#endif
+
+	private:
+		declare sub allocTable()
+		declare sub growTable()
 end type
 
 declare function hashHash(byval s as zstring ptr) as ulong
-declare function hashLookup _
-	( _
-		byval h as THASH ptr, _
-		byval s as zstring ptr, _
-		byval hash as ulong _
-	) as THASHITEM ptr
-declare function hashLookupDataOrNull(byval h as THASH ptr, byval id as zstring ptr) as any ptr
-declare function hashContains _
-	( _
-		byval h as THASH ptr, _
-		byval s as zstring ptr, _
-		byval hash as ulong _
-	) as integer
-declare sub hashAdd _
-	( _
-		byval h as THASH ptr, _
-		byval item as THASHITEM ptr, _
-		byval hash as ulong, _
-		byval s as zstring ptr, _
-		byval dat as any ptr _
-	)
-declare function hashAddOverwrite _
-	( _
-		byval h as THASH ptr, _
-		byval s as zstring ptr, _
-		byval dat as any ptr _
-	) as THASHITEM ptr
-declare sub hashInit _
-	( _
-		byval h as THASH ptr, _
-		byval exponent as integer, _
-		byval duplicate_strings as integer = FALSE _
-	)
-declare sub hashEnd(byval h as THASH ptr)
-#if __FB_DEBUG__
-declare sub hashDump(byval h as THASH ptr)
-#endif
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-extern fbcrtheaderhash as THASH
-declare sub fbcrtheadersInit()
+extern fbcrtheaderhash as THash
 
-declare sub extradatatypesInit()
 declare function extradatatypesLookup(byval id as zstring ptr) as integer
 
 enum
@@ -249,7 +226,6 @@ enum
 	FBKW_PP
 end enum
 
-declare sub fbkeywordsInit()
 declare function fbkeywordsLookup(byval id as zstring ptr) as integer
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -924,10 +900,10 @@ type ApiInfo
 	as integer nofunctionbodies, dropmacrobodyscopes
 
 	have_renames as integer
-	renameopt(OPT_RENAMETYPEDEF to OPT_RENAME) as THASH
-	idopt(OPT_REMOVEDEFINE to OPT_NOEXPAND) as THASH
-	removeinclude as THASH
-	setarraysizeoptions as THASH
+	renameopt(OPT_RENAMETYPEDEF to OPT_RENAME) as THash = any
+	idopt(OPT_REMOVEDEFINE to OPT_NOEXPAND) as THash = any
+	removeinclude as THash = THash(3, FALSE)
+	setarraysizeoptions as THash = THash(3, FALSE)
 	moveaboveoptions as ASTNODE ptr
 
 	replacements as CodeReplacement ptr
@@ -937,6 +913,8 @@ type ApiInfo
 
 	declare constructor()
 	declare destructor()
+	declare operator let(byref as const ApiInfo) '' declared but not implemented
+
 	declare sub addReplacement(byval fromcode as zstring ptr, byval tocode as zstring ptr, byval tofb as integer)
 	declare sub loadOption(byval opt as integer, byval param1 as zstring ptr, byval param2 as zstring ptr)
 	declare sub loadOptions()
@@ -951,7 +929,6 @@ type HeaderInfo
 	as FileBuffer ptr licensefile, translatorsfile
 end type
 
-declare sub lexInit()
 declare function lexLoadC(byval x as integer, byval code as zstring ptr, byref source as SourceInfo) as integer
 declare function lexLoadArgs(byval x as integer, byval args as zstring ptr, byref source as SourceInfo) as integer
 
