@@ -700,13 +700,11 @@ private sub hParseSelectCompound(byref x as integer, byval selectclass as intege
 			xblockbegin = x
 			x += 1
 
-			if selectclass = ASTCLASS_SELECTVERSION then
-				'' <version number>
-				hExpectStringOrId(x, "<version number> argument")
-			else
-				'' <symbol>
-				hExpectId(x)
-			end if
+			select case selectclass
+			case ASTCLASS_SELECTVERSION : hExpectStringOrId(x, "<version number> argument")
+			case ASTCLASS_SELECTTARGET  : hExpectStringOrId(x, "<target> argument")
+			case else                   : hExpectId(x)
+			end select
 			var n = astNew(ASTCLASS_CASE, tkGetText(x))
 			n->location = tkGetLocation(x)
 			astAppend(frog.script, n)
