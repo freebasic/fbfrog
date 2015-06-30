@@ -947,6 +947,13 @@ private function hSimplify(byval n as ASTNODE ptr, byref changed as integer) as 
 		return NULL
 	end if
 
+	'' Simplify OS define checks to __FB_UNIX__
+	if astIsEqual(frog.unixoschecks, n) then
+		changed = TRUE
+		astDelete(n)
+		return astNewDEFINED("__FB_UNIX__")
+	end if
+
 	''
 	'' If two VERANDs in a VEROR have a common condition, they can be
 	'' simplified:

@@ -18,7 +18,7 @@ extern separator as long
 
 extern separator as long
 
-#if defined(__FB_DARWIN__) or defined(__FB_CYGWIN__) or defined(__FB_LINUX__) or defined(__FB_FREEBSD__) or defined(__FB_OPENBSD__) or defined(__FB_NETBSD__)
+#ifdef __FB_UNIX__
 	declare sub rest_3()
 #elseif defined(__FB_WIN32__)
 	declare sub win32_3()

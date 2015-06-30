@@ -65,7 +65,7 @@ namespace frog
 	dim shared as integer enabledoscount
 
 	dim shared as ASTNODE ptr script
-	dim shared as ASTNODE ptr completeverors, fullveror
+	dim shared as ASTNODE ptr completeverors, fullveror, unixoschecks
 	dim shared as ApiInfo ptr apis
 	dim shared as integer apicount
 	dim shared as ApiBits fullapis
@@ -1521,6 +1521,14 @@ end function
 		astAppend(frog.completeverors, _
 			astNewVEROR(astNewDEFINEDfbarm(FALSE), _
 			            astNewDEFINEDfbarm(TRUE)))
+
+		'' Build defined() checks on all individual __FB_*__ defines, equivalent to a defined(__FB_UNIX__)
+		frog.unixoschecks = astNewVEROR()
+		for os as integer = 0 to OS__COUNT - 1
+			if osinfo(os).is_unix then
+				astAppend(frog.unixoschecks, astNewDEFINEDfbos(os))
+			end if
+		next
 	end scope
 	for os as integer = 0 to OS__COUNT - 1
 		maybeEvalForOs(os)

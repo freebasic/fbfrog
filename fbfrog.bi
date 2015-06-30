@@ -997,7 +997,7 @@ namespace frog
 	extern as integer verbose
 	extern as integer enabledoscount
 	extern as ASTNODE ptr script
-	extern as ASTNODE ptr completeverors, fullveror
+	extern as ASTNODE ptr completeverors, fullveror, unixoschecks
 	extern as ApiInfo ptr apis
 	extern as integer apicount
 	extern as ApiBits fullapis

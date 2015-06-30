@@ -224,7 +224,6 @@ Interesting improvements:
   - -declarebool: store flags in ApiInfo
   - frogEvaluateScript() should build ApiInfo objects directly, then copy them
     for recursive invocations, no more separate loadOptions()
-* use __FB_UNIX__ where possible
 * consecutive verblocks should be added to a prefix tree, to solve out common
   API conditions, e.g.:
 	#if win32 and static		#if win32
