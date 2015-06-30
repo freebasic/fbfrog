@@ -1264,17 +1264,19 @@ end function
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 dim shared osinfo(0 to OS__COUNT-1) as OsInfo => { _
-	(@"linux"  , @"__FB_LINUX__"  ,  TRUE,  TRUE), _
-	(@"freebsd", @"__FB_FREEBSD__",  TRUE,  TRUE), _
-	(@"openbsd", @"__FB_OPENBSD__",  TRUE,  TRUE), _
-	(@"netbsd" , @"__FB_NETBSD__" ,  TRUE,  TRUE), _
-	(@"darwin" , @"__FB_DARWIN__" ,  TRUE, FALSE), _
-	(@"windows", @"__FB_WIN32__"  ,  TRUE, FALSE), _
-	(@"cygwin" , @"__FB_CYGWIN__" ,  TRUE, FALSE), _
-	(@"dos"    , @"__FB_DOS__"    , FALSE, FALSE)  _
+	_ ''                           is_unix has_64bit has_arm
+	(@"linux"  , @"__FB_LINUX__"  ,  TRUE,  TRUE,  TRUE), _
+	(@"freebsd", @"__FB_FREEBSD__",  TRUE,  TRUE,  TRUE), _
+	(@"openbsd", @"__FB_OPENBSD__",  TRUE,  TRUE,  TRUE), _
+	(@"netbsd" , @"__FB_NETBSD__" ,  TRUE,  TRUE,  TRUE), _
+	(@"darwin" , @"__FB_DARWIN__" ,  TRUE,  TRUE, FALSE), _
+	(@"windows", @"__FB_WIN32__"  , FALSE,  TRUE, FALSE), _
+	(@"cygwin" , @"__FB_CYGWIN__" ,  TRUE,  TRUE, FALSE), _
+	(@"dos"    , @"__FB_DOS__"    , FALSE, FALSE, FALSE)  _
 }
 
 dim shared archinfo(0 to ARCH__COUNT-1) as ArchInfo => { _
+	_ ''       is_64bit is_arm
 	(@"x86"    , FALSE, FALSE), _
 	(@"x86_64" ,  TRUE, FALSE), _
 	(@"arm"    , FALSE,  TRUE), _

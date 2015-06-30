@@ -1127,6 +1127,7 @@ private function hTargetPatternMatchesTarget(byref pattern as string, byval targ
 	case "32bit" : return not archinfo(target.arch).is_64bit
 	case "win32" : return (target.os = OS_WINDOWS) and (target.arch = ARCH_X86   )
 	case "win64" : return (target.os = OS_WINDOWS) and (target.arch = ARCH_X86_64)
+	case "unix"  : return osinfo(target.os).is_unix
 	case targetos : return TRUE
 	case targetarch : return TRUE
 	end select

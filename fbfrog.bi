@@ -138,7 +138,7 @@ end enum
 
 type OsInfo
 	as zstring ptr id, fbdefine
-	as byte has_64bit, has_arm
+	as byte is_unix, has_64bit, has_arm
 end type
 
 type ArchInfo
