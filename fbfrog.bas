@@ -231,7 +231,7 @@ private sub hPrintHelpAndExit()
 	print "  -title <package + version> original-license.txt translators.txt [<destination .bi file>]"
 	print "     Add text at the top of .bi file(s): package name + version, copyright, license"
 	print "  -v                    Show verbose/debugging info"
-	print "  -target nodos|windows  Specify OS's/architectures to translate for"
+	print "  -target nodos|windows|noarm  Specify OS's/architectures to translate for, other than all"
 	print "API script logic:"
 	print "  -declareversions <symbol> (<number>)+     Version numbers"
 	print "  -declarebool <symbol>                     Single on/off #define"
@@ -861,6 +861,10 @@ private sub hParseArgs(byref x as integer)
 				case "windows"
 					frogSetArchs(TRUE)
 					frog.os(OS_WINDOWS) = TRUE
+				case "noarm"
+					frogSetTargets(TRUE)
+					frog.arch(ARCH_ARM) = FALSE
+					frog.arch(ARCH_AARCH64) = FALSE
 				case else
 					tkOops(x, "unknown <target> argument, expected: nodos|windows")
 				end select
