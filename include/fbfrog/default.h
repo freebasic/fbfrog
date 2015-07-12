@@ -81,6 +81,12 @@
 	#define __MSDOS__ 1
 #endif
 
+// 64bit Unix-likes, including Cygwin (!)
+#if defined __FB_64BIT__ && defined __unix__
+	#define __LP64__ 1
+	#define _LP64 1
+#endif
+
 #if defined __FB_ARM__ && defined __FB_64BIT__
 	// arm64
 	#define __aarch64__ 1
@@ -124,11 +130,6 @@
 	#define __k8__ 1
 	#define _M_X64
 	#define _M_AMD64
-	// 64bit Unix-likes, including Cygwin (!)
-	#ifdef __unix__
-		#define __LP64__ 1
-		#define _LP64 1
-	#endif
 	#define __code_model_small__ 1
 	#define __MMX__ 1
 	#define __SSE__ 1
