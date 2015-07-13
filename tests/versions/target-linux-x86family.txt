@@ -1,0 +1,4 @@
+[1/2] linux-x86
+[2/2] linux-x86_64
+	tests/versions/target-linux-x86family.h
+emitting: tests/versions/target-linux-x86family.bi (0 declarations, 0 TODOs)
