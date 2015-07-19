@@ -424,3 +424,4 @@
 
 #define __extension__
 #define register
+#define __has_feature(x) 0
