@@ -1,0 +1,6 @@
+[1/4] win32 UNICODE
+[2/4] win32 (not UNICODE)
+[3/4] win64 UNICODE
+[4/4] win64 (not UNICODE)
+	tests/versions/swapping-nested.h
+emitting: tests/versions/swapping-nested.bi (2 declarations, 0 TODOs)

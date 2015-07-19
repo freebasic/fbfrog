@@ -757,11 +757,18 @@ end function
 ''     #endif
 ''
 private sub hTurnVerblocksIntoPpIfs(byval code as ASTNODE ptr)
+	'' Process all nested verblocks first
+	'' (we may reorder verblocks below when turning them into #ifs, and
+	'' then it's too easy to forget nested ones)
 	var i = code->head
 	while i
-
-		'' Process verblocks nested inside structs etc.
 		hTurnVerblocksIntoPpIfs(i)
+		i = i->next
+	wend
+
+	'' Turn verblocks into #ifs (at this recursion level only)
+	i = code->head
+	while i
 
 		if astIsVERBLOCK(i) then
 			'' Turn the 1st verblock into an #if
