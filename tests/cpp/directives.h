@@ -94,3 +94,7 @@
 #warning "Example warning"
 
 #pragma warning(disable : 123)
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wfoo"
+#pragma clang diagnostic pop

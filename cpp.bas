@@ -2669,6 +2669,17 @@ private function cppPragma(byref flags as integer) as integer
 			exit function
 		end select
 
+	case "clang"
+		cpp.x += 1
+
+		select case tkSpell(cpp.x)
+		case "diagnostic"
+			cpp.x = hSkipToEol(cpp.x)
+
+		case else
+			exit function
+		end select
+
 	case "warning"
 		'' Ignore
 		cpp.x = hSkipToEol(cpp.x)
