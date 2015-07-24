@@ -396,12 +396,6 @@ constructor ApiInfo()
 	next
 	hashInit(@removeinclude, 3, FALSE)
 	hashInit(@setarraysizeoptions, 3, FALSE)
-
-	'' Automatically do -ifndefdecl for some common constants
-	'' Because we want to #ifndef those in basically all FB headers...
-	hashAddOverwrite(@idopt(OPT_IFNDEFDECL), "NULL", NULL)
-	hashAddOverwrite(@idopt(OPT_IFNDEFDECL), "TRUE", NULL)
-	hashAddOverwrite(@idopt(OPT_IFNDEFDECL), "FALSE", NULL)
 end constructor
 
 destructor ApiInfo()

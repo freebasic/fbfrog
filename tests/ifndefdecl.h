@@ -1,4 +1,4 @@
-// @fbfrog -ifndefdecl M1 -ifndefdecl M2 -ifndefdecl M3 -undefbeforedecl M3
+// @fbfrog -ifndefdecl NULL -ifndefdecl TRUE -ifndefdecl FALSE -ifndefdecl M1 -ifndefdecl M2 -ifndefdecl M3 -undefbeforedecl M3
 
 #define NULL 0
 #define TRUE 1
