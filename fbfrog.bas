@@ -220,6 +220,7 @@ private sub hPrintHelpAndExit()
 	print "    -rename (any matching symbol)"
 	print "  options for removing declarations (-remove* <id>):"
 	print "    -removedefine, -removeproc, -removevar, -remove1st, -remove2nd"
+	print "    -remove (any matching symbol)"
 	print "  -dropprocbody <id>  Don't preserve a certain procedure's body"
 	print "  -typedefhint <id>   Mark <id> as typedef, to help parsing of type casts"
 	print "  -addforwarddecl <id>  Force a forward declaration to be added for the given type"
