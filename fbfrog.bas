@@ -224,6 +224,7 @@ private sub hPrintHelpAndExit()
 	print "  -typedefhint <id>   Mark <id> as typedef, to help parsing of type casts"
 	print "  -addforwarddecl <id>  Force a forward declaration to be added for the given type"
 	print "  -undefbeforedecl <id>  Insert an #undef above a declaration"
+	print "  -ifndefdecl <id>    Wrap declaration of symbol named <id> in an #ifndef block"
 	print "  -nostring <id>      Prevent a symbol from being turned into a zstring"
 	print "  -string <id>        Force a [U]Byte [Ptr] symbol to be turned into a ZString [Ptr]"
 	print "  -convbodytokens <id>  Translate a #define's body only by converting the tokens, no parsing"
@@ -440,7 +441,7 @@ sub ApiInfo.loadOption(byval opt as integer, byval param1 as zstring ptr, byval 
 		have_renames = TRUE
 
 	case OPT_REMOVE, OPT_REMOVEDEFINE, OPT_REMOVEPROC, OPT_REMOVEVAR, OPT_REMOVE1ST, OPT_REMOVE2ND, _
-	     OPT_DROPPROCBODY, OPT_TYPEDEFHINT, OPT_ADDFORWARDDECL, OPT_UNDEFBEFOREDECL, _
+	     OPT_DROPPROCBODY, OPT_TYPEDEFHINT, OPT_ADDFORWARDDECL, OPT_UNDEFBEFOREDECL, OPT_IFNDEFDECL, _
 	     OPT_NOSTRING, OPT_STRING, OPT_CONVBODYTOKENS, OPT_EXPANDINDEFINE, OPT_NOEXPAND
 		hashAddOverwrite(@idopt(opt), param1, NULL)
 
@@ -947,7 +948,7 @@ private sub hParseArgs(byref x as integer)
 			hParseOption2Params(x, opt, "<oldid>", "<newid>")
 
 		case OPT_REMOVE, OPT_REMOVEDEFINE, OPT_REMOVEPROC, OPT_REMOVEVAR, OPT_REMOVE1ST, OPT_REMOVE2ND, _
-		     OPT_DROPPROCBODY, OPT_TYPEDEFHINT, OPT_ADDFORWARDDECL, OPT_UNDEFBEFOREDECL, _
+		     OPT_DROPPROCBODY, OPT_TYPEDEFHINT, OPT_ADDFORWARDDECL, OPT_UNDEFBEFOREDECL, OPT_IFNDEFDECL, _
 		     OPT_NOSTRING, OPT_STRING, OPT_CONVBODYTOKENS, OPT_EXPANDINDEFINE, OPT_NOEXPAND
 			hParseOption1Param(x, opt, "<id>")
 

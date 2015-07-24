@@ -1443,6 +1443,18 @@ private sub hlAddUndefsAboveDecls(byval ast as ASTNODE ptr)
 	wend
 end sub
 
+private sub hlAddIfndefsAroundDecls(byval ast as ASTNODE ptr)
+	var i = ast->head
+	while i
+
+		if i->text andalso hashContains(@hl.api->idopt(OPT_IFNDEFDECL), i->text, hashHash(i->text)) then
+			i->attrib or= ASTATTRIB_IFNDEFDECL
+		end if
+
+		i = i->next
+	wend
+end sub
+
 type ParamUsageChecker
 	proc as ASTNODE ptr
 	have_multiple_uses as integer
@@ -2147,6 +2159,10 @@ sub hlGlobal(byval ast as ASTNODE ptr, byref api as ApiInfo)
 
 	if api.idopt(OPT_UNDEFBEFOREDECL).count > 0 then
 		hlAddUndefsAboveDecls(ast)
+	end if
+
+	if api.idopt(OPT_IFNDEFDECL).count > 0 then
+		hlAddIfndefsAroundDecls(ast)
 	end if
 
 	hlProcs2Macros(ast)

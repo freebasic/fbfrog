@@ -185,6 +185,7 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	(@"-typedefhint"  ), _
 	(@"-addforwarddecl"), _
 	(@"-undefbeforedecl"), _
+	(@"-ifndefdecl"   ), _
 	(@"-nostring"     ), _
 	(@"-string"       ), _
 	(@"-convbodytokens"), _
