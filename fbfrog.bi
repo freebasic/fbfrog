@@ -399,6 +399,7 @@ enum
 	OPT_RENAMEDEFINE
 	OPT_RENAMEMACROPARAM
 	OPT_RENAME
+	OPT_REMOVE
 	OPT_REMOVEDEFINE
 	OPT_REMOVEPROC
 	OPT_REMOVEVAR
@@ -857,7 +858,7 @@ type ApiInfo
 
 	have_renames as integer
 	renameopt(OPT_RENAMETYPEDEF to OPT_RENAME) as THASH
-	idopt(OPT_REMOVEDEFINE to OPT_NOEXPAND) as THASH
+	idopt(OPT_REMOVE to OPT_NOEXPAND) as THASH
 	removeinclude as THASH
 	setarraysizeoptions as THASH
 	moveaboveoptions as ASTNODE ptr

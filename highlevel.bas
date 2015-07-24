@@ -450,7 +450,7 @@ private sub hlApplyRemoveOption(byval ast as ASTNODE ptr, byval astclass as inte
 	while i
 		var nxt = i->next
 
-		if i->class = astclass then
+		if (i->text <> NULL) and (astclass = -1) or (i->class = astclass) then
 			if hashContains(@hl.api->idopt(opt), i->text, hashHash(i->text)) then
 				astRemove(ast, i)
 			end if
@@ -1985,6 +1985,10 @@ sub hlGlobal(byval ast as ASTNODE ptr, byref api as ApiInfo)
 	hashInit(@hl.symbols, 10, TRUE)
 	astVisit(ast, @hlFixExpressions)
 	hashEnd(@hl.symbols)
+
+	if api.idopt(OPT_REMOVE).count > 0 then
+		hlApplyRemoveOption(ast, -1, OPT_REMOVE)
+	end if
 
 	if api.idopt(OPT_REMOVEPROC).count > 0 then
 		hlApplyRemoveOption(ast, ASTCLASS_PROC, OPT_REMOVEPROC)
