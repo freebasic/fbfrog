@@ -1447,7 +1447,8 @@ private sub hlAddIfndefsAroundDecls(byval ast as ASTNODE ptr)
 	var i = ast->head
 	while i
 
-		if i->text andalso hashContains(@hl.api->idopt(OPT_IFNDEFDECL), i->text, hashHash(i->text)) then
+		if (i->class <> ASTCLASS_UNDEF) andalso _
+		   i->text andalso hashContains(@hl.api->idopt(OPT_IFNDEFDECL), i->text, hashHash(i->text)) then
 			i->attrib or= ASTATTRIB_IFNDEFDECL
 		end if
 

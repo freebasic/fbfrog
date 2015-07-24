@@ -8,4 +8,4 @@
       tests/ifndefdecl.h
 [5/5] __FB_DOS__
       tests/ifndefdecl.h
-emitting: tests/ifndefdecl.bi (4 declarations, 0 TODOs)
+emitting: tests/ifndefdecl.bi (8 declarations, 0 TODOs)
