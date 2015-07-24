@@ -738,6 +738,10 @@ private sub hExpandProcTypedef(byval typedef as ASTNODE ptr, byval n as ASTNODE 
 	astSetType(n, typeUnsetBaseConst(typeSetDt(n->dtype, TYPE_PROC)), typedef->subtype)
 end sub
 
+private function isAffectedByNoString(byval id as zstring ptr) as integer
+	function = hashContains(@hl.api->idopt(OPT_NOSTRING), id, hashHash(id))
+end function
+
 private sub hlExpandSpecialTypedefs(byval n as ASTNODE ptr)
 	'' Declaration using one of the special typedefs?
 	if typeGetDt(n->dtype) = TYPE_UDT then
@@ -779,6 +783,9 @@ private sub hlExpandSpecialTypedefs(byval n as ASTNODE ptr)
 			var dtype = typeGetDtAndPtr(i->dtype)
 			var is_array_or_proc = (i->array <> NULL) or (dtype = TYPE_PROC)
 			var is_string = (dtype = TYPE_ZSTRING) or (dtype = TYPE_WSTRING)
+
+			'' but not if it's affected by -nostring
+			is_string and= not isAffectedByNoString(i->text)
 
 			if is_array_or_proc or is_string then
 				if is_array_or_proc then
@@ -860,12 +867,10 @@ end sub
 
 private sub hFixCharWchar(byval n as ASTNODE ptr)
 	'' Affected by -nostring?
-	if n->text then
-		if hashContains(@hl.api->idopt(OPT_NOSTRING), n->text, hashHash(n->text)) then
-			'' Turn string into byte (even pointers)
-			hTurnStringIntoByte(n)
-			exit sub
-		end if
+	if n->text andalso isAffectedByNoString(n->text) then
+		'' Turn string into byte (even pointers)
+		hTurnStringIntoByte(n)
+		exit sub
 	end if
 
 	'' Don't turn string pointers into byte pointers
@@ -2034,7 +2039,8 @@ sub hlGlobal(byval ast as ASTNODE ptr, byref api as ApiInfo)
 	''  * array/function typedefs, which aren't supported in FB
 	''  * char/wchar_t typedefs, which become zstring/wstring in some
 	''    places, but byte/wchar_t in others (i.e. it depends on context,
-	''    which is why the typedef needs to be expanded)
+	''    which is why the typedef needs to be expanded), unless affected by
+	''    -nostring.
 	'' TODO: If possible, turn function typedefs into function pointer
 	'' typedefs instead of solving them out
 	hashInit(@hl.typehash, 8, FALSE)
