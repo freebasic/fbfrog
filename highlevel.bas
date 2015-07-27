@@ -640,6 +640,48 @@ private function hlApplyRenameOption(byval n as ASTNODE ptr) as integer
 	function = TRUE
 end function
 
+type TypedefTable
+	hash as THASH '' id -> cloned ASTNODE holding dtype/subtype/array
+	declare constructor()
+	declare destructor()
+	declare function lookup(byval id as zstring ptr) as ASTNODE ptr
+	declare sub addOverwrite(byval n as ASTNODE ptr)
+end type
+
+constructor TypedefTable()
+	hashInit(@hash, 8, TRUE)
+end constructor
+
+destructor TypedefTable()
+	'' Free the cloned ASTNODEs
+	for i as integer = 0 to hash.room - 1
+		var item = hash.items + i
+		if item->s then
+			astDelete(item->data)
+		end if
+	next
+	hashEnd(@hash)
+end destructor
+
+function TypedefTable.lookup(byval id as zstring ptr) as ASTNODE ptr
+	function = hashLookupDataOrNull(@hash, id)
+end function
+
+sub TypedefTable.addOverwrite(byval n as ASTNODE ptr)
+	var id = n->text
+
+	'' Resolve typedefs to the type they reference
+	while (n->dtype = TYPE_UDT) andalso (n->subtype->class = ASTCLASS_TEXT)
+		var subtypetypedef = lookup(n->subtype->text)
+		if subtypetypedef = NULL then
+			exit while
+		end if
+		n = subtypetypedef
+	wend
+
+	hashAddOverwrite(@hash, id, astClone(n))
+end sub
+
 private sub hOopsCantExpandTypedef(byval typedef as ASTNODE ptr, byval n as ASTNODE ptr)
 	oops("can't solve out " + astDumpPrettyDecl(typedef) + " in " + astDumpPrettyDecl(n))
 end sub
