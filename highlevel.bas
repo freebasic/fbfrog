@@ -978,12 +978,16 @@ end sub
 '' this expansion to work, we keep the zstring/wstring type on the typedefs.
 ''
 private function hlFixCharWchar(byval n as ASTNODE ptr) as integer
-	if n->class <> ASTCLASS_STRING then
+	select case n->class
+	case ASTCLASS_STRING, ASTCLASS_CHAR
+		'' String/char literals... no need to change them
+
+	case else
 		select case typeGetDt(n->dtype)
 		case TYPE_ZSTRING, TYPE_WSTRING
 			hFixCharWchar(n)
 
-		case TYPE_BYTE, TYPE_UBYTE, TYPE_WCHAR_T
+		case TYPE_BYTE, TYPE_UBYTE
 			'' Affected by -string?
 			'' TODO: This works with plain "[un]signed char", but not with typedefs, since such typedefs aren't expanded currently.
 			'' It would be nice to have this for typedefs too though because of the GLubyte type in the OpenGL headers. But for that
@@ -994,8 +998,15 @@ private function hlFixCharWchar(byval n as ASTNODE ptr) as integer
 					byteToString(n)
 				end if
 			end if
+
+		case TYPE_WCHAR_T
+			'' This shouldn't ever happen because the C parser turns wchar_t into TYPE_WSTRING,
+			'' and we don't produce TYPE_WCHAR_T in any pass before this one.
+			'' (except for wide char literals, but those are skipped here anyways)
+			assert(FALSE)
 		end select
-	end if
+	end select
+
 	function = TRUE
 end function
 
