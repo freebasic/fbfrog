@@ -6,9 +6,8 @@ namespace hl
 	dim shared api as ApiInfo ptr
 	dim shared symbols as THASH
 
-	'' Used by both typedef expansion and forward declaration addition passes
-	'' hlExpandSpecialTypedefs: data = typedef ASTNODE, needs freeing
-	'' hlCollectForwardUses/hlAddForwardDecls: data = hl.types array index
+	'' Used by forward declaration addition pass
+	'' data = hl.types array index
 	dim shared typehash as THASH
 
 	'' data = TEXT ASTNODE holding the new id/alias
@@ -671,7 +670,8 @@ sub TypedefTable.addOverwrite(byval n as ASTNODE ptr)
 	var id = n->text
 
 	'' Resolve typedefs to the type they reference
-	while (n->dtype = TYPE_UDT) andalso (n->subtype->class = ASTCLASS_TEXT)
+	while n->dtype = TYPE_UDT
+		assert(astIsTEXT(n->subtype))
 		var subtypetypedef = lookup(n->subtype->text)
 		if subtypetypedef = NULL then
 			exit while
@@ -784,11 +784,16 @@ private function isAffectedByNoString(byval id as zstring ptr) as integer
 	function = hashContains(@hl.api->idopt(OPT_NOSTRING), id, hashHash(id))
 end function
 
-private sub hlExpandSpecialTypedefs(byval n as ASTNODE ptr)
+type SpecialTypedefExpander
+	typedefs as TypedefTable
+	declare sub work(byval n as ASTNODE ptr)
+end type
+
+sub SpecialTypedefExpander.work(byval n as ASTNODE ptr)
 	'' Declaration using one of the special typedefs?
 	if typeGetDt(n->dtype) = TYPE_UDT then
 		assert(astIsTEXT(n->subtype))
-		dim as ASTNODE ptr typedef = hashLookupDataOrNull(@hl.typehash, n->subtype->text)
+		var typedef = typedefs.lookup(n->subtype->text)
 		if typedef then
 			'' Expand the typedef into the declaration.
 			'' Since typedefs are also processed this way here, we can be sure that
@@ -811,15 +816,15 @@ private sub hlExpandSpecialTypedefs(byval n as ASTNODE ptr)
 		end if
 	end if
 
-	if n->subtype then hlExpandSpecialTypedefs(n->subtype)
-	if n->array   then hlExpandSpecialTypedefs(n->array  )
-	if n->expr    then hlExpandSpecialTypedefs(n->expr   )
+	if n->subtype then work(n->subtype)
+	if n->array   then work(n->array  )
+	if n->expr    then work(n->expr   )
 
 	var i = n->head
 	while i
 		var nxt = i->next
 
-		hlExpandSpecialTypedefs(i)
+		work(i)
 
 		if i->class = ASTCLASS_TYPEDEF then
 			var dtype = typeGetDtAndPtr(i->dtype)
@@ -830,18 +835,12 @@ private sub hlExpandSpecialTypedefs(byval n as ASTNODE ptr)
 			is_string and= not isAffectedByNoString(i->text)
 
 			if is_array_or_proc or is_string then
-				if is_array_or_proc then
-					'' Array/proc typedefs can't be preserved for FB;
-					'' remove from the AST, hl.typehash will free it later.
-					astUnlink(n, i)
-				else
-					'' Others can be preserved - make a copy for the hl.typehash
-					'' so we we'll free that instead of the node in the AST later.
-					i = astClone(i)
-				end if
-
 				'' TODO: handle duplicate typedefs? (perhaps warn about them?)
-				hashAddOverwrite(@hl.typehash, i->text, i)
+				typedefs.addOverwrite(i)
+				if is_array_or_proc then
+					'' Array/proc typedefs can't be preserved for FB, remove from the AST.
+					astRemove(n, i)
+				end if
 			end if
 		end if
 
@@ -954,7 +953,7 @@ end sub
 '' FB doesn't allow "foo as zstring" - it must be a pointer or fixed-length string,
 '' except in typedefs. Typedefs are a special case - char/wchar_t means byte/wchar_t
 '' or zstring/wstring depending on where they're used. Because of this we expand
-'' these typedefs like array/proc typedefs (see hlExpandSpecialTypedefs). To allow
+'' these typedefs like array/proc typedefs (see SpecialTypedefExpander). To allow
 '' this expansion to work, we keep the zstring/wstring type on the typedefs.
 ''
 private function hlFixCharWchar(byval n as ASTNODE ptr) as integer
@@ -2085,18 +2084,10 @@ sub hlGlobal(byval ast as ASTNODE ptr, byref api as ApiInfo)
 	''    -nostring.
 	'' TODO: If possible, turn function typedefs into function pointer
 	'' typedefs instead of solving them out
-	hashInit(@hl.typehash, 8, FALSE)
-	hlExpandSpecialTypedefs(ast)
 	scope
-		'' Free the collected typedefs which were unlinked from the main AST
-		for i as integer = 0 to hl.typehash.room - 1
-			var item = hl.typehash.items + i
-			if item->s then
-				astDelete(item->data)
-			end if
-		next
+		dim expander as SpecialTypedefExpander
+		expander.work(ast)
 	end scope
-	hashEnd(@hl.typehash)
 
 	'' Fix up parameters with certain special types:
 	''   function => function pointer
