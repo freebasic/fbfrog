@@ -883,7 +883,26 @@ private function hlFixSpecialParameters(byval n as ASTNODE ptr) as integer
 	function = TRUE
 end function
 
-private sub hTurnStringIntoByte(byval n as ASTNODE ptr)
+private sub charArrayToFixLenStr(byval n as ASTNODE ptr)
+	assert((typeGetDtAndPtr(n->dtype) = TYPE_ZSTRING) or (typeGetDtAndPtr(n->dtype) = TYPE_WSTRING))
+	assert(n->array)
+
+	'' Use the last (inner-most) array dimension as the fixed-length string size
+	var d = n->array->tail
+	assert(d->class = ASTCLASS_DIMENSION)
+	assert(d->expr)
+	assert(n->subtype = NULL)
+	n->subtype = astClone(d->expr)
+	astRemove(n->array, d)
+
+	'' If no dimensions left, remove the array type entirely
+	if n->array->head = NULL then
+		astDelete(n->array)
+		n->array = NULL
+	end if
+end sub
+
+private sub stringToByte(byval n as ASTNODE ptr)
 	'' Turn zstring/wstring into byte/wchar_t, but preserve PTRs + CONSTs
 	if typeGetDt(n->dtype) = TYPE_ZSTRING then
 		n->dtype = typeSetDt(n->dtype, TYPE_BYTE)
@@ -891,26 +910,41 @@ private sub hTurnStringIntoByte(byval n as ASTNODE ptr)
 		n->dtype = typeSetDt(n->dtype, TYPE_WCHAR_T)
 	end if
 	if n->subtype then
-		'' in case it was a fix-len string (zstring * N), delete the string length expression (N)
+		assert(n->subtype->class = ASTCLASS_ELLIPSIS)
+		'' in case it was a zstring * ..., delete the ellipsis expression
+		'' This can only happen due to hlFixUnsizedArrays, because it runs
+		'' after hlFixCharWchar which turns arrays => fix-len strings.
+		'' Note: We never have to turn a zstring * N back into a byte array with N elements,
+		'' because the C parser starts out producing arrays, and hlFixCharWchar only turns
+		'' them into fix-len strings if needed.
 		astDelete(n->subtype)
 		n->subtype = NULL
 	end if
 end sub
 
-private sub hTurnByteIntoString(byval n as ASTNODE ptr)
+private sub byteToString(byval n as ASTNODE ptr)
 	'' Turn [u]byte/wchar_t into zstring/wstring, but preserve PTRs + CONSTs
 	if typeGetDt(n->dtype) = TYPE_WCHAR_T then
 		n->dtype = typeSetDt(n->dtype, TYPE_WSTRING)
 	else
 		n->dtype = typeSetDt(n->dtype, TYPE_ZSTRING)
 	end if
+	assert(n->subtype = NULL)
+
+	'' If it's a plain string (no ptr), also try to turn array => fix-len string
+	select case typeGetDtAndPtr(n->dtype)
+	case TYPE_ZSTRING, TYPE_WSTRING
+		if n->array then
+			charArrayToFixLenStr(n)
+		end if
+	end select
 end sub
 
 private sub hFixCharWchar(byval n as ASTNODE ptr)
 	'' Affected by -nostring?
 	if n->text andalso isAffectedByNoString(n->text) then
 		'' Turn string into byte (even pointers)
-		hTurnStringIntoByte(n)
+		stringToByte(n)
 		exit sub
 	end if
 
@@ -921,25 +955,12 @@ private sub hFixCharWchar(byval n as ASTNODE ptr)
 
 	'' zstring + array? => fix-len zstring
 	if n->array then
-		'' Use the last (inner-most) array dimension as the fixed-length string size
-		var d = n->array->tail
-		assert(d->class = ASTCLASS_DIMENSION)
-		assert(d->expr)
-		assert(n->subtype = NULL)
-		n->subtype = astClone(d->expr)
-		astRemove(n->array, d)
-
-		'' If no dimensions left, remove the array type entirely
-		if n->array->head = NULL then
-			astDelete(n->array)
-			n->array = NULL
-		end if
-
+		charArrayToFixLenStr(n)
 		exit sub
 	end if
 
 	if n->class <> ASTCLASS_TYPEDEF then
-		hTurnStringIntoByte(n)
+		stringToByte(n)
 	end if
 end sub
 
@@ -970,7 +991,7 @@ private function hlFixCharWchar(byval n as ASTNODE ptr) as integer
 			if n->text then
 				if hashContains(@hl.api->idopt(OPT_STRING), n->text, hashHash(n->text)) then
 					'' Turn byte into string (even pointers)
-					hTurnByteIntoString(n)
+					byteToString(n)
 				end if
 			end if
 		end select
@@ -1372,7 +1393,7 @@ private sub hFixUnsizedArray(byval ast as ASTNODE ptr, byval n as ASTNODE ptr)
 			astInsert(ast, def, n->next)
 
 			astRenameSymbol(n, tempid, FALSE)
-			hTurnStringIntoByte(n)
+			stringToByte(n)
 		end if
 	end select
 end sub
