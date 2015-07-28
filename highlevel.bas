@@ -2,6 +2,8 @@
 
 #include once "fbfrog.bi"
 
+declare sub expandTypedef(byval typedef as ASTNODE ptr, byval n as ASTNODE ptr)
+
 namespace hl
 	dim shared api as ApiInfo ptr
 	dim shared symbols as THASH
@@ -640,7 +642,11 @@ private function hlApplyRenameOption(byval n as ASTNODE ptr) as integer
 end function
 
 type TypedefTable
-	hash as THASH '' id -> cloned ASTNODE holding dtype/subtype/array
+	'' id -> TYPEDEF ASTNODEs holding id/dtype/subtype/array
+	'' Strictly speaking we only need the dtype/array information, but
+	'' having the whole TYPEDEF is nicer for error reporting, plus we own
+	'' the id so it can be re-used by the hash table.
+	hash as THASH
 	declare constructor()
 	declare destructor()
 	declare function lookup(byval id as zstring ptr) as ASTNODE ptr
@@ -648,11 +654,11 @@ type TypedefTable
 end type
 
 constructor TypedefTable()
-	hashInit(@hash, 8, TRUE)
+	hashInit(@hash, 8, FALSE)
 end constructor
 
 destructor TypedefTable()
-	'' Free the cloned ASTNODEs
+	'' Free the cloned TYPEDEFs
 	for i as integer = 0 to hash.room - 1
 		var item = hash.items + i
 		if item->s then
@@ -667,35 +673,41 @@ function TypedefTable.lookup(byval id as zstring ptr) as ASTNODE ptr
 end function
 
 sub TypedefTable.addOverwrite(byval n as ASTNODE ptr)
-	var id = n->text
+	var datatype = astClone(n)
 
 	'' Resolve typedefs to the type they reference
-	while n->dtype = TYPE_UDT
+	'' TODO: what about CONSTs/PTRs? it's not enough to walk to the
+	'' inner-most typedef; we have to collect CONSTs/PTRs properly...
+	while typeGetDt(datatype->dtype) = TYPE_UDT
 		assert(astIsTEXT(n->subtype))
 		var subtypetypedef = lookup(n->subtype->text)
-		if subtypetypedef = NULL then
-			exit while
-		end if
-		n = subtypetypedef
+		if subtypetypedef = NULL then exit while
+		expandTypedef(subtypetypedef, datatype)
 	wend
 
-	hashAddOverwrite(@hash, id, astClone(n))
+	hashAddOverwrite(@hash, datatype->text, datatype)
 end sub
 
-private sub hOopsCantExpandTypedef(byval typedef as ASTNODE ptr, byval n as ASTNODE ptr)
-	oops("can't solve out " + astDumpPrettyDecl(typedef) + " in " + astDumpPrettyDecl(n))
+private sub oopsCantExpandTypedef(byval typedef as ASTNODE ptr, byval n as ASTNODE ptr, byref reason as string)
+	oops("can't expand " + astDumpPrettyDecl(typedef, TRUE) + " into " + astDumpPrettyDecl(n, TRUE) + ": " + reason)
 end sub
 
-private sub hExpandArrayTypedef(byval typedef as ASTNODE ptr, byval n as ASTNODE ptr)
+'' Expand typedef assuming it's only a simple type, no array or procedure
+private sub expandSimpleTypedef(byval typedef as ASTNODE ptr, byval n as ASTNODE ptr)
+	var newdtype = typeExpand(n->dtype, typedef->dtype)
+	if newdtype = TYPE_NONE then
+		oopsCantExpandTypedef(typedef, n, "too many pointers")
+	end if
+	astSetType(n, newdtype, typedef->subtype)
+end sub
+
+private sub expandArrayTypedef(byval typedef as ASTNODE ptr, byval n as ASTNODE ptr)
 	'' Pointer to array?
 	if typeGetPtrCount(n->dtype) > 0 then
 		'' FB doesn't support pointers to arrays either, but we can drop the array type,
 		'' such that the pointer only points to "single array element". That's pretty much
 		'' the best translation we can do here, and better than nothing...
-		astSetType(n, typeExpand(n->dtype, typedef->dtype), typedef->subtype)
-		if n->dtype = TYPE_NONE then
-			hOopsCantExpandTypedef(typedef, n)
-		end if
+		expandSimpleTypedef(typedef, n)
 		exit sub
 	end if
 
@@ -737,7 +749,7 @@ end sub
 '' be ignored, e.g. in case of:
 ''    a const * p1;
 ''
-private sub hExpandProcTypedef(byval typedef as ASTNODE ptr, byval n as ASTNODE ptr)
+private sub expandProcTypedef(byval typedef as ASTNODE ptr, byval n as ASTNODE ptr)
 	select case n->class
 	case ASTCLASS_VAR, ASTCLASS_FIELD
 		'' Not a pointer?
@@ -771,13 +783,29 @@ private sub hExpandProcTypedef(byval typedef as ASTNODE ptr, byval n as ASTNODE 
 		'' TODO: check whether we can do better - do function types in
 		'' casts or sizeof automatically become function pointers in C?
 		if typeGetPtrCount(n->dtype) = 0 then
-			hOopsCantExpandTypedef(typedef, n)
+			oopsCantExpandTypedef(typedef, n, "can't have a function type as type for function result/cast/sizeof")
 		end if
 	end select
 
 	'' Insert the typedef's type, overwriting the use of the typedef
 	assert(typeGetDtAndPtr(typedef->dtype) = TYPE_PROC)
 	astSetType(n, typeUnsetBaseConst(typeSetDt(n->dtype, TYPE_PROC)), typedef->subtype)
+end sub
+
+'' Expand a typedef into a declaration (or any ASTNODE really), assuming that
+'' the declaration's dtype uses that typedef.
+'' Expanding an array or procedure typedef requires special care, because then
+'' the declaration becomes an array or a procedure.
+'' It's not allowed/possible in C to have both at the same time (an array of
+'' procedures), so we don't need to handle that.
+private sub expandTypedef(byval typedef as ASTNODE ptr, byval n as ASTNODE ptr)
+	if typedef->array then
+		expandArrayTypedef(typedef, n)
+	elseif typeGetDtAndPtr(typedef->dtype) = TYPE_PROC then
+		expandProcTypedef(typedef, n)
+	else
+		expandSimpleTypedef(typedef, n)
+	end if
 end sub
 
 private function isAffectedByNoString(byval id as zstring ptr) as integer
@@ -801,16 +829,13 @@ sub SpecialTypedefExpander.work(byval n as ASTNODE ptr)
 			'' declaration using one of these typedefs. Thus, expanding a typedef
 			'' doesn't cause a need for further expansions.
 			if typedef->array then
-				hExpandArrayTypedef(typedef, n)
+				expandArrayTypedef(typedef, n)
 			else
-				var typedefdtype = typedef->dtype
-				select case typeGetDtAndPtr(typedefdtype)
+				select case typeGetDtAndPtr(typedef->dtype)
 				case TYPE_PROC
-					hExpandProcTypedef(typedef, n)
+					expandProcTypedef(typedef, n)
 				case TYPE_ZSTRING, TYPE_WSTRING
-					astSetType(n, typeExpand(n->dtype, typedefdtype), NULL)
-					assert(n->dtype <> TYPE_NONE)
-					assert(n->subtype = NULL)
+					expandSimpleTypedef(typedef, n)
 				end select
 			end if
 		end if
@@ -965,7 +990,8 @@ private sub hFixCharWchar(byval n as ASTNODE ptr)
 end sub
 
 ''
-'' Handle declarations with plain zstring/wstring type (originally char/wchar_t).
+'' Handle declarations with plain zstring/wstring type (originally char/wchar_t),
+'' and apply -string options to symbols that originally used "[un]signed char" (a.k.a "[u]byte").
 ''
 '' If it's a char pointer or array, then it's probably supposed to be a string,
 '' and we can leave it as-is (zstring/wstring). If it's just a char, then it's

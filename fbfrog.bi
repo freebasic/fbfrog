@@ -824,7 +824,7 @@ declare function astIsConst0(byval n as ASTNODE ptr) as integer
 declare function astLookupMacroParam(byval macro as ASTNODE ptr, byval id as zstring ptr) as integer
 declare sub astVisit(byval n as ASTNODE ptr, byval callback as ASTVISITCALLBACK)
 declare function astDumpPrettyClass(byval astclass as integer) as string
-declare function astDumpPrettyDecl(byval n as ASTNODE ptr) as string
+declare function astDumpPrettyDecl(byval n as ASTNODE ptr, byval show_type as integer = FALSE) as string
 declare function astDumpOne(byval n as ASTNODE ptr) as string
 declare sub astDump _
 	( _

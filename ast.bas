@@ -722,7 +722,7 @@ function astDumpPrettyClass(byval astclass as integer) as string
 	end select
 end function
 
-function astDumpPrettyDecl(byval n as ASTNODE ptr) as string
+function astDumpPrettyDecl(byval n as ASTNODE ptr, byval show_type as integer) as string
 	dim as string s
 
 	if n->text = NULL then
@@ -741,6 +741,13 @@ function astDumpPrettyDecl(byval n as ASTNODE ptr) as string
 
 	if n->class = ASTCLASS_PROC then
 		s += "()"
+	end if
+
+	if show_type then
+		if n->array then
+			s += emitExpr(n->array)
+		end if
+		s += " as " + emitType(n->dtype, n->subtype)
 	end if
 
 	function = s

@@ -1,3 +1,3 @@
 [1/5] __FB_WIN32__.__FB_64BIT__
       tests/c/typedef/typedef-proc-impossible-function-result.h
-oops, can't solve out typedef T in procedure f()
+oops, can't expand typedef T as declare sub cdecl() into procedure f() as T: can't have a function type as type for function result/cast/sizeof
