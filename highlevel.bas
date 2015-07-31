@@ -815,35 +815,27 @@ private sub expandTypedef(byval typedef as ASTNODE ptr, byval n as ASTNODE ptr)
 	end if
 end sub
 
-private function isAffectedByNoString(byval id as zstring ptr) as integer
-	function = hashContains(@hl.api->idopt(OPT_NOSTRING), id, hashHash(id))
-end function
-
+'' Solve out array/function typedefs (not supported in FB)
 type SpecialTypedefExpander
 	typedefs as TypedefTable
 	declare sub work(byval n as ASTNODE ptr)
 end type
 
 sub SpecialTypedefExpander.work(byval n as ASTNODE ptr)
-	'' Declaration using one of the special typedefs?
+	'' Declaration using one of the array/function typedefs?
 	if typeGetDt(n->dtype) = TYPE_UDT then
 		assert(astIsTEXT(n->subtype))
 		var typedef = typedefs.lookup(n->subtype->text)
 		if typedef then
 			'' Expand the typedef into the declaration.
-			'' Since typedefs are also processed this way here, we can be sure that
-			'' typedefs themselves are already fully expanded when reaching another
-			'' declaration using one of these typedefs. Thus, expanding a typedef
-			'' doesn't cause a need for further expansions.
+			'' The TypedefTable has alreay expanded this typedef itself as far as possible,
+			'' by using the registered typedefs. Thus, expanding a typedef doesn't cause a
+			'' need for further expansions. We're not expanding any simple typedefs, because
+			'' only array/function ones are registered.
 			if typedef->array then
 				expandArrayTypedef(typedef, n)
-			else
-				select case typeGetDtAndPtr(typedef->dtype)
-				case TYPE_PROC
-					expandProcTypedef(typedef, n)
-				case TYPE_ZSTRING, TYPE_WSTRING
-					expandSimpleTypedef(typedef, n)
-				end select
+			elseif typeGetDtAndPtr(typedef->dtype) = TYPE_PROC then
+				expandProcTypedef(typedef, n)
 			end if
 		end if
 	end if
@@ -858,21 +850,11 @@ sub SpecialTypedefExpander.work(byval n as ASTNODE ptr)
 
 		work(i)
 
+		'' Register & drop array/function typedefs
 		if i->class = ASTCLASS_TYPEDEF then
-			var dtype = typeGetDtAndPtr(i->dtype)
-			var is_array_or_proc = (i->array <> NULL) or (dtype = TYPE_PROC)
-			var is_string = (dtype = TYPE_ZSTRING) or (dtype = TYPE_WSTRING)
-
-			'' but not if it's affected by -nostring
-			is_string and= not isAffectedByNoString(i->text)
-
-			if is_array_or_proc or is_string then
-				'' TODO: handle duplicate typedefs? (perhaps warn about them?)
+			if (i->array <> NULL) or (typeGetDtAndPtr(i->dtype) = TYPE_PROC) then
 				typedefs.addOverwrite(i)
-				if is_array_or_proc then
-					'' Array/proc typedefs can't be preserved for FB, remove from the AST.
-					astRemove(n, i)
-				end if
+				astRemove(n, i)
 			end if
 		end if
 
@@ -913,6 +895,14 @@ private function hlFixSpecialParameters(byval n as ASTNODE ptr) as integer
 		end if
 	end if
 	function = TRUE
+end function
+
+private function isAffectedByNoString(byval id as zstring ptr) as integer
+	function = id andalso hashContains(@hl.api->idopt(OPT_NOSTRING), id, hashHash(id))
+end function
+
+private function isAffectedByString(byval id as zstring ptr) as integer
+	function = id andalso hashContains(@hl.api->idopt(OPT_STRING), id, hashHash(id))
 end function
 
 private sub charArrayToFixLenStr(byval n as ASTNODE ptr)
@@ -972,76 +962,121 @@ private sub byteToString(byval n as ASTNODE ptr)
 	end select
 end sub
 
-private sub hFixCharWchar(byval n as ASTNODE ptr)
-	'' Affected by -nostring?
-	if n->text andalso isAffectedByNoString(n->text) then
-		'' Turn string into byte (even pointers)
-		stringToByte(n)
-		exit sub
-	end if
-
-	'' Don't turn string pointers into byte pointers
-	if typeGetPtrCount(n->dtype) <> 0 then
-		exit sub
-	end if
-
-	'' zstring + array? => fix-len zstring
-	if n->array then
-		charArrayToFixLenStr(n)
-		exit sub
-	end if
-
-	if n->class <> ASTCLASS_TYPEDEF then
-		stringToByte(n)
-	end if
-end sub
-
 ''
-'' Handle declarations with plain zstring/wstring type (originally char/wchar_t),
-'' and apply -string options to symbols that originally used "[un]signed char" (a.k.a "[u]byte").
+'' Char/string handling pass
 ''
-'' If it's a char pointer or array, then it's probably supposed to be a string,
-'' and we can leave it as-is (zstring/wstring). If it's just a char, then it's
-'' probably supposed to be a byte (or wchar_t) though.
+'' The C parser turned char/wchar_t into zstring/wstring. Now we need to turn
+'' zstring/wstring into byte/wchar_t where it's probably not a string, and
+'' apply -string/-nostring options.
 ''
-'' FB doesn't allow "foo as zstring" - it must be a pointer or fixed-length string,
-'' except in typedefs. Typedefs are a special case - char/wchar_t means byte/wchar_t
-'' or zstring/wstring depending on where they're used. Because of this we expand
-'' these typedefs like array/proc typedefs (see SpecialTypedefExpander). To allow
-'' this expansion to work, we keep the zstring/wstring type on the typedefs.
+'' The default behaviour is to translate char/wchar_t depending on context -
+'' if it's a char/wchar_t pointer/array/typedef, we translate it as a string
+'' type (i.e. zstring or wstring). If it's a single char/wchar_t, we translate
+'' it as byte. For this, it is also necessary to expand char typedefs into the
+'' contexts that use them, so we can then translate the char/wchar_t to
+'' zstring/wstring or byte/wchar_t.
 ''
-private function hlFixCharWchar(byval n as ASTNODE ptr) as integer
+'' Furthermore, we support some options to override the defaults:
+''   -string    =>  Force "[un]signed char" to be treated as zstring. If it's
+''                  a typedef, it now needs to be expanded to get the
+''                  context-specific behaviour like normal string typedefs.
+''   -nostring  =>  prevent char/wchar_t from being treated as zstring/wstring
+''
+type CharStringPass
+	typedefs as TypedefTable
+	declare sub work(byval n as ASTNODE ptr)
+end type
+
+sub CharStringPass.work(byval n as ASTNODE ptr)
+	'' Ignore string/char literals, which also have string/char types,
+	'' but shouldn't be changed.
 	select case n->class
 	case ASTCLASS_STRING, ASTCLASS_CHAR
-		'' String/char literals... no need to change them
-
-	case else
-		select case typeGetDt(n->dtype)
-		case TYPE_ZSTRING, TYPE_WSTRING
-			hFixCharWchar(n)
-
-		case TYPE_BYTE, TYPE_UBYTE
-			'' Affected by -string?
-			'' TODO: This works with plain "[un]signed char", but not with typedefs, since such typedefs aren't expanded currently.
-			'' It would be nice to have this for typedefs too though because of the GLubyte type in the OpenGL headers. But for that
-			'' we need to have a typedef type tracker/symbol table first.
-			if n->text then
-				if hashContains(@hl.api->idopt(OPT_STRING), n->text, hashHash(n->text)) then
-					'' Turn byte into string (even pointers)
-					byteToString(n)
-				end if
-			end if
-
-		case TYPE_WCHAR_T
-			'' This shouldn't ever happen because the C parser turns wchar_t into TYPE_WSTRING,
-			'' and we don't produce TYPE_WCHAR_T in any pass before this one.
-			'' (except for wide char literals, but those are skipped here anyways)
-			assert(FALSE)
-		end select
+		exit sub
 	end select
 
-	function = TRUE
-end function
+	'' Expand "char/wchar_t" typedefs in this decl, unless the typedef or decl is affected by -nostring
+	'' Expand "[un]signed char" typedef into decls affected by -string
+	'' We don't expand pointer typedefs though (e.g. "char/wchar_t *" or "[un]signed char *")
+	'' because they have enough context by themselves (we already know they're pointers).
+	if typeGetDt(n->dtype) = TYPE_UDT then
+		assert(astIsTEXT(n->subtype))
+		var typedef = typedefs.lookup(n->subtype->text)
+		if typedef then
+			select case typeGetDtAndPtr(typedef->dtype)
+			case TYPE_ZSTRING, TYPE_WSTRING
+				if (not isAffectedByNoString(n->text)) and (not isAffectedByNoString(typedef->text)) then
+					expandSimpleTypedef(typedef, n)
+				end if
+			case TYPE_BYTE, TYPE_UBYTE
+				if isAffectedByString(n->text) then
+					expandSimpleTypedef(typedef, n)
+				end if
+			end select
+		end if
+	end if
+
+	select case typeGetDt(n->dtype)
+	'' Turn zstring/wstring (originally char/wchar_t in C) decls into byte/wchar_t (non-string types),
+	'' if it's neither pointer/array/typedef, or if -nostring.
+	case TYPE_ZSTRING, TYPE_WSTRING
+		'' Affected by -nostring?
+		if isAffectedByNoString(n->text) then
+			'' Turn string into byte (even pointers)
+			stringToByte(n)
+		'' Don't turn string pointers into byte pointers
+		elseif typeGetPtrCount(n->dtype) <> 0 then
+
+		'' zstring + array? => fix-len zstring
+		elseif n->array then
+			charArrayToFixLenStr(n)
+
+		elseif n->class <> ASTCLASS_TYPEDEF then
+			stringToByte(n)
+		end if
+
+	'' Turn decls using "[un]signed char [*]" into "char [*]" if -string
+	'' If it's a typedef and then just a "char" (not a pointer), it will be
+	'' expanded, like any other "char" typedefs.
+	case TYPE_BYTE, TYPE_UBYTE
+		if isAffectedByString(n->text) then
+			byteToString(n)
+		end if
+
+	case TYPE_WCHAR_T
+		'' This shouldn't ever happen because the C parser turns wchar_t into TYPE_WSTRING,
+		'' and we don't produce TYPE_WCHAR_T in any pass before this one.
+		'' (except for wide char literals, but those are skipped here anyways)
+		assert(FALSE)
+	end select
+
+	'' Register plain byte/char/string, the ones we're going to expand
+	'' - "char" typedefs were turned into string ones and should be expanded
+	'' - if -nostring was given for one of them, it's now using byte, but
+	''   should still be registered, to be expanded into -string decls,
+	''   which will be turned from byte to string after the expansion.
+	'' - if -string was given for a byte typedef, it was turned into a
+	''   string one, and should be registered like normal string typedefs.
+	if n->class = ASTCLASS_TYPEDEF then
+		select case typeGetDtAndPtr(n->dtype)
+		case TYPE_ZSTRING, TYPE_WSTRING, TYPE_BYTE, TYPE_UBYTE
+			typedefs.addOverwrite(n)
+		end select
+	end if
+
+	if n->subtype then work(n->subtype)
+	if n->array   then work(n->array  )
+	if n->expr    then work(n->expr   )
+
+	var i = n->head
+	while i
+		var nxt = i->next
+
+		work(i)
+
+		i = nxt
+	wend
+end sub
 
 private sub hlRenameJobsBegin()
 	hashInit(@hl.renamejobs, 6, TRUE)
@@ -2141,12 +2176,7 @@ sub hlGlobal(byval ast as ASTNODE ptr, byref api as ApiInfo)
 		astVisit(ast, @hlApplyRenameOption)
 	end if
 
-	'' Solve out special typedefs
-	''  * array/function typedefs, which aren't supported in FB
-	''  * char/wchar_t typedefs, which become zstring/wstring in some
-	''    places, but byte/wchar_t in others (i.e. it depends on context,
-	''    which is why the typedef needs to be expanded), unless affected by
-	''    -nostring.
+	'' Solve out array/function typedefs (not supported in FB)
 	'' TODO: If possible, turn function typedefs into function pointer
 	'' typedefs instead of solving them out
 	scope
@@ -2160,10 +2190,11 @@ sub hlGlobal(byval ast as ASTNODE ptr, byref api as ApiInfo)
 	''   jmp_buf => jmp_buf ptr (jmp_buf is an array type in C)
 	astVisit(ast, @hlFixSpecialParameters)
 
-	'' The C parser turned char/wchar_t into zstring/wstring.
-	'' Now turn zstring/wstring into byte/wchar_t where it's obviously
-	'' not a string.
-	astVisit(ast, @hlFixCharWchar)
+	'' Handle char/string types
+	scope
+		dim pass as CharStringPass
+		pass.work(ast)
+	end scope
 
 	''
 	'' Solve out various tags/typedefs
