@@ -646,7 +646,7 @@ type TypedefTable
 	'' Strictly speaking we only need the dtype/array information, but
 	'' having the whole TYPEDEF is nicer for error reporting, plus we own
 	'' the id so it can be re-used by the hash table.
-	hash as THASH
+	table as THASH
 	declare constructor()
 	declare destructor()
 	declare function lookup(byval id as zstring ptr) as ASTNODE ptr
@@ -654,22 +654,22 @@ type TypedefTable
 end type
 
 constructor TypedefTable()
-	hashInit(@hash, 8, FALSE)
+	hashInit(@table, 8, FALSE)
 end constructor
 
 destructor TypedefTable()
 	'' Free the cloned TYPEDEFs
-	for i as integer = 0 to hash.room - 1
-		var item = hash.items + i
+	for i as integer = 0 to table.room - 1
+		var item = table.items + i
 		if item->s then
 			astDelete(item->data)
 		end if
 	next
-	hashEnd(@hash)
+	hashEnd(@table)
 end destructor
 
 function TypedefTable.lookup(byval id as zstring ptr) as ASTNODE ptr
-	function = hashLookupDataOrNull(@hash, id)
+	function = hashLookupDataOrNull(@table, id)
 end function
 
 sub TypedefTable.addOverwrite(byval n as ASTNODE ptr)
@@ -685,7 +685,14 @@ sub TypedefTable.addOverwrite(byval n as ASTNODE ptr)
 		expandTypedef(subtypetypedef, datatype)
 	wend
 
-	hashAddOverwrite(@hash, datatype->text, datatype)
+	var hash = hashHash(datatype->text)
+	var item = hashLookup(@table, datatype->text, hash)
+	if item->s then
+		'' Free existing ASTNODE before overwriting, or else it would be leaked
+		astDelete(item->data)
+		item->s = NULL '' became dangling due to this
+	end if
+	hashAdd(@table, item, hash, datatype->text, datatype)
 end sub
 
 private sub oopsCantExpandTypedef(byval typedef as ASTNODE ptr, byval n as ASTNODE ptr, byref reason as string)
