@@ -1,4 +1,4 @@
-// @fbfrog -string directByteArrayToString -string directUbyteArrayToString -string indirectByteArrayToString -string indirectUbyteArrayToString -string p1 -string p4 -string p5 -nostring CHAR -string charArray -string stringField
+// @fbfrog -string directByteArrayToString -string directUbyteArrayToString -string indirectByteArrayToString -string indirectUbyteArrayToString -string p1 -string p4 -string p5 -nostring CHAR -nostring WCHAR -string charArray -string stringField -string wcharArray
 
 extern signed char directByteArrayToString[10];
 extern signed char directByteArrayLeftAsIs[10];
@@ -21,7 +21,17 @@ extern CHAR singleChar;
 extern CHAR charArray[10];
 
 typedef CHAR CHAR2;
-struct UDT {
+struct charUDT {
 	CHAR2 bufferField[10];
 	CHAR2 stringField[10];
+};
+
+typedef wchar_t WCHAR;
+extern WCHAR singleWChar;
+extern WCHAR wcharArray[10];
+
+typedef WCHAR WCHAR2;
+struct wcharUDT {
+	WCHAR2 bufferField[10];
+	WCHAR2 stringField[10];
 };

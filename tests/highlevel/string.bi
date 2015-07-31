@@ -21,9 +21,19 @@ extern singleChar as CHAR
 extern charArray as zstring * 10
 type CHAR2 as CHAR
 
-type UDT
+type charUDT
 	bufferField(0 to 9) as CHAR2
 	stringField as zstring * 10
+end type
+
+type WCHAR as wchar_t
+extern singleWChar as WCHAR
+extern wcharArray(0 to 9) as WCHAR
+type WCHAR2 as WCHAR
+
+type wcharUDT
+	bufferField(0 to 9) as WCHAR2
+	stringField(0 to 9) as WCHAR2
 end type
 
 end extern
