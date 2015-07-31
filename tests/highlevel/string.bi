@@ -19,5 +19,11 @@ declare sub f3(byval p5 as zstring ptr)
 type CHAR as byte
 extern singleChar as CHAR
 extern charArray as zstring * 10
+type CHAR2 as CHAR
+
+type UDT
+	bufferField(0 to 9) as CHAR2
+	stringField as zstring * 10
+end type
 
 end extern

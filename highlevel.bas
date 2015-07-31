@@ -1061,6 +1061,13 @@ sub CharStringPass.work(byval n as ASTNODE ptr)
 		select case typeGetDtAndPtr(n->dtype)
 		case TYPE_ZSTRING, TYPE_WSTRING, TYPE_BYTE, TYPE_UBYTE
 			typedefs.addOverwrite(n)
+		case TYPE_UDT
+			'' Also register if it's a typedef to another typedef
+			'' (that we already know to be a string/byte one)
+			assert(astIsTEXT(n->subtype))
+			if typedefs.lookup(n->subtype->text) then
+				typedefs.addOverwrite(n)
+			end if
 		end select
 	end if
 
