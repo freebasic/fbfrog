@@ -28,12 +28,12 @@ end type
 
 type WCHAR as wchar_t
 extern singleWChar as WCHAR
-extern wcharArray(0 to 9) as WCHAR
+extern wcharArray as wstring * 10
 type WCHAR2 as WCHAR
 
 type wcharUDT
 	bufferField(0 to 9) as WCHAR2
-	stringField(0 to 9) as WCHAR2
+	stringField as wstring * 10
 end type
 
 end extern

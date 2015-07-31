@@ -1008,7 +1008,7 @@ sub CharStringPass.work(byval n as ASTNODE ptr)
 				if (not isAffectedByNoString(n->text)) and (not isAffectedByNoString(typedef->text)) then
 					expandSimpleTypedef(typedef, n)
 				end if
-			case TYPE_BYTE, TYPE_UBYTE
+			case TYPE_BYTE, TYPE_UBYTE, TYPE_WCHAR_T
 				if isAffectedByString(n->text) then
 					expandSimpleTypedef(typedef, n)
 				end if
@@ -1038,16 +1038,13 @@ sub CharStringPass.work(byval n as ASTNODE ptr)
 	'' Turn decls using "[un]signed char [*]" into "char [*]" if -string
 	'' If it's a typedef and then just a "char" (not a pointer), it will be
 	'' expanded, like any other "char" typedefs.
-	case TYPE_BYTE, TYPE_UBYTE
+	'' Regarding wchar_t: Normally the C parser produced TYPE_WSTRING, but
+	'' we can still see TYPE_WCHAR_T here in case a wchar_t typedef got
+	'' expanded into this declaration.
+	case TYPE_BYTE, TYPE_UBYTE, TYPE_WCHAR_T
 		if isAffectedByString(n->text) then
 			byteToString(n)
 		end if
-
-	case TYPE_WCHAR_T
-		'' This shouldn't ever happen because the C parser turns wchar_t into TYPE_WSTRING,
-		'' and we don't produce TYPE_WCHAR_T in any pass before this one.
-		'' (except for wide char literals, but those are skipped here anyways)
-		assert(FALSE)
 	end select
 
 	'' Register plain byte/char/string, the ones we're going to expand
@@ -1057,9 +1054,11 @@ sub CharStringPass.work(byval n as ASTNODE ptr)
 	''   which will be turned from byte to string after the expansion.
 	'' - if -string was given for a byte typedef, it was turned into a
 	''   string one, and should be registered like normal string typedefs.
+	'' - it can be a wchar_t typedef, in case we did stringToByte() above
+	''   (which converted wstring => wchar_t)
 	if n->class = ASTCLASS_TYPEDEF then
 		select case typeGetDtAndPtr(n->dtype)
-		case TYPE_ZSTRING, TYPE_WSTRING, TYPE_BYTE, TYPE_UBYTE
+		case TYPE_ZSTRING, TYPE_WSTRING, TYPE_BYTE, TYPE_UBYTE, TYPE_WCHAR_T
 			typedefs.addOverwrite(n)
 		case TYPE_UDT
 			'' Also register if it's a typedef to another typedef
