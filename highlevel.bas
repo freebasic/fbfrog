@@ -906,7 +906,8 @@ private sub charArrayToFixLenStr(byval n as ASTNODE ptr)
 	assert(d->class = ASTCLASS_DIMENSION)
 	assert(d->expr)
 	assert(n->subtype = NULL)
-	n->subtype = astClone(d->expr)
+	n->subtype = d->expr
+	d->expr = NULL
 	astRemove(n->array, d)
 
 	'' If no dimensions left, remove the array type entirely
@@ -923,16 +924,19 @@ private sub stringToByte(byval n as ASTNODE ptr)
 	else
 		n->dtype = typeSetDt(n->dtype, TYPE_WCHAR_T)
 	end if
+
+	'' z/wstring * N? Turn back into array
 	if n->subtype then
-		assert(n->subtype->class = ASTCLASS_ELLIPSIS)
-		'' in case it was a zstring * ..., delete the ellipsis expression
-		'' This can only happen due to hlFixUnsizedArrays, because it runs
-		'' after hlFixCharWchar which turns arrays => fix-len strings.
-		'' Note: We never have to turn a zstring * N back into a byte array with N elements,
-		'' because the C parser starts out producing arrays, and hlFixCharWchar only turns
-		'' them into fix-len strings if needed.
-		astDelete(n->subtype)
+		'' add ARRAY if needed
+		if n->array = NULL then
+			n->array = astNew(ASTCLASS_ARRAY)
+		end if
+
+		'' add fix-len size as last (inner-most) array dimension
+		var d = astNew(ASTCLASS_DIMENSION)
+		d->expr = n->subtype
 		n->subtype = NULL
+		astAppend(n->array, d)
 	end if
 end sub
 
@@ -1051,7 +1055,7 @@ sub CharStringPass.work(byval n as ASTNODE ptr)
 		'' Don't turn string pointers into byte pointers
 		elseif typeGetPtrCount(n->dtype) <> 0 then
 
-		'' zstring + array? => fix-len zstring
+		'' zstring + array (produced by C parser)? => fix-len zstring
 		elseif n->array then
 			charArrayToFixLenStr(n)
 
@@ -1065,9 +1069,15 @@ sub CharStringPass.work(byval n as ASTNODE ptr)
 	'' Regarding wchar_t: Normally the C parser produced TYPE_WSTRING, but
 	'' we can still see TYPE_WCHAR_T here in case a wchar_t typedef got
 	'' expanded into this declaration.
+	'' If it's a single char, it can't be turned into string though, that would
+	'' be invalid FB, except in typedefs.
 	case TYPE_BYTE, TYPE_UBYTE, TYPE_WCHAR_T
-		if isAffectedByString(n) then
-			byteToString(n)
+		if (n->class = ASTCLASS_TYPEDEF) or _
+		   (typeGetPtrCount(n->dtype) <> 0) or _
+		   (n->array <> NULL) then
+			if isAffectedByString(n) then
+				byteToString(n)
+			end if
 		end if
 	end select
 
@@ -1499,6 +1509,8 @@ private sub hFixUnsizedArray(byval ast as ASTNODE ptr, byval n as ASTNODE ptr)
 			astInsert(ast, def, n->next)
 
 			astRenameSymbol(n, tempid, FALSE)
+			astDelete(n->subtype)
+			n->subtype = NULL
 			stringToByte(n)
 		end if
 	end select
