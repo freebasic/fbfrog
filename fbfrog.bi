@@ -715,6 +715,8 @@ const ASTATTRIB_ENUMCONST     = 1 shl 16
 const ASTATTRIB_NORENAMELIST  = 1 shl 17
 const ASTATTRIB_USED          = 1 shl 18
 const ASTATTRIB_IFNDEFDECL    = 1 shl 19
+const ASTATTRIB_NOSTRING      = 1 shl 20 '' helper flag used during CharStringPass to mark nodes affected by -nostring
+const ASTATTRIB_STRING        = 1 shl 21 '' same for -string
 
 const ASTATTRIB__CALLCONV = ASTATTRIB_CDECL or ASTATTRIB_STDCALL
 

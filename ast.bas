@@ -583,6 +583,11 @@ function astIsEqual _
 		aattrib and= not ASTATTRIB_HIDECALLCONV
 		battrib and= not ASTATTRIB_HIDECALLCONV
 
+		'' Whether nodes are affected by -[no]string only matters during the CharStringPass;
+		'' it doesn't matter for merging.
+		aattrib and= not (ASTATTRIB_NOSTRING or ASTATTRIB_STRING)
+		battrib and= not (ASTATTRIB_NOSTRING or ASTATTRIB_STRING)
+
 		'' Ignore DLLIMPORT on procedures for now, as we're not emitting it anyways
 		if a->class = ASTCLASS_PROC then
 			aattrib and= not ASTATTRIB_DLLIMPORT

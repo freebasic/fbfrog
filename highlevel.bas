@@ -897,14 +897,6 @@ private function hlFixSpecialParameters(byval n as ASTNODE ptr) as integer
 	function = TRUE
 end function
 
-private function isAffectedByNoString(byval parent as ASTNODE ptr, byval child as ASTNODE ptr, byval childindex as integer) as integer
-	function = hl.api->patterns(OPT_NOSTRING).matches(parent, child, childindex)
-end function
-
-private function isAffectedByString(byval parent as ASTNODE ptr, byval child as ASTNODE ptr, byval childindex as integer) as integer
-	function = hl.api->patterns(OPT_STRING).matches(parent, child, childindex)
-end function
-
 private sub charArrayToFixLenStr(byval n as ASTNODE ptr)
 	assert((typeGetDtAndPtr(n->dtype) = TYPE_ZSTRING) or (typeGetDtAndPtr(n->dtype) = TYPE_WSTRING))
 	assert(n->array)
@@ -962,6 +954,34 @@ private sub byteToString(byval n as ASTNODE ptr)
 	end select
 end sub
 
+private sub hlFindStringOptionMatches _
+	( _
+		byval parent as ASTNODE ptr, _
+		byval n as ASTNODE ptr, _
+		byval index as integer _
+	)
+
+	if hl.api->patterns(OPT_NOSTRING).matches(parent, n, index) then
+		n->attrib or= ASTATTRIB_NOSTRING
+	end if
+
+	if hl.api->patterns(OPT_STRING).matches(parent, n, index) then
+		n->attrib or= ASTATTRIB_STRING
+	end if
+
+	if n->subtype then hlFindStringOptionMatches(n, n->subtype, 0)
+	if n->array   then hlFindStringOptionMatches(n, n->array  , 0)
+	if n->expr    then hlFindStringOptionMatches(n, n->expr   , 0)
+
+	var i = n->head
+	var childindex = 0
+	while i
+		hlFindStringOptionMatches(n, i, childindex)
+		i = i->next
+		childindex += 1
+	wend
+end sub
+
 ''
 '' Char/string handling pass
 ''
@@ -984,10 +1004,13 @@ end sub
 ''
 type CharStringPass
 	typedefs as TypedefTable
-	declare sub work(byval parent as ASTNODE ptr, byval n as ASTNODE ptr, byval index as integer)
+	declare sub work(byval n as ASTNODE ptr)
 end type
 
-sub CharStringPass.work(byval parent as ASTNODE ptr, byval n as ASTNODE ptr, byval index as integer)
+#define isAffectedByNoString(n) (((n)->attrib and ASTATTRIB_NOSTRING) <> 0)
+#define isAffectedByString(n)   (((n)->attrib and ASTATTRIB_STRING  ) <> 0)
+
+sub CharStringPass.work(byval n as ASTNODE ptr)
 	'' Ignore string/char literals, which also have string/char types,
 	'' but shouldn't be changed.
 	select case n->class
@@ -1005,11 +1028,11 @@ sub CharStringPass.work(byval parent as ASTNODE ptr, byval n as ASTNODE ptr, byv
 		if typedef then
 			select case typeGetDtAndPtr(typedef->dtype)
 			case TYPE_ZSTRING, TYPE_WSTRING
-				if (not isAffectedByNoString(parent, n, index)) and (not isAffectedByNoString(NULL, typedef, index)) then
+				if (not isAffectedByNoString(n)) and (not isAffectedByNoString(typedef)) then
 					expandSimpleTypedef(typedef, n)
 				end if
 			case TYPE_BYTE, TYPE_UBYTE, TYPE_WCHAR_T
-				if isAffectedByString(parent, n, index) then
+				if isAffectedByString(n) then
 					expandSimpleTypedef(typedef, n)
 				end if
 			end select
@@ -1021,7 +1044,7 @@ sub CharStringPass.work(byval parent as ASTNODE ptr, byval n as ASTNODE ptr, byv
 	'' if it's neither pointer/array/typedef, or if -nostring.
 	case TYPE_ZSTRING, TYPE_WSTRING
 		'' Affected by -nostring?
-		if isAffectedByNoString(parent, n, index) then
+		if isAffectedByNoString(n) then
 			'' Turn string into byte (even pointers)
 			stringToByte(n)
 		'' Don't turn string pointers into byte pointers
@@ -1042,7 +1065,7 @@ sub CharStringPass.work(byval parent as ASTNODE ptr, byval n as ASTNODE ptr, byv
 	'' we can still see TYPE_WCHAR_T here in case a wchar_t typedef got
 	'' expanded into this declaration.
 	case TYPE_BYTE, TYPE_UBYTE, TYPE_WCHAR_T
-		if isAffectedByString(parent, n, index) then
+		if isAffectedByString(n) then
 			byteToString(n)
 		end if
 	end select
@@ -1070,16 +1093,14 @@ sub CharStringPass.work(byval parent as ASTNODE ptr, byval n as ASTNODE ptr, byv
 		end select
 	end if
 
-	if n->subtype then work(n, n->subtype, 0)
-	if n->array   then work(n, n->array  , 0)
-	if n->expr    then work(n, n->expr   , 0)
+	if n->subtype then work(n->subtype)
+	if n->array   then work(n->array  )
+	if n->expr    then work(n->expr   )
 
 	var i = n->head
-	var childindex = 0
 	while i
-		work(n, i, childindex)
+		work(i)
 		i = i->next
-		childindex += 1
 	wend
 end sub
 
@@ -2197,8 +2218,9 @@ sub hlGlobal(byval ast as ASTNODE ptr, byref api as ApiInfo)
 
 	'' Handle char/string types
 	scope
+		hlFindStringOptionMatches(NULL, ast, 0)
 		dim pass as CharStringPass
-		pass.work(NULL, ast, 0)
+		pass.work(ast)
 	end scope
 
 	''
