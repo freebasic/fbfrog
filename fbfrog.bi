@@ -852,7 +852,8 @@ declare sub astProcessVerblocks(byval code as ASTNODE ptr)
 '' which can be a child (param/field/enumconst) if we have a parent pattern too (proc for param, struct/union for field, etc.)
 type DeclPattern
 	as string parent, child
-	declare function matches(byval nparent as ASTNODE ptr, byval nchild as ASTNODE ptr) as integer
+	childindex as integer
+	declare function matches(byval nparent as ASTNODE ptr, byval nchild as ASTNODE ptr, byval childindex as integer) as integer
 end type
 
 type DeclPatterns
@@ -861,7 +862,7 @@ type DeclPatterns
 	declare sub add(byref pattern as DeclPattern)
 	declare sub parseAndAdd(byref s as string)
 	declare destructor()
-	declare function matches(byval parent as ASTNODE ptr, byval n as ASTNODE ptr) as integer
+	declare function matches(byval parent as ASTNODE ptr, byval child as ASTNODE ptr, byval childindex as integer) as integer
 end type
 
 type CodeReplacement

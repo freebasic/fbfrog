@@ -8,4 +8,4 @@
       tests/highlevel/string-patterns.h
 [5/5] __FB_DOS__
       tests/highlevel/string-patterns.h
-emitting: tests/highlevel/string-patterns.bi (11 declarations, 0 TODOs)
+emitting: tests/highlevel/string-patterns.bi (14 declarations, 0 TODOs)

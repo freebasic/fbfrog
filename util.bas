@@ -288,6 +288,15 @@ function strIsValidSymbolId(byval s as zstring ptr) as integer
 	function = TRUE
 end function
 
+private function strIsNumber(byref s as string) as integer
+	for i as integer = 0 to len(s) - 1
+		if (s[i] < CH_0) or (s[i] > CH_9) then
+			exit function
+		end if
+	next
+	function = TRUE
+end function
+
 '' Does an identifier start with __ (double underscore) or _U (single underscore
 '' and upper-case letter)?
 function strIsReservedIdInC(byval id as zstring ptr) as integer
@@ -1307,10 +1316,23 @@ end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-function DeclPattern.matches(byval nparent as ASTNODE ptr, byval nchild as ASTNODE ptr) as integer
-	var parent_matches = (len(parent) = 0) orelse _
-		((nparent = NULL) orelse strMatch(*nparent->text, parent))
-	function = parent_matches and strMatch(*nchild->text, child)
+function DeclPattern.matches(byval nparent as ASTNODE ptr, byval nchild as ASTNODE ptr, byval childindex as integer) as integer
+	var match = TRUE
+	if len(parent) > 0 then
+		if nparent then
+			match = strMatch(*nparent->text, parent)
+		else
+			match = FALSE
+		end if
+	end if
+	if len(child) > 0 then
+		'' Match child by name
+		match and= strMatch(*nchild->text, child)
+	else
+		'' Match child by index
+		match and= (this.childindex = childindex)
+	end if
+	function = match
 end function
 
 sub DeclPatterns.add(byref pattern as DeclPattern)
@@ -1323,6 +1345,7 @@ end sub
 
 '' Declaration pattern format:
 ''    [<parent-id-pattern>.]<child-id-pattern>
+''    <parent-id-pattern>.<child-index>
 '' TODO: support matching proc params by index (in case they're anonymous)
 '' TODO: match based on astclass to speed things up a bit
 ''       (if we have a parentpattern, the child can only be a field/param/enumconst)
@@ -1330,12 +1353,20 @@ end sub
 ''       hashtb instead of adding as DeclPattern?
 sub DeclPatterns.parseAndAdd(byref s as string)
 	dim pattern as DeclPattern
+
 	strSplit(s, ".", pattern.parent, pattern.child)
 
-	'' Just one pattern? Use it as child
-	if len(pattern.child) = 0 then
+	if len(pattern.child) > 0 then
+		'' Can be given a child index instead of a child id
+		if strIsNumber(pattern.child) then
+			pattern.childindex = valuint(pattern.child)
+			pattern.child = ""
+		end if
+	else
+		'' Just one pattern; use it as child
 		swap pattern.parent, pattern.child
 	end if
+
 
 	add(pattern)
 end sub
@@ -1347,9 +1378,9 @@ destructor DeclPatterns()
 	deallocate(patterns)
 end destructor
 
-function DeclPatterns.matches(byval parent as ASTNODE ptr, byval n as ASTNODE ptr) as integer
+function DeclPatterns.matches(byval parent as ASTNODE ptr, byval child as ASTNODE ptr, byval childindex as integer) as integer
 	for i as integer = 0 to count - 1
-		if patterns[i].matches(parent, n) then
+		if patterns[i].matches(parent, child, childindex) then
 			return TRUE
 		end if
 	next

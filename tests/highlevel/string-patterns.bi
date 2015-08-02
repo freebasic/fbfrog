@@ -23,5 +23,8 @@ end type
 extern myPartialPath(0 to 9) as byte
 declare sub f1(byval param1 as zstring ptr)
 declare sub f2(byval param1 as ubyte ptr)
+declare sub f3(byval as zstring ptr)
+declare sub f4(byval as ubyte ptr)
+declare sub f5(byval as ubyte ptr, byval as zstring ptr, byval as ubyte ptr)
 
 end extern

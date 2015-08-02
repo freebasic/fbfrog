@@ -1,4 +1,4 @@
-// @fbfrog -string 'string*' -nostring 'byteArray*' -string UDT1.name -string UDT*.my*Path -string f1.param1
+// @fbfrog -string 'string*' -nostring 'byteArray*' -string UDT1.name -string UDT*.my*Path -string f1.param1 -string f3.0 -string f5.1
 
 extern signed char string1[10];
 extern signed char string2[10];
@@ -22,3 +22,8 @@ extern signed char myPartialPath[10]; // shouldn't be matched
 
 void f1(unsigned char *param1 /* should be matched */);
 void f2(unsigned char *param1 /* shouldn't be matched */);
+
+void f3(unsigned char *); // should be matched
+void f4(unsigned char *); // shouldn't be matched
+
+void f5(unsigned char *, unsigned char *, unsigned char *); // matching 2nd parameter only
