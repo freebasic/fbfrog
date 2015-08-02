@@ -956,27 +956,28 @@ end sub
 
 private sub hlFindStringOptionMatches _
 	( _
+		byval parentparent as ASTNODE ptr, _
 		byval parent as ASTNODE ptr, _
 		byval n as ASTNODE ptr, _
 		byval index as integer _
 	)
 
-	if hl.api->patterns(OPT_NOSTRING).matches(parent, n, index) then
+	if hl.api->patterns(OPT_NOSTRING).matches(parentparent, parent, n, index) then
 		n->attrib or= ASTATTRIB_NOSTRING
 	end if
 
-	if hl.api->patterns(OPT_STRING).matches(parent, n, index) then
+	if hl.api->patterns(OPT_STRING).matches(parentparent, parent, n, index) then
 		n->attrib or= ASTATTRIB_STRING
 	end if
 
-	if n->subtype then hlFindStringOptionMatches(n, n->subtype, 0)
-	if n->array   then hlFindStringOptionMatches(n, n->array  , 0)
-	if n->expr    then hlFindStringOptionMatches(n, n->expr   , 0)
+	if n->subtype then hlFindStringOptionMatches(parent, n, n->subtype, 0)
+	if n->array   then hlFindStringOptionMatches(parent, n, n->array  , 0)
+	if n->expr    then hlFindStringOptionMatches(parent, n, n->expr   , 0)
 
 	var i = n->head
 	var childindex = 0
 	while i
-		hlFindStringOptionMatches(n, i, childindex)
+		hlFindStringOptionMatches(parent, n, i, childindex)
 		i = i->next
 		childindex += 1
 	wend
@@ -2218,7 +2219,7 @@ sub hlGlobal(byval ast as ASTNODE ptr, byref api as ApiInfo)
 
 	'' Handle char/string types
 	scope
-		hlFindStringOptionMatches(NULL, ast, 0)
+		hlFindStringOptionMatches(NULL, NULL, ast, 0)
 		dim pass as CharStringPass
 		pass.work(ast)
 	end scope

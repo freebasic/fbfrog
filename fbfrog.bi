@@ -853,9 +853,15 @@ declare sub astProcessVerblocks(byval code as ASTNODE ptr)
 '' String pattern for matching a declaration by name (proc/var/field/param/typedef/struct/etc.),
 '' which can be a child (param/field/enumconst) if we have a parent pattern too (proc for param, struct/union for field, etc.)
 type DeclPattern
-	as string parent, child
+	as string parentid, childid
 	childindex as integer
-	declare function matches(byval nparent as ASTNODE ptr, byval nchild as ASTNODE ptr, byval childindex as integer) as integer
+	declare function matches _
+		( _
+			byval parentparent as ASTNODE ptr, _
+			byval parent as ASTNODE ptr, _
+			byval child as ASTNODE ptr, _
+			byval childindex as integer _
+		) as integer
 end type
 
 type DeclPatterns
@@ -864,7 +870,13 @@ type DeclPatterns
 	declare sub add(byref pattern as DeclPattern)
 	declare sub parseAndAdd(byref s as string)
 	declare destructor()
-	declare function matches(byval parent as ASTNODE ptr, byval child as ASTNODE ptr, byval childindex as integer) as integer
+	declare function matches _
+		( _
+			byval parentparent as ASTNODE ptr, _
+			byval parent as ASTNODE ptr, _
+			byval child as ASTNODE ptr, _
+			byval childindex as integer _
+		) as integer
 end type
 
 type CodeReplacement

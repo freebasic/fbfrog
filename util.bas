@@ -1316,22 +1316,39 @@ end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-function DeclPattern.matches(byval nparent as ASTNODE ptr, byval nchild as ASTNODE ptr, byval childindex as integer) as integer
+function DeclPattern.matches _
+	( _
+		byval parentparent as ASTNODE ptr, _
+		byval parent as ASTNODE ptr, _
+		byval child as ASTNODE ptr, _
+		byval childindex as integer _
+	) as integer
+
 	var match = TRUE
-	if len(parent) > 0 then
-		if nparent then
-			match = strMatch(*nparent->text, parent)
+
+	if len(parentid) > 0 then
+		if parent then
+			'' If it's an anonymous procptr subtype, check its parent's id instead
+			if parentparent andalso _
+			   (parent->class = ASTCLASS_PROC) andalso _
+			   (parentparent->subtype = parent) then
+				match = strMatch(*parentparent->text, parentid)
+			else
+				match = strMatch(*parent->text, parentid)
+			end if
 		else
 			match = FALSE
 		end if
 	end if
-	if len(child) > 0 then
+
+	if len(childid) > 0 then
 		'' Match child by name
-		match and= strMatch(*nchild->text, child)
+		match and= strMatch(*child->text, childid)
 	else
 		'' Match child by index
 		match and= (this.childindex = childindex)
 	end if
+
 	function = match
 end function
 
@@ -1346,7 +1363,6 @@ end sub
 '' Declaration pattern format:
 ''    [<parent-id-pattern>.]<child-id-pattern>
 ''    <parent-id-pattern>.<child-index>
-'' TODO: support matching proc params by index (in case they're anonymous)
 '' TODO: match based on astclass to speed things up a bit
 ''       (if we have a parentpattern, the child can only be a field/param/enumconst)
 '' TODO: if pattern is a simple id (no wildcards or parent pattern), add to
@@ -1354,17 +1370,17 @@ end sub
 sub DeclPatterns.parseAndAdd(byref s as string)
 	dim pattern as DeclPattern
 
-	strSplit(s, ".", pattern.parent, pattern.child)
+	strSplit(s, ".", pattern.parentid, pattern.childid)
 
-	if len(pattern.child) > 0 then
+	if len(pattern.childid) > 0 then
 		'' Can be given a child index instead of a child id
-		if strIsNumber(pattern.child) then
-			pattern.childindex = valuint(pattern.child)
-			pattern.child = ""
+		if strIsNumber(pattern.childid) then
+			pattern.childindex = valuint(pattern.childid)
+			pattern.childid = ""
 		end if
 	else
 		'' Just one pattern; use it as child
-		swap pattern.parent, pattern.child
+		swap pattern.parentid, pattern.childid
 	end if
 
 
@@ -1378,9 +1394,15 @@ destructor DeclPatterns()
 	deallocate(patterns)
 end destructor
 
-function DeclPatterns.matches(byval parent as ASTNODE ptr, byval child as ASTNODE ptr, byval childindex as integer) as integer
+function DeclPatterns.matches _
+	( _
+		byval parentparent as ASTNODE ptr, _
+		byval parent as ASTNODE ptr, _
+		byval child as ASTNODE ptr, _
+		byval childindex as integer _
+	) as integer
 	for i as integer = 0 to count - 1
-		if patterns[i].matches(parent, child, childindex) then
+		if patterns[i].matches(parentparent, parent, child, childindex) then
 			return TRUE
 		end if
 	next

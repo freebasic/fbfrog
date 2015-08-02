@@ -1,4 +1,4 @@
-// @fbfrog -string 'string*' -nostring 'byteArray*' -string UDT1.name -string UDT*.my*Path -string f1.param1 -string f3.0 -string f5.1
+// @fbfrog -string 'string*' -nostring 'byteArray*' -string UDT1.name -string UDT*.my*Path -string f1.param1 -string f3.0 -string f5.1 -string PFDoodle.1 -string procPtrParam.1
 
 extern signed char string1[10];
 extern signed char string2[10];
@@ -27,3 +27,6 @@ void f3(unsigned char *); // should be matched
 void f4(unsigned char *); // shouldn't be matched
 
 void f5(unsigned char *, unsigned char *, unsigned char *); // matching 2nd parameter only
+
+typedef void (*PFDoodle)(unsigned char *, unsigned char *); // match 2nd parameter of procptr subtype of a typedef
+void f6(int, void (*procPtrParam)(unsigned char *, unsigned char *), int); // same, but as param instead of typedef
