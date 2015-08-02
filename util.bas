@@ -182,6 +182,17 @@ function strDuplicate(byval s as zstring ptr) as zstring ptr
 	end if
 end function
 
+sub strSplit(byref s as string, byref delimiter as string, byref l as string, byref r as string)
+	var leftlen = instr(s, delimiter) - 1
+	if leftlen > 0 then
+		l = left(s, leftlen)
+		r = right(s, len(s) - leftlen - len(delimiter))
+	else
+		l = s
+		r = ""
+	end if
+end sub
+
 function strReplace _
 	( _
 		byref text as string, _
@@ -1292,4 +1303,54 @@ function hReadableDirExists(byref path as string) as integer
 		fixed = left(fixed, len(fixed) - len(PATHDIV))
 	end if
 	function = (len(dir(fixed, fbDirectory or fbReadOnly or fbHidden)) > 0)
+end function
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+function DeclPattern.matches(byval nparent as ASTNODE ptr, byval nchild as ASTNODE ptr) as integer
+	var parent_matches = (len(parent) = 0) orelse _
+		((nparent = NULL) orelse strMatch(*nparent->text, parent))
+	function = parent_matches and strMatch(*nchild->text, child)
+end function
+
+sub DeclPatterns.add(byref pattern as DeclPattern)
+	var i = count
+	count += 1
+	patterns = reallocate(patterns, sizeof(*patterns) * count)
+	patterns[i].constructor()
+	patterns[i] = pattern
+end sub
+
+'' Declaration pattern format:
+''    [<parent-id-pattern>.]<child-id-pattern>
+'' TODO: support matching proc params by index (in case they're anonymous)
+'' TODO: match based on astclass to speed things up a bit
+''       (if we have a parentpattern, the child can only be a field/param/enumconst)
+'' TODO: if pattern is a simple id (no wildcards or parent pattern), add to
+''       hashtb instead of adding as DeclPattern?
+sub DeclPatterns.parseAndAdd(byref s as string)
+	dim pattern as DeclPattern
+	strSplit(s, ".", pattern.parent, pattern.child)
+
+	'' Just one pattern? Use it as child
+	if len(pattern.child) = 0 then
+		swap pattern.parent, pattern.child
+	end if
+
+	add(pattern)
+end sub
+
+destructor DeclPatterns()
+	for i as integer = 0 to count - 1
+		patterns[i].destructor()
+	next
+	deallocate(patterns)
+end destructor
+
+function DeclPatterns.matches(byval parent as ASTNODE ptr, byval n as ASTNODE ptr) as integer
+	for i as integer = 0 to count - 1
+		if patterns[i].matches(parent, n) then
+			return TRUE
+		end if
+	next
 end function

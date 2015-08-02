@@ -186,11 +186,11 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	(@"-addforwarddecl"), _
 	(@"-undefbeforedecl"), _
 	(@"-ifndefdecl"   ), _
-	(@"-nostring"     ), _
-	(@"-string"       ), _
 	(@"-convbodytokens"), _
 	(@"-expandindefine"), _
 	(@"-noexpand"     ), _
+	(@"-nostring"     ), _
+	(@"-string"       ), _
 	(@"-removeinclude"), _
 	(@"-setarraysize" ), _
 	(@"-moveabove"    ), _

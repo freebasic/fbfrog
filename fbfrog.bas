@@ -226,11 +226,11 @@ private sub hPrintHelpAndExit()
 	print "  -addforwarddecl <id>  Force a forward declaration to be added for the given type"
 	print "  -undefbeforedecl <id>  Insert an #undef above a declaration"
 	print "  -ifndefdecl <id>    Wrap declaration of symbol named <id> in an #ifndef block"
-	print "  -nostring <id>      Prevent a symbol from being turned into a zstring"
-	print "  -string <id>        Force a [U]Byte [Ptr] symbol to be turned into a ZString [Ptr]"
 	print "  -convbodytokens <id>  Translate a #define's body only by converting the tokens, no parsing"
 	print "  -expandindefine <id>  Expand macro in #define body"
 	print "  -noexpand <id>      Disable expansion of certain #define"
+	print "  -nostring <id-pattern> Prevent a symbol from being turned into a zstring"
+	print "  -string <id-pattern>   Force a [U]Byte [Ptr] symbol to be turned into a ZString [Ptr]"
 	print "  -removeinclude <filename>  Remove matching #include directives"
 	print "  -setarraysize <id> <size>  Set size of an [] array"
 	print "  -moveabove <id> <ref>  Move declaration of <id> above declaration of <ref>"
@@ -443,8 +443,11 @@ sub ApiInfo.loadOption(byval opt as integer, byval param1 as zstring ptr, byval 
 
 	case OPT_REMOVE, OPT_REMOVEDEFINE, OPT_REMOVEPROC, OPT_REMOVEVAR, OPT_REMOVE1ST, OPT_REMOVE2ND, _
 	     OPT_DROPPROCBODY, OPT_TYPEDEFHINT, OPT_ADDFORWARDDECL, OPT_UNDEFBEFOREDECL, OPT_IFNDEFDECL, _
-	     OPT_NOSTRING, OPT_STRING, OPT_CONVBODYTOKENS, OPT_EXPANDINDEFINE, OPT_NOEXPAND
+	     OPT_CONVBODYTOKENS, OPT_EXPANDINDEFINE, OPT_NOEXPAND
 		hashAddOverwrite(@idopt(opt), param1, NULL)
+
+	case OPT_NOSTRING, OPT_STRING
+		patterns(opt).parseAndAdd(*param1)
 
 	case OPT_REMOVEINCLUDE
 		hashAddOverwrite(@removeinclude, param1, NULL)
@@ -950,8 +953,11 @@ private sub hParseArgs(byref x as integer)
 
 		case OPT_REMOVE, OPT_REMOVEDEFINE, OPT_REMOVEPROC, OPT_REMOVEVAR, OPT_REMOVE1ST, OPT_REMOVE2ND, _
 		     OPT_DROPPROCBODY, OPT_TYPEDEFHINT, OPT_ADDFORWARDDECL, OPT_UNDEFBEFOREDECL, OPT_IFNDEFDECL, _
-		     OPT_NOSTRING, OPT_STRING, OPT_CONVBODYTOKENS, OPT_EXPANDINDEFINE, OPT_NOEXPAND
+		     OPT_CONVBODYTOKENS, OPT_EXPANDINDEFINE, OPT_NOEXPAND
 			hParseOption1Param(x, opt, "<id>")
+
+		case OPT_NOSTRING, OPT_STRING
+			hParseOption1Param(x, opt, "<pattern>")
 
 		case OPT_REMOVEINCLUDE
 			hParseOption1Param(x, opt, "<filename>")

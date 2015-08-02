@@ -897,12 +897,12 @@ private function hlFixSpecialParameters(byval n as ASTNODE ptr) as integer
 	function = TRUE
 end function
 
-private function isAffectedByNoString(byval id as zstring ptr) as integer
-	function = id andalso hashContains(@hl.api->idopt(OPT_NOSTRING), id, hashHash(id))
+private function isAffectedByNoString(byval parent as ASTNODE ptr, byval n as ASTNODE ptr) as integer
+	function = hl.api->patterns(OPT_NOSTRING).matches(parent, n)
 end function
 
-private function isAffectedByString(byval id as zstring ptr) as integer
-	function = id andalso hashContains(@hl.api->idopt(OPT_STRING), id, hashHash(id))
+private function isAffectedByString(byval parent as ASTNODE ptr, byval n as ASTNODE ptr) as integer
+	function = hl.api->patterns(OPT_STRING).matches(parent, n)
 end function
 
 private sub charArrayToFixLenStr(byval n as ASTNODE ptr)
@@ -984,10 +984,10 @@ end sub
 ''
 type CharStringPass
 	typedefs as TypedefTable
-	declare sub work(byval n as ASTNODE ptr)
+	declare sub work(byval parent as ASTNODE ptr, byval n as ASTNODE ptr)
 end type
 
-sub CharStringPass.work(byval n as ASTNODE ptr)
+sub CharStringPass.work(byval parent as ASTNODE ptr, byval n as ASTNODE ptr)
 	'' Ignore string/char literals, which also have string/char types,
 	'' but shouldn't be changed.
 	select case n->class
@@ -1005,11 +1005,11 @@ sub CharStringPass.work(byval n as ASTNODE ptr)
 		if typedef then
 			select case typeGetDtAndPtr(typedef->dtype)
 			case TYPE_ZSTRING, TYPE_WSTRING
-				if (not isAffectedByNoString(n->text)) and (not isAffectedByNoString(typedef->text)) then
+				if (not isAffectedByNoString(parent, n)) and (not isAffectedByNoString(NULL, typedef)) then
 					expandSimpleTypedef(typedef, n)
 				end if
 			case TYPE_BYTE, TYPE_UBYTE, TYPE_WCHAR_T
-				if isAffectedByString(n->text) then
+				if isAffectedByString(parent, n) then
 					expandSimpleTypedef(typedef, n)
 				end if
 			end select
@@ -1021,7 +1021,7 @@ sub CharStringPass.work(byval n as ASTNODE ptr)
 	'' if it's neither pointer/array/typedef, or if -nostring.
 	case TYPE_ZSTRING, TYPE_WSTRING
 		'' Affected by -nostring?
-		if isAffectedByNoString(n->text) then
+		if isAffectedByNoString(parent, n) then
 			'' Turn string into byte (even pointers)
 			stringToByte(n)
 		'' Don't turn string pointers into byte pointers
@@ -1042,7 +1042,7 @@ sub CharStringPass.work(byval n as ASTNODE ptr)
 	'' we can still see TYPE_WCHAR_T here in case a wchar_t typedef got
 	'' expanded into this declaration.
 	case TYPE_BYTE, TYPE_UBYTE, TYPE_WCHAR_T
-		if isAffectedByString(n->text) then
+		if isAffectedByString(parent, n) then
 			byteToString(n)
 		end if
 	end select
@@ -1070,15 +1070,15 @@ sub CharStringPass.work(byval n as ASTNODE ptr)
 		end select
 	end if
 
-	if n->subtype then work(n->subtype)
-	if n->array   then work(n->array  )
-	if n->expr    then work(n->expr   )
+	if n->subtype then work(n, n->subtype)
+	if n->array   then work(n, n->array  )
+	if n->expr    then work(n, n->expr   )
 
 	var i = n->head
 	while i
 		var nxt = i->next
 
-		work(i)
+		work(n, i)
 
 		i = nxt
 	wend
@@ -2199,7 +2199,7 @@ sub hlGlobal(byval ast as ASTNODE ptr, byref api as ApiInfo)
 	'' Handle char/string types
 	scope
 		dim pass as CharStringPass
-		pass.work(ast)
+		pass.work(NULL, ast)
 	end scope
 
 	''

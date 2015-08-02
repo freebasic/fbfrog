@@ -106,6 +106,7 @@ declare function hTrim(byref s as string) as string
 declare function hLTrim(byref s as string) as string
 declare function strStartsWith(byref s as string, byref lookfor as string) as integer
 declare function strDuplicate(byval s as zstring ptr) as zstring ptr
+declare sub strSplit(byref s as string, byref delimiter as string, byref l as string, byref r as string)
 declare function strReplace _
 	( _
 		byref text as string, _
@@ -412,11 +413,11 @@ enum
 	OPT_ADDFORWARDDECL
 	OPT_UNDEFBEFOREDECL
 	OPT_IFNDEFDECL
-	OPT_NOSTRING
-	OPT_STRING
 	OPT_CONVBODYTOKENS
 	OPT_EXPANDINDEFINE
 	OPT_NOEXPAND
+	OPT_NOSTRING
+	OPT_STRING
 	OPT_REMOVEINCLUDE
 	OPT_SETARRAYSIZE
 	OPT_MOVEABOVE
@@ -847,6 +848,22 @@ declare sub astProcessVerblocks(byval code as ASTNODE ptr)
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
+'' String pattern for matching a declaration by name (proc/var/field/param/typedef/struct/etc.),
+'' which can be a child (param/field/enumconst) if we have a parent pattern too (proc for param, struct/union for field, etc.)
+type DeclPattern
+	as string parent, child
+	declare function matches(byval nparent as ASTNODE ptr, byval nchild as ASTNODE ptr) as integer
+end type
+
+type DeclPatterns
+	patterns as DeclPattern ptr
+	count as integer
+	declare sub add(byref pattern as DeclPattern)
+	declare sub parseAndAdd(byref s as string)
+	declare destructor()
+	declare function matches(byval parent as ASTNODE ptr, byval n as ASTNODE ptr) as integer
+end type
+
 type CodeReplacement
 	as zstring ptr fromcode, tocode
 	tofb as integer
@@ -863,6 +880,7 @@ type ApiInfo
 	have_renames as integer
 	renameopt(OPT_RENAMETYPEDEF to OPT_RENAME) as THASH
 	idopt(OPT_REMOVE to OPT_NOEXPAND) as THASH
+	patterns(OPT_NOSTRING to OPT_STRING) as DeclPatterns
 	removeinclude as THASH
 	setarraysizeoptions as THASH
 	moveaboveoptions as ASTNODE ptr
