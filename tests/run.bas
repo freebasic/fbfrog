@@ -29,7 +29,6 @@
 #include "dir.bi"
 
 type TestRunner
-	as integer oks, fails
 	as string exe_path, cur_dir, fbfrog
 end type
 
@@ -107,12 +106,7 @@ sub hTest(byref hfile as string)
 
 	'' ./fbfrog *.h <extraoptions> > txtfile 2>&1
 	var ln = runner.fbfrog + " " + hfile + " " + extraoptions
-	var ok = hShell(ln + " > " + txtfile + " 2>&1")
-	if (not ok) = is_failure_test then
-		runner.oks += 1
-	else
-		runner.fails += 1
-	end if
+	hShell(ln + " > " + txtfile + " 2>&1")
 end sub
 
 sub hUnitTest(byref basfile as string)
@@ -304,11 +298,9 @@ if unit_only = FALSE then
 end if
 
 '' Compile and run *.bas unit tests
-hScanDirectory(runner.exe_path + PATHDIV + "unit", "*.bas")
+hScanDirectory(runner.exe_path + "unit", "*.bas")
 hSortFiles()
 for i as integer = 0 to files.count-1
 	hUnitTest(files.list(i))
 next
 files.count = 0
-
-print "  " & runner.oks & " tests ok, " & runner.fails & " failed"
