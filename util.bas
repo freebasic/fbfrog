@@ -1324,32 +1324,28 @@ function DeclPattern.matches _
 		byval childindex as integer _
 	) as integer
 
-	var match = TRUE
-
 	if len(parentid) > 0 then
-		if parent then
-			'' If it's an anonymous procptr subtype, check its parent's id instead
-			if parentparent andalso _
-			   (parent->class = ASTCLASS_PROC) andalso _
-			   (parentparent->subtype = parent) then
-				match = strMatch(*parentparent->text, parentid)
-			else
-				match = strMatch(*parent->text, parentid)
-			end if
+		if parent = NULL then exit function
+
+		'' If it's an anonymous procptr subtype, check its parent's id instead
+		dim parentid as zstring ptr
+		if parentparent andalso _
+		   (parent->class = ASTCLASS_PROC) andalso _
+		   (parentparent->subtype = parent) then
+			parentid = parentparent->text
 		else
-			match = FALSE
+			parentid = parent->text
 		end if
+		if strMatch(*parentid, this.parentid) = FALSE then exit function
 	end if
 
 	if len(childid) > 0 then
 		'' Match child by name
-		match and= strMatch(*child->text, childid)
+		function = strMatch(*child->text, childid)
 	else
 		'' Match child by index
-		match and= (this.childindex = childindex)
+		function = (this.childindex = childindex)
 	end if
-
-	function = match
 end function
 
 sub DeclPatterns.add(byref pattern as DeclPattern)
