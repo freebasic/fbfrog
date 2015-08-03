@@ -20,23 +20,16 @@
 ''               into others etc. without being seen as test cases itself.
 ''
 
-#include once "dir.bi"
+#include "../util-path.bas"
+#include "../util-str.bas"
+#include "dir.bi"
 
-#undef FALSE
-#undef TRUE
-const NULL = 0
-const FALSE = 0
-const TRUE = -1
-
-type TESTCALLBACK as sub(byref as string)
-
-type STATS
-	oks as integer
-	fails as integer
+type TestRunner
+	as integer oks, fails
+	as string exe_path, cur_dir, fbfrog
 end type
 
-dim shared stat as STATS
-dim shared as string exe_path, cur_dir, fbfrog
+dim shared runner as TestRunner
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
@@ -46,84 +39,6 @@ function strStripPrefix(byref s as string, byref prefix as string) as string
 	else
 		function = s
 	end if
-end function
-
-function strReplace _
-	( _
-		byref text as string, _
-		byref a as string, _
-		byref b as string _
-	) as string
-
-	var result = text
-
-	var alen = len(a)
-	var blen = len(b)
-
-	var i = 0
-	do
-		'' Does result contain an occurence of a?
-		i = instr(i + 1, result, a)
-		if i = 0 then
-			exit do
-		end if
-
-		'' Cut out a and insert b in its place
-		'' result  =  front  +  b  +  back
-		var keep = right(result, len(result) - ((i - 1) + alen))
-		result = left(result, i - 1)
-		result += b
-		result += keep
-
-		i += blen - 1
-	loop
-
-	function = result
-end function
-
-#if defined(__FB_WIN32__) or defined(__FB_DOS__)
-	const PATHDIV = $"\"
-#else
-	const PATHDIV = "/"
-#endif
-
-function pathAddDiv(byref path as string) as string
-	var s = path
-	var length = len(s)
-
-	if length > 0 then
-#if defined(__FB_WIN32__) or defined(__FB_DOS__)
-		select case s[length-1]
-		case asc("\"), asc("/")
-
-		case else
-			s += "\"
-		end select
-#else
-		if s[length-1] <> asc("/") then
-			s += "/"
-		end if
-#endif
-	end if
-
-	function = s
-end function
-
-private function hFindFileName(byref path as string) as integer
-	for i as integer = len(path)-1 to 0 step -1
-		select case path[i]
-#if defined(__FB_WIN32__) or defined(__FB_DOS__)
-		case asc("\"), asc("/")
-#else
-		case asc("/")
-#endif
-			return i + 1
-		end select
-	next
-end function
-
-function pathOnly(byref path as string) as string
-	function = left(path, hFindFileName(path))
 end function
 
 function pathStripLastComponent(byref path as string) as string
@@ -183,7 +98,7 @@ sub hTest(byref hfile as string)
 	print message;
 
 	'' ./fbfrog *.h <extraoptions> > txtfile 2>&1
-	var ln = fbfrog + " " + hfile + " " + extraoptions
+	var ln = runner.fbfrog + " " + hfile + " " + extraoptions
 	var result = shell(ln + " > " + txtfile + " 2>&1")
 	select case result
 	case -1
@@ -200,10 +115,10 @@ sub hTest(byref hfile as string)
 	dim as string suffix
 	if (result <> 0) = is_failure_test then
 		suffix = "[ ok ]"
-		stat.oks += 1
+		runner.oks += 1
 	else
 		suffix = "[fail]"
-		stat.fails += 1
+		runner.fails += 1
 	end if
 
 	print space(hConsoleWidth() - len(message) - len(suffix)) + suffix
@@ -264,7 +179,7 @@ private sub hScanParent(byref parent as string, byref filepattern as string)
 			print "MAXFILE is too small"
 			end 1
 		end if
-		files.list(files.count) = strStripPrefix(parent + found, cur_dir)
+		files.list(files.count) = strStripPrefix(parent + found, runner.cur_dir)
 		files.count += 1
 
 		found = dir()
@@ -335,11 +250,11 @@ end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-exe_path = pathAddDiv(exepath())
-cur_dir = pathAddDiv(curdir())
-fbfrog = pathStripLastComponent(exe_path) + "fbfrog"
-if cur_dir + "tests" + PATHDIV = exe_path then
-	fbfrog = "./fbfrog"
+runner.exe_path = pathAddDiv(exepath())
+runner.cur_dir = pathAddDiv(curdir())
+runner.fbfrog = pathStripLastComponent(runner.exe_path) + "fbfrog"
+if (runner.cur_dir + "tests" + PATHDIV) = runner.exe_path then
+	runner.fbfrog = "./fbfrog"
 end if
 
 var clean_only = FALSE
@@ -354,8 +269,8 @@ for i as integer = 1 to __FB_ARGC__-1
 next
 
 '' Clean test directories: Delete existing *.txt and *.bi files
-hScanDirectory(exe_path, "*.txt")
-hScanDirectory(exe_path, "*.bi")
+hScanDirectory(runner.exe_path, "*.txt")
+hScanDirectory(runner.exe_path, "*.bi")
 for i as integer = 0 to files.count-1
 	var dummy = kill(files.list(i))
 next
@@ -366,10 +281,10 @@ if clean_only then
 end if
 
 '' Test each *.h file
-hScanDirectory(exe_path, "*.h")
+hScanDirectory(runner.exe_path, "*.h")
 hSortFiles()
 for i as integer = 0 to files.count-1
 	hTest(files.list(i))
 next
 
-print "  " & stat.oks & " tests ok, " & stat.fails & " failed"
+print "  " & runner.oks & " tests ok, " & runner.fails & " failed"
