@@ -19,6 +19,10 @@
 ''  @ignore      Skip this .h file completely, allowing it to be #included
 ''               into others etc. without being seen as test cases itself.
 ''
+'' Additionally, unit tests for fbfrog's code are supported by compiling and
+'' running .bas files in the tests/unit/ directory. Their console output is
+'' captured too, allowing the tests to use astDump() etc.
+''
 
 #include "../util-path.bas"
 #include "../util-str.bas"
@@ -68,6 +72,20 @@ function hExtractLine1(byref filename as string) as string
 	function = line1
 end function
 
+function hShell(byref ln as string) as integer
+	var result = shell(ln)
+	select case result
+	case -1
+		print "command not found: '" + ln + "'"
+		end 1
+	case 0, 1
+	case else
+		print "command terminated with unusual error code " & result & ": " + ln
+		end 1
+	end select
+	function = (result = 0)
+end function
+
 sub hTest(byref hfile as string)
 	var line1 = hExtractLine1(hfile)
 
@@ -91,29 +109,17 @@ sub hTest(byref hfile as string)
 		end if
 	end scope
 
-	assert(right(hfile, 2) = ".h")
-	var txtfile = left(hfile, len(hfile) - 2) + ".txt"
+	var txtfile = pathStripExt(hfile) + ".txt"
 
 	var message = iif(is_failure_test, "FAIL", "PASS") + " " + hfile
 	print message;
 
 	'' ./fbfrog *.h <extraoptions> > txtfile 2>&1
 	var ln = runner.fbfrog + " " + hfile + " " + extraoptions
-	var result = shell(ln + " > " + txtfile + " 2>&1")
-	select case result
-	case -1
-		print "command not found: '" + ln + "'"
-		end 1
-
-	case 0, 1
-
-	case else
-		print "fbfrog (or the shell) terminated with unusual error code " & result
-		end 1
-	end select
+	var ok = hShell(ln + " > " + txtfile + " 2>&1")
 
 	dim as string suffix
-	if (result <> 0) = is_failure_test then
+	if (not ok) = is_failure_test then
 		suffix = "[ ok ]"
 		runner.oks += 1
 	else
@@ -122,6 +128,22 @@ sub hTest(byref hfile as string)
 	end if
 
 	print space(hConsoleWidth() - len(message) - len(suffix)) + suffix
+end sub
+
+sub hUnitTest(byref basfile as string)
+	var basprogram = pathStripExt(basfile)
+	var txtfile = basprogram + ".txt"
+
+	print "UNIT " + basfile
+
+	if hShell("fbc " + basfile) = FALSE then
+		print "error: compilation failed"
+		end 1
+	end if
+
+	hShell(basprogram + " > " + txtfile + " 2>&1")
+
+	kill(basprogram)
 end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -257,11 +279,13 @@ if (runner.cur_dir + "tests" + PATHDIV) = runner.exe_path then
 	runner.fbfrog = "./fbfrog"
 end if
 
-var clean_only = FALSE
+var clean_only = FALSE, unit_only = FALSE
 for i as integer = 1 to __FB_ARGC__-1
 	select case *__FB_ARGV__[i]
 	case "-clean"
 		clean_only = TRUE
+	case "-unit"
+		unit_only = TRUE
 	case else
 		print "unknown option: " + *__FB_ARGV__[i]
 		end 1
@@ -269,8 +293,12 @@ for i as integer = 1 to __FB_ARGC__-1
 next
 
 '' Clean test directories: Delete existing *.txt and *.bi files
-hScanDirectory(runner.exe_path, "*.txt")
-hScanDirectory(runner.exe_path, "*.bi")
+if unit_only then
+	hScanDirectory(runner.exe_path + PATHDIV + "unit", "*.txt")
+else
+	hScanDirectory(runner.exe_path, "*.txt")
+	hScanDirectory(runner.exe_path, "*.bi")
+end if
 for i as integer = 0 to files.count-1
 	var dummy = kill(files.list(i))
 next
@@ -280,11 +308,22 @@ if clean_only then
 	end 0
 end if
 
-'' Test each *.h file
-hScanDirectory(runner.exe_path, "*.h")
+if unit_only = FALSE then
+	'' Test each *.h file
+	hScanDirectory(runner.exe_path, "*.h")
+	hSortFiles()
+	for i as integer = 0 to files.count-1
+		hTest(files.list(i))
+	next
+	files.count = 0
+end if
+
+'' Compile and run *.bas unit tests
+hScanDirectory(runner.exe_path + PATHDIV + "unit", "*.bas")
 hSortFiles()
 for i as integer = 0 to files.count-1
-	hTest(files.list(i))
+	hUnitTest(files.list(i))
 next
+files.count = 0
 
 print "  " & runner.oks & " tests ok, " & runner.fails & " failed"
