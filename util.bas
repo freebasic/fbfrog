@@ -836,26 +836,6 @@ end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-'' *.h CRT/POSIX headers for which FB has corresponding crt/*.bi versions
-dim shared fbcrtheaders(0 to ...) as zstring ptr = _
-{ _
-	@"assert", @"ctype", @"errno", @"float", @"limits", @"locale", _
-	@"math", @"setjmp", @"signal", @"stdarg", @"stddef", @"stdint", _
-	@"stdio", @"stdlib", @"string", @"time", _
-	@"sys/types", @"sys/socket", @"wchar" _
-}
-
-dim shared fbcrtheaderhash as THASH
-
-sub fbcrtheadersInit()
-	hashInit(@fbcrtheaderhash, 5, TRUE)
-	for i as integer = lbound(fbcrtheaders) to ubound(fbcrtheaders)
-		hashAddOverwrite(@fbcrtheaderhash, fbcrtheaders(i), NULL)
-	next
-end sub
-
-''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-
 type FbKeywordInfo
 	id as zstring ptr
 	fbkw as integer

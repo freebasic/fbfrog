@@ -1358,7 +1358,6 @@ end sub
 	end if
 
 	filebuffersInit()
-	fbcrtheadersInit()
 	fbkeywordsInit()
 	lexInit()
 

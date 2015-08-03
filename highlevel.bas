@@ -1796,10 +1796,38 @@ private function hlHideCallConv(byval n as ASTNODE ptr) as integer
 	function = (n->class <> ASTCLASS_PPDEFINE)
 end function
 
+'' *.h CRT/POSIX headers for which FB has corresponding crt/*.bi versions
+dim shared fbcrtheaders(0 to ...) as zstring ptr = _
+{ _
+	@"assert", @"ctype", @"errno", @"float", @"limits", @"locale", _
+	@"math", @"setjmp", @"signal", @"stdarg", @"stddef", @"stdint", _
+	@"stdio", @"stdlib", @"string", @"time", _
+	@"sys/types", @"sys/socket", @"wchar" _
+}
+
+type IncludePass
+	fbcrtheaderhash as THASH
+	declare constructor()
+	declare destructor()
+	declare sub translateHeaderFileName(byref filename as string)
+	declare sub work(byval ast as ASTNODE ptr, byref bioptions as ApiSpecificBiOptions)
+end type
+
+constructor IncludePass()
+	hashInit(@fbcrtheaderhash, 5, TRUE)
+	for i as integer = lbound(fbcrtheaders) to ubound(fbcrtheaders)
+		hashAddOverwrite(@fbcrtheaderhash, fbcrtheaders(i), NULL)
+	next
+end constructor
+
+destructor IncludePass()
+	hashEnd(@fbcrtheaderhash)
+end destructor
+
 '' Remap .h name to a .bi name. If it's a known system header, we can even remap
 '' it to the corresponding FB header (in some cases it's not as simple as
 '' replacing .h by .bi).
-private sub hTranslateHeaderFileName(byref filename as string)
+sub IncludePass.translateHeaderFileName(byref filename as string)
 	filename = pathStripExt(filename)
 
 	'' Is it one of the CRT headers? Remap it to crt/*.bi
@@ -1810,7 +1838,7 @@ private sub hTranslateHeaderFileName(byref filename as string)
 	filename += ".bi"
 end sub
 
-private sub hlHandleIncludes(byval ast as ASTNODE ptr, byref bioptions as ApiSpecificBiOptions)
+sub IncludePass.work(byval ast as ASTNODE ptr, byref bioptions as ApiSpecificBiOptions)
 	'' Find node above which new #includes should be inserted. This should
 	'' always be behind existing #includes at the top.
 	var top = ast->head
@@ -1855,7 +1883,7 @@ private sub hlHandleIncludes(byval ast as ASTNODE ptr, byref bioptions as ApiSpe
 			if hashContains(@hl.api->removeinclude, filename, hashHash(filename)) then
 				astRemove(ast, i)
 			else
-				hTranslateHeaderFileName(filename)
+				translateHeaderFileName(filename)
 				astSetText(i, filename)
 			end if
 		end if
@@ -2403,7 +2431,10 @@ sub hlFile(byval ast as ASTNODE ptr, byref api as ApiInfo, byref bioptions as Ap
 	'' Remap *.h => *.bi
 	'' Apply -removeinclude
 	'' Remove duplicates
-	hlHandleIncludes(ast, bioptions)
+	scope
+		dim pass as IncludePass
+		pass.work(ast, bioptions)
+	end scope
 
 	'' Add #includes for "crt/long[double].bi" and "crt/wchar.bi" if the
 	'' binding uses the clong[double]/wchar_t types

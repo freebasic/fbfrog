@@ -182,9 +182,6 @@ declare sub hashDump(byval h as THASH ptr)
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-extern fbcrtheaderhash as THASH
-declare sub fbcrtheadersInit()
-
 enum
 	FBKW_OP
 	FBKW_CORE
