@@ -116,6 +116,7 @@ declare function strReplace _
 declare function strReplaceNonIdChars(byref orig as string, byval replacement as integer) as string
 declare function strMakePrintable(byref a as string) as string
 declare function strIsValidSymbolId(byval s as zstring ptr) as integer
+declare function strIsNumber(byref s as string) as integer
 declare function strIsReservedIdInC(byval id as zstring ptr) as integer
 declare function strMatch(byref s as string, byref pattern as string) as integer
 
@@ -211,9 +212,9 @@ declare function pathMakeAbsolute(byref path as string) as string
 declare function hExepath() as string
 declare function hCurdir() as string
 declare function pathStripCurdir(byref path as string) as string
+declare function hReadableDirExists(byref path as string) as integer
 declare function pathIsDir(byref s as string) as integer
 declare function pathNormalize(byref path as string) as string
-declare function hReadableDirExists(byref path as string) as integer
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
