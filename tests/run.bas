@@ -294,7 +294,7 @@ next
 
 '' Clean test directories: Delete existing *.txt and *.bi files
 if unit_only then
-	hScanDirectory(runner.exe_path + PATHDIV + "unit", "*.txt")
+	hScanDirectory(runner.exe_path + "unit", "*.txt")
 else
 	hScanDirectory(runner.exe_path, "*.txt")
 	hScanDirectory(runner.exe_path, "*.bi")
