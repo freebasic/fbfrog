@@ -45,14 +45,6 @@ function pathStripLastComponent(byref path as string) as string
 	function = pathOnly(left(path, len(path) - 1))
 end function
 
-function hConsoleWidth() as integer
-	dim as integer w = loword(width())
-	if w < 0 then
-		w = 0
-	end if
-	function = w
-end function
-
 function hExtractLine1(byref filename as string) as string
 	var f = freefile()
 	if open(filename, for input, as #f) then
@@ -94,8 +86,7 @@ sub hTest(byref hfile as string)
 	assert(right(hfile, 2) = ".h")
 	var txtfile = left(hfile, len(hfile) - 2) + ".txt"
 
-	var message = iif(is_failure_test, "FAIL", "PASS") + " " + hfile
-	print message;
+	print iif(is_failure_test, "FAIL", "PASS") + " " + hfile
 
 	'' ./fbfrog *.h <extraoptions> > txtfile 2>&1
 	var ln = runner.fbfrog + " " + hfile + " " + extraoptions
@@ -112,16 +103,11 @@ sub hTest(byref hfile as string)
 		end 1
 	end select
 
-	dim as string suffix
 	if (result <> 0) = is_failure_test then
-		suffix = "[ ok ]"
 		runner.oks += 1
 	else
-		suffix = "[fail]"
 		runner.fails += 1
 	end if
-
-	print space(hConsoleWidth() - len(message) - len(suffix)) + suffix
 end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
