@@ -65,6 +65,33 @@ declare function cWhile() as ASTNODE ptr
 declare function cConstruct(byval bodyastclass as integer) as ASTNODE ptr
 declare function cBody(byval bodyastclass as integer) as ASTNODE ptr
 
+type DATATYPEINFO
+	id as zstring ptr
+	dtype as integer
+end type
+
+dim shared extradatatypes(0 to ...) as DATATYPEINFO => _
+{ _
+	(@"__int8"   , TYPE_BYTE    ), _
+	(@"__int16"  , TYPE_SHORT   ), _
+	(@"__int32"  , TYPE_LONG    ), _
+	(@"__int64"  , TYPE_LONGINT ), _
+	(@"int8_t"   , TYPE_BYTE    ), _
+	(@"int16_t"  , TYPE_SHORT   ), _
+	(@"int32_t"  , TYPE_LONG    ), _
+	(@"int64_t"  , TYPE_LONGINT ), _
+	(@"uint8_t"  , TYPE_UBYTE   ), _
+	(@"uint16_t" , TYPE_USHORT  ), _
+	(@"uint32_t" , TYPE_ULONG   ), _
+	(@"uint64_t" , TYPE_ULONGINT), _
+	(@"intptr_t" , TYPE_INTEGER ), _
+	(@"uintptr_t", TYPE_UINTEGER), _
+	(@"ptrdiff_t", TYPE_INTEGER ), _
+	(@"size_t"   , TYPE_UINTEGER), _
+	(@"ssize_t"  , TYPE_INTEGER ), _
+	(@"wchar_t"  , TYPE_WSTRING )  _
+}
+
 namespace c
 	dim shared api as ApiInfo ptr
 	dim shared as integer x, parseok, tempids
@@ -89,6 +116,8 @@ namespace c
 
 	'' Used by hUpdateTypeNameReferences
 	dim shared as string oldid, newid
+
+	dim shared extradatatypehash as THASH
 end namespace
 
 private function cMatch(byval tk as integer) as integer
@@ -134,6 +163,15 @@ private function cIsTypedef(byval id as zstring ptr) as integer
 	function = hashContains(@c.api->idopt(OPT_TYPEDEFHINT), id, hashHash(id))
 end function
 
+private function cLookupExtraDataType(byval id as zstring ptr) as integer
+	var item = hashLookup(@c.extradatatypehash, id, hashHash(id))
+	if item->s then
+		function = cint(item->data)
+	else
+		function = TYPE_NONE
+	end if
+end function
+
 private function cIdentifierIsMacroParam(byval id as zstring ptr) as integer
 	if c.parentdefine then
 		function = (astLookupMacroParam(c.parentdefine, id) >= 0)
@@ -151,6 +189,11 @@ sub cInit(byref api as ApiInfo)
 
 	hashInit(@c.typedefs, 8, FALSE)
 
+	hashInit(@c.extradatatypehash, 6, FALSE)
+	for i as integer = 0 to ubound(extradatatypes)
+		hashAddOverwrite(@c.extradatatypehash, extradatatypes(i).id, cast(any ptr, extradatatypes(i).dtype))
+	next
+
 	'' Initially no packing
 	c.pragmapack.level = 0
 	cResetPragmaPack()
@@ -163,6 +206,7 @@ end sub
 sub cEnd()
 	deallocate(c.defbodies)
 	hashEnd(@c.typedefs)
+	hashEnd(@c.extradatatypehash)
 end sub
 
 #define cAddTypedef(id) hashAddOverwrite(@c.typedefs, id, NULL)
@@ -284,7 +328,7 @@ private function hIsDataType(byval y as integer) as integer
 		is_type = not cIdentifierIsMacroParam(tkSpellId(y))
 	case TK_ID
 		var id = tkSpellId(y)
-		if (extradatatypesLookup(id) <> TYPE_NONE) or cIsTypedef(id) then
+		if (cLookupExtraDataType(id) <> TYPE_NONE) or cIsTypedef(id) then
 			is_type = not cIdentifierIsMacroParam(id)
 		end if
 	end select
@@ -1554,7 +1598,7 @@ private sub cBaseType _
 
 				'' Treat the id as the type
 				var id = tkSpellId(c.x)
-				dtype = extradatatypesLookup(id)
+				dtype = cLookupExtraDataType(id)
 				if dtype = TYPE_NONE then
 					dtype = TYPE_UDT
 					subtype = astNewTEXT(id)

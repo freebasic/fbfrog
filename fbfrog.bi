@@ -185,9 +185,6 @@ declare sub hashDump(byval h as THASH ptr)
 extern fbcrtheaderhash as THASH
 declare sub fbcrtheadersInit()
 
-declare sub extradatatypesInit()
-declare function extradatatypesLookup(byval id as zstring ptr) as integer
-
 enum
 	FBKW_OP
 	FBKW_CORE

@@ -1359,7 +1359,6 @@ end sub
 
 	filebuffersInit()
 	fbcrtheadersInit()
-	extradatatypesInit()
 	fbkeywordsInit()
 	lexInit()
 

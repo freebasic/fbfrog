@@ -856,53 +856,6 @@ end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-type DATATYPEINFO
-	id as zstring ptr
-	dtype as integer
-end type
-
-dim shared extradatatypes(0 to ...) as DATATYPEINFO => _
-{ _
-	(@"__int8"   , TYPE_BYTE    ), _
-	(@"__int16"  , TYPE_SHORT   ), _
-	(@"__int32"  , TYPE_LONG    ), _
-	(@"__int64"  , TYPE_LONGINT ), _
-	(@"int8_t"   , TYPE_BYTE    ), _
-	(@"int16_t"  , TYPE_SHORT   ), _
-	(@"int32_t"  , TYPE_LONG    ), _
-	(@"int64_t"  , TYPE_LONGINT ), _
-	(@"uint8_t"  , TYPE_UBYTE   ), _
-	(@"uint16_t" , TYPE_USHORT  ), _
-	(@"uint32_t" , TYPE_ULONG   ), _
-	(@"uint64_t" , TYPE_ULONGINT), _
-	(@"intptr_t" , TYPE_INTEGER ), _
-	(@"uintptr_t", TYPE_UINTEGER), _
-	(@"ptrdiff_t", TYPE_INTEGER ), _
-	(@"size_t"   , TYPE_UINTEGER), _
-	(@"ssize_t"  , TYPE_INTEGER ), _
-	(@"wchar_t"  , TYPE_WSTRING )  _
-}
-
-dim shared extradatatypehash as THASH
-
-sub extradatatypesInit()
-	hashInit(@extradatatypehash, 6, FALSE)
-	for i as integer = 0 to ubound(extradatatypes)
-		hashAddOverwrite(@extradatatypehash, extradatatypes(i).id, cast(any ptr, extradatatypes(i).dtype))
-	next
-end sub
-
-function extradatatypesLookup(byval id as zstring ptr) as integer
-	var item = hashLookup(@extradatatypehash, id, hashHash(id))
-	if item->s then
-		function = cint(item->data)
-	else
-		function = TYPE_NONE
-	end if
-end function
-
-''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-
 type FbKeywordInfo
 	id as zstring ptr
 	fbkw as integer
