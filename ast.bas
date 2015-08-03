@@ -32,6 +32,8 @@ dim shared as zstring ptr astnodename(0 to ...) => _
 	@"fbcode"    , _
 	@"renamelist", _
 	@"title"     , _
+	@"wildcard"  , _
+	@"eol"       , _
 	_
 	_ '' Script helper nodes
 	@"declaredefines", _
@@ -216,6 +218,13 @@ function astNewOPTION(byval opt as integer, byval text1 as zstring ptr, byval te
 	n->opt = opt
 	function = n
 end function
+
+sub astTakeChildren(byval dest as ASTNODE ptr, byval source as ASTNODE ptr)
+	dest->head = source->head
+	dest->tail = source->tail
+	source->head = NULL
+	source->tail = NULL
+end sub
 
 function astCloneChildren(byval src as ASTNODE ptr) as ASTNODE ptr
 	var n = astNewGROUP()

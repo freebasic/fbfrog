@@ -1403,3 +1403,161 @@ function DeclPatterns.matches _
 		end if
 	next
 end function
+
+''
+'' StringMatcher: Prefix tree for pattern matching
+'' Goal: to make matching faster than going through the patterns and doing strMatch() for each
+''
+'' foo
+'' foobar
+'' fuz
+'' bar
+''
+'' str f
+''   str oo
+''     eol
+''     str bar
+''       eol
+''   str uz
+''     eol
+'' str bar
+''   eol
+''
+'' ab
+'' a*b
+''
+'' str a
+''   str b
+''     eol
+''   wildcard
+''     str b
+''       eol
+''
+
+private function findCommonPrefixLen(byval a as const zstring ptr, byval b as const zstring ptr) as integer
+	var length = 0
+	while ((*a)[0] = (*b)[0]) and ((*a)[0] <> 0)
+		length += 1
+		a += 1
+		b += 1
+	wend
+	function = length
+end function
+
+private function findWildcardOrEol(byval s as const zstring ptr) as integer
+	var i = 0
+	while ((*s)[0] <> CH_STAR) and ((*s)[0] <> 0)
+		i += 1
+		s += 1
+	wend
+	function = i
+end function
+
+sub StringMatcher.insert(byval n as ASTNODE ptr, byval s as const zstring ptr)
+	''
+	'' Check current choices at this level
+	'' We need to check for common prefix between an existing choice and the
+	'' new pattern, and then re-use it and possibly extract it.
+	''
+	'' insert foo2 into
+	''   foo1
+	''     a
+	''     b
+	'' =>
+	''   foo
+	''     1
+	''       a
+	''       b
+	''     2
+	''
+	'' insert foo2 into
+	''   foo1
+	''   bar
+	'' =>
+	''   foo
+	''     1
+	''     2
+	''   bar
+	''
+	scope
+		var i = n->head
+		while i
+
+			select case i->class
+			case ASTCLASS_WILDCARD
+				if (*s)[0] = CH_STAR then
+					'' WILDCARD node is already here, recursively add the rest
+					insert(i, @s[1])
+					exit sub
+				end if
+
+			case ASTCLASS_EOL
+				if (*s)[0] = 0 then
+					'' Empty pattern, and we already have an EOL node here,
+					'' so nothing more needs to be added
+					exit sub
+				end if
+
+			case ASTCLASS_STRING
+				var commonprefixlen = findCommonPrefixLen(i->text, s)
+				if commonprefixlen > 0 then
+					'' If there is a remainder, the node has to be split up
+					if (*i->text)[commonprefixlen] <> 0 then
+						'' Move the remainder suffix into a child node
+						var remainder = astNew(ASTCLASS_STRING, @i->text[commonprefixlen])
+						astTakeChildren(remainder, i)
+						astAppend(i, remainder)
+
+						'' Truncate to prefix only
+						(*i->text)[commonprefixlen] = 0
+					end if
+
+					if (*s)[commonprefixlen] <> 0 then
+						insert(i, @s[commonprefixlen])
+					end if
+
+					exit sub
+				end if
+			end select
+
+			i = i->next
+		wend
+	end scope
+
+	'' Otherwise, add a new choice at this level
+	var eol = findWildcardOrEol(s)
+	if eol > 0 then
+		'' Add node for string prefix, recursively add the rest
+		dim as ubyte ptr prefix = allocate(eol + 1)
+		memcpy(prefix, s, eol)
+		prefix[eol] = 0
+
+		var strnode = astNew(ASTCLASS_STRING)
+		strnode->text = prefix
+		astAppend(n, strnode)
+
+		insert(n->tail, @s[eol])
+	else
+		select case (*s)[0]
+		case CH_STAR
+			'' Add node for wildcard, recursively add the rest
+			astAppend(n, astNew(ASTCLASS_WILDCARD))
+			insert(n->tail, @s[1])
+		case 0
+			'' EOL node
+			astAppend(n, astNew(ASTCLASS_EOL))
+		end select
+	end if
+end sub
+
+constructor StringMatcher()
+	root = astNewGROUP()
+end constructor
+
+destructor StringMatcher()
+	astDelete(root)
+end destructor
+
+sub StringMatcher.addPattern(byval s as const zstring ptr)
+	insert(root, s)
+end sub

@@ -562,6 +562,8 @@ enum
 	ASTCLASS_FBCODE
 	ASTCLASS_RENAMELIST
 	ASTCLASS_TITLE
+	ASTCLASS_WILDCARD
+	ASTCLASS_EOL
 
 	'' Script helper nodes
 	ASTCLASS_DECLAREDEFINES
@@ -780,6 +782,7 @@ declare function astNewGROUP overload() as ASTNODE ptr
 declare function astNewGROUP overload(byval c1 as ASTNODE ptr, byval c2 as ASTNODE ptr = NULL) as ASTNODE ptr
 declare sub astBuildGroupAndAppend(byref group as ASTNODE ptr, byval n as ASTNODE ptr)
 declare function astNewOPTION(byval opt as integer, byval text1 as zstring ptr = NULL, byval text2 as zstring ptr = NULL) as ASTNODE ptr
+declare sub astTakeChildren(byval dest as ASTNODE ptr, byval source as ASTNODE ptr)
 declare function astCloneChildren(byval src as ASTNODE ptr) as ASTNODE ptr
 declare function astGroupContains(byval group as ASTNODE ptr, byval lookfor as ASTNODE ptr) as integer
 declare function astGroupContainsAnyChildrenOf(byval l as ASTNODE ptr, byval r as ASTNODE ptr) as integer
@@ -877,6 +880,14 @@ type DeclPatterns
 			byval child as ASTNODE ptr, _
 			byval childindex as integer _
 		) as integer
+end type
+
+type StringMatcher
+	root as ASTNODE ptr
+	declare sub insert(byval n as ASTNODE ptr, byval s as const zstring ptr)
+	declare constructor()
+	declare destructor()
+	declare sub addPattern(byval s as const zstring ptr)
 end type
 
 type CodeReplacement
