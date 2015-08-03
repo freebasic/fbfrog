@@ -35,22 +35,3 @@ group
          eol
       string "3"
          eol
-tests//unit/string-matching.bas(31): failed: m.matches("a")
-tests//unit/string-matching.bas(44): failed: m.matches("aa")
-tests//unit/string-matching.bas(46): failed: m.matches("baa")
-tests//unit/string-matching.bas(64): failed: m.matches("aa")
-tests//unit/string-matching.bas(65): failed: m.matches("ab")
-tests//unit/string-matching.bas(66): failed: m.matches("a1111111222223333")
-tests//unit/string-matching.bas(79): failed: m.matches("aa")
-tests//unit/string-matching.bas(80): failed: m.matches("aaaaaa")
-tests//unit/string-matching.bas(81): failed: m.matches("b11111aa")
-tests//unit/string-matching.bas(82): failed: m.matches("baa")
-tests//unit/string-matching.bas(83): failed: m.matches("baaa")
-tests//unit/string-matching.bas(105): failed: not m.matches("")
-tests//unit/string-matching.bas(106): failed: not m.matches("b")
-tests//unit/string-matching.bas(107): failed: not m.matches("bbbbbbbb")
-tests//unit/string-matching.bas(114): failed: m.matches("ab")
-tests//unit/string-matching.bas(115): failed: m.matches("aabb")
-tests//unit/string-matching.bas(116): failed: m.matches("aaaabccccc")
-tests//unit/string-matching.bas(117): failed: m.matches("abccccccc")
-tests//unit/string-matching.bas(118): failed: m.matches("abbbbbbbbbc")
