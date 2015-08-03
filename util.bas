@@ -805,61 +805,51 @@ sub StringMatcher.addPattern(byval s as const zstring ptr)
 	insert(root, s)
 end sub
 
-static function StringMatcher.matches(byval n as ASTNODE ptr, byval s as const zstring ptr) as integer
-	'' Check current choices at this level
-	var prefix = n->head
-	while prefix
+static function StringMatcher.matches(byval prefix as ASTNODE ptr, byval s as const zstring ptr) as integer
+	select case prefix->class
+	case ASTCLASS_WILDCARD
+		'' Also check suffixes, there must be at least an EOL node
+		var suffix = prefix->head
 
-		select case prefix->class
-		case ASTCLASS_WILDCARD
-			'' Also check suffixes, there must be at least an EOL node
-			var suffix = prefix->head
-
-			'' Check whether any of the suffixes match
+		'' Check whether any of the suffixes match
+		do
+			'' Have to try matches at all possible positions (i.e. expanding the wildcard),
+			'' even if it's just a null terminator (so it can match an EOL)
+			var i = s
 			do
-				'' Have to try matches at all possible positions (i.e. expanding the wildcard),
-				'' even if it's just a null terminator (so it can match an EOL)
-				var i = s
-				do
-					if matches(suffix, i) then return TRUE
-					if (*i)[0] = 0 then exit do
-					i += 1
-				loop
+				if matches(suffix, i) then return TRUE
+				if (*i)[0] = 0 then exit do
+				i += 1
+			loop
+			suffix = suffix->next
+		loop while suffix
+
+	case ASTCLASS_EOL
+		'' The given string must be empty
+		if (*s)[0] = 0 then return TRUE
+
+	case ASTCLASS_STRING
+		'' The given string must have this exact prefix
+		var prefixlen = strlen(prefix->text)
+		if strncmp(prefix->text, s, prefixlen) = 0 then
+			'' Prefix matched; now check suffixes, there must be at least an EOL node
+			var suffix = prefix->head
+			do
+				if matches(suffix, @s[prefixlen]) then return TRUE
 				suffix = suffix->next
 			loop while suffix
+		end if
+	end select
 
-			'' No match here, this can happen if there is a suffix behind the wildcard but it
-			'' didn't match the given string. Continue to next sibling prefix.
-
-		case ASTCLASS_EOL
-			'' The given string must be empty
-			if (*s)[0] = 0 then return TRUE
-
-			'' Continue to next sibling prefix
-
-		case ASTCLASS_STRING
-			'' The given string must have this exact prefix
-			var prefixlen = strlen(prefix->text)
-			if strncmp(prefix->text, s, prefixlen) = 0 then
-				'' Prefix matched; now check suffixes, there must be at least an EOL node
-				var suffix = prefix->head
-				do
-					if matches(suffix, @s[prefixlen]) then return TRUE
-					suffix = suffix->next
-				loop while suffix
-			end if
-
-			'' Continue to next sibling prefix
-
-		end select
-
-		prefix = prefix->next
-	wend
-
-	'' Nothing matched at this level
+	'' Nothing matched
 	function = FALSE
 end function
 
 function StringMatcher.matches(byval s as const zstring ptr) as integer
-	function = matches(root, s)
+	var i = root->head
+	while i
+		if matches(i, s) then return TRUE
+		i = i->next
+	wend
+	function = FALSE
 end function
