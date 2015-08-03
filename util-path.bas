@@ -164,29 +164,28 @@ function pathIsDir(byref s as string) as integer
 end function
 
 '' Component stack for the path solver
-const MAXSOLVERSTACK = 128
-namespace solver
-	dim shared stack(0 to MAXSOLVERSTACK-1) as integer
-	dim shared as integer top
-end namespace
+type PathSolverStack
+	const MAXSOLVERSTACK = 128
+	stack(0 to MAXSOLVERSTACK-1) as integer
+	top as integer = -1
+	declare sub push(byval w as integer)
+	declare function pop() as integer
+end type
 
-private sub solverInit()
-	solver.top = -1
+sub PathSolverStack.push(byval w as integer)
+	top += 1
+	if top >= MAXSOLVERSTACK then
+		print "error: path solver stack too small, MAXSOLVERSTACK=" & MAXSOLVERSTACK
+		end 1
+	end if
+	stack(top) = w
 end sub
 
-private sub solverPush(byval w as integer)
-	solver.top += 1
-	if solver.top >= MAXSOLVERSTACK then
-		oops("path solver stack too small, MAXSOLVERSTACK=" & MAXSOLVERSTACK)
+function PathSolverStack.pop() as integer
+	if top > 0 then
+		top -= 1
 	end if
-	solver.stack(solver.top) = w
-end sub
-
-private function solverPop() as integer
-	if solver.top > 0 then
-		solver.top -= 1
-	end if
-	function = solver.stack(solver.top)
+	function = stack(top)
 end function
 
 '' Resolves .'s and ..'s in the path,
@@ -211,8 +210,8 @@ function pathNormalize(byref path as string) as string
 	'' must be on the stack to be able to skip back to it (although the
 	'' begin of the root path itself, 0, is not on the stack, so it can't
 	'' be removed with a '..').
-	solverInit()
-	solverPush(rootlen)
+	dim stack as PathSolverStack
+	stack.push(rootlen)
 
 	var s = path
 	var dots = 0 '' Number of .'s in the current component
@@ -235,7 +234,7 @@ function pathNormalize(byref path as string) as string
 			case 2    '' /../
 				'' Go back to the begin of the component this
 				'' '..' refers to
-				w = solverPop()
+				w = stack.pop()
 
 			case else
 				if chars = 0 then
@@ -247,7 +246,7 @@ function pathNormalize(byref path as string) as string
 					w += 1
 					'' Remember this begin position so
 					'' w can be reset to it during '..'.
-					solverPush(w)
+					stack.push(w)
 				end if
 
 			end select
