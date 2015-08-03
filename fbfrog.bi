@@ -884,10 +884,12 @@ end type
 
 type StringMatcher
 	root as ASTNODE ptr
-	declare sub insert(byval n as ASTNODE ptr, byval s as const zstring ptr)
 	declare constructor()
 	declare destructor()
+	declare static sub insert(byval n as ASTNODE ptr, byval s as const zstring ptr)
 	declare sub addPattern(byval s as const zstring ptr)
+	declare static function matches(byval n as ASTNODE ptr, byval s as const zstring ptr) as integer
+	declare function matches(byval s as const zstring ptr) as integer
 end type
 
 type CodeReplacement
