@@ -394,22 +394,23 @@ function StringMatcher.matches(byval s as const zstring ptr) as integer
 	function = FALSE
 end function
 
-sub StringMatcher.dump()
-	static nestlevel as integer
-	nestlevel += 1
-
-	var s = space((nestlevel - 1) * 3)
+function StringMatcher.dump1() as string
+	dim s as string
 	select case nodeclass
 	case MatchRoot     : s += "root"
 	case MatchString   : s += "string """ + *text + """" : if textlength <> len(*text) then s += " textlength=" & textlength & " (INVALID)"
 	case MatchWildcard : s += "wildcard"
 	case MatchEol      : s += "eol"
 	end select
-	print s
+	function = s
+end function
 
+sub StringMatcher.dump()
+	static nestlevel as integer
+	nestlevel += 1
+	print space((nestlevel - 1) * 3) + dump1()
 	for i as integer = 0 to childcount - 1
 		children[i].dump()
 	next
-
 	nestlevel -= 1
 end sub

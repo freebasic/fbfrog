@@ -145,6 +145,7 @@ type StringMatcher
 	declare sub truncateTextToOnly(byval newlength as integer)
 	declare sub addPattern(byval pattern as const zstring ptr)
 	declare function matches(byval s as const zstring ptr) as integer
+	declare function dump1() as string
 	declare sub dump()
 	declare operator let(byref as const StringMatcher) '' unimplemented
 end type
