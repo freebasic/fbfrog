@@ -119,6 +119,36 @@ declare function strIsNumber(byref s as string) as integer
 declare function strIsReservedIdInC(byval id as zstring ptr) as integer
 declare function strMatch(byref s as const string, byref pattern as const string) as integer
 
+'' TODO: are EOL nodes really necessary? Maybe it's enough to store an EOL flag
+'' on all possible terminal nodes.
+type StringMatcher
+	enum
+		MatchRoot = 0 '' StringMatcher.root will automatically use this (zero-initialization)
+		MatchString
+		MatchWildcard
+		MatchEol
+	end enum
+
+	nodeclass as integer
+
+	'' string for MatchString nodes
+	text as zstring ptr
+	textlength as integer
+
+	'' array of child nodes
+	children as StringMatcher ptr
+	childcount as integer
+
+	declare destructor()
+	declare sub addChild(byval nodeclass as integer, byval text as const ubyte ptr, byval textlength as integer)
+	declare sub addChildHoldingPreviousChildren(byval nodeclass as integer, byval text as const ubyte ptr, byval textlength as integer)
+	declare sub truncateTextToOnly(byval newlength as integer)
+	declare sub addPattern(byval pattern as const zstring ptr)
+	declare function matches(byval s as const zstring ptr) as integer
+	declare sub dump()
+	declare operator let(byref as const StringMatcher) '' unimplemented
+end type
+
 enum
 	OS_LINUX
 	OS_FREEBSD
@@ -593,8 +623,6 @@ enum
 	ASTCLASS_FBCODE
 	ASTCLASS_RENAMELIST
 	ASTCLASS_TITLE
-	ASTCLASS_WILDCARD
-	ASTCLASS_EOL
 
 	'' Script helper nodes
 	ASTCLASS_DECLAREVERSIONS
@@ -891,17 +919,6 @@ declare sub astMergeNext(byval api as ApiBits, byref final as ASTNODE ptr, byref
 declare sub astProcessVerblocks(byval code as ASTNODE ptr)
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-
-type StringMatcher
-	root as ASTNODE ptr
-	declare constructor()
-	declare destructor()
-	declare static sub insert(byval n as ASTNODE ptr, byval s as const zstring ptr)
-	declare sub addPattern(byval s as const zstring ptr)
-	declare static function matches(byval n as ASTNODE ptr, byval s as const zstring ptr) as integer
-	declare function matches(byval s as const zstring ptr) as integer
-	declare operator let(byref as const StringMatcher) '' unimplemented
-end type
 
 type IndexPattern
 	parentpattern as string

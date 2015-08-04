@@ -33,8 +33,6 @@ dim shared as zstring ptr astnodename(0 to ...) => _
 	@"fbcode"    , _
 	@"renamelist", _
 	@"title"     , _
-	@"wildcard"  , _
-	@"eol"       , _
 	_
 	_ '' Script helper nodes
 	@"declareversions", _

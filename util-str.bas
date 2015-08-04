@@ -1,4 +1,5 @@
 #include once "fbfrog.bi"
+#include once "crt.bi"
 
 function hTrim(byref s as string) as string
 	function = trim(s, any !" \t")
@@ -175,3 +176,240 @@ function strMatch(byref s as const string, byref pattern as const string) as int
 
 	function = FALSE
 end function
+
+''
+'' StringMatcher: Prefix tree for pattern matching
+'' Goal: to make matching faster than going through the patterns and doing strMatch() for each
+''
+'' foo
+'' foobar
+'' fuz
+'' bar
+''
+'' str f
+''   str oo
+''     eol
+''     str bar
+''       eol
+''   str uz
+''     eol
+'' str bar
+''   eol
+''
+'' ab
+'' a*b
+''
+'' str a
+''   str b
+''     eol
+''   wildcard
+''     str b
+''       eol
+''
+
+destructor StringMatcher()
+	deallocate(text)
+	for i as integer = 0 to childcount - 1
+		children[i].destructor()
+	next
+	deallocate(children)
+end destructor
+
+sub StringMatcher.addChild(byval nodeclass as integer, byval text as const ubyte ptr, byval textlength as integer)
+	var i = childcount
+	childcount += 1
+	children = reallocate(children, sizeof(*children) * childcount)
+	clear(children[i], 0, sizeof(children[i]))
+	with children[i]
+		.nodeclass = nodeclass
+		if text then
+			.text = allocate(textlength + 1)
+			memcpy(.text, text, textlength)
+			.text[textlength] = 0
+			.textlength = textlength
+		end if
+	end with
+end sub
+
+sub StringMatcher.addChildHoldingPreviousChildren(byval nodeclass as integer, byval text as const ubyte ptr, byval textlength as integer)
+	var prevchildren = children
+	var prevchildcount = childcount
+	children = NULL
+	childcount = 0
+	addChild(nodeclass, text, textlength)
+	with children[0]
+		.children = prevchildren
+		.childcount = childcount
+	end with
+end sub
+
+sub StringMatcher.truncateTextToOnly(byval newlength as integer)
+	if (text <> NULL) and (textlength > newlength) then
+		(*text)[newlength] = 0
+		textlength = newlength
+	end if
+end sub
+
+private function findCommonPrefixLen(byval a as const zstring ptr, byval b as const zstring ptr) as integer
+	var length = 0
+	while ((*a)[0] = (*b)[0]) and ((*a)[0] <> 0)
+		length += 1
+		a += 1
+		b += 1
+	wend
+	function = length
+end function
+
+private function findWildcardOrEol(byval s as const zstring ptr) as integer
+	var i = 0
+	while ((*s)[0] <> CH_STAR) and ((*s)[0] <> 0)
+		i += 1
+		s += 1
+	wend
+	function = i
+end function
+
+sub StringMatcher.addPattern(byval pattern as const zstring ptr)
+	''
+	'' Check current choices at this level
+	'' We need to check for common prefix between an existing choice and the
+	'' new pattern, and then re-use it and possibly extract it.
+	''
+	'' insert foo2 into
+	''   foo1
+	''     a
+	''     b
+	'' =>
+	''   foo
+	''     1
+	''       a
+	''       b
+	''     2
+	''
+	'' insert foo2 into
+	''   foo1
+	''   bar
+	'' =>
+	''   foo
+	''     1
+	''     2
+	''   bar
+	''
+	for i as integer = 0 to childcount - 1
+		var child = @children[i]
+
+		select case child->nodeclass
+		case MatchWildcard
+			if (*pattern)[0] = CH_STAR then
+				'' WILDCARD node is already here, recursively add the rest
+				child->addPattern(@pattern[1])
+				exit sub
+			end if
+
+		case MatchEol
+			if (*pattern)[0] = 0 then
+				'' Empty pattern, and we already have an EOL node here,
+				'' so nothing more needs to be added
+				exit sub
+			end if
+
+		case MatchString
+			var commonprefixlen = findCommonPrefixLen(child->text, pattern)
+			if commonprefixlen > 0 then
+				'' If there is a remainder, the node has to be split up
+				if commonprefixlen < child->textlength then
+					'' Move the remainder suffix into a child node
+					var remainder = @child->text[commonprefixlen]
+					child->addChildHoldingPreviousChildren(MatchString, remainder, strlen(remainder))
+
+					'' Truncate to prefix only
+					child->truncateTextToOnly(commonprefixlen)
+				end if
+
+				'' Pattern not completely covered yet? Then recursively add its remainder.
+				if (*pattern)[commonprefixlen] <> 0 then
+					child->addPattern(@pattern[commonprefixlen])
+				end if
+
+				exit sub
+			end if
+		end select
+	next
+
+	'' Otherwise, add a new choice at this level
+	var eol = findWildcardOrEol(pattern)
+	if eol > 0 then
+		'' Add node for string prefix, recursively add the rest
+		addChild(MatchString, pattern, eol)
+		children[childcount-1].addPattern(@pattern[eol])
+	else
+		select case (*pattern)[0]
+		case CH_STAR
+			'' Add node for wildcard, recursively add the rest
+			addChild(MatchWildcard, NULL, 0)
+			children[childcount-1].addPattern(@pattern[1])
+		case 0
+			'' EOL node
+			addChild(MatchEol, NULL, 0)
+		end select
+	end if
+end sub
+
+function StringMatcher.matches(byval s as const zstring ptr) as integer
+	select case nodeclass
+	case MatchRoot
+		for i as integer = 0 to childcount - 1
+			if children[i].matches(s) then return TRUE
+		next
+
+	case MatchString
+		'' The given string must have this exact prefix
+		if strncmp(text, s, textlength) = 0 then
+			'' Prefix matched; now check suffixes, there must be at least an EOL node
+			for suffix as integer = 0 to childcount - 1
+				if children[suffix].matches(@s[textlength]) then return TRUE
+			next
+		end if
+
+	case MatchWildcard
+		'' Also check suffixes, there must be at least an EOL node
+		'' Check whether any of the suffixes match
+		for suffix as integer = 0 to childcount - 1
+			'' Have to try matches at all possible positions (i.e. expanding the wildcard),
+			'' even if it's just a null terminator (so it can match an EOL)
+			var i = s
+			do
+				if children[suffix].matches(i) then return TRUE
+				if (*i)[0] = 0 then exit do
+				i += 1
+			loop
+		next
+
+	case MatchEol
+		'' The given string must be empty
+		if (*s)[0] = 0 then return TRUE
+	end select
+
+	'' Nothing matched
+	function = FALSE
+end function
+
+sub StringMatcher.dump()
+	static nestlevel as integer
+	nestlevel += 1
+
+	var s = space((nestlevel - 1) * 3)
+	select case nodeclass
+	case MatchRoot     : s += "root"
+	case MatchString   : s += "string """ + *text + """" : if textlength <> len(*text) then s += " textlength=" & textlength & " (INVALID)"
+	case MatchWildcard : s += "wildcard"
+	case MatchEol      : s += "eol"
+	end select
+	print s
+
+	for i as integer = 0 to childcount - 1
+		children[i].dump()
+	next
+
+	nestlevel -= 1
+end sub

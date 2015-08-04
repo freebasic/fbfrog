@@ -1,10 +1,4 @@
 #include "test"
-#include "../../ast.bas"
-#include "../../emit.bas"
-#include "../../tk.bas"
-#include "../../util.bas"
-#include "../../util-hash.bas"
-#include "../../util-path.bas"
 #include "../../util-str.bas"
 
 #macro dumpStringMatcherTree(patterns...)
@@ -16,7 +10,7 @@
 		for i as integer = 0 to ubound(patternArray)
 			matcher.addPattern(patternArray(i))
 		next
-		astDump(matcher.root)
+		matcher.dump()
 	end scope
 #endmacro
 
