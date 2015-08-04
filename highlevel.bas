@@ -2,13 +2,14 @@
 
 #include once "fbfrog.bi"
 
+declare sub expandTypedef(byval typedef as ASTNODE ptr, byval n as ASTNODE ptr)
+
 namespace hl
 	dim shared api as ApiInfo ptr
 	dim shared symbols as THash ptr
 
-	'' Used by both typedef expansion and forward declaration addition passes
-	'' hlExpandSpecialTypedefs: data = typedef ASTNODE, needs freeing
-	'' hlCollectForwardUses/hlAddForwardDecls: data = hl.types array index
+	'' Used by forward declaration addition pass
+	'' data = hl.types array index
 	dim shared typehash as THash ptr
 
 	'' data = TEXT ASTNODE holding the new id/alias
@@ -450,7 +451,7 @@ private sub hlApplyRemoveOption(byval ast as ASTNODE ptr, byval astclass as inte
 	while i
 		var nxt = i->next
 
-		if i->class = astclass then
+		if (i->text <> NULL) and (astclass = -1) or (i->class = astclass) then
 			if hl.api->idopt(opt).contains(i->text, hashHash(i->text)) then
 				astRemove(ast, i)
 			end if
@@ -632,20 +633,75 @@ private function hlApplyRenameOption(byval n as ASTNODE ptr) as integer
 	function = TRUE
 end function
 
-private sub hOopsCantExpandTypedef(byval typedef as ASTNODE ptr, byval n as ASTNODE ptr)
-	oops("can't solve out " + astDumpPrettyDecl(typedef) + " in " + astDumpPrettyDecl(n))
+type TypedefTable
+	'' id -> TYPEDEF ASTNODEs holding id/dtype/subtype/array
+	'' Strictly speaking we only need the dtype/array information, but
+	'' having the whole TYPEDEF is nicer for error reporting, plus we own
+	'' the id so it can be re-used by the hash table.
+	table as THash = THash(8, FALSE)
+	declare destructor()
+	declare function lookup(byval id as zstring ptr) as ASTNODE ptr
+	declare sub addOverwrite(byval n as ASTNODE ptr)
+	declare operator let(byref as const TypedefTable) '' unimplemented
+end type
+
+destructor TypedefTable()
+	'' Free the cloned TYPEDEFs
+	for i as integer = 0 to table.room - 1
+		var item = table.items + i
+		if item->s then
+			astDelete(item->data)
+		end if
+	next
+end destructor
+
+function TypedefTable.lookup(byval id as zstring ptr) as ASTNODE ptr
+	function = table.lookupDataOrNull(id)
+end function
+
+sub TypedefTable.addOverwrite(byval n as ASTNODE ptr)
+	var datatype = astClone(n)
+
+	'' Resolve typedefs to the type they reference
+	'' TODO: what about CONSTs/PTRs? it's not enough to walk to the
+	'' inner-most typedef; we have to collect CONSTs/PTRs properly...
+	while typeGetDt(datatype->dtype) = TYPE_UDT
+		assert(astIsTEXT(n->subtype))
+		var subtypetypedef = lookup(n->subtype->text)
+		if subtypetypedef = NULL then exit while
+		expandTypedef(subtypetypedef, datatype)
+	wend
+
+	var hash = hashHash(datatype->text)
+	var item = table.lookup(datatype->text, hash)
+	if item->s then
+		'' Free existing ASTNODE before overwriting, or else it would be leaked
+		astDelete(item->data)
+		item->s = NULL '' became dangling due to this
+	end if
+	table.add(item, hash, datatype->text, datatype)
 end sub
 
-private sub hExpandArrayTypedef(byval typedef as ASTNODE ptr, byval n as ASTNODE ptr)
+private sub oopsCantExpandTypedef(byval typedef as ASTNODE ptr, byval n as ASTNODE ptr, byref reason as string)
+	oops("can't expand " + astDumpPrettyDecl(typedef, TRUE) + " into " + astDumpPrettyDecl(n, TRUE) + ": " + reason)
+end sub
+
+'' Expand typedef assuming it's only a simple type, no array or procedure
+private sub expandSimpleTypedef(byval typedef as ASTNODE ptr, byval n as ASTNODE ptr)
+	var newdtype = typeExpand(n->dtype, typedef->dtype)
+	if newdtype = TYPE_NONE then
+		oopsCantExpandTypedef(typedef, n, "too many pointers")
+	end if
+	astSetType(n, newdtype, typedef->subtype)
+end sub
+
+private sub expandArrayTypedef(byval typedef as ASTNODE ptr, byval n as ASTNODE ptr)
 	'' Pointer to array?
 	if typeGetPtrCount(n->dtype) > 0 then
 		'' FB doesn't support pointers to arrays either, but we can drop the array type,
 		'' such that the pointer only points to "single array element". That's pretty much
 		'' the best translation we can do here, and better than nothing...
-		astSetType(n, typeExpand(n->dtype, typedef->dtype), typedef->subtype)
-		if n->dtype = TYPE_NONE then
-			hOopsCantExpandTypedef(typedef, n)
-		end if
+		expandSimpleTypedef(typedef, n)
 		exit sub
 	end if
 
@@ -687,7 +743,7 @@ end sub
 '' be ignored, e.g. in case of:
 ''    a const * p1;
 ''
-private sub hExpandProcTypedef(byval typedef as ASTNODE ptr, byval n as ASTNODE ptr)
+private sub expandProcTypedef(byval typedef as ASTNODE ptr, byval n as ASTNODE ptr)
 	select case n->class
 	case ASTCLASS_VAR, ASTCLASS_FIELD
 		'' Not a pointer?
@@ -721,7 +777,7 @@ private sub hExpandProcTypedef(byval typedef as ASTNODE ptr, byval n as ASTNODE 
 		'' TODO: check whether we can do better - do function types in
 		'' casts or sizeof automatically become function pointers in C?
 		if typeGetPtrCount(n->dtype) = 0 then
-			hOopsCantExpandTypedef(typedef, n)
+			oopsCantExpandTypedef(typedef, n, "can't have a function type as type for function result/cast/sizeof")
 		end if
 	end select
 
@@ -730,61 +786,63 @@ private sub hExpandProcTypedef(byval typedef as ASTNODE ptr, byval n as ASTNODE 
 	astSetType(n, typeUnsetBaseConst(typeSetDt(n->dtype, TYPE_PROC)), typedef->subtype)
 end sub
 
-private sub hlExpandSpecialTypedefs(byval n as ASTNODE ptr)
-	'' Declaration using one of the special typedefs?
+'' Expand a typedef into a declaration (or any ASTNODE really), assuming that
+'' the declaration's dtype uses that typedef.
+'' Expanding an array or procedure typedef requires special care, because then
+'' the declaration becomes an array or a procedure.
+'' It's not allowed/possible in C to have both at the same time (an array of
+'' procedures), so we don't need to handle that.
+private sub expandTypedef(byval typedef as ASTNODE ptr, byval n as ASTNODE ptr)
+	if typedef->array then
+		expandArrayTypedef(typedef, n)
+	elseif typeGetDtAndPtr(typedef->dtype) = TYPE_PROC then
+		expandProcTypedef(typedef, n)
+	else
+		expandSimpleTypedef(typedef, n)
+	end if
+end sub
+
+'' Solve out array/function typedefs (not supported in FB)
+type SpecialTypedefExpander
+	typedefs as TypedefTable
+	declare sub work(byval n as ASTNODE ptr)
+	declare operator let(byref as const SpecialTypedefExpander) '' unimplemented
+end type
+
+sub SpecialTypedefExpander.work(byval n as ASTNODE ptr)
+	'' Declaration using one of the array/function typedefs?
 	if typeGetDt(n->dtype) = TYPE_UDT then
 		assert(astIsTEXT(n->subtype))
-		dim as ASTNODE ptr typedef = hl.typehash->lookupDataOrNull(n->subtype->text)
+		var typedef = typedefs.lookup(n->subtype->text)
 		if typedef then
 			'' Expand the typedef into the declaration.
-			'' Since typedefs are also processed this way here, we can be sure that
-			'' typedefs themselves are already fully expanded when reaching another
-			'' declaration using one of these typedefs. Thus, expanding a typedef
-			'' doesn't cause a need for further expansions.
+			'' The TypedefTable has alreay expanded this typedef itself as far as possible,
+			'' by using the registered typedefs. Thus, expanding a typedef doesn't cause a
+			'' need for further expansions. We're not expanding any simple typedefs, because
+			'' only array/function ones are registered.
 			if typedef->array then
-				hExpandArrayTypedef(typedef, n)
-			else
-				var typedefdtype = typedef->dtype
-				select case typeGetDtAndPtr(typedefdtype)
-				case TYPE_PROC
-					hExpandProcTypedef(typedef, n)
-				case TYPE_ZSTRING, TYPE_WSTRING
-					astSetType(n, typeExpand(n->dtype, typedefdtype), NULL)
-					assert(n->dtype <> TYPE_NONE)
-					assert(n->subtype = NULL)
-				end select
+				expandArrayTypedef(typedef, n)
+			elseif typeGetDtAndPtr(typedef->dtype) = TYPE_PROC then
+				expandProcTypedef(typedef, n)
 			end if
 		end if
 	end if
 
-	if n->subtype then hlExpandSpecialTypedefs(n->subtype)
-	if n->array   then hlExpandSpecialTypedefs(n->array  )
-	if n->expr    then hlExpandSpecialTypedefs(n->expr   )
+	if n->subtype then work(n->subtype)
+	if n->array   then work(n->array  )
+	if n->expr    then work(n->expr   )
 
 	var i = n->head
 	while i
 		var nxt = i->next
 
-		hlExpandSpecialTypedefs(i)
+		work(i)
 
+		'' Register & drop array/function typedefs
 		if i->class = ASTCLASS_TYPEDEF then
-			var dtype = typeGetDtAndPtr(i->dtype)
-			var is_array_or_proc = (i->array <> NULL) or (dtype = TYPE_PROC)
-			var is_string = (dtype = TYPE_ZSTRING) or (dtype = TYPE_WSTRING)
-
-			if is_array_or_proc or is_string then
-				if is_array_or_proc then
-					'' Array/proc typedefs can't be preserved for FB;
-					'' remove from the AST, hl.typehash will free it later.
-					astUnlink(n, i)
-				else
-					'' Others can be preserved - make a copy for the hl.typehash
-					'' so we we'll free that instead of the node in the AST later.
-					i = astClone(i)
-				end if
-
-				'' TODO: handle duplicate typedefs? (perhaps warn about them?)
-				hl.typehash->addOverwrite(i->text, i)
+			if (i->array <> NULL) or (typeGetDtAndPtr(i->dtype) = TYPE_PROC) then
+				typedefs.addOverwrite(i)
+				astRemove(n, i)
 			end if
 		end if
 
@@ -827,102 +885,231 @@ private function hlFixSpecialParameters(byval n as ASTNODE ptr) as integer
 	function = TRUE
 end function
 
-private sub hTurnStringIntoByte(byval n as ASTNODE ptr)
+private sub charArrayToFixLenStr(byval n as ASTNODE ptr)
+	assert((typeGetDtAndPtr(n->dtype) = TYPE_ZSTRING) or (typeGetDtAndPtr(n->dtype) = TYPE_WSTRING))
+	assert(n->array)
+
+	'' Use the last (inner-most) array dimension as the fixed-length string size
+	var d = n->array->tail
+	assert(d->class = ASTCLASS_DIMENSION)
+	assert(d->expr)
+	assert(n->subtype = NULL)
+	n->subtype = d->expr
+	d->expr = NULL
+	astRemove(n->array, d)
+
+	'' If no dimensions left, remove the array type entirely
+	if n->array->head = NULL then
+		astDelete(n->array)
+		n->array = NULL
+	end if
+end sub
+
+private sub stringToByte(byval n as ASTNODE ptr)
 	'' Turn zstring/wstring into byte/wchar_t, but preserve PTRs + CONSTs
 	if typeGetDt(n->dtype) = TYPE_ZSTRING then
 		n->dtype = typeSetDt(n->dtype, TYPE_BYTE)
 	else
 		n->dtype = typeSetDt(n->dtype, TYPE_WCHAR_T)
 	end if
+
+	'' z/wstring * N? Turn back into array
 	if n->subtype then
-		'' in case it was a fix-len string (zstring * N), delete the string length expression (N)
-		astDelete(n->subtype)
+		'' add ARRAY if needed
+		if n->array = NULL then
+			n->array = astNew(ASTCLASS_ARRAY)
+		end if
+
+		'' add fix-len size as last (inner-most) array dimension
+		var d = astNew(ASTCLASS_DIMENSION)
+		d->expr = n->subtype
 		n->subtype = NULL
+		astAppend(n->array, d)
 	end if
 end sub
 
-private sub hTurnByteIntoString(byval n as ASTNODE ptr)
+private sub byteToString(byval n as ASTNODE ptr)
 	'' Turn [u]byte/wchar_t into zstring/wstring, but preserve PTRs + CONSTs
 	if typeGetDt(n->dtype) = TYPE_WCHAR_T then
 		n->dtype = typeSetDt(n->dtype, TYPE_WSTRING)
 	else
 		n->dtype = typeSetDt(n->dtype, TYPE_ZSTRING)
 	end if
+	assert(n->subtype = NULL)
+
+	'' If it's a plain string (no ptr), also try to turn array => fix-len string
+	select case typeGetDtAndPtr(n->dtype)
+	case TYPE_ZSTRING, TYPE_WSTRING
+		if n->array then
+			charArrayToFixLenStr(n)
+		end if
+	end select
 end sub
 
-private sub hFixCharWchar(byval n as ASTNODE ptr)
-	'' Affected by -nostring?
-	if n->text then
-		if hl.api->idopt(OPT_NOSTRING).contains(n->text, hashHash(n->text)) then
-			'' Turn string into byte (even pointers)
-			hTurnStringIntoByte(n)
-			exit sub
-		end if
+private sub hlFindStringOptionMatches _
+	( _
+		byval parentparent as ASTNODE ptr, _
+		byval parent as ASTNODE ptr, _
+		byval n as ASTNODE ptr, _
+		byval index as integer _
+	)
+
+	'' TODO: don't call DeclPatterns.matches() if CharStringPass won't care anyways
+	'' 1. only check for match on nodes that have string/byte dtype
+	'' 2. don't try 2nd lookup if first one succeeded (-string and -nostring
+	''    on the same decl doesn't make sense anyways)
+	'' but this only works if string typedefs are already expanded,
+	'' so also try matching on nodes with UDT type?
+
+	if hl.api->patterns(OPT_NOSTRING).matches(parentparent, parent, n, index) then
+		n->attrib or= ASTATTRIB_NOSTRING
 	end if
 
-	'' Don't turn string pointers into byte pointers
-	if typeGetPtrCount(n->dtype) <> 0 then
-		exit sub
+	if hl.api->patterns(OPT_STRING).matches(parentparent, parent, n, index) then
+		n->attrib or= ASTATTRIB_STRING
 	end if
 
-	'' zstring + array? => fix-len zstring
-	if n->array then
-		'' Use the last (inner-most) array dimension as the fixed-length string size
-		var d = n->array->tail
-		assert(d->class = ASTCLASS_DIMENSION)
-		assert(d->expr)
-		assert(n->subtype = NULL)
-		n->subtype = astClone(d->expr)
-		astRemove(n->array, d)
+	if n->subtype then hlFindStringOptionMatches(parent, n, n->subtype, 0)
+	if n->array   then hlFindStringOptionMatches(parent, n, n->array  , 0)
+	if n->expr    then hlFindStringOptionMatches(parent, n, n->expr   , 0)
 
-		'' If no dimensions left, remove the array type entirely
-		if n->array->head = NULL then
-			astDelete(n->array)
-			n->array = NULL
-		end if
-
-		exit sub
-	end if
-
-	if n->class <> ASTCLASS_TYPEDEF then
-		hTurnStringIntoByte(n)
-	end if
+	var i = n->head
+	var childindex = 0
+	while i
+		hlFindStringOptionMatches(parent, n, i, childindex)
+		i = i->next
+		childindex += 1
+	wend
 end sub
 
 ''
-'' Handle declarations with plain zstring/wstring type (originally char/wchar_t).
+'' Char/string handling pass
 ''
-'' If it's a char pointer or array, then it's probably supposed to be a string,
-'' and we can leave it as-is (zstring/wstring). If it's just a char, then it's
-'' probably supposed to be a byte (or wchar_t) though.
+'' The C parser turned char/wchar_t into zstring/wstring. Now we need to turn
+'' zstring/wstring into byte/wchar_t where it's probably not a string, and
+'' apply -string/-nostring options.
 ''
-'' FB doesn't allow "foo as zstring" - it must be a pointer or fixed-length string,
-'' except in typedefs. Typedefs are a special case - char/wchar_t means byte/wchar_t
-'' or zstring/wstring depending on where they're used. Because of this we expand
-'' these typedefs like array/proc typedefs (see hlExpandSpecialTypedefs). To allow
-'' this expansion to work, we keep the zstring/wstring type on the typedefs.
+'' The default behaviour is to translate char/wchar_t depending on context -
+'' if it's a char/wchar_t pointer/array/typedef, we translate it as a string
+'' type (i.e. zstring or wstring). If it's a single char/wchar_t, we translate
+'' it as byte. For this, it is also necessary to expand char typedefs into the
+'' contexts that use them, so we can then translate the char/wchar_t to
+'' zstring/wstring or byte/wchar_t.
 ''
-private function hlFixCharWchar(byval n as ASTNODE ptr) as integer
-	if n->class <> ASTCLASS_STRING then
-		select case typeGetDt(n->dtype)
-		case TYPE_ZSTRING, TYPE_WSTRING
-			hFixCharWchar(n)
+'' Furthermore, we support some options to override the defaults:
+''   -string    =>  Force "[un]signed char" to be treated as zstring. If it's
+''                  a typedef, it now needs to be expanded to get the
+''                  context-specific behaviour like normal string typedefs.
+''   -nostring  =>  prevent char/wchar_t from being treated as zstring/wstring
+''
+type CharStringPass
+	typedefs as TypedefTable
+	declare sub work(byval n as ASTNODE ptr)
+	declare operator let(byref as const CharStringPass) '' unimplemented
+end type
 
-		case TYPE_BYTE, TYPE_UBYTE, TYPE_WCHAR_T
-			'' Affected by -string?
-			'' TODO: This works with plain "[un]signed char", but not with typedefs, since such typedefs aren't expanded currently.
-			'' It would be nice to have this for typedefs too though because of the GLubyte type in the OpenGL headers. But for that
-			'' we need to have a typedef type tracker/symbol table first.
-			if n->text then
-				if hl.api->idopt(OPT_STRING).contains(n->text, hashHash(n->text)) then
-					'' Turn byte into string (even pointers)
-					hTurnByteIntoString(n)
+#define isAffectedByNoString(n) (((n)->attrib and ASTATTRIB_NOSTRING) <> 0)
+#define isAffectedByString(n)   (((n)->attrib and ASTATTRIB_STRING  ) <> 0)
+
+sub CharStringPass.work(byval n as ASTNODE ptr)
+	'' Ignore string/char literals, which also have string/char types,
+	'' but shouldn't be changed.
+	select case n->class
+	case ASTCLASS_STRING, ASTCLASS_CHAR
+		exit sub
+	end select
+
+	'' Expand "char/wchar_t" typedefs in this decl, unless the typedef or decl is affected by -nostring
+	'' Expand "[un]signed char" typedef into decls affected by -string
+	'' We don't expand pointer typedefs though (e.g. "char/wchar_t *" or "[un]signed char *")
+	'' because they have enough context by themselves (we already know they're pointers).
+	if typeGetDt(n->dtype) = TYPE_UDT then
+		assert(astIsTEXT(n->subtype))
+		var typedef = typedefs.lookup(n->subtype->text)
+		if typedef then
+			select case typeGetDtAndPtr(typedef->dtype)
+			case TYPE_ZSTRING, TYPE_WSTRING
+				if (not isAffectedByNoString(n)) and (not isAffectedByNoString(typedef)) then
+					expandSimpleTypedef(typedef, n)
 				end if
+			case TYPE_BYTE, TYPE_UBYTE, TYPE_WCHAR_T
+				if isAffectedByString(n) then
+					expandSimpleTypedef(typedef, n)
+				end if
+			end select
+		end if
+	end if
+
+	select case typeGetDt(n->dtype)
+	'' Turn zstring/wstring (originally char/wchar_t in C) decls into byte/wchar_t (non-string types),
+	'' if it's neither pointer/array/typedef, or if -nostring.
+	case TYPE_ZSTRING, TYPE_WSTRING
+		'' Affected by -nostring?
+		if isAffectedByNoString(n) then
+			'' Turn string into byte (even pointers)
+			stringToByte(n)
+		'' Don't turn string pointers into byte pointers
+		elseif typeGetPtrCount(n->dtype) <> 0 then
+
+		'' zstring + array (produced by C parser)? => fix-len zstring
+		elseif n->array then
+			charArrayToFixLenStr(n)
+
+		elseif n->class <> ASTCLASS_TYPEDEF then
+			stringToByte(n)
+		end if
+
+	'' Turn decls using "[un]signed char [*]" into "char [*]" if -string
+	'' If it's a typedef and then just a "char" (not a pointer), it will be
+	'' expanded, like any other "char" typedefs.
+	'' Regarding wchar_t: Normally the C parser produced TYPE_WSTRING, but
+	'' we can still see TYPE_WCHAR_T here in case a wchar_t typedef got
+	'' expanded into this declaration.
+	'' If it's a single char, it can't be turned into string though, that would
+	'' be invalid FB, except in typedefs.
+	case TYPE_BYTE, TYPE_UBYTE, TYPE_WCHAR_T
+		if (n->class = ASTCLASS_TYPEDEF) or _
+		   (typeGetPtrCount(n->dtype) <> 0) or _
+		   (n->array <> NULL) then
+			if isAffectedByString(n) then
+				byteToString(n)
+			end if
+		end if
+	end select
+
+	'' Register plain byte/char/string, the ones we're going to expand
+	'' - "char" typedefs were turned into string ones and should be expanded
+	'' - if -nostring was given for one of them, it's now using byte, but
+	''   should still be registered, to be expanded into -string decls,
+	''   which will be turned from byte to string after the expansion.
+	'' - if -string was given for a byte typedef, it was turned into a
+	''   string one, and should be registered like normal string typedefs.
+	'' - it can be a wchar_t typedef, in case we did stringToByte() above
+	''   (which converted wstring => wchar_t)
+	if n->class = ASTCLASS_TYPEDEF then
+		select case typeGetDtAndPtr(n->dtype)
+		case TYPE_ZSTRING, TYPE_WSTRING, TYPE_BYTE, TYPE_UBYTE, TYPE_WCHAR_T
+			typedefs.addOverwrite(n)
+		case TYPE_UDT
+			'' Also register if it's a typedef to another typedef
+			'' (that we already know to be a string/byte one)
+			assert(astIsTEXT(n->subtype))
+			if typedefs.lookup(n->subtype->text) then
+				typedefs.addOverwrite(n)
 			end if
 		end select
 	end if
-	function = TRUE
-end function
+
+	if n->subtype then work(n->subtype)
+	if n->array   then work(n->array  )
+	if n->expr    then work(n->expr   )
+
+	var i = n->head
+	while i
+		work(i)
+		i = i->next
+	wend
+end sub
 
 private sub hlRenameJobsBegin()
 	hl.renamejobs = new THash(6, TRUE)
@@ -1319,7 +1506,9 @@ private sub hFixUnsizedArray(byval ast as ASTNODE ptr, byval n as ASTNODE ptr)
 			astInsert(ast, def, n->next)
 
 			astRenameSymbol(n, tempid, FALSE)
-			hTurnStringIntoByte(n)
+			astDelete(n->subtype)
+			n->subtype = NULL
+			stringToByte(n)
 		end if
 	end select
 end sub
@@ -1430,6 +1619,19 @@ private sub hlAddUndefsAboveDecls(byval ast as ASTNODE ptr)
 				undef->location = i->location
 				astInsert(ast, undef, i)
 			end if
+		end if
+
+		i = i->next
+	wend
+end sub
+
+private sub hlAddIfndefsAroundDecls(byval ast as ASTNODE ptr)
+	var i = ast->head
+	while i
+
+		if (i->class <> ASTCLASS_UNDEF) andalso _
+		   i->text andalso hl.api->idopt(OPT_IFNDEFDECL).contains(i->text, hashHash(i->text)) then
+			i->attrib or= ASTATTRIB_IFNDEFDECL
 		end if
 
 		i = i->next
@@ -1591,10 +1793,33 @@ private function hlHideCallConv(byval n as ASTNODE ptr) as integer
 	function = (n->class <> ASTCLASS_PPDEFINE)
 end function
 
+'' *.h CRT/POSIX headers for which FB has corresponding crt/*.bi versions
+dim shared fbcrtheaders(0 to ...) as zstring ptr = _
+{ _
+	@"assert", @"ctype", @"errno", @"float", @"limits", @"locale", _
+	@"math", @"setjmp", @"signal", @"stdarg", @"stddef", @"stdint", _
+	@"stdio", @"stdlib", @"string", @"time", _
+	@"sys/types", @"sys/socket", @"wchar" _
+}
+
+type IncludePass
+	fbcrtheaderhash as THash = THash(5, TRUE)
+	declare constructor()
+	declare sub translateHeaderFileName(byref filename as string)
+	declare sub work(byval ast as ASTNODE ptr, byref bioptions as ApiSpecificBiOptions)
+	declare operator let(byref as const IncludePass) '' unimplemented
+end type
+
+constructor IncludePass()
+	for i as integer = lbound(fbcrtheaders) to ubound(fbcrtheaders)
+		fbcrtheaderhash.addOverwrite(fbcrtheaders(i), NULL)
+	next
+end constructor
+
 '' Remap .h name to a .bi name. If it's a known system header, we can even remap
 '' it to the corresponding FB header (in some cases it's not as simple as
 '' replacing .h by .bi).
-private sub hTranslateHeaderFileName(byref filename as string)
+sub IncludePass.translateHeaderFileName(byref filename as string)
 	filename = pathStripExt(filename)
 
 	'' Is it one of the CRT headers? Remap it to crt/*.bi
@@ -1605,7 +1830,7 @@ private sub hTranslateHeaderFileName(byref filename as string)
 	filename += ".bi"
 end sub
 
-private sub hlHandleIncludes(byval ast as ASTNODE ptr, byref bioptions as ApiSpecificBiOptions)
+sub IncludePass.work(byval ast as ASTNODE ptr, byref bioptions as ApiSpecificBiOptions)
 	'' Find node above which new #includes should be inserted. This should
 	'' always be behind existing #includes at the top.
 	var top = ast->head
@@ -1650,7 +1875,7 @@ private sub hlHandleIncludes(byval ast as ASTNODE ptr, byref bioptions as ApiSpe
 			if hl.api->removeinclude.contains(filename, hashHash(filename)) then
 				astRemove(ast, i)
 			else
-				hTranslateHeaderFileName(filename)
+				translateHeaderFileName(filename)
 				astSetText(i, filename)
 			end if
 		end if
@@ -1977,6 +2202,10 @@ sub hlGlobal(byval ast as ASTNODE ptr, byref api as ApiInfo)
 	delete hl.symbols
 	hl.symbols = NULL
 
+	if api.idopt(OPT_REMOVE).count > 0 then
+		hlApplyRemoveOption(ast, -1, OPT_REMOVE)
+	end if
+
 	if api.idopt(OPT_REMOVEPROC).count > 0 then
 		hlApplyRemoveOption(ast, ASTCLASS_PROC, OPT_REMOVEPROC)
 	end if
@@ -2004,26 +2233,13 @@ sub hlGlobal(byval ast as ASTNODE ptr, byref api as ApiInfo)
 		astVisit(ast, @hlApplyRenameOption)
 	end if
 
-	'' Solve out special typedefs
-	''  * array/function typedefs, which aren't supported in FB
-	''  * char/wchar_t typedefs, which become zstring/wstring in some
-	''    places, but byte/wchar_t in others (i.e. it depends on context,
-	''    which is why the typedef needs to be expanded)
+	'' Solve out array/function typedefs (not supported in FB)
 	'' TODO: If possible, turn function typedefs into function pointer
 	'' typedefs instead of solving them out
-	hl.typehash = new THash(8, FALSE)
-	hlExpandSpecialTypedefs(ast)
 	scope
-		'' Free the collected typedefs which were unlinked from the main AST
-		for i as integer = 0 to hl.typehash->room - 1
-			var item = hl.typehash->items + i
-			if item->s then
-				astDelete(item->data)
-			end if
-		next
+		dim expander as SpecialTypedefExpander
+		expander.work(ast)
 	end scope
-	delete hl.typehash
-	hl.typehash = NULL
 
 	'' Fix up parameters with certain special types:
 	''   function => function pointer
@@ -2031,10 +2247,12 @@ sub hlGlobal(byval ast as ASTNODE ptr, byref api as ApiInfo)
 	''   jmp_buf => jmp_buf ptr (jmp_buf is an array type in C)
 	astVisit(ast, @hlFixSpecialParameters)
 
-	'' The C parser turned char/wchar_t into zstring/wstring.
-	'' Now turn zstring/wstring into byte/wchar_t where it's obviously
-	'' not a string.
-	astVisit(ast, @hlFixCharWchar)
+	'' Handle char/string types
+	scope
+		hlFindStringOptionMatches(NULL, NULL, ast, 0)
+		dim pass as CharStringPass
+		pass.work(ast)
+	end scope
 
 	''
 	'' Solve out various tags/typedefs
@@ -2138,6 +2356,10 @@ sub hlGlobal(byval ast as ASTNODE ptr, byref api as ApiInfo)
 		hlAddUndefsAboveDecls(ast)
 	end if
 
+	if api.idopt(OPT_IFNDEFDECL).count > 0 then
+		hlAddIfndefsAroundDecls(ast)
+	end if
+
 	hlProcs2Macros(ast)
 end sub
 
@@ -2200,7 +2422,10 @@ sub hlFile(byval ast as ASTNODE ptr, byref api as ApiInfo, byref bioptions as Ap
 	'' Remap *.h => *.bi
 	'' Apply -removeinclude
 	'' Remove duplicates
-	hlHandleIncludes(ast, bioptions)
+	scope
+		dim pass as IncludePass
+		pass.work(ast, bioptions)
+	end scope
 
 	'' Add #includes for "crt/long[double].bi" and "crt/wchar.bi" if the
 	'' binding uses the clong[double]/wchar_t types

@@ -261,15 +261,17 @@ private sub hPrintHelpAndExit()
 	print "    -rename (any matching symbol)"
 	print "  options for removing declarations (-remove* <id>):"
 	print "    -removedefine, -removeproc, -removevar, -remove1st, -remove2nd"
+	print "    -remove (any matching symbol)"
 	print "  -dropprocbody <id>  Don't preserve a certain procedure's body"
 	print "  -typedefhint <id>   Mark <id> as typedef, to help parsing of type casts"
 	print "  -addforwarddecl <id>  Force a forward declaration to be added for the given type"
 	print "  -undefbeforedecl <id>  Insert an #undef above a declaration"
-	print "  -nostring <id>      Prevent a symbol from being turned into a zstring"
-	print "  -string <id>        Force a [U]Byte [Ptr] symbol to be turned into a ZString [Ptr]"
+	print "  -ifndefdecl <id>    Wrap declaration of symbol named <id> in an #ifndef block"
 	print "  -convbodytokens <id>  Translate a #define's body only by converting the tokens, no parsing"
 	print "  -expandindefine <id>  Expand macro in #define body"
 	print "  -noexpand <id>      Disable expansion of certain #define"
+	print "  -nostring <id-pattern> Prevent a symbol from being turned into a zstring"
+	print "  -string <id-pattern>   Force a [U]Byte [Ptr] symbol to be turned into a ZString [Ptr]"
 	print "  -removeinclude <filename>  Remove matching #include directives"
 	print "  -setarraysize <id> <size>  Set size of an [] array"
 	print "  -moveabove <id> <ref>  Move declaration of <id> above declaration of <ref>"
@@ -471,10 +473,13 @@ sub ApiInfo.loadOption(byval opt as integer, byval param1 as zstring ptr, byval 
 		renameopt(opt).addOverwrite(param1, param2)
 		have_renames = TRUE
 
-	case OPT_REMOVEDEFINE, OPT_REMOVEPROC, OPT_REMOVEVAR, OPT_REMOVE1ST, OPT_REMOVE2ND, _
-	     OPT_DROPPROCBODY, OPT_TYPEDEFHINT, OPT_ADDFORWARDDECL, OPT_UNDEFBEFOREDECL, _
-	     OPT_NOSTRING, OPT_STRING, OPT_CONVBODYTOKENS, OPT_EXPANDINDEFINE, OPT_NOEXPAND
+	case OPT_REMOVE, OPT_REMOVEDEFINE, OPT_REMOVEPROC, OPT_REMOVEVAR, OPT_REMOVE1ST, OPT_REMOVE2ND, _
+	     OPT_DROPPROCBODY, OPT_TYPEDEFHINT, OPT_ADDFORWARDDECL, OPT_UNDEFBEFOREDECL, OPT_IFNDEFDECL, _
+	     OPT_CONVBODYTOKENS, OPT_EXPANDINDEFINE, OPT_NOEXPAND
 		idopt(opt).addOverwrite(param1, NULL)
+
+	case OPT_NOSTRING, OPT_STRING
+		patterns(opt).parseAndAdd(*param1)
 
 	case OPT_REMOVEINCLUDE
 		removeinclude.addOverwrite(param1, NULL)
@@ -1023,10 +1028,13 @@ private sub hParseArgs(byref x as integer)
 		     OPT_RENAMEMACROPARAM, OPT_RENAME
 			hParseOption2Params(x, opt, "<oldid>", "<newid>")
 
-		case OPT_REMOVEDEFINE, OPT_REMOVEPROC, OPT_REMOVEVAR, OPT_REMOVE1ST, OPT_REMOVE2ND, _
-		     OPT_DROPPROCBODY, OPT_TYPEDEFHINT, OPT_ADDFORWARDDECL, OPT_UNDEFBEFOREDECL, _
-		     OPT_NOSTRING, OPT_STRING, OPT_CONVBODYTOKENS, OPT_EXPANDINDEFINE, OPT_NOEXPAND
+		case OPT_REMOVE, OPT_REMOVEDEFINE, OPT_REMOVEPROC, OPT_REMOVEVAR, OPT_REMOVE1ST, OPT_REMOVE2ND, _
+		     OPT_DROPPROCBODY, OPT_TYPEDEFHINT, OPT_ADDFORWARDDECL, OPT_UNDEFBEFOREDECL, OPT_IFNDEFDECL, _
+		     OPT_CONVBODYTOKENS, OPT_EXPANDINDEFINE, OPT_NOEXPAND
 			hParseOption1Param(x, opt, "<id>")
+
+		case OPT_NOSTRING, OPT_STRING
+			hParseOption1Param(x, opt, "<pattern>")
 
 		case OPT_REMOVEINCLUDE
 			hParseOption1Param(x, opt, "<filename>")

@@ -177,6 +177,7 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	(@"-renamedefine" ), _
 	(@"-renamemacroparam"), _
 	(@"-rename"       ), _
+	(@"-remove"       ), _
 	(@"-removedefine" ), _
 	(@"-removeproc"   ), _
 	(@"-removevar"    ), _
@@ -186,11 +187,12 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	(@"-typedefhint"  ), _
 	(@"-addforwarddecl"), _
 	(@"-undefbeforedecl"), _
-	(@"-nostring"     ), _
-	(@"-string"       ), _
+	(@"-ifndefdecl"   ), _
 	(@"-convbodytokens"), _
 	(@"-expandindefine"), _
 	(@"-noexpand"     ), _
+	(@"-nostring"     ), _
+	(@"-string"       ), _
 	(@"-removeinclude"), _
 	(@"-setarraysize" ), _
 	(@"-moveabove"    ), _

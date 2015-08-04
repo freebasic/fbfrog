@@ -1,6 +1,5 @@
 #include once "fbfrog.bi"
 #include once "crt.bi"
-#include once "dir.bi"
 
 function min(byval a as integer, byval b as integer) as integer
 	if b < a then a = b
@@ -11,8 +10,6 @@ function max(byval a as integer, byval b as integer) as integer
 	if b > a then a = b
 	function = a
 end function
-
-''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 function sourceinfoForZstring(byval prettyname as zstring ptr) byref as SourceInfo
 	function = *new SourceInfo(strDuplicate(prettyname), FALSE)
@@ -152,702 +149,6 @@ sub oopsLocation(byval location as TkLocation, byval message as zstring ptr)
 	print hReport(location, message)
 	end 1
 end sub
-
-''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-
-function hTrim(byref s as string) as string
-	function = trim(s, any !" \t")
-end function
-
-function hLTrim(byref s as string) as string
-	function = ltrim(s, any !" \t")
-end function
-
-function strStartsWith(byref s as string, byref lookfor as string) as integer
-	function = left(s, len(lookfor)) = lookfor
-end function
-
-function strDuplicate(byval s as zstring ptr) as zstring ptr
-	dim as zstring ptr p = any
-	if s then
-		p = callocate(len(*s) + 1)
-		*p = *s
-		function = p
-	else
-		function = NULL
-	end if
-end function
-
-sub strSplit(byref s as string, byref delimiter as string, byref l as string, byref r as string)
-	var leftlen = instr(s, delimiter) - 1
-	if leftlen > 0 then
-		l = left(s, leftlen)
-		r = right(s, len(s) - leftlen - len(delimiter))
-	else
-		l = s
-		r = ""
-	end if
-end sub
-
-function strReplace _
-	( _
-		byref text as string, _
-		byref a as string, _
-		byref b as string _
-	) as string
-
-	var result = text
-
-	var alen = len(a)
-	var blen = len(b)
-
-	var i = 0
-	do
-		'' Does result contain an occurence of a?
-		i = instr(i + 1, result, a)
-		if i = 0 then
-			exit do
-		end if
-
-		'' Cut out a and insert b in its place
-		'' result  =  front  +  b  +  back
-		var keep = right(result, len(result) - ((i - 1) + alen))
-		result = left(result, i - 1)
-		result += b
-		result += keep
-
-		i += blen - 1
-	loop
-
-	function = result
-end function
-
-function strReplaceNonIdChars(byref orig as string, byval replacement as integer) as string
-	var s = orig
-
-	for i as integer = 0 to len(s) - 1
-		dim as integer ch = s[i]
-
-		select case as const ch
-		case CH_A to CH_Z, CH_L_A to CH_L_Z, CH_UNDERSCORE, CH_0 to CH_9
-
-		case else
-			ch = replacement
-		end select
-
-		s[i] = ch
-	next
-
-	function = s
-end function
-
-function strMakePrintable(byref a as string) as string
-	dim b as string
-
-	for i as integer = 0 to len(a)-1
-		select case a[i]
-		case CH_LF  : b += "\n"
-		case CH_CR  : b += "\r"
-		case CH_TAB : b += "\t"
-		case is < 32, 127 : b += "?"
-		case else   : b += chr(a[i])
-		end select
-	next
-
-	function = b
-end function
-
-function strIsValidSymbolId(byval s as zstring ptr) as integer
-	var i = 0
-	do
-		select case as const (*s)[0]
-		case 0
-			exit do
-
-		case CH_A to CH_Z, CH_L_A to CH_L_Z, CH_UNDERSCORE
-			'' A-Z, a-z, _ are allowed
-
-		case CH_0 to CH_9
-			'' Numbers are allowed but not at the front
-			if i = 0 then
-				exit function
-			end if
-
-		case else
-			exit function
-		end select
-
-		s += 1
-		i += 1
-	loop
-
-	function = TRUE
-end function
-
-'' Does an identifier start with __ (double underscore) or _U (single underscore
-'' and upper-case letter)?
-function strIsReservedIdInC(byval id as zstring ptr) as integer
-	if (*id)[0] = CH_UNDERSCORE then
-		var ch2 = (*id)[1]
-		if (ch2 = CH_UNDERSCORE) or ((ch2 >= CH_A) and (ch2 <= CH_Z)) then
-			return TRUE
-		end if
-	end if
-end function
-
-'' Recursive string matching, with ? and * wildcards, seems to work ok
-'' (based on post from stackoverflow)
-function strMatch(byref s as string, byref pattern as string) as integer
-	'' Always match?
-	if pattern = "*" then return TRUE
-
-	'' Same? (safe even if the string contains wildcard chars itself)
-	if s = pattern then return TRUE
-
-	'' String <> pattern. String empty?
-	if len(s) = 0 then return FALSE
-
-	select case left(pattern, 1)
-	case "*"
-		'' Either the rest of the pattern must match right here,
-		'' or the pattern must match somewhere later in the string.
-		return strMatch(s, right(pattern, len(pattern) - 1)) orelse _
-		       strMatch(right(s, len(s) - 1), pattern)
-
-	case "?", left(s, 1)
-		'' Current char matches; now check the rest.
-		return strMatch(right(s, len(s) - 1), right(pattern, len(pattern) - 1))
-	end select
-
-	function = FALSE
-end function
-
-''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-'' Generic hash table (open addressing/closed hashing), based on GCC's libcpp's
-'' hash table.
-''
-'' Note: No deletions possible due to the collision resolution adding duplicates
-'' to other entries in the table, instead of adding to the same bucket.
-'' Each duplicate can be reached by following through the chain of steps
-'' indicated by hashHash2(), the first free entry reached indicates the end of
-'' the chain -- that's where duplicates are inserted. Removing an entry from
-'' this chain would cause the following entries to become unreachable/lost,
-'' as the free item in the middle would appear as the end of the chain now.
-''
-'' If the hash table owns the strings then THash.add() will duplicate them and
-'' then never change them again until THash.destructor() which frees them.
-''
-
-function hashHash(byval s as zstring ptr) as ulong
-	dim as long hash = 5381
-	while (*s)[0]
-		hash = (*s)[0] + (hash shl 5) - hash
-		s += 1
-	wend
-	function = hash
-end function
-
-private function hashHash2(byval s as zstring ptr) as ulong
-	dim as ulong hash = 0
-	while (*s)[0]
-		hash = (*s)[0] + (hash shl 6) + (hash shl 16) - hash
-		s += 1
-	wend
-	function = hash
-end function
-
-sub THash.allocTable()
-	'' They must be zeroed, because NULL instead of a string indicates
-	'' unused items
-	items = callocate(room * sizeof(THashItem))
-end sub
-
-sub THash.growTable()
-	var olditems = items
-	var oldroom = room
-
-	room shl= 1
-	allocTable()
-
-	'' Insert all used items from the old table into the new one.
-	'' This will redistribute everything using the new h->room.
-	for item as THashItem ptr = olditems to (olditems + (oldroom - 1))
-		if item->s then
-			'' Yep, this is recursive, but since the table is
-			'' larger by now, we won't recurse in here again.
-			*lookup(item->s, item->hash) = *item
-		end if
-	next
-
-	deallocate(olditems)
-end sub
-
-function THash.lookup(byval s as zstring ptr, byval hash as ulong) as THashItem ptr
-	'' Enlarge the hash map when >= 75% is used up, for better lookup
-	'' performance (it's easier to find free items if there are many; i.e.
-	'' less collisions), and besides there always must be free slots,
-	'' otherwise a lookup could end up in an infinite loop.
-	if (count * 4) >= (room * 3) then
-		growTable()
-	end if
-
-	dim as uinteger roommask = room - 1
-
-	'' First probe
-	var i = hash and roommask
-	var item = @items[i]
-
-	'' Found unused item with first probe?
-	if item->s = NULL then
-		return item
-	end if
-
-	'' Item is used. Is it the correct string?
-	if item->hash = hash then
-		if *item->s = *s then
-			return item
-		end if
-	end if
-
-	'' The first probe reached an item containing the wrong string.
-	'' The collision is resolved by stepping through items until a
-	'' free item or the look-for string is found.
-	''
-	'' The step size is calculated based on a 2nd hash value. It is or'ed
-	'' with 1 to make sure it's odd, so all items will eventually be
-	'' reached, because h->room always is a power of 2.
-	var stepsize = (hashHash2(s) and roommask) or 1
-
-	do
-		i = (i + stepsize) and roommask
-		item = @items[i]
-
-		'' Found unused item?
-		'' The string is not in the hash, or it would have been found before.
-		if item->s = NULL then
-			exit do
-		end if
-
-		'' Item is used. Is it the correct string?
-		if item->hash = hash then
-			if *item->s = *s then
-				exit do
-			end if
-		end if
-	loop
-
-	function = item
-end function
-
-function THash.lookupDataOrNull(byval id as zstring ptr) as any ptr
-	var item = lookup(id, hashHash(id))
-	if item->s then
-		function = item->data
-	end if
-end function
-
-function THash.contains(byval s as zstring ptr, byval hash as ulong) as integer
-	function = (lookup(s, hash)->s <> NULL)
-end function
-
-sub THash.add(byval item as THashItem ptr, byval hash as ulong, byval s as zstring ptr, byval dat as any ptr)
-	if duplicate_strings then
-		s = strDuplicate(s)
-	end if
-	item->s = s
-	item->hash = hash
-	item->data = dat
-	count += 1
-end sub
-
-'' Add entry, overwriting previous user data stored in that slot
-function THash.addOverwrite(byval s as zstring ptr, byval dat as any ptr) as THashItem ptr
-	var hash = hashHash(s)
-	var item = lookup(s, hash)
-
-	if item->s then
-		'' Already exists
-		assert(*item->s = *s)
-		assert(item->hash = hash)
-	else
-		'' New entry
-		if duplicate_strings then
-			item->s = strDuplicate(s)
-		else
-			item->s = s
-		end if
-		item->hash = hash
-		count += 1
-	end if
-
-	item->data = dat
-
-	function = item
-end function
-
-constructor THash(byval exponent as integer, byval duplicate_strings as integer)
-	count = 0
-	room = 1 shl exponent
-	this.duplicate_strings = duplicate_strings
-	allocTable()
-end constructor
-
-destructor THash()
-	'' Free each item's string if they were duplicated
-	if duplicate_strings then
-		for i as THashItem ptr = items to items + (room - 1)
-			deallocate(i->s)
-		next
-	end if
-
-	deallocate(items)
-end destructor
-
-#if __FB_DEBUG__
-sub THash.dump()
-	print "hash: " & count & "/" & room & " slots used"
-	for i as integer = 0 to room - 1
-		with items[i]
-			print "    " & i & ": ";
-			if .s then
-				print "hash=" + hex(.hash) + ", s=""" + *.s + """, data=" + hex(.data)
-			else
-				print "(free)"
-			end if
-		end with
-	next
-end sub
-#endif
-
-''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-'' Path/file name handling functions
-
-'' Searches backwards for the last '.' while still behind '/' or '\'.
-private function hFindExtBegin(byref path as string) as integer
-	for i as integer = len(path)-1 to 0 step -1
-		select case path[i]
-		case asc(".")
-			return i
-#if defined(__FB_WIN32__) or defined(__FB_DOS__)
-		case asc($"\"), asc("/")
-#else
-		case asc("/")
-#endif
-			exit for
-		end select
-	next
-	function = len(path)
-end function
-
-function pathStripExt(byref path as string) as string
-	function = left(path, hFindExtBegin(path))
-end function
-
-function pathExtOnly(byref path as string) as string
-	'' -1 to strip the '.' in front of the file extension
-	function = right(path, len(path) - hFindExtBegin(path) - 1)
-end function
-
-private function hFindFileName(byref path as string) as integer
-	for i as integer = len(path)-1 to 0 step -1
-		select case path[i]
-#if defined(__FB_WIN32__) or defined(__FB_DOS__)
-		case asc($"\"), asc("/")
-#else
-		case asc("/")
-#endif
-			return i + 1
-		end select
-	next
-end function
-
-function pathOnly(byref path as string) as string
-	function = left(path, hFindFileName(path))
-end function
-
-function pathStrip(byref path as string) as string
-	function = right(path, len(path) - hFindFileName(path))
-end function
-
-function pathAddDiv(byref path as string) as string
-	dim as string s
-	dim as integer length = any
-
-	s = path
-	length = len(s)
-
-	if length > 0 then
-#if defined(__FB_WIN32__) or defined(__FB_DOS__)
-		select case s[length-1]
-		case asc($"\"), asc("/")
-
-		case else
-			s += $"\"
-		end select
-#else
-		if s[length-1] <> asc("/") then
-			s += "/"
-		end if
-#endif
-	end if
-
-	function = s
-end function
-
-private function pathGetRootLength(byref s as string) as integer
-#if defined(__FB_WIN32__) or defined(__FB_DOS__)
-	if len(s) >= 3 then
-		'' x:\...
-		if s[1] = asc(":") then
-			select case s[2]
-			case asc("/"), asc($"\")
-				return 3
-			end select
-		end if
-	end if
-#ifdef __FB_WIN32__
-	'' UNC paths
-	if len(s) >= 2 then
-		'' \\...
-		if s[0] = asc($"\") then
-			if s[1] = asc($"\") then
-				return 2
-			end if
-		end if
-	end if
-#endif
-#else
-	if len(s) >= 1 then
-		'' /...
-		if s[0] = asc("/") then
-			return 1
-		end if
-	end if
-#endif
-end function
-
-function pathIsAbsolute(byref s as string) as integer
-	function = (pathGetRootLength(s) > 0)
-end function
-
-'' Turns a relative path into an absolute path
-function pathMakeAbsolute(byref path as string) as string
-	if pathIsAbsolute(path) then
-		function = path
-	else
-		function = hCurdir() + path
-	end if
-end function
-
-function hExepath() as string
-	function = pathAddDiv(exepath())
-end function
-
-function hCurdir() as string
-	function = pathAddDiv(curdir())
-end function
-
-function pathStripCurdir(byref path as string) as string
-	var pwd = hCurdir()
-	if left(path, len(pwd)) = pwd then
-		function = right(path, len(path) - len(pwd))
-	else
-		function = path
-	end if
-end function
-
-private function pathEndsWithDiv(byref s as string) as integer
-	var length = len(s)
-	if length > 0 then
-#if defined(__FB_WIN32__) or defined(__FB_DOS__)
-		select case s[length-1]
-		case asc($"\"), asc("/")
-			function = TRUE
-		end select
-#else
-		function = (s[length-1] = asc("/"))
-#endif
-	end if
-end function
-
-function pathIsDir(byref s as string) as integer
-	function = hReadableDirExists(s) or pathEndsWithDiv(s)
-end function
-
-'' Component stack for the path solver
-const MAXSOLVERSTACK = 128
-namespace solver
-	dim shared stack(0 to MAXSOLVERSTACK-1) as integer
-	dim shared as integer top
-end namespace
-
-private sub solverInit()
-	solver.top = -1
-end sub
-
-private sub solverPush(byval w as integer)
-	solver.top += 1
-	if solver.top >= MAXSOLVERSTACK then
-		oops("path solver stack too small, MAXSOLVERSTACK=" & MAXSOLVERSTACK)
-	end if
-	solver.stack(solver.top) = w
-end sub
-
-private function solverPop() as integer
-	if solver.top > 0 then
-		solver.top -= 1
-	end if
-	function = solver.stack(solver.top)
-end function
-
-'' Resolves .'s and ..'s in the path,
-'' normalizes path separators to the host standard.
-function pathNormalize(byref path as string) as string
-	var rootlen = pathGetRootLength(path)
-	if rootlen = 0 then
-		return path
-	end if
-
-	'' r: read position, w: write position
-	'' r reads ahead, while w slowly writes out the result.
-	'' First r and w stay together, but as soon as r finds a .., w is set
-	'' back a bit, right in front of the path component it wrote last, so
-	'' that the component is dropped (it will be overwritten by following
-	'' components).
-	'' The stack is needed to be able to skip back over multiple components
-	'' in succession, for example in 'aa/bb/../..'.
-
-	'' r and w start out behind the root path (/ or C:\ etc.) so that it's
-	'' not touched. The begin of the first component after the root path
-	'' must be on the stack to be able to skip back to it (although the
-	'' begin of the root path itself, 0, is not on the stack, so it can't
-	'' be removed with a '..').
-	solverInit()
-	solverPush(rootlen)
-
-	var s = path
-	var dots = 0 '' Number of .'s in the current component
-	var chars = 0 '' Number of chars in the current component
-	var w = rootlen
-
-	for r as integer = rootlen to len(s) - 1
-		select case s[r]
-#if defined(__FB_WIN32__) or defined(__FB_DOS__)
-		case asc($"\"), asc("/")
-#else
-		case asc("/")
-#endif
-			'' Component closed: check whether it was /./ or /../
-			select case dots
-			case 1    '' /./
-				'' Ignore: don't write this /, and remove the .
-				w -= 1
-
-			case 2    '' /../
-				'' Go back to the begin of the component this
-				'' '..' refers to
-				w = solverPop()
-
-			case else
-				if chars = 0 then
-					'' // (Ignore: don't write this /)
-				else
-					'' Write this /. For Win32/DOS this also normalizes / to \.
-					s[w] = asc(PATHDIV)
-					'' New component starts behind this /
-					w += 1
-					'' Remember this begin position so
-					'' w can be reset to it during '..'.
-					solverPush(w)
-				end if
-
-			end select
-
-			dots = 0
-			chars = 0
-
-		case asc(".")
-			dots += 1
-			chars += 1
-			s[w] = s[r]
-			w += 1
-
-		case else
-			dots = 0
-			chars += 1
-			s[w] = s[r]
-			w += 1
-
-		end select
-	next
-
-	function = left(s, w)
-end function
-
-''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-
-'' *.h CRT/POSIX headers for which FB has corresponding crt/*.bi versions
-dim shared fbcrtheaders(0 to ...) as zstring ptr = _
-{ _
-	@"assert", @"ctype", @"errno", @"float", @"limits", @"locale", _
-	@"math", @"setjmp", @"signal", @"stdarg", @"stddef", @"stdint", _
-	@"stdio", @"stdlib", @"string", @"time", _
-	@"sys/types", @"sys/socket", @"wchar" _
-}
-
-dim shared fbcrtheaderhash as THash = Thash(5, TRUE)
-
-private sub fbcrtheadersInit() constructor
-	for i as integer = lbound(fbcrtheaders) to ubound(fbcrtheaders)
-		fbcrtheaderhash.addOverwrite(fbcrtheaders(i), NULL)
-	next
-end sub
-
-''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-
-type DATATYPEINFO
-	id as zstring ptr
-	dtype as integer
-end type
-
-dim shared extradatatypes(0 to ...) as DATATYPEINFO => _
-{ _
-	(@"__int8"   , TYPE_BYTE    ), _
-	(@"__int16"  , TYPE_SHORT   ), _
-	(@"__int32"  , TYPE_LONG    ), _
-	(@"__int64"  , TYPE_LONGINT ), _
-	(@"int8_t"   , TYPE_BYTE    ), _
-	(@"int16_t"  , TYPE_SHORT   ), _
-	(@"int32_t"  , TYPE_LONG    ), _
-	(@"int64_t"  , TYPE_LONGINT ), _
-	(@"uint8_t"  , TYPE_UBYTE   ), _
-	(@"uint16_t" , TYPE_USHORT  ), _
-	(@"uint32_t" , TYPE_ULONG   ), _
-	(@"uint64_t" , TYPE_ULONGINT), _
-	(@"intptr_t" , TYPE_INTEGER ), _
-	(@"uintptr_t", TYPE_UINTEGER), _
-	(@"ptrdiff_t", TYPE_INTEGER ), _
-	(@"size_t"   , TYPE_UINTEGER), _
-	(@"ssize_t"  , TYPE_INTEGER ), _
-	(@"wchar_t"  , TYPE_WSTRING )  _
-}
-
-dim shared extradatatypehash as THash = THash(6, FALSE)
-
-private sub extradatatypesInit() constructor
-	for i as integer = 0 to ubound(extradatatypes)
-		extradatatypehash.addOverwrite(extradatatypes(i).id, cast(any ptr, extradatatypes(i).dtype))
-	next
-end sub
-
-function extradatatypesLookup(byval id as zstring ptr) as integer
-	var item = extradatatypehash.lookup(id, hashHash(id))
-	if item->s then
-		function = cint(item->data)
-	else
-		function = TYPE_NONE
-	end if
-end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
@@ -1253,12 +554,314 @@ end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-function hReadableDirExists(byref path as string) as integer
-	var fixed = path
-	if right(fixed, len(PATHDIV)) = PATHDIV then
-		fixed = left(fixed, len(fixed) - len(PATHDIV))
+function IndexPattern.determineParentId(byval parentparent as ASTNODE ptr, byval parent as ASTNODE ptr) as const zstring ptr
+	'' If it's an anonymous procptr subtype, check its parent's id instead
+	if parentparent andalso _
+	   (parent->class = ASTCLASS_PROC) andalso _
+	   (parentparent->subtype = parent) then
+		function = parentparent->text
+	else
+		function = parent->text
 	end if
-	function = (len(dir(fixed, fbDirectory or fbReadOnly or fbHidden)) > 0)
+end function
+
+function IndexPattern.matches _
+	( _
+		byval parentparent as ASTNODE ptr, _
+		byval parent as ASTNODE ptr, _
+		byval childindex as integer _
+	) as integer
+	function = (this.childindex = childindex) andalso _
+	           strMatch(*determineParentId(parentparent, parent), parentpattern)
+end function
+
+''
+'' Declaration pattern format:
+''    [<parent-id-pattern>.]<child-id-pattern>
+''    <parent-id-pattern>.<child-index>
+''
+'' Id patterns ("child" or "parent.child") can be added to a StringMatcher,
+'' we can do lookups using the same formats.
+'' Index patterns however have to be matched manually.
+''
+'' TODO: extend StringMatcher to support payloads (like a hash table), then
+''       store child index into it, associated with parent id pattern?
+'' TODO: match based on astclass to speed things up a bit
+''       (if we have a parentpattern, the child can only be a field/param/enumconst)
+''
+sub DeclPatterns.parseAndAdd(byref s as string)
+	dim as string parent, child
+	strSplit(s, ".", parent, child)
+
+	'' Index pattern?
+	if (len(parent) > 0) and (len(child) > 0) and strIsNumber(child) then
+		var i = indexPatternCount
+		indexPatternCount += 1
+		indexPatterns = reallocate(indexPatterns, sizeof(*indexPatterns) * indexPatternCount)
+		indexPatterns[i].constructor()
+		indexPatterns[i].parentpattern = parent
+		indexPatterns[i].childindex = valuint(child)
+	else
+		stringPatterns.addPattern(s)
+	end if
+end sub
+
+destructor DeclPatterns()
+	for i as integer = 0 to indexPatternCount - 1
+		indexPatterns[i].destructor()
+	next
+	deallocate(indexPatterns)
+end destructor
+
+private function strConcatWithDotSeparator(byval a as const zstring ptr, byval b as const zstring ptr) as zstring ptr
+	dim as integer alen = strlen(a), blen = strlen(b)
+	dim s as ubyte ptr = allocate(alen + 1 + blen + 1)
+	memcpy(s, a, alen)
+	s[alen] = CH_DOT
+	memcpy(s + alen + 1, b, blen)
+	s[alen + 1 + blen] = 0
+	function = s
+end function
+
+function DeclPatterns.matches _
+	( _
+		byval parentparent as ASTNODE ptr, _
+		byval parent as ASTNODE ptr, _
+		byval child as ASTNODE ptr, _
+		byval childindex as integer _
+	) as integer
+
+	if child->text then
+		'' Match against "child" patterns
+		if stringPatterns.matches(child->text) then return TRUE
+
+		if parent andalso parent->text then
+			'' Match against "parent.child" patterns
+			'' Building the a.b string manually to avoid temp strings...
+			var s = strConcatWithDotSeparator(parent->text, child->text)
+			var match = stringPatterns.matches(s)
+			deallocate(s)
+			if match then return TRUE
+		end if
+	end if
+
+	if parent then
+		'' Match against index patterns
+		'' TODO: only if it's a field/param
+		for i as integer = 0 to indexPatternCount - 1
+			if indexPatterns[i].matches(parentparent, parent, childindex) then return TRUE
+		next
+	end if
+
+	function = FALSE
+end function
+
+''
+'' StringMatcher: Prefix tree for pattern matching
+'' Goal: to make matching faster than going through the patterns and doing strMatch() for each
+''
+'' foo
+'' foobar
+'' fuz
+'' bar
+''
+'' str f
+''   str oo
+''     eol
+''     str bar
+''       eol
+''   str uz
+''     eol
+'' str bar
+''   eol
+''
+'' ab
+'' a*b
+''
+'' str a
+''   str b
+''     eol
+''   wildcard
+''     str b
+''       eol
+''
+
+constructor StringMatcher()
+	root = astNewGROUP()
+end constructor
+
+destructor StringMatcher()
+	astDelete(root)
+end destructor
+
+private function findCommonPrefixLen(byval a as const zstring ptr, byval b as const zstring ptr) as integer
+	var length = 0
+	while ((*a)[0] = (*b)[0]) and ((*a)[0] <> 0)
+		length += 1
+		a += 1
+		b += 1
+	wend
+	function = length
+end function
+
+private function findWildcardOrEol(byval s as const zstring ptr) as integer
+	var i = 0
+	while ((*s)[0] <> CH_STAR) and ((*s)[0] <> 0)
+		i += 1
+		s += 1
+	wend
+	function = i
+end function
+
+static sub StringMatcher.insert(byval n as ASTNODE ptr, byval s as const zstring ptr)
+	''
+	'' Check current choices at this level
+	'' We need to check for common prefix between an existing choice and the
+	'' new pattern, and then re-use it and possibly extract it.
+	''
+	'' insert foo2 into
+	''   foo1
+	''     a
+	''     b
+	'' =>
+	''   foo
+	''     1
+	''       a
+	''       b
+	''     2
+	''
+	'' insert foo2 into
+	''   foo1
+	''   bar
+	'' =>
+	''   foo
+	''     1
+	''     2
+	''   bar
+	''
+	scope
+		var i = n->head
+		while i
+
+			select case i->class
+			case ASTCLASS_WILDCARD
+				if (*s)[0] = CH_STAR then
+					'' WILDCARD node is already here, recursively add the rest
+					insert(i, @s[1])
+					exit sub
+				end if
+
+			case ASTCLASS_EOL
+				if (*s)[0] = 0 then
+					'' Empty pattern, and we already have an EOL node here,
+					'' so nothing more needs to be added
+					exit sub
+				end if
+
+			case ASTCLASS_STRING
+				var commonprefixlen = findCommonPrefixLen(i->text, s)
+				if commonprefixlen > 0 then
+					'' If there is a remainder, the node has to be split up
+					if (*i->text)[commonprefixlen] <> 0 then
+						'' Move the remainder suffix into a child node
+						var remainder = astNew(ASTCLASS_STRING, @i->text[commonprefixlen])
+						astTakeChildren(remainder, i)
+						astAppend(i, remainder)
+
+						'' Truncate to prefix only
+						(*i->text)[commonprefixlen] = 0
+					end if
+
+					'' Pattern not completely covered yet? Then recursively add its remainder.
+					if (*s)[commonprefixlen] <> 0 then
+						insert(i, @s[commonprefixlen])
+					end if
+
+					exit sub
+				end if
+			end select
+
+			i = i->next
+		wend
+	end scope
+
+	'' Otherwise, add a new choice at this level
+	var eol = findWildcardOrEol(s)
+	if eol > 0 then
+		'' Add node for string prefix, recursively add the rest
+		dim as ubyte ptr prefix = allocate(eol + 1)
+		memcpy(prefix, s, eol)
+		prefix[eol] = 0
+
+		var strnode = astNew(ASTCLASS_STRING)
+		strnode->text = prefix
+		astAppend(n, strnode)
+
+		insert(n->tail, @s[eol])
+	else
+		select case (*s)[0]
+		case CH_STAR
+			'' Add node for wildcard, recursively add the rest
+			astAppend(n, astNew(ASTCLASS_WILDCARD))
+			insert(n->tail, @s[1])
+		case 0
+			'' EOL node
+			astAppend(n, astNew(ASTCLASS_EOL))
+		end select
+	end if
+end sub
+
+sub StringMatcher.addPattern(byval s as const zstring ptr)
+	insert(root, s)
+end sub
+
+static function StringMatcher.matches(byval prefix as ASTNODE ptr, byval s as const zstring ptr) as integer
+	select case prefix->class
+	case ASTCLASS_WILDCARD
+		'' Also check suffixes, there must be at least an EOL node
+		var suffix = prefix->head
+
+		'' Check whether any of the suffixes match
+		do
+			'' Have to try matches at all possible positions (i.e. expanding the wildcard),
+			'' even if it's just a null terminator (so it can match an EOL)
+			var i = s
+			do
+				if matches(suffix, i) then return TRUE
+				if (*i)[0] = 0 then exit do
+				i += 1
+			loop
+			suffix = suffix->next
+		loop while suffix
+
+	case ASTCLASS_EOL
+		'' The given string must be empty
+		if (*s)[0] = 0 then return TRUE
+
+	case ASTCLASS_STRING
+		'' The given string must have this exact prefix
+		var prefixlen = strlen(prefix->text)
+		if strncmp(prefix->text, s, prefixlen) = 0 then
+			'' Prefix matched; now check suffixes, there must be at least an EOL node
+			var suffix = prefix->head
+			do
+				if matches(suffix, @s[prefixlen]) then return TRUE
+				suffix = suffix->next
+			loop while suffix
+		end if
+	end select
+
+	'' Nothing matched
+	function = FALSE
+end function
+
+function StringMatcher.matches(byval s as const zstring ptr) as integer
+	var i = root->head
+	while i
+		if matches(i, s) then return TRUE
+		i = i->next
+	wend
+	function = FALSE
 end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''

@@ -19,22 +19,20 @@
 ''  @ignore      Skip this .h file completely, allowing it to be #included
 ''               into others etc. without being seen as test cases itself.
 ''
+'' Additionally, unit tests for fbfrog's code are supported by compiling and
+'' running .bas files in the tests/unit/ directory. Their console output is
+'' captured too, allowing the tests to use astDump() etc.
+''
 
-#include once "dir.bi"
+#include "../util-path.bas"
+#include "../util-str.bas"
+#include "dir.bi"
 
-const NULL = 0
-const FALSE = 0
-const TRUE = -1
-
-type TESTCALLBACK as sub(byref as string)
-
-type STATS
-	oks as integer
-	fails as integer
+type TestRunner
+	as string exe_path, cur_dir, fbfrog
 end type
 
-dim shared stat as STATS
-dim shared as string exe_path, cur_dir, fbfrog
+dim shared runner as TestRunner
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
@@ -46,94 +44,8 @@ function strStripPrefix(byref s as string, byref prefix as string) as string
 	end if
 end function
 
-function strReplace _
-	( _
-		byref text as string, _
-		byref a as string, _
-		byref b as string _
-	) as string
-
-	var result = text
-
-	var alen = len(a)
-	var blen = len(b)
-
-	var i = 0
-	do
-		'' Does result contain an occurence of a?
-		i = instr(i + 1, result, a)
-		if i = 0 then
-			exit do
-		end if
-
-		'' Cut out a and insert b in its place
-		'' result  =  front  +  b  +  back
-		var keep = right(result, len(result) - ((i - 1) + alen))
-		result = left(result, i - 1)
-		result += b
-		result += keep
-
-		i += blen - 1
-	loop
-
-	function = result
-end function
-
-#if defined(__FB_WIN32__) or defined(__FB_DOS__)
-	const PATHDIV = $"\"
-#else
-	const PATHDIV = "/"
-#endif
-
-function pathAddDiv(byref path as string) as string
-	var s = path
-	var length = len(s)
-
-	if length > 0 then
-#if defined(__FB_WIN32__) or defined(__FB_DOS__)
-		select case s[length-1]
-		case asc("\"), asc("/")
-
-		case else
-			s += "\"
-		end select
-#else
-		if s[length-1] <> asc("/") then
-			s += "/"
-		end if
-#endif
-	end if
-
-	function = s
-end function
-
-private function hFindFileName(byref path as string) as integer
-	for i as integer = len(path)-1 to 0 step -1
-		select case path[i]
-#if defined(__FB_WIN32__) or defined(__FB_DOS__)
-		case asc("\"), asc("/")
-#else
-		case asc("/")
-#endif
-			return i + 1
-		end select
-	next
-end function
-
-function pathOnly(byref path as string) as string
-	function = left(path, hFindFileName(path))
-end function
-
 function pathStripLastComponent(byref path as string) as string
 	function = pathOnly(left(path, len(path) - 1))
-end function
-
-function hConsoleWidth() as integer
-	dim as integer w = loword(width())
-	if w < 0 then
-		w = 0
-	end if
-	function = w
 end function
 
 function hExtractLine1(byref filename as string) as string
@@ -149,6 +61,20 @@ function hExtractLine1(byref filename as string) as string
 	close #f
 
 	function = line1
+end function
+
+function hShell(byref ln as string) as integer
+	var result = shell(ln)
+	select case result
+	case -1
+		print "command not found: '" + ln + "'"
+		end 1
+	case 0, 1
+	case else
+		print "command terminated with unusual error code " & result & ": " + ln
+		end 1
+	end select
+	function = (result = 0)
 end function
 
 sub hTest(byref hfile as string)
@@ -174,37 +100,29 @@ sub hTest(byref hfile as string)
 		end if
 	end scope
 
-	assert(right(hfile, 2) = ".h")
-	var txtfile = left(hfile, len(hfile) - 2) + ".txt"
+	var txtfile = pathStripExt(hfile) + ".txt"
 
-	var message = iif(is_failure_test, "FAIL", "PASS") + " " + hfile
-	print message;
+	print iif(is_failure_test, "FAIL", "PASS") + " " + hfile
 
 	'' ./fbfrog *.h <extraoptions> > txtfile 2>&1
-	var ln = fbfrog + " " + hfile + " " + extraoptions
-	var result = shell(ln + " > " + txtfile + " 2>&1")
-	select case result
-	case -1
-		print "command not found: '" + ln + "'"
+	var ln = runner.fbfrog + " " + hfile + " " + extraoptions
+	hShell(ln + " > " + txtfile + " 2>&1")
+end sub
+
+sub hUnitTest(byref basfile as string)
+	var basprogram = pathStripExt(basfile)
+	var txtfile = basprogram + ".txt"
+
+	print "UNIT " + basfile
+
+	if hShell("fbc " + basfile) = FALSE then
+		print "error: compilation failed"
 		end 1
-
-	case 0, 1
-
-	case else
-		print "fbfrog (or the shell) terminated with unusual error code " & result
-		end 1
-	end select
-
-	dim as string suffix
-	if (result <> 0) = is_failure_test then
-		suffix = "[ ok ]"
-		stat.oks += 1
-	else
-		suffix = "[fail]"
-		stat.fails += 1
 	end if
 
-	print space(hConsoleWidth() - len(message) - len(suffix)) + suffix
+	hShell(basprogram + " > " + txtfile + " 2>&1")
+
+	kill(basprogram)
 end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -262,7 +180,7 @@ private sub hScanParent(byref parent as string, byref filepattern as string)
 			print "MAXFILE is too small"
 			end 1
 		end if
-		files.list(files.count) = strStripPrefix(parent + found, cur_dir)
+		files.list(files.count) = strStripPrefix(parent + found, runner.cur_dir)
 		files.count += 1
 
 		found = dir()
@@ -333,18 +251,20 @@ end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-exe_path = pathAddDiv(exepath())
-cur_dir = pathAddDiv(curdir())
-fbfrog = pathStripLastComponent(exe_path) + "fbfrog"
-if cur_dir + "tests" + PATHDIV = exe_path then
-	fbfrog = "./fbfrog"
+runner.exe_path = pathAddDiv(exepath())
+runner.cur_dir = pathAddDiv(curdir())
+runner.fbfrog = pathStripLastComponent(runner.exe_path) + "fbfrog"
+if (runner.cur_dir + "tests" + PATHDIV) = runner.exe_path then
+	runner.fbfrog = "./fbfrog"
 end if
 
-var clean_only = FALSE
+var clean_only = FALSE, unit_only = FALSE
 for i as integer = 1 to __FB_ARGC__-1
 	select case *__FB_ARGV__[i]
 	case "-clean"
 		clean_only = TRUE
+	case "-unit"
+		unit_only = TRUE
 	case else
 		print "unknown option: " + *__FB_ARGV__[i]
 		end 1
@@ -352,8 +272,12 @@ for i as integer = 1 to __FB_ARGC__-1
 next
 
 '' Clean test directories: Delete existing *.txt and *.bi files
-hScanDirectory(exe_path, "*.txt")
-hScanDirectory(exe_path, "*.bi")
+if unit_only then
+	hScanDirectory(runner.exe_path + "unit", "*.txt")
+else
+	hScanDirectory(runner.exe_path, "*.txt")
+	hScanDirectory(runner.exe_path, "*.bi")
+end if
 for i as integer = 0 to files.count-1
 	var dummy = kill(files.list(i))
 next
@@ -363,11 +287,20 @@ if clean_only then
 	end 0
 end if
 
-'' Test each *.h file
-hScanDirectory(exe_path, "*.h")
+if unit_only = FALSE then
+	'' Test each *.h file
+	hScanDirectory(runner.exe_path, "*.h")
+	hSortFiles()
+	for i as integer = 0 to files.count-1
+		hTest(files.list(i))
+	next
+	files.count = 0
+end if
+
+'' Compile and run *.bas unit tests
+hScanDirectory(runner.exe_path + "unit", "*.bas")
 hSortFiles()
 for i as integer = 0 to files.count-1
-	hTest(files.list(i))
+	hUnitTest(files.list(i))
 next
-
-print "  " & stat.oks & " tests ok, " & stat.fails & " failed"
+files.count = 0

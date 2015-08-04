@@ -380,6 +380,14 @@ private sub emitAssign(byval n as ASTNODE ptr, byval assignop as zstring ptr)
 end sub
 
 private sub emitCode(byval n as ASTNODE ptr, byval parentclass as integer)
+	var wrap_in_ifndef = ((n->attrib and ASTATTRIB_IFNDEFDECL) <> 0)
+
+	if wrap_in_ifndef then
+		assert(n->text)
+		emitLine("#ifndef " + *n->text)
+		emit.indent += 1
+	end if
+
 	select case as const n->class
 	case ASTCLASS_GROUP
 		var i = n->head
@@ -677,6 +685,11 @@ private sub emitCode(byval n as ASTNODE ptr, byval parentclass as integer)
 	case else
 		emitLine(emitExpr(n))
 	end select
+
+	if wrap_in_ifndef then
+		emit.indent -= 1
+		emitLine("#endif")
+	end if
 end sub
 
 private function hEmitOperands(byval n as ASTNODE ptr, byref separator as string) as string

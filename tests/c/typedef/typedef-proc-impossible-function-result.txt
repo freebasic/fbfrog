@@ -1,2 +1,2 @@
 [ 1/23] linux-x86
-oops, can't solve out typedef T in procedure f()
+oops, can't expand typedef T as declare sub cdecl() into procedure f() as T: can't have a function type as type for function result/cast/sizeof

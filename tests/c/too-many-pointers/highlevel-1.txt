@@ -1,2 +1,2 @@
 [ 1/23] linux-x86
-oops, can't solve out typedef T in variable a2
+oops, can't expand typedef T(0 to 9) as long ptr ptr ptr ptr ptr ptr ptr ptr into variable a2 as T ptr: too many pointers

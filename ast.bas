@@ -33,6 +33,8 @@ dim shared as zstring ptr astnodename(0 to ...) => _
 	@"fbcode"    , _
 	@"renamelist", _
 	@"title"     , _
+	@"wildcard"  , _
+	@"eol"       , _
 	_
 	_ '' Script helper nodes
 	@"declareversions", _
@@ -236,6 +238,13 @@ function astNewOPTION(byval opt as integer, byval text1 as zstring ptr, byval te
 	n->opt = opt
 	function = n
 end function
+
+sub astTakeChildren(byval dest as ASTNODE ptr, byval source as ASTNODE ptr)
+	dest->head = source->head
+	dest->tail = source->tail
+	source->head = NULL
+	source->tail = NULL
+end sub
 
 function astCloneChildren(byval src as ASTNODE ptr) as ASTNODE ptr
 	var n = astNewGROUP()
@@ -607,6 +616,11 @@ function astIsEqual _
 		aattrib and= not ASTATTRIB_HIDECALLCONV
 		battrib and= not ASTATTRIB_HIDECALLCONV
 
+		'' Whether nodes are affected by -[no]string only matters during the CharStringPass;
+		'' it doesn't matter for merging.
+		aattrib and= not (ASTATTRIB_NOSTRING or ASTATTRIB_STRING)
+		battrib and= not (ASTATTRIB_NOSTRING or ASTATTRIB_STRING)
+
 		'' Ignore DLLIMPORT/STATIC on procedures for now, as we're not emitting it anyways
 		if a->class = ASTCLASS_PROC then
 			aattrib and= not (ASTATTRIB_DLLIMPORT or ASTATTRIB_STATIC)
@@ -756,7 +770,6 @@ function astCount(byval n as ASTNODE ptr) as integer
 	function = count
 end function
 
-
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 '' AST dumping for pretty output and debugging
 
@@ -770,7 +783,7 @@ function astDumpPrettyClass(byval astclass as integer) as string
 	end select
 end function
 
-function astDumpPrettyDecl(byval n as ASTNODE ptr) as string
+function astDumpPrettyDecl(byval n as ASTNODE ptr, byval show_type as integer) as string
 	dim as string s
 
 	if n->text = NULL then
@@ -789,6 +802,13 @@ function astDumpPrettyDecl(byval n as ASTNODE ptr) as string
 
 	if n->class = ASTCLASS_PROC then
 		s += "()"
+	end if
+
+	if show_type then
+		if n->array then
+			s += emitExpr(n->array)
+		end if
+		s += " as " + emitType(n->dtype, n->subtype)
 	end if
 
 	function = s

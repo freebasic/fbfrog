@@ -1,0 +1,37 @@
+--------------------------------------------------------------------------------
+patterns: "a", "b"
+group
+   string "a"
+      eol
+   string "b"
+      eol
+--------------------------------------------------------------------------------
+patterns: "a", "b", "aa"
+group
+   string "a"
+      eol
+      string "a"
+         eol
+   string "b"
+      eol
+--------------------------------------------------------------------------------
+patterns: "a", "b", "aa", "b*"
+group
+   string "a"
+      eol
+      string "a"
+         eol
+   string "b"
+      eol
+      wildcard
+         eol
+--------------------------------------------------------------------------------
+patterns: "aa1", "aa2", "aa3"
+group
+   string "aa"
+      string "1"
+         eol
+      string "2"
+         eol
+      string "3"
+         eol

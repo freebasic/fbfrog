@@ -1,3 +1,5 @@
+#undef FALSE
+#undef TRUE
 const NULL = 0
 const FALSE = 0
 const TRUE = -1
@@ -113,8 +115,9 @@ declare function strReplace _
 declare function strReplaceNonIdChars(byref orig as string, byval replacement as integer) as string
 declare function strMakePrintable(byref a as string) as string
 declare function strIsValidSymbolId(byval s as zstring ptr) as integer
+declare function strIsNumber(byref s as string) as integer
 declare function strIsReservedIdInC(byval id as zstring ptr) as integer
-declare function strMatch(byref s as string, byref pattern as string) as integer
+declare function strMatch(byref s as const string, byref pattern as const string) as integer
 
 enum
 	OS_LINUX
@@ -194,7 +197,7 @@ type THash
 
 	declare constructor(byval exponent as integer, byval duplicate_strings as integer = FALSE)
 	declare destructor()
-	declare operator let(byref as const THash) '' declared but not implemented
+	declare operator let(byref as const THash) '' unimplemented
 
 	declare function lookup(byval s as zstring ptr, byval hash as ulong) as THashItem ptr
 	declare function lookupDataOrNull(byval id as zstring ptr) as any ptr
@@ -213,10 +216,6 @@ end type
 declare function hashHash(byval s as zstring ptr) as ulong
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-
-extern fbcrtheaderhash as THash
-
-declare function extradatatypesLookup(byval id as zstring ptr) as integer
 
 enum
 	FBKW_OP
@@ -246,9 +245,9 @@ declare function pathMakeAbsolute(byref path as string) as string
 declare function hExepath() as string
 declare function hCurdir() as string
 declare function pathStripCurdir(byref path as string) as string
+declare function hReadableDirExists(byref path as string) as integer
 declare function pathIsDir(byref s as string) as integer
 declare function pathNormalize(byref path as string) as string
-declare function hReadableDirExists(byref path as string) as integer
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
@@ -433,6 +432,7 @@ enum
 	OPT_RENAMEDEFINE
 	OPT_RENAMEMACROPARAM
 	OPT_RENAME
+	OPT_REMOVE
 	OPT_REMOVEDEFINE
 	OPT_REMOVEPROC
 	OPT_REMOVEVAR
@@ -442,11 +442,12 @@ enum
 	OPT_TYPEDEFHINT
 	OPT_ADDFORWARDDECL
 	OPT_UNDEFBEFOREDECL
-	OPT_NOSTRING
-	OPT_STRING
+	OPT_IFNDEFDECL
 	OPT_CONVBODYTOKENS
 	OPT_EXPANDINDEFINE
 	OPT_NOEXPAND
+	OPT_NOSTRING
+	OPT_STRING
 	OPT_REMOVEINCLUDE
 	OPT_SETARRAYSIZE
 	OPT_MOVEABOVE
@@ -592,6 +593,8 @@ enum
 	ASTCLASS_FBCODE
 	ASTCLASS_RENAMELIST
 	ASTCLASS_TITLE
+	ASTCLASS_WILDCARD
+	ASTCLASS_EOL
 
 	'' Script helper nodes
 	ASTCLASS_DECLAREVERSIONS
@@ -745,6 +748,9 @@ const ASTATTRIB_DLLIMPORT     = 1 shl 15  '' VAR, PROC (ignored when merging PRO
 const ASTATTRIB_ENUMCONST     = 1 shl 16
 const ASTATTRIB_NORENAMELIST  = 1 shl 17
 const ASTATTRIB_USED          = 1 shl 18
+const ASTATTRIB_IFNDEFDECL    = 1 shl 19
+const ASTATTRIB_NOSTRING      = 1 shl 20 '' helper flag used during CharStringPass to mark nodes affected by -nostring
+const ASTATTRIB_STRING        = 1 shl 21 '' same for -string
 
 const ASTATTRIB__CALLCONV = ASTATTRIB_CDECL or ASTATTRIB_STDCALL
 
@@ -813,6 +819,7 @@ declare function astNewDEFINEDfb64(byval negate as integer) as ASTNODE ptr
 declare function astNewDEFINEDfbarm(byval negate as integer) as ASTNODE ptr
 declare function astNewDEFINEDfbos(byval os as integer) as ASTNODE ptr
 declare function astNewOPTION(byval opt as integer, byval text1 as zstring ptr = NULL, byval text2 as zstring ptr = NULL) as ASTNODE ptr
+declare sub astTakeChildren(byval dest as ASTNODE ptr, byval source as ASTNODE ptr)
 declare function astCloneChildren(byval src as ASTNODE ptr) as ASTNODE ptr
 declare function astGroupContains(byval group as ASTNODE ptr, byval lookfor as ASTNODE ptr) as integer
 declare function astGroupContainsAnyChildrenOf(byval l as ASTNODE ptr, byval r as ASTNODE ptr) as integer
@@ -861,7 +868,7 @@ declare function astLookupMacroParam(byval macro as ASTNODE ptr, byval id as zst
 declare sub astVisit(byval n as ASTNODE ptr, byval callback as ASTVISITCALLBACK)
 declare function astCount(byval n as ASTNODE ptr) as integer
 declare function astDumpPrettyClass(byval astclass as integer) as string
-declare function astDumpPrettyDecl(byval n as ASTNODE ptr) as string
+declare function astDumpPrettyDecl(byval n as ASTNODE ptr, byval show_type as integer = FALSE) as string
 declare function astDumpOne(byval n as ASTNODE ptr) as string
 declare sub astDump _
 	( _
@@ -885,6 +892,45 @@ declare sub astProcessVerblocks(byval code as ASTNODE ptr)
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
+type StringMatcher
+	root as ASTNODE ptr
+	declare constructor()
+	declare destructor()
+	declare static sub insert(byval n as ASTNODE ptr, byval s as const zstring ptr)
+	declare sub addPattern(byval s as const zstring ptr)
+	declare static function matches(byval n as ASTNODE ptr, byval s as const zstring ptr) as integer
+	declare function matches(byval s as const zstring ptr) as integer
+	declare operator let(byref as const StringMatcher) '' unimplemented
+end type
+
+type IndexPattern
+	parentpattern as string
+	childindex as integer
+	declare function determineParentId(byval parentparent as ASTNODE ptr, byval parent as ASTNODE ptr) as const zstring ptr
+	declare function matches _
+		( _
+			byval parentparent as ASTNODE ptr, _
+			byval parent as ASTNODE ptr, _
+			byval childindex as integer _
+		) as integer
+end type
+
+type DeclPatterns
+	stringPatterns as StringMatcher
+	indexPatterns as IndexPattern ptr
+	indexPatternCount as integer
+	declare sub parseAndAdd(byref s as string)
+	declare destructor()
+	declare function matches _
+		( _
+			byval parentparent as ASTNODE ptr, _
+			byval parent as ASTNODE ptr, _
+			byval child as ASTNODE ptr, _
+			byval childindex as integer _
+		) as integer
+	declare operator let(byref as const DeclPatterns) '' unimplemented
+end type
+
 type CodeReplacement
 	as zstring ptr fromcode, tocode
 	tofb as integer
@@ -901,7 +947,8 @@ type ApiInfo
 
 	have_renames as integer
 	renameopt(OPT_RENAMETYPEDEF to OPT_RENAME) as THash = any
-	idopt(OPT_REMOVEDEFINE to OPT_NOEXPAND) as THash = any
+	idopt(OPT_REMOVE to OPT_NOEXPAND) as THash = any
+	patterns(OPT_NOSTRING to OPT_STRING) as DeclPatterns
 	removeinclude as THash = THash(3, FALSE)
 	setarraysizeoptions as THash = THash(3, FALSE)
 	moveaboveoptions as ASTNODE ptr
@@ -913,13 +960,12 @@ type ApiInfo
 
 	declare constructor()
 	declare destructor()
-	declare operator let(byref as const ApiInfo) '' declared but not implemented
-
 	declare sub addReplacement(byval fromcode as zstring ptr, byval tocode as zstring ptr, byval tofb as integer)
 	declare sub loadOption(byval opt as integer, byval param1 as zstring ptr, byval param2 as zstring ptr)
 	declare sub loadOptions()
 	declare sub print(byref ln as string)
 	declare function prettyId() as string
+	declare operator let(byref as const ApiInfo) '' unimplemented
 end type
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''

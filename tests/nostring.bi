@@ -12,5 +12,8 @@ end type
 
 extern p1 as zstring ptr
 extern p2 as byte ptr
+type CHAR as byte
+extern p3 as CHAR ptr
+declare sub f1(byval i as CHAR, byval p as CHAR ptr)
 
 end extern
