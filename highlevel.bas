@@ -966,6 +966,13 @@ private sub hlFindStringOptionMatches _
 		byval index as integer _
 	)
 
+	'' TODO: don't call DeclPatterns.matches() if CharStringPass won't care anyways
+	'' 1. only check for match on nodes that have string/byte dtype
+	'' 2. don't try 2nd lookup if first one succeeded (-string and -nostring
+	''    on the same decl doesn't make sense anyways)
+	'' but this only works if string typedefs are already expanded,
+	'' so also try matching on nodes with UDT type?
+
 	if hl.api->patterns(OPT_NOSTRING).matches(parentparent, parent, n, index) then
 		n->attrib or= ASTATTRIB_NOSTRING
 	end if

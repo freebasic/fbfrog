@@ -118,7 +118,7 @@ declare function strMakePrintable(byref a as string) as string
 declare function strIsValidSymbolId(byval s as zstring ptr) as integer
 declare function strIsNumber(byref s as string) as integer
 declare function strIsReservedIdInC(byval id as zstring ptr) as integer
-declare function strMatch(byref s as string, byref pattern as string) as integer
+declare function strMatch(byref s as const string, byref pattern as const string) as integer
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
@@ -848,24 +848,33 @@ declare sub astProcessVerblocks(byval code as ASTNODE ptr)
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-'' String pattern for matching a declaration by name (proc/var/field/param/typedef/struct/etc.),
-'' which can be a child (param/field/enumconst) if we have a parent pattern too (proc for param, struct/union for field, etc.)
-type DeclPattern
-	as string parentid, childid
+type StringMatcher
+	root as ASTNODE ptr
+	declare constructor()
+	declare destructor()
+	declare static sub insert(byval n as ASTNODE ptr, byval s as const zstring ptr)
+	declare sub addPattern(byval s as const zstring ptr)
+	declare static function matches(byval n as ASTNODE ptr, byval s as const zstring ptr) as integer
+	declare function matches(byval s as const zstring ptr) as integer
+	declare operator let(byref as const StringMatcher) '' unimplemented
+end type
+
+type IndexPattern
+	parentpattern as string
 	childindex as integer
+	declare function determineParentId(byval parentparent as ASTNODE ptr, byval parent as ASTNODE ptr) as const zstring ptr
 	declare function matches _
 		( _
 			byval parentparent as ASTNODE ptr, _
 			byval parent as ASTNODE ptr, _
-			byval child as ASTNODE ptr, _
 			byval childindex as integer _
 		) as integer
 end type
 
 type DeclPatterns
-	patterns as DeclPattern ptr
-	count as integer
-	declare sub add(byref pattern as DeclPattern)
+	stringPatterns as StringMatcher
+	indexPatterns as IndexPattern ptr
+	indexPatternCount as integer
 	declare sub parseAndAdd(byref s as string)
 	declare destructor()
 	declare function matches _
@@ -875,16 +884,7 @@ type DeclPatterns
 			byval child as ASTNODE ptr, _
 			byval childindex as integer _
 		) as integer
-end type
-
-type StringMatcher
-	root as ASTNODE ptr
-	declare constructor()
-	declare destructor()
-	declare static sub insert(byval n as ASTNODE ptr, byval s as const zstring ptr)
-	declare sub addPattern(byval s as const zstring ptr)
-	declare static function matches(byval n as ASTNODE ptr, byval s as const zstring ptr) as integer
-	declare function matches(byval s as const zstring ptr) as integer
+	declare operator let(byref as const DeclPatterns) '' unimplemented
 end type
 
 type CodeReplacement
@@ -916,6 +916,7 @@ type ApiInfo
 	declare sub addReplacement(byval fromcode as zstring ptr, byval tocode as zstring ptr, byval tofb as integer)
 	declare sub loadOption(byval opt as integer, byval param1 as zstring ptr, byval param2 as zstring ptr)
 	declare sub loadOptions()
+	declare operator let(byref as const ApiInfo) '' unimplemented
 end type
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''

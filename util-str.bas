@@ -151,7 +151,7 @@ end function
 
 '' Recursive string matching, with ? and * wildcards, seems to work ok
 '' (based on post from stackoverflow)
-function strMatch(byref s as string, byref pattern as string) as integer
+function strMatch(byref s as const string, byref pattern as const string) as integer
 	'' Always match?
 	if pattern = "*" then return TRUE
 

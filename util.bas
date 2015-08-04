@@ -559,78 +559,74 @@ end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-function DeclPattern.matches _
-	( _
-		byval parentparent as ASTNODE ptr, _
-		byval parent as ASTNODE ptr, _
-		byval child as ASTNODE ptr, _
-		byval childindex as integer _
-	) as integer
-
-	if len(parentid) > 0 then
-		if parent = NULL then exit function
-
-		'' If it's an anonymous procptr subtype, check its parent's id instead
-		dim parentid as zstring ptr
-		if parentparent andalso _
-		   (parent->class = ASTCLASS_PROC) andalso _
-		   (parentparent->subtype = parent) then
-			parentid = parentparent->text
-		else
-			parentid = parent->text
-		end if
-		if strMatch(*parentid, this.parentid) = FALSE then exit function
-	end if
-
-	if len(childid) > 0 then
-		'' Match child by name
-		function = strMatch(*child->text, childid)
+function IndexPattern.determineParentId(byval parentparent as ASTNODE ptr, byval parent as ASTNODE ptr) as const zstring ptr
+	'' If it's an anonymous procptr subtype, check its parent's id instead
+	if parentparent andalso _
+	   (parent->class = ASTCLASS_PROC) andalso _
+	   (parentparent->subtype = parent) then
+		function = parentparent->text
 	else
-		'' Match child by index
-		function = (this.childindex = childindex)
+		function = parent->text
 	end if
 end function
 
-sub DeclPatterns.add(byref pattern as DeclPattern)
-	var i = count
-	count += 1
-	patterns = reallocate(patterns, sizeof(*patterns) * count)
-	patterns[i].constructor()
-	patterns[i] = pattern
-end sub
+function IndexPattern.matches _
+	( _
+		byval parentparent as ASTNODE ptr, _
+		byval parent as ASTNODE ptr, _
+		byval childindex as integer _
+	) as integer
+	function = (this.childindex = childindex) andalso _
+	           strMatch(*determineParentId(parentparent, parent), parentpattern)
+end function
 
+''
 '' Declaration pattern format:
 ''    [<parent-id-pattern>.]<child-id-pattern>
 ''    <parent-id-pattern>.<child-index>
+''
+'' Id patterns ("child" or "parent.child") can be added to a StringMatcher,
+'' we can do lookups using the same formats.
+'' Index patterns however have to be matched manually.
+''
+'' TODO: extend StringMatcher to support payloads (like a hash table), then
+''       store child index into it, associated with parent id pattern?
 '' TODO: match based on astclass to speed things up a bit
 ''       (if we have a parentpattern, the child can only be a field/param/enumconst)
-'' TODO: if pattern is a simple id (no wildcards or parent pattern), add to
-''       hashtb instead of adding as DeclPattern?
+''
 sub DeclPatterns.parseAndAdd(byref s as string)
-	dim pattern as DeclPattern
+	dim as string parent, child
+	strSplit(s, ".", parent, child)
 
-	strSplit(s, ".", pattern.parentid, pattern.childid)
-
-	if len(pattern.childid) > 0 then
-		'' Can be given a child index instead of a child id
-		if strIsNumber(pattern.childid) then
-			pattern.childindex = valuint(pattern.childid)
-			pattern.childid = ""
-		end if
+	'' Index pattern?
+	if (len(parent) > 0) and (len(child) > 0) and strIsNumber(child) then
+		var i = indexPatternCount
+		indexPatternCount += 1
+		indexPatterns = reallocate(indexPatterns, sizeof(*indexPatterns) * indexPatternCount)
+		indexPatterns[i].constructor()
+		indexPatterns[i].parentpattern = parent
+		indexPatterns[i].childindex = valuint(child)
 	else
-		'' Just one pattern; use it as child
-		swap pattern.parentid, pattern.childid
+		stringPatterns.addPattern(s)
 	end if
-
-	add(pattern)
 end sub
 
 destructor DeclPatterns()
-	for i as integer = 0 to count - 1
-		patterns[i].destructor()
+	for i as integer = 0 to indexPatternCount - 1
+		indexPatterns[i].destructor()
 	next
-	deallocate(patterns)
+	deallocate(indexPatterns)
 end destructor
+
+private function strConcatWithDotSeparator(byval a as const zstring ptr, byval b as const zstring ptr) as zstring ptr
+	dim as integer alen = strlen(a), blen = strlen(b)
+	dim s as ubyte ptr = allocate(alen + 1 + blen + 1)
+	memcpy(s, a, alen)
+	s[alen] = CH_DOT
+	memcpy(s + alen + 1, b, blen)
+	s[alen + 1 + blen] = 0
+	function = s
+end function
 
 function DeclPatterns.matches _
 	( _
@@ -639,11 +635,30 @@ function DeclPatterns.matches _
 		byval child as ASTNODE ptr, _
 		byval childindex as integer _
 	) as integer
-	for i as integer = 0 to count - 1
-		if patterns[i].matches(parentparent, parent, child, childindex) then
-			return TRUE
+
+	if child->text then
+		'' Match against "child" patterns
+		if stringPatterns.matches(child->text) then return TRUE
+
+		if parent andalso parent->text then
+			'' Match against "parent.child" patterns
+			'' Building the a.b string manually to avoid temp strings...
+			var s = strConcatWithDotSeparator(parent->text, child->text)
+			var match = stringPatterns.matches(s)
+			deallocate(s)
+			if match then return TRUE
 		end if
-	next
+	end if
+
+	if parent then
+		'' Match against index patterns
+		'' TODO: only if it's a field/param
+		for i as integer = 0 to indexPatternCount - 1
+			if indexPatterns[i].matches(parentparent, parent, childindex) then return TRUE
+		next
+	end if
+
+	function = FALSE
 end function
 
 ''
