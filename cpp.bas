@@ -2925,6 +2925,19 @@ sub hMoveDirectivesOutOfConstructs()
 	loop
 end sub
 
+private function removeEols(byval first as integer, byval last as integer) as integer
+	var x = first
+	while x <= last
+		if tkGet(x) = TK_EOL then
+			tkRemove(x, x)
+			x -= 1
+			last -= 1
+		end if
+		x += 1
+	wend
+	function = last
+end function
+
 sub hApplyReplacements()
 	'' Lex all the C token "patterns", so we can use tkCTokenRangesAreEqual()
 	'' Insert them at the front of the tk buffer, because
@@ -2937,6 +2950,11 @@ sub hApplyReplacements()
 	for i as integer = 0 to cpp.api->replacementcount - 1
 		var begin = x
 		x = lexLoadC(x, cpp.api->replacements[i].fromcode, sourceinfoForZstring("C code pattern from replacements file"))
+
+		'' But remove EOLs from the patterns, because we're going to match against tk buffer content
+		'' after the CPP phase, i.e. which had its EOLs removed aswell (except for #directives)
+		x = removeEols(begin, x)
+
 		cpp.api->replacements[i].patternlen = x - begin
 	next
 	var xmainbegin = x
