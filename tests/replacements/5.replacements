@@ -8,3 +8,13 @@ convert c:
 	static const int C = \
 		3;
 to c: #define C 3
+
+convert c:
+	static int f(void) {
+		return i++;
+	}
+to fb:
+	private function f() as long
+		function = i
+		i += 1
+	end function
