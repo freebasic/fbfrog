@@ -35,3 +35,13 @@ root
          eol
       string "3"
          eol
+--------------------------------------------------------------------------------
+patterns: "LPCSTR", "LPSTR", "ListLabel"
+root
+   string "L"
+      string "P"
+         string "CSTR"
+            eol
+      string "istLabel"
+         eol
+tests/unit/string-matching.bas(131): failed: m.matches("LPSTR")
