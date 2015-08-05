@@ -239,7 +239,7 @@ sub StringMatcher.addChildHoldingPreviousChildren(byval nodeclass as integer, by
 	addChild(nodeclass, text, textlength)
 	with children[0]
 		.children = prevchildren
-		.childcount = childcount
+		.childcount = prevchildcount
 	end with
 end sub
 

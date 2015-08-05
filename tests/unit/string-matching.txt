@@ -42,6 +42,7 @@ root
       string "P"
          string "CSTR"
             eol
+         string "STR"
+            eol
       string "istLabel"
          eol
-tests/unit/string-matching.bas(131): failed: m.matches("LPSTR")
