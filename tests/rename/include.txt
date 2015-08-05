@@ -22,5 +22,9 @@
 [22/23] cygwin-x86_64
 [23/23] dos
 	tests/rename/include.h
-	foo.h (not found)
+	#ifdef __FB_WIN32__
+		foo.h (not found)
+	#else
+		bar.h (not found)
+	#endif
 emitting: tests/rename/include.bi (0 declarations, 0 TODOs)

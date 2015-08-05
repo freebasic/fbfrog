@@ -1,3 +1,7 @@
 // @fbfrog -rename foo.h bar.h
 
-#include "foo.h"
+#ifdef _WIN32
+	#include "foo.h"
+#else
+	#include "bar.h"
+#endif

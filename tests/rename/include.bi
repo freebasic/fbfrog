@@ -1,3 +1,7 @@
 #pragma once
 
-#include once "bar.bi"
+#ifdef __FB_WIN32__
+	#include once "bar.bi"
+#else
+	#include once "bar.bi"
+#endif
