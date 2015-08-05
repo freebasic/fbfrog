@@ -559,7 +559,13 @@ end function
 private function hApplyRenameOption(byval opt as integer, byval n as ASTNODE ptr) as integer
 	dim as zstring ptr newid = hl.api->renameopt(opt).lookupDataOrNull(n->text)
 	if newid then
-		astRenameSymbol(n, newid)
+		if n->class = ASTCLASS_PPINCLUDE then
+			'' Allow -rename to affect PPINCLUDE nodes, but without giving them
+			'' alias strings (which could prevent merging and would add them to renamelists)
+			astSetText(n, newid)
+		else
+			astRenameSymbol(n, newid)
+		end if
 		function = TRUE
 	end if
 end function
@@ -1922,10 +1928,10 @@ private function hlBuildRenameList(byval n as ASTNODE ptr) as ASTNODE ptr
 	while i
 
 		if (i->text <> NULL) and (i->alias <> NULL) and _
-		   ((i->attrib and ASTATTRIB_NORENAMELIST) = 0) and _
-		   (i->class <> ASTCLASS_PPINCLUDE) then
+		   ((i->attrib and ASTATTRIB_NORENAMELIST) = 0) then
 			astAppend(list, astNewTEXT( _
-				astDumpPrettyClass(i->class) + " " + *i->alias + " => " + *i->text))
+				astDumpPrettyClass(i->class) + " " + _
+					*i->alias + " => " + *i->text))
 		end if
 
 		'' TODO: recurse into struct/union if renaming fields...
