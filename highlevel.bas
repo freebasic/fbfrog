@@ -1921,7 +1921,9 @@ private function hlBuildRenameList(byval n as ASTNODE ptr) as ASTNODE ptr
 	var i = n->head
 	while i
 
-		if (i->text <> NULL) and (i->alias <> NULL) and ((i->attrib and ASTATTRIB_NORENAMELIST) = 0) then
+		if (i->text <> NULL) and (i->alias <> NULL) and _
+		   ((i->attrib and ASTATTRIB_NORENAMELIST) = 0) and _
+		   (i->class <> ASTCLASS_PPINCLUDE) then
 			astAppend(list, astNewTEXT( _
 				astDumpPrettyClass(i->class) + " " + *i->alias + " => " + *i->text))
 		end if
