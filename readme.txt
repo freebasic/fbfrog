@@ -70,12 +70,11 @@ What's this?
 
 
 Compiling:
-  fbc *.bas -m fbfrog
+  a)  make      or b)  fbc *.bas -m fbfrog
 
 Running the tests:
-  1. fbc tests/run.bas
-  2. tests/run
-  3. Use Git to check the status of the tests/ directory.
+  1. "make tests" or compile and run tests/run.bas
+  2. Use Git to check the status of the tests/ directory.
      Any changes indicate test failures.
 
 
