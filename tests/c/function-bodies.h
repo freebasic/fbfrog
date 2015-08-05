@@ -28,3 +28,5 @@ int f(int i) { return i; }
 int f(int i) { return i + i; }
 int f(int a, int b) { return a + b; }
 int f(int a, int b) { return a + b + b; }
+int f(int i) { return i * 4; }
+int f(int i) { return sizeof(i); }

@@ -1647,14 +1647,16 @@ end sub
 type ParamUsageChecker
 	proc as ASTNODE ptr
 	have_multiple_uses as integer
-	declare constructor(byval proc as ASTNODE ptr)
+	mark_as_macroparam as integer
+	declare constructor(byval proc as ASTNODE ptr, byval mark_as_macroparam as integer)
 	declare function lookupParam(byval id as zstring ptr) as ASTNODE ptr
-	declare sub onSymbolRef(byval id as zstring ptr)
+	declare sub onTEXT(byval n as ASTNODE ptr)
 	declare destructor()
 end type
 
-constructor ParamUsageChecker(byval proc as ASTNODE ptr)
+constructor ParamUsageChecker(byval proc as ASTNODE ptr, byval mark_as_macroparam as integer)
 	this.proc = proc
+	this.mark_as_macroparam = mark_as_macroparam
 end constructor
 
 function ParamUsageChecker.lookupParam(byval id as zstring ptr) as ASTNODE ptr
@@ -1668,13 +1670,17 @@ function ParamUsageChecker.lookupParam(byval id as zstring ptr) as ASTNODE ptr
 	function = NULL
 end function
 
-sub ParamUsageChecker.onSymbolRef(byval id as zstring ptr)
-	var param = lookupParam(id)
+sub ParamUsageChecker.onTEXT(byval n as ASTNODE ptr)
+	var param = lookupParam(n->text)
 	if param then
 		if param->attrib and ASTATTRIB_USED then
 			have_multiple_uses = TRUE
 		else
 			param->attrib or= ASTATTRIB_USED
+		end if
+
+		if mark_as_macroparam then
+			n->attrib or= ASTATTRIB_PARENTHESIZEDMACROPARAM
 		end if
 	end if
 end sub
@@ -1691,7 +1697,7 @@ dim shared paramusage as ParamUsageChecker ptr
 
 private function collectParamUses(byval n as ASTNODE ptr) as integer
 	if astIsTEXT(n) then
-		paramusage->onSymbolRef(n->text)
+		paramusage->onTEXT(n)
 	end if
 	function = TRUE
 end function
@@ -1713,7 +1719,7 @@ private sub maybeProc2Macro(byval proc as ASTNODE ptr)
 		'' does it return an expression?
 		if ret->head then
 			'' Check that each parameter is only used once by the expression
-			paramusage = new ParamUsageChecker(proc)
+			paramusage = new ParamUsageChecker(proc, FALSE)
 			astVisit(ret->head, @collectParamUses)
 			var have_multiple_uses = paramusage->have_multiple_uses
 			delete paramusage
@@ -1724,6 +1730,12 @@ private sub maybeProc2Macro(byval proc as ASTNODE ptr)
 				''  - keep parameters
 				''  - cast expression to function's result type if there
 				''    is no cast yet. This may or may not be useful...
+
+				'' Wrap references to macro parameters in parentheses
+				paramusage = new ParamUsageChecker(proc, TRUE)
+				astVisit(ret->head, @collectParamUses)
+				delete paramusage
+				paramusage = NULL
 
 				proc->class = ASTCLASS_PPDEFINE
 
