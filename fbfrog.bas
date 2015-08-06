@@ -231,7 +231,7 @@ private sub hPrintHelpAndExit()
 	print "  -title <package + version> original-license.txt translators.txt [<destination .bi file>]"
 	print "     Add text at the top of .bi file(s): package name + version, copyright, license"
 	print "  -v                    Show verbose/debugging info"
-	print "  -target nodos|windows|linuxonly|linux-x86family|noarm"
+	print "  -target nodos|windows|linuxonly|noarm"
 	print "                        Specify OS's/architectures to translate for, other than all"
 	print "API script logic:"
 	print "  -declareversions <symbol> (<number>)+     Version numbers"
@@ -870,16 +870,12 @@ private sub hParseArgs(byref x as integer)
 				case "linuxonly"
 					frogSetArchs(TRUE)
 					frog.os(OS_LINUX) = TRUE
-				case "linux-x86family"
-					frog.os(OS_LINUX) = TRUE
-					frog.arch(ARCH_X86) = TRUE
-					frog.arch(ARCH_X86_64) = TRUE
 				case "noarm"
 					frogSetTargets(TRUE)
 					frog.arch(ARCH_ARM) = FALSE
 					frog.arch(ARCH_AARCH64) = FALSE
 				case else
-					tkOops(x, "unknown -target argument, expected: nodos|windows|linuxonly|linux-x86family|noarm")
+					tkOops(x, "unknown -target argument, expected: nodos|windows|linuxonly|noarm")
 				end select
 
 				x += 1
