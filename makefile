@@ -1,6 +1,7 @@
 FBC := fbc
 FBFROG := $(shell $(FBC) -m fbfrog -print x)
 TESTSRUN := $(shell $(FBC) tests/run.bas -print x)
+prefix := /usr/local
 
 -include config.mk
 
@@ -18,4 +19,8 @@ tests: build
 clean:
 	rm -f $(FBFROG) $(TESTSRUN)
 
-.PHONY: all tests clean
+install:
+	install $(FBFROG) "$(prefix)/bin"
+	cp -R include/fbfrog "$(prefix)/include"
+
+.PHONY: all tests clean install
