@@ -1,4 +1,4 @@
-// @fbfrog -declarebool UNICODE -ifdef UNICODE -define UNICODE 1 -endif -target windows
+// @fbfrog -declarebool UNICODE -ifdef UNICODE -define UNICODE 1 -endif -target windowsonly
 // When swapping verblocks (or really not only then, but in general) we shouldn't
 // forget about processing nested verblocks.
 
