@@ -463,6 +463,7 @@ enum
 	OPT_RENAMEDEFINE
 	OPT_RENAMEMACROPARAM
 	OPT_RENAME
+	OPT_REMOVEEMPTYRESERVEDDEFINES
 	OPT_REMOVE
 	OPT_REMOVEDEFINE
 	OPT_REMOVEPROC
@@ -961,7 +962,7 @@ type ApiInfo
 
 	target as TargetInfo
 	as integer windowsms, clong32, fixunsizedarrays, disableconstants
-	as integer nofunctionbodies, dropmacrobodyscopes
+	as integer nofunctionbodies, dropmacrobodyscopes, removeEmptyReservedDefines
 
 	have_renames as integer
 	renameopt(OPT_RENAMETYPEDEF to OPT_RENAME) as THash = any

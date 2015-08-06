@@ -446,6 +446,23 @@ private function hlFixExpressions(byval n as ASTNODE ptr) as integer
 	function = TRUE
 end function
 
+private function isEmptyReservedDefine(byval n as ASTNODE ptr) as integer
+	function = (n->class = ASTCLASS_PPDEFINE) andalso _
+	           (n->paramcount < 0) andalso (n->expr = NULL) andalso _
+	           strIsReservedIdInC(n->text)
+end function
+
+private sub hlRemoveEmptyReservedDefines(byval ast as ASTNODE ptr)
+	var i = ast->head
+	while i
+		var nxt = i->next
+		if isEmptyReservedDefine(i) then
+			astRemove(ast, i)
+		end if
+		i = nxt
+	wend
+end sub
+
 private sub hlApplyRemoveOption(byval ast as ASTNODE ptr, byval astclass as integer, byval opt as integer)
 	var i = ast->head
 	while i
@@ -2221,6 +2238,10 @@ sub hlGlobal(byval ast as ASTNODE ptr, byref api as ApiInfo)
 	astVisit(ast, @hlFixExpressions)
 	delete hl.symbols
 	hl.symbols = NULL
+
+	if api.removeEmptyReservedDefines then
+		hlRemoveEmptyReservedDefines(ast)
+	end if
 
 	if api.idopt(OPT_REMOVE).count > 0 then
 		hlApplyRemoveOption(ast, -1, OPT_REMOVE)

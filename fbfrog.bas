@@ -262,6 +262,7 @@ private sub hPrintHelpAndExit()
 	print "  options for removing declarations (-remove* <id>):"
 	print "    -removedefine, -removeproc, -removevar, -remove1st, -remove2nd"
 	print "    -remove (any matching symbol)"
+	print "  -removeemptyreserveddefines Remove empty (and parameter-less) #defines with __* or _U* names"
 	print "  -dropprocbody <id>  Don't preserve a certain procedure's body"
 	print "  -typedefhint <id>   Mark <id> as typedef, to help parsing of type casts"
 	print "  -addforwarddecl <id>  Force a forward declaration to be added for the given type"
@@ -467,6 +468,7 @@ sub ApiInfo.loadOption(byval opt as integer, byval param1 as zstring ptr, byval 
 	case OPT_DISABLECONSTANTS : disableconstants = TRUE
 	case OPT_NOFUNCTIONBODIES : nofunctionbodies = TRUE
 	case OPT_DROPMACROBODYSCOPES : dropmacrobodyscopes = TRUE
+	case OPT_REMOVEEMPTYRESERVEDDEFINES : removeEmptyReservedDefines = TRUE
 
 	case OPT_RENAMETYPEDEF, OPT_RENAMETAG, OPT_RENAMEPROC, _
 	     OPT_RENAMEDEFINE, OPT_RENAMEMACROPARAM, OPT_RENAME
@@ -1019,7 +1021,7 @@ private sub hParseArgs(byref x as integer)
 			x += 1
 
 		case OPT_WINDOWSMS, OPT_CLONG32, OPT_FIXUNSIZEDARRAYS, OPT_DISABLECONSTANTS, _
-		     OPT_NOFUNCTIONBODIES, OPT_DROPMACROBODYSCOPES
+		     OPT_NOFUNCTIONBODIES, OPT_DROPMACROBODYSCOPES, OPT_REMOVEEMPTYRESERVEDDEFINES
 			x += 1
 			astAppend(frog.script, astNewOPTION(opt))
 

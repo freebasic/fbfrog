@@ -177,6 +177,7 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	(@"-renamedefine" ), _
 	(@"-renamemacroparam"), _
 	(@"-rename"       ), _
+	(@"-removeEmptyReservedDefines"), _
 	(@"-remove"       ), _
 	(@"-removedefine" ), _
 	(@"-removeproc"   ), _
