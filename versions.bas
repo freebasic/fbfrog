@@ -1323,6 +1323,207 @@ private sub hGenVerExprs(byval code as ASTNODE ptr)
 	wend
 end sub
 
+private sub splitVerandIf(byval n as ASTNODE ptr)
+	''    #if VERAND(a, b, c)
+	'' =>
+	''    #if VERAND(a, b, c)
+	''        #if
+	var nested = astNew(n->class)
+	astTakeChildren(nested, n)
+	astAppend(n, nested)
+	astAppend(n, astNew(ASTCLASS_PPENDIF))
+
+	'' =>
+	''    #if a
+	''        #if VERAND(b, c)
+	var verand = n->expr
+	assert(astIsVERAND(verand))
+	var prefix = verand->head
+	astUnlink(verand, prefix)
+	n->expr = prefix
+	nested->expr = verand
+
+	'' Solve out the VERAND if only 1 expression left
+	''    #if VERAND(a, b)
+	'' =>
+	''    #if a
+	''        #if b
+	assert(verand->head)
+	if verand->head = verand->tail then
+		nested->expr = verand->head
+		verand->head = NULL
+		verand->tail = NULL
+		astDelete(verand)
+	else
+		'' Otherwise recurse to split up the remaining VERAND
+		splitVerandIf(nested)
+	end if
+end sub
+
+private sub splitVerandIfsIntoNestedIfs(byval ast as ASTNODE ptr)
+	var i = ast->head
+	while i
+
+		'' Handle #ifs in structs
+		splitVerandIfsIntoNestedIfs(i)
+
+		'' #if/#endif with VERAND condition?
+		'' Can't do the splitting if there is an #else, for example:
+		''    #if defined(__FB_64BIT__) and defined(__FB_WIN32__)
+		''    #else
+		''    #endif
+		'' =>
+		''    #ifdef __FB_64BIT__
+		''        #ifdef __FB_WIN32__
+		''        #endif
+		''    #else
+		''    #endif
+		'' because it changes the logic for reaching the #else path...
+		if astIsPPIF(i) andalso i->next andalso astIsPPENDIF(i->next) then
+			if astIsVERAND(i->expr) then
+				splitVerandIf(i)
+			end if
+		end if
+
+		i = i->next
+	wend
+end sub
+
+private sub mergeSiblingIfs(byval ast as ASTNODE ptr)
+	var i = ast->head
+	while i
+		var nxt = i->next
+
+		'' Handle #ifs in structs, and nested #ifs (after 1st got merged
+		'' into 2nd below, we'll visit the 2nd here, while the 1st was
+		'' removed)
+		mergeSiblingIfs(i)
+
+		'' #if?
+		if astIsPPIF(i) then
+			'' #endif?
+			var iendif = i->next
+			if iendif andalso astIsPPENDIF(iendif) then
+				'' #if?
+				var secondif = iendif->next
+				if secondif andalso astIsPPIF(secondif) then
+					'' Same condition?
+					if astIsEqual(i->expr, secondif->expr) then
+						'' Merge 1st into 2nd
+						'' (we know the 1st doesn't have any #elseifs/#elses, but the 2nd might)
+						astTakeAndPrependChildren(secondif, i)
+						astRemove(ast, i)
+						astRemove(ast, iendif)
+						nxt = secondif
+					end if
+				end if
+			end if
+		end if
+
+		i = nxt
+	wend
+end sub
+
+private sub removeUnnecessaryIfNesting(byval ast as ASTNODE ptr)
+	var i = ast->head
+	while i
+
+		'' Handle nested #ifs and #ifs in structs
+		removeUnnecessaryIfNesting(i)
+
+		if astIsPPIF(i) then
+			'' If this #if contains only another #if/#endif as children...
+			var nested = i->head
+			if nested andalso astIsPPIF(nested) then
+				var nestedendif = nested->next
+				if nestedendif andalso astIsPPENDIF(nestedendif) then
+					if nestedendif = i->tail then
+						'' then merge it with its parent:
+						''
+						''    #if a
+						''        #if b
+						'' =>
+						''    #if VERAND(a, b)
+						''
+						'' or:
+						''
+						''    #if a
+						''        #if VERAND(b, c)
+						'' =>
+						''    #if VERAND(a, b, c)
+						i->expr = astNewVERAND(i->expr, nested->expr)
+						i->head = nested->head
+						i->tail = nested->tail
+						nested->expr = NULL
+						nested->head = NULL
+						nested->tail = NULL
+						astDelete(nested)
+						astDelete(nestedendif)
+					end if
+				end if
+			end if
+		end if
+
+		i = i->next
+	wend
+end sub
+
+''
+'' Merge consecutive VERBLOCKs (#if blocks) with VERANDs with common prefix.
+''
+''    #if defined(__FB_WIN32__) and defined(STATIC)
+''    #endif
+''    #if defined(__FB_WIN32__) and (not defined(STATIC))
+''    #endif
+''  =>
+''    #ifdef __FB_WIN32__
+''        #ifdef STATIC
+''        #else
+''        #endif
+''    #endif
+''
+'' But verblocks with common prefix mustn't be reordered, i.e. the shortest
+'' common prefix must be merged first, and the longest must be last.
+''
+'' 1. look through consecutive VERBLOCKs with VERANDs
+'' 2. collect all those with a common prefix, merge them
+'' 3. process recursively
+'' 4. repeat until no more common prefix in that bulk of verblocks
+''
+'' Alternative idea:
+''        #if defined(__FB_WIN32__) and defined(STATIC)
+''        #endif
+''        #if defined(__FB_WIN32__) and (not defined(STATIC))
+''        #endif
+'' 1. expand all VERANDs as nested #ifs
+''        #ifdef __FB_WIN32__
+''            #ifdef STATIC
+''            #endif
+''        #endif
+''        #ifdef __FB_WIN32__
+''            #ifndef STATIC
+''            #endif
+''        #endif
+'' 2. merge sibling #if blocks with equal condition
+''        #ifdef __FB_WIN32__
+''            #ifdef STATIC
+''            #endif
+''            #ifndef STATIC
+''            #endif
+''        #endif
+'' 3. re-run hTurnVerblocksIntoPpIfs to merge #ifdef FOO + #ifndef FOO to #if/#else
+''
+'' This should be done with VERBLOCKs, not #ifs, to make it simpler. But even
+'' with #if expressions generated on VERBLOCKs already, it can't be done,
+'' because hTurnVerblocksIntoPpIfs requires the ASTNODE.apis fields to be set
+'' properly and they can't be split up like the #if expressions...
+''
+private sub combineIfsWithCommonPrefix(byval ast as ASTNODE ptr)
+	splitVerandIfsIntoNestedIfs(ast)
+	mergeSiblingIfs(ast)
+	removeUnnecessaryIfNesting(ast)
+end sub
+
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 sub astProcessVerblocks(byval code as ASTNODE ptr)
@@ -1330,4 +1531,5 @@ sub astProcessVerblocks(byval code as ASTNODE ptr)
 	hSolveOutRedundantVerblocks(code, frog.fullapis)
 	hGenVerExprs(code)
 	hTurnVerblocksIntoPpIfs(code)
+	combineIfsWithCommonPrefix(code)
 end sub

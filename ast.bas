@@ -238,10 +238,25 @@ function astNewOPTION(byval opt as integer, byval text1 as zstring ptr, byval te
 end function
 
 sub astTakeChildren(byval dest as ASTNODE ptr, byval source as ASTNODE ptr)
+	assert(dest->head = NULL)
 	dest->head = source->head
 	dest->tail = source->tail
 	source->head = NULL
 	source->tail = NULL
+end sub
+
+sub astTakeAndPrependChildren(byval dest as ASTNODE ptr, byval source as ASTNODE ptr)
+	if source->tail then
+		source->tail->next = dest->head
+		if dest->head then
+			dest->head->prev = source->tail
+		else
+			dest->tail = source->tail
+		end if
+		dest->head = source->head
+		source->head = NULL
+		source->tail = NULL
+	end if
 end sub
 
 function astCloneChildren(byval src as ASTNODE ptr) as ASTNODE ptr

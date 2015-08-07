@@ -832,6 +832,10 @@ type ASTVISITCALLBACK as function(byval as ASTNODE ptr) as integer
 #define astIsVEROR(n)  ((n)->class = ASTCLASS_VEROR)
 #define astIsTEXT(n) ((n)->class = ASTCLASS_TEXT)
 #define astIsDEFINED(n) ((n)->class = ASTCLASS_DEFINED)
+#define astIsPPIF(n) ((n)->class = ASTCLASS_PPIF)
+#define astIsPPELSEIF(n) ((n)->class = ASTCLASS_PPELSEIF)
+#define astIsPPELSE(n) ((n)->class = ASTCLASS_PPELSE)
+#define astIsPPENDIF(n) ((n)->class = ASTCLASS_PPENDIF)
 
 declare function astNew overload(byval class_ as integer) as ASTNODE ptr
 declare function astNew overload(byval class_ as integer, byval text as zstring ptr) as ASTNODE ptr
@@ -851,6 +855,7 @@ declare function astNewDEFINEDfbarm(byval negate as integer) as ASTNODE ptr
 declare function astNewDEFINEDfbos(byval os as integer) as ASTNODE ptr
 declare function astNewOPTION(byval opt as integer, byval text1 as zstring ptr = NULL, byval text2 as zstring ptr = NULL) as ASTNODE ptr
 declare sub astTakeChildren(byval dest as ASTNODE ptr, byval source as ASTNODE ptr)
+declare sub astTakeAndPrependChildren(byval dest as ASTNODE ptr, byval source as ASTNODE ptr)
 declare function astCloneChildren(byval src as ASTNODE ptr) as ASTNODE ptr
 declare function astGroupContains(byval group as ASTNODE ptr, byval lookfor as ASTNODE ptr) as integer
 declare function astGroupContainsAnyChildrenOf(byval l as ASTNODE ptr, byval r as ASTNODE ptr) as integer
