@@ -717,13 +717,7 @@ private sub hSolveOutRedundantVerblocks(byval code as ASTNODE ptr, byval parenta
 	wend
 end sub
 
-declare function hBuildIfConditionFor(byval bits as ApiBits) as ASTNODE ptr
-
-private function hCalcIfConditionWeight(byval bits as ApiBits) as integer
-	var expr = hBuildIfConditionFor(bits)
-	function = astCount(expr)
-	astDelete(expr)
-end function
+#define hCalcIfConditionWeight(expr) astCount(expr)
 
 ''
 '' verblocks must be turned into #if/#endif blocks. Doing that on the AST level
@@ -815,7 +809,8 @@ private sub hTurnVerblocksIntoPpIfs(byval code as ASTNODE ptr)
 						''     #else
 						''         [dos/unix]
 						''     #endif
-						if hCalcIfConditionWeight(i->apis) > hCalcIfConditionWeight(last->apis) then
+						if hCalcIfConditionWeight(i->expr) > hCalcIfConditionWeight(last->expr) then
+							swap i->expr, last->expr
 							swap i->apis, last->apis
 							swap i->head, last->head
 							swap i->tail, last->tail
@@ -1313,8 +1308,7 @@ private sub hGenVerExprs(byval code as ASTNODE ptr)
 		'' Handle #if checks nested inside structs
 		hGenVerExprs(i)
 
-		select case i->class
-		case ASTCLASS_PPIF, ASTCLASS_PPELSEIF
+		if astIsVERBLOCK(i) then
 			i->expr = hBuildIfConditionFor(i->apis)
 
 			'' If we were able to solve it out completely that means
@@ -1322,17 +1316,8 @@ private sub hGenVerExprs(byval code as ASTNODE ptr)
 			'' #if check and insert the body in its place.
 			if i->expr = NULL then
 				astReplace(code, i, astCloneChildren(i))
-
-				'' If the next node is an #endif, remove that too.
-				'' If it's an #elseif, turn that into an #if.
-				select case inext->class
-				case ASTCLASS_PPENDIF
-					inext = astRemove(code, inext)
-				case ASTCLASS_PPELSEIF
-					inext->class = ASTCLASS_PPIF
-				end select
 			end if
-		end select
+		end if
 
 		i = inext
 	wend
@@ -1343,6 +1328,6 @@ end sub
 sub astProcessVerblocks(byval code as ASTNODE ptr)
 	assert(code->class = ASTCLASS_GROUP)
 	hSolveOutRedundantVerblocks(code, frog.fullapis)
-	hTurnVerblocksIntoPpIfs(code)
 	hGenVerExprs(code)
+	hTurnVerblocksIntoPpIfs(code)
 end sub
