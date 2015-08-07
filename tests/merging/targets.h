@@ -46,3 +46,11 @@ struct UDTall2 {
 		int fieldwin32;
 	#endif
 };
+
+#ifndef DJGPP
+	extern int nondos;
+#endif
+
+#if defined __LP64__ || defined __x86_64__
+	extern int _64bit;
+#endif
