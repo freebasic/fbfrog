@@ -831,6 +831,7 @@ type ASTVISITCALLBACK as function(byval as ASTNODE ptr) as integer
 #define astIsVERAND(n) ((n)->class = ASTCLASS_VERAND)
 #define astIsVEROR(n)  ((n)->class = ASTCLASS_VEROR)
 #define astIsTEXT(n) ((n)->class = ASTCLASS_TEXT)
+#define astIsDEFINED(n) ((n)->class = ASTCLASS_DEFINED)
 
 declare function astNew overload(byval class_ as integer) as ASTNODE ptr
 declare function astNew overload(byval class_ as integer, byval text as zstring ptr) as ASTNODE ptr
@@ -1062,7 +1063,7 @@ namespace frog
 	extern as integer verbose
 	extern as integer enabledoscount
 	extern as ASTNODE ptr script
-	extern as ASTNODE ptr completeverors, fullveror, unixoschecks
+	extern as ASTNODE ptr completeverors, fullveror
 	extern as ApiInfo ptr apis
 	extern as integer apicount
 	extern as ApiBits fullapis

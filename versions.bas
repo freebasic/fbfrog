@@ -916,6 +916,55 @@ private function hIsCondition(byval n as ASTNODE ptr) as integer
 	function = (not astIsVEROR(n)) and (not astIsVERAND(n))
 end function
 
+'' Determine which OS's are covered by a VEROR
+type OSDefineChecker
+	covered(0 to OS__COUNT-1) as byte
+	declare sub check(byval veror as ASTNODE ptr)
+end type
+
+sub OSDefineChecker.check(byval veror as ASTNODE ptr)
+	assert(astIsVEROR(veror))
+	var i = veror->head
+	while i
+		if astIsDEFINED(i) then
+			for os as integer = 0 to OS__COUNT - 1
+				if *i->text = *osinfo(os).fbdefine then
+					covered(os) = TRUE
+				end if
+			next
+		end if
+		i = i->next
+	wend
+end sub
+
+private function coversAllUnix(byval veror as ASTNODE ptr) as integer
+	dim checker as OSDefineChecker
+	checker.check(veror)
+	for os as integer = 0 to OS__COUNT - 1
+		if osinfo(os).is_unix and (not checker.covered(os)) then
+			return FALSE
+		end if
+	next
+	return TRUE
+end function
+
+private sub replaceUnixChecks(byval veror as ASTNODE ptr)
+	assert(astIsVEROR(veror))
+	var i = veror->head
+	while i
+		var nxt = i->next
+		if astIsDEFINED(i) then
+			for os as integer = 0 to OS__COUNT - 1
+				if osinfo(os).is_unix andalso (*i->text = *osinfo(os).fbdefine) then
+					astRemove(veror, i)
+				end if
+			next
+		end if
+		i = nxt
+	wend
+	astAppend(veror, astNewDEFINED("__FB_UNIX__"))
+end sub
+
 private function hSimplify(byval n as ASTNODE ptr, byref changed as integer) as ASTNODE ptr
 	if n = NULL then return NULL
 	if hIsCondition(n) then return n
@@ -952,13 +1001,6 @@ private function hSimplify(byval n as ASTNODE ptr, byref changed as integer) as 
 		changed = TRUE
 		astDelete(n)
 		return NULL
-	end if
-
-	'' Simplify OS define checks to __FB_UNIX__
-	if astIsEqual(frog.unixoschecks, n) then
-		changed = TRUE
-		astDelete(n)
-		return astNewDEFINED("__FB_UNIX__")
 	end if
 
 	''
@@ -1176,6 +1218,33 @@ private sub hFoldNumberChecks(byval n as ASTNODE ptr)
 	hMaybeEmitRangeCheck(n, l, r)
 end sub
 
+private function foldUnix(byval n as ASTNODE ptr) as ASTNODE ptr
+	if hIsCondition(n) then return n
+
+	scope
+		var i = n->head
+		while i
+			i = astReplace(n, i, foldUnix(astClone(i)))
+		wend
+	end scope
+
+	if astIsVEROR(n) then
+		'' Simplify OS define checks to __FB_UNIX__
+		if coversAllUnix(n) then
+			replaceUnixChecks(n)
+		end if
+	end if
+
+	'' Single child, or none at all? Solve out the VEROR/VERAND.
+	if n->head = n->tail then
+		var child = n->head
+		astUnlink(n, child)
+		n = child
+	end if
+
+	function = n
+end function
+
 private function hSimplifyVersionExpr(byval n as ASTNODE ptr) as ASTNODE ptr
 	dim as integer changed
 
@@ -1192,6 +1261,8 @@ private function hSimplifyVersionExpr(byval n as ASTNODE ptr) as ASTNODE ptr
 		changed = FALSE
 		n = hSimplify(n, changed)
 	loop while changed
+
+	n = foldUnix(n)
 
 	function = n
 end function
