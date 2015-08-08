@@ -825,15 +825,14 @@ private sub expandTypedef(byval typedef as ASTNODE ptr, byval n as ASTNODE ptr)
 	end if
 end sub
 
-'' Solve out array/function typedefs (not supported in FB)
-type SpecialTypedefExpander
+type TypedefExpander
 	typedefs as TypedefTable
 	declare sub work(byval n as ASTNODE ptr)
-	declare operator let(byref as const SpecialTypedefExpander) '' unimplemented
+	declare operator let(byref as const TypedefExpander) '' unimplemented
 end type
 
-sub SpecialTypedefExpander.work(byval n as ASTNODE ptr)
-	'' Declaration using one of the array/function typedefs?
+sub TypedefExpander.work(byval n as ASTNODE ptr)
+	'' Declaration using one of the typedefs?
 	if typeGetDt(n->dtype) = TYPE_UDT then
 		assert(astIsTEXT(n->subtype))
 		var typedef = typedefs.lookup(n->subtype->text)
@@ -841,8 +840,7 @@ sub SpecialTypedefExpander.work(byval n as ASTNODE ptr)
 			'' Expand the typedef into the declaration.
 			'' The TypedefTable has alreay expanded this typedef itself as far as possible,
 			'' by using the registered typedefs. Thus, expanding a typedef doesn't cause a
-			'' need for further expansions. We're not expanding any simple typedefs, because
-			'' only array/function ones are registered.
+			'' need for further expansions. We're only expanding the registered typedefs.
 			expandTypedef(typedef, n)
 		end if
 	end if
@@ -857,9 +855,11 @@ sub SpecialTypedefExpander.work(byval n as ASTNODE ptr)
 
 		work(i)
 
-		'' Register & drop array/function typedefs
+		'' Register & drop typedefs
 		if i->class = ASTCLASS_TYPEDEF then
-			if (i->array <> NULL) or (typeGetDtAndPtr(i->dtype) = TYPE_PROC) then
+			if (i->array <> NULL) orelse _
+			   (typeGetDtAndPtr(i->dtype) = TYPE_PROC) orelse _
+			   hl.api->expand.matches(i->text) then
 				typedefs.addOverwrite(i)
 				astRemove(n, i)
 			end if
@@ -2270,11 +2270,12 @@ sub hlGlobal(byval ast as ASTNODE ptr, byref api as ApiInfo)
 		astVisit(ast, @hlApplyRenameOption)
 	end if
 
-	'' Solve out array/function typedefs (not supported in FB)
+	'' Solve out array/function typedefs (not supported in FB),
+	'' and any typedefs matched by an -expand option
 	'' TODO: If possible, turn function typedefs into function pointer
 	'' typedefs instead of solving them out
 	scope
-		dim expander as SpecialTypedefExpander
+		dim expander as TypedefExpander
 		expander.work(ast)
 	end scope
 

@@ -271,8 +271,9 @@ private sub hPrintHelpAndExit()
 	print "  -convbodytokens <id>  Translate a #define's body only by converting the tokens, no parsing"
 	print "  -expandindefine <id>  Expand macro in #define body"
 	print "  -noexpand <id>      Disable expansion of certain #define"
-	print "  -nostring <id-pattern> Prevent a symbol from being turned into a zstring"
-	print "  -string <id-pattern>   Force a [U]Byte [Ptr] symbol to be turned into a ZString [Ptr]"
+	print "  -expand <id-pattern>   Expand and remove matching typedefs"
+	print "  -nostring <decl-pattern> Prevent a symbol from being turned into a zstring"
+	print "  -string <decl-pattern>   Force a [U]Byte [Ptr] symbol to be turned into a ZString [Ptr]"
 	print "  -removeinclude <filename>  Remove matching #include directives"
 	print "  -setarraysize <id> <size>  Set size of an [] array"
 	print "  -moveabove <id> <ref>  Move declaration of <id> above declaration of <ref>"
@@ -479,6 +480,9 @@ sub ApiInfo.loadOption(byval opt as integer, byval param1 as zstring ptr, byval 
 	     OPT_DROPPROCBODY, OPT_TYPEDEFHINT, OPT_ADDFORWARDDECL, OPT_UNDEFBEFOREDECL, OPT_IFNDEFDECL, _
 	     OPT_CONVBODYTOKENS, OPT_EXPANDINDEFINE, OPT_NOEXPAND
 		idopt(opt).addOverwrite(param1, NULL)
+
+	case OPT_EXPAND
+		expand.addPattern(param1)
 
 	case OPT_NOSTRING, OPT_STRING
 		patterns(opt).parseAndAdd(*param1)
@@ -1034,8 +1038,11 @@ private sub hParseArgs(byref x as integer)
 		     OPT_CONVBODYTOKENS, OPT_EXPANDINDEFINE, OPT_NOEXPAND
 			hParseOption1Param(x, opt, "<id>")
 
+		case OPT_EXPAND
+			hParseOption1Param(x, opt, "<id-pattern>")
+
 		case OPT_NOSTRING, OPT_STRING
-			hParseOption1Param(x, opt, "<pattern>")
+			hParseOption1Param(x, opt, "<decl-pattern>")
 
 		case OPT_REMOVEINCLUDE
 			hParseOption1Param(x, opt, "<filename>")

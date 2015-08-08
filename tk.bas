@@ -192,6 +192,7 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	(@"-convbodytokens"), _
 	(@"-expandindefine"), _
 	(@"-noexpand"     ), _
+	(@"-expand"       ), _
 	(@"-nostring"     ), _
 	(@"-string"       ), _
 	(@"-removeinclude"), _

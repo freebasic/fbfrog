@@ -478,6 +478,7 @@ enum
 	OPT_CONVBODYTOKENS
 	OPT_EXPANDINDEFINE
 	OPT_NOEXPAND
+	OPT_EXPAND
 	OPT_NOSTRING
 	OPT_STRING
 	OPT_REMOVEINCLUDE
@@ -975,6 +976,7 @@ type ApiInfo
 	have_renames as integer
 	renameopt(OPT_RENAMETYPEDEF to OPT_RENAME) as THash = any
 	idopt(OPT_REMOVE to OPT_NOEXPAND) as THash = any
+	expand as StringMatcher
 	patterns(OPT_NOSTRING to OPT_STRING) as DeclPatterns
 	removeinclude as THash = THash(3, FALSE)
 	setarraysizeoptions as THash = THash(3, FALSE)
