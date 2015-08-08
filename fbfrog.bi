@@ -836,6 +836,7 @@ type ASTVISITCALLBACK as function(byval as ASTNODE ptr) as integer
 #define astIsPPELSEIF(n) ((n)->class = ASTCLASS_PPELSEIF)
 #define astIsPPELSE(n) ((n)->class = ASTCLASS_PPELSE)
 #define astIsPPENDIF(n) ((n)->class = ASTCLASS_PPENDIF)
+#define astIsNOT(n) ((n)->class = ASTCLASS_NOT)
 
 declare function astNew overload(byval class_ as integer) as ASTNODE ptr
 declare function astNew overload(byval class_ as integer, byval text as zstring ptr) as ASTNODE ptr

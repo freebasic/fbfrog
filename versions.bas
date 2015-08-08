@@ -719,6 +719,33 @@ end sub
 
 #define hCalcIfConditionWeight(expr) astCount(expr)
 
+'' If the #if block's condition expression is bigger than that of
+'' the #else block, swap the two blocks.
+''
+'' This way we can make the #if block easier to read by hiding the
+'' more complex conditions of the two:
+''     #if dos or linux or freebsd or darwin
+''         [dos/unix]
+''     #else
+''         [windows]
+''     #endif
+'' =>
+''     #if windows
+''         [windows]
+''     #else
+''         [dos/unix]
+''     #endif
+private sub maybeSwapIfElseWithoutRelinking(byval ifblock as ASTNODE ptr)
+	var elseblock = ifblock->next
+	assert(astIsPPIF(ifblock) and astIsPPELSE(elseblock))
+	if hCalcIfConditionWeight(ifblock->expr) > hCalcIfConditionWeight(elseblock->expr) then
+		swap ifblock->expr, elseblock->expr
+		swap ifblock->apis, elseblock->apis
+		swap ifblock->head, elseblock->head
+		swap ifblock->tail, elseblock->tail
+	end if
+end sub
+
 ''
 '' verblocks must be turned into #if/#endif blocks. Doing that on the AST level
 '' instead of when emitting allows us to generate #elseifs/#elses for adjacent
@@ -793,28 +820,7 @@ private sub hTurnVerblocksIntoPpIfs(byval code as ASTNODE ptr)
 
 					'' Only 2 verblocks? (i.e. just an #if and an #else)
 					if i->next = last then
-						'' If the #if block's condition expression is bigger than that of
-						'' the #else block, swap the two blocks.
-						''
-						'' This way we can make the #if block easier to read by hiding the
-						'' more complex conditions of the two:
-						''     #if dos or linux or freebsd or darwin
-						''         [dos/unix]
-						''     #else
-						''         [windows]
-						''     #endif
-						'' =>
-						''     #if windows
-						''         [windows]
-						''     #else
-						''         [dos/unix]
-						''     #endif
-						if hCalcIfConditionWeight(i->expr) > hCalcIfConditionWeight(last->expr) then
-							swap i->expr, last->expr
-							swap i->apis, last->apis
-							swap i->head, last->head
-							swap i->tail, last->tail
-						end if
+						maybeSwapIfElseWithoutRelinking(i)
 					end if
 				end if
 			end if
@@ -1545,6 +1551,37 @@ private sub combineIfsWithCommonPrefix(byval ast as ASTNODE ptr)
 	removeUnnecessaryIfNesting(ast)
 end sub
 
+'' Determine whether two #if conditions are logically opposites
+''    A    and    B         maybe, but not necessarily.
+''    A    and    not A     are definitely opposite.
+private function conditionsAreOpposite(byval a as ASTNODE ptr, byval b as ASTNODE ptr) as integer
+	if astIsNOT(a) and (not astIsNOT(b)) then return astIsEqual(a->head, b)
+	if astIsNOT(b) and (not astIsNOT(a)) then return astIsEqual(b->head, a)
+	function = FALSE
+end function
+
+'' Fold #if/elseif to #if/else if possible. Normally this is done by
+'' hTurnVerblocksIntoPpIfs() already, but combineIfsWithCommonPrefix() may have
+'' produced such cases again, and we can't re-run hTurnVerblocksIntoPpIfs()
+'' because that works with VERBLOCKs and ASTNODE.apis, not with the generated
+'' condition expressions.
+private sub foldIfElseIf(byval ast as ASTNODE ptr)
+	var i = ast->head
+	while i
+
+		foldIfElseIf(i)
+
+		if astIsPPIF(i) andalso astIsPPELSEIF(i->next) andalso astIsPPENDIF(i->next->next) then
+			if conditionsAreOpposite(i->expr, i->next->expr) then
+				i->next->class = ASTCLASS_PPELSE
+				maybeSwapIfElseWithoutRelinking(i)
+			end if
+		end if
+
+		i = i->next
+	wend
+end sub
+
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 sub astProcessVerblocks(byval code as ASTNODE ptr)
@@ -1553,4 +1590,5 @@ sub astProcessVerblocks(byval code as ASTNODE ptr)
 	hGenVerExprs(code)
 	hTurnVerblocksIntoPpIfs(code)
 	combineIfsWithCommonPrefix(code)
+	foldIfElseIf(code)
 end sub

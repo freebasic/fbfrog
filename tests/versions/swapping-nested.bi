@@ -5,7 +5,7 @@
 		#ifdef __FB_64BIT__
 			#ifdef UNICODE
 				unicode as long
-			#elseif not defined(UNICODE)
+			#else
 				ansi as long
 			#endif
 		#endif
@@ -15,7 +15,7 @@
 		#ifndef __FB_64BIT__
 			#ifdef UNICODE
 				unicode as long
-			#elseif not defined(UNICODE)
+			#else
 				ansi as long
 			#endif
 		#endif
