@@ -139,6 +139,8 @@ type StringMatcher
 	children as StringMatcher ptr
 	childcount as integer
 
+	nonEmpty as integer
+
 	declare destructor()
 	declare sub addChild(byval nodeclass as integer, byval text as const ubyte ptr, byval textlength as integer)
 	declare sub addChildHoldingPreviousChildren(byval nodeclass as integer, byval text as const ubyte ptr, byval textlength as integer)
@@ -975,8 +977,7 @@ type ApiInfo
 
 	have_renames as integer
 	renameopt(OPT_RENAMETYPEDEF to OPT_RENAME) as THash = any
-	idopt(OPT_REMOVE to OPT_NOEXPAND) as THash = any
-	expand as StringMatcher
+	idopt(OPT_REMOVE to OPT_EXPAND) as StringMatcher
 	patterns(OPT_NOSTRING to OPT_STRING) as DeclPatterns
 	removeinclude as THash = THash(3, FALSE)
 	setarraysizeoptions as THash = THash(3, FALSE)

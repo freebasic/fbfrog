@@ -270,6 +270,8 @@ private function findWildcardOrEol(byval s as const zstring ptr) as integer
 end function
 
 sub StringMatcher.addPattern(byval pattern as const zstring ptr)
+	nonEmpty = TRUE
+
 	''
 	'' Check current choices at this level
 	'' We need to check for common prefix between an existing choice and the

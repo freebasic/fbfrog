@@ -1282,7 +1282,7 @@ private function hCheckForMacroCall(byval x as integer) as DEFINEINFO ptr
 	end if
 
 	'' Only expand if not marked otherwise
-	if cpp.api->idopt(OPT_NOEXPAND).contains(id, hashHash(id)) or _
+	if cpp.api->idopt(OPT_NOEXPAND).matches(id) or _
 	    (tkGetFlags(x) and TKFLAG_NOEXPAND) or _
 	    (definfo->macro->attrib and ASTATTRIB_POISONED) then
 		return NULL
@@ -2453,7 +2453,7 @@ private sub hMaybeExpandMacroInDefineBody(byval parentdefine as ASTNODE ptr)
 	var id = tkSpellId(cpp.x)
 
 	'' Only expand if the called macro was given with -expandindefine
-	if cpp.api->idopt(OPT_EXPANDINDEFINE).contains(id, hashHash(id)) = FALSE then
+	if cpp.api->idopt(OPT_EXPANDINDEFINE).matches(id) = FALSE then
 		exit sub
 	end if
 
@@ -2488,7 +2488,7 @@ private sub hMaybeExpandMacroInDefineBody(byval parentdefine as ASTNODE ptr)
 end sub
 
 private function hShouldRemoveDefine(byval id as zstring ptr) as integer
-	function = cpp.api->idopt(OPT_REMOVEDEFINE).contains(id, hashHash(id))
+	function = cpp.api->idopt(OPT_REMOVEDEFINE).matches(id)
 end function
 
 '' DEFINE Identifier ['(' ParameterList ')'] Body Eol
@@ -2518,7 +2518,7 @@ private sub cppDefine(byref flags as integer)
 	''    #define b(x) x1      // wrong, b() is broken now
 	''    #define c(x) x + 11  // ok: invocation of a() doesn't involve x
 	''
-	if cpp.api->idopt(OPT_EXPANDINDEFINE).count > 0 then
+	if cpp.api->idopt(OPT_EXPANDINDEFINE).nonEmpty then
 		do
 			select case tkGet(cpp.x)
 			case TK_EOL

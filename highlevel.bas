@@ -469,7 +469,7 @@ private sub hlApplyRemoveOption(byval ast as ASTNODE ptr, byval astclass as inte
 		var nxt = i->next
 
 		if (i->text <> NULL) and (astclass = -1) or (i->class = astclass) then
-			if hl.api->idopt(opt).contains(i->text, hashHash(i->text)) then
+			if hl.api->idopt(opt).matches(i->text) then
 				astRemove(ast, i)
 			end if
 		end if
@@ -485,9 +485,8 @@ private sub hlApplyRemove1st(byval ast as ASTNODE ptr)
 		var nxt = i->next
 
 		if i->text then
-			var hash = hashHash(i->text)
-			if hl.api->idopt(OPT_REMOVE1ST).contains(i->text, hash) and _
-			   (not removed.contains(i->text, hash)) then
+			if hl.api->idopt(OPT_REMOVE1ST).matches(i->text) and _
+			   (not removed.contains(i->text, hashHash(i->text))) then
 				removed.addOverwrite(i->text, NULL)
 				astRemove(ast, i)
 			end if
@@ -504,9 +503,8 @@ private sub hlApplyRemove2nd(byval ast as ASTNODE ptr)
 		var nxt = i->next
 
 		if i->text then
-			var hash = hashHash(i->text)
-			if hl.api->idopt(OPT_REMOVE2ND).contains(i->text, hash) then
-				if found1st.contains(i->text, hash) then
+			if hl.api->idopt(OPT_REMOVE2ND).matches(i->text) then
+				if found1st.contains(i->text, hashHash(i->text)) then
 					astRemove(ast, i)
 				else
 					found1st.addOverwrite(i->text, NULL)
@@ -523,7 +521,7 @@ private sub hlApplyDropProcBodyOptions(byval ast as ASTNODE ptr)
 	while i
 
 		if (i->class = ASTCLASS_PROC) and (i->expr <> NULL) then
-			if hl.api->idopt(OPT_DROPPROCBODY).contains(i->text, hashHash(i->text)) then
+			if hl.api->idopt(OPT_DROPPROCBODY).matches(i->text) then
 				astDelete(i->expr)
 				i->expr = NULL
 			end if
@@ -859,7 +857,7 @@ sub TypedefExpander.work(byval n as ASTNODE ptr)
 		if i->class = ASTCLASS_TYPEDEF then
 			if (i->array <> NULL) orelse _
 			   (typeGetDtAndPtr(i->dtype) = TYPE_PROC) orelse _
-			   hl.api->expand.matches(i->text) then
+			   hl.api->idopt(OPT_EXPAND).matches(i->text) then
 				typedefs.addOverwrite(i)
 				astRemove(n, i)
 			end if
@@ -1383,7 +1381,7 @@ private function hShouldAddForwardDeclForType(byref typ as hl.TYPENODE) as integ
 			function = TRUE
 		else
 			'' Not defined here; only if -addforwarddecl was given
-			function = hl.api->idopt(OPT_ADDFORWARDDECL).contains(typ.id, hashHash(typ.id))
+			function = hl.api->idopt(OPT_ADDFORWARDDECL).matches(typ.id)
 		end if
 	end if
 end function
@@ -1633,7 +1631,7 @@ private sub hlAddUndefsAboveDecls(byval ast as ASTNODE ptr)
 	while i
 
 		if (i->class <> ASTCLASS_UNDEF) and (i->text <> NULL) then
-			if hl.api->idopt(OPT_UNDEFBEFOREDECL).contains(i->text, hashHash(i->text)) then
+			if hl.api->idopt(OPT_UNDEFBEFOREDECL).matches(i->text) then
 				var undef = astNew(ASTCLASS_UNDEF, i->text)
 				undef->location = i->location
 				astInsert(ast, undef, i)
@@ -1649,7 +1647,7 @@ private sub hlAddIfndefsAroundDecls(byval ast as ASTNODE ptr)
 	while i
 
 		if (i->class <> ASTCLASS_UNDEF) andalso _
-		   i->text andalso hl.api->idopt(OPT_IFNDEFDECL).contains(i->text, hashHash(i->text)) then
+		   i->text andalso hl.api->idopt(OPT_IFNDEFDECL).matches(i->text) then
 			i->attrib or= ASTATTRIB_IFNDEFDECL
 		end if
 
@@ -2239,27 +2237,27 @@ sub hlGlobal(byval ast as ASTNODE ptr, byref api as ApiInfo)
 		hlRemoveEmptyReservedDefines(ast)
 	end if
 
-	if api.idopt(OPT_REMOVE).count > 0 then
+	if api.idopt(OPT_REMOVE).nonEmpty then
 		hlApplyRemoveOption(ast, -1, OPT_REMOVE)
 	end if
 
-	if api.idopt(OPT_REMOVEPROC).count > 0 then
+	if api.idopt(OPT_REMOVEPROC).nonEmpty then
 		hlApplyRemoveOption(ast, ASTCLASS_PROC, OPT_REMOVEPROC)
 	end if
 
-	if api.idopt(OPT_REMOVEVAR).count > 0 then
+	if api.idopt(OPT_REMOVEVAR).nonEmpty then
 		hlApplyRemoveOption(ast, ASTCLASS_VAR, OPT_REMOVEVAR)
 	end if
 
-	if api.idopt(OPT_REMOVE1ST).count > 0 then
+	if api.idopt(OPT_REMOVE1ST).nonEmpty then
 		hlApplyRemove1st(ast)
 	end if
 
-	if api.idopt(OPT_REMOVE2ND).count > 0 then
+	if api.idopt(OPT_REMOVE2ND).nonEmpty then
 		hlApplyRemove2nd(ast)
 	end if
 
-	if api.idopt(OPT_DROPPROCBODY).count > 0 then
+	if api.idopt(OPT_DROPPROCBODY).nonEmpty then
 		hlApplyDropProcBodyOptions(ast)
 	end if
 
@@ -2390,11 +2388,11 @@ sub hlGlobal(byval ast as ASTNODE ptr, byref api as ApiInfo)
 		wend
 	end if
 
-	if api.idopt(OPT_UNDEFBEFOREDECL).count > 0 then
+	if api.idopt(OPT_UNDEFBEFOREDECL).nonEmpty then
 		hlAddUndefsAboveDecls(ast)
 	end if
 
-	if api.idopt(OPT_IFNDEFDECL).count > 0 then
+	if api.idopt(OPT_IFNDEFDECL).nonEmpty then
 		hlAddIfndefsAroundDecls(ast)
 	end if
 

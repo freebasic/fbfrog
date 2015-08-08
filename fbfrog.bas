@@ -259,7 +259,7 @@ private sub hPrintHelpAndExit()
 	print "    -renameproc (procedures)"
 	print "    -renamedefine, -renamemacroparam"
 	print "    -rename (any matching symbol)"
-	print "  options for removing declarations (-remove* <id>):"
+	print "  options for removing declarations (-remove* <id>, where <id> is an id or a pattern):"
 	print "    -removedefine, -removeproc, -removevar, -remove1st, -remove2nd"
 	print "    -remove (any matching symbol)"
 	print "  -removeemptyreserveddefines Remove empty (and parameter-less) #defines with __* or _U* names"
@@ -271,7 +271,7 @@ private sub hPrintHelpAndExit()
 	print "  -convbodytokens <id>  Translate a #define's body only by converting the tokens, no parsing"
 	print "  -expandindefine <id>  Expand macro in #define body"
 	print "  -noexpand <id>      Disable expansion of certain #define"
-	print "  -expand <id-pattern>   Expand and remove matching typedefs"
+	print "  -expand <id>        Expand and remove matching typedefs"
 	print "  -nostring <decl-pattern> Prevent a symbol from being turned into a zstring"
 	print "  -string <decl-pattern>   Force a [U]Byte [Ptr] symbol to be turned into a ZString [Ptr]"
 	print "  -removeinclude <filename>  Remove matching #include directives"
@@ -434,9 +434,6 @@ constructor ApiInfo()
 	for i as integer = lbound(renameopt) to ubound(renameopt)
 		renameopt(i).constructor(3, FALSE)
 	next
-	for i as integer = lbound(idopt) to ubound(idopt)
-		idopt(i).constructor(3, FALSE)
-	next
 	log = astNewGROUP()
 end constructor
 
@@ -478,11 +475,8 @@ sub ApiInfo.loadOption(byval opt as integer, byval param1 as zstring ptr, byval 
 
 	case OPT_REMOVE, OPT_REMOVEDEFINE, OPT_REMOVEPROC, OPT_REMOVEVAR, OPT_REMOVE1ST, OPT_REMOVE2ND, _
 	     OPT_DROPPROCBODY, OPT_TYPEDEFHINT, OPT_ADDFORWARDDECL, OPT_UNDEFBEFOREDECL, OPT_IFNDEFDECL, _
-	     OPT_CONVBODYTOKENS, OPT_EXPANDINDEFINE, OPT_NOEXPAND
-		idopt(opt).addOverwrite(param1, NULL)
-
-	case OPT_EXPAND
-		expand.addPattern(param1)
+	     OPT_CONVBODYTOKENS, OPT_EXPANDINDEFINE, OPT_NOEXPAND, OPT_EXPAND
+		idopt(opt).addPattern(param1)
 
 	case OPT_NOSTRING, OPT_STRING
 		patterns(opt).parseAndAdd(*param1)

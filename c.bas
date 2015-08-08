@@ -159,7 +159,7 @@ private function cIsTypedef(byval id as zstring ptr) as integer
 	end if
 
 	'' 2. Check -typedefhint options
-	function = c.api->idopt(OPT_TYPEDEFHINT).contains(id, hashHash(id))
+	function = c.api->idopt(OPT_TYPEDEFHINT).matches(id)
 end function
 
 private function cLookupExtraDataType(byval id as zstring ptr) as integer
@@ -1110,7 +1110,7 @@ end function
 private function cDefineBody(byval macro as ASTNODE ptr) as integer
 	'' If -convbodytokens was given for this #define, then don't try to parse the #define body,
 	'' but just convert the tokens individually from C to FB.
-	if c.api->idopt(OPT_CONVBODYTOKENS).contains(macro->text, hashHash(macro->text)) then
+	if c.api->idopt(OPT_CONVBODYTOKENS).matches(macro->text) then
 		var body = cDefineBodyTokens()
 		if len(body) > 0 then
 			macro->expr = astNewTEXT(body)
