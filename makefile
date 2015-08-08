@@ -8,7 +8,7 @@ prefix := /usr/local
 build: $(FBFROG) $(TESTSRUN)
 
 $(FBFROG): $(wildcard *.bas *.bi)
-	$(FBC) *.bas -m fbfrog $(FBFLAGS)
+	$(FBC) *.bas -m fbfrog -maxerr 1 $(FBFLAGS)
 
 $(TESTSRUN): tests/run.bas util-path.bas util-str.bas
 	$(FBC) $< $(FBFLAGS)
