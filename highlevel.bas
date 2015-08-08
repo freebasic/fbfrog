@@ -843,11 +843,7 @@ sub SpecialTypedefExpander.work(byval n as ASTNODE ptr)
 			'' by using the registered typedefs. Thus, expanding a typedef doesn't cause a
 			'' need for further expansions. We're not expanding any simple typedefs, because
 			'' only array/function ones are registered.
-			if typedef->array then
-				expandArrayTypedef(typedef, n)
-			elseif typeGetDtAndPtr(typedef->dtype) = TYPE_PROC then
-				expandProcTypedef(typedef, n)
-			end if
+			expandTypedef(typedef, n)
 		end if
 	end if
 
