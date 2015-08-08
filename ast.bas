@@ -237,26 +237,67 @@ function astNewOPTION(byval opt as integer, byval text1 as zstring ptr, byval te
 	function = n
 end function
 
-sub astTakeChildren(byval dest as ASTNODE ptr, byval source as ASTNODE ptr)
-	assert(dest->head = NULL)
-	dest->head = source->head
-	dest->tail = source->tail
-	source->head = NULL
-	source->tail = NULL
+#if __FB_DEBUG__
+private function astGetIndexOf(byval parent as ASTNODE ptr, byval lookfor as ASTNODE ptr) as integer
+	var index = 0
+	var i = parent->head
+	while i
+		if i = lookfor then return index
+		index += 1
+		i = i->next
+	wend
+	function = -1
+end function
+#define astIsChildOf(parent, lookfor) (astGetIndexOf(parent, lookfor) >= 0)
+#endif
+
+sub astTakeChildren(byval d as ASTNODE ptr, byval s as ASTNODE ptr)
+	assert(d->head = NULL)
+	d->head = s->head
+	d->tail = s->tail
+	s->head = NULL
+	s->tail = NULL
 end sub
 
-sub astTakeAndPrependChildren(byval dest as ASTNODE ptr, byval source as ASTNODE ptr)
-	if source->tail then
-		source->tail->next = dest->head
-		if dest->head then
-			dest->head->prev = source->tail
+sub astTakeAndPrependChildren(byval d as ASTNODE ptr, byval s as ASTNODE ptr)
+	if s->tail then
+		if d->head then
+			s->tail->next = d->head
+			d->head->prev = s->tail
 		else
-			dest->tail = source->tail
+			d->tail = s->tail
 		end if
-		dest->head = source->head
-		source->head = NULL
-		source->tail = NULL
+		d->head = s->head
+		s->head = NULL
+		s->tail = NULL
 	end if
+end sub
+
+sub astTakeAndAppendChildSequence(byval d as ASTNODE ptr, byval s as ASTNODE ptr, byval first as ASTNODE ptr, byval last as ASTNODE ptr)
+	assert(astGetIndexOf(s, first) <= astGetIndexOf(s, last))
+
+	'' unlink from s
+	if first->prev then
+		first->prev->next = last->next
+	else
+		s->head = last->next
+	end if
+	if last->next then
+		last->next->prev = first->prev
+	else
+		s->tail = first->prev
+	end if
+	first->prev = NULL
+	last->next = NULL
+
+	'' append to d
+	if d->tail then
+		first->prev = d->tail
+		d->tail->next = first
+	else
+		d->head = first
+	end if
+	d->tail = last
 end sub
 
 function astCloneChildren(byval src as ASTNODE ptr) as ASTNODE ptr
@@ -320,25 +361,6 @@ sub astDelete(byval n as ASTNODE ptr)
 
 	deallocate(n)
 end sub
-
-#if __FB_DEBUG__
-private function astIsChildOf _
-	( _
-		byval parent as ASTNODE ptr, _
-		byval lookfor as ASTNODE ptr _
-	) as integer
-
-	var child = parent->head
-	while child
-		if child = lookfor then
-			return TRUE
-		end if
-		child = child->next
-	wend
-
-	function = FALSE
-end function
-#endif
 
 '' Insert in front of ref, or append if ref = NULL
 sub astInsert(byval parent as ASTNODE ptr, byval n as ASTNODE ptr, byval ref as ASTNODE ptr)
@@ -834,7 +856,7 @@ function astDumpOne(byval n as ASTNODE ptr) as string
 		return "<NULL>"
 	end if
 
-	's += "[" & hex(n) & "] "
+	s += "[" & hex(n) & "] "
 	if (n->class >= 0) and (n->class < ASTCLASS__COUNT) then
 		s += *astnodename(n->class)
 	else
@@ -867,7 +889,7 @@ function astDumpOne(byval n as ASTNODE ptr) as string
 	case ASTCLASS_OPTION
 		s += " " + *tkInfoText(n->opt)
 	case ASTCLASS_VERBLOCK, ASTCLASS_PPIF, ASTCLASS_PPELSEIF
-		s += " apis=" + n->apis.dump()
+		's += " apis=" + n->apis.dump()
 	case ASTCLASS_VERNUMCHECK
 		s += " vernum=" & n->vernum
 	end select
@@ -907,11 +929,11 @@ sub astDump _
 	s += astDumpOne(n)
 	print s
 
-	#define dumpField(field) if n->field then astDump(n->field, nestlevel, #field)
-	dumpField(subtype)
-	dumpField(array)
-	dumpField(bits)
-	dumpField(expr)
+	'#define dumpField(field) if n->field then astDump(n->field, nestlevel, #field)
+	'dumpField(subtype)
+	'dumpField(array)
+	'dumpField(bits)
+	'dumpField(expr)
 
 	var child = n->head
 	while child

@@ -854,8 +854,9 @@ declare function astNewDEFINEDfb64(byval negate as integer) as ASTNODE ptr
 declare function astNewDEFINEDfbarm(byval negate as integer) as ASTNODE ptr
 declare function astNewDEFINEDfbos(byval os as integer) as ASTNODE ptr
 declare function astNewOPTION(byval opt as integer, byval text1 as zstring ptr = NULL, byval text2 as zstring ptr = NULL) as ASTNODE ptr
-declare sub astTakeChildren(byval dest as ASTNODE ptr, byval source as ASTNODE ptr)
-declare sub astTakeAndPrependChildren(byval dest as ASTNODE ptr, byval source as ASTNODE ptr)
+declare sub astTakeChildren(byval d as ASTNODE ptr, byval s as ASTNODE ptr)
+declare sub astTakeAndPrependChildren(byval d as ASTNODE ptr, byval s as ASTNODE ptr)
+declare sub astTakeAndAppendChildSequence(byval d as ASTNODE ptr, byval s as ASTNODE ptr, byval first as ASTNODE ptr, byval last as ASTNODE ptr)
 declare function astCloneChildren(byval src as ASTNODE ptr) as ASTNODE ptr
 declare function astGroupContains(byval group as ASTNODE ptr, byval lookfor as ASTNODE ptr) as integer
 declare function astGroupContainsAnyChildrenOf(byval l as ASTNODE ptr, byval r as ASTNODE ptr) as integer

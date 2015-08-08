@@ -1323,69 +1323,90 @@ private sub hGenVerExprs(byval code as ASTNODE ptr)
 	wend
 end sub
 
-private sub splitVerandIf(byval n as ASTNODE ptr)
-	''    #if VERAND(a, b, c)
-	'' =>
-	''    #if VERAND(a, b, c)
-	''        #if
-	var nested = astNew(n->class)
-	astTakeChildren(nested, n)
-	astAppend(n, nested)
-	astAppend(n, astNew(ASTCLASS_PPENDIF))
+#define astIsPPIFWithVERAND(n) (astIsPPIF(n) andalso astIsVERAND(n->expr))
+#define astIsPPELSEIFWithVERAND(n) (astIsPPELSEIF(n) andalso astIsVERAND(n->expr))
+#define astIsPPELSEWithVERAND(n) (astIsPPELSE(n) andalso astIsVERAND(n->expr))
+#define hasVerandPrefix(n, prefix) astIsEqual(n->expr->head, prefix)
 
-	'' =>
-	''    #if a
-	''        #if VERAND(b, c)
-	var verand = n->expr
-	assert(astIsVERAND(verand))
-	var prefix = verand->head
-	astUnlink(verand, prefix)
-	n->expr = prefix
-	nested->expr = verand
+private function findEndifOfVerandIfBlockWithCommonPrefix(byval n as ASTNODE ptr) as ASTNODE ptr
+	if astIsPPIFWithVERAND(n) = FALSE then exit function
+	var prefix = n->expr->head
+	n = n->next
 
-	'' Solve out the VERAND if only 1 expression left
-	''    #if VERAND(a, b)
-	'' =>
-	''    #if a
-	''        #if b
-	assert(verand->head)
-	if verand->head = verand->tail then
-		nested->expr = verand->head
-		verand->head = NULL
-		verand->tail = NULL
-		astDelete(verand)
-	else
-		'' Otherwise recurse to split up the remaining VERAND
-		splitVerandIf(nested)
+	'' Skip #elseifs if they're ok
+	while astIsPPELSEIFWithVERAND(n) andalso hasVerandPrefix(n, prefix)
+		n = n->next
+	wend
+
+	'' Skip #else if it's ok
+	if astIsPPELSEWithVERAND(n) andalso hasVerandPrefix(n, prefix) then
+		n = n->next
 	end if
-end sub
 
+	'' Must have reached #endif. If not, there was an #elseif/#else without
+	'' VERAND or with different prefix...
+	if astIsPPENDIF(n) = FALSE then exit function
+	function = n
+end function
+
+''     #if VERAND(a, b)
+''     #elseif VERAND(a, c)
+''     #else VERAND(a, d)
+''     #endif
+'' =>
+''     #if a
+''         #if b
+''         #elseif c
+''         #else d
+''         #endif
+''     #endif
 private sub splitVerandIfsIntoNestedIfs(byval ast as ASTNODE ptr)
 	var i = ast->head
 	while i
+		var inext = i->next
 
-		'' Handle #ifs in structs
-		splitVerandIfsIntoNestedIfs(i)
+		var iendif = findEndifOfVerandIfBlockWithCommonPrefix(i)
+		if iendif then
+			'' New outer #if with just the prefix condition
+			var newif = astNew(ASTCLASS_PPIF)
+			newif->expr = astClone(i->expr->head)
 
-		'' #if/#endif with VERAND condition?
-		'' Can't do the splitting if there is an #else, for example:
-		''    #if defined(__FB_64BIT__) and defined(__FB_WIN32__)
-		''    #else
-		''    #endif
-		'' =>
-		''    #ifdef __FB_64BIT__
-		''        #ifdef __FB_WIN32__
-		''        #endif
-		''    #else
-		''    #endif
-		'' because it changes the logic for reaching the #else path...
-		if astIsPPIF(i) andalso i->next andalso astIsPPENDIF(i->next) then
-			if astIsVERAND(i->expr) then
-				splitVerandIf(i)
-			end if
+			'' Move all the old #if/#elseifs/#else/#endif into the new #if
+			inext = iendif->next
+			astTakeAndAppendChildSequence(newif, ast, i, iendif)
+
+			'' Insert the new #if in the old one's place
+			astInsert(ast, newif, inext)
+			astInsert(ast, astNew(ASTCLASS_PPENDIF), inext)
+
+			'' Cut prefix from the VERANDs of the nested #if/#elseifs/#else
+			scope
+				var nested = newif->head
+				do
+					var verand = nested->expr
+					astRemove(verand, verand->head)
+
+					'' Solve out the VERAND if only 1 expression left
+					assert(verand->head)
+					if verand->head = verand->tail then
+						nested->expr = verand->head
+						verand->head = NULL
+						verand->tail = NULL
+						astDelete(verand)
+					end if
+
+					nested = nested->next
+				loop until astIsPPENDIF(nested)
+			end scope
+
+			'' Visit the new #if, to process its nested #ifs recursively
+			inext = newif
+		else
+			'' Visit children recursively once no more splitting can be done here
+			splitVerandIfsIntoNestedIfs(i)
 		end if
 
-		i = i->next
+		i = inext
 	wend
 end sub
 
@@ -1410,7 +1431,7 @@ private sub mergeSiblingIfs(byval ast as ASTNODE ptr)
 					'' Same condition?
 					if astIsEqual(i->expr, secondif->expr) then
 						'' Merge 1st into 2nd
-						'' (we know the 1st doesn't have any #elseifs/#elses, but the 2nd might)
+						'' (we know the 1st doesn't have any #elseifs/#else, but the 2nd might)
 						astTakeAndPrependChildren(secondif, i)
 						astRemove(ast, i)
 						astRemove(ast, iendif)
