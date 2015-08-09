@@ -1,0 +1,3 @@
+[1/1] dos
+	tests/versions/target-dosonly.h
+emitting: tests/versions/target-dosonly.bi (0 declarations, 0 TODOs)
