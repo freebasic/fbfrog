@@ -328,11 +328,10 @@ sub StringMatcher.addPattern(byval pattern as const zstring ptr)
 					child->truncateTextToOnly(commonprefixlen)
 				end if
 
-				'' Pattern not completely covered yet? Then recursively add its remainder.
-				if (*pattern)[commonprefixlen] <> 0 then
-					child->addPattern(@pattern[commonprefixlen])
-				end if
-
+				'' Recursively add the rest of the pattern
+				'' (at the very least there will be the null terminator remaining,
+				'' for which we have to add an EOL node)
+				child->addPattern(@pattern[commonprefixlen])
 				exit sub
 			end if
 		end select
