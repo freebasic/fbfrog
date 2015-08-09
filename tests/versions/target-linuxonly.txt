@@ -1,6 +1,0 @@
-[1/4] linux-x86
-[2/4] linux-x86_64
-[3/4] linux-arm
-[4/4] linux-aarch64
-	tests/versions/target-linuxonly.h
-emitting: tests/versions/target-linuxonly.bi (0 declarations, 0 TODOs)

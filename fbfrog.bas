@@ -231,8 +231,7 @@ private sub hPrintHelpAndExit()
 	print "  -title <package + version> original-license.txt translators.txt [<destination .bi file>]"
 	print "     Add text at the top of .bi file(s): package name + version, copyright, license"
 	print "  -v                    Show verbose/debugging info"
-	print "  -target nodos|dosonly|linuxonly|windowsonly|noarm"
-	print "                        Specify OS's/architectures to translate for, other than all"
+	print "  -target nodos|noarm|<os>  Specify OS/architecture to translate for, instead of all"
 	print "API script logic:"
 	print "  -declareversions <symbol> (<number>)+     Version numbers"
 	print "  -declarebool <symbol>                     Single on/off #define"
@@ -858,25 +857,22 @@ private sub hParseArgs(byref x as integer)
 			x += 1
 
 			hExpectStringOrId(x, "<target> argument")
-			select case *tkGetText(x)
+			var s = *tkGetText(x)
+			select case s
 			case "nodos"
 				frogSetTargets(TRUE)
 				frog.os(OS_DOS) = FALSE
-			case "dosonly"
-				frogSetArchs(TRUE)
-				frog.os(OS_DOS) = TRUE
-			case "linuxonly"
-				frogSetArchs(TRUE)
-				frog.os(OS_LINUX) = TRUE
-			case "windowsonly"
-				frogSetArchs(TRUE)
-				frog.os(OS_WINDOWS) = TRUE
 			case "noarm"
 				frogSetTargets(TRUE)
 				frog.arch(ARCH_ARM) = FALSE
 				frog.arch(ARCH_AARCH64) = FALSE
 			case else
-				tkOops(x, "unknown -target argument")
+				var os = osParse(s)
+				if os < 0 then
+					tkOops(x, "unknown -target argument")
+				end if
+				frog.os(os) = TRUE
+				frogSetArchs(TRUE)
 			end select
 			x += 1
 

@@ -678,6 +678,15 @@ dim shared archinfo(0 to ARCH__COUNT-1) as ArchInfo => { _
 	(@"aarch64",  TRUE,  TRUE)  _
 }
 
+function osParse(byref s as string) as integer
+	for i as integer = 0 to OS__COUNT - 1
+		if *osinfo(i).id = s then
+			return i
+		end if
+	next
+	function = -1
+end function
+
 function TargetInfo.id() as string
 	if (os = OS_DOS) and (arch = ARCH_X86) then
 		return "dos"

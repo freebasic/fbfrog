@@ -1,0 +1,4 @@
+[1/2] win32
+[2/2] win64
+	tests/versions/target-windows.h
+emitting: tests/versions/target-windows.bi (0 declarations, 0 TODOs)
