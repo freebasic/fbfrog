@@ -858,31 +858,27 @@ private sub hParseArgs(byref x as integer)
 			x += 1
 
 			hExpectStringOrId(x, "<target> argument")
-			do
-
-				select case *tkGetText(x)
-				case "nodos"
-					frogSetTargets(TRUE)
-					frog.os(OS_DOS) = FALSE
-				case "dosonly"
-					frogSetArchs(TRUE)
-					frog.os(OS_DOS) = TRUE
-				case "linuxonly"
-					frogSetArchs(TRUE)
-					frog.os(OS_LINUX) = TRUE
-				case "windowsonly"
-					frogSetArchs(TRUE)
-					frog.os(OS_WINDOWS) = TRUE
-				case "noarm"
-					frogSetTargets(TRUE)
-					frog.arch(ARCH_ARM) = FALSE
-					frog.arch(ARCH_AARCH64) = FALSE
-				case else
-					tkOops(x, "unknown -target argument")
-				end select
-
-				x += 1
-			loop while hIsStringOrId(x)
+			select case *tkGetText(x)
+			case "nodos"
+				frogSetTargets(TRUE)
+				frog.os(OS_DOS) = FALSE
+			case "dosonly"
+				frogSetArchs(TRUE)
+				frog.os(OS_DOS) = TRUE
+			case "linuxonly"
+				frogSetArchs(TRUE)
+				frog.os(OS_LINUX) = TRUE
+			case "windowsonly"
+				frogSetArchs(TRUE)
+				frog.os(OS_WINDOWS) = TRUE
+			case "noarm"
+				frogSetTargets(TRUE)
+				frog.arch(ARCH_ARM) = FALSE
+				frog.arch(ARCH_AARCH64) = FALSE
+			case else
+				tkOops(x, "unknown -target argument")
+			end select
+			x += 1
 
 		'' -title
 		case OPT_TITLE
