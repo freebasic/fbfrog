@@ -46,3 +46,10 @@ root
             eol
       string "istLabel"
          eol
+--------------------------------------------------------------------------------
+patterns: "aa", "a"
+root
+   string "a"
+      string "a"
+         eol
+tests/unit/string-matching.bas(142): failed: m.matches("a")

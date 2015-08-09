@@ -19,6 +19,7 @@ dumpStringMatcherTree("a", "b", "aa")
 dumpStringMatcherTree("a", "b", "aa", "b*")
 dumpStringMatcherTree("aa1", "aa2", "aa3")
 dumpStringMatcherTree("LPCSTR", "LPSTR", "ListLabel")
+dumpStringMatcherTree("aa", "a")
 
 scope
 	dim m as StringMatcher
@@ -131,4 +132,13 @@ scope
 	test(m.matches("LPSTR"))
 	test(m.matches("ListLabel"))
 	test(not m.matches("LPCWSTR"))
+end scope
+
+scope
+	dim m as StringMatcher
+	m.addPattern("aa")
+	m.addPattern("a")
+
+	test(m.matches("a"))
+	test(m.matches("aa"))
 end scope
