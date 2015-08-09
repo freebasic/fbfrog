@@ -856,7 +856,7 @@ function astDumpOne(byval n as ASTNODE ptr) as string
 		return "<NULL>"
 	end if
 
-	s += "[" & hex(n) & "] "
+	's += "[" & hex(n) & "] "
 	if (n->class >= 0) and (n->class < ASTCLASS__COUNT) then
 		s += *astnodename(n->class)
 	else
@@ -889,7 +889,7 @@ function astDumpOne(byval n as ASTNODE ptr) as string
 	case ASTCLASS_OPTION
 		s += " " + *tkInfoText(n->opt)
 	case ASTCLASS_VERBLOCK, ASTCLASS_PPIF, ASTCLASS_PPELSEIF
-		's += " apis=" + n->apis.dump()
+		s += " apis=" + n->apis.dump()
 	case ASTCLASS_VERNUMCHECK
 		s += " vernum=" & n->vernum
 	end select
@@ -929,11 +929,11 @@ sub astDump _
 	s += astDumpOne(n)
 	print s
 
-	'#define dumpField(field) if n->field then astDump(n->field, nestlevel, #field)
-	'dumpField(subtype)
-	'dumpField(array)
-	'dumpField(bits)
-	'dumpField(expr)
+	#define dumpField(field) if n->field then astDump(n->field, nestlevel, #field)
+	dumpField(subtype)
+	dumpField(array)
+	dumpField(bits)
+	dumpField(expr)
 
 	var child = n->head
 	while child
