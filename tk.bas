@@ -81,7 +81,9 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	(@"}"  ), _
 	(@"~"  ), _
 	(@"TK_ID" ), _ '' TK_ID
-	(@"__attribute"  ), _ '' C keywords
+	(@"__asm"        ), _ '' C keywords
+	(@"__asm__"      ), _
+	(@"__attribute"  ), _
 	(@"__attribute__"), _
 	(@"__inline"     ), _
 	(@"__inline__"   ), _
@@ -89,6 +91,7 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	(@"__restrict__" ), _
 	(@"_Bool"   ), _
 	(@"_Pragma" ), _
+	(@"asm"     ), _
 	(@"auto"    ), _
 	(@"break"   ), _
 	(@"case"    ), _

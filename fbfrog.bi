@@ -369,7 +369,9 @@ enum
 
 	'' C keywords
 	KW__C_FIRST
-	KW___ATTRIBUTE = KW__C_FIRST
+	KW___ASM = KW__C_FIRST
+	KW___ASM__
+	KW___ATTRIBUTE
 	KW___ATTRIBUTE__
 	KW___INLINE
 	KW___INLINE__
@@ -377,6 +379,7 @@ enum
 	KW___RESTRICT__
 	KW__BOOL
 	KW__PRAGMA
+	KW_ASM
 	KW_AUTO
 	KW_BREAK
 	KW_CASE

@@ -2352,6 +2352,23 @@ private function cDeclaration(byval astclass as integer, byval gccattribs as int
 			cAddTypedef(n->text)
 		end if
 
+		select case tkGet(c.x)
+		case KW_ASM, KW___ASM, KW___ASM__
+			c.x += 1
+
+			cExpectMatch(TK_LPAREN, "for asm()")
+
+			if tkGet(c.x) = TK_STRING then
+				var s = cLiteral(ASTCLASS_STRING, TRUE)
+				astSetAlias(n, s->text)
+				astDelete(s)
+			else
+				cError("expected ""name"" inside asm()")
+			end if
+
+			cExpectMatch(TK_RPAREN, "for asm()")
+		end select
+
 		if hCanHaveInitializer(n) then
 			'' ['=' Initializer]
 			if cMatch(TK_EQ) then
