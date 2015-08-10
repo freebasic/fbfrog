@@ -2661,7 +2661,7 @@ private function cppPragma(byref flags as integer) as integer
 		cpp.x += 1
 
 		select case tkSpell(cpp.x)
-		case "system_header", "push_options", "pop_options", "reset_options", "optimize", "target"
+		case "system_header", "push_options", "pop_options", "reset_options", "optimize", "target", "visibility"
 			'' Ignore
 			cpp.x = hSkipToEol(cpp.x)
 

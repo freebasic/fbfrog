@@ -98,3 +98,8 @@
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wfoo"
 #pragma clang diagnostic pop
+
+#pragma GCC visibility push(default)
+#pragma GCC visibility pop
+#pragma GCC visibility push(hidden)
+#pragma GCC visibility pop
