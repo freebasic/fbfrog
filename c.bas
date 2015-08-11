@@ -2361,6 +2361,7 @@ private function cDeclaration(byval astclass as integer, byval gccattribs as int
 			if tkGet(c.x) = TK_STRING then
 				var s = cLiteral(ASTCLASS_STRING, TRUE)
 				astSetAlias(n, s->text)
+				n->attrib or= ASTATTRIB_NORENAMELIST
 				astDelete(s)
 			else
 				cError("expected ""name"" inside asm()")

@@ -1,10 +1,6 @@
 #pragma once
 
 '' The following symbols have been renamed:
-''     variable b => a
-''     variable b => a
-''     variable b => a
-''     procedure f2 => f1
 ''     variable x1 => x2
 
 extern "C"
