@@ -120,7 +120,7 @@ Using the -declare*/-select/-ifdef options:
   fbfrog options:
 
     -declareversions __LIBFOO_VERSION 1 2
-    -select __LIBFOO_VERSION
+    -selectversion
     -case 1
         foo1.h
     -case 2
@@ -150,11 +150,11 @@ Using the -declare*/-select/-ifdef options:
         blocks such as #if <symbol> = <number>.
 
     -declarebool <symbol>
-        Useful to allow API selection based on whether a certain symbol is
-        defined or not. This is used for __FB_64BIT__ in default.fbfrog, but
-        could also be used to support distinguishing between UNICODE and ANSI
-        versions of a binding (-declarebool UNICODE -> #ifdef UNICODE) or
-        the shared library/DLL version and the static library version, etc.
+        Useful to allow API selection based on whether a certain symbol is 
+        defined or not. For example, this could be used to support 
+        distinguishing between UNICODE and ANSI versions of a binding 
+        (-declarebool UNICODE -> #ifdef UNICODE) or the shared library/DLL 
+        version and the static library version, etc.
 
   If multiple -declare* options are given, they multiply. For example:
     -declarebool A -declarebool B
@@ -167,9 +167,7 @@ Using the -declare*/-select/-ifdef options:
   You can use the -select/-ifdef logic options to create different "code paths"
   where some options will only be used for some APIs (instead of applying to
   all APIs). This also works with -declare* options, allowing you to build
-  even complex API condition trees. See for example
-  include/fbfrog/default.fbfrog, which declares 64bit versions for all systems
-  except DOS.
+  even complex API condition trees.
 
 
 Why use a custom C preprocessor and parser instead of an existing one?
@@ -223,26 +221,6 @@ Interesting improvements:
   - -declarebool: store flags in ApiInfo
   - frogEvaluateScript() should build ApiInfo objects directly, then copy them
     for recursive invocations, no more separate loadOptions()
-* consecutive verblocks should be added to a prefix tree, to solve out common
-  API conditions, e.g.:
-	#if win32 and static		#if win32
-		...				#if static
-	#endif						...
-	#if win32				#endif
-		...		=>		...
-	#endif					#if static
-	#if win32 and static				...
-		...				#endif
-	#endif				#endif
-  and to catch bad merges:
-	#if win32			#if win32
-		[win32 1]			[win32 1]
-	#else					[win32 2]
-		[linux]		=>	#else
-	#endif					[linux]
-	#if win32			#endif
-		[win32 2]
-	#endif
 * LCS is main bottle-neck, can it be optimized?
 * Turn more inline functions into macros: also void functions whose body can
   just be used as macro'd scope block, and doesn't contain any RETURNs
@@ -273,17 +251,12 @@ Interesting improvements:
   can be used)
   * use separate ExprNode to hold expressions
       - 2 kinds of macros: 1. expression macro, 2. code block macro
-* Show #include tree
-* Hard-code default.fbfrog and default.h, remove include/fbfrog/
-  add a tools/gcc.sh or similar that queries various gcc toolchains and
-  generates a gccpredefs.bi
 * Don't expand macro constants outside CPP expressions, to keep them as array size etc.
 * Solve out tag ids if there is an alias typedef, unless the tag id is used elsewhere
 * Turn alias #defines into proper decls (typedefs, procdecls)
    1st pass: collect all types/procs
    2nd pass: find alias #defines and turn them into real decls. For procs, 1.
    duplicate the PROC node, 2. rename it to get an ALIAS emitted.
-* pattern-based -removedefine, e.g. -removedefine '__*'
 * pattern-based renames, e.g. -renamedefine '%' 'FOO_%',
   or at least --rename-define-add-prefix '*' FOO_  <- add prefix FOO_ to matching defines.
 * -rename <id> which automatically appends an _ underscore
