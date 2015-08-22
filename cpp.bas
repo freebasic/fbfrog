@@ -2286,7 +2286,16 @@ private sub cppInclude(byval begin as integer, byref flags as integer, byval is_
 	assert(cppSkipping() = FALSE)
 
 	'' Expand macros behind the #include (but still in the same line)
-	hExpandInRange(cpp.x, hSkipToEol(cpp.x) - 1, FALSE)
+	'' but only if there is not already a " or < (like gcc).
+	'' This way we avoid expanding macros inside <...> which can't be made
+	'' a single token like "..." because it depends on context. It should
+	'' only be a single token if used for an #include, but if it's written
+	'' in a #define body then we don't know what the context will be.
+	select case tkGet(cpp.x)
+	case TK_LT, TK_STRING
+	case else
+		hExpandInRange(cpp.x, hSkipToEol(cpp.x) - 1, FALSE)
+	end select
 
 	'' "filename" | <filename>
 	var location = tkGetLocation(cpp.x)
