@@ -825,11 +825,15 @@ end sub
 
 type TypedefExpander
 	typedefs as TypedefTable
-	declare sub work(byval n as ASTNODE ptr)
+	declare sub walkDecls(byval n as ASTNODE ptr)
+	declare sub walkDefines(byval n as ASTNODE ptr)
 	declare operator let(byref as const TypedefExpander) '' unimplemented
 end type
 
-sub TypedefExpander.work(byval n as ASTNODE ptr)
+sub TypedefExpander.walkDecls(byval n as ASTNODE ptr)
+	'' Ignore #defines for now; they will be processed later by walkDefines()
+	if n->class = ASTCLASS_PPDEFINE then exit sub
+
 	'' Declaration using one of the typedefs?
 	if typeGetDt(n->dtype) = TYPE_UDT then
 		assert(astIsTEXT(n->subtype))
@@ -843,15 +847,15 @@ sub TypedefExpander.work(byval n as ASTNODE ptr)
 		end if
 	end if
 
-	if n->subtype then work(n->subtype)
-	if n->array   then work(n->array  )
-	if n->expr    then work(n->expr   )
+	if n->subtype then walkDecls(n->subtype)
+	if n->array   then walkDecls(n->array  )
+	if n->expr    then walkDecls(n->expr   )
 
 	var i = n->head
 	while i
 		var nxt = i->next
 
-		work(i)
+		walkDecls(i)
 
 		'' Register & drop typedefs
 		if i->class = ASTCLASS_TYPEDEF then
@@ -864,6 +868,18 @@ sub TypedefExpander.work(byval n as ASTNODE ptr)
 		end if
 
 		i = nxt
+	wend
+end sub
+
+sub TypedefExpander.walkDefines(byval n as ASTNODE ptr)
+	var i = n->head
+	while i
+
+		if (i->class = ASTCLASS_PPDEFINE) and (i->expr <> NULL) then
+			walkDecls(i->expr)
+		end if
+
+		i = i->next
 	wend
 end sub
 
@@ -1021,18 +1037,20 @@ end sub
 ''
 type CharStringPass
 	typedefs as TypedefTable
-	declare sub work(byval n as ASTNODE ptr)
+	declare sub walkDecls(byval n as ASTNODE ptr)
+	declare sub walkDefines(byval n as ASTNODE ptr)
 	declare operator let(byref as const CharStringPass) '' unimplemented
 end type
 
 #define isAffectedByNoString(n) (((n)->attrib and ASTATTRIB_NOSTRING) <> 0)
 #define isAffectedByString(n)   (((n)->attrib and ASTATTRIB_STRING  ) <> 0)
 
-sub CharStringPass.work(byval n as ASTNODE ptr)
-	'' Ignore string/char literals, which also have string/char types,
-	'' but shouldn't be changed.
+sub CharStringPass.walkDecls(byval n as ASTNODE ptr)
+	'' Ignore string/char literals, which also have string/char types, but
+	'' shouldn't be changed.
+	'' Ignore #defines for now; they will be processed later by walkDefines()
 	select case n->class
-	case ASTCLASS_STRING, ASTCLASS_CHAR
+	case ASTCLASS_STRING, ASTCLASS_CHAR, ASTCLASS_PPDEFINE
 		exit sub
 	end select
 
@@ -1117,13 +1135,25 @@ sub CharStringPass.work(byval n as ASTNODE ptr)
 		end select
 	end if
 
-	if n->subtype then work(n->subtype)
-	if n->array   then work(n->array  )
-	if n->expr    then work(n->expr   )
+	if n->subtype then walkDecls(n->subtype)
+	if n->array   then walkDecls(n->array  )
+	if n->expr    then walkDecls(n->expr   )
 
 	var i = n->head
 	while i
-		work(i)
+		walkDecls(i)
+		i = i->next
+	wend
+end sub
+
+sub CharStringPass.walkDefines(byval n as ASTNODE ptr)
+	var i = n->head
+	while i
+
+		if (i->class = ASTCLASS_PPDEFINE) and (i->expr <> NULL) then
+			walkDecls(i->expr)
+		end if
+
 		i = i->next
 	wend
 end sub
@@ -2272,9 +2302,12 @@ sub hlGlobal(byval ast as ASTNODE ptr, byref api as ApiInfo)
 	'' and any typedefs matched by an -expand option
 	'' TODO: If possible, turn function typedefs into function pointer
 	'' typedefs instead of solving them out
+	'' All C declarations must be processed before processing #define
+	'' bodies, because #define bodies may "forward-reference" typedefs etc.
 	scope
 		dim expander as TypedefExpander
-		expander.work(ast)
+		expander.walkDecls(ast)
+		expander.walkDefines(ast)
 	end scope
 
 	'' Fix up parameters with certain special types:
@@ -2287,7 +2320,8 @@ sub hlGlobal(byval ast as ASTNODE ptr, byref api as ApiInfo)
 	scope
 		hlFindStringOptionMatches(NULL, NULL, ast, 0)
 		dim pass as CharStringPass
-		pass.work(ast)
+		pass.walkDecls(ast)
+		pass.walkDefines(ast)
 	end scope
 
 	''
