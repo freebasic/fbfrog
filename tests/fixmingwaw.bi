@@ -39,9 +39,9 @@ const CONST1A = 1
 const CONST1W = 2
 
 #ifdef UNICODE
-	#define CONST1 CONST1W
+	const CONST1 = CONST1W
 #else
-	#define CONST1 CONST1A
+	const CONST1 = CONST1A
 #endif
 
 #define STR1 __TEXT("1")

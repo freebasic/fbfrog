@@ -479,11 +479,12 @@ const A62 = culng(0u - 100u)
 
 #ifdef __FB_WIN32__
 	#define A84 undefined
+	#define A85 A84
 #else
 	const A84 = -1
+	const A85 = A84
 #endif
 
-#define A85 A84
 #define A90(x) (@(x)->a[(x)->b])
 '' TODO: #define A100 struct { int i; }
 '' TODO: #define A101 struct UDT { int i; }

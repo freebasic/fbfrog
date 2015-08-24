@@ -1820,6 +1820,116 @@ private sub hlProcs2Macros(byval ast as ASTNODE ptr)
 	wend
 end sub
 
+''
+'' Turn alias #defines into proper declarations, for example:
+''
+''    type T1 as integer
+''    #define T2 T1
+''    declare sub function1
+''    #define function2 function1
+'' =>
+''    type T1 as integer
+''    type T2 as T1
+''    declare sub function1
+''    declare sub function2 alias "function1"
+''
+'' The advantage is that proper declarations are less intrusive than #defines
+'' in the global namespace.
+''
+'' #defines are commonly used to provide aliases for constants, typedefs and
+'' functions (e.g. in the Windows API headers). We can have two kinds of alias
+'' defines:
+''   1. identifier aliases (macro body is a TEXT node)
+''   2. type aliases (macro body is a DATATYPE node)
+''
+'' Normally the main declaration comes first and the alias #defines follow it,
+'' but if it's the other way round (which is legal C code afterall) we may have
+'' to move the alias declarations behind the main one.
+''
+type Define2Decl
+	decls as THash = THash(12, FALSE)
+	declare operator let(byref as const Define2Decl) '' unimplemented
+	declare sub handleAliasDefine(byval n as ASTNODE ptr, byval aliasedid as zstring ptr)
+	declare sub work(byval ast as ASTNODE ptr)
+end type
+
+sub Define2Decl.handleAliasDefine(byval n as ASTNODE ptr, byval aliasedid as zstring ptr)
+	dim as ASTNODE ptr decl = decls.lookupDataOrNull(aliasedid)
+	if decl then
+		'' This #define aliases a previous declaration
+		select case decl->class
+		case ASTCLASS_CONST
+			'' const A = ...
+			'' #define B A    =>  const B = A
+			n->class = ASTCLASS_CONST
+		case ASTCLASS_TYPEDEF, ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
+			'' type A as ...
+			'' #define B A    =>  type B as A
+			n->class = ASTCLASS_TYPEDEF
+			n->dtype = TYPE_UDT
+			n->subtype = astNewTEXT(aliasedid)
+			astDelete(n->expr)
+			n->expr = NULL
+		case ASTCLASS_PROC
+			'' declare sub/function A
+			'' declare sub/function C alias "X"
+			'' #define B A    =>  declare sub/function B alias "A"
+			'' #define D C    =>  declare sub/function D alias "X"
+			n->class = ASTCLASS_PROC
+
+			'' Copy attributes, result type, parameters
+			n->attrib or= decl->attrib and (ASTATTRIB_DLLIMPORT or ASTATTRIB__CALLCONV)
+			astSetType(n, decl->dtype, decl->subtype)
+			astAppend(n, astCloneChildren(decl))
+
+			'' Use main decl's alias name as alias here
+			astSetAlias(n, iif(decl->alias, decl->alias, decl->text))
+
+			'' Forget the macro body
+			astDelete(n->expr)
+			n->expr = NULL
+		end select
+	else
+		'' This #define may alias a following declaration
+		'' TODO: add it to a list for processing later
+	end if
+end sub
+
+sub Define2Decl.work(byval ast as ASTNODE ptr)
+	var i = ast->head
+	while i
+
+		'' Process alias #defines
+		if (i->class = ASTCLASS_PPDEFINE) andalso (i->paramcount = -1) andalso i->expr then
+			select case i->expr->class
+			case ASTCLASS_TEXT
+				handleAliasDefine(i, i->expr->text)
+			case ASTCLASS_DATATYPE
+				var datatype = i->expr
+				if datatype->dtype = TYPE_UDT then
+					assert(astIsTEXT(datatype->subtype))
+					handleAliasDefine(i, datatype->subtype->text)
+				end if
+			end select
+		end if
+
+		'' Register declarations that can be aliased via #defines
+		select case i->class
+		case ASTCLASS_CONST, ASTCLASS_PROC, ASTCLASS_TYPEDEF, _
+		     ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
+			if i->text then
+				decls.addOverwrite(i->text, i)
+			end if
+			if i->class = ASTCLASS_ENUM then
+				'' Register enum constants too
+				work(i)
+			end if
+		end select
+
+		i = i->next
+	wend
+end sub
+
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 private function hlCountCallConvs(byval n as ASTNODE ptr) as integer
@@ -2431,6 +2541,11 @@ sub hlGlobal(byval ast as ASTNODE ptr, byref api as ApiInfo)
 	end if
 
 	hlProcs2Macros(ast)
+
+	scope
+		dim pass as Define2Decl
+		pass.work(ast)
+	end scope
 end sub
 
 ''

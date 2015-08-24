@@ -6,7 +6,7 @@ const A = 1
 #define B() 1
 #define C(a) 1
 #define D f()
-#define E A
+const E = A
 
 type UDT1
 	field as long
