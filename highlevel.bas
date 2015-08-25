@@ -1888,7 +1888,7 @@ type Define2Decl
 	declare sub turnDefine2Decl(byval n as ASTNODE ptr, byval decl as ASTNODE ptr)
 	declare sub addForward(byval aliasedid as zstring ptr, byval def as ASTNODE ptr)
 	declare sub handleAliasDefine(byval n as ASTNODE ptr, byval aliasedid as zstring ptr)
-	declare sub workDecl(byval ast as ASTNODE ptr, byval decl as ASTNODE ptr, byval insertref as ASTNODE ptr)
+	declare sub workDecl(byval ast as ASTNODE ptr, byval decl as ASTNODE ptr, byval insertbehind as ASTNODE ptr)
 	declare sub work(byval ast as ASTNODE ptr)
 end type
 
@@ -2025,7 +2025,7 @@ sub Define2Decl.handleAliasDefine(byval def as ASTNODE ptr, byval aliasedid as z
 	end if
 end sub
 
-sub Define2Decl.workDecl(byval ast as ASTNODE ptr, byval decl as ASTNODE ptr, byval insertref as ASTNODE ptr)
+sub Define2Decl.workDecl(byval ast as ASTNODE ptr, byval decl as ASTNODE ptr, byval insertbehind as ASTNODE ptr)
 	if mayTurnDefs2Decl(decl) = FALSE then exit sub
 
 	'' Check whether we saw an alias #define for this declaration before
@@ -2033,11 +2033,17 @@ sub Define2Decl.workDecl(byval ast as ASTNODE ptr, byval decl as ASTNODE ptr, by
 	if item->s then
 		dim info as ForwardInfo ptr = item->data
 		if info then
+			var insertbefore = insertbehind->next
+
 			'' Move the collected #defines behind the declaration and process them
 			for i as integer = 0 to info->defcount - 1
 				var aliasdef = info->defs[i]
 				astUnlink(ast, aliasdef)
-				astInsert(ast, aliasdef, insertref)
+				astInsert(ast, aliasdef, insertbefore)
+
+				'' This may even move the #define into a different header file
+				aliasdef->location = insertbehind->location
+
 				turnDefine2Decl(aliasdef, decl)
 			next
 
@@ -2076,7 +2082,7 @@ sub Define2Decl.work(byval ast as ASTNODE ptr)
 		case ASTCLASS_CONST, ASTCLASS_PROC, ASTCLASS_TYPEDEF, _
 		     ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
 			if i->text then
-				workDecl(ast, i, i->next)
+				workDecl(ast, i, i)
 			end if
 
 			if i->class = ASTCLASS_ENUM then
@@ -2084,7 +2090,7 @@ sub Define2Decl.work(byval ast as ASTNODE ptr)
 				var enumconst = i->head
 				while enumconst
 					if enumconst->class = ASTCLASS_CONST then
-						workDecl(ast, enumconst, i->next)
+						workDecl(ast, enumconst, i)
 					end if
 					enumconst = enumconst->next
 				wend
@@ -2092,7 +2098,7 @@ sub Define2Decl.work(byval ast as ASTNODE ptr)
 
 		case ASTCLASS_VAR
 			if (i->attrib and (ASTATTRIB_LOCAL or ASTATTRIB_STATIC)) = 0 then
-				workDecl(ast, i, i->next)
+				workDecl(ast, i, i)
 			end if
 		end select
 

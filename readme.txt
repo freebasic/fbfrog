@@ -198,8 +198,6 @@ unnecessary?
 To do:
 
 Bugs:
-* Only add things to renamelist if they have a RENAMED flag (not everything
-  with an alias was renamed)
 * Don't add #undefs to renamelists
 * C parser needs to verify #directives, since they can be inserted by "to c" -replacements,
   which aren't verified by the CPP
@@ -218,6 +216,8 @@ Bugs:
   (at least, mark it with a TODO)
 
 Interesting improvements:
+* Only add things to renamelist if they have a RENAMED flag (not everything
+  with an alias was renamed)
 * Add -printcconstruct <pattern> option for dumping C constructs as seen by fbfrog
   to make writing replacements easier. (TODOs aren't enough, because sometimes we
   want to do a replacement even though it's not a TODO)

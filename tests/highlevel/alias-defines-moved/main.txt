@@ -24,6 +24,6 @@
 	tests/highlevel/alias-defines-moved/main.h
 	tests/highlevel/alias-defines-moved/other1.h
 	tests/highlevel/alias-defines-moved/other2.h
-emitting: tests/highlevel/alias-defines-moved/main.bi (1 declaration, 0 TODOs)
-emitting: tests/highlevel/alias-defines-moved/other1.bi (1 declaration, 0 TODOs)
+emitting: tests/highlevel/alias-defines-moved/main.bi (2 declarations, 0 TODOs)
+emitting: tests/highlevel/alias-defines-moved/other1.bi (0 declarations, 0 TODOs)
 emitting: tests/highlevel/alias-defines-moved/other2.bi (1 declaration, 0 TODOs)
