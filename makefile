@@ -23,4 +23,8 @@ install:
 	install $(FBFROG) "$(prefix)/bin"
 	cp -R include/fbfrog "$(prefix)/include"
 
-.PHONY: all tests clean install
+COMMIT = $(shell git rev-parse --verify HEAD)
+tarball:
+	git archive --format tar --prefix "fbfrog-$(COMMIT)/" $(COMMIT) | xz --stdout > fbfrog-$(COMMIT).tar.xz
+
+.PHONY: all tests clean install tarball
