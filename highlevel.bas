@@ -1961,6 +1961,7 @@ end sub
 private sub copyTypeAndChooseAlias(byval n as ASTNODE ptr, byval decl as ASTNODE ptr)
 	astSetType(n, decl->dtype, decl->subtype)
 	astSetAlias(n, iif(decl->alias, decl->alias, decl->text))
+	n->attrib or= ASTATTRIB_NORENAMELIST
 end sub
 
 private sub astDropExpr(byval n as ASTNODE ptr)

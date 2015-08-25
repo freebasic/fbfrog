@@ -1,8 +1,6 @@
 #pragma once
 
 '' The following symbols have been renamed:
-''     procedure F1 => F2
-''     variable EV1 => EV2
 ''     variable FOO => BAR
 
 extern "C"

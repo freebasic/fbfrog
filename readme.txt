@@ -198,6 +198,9 @@ unnecessary?
 To do:
 
 Bugs:
+* Only add things to renamelist if they have a RENAMED flag (not everything
+  with an alias was renamed)
+* Don't add #undefs to renamelists
 * C parser needs to verify #directives, since they can be inserted by "to c" -replacements,
   which aren't verified by the CPP
 * in winapi, there is a case where an auto-generated tagid conflicts
