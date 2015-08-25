@@ -1820,6 +1820,40 @@ private sub hlProcs2Macros(byval ast as ASTNODE ptr)
 	wend
 end sub
 
+private sub maybeRemoveSelfDefine(byval ast as ASTNODE ptr, byval i as ASTNODE ptr, byval aliasedid as zstring ptr)
+	'' Aliasing same id?
+	if *i->text = *aliasedid then
+		astRemove(ast, i)
+	end if
+end sub
+
+'' Some C headers use self-aliasing #defines, for example
+''    typedef int A;
+''    #define A A
+'' these aren't needed/useful/possible in FB, and should be removed completely.
+private sub hlRemoveSelfDefines(byval ast as ASTNODE ptr)
+	var i = ast->head
+	while i
+		var nxt = i->next
+
+		'' Process alias #defines
+		if (i->class = ASTCLASS_PPDEFINE) andalso (i->paramcount = -1) andalso i->expr then
+			select case i->expr->class
+			case ASTCLASS_TEXT
+				maybeRemoveSelfDefine(ast, i, i->expr->text)
+			case ASTCLASS_DATATYPE
+				var datatype = i->expr
+				if datatype->dtype = TYPE_UDT then
+					assert(astIsTEXT(datatype->subtype))
+					maybeRemoveSelfDefine(ast, i, datatype->subtype->text)
+				end if
+			end select
+		end if
+
+		i = nxt
+	wend
+end sub
+
 ''
 '' Turn alias #defines into proper declarations, for example:
 ''
@@ -2717,6 +2751,8 @@ sub hlGlobal(byval ast as ASTNODE ptr, byref api as ApiInfo)
 	end if
 
 	hlProcs2Macros(ast)
+
+	hlRemoveSelfDefines(ast)
 
 	scope
 		dim pass as Define2Decl
