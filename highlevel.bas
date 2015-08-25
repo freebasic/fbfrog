@@ -1841,58 +1841,198 @@ end sub
 '' defines:
 ''   1. identifier aliases (macro body is a TEXT node)
 ''   2. type aliases (macro body is a DATATYPE node)
+'' TODO: aliases for extern vars
 ''
 '' Normally the main declaration comes first and the alias #defines follow it,
 '' but if it's the other way round (which is legal C code afterall) we may have
 '' to move the alias declarations behind the main one.
+''  - There can be multiple forward alias #defines for one declaration
+''    (i.e. we have to keep a list of #defines per identifier, and then move
+''    all of them behind the declaration)
+''  - What if there are multiple declarations using the same id? It can happen
+''    for example with an UDT and procedure of the same name.  We don't know
+''    which the alias refers to, it can stand for both depending on where it's
+''    used. Thus, such alias #defines mustn't be turned into declarations.
+''    For this, we have to do a separate pass that just counts the declarations
+''    per identifier, so we can lookup that count during the main pass.
+''  - If the alias is for an enumconst, the #define must be inserted behind the
+''    enum body, not inside it.
 ''
+
+type ForwardInfo
+	defs as ASTNODE ptr ptr
+	defcount as integer
+	declare destructor()
+	declare sub append(byval def as ASTNODE ptr)
+end type
+
+destructor ForwardInfo()
+	deallocate(defs)
+end destructor
+
+sub ForwardInfo.append(byval def as ASTNODE ptr)
+	var i = defcount
+	defcount += 1
+	defs = reallocate(defs, sizeof(*defs) * defcount)
+	defs[i] = def
+end sub
+
 type Define2Decl
+	counts as THash = THash(12, FALSE)
 	decls as THash = THash(12, FALSE)
+	forwards as THash = THash(8, FALSE)
 	declare operator let(byref as const Define2Decl) '' unimplemented
+	declare destructor()
+	declare sub countDecl(byval id as zstring ptr)
+	declare sub countDecls(byval ast as ASTNODE ptr)
+	declare function mayTurnDefs2Decl(byval decl as ASTNODE ptr) as integer
+	declare sub turnDefine2Decl(byval n as ASTNODE ptr, byval decl as ASTNODE ptr)
+	declare sub addForward(byval aliasedid as zstring ptr, byval def as ASTNODE ptr)
 	declare sub handleAliasDefine(byval n as ASTNODE ptr, byval aliasedid as zstring ptr)
+	declare sub workDecl(byval ast as ASTNODE ptr, byval decl as ASTNODE ptr, byval insertref as ASTNODE ptr)
 	declare sub work(byval ast as ASTNODE ptr)
 end type
 
-sub Define2Decl.handleAliasDefine(byval n as ASTNODE ptr, byval aliasedid as zstring ptr)
+destructor Define2Decl()
+	for i as integer = 0 to forwards.room - 1
+		var item = forwards.items + i
+		if item->s andalso item->data then
+			delete cptr(ForwardInfo ptr, item->data)
+		end if
+	next
+end destructor
+
+sub Define2Decl.countDecl(byval id as zstring ptr)
+	var idhash = hashHash(id)
+	var item = counts.lookup(id, idhash)
+	if item->s then
+		'' Entry already exists, increment counter
+		item->data = cptr(any ptr, cint(item->data) + 1)
+	else
+		'' New entry, start with count=1
+		counts.add(item, idhash, id, cptr(any ptr, 1))
+	end if
+end sub
+
+'' 1st pass: Count declarations per identifier
+'' (This has to count even #defines, at least those that may be turned into
+'' declarations later, because they themselves will be considered as alias-able
+'' declarations)
+sub Define2Decl.countDecls(byval ast as ASTNODE ptr)
+	var i = ast->head
+	while i
+
+		if i->text then
+			countDecl(i->text)
+		end if
+
+		if i->class = ASTCLASS_ENUM then
+			'' Register enum constants too
+			var enumconst = i->head
+			while enumconst
+				if enumconst->class = ASTCLASS_CONST then
+					countDecl(enumconst->text)
+				end if
+				enumconst = enumconst->next
+			wend
+		end if
+
+		i = i->next
+	wend
+end sub
+
+function Define2Decl.mayTurnDefs2Decl(byval decl as ASTNODE ptr) as integer
+	assert(counts.contains(decl->text, hashHash(decl->text)))
+	var count = cint(counts.lookupDataOrNull(decl->text))
+	function = (count = 1)
+end function
+
+sub Define2Decl.addForward(byval aliasedid as zstring ptr, byval def as ASTNODE ptr)
+	var aliasedidhash = hashHash(aliasedid)
+	var item = forwards.lookup(aliasedid, aliasedidhash)
+	if item->s then
+		cptr(ForwardInfo ptr, item->data)->append(def)
+	else
+		var info = new ForwardInfo
+		info->append(def)
+		forwards.add(item, aliasedidhash, aliasedid, info)
+	end if
+end sub
+
+sub Define2Decl.turnDefine2Decl(byval n as ASTNODE ptr, byval decl as ASTNODE ptr)
+	'' This #define aliases a previous declaration
+	select case decl->class
+	case ASTCLASS_CONST
+		'' const A = ...
+		'' #define B A    =>  const B = A
+		n->class = ASTCLASS_CONST
+	case ASTCLASS_TYPEDEF, ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
+		'' type A as ...
+		'' #define B A    =>  type B as A
+		n->class = ASTCLASS_TYPEDEF
+		n->dtype = TYPE_UDT
+		n->subtype = astNewTEXT(decl->text)
+		astDelete(n->expr)
+		n->expr = NULL
+	case ASTCLASS_PROC
+		'' declare sub/function A
+		'' declare sub/function C alias "X"
+		'' #define B A    =>  declare sub/function B alias "A"
+		'' #define D C    =>  declare sub/function D alias "X"
+		n->class = ASTCLASS_PROC
+
+		'' Copy attributes, result type, parameters
+		n->attrib or= decl->attrib and (ASTATTRIB_DLLIMPORT or ASTATTRIB__CALLCONV)
+		astSetType(n, decl->dtype, decl->subtype)
+		astAppend(n, astCloneChildren(decl))
+
+		'' Use main decl's alias name as alias here
+		astSetAlias(n, iif(decl->alias, decl->alias, decl->text))
+
+		'' Forget the macro body
+		astDelete(n->expr)
+		n->expr = NULL
+	end select
+end sub
+
+sub Define2Decl.handleAliasDefine(byval def as ASTNODE ptr, byval aliasedid as zstring ptr)
 	dim as ASTNODE ptr decl = decls.lookupDataOrNull(aliasedid)
 	if decl then
-		'' This #define aliases a previous declaration
-		select case decl->class
-		case ASTCLASS_CONST
-			'' const A = ...
-			'' #define B A    =>  const B = A
-			n->class = ASTCLASS_CONST
-		case ASTCLASS_TYPEDEF, ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
-			'' type A as ...
-			'' #define B A    =>  type B as A
-			n->class = ASTCLASS_TYPEDEF
-			n->dtype = TYPE_UDT
-			n->subtype = astNewTEXT(aliasedid)
-			astDelete(n->expr)
-			n->expr = NULL
-		case ASTCLASS_PROC
-			'' declare sub/function A
-			'' declare sub/function C alias "X"
-			'' #define B A    =>  declare sub/function B alias "A"
-			'' #define D C    =>  declare sub/function D alias "X"
-			n->class = ASTCLASS_PROC
-
-			'' Copy attributes, result type, parameters
-			n->attrib or= decl->attrib and (ASTATTRIB_DLLIMPORT or ASTATTRIB__CALLCONV)
-			astSetType(n, decl->dtype, decl->subtype)
-			astAppend(n, astCloneChildren(decl))
-
-			'' Use main decl's alias name as alias here
-			astSetAlias(n, iif(decl->alias, decl->alias, decl->text))
-
-			'' Forget the macro body
-			astDelete(n->expr)
-			n->expr = NULL
-		end select
+		turnDefine2Decl(def, decl)
 	else
 		'' This #define may alias a following declaration
-		'' TODO: add it to a list for processing later
+		'' Add it to a list for processing later. We have to lookup
+		'' following declarations until the one that's being aliased is
+		'' found, then the #define can be moved behind it, and be turned
+		'' into a proper declaration.
+		addForward(aliasedid, def)
 	end if
+end sub
+
+sub Define2Decl.workDecl(byval ast as ASTNODE ptr, byval decl as ASTNODE ptr, byval insertref as ASTNODE ptr)
+	if mayTurnDefs2Decl(decl) = FALSE then exit sub
+
+	'' Check whether we saw an alias #define for this declaration before
+	var item = forwards.lookup(decl->text, hashHash(decl->text))
+	if item->s then
+		dim info as ForwardInfo ptr = item->data
+		if info then
+			'' Move the collected #defines behind the declaration and process them
+			for i as integer = 0 to info->defcount - 1
+				var aliasdef = info->defs[i]
+				astUnlink(ast, aliasdef)
+				astInsert(ast, aliasdef, insertref)
+				turnDefine2Decl(aliasdef, decl)
+			next
+
+			'' And "remove" the alias #defines from the collected list,
+			'' so they won't be matched/moved again.
+			delete info
+			item->data = NULL
+		end if
+	end if
+
+	decls.addOverwrite(decl->text, decl)
 end sub
 
 sub Define2Decl.work(byval ast as ASTNODE ptr)
@@ -1914,15 +2054,24 @@ sub Define2Decl.work(byval ast as ASTNODE ptr)
 		end if
 
 		'' Register declarations that can be aliased via #defines
+		'' (This also handles declarations produced above by turning
+		'' #defines into declarations)
 		select case i->class
 		case ASTCLASS_CONST, ASTCLASS_PROC, ASTCLASS_TYPEDEF, _
 		     ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
 			if i->text then
-				decls.addOverwrite(i->text, i)
+				workDecl(ast, i, i->next)
 			end if
+
 			if i->class = ASTCLASS_ENUM then
 				'' Register enum constants too
-				work(i)
+				var enumconst = i->head
+				while enumconst
+					if enumconst->class = ASTCLASS_CONST then
+						workDecl(ast, enumconst, i->next)
+					end if
+					enumconst = enumconst->next
+				wend
 			end if
 		end select
 
@@ -2544,6 +2693,7 @@ sub hlGlobal(byval ast as ASTNODE ptr, byref api as ApiInfo)
 
 	scope
 		dim pass as Define2Decl
+		pass.countDecls(ast)
 		pass.work(ast)
 	end scope
 end sub
