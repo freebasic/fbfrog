@@ -1855,8 +1855,7 @@ private sub hlRemoveSelfDefines(byval ast as ASTNODE ptr)
 end sub
 
 ''
-'' Turn alias #defines into proper declarations, for example:
-''
+'' Turn #defines into proper declarations, for example alias #defines:
 ''    type T1 as integer
 ''    #define T2 T1
 ''    declare sub function1
@@ -1866,6 +1865,13 @@ end sub
 ''    type T2 as T1
 ''    declare sub function1
 ''    declare sub function2 alias "function1"
+''
+'' but also typedefs:
+''    #define T integer ptr
+'' =>
+''    type T as integer ptr
+''
+'' TODO: integrate hlTurnDefinesIntoProperDeclarations() into this
 ''
 '' The advantage is that proper declarations are less intrusive than #defines
 '' in the global namespace.
@@ -1890,6 +1896,14 @@ end sub
 ''    per identifier, so we can lookup that count during the main pass.
 ''  - If the alias is for an enumconst, the #define must be inserted behind the
 ''    enum body, not inside it.
+''  - Typedef #defines generally don't need to be moved, because typedefs allow
+''    forward references anyways. There still can be cases where it's needed
+''    though, for example:
+''        #define T sub(byval as UDT)
+''        type UDT ...
+''    because FB doesn't allow byval parameters to be forward references.
+''    But this is probably not a big deal in practice, and will be caught by fbc
+''    anyways.
 ''
 
 type ForwardInfo
@@ -1919,7 +1933,6 @@ type Define2Decl
 	declare sub countDecl(byval id as zstring ptr)
 	declare sub countDecls(byval ast as ASTNODE ptr)
 	declare function mayTurnDefs2Decl(byval decl as ASTNODE ptr) as integer
-	declare sub turnDefine2Decl(byval n as ASTNODE ptr, byval decl as ASTNODE ptr)
 	declare sub addForward(byval aliasedid as zstring ptr, byval def as ASTNODE ptr)
 	declare sub handleAliasDefine(byval n as ASTNODE ptr, byval aliasedid as zstring ptr)
 	declare sub workDecl(byval ast as ASTNODE ptr, byval decl as ASTNODE ptr, byval insertbehind as ASTNODE ptr)
@@ -2003,7 +2016,7 @@ private sub astDropExpr(byval n as ASTNODE ptr)
 	n->expr = NULL
 end sub
 
-sub Define2Decl.turnDefine2Decl(byval n as ASTNODE ptr, byval decl as ASTNODE ptr)
+private sub turnDefine2Decl(byval n as ASTNODE ptr, byval decl as ASTNODE ptr)
 	'' This #define aliases a previous declaration
 	select case decl->class
 	case ASTCLASS_CONST
@@ -2014,6 +2027,11 @@ sub Define2Decl.turnDefine2Decl(byval n as ASTNODE ptr, byval decl as ASTNODE pt
 	case ASTCLASS_TYPEDEF, ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
 		'' type A as ...
 		'' #define B A    =>  type B as A
+		'' Note: typedef-style #defines (with DATATYPE body) are handled
+		'' by turnDefine2Typedef() now, but this case here can still
+		'' happen, if a define body refers to a struct but wasn't parsed
+		'' as data type - i.e. because it's just the tag id, and the
+		'' "struct" keyword was missing.
 		n->class = ASTCLASS_TYPEDEF
 		n->dtype = TYPE_UDT
 		n->subtype = astNewTEXT(decl->text)
@@ -2043,6 +2061,17 @@ sub Define2Decl.turnDefine2Decl(byval n as ASTNODE ptr, byval decl as ASTNODE pt
 		copyTypeAndChooseAlias(n, decl)
 		astDropExpr(n)
 	end select
+end sub
+
+private sub turnDefine2Typedef(byval n as ASTNODE ptr)
+	'' #define A dtype    =>    type A as dtype
+	var datatype = n->expr
+	assert(datatype->class = ASTCLASS_DATATYPE)
+	n->class = ASTCLASS_TYPEDEF
+	n->dtype = datatype->dtype
+	n->subtype = datatype->subtype
+	datatype->subtype = NULL
+	astDropExpr(n)
 end sub
 
 sub Define2Decl.handleAliasDefine(byval def as ASTNODE ptr, byval aliasedid as zstring ptr)
@@ -2101,11 +2130,7 @@ sub Define2Decl.work(byval ast as ASTNODE ptr)
 			case ASTCLASS_TEXT
 				handleAliasDefine(i, i->expr->text)
 			case ASTCLASS_DATATYPE
-				var datatype = i->expr
-				if datatype->dtype = TYPE_UDT then
-					assert(astIsTEXT(datatype->subtype))
-					handleAliasDefine(i, datatype->subtype->text)
-				end if
+				turnDefine2Typedef(i)
 			end select
 		end if
 

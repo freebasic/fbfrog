@@ -2,10 +2,10 @@
 
 extern "C"
 
-#define int byte
+type int as byte
 extern i as byte
 #undef int
-#define define long
+type define as long
 extern i as long
 #undef define
 '' TODO: #define m1(int, define, defined) int define defined

@@ -2,8 +2,12 @@
 
 #include once "crt/long.bi"
 
-#define MYINT long
-#define MYLONG clong
-#define MYCONSTINT const long
-#define MYINTPTR long ptr
-#define MYPROCPTR sub cdecl()
+extern "C"
+
+type MYINT as long
+type MYLONG as clong
+type MYCONSTINT as const long
+type MYINTPTR as long ptr
+type MYPROCPTR as sub()
+
+end extern
