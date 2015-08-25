@@ -15,7 +15,7 @@ type T2 as T1
 declare sub F1()
 
 #ifdef __FB_WIN32__
-	declare function F3 alias "__F3__" stdcall(byval as double, byval as single) as long
+	declare function F3 stdcall alias "__F3__"(byval as double, byval as single) as long
 #else
 	declare function F3 alias "__F3__"(byval as double, byval as single) as long
 #endif
@@ -23,7 +23,7 @@ declare sub F1()
 declare sub F2 alias "F1"()
 
 #ifdef __FB_WIN32__
-	declare function F4 alias "__F3__" stdcall(byval as double, byval as single) as long
+	declare function F4 stdcall alias "__F3__"(byval as double, byval as single) as long
 #else
 	declare function F4 alias "__F3__"(byval as double, byval as single) as long
 #endif

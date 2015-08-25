@@ -324,7 +324,7 @@ private sub emitProc(byref s as string, byval n as ASTNODE ptr, byval is_expr as
 	'' SUB|FUNCTION [<id>]
 	s += iif(n->dtype = TYPE_ANY, "sub", "function")
 	if is_expr = FALSE then
-		s += " " + *n->text + hEmitAlias(n)
+		s += " " + *n->text
 	end if
 
 	'' Calling convention not covered by Extern block?
@@ -335,6 +335,10 @@ private sub emitProc(byref s as string, byval n as ASTNODE ptr, byval is_expr as
 		elseif n->attrib and ASTATTRIB_STDCALL then
 			s += " stdcall"
 		end if
+	end if
+
+	if is_expr = FALSE then
+		s += hEmitAlias(n)
 	end if
 
 	'' '(' Parameters... ')'
