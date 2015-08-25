@@ -215,6 +215,9 @@ Bugs:
   (at least, mark it with a TODO)
 
 Interesting improvements:
+* Add -printcconstruct <pattern> option for dumping C constructs as seen by fbfrog
+  to make writing replacements easier. (TODOs aren't enough, because sometimes we
+  want to do a replacement even though it's not a TODO)
 * don't build VERAND conditions at frogEvaluateScript() time, but rather do it
   later when generating the #if conditions.
   - -declareversions: store version number in ApiInfo
@@ -253,10 +256,6 @@ Interesting improvements:
       - 2 kinds of macros: 1. expression macro, 2. code block macro
 * Don't expand macro constants outside CPP expressions, to keep them as array size etc.
 * Solve out tag ids if there is an alias typedef, unless the tag id is used elsewhere
-* Turn alias #defines into proper decls (typedefs, procdecls)
-   1st pass: collect all types/procs
-   2nd pass: find alias #defines and turn them into real decls. For procs, 1.
-   duplicate the PROC node, 2. rename it to get an ALIAS emitted.
 * pattern-based renames, e.g. -renamedefine '%' 'FOO_%',
   or at least --rename-define-add-prefix '*' FOO_  <- add prefix FOO_ to matching defines.
 * -rename <id> which automatically appends an _ underscore
