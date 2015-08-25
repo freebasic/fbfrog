@@ -12,3 +12,6 @@ void B(void);
 #define C_ C
 struct C { int i; };
 void C(void);
+
+static int SV1;
+#define SV2 SV1

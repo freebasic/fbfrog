@@ -1841,7 +1841,6 @@ end sub
 '' defines:
 ''   1. identifier aliases (macro body is a TEXT node)
 ''   2. type aliases (macro body is a DATATYPE node)
-'' TODO: aliases for extern vars
 ''
 '' Normally the main declaration comes first and the alias #defines follow it,
 '' but if it's the other way round (which is legal C code afterall) we may have
@@ -1959,6 +1958,16 @@ sub Define2Decl.addForward(byval aliasedid as zstring ptr, byval def as ASTNODE 
 	end if
 end sub
 
+private sub copyTypeAndChooseAlias(byval n as ASTNODE ptr, byval decl as ASTNODE ptr)
+	astSetType(n, decl->dtype, decl->subtype)
+	astSetAlias(n, iif(decl->alias, decl->alias, decl->text))
+end sub
+
+private sub astDropExpr(byval n as ASTNODE ptr)
+	astDelete(n->expr)
+	n->expr = NULL
+end sub
+
 sub Define2Decl.turnDefine2Decl(byval n as ASTNODE ptr, byval decl as ASTNODE ptr)
 	'' This #define aliases a previous declaration
 	select case decl->class
@@ -1966,32 +1975,38 @@ sub Define2Decl.turnDefine2Decl(byval n as ASTNODE ptr, byval decl as ASTNODE pt
 		'' const A = ...
 		'' #define B A    =>  const B = A
 		n->class = ASTCLASS_CONST
+
 	case ASTCLASS_TYPEDEF, ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
 		'' type A as ...
 		'' #define B A    =>  type B as A
 		n->class = ASTCLASS_TYPEDEF
 		n->dtype = TYPE_UDT
 		n->subtype = astNewTEXT(decl->text)
-		astDelete(n->expr)
-		n->expr = NULL
+		astDropExpr(n)
+
 	case ASTCLASS_PROC
 		'' declare sub/function A
 		'' declare sub/function C alias "X"
-		'' #define B A    =>  declare sub/function B alias "A"
-		'' #define D C    =>  declare sub/function D alias "X"
+		'' #define B A    =>    declare sub/function B alias "A"
+		'' #define D C    =>    declare sub/function D alias "X"
 		n->class = ASTCLASS_PROC
-
 		'' Copy attributes, result type, parameters
 		n->attrib or= decl->attrib and (ASTATTRIB_DLLIMPORT or ASTATTRIB__CALLCONV)
-		astSetType(n, decl->dtype, decl->subtype)
 		astAppend(n, astCloneChildren(decl))
+		copyTypeAndChooseAlias(n, decl)
+		astDropExpr(n)
 
-		'' Use main decl's alias name as alias here
-		astSetAlias(n, iif(decl->alias, decl->alias, decl->text))
+	case ASTCLASS_VAR
+		if decl->attrib and (ASTATTRIB_LOCAL or ASTATTRIB_STATIC) then exit sub
 
-		'' Forget the macro body
-		astDelete(n->expr)
-		n->expr = NULL
+		'' extern A as ...
+		'' extern C alias "X" as ...
+		'' #define B A    =>    extern B alias "A"
+		'' #define D C    =>    extern D alias "X"
+		n->class = ASTCLASS_VAR
+		n->attrib or= decl->attrib and (ASTATTRIB_DLLIMPORT or ASTATTRIB_EXTERN)
+		copyTypeAndChooseAlias(n, decl)
+		astDropExpr(n)
 	end select
 end sub
 
@@ -2072,6 +2087,11 @@ sub Define2Decl.work(byval ast as ASTNODE ptr)
 					end if
 					enumconst = enumconst->next
 				wend
+			end if
+
+		case ASTCLASS_VAR
+			if (i->attrib and (ASTATTRIB_LOCAL or ASTATTRIB_STATIC)) = 0 then
+				workDecl(ast, i, i->next)
 			end if
 		end select
 

@@ -40,3 +40,11 @@ union Union1 {
 enum Enum1 {
 	Enum1_dummy = 0
 };
+
+#define V2 V1
+int V1;
+
+#define EV2 EV1
+#define EV4 EV3
+extern int EV1;
+extern int EV3 asm("__EV3__");

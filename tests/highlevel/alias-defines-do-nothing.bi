@@ -22,5 +22,7 @@ type C
 end type
 
 declare sub C()
+dim shared SV1 as long
+#define SV2 SV1
 
 end extern

@@ -49,5 +49,13 @@ end enum
 
 type Enum2 as Enum1
 type Enum2_ as Enum1
+extern     V1 as long
+dim shared V1 as long
+extern     V2 alias "V1" as long
+dim shared V2 as long
+extern EV1 as long
+extern EV3 alias "__EV3__" as long
+extern EV2 alias "EV1" as long
+extern EV4 alias "__EV3__" as long
 
 end extern
