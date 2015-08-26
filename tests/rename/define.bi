@@ -1,7 +1,6 @@
 #pragma once
 
 '' The following symbols have been renamed:
-''     undef A1 => A2
 ''     constant A1 => A2
 ''     #ifdef __FB_WIN32__
 ''         constant E1 => E2

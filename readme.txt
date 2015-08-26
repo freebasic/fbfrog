@@ -198,7 +198,6 @@ unnecessary?
 To do:
 
 Bugs:
-* Don't add #undefs to renamelists
 * C parser needs to verify #directives, since they can be inserted by "to c" -replacements,
   which aren't verified by the CPP
 * in winapi, there is a case where an auto-generated tagid conflicts
@@ -216,6 +215,15 @@ Bugs:
   (at least, mark it with a TODO)
 
 Interesting improvements:
+* Define2Decl pass should run earlier - e.g. typedef/tagid fix ups should
+  consider the typedefs created from alias #defines
+* Define2Decl shouldn't move alias defines at all - it's typically not needed
+  for procs/vars/typedefs, so that's it
+* Define2Decl shouldn't count #undefs as declarations (preventing affected symbols
+  from being handled by the pass)
+* Define2Decl shouldn't count exact-alias #defines as declarations
+  (easy solution: remove them before Define2Decl pass)
+* Define2Decl should count multiple, equal declarations as one declaration
 * Only add things to renamelist if they have a RENAMED flag (not everything
   with an alias was renamed)
 * Add -printcconstruct <pattern> option for dumping C constructs as seen by fbfrog

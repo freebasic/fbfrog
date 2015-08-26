@@ -2326,7 +2326,8 @@ private function hlBuildRenameList(byval n as ASTNODE ptr) as ASTNODE ptr
 	while i
 
 		if (i->text <> NULL) and (i->alias <> NULL) and _
-		   ((i->attrib and ASTATTRIB_NORENAMELIST) = 0) then
+		   ((i->attrib and ASTATTRIB_NORENAMELIST) = 0) and _
+		   (i->class <> ASTCLASS_UNDEF) then
 			astAppend(list, astNewTEXT( _
 				astDumpPrettyClass(i->class) + " " + _
 					*i->alias + " => " + *i->text))
