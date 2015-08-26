@@ -2,7 +2,7 @@
 
 extern "C"
 
-type int as byte
+type int as zstring
 extern i as byte
 #undef int
 type define as long

@@ -460,7 +460,6 @@ enum
 	OPT_WINDOWSMS
 	OPT_CLONG32
 	OPT_FIXUNSIZEDARRAYS
-	OPT_DISABLECONSTANTS
 	OPT_NOFUNCTIONBODIES
 	OPT_DROPMACROBODYSCOPES
 	OPT_REPLACEMENTS
@@ -977,7 +976,7 @@ type ApiInfo
 	script as ASTNODE ptr
 
 	target as TargetInfo
-	as integer windowsms, clong32, fixunsizedarrays, disableconstants
+	as integer windowsms, clong32, fixunsizedarrays
 	as integer nofunctionbodies, dropmacrobodyscopes, removeEmptyReservedDefines
 
 	have_renames as integer

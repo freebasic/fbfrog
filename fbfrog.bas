@@ -249,7 +249,6 @@ private sub hPrintHelpAndExit()
 	print "  -windowsms       Use Extern ""Windows-MS"" instead of Extern ""Windows"""
 	print "  -clong32         Translate C long as 32bit LONG, instead of CLONG"
 	print "  -fixunsizedarrays  Wrap [] arrays with a #define"
-	print "  -disableconstants  Don't turn #defines into constants"
 	print "  -nofunctionbodies  Don't preserve function bodies"
 	print "  -dropmacrobodyscopes  Drop scope blocks with only 1 statement in macro bodies"
 	print "  -replacements <file>  Load patterns for search/replace"
@@ -462,7 +461,6 @@ sub ApiInfo.loadOption(byval opt as integer, byval param1 as zstring ptr, byval 
 	case OPT_WINDOWSMS        : windowsms        = TRUE
 	case OPT_CLONG32          : clong32          = TRUE
 	case OPT_FIXUNSIZEDARRAYS : fixunsizedarrays = TRUE
-	case OPT_DISABLECONSTANTS : disableconstants = TRUE
 	case OPT_NOFUNCTIONBODIES : nofunctionbodies = TRUE
 	case OPT_DROPMACROBODYSCOPES : dropmacrobodyscopes = TRUE
 	case OPT_REMOVEEMPTYRESERVEDDEFINES : removeEmptyReservedDefines = TRUE
@@ -1013,7 +1011,7 @@ private sub hParseArgs(byref x as integer)
 			astAppend(frog.script, astNewOPTION(opt, hPathRelativeToArgsFile(x)))
 			x += 1
 
-		case OPT_WINDOWSMS, OPT_CLONG32, OPT_FIXUNSIZEDARRAYS, OPT_DISABLECONSTANTS, _
+		case OPT_WINDOWSMS, OPT_CLONG32, OPT_FIXUNSIZEDARRAYS, _
 		     OPT_NOFUNCTIONBODIES, OPT_DROPMACROBODYSCOPES, OPT_REMOVEEMPTYRESERVEDDEFINES
 			x += 1
 			astAppend(frog.script, astNewOPTION(opt))

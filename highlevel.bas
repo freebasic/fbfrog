@@ -1593,28 +1593,6 @@ private sub hlFixUnsizedArrays(byval ast as ASTNODE ptr)
 	wend
 end sub
 
-'' Turns simple #defines into constants
-private sub hlTurnDefinesIntoProperDeclarations(byval ast as ASTNODE ptr)
-	var i = ast->head
-	while i
-
-		if i->class = ASTCLASS_PPDEFINE then
-			'' Object-like macro?
-			if i->paramcount < 0 then
-				'' Has a body?
-				if i->expr then
-					'' Body is a simple expression?
-					if hIsSimpleConstantExpression(i->expr) then
-						i->class = ASTCLASS_CONST
-					end if
-				end if
-			end if
-		end if
-
-		i = i->next
-	wend
-end sub
-
 private sub hlDropMacroBodyScopes(byval ast as ASTNODE ptr)
 	var i = ast->head
 	while i
@@ -1870,8 +1848,6 @@ end sub
 ''    #define T integer ptr
 '' =>
 ''    type T as integer ptr
-''
-'' TODO: integrate hlTurnDefinesIntoProperDeclarations() into this
 ''
 '' The advantage is that proper declarations are less intrusive than #defines
 '' in the global namespace.
@@ -2131,6 +2107,11 @@ sub Define2Decl.work(byval ast as ASTNODE ptr)
 				handleAliasDefine(i, i->expr->text)
 			case ASTCLASS_DATATYPE
 				turnDefine2Typedef(i)
+			case else
+				'' Body is a simple expression?
+				if hIsSimpleConstantExpression(i->expr) then
+					i->class = ASTCLASS_CONST
+				end if
 			end select
 		end if
 
@@ -2163,6 +2144,12 @@ sub Define2Decl.work(byval ast as ASTNODE ptr)
 
 		i = i->next
 	wend
+end sub
+
+private sub hlDefine2Decl(byval ast as ASTNODE ptr)
+	dim pass as Define2Decl
+	pass.countDecls(ast)
+	pass.work(ast)
 end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -2453,7 +2440,6 @@ private function hAreSimilar(byval a as integer, byval b as integer) as integer
 	if (a = ASTCLASS_FBCODE) or (b = ASTCLASS_FBCODE) then return TRUE
 
 	'' Treat #defines/constants as equal, because they're often the same thing anyways
-	'' (and then the formatting is the same no matter whether -disableconstants was used)
 	#define check(x, y) if ((a = x) and (b = y)) or ((a = y) and (b = x)) then return TRUE
 	check(ASTCLASS_PPDEFINE, ASTCLASS_CONST)
 
@@ -2644,6 +2630,15 @@ sub hlGlobal(byval ast as ASTNODE ptr, byref api as ApiInfo)
 		astVisit(ast, @hlApplyRenameOption)
 	end if
 
+	'' Remove exact-alias #defines (e.g. <#define A A>), they're neither
+	'' needed nor possible in FB. This also prevents Define2Decl from
+	'' counting such #defines as declarations.
+	hlRemoveSelfDefines(ast)
+
+	'' Run Define2Decl before typedef expansion passes, so that they get to
+	'' see the typedefs produced here.
+	hlDefine2Decl(ast)
+
 	'' Solve out array/function typedefs (not supported in FB),
 	'' and any typedefs matched by an -expand option
 	'' TODO: If possible, turn function typedefs into function pointer
@@ -2740,12 +2735,13 @@ sub hlGlobal(byval ast as ASTNODE ptr, byref api as ApiInfo)
 	hl.typecount = 0
 	hl.typeroom = 0
 
+	'' Run Define2Decl again - typedef expansion inside #define bodies may
+	'' allow additional #defines to be turned into constants now, etc.
+	'' (e.g. <#define A (FOO*)0> may have become <#define A (int*)0>)
+	hlDefine2Decl(ast)
+
 	if api.fixunsizedarrays then
 		hlFixUnsizedArrays(ast)
-	end if
-
-	if api.disableconstants = FALSE then
-		hlTurnDefinesIntoProperDeclarations(ast)
 	end if
 
 	if api.dropmacrobodyscopes then
@@ -2777,14 +2773,6 @@ sub hlGlobal(byval ast as ASTNODE ptr, byref api as ApiInfo)
 	end if
 
 	hlProcs2Macros(ast)
-
-	hlRemoveSelfDefines(ast)
-
-	scope
-		dim pass as Define2Decl
-		pass.countDecls(ast)
-		pass.work(ast)
-	end scope
 end sub
 
 ''

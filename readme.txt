@@ -215,15 +215,15 @@ Bugs:
   (at least, mark it with a TODO)
 
 Interesting improvements:
-* Define2Decl pass should run earlier - e.g. typedef/tagid fix ups should
-  consider the typedefs created from alias #defines
-* Define2Decl shouldn't move alias defines at all - it's typically not needed
-  for procs/vars/typedefs, so that's it
-* Define2Decl shouldn't count #undefs as declarations (preventing affected symbols
-  from being handled by the pass)
-* Define2Decl shouldn't count exact-alias #defines as declarations
-  (easy solution: remove them before Define2Decl pass)
-* Define2Decl should count multiple, equal declarations as one declaration
+* Define2Decl
+  - hIsSimpleConstantExpression: use Define2Decl's decls hash table to check
+    whether UDTs are declared in CAST handling
+  - check whether alias defines use any undeclared identifiers?
+  - shouldn't move alias defines at all - it's typically not needed for
+    procs/vars/typedefs, so that's it
+  - shouldn't count #undefs as declarations (preventing affected symbols
+    from being handled by the pass)
+  - should count multiple, equal declarations as one declaration
 * Only add things to renamelist if they have a RENAMED flag (not everything
   with an alias was renamed)
 * Add -printcconstruct <pattern> option for dumping C constructs as seen by fbfrog
