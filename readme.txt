@@ -216,8 +216,6 @@ Bugs:
 
 Interesting improvements:
 * Define2Decl
-  - hIsSimpleConstantExpression: use Define2Decl's decls hash table to check
-    whether UDTs are declared in CAST handling
   - check whether alias defines use any undeclared identifiers?
   - shouldn't move alias defines at all - it's typically not needed for
     procs/vars/typedefs, so that's it

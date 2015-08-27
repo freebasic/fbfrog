@@ -3,6 +3,7 @@
 #define C(a) 1
 #define D f()
 #define E A
+#define F (A + E * 123)
 
 struct UDT1 {
 	int field;
@@ -28,3 +29,4 @@ void cool2(int);
 #define D4 ((struct UDT1 *)0)
 #define D5 ((struct UDT1 *(*)(void))0)
 #define D6 ((void (*)(struct UDT1 *))0)
+#define D7 ((struct UndeclaredUdt *)0)

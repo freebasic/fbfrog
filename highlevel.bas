@@ -1435,85 +1435,6 @@ private sub hlAddForwardDecls(byval ast as ASTNODE ptr)
 	next
 end sub
 
-private function typeInvolvesUdt(byval dtype as integer, byval subtype as ASTNODE ptr) as integer
-	select case typeGetDt(dtype)
-	case TYPE_UDT
-		return TRUE
-
-	'' Function [pointer] type?
-	case TYPE_PROC
-		assert(subtype->class = ASTCLASS_PROC)
-
-		'' Check function result
-		if typeInvolvesUdt(subtype->dtype, subtype->subtype) then return TRUE
-
-		'' Check parameters
-		var param = subtype->head
-		while param
-			if typeInvolvesUdt(param->dtype, param->subtype) then return TRUE
-			param = param->next
-		wend
-	end select
-
-	function = FALSE
-end function
-
-''
-'' Checks whether an expression is simple enough that it could be used in an
-'' FB constant declaration (const FOO = <...>).
-''
-'' Thus, it shouldn't contain any function calls, addrof/deref operations, or
-'' preprocessor operations, etc., but only a selected set of known-to-be-safe
-'' math operations & co.
-''
-'' TODO: allow more here:
-''  * references to other constants
-''  * string literals
-''  * "sizeof(datatype)", but not "datatype"
-''  * cast(A, ...) if type A is declared above (#defines don't need to
-''    care, but constants declarations do...)
-''
-private function hIsSimpleConstantExpression(byval n as ASTNODE ptr) as integer
-	select case n->class
-	'' Atoms
-	case ASTCLASS_CONSTI, ASTCLASS_CONSTF
-
-	'' UOPs
-	case ASTCLASS_NOT, ASTCLASS_NEGATE
-		if hIsSimpleConstantExpression(n->head) = FALSE then exit function
-
-	'' Casts: only if the type doesn't involve a UDT (we would have to be
-	'' sure that the UDT is declared above this constant to allow casts
-	'' involving UDTs, but currently we don't track that)
-	case ASTCLASS_CAST
-		if typeInvolvesUdt(n->dtype, n->subtype) then exit function
-		if hIsSimpleConstantExpression(n->head) = FALSE then exit function
-
-	'' BOPs
-	case ASTCLASS_LOGOR, ASTCLASS_LOGAND, _
-	     ASTCLASS_OR, ASTCLASS_XOR, ASTCLASS_AND, _
-	     ASTCLASS_EQ, ASTCLASS_NE, _
-	     ASTCLASS_LT, ASTCLASS_LE, _
-	     ASTCLASS_GT, ASTCLASS_GE, _
-	     ASTCLASS_SHL, ASTCLASS_SHR, _
-	     ASTCLASS_ADD, ASTCLASS_SUB, _
-	     ASTCLASS_MUL, ASTCLASS_DIV, ASTCLASS_MOD
-		if hIsSimpleConstantExpression(n->head) = FALSE then exit function
-		if hIsSimpleConstantExpression(n->tail) = FALSE then exit function
-
-	'' IIF
-	case ASTCLASS_IIF
-		if hIsSimpleConstantExpression(n->expr) = FALSE then exit function
-		if hIsSimpleConstantExpression(n->head) = FALSE then exit function
-		if hIsSimpleConstantExpression(n->tail) = FALSE then exit function
-
-	case else
-		exit function
-	end select
-
-	function = TRUE
-end function
-
 private function hIsUnsizedArray(byval n as ASTNODE ptr) as integer
 	if n->array then
 		assert(n->array->class = ASTCLASS_ARRAY)
@@ -1909,6 +1830,8 @@ type Define2Decl
 	declare sub countDecl(byval id as zstring ptr)
 	declare sub countDecls(byval ast as ASTNODE ptr)
 	declare function mayTurnDefs2Decl(byval decl as ASTNODE ptr) as integer
+	declare function exprInvolvesUndeclaredId(byval n as ASTNODE ptr) as integer
+	declare function isConstantExpr(byval n as ASTNODE ptr) as integer
 	declare sub addForward(byval aliasedid as zstring ptr, byval def as ASTNODE ptr)
 	declare sub handleAliasDefine(byval n as ASTNODE ptr, byval aliasedid as zstring ptr)
 	declare sub workDecl(byval ast as ASTNODE ptr, byval decl as ASTNODE ptr, byval insertbehind as ASTNODE ptr)
@@ -1967,6 +1890,75 @@ function Define2Decl.mayTurnDefs2Decl(byval decl as ASTNODE ptr) as integer
 	assert(counts.contains(decl->text, hashHash(decl->text)))
 	var count = cint(counts.lookupDataOrNull(decl->text))
 	function = (count = 1)
+end function
+
+function Define2Decl.exprInvolvesUndeclaredId(byval n as ASTNODE ptr) as integer
+	select case n->class
+	case ASTCLASS_TEXT, ASTCLASS_CALL
+		if decls.contains(n->text, hashHash(n->text)) = FALSE then return TRUE
+	end select
+
+	if n->subtype then if exprInvolvesUndeclaredId(n->subtype) then return TRUE
+	if n->array   then if exprInvolvesUndeclaredId(n->array  ) then return TRUE
+	if n->expr    then if exprInvolvesUndeclaredId(n->expr   ) then return TRUE
+	var i = n->head
+	while i
+		if exprInvolvesUndeclaredId(i) then return TRUE
+		i = i->next
+	wend
+	function = FALSE
+end function
+
+''
+'' Checks whether an expression is a compile-time constant, such that it could
+'' be used in an FB constant declaration (const FOO = <...>).
+''
+'' Thus, it shouldn't contain any function calls, addrof/deref operations, or
+'' preprocessor operations, etc., but only a selected set of known-to-be-safe
+'' math operations & co, and atoms must be number literals or identifiers
+'' referring to other, known constants.
+''
+'' TODO: allow more here:
+''  * string literals
+''  * "sizeof(datatype)", but not "datatype"
+''
+function Define2Decl.isConstantExpr(byval n as ASTNODE ptr) as integer
+	select case n->class
+	'' Atoms
+	case ASTCLASS_CONSTI, ASTCLASS_CONSTF
+
+	case ASTCLASS_TEXT
+		'' Referring to another constant?
+		dim as ASTNODE ptr decl = decls.lookupDataOrNull(n->text)
+		if (decl = NULL) orelse (decl->class <> ASTCLASS_CONST) then exit function
+
+	'' UOPs
+	case ASTCLASS_NOT, ASTCLASS_NEGATE, ASTCLASS_CAST
+		if isConstantExpr(n->head) = FALSE then exit function
+
+	'' BOPs
+	case ASTCLASS_LOGOR, ASTCLASS_LOGAND, _
+	     ASTCLASS_OR, ASTCLASS_XOR, ASTCLASS_AND, _
+	     ASTCLASS_EQ, ASTCLASS_NE, _
+	     ASTCLASS_LT, ASTCLASS_LE, _
+	     ASTCLASS_GT, ASTCLASS_GE, _
+	     ASTCLASS_SHL, ASTCLASS_SHR, _
+	     ASTCLASS_ADD, ASTCLASS_SUB, _
+	     ASTCLASS_MUL, ASTCLASS_DIV, ASTCLASS_MOD
+		if isConstantExpr(n->head) = FALSE then exit function
+		if isConstantExpr(n->tail) = FALSE then exit function
+
+	'' IIF
+	case ASTCLASS_IIF
+		if isConstantExpr(n->expr) = FALSE then exit function
+		if isConstantExpr(n->head) = FALSE then exit function
+		if isConstantExpr(n->tail) = FALSE then exit function
+
+	case else
+		exit function
+	end select
+
+	function = TRUE
 end function
 
 sub Define2Decl.addForward(byval aliasedid as zstring ptr, byval def as ASTNODE ptr)
@@ -2108,8 +2100,8 @@ sub Define2Decl.work(byval ast as ASTNODE ptr)
 			case ASTCLASS_DATATYPE
 				turnDefine2Typedef(i)
 			case else
-				'' Body is a simple expression?
-				if hIsSimpleConstantExpression(i->expr) then
+				'' Body is a constant expression?
+				if isConstantExpr(i->expr) andalso (not exprInvolvesUndeclaredId(i->expr)) then
 					i->class = ASTCLASS_CONST
 				end if
 			end select
