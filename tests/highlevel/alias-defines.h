@@ -40,6 +40,8 @@ int V1;
 #define V2 V1
 
 extern int EV1;
-extern int EV3 asm("__EV3__");
-#define EV2 EV1
-#define EV4 EV3
+extern int EV2 asm("__EV2__");
+extern __attribute__((__dllimport__)) int EV3[10][20];
+#define EV1_ EV1
+#define EV2_ EV2
+#define EV3_ EV3
