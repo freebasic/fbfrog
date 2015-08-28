@@ -1973,8 +1973,13 @@ sub Define2Decl.addForward(byval aliasedid as zstring ptr, byval def as ASTNODE 
 	end if
 end sub
 
-private sub copyTypeAndChooseAlias(byval n as ASTNODE ptr, byval decl as ASTNODE ptr)
+private sub copyAttribsTypeEtcAndChooseAlias(byval n as ASTNODE ptr, byval decl as ASTNODE ptr)
+	n->class = decl->class
+	n->attrib or= decl->attrib and (ASTATTRIB_DLLIMPORT or ASTATTRIB__CALLCONV or ASTATTRIB_EXTERN)
 	astSetType(n, decl->dtype, decl->subtype)
+	n->array = astClone(decl->array)
+	astAppend(n, astCloneChildren(decl))
+
 	astSetAlias(n, iif(decl->alias, decl->alias, decl->text))
 	n->attrib or= ASTATTRIB_NORENAMELIST
 end sub
@@ -2003,6 +2008,7 @@ private sub turnDefine2Decl(byval n as ASTNODE ptr, byval decl as ASTNODE ptr)
 		n->class = ASTCLASS_TYPEDEF
 		n->dtype = TYPE_UDT
 		n->subtype = astNewTEXT(decl->text)
+		n->array = astClone(decl->array)
 		astDropExpr(n)
 
 	case ASTCLASS_PROC
@@ -2010,11 +2016,7 @@ private sub turnDefine2Decl(byval n as ASTNODE ptr, byval decl as ASTNODE ptr)
 		'' declare sub/function C alias "X"
 		'' #define B A    =>    declare sub/function B alias "A"
 		'' #define D C    =>    declare sub/function D alias "X"
-		n->class = ASTCLASS_PROC
-		'' Copy attributes, result type, parameters
-		n->attrib or= decl->attrib and (ASTATTRIB_DLLIMPORT or ASTATTRIB__CALLCONV)
-		astAppend(n, astCloneChildren(decl))
-		copyTypeAndChooseAlias(n, decl)
+		copyAttribsTypeEtcAndChooseAlias(n, decl)
 		astDropExpr(n)
 
 	case ASTCLASS_VAR
@@ -2024,9 +2026,7 @@ private sub turnDefine2Decl(byval n as ASTNODE ptr, byval decl as ASTNODE ptr)
 		'' extern C alias "X" as ...
 		'' #define B A    =>    extern B alias "A"
 		'' #define D C    =>    extern D alias "X"
-		n->class = ASTCLASS_VAR
-		n->attrib or= decl->attrib and (ASTATTRIB_DLLIMPORT or ASTATTRIB_EXTERN)
-		copyTypeAndChooseAlias(n, decl)
+		copyAttribsTypeEtcAndChooseAlias(n, decl)
 		astDropExpr(n)
 	end select
 end sub

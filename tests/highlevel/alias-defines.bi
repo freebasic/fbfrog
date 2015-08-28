@@ -58,6 +58,6 @@ extern EV2 alias "__EV2__" as long
 extern import EV3(0 to 9, 0 to 19) as long
 extern EV1_ alias "EV1" as long
 extern EV2_ alias "__EV2__" as long
-extern import EV3_ alias "EV3" as long
+extern import EV3_ alias "EV3"(0 to 9, 0 to 19) as long
 
 end extern
