@@ -241,11 +241,11 @@ end function
 
 private function hIdAndArray(byval n as ASTNODE ptr, byval allow_alias as integer) as string
 	var s = *n->text
-	if allow_alias then
-		s += hEmitAlias(n)
-	end if
 	if n->array then
 		s += emitExpr(n->array)
+	end if
+	if allow_alias then
+		s += hEmitAlias(n)
 	end if
 	if n->bits then
 		s += " : " + emitExpr(n->bits)
