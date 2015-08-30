@@ -1,6 +1,7 @@
 '' Higher level code transformations
 
 #include once "fbfrog.bi"
+#include once "crt.bi"
 
 declare sub expandTypedef(byval typedef as ASTNODE ptr, byval n as ASTNODE ptr)
 
@@ -33,19 +34,50 @@ namespace hl
 	dim shared as integer uses_clong, uses_clongdouble
 end namespace
 
-type ExpressionFixUp
-	symbols as THash = THash(10, TRUE)
-	declare function lookupSymbolType(byval id as zstring ptr) as integer
-	declare sub collectSymbol(byval id as zstring ptr, byval dtype as integer)
-	declare sub calculateCTypes(byval n as ASTNODE ptr)
-	declare function fixExpression(byval n as ASTNODE ptr, byval is_bool_context as integer) as ASTNODE ptr
-	declare sub work(byval n as ASTNODE ptr)
-	declare operator let(byref as const ExpressionFixUp) '' unimplemented
+type ForwardInfo
+	defs as ASTNODE ptr ptr
+	defcount as integer
+	declare destructor()
+	declare sub append(byval def as ASTNODE ptr)
+	declare sub remove(byval i as integer)
 end type
 
-function ExpressionFixUp.lookupSymbolType(byval id as zstring ptr) as integer
-	function = cint(symbols.lookupDataOrNull(id)) '' null is TYPE_NONE
-end function
+destructor ForwardInfo()
+	deallocate(defs)
+end destructor
+
+sub ForwardInfo.append(byval def as ASTNODE ptr)
+	var i = defcount
+	defcount += 1
+	defs = reallocate(defs, sizeof(*defs) * defcount)
+	defs[i] = def
+end sub
+
+sub ForwardInfo.remove(byval i as integer)
+	assert((i >= 0) and (i < defcount))
+	var p = defs + i
+	defcount -= 1
+	'' Remove array element from the middle of the array: move all elements
+	'' behind it to the front, by 1 slot, to close the gap.
+	var tail = defcount - i
+	if tail > 0 then
+		memmove(p, p + 1, tail * sizeof(*defs))
+	end if
+end sub
+
+type ExpressionFixUp
+	symbols as THash = THash(10, TRUE)
+	forwards as ForwardInfo
+	declare sub collectSymbol(byval id as zstring ptr, byval dtype as integer)
+	declare function calculateCTypes(byval n as ASTNODE ptr) as integer
+	declare sub collectSymbolIfExprTypeIsKnown(byval id as zstring ptr, byval expr as ASTNODE ptr)
+	declare sub maybeCollectSymbol(byval n as ASTNODE ptr)
+	declare sub collectSymbolsAndCalculateTypes(byval n as ASTNODE ptr)
+	declare sub handleForwards()
+	declare function fixExpression(byval n as ASTNODE ptr, byval is_bool_context as integer) as ASTNODE ptr
+	declare sub fixExpressions(byval n as ASTNODE ptr)
+	declare operator let(byref as const ExpressionFixUp) '' unimplemented
+end type
 
 sub ExpressionFixUp.collectSymbol(byval id as zstring ptr, byval dtype as integer)
 	select case dtype
@@ -203,40 +235,31 @@ private function typeCBop(byval astclass as integer, byval a as integer, byval b
 	function = TYPE_NONE
 end function
 
-sub ExpressionFixUp.calculateCTypes(byval n as ASTNODE ptr)
-	'' No types should be set yet, except for type casts and atoms
-	#if __FB_DEBUG__
-		select case as const n->class
-		case ASTCLASS_CAST, ASTCLASS_DATATYPE, _
-		     ASTCLASS_CONSTI, ASTCLASS_CONSTF, _
-		     ASTCLASS_STRING, ASTCLASS_CHAR
-			assert(n->dtype <> TYPE_NONE)
-
-		case ASTCLASS_IIF, ASTCLASS_CLOGOR, ASTCLASS_CLOGAND, _
-		    ASTCLASS_CEQ, ASTCLASS_CNE, ASTCLASS_CLT, ASTCLASS_CLE, ASTCLASS_CGT, ASTCLASS_CGE, _
-		    ASTCLASS_OR, ASTCLASS_XOR, ASTCLASS_AND, ASTCLASS_SHL, ASTCLASS_SHR, _
-		    ASTCLASS_ADD, ASTCLASS_SUB, ASTCLASS_MUL, ASTCLASS_DIV, ASTCLASS_MOD, _
-		    ASTCLASS_CLOGNOT, ASTCLASS_NOT, ASTCLASS_NEGATE, ASTCLASS_UNARYPLUS, _
-		    ASTCLASS_SIZEOF, ASTCLASS_CDEFINED, ASTCLASS_TEXT
-			assert(n->dtype = TYPE_NONE)
-
-		end select
-	#endif
+'' Returns FALSE if some id reference couldn't be resolved (i.e. we couldn't
+'' determine the expression's type)
+function ExpressionFixUp.calculateCTypes(byval n as ASTNODE ptr) as integer
+	var allresolved = TRUE
 
 	scope
 		var i = n->head
 		while i
-			calculateCTypes(i)
+			allresolved and= calculateCTypes(i)
 			i = i->next
 		wend
 	end scope
 
 	select case as const n->class
 	case ASTCLASS_TEXT
-		n->dtype = lookupSymbolType(n->text)
+		var item = symbols.lookup(n->text, hashHash(n->text))
+		if item->s then
+			astSetType(n, cint(item->data), NULL)
+		else
+			astSetType(n, TYPE_NONE, NULL)
+			allresolved = FALSE
+		end if
 
 	case ASTCLASS_CDEFINED
-		n->dtype = TYPE_LONG
+		astSetType(n, TYPE_LONG, NULL)
 
 	case ASTCLASS_IIF, ASTCLASS_CLOGOR, ASTCLASS_CLOGAND, _
 	     ASTCLASS_CEQ, ASTCLASS_CNE, ASTCLASS_CLT, ASTCLASS_CLE, ASTCLASS_CGT, ASTCLASS_CGE, _
@@ -248,8 +271,94 @@ sub ExpressionFixUp.calculateCTypes(byval n as ASTNODE ptr)
 		'' UOPs will have one operand (i.e. ldtype/rdtype will be the same)
 		var ldtype = n->head->dtype
 		var rdtype = n->tail->dtype
-		n->dtype = typeCBop(n->class, ldtype, rdtype)
+		astSetType(n, typeCBop(n->class, ldtype, rdtype), NULL)
 	end select
+
+	function = allresolved
+end function
+
+sub ExpressionFixUp.collectSymbolIfExprTypeIsKnown(byval id as zstring ptr, byval expr as ASTNODE ptr)
+	if expr->dtype <> TYPE_NONE then
+		collectSymbol(id, expr->dtype)
+	end if
+end sub
+
+sub ExpressionFixUp.maybeCollectSymbol(byval n as ASTNODE ptr)
+	select case n->class
+	case ASTCLASS_PPDEFINE
+		if n->expr andalso n->expr->class <> ASTCLASS_SCOPEBLOCK then
+			collectSymbolIfExprTypeIsKnown(n->text, n->expr)
+		end if
+	case ASTCLASS_CONST
+		if n->attrib and ASTATTRIB_ENUMCONST then
+			'' enumconsts are always ints
+			collectSymbol(n->text, TYPE_LONG)
+		elseif n->expr then
+			collectSymbolIfExprTypeIsKnown(n->text, n->expr)
+		end if
+	end select
+end sub
+
+''
+'' Collect #defines/constants/enumconsts and determine their types so we can do
+'' lookups and determine the type behind such identifiers used in expressions.
+''
+'' We walk from top to bottom. If a #define constant forward-references another
+'' one defined later, we have to add it to a list for processing later in
+'' handleForwards().
+''
+sub ExpressionFixUp.collectSymbolsAndCalculateTypes(byval n as ASTNODE ptr)
+	if n->expr then
+		var result = calculateCTypes(n->expr)
+		if result = FALSE then
+			'' Couldn't resolve some reference; store for later
+			forwards.append(n)
+		end if
+	end if
+
+	maybeCollectSymbol(n)
+
+	if n->subtype then collectSymbolsAndCalculateTypes(n->subtype)
+	if n->array   then collectSymbolsAndCalculateTypes(n->array  )
+	if n->expr    then collectSymbolsAndCalculateTypes(n->expr   )
+
+	var i = n->head
+	while i
+		collectSymbolsAndCalculateTypes(i)
+		i = i->next
+	wend
+end sub
+
+''
+'' Handle the constants that forward-reference others and whose types couldn't
+'' be determined in the first pass.
+''
+'' We process the list, in the hope that the forward-references can now be
+'' resolved and removed from the list. It may be necessary to process the list
+'' multiple times, until it's either empty or we can't resolve anything anymore.
+''
+sub ExpressionFixUp.handleForwards()
+	while forwards.defcount > 0
+
+		'' For each list entry...
+		var listchanged = FALSE
+		var i = 0
+		while i < forwards.defcount
+			var n = forwards.defs[i]
+
+			if n->expr andalso calculateCTypes(n->expr) then
+				'' The type of this one could now be determined
+				forwards.remove(i)
+				i -= 1
+				listchanged = TRUE
+			end if
+
+			maybeCollectSymbol(n)
+			i += 1
+		wend
+
+		if listchanged = FALSE then exit while
+	wend
 end sub
 
 private function hIsUlongCast(byval n as ASTNODE ptr) as integer
@@ -400,8 +509,6 @@ private sub hlRemoveExpressionTypes(byval n as ASTNODE ptr)
 end sub
 
 function ExpressionFixUp.fixExpression(byval n as ASTNODE ptr, byval is_bool_context as integer) as ASTNODE ptr
-	calculateCTypes(n)
-
 	n = hlAddMathCasts(NULL, n)
 
 	n = astOpsC2FB(n, is_bool_context)
@@ -414,7 +521,7 @@ function ExpressionFixUp.fixExpression(byval n as ASTNODE ptr, byval is_bool_con
 	function = n
 end function
 
-sub ExpressionFixUp.work(byval n as ASTNODE ptr)
+sub ExpressionFixUp.fixExpressions(byval n as ASTNODE ptr)
 	if n->expr then
 		'' TODO: shouldn't assume is_bool_context=TRUE for #define bodies
 		var is_bool_context = FALSE
@@ -427,28 +534,13 @@ sub ExpressionFixUp.work(byval n as ASTNODE ptr)
 		n->expr = fixExpression(n->expr, is_bool_context)
 	end if
 
-	'' Collect #defines/enumconsts so we can do lookups and determine the
-	'' type behind such identifiers used in expressions
-	select case n->class
-	case ASTCLASS_PPDEFINE
-		var body = n->expr
-		if body andalso (body->class <> ASTCLASS_SCOPEBLOCK) then
-			var dtype = body->dtype
-			if dtype <> TYPE_NONE then
-				collectSymbol(n->text, dtype)
-			end if
-		end if
-	case ASTCLASS_CONST
-		collectSymbol(n->text, TYPE_LONG)
-	end select
-
-	if n->subtype then work(n->subtype)
-	if n->array   then work(n->array  )
-	if n->expr    then work(n->expr   )
+	if n->subtype then fixExpressions(n->subtype)
+	if n->array   then fixExpressions(n->array  )
+	if n->expr    then fixExpressions(n->expr   )
 
 	var i = n->head
 	while i
-		work(i)
+		fixExpressions(i)
 		i = i->next
 	wend
 end sub
@@ -1810,24 +1902,6 @@ end sub
 ''    anyways.
 ''
 
-type ForwardInfo
-	defs as ASTNODE ptr ptr
-	defcount as integer
-	declare destructor()
-	declare sub append(byval def as ASTNODE ptr)
-end type
-
-destructor ForwardInfo()
-	deallocate(defs)
-end destructor
-
-sub ForwardInfo.append(byval def as ASTNODE ptr)
-	var i = defcount
-	defcount += 1
-	defs = reallocate(defs, sizeof(*defs) * defcount)
-	defs[i] = def
-end sub
-
 type Define2Decl
 	counts as THash = THash(12, FALSE)
 	decls as THash = THash(12, FALSE)
@@ -2589,11 +2663,6 @@ end sub
 sub hlGlobal(byval ast as ASTNODE ptr, byref api as ApiInfo)
 	hl.api = @api
 
-	scope
-		dim pass as ExpressionFixUp
-		pass.work(ast)
-	end scope
-
 	if api.removeEmptyReservedDefines then
 		hlRemoveEmptyReservedDefines(ast)
 	end if
@@ -2637,6 +2706,13 @@ sub hlGlobal(byval ast as ASTNODE ptr, byref api as ApiInfo)
 	'' Run Define2Decl before typedef expansion passes, so that they get to
 	'' see the typedefs produced here.
 	hlDefine2Decl(ast)
+
+	scope
+		dim pass as ExpressionFixUp
+		pass.collectSymbolsAndCalculateTypes(ast)
+		pass.handleForwards()
+		pass.fixExpressions(ast)
+	end scope
 
 	'' Solve out array/function typedefs (not supported in FB),
 	'' and any typedefs matched by an -expand option

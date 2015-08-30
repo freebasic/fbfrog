@@ -487,13 +487,13 @@ const A77 = culng(culng(ENUMCONST1) - 1)
 
 const B00 = culng(0u - 100u)
 const B01 = B00
-#define B11 (B10 - 1)
+#define B11 culng(B10 - 1)
 const B10 = culng(0u - 100u)
-#define B22 (B21 - 1)
-#define B21 (B20 - 1)
+#define B22 culng(B21 - 1)
+#define B21 culng(B20 - 1)
 const B20 = culng(0u - 100u)
-#define B31 (B30 - 1)
-#define B32 (B31 - 1)
+#define B31 culng(B30 - 1)
+#define B32 culng(B31 - 1)
 const B30 = culng(0u - 100u)
 #define A90(x) (@(x)->a[(x)->b])
 
