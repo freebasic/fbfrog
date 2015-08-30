@@ -6,7 +6,6 @@ declare sub expandTypedef(byval typedef as ASTNODE ptr, byval n as ASTNODE ptr)
 
 namespace hl
 	dim shared api as ApiInfo ptr
-	dim shared symbols as THash ptr
 
 	'' Used by forward declaration addition pass
 	'' data = hl.types array index
@@ -34,21 +33,31 @@ namespace hl
 	dim shared as integer uses_clong, uses_clongdouble
 end namespace
 
-private function hlLookupSymbolType(byval id as zstring ptr) as integer
-	function = cint(hl.symbols->lookupDataOrNull(id))
+type ExpressionFixUp
+	symbols as THash = THash(10, TRUE)
+	declare function lookupSymbolType(byval id as zstring ptr) as integer
+	declare sub collectSymbol(byval id as zstring ptr, byval dtype as integer)
+	declare sub calculateCTypes(byval n as ASTNODE ptr)
+	declare function fixExpression(byval n as ASTNODE ptr, byval is_bool_context as integer) as ASTNODE ptr
+	declare sub work(byval n as ASTNODE ptr)
+	declare operator let(byref as const ExpressionFixUp) '' unimplemented
+end type
+
+function ExpressionFixUp.lookupSymbolType(byval id as zstring ptr) as integer
+	function = cint(symbols.lookupDataOrNull(id)) '' null is TYPE_NONE
 end function
 
-private sub hlCollectSymbol(byval id as zstring ptr, byval dtype as integer)
+sub ExpressionFixUp.collectSymbol(byval id as zstring ptr, byval dtype as integer)
 	select case dtype
 	case TYPE_UDT, TYPE_PROC
 		'' Don't bother tracking complex types - not worth it yet
 		dtype = TYPE_NONE
 	end select
-	hl.symbols->addOverwrite(id, cptr(any ptr, dtype))
+	symbols.addOverwrite(id, cptr(any ptr, dtype))
 end sub
 
 private function typeIsNumeric(byval dtype as integer) as integer
-	select case dtype
+	select case as const dtype
 	case TYPE_BYTE, TYPE_UBYTE, TYPE_SHORT, TYPE_USHORT, _
 	     TYPE_LONG, TYPE_ULONG, TYPE_CLONG, TYPE_CULONG, _
 	     TYPE_INTEGER, TYPE_UINTEGER, TYPE_LONGINT, TYPE_ULONGINT, _
@@ -194,7 +203,7 @@ private function typeCBop(byval astclass as integer, byval a as integer, byval b
 	function = TYPE_NONE
 end function
 
-private sub hlCalculateCTypes(byval n as ASTNODE ptr)
+sub ExpressionFixUp.calculateCTypes(byval n as ASTNODE ptr)
 	'' No types should be set yet, except for type casts and atoms
 	#if __FB_DEBUG__
 		select case as const n->class
@@ -217,14 +226,14 @@ private sub hlCalculateCTypes(byval n as ASTNODE ptr)
 	scope
 		var i = n->head
 		while i
-			hlCalculateCTypes(i)
+			calculateCTypes(i)
 			i = i->next
 		wend
 	end scope
 
 	select case as const n->class
 	case ASTCLASS_TEXT
-		n->dtype = hlLookupSymbolType(n->text)
+		n->dtype = lookupSymbolType(n->text)
 
 	case ASTCLASS_CDEFINED
 		n->dtype = TYPE_LONG
@@ -390,8 +399,8 @@ private sub hlRemoveExpressionTypes(byval n as ASTNODE ptr)
 	end if
 end sub
 
-private function hlFixExpression(byval n as ASTNODE ptr, byval is_bool_context as integer) as ASTNODE ptr
-	hlCalculateCTypes(n)
+function ExpressionFixUp.fixExpression(byval n as ASTNODE ptr, byval is_bool_context as integer) as ASTNODE ptr
+	calculateCTypes(n)
 
 	n = hlAddMathCasts(NULL, n)
 
@@ -405,17 +414,7 @@ private function hlFixExpression(byval n as ASTNODE ptr, byval is_bool_context a
 	function = n
 end function
 
-private function hlFixExpressions(byval n as ASTNODE ptr) as integer
-	''
-	'' TODO: Don't process ASTNODE.expr only, because anything that isn't
-	'' directly or indirectly stored in ASTNODE.expr will be missed.
-	''
-	'' In practice that's currently no problem though, because effectively
-	'' everything (macro bodies, proc bodies, initializers) uses
-	'' ASTNODE.expr. It would only be a problem with code (e.g. scope blocks
-	'' containing assignments or calls) outside any macro/proc body, but
-	'' that's not allowed in C anyways...
-	''
+sub ExpressionFixUp.work(byval n as ASTNODE ptr)
 	if n->expr then
 		'' TODO: shouldn't assume is_bool_context=TRUE for #define bodies
 		var is_bool_context = FALSE
@@ -425,7 +424,7 @@ private function hlFixExpressions(byval n as ASTNODE ptr) as integer
 			is_bool_context = TRUE
 		end select
 
-		n->expr = hlFixExpression(n->expr, is_bool_context)
+		n->expr = fixExpression(n->expr, is_bool_context)
 	end if
 
 	'' Collect #defines/enumconsts so we can do lookups and determine the
@@ -436,15 +435,23 @@ private function hlFixExpressions(byval n as ASTNODE ptr) as integer
 		if body andalso (body->class <> ASTCLASS_SCOPEBLOCK) then
 			var dtype = body->dtype
 			if dtype <> TYPE_NONE then
-				hlCollectSymbol(n->text, dtype)
+				collectSymbol(n->text, dtype)
 			end if
 		end if
 	case ASTCLASS_CONST
-		hlCollectSymbol(n->text, TYPE_LONG)
+		collectSymbol(n->text, TYPE_LONG)
 	end select
 
-	function = TRUE
-end function
+	if n->subtype then work(n->subtype)
+	if n->array   then work(n->array  )
+	if n->expr    then work(n->expr   )
+
+	var i = n->head
+	while i
+		work(i)
+		i = i->next
+	wend
+end sub
 
 private function isEmptyReservedDefine(byval n as ASTNODE ptr) as integer
 	function = (n->class = ASTCLASS_PPDEFINE) andalso _
@@ -2582,10 +2589,10 @@ end sub
 sub hlGlobal(byval ast as ASTNODE ptr, byref api as ApiInfo)
 	hl.api = @api
 
-	hl.symbols = new THash(10, TRUE)
-	astVisit(ast, @hlFixExpressions)
-	delete hl.symbols
-	hl.symbols = NULL
+	scope
+		dim pass as ExpressionFixUp
+		pass.work(ast)
+	end scope
 
 	if api.removeEmptyReservedDefines then
 		hlRemoveEmptyReservedDefines(ast)
