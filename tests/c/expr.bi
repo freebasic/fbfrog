@@ -485,7 +485,18 @@ const A77 = culng(culng(ENUMCONST1) - 1)
 	const A85 = A84
 #endif
 
+const B00 = culng(0u - 100u)
+const B01 = B00
+#define B11 (B10 - 1)
+const B10 = culng(0u - 100u)
+#define B22 (B21 - 1)
+#define B21 (B20 - 1)
+const B20 = culng(0u - 100u)
+#define B31 (B30 - 1)
+#define B32 (B31 - 1)
+const B30 = culng(0u - 100u)
 #define A90(x) (@(x)->a[(x)->b])
+
 '' TODO: #define A100 struct { int i; }
 '' TODO: #define A101 struct UDT { int i; }
 '' TODO: #define A102 sizeof(struct { int i; })

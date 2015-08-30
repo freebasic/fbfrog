@@ -534,6 +534,21 @@ enum E {
 #endif
 #define A85 A84
 
+// Same but with forward references
+#define B01 B00 // simple alias
+#define B00 (0u - 100u)
+
+#define B11 (B10 - 1) // "complex" math expression
+#define B10 (0u - 100u)
+
+#define B22 (B21 - 1) // extra indirection level
+#define B21 (B20 - 1)
+#define B20 (0u - 100u)
+
+#define B31 (B30 - 1)
+#define B32 (B31 - 1) // isn't a fwdref itself, but refers to one
+#define B30 (0u - 100u)
+
 #define A90(x) &(x)->a[(x)->b]
 
 #define A100 struct { int i; }
