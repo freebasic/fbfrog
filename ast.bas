@@ -488,18 +488,49 @@ sub astSetAlias(byval n as ASTNODE ptr, byval alias_ as zstring ptr)
 	n->alias = strDuplicate(alias_)
 end sub
 
-sub astRenameSymbol(byval n as ASTNODE ptr, byval newid as zstring ptr, byval add_to_renamelist as integer)
-	if n->alias = NULL then
-		n->alias = n->text
+sub astRenameSymbol(byval n as ASTNODE ptr, byval newid as zstring ptr)
+	if n->origid = NULL then
+		n->origid = n->text
+		if n->alias = NULL then
+			n->alias = strDuplicate(n->origid)
+		end if
 	else
 		deallocate(n->text)
 	end if
 	n->text = strDuplicate(newid)
-	if add_to_renamelist then
-		n->attrib and= not ASTATTRIB_NORENAMELIST
+end sub
+
+sub astRenameSymbolWithoutSettingOrigId(byval n as ASTNODE ptr, byval newid as zstring ptr)
+	if n->alias = NULL then
+		n->alias = strDuplicate(n->text)
 	else
-		n->attrib or= ASTATTRIB_NORENAMELIST
+		deallocate(n->text)
 	end if
+	n->text = strDuplicate(newid)
+end sub
+
+sub astTakeAliasFromId(byval dst as ASTNODE ptr, byval src as ASTNODE ptr)
+	if dst->alias then deallocate(dst->alias)
+	dst->alias = src->text
+	src->text = NULL
+end sub
+
+sub astTakeOrigId(byval dst as ASTNODE ptr, byval src as ASTNODE ptr)
+	if dst->origid then deallocate(dst->origid)
+	dst->origid = src->origid
+	src->origid = NULL
+end sub
+
+sub astTakeAliasAndOrigId(byval dst as ASTNODE ptr, byval src as ASTNODE ptr)
+	if dst->alias then deallocate(dst->alias)
+	dst->alias = src->alias
+	src->alias = NULL
+	astTakeOrigId(dst, src)
+end sub
+
+sub astCopyOrigId(byval dst as ASTNODE ptr, byval src as ASTNODE ptr)
+	if dst->origid then deallocate(dst->origid)
+	dst->origid = strDuplicate(src->origid)
 end sub
 
 sub astSetType(byval n as ASTNODE ptr, byval dtype as integer, byval subtype as ASTNODE ptr)
@@ -882,7 +913,6 @@ function astDumpOne(byval n as ASTNODE ptr) as string
 	checkAttrib(GENERATEDID)
 	checkAttrib(DLLIMPORT)
 	checkAttrib(ENUMCONST)
-	checkAttrib(NORENAMELIST)
 	checkAttrib(USED)
 
 	select case n->class
@@ -899,6 +929,9 @@ function astDumpOne(byval n as ASTNODE ptr) as string
 	end if
 	if n->alias then
 		s += " alias """ + strMakePrintable(*n->alias) + """"
+	end if
+	if n->origid then
+		s += " origid """ + strMakePrintable(*n->origid) + """"
 	end if
 
 	if n->dtype <> TYPE_NONE then

@@ -1274,13 +1274,12 @@ private function hlRenameJobAdd(byval oldid as zstring ptr, byval newname as AST
 		end if
 	end if
 
-	'' When renaming, we don't just override the id, but also copy the alias
-	'' and related flags. This way, if an UDT is given a renamed typedef's
-	'' name, the UDT will become "renamed" too, and thus the type will
-	'' continue to appear in renamelists.
+	'' When renaming, we don't just overwrite the id, but also copy the
+	'' origid. This way, if an UDT is given a renamed typedef's name, the
+	'' UDT will become "renamed" too, and thus the type will continue to
+	'' appear in renamelists.
 	var newid = astNewTEXT(newname->text)
-	astSetAlias(newid, newname->alias)
-	newid->attrib = newname->attrib and ASTATTRIB_NORENAMELIST
+	astCopyOrigId(newid, newname)
 
 	if item->s then
 		'' Free existing newid if there already is a renamejob for this oldid,
@@ -1303,12 +1302,8 @@ private sub hMaybeApplyRenameJob(byval n as ASTNODE ptr)
 			astSetText(n, newid->text)
 		end if
 
-		'' Change alias too
-		if newid->alias then
-			astSetAlias(n, newid->alias)
-		end if
-
-		n->attrib or= newid->attrib and ASTATTRIB_NORENAMELIST
+		'' Overwrite origid too
+		astCopyOrigId(n, newid)
 
 		'' Remove attributes even if id strictly speaking doesn't change
 		n->attrib and= not (ASTATTRIB_TAGID or ASTATTRIB_GENERATEDID)
@@ -1528,12 +1523,11 @@ private sub hlAddForwardDecls(byval ast as ASTNODE ptr)
 			astInsert(ast, fwd, typ->firstuse)
 			if typ->definition then
 				assert(*typ->id = *typ->definition->text)
-				astRenameSymbol(typ->definition, fwdid, FALSE)
-				'' Copy the type's alias onto the forward decl too.
-				'' In case the type was renamed, the forward decl (which now
-				'' declares the type) should also appear in the renamelist,
-				'' instead of the old type definition.
-				astSetAlias(fwd, typ->definition->alias)
+				astSetText(typ->definition, fwdid)
+				'' Move the type's alias/origid onto the forward decl,
+				'' since that now declares that type and should be what
+				'' appears in renamelists.
+				astTakeAliasAndOrigId(fwd, typ->definition)
 			end if
 		end if
 	next
@@ -1559,7 +1553,9 @@ private sub hFixUnsizedArray(byval ast as ASTNODE ptr, byval n as ASTNODE ptr)
 		def->location = n->location
 		astInsert(ast, def, n)
 
-		astRenameSymbol(n, tempid, FALSE)
+		astTakeOrigId(def, n)
+		astRenameSymbolWithoutSettingOrigId(n, tempid)
+
 		astDelete(n->array)
 		n->array = NULL
 
@@ -1577,7 +1573,9 @@ private sub hFixUnsizedArray(byval ast as ASTNODE ptr, byval n as ASTNODE ptr)
 			def->location = n->location
 			astInsert(ast, def, n->next)
 
-			astRenameSymbol(n, tempid, FALSE)
+			astTakeOrigId(def, n)
+			astRenameSymbolWithoutSettingOrigId(n, tempid)
+
 			astDelete(n->subtype)
 			n->subtype = NULL
 			stringToByte(n)
@@ -2065,9 +2063,7 @@ private sub copyAttribsTypeEtcAndChooseAlias(byval n as ASTNODE ptr, byval decl 
 	astSetType(n, decl->dtype, decl->subtype)
 	n->array = astClone(decl->array)
 	astAppend(n, astCloneChildren(decl))
-
 	astSetAlias(n, iif(decl->alias, decl->alias, decl->text))
-	n->attrib or= ASTATTRIB_NORENAMELIST
 end sub
 
 private sub astDropExpr(byval n as ASTNODE ptr)
@@ -2390,12 +2386,11 @@ private function hlBuildRenameList(byval n as ASTNODE ptr) as ASTNODE ptr
 	var i = n->head
 	while i
 
-		if (i->text <> NULL) and (i->alias <> NULL) and _
-		   ((i->attrib and ASTATTRIB_NORENAMELIST) = 0) and _
+		if (i->text <> NULL) and (i->origid <> NULL) and _
 		   (i->class <> ASTCLASS_UNDEF) then
-			astAppend(list, astNewTEXT( _
-				astDumpPrettyClass(i->class) + " " + _
-					*i->alias + " => " + *i->text))
+			var msg = astDumpPrettyClass(i->class)
+			msg += " " + *i->origid + " => " + *i->text
+			astAppend(list, astNewTEXT(msg))
 		end if
 
 		'' TODO: recurse into struct/union if renaming fields...

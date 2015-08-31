@@ -783,7 +783,7 @@ const ASTATTRIB_TAGID         = 1 shl 13
 const ASTATTRIB_GENERATEDID   = 1 shl 14
 const ASTATTRIB_DLLIMPORT     = 1 shl 15  '' VAR, PROC (ignored when merging PROCs)
 const ASTATTRIB_ENUMCONST     = 1 shl 16
-const ASTATTRIB_NORENAMELIST  = 1 shl 17
+                            ''= 1 shl 17
 const ASTATTRIB_USED          = 1 shl 18
 const ASTATTRIB_IFNDEFDECL    = 1 shl 19
 const ASTATTRIB_NOSTRING      = 1 shl 20 '' helper flag used during CharStringPass to mark nodes affected by -nostring
@@ -798,8 +798,15 @@ type ASTNODE
 	attrib		as integer  '' ASTATTRIB_*
 
 	'' Identifiers/string literals, or NULL
-	text		as zstring ptr
-	alias		as zstring ptr  '' Original identifier, if symbol was renamed
+	text   as zstring ptr '' Symbol name (original or renamed)
+	alias  as zstring ptr '' External name (if symbol was renamed, or if given via asm() in C code, etc.)
+	origid as zstring ptr '' Original name (if symbol was renamed)
+
+	'' Examples for symbol identifiers:
+	'' extern int a         ;                =>  text="a" alias=NULL origid=NULL  =>  extern a as long
+	'' extern int a asm("c");                =>  text="a" alias="c" origid=NULL   =>  extern a alias "c" as long
+	'' extern int a         ; + -rename a b  =>  text="b" alias="a" origid="a"    =>  extern b alias "a" as long + renamelist entry a => b
+	'' extern int a asm("c"); + -rename a b  =>  text="b" alias="c" origid="a"    =>  extern b alias "c" as long + renamelist entry a => b
 
 	'' Data type (vars, fields, params, function results, expressions)
 	dtype		as integer
@@ -884,7 +891,12 @@ declare function astReplace _
 	) as ASTNODE ptr
 declare sub astSetText(byval n as ASTNODE ptr, byval text as zstring ptr)
 declare sub astSetAlias(byval n as ASTNODE ptr, byval alias_ as zstring ptr)
-declare sub astRenameSymbol(byval n as ASTNODE ptr, byval newid as zstring ptr, byval add_to_renamelist as integer = TRUE)
+declare sub astRenameSymbol(byval n as ASTNODE ptr, byval newid as zstring ptr)
+declare sub astRenameSymbolWithoutSettingOrigId(byval n as ASTNODE ptr, byval newid as zstring ptr)
+declare sub astTakeAliasFromId(byval dst as ASTNODE ptr, byval src as ASTNODE ptr)
+declare sub astTakeOrigId(byval dst as ASTNODE ptr, byval src as ASTNODE ptr)
+declare sub astTakeAliasAndOrigId(byval dst as ASTNODE ptr, byval src as ASTNODE ptr)
+declare sub astCopyOrigId(byval dst as ASTNODE ptr, byval src as ASTNODE ptr)
 declare sub astSetType _
 	( _
 		byval n as ASTNODE ptr, _

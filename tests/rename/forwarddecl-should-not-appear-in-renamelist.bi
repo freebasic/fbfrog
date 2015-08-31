@@ -1,8 +1,5 @@
 #pragma once
 
-'' The following symbols have been renamed:
-''     typedef UDT => UDT
-
 extern "C"
 
 type UDT as UDT_

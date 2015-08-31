@@ -1,7 +1,7 @@
 #pragma once
 
 '' The following symbols have been renamed:
-''     variable c => b
+''     variable a => b
 
 extern "C"
 
