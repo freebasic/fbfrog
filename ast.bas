@@ -17,6 +17,16 @@ function typeUnsetBaseConst(byval dtype as integer) as integer
 	function = dtype and (not (1 shl (TYPEPOS_CONST + typeGetPtrCount(dtype))))
 end function
 
+function typeGetCLong(byval is_unsigned as integer, byval clong32 as integer) as integer
+	if clong32 then
+		'' C long => LONG (ok on Windows where C long is always 32bit)
+		function = iif(is_unsigned, TYPE_ULONG, TYPE_LONG)
+	else
+		'' C long => CLONG
+		function = iif(is_unsigned, TYPE_CULONG, TYPE_CLONG)
+	end if
+end function
+
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 dim shared as zstring ptr astnodename(0 to ...) => _

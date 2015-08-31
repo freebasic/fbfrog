@@ -618,6 +618,7 @@ const TYPEMAX_PTR = 8
 
 declare function typeExpand(byval a as integer, byval b as integer) as integer
 declare function typeUnsetBaseConst(byval dtype as integer) as integer
+declare function typeGetCLong(byval is_unsigned as integer, byval clong32 as integer) as integer
 
 enum
 	'' Internal helper nodes
@@ -1049,7 +1050,8 @@ declare function hNumberLiteral _
 	( _
 		byval x as integer, _
 		byval is_cpp as integer, _
-		byref errmsg as string _
+		byref errmsg as string, _
+		byval clong32 as integer _
 	) as ASTNODE ptr
 declare function hStringLiteral _
 	( _

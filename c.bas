@@ -233,7 +233,7 @@ private function cLiteral(byval astclass as integer, byval eval_escapes as integ
 	dim n as ASTNODE ptr
 
 	if astclass = ASTCLASS_CONSTI then
-		n = hNumberLiteral(c.x, FALSE, errmsg)
+		n = hNumberLiteral(c.x, FALSE, errmsg, c.api->clong32)
 	else
 		n = hStringLiteral(c.x, eval_escapes, errmsg)
 	end if
@@ -1641,13 +1641,7 @@ private sub cBaseType _
 		if shortmods = 1 then
 			dtype = iif(unsignedmods > 0, TYPE_USHORT, TYPE_SHORT)
 		elseif longmods = 1 then
-			if c.api->clong32 then
-				'' C long => LONG (ok on Windows where C long is always 32bit)
-				dtype = iif(unsignedmods > 0, TYPE_ULONG, TYPE_LONG)
-			else
-				'' C long => CLONG
-				dtype = iif(unsignedmods > 0, TYPE_CULONG, TYPE_CLONG)
-			end if
+			dtype = typeGetCLong(unsignedmods > 0, c.api->clong32)
 		elseif longmods = 2 then
 			dtype = iif(unsignedmods > 0, TYPE_ULONGINT, TYPE_LONGINT)
 		elseif dtype = TYPE_LONG then

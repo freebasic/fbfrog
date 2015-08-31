@@ -69,7 +69,8 @@ function hNumberLiteral _
 	( _
 		byval x as integer, _
 		byval is_cpp as integer, _
-		byref errmsg as string _
+		byref errmsg as string, _
+		byval clong32 as integer _
 	) as ASTNODE ptr
 
 	assert(tkGet(x) = TK_NUMBER)
@@ -237,7 +238,7 @@ function hNumberLiteral _
 		elseif have_ll then
 			n->dtype = iif(have_u, TYPE_ULONGINT, TYPE_LONGINT)
 		elseif have_l then
-			n->dtype = iif(have_u, TYPE_CULONG, TYPE_CLONG)
+			n->dtype = typeGetCLong(have_u, clong32)
 		else
 			n->dtype = iif(have_u, TYPE_ULONG, TYPE_LONG)
 		end if
@@ -1069,7 +1070,7 @@ private sub cppExpression _
 
 	case TK_NUMBER  '' Number literal
 		dim errmsg as string
-		var n = hNumberLiteral(cpp.x, TRUE, errmsg)
+		var n = hNumberLiteral(cpp.x, TRUE, errmsg, cpp.api->clong32)
 		if n = NULL then
 			tkOops(cpp.x, errmsg)
 		end if
