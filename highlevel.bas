@@ -1521,15 +1521,20 @@ private sub hlAddForwardDecls(byval ast as ASTNODE ptr)
 		var typ = hl.types + i
 		if hShouldAddForwardDeclForType(*typ) then
 			var fwdid = *typ->id + "_"
-			if typ->definition then
-				assert(*typ->id = *typ->definition->text)
-				astRenameSymbol(typ->definition, fwdid, FALSE)
-			end if
 			var fwd = astNew(ASTCLASS_TYPEDEF, typ->id)
 			fwd->dtype = TYPE_UDT
 			fwd->subtype = astNewTEXT(fwdid)
 			fwd->location = typ->firstuse->location
 			astInsert(ast, fwd, typ->firstuse)
+			if typ->definition then
+				assert(*typ->id = *typ->definition->text)
+				astRenameSymbol(typ->definition, fwdid, FALSE)
+				'' Copy the type's alias onto the forward decl too.
+				'' In case the type was renamed, the forward decl (which now
+				'' declares the type) should also appear in the renamelist,
+				'' instead of the old type definition.
+				astSetAlias(fwd, typ->definition->alias)
+			end if
 		end if
 	next
 end sub

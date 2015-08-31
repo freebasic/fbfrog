@@ -1,5 +1,8 @@
 #pragma once
 
+'' The following symbols have been renamed:
+''     typedef MY_INTEGER => MY_INTEGER_
+
 extern "C"
 
 type MY_INTEGER_ as MY_INTEGER__
