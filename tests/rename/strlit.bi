@@ -1,4 +1,4 @@
 #pragma once
 
-#define M1 "a_"
-#define M2 asc("b_")
+#define M1 "a"
+#define M2 asc("b")

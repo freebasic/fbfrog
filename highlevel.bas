@@ -692,11 +692,18 @@ private function hlApplyRenameOption(byval n as ASTNODE ptr) as integer
 	static inside_macro as integer
 
 	if n->text then
-		hApplyRenameOption(OPT_RENAME, n)
+		'' Apply -rename[_] options to any declaration,
+		'' but not string literals and such
+		select case n->class
+		case ASTCLASS_STRING, ASTCLASS_CHAR
 
-		if hl.api->idopt(OPT_RENAME_).matches(n->text) then
-			doRename(n, *n->text + "_")
-		end if
+		case else
+			hApplyRenameOption(OPT_RENAME, n)
+
+			if hl.api->idopt(OPT_RENAME_).matches(n->text) then
+				doRename(n, *n->text + "_")
+			end if
+		end select
 	end if
 
 	if typeGetDt(n->dtype) = TYPE_UDT then
