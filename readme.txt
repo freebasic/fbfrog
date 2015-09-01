@@ -267,7 +267,6 @@ Interesting improvements:
 * Solve out tag ids if there is an alias typedef, unless the tag id is used elsewhere
 * pattern-based renames, e.g. -renamedefine '%' 'FOO_%',
   or at least --rename-define-add-prefix '*' FOO_  <- add prefix FOO_ to matching defines.
-* -rename <id> which automatically appends an _ underscore
 * auto-convert C's [] array indexing into FB's (): track which vars/fields are
   arrays (or pointers) and then compare indexing BOPs against that.
 * Add support for

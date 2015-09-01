@@ -258,6 +258,7 @@ private sub hPrintHelpAndExit()
 	print "    -renamedefine, -renamemacroparam"
 	print "    -rename (any matching symbol)"
 	print "  -removeEmptyReservedDefines Remove empty (and parameter-less) #defines with __* or _U* names"
+	print "  -rename_ <id> Rename symbol by appending an _ underscore"
 	print "  options for removing declarations (-remove* <id>, where <id> is an id or a pattern):"
 	print "    -removedefine, -removeproc, -removevar, -remove1st, -remove2nd"
 	print "    -remove (any matching symbol)"
@@ -470,9 +471,12 @@ sub ApiInfo.loadOption(byval opt as integer, byval param1 as zstring ptr, byval 
 		renameopt(opt).addOverwrite(param1, param2)
 		have_renames = TRUE
 
-	case OPT_REMOVE, OPT_REMOVEDEFINE, OPT_REMOVEPROC, OPT_REMOVEVAR, OPT_REMOVE1ST, OPT_REMOVE2ND, _
+	case OPT_RENAME_, OPT_REMOVE, OPT_REMOVEDEFINE, OPT_REMOVEPROC, OPT_REMOVEVAR, OPT_REMOVE1ST, OPT_REMOVE2ND, _
 	     OPT_DROPPROCBODY, OPT_TYPEDEFHINT, OPT_ADDFORWARDDECL, OPT_UNDEFBEFOREDECL, OPT_IFNDEFDECL, _
 	     OPT_CONVBODYTOKENS, OPT_EXPANDINDEFINE, OPT_NOEXPAND, OPT_EXPAND
+		if opt = OPT_RENAME_ then
+			have_renames = TRUE
+		end if
 		idopt(opt).addPattern(param1)
 
 	case OPT_NOSTRING, OPT_STRING
@@ -1020,7 +1024,7 @@ private sub hParseArgs(byref x as integer)
 		     OPT_RENAMEMACROPARAM, OPT_RENAME
 			hParseOption2Params(x, opt, "<oldid>", "<newid>")
 
-		case OPT_REMOVE, OPT_REMOVEDEFINE, OPT_REMOVEPROC, OPT_REMOVEVAR, OPT_REMOVE1ST, OPT_REMOVE2ND, _
+		case OPT_RENAME_, OPT_REMOVE, OPT_REMOVEDEFINE, OPT_REMOVEPROC, OPT_REMOVEVAR, OPT_REMOVE1ST, OPT_REMOVE2ND, _
 		     OPT_DROPPROCBODY, OPT_TYPEDEFHINT, OPT_ADDFORWARDDECL, OPT_UNDEFBEFOREDECL, OPT_IFNDEFDECL, _
 		     OPT_CONVBODYTOKENS, OPT_EXPANDINDEFINE, OPT_NOEXPAND
 			hParseOption1Param(x, opt, "<id>")

@@ -670,16 +670,20 @@ private function hlSetArraySizes(byval n as ASTNODE ptr) as integer
 	function = TRUE
 end function
 
+private sub doRename(byval n as ASTNODE ptr, byval newid as zstring ptr)
+	if n->class = ASTCLASS_PPINCLUDE then
+		'' Allow -rename to affect PPINCLUDE nodes, but without giving them
+		'' alias strings (which could prevent merging and would add them to renamelists)
+		astSetText(n, newid)
+	else
+		astRenameSymbol(n, newid)
+	end if
+end sub
+
 private function hApplyRenameOption(byval opt as integer, byval n as ASTNODE ptr) as integer
 	dim as zstring ptr newid = hl.api->renameopt(opt).lookupDataOrNull(n->text)
 	if newid then
-		if n->class = ASTCLASS_PPINCLUDE then
-			'' Allow -rename to affect PPINCLUDE nodes, but without giving them
-			'' alias strings (which could prevent merging and would add them to renamelists)
-			astSetText(n, newid)
-		else
-			astRenameSymbol(n, newid)
-		end if
+		doRename(n, newid)
 		function = TRUE
 	end if
 end function
@@ -689,6 +693,10 @@ private function hlApplyRenameOption(byval n as ASTNODE ptr) as integer
 
 	if n->text then
 		hApplyRenameOption(OPT_RENAME, n)
+
+		if hl.api->idopt(OPT_RENAME_).matches(n->text) then
+			doRename(n, *n->text + "_")
+		end if
 	end if
 
 	if typeGetDt(n->dtype) = TYPE_UDT then
@@ -2003,7 +2011,7 @@ end function
 '' referring to other, known constants.
 ''
 '' TODO: allow more here:
-''  * string literals
+''  * string/char literals
 ''  * "sizeof(datatype)", but not "datatype"
 ''
 function Define2Decl.isConstantExpr(byval n as ASTNODE ptr) as integer

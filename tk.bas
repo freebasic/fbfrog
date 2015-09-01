@@ -180,6 +180,7 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	(@"-renamemacroparam"), _
 	(@"-rename"       ), _
 	(@"-removeEmptyReservedDefines"), _
+	(@"-rename_"      ), _
 	(@"-remove"       ), _
 	(@"-removedefine" ), _
 	(@"-removeproc"   ), _

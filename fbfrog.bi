@@ -470,6 +470,7 @@ enum
 	OPT_RENAMEMACROPARAM
 	OPT_RENAME
 	OPT_REMOVEEMPTYRESERVEDDEFINES
+	OPT_RENAME_
 	OPT_REMOVE
 	OPT_REMOVEDEFINE
 	OPT_REMOVEPROC
@@ -994,7 +995,7 @@ type ApiInfo
 
 	have_renames as integer
 	renameopt(OPT_RENAMETYPEDEF to OPT_RENAME) as THash = any
-	idopt(OPT_REMOVE to OPT_EXPAND) as StringMatcher
+	idopt(OPT_RENAME_ to OPT_EXPAND) as StringMatcher
 	patterns(OPT_NOSTRING to OPT_STRING) as DeclPatterns
 	removeinclude as THash = THash(3, FALSE)
 	setarraysizeoptions as THash = THash(3, FALSE)
