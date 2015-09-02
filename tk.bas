@@ -193,6 +193,7 @@ dim shared as TOKENINFO tk_info(0 to ...) = _
 	(@"-undefbeforedecl"), _
 	(@"-ifndefdecl"   ), _
 	(@"-convbodytokens"), _
+	(@"-forcefunction2macro"), _
 	(@"-expandindefine"), _
 	(@"-noexpand"     ), _
 	(@"-expand"       ), _

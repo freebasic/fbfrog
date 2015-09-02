@@ -1759,7 +1759,23 @@ private function collectParamUses(byval n as ASTNODE ptr) as integer
 	function = TRUE
 end function
 
-'' Check whether a proc can be turned into a #define.
+'' Check that each parameter is only used once by the expression,
+'' unless -forcefunction2macro was given
+private function allowedToTurnProc2Macro(byval proc as ASTNODE ptr, byval expr as ASTNODE ptr) as integer
+	if hl.api->idopt(OPT_FORCEFUNCTION2MACRO).matches(proc->text) then
+		return TRUE
+	end if
+
+	paramusage = new ParamUsageChecker(proc, FALSE)
+	astVisit(expr, @collectParamUses)
+	var have_multiple_uses = paramusage->have_multiple_uses
+	delete paramusage
+	paramusage = NULL
+
+	function = (not have_multiple_uses)
+end function
+
+'' Check whether a proc can be turned into a #define, and do it if possible.
 ''  - it must only return an expression; no other statements in the body.
 ''  - parameters (if any) can be used only once (otherwise they'd be evaluated
 ''    multiple times if turned into macro parameters).
@@ -1775,14 +1791,7 @@ private sub maybeProc2Macro(byval proc as ASTNODE ptr)
 
 		'' does it return an expression?
 		if ret->head then
-			'' Check that each parameter is only used once by the expression
-			paramusage = new ParamUsageChecker(proc, FALSE)
-			astVisit(ret->head, @collectParamUses)
-			var have_multiple_uses = paramusage->have_multiple_uses
-			delete paramusage
-			paramusage = NULL
-
-			if have_multiple_uses = FALSE then
+			if allowedToTurnProc2Macro(proc, ret->head) then
 				'' Turn proc into #define
 				''  - keep parameters
 				''  - cast expression to function's result type if there

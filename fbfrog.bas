@@ -268,6 +268,8 @@ private sub hPrintHelpAndExit()
 	print "  -undefbeforedecl <id>  Insert an #undef above a declaration"
 	print "  -ifndefdecl <id>    Wrap declaration of symbol named <id> in an #ifndef block"
 	print "  -convbodytokens <id>  Translate a #define's body only by converting the tokens, no parsing"
+	print "  -forcefunction2macro <id>  Force an inline function to be converted to a macro,"
+	print "                             even if parameters are used multiple times"
 	print "  -expandindefine <id>  Expand macro in #define body"
 	print "  -noexpand <id>      Disable expansion of certain #define"
 	print "  -expand <id>        Expand and remove matching typedefs"
@@ -473,7 +475,7 @@ sub ApiInfo.loadOption(byval opt as integer, byval param1 as zstring ptr, byval 
 
 	case OPT_RENAME_, OPT_REMOVE, OPT_REMOVEDEFINE, OPT_REMOVEPROC, OPT_REMOVEVAR, OPT_REMOVE1ST, OPT_REMOVE2ND, _
 	     OPT_DROPPROCBODY, OPT_TYPEDEFHINT, OPT_ADDFORWARDDECL, OPT_UNDEFBEFOREDECL, OPT_IFNDEFDECL, _
-	     OPT_CONVBODYTOKENS, OPT_EXPANDINDEFINE, OPT_NOEXPAND, OPT_EXPAND
+	     OPT_CONVBODYTOKENS, OPT_FORCEFUNCTION2MACRO, OPT_EXPANDINDEFINE, OPT_NOEXPAND, OPT_EXPAND
 		if opt = OPT_RENAME_ then
 			have_renames = TRUE
 		end if
@@ -1026,7 +1028,7 @@ private sub hParseArgs(byref x as integer)
 
 		case OPT_RENAME_, OPT_REMOVE, OPT_REMOVEDEFINE, OPT_REMOVEPROC, OPT_REMOVEVAR, OPT_REMOVE1ST, OPT_REMOVE2ND, _
 		     OPT_DROPPROCBODY, OPT_TYPEDEFHINT, OPT_ADDFORWARDDECL, OPT_UNDEFBEFOREDECL, OPT_IFNDEFDECL, _
-		     OPT_CONVBODYTOKENS, OPT_EXPANDINDEFINE, OPT_NOEXPAND
+		     OPT_CONVBODYTOKENS, OPT_FORCEFUNCTION2MACRO, OPT_EXPANDINDEFINE, OPT_NOEXPAND
 			hParseOption1Param(x, opt, "<id>")
 
 		case OPT_EXPAND
