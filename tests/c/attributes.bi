@@ -358,6 +358,9 @@ end sub
 private sub f()
 end sub
 
+private sub f(byval p as any ptr)
+end sub
+
 extern p as sub stdcall(byval p as sub stdcall())
 
 end extern

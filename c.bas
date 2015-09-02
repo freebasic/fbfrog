@@ -710,6 +710,7 @@ private sub cGccAttribute(byref gccattribs as integer)
 	     "malloc", _
 	     "may_alias", _
 	     "no_instrument_function", _
+	     "nonnull", _
 	     "noreturn", _
 	     "nothrow", _
 	     "pure", _
