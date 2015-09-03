@@ -2565,6 +2565,31 @@ private function cWhile() as ASTNODE ptr
 	function = whileloop
 end function
 
+'' EXTERN "C" { ... }
+private function cExternBlock() as ASTNODE ptr
+	assert(tkGet(c.x) = KW_EXTERN)
+	c.x += 1
+
+	if tkGet(c.x) <> TK_STRING then
+		cError("expected <""C""> behind <extern>")
+		return astNewGROUP()
+	end if
+	scope
+		var s = cLiteral(ASTCLASS_STRING, TRUE)
+		if *s->text <> "C" then
+			cError("expected <""C""> behind <extern>")
+			return astNewGROUP()
+		end if
+		astDelete(s)
+	end scope
+
+	cExpectMatch(TK_LBRACE, "for <extern ""C""> block")
+
+	function = cBody(ASTCLASS_EXTERNBLOCKBEGIN)
+
+	cExpectMatch(TK_RBRACE, "for <extern ""C""> block")
+end function
+
 private function cConstruct(byval bodyastclass as integer) as ASTNODE ptr
 	if tkGet(c.x) = TK_FBCODE then
 		var n = astNew(ASTCLASS_FBCODE, tkGetText(c.x))
@@ -2622,6 +2647,10 @@ private function cConstruct(byval bodyastclass as integer) as ASTNODE ptr
 	case KW_DO     : return cDoWhile(FALSE)
 	case KW_WHILE  : return cWhile()
 	case KW_RETURN : return cReturn()
+	case KW_EXTERN
+		if tkGet(c.x + 1) = TK_STRING then
+			return cExternBlock()
+		end if
 	end select
 
 	select case bodyastclass
