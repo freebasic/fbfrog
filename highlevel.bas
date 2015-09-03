@@ -1139,9 +1139,10 @@ end sub
 '' The default behaviour is to translate char/wchar_t depending on context -
 '' if it's a char/wchar_t pointer/array/typedef, we translate it as a string
 '' type (i.e. zstring or wstring). If it's a single char/wchar_t, we translate
-'' it as byte. For this, it is also necessary to expand char typedefs into the
-'' contexts that use them, so we can then translate the char/wchar_t to
-'' zstring/wstring or byte/wchar_t.
+'' it as byte. For this, it is necessary to check the contexts where char
+'' typedefs are used and possibly expand them. Expansion is needed for single
+'' chars so they can be turned into byte/wchar_t -- this also covers the case
+'' of char arrays that should be turned into fixed-length strings.
 ''
 '' Furthermore, we support some options to override the defaults:
 ''   -string    =>  Force "[un]signed char" to be treated as zstring. If it's
@@ -1159,6 +1160,10 @@ end type
 #define isAffectedByNoString(n) (((n)->attrib and ASTATTRIB_NOSTRING) <> 0)
 #define isAffectedByString(n)   (((n)->attrib and ASTATTRIB_STRING  ) <> 0)
 
+private function needsStringTypedefExpansion(byval n as ASTNODE ptr) as integer
+	function = (typeGetPtrCount(n->dtype) = 0)
+end function
+
 sub CharStringPass.walkDecls(byval n as ASTNODE ptr)
 	'' Ignore string/char literals, which also have string/char types, but
 	'' shouldn't be changed.
@@ -1172,13 +1177,14 @@ sub CharStringPass.walkDecls(byval n as ASTNODE ptr)
 	'' Expand "[un]signed char" typedef into decls affected by -string
 	'' We don't expand pointer typedefs though (e.g. "char/wchar_t *" or "[un]signed char *")
 	'' because they have enough context by themselves (we already know they're pointers).
-	if typeGetDt(n->dtype) = TYPE_UDT then
+	if (typeGetDt(n->dtype) = TYPE_UDT) then
 		assert(astIsTEXT(n->subtype))
 		var typedef = typedefs.lookup(n->subtype->text)
 		if typedef then
 			select case typeGetDtAndPtr(typedef->dtype)
 			case TYPE_ZSTRING, TYPE_WSTRING
-				if (not isAffectedByNoString(n)) and (not isAffectedByNoString(typedef)) then
+				if (not isAffectedByNoString(n)) and (not isAffectedByNoString(typedef)) and _
+				   needsStringTypedefExpansion(n) then
 					expandSimpleTypedef(typedef, n)
 				end if
 			case TYPE_BYTE, TYPE_UBYTE, TYPE_WCHAR_T
