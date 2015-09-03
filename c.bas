@@ -2642,6 +2642,12 @@ private function cConstruct(byval bodyastclass as integer) as ASTNODE ptr
 	end select
 end function
 
+private sub hSetLocationIfNeeded(byval n as ASTNODE ptr, byval location as TkLocation)
+	if n->location.source = NULL then
+		n->location = location
+	end if
+end sub
+
 private function cBody(byval bodyastclass as integer) as ASTNODE ptr
 	var result = astNewGROUP()
 
@@ -2676,18 +2682,19 @@ private function cBody(byval bodyastclass as integer) as ASTNODE ptr
 			hTurnIntoUNKNOWN(t, begin, c.x - 1)
 		end if
 
-		'' If at toplevel, assign source location to toplevel ASTNODEs
-		if bodyastclass < 0 then
-			var location = tkGetLocation(begin)
-			if t->class = ASTCLASS_GROUP then
-				var i = t->head
-				while i
-					i->location = location
-					i = i->next
-				wend
-			else
-				t->location = location
-			end if
+		'' Assign source location to declarations
+		'' For toplevel declarations (not fields/parameters) this will
+		'' be used to distribute them based on -emit patterns.
+		var location = tkGetLocation(begin)
+		if t->class = ASTCLASS_GROUP then
+			var i = t->head
+			while i
+				hSetLocationIfNeeded(i, location)
+				i->location = location
+				i = i->next
+			wend
+		else
+			hSetLocationIfNeeded(t, location)
 		end if
 
 		astAppend(result, t)
