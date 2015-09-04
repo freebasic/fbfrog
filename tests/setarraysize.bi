@@ -18,5 +18,6 @@ end type
 declare sub f1(byval s3 as zstring ptr)
 declare sub f2(byval i3 as long ptr)
 extern s4 as const zstring * len("foo")
+extern array10x20(0 to 10 - 1, 0 to 19) as long
 
 end extern

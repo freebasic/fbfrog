@@ -22,4 +22,4 @@
 [22/23] cygwin-x86_64
 [23/23] dos
 	tests/setarraysize.h
-emitting: tests/setarraysize.bi (7 declarations, 0 TODOs)
+emitting: tests/setarraysize.bi (8 declarations, 0 TODOs)

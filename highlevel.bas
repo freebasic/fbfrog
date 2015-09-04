@@ -652,18 +652,16 @@ private sub hlApplyMoveOption(byval ast as ASTNODE ptr, byref search as string, 
 	end if
 end sub
 
+'' Apply -setarraysize options, to arrays' "first" dimension
 private function hlSetArraySizes(byval n as ASTNODE ptr) as integer
 	if (n->text <> NULL) and (n->array <> NULL) then
-		'' 1 dimension?
-		if astHas1Child(n->array) then
-			var dimension = n->array->head
-			assert(dimension->class = ASTCLASS_DIMENSION)
-			if dimension->expr->class = ASTCLASS_ELLIPSIS then
-				dim size as zstring ptr = hl.api->setarraysizeoptions.lookupDataOrNull(n->text)
-				if size then
-					astDelete(dimension->expr)
-					dimension->expr = astNewTEXT(size)
-				end if
+		var dimension = n->array->head
+		assert(dimension->class = ASTCLASS_DIMENSION)
+		if dimension->expr->class = ASTCLASS_ELLIPSIS then
+			dim size as zstring ptr = hl.api->setarraysizeoptions.lookupDataOrNull(n->text)
+			if size then
+				astDelete(dimension->expr)
+				dimension->expr = astNewTEXT(size)
 			end if
 		end if
 	end if
