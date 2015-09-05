@@ -1807,6 +1807,15 @@ end sub
 ''                            void (*f(void))(void);
 ''    (*p[10])(void)      array of function pointers: void (*p[10])(void);
 ''
+''
+'' t = The whole declaration's AST. Typically this starts out as a VAR.
+'' node = The ASTNODE at the current recursion level. If we find function
+'' parameters or an array size, they go to this node.
+'' If the declarator is a plain VAR, function parameters turn it into a function.
+'' But if it's a pointer, it becomes a function pointer VAR. Then t stays the same,
+'' but "node" starts pointing to the procptr subtype, which receives the function parameters,
+'' and callconv attributes, etc.
+''
 '' Example 1:
 ''
 ''         int (*f)(int a);
@@ -2043,11 +2052,11 @@ private function cDeclarator _
 		astSetType(t, dtype, basesubtype)
 	end if
 
-	node = t
-
 	select case tkGet(c.x)
 	'' ('[' [ArrayElements] ']')*
 	case TK_LBRACKET
+		node = t
+
 		'' Can't allow arrays on everything - currently, it's only
 		'' handled for vars/fields/params/typedefs
 		if node->class = ASTCLASS_DATATYPE then
@@ -2079,9 +2088,19 @@ private function cDeclarator _
 			'' '['? (next dimension)
 		loop while (tkGet(c.x) = TK_LBRACKET) and c.parseok
 
+		if innerprocptrdtype <> TYPE_PROC then
+			'' It's a pointer to an array - unsupported in FB.
+			'' Drop the array type, effectively making it a pointer to just one array element.
+			'' see also expandArrayTypedef()
+			astDelete(node->array)
+			node->array = NULL
+		end if
+
 	'' ':' <bits>
 	case TK_COLON
-		if node->class <> ASTCLASS_FIELD then
+		node = t
+
+		if (innerprocptrdtype <> TYPE_PROC) or (node->class <> ASTCLASS_FIELD) then
 			cError("bitfields not supported here")
 		end if
 		c.x += 1
@@ -2121,6 +2140,7 @@ private function cDeclarator _
 			select case t->class
 			'' A plain symbol, not a pointer, becomes a function
 			case ASTCLASS_VAR, ASTCLASS_FIELD
+				node = t
 				t->class = ASTCLASS_PROC
 
 			'' Anything else though (typedefs, params, type casts...)
@@ -2150,6 +2170,8 @@ private function cDeclarator _
 			cExpectMatch(TK_RPAREN, "to close parameter list in function declaration")
 			paramlistnesting -= 1
 		wend
+	case else
+		node = t
 	end select
 
 	'' __ATTRIBUTE__((...))

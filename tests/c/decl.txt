@@ -22,4 +22,4 @@
 [22/23] cygwin-x86_64
 [23/23] dos
 	tests/c/decl.h
-emitting: tests/c/decl.bi (7 declarations, 0 TODOs)
+emitting: tests/c/decl.bi (7 declarations, 2 TODOs)
