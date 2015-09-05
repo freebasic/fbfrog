@@ -253,11 +253,13 @@ private function hIdAndArray(byval n as ASTNODE ptr, byval allow_alias as intege
 	function = s
 end function
 
-private function hSeparatedList(byval n as ASTNODE ptr, byval separator as zstring ptr) as string
+private function hSeparatedList(byval n as ASTNODE ptr, byval separator as zstring ptr, byval skip_head as integer) as string
 	dim s as string
-
 	var count = 0
 	var i = n->head
+	if (i <> NULL) and skip_head then
+		i = i->next
+	end if
 	while i
 		if count > 0 then
 			s += *separator
@@ -268,12 +270,11 @@ private function hSeparatedList(byval n as ASTNODE ptr, byval separator as zstri
 		count += 1
 		i = i->next
 	wend
-
 	function = s
 end function
 
-private function hParamList(byval n as ASTNODE ptr) as string
-	function = "(" + hSeparatedList(n, ", ") + ")"
+private function hParamList(byval n as ASTNODE ptr, byval skip_head as integer) as string
+	function = "(" + hSeparatedList(n, ", ", skip_head) + ")"
 end function
 
 private sub hEmitIndentedChildren(byval n as ASTNODE ptr, byval parentclass as integer = -1)
@@ -342,7 +343,7 @@ private sub emitProc(byref s as string, byval n as ASTNODE ptr, byval is_expr as
 	end if
 
 	'' '(' Parameters... ')'
-	s += hParamList(n)
+	s += hParamList(n, FALSE)
 
 	'' Function result type
 	if n->dtype <> TYPE_ANY then
@@ -375,7 +376,7 @@ end function
 
 private sub hMacroParamList(byref s as string, byval n as ASTNODE ptr)
 	if n->paramcount >= 0 then
-		s += hParamList(n)
+		s += hParamList(n, FALSE)
 	end if
 end sub
 
@@ -756,7 +757,7 @@ function emitExpr(byval n as ASTNODE ptr, byval need_parens as integer, byval ne
 		end if
 
 	case ASTCLASS_ARRAY
-		s += hParamList(n)
+		s += hParamList(n, FALSE)
 
 	case ASTCLASS_MACROPARAM
 		s += *n->text
@@ -948,13 +949,13 @@ function emitExpr(byval n as ASTNODE ptr, byval need_parens as integer, byval ne
 		s = hEmitOperands(n, "##")
 
 	case ASTCLASS_CALL
-		s = *n->text + hParamList(n)
+		s = emitExpr(n->head, TRUE, FALSE) + hParamList(n, TRUE)
 
 	case ASTCLASS_STRUCTINIT
-		s = hParamList(n)
+		s = hParamList(n, FALSE)
 
 	case ASTCLASS_ARRAYINIT
-		s = "{" + hSeparatedList(n, ", ") + "}"
+		s = "{" + hSeparatedList(n, ", ", FALSE) + "}"
 
 	case ASTCLASS_DIMENSION
 		s = "0 to "

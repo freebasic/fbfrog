@@ -754,7 +754,7 @@ private function hlApplyRenameOption(byval n as ASTNODE ptr) as integer
 	case ASTCLASS_UNDEF
 		hApplyRenameOption(OPT_RENAMEDEFINE, n)
 
-	case ASTCLASS_TEXT, ASTCLASS_CALL
+	case ASTCLASS_TEXT
 		hApplyRenameOption(OPT_RENAMEPROC, n)
 		hApplyRenameOption(OPT_RENAMEDEFINE, n)
 		if inside_macro then
@@ -2005,10 +2005,9 @@ function Define2Decl.mayTurnDefs2Decl(byval decl as ASTNODE ptr) as integer
 end function
 
 function Define2Decl.exprInvolvesUndeclaredId(byval n as ASTNODE ptr) as integer
-	select case n->class
-	case ASTCLASS_TEXT, ASTCLASS_CALL
+	if astIsTEXT(n) then
 		if decls.contains(n->text, hashHash(n->text)) = FALSE then return TRUE
-	end select
+	end if
 
 	if n->subtype then if exprInvolvesUndeclaredId(n->subtype) then return TRUE
 	if n->array   then if exprInvolvesUndeclaredId(n->array  ) then return TRUE

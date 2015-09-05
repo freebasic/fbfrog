@@ -69,8 +69,6 @@ loop while a = b
 while a = b
 wend
 
-do
-loop while G_LIKELY(-(a = b))
-
-while G_LIKELY(-(a = b))
+while a
+	b
 wend

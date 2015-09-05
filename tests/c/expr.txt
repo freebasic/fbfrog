@@ -22,4 +22,4 @@
 [22/23] cygwin-x86_64
 [23/23] dos
 	tests/c/expr.h
-emitting: tests/c/expr.bi (112 declarations, 7 TODOs)
+emitting: tests/c/expr.bi (120 declarations, 9 TODOs)

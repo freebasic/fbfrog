@@ -343,6 +343,28 @@ private function hIsDataTypeOrAttribute(byval y as integer) as integer
 	end select
 end function
 
+private function cCall(byval functionexpr as ASTNODE ptr, byval allow_idseq as integer) as ASTNODE ptr
+	assert(tkGet(c.x) = TK_LPAREN)
+	c.x += 1
+
+	functionexpr = astNew(ASTCLASS_CALL, functionexpr)
+
+	'' [Arguments]
+	if tkGet(c.x) <> TK_RPAREN then
+		'' Expression (',' Expression)*
+		do
+			astAppend(functionexpr, cExpression(FALSE, allow_idseq))
+
+			'' ','?
+		loop while cMatch(TK_COMMA) and c.parseok
+	end if
+
+	'' ')'?
+	cExpectMatch(TK_RPAREN, "to close call argument list")
+
+	function = functionexpr
+end function
+
 '' C expression parser based on precedence climbing
 private function hExpression _
 	( _
@@ -371,8 +393,9 @@ private function hExpression _
 		'' Atoms
 		select case tkGet(c.x)
 
-		''     '(' Expression ')'
-		'' or: '(' DataType ')' Expression
+		'' '(' Expression ')'
+		'' '(' DataType ')' Expression
+		'' '(' FunctionTypeExpr ')' '(' ArgumentList ')'
 		case TK_LPAREN
 			'' '('
 			c.x += 1
@@ -417,6 +440,22 @@ private function hExpression _
 						a->attrib or= ASTATTRIB_PARENTHESIZEDMACROPARAM
 					end if
 				end if
+
+				'' '('?
+				if tkGet(c.x) = TK_LPAREN then
+					''
+					'' Function call on parenthesized function name
+					''
+					'' TODO: Allow any expressions as function. But this requires
+					'' function-pointer-to-function-type derefs (e.g. <(*myFunctionPtr)(arg1, arg2)>)
+					'' to be removed automatically since they're not needed/allowed in FB.
+					'' But how to differentiate from function-ptr-ptr-to-function-ptr derefs, where
+					'' the deref is important?
+					''
+					if astIsTEXT(a) then
+						a = cCall(a, allow_idseq)
+					end if
+				end if
 			end if
 
 		case TK_NUMBER
@@ -429,29 +468,17 @@ private function hExpression _
 			a = cLiteral(ASTCLASS_CHAR, TRUE)
 
 		'' Id
-		'' Id ()
-		'' Id (CallArgs)
+		'' Id '(' ArgumentList ')'
 		'' Id ## Id ## ...
 		'' Id ("String"|Id)*
 		case TK_ID
 			select case tkGet(c.x + 1)
 			'' '('?
 			case TK_LPAREN
-				a = astNew(ASTCLASS_CALL, tkSpellId(c.x))
-				c.x += 2
+				a = astNewTEXT(tkSpellId(c.x))
+				c.x += 1
 
-				'' [CallArguments]
-				if tkGet(c.x) <> TK_RPAREN then
-					'' Expression (',' Expression)*
-					do
-						astAppend(a, cExpression(FALSE, allow_idseq))
-
-						'' ','?
-					loop while cMatch(TK_COMMA) and c.parseok
-				end if
-
-				'' ')'?
-				cExpectMatch(TK_RPAREN, "to close call argument list")
+				a = cCall(a, allow_idseq)
 
 			'' '##'?
 			case TK_HASHHASH
@@ -2487,6 +2514,26 @@ private function cScope() as ASTNODE ptr
 	cExpectMatch(TK_RBRACE, "to close compound statement")
 end function
 
+private function cConditionExpr() as ASTNODE ptr
+	'' The parentheses around the condition expression are part of the
+	'' if/do/while/... syntax. They have to be parsed explicitly, not as
+	'' part of the condition expression. Otherwise, code such as this:
+	''    if (foo)
+	''        (bar);
+	'' could be mis-parsed as
+	''    if (foo)(bar)
+	''        ;
+
+	'' '('
+	cExpectMatch(TK_LPAREN, "in front of condition")
+
+	'' condition expression
+	function = cExpression(TRUE, FALSE)
+
+	'' ')'
+	cExpectMatch(TK_RPAREN, "behind condition")
+end function
+
 '' IF '(' Expression ')' Construct [ELSE Construct]
 private function cIfBlock() as ASTNODE ptr
 	var ifblock = astNew(ASTCLASS_IFBLOCK)
@@ -2495,15 +2542,9 @@ private function cIfBlock() as ASTNODE ptr
 	assert(tkGet(c.x) = KW_IF)
 	c.x += 1
 
-	'' Note: We're not parsing/requiring the '()' parentheses around the if
-	'' condition explicitly here, because some headers (e.g. glib) use
-	'' macros in this place, e.g.:
-	''    if G_LIKELY(...) { ... }
-	'' So it's useful to accept that too without having to expand the macro.
-
 	'' condition expression
 	var ifpart = astNew(ASTCLASS_IFPART)
-	ifpart->expr = cExpression(TRUE, FALSE)
+	ifpart->expr = cConditionExpr()
 
 	'' if/true statement
 	astAppend(ifpart, cConstruct(ASTCLASS_SCOPEBLOCK))
@@ -2532,10 +2573,8 @@ private function cDoWhile(byval semi_is_optional as integer) as ASTNODE ptr
 	'' WHILE
 	cExpectMatch(KW_WHILE, "behind do loop body")
 
-	'' Note: not explicitly parsing the '()' parentheses here, see cIfBlock()
-
 	'' loop condition expression
-	dowhile->expr = cExpression(TRUE, FALSE)
+	dowhile->expr = cConditionExpr()
 
 	if semi_is_optional then
 		cMatch(TK_SEMI)
@@ -2554,10 +2593,8 @@ private function cWhile() as ASTNODE ptr
 	assert(tkGet(c.x) = KW_WHILE)
 	c.x += 1
 
-	'' Note: not explicitly parsing the '()' parentheses here, see cIfBlock()
-
 	'' loop condition expression
-	whileloop->expr = cExpression(TRUE, FALSE)
+	whileloop->expr = cConditionExpr()
 
 	'' loop body
 	astAppend(whileloop, cConstruct(ASTCLASS_SCOPEBLOCK))

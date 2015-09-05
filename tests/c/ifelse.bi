@@ -172,7 +172,8 @@ else
 	printf("2.2")
 end if
 
-if G_LIKELY(-(a = b)) then
+if a then
+	b
 end if
 
 #macro M1

@@ -215,6 +215,9 @@ Bugs:
   (at least, mark it with a TODO)
 
 Interesting improvements:
+* -1to1 option which automatically adds -emit options for each input .h such
+  that each .h is emitted into its own .bi, in the directory given with -o
+    - strip only the common prefix, preserve remaining directory structure (if any)
 * Define2Decl
   - check whether alias defines use any undeclared identifiers?
   - shouldn't move alias defines at all - it's typically not needed for

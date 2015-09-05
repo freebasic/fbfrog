@@ -582,3 +582,15 @@ enum E {
 #define A124b(x) ((void *)(x))
 #define A125a(x) (x ? x : x)
 #define A125b(x) ((x) ? (x) : (x))
+
+// Complex function calls
+#define NormalCall1 myFunction()
+#define NormalCall2 myFunction(1, 2)
+#define NormalCall3 myFunctionPtr(1, 2)
+#define NormalCall4(fn) fn(1, 2)
+#define ComplexCall1 (myFunction)()
+#define ComplexCall2 (myFunction)(1, 2)
+#define ComplexCall3 ((myFunction))(1, 2)
+#define ComplexCall4 (*myFunctionPtr)(1, 2)
+#define ComplexCall5 (*(myFunctionPtr))(1, 2)
+#define ComplexCall6(fn) (fn)(1, 2)

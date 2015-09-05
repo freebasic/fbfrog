@@ -22,4 +22,4 @@
 [22/23] cygwin-x86_64
 [23/23] dos
 	tests/c/dowhile.h
-emitting: tests/c/dowhile.bi (20 declarations, 0 TODOs)
+emitting: tests/c/dowhile.bi (19 declarations, 0 TODOs)
