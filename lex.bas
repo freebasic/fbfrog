@@ -329,15 +329,12 @@ private sub hReadString()
 end sub
 
 private sub lexNext()
-	'' Skip spaces
-	lex.behindspace = FALSE
-	while (lex.i[0] = CH_TAB) or (lex.i[0] = CH_SPACE)
-		lex.i += 1
-		lex.behindspace = TRUE
-	wend
-
 	'' Identify the next token
 	select case as const lex.i[0]
+	case CH_TAB, CH_SPACE
+		lex.i += 1
+		lex.behindspace = TRUE
+
 	case CH_CR
 		if lex.i[1] = CH_LF then	'' CRLF
 			lex.i += 1
@@ -447,8 +444,10 @@ private sub lexNext()
 			hReadBytes(TK_SLASHEQ, 2)
 		case CH_SLASH	'' //
 			hSkipLineComment()
+			lex.behindspace = TRUE
 		case CH_STAR	'' /*
 			hSkipComment()
+			lex.behindspace = TRUE
 		case else
 			hReadBytes(TK_SLASH, 1)
 		end select
@@ -517,7 +516,9 @@ private sub lexNext()
 
 	case CH_BACKSLASH	'' \
 		'' Check for escaped EOLs and solve them out
-		if hSkipEscapedEol() = FALSE then
+		if hSkipEscapedEol() then
+			lex.behindspace = TRUE
+		else
 			lex.i += 1
 			hAddTextToken(TK_STRAYBYTE, lex.i - 1)
 		end if
@@ -571,9 +572,17 @@ function lexLoadC(byval x as integer, byval code as zstring ptr, byref source as
 	lex.i = code
 
 	'' Tokenize and insert into tk buffer
-	while lex.i[0]
-		lexNext()
-	wend
+	'' Loop until EOF...
+	do
+		'' Loop until the next token was added...
+		'' (loop while skipping white-space)
+		lex.behindspace = FALSE
+		x = lex.x
+		do
+			if lex.i[0] = 0 then exit do, do
+			lexNext()
+		loop while lex.x = x
+	loop
 
 	function = lex.x
 end function

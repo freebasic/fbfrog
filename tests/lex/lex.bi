@@ -113,9 +113,9 @@ declare sub f()
 #define Z2 "abcdef"
 #define Z3 ""
 #define Z4 ""
-#define M1(x) (+1)
-#define M2(x) (+1)
-#define M3(x) (+1)
-#define M4(x) (+1)
+#define M1 (x + 1)
+#define M2 (x + 1)
+#define M3 (x + 1)
+#define M4 (x + 1)
 
 end extern
