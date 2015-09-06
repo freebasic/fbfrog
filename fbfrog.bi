@@ -954,22 +954,33 @@ declare sub astProcessVerblocks(byval code as ASTNODE ptr)
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
+type ParentChildPattern
+	parentpattern as string
+	childpattern as string
+	declare function matches(byval parent as ASTNODE ptr, byval child as ASTNODE ptr) as integer
+end type
+
 type IndexPattern
 	parentpattern as string
 	childindex as integer
-	declare function determineParentId(byval parentparent as ASTNODE ptr, byval parent as ASTNODE ptr) as const zstring ptr
-	declare function matches _
-		( _
-			byval parentparent as ASTNODE ptr, _
-			byval parent as ASTNODE ptr, _
-			byval childindex as integer _
-		) as integer
+	declare function matches(byval parentid as zstring ptr, byval childindex as integer) as integer
 end type
 
 type DeclPatterns
-	stringPatterns as StringMatcher
-	indexPatterns as IndexPattern ptr
-	indexPatternCount as integer
+	'' id patterns
+	ids as StringMatcher
+
+	'' parent.child patterns
+	pcParents as StringMatcher
+	pcChildren as StringMatcher
+	pcs as ParentChildPattern ptr
+	pccount as integer
+
+	'' index patterns
+	indexParents as StringMatcher
+	index as IndexPattern ptr
+	indexcount as integer
+
 	declare sub parseAndAdd(byref s as string)
 	declare destructor()
 	declare function matches _

@@ -554,25 +554,14 @@ end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-function IndexPattern.determineParentId(byval parentparent as ASTNODE ptr, byval parent as ASTNODE ptr) as const zstring ptr
-	'' If it's an anonymous procptr subtype, check its parent's id instead
-	if parentparent andalso _
-	   (parent->class = ASTCLASS_PROC) andalso _
-	   (parentparent->subtype = parent) then
-		function = parentparent->text
-	else
-		function = parent->text
-	end if
+function ParentChildPattern.matches(byval parent as ASTNODE ptr, byval child as ASTNODE ptr) as integer
+	function = strMatch(*parent->text, parentpattern) andalso _
+	           strMatch(*child->text, childpattern)
 end function
 
-function IndexPattern.matches _
-	( _
-		byval parentparent as ASTNODE ptr, _
-		byval parent as ASTNODE ptr, _
-		byval childindex as integer _
-	) as integer
+function IndexPattern.matches(byval parentid as zstring ptr, byval childindex as integer) as integer
 	function = (this.childindex = childindex) andalso _
-	           strMatch(*determineParentId(parentparent, parent), parentpattern)
+	           strMatch(*parentid, parentpattern)
 end function
 
 ''
@@ -580,12 +569,15 @@ end function
 ''    [<parent-id-pattern>.]<child-id-pattern>
 ''    <parent-id-pattern>.<child-index>
 ''
-'' Id patterns ("child" or "parent.child") can be added to a StringMatcher,
-'' we can do lookups using the same formats.
-'' Index patterns however have to be matched manually.
+'' "child" id patterns can be handles using a StringMatcher.
 ''
-'' TODO: extend StringMatcher to support payloads (like a hash table), then
-''       store child index into it, associated with parent id pattern?
+'' "parent.child" patterns are more difficult: We can use two StringMatchers to
+'' track parent and child ids to fairly quickly look for possible matches, but
+'' then we still have to check a list of the "parent.child" patterns to
+'' determine exactly whether the given parent/child combination matches.
+''
+'' Same for index patterns.
+''
 '' TODO: match based on astclass to speed things up a bit
 ''       (if we have a parentpattern, the child can only be a field/param/enumconst)
 ''
@@ -594,33 +586,50 @@ sub DeclPatterns.parseAndAdd(byref s as string)
 	strSplit(s, ".", parent, child)
 
 	'' Index pattern?
-	if (len(parent) > 0) and (len(child) > 0) and strIsNumber(child) then
-		var i = indexPatternCount
-		indexPatternCount += 1
-		indexPatterns = reallocate(indexPatterns, sizeof(*indexPatterns) * indexPatternCount)
-		indexPatterns[i].constructor()
-		indexPatterns[i].parentpattern = parent
-		indexPatterns[i].childindex = valuint(child)
+	if (len(parent) > 0) and (len(child) > 0) then
+		if strIsNumber(child) then
+			indexParents.addPattern(parent)
+			var i = indexCount
+			indexCount += 1
+			index = reallocate(index, sizeof(*index) * indexCount)
+			index[i].constructor()
+			index[i].parentpattern = parent
+			index[i].childindex = valuint(child)
+		else
+			pcParents.addPattern(parent)
+			pcChildren.addPattern(child)
+			var i = pccount
+			pccount += 1
+			pcs = reallocate(pcs, sizeof(*pcs) * pccount)
+			pcs[i].constructor()
+			pcs[i].parentpattern = parent
+			pcs[i].childpattern = child
+		end if
 	else
-		stringPatterns.addPattern(s)
+		ids.addPattern(s)
 	end if
 end sub
 
 destructor DeclPatterns()
-	for i as integer = 0 to indexPatternCount - 1
-		indexPatterns[i].destructor()
+	for i as integer = 0 to pccount - 1
+		pcs[i].destructor()
 	next
-	deallocate(indexPatterns)
+	deallocate(pcs)
+	for i as integer = 0 to indexcount - 1
+		index[i].destructor()
+	next
+	deallocate(index)
 end destructor
 
-private function strConcatWithDotSeparator(byval a as const zstring ptr, byval b as const zstring ptr) as zstring ptr
-	dim as integer alen = strlen(a), blen = strlen(b)
-	dim s as ubyte ptr = allocate(alen + 1 + blen + 1)
-	memcpy(s, a, alen)
-	s[alen] = CH_DOT
-	memcpy(s + alen + 1, b, blen)
-	s[alen + 1 + blen] = 0
-	function = s
+private function determineParentId(byval parentparent as ASTNODE ptr, byval parent as ASTNODE ptr) as zstring ptr
+	'' If it's an anonymous procptr subtype, check its parent's id instead
+	if parentparent andalso _
+	   (parent->class = ASTCLASS_PROC) andalso _
+	   (parentparent->subtype = parent) then
+		function = parentparent->text
+	else
+		function = parent->text
+	end if
 end function
 
 function DeclPatterns.matches _
@@ -632,25 +641,39 @@ function DeclPatterns.matches _
 	) as integer
 
 	if child->text then
-		'' Match against "child" patterns
-		if stringPatterns.matches(child->text) then return TRUE
+		'' Match against "id" patterns
+		if ids.matches(child->text) then
+			return TRUE
+		end if
 
 		if parent andalso parent->text then
 			'' Match against "parent.child" patterns
-			'' Building the a.b string manually to avoid temp strings...
-			var s = strConcatWithDotSeparator(parent->text, child->text)
-			var match = stringPatterns.matches(s)
-			deallocate(s)
-			if match then return TRUE
+			'' Potential match?
+			if pcParents.matches(parent->text) andalso _
+			   pcChildren.matches(child->text) then
+				'' Confirm match...
+				for i as integer = 0 to pccount - 1
+					if pcs[i].matches(parent, child) then
+						return TRUE
+					end if
+				next
+			end if
 		end if
 	end if
 
 	if parent then
 		'' Match against index patterns
 		'' TODO: only if it's a field/param
-		for i as integer = 0 to indexPatternCount - 1
-			if indexPatterns[i].matches(parentparent, parent, childindex) then return TRUE
-		next
+		'' Potential match?
+		var parentid = determineParentId(parentparent, parent)
+		if parentid andalso indexParents.matches(parentid) then
+			'' Confirm match...
+			for i as integer = 0 to indexcount - 1
+				if index[i].matches(parentid, childindex) then
+					return TRUE
+				end if
+			next
+		end if
 	end if
 
 	function = FALSE
