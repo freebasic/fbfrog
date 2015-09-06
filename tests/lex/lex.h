@@ -161,3 +161,20 @@ def"
 "
 #define Z4 "\ 
 "
+
+// behindspace must be set correctly where it matters...
+
+// same as M1(x) -- function-like macro, escaped EOL not treated as space
+#define M1\
+(x) + 1
+
+// same as M2 (x) -- object-like macro, space shouldn't be ignored
+#define M2 \
+(x) + 1
+
+// object-like macro, comment treated as space
+#define M3/**/(x) + 1
+
+// object-like macro, comment treated as space
+#define M4/*
+*/(x) + 1

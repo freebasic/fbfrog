@@ -22,4 +22,4 @@
 [22/23] cygwin-x86_64
 [23/23] dos
 	tests/lex/lex.h
-emitting: tests/lex/lex.bi (109 declarations, 0 TODOs)
+emitting: tests/lex/lex.bi (113 declarations, 0 TODOs)
