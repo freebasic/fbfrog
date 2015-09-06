@@ -28,5 +28,6 @@ declare sub f4(byval as ubyte ptr)
 declare sub f5(byval as ubyte ptr, byval as zstring ptr, byval as ubyte ptr)
 type PFDoodle as sub(byval as ubyte ptr, byval as zstring ptr)
 declare sub f6(byval as long, byval procPtrParam as sub(byval as ubyte ptr, byval as zstring ptr), byval as long)
+declare sub f7(byval param as zstring ptr)
 
 end extern
