@@ -269,7 +269,7 @@ private function findWildcardOrEol(byval s as const zstring ptr) as integer
 	function = i
 end function
 
-sub StringMatcher.addPattern(byval pattern as const zstring ptr)
+sub StringMatcher.addPattern(byval pattern as const zstring ptr, byval payload as any ptr)
 	nonEmpty = TRUE
 
 	''
@@ -304,14 +304,15 @@ sub StringMatcher.addPattern(byval pattern as const zstring ptr)
 		case MatchWildcard
 			if (*pattern)[0] = CH_STAR then
 				'' WILDCARD node is already here, recursively add the rest
-				child->addPattern(@pattern[1])
+				child->addPattern(@pattern[1], payload)
 				exit sub
 			end if
 
 		case MatchEol
 			if (*pattern)[0] = 0 then
 				'' Empty pattern, and we already have an EOL node here,
-				'' so nothing more needs to be added
+				'' so nothing more needs to be added. But overwrite the payload.
+				child->payload = payload
 				exit sub
 			end if
 
@@ -331,7 +332,7 @@ sub StringMatcher.addPattern(byval pattern as const zstring ptr)
 				'' Recursively add the rest of the pattern
 				'' (at the very least there will be the null terminator remaining,
 				'' for which we have to add an EOL node)
-				child->addPattern(@pattern[commonprefixlen])
+				child->addPattern(@pattern[commonprefixlen], payload)
 				exit sub
 			end if
 		end select
@@ -342,25 +343,26 @@ sub StringMatcher.addPattern(byval pattern as const zstring ptr)
 	if eol > 0 then
 		'' Add node for string prefix, recursively add the rest
 		addChild(MatchString, pattern, eol)
-		children[childcount-1].addPattern(@pattern[eol])
+		children[childcount-1].addPattern(@pattern[eol], payload)
 	else
 		select case (*pattern)[0]
 		case CH_STAR
 			'' Add node for wildcard, recursively add the rest
 			addChild(MatchWildcard, NULL, 0)
-			children[childcount-1].addPattern(@pattern[1])
+			children[childcount-1].addPattern(@pattern[1], payload)
 		case 0
 			'' EOL node
 			addChild(MatchEol, NULL, 0)
+			children[childcount-1].payload = payload
 		end select
 	end if
 end sub
 
-function StringMatcher.matches(byval s as const zstring ptr) as integer
+function StringMatcher.matches(byval s as const zstring ptr, byref payload as any ptr) as integer
 	select case nodeclass
 	case MatchRoot
 		for i as integer = 0 to childcount - 1
-			if children[i].matches(s) then return TRUE
+			if children[i].matches(s, payload) then return TRUE
 		next
 
 	case MatchString
@@ -368,7 +370,7 @@ function StringMatcher.matches(byval s as const zstring ptr) as integer
 		if strncmp(text, s, textlength) = 0 then
 			'' Prefix matched; now check suffixes, there must be at least an EOL node
 			for suffix as integer = 0 to childcount - 1
-				if children[suffix].matches(@s[textlength]) then return TRUE
+				if children[suffix].matches(@s[textlength], payload) then return TRUE
 			next
 		end if
 
@@ -380,7 +382,7 @@ function StringMatcher.matches(byval s as const zstring ptr) as integer
 			'' even if it's just a null terminator (so it can match an EOL)
 			var i = s
 			do
-				if children[suffix].matches(i) then return TRUE
+				if children[suffix].matches(i, payload) then return TRUE
 				if (*i)[0] = 0 then exit do
 				i += 1
 			loop
@@ -388,7 +390,10 @@ function StringMatcher.matches(byval s as const zstring ptr) as integer
 
 	case MatchEol
 		'' The given string must be empty
-		if (*s)[0] = 0 then return TRUE
+		if (*s)[0] = 0 then
+			payload = this.payload
+			return TRUE
+		end if
 	end select
 
 	'' Nothing matched
@@ -398,10 +403,10 @@ end function
 function StringMatcher.dump1() as string
 	dim s as string
 	select case nodeclass
-	case MatchRoot     : s += "root"
+	case MatchRoot     : s += "root nonEmpty=" & nonEmpty
 	case MatchString   : s += "string """ + *text + """" : if textlength <> len(*text) then s += " textlength=" & textlength & " (INVALID)"
 	case MatchWildcard : s += "wildcard"
-	case MatchEol      : s += "eol"
+	case MatchEol      : s += "eol payload=" & payload
 	end select
 	function = s
 end function

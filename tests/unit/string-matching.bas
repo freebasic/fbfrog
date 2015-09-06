@@ -142,3 +142,29 @@ scope
 	test(m.matches("a"))
 	test(m.matches("aa"))
 end scope
+
+scope
+	dim m as StringMatcher
+	m.addPattern("1", cptr(any ptr, 1))
+	m.addPattern("2", cptr(any ptr, 2))
+	m.addPattern("3", cptr(any ptr, 3))
+	m.addPattern("22", cptr(any ptr, 22))
+
+	'' should store the payloads properly (see tree dump)
+	m.dump
+
+	dim payload as any ptr
+
+	'' should return the proper payloads
+	payload = 0 : test(m.matches("1", payload)) : test(cint(payload) = 1)
+	payload = 0 : test(m.matches("2", payload)) : test(cint(payload) = 2)
+	payload = 0 : test(m.matches("3", payload)) : test(cint(payload) = 3)
+	payload = 0 : test(m.matches("22", payload)) : test(cint(payload) = 22)
+
+	'' should overwrite 3's payload (and nothing else)
+	m.addPattern("3", cptr(any ptr, 333))
+	payload = 0 : test(m.matches("1", payload)) : test(cint(payload) = 1)
+	payload = 0 : test(m.matches("2", payload)) : test(cint(payload) = 2)
+	payload = 0 : test(m.matches("3", payload)) : test(cint(payload) = 333)
+	payload = 0 : test(m.matches("22", payload)) : test(cint(payload) = 22)
+end scope
