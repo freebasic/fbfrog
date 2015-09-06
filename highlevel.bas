@@ -2995,31 +2995,22 @@ function hlCountDecls(byval ast as ASTNODE ptr) as integer
 	function = n
 end function
 
-function hlCountTodos(byval ast as ASTNODE ptr) as integer
-	var n = 0
+function hlCountTodos(byval n as ASTNODE ptr) as integer
+	var count = 0
 
-	var i = ast->head
+	if n->class = ASTCLASS_UNKNOWN then
+		count += 1
+	end if
+
+	if n->subtype then count += hlCountTodos(n->subtype)
+	if n->array   then count += hlCountTodos(n->array  )
+	if n->expr    then count += hlCountTodos(n->expr   )
+
+	var i = n->head
 	while i
-		select case i->class
-		case ASTCLASS_UNKNOWN
-			n += 1
-
-		case ASTCLASS_PPIF, ASTCLASS_PPELSEIF, ASTCLASS_PPELSE, _
-		     ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
-			n += hlCountTodos(i)
-
-		case ASTCLASS_PROC, ASTCLASS_PPDEFINE
-			if i->expr then
-				if i->expr->class = ASTCLASS_UNKNOWN then
-					n += 1
-				else
-					n += hlCountTodos(i->expr)
-				end if
-			end if
-		end select
-
+		count += hlCountTodos(i)
 		i = i->next
 	wend
 
-	function = n
+	function = count
 end function
