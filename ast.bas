@@ -924,6 +924,9 @@ function astDumpOne(byval n as ASTNODE ptr) as string
 	checkAttrib(DLLIMPORT)
 	checkAttrib(ENUMCONST)
 	checkAttrib(USED)
+	checkAttrib(IFNDEFDECL)
+	checkAttrib(NOSTRING)
+	checkAttrib(STRING)
 
 	select case n->class
 	case ASTCLASS_OPTION
