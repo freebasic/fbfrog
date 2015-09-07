@@ -287,6 +287,14 @@ private function cStringLiteralSequence() as ASTNODE ptr
 		end select
 	wend
 
+	'' Strip the STRCAT node if it's a single literal only...
+	if strcat->head = strcat->tail then
+		var result = strcat->head
+		astUnlink(strcat, strcat->head)
+		astDelete(strcat)
+		strcat = result
+	end if
+
 	function = strcat
 end function
 

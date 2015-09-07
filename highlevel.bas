@@ -361,6 +361,25 @@ sub ExpressionFixUp.handleForwards()
 	wend
 end sub
 
+'' Fix up casts on string literals by adding an address-of operation:
+''    cptr(foo ptr, "bar") => cptr(foo ptr, @"bar")
+private sub hlFixAddrOfStrLit(byval n as ASTNODE ptr)
+	var i = n->head
+	while i
+		hlFixAddrOfStrLit(i)
+		i = i->next
+	wend
+
+	if (n->class = ASTCLASS_CAST) andalso _
+	   ((n->head->class = ASTCLASS_STRING) or _
+	    (n->head->class = ASTCLASS_STRCAT)) then
+		var strlit = n->head
+		astUnlink(n, n->head)
+		strlit = astNew(ASTCLASS_ADDROF, strlit)
+		astPrepend(n, strlit)
+	end if
+end sub
+
 private function hIsUlongCast(byval n as ASTNODE ptr) as integer
 	function = n andalso (n->class = ASTCLASS_CAST) andalso (n->dtype = TYPE_ULONG)
 end function
@@ -509,6 +528,7 @@ private sub hlRemoveExpressionTypes(byval n as ASTNODE ptr)
 end sub
 
 function ExpressionFixUp.fixExpression(byval n as ASTNODE ptr, byval is_bool_context as integer) as ASTNODE ptr
+	hlFixAddrOfStrLit(n)
 	n = hlAddMathCasts(NULL, n)
 
 	n = astOpsC2FB(n, is_bool_context)

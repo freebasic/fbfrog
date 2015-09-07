@@ -244,8 +244,6 @@ Interesting improvements:
     1. preserve comments
     2. for unnamed parameters, check if the comment is just an id, and if so
        use it as the param id.
-* add pass for fixing up string literal casts (useful for gtk3 at least):
-	cast(SomePtrType, "foo")  =>  cast(SomePtrType, @"foo")
 * fbfrog-fbc-wrapper for compiling .bas files that contain #fbfrog directives
   * process #fbfrog directives in the .bas and in each included .bi; must do
     #include search just like the fbc. Query fbc's incdir via 'fbc -print incdir'
