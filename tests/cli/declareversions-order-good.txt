@@ -1,0 +1,3 @@
+<command line>(1): version '8' >= '16', but should be < to maintain order
+    frog tests/cli/declareversions-order-good.h -declareversions V 1 2 4 8 16 32
+                                                                           ^~
