@@ -949,7 +949,7 @@ private sub hParseArgs(byref x as integer)
 				'' Verify that new version number is >= the previous one (unless this is the first one)
 				if xfirst < x then
 					var prev = *tkGetText(x - 1)
-					if prev >= verstr then
+					if valint(prev) >= valint(verstr) then
 						tkOops(x, "version '" + prev + "' >= '" + verstr + "', but should be < to maintain order")
 					end if
 				end if
