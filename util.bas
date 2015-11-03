@@ -531,26 +531,26 @@ dim shared fbkeywordsinfo(0 to ...) as FbKeywordInfo => { _
 	(@"UNDEF"   , FBKW_PP)  _
 }
 
-dim shared fbkeywords as THash = THash(8, FALSE)
-
-private sub fbkeywordsInit() constructor
+constructor FBKeywordTable()
 	for i as integer = 0 to ubound(fbkeywordsinfo)
 		with fbkeywordsinfo(i)
-			assert(fbkeywords.contains(.id, hashHash(.id)) = FALSE)
-			fbkeywords.addOverwrite(.id, cast(any ptr, .fbkw))
+			assert(tb.contains(.id, hashHash(.id)) = FALSE)
+			tb.addOverwrite(.id, cast(any ptr, .fbkw))
 		end with
 	next
-end sub
+end constructor
 
-function fbkeywordsLookup(byval id as zstring ptr) as integer
+function FBKeywordTable.lookup(byval id as zstring ptr) as integer
 	var ucaseid = ucase(*id, 1)
-	var item = fbkeywords.lookup(ucaseid, hashHash(ucaseid))
+	var item = tb.lookup(ucaseid, hashHash(ucaseid))
 	if item->s then
 		function = cint(item->data)
 	else
 		function = -1
 	end if
 end function
+
+dim shared fbkeywords as FBKeywordTable
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
