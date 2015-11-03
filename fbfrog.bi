@@ -262,7 +262,14 @@ enum
 	FBKW_PP
 end enum
 
-declare function fbkeywordsLookup(byval id as zstring ptr) as integer
+type FBKeywordTable
+	tb as THash = THash(8, FALSE)
+	declare constructor()
+	declare operator let(byref as const FBKeywordTable) '' unimplemented
+	declare function lookup(byval id as zstring ptr) as integer
+end type
+
+extern fbkeywords as FBKeywordTable
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 

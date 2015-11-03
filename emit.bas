@@ -354,7 +354,7 @@ end sub
 '' Warn about types named after FB quirk keywords, e.g. winapi's INPUT, to avoid
 '' fbc bug #730 (Using quirk keywords as identifier leads to parsing problems later)
 private function hCheckForQuirkKeywordType(byval id as zstring ptr) as string
-	if id andalso (fbkeywordsLookup(id) = FBKW_QUIRK) then
+	if id andalso (fbkeywords.lookup(id) = FBKW_QUIRK) then
 		function = " '' TODO"
 	end if
 end function
