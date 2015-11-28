@@ -705,12 +705,12 @@ end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-private sub cSkipToRparen()
+private sub cSkipToCommaOrRparen()
 	do
 		select case tkGet(c.x)
 		case TK_LPAREN, TK_LBRACKET, TK_LBRACE
 			c.x = hFindClosingParen(c.x, cIsInsideDefineBody(), TRUE)
-		case TK_RPAREN, TK_EOF
+		case TK_COMMA, TK_RPAREN, TK_EOF
 			exit do
 		end select
 		c.x += 1
@@ -759,7 +759,7 @@ private sub cGccAttribute(byref gccattribs as integer)
 
 		'' Some of these attributes accept further arguments which we
 		'' can just ignore.
-		cSkipToRparen()
+		cSkipToCommaOrRparen()
 
 	case "cdecl"     : gccattribs or= ASTATTRIB_CDECL     : c.x += 1
 	case "stdcall"   : gccattribs or= ASTATTRIB_STDCALL   : c.x += 1
@@ -1170,7 +1170,7 @@ private function cDefineBody(byval macro as ASTNODE ptr) as integer
 
 			'' Skip to ')' - we don't care whether there is
 			'' a string literal or something like a #macroparam or similar...
-			cSkipToRparen()
+			cSkipToCommaOrRparen()
 			c.x += 1
 		loop while tkGet(c.x) = KW__PRAGMA
 

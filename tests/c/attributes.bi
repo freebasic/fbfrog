@@ -367,11 +367,11 @@ type T
 	i as long
 end type
 
-type ShouldBePacked
+type ShouldBePacked field = 1
 	i as long
 end type
 
-private sub ShouldBeStdcall()
+private sub ShouldBeStdcall stdcall()
 end sub
 
 end extern
