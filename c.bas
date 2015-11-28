@@ -741,6 +741,7 @@ private sub cGccAttribute(byref gccattribs as integer)
 	     "deprecated", _
 	     "format", _
 	     "format_arg", _
+	     "gcc_struct", _
 	     "gnu_inline", _
 	     "malloc", _
 	     "may_alias", _

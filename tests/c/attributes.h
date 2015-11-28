@@ -290,3 +290,5 @@ __attribute__((always_inline)) void f(void) { }
 __attribute__((nonnull(1))) void f(void *p) { }
 
 extern void (__attribute__((stdcall)) *p)(    void (__attribute__((stdcall)) *p)(void)    );
+
+struct T { int i; } __attribute__((gcc_struct));

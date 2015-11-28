@@ -363,4 +363,8 @@ end sub
 
 extern p as sub stdcall(byval p as sub stdcall())
 
+type T
+	i as long
+end type
+
 end extern
