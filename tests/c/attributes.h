@@ -292,3 +292,7 @@ __attribute__((nonnull(1))) void f(void *p) { }
 extern void (__attribute__((stdcall)) *p)(    void (__attribute__((stdcall)) *p)(void)    );
 
 struct T { int i; } __attribute__((gcc_struct));
+
+// When ignoring some attributes we shouldn't miss important ones
+struct ShouldBePacked { int i; } __attribute__((gcc_struct, packed));
+__attribute__((deprecated, cold, noreturn, stdcall)) void ShouldBeStdcall(void) { }

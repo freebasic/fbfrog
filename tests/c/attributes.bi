@@ -367,4 +367,11 @@ type T
 	i as long
 end type
 
+type ShouldBePacked
+	i as long
+end type
+
+private sub ShouldBeStdcall()
+end sub
+
 end extern
