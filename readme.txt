@@ -198,6 +198,10 @@ unnecessary?
 To do:
 
 Bugs:
+* in FB, anon UDTs inherit their parent's FIELD alignment, that's not gcc-compatible
+  fbfrog needs to generate FIELD=8 on anon UDTs if the parent has a FIELD but the
+  anon doesn't.
+  http://www.freebasic.net/forum/viewtopic.php?f=3&t=19514
 * C parser needs to verify #directives, since they can be inserted by "to c" -replacements,
   which aren't verified by the CPP
 * in winapi, there is a case where an auto-generated tagid conflicts
