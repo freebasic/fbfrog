@@ -12,9 +12,6 @@ namespace hl
 	'' data = hl.types array index
 	dim shared typehash as THash ptr
 
-	'' data = TEXT ASTNODE holding the new id/alias
-	dim shared renamejobs as THash ptr
-
 	'' Used by forward declaration addition pass
 	type TYPENODE
 		id		as zstring ptr  '' Type name
@@ -1296,13 +1293,19 @@ sub CharStringPass.walkDefines(byval n as ASTNODE ptr)
 	wend
 end sub
 
-private sub hlRenameJobsBegin()
-	hl.renamejobs = new THash(6, TRUE)
-end sub
+type RenameJobs
+	'' data = TEXT ASTNODE holding the new id/alias
+	table as THash = THash(6, TRUE)
+	declare function add(byval oldid as zstring ptr, byval newname as ASTNODE ptr) as integer
+	declare sub maybeApply(byval n as ASTNODE ptr)
+	declare sub walkAndApply(byval n as ASTNODE ptr)
+	declare destructor()
+	declare operator let(byref as const RenameJobs) '' unimplemented
+end type
 
-private function hlRenameJobAdd(byval oldid as zstring ptr, byval newname as ASTNODE ptr) as integer
+function RenameJobs.add(byval oldid as zstring ptr, byval newname as ASTNODE ptr) as integer
 	var hash = hashHash(oldid)
-	var item = hl.renamejobs->lookup(oldid, hash)
+	var item = table.lookup(oldid, hash)
 	if item->s then
 		'' Allow overwriting duplicate typedefs (if both oldid/newid are the same),
 		'' but not if the newid differs (then it's a separate typedef which has to be
@@ -1326,15 +1329,15 @@ private function hlRenameJobAdd(byval oldid as zstring ptr, byval newname as AST
 		astDelete(item->data)
 		item->data = newid
 	else
-		hl.renamejobs->add(item, hash, oldid, newid)
+		table.add(item, hash, oldid, newid)
 	end if
 
 	function = TRUE
 end function
 
-private sub hMaybeApplyRenameJob(byval n as ASTNODE ptr)
+sub RenameJobs.maybeApply(byval n as ASTNODE ptr)
 	'' Is there a renamejob for this oldid?
-	dim as ASTNODE ptr newid = hl.renamejobs->lookupDataOrNull(n->text)
+	dim as ASTNODE ptr newid = table.lookupDataOrNull(n->text)
 	if newid then
 		'' Change the id if needed
 		if *n->text <> *newid->text then
@@ -1351,38 +1354,42 @@ end sub
 
 '' Check all type names (definitions and references): If there is a rename job
 '' for an id, then change it to use the newid.
-private function hlApplyRenameJobs(byval n as ASTNODE ptr) as integer
+sub RenameJobs.walkAndApply(byval n as ASTNODE ptr)
 	if typeGetDt(n->dtype) = TYPE_UDT then
 		assert(astIsTEXT(n->subtype))
-		hMaybeApplyRenameJob(n->subtype)
+		maybeApply(n->subtype)
 	end if
 
 	select case n->class
 	case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM, ASTCLASS_TYPEDEF
 		if n->text then
-			hMaybeApplyRenameJob(n)
+			maybeApply(n)
 		end if
 	end select
 
-	function = TRUE
-end function
+	if n->subtype then walkAndApply(n->subtype)
+	if n->array   then walkAndApply(n->array  )
+	if n->bits    then walkAndApply(n->bits   )
+	if n->expr    then walkAndApply(n->expr   )
 
-private sub hlRenameJobsEnd(byval ast as ASTNODE ptr)
-	astVisit(ast, @hlApplyRenameJobs)
-	scope
-		'' Free the newids
-		for i as integer = 0 to hl.renamejobs->room - 1
-			var item = hl.renamejobs->items + i
-			if item->s then
-				astDelete(item->data)
-			end if
-		next
-	end scope
-	delete hl.renamejobs
-	hl.renamejobs = NULL
+	var i = n->head
+	while i
+		walkAndApply(i)
+		i = i->next
+	wend
 end sub
 
-private sub hlSolveOutTagIds(byval n as ASTNODE ptr)
+destructor RenameJobs()
+	'' Free the newids
+	for i as integer = 0 to table.room - 1
+		var item = table.items + i
+		if item->s then
+			astDelete(item->data)
+		end if
+	next
+end destructor
+
+private sub hlSolveOutTagIds(byval n as ASTNODE ptr, byref renames as RenameJobs)
 	var i = n->head
 	while i
 		var nxt = i->next
@@ -1392,7 +1399,7 @@ private sub hlSolveOutTagIds(byval n as ASTNODE ptr)
 				assert(astIsTEXT(i->subtype))
 				'if i->subtype->attrib and ASTATTRIB_TAGID then
 				if i->subtype->attrib and ASTATTRIB_GENERATEDID then
-					if hlRenameJobAdd(i->subtype->text, i) then
+					if renames.add(i->subtype->text, i) then
 						astRemove(n, i)
 					end if
 				end if
@@ -1408,7 +1415,7 @@ end sub
 ''    typedef struct A A;
 ''    typedef struct b B;  (FB is case-insensitive)
 '' but not if there are pointers or CONSTs involved.
-private sub hlRemoveSameIdTypedefs(byval n as ASTNODE ptr)
+private sub hlRemoveSameIdTypedefs(byval n as ASTNODE ptr, byref renames as RenameJobs)
 	var i = n->head
 	while i
 		var nxt = i->next
@@ -1417,7 +1424,7 @@ private sub hlRemoveSameIdTypedefs(byval n as ASTNODE ptr)
 			if i->dtype = TYPE_UDT then
 				assert(astIsTEXT(i->subtype))
 				if ucase(*i->subtype->text, 1) = ucase(*i->text, 1) then
-					if hlRenameJobAdd(i->subtype->text, i) then
+					if renames.add(i->subtype->text, i) then
 						astRemove(n, i)
 					end if
 				end if
@@ -2818,16 +2825,20 @@ sub hlGlobal(byval ast as ASTNODE ptr, byref api as ApiInfo)
 	'' TODO: currently only auto-generated tag ids are solved out -
 	'' enable solving out of normal tag ids too.
 	''
-	hlRenameJobsBegin()
-	hlSolveOutTagIds(ast)
-	hlRenameJobsEnd(ast)
+	scope
+		dim renames as RenameJobs
+		hlSolveOutTagIds(ast, renames)
+		renames.walkAndApply(ast)
+	end scope
 
 	'' 2. Solve out remaining exact/case-alias typedefs - they're useless
 	'' and/or impossible in FB, because it's case-insensitive and doesn't
 	'' have separate tag/typedef namespaces.
-	hlRenameJobsBegin()
-	hlRemoveSameIdTypedefs(ast)
-	hlRenameJobsEnd(ast)
+	scope
+		dim renames as RenameJobs
+		hlRemoveSameIdTypedefs(ast, renames)
+		renames.walkAndApply(ast)
+	end scope
 
 	''
 	'' Auto-add forward declarations for types (any UDT or typedef)
