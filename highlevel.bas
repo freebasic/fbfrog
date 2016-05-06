@@ -2280,6 +2280,68 @@ private sub hlDefine2Decl(byval ast as ASTNODE ptr)
 	pass.work(ast)
 end sub
 
+type MacroParamPass
+	macro as ASTNODE ptr
+	declare sub walk(byval ast as ASTNODE ptr)
+end type
+
+sub MacroParamPass.walk(byval n as ASTNODE ptr)
+	'' For ecah identifier in the macro body
+	if n->class = ASTCLASS_TEXT then
+		var param = astGetMacroParamByNameIgnoreCase(macro, n->text)
+		if param andalso (*n->text <> *param->text) then
+			'' This id in the macro body is a case-alias for a macro param,
+			'' so the macro param should perhaps be renamed...
+			param->attrib or= ASTATTRIB_CONFLICTWITHIDINMACRO
+		end if
+	end if
+	if n->subtype then walk(n->subtype)
+	if n->array   then walk(n->array  )
+	if n->expr    then walk(n->expr   )
+	var i = n->head
+	while i
+		walk(i)
+		i = i->next
+	wend
+end sub
+
+''
+'' Check for macro parameter names that would conflict with other identifiers,
+'' e.g. typedefs, variables, function names) or FB keywords used in the macro
+'' body.
+''
+private sub hlMarkConflictingMacroParams(byval ast as ASTNODE ptr)
+	var i = ast->head
+	while i
+		if i->class = ASTCLASS_PPDEFINE then
+			if (i->expr <> NULL) and (i->paramcount > 0) then
+				'' Check identifiers in the macro body against macro params
+				scope
+					dim pass as MacroParamPass = (i)
+					pass.walk(i->expr)
+				end scope
+				'' Check macro params against FB keywords that might be used in
+				'' the body
+				scope
+					var param = i->head
+					while param
+						if fbkeywords.lookup(param->text) >= 0 then
+							'' This macro param is an FB keyword, so perhaps
+							'' it should be renamed, in case the macro body will
+							'' use the keyword.
+							'' TODO: shouldn't mark all keywords, just those
+							'' that will be used in the body.
+							param->attrib or= ASTATTRIB_CONFLICTWITHIDINMACRO
+						end if
+						param = param->next
+					wend
+				end scope
+			end if
+		end if
+		i = i->next
+	wend
+end sub
+
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 private function hlCountCallConvs(byval n as ASTNODE ptr) as integer
@@ -2906,6 +2968,8 @@ sub hlGlobal(byval ast as ASTNODE ptr, byref api as ApiInfo)
 	end if
 
 	hlProcs2Macros(ast)
+
+	hlMarkConflictingMacroParams(ast)
 end sub
 
 ''

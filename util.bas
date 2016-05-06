@@ -172,6 +172,7 @@ dim shared fbkeywordsinfo(0 to ...) as FbKeywordInfo => { _
 	(@"SHR"        , FBKW_OP), _
 	(@"XOR"        , FBKW_OP), _
 	_
+	(@"_"          , FBKW_CORE), _
 	(@"ABS"        , FBKW_CORE), _
 	(@"ABSTRACT"   , FBKW_CORE), _
 	(@"ALIAS"      , FBKW_CORE), _

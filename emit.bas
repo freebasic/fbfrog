@@ -267,6 +267,10 @@ private function hSeparatedList(byval n as ASTNODE ptr, byval separator as zstri
 
 		s += emitExpr(i, FALSE)
 
+		if i->attrib and ASTATTRIB_CONFLICTWITHIDINMACRO then
+			s += "/'TODO'/"
+		end if
+
 		count += 1
 		i = i->next
 	wend

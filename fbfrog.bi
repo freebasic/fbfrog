@@ -795,7 +795,7 @@ const ASTATTRIB_TAGID         = 1 shl 13
 const ASTATTRIB_GENERATEDID   = 1 shl 14
 const ASTATTRIB_DLLIMPORT     = 1 shl 15  '' VAR, PROC (ignored when merging PROCs)
 const ASTATTRIB_ENUMCONST     = 1 shl 16
-                            ''= 1 shl 17
+const ASTATTRIB_CONFLICTWITHIDINMACRO = 1 shl 17
 const ASTATTRIB_USED          = 1 shl 18
 const ASTATTRIB_IFNDEFDECL    = 1 shl 19
 const ASTATTRIB_NOSTRING      = 1 shl 20 '' helper flag used during CharStringPass to mark nodes affected by -nostring
@@ -934,6 +934,7 @@ declare function hGetFbNumberLiteralPrefix(byval attrib as integer) as string
 declare function astEvalConstiAsInt64(byval n as ASTNODE ptr) as longint
 declare function astIsConst0(byval n as ASTNODE ptr) as integer
 declare function astLookupMacroParam(byval macro as ASTNODE ptr, byval id as zstring ptr) as integer
+declare function astGetMacroParamByNameIgnoreCase(byval macro as ASTNODE ptr, byval id as zstring ptr) as ASTNODE ptr
 declare sub astVisit(byval n as ASTNODE ptr, byval callback as ASTVISITCALLBACK)
 declare function astCount(byval n as ASTNODE ptr) as integer
 declare function astDumpPrettyClass(byval astclass as integer) as string

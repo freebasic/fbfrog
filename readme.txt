@@ -202,8 +202,6 @@ Bugs:
   fbfrog needs to generate FIELD=8 on anon UDTs if the parent has a FIELD but the
   anon doesn't.
   http://www.freebasic.net/forum/viewtopic.php?f=3&t=19514
-* should auto-rename (or at least report) macro parameters that are case-aliases
-  for an id used in the macro body
 * C parser needs to verify #directives, since they can be inserted by "to c" -replacements,
   which aren't verified by the CPP
 * in winapi, there is a case where an auto-generated tagid conflicts

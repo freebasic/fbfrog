@@ -812,6 +812,23 @@ function astLookupMacroParam(byval macro as ASTNODE ptr, byval id as zstring ptr
 	function = -1
 end function
 
+function astGetMacroParamByNameIgnoreCase(byval macro as ASTNODE ptr, byval id as zstring ptr) as ASTNODE ptr
+	assert(macro->class = ASTCLASS_PPDEFINE)
+
+	var param = macro->head
+	while param
+
+		assert(param->class = ASTCLASS_MACROPARAM)
+		if lcase(*param->text) = lcase(*id) then
+			return param
+		end if
+
+		param = param->next
+	wend
+
+	function = NULL
+end function
+
 sub astVisit(byval n as ASTNODE ptr, byval callback as ASTVISITCALLBACK)
 	if callback(n) = FALSE then
 		exit sub
@@ -923,6 +940,7 @@ function astDumpOne(byval n as ASTNODE ptr) as string
 	checkAttrib(GENERATEDID)
 	checkAttrib(DLLIMPORT)
 	checkAttrib(ENUMCONST)
+	checkAttrib(CONFLICTWITHIDINMACRO)
 	checkAttrib(USED)
 	checkAttrib(IFNDEFDECL)
 	checkAttrib(NOSTRING)
