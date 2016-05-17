@@ -1049,3 +1049,49 @@ sub emitStdout(byval ast as ASTNODE ptr, byval indent as integer)
 
 	close #emit.fo
 end sub
+
+dim shared emitKeywordList(0 to ...) as zstring ptr => { _
+	@"_", _
+	@"ALIAS", @"AND", @"ANDALSO", @"ANY", @"AS", @"ASC", _
+	@"BYTE", @"BYVAL", _
+	@"CAST", @"CBYTE", @"CDBL", @"CDECL", @"CINT", @"CLNG", @"CLNGINT", _
+	@"CLONG", @"CLONGDOUBLE", @"CONST", @"CPTR", @"CSHORT", @"CSNG", _
+	@"CUBYTE", @"CUINT", @"CULNG", @"CULNGINT", @"CULONG", @"CUSHORT", _
+	@"DECLARE", @"DEFINED", @"DIM", @"DO", @"DOUBLE", _
+	@"ELSE", @"ELSEIF", @"END", @"ENUM", @"EXTERN", _
+	@"FIELD", @"FUNCTION", _
+	@"IF", @"IIF", @"IMPORT", @"INTEGER", _
+	@"LONG", @"LONGINT", @"LOOP", _
+	@"MOD", _
+	@"NOT", _
+	@"OR", @"ORELSE", _
+	@"PRIVATE", @"PTR", _
+	@"RETURN", _
+	@"SCOPE", @"SHARED", @"SHL", @"SHORT", @"SHR", @"SINGLE", @"SIZEOF", _
+	@"STATIC", @"STDCALL", @"SUB", _
+	@"THEN", @"TO", @"TYPE", @"TYPEOF", _
+	@"UBYTE", @"UINTEGER", @"ULONG", @"ULONGINT", @"UNION", @"USHORT", _
+	@"WCHAR_T", @"WEND", @"WHILE", @"WSTR", @"WSTRING", _
+	@"XOR", _
+	@"ZSTRING" _
+}
+
+type EmitKeywordsTable
+	tb as THash = THash(8, FALSE)
+	declare constructor()
+	declare operator let(byref as const EmitKeywordsTable) '' unimplemented
+end type
+
+constructor EmitKeywordsTable()
+	for i as integer = 0 to ubound(emitKeywordList)
+		assert(not tb.contains(emitKeywordList(i), hashHash(emitKeywordList(i))))
+		tb.addOverwrite(emitKeywordList(i), 0)
+	next
+end constructor
+
+dim shared emitKeywords as EmitKeywordsTable
+
+function isEmitKeyword(byval id as zstring ptr) as boolean
+	var ucaseid = ucase(*id, 1)
+	return emitKeywords.tb.contains(ucaseid, hashHash(ucaseid))
+end function

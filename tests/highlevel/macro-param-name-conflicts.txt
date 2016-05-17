@@ -22,4 +22,4 @@
 [22/23] cygwin-x86_64
 [23/23] dos
 	tests/highlevel/macro-param-name-conflicts.h
-emitting: tests/highlevel/macro-param-name-conflicts.bi (7 declarations, 1 TODO)
+emitting: tests/highlevel/macro-param-name-conflicts.bi (11 declarations, 1 TODO)

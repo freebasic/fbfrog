@@ -1058,6 +1058,7 @@ declare function emitType overload(byval n as ASTNODE ptr) as string
 declare function emitExpr(byval n as ASTNODE ptr, byval need_parens as integer = FALSE, byval need_macroparam_parens as integer = TRUE) as string
 declare sub emitFile(byref filename as string, byval header as HeaderInfo ptr, byval ast as ASTNODE ptr)
 declare sub emitStdout(byval ast as ASTNODE ptr, byval indent as integer)
+declare function isEmitKeyword(byval id as zstring ptr) as boolean
 
 type COperatorInfo
 	precedence as byte

@@ -8,3 +8,7 @@ type HWND as long
 '' TODO: #define m5(long) ((int*)long)
 #define m6(integer/'TODO'/) cptr(integer ptr, integer)
 #define m7(_/'TODO'/) _
+#define m8(screen) f(screen)
+#define m9(val) f(val)
+#define m10(len) f(len)
+#define m11(string) f(string)

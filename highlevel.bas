@@ -2320,12 +2320,12 @@ private sub hlMarkConflictingMacroParams(byval ast as ASTNODE ptr)
 					dim pass as MacroParamPass = (i)
 					pass.walk(i->expr)
 				end scope
-				'' Check macro params against FB keywords that might be used in
-				'' the body
+				'' Check macro params against potentially emitted FB keywords
+				'' that might be used in the body
 				scope
 					var param = i->head
 					while param
-						if fbkeywords.lookup(param->text) >= 0 then
+						if isEmitKeyword(param->text) then
 							'' This macro param is an FB keyword, so perhaps
 							'' it should be renamed, in case the macro body will
 							'' use the keyword.
