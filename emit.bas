@@ -4,8 +4,6 @@
 
 #include once "fbfrog.bi"
 
-declare sub emitCode(byval n as ASTNODE ptr, byval parentclass as integer = -1)
-
 function emitType overload _
 	( _
 		byval dtype as integer, _
@@ -122,113 +120,6 @@ function emitType overload(byval n as ASTNODE ptr) as string
 	function = emitType(n->dtype, n->subtype)
 end function
 
-namespace emit
-	dim shared as integer fo, indent, comment, commentspaces, singleline, at_bol
-end namespace
-
-private sub emitLine(byref ln as string)
-	dim s as string
-
-	if emit.at_bol then
-		'' Only add indentation if the line will contain more than that
-		if (len(ln) > 0) or (emit.comment > 0) then
-			s += string(emit.indent, !"\t")
-		end if
-	else
-		if emit.singleline > 0 then
-			s += " : "
-		end if
-	end if
-
-	if emit.comment > 0 then
-		if emit.singleline > 0 then
-			s += "/'"
-		else
-			s += "''"
-		end if
-		if len(ln) > 0 then
-			s += space(emit.commentspaces)
-		end if
-	end if
-
-	s += ln
-
-	if emit.comment > 0 then
-		if emit.singleline > 0 then
-			s += " '/"
-		end if
-	end if
-
-	if emit.singleline > 0 then
-		print #emit.fo, s;
-		emit.at_bol = FALSE
-	else
-		print #emit.fo, s
-		emit.at_bol = TRUE
-	end if
-end sub
-
-private sub emitSingleLineBegin()
-	emit.singleline += 1
-end sub
-
-private sub emitSingleLineEnd()
-	emit.singleline -= 1
-	if emit.singleline = 0 then
-		print #emit.fo, ""
-		emit.at_bol = TRUE
-	end if
-end sub
-
-private sub hFlushLine(byval begin as zstring ptr, byval p as ubyte ptr)
-	if begin > p then
-		exit sub
-	end if
-
-	'' Insert a null terminator at EOL temporarily, so the current line
-	'' text can be read from the string directly, instead of having to be
-	'' copied out char-by-char.
-	dim as integer old = p[0]
-	p[0] = 0
-	emitLine(*begin)
-	p[0] = old
-end sub
-
-'' Given text that contains newlines, emit every line individually and prepend
-'' indentation and/or <'' > if it's a comment.
-private sub emitLines(byval lines as zstring ptr)
-	dim as ubyte ptr p = lines
-	dim as zstring ptr begin = p
-
-	do
-		select case p[0]
-		case 0
-			'' EOF not behind EOL? Treat as EOL.
-			hFlushLine(begin, p)
-			exit do
-
-		case CH_LF, CH_CR
-			hFlushLine(begin, p)
-
-			'' CRLF?
-			if (p[0] = CH_CR) and (p[1] = CH_LF) then
-				p += 1
-			end if
-
-			p += 1
-
-			'' EOF after EOL? Don't emit another empty line.
-			if p[0] = 0 then
-				exit do
-			end if
-
-			begin = p
-
-		case else
-			p += 1
-		end select
-	loop
-end sub
 
 '' Normally we'll emit Extern blocks, making it unnecessary to worry about
 '' case-preserving aliases, but symbols can still have an explicit alias set due
@@ -281,47 +172,11 @@ private function hParamList(byval n as ASTNODE ptr, byval skip_head as integer) 
 	function = "(" + hSeparatedList(n, ", ", skip_head) + ")"
 end function
 
-private sub hEmitIndentedChildren(byval n as ASTNODE ptr, byval parentclass as integer = -1)
-	if emit.comment > 0 then
-		emit.commentspaces += 4
-	else
-		emit.indent += 1
-	end if
-
-	var i = n->head
-	while i
-		emitCode(i, parentclass)
-		i = i->next
-	wend
-
-	if emit.comment > 0 then
-		emit.commentspaces -= 4
-	else
-		emit.indent -= 1
-	end if
-end sub
-
 private function hInitializer(byval n as ASTNODE ptr) as string
 	if n->expr then
 		function = " = " + emitExpr(n->expr)
 	end if
 end function
-
-private sub emitVarDecl(byref prefix as string, byval n as ASTNODE ptr, byval is_extern as integer)
-	var s = prefix
-
-	if is_extern then
-		if ((n->attrib and ASTATTRIB_EXTERN) <> 0) and _
-		   ((n->attrib and ASTATTRIB_DLLIMPORT) <> 0) then
-			s += "import "
-		end if
-	end if
-
-	s += hIdAndArray(n, is_extern) + " as " + emitType(n)
-	if is_extern = FALSE then s += hInitializer(n)
-
-	emitLine(s)
-end sub
 
 private sub emitProc(byref s as string, byval n as ASTNODE ptr, byval is_expr as integer)
 	assert(n->array = NULL)
@@ -381,323 +236,6 @@ end function
 private sub hMacroParamList(byref s as string, byval n as ASTNODE ptr)
 	if n->paramcount >= 0 then
 		s += hParamList(n, FALSE)
-	end if
-end sub
-
-private sub emitAssign(byval n as ASTNODE ptr, byval assignop as zstring ptr)
-	emitLine(emitExpr(n->head, TRUE) + " " + *assignop + " " + emitExpr(n->tail, FALSE))
-end sub
-
-private sub emitCode(byval n as ASTNODE ptr, byval parentclass as integer)
-	var wrap_in_ifndef = ((n->attrib and ASTATTRIB_IFNDEFDECL) <> 0)
-
-	if wrap_in_ifndef then
-		assert(n->text)
-		emitLine("#ifndef " + *n->text)
-		emit.indent += 1
-	end if
-
-	select case as const n->class
-	case ASTCLASS_GROUP
-		var i = n->head
-		while i
-			emitCode(i)
-			i = i->next
-		wend
-
-	case ASTCLASS_DIVIDER
-		if (n->prev <> NULL) and (n->next <> NULL) then
-			emitLine("")
-		end if
-
-	case ASTCLASS_SCOPEBLOCK
-		emitLine("scope")
-		hEmitIndentedChildren(n)
-		emitLine("end scope")
-
-	case ASTCLASS_UNKNOWN
-		emit.comment += 1
-		emit.commentspaces += 1
-		emitLines("TODO: " + *n->text)
-		emit.commentspaces -= 1
-		emit.comment -= 1
-
-	case ASTCLASS_FBCODE
-		emitLines(n->text)
-
-	case ASTCLASS_RENAMELIST
-		var added_indent = FALSE
-		if emit.comment = 0 then
-			added_indent = TRUE
-			emit.comment += 1
-			emit.commentspaces += 1
-		end if
-		emitLine(*n->text)
-		hEmitIndentedChildren(n)
-		if added_indent then
-			emit.commentspaces -= 1
-			emit.comment -= 1
-		end if
-
-	case ASTCLASS_INCLIB
-		emitLine("#inclib """ + *n->text + """")
-
-	case ASTCLASS_UNDEF
-		emitLine("#undef " + *n->text)
-
-	case ASTCLASS_PRAGMAONCE
-		emitLine("#pragma once")
-
-	case ASTCLASS_PPINCLUDE
-		emitLine("#include once """ + *n->text + """")
-
-	case ASTCLASS_PPDEFINE
-		if hMacroBodyIsCodeBlock(n) then
-			if hMacroBodyIsScopeBlockWith1Stmt(n) then
-				emitSingleLineBegin()
-				var s = "#define " + *n->text
-				hMacroParamList(s, n)
-				s += " scope"
-				emitLine(s)
-				emitCode(n->expr->head)
-				emitLine("end scope")
-				emitSingleLineEnd()
-			else
-				var s = "#macro " + *n->text
-				hMacroParamList(s, n)
-				emitLine(s)
-
-				emit.indent += 1
-				emitCode(n->expr)
-				emit.indent -= 1
-
-				emitLine("#endmacro")
-			end if
-		else
-			var s = "#define " + *n->text
-			hMacroParamList(s, n)
-			if n->expr then
-				s += " " + emitExpr(n->expr, TRUE)
-			end if
-			emitLine(s)
-		end if
-
-	case ASTCLASS_PPIF
-		dim s as string
-		assert(n->expr)
-		select case n->expr->class
-		'' #if defined(id)        ->    #ifdef id
-		case ASTCLASS_DEFINED
-			s = "#ifdef " + *n->expr->text
-
-		'' #if not defined(id)    ->    #ifndef id
-		case ASTCLASS_NOT
-			if n->expr->head->class = ASTCLASS_DEFINED then
-				s = "#ifndef " + *n->expr->head->text
-			end if
-		end select
-		if len(s) = 0 then
-			s = "#if " + emitExpr(n->expr)
-		end if
-		emitLine(s)
-
-		hEmitIndentedChildren(n)
-
-	case ASTCLASS_PPELSEIF
-		emitLine("#elseif " + emitExpr(n->expr))
-		hEmitIndentedChildren(n)
-
-	case ASTCLASS_PPELSE
-		emitLine("#else")
-		hEmitIndentedChildren(n)
-
-	case ASTCLASS_PPENDIF
-		emitLine("#endif")
-
-	case ASTCLASS_PPERROR
-		emitLine("#error " + emitExpr(n->expr))
-
-	case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
-		var tail = hCheckForQuirkKeywordType(n->text)
-
-		if (n->class = ASTCLASS_ENUM) and (n->text <> NULL) then
-			emitLine("type " + *n->text + " as long" + tail)
-		end if
-
-		'' If it's a struct inside a struct, or union inside union,
-		'' insert a union/struct in between respectively, to make it
-		'' FB-compatible. FB only allows alternating types/unions when
-		'' nesting.
-		var opposite = iif(n->class = ASTCLASS_STRUCT, "union", "type")
-		if n->class = parentclass then
-			assert(parentclass <> ASTCLASS_ENUM)
-			emitLine(opposite)
-			emit.indent += 1
-		end if
-
-		dim as string compound
-		select case n->class
-		case ASTCLASS_UNION : compound = "union"
-		case ASTCLASS_ENUM  : compound = "enum"
-		case else           : compound = "type"
-		end select
-
-		var s = compound
-		if (n->class <> ASTCLASS_ENUM) and (n->text <> NULL) then
-			s += " " + *n->text
-		end if
-		if n->attrib and ASTATTRIB_PACKED then
-			s += " field = 1"
-		elseif n->maxalign > 0 then
-			s += " field = " & n->maxalign
-		end if
-		if (n->class <> ASTCLASS_ENUM) and (n->text <> NULL) then
-			s += tail
-		end if
-		emitLine(s)
-
-		hEmitIndentedChildren(n, n->class)
-
-		emitLine("end " + compound)
-
-		if n->class = parentclass then
-			emit.indent -= 1
-			emitLine("end " + opposite)
-		end if
-
-	case ASTCLASS_TYPEDEF
-		assert(n->array = NULL)
-		emitLine("type " + *n->text + " as " + emitType(n) + hCheckForQuirkKeywordType(n->text))
-
-	case ASTCLASS_CONST
-		dim s as string
-		if (n->attrib and ASTATTRIB_ENUMCONST) = 0 then
-			s = "const "
-		end if
-		emitLine(s + *n->text + hInitializer(n))
-
-	case ASTCLASS_VAR
-		if n->attrib and ASTATTRIB_LOCAL then
-			if n->attrib and ASTATTRIB_STATIC then
-				emitVarDecl("static ", n, FALSE)
-			else
-				emitVarDecl("dim ", n, FALSE)
-			end if
-		else
-			if n->attrib and ASTATTRIB_EXTERN then
-				emitVarDecl("extern ", n, TRUE)
-			elseif n->attrib and ASTATTRIB_STATIC then
-				emitVarDecl("dim shared ", n, FALSE)
-			else
-				emitVarDecl("extern     ", n, TRUE)
-				emitVarDecl("dim shared ", n, FALSE)
-			end if
-		end if
-
-	case ASTCLASS_FIELD
-		'' Fields can be named after keywords, but we have to do
-		''     as type foo
-		'' instead of
-		''     foo as type
-		'' if foo has special meaning at the beginning of a statement in
-		'' a TYPE block.
-		var use_multdecl = FALSE
-
-		select case lcase(*n->text, 1)
-		case "as", "static", "dim", "redim", "const", "declare", _
-		     "end", "type", "union", "enum", "rem", _
-		     "public", "private", "protected"
-			use_multdecl = TRUE
-		end select
-
-		if use_multdecl then
-			emitLine("as " + emitType(n) + " " + hIdAndArray(n, FALSE))
-		else
-			emitLine(hIdAndArray(n, FALSE) + " as " + emitType(n))
-		end if
-
-	case ASTCLASS_PROC
-		dim s as string
-		if n->expr then
-			s += "private "  '' procedure bodies in headers should really be private
-		else
-			s += "declare "
-		end if
-		emitProc(s, n, FALSE)
-		emitLine(s)
-
-		'' Body
-		if n->expr then
-			assert(n->expr->class = ASTCLASS_SCOPEBLOCK)
-			hEmitIndentedChildren(n->expr)
-			emitLine("end " + iif(n->dtype = TYPE_ANY, "sub", "function"))
-		end if
-
-	case ASTCLASS_EXTERNBLOCKBEGIN
-		emitLine("extern """ + *n->text + """")
-
-	case ASTCLASS_EXTERNBLOCKEND
-		emitLine("end extern")
-
-	case ASTCLASS_RETURN
-		var ln = "return"
-		if n->head then
-			ln += " " + emitExpr(n->head)
-		end if
-		emitLine(ln)
-
-	case ASTCLASS_ASSIGN  : emitAssign(n, "=")
-	case ASTCLASS_SELFOR  : emitAssign(n, "or=")
-	case ASTCLASS_SELFXOR : emitAssign(n, "xor=")
-	case ASTCLASS_SELFAND : emitAssign(n, "and=")
-	case ASTCLASS_SELFSHL : emitAssign(n, "shl=")
-	case ASTCLASS_SELFSHR : emitAssign(n, "shr=")
-	case ASTCLASS_SELFADD : emitAssign(n, "+=")
-	case ASTCLASS_SELFSUB : emitAssign(n, "-=")
-	case ASTCLASS_SELFMUL : emitAssign(n, "*=")
-	case ASTCLASS_SELFDIV : emitAssign(n, "/=")
-	case ASTCLASS_SELFMOD : emitAssign(n, "mod=")
-
-	case ASTCLASS_IFBLOCK
-		var i = n->head
-
-		assert(i->class = ASTCLASS_IFPART)
-		emitLine("if " + emitExpr(i->expr) + " then")
-		hEmitIndentedChildren(i)
-
-		do
-			i = i->next
-			if i = NULL then exit do
-
-			if i->class = ASTCLASS_ELSEIFPART then
-				emitLine("elseif " + emitExpr(i->expr) + " then")
-				hEmitIndentedChildren(i)
-			else
-				assert(i->class = ASTCLASS_ELSEPART)
-				emitLine("else")
-				hEmitIndentedChildren(i)
-			end if
-		loop
-
-		emitLine("end if")
-
-	case ASTCLASS_DOWHILE
-		emitLine("do")
-		hEmitIndentedChildren(n)
-		emitLine("loop while " + emitExpr(n->expr))
-
-	case ASTCLASS_WHILE
-		emitLine("while " + emitExpr(n->expr))
-		hEmitIndentedChildren(n)
-		emitLine("wend")
-
-	case else
-		emitLine(emitExpr(n))
-	end select
-
-	if wrap_in_ifndef then
-		emit.indent -= 1
-		emitLine("#endif")
 	end if
 end sub
 
@@ -990,64 +528,576 @@ function emitExpr(byval n as ASTNODE ptr, byval need_parens as integer, byval ne
 	function = s
 end function
 
-private sub emitHeader(byref header as HeaderInfo)
-	emit.comment += 1
-	emit.commentspaces += 1
+type Writer extends object
+	declare const abstract sub emit(byref s as const string)
+	declare const abstract sub emitLine(byref ln as const string)
+end type
+
+type FileWriter extends Writer
+private:
+	fo as integer
+public:
+	declare constructor(byref filename as string)
+	declare destructor()
+	declare const sub emit(byref s as const string) override
+	declare const sub emitLine(byref ln as const string) override
+end type
+
+constructor FileWriter(byref filename as string)
+	fo = freefile()
+	if open(filename, for output, as #fo) then
+		oops("could not open output file: '" + filename + "'")
+	end if
+end constructor
+
+destructor FileWriter()
+	close #fo
+end destructor
+
+sub FileWriter.emit(byref s as const string)
+	print #fo, s;
+end sub
+
+sub FileWriter.emitLine(byref ln as const string)
+	print #fo, ln
+end sub
+
+type StdoutWriter extends Writer
+	declare const sub emit(byref s as const string) override
+	declare const sub emitLine(byref ln as const string) override
+end type
+
+sub StdoutWriter.emit(byref s as const string)
+	print s;
+end sub
+
+sub StdoutWriter.emitLine(byref ln as const string)
+	print ln
+end sub
+
+type FbCodeEmitter
+private:
+	w as const Writer ptr
+	as integer indent, comment, commentspaces, singleline, at_bol
+public:
+	declare constructor(byref w as const Writer)
+	declare sub addBaseIndent(byval n as integer)
+	declare sub emitLine(byref ln as string)
+	declare sub emitSingleLineBegin()
+	declare sub emitSingleLineEnd()
+	declare sub emitLine(byval begin as zstring ptr, byval p as ubyte ptr)
+	declare sub emitLines(byval lines as zstring ptr)
+	declare sub emitIndentedChildren(byval n as ASTNODE ptr, byval parentclass as integer = -1)
+	declare sub emitVarDecl(byref prefix as string, byval n as ASTNODE ptr, byval is_extern as integer)
+	declare sub emitAssign(byval n as ASTNODE ptr, byval assignop as zstring ptr)
+	declare sub emitCode(byval n as ASTNODE ptr, byval parentclass as integer = -1)
+	declare sub emitHeader(byref header as HeaderInfo)
+end type
+
+constructor FbCodeEmitter(byref w as const Writer)
+	this.w = @w
+	at_bol = TRUE
+end constructor
+
+sub FbCodeEmitter.addBaseIndent(byval n as integer)
+	indent += n
+end sub
+
+sub FbCodeEmitter.emitLine(byref ln as string)
+	dim s as string
+
+	if at_bol then
+		'' Only add indentation if the line will contain more than that
+		if (len(ln) > 0) or (comment > 0) then
+			s += string(indent, !"\t")
+		end if
+	else
+		if singleline > 0 then
+			s += " : "
+		end if
+	end if
+
+	if comment > 0 then
+		if singleline > 0 then
+			s += "/'"
+		else
+			s += "''"
+		end if
+		if len(ln) > 0 then
+			s += space(commentspaces)
+		end if
+	end if
+
+	s += ln
+
+	if comment > 0 then
+		if singleline > 0 then
+			s += " '/"
+		end if
+	end if
+
+	if singleline > 0 then
+		w->emit(s)
+		at_bol = FALSE
+	else
+		w->emitLine(s)
+		at_bol = TRUE
+	end if
+end sub
+
+sub FbCodeEmitter.emitSingleLineBegin()
+	singleline += 1
+end sub
+
+sub FbCodeEmitter.emitSingleLineEnd()
+	singleline -= 1
+	if singleline = 0 then
+		w->emitLine("")
+		at_bol = TRUE
+	end if
+end sub
+
+sub FbCodeEmitter.emitLine(byval begin as zstring ptr, byval p as ubyte ptr)
+	if begin > p then
+		exit sub
+	end if
+
+	'' Insert a null terminator at EOL temporarily, so the current line
+	'' text can be read from the string directly, instead of having to be
+	'' copied out char-by-char.
+	dim as integer old = p[0]
+	p[0] = 0
+	emitLine(*begin)
+	p[0] = old
+end sub
+
+'' Given text that contains newlines, emit every line individually and prepend
+'' indentation and/or <'' > if it's a comment.
+sub FbCodeEmitter.emitLines(byval lines as zstring ptr)
+	dim as ubyte ptr p = lines
+	dim as zstring ptr begin = p
+
+	do
+		select case p[0]
+		case 0
+			'' EOF not behind EOL? Treat as EOL.
+			emitLine(begin, p)
+			exit do
+
+		case CH_LF, CH_CR
+			emitLine(begin, p)
+
+			'' CRLF?
+			if (p[0] = CH_CR) and (p[1] = CH_LF) then
+				p += 1
+			end if
+
+			p += 1
+
+			'' EOF after EOL? Don't emit another empty line.
+			if p[0] = 0 then
+				exit do
+			end if
+
+			begin = p
+
+		case else
+			p += 1
+		end select
+	loop
+end sub
+
+sub FbCodeEmitter.emitIndentedChildren(byval n as ASTNODE ptr, byval parentclass as integer = -1)
+	if comment > 0 then
+		commentspaces += 4
+	else
+		indent += 1
+	end if
+
+	var i = n->head
+	while i
+		emitCode(i, parentclass)
+		i = i->next
+	wend
+
+	if comment > 0 then
+		commentspaces -= 4
+	else
+		indent -= 1
+	end if
+end sub
+
+sub FbCodeEmitter.emitVarDecl(byref prefix as string, byval n as ASTNODE ptr, byval is_extern as integer)
+	var s = prefix
+
+	if is_extern then
+		if ((n->attrib and ASTATTRIB_EXTERN) <> 0) and _
+		   ((n->attrib and ASTATTRIB_DLLIMPORT) <> 0) then
+			s += "import "
+		end if
+	end if
+
+	s += hIdAndArray(n, is_extern) + " as " + emitType(n)
+	if not is_extern then
+		s += hInitializer(n)
+	end if
+
+	emitLine(s)
+end sub
+
+sub FbCodeEmitter.emitAssign(byval n as ASTNODE ptr, byval assignop as zstring ptr)
+	emitLine(emitExpr(n->head, TRUE) + " " + *assignop + " " + emitExpr(n->tail, FALSE))
+end sub
+
+sub FbCodeEmitter.emitCode(byval n as ASTNODE ptr, byval parentclass as integer)
+	var wrap_in_ifndef = ((n->attrib and ASTATTRIB_IFNDEFDECL) <> 0)
+
+	if wrap_in_ifndef then
+		assert(n->text)
+		emitLine("#ifndef " + *n->text)
+		indent += 1
+	end if
+
+	select case as const n->class
+	case ASTCLASS_GROUP
+		var i = n->head
+		while i
+			emitCode(i)
+			i = i->next
+		wend
+
+	case ASTCLASS_DIVIDER
+		if (n->prev <> NULL) and (n->next <> NULL) then
+			emitLine("")
+		end if
+
+	case ASTCLASS_SCOPEBLOCK
+		emitLine("scope")
+		emitIndentedChildren(n)
+		emitLine("end scope")
+
+	case ASTCLASS_UNKNOWN
+		comment += 1
+		commentspaces += 1
+		emitLines("TODO: " + *n->text)
+		commentspaces -= 1
+		comment -= 1
+
+	case ASTCLASS_FBCODE
+		emitLines(n->text)
+
+	case ASTCLASS_RENAMELIST
+		var added_indent = FALSE
+		if comment = 0 then
+			added_indent = TRUE
+			comment += 1
+			commentspaces += 1
+		end if
+		emitLine(*n->text)
+		emitIndentedChildren(n)
+		if added_indent then
+			commentspaces -= 1
+			comment -= 1
+		end if
+
+	case ASTCLASS_INCLIB
+		emitLine("#inclib """ + *n->text + """")
+
+	case ASTCLASS_UNDEF
+		emitLine("#undef " + *n->text)
+
+	case ASTCLASS_PRAGMAONCE
+		emitLine("#pragma once")
+
+	case ASTCLASS_PPINCLUDE
+		emitLine("#include once """ + *n->text + """")
+
+	case ASTCLASS_PPDEFINE
+		if hMacroBodyIsCodeBlock(n) then
+			if hMacroBodyIsScopeBlockWith1Stmt(n) then
+				emitSingleLineBegin()
+				var s = "#define " + *n->text
+				hMacroParamList(s, n)
+				s += " scope"
+				emitLine(s)
+				emitCode(n->expr->head)
+				emitLine("end scope")
+				emitSingleLineEnd()
+			else
+				var s = "#macro " + *n->text
+				hMacroParamList(s, n)
+				emitLine(s)
+
+				indent += 1
+				emitCode(n->expr)
+				indent -= 1
+
+				emitLine("#endmacro")
+			end if
+		else
+			var s = "#define " + *n->text
+			hMacroParamList(s, n)
+			if n->expr then
+				s += " " + emitExpr(n->expr, TRUE)
+			end if
+			emitLine(s)
+		end if
+
+	case ASTCLASS_PPIF
+		dim s as string
+		assert(n->expr)
+		select case n->expr->class
+		'' #if defined(id)        ->    #ifdef id
+		case ASTCLASS_DEFINED
+			s = "#ifdef " + *n->expr->text
+
+		'' #if not defined(id)    ->    #ifndef id
+		case ASTCLASS_NOT
+			if n->expr->head->class = ASTCLASS_DEFINED then
+				s = "#ifndef " + *n->expr->head->text
+			end if
+		end select
+		if len(s) = 0 then
+			s = "#if " + emitExpr(n->expr)
+		end if
+		emitLine(s)
+
+		emitIndentedChildren(n)
+
+	case ASTCLASS_PPELSEIF
+		emitLine("#elseif " + emitExpr(n->expr))
+		emitIndentedChildren(n)
+
+	case ASTCLASS_PPELSE
+		emitLine("#else")
+		emitIndentedChildren(n)
+
+	case ASTCLASS_PPENDIF
+		emitLine("#endif")
+
+	case ASTCLASS_PPERROR
+		emitLine("#error " + emitExpr(n->expr))
+
+	case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
+		var tail = hCheckForQuirkKeywordType(n->text)
+
+		if (n->class = ASTCLASS_ENUM) and (n->text <> NULL) then
+			emitLine("type " + *n->text + " as long" + tail)
+		end if
+
+		'' If it's a struct inside a struct, or union inside union,
+		'' insert a union/struct in between respectively, to make it
+		'' FB-compatible. FB only allows alternating types/unions when
+		'' nesting.
+		var opposite = iif(n->class = ASTCLASS_STRUCT, "union", "type")
+		if n->class = parentclass then
+			assert(parentclass <> ASTCLASS_ENUM)
+			emitLine(opposite)
+			indent += 1
+		end if
+
+		dim as string compound
+		select case n->class
+		case ASTCLASS_UNION : compound = "union"
+		case ASTCLASS_ENUM  : compound = "enum"
+		case else           : compound = "type"
+		end select
+
+		var s = compound
+		if (n->class <> ASTCLASS_ENUM) and (n->text <> NULL) then
+			s += " " + *n->text
+		end if
+		if n->attrib and ASTATTRIB_PACKED then
+			s += " field = 1"
+		elseif n->maxalign > 0 then
+			s += " field = " & n->maxalign
+		end if
+		if (n->class <> ASTCLASS_ENUM) and (n->text <> NULL) then
+			s += tail
+		end if
+		emitLine(s)
+
+		emitIndentedChildren(n, n->class)
+
+		emitLine("end " + compound)
+
+		if n->class = parentclass then
+			indent -= 1
+			emitLine("end " + opposite)
+		end if
+
+	case ASTCLASS_TYPEDEF
+		assert(n->array = NULL)
+		emitLine("type " + *n->text + " as " + emitType(n) + hCheckForQuirkKeywordType(n->text))
+
+	case ASTCLASS_CONST
+		dim s as string
+		if (n->attrib and ASTATTRIB_ENUMCONST) = 0 then
+			s = "const "
+		end if
+		emitLine(s + *n->text + hInitializer(n))
+
+	case ASTCLASS_VAR
+		if n->attrib and ASTATTRIB_LOCAL then
+			if n->attrib and ASTATTRIB_STATIC then
+				emitVarDecl("static ", n, FALSE)
+			else
+				emitVarDecl("dim ", n, FALSE)
+			end if
+		else
+			if n->attrib and ASTATTRIB_EXTERN then
+				emitVarDecl("extern ", n, TRUE)
+			elseif n->attrib and ASTATTRIB_STATIC then
+				emitVarDecl("dim shared ", n, FALSE)
+			else
+				emitVarDecl("extern     ", n, TRUE)
+				emitVarDecl("dim shared ", n, FALSE)
+			end if
+		end if
+
+	case ASTCLASS_FIELD
+		'' Fields can be named after keywords, but we have to do
+		''     as type foo
+		'' instead of
+		''     foo as type
+		'' if foo has special meaning at the beginning of a statement in
+		'' a TYPE block.
+		var use_multdecl = FALSE
+
+		select case lcase(*n->text, 1)
+		case "as", "static", "dim", "redim", "const", "declare", _
+		     "end", "type", "union", "enum", "rem", _
+		     "public", "private", "protected"
+			use_multdecl = TRUE
+		end select
+
+		if use_multdecl then
+			emitLine("as " + emitType(n) + " " + hIdAndArray(n, FALSE))
+		else
+			emitLine(hIdAndArray(n, FALSE) + " as " + emitType(n))
+		end if
+
+	case ASTCLASS_PROC
+		dim s as string
+		if n->expr then
+			s += "private "  '' procedure bodies in headers should really be private
+		else
+			s += "declare "
+		end if
+		emitProc(s, n, FALSE)
+		emitLine(s)
+
+		'' Body
+		if n->expr then
+			assert(n->expr->class = ASTCLASS_SCOPEBLOCK)
+			emitIndentedChildren(n->expr)
+			emitLine("end " + iif(n->dtype = TYPE_ANY, "sub", "function"))
+		end if
+
+	case ASTCLASS_EXTERNBLOCKBEGIN
+		emitLine("extern """ + *n->text + """")
+
+	case ASTCLASS_EXTERNBLOCKEND
+		emitLine("end extern")
+
+	case ASTCLASS_RETURN
+		var ln = "return"
+		if n->head then
+			ln += " " + emitExpr(n->head)
+		end if
+		emitLine(ln)
+
+	case ASTCLASS_ASSIGN  : emitAssign(n, "=")
+	case ASTCLASS_SELFOR  : emitAssign(n, "or=")
+	case ASTCLASS_SELFXOR : emitAssign(n, "xor=")
+	case ASTCLASS_SELFAND : emitAssign(n, "and=")
+	case ASTCLASS_SELFSHL : emitAssign(n, "shl=")
+	case ASTCLASS_SELFSHR : emitAssign(n, "shr=")
+	case ASTCLASS_SELFADD : emitAssign(n, "+=")
+	case ASTCLASS_SELFSUB : emitAssign(n, "-=")
+	case ASTCLASS_SELFMUL : emitAssign(n, "*=")
+	case ASTCLASS_SELFDIV : emitAssign(n, "/=")
+	case ASTCLASS_SELFMOD : emitAssign(n, "mod=")
+
+	case ASTCLASS_IFBLOCK
+		var i = n->head
+
+		assert(i->class = ASTCLASS_IFPART)
+		emitLine("if " + emitExpr(i->expr) + " then")
+		emitIndentedChildren(i)
+
+		do
+			i = i->next
+			if i = NULL then exit do
+
+			if i->class = ASTCLASS_ELSEIFPART then
+				emitLine("elseif " + emitExpr(i->expr) + " then")
+				emitIndentedChildren(i)
+			else
+				assert(i->class = ASTCLASS_ELSEPART)
+				emitLine("else")
+				emitIndentedChildren(i)
+			end if
+		loop
+
+		emitLine("end if")
+
+	case ASTCLASS_DOWHILE
+		emitLine("do")
+		emitIndentedChildren(n)
+		emitLine("loop while " + emitExpr(n->expr))
+
+	case ASTCLASS_WHILE
+		emitLine("while " + emitExpr(n->expr))
+		emitIndentedChildren(n)
+		emitLine("wend")
+
+	case else
+		emitLine(emitExpr(n))
+	end select
+
+	if wrap_in_ifndef then
+		indent -= 1
+		emitLine("#endif")
+	end if
+end sub
+
+sub FbCodeEmitter.emitHeader(byref header as HeaderInfo)
+	comment += 1
+	commentspaces += 1
 
 	emitLine("FreeBASIC binding for " + header.title)
 	emitLine("")
 	emitLine("based on the C header files:")
-	emit.commentspaces += 2
+	commentspaces += 2
 	emitLines(header.licensefile->buffer)
-	emit.commentspaces -= 2
+	commentspaces -= 2
 	emitLine("")
 	emitLine("translated to FreeBASIC by:")
-	emit.commentspaces += 2
+	commentspaces += 2
 	emitLines(header.translatorsfile->buffer)
-	emit.commentspaces -= 2
+	commentspaces -= 2
 
-	emit.commentspaces -= 1
-	emit.comment -= 1
+	commentspaces -= 1
+	comment -= 1
 
 	emitLine("")
 end sub
 
 sub emitFile(byref filename as string, byval header as HeaderInfo ptr, byval ast as ASTNODE ptr)
-	emit.indent = 0
-	emit.comment = 0
-	emit.commentspaces = 0
-	emit.singleline = 0
-	emit.at_bol = TRUE
-
-	emit.fo = freefile()
-	if open(filename, for output, as #emit.fo) then
-		oops("could not open output file: '" + filename + "'")
-	end if
-
+	dim w as FileWriter = FileWriter(filename)
+	dim fbcode as FbCodeEmitter = FbCodeEmitter(w)
 	if header then
-		emitHeader(*header)
+		fbcode.emitHeader(*header)
 	end if
-
-	emitCode(ast)
-
-	close #emit.fo
+	fbcode.emitCode(ast)
 end sub
 
 sub emitStdout(byval ast as ASTNODE ptr, byval indent as integer)
-	emit.indent = indent
-	emit.comment = 0
-	emit.commentspaces = 0
-	emit.singleline = 0
-	emit.at_bol = TRUE
-
-	emit.fo = freefile()
-	if open cons(for output, as #emit.fo) then
-		oops("could not open stdout")
-	end if
-
-	emitCode(ast)
-
-	close #emit.fo
+	dim w as StdoutWriter
+	dim fbcode as FbCodeEmitter = FbCodeEmitter(w)
+	fbcode.addBaseIndent(indent)
+	fbcode.emitCode(ast)
 end sub
 
 dim shared emitKeywordList(0 to ...) as zstring ptr => { _
