@@ -1,14 +1,20 @@
 #pragma once
 
 type HWND as long
-#define m1(hwnd/'TODO'/) f(cast(HWND, hwnd))
-#define m2(and/'TODO'/) (and and and)
-#define m3(cast/'TODO'/) cast(HWND, cast)
-#define m4(cptr/'TODO'/) cptr(long ptr, cptr)
-'' TODO: #define m5(long) ((int*)long)
-#define m6(integer/'TODO'/) cptr(integer ptr, integer)
-#define m7(_/'TODO'/) _
-#define m8(screen) f(screen)
-#define m9(val) f(val)
-#define m10(len) f(len)
-#define m11(string) f(string)
+type HICON as long
+#define m0(hwnd_) f(cast(HWND, hwnd_))
+#define m10(and_) (and_ and and_)
+#define m11(cast_) cast(HWND, cast_)
+#define m12(cptr_) cptr(long ptr, cptr_)
+#define m13(integer_) cptr(integer ptr, integer_)
+#define m14(_) _
+#define m15(AND) (AND and AND)
+#define m16(casT) cast(HWND, casT)
+#define m20(screen) f(screen)
+#define m21(val) f(val)
+#define m22(len) f(len)
+#define m23(string) f(string)
+#define m30(cast, Cast) (cast(HWND, cast) + Cast)
+#define m31(a, A) f(a, A)
+#define m32(hwnd, Hwnd) Hwnd(cast(HWND, hwnd))
+#define m33(hicon_, Hicon_manually_renamed) Hicon_manually_renamed(cast(HICON, hicon_))

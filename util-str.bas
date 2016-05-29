@@ -13,10 +13,9 @@ function strStartsWith(byref s as string, byref lookfor as string) as integer
 	function = left(s, len(lookfor)) = lookfor
 end function
 
-function strDuplicate(byval s as zstring ptr) as zstring ptr
-	dim as zstring ptr p = any
+function strDuplicate(byval s as const zstring ptr) as zstring ptr
 	if s then
-		p = callocate(len(*s) + 1)
+		dim as zstring ptr p = callocate(len(*s) + 1)
 		*p = *s
 		function = p
 	else
@@ -103,7 +102,7 @@ function strMakePrintable(byref a as string) as string
 	function = b
 end function
 
-function strIsValidSymbolId(byval s as zstring ptr) as integer
+function strIsValidSymbolId(byval s as const zstring ptr) as integer
 	var i = 0
 	do
 		select case as const (*s)[0]

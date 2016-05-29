@@ -1,6 +1,7 @@
 '' AST build up/helper functions
 
 #include once "fbfrog.bi"
+#include once "emit.bi"
 
 '' Merge/expand dtype b into dtype a, overwriting a's base dtype, but preserving its ptrs/consts
 '' This is useful for expanding typedefs into the context of another dtype.
@@ -25,6 +26,54 @@ function typeGetCLong(byval is_unsigned as integer, byval clong32 as integer) as
 		'' C long => CLONG
 		function = iif(is_unsigned, TYPE_CULONG, TYPE_CLONG)
 	end if
+end function
+
+dim shared datatypenames(0 to TYPE__COUNT-1) as zstring ptr => { _
+	@"none"    , _
+	@"any"     , _
+	@"byte"    , _
+	@"ubyte"   , _
+	@"short"   , _
+	@"ushort"  , _
+	@"long"    , _
+	@"ulong"   , _
+	@"clong"   , _
+	@"culong"  , _
+	@"integer" , _
+	@"uinteger", _
+	@"longint" , _
+	@"ulongint", _
+	@"single"  , _
+	@"double"  , _
+	@"clongdouble", _
+	@"udt"     , _
+	@"proc"    , _
+	@"zstring" , _
+	@"wstring" , _
+	@"wchar_t"   _
+}
+
+function typeDump(byval dtype as integer) as string
+	dim s as string
+
+	var dt = typeGetDt(dtype)
+	var ptrcount = typeGetPtrCount(dtype)
+
+	if typeIsConstAt(dtype, ptrcount) then
+		s += "const "
+	end if
+
+	s += *datatypenames(dt)
+
+	for i as integer = (ptrcount - 1) to 0 step -1
+		if typeIsConstAt(dtype, i) then
+			s += " const"
+		end if
+
+		s += " ptr"
+	next
+
+	function = s
 end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -62,7 +111,6 @@ dim shared as zstring ptr astnodename(0 to ...) => _
 	@"ppelseif" , _
 	@"ppelse"   , _
 	@"ppendif"  , _
-	@"pperror"  , _
 	@"pragmaonce", _
 	@"inclib"   , _
 	@"undef"    , _
@@ -641,6 +689,18 @@ function astIsCodeBlock(byval n as ASTNODE ptr) as integer
 	end select
 end function
 
+function astIsCodeScopeBlock(byval n as ASTNODE ptr) as integer
+	select case n->class
+	case ASTCLASS_SCOPEBLOCK, ASTCLASS_IFBLOCK, ASTCLASS_DOWHILE, ASTCLASS_WHILE
+		function = TRUE
+	end select
+end function
+
+function astIsScopeBlockWith1Stmt(byval n as ASTNODE ptr) as integer
+	function = (n->class = ASTCLASS_SCOPEBLOCK) andalso _
+	           astHas1Child(n) andalso (not astIsCodeBlock(n->head))
+end function
+
 function astIsMergableBlock(byval n as ASTNODE ptr) as integer
 	select case n->class
 	case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM, ASTCLASS_RENAMELIST
@@ -899,9 +959,9 @@ function astDumpPrettyDecl(byval n as ASTNODE ptr, byval show_type as integer) a
 
 	if show_type then
 		if n->array then
-			s += emitExpr(n->array)
+			s += emitFbExpr(n->array)
 		end if
-		s += " as " + emitType(n->dtype, n->subtype)
+		s += " as " + emitFbType(n->dtype, n->subtype)
 	end if
 
 	function = s
@@ -940,7 +1000,6 @@ function astDumpOne(byval n as ASTNODE ptr) as string
 	checkAttrib(GENERATEDID)
 	checkAttrib(DLLIMPORT)
 	checkAttrib(ENUMCONST)
-	checkAttrib(CONFLICTWITHIDINMACRO)
 	checkAttrib(USED)
 	checkAttrib(IFNDEFDECL)
 	checkAttrib(NOSTRING)
@@ -966,7 +1025,7 @@ function astDumpOne(byval n as ASTNODE ptr) as string
 	end if
 
 	if n->dtype <> TYPE_NONE then
-		s += " as " + emitType(n->dtype, NULL, TRUE)
+		s += " as " + typeDump(n->dtype)
 	end if
 
 	function = s

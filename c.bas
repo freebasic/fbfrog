@@ -53,6 +53,9 @@
 ''
 
 #include once "fbfrog.bi"
+#include once "emit.bi"
+
+using tktokens
 
 declare function cExpression(byval allow_toplevel_comma as integer, byval allow_idseq as integer) as ASTNODE ptr
 declare function cExpressionOrInitializer(byval allow_idseq as integer) as ASTNODE ptr
@@ -1057,16 +1060,14 @@ end function
 
 private function cDefineBodyTokenLiteral() as string
 	dim astclass as integer
-
 	select case as const tkGet(c.x)
 	case TK_NUMBER             : astclass = ASTCLASS_CONSTI
 	case TK_STRING, TK_WSTRING : astclass = ASTCLASS_STRING
 	case TK_CHAR, TK_WCHAR     : astclass = ASTCLASS_CHAR
 	case else : assert(FALSE)
 	end select
-
 	var n = cLiteral(astclass, TRUE)
-	function = emitExpr(n)
+	function = emitFbExpr(n)
 	astDelete(n)
 end function
 
@@ -1148,6 +1149,7 @@ private function cDefineBody(byval macro as ASTNODE ptr) as integer
 	'' If -convbodytokens was given for this #define, then don't try to parse the #define body,
 	'' but just convert the tokens individually from C to FB.
 	if c.api->idopt(OPT_CONVBODYTOKENS).matches(macro->text) then
+		'' TODO: should use emit.TokenBuffer, so hlAutoRenameConflictingMacroParams() could work
 		var body = cDefineBodyTokens()
 		if len(body) > 0 then
 			macro->expr = astNewTEXT(body)

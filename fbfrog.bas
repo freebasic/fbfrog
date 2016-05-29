@@ -33,7 +33,10 @@
 ''
 
 #include once "fbfrog.bi"
+#include once "emit.bi"
 #include once "file.bi"
+
+using tktokens
 
 type BIFILE
 	filename	as zstring ptr
@@ -1657,7 +1660,7 @@ end function
 	'' files were used, found, not found, which additional files were
 	'' #included, etc.
 	astProcessVerblocks(frog.mergedlog)
-	emitStdout(frog.mergedlog, 1)
+	emitFbStdout(frog.mergedlog, 1)
 
 	for bi as integer = 0 to frog.bicount - 1
 		with frog.bis[bi]
@@ -1686,6 +1689,6 @@ end function
 			print "emitting: " + bifilename + " (" + _
 				hMakeCountMessage(hlCountDecls(.final), "declaration") + ", " + _
 				hMakeCountMessage(hlCountTodos(.final), "TODO"       ) + ")"
-			emitFile(bifilename, header, .final)
+			emitFbFile(bifilename, header, .final)
 		end with
 	next

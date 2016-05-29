@@ -102,7 +102,7 @@ function astDumpPrettyVersion(byval n as ASTNODE ptr) as string
 		wend
 
 	case ASTCLASS_VERNUMCHECK
-		s = astEmitVerNumCheck(n, "=")
+		s = frog.versiondefine + "=" + frog.vernums(n->vernum)
 
 	case ASTCLASS_DEFINED
 		s = *n->text
@@ -142,11 +142,6 @@ function astNewVERNUMCHECK(byval vernum as integer) as ASTNODE ptr
 	var n = astNew(ASTCLASS_VERNUMCHECK)
 	n->vernum = vernum
 	function = n
-end function
-
-function astEmitVerNumCheck(byval n as ASTNODE ptr, byref eqsign as string) as string
-	assert(n->class = ASTCLASS_VERNUMCHECK)
-	function = frog.versiondefine + eqsign + frog.vernums(n->vernum)
 end function
 
 private function astNewVERBLOCK(byval apis as ApiBits, byval children as ASTNODE ptr) as ASTNODE ptr

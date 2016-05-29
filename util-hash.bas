@@ -15,8 +15,9 @@
 ''
 
 #include once "fbfrog.bi"
+#include once "crt/mem.bi"
 
-function hashHash(byval s as zstring ptr) as ulong
+function hashHash(byval s as const zstring ptr) as ulong
 	dim as long hash = 5381
 	while (*s)[0]
 		hash = (*s)[0] + (hash shl 5) - hash
@@ -25,7 +26,7 @@ function hashHash(byval s as zstring ptr) as ulong
 	function = hash
 end function
 
-private function hashHash2(byval s as zstring ptr) as ulong
+private function hashHash2(byval s as const zstring ptr) as ulong
 	dim as ulong hash = 0
 	while (*s)[0]
 		hash = (*s)[0] + (hash shl 6) + (hash shl 16) - hash
@@ -60,7 +61,7 @@ sub THash.growTable()
 	deallocate(olditems)
 end sub
 
-function THash.lookup(byval s as zstring ptr, byval hash as ulong) as THashItem ptr
+function THash.lookup(byval s as const zstring ptr, byval hash as ulong) as THashItem ptr
 	'' Enlarge the hash map when >= 75% is used up, for better lookup
 	'' performance (it's easier to find free items if there are many; i.e.
 	'' less collisions), and besides there always must be free slots,
@@ -117,18 +118,18 @@ function THash.lookup(byval s as zstring ptr, byval hash as ulong) as THashItem 
 	function = item
 end function
 
-function THash.lookupDataOrNull(byval id as zstring ptr) as any ptr
+function THash.lookupDataOrNull(byval id as const zstring ptr) as any ptr
 	var item = lookup(id, hashHash(id))
 	if item->s then
 		function = item->data
 	end if
 end function
 
-function THash.contains(byval s as zstring ptr, byval hash as ulong) as integer
+function THash.contains(byval s as const zstring ptr, byval hash as ulong) as integer
 	function = (lookup(s, hash)->s <> NULL)
 end function
 
-sub THash.add(byval item as THashItem ptr, byval hash as ulong, byval s as zstring ptr, byval dat as any ptr)
+sub THash.add(byval item as THashItem ptr, byval hash as ulong, byval s as const zstring ptr, byval dat as any ptr)
 	if duplicate_strings then
 		s = strDuplicate(s)
 	end if
@@ -139,7 +140,7 @@ sub THash.add(byval item as THashItem ptr, byval hash as ulong, byval s as zstri
 end sub
 
 '' Add entry, overwriting previous user data stored in that slot
-function THash.addOverwrite(byval s as zstring ptr, byval dat as any ptr) as THashItem ptr
+function THash.addOverwrite(byval s as const zstring ptr, byval dat as any ptr) as THashItem ptr
 	var hash = hashHash(s)
 	var item = lookup(s, hash)
 
@@ -186,13 +187,48 @@ sub THash.dump()
 	print "hash: " & count & "/" & room & " slots used"
 	for i as integer = 0 to room - 1
 		with items[i]
-			print "    " & i & ": ";
 			if .s then
-				print "hash=" + hex(.hash) + ", s=""" + *.s + """, data=" + hex(.data)
-			else
-				print "(free)"
+				print "  " & i & ": hash=" + hex(.hash) + ", s=""" + *.s + """, data=" + hex(.data)
 			end if
 		end with
 	next
 end sub
 #endif
+
+destructor StrBuffer()
+	for i as integer = 0 to count - 1
+		deallocate(p[i])
+	next
+	deallocate(p)
+end destructor
+
+function StrBuffer.store(byval payload as const ubyte ptr, byval size as uinteger) as integer
+	dim s as zstring ptr = allocate(size + 1)
+	memcpy(s, payload, size)
+	s[size] = 0
+
+	var hash = hashHash(s)
+	var item = hashtb.lookup(s, hash)
+	if item->s then
+		deallocate(s)
+		return cint(item->data)
+	end if
+
+	var i = count
+	if count = room then
+		if room = 0 then
+			room = 32
+		else
+			room *= 2
+		end if
+		p = reallocate(p, sizeof(*p) * room)
+	end if
+
+	p[i] = s
+	count += 1
+	return i
+end function
+
+function StrBuffer.store(byval payload as const zstring ptr) as integer
+	return store(payload, len(*payload))
+end function

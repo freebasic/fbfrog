@@ -1,6 +1,7 @@
 '' Higher level code transformations
 
 #include once "fbfrog.bi"
+#include once "emit.bi"
 #include once "crt.bi"
 
 declare sub expandTypedef(byval typedef as ASTNODE ptr, byval n as ASTNODE ptr)
@@ -601,7 +602,7 @@ private sub hlApplyRemove1st(byval ast as ASTNODE ptr)
 		var nxt = i->next
 
 		if i->text then
-			if hl.api->idopt(OPT_REMOVE1ST).matches(i->text) and _
+			if hl.api->idopt(tktokens.OPT_REMOVE1ST).matches(i->text) and _
 			   (not removed.contains(i->text, hashHash(i->text))) then
 				removed.addOverwrite(i->text, NULL)
 				astRemove(ast, i)
@@ -619,7 +620,7 @@ private sub hlApplyRemove2nd(byval ast as ASTNODE ptr)
 		var nxt = i->next
 
 		if i->text then
-			if hl.api->idopt(OPT_REMOVE2ND).matches(i->text) then
+			if hl.api->idopt(tktokens.OPT_REMOVE2ND).matches(i->text) then
 				if found1st.contains(i->text, hashHash(i->text)) then
 					astRemove(ast, i)
 				else
@@ -637,7 +638,7 @@ private sub hlApplyDropProcBodyOptions(byval ast as ASTNODE ptr)
 	while i
 
 		if (i->class = ASTCLASS_PROC) and (i->expr <> NULL) then
-			if hl.api->idopt(OPT_DROPPROCBODY).matches(i->text) then
+			if hl.api->idopt(tktokens.OPT_DROPPROCBODY).matches(i->text) then
 				astDelete(i->expr)
 				i->expr = NULL
 			end if
@@ -713,9 +714,9 @@ private function hlApplyRenameOption(byval n as ASTNODE ptr) as integer
 		case ASTCLASS_STRING, ASTCLASS_CHAR
 
 		case else
-			hApplyRenameOption(OPT_RENAME, n)
+			hApplyRenameOption(tktokens.OPT_RENAME, n)
 
-			if hl.api->idopt(OPT_RENAME_).matches(n->text) then
+			if hl.api->idopt(tktokens.OPT_RENAME_).matches(n->text) then
 				doRename(n, *n->text + "_")
 			end if
 		end select
@@ -724,35 +725,35 @@ private function hlApplyRenameOption(byval n as ASTNODE ptr) as integer
 	if typeGetDt(n->dtype) = TYPE_UDT then
 		assert(astIsTEXT(n->subtype))
 		if n->subtype->attrib and ASTATTRIB_TAGID then
-			hApplyRenameOption(OPT_RENAMETAG, n->subtype)
+			hApplyRenameOption(tktokens.OPT_RENAMETAG, n->subtype)
 		else
-			hApplyRenameOption(OPT_RENAMETYPEDEF, n->subtype)
+			hApplyRenameOption(tktokens.OPT_RENAMETYPEDEF, n->subtype)
 		end if
 	end if
 
 	select case n->class
 	case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
 		if n->text then
-			hApplyRenameOption(OPT_RENAMETAG, n)
+			hApplyRenameOption(tktokens.OPT_RENAMETAG, n)
 		end if
 
 	case ASTCLASS_PROC
 		if n->text then
-			hApplyRenameOption(OPT_RENAMEPROC, n)
+			hApplyRenameOption(tktokens.OPT_RENAMEPROC, n)
 		end if
 
 	case ASTCLASS_TYPEDEF
-		hApplyRenameOption(OPT_RENAMETYPEDEF, n)
+		hApplyRenameOption(tktokens.OPT_RENAMETYPEDEF, n)
 
 	case ASTCLASS_PPDEFINE
-		hApplyRenameOption(OPT_RENAMEDEFINE, n)
+		hApplyRenameOption(tktokens.OPT_RENAMEDEFINE, n)
 
-		if hl.api->renameopt(OPT_RENAMEMACROPARAM).count > 0 then
+		if hl.api->renameopt(tktokens.OPT_RENAMEMACROPARAM).count > 0 then
 			var param = n->head
 			var renamed_param_here = FALSE
 			while param
 				assert(param->class = ASTCLASS_MACROPARAM)
-				renamed_param_here or= hApplyRenameOption(OPT_RENAMEMACROPARAM, param)
+				renamed_param_here or= hApplyRenameOption(tktokens.OPT_RENAMEMACROPARAM, param)
 				param = param->next
 			wend
 
@@ -769,13 +770,13 @@ private function hlApplyRenameOption(byval n as ASTNODE ptr) as integer
 		end if
 
 	case ASTCLASS_UNDEF
-		hApplyRenameOption(OPT_RENAMEDEFINE, n)
+		hApplyRenameOption(tktokens.OPT_RENAMEDEFINE, n)
 
 	case ASTCLASS_TEXT
-		hApplyRenameOption(OPT_RENAMEPROC, n)
-		hApplyRenameOption(OPT_RENAMEDEFINE, n)
+		hApplyRenameOption(tktokens.OPT_RENAMEPROC, n)
+		hApplyRenameOption(tktokens.OPT_RENAMEDEFINE, n)
 		if inside_macro then
-			hApplyRenameOption(OPT_RENAMEMACROPARAM, n)
+			hApplyRenameOption(tktokens.OPT_RENAMEMACROPARAM, n)
 		end if
 
 	end select
@@ -990,7 +991,7 @@ sub TypedefExpander.walkDecls(byval n as ASTNODE ptr)
 		if i->class = ASTCLASS_TYPEDEF then
 			if (i->array <> NULL) orelse _
 			   (typeGetDtAndPtr(i->dtype) = TYPE_PROC) orelse _
-			   hl.api->idopt(OPT_EXPAND).matches(i->text) then
+			   hl.api->idopt(tktokens.OPT_EXPAND).matches(i->text) then
 				typedefs.addOverwrite(i)
 				astRemove(n, i)
 			end if
@@ -1123,11 +1124,11 @@ private sub hlFindStringOptionMatches _
 	'' but this only works if string typedefs are already expanded,
 	'' so also try matching on nodes with UDT type?
 
-	if hl.api->patterns(OPT_NOSTRING).matches(parentparent, parent, n, index) then
+	if hl.api->patterns(tktokens.OPT_NOSTRING).matches(parentparent, parent, n, index) then
 		n->attrib or= ASTATTRIB_NOSTRING
 	end if
 
-	if hl.api->patterns(OPT_STRING).matches(parentparent, parent, n, index) then
+	if hl.api->patterns(tktokens.OPT_STRING).matches(parentparent, parent, n, index) then
 		n->attrib or= ASTATTRIB_STRING
 	end if
 
@@ -1551,7 +1552,7 @@ private function hShouldAddForwardDeclForType(byref typ as hl.TYPENODE) as integ
 			function = TRUE
 		else
 			'' Not defined here; only if -addforwarddecl was given
-			function = hl.api->idopt(OPT_ADDFORWARDDECL).matches(typ.id)
+			function = hl.api->idopt(tktokens.OPT_ADDFORWARDDECL).matches(typ.id)
 		end if
 	end if
 end function
@@ -1615,7 +1616,7 @@ private sub hFixUnsizedArray(byval ast as ASTNODE ptr, byval n as ASTNODE ptr)
 			var tempid = "__" + id
 
 			var def = astNewPPDEFINE(id)
-			def->expr = astNewTEXT("(*cptr(" + emitType(typeAddrOf(n->dtype), NULL) + ", @" + tempid + "))")
+			def->expr = astNewTEXT("(*cptr(" + emitFbType(typeAddrOf(n->dtype), NULL) + ", @" + tempid + "))")
 			def->location = n->location
 			astInsert(ast, def, n->next)
 
@@ -1708,7 +1709,7 @@ private sub hlAddUndefsAboveDecls(byval ast as ASTNODE ptr)
 	while i
 
 		if (i->class <> ASTCLASS_UNDEF) and (i->text <> NULL) then
-			if hl.api->idopt(OPT_UNDEFBEFOREDECL).matches(i->text) then
+			if hl.api->idopt(tktokens.OPT_UNDEFBEFOREDECL).matches(i->text) then
 				var undef = astNew(ASTCLASS_UNDEF, i->text)
 				undef->location = i->location
 				astInsert(ast, undef, i)
@@ -1724,7 +1725,7 @@ private sub hlAddIfndefsAroundDecls(byval ast as ASTNODE ptr)
 	while i
 
 		if (i->class <> ASTCLASS_UNDEF) andalso _
-		   i->text andalso hl.api->idopt(OPT_IFNDEFDECL).matches(i->text) then
+		   i->text andalso hl.api->idopt(tktokens.OPT_IFNDEFDECL).matches(i->text) then
 			i->attrib or= ASTATTRIB_IFNDEFDECL
 		end if
 
@@ -1793,7 +1794,7 @@ end function
 '' Check that each parameter is only used once by the expression,
 '' unless -forcefunction2macro was given
 private function allowedToTurnProc2Macro(byval proc as ASTNODE ptr, byval expr as ASTNODE ptr) as integer
-	if hl.api->idopt(OPT_FORCEFUNCTION2MACRO).matches(proc->text) then
+	if hl.api->idopt(tktokens.OPT_FORCEFUNCTION2MACRO).matches(proc->text) then
 		return TRUE
 	end if
 
@@ -2280,24 +2281,93 @@ private sub hlDefine2Decl(byval ast as ASTNODE ptr)
 	pass.work(ast)
 end sub
 
-type MacroParamPass
-	macro as ASTNODE ptr
-	declare sub walk(byval ast as ASTNODE ptr)
+type EmittedIds
+	ids as THash = THash(8, TRUE) '' data = boolean: id ever used as FB keyword?
+	declare operator let(byref as const EmittedIds) '' unimplemented
+	declare sub collect(byval ast as ASTNODE ptr)
 end type
 
-sub MacroParamPass.walk(byval n as ASTNODE ptr)
-	'' For ecah identifier in the macro body
+sub EmittedIds.collect(byval ast as ASTNODE ptr)
+	dim fbcode as emit.CodeGen
+	fbcode.emitCode(ast)
+	for i as integer = 0 to fbcode.tokens.count - 1
+		var t = fbcode.tokens.get(i)
+		if t >= emit.TK_ID then
+			'' Register used id, if not yet done
+			var is_fb_keyword = (t > emit.TK_ID)
+			var text = iif(t = emit.TK_ID, fbcode.tokens.strings.p[fbcode.tokens.p[i].payload], emit.tokentext(t))
+			var hash = hashHash(text)
+			var item = ids.lookup(text, hash)
+			if item->s then
+				'' Already known used id, but update "used as FB keyword" status
+				item->data = cptr(any ptr, cint(item->data) or is_fb_keyword)
+			else
+				ids.add(item, hash, text, cptr(any ptr, is_fb_keyword))
+			end if
+		end if
+	next
+end sub
+
+private function idsDifferInCaseOnly(byref a as const string, byref b as const string) as integer
+	'' Not a reference to the macro param (from C POV),
+	'' but from FB POV? (due to case insensitivity)
+	return (a <> b) andalso (lcase(a, 1) = lcase(b, 1))
+end function
+
+private function macroParamConflictsWithIdInBody(byref param as const string, byref ids as EmittedIds) as integer
+	for i as integer = 0 to ids.ids.room - 1
+		var item = ids.ids.items + i
+		if item->s then
+			var usedid = *item->s
+			var is_fb_keyword = cint(item->data)
+
+			if param = usedid then
+				'' It's a reference to the macro param (no conflict), or an FB keyword (conflict)
+				return is_fb_keyword
+			end if
+
+			if lcase(param, 1) = lcase(usedid, 1) then
+				'' It's an id or FB keyword that differs from the macro param only in case (conflict)
+				return TRUE
+			end if
+		end if
+	next
+	return FALSE
+end function
+
+private function macroParamConflictsWithMacroParam(byref param as const string, byval macro as ASTNODE ptr) as integer
+	var otherparam = macro->head
+	while otherparam
+		if idsDifferInCaseOnly(*otherparam->text, param) then
+			return TRUE
+		end if
+		otherparam = otherparam->next
+	wend
+	return FALSE
+end function
+
+type MacroParamRenamer
+	as string oldname, newname
+	declare constructor(byref oldname as string, byref newname as string)
+	declare sub walk(byval n as ASTNODE ptr)
+end type
+
+constructor MacroParamRenamer(byref oldname as string, byref newname as string)
+	this.oldname = oldname
+	this.newname = newname
+end constructor
+
+sub MacroParamRenamer.walk(byval n as ASTNODE ptr)
 	if n->class = ASTCLASS_TEXT then
-		var param = astGetMacroParamByNameIgnoreCase(macro, n->text)
-		if param andalso (*n->text <> *param->text) then
-			'' This id in the macro body is a case-alias for a macro param,
-			'' so the macro param should perhaps be renamed...
-			param->attrib or= ASTATTRIB_CONFLICTWITHIDINMACRO
+		if *n->text = oldname then
+			astSetText(n, newname)
 		end if
 	end if
+
 	if n->subtype then walk(n->subtype)
 	if n->array   then walk(n->array  )
 	if n->expr    then walk(n->expr   )
+
 	var i = n->head
 	while i
 		walk(i)
@@ -2310,32 +2380,54 @@ end sub
 '' e.g. typedefs, variables, function names) or FB keywords used in the macro
 '' body.
 ''
-private sub hlMarkConflictingMacroParams(byval ast as ASTNODE ptr)
+private sub autoRenameConflictingMacroParams(byval macro as ASTNODE ptr)
+	var found_conflict = FALSE
+	do
+		'' Collect ids used in the macro body
+		dim ids as EmittedIds
+		ids.collect(macro->expr)
+
+		''
+		'' Check used ids against macro params. If we find a conflict,
+		'' auto-rename the macro param and re-check everything.
+		''
+		'' Macro params can conflict with any alphanumeric string in the macro
+		'' body, such as FB keywords or variable/function/typedef identifiers.
+		'' We have to auto-detect this because fbc won't.
+		''
+		'' Macro params can also conflict with each-other, but fbc will detect
+		'' that, so we don't have to handle it. Just take care not to run an
+		'' infinite loop when auto-renaming.
+		''
+		found_conflict = FALSE
+		var param = macro->head
+		do
+			var paramname = *param->text
+			if macroParamConflictsWithIdInBody(paramname, ids) and _
+			   (not macroParamConflictsWithMacroParam(paramname, macro)) then
+				'' Auto-rename
+				var newname = paramname + "_"
+				astSetText(param, newname)
+				scope
+					dim renamer as MacroParamRenamer = MacroParamRenamer(paramname, newname)
+					renamer.walk(macro->expr)
+				end scope
+				found_conflict = TRUE
+			end if
+			param = param->next
+		loop while param
+
+		'sleep
+		while inkey <> "" : wend
+	loop while found_conflict
+end sub
+
+private sub hlAutoRenameConflictingMacroParams(byval ast as ASTNODE ptr)
 	var i = ast->head
 	while i
 		if i->class = ASTCLASS_PPDEFINE then
 			if (i->expr <> NULL) and (i->paramcount > 0) then
-				'' Check identifiers in the macro body against macro params
-				scope
-					dim pass as MacroParamPass = (i)
-					pass.walk(i->expr)
-				end scope
-				'' Check macro params against potentially emitted FB keywords
-				'' that might be used in the body
-				scope
-					var param = i->head
-					while param
-						if isEmitKeyword(param->text) then
-							'' This macro param is an FB keyword, so perhaps
-							'' it should be renamed, in case the macro body will
-							'' use the keyword.
-							'' TODO: shouldn't mark all keywords, just those
-							'' that will be used in the body.
-							param->attrib or= ASTATTRIB_CONFLICTWITHIDINMACRO
-						end if
-						param = param->next
-					wend
-				end scope
+				autoRenameConflictingMacroParams(i)
 			end if
 		end if
 		i = i->next
@@ -2783,27 +2875,27 @@ sub hlGlobal(byval ast as ASTNODE ptr, byref api as ApiInfo)
 		hlRemoveEmptyReservedDefines(ast)
 	end if
 
-	if api.idopt(OPT_REMOVE).nonEmpty then
-		hlApplyRemoveOption(ast, -1, OPT_REMOVE)
+	if api.idopt(tktokens.OPT_REMOVE).nonEmpty then
+		hlApplyRemoveOption(ast, -1, tktokens.OPT_REMOVE)
 	end if
 
-	if api.idopt(OPT_REMOVEPROC).nonEmpty then
-		hlApplyRemoveOption(ast, ASTCLASS_PROC, OPT_REMOVEPROC)
+	if api.idopt(tktokens.OPT_REMOVEPROC).nonEmpty then
+		hlApplyRemoveOption(ast, ASTCLASS_PROC, tktokens.OPT_REMOVEPROC)
 	end if
 
-	if api.idopt(OPT_REMOVEVAR).nonEmpty then
-		hlApplyRemoveOption(ast, ASTCLASS_VAR, OPT_REMOVEVAR)
+	if api.idopt(tktokens.OPT_REMOVEVAR).nonEmpty then
+		hlApplyRemoveOption(ast, ASTCLASS_VAR, tktokens.OPT_REMOVEVAR)
 	end if
 
-	if api.idopt(OPT_REMOVE1ST).nonEmpty then
+	if api.idopt(tktokens.OPT_REMOVE1ST).nonEmpty then
 		hlApplyRemove1st(ast)
 	end if
 
-	if api.idopt(OPT_REMOVE2ND).nonEmpty then
+	if api.idopt(tktokens.OPT_REMOVE2ND).nonEmpty then
 		hlApplyRemove2nd(ast)
 	end if
 
-	if api.idopt(OPT_DROPPROCBODY).nonEmpty then
+	if api.idopt(tktokens.OPT_DROPPROCBODY).nonEmpty then
 		hlApplyDropProcBodyOptions(ast)
 	end if
 
@@ -2959,17 +3051,17 @@ sub hlGlobal(byval ast as ASTNODE ptr, byref api as ApiInfo)
 		wend
 	end if
 
-	if api.idopt(OPT_UNDEFBEFOREDECL).nonEmpty then
+	if api.idopt(tktokens.OPT_UNDEFBEFOREDECL).nonEmpty then
 		hlAddUndefsAboveDecls(ast)
 	end if
 
-	if api.idopt(OPT_IFNDEFDECL).nonEmpty then
+	if api.idopt(tktokens.OPT_IFNDEFDECL).nonEmpty then
 		hlAddIfndefsAroundDecls(ast)
 	end if
 
 	hlProcs2Macros(ast)
 
-	hlMarkConflictingMacroParams(ast)
+	hlAutoRenameConflictingMacroParams(ast)
 end sub
 
 ''

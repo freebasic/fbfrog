@@ -104,7 +104,7 @@ declare sub oopsLocation(byval location as TkLocation, byval message as zstring 
 declare function hTrim(byref s as string) as string
 declare function hLTrim(byref s as string) as string
 declare function strStartsWith(byref s as string, byref lookfor as string) as integer
-declare function strDuplicate(byval s as zstring ptr) as zstring ptr
+declare function strDuplicate(byval s as const zstring ptr) as zstring ptr
 declare sub strSplit(byref s as string, byref delimiter as string, byref l as string, byref r as string)
 declare function strReplace _
 	( _
@@ -114,7 +114,7 @@ declare function strReplace _
 	) as string
 declare function strReplaceNonIdChars(byref orig as string, byval replacement as integer) as string
 declare function strMakePrintable(byref a as string) as string
-declare function strIsValidSymbolId(byval s as zstring ptr) as integer
+declare function strIsValidSymbolId(byval s as const zstring ptr) as integer
 declare function strIsNumber(byref s as string) as integer
 declare function strIsReservedIdInC(byval id as zstring ptr) as integer
 declare function strMatch(byref s as const string, byref pattern as const string) as integer
@@ -216,9 +216,9 @@ end type
 '' The hash table is an array of items,
 '' which associate a string to some user data.
 type THashItem
-	s	as zstring ptr
-	hash	as ulong     '' hash value for quick comparison
-	data	as any ptr   '' user data
+	s as const zstring ptr
+	hash as ulong     '' hash value for quick comparison
+	data as any ptr   '' user data
 end type
 
 type THash
@@ -236,11 +236,11 @@ type THash
 	declare destructor()
 	declare operator let(byref as const THash) '' unimplemented
 
-	declare function lookup(byval s as zstring ptr, byval hash as ulong) as THashItem ptr
-	declare function lookupDataOrNull(byval id as zstring ptr) as any ptr
-	declare function contains(byval s as zstring ptr, byval hash as ulong) as integer
-	declare sub add(byval item as THashItem ptr, byval hash as ulong, byval s as zstring ptr, byval dat as any ptr)
-	declare function addOverwrite(byval s as zstring ptr, byval dat as any ptr) as THashItem ptr
+	declare function lookup(byval s as const zstring ptr, byval hash as ulong) as THashItem ptr
+	declare function lookupDataOrNull(byval id as const zstring ptr) as any ptr
+	declare function contains(byval s as const zstring ptr, byval hash as ulong) as integer
+	declare sub add(byval item as THashItem ptr, byval hash as ulong, byval s as const zstring ptr, byval dat as any ptr)
+	declare function addOverwrite(byval s as const zstring ptr, byval dat as any ptr) as THashItem ptr
 	#if __FB_DEBUG__
 		declare sub dump()
 	#endif
@@ -250,7 +250,20 @@ type THash
 		declare sub growTable()
 end type
 
-declare function hashHash(byval s as zstring ptr) as ulong
+declare function hashHash(byval s as const zstring ptr) as ulong
+
+type StrBuffer
+	p as zstring ptr ptr
+	count as integer
+private:
+	hashtb as THash = THash(8, FALSE)
+	room as integer
+public:
+	declare destructor()
+	declare operator let(byref as const StrBuffer) '' unimplemented
+	declare function store(byval payload as const ubyte ptr, byval size as uinteger) as integer
+	declare function store(byval payload as const zstring ptr) as integer
+end type
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
@@ -294,6 +307,8 @@ declare function pathIsDir(byref s as string) as integer
 declare function pathNormalize(byref path as string) as string
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+namespace tktokens
 
 const TKFLAG_BEHINDSPACE	= 1 shl 0  '' was preceded by spaces?
 const TKFLAG_NOEXPAND		= 1 shl 1  '' may be macro-expanded? (cpp)
@@ -510,6 +525,8 @@ enum
 	TK__COUNT
 end enum
 
+end namespace
+
 declare function tkInfoText(byval id as integer) as zstring ptr
 declare function tkInfoPretty(byval tk as integer) as string
 
@@ -630,6 +647,7 @@ const TYPEMAX_PTR = 8
 declare function typeExpand(byval a as integer, byval b as integer) as integer
 declare function typeUnsetBaseConst(byval dtype as integer) as integer
 declare function typeGetCLong(byval is_unsigned as integer, byval clong32 as integer) as integer
+declare function typeDump(byval dtype as integer) as string
 
 enum
 	'' Internal helper nodes
@@ -663,7 +681,6 @@ enum
 	ASTCLASS_PPELSEIF
 	ASTCLASS_PPELSE
 	ASTCLASS_PPENDIF
-	ASTCLASS_PPERROR
 	ASTCLASS_PRAGMAONCE
 	ASTCLASS_INCLIB
 	ASTCLASS_UNDEF
@@ -795,7 +812,7 @@ const ASTATTRIB_TAGID         = 1 shl 13
 const ASTATTRIB_GENERATEDID   = 1 shl 14
 const ASTATTRIB_DLLIMPORT     = 1 shl 15  '' VAR, PROC (ignored when merging PROCs)
 const ASTATTRIB_ENUMCONST     = 1 shl 16
-const ASTATTRIB_CONFLICTWITHIDINMACRO = 1 shl 17
+''                            = 1 shl 17
 const ASTATTRIB_USED          = 1 shl 18
 const ASTATTRIB_IFNDEFDECL    = 1 shl 19
 const ASTATTRIB_NOSTRING      = 1 shl 20 '' helper flag used during CharStringPass to mark nodes affected by -nostring
@@ -922,6 +939,8 @@ declare function astContainsCAssignments(byval n as ASTNODE ptr) as integer
 declare function astHas1Child(byval n as ASTNODE ptr) as integer
 declare function astHasOnlyChild(byval n as ASTNODE ptr, byval astclass as integer) as integer
 declare function astIsCodeBlock(byval n as ASTNODE ptr) as integer
+declare function astIsCodeScopeBlock(byval n as ASTNODE ptr) as integer
+declare function astIsScopeBlockWith1Stmt(byval n as ASTNODE ptr) as integer
 declare function astIsMergableBlock(byval n as ASTNODE ptr) as integer
 declare function astIsCastTo(byval n as ASTNODE ptr, byval dtype as integer, byval subtype as ASTNODE ptr) as integer
 declare function astIsEqual _
@@ -951,7 +970,6 @@ declare function astDumpPrettyVersion(byval n as ASTNODE ptr) as string
 declare function astNewVERAND(byval a as ASTNODE ptr = NULL, byval b as ASTNODE ptr = NULL) as ASTNODE ptr
 declare function astNewVEROR(byval a as ASTNODE ptr = NULL, byval b as ASTNODE ptr = NULL) as ASTNODE ptr
 declare function astNewVERNUMCHECK(byval vernum as integer) as ASTNODE ptr
-declare function astEmitVerNumCheck(byval n as ASTNODE ptr, byref eqsign as string) as string
 declare function astMergeVerblocks _
 	( _
 		byval a as ASTNODE ptr, _
@@ -1016,9 +1034,9 @@ type ApiInfo
 	as integer nofunctionbodies, dropmacrobodyscopes, removeEmptyReservedDefines
 
 	have_renames as integer
-	renameopt(OPT_RENAMETYPEDEF to OPT_RENAME) as THash = any
-	idopt(OPT_RENAME_ to OPT_EXPAND) as StringMatcher
-	patterns(OPT_NOSTRING to OPT_STRING) as DeclPatterns
+	renameopt(tktokens.OPT_RENAMETYPEDEF to tktokens.OPT_RENAME) as THash = any
+	idopt(tktokens.OPT_RENAME_ to tktokens.OPT_EXPAND) as StringMatcher
+	patterns(tktokens.OPT_NOSTRING to tktokens.OPT_STRING) as DeclPatterns
 	removeinclude as THash = THash(3, FALSE)
 	setarraysizeoptions as THash = THash(3, FALSE)
 	moveaboveoptions as ASTNODE ptr
@@ -1048,17 +1066,7 @@ end type
 declare function lexLoadC(byval x as integer, byval code as zstring ptr, byref source as SourceInfo) as integer
 declare function lexLoadArgs(byval x as integer, byval args as zstring ptr, byref source as SourceInfo) as integer
 
-declare function emitType overload _
-	( _
-		byval dtype as integer, _
-		byval subtype as ASTNODE ptr, _
-		byval debugdump as integer = FALSE _
-	) as string
-declare function emitType overload(byval n as ASTNODE ptr) as string
-declare function emitExpr(byval n as ASTNODE ptr, byval need_parens as integer = FALSE, byval need_macroparam_parens as integer = TRUE) as string
-declare sub emitFile(byref filename as string, byval header as HeaderInfo ptr, byval ast as ASTNODE ptr)
-declare sub emitStdout(byval ast as ASTNODE ptr, byval indent as integer)
-declare function isEmitKeyword(byval id as zstring ptr) as boolean
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 type COperatorInfo
 	precedence as byte

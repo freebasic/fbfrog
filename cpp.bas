@@ -38,6 +38,8 @@
 #include once "crt.bi"
 #include once "file.bi"
 
+using tktokens
+
 declare function hMaybeExpandMacro(byval x as integer, byval inside_ifexpr as integer, byval expand_recursively as integer) as integer
 
 ''

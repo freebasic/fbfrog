@@ -1,17 +1,28 @@
-// Should warn about conflitcs with typedefs
+// @fbfrog -renamemacroparam Hicon Hicon_manually_renamed
+
+// Should detect conflicts with typedefs
 typedef int HWND;
-#define m1(hwnd) f((HWND)hwnd)
+typedef int HICON;
+#define m0(hwnd) f((HWND)hwnd)
 
-// Should warn about conflicts with FB keywords that are used in the macro body
-#define m2(and) (and & and)
-#define m3(cast) ((HWND)cast)
-#define m4(cptr) ((int*)cptr)
-#define m5(long) ((int*)long)
-#define m6(integer) ((ssize_t*)integer)
-#define m7(_) _
+// Should detect conflicts with FB keywords that are used in the macro body
+#define m10(and) (and & and)
+#define m11(cast) ((HWND)cast)
+#define m12(cptr) ((int*)cptr)
+#define m13(integer) ((ssize_t*)integer)
+#define m14(_) _
+#define m15(AND) (AND & AND)
+#define m16(casT) ((HWND)casT)
 
-// Should not warn about conflicts with other, unused FB keywords
-#define m8(screen) f(screen)
-#define m9(val) f(val)
-#define m10(len) f(len)
-#define m11(string) f(string)
+// Should ignore conflicts with FB keywords not used in the body
+#define m20(screen) f(screen)
+#define m21(val) f(val)
+#define m22(len) f(len)
+#define m23(string) f(string)
+
+// Should ignore macro params conflicting with each-other,
+// because fbc already detects that.
+#define m30(cast, Cast) ((HWND)cast + Cast)
+#define m31(a, A) f(a, A)
+#define m32(hwnd, Hwnd) Hwnd((HWND)hwnd)
+#define m33(hicon, Hicon) Hicon((HICON)hicon)

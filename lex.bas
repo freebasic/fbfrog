@@ -4,6 +4,8 @@
 
 #include once "fbfrog.bi"
 
+using tktokens
+
 const MAXTEXTLEN = 1 shl 12
 
 type LexStuff

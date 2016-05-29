@@ -11,6 +11,8 @@
 #include once "fbfrog.bi"
 #include once "crt.bi"
 
+using tktokens
+
 type TOKENINFO
 	text		as zstring ptr
 end type
