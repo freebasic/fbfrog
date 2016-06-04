@@ -1,6 +1,6 @@
 
   fbfrog -- FreeBASIC binding generator
-  Copyright (C) 2011 - 2015  Daniel C. Klauer <daniel.c.klauer[at]web.de>
+  Copyright (C) 2011 - 2016  Daniel C. Klauer <daniel.c.klauer[at]web.de>
 
   This program is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
