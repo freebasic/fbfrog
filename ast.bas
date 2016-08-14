@@ -405,6 +405,7 @@ sub astDelete(byval n as ASTNODE ptr)
 
 	deallocate(n->text)
 	deallocate(n->alias)
+	deallocate(n->origid)
 	astDelete(n->subtype)
 	astDelete(n->array)
 	astDelete(n->bits)
