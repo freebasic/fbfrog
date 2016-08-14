@@ -605,6 +605,7 @@ function astCloneNode(byval n as ASTNODE ptr) as ASTNODE ptr
 	c->attrib      = n->attrib
 	c->text        = strDuplicate(n->text)
 	c->alias       = strDuplicate(n->alias)
+	c->origid      = strDuplicate(n->origid)
 	c->dtype       = n->dtype
 	c->subtype     = astClone(n->subtype)
 	c->array       = astClone(n->array)
