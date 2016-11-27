@@ -746,6 +746,7 @@ private sub cGccAttribute(byref gccattribs as integer)
 	     "format_arg", _
 	     "gcc_struct", _
 	     "gnu_inline", _
+	     "leaf", _
 	     "malloc", _
 	     "may_alias", _
 	     "no_instrument_function", _
