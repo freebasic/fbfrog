@@ -100,10 +100,14 @@ private sub frogSetArchs(byval enabled as integer)
 	next
 end sub
 
-private sub frogSetTargets(byval enabled as integer)
+private sub frogSetOSes(byval enabled as integer)
 	for i as integer = 0 to OS__COUNT - 1
 		frog.os(i) = enabled
 	next
+end sub
+
+private sub frogSetTargets(byval enabled as integer)
+	frogSetOSes(enabled)
 	frogSetArchs(enabled)
 end sub
 
@@ -234,7 +238,7 @@ private sub hPrintHelpAndExit()
 	print "  -title <package + version> original-license.txt translators.txt [<destination .bi file>]"
 	print "     Add text at the top of .bi file(s): package name + version, copyright, license"
 	print "  -v                    Show verbose/debugging info"
-	print "  -target nodos|noarm|<os>  Specify OS/architecture to translate for, instead of all"
+	print "  -target nodos|noarm|<os>|<arch>|<os>-<arch>  Specify OS/arch to translate for, instead of all"
 	print "API script logic:"
 	print "  -declareversions <symbol> (<number>)+     Version numbers"
 	print "  -declarebool <symbol>                     Single on/off #define"
@@ -874,12 +878,34 @@ private sub hParseArgs(byref x as integer)
 				frog.arch(ARCH_ARM) = FALSE
 				frog.arch(ARCH_AARCH64) = FALSE
 			case else
+				'' Check for <os>-<arch>
+				dim archstr as string
+				var dash = instr(s, "-")
+				if dash then
+					archstr = mid(s, dash + 1)
+					s = mid(s, 1, dash - 1)
+				end if
+
+				'' Check for <os>; set frog.os()
 				var os = osParse(s)
 				if os < 0 then
-					tkOops(x, "unknown -target argument")
+					'' Assume it's just an arch
+					archstr = s
+					frogSetOSes(TRUE)
+				else
+					frog.os(os) = TRUE
 				end if
-				frog.os(os) = TRUE
-				frogSetArchs(TRUE)
+
+				'' Check for <arch>; set frog.arch()
+				if len(archstr) then
+					var arch = archParse(archstr)
+					if arch < 0 then
+						tkOops(x, "unknown -target argument")
+					end if
+					frog.arch(arch) = TRUE
+				else
+					frogSetArchs(TRUE)
+				end if
 			end select
 			x += 1
 

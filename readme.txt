@@ -63,10 +63,10 @@ What's this?
      there's always something missing...)
 
   fbfrog preprocesses and parses the input headers multiple times: once for each
-  supported target (DOS/Linux/Windows, x86/x86_64) and merges all these APIs
-  together into the final binding. If you need to override this (for example if
-  your .h files don't support DOS and have an #error statement for this case),
-  then use -target and specify the needed targets manually.
+  supported target (DOS/Linux/Windows/etc, x86/x86_64/arm/aarch64) and merges
+  all these APIs together into the final binding. If you need to override this
+  (for example if your .h files don't support DOS and have an #error statement
+  for this case), then use -target and specify the needed targets manually.
 
 
 Compiling:

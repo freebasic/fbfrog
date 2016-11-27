@@ -188,6 +188,7 @@ extern osinfo(0 to OS__COUNT-1) as OsInfo
 extern archinfo(0 to ARCH__COUNT-1) as ArchInfo
 
 declare function osParse(byref s as string) as integer
+declare function archParse(byref s as string) as integer
 
 type TargetInfo
 	as byte os, arch
