@@ -2555,6 +2555,10 @@ private sub cppDefine(byref flags as integer)
 	definfo->xeol = xeol
 	definfo->macro = macro
 
+	if frog.verbose >= 2 then
+		print "#define " + *macro->text + " " + tkSpell(xbody, xeol)
+	end if
+
 	'' Report conflicting #defines
 	var prevdef = cppLookupMacro(macro->text)
 	if prevdef then
@@ -2584,6 +2588,10 @@ private sub cppUndef(byref flags as integer)
 	end if
 	var id = tkSpellId(cpp.x)
 	cpp.x += 1
+
+	if frog.verbose >= 2 then
+		print "#undef " + *id
+	end if
 
 	cppAddKnownUndefined(id)
 

@@ -237,7 +237,7 @@ private sub hPrintHelpAndExit()
 	print "  -dontemit '*.h'       Drop code from matching .h files"
 	print "  -title <package + version> original-license.txt translators.txt [<destination .bi file>]"
 	print "     Add text at the top of .bi file(s): package name + version, copyright, license"
-	print "  -v                    Show verbose/debugging info"
+	print "  -v                    Show verbose/debugging info. Pass -v -v for more debug info"
 	print "  -target nodos|noarm|<os>|<arch>|<os>-<arch>  Specify OS/arch to translate for, instead of all"
 	print "API script logic:"
 	print "  -declareversions <symbol> (<number>)+     Version numbers"
@@ -832,7 +832,7 @@ private sub hParseArgs(byref x as integer)
 		var opt = tkGet(x)
 		select case as const opt
 		case OPT_V
-			frog.verbose = TRUE
+			frog.verbose += 1
 			x += 1
 
 		case OPT_O
