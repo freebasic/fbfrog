@@ -824,6 +824,7 @@ end sub
 
 private sub hParseArgs(byref x as integer)
 	static nestinglevel as integer
+	static seentarget as integer
 
 	nestinglevel += 1
 
@@ -862,10 +863,16 @@ private sub hParseArgs(byref x as integer)
 			frogAddPattern(*tkGetText(x), -1)
 			x += 1
 
-		'' -target (<target>)+
+		'' (-target <target>)+
 		case OPT_TARGET
-			frogSetTargets(FALSE)
 			x += 1
+			'' All OSes and archs default to enabled; disable all the first time
+			'' we see -target so that multiple targets can be selected.
+			'' (However, '-target linux-x86 -target win64' also enables win32 and linux-x86_64)
+			if seentarget = FALSE then
+				frogSetTargets(FALSE)
+				seentarget = TRUE
+			end if
 
 			hExpectStringOrId(x, "<target> argument")
 			var s = *tkGetText(x)
