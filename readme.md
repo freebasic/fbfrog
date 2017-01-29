@@ -74,6 +74,7 @@ tar xf freeglut-3.0.0.tar.gz
 
 ## Additional information
 
+* [Command Line Options](doc/options.md)
 * [Overview](doc/overview.md)
 * [Automatic Translation Features](doc/automatic-translation-features.md)
 * [Extra Features](doc/extra-features.md)
