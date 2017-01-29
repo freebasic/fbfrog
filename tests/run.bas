@@ -24,8 +24,8 @@
 '' captured too, allowing the tests to use astDump() etc.
 ''
 
-#include "../util-path.bas"
-#include "../util-str.bas"
+#include "../src/util-path.bas"
+#include "../src/util-str.bas"
 #include "dir.bi"
 
 type TestRunner

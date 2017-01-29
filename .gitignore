@@ -3,4 +3,4 @@
 /tests/run
 /tests/run.exe
 config.mk
-/obj/*.o
+/src/obj/*.o
