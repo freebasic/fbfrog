@@ -199,15 +199,13 @@ doing a pure syntax conversion, for example:
   char/wchar_t typedefs are expanded in case they are used as string in some cases and byte in others.
   The `-string`/`-nostring` options can be used to override the automatic conversion.
   C's `long` and `long double` types are translated to `clong` and `clongdouble`.
-  #include for `crt/long[double].bi` or `crt/wchar.bi` are automatically added if needed.
-* Named enum => type enumname as long + anonymous enum, because C enums/ints stay 32bit on 64bit,
+  #includes for `crt/long[double].bi` or `crt/wchar.bi` are automatically added if needed.
+* Named enum => `type enumname as long` + anonymous enum, because C enums/ints stay 32bit on 64bit,
   so in FB we have to use the always-32bit LONG type instead of the default ENUM/INTEGER type.
-* struct/union/enum tag names are solved out in favour of typedefs, if any.
-  Case-alias typedefs are solved out since FB is case-insensitive anyways.
-  FB doesn't have the separate tag namespace.
 * Function/array typedefs (not supported in FB) => solved out
+* struct/union/enum tag names are solved out in favour of typedefs, if any.
+  Exact-alias typedefs (`typedef struct A A`) or case-alias typedefs (`typedef struct a A`) are solved out, since FB doesn't have the separate tag namespace and is case-insensitive anyways.
 * Anonymous structs (not supported in FB) => named after first typedef that uses them, or auto-generated name
-* typedef struct FOO FOO; => solved out (FB doesn't have separate type/tag namespaces)
 * Forward-references to tags/types are handled by auto-adding forward declarations,
   but only if the referenced tag is actually declared in the API. This way,
   tags/types from other headers like `FILE`/`jmp_buf`/`time_t` or `struct tm` won't be
