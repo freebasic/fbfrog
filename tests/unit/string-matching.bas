@@ -1,5 +1,5 @@
 #include "test"
-#include "../../util-str.bas"
+#include "../../src/util-str.bas"
 
 #macro dumpStringMatcherTree(patterns...)
 	scope
