@@ -841,7 +841,7 @@ end sub
 private sub expandSimpleTypedef(byval typedef as ASTNODE ptr, byval n as ASTNODE ptr)
 	var newdtype = typeExpand(n->dtype, typedef->dtype)
 	if newdtype = TYPE_NONE then
-		oopsCantExpandTypedef(typedef, n, "too many pointers")
+		oopsCantExpandTypedef(typedef, n, "too many pointers, or ref to ref")
 	end if
 	astSetType(n, newdtype, typedef->subtype)
 end sub

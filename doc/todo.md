@@ -29,5 +29,6 @@
   Popping by name means popping everything until that node is popped. If not found, nothing is popped.
   (MinGW-w64 CRT headers use this)
 * Continue support for parsing function bodies: `++` and `--` operators, for loops, continue/break, goto/labels/switch/case.
-* Add some C++ support
+* Reference typedefs - must be expanded like array typedefs
+* Add more C++ support
 * ...

@@ -11,7 +11,10 @@ function typeExpand(byval a as integer, byval b as integer) as integer
 	if acount + bcount > TYPEMAX_PTR then
 		return TYPE_NONE
 	end if
-	function = typeMultAddrOf(b, acount) or typeGetConst(a)
+	if typeIsRef(a) and typeIsRef(b) then
+		return TYPE_NONE
+	end if
+	return typeMultAddrOf(b, acount) or typeGetConst(a) or typeGetRef(a)
 end function
 
 function typeUnsetBaseConst(byval dtype as integer) as integer
@@ -55,6 +58,10 @@ dim shared datatypenames(0 to TYPE__COUNT-1) as zstring ptr => { _
 
 function typeDump(byval dtype as integer) as string
 	dim s as string
+
+	if typeIsRef(dtype) then
+		s += "byref "
+	end if
 
 	var dt = typeGetDt(dtype)
 	var ptrcount = typeGetPtrCount(dtype)

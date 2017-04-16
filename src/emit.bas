@@ -51,6 +51,7 @@ dim shared tokentext(0 to TK__COUNT-1) as zstring ptr => { _
 	@"as"      , _
 	@"asc"     , _
 	@"byte"    , _
+	@"byref"   , _
 	@"byval"   , _
 	@"cast"    , _
 	@"cbyte"   , _
@@ -541,7 +542,11 @@ sub CodeGen.emitExpr(byval n as ASTNODE ptr, byval need_parens as integer, byval
 		if n->dtype = TYPE_NONE then
 			add(TK_ELLIPSIS)
 		else
-			add(KW_BYVAL)
+			if typeIsRef(n->dtype) then
+				add(KW_BYREF)
+			else
+				add(KW_BYVAL)
+			end if
 			if n->text then
 				add(TK_SPACE)
 				add(TK_ID, n->text)
@@ -924,6 +929,11 @@ sub CodeGen.emitVarDecl _
 			add(KW_IMPORT)
 			add(TK_SPACE)
 		end if
+	end if
+
+	if typeIsRef(n->dtype) then
+		add(KW_BYREF)
+		add(TK_SPACE)
 	end if
 
 	emitIdAndArray(n, is_extern)

@@ -1801,6 +1801,7 @@ end sub
 '' Declarator =
 ''    GccAttributeList
 ''    ('*' [CONST|GccAttributeList])*
+''    ['&']
 ''    { [Identifier] | '(' Declarator ')' }
 ''    { '(' ParamList ')' | ('[' ArrayElements ']')* }
 ''    [ '=' Initializer ]
@@ -2013,6 +2014,12 @@ private function cDeclarator _
 		wend
 	wend
 
+	'' Reference: '&'
+	if cMatch(TK_AMP) then
+		procptrdtype = typeSetIsRef(procptrdtype)
+		dtype = typeSetIsRef(dtype)
+	end if
+
 	dim as ASTNODE ptr t, innernode
 
 	''    '(' Declarator ')'    |    [Identifier]
@@ -2200,7 +2207,7 @@ private function cDeclarator _
 			gccattribs or= innergccattribs
 			procptrdtype = typeExpand(innerprocptrdtype, procptrdtype)
 			if procptrdtype = TYPE_NONE then
-				cError("too many pointers")
+				cError("too many pointers, or ref to ref")
 			end if
 		else
 			node->attrib or= innergccattribs

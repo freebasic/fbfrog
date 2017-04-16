@@ -631,16 +631,19 @@ const TYPEMAX_PTR = 8
 
 #define typeSetDt(dtype, dt) ((dtype and (not TYPEMASK_DT)) or (dt and TYPEMASK_DT))
 #define typeSetIsConst(dt) ((dt) or (1 shl TYPEPOS_CONST))
+#define typeSetIsRef(dt)   ((dt) or (1 shl TYPEPOS_REF  ))
 #define typeIsConstAt(dt, at) (((dt) and (1 shl (TYPEPOS_CONST + (at)))) <> 0)
+#define typeIsRef(dt) (((dt) and TYPEMASK_REF) <> 0)
 #define typeGetDt(dt) ((dt) and TYPEMASK_DT)
+#define typeGetRef(dt) ((dt) and TYPEMASK_REF)
 #define typeGetDtAndPtr(dt) ((dt) and (TYPEMASK_DT or TYPEMASK_PTR))
 #define typeGetPtrCount(dt) (((dt) and TYPEMASK_PTR) shr TYPEPOS_PTR)
 #define typeAddrOf(dt) _
-	(((dt) and TYPEMASK_DT) or _
+	(((dt) and (TYPEMASK_DT or TYPEMASK_REF)) or _
 	 (((dt) and TYPEMASK_PTR) + (1 shl TYPEPOS_PTR)) or _
 	 (((dt) and TYPEMASK_CONST) shl 1))
 #define typeMultAddrOf(dt, count) _
-	((dt and TYPEMASK_DT) or _
+	((dt and (TYPEMASK_DT or TYPEMASK_REF)) or _
 	 ((dt and TYPEMASK_PTR) + (count shl TYPEPOS_PTR)) or _
 	 ((dt and TYPEMASK_CONST) shl count))
 #define typeGetConst(dt) ((dt) and TYPEMASK_CONST)
