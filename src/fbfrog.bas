@@ -370,7 +370,7 @@ private sub hParseSelectCompound(byref tk as TokenBuffer, byref x as integer, by
 	var xblockbegin = x
 	x += 1
 
-	astAppend(frog.script, astNew(selectkind))
+	frog.script->append(astNew(selectkind))
 
 	'' -case
 	if tk.get(x) <> OPT_CASE then
@@ -398,19 +398,19 @@ private sub hParseSelectCompound(byref tk as TokenBuffer, byref x as integer, by
 			end select
 			var n = astNew(ASTKIND_CASE, tk.getText(x))
 			n->location = tk.getLocation(x)
-			astAppend(frog.script, n)
+			frog.script->append(n)
 			x += 1
 
 		case OPT_CASEELSE
 			if frog.script->tail->kind = ASTKIND_CASEELSE then
 				tk.showErrorAndAbort(x, "-caseelse behind -caseelse")
 			end if
-			astAppend(frog.script, astNew(ASTKIND_CASEELSE))
+			frog.script->append(astNew(ASTKIND_CASEELSE))
 			xblockbegin = x
 			x += 1
 
 		case OPT_ENDSELECT
-			astAppend(frog.script, astNew(ASTKIND_ENDSELECT))
+			frog.script->append(astNew(ASTKIND_ENDSELECT))
 			x += 1
 			exit do
 
@@ -431,15 +431,15 @@ private sub hParseIfCompound(byref tk as TokenBuffer, byref x as integer)
 		hExpectStringOrId(tk, x, "<target> argument")
 
 		'' -iftarget <target>  =>  -selecttarget -case <target>
-		astAppend(frog.script, astNew(ASTKIND_SELECTTARGET))
-		astAppend(frog.script, astNew(ASTKIND_CASE, tk.getText(x)))
+		frog.script->append(astNew(ASTKIND_SELECTTARGET))
+		frog.script->append(astNew(ASTKIND_CASE, tk.getText(x)))
 	else
 		'' <symbol>
 		hExpectId(tk, x)
 
 		'' -ifdef <symbol>  =>  -select -case <symbol>
-		astAppend(frog.script, astNew(ASTKIND_SELECTDEFINE))
-		astAppend(frog.script, astNew(ASTKIND_CASE, tk.getText(x)))
+		frog.script->append(astNew(ASTKIND_SELECTDEFINE))
+		frog.script->append(astNew(ASTKIND_CASE, tk.getText(x)))
 	end if
 	x += 1
 
@@ -454,12 +454,12 @@ private sub hParseIfCompound(byref tk as TokenBuffer, byref x as integer)
 			if frog.script->tail->kind = ASTKIND_CASEELSE then
 				tk.showErrorAndAbort(x, "-else behind -else")
 			end if
-			astAppend(frog.script, astNew(ASTKIND_CASEELSE))
+			frog.script->append(astNew(ASTKIND_CASEELSE))
 			xblockbegin = x
 			x += 1
 
 		case OPT_ENDIF
-			astAppend(frog.script, astNew(ASTKIND_ENDSELECT))
+			frog.script->append(astNew(ASTKIND_ENDSELECT))
 			x += 1
 			exit do
 
@@ -474,7 +474,7 @@ private sub hParseDestinationBiFile(byref tk as TokenBuffer, byref x as integer)
 	'' [<destination .bi file>]
 	if hIsStringOrId(tk, x) then
 		assert(frog.script->tail->kind = ASTKIND_OPTION)
-		astSetAlias(frog.script->tail, tk.getText(x))
+		frog.script->tail->setAlias(tk.getText(x))
 		x += 1
 	end if
 end sub
@@ -487,14 +487,14 @@ end sub
 private sub hParseOption1Param(byref tk as TokenBuffer, byref x as integer, byval opt as integer, byref param1 as zstring)
 	x += 1
 	hParseParam(tk, x, param1 + " parameter for " + tkInfoPretty(opt))
-	astAppend(frog.script, astNewOPTION(opt, tk.getText(x - 1)))
+	frog.script->append(astNewOPTION(opt, tk.getText(x - 1)))
 end sub
 
 private sub hParseOption2Params(byref tk as TokenBuffer, byref x as integer, byval opt as integer, byref param1 as zstring, byref param2 as zstring)
 	x += 1
 	hParseParam(tk, x, param1)
 	hParseParam(tk, x, param2)
-	astAppend(frog.script, astNewOPTION(opt, tk.getText(x - 2), tk.getText(x - 1)))
+	frog.script->append(astNewOPTION(opt, tk.getText(x - 2), tk.getText(x - 1)))
 end sub
 
 private sub hParseArgs(byref tk as TokenBuffer, byref x as integer)
@@ -676,7 +676,7 @@ private sub hParseArgs(byref tk as TokenBuffer, byref x as integer)
 				x += 1
 			loop while tk.get(x) = TK_STRING
 
-			astAppend(frog.script, astNew(ASTKIND_DECLAREVERSIONS))
+			frog.script->append(astNew(ASTKIND_DECLAREVERSIONS))
 
 		'' -declarebool <symbol>
 		case OPT_DECLAREBOOL
@@ -684,7 +684,7 @@ private sub hParseArgs(byref tk as TokenBuffer, byref x as integer)
 
 			'' <symbol>
 			hExpectId(tk, x)
-			astAppend(frog.script, astNew(ASTKIND_DECLAREBOOL, tk.getText(x)))
+			frog.script->append(astNew(ASTKIND_DECLAREBOOL, tk.getText(x)))
 			x += 1
 
 		case OPT_SELECTTARGET  : hParseSelectCompound(tk, x, ASTKIND_SELECTTARGET)
@@ -720,7 +720,7 @@ private sub hParseArgs(byref tk as TokenBuffer, byref x as integer)
 				x += 1
 			end if
 
-			astAppend(frog.script, astNewOPTION(opt, id, body))
+			frog.script->append(astNewOPTION(opt, id, body))
 
 		case OPT_INCLUDE
 			hParseOption1Param(tk, x, opt, "<file>")
@@ -731,13 +731,13 @@ private sub hParseArgs(byref tk as TokenBuffer, byref x as integer)
 		case OPT_INCDIR
 			x += 1
 			hExpectStringOrId(tk, x, "<path>")
-			astAppend(frog.script, astNewOPTION(opt, hPathRelativeToArgsFile(tk, x)))
+			frog.script->append(astNewOPTION(opt, hPathRelativeToArgsFile(tk, x)))
 			x += 1
 
 		case OPT_WINDOWSMS, OPT_CLONG32, OPT_FIXUNSIZEDARRAYS, _
 		     OPT_NOFUNCTIONBODIES, OPT_DROPMACROBODYSCOPES, OPT_REMOVEEMPTYRESERVEDDEFINES
 			x += 1
-			astAppend(frog.script, astNewOPTION(opt))
+			frog.script->append(astNewOPTION(opt))
 
 		case OPT_RENAMETYPEDEF, OPT_RENAMETAG, OPT_RENAMEPROC, OPT_RENAMEDEFINE, _
 		     OPT_RENAMEMACROPARAM, OPT_RENAME
@@ -790,7 +790,7 @@ private sub hParseArgs(byref tk as TokenBuffer, byref x as integer)
 			else
 				'' Input file
 				var filename = hPathRelativeToArgsFile(tk, x)
-				astAppend(frog.script, astNewOPTION(OPT_I, filename))
+				frog.script->append(astNewOPTION(OPT_I, filename))
 
 				'' The first .h file name seen will be used as default name for the ouput .bi,
 				'' in case no explicit .bi file names are given via -emit or -o
@@ -937,13 +937,13 @@ private sub frogEvaluateScript _
 			for vernum as integer = 0 to lastvernum - 1
 				'' <symbol> = <versionnumber>
 				frogEvaluateScript(i, _
-					astNewGROUP(astClone(conditions), astNewVERNUMCHECK(vernum)), _
-					astClone(options), _
+					astNewGROUP(conditions->clone(), astNewVERNUMCHECK(vernum)), _
+					options->clone(), _
 					target)
 			next
 
 			'' Now continue without recursing and evaluate the code path for the last version
-			astAppend(conditions, astNewVERNUMCHECK(lastvernum))
+			conditions->append(astNewVERNUMCHECK(lastvernum))
 
 		case ASTKIND_DECLAREBOOL
 			var symbol = i->text
@@ -954,19 +954,19 @@ private sub frogEvaluateScript _
 			'' Branch for the true code path
 			'' defined(<symbol>)
 			var condition = astNewDEFINED(symbol)
-			astAppend(completeveror, astClone(condition))
+			completeveror->append(condition->clone())
 			frogEvaluateScript(i, _
-				astNewGROUP(astClone(conditions), astClone(condition)), _
-				astClone(options), _
+				astNewGROUP(conditions->clone(), condition->clone()), _
+				options->clone(), _
 				target)
 
 			'' And follow the false code path here
 			'' (not defined(<symbol>))
 			condition = astNew(ASTKIND_NOT, condition)
-			astAppend(completeveror, astClone(condition))
-			astAppend(conditions, condition)
+			completeveror->append(condition->clone())
+			conditions->append(condition)
 
-			astAppend(frog.completeverors, completeveror)
+			frog.completeverors->append(completeveror)
 
 		case ASTKIND_SELECTTARGET, ASTKIND_SELECTVERSION, ASTKIND_SELECTDEFINE
 			var sel = i
@@ -994,8 +994,8 @@ private sub frogEvaluateScript _
 						'' defined(<symbol>)
 						condition = astNewDEFINED(i->text)
 					end if
-					is_true = astGroupContains(conditions, condition)
-					astDelete(condition)
+					is_true = conditions->groupContains(condition)
+					delete condition
 				end if
 
 				i = i->nxt
@@ -1033,7 +1033,7 @@ private sub frogEvaluateScript _
 			i = i->nxt
 
 		case else
-			astAppend(options, astClone(i))
+			options->append(i->clone())
 			i = i->nxt
 		end select
 	wend
@@ -1221,7 +1221,7 @@ end function
 	end scope
 
 	'' Add the implicit default.h pre-#include
-	astPrepend(frog.script, astNewOPTION(OPT_FBFROGINCLUDE, "default.h"))
+	frog.script->prepend(astNewOPTION(OPT_FBFROGINCLUDE, "default.h"))
 
 	'' Determine the APIs and their individual options
 	'' - The API-specific command line options were stored in the "script",
@@ -1242,21 +1242,21 @@ end function
 			var osveror = astNewVEROR()
 			for os as integer = 0 to OS__COUNT - 1
 				if frog.os(os) then
-					astAppend(osveror, astNewDEFINEDfbos(os))
+					osveror->append(astNewDEFINEDfbos(os))
 				end if
 			next
-			astAppend(frog.completeverors, osveror)
+			frog.completeverors->append(osveror)
 		end if
 
 		'' 2. one VEROR covering the __FB_64BIT__ boolean (defined + not defined)
 		'' This assumes that 32bit + 64bit architectures are always enabled.
 		'' TODO: support cases like 32bit-only?
-		astAppend(frog.completeverors, _
+		frog.completeverors->append( _
 			astNewVEROR(astNewDEFINEDfb64(FALSE), _
 			            astNewDEFINEDfb64(TRUE)))
 
 		'' same for __FB_ARM__
-		astAppend(frog.completeverors, _
+		frog.completeverors->append( _
 			astNewVEROR(astNewDEFINEDfbarm(FALSE), _
 			            astNewDEFINEDfbarm(TRUE)))
 	end scope
@@ -1336,8 +1336,8 @@ end function
 
 				if bi >= 0 then
 					'' Add the declaration to the "incoming" AST for that .bi file
-					astUnlink(ast, i)
-					astAppend(frog.bis[bi].incoming, i)
+					ast->unlink(i)
+					frog.bis[bi].incoming->append(i)
 				end if
 
 				i = nxt
@@ -1346,7 +1346,7 @@ end function
 
 		'' Forget the remaining AST. Anything that wasn't moved into the
 		'' .bi files won't be emitted.
-		astDelete(ast)
+		delete ast
 
 		dim apibit as ApiBits
 		apibit.set(api)
@@ -1369,7 +1369,7 @@ end function
 		astMergeNext(apibit, frog.mergedlog, frog.apis[api].log)
 		assert(frog.apis[api].log = NULL)
 
-		frog.fullveror = astNewVEROR(frog.fullveror, astClone(frog.apis[api].verand))
+		frog.fullveror = astNewVEROR(frog.fullveror, frog.apis[api].verand->clone())
 	next
 
 	'' Print the merged list of #included files
@@ -1388,7 +1388,7 @@ end function
 			'' It's always needed, except if the binding is empty: C headers
 			'' typically have #include guards, but we don't preserve those.
 			if .final->head then
-				astPrepend(.final, astNew(ASTKIND_PRAGMAONCE))
+				.final->prepend(astNew(ASTKIND_PRAGMAONCE))
 			end if
 
 			hlAutoAddDividers(.final)

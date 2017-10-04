@@ -46,14 +46,14 @@
 using tktokens
 
 destructor DefineInfo()
-	astDelete(macro)
+	delete macro
 end destructor
 
 function DefineInfo.clone() as DefineInfo ptr
 	var b = new DefineInfo
 	b->xbody   = xbody
 	b->xeol    = xeol
-	b->macro   = astClone(macro)
+	b->macro   = macro->clone()
 	function = b
 end function
 
@@ -68,7 +68,7 @@ end sub
 '' Compare two #defines and determine whether they are equal
 function DefineInfo.equals(byref tk as TokenBuffer, byval b as DefineInfo ptr) as integer
 	'' Check name, parameters and body
-	return astIsEqual(macro, b->macro) andalso tk.spell(xbody, xeol) = tk.spell(b->xbody, b->xeol)
+	return astIsEqual(macro, b->macro, FALSE) andalso tk.spell(xbody, xeol) = tk.spell(b->xbody, b->xeol)
 end function
 
 destructor SavedMacro()
@@ -122,7 +122,7 @@ destructor CppContext()
 		savedmacros[i].destructor()
 	next
 	deallocate(savedmacros)
-	astDelete(incdirs)
+	delete incdirs
 	for i as integer = 0 to filecount - 1
 		with files[i]
 			deallocate(.incfile)
@@ -154,7 +154,7 @@ sub CppContext.addTargetPredefines(byval target as TargetInfo)
 end sub
 
 sub CppContext.addIncDir(byval incdir as zstring ptr)
-	astAppend(incdirs, astNewTEXT(incdir))
+	incdirs->append(astNewTEXT(incdir))
 end sub
 
 sub CppContext.appendIncludeDirective(byval filename as zstring ptr, byval tkflags as integer)
@@ -295,7 +295,7 @@ function CppContext.parseStringLiteral(byval eval_escapes as integer) as string
 		tk->showErrorAndAbort(x, errmsg)
 	end if
 	function = *s->text
-	astDelete(s)
+	delete s
 	x += 1
 end function
 
@@ -409,10 +409,10 @@ sub CppContext.parseExpr(byref a as CPPVALUE, byval dtype_only as integer, byval
 		end if
 
 		assert((n->dtype = TYPE_LONGINT) or (n->dtype = TYPE_ULONGINT))
-		a.vali = astEvalConstiAsInt64(n)
+		a.vali = n->evalConstiAsInt64()
 		a.dtype = n->dtype
 
-		astDelete(n)
+		delete n
 
 		x += 1
 
@@ -964,7 +964,7 @@ function CppContext.insertMacroExpansion _
 			'' Followed by identifier?
 			if tk->get(y + 1) >= TK_ID then
 				'' Is it a macro parameter?
-				var arg = astLookupMacroParam(definfo.macro, tk->spellId(y + 1))
+				var arg = definfo.macro->lookupMacroParam(tk->spellId(y + 1))
 				if arg >= 0 then
 					'' Remove #param, and insert stringify result instead
 					'' but preserve BEHINDSPACE status.
@@ -1014,7 +1014,7 @@ function CppContext.insertMacroExpansion _
 
 		'' Macro parameter?
 		if tk->get(y) >= TK_ID then
-			var arg = astLookupMacroParam(definfo.macro, tk->spellId(y))
+			var arg = definfo.macro->lookupMacroParam(tk->spellId(y))
 			if arg >= 0 then
 				'' >= TK_ID
 				var behindspace = tk->getFlags(y) and TKFLAG_BEHINDSPACE
@@ -1836,7 +1836,7 @@ sub CppContext.maybeExpandMacroInDefineBody(byval parentdefine as AstNode ptr)
 	'' Don't expand if the macrocall involves parameters of the parentdefine
 	for i as integer = callbegin to callend
 		if tk->get(i) >= TK_ID then
-			if astLookupMacroParam(parentdefine, tk->spellId(i)) >= 0 then
+			if parentdefine->lookupMacroParam(tk->spellId(i)) >= 0 then
 				exit sub
 			end if
 		end if

@@ -20,7 +20,7 @@ destructor ApiInfo()
 		deallocate(replacements[i].tocode)
 	next
 	deallocate(replacements)
-	astDelete(log)
+	delete log
 end destructor
 
 sub ApiInfo.addReplacement(byval fromcode as zstring ptr, byval tocode as zstring ptr, byval tofb as integer)
@@ -68,7 +68,7 @@ sub ApiInfo.loadOption(byval opt as integer, byval param1 as zstring ptr, byval 
 
 	case OPT_MOVEABOVE
 		var n = astNewTEXT(param1)
-		astSetAlias(n, param2)
+		n->setAlias(param2)
 		astBuildGroupAndAppend(moveaboveoptions, n)
 
 	case OPT_REPLACEMENTS
@@ -115,7 +115,7 @@ sub ApiInfo.loadOptions()
 end sub
 
 sub ApiInfo.print(byref ln as string)
-	astAppend(log, astNewTEXT(ln))
+	log->append(astNewTEXT(ln))
 end sub
 
 function ApiInfo.prettyId() as string

@@ -142,7 +142,7 @@ end function
 
 function CParser.identifierIsMacroParam(byval id as zstring ptr) as integer
 	if parentdefine then
-		function = (astLookupMacroParam(parentdefine, id) >= 0)
+		function = (parentdefine->lookupMacroParam(id) >= 0)
 	else
 		function = FALSE
 	end if
@@ -233,11 +233,11 @@ function CParser.parseStringLiteralSequence() as AstNode ptr
 	while parseok
 		select case tk->get(x)
 		case TK_ID
-			astAppend(strcat, astNewTEXT(tk->spellId(x)))
+			strcat->append(astNewTEXT(tk->spellId(x)))
 			x += 1
 
 		case TK_STRING, TK_WSTRING
-			astAppend(strcat, parseLiteral(ASTKIND_STRING, TRUE))
+			strcat->append(parseLiteral(ASTKIND_STRING, TRUE))
 
 		'' '#' stringify operator
 		case TK_HASH
@@ -247,7 +247,7 @@ function CParser.parseStringLiteralSequence() as AstNode ptr
 			end if
 			x += 1
 
-			astAppend(strcat, astNew(ASTKIND_STRINGIFY, astNewTEXT(tk->getText(x))))
+			strcat->append(astNew(ASTKIND_STRINGIFY, astNewTEXT(tk->getText(x))))
 			x += 1
 
 		case else
@@ -258,8 +258,8 @@ function CParser.parseStringLiteralSequence() as AstNode ptr
 	'' Strip the STRCAT node if it's a single literal only...
 	if strcat->head = strcat->tail then
 		var result = strcat->head
-		astUnlink(strcat, strcat->head)
-		astDelete(strcat)
+		strcat->unlink(strcat->head)
+		delete strcat
 		strcat = result
 	end if
 
@@ -327,7 +327,7 @@ function CParser.parseCall(byval functionexpr as AstNode ptr, byval allow_idseq 
 	if tk->get(x) <> TK_RPAREN then
 		'' Expr (',' Expr)*
 		do
-			astAppend(functionexpr, parseExpr(FALSE, allow_idseq))
+			functionexpr->append(parseExpr(FALSE, allow_idseq))
 
 			'' ','?
 		loop while match(TK_COMMA) and parseok
@@ -400,8 +400,8 @@ function CParser.parseExprRecursive _
 
 				assert(t->kind = ASTKIND_DATATYPE)
 				a = astNew(ASTKIND_CAST, a)
-				astSetType(a, t->dtype, t->subtype)
-				astDelete(t)
+				a->setType(t->dtype, t->subtype)
+				delete t
 			else
 				'' Expr
 				a = parseExprRecursive(0, parentheses + 1, allow_toplevel_comma, allow_idseq)
@@ -457,14 +457,14 @@ function CParser.parseExprRecursive _
 			'' '##'?
 			case TK_HASHHASH
 				a = astNew(ASTKIND_PPMERGE)
-				astAppend(a, astNewTEXT(tk->spellId(x)))
+				a->append(astNewTEXT(tk->spellId(x)))
 				x += 2
 
 				'' Identifier ('##' Identifier)*
 				do
 					'' Identifier?
 					if tk->get(x) = TK_ID then
-						astAppend(a, astNewTEXT(tk->spellId(x)))
+						a->append(astNewTEXT(tk->spellId(x)))
 						x += 1
 					else
 						showError("expected identifier as operand of '##' PP merge operator" + tk->butFound(x))
@@ -652,7 +652,7 @@ function CParser.parseInit(byval allow_idseq as integer) as AstNode ptr
 			exit do
 		end if
 
-		astAppend(a, parseExprOrInit(allow_idseq))
+		a->append(parseExprOrInit(allow_idseq))
 
 		'' ','
 	loop while match(TK_COMMA) and parseok
@@ -861,10 +861,10 @@ function CParser.parseTag() as AstNode ptr
 		x += 1
 
 		'' Parse struct/union/enum body
-		astAppend(udt, parseBody(astkind))
+		udt->append(parseBody(astkind))
 
 		'' '}'
-		expectMatch(TK_RBRACE, "to close " + astDumpPrettyDecl(udt) + " block")
+		expectMatch(TK_RBRACE, "to close " + udt->dumpPrettyDecl(false) + " block")
 
 		'' __attribute__((...))
 		parseGccAttributeList(udt->attrib)
@@ -893,11 +893,11 @@ end function
 
 sub CParser.turnIntoUNKNOWN(byval n as AstNode ptr, byval first as integer, byval last as integer)
 	n->kind = ASTKIND_UNKNOWN
-	astSetText(n, tk->spell(first, last))
-	astRemoveChildren(n)
-	astDelete(n->expr)
+	n->setText(tk->spell(first, last))
+	n->removeChildren()
+	delete n->expr
 	n->expr = NULL
-	astSetType(n, TYPE_NONE, NULL)
+	n->setType(TYPE_NONE, NULL)
 end sub
 
 '' Toplevel comma operators can be translated to a sequence of
@@ -916,9 +916,9 @@ private function hUnwrapToplevelCommas(byval n as AstNode ptr) as AstNode ptr
 	if n->kind = ASTKIND_CCOMMA then
 		var l = n->head
 		var r = n->tail
-		astUnlink(n, l)
-		astUnlink(n, r)
-		astDelete(n)
+		n->unlink(l)
+		n->unlink(r)
+		delete n
 		function = astNewGROUP(hUnwrapToplevelCommas(l), hUnwrapToplevelCommas(r))
 	else
 		function = n
@@ -974,10 +974,10 @@ private function hTryToFixCommasAndAssigns(byval n as AstNode ptr) as AstNode pt
 end function
 
 sub CParser.showErrorForRemainingCommasOrAssigns(byval n as AstNode ptr)
-	if astContains(n, ASTKIND_CCOMMA) then
+	if n->contains(ASTKIND_CCOMMA) then
 		showError("can't auto-translate C comma operator here [yet]")
 	end if
-	if astContainsCAssignments(n) then
+	if n->containsCAssignments() then
 		showError("can't auto-translate C assignment operator here [yet]")
 	end if
 end sub
@@ -1034,7 +1034,7 @@ function CParser.parseDefineBodyTokenLiteral() as string
 	end select
 	var n = parseLiteral(astkind, TRUE)
 	function = emitFbExpr(n)
-	astDelete(n)
+	delete n
 end function
 
 function CParser.parseDefineBodyToken() as string
@@ -1273,7 +1273,7 @@ function CParser.parseDefine() as AstNode ptr
 	x += 1
 
 	if add_to_ast = FALSE then
-		astDelete(macro)
+		delete macro
 		macro = astNewGROUP()
 	end if
 	function = macro
@@ -1318,7 +1318,7 @@ function CParser.parseInclude() as AstNode ptr
 		assert(tk->get(x) = TK_STRING)
 		var s = parseLiteral(ASTKIND_STRING, FALSE)
 		filename = *s->text
-		astDelete(s)
+		delete s
 	end if
 
 	'' Eol
@@ -1333,8 +1333,8 @@ function CParser.parsePragmaPackNumber() as integer
 	if n->kind <> ASTKIND_CONSTI then
 		exit function
 	end if
-	pragmapack.stack(pragmapack.level) = astEvalConstiAsInt64(n)
-	astDelete(n)
+	pragmapack.stack(pragmapack.level) = n->evalConstiAsInt64()
+	delete n
 	function = TRUE
 end function
 
@@ -1434,7 +1434,7 @@ function CParser.parsePragmaComment() as AstNode ptr
 	scope
 		var s = parseLiteral(ASTKIND_STRING, TRUE)
 		libname = *s->text
-		astDelete(s)
+		delete s
 	end scope
 
 	'' ')'
@@ -1705,7 +1705,7 @@ function CParser.parseParamDeclList() as AstNode ptr
 			t = parseDecl(ASTKIND_PARAM, 0)
 		end if
 
-		astAppend(group, t)
+		group->append(t)
 
 		'' ','?
 	loop while match(TK_COMMA) and parseok
@@ -2033,7 +2033,7 @@ function CParser.parseDeclarator _
 		end if
 
 		t = astNew(astkind, id)
-		astSetType(t, dtype, basesubtype)
+		t->setType(dtype, basesubtype)
 	end if
 
 	select case tk->get(x)
@@ -2064,7 +2064,7 @@ function CParser.parseDeclarator _
 				d->expr = parseExpr(TRUE, FALSE)
 			end if
 
-			astAppend(node->array, d)
+			node->array->append(d)
 
 			'' ']'
 			expectMatch(TK_RBRACKET, "to close this array dimension declaration")
@@ -2076,7 +2076,7 @@ function CParser.parseDeclarator _
 			'' It's a pointer to an array - unsupported in FB.
 			'' Drop the array type, effectively making it a pointer to just one array element.
 			'' see also expandArrayTypedef()
-			astDelete(node->array)
+			delete node->array
 			node->array = NULL
 		end if
 
@@ -2112,10 +2112,10 @@ function CParser.parseDeclarator _
 
 			'' New PROC node for the function pointer's subtype
 			node = astNew(ASTKIND_PROC)
-			astSetType(node, dtype, basesubtype)
+			node->setType(dtype, basesubtype)
 
 			'' Turn the object into a function pointer
-			astDelete(innernode->subtype)
+			delete innernode->subtype
 			innernode->dtype = innerprocptrdtype
 			innernode->subtype = node
 
@@ -2131,9 +2131,9 @@ function CParser.parseDeclarator _
 			'' with params isn't turned into a proc, but just has function type.
 			case else
 				node = astNew(ASTKIND_PROC)
-				astSetType(node, dtype, basesubtype)
+				node->setType(dtype, basesubtype)
 
-				astDelete(t->subtype)
+				delete t->subtype
 				t->dtype = TYPE_PROC
 				t->subtype = node
 			end select
@@ -2146,7 +2146,7 @@ function CParser.parseDeclarator _
 		'' Not just '()'?
 		elseif tk->get(x) <> TK_RPAREN then
 			assert(node->kind = ASTKIND_PROC)
-			astAppend(node, parseParamDeclList())
+			node->append(parseParamDeclList())
 		end if
 
 		'' ')'
@@ -2227,7 +2227,7 @@ function CParser.parseDataType() as AstNode ptr
 		case ASTKIND_STRUCT, ASTKIND_UNION, ASTKIND_ENUM
 			showError("UDT in datatype expression; not supported in FB")
 			dtype = TYPE_INTEGER
-			astDelete(subtype)
+			delete subtype
 			subtype = NULL
 		end select
 	end if
@@ -2244,7 +2244,7 @@ function TypeNameRefUpdater.visit(byref n as AstNode) as integer
 	if typeGetDt(n.dtype) = TYPE_UDT then
 		assert(astIsTEXT(n.subtype))
 		if *n.subtype->text = oldid then
-			astSetText(n.subtype, newid)
+			n.subtype->setText(newid)
 		end if
 	end if
 	function = TRUE
@@ -2275,12 +2275,12 @@ private sub hUnscopeNestedNamedUdts(byval result as AstNode ptr, byval udt as As
 						updater.oldid = *i->text
 						updater.newid = *udt->text + "_" + *i->text
 						udt->visit(updater)
-						astSetText(i, updater.newid)
+						i->setText(updater.newid)
 					end if
 				end if
 
-				astUnlink(udt, i)
-				astAppend(result, i)
+				udt->unlink(i)
+				result->append(i)
 			end if
 		end select
 
@@ -2319,7 +2319,7 @@ function CParser.parseDecl(byval astkind as integer, byval gccattribs as integer
 			'' ';'?
 			if match(TK_SEMI) then
 				hUnscopeNestedNamedUdts(result, subtype)
-				astAppend(result, subtype)
+				result->append(subtype)
 				return result
 			end if
 
@@ -2329,7 +2329,7 @@ function CParser.parseDecl(byval astkind as integer, byval gccattribs as integer
 			'' ';'?
 			if match(TK_SEMI) then
 				'' Ignore & treat as no-op
-				astDelete(subtype)
+				delete subtype
 				return result
 			end if
 		end select
@@ -2350,7 +2350,7 @@ function CParser.parseDecl(byval astkind as integer, byval gccattribs as integer
 			if udt->text = NULL then
 				'' Try to name it after the symbol declared in this declaration
 				if tk->get(x) = TK_ID then
-					astSetText(udt, tk->spellId(x))
+					udt->setText(tk->spellId(x))
 				else
 					'' Auto-generate id
 					'' TODO:
@@ -2358,7 +2358,7 @@ function CParser.parseDecl(byval astkind as integer, byval gccattribs as integer
 					''  * name after fields (name & type) instead of counter
 					''  * If this is really only needed for anonymous parameters,
 					''    then it's probably very rare in practice. No need to bother.
-					astSetText(udt, "_" + str(tempids))
+					udt->setText("_" + str(tempids))
 					tempids += 1
 				end if
 				udt->attrib or= ASTATTRIB_GENERATEDID
@@ -2368,7 +2368,7 @@ function CParser.parseDecl(byval astkind as integer, byval gccattribs as integer
 			subtype->attrib or= ASTATTRIB_TAGID or (udt->attrib and ASTATTRIB_GENERATEDID)
 
 			hUnscopeNestedNamedUdts(result, udt)
-			astAppend(result, udt)
+			result->append(udt)
 		end select
 	end if
 
@@ -2379,7 +2379,7 @@ function CParser.parseDecl(byval astkind as integer, byval gccattribs as integer
 	do
 		declarator_count += 1
 		var n = parseDeclarator(0, astkind, dtype, subtype, gccattribs, NULL, 0, 0)
-		astAppend(result, n)
+		result->append(n)
 
 		if n->kind = ASTKIND_TYPEDEF then
 			'' Register known typedefs, so we can disambiguate type casts
@@ -2394,8 +2394,8 @@ function CParser.parseDecl(byval astkind as integer, byval gccattribs as integer
 
 			if tk->get(x) = TK_STRING then
 				var s = parseLiteral(ASTKIND_STRING, TRUE)
-				astTakeAliasFromId(n, s)
-				astDelete(s)
+				n->takeAliasFromId(s)
+				delete s
 			else
 				showError("expected ""name"" inside asm()")
 			end if
@@ -2454,7 +2454,7 @@ function CParser.parseDecl(byval astkind as integer, byval gccattribs as integer
 		expectMatch(TK_SEMI, "to finish this declaration")
 	end if
 
-	astDelete(subtype)
+	delete subtype
 	function = result
 end function
 
@@ -2502,7 +2502,7 @@ function CParser.parseReturn() as AstNode ptr
 
 	'' [Expr]
 	if tk->get(x) <> TK_SEMI then
-		astAppend(n, parseExpr(TRUE, FALSE))
+		n->append(parseExpr(TRUE, FALSE))
 	end if
 
 	'' ';'
@@ -2559,13 +2559,13 @@ function CParser.parseIfBlock() as AstNode ptr
 	ifpart->expr = parseConditionExpr()
 
 	'' if/true statement
-	astAppend(ifpart, parseConstruct(ASTKIND_SCOPEBLOCK))
-	astAppend(ifblock, ifpart)
+	ifpart->append(parseConstruct(ASTKIND_SCOPEBLOCK))
+	ifblock->append(ifpart)
 
 	'' ELSE?
 	if match(KW_ELSE) then
 		'' else/false statement
-		astAppend(ifblock, astNew(ASTKIND_ELSEPART, parseConstruct(ASTKIND_SCOPEBLOCK)))
+		ifblock->append(astNew(ASTKIND_ELSEPART, parseConstruct(ASTKIND_SCOPEBLOCK)))
 	end if
 
 	function = ifblock
@@ -2580,7 +2580,7 @@ function CParser.parseDoWhile(byval semi_is_optional as integer) as AstNode ptr
 	x += 1
 
 	'' loop body
-	astAppend(dowhile, parseConstruct(ASTKIND_SCOPEBLOCK))
+	dowhile->append(parseConstruct(ASTKIND_SCOPEBLOCK))
 
 	'' WHILE
 	expectMatch(KW_WHILE, "behind do loop body")
@@ -2609,7 +2609,7 @@ function CParser.parseWhile() as AstNode ptr
 	whileloop->expr = parseConditionExpr()
 
 	'' loop body
-	astAppend(whileloop, parseConstruct(ASTKIND_SCOPEBLOCK))
+	whileloop->append(parseConstruct(ASTKIND_SCOPEBLOCK))
 
 	function = whileloop
 end function
@@ -2629,7 +2629,7 @@ function CParser.parseExternBlock() as AstNode ptr
 			showError("expected <""C""> behind <extern>")
 			return astNewGROUP()
 		end if
-		astDelete(s)
+		delete s
 	end scope
 
 	expectMatch(TK_LBRACE, "for <extern ""C""> block")
@@ -2775,7 +2775,7 @@ function CParser.parseBody(byval bodyastkind as integer) as AstNode ptr
 			hSetLocationIfNeeded(t, location)
 		end if
 
-		astAppend(result, t)
+		result->append(t)
 	loop
 
 	function = result
@@ -2795,7 +2795,7 @@ function CParser.parseToplevel() as AstNode ptr
 			parseDefBody(.n, .xdefbegin, add_to_ast)
 
 			if add_to_ast = FALSE then
-				astRemove(t, .n)
+				t->remove(.n)
 			end if
 		end with
 	next

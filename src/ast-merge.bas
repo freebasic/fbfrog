@@ -161,10 +161,10 @@ private sub hWrapStructFieldsInVerblocks(byval api as ApiBits, byval code as Ast
 		i = i->nxt
 	wend
 
-	if astIsMergableBlock(code) then
-		var newfields = astNewVERBLOCK(api, astCloneChildren(code))
-		astRemoveChildren(code)
-		astAppend(code, newfields)
+	if code->isMergableBlock() then
+		var newfields = astNewVERBLOCK(api, code->cloneChildren())
+		code->removeChildren()
+		code->append(newfields)
 	end if
 end sub
 
@@ -185,16 +185,16 @@ private sub hVerblockAppend _
 	var verblock = n->tail
 	if verblock andalso astIsVERBLOCK(verblock) then
 		if verblock->apis.equals(apis) then
-			astAppend(verblock, child)
+			verblock->append(child)
 			exit sub
 		end if
 	end if
 
-	astAppend(n, astNewVERBLOCK(apis, child))
+	n->append(astNewVERBLOCK(apis, child))
 end sub
 
 private sub hAddDecl(byval c as AstNode ptr, byval array as DECLNODE ptr, byval i as integer)
-	hVerblockAppend(c, array[i].apis, astClone(array[i].n))
+	hVerblockAppend(c, array[i].apis, array[i].n->clone())
 end sub
 
 ''
@@ -326,7 +326,7 @@ private sub hAddMergedDecl _
 	'' even if they have different children)
 	''
 	dim mdecl as AstNode ptr
-	if astIsMergableBlock(adecl) then
+	if adecl->isMergableBlock() then
 
 		''
 		'' For example:
@@ -359,22 +359,22 @@ private sub hAddMergedDecl _
 		''             field c as integer
 		''
 
-		var achildren = astCloneChildren(adecl)
-		var bchildren = astCloneChildren(bdecl)
+		var achildren = adecl->cloneChildren()
+		var bchildren = bdecl->cloneChildren()
 
 		'' Merge both set of children
 		var mchildren = astMergeVerblocks(achildren, bchildren)
 
 		'' Create a result block with the new set of children
-		mdecl = astCloneNode(adecl)
-		astAppend(mdecl, mchildren)
+		mdecl = adecl->cloneNode()
+		mdecl->append(mchildren)
 	else
 		'' "Merge" a and b by cloning a. They've compared equal in astIsEqual() so this works.
 		'' Below we only need to cover a few additional cases where astIsEqual() is more permissive
 		'' than a true equality check: it allows merging of a/b even if they're slightly different.
 		'' This currently affects the calling convention only. In such cases, just cloning a isn't
 		'' enough and some actual merging work is needed.
-		mdecl = astClone(adecl)
+		mdecl = adecl->clone()
 
 		hFindCommonCallConvsOnMergedDecl(mdecl, adecl, bdecl)
 	end if
@@ -647,8 +647,8 @@ function astMergeVerblocks _
 	hAstMerge(c, atable.array, 0, atable.count - 1, _
 	             btable.array, 0, btable.count - 1)
 
-	astDelete(a)
-	astDelete(b)
+	delete a
+	delete b
 
 	function = c
 end function
@@ -699,7 +699,7 @@ private sub hSolveOutRedundantVerblocks(byval code as AstNode ptr, byval parenta
 			'' Nested verblock covers at least the parent's versions?
 			if i->apis.coversAtLeast(parentapis) then
 				'' Remove this verblock, preserve only its children
-				astReplace(code, i, astCloneChildren(i))
+				code->replace(i, i->cloneChildren())
 			end if
 		else
 			hSolveOutRedundantVerblocks(i, parentapis)
@@ -709,7 +709,7 @@ private sub hSolveOutRedundantVerblocks(byval code as AstNode ptr, byval parenta
 	wend
 end sub
 
-#define hCalcIfConditionWeight(expr) astCount(expr)
+#define hCalcIfConditionWeight(expr) ((expr)->count())
 
 '' If the #if block's condition expression is bigger than that of
 '' the #else block, swap the two blocks.
@@ -818,7 +818,7 @@ private sub hTurnVerblocksIntoPpIfs(byval code as AstNode ptr)
 			end if
 
 			'' Insert #endif
-			astInsert(code, astNew(ASTKIND_PPENDIF), j)
+			code->insert(astNew(ASTKIND_PPENDIF), j)
 		end if
 
 		i = i->nxt
@@ -847,7 +847,7 @@ end destructor
 
 function CondCounter.find(byval cond as AstNode ptr) as integer
 	for i as integer = 0 to condcount - 1
-		if astIsEqual(conds[i].cond, cond) then
+		if astIsEqual(conds[i].cond, cond, FALSE) then
 			return i
 		end if
 	next
@@ -965,14 +965,14 @@ private sub replaceUnixChecks(byval veror as AstNode ptr)
 		if astIsDEFINED(i) then
 			for os as integer = 0 to OS__COUNT - 1
 				if osinfo(os).is_unix andalso (*i->text = *osinfo(os).fbdefine) then
-					astRemove(veror, i)
+					veror->remove(i)
 					exit for
 				end if
 			next
 		end if
 		i = nxt
 	wend
-	astAppend(veror, astNewDEFINED("__FB_UNIX__"))
+	veror->append(astNewDEFINED("__FB_UNIX__"))
 end sub
 
 private function hSimplify(byval n as AstNode ptr, byref changed as integer) as AstNode ptr
@@ -982,7 +982,7 @@ private function hSimplify(byval n as AstNode ptr, byref changed as integer) as 
 	scope
 		var i = n->head
 		while i
-			var newi = hSimplify(astClone(i), changed)
+			var newi = hSimplify(i->clone(), changed)
 
 			'' Don't add a VEROR as a child of a VEROR; instead, add
 			'' the VEROR's chidlren to the VEROR's parent. (same for VERANDs)
@@ -990,15 +990,15 @@ private function hSimplify(byval n as AstNode ptr, byref changed as integer) as 
 				newi->kind = ASTKIND_GROUP
 			end if
 
-			i = astReplace(n, i, newi)
+			i = n->replace(i, newi)
 		wend
 	end scope
 
 	'' Single child, or none at all? Solve out the VEROR/VERAND.
 	if n->head = n->tail then
 		changed = TRUE
-		function = astClone(n->head)
-		astDelete(n)
+		function = n->head->clone()
+		delete n
 		exit function
 	end if
 
@@ -1007,9 +1007,9 @@ private function hSimplify(byval n as AstNode ptr, byref changed as integer) as 
 	end if
 
 	'' Solve out "complete" VERORs - VERORs that cover all possible choices
-	if astGroupContains(frog.completeverors, n) then
+	if frog.completeverors->groupContains(n) then
 		changed = TRUE
-		astDelete(n)
+		delete n
 		return NULL
 	end if
 
@@ -1038,7 +1038,7 @@ private function hSimplify(byval n as AstNode ptr, byref changed as integer) as 
 	if mostcommoncond = NULL then
 		return n
 	end if
-	mostcommoncond = astClone(mostcommoncond)
+	mostcommoncond = mostcommoncond->clone()
 
 	var extracted = astNew(ASTKIND_VEROR)
 
@@ -1048,9 +1048,9 @@ private function hSimplify(byval n as AstNode ptr, byref changed as integer) as 
 		while verand
 			var verandnext = verand->nxt
 			if astIsVERAND(verand) then
-				if astGroupContains(verand, mostcommoncond) then
-					astAppend(extracted, astClone(verand))
-					astRemove(n, verand)
+				if verand->groupContains(mostcommoncond) then
+					extracted->append(verand->clone())
+					n->remove(verand)
 				end if
 			end if
 			verand = verandnext
@@ -1067,8 +1067,8 @@ private function hSimplify(byval n as AstNode ptr, byref changed as integer) as 
 			var cond = verand->head
 			while cond
 				var condnext = cond->nxt
-				if astIsEqual(cond, mostcommoncond) then
-					astRemove(verand, cond)
+				if astIsEqual(cond, mostcommoncond, FALSE) then
+					verand->remove(cond)
 				end if
 				cond = condnext
 			wend
@@ -1076,7 +1076,7 @@ private function hSimplify(byval n as AstNode ptr, byref changed as integer) as 
 			'' If this VERAND now only contains 1 condition,
 			'' solve out the VERAND
 			if verand->head = verand->tail then
-				astReplace(extracted, verand, astClone(verand->head))
+				extracted->replace(verand, verand->head->clone())
 			end if
 
 			verand = verandnext
@@ -1090,7 +1090,7 @@ private function hSimplify(byval n as AstNode ptr, byref changed as integer) as 
 	assert(astIsVERAND(extracted))
 
 	'' And re-add that to the original VEROR
-	astAppend(n, extracted)
+	n->append(extracted)
 	changed = TRUE
 
 	function = n
@@ -1113,7 +1113,7 @@ private sub hMaybeEmitRangeCheck(byval veror as AstNode ptr, byref l as integer,
 	if (coveredcount <= 2) and l_in_mid and r_in_mid then
 		'' A range check isn't worth it, re-add the normal individual checks
 		for i as integer = l to r
-			astAppend(veror, astNewVERNUMCHECK(i))
+			veror->append(astNewVERNUMCHECK(i))
 		next
 		exit sub
 	end if
@@ -1136,7 +1136,7 @@ private sub hMaybeEmitRangeCheck(byval veror as AstNode ptr, byref l as integer,
 		exit sub
 	end if
 
-	astAppend(veror, check)
+	veror->append(check)
 end sub
 
 ''
@@ -1192,7 +1192,7 @@ private sub hFoldNumberChecks(byval n as AstNode ptr)
 
 			if i->kind = ASTKIND_VERNUMCHECK then
 				covered(i->vernum) = TRUE
-				astRemove(n, i)
+				n->remove(i)
 			end if
 
 			i = nxt
@@ -1234,7 +1234,7 @@ private function foldUnix(byval n as AstNode ptr) as AstNode ptr
 	scope
 		var i = n->head
 		while i
-			i = astReplace(n, i, foldUnix(astClone(i)))
+			i = n->replace(i, foldUnix(i->clone()))
 		wend
 	end scope
 
@@ -1248,7 +1248,7 @@ private function foldUnix(byval n as AstNode ptr) as AstNode ptr
 	'' Single child, or none at all? Solve out the VEROR/VERAND.
 	if n->head = n->tail then
 		var child = n->head
-		astUnlink(n, child)
+		n->unlink(child)
 		n = child
 	end if
 
@@ -1284,17 +1284,17 @@ private function hBuildIfConditionFor(byval bits as ApiBits) as AstNode ptr
 	for i as integer = 0 to frog.apicount - 1
 		if bits.isSet(i) then
 			var api = @frog.apis[i]
-			var verand = astClone(api->verand)
+			var verand = api->verand->clone()
 
 			'' Conditions for API's target
 			if osinfo(api->target.os).has_arm then
-				astPrepend(verand, astNewDEFINEDfbarm(not archinfo(api->target.arch).is_arm))
+				verand->prepend(astNewDEFINEDfbarm(not archinfo(api->target.arch).is_arm))
 			end if
 			if osinfo(api->target.os).has_64bit then
-				astPrepend(verand, astNewDEFINEDfb64(not archinfo(api->target.arch).is_64bit))
+				verand->prepend(astNewDEFINEDfb64(not archinfo(api->target.arch).is_64bit))
 			end if
 			if frog.enabledoscount > 1 then
-				astPrepend(verand, astNewDEFINEDfbos(api->target.os))
+				verand->prepend(astNewDEFINEDfbos(api->target.os))
 			end if
 
 			var veror = astNewVEROR(verand)
@@ -1330,7 +1330,7 @@ private sub hGenVerExprs(byval code as AstNode ptr)
 			'' the check was always true -- thus, we can remove this
 			'' #if check and insert the body in its place.
 			if i->expr = NULL then
-				astReplace(code, i, astCloneChildren(i))
+				code->replace(i, i->cloneChildren())
 			end if
 		end if
 
@@ -1341,7 +1341,7 @@ end sub
 #define astIsPPIFWithVERAND(n) (astIsPPIF(n) andalso astIsVERAND(n->expr))
 #define astIsPPELSEIFWithVERAND(n) (astIsPPELSEIF(n) andalso astIsVERAND(n->expr))
 #define astIsPPELSEWithVERAND(n) (astIsPPELSE(n) andalso astIsVERAND(n->expr))
-#define hasVerandPrefix(n, prefix) astIsEqual(n->expr->head, prefix)
+#define hasVerandPrefix(n, prefix) astIsEqual(n->expr->head, prefix, FALSE)
 
 private function findEndifOfVerandIfBlockWithCommonPrefix(byval n as AstNode ptr) as AstNode ptr
 	if astIsPPIFWithVERAND(n) = FALSE then exit function
@@ -1384,22 +1384,22 @@ private sub splitVerandIfsIntoNestedIfs(byval ast as AstNode ptr)
 		if iendif then
 			'' New outer #if with just the prefix condition
 			var newif = astNew(ASTKIND_PPIF)
-			newif->expr = astClone(i->expr->head)
+			newif->expr = i->expr->head->clone()
 
 			'' Move all the old #if/#elseifs/#else/#endif into the new #if
 			inext = iendif->nxt
-			astTakeAndAppendChildSequence(newif, ast, i, iendif)
+			newif->takeAndAppendChildSequence(ast, i, iendif)
 
 			'' Insert the new #if in the old one's place
-			astInsert(ast, newif, inext)
-			astInsert(ast, astNew(ASTKIND_PPENDIF), inext)
+			ast->insert(newif, inext)
+			ast->insert(astNew(ASTKIND_PPENDIF), inext)
 
 			'' Cut prefix from the VERANDs of the nested #if/#elseifs/#else
 			scope
 				var nested = newif->head
 				do
 					var verand = nested->expr
-					astRemove(verand, verand->head)
+					verand->remove(verand->head)
 
 					'' Solve out the VERAND if only 1 expression left
 					assert(verand->head)
@@ -1407,7 +1407,7 @@ private sub splitVerandIfsIntoNestedIfs(byval ast as AstNode ptr)
 						nested->expr = verand->head
 						verand->head = NULL
 						verand->tail = NULL
-						astDelete(verand)
+						delete verand
 					end if
 
 					nested = nested->nxt
@@ -1444,12 +1444,12 @@ private sub mergeSiblingIfs(byval ast as AstNode ptr)
 				var secondif = iendif->nxt
 				if secondif andalso astIsPPIF(secondif) then
 					'' Same condition?
-					if astIsEqual(i->expr, secondif->expr) then
+					if astIsEqual(i->expr, secondif->expr, FALSE) then
 						'' Merge 1st into 2nd
 						'' (we know the 1st doesn't have any #elseifs/#else, but the 2nd might)
-						astTakeAndPrependChildren(secondif, i)
-						astRemove(ast, i)
-						astRemove(ast, iendif)
+						secondif->takeAndPrependChildren(i)
+						ast->remove(i)
+						ast->remove(iendif)
 						nxt = secondif
 					end if
 				end if
@@ -1493,8 +1493,8 @@ private sub removeUnnecessaryIfNesting(byval ast as AstNode ptr)
 						nested->expr = NULL
 						nested->head = NULL
 						nested->tail = NULL
-						astDelete(nested)
-						astDelete(nestedendif)
+						delete nested
+						delete nestedendif
 					end if
 				end if
 			end if
@@ -1564,8 +1564,8 @@ end sub
 ''    A    and    B         maybe, but not necessarily.
 ''    A    and    not A     are definitely opposite.
 private function conditionsAreOpposite(byval a as AstNode ptr, byval b as AstNode ptr) as integer
-	if astIsNOT(a) and (not astIsNOT(b)) then return astIsEqual(a->head, b)
-	if astIsNOT(b) and (not astIsNOT(a)) then return astIsEqual(b->head, a)
+	if astIsNOT(a) and (not astIsNOT(b)) then return astIsEqual(a->head, b, FALSE)
+	if astIsNOT(b) and (not astIsNOT(a)) then return astIsEqual(b->head, a, FALSE)
 	function = FALSE
 end function
 

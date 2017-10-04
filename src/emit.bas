@@ -750,7 +750,7 @@ sub CodeGen.emitExpr(byval n as AstNode ptr, byval need_parens as integer, byval
 		case ASTKIND_ELLIPSIS
 			add(TK_ELLIPSIS)
 		case ASTKIND_CONSTI
-			add(TK_NUMLIT, str(astEvalConstiAsInt64(n->expr) - 1))
+			add(TK_NUMLIT, str(n->expr->evalConstiAsInt64() - 1))
 		case else
 			emitExpr(n->expr, TRUE)
 			add(TK_SPACE)
@@ -766,7 +766,7 @@ sub CodeGen.emitExpr(byval n as AstNode ptr, byval need_parens as integer, byval
 		add(TK_ELLIPSIS)
 
 	case else
-		astDump(n)
+		n->dump()
 		assert(FALSE)
 	end select
 
@@ -1063,8 +1063,8 @@ sub CodeGen.emitCode(byval n as AstNode ptr, byval parentkind as integer)
 
 	case ASTKIND_PPDEFINE
 		if n->expr then
-			if astIsCodeScopeBlock(n->expr) then
-				if astIsScopeBlockWith1Stmt(n->expr) then
+			if n->expr->isCodeScopeBlock() then
+				if n->expr->isScopeBlockWith1Stmt() then
 					'' Emit macro body with scope block in single-line #define
 					emitMacroHeader(n, KW_DEFINE)
 					eolSingleLineBegin()

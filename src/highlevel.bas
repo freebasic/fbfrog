@@ -253,14 +253,14 @@ function ExpressionFixUp.calculateCTypes(byval n as AstNode ptr) as integer
 	case ASTKIND_TEXT
 		var item = symbols.lookup(n->text, hashHash(n->text))
 		if item->s then
-			astSetType(n, cint(item->data), NULL)
+			n->setType(cint(item->data), NULL)
 		else
-			astSetType(n, TYPE_NONE, NULL)
+			n->setType(TYPE_NONE, NULL)
 			allresolved = FALSE
 		end if
 
 	case ASTKIND_CDEFINED
-		astSetType(n, TYPE_LONG, NULL)
+		n->setType(TYPE_LONG, NULL)
 
 	case ASTKIND_IIF, ASTKIND_CLOGOR, ASTKIND_CLOGAND, _
 	     ASTKIND_CEQ, ASTKIND_CNE, ASTKIND_CLT, ASTKIND_CLE, ASTKIND_CGT, ASTKIND_CGE, _
@@ -272,7 +272,7 @@ function ExpressionFixUp.calculateCTypes(byval n as AstNode ptr) as integer
 		'' UOPs will have one operand (i.e. ldtype/rdtype will be the same)
 		var ldtype = n->head->dtype
 		var rdtype = n->tail->dtype
-		astSetType(n, typeCBop(n->kind, ldtype, rdtype), NULL)
+		n->setType(typeCBop(n->kind, ldtype, rdtype), NULL)
 	end select
 
 	function = allresolved
@@ -375,9 +375,9 @@ private sub hlFixAddrOfStrLit(byval n as AstNode ptr)
 	   ((n->head->kind = ASTKIND_STRING) or _
 	    (n->head->kind = ASTKIND_STRCAT)) then
 		var strlit = n->head
-		astUnlink(n, n->head)
+		n->unlink(n->head)
 		strlit = astNew(ASTKIND_ADDROF, strlit)
-		astPrepend(n, strlit)
+		n->prepend(strlit)
 	end if
 end sub
 
@@ -402,7 +402,7 @@ end function
 private function hlAddMathCasts(byval parent as AstNode ptr, byval n as AstNode ptr) as AstNode ptr
 	var i = n->head
 	while i
-		i = astReplace(n, i, hlAddMathCasts(n, astClone(i)))
+		i = n->replace(i, hlAddMathCasts(n, i->clone()))
 	wend
 
 	select case as const n->kind
@@ -447,7 +447,7 @@ private function astOpsC2FB(byval n as AstNode ptr, byval is_bool_context as int
 		'' not 0 and -1)
 		case ASTKIND_CEQ, ASTKIND_CNE
 			if astIsCONSTI(n->tail) then
-				l_is_bool_context = (astEvalConstiAsInt64(n->tail) = 0)
+				l_is_bool_context = (n->tail->evalConstiAsInt64() = 0)
 			end if
 
 		'' iif() condition always is treated as bool
@@ -455,16 +455,16 @@ private function astOpsC2FB(byval n as AstNode ptr, byval is_bool_context as int
 			n->expr = astOpsC2FB(n->expr, TRUE)
 		end select
 
-		astReplace(n, n->head, astOpsC2FB(astClone(n->head), l_is_bool_context))
+		n->replace(n->head, astOpsC2FB(n->head->clone(), l_is_bool_context))
 		if n->head <> n->tail then
 			assert(n->head->nxt = n->tail)
-			astReplace(n, n->tail, astOpsC2FB(astClone(n->tail), r_is_bool_context))
+			n->replace(n->tail, astOpsC2FB(n->tail->clone(), r_is_bool_context))
 		end if
 
 	case else
 		var i = n->head
 		while i
-			i = astReplace(n, i, astOpsC2FB(astClone(i), FALSE))
+			i = n->replace(i, astOpsC2FB(i->clone(), FALSE))
 		wend
 	end select
 
@@ -480,8 +480,8 @@ private function astOpsC2FB(byval n as AstNode ptr, byval is_bool_context as int
 			'' Turn C's "!x" into FB's "x = 0"
 			n->kind = ASTKIND_EQ
 			var zero = astNew(ASTKIND_CONSTI, "0")
-			astSetType(zero, TYPE_LONG, NULL)
-			astAppend(n, zero)
+			zero->setType(TYPE_LONG, NULL)
+			n->append(zero)
 		case ASTKIND_CDEFINED : n->kind = ASTKIND_DEFINED
 		case ASTKIND_CLOGOR   : n->kind = ASTKIND_LOGOR
 		case ASTKIND_CLOGAND  : n->kind = ASTKIND_LOGAND
@@ -518,7 +518,7 @@ private sub hlRemoveExpressionTypes(byval n as AstNode ptr)
 		     ASTKIND_ADD, ASTKIND_SUB, ASTKIND_MUL, ASTKIND_DIV, ASTKIND_MOD, _
 		     ASTKIND_NOT, ASTKIND_NEGATE, ASTKIND_UNARYPLUS, _
 		     ASTKIND_SIZEOF, ASTKIND_DEFINED, ASTKIND_TEXT
-			astSetType(n, TYPE_NONE, NULL)
+			n->setType(TYPE_NONE, NULL)
 
 		case ASTKIND_CLOGOR, ASTKIND_CLOGAND, _
 		     ASTKIND_CEQ, ASTKIND_CNE, ASTKIND_CLT, ASTKIND_CLE, ASTKIND_CGT, ASTKIND_CGE, _
@@ -577,7 +577,7 @@ private sub hlRemoveEmptyReservedDefines(byval ast as AstNode ptr)
 	while i
 		var nxt = i->nxt
 		if isEmptyReservedDefine(i) then
-			astRemove(ast, i)
+			ast->remove(i)
 		end if
 		i = nxt
 	wend
@@ -590,7 +590,7 @@ private sub hlApplyRemoveOption(byval ast as AstNode ptr, byval astkind as integ
 
 		if (i->text <> NULL) and (astkind = -1) or (i->kind = astkind) then
 			if hl.api->idopt(opt).matches(i->text) then
-				astRemove(ast, i)
+				ast->remove(i)
 			end if
 		end if
 
@@ -608,7 +608,7 @@ private sub hlApplyRemove1st(byval ast as AstNode ptr)
 			if hl.api->idopt(tktokens.OPT_REMOVE1ST).matches(i->text) and _
 			   (not removed.contains(i->text, hashHash(i->text))) then
 				removed.addOverwrite(i->text, NULL)
-				astRemove(ast, i)
+				ast->remove(i)
 			end if
 		end if
 
@@ -625,7 +625,7 @@ private sub hlApplyRemove2nd(byval ast as AstNode ptr)
 		if i->text then
 			if hl.api->idopt(tktokens.OPT_REMOVE2ND).matches(i->text) then
 				if found1st.contains(i->text, hashHash(i->text)) then
-					astRemove(ast, i)
+					ast->remove(i)
 				else
 					found1st.addOverwrite(i->text, NULL)
 				end if
@@ -642,7 +642,7 @@ private sub hlApplyDropProcBodyOptions(byval ast as AstNode ptr)
 
 		if (i->kind = ASTKIND_PROC) and (i->expr <> NULL) then
 			if hl.api->idopt(tktokens.OPT_DROPPROCBODY).matches(i->text) then
-				astDelete(i->expr)
+				delete i->expr
 				i->expr = NULL
 			end if
 		end if
@@ -668,8 +668,8 @@ private sub hlApplyMoveOption(byval ast as AstNode ptr, byref search as string, 
 	wend
 
 	if (decltomove <> NULL) and (refdecl <> NULL) then
-		astUnlink(ast, decltomove)
-		astInsert(ast, decltomove, refdecl)
+		ast->unlink(decltomove)
+		ast->insert(decltomove, refdecl)
 	end if
 end sub
 
@@ -681,7 +681,7 @@ private function hlSetArraySizes(byval n as AstNode ptr) as integer
 		if dimension->expr->kind = ASTKIND_ELLIPSIS then
 			dim size as zstring ptr = hl.api->setarraysizeoptions.lookupDataOrNull(n->text)
 			if size then
-				astDelete(dimension->expr)
+				delete dimension->expr
 				dimension->expr = astNewTEXT(size)
 			end if
 		end if
@@ -693,9 +693,9 @@ private sub doRename(byval n as AstNode ptr, byval newid as zstring ptr)
 	if n->kind = ASTKIND_PPINCLUDE then
 		'' Allow -rename to affect PPINCLUDE nodes, but without giving them
 		'' alias strings (which could prevent merging and would add them to renamelists)
-		astSetText(n, newid)
+		n->setText(newid)
 	else
-		astRenameSymbol(n, newid)
+		n->renameSymbol(newid)
 	end if
 end sub
 
@@ -767,7 +767,7 @@ private function hlApplyRenameOption(byval n as AstNode ptr) as integer
 			if renamed_param_here and (n->expr <> NULL) then
 				assert(inside_macro = FALSE)
 				inside_macro = TRUE
-				astVisit(n->expr, @hlApplyRenameOption)
+				n->expr->visit(@hlApplyRenameOption)
 				inside_macro = FALSE
 			end if
 		end if
@@ -804,7 +804,7 @@ destructor TypedefTable()
 	for i as integer = 0 to table.room - 1
 		var item = table.items + i
 		if item->s then
-			astDelete(item->data)
+			delete cptr(AstNode ptr, item->data)
 		end if
 	next
 end destructor
@@ -814,7 +814,7 @@ function TypedefTable.lookup(byval id as zstring ptr) as AstNode ptr
 end function
 
 sub TypedefTable.addOverwrite(byval n as AstNode ptr)
-	var datatype = astClone(n)
+	var datatype = n->clone()
 
 	'' Resolve typedefs to the type they reference
 	'' TODO: what about CONSTs/PTRs? it's not enough to walk to the
@@ -830,14 +830,14 @@ sub TypedefTable.addOverwrite(byval n as AstNode ptr)
 	var item = table.lookup(datatype->text, hash)
 	if item->s then
 		'' Free existing AstNode before overwriting, or else it would be leaked
-		astDelete(item->data)
+		delete cptr(AstNode ptr, item->data)
 		item->s = NULL '' became dangling due to this
 	end if
 	table.add(item, hash, datatype->text, datatype)
 end sub
 
 private sub oopsCantExpandTypedef(byval typedef as AstNode ptr, byval n as AstNode ptr, byref reason as string)
-	oops("can't expand " + astDumpPrettyDecl(typedef, TRUE) + " into " + astDumpPrettyDecl(n, TRUE) + ": " + reason)
+	oops("can't expand " + typedef->dumpPrettyDecl(TRUE) + " into " + n->dumpPrettyDecl(TRUE) + ": " + reason)
 end sub
 
 '' Expand typedef assuming it's only a simple type, no array or procedure
@@ -846,7 +846,7 @@ private sub expandSimpleTypedef(byval typedef as AstNode ptr, byval n as AstNode
 	if newdtype = TYPE_NONE then
 		oopsCantExpandTypedef(typedef, n, "too many pointers, or ref to ref")
 	end if
-	astSetType(n, newdtype, typedef->subtype)
+	n->setType(newdtype, typedef->subtype)
 end sub
 
 private sub expandArrayTypedef(byval typedef as AstNode ptr, byval n as AstNode ptr)
@@ -860,11 +860,11 @@ private sub expandArrayTypedef(byval typedef as AstNode ptr, byval n as AstNode 
 	end if
 
 	'' Expand the array typedef
-	astSetType(n, typeGetConst(n->dtype) or typedef->dtype, typedef->subtype)
+	n->setType(typeGetConst(n->dtype) or typedef->dtype, typedef->subtype)
 	if n->array = NULL then
 		n->array = astNew(ASTKIND_ARRAY)
 	end if
-	astAppend(n->array, astCloneChildren(typedef->array))
+	n->array->append(typedef->array->cloneChildren())
 end sub
 
 ''
@@ -910,9 +910,9 @@ private sub expandProcTypedef(byval typedef as AstNode ptr, byval n as AstNode p
 			'' Copy over the function result type (overwriting any previous cv-qualifiers),
 			'' parameters, and callconv attributes
 			n->kind = ASTKIND_PROC
-			astSetType(n, proc->dtype, proc->subtype)
+			n->setType(proc->dtype, proc->subtype)
 			assert(n->head = NULL)
-			astAppend(n, astCloneChildren(proc))
+			n->append(proc->cloneChildren())
 			n->attrib or= proc->attrib
 
 			exit sub
@@ -937,7 +937,7 @@ private sub expandProcTypedef(byval typedef as AstNode ptr, byval n as AstNode p
 
 	'' Insert the typedef's type, overwriting the use of the typedef
 	assert(typeGetDtAndPtr(typedef->dtype) = TYPE_PROC)
-	astSetType(n, typeUnsetBaseConst(typeSetDt(n->dtype, TYPE_PROC)), typedef->subtype)
+	n->setType(typeUnsetBaseConst(typeSetDt(n->dtype, TYPE_PROC)), typedef->subtype)
 end sub
 
 '' Expand a typedef into a declaration (or any AstNode really), assuming that
@@ -996,7 +996,7 @@ sub TypedefExpander.walkDecls(byval n as AstNode ptr)
 			   (typeGetDtAndPtr(i->dtype) = TYPE_PROC) orelse _
 			   hl.api->idopt(tktokens.OPT_EXPAND).matches(i->text) then
 				typedefs.addOverwrite(i)
-				astRemove(n, i)
+				n->remove(i)
 			end if
 		end if
 
@@ -1040,10 +1040,10 @@ private function hlFixSpecialParameters(byval n as AstNode ptr) as integer
 		'' FB doesn't support C array parameters like that, so turn them into pointers:
 		''    int a[5]  ->  byval a as long ptr
 		if n->array then
-			astDelete(n->array)
+			delete n->array
 			n->array = NULL
 			if typeGetPtrCount(n->dtype) = TYPEMAX_PTR then
-				oops("too many pointers on " + astDumpPrettyDecl(n))
+				oops("too many pointers on " + n->dumpPrettyDecl(FALSE))
 			end if
 			n->dtype = typeAddrOf(n->dtype)
 		end if
@@ -1062,11 +1062,11 @@ private sub charArrayToFixLenStr(byval n as AstNode ptr)
 	assert(n->subtype = NULL)
 	n->subtype = d->expr
 	d->expr = NULL
-	astRemove(n->array, d)
+	n->array->remove(d)
 
 	'' If no dimensions left, remove the array type entirely
 	if n->array->head = NULL then
-		astDelete(n->array)
+		delete n->array
 		n->array = NULL
 	end if
 end sub
@@ -1090,7 +1090,7 @@ private sub stringToByte(byval n as AstNode ptr)
 		var d = astNew(ASTKIND_DIMENSION)
 		d->expr = n->subtype
 		n->subtype = NULL
-		astAppend(n->array, d)
+		n->array->append(d)
 	end if
 end sub
 
@@ -1325,12 +1325,12 @@ function RenameJobs.add(byval oldid as zstring ptr, byval newname as AstNode ptr
 	'' UDT will become "renamed" too, and thus the type will continue to
 	'' appear in renamelists.
 	var newid = astNewTEXT(newname->text)
-	astCopyOrigId(newid, newname)
+	newid->copyOrigId(newname)
 
 	if item->s then
 		'' Free existing newid if there already is a renamejob for this oldid,
 		'' then the new newid can be stored
-		astDelete(item->data)
+		delete cptr(AstNode ptr, item->data)
 		item->data = newid
 	else
 		table.add(item, hash, oldid, newid)
@@ -1345,11 +1345,11 @@ sub RenameJobs.maybeApply(byval n as AstNode ptr)
 	if newid then
 		'' Change the id if needed
 		if *n->text <> *newid->text then
-			astSetText(n, newid->text)
+			n->setText(newid->text)
 		end if
 
 		'' Overwrite origid too
-		astCopyOrigId(n, newid)
+		n->copyOrigId(newid)
 
 		'' Remove attributes even if id strictly speaking doesn't change
 		n->attrib and= not (ASTATTRIB_TAGID or ASTATTRIB_GENERATEDID)
@@ -1388,7 +1388,7 @@ destructor RenameJobs()
 	for i as integer = 0 to table.room - 1
 		var item = table.items + i
 		if item->s then
-			astDelete(item->data)
+			delete cptr(AstNode ptr, item->data)
 		end if
 	next
 end destructor
@@ -1404,7 +1404,7 @@ private sub hlSolveOutTagIds(byval n as AstNode ptr, byref renames as RenameJobs
 				'if i->subtype->attrib and ASTATTRIB_TAGID then
 				if i->subtype->attrib and ASTATTRIB_GENERATEDID then
 					if renames.add(i->subtype->text, i) then
-						astRemove(n, i)
+						n->remove(i)
 					end if
 				end if
 			end if
@@ -1429,7 +1429,7 @@ private sub hlRemoveSameIdTypedefs(byval n as AstNode ptr, byref renames as Rena
 				assert(astIsTEXT(i->subtype))
 				if ucase(*i->subtype->text, 1) = ucase(*i->text, 1) then
 					if renames.add(i->subtype->text, i) then
-						astRemove(n, i)
+						n->remove(i)
 					end if
 				end if
 			end if
@@ -1540,7 +1540,7 @@ private sub hlScanForForwardUsedTypes(byval ast as AstNode ptr)
 		end select
 
 		hl.currentdecl = i
-		astVisit(i, @hlCollectForwardUses)
+		i->visit(@hlCollectForwardUses)
 		hl.currentdecl = NULL
 
 		i = i->nxt
@@ -1570,14 +1570,14 @@ private sub hlAddForwardDecls(byval ast as AstNode ptr)
 			fwd->dtype = TYPE_UDT
 			fwd->subtype = astNewTEXT(fwdid)
 			fwd->location = typ->firstuse->location
-			astInsert(ast, fwd, typ->firstuse)
+			ast->insert(fwd, typ->firstuse)
 			if typ->definition then
 				assert(*typ->id = *typ->definition->text)
-				astSetText(typ->definition, fwdid)
+				typ->definition->setText(fwdid)
 				'' Move the type's alias/origid onto the forward decl,
 				'' since that now declares that type and should be what
 				'' appears in renamelists.
-				astTakeAliasAndOrigId(fwd, typ->definition)
+				fwd->takeAliasAndOrigId(typ->definition)
 			end if
 		end if
 	next
@@ -1587,7 +1587,7 @@ private function hIsUnsizedArray(byval n as AstNode ptr) as integer
 	if n->array then
 		assert(n->array->kind = ASTKIND_ARRAY)
 		assert(n->array->head->kind = ASTKIND_DIMENSION)
-		function = astHas1Child(n->array) and (n->array->head->expr->kind = ASTKIND_ELLIPSIS)
+		function = n->array->has1Child() and (n->array->head->expr->kind = ASTKIND_ELLIPSIS)
 	end if
 end function
 
@@ -1598,15 +1598,15 @@ private sub hFixUnsizedArray(byval ast as AstNode ptr, byval n as AstNode ptr)
 
 		var def = astNewPPDEFINE(id)
 		def->paramcount = 1
-		astAppend(def, astNew(ASTKIND_MACROPARAM, "i"))
+		def->append(astNew(ASTKIND_MACROPARAM, "i"))
 		def->expr = astNewTEXT("((@" + tempid + ")[i])")
 		def->location = n->location
-		astInsert(ast, def, n)
+		ast->insert(def, n)
 
-		astTakeOrigId(def, n)
-		astRenameSymbolWithoutSettingOrigId(n, tempid)
+		def->takeOrigId(n)
+		n->renameSymbolWithoutSettingOrigId(tempid)
 
-		astDelete(n->array)
+		delete n->array
 		n->array = NULL
 
 		exit sub
@@ -1621,12 +1621,12 @@ private sub hFixUnsizedArray(byval ast as AstNode ptr, byval n as AstNode ptr)
 			var def = astNewPPDEFINE(id)
 			def->expr = astNewTEXT("(*cptr(" + emitFbType(typeAddrOf(n->dtype), NULL) + ", @" + tempid + "))")
 			def->location = n->location
-			astInsert(ast, def, n->nxt)
+			ast->insert(def, n->nxt)
 
-			astTakeOrigId(def, n)
-			astRenameSymbolWithoutSettingOrigId(n, tempid)
+			def->takeOrigId(n)
+			n->renameSymbolWithoutSettingOrigId(tempid)
 
-			astDelete(n->subtype)
+			delete n->subtype
 			n->subtype = NULL
 			stringToByte(n)
 		end if
@@ -1673,11 +1673,11 @@ private sub hlDropMacroBodyScopes(byval ast as AstNode ptr)
 		if (i->kind = ASTKIND_PPDEFINE) andalso _
 		   i->expr andalso (i->expr->kind = ASTKIND_SCOPEBLOCK) then
 			if i->expr->head = NULL then
-				astDelete(i->expr)
+				delete i->expr
 				i->expr = NULL
-			elseif astHas1Child(i->expr) then
-				var stmt = astClone(i->expr->head)
-				astDelete(i->expr)
+			elseif i->expr->has1Child() then
+				var stmt = i->expr->head->clone()
+				delete i->expr
 				i->expr = stmt
 			end if
 		end if
@@ -1698,8 +1698,8 @@ private sub hlRemoveVoidCasts(byval ast as AstNode ptr)
 		   i->expr andalso _
 		   (i->expr->kind = ASTKIND_CAST) andalso _
 		   (i->expr->dtype = TYPE_ANY) then
-			var expr = astClone(i->expr->head)
-			astDelete(i->expr)
+			var expr = i->expr->head->clone()
+			delete i->expr
 			i->expr = expr
 		end if
 
@@ -1715,7 +1715,7 @@ private sub hlAddUndefsAboveDecls(byval ast as AstNode ptr)
 			if hl.api->idopt(tktokens.OPT_UNDEFBEFOREDECL).matches(i->text) then
 				var undef = astNew(ASTKIND_UNDEF, i->text)
 				undef->location = i->location
-				astInsert(ast, undef, i)
+				ast->insert(undef, i)
 			end if
 		end if
 
@@ -1802,7 +1802,7 @@ private function allowedToTurnProc2Macro(byval proc as AstNode ptr, byval expr a
 	end if
 
 	paramusage = new ParamUsageChecker(proc, FALSE)
-	astVisit(expr, @collectParamUses)
+	expr->visit(@collectParamUses)
 	var have_multiple_uses = paramusage->have_multiple_uses
 	delete paramusage
 	paramusage = NULL
@@ -1821,7 +1821,7 @@ private sub maybeProc2Macro(byval proc as AstNode ptr)
 	assert(body->kind = ASTKIND_SCOPEBLOCK)
 
 	'' just a RETURN?
-	if astHasOnlyChild(body, ASTKIND_RETURN) then
+	if body->hasOnlyChild(ASTKIND_RETURN) then
 		var ret = body->head
 
 		'' does it return an expression?
@@ -1834,7 +1834,7 @@ private sub maybeProc2Macro(byval proc as AstNode ptr)
 
 				'' Wrap references to macro parameters in parentheses
 				paramusage = new ParamUsageChecker(proc, TRUE)
-				astVisit(ret->head, @collectParamUses)
+				ret->head->visit(@collectParamUses)
 				delete paramusage
 				paramusage = NULL
 
@@ -1844,23 +1844,23 @@ private sub maybeProc2Macro(byval proc as AstNode ptr)
 				var param = proc->head
 				while param
 					param->kind = ASTKIND_MACROPARAM
-					astSetType(param, TYPE_NONE, NULL)
+					param->setType(TYPE_NONE, NULL)
 					param = param->nxt
 				wend
 
 				'' Macro body, add cast if there is none yet
-				var expr = astClone(ret->head)
-				if astIsCastTo(expr, proc->dtype, proc->subtype) = FALSE then
+				var expr = ret->head->clone()
+				if expr->isCastTo(proc->dtype, proc->subtype) = FALSE then
 					expr = astNew(ASTKIND_CAST, expr)
-					astSetType(expr, proc->dtype, proc->subtype)
+					expr->setType(proc->dtype, proc->subtype)
 				end if
 
 				'' Proc body -> macro body
-				astDelete(proc->expr)
+				delete proc->expr
 				proc->expr = expr
 
 				'' Forget function dtype & callconv
-				astSetType(proc, TYPE_NONE, NULL)
+				proc->setType(TYPE_NONE, NULL)
 				proc->attrib and= not ASTATTRIB__CALLCONV
 			end if
 		end if
@@ -1883,7 +1883,7 @@ end sub
 private sub maybeRemoveSelfDefine(byval ast as AstNode ptr, byval i as AstNode ptr, byval aliasedid as zstring ptr)
 	'' Aliasing same id?
 	if *i->text = *aliasedid then
-		astRemove(ast, i)
+		ast->remove(i)
 	end if
 end sub
 
@@ -2118,14 +2118,16 @@ end sub
 private sub copyAttribsTypeEtcAndChooseAlias(byval n as AstNode ptr, byval decl as AstNode ptr)
 	n->kind = decl->kind
 	n->attrib or= decl->attrib and (ASTATTRIB_DLLIMPORT or ASTATTRIB__CALLCONV or ASTATTRIB_EXTERN)
-	astSetType(n, decl->dtype, decl->subtype)
-	n->array = astClone(decl->array)
-	astAppend(n, astCloneChildren(decl))
-	astSetAlias(n, iif(decl->alias_, decl->alias_, decl->text))
+	n->setType(decl->dtype, decl->subtype)
+	if decl->array then
+		n->array = decl->array->clone()
+	end if
+	n->append(decl->cloneChildren())
+	n->setAlias(iif(decl->alias_, decl->alias_, decl->text))
 end sub
 
 private sub astDropExpr(byval n as AstNode ptr)
-	astDelete(n->expr)
+	delete n->expr
 	n->expr = NULL
 end sub
 
@@ -2148,7 +2150,9 @@ private sub turnDefine2Decl(byval n as AstNode ptr, byval decl as AstNode ptr)
 		n->kind = ASTKIND_TYPEDEF
 		n->dtype = TYPE_UDT
 		n->subtype = astNewTEXT(decl->text)
-		n->array = astClone(decl->array)
+		if decl->array then
+			n->array = decl->array->clone()
+		end if
 		astDropExpr(n)
 
 	case ASTKIND_PROC
@@ -2209,8 +2213,8 @@ sub Define2Decl.workDecl(byval ast as AstNode ptr, byval decl as AstNode ptr, by
 			'' Move the collected #defines behind the declaration and process them
 			for i as integer = 0 to info->defcount - 1
 				var aliasdef = info->defs[i]
-				astUnlink(ast, aliasdef)
-				astInsert(ast, aliasdef, insertbefore)
+				ast->unlink(aliasdef)
+				ast->insert(aliasdef, insertbefore)
 
 				'' This may even move the #define into a different header file
 				aliasdef->location = insertbehind->location
@@ -2363,7 +2367,7 @@ end constructor
 sub MacroParamRenamer.walk(byval n as AstNode ptr)
 	if n->kind = ASTKIND_TEXT then
 		if *n->text = oldname then
-			astSetText(n, newname)
+			n->setText(newname)
 		end if
 	end if
 
@@ -2410,7 +2414,7 @@ private sub autoRenameConflictingMacroParams(byval macro as AstNode ptr)
 			   (not macroParamConflictsWithMacroParam(paramname, macro)) then
 				'' Auto-rename
 				var newname = paramname + "_"
-				astSetText(param, newname)
+				param->setText(newname)
 				scope
 					dim renamer as MacroParamRenamer = MacroParamRenamer(paramname, newname)
 					renamer.walk(macro->expr)
@@ -2527,8 +2531,8 @@ sub IncludePass.work(byval ast as AstNode ptr, byref bioptions as ApiSpecificBiO
 		if i->kind = ASTKIND_PPINCLUDE then
 			'' Move to top (outside of Extern block), without changing the order
 			assert(i <> top)
-			astUnlink(ast, i)
-			astInsert(ast, i, top)
+			ast->unlink(i)
+			ast->insert(i, top)
 		end if
 
 		i = nxt
@@ -2536,7 +2540,7 @@ sub IncludePass.work(byval ast as AstNode ptr, byref bioptions as ApiSpecificBiO
 
 	'' Add #includes from -addinclude options
 	if bioptions.addincludes then
-		astInsert(ast, bioptions.addincludes, top)
+		ast->insert(bioptions.addincludes, top)
 		bioptions.addincludes = NULL
 	end if
 
@@ -2549,10 +2553,10 @@ sub IncludePass.work(byval ast as AstNode ptr, byref bioptions as ApiSpecificBiO
 		if i->kind = ASTKIND_PPINCLUDE then
 			var filename = *i->text
 			if hl.api->removeinclude.contains(filename, hashHash(filename)) then
-				astRemove(ast, i)
+				ast->remove(i)
 			else
 				translateHeaderFileName(filename)
-				astSetText(i, filename)
+				i->setText(filename)
 			end if
 		end if
 
@@ -2571,7 +2575,7 @@ sub IncludePass.work(byval ast as AstNode ptr, byref bioptions as ApiSpecificBiO
 			var hash = hashHash(i->text)
 			var item = includes.lookup(i->text, hash)
 			if item->s then
-				astRemove(ast, i)
+				ast->remove(i)
 			else
 				includes.add(item, hash, i->text, NULL)
 			end if
@@ -2601,16 +2605,16 @@ private function hlBuildRenameList(byval n as AstNode ptr) as AstNode ptr
 		   (i->kind <> ASTKIND_UNDEF) then
 			var msg = astDumpPrettyKind(i->kind)
 			msg += " " + *i->origid + " => " + *i->text
-			astAppend(list, astNewTEXT(msg))
+			list->append(astNewTEXT(msg))
 		end if
 
 		'' TODO: recurse into struct/union if renaming fields...
-		''astAppend(list, hlBuildRenameList(i))
+		''list->append(hlBuildRenameList(i))
 
 		if i->kind = ASTKIND_ENUM then
 			'' Handle enumconsts - they're in the same scope as the enum itself anyways,
 			'' so we don't need to worry about making a nested renamelist for the enum.
-			astAppend(list, hlBuildRenameList(i))
+			list->append(hlBuildRenameList(i))
 		end if
 
 
@@ -2627,8 +2631,8 @@ private function hlTurnWhile0IntoScope(byval n as AstNode ptr) as integer
 	select case n->kind
 	case ASTKIND_DOWHILE, ASTKIND_WHILE
 		'' Loop condition is just a 0?
-		if astIsConst0(n->expr) then
-			astDelete(n->expr)
+		if n->expr->isConst0() then
+			delete n->expr
 			n->expr = NULL
 			n->kind = ASTKIND_SCOPEBLOCK
 		end if
@@ -2641,10 +2645,10 @@ private function hlSolveOutUnnecessaryScopeBlocks(byval n as AstNode ptr) as int
 	case ASTKIND_SCOPEBLOCK, ASTKIND_DOWHILE, ASTKIND_WHILE, _
 	     ASTKIND_IFPART, ASTKIND_ELSEIFPART, ASTKIND_ELSEPART
 		'' Contains just a SCOPEBLOCK?
-		while astHasOnlyChild(n, ASTKIND_SCOPEBLOCK)
+		while n->hasOnlyChild(ASTKIND_SCOPEBLOCK)
 			'' Move scope block's children in place of the scope block
-			astAppend(n, astCloneChildren(n->head))
-			astRemove(n, n->head)
+			n->append(n->head->cloneChildren())
+			n->remove(n->head)
 		wend
 
 	case ASTKIND_PPDEFINE
@@ -2657,15 +2661,15 @@ private function hlSolveOutUnnecessaryScopeBlocks(byval n as AstNode ptr) as int
 			var scopeblock = n->expr
 
 			'' Exactly one statement?
-			if astHas1Child(scopeblock) = FALSE then exit do
+			if scopeblock->has1Child() = FALSE then exit do
 
 			'' It's a scope/if/loop?
 			select case scopeblock->head->kind
 			case ASTKIND_SCOPEBLOCK, ASTKIND_IFBLOCK, ASTKIND_DOWHILE, ASTKIND_WHILE
 				'' Remove the outer scope block, and directly use the inner block as macro body.
 				var stmt = scopeblock->head
-				astUnlink(scopeblock, stmt)
-				astDelete(n->expr)
+				scopeblock->unlink(stmt)
+				delete n->expr
 				n->expr = stmt
 
 			case else
@@ -2687,7 +2691,7 @@ private function hlCreateElseIfs(byval n as AstNode ptr) as integer
 			end if
 
 			'' Contains just an IFBLOCK?
-			if astHasOnlyChild(elsepart, ASTKIND_IFBLOCK) = FALSE then
+			if elsepart->hasOnlyChild(ASTKIND_IFBLOCK) = FALSE then
 				exit do
 			end if
 
@@ -2696,13 +2700,13 @@ private function hlCreateElseIfs(byval n as AstNode ptr) as integer
 
 			'' Copy the if/elseif/else parts from the nested ifblock
 			'' into the parent ifblock, behind the else part
-			astAppend(n, astCloneChildren(nestedif))
+			n->append(nestedif->cloneChildren())
 
 			'' Turn the added if part into an elseif
 			assert(elsepart->nxt->kind = ASTKIND_IFPART)
 			elsepart->nxt->kind = ASTKIND_ELSEIFPART
 
-			astRemove(n, elsepart)
+			n->remove(elsepart)
 		loop
 	end if
 	function = TRUE
@@ -2858,7 +2862,7 @@ sub hlAutoAddDividers(byval ast as AstNode ptr)
 
 			'' Insert divider behind the block, to separate it from the next
 			'' block. The divider isn't treated as part of a block.
-			astInsert(ast, astNew(ASTKIND_DIVIDER), i)
+			ast->insert(astNew(ASTKIND_DIVIDER), i)
 		loop
 	end if
 end sub
@@ -2902,11 +2906,11 @@ sub hlGlobal(byval ast as AstNode ptr, byref api as ApiInfo)
 		hlApplyDropProcBodyOptions(ast)
 	end if
 
-	astVisit(ast, @hlSetArraySizes)
+	ast->visit(@hlSetArraySizes)
 
 	'' Apply -rename* options, if any
 	if api.have_renames then
-		astVisit(ast, @hlApplyRenameOption)
+		ast->visit(@hlApplyRenameOption)
 	end if
 
 	'' Remove exact-alias #defines (e.g. <#define A A>), they're neither
@@ -2941,7 +2945,7 @@ sub hlGlobal(byval ast as AstNode ptr, byref api as ApiInfo)
 	''   function => function pointer
 	''   array => pointer to the element type
 	''   jmp_buf => jmp_buf ptr (jmp_buf is an array type in C)
-	astVisit(ast, @hlFixSpecialParameters)
+	ast->visit(@hlFixSpecialParameters)
 
 	'' Handle char/string types
 	scope
@@ -3083,7 +3087,7 @@ sub hlFile(byval ast as AstNode ptr, byref api as ApiInfo, byref bioptions as Ap
 	'' Add Extern block
 	''  * to preserve identifiers of global variables/procedures
 	''  * to cover the most-used calling convention
-	astVisit(ast, @hlCountCallConvs)
+	ast->visit(@hlCountCallConvs)
 	if hl.need_extern then
 		if hl.stdcalls > hl.cdecls then
 			hl.mostusedcallconv = ASTATTRIB_STDCALL
@@ -3093,7 +3097,7 @@ sub hlFile(byval ast as AstNode ptr, byref api as ApiInfo, byref bioptions as Ap
 
 		'' Remove the calling convention from all procdecls,
 		'' the Extern block will take over
-		astVisit(ast, @hlHideCallConv)
+		ast->visit(@hlHideCallConv)
 
 		var externblock = @"C"
 		if hl.mostusedcallconv = ASTATTRIB_STDCALL then
@@ -3105,8 +3109,8 @@ sub hlFile(byval ast as AstNode ptr, byref api as ApiInfo, byref bioptions as Ap
 		end if
 
 		assert(ast->kind = ASTKIND_GROUP)
-		astPrepend(ast, astNew(ASTKIND_EXTERNBLOCKBEGIN, externblock))
-		astAppend(ast, astNew(ASTKIND_EXTERNBLOCKEND))
+		ast->prepend(astNew(ASTKIND_EXTERNBLOCKBEGIN, externblock))
+		ast->append(astNew(ASTKIND_EXTERNBLOCKEND))
 	end if
 
 	'' If any symbols from this file were renamed, add a rename list at the top
@@ -3115,10 +3119,10 @@ sub hlFile(byval ast as AstNode ptr, byref api as ApiInfo, byref bioptions as Ap
 		var entries = hlBuildRenameList(ast)
 		if entries->head then
 			var renamelist = astNew(ASTKIND_RENAMELIST, "The following symbols have been renamed:")
-			astAppend(renamelist, entries)
-			astPrepend(ast, renamelist)
+			renamelist->append(entries)
+			ast->prepend(renamelist)
 		else
-			astDelete(entries)
+			delete entries
 		end if
 	end if
 
@@ -3133,27 +3137,27 @@ sub hlFile(byval ast as AstNode ptr, byref api as ApiInfo, byref bioptions as Ap
 
 	'' Add #includes for "crt/long[double].bi" and "crt/wchar.bi" if the
 	'' binding uses the clong[double]/wchar_t types
-	astVisit(ast, @hlSearchSpecialDtypes)
+	ast->visit(@hlSearchSpecialDtypes)
 	if hl.uses_clongdouble then
-		astPrepend(ast, astNew(ASTKIND_PPINCLUDE, "crt/longdouble.bi"))
+		ast->prepend(astNew(ASTKIND_PPINCLUDE, "crt/longdouble.bi"))
 	end if
 	if hl.uses_clong then
-		astPrepend(ast, astNew(ASTKIND_PPINCLUDE, "crt/long.bi"))
+		ast->prepend(astNew(ASTKIND_PPINCLUDE, "crt/long.bi"))
 	end if
 
 	'' Prepend #inclibs/#undefs
 	if bioptions.undefs then
-		astPrepend(ast, bioptions.undefs)
+		ast->prepend(bioptions.undefs)
 		bioptions.undefs = NULL
 	end if
 	if bioptions.inclibs then
-		astPrepend(ast, bioptions.inclibs)
+		ast->prepend(bioptions.inclibs)
 		bioptions.inclibs = NULL
 	end if
 
-	astVisit(ast, @hlTurnWhile0IntoScope)
-	astVisit(ast, @hlSolveOutUnnecessaryScopeBlocks)
-	astVisit(ast, @hlCreateElseIfs)
+	ast->visit(@hlTurnWhile0IntoScope)
+	ast->visit(@hlSolveOutUnnecessaryScopeBlocks)
+	ast->visit(@hlCreateElseIfs)
 end sub
 
 function hlCountDecls(byval ast as AstNode ptr) as integer

@@ -79,7 +79,7 @@ constructor CNumLitParser _
 end constructor
 
 destructor CNumLitParser()
-	astDelete(ast)
+	delete ast
 end destructor
 
 function CNumLitParser.takeAst() as AstNode ptr
@@ -508,7 +508,7 @@ private sub hMacroParam(byref tk as TokenBuffer, byref x as integer, byval macro
 
 	var param = astNew(ASTKIND_MACROPARAM, id)
 	param->attrib or= maybevariadic
-	astAppend(macro, param)
+	macro->append(param)
 	macro->attrib or= maybevariadic
 	macro->paramcount += 1
 end sub
