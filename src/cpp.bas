@@ -530,48 +530,37 @@ type DefineInfo
 
 	'' PPDEFINE node with information about the macro's parameters etc.
 	macro	as AstNode ptr
+
+	declare destructor()
+	declare function clone() as DefineInfo ptr
+	declare sub copyBody(byval x as integer)
+	declare function equals(byval b as DefineInfo ptr) as integer
 end type
 
-private function definfoNew() as DefineInfo ptr
-	function = callocate(sizeof(DefineInfo))
-end function
+destructor DefineInfo()
+	astDelete(macro)
+end destructor
 
-private sub definfoDelete(byval definfo as DefineInfo ptr)
-	if definfo then
-		astDelete(definfo->macro)
-		deallocate(definfo)
-	end if
-end sub
-
-private function definfoClone(byval a as DefineInfo ptr) as DefineInfo ptr
-	var b = definfoNew()
-	b->xbody   = a->xbody
-	b->xeol    = a->xeol
-	b->macro   = astClone(a->macro)
+function DefineInfo.clone() as DefineInfo ptr
+	var b = new DefineInfo
+	b->xbody   = xbody
+	b->xeol    = xeol
+	b->macro   = astClone(macro)
 	function = b
 end function
 
 const DEFINEBODY_FLAGMASK = not (TKFLAG_REMOVE or TKFLAG_DIRECTIVE)
 
 '' Copy a #define body into some other place
-private sub definfoCopyBody(byval definfo as DefineInfo ptr, byval x as integer)
-	assert(x > definfo->xeol)
-	tkCopy(x, definfo->xbody, definfo->xeol - 1, DEFINEBODY_FLAGMASK)
+sub DefineInfo.copyBody(byval x as integer)
+	assert(x > xeol)
+	tkCopy(x, xbody, xeol - 1, DEFINEBODY_FLAGMASK)
 end sub
 
 '' Compare two #defines and determine whether they are equal
-private function definfoDefinesAreEqual(byval a as DefineInfo ptr, byval b as DefineInfo ptr) as integer
-	'' Check name and parameters
-	if astIsEqual(a->macro, b->macro) = FALSE then
-		exit function
-	end if
-
-	'' Check body
-	if tkSpell(a->xbody, a->xeol) <> tkSpell(b->xbody, b->xeol) then
-		exit function
-	end if
-
-	function = TRUE
+function DefineInfo.equals(byval b as DefineInfo ptr) as integer
+	'' Check name, parameters and body
+	return astIsEqual(macro, b->macro) andalso tkSpell(xbody, xeol) = tkSpell(b->xbody, b->xeol)
 end function
 
 type SAVEDMACRO
@@ -584,7 +573,7 @@ end type
 
 private sub savedmacroDtor(byval macro as SAVEDMACRO ptr)
 	deallocate(macro->id)
-	definfoDelete(macro->definfo)
+	delete macro->definfo
 end sub
 
 enum
@@ -708,7 +697,7 @@ sub cppEnd()
 
 	scope
 		for i as integer = 0 to cpp.macros->room - 1
-			definfoDelete(cpp.macros->items[i].data)
+			delete cptr(DefineInfo ptr, cpp.macros->items[i].data)
 		next
 		delete cpp.macros
 	end scope
@@ -779,7 +768,7 @@ private sub cppAddMacro(byval id as zstring ptr, byval definfo as DefineInfo ptr
 	var hash = hashHash(id)
 	var item = cpp.macros->lookup(id, hash)
 	if item->s then
-		definfoDelete(item->data)
+		delete cptr(DefineInfo ptr, item->data)
 		item->data = definfo
 	else
 		cpp.macros->add(item, hash, id, definfo)
@@ -831,7 +820,7 @@ private sub cppSaveMacro(byval id as zstring ptr)
 	'' otherwise, if it's undefined, we use NULL.
 	var definfo = cppLookupMacro(id)
 	if definfo then
-		definfo = definfoClone(definfo)
+		definfo = definfo->clone()
 	end if
 
 	cppAppendSavedMacro(id, definfo)
@@ -1579,7 +1568,7 @@ private function hInsertMacroExpansion _
 	( _
 		byval callbehindspace as integer, _
 		byval expansionbegin as integer, _
-		byval definfo as DefineInfo ptr, _
+		byref definfo as DefineInfo, _
 		byval argbegin as integer ptr, _
 		byval argend as integer ptr, _
 		byval argcount as integer, _
@@ -1595,7 +1584,7 @@ private function hInsertMacroExpansion _
 	'' Instead, if we need to know the end of the expansion, we can just
 	'' look for the TK_END.
 	tkInsert(expansionbegin, TK_END)
-	definfoCopyBody(definfo, expansionbegin)
+	definfo.copyBody(expansionbegin)
 	tkInsert(expansionbegin, TK_BEGIN)
 
 	'' Update the BEHINDSPACE status of the first token in the expansion to
@@ -1612,7 +1601,7 @@ private function hInsertMacroExpansion _
 			'' Followed by identifier?
 			if tkGet(x + 1) >= TK_ID then
 				'' Is it a macro parameter?
-				var arg = astLookupMacroParam(definfo->macro, tkSpellId(x + 1))
+				var arg = astLookupMacroParam(definfo.macro, tkSpellId(x + 1))
 				if arg >= 0 then
 					'' Remove #param, and insert stringify result instead
 					'' but preserve BEHINDSPACE status.
@@ -1662,7 +1651,7 @@ private function hInsertMacroExpansion _
 
 		'' Macro parameter?
 		if tkGet(x) >= TK_ID then
-			var arg = astLookupMacroParam(definfo->macro, tkSpellId(x))
+			var arg = astLookupMacroParam(definfo.macro, tkSpellId(x))
 			if arg >= 0 then
 				'' >= TK_ID
 				var behindspace = tkGetFlags(x) and TKFLAG_BEHINDSPACE
@@ -1847,7 +1836,7 @@ end function
 
 private sub hExpandMacro _
 	( _
-		byval definfo as DefineInfo ptr, _
+		byref definfo as DefineInfo, _
 		byval callbegin as integer, _
 		byval callend as integer, _
 		byval argbegin as integer ptr, _
@@ -1875,9 +1864,9 @@ private sub hExpandMacro _
 		'' - Incomplete recursive calls need to be marked with NOEXPAND so they
 		''   won't be expanded later when they become complete by taking into
 		''   account tokens following behind the expansion.
-		definfo->macro->attrib or= ASTATTRIB_POISONED
+		definfo.macro->attrib or= ASTATTRIB_POISONED
 		expansionend = hExpandInRange(expansionbegin, expansionend, inside_ifexpr)
-		definfo->macro->attrib and= not ASTATTRIB_POISONED
+		definfo.macro->attrib and= not ASTATTRIB_POISONED
 	end if
 
 	'' Disable future expansion of recursive macro calls to this macro
@@ -1889,13 +1878,13 @@ private sub hExpandMacro _
 			if tkGet(x) >= TK_ID then
 				'' Known macro, and it's the same as this one?
 				var calldefinfo = hCheckForMacroCall(x)
-				if calldefinfo = definfo then
+				if calldefinfo = @definfo then
 					'' Can the macro call be parsed successfully,
 					'' and is it fully within the expansion?
 					dim as integer argbegin(0 to MAXARGS-1)
 					dim as integer argend(0 to MAXARGS-1)
 					dim as integer argcount
-					var callend = hParseMacroCall(x, definfo->macro, @argbegin(0), @argend(0), argcount)
+					var callend = hParseMacroCall(x, definfo.macro, @argbegin(0), @argend(0), argcount)
 					if (callend >= 0) and (callend <= expansionend) then
 						tkAddFlags(x, x, TKFLAG_NOEXPAND)
 					end if
@@ -1938,7 +1927,7 @@ private function hMaybeExpandMacro(byval x as integer, byval inside_ifexpr as in
 		exit function
 	end if
 
-	hExpandMacro(definfo, callbegin, callend, @argbegin(0), @argend(0), argcount, inside_ifexpr, expand_recursively)
+	hExpandMacro(*definfo, callbegin, callend, @argbegin(0), @argend(0), argcount, inside_ifexpr, expand_recursively)
 	function = TRUE
 end function
 
@@ -2497,7 +2486,7 @@ private sub hMaybeExpandMacroInDefineBody(byval parentdefine as AstNode ptr)
 		end if
 	next
 
-	hExpandMacro(definfo, callbegin, callend, @argbegin(0), @argend(0), argcount, FALSE, FALSE)
+	hExpandMacro(*definfo, callbegin, callend, @argbegin(0), @argend(0), argcount, FALSE, FALSE)
 
 	'' TK_ID expanded; reparse it
 	cpp.x -= 1
@@ -2554,7 +2543,7 @@ private sub cppDefine(byref flags as integer)
 	assert(tkGet(xeol) = TK_EOL)
 	cpp.x = xeol + 1
 
-	var definfo = definfoNew()
+	var definfo = new DefineInfo
 	definfo->xbody = xbody
 	definfo->xeol = xeol
 	definfo->macro = macro
@@ -2566,7 +2555,7 @@ private sub cppDefine(byref flags as integer)
 	'' Report conflicting #defines
 	var prevdef = cppLookupMacro(macro->text)
 	if prevdef then
-		if definfoDefinesAreEqual(prevdef, definfo) = FALSE then
+		if prevdef->equals(definfo) = FALSE then
 			'' TODO: should only report once per symbol (per fbfrog run, not cpp run)
 			print "conflicting #define " + *macro->text
 		end if
