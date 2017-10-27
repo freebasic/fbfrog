@@ -816,7 +816,7 @@ private function hSkipToEndOfBlock(byval i as AstNode ptr) as AstNode ptr
 			level -= 1
 		end select
 
-		i = i->next
+		i = i->nxt
 	loop
 
 	function = i
@@ -918,7 +918,7 @@ private sub frogEvaluateScript _
 
 		select case i->kind
 		case ASTKIND_DECLAREVERSIONS
-			i = i->next
+			i = i->nxt
 
 			var lastvernum = ubound(frog.vernums)
 
@@ -937,7 +937,7 @@ private sub frogEvaluateScript _
 
 		case ASTKIND_DECLAREBOOL
 			var symbol = i->text
-			i = i->next
+			i = i->nxt
 
 			var completeveror = astNew(ASTKIND_VEROR)
 
@@ -960,7 +960,7 @@ private sub frogEvaluateScript _
 
 		case ASTKIND_SELECTTARGET, ASTKIND_SELECTVERSION, ASTKIND_SELECTDEFINE
 			var sel = i
-			i = i->next
+			i = i->nxt
 
 			do
 				'' -case
@@ -988,7 +988,7 @@ private sub frogEvaluateScript _
 					astDelete(condition)
 				end if
 
-				i = i->next
+				i = i->nxt
 
 				'' Evaluate the first -case block whose condition is true
 				if is_true then
@@ -1000,7 +1000,7 @@ private sub frogEvaluateScript _
 				select case eob->kind
 				case ASTKIND_CASEELSE, ASTKIND_ENDSELECT
 					'' Reached -caseelse/-endselect
-					i = eob->next
+					i = eob->nxt
 					exit do
 				end select
 
@@ -1013,18 +1013,18 @@ private sub frogEvaluateScript _
 			'' select, that means we're evaluating the code path of the
 			'' previous case code path, and must now step over the
 			'' block(s) of the alternate code path(s).
-			i = hSkipToEndOfBlock(i->next)
+			i = hSkipToEndOfBlock(i->nxt)
 			assert((i->kind = ASTKIND_CASE) or _
 				(i->kind = ASTKIND_CASEELSE) or _
 				(i->kind = ASTKIND_ENDSELECT))
 
 		case ASTKIND_ENDSELECT
 			'' Ignore - nothing to do
-			i = i->next
+			i = i->nxt
 
 		case else
 			astAppend(options, astClone(i))
-			i = i->next
+			i = i->nxt
 		end select
 	wend
 
@@ -1079,7 +1079,7 @@ private function frogParse(byref api as ApiInfo) as AstNode ptr
 				cppAddIncDir(i->text)
 			end select
 
-			i = i->next
+			i = i->nxt
 		wend
 	end scope
 
@@ -1097,7 +1097,7 @@ private function frogParse(byref api as ApiInfo) as AstNode ptr
 				lexLoadC(x, file->buffer, file->source)
 				tkSetRemove(x, tkGetCount() - 1)
 			end if
-			i = i->next
+			i = i->nxt
 		wend
 	end scope
 
@@ -1109,7 +1109,7 @@ private function frogParse(byref api as ApiInfo) as AstNode ptr
 			if i->opt = OPT_INCLUDE then
 				cppAppendIncludeDirective(i->text, TKFLAG_PREINCLUDE)
 			end if
-			i = i->next
+			i = i->nxt
 		wend
 	end scope
 
@@ -1132,7 +1132,7 @@ private function frogParse(byref api as ApiInfo) as AstNode ptr
 			if i->opt = OPT_I then
 				cppAppendIncludeDirective(i->text, TKFLAG_ROOTFILE)
 			end if
-			i = i->next
+			i = i->nxt
 		wend
 	end scope
 
@@ -1307,7 +1307,7 @@ end function
 
 			var i = ast->head
 			while i
-				var nxt = i->next
+				var nxt = i->nxt
 
 				assert(i->location.source)
 				assert(i->location.source->is_file)

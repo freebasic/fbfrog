@@ -331,7 +331,7 @@ sub CodeGen.emitSeparatedList(byval n as AstNode ptr, byval skip_head as integer
 	var count = 0
 	var i = n->head
 	if (i <> NULL) and skip_head then
-		i = i->next
+		i = i->nxt
 	end if
 	while i
 		if count > 0 then
@@ -340,7 +340,7 @@ sub CodeGen.emitSeparatedList(byval n as AstNode ptr, byval skip_head as integer
 		end if
 		emitExpr(i)
 		count += 1
-		i = i->next
+		i = i->nxt
 	wend
 end sub
 
@@ -515,7 +515,7 @@ sub CodeGen.emitExpr(byval n as AstNode ptr, byval need_parens as integer, byval
 		var i = n->head
 		while i
 			emitExpr(i, TRUE)
-			if i->next then
+			if i->nxt then
 				add(TK_SPACE)
 				if astIsVEROR(n) then
 					add(KW_OR)
@@ -524,7 +524,7 @@ sub CodeGen.emitExpr(byval n as AstNode ptr, byval need_parens as integer, byval
 				end if
 				add(TK_SPACE)
 			end if
-			i = i->next
+			i = i->nxt
 		wend
 
 	case ASTKIND_VERNUMCHECK
@@ -716,7 +716,7 @@ sub CodeGen.emitExpr(byval n as AstNode ptr, byval need_parens as integer, byval
 				add(TK_SPACE)
 			end if
 			emitExpr(i)
-			i = i->next
+			i = i->nxt
 		wend
 
 	case ASTKIND_PPMERGE
@@ -726,7 +726,7 @@ sub CodeGen.emitExpr(byval n as AstNode ptr, byval need_parens as integer, byval
 				add(TK_HASHHASH)
 			end if
 			emitExpr(i)
-			i = i->next
+			i = i->nxt
 		wend
 
 	case ASTKIND_CALL
@@ -897,7 +897,7 @@ sub CodeGen.emitIndentedChildren(byval n as AstNode ptr, byval parentkind as int
 	var i = n->head
 	while i
 		emitCode(i, parentkind)
-		i = i->next
+		i = i->nxt
 	wend
 
 	if comment > 0 then
@@ -981,11 +981,11 @@ sub CodeGen.emitCode(byval n as AstNode ptr, byval parentkind as integer)
 		var i = n->head
 		while i
 			emitCode(i)
-			i = i->next
+			i = i->nxt
 		wend
 
 	case ASTKIND_DIVIDER
-		if (n->prev <> NULL) and (n->next <> NULL) then
+		if (n->prev <> NULL) and (n->nxt <> NULL) then
 			bol()
 			eol()
 		end if
@@ -1369,7 +1369,7 @@ sub CodeGen.emitCode(byval n as AstNode ptr, byval parentkind as integer)
 		emitIndentedChildren(i)
 
 		do
-			i = i->next
+			i = i->nxt
 			if i = NULL then exit do
 
 			if i->kind = ASTKIND_ELSEIFPART then

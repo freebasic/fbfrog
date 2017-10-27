@@ -110,7 +110,7 @@ sub ApiInfo.loadOptions()
 	while i
 		assert(i->kind = ASTKIND_OPTION)
 		loadOption(i->opt, i->text, i->alias)
-		i = i->next
+		i = i->nxt
 	wend
 end sub
 

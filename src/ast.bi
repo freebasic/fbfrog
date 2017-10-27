@@ -276,10 +276,7 @@ type AstNode
 	end union
 
 	'' Linked list of child nodes, operands/fields/parameters/...
-	head		as AstNode ptr
-	tail		as AstNode ptr
-	next		as AstNode ptr
-	prev		as AstNode ptr
+	as AstNode ptr head, tail, nxt, prev
 end type
 
 '' result = boolean = whether to visit this node's children

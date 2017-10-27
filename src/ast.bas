@@ -309,7 +309,7 @@ private function astGetIndexOf(byval parent as AstNode ptr, byval lookfor as Ast
 	while i
 		if i = lookfor then return index
 		index += 1
-		i = i->next
+		i = i->nxt
 	wend
 	function = -1
 end function
@@ -327,7 +327,7 @@ end sub
 sub astTakeAndPrependChildren(byval d as AstNode ptr, byval s as AstNode ptr)
 	if s->tail then
 		if d->head then
-			s->tail->next = d->head
+			s->tail->nxt = d->head
 			d->head->prev = s->tail
 		else
 			d->tail = s->tail
@@ -343,22 +343,22 @@ sub astTakeAndAppendChildSequence(byval d as AstNode ptr, byval s as AstNode ptr
 
 	'' unlink from s
 	if first->prev then
-		first->prev->next = last->next
+		first->prev->nxt = last->nxt
 	else
-		s->head = last->next
+		s->head = last->nxt
 	end if
-	if last->next then
-		last->next->prev = first->prev
+	if last->nxt then
+		last->nxt->prev = first->prev
 	else
 		s->tail = first->prev
 	end if
 	first->prev = NULL
-	last->next = NULL
+	last->nxt = NULL
 
 	'' append to d
 	if d->tail then
 		first->prev = d->tail
-		d->tail->next = first
+		d->tail->nxt = first
 	else
 		d->head = first
 	end if
@@ -370,7 +370,7 @@ function astCloneChildren(byval src as AstNode ptr) as AstNode ptr
 	var i = src->head
 	while i
 		astAppend(n, astClone(i))
-		i = i->next
+		i = i->nxt
 	wend
 	function = n
 end function
@@ -381,7 +381,7 @@ function astGroupContains(byval group as AstNode ptr, byval lookfor as AstNode p
 		if astIsEqual(i, lookfor) then
 			return TRUE
 		end if
-		i = i->next
+		i = i->nxt
 	wend
 	function = FALSE
 end function
@@ -390,7 +390,7 @@ function astGroupContainsAnyChildrenOf(byval l as AstNode ptr, byval r as AstNod
 	var i = r->head
 	while i
 		if astGroupContains(l, i) then return TRUE
-		i = i->next
+		i = i->nxt
 	wend
 end function
 
@@ -398,7 +398,7 @@ function astGroupContainsAllChildrenOf(byval l as AstNode ptr, byval r as AstNod
 	var i = r->head
 	while i
 		if astGroupContains(l, i) = FALSE then exit function
-		i = i->next
+		i = i->nxt
 	wend
 	function = TRUE
 end function
@@ -420,7 +420,7 @@ sub astDelete(byval n as AstNode ptr)
 
 	var i = n->head
 	while i
-		var nxt = i->next
+		var nxt = i->nxt
 		astDelete(i)
 		i = nxt
 	wend
@@ -441,23 +441,23 @@ sub astInsert(byval parent as AstNode ptr, byval n as AstNode ptr, byval ref as 
 			'' Relink the GROUP's children, so they're added without being reallocated
 			if ref then
 				if ref->prev then
-					ref->prev->next = n->head
+					ref->prev->nxt = n->head
 					n->head->prev = ref->prev
 				else
 					parent->head = n->head
 					assert(n->head->prev = NULL)
 				end if
-				n->tail->next = ref
+				n->tail->nxt = ref
 				ref->prev = n->tail
 			else
 				if parent->tail then
-					parent->tail->next = n->head
+					parent->tail->nxt = n->head
 					n->head->prev = parent->tail
 				else
 					parent->head = n->head
 					assert(n->head->prev = NULL)
 				end if
-				assert(n->tail->next = NULL)
+				assert(n->tail->nxt = NULL)
 				parent->tail = n->tail
 			end if
 
@@ -471,23 +471,23 @@ sub astInsert(byval parent as AstNode ptr, byval n as AstNode ptr, byval ref as 
 
 	if ref then
 		if ref->prev then
-			ref->prev->next = n
+			ref->prev->nxt = n
 			n->prev = ref->prev
 		else
 			parent->head = n
 			assert(n->prev = NULL)
 		end if
-		n->next = ref
+		n->nxt = ref
 		ref->prev = n
 	else
 		if parent->tail then
-			parent->tail->next = n
+			parent->tail->nxt = n
 			n->prev = parent->tail
 		else
 			parent->head = n
 			assert(n->prev = NULL)
 		end if
-		assert(n->next = NULL)
+		assert(n->nxt = NULL)
 		parent->tail = n
 	end if
 end sub
@@ -504,25 +504,25 @@ sub astUnlink(byval parent as AstNode ptr, byval n as AstNode ptr)
 	assert(astIsChildOf(parent, n))
 
 	if n->prev then
-		n->prev->next = n->next
+		n->prev->nxt = n->nxt
 	else
 		assert(parent->head = n)
-		parent->head = n->next
+		parent->head = n->nxt
 	end if
 
-	if n->next then
-		n->next->prev = n->prev
+	if n->nxt then
+		n->nxt->prev = n->prev
 	else
 		assert(parent->tail = n)
 		parent->tail = n->prev
 	end if
 
 	n->prev = NULL
-	n->next = NULL
+	n->nxt = NULL
 end sub
 
 function astRemove(byval parent as AstNode ptr, byval n as AstNode ptr) as AstNode ptr
-	function = n->next
+	function = n->nxt
 	astUnlink(parent, n)
 	astDelete(n)
 end function
@@ -639,7 +639,7 @@ function astClone(byval n as AstNode ptr) as AstNode ptr
 		var i = n->head
 		while i
 			astAppend(c, astClone(i))
-			i = i->next
+			i = i->nxt
 		wend
 	end if
 	function = c
@@ -654,7 +654,7 @@ function astContains(byval n as AstNode ptr, byval astkind as integer) as intege
 	var i = n->head
 	while i
 		if astContains(i, astkind) then return TRUE
-		i = i->next
+		i = i->nxt
 	wend
 	function = FALSE
 end function
@@ -675,7 +675,7 @@ function astContainsCAssignments(byval n as AstNode ptr) as integer
 	var i = n->head
 	while i
 		if astContainsCAssignments(i) then return TRUE
-		i = i->next
+		i = i->nxt
 	wend
 	function = FALSE
 end function
@@ -832,8 +832,8 @@ function astIsEqual _
 		if astIsEqual(a, b, is_merge) = FALSE then
 			exit function
 		end if
-		a = a->next
-		b = b->next
+		a = a->nxt
+		b = b->nxt
 	wend
 
 	'' Both a's and b's last child must be reached at the same time
@@ -875,7 +875,7 @@ function astLookupMacroParam(byval macro as AstNode ptr, byval id as zstring ptr
 		end if
 
 		index += 1
-		param = param->next
+		param = param->nxt
 	wend
 
 	function = -1
@@ -892,7 +892,7 @@ function astGetMacroParamByNameIgnoreCase(byval macro as AstNode ptr, byval id a
 			return param
 		end if
 
-		param = param->next
+		param = param->nxt
 	wend
 
 	function = NULL
@@ -911,7 +911,7 @@ sub astVisit(byval n as AstNode ptr, byval callback as ASTVISITCALLBACK)
 	var i = n->head
 	while i
 		astVisit(i, callback)
-		i = i->next
+		i = i->nxt
 	wend
 end sub
 
@@ -926,7 +926,7 @@ function astCount(byval n as AstNode ptr) as integer
 	var i = n->head
 	while i
 		count += astCount(i)
-		i = i->next
+		i = i->nxt
 	wend
 
 	function = count
@@ -1070,7 +1070,7 @@ sub astDump _
 	var child = n->head
 	while child
 		astDump(child, nestlevel)
-		child = child->next
+		child = child->nxt
 	wend
 
 	nestlevel -= 1

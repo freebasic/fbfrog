@@ -1001,7 +1001,7 @@ private function hTryToFixCommasAndAssigns(byval n as AstNode ptr) as AstNode pt
 		var i = n->head
 		while i
 			hHandleToplevelAssign(i)
-			i = i->next
+			i = i->nxt
 		wend
 	else
 		hHandleToplevelAssign(n)
@@ -1765,7 +1765,7 @@ private function hHasVarargParam(byval proc as AstNode ptr) as integer
 		if param->dtype = TYPE_NONE then
 			return TRUE
 		end if
-		param = param->next
+		param = param->nxt
 	wend
 	function = FALSE
 end function
@@ -2293,7 +2293,7 @@ end function
 private sub hUnscopeNestedNamedUdts(byval result as AstNode ptr, byval udt as AstNode ptr)
 	var i = udt->head
 	while i
-		var nxt = i->next
+		var nxt = i->nxt
 
 		select case i->kind
 		case ASTKIND_STRUCT, ASTKIND_UNION, ASTKIND_ENUM
@@ -2800,7 +2800,7 @@ private function cBody(byval bodyastkind as integer) as AstNode ptr
 			while i
 				hSetLocationIfNeeded(i, location)
 				i->location = location
-				i = i->next
+				i = i->nxt
 			wend
 		else
 			hSetLocationIfNeeded(t, location)

@@ -2210,7 +2210,7 @@ private function hSearchHeaderFile _
 
 	'' In any of the include search directories; #include_next starts with
 	'' the incdir following the one where the parent file was found
-	var i = iif(contextincdir, contextincdir->next, cpp.incdirs->head)
+	var i = iif(contextincdir, contextincdir->nxt, cpp.incdirs->head)
 	while i
 
 		var incfile = pathAddDiv(*i->text) + inctext
@@ -2220,7 +2220,7 @@ private function hSearchHeaderFile _
 		end if
 		maybePrintIncludeTree(inctext, "not found at " + incfile, FALSE)
 
-		i = i->next
+		i = i->nxt
 	wend
 
 	function = ""

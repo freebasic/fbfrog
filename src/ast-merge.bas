@@ -76,10 +76,10 @@ private sub decltableInit(byval table as DECLTABLE ptr, byval code as AstNode pt
 		var decl = verblock->head
 		while decl
 			decltableAdd(table, decl, verblock->apis)
-			decl = decl->next
+			decl = decl->nxt
 		wend
 
-		verblock = verblock->next
+		verblock = verblock->nxt
 	wend
 end sub
 
@@ -97,7 +97,7 @@ function astDumpPrettyVersion(byval n as AstNode ptr) as string
 		var i = n->head
 		while i
 			s += astDumpPrettyVersion(i)
-			i = i->next
+			i = i->nxt
 			if i then
 				s += "."
 			end if
@@ -160,7 +160,7 @@ private sub hWrapStructFieldsInVerblocks(byval api as ApiBits, byval code as Ast
 	var i = code->head
 	while i
 		hWrapStructFieldsInVerblocks(api, i)
-		i = i->next
+		i = i->nxt
 	wend
 
 	if astIsMergableBlock(code) then
@@ -292,9 +292,9 @@ private sub hFindCommonCallConvsOnMergedDecl _
 
 		hFindCommonCallConvsOnMergedDecl(mchild, achild, bchild)
 
-		mchild = mchild->next
-		achild = achild->next
-		bchild = bchild->next
+		mchild = mchild->nxt
+		achild = achild->nxt
+		bchild = bchild->nxt
 	wend
 	assert(mchild = NULL)
 	assert(achild = NULL)
@@ -695,7 +695,7 @@ end sub
 private sub hSolveOutRedundantVerblocks(byval code as AstNode ptr, byval parentapis as ApiBits)
 	var i = code->head
 	while i
-		var nxt = i->next
+		var nxt = i->nxt
 
 		if i->kind = ASTKIND_VERBLOCK then
 			hSolveOutRedundantVerblocks(i, i->apis)
@@ -733,7 +733,7 @@ end sub
 ''         [dos/unix]
 ''     #endif
 private sub maybeSwapIfElseWithoutRelinking(byval ifblock as AstNode ptr)
-	var elseblock = ifblock->next
+	var elseblock = ifblock->nxt
 	assert(astIsPPIF(ifblock) and astIsPPELSE(elseblock))
 	if hCalcIfConditionWeight(ifblock->expr) > hCalcIfConditionWeight(elseblock->expr) then
 		swap ifblock->expr, elseblock->expr
@@ -781,7 +781,7 @@ private sub hTurnVerblocksIntoPpIfs(byval code as AstNode ptr)
 	var i = code->head
 	while i
 		hTurnVerblocksIntoPpIfs(i)
-		i = i->next
+		i = i->nxt
 	wend
 
 	'' Turn verblocks into #ifs (at this recursion level only)
@@ -795,12 +795,12 @@ private sub hTurnVerblocksIntoPpIfs(byval code as AstNode ptr)
 			'' Find all VERBLOCKs in a row, if any, as long as they cover different versions
 			'' (as long as no duplicates would be added to the list of collected versions)
 			'' and turn them into #elseif's while at it.
-			var j = i->next
+			var j = i->nxt
 			var collected = i->apis
 			while j andalso astIsVERBLOCK(j) andalso collected.containsNoneOf(j->apis)
 				j->kind = ASTKIND_PPELSEIF
 				collected.set(j->apis)
-				j = j->next
+				j = j->nxt
 			wend
 
 			'' j = node behind the last VERBLOCK in the row, or NULL if at EOF
@@ -816,7 +816,7 @@ private sub hTurnVerblocksIntoPpIfs(byval code as AstNode ptr)
 					last->kind = ASTKIND_PPELSE
 
 					'' Only 2 verblocks? (i.e. just an #if and an #else)
-					if i->next = last then
+					if i->nxt = last then
 						maybeSwapIfElseWithoutRelinking(i)
 					end if
 				end if
@@ -826,7 +826,7 @@ private sub hTurnVerblocksIntoPpIfs(byval code as AstNode ptr)
 			astInsert(code, astNew(ASTKIND_PPENDIF), j)
 		end if
 
-		i = i->next
+		i = i->nxt
 	wend
 end sub
 
@@ -899,10 +899,10 @@ private function hDetermineMostCommonCondition(byval veror as AstNode ptr) as As
 			var cond = verand->head
 			while cond
 				condcounterCount(cond)
-				cond = cond->next
+				cond = cond->nxt
 			wend
 		end if
-		verand = verand->next
+		verand = verand->nxt
 	wend
 
 	function = condcounterFindMostCommon()
@@ -931,7 +931,7 @@ sub OSDefineChecker.check(byval veror as AstNode ptr)
 				end if
 			next
 		end if
-		i = i->next
+		i = i->nxt
 	wend
 end sub
 
@@ -950,7 +950,7 @@ private sub replaceUnixChecks(byval veror as AstNode ptr)
 	assert(astIsVEROR(veror))
 	var i = veror->head
 	while i
-		var nxt = i->next
+		var nxt = i->nxt
 		if astIsDEFINED(i) then
 			for os as integer = 0 to OS__COUNT - 1
 				if osinfo(os).is_unix andalso (*i->text = *osinfo(os).fbdefine) then
@@ -1034,7 +1034,7 @@ private function hSimplify(byval n as AstNode ptr, byref changed as integer) as 
 	scope
 		var verand = n->head
 		while verand
-			var verandnext = verand->next
+			var verandnext = verand->nxt
 			if astIsVERAND(verand) then
 				if astGroupContains(verand, mostcommoncond) then
 					astAppend(extracted, astClone(verand))
@@ -1049,12 +1049,12 @@ private function hSimplify(byval n as AstNode ptr, byref changed as integer) as 
 	scope
 		var verand = extracted->head
 		while verand
-			var verandnext = verand->next
+			var verandnext = verand->nxt
 
 			'' Remove common condition from this VERAND
 			var cond = verand->head
 			while cond
-				var condnext = cond->next
+				var condnext = cond->nxt
 				if astIsEqual(cond, mostcommoncond) then
 					astRemove(verand, cond)
 				end if
@@ -1141,7 +1141,7 @@ private sub hFoldNumberChecks(byval n as AstNode ptr)
 		var i = n->head
 		while i
 			hFoldNumberChecks(i)
-			i = i->next
+			i = i->nxt
 		wend
 	end scope
 
@@ -1176,7 +1176,7 @@ private sub hFoldNumberChecks(byval n as AstNode ptr)
 	scope
 		var i = n->head
 		while i
-			var nxt = i->next
+			var nxt = i->nxt
 
 			if i->kind = ASTKIND_VERNUMCHECK then
 				covered(i->vernum) = TRUE
@@ -1306,7 +1306,7 @@ end function
 private sub hGenVerExprs(byval code as AstNode ptr)
 	var i = code->head
 	while i
-		var inext = i->next
+		var inext = i->nxt
 
 		'' Handle #if checks nested inside structs
 		hGenVerExprs(i)
@@ -1334,16 +1334,16 @@ end sub
 private function findEndifOfVerandIfBlockWithCommonPrefix(byval n as AstNode ptr) as AstNode ptr
 	if astIsPPIFWithVERAND(n) = FALSE then exit function
 	var prefix = n->expr->head
-	n = n->next
+	n = n->nxt
 
 	'' Skip #elseifs if they're ok
 	while astIsPPELSEIFWithVERAND(n) andalso hasVerandPrefix(n, prefix)
-		n = n->next
+		n = n->nxt
 	wend
 
 	'' Skip #else if it's ok
 	if astIsPPELSEWithVERAND(n) andalso hasVerandPrefix(n, prefix) then
-		n = n->next
+		n = n->nxt
 	end if
 
 	'' Must have reached #endif. If not, there was an #elseif/#else without
@@ -1366,7 +1366,7 @@ end function
 private sub splitVerandIfsIntoNestedIfs(byval ast as AstNode ptr)
 	var i = ast->head
 	while i
-		var inext = i->next
+		var inext = i->nxt
 
 		var iendif = findEndifOfVerandIfBlockWithCommonPrefix(i)
 		if iendif then
@@ -1375,7 +1375,7 @@ private sub splitVerandIfsIntoNestedIfs(byval ast as AstNode ptr)
 			newif->expr = astClone(i->expr->head)
 
 			'' Move all the old #if/#elseifs/#else/#endif into the new #if
-			inext = iendif->next
+			inext = iendif->nxt
 			astTakeAndAppendChildSequence(newif, ast, i, iendif)
 
 			'' Insert the new #if in the old one's place
@@ -1398,7 +1398,7 @@ private sub splitVerandIfsIntoNestedIfs(byval ast as AstNode ptr)
 						astDelete(verand)
 					end if
 
-					nested = nested->next
+					nested = nested->nxt
 				loop until astIsPPENDIF(nested)
 			end scope
 
@@ -1416,7 +1416,7 @@ end sub
 private sub mergeSiblingIfs(byval ast as AstNode ptr)
 	var i = ast->head
 	while i
-		var nxt = i->next
+		var nxt = i->nxt
 
 		'' Handle #ifs in structs, and nested #ifs (after 1st got merged
 		'' into 2nd below, we'll visit the 2nd here, while the 1st was
@@ -1426,10 +1426,10 @@ private sub mergeSiblingIfs(byval ast as AstNode ptr)
 		'' #if?
 		if astIsPPIF(i) then
 			'' #endif?
-			var iendif = i->next
+			var iendif = i->nxt
 			if iendif andalso astIsPPENDIF(iendif) then
 				'' #if?
-				var secondif = iendif->next
+				var secondif = iendif->nxt
 				if secondif andalso astIsPPIF(secondif) then
 					'' Same condition?
 					if astIsEqual(i->expr, secondif->expr) then
@@ -1459,7 +1459,7 @@ private sub removeUnnecessaryIfNesting(byval ast as AstNode ptr)
 			'' If this #if contains only another #if/#endif as children...
 			var nested = i->head
 			if nested andalso astIsPPIF(nested) then
-				var nestedendif = nested->next
+				var nestedendif = nested->nxt
 				if nestedendif andalso astIsPPENDIF(nestedendif) then
 					if nestedendif = i->tail then
 						'' then merge it with its parent:
@@ -1488,7 +1488,7 @@ private sub removeUnnecessaryIfNesting(byval ast as AstNode ptr)
 			end if
 		end if
 
-		i = i->next
+		i = i->nxt
 	wend
 end sub
 
@@ -1568,14 +1568,14 @@ private sub foldIfElseIf(byval ast as AstNode ptr)
 
 		foldIfElseIf(i)
 
-		if astIsPPIF(i) andalso astIsPPELSEIF(i->next) andalso astIsPPENDIF(i->next->next) then
-			if conditionsAreOpposite(i->expr, i->next->expr) then
-				i->next->kind = ASTKIND_PPELSE
+		if astIsPPIF(i) andalso astIsPPELSEIF(i->nxt) andalso astIsPPENDIF(i->nxt->nxt) then
+			if conditionsAreOpposite(i->expr, i->nxt->expr) then
+				i->nxt->kind = ASTKIND_PPELSE
 				maybeSwapIfElseWithoutRelinking(i)
 			end if
 		end if
 
-		i = i->next
+		i = i->nxt
 	wend
 end sub
 

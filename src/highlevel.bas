@@ -245,7 +245,7 @@ function ExpressionFixUp.calculateCTypes(byval n as AstNode ptr) as integer
 		var i = n->head
 		while i
 			allresolved and= calculateCTypes(i)
-			i = i->next
+			i = i->nxt
 		wend
 	end scope
 
@@ -326,7 +326,7 @@ sub ExpressionFixUp.collectSymbolsAndCalculateTypes(byval n as AstNode ptr)
 	var i = n->head
 	while i
 		collectSymbolsAndCalculateTypes(i)
-		i = i->next
+		i = i->nxt
 	wend
 end sub
 
@@ -368,7 +368,7 @@ private sub hlFixAddrOfStrLit(byval n as AstNode ptr)
 	var i = n->head
 	while i
 		hlFixAddrOfStrLit(i)
-		i = i->next
+		i = i->nxt
 	wend
 
 	if (n->kind = ASTKIND_CAST) andalso _
@@ -457,7 +457,7 @@ private function astOpsC2FB(byval n as AstNode ptr, byval is_bool_context as int
 
 		astReplace(n, n->head, astOpsC2FB(astClone(n->head), l_is_bool_context))
 		if n->head <> n->tail then
-			assert(n->head->next = n->tail)
+			assert(n->head->nxt = n->tail)
 			astReplace(n, n->tail, astOpsC2FB(astClone(n->tail), r_is_bool_context))
 		end if
 
@@ -507,7 +507,7 @@ private sub hlRemoveExpressionTypes(byval n as AstNode ptr)
 	var i = n->head
 	while i
 		hlRemoveExpressionTypes(i)
-		i = i->next
+		i = i->nxt
 	wend
 
 	if n->kind <> ASTKIND_CAST then
@@ -562,7 +562,7 @@ sub ExpressionFixUp.fixExpressions(byval n as AstNode ptr)
 	var i = n->head
 	while i
 		fixExpressions(i)
-		i = i->next
+		i = i->nxt
 	wend
 end sub
 
@@ -575,7 +575,7 @@ end function
 private sub hlRemoveEmptyReservedDefines(byval ast as AstNode ptr)
 	var i = ast->head
 	while i
-		var nxt = i->next
+		var nxt = i->nxt
 		if isEmptyReservedDefine(i) then
 			astRemove(ast, i)
 		end if
@@ -586,7 +586,7 @@ end sub
 private sub hlApplyRemoveOption(byval ast as AstNode ptr, byval astkind as integer, byval opt as integer)
 	var i = ast->head
 	while i
-		var nxt = i->next
+		var nxt = i->nxt
 
 		if (i->text <> NULL) and (astkind = -1) or (i->kind = astkind) then
 			if hl.api->idopt(opt).matches(i->text) then
@@ -602,7 +602,7 @@ private sub hlApplyRemove1st(byval ast as AstNode ptr)
 	dim removed as THash = THash(7, TRUE)
 	var i = ast->head
 	while i
-		var nxt = i->next
+		var nxt = i->nxt
 
 		if i->text then
 			if hl.api->idopt(tktokens.OPT_REMOVE1ST).matches(i->text) and _
@@ -620,7 +620,7 @@ private sub hlApplyRemove2nd(byval ast as AstNode ptr)
 	dim found1st as THash = THash(7, FALSE)
 	var i = ast->head
 	while i
-		var nxt = i->next
+		var nxt = i->nxt
 
 		if i->text then
 			if hl.api->idopt(tktokens.OPT_REMOVE2ND).matches(i->text) then
@@ -647,7 +647,7 @@ private sub hlApplyDropProcBodyOptions(byval ast as AstNode ptr)
 			end if
 		end if
 
-		i = i->next
+		i = i->nxt
 	wend
 end sub
 
@@ -664,7 +664,7 @@ private sub hlApplyMoveOption(byval ast as AstNode ptr, byref search as string, 
 				refdecl = i
 			end select
 		end if
-		i = i->next
+		i = i->nxt
 	wend
 
 	if (decltomove <> NULL) and (refdecl <> NULL) then
@@ -757,7 +757,7 @@ private function hlApplyRenameOption(byval n as AstNode ptr) as integer
 			while param
 				assert(param->kind = ASTKIND_MACROPARAM)
 				renamed_param_here or= hApplyRenameOption(tktokens.OPT_RENAMEMACROPARAM, param)
-				param = param->next
+				param = param->nxt
 			wend
 
 			'' Visit body to update references to renamed parameters,
@@ -986,7 +986,7 @@ sub TypedefExpander.walkDecls(byval n as AstNode ptr)
 
 	var i = n->head
 	while i
-		var nxt = i->next
+		var nxt = i->nxt
 
 		walkDecls(i)
 
@@ -1012,7 +1012,7 @@ sub TypedefExpander.walkDefines(byval n as AstNode ptr)
 			walkDecls(i->expr)
 		end if
 
-		i = i->next
+		i = i->nxt
 	wend
 end sub
 
@@ -1143,7 +1143,7 @@ private sub hlFindStringOptionMatches _
 	var childindex = 0
 	while i
 		hlFindStringOptionMatches(parent, n, i, childindex)
-		i = i->next
+		i = i->nxt
 		childindex += 1
 	wend
 end sub
@@ -1281,7 +1281,7 @@ sub CharStringPass.walkDecls(byval n as AstNode ptr)
 	var i = n->head
 	while i
 		walkDecls(i)
-		i = i->next
+		i = i->nxt
 	wend
 end sub
 
@@ -1293,7 +1293,7 @@ sub CharStringPass.walkDefines(byval n as AstNode ptr)
 			walkDecls(i->expr)
 		end if
 
-		i = i->next
+		i = i->nxt
 	wend
 end sub
 
@@ -1379,7 +1379,7 @@ sub RenameJobs.walkAndApply(byval n as AstNode ptr)
 	var i = n->head
 	while i
 		walkAndApply(i)
-		i = i->next
+		i = i->nxt
 	wend
 end sub
 
@@ -1396,7 +1396,7 @@ end destructor
 private sub hlSolveOutTagIds(byval n as AstNode ptr, byref renames as RenameJobs)
 	var i = n->head
 	while i
-		var nxt = i->next
+		var nxt = i->nxt
 
 		if i->kind = ASTKIND_TYPEDEF then
 			if i->dtype = TYPE_UDT then
@@ -1422,7 +1422,7 @@ end sub
 private sub hlRemoveSameIdTypedefs(byval n as AstNode ptr, byref renames as RenameJobs)
 	var i = n->head
 	while i
-		var nxt = i->next
+		var nxt = i->nxt
 
 		if i->kind = ASTKIND_TYPEDEF then
 			if i->dtype = TYPE_UDT then
@@ -1543,7 +1543,7 @@ private sub hlScanForForwardUsedTypes(byval ast as AstNode ptr)
 		astVisit(i, @hlCollectForwardUses)
 		hl.currentdecl = NULL
 
-		i = i->next
+		i = i->nxt
 	wend
 end sub
 
@@ -1621,7 +1621,7 @@ private sub hFixUnsizedArray(byval ast as AstNode ptr, byval n as AstNode ptr)
 			var def = astNewPPDEFINE(id)
 			def->expr = astNewTEXT("(*cptr(" + emitFbType(typeAddrOf(n->dtype), NULL) + ", @" + tempid + "))")
 			def->location = n->location
-			astInsert(ast, def, n->next)
+			astInsert(ast, def, n->nxt)
 
 			astTakeOrigId(def, n)
 			astRenameSymbolWithoutSettingOrigId(n, tempid)
@@ -1662,7 +1662,7 @@ private sub hlFixUnsizedArrays(byval ast as AstNode ptr)
 			hFixUnsizedArray(ast, i)
 		end if
 
-		i = i->next
+		i = i->nxt
 	wend
 end sub
 
@@ -1682,7 +1682,7 @@ private sub hlDropMacroBodyScopes(byval ast as AstNode ptr)
 			end if
 		end if
 
-		i = i->next
+		i = i->nxt
 	wend
 end sub
 
@@ -1703,7 +1703,7 @@ private sub hlRemoveVoidCasts(byval ast as AstNode ptr)
 			i->expr = expr
 		end if
 
-		i = i->next
+		i = i->nxt
 	wend
 end sub
 
@@ -1719,7 +1719,7 @@ private sub hlAddUndefsAboveDecls(byval ast as AstNode ptr)
 			end if
 		end if
 
-		i = i->next
+		i = i->nxt
 	wend
 end sub
 
@@ -1732,7 +1732,7 @@ private sub hlAddIfndefsAroundDecls(byval ast as AstNode ptr)
 			i->attrib or= ASTATTRIB_IFNDEFDECL
 		end if
 
-		i = i->next
+		i = i->nxt
 	wend
 end sub
 
@@ -1757,7 +1757,7 @@ function ParamUsageChecker.lookupParam(byval id as zstring ptr) as AstNode ptr
 		if param->text andalso (*param->text = *id) then
 			return param
 		end if
-		param = param->next
+		param = param->nxt
 	wend
 	function = NULL
 end function
@@ -1781,7 +1781,7 @@ destructor ParamUsageChecker()
 	var param = proc->head
 	while param
 		param->attrib and= not ASTATTRIB_USED
-		param = param->next
+		param = param->nxt
 	wend
 end destructor
 
@@ -1845,7 +1845,7 @@ private sub maybeProc2Macro(byval proc as AstNode ptr)
 				while param
 					param->kind = ASTKIND_MACROPARAM
 					astSetType(param, TYPE_NONE, NULL)
-					param = param->next
+					param = param->nxt
 				wend
 
 				'' Macro body, add cast if there is none yet
@@ -1876,7 +1876,7 @@ private sub hlProcs2Macros(byval ast as AstNode ptr)
 			maybeProc2Macro(i)
 		end if
 
-		i = i->next
+		i = i->nxt
 	wend
 end sub
 
@@ -1894,7 +1894,7 @@ end sub
 private sub hlRemoveSelfDefines(byval ast as AstNode ptr)
 	var i = ast->head
 	while i
-		var nxt = i->next
+		var nxt = i->nxt
 
 		'' Process alias #defines
 		if (i->kind = ASTKIND_PPDEFINE) andalso (i->paramcount = -1) andalso i->expr then
@@ -2021,11 +2021,11 @@ sub Define2Decl.countDecls(byval ast as AstNode ptr)
 				if enumconst->kind = ASTKIND_CONST then
 					countDecl(enumconst->text)
 				end if
-				enumconst = enumconst->next
+				enumconst = enumconst->nxt
 			wend
 		end if
 
-		i = i->next
+		i = i->nxt
 	wend
 end sub
 
@@ -2046,7 +2046,7 @@ function Define2Decl.exprInvolvesUndeclaredId(byval n as AstNode ptr) as integer
 	var i = n->head
 	while i
 		if exprInvolvesUndeclaredId(i) then return TRUE
-		i = i->next
+		i = i->nxt
 	wend
 	function = FALSE
 end function
@@ -2204,7 +2204,7 @@ sub Define2Decl.workDecl(byval ast as AstNode ptr, byval decl as AstNode ptr, by
 	if item->s then
 		dim info as ForwardInfo ptr = item->data
 		if info then
-			var insertbefore = insertbehind->next
+			var insertbefore = insertbehind->nxt
 
 			'' Move the collected #defines behind the declaration and process them
 			for i as integer = 0 to info->defcount - 1
@@ -2264,7 +2264,7 @@ sub Define2Decl.work(byval ast as AstNode ptr)
 					if enumconst->kind = ASTKIND_CONST then
 						workDecl(ast, enumconst, i)
 					end if
-					enumconst = enumconst->next
+					enumconst = enumconst->nxt
 				wend
 			end if
 
@@ -2274,7 +2274,7 @@ sub Define2Decl.work(byval ast as AstNode ptr)
 			end if
 		end select
 
-		i = i->next
+		i = i->nxt
 	wend
 end sub
 
@@ -2344,7 +2344,7 @@ private function macroParamConflictsWithMacroParam(byref param as const string, 
 		if idsDifferInCaseOnly(*otherparam->text, param) then
 			return TRUE
 		end if
-		otherparam = otherparam->next
+		otherparam = otherparam->nxt
 	wend
 	return FALSE
 end function
@@ -2374,7 +2374,7 @@ sub MacroParamRenamer.walk(byval n as AstNode ptr)
 	var i = n->head
 	while i
 		walk(i)
-		i = i->next
+		i = i->nxt
 	wend
 end sub
 
@@ -2417,7 +2417,7 @@ private sub autoRenameConflictingMacroParams(byval macro as AstNode ptr)
 				end scope
 				found_conflict = TRUE
 			end if
-			param = param->next
+			param = param->nxt
 		loop while param
 
 		'sleep
@@ -2433,7 +2433,7 @@ private sub hlAutoRenameConflictingMacroParams(byval ast as AstNode ptr)
 				autoRenameConflictingMacroParams(i)
 			end if
 		end if
-		i = i->next
+		i = i->nxt
 	wend
 end sub
 
@@ -2511,7 +2511,7 @@ sub IncludePass.work(byval ast as AstNode ptr, byref bioptions as ApiSpecificBiO
 	'' always be behind existing #includes at the top.
 	var top = ast->head
 	while top andalso (top->kind = ASTKIND_PPINCLUDE)
-		top = top->next
+		top = top->nxt
 	wend
 
 	'' Start at this "top" node, otherwise we'd run an infinite loop trying
@@ -2521,7 +2521,7 @@ sub IncludePass.work(byval ast as AstNode ptr, byref bioptions as ApiSpecificBiO
 	'' to bottom via the "next" pointers).
 	var i = top
 	while i
-		var nxt = i->next
+		var nxt = i->nxt
 
 		'' #include?
 		if i->kind = ASTKIND_PPINCLUDE then
@@ -2543,7 +2543,7 @@ sub IncludePass.work(byval ast as AstNode ptr, byref bioptions as ApiSpecificBiO
 	'' For each #include at the top, apply -removeinclude and remap *.h => *.bi
 	i = ast->head
 	while i <> top
-		var nxt = i->next
+		var nxt = i->nxt
 
 		'' #include?
 		if i->kind = ASTKIND_PPINCLUDE then
@@ -2564,7 +2564,7 @@ sub IncludePass.work(byval ast as AstNode ptr, byref bioptions as ApiSpecificBiO
 
 	i = ast->head
 	while i <> top
-		var nxt = i->next
+		var nxt = i->nxt
 
 		'' #include?
 		if i->kind = ASTKIND_PPINCLUDE then
@@ -2614,7 +2614,7 @@ private function hlBuildRenameList(byval n as AstNode ptr) as AstNode ptr
 		end if
 
 
-		i = i->next
+		i = i->nxt
 	wend
 
 	function = list
@@ -2699,8 +2699,8 @@ private function hlCreateElseIfs(byval n as AstNode ptr) as integer
 			astAppend(n, astCloneChildren(nestedif))
 
 			'' Turn the added if part into an elseif
-			assert(elsepart->next->kind = ASTKIND_IFPART)
-			elsepart->next->kind = ASTKIND_ELSEIFPART
+			assert(elsepart->nxt->kind = ASTKIND_IFPART)
+			elsepart->nxt->kind = ASTKIND_ELSEIFPART
 
 			astRemove(n, elsepart)
 		loop
@@ -2735,14 +2735,14 @@ private function hSkipStatementsInARow(byval i as AstNode ptr) as AstNode ptr
 	'' All parts of one #if block
 	case ASTKIND_PPIF
 		do
-			i = i->next
+			i = i->nxt
 		loop while i andalso hIsPPElseOrEnd(i)
 		return i
 
 	case ASTKIND_PPINCLUDE, ASTKIND_INCLIB
 		var astkind = i->kind
 		do
-			i = i->next
+			i = i->nxt
 		loop while i andalso (i->kind = astkind)
 		return i
 
@@ -2750,12 +2750,12 @@ private function hSkipStatementsInARow(byval i as AstNode ptr) as AstNode ptr
 	     ASTKIND_EXTERNBLOCKBEGIN, ASTKIND_EXTERNBLOCKEND, _
 	     ASTKIND_STRUCT, ASTKIND_UNION, ASTKIND_ENUM, _
 	     ASTKIND_IFBLOCK, ASTKIND_DOWHILE, ASTKIND_WHILE
-		return i->next
+		return i->nxt
 
 	'' Procedure body?
 	case ASTKIND_PROC
 		if i->expr then
-			return i->next
+			return i->nxt
 		end if
 	end select
 
@@ -2783,7 +2783,7 @@ private function hSkipStatementsInARow(byval i as AstNode ptr) as AstNode ptr
 			end select
 
 			length += 1
-			nxt = nxt->next
+			nxt = nxt->nxt
 		loop while nxt andalso hAreSimilar(blockkind, nxt->kind)
 
 		'' Next statement can't be in a block?
@@ -2839,10 +2839,10 @@ sub hlAutoAddDividers(byval ast as AstNode ptr)
 				var part = i->head
 				while part
 					hlAutoAddDividers(part)
-					part = part->next
+					part = part->nxt
 				wend
 			end select
-			i = i->next
+			i = i->nxt
 		wend
 	end scope
 
@@ -3050,7 +3050,7 @@ sub hlGlobal(byval ast as AstNode ptr, byref api as ApiInfo)
 		var i = api.moveaboveoptions->head
 		while i
 			hlApplyMoveOption(ast, *i->text, *i->alias)
-			i = i->next
+			i = i->nxt
 		wend
 	end if
 
@@ -3179,7 +3179,7 @@ function hlCountDecls(byval ast as AstNode ptr) as integer
 			n += 1
 		end select
 
-		i = i->next
+		i = i->nxt
 	wend
 
 	function = n
@@ -3199,7 +3199,7 @@ function hlCountTodos(byval n as AstNode ptr) as integer
 	var i = n->head
 	while i
 		count += hlCountTodos(i)
-		i = i->next
+		i = i->nxt
 	wend
 
 	function = count
