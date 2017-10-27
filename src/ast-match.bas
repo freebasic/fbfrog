@@ -1,6 +1,6 @@
 #include once "ast-match.bi"
 
-function ParentChildPattern.matches(byval parent as ASTNODE ptr, byval child as ASTNODE ptr) as integer
+function ParentChildPattern.matches(byval parent as AstNode ptr, byval child as AstNode ptr) as integer
 	function = strMatch(*parent->text, parentpattern) andalso _
 	           strMatch(*child->text, childpattern)
 end function
@@ -67,7 +67,7 @@ destructor DeclPatterns()
 	deallocate(index)
 end destructor
 
-private function determineParentId(byval parentparent as ASTNODE ptr, byval parent as ASTNODE ptr) as zstring ptr
+private function determineParentId(byval parentparent as AstNode ptr, byval parent as AstNode ptr) as zstring ptr
 	'' If it's an anonymous procptr subtype, check its parent's id instead
 	if parentparent andalso _
 	   (parent->class = ASTCLASS_PROC) andalso _
@@ -80,9 +80,9 @@ end function
 
 function DeclPatterns.matches _
 	( _
-		byval parentparent as ASTNODE ptr, _
-		byval parent as ASTNODE ptr, _
-		byval child as ASTNODE ptr, _
+		byval parentparent as AstNode ptr, _
+		byval parent as AstNode ptr, _
+		byval child as AstNode ptr, _
 		byval childindex as integer _
 	) as integer
 

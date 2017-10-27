@@ -48,7 +48,7 @@ declare function hMaybeExpandMacro(byval x as integer, byval inside_ifexpr as in
 
 ''
 '' Check whether the number literal token (TK_NUMBER) is a valid number literal,
-'' and build a CONSTI/CONSTF ASTNODE representing its value (the literal saved
+'' and build a CONSTI/CONSTF AstNode representing its value (the literal saved
 '' as-is in textual form, without type suffixes) and data type.
 ''
 '' As a special case, in CPP expressions, number literals are always treated as
@@ -77,7 +77,7 @@ function hNumberLiteral _
 		byval is_cpp as integer, _
 		byref errmsg as string, _
 		byval clong32 as integer _
-	) as ASTNODE ptr
+	) as AstNode ptr
 
 	assert(tkGet(x) = TK_NUMBER)
 	dim as ubyte ptr p = tkGetText(x)
@@ -335,7 +335,7 @@ function hStringLiteral _
 		byval x as integer, _
 		byval eval_escapes as integer, _
 		byref errmsg as string _
-	) as ASTNODE ptr
+	) as AstNode ptr
 
 	assert((tkGet(x) = TK_STRING) or (tkGet(x) = TK_WSTRING) or _
 	       (tkGet(x) = TK_CHAR  ) or (tkGet(x) = TK_WCHAR  ))
@@ -440,7 +440,7 @@ end function
 ''    | Identifier '...'   (named + variadic)
 ''    | '...'              (variadic, using __VA_ARGS__)
 '' ('...' can only appear on the last parameter)
-private sub hMacroParam(byref x as integer, byval macro as ASTNODE ptr)
+private sub hMacroParam(byref x as integer, byval macro as AstNode ptr)
 	'' Identifier?
 	dim id as zstring ptr
 	if tkGet(x) >= TK_ID then
@@ -477,7 +477,7 @@ private sub hMacroParam(byref x as integer, byval macro as ASTNODE ptr)
 end sub
 
 '' <no whitespace> '(' MacroParameters ')'
-private sub hMacroParamList(byref x as integer, byval macro as ASTNODE ptr)
+private sub hMacroParamList(byref x as integer, byval macro as AstNode ptr)
 	assert(macro->paramcount = -1)
 
 	'' '(' directly behind #define identifier, no spaces in between?
@@ -506,7 +506,7 @@ private sub hMacroParamList(byref x as integer, byval macro as ASTNODE ptr)
 	end if
 end sub
 
-function hDefineHead(byref x as integer) as ASTNODE ptr
+function hDefineHead(byref x as integer) as AstNode ptr
 	'' Identifier? (keywords should be allowed to, so anything >= TK_ID)
 	select case tkGet(x)
 	case is < TK_ID
@@ -529,7 +529,7 @@ type DEFINEINFO
 	xeol	as integer  '' eol/eof token behind the #define body
 
 	'' PPDEFINE node with information about the macro's parameters etc.
-	macro	as ASTNODE ptr
+	macro	as AstNode ptr
 end type
 
 private function definfoNew() as DEFINEINFO ptr
@@ -614,7 +614,7 @@ namespace cpp
 		'' file contexts:
 		'' A node from the incdirs list, representing the incdir where
 		'' this file was found (for #include_next support)
-		incdir		as ASTNODE ptr
+		incdir		as AstNode ptr
 	end type
 
 	'' #if/file context stack
@@ -659,7 +659,7 @@ namespace cpp
 	dim shared savedmacros		as SAVEDMACRO ptr
 	dim shared savedmacrocount	as integer
 
-	dim shared incdirs		as ASTNODE ptr
+	dim shared incdirs		as AstNode ptr
 
 	type KNOWNFILE
 		incfile as zstring ptr  '' Normalized file name
@@ -1303,7 +1303,7 @@ const MAXARGS = 128
 private sub hParseMacroCallArgs _
 	( _
 		byref x as integer, _
-		byval macro as ASTNODE ptr, _
+		byval macro as AstNode ptr, _
 		byval argbegin as integer ptr, _
 		byval argend as integer ptr, _
 		byref argcount as integer _
@@ -1398,7 +1398,7 @@ end sub
 private function hParseMacroCall _
 	( _
 		byval x as integer, _
-		byval macro as ASTNODE ptr, _
+		byval macro as AstNode ptr, _
 		byval argbegin as integer ptr, _
 		byval argend as integer ptr, _
 		byref argcount as integer _
@@ -2188,10 +2188,10 @@ end sub
 private function hSearchHeaderFile _
 	( _
 		byref contextfile as string, _
-		byval contextincdir as ASTNODE ptr, _
+		byval contextincdir as AstNode ptr, _
 		byref inctext as string, _
 		byval is_system_include as integer, _
-		byref incdir as ASTNODE ptr _
+		byref incdir as AstNode ptr _
 	) as string
 
 	'' If #including by absolute path, use it as-is
@@ -2313,7 +2313,7 @@ private sub cppInclude(byval begin as integer, byref flags as integer, byval is_
 	cppEol()
 
 	dim incfile as string
-	dim incdir as ASTNODE ptr
+	dim incdir as AstNode ptr
 	if includetkflags and TKFLAG_ROOTFILE then
 		'' No #include file search for internal #includes
 		incfile = inctext
@@ -2324,7 +2324,7 @@ private sub cppInclude(byval begin as integer, byref flags as integer, byval is_
 			contextfile = *location.source->name
 		end if
 
-		dim contextincdir as ASTNODE ptr
+		dim contextincdir as AstNode ptr
 		if is_include_next then
 			contextincdir = cppGetFileContext()->incdir
 		end if
@@ -2465,7 +2465,7 @@ private sub cppEndInclude()
 	cpp.x += 1
 end sub
 
-private sub hMaybeExpandMacroInDefineBody(byval parentdefine as ASTNODE ptr)
+private sub hMaybeExpandMacroInDefineBody(byval parentdefine as AstNode ptr)
 	var id = tkSpellId(cpp.x)
 
 	'' Only expand if the called macro was given with -expandindefine

@@ -4,7 +4,7 @@
 type ParentChildPattern
 	parentpattern as string
 	childpattern as string
-	declare function matches(byval parent as ASTNODE ptr, byval child as ASTNODE ptr) as integer
+	declare function matches(byval parent as AstNode ptr, byval child as AstNode ptr) as integer
 end type
 
 type IndexPattern
@@ -32,9 +32,9 @@ type DeclPatterns
 	declare destructor()
 	declare function matches _
 		( _
-			byval parentparent as ASTNODE ptr, _
-			byval parent as ASTNODE ptr, _
-			byval child as ASTNODE ptr, _
+			byval parentparent as AstNode ptr, _
+			byval parent as AstNode ptr, _
+			byval child as AstNode ptr, _
 			byval childindex as integer _
 		) as integer
 	declare operator let(byref as const DeclPatterns) '' unimplemented

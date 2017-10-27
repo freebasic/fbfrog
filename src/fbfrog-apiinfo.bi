@@ -10,8 +10,8 @@ type CodeReplacement
 end type
 
 type ApiInfo
-	verand as ASTNODE ptr
-	script as ASTNODE ptr
+	verand as AstNode ptr
+	script as AstNode ptr
 
 	target as TargetInfo
 	as integer windowsms, clong32, fixunsizedarrays
@@ -23,12 +23,12 @@ type ApiInfo
 	patterns(tktokens.OPT_NOSTRING to tktokens.OPT_STRING) as DeclPatterns
 	removeinclude as THash = THash(3, FALSE)
 	setarraysizeoptions as THash = THash(3, FALSE)
-	moveaboveoptions as ASTNODE ptr
+	moveaboveoptions as AstNode ptr
 
 	replacements as CodeReplacement ptr
 	replacementcount as integer
 
-	log as ASTNODE ptr
+	log as AstNode ptr
 
 	declare constructor()
 	declare destructor()

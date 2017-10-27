@@ -59,16 +59,16 @@
 
 using tktokens
 
-declare function cExpression(byval allow_toplevel_comma as integer, byval allow_idseq as integer) as ASTNODE ptr
-declare function cExpressionOrInitializer(byval allow_idseq as integer) as ASTNODE ptr
-declare function cDataType() as ASTNODE ptr
-declare function cDeclaration(byval astclass as integer, byval gccattribs as integer) as ASTNODE ptr
-declare function cScope() as ASTNODE ptr
-declare function cIfBlock() as ASTNODE ptr
-declare function cDoWhile(byval semi_is_optional as integer) as ASTNODE ptr
-declare function cWhile() as ASTNODE ptr
-declare function cConstruct(byval bodyastclass as integer) as ASTNODE ptr
-declare function cBody(byval bodyastclass as integer) as ASTNODE ptr
+declare function cExpression(byval allow_toplevel_comma as integer, byval allow_idseq as integer) as AstNode ptr
+declare function cExpressionOrInitializer(byval allow_idseq as integer) as AstNode ptr
+declare function cDataType() as AstNode ptr
+declare function cDeclaration(byval astclass as integer, byval gccattribs as integer) as AstNode ptr
+declare function cScope() as AstNode ptr
+declare function cIfBlock() as AstNode ptr
+declare function cDoWhile(byval semi_is_optional as integer) as AstNode ptr
+declare function cWhile() as AstNode ptr
+declare function cConstruct(byval bodyastclass as integer) as AstNode ptr
+declare function cBody(byval bodyastclass as integer) as AstNode ptr
 
 type DATATYPEINFO
 	id as zstring ptr
@@ -100,7 +100,7 @@ dim shared extradatatypes(0 to ...) as DATATYPEINFO => _
 namespace c
 	dim shared api as ApiInfo ptr
 	dim shared as integer x, parseok, tempids
-	dim shared parentdefine as ASTNODE ptr
+	dim shared parentdefine as AstNode ptr
 
 	dim shared typedefs as THash ptr
 	dim shared extradatatypehash as THash ptr
@@ -115,7 +115,7 @@ namespace c
 	type DEFBODYNODE
 		xdefbegin	as integer  '' Begin of the #define
 		xbodybegin	as integer  '' Begin of the #define's body
-		n		as ASTNODE ptr  '' #define node
+		n		as AstNode ptr  '' #define node
 	end type
 	dim shared defbodies as DEFBODYNODE ptr
 	dim shared as integer defbodycount, defbodyroom
@@ -214,7 +214,7 @@ end sub
 
 #define cAddTypedef(id) c.typedefs->addOverwrite(id, NULL)
 
-private sub cAddDefBody(byval xdefbegin as integer, byval xbodybegin as integer, byval n as ASTNODE ptr)
+private sub cAddDefBody(byval xdefbegin as integer, byval xbodybegin as integer, byval n as AstNode ptr)
 	if c.defbodyroom = c.defbodycount then
 		if c.defbodyroom = 0 then
 			c.defbodyroom = 512
@@ -233,9 +233,9 @@ end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-private function cLiteral(byval astclass as integer, byval eval_escapes as integer) as ASTNODE ptr
+private function cLiteral(byval astclass as integer, byval eval_escapes as integer) as AstNode ptr
 	dim errmsg as string
-	dim n as ASTNODE ptr
+	dim n as AstNode ptr
 
 	if astclass = ASTCLASS_CONSTI then
 		n = hNumberLiteral(c.x, FALSE, errmsg, c.api->clong32)
@@ -264,7 +264,7 @@ private function cLiteral(byval astclass as integer, byval eval_escapes as integ
 end function
 
 '' ("..." | [#]id)*
-private function cStringLiteralSequence() as ASTNODE ptr
+private function cStringLiteralSequence() as AstNode ptr
 	var strcat = astNew(ASTCLASS_STRCAT)
 
 	while c.parseok
@@ -356,7 +356,7 @@ private function hIsDataTypeOrAttribute(byval y as integer) as integer
 	end select
 end function
 
-private function cCall(byval functionexpr as ASTNODE ptr, byval allow_idseq as integer) as ASTNODE ptr
+private function cCall(byval functionexpr as AstNode ptr, byval allow_idseq as integer) as AstNode ptr
 	assert(tkGet(c.x) = TK_LPAREN)
 	c.x += 1
 
@@ -385,7 +385,7 @@ private function hExpression _
 		byval parentheses as integer, _
 		byval allow_toplevel_comma as integer, _
 		byval allow_idseq as integer _
-	) as ASTNODE ptr
+	) as AstNode ptr
 
 	'' Unary prefix operators
 	var op = -1
@@ -398,7 +398,7 @@ private function hExpression _
 	case TK_STAR   : op = ASTCLASS_DEREF     '' *
 	end select
 
-	dim as ASTNODE ptr a
+	dim as AstNode ptr a
 	if op >= 0 then
 		c.x += 1
 		a = astNew(op, hExpression(cprecedence(op), parentheses, allow_toplevel_comma, allow_idseq))
@@ -672,13 +672,13 @@ private function hExpression _
 	function = a
 end function
 
-private function cExpression(byval allow_toplevel_comma as integer, byval allow_idseq as integer) as ASTNODE ptr
+private function cExpression(byval allow_toplevel_comma as integer, byval allow_idseq as integer) as AstNode ptr
 	function = hExpression(0, 0, allow_toplevel_comma, allow_idseq)
 end function
 
 '' Initializer:
 '' '{' ExpressionOrInitializer (',' ExpressionOrInitializer)* [','] '}'
-private function cInitializer(byval allow_idseq as integer) as ASTNODE ptr
+private function cInitializer(byval allow_idseq as integer) as AstNode ptr
 	'' '{'
 	assert(tkGet(c.x) = TK_LBRACE)
 	c.x += 1
@@ -699,7 +699,7 @@ private function cInitializer(byval allow_idseq as integer) as ASTNODE ptr
 	function = a
 end function
 
-private function cExpressionOrInitializer(byval allow_idseq as integer) as ASTNODE ptr
+private function cExpressionOrInitializer(byval allow_idseq as integer) as AstNode ptr
 	'' '{'?
 	if tkGet(c.x) = TK_LBRACE then
 		function = cInitializer(allow_idseq)
@@ -819,7 +819,7 @@ end sub
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 '' Enum constant: Identifier ['=' Expression] (',' | '}')
-private function cEnumConst() as ASTNODE ptr
+private function cEnumConst() as AstNode ptr
 	'' Identifier
 	if tkGet(c.x) <> TK_ID then
 		cError("expected identifier for an enum constant" + tkButFound(c.x))
@@ -851,7 +851,7 @@ end function
 
 '' {STRUCT|UNION|ENUM} [Identifier] '{' StructBody|EnumBody '}'
 '' {STRUCT|UNION|ENUM} Identifier
-private function cTag() as ASTNODE ptr
+private function cTag() as AstNode ptr
 	'' {STRUCT|UNION|ENUM}
 	dim as integer astclass
 	select case tkGet(c.x)
@@ -920,7 +920,7 @@ private function cTag() as ASTNODE ptr
 	end if
 end function
 
-private function cTypedef() as ASTNODE ptr
+private function cTypedef() as AstNode ptr
 	'' TYPEDEF
 	c.x += 1
 	function = cDeclaration(ASTCLASS_TYPEDEF, 0)
@@ -928,7 +928,7 @@ end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-private sub hTurnIntoUNKNOWN(byval n as ASTNODE ptr, byval first as integer, byval last as integer)
+private sub hTurnIntoUNKNOWN(byval n as AstNode ptr, byval first as integer, byval last as integer)
 	n->class = ASTCLASS_UNKNOWN
 	astSetText(n, tkSpell(first, last))
 	astRemoveChildren(n)
@@ -949,7 +949,7 @@ end sub
 ''        [return?] c
 ''    end scope
 ''
-private function hUnwrapToplevelCommas(byval n as ASTNODE ptr) as ASTNODE ptr
+private function hUnwrapToplevelCommas(byval n as AstNode ptr) as AstNode ptr
 	if n->class = ASTCLASS_CCOMMA then
 		var l = n->head
 		var r = n->tail
@@ -962,7 +962,7 @@ private function hUnwrapToplevelCommas(byval n as ASTNODE ptr) as ASTNODE ptr
 	end if
 end function
 
-private sub hHandleToplevelAssign(byval n as ASTNODE ptr)
+private sub hHandleToplevelAssign(byval n as AstNode ptr)
 	'' C assignment expression is top-most expression?
 	'' Can be translated to FB assignment statement easily.
 	'' (unlike C assignments nested deeper in expressions etc.)
@@ -991,7 +991,7 @@ end sub
 '' use as statement, not expression. (otherwise, for example, assignments could
 '' be mis-used as comparisons)
 ''
-private function hTryToFixCommasAndAssigns(byval n as ASTNODE ptr) as ASTNODE ptr
+private function hTryToFixCommasAndAssigns(byval n as AstNode ptr) as AstNode ptr
 	'' Commas (first -- in case they contain assignments that will become
 	'' toplevel ones after unwrapping)
 	n = hUnwrapToplevelCommas(n)
@@ -1010,7 +1010,7 @@ private function hTryToFixCommasAndAssigns(byval n as ASTNODE ptr) as ASTNODE pt
 	function = n
 end function
 
-private sub hErrorForRemainingCommasOrAssigns(byval n as ASTNODE ptr)
+private sub hErrorForRemainingCommasOrAssigns(byval n as AstNode ptr)
 	if astContains(n, ASTCLASS_CCOMMA) then
 		cError("can't auto-translate C comma operator here [yet]")
 	end if
@@ -1148,7 +1148,7 @@ private function cDefineBodyTokens() as string
 end function
 
 '' Return value: whether to keep the #define
-private function cDefineBody(byval macro as ASTNODE ptr) as integer
+private function cDefineBody(byval macro as AstNode ptr) as integer
 	'' If -convbodytokens was given for this #define, then don't try to parse the #define body,
 	'' but just convert the tokens individually from C to FB.
 	if c.api->idopt(OPT_CONVBODYTOKENS).matches(macro->text) then
@@ -1249,7 +1249,7 @@ private function hDefBodyContainsIds(byval y as integer) as integer
 	loop
 end function
 
-private sub cParseDefBody(byval n as ASTNODE ptr, byval xbegin as integer, byref add_to_ast as integer)
+private sub cParseDefBody(byval n as AstNode ptr, byval xbegin as integer, byref add_to_ast as integer)
 	c.parentdefine = n
 
 	'' Body
@@ -1277,7 +1277,7 @@ private sub cParseDefBody(byval n as ASTNODE ptr, byval xbegin as integer, byref
 	c.parentdefine = NULL
 end sub
 
-private function cDefine() as ASTNODE ptr
+private function cDefine() as AstNode ptr
 	'' define
 	var defbegin = c.x - 1
 	c.x += 1
@@ -1316,7 +1316,7 @@ private function cDefine() as ASTNODE ptr
 	function = macro
 end function
 
-private function cUndef() as ASTNODE ptr
+private function cUndef() as AstNode ptr
 	'' undef
 	c.x += 1
 
@@ -1330,7 +1330,7 @@ private function cUndef() as ASTNODE ptr
 	c.x += 1
 end function
 
-private function cInclude() as ASTNODE ptr
+private function cInclude() as AstNode ptr
 	c.x += 1
 
 	'' "filename" | <filename>
@@ -1375,7 +1375,7 @@ private function cPragmaPackNumber() as integer
 	function = TRUE
 end function
 
-private function cPragmaPack() as ASTNODE ptr
+private function cPragmaPack() as AstNode ptr
 	'' pack
 	assert(tkGet(c.x) = TK_ID)
 	assert(tkSpell(c.x) = "pack")
@@ -1446,7 +1446,7 @@ private function cPragmaPack() as ASTNODE ptr
 end function
 
 '' #pragma comment(lib, "...")
-function cPragmaComment() as ASTNODE ptr
+function cPragmaComment() as AstNode ptr
 	'' comment
 	assert(tkGet(c.x) = TK_ID)
 	assert(tkSpell(c.x) = "comment")
@@ -1541,7 +1541,7 @@ end function
 private sub cBaseType _
 	( _
 		byref dtype as integer, _
-		byref subtype as ASTNODE ptr, _
+		byref subtype as AstNode ptr, _
 		byref gccattribs as integer, _
 		byref is_tag as integer _
 	)
@@ -1728,11 +1728,11 @@ end sub
 
 '' ParamDeclList = ParamDecl (',' ParamDecl)*
 '' ParamDecl = '...' | Declaration{Param}
-private function cParamDeclList() as ASTNODE ptr
+private function cParamDeclList() as AstNode ptr
 	var group = astNewGROUP()
 
 	do
-		dim as ASTNODE ptr t
+		dim as AstNode ptr t
 
 		'' '...'?
 		if tkGet(c.x) = TK_ELLIPSIS then
@@ -1750,7 +1750,7 @@ private function cParamDeclList() as ASTNODE ptr
 	function = group
 end function
 
-private function hCanHaveInitializer(byval n as ASTNODE ptr) as integer
+private function hCanHaveInitializer(byval n as AstNode ptr) as integer
 	select case n->class
 	case ASTCLASS_PARAM
 		function = TRUE
@@ -1759,7 +1759,7 @@ private function hCanHaveInitializer(byval n as ASTNODE ptr) as integer
 	end select
 end function
 
-private function hHasVarargParam(byval proc as ASTNODE ptr) as integer
+private function hHasVarargParam(byval proc as AstNode ptr) as integer
 	var param = proc->head
 	while param
 		if param->dtype = TYPE_NONE then
@@ -1770,7 +1770,7 @@ private function hHasVarargParam(byval proc as ASTNODE ptr) as integer
 	function = FALSE
 end function
 
-private sub hPostprocessDeclarator(byval n as ASTNODE ptr)
+private sub hPostprocessDeclarator(byval n as AstNode ptr)
 	if n->class = ASTCLASS_PROC then
 		'' Ignore extern on procedures, not needed explicitly
 		n->attrib and= not ASTATTRIB_EXTERN
@@ -1824,7 +1824,7 @@ end sub
 ''
 ''
 '' t = The whole declaration's AST. Typically this starts out as a VAR.
-'' node = The ASTNODE at the current recursion level. If we find function
+'' node = The AstNode at the current recursion level. If we find function
 '' parameters or an array size, they go to this node.
 '' If the declarator is a plain VAR, function parameters turn it into a function.
 '' But if it's a pointer, it becomes a function pointer VAR. Then t stays the same,
@@ -1956,12 +1956,12 @@ private function cDeclarator _
 		byval nestlevel as integer, _
 		byval astclass as integer, _
 		byval outerdtype as integer, _
-		byval basesubtype as ASTNODE ptr, _
+		byval basesubtype as AstNode ptr, _
 		byval basegccattribs as integer, _
-		byref node as ASTNODE ptr, _
+		byref node as AstNode ptr, _
 		byref procptrdtype as integer, _
 		byref gccattribs as integer _
-	) as ASTNODE ptr
+	) as AstNode ptr
 
 	var dtype = outerdtype
 	var innerprocptrdtype = TYPE_PROC
@@ -2022,7 +2022,7 @@ private function cDeclarator _
 		dtype = typeSetIsRef(dtype)
 	end if
 
-	dim as ASTNODE ptr t, innernode
+	dim as AstNode ptr t, innernode
 
 	''    '(' Declarator ')'    |    [Identifier]
 
@@ -2252,9 +2252,9 @@ end function
 '' Parsing just the base type isn't enough, because it could be a function
 '' pointer cast with parameter list etc. We need to do full declarator parsing
 '' to handle that.
-private function cDataType() as ASTNODE ptr
+private function cDataType() as AstNode ptr
 	dim as integer dtype, gccattribs
-	dim as ASTNODE ptr subtype
+	dim as AstNode ptr subtype
 	cBaseType(dtype, subtype, gccattribs, FALSE)
 
 	'' Disallow UDT bodies in type "expressions" - FB doesn't support it,
@@ -2272,7 +2272,7 @@ private function cDataType() as ASTNODE ptr
 	function = cDeclarator(0, ASTCLASS_DATATYPE, dtype, subtype, gccattribs, NULL, 0, 0)
 end function
 
-private function hUpdateTypeNameReferences(byval n as ASTNODE ptr) as integer
+private function hUpdateTypeNameReferences(byval n as AstNode ptr) as integer
 	if typeGetDt(n->dtype) = TYPE_UDT then
 		assert(astIsTEXT(n->subtype))
 		if *n->subtype->text = c.oldid then
@@ -2290,7 +2290,7 @@ end function
 '' =>
 ''    struct B { };
 ''    struct A { };
-private sub hUnscopeNestedNamedUdts(byval result as ASTNODE ptr, byval udt as ASTNODE ptr)
+private sub hUnscopeNestedNamedUdts(byval result as AstNode ptr, byval udt as AstNode ptr)
 	var i = udt->head
 	while i
 		var nxt = i->next
@@ -2331,12 +2331,12 @@ end sub
 ''
 '' Declaration = GccAttributeList BaseType Declarator (',' Declarator)* [';']
 ''
-private function cDeclaration(byval astclass as integer, byval gccattribs as integer) as ASTNODE ptr
+private function cDeclaration(byval astclass as integer, byval gccattribs as integer) as AstNode ptr
 	assert(astclass <> ASTCLASS_DATATYPE)
 
 	'' BaseType
 	dim as integer dtype, is_tag
-	dim as ASTNODE ptr subtype
+	dim as AstNode ptr subtype
 	cBaseType(dtype, subtype, gccattribs, is_tag)
 
 	var result = astNewGROUP()
@@ -2491,7 +2491,7 @@ end function
 
 '' Variable/procedure declarations
 ''    GccAttributeList [EXTERN|STATIC] Declaration
-private function cVarOrProcDecl(byval is_local as integer) as ASTNODE ptr
+private function cVarOrProcDecl(byval is_local as integer) as AstNode ptr
 	'' __ATTRIBUTE__((...))
 	var gccattribs = 0
 	cGccAttributeList(gccattribs)
@@ -2516,7 +2516,7 @@ private function cVarOrProcDecl(byval is_local as integer) as ASTNODE ptr
 end function
 
 '' Expression statement: Assignments, function calls, i++, etc.
-private function cExpressionStatement() as ASTNODE ptr
+private function cExpressionStatement() as AstNode ptr
 	function = hTryToFixCommasAndAssigns(cExpression(TRUE, FALSE))
 
 	'' ';'?
@@ -2524,7 +2524,7 @@ private function cExpressionStatement() as ASTNODE ptr
 end function
 
 '' RETURN [Expression] ';'
-private function cReturn() as ASTNODE ptr
+private function cReturn() as AstNode ptr
 	'' RETURN
 	assert(tkGet(c.x) = KW_RETURN)
 	c.x += 1
@@ -2546,7 +2546,7 @@ end function
 '' Using cBody() to allow the constructs in this scope block to be parsed
 '' separately. If we can't parse one of them, then only that one will become an
 '' unknown construct. The rest of the scope can potentially be parsed fine.
-private function cScope() as ASTNODE ptr
+private function cScope() as AstNode ptr
 	'' '{'
 	assert(tkGet(c.x) = TK_LBRACE)
 	c.x += 1
@@ -2557,7 +2557,7 @@ private function cScope() as ASTNODE ptr
 	cExpectMatch(TK_RBRACE, "to close compound statement")
 end function
 
-private function cConditionExpr() as ASTNODE ptr
+private function cConditionExpr() as AstNode ptr
 	'' The parentheses around the condition expression are part of the
 	'' if/do/while/... syntax. They have to be parsed explicitly, not as
 	'' part of the condition expression. Otherwise, code such as this:
@@ -2578,7 +2578,7 @@ private function cConditionExpr() as ASTNODE ptr
 end function
 
 '' IF '(' Expression ')' Construct [ELSE Construct]
-private function cIfBlock() as ASTNODE ptr
+private function cIfBlock() as AstNode ptr
 	var ifblock = astNew(ASTCLASS_IFBLOCK)
 
 	'' IF
@@ -2603,7 +2603,7 @@ private function cIfBlock() as ASTNODE ptr
 end function
 
 '' DO Construct WHILE '(' Expression ')' [';']
-private function cDoWhile(byval semi_is_optional as integer) as ASTNODE ptr
+private function cDoWhile(byval semi_is_optional as integer) as AstNode ptr
 	var dowhile = astNew(ASTCLASS_DOWHILE)
 
 	'' DO
@@ -2629,7 +2629,7 @@ private function cDoWhile(byval semi_is_optional as integer) as ASTNODE ptr
 end function
 
 '' WHILE '(' Expression ')' Construct
-private function cWhile() as ASTNODE ptr
+private function cWhile() as AstNode ptr
 	var whileloop = astNew(ASTCLASS_WHILE)
 
 	'' WHILE
@@ -2646,7 +2646,7 @@ private function cWhile() as ASTNODE ptr
 end function
 
 '' EXTERN "C" { ... }
-private function cExternBlock() as ASTNODE ptr
+private function cExternBlock() as AstNode ptr
 	assert(tkGet(c.x) = KW_EXTERN)
 	c.x += 1
 
@@ -2670,7 +2670,7 @@ private function cExternBlock() as ASTNODE ptr
 	cExpectMatch(TK_RBRACE, "for <extern ""C""> block")
 end function
 
-private function cConstruct(byval bodyastclass as integer) as ASTNODE ptr
+private function cConstruct(byval bodyastclass as integer) as AstNode ptr
 	if tkGet(c.x) = TK_FBCODE then
 		var n = astNew(ASTCLASS_FBCODE, tkGetText(c.x))
 		c.x += 1
@@ -2682,7 +2682,7 @@ private function cConstruct(byval bodyastclass as integer) as ASTNODE ptr
 	if (tkGet(c.x) = TK_HASH) and tkIsStartOfDirective(c.x) then
 		c.x += 1
 
-		dim directive as ASTNODE ptr
+		dim directive as AstNode ptr
 		if tkGet(c.x) = TK_ID then
 			select case *tkSpellId(c.x)
 			case "define"
@@ -2751,13 +2751,13 @@ private function cConstruct(byval bodyastclass as integer) as ASTNODE ptr
 	end select
 end function
 
-private sub hSetLocationIfNeeded(byval n as ASTNODE ptr, byval location as TkLocation)
+private sub hSetLocationIfNeeded(byval n as AstNode ptr, byval location as TkLocation)
 	if n->location.source = NULL then
 		n->location = location
 	end if
 end sub
 
-private function cBody(byval bodyastclass as integer) as ASTNODE ptr
+private function cBody(byval bodyastclass as integer) as AstNode ptr
 	var result = astNewGROUP()
 
 	do
@@ -2812,7 +2812,7 @@ private function cBody(byval bodyastclass as integer) as ASTNODE ptr
 	function = result
 end function
 
-function cMain() as ASTNODE ptr
+function cMain() as AstNode ptr
 	var t = cBody(-1)
 
 	'' Process the #define bodies which weren't parsed yet

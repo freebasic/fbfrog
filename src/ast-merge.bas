@@ -23,7 +23,7 @@
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 type DECLNODE
-	n	as ASTNODE ptr  '' The declaration at that index
+	n	as AstNode ptr  '' The declaration at that index
 	hash	as ulong        '' Precalculated hash value for the declaration
 	apis	as ApiBits      '' APIs bitmask of the declaration's parent VERBLOCK
 end type
@@ -34,10 +34,10 @@ type DECLTABLE
 	room	as integer
 end type
 
-'' ASTNODE class and identifier are the 2 main points to quickly distinguish two declarations.
+'' AstNode class and identifier are the 2 main points to quickly distinguish two declarations.
 '' Care must be taken though; callconv/ASTATTRIB_HIDECALLCONV flags shouldn't be calculated into
 '' the hash though because hAstLCS() and hFindCommonCallConvsOnMergedDecl() do custom handling for them...
-private function decltableHash(byval n as ASTNODE ptr) as ulong
+private function decltableHash(byval n as AstNode ptr) as ulong
 	dim as ulong hash = n->class
 	if n->text then
 		hash or= hashHash(n->text) shl 8
@@ -45,7 +45,7 @@ private function decltableHash(byval n as ASTNODE ptr) as ulong
 	function = hash
 end function
 
-private sub decltableAdd(byval table as DECLTABLE ptr, byval n as ASTNODE ptr, byval apis as ApiBits)
+private sub decltableAdd(byval table as DECLTABLE ptr, byval n as AstNode ptr, byval apis as ApiBits)
 	if table->count = table->room then
 		table->room += 256
 		table->array = reallocate(table->array, table->room * sizeof(DECLNODE))
@@ -60,7 +60,7 @@ private sub decltableAdd(byval table as DECLTABLE ptr, byval n as ASTNODE ptr, b
 	table->count += 1
 end sub
 
-private sub decltableInit(byval table as DECLTABLE ptr, byval code as ASTNODE ptr)
+private sub decltableInit(byval table as DECLTABLE ptr, byval code as AstNode ptr)
 	table->array = NULL
 	table->count = 0
 	table->room = 0
@@ -89,7 +89,7 @@ end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-function astDumpPrettyVersion(byval n as ASTNODE ptr) as string
+function astDumpPrettyVersion(byval n as AstNode ptr) as string
 	dim s as string
 
 	select case n->class
@@ -122,9 +122,9 @@ end function
 private function astNewGroupLike _
 	( _
 		byval astclass as integer, _
-		byval a as ASTNODE ptr, _
-		byval b as ASTNODE ptr _
-	) as ASTNODE ptr
+		byval a as AstNode ptr, _
+		byval b as AstNode ptr _
+	) as AstNode ptr
 
 	if a andalso (a->class = astclass) then a->class = ASTCLASS_GROUP
 	if b andalso (b->class = astclass) then b->class = ASTCLASS_GROUP
@@ -132,21 +132,21 @@ private function astNewGroupLike _
 	function = astNew(astclass, astNewGROUP(a, b))
 end function
 
-function astNewVERAND(byval a as ASTNODE ptr, byval b as ASTNODE ptr) as ASTNODE ptr
+function astNewVERAND(byval a as AstNode ptr, byval b as AstNode ptr) as AstNode ptr
 	function = astNewGroupLike(ASTCLASS_VERAND, a, b)
 end function
 
-function astNewVEROR(byval a as ASTNODE ptr, byval b as ASTNODE ptr) as ASTNODE ptr
+function astNewVEROR(byval a as AstNode ptr, byval b as AstNode ptr) as AstNode ptr
 	function = astNewGroupLike(ASTCLASS_VEROR, a, b)
 end function
 
-function astNewVERNUMCHECK(byval vernum as integer) as ASTNODE ptr
+function astNewVERNUMCHECK(byval vernum as integer) as AstNode ptr
 	var n = astNew(ASTCLASS_VERNUMCHECK)
 	n->vernum = vernum
 	function = n
 end function
 
-private function astNewVERBLOCK(byval apis as ApiBits, byval children as ASTNODE ptr) as ASTNODE ptr
+private function astNewVERBLOCK(byval apis as ApiBits, byval children as AstNode ptr) as AstNode ptr
 	var n = astNew(ASTCLASS_VERBLOCK, children)
 	n->apis = apis
 	function = n
@@ -156,7 +156,7 @@ end function
 '' should be aswell, so hMergeStructsManually() doesn't have to handle both
 '' cases of "fresh still unwrapped fields" and "already wrapped from previous
 '' merge", but only the latter.
-private sub hWrapStructFieldsInVerblocks(byval api as ApiBits, byval code as ASTNODE ptr)
+private sub hWrapStructFieldsInVerblocks(byval api as ApiBits, byval code as AstNode ptr)
 	var i = code->head
 	while i
 		hWrapStructFieldsInVerblocks(api, i)
@@ -170,16 +170,16 @@ private sub hWrapStructFieldsInVerblocks(byval api as ApiBits, byval code as AST
 	end if
 end sub
 
-private function astWrapFileInVerblock(byval api as ApiBits, byval code as ASTNODE ptr) as ASTNODE ptr
+private function astWrapFileInVerblock(byval api as ApiBits, byval code as AstNode ptr) as AstNode ptr
 	hWrapStructFieldsInVerblocks(api, code)
 	function = astNewVERBLOCK(api, code)
 end function
 
 private sub hVerblockAppend _
 	( _
-		byval n as ASTNODE ptr, _
+		byval n as AstNode ptr, _
 		byval apis as ApiBits, _
-		byval child as ASTNODE ptr _
+		byval child as AstNode ptr _
 	)
 
 	'' If the tree's last VERBLOCK covers the same versions, then just add
@@ -195,7 +195,7 @@ private sub hVerblockAppend _
 	astAppend(n, astNewVERBLOCK(apis, child))
 end sub
 
-private sub hAddDecl(byval c as ASTNODE ptr, byval array as DECLNODE ptr, byval i as integer)
+private sub hAddDecl(byval c as AstNode ptr, byval array as DECLNODE ptr, byval i as integer)
 	hVerblockAppend(c, array[i].apis, astClone(array[i].n))
 end sub
 
@@ -231,9 +231,9 @@ end sub
 ''
 private sub hFindCommonCallConvsOnMergedDecl _
 	( _
-		byval mdecl as ASTNODE ptr, _
-		byval adecl as ASTNODE ptr, _
-		byval bdecl as ASTNODE ptr _
+		byval mdecl as AstNode ptr, _
+		byval adecl as AstNode ptr, _
+		byval bdecl as AstNode ptr _
 	)
 
 	assert(mdecl->class = adecl->class)
@@ -303,7 +303,7 @@ end sub
 
 private sub hAddMergedDecl _
 	( _
-		byval c as ASTNODE ptr, _
+		byval c as AstNode ptr, _
 		byval aarray as DECLNODE ptr, _
 		byval ai as integer, _
 		byval barray as DECLNODE ptr, _
@@ -327,7 +327,7 @@ private sub hAddMergedDecl _
 	'' (This relies on blocks to be allowed to match in the hAstLCS() call,
 	'' even if they have different children)
 	''
-	dim mdecl as ASTNODE ptr
+	dim mdecl as AstNode ptr
 	if astIsMergableBlock(adecl) then
 
 		''
@@ -515,7 +515,7 @@ end sub
 
 private sub hAstMerge _
 	( _
-		byval c as ASTNODE ptr, _
+		byval c as AstNode ptr, _
 		byval aarray as DECLNODE ptr, _
 		byval afirst as integer, _
 		byval alast as integer, _
@@ -600,9 +600,9 @@ end sub
 
 function astMergeVerblocks _
 	( _
-		byval a as ASTNODE ptr, _
-		byval b as ASTNODE ptr _
-	) as ASTNODE ptr
+		byval a as AstNode ptr, _
+		byval b as AstNode ptr _
+	) as AstNode ptr
 
 	var c = astNewGROUP()
 	a = astNewGROUP(a)
@@ -658,7 +658,7 @@ function astMergeVerblocks _
 	function = c
 end function
 
-sub astMergeNext(byval api as ApiBits, byref final as ASTNODE ptr, byref incoming as ASTNODE ptr)
+sub astMergeNext(byval api as ApiBits, byref final as AstNode ptr, byref incoming as AstNode ptr)
 	incoming = astWrapFileInVerblock(api, incoming)
 	if final = NULL then
 		final = astNewGROUP(incoming)
@@ -692,7 +692,7 @@ end sub
 '' Similar to that, verblocks at the toplevel can be solved out, if they cover
 '' all possible versions. (think of them as being nested in a global verblock)
 ''
-private sub hSolveOutRedundantVerblocks(byval code as ASTNODE ptr, byval parentapis as ApiBits)
+private sub hSolveOutRedundantVerblocks(byval code as AstNode ptr, byval parentapis as ApiBits)
 	var i = code->head
 	while i
 		var nxt = i->next
@@ -732,7 +732,7 @@ end sub
 ''     #else
 ''         [dos/unix]
 ''     #endif
-private sub maybeSwapIfElseWithoutRelinking(byval ifblock as ASTNODE ptr)
+private sub maybeSwapIfElseWithoutRelinking(byval ifblock as AstNode ptr)
 	var elseblock = ifblock->next
 	assert(astIsPPIF(ifblock) and astIsPPELSE(elseblock))
 	if hCalcIfConditionWeight(ifblock->expr) > hCalcIfConditionWeight(elseblock->expr) then
@@ -774,7 +774,7 @@ end sub
 ''         <...>
 ''     #endif
 ''
-private sub hTurnVerblocksIntoPpIfs(byval code as ASTNODE ptr)
+private sub hTurnVerblocksIntoPpIfs(byval code as AstNode ptr)
 	'' Process all nested verblocks first
 	'' (we may reorder verblocks below when turning them into #ifs, and
 	'' then it's too easy to forget nested ones)
@@ -831,7 +831,7 @@ private sub hTurnVerblocksIntoPpIfs(byval code as ASTNODE ptr)
 end sub
 
 type CONDINFO
-	cond		as ASTNODE ptr	'' The condition expression
+	cond		as AstNode ptr	'' The condition expression
 	count		as integer	'' How often it was seen
 end type
 
@@ -840,7 +840,7 @@ namespace condcounter
 	dim shared condcount as integer
 end namespace
 
-private sub condcounterCount(byval cond as ASTNODE ptr)
+private sub condcounterCount(byval cond as AstNode ptr)
 	'' If this condition is already known, increase the count.
 	for i as integer = 0 to condcounter.condcount - 1
 		if astIsEqual(condcounter.conds[i].cond, cond) then
@@ -864,7 +864,7 @@ private sub condcounterEnd()
 	condcounter.condcount = 0
 end sub
 
-private function condcounterFindMostCommon() as ASTNODE ptr
+private function condcounterFindMostCommon() as AstNode ptr
 	if condcounter.condcount = 0 then
 		return NULL
 	end if
@@ -887,7 +887,7 @@ private function condcounterFindMostCommon() as ASTNODE ptr
 	function = condcounter.conds[imaxcount].cond
 end function
 
-private function hDetermineMostCommonCondition(byval veror as ASTNODE ptr) as ASTNODE ptr
+private function hDetermineMostCommonCondition(byval veror as AstNode ptr) as AstNode ptr
 	assert(astIsVEROR(veror))
 
 	'' Build list of all conditions and count them. The one with the max
@@ -910,17 +910,17 @@ private function hDetermineMostCommonCondition(byval veror as ASTNODE ptr) as AS
 	condcounterEnd()
 end function
 
-private function hIsCondition(byval n as ASTNODE ptr) as integer
+private function hIsCondition(byval n as AstNode ptr) as integer
 	function = (not astIsVEROR(n)) and (not astIsVERAND(n))
 end function
 
 '' Determine which OS's are covered by a VEROR
 type OSDefineChecker
 	covered(0 to OS__COUNT-1) as byte
-	declare sub check(byval veror as ASTNODE ptr)
+	declare sub check(byval veror as AstNode ptr)
 end type
 
-sub OSDefineChecker.check(byval veror as ASTNODE ptr)
+sub OSDefineChecker.check(byval veror as AstNode ptr)
 	assert(astIsVEROR(veror))
 	var i = veror->head
 	while i
@@ -935,7 +935,7 @@ sub OSDefineChecker.check(byval veror as ASTNODE ptr)
 	wend
 end sub
 
-private function coversAllUnix(byval veror as ASTNODE ptr) as integer
+private function coversAllUnix(byval veror as AstNode ptr) as integer
 	dim checker as OSDefineChecker
 	checker.check(veror)
 	for os as integer = 0 to OS__COUNT - 1
@@ -946,7 +946,7 @@ private function coversAllUnix(byval veror as ASTNODE ptr) as integer
 	return TRUE
 end function
 
-private sub replaceUnixChecks(byval veror as ASTNODE ptr)
+private sub replaceUnixChecks(byval veror as AstNode ptr)
 	assert(astIsVEROR(veror))
 	var i = veror->head
 	while i
@@ -963,7 +963,7 @@ private sub replaceUnixChecks(byval veror as ASTNODE ptr)
 	astAppend(veror, astNewDEFINED("__FB_UNIX__"))
 end sub
 
-private function hSimplify(byval n as ASTNODE ptr, byref changed as integer) as ASTNODE ptr
+private function hSimplify(byval n as AstNode ptr, byref changed as integer) as AstNode ptr
 	if n = NULL then return NULL
 	if hIsCondition(n) then return n
 
@@ -1084,11 +1084,11 @@ private function hSimplify(byval n as ASTNODE ptr, byref changed as integer) as 
 	function = n
 end function
 
-private function hBuildVerBop(byval astclass as integer, byval vernum as integer) as ASTNODE ptr
+private function hBuildVerBop(byval astclass as integer, byval vernum as integer) as AstNode ptr
 	function = astNew(astclass, astNewTEXT(frog.versiondefine), astNewTEXT(frog.vernums(vernum)))
 end function
 
-private sub hMaybeEmitRangeCheck(byval veror as ASTNODE ptr, byref l as integer, byref r as integer)
+private sub hMaybeEmitRangeCheck(byval veror as AstNode ptr, byref l as integer, byref r as integer)
 	'' No covered range found (yet)?
 	if l < 0 then exit sub
 
@@ -1108,7 +1108,7 @@ private sub hMaybeEmitRangeCheck(byval veror as ASTNODE ptr, byref l as integer,
 
 	'' Build range check, but omit lbound/ubound checks if possible
 	'' It's possible that this solves out the entire check (if all versions are covered).
-	dim as ASTNODE ptr check, lcheck, rcheck
+	dim as AstNode ptr check, lcheck, rcheck
 
 	if l_in_mid then lcheck = hBuildVerBop(ASTCLASS_GE, l) '' V >= 1
 	if r_in_mid then rcheck = hBuildVerBop(ASTCLASS_LE, r) '' V <= 1
@@ -1136,7 +1136,7 @@ end sub
 '' Here no VERORs/VERANDs are solved out (we leave that to hSimplify()), only
 '' the atomic conditions are touched.
 ''
-private sub hFoldNumberChecks(byval n as ASTNODE ptr)
+private sub hFoldNumberChecks(byval n as AstNode ptr)
 	scope
 		var i = n->head
 		while i
@@ -1216,7 +1216,7 @@ private sub hFoldNumberChecks(byval n as ASTNODE ptr)
 	hMaybeEmitRangeCheck(n, l, r)
 end sub
 
-private function foldUnix(byval n as ASTNODE ptr) as ASTNODE ptr
+private function foldUnix(byval n as AstNode ptr) as AstNode ptr
 	if hIsCondition(n) then return n
 
 	scope
@@ -1243,7 +1243,7 @@ private function foldUnix(byval n as ASTNODE ptr) as ASTNODE ptr
 	function = n
 end function
 
-private function hSimplifyVersionExpr(byval n as ASTNODE ptr) as ASTNODE ptr
+private function hSimplifyVersionExpr(byval n as AstNode ptr) as AstNode ptr
 	dim as integer changed
 
 	do
@@ -1265,8 +1265,8 @@ private function hSimplifyVersionExpr(byval n as ASTNODE ptr) as ASTNODE ptr
 	function = n
 end function
 
-private function hBuildIfConditionFor(byval bits as ApiBits) as ASTNODE ptr
-	dim expr as ASTNODE ptr
+private function hBuildIfConditionFor(byval bits as ApiBits) as AstNode ptr
+	dim expr as AstNode ptr
 
 	'' Build VEROR from the VERBLOCK's apis bitmask
 	for i as integer = 0 to frog.apicount - 1
@@ -1303,7 +1303,7 @@ private function hBuildIfConditionFor(byval bits as ApiBits) as ASTNODE ptr
 	function = expr
 end function
 
-private sub hGenVerExprs(byval code as ASTNODE ptr)
+private sub hGenVerExprs(byval code as AstNode ptr)
 	var i = code->head
 	while i
 		var inext = i->next
@@ -1331,7 +1331,7 @@ end sub
 #define astIsPPELSEWithVERAND(n) (astIsPPELSE(n) andalso astIsVERAND(n->expr))
 #define hasVerandPrefix(n, prefix) astIsEqual(n->expr->head, prefix)
 
-private function findEndifOfVerandIfBlockWithCommonPrefix(byval n as ASTNODE ptr) as ASTNODE ptr
+private function findEndifOfVerandIfBlockWithCommonPrefix(byval n as AstNode ptr) as AstNode ptr
 	if astIsPPIFWithVERAND(n) = FALSE then exit function
 	var prefix = n->expr->head
 	n = n->next
@@ -1363,7 +1363,7 @@ end function
 ''         #else d
 ''         #endif
 ''     #endif
-private sub splitVerandIfsIntoNestedIfs(byval ast as ASTNODE ptr)
+private sub splitVerandIfsIntoNestedIfs(byval ast as AstNode ptr)
 	var i = ast->head
 	while i
 		var inext = i->next
@@ -1413,7 +1413,7 @@ private sub splitVerandIfsIntoNestedIfs(byval ast as ASTNODE ptr)
 	wend
 end sub
 
-private sub mergeSiblingIfs(byval ast as ASTNODE ptr)
+private sub mergeSiblingIfs(byval ast as AstNode ptr)
 	var i = ast->head
 	while i
 		var nxt = i->next
@@ -1448,7 +1448,7 @@ private sub mergeSiblingIfs(byval ast as ASTNODE ptr)
 	wend
 end sub
 
-private sub removeUnnecessaryIfNesting(byval ast as ASTNODE ptr)
+private sub removeUnnecessaryIfNesting(byval ast as AstNode ptr)
 	var i = ast->head
 	while i
 
@@ -1539,10 +1539,10 @@ end sub
 ''
 '' This should be done with VERBLOCKs, not #ifs, to make it simpler. But even
 '' with #if expressions generated on VERBLOCKs already, it can't be done,
-'' because hTurnVerblocksIntoPpIfs requires the ASTNODE.apis fields to be set
+'' because hTurnVerblocksIntoPpIfs requires the AstNode.apis fields to be set
 '' properly and they can't be split up like the #if expressions...
 ''
-private sub combineIfsWithCommonPrefix(byval ast as ASTNODE ptr)
+private sub combineIfsWithCommonPrefix(byval ast as AstNode ptr)
 	splitVerandIfsIntoNestedIfs(ast)
 	mergeSiblingIfs(ast)
 	removeUnnecessaryIfNesting(ast)
@@ -1551,7 +1551,7 @@ end sub
 '' Determine whether two #if conditions are logically opposites
 ''    A    and    B         maybe, but not necessarily.
 ''    A    and    not A     are definitely opposite.
-private function conditionsAreOpposite(byval a as ASTNODE ptr, byval b as ASTNODE ptr) as integer
+private function conditionsAreOpposite(byval a as AstNode ptr, byval b as AstNode ptr) as integer
 	if astIsNOT(a) and (not astIsNOT(b)) then return astIsEqual(a->head, b)
 	if astIsNOT(b) and (not astIsNOT(a)) then return astIsEqual(b->head, a)
 	function = FALSE
@@ -1560,9 +1560,9 @@ end function
 '' Fold #if/elseif to #if/else if possible. Normally this is done by
 '' hTurnVerblocksIntoPpIfs() already, but combineIfsWithCommonPrefix() may have
 '' produced such cases again, and we can't re-run hTurnVerblocksIntoPpIfs()
-'' because that works with VERBLOCKs and ASTNODE.apis, not with the generated
+'' because that works with VERBLOCKs and AstNode.apis, not with the generated
 '' condition expressions.
-private sub foldIfElseIf(byval ast as ASTNODE ptr)
+private sub foldIfElseIf(byval ast as AstNode ptr)
 	var i = ast->head
 	while i
 
@@ -1581,7 +1581,7 @@ end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-sub astProcessVerblocks(byval code as ASTNODE ptr)
+sub astProcessVerblocks(byval code as AstNode ptr)
 	assert(code->class = ASTCLASS_GROUP)
 	hSolveOutRedundantVerblocks(code, frog.fullapis)
 	hGenVerExprs(code)

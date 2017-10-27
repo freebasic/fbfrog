@@ -17,14 +17,14 @@ declare function hNumberLiteral _
 		byval is_cpp as integer, _
 		byref errmsg as string, _
 		byval clong32 as integer _
-	) as ASTNODE ptr
+	) as AstNode ptr
 declare function hStringLiteral _
 	( _
 		byval x as integer, _
 		byval eval_escapes as integer, _
 		byref errmsg as string _
-	) as ASTNODE ptr
-declare function hDefineHead(byref x as integer) as ASTNODE ptr
+	) as AstNode ptr
+declare function hDefineHead(byref x as integer) as AstNode ptr
 
 declare sub cppInit(byref api as ApiInfo)
 declare sub cppEnd()

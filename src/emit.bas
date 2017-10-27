@@ -214,7 +214,7 @@ dim shared as ushort typeToKw(0 to TYPE__COUNT-1) = { _
 	KW_ZSTRING, KW_WSTRING, KW_WCHAR_T _
 }
 
-sub CodeGen.emitType(byval dtype as integer, byval subtype as ASTNODE ptr)
+sub CodeGen.emitType(byval dtype as integer, byval subtype as AstNode ptr)
 	var dt = typeGetDt(dtype)
 	assert(dt <> TYPE_NONE)
 	var ptrcount = typeGetPtrCount(dtype)
@@ -295,14 +295,14 @@ sub CodeGen.emitType(byval dtype as integer, byval subtype as ASTNODE ptr)
 	next
 end sub
 
-sub CodeGen.emitType(byval n as ASTNODE ptr)
+sub CodeGen.emitType(byval n as AstNode ptr)
 	emitType(n->dtype, n->subtype)
 end sub
 
 '' Normally we'll emit Extern blocks, making it unnecessary to worry about
 '' case-preserving aliases, but symbols can still have an explicit alias set due
 '' to symbol renaming.
-sub CodeGen.emitAlias(byval n as ASTNODE ptr)
+sub CodeGen.emitAlias(byval n as AstNode ptr)
 	if n->alias then
 		add(TK_SPACE)
 		add(KW_ALIAS)
@@ -311,7 +311,7 @@ sub CodeGen.emitAlias(byval n as ASTNODE ptr)
 	end if
 end sub
 
-sub CodeGen.emitIdAndArray(byval n as ASTNODE ptr, byval allow_alias as integer)
+sub CodeGen.emitIdAndArray(byval n as AstNode ptr, byval allow_alias as integer)
 	add(TK_ID, n->text)
 	if n->array then
 		emitExpr(n->array)
@@ -327,7 +327,7 @@ sub CodeGen.emitIdAndArray(byval n as ASTNODE ptr, byval allow_alias as integer)
 	end if
 end sub
 
-sub CodeGen.emitSeparatedList(byval n as ASTNODE ptr, byval skip_head as integer)
+sub CodeGen.emitSeparatedList(byval n as AstNode ptr, byval skip_head as integer)
 	var count = 0
 	var i = n->head
 	if (i <> NULL) and skip_head then
@@ -344,13 +344,13 @@ sub CodeGen.emitSeparatedList(byval n as ASTNODE ptr, byval skip_head as integer
 	wend
 end sub
 
-sub CodeGen.emitParamList(byval n as ASTNODE ptr, byval skip_head as integer)
+sub CodeGen.emitParamList(byval n as AstNode ptr, byval skip_head as integer)
 	add(TK_LPAREN)
 	emitSeparatedList(n, skip_head)
 	add(TK_RPAREN)
 end sub
 
-sub CodeGen.emitInitializer(byval n as ASTNODE ptr)
+sub CodeGen.emitInitializer(byval n as AstNode ptr)
 	if n->expr then
 		add(TK_SPACE)
 		add(TK_EQ)
@@ -359,7 +359,7 @@ sub CodeGen.emitInitializer(byval n as ASTNODE ptr)
 	end if
 end sub
 
-sub CodeGen.emitProcHeader(byval n as ASTNODE ptr, byval is_expr as integer)
+sub CodeGen.emitProcHeader(byval n as AstNode ptr, byval is_expr as integer)
 	assert(n->array = NULL)
 
 	'' SUB|FUNCTION [<id>]
@@ -406,7 +406,7 @@ sub CodeGen.emitTodoForQuirkKeywordType(byval id as zstring ptr)
 	end if
 end sub
 
-sub CodeGen.emitMacroHeader(byval n as ASTNODE ptr, byval macrokw as ulong)
+sub CodeGen.emitMacroHeader(byval n as AstNode ptr, byval macrokw as ulong)
 	bol()
 	add(TK_HASH)
 	add(macrokw)
@@ -488,7 +488,7 @@ private function renderStrLit(byval payload as const zstring ptr) as string
 	return s
 end function
 
-sub CodeGen.emitExpr(byval n as ASTNODE ptr, byval need_parens as integer, byval need_macroparam_parens as integer)
+sub CodeGen.emitExpr(byval n as AstNode ptr, byval need_parens as integer, byval need_macroparam_parens as integer)
 	var consider_parens = FALSE
 	select case as const n->class
 	case ASTCLASS_VEROR, ASTCLASS_VERAND, ASTCLASS_VERNUMCHECK, _
@@ -887,7 +887,7 @@ sub CodeGen.emitLines(byval lines as const zstring ptr)
 	loop
 end sub
 
-sub CodeGen.emitIndentedChildren(byval n as ASTNODE ptr, byval parentclass as integer = -1)
+sub CodeGen.emitIndentedChildren(byval n as AstNode ptr, byval parentclass as integer = -1)
 	if comment > 0 then
 		commentspaces += 4
 	else
@@ -912,7 +912,7 @@ sub CodeGen.emitVarDecl _
 		byval kw1 as integer, _
 		byval kw2 as integer, _
 		byval spaces as integer, _
-		byval n as ASTNODE ptr, _
+		byval n as AstNode ptr, _
 		byval is_extern as integer _
 	)
 
@@ -951,7 +951,7 @@ sub CodeGen.emitVarDecl _
 	eol()
 end sub
 
-sub CodeGen.emitSelfBop(byval n as ASTNODE ptr, byval op as ulong)
+sub CodeGen.emitSelfBop(byval n as AstNode ptr, byval op as ulong)
 	bol()
 	emitExpr(n->head, TRUE)
 	add(TK_SPACE)
@@ -962,7 +962,7 @@ sub CodeGen.emitSelfBop(byval n as ASTNODE ptr, byval op as ulong)
 	eol()
 end sub
 
-sub CodeGen.emitCode(byval n as ASTNODE ptr, byval parentclass as integer)
+sub CodeGen.emitCode(byval n as AstNode ptr, byval parentclass as integer)
 	var wrap_in_ifndef = ((n->attrib and ASTATTRIB_IFNDEFDECL) <> 0)
 
 	if wrap_in_ifndef then
@@ -1502,7 +1502,7 @@ end sub
 
 end namespace
 
-function emitFbType(byval dtype as integer, byval subtype as ASTNODE ptr) as string
+function emitFbType(byval dtype as integer, byval subtype as AstNode ptr) as string
 	dim fbcode as emit.CodeGen
 	fbcode.emitType(dtype, subtype)
 	dim w as emit.StringWriter
@@ -1510,7 +1510,7 @@ function emitFbType(byval dtype as integer, byval subtype as ASTNODE ptr) as str
 	return w.s
 end function
 
-function emitFbExpr(byval n as ASTNODE ptr) as string
+function emitFbExpr(byval n as AstNode ptr) as string
 	dim fbcode as emit.CodeGen
 	fbcode.emitExpr(n)
 	dim w as emit.StringWriter
@@ -1518,7 +1518,7 @@ function emitFbExpr(byval n as ASTNODE ptr) as string
 	return w.s
 end function
 
-sub emitFbFile(byref filename as string, byval header as HeaderInfo ptr, byval ast as ASTNODE ptr)
+sub emitFbFile(byref filename as string, byval header as HeaderInfo ptr, byval ast as AstNode ptr)
 	dim fbcode as emit.CodeGen
 	if header then
 		fbcode.emitHeader(*header)
@@ -1528,7 +1528,7 @@ sub emitFbFile(byref filename as string, byval header as HeaderInfo ptr, byval a
 	w.render(fbcode.tokens)
 end sub
 
-sub emitFbStdout(byval ast as ASTNODE ptr, byval baseindent as integer)
+sub emitFbStdout(byval ast as AstNode ptr, byval baseindent as integer)
 	dim fbcode as emit.CodeGen
 	fbcode.indent += baseindent
 	fbcode.emitCode(ast)

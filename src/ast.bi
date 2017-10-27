@@ -241,7 +241,7 @@ const ASTATTRIB__CALLCONV = ASTATTRIB_CDECL or ASTATTRIB_STDCALL
 
 '' When changing, adjust astClone(), astIsEqual(), astDump*()
 '' TODO: pack
-type ASTNODE
+type AstNode
 	class		as integer  '' ASTCLASS_*
 	attrib		as integer  '' ASTATTRIB_*
 
@@ -258,12 +258,12 @@ type ASTNODE
 
 	'' Data type (vars, fields, params, function results, expressions)
 	dtype		as integer
-	subtype		as ASTNODE ptr
-	array		as ASTNODE ptr '' ARRAY holding DIMENSIONs, or NULL
-	bits		as ASTNODE ptr '' bitfields only. TODO: change to simple number, FB doesn't support expressions as bitfield size anyways
+	subtype		as AstNode ptr
+	array		as AstNode ptr '' ARRAY holding DIMENSIONs, or NULL
+	bits		as AstNode ptr '' bitfields only. TODO: change to simple number, FB doesn't support expressions as bitfield size anyways
 
 	'' Initializers, condition expressions, macro/procedure bodies, ...
-	expr		as ASTNODE ptr
+	expr		as AstNode ptr
 
 	location	as TKLOCATION
 
@@ -276,15 +276,15 @@ type ASTNODE
 	end union
 
 	'' Linked list of child nodes, operands/fields/parameters/...
-	head		as ASTNODE ptr
-	tail		as ASTNODE ptr
-	next		as ASTNODE ptr
-	prev		as ASTNODE ptr
+	head		as AstNode ptr
+	tail		as AstNode ptr
+	next		as AstNode ptr
+	prev		as AstNode ptr
 end type
 
 '' result = boolean = whether to visit this node's children
 '' (can be used to skip #define bodies, etc.)
-type ASTVISITCALLBACK as function(byval as ASTNODE ptr) as integer
+type ASTVISITCALLBACK as function(byval as AstNode ptr) as integer
 
 #define astNewTEXT(text) astNew(ASTCLASS_TEXT, text)
 #define astNewDEFINED(id) astNew(ASTCLASS_DEFINED, id)
@@ -300,87 +300,87 @@ type ASTVISITCALLBACK as function(byval as ASTNODE ptr) as integer
 #define astIsPPENDIF(n) ((n)->class = ASTCLASS_PPENDIF)
 #define astIsNOT(n) ((n)->class = ASTCLASS_NOT)
 
-declare function astNew overload(byval class_ as integer) as ASTNODE ptr
-declare function astNew overload(byval class_ as integer, byval text as zstring ptr) as ASTNODE ptr
-declare function astNew overload(byval class_ as integer, byval c1 as ASTNODE ptr, byval c2 as ASTNODE ptr = NULL) as ASTNODE ptr
-declare function astNewPPDEFINE(byval id as zstring ptr) as ASTNODE ptr
+declare function astNew overload(byval class_ as integer) as AstNode ptr
+declare function astNew overload(byval class_ as integer, byval text as zstring ptr) as AstNode ptr
+declare function astNew overload(byval class_ as integer, byval c1 as AstNode ptr, byval c2 as AstNode ptr = NULL) as AstNode ptr
+declare function astNewPPDEFINE(byval id as zstring ptr) as AstNode ptr
 declare function astNewIIF _
 	( _
-		byval cond as ASTNODE ptr, _
-		byval l as ASTNODE ptr, _
-		byval r as ASTNODE ptr _
-	) as ASTNODE ptr
-declare function astNewGROUP overload() as ASTNODE ptr
-declare function astNewGROUP overload(byval c1 as ASTNODE ptr, byval c2 as ASTNODE ptr = NULL) as ASTNODE ptr
-declare sub astBuildGroupAndAppend(byref group as ASTNODE ptr, byval n as ASTNODE ptr)
-declare function astNewDEFINEDfb64(byval negate as integer) as ASTNODE ptr
-declare function astNewDEFINEDfbarm(byval negate as integer) as ASTNODE ptr
-declare function astNewDEFINEDfbos(byval os as integer) as ASTNODE ptr
-declare function astNewOPTION(byval opt as integer, byval text1 as zstring ptr = NULL, byval text2 as zstring ptr = NULL) as ASTNODE ptr
-declare sub astTakeChildren(byval d as ASTNODE ptr, byval s as ASTNODE ptr)
-declare sub astTakeAndPrependChildren(byval d as ASTNODE ptr, byval s as ASTNODE ptr)
-declare sub astTakeAndAppendChildSequence(byval d as ASTNODE ptr, byval s as ASTNODE ptr, byval first as ASTNODE ptr, byval last as ASTNODE ptr)
-declare function astCloneChildren(byval src as ASTNODE ptr) as ASTNODE ptr
-declare function astGroupContains(byval group as ASTNODE ptr, byval lookfor as ASTNODE ptr) as integer
-declare function astGroupContainsAnyChildrenOf(byval l as ASTNODE ptr, byval r as ASTNODE ptr) as integer
-declare function astGroupContainsAllChildrenOf(byval l as ASTNODE ptr, byval r as ASTNODE ptr) as integer
-declare sub astDelete(byval n as ASTNODE ptr)
-declare sub astInsert(byval parent as ASTNODE ptr, byval n as ASTNODE ptr, byval ref as ASTNODE ptr)
-declare sub astPrepend(byval parent as ASTNODE ptr, byval n as ASTNODE ptr)
-declare sub astAppend(byval parent as ASTNODE ptr, byval n as ASTNODE ptr)
-declare sub astUnlink(byval parent as ASTNODE ptr, byval n as ASTNODE ptr)
-declare function astRemove(byval parent as ASTNODE ptr, byval a as ASTNODE ptr) as ASTNODE ptr
-declare sub astRemoveChildren(byval parent as ASTNODE ptr)
+		byval cond as AstNode ptr, _
+		byval l as AstNode ptr, _
+		byval r as AstNode ptr _
+	) as AstNode ptr
+declare function astNewGROUP overload() as AstNode ptr
+declare function astNewGROUP overload(byval c1 as AstNode ptr, byval c2 as AstNode ptr = NULL) as AstNode ptr
+declare sub astBuildGroupAndAppend(byref group as AstNode ptr, byval n as AstNode ptr)
+declare function astNewDEFINEDfb64(byval negate as integer) as AstNode ptr
+declare function astNewDEFINEDfbarm(byval negate as integer) as AstNode ptr
+declare function astNewDEFINEDfbos(byval os as integer) as AstNode ptr
+declare function astNewOPTION(byval opt as integer, byval text1 as zstring ptr = NULL, byval text2 as zstring ptr = NULL) as AstNode ptr
+declare sub astTakeChildren(byval d as AstNode ptr, byval s as AstNode ptr)
+declare sub astTakeAndPrependChildren(byval d as AstNode ptr, byval s as AstNode ptr)
+declare sub astTakeAndAppendChildSequence(byval d as AstNode ptr, byval s as AstNode ptr, byval first as AstNode ptr, byval last as AstNode ptr)
+declare function astCloneChildren(byval src as AstNode ptr) as AstNode ptr
+declare function astGroupContains(byval group as AstNode ptr, byval lookfor as AstNode ptr) as integer
+declare function astGroupContainsAnyChildrenOf(byval l as AstNode ptr, byval r as AstNode ptr) as integer
+declare function astGroupContainsAllChildrenOf(byval l as AstNode ptr, byval r as AstNode ptr) as integer
+declare sub astDelete(byval n as AstNode ptr)
+declare sub astInsert(byval parent as AstNode ptr, byval n as AstNode ptr, byval ref as AstNode ptr)
+declare sub astPrepend(byval parent as AstNode ptr, byval n as AstNode ptr)
+declare sub astAppend(byval parent as AstNode ptr, byval n as AstNode ptr)
+declare sub astUnlink(byval parent as AstNode ptr, byval n as AstNode ptr)
+declare function astRemove(byval parent as AstNode ptr, byval a as AstNode ptr) as AstNode ptr
+declare sub astRemoveChildren(byval parent as AstNode ptr)
 declare function astReplace _
 	( _
-		byval parent as ASTNODE ptr, _
-		byval old as ASTNODE ptr, _
-		byval n as ASTNODE ptr _
-	) as ASTNODE ptr
-declare sub astSetText(byval n as ASTNODE ptr, byval text as zstring ptr)
-declare sub astSetAlias(byval n as ASTNODE ptr, byval alias_ as zstring ptr)
-declare sub astRenameSymbol(byval n as ASTNODE ptr, byval newid as zstring ptr)
-declare sub astRenameSymbolWithoutSettingOrigId(byval n as ASTNODE ptr, byval newid as zstring ptr)
-declare sub astTakeAliasFromId(byval dst as ASTNODE ptr, byval src as ASTNODE ptr)
-declare sub astTakeOrigId(byval dst as ASTNODE ptr, byval src as ASTNODE ptr)
-declare sub astTakeAliasAndOrigId(byval dst as ASTNODE ptr, byval src as ASTNODE ptr)
-declare sub astCopyOrigId(byval dst as ASTNODE ptr, byval src as ASTNODE ptr)
+		byval parent as AstNode ptr, _
+		byval old as AstNode ptr, _
+		byval n as AstNode ptr _
+	) as AstNode ptr
+declare sub astSetText(byval n as AstNode ptr, byval text as zstring ptr)
+declare sub astSetAlias(byval n as AstNode ptr, byval alias_ as zstring ptr)
+declare sub astRenameSymbol(byval n as AstNode ptr, byval newid as zstring ptr)
+declare sub astRenameSymbolWithoutSettingOrigId(byval n as AstNode ptr, byval newid as zstring ptr)
+declare sub astTakeAliasFromId(byval dst as AstNode ptr, byval src as AstNode ptr)
+declare sub astTakeOrigId(byval dst as AstNode ptr, byval src as AstNode ptr)
+declare sub astTakeAliasAndOrigId(byval dst as AstNode ptr, byval src as AstNode ptr)
+declare sub astCopyOrigId(byval dst as AstNode ptr, byval src as AstNode ptr)
 declare sub astSetType _
 	( _
-		byval n as ASTNODE ptr, _
+		byval n as AstNode ptr, _
 		byval dtype as integer, _
-		byval subtype as ASTNODE ptr _
+		byval subtype as AstNode ptr _
 	)
-declare function astCloneNode(byval n as ASTNODE ptr) as ASTNODE ptr
-declare function astClone(byval n as ASTNODE ptr) as ASTNODE ptr
-declare function astContains(byval n as ASTNODE ptr, byval astclass as integer) as integer
-declare function astContainsCAssignments(byval n as ASTNODE ptr) as integer
-declare function astHas1Child(byval n as ASTNODE ptr) as integer
-declare function astHasOnlyChild(byval n as ASTNODE ptr, byval astclass as integer) as integer
-declare function astIsCodeBlock(byval n as ASTNODE ptr) as integer
-declare function astIsCodeScopeBlock(byval n as ASTNODE ptr) as integer
-declare function astIsScopeBlockWith1Stmt(byval n as ASTNODE ptr) as integer
-declare function astIsMergableBlock(byval n as ASTNODE ptr) as integer
-declare function astIsCastTo(byval n as ASTNODE ptr, byval dtype as integer, byval subtype as ASTNODE ptr) as integer
+declare function astCloneNode(byval n as AstNode ptr) as AstNode ptr
+declare function astClone(byval n as AstNode ptr) as AstNode ptr
+declare function astContains(byval n as AstNode ptr, byval astclass as integer) as integer
+declare function astContainsCAssignments(byval n as AstNode ptr) as integer
+declare function astHas1Child(byval n as AstNode ptr) as integer
+declare function astHasOnlyChild(byval n as AstNode ptr, byval astclass as integer) as integer
+declare function astIsCodeBlock(byval n as AstNode ptr) as integer
+declare function astIsCodeScopeBlock(byval n as AstNode ptr) as integer
+declare function astIsScopeBlockWith1Stmt(byval n as AstNode ptr) as integer
+declare function astIsMergableBlock(byval n as AstNode ptr) as integer
+declare function astIsCastTo(byval n as AstNode ptr, byval dtype as integer, byval subtype as AstNode ptr) as integer
 declare function astIsEqual _
 	( _
-		byval a as ASTNODE ptr, _
-		byval b as ASTNODE ptr, _
+		byval a as AstNode ptr, _
+		byval b as AstNode ptr, _
 		byval is_merge as integer = FALSE _
 	) as integer
 declare function hGetFbNumberLiteralPrefix(byval attrib as integer) as string
-declare function astEvalConstiAsInt64(byval n as ASTNODE ptr) as longint
-declare function astIsConst0(byval n as ASTNODE ptr) as integer
-declare function astLookupMacroParam(byval macro as ASTNODE ptr, byval id as zstring ptr) as integer
-declare function astGetMacroParamByNameIgnoreCase(byval macro as ASTNODE ptr, byval id as zstring ptr) as ASTNODE ptr
-declare sub astVisit(byval n as ASTNODE ptr, byval callback as ASTVISITCALLBACK)
-declare function astCount(byval n as ASTNODE ptr) as integer
+declare function astEvalConstiAsInt64(byval n as AstNode ptr) as longint
+declare function astIsConst0(byval n as AstNode ptr) as integer
+declare function astLookupMacroParam(byval macro as AstNode ptr, byval id as zstring ptr) as integer
+declare function astGetMacroParamByNameIgnoreCase(byval macro as AstNode ptr, byval id as zstring ptr) as AstNode ptr
+declare sub astVisit(byval n as AstNode ptr, byval callback as ASTVISITCALLBACK)
+declare function astCount(byval n as AstNode ptr) as integer
 declare function astDumpPrettyClass(byval astclass as integer) as string
-declare function astDumpPrettyDecl(byval n as ASTNODE ptr, byval show_type as integer = FALSE) as string
-declare function astDumpOne(byval n as ASTNODE ptr) as string
+declare function astDumpPrettyDecl(byval n as AstNode ptr, byval show_type as integer = FALSE) as string
+declare function astDumpOne(byval n as AstNode ptr) as string
 declare sub astDump _
 	( _
-		byval n as ASTNODE ptr, _
+		byval n as AstNode ptr, _
 		byval nestlevel as integer = 0, _
 		byref prefix as string = "" _
 	)

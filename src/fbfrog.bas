@@ -56,13 +56,13 @@ namespace frog
 	dim shared arch(0 to ARCH__COUNT-1) as byte
 	dim shared as integer enabledoscount
 
-	dim shared as ASTNODE ptr script
-	dim shared as ASTNODE ptr completeverors, fullveror
+	dim shared as AstNode ptr script
+	dim shared as AstNode ptr completeverors, fullveror
 	dim shared as ApiInfo ptr apis
 	dim shared as integer apicount
 	dim shared as ApiBits fullapis
 
-	dim shared as ASTNODE ptr mergedlog
+	dim shared as AstNode ptr mergedlog
 
 	'' *.bi output file names from the -emit options
 	dim shared as BIFILE ptr bis
@@ -796,7 +796,7 @@ private sub hParseArgs(byref x as integer)
 	nestinglevel -= 1
 end sub
 
-private function hSkipToEndOfBlock(byval i as ASTNODE ptr) as ASTNODE ptr
+private function hSkipToEndOfBlock(byval i as AstNode ptr) as AstNode ptr
 	var level = 0
 
 	do
@@ -822,7 +822,7 @@ private function hSkipToEndOfBlock(byval i as ASTNODE ptr) as ASTNODE ptr
 	function = i
 end function
 
-private sub frogAddApi(byval verand as ASTNODE ptr, byval script as ASTNODE ptr, byval target as TargetInfo)
+private sub frogAddApi(byval verand as AstNode ptr, byval script as AstNode ptr, byval target as TargetInfo)
 	assert(astIsVERAND(verand))
 	var i = frog.apicount
 	frog.apicount += 1
@@ -907,9 +907,9 @@ end function
 ''
 private sub frogEvaluateScript _
 	( _
-		byval start as ASTNODE ptr, _
-		byval conditions as ASTNODE ptr, _
-		byval options as ASTNODE ptr, _
+		byval start as AstNode ptr, _
+		byval conditions as AstNode ptr, _
+		byval options as AstNode ptr, _
 		byval target as TargetInfo _
 	)
 
@@ -972,7 +972,7 @@ private sub frogEvaluateScript _
 				if sel->class = ASTCLASS_SELECTTARGET then
 					is_true = hTargetPatternMatchesTarget(*i->text, target)
 				else
-					dim condition as ASTNODE ptr
+					dim condition as AstNode ptr
 					if sel->class = ASTCLASS_SELECTVERSION then
 						'' <versionnumber>
 						var vernum = frogLookupVernum(*i->text)
@@ -1055,7 +1055,7 @@ private sub maybeEvalForOs(byval os as integer)
 	end if
 end sub
 
-private function frogParse(byref api as ApiInfo) as ASTNODE ptr
+private function frogParse(byref api as ApiInfo) as AstNode ptr
 	tkInit()
 
 	'' C preprocessing
@@ -1283,7 +1283,7 @@ end function
 	'' also means that the slow merging process for a version happens after
 	'' parsing that version. Instead of one single big delay at the end,
 	'' there is a small delay at each version.
-	dim as ASTNODE ptr final
+	dim as AstNode ptr final
 	for api as integer = 0 to frog.apicount - 1
 		print hMakeProgressString(api + 1, frog.apicount) + " " + frog.apis[api].prettyId()
 

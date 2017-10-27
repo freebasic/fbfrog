@@ -181,34 +181,34 @@ type CodeGen
 	declare operator let(byref as const CodeGen) '' unimplemented
 	declare sub add(byval typ as ulong, byval payload as const zstring ptr = NULL)
 	declare sub add(byval typ as ulong, byval payload as const ubyte ptr, byval size as uinteger)
-	declare sub emitType(byval dtype as integer, byval subtype as ASTNODE ptr)
-	declare sub emitType(byval n as ASTNODE ptr)
-	declare sub emitAlias(byval n as ASTNODE ptr)
-	declare sub emitIdAndArray(byval n as ASTNODE ptr, byval allow_alias as integer)
-	declare sub emitSeparatedList(byval n as ASTNODE ptr, byval skip_head as integer)
-	declare sub emitParamList(byval n as ASTNODE ptr, byval skip_head as integer)
-	declare sub emitInitializer(byval n as ASTNODE ptr)
-	declare sub emitProcHeader(byval n as ASTNODE ptr, byval is_expr as integer)
+	declare sub emitType(byval dtype as integer, byval subtype as AstNode ptr)
+	declare sub emitType(byval n as AstNode ptr)
+	declare sub emitAlias(byval n as AstNode ptr)
+	declare sub emitIdAndArray(byval n as AstNode ptr, byval allow_alias as integer)
+	declare sub emitSeparatedList(byval n as AstNode ptr, byval skip_head as integer)
+	declare sub emitParamList(byval n as AstNode ptr, byval skip_head as integer)
+	declare sub emitInitializer(byval n as AstNode ptr)
+	declare sub emitProcHeader(byval n as AstNode ptr, byval is_expr as integer)
 	declare sub emitTodoForQuirkKeywordType(byval id as zstring ptr)
-	declare sub emitMacroHeader(byval n as ASTNODE ptr, byval macrokw as ulong)
-	declare sub emitExpr(byval n as ASTNODE ptr, byval need_parens as integer = FALSE, byval need_macroparam_parens as integer = TRUE)
+	declare sub emitMacroHeader(byval n as AstNode ptr, byval macrokw as ulong)
+	declare sub emitExpr(byval n as AstNode ptr, byval need_parens as integer = FALSE, byval need_macroparam_parens as integer = TRUE)
 	declare sub bol()
 	declare sub eol()
 	declare sub eolSingleLineBegin()
 	declare sub eolSingleLineEnd()
 	declare sub emitLine(byval begin as const zstring ptr, byval p as const ubyte ptr)
 	declare sub emitLines(byval lines as const zstring ptr)
-	declare sub emitIndentedChildren(byval n as ASTNODE ptr, byval parentclass as integer = -1)
+	declare sub emitIndentedChildren(byval n as AstNode ptr, byval parentclass as integer = -1)
 	declare sub emitVarDecl _
 		( _
 			byval kw1 as integer, _
 			byval kw2 as integer, _
 			byval spaces as integer, _
-			byval n as ASTNODE ptr, _
+			byval n as AstNode ptr, _
 			byval is_extern as integer _
 		)
-	declare sub emitSelfBop(byval n as ASTNODE ptr, byval op as ulong)
-	declare sub emitCode(byval n as ASTNODE ptr, byval parentclass as integer = -1)
+	declare sub emitSelfBop(byval n as AstNode ptr, byval op as ulong)
+	declare sub emitCode(byval n as AstNode ptr, byval parentclass as integer = -1)
 	declare sub emitHeader(byref header as HeaderInfo)
 end type
 
@@ -237,7 +237,7 @@ end type
 
 end namespace
 
-declare function emitFbType(byval dtype as integer, byval subtype as ASTNODE ptr) as string
-declare function emitFbExpr(byval n as ASTNODE ptr) as string
-declare sub emitFbFile(byref filename as string, byval header as HeaderInfo ptr, byval ast as ASTNODE ptr)
-declare sub emitFbStdout(byval ast as ASTNODE ptr, byval indent as integer)
+declare function emitFbType(byval dtype as integer, byval subtype as AstNode ptr) as string
+declare function emitFbExpr(byval n as AstNode ptr) as string
+declare sub emitFbFile(byref filename as string, byval header as HeaderInfo ptr, byval ast as AstNode ptr)
+declare sub emitFbStdout(byval ast as AstNode ptr, byval indent as integer)
