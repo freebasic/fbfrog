@@ -1,25 +1,27 @@
 #include "test"
 #include "../../src/util-str.bas"
 
-#macro dumpStringMatcherTree(patterns...)
+#macro dumpStringMatcherTree(pattern1, pattern2, pattern3, pattern4)
 	scope
 		print string(80, "-")
-		print "patterns: " + #patterns
-		dim patternArray(0 to ...) as const string => { patterns }
+		print "patterns: """ + pattern1 + """, """ + pattern2 + """" + _
+				iif(len(pattern3) > 0, ", """ + pattern3 + """", "") + _
+				iif(len(pattern4) > 0, ", """ + pattern4 + """", "")
 		dim matcher as StringMatcher
-		for i as integer = 0 to ubound(patternArray)
-			matcher.addPattern(patternArray(i))
-		next
+		matcher.addPattern(pattern1)
+		matcher.addPattern(pattern2)
+		if len(pattern3) > 0 then matcher.addPattern(pattern3)
+		if len(pattern4) > 0 then matcher.addPattern(pattern4)
 		matcher.dump()
 	end scope
 #endmacro
 
-dumpStringMatcherTree("a", "b")
-dumpStringMatcherTree("a", "b", "aa")
+dumpStringMatcherTree("a", "b", "", "")
+dumpStringMatcherTree("a", "b", "aa", "")
 dumpStringMatcherTree("a", "b", "aa", "b*")
-dumpStringMatcherTree("aa1", "aa2", "aa3")
-dumpStringMatcherTree("LPCSTR", "LPSTR", "ListLabel")
-dumpStringMatcherTree("aa", "a")
+dumpStringMatcherTree("aa1", "aa2", "aa3", "")
+dumpStringMatcherTree("LPCSTR", "LPSTR", "ListLabel", "")
+dumpStringMatcherTree("aa", "a", "", "")
 
 scope
 	dim m as StringMatcher
