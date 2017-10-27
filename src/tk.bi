@@ -304,6 +304,3 @@ end type
 
 declare function tkInfoText(byval id as integer) as zstring ptr
 declare function tkInfoPretty(byval tk as integer) as string
-
-'' Debugging helper, for example: TRACE(x), "decl begin"
-#define TRACE(x) print __FUNCTION__ + "(" + str(__LINE__) + "): " + tkDumpOne(x)
