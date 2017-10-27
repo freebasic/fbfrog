@@ -1157,9 +1157,11 @@ private function frogParse(byref api as ApiInfo) as AstNode ptr
 	tkTurnCPPTokensIntoCIds()
 
 	'' C parsing
-	cInit(api)
-	var ast = cMain()
-	cEnd()
+	dim ast as AstNode ptr
+	scope
+		dim parser as CParser = CParser(api)
+		ast = parser.parseToplevel()
+	end scope
 
 	tkEnd()
 
