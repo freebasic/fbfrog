@@ -524,7 +524,7 @@ end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-type DEFINEINFO
+type DefineInfo
 	xbody	as integer  '' 1st token of the #define body
 	xeol	as integer  '' eol/eof token behind the #define body
 
@@ -532,18 +532,18 @@ type DEFINEINFO
 	macro	as AstNode ptr
 end type
 
-private function definfoNew() as DEFINEINFO ptr
-	function = callocate(sizeof(DEFINEINFO))
+private function definfoNew() as DefineInfo ptr
+	function = callocate(sizeof(DefineInfo))
 end function
 
-private sub definfoDelete(byval definfo as DEFINEINFO ptr)
+private sub definfoDelete(byval definfo as DefineInfo ptr)
 	if definfo then
 		astDelete(definfo->macro)
 		deallocate(definfo)
 	end if
 end sub
 
-private function definfoClone(byval a as DEFINEINFO ptr) as DEFINEINFO ptr
+private function definfoClone(byval a as DefineInfo ptr) as DefineInfo ptr
 	var b = definfoNew()
 	b->xbody   = a->xbody
 	b->xeol    = a->xeol
@@ -554,13 +554,13 @@ end function
 const DEFINEBODY_FLAGMASK = not (TKFLAG_REMOVE or TKFLAG_DIRECTIVE)
 
 '' Copy a #define body into some other place
-private sub definfoCopyBody(byval definfo as DEFINEINFO ptr, byval x as integer)
+private sub definfoCopyBody(byval definfo as DefineInfo ptr, byval x as integer)
 	assert(x > definfo->xeol)
 	tkCopy(x, definfo->xbody, definfo->xeol - 1, DEFINEBODY_FLAGMASK)
 end sub
 
 '' Compare two #defines and determine whether they are equal
-private function definfoDefinesAreEqual(byval a as DEFINEINFO ptr, byval b as DEFINEINFO ptr) as integer
+private function definfoDefinesAreEqual(byval a as DefineInfo ptr, byval b as DefineInfo ptr) as integer
 	'' Check name and parameters
 	if astIsEqual(a->macro, b->macro) = FALSE then
 		exit function
@@ -577,9 +577,9 @@ end function
 type SAVEDMACRO
 	id		as zstring ptr		'' Macro's name
 
-	'' A DEFINEINFO object if the macro was defined when being saved,
+	'' A DefineInfo object if the macro was defined when being saved,
 	'' or NULL if it was undefined.
-	definfo		as DEFINEINFO ptr
+	definfo		as DefineInfo ptr
 end type
 
 private sub savedmacroDtor(byval macro as SAVEDMACRO ptr)
@@ -634,7 +634,7 @@ namespace cpp
 	dim shared as integer filelevel
 
 	'' Lookup table of macros known to be either defined or undefined.
-	''   defined <=> data = a DEFINEINFO object
+	''   defined <=> data = a DefineInfo object
 	'' undefined <=> data = NULL
 	'' Even though unregistered symbols are implicitly undefined,
 	'' registering them is useful to show the "assuming undefined" warning
@@ -762,7 +762,7 @@ sub cppAppendIncludeDirective(byval filename as zstring ptr, byval tkflags as in
 	tkAddFlags(x, tkGetCount() - 1, TKFLAG_REMOVE or tkflags)
 end sub
 
-private function cppLookupMacro(byval id as zstring ptr) as DEFINEINFO ptr
+private function cppLookupMacro(byval id as zstring ptr) as DefineInfo ptr
 	function = cpp.macros->lookupDataOrNull(id)
 end function
 
@@ -775,7 +775,7 @@ private function cppIsMacroCurrentlyDefined(byval id as zstring ptr) as integer
 end function
 
 '' Add/overwrite a known macro definition (or register it as known undefined)
-private sub cppAddMacro(byval id as zstring ptr, byval definfo as DEFINEINFO ptr)
+private sub cppAddMacro(byval id as zstring ptr, byval definfo as DefineInfo ptr)
 	var hash = hashHash(id)
 	var item = cpp.macros->lookup(id, hash)
 	if item->s then
@@ -791,7 +791,7 @@ private sub cppAddKnownUndefined(byval id as zstring ptr)
 end sub
 
 '' Append a new entry to the array of saved macros
-private sub cppAppendSavedMacro(byval id as zstring ptr, byval definfo as DEFINEINFO ptr)
+private sub cppAppendSavedMacro(byval id as zstring ptr, byval definfo as DefineInfo ptr)
 	cpp.savedmacrocount += 1
 	cpp.savedmacros = reallocate(cpp.savedmacros, _
 			cpp.savedmacrocount * sizeof(SAVEDMACRO))
@@ -827,7 +827,7 @@ end function
 
 private sub cppSaveMacro(byval id as zstring ptr)
 	'' Check the macro's current state.
-	'' If it's defined, we need to duplicate the DEFINEINFO object;
+	'' If it's defined, we need to duplicate the DefineInfo object;
 	'' otherwise, if it's undefined, we use NULL.
 	var definfo = cppLookupMacro(id)
 	if definfo then
@@ -1278,7 +1278,7 @@ private sub cppExpression _
 	loop
 end sub
 
-private function hCheckForMacroCall(byval x as integer) as DEFINEINFO ptr
+private function hCheckForMacroCall(byval x as integer) as DefineInfo ptr
 	assert(tkGet(x) >= TK_ID)
 	var id = tkSpellId(x)
 
@@ -1579,7 +1579,7 @@ private function hInsertMacroExpansion _
 	( _
 		byval callbehindspace as integer, _
 		byval expansionbegin as integer, _
-		byval definfo as DEFINEINFO ptr, _
+		byval definfo as DefineInfo ptr, _
 		byval argbegin as integer ptr, _
 		byval argend as integer ptr, _
 		byval argcount as integer, _
@@ -1847,7 +1847,7 @@ end function
 
 private sub hExpandMacro _
 	( _
-		byval definfo as DEFINEINFO ptr, _
+		byval definfo as DefineInfo ptr, _
 		byval callbegin as integer, _
 		byval callend as integer, _
 		byval argbegin as integer ptr, _
