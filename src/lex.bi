@@ -1,4 +1,5 @@
 #include once "util.bi"
+#include once "util-hash.bi"
 
 enum
 	CH_BELL      = &h07  '' \a
@@ -61,6 +62,39 @@ enum
 
 	CH_DEL
 end enum
+
+const MAXTEXTLEN = 1 shl 12
+
+type LexContext
+	i		as ubyte ptr  '' Current char, will always be <= limit
+	x		as integer
+	location	as TkLocation
+	behindspace	as integer
+
+	ckeywords	as THash = THash(12)
+	frogoptions	as THash = THash(12)
+
+	'' +2 extra room to allow for some "overflowing" to reduce the amount
+	'' of checking needed, +1 for null terminator.
+	text		as zstring * MAXTEXTLEN+2+1
+
+	declare constructor()
+	declare operator let(byref as const LexContext) '' declared but not implemented
+
+	declare sub oops(byref message as string)
+	declare sub setLocation(byval flags as integer = 0)
+	declare sub addTextToken(byval t as integer, byval begin as ubyte ptr)
+	declare sub readBytes(byval t as integer, byval length as integer)
+	declare sub newLine()
+	declare sub skipLineComment()
+	declare sub skipComment()
+	declare sub readId()
+	declare sub readNumber()
+	declare function skipEscapedEol() as integer
+	declare sub readString()
+	declare sub tokenize()
+	declare sub readArg(byval t as integer)
+end type
 
 declare function lexLoadC(byval x as integer, byval code as zstring ptr, byref source as SourceInfo) as integer
 declare function lexLoadArgs(byval x as integer, byval args as zstring ptr, byref source as SourceInfo) as integer
