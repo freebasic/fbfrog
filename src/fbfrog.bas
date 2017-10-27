@@ -1058,87 +1058,87 @@ end sub
 private function frogParse(byref api as ApiInfo) as AstNode ptr
 	tkInit()
 
-	'' C preprocessing
-	cppInit(api)
-
-	'' Add fbfrog's CPP pre-#defines for preprocessing of default.h
-	cppAddTargetPredefines(api.target)
-
 	scope
-		'' Pre-#defines are simply inserted at the top of the token
-		'' buffer, so that cppMain() parses them like any other #define.
+		'' C preprocessing
+		dim cpp as CppContext = CppContext(api)
 
-		var i = api.script->head
-		while i
+		'' Add fbfrog's CPP pre-#defines for preprocessing of default.h
+		cpp.addTargetPredefines(api.target)
 
-			assert(i->kind = ASTKIND_OPTION)
-			select case i->opt
-			case OPT_DEFINE
-				cppAddPredefine(i->text, i->alias_)
-			case OPT_INCDIR
-				cppAddIncDir(i->text)
-			end select
+		scope
+			'' Pre-#defines are simply inserted at the top of the token
+			'' buffer, so that cppMain() parses them like any other #define.
 
-			i = i->nxt
-		wend
+			var i = api.script->head
+			while i
+
+				assert(i->kind = ASTKIND_OPTION)
+				select case i->opt
+				case OPT_DEFINE
+					cpp.addPredefine(i->text, i->alias_)
+				case OPT_INCDIR
+					cpp.addIncDir(i->text)
+				end select
+
+				i = i->nxt
+			wend
+		end scope
+
+		'' Insert the code from fbfrog pre-#includes (default.h etc.)
+		'' * behind command line pre-#defines so that default.h can use them
+		'' * marked for removal so the code won't be preserved
+		scope
+			var i = api.script->head
+			while i
+				assert(i->kind = ASTKIND_OPTION)
+				if i->opt = OPT_FBFROGINCLUDE then
+					var filename = hFindResource(*i->text)
+					var x = tkGetCount()
+					var file = filebuffersAdd(filename, type(NULL, 0))
+					lexLoadC(x, file->buffer, file->source)
+					tkSetRemove(x, tkGetCount() - 1)
+				end if
+				i = i->nxt
+			wend
+		end scope
+
+		'' Add #includes for pre-#includes
+		scope
+			var i = api.script->head
+			while i
+				assert(i->kind = ASTKIND_OPTION)
+				if i->opt = OPT_INCLUDE then
+					cpp.appendIncludeDirective(i->text, TKFLAG_PREINCLUDE)
+				end if
+				i = i->nxt
+			wend
+		end scope
+
+		''
+		'' Add #include statements for the toplevel file(s) behind current
+		'' tokens, but marked with TKFLAG_ROOTFILE to let the CPP know that no
+		'' #include search should be done.
+		''
+		'' This way we can re-use the #include handling code to load the
+		'' toplevel files. (especially interesting for include guard optimization)
+		''
+		'' Note: pre-#defines should appear before tokens from root files, such
+		'' that the order of -define vs *.h command line arguments doesn't
+		'' matter.
+		''
+		scope
+			var i = api.script->head
+			while i
+				assert(i->kind = ASTKIND_OPTION)
+				if i->opt = OPT_I then
+					cpp.appendIncludeDirective(i->text, TKFLAG_ROOTFILE)
+				end if
+				i = i->nxt
+			wend
+		end scope
+
+		cpp.parseToplevel()
 	end scope
-
-	'' Insert the code from fbfrog pre-#includes (default.h etc.)
-	'' * behind command line pre-#defines so that default.h can use them
-	'' * marked for removal so the code won't be preserved
-	scope
-		var i = api.script->head
-		while i
-			assert(i->kind = ASTKIND_OPTION)
-			if i->opt = OPT_FBFROGINCLUDE then
-				var filename = hFindResource(*i->text)
-				var x = tkGetCount()
-				var file = filebuffersAdd(filename, type(NULL, 0))
-				lexLoadC(x, file->buffer, file->source)
-				tkSetRemove(x, tkGetCount() - 1)
-			end if
-			i = i->nxt
-		wend
-	end scope
-
-	'' Add #includes for pre-#includes
-	scope
-		var i = api.script->head
-		while i
-			assert(i->kind = ASTKIND_OPTION)
-			if i->opt = OPT_INCLUDE then
-				cppAppendIncludeDirective(i->text, TKFLAG_PREINCLUDE)
-			end if
-			i = i->nxt
-		wend
-	end scope
-
-	''
-	'' Add #include statements for the toplevel file(s) behind current
-	'' tokens, but marked with TKFLAG_ROOTFILE to let the CPP know that no
-	'' #include search should be done.
-	''
-	'' This way we can re-use the #include handling code to load the
-	'' toplevel files. (especially interesting for include guard optimization)
-	''
-	'' Note: pre-#defines should appear before tokens from root files, such
-	'' that the order of -define vs *.h command line arguments doesn't
-	'' matter.
-	''
-	scope
-		var i = api.script->head
-		while i
-			assert(i->kind = ASTKIND_OPTION)
-			if i->opt = OPT_I then
-				cppAppendIncludeDirective(i->text, TKFLAG_ROOTFILE)
-			end if
-			i = i->nxt
-		wend
-	end scope
-
-	cppMain()
-
-	cppEnd()
 
 	'' Remove CPP directives and EOLs (tokens marked for removal by
 	'' cppMain()). Doing this as a separate step allows
@@ -1151,7 +1151,7 @@ private function frogParse(byref api as ApiInfo) as AstNode ptr
 	hMoveDirectivesOutOfConstructs()
 
 	if api.replacementcount > 0 then
-		hApplyReplacements()
+		hApplyReplacements(api)
 	end if
 
 	tkTurnCPPTokensIntoCIds()
