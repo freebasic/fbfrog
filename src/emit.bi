@@ -198,7 +198,7 @@ type CodeGen
 	declare sub eolSingleLineEnd()
 	declare sub emitLine(byval begin as const zstring ptr, byval p as const ubyte ptr)
 	declare sub emitLines(byval lines as const zstring ptr)
-	declare sub emitIndentedChildren(byval n as AstNode ptr, byval parentclass as integer = -1)
+	declare sub emitIndentedChildren(byval n as AstNode ptr, byval parentkind as integer = -1)
 	declare sub emitVarDecl _
 		( _
 			byval kw1 as integer, _
@@ -208,7 +208,7 @@ type CodeGen
 			byval is_extern as integer _
 		)
 	declare sub emitSelfBop(byval n as AstNode ptr, byval op as ulong)
-	declare sub emitCode(byval n as AstNode ptr, byval parentclass as integer = -1)
+	declare sub emitCode(byval n as AstNode ptr, byval parentkind as integer = -1)
 	declare sub emitHeader(byref header as HeaderInfo)
 end type
 

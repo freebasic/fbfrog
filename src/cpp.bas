@@ -172,7 +172,7 @@ function hNumberLiteral _
 	'' Save the number literal body (we don't want to include type suffixes here)
 	var old = p[0]
 	p[0] = 0  '' temporary null terminator
-	var n = astNew(ASTCLASS_CONSTI, cptr(zstring ptr, begin))
+	var n = astNew(ASTKIND_CONSTI, cptr(zstring ptr, begin))
 	p[0] = old
 
 	'' Float type suffixes
@@ -188,7 +188,7 @@ function hNumberLiteral _
 	end select
 
 	if is_float then
-		n->class = ASTCLASS_CONSTF
+		n->kind = ASTKIND_CONSTF
 		'' No float type suffix? Then default to double.
 		if n->dtype = TYPE_NONE then
 			n->dtype = TYPE_DOUBLE
@@ -347,10 +347,10 @@ function hStringLiteral _
 		p += 1
 	end if
 
-	var astclass = ASTCLASS_STRING
+	var astkind = ASTKIND_STRING
 	var quotechar = p[0]
 	if quotechar = CH_QUOTE then
-		astclass = ASTCLASS_CHAR
+		astkind = ASTKIND_CHAR
 		dtype = iif(dtype = TYPE_ZSTRING, TYPE_BYTE, TYPE_WCHAR_T)
 	end if
 	p += 1
@@ -430,7 +430,7 @@ function hStringLiteral _
 	'' null-terminator
 	text[j] = 0
 
-	var n = astNew(astclass, text)
+	var n = astNew(astkind, text)
 	n->dtype = dtype
 	function = n
 end function
@@ -469,7 +469,7 @@ private sub hMacroParam(byref x as integer, byval macro as AstNode ptr)
 		tkOopsExpected(x, "macro parameter (identifier or '...')")
 	end if
 
-	var param = astNew(ASTCLASS_MACROPARAM, id)
+	var param = astNew(ASTKIND_MACROPARAM, id)
 	param->attrib or= maybevariadic
 	astAppend(macro, param)
 	macro->attrib or= maybevariadic
@@ -926,62 +926,62 @@ end sub
 
 '' 1st field: C operator precedence, starting at 1, higher value = higher precedence
 '' 2nd field: is it right associative? (assignments/iif)
-dim shared copinfo(ASTCLASS_CLOGOR to ASTCLASS_IIF) as COperatorInfo = _
+dim shared copinfo(ASTKIND_CLOGOR to ASTKIND_IIF) as COperatorInfo = _
 { _
-	( 4, FALSE), _ '' ASTCLASS_CLOGOR
-	( 5, FALSE), _ '' ASTCLASS_CLOGAND
-	( 0, FALSE), _ '' ASTCLASS_LOGOR (unused)
-	( 0, FALSE), _ '' ASTCLASS_LOGAND (unused)
-	( 6, FALSE), _ '' ASTCLASS_OR
-	( 7, FALSE), _ '' ASTCLASS_XOR
-	( 8, FALSE), _ '' ASTCLASS_AND
-	( 1, FALSE), _ '' ASTCLASS_CCOMMA
-	( 2, TRUE ), _ '' ASTCLASS_CASSIGN
-	( 2, TRUE ), _ '' ASTCLASS_CSELFOR
-	( 2, TRUE ), _ '' ASTCLASS_CSELFXOR
-	( 2, TRUE ), _ '' ASTCLASS_CSELFAND
-	( 2, TRUE ), _ '' ASTCLASS_CSELFSHL
-	( 2, TRUE ), _ '' ASTCLASS_CSELFSHR
-	( 2, TRUE ), _ '' ASTCLASS_CSELFADD
-	( 2, TRUE ), _ '' ASTCLASS_CSELFSUB
-	( 2, TRUE ), _ '' ASTCLASS_CSELFMUL
-	( 2, TRUE ), _ '' ASTCLASS_CSELFDIV
-	( 2, TRUE ), _ '' ASTCLASS_CSELFMOD
-	( 9, FALSE), _ '' ASTCLASS_CEQ
-	( 9, FALSE), _ '' ASTCLASS_CNE
-	(10, FALSE), _ '' ASTCLASS_CLT
-	(10, FALSE), _ '' ASTCLASS_CLE
-	(10, FALSE), _ '' ASTCLASS_CGT
-	(10, FALSE), _ '' ASTCLASS_CGE
-	( 0, FALSE), _ '' ASTCLASS_EQ (unused)
-	( 0, FALSE), _ '' ASTCLASS_NE (unused)
-	( 0, FALSE), _ '' ASTCLASS_LT (unused)
-	( 0, FALSE), _ '' ASTCLASS_LE (unused)
-	( 0, FALSE), _ '' ASTCLASS_GT (unused)
-	( 0, FALSE), _ '' ASTCLASS_GE (unused)
-	(11, FALSE), _ '' ASTCLASS_SHL
-	(11, FALSE), _ '' ASTCLASS_SHR
-	(12, FALSE), _ '' ASTCLASS_ADD
-	(12, FALSE), _ '' ASTCLASS_SUB
-	(13, FALSE), _ '' ASTCLASS_MUL
-	(13, FALSE), _ '' ASTCLASS_DIV
-	(13, FALSE), _ '' ASTCLASS_MOD
-	(15, FALSE), _ '' ASTCLASS_INDEX
-	(15, FALSE), _ '' ASTCLASS_MEMBER
-	(15, FALSE), _ '' ASTCLASS_MEMBERDEREF
-	( 0, FALSE), _ '' ASTCLASS_STRCAT (unused)
-	(14, FALSE), _ '' ASTCLASS_CLOGNOT
-	(14, FALSE), _ '' ASTCLASS_NOT
-	(14, FALSE), _ '' ASTCLASS_NEGATE
-	(14, FALSE), _ '' ASTCLASS_UNARYPLUS
-	( 0, FALSE), _ '' ASTCLASS_CDEFINED (unused)
-	( 0, FALSE), _ '' ASTCLASS_DEFINED (unused)
-	(14, FALSE), _ '' ASTCLASS_ADDROF
-	(14, FALSE), _ '' ASTCLASS_DEREF
-	( 0, FALSE), _ '' ASTCLASS_STRINGIFY (unused)
-	(14, FALSE), _ '' ASTCLASS_SIZEOF
-	(14, FALSE), _ '' ASTCLASS_CAST
-	( 3, TRUE )  _ '' ASTCLASS_IIF
+	( 4, FALSE), _ '' ASTKIND_CLOGOR
+	( 5, FALSE), _ '' ASTKIND_CLOGAND
+	( 0, FALSE), _ '' ASTKIND_LOGOR (unused)
+	( 0, FALSE), _ '' ASTKIND_LOGAND (unused)
+	( 6, FALSE), _ '' ASTKIND_OR
+	( 7, FALSE), _ '' ASTKIND_XOR
+	( 8, FALSE), _ '' ASTKIND_AND
+	( 1, FALSE), _ '' ASTKIND_CCOMMA
+	( 2, TRUE ), _ '' ASTKIND_CASSIGN
+	( 2, TRUE ), _ '' ASTKIND_CSELFOR
+	( 2, TRUE ), _ '' ASTKIND_CSELFXOR
+	( 2, TRUE ), _ '' ASTKIND_CSELFAND
+	( 2, TRUE ), _ '' ASTKIND_CSELFSHL
+	( 2, TRUE ), _ '' ASTKIND_CSELFSHR
+	( 2, TRUE ), _ '' ASTKIND_CSELFADD
+	( 2, TRUE ), _ '' ASTKIND_CSELFSUB
+	( 2, TRUE ), _ '' ASTKIND_CSELFMUL
+	( 2, TRUE ), _ '' ASTKIND_CSELFDIV
+	( 2, TRUE ), _ '' ASTKIND_CSELFMOD
+	( 9, FALSE), _ '' ASTKIND_CEQ
+	( 9, FALSE), _ '' ASTKIND_CNE
+	(10, FALSE), _ '' ASTKIND_CLT
+	(10, FALSE), _ '' ASTKIND_CLE
+	(10, FALSE), _ '' ASTKIND_CGT
+	(10, FALSE), _ '' ASTKIND_CGE
+	( 0, FALSE), _ '' ASTKIND_EQ (unused)
+	( 0, FALSE), _ '' ASTKIND_NE (unused)
+	( 0, FALSE), _ '' ASTKIND_LT (unused)
+	( 0, FALSE), _ '' ASTKIND_LE (unused)
+	( 0, FALSE), _ '' ASTKIND_GT (unused)
+	( 0, FALSE), _ '' ASTKIND_GE (unused)
+	(11, FALSE), _ '' ASTKIND_SHL
+	(11, FALSE), _ '' ASTKIND_SHR
+	(12, FALSE), _ '' ASTKIND_ADD
+	(12, FALSE), _ '' ASTKIND_SUB
+	(13, FALSE), _ '' ASTKIND_MUL
+	(13, FALSE), _ '' ASTKIND_DIV
+	(13, FALSE), _ '' ASTKIND_MOD
+	(15, FALSE), _ '' ASTKIND_INDEX
+	(15, FALSE), _ '' ASTKIND_MEMBER
+	(15, FALSE), _ '' ASTKIND_MEMBERDEREF
+	( 0, FALSE), _ '' ASTKIND_STRCAT (unused)
+	(14, FALSE), _ '' ASTKIND_CLOGNOT
+	(14, FALSE), _ '' ASTKIND_NOT
+	(14, FALSE), _ '' ASTKIND_NEGATE
+	(14, FALSE), _ '' ASTKIND_UNARYPLUS
+	( 0, FALSE), _ '' ASTKIND_CDEFINED (unused)
+	( 0, FALSE), _ '' ASTKIND_DEFINED (unused)
+	(14, FALSE), _ '' ASTKIND_ADDROF
+	(14, FALSE), _ '' ASTKIND_DEREF
+	( 0, FALSE), _ '' ASTKIND_STRINGIFY (unused)
+	(14, FALSE), _ '' ASTKIND_SIZEOF
+	(14, FALSE), _ '' ASTKIND_CAST
+	( 3, TRUE )  _ '' ASTKIND_IIF
 }
 
 type CPPVALUE
@@ -1035,7 +1035,7 @@ private sub cppExpression _
 		cpp.x += 1
 
 		'' operand
-		cppExpression(a, dtype_only, cprecedence(ASTCLASS_CLOGNOT))
+		cppExpression(a, dtype_only, cprecedence(ASTKIND_CLOGNOT))
 
 		a.vali = -(a.vali = 0)
 		a.dtype = TYPE_LONGINT  '' ! operator always produces a signed int
@@ -1044,7 +1044,7 @@ private sub cppExpression _
 		cpp.x += 1
 
 		'' operand
-		cppExpression(a, dtype_only, cprecedence(ASTCLASS_NOT))
+		cppExpression(a, dtype_only, cprecedence(ASTKIND_NOT))
 
 		a.vali = not a.vali
 
@@ -1052,7 +1052,7 @@ private sub cppExpression _
 		cpp.x += 1
 
 		'' operand
-		cppExpression(a, dtype_only, cprecedence(ASTCLASS_NEGATE))
+		cppExpression(a, dtype_only, cprecedence(ASTKIND_NEGATE))
 
 		a.vali = -a.vali
 
@@ -1060,7 +1060,7 @@ private sub cppExpression _
 		cpp.x += 1
 
 		'' operand
-		cppExpression(a, dtype_only, cprecedence(ASTCLASS_UNARYPLUS))
+		cppExpression(a, dtype_only, cprecedence(ASTKIND_UNARYPLUS))
 
 	'' Atoms
 	case TK_LPAREN  '' '(' Expression ')'
@@ -1080,7 +1080,7 @@ private sub cppExpression _
 		if n = NULL then
 			tkOops(cpp.x, errmsg)
 		end if
-		if n->class = ASTCLASS_CONSTF then
+		if n->kind = ASTKIND_CONSTF then
 			tkOops(cpp.x, "float literal in CPP expression")
 		end if
 
@@ -1140,25 +1140,25 @@ private sub cppExpression _
 	do
 		dim op as integer
 		select case as const tkGet(cpp.x)
-		case TK_QUEST    : op = ASTCLASS_IIF     '' ? (a ? b : c)
-		case TK_PIPEPIPE : op = ASTCLASS_CLOGOR  '' ||
-		case TK_AMPAMP   : op = ASTCLASS_CLOGAND '' &&
-		case TK_PIPE     : op = ASTCLASS_OR      '' |
-		case TK_CIRC     : op = ASTCLASS_XOR     '' ^
-		case TK_AMP      : op = ASTCLASS_AND     '' &
-		case TK_EQEQ     : op = ASTCLASS_CEQ     '' ==
-		case TK_EXCLEQ   : op = ASTCLASS_CNE     '' !=
-		case TK_LT       : op = ASTCLASS_CLT     '' <
-		case TK_LTEQ     : op = ASTCLASS_CLE     '' <=
-		case TK_GT       : op = ASTCLASS_CGT     '' >
-		case TK_GTEQ     : op = ASTCLASS_CGE     '' >=
-		case TK_LTLT     : op = ASTCLASS_SHL     '' <<
-		case TK_GTGT     : op = ASTCLASS_SHR     '' >>
-		case TK_PLUS     : op = ASTCLASS_ADD     '' +
-		case TK_MINUS    : op = ASTCLASS_SUB     '' -
-		case TK_STAR     : op = ASTCLASS_MUL     '' *
-		case TK_SLASH    : op = ASTCLASS_DIV     '' /
-		case TK_PERCENT  : op = ASTCLASS_MOD     '' %
+		case TK_QUEST    : op = ASTKIND_IIF     '' ? (a ? b : c)
+		case TK_PIPEPIPE : op = ASTKIND_CLOGOR  '' ||
+		case TK_AMPAMP   : op = ASTKIND_CLOGAND '' &&
+		case TK_PIPE     : op = ASTKIND_OR      '' |
+		case TK_CIRC     : op = ASTKIND_XOR     '' ^
+		case TK_AMP      : op = ASTKIND_AND     '' &
+		case TK_EQEQ     : op = ASTKIND_CEQ     '' ==
+		case TK_EXCLEQ   : op = ASTKIND_CNE     '' !=
+		case TK_LT       : op = ASTKIND_CLT     '' <
+		case TK_LTEQ     : op = ASTKIND_CLE     '' <=
+		case TK_GT       : op = ASTKIND_CGT     '' >
+		case TK_GTEQ     : op = ASTKIND_CGE     '' >=
+		case TK_LTLT     : op = ASTKIND_SHL     '' <<
+		case TK_GTGT     : op = ASTKIND_SHR     '' >>
+		case TK_PLUS     : op = ASTKIND_ADD     '' +
+		case TK_MINUS    : op = ASTKIND_SUB     '' -
+		case TK_STAR     : op = ASTKIND_MUL     '' *
+		case TK_SLASH    : op = ASTKIND_DIV     '' /
+		case TK_PERCENT  : op = ASTKIND_MOD     '' %
 		case else        : exit do
 		end select
 
@@ -1170,7 +1170,7 @@ private sub cppExpression _
 			exit do
 		end if
 		'' Left associative?
-		if op <> ASTCLASS_IIF then
+		if op <> ASTKIND_IIF then
 			oplevel += 1
 		end if
 
@@ -1180,19 +1180,19 @@ private sub cppExpression _
 		dim b as CPPVALUE
 
 		select case op
-		case ASTCLASS_CLOGOR  '' ||
+		case ASTKIND_CLOGOR  '' ||
 			'' Parse rhs (don't evaluate if lhs was true)
 			cppExpression(b, dtype_only or (a.vali <> 0), oplevel)
 			a.vali = iif(a.vali, 1, iif(b.vali, 1, 0))
 			a.dtype = TYPE_LONGINT  '' || always produces a signed int
 
-		case ASTCLASS_CLOGAND  '' &&
+		case ASTKIND_CLOGAND  '' &&
 			'' Parse rhs (don't evaluate if lhs was false)
 			cppExpression(b, dtype_only or (a.vali = 0), oplevel)
 			a.vali = iif(a.vali, iif(b.vali, 1, 0), 0)
 			a.dtype = TYPE_LONGINT  '' && always produces a signed int
 
-		case ASTCLASS_IIF
+		case ASTKIND_IIF
 			'' Parse 2nd operand (don't evaluate if condition = false)
 			cppExpression(b, dtype_only or (a.vali = 0), oplevel)
 
@@ -1218,7 +1218,7 @@ private sub cppExpression _
 
 			if dtype_only = FALSE then
 				select case op
-				case ASTCLASS_DIV, ASTCLASS_MOD
+				case ASTKIND_DIV, ASTKIND_MOD
 					if b.vali = 0 then
 						tkOops(cpp.x, "division by zero")
 					end if
@@ -1226,42 +1226,42 @@ private sub cppExpression _
 
 				if a.dtype = TYPE_ULONGINT then
 					select case as const op
-					case ASTCLASS_OR  : a.vali =   cunsg(a.vali) or  cunsg(b.vali)
-					case ASTCLASS_XOR : a.vali =   cunsg(a.vali) xor cunsg(b.vali)
-					case ASTCLASS_AND : a.vali =   cunsg(a.vali) and cunsg(b.vali)
-					case ASTCLASS_CEQ : a.vali = -(cunsg(a.vali) =   cunsg(b.vali))
-					case ASTCLASS_CNE : a.vali = -(cunsg(a.vali) <>  cunsg(b.vali))
-					case ASTCLASS_CLT : a.vali = -(cunsg(a.vali) <   cunsg(b.vali))
-					case ASTCLASS_CLE : a.vali = -(cunsg(a.vali) <=  cunsg(b.vali))
-					case ASTCLASS_CGT : a.vali = -(cunsg(a.vali) >   cunsg(b.vali))
-					case ASTCLASS_CGE : a.vali = -(cunsg(a.vali) >=  cunsg(b.vali))
-					case ASTCLASS_SHL : a.vali =   cunsg(a.vali) shl cunsg(b.vali)
-					case ASTCLASS_SHR : a.vali =   cunsg(a.vali) shr cunsg(b.vali)
-					case ASTCLASS_ADD : a.vali =   cunsg(a.vali) +   cunsg(b.vali)
-					case ASTCLASS_SUB : a.vali =   cunsg(a.vali) -   cunsg(b.vali)
-					case ASTCLASS_MUL : a.vali =   cunsg(a.vali) *   cunsg(b.vali)
-					case ASTCLASS_DIV : a.vali =   cunsg(a.vali) \   cunsg(b.vali)
-					case ASTCLASS_MOD : a.vali =   cunsg(a.vali) mod cunsg(b.vali)
+					case ASTKIND_OR  : a.vali =   cunsg(a.vali) or  cunsg(b.vali)
+					case ASTKIND_XOR : a.vali =   cunsg(a.vali) xor cunsg(b.vali)
+					case ASTKIND_AND : a.vali =   cunsg(a.vali) and cunsg(b.vali)
+					case ASTKIND_CEQ : a.vali = -(cunsg(a.vali) =   cunsg(b.vali))
+					case ASTKIND_CNE : a.vali = -(cunsg(a.vali) <>  cunsg(b.vali))
+					case ASTKIND_CLT : a.vali = -(cunsg(a.vali) <   cunsg(b.vali))
+					case ASTKIND_CLE : a.vali = -(cunsg(a.vali) <=  cunsg(b.vali))
+					case ASTKIND_CGT : a.vali = -(cunsg(a.vali) >   cunsg(b.vali))
+					case ASTKIND_CGE : a.vali = -(cunsg(a.vali) >=  cunsg(b.vali))
+					case ASTKIND_SHL : a.vali =   cunsg(a.vali) shl cunsg(b.vali)
+					case ASTKIND_SHR : a.vali =   cunsg(a.vali) shr cunsg(b.vali)
+					case ASTKIND_ADD : a.vali =   cunsg(a.vali) +   cunsg(b.vali)
+					case ASTKIND_SUB : a.vali =   cunsg(a.vali) -   cunsg(b.vali)
+					case ASTKIND_MUL : a.vali =   cunsg(a.vali) *   cunsg(b.vali)
+					case ASTKIND_DIV : a.vali =   cunsg(a.vali) \   cunsg(b.vali)
+					case ASTKIND_MOD : a.vali =   cunsg(a.vali) mod cunsg(b.vali)
 					case else         : assert(FALSE)
 					end select
 				else
 					select case as const op
-					case ASTCLASS_OR  : a.vali =   a.vali or  b.vali
-					case ASTCLASS_XOR : a.vali =   a.vali xor b.vali
-					case ASTCLASS_AND : a.vali =   a.vali and b.vali
-					case ASTCLASS_CEQ : a.vali = -(a.vali =   b.vali)
-					case ASTCLASS_CNE : a.vali = -(a.vali <>  b.vali)
-					case ASTCLASS_CLT : a.vali = -(a.vali <   b.vali)
-					case ASTCLASS_CLE : a.vali = -(a.vali <=  b.vali)
-					case ASTCLASS_CGT : a.vali = -(a.vali >   b.vali)
-					case ASTCLASS_CGE : a.vali = -(a.vali >=  b.vali)
-					case ASTCLASS_SHL : a.vali =   a.vali shl b.vali
-					case ASTCLASS_SHR : a.vali =   a.vali shr b.vali
-					case ASTCLASS_ADD : a.vali =   a.vali +   b.vali
-					case ASTCLASS_SUB : a.vali =   a.vali -   b.vali
-					case ASTCLASS_MUL : a.vali =   a.vali *   b.vali
-					case ASTCLASS_DIV : a.vali =   a.vali \   b.vali
-					case ASTCLASS_MOD : a.vali =   a.vali mod b.vali
+					case ASTKIND_OR  : a.vali =   a.vali or  b.vali
+					case ASTKIND_XOR : a.vali =   a.vali xor b.vali
+					case ASTKIND_AND : a.vali =   a.vali and b.vali
+					case ASTKIND_CEQ : a.vali = -(a.vali =   b.vali)
+					case ASTKIND_CNE : a.vali = -(a.vali <>  b.vali)
+					case ASTKIND_CLT : a.vali = -(a.vali <   b.vali)
+					case ASTKIND_CLE : a.vali = -(a.vali <=  b.vali)
+					case ASTKIND_CGT : a.vali = -(a.vali >   b.vali)
+					case ASTKIND_CGE : a.vali = -(a.vali >=  b.vali)
+					case ASTKIND_SHL : a.vali =   a.vali shl b.vali
+					case ASTKIND_SHR : a.vali =   a.vali shr b.vali
+					case ASTKIND_ADD : a.vali =   a.vali +   b.vali
+					case ASTKIND_SUB : a.vali =   a.vali -   b.vali
+					case ASTKIND_MUL : a.vali =   a.vali *   b.vali
+					case ASTKIND_DIV : a.vali =   a.vali \   b.vali
+					case ASTKIND_MOD : a.vali =   a.vali mod b.vali
 					case else         : assert(FALSE)
 					end select
 				end if
@@ -1269,9 +1269,9 @@ private sub cppExpression _
 
 			'' Relational BOPs always produce a signed int
 			select case op
-			case ASTCLASS_CEQ, ASTCLASS_CNE, _
-			     ASTCLASS_CLT, ASTCLASS_CLE, _
-			     ASTCLASS_CGT, ASTCLASS_CGE
+			case ASTKIND_CEQ, ASTKIND_CNE, _
+			     ASTKIND_CLT, ASTKIND_CLE, _
+			     ASTKIND_CGT, ASTKIND_CGE
 				a.dtype = TYPE_LONGINT
 			end select
 		end select

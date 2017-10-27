@@ -6,7 +6,7 @@ type COperatorInfo
 	is_right_assoc as byte
 end type
 
-extern copinfo(ASTCLASS_CLOGOR to ASTCLASS_IIF) as COperatorInfo
+extern copinfo(ASTKIND_CLOGOR to ASTKIND_IIF) as COperatorInfo
 
 #define cprecedence(op) copinfo(op).precedence
 #define cOpIsLeftAssoc(op) (not copinfo(op).is_right_assoc)

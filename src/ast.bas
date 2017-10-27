@@ -228,41 +228,41 @@ dim shared as zstring ptr astnodename(0 to ...) => _
 	@"dimension"   _
 }
 
-#assert ubound(astnodename) = ASTCLASS__COUNT - 1
+#assert ubound(astnodename) = ASTKIND__COUNT - 1
 
-function astNew overload(byval class_ as integer) as AstNode ptr
+function astNew overload(byval kind as integer) as AstNode ptr
 	dim as AstNode ptr n = callocate(sizeof(AstNode))
-	n->class = class_
+	n->kind = kind
 	function = n
 end function
 
-function astNew overload(byval class_ as integer, byval text as zstring ptr) as AstNode ptr
-	var n = astNew(class_)
+function astNew overload(byval kind as integer, byval text as zstring ptr) as AstNode ptr
+	var n = astNew(kind)
 	n->text = strDuplicate(text)
 	function = n
 end function
 
-function astNew overload(byval class_ as integer, byval c1 as AstNode ptr, byval c2 as AstNode ptr) as AstNode ptr
-	var n = astNew(class_)
+function astNew overload(byval kind as integer, byval c1 as AstNode ptr, byval c2 as AstNode ptr) as AstNode ptr
+	var n = astNew(kind)
 	astAppend(n, c1)
 	astAppend(n, c2)
 	function = n
 end function
 
 function astNewPPDEFINE(byval id as zstring ptr) as AstNode ptr
-	var n = astNew(ASTCLASS_PPDEFINE, id)
+	var n = astNew(ASTKIND_PPDEFINE, id)
 	n->paramcount = -1
 	function = n
 end function
 
 function astNewIIF(byval cond as AstNode ptr, byval l as AstNode ptr, byval r as AstNode ptr) as AstNode ptr
-	var n = astNew(ASTCLASS_IIF, l, r)
+	var n = astNew(ASTKIND_IIF, l, r)
 	n->expr = cond
 	function = n
 end function
 
 function astNewGROUP overload() as AstNode ptr
-	function = astNew(ASTCLASS_GROUP)
+	function = astNew(ASTKIND_GROUP)
 end function
 
 function astNewGROUP overload(byval c1 as AstNode ptr, byval c2 as AstNode ptr) as AstNode ptr
@@ -279,7 +279,7 @@ end sub
 
 private function astBuildDEFINED(byval symbol as zstring ptr, byval negate as integer) as AstNode ptr
 	var n = astNewDEFINED(symbol)
-	if negate then n = astNew(ASTCLASS_NOT, n)
+	if negate then n = astNew(ASTKIND_NOT, n)
 	function = n
 end function
 
@@ -296,7 +296,7 @@ function astNewDEFINEDfbos(byval os as integer) as AstNode ptr
 end function
 
 function astNewOPTION(byval opt as integer, byval text1 as zstring ptr, byval text2 as zstring ptr) as AstNode ptr
-	var n = astNew(ASTCLASS_OPTION, text1)
+	var n = astNew(ASTKIND_OPTION, text1)
 	astSetAlias(n, text2)
 	n->opt = opt
 	function = n
@@ -436,7 +436,7 @@ sub astInsert(byval parent as AstNode ptr, byval n as AstNode ptr, byval ref as 
 	assert(iif(ref, astIsChildOf(parent, ref), TRUE))
 
 	'' If it's a GROUP, insert its children, and delete the GROUP itself
-	if n->class = ASTCLASS_GROUP then
+	if n->kind = ASTKIND_GROUP then
 		if n->head then
 			'' Relink the GROUP's children, so they're added without being reallocated
 			if ref then
@@ -609,7 +609,7 @@ end sub
 function astCloneNode(byval n as AstNode ptr) as AstNode ptr
 	if n = NULL then return NULL
 
-	var c = astNew(n->class)
+	var c = astNew(n->kind)
 	c->attrib      = n->attrib
 	c->text        = strDuplicate(n->text)
 	c->alias       = strDuplicate(n->alias)
@@ -620,13 +620,13 @@ function astCloneNode(byval n as AstNode ptr) as AstNode ptr
 	c->bits        = astClone(n->bits)
 	c->expr        = astClone(n->expr)
 	c->location    = n->location
-	select case n->class
-	case ASTCLASS_PPDEFINE : c->paramcount = n->paramcount
-	case ASTCLASS_STRUCT, ASTCLASS_UNION : c->maxalign = n->maxalign
-	case ASTCLASS_OPTION : c->opt = n->opt
-	case ASTCLASS_VERBLOCK, ASTCLASS_PPIF, ASTCLASS_PPELSEIF
+	select case n->kind
+	case ASTKIND_PPDEFINE : c->paramcount = n->paramcount
+	case ASTKIND_STRUCT, ASTKIND_UNION : c->maxalign = n->maxalign
+	case ASTKIND_OPTION : c->opt = n->opt
+	case ASTKIND_VERBLOCK, ASTKIND_PPIF, ASTKIND_PPELSEIF
 		c->apis = n->apis
-	case ASTCLASS_VERNUMCHECK
+	case ASTKIND_VERNUMCHECK
 		c->vernum = n->vernum
 	end select
 
@@ -645,27 +645,27 @@ function astClone(byval n as AstNode ptr) as AstNode ptr
 	function = c
 end function
 
-function astContains(byval n as AstNode ptr, byval astclass as integer) as integer
-	if n->class = astclass then return TRUE
-	if n->subtype then if astContains(n->subtype, astclass) then return TRUE
-	if n->array   then if astContains(n->array  , astclass) then return TRUE
-	if n->bits    then if astContains(n->bits   , astclass) then return TRUE
-	if n->expr    then if astContains(n->expr   , astclass) then return TRUE
+function astContains(byval n as AstNode ptr, byval astkind as integer) as integer
+	if n->kind = astkind then return TRUE
+	if n->subtype then if astContains(n->subtype, astkind) then return TRUE
+	if n->array   then if astContains(n->array  , astkind) then return TRUE
+	if n->bits    then if astContains(n->bits   , astkind) then return TRUE
+	if n->expr    then if astContains(n->expr   , astkind) then return TRUE
 	var i = n->head
 	while i
-		if astContains(i, astclass) then return TRUE
+		if astContains(i, astkind) then return TRUE
 		i = i->next
 	wend
 	function = FALSE
 end function
 
 function astContainsCAssignments(byval n as AstNode ptr) as integer
-	select case as const n->class
-	case ASTCLASS_CASSIGN, _
-	     ASTCLASS_CSELFOR, ASTCLASS_CSELFXOR, ASTCLASS_CSELFAND, _
-	     ASTCLASS_CSELFSHL, ASTCLASS_CSELFSHR, _
-	     ASTCLASS_CSELFADD, ASTCLASS_CSELFSUB, _
-	     ASTCLASS_CSELFMUL, ASTCLASS_CSELFDIV, ASTCLASS_CSELFMOD
+	select case as const n->kind
+	case ASTKIND_CASSIGN, _
+	     ASTKIND_CSELFOR, ASTKIND_CSELFXOR, ASTKIND_CSELFAND, _
+	     ASTKIND_CSELFSHL, ASTKIND_CSELFSHR, _
+	     ASTKIND_CSELFADD, ASTKIND_CSELFSUB, _
+	     ASTKIND_CSELFMUL, ASTKIND_CSELFDIV, ASTKIND_CSELFMOD
 		return TRUE
 	end select
 	if n->subtype then if astContainsCAssignments(n->subtype) then return TRUE
@@ -684,41 +684,41 @@ function astHas1Child(byval n as AstNode ptr) as integer
 	function = n->head andalso (n->head = n->tail)
 end function
 
-function astHasOnlyChild(byval n as AstNode ptr, byval astclass as integer) as integer
-	function = astHas1Child(n) andalso (n->head->class = astclass)
+function astHasOnlyChild(byval n as AstNode ptr, byval astkind as integer) as integer
+	function = astHas1Child(n) andalso (n->head->kind = astkind)
 end function
 
 function astIsCodeBlock(byval n as AstNode ptr) as integer
-	select case n->class
-	case ASTCLASS_SCOPEBLOCK, ASTCLASS_IFBLOCK, ASTCLASS_DOWHILE, _
-	     ASTCLASS_WHILE, ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM
+	select case n->kind
+	case ASTKIND_SCOPEBLOCK, ASTKIND_IFBLOCK, ASTKIND_DOWHILE, _
+	     ASTKIND_WHILE, ASTKIND_STRUCT, ASTKIND_UNION, ASTKIND_ENUM
 		function = TRUE
-	case ASTCLASS_PROC
+	case ASTKIND_PROC
 		function = (n->expr <> NULL)
 	end select
 end function
 
 function astIsCodeScopeBlock(byval n as AstNode ptr) as integer
-	select case n->class
-	case ASTCLASS_SCOPEBLOCK, ASTCLASS_IFBLOCK, ASTCLASS_DOWHILE, ASTCLASS_WHILE
+	select case n->kind
+	case ASTKIND_SCOPEBLOCK, ASTKIND_IFBLOCK, ASTKIND_DOWHILE, ASTKIND_WHILE
 		function = TRUE
 	end select
 end function
 
 function astIsScopeBlockWith1Stmt(byval n as AstNode ptr) as integer
-	function = (n->class = ASTCLASS_SCOPEBLOCK) andalso _
+	function = (n->kind = ASTKIND_SCOPEBLOCK) andalso _
 	           astHas1Child(n) andalso (not astIsCodeBlock(n->head))
 end function
 
 function astIsMergableBlock(byval n as AstNode ptr) as integer
-	select case n->class
-	case ASTCLASS_STRUCT, ASTCLASS_UNION, ASTCLASS_ENUM, ASTCLASS_RENAMELIST
+	select case n->kind
+	case ASTKIND_STRUCT, ASTKIND_UNION, ASTKIND_ENUM, ASTKIND_RENAMELIST
 		function = TRUE
 	end select
 end function
 
 function astIsCastTo(byval n as AstNode ptr, byval dtype as integer, byval subtype as AstNode ptr) as integer
-	function = (n->class = ASTCLASS_CAST) andalso (n->dtype = dtype) andalso astIsEqual(n->subtype, subtype)
+	function = (n->kind = ASTKIND_CAST) andalso (n->dtype = dtype) andalso astIsEqual(n->subtype, subtype)
 end function
 
 ''
@@ -743,7 +743,7 @@ function astIsEqual _
 	if a = b then return TRUE
 	if (a = NULL) or (b = NULL) then exit function
 
-	if a->class <> b->class then exit function
+	if a->kind <> b->kind then exit function
 
 	var aattrib = a->attrib
 	var battrib = b->attrib
@@ -767,7 +767,7 @@ function astIsEqual _
 		battrib and= not (ASTATTRIB_NOSTRING or ASTATTRIB_STRING)
 
 		'' Ignore DLLIMPORT/STATIC on procedures for now, as we're not emitting it anyways
-		if a->class = ASTCLASS_PROC then
+		if a->kind = ASTKIND_PROC then
 			aattrib and= not (ASTATTRIB_DLLIMPORT or ASTATTRIB_STATIC)
 			battrib and= not (ASTATTRIB_DLLIMPORT or ASTATTRIB_STATIC)
 		end if
@@ -799,23 +799,23 @@ function astIsEqual _
 		if a->location.linenum <> b->location.linenum then exit function
 	end if
 
-	select case a->class
-	case ASTCLASS_PPDEFINE
+	select case a->kind
+	case ASTKIND_PPDEFINE
 		if a->paramcount <> b->paramcount then exit function
 
-	case ASTCLASS_STRUCT, ASTCLASS_UNION
+	case ASTKIND_STRUCT, ASTKIND_UNION
 		if a->maxalign <> b->maxalign then exit function
 
-	case ASTCLASS_OPTION
+	case ASTKIND_OPTION
 		if a->opt <> b->opt then exit function
 
-	case ASTCLASS_VERBLOCK, ASTCLASS_PPIF, ASTCLASS_PPELSEIF
+	case ASTKIND_VERBLOCK, ASTKIND_PPIF, ASTKIND_PPELSEIF
 		if a->apis.equals(b->apis) = FALSE then exit function
 
-	case ASTCLASS_VEROR, ASTCLASS_VERAND
+	case ASTKIND_VEROR, ASTKIND_VERAND
 		return astGroupsContainEqualChildren(a, b)
 
-	case ASTCLASS_VERNUMCHECK
+	case ASTKIND_VERNUMCHECK
 		if a->vernum <> b->vernum then exit function
 	end select
 
@@ -864,12 +864,12 @@ end function
 function astLookupMacroParam(byval macro as AstNode ptr, byval id as zstring ptr) as integer
 	var index = 0
 
-	assert(macro->class = ASTCLASS_PPDEFINE)
+	assert(macro->kind = ASTKIND_PPDEFINE)
 
 	var param = macro->head
 	while param
 
-		assert(param->class = ASTCLASS_MACROPARAM)
+		assert(param->kind = ASTKIND_MACROPARAM)
 		if *param->text = *id then
 			return index
 		end if
@@ -882,12 +882,12 @@ function astLookupMacroParam(byval macro as AstNode ptr, byval id as zstring ptr
 end function
 
 function astGetMacroParamByNameIgnoreCase(byval macro as AstNode ptr, byval id as zstring ptr) as AstNode ptr
-	assert(macro->class = ASTCLASS_PPDEFINE)
+	assert(macro->kind = ASTKIND_PPDEFINE)
 
 	var param = macro->head
 	while param
 
-		assert(param->class = ASTCLASS_MACROPARAM)
+		assert(param->kind = ASTKIND_MACROPARAM)
 		if lcase(*param->text) = lcase(*id) then
 			return param
 		end if
@@ -935,13 +935,13 @@ end function
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 '' AST dumping for pretty output and debugging
 
-function astDumpPrettyClass(byval astclass as integer) as string
-	select case astclass
-	case ASTCLASS_PPDEFINE : function = "#define"
-	case ASTCLASS_CONST : function = "constant"
-	case ASTCLASS_VAR   : function = "variable"
-	case ASTCLASS_PROC  : function = "procedure"
-	case else           : function = *astnodename(astclass)
+function astDumpPrettyKind(byval astkind as integer) as string
+	select case astkind
+	case ASTKIND_PPDEFINE : function = "#define"
+	case ASTKIND_CONST : function = "constant"
+	case ASTKIND_VAR   : function = "variable"
+	case ASTKIND_PROC  : function = "procedure"
+	case else           : function = *astnodename(astkind)
 	end select
 end function
 
@@ -952,7 +952,7 @@ function astDumpPrettyDecl(byval n as AstNode ptr, byval show_type as integer) a
 		s += "anonymous "
 	end if
 
-	s += astDumpPrettyClass(n->class)
+	s += astDumpPrettyKind(n->kind)
 
 	if n->text then
 		s += " " + strMakePrintable(*n->text)
@@ -962,7 +962,7 @@ function astDumpPrettyDecl(byval n as AstNode ptr, byval show_type as integer) a
 		s += " alias """ + strMakePrintable(*n->alias) + """"
 	end if
 
-	if n->class = ASTCLASS_PROC then
+	if n->kind = ASTKIND_PROC then
 		s += "()"
 	end if
 
@@ -984,10 +984,10 @@ function astDumpOne(byval n as AstNode ptr) as string
 	end if
 
 	's += "[" & hex(n) & "] "
-	if (n->class >= 0) and (n->class < ASTCLASS__COUNT) then
-		s += *astnodename(n->class)
+	if (n->kind >= 0) and (n->kind < ASTKIND__COUNT) then
+		s += *astnodename(n->kind)
 	else
-		s += "invalid astclass " & n->class
+		s += "invalid astkind " & n->kind
 	end if
 
 	#macro checkAttrib(a)
@@ -1014,12 +1014,12 @@ function astDumpOne(byval n as AstNode ptr) as string
 	checkAttrib(NOSTRING)
 	checkAttrib(STRING)
 
-	select case n->class
-	case ASTCLASS_OPTION
+	select case n->kind
+	case ASTKIND_OPTION
 		s += " " + *tkInfoText(n->opt)
-	case ASTCLASS_VERBLOCK, ASTCLASS_PPIF, ASTCLASS_PPELSEIF
+	case ASTKIND_VERBLOCK, ASTKIND_PPIF, ASTKIND_PPELSEIF
 		s += " apis=" + n->apis.dump()
-	case ASTCLASS_VERNUMCHECK
+	case ASTKIND_VERNUMCHECK
 		s += " vernum=" & n->vernum
 	end select
 

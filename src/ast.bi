@@ -70,148 +70,148 @@ declare function typeDump(byval dtype as integer) as string
 
 enum
 	'' Internal helper nodes
-	ASTCLASS_GROUP = 0
-	ASTCLASS_VERBLOCK
-	ASTCLASS_VEROR
-	ASTCLASS_VERAND
-	ASTCLASS_VERNUMCHECK
-	ASTCLASS_DIVIDER
-	ASTCLASS_SCOPEBLOCK
-	ASTCLASS_UNKNOWN
-	ASTCLASS_FBCODE
-	ASTCLASS_RENAMELIST
-	ASTCLASS_TITLE
+	ASTKIND_GROUP = 0
+	ASTKIND_VERBLOCK
+	ASTKIND_VEROR
+	ASTKIND_VERAND
+	ASTKIND_VERNUMCHECK
+	ASTKIND_DIVIDER
+	ASTKIND_SCOPEBLOCK
+	ASTKIND_UNKNOWN
+	ASTKIND_FBCODE
+	ASTKIND_RENAMELIST
+	ASTKIND_TITLE
 
 	'' Script helper nodes
-	ASTCLASS_DECLAREVERSIONS
-	ASTCLASS_DECLAREBOOL
-	ASTCLASS_SELECTTARGET
-	ASTCLASS_SELECTVERSION
-	ASTCLASS_SELECTDEFINE
-	ASTCLASS_CASE
-	ASTCLASS_CASEELSE
-	ASTCLASS_ENDSELECT
-	ASTCLASS_OPTION
+	ASTKIND_DECLAREVERSIONS
+	ASTKIND_DECLAREBOOL
+	ASTKIND_SELECTTARGET
+	ASTKIND_SELECTVERSION
+	ASTKIND_SELECTDEFINE
+	ASTKIND_CASE
+	ASTKIND_CASEELSE
+	ASTKIND_ENDSELECT
+	ASTKIND_OPTION
 
 	'' Declarations/statements
-	ASTCLASS_PPINCLUDE
-	ASTCLASS_PPDEFINE
-	ASTCLASS_PPIF
-	ASTCLASS_PPELSEIF
-	ASTCLASS_PPELSE
-	ASTCLASS_PPENDIF
-	ASTCLASS_PRAGMAONCE
-	ASTCLASS_INCLIB
-	ASTCLASS_UNDEF
-	ASTCLASS_STRUCT
-	ASTCLASS_UNION
-	ASTCLASS_ENUM
-	ASTCLASS_TYPEDEF
-	ASTCLASS_CONST
-	ASTCLASS_VAR
-	ASTCLASS_FIELD
-	ASTCLASS_PROC
-	ASTCLASS_PARAM
-	ASTCLASS_MACROPARAM
-	ASTCLASS_ARRAY
-	ASTCLASS_EXTERNBLOCKBEGIN
-	ASTCLASS_EXTERNBLOCKEND
-	ASTCLASS_RETURN
-	ASTCLASS_ASSIGN
-	ASTCLASS_SELFOR
-	ASTCLASS_SELFXOR
-	ASTCLASS_SELFAND
-	ASTCLASS_SELFSHL
-	ASTCLASS_SELFSHR
-	ASTCLASS_SELFADD
-	ASTCLASS_SELFSUB
-	ASTCLASS_SELFMUL
-	ASTCLASS_SELFDIV
-	ASTCLASS_SELFMOD
-	ASTCLASS_IFBLOCK
-	ASTCLASS_IFPART
-	ASTCLASS_ELSEIFPART
-	ASTCLASS_ELSEPART
-	ASTCLASS_DOWHILE
-	ASTCLASS_WHILE
+	ASTKIND_PPINCLUDE
+	ASTKIND_PPDEFINE
+	ASTKIND_PPIF
+	ASTKIND_PPELSEIF
+	ASTKIND_PPELSE
+	ASTKIND_PPENDIF
+	ASTKIND_PRAGMAONCE
+	ASTKIND_INCLIB
+	ASTKIND_UNDEF
+	ASTKIND_STRUCT
+	ASTKIND_UNION
+	ASTKIND_ENUM
+	ASTKIND_TYPEDEF
+	ASTKIND_CONST
+	ASTKIND_VAR
+	ASTKIND_FIELD
+	ASTKIND_PROC
+	ASTKIND_PARAM
+	ASTKIND_MACROPARAM
+	ASTKIND_ARRAY
+	ASTKIND_EXTERNBLOCKBEGIN
+	ASTKIND_EXTERNBLOCKEND
+	ASTKIND_RETURN
+	ASTKIND_ASSIGN
+	ASTKIND_SELFOR
+	ASTKIND_SELFXOR
+	ASTKIND_SELFAND
+	ASTKIND_SELFSHL
+	ASTKIND_SELFSHR
+	ASTKIND_SELFADD
+	ASTKIND_SELFSUB
+	ASTKIND_SELFMUL
+	ASTKIND_SELFDIV
+	ASTKIND_SELFMOD
+	ASTKIND_IFBLOCK
+	ASTKIND_IFPART
+	ASTKIND_ELSEIFPART
+	ASTKIND_ELSEPART
+	ASTKIND_DOWHILE
+	ASTKIND_WHILE
 
 	'' Expression atoms etc.
-	ASTCLASS_CONSTI
-	ASTCLASS_CONSTF
-	ASTCLASS_TEXT
-	ASTCLASS_STRING
-	ASTCLASS_CHAR
-	ASTCLASS_DATATYPE
-	ASTCLASS_ELLIPSIS
+	ASTKIND_CONSTI
+	ASTKIND_CONSTF
+	ASTKIND_TEXT
+	ASTKIND_STRING
+	ASTKIND_CHAR
+	ASTKIND_DATATYPE
+	ASTKIND_ELLIPSIS
 
 	'' Expressions
 
 	'' BOPs
-	ASTCLASS_CLOGOR
-	ASTCLASS_CLOGAND
-	ASTCLASS_LOGOR
-	ASTCLASS_LOGAND
-	ASTCLASS_OR
-	ASTCLASS_XOR
-	ASTCLASS_AND
-	ASTCLASS_CCOMMA
-	ASTCLASS_CASSIGN
-	ASTCLASS_CSELFOR
-	ASTCLASS_CSELFXOR
-	ASTCLASS_CSELFAND
-	ASTCLASS_CSELFSHL
-	ASTCLASS_CSELFSHR
-	ASTCLASS_CSELFADD
-	ASTCLASS_CSELFSUB
-	ASTCLASS_CSELFMUL
-	ASTCLASS_CSELFDIV
-	ASTCLASS_CSELFMOD
-	ASTCLASS_CEQ
-	ASTCLASS_CNE
-	ASTCLASS_CLT
-	ASTCLASS_CLE
-	ASTCLASS_CGT
-	ASTCLASS_CGE
-	ASTCLASS_EQ
-	ASTCLASS_NE
-	ASTCLASS_LT
-	ASTCLASS_LE
-	ASTCLASS_GT
-	ASTCLASS_GE
-	ASTCLASS_SHL
-	ASTCLASS_SHR
-	ASTCLASS_ADD
-	ASTCLASS_SUB
-	ASTCLASS_MUL
-	ASTCLASS_DIV
-	ASTCLASS_MOD
-	ASTCLASS_INDEX
-	ASTCLASS_MEMBER
-	ASTCLASS_MEMBERDEREF
-	ASTCLASS_STRCAT
+	ASTKIND_CLOGOR
+	ASTKIND_CLOGAND
+	ASTKIND_LOGOR
+	ASTKIND_LOGAND
+	ASTKIND_OR
+	ASTKIND_XOR
+	ASTKIND_AND
+	ASTKIND_CCOMMA
+	ASTKIND_CASSIGN
+	ASTKIND_CSELFOR
+	ASTKIND_CSELFXOR
+	ASTKIND_CSELFAND
+	ASTKIND_CSELFSHL
+	ASTKIND_CSELFSHR
+	ASTKIND_CSELFADD
+	ASTKIND_CSELFSUB
+	ASTKIND_CSELFMUL
+	ASTKIND_CSELFDIV
+	ASTKIND_CSELFMOD
+	ASTKIND_CEQ
+	ASTKIND_CNE
+	ASTKIND_CLT
+	ASTKIND_CLE
+	ASTKIND_CGT
+	ASTKIND_CGE
+	ASTKIND_EQ
+	ASTKIND_NE
+	ASTKIND_LT
+	ASTKIND_LE
+	ASTKIND_GT
+	ASTKIND_GE
+	ASTKIND_SHL
+	ASTKIND_SHR
+	ASTKIND_ADD
+	ASTKIND_SUB
+	ASTKIND_MUL
+	ASTKIND_DIV
+	ASTKIND_MOD
+	ASTKIND_INDEX
+	ASTKIND_MEMBER
+	ASTKIND_MEMBERDEREF
+	ASTKIND_STRCAT
 
 	'' UOPs
-	ASTCLASS_CLOGNOT
-	ASTCLASS_NOT
-	ASTCLASS_NEGATE
-	ASTCLASS_UNARYPLUS
-	ASTCLASS_CDEFINED
-	ASTCLASS_DEFINED
-	ASTCLASS_ADDROF
-	ASTCLASS_DEREF
-	ASTCLASS_STRINGIFY
-	ASTCLASS_SIZEOF
-	ASTCLASS_CAST
+	ASTKIND_CLOGNOT
+	ASTKIND_NOT
+	ASTKIND_NEGATE
+	ASTKIND_UNARYPLUS
+	ASTKIND_CDEFINED
+	ASTKIND_DEFINED
+	ASTKIND_ADDROF
+	ASTKIND_DEREF
+	ASTKIND_STRINGIFY
+	ASTKIND_SIZEOF
+	ASTKIND_CAST
 
 	'' Special expressions
-	ASTCLASS_IIF
-	ASTCLASS_PPMERGE
-	ASTCLASS_CALL
-	ASTCLASS_STRUCTINIT
-	ASTCLASS_ARRAYINIT
-	ASTCLASS_DIMENSION
+	ASTKIND_IIF
+	ASTKIND_PPMERGE
+	ASTKIND_CALL
+	ASTKIND_STRUCTINIT
+	ASTKIND_ARRAYINIT
+	ASTKIND_DIMENSION
 
-	ASTCLASS__COUNT
+	ASTKIND__COUNT
 end enum
 
 const ASTATTRIB_LOCAL         = 1 shl 0  '' VAR
@@ -242,7 +242,7 @@ const ASTATTRIB__CALLCONV = ASTATTRIB_CDECL or ASTATTRIB_STDCALL
 '' When changing, adjust astClone(), astIsEqual(), astDump*()
 '' TODO: pack
 type AstNode
-	class		as integer  '' ASTCLASS_*
+	kind		as integer  '' ASTKIND_*
 	attrib		as integer  '' ASTATTRIB_*
 
 	'' Identifiers/string literals, or NULL
@@ -286,23 +286,23 @@ end type
 '' (can be used to skip #define bodies, etc.)
 type ASTVISITCALLBACK as function(byval as AstNode ptr) as integer
 
-#define astNewTEXT(text) astNew(ASTCLASS_TEXT, text)
-#define astNewDEFINED(id) astNew(ASTCLASS_DEFINED, id)
-#define astIsCONSTI(n) ((n)->class = ASTCLASS_CONSTI)
-#define astIsVERBLOCK(n) ((n)->class = ASTCLASS_VERBLOCK)
-#define astIsVERAND(n) ((n)->class = ASTCLASS_VERAND)
-#define astIsVEROR(n)  ((n)->class = ASTCLASS_VEROR)
-#define astIsTEXT(n) ((n)->class = ASTCLASS_TEXT)
-#define astIsDEFINED(n) ((n)->class = ASTCLASS_DEFINED)
-#define astIsPPIF(n) ((n)->class = ASTCLASS_PPIF)
-#define astIsPPELSEIF(n) ((n)->class = ASTCLASS_PPELSEIF)
-#define astIsPPELSE(n) ((n)->class = ASTCLASS_PPELSE)
-#define astIsPPENDIF(n) ((n)->class = ASTCLASS_PPENDIF)
-#define astIsNOT(n) ((n)->class = ASTCLASS_NOT)
+#define astNewTEXT(text) astNew(ASTKIND_TEXT, text)
+#define astNewDEFINED(id) astNew(ASTKIND_DEFINED, id)
+#define astIsCONSTI(n) ((n)->kind = ASTKIND_CONSTI)
+#define astIsVERBLOCK(n) ((n)->kind = ASTKIND_VERBLOCK)
+#define astIsVERAND(n) ((n)->kind = ASTKIND_VERAND)
+#define astIsVEROR(n)  ((n)->kind = ASTKIND_VEROR)
+#define astIsTEXT(n) ((n)->kind = ASTKIND_TEXT)
+#define astIsDEFINED(n) ((n)->kind = ASTKIND_DEFINED)
+#define astIsPPIF(n) ((n)->kind = ASTKIND_PPIF)
+#define astIsPPELSEIF(n) ((n)->kind = ASTKIND_PPELSEIF)
+#define astIsPPELSE(n) ((n)->kind = ASTKIND_PPELSE)
+#define astIsPPENDIF(n) ((n)->kind = ASTKIND_PPENDIF)
+#define astIsNOT(n) ((n)->kind = ASTKIND_NOT)
 
-declare function astNew overload(byval class_ as integer) as AstNode ptr
-declare function astNew overload(byval class_ as integer, byval text as zstring ptr) as AstNode ptr
-declare function astNew overload(byval class_ as integer, byval c1 as AstNode ptr, byval c2 as AstNode ptr = NULL) as AstNode ptr
+declare function astNew overload(byval kind as integer) as AstNode ptr
+declare function astNew overload(byval kind as integer, byval text as zstring ptr) as AstNode ptr
+declare function astNew overload(byval kind as integer, byval c1 as AstNode ptr, byval c2 as AstNode ptr = NULL) as AstNode ptr
 declare function astNewPPDEFINE(byval id as zstring ptr) as AstNode ptr
 declare function astNewIIF _
 	( _
@@ -353,10 +353,10 @@ declare sub astSetType _
 	)
 declare function astCloneNode(byval n as AstNode ptr) as AstNode ptr
 declare function astClone(byval n as AstNode ptr) as AstNode ptr
-declare function astContains(byval n as AstNode ptr, byval astclass as integer) as integer
+declare function astContains(byval n as AstNode ptr, byval astkind as integer) as integer
 declare function astContainsCAssignments(byval n as AstNode ptr) as integer
 declare function astHas1Child(byval n as AstNode ptr) as integer
-declare function astHasOnlyChild(byval n as AstNode ptr, byval astclass as integer) as integer
+declare function astHasOnlyChild(byval n as AstNode ptr, byval astkind as integer) as integer
 declare function astIsCodeBlock(byval n as AstNode ptr) as integer
 declare function astIsCodeScopeBlock(byval n as AstNode ptr) as integer
 declare function astIsScopeBlockWith1Stmt(byval n as AstNode ptr) as integer
@@ -375,7 +375,7 @@ declare function astLookupMacroParam(byval macro as AstNode ptr, byval id as zst
 declare function astGetMacroParamByNameIgnoreCase(byval macro as AstNode ptr, byval id as zstring ptr) as AstNode ptr
 declare sub astVisit(byval n as AstNode ptr, byval callback as ASTVISITCALLBACK)
 declare function astCount(byval n as AstNode ptr) as integer
-declare function astDumpPrettyClass(byval astclass as integer) as string
+declare function astDumpPrettyKind(byval astkind as integer) as string
 declare function astDumpPrettyDecl(byval n as AstNode ptr, byval show_type as integer = FALSE) as string
 declare function astDumpOne(byval n as AstNode ptr) as string
 declare sub astDump _

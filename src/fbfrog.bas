@@ -361,12 +361,12 @@ end function
 
 declare sub hParseArgs(byref x as integer)
 
-private sub hParseSelectCompound(byref x as integer, byval selectclass as integer)
+private sub hParseSelectCompound(byref x as integer, byval selectkind as integer)
 	'' -selecttarget|-selectversion|-selectdefine
 	var xblockbegin = x
 	x += 1
 
-	astAppend(frog.script, astNew(selectclass))
+	astAppend(frog.script, astNew(selectkind))
 
 	'' -case
 	if tkGet(x) <> OPT_CASE then
@@ -381,32 +381,32 @@ private sub hParseSelectCompound(byref x as integer, byval selectclass as intege
 			tkOops(xblockbegin, "missing -endselect for this")
 
 		case OPT_CASE
-			if frog.script->tail->class = ASTCLASS_CASEELSE then
+			if frog.script->tail->kind = ASTKIND_CASEELSE then
 				tkOops(x, "-case behind -caseelse")
 			end if
 			xblockbegin = x
 			x += 1
 
-			select case selectclass
-			case ASTCLASS_SELECTVERSION : hExpectStringOrId(x, "<version number> argument")
-			case ASTCLASS_SELECTTARGET  : hExpectStringOrId(x, "<target> argument")
+			select case selectkind
+			case ASTKIND_SELECTVERSION : hExpectStringOrId(x, "<version number> argument")
+			case ASTKIND_SELECTTARGET  : hExpectStringOrId(x, "<target> argument")
 			case else                   : hExpectId(x)
 			end select
-			var n = astNew(ASTCLASS_CASE, tkGetText(x))
+			var n = astNew(ASTKIND_CASE, tkGetText(x))
 			n->location = tkGetLocation(x)
 			astAppend(frog.script, n)
 			x += 1
 
 		case OPT_CASEELSE
-			if frog.script->tail->class = ASTCLASS_CASEELSE then
+			if frog.script->tail->kind = ASTKIND_CASEELSE then
 				tkOops(x, "-caseelse behind -caseelse")
 			end if
-			astAppend(frog.script, astNew(ASTCLASS_CASEELSE))
+			astAppend(frog.script, astNew(ASTKIND_CASEELSE))
 			xblockbegin = x
 			x += 1
 
 		case OPT_ENDSELECT
-			astAppend(frog.script, astNew(ASTCLASS_ENDSELECT))
+			astAppend(frog.script, astNew(ASTKIND_ENDSELECT))
 			x += 1
 			exit do
 
@@ -427,15 +427,15 @@ private sub hParseIfCompound(byref x as integer)
 		hExpectStringOrId(x, "<target> argument")
 
 		'' -iftarget <target>  =>  -selecttarget -case <target>
-		astAppend(frog.script, astNew(ASTCLASS_SELECTTARGET))
-		astAppend(frog.script, astNew(ASTCLASS_CASE, tkGetText(x)))
+		astAppend(frog.script, astNew(ASTKIND_SELECTTARGET))
+		astAppend(frog.script, astNew(ASTKIND_CASE, tkGetText(x)))
 	else
 		'' <symbol>
 		hExpectId(x)
 
 		'' -ifdef <symbol>  =>  -select -case <symbol>
-		astAppend(frog.script, astNew(ASTCLASS_SELECTDEFINE))
-		astAppend(frog.script, astNew(ASTCLASS_CASE, tkGetText(x)))
+		astAppend(frog.script, astNew(ASTKIND_SELECTDEFINE))
+		astAppend(frog.script, astNew(ASTKIND_CASE, tkGetText(x)))
 	end if
 	x += 1
 
@@ -447,15 +447,15 @@ private sub hParseIfCompound(byref x as integer)
 			tkOops(xblockbegin, "missing -endif for this")
 
 		case OPT_ELSE
-			if frog.script->tail->class = ASTCLASS_CASEELSE then
+			if frog.script->tail->kind = ASTKIND_CASEELSE then
 				tkOops(x, "-else behind -else")
 			end if
-			astAppend(frog.script, astNew(ASTCLASS_CASEELSE))
+			astAppend(frog.script, astNew(ASTKIND_CASEELSE))
 			xblockbegin = x
 			x += 1
 
 		case OPT_ENDIF
-			astAppend(frog.script, astNew(ASTCLASS_ENDSELECT))
+			astAppend(frog.script, astNew(ASTKIND_ENDSELECT))
 			x += 1
 			exit do
 
@@ -469,7 +469,7 @@ end sub
 private sub hParseDestinationBiFile(byref x as integer)
 	'' [<destination .bi file>]
 	if hIsStringOrId(x) then
-		assert(frog.script->tail->class = ASTCLASS_OPTION)
+		assert(frog.script->tail->kind = ASTKIND_OPTION)
 		astSetAlias(frog.script->tail, tkGetText(x))
 		x += 1
 	end if
@@ -666,7 +666,7 @@ private sub hParseArgs(byref x as integer)
 				x += 1
 			loop while tkGet(x) = TK_STRING
 
-			astAppend(frog.script, astNew(ASTCLASS_DECLAREVERSIONS))
+			astAppend(frog.script, astNew(ASTKIND_DECLAREVERSIONS))
 
 		'' -declarebool <symbol>
 		case OPT_DECLAREBOOL
@@ -674,12 +674,12 @@ private sub hParseArgs(byref x as integer)
 
 			'' <symbol>
 			hExpectId(x)
-			astAppend(frog.script, astNew(ASTCLASS_DECLAREBOOL, tkGetText(x)))
+			astAppend(frog.script, astNew(ASTKIND_DECLAREBOOL, tkGetText(x)))
 			x += 1
 
-		case OPT_SELECTTARGET  : hParseSelectCompound(x, ASTCLASS_SELECTTARGET)
-		case OPT_SELECTVERSION : hParseSelectCompound(x, ASTCLASS_SELECTVERSION)
-		case OPT_SELECTDEFINE  : hParseSelectCompound(x, ASTCLASS_SELECTDEFINE)
+		case OPT_SELECTTARGET  : hParseSelectCompound(x, ASTKIND_SELECTTARGET)
+		case OPT_SELECTVERSION : hParseSelectCompound(x, ASTKIND_SELECTVERSION)
+		case OPT_SELECTDEFINE  : hParseSelectCompound(x, ASTKIND_SELECTDEFINE)
 
 		case OPT_IFTARGET, OPT_IFDEF
 			hParseIfCompound(x)
@@ -800,16 +800,16 @@ private function hSkipToEndOfBlock(byval i as AstNode ptr) as AstNode ptr
 	var level = 0
 
 	do
-		select case i->class
-		case ASTCLASS_SELECTTARGET, ASTCLASS_SELECTVERSION, ASTCLASS_SELECTDEFINE
+		select case i->kind
+		case ASTKIND_SELECTTARGET, ASTKIND_SELECTVERSION, ASTKIND_SELECTDEFINE
 			level += 1
 
-		case ASTCLASS_CASE, ASTCLASS_CASEELSE
+		case ASTKIND_CASE, ASTKIND_CASEELSE
 			if level = 0 then
 				exit do
 			end if
 
-		case ASTCLASS_ENDSELECT
+		case ASTKIND_ENDSELECT
 			if level = 0 then
 				exit do
 			end if
@@ -916,8 +916,8 @@ private sub frogEvaluateScript _
 	var i = start
 	while i
 
-		select case i->class
-		case ASTCLASS_DECLAREVERSIONS
+		select case i->kind
+		case ASTKIND_DECLAREVERSIONS
 			i = i->next
 
 			var lastvernum = ubound(frog.vernums)
@@ -935,11 +935,11 @@ private sub frogEvaluateScript _
 			'' Now continue without recursing and evaluate the code path for the last version
 			astAppend(conditions, astNewVERNUMCHECK(lastvernum))
 
-		case ASTCLASS_DECLAREBOOL
+		case ASTKIND_DECLAREBOOL
 			var symbol = i->text
 			i = i->next
 
-			var completeveror = astNew(ASTCLASS_VEROR)
+			var completeveror = astNew(ASTKIND_VEROR)
 
 			'' Branch for the true code path
 			'' defined(<symbol>)
@@ -952,28 +952,28 @@ private sub frogEvaluateScript _
 
 			'' And follow the false code path here
 			'' (not defined(<symbol>))
-			condition = astNew(ASTCLASS_NOT, condition)
+			condition = astNew(ASTKIND_NOT, condition)
 			astAppend(completeveror, astClone(condition))
 			astAppend(conditions, condition)
 
 			astAppend(frog.completeverors, completeveror)
 
-		case ASTCLASS_SELECTTARGET, ASTCLASS_SELECTVERSION, ASTCLASS_SELECTDEFINE
+		case ASTKIND_SELECTTARGET, ASTKIND_SELECTVERSION, ASTKIND_SELECTDEFINE
 			var sel = i
 			i = i->next
 
 			do
 				'' -case
-				assert(i->class = ASTCLASS_CASE)
+				assert(i->kind = ASTKIND_CASE)
 
 				'' Evaluate -case condition
 				dim is_true as integer
 
-				if sel->class = ASTCLASS_SELECTTARGET then
+				if sel->kind = ASTKIND_SELECTTARGET then
 					is_true = hTargetPatternMatchesTarget(*i->text, target)
 				else
 					dim condition as AstNode ptr
-					if sel->class = ASTCLASS_SELECTVERSION then
+					if sel->kind = ASTKIND_SELECTVERSION then
 						'' <versionnumber>
 						var vernum = frogLookupVernum(*i->text)
 						if vernum < 0 then
@@ -997,8 +997,8 @@ private sub frogEvaluateScript _
 
 				'' Condition was false, skip over the -case's body
 				var eob = hSkipToEndOfBlock(i)
-				select case eob->class
-				case ASTCLASS_CASEELSE, ASTCLASS_ENDSELECT
+				select case eob->kind
+				case ASTKIND_CASEELSE, ASTKIND_ENDSELECT
 					'' Reached -caseelse/-endselect
 					i = eob->next
 					exit do
@@ -1008,17 +1008,17 @@ private sub frogEvaluateScript _
 				i = eob
 			loop
 
-		case ASTCLASS_CASE, ASTCLASS_CASEELSE
+		case ASTKIND_CASE, ASTKIND_CASEELSE
 			'' When reaching a case/else block instead of the corresponding
 			'' select, that means we're evaluating the code path of the
 			'' previous case code path, and must now step over the
 			'' block(s) of the alternate code path(s).
 			i = hSkipToEndOfBlock(i->next)
-			assert((i->class = ASTCLASS_CASE) or _
-				(i->class = ASTCLASS_CASEELSE) or _
-				(i->class = ASTCLASS_ENDSELECT))
+			assert((i->kind = ASTKIND_CASE) or _
+				(i->kind = ASTKIND_CASEELSE) or _
+				(i->kind = ASTKIND_ENDSELECT))
 
-		case ASTCLASS_ENDSELECT
+		case ASTKIND_ENDSELECT
 			'' Ignore - nothing to do
 			i = i->next
 
@@ -1028,8 +1028,8 @@ private sub frogEvaluateScript _
 		end select
 	wend
 
-	assert(conditions->class = ASTCLASS_GROUP)
-	conditions->class = ASTCLASS_VERAND
+	assert(conditions->kind = ASTKIND_GROUP)
+	conditions->kind = ASTKIND_VERAND
 	frogAddApi(conditions, options, target)
 end sub
 
@@ -1071,7 +1071,7 @@ private function frogParse(byref api as ApiInfo) as AstNode ptr
 		var i = api.script->head
 		while i
 
-			assert(i->class = ASTCLASS_OPTION)
+			assert(i->kind = ASTKIND_OPTION)
 			select case i->opt
 			case OPT_DEFINE
 				cppAddPredefine(i->text, i->alias)
@@ -1089,7 +1089,7 @@ private function frogParse(byref api as ApiInfo) as AstNode ptr
 	scope
 		var i = api.script->head
 		while i
-			assert(i->class = ASTCLASS_OPTION)
+			assert(i->kind = ASTKIND_OPTION)
 			if i->opt = OPT_FBFROGINCLUDE then
 				var filename = hFindResource(*i->text)
 				var x = tkGetCount()
@@ -1105,7 +1105,7 @@ private function frogParse(byref api as ApiInfo) as AstNode ptr
 	scope
 		var i = api.script->head
 		while i
-			assert(i->class = ASTCLASS_OPTION)
+			assert(i->kind = ASTKIND_OPTION)
 			if i->opt = OPT_INCLUDE then
 				cppAppendIncludeDirective(i->text, TKFLAG_PREINCLUDE)
 			end if
@@ -1128,7 +1128,7 @@ private function frogParse(byref api as ApiInfo) as AstNode ptr
 	scope
 		var i = api.script->head
 		while i
-			assert(i->class = ASTCLASS_OPTION)
+			assert(i->kind = ASTKIND_OPTION)
 			if i->opt = OPT_I then
 				cppAppendIncludeDirective(i->text, TKFLAG_ROOTFILE)
 			end if
@@ -1375,7 +1375,7 @@ end function
 			'' It's always needed, except if the binding is empty: C headers
 			'' typically have #include guards, but we don't preserve those.
 			if .final->head then
-				astPrepend(.final, astNew(ASTCLASS_PRAGMAONCE))
+				astPrepend(.final, astNew(ASTKIND_PRAGMAONCE))
 			end if
 
 			hlAutoAddDividers(.final)

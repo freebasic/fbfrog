@@ -34,11 +34,11 @@ type DECLTABLE
 	room	as integer
 end type
 
-'' AstNode class and identifier are the 2 main points to quickly distinguish two declarations.
+'' AstNode kind and identifier are the 2 main points to quickly distinguish two declarations.
 '' Care must be taken though; callconv/ASTATTRIB_HIDECALLCONV flags shouldn't be calculated into
 '' the hash though because hAstLCS() and hFindCommonCallConvsOnMergedDecl() do custom handling for them...
 private function decltableHash(byval n as AstNode ptr) as ulong
-	dim as ulong hash = n->class
+	dim as ulong hash = n->kind
 	if n->text then
 		hash or= hashHash(n->text) shl 8
 	end if
@@ -67,7 +67,7 @@ private sub decltableInit(byval table as DECLTABLE ptr, byval code as AstNode pt
 
 	'' Add each declaration node from the AST to the table
 	'' For each VERBLOCK...
-	assert(code->class = ASTCLASS_GROUP)
+	assert(code->kind = ASTKIND_GROUP)
 	var verblock = code->head
 	while verblock
 		assert(astIsVERBLOCK(verblock))
@@ -92,8 +92,8 @@ end sub
 function astDumpPrettyVersion(byval n as AstNode ptr) as string
 	dim s as string
 
-	select case n->class
-	case ASTCLASS_VERAND
+	select case n->kind
+	case ASTKIND_VERAND
 		var i = n->head
 		while i
 			s += astDumpPrettyVersion(i)
@@ -103,13 +103,13 @@ function astDumpPrettyVersion(byval n as AstNode ptr) as string
 			end if
 		wend
 
-	case ASTCLASS_VERNUMCHECK
+	case ASTKIND_VERNUMCHECK
 		s = frog.versiondefine + "=" + frog.vernums(n->vernum)
 
-	case ASTCLASS_DEFINED
+	case ASTKIND_DEFINED
 		s = *n->text
 
-	case ASTCLASS_NOT
+	case ASTKIND_NOT
 		s = "(not " + astDumpPrettyVersion(n->head) + ")"
 
 	case else
@@ -121,33 +121,33 @@ end function
 
 private function astNewGroupLike _
 	( _
-		byval astclass as integer, _
+		byval astkind as integer, _
 		byval a as AstNode ptr, _
 		byval b as AstNode ptr _
 	) as AstNode ptr
 
-	if a andalso (a->class = astclass) then a->class = ASTCLASS_GROUP
-	if b andalso (b->class = astclass) then b->class = ASTCLASS_GROUP
+	if a andalso (a->kind = astkind) then a->kind = ASTKIND_GROUP
+	if b andalso (b->kind = astkind) then b->kind = ASTKIND_GROUP
 
-	function = astNew(astclass, astNewGROUP(a, b))
+	function = astNew(astkind, astNewGROUP(a, b))
 end function
 
 function astNewVERAND(byval a as AstNode ptr, byval b as AstNode ptr) as AstNode ptr
-	function = astNewGroupLike(ASTCLASS_VERAND, a, b)
+	function = astNewGroupLike(ASTKIND_VERAND, a, b)
 end function
 
 function astNewVEROR(byval a as AstNode ptr, byval b as AstNode ptr) as AstNode ptr
-	function = astNewGroupLike(ASTCLASS_VEROR, a, b)
+	function = astNewGroupLike(ASTKIND_VEROR, a, b)
 end function
 
 function astNewVERNUMCHECK(byval vernum as integer) as AstNode ptr
-	var n = astNew(ASTCLASS_VERNUMCHECK)
+	var n = astNew(ASTKIND_VERNUMCHECK)
 	n->vernum = vernum
 	function = n
 end function
 
 private function astNewVERBLOCK(byval apis as ApiBits, byval children as AstNode ptr) as AstNode ptr
-	var n = astNew(ASTCLASS_VERBLOCK, children)
+	var n = astNew(ASTKIND_VERBLOCK, children)
 	n->apis = apis
 	function = n
 end function
@@ -236,10 +236,10 @@ private sub hFindCommonCallConvsOnMergedDecl _
 		byval bdecl as AstNode ptr _
 	)
 
-	assert(mdecl->class = adecl->class)
-	assert(adecl->class = bdecl->class)
+	assert(mdecl->kind = adecl->kind)
+	assert(adecl->kind = bdecl->kind)
 
-	if mdecl->class = ASTCLASS_PROC then
+	if mdecl->kind = ASTKIND_PROC then
 
 		var ahide = ((adecl->attrib and ASTATTRIB_HIDECALLCONV) <> 0)
 		var bhide = ((bdecl->attrib and ASTATTRIB_HIDECALLCONV) <> 0)
@@ -315,7 +315,7 @@ private sub hAddMergedDecl _
 	var aapis = aarray[ai].apis
 	var bapis = barray[bi].apis
 
-	assert(adecl->class = bdecl->class)
+	assert(adecl->kind = bdecl->kind)
 
 	''
 	'' The LCS may include merged blocks (structs/unions/enums/renamelists) that were put
@@ -697,7 +697,7 @@ private sub hSolveOutRedundantVerblocks(byval code as AstNode ptr, byval parenta
 	while i
 		var nxt = i->next
 
-		if i->class = ASTCLASS_VERBLOCK then
+		if i->kind = ASTKIND_VERBLOCK then
 			hSolveOutRedundantVerblocks(i, i->apis)
 
 			assert(parentapis.hasAtLeast1Set())
@@ -790,7 +790,7 @@ private sub hTurnVerblocksIntoPpIfs(byval code as AstNode ptr)
 
 		if astIsVERBLOCK(i) then
 			'' Turn the 1st verblock into an #if
-			i->class = ASTCLASS_PPIF
+			i->kind = ASTKIND_PPIF
 
 			'' Find all VERBLOCKs in a row, if any, as long as they cover different versions
 			'' (as long as no duplicates would be added to the list of collected versions)
@@ -798,7 +798,7 @@ private sub hTurnVerblocksIntoPpIfs(byval code as AstNode ptr)
 			var j = i->next
 			var collected = i->apis
 			while j andalso astIsVERBLOCK(j) andalso collected.containsNoneOf(j->apis)
-				j->class = ASTCLASS_PPELSEIF
+				j->kind = ASTKIND_PPELSEIF
 				collected.set(j->apis)
 				j = j->next
 			wend
@@ -812,8 +812,8 @@ private sub hTurnVerblocksIntoPpIfs(byval code as AstNode ptr)
 				var last = iif(j, j->prev, code->tail)
 				'' But only if we've got more than 1 verblock
 				if i <> last then
-					assert(last->class = ASTCLASS_PPELSEIF)
-					last->class = ASTCLASS_PPELSE
+					assert(last->kind = ASTKIND_PPELSEIF)
+					last->kind = ASTKIND_PPELSE
 
 					'' Only 2 verblocks? (i.e. just an #if and an #else)
 					if i->next = last then
@@ -823,7 +823,7 @@ private sub hTurnVerblocksIntoPpIfs(byval code as AstNode ptr)
 			end if
 
 			'' Insert #endif
-			astInsert(code, astNew(ASTCLASS_PPENDIF), j)
+			astInsert(code, astNew(ASTKIND_PPENDIF), j)
 		end if
 
 		i = i->next
@@ -974,8 +974,8 @@ private function hSimplify(byval n as AstNode ptr, byref changed as integer) as 
 
 			'' Don't add a VEROR as a child of a VEROR; instead, add
 			'' the VEROR's chidlren to the VEROR's parent. (same for VERANDs)
-			if newi andalso (newi->class = n->class) then
-				newi->class = ASTCLASS_GROUP
+			if newi andalso (newi->kind = n->kind) then
+				newi->kind = ASTKIND_GROUP
 			end if
 
 			i = astReplace(n, i, newi)
@@ -1028,7 +1028,7 @@ private function hSimplify(byval n as AstNode ptr, byref changed as integer) as 
 	end if
 	mostcommoncond = astClone(mostcommoncond)
 
-	var extracted = astNew(ASTCLASS_VEROR)
+	var extracted = astNew(ASTKIND_VEROR)
 
 	'' Extract VERANDs that contain the most common condition
 	scope
@@ -1084,8 +1084,8 @@ private function hSimplify(byval n as AstNode ptr, byref changed as integer) as 
 	function = n
 end function
 
-private function hBuildVerBop(byval astclass as integer, byval vernum as integer) as AstNode ptr
-	function = astNew(astclass, astNewTEXT(frog.versiondefine), astNewTEXT(frog.vernums(vernum)))
+private function hBuildVerBop(byval astkind as integer, byval vernum as integer) as AstNode ptr
+	function = astNew(astkind, astNewTEXT(frog.versiondefine), astNewTEXT(frog.vernums(vernum)))
 end function
 
 private sub hMaybeEmitRangeCheck(byval veror as AstNode ptr, byref l as integer, byref r as integer)
@@ -1110,11 +1110,11 @@ private sub hMaybeEmitRangeCheck(byval veror as AstNode ptr, byref l as integer,
 	'' It's possible that this solves out the entire check (if all versions are covered).
 	dim as AstNode ptr check, lcheck, rcheck
 
-	if l_in_mid then lcheck = hBuildVerBop(ASTCLASS_GE, l) '' V >= 1
-	if r_in_mid then rcheck = hBuildVerBop(ASTCLASS_LE, r) '' V <= 1
+	if l_in_mid then lcheck = hBuildVerBop(ASTKIND_GE, l) '' V >= 1
+	if r_in_mid then rcheck = hBuildVerBop(ASTKIND_LE, r) '' V <= 1
 
 	if (lcheck <> NULL) and (rcheck <> NULL) then
-		check = astNew(ASTCLASS_AND, lcheck, rcheck)
+		check = astNew(ASTKIND_AND, lcheck, rcheck)
 	elseif lcheck then
 		check = lcheck
 	elseif rcheck then
@@ -1178,7 +1178,7 @@ private sub hFoldNumberChecks(byval n as AstNode ptr)
 		while i
 			var nxt = i->next
 
-			if i->class = ASTCLASS_VERNUMCHECK then
+			if i->kind = ASTKIND_VERNUMCHECK then
 				covered(i->vernum) = TRUE
 				astRemove(n, i)
 			end if
@@ -1371,7 +1371,7 @@ private sub splitVerandIfsIntoNestedIfs(byval ast as AstNode ptr)
 		var iendif = findEndifOfVerandIfBlockWithCommonPrefix(i)
 		if iendif then
 			'' New outer #if with just the prefix condition
-			var newif = astNew(ASTCLASS_PPIF)
+			var newif = astNew(ASTKIND_PPIF)
 			newif->expr = astClone(i->expr->head)
 
 			'' Move all the old #if/#elseifs/#else/#endif into the new #if
@@ -1380,7 +1380,7 @@ private sub splitVerandIfsIntoNestedIfs(byval ast as AstNode ptr)
 
 			'' Insert the new #if in the old one's place
 			astInsert(ast, newif, inext)
-			astInsert(ast, astNew(ASTCLASS_PPENDIF), inext)
+			astInsert(ast, astNew(ASTKIND_PPENDIF), inext)
 
 			'' Cut prefix from the VERANDs of the nested #if/#elseifs/#else
 			scope
@@ -1570,7 +1570,7 @@ private sub foldIfElseIf(byval ast as AstNode ptr)
 
 		if astIsPPIF(i) andalso astIsPPELSEIF(i->next) andalso astIsPPENDIF(i->next->next) then
 			if conditionsAreOpposite(i->expr, i->next->expr) then
-				i->next->class = ASTCLASS_PPELSE
+				i->next->kind = ASTKIND_PPELSE
 				maybeSwapIfElseWithoutRelinking(i)
 			end if
 		end if
@@ -1582,7 +1582,7 @@ end sub
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
 sub astProcessVerblocks(byval code as AstNode ptr)
-	assert(code->class = ASTCLASS_GROUP)
+	assert(code->kind = ASTKIND_GROUP)
 	hSolveOutRedundantVerblocks(code, frog.fullapis)
 	hGenVerExprs(code)
 	hTurnVerblocksIntoPpIfs(code)

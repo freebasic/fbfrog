@@ -28,7 +28,7 @@ type StringMatcher
 		MatchEol
 	end enum
 
-	nodeclass as integer
+	nodekind as integer
 
 	'' string for MatchString nodes
 	text as zstring ptr
@@ -43,8 +43,8 @@ type StringMatcher
 	childcount as integer
 
 	declare destructor()
-	declare sub addChild(byval nodeclass as integer, byval text as const ubyte ptr, byval textlength as integer)
-	declare sub addChildHoldingPreviousChildren(byval nodeclass as integer, byval text as const ubyte ptr, byval textlength as integer)
+	declare sub addChild(byval nodekind as integer, byval text as const ubyte ptr, byval textlength as integer)
+	declare sub addChildHoldingPreviousChildren(byval nodekind as integer, byval text as const ubyte ptr, byval textlength as integer)
 	declare sub truncateTextToOnly(byval newlength as integer)
 	declare sub addPattern(byval pattern as const zstring ptr, byval payload as any ptr = NULL)
 	declare function matches(byval s as const zstring ptr, byref payload as any ptr = NULL) as integer

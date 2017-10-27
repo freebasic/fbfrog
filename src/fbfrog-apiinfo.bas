@@ -95,11 +95,11 @@ sub ApiInfo.loadOption(byval opt as integer, byval param1 as zstring ptr, byval 
 		with frog.bis[bi]
 			select case opt
 			case OPT_INCLIB
-				astBuildGroupAndAppend(.options.inclibs, astNew(ASTCLASS_INCLIB, param1))
+				astBuildGroupAndAppend(.options.inclibs, astNew(ASTKIND_INCLIB, param1))
 			case OPT_UNDEF
-				astBuildGroupAndAppend(.options.undefs, astNew(ASTCLASS_UNDEF, param1))
+				astBuildGroupAndAppend(.options.undefs, astNew(ASTKIND_UNDEF, param1))
 			case OPT_ADDINCLUDE
-				astBuildGroupAndAppend(.options.addincludes, astNew(ASTCLASS_PPINCLUDE, param1))
+				astBuildGroupAndAppend(.options.addincludes, astNew(ASTKIND_PPINCLUDE, param1))
 			end select
 		end with
 	end select
@@ -108,7 +108,7 @@ end sub
 sub ApiInfo.loadOptions()
 	var i = script->head
 	while i
-		assert(i->class = ASTCLASS_OPTION)
+		assert(i->kind = ASTKIND_OPTION)
 		loadOption(i->opt, i->text, i->alias)
 		i = i->next
 	wend

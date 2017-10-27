@@ -24,7 +24,7 @@ end function
 ''
 '' Same for index patterns.
 ''
-'' TODO: match based on astclass to speed things up a bit
+'' TODO: match based on astkind to speed things up a bit
 ''       (if we have a parentpattern, the child can only be a field/param/enumconst)
 ''
 sub DeclPatterns.parseAndAdd(byref s as string)
@@ -70,7 +70,7 @@ end destructor
 private function determineParentId(byval parentparent as AstNode ptr, byval parent as AstNode ptr) as zstring ptr
 	'' If it's an anonymous procptr subtype, check its parent's id instead
 	if parentparent andalso _
-	   (parent->class = ASTCLASS_PROC) andalso _
+	   (parent->kind = ASTKIND_PROC) andalso _
 	   (parentparent->subtype = parent) then
 		function = parentparent->text
 	else
