@@ -563,18 +563,20 @@ function DefineInfo.equals(byval b as DefineInfo ptr) as integer
 	return astIsEqual(macro, b->macro) andalso tkSpell(xbody, xeol) = tkSpell(b->xbody, b->xeol)
 end function
 
-type SAVEDMACRO
+type SavedMacro
 	id		as zstring ptr		'' Macro's name
 
 	'' A DefineInfo object if the macro was defined when being saved,
 	'' or NULL if it was undefined.
 	definfo		as DefineInfo ptr
+
+	declare destructor()
 end type
 
-private sub savedmacroDtor(byval macro as SAVEDMACRO ptr)
-	deallocate(macro->id)
-	delete macro->definfo
-end sub
+destructor SavedMacro()
+	deallocate(id)
+	delete definfo
+end destructor
 
 enum
 	'' If stack states:
@@ -645,7 +647,7 @@ namespace cpp
 	'' a macro requires searching the array backwards for an entry for the
 	'' given macro name. A hash table could be used instead, but that does
 	'' not seem to be worth it.
-	dim shared savedmacros		as SAVEDMACRO ptr
+	dim shared savedmacros		as SavedMacro ptr
 	dim shared savedmacrocount	as integer
 
 	dim shared incdirs		as AstNode ptr
@@ -703,7 +705,7 @@ sub cppEnd()
 	end scope
 	scope
 		for i as integer = 0 to cpp.savedmacrocount - 1
-			savedmacroDtor(@cpp.savedmacros[i])
+			cpp.savedmacros[i].destructor()
 		next
 		deallocate(cpp.savedmacros)
 	end scope
@@ -783,7 +785,7 @@ end sub
 private sub cppAppendSavedMacro(byval id as zstring ptr, byval definfo as DefineInfo ptr)
 	cpp.savedmacrocount += 1
 	cpp.savedmacros = reallocate(cpp.savedmacros, _
-			cpp.savedmacrocount * sizeof(SAVEDMACRO))
+			cpp.savedmacrocount * sizeof(SavedMacro))
 	with cpp.savedmacros[cpp.savedmacrocount-1]
 		.id = strDuplicate(id)
 		.definfo = definfo
@@ -794,14 +796,14 @@ private sub cppRemoveSavedMacro(byval i as integer)
 	assert((i >= 0) and (i < cpp.savedmacrocount))
 
 	var p = cpp.savedmacros + i
-	savedmacroDtor(p)
+	p->destructor()
 	cpp.savedmacrocount -= 1
 
 	'' Remove array element from the middle of the array: move all elements
 	'' behind it to the front, by 1 slot, to close the gap.
 	var tail = cpp.savedmacrocount - i
 	if tail > 0 then
-		memmove(p, p + 1, tail * sizeof(SAVEDMACRO))
+		memmove(p, p + 1, tail * sizeof(SavedMacro))
 	end if
 end sub
 
@@ -834,11 +836,11 @@ private sub cppRestoreMacro(byval id as zstring ptr)
 	end if
 
 	'' Restore the macro state
-	var savedmacro = @cpp.savedmacros[i]
-	if savedmacro->definfo then
+	var m = @cpp.savedmacros[i]
+	if m->definfo then
 		'' It was defined when saved, (re)-#define the macro
-		cppAddMacro(id, savedmacro->definfo)
-		savedmacro->definfo = NULL
+		cppAddMacro(id, m->definfo)
+		m->definfo = NULL
 	else
 		'' It was undefined when saved, #undef the macro
 		cppAddKnownUndefined(id)
