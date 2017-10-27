@@ -1,7 +1,10 @@
 #include once "util.bi"
 #include once "util-hash.bi"
+#include once "tk.bi"
 
 type LexContext
+	tk as TokenBuffer ptr
+
 	i		as ubyte ptr  '' Current char, will always be <= limit
 	x		as integer
 	location	as TkLocation

@@ -19,8 +19,8 @@ type DefineInfo
 
 	declare destructor()
 	declare function clone() as DefineInfo ptr
-	declare sub copyBody(byval x as integer)
-	declare function equals(byval b as DefineInfo ptr) as integer
+	declare sub copyBody(byref tk as TokenBuffer, byval x as integer)
+	declare function equals(byref tk as TokenBuffer, byval b as DefineInfo ptr) as integer
 end type
 
 type SavedMacro
@@ -46,6 +46,7 @@ type CPPVALUE
 end type
 
 type CppContext
+	tk as TokenBuffer ptr
 	api as ApiInfo ptr
 	as integer x  '' Current token index
 
@@ -99,7 +100,7 @@ type CppContext
 	filecount as integer
 	filetb as THash = THash(4, FALSE)  '' data = index into files array
 
-	declare constructor(byref api as ApiInfo)
+	declare constructor(byref tk as TokenBuffer, byref api as ApiInfo)
 	declare destructor()
 	declare function isSkipping() as integer
 	declare sub addPredefine(byval id as zstring ptr, byval body as zstring ptr)
@@ -188,5 +189,5 @@ type CppContext
 	declare operator let(byref as const CppContext) '' unimplemented
 end type
 
-declare sub hMoveDirectivesOutOfConstructs()
-declare sub hApplyReplacements(byref api as ApiInfo)
+declare sub hMoveDirectivesOutOfConstructs(byref tk as TokenBuffer)
+declare sub hApplyReplacements(byref tk as TokenBuffer, byref api as ApiInfo)

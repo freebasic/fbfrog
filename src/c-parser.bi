@@ -14,6 +14,7 @@ type DEFBODYNODE
 end type
 
 type CParser
+	tk as TokenBuffer ptr
 	api as ApiInfo ptr
 	as integer x, parseok, tempids
 	parentdefine as AstNode ptr
@@ -35,7 +36,7 @@ type CParser
 	declare function isTypedef(byval id as zstring ptr) as integer
 	declare function lookupExtraDataType(byval id as zstring ptr) as integer
 	declare function identifierIsMacroParam(byval id as zstring ptr) as integer
-	declare constructor(byref api as ApiInfo)
+	declare constructor(byref tk as TokenBuffer, byref api as ApiInfo)
 	declare destructor()
 	declare sub addTypedef(byval id as const zstring ptr)
 	declare sub addDefBody(byval xdefbegin as integer, byval xbodybegin as integer, byval n as AstNode ptr)
@@ -60,6 +61,7 @@ type CParser
 	declare function parseEnumConst() as AstNode ptr
 	declare function parseTag() as AstNode ptr
 	declare function parseTypedef() as AstNode ptr
+	declare sub turnIntoUNKNOWN(byval n as AstNode ptr, byval first as integer, byval last as integer)
 	declare sub showErrorForRemainingCommasOrAssigns(byval n as AstNode ptr)
 	declare function defineBodyLooksLikeScopeBlock(byval y as integer) as integer
 	declare function parseDefineBodyTokenLiteral() as string

@@ -1,7 +1,9 @@
 #include once "ast.bi"
+#include once "tk.bi"
 
 declare function hNumberLiteral _
 	( _
+		byref tk as TokenBuffer, _
 		byval x as integer, _
 		byval is_cpp as integer, _
 		byref errmsg as string, _
@@ -9,11 +11,12 @@ declare function hNumberLiteral _
 	) as AstNode ptr
 declare function hStringLiteral _
 	( _
+		byref tk as TokenBuffer, _
 		byval x as integer, _
 		byval eval_escapes as integer, _
 		byref errmsg as string _
 	) as AstNode ptr
-declare function hDefineHead(byref x as integer) as AstNode ptr
+declare function hDefineHead(byref tk as TokenBuffer, byref x as integer) as AstNode ptr
 
 type COperatorInfo
 	precedence as byte

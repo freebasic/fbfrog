@@ -271,6 +271,7 @@ end function
 
 private sub hLoadArgsFile _
 	( _
+		byref tk as TokenBuffer, _
 		byval x as integer, _
 		byref filename as string, _
 		byval location as TkLocation _
@@ -280,48 +281,48 @@ private sub hLoadArgsFile _
 	static filecount as integer
 
 	if filecount > MAX_FILES then
-		tkOops(x, "suspiciously many @file expansions, recursion? (limit=" & MAX_FILES & ")")
+		tk.showErrorAndAbort(x, "suspiciously many @file expansions, recursion? (limit=" & MAX_FILES & ")")
 	end if
 
 	filename = hFindResource(filename)
 
 	'' Load the file content at the specified position
 	var file = filebuffersAdd(filename, location)
-	lexLoadArgs(x, file->buffer, file->source)
+	lexLoadArgs(tk, x, file->buffer, file->source)
 	filecount += 1
 
 end sub
 
 '' Expand @file arguments in the tk buffer
-private sub hExpandArgsFiles()
+private sub hExpandArgsFiles(byref tk as TokenBuffer)
 	var x = 0
 	do
-		select case tkGet(x)
+		select case tk.get(x)
 		case TK_EOF
 			exit do
 
 		case TK_ARGSFILE
-			var filename = *tkGetText(x)
+			var filename = *tk.getText(x)
 
 			'' Complain if argument was only '@'
 			if len(filename) = 0 then
-				tkOopsExpected(x, "file name directly behind @ (no spaces in between)")
+				tk.oopsExpected(x, "file name directly behind @ (no spaces in between)")
 			end if
 
 			'' If the @file argument comes from an @file,
 			'' open it relative to the parent @file's dir.
-			var location = tkGetLocation(x)
+			var location = tk.getLocation(x)
 			if location.source->is_file then
 				filename = pathAddDiv(pathOnly(*location.source->name)) + filename
 			end if
 
 			'' Load the file content behind the @file token
-			hLoadArgsFile(x + 1, filename, location)
+			hLoadArgsFile(tk, x + 1, filename, location)
 
 			'' Remove the @file token (now that its location is no
 			'' longer referenced), so it doesn't get in the way of
 			'' hParseArgs().
-			tkRemove(x, x)
+			tk.remove(x, x)
 
 			'' Re-check this position in case a new @file token was inserted right here
 			x -= 1
@@ -331,27 +332,27 @@ private sub hExpandArgsFiles()
 	loop
 end sub
 
-private sub hExpectId(byval x as integer)
-	tkExpect(x, TK_ID, "(valid symbol name)")
+private sub hExpectId(byref tk as TokenBuffer, byval x as integer)
+	tk.expect(x, TK_ID, "(valid symbol name)")
 end sub
 
-private function hIsStringOrId(byval x as integer) as integer
-	function = (tkGet(x) = TK_STRING) or (tkGet(x) = TK_ID)
+private function hIsStringOrId(byref tk as TokenBuffer, byval x as integer) as integer
+	function = (tk.get(x) = TK_STRING) or (tk.get(x) = TK_ID)
 end function
 
-private sub hExpectStringOrId(byval x as integer, byval paramdescription as zstring ptr)
-	if hIsStringOrId(x) = FALSE then
-		tkOopsExpected(x, paramdescription)
+private sub hExpectStringOrId(byref tk as TokenBuffer, byval x as integer, byval paramdescription as zstring ptr)
+	if hIsStringOrId(tk, x) = FALSE then
+		tk.oopsExpected(x, paramdescription)
 	end if
 end sub
 
-private function hPathRelativeToArgsFile(byval x as integer) as string
-	var path = *tkGetText(x)
+private function hPathRelativeToArgsFile(byref tk as TokenBuffer, byval x as integer) as string
+	var path = *tk.getText(x)
 
 	'' If the file/dir argument isn't an absolute path, and it came from an
 	'' @file, open it relative to the @file's dir.
 	if pathIsAbsolute(path) = FALSE then
-		var location = tkGetLocation(x)
+		var location = tk.getLocation(x)
 		if location.source->is_file then
 			path = pathAddDiv(pathOnly(*location.source->name)) + path
 		end if
@@ -360,9 +361,9 @@ private function hPathRelativeToArgsFile(byval x as integer) as string
 	function = path
 end function
 
-declare sub hParseArgs(byref x as integer)
+declare sub hParseArgs(byref tk as TokenBuffer, byref x as integer)
 
-private sub hParseSelectCompound(byref x as integer, byval selectkind as integer)
+private sub hParseSelectCompound(byref tk as TokenBuffer, byref x as integer, byval selectkind as integer)
 	'' -selecttarget|-selectversion|-selectdefine
 	var xblockbegin = x
 	x += 1
@@ -370,37 +371,37 @@ private sub hParseSelectCompound(byref x as integer, byval selectkind as integer
 	astAppend(frog.script, astNew(selectkind))
 
 	'' -case
-	if tkGet(x) <> OPT_CASE then
-		tkOopsExpected(x, "-case after the -select")
+	if tk.get(x) <> OPT_CASE then
+		tk.oopsExpected(x, "-case after the -select")
 	end if
 
 	do
-		hParseArgs(x)
+		hParseArgs(tk, x)
 
-		select case tkGet(x)
+		select case tk.get(x)
 		case TK_EOF
-			tkOops(xblockbegin, "missing -endselect for this")
+			tk.showErrorAndAbort(xblockbegin, "missing -endselect for this")
 
 		case OPT_CASE
 			if frog.script->tail->kind = ASTKIND_CASEELSE then
-				tkOops(x, "-case behind -caseelse")
+				tk.showErrorAndAbort(x, "-case behind -caseelse")
 			end if
 			xblockbegin = x
 			x += 1
 
 			select case selectkind
-			case ASTKIND_SELECTVERSION : hExpectStringOrId(x, "<version number> argument")
-			case ASTKIND_SELECTTARGET  : hExpectStringOrId(x, "<target> argument")
-			case else                   : hExpectId(x)
+			case ASTKIND_SELECTVERSION : hExpectStringOrId(tk, x, "<version number> argument")
+			case ASTKIND_SELECTTARGET  : hExpectStringOrId(tk, x, "<target> argument")
+			case else                  : hExpectId(tk, x)
 			end select
-			var n = astNew(ASTKIND_CASE, tkGetText(x))
-			n->location = tkGetLocation(x)
+			var n = astNew(ASTKIND_CASE, tk.getText(x))
+			n->location = tk.getLocation(x)
 			astAppend(frog.script, n)
 			x += 1
 
 		case OPT_CASEELSE
 			if frog.script->tail->kind = ASTKIND_CASEELSE then
-				tkOops(x, "-caseelse behind -caseelse")
+				tk.showErrorAndAbort(x, "-caseelse behind -caseelse")
 			end if
 			astAppend(frog.script, astNew(ASTKIND_CASEELSE))
 			xblockbegin = x
@@ -412,44 +413,44 @@ private sub hParseSelectCompound(byref x as integer, byval selectkind as integer
 			exit do
 
 		case else
-			tkOopsExpected(x, "-case or -endselect")
+			tk.oopsExpected(x, "-case or -endselect")
 		end select
 	loop
 end sub
 
-private sub hParseIfCompound(byref x as integer)
+private sub hParseIfCompound(byref tk as TokenBuffer, byref x as integer)
 	'' -ifdef|-iftarget
 	var xblockbegin = x
-	var is_target = (tkGet(x) = OPT_IFTARGET)
+	var is_target = (tk.get(x) = OPT_IFTARGET)
 	x += 1
 
 	if is_target then
 		'' <target>
-		hExpectStringOrId(x, "<target> argument")
+		hExpectStringOrId(tk, x, "<target> argument")
 
 		'' -iftarget <target>  =>  -selecttarget -case <target>
 		astAppend(frog.script, astNew(ASTKIND_SELECTTARGET))
-		astAppend(frog.script, astNew(ASTKIND_CASE, tkGetText(x)))
+		astAppend(frog.script, astNew(ASTKIND_CASE, tk.getText(x)))
 	else
 		'' <symbol>
-		hExpectId(x)
+		hExpectId(tk, x)
 
 		'' -ifdef <symbol>  =>  -select -case <symbol>
 		astAppend(frog.script, astNew(ASTKIND_SELECTDEFINE))
-		astAppend(frog.script, astNew(ASTKIND_CASE, tkGetText(x)))
+		astAppend(frog.script, astNew(ASTKIND_CASE, tk.getText(x)))
 	end if
 	x += 1
 
 	do
-		hParseArgs(x)
+		hParseArgs(tk, x)
 
-		select case tkGet(x)
+		select case tk.get(x)
 		case TK_EOF
-			tkOops(xblockbegin, "missing -endif for this")
+			tk.showErrorAndAbort(xblockbegin, "missing -endif for this")
 
 		case OPT_ELSE
 			if frog.script->tail->kind = ASTKIND_CASEELSE then
-				tkOops(x, "-else behind -else")
+				tk.showErrorAndAbort(x, "-else behind -else")
 			end if
 			astAppend(frog.script, astNew(ASTKIND_CASEELSE))
 			xblockbegin = x
@@ -461,47 +462,47 @@ private sub hParseIfCompound(byref x as integer)
 			exit do
 
 		case else
-			tkOopsExpected(x, iif(tkGet(xblockbegin) = OPT_ELSE, _
+			tk.oopsExpected(x, iif(tk.get(xblockbegin) = OPT_ELSE, _
 					@"-endif", @"-else or -endif"))
 		end select
 	loop
 end sub
 
-private sub hParseDestinationBiFile(byref x as integer)
+private sub hParseDestinationBiFile(byref tk as TokenBuffer, byref x as integer)
 	'' [<destination .bi file>]
-	if hIsStringOrId(x) then
+	if hIsStringOrId(tk, x) then
 		assert(frog.script->tail->kind = ASTKIND_OPTION)
-		astSetAlias(frog.script->tail, tkGetText(x))
+		astSetAlias(frog.script->tail, tk.getText(x))
 		x += 1
 	end if
 end sub
 
-private sub hParseParam(byref x as integer, byref description as zstring)
-	hExpectStringOrId(x, description)
+private sub hParseParam(byref tk as TokenBuffer, byref x as integer, byref description as zstring)
+	hExpectStringOrId(tk, x, description)
 	x += 1
 end sub
 
-private sub hParseOption1Param(byref x as integer, byval opt as integer, byref param1 as zstring)
+private sub hParseOption1Param(byref tk as TokenBuffer, byref x as integer, byval opt as integer, byref param1 as zstring)
 	x += 1
-	hParseParam(x, param1 + " parameter for " + tkInfoPretty(opt))
-	astAppend(frog.script, astNewOPTION(opt, tkGetText(x - 1)))
+	hParseParam(tk, x, param1 + " parameter for " + tkInfoPretty(opt))
+	astAppend(frog.script, astNewOPTION(opt, tk.getText(x - 1)))
 end sub
 
-private sub hParseOption2Params(byref x as integer, byval opt as integer, byref param1 as zstring, byref param2 as zstring)
+private sub hParseOption2Params(byref tk as TokenBuffer, byref x as integer, byval opt as integer, byref param1 as zstring, byref param2 as zstring)
 	x += 1
-	hParseParam(x, param1)
-	hParseParam(x, param2)
-	astAppend(frog.script, astNewOPTION(opt, tkGetText(x - 2), tkGetText(x - 1)))
+	hParseParam(tk, x, param1)
+	hParseParam(tk, x, param2)
+	astAppend(frog.script, astNewOPTION(opt, tk.getText(x - 2), tk.getText(x - 1)))
 end sub
 
-private sub hParseArgs(byref x as integer)
+private sub hParseArgs(byref tk as TokenBuffer, byref x as integer)
 	static nestinglevel as integer
 	static seentarget as integer
 
 	nestinglevel += 1
 
-	while tkGet(x) <> TK_EOF
-		var opt = tkGet(x)
+	while tk.get(x) <> TK_EOF
+		var opt = tk.get(x)
 		select case as const opt
 		case OPT_V
 			frog.verbose += 1
@@ -509,20 +510,20 @@ private sub hParseArgs(byref x as integer)
 
 		case OPT_O
 			x += 1
-			hExpectStringOrId(x, "<path/file>")
-			frog.outname = hPathRelativeToArgsFile(x)
+			hExpectStringOrId(tk, x, "<path/file>")
+			frog.outname = hPathRelativeToArgsFile(tk, x)
 			x += 1
 
 		'' -emit <filename-pattern> <file>
 		case OPT_EMIT
 			x += 1
 
-			hExpectStringOrId(x, "<filename-pattern> argument")
-			var pattern = *tkGetText(x)
+			hExpectStringOrId(tk, x, "<filename-pattern> argument")
+			var pattern = *tk.getText(x)
 			x += 1
 
-			hExpectStringOrId(x, "<file> argument")
-			var filename = *tkGetText(x)
+			hExpectStringOrId(tk, x, "<file> argument")
+			var filename = *tk.getText(x)
 			x += 1
 
 			frogAddBi(filename, pattern)
@@ -531,8 +532,8 @@ private sub hParseArgs(byref x as integer)
 		case OPT_DONTEMIT
 			x += 1
 
-			hExpectStringOrId(x, "<filename-pattern> argument")
-			frogAddPattern(*tkGetText(x), -1)
+			hExpectStringOrId(tk, x, "<filename-pattern> argument")
+			frogAddPattern(*tk.getText(x), -1)
 			x += 1
 
 		'' (-target <target>)+
@@ -546,8 +547,8 @@ private sub hParseArgs(byref x as integer)
 				seentarget = TRUE
 			end if
 
-			hExpectStringOrId(x, "<target> argument")
-			var s = *tkGetText(x)
+			hExpectStringOrId(tk, x, "<target> argument")
+			var s = *tk.getText(x)
 			select case s
 			case "nodos"
 				frogSetTargets(TRUE)
@@ -579,7 +580,7 @@ private sub hParseArgs(byref x as integer)
 				if len(archstr) then
 					var arch = archParse(archstr)
 					if arch < 0 then
-						tkOops(x, "unknown -target argument")
+						tk.showErrorAndAbort(x, "unknown -target argument")
 					end if
 					frog.arch(arch) = TRUE
 				else
@@ -594,24 +595,24 @@ private sub hParseArgs(byref x as integer)
 			x += 1
 
 			'' <package + version>
-			hParseParam(x, "<text> parameter for -title")
-			var title = tkGetText(x - 1)
+			hParseParam(tk, x, "<text> parameter for -title")
+			var title = tk.getText(x - 1)
 
 			'' original-license.txt
-			hParseParam(x, "original-license.txt parameter for -title")
-			var licensefile = filebuffersAdd(tkGetText(x - 1), tkGetLocation(x - 1))
+			hParseParam(tk, x, "original-license.txt parameter for -title")
+			var licensefile = filebuffersAdd(tk.getText(x - 1), tk.getLocation(x - 1))
 
 			'' translators.txt
-			hParseParam(x, "translators.txt parameter for -title")
-			var translatorsfile = filebuffersAdd(tkGetText(x - 1), tkGetLocation(x - 1))
+			hParseParam(tk, x, "translators.txt parameter for -title")
+			var translatorsfile = filebuffersAdd(tk.getText(x - 1), tk.getLocation(x - 1))
 
 			'' [<destination .bi file>]
 			dim header as HeaderInfo ptr
-			if hIsStringOrId(x) then
+			if hIsStringOrId(tk, x) then
 				'' .bi-specific -title option
-				var bi = frogLookupBiFromBi(*tkGetText(x))
+				var bi = frogLookupBiFromBi(*tk.getText(x))
 				if bi < 0 then
-					tkOops(x, "unknown destination .bi")
+					tk.showErrorAndAbort(x, "unknown destination .bi")
 				end if
 				header = @frog.bis[bi].header
 				x += 1
@@ -621,7 +622,7 @@ private sub hParseArgs(byref x as integer)
 			end if
 
 			if len(header->title) > 0 then
-				tkOops(begin, "duplicate -title option")
+				tk.showErrorAndAbort(begin, "duplicate -title option")
 			end if
 			header->title = *title
 			header->licensefile = licensefile
@@ -630,14 +631,14 @@ private sub hParseArgs(byref x as integer)
 		'' -declareversions <symbol> (<string>)+
 		case OPT_DECLAREVERSIONS
 			if frog.have_declareversions then
-				tkOops(x, "multiple -declareversions options, only 1 is allowed")
+				tk.showErrorAndAbort(x, "multiple -declareversions options, only 1 is allowed")
 			end if
 			frog.have_declareversions = TRUE
 			x += 1
 
 			'' <symbol>
-			hExpectId(x)
-			frog.versiondefine = *tkGetText(x)
+			hExpectId(tk, x)
+			frog.versiondefine = *tk.getText(x)
 			x += 1
 
 			'' The version numbers must be given in ascending order,
@@ -647,25 +648,25 @@ private sub hParseArgs(byref x as integer)
 			''      ID <= c
 
 			'' (<string>)+
-			if tkGet(x) <> TK_STRING then
-				tkOopsExpected(x, "<version number> argument")
+			if tk.get(x) <> TK_STRING then
+				tk.oopsExpected(x, "<version number> argument")
 			end if
 			var xfirst = x
 			do
-				var verstr = *tkGetText(x)
+				var verstr = *tk.getText(x)
 
 				'' Verify that new version number is >= the previous one (unless this is the first one)
 				if xfirst < x then
-					var prev = *tkGetText(x - 1)
+					var prev = *tk.getText(x - 1)
 					if valint(prev) >= valint(verstr) then
-						tkOops(x, "version '" + prev + "' >= '" + verstr + "', but should be < to maintain order")
+						tk.showErrorAndAbort(x, "version '" + prev + "' >= '" + verstr + "', but should be < to maintain order")
 					end if
 				end if
 
 				frogAddVernum(verstr)
 
 				x += 1
-			loop while tkGet(x) = TK_STRING
+			loop while tk.get(x) = TK_STRING
 
 			astAppend(frog.script, astNew(ASTKIND_DECLAREVERSIONS))
 
@@ -674,25 +675,25 @@ private sub hParseArgs(byref x as integer)
 			x += 1
 
 			'' <symbol>
-			hExpectId(x)
-			astAppend(frog.script, astNew(ASTKIND_DECLAREBOOL, tkGetText(x)))
+			hExpectId(tk, x)
+			astAppend(frog.script, astNew(ASTKIND_DECLAREBOOL, tk.getText(x)))
 			x += 1
 
-		case OPT_SELECTTARGET  : hParseSelectCompound(x, ASTKIND_SELECTTARGET)
-		case OPT_SELECTVERSION : hParseSelectCompound(x, ASTKIND_SELECTVERSION)
-		case OPT_SELECTDEFINE  : hParseSelectCompound(x, ASTKIND_SELECTDEFINE)
+		case OPT_SELECTTARGET  : hParseSelectCompound(tk, x, ASTKIND_SELECTTARGET)
+		case OPT_SELECTVERSION : hParseSelectCompound(tk, x, ASTKIND_SELECTVERSION)
+		case OPT_SELECTDEFINE  : hParseSelectCompound(tk, x, ASTKIND_SELECTDEFINE)
 
 		case OPT_IFTARGET, OPT_IFDEF
-			hParseIfCompound(x)
+			hParseIfCompound(tk, x)
 
 		case OPT_CASE, OPT_CASEELSE, OPT_ENDSELECT, OPT_ELSE, OPT_ENDIF
 			if nestinglevel <= 1 then
-				select case tkGet(x)
-				case OPT_CASE      : tkOops(x, "-case without -select")
-				case OPT_CASEELSE  : tkOops(x, "-caseelse without -select")
-				case OPT_ENDSELECT : tkOops(x, "-endselect without -select")
-				case OPT_ELSE      : tkOops(x, "-else without -ifdef")
-				case else          : tkOops(x, "-endif without -ifdef")
+				select case tk.get(x)
+				case OPT_CASE      : tk.showErrorAndAbort(x, "-case without -select")
+				case OPT_CASEELSE  : tk.showErrorAndAbort(x, "-caseelse without -select")
+				case OPT_ENDSELECT : tk.showErrorAndAbort(x, "-endselect without -select")
+				case OPT_ELSE      : tk.showErrorAndAbort(x, "-else without -ifdef")
+				case else          : tk.showErrorAndAbort(x, "-endif without -ifdef")
 				end select
 			end if
 			exit while
@@ -701,28 +702,28 @@ private sub hParseArgs(byref x as integer)
 		case OPT_DEFINE
 			x += 1
 
-			hExpectId(x)
-			var id = tkGetText(x)
+			hExpectId(tk, x)
+			var id = tk.getText(x)
 			x += 1
 
 			dim body as zstring ptr
-			if hIsStringOrId(x) then
-				body = tkGetText(x)
+			if hIsStringOrId(tk, x) then
+				body = tk.getText(x)
 				x += 1
 			end if
 
 			astAppend(frog.script, astNewOPTION(opt, id, body))
 
 		case OPT_INCLUDE
-			hParseOption1Param(x, opt, "<file>")
+			hParseOption1Param(tk, x, opt, "<file>")
 
 		case OPT_FBFROGINCLUDE
-			hParseOption1Param(x, opt, "<file>")
+			hParseOption1Param(tk, x, opt, "<file>")
 
 		case OPT_INCDIR
 			x += 1
-			hExpectStringOrId(x, "<path>")
-			astAppend(frog.script, astNewOPTION(opt, hPathRelativeToArgsFile(x)))
+			hExpectStringOrId(tk, x, "<path>")
+			astAppend(frog.script, astNewOPTION(opt, hPathRelativeToArgsFile(tk, x)))
 			x += 1
 
 		case OPT_WINDOWSMS, OPT_CLONG32, OPT_FIXUNSIZEDARRAYS, _
@@ -732,55 +733,55 @@ private sub hParseArgs(byref x as integer)
 
 		case OPT_RENAMETYPEDEF, OPT_RENAMETAG, OPT_RENAMEPROC, OPT_RENAMEDEFINE, _
 		     OPT_RENAMEMACROPARAM, OPT_RENAME
-			hParseOption2Params(x, opt, "<oldid>", "<newid>")
+			hParseOption2Params(tk, x, opt, "<oldid>", "<newid>")
 
 		case OPT_RENAME_, OPT_REMOVE, OPT_REMOVEDEFINE, OPT_REMOVEPROC, OPT_REMOVEVAR, OPT_REMOVE1ST, OPT_REMOVE2ND, _
 		     OPT_DROPPROCBODY, OPT_TYPEDEFHINT, OPT_ADDFORWARDDECL, OPT_UNDEFBEFOREDECL, OPT_IFNDEFDECL, _
 		     OPT_CONVBODYTOKENS, OPT_FORCEFUNCTION2MACRO, OPT_EXPANDINDEFINE, OPT_NOEXPAND
-			hParseOption1Param(x, opt, "<id>")
+			hParseOption1Param(tk, x, opt, "<id>")
 
 		case OPT_EXPAND
-			hParseOption1Param(x, opt, "<id-pattern>")
+			hParseOption1Param(tk, x, opt, "<id-pattern>")
 
 		case OPT_NOSTRING, OPT_STRING
-			hParseOption1Param(x, opt, "<decl-pattern>")
+			hParseOption1Param(tk, x, opt, "<decl-pattern>")
 
 		case OPT_REMOVEINCLUDE
-			hParseOption1Param(x, opt, "<filename>")
+			hParseOption1Param(tk, x, opt, "<filename>")
 
 		case OPT_SETARRAYSIZE
-			hParseOption2Params(x, opt, "<id>", "<size>")
+			hParseOption2Params(tk, x, opt, "<id>", "<size>")
 
 		case OPT_MOVEABOVE
-			hParseOption2Params(x, opt, "<id>", "<ref>")
+			hParseOption2Params(tk, x, opt, "<id>", "<ref>")
 
 		case OPT_REPLACEMENTS
-			hParseOption1Param(x, opt, "<file>")
+			hParseOption1Param(tk, x, opt, "<file>")
 
 		case OPT_INCLIB
-			hParseOption1Param(x, opt, "<name>")
-			hParseDestinationBiFile(x)
+			hParseOption1Param(tk, x, opt, "<name>")
+			hParseDestinationBiFile(tk, x)
 
 		case OPT_UNDEF
-			hParseOption1Param(x, opt, "<id>")
-			hParseDestinationBiFile(x)
+			hParseOption1Param(tk, x, opt, "<id>")
+			hParseDestinationBiFile(tk, x)
 
 		case OPT_ADDINCLUDE
-			hParseOption1Param(x, opt, "<.bi file>")
-			hParseDestinationBiFile(x)
+			hParseOption1Param(tk, x, opt, "<.bi file>")
+			hParseDestinationBiFile(tk, x)
 
 		case else
 			'' *.fbfrog file given (without @)? Treat as @file too
-			var filename = *tkGetText(x)
+			var filename = *tk.getText(x)
 			if pathExtOnly(filename) = "fbfrog" then
-				hLoadArgsFile(x + 1, filename, tkGetLocation(x))
-				tkRemove(x, x)
+				hLoadArgsFile(tk, x + 1, filename, tk.getLocation(x))
+				tk.remove(x, x)
 
 				'' Must expand @files again in case the loaded file contained any
-				hExpandArgsFiles()
+				hExpandArgsFiles(tk)
 			else
 				'' Input file
-				var filename = hPathRelativeToArgsFile(x)
+				var filename = hPathRelativeToArgsFile(tk, x)
 				astAppend(frog.script, astNewOPTION(OPT_I, filename))
 
 				'' The first .h file name seen will be used as default name for the ouput .bi,
@@ -1057,114 +1058,115 @@ private sub maybeEvalForOs(byval os as integer)
 end sub
 
 private function frogParse(byref api as ApiInfo) as AstNode ptr
-	tkInit()
-
-	scope
-		'' C preprocessing
-		dim cpp as CppContext = CppContext(api)
-
-		'' Add fbfrog's CPP pre-#defines for preprocessing of default.h
-		cpp.addTargetPredefines(api.target)
-
-		scope
-			'' Pre-#defines are simply inserted at the top of the token
-			'' buffer, so that cppMain() parses them like any other #define.
-
-			var i = api.script->head
-			while i
-
-				assert(i->kind = ASTKIND_OPTION)
-				select case i->opt
-				case OPT_DEFINE
-					cpp.addPredefine(i->text, i->alias_)
-				case OPT_INCDIR
-					cpp.addIncDir(i->text)
-				end select
-
-				i = i->nxt
-			wend
-		end scope
-
-		'' Insert the code from fbfrog pre-#includes (default.h etc.)
-		'' * behind command line pre-#defines so that default.h can use them
-		'' * marked for removal so the code won't be preserved
-		scope
-			var i = api.script->head
-			while i
-				assert(i->kind = ASTKIND_OPTION)
-				if i->opt = OPT_FBFROGINCLUDE then
-					var filename = hFindResource(*i->text)
-					var x = tkGetCount()
-					var file = filebuffersAdd(filename, type(NULL, 0))
-					lexLoadC(x, file->buffer, file->source)
-					tkSetRemove(x, tkGetCount() - 1)
-				end if
-				i = i->nxt
-			wend
-		end scope
-
-		'' Add #includes for pre-#includes
-		scope
-			var i = api.script->head
-			while i
-				assert(i->kind = ASTKIND_OPTION)
-				if i->opt = OPT_INCLUDE then
-					cpp.appendIncludeDirective(i->text, TKFLAG_PREINCLUDE)
-				end if
-				i = i->nxt
-			wend
-		end scope
-
-		''
-		'' Add #include statements for the toplevel file(s) behind current
-		'' tokens, but marked with TKFLAG_ROOTFILE to let the CPP know that no
-		'' #include search should be done.
-		''
-		'' This way we can re-use the #include handling code to load the
-		'' toplevel files. (especially interesting for include guard optimization)
-		''
-		'' Note: pre-#defines should appear before tokens from root files, such
-		'' that the order of -define vs *.h command line arguments doesn't
-		'' matter.
-		''
-		scope
-			var i = api.script->head
-			while i
-				assert(i->kind = ASTKIND_OPTION)
-				if i->opt = OPT_I then
-					cpp.appendIncludeDirective(i->text, TKFLAG_ROOTFILE)
-				end if
-				i = i->nxt
-			wend
-		end scope
-
-		cpp.parseToplevel()
-	end scope
-
-	'' Remove CPP directives and EOLs (tokens marked for removal by
-	'' cppMain()). Doing this as a separate step allows
-	'' * error reports during cppMain() to view the complete input
-	'' * cppMain() to reference #define directives based on token position
-	''   (to retrieve the bodies for macro expansion) as opposed to having
-	''   to load them into AST
-	tkApplyRemoves()
-
-	hMoveDirectivesOutOfConstructs()
-
-	if api.replacementcount > 0 then
-		hApplyReplacements(api)
-	end if
-
-	tkTurnCPPTokensIntoCIds()
-
-	'' C parsing
 	dim ast as AstNode ptr
-	scope
-		dim parser as CParser = CParser(api)
-		ast = parser.parseToplevel()
-	end scope
 
-	tkEnd()
+	scope
+		dim tk as TokenBuffer
+
+		scope
+			'' C preprocessing
+			dim cpp as CppContext = CppContext(tk, api)
+
+			'' Add fbfrog's CPP pre-#defines for preprocessing of default.h
+			cpp.addTargetPredefines(api.target)
+
+			scope
+				'' Pre-#defines are simply inserted at the top of the token
+				'' buffer, so that cppMain() parses them like any other #define.
+
+				var i = api.script->head
+				while i
+
+					assert(i->kind = ASTKIND_OPTION)
+					select case i->opt
+					case OPT_DEFINE
+						cpp.addPredefine(i->text, i->alias_)
+					case OPT_INCDIR
+						cpp.addIncDir(i->text)
+					end select
+
+					i = i->nxt
+				wend
+			end scope
+
+			'' Insert the code from fbfrog pre-#includes (default.h etc.)
+			'' * behind command line pre-#defines so that default.h can use them
+			'' * marked for removal so the code won't be preserved
+			scope
+				var i = api.script->head
+				while i
+					assert(i->kind = ASTKIND_OPTION)
+					if i->opt = OPT_FBFROGINCLUDE then
+						var filename = hFindResource(*i->text)
+						var x = tk.count()
+						var file = filebuffersAdd(filename, type(NULL, 0))
+						lexLoadC(tk, x, file->buffer, file->source)
+						tk.setRemove(x, tk.count() - 1)
+					end if
+					i = i->nxt
+				wend
+			end scope
+
+			'' Add #includes for pre-#includes
+			scope
+				var i = api.script->head
+				while i
+					assert(i->kind = ASTKIND_OPTION)
+					if i->opt = OPT_INCLUDE then
+						cpp.appendIncludeDirective(i->text, TKFLAG_PREINCLUDE)
+					end if
+					i = i->nxt
+				wend
+			end scope
+
+			''
+			'' Add #include statements for the toplevel file(s) behind current
+			'' tokens, but marked with TKFLAG_ROOTFILE to let the CPP know that no
+			'' #include search should be done.
+			''
+			'' This way we can re-use the #include handling code to load the
+			'' toplevel files. (especially interesting for include guard optimization)
+			''
+			'' Note: pre-#defines should appear before tokens from root files, such
+			'' that the order of -define vs *.h command line arguments doesn't
+			'' matter.
+			''
+			scope
+				var i = api.script->head
+				while i
+					assert(i->kind = ASTKIND_OPTION)
+					if i->opt = OPT_I then
+						cpp.appendIncludeDirective(i->text, TKFLAG_ROOTFILE)
+					end if
+					i = i->nxt
+				wend
+			end scope
+
+			cpp.parseToplevel()
+		end scope
+
+		'' Remove CPP directives and EOLs (tokens marked for removal by
+		'' cppMain()). Doing this as a separate step allows
+		'' * error reports during cppMain() to view the complete input
+		'' * cppMain() to reference #define directives based on token position
+		''   (to retrieve the bodies for macro expansion) as opposed to having
+		''   to load them into AST
+		tk.applyRemoves()
+
+		hMoveDirectivesOutOfConstructs(tk)
+
+		if api.replacementcount > 0 then
+			hApplyReplacements(tk, api)
+		end if
+
+		tk.turnCPPTokensIntoCIds()
+
+		'' C parsing
+		scope
+			dim parser as CParser = CParser(tk, api)
+			ast = parser.parseToplevel()
+		end scope
+	end scope
 
 	hlGlobal(ast, api)
 
@@ -1193,22 +1195,22 @@ end function
 
 	frogSetTargets(TRUE)
 
-	tkInit()
+	scope
+		dim tk as TokenBuffer
 
-	'' Load all command line arguments into the tk buffer
-	lexLoadArgs(0, hTurnArgsIntoString(__FB_ARGC__, __FB_ARGV__), _
-		sourceinfoForZstring("<command line>"))
+		'' Load all command line arguments into the tk buffer
+		lexLoadArgs(tk, 0, hTurnArgsIntoString(__FB_ARGC__, __FB_ARGV__), _
+			sourceinfoForZstring("<command line>"))
 
-	'' Load content of @files too
-	hExpandArgsFiles()
+		'' Load content of @files too
+		hExpandArgsFiles(tk)
 
-	'' Parse the command line arguments, skipping argv[0]. Global options
-	'' are added to various frog.* fields, version-specific options are
-	'' added to the frog.script list in their original order.
-	frog.script = astNewGROUP()
-	hParseArgs(1)
-
-	tkEnd()
+		'' Parse the command line arguments, skipping argv[0]. Global options
+		'' are added to various frog.* fields, version-specific options are
+		'' added to the frog.script list in their original order.
+		frog.script = astNewGROUP()
+		hParseArgs(tk, 1)
+	end scope
 
 	'' Add the implicit default.h pre-#include
 	astPrepend(frog.script, astNewOPTION(OPT_FBFROGINCLUDE, "default.h"))

@@ -1,6 +1,5 @@
 #include once "c-lex.bi"
 #include once "chars.bi"
-#include once "tk.bi"
 
 using tktokens
 
@@ -23,7 +22,7 @@ sub CLexer.addTextToken(byval t as integer, byval begin as ubyte ptr)
 		end if
 	end if
 
-	tkInsert(x, t, begin)
+	tk->insert(x, t, begin)
 	setLocation()
 
 	i[0] = old
@@ -31,7 +30,7 @@ end sub
 
 sub CLexer.readBytes(byval t as integer, byval length as integer)
 	i += length
-	tkInsert(x, t)
+	tk->insert(x, t)
 	setLocation()
 end sub
 
@@ -265,7 +264,7 @@ sub CLexer.readString()
 	'' null-terminator
 	text[j] = 0
 
-	tkInsert(x, id, text)
+	tk->insert(x, id, text)
 	setLocation()
 end sub
 
@@ -506,8 +505,9 @@ end sub
 ''
 '' C lexer entry point
 ''
-function lexLoadC(byval x as integer, byval code as zstring ptr, byref source as SourceInfo) as integer
+function lexLoadC(byref tk as TokenBuffer, byval x as integer, byval code as zstring ptr, byref source as SourceInfo) as integer
 	dim clex as CLexer
+	clex.tk = @tk
 	clex.x = x
 	clex.location.source = @source
 	clex.location.linenum = 1

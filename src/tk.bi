@@ -220,64 +220,90 @@ end enum
 
 end namespace
 
+'' TODO: pack
+type ONETOKEN
+	id		as integer  '' TK_*
+	flags		as integer  '' TKFLAG_*
+
+	'' TK_ID: Identifier
+	''
+	'' TK_STRING: C string literal as-is, preserving quotes and escape
+	'' sequences solved out, except for escaped EOLs.
+	''
+	'' TK_DECNUM/TK_HEXNUM/TK_OCTNUM: Original token text without octal/hex
+	'' prefixes ('0' or '0x'), this is enough for
+	''    - parsing code to easily retrieve the integer values by doing
+	''      valulng("&h" + *text)
+	''    - CPP code to differentiate '0', '0x', '0x0', etc. when doing
+	''      ## merging
+	''
+	'' rest: NULL
+	text		as zstring ptr
+
+	location	as TkLocation   '' where this token was found
+end type
+
+type TokenBuffer
+private:
+	'' Gap buffer of tokens
+	buffer as ONETOKEN ptr  '' Buffer containing: front,gap,back
+	front as integer  '' Front length; the gap's offset
+	gap as integer  '' Gap length
+	size as integer  '' Front + back
+
+	newgapsize as integer  '' Size to use for new gap when increasing the buffer size
+
+	declare function lookup(byval x as integer) as ONETOKEN ptr
+	declare sub moveTo(byval x as integer)
+
+public:
+	declare constructor()
+	declare destructor()
+	declare function dumpOne(byval x as integer) as string
+	declare sub dump(byval first as integer, byval last as integer)
+	declare sub dump()
+	declare function count() as integer
+	declare sub insert(byval x as integer, byval id as integer, byval text as zstring ptr = NULL)
+	declare sub remove(byval first as integer, byval last as integer)
+	declare sub copy(byval x as integer, byval first as integer, byval last as integer, byval flagmask as integer)
+	declare function get(byval x as integer) as integer
+	declare function getText(byval x as integer) as zstring ptr
+	declare function spellId(byval x as integer) as zstring ptr
+	declare sub setLocation(byval x as integer, byval location as TkLocation)
+	declare function getLocation(byval x as integer) as TkLocation
+	declare sub setFlags(byval x as integer, byval flags as integer)
+	declare sub addFlags(byval first as integer, byval last as integer, byval flags as integer)
+	declare sub setRemove(byval x as integer)
+	declare sub setRemove(byval first as integer, byval last as integer)
+	declare function getFlags(byval x as integer) as integer
+	declare sub applyRemoves()
+	declare function isOriginal(byval x as integer) as integer
+	declare function isDirective(byval x as integer) as integer
+	declare function isStartOfDirective(byval x as integer) as integer
+
+	declare function isKwThatShouldBecomeId(byval x as integer) as integer
+	declare sub turnCPPTokensIntoCIds()
+	declare function areCTokenRangesEqual(byval a as integer, byval b as integer, byval length as integer) as integer
+
+	declare function spell(byval x as integer) as string
+	declare function spell(byval first as integer, byval last as integer) as string
+
+	declare function findClosingParen(byval x as integer, byval inside_directive as integer, byval ignore_directive as integer) as integer
+	declare function isEolOrEof(byval x as integer) as integer
+	declare function skipToEol(byval x as integer) as integer
+	declare function skipConstruct(byval x as integer, byval ignore_directives as integer) as integer
+	declare sub findConstructBoundaries(byval x as integer, byref first as integer, byref last as integer)
+	declare function reportConstructTokens(byval x as integer, byval first as integer, byval last as integer) as string
+	declare function report(byval x as integer, byval message as zstring ptr) as string
+	declare sub showErrorAndAbort(byval x as integer, byval message as zstring ptr)
+	declare function butFound(byval x as integer) as string
+	declare function makeExpectedMessage(byval x as integer, byval something as zstring ptr) as string
+	declare sub oopsExpected(byval x as integer, byval message as zstring ptr)
+	declare sub expect(byval x as integer, byval tk as integer, byval message as zstring ptr)
+end type
+
 declare function tkInfoText(byval id as integer) as zstring ptr
 declare function tkInfoPretty(byval tk as integer) as string
 
 '' Debugging helper, for example: TRACE(x), "decl begin"
 #define TRACE(x) print __FUNCTION__ + "(" + str(__LINE__) + "): " + tkDumpOne(x)
-
-'' original = not from a macro
-#define tkIsOriginal(x) ((tkGetFlags(x) and TKFLAG_EXPANSION) = 0)
-#define tkIsDirective(x) ((tkGetFlags(x) and TKFLAG_DIRECTIVE) <> 0)
-#define tkIsStartOfDirective(x) ((tkGetFlags(x) and TKFLAG_STARTOFDIRECTIVE) <> 0)
-
-declare sub tkInit()
-declare sub tkEnd()
-declare function tkDumpOne(byval x as integer) as string
-declare sub tkDump overload(byval first as integer, byval last as integer)
-declare sub tkDump overload()
-declare function tkGetCount() as integer
-declare sub tkInsert _
-	( _
-		byval x as integer, _
-		byval id as integer, _
-		byval text as zstring ptr = NULL _
-	)
-declare sub tkRemove(byval first as integer, byval last as integer)
-declare sub tkCopy _
-	( _
-		byval x as integer, _
-		byval first as integer, _
-		byval last as integer, _
-		byval flagmask as integer _
-	)
-declare function tkGet(byval x as integer) as integer
-declare function tkGetText(byval x as integer) as zstring ptr
-declare function tkSpellId(byval x as integer) as zstring ptr
-declare sub tkSetLocation(byval x as integer, byval location as TkLocation)
-declare function tkGetLocation(byval x as integer) as TkLocation
-declare sub tkSetFlags(byval x as integer, byval flags as integer)
-declare sub tkAddFlags(byval first as integer, byval last as integer, byval flags as integer)
-declare sub tkSetRemove overload(byval x as integer)
-declare sub tkSetRemove overload(byval first as integer, byval last as integer)
-declare function tkGetFlags(byval x as integer) as integer
-declare sub tkApplyRemoves()
-declare sub tkTurnCPPTokensIntoCIds()
-declare function tkCTokenRangesAreEqual(byval a as integer, byval b as integer, byval length as integer) as integer
-declare function tkSpell overload(byval x as integer) as string
-declare function tkSpell overload(byval first as integer, byval last as integer) as string
-declare function hFindClosingParen _
-	( _
-		byval x as integer, _
-		byval inside_directive as integer, _
-		byval ignore_directive as integer _
-	) as integer
-declare function tkIsEolOrEof(byval x as integer) as integer
-declare function hSkipToEol(byval x as integer) as integer
-declare function hSkipConstruct(byval x as integer, byval ignore_directives as integer) as integer
-declare function tkReport(byval x as integer, byval message as zstring ptr) as string
-declare sub tkOops(byval x as integer, byval message as zstring ptr)
-declare function tkButFound(byval x as integer) as string
-declare function tkMakeExpectedMessage(byval x as integer, byval message as zstring ptr) as string
-declare sub tkOopsExpected(byval x as integer, byval message as zstring ptr)
-declare sub tkExpect(byval x as integer, byval tk as integer, byval message as zstring ptr)

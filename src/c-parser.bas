@@ -86,8 +86,8 @@ dim shared extradatatypes(0 to ...) as DATATYPEINFO => _
 	(@"wchar_t"  , TYPE_WSTRING )  _
 }
 
-function CParser.match(byval tk as integer) as integer
-	if tkGet(x) = tk then
+function CParser.match(byval t as integer) as integer
+	if tk->get(x) = t then
 		x += 1
 		function = TRUE
 	end if
@@ -97,18 +97,18 @@ sub CParser.showError(byref message as string)
 	if parseok then
 		parseok = FALSE
 		if frog.verbose then
-			print tkReport(x, message)
+			print tk->report(x, message)
 		end if
 	end if
 end sub
 
-sub CParser.expectMatch(byval tk as integer, byref message as string)
-	if tkGet(x) = tk then
+sub CParser.expectMatch(byval t as integer, byref message as string)
+	if tk->get(x) = t then
 		x += 1
 	elseif parseok then
 		parseok = FALSE
 		if frog.verbose then
-			print tkReport(x, tkMakeExpectedMessage(x, tkInfoPretty(tk) + " " + message))
+			print tk->report(x, tk->makeExpectedMessage(x, tkInfoPretty(t) + " " + message))
 		end if
 	end if
 end sub
@@ -148,7 +148,8 @@ function CParser.identifierIsMacroParam(byval id as zstring ptr) as integer
 	end if
 end function
 
-constructor CParser(byref api as ApiInfo)
+constructor CParser(byref tk as TokenBuffer, byref api as ApiInfo)
+	this.tk = @tk
 	this.api = @api
 	x = 0
 	parseok = TRUE
@@ -200,9 +201,9 @@ function CParser.parseLiteral(byval astkind as integer, byval eval_escapes as in
 	dim n as AstNode ptr
 
 	if astkind = ASTKIND_CONSTI then
-		n = hNumberLiteral(x, FALSE, errmsg, api->clong32)
+		n = hNumberLiteral(*tk, x, FALSE, errmsg, api->clong32)
 	else
-		n = hStringLiteral(x, eval_escapes, errmsg)
+		n = hStringLiteral(*tk, x, eval_escapes, errmsg)
 	end if
 
 	if n = NULL then
@@ -230,9 +231,9 @@ function CParser.parseStringLiteralSequence() as AstNode ptr
 	var strcat = astNew(ASTKIND_STRCAT)
 
 	while parseok
-		select case tkGet(x)
+		select case tk->get(x)
 		case TK_ID
-			astAppend(strcat, astNewTEXT(tkSpellId(x)))
+			astAppend(strcat, astNewTEXT(tk->spellId(x)))
 			x += 1
 
 		case TK_STRING, TK_WSTRING
@@ -241,12 +242,12 @@ function CParser.parseStringLiteralSequence() as AstNode ptr
 		'' '#' stringify operator
 		case TK_HASH
 			'' #id?
-			if tkGet(x + 1) <> TK_ID then
+			if tk->get(x + 1) <> TK_ID then
 				exit while
 			end if
 			x += 1
 
-			astAppend(strcat, astNew(ASTKIND_STRINGIFY, astNewTEXT(tkGetText(x))))
+			astAppend(strcat, astNew(ASTKIND_STRINGIFY, astNewTEXT(tk->getText(x))))
 			x += 1
 
 		case else
@@ -293,13 +294,13 @@ end function
 ''
 function CParser.isDataType(byval y as integer) as integer
 	var is_type = FALSE
-	select case tkGet(y)
+	select case tk->get(y)
 	case KW_SIGNED, KW_UNSIGNED, KW_CONST, KW_SHORT, KW_LONG, _
 	     KW_ENUM, KW_STRUCT, KW_UNION, _
 	     KW_VOID, KW_CHAR, KW_FLOAT, KW_DOUBLE, KW_INT
-		is_type = not identifierIsMacroParam(tkSpellId(y))
+		is_type = not identifierIsMacroParam(tk->spellId(y))
 	case TK_ID
-		var id = tkSpellId(y)
+		var id = tk->spellId(y)
 		if (lookupExtraDataType(id) <> TYPE_NONE) or isTypedef(id) then
 			is_type = not identifierIsMacroParam(id)
 		end if
@@ -308,22 +309,22 @@ function CParser.isDataType(byval y as integer) as integer
 end function
 
 function CParser.isDataTypeOrAttribute(byval y as integer) as integer
-	select case tkGet(y)
+	select case tk->get(y)
 	case KW___ATTRIBUTE, KW___ATTRIBUTE__
-		function = not identifierIsMacroParam(tkSpellId(y))
+		function = not identifierIsMacroParam(tk->spellId(y))
 	case else
 		function = isDataType(y)
 	end select
 end function
 
 function CParser.parseCall(byval functionexpr as AstNode ptr, byval allow_idseq as integer) as AstNode ptr
-	assert(tkGet(x) = TK_LPAREN)
+	assert(tk->get(x) = TK_LPAREN)
 	x += 1
 
 	functionexpr = astNew(ASTKIND_CALL, functionexpr)
 
 	'' [Arguments]
-	if tkGet(x) <> TK_RPAREN then
+	if tk->get(x) <> TK_RPAREN then
 		'' Expr (',' Expr)*
 		do
 			astAppend(functionexpr, parseExpr(FALSE, allow_idseq))
@@ -349,7 +350,7 @@ function CParser.parseExprRecursive _
 
 	'' Unary prefix operators
 	var op = -1
-	select case tkGet(x)
+	select case tk->get(x)
 	case TK_EXCL   : op = ASTKIND_CLOGNOT   '' !
 	case TK_TILDE  : op = ASTKIND_NOT       '' ~
 	case TK_MINUS  : op = ASTKIND_NEGATE    '' -
@@ -364,7 +365,7 @@ function CParser.parseExprRecursive _
 		a = astNew(op, parseExprRecursive(cprecedence(op), parentheses, allow_toplevel_comma, allow_idseq))
 	else
 		'' Atoms
-		select case tkGet(x)
+		select case tk->get(x)
 
 		'' '(' Expr ')'
 		'' '(' DataType ')' Expr
@@ -377,15 +378,15 @@ function CParser.parseExprRecursive _
 
 			'' Find the ')' and check the token behind it, in some cases
 			'' we can tell that it probably isn't a cast.
-			var closingparen = hFindClosingParen(x - 1, isInsideDefineBody(), FALSE)
-			select case tkGet(closingparen + 1)
+			var closingparen = tk->findClosingParen(x - 1, isInsideDefineBody(), FALSE)
+			select case tk->get(closingparen + 1)
 			case TK_RPAREN, TK_EOF, TK_EOL
 				is_cast = FALSE
 			end select
 
 			'' Something of the form '(id*)' or just in general a
 			'' '*' in front of the closing ')'? It most likely is a pointer cast.
-			is_cast or= (tkGet(closingparen - 1) = TK_STAR)
+			is_cast or= (tk->get(closingparen - 1) = TK_STAR)
 
 			if is_cast then
 				'' DataType
@@ -415,7 +416,7 @@ function CParser.parseExprRecursive _
 				end if
 
 				'' '('?
-				if tkGet(x) = TK_LPAREN then
+				if tk->get(x) = TK_LPAREN then
 					''
 					'' Function call on parenthesized function name
 					''
@@ -445,10 +446,10 @@ function CParser.parseExprRecursive _
 		'' Id ## Id ## ...
 		'' Id ("String"|Id)*
 		case TK_ID
-			select case tkGet(x + 1)
+			select case tk->get(x + 1)
 			'' '('?
 			case TK_LPAREN
-				a = astNewTEXT(tkSpellId(x))
+				a = astNewTEXT(tk->spellId(x))
 				x += 1
 
 				a = parseCall(a, allow_idseq)
@@ -456,17 +457,17 @@ function CParser.parseExprRecursive _
 			'' '##'?
 			case TK_HASHHASH
 				a = astNew(ASTKIND_PPMERGE)
-				astAppend(a, astNewTEXT(tkSpellId(x)))
+				astAppend(a, astNewTEXT(tk->spellId(x)))
 				x += 2
 
 				'' Identifier ('##' Identifier)*
 				do
 					'' Identifier?
-					if tkGet(x) = TK_ID then
-						astAppend(a, astNewTEXT(tkSpellId(x)))
+					if tk->get(x) = TK_ID then
+						astAppend(a, astNewTEXT(tk->spellId(x)))
 						x += 1
 					else
-						showError("expected identifier as operand of '##' PP merge operator" + tkButFound(x))
+						showError("expected identifier as operand of '##' PP merge operator" + tk->butFound(x))
 					end if
 
 					'' '##'?
@@ -482,7 +483,7 @@ function CParser.parseExprRecursive _
 					'' didn't recognize the A as typedef yet. This shouldn't be misparsed
 					'' as string literal sequence silently, so we parse A as normal expression
 					'' and let B trigger an error.
-					a = astNewTEXT(tkSpellId(x))
+					a = astNewTEXT(tk->spellId(x))
 					x += 1
 				end if
 
@@ -490,7 +491,7 @@ function CParser.parseExprRecursive _
 				a = parseStringLiteralSequence()
 
 			case else
-				a = astNewTEXT(tkSpellId(x))
+				a = astNewTEXT(tk->spellId(x))
 				x += 1
 			end select
 
@@ -500,7 +501,7 @@ function CParser.parseExprRecursive _
 			x += 1
 
 			'' ('(' DataType)?
-			if (tkGet(x) = TK_LPAREN) andalso isDataTypeOrAttribute(x + 1) then
+			if (tk->get(x) = TK_LPAREN) andalso isDataTypeOrAttribute(x + 1) then
 				'' '('
 				x += 1
 
@@ -523,10 +524,10 @@ function CParser.parseExprRecursive _
 
 			'' Identifier
 			dim as string id
-			if tkGet(x) = TK_ID then
-				id = *tkSpellId(x)
+			if tk->get(x) = TK_ID then
+				id = *tk->spellId(x)
 			else
-				showError("expected identifier" + tkButFound(x))
+				showError("expected identifier" + tk->butFound(x))
 				id = "<error-recovery>"
 			end if
 			a = astNew(ASTKIND_CDEFINED, id)
@@ -538,7 +539,7 @@ function CParser.parseExprRecursive _
 			end if
 
 		case else
-			showError("expected expression" + tkButFound(x))
+			showError("expected expression" + tk->butFound(x))
 			a = astNew(ASTKIND_CONSTI, "0")
 			a->dtype = TYPE_INTEGER
 		end select
@@ -546,7 +547,7 @@ function CParser.parseExprRecursive _
 
 	'' Infix operators
 	while parseok
-		select case as const tkGet(x)
+		select case as const tk->get(x)
 		case TK_QUEST    : op = ASTKIND_IIF      '' ? (a ? b : c)
 		case TK_PIPEPIPE : op = ASTKIND_CLOGOR   '' ||
 		case TK_AMPAMP   : op = ASTKIND_CLOGAND  '' &&
@@ -640,14 +641,14 @@ end function
 '' '{' ExprOrInit (',' ExprOrInit)* [','] '}'
 function CParser.parseInit(byval allow_idseq as integer) as AstNode ptr
 	'' '{'
-	assert(tkGet(x) = TK_LBRACE)
+	assert(tk->get(x) = TK_LBRACE)
 	x += 1
 
 	var a = astNew(ASTKIND_STRUCTINIT)
 
 	do
 		'' '}'?
-		if tkGet(x) = TK_RBRACE then
+		if tk->get(x) = TK_RBRACE then
 			exit do
 		end if
 
@@ -663,7 +664,7 @@ end function
 
 function CParser.parseExprOrInit(byval allow_idseq as integer) as AstNode ptr
 	'' '{'?
-	if tkGet(x) = TK_LBRACE then
+	if tk->get(x) = TK_LBRACE then
 		function = parseInit(allow_idseq)
 	else
 		function = parseExpr(FALSE, allow_idseq)
@@ -674,9 +675,9 @@ end function
 
 sub CParser.skipToCommaOrRparen()
 	do
-		select case tkGet(x)
+		select case tk->get(x)
 		case TK_LPAREN, TK_LBRACKET, TK_LBRACE
-			x = hFindClosingParen(x, isInsideDefineBody(), TRUE)
+			x = tk->findClosingParen(x, isInsideDefineBody(), TRUE)
 		case TK_COMMA, TK_RPAREN, TK_EOF
 			exit do
 		end select
@@ -685,12 +686,12 @@ sub CParser.skipToCommaOrRparen()
 end sub
 
 sub CParser.parseGccAttribute(byref gccattribs as integer)
-	if tkGet(x) < TK_ID then
+	if tk->get(x) < TK_ID then
 		showError("expected attribute identifier inside __attribute__((...))")
 		exit sub
 	end if
 
-	var attr = *tkSpellId(x)
+	var attr = *tk->spellId(x)
 
 	'' Each attribute can be given as foo or __foo__ -- normalize to foo.
 	if (left(attr, 2) = "__") and (right(attr, 2) = "__") then
@@ -734,13 +735,13 @@ sub CParser.parseGccAttribute(byref gccattribs as integer)
 	case "packed"    : gccattribs or= ASTATTRIB_PACKED    : x += 1
 	case "dllimport" : gccattribs or= ASTATTRIB_DLLIMPORT : x += 1
 	case else
-		showError("unknown attribute '" + *tkSpellId(x) + "'")
+		showError("unknown attribute '" + *tk->spellId(x) + "'")
 	end select
 end sub
 
 sub CParser.parseGccAttributeList(byref gccattribs as integer)
 	while parseok
-		select case tkGet(x)
+		select case tk->get(x)
 		case KW_VOLATILE, KW_INLINE, KW___INLINE, KW___INLINE__
 			x += 1
 
@@ -758,7 +759,7 @@ sub CParser.parseGccAttributeList(byref gccattribs as integer)
 			'' Attribute (',' Attribute)*
 			do
 				'' ')'?
-				if tkGet(x) = TK_RPAREN then exit do
+				if tk->get(x) = TK_RPAREN then exit do
 
 				'' Attribute
 				parseGccAttribute(gccattribs)
@@ -783,11 +784,11 @@ end sub
 '' Enum constant: Identifier ['=' Expr] (',' | '}')
 function CParser.parseEnumConst() as AstNode ptr
 	'' Identifier
-	if tkGet(x) <> TK_ID then
-		showError("expected identifier for an enum constant" + tkButFound(x))
+	if tk->get(x) <> TK_ID then
+		showError("expected identifier for an enum constant" + tk->butFound(x))
 		exit function
 	end if
-	var enumconst = astNew(ASTKIND_CONST, tkSpellId(x))
+	var enumconst = astNew(ASTKIND_CONST, tk->spellId(x))
 	enumconst->attrib or= ASTATTRIB_ENUMCONST
 	x += 1
 
@@ -798,14 +799,14 @@ function CParser.parseEnumConst() as AstNode ptr
 	end if
 
 	'' (',' | '}')
-	select case tkGet(x)
+	select case tk->get(x)
 	case TK_COMMA
 		x += 1
 
 	case TK_RBRACE
 
 	case else
-		showError("expected ',' or '}' behind enum constant" + tkButFound(x))
+		showError("expected ',' or '}' behind enum constant" + tk->butFound(x))
 	end select
 
 	function = enumconst
@@ -816,13 +817,13 @@ end function
 function CParser.parseTag() as AstNode ptr
 	'' {STRUCT|UNION|ENUM}
 	dim as integer astkind
-	select case tkGet(x)
+	select case tk->get(x)
 	case KW_UNION
 		astkind = ASTKIND_UNION
 	case KW_ENUM
 		astkind = ASTKIND_ENUM
 	case else
-		assert(tkGet(x) = KW_STRUCT)
+		assert(tk->get(x) = KW_STRUCT)
 		astkind = ASTKIND_STRUCT
 	end select
 	x += 1
@@ -833,13 +834,13 @@ function CParser.parseTag() as AstNode ptr
 
 	'' [Identifier]
 	dim tagid as zstring ptr
-	if tkGet(x) = TK_ID then
-		tagid = tkSpellId(x)
+	if tk->get(x) = TK_ID then
+		tagid = tk->spellId(x)
 		x += 1
 	end if
 
 	'' '{'?
-	if tkGet(x) = TK_LBRACE then
+	if tk->get(x) = TK_LBRACE then
 		var udt = astNew(astkind, tagid)
 		udt->attrib or= gccattrib
 
@@ -872,7 +873,7 @@ function CParser.parseTag() as AstNode ptr
 	else
 		'' It's just a type name, not an UDT body - can't be anonymous
 		if tagid = NULL then
-			showError("expected '{' or tag name" + tkButFound(x))
+			showError("expected '{' or tag name" + tk->butFound(x))
 			tagid = @"<error-recovery>"
 		end if
 
@@ -890,9 +891,9 @@ end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-private sub hTurnIntoUNKNOWN(byval n as AstNode ptr, byval first as integer, byval last as integer)
+sub CParser.turnIntoUNKNOWN(byval n as AstNode ptr, byval first as integer, byval last as integer)
 	n->kind = ASTKIND_UNKNOWN
-	astSetText(n, tkSpell(first, last))
+	astSetText(n, tk->spell(first, last))
 	astRemoveChildren(n)
 	astDelete(n->expr)
 	n->expr = NULL
@@ -993,12 +994,12 @@ end sub
 ''
 function CParser.defineBodyLooksLikeScopeBlock(byval y as integer) as integer
 	'' '{'
-	assert(tkGet(y) = TK_LBRACE)
+	assert(tk->get(y) = TK_LBRACE)
 	y += 1
 
 	'' Any keyword? (then it's likely not an expression, as most C keywords
 	'' are for statements...)
-	select case tkGet(y)
+	select case tk->get(y)
 	case KW_SIZEOF
 		'' sizeof() is an exception: a keyword, but for expressions, not statements
 	case is > TK_ID
@@ -1006,7 +1007,7 @@ function CParser.defineBodyLooksLikeScopeBlock(byval y as integer) as integer
 	end select
 
 	do
-		select case tkGet(y)
+		select case tk->get(y)
 		case TK_SEMI
 			return TRUE
 
@@ -1014,7 +1015,7 @@ function CParser.defineBodyLooksLikeScopeBlock(byval y as integer) as integer
 			exit do
 
 		case TK_LPAREN, TK_LBRACKET, TK_LBRACE
-			y = hFindClosingParen(y, TRUE, TRUE)
+			y = tk->findClosingParen(y, TRUE, TRUE)
 		end select
 
 		y += 1
@@ -1025,7 +1026,7 @@ end function
 
 function CParser.parseDefineBodyTokenLiteral() as string
 	dim astkind as integer
-	select case as const tkGet(x)
+	select case as const tk->get(x)
 	case TK_NUMBER             : astkind = ASTKIND_CONSTI
 	case TK_STRING, TK_WSTRING : astkind = ASTKIND_STRING
 	case TK_CHAR, TK_WCHAR     : astkind = ASTKIND_CHAR
@@ -1037,7 +1038,7 @@ function CParser.parseDefineBodyTokenLiteral() as string
 end function
 
 function CParser.parseDefineBodyToken() as string
-	select case as const tkGet(x)
+	select case as const tk->get(x)
 	case TK_NUMBER, TK_STRING, TK_WSTRING, TK_CHAR, TK_WCHAR
 		function = parseDefineBodyTokenLiteral()
 
@@ -1060,7 +1061,7 @@ function CParser.parseDefineBodyToken() as string
 	case TK_TILDE     : function = "not"     : x += 1  '' ~
 
 	case else
-		function = tkSpell(x)
+		function = tk->spell(x)
 		x += 1
 	end select
 end function
@@ -1093,12 +1094,12 @@ function CParser.parseDefineBodyTokens() as string
 	dim s as string
 
 	var begin = x
-	while tkGet(x) <> TK_EOL
+	while tk->get(x) <> TK_EOL
 
-		assert(tkGet(x) <> TK_EOF)
+		assert(tk->get(x) <> TK_EOF)
 
 		if begin < x then
-			if hSeparateBySpace(tkGet(x - 1), tkGet(x)) then
+			if hSeparateBySpace(tk->get(x - 1), tk->get(x)) then
 				s += " "
 			end if
 		end if
@@ -1119,11 +1120,11 @@ function CParser.parseDefineBody(byval macro as AstNode ptr) as integer
 		if len(body) > 0 then
 			macro->expr = astNewTEXT(body)
 		end if
-		assert(tkGet(x) = TK_EOL)
+		assert(tk->get(x) = TK_EOL)
 		return TRUE
 	end if
 
-	select case tkGet(x)
+	select case tk->get(x)
 	'' Don't preserve #define if it just contains _Pragma's
 	'' _Pragma("...")
 	case KW__PRAGMA
@@ -1132,14 +1133,14 @@ function CParser.parseDefineBody(byval macro as AstNode ptr) as integer
 			x += 1
 
 			'' '('
-			if tkGet(x) <> TK_LPAREN then exit do
+			if tk->get(x) <> TK_LPAREN then exit do
 			x += 1
 
 			'' Skip to ')' - we don't care whether there is
 			'' a string literal or something like a #macroparam or similar...
 			skipToCommaOrRparen()
 			x += 1
-		loop while tkGet(x) = KW__PRAGMA
+		loop while tk->get(x) = KW__PRAGMA
 
 		exit function
 
@@ -1160,7 +1161,7 @@ function CParser.parseDefineBody(byval macro as AstNode ptr) as integer
 	'' Just a 'const'? It's common to have a #define for the const keyword
 	'' in C headers...
 	case KW_CONST
-		if tkGet(x + 1) = TK_EOL then
+		if tk->get(x + 1) = TK_EOL then
 			'' const
 			x += 1
 			exit function
@@ -1200,8 +1201,8 @@ end function
 
 function CParser.defBodyContainsIds(byval y as integer) as integer
 	do
-		assert(tkGet(y) <> TK_EOF)
-		select case tkGet(y)
+		assert(tk->get(y) <> TK_EOF)
+		select case tk->get(y)
 		case TK_EOL
 			exit do
 		case TK_ID
@@ -1219,10 +1220,10 @@ sub CParser.parseDefBody(byval n as AstNode ptr, byval xbegin as integer, byref 
 
 	'' Didn't reach EOL? Then the beginning of the macro body could
 	'' be parsed as expression, but not the rest.
-	assert(tkGet(x) <> TK_EOF)
-	if tkGet(x) <> TK_EOL then
+	assert(tk->get(x) <> TK_EOF)
+	if tk->get(x) <> TK_EOL then
 		showError("failed to parse full #define body")
-		x = hSkipToEol(x)
+		x = tk->skipToEol(x)
 	end if
 
 	if n->expr then
@@ -1232,7 +1233,7 @@ sub CParser.parseDefBody(byval n as AstNode ptr, byval xbegin as integer, byref 
 	'' If parsing the body failed, turn the PPDEFINE into an UNKNOWN without
 	'' reallocating it (as it may already be linked into the AST).
 	if parseok = FALSE then
-		hTurnIntoUNKNOWN(n, xbegin, x)
+		turnIntoUNKNOWN(n, xbegin, x)
 		parseok = TRUE
 	end if
 
@@ -1245,18 +1246,18 @@ function CParser.parseDefine() as AstNode ptr
 	x += 1
 
 	'' Identifier ['(' ParameterList ')']
-	var macro = hDefineHead(x)
+	var macro = hDefineHead(*tk, x)
 
 	'' Body?
 	var add_to_ast = TRUE
 	assert(macro->expr = NULL)
-	if tkGet(x) <> TK_EOL then
+	if tk->get(x) <> TK_EOL then
 		if defBodyContainsIds(x) then
 			'' Delay parsing, until we've parsed all declarations in the input.
 			'' This way we have more knowledge about typedefs etc. which could
 			'' help parsing this #define body.
 			addDefBody(defbegin, x, macro)
-			x = hSkipToEol(x)
+			x = tk->skipToEol(x)
 
 			'' parseBody() mustn't delete the PPDEFINE node now that
 			'' we're referencing it from the c.defbodies list
@@ -1268,7 +1269,7 @@ function CParser.parseDefine() as AstNode ptr
 	end if
 
 	'' Eol
-	assert(tkGet(x) = TK_EOL)
+	assert(tk->get(x) = TK_EOL)
 	x += 1
 
 	if add_to_ast = FALSE then
@@ -1283,12 +1284,12 @@ function CParser.parseUndef() as AstNode ptr
 	x += 1
 
 	'' id
-	assert(tkGet(x) >= TK_ID)
-	function = astNew(ASTKIND_UNDEF, tkSpellId(x))
+	assert(tk->get(x) >= TK_ID)
+	function = astNew(ASTKIND_UNDEF, tk->spellId(x))
 	x += 1
 
 	'' Eol
-	assert(tkGet(x) = TK_EOL)
+	assert(tk->get(x) = TK_EOL)
 	x += 1
 end function
 
@@ -1299,29 +1300,29 @@ function CParser.parseInclude() as AstNode ptr
 	'' TODO: Don't evaluate escape sequences in "filename"
 	'' TODO: Don't evaluate escape sequences/comments in <filename>
 	dim filename as string
-	if tkGet(x) = TK_LT then
+	if tk->get(x) = TK_LT then
 		'' <filename>
 
 		'' Skip tokens until the '>'
 		var begin = x
 		do
 			x += 1
-			assert((tkGet(x) <> TK_EOL) and (tkGet(x) <> TK_EOF))
-		loop until tkGet(x) = TK_GT
+			assert((tk->get(x) <> TK_EOL) and (tk->get(x) <> TK_EOF))
+		loop until tk->get(x) = TK_GT
 
 		'' Then spell them to get the filename
-		filename = tkSpell(begin + 1, x - 1)
+		filename = tk->spell(begin + 1, x - 1)
 		x += 1
 	else
 		'' "filename"
-		assert(tkGet(x) = TK_STRING)
+		assert(tk->get(x) = TK_STRING)
 		var s = parseLiteral(ASTKIND_STRING, FALSE)
 		filename = *s->text
 		astDelete(s)
 	end if
 
 	'' Eol
-	assert(tkGet(x) = TK_EOL)
+	assert(tk->get(x) = TK_EOL)
 	x += 1
 
 	function = astNew(ASTKIND_PPINCLUDE, filename)
@@ -1339,14 +1340,14 @@ end function
 
 function CParser.parsePragmaPack() as AstNode ptr
 	'' pack
-	assert(tkGet(x) = TK_ID)
-	assert(tkSpell(x) = "pack")
+	assert(tk->get(x) = TK_ID)
+	assert(tk->spell(x) = "pack")
 	x += 1
 
 	'' '('
 	expectMatch(TK_LPAREN, "as in '#pragma pack(...)'")
 
-	select case tkGet(x)
+	select case tk->get(x)
 	'' #pragma pack(N): Set max alignment for current top of stack
 	case TK_NUMBER
 		if parsePragmaPackNumber() = FALSE then
@@ -1356,7 +1357,7 @@ function CParser.parsePragmaPack() as AstNode ptr
 	'' #pragma pack(push, N)
 	'' #pragma pack(pop)
 	case TK_ID
-		select case *tkSpellId(x)
+		select case *tk->spellId(x)
 		case "push"
 			pragmapack.level += 1
 			if pragmapack.level >= pragmapack.MAXLEVEL then
@@ -1369,7 +1370,7 @@ function CParser.parsePragmaPack() as AstNode ptr
 			expectMatch(TK_COMMA, "behind 'push'")
 
 			'' 'N'
-			if tkGet(x) <> TK_NUMBER then
+			if tk->get(x) <> TK_NUMBER then
 				exit function
 			end if
 			if parsePragmaPackNumber() = FALSE then
@@ -1400,7 +1401,7 @@ function CParser.parsePragmaPack() as AstNode ptr
 	expectMatch(TK_RPAREN, "as in '#pragma pack(...)'")
 
 	'' Eol
-	assert(tkGet(x) = TK_EOL)
+	assert(tk->get(x) = TK_EOL)
 	x += 1
 
 	'' Don't preserve the directive
@@ -1410,25 +1411,25 @@ end function
 '' #pragma comment(lib, "...")
 function CParser.parsePragmaComment() as AstNode ptr
 	'' comment
-	assert(tkGet(x) = TK_ID)
-	assert(tkSpell(x) = "comment")
+	assert(tk->get(x) = TK_ID)
+	assert(tk->spell(x) = "comment")
 	x += 1
 
 	'' '('
-	assert(tkGet(x) = TK_LPAREN)
+	assert(tk->get(x) = TK_LPAREN)
 	x += 1
 
 	'' lib
-	assert(tkGet(x) = TK_ID)
-	assert(tkSpell(x) = "lib")
+	assert(tk->get(x) = TK_ID)
+	assert(tk->spell(x) = "lib")
 	x += 1
 
 	'' ','
-	assert(tkGet(x) = TK_COMMA)
+	assert(tk->get(x) = TK_COMMA)
 	x += 1
 
 	'' "<library-file-name>"
-	assert(tkGet(x) = TK_STRING)
+	assert(tk->get(x) = TK_STRING)
 	dim libname as string
 	scope
 		var s = parseLiteral(ASTKIND_STRING, TRUE)
@@ -1437,10 +1438,10 @@ function CParser.parsePragmaComment() as AstNode ptr
 	end scope
 
 	'' ')'
-	assert(tkGet(x) = TK_RPAREN)
+	assert(tk->get(x) = TK_RPAREN)
 	x += 1
 
-	assert(tkGet(x) = TK_EOL)
+	assert(tk->get(x) = TK_EOL)
 	x += 1
 
 	''
@@ -1526,7 +1527,7 @@ sub CParser.parseBaseType _
 		'' __ATTRIBUTE__((...))
 		parseGccAttributeList(gccattribs)
 
-		select case tkGet(x)
+		select case tk->get(x)
 		case KW_SIGNED
 			if unsignedmods > 0 then
 				showError("mixed SIGNED with previous UNSIGNED modifier")
@@ -1566,7 +1567,7 @@ sub CParser.parseBaseType _
 				exit while
 			end if
 
-			select case tkGet(x)
+			select case tk->get(x)
 			case KW_ENUM, KW_STRUCT, KW_UNION
 				dtype = TYPE_UDT
 				subtype = parseTag()
@@ -1599,7 +1600,7 @@ sub CParser.parseBaseType _
 				end if
 
 				'' Treat the id as the type
-				var id = tkSpellId(x)
+				var id = tk->spellId(x)
 				dtype = lookupExtraDataType(id)
 				if dtype = TYPE_NONE then
 					dtype = TYPE_UDT
@@ -1659,7 +1660,7 @@ sub CParser.parseBaseType _
 			dtype = TYPE_LONG
 		else
 			'' No modifiers and no explicit "int" either
-			showError("expected a data type" + tkButFound(x))
+			showError("expected a data type" + tk->butFound(x))
 		end if
 	end select
 
@@ -1697,7 +1698,7 @@ function CParser.parseParamDeclList() as AstNode ptr
 		dim as AstNode ptr t
 
 		'' '...'?
-		if tkGet(x) = TK_ELLIPSIS then
+		if tk->get(x) = TK_ELLIPSIS then
 			t = astNew(ASTKIND_PARAM)
 			x += 1
 		else
@@ -1962,7 +1963,7 @@ function CParser.parseDeclarator _
 			'' __ATTRIBUTE__((...))
 			parseGccAttributeList(gccattribs)
 
-			select case tkGet(x)
+			select case tk->get(x)
 			case KW_CONST
 				procptrdtype = typeSetIsConst(procptrdtype)
 				dtype = typeSetIsConst(dtype)
@@ -1998,16 +1999,16 @@ function CParser.parseDeclarator _
 	var paramlistnesting = 0
 	if astkind = ASTKIND_PARAM then
 		var y = x
-		while tkGet(y) = TK_LPAREN
+		while tk->get(y) = TK_LPAREN
 			y += 1
 		wend
-		if isDataType(y) or (tkGet(y) = TK_RPAREN) then
+		if isDataType(y) or (tk->get(y) = TK_RPAREN) then
 			paramlistnesting = y - x
 		end if
 	end if
 
 	'' '(' for declarator?
-	if (tkGet(x) = TK_LPAREN) and (paramlistnesting = 0) then
+	if (tk->get(x) = TK_LPAREN) and (paramlistnesting = 0) then
 		x += 1
 
 		t = parseDeclarator(nestlevel + 1, astkind, dtype, basesubtype, 0, innernode, innerprocptrdtype, innergccattribs)
@@ -2020,12 +2021,12 @@ function CParser.parseDeclarator _
 		'' in fact for types there mustn't be an id.
 		dim id as zstring ptr
 		if astkind <> ASTKIND_DATATYPE then
-			if tkGet(x) = TK_ID then
-				id = tkSpellId(x)
+			if tk->get(x) = TK_ID then
+				id = tk->spellId(x)
 				x += 1
 			else
 				if astkind <> ASTKIND_PARAM then
-					showError("expected identifier for the symbol declared in this declaration" + tkButFound(x))
+					showError("expected identifier for the symbol declared in this declaration" + tk->butFound(x))
 					id = @"<error-recovery>"
 				end if
 			end if
@@ -2035,7 +2036,7 @@ function CParser.parseDeclarator _
 		astSetType(t, dtype, basesubtype)
 	end if
 
-	select case tkGet(x)
+	select case tk->get(x)
 	'' ('[' [ArrayElements] ']')*
 	case TK_LBRACKET
 		node = t
@@ -2057,7 +2058,7 @@ function CParser.parseDeclarator _
 			var d = astNew(ASTKIND_DIMENSION)
 
 			'' Just '[]'?
-			if tkGet(x) = TK_RBRACKET then
+			if tk->get(x) = TK_RBRACKET then
 				d->expr = astNew(ASTKIND_ELLIPSIS)
 			else
 				d->expr = parseExpr(TRUE, FALSE)
@@ -2069,7 +2070,7 @@ function CParser.parseDeclarator _
 			expectMatch(TK_RBRACKET, "to close this array dimension declaration")
 
 			'' '['? (next dimension)
-		loop while (tkGet(x) = TK_LBRACKET) and parseok
+		loop while (tk->get(x) = TK_LBRACKET) and parseok
 
 		if innerprocptrdtype <> TYPE_PROC then
 			'' It's a pointer to an array - unsupported in FB.
@@ -2139,11 +2140,11 @@ function CParser.parseDeclarator _
 		end if
 
 		'' Just '(void)'?
-		if (tkGet(x) = KW_VOID) and (tkGet(x + 1) = TK_RPAREN) then
+		if (tk->get(x) = KW_VOID) and (tk->get(x + 1) = TK_RPAREN) then
 			'' VOID
 			x += 1
 		'' Not just '()'?
-		elseif tkGet(x) <> TK_RPAREN then
+		elseif tk->get(x) <> TK_RPAREN then
 			assert(node->kind = ASTKIND_PROC)
 			astAppend(node, parseParamDeclList())
 		end if
@@ -2348,8 +2349,8 @@ function CParser.parseDecl(byval astkind as integer, byval gccattribs as integer
 			'' (FB doesn't allow anonymous non-nested UDTs)
 			if udt->text = NULL then
 				'' Try to name it after the symbol declared in this declaration
-				if tkGet(x) = TK_ID then
-					astSetText(udt, tkSpellId(x))
+				if tk->get(x) = TK_ID then
+					astSetText(udt, tk->spellId(x))
 				else
 					'' Auto-generate id
 					'' TODO:
@@ -2385,13 +2386,13 @@ function CParser.parseDecl(byval astkind as integer, byval gccattribs as integer
 			addTypedef(n->text)
 		end if
 
-		select case tkGet(x)
+		select case tk->get(x)
 		case KW_ASM, KW___ASM, KW___ASM__
 			x += 1
 
 			expectMatch(TK_LPAREN, "for asm()")
 
-			if tkGet(x) = TK_STRING then
+			if tk->get(x) = TK_STRING then
 				var s = parseLiteral(ASTKIND_STRING, TRUE)
 				astTakeAliasFromId(n, s)
 				astDelete(s)
@@ -2426,7 +2427,7 @@ function CParser.parseDecl(byval astkind as integer, byval gccattribs as integer
 		end if
 
 		'' '{', procedure body?
-		if (n->kind = ASTKIND_PROC) and (tkGet(x) = TK_LBRACE) then
+		if (n->kind = ASTKIND_PROC) and (tk->get(x) = TK_LBRACE) then
 			'' A procedure with body must be the first and only
 			'' declarator in the declaration.
 			if declarator_count = 1 then
@@ -2465,7 +2466,7 @@ function CParser.parseVarOrProcDecl(byval is_local as integer) as AstNode ptr
 	parseGccAttributeList(gccattribs)
 
 	'' [EXTERN|STATIC]
-	select case tkGet(x)
+	select case tk->get(x)
 	case KW_EXTERN
 		gccattribs or= ASTATTRIB_EXTERN
 		x += 1
@@ -2494,13 +2495,13 @@ end function
 '' RETURN [Expr] ';'
 function CParser.parseReturn() as AstNode ptr
 	'' RETURN
-	assert(tkGet(x) = KW_RETURN)
+	assert(tk->get(x) = KW_RETURN)
 	x += 1
 
 	var n = astNew(ASTKIND_RETURN)
 
 	'' [Expr]
-	if tkGet(x) <> TK_SEMI then
+	if tk->get(x) <> TK_SEMI then
 		astAppend(n, parseExpr(TRUE, FALSE))
 	end if
 
@@ -2516,7 +2517,7 @@ end function
 '' unknown construct. The rest of the scope can potentially be parsed fine.
 function CParser.parseScope() as AstNode ptr
 	'' '{'
-	assert(tkGet(x) = TK_LBRACE)
+	assert(tk->get(x) = TK_LBRACE)
 	x += 1
 
 	function = astNew(ASTKIND_SCOPEBLOCK, parseBody(ASTKIND_SCOPEBLOCK))
@@ -2550,7 +2551,7 @@ function CParser.parseIfBlock() as AstNode ptr
 	var ifblock = astNew(ASTKIND_IFBLOCK)
 
 	'' IF
-	assert(tkGet(x) = KW_IF)
+	assert(tk->get(x) = KW_IF)
 	x += 1
 
 	'' condition expression
@@ -2575,7 +2576,7 @@ function CParser.parseDoWhile(byval semi_is_optional as integer) as AstNode ptr
 	var dowhile = astNew(ASTKIND_DOWHILE)
 
 	'' DO
-	assert(tkGet(x) = KW_DO)
+	assert(tk->get(x) = KW_DO)
 	x += 1
 
 	'' loop body
@@ -2601,7 +2602,7 @@ function CParser.parseWhile() as AstNode ptr
 	var whileloop = astNew(ASTKIND_WHILE)
 
 	'' WHILE
-	assert(tkGet(x) = KW_WHILE)
+	assert(tk->get(x) = KW_WHILE)
 	x += 1
 
 	'' loop condition expression
@@ -2615,10 +2616,10 @@ end function
 
 '' EXTERN "C" { ... }
 function CParser.parseExternBlock() as AstNode ptr
-	assert(tkGet(x) = KW_EXTERN)
+	assert(tk->get(x) = KW_EXTERN)
 	x += 1
 
-	if tkGet(x) <> TK_STRING then
+	if tk->get(x) <> TK_STRING then
 		showError("expected <""C""> behind <extern>")
 		return astNewGROUP()
 	end if
@@ -2639,20 +2640,20 @@ function CParser.parseExternBlock() as AstNode ptr
 end function
 
 function CParser.parseConstruct(byval bodyastkind as integer) as AstNode ptr
-	if tkGet(x) = TK_FBCODE then
-		var n = astNew(ASTKIND_FBCODE, tkGetText(x))
+	if tk->get(x) = TK_FBCODE then
+		var n = astNew(ASTKIND_FBCODE, tk->getText(x))
 		x += 1
 		return n
 	end if
 
 	'' TODO: only parse #defines at toplevel, not inside structs etc.
 	'' '#'?
-	if (tkGet(x) = TK_HASH) and tkIsStartOfDirective(x) then
+	if (tk->get(x) = TK_HASH) and tk->isStartOfDirective(x) then
 		x += 1
 
 		dim directive as AstNode ptr
-		if tkGet(x) = TK_ID then
-			select case *tkSpellId(x)
+		if tk->get(x) = TK_ID then
+			select case *tk->spellId(x)
 			case "define"
 				directive = parseDefine()
 			case "undef"
@@ -2662,7 +2663,7 @@ function CParser.parseConstruct(byval bodyastkind as integer) as AstNode ptr
 			case "pragma"
 				x += 1
 
-				select case tkSpell(x)
+				select case tk->spell(x)
 				case "pack"
 					directive = parsePragmaPack()
 				case "comment"
@@ -2683,7 +2684,7 @@ function CParser.parseConstruct(byval bodyastkind as integer) as AstNode ptr
 		return parseEnumConst()
 	end if
 
-	select case tkGet(x)
+	select case tk->get(x)
 	case KW_TYPEDEF
 		return parseTypedef()
 	case TK_SEMI
@@ -2696,7 +2697,7 @@ function CParser.parseConstruct(byval bodyastkind as integer) as AstNode ptr
 	case KW_WHILE  : return parseWhile()
 	case KW_RETURN : return parseReturn()
 	case KW_EXTERN
-		if tkGet(x + 1) = TK_STRING then
+		if tk->get(x + 1) = TK_STRING then
 			return parseExternBlock()
 		end if
 	end select
@@ -2709,7 +2710,7 @@ function CParser.parseConstruct(byval bodyastkind as integer) as AstNode ptr
 		'' Disambiguate: local declaration vs. expression
 		'' If it starts with a data type, __attribute__, or 'static',
 		'' then it must be a declaration.
-		if (tkGet(x) = KW_STATIC) orelse isDataTypeOrAttribute(x) then
+		if (tk->get(x) = KW_STATIC) orelse isDataTypeOrAttribute(x) then
 			function = parseVarOrProcDecl(TRUE)
 		else
 			function = parseExprStatement()
@@ -2729,7 +2730,7 @@ function CParser.parseBody(byval bodyastkind as integer) as AstNode ptr
 	var result = astNewGROUP()
 
 	do
-		select case tkGet(x)
+		select case tk->get(x)
 		case TK_EOF
 			exit do
 
@@ -2755,14 +2756,14 @@ function CParser.parseBody(byval bodyastkind as integer) as AstNode ptr
 
 			'' Skip current construct and preserve its tokens in
 			'' an UNKNOWN node
-			x = hSkipConstruct(begin, FALSE)
-			hTurnIntoUNKNOWN(t, begin, x - 1)
+			x = tk->skipConstruct(begin, FALSE)
+			turnIntoUNKNOWN(t, begin, x - 1)
 		end if
 
 		'' Assign source location to declarations
 		'' For toplevel declarations (not fields/parameters) this will
 		'' be used to distribute them based on -emit patterns.
-		var location = tkGetLocation(begin)
+		var location = tk->getLocation(begin)
 		if t->kind = ASTKIND_GROUP then
 			var i = t->head
 			while i

@@ -1,6 +1,5 @@
 #include once "fbfrog-args-lex.bi"
 #include once "chars.bi"
-#include once "tk.bi"
 #include once "util-str.bi"
 
 using tktokens
@@ -90,7 +89,7 @@ sub ArgLexer.readArg(byval t as integer)
 		end if
 	end select
 
-	tkInsert(x, t, ptext)
+	tk->insert(x, t, ptext)
 	setLocation()
 end sub
 
@@ -105,8 +104,9 @@ end sub
 ''   * "..." allows \" and \\ escape sequences
 ''   * #comments
 ''
-function lexLoadArgs(byval x as integer, byval args as zstring ptr, byref source as SourceInfo) as integer
+function lexLoadArgs(byref tk as TokenBuffer, byval x as integer, byval args as zstring ptr, byref source as SourceInfo) as integer
 	dim lex as ArgLexer
+	lex.tk = @tk
 	lex.x = x
 	lex.location.source = @source
 	lex.location.linenum = 1

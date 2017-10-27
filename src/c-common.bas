@@ -1,5 +1,4 @@
 #include once "c-common.bi"
-#include once "tk.bi"
 #include once "chars.bi"
 
 using tktokens
@@ -31,14 +30,15 @@ using tktokens
 ''
 function hNumberLiteral _
 	( _
+		byref tk as TokenBuffer, _
 		byval x as integer, _
 		byval is_cpp as integer, _
 		byref errmsg as string, _
 		byval clong32 as integer _
 	) as AstNode ptr
 
-	assert(tkGet(x) = TK_NUMBER)
-	dim as ubyte ptr p = tkGetText(x)
+	assert(tk.get(x) = TK_NUMBER)
+	dim as ubyte ptr p = tk.getText(x)
 
 	var numbase = 10
 	var is_float = FALSE
@@ -290,14 +290,15 @@ end function
 '' String literals can contain escape sequences
 function hStringLiteral _
 	( _
+		byref tk as TokenBuffer, _
 		byval x as integer, _
 		byval eval_escapes as integer, _
 		byref errmsg as string _
 	) as AstNode ptr
 
-	assert((tkGet(x) = TK_STRING) or (tkGet(x) = TK_WSTRING) or _
-	       (tkGet(x) = TK_CHAR  ) or (tkGet(x) = TK_WCHAR  ))
-	dim as ubyte ptr p = tkGetText(x)
+	assert((tk.get(x) = TK_STRING) or (tk.get(x) = TK_WSTRING) or _
+	       (tk.get(x) = TK_CHAR  ) or (tk.get(x) = TK_WCHAR  ))
+	dim as ubyte ptr p = tk.getText(x)
 
 	var dtype = TYPE_ZSTRING
 	if p[0] = CH_L then
@@ -398,11 +399,11 @@ end function
 ''    | Identifier '...'   (named + variadic)
 ''    | '...'              (variadic, using __VA_ARGS__)
 '' ('...' can only appear on the last parameter)
-private sub hMacroParam(byref x as integer, byval macro as AstNode ptr)
+private sub hMacroParam(byref tk as TokenBuffer, byref x as integer, byval macro as AstNode ptr)
 	'' Identifier?
 	dim id as zstring ptr
-	if tkGet(x) >= TK_ID then
-		id = tkSpellId(x)
+	if tk.get(x) >= TK_ID then
+		id = tk.spellId(x)
 		x += 1
 	end if
 
@@ -411,7 +412,7 @@ private sub hMacroParam(byref x as integer, byval macro as AstNode ptr)
 	var maybevariadic = 0
 
 	'' '...'?
-	if tkGet(x) = TK_ELLIPSIS then
+	if tk.get(x) = TK_ELLIPSIS then
 		x += 1
 		maybevariadic = ASTATTRIB_VARIADIC
 		if id = NULL then
@@ -424,7 +425,7 @@ private sub hMacroParam(byref x as integer, byval macro as AstNode ptr)
 			id = @"__VA_ARGS__"
 		end if
 	elseif id = NULL then
-		tkOopsExpected(x, "macro parameter (identifier or '...')")
+		tk.oopsExpected(x, "macro parameter (identifier or '...')")
 	end if
 
 	var param = astNew(ASTKIND_MACROPARAM, id)
@@ -435,23 +436,23 @@ private sub hMacroParam(byref x as integer, byval macro as AstNode ptr)
 end sub
 
 '' <no whitespace> '(' MacroParameters ')'
-private sub hMacroParamList(byref x as integer, byval macro as AstNode ptr)
+private sub hMacroParamList(byref tk as TokenBuffer, byref x as integer, byval macro as AstNode ptr)
 	assert(macro->paramcount = -1)
 
 	'' '(' directly behind #define identifier, no spaces in between?
-	if (tkGet(x) = TK_LPAREN) and ((tkGetFlags(x) and TKFLAG_BEHINDSPACE) = 0) then
+	if (tk.get(x) = TK_LPAREN) and ((tk.getFlags(x) and TKFLAG_BEHINDSPACE) = 0) then
 		x += 1
 
 		macro->paramcount = 0
 
 		'' Not just '()'?
-		if tkGet(x) <> TK_RPAREN then
+		if tk.get(x) <> TK_RPAREN then
 			'' MacroParam (',' MacroParam)*
 			do
-				hMacroParam(x, macro)
+				hMacroParam(tk, x, macro)
 
 				'' ','?
-				if tkGet(x) <> TK_COMMA then
+				if tk.get(x) <> TK_COMMA then
 					exit do
 				end if
 				x += 1
@@ -459,23 +460,23 @@ private sub hMacroParamList(byref x as integer, byval macro as AstNode ptr)
 		end if
 
 		'' ')'?
-		tkExpect(x, TK_RPAREN, "to close the parameter list in this macro declaration")
+		tk.expect(x, TK_RPAREN, "to close the parameter list in this macro declaration")
 		x += 1
 	end if
 end sub
 
-function hDefineHead(byref x as integer) as AstNode ptr
+function hDefineHead(byref tk as TokenBuffer, byref x as integer) as AstNode ptr
 	'' Identifier? (keywords should be allowed to, so anything >= TK_ID)
-	select case tkGet(x)
+	select case tk.get(x)
 	case is < TK_ID
-		tkExpect(x, TK_ID, "behind #define")
+		tk.expect(x, TK_ID, "behind #define")
 	case KW_DEFINED
-		tkOops(x, "'defined' cannot be used as macro name")
+		tk.showErrorAndAbort(x, "'defined' cannot be used as macro name")
 	end select
-	var macro = astNewPPDEFINE(tkSpellId(x))
+	var macro = astNewPPDEFINE(tk.spellId(x))
 	x += 1
 
-	hMacroParamList(x, macro)
+	hMacroParamList(tk, x, macro)
 
 	function = macro
 end function
