@@ -247,7 +247,7 @@ type AstNode
 
 	'' Identifiers/string literals, or NULL
 	text   as zstring ptr '' Symbol name (original or renamed)
-	alias  as zstring ptr '' External name (if symbol was renamed, or if given via asm() in C code, etc.)
+	alias_ as zstring ptr '' External name (if symbol was renamed, or if given via asm() in C code, etc.)
 	origid as zstring ptr '' Original name (if symbol was renamed)
 
 	'' Examples for symbol identifiers:

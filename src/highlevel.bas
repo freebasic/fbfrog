@@ -2121,7 +2121,7 @@ private sub copyAttribsTypeEtcAndChooseAlias(byval n as AstNode ptr, byval decl 
 	astSetType(n, decl->dtype, decl->subtype)
 	n->array = astClone(decl->array)
 	astAppend(n, astCloneChildren(decl))
-	astSetAlias(n, iif(decl->alias, decl->alias, decl->text))
+	astSetAlias(n, iif(decl->alias_, decl->alias_, decl->text))
 end sub
 
 private sub astDropExpr(byval n as AstNode ptr)
@@ -3049,7 +3049,7 @@ sub hlGlobal(byval ast as AstNode ptr, byref api as ApiInfo)
 	if api.moveaboveoptions then
 		var i = api.moveaboveoptions->head
 		while i
-			hlApplyMoveOption(ast, *i->text, *i->alias)
+			hlApplyMoveOption(ast, *i->text, *i->alias_)
 			i = i->nxt
 		wend
 	end if

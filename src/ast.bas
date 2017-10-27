@@ -411,7 +411,7 @@ sub astDelete(byval n as AstNode ptr)
 	if n = NULL then exit sub
 
 	deallocate(n->text)
-	deallocate(n->alias)
+	deallocate(n->alias_)
 	deallocate(n->origid)
 	astDelete(n->subtype)
 	astDelete(n->array)
@@ -550,15 +550,15 @@ sub astSetText(byval n as AstNode ptr, byval text as zstring ptr)
 end sub
 
 sub astSetAlias(byval n as AstNode ptr, byval alias_ as zstring ptr)
-	deallocate(n->alias)
-	n->alias = strDuplicate(alias_)
+	deallocate(n->alias_)
+	n->alias_ = strDuplicate(alias_)
 end sub
 
 sub astRenameSymbol(byval n as AstNode ptr, byval newid as zstring ptr)
 	if n->origid = NULL then
 		n->origid = n->text
-		if n->alias = NULL then
-			n->alias = strDuplicate(n->origid)
+		if n->alias_ = NULL then
+			n->alias_ = strDuplicate(n->origid)
 		end if
 	else
 		deallocate(n->text)
@@ -567,8 +567,8 @@ sub astRenameSymbol(byval n as AstNode ptr, byval newid as zstring ptr)
 end sub
 
 sub astRenameSymbolWithoutSettingOrigId(byval n as AstNode ptr, byval newid as zstring ptr)
-	if n->alias = NULL then
-		n->alias = strDuplicate(n->text)
+	if n->alias_ = NULL then
+		n->alias_ = strDuplicate(n->text)
 	else
 		deallocate(n->text)
 	end if
@@ -576,8 +576,8 @@ sub astRenameSymbolWithoutSettingOrigId(byval n as AstNode ptr, byval newid as z
 end sub
 
 sub astTakeAliasFromId(byval dst as AstNode ptr, byval src as AstNode ptr)
-	if dst->alias then deallocate(dst->alias)
-	dst->alias = src->text
+	if dst->alias_ then deallocate(dst->alias_)
+	dst->alias_ = src->text
 	src->text = NULL
 end sub
 
@@ -588,9 +588,9 @@ sub astTakeOrigId(byval dst as AstNode ptr, byval src as AstNode ptr)
 end sub
 
 sub astTakeAliasAndOrigId(byval dst as AstNode ptr, byval src as AstNode ptr)
-	if dst->alias then deallocate(dst->alias)
-	dst->alias = src->alias
-	src->alias = NULL
+	if dst->alias_ then deallocate(dst->alias_)
+	dst->alias_ = src->alias_
+	src->alias_ = NULL
 	astTakeOrigId(dst, src)
 end sub
 
@@ -612,7 +612,7 @@ function astCloneNode(byval n as AstNode ptr) as AstNode ptr
 	var c = astNew(n->kind)
 	c->attrib      = n->attrib
 	c->text        = strDuplicate(n->text)
-	c->alias       = strDuplicate(n->alias)
+	c->alias_       = strDuplicate(n->alias_)
 	c->origid      = strDuplicate(n->origid)
 	c->dtype       = n->dtype
 	c->subtype     = astClone(n->subtype)
@@ -782,8 +782,8 @@ function astIsEqual _
 	if (a->text <> NULL) <> (b->text <> NULL) then exit function
 	if a->text then if *a->text <> *b->text then exit function
 
-	if (a->alias <> NULL) <> (b->alias <> NULL) then exit function
-	if a->alias then if *a->alias <> *b->alias then exit function
+	if (a->alias_ <> NULL) <> (b->alias_ <> NULL) then exit function
+	if a->alias_ then if *a->alias_ <> *b->alias_ then exit function
 
 	if a->dtype <> b->dtype then exit function
 	if astIsEqual(a->subtype, b->subtype, is_merge) = FALSE then exit function
@@ -958,8 +958,8 @@ function astDumpPrettyDecl(byval n as AstNode ptr, byval show_type as integer) a
 		s += " " + strMakePrintable(*n->text)
 	end if
 
-	if n->alias then
-		s += " alias """ + strMakePrintable(*n->alias) + """"
+	if n->alias_ then
+		s += " alias """ + strMakePrintable(*n->alias_) + """"
 	end if
 
 	if n->kind = ASTKIND_PROC then
@@ -1026,8 +1026,8 @@ function astDumpOne(byval n as AstNode ptr) as string
 	if n->text then
 		s += " """ + strMakePrintable(*n->text) + """"
 	end if
-	if n->alias then
-		s += " alias """ + strMakePrintable(*n->alias) + """"
+	if n->alias_ then
+		s += " alias """ + strMakePrintable(*n->alias_) + """"
 	end if
 	if n->origid then
 		s += " origid """ + strMakePrintable(*n->origid) + """"

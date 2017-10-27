@@ -303,11 +303,11 @@ end sub
 '' case-preserving aliases, but symbols can still have an explicit alias set due
 '' to symbol renaming.
 sub CodeGen.emitAlias(byval n as AstNode ptr)
-	if n->alias then
+	if n->alias_ then
 		add(TK_SPACE)
 		add(KW_ALIAS)
 		add(TK_SPACE)
-		add(TK_STRLIT, """" + *n->alias + """")
+		add(TK_STRLIT, """" + *n->alias_ + """")
 	end if
 end sub
 

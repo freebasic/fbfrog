@@ -109,7 +109,7 @@ sub ApiInfo.loadOptions()
 	var i = script->head
 	while i
 		assert(i->kind = ASTKIND_OPTION)
-		loadOption(i->opt, i->text, i->alias)
+		loadOption(i->opt, i->text, i->alias_)
 		i = i->nxt
 	wend
 end sub

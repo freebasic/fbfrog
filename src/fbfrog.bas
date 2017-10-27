@@ -1074,7 +1074,7 @@ private function frogParse(byref api as ApiInfo) as AstNode ptr
 			assert(i->kind = ASTKIND_OPTION)
 			select case i->opt
 			case OPT_DEFINE
-				cppAddPredefine(i->text, i->alias)
+				cppAddPredefine(i->text, i->alias_)
 			case OPT_INCDIR
 				cppAddIncDir(i->text)
 			end select
