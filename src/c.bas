@@ -119,9 +119,6 @@ namespace c
 	end type
 	dim shared defbodies as DEFBODYNODE ptr
 	dim shared as integer defbodycount, defbodyroom
-
-	'' Used by hUpdateTypeNameReferences
-	dim shared as string oldid, newid
 end namespace
 
 private function cMatch(byval tk as integer) as integer
@@ -2272,11 +2269,16 @@ private function cDataType() as AstNode ptr
 	function = cDeclarator(0, ASTKIND_DATATYPE, dtype, subtype, gccattribs, NULL, 0, 0)
 end function
 
-private function hUpdateTypeNameReferences(byval n as AstNode ptr) as integer
-	if typeGetDt(n->dtype) = TYPE_UDT then
-		assert(astIsTEXT(n->subtype))
-		if *n->subtype->text = c.oldid then
-			astSetText(n->subtype, c.newid)
+type TypeNameRefUpdater extends AstVisitor
+	as string oldid, newid
+	declare function visit(byref n as AstNode) as integer override
+end type
+
+function TypeNameRefUpdater.visit(byref n as AstNode) as integer
+	if typeGetDt(n.dtype) = TYPE_UDT then
+		assert(astIsTEXT(n.subtype))
+		if *n.subtype->text = oldid then
+			astSetText(n.subtype, newid)
 		end if
 	end if
 	function = TRUE
@@ -2303,10 +2305,11 @@ private sub hUnscopeNestedNamedUdts(byval result as AstNode ptr, byval udt as As
 					'' prepend the parent UDT name as "namespace".
 					'' All references to the old name must be updated.
 					if i->attrib and ASTATTRIB_GENERATEDID then
-						c.oldid = *i->text
-						c.newid = *udt->text + "_" + *i->text
-						astVisit(udt, @hUpdateTypeNameReferences)
-						astSetText(i, c.newid)
+						dim updater as TypeNameRefUpdater
+						updater.oldid = *i->text
+						updater.newid = *udt->text + "_" + *i->text
+						udt->visit(updater)
+						astSetText(i, updater.newid)
 					end if
 				end if
 
