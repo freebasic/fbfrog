@@ -239,9 +239,17 @@ const ASTATTRIB_STRING        = 1 shl 21 '' same for -string
 
 const ASTATTRIB__CALLCONV = ASTATTRIB_CDECL or ASTATTRIB_STDCALL
 
+type AstNode as AstNode_
+
+type AstVisitor extends object
+	'' result = boolean = whether to visit this node's children
+	'' (can be used to skip #define bodies, etc.)
+	declare abstract function visit(byref as AstNode) as integer
+end type
+
 '' When changing, adjust astClone(), astIsEqual(), astDump*()
 '' TODO: pack
-type AstNode
+type AstNode_
 	kind		as integer  '' ASTKIND_*
 	attrib		as integer  '' ASTATTRIB_*
 
@@ -277,6 +285,8 @@ type AstNode
 
 	'' Linked list of child nodes, operands/fields/parameters/...
 	as AstNode ptr head, tail, nxt, prev
+
+	declare sub visit(byref visitor as AstVisitor)
 end type
 
 '' result = boolean = whether to visit this node's children

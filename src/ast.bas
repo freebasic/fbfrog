@@ -915,6 +915,23 @@ sub astVisit(byval n as AstNode ptr, byval callback as ASTVISITCALLBACK)
 	wend
 end sub
 
+sub AstNode.visit(byref visitor as AstVisitor)
+	if not visitor.visit(this) then
+		exit sub
+	end if
+
+	if subtype then subtype->visit(visitor)
+	if array   then   array->visit(visitor)
+	if bits    then    bits->visit(visitor)
+	if expr    then    expr->visit(visitor)
+
+	var i = head
+	while i
+		i->visit(visitor)
+		i = i->nxt
+	wend
+end sub
+
 function astCount(byval n as AstNode ptr) as integer
 	var count = 1
 
