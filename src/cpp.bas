@@ -34,7 +34,11 @@
 '' #include content will be kept instead.
 ''
 
+#include once "cpp.bi"
+#include once "lex.bi"
 #include once "fbfrog.bi"
+#include once "util-path.bi"
+
 #include once "crt.bi"
 #include once "file.bi"
 

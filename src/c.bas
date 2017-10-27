@@ -52,8 +52,10 @@
 '' UDT must be extracted, otherwise it would have to be duplicated too.
 ''
 
-#include once "fbfrog.bi"
+#include once "c.bi"
+#include once "cpp.bi"
 #include once "emit.bi"
+#include once "fbfrog.bi"
 
 using tktokens
 

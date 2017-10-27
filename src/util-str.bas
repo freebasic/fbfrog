@@ -1,4 +1,5 @@
-#include once "fbfrog.bi"
+#include once "util-str.bi"
+#include once "lex.bi"
 #include once "crt.bi"
 
 function hTrim(byref s as string) as string

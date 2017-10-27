@@ -1,6 +1,6 @@
 '' Path/file name handling functions
 
-#include once "fbfrog.bi"
+#include once "util-path.bi"
 #include once "dir.bi"
 
 '' Searches backwards for the last '.' while still behind '/' or '\'.

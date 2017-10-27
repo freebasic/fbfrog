@@ -16,6 +16,8 @@
 ''    etc.
 ''
 
+#include once "ast-merge.bi"
+#include once "util-hash.bi"
 #include once "fbfrog.bi"
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''

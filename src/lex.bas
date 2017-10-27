@@ -2,7 +2,11 @@
 '' C source code lexer, command line argument lexer
 ''
 
-#include once "fbfrog.bi"
+#include once "lex.bi"
+
+#include once "tk.bi"
+#include once "util-hash.bi"
+#include once "util-str.bi"
 
 using tktokens
 

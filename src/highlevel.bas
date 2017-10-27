@@ -1,7 +1,10 @@
 '' Higher level code transformations
 
-#include once "fbfrog.bi"
+#include once "highlevel.bi"
+
 #include once "emit.bi"
+#include once "util-path.bi"
+
 #include once "crt.bi"
 
 declare sub expandTypedef(byval typedef as ASTNODE ptr, byval n as ASTNODE ptr)

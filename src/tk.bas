@@ -8,7 +8,9 @@
 '' into the token buffer - it's only valid until the next insertion/deletion.
 ''
 
-#include once "fbfrog.bi"
+#include once "tk.bi"
+#include once "util-str.bi"
+
 #include once "crt.bi"
 
 using tktokens

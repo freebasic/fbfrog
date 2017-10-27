@@ -33,28 +33,17 @@
 ''
 
 #include once "fbfrog.bi"
+
+#include once "ast-merge.bi"
+#include once "c.bi"
+#include once "cpp.bi"
 #include once "emit.bi"
+#include once "lex.bi"
+#include once "util-path.bi"
+
 #include once "file.bi"
 
 using tktokens
-
-type BIFILE
-	filename	as zstring ptr
-	header as HeaderInfo
-
-	'' command line options specific to this .bi (e.g. -inclib) from the current API
-	options as ApiSpecificBiOptions
-
-	'' Used to hold the .bi file-specific tree for the current API, after
-	'' that API was parsed and its big AST was split up. Reset to NULL after
-	'' being merged into "final".
-	incoming	as ASTNODE ptr
-
-	'' Holds/accumulates the merged AST for this .bi file, containing all
-	'' APIs. The "incoming" trees are merged into this one after another
-	'' until all APIs were processed.
-	final		as ASTNODE ptr
-end type
 
 namespace frog
 	dim shared as integer verbose
@@ -136,7 +125,7 @@ private sub frogAddPattern(byref pattern as string, byval bi as integer)
 	end with
 end sub
 
-private function frogLookupBiFromBi(byref filename as string) as integer
+function frogLookupBiFromBi(byref filename as string) as integer
 	var ucasefilename = ucase(filename, 1)
 	var ucasehash = hashHash(ucasefilename)
 	var item = frog.ucasebihash.lookup(ucasefilename, ucasehash)
@@ -239,273 +228,6 @@ private sub hPrintHelpAndExit()
 	print "Please check the documentation for the full list of options."
 	end 1
 end sub
-
-''
-'' Read "replacement" files
-''
-'' Format for one replacement entry:
-''    convert c: <C code>
-''    to c: <C code>
-'' or:
-''    convert c: <C code>
-''    to fb: <FB code>
-''
-'' Code can be given either in a single line behind the keywords, or in a
-'' multi-line block below the keyword:
-''    <keyword>:
-''        <multi-line code>
-''
-'' # for comments
-''
-'' Smart indentation handling for multi-line code snippets: The indentation in
-'' the first line specifies the indentation in the replacements file. Any
-'' additional whitespace is preserved as-is as part of the code snippets.
-'' (doesn't matter for the C code though because they'll be lexed, which drops
-'' whitespace anyways)
-''
-'' TODO: auto-generate empty replacement files: add a "convert:" line for all
-'' TODOs, leave the "to:" empty
-''
-type ReplacementsParser
-	as integer f, linenum, reachedeof
-	as string filename, ln
-
-	const ConvertKeyword = "convert c:"
-	const ToCKeyword = "to c:"
-	const ToFbKeyword = "to fb:"
-
-	declare constructor(byref filename as string)
-	declare destructor()
-	declare sub nextLine()
-	declare sub parseOops(byref message as string)
-	declare function parseCode(byref keyword as string) as string
-	declare sub parse(byref api as ApiInfo)
-end type
-
-constructor ReplacementsParser(byref filename as string)
-	this.filename = filename
-	f = freefile()
-	if open(filename, for input, as #f) <> 0 then
-		oops("couldn't open file '" + filename + "'")
-	end if
-end constructor
-
-destructor ReplacementsParser()
-	close #f
-end destructor
-
-sub ReplacementsParser.nextLine()
-	do
-		if reachedeof then
-			ln = "<EOF>"
-			exit do
-		end if
-
-		linenum += 1
-		line input #f, ln
-
-		'' Neither empty line, nor a comment?
-		if len(ln) > 0 then
-			if ln[0] <> CH_HASH then
-				exit do
-			end if
-		end if
-
-		reachedeof = eof(f)
-	loop
-end sub
-
-sub ReplacementsParser.parseOops(byref message as string)
-	print filename + "(" & linenum & "): error: " + message + ":"
-	print "    " + ln
-	end 1
-end sub
-
-function ReplacementsParser.parseCode(byref keyword as string) as string
-	'' Any code behind the keyword?
-	var code = hTrim(right(ln, len(ln) - len(keyword)))
-	nextLine()
-	if len(code) > 0 then
-		return code
-	end if
-
-	'' Any indentation in the first line of the FB code block is treated as part
-	'' of the replacements file, not the FB code block.
-	''  * the first line must have some indentation
-	''  * all lines of an FB code block must have at least the same indentation
-	''    as the first line
-	var trimmedln = hLTrim(ln)
-	code += trimmedln
-	var indentation = left(ln, len(ln) - len(trimmedln))
-	assert(indentation + trimmedln = ln)
-	if len(indentation) = 0 then
-		parseOops("missing indentation in code block")
-	end if
-	nextLine()
-
-	do
-		'' Treat all following indented lines as part of the code block
-		if (len(ln) = 0) orelse ((ln[0] <> CH_SPACE) and (ln[0] <> CH_TAB)) then
-			exit do
-		end if
-
-		if left(ln, len(indentation)) <> indentation then
-			parseOops("indentation here doesn't match the first line of this code block")
-		end if
-		code += !"\n" + right(ln, len(ln) - len(indentation))
-		nextLine()
-	loop until reachedeof
-
-	function = code
-end function
-
-sub ReplacementsParser.parse(byref api as ApiInfo)
-	nextLine()
-
-	while reachedeof = FALSE
-		'' Read convert/to line pair
-
-		'' "convert" line
-		if strStartsWith(ln, ConvertKeyword) = FALSE then
-			parseOops("expected '" + ConvertKeyword + "' line, but found something else")
-		end if
-		var fromcode = parseCode(ConvertKeyword)
-
-		'' "to" line
-		dim tocode as string
-		dim tofb as integer
-		if strStartsWith(ln, ToCKeyword) then
-			tocode = parseCode(ToCKeyword)
-		elseif strStartsWith(ln, ToFbKeyword) then
-			tocode = parseCode(ToFbKeyword)
-			tofb = TRUE
-		else
-			parseOops("expected line to start with '" + ToCKeyword + "' or '" + ToFbKeyword + "', but found something else")
-		end if
-
-		api.addReplacement(fromcode, tocode, tofb)
-	wend
-end sub
-
-constructor ApiInfo()
-	for i as integer = lbound(renameopt) to ubound(renameopt)
-		renameopt(i).constructor(3, FALSE)
-	next
-	log = astNewGROUP()
-end constructor
-
-destructor ApiInfo()
-	for i as integer = 0 to replacementcount - 1
-		deallocate(replacements[i].fromcode)
-		deallocate(replacements[i].tocode)
-	next
-	deallocate(replacements)
-	astDelete(log)
-end destructor
-
-sub ApiInfo.addReplacement(byval fromcode as zstring ptr, byval tocode as zstring ptr, byval tofb as integer)
-	var i = replacementcount
-	replacementcount += 1
-	replacements = reallocate(replacements, replacementcount * sizeof(*replacements))
-	clear(replacements[i], 0, sizeof(*replacements))
-	with replacements[i]
-		.fromcode = strDuplicate(fromcode)
-		.tocode = strDuplicate(tocode)
-		.tofb = tofb
-	end with
-end sub
-
-sub ApiInfo.loadOption(byval opt as integer, byval param1 as zstring ptr, byval param2 as zstring ptr)
-	select case as const opt
-	case OPT_WINDOWSMS        : windowsms        = TRUE
-	case OPT_CLONG32          : clong32          = TRUE
-	case OPT_FIXUNSIZEDARRAYS : fixunsizedarrays = TRUE
-	case OPT_NOFUNCTIONBODIES : nofunctionbodies = TRUE
-	case OPT_DROPMACROBODYSCOPES : dropmacrobodyscopes = TRUE
-	case OPT_REMOVEEMPTYRESERVEDDEFINES : removeEmptyReservedDefines = TRUE
-
-	case OPT_RENAMETYPEDEF, OPT_RENAMETAG, OPT_RENAMEPROC, _
-	     OPT_RENAMEDEFINE, OPT_RENAMEMACROPARAM, OPT_RENAME
-		renameopt(opt).addOverwrite(param1, param2)
-		have_renames = TRUE
-
-	case OPT_RENAME_, OPT_REMOVE, OPT_REMOVEDEFINE, OPT_REMOVEPROC, OPT_REMOVEVAR, OPT_REMOVE1ST, OPT_REMOVE2ND, _
-	     OPT_DROPPROCBODY, OPT_TYPEDEFHINT, OPT_ADDFORWARDDECL, OPT_UNDEFBEFOREDECL, OPT_IFNDEFDECL, _
-	     OPT_CONVBODYTOKENS, OPT_FORCEFUNCTION2MACRO, OPT_EXPANDINDEFINE, OPT_NOEXPAND, OPT_EXPAND
-		if opt = OPT_RENAME_ then
-			have_renames = TRUE
-		end if
-		idopt(opt).addPattern(param1)
-
-	case OPT_NOSTRING, OPT_STRING
-		patterns(opt).parseAndAdd(*param1)
-
-	case OPT_REMOVEINCLUDE
-		removeinclude.addOverwrite(param1, NULL)
-
-	case OPT_SETARRAYSIZE
-		setarraysizeoptions.addOverwrite(param1, param2)
-
-	case OPT_MOVEABOVE
-		var n = astNewTEXT(param1)
-		astSetAlias(n, param2)
-		astBuildGroupAndAppend(moveaboveoptions, n)
-
-	case OPT_REPLACEMENTS
-		dim parser as ReplacementsParser = ReplacementsParser(*param1)
-		parser.parse(this)
-
-	'' Distribute .bi-file-specific options for this API to invidiual .bi files
-	case OPT_INCLIB, OPT_UNDEF, OPT_ADDINCLUDE
-		dim bi as integer
-		if param2 then
-			bi = frogLookupBiFromBi(*param2)
-			if bi < 0 then
-				oops("couldn't find destination .bi '" + *param2 + "', for '" + *tkInfoText(opt) + " " + *param1 + "'")
-			end if
-		else
-			'' No destination .bi file given for this -inclib/-undef option;
-			'' add it to the first .bi.
-			'' This allows the simple use case where there's just one output .bi,
-			'' and it's not necessary to specify a destination .bi for each option.
-			bi = 0
-		end if
-
-		assert((bi >= 0) and (bi < frog.bicount))
-		with frog.bis[bi]
-			select case opt
-			case OPT_INCLIB
-				astBuildGroupAndAppend(.options.inclibs, astNew(ASTCLASS_INCLIB, param1))
-			case OPT_UNDEF
-				astBuildGroupAndAppend(.options.undefs, astNew(ASTCLASS_UNDEF, param1))
-			case OPT_ADDINCLUDE
-				astBuildGroupAndAppend(.options.addincludes, astNew(ASTCLASS_PPINCLUDE, param1))
-			end select
-		end with
-	end select
-end sub
-
-sub ApiInfo.loadOptions()
-	var i = script->head
-	while i
-		assert(i->class = ASTCLASS_OPTION)
-		loadOption(i->opt, i->text, i->alias)
-		i = i->next
-	wend
-end sub
-
-sub ApiInfo.print(byref ln as string)
-	astAppend(log, astNewTEXT(ln))
-end sub
-
-function ApiInfo.prettyId() as string
-	var s = target.id()
-	var extras = astDumpPrettyVersion(verand)
-	if len(extras) > 0 then
-		s += " " + extras
-	end if
-	function = s
-end function
 
 private function hTurnArgsIntoString(byval argc as integer, byval argv as zstring ptr ptr) as string
 	dim s as string

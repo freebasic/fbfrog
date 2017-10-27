@@ -1,4 +1,5 @@
-#include once "fbfrog.bi"
+#include once "ast.bi"
+#include once "util-hash.bi"
 
 namespace emit
 

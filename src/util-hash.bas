@@ -14,7 +14,9 @@
 '' then never change them again until hashEnd() which frees them.
 ''
 
-#include once "fbfrog.bi"
+#include once "util-hash.bi"
+#include once "util-str.bi"
+
 #include once "crt/mem.bi"
 
 function hashHash(byval s as const zstring ptr) as ulong

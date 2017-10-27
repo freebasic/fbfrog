@@ -1,6 +1,9 @@
 '' FB code generation, from AST
 
 #include once "emit.bi"
+#include once "emit-fbkeywords.bi"
+#include once "lex.bi"
+#include once "fbfrog.bi"
 
 namespace emit
 
