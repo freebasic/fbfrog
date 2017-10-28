@@ -3,6 +3,10 @@
 
 using tktokens
 
+type IntTypeSuffixes
+	as integer have_u, have_l, have_ll
+end type
+
 ''
 '' Check whether the number literal token (TK_NUMBER) is a valid number literal,
 '' and build a CONSTI/CONSTF AstNode representing its value (the literal saved
@@ -28,23 +32,62 @@ using tktokens
 '' can decide whether it's an integer or float. This decides whether a leading
 '' zero indicates octal or not.
 ''
-function hNumberLiteral _
+type CNumLitParser
+private:
+	p as ubyte ptr '' null-terminated literal text
+	as integer is_cpp, clong32, is_float, have_nonoct_digit
+	as integer numbase
+	ast as AstNode ptr
+
+public:
+	errmsg as string
+
+	declare constructor _
+		( _
+			byval text as zstring ptr, _
+			byval is_cpp as integer, _
+			byval clong32 as integer _
+		)
+	declare destructor()
+	declare function takeAst() as AstNode ptr
+	declare sub parseNonDecimalPrefix()
+	declare sub parseBody()
+	declare sub parseExponent()
+	declare function parseFloatTypeSuffixes() as integer
+	declare function parseIntTypeSuffixes() as IntTypeSuffixes
+	declare function getIntNumLitType(byval suffixes as IntTypeSuffixes) as integer
+	declare sub parse()
+end type
+
+constructor CNumLitParser _
 	( _
-		byref tk as TokenBuffer, _
-		byval x as integer, _
+		byval text as zstring ptr, _
 		byval is_cpp as integer, _
-		byref errmsg as string, _
 		byval clong32 as integer _
-	) as AstNode ptr
+	)
 
-	assert(tk.get(x) = TK_NUMBER)
-	dim as ubyte ptr p = tk.getText(x)
+	p = text
+	this.is_cpp = is_cpp
+	this.clong32 = clong32
+	numbase = 10
+	is_float = FALSE
+	have_nonoct_digit = FALSE
 
-	var numbase = 10
-	var is_float = FALSE
-	var have_nonoct_digit = FALSE
+	parse()
 
-	'' Check for non-decimal prefixes:
+	p = NULL
+end constructor
+
+destructor CNumLitParser()
+	astDelete(ast)
+end destructor
+
+function CNumLitParser.takeAst() as AstNode ptr
+	function = ast
+	ast = NULL
+end function
+
+sub CNumLitParser.parseNonDecimalPrefix()
 	'' 0, 0x, 0X, 0b, 0B
 	if p[0] = CH_0 then '' 0
 		select case p[1]
@@ -59,10 +102,10 @@ function hNumberLiteral _
 			numbase = 8
 		end select
 	end if
+end sub
 
-	'' Body (integer part + fractional part, if any)
-	var begin = p
-
+'' Body (integer part + fractional part, if any)
+sub CNumLitParser.parseBody()
 	select case numbase
 	case 2
 		while (p[0] = CH_0) or (p[0] = CH_1)
@@ -98,7 +141,9 @@ function hNumberLiteral _
 			p += 1
 		loop
 	end select
+end sub
 
+sub CNumLitParser.parseExponent()
 	'' Exponent? (can be used even without fractional part, e.g. '1e1')
 	select case p[0]
 	case CH_E, CH_L_E   '' 'E', 'e'
@@ -116,6 +161,89 @@ function hNumberLiteral _
 			p += 1
 		wend
 	end select
+end sub
+
+function CNumLitParser.parseFloatTypeSuffixes() as integer
+	'' Float type suffixes
+	select case p[0]
+	case CH_F, CH_L_F    '' 'F' | 'f'
+		p += 1
+		return TYPE_SINGLE
+	case CH_D, CH_L_D    '' 'D' | 'd'
+		p += 1
+		return TYPE_DOUBLE
+	end select
+	return TYPE_NONE
+end function
+
+'' Integer type suffixes:
+''  l, ll, ul, ull, lu, llu
+'' MSVC-specific ones:
+''  [u]i{8|16|32|64}
+'' All letters can also be upper-case.
+function CNumLitParser.parseIntTypeSuffixes() as IntTypeSuffixes
+	dim suffixes as IntTypeSuffixes = (FALSE, FALSE, FALSE)
+
+	select case p[0]
+	case CH_U, CH_L_U       '' u
+		p += 1
+		suffixes.have_u = TRUE
+	end select
+
+	select case p[0]
+	case CH_L, CH_L_L       '' l, [u]l
+		p += 1
+		select case p[0]
+		case CH_L, CH_L_L       '' l, [u]ll
+			p += 1
+			suffixes.have_ll = TRUE
+		case else
+			suffixes.have_l = TRUE
+		end select
+
+		if suffixes.have_u = FALSE then
+			select case p[0]
+			case CH_U, CH_L_U       '' u, llu
+				p += 1
+				suffixes.have_u = TRUE
+			end select
+		end if
+
+	case CH_I, CH_L_I       '' i, [u]i
+		select case p[1]
+		case CH_8 : p += 2 '' i8
+		case CH_1 : if p[2] = CH_6 then : p += 3 : end if  '' i16
+		case CH_3 : if p[2] = CH_2 then : p += 3 : end if  '' i32
+		case CH_6 : if p[2] = CH_4 then : p += 3 : suffixes.have_ll = TRUE : end if  '' i64
+		end select
+	end select
+
+	return suffixes
+end function
+
+function CNumLitParser.getIntNumLitType(byval suffixes as IntTypeSuffixes) as integer
+	'' In CPP mode, all integer literals are 64bit, the 'l' suffix is ignored
+	if is_cpp then
+		return iif(suffixes.have_u, TYPE_ULONGINT, TYPE_LONGINT)
+	end if
+
+	'' In C mode, integer literals default to 'int', and suffixes are respected
+	if suffixes.have_ll then
+		return iif(suffixes.have_u, TYPE_ULONGINT, TYPE_LONGINT)
+	end if
+
+	if suffixes.have_l then
+		return typeGetCLong(suffixes.have_u, clong32)
+	end if
+
+	return iif(suffixes.have_u, TYPE_ULONG, TYPE_LONG)
+end function
+
+sub CNumLitParser.parse()
+	parseNonDecimalPrefix()
+	var begin = p
+	parseBody()
+	parseExponent()
 
 	'' Floats with leading zeroes are decimal, not octal.
 	if is_float and (numbase = 8) then
@@ -124,104 +252,54 @@ function hNumberLiteral _
 
 	if have_nonoct_digit and (numbase = 8) then
 		errmsg = "invalid digit in octal number literal"
-		exit function
+		return
 	end if
 
 	'' Save the number literal body (we don't want to include type suffixes here)
 	var old = p[0]
 	p[0] = 0  '' temporary null terminator
-	var n = astNew(ASTKIND_CONSTI, cptr(zstring ptr, begin))
+	ast = astNew(ASTKIND_CONSTI, cptr(zstring ptr, begin))
 	p[0] = old
 
-	'' Float type suffixes
-	select case p[0]
-	case CH_F, CH_L_F    '' 'F' | 'f'
-		p += 1
-		is_float = TRUE
-		n->dtype = TYPE_SINGLE
-	case CH_D, CH_L_D    '' 'D' | 'd'
-		p += 1
-		is_float = TRUE
-		n->dtype = TYPE_DOUBLE
-	end select
+	ast->dtype = parseFloatTypeSuffixes()
+	is_float or= (ast->dtype <> TYPE_NONE)
 
 	if is_float then
-		n->kind = ASTKIND_CONSTF
+		ast->kind = ASTKIND_CONSTF
 		'' No float type suffix? Then default to double.
-		if n->dtype = TYPE_NONE then
-			n->dtype = TYPE_DOUBLE
+		if ast->dtype = TYPE_NONE then
+			ast->dtype = TYPE_DOUBLE
 		end if
 	else
-		'' Integer type suffixes:
-		''  l, ll, ul, ull, lu, llu
-		'' MSVC-specific ones:
-		''  [u]i{8|16|32|64}
-		'' All letters can also be upper-case.
-		var have_u = FALSE
-		var have_l = FALSE
-		var have_ll = FALSE
-
-		select case p[0]
-		case CH_U, CH_L_U       '' u
-			p += 1
-			have_u = TRUE
-		end select
-
-		select case p[0]
-		case CH_L, CH_L_L       '' l, [u]l
-			p += 1
-			select case p[0]
-			case CH_L, CH_L_L       '' l, [u]ll
-				p += 1
-				have_ll = TRUE
-			case else
-				have_l = TRUE
-			end select
-
-			if have_u = FALSE then
-				select case p[0]
-				case CH_U, CH_L_U       '' u, llu
-					p += 1
-					have_u = TRUE
-				end select
-			end if
-
-		case CH_I, CH_L_I       '' i, [u]i
-			select case p[1]
-			case CH_8 : p += 2 '' i8
-			case CH_1 : if p[2] = CH_6 then : p += 3 : end if  '' i16
-			case CH_3 : if p[2] = CH_2 then : p += 3 : end if  '' i32
-			case CH_6 : if p[2] = CH_4 then : p += 3 : have_ll = TRUE : end if  '' i64
-			end select
-		end select
-
-		'' In CPP mode, all integer literals are 64bit, the 'l' suffix is ignored
-		if is_cpp then
-			n->dtype = iif(have_u, TYPE_ULONGINT, TYPE_LONGINT)
-		'' In C mode, integer literals default to 'int', and suffixes are respected
-		elseif have_ll then
-			n->dtype = iif(have_u, TYPE_ULONGINT, TYPE_LONGINT)
-		elseif have_l then
-			n->dtype = typeGetCLong(have_u, clong32)
-		else
-			n->dtype = iif(have_u, TYPE_ULONG, TYPE_LONG)
-		end if
-
+		var suffixes = parseIntTypeSuffixes()
+		ast->dtype = getIntNumLitType(suffixes)
 		select case numbase
-		case 16 : n->attrib or= ASTATTRIB_HEX
-		case  8 : n->attrib or= ASTATTRIB_OCT
-		case  2 : n->attrib or= ASTATTRIB_BIN
+		case 16 : ast->attrib or= ASTATTRIB_HEX
+		case  8 : ast->attrib or= ASTATTRIB_OCT
+		case  2 : ast->attrib or= ASTATTRIB_BIN
 		end select
 	end if
 
 	'' Show error if we didn't reach the end of the number literal
 	if p[0] <> 0 then
 		errmsg = "invalid suffix on number literal: '" + *cptr(zstring ptr, p) + "'"
-		astDelete(n)
-		exit function
 	end if
+end sub
 
-	function = n
+function hNumberLiteral _
+	( _
+		byref tk as TokenBuffer, _
+		byval x as integer, _
+		byval is_cpp as integer, _
+		byref errmsg as string, _
+		byval clong32 as integer _
+	) as AstNode ptr
+	dim parser as CNumLitParser = CNumLitParser(tk.getText(x), is_cpp, clong32)
+	if len(parser.errmsg) > 0 then
+		errmsg = parser.errmsg
+		return NULL
+	end if
+	return parser.takeAst()
 end function
 
 private function hReadEscapeSequence(byref p as ubyte ptr, byref errmsg as string) as ulongint
