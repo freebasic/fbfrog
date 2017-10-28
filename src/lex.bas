@@ -22,7 +22,7 @@ function LexContext.lookupKeyword(byval id as zstring ptr, byval defaulttk as in
 	end if
 end function
 
-sub LexContext.oops(byref message as string)
+sub LexContext.showErrorAndAbort(byref message as string)
 	oopsLocation(location, message)
 end sub
 

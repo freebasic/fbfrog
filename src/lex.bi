@@ -12,7 +12,7 @@ type LexContext
 	declare operator let(byref as const LexContext) '' unimplemented
 	declare sub initKeywords(byval first as integer, byval last as integer)
 	declare function lookupKeyword(byval id as zstring ptr, byval defaulttk as integer) as integer
-	declare sub oops(byref message as string)
+	declare sub showErrorAndAbort(byref message as string)
 	declare sub setLocation(byval flags as integer = 0)
 	declare sub newLine()
 end type

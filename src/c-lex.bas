@@ -90,7 +90,7 @@ sub CLexer.skipComment()
 	do
 		select case i[0]
 		case 0
-			oops("comment left open")
+			showErrorAndAbort("comment left open")
 
 		case CH_STAR		'' *
 			if i[1] = CH_SLASH then	'' */
@@ -230,7 +230,7 @@ sub CLexer.readString()
 			exit do
 
 		case CH_LF, CH_CR, 0
-			oops("string/char literal left open")
+			showErrorAndAbort("string/char literal left open")
 
 		case CH_BACKSLASH	'' \
 			if skipEscapedEol() = FALSE then
@@ -254,7 +254,7 @@ sub CLexer.readString()
 		end select
 
 		if j > MAXTEXTLEN then
-			oops("string literal too long, MAXTEXTLEN=" & MAXTEXTLEN)
+			showErrorAndAbort("string literal too long, MAXTEXTLEN=" & MAXTEXTLEN)
 		end if
 	loop
 

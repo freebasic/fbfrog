@@ -50,7 +50,7 @@ sub ArgLexer.readArg(byval t as integer)
 					end if
 
 				case 0, CH_CR, CH_LF
-					oops("string literal left open")
+					showErrorAndAbort("string literal left open")
 
 				case else
 					text[j] = i[0] : j += 1
@@ -58,7 +58,7 @@ sub ArgLexer.readArg(byval t as integer)
 				end select
 
 				if j > MAXTEXTLEN then
-					oops("argument too long, MAXTEXTLEN=" & MAXTEXTLEN)
+					showErrorAndAbort("argument too long, MAXTEXTLEN=" & MAXTEXTLEN)
 				end if
 			loop
 
@@ -67,7 +67,7 @@ sub ArgLexer.readArg(byval t as integer)
 		end select
 
 		if j > MAXTEXTLEN then
-			oops("argument too long, MAXTEXTLEN=" & MAXTEXTLEN)
+			showErrorAndAbort("argument too long, MAXTEXTLEN=" & MAXTEXTLEN)
 		end if
 
 		i += 1
