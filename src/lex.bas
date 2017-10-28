@@ -1,7 +1,3 @@
-''
-'' C source code lexer, command line argument lexer
-''
-
 #include once "c-lex.bi"
 #include once "tk.bi"
 #include once "util-str.bi"
