@@ -2,8 +2,8 @@
 
 #include once "emit.bi"
 #include once "emit-fbkeywords.bi"
-#include once "lex.bi"
 #include once "fbfrog.bi"
+#include once "chars.bi"
 
 namespace emit
 

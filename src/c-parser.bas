@@ -52,8 +52,8 @@
 '' UDT must be extracted, otherwise it would have to be duplicated too.
 ''
 
-#include once "c.bi"
-#include once "cpp.bi"
+#include once "c-parser.bi"
+#include once "c-common.bi"
 #include once "emit.bi"
 #include once "fbfrog.bi"
 

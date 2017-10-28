@@ -35,10 +35,11 @@
 #include once "fbfrog.bi"
 
 #include once "ast-merge.bi"
-#include once "c.bi"
-#include once "cpp.bi"
+#include once "c-lex.bi"
+#include once "c-parser.bi"
+#include once "c-pp.bi"
 #include once "emit.bi"
-#include once "lex.bi"
+#include once "fbfrog-args-lex.bi"
 #include once "util-path.bi"
 
 #include once "file.bi"
