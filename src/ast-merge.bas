@@ -28,16 +28,20 @@ type DECLNODE
 	apis	as ApiBits      '' APIs bitmask of the declaration's parent VERBLOCK
 end type
 
-type DECLTABLE
+type DeclTable
 	array	as DECLNODE ptr
 	count	as integer
 	room	as integer
+	declare static function calcHash(byval n as AstNode ptr) as ulong
+	declare sub add(byval n as AstNode ptr, byval apis as ApiBits)
+	declare sub addAll(byval code as AstNode ptr)
+	declare destructor()
 end type
 
 '' AstNode kind and identifier are the 2 main points to quickly distinguish two declarations.
 '' Care must be taken though; callconv/ASTATTRIB_HIDECALLCONV flags shouldn't be calculated into
 '' the hash though because hAstLCS() and hFindCommonCallConvsOnMergedDecl() do custom handling for them...
-private function decltableHash(byval n as AstNode ptr) as ulong
+function DeclTable.calcHash(byval n as AstNode ptr) as ulong
 	dim as ulong hash = n->kind
 	if n->text then
 		hash or= hashHash(n->text) shl 8
@@ -45,26 +49,20 @@ private function decltableHash(byval n as AstNode ptr) as ulong
 	function = hash
 end function
 
-private sub decltableAdd(byval table as DECLTABLE ptr, byval n as AstNode ptr, byval apis as ApiBits)
-	if table->count = table->room then
-		table->room += 256
-		table->array = reallocate(table->array, table->room * sizeof(DECLNODE))
+sub DeclTable.add(byval n as AstNode ptr, byval apis as ApiBits)
+	if count = room then
+		room += 256
+		array = reallocate(array, room * sizeof(DECLNODE))
 	end if
-
-	with table->array[table->count]
+	with array[count]
 		.n = n
-		.hash = decltableHash(n)
+		.hash = calcHash(n)
 		.apis = apis
 	end with
-
-	table->count += 1
+	count += 1
 end sub
 
-private sub decltableInit(byval table as DECLTABLE ptr, byval code as AstNode ptr)
-	table->array = NULL
-	table->count = 0
-	table->room = 0
-
+sub DeclTable.addAll(byval code as AstNode ptr)
 	'' Add each declaration node from the AST to the table
 	'' For each VERBLOCK...
 	assert(code->kind = ASTKIND_GROUP)
@@ -75,7 +73,7 @@ private sub decltableInit(byval table as DECLTABLE ptr, byval code as AstNode pt
 		'' For each declaration in that VERBLOCK...
 		var decl = verblock->head
 		while decl
-			decltableAdd(table, decl, verblock->apis)
+			add(decl, verblock->apis)
 			decl = decl->nxt
 		wend
 
@@ -83,9 +81,9 @@ private sub decltableInit(byval table as DECLTABLE ptr, byval code as AstNode pt
 	wend
 end sub
 
-private sub decltableEnd(byval table as DECLTABLE ptr)
-	deallocate(table->array)
-end sub
+destructor DeclTable()
+	deallocate(array)
+end destructor
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
@@ -611,14 +609,14 @@ function astMergeVerblocks _
 	'' Create a lookup table for each side, so the LCS algorithm can do
 	'' index-based lookups in O(1) instead of having to cycle through the
 	'' whole list of preceding nodes everytime which was terribly slow.
-	dim atable as DECLTABLE
-	dim btable as DECLTABLE
+	dim atable as DeclTable
+	dim btable as DeclTable
 
-	decltableInit(@atable, a)
-	decltableInit(@btable, b)
+	atable.addAll(a)
+	btable.addAll(b)
 
 	''
-	'' decltableInit() precalculates hashes for A's and B's declarations.
+	'' DeclTable precalculates hashes for A's and B's declarations.
 	'' hAstLCS() can then quickly detect declarations that are different and
 	'' avoid the slow astIsEqual() in such cases.
 	''
@@ -648,9 +646,6 @@ function astMergeVerblocks _
 
 	hAstMerge(c, atable.array, 0, atable.count - 1, _
 	             btable.array, 0, btable.count - 1)
-
-	decltableEnd(@btable)
-	decltableEnd(@atable)
 
 	astDelete(a)
 	astDelete(b)
