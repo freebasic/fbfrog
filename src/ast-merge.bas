@@ -835,56 +835,73 @@ type CONDINFO
 	count		as integer	'' How often it was seen
 end type
 
-namespace condcounter
-	dim shared conds as CONDINFO ptr
-	dim shared condcount as integer
-end namespace
+type CondCounter
+	conds as CONDINFO ptr
+	condcount as integer
+	declare destructor()
+	declare function find(byval cond as AstNode ptr) as integer
+	declare sub add(byval cond as AstNode ptr)
+	declare sub count(byval cond as AstNode ptr)
+	declare sub findMaxCount(byref maxcount as integer, byref imaxcount as integer)
+	declare function findMostCommon() as AstNode ptr
+end type
 
-private sub condcounterCount(byval cond as AstNode ptr)
-	'' If this condition is already known, increase the count.
-	for i as integer = 0 to condcounter.condcount - 1
-		if astIsEqual(condcounter.conds[i].cond, cond) then
-			condcounter.conds[i].count += 1
-			exit sub
+destructor CondCounter()
+	deallocate(conds)
+end destructor
+
+function CondCounter.find(byval cond as AstNode ptr) as integer
+	for i as integer = 0 to condcount - 1
+		if astIsEqual(conds[i].cond, cond) then
+			return i
 		end if
 	next
+	return -1
+end function
 
-	'' Otherwise, register it as new.
-	var i = condcounter.condcount
-	condcounter.condcount += 1
-	condcounter.conds = reallocate(condcounter.conds, _
-			condcounter.condcount * sizeof(CONDINFO))
-	condcounter.conds[i].cond = cond
-	condcounter.conds[i].count = 1
+sub CondCounter.add(byval cond as AstNode ptr)
+	var i = condcount
+	condcount += 1
+	conds = reallocate(conds, condcount * sizeof(CONDINFO))
+	conds[i].cond = cond
+	conds[i].count = 1
 end sub
 
-private sub condcounterEnd()
-	deallocate(condcounter.conds)
-	condcounter.conds = NULL
-	condcounter.condcount = 0
-end sub
-
-private function condcounterFindMostCommon() as AstNode ptr
-	if condcounter.condcount = 0 then
-		return NULL
+sub CondCounter.count(byval cond as AstNode ptr)
+	var i = find(cond)
+	if i >= 0 then
+		conds[i].count += 1
+	else
+		add(cond)
 	end if
+end sub
 
-	var maxcount = 0
-	var imaxcount = -1
-	for i as integer = 0 to condcounter.condcount - 1
-		if maxcount < condcounter.conds[i].count then
-			maxcount = condcounter.conds[i].count
+sub CondCounter.findMaxCount(byref maxcount as integer, byref imaxcount as integer)
+	maxcount = 0
+	imaxcount = -1
+	for i as integer = 0 to condcount - 1
+		if maxcount < conds[i].count then
+			maxcount = conds[i].count
 			imaxcount = i
 		end if
 	next
-	assert((imaxcount >= 0) and (imaxcount < condcounter.condcount))
+end sub
 
-	'' No point extracting a condition that only appeared once
-	if condcounter.conds[imaxcount].count < 2 then
+function CondCounter.findMostCommon() as AstNode ptr
+	if condcount = 0 then
 		return NULL
 	end if
 
-	function = condcounter.conds[imaxcount].cond
+	dim as integer maxcount, imaxcount
+	findMaxCount(maxcount, imaxcount)
+	assert((imaxcount >= 0) and (imaxcount < condcount))
+
+	'' No point extracting a condition that only appeared once
+	if conds[imaxcount].count < 2 then
+		return NULL
+	end if
+
+	return conds[imaxcount].cond
 end function
 
 private function hDetermineMostCommonCondition(byval veror as AstNode ptr) as AstNode ptr
@@ -892,22 +909,21 @@ private function hDetermineMostCommonCondition(byval veror as AstNode ptr) as As
 
 	'' Build list of all conditions and count them. The one with the max
 	'' count is the most common.
+	dim counter as CondCounter
 
 	var verand = veror->head
 	while verand
 		if astIsVERAND(verand) then
 			var cond = verand->head
 			while cond
-				condcounterCount(cond)
+				counter.count(cond)
 				cond = cond->nxt
 			wend
 		end if
 		verand = verand->nxt
 	wend
 
-	function = condcounterFindMostCommon()
-
-	condcounterEnd()
+	return counter.findMostCommon()
 end function
 
 private function hIsCondition(byval n as AstNode ptr) as integer
