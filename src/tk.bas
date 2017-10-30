@@ -263,7 +263,7 @@ private function tkDumpBasic(byval id as integer, byval text as zstring ptr) as 
 	var s = "["
 	s += *tk_info(id).text
 	if text then
-		s += " """ + strMakePrintable(*text) + """"
+		s += " " + strMakePrintable(*text)
 	end if
 	s += "]"
 	function = s
