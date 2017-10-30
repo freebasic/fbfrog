@@ -557,6 +557,12 @@ private sub hParseArgs(byref tk as TokenBuffer, byref x as integer)
 				frogSetTargets(TRUE)
 				frog.arch(ARCH_ARM) = FALSE
 				frog.arch(ARCH_AARCH64) = FALSE
+			case "win32"
+				frog.os(OS_WINDOWS) = TRUE
+				frog.arch(ARCH_X86) = TRUE
+			case "win64"
+				frog.os(OS_WINDOWS) = TRUE
+				frog.arch(ARCH_X86_64) = TRUE
 			case else
 				'' Check for <os>-<arch>
 				dim archstr as string
