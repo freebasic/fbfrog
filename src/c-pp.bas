@@ -621,6 +621,18 @@ function CppContext.checkForMacroCall(byval y as integer) as DefineInfo ptr
 	function = definfo
 end function
 
+private function hSkipEols(byref tk as TokenBuffer, byval x as integer, byval delta as integer) as integer
+	while tk.get(x) = TK_EOL
+		x += delta
+	wend
+	function = x
+end function
+
+'' Set or unset the BEHINDSPACE flag of a token
+private sub hOverrideBehindspace(byref tk as TokenBuffer, byval x as integer, byval flag as integer)
+	tk.setFlags(x, (tk.getFlags(x) and (not TKFLAG_BEHINDSPACE)) or flag)
+end sub
+
 const MAXARGS = 128
 
 private sub hParseMacroCallArgs _
@@ -717,6 +729,30 @@ private sub hParseMacroCallArgs _
 		s &= argcount & " given, " & macro->paramcount & " needed"
 		tk.showErrorAndAbort(x, s)
 	end if
+
+	'' Cut EOL/space in front of and behind macro call args
+	for i as integer = 0 to argcount - 1
+		var begin_had_eol = (argbegin[i] = TK_EOL)
+		argbegin[i] = hSkipEols(tk, argbegin[i], 1)
+		argend[i] = hSkipEols(tk, argend[i], -1)
+		if argbegin[i] < argend[i] then
+			hOverrideBehindspace(tk, argbegin[i], 0)
+		end if
+	next
+
+	'' If arg contains EOL, mark following token as behindspace
+	'' (the whole macro arg is considered to be a single line, but we can't delete tokens from the
+	'' buffer here)
+	for i as integer = 0 to argcount - 1
+		for j as integer = argbegin[i] to argend[i]
+			if tk.get(j) = TK_EOL then
+				var k = j + 1
+				if k <= argend[i] then
+					tk.setFlags(k, tk.getFlags(k) or TKFLAG_BEHINDSPACE)
+				end if
+			end if
+		next
+	next
 end sub
 
 private function hParseMacroCall _
@@ -861,11 +897,6 @@ function CppContext.expandInRange _
 
 	function = last
 end function
-
-'' Set or unset the BEHINDSPACE flag of a token
-private sub hOverrideBehindspace(byref tk as TokenBuffer, byval x as integer, byval flag as integer)
-	tk.setFlags(x, (tk.getFlags(x) and (not TKFLAG_BEHINDSPACE)) or flag)
-end sub
 
 ''
 '' - Macro arguments must be inserted in place of macro parameters, and fully
@@ -1315,13 +1346,6 @@ sub CppContext.applyIf(byval condition as integer)
 	end if
 end sub
 
-private function hSkipEols(byref tk as TokenBuffer, byval x as integer) as integer
-	while tk.get(x) = TK_EOL
-		x += 1
-	wend
-	function = x
-end function
-
 function CppContext.parseIfExpr() as integer
 	'' Expand macros in the #if condition before parsing it
 	'' * but don't expand operands of the "defined" operator
@@ -1475,8 +1499,8 @@ sub CppContext.parseEndIf()
 	if isInsideFileLevelBlock() then
 		'' If we don't reach the #include EOF directly after the #endif,
 		'' then this can't be an #include guard
-		if tk->get(hSkipEols(*tk, x)) <> TK_ENDINCLUDE then
-			assert(tk->get(hSkipEols(*tk, x)) <> TK_EOF)
+		if tk->get(hSkipEols(*tk, x, 1)) <> TK_ENDINCLUDE then
+			assert(tk->get(hSkipEols(*tk, x, 1)) <> TK_EOF)
 			disableIncludeGuardOptimization()
 		end if
 	end if
@@ -1551,7 +1575,7 @@ end function
 private function hDetectIncludeGuardBegin(byref tk as TokenBuffer, byval first as integer) as zstring ptr
 	assert(tk.get(first - 1) = TK_EOL)
 
-	var x = hSkipEols(tk, first)
+	var x = hSkipEols(tk, first, 1)
 
 	if tk.get(x) <> TK_HASH then exit function
 	x += 1

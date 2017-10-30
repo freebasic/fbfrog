@@ -548,7 +548,6 @@ function TokenBuffer.spell(byval x as integer) as string
 	var text = getText(x)
 
 	select case as const id
-	case TK_EOL      : s = !"\n"
 	case TK_PPMERGE  : s = "##"
 	case TK_ARGSFILE : s = "@" + *text
 	case TK_STRING, TK_CHAR, TK_WSTRING, TK_WCHAR, TK_NUMBER, TK_ID
@@ -564,24 +563,22 @@ end function
 
 function TokenBuffer.spell(byval first as integer, byval last as integer) as string
 	dim as string s
-
 	for i as integer = first to last
-		if get(i) = TK_EOL then
-			assert(i = last)
-			exit for
-		end if
-
 		if i > first then
 			var add_space = ((getFlags(i) and TKFLAG_BEHINDSPACE) <> 0)
 			add_space or= (get(i - 1) >= TK_ID) and (get(i) >= TK_ID)
+			add_space and= not ((len(s) > 0) and (right(s, 1) = " "))
 			if add_space then
 				s += " "
 			end if
 		end if
-
-		s += spell(i)
+		if get(i) <> TK_EOL then
+			s += spell(i)
+		end if
 	next
-
+	if right(s, 1) = " " then
+		s = left(s, len(s) - 1)
+	end if
 	function = s
 end function
 
