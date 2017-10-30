@@ -1,0 +1,2 @@
+[ 1/23] linux-x86
+src/tk.bas(570): assertion failed at TOKENBUFFER.SPELL: i =last
