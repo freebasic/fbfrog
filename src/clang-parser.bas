@@ -218,6 +218,10 @@ private sub parseClangType(byval ty as CXType, byref dtype as integer, byref sub
 	case else
 		oops("unhandled clang type " + dumpClangType(ty))
 	end select
+
+	if clang_isConstQualifiedType(ty) then
+		dtype = typeSetIsConst(dtype)
+	end if
 end sub
 
 type TranslationUnitParser extends ClangAstVisitor
