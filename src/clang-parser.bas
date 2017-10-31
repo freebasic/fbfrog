@@ -212,6 +212,26 @@ private sub parseClangFunctionType(byval ty as CXType, byref dtype as integer, b
 	subtype = proc
 end sub
 
+type FieldCollector extends ClangAstVisitor
+	record as ASTNODE ptr
+	declare constructor(byval record as ASTNODE ptr)
+	declare operator let(byref as const FieldCollector) '' unimplemented
+	declare function visitor(byval cursor as CXCursor, byval parent as CXCursor) as CXChildVisitResult override
+end type
+
+constructor FieldCollector(byval record as ASTNODE ptr)
+	this.record = record
+end constructor
+
+function FieldCollector.visitor(byval cursor as CXCursor, byval parent as CXCursor) as CXChildVisitResult
+	if clang_getCursorKind(cursor) = CXCursor_FieldDecl then
+		var fld = astNew(ASTKIND_FIELD, wrapClangStr(clang_getCursorSpelling(cursor)))
+		parseClangType(clang_getCursorType(cursor), fld->dtype, fld->subtype)
+		astAppend(record, fld)
+	end if
+	return CXChildVisit_Continue
+end function
+
 private sub parseClangType(byval ty as CXType, byref dtype as integer, byref subtype as ASTNODE ptr)
 	'' TODO: check ABI to ensure it's correct
 	select case as const ty.kind
@@ -238,6 +258,16 @@ private sub parseClangType(byval ty as CXType, byref dtype as integer, byref sub
 		dim pointee_dtype as integer
 		parseClangType(clang_getPointeeType(ty), pointee_dtype, subtype)
 		dtype = typeAddrOf(pointee_dtype)
+
+	case CXType_Elaborated
+		dtype = TYPE_UDT
+		subtype = astNewTEXT(wrapClangStr(clang_getTypeSpelling(ty)))
+
+	case CXType_Record
+		var struct = astNew(ASTKIND_STRUCT, wrapClangStr(clang_getTypeSpelling(ty)))
+		FieldCollector(struct).visitChildrenOf(clang_getTypeDeclaration(ty))
+		dtype = TYPE_UDT
+		subtype = struct
 
 	case CXType_FunctionProto
 		parseClangFunctionType(ty, dtype, subtype)
@@ -328,6 +358,14 @@ function TranslationUnitParser.visitor(byval cursor as CXCursor, byval parent as
 		end if
 
 		ast.takeAppend(proc)
+
+	case CXCursor_StructDecl
+		dim dtype as integer
+		dim struct as ASTNODE ptr
+		parseClangType(clang_getCursorType(cursor), dtype, struct)
+		assert(dtype = TYPE_UDT)
+		astSetText(struct, wrapClangStr(clang_getCursorSpelling(cursor)))
+		ast.takeAppend(struct)
 
 	end select
 
