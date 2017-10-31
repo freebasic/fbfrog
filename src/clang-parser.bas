@@ -215,6 +215,29 @@ private sub parseClangType(byval ty as CXType, byref dtype as integer, byref sub
 		parseClangType(clang_getPointeeType(ty), pointee_dtype, subtype)
 		dtype = typeAddrOf(pointee_dtype)
 
+	case CXType_Unexposed
+		var resultty = clang_getResultType(ty)
+		if resultty.kind <> CXType_Invalid then
+			var proc = astNew(ASTKIND_PROC)
+			parseClangType(resultty, proc->dtype, proc->subtype)
+
+			var paramcount = clang_getNumArgTypes(ty)
+			for i as integer = 0 to paramcount - 1
+				var param = astNew(ASTKIND_PARAM)
+				parseClangType(clang_getArgType(ty, i), param->dtype, param->subtype)
+				astAppend(proc, param)
+			next
+
+			if clang_isFunctionTypeVariadic(ty) then
+				astAppend(proc, astNew(ASTKIND_PARAM))
+			end if
+
+			dtype = TYPE_PROC
+			subtype = proc
+		else
+			oops("unhandled clang type " + dumpClangType(ty))
+		end if
+
 	case else
 		oops("unhandled clang type " + dumpClangType(ty))
 	end select
@@ -223,6 +246,35 @@ private sub parseClangType(byval ty as CXType, byref dtype as integer, byref sub
 		dtype = typeSetIsConst(dtype)
 	end if
 end sub
+
+type ParamVisitor extends ClangAstVisitor
+	proc as ASTNODE ptr
+	param as ASTNODE ptr
+	declare constructor(byval proc as ASTNODE ptr)
+	declare operator let(byref as const ParamVisitor) '' unimplemented
+	declare function visitor(byval cursor as CXCursor, byval parent as CXCursor) as CXChildVisitResult override
+end type
+
+constructor ParamVisitor(byval proc as ASTNODE ptr)
+	this.proc = proc
+	this.param = proc->head
+end constructor
+
+function ParamVisitor.visitor(byval cursor as CXCursor, byval parent as CXCursor) as CXChildVisitResult
+	if clang_getCursorKind(cursor) = CXCursor_ParmDecl then
+		if param = NULL then
+			oops("found ParmDecl, but no param in the function's type")
+		end if
+		var spelling = clang_getCursorSpelling(cursor)
+		var id = clang_getCString(spelling)
+		if id[0] then
+			astSetText(param, id[0])
+		end if
+		clang_disposeString(spelling)
+		param = param->nxt
+	end if
+	return CXChildVisit_Continue
+end function
 
 type TranslationUnitParser extends ClangAstVisitor
 	ast as AstBuilder
@@ -236,6 +288,17 @@ function TranslationUnitParser.visitor(byval cursor as CXCursor, byval parent as
 	case CXCursor_VarDecl
 		var n = astNew(ASTKIND_VAR, wrapClangStr(clang_getCursorSpelling(cursor)))
 		parseClangType(clang_getCursorType(cursor), n->dtype, n->subtype)
+
+		'' FIXME: function pointer types don't save the names of their params, so we'd have to
+		'' parse the ParmDecls when they are there. However it's difficult because the ParmDecls
+		'' of function pointer and its result type are saved at the same level.
+		'' See AST dump of
+		''  static void (*(*(*PA)(int A1, int A2))(int B1, int B2))(int C1, int C2);
+		'if typeGetDtAndPtr(n->dtype) = TYPE_PROC then
+		'	dim v as ParamVisitor = ParamVisitor(n->subtype)
+		'	v.visitChildrenOf(cursor)
+		'end if
+
 		ast.takeAppend(n)
 	end select
 	return CXChildVisit_Continue
