@@ -191,42 +191,30 @@ end function
 private sub parseClangType(byval ty as CXType, byref dtype as integer, byref subtype as ASTNODE ptr)
 	'' TODO: check ABI to ensure it's correct
 	select case as const ty.kind
-	case CXType_Void
-		dtype = TYPE_ANY
-	case CXType_Bool
-		dtype = TYPE_BYTE
-	case CXType_Char_S
-		dtype = TYPE_BYTE
-	case CXType_Char_U
-		dtype = TYPE_UBYTE
-	case CXType_UChar
-		dtype = TYPE_UBYTE
-	case CXType_UShort
-		dtype = TYPE_USHORT
-	case CXType_UInt
-		dtype = TYPE_ULONG
-	case CXType_ULong
-		dtype = TYPE_CULONG
-	case CXType_ULongLong
-		dtype = TYPE_ULONGINT
-	case CXType_SChar
-		dtype = TYPE_BYTE
-	case CXType_WChar
-		dtype = TYPE_WCHAR_T
-	case CXType_Short
-		dtype = TYPE_SHORT
-	case CXType_Int
-		dtype = TYPE_LONG
-	case CXType_Long
-		dtype = TYPE_CLONG
-	case CXType_LongLong
-		dtype = TYPE_LONGINT
-	case CXType_Float
-		dtype = TYPE_SINGLE
-	case CXType_Double
-		dtype = TYPE_DOUBLE
-	case CXType_LongDouble
-		dtype = TYPE_CLONGDOUBLE
+	case CXType_Void       : dtype = TYPE_ANY
+	case CXType_Bool       : dtype = TYPE_BYTE
+	case CXType_Char_S     : dtype = TYPE_BYTE
+	case CXType_Char_U     : dtype = TYPE_UBYTE
+	case CXType_UChar      : dtype = TYPE_UBYTE
+	case CXType_UShort     : dtype = TYPE_USHORT
+	case CXType_UInt       : dtype = TYPE_ULONG
+	case CXType_ULong      : dtype = TYPE_CULONG
+	case CXType_ULongLong  : dtype = TYPE_ULONGINT
+	case CXType_SChar      : dtype = TYPE_BYTE
+	case CXType_WChar      : dtype = TYPE_WCHAR_T
+	case CXType_Short      : dtype = TYPE_SHORT
+	case CXType_Int        : dtype = TYPE_LONG
+	case CXType_Long       : dtype = TYPE_CLONG
+	case CXType_LongLong   : dtype = TYPE_LONGINT
+	case CXType_Float      : dtype = TYPE_SINGLE
+	case CXType_Double     : dtype = TYPE_DOUBLE
+	case CXType_LongDouble : dtype = TYPE_CLONGDOUBLE
+
+	case CXType_Pointer
+		dim pointee_dtype as integer
+		parseClangType(clang_getPointeeType(ty), pointee_dtype, subtype)
+		dtype = typeAddrOf(pointee_dtype)
+
 	case else
 		oops("unhandled clang type " + dumpClangType(ty))
 	end select
