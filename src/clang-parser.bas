@@ -109,6 +109,10 @@ private function dumpSourceLocation(byval location as CXSourceLocation) as strin
 	clang_disposeString(filename)
 end function
 
+private function dumpClangType(byval ty as CXType) as string
+	return ty.kind & ": " & wrapClangStr(clang_getTypeSpelling(ty))
+end function
+
 type ClangAstVisitor extends object
 	declare abstract function visitor(byval cursor as CXCursor, byval parent as CXCursor) as CXChildVisitResult
 	declare static function staticVisitor(byval cursor as CXCursor, byval parent as CXCursor, byval client_data as CXClientData) as CXChildVisitResult
@@ -127,6 +131,7 @@ end sub
 type ClangAstDumper extends ClangAstVisitor
 	nestinglevel as integer
 	declare function visitor(byval cursor as CXCursor, byval parent as CXCursor) as CXChildVisitResult override
+	declare function dumpOne(byval cursor as CXCursor) as string
 	declare sub dump(byval cursor as CXCursor)
 end type
 
@@ -135,13 +140,96 @@ function ClangAstDumper.visitor(byval cursor as CXCursor, byval parent as CXCurs
 	return CXChildVisit_Continue
 end function
 
-sub ClangAstDumper.dump(byval cursor as CXCursor)
-	var kind = clang_getCursorKind(cursor)
-	print space(nestinglevel * 3) + wrapClangStr(clang_getCursorKindSpelling(kind)) + " " + wrapClangStr(clang_getCursorSpelling(cursor))
+function ClangAstDumper.dumpOne(byval cursor as CXCursor) as string
+	var kind = wrapClangStr(clang_getCursorKindSpelling(clang_getCursorKind(cursor)))
+	var spelling = wrapClangStr(clang_getCursorSpelling(cursor))
+	var ty = clang_getCursorType(cursor)
+	return kind + " " + spelling + ": type[" & dumpClangType(ty) & "]"
+end function
 
+sub ClangAstDumper.dump(byval cursor as CXCursor)
+	print space(nestinglevel * 3) + dumpOne(cursor)
 	nestinglevel += 1
 	visitChildrenOf(cursor)
 	nestinglevel -= 1
+end sub
+
+private function functionDeclVisitor(byval cursor as CXCursor, byval parent as CXCursor, byval client_data as CXClientData) as CXChildVisitResult
+	var kind = clang_getCursorKind(cursor)
+	var ty = clang_getCursorType(cursor)
+
+	select case kind
+	case CXCursor_ParmDecl
+		var id = wrapClangStr(clang_getCursorSpelling(cursor))
+		print "param: " & id & ", type " & ty.kind & " " & wrapClangStr(clang_getTypeSpelling(ty))
+		dim pparamcount as integer ptr = client_data
+		*pparamcount += 1
+	end select
+
+	return CXChildVisit_Continue
+end function
+
+private function cursorVisitor(byval cursor as CXCursor, byval parent as CXCursor, byval client_data as CXClientData) as CXChildVisitResult
+	var kind = clang_getCursorKind(cursor)
+	var spelling = wrapClangStr(clang_getCursorSpelling(cursor))
+
+	select case kind
+	case CXCursor_FunctionDecl
+		print "FunctionDecl " & spelling
+
+		dim paramcount as integer
+		clang_visitChildren(cursor, @functionDeclVisitor, @paramcount)
+		print paramcount & " params"
+		print "source: " & dumpSourceLocation(clang_getCursorLocation(cursor))
+		function = CXChildVisit_Continue
+
+	case else
+		function = CXChildVisit_Recurse
+	end select
+end function
+
+private sub parseClangType(byval ty as CXType, byref dtype as integer, byref subtype as ASTNODE ptr)
+	'' TODO: check ABI to ensure it's correct
+	select case as const ty.kind
+	case CXType_Void
+		dtype = TYPE_ANY
+	case CXType_Bool
+		dtype = TYPE_BYTE
+	case CXType_Char_S
+		dtype = TYPE_BYTE
+	case CXType_Char_U
+		dtype = TYPE_UBYTE
+	case CXType_UChar
+		dtype = TYPE_UBYTE
+	case CXType_UShort
+		dtype = TYPE_USHORT
+	case CXType_UInt
+		dtype = TYPE_ULONG
+	case CXType_ULong
+		dtype = TYPE_CULONG
+	case CXType_ULongLong
+		dtype = TYPE_ULONGINT
+	case CXType_SChar
+		dtype = TYPE_BYTE
+	case CXType_WChar
+		dtype = TYPE_WCHAR_T
+	case CXType_Short
+		dtype = TYPE_SHORT
+	case CXType_Int
+		dtype = TYPE_LONG
+	case CXType_Long
+		dtype = TYPE_CLONG
+	case CXType_LongLong
+		dtype = TYPE_LONGINT
+	case CXType_Float
+		dtype = TYPE_SINGLE
+	case CXType_Double
+		dtype = TYPE_DOUBLE
+	case CXType_LongDouble
+		dtype = TYPE_CLONGDOUBLE
+	case else
+		oops("unhandled clang type " + dumpClangType(ty))
+	end select
 end sub
 
 type TranslationUnitParser extends ClangAstVisitor
@@ -155,6 +243,7 @@ function TranslationUnitParser.visitor(byval cursor as CXCursor, byval parent as
 	select case clang_getCursorKind(cursor)
 	case CXCursor_VarDecl
 		var n = astNew(ASTKIND_VAR, wrapClangStr(clang_getCursorSpelling(cursor)))
+		parseClangType(clang_getCursorType(cursor), n->dtype, n->subtype)
 		ast.takeAppend(n)
 	end select
 	return CXChildVisit_Continue
