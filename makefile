@@ -12,6 +12,9 @@ SOURCES := $(sort $(wildcard src/*.bas))
 HEADERS := $(wildcard src/*.bi)
 OBJECTS := $(patsubst src/%.bas,src/obj/%.o,$(SOURCES))
 
+LLVM_LIBDIR := $(shell llvm-config-4.0 --libdir)
+LIBS := -p $(LLVM_LIBDIR) -l clang
+
 # We don't want to use any of make's built-in suffixes/rules
 .SUFFIXES:
 
@@ -23,7 +26,7 @@ endif
 build: $(FBFROG) $(TESTSRUN)
 
 $(FBFROG): $(OBJECTS)
-	$(QUIET_FBCLINK)$(FBC) $(ALLFBLFLAGS) $^ -x $@
+	$(QUIET_FBCLINK)$(FBC) $(ALLFBLFLAGS) $^ $(LIBS) -x $@
 
 $(OBJECTS): src/obj/%.o: src/%.bas $(HEADERS)
 	$(QUIET_FBC)$(FBC) $(ALLFBCFLAGS) $< -c -o $@

@@ -35,6 +35,7 @@
 #include once "fbfrog.bi"
 
 #include once "ast-merge.bi"
+#include once "clang-parser.bi"
 #include once "c-lex.bi"
 #include once "c-parser.bi"
 #include once "c-pp.bi"
@@ -1066,6 +1067,7 @@ end sub
 private function frogParse(byref api as ApiInfo) as AstNode ptr
 	dim ast as AstNode ptr
 
+#if 0
 	scope
 		dim tk as TokenBuffer
 
@@ -1173,6 +1175,56 @@ private function frogParse(byref api as ApiInfo) as AstNode ptr
 			ast = parser.parseToplevel()
 		end scope
 	end scope
+#endif
+
+	scope
+		dim parser as ClangParser
+
+		'' Pre-#defines and #include search dirs
+		scope
+			var i = api.script->head
+			while i
+				assert(i->kind = ASTKIND_OPTION)
+				select case i->opt
+				case OPT_DEFINE
+					parser.addArg("-D" & *i->text & "=" & *i->alias_)
+				case OPT_INCDIR
+					parser.addArg("-I" & *i->text)
+				end select
+				i = i->nxt
+			wend
+		end scope
+
+		'' Pre-#includes
+		scope
+			var i = api.script->head
+			while i
+				assert(i->kind = ASTKIND_OPTION)
+				if i->opt = OPT_INCLUDE then
+					parser.addArg("-include")
+					parser.addArg(*i->text)
+				end if
+				i = i->nxt
+			wend
+		end scope
+
+		'' Main input files
+		scope
+			var i = api.script->head
+			while i
+				assert(i->kind = ASTKIND_OPTION)
+				if i->opt = OPT_I then
+					parser.addArg(*i->text)
+				end if
+				i = i->nxt
+			wend
+		end scope
+
+		parser.parseTranslationUnit()
+	end scope
+
+	print "finished"
+	end 1
 
 	hlGlobal(ast, api)
 
