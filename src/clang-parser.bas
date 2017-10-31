@@ -30,4 +30,14 @@ sub ClangParser.parseTranslationUnit()
 	if e <> CXError_Success then
 		oops("libclang parsing failed with error code " & e)
 	end if
+
+	var diagcount = clang_getNumDiagnostics(unit)
+	if diagcount > 0 then
+		for i as integer = 0 to diagcount - 1
+			var diag = clang_getDiagnostic(unit, i)
+			var errstr = clang_formatDiagnostic(diag, clang_defaultDiagnosticDisplayOptions())
+			print *clang_getCString(errstr)
+			clang_disposeString(errstr)
+		next
+	end if
 end sub
