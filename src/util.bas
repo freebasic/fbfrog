@@ -152,3 +152,5 @@ sub oopsLocation(byval location as TkLocation, byval message as zstring ptr)
 	print hReport(location, message)
 	end 1
 end sub
+
+implementDynamicArray(const zstring ptr, const_zstring_ptr, true, false, true)
