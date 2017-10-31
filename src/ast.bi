@@ -391,3 +391,13 @@ declare sub astDump _
 		byval nestlevel as integer = 0, _
 		byref prefix as string = "" _
 	)
+
+type AstBuilder
+private:
+	t as ASTNODE ptr
+public:
+	declare constructor()
+	declare destructor()
+	declare function takeTree() as ASTNODE ptr
+	declare sub takeAppend(byval n as ASTNODE ptr)
+end type

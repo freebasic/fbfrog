@@ -1092,3 +1092,20 @@ sub astDump _
 
 	nestlevel -= 1
 end sub
+
+constructor AstBuilder()
+	t = astNewGROUP()
+end constructor
+
+destructor AstBuilder()
+	astDelete(t)
+end destructor
+
+function AstBuilder.takeTree() as ASTNODE ptr
+	function = t
+	t = NULL
+end function
+
+sub AstBuilder.takeAppend(byval n as ASTNODE ptr)
+	astAppend(t, n)
+end sub

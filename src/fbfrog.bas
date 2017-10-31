@@ -1221,10 +1221,10 @@ private function frogParse(byref api as ApiInfo) as AstNode ptr
 		end scope
 
 		parser.parseTranslationUnit()
+		ast = parser.parseAst()
 	end scope
 
-	print "finished"
-	end 1
+	astDump(ast)
 
 	hlGlobal(ast, api)
 
