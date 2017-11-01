@@ -4,7 +4,7 @@
 #include once "dir.bi"
 
 '' Searches backwards for the last '.' while still behind '/' or '\'.
-private function hFindExtBegin(byref path as string) as integer
+private function hFindExtBegin(byref path as const string) as integer
 	for i as integer = len(path)-1 to 0 step -1
 		select case path[i]
 		case asc(".")
@@ -20,16 +20,16 @@ private function hFindExtBegin(byref path as string) as integer
 	function = len(path)
 end function
 
-function pathStripExt(byref path as string) as string
+function pathStripExt(byref path as const string) as string
 	function = left(path, hFindExtBegin(path))
 end function
 
-function pathExtOnly(byref path as string) as string
+function pathExtOnly(byref path as const string) as string
 	'' -1 to strip the '.' in front of the file extension
 	function = right(path, len(path) - hFindExtBegin(path) - 1)
 end function
 
-private function hFindFileName(byref path as string) as integer
+private function hFindFileName(byref path as const string) as integer
 	for i as integer = len(path)-1 to 0 step -1
 		select case path[i]
 #if defined(__FB_WIN32__) or defined(__FB_DOS__)
@@ -42,20 +42,17 @@ private function hFindFileName(byref path as string) as integer
 	next
 end function
 
-function pathOnly(byref path as string) as string
+function pathOnly(byref path as const string) as string
 	function = left(path, hFindFileName(path))
 end function
 
-function pathStrip(byref path as string) as string
+function pathStrip(byref path as const string) as string
 	function = right(path, len(path) - hFindFileName(path))
 end function
 
-function pathAddDiv(byref path as string) as string
-	dim as string s
-	dim as integer length = any
-
-	s = path
-	length = len(s)
+function pathAddDiv(byref path as const string) as string
+	dim as string s = path
+	var length = len(s)
 
 	if length > 0 then
 #if defined(__FB_WIN32__) or defined(__FB_DOS__)
@@ -75,7 +72,7 @@ function pathAddDiv(byref path as string) as string
 	function = s
 end function
 
-private function pathGetRootLength(byref s as string) as integer
+private function pathGetRootLength(byref s as const string) as integer
 #if defined(__FB_WIN32__) or defined(__FB_DOS__)
 	if len(s) >= 3 then
 		'' x:\...
@@ -107,12 +104,12 @@ private function pathGetRootLength(byref s as string) as integer
 #endif
 end function
 
-function pathIsAbsolute(byref s as string) as integer
+function pathIsAbsolute(byref s as const string) as integer
 	function = (pathGetRootLength(s) > 0)
 end function
 
 '' Turns a relative path into an absolute path
-function pathMakeAbsolute(byref path as string) as string
+function pathMakeAbsolute(byref path as const string) as string
 	if pathIsAbsolute(path) then
 		function = path
 	else
@@ -128,7 +125,7 @@ function hCurdir() as string
 	function = pathAddDiv(curdir())
 end function
 
-function pathStripCurdir(byref path as string) as string
+function pathStripCurdir(byref path as const string) as string
 	var pwd = hCurdir()
 	if left(path, len(pwd)) = pwd then
 		function = right(path, len(path) - len(pwd))
@@ -137,7 +134,7 @@ function pathStripCurdir(byref path as string) as string
 	end if
 end function
 
-private function pathEndsWithDiv(byref s as string) as integer
+private function pathEndsWithDiv(byref s as const string) as integer
 	var length = len(s)
 	if length > 0 then
 #if defined(__FB_WIN32__) or defined(__FB_DOS__)
@@ -151,15 +148,15 @@ private function pathEndsWithDiv(byref s as string) as integer
 	end if
 end function
 
-function hReadableDirExists(byref path as string) as integer
-	var fixed = path
+function hReadableDirExists(byref path as const string) as integer
+	dim as string fixed = path
 	if right(fixed, len(PATHDIV)) = PATHDIV then
 		fixed = left(fixed, len(fixed) - len(PATHDIV))
 	end if
 	function = (len(dir(fixed, fbDirectory or fbReadOnly or fbHidden)) > 0)
 end function
 
-function pathIsDir(byref s as string) as integer
+function pathIsDir(byref s as const string) as integer
 	function = hReadableDirExists(s) or pathEndsWithDiv(s)
 end function
 
@@ -190,7 +187,7 @@ end function
 
 '' Resolves .'s and ..'s in the path,
 '' normalizes path separators to the host standard.
-function pathNormalize(byref path as string) as string
+function pathNormalize(byref path as const string) as string
 	var rootlen = pathGetRootLength(path)
 	if rootlen = 0 then
 		return path
@@ -213,7 +210,7 @@ function pathNormalize(byref path as string) as string
 	dim stack as PathSolverStack
 	stack.push(rootlen)
 
-	var s = path
+	dim as string s = path
 	var dots = 0 '' Number of .'s in the current component
 	var chars = 0 '' Number of chars in the current component
 	var w = rootlen
