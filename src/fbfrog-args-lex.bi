@@ -6,4 +6,4 @@ type ArgLexer extends LexContext
 	declare sub readArg(byval t as integer)
 end type
 
-declare function lexLoadArgs(byref tk as TokenBuffer, byval x as integer, byval args as zstring ptr, byref source as SourceInfo) as integer
+declare function lexLoadArgs(byref tk as TokenBuffer, byval x as integer, byval args as zstring ptr, byval source as const SourceInfo ptr) as integer

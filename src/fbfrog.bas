@@ -82,6 +82,8 @@ namespace frog
 
 	dim shared vernums(any) as string
 	dim shared versiondefine as string
+
+	dim shared sourcectx as SourceContext
 end namespace
 
 private sub frogSetArchs(byval enabled as integer)
@@ -287,7 +289,7 @@ private sub hLoadArgsFile _
 	filename = hFindResource(filename)
 
 	'' Load the file content at the specified position
-	var file = filebuffersAdd(filename, location)
+	var file = filebuffersAdd(frog.sourcectx, filename, location)
 	lexLoadArgs(tk, x, file->buffer, file->source)
 	filecount += 1
 
@@ -313,7 +315,7 @@ private sub hExpandArgsFiles(byref tk as TokenBuffer)
 			'' open it relative to the parent @file's dir.
 			var location = tk.getLocation(x)
 			if location.source->is_file then
-				filename = pathAddDiv(pathOnly(*location.source->name)) + filename
+				filename = pathAddDiv(pathOnly(location.source->name)) + filename
 			end if
 
 			'' Load the file content behind the @file token
@@ -354,7 +356,7 @@ private function hPathRelativeToArgsFile(byref tk as TokenBuffer, byval x as int
 	if pathIsAbsolute(path) = FALSE then
 		var location = tk.getLocation(x)
 		if location.source->is_file then
-			path = pathAddDiv(pathOnly(*location.source->name)) + path
+			path = pathAddDiv(pathOnly(location.source->name)) + path
 		end if
 	end if
 
@@ -606,11 +608,11 @@ private sub hParseArgs(byref tk as TokenBuffer, byref x as integer)
 
 			'' original-license.txt
 			hParseParam(tk, x, "original-license.txt parameter for -title")
-			var licensefile = filebuffersAdd(tk.getText(x - 1), tk.getLocation(x - 1))
+			var licensefile = filebuffersAdd(frog.sourcectx, tk.getText(x - 1), tk.getLocation(x - 1))
 
 			'' translators.txt
 			hParseParam(tk, x, "translators.txt parameter for -title")
-			var translatorsfile = filebuffersAdd(tk.getText(x - 1), tk.getLocation(x - 1))
+			var translatorsfile = filebuffersAdd(frog.sourcectx, tk.getText(x - 1), tk.getLocation(x - 1))
 
 			'' [<destination .bi file>]
 			dim header as HeaderInfo ptr
@@ -1071,7 +1073,7 @@ private function frogParse(byref api as ApiInfo) as AstNode ptr
 
 		scope
 			'' C preprocessing
-			dim cpp as CppContext = CppContext(tk, api)
+			dim cpp as CppContext = CppContext(frog.sourcectx, tk, api)
 
 			'' Add fbfrog's CPP pre-#defines for preprocessing of default.h
 			cpp.addTargetPredefines(api.target)
@@ -1105,7 +1107,7 @@ private function frogParse(byref api as ApiInfo) as AstNode ptr
 					if i->opt = OPT_FBFROGINCLUDE then
 						var filename = hFindResource(*i->text)
 						var x = tk.count()
-						var file = filebuffersAdd(filename, type(NULL, 0))
+						var file = filebuffersAdd(frog.sourcectx, filename, type(NULL, 0))
 						lexLoadC(tk, x, file->buffer, file->source)
 						tk.setRemove(x, tk.count() - 1)
 					end if
@@ -1162,7 +1164,7 @@ private function frogParse(byref api as ApiInfo) as AstNode ptr
 		hMoveDirectivesOutOfConstructs(tk)
 
 		if api.replacementcount > 0 then
-			hApplyReplacements(tk, api)
+			hApplyReplacements(frog.sourcectx, tk, api)
 		end if
 
 		tk.turnCPPTokensIntoCIds()
@@ -1206,7 +1208,7 @@ end function
 
 		'' Load all command line arguments into the tk buffer
 		lexLoadArgs(tk, 0, hTurnArgsIntoString(__FB_ARGC__, __FB_ARGV__), _
-			sourceinfoForZstring("<command line>"))
+			frog.sourcectx.lookupOrMakeSourceInfo("<command line>", FALSE))
 
 		'' Load content of @files too
 		hExpandArgsFiles(tk)
@@ -1314,7 +1316,7 @@ end function
 		'' Split the big tree into separate "incoming" trees on each .bi file
 		scope
 			dim bi as integer
-			dim prevsource as SourceInfo ptr
+			dim prevsource as const SourceInfo ptr
 
 			var i = ast->head
 			while i

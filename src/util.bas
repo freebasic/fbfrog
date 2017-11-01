@@ -14,8 +14,29 @@ function max(byval a as integer, byval b as integer) as integer
 	function = a
 end function
 
-function sourceinfoForZstring(byval prettyname as zstring ptr) byref as SourceInfo
-	function = *new SourceInfo(strDuplicate(prettyname), FALSE)
+constructor SourceInfo(byval sourcename as const zstring ptr, byval is_file as integer)
+	var mutablename = cptr(string ptr, @this.name)
+	*mutablename = *sourcename
+	this.is_file = is_file
+end constructor
+
+destructor SourceContext()
+	for i as integer = 0 to table.room - 1
+		var item = table.items + i
+		if item->s then
+			delete cptr(SourceInfo ptr, item->data)
+		end if
+	next
+end destructor
+
+function SourceContext.lookupOrMakeSourceInfo(byval sourcename as const zstring ptr, byval is_file as integer) as const SourceInfo ptr
+	var hash = hashHash(sourcename)
+	var item = table.lookup(sourcename, hash)
+	if item->s = NULL then
+		var sourceinfo = new SourceInfo(sourcename, is_file)
+		table.add(item, hash, sourceinfo->name, sourceinfo)
+	end if
+	return item->data
 end function
 
 sub FileBuffer.load(byval location as TkLocation)
@@ -56,10 +77,10 @@ sub FileBuffer.load(byval location as TkLocation)
 end sub
 
 namespace filebuffers
-	dim shared hashtb as THash = Thash(8, FALSE)
+	dim shared hashtb as THash = THash(8, FALSE)
 end namespace
 
-function filebuffersAdd(byval filename as zstring ptr, byval location as TkLocation) as FileBuffer ptr
+function filebuffersAdd(byref sourcectx as SourceContext, byval filename as zstring ptr, byval location as TkLocation) as FileBuffer ptr
 	'' Cache file buffers based on the file name
 	var hash = hashHash(filename)
 	var item = filebuffers.hashtb.lookup(filename, hash)
@@ -67,10 +88,9 @@ function filebuffersAdd(byval filename as zstring ptr, byval location as TkLocat
 	'' Not yet loaded?
 	if item->s = NULL then
 		var file = new FileBuffer
-		file->source.name = strDuplicate(filename)
-		file->source.is_file = TRUE
+		file->source = sourcectx.lookupOrMakeSourceInfo(filename, TRUE)
 		file->load(location)
-		filebuffers.hashtb.add(item, hash, file->source.name, file)
+		filebuffers.hashtb.add(item, hash, strptr(file->source->name), file)
 	end if
 
 	function = item->data
@@ -85,7 +105,7 @@ end sub
 
 function hDumpLocation(byval location as TkLocation) as string
 	if location.source then
-		function = *location.source->name + "(" & location.linenum & ")"
+		function = location.source->name + "(" & location.linenum & ")"
 	end if
 end function
 
@@ -142,7 +162,7 @@ end function
 '' for the user.
 function hReport(byval location as TkLocation, byval message as zstring ptr) as string
 	if location.source then
-		function = pathStripCurdir(*location.source->name) + "(" & location.linenum & "): " + *message
+		function = pathStripCurdir(location.source->name) + "(" & location.linenum & "): " + *message
 	else
 		function = *message
 	end if

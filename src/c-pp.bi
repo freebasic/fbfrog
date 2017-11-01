@@ -46,6 +46,7 @@ type CPPVALUE
 end type
 
 type CppContext
+	sourcectx as SourceContext ptr
 	tk as TokenBuffer ptr
 	api as ApiInfo ptr
 	as integer x  '' Current token index
@@ -100,7 +101,7 @@ type CppContext
 	filecount as integer
 	filetb as THash = THash(4, FALSE)  '' data = index into files array
 
-	declare constructor(byref tk as TokenBuffer, byref api as ApiInfo)
+	declare constructor(byref sourcectx as SourceContext, byref tk as TokenBuffer, byref api as ApiInfo)
 	declare destructor()
 	declare function isSkipping() as integer
 	declare sub addPredefine(byval id as zstring ptr, byval body as zstring ptr)
@@ -190,4 +191,4 @@ type CppContext
 end type
 
 declare sub hMoveDirectivesOutOfConstructs(byref tk as TokenBuffer)
-declare sub hApplyReplacements(byref tk as TokenBuffer, byref api as ApiInfo)
+declare sub hApplyReplacements(byref sourcectx as SourceContext, byref tk as TokenBuffer, byref api as ApiInfo)
