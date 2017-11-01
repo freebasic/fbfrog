@@ -359,12 +359,15 @@ function TranslationUnitParser.visitor(byval cursor as CXCursor, byval parent as
 
 		ast.takeAppend(proc)
 
-	case CXCursor_StructDecl
+	case CXCursor_StructDecl, CXCursor_UnionDecl
 		dim dtype as integer
 		dim struct as ASTNODE ptr
 		parseClangType(clang_getCursorType(cursor), dtype, struct)
 		assert(dtype = TYPE_UDT)
 		astSetText(struct, wrapClangStr(clang_getCursorSpelling(cursor)))
+		if clang_getCursorKind(cursor) = CXCursor_UnionDecl then
+			struct->kind = ASTKIND_UNION
+		end if
 		ast.takeAppend(struct)
 
 	end select
