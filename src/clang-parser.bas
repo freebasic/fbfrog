@@ -28,20 +28,21 @@ private function wrapClangStr(byref s as CXString) as string
 	return wrapped.value()
 end function
 
-constructor ClangParser()
+constructor ClangContext(byref sourcectx as SourceContext)
+	this.sourcectx = @sourcectx
 	index = clang_createIndex(0, 0)
 end constructor
 
-destructor ClangParser()
+destructor ClangContext()
 	clang_disposeTranslationUnit(unit)
 	clang_disposeIndex(index)
 end destructor
 
-sub ClangParser.addArg(byval arg as const zstring ptr)
+sub ClangContext.addArg(byval arg as const zstring ptr)
 	args.append(strDuplicate(arg))
 end sub
 
-sub ClangParser.parseTranslationUnit()
+sub ClangContext.parseTranslationUnit()
 	print "libclang invocation args:";
 	for i as integer = 0 to args.count - 1
 		print " ";*args.p[i];
@@ -77,12 +78,12 @@ private function getClangTokenKindSpelling(byval kind as CXTokenKind) as string
 	end select
 end function
 
-function ClangParser.dumpToken(byval token as CXToken) as string
+function ClangContext.dumpToken(byval token as CXToken) as string
 	dim tokenstr as ClangString = ClangString(clang_getTokenSpelling(unit, token))
 	return getClangTokenKindSpelling(clang_getTokenKind(token)) + "[" + tokenstr.value() + "]"
 end function
 
-function ClangParser.dumpCursorTokens(byval cursor as CXCursor) as string
+function ClangContext.dumpCursorTokens(byval cursor as CXCursor) as string
 	dim buffer as CXToken ptr
 	dim count as ulong
 	clang_tokenize(unit, clang_getCursorExtent(cursor), @buffer, @count)
@@ -99,6 +100,21 @@ function ClangParser.dumpCursorTokens(byval cursor as CXCursor) as string
 
 	clang_disposeTokens(unit, buffer, count)
 	return s
+end function
+
+function ClangContext.locationFromClang(byval location as CXSourceLocation) as TkLocation
+	dim file as CXFile
+	dim linenum as ulong
+	clang_getSpellingLocation(location, @file, @linenum, NULL, NULL)
+
+	var filename = clang_getFileName(file)
+
+	dim astloc as TkLocation
+	astloc.source = sourcectx->lookupOrMakeSourceInfo(clang_getCString(filename), TRUE)
+	astloc.linenum = linenum
+
+	clang_disposeString(filename)
+	return astloc
 end function
 
 private function dumpSourceLocation(byval location as CXSourceLocation) as string
@@ -153,40 +169,6 @@ sub ClangAstDumper.dump(byval cursor as CXCursor)
 	visitChildrenOf(cursor)
 	nestinglevel -= 1
 end sub
-
-private function functionDeclVisitor(byval cursor as CXCursor, byval parent as CXCursor, byval client_data as CXClientData) as CXChildVisitResult
-	var kind = clang_getCursorKind(cursor)
-	var ty = clang_getCursorType(cursor)
-
-	select case kind
-	case CXCursor_ParmDecl
-		var id = wrapClangStr(clang_getCursorSpelling(cursor))
-		print "param: " & id & ", type " & ty.kind & " " & wrapClangStr(clang_getTypeSpelling(ty))
-		dim pparamcount as integer ptr = client_data
-		*pparamcount += 1
-	end select
-
-	return CXChildVisit_Continue
-end function
-
-private function cursorVisitor(byval cursor as CXCursor, byval parent as CXCursor, byval client_data as CXClientData) as CXChildVisitResult
-	var kind = clang_getCursorKind(cursor)
-	var spelling = wrapClangStr(clang_getCursorSpelling(cursor))
-
-	select case kind
-	case CXCursor_FunctionDecl
-		print "FunctionDecl " & spelling
-
-		dim paramcount as integer
-		clang_visitChildren(cursor, @functionDeclVisitor, @paramcount)
-		print paramcount & " params"
-		print "source: " & dumpSourceLocation(clang_getCursorLocation(cursor))
-		function = CXChildVisit_Continue
-
-	case else
-		function = CXChildVisit_Recurse
-	end select
-end function
 
 declare sub parseClangType(byval ty as CXType, byref dtype as integer, byref subtype as ASTNODE ptr)
 
@@ -319,11 +301,17 @@ function ParamVisitor.visitor(byval cursor as CXCursor, byval parent as CXCursor
 end function
 
 type TranslationUnitParser extends ClangAstVisitor
+	ctx as ClangContext ptr
 	ast as AstBuilder
+	declare constructor(byref ctx as ClangContext)
 	declare operator let(byref as const TranslationUnitParser) '' unimplemented
 	declare function visitor(byval cursor as CXCursor, byval parent as CXCursor) as CXChildVisitResult override
 	declare sub parse(byval unit as CXTranslationUnit)
 end type
+
+constructor TranslationUnitParser(byref ctx as ClangContext)
+	this.ctx = @ctx
+end constructor
 
 function TranslationUnitParser.visitor(byval cursor as CXCursor, byval parent as CXCursor) as CXChildVisitResult
 	select case clang_getCursorKind(cursor)
@@ -368,6 +356,7 @@ function TranslationUnitParser.visitor(byval cursor as CXCursor, byval parent as
 		if clang_getCursorKind(cursor) = CXCursor_UnionDecl then
 			struct->kind = ASTKIND_UNION
 		end if
+		struct->location = ctx->locationFromClang(clang_getCursorLocation(cursor))
 		ast.takeAppend(struct)
 
 	end select
@@ -379,9 +368,9 @@ sub TranslationUnitParser.parse(byval unit as CXTranslationUnit)
 	visitChildrenOf(clang_getTranslationUnitCursor(unit))
 end sub
 
-function ClangParser.parseAst() as ASTNODE ptr
+function ClangContext.parseAst() as ASTNODE ptr
 	ClangAstDumper().dump(clang_getTranslationUnitCursor(unit))
-	dim unitparser as TranslationUnitParser
+	dim unitparser as TranslationUnitParser = TranslationUnitParser(this)
 	unitparser.parse(unit)
 	return unitparser.ast.takeTree()
 end function

@@ -1180,7 +1180,7 @@ private function frogParse(byref api as ApiInfo) as AstNode ptr
 #endif
 
 	scope
-		dim parser as ClangParser
+		dim parser as ClangContext = ClangContext(frog.sourcectx)
 
 		'' Pre-#defines and #include search dirs
 		scope
