@@ -248,7 +248,7 @@ sub ClangContext.parseClangType(byval ty as CXType, byref dtype as integer, byre
 		parseClangType(clang_getPointeeType(ty), pointee_dtype, subtype)
 		dtype = typeAddrOf(pointee_dtype)
 
-	case CXType_Elaborated
+	case CXType_Elaborated, CXType_Typedef
 		dtype = TYPE_UDT
 		subtype = astNewTEXT(wrapClangStr(clang_getTypeSpelling(ty)))
 
@@ -367,7 +367,6 @@ function TranslationUnitParser.visitor(byval cursor as CXCursor, byval parent as
 		ast.takeAppend(proc)
 
 	case CXCursor_StructDecl, CXCursor_UnionDecl
-		'' Parse struct type
 		dim dtype as integer
 		dim struct as ASTNODE ptr
 		ctx->parseClangType(clang_getCursorType(cursor), dtype, struct)
@@ -380,6 +379,12 @@ function TranslationUnitParser.visitor(byval cursor as CXCursor, byval parent as
 		struct->location = ctx->locationFromClang(clang_getCursorLocation(cursor))
 
 		ast.takeAppend(struct)
+
+	case CXCursor_TypedefDecl
+		var n = astNew(ASTKIND_TYPEDEF, wrapClangStr(clang_getCursorSpelling(cursor)))
+		ctx->parseClangType(clang_getTypedefDeclUnderlyingType(cursor), n->dtype, n->subtype)
+		n->location = ctx->locationFromClang(clang_getCursorLocation(cursor))
+		ast.takeAppend(n)
 
 	end select
 
