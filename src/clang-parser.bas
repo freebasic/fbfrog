@@ -169,25 +169,35 @@ private sub parseClangFunctionType(byval ty as CXType, byref dtype as integer, b
 	subtype = proc
 end sub
 
-type FieldCollector extends ClangAstVisitor
+type FieldCollector
 	record as ASTNODE ptr
 	declare constructor(byval record as ASTNODE ptr)
 	declare operator let(byref as const FieldCollector) '' unimplemented
-	declare function visitor(byval cursor as CXCursor, byval parent as CXCursor) as CXChildVisitResult override
+	declare static function staticVisitor(byval cursor as CXCursor, byval client_data as CXClientData) as CXVisitorResult
+	declare function visitor(byval cursor as CXCursor) as CXVisitorResult
+	declare sub visitFields(byval ty as CXType)
 end type
 
 constructor FieldCollector(byval record as ASTNODE ptr)
 	this.record = record
 end constructor
 
-function FieldCollector.visitor(byval cursor as CXCursor, byval parent as CXCursor) as CXChildVisitResult
-	if clang_getCursorKind(cursor) = CXCursor_FieldDecl then
-		var fld = astNew(ASTKIND_FIELD, wrapClangStr(clang_getCursorSpelling(cursor)))
-		parseClangType(clang_getCursorType(cursor), fld->dtype, fld->subtype)
-		astAppend(record, fld)
-	end if
+function FieldCollector.staticVisitor(byval cursor as CXCursor, byval client_data as CXClientData) as CXVisitorResult
+	dim self as FieldCollector ptr = client_data
+	return self->visitor(cursor)
+end function
+
+function FieldCollector.visitor(byval cursor as CXCursor) as CXVisitorResult
+	assert(clang_getCursorKind(cursor) = CXCursor_FieldDecl)
+	var fld = astNew(ASTKIND_FIELD, wrapClangStr(clang_getCursorSpelling(cursor)))
+	parseClangType(clang_getCursorType(cursor), fld->dtype, fld->subtype)
+	astAppend(record, fld)
 	return CXChildVisit_Continue
 end function
+
+sub FieldCollector.visitFields(byval ty as CXType)
+	clang_Type_visitFields(ty, @staticVisitor, @this)
+end sub
 
 private sub parseClangType(byval ty as CXType, byref dtype as integer, byref subtype as ASTNODE ptr)
 	'' TODO: check ABI to ensure it's correct
@@ -222,7 +232,7 @@ private sub parseClangType(byval ty as CXType, byref dtype as integer, byref sub
 
 	case CXType_Record
 		var struct = astNew(ASTKIND_STRUCT, wrapClangStr(clang_getTypeSpelling(ty)))
-		FieldCollector(struct).visitChildrenOf(clang_getTypeDeclaration(ty))
+		FieldCollector(struct).visitFields(ty)
 		dtype = TYPE_UDT
 		subtype = struct
 
