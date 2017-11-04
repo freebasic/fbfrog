@@ -42,31 +42,6 @@ sub ClangContext.addArg(byval arg as const zstring ptr)
 	args.append(strDuplicate(arg))
 end sub
 
-sub ClangContext.parseTranslationUnit()
-	print "libclang invocation args:";
-	for i as integer = 0 to args.count - 1
-		print " ";*args.p[i];
-	next
-	print
-
-	dim e as CXErrorCode = _
-		clang_parseTranslationUnit2(index, _
-			NULL, args.p, args.count, _
-			NULL, 0, _
-			CXTranslationUnit_Incomplete, _
-			@unit)
-	if e <> CXError_Success then
-		oops("libclang parsing failed with error code " & e)
-	end if
-
-	var diagcount = clang_getNumDiagnostics(unit)
-	if diagcount > 0 then
-		for i as integer = 0 to diagcount - 1
-			print wrapClangStr(clang_formatDiagnostic(clang_getDiagnostic(unit, i), clang_defaultDiagnosticDisplayOptions()))
-		next
-	end if
-end sub
-
 private function getClangTokenKindSpelling(byval kind as CXTokenKind) as string
 	select case kind
 	case CXToken_Comment     : return "Comment"
@@ -369,7 +344,32 @@ sub TranslationUnitParser.parse(byval unit as CXTranslationUnit)
 end sub
 
 function ClangContext.parseAst() as ASTNODE ptr
+	print "libclang invocation args:";
+	for i as integer = 0 to args.count - 1
+		print " ";*args.p[i];
+	next
+	print
+
+	var e = _
+		clang_parseTranslationUnit2(index, _
+			NULL, args.p, args.count, _
+			NULL, 0, _
+			CXTranslationUnit_Incomplete, _
+			@unit)
+
+	if e <> CXError_Success then
+		oops("libclang parsing failed with error code " & e)
+	end if
+
+	var diagcount = clang_getNumDiagnostics(unit)
+	if diagcount > 0 then
+		for i as integer = 0 to diagcount - 1
+			print wrapClangStr(clang_formatDiagnostic(clang_getDiagnostic(unit, i), clang_defaultDiagnosticDisplayOptions()))
+		next
+	end if
+
 	ClangAstDumper().dump(clang_getTranslationUnitCursor(unit))
+
 	dim unitparser as TranslationUnitParser = TranslationUnitParser(this)
 	unitparser.parse(unit)
 	return unitparser.ast.takeTree()
