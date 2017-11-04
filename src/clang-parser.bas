@@ -145,6 +145,18 @@ sub ClangAstDumper.dump(byval cursor as CXCursor)
 	nestinglevel -= 1
 end sub
 
+sub ClangContext.parseCallConv(byref proc as ASTNODE, byval ty as CXType)
+	var callconv = clang_getFunctionTypeCallingConv(ty)
+	select case callconv
+	case CXCallingConv_C
+		proc.attrib or= ASTATTRIB_CDECL
+	case CXCallingConv_X86StdCall
+		proc.attrib or= ASTATTRIB_STDCALL
+	case else
+		oops("Unsupported callconv " & callconv)
+	end select
+end sub
+
 sub ClangContext.parseClangFunctionType(byval ty as CXType, byref dtype as integer, byref subtype as ASTNODE ptr)
 	var proc = astNew(ASTKIND_PROC)
 
@@ -162,6 +174,8 @@ sub ClangContext.parseClangFunctionType(byval ty as CXType, byref dtype as integ
 	if clang_isFunctionTypeVariadic(ty) then
 		astAppend(proc, astNew(ASTKIND_PARAM))
 	end if
+
+	parseCallConv(*proc, ty)
 
 	dtype = TYPE_PROC
 	subtype = proc
@@ -332,6 +346,8 @@ function TranslationUnitParser.visitor(byval cursor as CXCursor, byval parent as
 				astAppend(proc, param)
 			next
 		end if
+
+		ctx->parseCallConv(*proc, clang_getCursorType(cursor))
 
 		ast.takeAppend(proc)
 
