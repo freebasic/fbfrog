@@ -1,5 +1,6 @@
 ## Bugs
 
+* Struct decl nested in function pointer parameter triggers assert(): `void (*p)(struct Param { int param; } param);`
 * In FB, anon UDTs inherit their parent's FIELD alignment, that's not gcc-compatible.
   fbfrog needs to generate FIELD=8 on anon UDTs if the parent has a FIELD but the anon doesn't.
   http://www.freebasic.net/forum/viewtopic.php?f=3&t=19514
