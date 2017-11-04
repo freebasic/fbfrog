@@ -122,7 +122,7 @@ end sub
 type ClangAstDumper extends ClangAstVisitor
 	nestinglevel as integer
 	declare function visitor(byval cursor as CXCursor, byval parent as CXCursor) as CXChildVisitResult override
-	declare function dumpOne(byval cursor as CXCursor) as string
+	declare static function dumpOne(byval cursor as CXCursor) as string
 	declare sub dump(byval cursor as CXCursor)
 end type
 
@@ -145,9 +145,7 @@ sub ClangAstDumper.dump(byval cursor as CXCursor)
 	nestinglevel -= 1
 end sub
 
-declare sub parseClangType(byval ty as CXType, byref dtype as integer, byref subtype as ASTNODE ptr)
-
-private sub parseClangFunctionType(byval ty as CXType, byref dtype as integer, byref subtype as ASTNODE ptr)
+sub ClangContext.parseClangFunctionType(byval ty as CXType, byref dtype as integer, byref subtype as ASTNODE ptr)
 	var proc = astNew(ASTKIND_PROC)
 
 	var resultty = clang_getResultType(ty)
@@ -169,16 +167,25 @@ private sub parseClangFunctionType(byval ty as CXType, byref dtype as integer, b
 	subtype = proc
 end sub
 
+function ClangContext.makeSymbolFromCursor(byval kind as integer, byval cursor as CXCursor) as ASTNODE ptr
+	var n = astNew(kind, wrapClangStr(clang_getCursorSpelling(cursor)))
+	parseClangType(clang_getCursorType(cursor), n->dtype, n->subtype)
+	n->location = locationFromClang(clang_getCursorLocation(cursor))
+	return n
+end function
+
 type FieldCollector
+	ctx as ClangContext ptr
 	record as ASTNODE ptr
-	declare constructor(byval record as ASTNODE ptr)
+	declare constructor(byref ctx as ClangContext, byval record as ASTNODE ptr)
 	declare operator let(byref as const FieldCollector) '' unimplemented
 	declare static function staticVisitor(byval cursor as CXCursor, byval client_data as CXClientData) as CXVisitorResult
 	declare function visitor(byval cursor as CXCursor) as CXVisitorResult
 	declare sub visitFields(byval ty as CXType)
 end type
 
-constructor FieldCollector(byval record as ASTNODE ptr)
+constructor FieldCollector(byref ctx as ClangContext, byval record as ASTNODE ptr)
+	this.ctx = @ctx
 	this.record = record
 end constructor
 
@@ -189,9 +196,7 @@ end function
 
 function FieldCollector.visitor(byval cursor as CXCursor) as CXVisitorResult
 	assert(clang_getCursorKind(cursor) = CXCursor_FieldDecl)
-	var fld = astNew(ASTKIND_FIELD, wrapClangStr(clang_getCursorSpelling(cursor)))
-	parseClangType(clang_getCursorType(cursor), fld->dtype, fld->subtype)
-	astAppend(record, fld)
+	astAppend(record, ctx->makeSymbolFromCursor(ASTKIND_FIELD, cursor))
 	return CXChildVisit_Continue
 end function
 
@@ -199,7 +204,7 @@ sub FieldCollector.visitFields(byval ty as CXType)
 	clang_Type_visitFields(ty, @staticVisitor, @this)
 end sub
 
-private sub parseClangType(byval ty as CXType, byref dtype as integer, byref subtype as ASTNODE ptr)
+sub ClangContext.parseClangType(byval ty as CXType, byref dtype as integer, byref subtype as ASTNODE ptr)
 	'' TODO: check ABI to ensure it's correct
 	select case as const ty.kind
 	case CXType_Void       : dtype = TYPE_ANY
@@ -232,7 +237,7 @@ private sub parseClangType(byval ty as CXType, byref dtype as integer, byref sub
 
 	case CXType_Record
 		var struct = astNew(ASTKIND_STRUCT, wrapClangStr(clang_getTypeSpelling(ty)))
-		FieldCollector(struct).visitFields(ty)
+		FieldCollector(this, struct).visitFields(ty)
 		dtype = TYPE_UDT
 		subtype = struct
 
@@ -301,8 +306,7 @@ end constructor
 function TranslationUnitParser.visitor(byval cursor as CXCursor, byval parent as CXCursor) as CXChildVisitResult
 	select case clang_getCursorKind(cursor)
 	case CXCursor_VarDecl
-		var n = astNew(ASTKIND_VAR, wrapClangStr(clang_getCursorSpelling(cursor)))
-		parseClangType(clang_getCursorType(cursor), n->dtype, n->subtype)
+		var n = ctx->makeSymbolFromCursor(ASTKIND_VAR, cursor)
 
 		'' FIXME: function pointer types don't save the names of their params, so we'd have to
 		'' parse the ParmDecls when they are there. However it's difficult because the ParmDecls
@@ -317,15 +321,14 @@ function TranslationUnitParser.visitor(byval cursor as CXCursor, byval parent as
 		ast.takeAppend(n)
 
 	case CXCursor_FunctionDecl
-		var proc = astNew(ASTKIND_PROC, wrapClangStr(clang_getCursorSpelling(cursor)))
-		parseClangType(clang_getCursorResultType(cursor), proc->dtype, proc->subtype)
+		var proc = ctx->makeSymbolFromCursor(ASTKIND_PROC, cursor)
 
 		var paramcount = clang_Cursor_getNumArguments(cursor)
 		if paramcount > 0 then
 			for i as integer = 0 to paramcount - 1
 				var paramcursor = clang_Cursor_getArgument(cursor, i)
 				var param = astNew(ASTKIND_PARAM, wrapClangStr(clang_getCursorSpelling(paramcursor)))
-				parseClangType(clang_getCursorType(paramcursor), param->dtype, param->subtype)
+				ctx->parseClangType(clang_getCursorType(paramcursor), param->dtype, param->subtype)
 				astAppend(proc, param)
 			next
 		end if
@@ -335,7 +338,7 @@ function TranslationUnitParser.visitor(byval cursor as CXCursor, byval parent as
 	case CXCursor_StructDecl, CXCursor_UnionDecl
 		dim dtype as integer
 		dim struct as ASTNODE ptr
-		parseClangType(clang_getCursorType(cursor), dtype, struct)
+		ctx->parseClangType(clang_getCursorType(cursor), dtype, struct)
 		assert(dtype = TYPE_UDT)
 		astSetText(struct, wrapClangStr(clang_getCursorSpelling(cursor)))
 		if clang_getCursorKind(cursor) = CXCursor_UnionDecl then
