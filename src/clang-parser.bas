@@ -343,10 +343,7 @@ function TranslationUnitParser.visitor(byval cursor as CXCursor, byval parent as
 		var paramcount = clang_Cursor_getNumArguments(cursor)
 		if paramcount > 0 then
 			for i as integer = 0 to paramcount - 1
-				var paramcursor = clang_Cursor_getArgument(cursor, i)
-				var param = astNew(ASTKIND_PARAM, wrapClangStr(clang_getCursorSpelling(paramcursor)))
-				ctx->parseClangType(clang_getCursorType(paramcursor), param->dtype, param->subtype)
-				astAppend(proc, param)
+				astAppend(proc, ctx->makeSymbolFromCursor(ASTKIND_PARAM, clang_Cursor_getArgument(cursor, i)))
 			next
 		end if
 
