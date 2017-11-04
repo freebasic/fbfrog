@@ -20,6 +20,7 @@ type ClangContext
 	declare function dumpCursorTokens(byval cursor as CXCursor) as string
 
 	declare function locationFromClang(byval location as CXSourceLocation) as TkLocation
+	declare sub parseVariadicProc(byref proc as ASTNODE, byval ty as CXType)
 	declare sub parseCallConv(byref proc as ASTNODE, byval ty as CXType)
 	declare sub parseClangFunctionType(byval ty as CXType, byref dtype as integer, byref subtype as ASTNODE ptr)
 	declare function makeSymbolFromCursor(byval kind as integer, byval cursor as CXCursor) as ASTNODE ptr

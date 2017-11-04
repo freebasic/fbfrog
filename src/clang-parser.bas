@@ -145,6 +145,12 @@ sub ClangAstDumper.dump(byval cursor as CXCursor)
 	nestinglevel -= 1
 end sub
 
+sub ClangContext.parseVariadicProc(byref proc as ASTNODE, byval ty as CXType)
+	if clang_isFunctionTypeVariadic(ty) then
+		astAppend(@proc, astNew(ASTKIND_PARAM))
+	end if
+end sub
+
 sub ClangContext.parseCallConv(byref proc as ASTNODE, byval ty as CXType)
 	var callconv = clang_getFunctionTypeCallingConv(ty)
 	select case callconv
@@ -171,10 +177,7 @@ sub ClangContext.parseClangFunctionType(byval ty as CXType, byref dtype as integ
 		astAppend(proc, param)
 	next
 
-	if clang_isFunctionTypeVariadic(ty) then
-		astAppend(proc, astNew(ASTKIND_PARAM))
-	end if
-
+	parseVariadicProc(*proc, ty)
 	parseCallConv(*proc, ty)
 
 	dtype = TYPE_PROC
@@ -347,7 +350,9 @@ function TranslationUnitParser.visitor(byval cursor as CXCursor, byval parent as
 			next
 		end if
 
-		ctx->parseCallConv(*proc, clang_getCursorType(cursor))
+		var ty = clang_getCursorType(cursor)
+		ctx->parseVariadicProc(*proc, ty)
+		ctx->parseCallConv(*proc, ty)
 
 		ast.takeAppend(proc)
 
