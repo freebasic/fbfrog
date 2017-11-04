@@ -338,31 +338,47 @@ function TranslationUnitParser.visitor(byval cursor as CXCursor, byval parent as
 		ast.takeAppend(n)
 
 	case CXCursor_FunctionDecl
-		var proc = ctx->makeSymbolFromCursor(ASTKIND_PROC, cursor)
+		'' Parse the function type
+		dim dtype as integer
+		dim proc as ASTNODE ptr
+		ctx->parseClangType(clang_getCursorType(cursor), dtype, proc)
 
+		assert(dtype = TYPE_PROC)
+		astSetText(proc, wrapClangStr(clang_getCursorSpelling(cursor)))
+		proc->location = ctx->locationFromClang(clang_getCursorLocation(cursor))
+
+		'' Collect parameter names and location
+		'' (information that's only available from cursors, not from the type)
 		var paramcount = clang_Cursor_getNumArguments(cursor)
 		if paramcount > 0 then
+			var param = proc->head
 			for i as integer = 0 to paramcount - 1
-				astAppend(proc, ctx->makeSymbolFromCursor(ASTKIND_PARAM, clang_Cursor_getArgument(cursor, i)))
+				assert(param)
+				var paramcursor = clang_Cursor_getArgument(cursor, i)
+				astSetText(param, wrapClangStr(clang_getCursorSpelling(paramcursor)))
+				param->location = ctx->locationFromClang(clang_getCursorLocation(paramcursor))
+				param = param->nxt
 			next
+			assert(param = NULL)
+		else
+			assert(proc->head = NULL)
 		end if
-
-		var ty = clang_getCursorType(cursor)
-		ctx->parseVariadicProc(*proc, ty)
-		ctx->parseCallConv(*proc, ty)
 
 		ast.takeAppend(proc)
 
 	case CXCursor_StructDecl, CXCursor_UnionDecl
+		'' Parse struct type
 		dim dtype as integer
 		dim struct as ASTNODE ptr
 		ctx->parseClangType(clang_getCursorType(cursor), dtype, struct)
+
 		assert(dtype = TYPE_UDT)
 		astSetText(struct, wrapClangStr(clang_getCursorSpelling(cursor)))
 		if clang_getCursorKind(cursor) = CXCursor_UnionDecl then
 			struct->kind = ASTKIND_UNION
 		end if
 		struct->location = ctx->locationFromClang(clang_getCursorLocation(cursor))
+
 		ast.takeAppend(struct)
 
 	end select
