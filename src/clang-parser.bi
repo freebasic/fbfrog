@@ -20,6 +20,8 @@ type ClangContext
 	declare function dumpCursorTokens(byval cursor as CXCursor) as string
 
 	declare function locationFromClang(byval location as CXSourceLocation) as TkLocation
+	declare function locationFromClang(byval cursor as CXCursor) as TkLocation
+	declare function isBuiltIn(byval cursor as CXCursor) as integer
 	declare function parseEvalResult(byval eval as CXEvalResult) as ASTNODE ptr
 	declare function evaluateInitializer(byval cursor as CXCursor) as ASTNODE ptr
 	declare sub parseLinkage(byref n as ASTNODE, byval cursor as CXCursor)

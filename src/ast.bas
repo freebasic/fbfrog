@@ -1054,6 +1054,10 @@ function astDumpOne(byval n as AstNode ptr) as string
 		s += " as " + typeDump(n->dtype)
 	end if
 
+	if n->location.source then
+		s += " from " + n->location.source->name + "(" & n->location.linenum & ")"
+	end if
+
 	function = s
 end function
 

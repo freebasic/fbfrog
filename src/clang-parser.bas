@@ -82,14 +82,31 @@ function ClangContext.locationFromClang(byval location as CXSourceLocation) as T
 	dim linenum as ulong
 	clang_getSpellingLocation(location, @file, @linenum, NULL, NULL)
 
-	var filename = clang_getFileName(file)
-
 	dim astloc as TkLocation
-	astloc.source = sourcectx->lookupOrMakeSourceInfo(clang_getCString(filename), TRUE)
+
+	if file then
+		var filename = clang_getFileName(file)
+		var filenamecstr = clang_getCString(filename)
+		assert(filenamecstr)
+		astloc.source = sourcectx->lookupOrMakeSourceInfo(filenamecstr, TRUE)
+		clang_disposeString(filename)
+	else
+		astloc.source = sourcectx->lookupOrMakeSourceInfo("<built-in>", FALSE)
+	end if
+
 	astloc.linenum = linenum
 
-	clang_disposeString(filename)
 	return astloc
+end function
+
+function ClangContext.locationFromClang(byval cursor as CXCursor) as TkLocation
+	return locationFromClang(clang_getCursorLocation(cursor))
+end function
+
+function ClangContext.isBuiltIn(byval cursor as CXCursor) as integer
+	dim file as CXFile
+	clang_getSpellingLocation(clang_getCursorLocation(cursor), @file, NULL, NULL, NULL)
+	return (file = NULL)
 end function
 
 function ClangContext.parseEvalResult(byval eval as CXEvalResult) as ASTNODE ptr
@@ -187,7 +204,7 @@ function ClangAstDumper.dumpOne(byval cursor as CXCursor) as string
 	var kind = wrapClangStr(clang_getCursorKindSpelling(clang_getCursorKind(cursor)))
 	var spelling = wrapClangStr(clang_getCursorSpelling(cursor))
 	var ty = clang_getCursorType(cursor)
-	return kind + " " + spelling + ": type[" & dumpClangType(ty) & "]"
+	return kind + " " + spelling + ": type[" & dumpClangType(ty) & "]" + " from " + dumpSourceLocation(clang_getCursorLocation(cursor))
 end function
 
 sub ClangAstDumper.dump(byval cursor as CXCursor)
@@ -239,7 +256,7 @@ end sub
 function ClangContext.makeSymbolFromCursor(byval kind as integer, byval cursor as CXCursor) as ASTNODE ptr
 	var n = astNew(kind, wrapClangStr(clang_getCursorSpelling(cursor)))
 	parseClangType(clang_getCursorType(cursor), n->dtype, n->subtype)
-	n->location = locationFromClang(clang_getCursorLocation(cursor))
+	n->location = locationFromClang(cursor)
 	return n
 end function
 
@@ -400,7 +417,7 @@ function TranslationUnitParser.visitor(byval cursor as CXCursor, byval parent as
 
 		assert(dtype = TYPE_PROC)
 		astSetText(proc, wrapClangStr(clang_getCursorSpelling(cursor)))
-		proc->location = ctx->locationFromClang(clang_getCursorLocation(cursor))
+		proc->location = ctx->locationFromClang(cursor)
 
 		'' Collect parameter names and location
 		'' (information that's only available from cursors, not from the type)
@@ -411,7 +428,7 @@ function TranslationUnitParser.visitor(byval cursor as CXCursor, byval parent as
 				assert(param)
 				var paramcursor = clang_Cursor_getArgument(cursor, i)
 				astSetText(param, wrapClangStr(clang_getCursorSpelling(paramcursor)))
-				param->location = ctx->locationFromClang(clang_getCursorLocation(paramcursor))
+				param->location = ctx->locationFromClang(paramcursor)
 				param = param->nxt
 			next
 			assert(param = NULL)
@@ -433,15 +450,22 @@ function TranslationUnitParser.visitor(byval cursor as CXCursor, byval parent as
 		if clang_getCursorKind(cursor) = CXCursor_UnionDecl then
 			struct->kind = ASTKIND_UNION
 		end if
-		struct->location = ctx->locationFromClang(clang_getCursorLocation(cursor))
+		struct->location = ctx->locationFromClang(cursor)
 
 		ast.takeAppend(struct)
 
 	case CXCursor_TypedefDecl
 		var n = astNew(ASTKIND_TYPEDEF, wrapClangStr(clang_getCursorSpelling(cursor)))
 		ctx->parseClangType(clang_getTypedefDeclUnderlyingType(cursor), n->dtype, n->subtype)
-		n->location = ctx->locationFromClang(clang_getCursorLocation(cursor))
+		n->location = ctx->locationFromClang(cursor)
 		ast.takeAppend(n)
+
+	case CXCursor_MacroDefinition
+		if ctx->isBuiltIn(cursor) = false then
+			var n = astNew(ASTKIND_PPDEFINE, wrapClangStr(clang_getCursorSpelling(cursor)))
+			n->location = ctx->locationFromClang(cursor)
+			ast.takeAppend(n)
+		end if
 
 	end select
 
@@ -463,7 +487,7 @@ function ClangContext.parseAst() as ASTNODE ptr
 		clang_parseTranslationUnit2(index, _
 			NULL, args.p, args.count, _
 			NULL, 0, _
-			CXTranslationUnit_Incomplete, _
+			CXTranslationUnit_Incomplete or CXTranslationUnit_DetailedPreprocessingRecord, _
 			@unit)
 
 	if e <> CXError_Success then
