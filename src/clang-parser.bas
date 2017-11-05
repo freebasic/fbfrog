@@ -218,7 +218,9 @@ function ClangAstDumper.dumpOne(byval cursor as CXCursor) as string
 	var kind = wrapClangStr(clang_getCursorKindSpelling(clang_getCursorKind(cursor)))
 	var spelling = wrapClangStr(clang_getCursorSpelling(cursor))
 	var ty = clang_getCursorType(cursor)
-	return kind + " " + spelling + ": type[" & dumpClangType(ty) & "]" + " from " + dumpSourceLocation(clang_getCursorLocation(cursor))
+	return kind + " " + spelling + _
+		": type[" & dumpClangType(ty) & "]" + _
+		" from " + dumpSourceLocation(clang_getCursorLocation(cursor))
 end function
 
 sub ClangAstDumper.dump(byval cursor as CXCursor)
@@ -306,6 +308,17 @@ sub FieldCollector.visitFields(byval ty as CXType)
 	clang_Type_visitFields(ty, @staticVisitor, @this)
 end sub
 
+private function isTagDecl(byval cursor as CXCursor) as integer
+	select case clang_getCursorKind(cursor)
+	case CXCursor_StructDecl, CXCursor_UnionDecl, CXCursor_EnumDecl
+		return true
+	case CXCursor_TypedefDecl
+	case else
+		assert(false)
+	end select
+	return false
+end function
+
 sub ClangContext.parseClangType(byval ty as CXType, byref dtype as integer, byref subtype as ASTNODE ptr)
 	'' TODO: check ABI to ensure it's correct
 	select case as const ty.kind
@@ -334,8 +347,12 @@ sub ClangContext.parseClangType(byval ty as CXType, byref dtype as integer, byre
 		dtype = typeAddrOf(pointee_dtype)
 
 	case CXType_Elaborated, CXType_Typedef
+		var decl = clang_getTypeDeclaration(ty)
 		dtype = TYPE_UDT
-		subtype = astNewTEXT(wrapClangStr(clang_getTypeSpelling(ty)))
+		subtype = astNewTEXT(wrapClangStr(clang_getCursorSpelling(decl)))
+		if isTagDecl(decl) then
+			subtype->attrib or= ASTATTRIB_TAGID
+		end if
 
 	case CXType_Record
 		var struct = astNew(ASTKIND_STRUCT, wrapClangStr(clang_getTypeSpelling(ty)))
