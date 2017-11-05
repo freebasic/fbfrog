@@ -218,9 +218,20 @@ function ClangAstDumper.dumpOne(byval cursor as CXCursor) as string
 	var kind = wrapClangStr(clang_getCursorKindSpelling(clang_getCursorKind(cursor)))
 	var spelling = wrapClangStr(clang_getCursorSpelling(cursor))
 	var ty = clang_getCursorType(cursor)
-	return kind + " " + spelling + _
-		": type[" & dumpClangType(ty) & "]" + _
-		" from " + dumpSourceLocation(clang_getCursorLocation(cursor))
+
+	var s = kind + " " + spelling
+	s += ": type[" & dumpClangType(ty) & "]"
+	's += " from " + dumpSourceLocation(clang_getCursorLocation(cursor))
+
+	if clang_getCursorKind(cursor) = CXCursor_StructDecl then
+		if clang_equalCursors(cursor, clang_getTypeDeclaration(clang_getCursorType(cursor))) then
+			s += " StructDecl is decl"
+		else
+			s += " StructDecl is not decl"
+		end if
+	end if
+
+	return s
 end function
 
 sub ClangAstDumper.dump(byval cursor as CXCursor)
@@ -355,7 +366,8 @@ sub ClangContext.parseClangType(byval ty as CXType, byref dtype as integer, byre
 		end if
 
 	case CXType_Record
-		var struct = astNew(ASTKIND_STRUCT, wrapClangStr(clang_getTypeSpelling(ty)))
+		var decl = clang_getTypeDeclaration(ty)
+		var struct = astNew(ASTKIND_STRUCT, wrapClangStr(clang_getCursorSpelling(decl)))
 		FieldCollector(this, struct).visitFields(ty)
 		dtype = TYPE_UDT
 		subtype = struct
@@ -522,18 +534,27 @@ function TranslationUnitParser.visitor(byval cursor as CXCursor, byval parent as
 		ast.takeAppend(proc)
 
 	case CXCursor_StructDecl, CXCursor_UnionDecl
-		dim dtype as integer
-		dim struct as ASTNODE ptr
-		ctx->parseClangType(clang_getCursorType(cursor), dtype, struct)
+		'' Really the declaration with body?
+		if clang_equalCursors(cursor, clang_getTypeDeclaration(clang_getCursorType(cursor))) then
+			dim dtype as integer
+			dim struct as ASTNODE ptr
+			ctx->parseClangType(clang_getCursorType(cursor), dtype, struct)
 
-		assert(dtype = TYPE_UDT)
-		astSetText(struct, wrapClangStr(clang_getCursorSpelling(cursor)))
-		if clang_getCursorKind(cursor) = CXCursor_UnionDecl then
-			struct->kind = ASTKIND_UNION
+			assert(dtype = TYPE_UDT)
+			assert(*struct->text = wrapClangStr(clang_getCursorSpelling(cursor)))
+			if clang_getCursorKind(cursor) = CXCursor_UnionDecl then
+				struct->kind = ASTKIND_UNION
+			end if
+			struct->location = ctx->locationFromClang(cursor)
+
+			if struct->head then
+				ast.takeAppend(struct)
+			else
+				'' No fields; must be a forward declaration
+				ctx->api->idopt(tktokens.OPT_ADDFORWARDDECL).addPattern(struct->text)
+				astDelete(struct)
+			end if
 		end if
-		struct->location = ctx->locationFromClang(cursor)
-
-		ast.takeAppend(struct)
 
 	case CXCursor_TypedefDecl
 		var n = astNew(ASTKIND_TYPEDEF, wrapClangStr(clang_getCursorSpelling(cursor)))
