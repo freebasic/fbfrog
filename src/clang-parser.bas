@@ -130,6 +130,20 @@ function ClangContext.evaluateInitializer(byval cursor as CXCursor) as ASTNODE p
 	return n
 end function
 
+sub ClangContext.parseLinkage(byref n as ASTNODE, byval cursor as CXCursor)
+	var linkage = clang_getCursorLinkage(cursor)
+	select case linkage
+	case CXLinkage_NoLinkage
+		n.attrib or= ASTATTRIB_LOCAL
+	case CXLinkage_Internal
+		n.attrib or= ASTATTRIB_STATIC
+	case CXLinkage_External
+		n.attrib or= ASTATTRIB_EXTERN
+	case else
+		oops("unhandled linkage kind " & linkage)
+	end select
+end sub
+
 private function dumpSourceLocation(byval location as CXSourceLocation) as string
 	dim filename as CXString
 	dim as ulong linenum, column
@@ -374,6 +388,7 @@ function TranslationUnitParser.visitor(byval cursor as CXCursor, byval parent as
 		'end if
 
 		n->expr = ctx->evaluateInitializer(cursor)
+		ctx->parseLinkage(*n, cursor)
 
 		ast.takeAppend(n)
 
@@ -403,6 +418,8 @@ function TranslationUnitParser.visitor(byval cursor as CXCursor, byval parent as
 		else
 			assert(proc->head = NULL)
 		end if
+
+		ctx->parseLinkage(*proc, cursor)
 
 		ast.takeAppend(proc)
 
