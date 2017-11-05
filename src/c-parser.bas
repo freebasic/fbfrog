@@ -2781,9 +2781,7 @@ function CParser.parseBody(byval bodyastkind as integer) as AstNode ptr
 	function = result
 end function
 
-function CParser.parseToplevel() as AstNode ptr
-	var t = parseBody(-1)
-
+sub CParser.processQueuedDefBodies(byval t as ASTNODE ptr)
 	'' Process the #define bodies which weren't parsed yet
 	for i as integer = 0 to defbodycount - 1
 		with defbodies[i]
@@ -2799,6 +2797,10 @@ function CParser.parseToplevel() as AstNode ptr
 			end if
 		end with
 	next
+end sub
 
+function CParser.parseToplevel() as AstNode ptr
+	var t = parseBody(-1)
+	processQueuedDefBodies(t)
 	function = t
 end function

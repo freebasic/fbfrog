@@ -109,6 +109,7 @@ type CParser
 	declare function parseExternBlock() as AstNode ptr
 	declare function parseConstruct(byval bodyastkind as integer) as AstNode ptr
 	declare function parseBody(byval bodyastkind as integer) as AstNode ptr
+	declare sub processQueuedDefBodies(byval t as ASTNODE ptr)
 	declare function parseToplevel() as AstNode ptr
 
 	declare operator let(byref as const CParser) '' unimplemented

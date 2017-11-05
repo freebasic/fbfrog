@@ -1,5 +1,6 @@
 #include once "clang-parser.bi"
 #include once "util-str.bi"
+#include once "c-lex.bi"
 
 type ClangString
 	s as CXString
@@ -28,12 +29,20 @@ private function wrapClangStr(byref s as CXString) as string
 	return wrapped.value()
 end function
 
-constructor ClangContext(byref sourcectx as SourceContext)
+constructor ClangContext(byref sourcectx as SourceContext, byref api as ApiInfo)
 	this.sourcectx = @sourcectx
+	this.api = @api
 	index = clang_createIndex(0, 0)
+
+	for i as integer = tktokens.KW__C_FIRST to tktokens.KW__C_LAST
+		ckeywords.addOverwrite(tkInfoText(i), cast(any ptr, i))
+	next
+
+	fbfrog_c_parser = new CParser(fbfrog_tk, api)
 end constructor
 
 destructor ClangContext()
+	delete fbfrog_c_parser
 	clang_disposeTranslationUnit(unit)
 	clang_disposeIndex(index)
 end destructor
@@ -42,7 +51,7 @@ sub ClangContext.addArg(byval arg as const zstring ptr)
 	args.append(strDuplicate(arg))
 end sub
 
-private function getClangTokenKindSpelling(byval kind as CXTokenKind) as string
+private function dumpTokenKind(byval kind as CXTokenKind) as string
 	select case kind
 	case CXToken_Comment     : return "Comment"
 	case CXToken_Identifier  : return "Identifier"
@@ -54,8 +63,7 @@ private function getClangTokenKindSpelling(byval kind as CXTokenKind) as string
 end function
 
 function ClangContext.dumpToken(byval token as CXToken) as string
-	dim tokenstr as ClangString = ClangString(clang_getTokenSpelling(unit, token))
-	return getClangTokenKindSpelling(clang_getTokenKind(token)) + "[" + tokenstr.value() + "]"
+	return dumpTokenKind(clang_getTokenKind(token)) + "[" + wrapClangStr(clang_getTokenSpelling(unit, token)) + "]"
 end function
 
 function ClangContext.dumpCursorTokens(byval cursor as CXCursor) as string
@@ -189,11 +197,17 @@ sub ClangAstVisitor.visitChildrenOf(byval cursor as CXCursor)
 end sub
 
 type ClangAstDumper extends ClangAstVisitor
+	ctx as ClangContext ptr
 	nestinglevel as integer
+	declare constructor(byref ctx as ClangContext)
 	declare function visitor(byval cursor as CXCursor, byval parent as CXCursor) as CXChildVisitResult override
 	declare static function dumpOne(byval cursor as CXCursor) as string
 	declare sub dump(byval cursor as CXCursor)
 end type
+
+constructor ClangAstDumper(byref ctx as ClangContext)
+	this.ctx = @ctx
+end constructor
 
 function ClangAstDumper.visitor(byval cursor as CXCursor, byval parent as CXCursor) as CXChildVisitResult
 	dump(cursor)
@@ -208,7 +222,9 @@ function ClangAstDumper.dumpOne(byval cursor as CXCursor) as string
 end function
 
 sub ClangAstDumper.dump(byval cursor as CXCursor)
-	print space(nestinglevel * 3) + dumpOne(cursor)
+	if ctx->isBuiltIn(cursor) = false then
+		print space(nestinglevel * 3) + dumpOne(cursor)
+	end if
 	nestinglevel += 1
 	visitChildrenOf(cursor)
 	nestinglevel -= 1
@@ -347,6 +363,54 @@ sub ClangContext.parseClangType(byval ty as CXType, byref dtype as integer, byre
 	end if
 end sub
 
+sub ClangContext.addFbfrogToken(byval x as integer, byref token as const CXToken)
+	var clangkind = clang_getTokenKind(token)
+	var spelling = wrapClangStr(clang_getTokenSpelling(unit, token))
+
+	select case clangkind
+	case CXToken_Identifier
+		fbfrog_tk.insert(x, tktokens.TK_ID, spelling)
+
+	case CXToken_Keyword
+		var item = ckeywords.lookup(spelling, hashHash(spelling))
+		if item->s = NULL then
+			oops("unknown keyword " + spelling)
+		end if
+		fbfrog_tk.insert(x, cint(item->data))
+
+	case CXToken_Literal, CXToken_Punctuation
+		var y = lexLoadC(fbfrog_tk, x, spelling, locationFromClang(clang_getTokenLocation(unit, token)).source)
+		assert(y = x + 1)
+
+	case else
+		oops("unhandled token kind " & clangkind)
+	end select
+end sub
+
+sub ClangContext.setFbfrogTokens(byval cursor as CXCursor)
+	fbfrog_tk.clear()
+
+	dim tokens as CXToken ptr
+	dim tokencount as ulong
+	clang_tokenize(unit, clang_getCursorExtent(cursor), @tokens, @tokencount)
+
+	if tokencount > 0 then
+		for i as integer = 0 to tokencount - 1
+			addFbfrogToken(i, tokens[i])
+		next
+	end if
+
+	clang_disposeTokens(unit, tokens, tokencount)
+end sub
+
+function ClangContext.parseMacro(byval cursor as CXCursor) as ASTNODE ptr
+	setFbfrogTokens(cursor)
+	fbfrog_tk.insert(0, tktokens.TK_ID, "define")
+	fbfrog_tk.insert(fbfrog_tk.count(), tktokens.TK_EOL)
+	function = fbfrog_c_parser->parseDefine()
+	fbfrog_tk.clear()
+end function
+
 type ParamVisitor extends ClangAstVisitor
 	proc as ASTNODE ptr
 	param as ASTNODE ptr
@@ -458,11 +522,13 @@ function TranslationUnitParser.visitor(byval cursor as CXCursor, byval parent as
 		var n = astNew(ASTKIND_TYPEDEF, wrapClangStr(clang_getCursorSpelling(cursor)))
 		ctx->parseClangType(clang_getTypedefDeclUnderlyingType(cursor), n->dtype, n->subtype)
 		n->location = ctx->locationFromClang(cursor)
+
+		ctx->fbfrog_c_parser->addTypedef(n->text)
 		ast.takeAppend(n)
 
 	case CXCursor_MacroDefinition
 		if ctx->isBuiltIn(cursor) = false then
-			var n = astNew(ASTKIND_PPDEFINE, wrapClangStr(clang_getCursorSpelling(cursor)))
+			var n = ctx->parseMacro(cursor)
 			n->location = ctx->locationFromClang(cursor)
 			ast.takeAppend(n)
 		end if
@@ -501,9 +567,12 @@ function ClangContext.parseAst() as ASTNODE ptr
 		next
 	end if
 
-	ClangAstDumper().dump(clang_getTranslationUnitCursor(unit))
+	ClangAstDumper(this).dump(clang_getTranslationUnitCursor(unit))
 
 	dim unitparser as TranslationUnitParser = TranslationUnitParser(this)
 	unitparser.parse(unit)
-	return unitparser.ast.takeTree()
+
+	var t = unitparser.ast.takeTree()
+	fbfrog_c_parser->processQueuedDefBodies(t)
+	return t
 end function

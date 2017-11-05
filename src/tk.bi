@@ -265,6 +265,7 @@ public:
 	declare function count() as integer
 	declare sub insert(byval x as integer, byval id as integer, byval text as zstring ptr = NULL)
 	declare sub remove(byval first as integer, byval last as integer)
+	declare sub clear()
 	declare sub copy(byval x as integer, byval first as integer, byval last as integer, byval flagmask as integer)
 	declare function get(byval x as integer) as integer
 	declare function getText(byval x as integer) as zstring ptr

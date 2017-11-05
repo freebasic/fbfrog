@@ -235,7 +235,7 @@ constructor TokenBuffer()
 end constructor
 
 destructor TokenBuffer()
-	remove(0, size - 1)
+	clear()
 	deallocate(buffer)
 end destructor
 
@@ -346,7 +346,7 @@ sub TokenBuffer.insert(byval x as integer, byval id as integer, byval text as zs
 		p = buffer + front
 	end if
 
-	clear(*p, 0, sizeof(*p))
+	.clear(*p, 0, sizeof(*p))
 	p->id = id
 	p->text = strDuplicate(text)
 
@@ -381,6 +381,10 @@ sub TokenBuffer.remove(byval first as integer, byval last as integer)
 
 	gap += delta
 	size -= delta
+end sub
+
+sub TokenBuffer.clear()
+	remove(0, size - 1)
 end sub
 
 '' Copy tokens first..last and insert them in front of x
