@@ -53,6 +53,35 @@ function TargetInfo.id() as string
 	return *osinfo(os).id + "-" + *archinfo(arch).id
 end function
 
+function TargetInfo.clang() as string
+	dim as string archstr, osstr, abistr
+
+	if arch = ARCH_X86 then
+		if os = OS_DOS then
+			archstr = "i386"
+		else
+			archstr = "i686"
+		end if
+	else
+		archstr = *archinfo(arch).id
+	end if
+
+	if os = OS_DOS then
+		osstr = "-msdosdjgpp"
+	else
+		osstr = "-" + *osinfo(os).id
+	end if
+
+	select case arch
+	case ARCH_ARM, ARCH_AARCH64
+		abistr = "-gnueabihf"
+	case else
+		abistr = "-gnu"
+	end select
+
+	return archstr + osstr + abistr
+end function
+
 function ApiBits.calcAccess(byval api as integer, byref element as integer) as ulongint
 	assert(element = 0)
 	while api >= 64

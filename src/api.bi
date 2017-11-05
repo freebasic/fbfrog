@@ -37,6 +37,7 @@ declare function archParse(byref s as string) as integer
 type TargetInfo
 	as byte os, arch
 	declare function id() as string
+	declare function clang() as string
 end type
 
 type ApiBits

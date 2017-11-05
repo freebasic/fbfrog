@@ -1182,6 +1182,9 @@ private function frogParse(byref api as ApiInfo) as AstNode ptr
 	scope
 		dim parser as ClangContext = ClangContext(frog.sourcectx, api)
 
+		parser.addArg("-target")
+		parser.addArg(api.target.clang())
+
 		'' Pre-#defines and #include search dirs
 		scope
 			var i = api.script->head
@@ -1224,8 +1227,6 @@ private function frogParse(byref api as ApiInfo) as AstNode ptr
 
 		ast = parser.parseAst()
 	end scope
-
-	astDump(ast)
 
 	hlGlobal(ast, api)
 
