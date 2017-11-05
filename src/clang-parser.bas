@@ -582,6 +582,7 @@ function ClangContext.parseAst() as ASTNODE ptr
 		for i as integer = 0 to diagcount - 1
 			print wrapClangStr(clang_formatDiagnostic(clang_getDiagnostic(unit, i), clang_defaultDiagnosticDisplayOptions()))
 		next
+		end 1
 	end if
 
 	ClangAstDumper(this).dump(clang_getTranslationUnitCursor(unit))
