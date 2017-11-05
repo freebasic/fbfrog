@@ -92,6 +92,44 @@ function ClangContext.locationFromClang(byval location as CXSourceLocation) as T
 	return astloc
 end function
 
+function ClangContext.parseEvalResult(byval eval as CXEvalResult) as ASTNODE ptr
+	var text = ""
+	var kind = ASTKIND_CONSTI
+	var evalkind = clang_EvalResult_getKind(eval)
+
+	select case evalkind
+	case CXEval_Int
+		if clang_EvalResult_isUnsignedInt(eval) then
+			text = str(clang_EvalResult_getAsUnsigned(eval))
+		else
+			text = str(clang_EvalResult_getAsLongLong(eval))
+		end if
+
+	case CXEval_Float
+		text = str(clang_EvalResult_getAsDouble(eval))
+		kind = ASTKIND_CONSTF
+
+	case CXEval_StrLiteral
+		text = *clang_EvalResult_getAsStr(eval)
+		kind = ASTKIND_STRING
+
+	case CXEval_UnExposed
+		return NULL
+
+	case else
+		oops("unhandled eval result kind " & evalkind)
+	end select
+
+	return astNew(kind, text)
+end function
+
+function ClangContext.evaluateInitializer(byval cursor as CXCursor) as ASTNODE ptr
+	var eval = clang_Cursor_Evaluate(cursor)
+	var n = parseEvalResult(eval)
+	clang_EvalResult_dispose(eval)
+	return n
+end function
+
 private function dumpSourceLocation(byval location as CXSourceLocation) as string
 	dim filename as CXString
 	dim as ulong linenum, column
@@ -334,6 +372,8 @@ function TranslationUnitParser.visitor(byval cursor as CXCursor, byval parent as
 		'	dim v as ParamVisitor = ParamVisitor(n->subtype)
 		'	v.visitChildrenOf(cursor)
 		'end if
+
+		n->expr = ctx->evaluateInitializer(cursor)
 
 		ast.takeAppend(n)
 
