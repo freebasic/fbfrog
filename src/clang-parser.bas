@@ -571,6 +571,11 @@ function TranslationUnitParser.visitor(byval cursor as CXCursor, byval parent as
 			ast.takeAppend(n)
 		end if
 
+	case CXCursor_InclusionDirective
+		'' Ignore (clang expands all #includes anyways)
+
+	case else
+		oops("unhandled cursor kind " & clang_getCursorKind(cursor))
 	end select
 
 	return CXChildVisit_Continue
