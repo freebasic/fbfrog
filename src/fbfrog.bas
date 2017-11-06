@@ -1225,6 +1225,10 @@ private function frogParse(byref api as ApiInfo) as AstNode ptr
 			wend
 		end scope
 
+		if frog.verbose then
+			parser.dumpArgs()
+		end if
+
 		ast = parser.parseAst()
 	end scope
 

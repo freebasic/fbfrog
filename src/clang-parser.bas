@@ -51,6 +51,14 @@ sub ClangContext.addArg(byval arg as const zstring ptr)
 	args.append(strDuplicate(arg))
 end sub
 
+sub ClangContext.dumpArgs()
+	var s = "libclang:"
+	for i as integer = 0 to args.count - 1
+		s += " " + *args.p[i]
+	next
+	print s
+end sub
+
 private function dumpTokenKind(byval kind as CXTokenKind) as string
 	select case kind
 	case CXToken_Comment     : return "Comment"
@@ -586,12 +594,6 @@ sub TranslationUnitParser.parse(byval unit as CXTranslationUnit)
 end sub
 
 function ClangContext.parseAst() as ASTNODE ptr
-	print "libclang invocation args:";
-	for i as integer = 0 to args.count - 1
-		print " ";*args.p[i];
-	next
-	print
-
 	var e = _
 		clang_parseTranslationUnit2(index, _
 			NULL, args.p, args.count, _
