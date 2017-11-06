@@ -90,6 +90,7 @@ enum
 	KW___ASM__
 	KW___ATTRIBUTE
 	KW___ATTRIBUTE__
+	KW___CONST__
 	KW___INLINE
 	KW___INLINE__
 	KW___RESTRICT

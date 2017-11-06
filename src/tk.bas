@@ -89,6 +89,7 @@ dim shared as const TOKENINFO tk_info(0 to ...) = _
 	(@"__asm__"      ), _
 	(@"__attribute"  ), _
 	(@"__attribute__"), _
+	(@"__const__"    ), _
 	(@"__inline"     ), _
 	(@"__inline__"   ), _
 	(@"__restrict"   ), _
