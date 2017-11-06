@@ -400,22 +400,23 @@ sub ClangContext.parseClangType(byval ty as CXType, byref dtype as integer, byre
 	end if
 end sub
 
-sub ClangContext.addFbfrogToken(byval x as integer, byref token as const CXToken)
+sub ClangContext.appendFbfrogToken(byref token as const CXToken)
 	var clangkind = clang_getTokenKind(token)
 	var spelling = wrapClangStr(clang_getTokenSpelling(unit, token))
 
 	select case clangkind
 	case CXToken_Identifier
-		fbfrog_tk.insert(x, tktokens.TK_ID, spelling)
+		fbfrog_tk.insert(fbfrog_tk.count(), tktokens.TK_ID, spelling)
 
 	case CXToken_Keyword
 		var item = ckeywords.lookup(spelling, hashHash(spelling))
 		if item->s = NULL then
 			oops("unknown keyword " + spelling)
 		end if
-		fbfrog_tk.insert(x, cint(item->data))
+		fbfrog_tk.insert(fbfrog_tk.count(), cint(item->data))
 
 	case CXToken_Literal, CXToken_Punctuation
+		var x = fbfrog_tk.count()
 		var y = lexLoadC(fbfrog_tk, x, spelling, locationFromClang(clang_getTokenLocation(unit, token)).source)
 		assert(y = x + 1)
 
@@ -424,28 +425,25 @@ sub ClangContext.addFbfrogToken(byval x as integer, byref token as const CXToken
 	end select
 end sub
 
-sub ClangContext.setFbfrogTokens(byval cursor as CXCursor)
-	fbfrog_tk.clear()
-
+sub ClangContext.appendFbfrogTokens(byval cursor as CXCursor)
 	dim tokens as CXToken ptr
 	dim tokencount as ulong
 	clang_tokenize(unit, clang_getCursorExtent(cursor), @tokens, @tokencount)
-
 	if tokencount > 0 then
 		for i as integer = 0 to tokencount - 1
-			addFbfrogToken(i, tokens[i])
+			appendFbfrogToken(tokens[i])
 		next
 	end if
-
 	clang_disposeTokens(unit, tokens, tokencount)
 end sub
 
 function ClangContext.parseMacro(byval cursor as CXCursor) as ASTNODE ptr
-	setFbfrogTokens(cursor)
 	fbfrog_tk.insert(0, tktokens.TK_ID, "define")
+	appendFbfrogTokens(cursor)
 	fbfrog_tk.insert(fbfrog_tk.count(), tktokens.TK_EOL)
+	fbfrog_c_parser->x = 0
+	fbfrog_c_parser->parseok = TRUE
 	function = fbfrog_c_parser->parseDefine()
-	fbfrog_tk.clear()
 end function
 
 type ParamVisitor extends ClangAstVisitor
