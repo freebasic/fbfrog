@@ -53,7 +53,8 @@ dim shared datatypenames(0 to TYPE__COUNT-1) as zstring ptr => { _
 	@"proc"    , _
 	@"zstring" , _
 	@"wstring" , _
-	@"wchar_t"   _
+	@"wchar_t" , _
+	@"array"     _
 }
 
 function typeDump(byval dtype as integer) as string

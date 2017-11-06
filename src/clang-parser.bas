@@ -274,12 +274,12 @@ sub ClangContext.parseClangFunctionType(byval ty as CXType, byref dtype as integ
 
 	var resultty = clang_getResultType(ty)
 	assert(resultty.kind <> CXType_Invalid)
-	parseClangType(resultty, proc->dtype, proc->subtype)
+	parseClangType(resultty, *proc)
 
 	var paramcount = clang_getNumArgTypes(ty)
 	for i as integer = 0 to paramcount - 1
 		var param = astNew(ASTKIND_PARAM)
-		parseClangType(clang_getArgType(ty, i), param->dtype, param->subtype)
+		parseClangType(clang_getArgType(ty, i), *param)
 		astAppend(proc, param)
 	next
 
@@ -292,7 +292,7 @@ end sub
 
 function ClangContext.makeSymbolFromCursor(byval kind as integer, byval cursor as CXCursor) as ASTNODE ptr
 	var n = astNew(kind, wrapClangStr(clang_getCursorSpelling(cursor)))
-	parseClangType(clang_getCursorType(cursor), n->dtype, n->subtype)
+	parseClangType(clang_getCursorType(cursor), *n)
 	n->location = locationFromClang(cursor)
 	return n
 end function
@@ -338,6 +338,15 @@ private function isTagDecl(byval cursor as CXCursor) as integer
 	return false
 end function
 
+private sub addArrayDimension(byref n as ASTNODE, byval size as ASTNODE ptr)
+	if n.array = NULL then
+		n.array = astNew(ASTKIND_ARRAY)
+	end if
+	var d = astNew(ASTKIND_DIMENSION)
+	d->expr = size
+	astAppend(n.array, d)
+end sub
+
 sub ClangContext.parseClangType(byval ty as CXType, byref dtype as integer, byref subtype as ASTNODE ptr)
 	'' TODO: check ABI to ensure it's correct
 	select case as const ty.kind
@@ -380,6 +389,22 @@ sub ClangContext.parseClangType(byval ty as CXType, byref dtype as integer, byre
 		dtype = TYPE_UDT
 		subtype = struct
 
+	case CXType_ConstantArray, CXType_IncompleteArray
+		var arraytype = astNew(ASTKIND_ARRAY)
+		parseClangType(clang_getArrayElementType(ty), *arraytype)
+
+		dim size as ASTNODE ptr
+		if ty.kind = CXType_IncompleteArray then
+			size = astNew(ASTKIND_ELLIPSIS)
+		else
+			size = astNew(ASTKIND_CONSTI, str(clang_getArraySize(ty)))
+			size->dtype = TYPE_INTEGER
+		end if
+		addArrayDimension(*arraytype, size)
+
+		dtype = TYPE_ARRAY
+		subtype = arraytype
+
 	case CXType_FunctionProto
 		parseClangFunctionType(ty, dtype, subtype)
 
@@ -397,6 +422,34 @@ sub ClangContext.parseClangType(byval ty as CXType, byref dtype as integer, byre
 
 	if clang_isConstQualifiedType(ty) then
 		dtype = typeSetIsConst(dtype)
+	end if
+end sub
+
+sub ClangContext.parseClangType(byval ty as CXType, byref n as ASTNODE)
+	parseClangType(ty, n.dtype, n.subtype)
+	if typeGetDt(n.dtype) = TYPE_ARRAY then
+		if typeGetPtrCount(n.dtype) > 0 then
+			oops("pointer to array, not supported")
+		end if
+
+		var arraytype = n.subtype
+		n.subtype = NULL
+
+		astSetType(@n, typeExpand(n.dtype, arraytype->dtype), arraytype->subtype)
+
+		assert(arraytype->kind = ASTKIND_ARRAY)
+		assert(arraytype->array)
+		assert(arraytype->array->kind = ASTKIND_ARRAY)
+		assert(arraytype->array->head)
+		var d = arraytype->array->head
+		while d
+			assert(d->kind = ASTKIND_DIMENSION)
+			assert(d->expr)
+			addArrayDimension(n, astClone(d->expr))
+			d = d->nxt
+		wend
+
+		astDelete(arraytype)
 	end if
 end sub
 
@@ -564,7 +617,7 @@ function TranslationUnitParser.visitor(byval cursor as CXCursor, byval parent as
 
 	case CXCursor_TypedefDecl
 		var n = astNew(ASTKIND_TYPEDEF, wrapClangStr(clang_getCursorSpelling(cursor)))
-		ctx->parseClangType(clang_getTypedefDeclUnderlyingType(cursor), n->dtype, n->subtype)
+		ctx->parseClangType(clang_getTypedefDeclUnderlyingType(cursor), *n)
 		n->location = ctx->locationFromClang(cursor)
 
 		ctx->fbfrog_c_parser->addTypedef(n->text)

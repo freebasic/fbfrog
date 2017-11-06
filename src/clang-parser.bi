@@ -39,6 +39,7 @@ type ClangContext
 	declare sub parseClangFunctionType(byval ty as CXType, byref dtype as integer, byref subtype as ASTNODE ptr)
 	declare function makeSymbolFromCursor(byval kind as integer, byval cursor as CXCursor) as ASTNODE ptr
 	declare sub parseClangType(byval ty as CXType, byref dtype as integer, byref subtype as ASTNODE ptr)
+	declare sub parseClangType(byval ty as CXType, byref n as ASTNODE)
 	declare sub appendFbfrogToken(byref token as const CXToken)
 	declare sub appendFbfrogTokens(byval cursor as CXCursor)
 	declare function parseMacro(byval cursor as CXCursor) as ASTNODE ptr

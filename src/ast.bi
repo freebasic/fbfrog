@@ -30,6 +30,7 @@ enum
 	TYPE_ZSTRING      '' C char pointers/arrays, if not turned into TYPE_BYTE
 	TYPE_WSTRING      '' C wchar_t pointers/arrays, if not turned into TYPE_WCHAR_T
 	TYPE_WCHAR_T      '' Single wchar
+	TYPE_ARRAY
 	TYPE__COUNT
 end enum
 

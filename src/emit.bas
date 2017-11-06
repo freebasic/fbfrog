@@ -211,7 +211,7 @@ dim shared as ushort typeToKw(0 to TYPE__COUNT-1) = { _
 	KW_LONGINT, KW_ULONGINT, _
 	KW_SINGLE, KW_DOUBLE, KW_CLONGDOUBLE, _
 	TK_TEXT, TK_TEXT, _
-	KW_ZSTRING, KW_WSTRING, KW_WCHAR_T _
+	KW_ZSTRING, KW_WSTRING, KW_WCHAR_T, TK_EOF _
 }
 
 sub CodeGen.emitType(byval dtype as integer, byval subtype as AstNode ptr)
