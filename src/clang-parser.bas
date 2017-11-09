@@ -338,15 +338,6 @@ private function isTagDecl(byval cursor as CXCursor) as integer
 	return false
 end function
 
-private sub addArrayDimension(byref n as ASTNODE, byval size as ASTNODE ptr)
-	if n.array = NULL then
-		n.array = astNew(ASTKIND_ARRAY)
-	end if
-	var d = astNew(ASTKIND_DIMENSION)
-	d->expr = size
-	astAppend(n.array, d)
-end sub
-
 sub ClangContext.parseClangType(byval ty as CXType, byref dtype as integer, byref subtype as ASTNODE ptr)
 	'' TODO: check ABI to ensure it's correct
 	select case as const ty.kind
@@ -400,7 +391,13 @@ sub ClangContext.parseClangType(byval ty as CXType, byref dtype as integer, byre
 			size = astNew(ASTKIND_CONSTI, str(clang_getArraySize(ty)))
 			size->dtype = TYPE_INTEGER
 		end if
-		addArrayDimension(*arraytype, size)
+
+		if arraytype->array = NULL then
+			arraytype->array = astNew(ASTKIND_ARRAY)
+		end if
+		var d = astNew(ASTKIND_DIMENSION)
+		d->expr = size
+		astPrepend(arraytype->array, d)
 
 		dtype = TYPE_ARRAY
 		subtype = arraytype
@@ -437,17 +434,9 @@ sub ClangContext.parseClangType(byval ty as CXType, byref n as ASTNODE)
 
 		astSetType(@n, typeExpand(n.dtype, arraytype->dtype), arraytype->subtype)
 
-		assert(arraytype->kind = ASTKIND_ARRAY)
-		assert(arraytype->array)
-		assert(arraytype->array->kind = ASTKIND_ARRAY)
-		assert(arraytype->array->head)
-		var d = arraytype->array->head
-		while d
-			assert(d->kind = ASTKIND_DIMENSION)
-			assert(d->expr)
-			addArrayDimension(n, astClone(d->expr))
-			d = d->nxt
-		wend
+		assert(n.array = NULL)
+		n.array = arraytype->array
+		arraytype->array = NULL
 
 		astDelete(arraytype)
 	end if
