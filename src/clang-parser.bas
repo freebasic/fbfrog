@@ -640,7 +640,7 @@ function TranslationUnitParser.visitor(byval cursor as CXCursor, byval parent as
 			ast.takeAppend(n)
 		end if
 
-	case CXCursor_InclusionDirective
+	case CXCursor_InclusionDirective, CXCursor_MacroExpansion
 		'' Ignore (clang expands all #includes anyways)
 
 	case else
