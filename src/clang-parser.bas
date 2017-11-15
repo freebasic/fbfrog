@@ -52,6 +52,22 @@ private function dumpTokenKind(byval kind as CXTokenKind) as string
 	end select
 end function
 
+sub TempIdManager.add(byref typespelling as const string, byref tempid as const string)
+	tempidlist.append(tempid)
+	anontagtable.addOverwrite(typespelling, @tempidlist.p[tempidlist.count - 1])
+end sub
+
+function TempIdManager.makeNext(byref typespelling as const string) as string
+	var tempid = "_" & count
+	count += 1
+	add(typespelling, tempid)
+	return tempid
+end function
+
+function TempIdManager.lookup(byref typespelling as const string) as const string ptr
+	return anontagtable.lookupDataOrNull(typespelling)
+end function
+
 constructor ClangContext(byref sourcectx as SourceContext, byref api as ApiInfo)
 	this.sourcectx = @sourcectx
 	this.api = @api
@@ -429,23 +445,49 @@ sub ClangContext.parseClangType(byval ty as CXType, byref dtype as integer, byre
 		dtype = typeAddrOf(pointee_dtype)
 
 	case CXType_Elaborated, CXType_Typedef
-		var decl = clang_getTypeDeclaration(ty)
 		dtype = TYPE_UDT
-		subtype = astNewTEXT(wrapClangStr(clang_getCursorSpelling(decl)))
+		subtype = astNew(ASTKIND_TEXT)
+
+		var decl = clang_getTypeDeclaration(ty)
+		var id = wrapClangStr(clang_getCursorSpelling(decl))
 		if isTagDecl(decl) then
 			subtype->attrib or= ASTATTRIB_TAGID
+			'' Anonymous? Lookup temp id generated for the previous CXType_Record.
+			if len(id) = 0 then
+				dim tempid as const string ptr = tempids.lookup(wrapClangStr(clang_getTypeSpelling(clang_getCursorType(decl))))
+				assert(tempid) '' should have had the CXType_Record and generated a temp id
+				id = *tempid
+				subtype->attrib or= ASTATTRIB_GENERATEDID
+			end if
 		end if
+
+		assert(len(id) > 0)
+		astSetText(subtype, id)
 
 	case CXType_Record, CXType_Enum
 		var decl = clang_getTypeDeclaration(ty)
-		var tagbody = astNew(iif(ty.kind = CXType_Enum, ASTKIND_ENUM, ASTKIND_STRUCT), wrapClangStr(clang_getCursorSpelling(decl)))
-		if ty.kind = CXType_Record then
-			RecordFieldCollector(this, tagbody).collectFieldsOf(ty)
-		else
-			EnumConstVisitor(this, tagbody).visitChildrenOf(decl)
+		var udt = astNew(iif(ty.kind = CXType_Enum, ASTKIND_ENUM, ASTKIND_STRUCT))
+
+		var id = wrapClangStr(clang_getCursorSpelling(decl))
+
+		'' Anonymous record? Assign a fallback name, because anonymous TYPEs are not allowed in FB.
+		if len(id) = 0 andalso ty.kind = CXType_Record then
+			id = tempids.makeNext(wrapClangStr(clang_getTypeSpelling(ty)))
+			udt->attrib or= ASTATTRIB_GENERATEDID
 		end if
+
+		if len(id) > 0 then
+			astSetText(udt, id)
+		end if
+
+		if ty.kind = CXType_Record then
+			RecordFieldCollector(this, udt).collectFieldsOf(ty)
+		else
+			EnumConstVisitor(this, udt).visitChildrenOf(decl)
+		end if
+
 		dtype = TYPE_UDT
-		subtype = tagbody
+		subtype = udt
 
 	case CXType_ConstantArray, CXType_IncompleteArray
 		var arraytype = astNew(ASTKIND_ARRAY)
@@ -655,8 +697,13 @@ function TranslationUnitParser.visitor(byval cursor as CXCursor, byval parent as
 			dim tagbody as ASTNODE ptr
 			ctx->parseClangType(clang_getCursorType(cursor), dtype, tagbody)
 
-			assert(dtype = TYPE_UDT)
-			assert(*tagbody->text = wrapClangStr(clang_getCursorSpelling(cursor)))
+			#if __FB_DEBUG__
+				assert(dtype = TYPE_UDT)
+				var id = wrapClangStr(clang_getCursorSpelling(cursor))
+				if len(id) > 0 then
+					assert(*tagbody->text = id)
+				end if
+			#endif
 
 			select case clang_getCursorKind(cursor)
 			case CXCursor_UnionDecl
@@ -670,6 +717,7 @@ function TranslationUnitParser.visitor(byval cursor as CXCursor, byval parent as
 				ast.takeAppend(tagbody)
 			else
 				'' No fields; must be a forward declaration
+				assert(tagbody->text andalso len(*tagbody->text) > 0)
 				ctx->api->idopt(tktokens.OPT_ADDFORWARDDECL).addPattern(tagbody->text)
 				astDelete(tagbody)
 			end if
