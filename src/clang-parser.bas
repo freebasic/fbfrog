@@ -38,7 +38,19 @@ private function dumpSourceLocation(byval location as CXSourceLocation) as strin
 end function
 
 private function dumpClangType(byval ty as CXType) as string
-	return ty.kind & ": " & wrapClangStr(clang_getTypeSpelling(ty))
+	var s = wrapClangStr(clang_getTypeKindSpelling(ty.kind)) + " " + wrapClangStr(clang_getTypeSpelling(ty))
+
+	select case ty.kind
+	case CXType_Elaborated
+		s += " elaborated " + dumpClangType(clang_Type_getNamedType(ty))
+	end select
+
+	var canonical = clang_getCanonicalType(ty)
+	if clang_equalTypes(ty, canonical) = 0 then
+		s += " canonical " + dumpClangType(canonical)
+	end if
+
+	return s
 end function
 
 private function dumpTokenKind(byval kind as CXTokenKind) as string
@@ -50,6 +62,22 @@ private function dumpTokenKind(byval kind as CXTokenKind) as string
 	case CXToken_Punctuation : return "Punctuation"
 	case else : return "Unknown(" & kind & ")"
 	end select
+end function
+
+private function dumpCursor(byval cursor as CXCursor) as string
+	var s = wrapClangStr(clang_getCursorKindSpelling(clang_getCursorKind(cursor))) + " " + wrapClangStr(clang_getCursorSpelling(cursor))
+	s += ": type[" & dumpClangType(clang_getCursorType(cursor)) & "]"
+	's += " from " + dumpSourceLocation(clang_getCursorLocation(cursor))
+
+	if clang_getCursorKind(cursor) = CXCursor_StructDecl then
+		if clang_equalCursors(cursor, clang_getTypeDeclaration(clang_getCursorType(cursor))) then
+			s += " StructDecl is decl"
+		else
+			s += " StructDecl is not decl"
+		end if
+	end if
+
+	return s
 end function
 
 sub TempIdManager.add(byref typespelling as const string, byref tempid as const string)
@@ -277,29 +305,9 @@ function ClangAstDumper.visitor(byval cursor as CXCursor, byval parent as CXCurs
 	return CXChildVisit_Continue
 end function
 
-function ClangAstDumper.dumpOne(byval cursor as CXCursor) as string
-	var kind = wrapClangStr(clang_getCursorKindSpelling(clang_getCursorKind(cursor)))
-	var spelling = wrapClangStr(clang_getCursorSpelling(cursor))
-	var ty = clang_getCursorType(cursor)
-
-	var s = kind + " " + spelling
-	s += ": type[" & dumpClangType(ty) & "]"
-	's += " from " + dumpSourceLocation(clang_getCursorLocation(cursor))
-
-	if clang_getCursorKind(cursor) = CXCursor_StructDecl then
-		if clang_equalCursors(cursor, clang_getTypeDeclaration(clang_getCursorType(cursor))) then
-			s += " StructDecl is decl"
-		else
-			s += " StructDecl is not decl"
-		end if
-	end if
-
-	return s
-end function
-
 sub ClangAstDumper.dump(byval cursor as CXCursor)
 	if ctx->isBuiltIn(cursor) = false then
-		print space(nestinglevel * 3) + dumpOne(cursor)
+		print space(nestinglevel * 3) + dumpCursor(cursor)
 	end if
 	nestinglevel += 1
 	visitChildrenOf(cursor)
@@ -447,13 +455,14 @@ sub ClangContext.parseClangType(byval ty as CXType, byref dtype as integer, byre
 		dtype = TYPE_UDT
 		subtype = astNew(ASTKIND_TEXT)
 
-		var decl = clang_getTypeDeclaration(ty)
+		var canonty = clang_getCanonicalType(ty)
+		var decl = clang_getTypeDeclaration(canonty)
 		var id = wrapClangStr(clang_getCursorSpelling(decl))
 		if isTagDecl(decl) then
 			subtype->attrib or= ASTATTRIB_TAGID
 			'' Anonymous? Lookup temp id generated for the previous CXType_Record.
 			if len(id) = 0 then
-				dim tempid as const string ptr = tempids.lookup(wrapClangStr(clang_getTypeSpelling(clang_getCursorType(decl))))
+				dim tempid as const string ptr = tempids.lookup(wrapClangStr(clang_getTypeSpelling(canonty)))
 				assert(tempid) '' should have had the CXType_Record and generated a temp id
 				id = *tempid
 				subtype->attrib or= ASTATTRIB_GENERATEDID
@@ -470,7 +479,10 @@ sub ClangContext.parseClangType(byval ty as CXType, byref dtype as integer, byre
 		var id = wrapClangStr(clang_getCursorSpelling(decl))
 
 		'' Anonymous record? Assign a fallback name, because anonymous TYPEs are not allowed in FB.
-		if len(id) = 0 andalso ty.kind = CXType_Record then
+		'' We also need to do this for enums (even though FB allows anonymous ENUMs in general),
+		'' because there may be CXType_Elaborated references to the enum later.
+		if len(id) = 0 then
+			assert(wrapClangStr(clang_getTypeSpelling(ty)) = wrapClangStr(clang_getTypeSpelling(clang_getCanonicalType(ty))))
 			id = tempids.makeNext(wrapClangStr(clang_getTypeSpelling(ty)))
 			udt->attrib or= ASTATTRIB_GENERATEDID
 		end if
