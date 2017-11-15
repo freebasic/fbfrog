@@ -1229,6 +1229,8 @@ private function frogParse(byref api as ApiInfo) as AstNode ptr
 			parser.dumpArgs()
 		end if
 
+		parser.parseTranslationUnit()
+
 		ast = parser.parseAst()
 	end scope
 

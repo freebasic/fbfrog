@@ -59,6 +59,27 @@ sub ClangContext.dumpArgs()
 	print s
 end sub
 
+sub ClangContext.parseTranslationUnit()
+	var e = _
+		clang_parseTranslationUnit2(index, _
+			NULL, args.p, args.count, _
+			NULL, 0, _
+			CXTranslationUnit_Incomplete or CXTranslationUnit_DetailedPreprocessingRecord, _
+			@unit)
+
+	if e <> CXError_Success then
+		oops("libclang parsing failed with error code " & e)
+	end if
+
+	var diagcount = clang_getNumDiagnostics(unit)
+	if diagcount > 0 then
+		for i as integer = 0 to diagcount - 1
+			print wrapClangStr(clang_formatDiagnostic(clang_getDiagnostic(unit, i), clang_defaultDiagnosticDisplayOptions()))
+		next
+		end 1
+	end if
+end sub
+
 private function dumpTokenKind(byval kind as CXTokenKind) as string
 	select case kind
 	case CXToken_Comment     : return "Comment"
@@ -634,31 +655,13 @@ sub TranslationUnitParser.parse(byval unit as CXTranslationUnit)
 end sub
 
 function ClangContext.parseAst() as ASTNODE ptr
-	var e = _
-		clang_parseTranslationUnit2(index, _
-			NULL, args.p, args.count, _
-			NULL, 0, _
-			CXTranslationUnit_Incomplete or CXTranslationUnit_DetailedPreprocessingRecord, _
-			@unit)
-
-	if e <> CXError_Success then
-		oops("libclang parsing failed with error code " & e)
-	end if
-
-	var diagcount = clang_getNumDiagnostics(unit)
-	if diagcount > 0 then
-		for i as integer = 0 to diagcount - 1
-			print wrapClangStr(clang_formatDiagnostic(clang_getDiagnostic(unit, i), clang_defaultDiagnosticDisplayOptions()))
-		next
-		end 1
-	end if
-
-	ClangAstDumper(this).dump(clang_getTranslationUnitCursor(unit))
+	'ClangAstDumper(this).dump(clang_getTranslationUnitCursor(unit))
 
 	dim unitparser as TranslationUnitParser = TranslationUnitParser(this)
 	unitparser.parse(unit)
 
 	var t = unitparser.ast.takeTree()
 	fbfrog_c_parser->processQueuedDefBodies(t)
+
 	return t
 end function

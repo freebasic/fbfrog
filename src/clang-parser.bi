@@ -25,6 +25,8 @@ type ClangContext
 	declare sub addArg(byval arg as const zstring ptr)
 	declare sub dumpArgs()
 
+	declare sub parseTranslationUnit()
+
 	declare function dumpToken(byval token as CXToken) as string
 	declare function dumpCursorTokens(byval cursor as CXCursor) as string
 
