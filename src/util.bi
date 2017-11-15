@@ -59,21 +59,15 @@ declare sub oopsLocation(byval location as TkLocation, byval message as zstring 
 	end type
 #endmacro
 
-#macro implementDynamicArray(T, T_id, T_is_pod, T_is_fbstring, T_needs_deallocate)
+#macro implementDynamicArray(T, T_id, T_is_pod, T_is_fbstring)
 	constructor DynamicArray(T_id)()
 	end constructor
 
 	destructor DynamicArray(T_id)()
 		#if T_is_fbstring
 			#assert T_is_pod = false
-			#assert T_needs_deallocate = false
 			for i as integer = 0 to count - 1
 				p[i] = ""
-			next
-		#elseif T_needs_deallocate
-			#assert T_is_pod
-			for i as integer = 0 to count - 1
-				deallocate(p[i])
 			next
 		#elseif T_is_pod = false
 			for i as integer = 0 to count - 1

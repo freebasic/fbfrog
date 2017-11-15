@@ -68,6 +68,10 @@ destructor ClangContext()
 	delete fbfrog_c_parser
 	clang_disposeTranslationUnit(unit)
 	clang_disposeIndex(index)
+	for i as integer = 0 to args.count - 1
+		deallocate(args.p[i])
+		args.p[i] = NULL
+	next
 end destructor
 
 sub ClangContext.addArg(byval arg as const zstring ptr)
