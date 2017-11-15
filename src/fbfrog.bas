@@ -1066,6 +1066,72 @@ private sub maybeEvalForOs(byval os as integer)
 	end if
 end sub
 
+private function getTargetClangInvokeCommand(byref api as ApiInfo) as string
+	return "clang -target " + api.target.clang()
+end function
+
+private sub parseIncludeDirsFromGccVerbose(byref gccverbose as const string, byref includedirs as DynamicArray(string))
+	enum
+		StateNotYet
+		StatePart1
+		StatePart2
+		StateFinished
+	end enum
+	var state = StateNotYet
+	var bol = 0
+
+	while bol < len(gccverbose)
+		var eol = instr(bol + 1, gccverbose, !"\n") - 1
+		var ln = mid(gccverbose, bol + 1, eol - bol)
+		bol = eol + 1
+
+		select case ln
+		case "#include ""..."" search starts here:"
+			if state = StateNotYet then
+				state = StatePart1
+			end if
+
+		case "#include <...> search starts here:"
+			if state = StatePart1 then
+				state = StatePart2
+			end if
+
+		case "End of search list."
+			state = StateFinished
+
+		case else
+			select case state
+			case StatePart1, StatePart2
+				if len(ln) > 1 andalso ln[0] = asc(" ") then
+					ln = right(ln, len(ln) - 1)
+					includedirs.append(ln)
+				end if
+			end select
+
+		end select
+	wend
+end sub
+
+private function getCommandOutput(byref cmd as const string) as string
+	var f = freefile()
+	if open pipe(cmd, for input, as f) then
+		oops("Failed to run command: " + cmd)
+	end if
+	dim as string ln, all
+	while not eof(f)
+		line input #f, ln
+		all += ln + !"\n"
+	wend
+	close f
+	return all
+end function
+
+private sub queryGccIncludeDirs(byref api as ApiInfo, byref includedirs as DynamicArray(string))
+	var cmd = "echo | " + getTargetClangInvokeCommand(api) + " -E -v - 2>&1"
+	var gccverbose = getCommandOutput(cmd)
+	parseIncludeDirsFromGccVerbose(gccverbose, includedirs)
+end sub
+
 private function frogParse(byref api as ApiInfo) as AstNode ptr
 	dim ast as AstNode ptr
 
@@ -1184,6 +1250,15 @@ private function frogParse(byref api as ApiInfo) as AstNode ptr
 
 		parser.addArg("-target")
 		parser.addArg(api.target.clang())
+
+		scope
+			dim includedirs as DynamicArray(string)
+			queryGccIncludeDirs(api, includedirs)
+			for i as integer = 0 to includedirs.count - 1
+				parser.addArg("-isystem")
+				parser.addArg(includedirs.p[i])
+			next
+		end scope
 
 		'' Pre-#defines and #include search dirs
 		scope
