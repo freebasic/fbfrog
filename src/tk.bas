@@ -90,10 +90,12 @@ dim shared as const TOKENINFO tk_info(0 to ...) = _
 	(@"__attribute"  ), _
 	(@"__attribute__"), _
 	(@"__const__"    ), _
+	(@"__extension__"), _
 	(@"__inline"     ), _
 	(@"__inline__"   ), _
 	(@"__restrict"   ), _
 	(@"__restrict__" ), _
+	(@"__volatile__"), _
 	(@"_Bool"   ), _
 	(@"_Pragma" ), _
 	(@"asm"     ), _
