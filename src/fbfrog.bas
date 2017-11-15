@@ -1307,6 +1307,8 @@ private function frogParse(byref api as ApiInfo) as AstNode ptr
 		parser.parseTranslationUnit()
 
 		ast = parser.parseAst()
+
+		parser.parseInclusions()
 	end scope
 
 	hlGlobal(ast, api)

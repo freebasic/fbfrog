@@ -47,4 +47,14 @@ type ClangContext
 	declare function parseMacro(byval cursor as CXCursor) as ASTNODE ptr
 
 	declare function parseAst() as ASTNODE ptr
+
+	declare sub inclusionVisitor(byval incfile as CXFile, byval stack as CXSourceLocation ptr, byval stackcount as ulong)
+	declare static sub staticInclusionVisitor _
+		( _
+			byval incfile as CXFile, _
+			byval stack as CXSourceLocation ptr, _
+			byval stackcount as ulong, _
+			byval client_data as CXClientData _
+		)
+	declare sub parseInclusions()
 end type

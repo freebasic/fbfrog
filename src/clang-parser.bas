@@ -695,3 +695,29 @@ function ClangContext.parseAst() as ASTNODE ptr
 
 	return t
 end function
+
+sub ClangContext.inclusionVisitor(byval incfile as CXFile, byval stack as CXSourceLocation ptr, byval stackcount as ulong)
+	api->print(wrapClangStr(clang_getFileName(incfile)))
+#if 0
+	if stackcount > 0 then
+		for i as integer = 0 to stackcount - 1
+			api->print(dumpSourceLocation(stack[i]))
+		next
+	end if
+#endif
+end sub
+
+sub ClangContext.staticInclusionVisitor _
+	( _
+		byval incfile as CXFile, _
+		byval stack as CXSourceLocation ptr, _
+		byval stackcount as ulong, _
+		byval client_data as CXClientData _
+	)
+	dim self as ClangContext ptr = client_data
+	self->inclusionVisitor(incfile, stack, stackcount)
+end sub
+
+sub ClangContext.parseInclusions()
+	clang_getInclusions(unit, @staticInclusionVisitor, @this)
+end sub
