@@ -106,8 +106,12 @@ end function
 function strIsValidSymbolId(byval s as const zstring ptr) as integer
 	var i = 0
 	do
-		select case as const (*s)[0]
+		select case as const (*s)[i]
 		case 0
+			'' Must not be empty
+			if i = 0 then
+				return FALSE
+			end if
 			exit do
 
 		case CH_A to CH_Z, CH_L_A to CH_L_Z, CH_UNDERSCORE
@@ -116,14 +120,13 @@ function strIsValidSymbolId(byval s as const zstring ptr) as integer
 		case CH_0 to CH_9
 			'' Numbers are allowed but not at the front
 			if i = 0 then
-				exit function
+				return FALSE
 			end if
 
 		case else
-			exit function
+			return FALSE
 		end select
 
-		s += 1
 		i += 1
 	loop
 
