@@ -452,41 +452,57 @@ sub ClangContext.parseClangType(byval ty as CXType, byref dtype as integer, byre
 		dtype = typeAddrOf(pointee_dtype)
 
 	case CXType_Elaborated, CXType_Typedef
-		dtype = TYPE_UDT
-		subtype = astNew(ASTKIND_TEXT)
-
 		var canonty = clang_getCanonicalType(ty)
-		var decl = clang_getTypeDeclaration(canonty)
-		var id = wrapClangStr(clang_getCursorSpelling(decl))
-		if isTagDecl(decl) then
-			subtype->attrib or= ASTATTRIB_TAGID
-			'' Anonymous? Lookup temp id generated for the previous CXType_Record.
-			if len(id) = 0 then
-				dim tempid as const string ptr = tempids.lookup(wrapClangStr(clang_getTypeSpelling(canonty)))
-				assert(tempid) '' should have had the CXType_Record and generated a temp id
-				id = *tempid
-				subtype->attrib or= ASTATTRIB_GENERATEDID
-			end if
-		end if
+		select case canonty.kind
+		case CXType_Elaborated, CXType_Typedef
+			assert(false)
 
-		assert(len(id) > 0)
-		astSetText(subtype, id)
+		case CXType_Record, CXType_Enum
+			dtype = TYPE_UDT
+			subtype = astNew(ASTKIND_TEXT)
+
+			var canontyspelling = wrapClangStr(clang_getTypeSpelling(canonty))
+			var decl = clang_getTypeDeclaration(canonty)
+			var id = wrapClangStr(clang_getCursorSpelling(decl))
+			if isTagDecl(decl) then
+				subtype->attrib or= ASTATTRIB_TAGID
+				'' Anonymous? Lookup temp id generated for the previous CXType_Record.
+				if len(id) = 0 andalso strIsValidSymbolId(canontyspelling) then
+					id = canontyspelling
+				end if
+				if len(id) = 0 then
+					dim tempid as const string ptr = tempids.lookup(canontyspelling)
+					assert(tempid) '' should have had the CXType_Record and generated a temp id
+					id = *tempid
+					subtype->attrib or= ASTATTRIB_GENERATEDID
+				end if
+			end if
+
+			assert(len(id) > 0)
+			astSetText(subtype, id)
+
+		case else
+			parseClangType(canonty, dtype, subtype)
+		end select
 
 	case CXType_Record, CXType_Enum
 		var decl = clang_getTypeDeclaration(ty)
 		var udt = astNew(iif(ty.kind = CXType_Enum, ASTKIND_ENUM, ASTKIND_STRUCT))
 
 		var id = wrapClangStr(clang_getCursorSpelling(decl))
+		var tyspelling = wrapClangStr(clang_getTypeSpelling(ty))
 
 		'' Anonymous record? Assign a fallback name, because anonymous TYPEs are not allowed in FB.
 		'' We also need to do this for enums (even though FB allows anonymous ENUMs in general),
 		'' because there may be CXType_Elaborated references to the enum later.
+		if len(id) = 0 andalso strIsValidSymbolId(tyspelling) then
+			id = tyspelling
+		end if
 		if len(id) = 0 then
-			assert(wrapClangStr(clang_getTypeSpelling(ty)) = wrapClangStr(clang_getTypeSpelling(clang_getCanonicalType(ty))))
-			id = tempids.makeNext(wrapClangStr(clang_getTypeSpelling(ty)))
+			assert(tyspelling = wrapClangStr(clang_getTypeSpelling(clang_getCanonicalType(ty))))
+			id = tempids.makeNext(tyspelling)
 			udt->attrib or= ASTATTRIB_GENERATEDID
 		end if
-
 		if len(id) > 0 then
 			astSetText(udt, id)
 		end if
@@ -702,6 +718,7 @@ function TranslationUnitParser.visitor(byval cursor as CXCursor, byval parent as
 		ast.takeAppend(proc)
 
 	case CXCursor_StructDecl, CXCursor_UnionDecl, CXCursor_EnumDecl
+		'' TODO: use clang_getCanonicalCursor() and lookup table to emit each type once only
 		'' Really the declaration with body?
 		if clang_equalCursors(cursor, clang_getTypeDeclaration(clang_getCursorType(cursor))) then
 			dim dtype as integer
