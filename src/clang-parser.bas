@@ -318,35 +318,57 @@ function ClangContext.makeSymbolFromCursor(byval kind as integer, byval cursor a
 	return n
 end function
 
-type FieldCollector
+type RecordFieldCollector
 	ctx as ClangContext ptr
 	record as ASTNODE ptr
 	declare constructor(byref ctx as ClangContext, byval record as ASTNODE ptr)
-	declare operator let(byref as const FieldCollector) '' unimplemented
+	declare operator let(byref as const RecordFieldCollector) '' unimplemented
 	declare static function staticVisitor(byval cursor as CXCursor, byval client_data as CXClientData) as CXVisitorResult
 	declare function visitor(byval cursor as CXCursor) as CXVisitorResult
-	declare sub visitFields(byval ty as CXType)
+	declare sub collectFieldsOf(byval ty as CXType)
 end type
 
-constructor FieldCollector(byref ctx as ClangContext, byval record as ASTNODE ptr)
+constructor RecordFieldCollector(byref ctx as ClangContext, byval record as ASTNODE ptr)
 	this.ctx = @ctx
 	this.record = record
 end constructor
 
-function FieldCollector.staticVisitor(byval cursor as CXCursor, byval client_data as CXClientData) as CXVisitorResult
-	dim self as FieldCollector ptr = client_data
+function RecordFieldCollector.staticVisitor(byval cursor as CXCursor, byval client_data as CXClientData) as CXVisitorResult
+	dim self as RecordFieldCollector ptr = client_data
 	return self->visitor(cursor)
 end function
 
-function FieldCollector.visitor(byval cursor as CXCursor) as CXVisitorResult
+function RecordFieldCollector.visitor(byval cursor as CXCursor) as CXVisitorResult
 	assert(clang_getCursorKind(cursor) = CXCursor_FieldDecl)
 	astAppend(record, ctx->makeSymbolFromCursor(ASTKIND_FIELD, cursor))
 	return CXChildVisit_Continue
 end function
 
-sub FieldCollector.visitFields(byval ty as CXType)
+sub RecordFieldCollector.collectFieldsOf(byval ty as CXType)
 	clang_Type_visitFields(ty, @staticVisitor, @this)
 end sub
+
+type EnumConstVisitor extends ClangAstVisitor
+	ctx as ClangContext ptr
+	enumbody as ASTNODE ptr
+	declare constructor(byref ctx as ClangContext, byval enumbody as ASTNODE ptr)
+	declare operator let(byref as const EnumConstVisitor) '' unimplemented
+	declare function visitor(byval cursor as CXCursor, byval parent as CXCursor) as CXChildVisitResult override
+end type
+
+constructor EnumConstVisitor(byref ctx as ClangContext, byval enumbody as ASTNODE ptr)
+	this.ctx = @ctx
+	this.enumbody = enumbody
+end constructor
+
+function EnumConstVisitor.visitor(byval cursor as CXCursor, byval parent as CXCursor) as CXChildVisitResult
+	if clang_getCursorKind(cursor) = CXCursor_EnumConstantDecl then
+		var enumconst = ctx->makeSymbolFromCursor(ASTKIND_CONST, cursor)
+		enumconst->attrib or= ASTATTRIB_ENUMCONST
+		astAppend(enumbody, enumconst)
+	end if
+	return CXChildVisit_Continue
+end function
 
 private function isTagDecl(byval cursor as CXCursor) as integer
 	select case clang_getCursorKind(cursor)
@@ -394,12 +416,16 @@ sub ClangContext.parseClangType(byval ty as CXType, byref dtype as integer, byre
 			subtype->attrib or= ASTATTRIB_TAGID
 		end if
 
-	case CXType_Record
+	case CXType_Record, CXType_Enum
 		var decl = clang_getTypeDeclaration(ty)
-		var struct = astNew(ASTKIND_STRUCT, wrapClangStr(clang_getCursorSpelling(decl)))
-		FieldCollector(this, struct).visitFields(ty)
+		var tagbody = astNew(iif(ty.kind = CXType_Enum, ASTKIND_ENUM, ASTKIND_STRUCT), wrapClangStr(clang_getCursorSpelling(decl)))
+		if ty.kind = CXType_Record then
+			RecordFieldCollector(this, tagbody).collectFieldsOf(ty)
+		else
+			EnumConstVisitor(this, tagbody).visitChildrenOf(decl)
+		end if
 		dtype = TYPE_UDT
-		subtype = struct
+		subtype = tagbody
 
 	case CXType_ConstantArray, CXType_IncompleteArray
 		var arraytype = astNew(ASTKIND_ARRAY)
@@ -602,26 +628,30 @@ function TranslationUnitParser.visitor(byval cursor as CXCursor, byval parent as
 
 		ast.takeAppend(proc)
 
-	case CXCursor_StructDecl, CXCursor_UnionDecl
+	case CXCursor_StructDecl, CXCursor_UnionDecl, CXCursor_EnumDecl
 		'' Really the declaration with body?
 		if clang_equalCursors(cursor, clang_getTypeDeclaration(clang_getCursorType(cursor))) then
 			dim dtype as integer
-			dim struct as ASTNODE ptr
-			ctx->parseClangType(clang_getCursorType(cursor), dtype, struct)
+			dim tagbody as ASTNODE ptr
+			ctx->parseClangType(clang_getCursorType(cursor), dtype, tagbody)
 
 			assert(dtype = TYPE_UDT)
-			assert(*struct->text = wrapClangStr(clang_getCursorSpelling(cursor)))
-			if clang_getCursorKind(cursor) = CXCursor_UnionDecl then
-				struct->kind = ASTKIND_UNION
-			end if
-			struct->location = ctx->locationFromClang(cursor)
+			assert(*tagbody->text = wrapClangStr(clang_getCursorSpelling(cursor)))
 
-			if struct->head then
-				ast.takeAppend(struct)
+			select case clang_getCursorKind(cursor)
+			case CXCursor_UnionDecl
+				tagbody->kind = ASTKIND_UNION
+			case CXCursor_EnumDecl
+				assert(tagbody->kind = ASTKIND_ENUM)
+			end select
+			tagbody->location = ctx->locationFromClang(cursor)
+
+			if tagbody->head then
+				ast.takeAppend(tagbody)
 			else
 				'' No fields; must be a forward declaration
-				ctx->api->idopt(tktokens.OPT_ADDFORWARDDECL).addPattern(struct->text)
-				astDelete(struct)
+				ctx->api->idopt(tktokens.OPT_ADDFORWARDDECL).addPattern(tagbody->text)
+				astDelete(tagbody)
 			end if
 		end if
 
