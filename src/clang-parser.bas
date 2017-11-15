@@ -29,6 +29,29 @@ private function wrapClangStr(byref s as CXString) as string
 	return wrapped.value()
 end function
 
+private function dumpSourceLocation(byval location as CXSourceLocation) as string
+	dim filename as CXString
+	dim as ulong linenum, column
+	clang_getPresumedLocation(location, @filename, @linenum, @column)
+	function = *clang_getCString(filename) + ":" & linenum & ":" & column
+	clang_disposeString(filename)
+end function
+
+private function dumpClangType(byval ty as CXType) as string
+	return ty.kind & ": " & wrapClangStr(clang_getTypeSpelling(ty))
+end function
+
+private function dumpTokenKind(byval kind as CXTokenKind) as string
+	select case kind
+	case CXToken_Comment     : return "Comment"
+	case CXToken_Identifier  : return "Identifier"
+	case CXToken_Keyword     : return "Keyword"
+	case CXToken_Literal     : return "Literal"
+	case CXToken_Punctuation : return "Punctuation"
+	case else : return "Unknown(" & kind & ")"
+	end select
+end function
+
 constructor ClangContext(byref sourcectx as SourceContext, byref api as ApiInfo)
 	this.sourcectx = @sourcectx
 	this.api = @api
@@ -79,17 +102,6 @@ sub ClangContext.parseTranslationUnit()
 		end 1
 	end if
 end sub
-
-private function dumpTokenKind(byval kind as CXTokenKind) as string
-	select case kind
-	case CXToken_Comment     : return "Comment"
-	case CXToken_Identifier  : return "Identifier"
-	case CXToken_Keyword     : return "Keyword"
-	case CXToken_Literal     : return "Literal"
-	case CXToken_Punctuation : return "Punctuation"
-	case else : return "Unknown(" & kind & ")"
-	end select
-end function
 
 function ClangContext.dumpToken(byval token as CXToken) as string
 	return dumpTokenKind(clang_getTokenKind(token)) + "[" + wrapClangStr(clang_getTokenSpelling(unit, token)) + "]"
@@ -184,6 +196,21 @@ function ClangContext.evaluateInitializer(byval cursor as CXCursor) as ASTNODE p
 	return n
 end function
 
+function ClangContext.parseEnumConstValue(byval cursor as CXCursor, byval parent as CXCursor) as ASTNODE ptr
+	var expr = astNew(ASTKIND_CONSTI)
+	print wrapClangStr(clang_getCursorSpelling(parent)), dumpClangType(clang_getEnumDeclIntegerType(parent))
+	parseClangType(clang_getEnumDeclIntegerType(parent), expr->dtype, expr->subtype)
+	select case expr->dtype
+	case TYPE_BYTE, TYPE_SHORT, TYPE_LONG, TYPE_LONGINT, TYPE_INTEGER, TYPE_CLONG
+		astSetText(expr, str(clang_getEnumConstantDeclValue(cursor)))
+	case TYPE_UBYTE, TYPE_USHORT, TYPE_ULONG, TYPE_ULONGINT, TYPE_UINTEGER, TYPE_CULONG
+		astSetText(expr, str(clang_getEnumConstantDeclUnsignedValue(cursor)))
+	case else
+		assert(false)
+	end select
+	return expr
+end function
+
 sub ClangContext.parseLinkage(byref n as ASTNODE, byval cursor as CXCursor)
 	var linkage = clang_getCursorLinkage(cursor)
 	select case linkage
@@ -197,18 +224,6 @@ sub ClangContext.parseLinkage(byref n as ASTNODE, byval cursor as CXCursor)
 		oops("unhandled linkage kind " & linkage)
 	end select
 end sub
-
-private function dumpSourceLocation(byval location as CXSourceLocation) as string
-	dim filename as CXString
-	dim as ulong linenum, column
-	clang_getPresumedLocation(location, @filename, @linenum, @column)
-	function = *clang_getCString(filename) + ":" & linenum & ":" & column
-	clang_disposeString(filename)
-end function
-
-private function dumpClangType(byval ty as CXType) as string
-	return ty.kind & ": " & wrapClangStr(clang_getTypeSpelling(ty))
-end function
 
 type ClangAstVisitor extends object
 	declare abstract function visitor(byval cursor as CXCursor, byval parent as CXCursor) as CXChildVisitResult
@@ -365,6 +380,7 @@ function EnumConstVisitor.visitor(byval cursor as CXCursor, byval parent as CXCu
 	if clang_getCursorKind(cursor) = CXCursor_EnumConstantDecl then
 		var enumconst = ctx->makeSymbolFromCursor(ASTKIND_CONST, cursor)
 		enumconst->attrib or= ASTATTRIB_ENUMCONST
+		enumconst->expr = ctx->parseEnumConstValue(cursor, parent)
 		astAppend(enumbody, enumconst)
 	end if
 	return CXChildVisit_Continue

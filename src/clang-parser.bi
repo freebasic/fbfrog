@@ -35,6 +35,7 @@ type ClangContext
 	declare function isBuiltIn(byval cursor as CXCursor) as integer
 	declare function parseEvalResult(byval eval as CXEvalResult) as ASTNODE ptr
 	declare function evaluateInitializer(byval cursor as CXCursor) as ASTNODE ptr
+	declare function parseEnumConstValue(byval cursor as CXCursor, byval parent as CXCursor) as ASTNODE ptr
 	declare sub parseLinkage(byref n as ASTNODE, byval cursor as CXCursor)
 	declare sub parseVariadicProc(byref proc as ASTNODE, byval ty as CXType)
 	declare sub parseCallConv(byref proc as ASTNODE, byval ty as CXType)
