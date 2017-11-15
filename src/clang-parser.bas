@@ -218,7 +218,6 @@ end function
 
 function ClangContext.parseEnumConstValue(byval cursor as CXCursor, byval parent as CXCursor) as ASTNODE ptr
 	var expr = astNew(ASTKIND_CONSTI)
-	print wrapClangStr(clang_getCursorSpelling(parent)), dumpClangType(clang_getEnumDeclIntegerType(parent))
 	parseClangType(clang_getEnumDeclIntegerType(parent), expr->dtype, expr->subtype)
 	select case expr->dtype
 	case TYPE_BYTE, TYPE_SHORT, TYPE_LONG, TYPE_LONGINT, TYPE_INTEGER, TYPE_CLONG
