@@ -67,7 +67,9 @@ declare sub oopsLocation(byval location as TkLocation, byval message as zstring 
 		#if T_is_fbstring
 			#assert T_is_pod = false
 			#assert T_needs_deallocate = false
-			p[i] = ""
+			for i as integer = 0 to count - 1
+				p[i] = ""
+			next
 		#elseif T_needs_deallocate
 			#assert T_is_pod
 			for i as integer = 0 to count - 1
@@ -100,3 +102,4 @@ declare sub oopsLocation(byval location as TkLocation, byval message as zstring 
 #endmacro
 
 declareDynamicArray(const zstring ptr, const_zstring_ptr, true)
+declareDynamicArray(string, string, false)

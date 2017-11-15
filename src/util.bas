@@ -174,3 +174,4 @@ sub oopsLocation(byval location as TkLocation, byval message as zstring ptr)
 end sub
 
 implementDynamicArray(const zstring ptr, const_zstring_ptr, true, false, true)
+implementDynamicArray(string, string, false, true, false)
