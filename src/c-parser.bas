@@ -128,7 +128,7 @@ function CParser.isTypedef(byval id as zstring ptr) as integer
 	end if
 
 	'' 2. Check -typedefhint options
-	function = api->idopt(OPT_TYPEDEFHINT).matches(id)
+	function = options->idopt(OPT_TYPEDEFHINT).matches(id)
 end function
 
 function CParser.lookupExtraDataType(byval id as zstring ptr) as integer
@@ -148,9 +148,9 @@ function CParser.identifierIsMacroParam(byval id as zstring ptr) as integer
 	end if
 end function
 
-constructor CParser(byref tk as TokenBuffer, byref api as ApiInfo)
+constructor CParser(byref tk as TokenBuffer, byref options as BindingOptions)
 	this.tk = @tk
-	this.api = @api
+	this.options = @options
 	x = 0
 	parseok = TRUE
 	parentdefine = NULL
@@ -201,7 +201,7 @@ function CParser.parseLiteral(byval astkind as integer, byval eval_escapes as in
 	dim n as AstNode ptr
 
 	if astkind = ASTKIND_CONSTI then
-		n = hNumberLiteral(*tk, x, FALSE, errmsg, api->clong32)
+		n = hNumberLiteral(*tk, x, FALSE, errmsg, options->clong32)
 	else
 		n = hStringLiteral(*tk, x, eval_escapes, errmsg)
 	end if
@@ -1114,7 +1114,7 @@ end function
 function CParser.parseDefineBody(byval macro as AstNode ptr) as integer
 	'' If -convbodytokens was given for this #define, then don't try to parse the #define body,
 	'' but just convert the tokens individually from C to FB.
-	if api->idopt(OPT_CONVBODYTOKENS).matches(macro->text) then
+	if options->idopt(OPT_CONVBODYTOKENS).matches(macro->text) then
 		'' TODO: should use emit.TokenBuffer, so hlAutoRenameConflictingMacroParams() could work
 		var body = parseDefineBodyTokens()
 		if len(body) > 0 then
@@ -1646,7 +1646,7 @@ sub CParser.parseBaseType _
 		if shortmods = 1 then
 			dtype = iif(unsignedmods > 0, TYPE_USHORT, TYPE_SHORT)
 		elseif longmods = 1 then
-			dtype = typeGetCLong(unsignedmods > 0, api->clong32)
+			dtype = typeGetCLong(unsignedmods > 0, options->clong32)
 		elseif longmods = 2 then
 			dtype = iif(unsignedmods > 0, TYPE_ULONGINT, TYPE_LONGINT)
 		elseif dtype = TYPE_LONG then
@@ -2436,7 +2436,7 @@ function CParser.parseDecl(byval astkind as integer, byval gccattribs as integer
 				assert(n->expr = NULL)
 				n->expr = parseScope()
 
-				if api->nofunctionbodies then
+				if options->nofunctionbodies then
 					parseok = originalparseok
 					n->expr = NULL
 				end if

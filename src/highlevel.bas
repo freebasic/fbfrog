@@ -10,7 +10,7 @@
 declare sub expandTypedef(byval typedef as AstNode ptr, byval n as AstNode ptr)
 
 namespace hl
-	dim shared api as ApiInfo ptr
+	dim shared options as BindingOptions ptr
 
 	'' Used by forward declaration addition pass
 	'' data = hl.types array index
@@ -589,7 +589,7 @@ private sub hlApplyRemoveOption(byval ast as AstNode ptr, byval astkind as integ
 		var nxt = i->nxt
 
 		if (i->text <> NULL) and (astkind = -1) or (i->kind = astkind) then
-			if hl.api->idopt(opt).matches(i->text) then
+			if hl.options->idopt(opt).matches(i->text) then
 				astRemove(ast, i)
 			end if
 		end if
@@ -605,7 +605,7 @@ private sub hlApplyRemove1st(byval ast as AstNode ptr)
 		var nxt = i->nxt
 
 		if i->text then
-			if hl.api->idopt(tktokens.OPT_REMOVE1ST).matches(i->text) and _
+			if hl.options->idopt(tktokens.OPT_REMOVE1ST).matches(i->text) and _
 			   (not removed.contains(i->text, hashHash(i->text))) then
 				removed.addOverwrite(i->text, NULL)
 				astRemove(ast, i)
@@ -623,7 +623,7 @@ private sub hlApplyRemove2nd(byval ast as AstNode ptr)
 		var nxt = i->nxt
 
 		if i->text then
-			if hl.api->idopt(tktokens.OPT_REMOVE2ND).matches(i->text) then
+			if hl.options->idopt(tktokens.OPT_REMOVE2ND).matches(i->text) then
 				if found1st.contains(i->text, hashHash(i->text)) then
 					astRemove(ast, i)
 				else
@@ -641,7 +641,7 @@ private sub hlApplyDropProcBodyOptions(byval ast as AstNode ptr)
 	while i
 
 		if (i->kind = ASTKIND_PROC) and (i->expr <> NULL) then
-			if hl.api->idopt(tktokens.OPT_DROPPROCBODY).matches(i->text) then
+			if hl.options->idopt(tktokens.OPT_DROPPROCBODY).matches(i->text) then
 				astDelete(i->expr)
 				i->expr = NULL
 			end if
@@ -679,7 +679,7 @@ private function hlSetArraySizes(byval n as AstNode ptr) as integer
 		var dimension = n->array->head
 		assert(dimension->kind = ASTKIND_DIMENSION)
 		if dimension->expr->kind = ASTKIND_ELLIPSIS then
-			dim size as zstring ptr = hl.api->setarraysizeoptions.lookupDataOrNull(n->text)
+			dim size as zstring ptr = hl.options->setarraysizeoptions.lookupDataOrNull(n->text)
 			if size then
 				astDelete(dimension->expr)
 				dimension->expr = astNewTEXT(size)
@@ -700,7 +700,7 @@ private sub doRename(byval n as AstNode ptr, byval newid as zstring ptr)
 end sub
 
 private function hApplyRenameOption(byval opt as integer, byval n as AstNode ptr) as integer
-	dim as zstring ptr newid = hl.api->renameopt(opt).lookupDataOrNull(n->text)
+	dim as zstring ptr newid = hl.options->renameopt(opt).lookupDataOrNull(n->text)
 	if newid then
 		doRename(n, newid)
 		function = TRUE
@@ -719,7 +719,7 @@ private function hlApplyRenameOption(byval n as AstNode ptr) as integer
 		case else
 			hApplyRenameOption(tktokens.OPT_RENAME, n)
 
-			if hl.api->idopt(tktokens.OPT_RENAME_).matches(n->text) then
+			if hl.options->idopt(tktokens.OPT_RENAME_).matches(n->text) then
 				doRename(n, *n->text + "_")
 			end if
 		end select
@@ -751,7 +751,7 @@ private function hlApplyRenameOption(byval n as AstNode ptr) as integer
 	case ASTKIND_PPDEFINE
 		hApplyRenameOption(tktokens.OPT_RENAMEDEFINE, n)
 
-		if hl.api->renameopt(tktokens.OPT_RENAMEMACROPARAM).count > 0 then
+		if hl.options->renameopt(tktokens.OPT_RENAMEMACROPARAM).count > 0 then
 			var param = n->head
 			var renamed_param_here = FALSE
 			while param
@@ -994,7 +994,7 @@ sub TypedefExpander.walkDecls(byval n as AstNode ptr)
 		if i->kind = ASTKIND_TYPEDEF then
 			if (i->array <> NULL) orelse _
 			   (typeGetDtAndPtr(i->dtype) = TYPE_PROC) orelse _
-			   hl.api->idopt(tktokens.OPT_EXPAND).matches(i->text) then
+			   hl.options->idopt(tktokens.OPT_EXPAND).matches(i->text) then
 				typedefs.addOverwrite(i)
 				astRemove(n, i)
 			end if
@@ -1127,11 +1127,11 @@ private sub hlFindStringOptionMatches _
 	'' but this only works if string typedefs are already expanded,
 	'' so also try matching on nodes with UDT type?
 
-	if hl.api->patterns(tktokens.OPT_NOSTRING).matches(parentparent, parent, n, index) then
+	if hl.options->patterns(tktokens.OPT_NOSTRING).matches(parentparent, parent, n, index) then
 		n->attrib or= ASTATTRIB_NOSTRING
 	end if
 
-	if hl.api->patterns(tktokens.OPT_STRING).matches(parentparent, parent, n, index) then
+	if hl.options->patterns(tktokens.OPT_STRING).matches(parentparent, parent, n, index) then
 		n->attrib or= ASTATTRIB_STRING
 	end if
 
@@ -1555,7 +1555,7 @@ private function hShouldAddForwardDeclForType(byref typ as hl.TYPENODE) as integ
 			function = TRUE
 		else
 			'' Not defined here; only if -addforwarddecl was given
-			function = hl.api->idopt(tktokens.OPT_ADDFORWARDDECL).matches(typ.id)
+			function = hl.options->idopt(tktokens.OPT_ADDFORWARDDECL).matches(typ.id)
 		end if
 	end if
 end function
@@ -1712,7 +1712,7 @@ private sub hlAddUndefsAboveDecls(byval ast as AstNode ptr)
 	while i
 
 		if (i->kind <> ASTKIND_UNDEF) and (i->text <> NULL) then
-			if hl.api->idopt(tktokens.OPT_UNDEFBEFOREDECL).matches(i->text) then
+			if hl.options->idopt(tktokens.OPT_UNDEFBEFOREDECL).matches(i->text) then
 				var undef = astNew(ASTKIND_UNDEF, i->text)
 				undef->location = i->location
 				astInsert(ast, undef, i)
@@ -1728,7 +1728,7 @@ private sub hlAddIfndefsAroundDecls(byval ast as AstNode ptr)
 	while i
 
 		if (i->kind <> ASTKIND_UNDEF) andalso _
-		   i->text andalso hl.api->idopt(tktokens.OPT_IFNDEFDECL).matches(i->text) then
+		   i->text andalso hl.options->idopt(tktokens.OPT_IFNDEFDECL).matches(i->text) then
 			i->attrib or= ASTATTRIB_IFNDEFDECL
 		end if
 
@@ -1797,7 +1797,7 @@ end function
 '' Check that each parameter is only used once by the expression,
 '' unless -forcefunction2macro was given
 private function allowedToTurnProc2Macro(byval proc as AstNode ptr, byval expr as AstNode ptr) as integer
-	if hl.api->idopt(tktokens.OPT_FORCEFUNCTION2MACRO).matches(proc->text) then
+	if hl.options->idopt(tktokens.OPT_FORCEFUNCTION2MACRO).matches(proc->text) then
 		return TRUE
 	end if
 
@@ -2730,41 +2730,41 @@ end sub
 '' If any declarations are added to the AST here, care must be taken to set the
 '' AstNode.location, so they can be assigned to the proper output .bi file.
 ''
-sub hlGlobal(byval ast as AstNode ptr, byref api as ApiInfo)
-	hl.api = @api
+sub hlGlobal(byval ast as AstNode ptr, byref options as BindingOptions)
+	hl.options = @options
 
-	if api.removeEmptyReservedDefines then
+	if options.removeEmptyReservedDefines then
 		hlRemoveEmptyReservedDefines(ast)
 	end if
 
-	if api.idopt(tktokens.OPT_REMOVE).nonEmpty then
+	if options.idopt(tktokens.OPT_REMOVE).nonEmpty then
 		hlApplyRemoveOption(ast, -1, tktokens.OPT_REMOVE)
 	end if
 
-	if api.idopt(tktokens.OPT_REMOVEPROC).nonEmpty then
+	if options.idopt(tktokens.OPT_REMOVEPROC).nonEmpty then
 		hlApplyRemoveOption(ast, ASTKIND_PROC, tktokens.OPT_REMOVEPROC)
 	end if
 
-	if api.idopt(tktokens.OPT_REMOVEVAR).nonEmpty then
+	if options.idopt(tktokens.OPT_REMOVEVAR).nonEmpty then
 		hlApplyRemoveOption(ast, ASTKIND_VAR, tktokens.OPT_REMOVEVAR)
 	end if
 
-	if api.idopt(tktokens.OPT_REMOVE1ST).nonEmpty then
+	if options.idopt(tktokens.OPT_REMOVE1ST).nonEmpty then
 		hlApplyRemove1st(ast)
 	end if
 
-	if api.idopt(tktokens.OPT_REMOVE2ND).nonEmpty then
+	if options.idopt(tktokens.OPT_REMOVE2ND).nonEmpty then
 		hlApplyRemove2nd(ast)
 	end if
 
-	if api.idopt(tktokens.OPT_DROPPROCBODY).nonEmpty then
+	if options.idopt(tktokens.OPT_DROPPROCBODY).nonEmpty then
 		hlApplyDropProcBodyOptions(ast)
 	end if
 
 	astVisit(ast, @hlSetArraySizes)
 
 	'' Apply -rename* options, if any
-	if api.have_renames then
+	if options.have_renames then
 		astVisit(ast, @hlApplyRenameOption)
 	end if
 
@@ -2889,11 +2889,11 @@ sub hlGlobal(byval ast as AstNode ptr, byref api as ApiInfo)
 	'' (e.g. <#define A (FOO*)0> may have become <#define A (int*)0>)
 	hlDefine2Decl(ast)
 
-	if api.fixunsizedarrays then
+	if options.fixunsizedarrays then
 		hlFixUnsizedArrays(ast)
 	end if
 
-	if api.dropmacrobodyscopes then
+	if options.dropmacrobodyscopes then
 		hlDropMacroBodyScopes(ast)
 	end if
 
@@ -2905,19 +2905,19 @@ sub hlGlobal(byval ast as AstNode ptr, byref api as ApiInfo)
 	'' move a declaration based on its name in the .bi file, rather than
 	'' going through the .h file and find the original name there (thinking
 	'' about tag names which are solved out in favour of typedefs, etc).
-	if api.moveaboveoptions then
-		var i = api.moveaboveoptions->head
+	if options.moveaboveoptions then
+		var i = options.moveaboveoptions->head
 		while i
 			hlApplyMoveOption(ast, *i->text, *i->alias_)
 			i = i->nxt
 		wend
 	end if
 
-	if api.idopt(tktokens.OPT_UNDEFBEFOREDECL).nonEmpty then
+	if options.idopt(tktokens.OPT_UNDEFBEFOREDECL).nonEmpty then
 		hlAddUndefsAboveDecls(ast)
 	end if
 
-	if api.idopt(tktokens.OPT_IFNDEFDECL).nonEmpty then
+	if options.idopt(tktokens.OPT_IFNDEFDECL).nonEmpty then
 		hlAddIfndefsAroundDecls(ast)
 	end if
 
@@ -2930,8 +2930,8 @@ end sub
 '' .bi-file-specific highlevel transformations, intended to run on the
 '' API-specific ASTs in each output .bi file.
 ''
-sub hlFile(byval ast as AstNode ptr, byref api as ApiInfo)
-	hl.api = @api
+sub hlFile(byval ast as AstNode ptr, byref options as BindingOptions)
+	hl.options = @options
 	hl.need_extern = FALSE
 	hl.stdcalls = 0
 	hl.cdecls = 0
@@ -2956,7 +2956,7 @@ sub hlFile(byval ast as AstNode ptr, byref api as ApiInfo)
 
 		var externblock = @"C"
 		if hl.mostusedcallconv = ASTATTRIB_STDCALL then
-			if api.windowsms then
+			if options.windowsms then
 				externblock = @"Windows-MS"
 			else
 				externblock = @"Windows"

@@ -96,16 +96,16 @@ function TempIdManager.lookup(byref typespelling as const string) as const strin
 	return anontagtable.lookupDataOrNull(typespelling)
 end function
 
-constructor ClangContext(byref sourcectx as SourceContext, byref api as ApiInfo)
+constructor ClangContext(byref sourcectx as SourceContext, byref options as BindingOptions)
 	this.sourcectx = @sourcectx
-	this.api = @api
+	this.options = @options
 	index = clang_createIndex(0, 0)
 
 	for i as integer = tktokens.KW__C_FIRST to tktokens.KW__C_LAST
 		ckeywords.addOverwrite(tkInfoText(i), cast(any ptr, i))
 	next
 
-	fbfrog_c_parser = new CParser(fbfrog_tk, api)
+	fbfrog_c_parser = new CParser(fbfrog_tk, options)
 end constructor
 
 destructor ClangContext()
@@ -746,7 +746,7 @@ function TranslationUnitParser.visitor(byval cursor as CXCursor, byval parent as
 			else
 				'' No fields; must be a forward declaration
 				assert(tagbody->text andalso len(*tagbody->text) > 0)
-				ctx->api->idopt(tktokens.OPT_ADDFORWARDDECL).addPattern(tagbody->text)
+				ctx->options->idopt(tktokens.OPT_ADDFORWARDDECL).addPattern(tagbody->text)
 				astDelete(tagbody)
 			end if
 		end if
@@ -793,11 +793,11 @@ function ClangContext.parseAst() as ASTNODE ptr
 end function
 
 sub ClangContext.inclusionVisitor(byval incfile as CXFile, byval stack as CXSourceLocation ptr, byval stackcount as ulong)
-	api->print(wrapClangStr(clang_getFileName(incfile)))
+	options->print(wrapClangStr(clang_getFileName(incfile)))
 #if 0
 	if stackcount > 0 then
 		for i as integer = 0 to stackcount - 1
-			api->print(dumpSourceLocation(stack[i]))
+			options->print(dumpSourceLocation(stack[i]))
 		next
 	end if
 #endif

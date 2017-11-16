@@ -90,10 +90,10 @@ enum
 	GUARDSTATE_KNOWN
 end enum
 
-constructor CppContext(byref sourcectx as SourceContext, byref tk as TokenBuffer, byref api as ApiInfo)
+constructor CppContext(byref sourcectx as SourceContext, byref tk as TokenBuffer, byref options as BindingOptions)
 	this.sourcectx = @sourcectx
 	this.tk = @tk
-	this.api = @api
+	this.options = @options
 	x = 0
 
 	'' Toplevel file context
@@ -400,7 +400,7 @@ sub CppContext.parseExpr(byref a as CPPVALUE, byval dtype_only as integer, byval
 
 	case TK_NUMBER  '' Number literal
 		dim errmsg as string
-		var n = hNumberLiteral(*tk, x, TRUE, errmsg, api->clong32)
+		var n = hNumberLiteral(*tk, x, TRUE, errmsg, options->clong32)
 		if n = NULL then
 			tk->showErrorAndAbort(x, errmsg)
 		end if
@@ -613,7 +613,7 @@ function CppContext.checkForMacroCall(byval y as integer) as DefineInfo ptr
 	end if
 
 	'' Only expand if not marked otherwise
-	if api->idopt(OPT_NOEXPAND).matches(id) or _
+	if options->idopt(OPT_NOEXPAND).matches(id) or _
 	   (tk->getFlags(y) and TKFLAG_NOEXPAND) or _
 	   (definfo->macro->attrib and ASTATTRIB_POISONED) then
 		return NULL
@@ -1677,7 +1677,7 @@ sub CppContext.parseInclude(byval begin as integer, byref flags as integer, byva
 		incfile = searchHeaderFile(contextfile, contextincdir, inctext, is_system_include, incdir)
 		if len(incfile) = 0 then
 			'' #include not found
-			api->print(inctext + " (not found)")
+			options->print(inctext + " (not found)")
 
 			'' Preserve non-internal #includes that weren't found
 			if (includetkflags and (TKFLAG_PREINCLUDE or TKFLAG_ROOTFILE)) = 0 then
@@ -1717,7 +1717,7 @@ sub CppContext.parseInclude(byval begin as integer, byref flags as integer, byva
 	end with
 
 	maybePrintIncludeTree(inctext, prettyfile, FALSE)
-	api->print(prettyfile)
+	options->print(prettyfile)
 
 	'' Push the #include file context
 	push(STATE_FILE, knownfile)
@@ -1793,7 +1793,7 @@ sub CppContext.maybeExpandMacroInDefineBody(byval parentdefine as AstNode ptr)
 	var id = tk->spellId(x)
 
 	'' Only expand if the called macro was given with -expandindefine
-	if api->idopt(OPT_EXPANDINDEFINE).matches(id) = FALSE then
+	if options->idopt(OPT_EXPANDINDEFINE).matches(id) = FALSE then
 		exit sub
 	end if
 
@@ -1828,7 +1828,7 @@ sub CppContext.maybeExpandMacroInDefineBody(byval parentdefine as AstNode ptr)
 end sub
 
 function CppContext.shouldRemoveDefine(byval id as zstring ptr) as integer
-	function = api->idopt(OPT_REMOVEDEFINE).matches(id)
+	function = options->idopt(OPT_REMOVEDEFINE).matches(id)
 end function
 
 '' DEFINE Identifier ['(' ParameterList ')'] Body Eol
@@ -1858,7 +1858,7 @@ sub CppContext.parseDefine(byref flags as integer)
 	''    #define b(x) x1      // wrong, b() is broken now
 	''    #define c(x) x + 11  // ok: invocation of a() doesn't involve x
 	''
-	if api->idopt(OPT_EXPANDINDEFINE).nonEmpty then
+	if options->idopt(OPT_EXPANDINDEFINE).nonEmpty then
 		do
 			select case tk->get(x)
 			case TK_EOL
@@ -2294,7 +2294,7 @@ private function removeEols(byref tk as TokenBuffer, byval first as integer, byv
 	function = last
 end function
 
-sub hApplyReplacements(byref sourcectx as SourceContext, byref tk as TokenBuffer, byref api as ApiInfo)
+sub hApplyReplacements(byref sourcectx as SourceContext, byref tk as TokenBuffer, byref options as BindingOptions)
 	'' Lex all the C token "patterns", so we can use tk.areCTokenRangesEqual()
 	'' Insert them at the front of the tk buffer, because
 	''  * they have to go *somewhere*
@@ -2303,15 +2303,15 @@ sub hApplyReplacements(byref sourcectx as SourceContext, byref tk as TokenBuffer
 	''  * then inserting/removing tokens from the main part won't affect our
 	''    offsets into the pattern part
 	var x = 0
-	for i as integer = 0 to api.replacementcount - 1
+	for i as integer = 0 to options.replacementcount - 1
 		var begin = x
-		x = lexLoadC(tk, x, api.replacements[i].fromcode, sourcectx.lookupOrMakeSourceInfo("C code pattern from replacements file", FALSE))
+		x = lexLoadC(tk, x, options.replacements[i].fromcode, sourcectx.lookupOrMakeSourceInfo("C code pattern from replacements file", FALSE))
 
 		'' But remove EOLs from the patterns, because we're going to match against tk buffer content
 		'' after the CPP phase, i.e. which had its EOLs removed aswell (except for #directives)
 		x = removeEols(tk, begin, x)
 
-		api.replacements[i].patternlen = x - begin
+		options.replacements[i].patternlen = x - begin
 	next
 	var xmainbegin = x
 
@@ -2335,8 +2335,8 @@ sub hApplyReplacements(byref sourcectx as SourceContext, byref tk as TokenBuffer
 		var constructlen = last - x + 1
 		var patternbegin = 0
 
-		for i as integer = 0 to api.replacementcount - 1
-			var replacement = api.replacements + i
+		for i as integer = 0 to options.replacementcount - 1
+			var replacement = options.replacements + i
 
 			'' Does the construct match this replacement pattern?
 			if constructlen = replacement->patternlen then

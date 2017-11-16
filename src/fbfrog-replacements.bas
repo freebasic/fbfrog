@@ -78,7 +78,7 @@ function ReplacementsParser.parseCode(byref keyword as string) as string
 	function = code
 end function
 
-sub ReplacementsParser.parse(byref api as ApiInfo)
+sub ReplacementsParser.parse(byref options as BindingOptions)
 	nextLine()
 
 	while reachedeof = FALSE
@@ -102,6 +102,6 @@ sub ReplacementsParser.parse(byref api as ApiInfo)
 			parseOops("expected line to start with '" + ToCKeyword + "' or '" + ToFbKeyword + "', but found something else")
 		end if
 
-		api.addReplacement(fromcode, tocode, tofb)
+		options.addReplacement(fromcode, tocode, tofb)
 	wend
 end sub

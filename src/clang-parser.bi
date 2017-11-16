@@ -1,7 +1,7 @@
 #include once "ast.bi"
 #include once "util.bi"
 #include once "tk.bi"
-#include once "fbfrog-apiinfo.bi"
+#include once "options.bi"
 #include once "c-parser.bi"
 
 #include once "clang-c.bi"
@@ -32,7 +32,7 @@ type ClangContext
 	args as DynamicArray(const_zstring_ptr)
 
 	sourcectx as SourceContext ptr
-	api as ApiInfo ptr
+	options as BindingOptions ptr
 
 	ckeywords as THash = THash(12)
 	fbfrog_tk as TokenBuffer
@@ -40,7 +40,7 @@ type ClangContext
 
 	tempids as TempIdManager
 
-	declare constructor(byref sourcectx as SourceContext, byref api as ApiInfo)
+	declare constructor(byref sourcectx as SourceContext, byref options as BindingOptions)
 	declare destructor()
 	declare operator let(byref as const ClangContext) '' unimplemented
 

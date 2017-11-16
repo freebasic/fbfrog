@@ -1,5 +1,5 @@
 #include once "ast.bi"
-#include once "fbfrog-apiinfo.bi"
+#include once "options.bi"
 
 type CppStackNode
 	state		as integer  '' STATE_*
@@ -48,7 +48,7 @@ end type
 type CppContext
 	sourcectx as SourceContext ptr
 	tk as TokenBuffer ptr
-	api as ApiInfo ptr
+	options as BindingOptions ptr
 	as integer x  '' Current token index
 
 	'' #if/file context stack
@@ -101,7 +101,7 @@ type CppContext
 	filecount as integer
 	filetb as THash = THash(4, FALSE)  '' data = index into files array
 
-	declare constructor(byref sourcectx as SourceContext, byref tk as TokenBuffer, byref api as ApiInfo)
+	declare constructor(byref sourcectx as SourceContext, byref tk as TokenBuffer, byref options as BindingOptions)
 	declare destructor()
 	declare function isSkipping() as integer
 	declare sub addPredefine(byval id as zstring ptr, byval body as zstring ptr)
@@ -191,4 +191,4 @@ type CppContext
 end type
 
 declare sub hMoveDirectivesOutOfConstructs(byref tk as TokenBuffer)
-declare sub hApplyReplacements(byref sourcectx as SourceContext, byref tk as TokenBuffer, byref api as ApiInfo)
+declare sub hApplyReplacements(byref sourcectx as SourceContext, byref tk as TokenBuffer, byref options as BindingOptions)

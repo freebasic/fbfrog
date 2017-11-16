@@ -1,4 +1,4 @@
-#include once "fbfrog-apiinfo.bi"
+#include once "options.bi"
 
 #include once "fbfrog.bi"
 #include once "fbfrog-replacements.bi"
@@ -6,14 +6,14 @@
 
 using tktokens
 
-constructor ApiInfo()
+constructor BindingOptions()
 	for i as integer = lbound(renameopt) to ubound(renameopt)
 		renameopt(i).constructor(3, FALSE)
 	next
 	log = astNewGROUP()
 end constructor
 
-destructor ApiInfo()
+destructor BindingOptions()
 	for i as integer = 0 to replacementcount - 1
 		deallocate(replacements[i].fromcode)
 		deallocate(replacements[i].tocode)
@@ -22,7 +22,7 @@ destructor ApiInfo()
 	astDelete(log)
 end destructor
 
-sub ApiInfo.addReplacement(byval fromcode as zstring ptr, byval tocode as zstring ptr, byval tofb as integer)
+sub BindingOptions.addReplacement(byval fromcode as zstring ptr, byval tocode as zstring ptr, byval tofb as integer)
 	var i = replacementcount
 	replacementcount += 1
 	replacements = reallocate(replacements, replacementcount * sizeof(*replacements))
@@ -34,7 +34,7 @@ sub ApiInfo.addReplacement(byval fromcode as zstring ptr, byval tocode as zstrin
 	end with
 end sub
 
-sub ApiInfo.loadOption(byval opt as integer, byval param1 as zstring ptr, byval param2 as zstring ptr)
+sub BindingOptions.loadOption(byval opt as integer, byval param1 as zstring ptr, byval param2 as zstring ptr)
 	select case as const opt
 	case OPT_WINDOWSMS        : windowsms        = TRUE
 	case OPT_CLONG32          : clong32          = TRUE
@@ -76,7 +76,7 @@ sub ApiInfo.loadOption(byval opt as integer, byval param1 as zstring ptr, byval 
 	end select
 end sub
 
-sub ApiInfo.loadOptions()
+sub BindingOptions.loadOptions()
 	var i = script->head
 	while i
 		assert(i->kind = ASTKIND_OPTION)
@@ -85,10 +85,10 @@ sub ApiInfo.loadOptions()
 	wend
 end sub
 
-sub ApiInfo.print(byref ln as string)
+sub BindingOptions.print(byref ln as string)
 	astAppend(log, astNewTEXT(ln))
 end sub
 
-function ApiInfo.prettyId() as string
+function BindingOptions.prettyId() as string
 	return target.id()
 end function

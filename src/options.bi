@@ -9,7 +9,7 @@ type CodeReplacement
 	patternlen as integer '' used temporarily by hApplyReplacements()
 end type
 
-type ApiInfo
+type BindingOptions
 	script as AstNode ptr
 
 	target as TargetInfo
@@ -36,5 +36,5 @@ type ApiInfo
 	declare sub loadOptions()
 	declare sub print(byref ln as string)
 	declare function prettyId() as string
-	declare operator let(byref as const ApiInfo) '' unimplemented
+	declare operator let(byref as const BindingOptions) '' unimplemented
 end type

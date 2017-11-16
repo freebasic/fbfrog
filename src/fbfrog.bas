@@ -11,7 +11,7 @@
 #include once "c-parser.bi"
 #include once "c-pp.bi"
 #include once "emit.bi"
-#include once "fbfrog-apiinfo.bi"
+#include once "options.bi"
 #include once "fbfrog-args-lex.bi"
 #include once "highlevel.bi"
 #include once "util-path.bi"
@@ -366,8 +366,8 @@ private sub hParseArgs(byref tk as TokenBuffer, byref x as integer)
 	nestinglevel -= 1
 end sub
 
-private function getTargetClangInvokeCommand(byref api as ApiInfo) as string
-	return "clang -target " + api.target.clang()
+private function getTargetClangInvokeCommand(byref options as BindingOptions) as string
+	return "clang -target " + options.target.clang()
 end function
 
 private sub parseIncludeDirsFromGccVerbose(byref gccverbose as const string, byref includedirs as DynamicArray(string))
@@ -426,13 +426,13 @@ private function getCommandOutput(byref cmd as const string) as string
 	return all
 end function
 
-private sub queryGccIncludeDirs(byref api as ApiInfo, byref includedirs as DynamicArray(string))
-	var cmd = "echo | " + getTargetClangInvokeCommand(api) + " -E -v - 2>&1"
+private sub queryGccIncludeDirs(byref options as BindingOptions, byref includedirs as DynamicArray(string))
+	var cmd = "echo | " + getTargetClangInvokeCommand(options) + " -E -v - 2>&1"
 	var gccverbose = getCommandOutput(cmd)
 	parseIncludeDirsFromGccVerbose(gccverbose, includedirs)
 end sub
 
-private function frogParse(byref api as ApiInfo) as AstNode ptr
+private function frogParse(byref options as BindingOptions) as AstNode ptr
 	dim ast as AstNode ptr
 
 #if 0
@@ -441,16 +441,16 @@ private function frogParse(byref api as ApiInfo) as AstNode ptr
 
 		scope
 			'' C preprocessing
-			dim cpp as CppContext = CppContext(frog.sourcectx, tk, api)
+			dim cpp as CppContext = CppContext(frog.sourcectx, tk, options)
 
 			'' Add fbfrog's CPP pre-#defines for preprocessing of default.h
-			cpp.addTargetPredefines(api.target)
+			cpp.addTargetPredefines(options.target)
 
 			scope
 				'' Pre-#defines are simply inserted at the top of the token
 				'' buffer, so that cppMain() parses them like any other #define.
 
-				var i = api.script->head
+				var i = options.script->head
 				while i
 
 					assert(i->kind = ASTKIND_OPTION)
@@ -467,7 +467,7 @@ private function frogParse(byref api as ApiInfo) as AstNode ptr
 
 			'' Add #includes for pre-#includes
 			scope
-				var i = api.script->head
+				var i = options.script->head
 				while i
 					assert(i->kind = ASTKIND_OPTION)
 					if i->opt = OPT_INCLUDE then
@@ -490,7 +490,7 @@ private function frogParse(byref api as ApiInfo) as AstNode ptr
 			'' matter.
 			''
 			scope
-				var i = api.script->head
+				var i = options.script->head
 				while i
 					assert(i->kind = ASTKIND_OPTION)
 					if i->opt = OPT_I then
@@ -513,29 +513,29 @@ private function frogParse(byref api as ApiInfo) as AstNode ptr
 
 		hMoveDirectivesOutOfConstructs(tk)
 
-		if api.replacementcount > 0 then
-			hApplyReplacements(frog.sourcectx, tk, api)
+		if options.replacementcount > 0 then
+			hApplyReplacements(frog.sourcectx, tk, options)
 		end if
 
 		tk.turnCPPTokensIntoCIds()
 
 		'' C parsing
 		scope
-			dim parser as CParser = CParser(tk, api)
+			dim parser as CParser = CParser(tk, options)
 			ast = parser.parseToplevel()
 		end scope
 	end scope
 #endif
 
 	scope
-		dim parser as ClangContext = ClangContext(frog.sourcectx, api)
+		dim parser as ClangContext = ClangContext(frog.sourcectx, options)
 
 		parser.addArg("-target")
-		parser.addArg(api.target.clang())
+		parser.addArg(options.target.clang())
 
 		scope
 			dim includedirs as DynamicArray(string)
-			queryGccIncludeDirs(api, includedirs)
+			queryGccIncludeDirs(options, includedirs)
 			for i as integer = 0 to includedirs.count - 1
 				parser.addArg("-isystem")
 				parser.addArg(includedirs.p[i])
@@ -544,7 +544,7 @@ private function frogParse(byref api as ApiInfo) as AstNode ptr
 
 		'' Pre-#defines and #include search dirs
 		scope
-			var i = api.script->head
+			var i = options.script->head
 			while i
 				assert(i->kind = ASTKIND_OPTION)
 				select case i->opt
@@ -559,7 +559,7 @@ private function frogParse(byref api as ApiInfo) as AstNode ptr
 
 		'' Pre-#includes
 		scope
-			var i = api.script->head
+			var i = options.script->head
 			while i
 				assert(i->kind = ASTKIND_OPTION)
 				if i->opt = OPT_INCLUDE then
@@ -572,7 +572,7 @@ private function frogParse(byref api as ApiInfo) as AstNode ptr
 
 		'' Main input files
 		scope
-			var i = api.script->head
+			var i = options.script->head
 			while i
 				assert(i->kind = ASTKIND_OPTION)
 				if i->opt = OPT_I then
@@ -593,7 +593,7 @@ private function frogParse(byref api as ApiInfo) as AstNode ptr
 		parser.parseInclusions()
 	end scope
 
-	hlGlobal(ast, api)
+	hlGlobal(ast, options)
 
 	function = ast
 end function
@@ -635,15 +635,15 @@ end function
 		frog.outname = "unknown.bi"
 	end if
 
-	dim api as ApiInfo
-	api.script = frog.script
+	dim options as BindingOptions
+	options.script = frog.script
 	frog.script = NULL
-	api.loadOptions()
+	options.loadOptions()
 
-	var ast = frogParse(api)
+	var ast = frogParse(options)
 
 	'' Do file-specific AST work (e.g. add Extern block)
-	hlFile(ast, api)
+	hlFile(ast, options)
 
 	'' Prepend #pragma once
 	'' It's always needed, except if the binding is empty: C headers

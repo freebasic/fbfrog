@@ -1,5 +1,5 @@
 #include once "ast.bi"
-#include once "fbfrog-apiinfo.bi"
+#include once "options.bi"
 
 type PragmaPackStack
 	const MAXLEVEL = 128
@@ -15,7 +15,7 @@ end type
 
 type CParser
 	tk as TokenBuffer ptr
-	api as ApiInfo ptr
+	options as BindingOptions ptr
 	as integer x, parseok, tempids
 	parentdefine as AstNode ptr
 
@@ -36,7 +36,7 @@ type CParser
 	declare function isTypedef(byval id as zstring ptr) as integer
 	declare function lookupExtraDataType(byval id as zstring ptr) as integer
 	declare function identifierIsMacroParam(byval id as zstring ptr) as integer
-	declare constructor(byref tk as TokenBuffer, byref api as ApiInfo)
+	declare constructor(byref tk as TokenBuffer, byref options as BindingOptions)
 	declare destructor()
 	declare sub addTypedef(byval id as const zstring ptr)
 	declare sub addDefBody(byval xdefbegin as integer, byval xbodybegin as integer, byval n as AstNode ptr)

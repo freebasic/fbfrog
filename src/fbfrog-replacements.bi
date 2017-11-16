@@ -1,4 +1,4 @@
-#include once "fbfrog-apiinfo.bi"
+#include once "options.bi"
 
 ''
 '' Read "replacement" files
@@ -39,5 +39,5 @@ type ReplacementsParser
 	declare sub nextLine()
 	declare sub parseOops(byref message as string)
 	declare function parseCode(byref keyword as string) as string
-	declare sub parse(byref api as ApiInfo)
+	declare sub parse(byref options as BindingOptions)
 end type
