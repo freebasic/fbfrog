@@ -76,7 +76,6 @@ enum
 	ASTKIND_SCOPEBLOCK
 	ASTKIND_UNKNOWN
 	ASTKIND_FBCODE
-	ASTKIND_RENAMELIST
 	ASTKIND_OPTION
 
 	'' Declarations/statements
@@ -247,8 +246,8 @@ type AstNode_
 	'' Examples for symbol identifiers:
 	'' extern int a         ;                =>  text="a" alias=NULL origid=NULL  =>  extern a as long
 	'' extern int a asm("c");                =>  text="a" alias="c" origid=NULL   =>  extern a alias "c" as long
-	'' extern int a         ; + -rename a b  =>  text="b" alias="a" origid="a"    =>  extern b alias "a" as long + renamelist entry a => b
-	'' extern int a asm("c"); + -rename a b  =>  text="b" alias="c" origid="a"    =>  extern b alias "c" as long + renamelist entry a => b
+	'' extern int a         ; + -rename a b  =>  text="b" alias="a" origid="a"    =>  extern b alias "a" as long
+	'' extern int a asm("c"); + -rename a b  =>  text="b" alias="c" origid="a"    =>  extern b alias "c" as long
 
 	'' Data type (vars, fields, params, function results, expressions)
 	dtype		as integer

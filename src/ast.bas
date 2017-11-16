@@ -94,7 +94,6 @@ dim shared as zstring ptr astnodename(0 to ...) => _
 	@"scopeblock", _
 	@"unknown"   , _
 	@"fbcode"    , _
-	@"renamelist", _
 	@"option"    , _
 	_
 	_ '' Declarations/statements
@@ -696,7 +695,7 @@ end function
 
 function astIsMergableBlock(byval n as AstNode ptr) as integer
 	select case n->kind
-	case ASTKIND_STRUCT, ASTKIND_UNION, ASTKIND_ENUM, ASTKIND_RENAMELIST
+	case ASTKIND_STRUCT, ASTKIND_UNION, ASTKIND_ENUM
 		function = TRUE
 	end select
 end function

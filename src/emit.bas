@@ -989,20 +989,6 @@ sub CodeGen.emitCode(byval n as AstNode ptr, byval parentkind as integer)
 	case ASTKIND_FBCODE
 		emitLines(n->text)
 
-	case ASTKIND_RENAMELIST
-		var added_indent = FALSE
-		if comment = 0 then
-			added_indent = TRUE
-			comment += 1
-			commentspaces += 1
-		end if
-		bol() : add(TK_TEXT, n->text) : eol()
-		emitIndentedChildren(n)
-		if added_indent then
-			commentspaces -= 1
-			comment -= 1
-		end if
-
 	case ASTKIND_INCLIB
 		bol()
 		add(TK_HASH)

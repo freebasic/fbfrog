@@ -2479,35 +2479,6 @@ private function hlSearchSpecialDtypes(byval n as AstNode ptr) as integer
 	function = TRUE
 end function
 
-private function hlBuildRenameList(byval n as AstNode ptr) as AstNode ptr
-	var list = astNewGROUP()
-
-	var i = n->head
-	while i
-
-		if (i->text <> NULL) and (i->origid <> NULL) and _
-		   (i->kind <> ASTKIND_UNDEF) then
-			var msg = astDumpPrettyKind(i->kind)
-			msg += " " + *i->origid + " => " + *i->text
-			astAppend(list, astNewTEXT(msg))
-		end if
-
-		'' TODO: recurse into struct/union if renaming fields...
-		''astAppend(list, hlBuildRenameList(i))
-
-		if i->kind = ASTKIND_ENUM then
-			'' Handle enumconsts - they're in the same scope as the enum itself anyways,
-			'' so we don't need to worry about making a nested renamelist for the enum.
-			astAppend(list, hlBuildRenameList(i))
-		end if
-
-
-		i = i->nxt
-	wend
-
-	function = list
-end function
-
 '' while (0) ...      =>   scope : ... : end scope
 '' do ... while (0);  =>   scope : ... : end scope
 '' (commonly used construct in C headers)
@@ -2634,7 +2605,7 @@ private function hSkipStatementsInARow(byval i as AstNode ptr) as AstNode ptr
 		loop while i andalso (i->kind = astkind)
 		return i
 
-	case ASTKIND_PRAGMAONCE, ASTKIND_RENAMELIST, _
+	case ASTKIND_PRAGMAONCE, _
 	     ASTKIND_EXTERNBLOCKBEGIN, ASTKIND_EXTERNBLOCKEND, _
 	     ASTKIND_STRUCT, ASTKIND_UNION, ASTKIND_ENUM, _
 	     ASTKIND_IFBLOCK, ASTKIND_DOWHILE, ASTKIND_WHILE
@@ -2659,7 +2630,7 @@ private function hSkipStatementsInARow(byval i as AstNode ptr) as AstNode ptr
 		do
 			select case nxt->kind
 			case ASTKIND_PPIF, ASTKIND_INCLIB, ASTKIND_PPINCLUDE, _
-			     ASTKIND_PRAGMAONCE, ASTKIND_RENAMELIST, _
+			     ASTKIND_PRAGMAONCE, _
 			     ASTKIND_EXTERNBLOCKBEGIN, ASTKIND_EXTERNBLOCKEND, _
 			     ASTKIND_STRUCT, ASTKIND_UNION, ASTKIND_ENUM, _
 			     ASTKIND_IFBLOCK, ASTKIND_DOWHILE, ASTKIND_WHILE
@@ -2997,19 +2968,6 @@ sub hlFile(byval ast as AstNode ptr, byref api as ApiInfo)
 		astAppend(ast, astNew(ASTKIND_EXTERNBLOCKEND))
 	end if
 
-	'' If any symbols from this file were renamed, add a rename list at the top
-	'' TODO: add it above #inclibs/#includes even
-	if api.have_renames then
-		var entries = hlBuildRenameList(ast)
-		if entries->head then
-			var renamelist = astNew(ASTKIND_RENAMELIST, "The following symbols have been renamed:")
-			astAppend(renamelist, entries)
-			astPrepend(ast, renamelist)
-		else
-			astDelete(entries)
-		end if
-	end if
-
 	'' Add #includes for "crt/long[double].bi" and "crt/wchar.bi" if the
 	'' binding uses the clong[double]/wchar_t types
 	astVisit(ast, @hlSearchSpecialDtypes)
@@ -3034,7 +2992,7 @@ function hlCountDecls(byval ast as AstNode ptr) as integer
 		case ASTKIND_DIVIDER, ASTKIND_PPINCLUDE, ASTKIND_PPENDIF, _
 		     ASTKIND_EXTERNBLOCKBEGIN, ASTKIND_EXTERNBLOCKEND, _
 		     ASTKIND_INCLIB, ASTKIND_PRAGMAONCE, _
-		     ASTKIND_UNKNOWN, ASTKIND_RENAMELIST
+		     ASTKIND_UNKNOWN
 
 		case ASTKIND_PPIF, ASTKIND_PPELSEIF, ASTKIND_PPELSE
 			n += hlCountDecls(i)
