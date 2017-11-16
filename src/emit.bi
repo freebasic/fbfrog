@@ -209,7 +209,6 @@ type CodeGen
 		)
 	declare sub emitSelfBop(byval n as AstNode ptr, byval op as ulong)
 	declare sub emitCode(byval n as AstNode ptr, byval parentkind as integer = -1)
-	declare sub emitHeader(byref header as HeaderInfo)
 end type
 
 type TokenRenderer extends object
@@ -239,5 +238,5 @@ end namespace
 
 declare function emitFbType(byval dtype as integer, byval subtype as AstNode ptr) as string
 declare function emitFbExpr(byval n as AstNode ptr) as string
-declare sub emitFbFile(byref filename as string, byval header as HeaderInfo ptr, byval ast as AstNode ptr)
+declare sub emitFbFile(byref filename as string, byval ast as AstNode ptr)
 declare sub emitFbStdout(byval ast as AstNode ptr, byval indent as integer)

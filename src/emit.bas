@@ -1,9 +1,9 @@
 '' FB code generation, from AST
 
 #include once "emit.bi"
-#include once "emit-fbkeywords.bi"
-#include once "fbfrog.bi"
 #include once "chars.bi"
+#include once "emit-fbkeywords.bi"
+#include once "util-str.bi"
 
 namespace emit
 
@@ -1401,25 +1401,6 @@ sub CodeGen.emitCode(byval n as AstNode ptr, byval parentkind as integer)
 	end if
 end sub
 
-sub CodeGen.emitHeader(byref header as HeaderInfo)
-	comment += 1
-	commentspaces += 1
-	bol() : add(TK_TEXT, "FreeBASIC binding for " + header.title) : eol()
-	bol() : eol()
-	bol() : add(TK_TEXT, "based on the C header files:") : eol()
-	commentspaces += 2
-	emitLines(header.licensefile->buffer)
-	commentspaces -= 2
-	bol() : eol()
-	bol() : add(TK_TEXT, "translated to FreeBASIC by:") : eol()
-	commentspaces += 2
-	emitLines(header.translatorsfile->buffer)
-	commentspaces -= 2
-	commentspaces -= 1
-	comment -= 1
-	bol() : eol()
-end sub
-
 sub TokenRenderer.render(byref tokens as const TokenBuffer)
 	dim ln as string
 	for i as integer = 0 to tokens.count - 1
@@ -1480,11 +1461,8 @@ function emitFbExpr(byval n as AstNode ptr) as string
 	return w.s
 end function
 
-sub emitFbFile(byref filename as string, byval header as HeaderInfo ptr, byval ast as AstNode ptr)
+sub emitFbFile(byref filename as string, byval ast as AstNode ptr)
 	dim fbcode as emit.CodeGen
-	if header then
-		fbcode.emitHeader(*header)
-	end if
 	fbcode.emitCode(ast)
 	dim w as emit.FileWriter = emit.FileWriter(filename)
 	w.render(fbcode.tokens)

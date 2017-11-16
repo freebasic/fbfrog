@@ -1,7 +1,9 @@
 '' AST build up/helper functions
 
-#include once "fbfrog.bi"
+#include once "ast.bi"
 #include once "emit.bi"
+#include once "tk.bi"
+#include once "util-str.bi"
 
 '' Merge/expand dtype b into dtype a, overwriting a's base dtype, but preserving its ptrs/consts
 '' This is useful for expanding typedefs into the context of another dtype.

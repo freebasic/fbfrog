@@ -1693,27 +1693,6 @@ sub CppContext.parseInclude(byval begin as integer, byref flags as integer, byva
 	'' would be seen as different files.
 	incfile = pathNormalize(pathMakeAbsolute(incfile))
 
-	'' * Don't preserve internal #includes,
-	'' * don't preserve #includes if we will emit the #included content
-	''   into the same .bi file as the #include directive itself.
-	''
-	'' We do this check here instead of later when distributing declarations
-	'' into .bi files, because #include tokens/ASTNODEs don't carry enough
-	'' information about the #included file. Knowing the #include "filename"
-	'' isn't enough, because it may be a relative path such as "../foo.h".
-	''
-	'' Not internal?
-	if (includetkflags and (TKFLAG_PREINCLUDE or TKFLAG_ROOTFILE)) = 0 then
-		assert(location.source->is_file)
-		var directivebi = frogLookupBiFromH(location.source->name)
-		var contentbi = frogLookupBiFromH(incfile)
-		'' Not emitted into same .bi as #included content?
-		if directivebi <> contentbi then
-			'' Then preserve it
-			flags and= not TKFLAG_REMOVE
-		end if
-	end if
-
 	'' For display we make the filename relative to curdir()
 	var prettyfile = pathStripCurdir(incfile)
 

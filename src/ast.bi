@@ -2,11 +2,6 @@
 #include once "api.bi"
 #include once "util.bi"
 
-type HeaderInfo
-	title as string
-	as FileBuffer ptr licensefile, translatorsfile
-end type
-
 enum
 	TYPE_NONE = 0
 	TYPE_ANY          '' C void

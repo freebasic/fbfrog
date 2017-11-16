@@ -4,12 +4,16 @@
 
 #include once "fbfrog.bi"
 
+#include once "api.bi"
+#include once "ast.bi"
 #include once "clang-parser.bi"
 #include once "c-lex.bi"
 #include once "c-parser.bi"
 #include once "c-pp.bi"
 #include once "emit.bi"
+#include once "fbfrog-apiinfo.bi"
 #include once "fbfrog-args-lex.bi"
+#include once "highlevel.bi"
 #include once "util-path.bi"
 
 #include once "file.bi"
@@ -18,36 +22,12 @@ using tktokens
 
 namespace frog
 	dim shared as integer verbose
-	dim shared as string outname, defaultoutname
-	dim shared header as HeaderInfo  '' global titles etc. - will be added to all generated .bi files
-
-	dim shared as integer have_declareversions
+	dim shared as string outname
 
 	dim shared os(0 to OS__COUNT-1) as byte
 	dim shared arch(0 to ARCH__COUNT-1) as byte
-	dim shared as integer enabledoscount
 
 	dim shared as AstNode ptr script
-	dim shared as ApiInfo ptr apis
-	dim shared as integer apicount
-	dim shared as ApiBits fullapis
-
-	dim shared as AstNode ptr mergedlog
-
-	'' *.bi output file names from the -emit options
-	dim shared as BIFILE ptr bis
-	dim shared as integer bicount
-	dim shared as THash ucasebihash = THash(6, TRUE)
-	dim shared as THash bilookupcache = THash(6, TRUE)
-
-	'' *.h file name patterns from the -emit options, associated to the
-	'' corresponding bis array index
-	type HPATTERN
-		pattern as string
-		bi as integer
-	end type
-	dim shared as HPATTERN ptr patterns
-	dim shared as integer patterncount
 
 	dim shared sourcectx as SourceContext
 end namespace
@@ -68,69 +48,6 @@ private sub frogSetTargets(byval enabled as integer)
 	frogSetOSes(enabled)
 	frogSetArchs(enabled)
 end sub
-
-private sub frogAddPattern(byref pattern as string, byval bi as integer)
-	var i = frog.patterncount
-	frog.patterncount += 1
-	frog.patterns = reallocate(frog.patterns, frog.patterncount * sizeof(*frog.patterns))
-	clear(frog.patterns[i], 0, sizeof(*frog.patterns))
-	with frog.patterns[i]
-		.pattern = pattern
-		.bi = bi
-	end with
-end sub
-
-private sub frogAddBi(byref filename as string, byref pattern as string)
-	dim bi as integer
-
-	'' Put bi files into a hashtb, so that multiple -emit options with the
-	'' same filename will be redirected to the same bi file. This check
-	'' should be case-insensitive, because of Windows' file system...
-	var ucasefilename = ucase(filename, 1)
-	var ucasehash = hashHash(ucasefilename)
-	var item = frog.ucasebihash.lookup(ucasefilename, ucasehash)
-	if item->s then
-		'' Already exists
-		bi = cint(item->data)
-	else
-		'' Add new bi file
-		bi = frog.bicount
-		frog.bicount += 1
-		frog.bis = reallocate(frog.bis, frog.bicount * sizeof(*frog.bis))
-		clear(frog.bis[bi], 0, sizeof(*frog.bis))
-		with frog.bis[bi]
-			.filename = strDuplicate(filename)
-		end with
-		frog.ucasebihash.add(item, ucasehash, ucasefilename, cptr(any ptr, bi))
-	end if
-
-	frogAddPattern(pattern, bi)
-end sub
-
-function frogLookupBiFromH(byval hfile as zstring ptr) as integer
-	'' Check whether we've already cached the .bi for this .h file
-	var hfilehash = hashHash(hfile)
-	var item = frog.bilookupcache.lookup(hfile, hfilehash)
-	if item->s then
-		return cint(item->data)
-	end if
-
-	'' Slow lookup
-	var bi = -1
-	var hfilestr = *hfile
-	for pattern as integer = 0 to frog.patterncount - 1
-		if strMatch(hfilestr, frog.patterns[pattern].pattern) then
-			bi = frog.patterns[pattern].bi
-			exit for
-		end if
-	next
-
-	'' Cache the lookup results to improve performance
-	'' (the CPP does repeated lookups on each #include, which can add up on certain
-	'' input headers, such as the Windows API headers)
-	frog.bilookupcache.add(item, hfilehash, hfile, cptr(any ptr, bi))
-	function = bi
-end function
 
 private sub hPrintHelpAndExit()
 	print "fbfrog 1.14 (built on " + __DATE_ISO__ + ")"
@@ -273,8 +190,6 @@ private function hPathRelativeToArgsFile(byref tk as TokenBuffer, byval x as int
 
 	function = path
 end function
-
-declare sub hParseArgs(byref tk as TokenBuffer, byref x as integer)
 
 private sub hParseParam(byref tk as TokenBuffer, byref x as integer, byref description as zstring)
 	hExpectStringOrId(tk, x, description)
@@ -443,77 +358,12 @@ private sub hParseArgs(byref tk as TokenBuffer, byref x as integer)
 				var filename = hPathRelativeToArgsFile(tk, x)
 				astAppend(frog.script, astNewOPTION(OPT_I, filename))
 
-				'' The first .h file name seen will be used as default name for the ouput .bi,
-				'' in case no explicit .bi file names are given via -emit or -o
-				if len((frog.defaultoutname)) = 0 then
-					frog.defaultoutname = pathStripExt(filename) + ".bi"
-				end if
-
 				x += 1
 			end if
 		end select
 	wend
 
 	nestinglevel -= 1
-end sub
-
-private sub frogAddApi(byval script as AstNode ptr, byval target as TargetInfo)
-	var i = frog.apicount
-	frog.apicount += 1
-	frog.apis = reallocate(frog.apis, frog.apicount * sizeof(*frog.apis))
-	with frog.apis[i]
-		.constructor()
-		.script = script
-		.target = target
-	end with
-end sub
-
-'' Pattern matching for the -selecttarget/-iftarget options
-'' Example patterns:
-''    64bit      =>  matches all 64bit targets
-''    windows    =>  matches all Windows targets
-''    dos        =>  matches dos only
-''    linux-x86  =>  matches linux-x86 only
-private function hTargetPatternMatchesTarget(byref pattern as string, byval target as TargetInfo) as integer
-	var targetos = *osinfo(target.os).id
-	var targetarch = *archinfo(target.arch).id
-
-	select case pattern
-	case "64bit" : return     archinfo(target.arch).is_64bit
-	case "32bit" : return not archinfo(target.arch).is_64bit
-	case "win32" : return (target.os = OS_WINDOWS) and (target.arch = ARCH_X86   )
-	case "win64" : return (target.os = OS_WINDOWS) and (target.arch = ARCH_X86_64)
-	case "unix"  : return osinfo(target.os).is_unix
-	case targetos : return TRUE
-	case targetarch : return TRUE
-	end select
-
-	'' <os>-<arch>?
-	dim as string os, arch
-	strSplit(pattern, "-", os, arch)
-	return (targetos = os) and (targetarch = arch)
-end function
-
-private sub maybeEvalForTarget(byval os as integer, byval arch as integer)
-	if frog.arch(arch) then
-		frogAddApi(frog.script->head, type<TargetInfo>(os, arch))
-	end if
-end sub
-
-private sub maybeEvalForOs(byval os as integer)
-	if frog.os(os) = FALSE then exit sub
-
-	maybeEvalForTarget(os, ARCH_X86)
-	if osinfo(os).has_64bit then
-		maybeEvalForTarget(os, ARCH_X86_64)
-	end if
-
-	if osinfo(os).has_arm then
-		maybeEvalForTarget(os, ARCH_ARM)
-		if osinfo(os).has_64bit then
-			maybeEvalForTarget(os, ARCH_AARCH64)
-		end if
-	end if
 end sub
 
 private function getTargetClangInvokeCommand(byref api as ApiInfo) as string
@@ -748,12 +598,6 @@ private function frogParse(byref api as ApiInfo) as AstNode ptr
 	function = ast
 end function
 
-private function hMakeProgressString(byval position as integer, byval total as integer) as string
-	var sposition = str(position), stotal = str(total)
-	sposition = string(len(stotal) - len(sposition), " ") + sposition
-	function = "[" + sposition + "/" + stotal + "]"
-end function
-
 private function hMakeCountMessage(byval count as integer, byref noun as string) as string
 	if count = 1 then
 		function = "1 " + noun
@@ -787,154 +631,31 @@ end function
 		hParseArgs(tk, 1)
 	end scope
 
-	'' Determine the APIs and their individual options
-	'' - The API-specific command line options were stored in the "script",
-	''   this must be evaluated now, following each possible code path.
-	'' - The built-in targets representing the "base" set of APIs are
-	''   hard-coded here in form of loops
-	'' - Any -declare* options in the script trigger recursive evaluation
-	frog.enabledoscount = 0
-	for os as integer = 0 to OS__COUNT - 1
-		if frog.os(os) then frog.enabledoscount += 1
-	next
-	for os as integer = 0 to OS__COUNT - 1
-		maybeEvalForOs(os)
-	next
-	assert(frog.apicount > 0)
-
-	if frog.apicount > ApiBits.MaxApis then
-		oops(frog.apicount & " APIs -- that's too many, max. is " & ApiBits.MaxApis & ", sorry")
-	else
-		for i as integer = 0 to frog.apicount - 1
-			frog.fullapis.set(i)
-		next
+	if len((frog.outname)) = 0 then
+		frog.outname = "unknown.bi"
 	end if
 
-	'' If no output .bi files were given via -emit options on the command line,
-	'' we default to emitting one output .bi, much like: -emit '*' default.bi
-	if frog.bicount = 0 then
-		if len((frog.defaultoutname)) = 0 then
-			frog.defaultoutname = "unknown.bi"
-		end if
-		if len((frog.outname)) = 0 then
-			frog.outname = frog.defaultoutname
-		elseif pathIsDir(frog.outname) then
-			frog.outname = pathAddDiv(frog.outname) + pathStrip(frog.defaultoutname)
-		end if
-		frogAddBi(frog.outname, "*")
+	dim api as ApiInfo
+	api.script = frog.script
+	frog.script = NULL
+	api.loadOptions()
+
+	var ast = frogParse(api)
+
+	'' Do file-specific AST work (e.g. add Extern block)
+	hlFile(ast, api)
+
+	'' Prepend #pragma once
+	'' It's always needed, except if the binding is empty: C headers
+	'' typically have #include guards, but we don't preserve those.
+	if ast->head then
+		astPrepend(ast, astNew(ASTKIND_PRAGMAONCE))
 	end if
 
-	'' For each version, parse the input into an AST, using the options for
-	'' that version, and then merge the AST with the previous one, so that
-	'' finally we get a single AST representing all versions.
-	''
-	'' Doing the merging here step-by-step vs. collecting all ASTs and then
-	'' merging them afterwards: Merging here immediately saves memory, and
-	'' also means that the slow merging process for a version happens after
-	'' parsing that version. Instead of one single big delay at the end,
-	'' there is a small delay at each version.
-	dim as AstNode ptr final
-	for api as integer = 0 to frog.apicount - 1
-		print hMakeProgressString(api + 1, frog.apicount) + " " + frog.apis[api].prettyId()
+	hlAutoAddDividers(ast)
 
-		'' Prepare the API options for the following cpp/c/highlevel steps (load them into hash tables etc.)
-		'' This writes into frog.bis to fill each .bi's ApiSpecificBiOptions.
-		frog.apis[api].loadOptions()
-
-		'' Parse code for this API into an AST
-		var ast = frogParse(frog.apis[api])
-
-		'' Prepare "incoming" trees
-		for bi as integer = 0 to frog.bicount - 1
-			assert(frog.bis[bi].incoming = NULL)
-			frog.bis[bi].incoming = astNewGROUP()
-		next
-
-		'' Split the big tree into separate "incoming" trees on each .bi file
-		scope
-			dim bi as integer
-			dim prevsource as const SourceInfo ptr
-
-			var i = ast->head
-			while i
-				var nxt = i->nxt
-
-				assert(i->location.source)
-				assert(i->location.source->is_file)
-
-				'' Find out into which .bi file this declaration should be put.
-				'' If this declaration has the same source as the previous one,
-				'' then re-use the previously calculated .bi file, instead of
-				'' redoing the lookup. Otherwise, do the lookup and cache the result.
-				if prevsource <> i->location.source then
-					bi = frogLookupBiFromH(i->location.source->name)
-					prevsource = i->location.source
-				end if
-
-				if bi >= 0 then
-					'' Add the declaration to the "incoming" AST for that .bi file
-					astUnlink(ast, i)
-					astAppend(frog.bis[bi].incoming, i)
-				end if
-
-				i = nxt
-			wend
-		end scope
-
-		'' Forget the remaining AST. Anything that wasn't moved into the
-		'' .bi files won't be emitted.
-		astDelete(ast)
-
-		dim apibit as ApiBits
-		apibit.set(api)
-
-		for bi as integer = 0 to frog.bicount - 1
-			with frog.bis[bi]
-				'' Do file-specific AST work (e.g. add Extern block)
-				hlFile(.incoming, frog.apis[api])
-
-				'' Merge the "incoming" tree into the "final" tree
-				assert(.final = NULL)
-				.final = .incoming
-				.incoming = NULL
-			end with
-		next
-
-		assert(frog.mergedlog = NULL)
-		frog.mergedlog = frog.apis[api].log
-		frog.apis[api].log = NULL
-	next
-
-	'' Print the merged list of #included files
-	'' This should be useful because it allows the user to see which input
-	'' files were used, found, not found, which additional files were
-	'' #included, etc.
-	emitFbStdout(frog.mergedlog, 1)
-
-	for bi as integer = 0 to frog.bicount - 1
-		with frog.bis[bi]
-			'' Prepend #pragma once
-			'' It's always needed, except if the binding is empty: C headers
-			'' typically have #include guards, but we don't preserve those.
-			if .final->head then
-				astPrepend(.final, astNew(ASTKIND_PRAGMAONCE))
-			end if
-
-			hlAutoAddDividers(.final)
-
-			'' Use .bi-specific header, if any; fallback to global header, if any
-			dim header as HeaderInfo ptr
-			if len(.header.title) > 0 then
-				header = @.header
-			elseif len((frog.header.title)) > 0 then
-				header = @frog.header
-			end if
-
-			'' Write out the .bi file.
-			var bifilename = *.filename
-			print "emitting: " + bifilename + " (" + _
-				hMakeCountMessage(hlCountDecls(.final), "declaration") + ", " + _
-				hMakeCountMessage(hlCountTodos(.final), "TODO"       ) + ")"
-			emitFbFile(bifilename, header, .final)
-		end with
-	next
+	'' Write out the .bi file.
+	print "emitting: " + frog.outname + " (" + _
+		hMakeCountMessage(hlCountDecls(ast), "declaration") + ", " + _
+		hMakeCountMessage(hlCountTodos(ast), "TODO"       ) + ")"
+	emitFbFile(frog.outname, ast)
