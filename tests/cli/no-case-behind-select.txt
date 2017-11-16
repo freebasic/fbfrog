@@ -1,3 +1,0 @@
-<command line>(1): expected -case after the -select but found '-define'
-    sts/cli/no-case-behind-select.h -selectdefine -define foo -case a -endselect
-                                                  ^~~~~~~

@@ -1,3 +1,0 @@
-<command line>(1): expected identifier (valid symbol name) but found '123'
-    ./fbfrog tests/cli/ifdef-non-id.h -ifdef 123 -endif
-                                             ^~~

@@ -1,3 +1,0 @@
-<command line>(1): expected identifier (valid symbol name) but found '-endselect'
-    ./fbfrog tests/cli/case-missing-define.h -selectdefine -case -endselect
-                                                                 ^~~~~~~~~~

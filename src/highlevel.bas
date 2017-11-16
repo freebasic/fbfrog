@@ -2469,118 +2469,6 @@ private function hlHideCallConv(byval n as AstNode ptr) as integer
 	function = (n->kind <> ASTKIND_PPDEFINE)
 end function
 
-'' *.h CRT/POSIX headers for which FB has corresponding crt/*.bi versions
-dim shared fbcrtheaders(0 to ...) as zstring ptr = _
-{ _
-	@"assert", @"ctype", @"errno", @"float", @"limits", @"locale", _
-	@"math", @"setjmp", @"signal", @"stdarg", @"stddef", @"stdint", _
-	@"stdio", @"stdlib", @"string", @"time", _
-	@"sys/types", @"sys/socket", @"wchar" _
-}
-
-type IncludePass
-	fbcrtheaderhash as THash = THash(5, TRUE)
-	declare constructor()
-	declare sub translateHeaderFileName(byref filename as string)
-	declare sub work(byval ast as AstNode ptr, byref bioptions as ApiSpecificBiOptions)
-	declare operator let(byref as const IncludePass) '' unimplemented
-end type
-
-constructor IncludePass()
-	for i as integer = lbound(fbcrtheaders) to ubound(fbcrtheaders)
-		fbcrtheaderhash.addOverwrite(fbcrtheaders(i), NULL)
-	next
-end constructor
-
-'' Remap .h name to a .bi name. If it's a known system header, we can even remap
-'' it to the corresponding FB header (in some cases it's not as simple as
-'' replacing .h by .bi).
-sub IncludePass.translateHeaderFileName(byref filename as string)
-	filename = pathStripExt(filename)
-
-	'' Is it one of the CRT headers? Remap it to crt/*.bi
-	if fbcrtheaderhash.contains(filename, hashHash(filename)) then
-		filename = "crt/" + filename
-	end if
-
-	filename += ".bi"
-end sub
-
-sub IncludePass.work(byval ast as AstNode ptr, byref bioptions as ApiSpecificBiOptions)
-	'' Find node above which new #includes should be inserted. This should
-	'' always be behind existing #includes at the top.
-	var top = ast->head
-	while top andalso (top->kind = ASTKIND_PPINCLUDE)
-		top = top->nxt
-	wend
-
-	'' Start at this "top" node, otherwise we'd run an infinite loop trying
-	'' to move things to the top that already are at the top (because we'd
-	'' be *above* the "top" node, and moving #includes *down* to it, which
-	'' means we'd visit them again and again, since we're cycling from top
-	'' to bottom via the "next" pointers).
-	var i = top
-	while i
-		var nxt = i->nxt
-
-		'' #include?
-		if i->kind = ASTKIND_PPINCLUDE then
-			'' Move to top (outside of Extern block), without changing the order
-			assert(i <> top)
-			astUnlink(ast, i)
-			astInsert(ast, i, top)
-		end if
-
-		i = nxt
-	wend
-
-	'' Add #includes from -addinclude options
-	if bioptions.addincludes then
-		astInsert(ast, bioptions.addincludes, top)
-		bioptions.addincludes = NULL
-	end if
-
-	'' For each #include at the top, apply -removeinclude and remap *.h => *.bi
-	i = ast->head
-	while i <> top
-		var nxt = i->nxt
-
-		'' #include?
-		if i->kind = ASTKIND_PPINCLUDE then
-			var filename = *i->text
-			if hl.api->removeinclude.contains(filename, hashHash(filename)) then
-				astRemove(ast, i)
-			else
-				translateHeaderFileName(filename)
-				astSetText(i, filename)
-			end if
-		end if
-
-		i = nxt
-	wend
-
-	'' Remove duplicate #includes
-	dim includes as THash = THash(6, TRUE)
-
-	i = ast->head
-	while i <> top
-		var nxt = i->nxt
-
-		'' #include?
-		if i->kind = ASTKIND_PPINCLUDE then
-			var hash = hashHash(i->text)
-			var item = includes.lookup(i->text, hash)
-			if item->s then
-				astRemove(ast, i)
-			else
-				includes.add(item, hash, i->text, NULL)
-			end if
-		end if
-
-		i = nxt
-	wend
-end sub
-
 private function hlSearchSpecialDtypes(byval n as AstNode ptr) as integer
 	select case typeGetDt(n->dtype)
 	case TYPE_CLONG, TYPE_CULONG
@@ -2746,7 +2634,7 @@ private function hSkipStatementsInARow(byval i as AstNode ptr) as AstNode ptr
 		loop while i andalso (i->kind = astkind)
 		return i
 
-	case ASTKIND_PRAGMAONCE, ASTKIND_RENAMELIST, ASTKIND_TITLE, _
+	case ASTKIND_PRAGMAONCE, ASTKIND_RENAMELIST, _
 	     ASTKIND_EXTERNBLOCKBEGIN, ASTKIND_EXTERNBLOCKEND, _
 	     ASTKIND_STRUCT, ASTKIND_UNION, ASTKIND_ENUM, _
 	     ASTKIND_IFBLOCK, ASTKIND_DOWHILE, ASTKIND_WHILE
@@ -2771,7 +2659,7 @@ private function hSkipStatementsInARow(byval i as AstNode ptr) as AstNode ptr
 		do
 			select case nxt->kind
 			case ASTKIND_PPIF, ASTKIND_INCLIB, ASTKIND_PPINCLUDE, _
-			     ASTKIND_PRAGMAONCE, ASTKIND_RENAMELIST, ASTKIND_TITLE, _
+			     ASTKIND_PRAGMAONCE, ASTKIND_RENAMELIST, _
 			     ASTKIND_EXTERNBLOCKBEGIN, ASTKIND_EXTERNBLOCKEND, _
 			     ASTKIND_STRUCT, ASTKIND_UNION, ASTKIND_ENUM, _
 			     ASTKIND_IFBLOCK, ASTKIND_DOWHILE, ASTKIND_WHILE
@@ -3071,7 +2959,7 @@ end sub
 '' .bi-file-specific highlevel transformations, intended to run on the
 '' API-specific ASTs in each output .bi file.
 ''
-sub hlFile(byval ast as AstNode ptr, byref api as ApiInfo, byref bioptions as ApiSpecificBiOptions)
+sub hlFile(byval ast as AstNode ptr, byref api as ApiInfo)
 	hl.api = @api
 	hl.need_extern = FALSE
 	hl.stdcalls = 0
@@ -3122,15 +3010,6 @@ sub hlFile(byval ast as AstNode ptr, byref api as ApiInfo, byref bioptions as Ap
 		end if
 	end if
 
-	'' Move existing #include statements outside the Extern block
-	'' Remap *.h => *.bi
-	'' Apply -removeinclude
-	'' Remove duplicates
-	scope
-		dim pass as IncludePass
-		pass.work(ast, bioptions)
-	end scope
-
 	'' Add #includes for "crt/long[double].bi" and "crt/wchar.bi" if the
 	'' binding uses the clong[double]/wchar_t types
 	astVisit(ast, @hlSearchSpecialDtypes)
@@ -3139,16 +3018,6 @@ sub hlFile(byval ast as AstNode ptr, byref api as ApiInfo, byref bioptions as Ap
 	end if
 	if hl.uses_clong then
 		astPrepend(ast, astNew(ASTKIND_PPINCLUDE, "crt/long.bi"))
-	end if
-
-	'' Prepend #inclibs/#undefs
-	if bioptions.undefs then
-		astPrepend(ast, bioptions.undefs)
-		bioptions.undefs = NULL
-	end if
-	if bioptions.inclibs then
-		astPrepend(ast, bioptions.inclibs)
-		bioptions.inclibs = NULL
 	end if
 
 	astVisit(ast, @hlTurnWhile0IntoScope)
@@ -3165,7 +3034,7 @@ function hlCountDecls(byval ast as AstNode ptr) as integer
 		case ASTKIND_DIVIDER, ASTKIND_PPINCLUDE, ASTKIND_PPENDIF, _
 		     ASTKIND_EXTERNBLOCKBEGIN, ASTKIND_EXTERNBLOCKEND, _
 		     ASTKIND_INCLIB, ASTKIND_PRAGMAONCE, _
-		     ASTKIND_UNKNOWN, ASTKIND_RENAMELIST, ASTKIND_TITLE
+		     ASTKIND_UNKNOWN, ASTKIND_RENAMELIST
 
 		case ASTKIND_PPIF, ASTKIND_PPELSEIF, ASTKIND_PPELSE
 			n += hlCountDecls(i)

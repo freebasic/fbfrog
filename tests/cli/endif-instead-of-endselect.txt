@@ -1,3 +1,0 @@
-<command line>(1): expected -case or -endselect but found '-endif'
-    ./fbfrog tests/cli/endif-instead-of-endselect.h -selectdefine -case a -endif
-                                                                          ^~~~~~

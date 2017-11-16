@@ -1,3 +1,0 @@
-<command line>(1): expected <version number> argument but found '-endselect'
-    ng-version-number.h -declareversions VER 1 2 -selectversion -case -endselect
-                                                                      ^~~~~~~~~~

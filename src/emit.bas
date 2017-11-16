@@ -491,8 +491,7 @@ end function
 sub CodeGen.emitExpr(byval n as AstNode ptr, byval need_parens as integer, byval need_macroparam_parens as integer)
 	var consider_parens = FALSE
 	select case as const n->kind
-	case ASTKIND_VEROR, ASTKIND_VERAND, ASTKIND_VERNUMCHECK, _
-	     ASTKIND_LOGOR, ASTKIND_LOGAND, _
+	case ASTKIND_LOGOR, ASTKIND_LOGAND, _
 	     ASTKIND_OR, ASTKIND_XOR, ASTKIND_AND, _
 	     ASTKIND_EQ, ASTKIND_NE, ASTKIND_LT, _
 	     ASTKIND_LE, ASTKIND_GT, ASTKIND_GE, _
@@ -511,29 +510,6 @@ sub CodeGen.emitExpr(byval n as AstNode ptr, byval need_parens as integer, byval
 	end if
 
 	select case as const n->kind
-	case ASTKIND_VEROR, ASTKIND_VERAND
-		var i = n->head
-		while i
-			emitExpr(i, TRUE)
-			if i->nxt then
-				add(TK_SPACE)
-				if astIsVEROR(n) then
-					add(KW_OR)
-				else
-					add(KW_AND)
-				end if
-				add(TK_SPACE)
-			end if
-			i = i->nxt
-		wend
-
-	case ASTKIND_VERNUMCHECK
-		add(TK_ID, frog.versiondefine)
-		add(TK_SPACE)
-		add(TK_EQ)
-		add(TK_SPACE)
-		add(TK_NUMLIT, frog.vernums(n->vernum))
-
 	case ASTKIND_PROC
 		emitProcHeader(n, TRUE)
 

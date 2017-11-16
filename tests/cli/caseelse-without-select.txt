@@ -1,3 +1,0 @@
-<command line>(1): -caseelse without -select
-    ./fbfrog tests/cli/caseelse-without-select.h -caseelse -endselect
-                                                 ^~~~~~~~~

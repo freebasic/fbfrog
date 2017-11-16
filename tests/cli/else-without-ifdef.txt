@@ -1,3 +1,0 @@
-<command line>(1): -else without -ifdef
-    ./fbfrog tests/cli/else-without-ifdef.h -else -endif
-                                            ^~~~~

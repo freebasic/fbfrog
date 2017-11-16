@@ -4,27 +4,13 @@
 
 * `@<file> | *.fbfrog`: Read more command line arguments from a file
 * `-o <path/file>`: Set output .bi file name, or just the output directory
-* `-emit '*.h' foo.bi`: Emit code from matching .h into specified .bi
-* `-dontemit '*.h'`: Drop code from matching .h files.
-* `-title <package + version> original-license.txt translators.txt [<destination .bi file>]`: Add text at the top of .bi file(s): package name + version, copyright, license
 * `-v`: Show verbose/debugging info. Pass `-v -v` for more debug info.
 * `-target nodos|noarm|<os>|<arch>|<os>-<arch>`: Specify OS/arch to translate for, instead of all.
-
-#### API script logic
-
-* `-declareversions <symbol> (<number>)+`: Version numbers
-* `-declarebool <symbol>`: Single on/off #define
-* `-selecttarget  (-case <target> ...)+ [-caseelse ...] -endselect`
-* `-selectversion (-case <number> ...)+ [-caseelse ...] -endselect`
-* `-selectdefine  (-case <symbol> ...)+ [-caseelse ...] -endselect`
-* `-iftarget <target> ... [-else ...] -endif`
-* `-ifdef <symbol> ... [-else ...] -endif`
 
 #### CPP (options are API-specific)
 
 * `-define <id> [<body>]`: Add pre-#define
 * `-include <file>`: Add pre-#include
-* `-fbfroginclude <file>`: Add pre-#include from include/fbfrog/
 * `-incdir <path>`: Add search directory for .h #includes
 
 #### Binding generation (options are API-specific)
@@ -60,6 +46,3 @@
 * `-removeinclude <filename>`: Remove matching #include directives
 * `-setarraysize <id> <size>`: Set size of an `[]` array
 * `-moveabove <id> <ref>`: Move declaration of `<id>` above declaration of `<ref>`
-* `-inclib <name> [<destination .bi file>]`: Add `#inclib "<name>"`
-* `-undef  <id>   [<destination .bi file>]`: Add `#undef <id>`
-* `-addinclude <.bi file> [<destination .bi file>]`: Add `#include <.bi file>`

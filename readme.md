@@ -78,7 +78,6 @@ tar xf freeglut-3.0.0.tar.gz
 * [Overview](doc/overview.md)
 * [Automatic Translation Features](doc/automatic-translation-features.md)
 * [Extra Features](doc/extra-features.md)
-* [About the -declare*/-select/-ifdef options](doc/script-options.md)
 * [Bugs](doc/bugs.md)
 * [Old to-do list](doc/todo.md)
 * [Future improvements](doc/future.md)

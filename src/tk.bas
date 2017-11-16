@@ -149,29 +149,12 @@ dim shared as const TOKENINFO tk_info(0 to ...) = _
 	(@"TK_ARGSFILE"), _
 	_
 	(@"-o"            ), _
-	(@"-emit"         ), _
-	(@"-dontemit"     ), _
 	(@"-i"            ), _
 	(@"-v"            ), _
 	(@"-target"       ), _
-	(@"-title"        ), _
-	_
-	(@"-declareversions"), _
-	(@"-declarebool"  ), _
-	(@"-selecttarget" ), _
-	(@"-selectversion"), _
-	(@"-selectdefine" ), _
-	(@"-case"         ), _
-	(@"-caseelse"     ), _
-	(@"-endselect"    ), _
-	(@"-iftarget"     ), _
-	(@"-ifdef"        ), _
-	(@"-else"         ), _
-	(@"-endif"        ), _
 	_
 	(@"-define"       ), _
 	(@"-include"      ), _
-	(@"-fbfroginclude"), _
 	(@"-incdir"       ), _
 	_
 	(@"-windowsms"    ), _
@@ -208,10 +191,7 @@ dim shared as const TOKENINFO tk_info(0 to ...) = _
 	(@"-string"       ), _
 	(@"-removeinclude"), _
 	(@"-setarraysize" ), _
-	(@"-moveabove"    ), _
-	(@"-inclib"       ), _
-	(@"-undef"        ), _
-	(@"-addinclude"   )  _
+	(@"-moveabove"    )  _
 }
 
 #assert ubound(tk_info) = TK__COUNT - 1

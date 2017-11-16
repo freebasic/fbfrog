@@ -1,3 +1,0 @@
-<command line>(1): expected -endif but found '-endselect'
-    ./fbfrog tests/cli/endselect-instead-of-endif.h -ifdef A -else -endselect
-                                                                   ^~~~~~~~~~

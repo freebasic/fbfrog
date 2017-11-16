@@ -72,26 +72,11 @@ declare function typeDump(byval dtype as integer) as string
 enum
 	'' Internal helper nodes
 	ASTKIND_GROUP = 0
-	ASTKIND_VERBLOCK
-	ASTKIND_VEROR
-	ASTKIND_VERAND
-	ASTKIND_VERNUMCHECK
 	ASTKIND_DIVIDER
 	ASTKIND_SCOPEBLOCK
 	ASTKIND_UNKNOWN
 	ASTKIND_FBCODE
 	ASTKIND_RENAMELIST
-	ASTKIND_TITLE
-
-	'' Script helper nodes
-	ASTKIND_DECLAREVERSIONS
-	ASTKIND_DECLAREBOOL
-	ASTKIND_SELECTTARGET
-	ASTKIND_SELECTVERSION
-	ASTKIND_SELECTDEFINE
-	ASTKIND_CASE
-	ASTKIND_CASEELSE
-	ASTKIND_ENDSELECT
 	ASTKIND_OPTION
 
 	'' Declarations/statements
@@ -281,7 +266,6 @@ type AstNode_
 		maxalign	as integer  '' STRUCT/UNION: FIELD=N/#pragma pack(N)
 		opt		as integer  '' OPTION: OPT_*
 		apis		as ApiBits  '' VERBLOCK
-		vernum		as integer  '' VERNUMCHECK: index into frog.vernums()
 	end union
 
 	'' Linked list of child nodes, operands/fields/parameters/...
@@ -297,9 +281,6 @@ type ASTVISITCALLBACK as function(byval as AstNode ptr) as integer
 #define astNewTEXT(text) astNew(ASTKIND_TEXT, text)
 #define astNewDEFINED(id) astNew(ASTKIND_DEFINED, id)
 #define astIsCONSTI(n) ((n)->kind = ASTKIND_CONSTI)
-#define astIsVERBLOCK(n) ((n)->kind = ASTKIND_VERBLOCK)
-#define astIsVERAND(n) ((n)->kind = ASTKIND_VERAND)
-#define astIsVEROR(n)  ((n)->kind = ASTKIND_VEROR)
 #define astIsTEXT(n) ((n)->kind = ASTKIND_TEXT)
 #define astIsDEFINED(n) ((n)->kind = ASTKIND_DEFINED)
 #define astIsPPIF(n) ((n)->kind = ASTKIND_PPIF)

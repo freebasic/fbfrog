@@ -1,3 +1,0 @@
-<command line>(1): -else behind -else
-    ./fbfrog tests/cli/else-behind-else.h -ifdef A -else -else -endif
-                                                         ^~~~~

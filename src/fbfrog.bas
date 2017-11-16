@@ -1,40 +1,9 @@
 ''
 '' Main module, command line interface
 ''
-'' This is how fbfrog works:
-''
-'' 1. Read command line. Evaluate -declare*, -if, -select options. Determine the
-''    list of APIs to parse. Collect input files and options for each API.
-''
-''    Often APIs just means compilation targets:
-''        dos, linux-x86, linux-x86_64, win32, win64
-''    but it can be more than that. For example, fbfrog can be told about
-''    conditional #defines used in the input header, to make them available in
-''    the .bi output (e.g. Allegro's ALLEGRO_STATICLINK), and fbfrog can even be
-''    given separate input headers for each API. That's useful to create a
-''    multi-version .bi binding, where you can specify a #define to select the
-''    desired API version (e.g. for GTK2 or GTK3).
-''
-'' 2. For each API, parse the .h input files (C lexer, C preprocessor, C parser)
-''    into an AST. Do highlevel transformations on that AST to adjust it to FB,
-''    e.g. fix up array parameters, or solve out redundant typedefs.
-''
-''    The CPP expands as many #includes and macros as it can, so that fbfrog
-''    gets to see as much information about the API as possible. The CPP uses
-''    API-specific pre-#defines: each API has a certain compilation target.
-''
-'' 3. Split up the API-specific ASTs into .bi files according to -emit options.
-''    Each .bi file ends up with its parts of all the APIs. Do .bi-file-specific
-''    highlevel transformations on the individual parts (e.g. add Extern blocks).
-''
-'' 4. For each .bi file, merge the API-specific trees into one, adding #if
-''    checks where needed (e.g. to enclose target-specific code). Then emit the
-''    .bi file.
-''
 
 #include once "fbfrog.bi"
 
-#include once "ast-merge.bi"
 #include once "clang-parser.bi"
 #include once "c-lex.bi"
 #include once "c-parser.bi"
@@ -59,7 +28,6 @@ namespace frog
 	dim shared as integer enabledoscount
 
 	dim shared as AstNode ptr script
-	dim shared as AstNode ptr completeverors, fullveror
 	dim shared as ApiInfo ptr apis
 	dim shared as integer apicount
 	dim shared as ApiBits fullapis
@@ -81,9 +49,6 @@ namespace frog
 	dim shared as HPATTERN ptr patterns
 	dim shared as integer patterncount
 
-	dim shared vernums(any) as string
-	dim shared versiondefine as string
-
 	dim shared sourcectx as SourceContext
 end namespace
 
@@ -104,20 +69,6 @@ private sub frogSetTargets(byval enabled as integer)
 	frogSetArchs(enabled)
 end sub
 
-private function frogAddVernum(byref vernum as string) as integer
-	var i = ubound(frog.vernums) + 1
-	redim preserve frog.vernums(0 to i)
-	frog.vernums(i) = vernum
-	return i
-end function
-
-private function frogLookupVernum(byref vernum as string) as integer
-	for i as integer = 0 to ubound(frog.vernums)
-		if frog.vernums(i) = vernum then return i
-	next
-	function = -1
-end function
-
 private sub frogAddPattern(byref pattern as string, byval bi as integer)
 	var i = frog.patterncount
 	frog.patterncount += 1
@@ -128,17 +79,6 @@ private sub frogAddPattern(byref pattern as string, byval bi as integer)
 		.bi = bi
 	end with
 end sub
-
-function frogLookupBiFromBi(byref filename as string) as integer
-	var ucasefilename = ucase(filename, 1)
-	var ucasehash = hashHash(ucasefilename)
-	var item = frog.ucasebihash.lookup(ucasefilename, ucasehash)
-	if item->s then
-		function = cint(item->data)
-	else
-		function = -1
-	end if
-end function
 
 private sub frogAddBi(byref filename as string, byref pattern as string)
 	dim bi as integer
@@ -190,34 +130,6 @@ function frogLookupBiFromH(byval hfile as zstring ptr) as integer
 	'' input headers, such as the Windows API headers)
 	frog.bilookupcache.add(item, hfilehash, hfile, cptr(any ptr, bi))
 	function = bi
-end function
-
-'' Find a *.fbfrog or *.h file in fbfrog's include/ dir, its "library" of
-'' premade collections of pre-#defines etc. useful when creating bindings.
-private function hFindResource(byref filename as string) as string
-	'' 1. Absolute path? Use as-is
-	if pathIsAbsolute(filename) then return filename
-
-	'' 2. Current directory?
-	if fileexists(filename) then return filename
-
-	'' 3. <exepath>/include/fbfrog/?
-	const INCLUDEDIR = "include" + PATHDIV + "fbfrog" + PATHDIV
-	var dir1 = hExepath() + INCLUDEDIR
-	var found = dir1 + filename
-	if fileexists(found) then return found
-
-	'' 4. <exepath>/../include/fbfrog/?
-	var dir2 = hExepath() + ".." + PATHDIV + INCLUDEDIR
-	found = dir2 + filename
-	if fileexists(found) then return found
-
-	print "error: could not find '" + filename + "'"
-	print "search dirs:"
-	print "  <curdir> (" + curdir() + ")"
-	print "  <exepath>/include/fbfrog (" + dir1 + ")"
-	print "  <exepath>/../include/fbfrog (" + pathNormalize(dir2) + ")"
-	end 1
 end function
 
 private sub hPrintHelpAndExit()
@@ -286,8 +198,6 @@ private sub hLoadArgsFile _
 	if filecount > MAX_FILES then
 		tk.showErrorAndAbort(x, "suspiciously many @file expansions, recursion? (limit=" & MAX_FILES & ")")
 	end if
-
-	filename = hFindResource(filename)
 
 	'' Load the file content at the specified position
 	var file = filebuffersAdd(frog.sourcectx, filename, location)
@@ -366,120 +276,6 @@ end function
 
 declare sub hParseArgs(byref tk as TokenBuffer, byref x as integer)
 
-private sub hParseSelectCompound(byref tk as TokenBuffer, byref x as integer, byval selectkind as integer)
-	'' -selecttarget|-selectversion|-selectdefine
-	var xblockbegin = x
-	x += 1
-
-	astAppend(frog.script, astNew(selectkind))
-
-	'' -case
-	if tk.get(x) <> OPT_CASE then
-		tk.oopsExpected(x, "-case after the -select")
-	end if
-
-	do
-		hParseArgs(tk, x)
-
-		select case tk.get(x)
-		case TK_EOF
-			tk.showErrorAndAbort(xblockbegin, "missing -endselect for this")
-
-		case OPT_CASE
-			if frog.script->tail->kind = ASTKIND_CASEELSE then
-				tk.showErrorAndAbort(x, "-case behind -caseelse")
-			end if
-			xblockbegin = x
-			x += 1
-
-			select case selectkind
-			case ASTKIND_SELECTVERSION : hExpectStringOrId(tk, x, "<version number> argument")
-			case ASTKIND_SELECTTARGET  : hExpectStringOrId(tk, x, "<target> argument")
-			case else                  : hExpectId(tk, x)
-			end select
-			var n = astNew(ASTKIND_CASE, tk.getText(x))
-			n->location = tk.getLocation(x)
-			astAppend(frog.script, n)
-			x += 1
-
-		case OPT_CASEELSE
-			if frog.script->tail->kind = ASTKIND_CASEELSE then
-				tk.showErrorAndAbort(x, "-caseelse behind -caseelse")
-			end if
-			astAppend(frog.script, astNew(ASTKIND_CASEELSE))
-			xblockbegin = x
-			x += 1
-
-		case OPT_ENDSELECT
-			astAppend(frog.script, astNew(ASTKIND_ENDSELECT))
-			x += 1
-			exit do
-
-		case else
-			tk.oopsExpected(x, "-case or -endselect")
-		end select
-	loop
-end sub
-
-private sub hParseIfCompound(byref tk as TokenBuffer, byref x as integer)
-	'' -ifdef|-iftarget
-	var xblockbegin = x
-	var is_target = (tk.get(x) = OPT_IFTARGET)
-	x += 1
-
-	if is_target then
-		'' <target>
-		hExpectStringOrId(tk, x, "<target> argument")
-
-		'' -iftarget <target>  =>  -selecttarget -case <target>
-		astAppend(frog.script, astNew(ASTKIND_SELECTTARGET))
-		astAppend(frog.script, astNew(ASTKIND_CASE, tk.getText(x)))
-	else
-		'' <symbol>
-		hExpectId(tk, x)
-
-		'' -ifdef <symbol>  =>  -select -case <symbol>
-		astAppend(frog.script, astNew(ASTKIND_SELECTDEFINE))
-		astAppend(frog.script, astNew(ASTKIND_CASE, tk.getText(x)))
-	end if
-	x += 1
-
-	do
-		hParseArgs(tk, x)
-
-		select case tk.get(x)
-		case TK_EOF
-			tk.showErrorAndAbort(xblockbegin, "missing -endif for this")
-
-		case OPT_ELSE
-			if frog.script->tail->kind = ASTKIND_CASEELSE then
-				tk.showErrorAndAbort(x, "-else behind -else")
-			end if
-			astAppend(frog.script, astNew(ASTKIND_CASEELSE))
-			xblockbegin = x
-			x += 1
-
-		case OPT_ENDIF
-			astAppend(frog.script, astNew(ASTKIND_ENDSELECT))
-			x += 1
-			exit do
-
-		case else
-			tk.oopsExpected(x, iif(tk.get(xblockbegin) = OPT_ELSE, _
-					@"-endif", @"-else or -endif"))
-		end select
-	loop
-end sub
-
-private sub hParseDestinationBiFile(byref tk as TokenBuffer, byref x as integer)
-	'' [<destination .bi file>]
-	if hIsStringOrId(tk, x) then
-		assert(frog.script->tail->kind = ASTKIND_OPTION)
-		astSetAlias(frog.script->tail, tk.getText(x))
-		x += 1
-	end if
-end sub
-
 private sub hParseParam(byref tk as TokenBuffer, byref x as integer, byref description as zstring)
 	hExpectStringOrId(tk, x, description)
 	x += 1
@@ -515,28 +311,6 @@ private sub hParseArgs(byref tk as TokenBuffer, byref x as integer)
 			x += 1
 			hExpectStringOrId(tk, x, "<path/file>")
 			frog.outname = hPathRelativeToArgsFile(tk, x)
-			x += 1
-
-		'' -emit <filename-pattern> <file>
-		case OPT_EMIT
-			x += 1
-
-			hExpectStringOrId(tk, x, "<filename-pattern> argument")
-			var pattern = *tk.getText(x)
-			x += 1
-
-			hExpectStringOrId(tk, x, "<file> argument")
-			var filename = *tk.getText(x)
-			x += 1
-
-			frogAddBi(filename, pattern)
-
-		'' -dontemit <filename-pattern>
-		case OPT_DONTEMIT
-			x += 1
-
-			hExpectStringOrId(tk, x, "<filename-pattern> argument")
-			frogAddPattern(*tk.getText(x), -1)
 			x += 1
 
 		'' (-target <target>)+
@@ -598,115 +372,6 @@ private sub hParseArgs(byref tk as TokenBuffer, byref x as integer)
 			end select
 			x += 1
 
-		'' -title
-		case OPT_TITLE
-			var begin = x
-			x += 1
-
-			'' <package + version>
-			hParseParam(tk, x, "<text> parameter for -title")
-			var title = tk.getText(x - 1)
-
-			'' original-license.txt
-			hParseParam(tk, x, "original-license.txt parameter for -title")
-			var licensefile = filebuffersAdd(frog.sourcectx, tk.getText(x - 1), tk.getLocation(x - 1))
-
-			'' translators.txt
-			hParseParam(tk, x, "translators.txt parameter for -title")
-			var translatorsfile = filebuffersAdd(frog.sourcectx, tk.getText(x - 1), tk.getLocation(x - 1))
-
-			'' [<destination .bi file>]
-			dim header as HeaderInfo ptr
-			if hIsStringOrId(tk, x) then
-				'' .bi-specific -title option
-				var bi = frogLookupBiFromBi(*tk.getText(x))
-				if bi < 0 then
-					tk.showErrorAndAbort(x, "unknown destination .bi")
-				end if
-				header = @frog.bis[bi].header
-				x += 1
-			else
-				'' global -title option
-				header = @frog.header
-			end if
-
-			if len(header->title) > 0 then
-				tk.showErrorAndAbort(begin, "duplicate -title option")
-			end if
-			header->title = *title
-			header->licensefile = licensefile
-			header->translatorsfile = translatorsfile
-
-		'' -declareversions <symbol> (<string>)+
-		case OPT_DECLAREVERSIONS
-			if frog.have_declareversions then
-				tk.showErrorAndAbort(x, "multiple -declareversions options, only 1 is allowed")
-			end if
-			frog.have_declareversions = TRUE
-			x += 1
-
-			'' <symbol>
-			hExpectId(tk, x)
-			frog.versiondefine = *tk.getText(x)
-			x += 1
-
-			'' The version numbers must be given in ascending order,
-			'' allowing us to optimize things like:
-			''      (ID = a) or (ID = b) or (ID = c)
-			'' to:
-			''      ID <= c
-
-			'' (<string>)+
-			if tk.get(x) <> TK_STRING then
-				tk.oopsExpected(x, "<version number> argument")
-			end if
-			var xfirst = x
-			do
-				var verstr = *tk.getText(x)
-
-				'' Verify that new version number is >= the previous one (unless this is the first one)
-				if xfirst < x then
-					var prev = *tk.getText(x - 1)
-					if valint(prev) >= valint(verstr) then
-						tk.showErrorAndAbort(x, "version '" + prev + "' >= '" + verstr + "', but should be < to maintain order")
-					end if
-				end if
-
-				frogAddVernum(verstr)
-
-				x += 1
-			loop while tk.get(x) = TK_STRING
-
-			astAppend(frog.script, astNew(ASTKIND_DECLAREVERSIONS))
-
-		'' -declarebool <symbol>
-		case OPT_DECLAREBOOL
-			x += 1
-
-			'' <symbol>
-			hExpectId(tk, x)
-			astAppend(frog.script, astNew(ASTKIND_DECLAREBOOL, tk.getText(x)))
-			x += 1
-
-		case OPT_SELECTTARGET  : hParseSelectCompound(tk, x, ASTKIND_SELECTTARGET)
-		case OPT_SELECTVERSION : hParseSelectCompound(tk, x, ASTKIND_SELECTVERSION)
-		case OPT_SELECTDEFINE  : hParseSelectCompound(tk, x, ASTKIND_SELECTDEFINE)
-
-		case OPT_IFTARGET, OPT_IFDEF
-			hParseIfCompound(tk, x)
-
-		case OPT_CASE, OPT_CASEELSE, OPT_ENDSELECT, OPT_ELSE, OPT_ENDIF
-			if nestinglevel <= 1 then
-				select case tk.get(x)
-				case OPT_CASE      : tk.showErrorAndAbort(x, "-case without -select")
-				case OPT_CASEELSE  : tk.showErrorAndAbort(x, "-caseelse without -select")
-				case OPT_ENDSELECT : tk.showErrorAndAbort(x, "-endselect without -select")
-				case OPT_ELSE      : tk.showErrorAndAbort(x, "-else without -ifdef")
-				case else          : tk.showErrorAndAbort(x, "-endif without -ifdef")
-				end select
-			end if
-			exit while
-
 		'' -define <id> [<body>]
 		case OPT_DEFINE
 			x += 1
@@ -724,9 +389,6 @@ private sub hParseArgs(byref tk as TokenBuffer, byref x as integer)
 			astAppend(frog.script, astNewOPTION(opt, id, body))
 
 		case OPT_INCLUDE
-			hParseOption1Param(tk, x, opt, "<file>")
-
-		case OPT_FBFROGINCLUDE
 			hParseOption1Param(tk, x, opt, "<file>")
 
 		case OPT_INCDIR
@@ -767,18 +429,6 @@ private sub hParseArgs(byref tk as TokenBuffer, byref x as integer)
 		case OPT_REPLACEMENTS
 			hParseOption1Param(tk, x, opt, "<file>")
 
-		case OPT_INCLIB
-			hParseOption1Param(tk, x, opt, "<name>")
-			hParseDestinationBiFile(tk, x)
-
-		case OPT_UNDEF
-			hParseOption1Param(tk, x, opt, "<id>")
-			hParseDestinationBiFile(tk, x)
-
-		case OPT_ADDINCLUDE
-			hParseOption1Param(tk, x, opt, "<.bi file>")
-			hParseDestinationBiFile(tk, x)
-
 		case else
 			'' *.fbfrog file given (without @)? Treat as @file too
 			var filename = *tk.getText(x)
@@ -807,40 +457,12 @@ private sub hParseArgs(byref tk as TokenBuffer, byref x as integer)
 	nestinglevel -= 1
 end sub
 
-private function hSkipToEndOfBlock(byval i as AstNode ptr) as AstNode ptr
-	var level = 0
-
-	do
-		select case i->kind
-		case ASTKIND_SELECTTARGET, ASTKIND_SELECTVERSION, ASTKIND_SELECTDEFINE
-			level += 1
-
-		case ASTKIND_CASE, ASTKIND_CASEELSE
-			if level = 0 then
-				exit do
-			end if
-
-		case ASTKIND_ENDSELECT
-			if level = 0 then
-				exit do
-			end if
-			level -= 1
-		end select
-
-		i = i->nxt
-	loop
-
-	function = i
-end function
-
-private sub frogAddApi(byval verand as AstNode ptr, byval script as AstNode ptr, byval target as TargetInfo)
-	assert(astIsVERAND(verand))
+private sub frogAddApi(byval script as AstNode ptr, byval target as TargetInfo)
 	var i = frog.apicount
 	frog.apicount += 1
 	frog.apis = reallocate(frog.apis, frog.apicount * sizeof(*frog.apis))
 	with frog.apis[i]
 		.constructor()
-		.verand = verand
 		.script = script
 		.target = target
 	end with
@@ -872,181 +494,9 @@ private function hTargetPatternMatchesTarget(byref pattern as string, byval targ
 	return (targetos = os) and (targetarch = arch)
 end function
 
-''
-'' The script is a linear list of the command line options, for example:
-'' (each line is a sibling AST node)
-''    select __LIBFOO_VERSION
-''    case 1
-''    #define VERSION 1
-''    case 2
-''    #define VERSION 2
-''    endselect
-''    ifdef UNICODE
-''    #define UNICODE
-''    else
-''    #define ANSI
-''    endif
-''    #define COMMON
-'' We want to follow each possible code path to determine which versions fbfrog
-'' should work with and what their options are. The possible code paths for this
-'' example are:
-''    <conditions>                                <options>
-''    __LIBFOO_VERSION=1, defined(UNICODE)     => #define VERSION 1, #define UNICODE, #define COMMON
-''    __LIBFOO_VERSION=2, defined(UNICODE)     => #define VERSION 2, #define UNICODE, #define COMMON
-''    __LIBFOO_VERSION=1, not defined(UNICODE) => #define VERSION 1, #define ANSI, #define COMMON
-''    __LIBFOO_VERSION=2, not defined(UNICODE) => #define VERSION 2, #define ANSI, #define COMMON
-''
-'' All the evaluation code assumes that the script is valid, especially that
-'' if/else/endif and select/case/endselect nodes are properly used.
-''
-'' In order to evaluate multiple code paths, we start walking at the beginning,
-'' and start a recursive call at every condition. The if path of an -ifdef is
-'' evaluated by a recursive call, and we then go on to evaluate the else path.
-'' Similar for -select's, except that there can be 1..n possible code paths
-'' instead of always 2. Each -case code path except the last is evaluated by a
-'' recursive call, and then we go on to evaluate the last -case code path.
-''
-'' Evaluating the first (couple) code path(s) first, and the last code path
-'' last, means that they'll be evaluated in the order they appear in the script,
-'' and the results will be in the pretty order expected by the user.
-''
-'' While evaluating, we keep track of the conditions and visited options of each
-'' code path. Recursive calls are given the conditions/options so far seen by
-'' the parent. This way, common conditions/options from before the last
-'' conditional branch are passed into each code path resulting from the
-'' conditional branch.
-''
-private sub frogEvaluateScript _
-	( _
-		byval start as AstNode ptr, _
-		byval conditions as AstNode ptr, _
-		byval options as AstNode ptr, _
-		byval target as TargetInfo _
-	)
-
-	var i = start
-	while i
-
-		select case i->kind
-		case ASTKIND_DECLAREVERSIONS
-			i = i->nxt
-
-			var lastvernum = ubound(frog.vernums)
-
-			'' Evaluate a separate code path for each version,
-			'' branching for every version except the last
-			for vernum as integer = 0 to lastvernum - 1
-				'' <symbol> = <versionnumber>
-				frogEvaluateScript(i, _
-					astNewGROUP(astClone(conditions), astNewVERNUMCHECK(vernum)), _
-					astClone(options), _
-					target)
-			next
-
-			'' Now continue without recursing and evaluate the code path for the last version
-			astAppend(conditions, astNewVERNUMCHECK(lastvernum))
-
-		case ASTKIND_DECLAREBOOL
-			var symbol = i->text
-			i = i->nxt
-
-			var completeveror = astNew(ASTKIND_VEROR)
-
-			'' Branch for the true code path
-			'' defined(<symbol>)
-			var condition = astNewDEFINED(symbol)
-			astAppend(completeveror, astClone(condition))
-			frogEvaluateScript(i, _
-				astNewGROUP(astClone(conditions), astClone(condition)), _
-				astClone(options), _
-				target)
-
-			'' And follow the false code path here
-			'' (not defined(<symbol>))
-			condition = astNew(ASTKIND_NOT, condition)
-			astAppend(completeveror, astClone(condition))
-			astAppend(conditions, condition)
-
-			astAppend(frog.completeverors, completeveror)
-
-		case ASTKIND_SELECTTARGET, ASTKIND_SELECTVERSION, ASTKIND_SELECTDEFINE
-			var sel = i
-			i = i->nxt
-
-			do
-				'' -case
-				assert(i->kind = ASTKIND_CASE)
-
-				'' Evaluate -case condition
-				dim is_true as integer
-
-				if sel->kind = ASTKIND_SELECTTARGET then
-					is_true = hTargetPatternMatchesTarget(*i->text, target)
-				else
-					dim condition as AstNode ptr
-					if sel->kind = ASTKIND_SELECTVERSION then
-						'' <versionnumber>
-						var vernum = frogLookupVernum(*i->text)
-						if vernum < 0 then
-							oopsLocation(i->location, "unknown version number; it didn't appear in the previous -declareversions option")
-						end if
-						condition = astNewVERNUMCHECK(vernum)
-					else
-						'' defined(<symbol>)
-						condition = astNewDEFINED(i->text)
-					end if
-					is_true = astGroupContains(conditions, condition)
-					astDelete(condition)
-				end if
-
-				i = i->nxt
-
-				'' Evaluate the first -case block whose condition is true
-				if is_true then
-					exit do
-				end if
-
-				'' Condition was false, skip over the -case's body
-				var eob = hSkipToEndOfBlock(i)
-				select case eob->kind
-				case ASTKIND_CASEELSE, ASTKIND_ENDSELECT
-					'' Reached -caseelse/-endselect
-					i = eob->nxt
-					exit do
-				end select
-
-				'' Go to next -case
-				i = eob
-			loop
-
-		case ASTKIND_CASE, ASTKIND_CASEELSE
-			'' When reaching a case/else block instead of the corresponding
-			'' select, that means we're evaluating the code path of the
-			'' previous case code path, and must now step over the
-			'' block(s) of the alternate code path(s).
-			i = hSkipToEndOfBlock(i->nxt)
-			assert((i->kind = ASTKIND_CASE) or _
-				(i->kind = ASTKIND_CASEELSE) or _
-				(i->kind = ASTKIND_ENDSELECT))
-
-		case ASTKIND_ENDSELECT
-			'' Ignore - nothing to do
-			i = i->nxt
-
-		case else
-			astAppend(options, astClone(i))
-			i = i->nxt
-		end select
-	wend
-
-	assert(conditions->kind = ASTKIND_GROUP)
-	conditions->kind = ASTKIND_VERAND
-	frogAddApi(conditions, options, target)
-end sub
-
 private sub maybeEvalForTarget(byval os as integer, byval arch as integer)
 	if frog.arch(arch) then
-		frogEvaluateScript(frog.script->head, astNewGROUP(), astNewGROUP(), type<TargetInfo>(os, arch))
+		frogAddApi(frog.script->head, type<TargetInfo>(os, arch))
 	end if
 end sub
 
@@ -1161,24 +611,6 @@ private function frogParse(byref api as ApiInfo) as AstNode ptr
 						cpp.addIncDir(i->text)
 					end select
 
-					i = i->nxt
-				wend
-			end scope
-
-			'' Insert the code from fbfrog pre-#includes (default.h etc.)
-			'' * behind command line pre-#defines so that default.h can use them
-			'' * marked for removal so the code won't be preserved
-			scope
-				var i = api.script->head
-				while i
-					assert(i->kind = ASTKIND_OPTION)
-					if i->opt = OPT_FBFROGINCLUDE then
-						var filename = hFindResource(*i->text)
-						var x = tk.count()
-						var file = filebuffersAdd(frog.sourcectx, filename, type(NULL, 0))
-						lexLoadC(tk, x, file->buffer, file->source)
-						tk.setRemove(x, tk.count() - 1)
-					end if
 					i = i->nxt
 				wend
 			end scope
@@ -1355,46 +787,16 @@ end function
 		hParseArgs(tk, 1)
 	end scope
 
-	'' Add the implicit default.h pre-#include
-	astPrepend(frog.script, astNewOPTION(OPT_FBFROGINCLUDE, "default.h"))
-
 	'' Determine the APIs and their individual options
 	'' - The API-specific command line options were stored in the "script",
 	''   this must be evaluated now, following each possible code path.
 	'' - The built-in targets representing the "base" set of APIs are
 	''   hard-coded here in form of loops
 	'' - Any -declare* options in the script trigger recursive evaluation
-	frog.completeverors = astNewGROUP()
 	frog.enabledoscount = 0
 	for os as integer = 0 to OS__COUNT - 1
 		if frog.os(os) then frog.enabledoscount += 1
 	next
-	scope
-		'' Fill in frog.completeverors for the built-in targets
-
-		if frog.enabledoscount > 1 then
-			'' 1. one VEROR covering all enabled OS conditions
-			var osveror = astNewVEROR()
-			for os as integer = 0 to OS__COUNT - 1
-				if frog.os(os) then
-					astAppend(osveror, astNewDEFINEDfbos(os))
-				end if
-			next
-			astAppend(frog.completeverors, osveror)
-		end if
-
-		'' 2. one VEROR covering the __FB_64BIT__ boolean (defined + not defined)
-		'' This assumes that 32bit + 64bit architectures are always enabled.
-		'' TODO: support cases like 32bit-only?
-		astAppend(frog.completeverors, _
-			astNewVEROR(astNewDEFINEDfb64(FALSE), _
-			            astNewDEFINEDfb64(TRUE)))
-
-		'' same for __FB_ARM__
-		astAppend(frog.completeverors, _
-			astNewVEROR(astNewDEFINEDfbarm(FALSE), _
-			            astNewDEFINEDfbarm(TRUE)))
-	end scope
 	for os as integer = 0 to OS__COUNT - 1
 		maybeEvalForOs(os)
 	next
@@ -1489,36 +891,28 @@ end function
 		for bi as integer = 0 to frog.bicount - 1
 			with frog.bis[bi]
 				'' Do file-specific AST work (e.g. add Extern block)
-				hlFile(.incoming, frog.apis[api], .options)
+				hlFile(.incoming, frog.apis[api])
 
 				'' Merge the "incoming" tree into the "final" tree
-				astMergeNext(apibit, .final, .incoming)
-
-				assert(.incoming = NULL)
-				assert(.options.inclibs = NULL)
-				assert(.options.undefs = NULL)
-				assert(.options.addincludes = NULL)
+				assert(.final = NULL)
+				.final = .incoming
+				.incoming = NULL
 			end with
 		next
 
-		astMergeNext(apibit, frog.mergedlog, frog.apis[api].log)
-		assert(frog.apis[api].log = NULL)
-
-		frog.fullveror = astNewVEROR(frog.fullveror, astClone(frog.apis[api].verand))
+		assert(frog.mergedlog = NULL)
+		frog.mergedlog = frog.apis[api].log
+		frog.apis[api].log = NULL
 	next
 
 	'' Print the merged list of #included files
 	'' This should be useful because it allows the user to see which input
 	'' files were used, found, not found, which additional files were
 	'' #included, etc.
-	astProcessVerblocks(frog.mergedlog)
 	emitFbStdout(frog.mergedlog, 1)
 
 	for bi as integer = 0 to frog.bicount - 1
 		with frog.bis[bi]
-			'' Turn VERBLOCKs into #ifs etc.
-			astProcessVerblocks(.final)
-
 			'' Prepend #pragma once
 			'' It's always needed, except if the binding is empty: C headers
 			'' typically have #include guards, but we don't preserve those.

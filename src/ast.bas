@@ -90,27 +90,12 @@ dim shared as zstring ptr astnodename(0 to ...) => _
 { _
 	_ '' Internal helper nodes
 	@"group"     , _
-	@"verblock"  , _
-	@"veror"     , _
-	@"verand"    , _
-	@"vernumcheck", _
 	@"divider"   , _
 	@"scopeblock", _
 	@"unknown"   , _
 	@"fbcode"    , _
 	@"renamelist", _
-	@"title"     , _
-	_
-	_ '' Script helper nodes
-	@"declareversions", _
-	@"declarebool"  , _
-	@"selecttarget" , _
-	@"selectversion", _
-	@"selectdefine" , _
-	@"case"         , _
-	@"caseelse"     , _
-	@"endselect"    , _
-	@"option"       , _
+	@"option"    , _
 	_
 	_ '' Declarations/statements
 	@"ppinclude", _
@@ -625,10 +610,8 @@ function astCloneNode(byval n as AstNode ptr) as AstNode ptr
 	case ASTKIND_PPDEFINE : c->paramcount = n->paramcount
 	case ASTKIND_STRUCT, ASTKIND_UNION : c->maxalign = n->maxalign
 	case ASTKIND_OPTION : c->opt = n->opt
-	case ASTKIND_VERBLOCK, ASTKIND_PPIF, ASTKIND_PPELSEIF
+	case ASTKIND_PPIF, ASTKIND_PPELSEIF
 		c->apis = n->apis
-	case ASTKIND_VERNUMCHECK
-		c->vernum = n->vernum
 	end select
 
 	function = c
@@ -731,9 +714,6 @@ end function
 '' calling convention explicitly anyways, and the declarations look exactly the
 '' same.
 ''
-'' For VEROR and VERAND nodes the order of children does not matter; we treat
-'' them as equal either way.
-''
 function astIsEqual _
 	( _
 		byval a as AstNode ptr, _
@@ -810,14 +790,8 @@ function astIsEqual _
 	case ASTKIND_OPTION
 		if a->opt <> b->opt then exit function
 
-	case ASTKIND_VERBLOCK, ASTKIND_PPIF, ASTKIND_PPELSEIF
+	case ASTKIND_PPIF, ASTKIND_PPELSEIF
 		if a->apis.equals(b->apis) = FALSE then exit function
-
-	case ASTKIND_VEROR, ASTKIND_VERAND
-		return astGroupsContainEqualChildren(a, b)
-
-	case ASTKIND_VERNUMCHECK
-		if a->vernum <> b->vernum then exit function
 	end select
 
 	if is_merge then
@@ -1035,10 +1009,8 @@ function astDumpOne(byval n as AstNode ptr) as string
 	select case n->kind
 	case ASTKIND_OPTION
 		s += " " + *tkInfoText(n->opt)
-	case ASTKIND_VERBLOCK, ASTKIND_PPIF, ASTKIND_PPELSEIF
+	case ASTKIND_PPIF, ASTKIND_PPELSEIF
 		s += " apis=" + n->apis.dump()
-	case ASTKIND_VERNUMCHECK
-		s += " vernum=" & n->vernum
 	end select
 
 	if n->text then

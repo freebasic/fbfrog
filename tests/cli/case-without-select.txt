@@ -1,3 +1,0 @@
-<command line>(1): -case without -select
-    ./fbfrog tests/cli/case-without-select.h -case a -endselect
-                                             ^~~~~

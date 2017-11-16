@@ -1,3 +1,0 @@
-<command line>(1): -caseelse behind -caseelse
-    eelse-behind-caseelse.h -selectdefine -case A -caseelse -caseelse -endselect
-                                                            ^~~~~~~~~

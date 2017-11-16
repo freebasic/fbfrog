@@ -1,1 +1,0 @@
-<command line>(1): unknown version number; it didn't appear in the previous -declareversions option

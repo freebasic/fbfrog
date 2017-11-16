@@ -1,6 +1,5 @@
 #include once "fbfrog-apiinfo.bi"
 
-#include once "ast-merge.bi"
 #include once "fbfrog.bi"
 #include once "fbfrog-replacements.bi"
 #include once "tk.bi"
@@ -74,34 +73,6 @@ sub ApiInfo.loadOption(byval opt as integer, byval param1 as zstring ptr, byval 
 	case OPT_REPLACEMENTS
 		dim parser as ReplacementsParser = ReplacementsParser(*param1)
 		parser.parse(this)
-
-	'' Distribute .bi-file-specific options for this API to invidiual .bi files
-	case OPT_INCLIB, OPT_UNDEF, OPT_ADDINCLUDE
-		dim bi as integer
-		if param2 then
-			bi = frogLookupBiFromBi(*param2)
-			if bi < 0 then
-				oops("couldn't find destination .bi '" + *param2 + "', for '" + *tkInfoText(opt) + " " + *param1 + "'")
-			end if
-		else
-			'' No destination .bi file given for this -inclib/-undef option;
-			'' add it to the first .bi.
-			'' This allows the simple use case where there's just one output .bi,
-			'' and it's not necessary to specify a destination .bi for each option.
-			bi = 0
-		end if
-
-		assert((bi >= 0) and (bi < frog.bicount))
-		with frog.bis[bi]
-			select case opt
-			case OPT_INCLIB
-				astBuildGroupAndAppend(.options.inclibs, astNew(ASTKIND_INCLIB, param1))
-			case OPT_UNDEF
-				astBuildGroupAndAppend(.options.undefs, astNew(ASTKIND_UNDEF, param1))
-			case OPT_ADDINCLUDE
-				astBuildGroupAndAppend(.options.addincludes, astNew(ASTKIND_PPINCLUDE, param1))
-			end select
-		end with
 	end select
 end sub
 
@@ -119,10 +90,5 @@ sub ApiInfo.print(byref ln as string)
 end sub
 
 function ApiInfo.prettyId() as string
-	var s = target.id()
-	var extras = astDumpPrettyVersion(verand)
-	if len(extras) > 0 then
-		s += " " + extras
-	end if
-	function = s
+	return target.id()
 end function

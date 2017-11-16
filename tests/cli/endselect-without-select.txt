@@ -1,3 +1,0 @@
-<command line>(1): -endselect without -select
-    ./fbfrog tests/cli/endselect-without-select.h -endselect
-                                                  ^~~~~~~~~~

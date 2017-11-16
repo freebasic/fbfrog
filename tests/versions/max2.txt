@@ -1,1 +1,0 @@
-oops, 1472 APIs -- that's too many, max. is 256, sorry

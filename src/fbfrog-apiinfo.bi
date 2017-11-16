@@ -10,7 +10,6 @@ type CodeReplacement
 end type
 
 type ApiInfo
-	verand as AstNode ptr
 	script as AstNode ptr
 
 	target as TargetInfo
