@@ -1,12 +1,6 @@
 #include once "ast.bi"
 #include once "options.bi"
 
-type PragmaPackStack
-	const MAXLEVEL = 128
-	stack(0 to MAXLEVEL-1) as integer
-	level as integer
-end type
-
 type DEFBODYNODE
 	xdefbegin	as integer  '' Begin of the #define
 	xbodybegin	as integer  '' Begin of the #define's body
@@ -21,9 +15,6 @@ type CParser
 
 	typedefs as THash = THash(8, FALSE)
 	extradatatypehash as THash = THash(6, FALSE)
-
-	'' #pragma pack stack
-	pragmapack as PragmaPackStack
 
 	defbodies as DEFBODYNODE ptr
 	as integer defbodycount, defbodyroom
@@ -71,11 +62,6 @@ type CParser
 	declare function defBodyContainsIds(byval y as integer) as integer
 	declare sub parseDefBody(byval n as AstNode ptr, byval xbegin as integer, byref add_to_ast as integer)
 	declare function parseDefine() as AstNode ptr
-	declare function parseUndef() as AstNode ptr
-	declare function parseInclude() as AstNode ptr
-	declare function parsePragmaPackNumber() as integer
-	declare function parsePragmaPack() as AstNode ptr
-	declare function parsePragmaComment() as AstNode ptr
 	declare sub parseBaseType _
 		( _
 			byref dtype as integer, _
@@ -110,7 +96,6 @@ type CParser
 	declare function parseConstruct(byval bodyastkind as integer) as AstNode ptr
 	declare function parseBody(byval bodyastkind as integer) as AstNode ptr
 	declare sub processQueuedDefBodies(byval t as ASTNODE ptr)
-	declare function parseToplevel() as AstNode ptr
 
 	declare operator let(byref as const CParser) '' unimplemented
 end type

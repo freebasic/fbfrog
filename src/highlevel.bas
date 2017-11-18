@@ -689,20 +689,10 @@ private function hlSetArraySizes(byval n as AstNode ptr) as integer
 	function = TRUE
 end function
 
-private sub doRename(byval n as AstNode ptr, byval newid as zstring ptr)
-	if n->kind = ASTKIND_PPINCLUDE then
-		'' Allow -rename to affect PPINCLUDE nodes, but without giving them
-		'' alias strings (which could prevent merging and would add them to renamelists)
-		astSetText(n, newid)
-	else
-		astRenameSymbol(n, newid)
-	end if
-end sub
-
 private function hApplyRenameOption(byval opt as integer, byval n as AstNode ptr) as integer
 	dim as zstring ptr newid = hl.options->renameopt(opt).lookupDataOrNull(n->text)
 	if newid then
-		doRename(n, newid)
+		astRenameSymbol(n, newid)
 		function = TRUE
 	end if
 end function
@@ -720,7 +710,7 @@ private function hlApplyRenameOption(byval n as AstNode ptr) as integer
 			hApplyRenameOption(tktokens.OPT_RENAME, n)
 
 			if hl.options->idopt(tktokens.OPT_RENAME_).matches(n->text) then
-				doRename(n, *n->text + "_")
+				astRenameSymbol(n, *n->text + "_")
 			end if
 		end select
 	end if
@@ -771,9 +761,6 @@ private function hlApplyRenameOption(byval n as AstNode ptr) as integer
 				inside_macro = FALSE
 			end if
 		end if
-
-	case ASTKIND_UNDEF
-		hApplyRenameOption(tktokens.OPT_RENAMEDEFINE, n)
 
 	case ASTKIND_TEXT
 		hApplyRenameOption(tktokens.OPT_RENAMEPROC, n)
@@ -1711,11 +1698,9 @@ private sub hlAddUndefsAboveDecls(byval ast as AstNode ptr)
 	var i = ast->head
 	while i
 
-		if (i->kind <> ASTKIND_UNDEF) and (i->text <> NULL) then
+		if i->text then
 			if hl.options->idopt(tktokens.OPT_UNDEFBEFOREDECL).matches(i->text) then
-				var undef = astNew(ASTKIND_UNDEF, i->text)
-				undef->location = i->location
-				astInsert(ast, undef, i)
+				i->attrib or= ASTATTRIB_PREPENDUNDEF
 			end if
 		end if
 
@@ -1727,8 +1712,7 @@ private sub hlAddIfndefsAroundDecls(byval ast as AstNode ptr)
 	var i = ast->head
 	while i
 
-		if (i->kind <> ASTKIND_UNDEF) andalso _
-		   i->text andalso hl.options->idopt(tktokens.OPT_IFNDEFDECL).matches(i->text) then
+		if i->text andalso hl.options->idopt(tktokens.OPT_IFNDEFDECL).matches(i->text) then
 			i->attrib or= ASTATTRIB_IFNDEFDECL
 		end if
 
@@ -2569,13 +2553,6 @@ end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-private function hIsPPElseOrEnd(byval n as AstNode ptr) as integer
-	select case n->kind
-	case ASTKIND_PPELSEIF, ASTKIND_PPELSE, ASTKIND_PPENDIF
-		function = TRUE
-	end select
-end function
-
 private function hAreSimilar(byval a as integer, byval b as integer) as integer
 	if a = b then return TRUE
 
@@ -2591,22 +2568,7 @@ end function
 
 private function hSkipStatementsInARow(byval i as AstNode ptr) as AstNode ptr
 	select case i->kind
-	'' All parts of one #if block
-	case ASTKIND_PPIF
-		do
-			i = i->nxt
-		loop while i andalso hIsPPElseOrEnd(i)
-		return i
-
-	case ASTKIND_PPINCLUDE, ASTKIND_INCLIB
-		var astkind = i->kind
-		do
-			i = i->nxt
-		loop while i andalso (i->kind = astkind)
-		return i
-
-	case ASTKIND_PRAGMAONCE, _
-	     ASTKIND_EXTERNBLOCKBEGIN, ASTKIND_EXTERNBLOCKEND, _
+	case ASTKIND_EXTERNBLOCKBEGIN, ASTKIND_EXTERNBLOCKEND, _
 	     ASTKIND_STRUCT, ASTKIND_UNION, ASTKIND_ENUM, _
 	     ASTKIND_IFBLOCK, ASTKIND_DOWHILE, ASTKIND_WHILE
 		return i->nxt
@@ -2629,9 +2591,7 @@ private function hSkipStatementsInARow(byval i as AstNode ptr) as AstNode ptr
 		var nxt = i
 		do
 			select case nxt->kind
-			case ASTKIND_PPIF, ASTKIND_INCLIB, ASTKIND_PPINCLUDE, _
-			     ASTKIND_PRAGMAONCE, _
-			     ASTKIND_EXTERNBLOCKBEGIN, ASTKIND_EXTERNBLOCKEND, _
+			case ASTKIND_EXTERNBLOCKBEGIN, ASTKIND_EXTERNBLOCKEND, _
 			     ASTKIND_STRUCT, ASTKIND_UNION, ASTKIND_ENUM, _
 			     ASTKIND_IFBLOCK, ASTKIND_DOWHILE, ASTKIND_WHILE
 				exit do
@@ -2691,7 +2651,6 @@ sub hlAutoAddDividers(byval ast as AstNode ptr)
 		while i
 			select case i->kind
 			case ASTKIND_STRUCT, ASTKIND_UNION, ASTKIND_ENUM, _
-			     ASTKIND_PPIF, ASTKIND_PPELSEIF, ASTKIND_PPELSE, _
 			     ASTKIND_SCOPEBLOCK, ASTKIND_DOWHILE, ASTKIND_WHILE
 				hlAutoAddDividers(i)
 			case ASTKIND_IFBLOCK
@@ -2989,13 +2948,9 @@ function hlCountDecls(byval ast as AstNode ptr) as integer
 	var i = ast->head
 	while i
 		select case i->kind
-		case ASTKIND_DIVIDER, ASTKIND_PPINCLUDE, ASTKIND_PPENDIF, _
+		case ASTKIND_DIVIDER, _
 		     ASTKIND_EXTERNBLOCKBEGIN, ASTKIND_EXTERNBLOCKEND, _
-		     ASTKIND_INCLIB, ASTKIND_PRAGMAONCE, _
 		     ASTKIND_UNKNOWN
-
-		case ASTKIND_PPIF, ASTKIND_PPELSEIF, ASTKIND_PPELSE
-			n += hlCountDecls(i)
 
 		case ASTKIND_PPDEFINE
 			if (i->expr = NULL) orelse (i->expr->kind <> ASTKIND_UNKNOWN) then

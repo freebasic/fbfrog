@@ -940,6 +940,7 @@ end sub
 
 sub CodeGen.emitCode(byval n as AstNode ptr, byval parentkind as integer)
 	var wrap_in_ifndef = ((n->attrib and ASTATTRIB_IFNDEFDECL) <> 0)
+	var prepend_undef = ((n->attrib and ASTATTRIB_PREPENDUNDEF) <> 0)
 
 	if wrap_in_ifndef then
 		assert(n->text)
@@ -950,6 +951,14 @@ sub CodeGen.emitCode(byval n as AstNode ptr, byval parentkind as integer)
 		add(TK_ID, n->text)
 		eol()
 		indent += 1
+	elseif prepend_undef then
+		assert(n->text)
+		bol()
+		add(TK_HASH)
+		add(KW_UNDEF)
+		add(TK_SPACE)
+		add(TK_ID, n->text)
+		eol()
 	end if
 
 	select case as const n->kind
@@ -988,30 +997,6 @@ sub CodeGen.emitCode(byval n as AstNode ptr, byval parentkind as integer)
 
 	case ASTKIND_FBCODE
 		emitLines(n->text)
-
-	case ASTKIND_INCLIB
-		bol()
-		add(TK_HASH)
-		add(KW_INCLIB)
-		add(TK_SPACE)
-		add(TK_STRLIT, """" + *n->text + """")
-		eol()
-
-	case ASTKIND_UNDEF
-		bol()
-		add(TK_HASH)
-		add(KW_UNDEF)
-		add(TK_SPACE)
-		add(TK_ID, n->text)
-		eol()
-
-	case ASTKIND_PRAGMAONCE
-		bol()
-		add(TK_HASH)
-		add(KW_PRAGMA)
-		add(TK_SPACE)
-		add(KW_ONCE)
-		eol()
 
 	case ASTKIND_PPINCLUDE
 		bol()
@@ -1052,60 +1037,6 @@ sub CodeGen.emitCode(byval n as AstNode ptr, byval parentkind as integer)
 			emitMacroHeader(n, KW_DEFINE)
 			eol()
 		end if
-
-	case ASTKIND_PPIF
-		bol()
-		add(TK_HASH)
-
-		assert(n->expr)
-		select case n->expr->kind
-		'' #if defined(id)        ->    #ifdef id
-		case ASTKIND_DEFINED
-			add(KW_IFDEF)
-			add(TK_SPACE)
-			add(TK_ID, n->expr->text)
-
-		'' #if not defined(id)    ->    #ifndef id
-		case ASTKIND_NOT
-			if n->expr->head->kind = ASTKIND_DEFINED then
-				add(KW_IFNDEF)
-				add(TK_SPACE)
-				add(TK_ID, n->expr->head->text)
-			end if
-		end select
-
-		'' Not handled above? Then emit the default '#if expr'
-		if tokens.get(tokens.count - 1) = TK_HASH then
-			add(KW_IF)
-			add(TK_SPACE)
-			emitExpr(n->expr)
-		end if
-
-		eol()
-
-		emitIndentedChildren(n)
-
-	case ASTKIND_PPELSEIF
-		bol()
-		add(TK_HASH)
-		add(KW_ELSEIF)
-		add(TK_SPACE)
-		emitExpr(n->expr)
-		eol()
-		emitIndentedChildren(n)
-
-	case ASTKIND_PPELSE
-		bol()
-		add(TK_HASH)
-		add(KW_ELSE)
-		eol()
-		emitIndentedChildren(n)
-
-	case ASTKIND_PPENDIF
-		bol()
-		add(TK_HASH)
-		add(KW_ENDIF)
-		eol()
 
 	case ASTKIND_STRUCT, ASTKIND_UNION, ASTKIND_ENUM
 		if (n->kind = ASTKIND_ENUM) and (n->text <> NULL) then

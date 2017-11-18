@@ -101,13 +101,6 @@ dim shared as zstring ptr astnodename(0 to ...) => _
 	_ '' Declarations/statements
 	@"ppinclude", _
 	@"ppdefine" , _
-	@"ppif"     , _
-	@"ppelseif" , _
-	@"ppelse"   , _
-	@"ppendif"  , _
-	@"pragmaonce", _
-	@"inclib"   , _
-	@"undef"    , _
 	@"struct"   , _
 	@"union"    , _
 	@"enum"     , _
@@ -611,8 +604,6 @@ function astCloneNode(byval n as AstNode ptr) as AstNode ptr
 	case ASTKIND_PPDEFINE : c->paramcount = n->paramcount
 	case ASTKIND_STRUCT, ASTKIND_UNION : c->maxalign = n->maxalign
 	case ASTKIND_OPTION : c->opt = n->opt
-	case ASTKIND_PPIF, ASTKIND_PPELSEIF
-		c->apis = n->apis
 	end select
 
 	function = c
@@ -790,9 +781,6 @@ function astIsEqual _
 
 	case ASTKIND_OPTION
 		if a->opt <> b->opt then exit function
-
-	case ASTKIND_PPIF, ASTKIND_PPELSEIF
-		if a->apis.equals(b->apis) = FALSE then exit function
 	end select
 
 	if is_merge then
@@ -1010,8 +998,6 @@ function astDumpOne(byval n as AstNode ptr) as string
 	select case n->kind
 	case ASTKIND_OPTION
 		s += " " + *tkInfoText(n->opt)
-	case ASTKIND_PPIF, ASTKIND_PPELSEIF
-		s += " apis=" + n->apis.dump()
 	end select
 
 	if n->text then

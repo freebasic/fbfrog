@@ -76,13 +76,6 @@ enum
 	'' Declarations/statements
 	ASTKIND_PPINCLUDE
 	ASTKIND_PPDEFINE
-	ASTKIND_PPIF
-	ASTKIND_PPELSEIF
-	ASTKIND_PPELSE
-	ASTKIND_PPENDIF
-	ASTKIND_PRAGMAONCE
-	ASTKIND_INCLIB
-	ASTKIND_UNDEF
 	ASTKIND_STRUCT
 	ASTKIND_UNION
 	ASTKIND_ENUM
@@ -211,7 +204,7 @@ const ASTATTRIB_TAGID         = 1 shl 13
 const ASTATTRIB_GENERATEDID   = 1 shl 14
 const ASTATTRIB_DLLIMPORT     = 1 shl 15  '' VAR, PROC (ignored when merging PROCs)
 const ASTATTRIB_ENUMCONST     = 1 shl 16
-''                            = 1 shl 17
+const ASTATTRIB_PREPENDUNDEF  = 1 shl 17
 const ASTATTRIB_USED          = 1 shl 18
 const ASTATTRIB_IFNDEFDECL    = 1 shl 19
 const ASTATTRIB_NOSTRING      = 1 shl 20 '' helper flag used during CharStringPass to mark nodes affected by -nostring

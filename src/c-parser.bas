@@ -117,10 +117,6 @@ function CParser.isInsideDefineBody() as integer
 	return (parentdefine <> NULL)
 end function
 
-sub CParser.resetPragmaPack()
-	pragmapack.stack(pragmapack.level) = 0
-end sub
-
 function CParser.isTypedef(byval id as zstring ptr) as integer
 	'' 1. Check typedefs seen by C parser
 	if typedefs.contains(id, hashHash(id)) then
@@ -159,10 +155,6 @@ constructor CParser(byref tk as TokenBuffer, byref options as BindingOptions)
 	for i as integer = 0 to ubound(extradatatypes)
 		extradatatypehash.addOverwrite(extradatatypes(i).id, cast(any ptr, extradatatypes(i).dtype))
 	next
-
-	'' Initially no packing
-	pragmapack.level = 0
-	resetPragmaPack()
 
 	defbodies = NULL
 	defbodycount = 0
@@ -844,19 +836,6 @@ function CParser.parseTag() as AstNode ptr
 		var udt = astNew(astkind, tagid)
 		udt->attrib or= gccattrib
 
-		select case astkind
-		case ASTKIND_STRUCT, ASTKIND_UNION
-			var maxalign = pragmapack.stack(pragmapack.level)
-
-			'' Preserve alignment if needed so we can emit FIELD = N,
-			'' but not if N >= 8, because FB has no alignment > 8,
-			'' so FIELD >= 8 is useless. Omitting it improves merging
-			'' for some bindings.
-			if (maxalign > 0) and (maxalign < 8) then
-				udt->maxalign = maxalign
-			end if
-		end select
-
 		'' '{'
 		x += 1
 
@@ -1277,196 +1256,6 @@ function CParser.parseDefine() as AstNode ptr
 		macro = astNewGROUP()
 	end if
 	function = macro
-end function
-
-function CParser.parseUndef() as AstNode ptr
-	'' undef
-	x += 1
-
-	'' id
-	assert(tk->get(x) >= TK_ID)
-	function = astNew(ASTKIND_UNDEF, tk->spellId(x))
-	x += 1
-
-	'' Eol
-	assert(tk->get(x) = TK_EOL)
-	x += 1
-end function
-
-function CParser.parseInclude() as AstNode ptr
-	x += 1
-
-	'' "filename" | <filename>
-	'' TODO: Don't evaluate escape sequences in "filename"
-	'' TODO: Don't evaluate escape sequences/comments in <filename>
-	dim filename as string
-	if tk->get(x) = TK_LT then
-		'' <filename>
-
-		'' Skip tokens until the '>'
-		var begin = x
-		do
-			x += 1
-			assert((tk->get(x) <> TK_EOL) and (tk->get(x) <> TK_EOF))
-		loop until tk->get(x) = TK_GT
-
-		'' Then spell them to get the filename
-		filename = tk->spell(begin + 1, x - 1)
-		x += 1
-	else
-		'' "filename"
-		assert(tk->get(x) = TK_STRING)
-		var s = parseLiteral(ASTKIND_STRING, FALSE)
-		filename = *s->text
-		astDelete(s)
-	end if
-
-	'' Eol
-	assert(tk->get(x) = TK_EOL)
-	x += 1
-
-	function = astNew(ASTKIND_PPINCLUDE, filename)
-end function
-
-function CParser.parsePragmaPackNumber() as integer
-	var n = parseLiteral(ASTKIND_CONSTI, TRUE)
-	if n->kind <> ASTKIND_CONSTI then
-		exit function
-	end if
-	pragmapack.stack(pragmapack.level) = astEvalConstiAsInt64(n)
-	astDelete(n)
-	function = TRUE
-end function
-
-function CParser.parsePragmaPack() as AstNode ptr
-	'' pack
-	assert(tk->get(x) = TK_ID)
-	assert(tk->spell(x) = "pack")
-	x += 1
-
-	'' '('
-	expectMatch(TK_LPAREN, "as in '#pragma pack(...)'")
-
-	select case tk->get(x)
-	'' #pragma pack(N): Set max alignment for current top of stack
-	case TK_NUMBER
-		if parsePragmaPackNumber() = FALSE then
-			exit function
-		end if
-
-	'' #pragma pack(push, N)
-	'' #pragma pack(pop)
-	case TK_ID
-		select case *tk->spellId(x)
-		case "push"
-			pragmapack.level += 1
-			if pragmapack.level >= pragmapack.MAXLEVEL then
-				oops("#pragma pack stack too small")
-			end if
-			resetPragmaPack()
-			x += 1
-
-			'' ','
-			expectMatch(TK_COMMA, "behind 'push'")
-
-			'' 'N'
-			if tk->get(x) <> TK_NUMBER then
-				exit function
-			end if
-			if parsePragmaPackNumber() = FALSE then
-				exit function
-			end if
-
-		case "pop"
-			if pragmapack.level > 0 then
-				pragmapack.level -= 1
-			else
-				showError("#pragma pack(pop) without previous push")
-			end if
-			x += 1
-
-		case else
-			exit function
-		end select
-
-	'' #pragma pack(): Reset top of stack to default
-	case TK_RPAREN
-		resetPragmaPack()
-
-	case else
-		exit function
-	end select
-
-	'' ')'
-	expectMatch(TK_RPAREN, "as in '#pragma pack(...)'")
-
-	'' Eol
-	assert(tk->get(x) = TK_EOL)
-	x += 1
-
-	'' Don't preserve the directive
-	function = astNewGROUP()
-end function
-
-'' #pragma comment(lib, "...")
-function CParser.parsePragmaComment() as AstNode ptr
-	'' comment
-	assert(tk->get(x) = TK_ID)
-	assert(tk->spell(x) = "comment")
-	x += 1
-
-	'' '('
-	assert(tk->get(x) = TK_LPAREN)
-	x += 1
-
-	'' lib
-	assert(tk->get(x) = TK_ID)
-	assert(tk->spell(x) = "lib")
-	x += 1
-
-	'' ','
-	assert(tk->get(x) = TK_COMMA)
-	x += 1
-
-	'' "<library-file-name>"
-	assert(tk->get(x) = TK_STRING)
-	dim libname as string
-	scope
-		var s = parseLiteral(ASTKIND_STRING, TRUE)
-		libname = *s->text
-		astDelete(s)
-	end scope
-
-	'' ')'
-	assert(tk->get(x) = TK_RPAREN)
-	x += 1
-
-	assert(tk->get(x) = TK_EOL)
-	x += 1
-
-	''
-	'' Turn the #pragma comment(lib, "...") into #inclib "..."
-	''
-	'' It seems to be common to specify the library's full file name in the
-	'' #pragma directive, i.e. "foo.lib". In FB it must be #inclib "foo"
-	'' though, no extension or lib prefix. Thus, we need to do some
-	'' conversion.
-	''
-	'' Besides "foo.lib", we also handle "libfoo.a" here which is another
-	'' common library file name format. Anything else should probably be
-	'' passed through as-is though.
-	''
-
-	'' Remove .lib suffix
-	if right(libname, 4) = ".lib" then
-		libname = left(libname, len(libname) - 4)
-	'' Remove lib prefix and .a suffix
-	elseif (left(libname, 3) = "lib") and (right(libname, 2) = ".a") then
-		libname = right(libname, len(libname) - 3)
-		libname = left(libname, len(libname) - 2)
-	end if
-
-	function = astNew(ASTKIND_INCLIB, libname)
 end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -2656,19 +2445,6 @@ function CParser.parseConstruct(byval bodyastkind as integer) as AstNode ptr
 			select case *tk->spellId(x)
 			case "define"
 				directive = parseDefine()
-			case "undef"
-				directive = parseUndef()
-			case "include"
-				directive = parseInclude()
-			case "pragma"
-				x += 1
-
-				select case tk->spell(x)
-				case "pack"
-					directive = parsePragmaPack()
-				case "comment"
-					directive = parsePragmaComment()
-				end select
 			end select
 		end if
 
@@ -2798,9 +2574,3 @@ sub CParser.processQueuedDefBodies(byval t as ASTNODE ptr)
 		end with
 	next
 end sub
-
-function CParser.parseToplevel() as AstNode ptr
-	var t = parseBody(-1)
-	processQueuedDefBodies(t)
-	function = t
-end function

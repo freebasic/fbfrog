@@ -553,13 +553,6 @@ end function
 	'' Do file-specific AST work (e.g. add Extern block)
 	hlFile(ast, options)
 
-	'' Prepend #pragma once
-	'' It's always needed, except if the binding is empty: C headers
-	'' typically have #include guards, but we don't preserve those.
-	if ast->head then
-		astPrepend(ast, astNew(ASTKIND_PRAGMAONCE))
-	end if
-
 	hlAutoAddDividers(ast)
 
 	'' Write out the .bi file.
