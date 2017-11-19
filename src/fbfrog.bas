@@ -553,8 +553,6 @@ end function
 	'' Do file-specific AST work (e.g. add Extern block)
 	hlFile(ast, options)
 
-	hlAutoAddDividers(ast)
-
 	'' Write out the .bi file.
 	print "emitting: " + frog.outname + " (" + _
 		hMakeCountMessage(hlCountDecls(ast), "declaration") + ", " + _
