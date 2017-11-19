@@ -432,7 +432,48 @@ private sub queryGccIncludeDirs(byref options as BindingOptions, byref includedi
 	parseIncludeDirsFromGccVerbose(gccverbose, includedirs)
 end sub
 
-private function frogParse(byref options as BindingOptions) as AstNode ptr
+private function hMakeCountMessage(byval count as integer, byref noun as string) as string
+	if count = 1 then
+		function = "1 " + noun
+	else
+		function = count & " " + noun + "s"
+	end if
+end function
+
+''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+
+	if  __FB_ARGC__ <= 1 then
+		hPrintHelpAndExit()
+	end if
+
+	frogSetTargets(TRUE)
+
+	scope
+		dim tk as TokenBuffer
+
+		'' Load all command line arguments into the tk buffer
+		lexLoadArgs(tk, 0, hTurnArgsIntoString(__FB_ARGC__, __FB_ARGV__), _
+			frog.sourcectx.lookupOrMakeSourceInfo("<command line>", FALSE))
+
+		'' Load content of @files too
+		hExpandArgsFiles(tk)
+
+		'' Parse the command line arguments, skipping argv[0]. Global options
+		'' are added to various frog.* fields, version-specific options are
+		'' added to the frog.script list in their original order.
+		frog.script = astNewGROUP()
+		hParseArgs(tk, 1)
+	end scope
+
+	if len((frog.outname)) = 0 then
+		frog.outname = "unknown.bi"
+	end if
+
+	dim options as BindingOptions
+	options.script = frog.script
+	frog.script = NULL
+	options.loadOptions()
+
 	dim ast as AstNode ptr
 
 	scope
@@ -502,58 +543,8 @@ private function frogParse(byref options as BindingOptions) as AstNode ptr
 	end scope
 
 	hlGlobal(ast, options)
-
-	function = ast
-end function
-
-private function hMakeCountMessage(byval count as integer, byref noun as string) as string
-	if count = 1 then
-		function = "1 " + noun
-	else
-		function = count & " " + noun + "s"
-	end if
-end function
-
-''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
-
-	if  __FB_ARGC__ <= 1 then
-		hPrintHelpAndExit()
-	end if
-
-	frogSetTargets(TRUE)
-
-	scope
-		dim tk as TokenBuffer
-
-		'' Load all command line arguments into the tk buffer
-		lexLoadArgs(tk, 0, hTurnArgsIntoString(__FB_ARGC__, __FB_ARGV__), _
-			frog.sourcectx.lookupOrMakeSourceInfo("<command line>", FALSE))
-
-		'' Load content of @files too
-		hExpandArgsFiles(tk)
-
-		'' Parse the command line arguments, skipping argv[0]. Global options
-		'' are added to various frog.* fields, version-specific options are
-		'' added to the frog.script list in their original order.
-		frog.script = astNewGROUP()
-		hParseArgs(tk, 1)
-	end scope
-
-	if len((frog.outname)) = 0 then
-		frog.outname = "unknown.bi"
-	end if
-
-	dim options as BindingOptions
-	options.script = frog.script
-	frog.script = NULL
-	options.loadOptions()
-
-	var ast = frogParse(options)
-
-	'' Do file-specific AST work (e.g. add Extern block)
 	hlFile(ast, options)
 
-	'' Write out the .bi file.
 	print "emitting: " + frog.outname + " (" + _
 		hMakeCountMessage(hlCountDecls(ast), "declaration") + ", " + _
 		hMakeCountMessage(hlCountTodos(ast), "TODO"       ) + ")"
