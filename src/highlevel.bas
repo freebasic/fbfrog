@@ -27,10 +27,6 @@ namespace hl
 	dim shared as integer typecount, typeroom
 	dim shared as AstNode ptr currentdecl
 
-	'' Used by Extern block addition pass
-	dim shared as integer need_extern, stdcalls, cdecls
-	dim shared as integer mostusedcallconv
-
 	'' Used by dtype use determination passes
 	dim shared as integer uses_clong, uses_clongdouble
 end namespace
@@ -2423,36 +2419,6 @@ end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-private function hlCountCallConvs(byval n as AstNode ptr) as integer
-	select case n->kind
-	case ASTKIND_PROC
-		hl.need_extern = TRUE
-		if n->attrib and ASTATTRIB_STDCALL then
-			hl.stdcalls += 1
-		else
-			assert(n->attrib and ASTATTRIB_CDECL)
-			hl.cdecls += 1
-		end if
-	case ASTKIND_VAR
-		hl.need_extern or= ((n->attrib and ASTATTRIB_EXTERN) <> 0) or _
-		                   ((n->attrib and ASTATTRIB_STATIC) = 0)
-	end select
-	'' Don't count code in macro bodies
-	function = (n->kind <> ASTKIND_PPDEFINE)
-end function
-
-private function hlHideCallConv(byval n as AstNode ptr) as integer
-	if n->kind = ASTKIND_PROC then
-		if n->attrib and hl.mostusedcallconv then
-			n->attrib or= ASTATTRIB_HIDECALLCONV
-		end if
-	end if
-	'' Don't hide callconvs in macro bodies, otherwise they could
-	'' end up using the wrong callconv if expanded outside the
-	'' header's Extern block.
-	function = (n->kind <> ASTKIND_PPDEFINE)
-end function
-
 private function hlSearchSpecialDtypes(byval n as AstNode ptr) as integer
 	select case typeGetDt(n->dtype)
 	case TYPE_CLONG, TYPE_CULONG
@@ -2891,41 +2857,17 @@ end sub
 ''
 sub hlFile(byval ast as AstNode ptr, byref options as BindingOptions)
 	hl.options = @options
-	hl.need_extern = FALSE
-	hl.stdcalls = 0
-	hl.cdecls = 0
-	hl.mostusedcallconv = 0
 	hl.uses_clong = FALSE
 	hl.uses_clongdouble = FALSE
 
-	'' Add Extern block
-	''  * to preserve identifiers of global variables/procedures
-	''  * to cover the most-used calling convention
-	astVisit(ast, @hlCountCallConvs)
-	if hl.need_extern then
-		if hl.stdcalls > hl.cdecls then
-			hl.mostusedcallconv = ASTATTRIB_STDCALL
-		else
-			hl.mostusedcallconv = ASTATTRIB_CDECL
-		end if
-
-		'' Remove the calling convention from all procdecls,
-		'' the Extern block will take over
-		astVisit(ast, @hlHideCallConv)
-
-		var externblock = @"C"
-		if hl.mostusedcallconv = ASTATTRIB_STDCALL then
-			if options.windowsms then
-				externblock = @"Windows-MS"
-			else
-				externblock = @"Windows"
-			end if
-		end if
-
-		assert(ast->kind = ASTKIND_GROUP)
-		astPrepend(ast, astNew(ASTKIND_EXTERNBLOCKBEGIN, externblock))
-		astAppend(ast, astNew(ASTKIND_EXTERNBLOCKEND))
+	var externblock = @"C"
+	if options.windowsms then
+		externblock = @"Windows-MS"
 	end if
+
+	assert(ast->kind = ASTKIND_GROUP)
+	astPrepend(ast, astNew(ASTKIND_EXTERNBLOCKBEGIN, externblock))
+	astAppend(ast, astNew(ASTKIND_EXTERNBLOCKEND))
 
 	'' Add #includes for "crt/long[double].bi" and "crt/wchar.bi" if the
 	'' binding uses the clong[double]/wchar_t types
