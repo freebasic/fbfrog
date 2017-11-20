@@ -465,10 +465,6 @@ end function
 		hParseArgs(tk, 1)
 	end scope
 
-	if len((frog.outname)) = 0 then
-		frog.outname = "unknown.bi"
-	end if
-
 	dim options as BindingOptions
 	options.script = frog.script
 	frog.script = NULL
@@ -545,7 +541,11 @@ end function
 	hlGlobal(ast, options)
 	hlFile(ast, options)
 
-	print "emitting: " + frog.outname + " (" + _
-		hMakeCountMessage(hlCountDecls(ast), "declaration") + ", " + _
-		hMakeCountMessage(hlCountTodos(ast), "TODO"       ) + ")"
-	emitFbFile(frog.outname, ast)
+	if frog.outname = "" then
+		emitFbStdout(ast, 0)
+	else
+		print "emitting: " + frog.outname + " (" + _
+			hMakeCountMessage(hlCountDecls(ast), "declaration") + ", " + _
+			hMakeCountMessage(hlCountTodos(ast), "TODO"       ) + ")"
+		emitFbFile(frog.outname, ast)
+	end if
