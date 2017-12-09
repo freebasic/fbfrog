@@ -6,24 +6,23 @@
 
 #include once "clang-c.bi"
 
-type TempIdManager
+type TagIdTracker
 private:
 	'' Counter for producing temporary identifiers, for non-nested anonymous structs/unions
-	count as integer
+	tempidcount as integer
 
-	'' Map clang type spelling => temporary identifier, for non-nested anonymous structs/unions
-	'' The clang type spelling seems to be unique, for example "struct (anonymous at a.h:6:8)",
-	'' so it should be safe to use it as key.
-	'' This map is needed because CXType_Record and CXType_Elaborated appear separately even for
-	'' anonymous ones. The temp id is generated for the CXType_Record, and must be looked up for the CXType_Elaborated.
-	anontagtable as THash = THash(10, true) '' key = zstring owned by anontagtable, data = FB string owned by tempidlist
-	tempidlist as DynamicArray(string)
+	'' Map clang tag type USR => original/generated type name
+	'' This map is mainly needed to...
+	''  - resolve const-qualified type references, because then the spelling can't be used because
+	''    it includes the "const"
+	''  - handle anonymous non-nested structs/unions/enums, for which we have to generate a name
+	table as THash = THash(10, true) '' key = zstring owned by table, data = zstring owned by names
+	names as DynamicArray(string)
 
 public:
-	declare operator let(byref as const TempIdManager) '' unimplemented
-	declare sub add(byref typespelling as const string, byref tempid as const string)
-	declare function makeNext(byref typespelling as const string) as string
-	declare function lookup(byref typespelling as const string) as const string ptr
+	declare operator let(byref as const TagIdTracker) '' unimplemented
+	declare sub add(byval ty as CXType)
+	declare function lookup(byval ty as CXType) as const zstring ptr
 end type
 
 type ClangContext
@@ -38,7 +37,7 @@ type ClangContext
 	fbfrog_tk as TokenBuffer
 	fbfrog_c_parser as CParser ptr
 
-	tempids as TempIdManager
+	tags as TagIdTracker
 
 	declare constructor(byref sourcectx as SourceContext, byref options as BindingOptions)
 	declare destructor()

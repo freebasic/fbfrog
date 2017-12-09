@@ -37,6 +37,29 @@ private function dumpSourceLocation(byval location as CXSourceLocation) as strin
 	clang_disposeString(filename)
 end function
 
+private function getTypeUSR(byval ty as CXType) as string
+	return wrapClangStr(clang_getCursorUSR(clang_getTypeDeclaration(clang_getCanonicalType(ty))))
+end function
+
+private function isTagDecl(byval cursor as CXCursor) as integer
+	select case clang_getCursorKind(cursor)
+	case CXCursor_StructDecl, CXCursor_UnionDecl, CXCursor_EnumDecl
+		return true
+	case CXCursor_TypedefDecl
+	case else
+		assert(false)
+	end select
+	return false
+end function
+
+private function isTagType(byval ty as CXType) as integer
+	select case ty.kind
+	case CXType_Record, CXType_Enum
+		return true
+	end select
+	return false
+end function
+
 private function dumpClangType(byval ty as CXType) as string
 	var s = wrapClangStr(clang_getTypeKindSpelling(ty.kind)) + " " + wrapClangStr(clang_getTypeSpelling(ty))
 
@@ -67,7 +90,8 @@ end function
 private function dumpCursor(byval cursor as CXCursor) as string
 	var s = wrapClangStr(clang_getCursorKindSpelling(clang_getCursorKind(cursor))) + " " + wrapClangStr(clang_getCursorSpelling(cursor))
 	s += ": type[" & dumpClangType(clang_getCursorType(cursor)) & "]"
-	's += " from " + dumpSourceLocation(clang_getCursorLocation(cursor))
+	s += " usr """ + wrapClangStr(clang_getCursorUSR(cursor)) + """"
+	s += " from " + dumpSourceLocation(clang_getCursorLocation(cursor))
 
 	if clang_getCursorKind(cursor) = CXCursor_StructDecl then
 		if clang_equalCursors(cursor, clang_getTypeDeclaration(clang_getCursorType(cursor))) then
@@ -80,20 +104,38 @@ private function dumpCursor(byval cursor as CXCursor) as string
 	return s
 end function
 
-sub TempIdManager.add(byref typespelling as const string, byref tempid as const string)
-	tempidlist.append(tempid)
-	anontagtable.addOverwrite(typespelling, @tempidlist.p[tempidlist.count - 1])
+sub TagIdTracker.add(byval ty as CXType)
+	ty = clang_getCanonicalType(ty)
+	var usr = getTypeUSR(ty)
+	var hash = hashHash(usr)
+	var item = table.lookup(usr, hash)
+	if item->s then
+		print "add (already exists) " + dumpClangType(ty) + " usr " + usr + " => " + *lookup(ty)
+	else
+		'' New entry
+		var decl = clang_getTypeDeclaration(ty)
+		var id = wrapClangStr(clang_getCursorSpelling(decl))
+		var tyspelling = wrapClangStr(clang_getTypeSpelling(ty))
+		if len(id) = 0 andalso strIsValidSymbolId(tyspelling) then
+			id = tyspelling
+		end if
+		if len(id) = 0 then
+			id = "_" & tempidcount
+			tempidcount += 1
+		end if
+		print "add (new) " + dumpClangType(ty) + " usr " + usr + " => " + id
+		assert(isTagType(ty))
+		names.append(id)
+		table.add(item, hash, usr, strptr(names.p[names.count - 1]))
+	end if
 end sub
 
-function TempIdManager.makeNext(byref typespelling as const string) as string
-	var tempid = "_" & count
-	count += 1
-	add(typespelling, tempid)
-	return tempid
-end function
-
-function TempIdManager.lookup(byref typespelling as const string) as const string ptr
-	return anontagtable.lookupDataOrNull(typespelling)
+function TagIdTracker.lookup(byval ty as CXType) as const zstring ptr
+	ty = clang_getCanonicalType(ty)
+	var usr = getTypeUSR(ty)
+	print "lookup " + dumpClangType(ty) + " usr " + usr
+	assert(isTagType(ty))
+	return table.lookupDataOrNull(usr)
 end function
 
 constructor ClangContext(byref sourcectx as SourceContext, byref options as BindingOptions)
@@ -413,17 +455,6 @@ function EnumConstVisitor.visitor(byval cursor as CXCursor, byval parent as CXCu
 	return CXChildVisit_Continue
 end function
 
-private function isTagDecl(byval cursor as CXCursor) as integer
-	select case clang_getCursorKind(cursor)
-	case CXCursor_StructDecl, CXCursor_UnionDecl, CXCursor_EnumDecl
-		return true
-	case CXCursor_TypedefDecl
-	case else
-		assert(false)
-	end select
-	return false
-end function
-
 sub ClangContext.parseClangType(byval ty as CXType, byref dtype as integer, byref subtype as ASTNODE ptr)
 	'' TODO: check ABI to ensure it's correct
 	select case as const ty.kind
@@ -456,65 +487,19 @@ sub ClangContext.parseClangType(byval ty as CXType, byref dtype as integer, byre
 		select case canonty.kind
 		case CXType_Elaborated, CXType_Typedef
 			assert(false)
-
-		case CXType_Record, CXType_Enum
-			dtype = TYPE_UDT
-			subtype = astNew(ASTKIND_TEXT)
-
-			var canontyspelling = wrapClangStr(clang_getTypeSpelling(canonty))
-			var decl = clang_getTypeDeclaration(canonty)
-			var id = wrapClangStr(clang_getCursorSpelling(decl))
-			if isTagDecl(decl) then
-				subtype->attrib or= ASTATTRIB_TAGID
-				'' Anonymous? Lookup temp id generated for the previous CXType_Record.
-				if len(id) = 0 andalso strIsValidSymbolId(canontyspelling) then
-					id = canontyspelling
-				end if
-				if len(id) = 0 then
-					dim tempid as const string ptr = tempids.lookup(canontyspelling)
-					assert(tempid) '' should have had the CXType_Record and generated a temp id
-					id = *tempid
-					subtype->attrib or= ASTATTRIB_GENERATEDID
-				end if
-			end if
-
-			assert(len(id) > 0)
-			astSetText(subtype, id)
-
 		case else
 			parseClangType(canonty, dtype, subtype)
 		end select
 
 	case CXType_Record, CXType_Enum
-		var decl = clang_getTypeDeclaration(ty)
-		var udt = astNew(iif(ty.kind = CXType_Enum, ASTKIND_ENUM, ASTKIND_STRUCT))
-
-		var id = wrapClangStr(clang_getCursorSpelling(decl))
-		var tyspelling = wrapClangStr(clang_getTypeSpelling(ty))
-
-		'' Anonymous record? Assign a fallback name, because anonymous TYPEs are not allowed in FB.
-		'' We also need to do this for enums (even though FB allows anonymous ENUMs in general),
-		'' because there may be CXType_Elaborated references to the enum later.
-		if len(id) = 0 andalso strIsValidSymbolId(tyspelling) then
-			id = tyspelling
-		end if
-		if len(id) = 0 then
-			assert(tyspelling = wrapClangStr(clang_getTypeSpelling(clang_getCanonicalType(ty))))
-			id = tempids.makeNext(tyspelling)
-			udt->attrib or= ASTATTRIB_GENERATEDID
-		end if
-		if len(id) > 0 then
-			astSetText(udt, id)
-		end if
-
-		if ty.kind = CXType_Record then
-			RecordFieldCollector(this, udt).collectFieldsOf(ty)
-		else
-			EnumConstVisitor(this, udt).visitChildrenOf(decl)
-		end if
-
 		dtype = TYPE_UDT
-		subtype = udt
+		subtype = astNew(ASTKIND_TEXT)
+
+		tags.add(ty)
+		var id = tags.lookup(ty)
+		assert(id)
+		assert(len(*id) > 0)
+		astSetText(subtype, *id)
 
 	case CXType_ConstantArray, CXType_IncompleteArray
 		var arraytype = astNew(ASTKIND_ARRAY)
@@ -720,25 +705,30 @@ function TranslationUnitParser.visitor(byval cursor as CXCursor, byval parent as
 	case CXCursor_StructDecl, CXCursor_UnionDecl, CXCursor_EnumDecl
 		'' TODO: use clang_getCanonicalCursor() and lookup table to emit each type once only
 		'' Really the declaration with body?
-		if clang_equalCursors(cursor, clang_getTypeDeclaration(clang_getCursorType(cursor))) then
-			dim dtype as integer
-			dim tagbody as ASTNODE ptr
-			ctx->parseClangType(clang_getCursorType(cursor), dtype, tagbody)
-
-			#if __FB_DEBUG__
-				assert(dtype = TYPE_UDT)
-				var id = wrapClangStr(clang_getCursorSpelling(cursor))
-				if len(id) > 0 then
-					assert(*tagbody->text = id)
-				end if
-			#endif
-
+		var ty = clang_getCursorType(cursor)
+		var tydecl = clang_getTypeDeclaration(ty)
+		if clang_equalCursors(cursor, tydecl) then
+			var astkind = ASTKIND_STRUCT
 			select case clang_getCursorKind(cursor)
 			case CXCursor_UnionDecl
-				tagbody->kind = ASTKIND_UNION
+				astkind = ASTKIND_UNION
 			case CXCursor_EnumDecl
-				assert(tagbody->kind = ASTKIND_ENUM)
+				astkind = ASTKIND_ENUM
 			end select
+			var tagbody = astNew(astkind)
+
+			ctx->tags.add(ty)
+			var id = ctx->tags.lookup(ty)
+			assert(id)
+			assert(len(*id) > 0)
+			astSetText(tagbody, *id)
+
+			if ty.kind = CXType_Record then
+				RecordFieldCollector(*ctx, tagbody).collectFieldsOf(ty)
+			else
+				EnumConstVisitor(*ctx, tagbody).visitChildrenOf(tydecl)
+			end if
+
 			tagbody->location = ctx->locationFromClang(cursor)
 
 			if tagbody->head then
