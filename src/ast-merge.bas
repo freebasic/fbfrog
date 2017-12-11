@@ -966,6 +966,7 @@ private sub replaceUnixChecks(byval veror as AstNode ptr)
 			for os as integer = 0 to OS__COUNT - 1
 				if osinfo(os).is_unix andalso (*i->text = *osinfo(os).fbdefine) then
 					astRemove(veror, i)
+					exit for
 				end if
 			next
 		end if
