@@ -240,7 +240,7 @@ destructor TokenBuffer()
 end destructor
 
 '' Static EOF token for out-of-bounds accesses
-dim shared EOF_TOKEN as ONETOKEN = (TK_EOF)
+dim shared EOF_TOKEN as ONETOKEN = (NULL, type<TkLocation>(NULL, 0), TK_EOF, 0)
 
 function TokenBuffer.lookup(byval x as integer) as ONETOKEN ptr
 	'' Inside end?

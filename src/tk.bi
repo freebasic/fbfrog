@@ -220,11 +220,11 @@ end enum
 
 end namespace
 
-'' TODO: pack
-type ONETOKEN
-	id		as integer  '' TK_*
-	flags		as integer  '' TKFLAG_*
+#assert tktokens.TK__COUNT <= &hFF
 
+'' This should be as small as possible, to reduce memory usage and the amount of
+'' memmove()/memcpy() required for insertions/deletions in the gap buffer.
+type ONETOKEN field = 1
 	'' TK_ID: Identifier
 	''
 	'' TK_STRING: C string literal as-is, preserving quotes and escape
@@ -241,8 +241,11 @@ type ONETOKEN
 	text		as zstring ptr
 
 	location	as TkLocation   '' where this token was found
+
+	id		as ubyte  '' TK_*
+	flags		as ubyte  '' TKFLAG_*
 end type
-#assert sizeof(ONETOKEN) = sizeof(any ptr) * 5
+#assert sizeof(ONETOKEN) = sizeof(any ptr) * 2 + 6
 
 type TokenBuffer
 private:

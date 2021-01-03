@@ -15,11 +15,11 @@ public:
 	declare function lookupOrMakeSourceInfo(byval sourcename as const zstring ptr, byval is_file as integer) as const SourceInfo ptr
 end type
 
-type TkLocation
+type TkLocation field = 1
 	source as const SourceInfo ptr
-	linenum as integer
+	linenum as ulong
 end type
-#assert sizeof(TkLocation) = sizeof(any ptr) * 2
+#assert sizeof(TkLocation) = sizeof(any ptr) + 4
 
 type FileBuffer
 	buffer as zstring ptr '' file content, null-terminated (embedded nulls are disallowed)
