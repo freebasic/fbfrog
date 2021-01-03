@@ -1,14 +1,38 @@
 #include once "common.bi"
 #include once "source.bi"
 
-const TKFLAG_BEHINDSPACE	= 1 shl 0  '' was preceded by spaces?
-const TKFLAG_NOEXPAND		= 1 shl 1  '' may be macro-expanded? (cpp)
+'' Whether the token was preceded by effective white-space (e.g. spaces, tabs, comments...).
+'' Needed e.g. for C pre-processing to differentiate between <#define M (x)> and <#define M(x)>.
+const TKFLAG_BEHINDSPACE	= 1 shl 0
+
+'' Whether to skip macro expansion for this identifier token.
+'' The C pre-processor uses this to disable expansion of identifiers in a macro
+'' body matching the macro name, preventing recursive macro expansion.
+const TKFLAG_NOEXPAND		= 1 shl 1
+
+'' Tokens can be marked for removal later. This is used e.g. by the C
+'' pre-processor to remove the preprocessor directives except #defines and
+'' #pragma after it has finished preprocessing. It's easier to just remove the
+'' tokens that were marked for removal, instead of parsing again.
 const TKFLAG_REMOVE		= 1 shl 2
+
+'' Used to mark the # token from the beginning of C preprocessor directives.
 const TKFLAG_STARTOFDIRECTIVE	= 1 shl 3
-const TKFLAG_ROOTFILE		= 1 shl 4  '' Used to mark the internal #include statements which pull in the toplevel files
+
+'' Used to mark the internal #include statements which pull in the toplevel files
+'' or pre-#includes specified on the command line. This is needed because we
+'' add #include statements to the token stream to implement these features,
+'' but want to differentiate those artificial #include statements from the
+'' original ones in the input stream.
+const TKFLAG_ROOTFILE		= 1 shl 4
 const TKFLAG_PREINCLUDE		= 1 shl 5
-const TKFLAG_DIRECTIVE		= 1 shl 6  '' used to mark #defines/#includes for hMoveDirectivesOutOfConstructs()
-const TKFLAG_EXPANSION		= 1 shl 7  '' comes from macro?
+
+'' Used to mark #defines/#includes for hMoveDirectivesOutOfConstructs()
+const TKFLAG_DIRECTIVE		= 1 shl 6
+
+'' Whether the token originated from a macro expansion. This is used by the C
+'' pre-processor to skip directive parsing for # tokens from macro expansions.
+const TKFLAG_EXPANSION		= 1 shl 7
 
 namespace tktokens
 
