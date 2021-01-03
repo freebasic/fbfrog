@@ -997,9 +997,12 @@ private function hSimplify(byval n as AstNode ptr, byref changed as integer) as 
 	'' Single child, or none at all? Solve out the VEROR/VERAND.
 	if n->head = n->tail then
 		changed = TRUE
-		function = n->head->clone()
+		dim child as AstNode ptr = NULL
+		if n->head then
+			child = n->head->clone()
+		end if
 		delete n
-		exit function
+		return child
 	end if
 
 	if astIsVEROR(n) = FALSE then

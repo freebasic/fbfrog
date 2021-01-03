@@ -1,0 +1,7 @@
+-declareversions V 1 2
+-selectversion
+-case 1
+	-define V 1
+-case 2
+	-define V 2
+-endselect
