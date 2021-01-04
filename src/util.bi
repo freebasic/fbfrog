@@ -19,6 +19,7 @@ type TkLocation
 	source as const SourceInfo ptr
 	linenum as integer
 end type
+#assert sizeof(TkLocation) = sizeof(any ptr) * 2
 
 type FileBuffer
 	buffer as zstring ptr '' file content, null-terminated (embedded nulls are disallowed)

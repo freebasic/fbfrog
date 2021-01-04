@@ -242,6 +242,7 @@ type ONETOKEN
 
 	location	as TkLocation   '' where this token was found
 end type
+#assert sizeof(ONETOKEN) = sizeof(any ptr) * 5
 
 type TokenBuffer
 private:

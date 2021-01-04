@@ -55,3 +55,4 @@ type ApiBits
 	declare function containsNoneOf(byref rhs as ApiBits) as integer
 	declare function dump() as string
 end type
+#assert sizeof(ApiBits) = 32

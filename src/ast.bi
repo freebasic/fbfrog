@@ -336,6 +336,7 @@ type AstNode_
 	declare function dumpOne() as string
 	declare sub dump(byval nestlevel as integer = 0, byref prefix as string = "")
 end type
+#assert sizeof(AstNode) = sizeof(any ptr) * 16 + sizeof(ApiBits)
 
 #define astNewTEXT(text) astNew(ASTKIND_TEXT, text)
 #define astNewDEFINED(id) astNew(ASTKIND_DEFINED, id)
