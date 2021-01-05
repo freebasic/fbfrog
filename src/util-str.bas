@@ -1,6 +1,8 @@
 #include once "util-str.bi"
+
 #include once "chars.bi"
 #include once "crt.bi"
+#include once "util.bi"
 
 function hTrim(byref s as string) as string
 	function = trim(s, any !" \t")
@@ -17,6 +19,9 @@ end function
 function strDuplicate(byval s as const zstring ptr) as zstring ptr
 	if s then
 		dim as zstring ptr p = callocate(len(*s) + 1)
+		if p = NULL then
+			oops("strDuplicate() memory allocation failed")
+		end if
 		*p = *s
 		function = p
 	else
@@ -230,6 +235,9 @@ sub StringMatcher.addChild(byval nodekind as integer, byval text as const ubyte 
 		.nodekind = nodekind
 		if text then
 			.text = allocate(textlength + 1)
+			if .text = NULL then
+				oops("StringMatcher memory allocation failed")
+			end if
 			memcpy(.text, text, textlength)
 			.text[textlength] = 0
 			.textlength = textlength

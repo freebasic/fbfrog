@@ -51,6 +51,9 @@ end destructor
 
 function DefineInfo.clone() as DefineInfo ptr
 	var b = new DefineInfo
+	if b = NULL then
+		oops("DefineInfo memory allocation failed")
+	end if
 	b->xbody   = xbody
 	b->xeol    = xeol
 	b->macro   = macro->clone()
@@ -1900,6 +1903,9 @@ sub CppContext.parseDefine(byref flags as integer)
 	x = xeol + 1
 
 	var definfo = new DefineInfo
+	if definfo = NULL then
+		oops("DefineInfo memory allocation failed")
+	end if
 	definfo->xbody = xbody
 	definfo->xeol = xeol
 	definfo->macro = macro

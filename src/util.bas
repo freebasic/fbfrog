@@ -34,6 +34,9 @@ function SourceContext.lookupOrMakeSourceInfo(byval sourcename as const zstring 
 	var item = table.lookup(sourcename, hash)
 	if item->s = NULL then
 		var sourceinfo = new SourceInfo(sourcename, is_file)
+		if sourceinfo = NULL then
+			oops("SourceInfo memory allocation failed")
+		end if
 		table.add(item, hash, sourceinfo->name, sourceinfo)
 	end if
 	return item->data
@@ -56,6 +59,9 @@ sub FileBuffer.load(byval location as TkLocation)
 	'' to empty files.
 	dim as integer sizetoload = filesize
 	buffer = callocate(sizetoload + 1)
+	if buffer = NULL then
+		oops("FileBuffer.load() memory allocation failed")
+	end if
 
 	if sizetoload > 0 then
 		var sizeloaded = 0
@@ -88,6 +94,9 @@ function filebuffersAdd(byref sourcectx as SourceContext, byval filename as zstr
 	'' Not yet loaded?
 	if item->s = NULL then
 		var file = new FileBuffer
+		if file = NULL then
+			oops("FileBuffer memory allocation failed")
+		end if
 		file->source = sourcectx.lookupOrMakeSourceInfo(filename, TRUE)
 		file->load(location)
 		filebuffers.hashtb.add(item, hash, strptr(file->source->name), file)

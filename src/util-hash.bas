@@ -15,8 +15,9 @@
 ''
 
 #include once "util-hash.bi"
-#include once "util-str.bi"
 
+#include once "util.bi"
+#include once "util-str.bi"
 #include once "crt/mem.bi"
 
 function hashHash(byval s as const zstring ptr) as ulong
@@ -41,6 +42,9 @@ sub THash.allocTable()
 	'' They must be zeroed, because NULL instead of a string indicates
 	'' unused items
 	items = callocate(room * sizeof(THashItem))
+	if items = NULL then
+		oops("THash memory allocation failed")
+	end if
 end sub
 
 sub THash.growTable()
@@ -206,6 +210,9 @@ end destructor
 
 function StrBuffer.store(byval payload as const ubyte ptr, byval size as uinteger) as integer
 	dim s as zstring ptr = allocate(size + 1)
+	if s = NULL then
+		oops("StrBuffer memory allocation failed")
+	end if
 	memcpy(s, payload, size)
 	s[size] = 0
 

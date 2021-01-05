@@ -1802,6 +1802,9 @@ private function allowedToTurnProc2Macro(byval proc as AstNode ptr, byval expr a
 	end if
 
 	paramusage = new ParamUsageChecker(proc, FALSE)
+	if paramusage = NULL then
+		oops("ParamUsageChecker memory allocation failed")
+	end if
 	expr->visit(@collectParamUses)
 	var have_multiple_uses = paramusage->have_multiple_uses
 	delete paramusage
@@ -1834,6 +1837,9 @@ private sub maybeProc2Macro(byval proc as AstNode ptr)
 
 				'' Wrap references to macro parameters in parentheses
 				paramusage = new ParamUsageChecker(proc, TRUE)
+				if paramusage = NULL then
+					oops("ParamUsageChecker memory allocation failed")
+				end if
 				ret->head->visit(@collectParamUses)
 				delete paramusage
 				paramusage = NULL
@@ -2110,6 +2116,9 @@ sub Define2Decl.addForward(byval aliasedid as zstring ptr, byval def as AstNode 
 		cptr(ForwardInfo ptr, item->data)->append(def)
 	else
 		var info = new ForwardInfo
+		if info = NULL then
+			oops("ForwardInfo memory allocation failed")
+		end if
 		info->append(def)
 		forwards.add(item, aliasedidhash, aliasedid, info)
 	end if
@@ -3017,6 +3026,9 @@ sub hlGlobal(byval ast as AstNode ptr, byref api as ApiInfo)
 	'' lists for types/tags for which forward decls should *not* be added.
 	''
 	hl.typehash = new THash(8, FALSE)
+	if hl.typehash = NULL then
+		oops("hl.typehash THash memory allocation failed")
+	end if
 	hlScanForForwardUsedTypes(ast)
 	hlAddForwardDecls(ast)
 	delete hl.typehash

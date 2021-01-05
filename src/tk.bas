@@ -336,6 +336,9 @@ sub TokenBuffer.insert(byval x as integer, byval id as integer, byval text as zs
 		'' end of the new buffer, so that the gap in the middle grows.
 		newgapsize shl= 1
 		buffer = reallocate(buffer, (size + newgapsize) * sizeof(ONETOKEN))
+		if buffer = NULL then
+			oops("tk buffer memory allocation failed")
+		end if
 		p = buffer + front
 		if size > front then
 			memmove(p + newgapsize, p + gap, _

@@ -232,6 +232,9 @@ dim shared as zstring ptr astnodename(0 to ...) => _
 
 function astNew overload(byval kind as integer) as AstNode ptr
 	var n = new AstNode
+	if n = NULL then
+		oops("AstNode memory allocation failed")
+	end if
 	n->kind = kind
 	function = n
 end function
