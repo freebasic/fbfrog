@@ -1,6 +1,10 @@
+/config.mk
 /fbfrog
 /fbfrog.exe
+/src/obj/*.o
 /tests/run
 /tests/run.exe
-config.mk
-/src/obj/*.o
+/tests/unit/string-is-valid-id
+/tests/unit/string-is-valid-id.exe
+/tests/unit/string-matching
+/tests/unit/string-matching.exe

@@ -24,9 +24,15 @@
 '' captured too, allowing the tests to use astDump() etc.
 ''
 
-#include "../src/util-path.bas"
-#include "../src/util-str.bas"
+#include "../src/util-path.bi"
+#include "../src/util-str.bi"
 #include "dir.bi"
+
+#if defined(__FB_WIN32__) or defined(__FB_CYGWIN__) or defined(__FB_DOS__)
+	const EXEEXT = ".exe"
+#else
+	const EXEEXT = ""
+#endif
 
 type TestRunner
 	as string exe_path, cur_dir, fbfrog
@@ -111,18 +117,10 @@ end sub
 
 sub hUnitTest(byref basfile as string)
 	var basprogram = pathStripExt(basfile)
+	var exefile = pathStripExt(basfile) + exeext
 	var txtfile = basprogram + ".txt"
-
 	print "UNIT " + basfile
-
-	if hShell("fbc " + basfile) = FALSE then
-		print "error: compilation failed"
-		end 1
-	end if
-
 	hShell(basprogram + " > " + txtfile + " 2>&1")
-
-	kill(basprogram)
 end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -253,9 +251,9 @@ end sub
 
 runner.exe_path = pathAddDiv(exepath())
 runner.cur_dir = pathAddDiv(curdir())
-runner.fbfrog = pathStripLastComponent(runner.exe_path) + "fbfrog"
+runner.fbfrog = pathStripLastComponent(runner.exe_path) + "fbfrog" + EXEEXT
 if (runner.cur_dir + "tests" + PATHDIV) = runner.exe_path then
-	runner.fbfrog = "./fbfrog"
+	runner.fbfrog = "./fbfrog" + EXEEXT
 end if
 
 var clean_only = FALSE, unit_only = FALSE
@@ -297,7 +295,7 @@ if unit_only = FALSE then
 	files.count = 0
 end if
 
-'' Compile and run *.bas unit tests
+'' Run unit test programs
 hScanDirectory(runner.exe_path + "unit", "*.bas")
 hSortFiles()
 for i as integer = 0 to files.count-1

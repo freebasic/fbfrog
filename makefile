@@ -1,16 +1,17 @@
 FBC := fbc
-FBFROG := $(shell $(FBC) -m fbfrog -print x)
-TESTSRUN := $(shell $(FBC) tests/run.bas -print x)
+EXEEXT := $(shell $(FBC) -print x)
 prefix := /usr/local
 
 -include config.mk
 
-ALLFBCFLAGS := -m fbfrog -maxerr 1 $(FBFLAGS)
-ALLFBLFLAGS := $(FBFLAGS)
+FBFROG_FBFLAGS := -m fbfrog -maxerr 1 $(FBFLAGS)
 
 SOURCES := $(sort $(wildcard src/*.bas))
 HEADERS := $(wildcard src/*.bi)
 OBJECTS := $(patsubst src/%.bas,src/obj/%.o,$(SOURCES))
+
+UNIT_TESTS := tests/unit/string-is-valid-id$(EXEEXT)
+UNIT_TESTS += tests/unit/string-matching$(EXEEXT)
 
 # We don't want to use any of make's built-in suffixes/rules
 .SUFFIXES:
@@ -20,25 +21,28 @@ ifndef V
   QUIET_FBCLINK = @echo "FBCLINK $@";
 endif
 
-build: $(FBFROG) $(TESTSRUN)
+build: fbfrog$(EXEEXT) tests/run$(EXEEXT) $(UNIT_TESTS)
 
-$(FBFROG): $(OBJECTS)
-	$(QUIET_FBCLINK)$(FBC) $(ALLFBLFLAGS) $^ -x $@
+fbfrog$(EXEEXT): $(OBJECTS)
+	$(QUIET_FBCLINK)$(FBC) $(FBFROG_FBFLAGS) $^ -x $@
 
 $(OBJECTS): src/obj/%.o: src/%.bas $(HEADERS)
-	$(QUIET_FBC)$(FBC) $(ALLFBCFLAGS) $< -c -o $@
+	$(QUIET_FBC)$(FBC) $(FBFROG_FBFLAGS) $< -c -o $@
 
-$(TESTSRUN): tests/run.bas src/util-path.bas src/util-str.bas
-	$(QUIET_FBCLINK)$(FBC) $< $(FBFLAGS)
+tests/run$(EXEEXT): tests/run.bas src/obj/util-path.o src/obj/util-str.o
+	$(QUIET_FBCLINK)$(FBC) $^ $(FBFLAGS)
+
+$(UNIT_TESTS): tests/unit/%$(EXEEXT): tests/unit/%.bas tests/unit/test src/obj/util-str.o
+	$(QUIET_FBCLINK)$(FBC) $< src/obj/util-str.o $(FBFLAGS)
 
 tests: build
-	$(TESTSRUN)
+	tests/run$(EXEEXT)
 
 clean:
-	rm -f $(FBFROG) $(TESTSRUN) src/obj/*.o
+	rm -f fbfrog$(EXEEXT) tests/run$(EXEEXT) $(UNIT_TESTS) src/obj/*.o
 
 install:
-	install $(FBFROG) "$(prefix)/bin"
+	install fbfrog$(EXEEXT) "$(prefix)/bin"
 	cp -R include/fbfrog "$(prefix)/include"
 
 COMMIT = $(shell git rev-parse --verify HEAD)

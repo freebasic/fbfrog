@@ -1,5 +1,5 @@
 #include "test"
-#include "../../src/util-str.bas"
+#include "../../src/util-str.bi"
 
 test(strIsValidSymbolId("") = false)
 test(strIsValidSymbolId("_"))

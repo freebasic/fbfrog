@@ -1,4 +1,4 @@
-#include "util-hash.bi"
+#include once "util-hash.bi"
 
 type SourceInfo
 	name as const string '' used as key in SourceContext's and FileBuffers' hash table
