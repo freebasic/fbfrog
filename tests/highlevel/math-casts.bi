@@ -1,5 +1,7 @@
 #pragma once
 
+extern "C"
+
 type E as long
 enum
 	ENUMCONST1 = 0
@@ -43,3 +45,12 @@ const B20 = culng(0u - 100u)
 #define B31 culng(B30 - 1)
 #define B32 culng(B31 - 1)
 const B30 = culng(0u - 100u)
+type UINT as ulong
+const C00_MAX_UINT32 = cuint(culng(not 0u))
+const C01_MAX_UINT32 = cuint(culng(not culng(0)))
+const C02_MAX_UINT32 = cuint(not cast(UINT, 0))
+const C03_MAX_UINTPTR = cuint(not 0)
+dim shared C04(0 to cuint(not cast(UINT, 0)) - 1) as uinteger = {cuint(not cast(UINT, 0))}
+declare sub C05(byval param as uinteger = cuint(not cast(UINT, 0)))
+
+end extern

@@ -49,3 +49,11 @@ enum E {
 #define B31 (B30 - 1)
 #define B32 (B31 - 1) // isn't a fwdref itself, but refers to one
 #define B30 (0u - 100u)
+
+typedef unsigned int UINT;
+#define C00_MAX_UINT32 ((size_t)~0u)
+#define C01_MAX_UINT32 ((size_t)~(unsigned int)0)
+#define C02_MAX_UINT32 ((size_t)~(UINT)0)
+#define C03_MAX_UINTPTR ((size_t)~0) // ~0 gives a 32bit -1, which (on a 64bit system) will be sign-extended to 64bit size_t before being converted to unsigned
+static size_t C04[(size_t)~(UINT)0] = {(size_t)~(UINT)0};
+void C05(size_t param = (size_t)~((UINT)0));
