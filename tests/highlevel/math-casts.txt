@@ -21,5 +21,5 @@
 [21/23] cygwin-x86
 [22/23] cygwin-x86_64
 [23/23] dos
-	tests/c/expr.h
-emitting: tests/c/expr.bi (87 declarations, 9 TODOs)
+	tests/highlevel/math-casts.h
+emitting: tests/highlevel/math-casts.bi (34 declarations, 0 TODOs)
