@@ -3,7 +3,7 @@
 fbfrog is a command line tool which reads .h files (C API declarations) and generates corresponding .bi file(s) (FreeBASIC API declarations).
 This tool was needed because the FreeBASIC Compiler is lacking the ability to #include C headers directly,
 and instead requires all data type and function declarations to be translated to the FB syntax. At least fbc is ABI-compatible to gcc,
-so only the translated headers are needed, no binary wrappers (for C++ bindings it's a different story though). fbfrog doesn't support C++.
+so only the translated headers are needed, no binary wrappers (for C++ bindings it's a different story though). fbfrog doesn't support C++, except for some simple cases like reference parameters.
 
 1. Compile fbfrog via `make` or `fbc *.bas -m fbfrog`. The test suite can be run via `make tests` and then `git diff`.
 2. Run fbfrog and pass the *.h file(s) that you want to #include on the command line:
