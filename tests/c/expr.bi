@@ -46,7 +46,7 @@ enum
 	A = cshort(0)
 	A = clng(0)
 	A = clngint(0)
-	A = cast(MYINT, 0)
+	A = clng(0)
 	A = 1
 	A = &o1
 	A = &h1
@@ -429,7 +429,7 @@ const A38 = cbyte(0)
 const A39 = cshort(0)
 const A40 = clng(0)
 const A41 = clngint(0)
-const A42 = cast(MYINT, 0)
+const A42 = clng(0)
 #macro A43
 	scope
 		a(0)

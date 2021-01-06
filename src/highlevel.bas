@@ -273,6 +273,18 @@ function ExpressionFixUp.calculateCTypes(byval n as AstNode ptr) as integer
 		var ldtype = n->head->dtype
 		var rdtype = n->tail->dtype
 		n->setType(typeCBop(n->kind, ldtype, rdtype), NULL)
+
+	case ASTKIND_CAST
+		'' Resolve some typedefs
+		'' FIXME: This currently drops the information that this was a typedef,
+		'' so the generated code will be uglier than necessary.
+		if typeGetDtAndPtr(n->dtype) = TYPE_UDT then
+			if calculateCTypes(n->subtype) then
+				if typeGetDtAndPtr(n->subtype->dtype) <> TYPE_UDT then
+					n->setType(n->subtype->dtype, n->subtype->subtype)
+				end if
+			end if
+		end if
 	end select
 
 	function = allresolved
@@ -297,12 +309,16 @@ sub ExpressionFixUp.maybeCollectSymbol(byval n as AstNode ptr)
 		elseif n->expr then
 			collectSymbolIfExprTypeIsKnown(n->text, n->expr)
 		end if
+	case ASTKIND_TYPEDEF
+		'' Note: C scope rules not handled, we add/overwrite typedefs only and never remove them.
+		'' Usually this works well enough for bindings, since usually all typedefs are declared at the toplevel/global scope.
+		collectSymbol(n->text, n->dtype)
 	end select
 end sub
 
 ''
-'' Collect #defines/constants/enumconsts and determine their types so we can do
-'' lookups and determine the type behind such identifiers used in expressions.
+'' Collect #defines/constants/enumconsts/typedefs and determine their types,
+'' so we can do lookups and determine the type behind such identifiers used in expressions.
 ''
 '' We walk from top to bottom. If a #define constant forward-references another
 '' one defined later, we have to add it to a list for processing later in

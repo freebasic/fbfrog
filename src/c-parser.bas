@@ -174,6 +174,8 @@ destructor CParser()
 end destructor
 
 sub CParser.addTypedef(byval id as const zstring ptr)
+	'' Note: C scope rules not handled, we add/overwrite typedefs only and never remove them.
+	'' Usually this works well enough for bindings, since usually all typedefs are declared at the toplevel/global scope.
 	typedefs.addOverwrite(id, NULL)
 end sub
 
