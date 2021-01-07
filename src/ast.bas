@@ -597,12 +597,15 @@ sub AstNode.copyOrigId(byval src as AstNode ptr)
 end sub
 
 sub AstNode.setType(byval dtype as integer, byval subtype as AstNode ptr)
-	delete this.subtype
+	'' The new subtype may be a child node of the old,
+	'' so the new must be cloned before the old is deleted.
+	var oldsubtype = this.subtype
 	this.subtype = NULL
 	this.dtype = dtype
 	if subtype then
 		this.subtype = subtype->clone()
 	end if
+	delete oldsubtype
 end sub
 
 function AstNode.cloneNode() as AstNode ptr
