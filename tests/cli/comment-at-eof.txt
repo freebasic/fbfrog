@@ -1,0 +1,25 @@
+[ 1/23] linux-x86
+[ 2/23] linux-x86_64
+[ 3/23] linux-arm
+[ 4/23] linux-aarch64
+[ 5/23] freebsd-x86
+[ 6/23] freebsd-x86_64
+[ 7/23] freebsd-arm
+[ 8/23] freebsd-aarch64
+[ 9/23] openbsd-x86
+[10/23] openbsd-x86_64
+[11/23] openbsd-arm
+[12/23] openbsd-aarch64
+[13/23] netbsd-x86
+[14/23] netbsd-x86_64
+[15/23] netbsd-arm
+[16/23] netbsd-aarch64
+[17/23] darwin-x86
+[18/23] darwin-x86_64
+[19/23] win32
+[20/23] win64
+[21/23] cygwin-x86
+[22/23] cygwin-x86_64
+[23/23] dos
+	tests/cli/comment-at-eof.h
+emitting: tests/cli/comment-at-eof.bi (0 declarations, 0 TODOs)

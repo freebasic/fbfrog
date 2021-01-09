@@ -136,7 +136,7 @@ function lexLoadArgs(byref tk as TokenBuffer, byval x as integer, byval args as 
 		case CH_HASH
 			do
 				lex.i += 1
-			loop until (lex.i[0] = CH_CR) or (lex.i[0] = CH_LF)
+			loop until (lex.i[0] = 0) or (lex.i[0] = CH_CR) or (lex.i[0] = CH_LF)
 
 		'' -option
 		case CH_MINUS
