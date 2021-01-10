@@ -1,10 +1,23 @@
+#include once "../src/util-path.bi"
 #include once "../src/util-str.bi"
 
-#macro test(x)
+#macro TEST(x)
 	scope
 		ctx.tests += 1
 		if (x) = 0 then
 			print __FILE__ + "(" & __LINE__ & "): failed: " + #x
+			ctx.failures += 1
+		end if
+	end scope
+#endmacro
+
+#macro TESTEQ(a, b)
+	scope
+		ctx.tests += 1
+		if (a) <> (b) then
+			print __FILE__ + "(" & __LINE__ & "): failed:"
+			print !"\texpected: " + #a + " = " + #b
+			print !"\t but got: '" + str(a) + "' <> '" + str(b) + "'"
 			ctx.failures += 1
 		end if
 	end scope
@@ -18,6 +31,7 @@ end type
 dim ctx as UnitTestRunnerContext
 
 scope
+	#include once "test-util-path.bi"
 	#include once "test-util-str-matching.bi"
 	#include once "test-util-str.bi"
 end scope
