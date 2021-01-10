@@ -1,28 +1,3 @@
-#include "test"
-#include "../../src/util-str.bi"
-
-#macro dumpStringMatcherTree(pattern1, pattern2, pattern3, pattern4)
-	scope
-		print string(80, "-")
-		print "patterns: """ + pattern1 + """, """ + pattern2 + """" + _
-				iif(len(pattern3) > 0, ", """ + pattern3 + """", "") + _
-				iif(len(pattern4) > 0, ", """ + pattern4 + """", "")
-		dim matcher as StringMatcher
-		matcher.addPattern(pattern1)
-		matcher.addPattern(pattern2)
-		if len(pattern3) > 0 then matcher.addPattern(pattern3)
-		if len(pattern4) > 0 then matcher.addPattern(pattern4)
-		matcher.dump()
-	end scope
-#endmacro
-
-dumpStringMatcherTree("a", "b", "", "")
-dumpStringMatcherTree("a", "b", "aa", "")
-dumpStringMatcherTree("a", "b", "aa", "b*")
-dumpStringMatcherTree("aa1", "aa2", "aa3", "")
-dumpStringMatcherTree("LPCSTR", "LPSTR", "ListLabel", "")
-dumpStringMatcherTree("aa", "a", "", "")
-
 scope
 	dim m as StringMatcher
 	m.addPattern("a")
@@ -151,9 +126,6 @@ scope
 	m.addPattern("2", cptr(any ptr, 2))
 	m.addPattern("3", cptr(any ptr, 3))
 	m.addPattern("22", cptr(any ptr, 22))
-
-	'' should store the payloads properly (see tree dump)
-	m.dump
 
 	dim payload as any ptr
 

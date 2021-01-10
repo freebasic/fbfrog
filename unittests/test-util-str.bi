@@ -1,6 +1,3 @@
-#include "test"
-#include "../../src/util-str.bi"
-
 test(strIsValidSymbolId("") = false)
 test(strIsValidSymbolId("_"))
 test(strIsValidSymbolId("____"))

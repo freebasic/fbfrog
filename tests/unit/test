@@ -1,5 +1,0 @@
-#macro test(x)
-	if (x) = 0 then
-		print __FILE__ + "(" & __LINE__ & "): failed: " + #x
-	end if
-#endmacro

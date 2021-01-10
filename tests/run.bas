@@ -19,10 +19,6 @@
 ''  @ignore      Skip this .h file completely, allowing it to be #included
 ''               into others etc. without being seen as test cases itself.
 ''
-'' Additionally, unit tests for fbfrog's code are supported by compiling and
-'' running .bas files in the tests/unit/ directory. Their console output is
-'' captured too, allowing the tests to use astDump() etc.
-''
 
 #include "../src/util-path.bi"
 #include "../src/util-str.bi"
@@ -113,14 +109,6 @@ sub hTest(byref hfile as string)
 	'' ./fbfrog *.h <extraoptions> > txtfile 2>&1
 	var ln = runner.fbfrog + " " + hfile + " " + extraoptions
 	hShell(ln + " > " + txtfile + " 2>&1")
-end sub
-
-sub hUnitTest(byref basfile as string)
-	var basprogram = pathStripExt(basfile)
-	var exefile = pathStripExt(basfile) + exeext
-	var txtfile = basprogram + ".txt"
-	print "UNIT " + basfile
-	hShell(basprogram + " > " + txtfile + " 2>&1")
 end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -256,13 +244,11 @@ if (runner.cur_dir + "tests" + PATHDIV) = runner.exe_path then
 	runner.fbfrog = "./fbfrog" + EXEEXT
 end if
 
-var clean_only = FALSE, unit_only = FALSE
+var clean_only = FALSE
 for i as integer = 1 to __FB_ARGC__-1
 	select case *__FB_ARGV__[i]
 	case "-clean"
 		clean_only = TRUE
-	case "-unit"
-		unit_only = TRUE
 	case else
 		print "unknown option: " + *__FB_ARGV__[i]
 		end 1
@@ -270,12 +256,8 @@ for i as integer = 1 to __FB_ARGC__-1
 next
 
 '' Clean test directories: Delete existing *.txt and *.bi files
-if unit_only then
-	hScanDirectory(runner.exe_path + "unit", "*.txt")
-else
-	hScanDirectory(runner.exe_path, "*.txt")
-	hScanDirectory(runner.exe_path, "*.bi")
-end if
+hScanDirectory(runner.exe_path, "*.txt")
+hScanDirectory(runner.exe_path, "*.bi")
 for i as integer = 0 to files.count-1
 	var dummy = kill(files.list(i))
 next
@@ -285,20 +267,10 @@ if clean_only then
 	end 0
 end if
 
-if unit_only = FALSE then
-	'' Test each *.h file
-	hScanDirectory(runner.exe_path, "*.h")
-	hSortFiles()
-	for i as integer = 0 to files.count-1
-		hTest(files.list(i))
-	next
-	files.count = 0
-end if
-
-'' Run unit test programs
-hScanDirectory(runner.exe_path + "unit", "*.bas")
+'' Test each *.h file
+hScanDirectory(runner.exe_path, "*.h")
 hSortFiles()
 for i as integer = 0 to files.count-1
-	hUnitTest(files.list(i))
+	hTest(files.list(i))
 next
 files.count = 0
