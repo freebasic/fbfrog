@@ -1748,7 +1748,7 @@ sub CppContext.parseInclude(byval begin as integer, byref flags as integer, byva
 	stack(level).incdir = incdir
 
 	'' Read the include file and insert its tokens
-	var file = filebuffersAdd(*sourcectx, incfile, location)
+	var file = sourcectx->addFileBuffer(incfile, location)
 	var y = lexLoadC(*tk, x, file->buffer, file->source)
 
 	'' If tokens were inserted, ensure there is an EOL at the end

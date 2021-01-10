@@ -289,7 +289,7 @@ private sub hLoadArgsFile _
 	filename = hFindResource(filename)
 
 	'' Load the file content at the specified position
-	var file = filebuffersAdd(frog.sourcectx, filename, location)
+	var file = frog.sourcectx.addFileBuffer(filename, location)
 	lexLoadArgs(tk, x, file->buffer, file->source)
 	filecount += 1
 
@@ -608,11 +608,11 @@ private sub hParseArgs(byref tk as TokenBuffer, byref x as integer)
 
 			'' original-license.txt
 			hParseParam(tk, x, "original-license.txt parameter for -title")
-			var licensefile = filebuffersAdd(frog.sourcectx, tk.getText(x - 1), tk.getLocation(x - 1))
+			var licensefile = frog.sourcectx.addFileBuffer(tk.getText(x - 1), tk.getLocation(x - 1))
 
 			'' translators.txt
 			hParseParam(tk, x, "translators.txt parameter for -title")
-			var translatorsfile = filebuffersAdd(frog.sourcectx, tk.getText(x - 1), tk.getLocation(x - 1))
+			var translatorsfile = frog.sourcectx.addFileBuffer(tk.getText(x - 1), tk.getLocation(x - 1))
 
 			'' [<destination .bi file>]
 			dim header as HeaderInfo ptr
@@ -1107,7 +1107,7 @@ private function frogParse(byref api as ApiInfo) as AstNode ptr
 					if i->opt = OPT_FBFROGINCLUDE then
 						var filename = hFindResource(*i->text)
 						var x = tk.count()
-						var file = filebuffersAdd(frog.sourcectx, filename, type(NULL, 0))
+						var file = frog.sourcectx.addFileBuffer(filename, type(NULL, 0))
 						lexLoadC(tk, x, file->buffer, file->source)
 						tk.setRemove(x, tk.count() - 1)
 					end if

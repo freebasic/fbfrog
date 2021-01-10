@@ -6,15 +6,6 @@ type SourceInfo
 	declare constructor(byval sourcename as const zstring ptr, byval is_file as integer)
 end type
 
-type SourceContext
-private:
-	table as THash = Thash(8, FALSE) '' data = owned SourceInfo ptr
-public:
-	declare destructor()
-	declare operator let(byref rhs as const SourceContext) '' unimplemented
-	declare function lookupOrMakeSourceInfo(byval sourcename as const zstring ptr, byval is_file as integer) as const SourceInfo ptr
-end type
-
 type TkLocation field = 1
 	source as const SourceInfo ptr
 	linenum as ulong
@@ -27,7 +18,16 @@ type FileBuffer
 	declare sub load(byval location as TkLocation)
 end type
 
-declare function filebuffersAdd(byref sourcectx as SourceContext, byval filename as zstring ptr, byval location as TkLocation) as FileBuffer ptr
+type SourceContext
+private:
+	filebuffers as THash = THash(8, FALSE) '' data = owned FileBuffer ptr
+	sourceinfos as THash = Thash(8, FALSE) '' data = owned SourceInfo ptr
+public:
+	declare destructor()
+	declare operator let(byref rhs as const SourceContext) '' unimplemented
+	declare function addFileBuffer(byval filename as zstring ptr, byval location as TkLocation) as FileBuffer ptr
+	declare function lookupOrMakeSourceInfo(byval sourcename as const zstring ptr, byval is_file as integer) as const SourceInfo ptr
+end type
 
 declare sub oops(byval message as zstring ptr)
 declare function hDumpLocation(byval location as TkLocation) as string

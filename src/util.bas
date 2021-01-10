@@ -21,8 +21,14 @@ constructor SourceInfo(byval sourcename as const zstring ptr, byval is_file as i
 end constructor
 
 destructor SourceContext()
-	for i as integer = 0 to table.room - 1
-		var item = table.items + i
+	for i as integer = 0 to filebuffers.room - 1
+		var item = filebuffers.items + i
+		if item->s then
+			delete cptr(FileBuffer ptr, item->data)
+		end if
+	next
+	for i as integer = 0 to sourceinfos.room - 1
+		var item = sourceinfos.items + i
 		if item->s then
 			delete cptr(SourceInfo ptr, item->data)
 		end if
@@ -31,13 +37,13 @@ end destructor
 
 function SourceContext.lookupOrMakeSourceInfo(byval sourcename as const zstring ptr, byval is_file as integer) as const SourceInfo ptr
 	var hash = hashHash(sourcename)
-	var item = table.lookup(sourcename, hash)
+	var item = sourceinfos.lookup(sourcename, hash)
 	if item->s = NULL then
 		var sourceinfo = new SourceInfo(sourcename, is_file)
 		if sourceinfo = NULL then
 			oops("SourceInfo memory allocation failed")
 		end if
-		table.add(item, hash, sourceinfo->name, sourceinfo)
+		sourceinfos.add(item, hash, sourceinfo->name, sourceinfo)
 	end if
 	return item->data
 end function
@@ -82,14 +88,10 @@ sub FileBuffer.load(byval location as TkLocation)
 	next
 end sub
 
-namespace filebuffers
-	dim shared hashtb as THash = THash(8, FALSE)
-end namespace
-
-function filebuffersAdd(byref sourcectx as SourceContext, byval filename as zstring ptr, byval location as TkLocation) as FileBuffer ptr
+function SourceContext.addFileBuffer(byval filename as zstring ptr, byval location as TkLocation) as FileBuffer ptr
 	'' Cache file buffers based on the file name
 	var hash = hashHash(filename)
-	var item = filebuffers.hashtb.lookup(filename, hash)
+	var item = filebuffers.lookup(filename, hash)
 
 	'' Not yet loaded?
 	if item->s = NULL then
@@ -97,9 +99,9 @@ function filebuffersAdd(byref sourcectx as SourceContext, byval filename as zstr
 		if file = NULL then
 			oops("FileBuffer memory allocation failed")
 		end if
-		file->source = sourcectx.lookupOrMakeSourceInfo(filename, TRUE)
+		file->source = lookupOrMakeSourceInfo(filename, TRUE)
 		file->load(location)
-		filebuffers.hashtb.add(item, hash, strptr(file->source->name), file)
+		filebuffers.add(item, hash, strptr(file->source->name), file)
 	end if
 
 	function = item->data
