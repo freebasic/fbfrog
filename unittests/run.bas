@@ -1,3 +1,4 @@
+#include once "../src/util-hash.bi"
 #include once "../src/util-path.bi"
 #include once "../src/util-str.bi"
 
@@ -31,6 +32,7 @@ end type
 dim ctx as UnitTestRunnerContext
 
 scope
+	#include once "test-util-hash.bi"
 	#include once "test-util-path.bi"
 	#include once "test-util-str-matching.bi"
 	#include once "test-util-str.bi"
