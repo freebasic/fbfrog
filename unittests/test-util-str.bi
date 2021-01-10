@@ -88,7 +88,7 @@ TEST(strIsValidSymbolId("a"))
 TEST(strIsValidSymbolId("A"))
 TEST(strIsValidSymbolId("abcABC_123"))
 
-TEST(strIsNumber("")) '' FIXME
+TEST(not strIsNumber(""))
 TEST(strIsNumber("0"))
 TEST(strIsNumber("9999"))
 TEST(not strIsNumber("a"))

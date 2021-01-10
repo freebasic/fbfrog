@@ -134,6 +134,9 @@ function strIsValidSymbolId(byval s as const zstring ptr) as integer
 end function
 
 function strIsNumber(byref s as string) as integer
+	if len(s) = 0 then
+		return FALSE
+	end if
 	for i as integer = 0 to len(s) - 1
 		if (s[i] < CH_0) or (s[i] > CH_9) then
 			exit function
