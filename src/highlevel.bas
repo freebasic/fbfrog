@@ -4,6 +4,7 @@
 
 #include once "emit.bi"
 #include once "util-path.bi"
+#include once "util.bi"
 
 #include once "crt.bi"
 

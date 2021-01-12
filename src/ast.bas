@@ -2,9 +2,10 @@
 
 #include once "ast.bi"
 
-#include once "util-str.bi"
 #include once "emit.bi"
 #include once "tk.bi"
+#include once "util-str.bi"
+#include once "util.bi"
 
 '' Merge/expand dtype b into dtype a, overwriting a's base dtype, but preserving its ptrs/consts
 '' This is useful for expanding typedefs into the context of another dtype.
@@ -798,8 +799,7 @@ function astIsEqual _
 	'' Only check location if not merging: for merging, the source location doesn't matter.
 	'' We only use it before the merging step.
 	if is_merge = FALSE then
-		if a->location.source  <> b->location.source  then exit function
-		if a->location.linenum <> b->location.linenum then exit function
+		if a->location.value <> b->location.value then exit function
 	end if
 
 	select case a->kind

@@ -20,4 +20,4 @@ type CLexer extends LexContext
 	declare sub readArg(byval t as integer)
 end type
 
-declare function lexLoadC(byref tk as TokenBuffer, byval x as integer, byval code as zstring ptr, byval source as const SourceInfo ptr) as integer
+declare function lexLoadC(byref sourcectx as SourceContext, byref tk as TokenBuffer, byval x as integer, byval source as SourceInfo ptr) as integer

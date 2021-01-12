@@ -1,5 +1,5 @@
 #include once "common.bi"
-#include once "util.bi"
+#include once "source.bi"
 
 const TKFLAG_BEHINDSPACE	= 1 shl 0  '' was preceded by spaces?
 const TKFLAG_NOEXPAND		= 1 shl 1  '' may be macro-expanded? (cpp)
@@ -224,7 +224,7 @@ end namespace
 
 '' This should be as small as possible, to reduce memory usage and the amount of
 '' memmove()/memcpy() required for insertions/deletions in the gap buffer.
-type ONETOKEN field = 1
+type ONETOKEN
 	'' TK_ID: Identifier
 	''
 	'' TK_STRING: C string literal as-is, preserving quotes and escape
@@ -245,10 +245,12 @@ type ONETOKEN field = 1
 	id		as ubyte  '' TK_*
 	flags		as ubyte  '' TKFLAG_*
 end type
-#assert sizeof(ONETOKEN) = sizeof(any ptr) * 2 + 6
+#assert sizeof(ONETOKEN) = sizeof(any ptr) + 8
 
 type TokenBuffer
 private:
+	sourcectx as SourceContext ptr
+
 	'' Gap buffer of tokens
 	buffer as ONETOKEN ptr  '' Buffer containing: front,gap,back
 	front as integer  '' Front length; the gap's offset
@@ -261,7 +263,7 @@ private:
 	declare sub moveTo(byval x as integer)
 
 public:
-	declare constructor()
+	declare constructor(byval sourcectx as SourceContext ptr)
 	declare destructor()
 	declare function dumpOne(byval x as integer) as string
 	declare sub dump(byval first as integer, byval last as integer)

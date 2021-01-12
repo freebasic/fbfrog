@@ -1,9 +1,10 @@
 #include once "fbfrog-apiinfo.bi"
 
 #include once "ast-merge.bi"
-#include once "fbfrog.bi"
 #include once "fbfrog-replacements.bi"
+#include once "fbfrog.bi"
 #include once "tk.bi"
+#include once "util.bi"
 
 using tktokens
 

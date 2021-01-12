@@ -1,4 +1,5 @@
 #include once "fbfrog-args-lex.bi"
+
 #include once "chars.bi"
 #include once "util-str.bi"
 
@@ -104,13 +105,14 @@ end sub
 ''   * "..." allows \" and \\ escape sequences
 ''   * #comments
 ''
-function lexLoadArgs(byref tk as TokenBuffer, byval x as integer, byval args as zstring ptr, byval source as const SourceInfo ptr) as integer
+function lexLoadArgs(byref sourcectx as SourceContext, byref tk as TokenBuffer, byval x as integer, byval source as SourceInfo ptr) as integer
 	dim lex as ArgLexer
+	lex.sourcectx = @sourcectx
 	lex.tk = @tk
 	lex.x = x
 	lex.location.source = source
 	lex.location.linenum = 1
-	lex.i = args
+	lex.i = source->text
 	lex.behindspace = TRUE
 
 	do

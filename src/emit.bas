@@ -1,9 +1,11 @@
 '' FB code generation, from AST
 
 #include once "emit.bi"
+
+#include once "chars.bi"
 #include once "emit-fbkeywords.bi"
 #include once "fbfrog.bi"
-#include once "chars.bi"
+#include once "util.bi"
 
 namespace emit
 
@@ -1446,12 +1448,12 @@ sub CodeGen.emitHeader(byref header as HeaderInfo)
 	bol() : eol()
 	bol() : add(TK_TEXT, "based on the C header files:") : eol()
 	commentspaces += 2
-	emitLines(header.licensefile->buffer)
+	emitLines(header.licensefile->text)
 	commentspaces -= 2
 	bol() : eol()
 	bol() : add(TK_TEXT, "translated to FreeBASIC by:") : eol()
 	commentspaces += 2
-	emitLines(header.translatorsfile->buffer)
+	emitLines(header.translatorsfile->text)
 	commentspaces -= 2
 	commentspaces -= 1
 	comment -= 1

@@ -53,9 +53,11 @@
 ''
 
 #include once "c-parser.bi"
+
 #include once "c-common.bi"
 #include once "emit.bi"
 #include once "fbfrog.bi"
+#include once "util.bi"
 
 using tktokens
 
@@ -2721,7 +2723,7 @@ function CParser.parseConstruct(byval bodyastkind as integer) as AstNode ptr
 end function
 
 private sub hSetLocationIfNeeded(byval n as AstNode ptr, byval location as TkLocation)
-	if n->location.source = NULL then
+	if n->location.value = 0 then
 		n->location = location
 	end if
 end sub

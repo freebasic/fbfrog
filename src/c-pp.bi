@@ -101,7 +101,7 @@ type CppContext
 	filecount as integer
 	filetb as THash = THash(4, FALSE)  '' data = index into files array
 
-	declare constructor(byref sourcectx as SourceContext, byref tk as TokenBuffer, byref api as ApiInfo)
+	declare constructor(byval sourcectx as SourceContext ptr, byval tk as TokenBuffer ptr, byref api as ApiInfo)
 	declare destructor()
 	declare function isSkipping() as integer
 	declare sub addPredefine(byval id as zstring ptr, byval body as zstring ptr)

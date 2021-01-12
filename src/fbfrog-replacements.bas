@@ -1,5 +1,6 @@
 #include once "fbfrog-replacements.bi"
 #include once "chars.bi"
+#include once "util.bi"
 
 constructor ReplacementsParser(byref filename as string)
 	this.filename = filename

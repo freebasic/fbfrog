@@ -3,11 +3,12 @@
 #include once "tk.bi"
 
 type LexContext
+	sourcectx as SourceContext ptr
 	tk as TokenBuffer ptr
 
 	i		as ubyte ptr  '' Current char, will always be <= limit
 	x		as integer
-	location	as TkLocation
+	location	as DecodedLocation
 	behindspace	as integer
 
 	keywords as THash = THash(12)

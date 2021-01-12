@@ -93,9 +93,9 @@ enum
 	GUARDSTATE_KNOWN
 end enum
 
-constructor CppContext(byref sourcectx as SourceContext, byref tk as TokenBuffer, byref api as ApiInfo)
-	this.sourcectx = @sourcectx
-	this.tk = @tk
+constructor CppContext(byval sourcectx as SourceContext ptr, byval tk as TokenBuffer ptr, byref api as ApiInfo)
+	this.sourcectx = sourcectx
+	this.tk = tk
 	this.api = @api
 	x = 0
 
@@ -146,7 +146,7 @@ sub CppContext.addPredefine(byval id as zstring ptr, byval body as zstring ptr)
 	end if
 	s += !"\n"
 	var y = tk->count()
-	lexLoadC(*tk, y, s, sourcectx->lookupOrMakeSourceInfo("pre-#define", FALSE))
+	lexLoadC(*sourcectx, *tk, y, sourcectx->addInternalSource("pre-#define", s))
 	tk->setRemove(y, tk->count() - 1)
 end sub
 
@@ -163,7 +163,7 @@ end sub
 sub CppContext.appendIncludeDirective(byval filename as zstring ptr, byval tkflags as integer)
 	var code = "#include """ + *filename + """" + !"\n"
 	var y = tk->count()
-	lexLoadC(*tk, y, code, sourcectx->lookupOrMakeSourceInfo(code, FALSE))
+	lexLoadC(*sourcectx, *tk, y, sourcectx->addInternalSource("pre-#include", code))
 	tk->addFlags(y, tk->count() - 1, TKFLAG_REMOVE or tkflags)
 end sub
 
@@ -1131,7 +1131,7 @@ function CppContext.insertMacroExpansion _
 
 				'' and try to lex them
 				var z = tk->count()
-				lexLoadC(*tk, z, mergetext, sourcectx->lookupOrMakeSourceInfo("## merge operation", FALSE))
+				lexLoadC(*sourcectx, *tk, z, sourcectx->addInternalSource("## merge operation", mergetext))
 
 				'' That should have produced only 1 token. If it produced more, then the merge failed.
 				assert(tk->count() >= (z + 1))
@@ -1654,6 +1654,7 @@ sub CppContext.parseInclude(byval begin as integer, byref flags as integer, byva
 
 	'' "filename" | <filename>
 	var location = tk->getLocation(x)
+	var decodedloc = sourcectx->decode(location)
 	var includetkflags = tk->getFlags(x)
 	var is_system_include = FALSE
 	var inctext = parseIncludeFilename(is_system_include)
@@ -1668,8 +1669,8 @@ sub CppContext.parseInclude(byval begin as integer, byref flags as integer, byva
 	else
 		'' #include file search
 		dim contextfile as string
-		if location.source then
-			contextfile = location.source->name
+		if decodedloc.source andalso decodedloc.source->is_file then
+			contextfile = *decodedloc.source->name
 		end if
 
 		dim contextincdir as AstNode ptr
@@ -1707,8 +1708,9 @@ sub CppContext.parseInclude(byval begin as integer, byref flags as integer, byva
 	''
 	'' Not internal?
 	if (includetkflags and (TKFLAG_PREINCLUDE or TKFLAG_ROOTFILE)) = 0 then
-		assert(location.source->is_file)
-		var directivebi = frogLookupBiFromH(location.source->name)
+		assert(decodedloc.source)
+		assert(decodedloc.source->is_file)
+		var directivebi = frogLookupBiFromH(decodedloc.source->name)
 		var contentbi = frogLookupBiFromH(incfile)
 		'' Not emitted into same .bi as #included content?
 		if directivebi <> contentbi then
@@ -1748,8 +1750,7 @@ sub CppContext.parseInclude(byval begin as integer, byref flags as integer, byva
 	stack(level).incdir = incdir
 
 	'' Read the include file and insert its tokens
-	var file = sourcectx->addFileBuffer(incfile, location)
-	var y = lexLoadC(*tk, x, file->buffer, file->source)
+	var y = lexLoadC(*sourcectx, *tk, x, sourcectx->addFileSource(incfile, location))
 
 	'' If tokens were inserted, ensure there is an EOL at the end
 	if x < y then
@@ -2216,7 +2217,7 @@ sub CppContext.parseNext()
 			if tk->get(x) <> TK_EOL then
 				pragma += !"\n"
 			end if
-			lexLoadC(*tk, x, pragma, sourcectx->lookupOrMakeSourceInfo("_Pragma(" + text + ")", FALSE))
+			lexLoadC(*sourcectx, *tk, x, sourcectx->addInternalSource("_Pragma(" + text + ")", pragma))
 			exit sub
 		end if
 
@@ -2332,7 +2333,7 @@ sub hApplyReplacements(byref sourcectx as SourceContext, byref tk as TokenBuffer
 	var x = 0
 	for i as integer = 0 to api.replacementcount - 1
 		var begin = x
-		x = lexLoadC(tk, x, api.replacements[i].fromcode, sourcectx.lookupOrMakeSourceInfo("C code pattern from replacements file", FALSE))
+		x = lexLoadC(sourcectx, tk, x, sourcectx.addInternalSource("C code pattern from replacements file", api.replacements[i].fromcode))
 
 		'' But remove EOLs from the patterns, because we're going to match against tk buffer content
 		'' after the CPP phase, i.e. which had its EOLs removed aswell (except for #directives)
@@ -2383,7 +2384,7 @@ sub hApplyReplacements(byref sourcectx as SourceContext, byref tk as TokenBuffer
 						nxt = x + 1
 					else
 						'' Insert C tokens instead
-						nxt = lexLoadC(tk, x, replacement->tocode, sourcectx.lookupOrMakeSourceInfo("C code from replacements file", FALSE))
+						nxt = lexLoadC(sourcectx, tk, x, sourcectx.addInternalSource("C code from replacements file", replacement->tocode))
 
 						'' Remove EOLs, as done by the CPP
 						scope

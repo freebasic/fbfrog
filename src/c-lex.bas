@@ -505,13 +505,16 @@ end sub
 ''
 '' C lexer entry point
 ''
-function lexLoadC(byref tk as TokenBuffer, byval x as integer, byval code as zstring ptr, byval source as const SourceInfo ptr) as integer
+function lexLoadC(byref sourcectx as SourceContext, byref tk as TokenBuffer, byval x as integer, byval source as SourceInfo ptr) as integer
+	assert(source->text)
+
 	dim clex as CLexer
+	clex.sourcectx = @sourcectx
 	clex.tk = @tk
 	clex.x = x
 	clex.location.source = source
 	clex.location.linenum = 1
-	clex.i = code
+	clex.i = source->text
 
 	'' Tokenize and insert into tk buffer
 	'' Loop until EOF...
