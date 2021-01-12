@@ -1,5 +1,8 @@
 #include once "util-hash.bi"
 
+declare function min(byval a as integer, byval b as integer) as integer
+declare function max(byval a as integer, byval b as integer) as integer
+
 type SourceInfo
 	name as const string '' used as key in SourceContext's and FileBuffers' hash table
 	is_file as integer '' whether name is a file path
