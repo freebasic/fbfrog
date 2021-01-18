@@ -1,5 +1,4 @@
-#include once "c-lex.bi"
-#include once "util-str.bi"
+#include once "lex.bi"
 
 sub LexContext.initKeywords(byval first as integer, byval last as integer)
 	for i as integer = first to last
