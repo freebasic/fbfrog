@@ -104,11 +104,11 @@ sub hTest(byref hfile as string)
 
 	var txtfile = pathStripExt(hfile) + ".txt"
 
-	print iif(is_failure_test, "FAIL", "PASS") + " " + hfile
-
 	'' ./fbfrog *.h <extraoptions> > txtfile 2>&1
 	var ln = runner.fbfrog + " " + hfile + " " + extraoptions
 	hShell(ln + " > " + txtfile + " 2>&1")
+
+	print "expect " + iif(is_failure_test, "fail", "pass") + ": " + hfile
 end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -273,4 +273,11 @@ hSortFiles()
 for i as integer = 0 to files.count-1
 	hTest(files.list(i))
 next
+print "done: " & files.count & " tests"
 files.count = 0
+
+if hShell("git diff --quiet") = 0 then
+	print !"result: ok (\"git diff\" indicates no unexpected changes)"
+else
+	print !"result: \"git diff\" indicates changes; please check for problems in the .bi and .txt files in tests/"
+end if
