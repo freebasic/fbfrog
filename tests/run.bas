@@ -76,7 +76,7 @@ function hShell(byref ln as string) as integer
 		print "command terminated with unusual error code " & result & ": " + ln
 		end 1
 	end select
-	function = (result = 0)
+	return result
 end function
 
 sub hTest(byref hfile as string)
