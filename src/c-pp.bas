@@ -1921,6 +1921,7 @@ sub CppContext.parseDefine(byref flags as integer)
 		if prevdef->equals(*tk, definfo) = FALSE then
 			'' TODO: should only report once per symbol (per fbfrog run, not cpp run)
 			print "conflicting #define " + *macro->text
+			return
 		end if
 	end if
 
