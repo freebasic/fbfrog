@@ -2489,7 +2489,8 @@ dim shared fbcrtheaders(0 to ...) as zstring ptr = _
 	@"assert", @"ctype", @"errno", @"float", @"limits", @"locale", _
 	@"math", @"setjmp", @"signal", @"stdarg", @"stddef", @"stdint", _
 	@"stdio", @"stdlib", @"string", @"time", _
-	@"sys/types", @"sys/socket", @"wchar" _
+	@"sys/types", @"sys/socket", @"wchar", _
+	@"sys/time", @"pthread", @"unistd" _
 }
 
 type IncludePass
