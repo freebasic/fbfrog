@@ -8,6 +8,10 @@ EXTRA_FBFLAGS := -maxerr 1
 FBFROG_FBFLAGS := -m fbfrog $(FBFLAGS) $(EXTRA_FBFLAGS)
 TESTRUNNER_FBFLAGS := $(FBFLAGS) $(EXTRA_FBFLAGS)
 
+ifdef ENABLE_STANDALONE
+  FBFROG_FBFLAGS += -d ENABLE_STANDALONE
+endif
+
 SOURCES := $(sort $(wildcard src/*.bas))
 HEADERS := $(wildcard src/*.bi)
 OBJECTS := $(patsubst src/%.bas,src/obj/%.o,$(SOURCES))
@@ -49,8 +53,14 @@ clean:
 	rm -f fbfrog$(EXEEXT) tests/run$(EXEEXT) unittests/run$(EXEEXT) src/obj/*.a src/obj/*.o
 
 install:
+ifdef ENABLE_STANDALONE
+	install fbfrog$(EXEEXT) "$(prefix)"
+	mkdir -p "$(prefix)/fbfrog/include"
+	cp -R include/fbfrog/* "$(prefix)/fbfrog/include"
+else
 	install fbfrog$(EXEEXT) "$(prefix)/bin"
 	cp -R include/fbfrog "$(prefix)/include"
+endif
 
 COMMIT = $(shell git rev-parse --verify HEAD)
 tarball:

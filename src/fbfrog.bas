@@ -206,8 +206,15 @@ private function hFindResource(byref filename as string) as string
 	var found = dir1 + filename
 	if fileexists(found) then return found
 
-	'' 4. <exepath>/../include/fbfrog/?
-	var dir2 = hExepath() + ".." + PATHDIV + INCLUDEDIR
+	#ifdef ENABLE_STANDALONE
+		'' 4. <exepath>/fbfrog/include/?
+		const ALTINCLUDEDIR = "fbfrog" + PATHDIV + "include" + PATHDIV
+		var dir2 = hExepath() + ALTINCLUDEDIR
+	#else
+		'' 4. <exepath>/../include/fbfrog/?
+		var dir2 = hExepath() + ".." + PATHDIV + INCLUDEDIR
+	#endif
+
 	found = dir2 + filename
 	if fileexists(found) then return found
 
@@ -215,7 +222,11 @@ private function hFindResource(byref filename as string) as string
 	print "search dirs:"
 	print "  <curdir> (" + curdir() + ")"
 	print "  <exepath>/include/fbfrog (" + dir1 + ")"
-	print "  <exepath>/../include/fbfrog (" + pathNormalize(dir2) + ")"
+	#ifdef ENABLE_STANDALONE
+		print "  <exepath>/fbfrog/include (" + dir2 + ")"
+	#else
+		print "  <exepath>/../include/fbfrog (" + pathNormalize(dir2) + ")"
+	#endif
 	end 1
 end function
 
