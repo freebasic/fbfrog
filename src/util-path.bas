@@ -60,11 +60,11 @@ function pathAddDiv(byref path as const string) as string
 		case asc($"\"), asc("/")
 
 		case else
-			s += $"\"
+			s += PATHDIV
 		end select
 #else
 		if s[length-1] <> asc("/") then
-			s += "/"
+			s += PATHDIV
 		end if
 #endif
 	end if

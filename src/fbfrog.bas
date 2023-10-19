@@ -254,6 +254,13 @@ private function hTurnArgsIntoString(byval argc as integer, byval argv as zstrin
 		'' If the argument contains special chars (white-space, ", '),
 		'' enclose it in quotes as needed for lexLoadArgs().
 
+		#if defined(__FB_WIN32__) or defined(__FB_DOS__)
+			'' WIN32_HACKS
+			'' assume that if ^* was passed in, it was to escape the
+			'' asterick and prevent wildcard expansion
+			arg = strReplace(arg, $"^*", $"*")
+		#endif
+
 		'' Contains '?
 		if instr(arg, "'") > 0 then
 			'' Must enclose in "..." and escape included " or \ chars properly.
