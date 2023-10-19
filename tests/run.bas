@@ -38,7 +38,7 @@ dim shared runner as TestRunner
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-function strStripPrefix(byref s as string, byref prefix as string) as string
+function strStripPrefix(byref s as const string, byref prefix as const string) as string
 	if left(s, len(prefix)) = prefix then
 		function = right(s, len(s) - len(prefix))
 	else
@@ -46,11 +46,11 @@ function strStripPrefix(byref s as string, byref prefix as string) as string
 	end if
 end function
 
-function pathStripLastComponent(byref path as string) as string
+function pathStripLastComponent(byref path as const string) as string
 	function = pathOnly(left(path, len(path) - 1))
 end function
 
-function hExtractLine1(byref filename as string) as string
+function hExtractLine1(byref filename as const string) as string
 	var f = freefile()
 	if open(filename, for input, as #f) then
 		print "couldn't open file '" + filename + "'"
@@ -65,7 +65,7 @@ function hExtractLine1(byref filename as string) as string
 	function = line1
 end function
 
-function hShell(byref ln as string) as integer
+function hShell(byref ln as const string) as integer
 	var result = shell(ln)
 	select case result
 	case -1
@@ -79,7 +79,7 @@ function hShell(byref ln as string) as integer
 	return result
 end function
 
-sub hTest(byref hfile as string)
+sub hTest(byref hfile as const string)
 	var line1 = hExtractLine1(hfile)
 
 	'' @ignore?
@@ -133,7 +133,7 @@ end type
 
 dim shared as DIRQUEUE dirs
 
-private sub dirsAppend(byref path as string)
+private sub dirsAppend(byref path as const string)
 	dim as DIRNODE ptr node = callocate(sizeof(DIRNODE))
 	node->path = pathAddDiv(path)
 	if dirs.tail then
@@ -157,7 +157,7 @@ private sub dirsDropHead()
 	end if
 end sub
 
-private sub hScanParent(byref parent as string, byref filepattern as string)
+private sub hScanParent(byref parent as const string, byref filepattern as const string)
 	'' Scan for files
 	var found = dir(parent + filepattern, fbNormal)
 	while len(found) > 0
@@ -188,7 +188,7 @@ private sub hScanParent(byref parent as string, byref filepattern as string)
 	wend
 end sub
 
-sub hScanDirectory(byref rootdir as string, byref filepattern as string)
+sub hScanDirectory(byref rootdir as const string, byref filepattern as const string)
 	dirsAppend(rootdir)
 
 	'' Work off the queue -- each subdir scan can append new subdirs

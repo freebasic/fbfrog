@@ -7,7 +7,7 @@ declare function strDuplicate(byval s as const zstring ptr) as zstring ptr
 declare sub strSplit(byref s as string, byref delimiter as string, byref l as string, byref r as string)
 declare function strReplace _
 	( _
-		byref text as string, _
+		byref text as const string, _
 		byref a as string, _
 		byref b as string _
 	) as string
