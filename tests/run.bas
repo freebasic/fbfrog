@@ -99,11 +99,22 @@ function hNormalizePathCharsInFile(byref hfile as const string) as boolean
 
 	do while eof(h_in) = false
 		line input #h_in, x
-		if( instr( x, "a\nb" ) = 0 ) then
-			x = strReplace( x, $"./fbfrog.exe", "./fbfrog" )
+
+		'' special cases, skip
+		if( instr( x, "a\nb" ) > 0 ) then
+			goto writeout
+		end if
+
+		'' fix the executable name
+		x = strReplace( x, $".\fbfrog", "./fbfrog" )
+
+		'' fix path chars only if not already normalized
+		#ifndef ENABLE_COMMON_PATHDIV
 			x = strReplace( x, $"\\", $"\" )
 			x = strReplace( x, $"\", "/" )
-		end if
+		#endif
+
+	writeout:
 		print #h_out, x
 	loop
 	close #h_out
@@ -276,6 +287,11 @@ sub hTest(byref hfile as const string)
 
 	'' NOTE: this will replace *all* instances, not just where used in paths
 
+	'' Even if ENABLE_COMMON_PATHDIV is defined still need to process the
+	'' output file because HOST_PATHDIV (\) is used in execuable names.
+	'' Also depending on line endings in the git repo and what shell was used
+	'' we may have differences by LF and CR+LF.
+
 	hNormalizePathCharsInFile( txtfile )
 
 	'' TODO: check if this could be replaced by some other way to produce
@@ -414,8 +430,8 @@ end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-runner.exe_path = pathAddDiv(exepath())
-runner.cur_dir = pathAddDiv(curdir())
+runner.exe_path = pathAddDiv(pathNormalizePathDiv(exepath()))
+runner.cur_dir = pathAddDiv(pathNormalizePathDiv(curdir()))
 runner.fbfrog = pathStripLastComponent(runner.exe_path) + "fbfrog" + EXEEXT
 
 if (runner.cur_dir + "tests" + PATHDIV) = runner.exe_path then
@@ -426,9 +442,9 @@ if (runner.cur_dir + "tests" + PATHDIV) = runner.exe_path then
 	'' use ".\" otherwise shell sees it as command "." followed by an option "/..."
 	'' the ".\" will get replaced after the test results are logged to file
 	'' don't add the file extension, it throws off the error marker for some tests  
-	runner.fbfrog = ".\fbfrog"
+	runner.fbfrog = "." + HOST_PATHDIV + "fbfrog"
 #else
-	runner.fbfrog = "./fbfrog" + EXEEXT
+	runner.fbfrog = "." + HOST_PATHDIV + "fbfrog" + EXEEXT
 #endif
 
 end if

@@ -1,6 +1,7 @@
 '' Path/file name handling functions
 
 #include once "util-path.bi"
+#include once "util-str.bi"
 #include once "dir.bi"
 
 '' Searches backwards for the last '.' while still behind '/' or '\'.
@@ -127,6 +128,11 @@ end function
 
 function pathStripCurdir(byref path as const string) as string
 	var pwd = hCurdir()
+
+	#ifdef ENABLE_COMMON_PATHDIV
+	pwd = pathNormalizePathDiv(pwd)
+	#endif
+
 	if left(path, len(pwd)) = pwd then
 		function = right(path, len(path) - len(pwd))
 	else
@@ -267,4 +273,12 @@ function pathNormalize(byref path as const string) as string
 	next
 
 	function = left(s, w)
+end function
+
+function pathNormalizePathDiv(byref path as const string) as string
+	#if defined(ENABLE_COMMON_PATHDIV) andalso (PATHDIV <> HOST_PATHDIV)
+		return strReplace( path, HOST_PATHDIV, PATHDIV )
+	#else
+		return path
+	#endif
 end function

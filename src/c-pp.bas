@@ -1695,7 +1695,7 @@ sub CppContext.parseInclude(byval begin as integer, byref flags as integer, byva
 	'' Get the normalized representation of the path, for use in hash tables
 	'' etc. Otherwise foo.h from the root dir and ../foo.h from a subdir
 	'' would be seen as different files.
-	incfile = pathNormalize(pathMakeAbsolute(incfile))
+	incfile = pathNormalizePathDiv(pathNormalize(pathMakeAbsolute(incfile)))
 
 	'' * Don't preserve internal #includes,
 	'' * don't preserve #includes if we will emit the #included content

@@ -306,6 +306,8 @@ private sub hLoadArgsFile _
 
 	filename = hFindResource(filename)
 
+	filename = pathNormalizePathDiv(filename)
+
 	'' Load the file content at the specified position
 	lexLoadArgs(frog.sourcectx, tk, x, frog.sourcectx.addFileSource(filename, location))
 	filecount += 1
@@ -1124,6 +1126,7 @@ private function frogParse(byref api as ApiInfo) as AstNode ptr
 					assert(i->kind = ASTKIND_OPTION)
 					if i->opt = OPT_FBFROGINCLUDE then
 						var filename = hFindResource(*i->text)
+						filename = pathNormalizePathDiv(filename)
 						var x = tk.count()
 						lexLoadC(frog.sourcectx, tk, x, frog.sourcectx.addFileSource(filename, i->location))
 						tk.setRemove(x, tk.count() - 1)

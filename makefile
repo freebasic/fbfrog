@@ -7,9 +7,24 @@ prefix := /usr/local
 EXTRA_FBFLAGS := -maxerr 1
 FBFROG_FBFLAGS := -m fbfrog $(FBFLAGS) $(EXTRA_FBFLAGS)
 TESTRUNNER_FBFLAGS := $(FBFLAGS) $(EXTRA_FBFLAGS)
+TESTRUNNER_ARGS :=
 
 ifdef ENABLE_STANDALONE
   FBFROG_FBFLAGS += -d ENABLE_STANDALONE
+endif
+
+ifdef ENABLE_COMMON_PATHDIV
+  # When ENABLE_COMMON_PATHDIV defined: 
+  # - Use forward slash '/' for path division on all targets
+  # - This helps with compatibility for  shell scripts.
+  # When ENABLE_COMMON_PATHDIV not defined:
+  # - use backslash '\' for path division on windows and dos
+  # - use forward slash '/' for all other targets
+  #
+  # See src/util-path.bi: HOST_PATHDIV and PATHDIV
+
+  FBFROG_FBFLAGS += -d ENABLE_COMMON_PATHDIV
+  TESTRUNNER_FBFLAGS += -d ENABLE_COMMON_PATHDIV 
 endif
 
 SOURCES := $(sort $(wildcard src/*.bas))
@@ -44,7 +59,7 @@ unittests/run$(EXEEXT): unittests/run.bas src/obj/libfbfrog.a $(UNITTESTS_HEADER
 	$(QUIET_FBCLINK)$(FBC) $< src/obj/libfbfrog.a $(TESTRUNNER_FBFLAGS) -x $@
 
 tests: build unittests
-	tests/run$(EXEEXT)
+	tests/run$(EXEEXT) $(TESTRUNNER_ARGS)
 
 unittests: build
 	unittests/run$(EXEEXT)
