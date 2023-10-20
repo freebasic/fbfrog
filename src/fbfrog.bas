@@ -490,11 +490,24 @@ private sub hParseIfCompound(byref tk as TokenBuffer, byref x as integer)
 	loop
 end sub
 
+private function hMaybeJoinOutputPath( byref filename as const string ) as string
+	function = filename
+	'' if the filename is relative and an output path was set
+	'' then join the the output path to the bi file to be emitted
+	if len(frog.outname) <> 0 then
+		if not pathIsAbsolute(frog.outname) then
+			if pathIsDir(frog.outname) then
+				function = pathAddDiv(frog.outname)+filename
+			end if
+		end if
+	end if
+end function
+
 private sub hParseDestinationBiFile(byref tk as TokenBuffer, byref x as integer)
 	'' [<destination .bi file>]
 	if hIsStringOrId(tk, x) then
 		assert(frog.script->tail->kind = ASTKIND_OPTION)
-		frog.script->tail->setAlias(tk.getText(x))
+		frog.script->tail->setAlias(hMaybeJoinOutputPath(*tk.getText(x)))
 		x += 1
 	end if
 end sub
@@ -545,7 +558,7 @@ private sub hParseArgs(byref tk as TokenBuffer, byref x as integer)
 			x += 1
 
 			hExpectStringOrId(tk, x, "<file> argument")
-			var filename = *tk.getText(x)
+			var filename = hMaybeJoinOutputPath(*tk.getText(x))
 			x += 1
 
 			frogAddBi(filename, pattern)
@@ -638,7 +651,7 @@ private sub hParseArgs(byref tk as TokenBuffer, byref x as integer)
 			dim header as HeaderInfo ptr
 			if hIsStringOrId(tk, x) then
 				'' .bi-specific -title option
-				var bi = frogLookupBiFromBi(*tk.getText(x))
+				var bi = frogLookupBiFromBi(hMaybeJoinOutputPath(*tk.getText(x)))
 				if bi < 0 then
 					tk.showErrorAndAbort(x, "unknown destination .bi")
 				end if
