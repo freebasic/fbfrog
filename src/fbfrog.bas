@@ -266,6 +266,22 @@ private function hTurnArgsIntoString(byval argc as integer, byval argv as zstrin
 			'' Must enclose in "..." and escape included " or \ chars properly.
 			'' This also works if " or whitespace are included too.
 
+			#if defined(__FB_WIN32__) or defined(__FB_DOS__)
+				'' WIN32_HACKS
+				'' if there is exactly 2 single quotes at the start and end
+				'' then we probably want to just strip those off since the
+				'' shell didn't do it and we probably are passing something
+				'' like '*' or '*/filename' to prevent wildcard expansion
+
+				if arg = "''" then
+					arg = """"""
+				elseif len( arg ) > 2 then
+					if left( arg, 1 ) = "'" and right( arg, 1 ) = "'" then
+						arg = mid( arg, 2, len( arg ) - 2 )
+					end if
+				end if
+			#endif
+
 			'' Insert \\ for \ before inserting \" for ", so \" won't accidentally
 			'' be turned into \\".
 			arg = strReplace(arg, $"\", $"\\")
