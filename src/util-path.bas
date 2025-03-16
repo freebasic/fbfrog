@@ -1,6 +1,7 @@
 '' Path/file name handling functions
 
 #include once "util-path.bi"
+#include once "util-str.bi"
 #include once "dir.bi"
 
 '' Searches backwards for the last '.' while still behind '/' or '\'.
@@ -60,11 +61,11 @@ function pathAddDiv(byref path as const string) as string
 		case asc($"\"), asc("/")
 
 		case else
-			s += $"\"
+			s += PATHDIV
 		end select
 #else
 		if s[length-1] <> asc("/") then
-			s += "/"
+			s += PATHDIV
 		end if
 #endif
 	end if
@@ -127,6 +128,11 @@ end function
 
 function pathStripCurdir(byref path as const string) as string
 	var pwd = hCurdir()
+
+	#ifdef ENABLE_COMMON_PATHDIV
+	pwd = pathNormalizePathDiv(pwd)
+	#endif
+
 	if left(path, len(pwd)) = pwd then
 		function = right(path, len(path) - len(pwd))
 	else
@@ -153,7 +159,13 @@ function hReadableDirExists(byref path as const string) as integer
 	if right(fixed, len(PATHDIV)) = PATHDIV then
 		fixed = left(fixed, len(fixed) - len(PATHDIV))
 	end if
-	function = (len(dir(fixed, fbDirectory or fbReadOnly or fbHidden)) > 0)
+	#if defined(__FB_WIN32__) or defined(__FB_DOS__)
+		dim attrib as integer = 0
+		var d = dir( fixed, fbDirectory or fbReadOnly or fbHidden or fbArchive, attrib )
+		function = (len(d) > 0) and ((attrib and fbDirectory) <> 0)
+	#else
+		function = (len(dir(fixed, fbDirectory or fbReadOnly or fbHidden)) > 0)
+	#endif
 end function
 
 function pathIsDir(byref s as const string) as integer
@@ -267,4 +279,12 @@ function pathNormalize(byref path as const string) as string
 	next
 
 	function = left(s, w)
+end function
+
+function pathNormalizePathDiv(byref path as const string) as string
+	#if defined(ENABLE_COMMON_PATHDIV) andalso (PATHDIV <> HOST_PATHDIV)
+		return strReplace( path, HOST_PATHDIV, PATHDIV )
+	#else
+		return path
+	#endif
 end function

@@ -38,7 +38,7 @@ dim shared runner as TestRunner
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-function strStripPrefix(byref s as string, byref prefix as string) as string
+function strStripPrefix(byref s as const string, byref prefix as const string) as string
 	if left(s, len(prefix)) = prefix then
 		function = right(s, len(s) - len(prefix))
 	else
@@ -46,11 +46,11 @@ function strStripPrefix(byref s as string, byref prefix as string) as string
 	end if
 end function
 
-function pathStripLastComponent(byref path as string) as string
+function pathStripLastComponent(byref path as const string) as string
 	function = pathOnly(left(path, len(path) - 1))
 end function
 
-function hExtractLine1(byref filename as string) as string
+function hExtractLine1(byref filename as const string) as string
 	var f = freefile()
 	if open(filename, for input, as #f) then
 		print "couldn't open file '" + filename + "'"
@@ -65,7 +65,7 @@ function hExtractLine1(byref filename as string) as string
 	function = line1
 end function
 
-function hShell(byref ln as string) as integer
+function hShell(byref ln as const string) as integer
 	var result = shell(ln)
 	select case result
 	case -1
@@ -79,7 +79,178 @@ function hShell(byref ln as string) as integer
 	return result
 end function
 
-sub hTest(byref hfile as string)
+#if defined(__FB_WIN32__) or defined(__FB_DOS__)
+'' WIN32_HACKS
+
+function hNormalizePathCharsInFile(byref hfile as const string) as boolean
+	dim as long h_in, h_out
+	dim as string x
+
+	h_in = freefile
+	if( open( hfile for input access read as #h_in ) <> 0 ) then
+		return false
+	end if
+
+	h_out = freefile
+	if( open( hfile & ".tmp" for output access write as #h_out ) <> 0 ) then
+		close #h_in
+		return false
+	end if
+
+	do while eof(h_in) = false
+		line input #h_in, x
+
+		'' special cases, skip
+		if( instr( x, "a\nb" ) > 0 ) then
+			goto writeout
+		end if
+
+		'' fix the executable name
+		x = strReplace( x, $".\fbfrog", "./fbfrog" )
+
+		'' fix path chars only if not already normalized
+		#ifndef ENABLE_COMMON_PATHDIV
+			x = strReplace( x, $"\\", $"\" )
+			x = strReplace( x, $"\", "/" )
+		#endif
+
+	writeout:
+		print #h_out, x
+	loop
+	close #h_out
+	close #h_in
+
+	kill hfile
+	name hfile & ".tmp" as hfile
+
+	return true 
+end function
+
+private function hEscapeArg( byref arg as const string ) as string
+	dim as string ret = """"
+	dim as integer n = len(arg)
+	for i as integer = 1 to n
+		select case mid( arg, i, 1 )
+		case """"
+			ret &= "\"""
+		case "*"
+			ret &= "^*"
+		case $"\"
+			if i = n then
+				ret &= $"\\"
+			else
+				ret &= $"\"
+			end if
+		case else
+			ret &= mid( arg, i, 1 )
+		end select
+	next
+	ret &= """"
+	return ret
+end function
+
+private function hGetNextChar( byref text as const string, byref ch as string ) as integer
+	select case left(text,2)
+	case $"\$", $"\`", $"\""", $"\\"
+		ch = mid(text,2,1)
+		return 2
+	end select
+	ch = left(text,1)
+	return 1
+end function
+
+function hEscapeShellArgs( byref args as const string ) as string
+
+	'' the test suite uses arguments (specified the test file) that
+	'' are suitable for bash-like shell, but we need to make these
+	'' usable for cmd.exe shell
+	''
+	'' no quote     any character starts an argument, need to still
+	''              process \$, \`, \", \\ 
+	'' single quote (') starts an arugment that is ended by single quote
+	''              no single quote should be contained within i.e. no \'
+	'' double quote (") starts an argument that is ended by double quote
+	''              take care to process the escape chars  
+
+	const ARG_NONE = -1
+	const ARG_NO_QUOTE = 0
+	const ARG_SINGLE_QUOTE = 1
+	const ARG_DOUBLE_QUOTE = 2
+
+	dim as string arg, argsout, ch
+	dim as integer n = len(args)
+	dim as integer i = 1
+	dim as integer q = ARG_NONE  '' -1=not-in-arg 0=no-quote, 1=single quote, 2=double quote
+	do while i <= n
+		ch = mid(args,i,1)
+
+		select case q
+		case ARG_NONE
+			select case ch
+			case " ", chr(9)
+				argsout += ch
+			case "'"
+				q = ARG_SINGLE_QUOTE
+			case """"
+				q = ARG_DOUBLE_QUOTE
+			case else
+				arg += ch
+				q = ARG_NO_QUOTE
+			end select
+		case ARG_SINGLE_QUOTE
+			if( ch = "'" ) then
+				'' flush arg
+				argsout += hEscapeArg( arg )
+				arg = ""
+				q = ARG_NONE
+			else
+				arg += ch
+			end if
+		case ARG_DOUBLE_QUOTE
+			if( ch = """" ) then
+				argsout += hEscapeArg( arg )
+				arg = ""
+				q = ARG_NONE
+			else
+				i += hGetNextChar( mid( args, i, 2 ), ch )
+				i -= 1
+				arg += ch
+			end if
+		case else
+			select case ch
+			case " ", chr(9)
+				argsout += hEscapeArg( arg )
+				argsout += ch
+				arg = ""
+				q = ARG_NONE
+			case else
+				i += hGetNextChar( mid( args, i, 2 ), ch )
+				i -= 1
+				arg += ch
+			end select
+		end select
+		i += 1
+	loop
+
+	'' flush the argument even if was missing a closing quote
+	if( arg > "" ) then
+		argsout += hEscapeArg( arg ) 
+	end if
+
+	function = argsout
+end function
+
+#else '' not (#if defined(__FB_WIN32__) or defined(__FB_DOS__))
+
+function hEscapeShellArgs( byref args as const string ) as string
+	'' the test suite uses arguments (specified the in test file)
+	'' that are suitable for bash-like shell, so just keep as-is
+	return args
+end function
+
+#endif
+
+sub hTest(byref hfile as const string)
 	var line1 = hExtractLine1(hfile)
 
 	'' @ignore?
@@ -105,8 +276,30 @@ sub hTest(byref hfile as string)
 	var txtfile = pathStripExt(hfile) + ".txt"
 
 	'' ./fbfrog *.h <extraoptions> > txtfile 2>&1
-	var ln = runner.fbfrog + " " + hfile + " " + extraoptions
+	var ln = runner.fbfrog + " " + hEscapeShellArgs( hfile + " " + extraoptions )
 	hShell(ln + " > " + txtfile + " 2>&1")
+
+#if defined(__FB_WIN32__) or defined(__FB_DOS__)
+	'' WIN32_HACKS
+	'' for the purpose of testing, replace all '\' path separation characters
+	'' with '/' path separation characters so we can diff the results that
+	'' were originally generated on *nix
+
+	'' NOTE: this will replace *all* instances, not just where used in paths
+
+	'' Even if ENABLE_COMMON_PATHDIV is defined still need to process the
+	'' output file because HOST_PATHDIV (\) is used in execuable names.
+	'' Also depending on line endings in the git repo and what shell was used
+	'' we may have differences by LF and CR+LF.
+
+	hNormalizePathCharsInFile( txtfile )
+
+	'' TODO: check if this could be replaced by some other way to produce
+	''       a shell-agnostic way of comparing results - maybe as an emitter
+	''       option which could allow for use of host paths internally and only
+	''       the output normalized to a forward slash path separator.
+	''       ... or decide it's not important and delete this TODO.
+#endif
 
 	print "expect " + iif(is_failure_test, "fail", "pass") + ": " + hfile
 end sub
@@ -133,7 +326,7 @@ end type
 
 dim shared as DIRQUEUE dirs
 
-private sub dirsAppend(byref path as string)
+private sub dirsAppend(byref path as const string)
 	dim as DIRNODE ptr node = callocate(sizeof(DIRNODE))
 	node->path = pathAddDiv(path)
 	if dirs.tail then
@@ -157,7 +350,7 @@ private sub dirsDropHead()
 	end if
 end sub
 
-private sub hScanParent(byref parent as string, byref filepattern as string)
+private sub hScanParent(byref parent as const string, byref filepattern as const string)
 	'' Scan for files
 	var found = dir(parent + filepattern, fbNormal)
 	while len(found) > 0
@@ -188,7 +381,7 @@ private sub hScanParent(byref parent as string, byref filepattern as string)
 	wend
 end sub
 
-sub hScanDirectory(byref rootdir as string, byref filepattern as string)
+sub hScanDirectory(byref rootdir as const string, byref filepattern as const string)
 	dirsAppend(rootdir)
 
 	'' Work off the queue -- each subdir scan can append new subdirs
@@ -237,11 +430,23 @@ end sub
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
 
-runner.exe_path = pathAddDiv(exepath())
-runner.cur_dir = pathAddDiv(curdir())
+runner.exe_path = pathAddDiv(pathNormalizePathDiv(exepath()))
+runner.cur_dir = pathAddDiv(pathNormalizePathDiv(curdir()))
 runner.fbfrog = pathStripLastComponent(runner.exe_path) + "fbfrog" + EXEEXT
+
 if (runner.cur_dir + "tests" + PATHDIV) = runner.exe_path then
-	runner.fbfrog = "./fbfrog" + EXEEXT
+
+#if defined(__FB_WIN32__) or defined(__FB_DOS__)
+	'' WIN32_HACKS
+	'' Handle running under windows (cmd.exe)
+	'' use ".\" otherwise shell sees it as command "." followed by an option "/..."
+	'' the ".\" will get replaced after the test results are logged to file
+	'' don't add the file extension, it throws off the error marker for some tests  
+	runner.fbfrog = "." + HOST_PATHDIV + "fbfrog"
+#else
+	runner.fbfrog = "." + HOST_PATHDIV + "fbfrog" + EXEEXT
+#endif
+
 end if
 
 var clean_only = FALSE

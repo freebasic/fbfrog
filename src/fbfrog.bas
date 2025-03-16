@@ -206,8 +206,15 @@ private function hFindResource(byref filename as string) as string
 	var found = dir1 + filename
 	if fileexists(found) then return found
 
-	'' 4. <exepath>/../include/fbfrog/?
-	var dir2 = hExepath() + ".." + PATHDIV + INCLUDEDIR
+	#ifdef ENABLE_STANDALONE
+		'' 4. <exepath>/fbfrog/include/?
+		const ALTINCLUDEDIR = "fbfrog" + PATHDIV + "include" + PATHDIV
+		var dir2 = hExepath() + ALTINCLUDEDIR
+	#else
+		'' 4. <exepath>/../include/fbfrog/?
+		var dir2 = hExepath() + ".." + PATHDIV + INCLUDEDIR
+	#endif
+
 	found = dir2 + filename
 	if fileexists(found) then return found
 
@@ -215,7 +222,11 @@ private function hFindResource(byref filename as string) as string
 	print "search dirs:"
 	print "  <curdir> (" + curdir() + ")"
 	print "  <exepath>/include/fbfrog (" + dir1 + ")"
-	print "  <exepath>/../include/fbfrog (" + pathNormalize(dir2) + ")"
+	#ifdef ENABLE_STANDALONE
+		print "  <exepath>/fbfrog/include (" + dir2 + ")"
+	#else
+		print "  <exepath>/../include/fbfrog (" + pathNormalize(dir2) + ")"
+	#endif
 	end 1
 end function
 
@@ -243,10 +254,33 @@ private function hTurnArgsIntoString(byval argc as integer, byval argv as zstrin
 		'' If the argument contains special chars (white-space, ", '),
 		'' enclose it in quotes as needed for lexLoadArgs().
 
+		#if defined(__FB_WIN32__) or defined(__FB_DOS__)
+			'' WIN32_HACKS
+			'' assume that if ^* was passed in, it was to escape the
+			'' asterick and prevent wildcard expansion
+			arg = strReplace(arg, $"^*", $"*")
+		#endif
+
 		'' Contains '?
 		if instr(arg, "'") > 0 then
 			'' Must enclose in "..." and escape included " or \ chars properly.
 			'' This also works if " or whitespace are included too.
+
+			#if defined(__FB_WIN32__) or defined(__FB_DOS__)
+				'' WIN32_HACKS
+				'' if there is exactly 2 single quotes at the start and end
+				'' then we probably want to just strip those off since the
+				'' shell didn't do it and we probably are passing something
+				'' like '*' or '*/filename' to prevent wildcard expansion
+
+				if arg = "''" then
+					arg = """"""
+				elseif len( arg ) > 2 then
+					if left( arg, 1 ) = "'" and right( arg, 1 ) = "'" then
+						arg = mid( arg, 2, len( arg ) - 2 )
+					end if
+				end if
+			#endif
 
 			'' Insert \\ for \ before inserting \" for ", so \" won't accidentally
 			'' be turned into \\".
@@ -287,6 +321,8 @@ private sub hLoadArgsFile _
 	end if
 
 	filename = hFindResource(filename)
+
+	filename = pathNormalizePathDiv(filename)
 
 	'' Load the file content at the specified position
 	lexLoadArgs(frog.sourcectx, tk, x, frog.sourcectx.addFileSource(filename, location))
@@ -470,11 +506,24 @@ private sub hParseIfCompound(byref tk as TokenBuffer, byref x as integer)
 	loop
 end sub
 
+private function hMaybeJoinOutputPath( byref filename as const string ) as string
+	function = filename
+	'' if the filename is relative and an output path was set
+	'' then join the the output path to the bi file to be emitted
+	if len(frog.outname) <> 0 then
+		if not pathIsAbsolute(frog.outname) then
+			if pathIsDir(frog.outname) then
+				function = pathAddDiv(frog.outname)+filename
+			end if
+		end if
+	end if
+end function
+
 private sub hParseDestinationBiFile(byref tk as TokenBuffer, byref x as integer)
 	'' [<destination .bi file>]
 	if hIsStringOrId(tk, x) then
 		assert(frog.script->tail->kind = ASTKIND_OPTION)
-		frog.script->tail->setAlias(tk.getText(x))
+		frog.script->tail->setAlias(hMaybeJoinOutputPath(*tk.getText(x)))
 		x += 1
 	end if
 end sub
@@ -525,7 +574,7 @@ private sub hParseArgs(byref tk as TokenBuffer, byref x as integer)
 			x += 1
 
 			hExpectStringOrId(tk, x, "<file> argument")
-			var filename = *tk.getText(x)
+			var filename = hMaybeJoinOutputPath(*tk.getText(x))
 			x += 1
 
 			frogAddBi(filename, pattern)
@@ -618,7 +667,7 @@ private sub hParseArgs(byref tk as TokenBuffer, byref x as integer)
 			dim header as HeaderInfo ptr
 			if hIsStringOrId(tk, x) then
 				'' .bi-specific -title option
-				var bi = frogLookupBiFromBi(*tk.getText(x))
+				var bi = frogLookupBiFromBi(hMaybeJoinOutputPath(*tk.getText(x)))
 				if bi < 0 then
 					tk.showErrorAndAbort(x, "unknown destination .bi")
 				end if
@@ -1106,6 +1155,7 @@ private function frogParse(byref api as ApiInfo) as AstNode ptr
 					assert(i->kind = ASTKIND_OPTION)
 					if i->opt = OPT_FBFROGINCLUDE then
 						var filename = hFindResource(*i->text)
+						filename = pathNormalizePathDiv(filename)
 						var x = tk.count()
 						lexLoadC(frog.sourcectx, tk, x, frog.sourcectx.addFileSource(filename, i->location))
 						tk.setRemove(x, tk.count() - 1)

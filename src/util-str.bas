@@ -42,12 +42,12 @@ end sub
 
 function strReplace _
 	( _
-		byref text as string, _
+		byref text as const string, _
 		byref a as string, _
 		byref b as string _
 	) as string
 
-	var result = text
+	dim result as string = text
 
 	var alen = len(a)
 	var blen = len(b)
@@ -183,6 +183,18 @@ function strMatch(byref s as const string, byref pattern as const string) as int
 	case "?", left(s, 1)
 		'' Current char matches; now check the rest.
 		return strMatch(right(s, len(s) - 1), right(pattern, len(pattern) - 1))
+
+#if defined(__FB_WIN32__) or defined(__FB_DOS__)
+	case "\"
+		return left(s,1) = "/" andalso _
+		       strMatch(right(s, len(s) - 1), right(pattern, len(pattern) - 1))
+
+	case "/"
+		return left(s,1) = "\" andalso _
+		       strMatch(right(s, len(s) - 1), right(pattern, len(pattern) - 1))
+
+#endif
+
 	end select
 
 	function = FALSE
