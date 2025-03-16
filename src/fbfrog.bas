@@ -231,7 +231,7 @@ private function hFindResource(byref filename as string) as string
 end function
 
 private sub hPrintHelpAndExit()
-	print "fbfrog 1.14 (built on " + __DATE_ISO__ + ")"
+	print "fbfrog 1.15 (built on " + __DATE_ISO__ + ")"
 	print "Usage: fbfrog foo.h [options]"
 	print "Common options:"
 	print "  -o <path/file>     Set output directory and/or file name"
