@@ -159,7 +159,13 @@ function hReadableDirExists(byref path as const string) as integer
 	if right(fixed, len(PATHDIV)) = PATHDIV then
 		fixed = left(fixed, len(fixed) - len(PATHDIV))
 	end if
-	function = (len(dir(fixed, fbDirectory or fbReadOnly or fbHidden)) > 0)
+	#if defined(__FB_WIN32__) or defined(__FB_DOS__)
+		dim attrib as integer = 0
+		var d = dir( fixed, fbDirectory or fbReadOnly or fbHidden or fbArchive, attrib )
+		function = (len(d) > 0) and ((attrib and fbDirectory) <> 0)
+	#else
+		function = (len(dir(fixed, fbDirectory or fbReadOnly or fbHidden)) > 0)
+	#endif
 end function
 
 function pathIsDir(byref s as const string) as integer
