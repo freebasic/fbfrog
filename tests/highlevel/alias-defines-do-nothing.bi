@@ -2,6 +2,9 @@
 
 extern "C"
 
+' Sometimes we don't know which declaration an alias define refers to.
+' In such cases it must not be turned into a declaration.
+
 type A
 	i as long
 end type

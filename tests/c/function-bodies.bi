@@ -15,9 +15,13 @@ private function f3(byval i as long) as long
 	return 0
 end function
 
+' Just a RETURN
+
 private sub f4()
 	return
 end sub
+
+' Anonymous parameter + body
 
 private function f(byval as long) as long
 	f(0)

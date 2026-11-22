@@ -4,6 +4,7 @@
 
 extern "C"
 
+' @ignore
 declare sub f1()
 
 end extern

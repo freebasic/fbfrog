@@ -1,5 +1,8 @@
 #pragma once
 
+' Initializer parsing cannot easily distinguish between struct & array initializers,
+' which look the same in C but have different syntax in FB.
+
 type Vector2A
 	x as long
 	y as long

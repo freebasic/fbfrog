@@ -79,6 +79,7 @@ end type
 type UDT11
 	field1 as UDT11_field1
 	field2 as UDT12
+	' Both should be CONST
 	a as const UDT11_a
 	b as const UDT11_a
 end type

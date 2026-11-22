@@ -2,12 +2,15 @@
 
 extern "C"
 
+' @fbfrog -fixunsizedarrays
 #define array1(i) ((@__array1)[i])
-extern __array1 alias "array1" as long
-extern array2(0 to 9) as long
+extern __array1 alias "array1" as long ' Needs to be fixed up, if size is unknown
+extern array2(0 to 9) as long ' Size known, do nothing
+' Same
 #define array3(i) ((@__array3)[i])
 dim shared __array3 as long
 dim shared array4(0 to 9) as long
+' Conflict with FB keyword too
 #define string(i) ((@__string)[i])
 extern __string alias "string" as long
 extern __zstring1 alias "zstring1" as byte

@@ -3,6 +3,8 @@
 '' The following symbols have been renamed:
 ''     struct A => B
 
+' @fbfrog -renametag A B
+
 type B
 	d as double
 end type

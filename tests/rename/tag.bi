@@ -6,6 +6,8 @@
 ''     struct A3 => B3
 ''     struct A4 => B4
 
+' @fbfrog -renametag A1 B1 -renametag A2 B2 -renametag A3 B3 -renametag A4 B4
+
 type a
 	f as long
 end type

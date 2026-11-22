@@ -1,5 +1,7 @@
 #pragma once
 
+' @fbfrog -declareversions VER 1 2 -selectversion -case 1 -define A -endselect
+
 type UDT1
 	field1 as long
 	field2 as long

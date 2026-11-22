@@ -2,6 +2,9 @@
 
 extern "C"
 
+' @fbfrog -v
+' Unknown constructs nested inside compound blocks
+
 type A
 	'' TODO: x;
 end type

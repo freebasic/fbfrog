@@ -1,5 +1,7 @@
 #pragma once
 
+' @fbfrog <dir>fixmingwaw.fbfrog
+
 #ifdef UNICODE
 	#define __MINGW_NAME_AW(s) s##W
 	#define __MINGW_NAME_AW_EXT(func, ext) func##W##ext

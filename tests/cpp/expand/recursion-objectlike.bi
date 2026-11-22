@@ -1,3 +1,4 @@
 #pragma once
 
-dim shared m as long
+' Recursion
+dim shared m as long ' -> m

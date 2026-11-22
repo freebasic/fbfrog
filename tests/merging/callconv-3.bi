@@ -2,10 +2,14 @@
 
 #ifdef __FB_64BIT__
 	extern "C"
-
-	#define CALLCONV
 #else
 	extern "Windows"
+#endif
+
+' @fbfrog -target windows -declarebool UNICODE -ifdef UNICODE -define UNICODE -endif
+
+#ifdef __FB_64BIT__
+	#define CALLCONV
 #endif
 
 type T1 as sub cdecl()

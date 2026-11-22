@@ -7,6 +7,7 @@ extern "C"
 type MYINT as long
 
 enum E
+	' atoms
 	A = A
 	A = A
 	A = cast(any, 0)
@@ -57,6 +58,7 @@ enum E
 	A = f(A)
 	A = f(1, 2, 3, 4)
 	A = f()
+	' UOPs
 	A = -(A = 0)
 	A = not A
 	A = -A
@@ -163,6 +165,7 @@ enum E
 	A = (-(-a)) mod b
 	A = -(-(a mod b))
 	A = (-(-a)) mod b
+	' infix BOPs
 	A = iif(a, b, c)
 	A = -(a orelse b)
 	A = -(a andalso b)
@@ -440,6 +443,7 @@ const A42 = cast(MYINT, 0)
 #define A45 ()
 #define A46 (1)
 #define A47 (1)
+' C UOP nested inside children list
 #define A48 (-(a = 0), -(a = 0))
 #define A49 scope : f(-(a = 0)) : end scope
 #define A50 defined(FOO)
@@ -455,12 +459,18 @@ const A42 = cast(MYINT, 0)
 	end scope
 #endmacro
 #define A57
+' Testing cast operator precedence
 #define MAKE_RGB(r, g, b) clng(culng((cbyte(r) or (cushort(cbyte(g)) shl 8)) or culng(culng(cbyte(b)) shl 16)))
+' A culng() cast needs to be added around this BOP, to ensure the result is
+' truncated to 32bit in FB 64bit
 const A58 = culng(0u - 100u)
 const A59 = culng(0u - 100)
 const A60 = 0 - 100
 const A61 = culng(0 - 100u)
+' Similar situation here - but the cast is already there, and we shouldn't add
+' another one.
 const A62 = culng(0u - 100u)
+' Expression type depending on the type of an existing symbol
 const A70 = culng(A58 - 1u)
 const A71 = culng(A58 - 1)
 const A72 = culng(culng(A58) - 1u)
@@ -484,28 +494,36 @@ const A77 = culng(culng(ENUMCONST1) - 1)
 	const A85 = A84
 #endif
 
+' Same but with forward references
+' simple alias
 const B00 = culng(0u - 100u)
 const B01 = B00
-#define B11 culng(B10 - 1)
+#define B11 culng(B10 - 1) ' "complex" math expression
 const B10 = culng(0u - 100u)
-#define B22 culng(B21 - 1)
+#define B22 culng(B21 - 1) ' extra indirection level
 #define B21 culng(B20 - 1)
 const B20 = culng(0u - 100u)
 #define B31 culng(B30 - 1)
-#define B32 culng(B31 - 1)
+#define B32 culng(B31 - 1) ' isn't a fwdref itself, but refers to one
 const B30 = culng(0u - 100u)
 #define A90(x) (@(x)->a[(x)->b])
-
 '' TODO: #define A100 struct { int i; }
 '' TODO: #define A101 struct UDT { int i; }
 '' TODO: #define A102 sizeof(struct { int i; })
 '' TODO: #define A103 sizeof(struct UDT { int i; })
 '' TODO: #define A104 (struct { int i; })x
 '' TODO: #define A105 (struct UDT { int i; })x
-
+' "a b" is probably a vardecl here, and it shouldn't be misparsed as string
+' literal sequence silently.
 #define A110 scope : /' TODO: a b; '/ : end scope
-#define mysizeof1(x) sizeof(x)
-#define mysizeof2(x) sizeof(x)
+' Testing the handling of parenthesized macro parameters
+' In general, fbfrog should
+'  - preserve parentheses around macro parameters
+'  - not add unnecessary parentheses
+'  - maybe add parentheses where they were missed/unnecessary in C, but would
+'    be useful in FB
+#define mysizeof1(x) sizeof(x) ' fbfrog shouldn't emit extra parentheses around the macro parameter here
+#define mysizeof2(x) sizeof(x) ' but here it probably should
 #define A120a(x) f(x, 1)
 #define A120b(x) f((x), 1)
 #define A121a(x) (1, x, 3)
@@ -518,6 +536,7 @@ const B30 = culng(0u - 100u)
 #define A124b(x) cptr(any ptr, (x))
 #define A125a(x) iif(x, x, x)
 #define A125b(x) iif((x), (x), (x))
+' Complex function calls
 #define NormalCall1 myFunction()
 #define NormalCall2 myFunction(1, 2)
 #define NormalCall3 myFunctionPtr(1, 2)

@@ -10,6 +10,8 @@
 
 extern "C"
 
+' @fbfrog -rename E E_ -rename A A_ -rename B B_ -rename f f_ -rename p p_ -rename i i_ -rename T T_
+
 enum E_
 	A_ = 0
 end enum

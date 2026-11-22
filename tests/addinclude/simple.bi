@@ -4,6 +4,7 @@
 
 extern "C"
 
+' @fbfrog -addinclude foo.bi
 declare sub simple()
 
 end extern

@@ -2,6 +2,8 @@
 
 extern "C"
 
+' @fbfrog -v
+
 private sub a()
 end sub
 

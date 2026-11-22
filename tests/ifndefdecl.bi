@@ -1,5 +1,6 @@
 #pragma once
 
+' @fbfrog -ifndefdecl NULL -ifndefdecl TRUE -ifndefdecl FALSE -ifndefdecl M1 -ifndefdecl M2 -ifndefdecl M3 -undefbeforedecl M3
 #ifndef NULL
 	const NULL = 0
 #endif

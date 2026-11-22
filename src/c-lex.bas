@@ -42,6 +42,8 @@ sub CLexer.skipLineComment()
 	i += 2
 	var escaped = FALSE
 
+	dim commenttext as string = ""
+
 	do
 		select case i[0]
 		case 0
@@ -53,38 +55,59 @@ sub CLexer.skipLineComment()
 			end if
 
 			if i[1] = CH_LF then	'' CRLF
+				commenttext += chr(CH_CR) + chr(CH_LF)
+				i += 2
+			else
+				commenttext += chr(CH_CR)
 				i += 1
 			end if
-			i += 1
 			newLine()
+			commenttext += " "
 
 		case CH_LF
 			if escaped = FALSE then
 				exit do
 			end if
+			commenttext += chr(CH_LF)
 			i += 1
 			newLine()
+			commenttext += " "
 
 		case CH_SPACE, CH_TAB
 			'' Spaces don't change escaped status
 			'' (at least gcc/clang support spaces between \ and EOL)
+			commenttext += chr(i[0])
 			i += 1
 
 		case CH_BACKSLASH
 			escaped = TRUE
+			commenttext += chr(i[0])
 			i += 1
 
 		case else
 			escaped = FALSE
+			commenttext += chr(i[0])
 			i += 1
 		end select
 	loop
+
+	'' Normalize to a single FB single-line comment.
+	if len(commenttext) > 0 andalso left(commenttext, 1) <> " " then
+		commenttext = " " + commenttext
+	end if
+	dim fbcomment as string = "'" + commenttext
+
+	behindspace = TRUE
+	tk->insert(x, TK_FBCODE, strptr(fbcomment))
+	setLocation()
 end sub
 
 '' /* C comment */
 sub CLexer.skipComment()
 	'' /*
 	i += 2
+
+	dim commenttext as string = ""
 
 	do
 		select case i[0]
@@ -95,26 +118,38 @@ sub CLexer.skipComment()
 			if i[1] = CH_SLASH then	'' */
 				exit do
 			end if
+			commenttext += "*"
 			i += 1
 
 		case CH_CR
 			if i[1] = CH_LF then	'' CRLF
+				commenttext += chr(CH_CR) + chr(CH_LF)
+				i += 2
+			else
+				commenttext += chr(CH_CR)
 				i += 1
 			end if
-			i += 1
 			newLine()
 
 		case CH_LF
+			commenttext += chr(CH_LF)
 			i += 1
 			newLine()
 
 		case else
+			commenttext += chr(i[0])
 			i += 1
 		end select
 	loop
 
 	'' */
 	i += 2
+
+	dim fbcomment as string = "/'" + commenttext + "'/"
+
+	behindspace = TRUE
+	tk->insert(x, TK_FBCODE, strptr(fbcomment))
+	setLocation()
 end sub
 
 '' Identifier/keyword lexing: sequences of A-Za-z0-9_

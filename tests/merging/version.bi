@@ -1,5 +1,6 @@
 #pragma once
 
+' @fbfrog -declareversions VER 1 -selectversion -case 1 -define VER 1 -endselect
 dim shared common as long
 dim shared v1 as long
 

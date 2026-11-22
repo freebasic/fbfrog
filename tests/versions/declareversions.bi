@@ -1,5 +1,7 @@
 #pragma once
 
+' @fbfrog <dir>declareversions.fbfrog
+
 #if VER = 1
 	dim shared i1 as long
 #elseif VER = 2

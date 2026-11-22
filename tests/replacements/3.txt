@@ -22,4 +22,4 @@
 [22/23] cygwin-x86_64
 [23/23] dos
 	tests/replacements/3.h
-emitting: tests/replacements/3.bi (3 declarations, 0 TODOs)
+emitting: tests/replacements/3.bi (2 declarations, 0 TODOs)

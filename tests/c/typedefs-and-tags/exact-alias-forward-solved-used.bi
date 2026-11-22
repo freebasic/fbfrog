@@ -7,5 +7,14 @@ type A
 end type
 
 declare sub f(byval as A ptr)
+/'
+
+type A
+	a as A ptr
+end type
+
+declare sub f(byval as A ptr)
+
+'/
 
 end extern

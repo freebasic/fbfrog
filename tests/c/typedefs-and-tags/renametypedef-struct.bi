@@ -3,6 +3,8 @@
 '' The following symbols have been renamed:
 ''     typedef A => myint
 
+' @fbfrog -renametypedef A myint
+
 type A
 	d as double
 end type

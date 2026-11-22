@@ -5,6 +5,7 @@
 
 extern "C"
 
+' @fbfrog -rename x1 x2
 extern a alias "b" as long
 extern a alias "b" as long
 extern a alias "b" as long

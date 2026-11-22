@@ -1013,7 +1013,24 @@ sub CodeGen.emitCode(byval n as AstNode ptr, byval parentkind as integer)
 		comment -= 1
 
 	case ASTKIND_FBCODE
-		emitLines(n->text)
+		'' Trailing comments (same source line as the previous sibling)
+		'' are emitted on the same line instead of on their own line.
+		var is_trailing = FALSE
+		if n->prev <> NULL then
+			if n->prev->location.value <> 0 andalso n->prev->location.value = n->location.value then
+				is_trailing = TRUE
+			end if
+		end if
+		if is_trailing then
+			if tokens.count > 0 andalso tokens.get(tokens.count - 1) = TK_EOL then
+				tokens.removeLast()
+			end if
+			add(TK_SPACE)
+			add(TK_TEXT, n->text)
+			eol()
+		else
+			emitLines(n->text)
+		end if
 
 	case ASTKIND_RENAMELIST
 		var added_indent = FALSE

@@ -12,6 +12,7 @@
 
 extern "C"
 
+' @ignore
 declare sub bispecific1()
 
 end extern
