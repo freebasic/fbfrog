@@ -2,6 +2,7 @@
 
 extern "Windows-MS"
 
+' @fbfrog -windowsms
 declare sub f1()
 declare sub f2()
 declare sub f3()

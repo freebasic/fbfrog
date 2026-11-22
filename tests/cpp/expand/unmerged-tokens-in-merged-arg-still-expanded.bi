@@ -1,5 +1,6 @@
 #pragma once
 
+' @fbfrog -removedefine m2
 #define identifier a
 #define m1(x) stat##x
 dim shared a as long

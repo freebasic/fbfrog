@@ -1,7 +1,6 @@
 #pragma once
 
-type E as long
-enum
+enum E
 	FOO = 1
 end enum
 

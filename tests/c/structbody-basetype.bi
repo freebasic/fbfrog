@@ -52,15 +52,13 @@ end union
 
 declare function f8() as UDT8
 
-type f9 as long
-enum
+enum f9
 	A = 0
 end enum
 
 declare function f9() as f9
 
-type UDT10 as long
-enum
+enum UDT10
 	B = 0
 end enum
 
@@ -81,6 +79,7 @@ end type
 type UDT11
 	field1 as UDT11_field1
 	field2 as UDT12
+	' Both should be CONST
 	a as const UDT11_a
 	b as const UDT11_a
 end type

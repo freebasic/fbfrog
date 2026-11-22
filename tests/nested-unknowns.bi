@@ -2,6 +2,9 @@
 
 extern "C"
 
+' @fbfrog -v
+' Unknown constructs nested inside compound blocks
+
 type A
 	'' TODO: x;
 end type
@@ -10,8 +13,7 @@ union B
 	'' TODO: x;
 end union
 
-type C as long
-enum
+enum C
 	'' TODO: x;
 end enum
 

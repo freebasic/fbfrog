@@ -1,5 +1,6 @@
 #pragma once
 
+' @fbfrog -removeEmptyReservedDefines
 #define A
 const B = 1
 const _B = 1

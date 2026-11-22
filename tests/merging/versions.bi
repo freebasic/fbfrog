@@ -1,5 +1,6 @@
 #pragma once
 
+' @fbfrog <dir>versions.fbfrog
 dim shared common as long
 
 #if VER = 1

@@ -2,6 +2,8 @@
 
 extern "C"
 
+' Anonymous, will be given a temp id, requiring AST fix up later
+
 type A
 	i as long
 end type

@@ -2,6 +2,7 @@
 
 extern "C"
 
+' @fbfrog -setarraysize s1 10 -setarraysize s2 20 -setarraysize s3 30 -setarraysize i1 15 -setarraysize i2 25 -setarraysize i3 35 -setarraysize s4 'len("foo")' -setarraysize array10x20 10
 extern s1 as zstring * 10
 extern i1(0 to 15 - 1) as long
 

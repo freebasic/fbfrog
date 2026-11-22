@@ -1,5 +1,7 @@
 #pragma once
 
+' @fbfrog -declarebool A -ifdef A -define A -endif
+
 #ifdef A
 	dim shared i1 as long
 #else

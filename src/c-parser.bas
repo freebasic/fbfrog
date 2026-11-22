@@ -800,6 +800,20 @@ function CParser.parseEnumConst() as AstNode ptr
 		enumconst->expr = parseExpr(FALSE, FALSE)
 	end if
 
+	'' Trailing comments (same source line as the enum constant)
+	var hasTrailingComments = (tk->get(x) = TK_FBCODE)
+	dim as AstNode ptr trailingComments = NULL
+	if hasTrailingComments then
+		trailingComments = astNewGROUP()
+		trailingComments->append(enumconst)
+		while tk->get(x) = TK_FBCODE
+			var cn = astNew(ASTKIND_FBCODE, tk->getText(x))
+			cn->location = tk->getLocation(x)
+			trailingComments->append(cn)
+			x += 1
+		wend
+	end if
+
 	'' (',' | '}')
 	select case tk->get(x)
 	case TK_COMMA
@@ -811,7 +825,11 @@ function CParser.parseEnumConst() as AstNode ptr
 		showError("expected ',' or '}' behind enum constant" + tk->butFound(x))
 	end select
 
-	function = enumconst
+	if trailingComments then
+		function = trailingComments
+	else
+		function = enumconst
+	end if
 end function
 
 '' {STRUCT|UNION|ENUM} [Identifier] '{' StructBody|EnumBody '}'
@@ -1044,6 +1062,10 @@ function CParser.parseDefineBodyToken() as string
 	case TK_NUMBER, TK_STRING, TK_WSTRING, TK_CHAR, TK_WCHAR
 		function = parseDefineBodyTokenLiteral()
 
+	case TK_FBCODE
+		x += 1
+		function = ""
+
 	case TK_EXCLEQ    : function = "<>"      : x += 1  '' !=
 	case TK_PERCENT   : function = "mod"     : x += 1  '' %
 	case TK_PERCENTEQ : function = "mod="    : x += 1  '' %=
@@ -1250,6 +1272,29 @@ function CParser.parseDefine() as AstNode ptr
 	'' Identifier ['(' ParameterList ')']
 	var macro = hDefineHead(*tk, x)
 
+	'' Collect trailing comments at the end of the #define body line,
+	'' so they don't confuse body parsing and can be emitted separately.
+	dim trailingComments as AstNode ptr = NULL
+	scope
+		var y = x
+		while (y < tk->count()) and (tk->get(y) <> TK_EOL) and (tk->get(y) <> TK_EOF)
+			y += 1
+		wend
+		var firstComment = y
+		while (firstComment > x) and (tk->get(firstComment - 1) = TK_FBCODE)
+			firstComment -= 1
+		wend
+		if firstComment < y then
+			trailingComments = astNewGROUP()
+			for i as integer = firstComment to y - 1
+				var cn = astNew(ASTKIND_FBCODE, tk->getText(i))
+				cn->location = tk->getLocation(i)
+				trailingComments->append(cn)
+			next
+			tk->remove(firstComment, y - 1)
+		end if
+	end scope
+
 	'' Body?
 	var add_to_ast = TRUE
 	assert(macro->expr = NULL)
@@ -1278,6 +1323,27 @@ function CParser.parseDefine() as AstNode ptr
 		delete macro
 		macro = astNewGROUP()
 	end if
+
+	'' Append preserved trailing comments, if any.
+	if trailingComments <> NULL then
+		if macro->kind = ASTKIND_PPDEFINE then
+			var g = astNewGROUP()
+			g->append(macro)
+			while trailingComments->head
+				var c = trailingComments->head
+				trailingComments->unlink(c)
+				g->append(c)
+			wend
+			macro = g
+		else
+			while trailingComments->head
+				var c = trailingComments->head
+				trailingComments->unlink(c)
+				macro->append(c)
+			wend
+		end if
+	end if
+
 	function = macro
 end function
 
@@ -1287,12 +1353,26 @@ function CParser.parseUndef() as AstNode ptr
 
 	'' id
 	assert(tk->get(x) >= TK_ID)
-	function = astNew(ASTKIND_UNDEF, tk->spellId(x))
+	var undefnode = astNew(ASTKIND_UNDEF, tk->spellId(x))
 	x += 1
 
-	'' Eol
+	'' Eol (possibly with trailing comments)
+	if tk->get(x) = TK_FBCODE then
+		var g = astNewGROUP()
+		g->append(undefnode)
+		while tk->get(x) = TK_FBCODE
+			var cn = astNew(ASTKIND_FBCODE, tk->getText(x))
+			cn->location = tk->getLocation(x)
+			g->append(cn)
+			x += 1
+		wend
+		undefnode = g
+	end if
+
 	assert(tk->get(x) = TK_EOL)
 	x += 1
+
+	function = undefnode
 end function
 
 function CParser.parseInclude() as AstNode ptr
@@ -1323,11 +1403,24 @@ function CParser.parseInclude() as AstNode ptr
 		delete s
 	end if
 
-	'' Eol
+	'' Eol (possibly with trailing comments)
+	var incnode = astNew(ASTKIND_PPINCLUDE, filename)
+	if tk->get(x) = TK_FBCODE then
+		var g = astNewGROUP()
+		g->append(incnode)
+		while tk->get(x) = TK_FBCODE
+			var cn = astNew(ASTKIND_FBCODE, tk->getText(x))
+			cn->location = tk->getLocation(x)
+			g->append(cn)
+			x += 1
+		wend
+		incnode = g
+	end if
+
 	assert(tk->get(x) = TK_EOL)
 	x += 1
 
-	function = astNew(ASTKIND_PPINCLUDE, filename)
+	function = incnode
 end function
 
 function CParser.parsePragmaPackNumber() as integer
@@ -1402,12 +1495,18 @@ function CParser.parsePragmaPack() as AstNode ptr
 	'' ')'
 	expectMatch(TK_RPAREN, "as in '#pragma pack(...)'")
 
-	'' Eol
+	'' Eol (possibly with trailing comments)
+	var packresult = astNewGROUP()
+	while tk->get(x) = TK_FBCODE
+		var cn = astNew(ASTKIND_FBCODE, tk->getText(x)) : cn->location = tk->getLocation(x) : packresult->append(cn)
+		x += 1
+	wend
+
 	assert(tk->get(x) = TK_EOL)
 	x += 1
 
 	'' Don't preserve the directive
-	function = astNewGROUP()
+	function = packresult
 end function
 
 '' #pragma comment(lib, "...")
@@ -1443,6 +1542,15 @@ function CParser.parsePragmaComment() as AstNode ptr
 	assert(tk->get(x) = TK_RPAREN)
 	x += 1
 
+	dim pragmaTrailing as AstNode ptr = NULL
+	if tk->get(x) = TK_FBCODE then
+		pragmaTrailing = astNewGROUP()
+		while tk->get(x) = TK_FBCODE
+			var cn = astNew(ASTKIND_FBCODE, tk->getText(x)) : cn->location = tk->getLocation(x) : pragmaTrailing->append(cn)
+			x += 1
+		wend
+	end if
+
 	assert(tk->get(x) = TK_EOL)
 	x += 1
 
@@ -1468,7 +1576,18 @@ function CParser.parsePragmaComment() as AstNode ptr
 		libname = left(libname, len(libname) - 2)
 	end if
 
-	function = astNew(ASTKIND_INCLIB, libname)
+	if pragmaTrailing <> NULL then
+		var g = astNewGROUP()
+		g->append(astNew(ASTKIND_INCLIB, libname))
+		while pragmaTrailing->head
+			var c = pragmaTrailing->head
+			pragmaTrailing->unlink(c)
+			g->append(c)
+		wend
+		function = g
+	else
+		function = astNew(ASTKIND_INCLIB, libname)
+	end if
 end function
 
 ''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
@@ -2644,6 +2763,7 @@ end function
 function CParser.parseConstruct(byval bodyastkind as integer) as AstNode ptr
 	if tk->get(x) = TK_FBCODE then
 		var n = astNew(ASTKIND_FBCODE, tk->getText(x))
+		n->location = tk->getLocation(x)
 		x += 1
 		return n
 	end if

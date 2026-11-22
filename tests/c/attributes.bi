@@ -37,11 +37,16 @@ declare sub f()
 extern import i as long
 
 #ifdef __FB_WIN32__
+	' Ok:
 	extern import i as long
 	extern import i as long
+	' Implicitly extern:
 	extern import i as long
+	' Doesn't make sense:
 	'' TODO: __attribute__((dllimport)) static int a;
 	'' TODO: static __attribute__((dllimport)) int b;
+	' Doesn't make sense, but exists in real headers (dllexport attribute
+	' should be ignored here):
 	extern i as long
 	declare sub f()
 #endif
@@ -49,6 +54,8 @@ extern import i as long
 declare sub f()
 declare sub f()
 declare sub f()
+' #defines containing only __attribute__'s should just be stripped automatically,
+' as they're useless for FB
 dim shared attribute_defines as long
 
 type alignment_
@@ -96,56 +103,73 @@ extern f1 as sub stdcall()
 extern f1 as sub stdcall()
 extern f1 as sub stdcall()
 extern separator1 as long
+'      function f( byval a as long ) as sub stdcall( byval b as long )
 extern _function_f__byval_a_as_long___as_sub_stdcall__byval_b_as_long as long
 declare function f(byval a as long) as sub stdcall(byval b as long)
 extern separator2 as long
+'      function f( byval a as long ) as sub stdcall( byval b as long )
 extern _function_f__byval_a_as_long___as_sub_stdcall__byval_b_as_long as long
 declare function f(byval a as long) as sub stdcall(byval b as long)
 extern separator3 as long
+'      function f stdcall( byval a as long ) as sub( byval b as long )
 extern _function_f_stdcall__byval_a_as_long___as_sub__byval_b_as_long as long
 declare function f stdcall(byval a as long) as sub(byval b as long)
 extern separator4 as long
+'      function f stdcall( byval a as long ) as sub( byval b as long )
 extern _function_f_stdcall__byval_a_as_long___as_sub__byval_b_as_long as long
 declare function f stdcall(byval a as long) as sub(byval b as long)
 extern separator5 as long
+'      function f stdcall( byval a as long ) as sub( byval b as long )
 extern _function_f_stdcall__byval_a_as_long___as_sub__byval_b_as_long as long
 declare function f stdcall(byval a as long) as sub(byval b as long)
 extern separator6 as long
+'      function f stdcall( byval a as long ) as function( byval b as long ) as sub( byval c as long )
 extern _function_f_stdcall__byval_a_as_long___as_function__byval_b_as_long___as_sub__byval_c_as_long as long
 declare function f stdcall(byval a as long) as function(byval b as long) as sub(byval c as long)
 extern separator7 as long
+'      function f stdcall( byval a as long ) as function( byval b as long ) as sub( byval c as long )
 extern _function_f_stdcall__byval_a_as_long___as_function__byval_b_as_long___as_sub__byval_c_as_long as long
 declare function f stdcall(byval a as long) as function(byval b as long) as sub(byval c as long)
 extern separator8 as long
+'      function f stdcall( byval a as long ) as function( byval b as long ) as sub( byval c as long )
 extern _function_f_stdcall__byval_a_as_long___as_function__byval_b_as_long___as_sub__byval_c_as_long as long
 declare function f stdcall(byval a as long) as function(byval b as long) as sub(byval c as long)
 extern separator9 as long
+'      function f( byval a as long ) as function( byval b as long ) as sub stdcall( byval c as long )
 extern _function_f__byval_a_as_long___as_function__byval_b_as_long___as_sub_stdcall__byval_c_as_long as long
 declare function f(byval a as long) as function(byval b as long) as sub stdcall(byval c as long)
 extern separator10 as long
+'      function f( byval a as long ) as function stdcall( byval b as long ) as sub( byval c as long )
 extern _function_f__byval_a_as_long___as_function_stdcall__byval_b_as_long___as_sub__byval_c_as_long as long
 declare function f(byval a as long) as function stdcall(byval b as long) as sub(byval c as long)
 extern separator11 as long
+'     p as function stdcall( byval a as long ) as sub( byval b as long )
 extern p_as_function_stdcall__byval_a_as_long___as_sub__byval_b_as_long as long
 extern p as function stdcall(byval a as long) as sub(byval b as long)
 extern p as function stdcall(byval a as long) as sub(byval b as long)
 extern p as function stdcall(byval a as long) as sub(byval b as long)
 extern separator12 as long
+'     p as function( byval a as long ) as sub stdcall( byval b as long )
 extern p_as_function__byval_a_as_long___as_sub_stdcall__byval_b_as_long as long
 extern p as function(byval a as long) as sub stdcall(byval b as long)
 extern separator13 as long
+'      sub f stdcall( )
 extern _sub_f_stdcall as long
 
 declare sub f stdcall()
 declare sub f stdcall()
 declare sub f stdcall()
+
 extern separator14 as long
+'      function f stdcall( ) as sub( )
 extern _function_f_stdcall____as_sub as long
+
 declare function f stdcall() as sub()
 declare function f stdcall() as sub()
 declare function f stdcall() as sub()
 
 extern separator15 as long
+'     p as sub stdcall( )
 extern p_as_sub_stdcall as long
 extern p as sub stdcall()
 extern p as sub stdcall()
@@ -171,6 +195,7 @@ extern p as sub stdcall()
 extern p as sub stdcall()
 extern p as sub stdcall()
 extern p as sub stdcall()
+' Lots of cdecl procedures to get fbfrog to generate Extern "C" instead of Extern "Windows"
 
 declare sub f()
 declare sub f()
@@ -254,6 +279,7 @@ type B3 field = 1
 end type
 
 type PFUDT6 as function() as B3
+' stdcall here is wrong, and should be ignored
 
 type C1
 	a as short
@@ -366,6 +392,8 @@ extern p as sub stdcall(byval p as sub stdcall())
 type T
 	i as long
 end type
+
+' When ignoring some attributes we shouldn't miss important ones
 
 type ShouldBePacked field = 1
 	i as long

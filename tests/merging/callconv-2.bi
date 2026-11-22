@@ -6,6 +6,7 @@
 	extern "C"
 #endif
 
+' @fbfrog -removedefine CALLCONV
 declare sub f1 cdecl()
 declare sub f2 cdecl()
 declare sub f3()

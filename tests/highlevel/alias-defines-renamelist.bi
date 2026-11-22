@@ -5,6 +5,7 @@
 
 extern "C"
 
+' @fbfrog -rename FOO BAR
 const C1 = 123
 const C2 = C1
 type T1 as long

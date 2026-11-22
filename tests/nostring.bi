@@ -2,6 +2,7 @@
 
 extern "C"
 
+' @fbfrog -nostring field2 -nostring var2 -nostring p2 -nostring CHAR
 extern var1 as zstring * 100
 extern var2(0 to 99) as byte
 

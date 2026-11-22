@@ -3,8 +3,9 @@
 '' The following symbols have been renamed:
 ''     enum A => B
 
-type B as long
-enum
+' @fbfrog -renametag A B
+
+enum B
 	FOO
 end enum
 

@@ -2,6 +2,7 @@
 
 extern "C"
 
+' @fbfrog -removedefine m1
 dim shared id_id as long
 declare sub idid()
 dim shared id_param as long
@@ -29,7 +30,6 @@ dim shared param1_id_param2 as long
 declare sub arg1idarg2()
 dim shared param1_param2_param3 as long
 declare sub abc()
-
 dim shared merge_affects_only_first_or_last_token_of_an_arg as long
 dim shared A as left_UDT
 dim shared A_right as UDT
@@ -42,178 +42,163 @@ dim shared spacedid_spacedparam as long
 declare sub spacedidarg()
 dim shared spacedid_spacedparam as long
 declare sub spacedidarg()
+' ------------------------------------------------------------------------------
 dim shared id_mm_decnum_to_id as long
 
-type E as long
-enum
+enum E
 	A = id1
 	A = id1
 end enum
 
 dim shared id_mm_hexnum_to_id as long
 
-type E as long
-enum
+enum E
 	A = id0x1
 	A = id0x1
 end enum
 
 dim shared id_mm_octnum_to_id as long
 
-type E as long
-enum
+enum E
 	A = id01
 	A = id01
 end enum
 
 dim shared id_mm_kw_to_id as long
 
-type E as long
-enum
+enum E
 	A = idstruct
 	A = idstruct
 end enum
 
 dim shared kw_mm_id_to_id as long
 
-type E as long
-enum
+enum E
 	A = structid
 	A = structid
 end enum
 
+' ------------------------------------------------------------------------------
 dim shared decnum_mm_id_to_hexnum as long
 
-type E as long
-enum
+enum E
 	A = &hFF
 	A = &hFF
 end enum
 
 dim shared decnum_mm_decnum_to_decnum as long
 
-type E as long
-enum
+enum E
 	A = 11
 	A = 11
 end enum
 
 dim shared decnum_mm_decnum_to_octnum as long
 
-type E as long
-enum
+enum E
 	A = &o100
 	A = &o100
 end enum
 
 dim shared decnum_mm_octnum_to_decnum as long
 
-type E as long
-enum
+enum E
 	A = 101
 	A = 101
 end enum
 
+' ------------------------------------------------------------------------------
 dim shared octnum_mm_decnum_to_octnum as long
 
-type E as long
-enum
+enum E
 	A = &o11
 	A = &o11
 end enum
 
+' ------------------------------------------------------------------------------
 dim shared hexnum_mm_id_to_hexnum as long
 
-type E as long
-enum
+enum E
 	A = &hAABB
 	A = &hAABB
 end enum
 
 dim shared hexnum_mm_decnum_to_hexnum as long
 
-type E as long
-enum
+enum E
 	A = &hAA123
 	A = &hAA123
 end enum
 
 dim shared hexnum_mm_octnum_to_hexnum as long
 
-type E as long
-enum
+enum E
 	A = &hAA0123
 	A = &hAA0123
 end enum
 
+' ------------------------------------------------------------------------------
 dim shared decnum_mm_id_mm_decnum_to_hexnum as long
 
-type E as long
-enum
+enum E
 	A = &h100
 	A = &h100
 end enum
 
 dim shared decnum_mm_id_mm_id_to_hexnum as long
 
-type E as long
-enum
+enum E
 	A = &hFF
 	A = &hFF
 end enum
 
 dim shared decnum_mm_id_mm_id_to_hexnum as long
 
-type E as long
-enum
+enum E
 	A = &hFF
 	A = &hFF
 end enum
 
+' ------------------------------------------------------------------------------
 dim shared __1_0 as long
 
-type E as long
-enum
+enum E
 	A = 10
 	A = 10
 end enum
 
 dim shared __0_1 as long
 
-type E as long
-enum
+enum E
 	A = &o1
 	A = &o1
 end enum
 
 dim shared __0_0 as long
 
-type E as long
-enum
+enum E
 	A = &o0
 	A = &o0
 end enum
 
 dim shared __123_000 as long
 
-type E as long
-enum
+enum E
 	A = 123000
 	A = 123000
 end enum
 
 dim shared __000_123 as long
 
-type E as long
-enum
+enum E
 	A = &o00123
 	A = &o00123
 end enum
 
+' ------------------------------------------------------------------------------
 dim shared __param_0 as long
 
-type E as long
-enum
+enum E
 	A = &o0000
 	A = &o0000
 	B = 10
@@ -228,8 +213,7 @@ end enum
 
 dim shared __param_00 as long
 
-type E as long
-enum
+enum E
 	A = &o00000
 	A = &o00000
 	B = 100
@@ -244,8 +228,7 @@ end enum
 
 dim shared __param_123 as long
 
-type E as long
-enum
+enum E
 	A = arg123
 	A = arg123
 	B = 123123
@@ -262,8 +245,7 @@ end enum
 
 dim shared __param_FF as long
 
-type E as long
-enum
+enum E
 	A = argFF
 	A = argFF
 	B = &hFF
@@ -276,8 +258,7 @@ end enum
 
 dim shared __param_aa as long
 
-type E as long
-enum
+enum E
 	A = argaa
 	A = argaa
 	B = &haa
@@ -290,18 +271,17 @@ end enum
 
 dim shared __param_0x as long
 
-type E as long
-enum
+enum E
 	A = arg0x
 	A = arg0x
 	B = &h
 	B = &h
 end enum
 
+' ------------------------------------------------------------------------------
 dim shared __0_param as long
 
-type E as long
-enum
+enum E
 	A = &o0000
 	A = &o0000
 	B = &o1
@@ -318,6 +298,7 @@ enum
 	G = 0
 end enum
 
+' ------------------------------------------------------------------------------
 dim shared __L_char as long
 declare sub f(byval w as wchar_t = asc(wstr("a")))
 dim shared __L_string as long

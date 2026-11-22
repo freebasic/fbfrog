@@ -1,3 +1,5 @@
 #pragma once
 
-dim shared m1 as long
+' @fbfrog -removedefine m1
+' Recursion after pasting
+dim shared m1 as long ' -> m1

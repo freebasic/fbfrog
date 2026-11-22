@@ -2,6 +2,7 @@
 
 extern "C"
 
+' @fbfrog -removedefine m
 declare sub f()
 declare sub f()
 type b as a

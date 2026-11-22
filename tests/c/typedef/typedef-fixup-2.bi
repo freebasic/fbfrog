@@ -2,6 +2,9 @@
 
 extern "C"
 
+' B shouldn't be typedeffed to A here; since A is a pointer to the struct it
+' shouldn't be seen as alias for it. B should be used as the alias.
+
 type B1
 	i as long
 end type

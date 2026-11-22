@@ -1,5 +1,6 @@
 #pragma once
 
+' @fbfrog -v
 '' TODO: static int i1 = 1a;
 '' TODO: static int i2 = 1z;
 '' TODO: static int i3 = 1uu;

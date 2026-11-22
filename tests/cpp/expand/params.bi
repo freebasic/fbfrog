@@ -2,6 +2,7 @@
 
 extern "C"
 
+' @fbfrog -removedefine m
 declare sub f()
 declare function f(byval as long, byval as long) as long
 declare sub bar()

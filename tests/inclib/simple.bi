@@ -10,6 +10,7 @@
 
 extern "C"
 
+' @fbfrog <dir>simple.fbfrog
 declare sub f()
 
 end extern

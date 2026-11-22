@@ -3,6 +3,8 @@
 '' The following symbols have been renamed:
 ''     union A => B
 
+' @fbfrog -renametag A B
+
 union B
 	d as double
 end union

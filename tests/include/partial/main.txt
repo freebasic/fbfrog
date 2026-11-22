@@ -24,4 +24,4 @@
 	tests/include/partial/main.h
 	tests/include/partial/field.h
 	tests/include/partial/param.h
-emitting: tests/include/partial/main.bi (2 declarations, 0 TODOs)
+emitting: tests/include/partial/main.bi (1 declaration, 1 TODO)

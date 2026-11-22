@@ -1013,7 +1013,24 @@ sub CodeGen.emitCode(byval n as AstNode ptr, byval parentkind as integer)
 		comment -= 1
 
 	case ASTKIND_FBCODE
-		emitLines(n->text)
+		'' Trailing comments (same source line as the previous sibling)
+		'' are emitted on the same line instead of on their own line.
+		var is_trailing = FALSE
+		if n->prev <> NULL then
+			if n->prev->location.value <> 0 andalso n->prev->location.value = n->location.value then
+				is_trailing = TRUE
+			end if
+		end if
+		if is_trailing then
+			if tokens.count > 0 andalso tokens.get(tokens.count - 1) = TK_EOL then
+				tokens.removeLast()
+			end if
+			add(TK_SPACE)
+			add(TK_TEXT, n->text)
+			eol()
+		else
+			emitLines(n->text)
+		end if
 
 	case ASTKIND_RENAMELIST
 		var added_indent = FALSE
@@ -1148,18 +1165,6 @@ sub CodeGen.emitCode(byval n as AstNode ptr, byval parentkind as integer)
 		eol()
 
 	case ASTKIND_STRUCT, ASTKIND_UNION, ASTKIND_ENUM
-		if (n->kind = ASTKIND_ENUM) and (n->text <> NULL) then
-			bol()
-			add(KW_TYPE)
-			add(TK_SPACE)
-			add(TK_ID, n->text)
-			add(TK_SPACE)
-			add(KW_AS)
-			add(TK_SPACE)
-			add(KW_LONG)
-			emitTodoForQuirkKeywordType(n->text)
-			eol()
-		end if
 
 		'' If it's a struct inside a struct, or union inside union,
 		'' insert a union/struct in between respectively, to make it
@@ -1182,7 +1187,7 @@ sub CodeGen.emitCode(byval n as AstNode ptr, byval parentkind as integer)
 
 		bol()
 		add(compound)
-		if (n->kind <> ASTKIND_ENUM) and (n->text <> NULL) then
+		if n->text <> NULL then
 			add(TK_SPACE)
 			add(TK_ID, n->text)
 		end if
@@ -1200,7 +1205,7 @@ sub CodeGen.emitCode(byval n as AstNode ptr, byval parentkind as integer)
 			add(TK_SPACE)
 			add(TK_NUMLIT, str(fieldalign))
 		end if
-		if (n->kind <> ASTKIND_ENUM) and (n->text <> NULL) then
+		if n->text <> NULL then
 			emitTodoForQuirkKeywordType(n->text)
 		end if
 		eol()

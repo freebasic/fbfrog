@@ -1,6 +1,7 @@
 #pragma once
 
-type E as long
-enum
+' @fbfrog -v -removedefine m
+
+enum E
 	'' TODO: A = 0xG
 end enum

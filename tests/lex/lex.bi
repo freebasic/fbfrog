@@ -108,14 +108,47 @@ const A47 = &b0
 #define H5 !"\255"
 #define H6 !"\170"
 #define H7 !"a\0g"
+/' foo '/
+' foo
+/'*
+ * Comments like this
+ '/
+/' /' '/
+/' '/'/' '/
+/'''/
+/'/'/
+/'/'/'/
+' Even stray form feed characters
+/' Some escaped newlines '/
+
 declare sub f()
+' single-line \
+ comment \
+ across \
+ multiple \
+ lines
+/' escaped
+
+\
+newlines
+inside\
+multi-line\
+comment '/
+' escaped newline in string literal
+
 #define Z1 "abcdef"
 #define Z2 "abcdef"
 #define Z3 ""
 #define Z4 ""
+' behindspace must be set correctly where it matters...
+' same as M1(x) -- function-like macro, escaped EOL not treated as space
 #define M1 (x + 1)
+' same as M2 (x) -- object-like macro, space shouldn't be ignored
 #define M2 (x + 1)
-#define M3 (x + 1)
-#define M4 (x + 1)
+' object-like macro, comment treated as space
+
+'' TODO: #define M3 [TK_FBCODE /''/](x) + 1
+' object-like macro, comment treated as space
+'' TODO: #define M4 [TK_FBCODE /'\n'/](x) + 1
 
 end extern

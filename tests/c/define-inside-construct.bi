@@ -2,8 +2,7 @@
 
 extern "C"
 
-type E as long
-enum
+enum E
 	A1 = 1
 	A2 = 2
 end enum

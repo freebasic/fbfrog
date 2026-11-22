@@ -285,6 +285,11 @@ function CppContext.lookupOrAppendKnownFile(byval incfile as zstring ptr, byref 
 end function
 
 sub CppContext.parseEol()
+	'' Allow (and preserve) trailing comments behind CPP directives.
+	while tk->get(x) = TK_FBCODE
+		x += 1
+	wend
+
 	if tk->get(x) <> TK_EOL then
 		tk->oopsExpected(x, "end-of-line behind CPP directive")
 	end if
@@ -2032,6 +2037,11 @@ function CppContext.parsePragma(byref flags as integer) as integer
 		'' ')'
 		tk->expect(x, TK_RPAREN, "for #pragma comment(...)")
 		x += 1
+
+		'' Preserve trailing comments (they remain in token stream)
+		while tk->get(x) = TK_FBCODE
+			x += 1
+		wend
 
 	case "GCC"
 		x += 1

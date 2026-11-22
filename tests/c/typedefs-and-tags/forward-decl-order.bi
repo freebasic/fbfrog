@@ -2,6 +2,10 @@
 
 extern "C"
 
+' Since fbfrog now inserts forward declarations right above the first
+' declarations that are using them, the order in which they are added only
+' matters if there are multiple forward declarations that have to be added
+' for a single declaration.
 type A as A_
 type B as B_
 

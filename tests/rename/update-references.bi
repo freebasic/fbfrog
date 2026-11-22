@@ -9,6 +9,8 @@
 
 extern "C"
 
+' @fbfrog -renametag A1 A2 -renametypedef B1 B2 -renamedefine C1 C2 -renamedefine D1 D2 -renameproc E1 E2
+
 type A2
 	i as long
 end type
@@ -17,6 +19,7 @@ type B2 as long
 const C2 = 123
 #define D2(x) x
 declare function E2 alias "E1"(byval as long) as long
+' When the above symbols are renamed, these references to them should be updated too
 type Ref1 as A2
 type Ref2 as B2
 const Ref3 = C2
