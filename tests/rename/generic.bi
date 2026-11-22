@@ -10,8 +10,7 @@
 
 extern "C"
 
-type E_ as long
-enum
+enum E_
 	A_ = 0
 end enum
 

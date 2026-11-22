@@ -52,15 +52,13 @@ end union
 
 declare function f8() as UDT8
 
-type f9 as long
-enum
+enum f9
 	A = 0
 end enum
 
 declare function f9() as f9
 
-type UDT10 as long
-enum
+enum UDT10
 	B = 0
 end enum
 

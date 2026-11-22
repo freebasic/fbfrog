@@ -42,8 +42,7 @@ end union
 type Union2 as Union1
 type Union2_ as Union1
 
-type Enum1 as long
-enum
+enum Enum1
 	Enum1_dummy = 0
 end enum
 

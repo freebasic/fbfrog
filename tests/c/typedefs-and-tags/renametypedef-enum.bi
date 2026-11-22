@@ -3,8 +3,7 @@
 '' The following symbols have been renamed:
 ''     typedef A => myint
 
-type A as long
-enum
+enum A
 	FOO
 end enum
 

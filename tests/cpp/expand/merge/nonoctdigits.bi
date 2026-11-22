@@ -1,6 +1,5 @@
 #pragma once
 
-type E as long
-enum
+enum E
 	'' TODO: A = 08
 end enum

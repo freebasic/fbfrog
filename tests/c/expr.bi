@@ -6,8 +6,7 @@ extern "C"
 
 type MYINT as long
 
-type E as long
-enum
+enum E
 	A = A
 	A = A
 	A = cast(any, 0)

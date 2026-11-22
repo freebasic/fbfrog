@@ -3,8 +3,7 @@
 '' The following symbols have been renamed:
 ''     enum A => B
 
-type B as long
-enum
+enum B
 	FOO
 end enum
 

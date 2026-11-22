@@ -10,8 +10,7 @@ union B
 	'' TODO: x;
 end union
 
-type C as long
-enum
+enum C
 	'' TODO: x;
 end enum
 

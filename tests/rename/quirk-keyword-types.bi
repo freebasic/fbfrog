@@ -10,8 +10,7 @@ end type
 
 extern popen as Open ptr
 
-type Close as long '' TODO
-enum
+enum Close '' TODO
 end enum
 
 end extern

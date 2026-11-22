@@ -1,7 +1,6 @@
 #pragma once
 
-type E as long
-enum
+enum E
 	A = 123
 end enum
 
