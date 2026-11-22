@@ -800,6 +800,20 @@ function CParser.parseEnumConst() as AstNode ptr
 		enumconst->expr = parseExpr(FALSE, FALSE)
 	end if
 
+	'' Trailing comments (same source line as the enum constant)
+	var hasTrailingComments = (tk->get(x) = TK_FBCODE)
+	dim as AstNode ptr trailingComments = NULL
+	if hasTrailingComments then
+		trailingComments = astNewGROUP()
+		trailingComments->append(enumconst)
+		while tk->get(x) = TK_FBCODE
+			var cn = astNew(ASTKIND_FBCODE, tk->getText(x))
+			cn->location = tk->getLocation(x)
+			trailingComments->append(cn)
+			x += 1
+		wend
+	end if
+
 	'' (',' | '}')
 	select case tk->get(x)
 	case TK_COMMA
@@ -811,7 +825,11 @@ function CParser.parseEnumConst() as AstNode ptr
 		showError("expected ',' or '}' behind enum constant" + tk->butFound(x))
 	end select
 
-	function = enumconst
+	if trailingComments then
+		function = trailingComments
+	else
+		function = enumconst
+	end if
 end function
 
 '' {STRUCT|UNION|ENUM} [Identifier] '{' StructBody|EnumBody '}'
